@@ -143,7 +143,7 @@ static void recurse_push_qual(Node *setOp, Query *topquery,
 static void remove_unused_subquery_outputs(Query *subquery, RelOptInfo *rel);
 
 static void bring_to_outer_query(PlannerInfo *root, RelOptInfo *rel, List *outer_quals);
-
+static bool query_contain_outer_params(Node *node, void *context);
 
 /*
  * make_one_rel
@@ -449,6 +449,17 @@ bring_to_outer_query(PlannerInfo *root, RelOptInfo *rel, List *outer_quals)
 		if (!CdbPathLocus_IsOuterQuery(origpath->locus))
 		{
 			/*
+			 * There is no motion bringing general locus to other
+			 * type of locus, so if origpath'c locus is genreal,
+			 * just add them and continue.
+			 */
+			if (CdbPathLocus_IsGeneral(origpath->locus))
+			{
+				add_path(rel, origpath);
+				continue;
+			}
+
+			/*
 			 * Cannot pass a param through motion, so if this is a parameterized
 			 * path, we can't use it.
 			 */
@@ -557,6 +568,26 @@ set_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
 
 	if (rel->upperrestrictinfo)
 		bring_to_outer_query(root, rel, rel->upperrestrictinfo);
+	else if ((root->parse->limitOffset || root->parse->limitCount) &&
+			 query_contain_outer_params((Node *) (root->parse), root))
+	{
+		/*
+		 * If the query contains limit clause and refer outer params not only
+		 * in restrictinfo, we still need to consider bring it to outer query.
+		 * A typical case is join lateral and the inner plan contain limit clause.
+		 * When inner path's locus is partitioned, then the plan may look like:
+		 *
+		 * limit
+		 *     \
+		 *   result
+		 *        \
+		 *       gather motion
+		 *            \
+		 *            scan
+		 * By doing so, we can avoid passing parameters across motions.
+		 */
+		bring_to_outer_query(root, rel, NIL);
+	}
 
 	/* Now find the cheapest of the paths for this rel */
 	set_cheapest(rel);
@@ -3412,6 +3443,23 @@ remove_unused_subquery_outputs(Query *subquery, RelOptInfo *rel)
 										   exprTypmod(texpr),
 										   exprCollation(texpr));
 	}
+}
+
+static bool
+query_contain_outer_params(Node *node, void *context)
+{
+	if (node == NULL)
+		return false;
+
+	if (IsA(node, Query))
+	{
+		return query_tree_walker((Query *) node,
+								 query_contain_outer_params,
+								 context,
+								 0 /* flags */);
+	}
+
+	return contains_outer_params(node, context);
 }
 
 /*****************************************************************************

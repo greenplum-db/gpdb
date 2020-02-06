@@ -554,3 +554,29 @@ select * from (
 join t_randomly_dist_table on t_subquery_general.a = t_randomly_dist_table.c;
 
 drop table t_randomly_dist_table;
+
+-- test join lateral of this special case:
+--   1. inner plan contains limit clause
+--   2. inner plan refers outer params in projections
+create table t1_lateral_limit_proj(a int, b int, c int) distributed by (a);
+create table t2_lateral_limit_proj(a int, b int, c int) distributed by (a);
+
+insert into t1_lateral_limit_proj select i,i,i from generate_series(1, 5)i;
+insert into t2_lateral_limit_proj select i,i,i from generate_series(1, 5)i;
+
+-- previously, we do not handle such query correctly and leads to a plan
+-- that need passing params across motions (because for partitioned locus
+-- relation, we can only do limit after gathering).
+-- Now the following plan should first gather t2 and then use result node
+-- to compute projection and then do limit.
+explain
+select t1.a, x.y from t1_lateral_limit_proj as t1 join lateral
+(select (t1.a+t2.b) as y from t2_lateral_limit_proj as t2 order by t2.b limit 1) x
+on true order by t1.a;
+
+select t1.a, x.y from t1_lateral_limit_proj as t1 join lateral
+(select (t1.a+t2.b) as y from t2_lateral_limit_proj as t2 order by t2.b limit 1) x
+on true order by t1.a;
+
+drop table t1_lateral_limit_proj;
+drop table t2_lateral_limit_proj;

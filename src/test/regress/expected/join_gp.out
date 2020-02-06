@@ -1169,3 +1169,53 @@ join t_randomly_dist_table on t_subquery_general.a = t_randomly_dist_table.c;
 (9 rows)
 
 drop table t_randomly_dist_table;
+-- test join lateral of this special case:
+--   1. inner plan contains limit clause
+--   2. inner plan refers outer params in projections
+create table t1_lateral_limit_proj(a int, b int, c int) distributed by (a);
+create table t2_lateral_limit_proj(a int, b int, c int) distributed by (a);
+insert into t1_lateral_limit_proj select i,i,i from generate_series(1, 5)i;
+insert into t2_lateral_limit_proj select i,i,i from generate_series(1, 5)i;
+-- previously, we do not handle such query correctly and leads to a plan
+-- that need passing params across motions (because for partitioned locus
+-- relation, we can only do limit after gathering).
+-- Now the following plan should first gather t2 and then use result node
+-- to compute projection and then do limit.
+explain
+select t1.a, x.y from t1_lateral_limit_proj as t1 join lateral
+(select (t1.a+t2.b) as y from t2_lateral_limit_proj as t2 order by t2.b limit 1) x
+on true order by t1.a;
+                                                          QUERY PLAN                                                          
+------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=10000000006.57..10000000006.59 rows=5 width=8)
+   Sort Key: t1.a
+   ->  Nested Loop  (cost=10000000003.26..10000000006.52 rows=5 width=8)
+         ->  Materialize  (cost=0.00..3.17 rows=5 width=4)
+               ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..3.15 rows=5 width=4)
+                     ->  Seq Scan on t1_lateral_limit_proj t1  (cost=0.00..3.05 rows=2 width=4)
+         ->  Materialize  (cost=3.26..3.28 rows=1 width=4)
+               ->  Subquery Scan on x  (cost=3.26..3.27 rows=1 width=4)
+                     ->  Limit  (cost=3.26..3.26 rows=1 width=8)
+                           ->  Sort  (cost=3.26..3.27 rows=5 width=8)
+                                 Sort Key: t2.b
+                                 ->  Result  (cost=0.00..3.24 rows=5 width=8)
+                                       ->  Materialize  (cost=0.00..3.17 rows=5 width=4)
+                                             ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..3.15 rows=5 width=4)
+                                                   ->  Seq Scan on t2_lateral_limit_proj t2  (cost=0.00..3.05 rows=2 width=4)
+ Optimizer: Postgres query optimizer
+(16 rows)
+
+select t1.a, x.y from t1_lateral_limit_proj as t1 join lateral
+(select (t1.a+t2.b) as y from t2_lateral_limit_proj as t2 order by t2.b limit 1) x
+on true order by t1.a;
+ a | y 
+---+---
+ 1 | 2
+ 2 | 3
+ 3 | 4
+ 4 | 5
+ 5 | 6
+(5 rows)
+
+drop table t1_lateral_limit_proj;
+drop table t2_lateral_limit_proj;
