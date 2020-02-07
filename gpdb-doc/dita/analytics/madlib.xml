@@ -66,8 +66,7 @@
       <p>MADlib can be used with PivotalR, an R client package that enables users to interact with
         data resident in the Greenplum Database. PivotalR can be considered as a wrapper around
         MADlib that translates R code into SQL to run on MPP databases and is designed for users
-        familiar with R but with data sets that are too large for R. For more details see <xref
-          href="#topic_dxp_vq2_sv" format="dita"/>.</p>
+        familiar with R but with data sets that are too large for R.</p>
       <p>The R language is an open-source language that is used for statistical computing. PivotalR
         is an R package that enables users to interact with data resident in Greenplum Database
         using the R client. Using PivotalR requires that MADlib is installed on the Greenplum
