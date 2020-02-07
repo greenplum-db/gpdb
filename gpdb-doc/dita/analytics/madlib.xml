@@ -20,7 +20,7 @@
       methods on structured and unstructured data. For Greenplum and MADlib version compatibility,
       refer to <xref
         href="https://cwiki.apache.org/confluence/display/MADLIB/FAQ#FAQ-Q1-2WhatdatabaseplatformsdoesMADlibsupportandwhatistheupgradematrix?"
-        format="html" scope="external">MADbib FAQ</xref>.</p>
+        format="html" scope="external">MADlib FAQ</xref>.</p>
     <p>MADlib’s suite of SQL-based algorithms run at scale within a single Greenplum Database engine
       without needing to transfer data between the database and other tools.</p>
     <p>MADlib is part of the database fabric with no changes to the Greenplum architecture. This
