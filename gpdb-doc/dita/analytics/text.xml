@@ -24,11 +24,11 @@
       cluster and provides Greenplum Database functions you can use to create Solr indexes, query
       them, and receive results in the database session.</p>
     <p>Both of these systems provide powerful, enterprise-quality document indexing and searching
-      services. GPText, with Solr, has many capabilities that are not available with Greenplum
-      Database text search. In particular, GPText is better for advanced text analysis applications.
-      For a comparative between these methods, see <xref
-        href="../admin_guide/textsearch/full-text-search.xml#full-text-search">Comparing Greenplum
-        Database Text Search with Pivotal GPText</xref>.</p>
+        services. GPText, with Solr, has many capabilities that are not available with Greenplum
+        Database text search. In particular, GPText is better for advanced text analysis
+        applications. For a comparative between these methods, see <xref
+          href="../admin_guide/textsearch/intro.xml#gptext">Comparing Greenplum Database Text Search
+          with Pivotal GPText</xref>.</p>
     </section>
   </body>
 </topic>
