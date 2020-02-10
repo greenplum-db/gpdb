@@ -86,6 +86,6 @@ extern bool IsUnderMasterDispatchMode(void);
  * relevant GUC check hooks and in RegisterBackgroundWorker().
  */
 #define MAX_BACKENDS	0x3FFFF
-#define MaxPMAuxProc	6
+#define MaxPMAuxProc	4
 
 #endif   /* _POSTMASTER_H */

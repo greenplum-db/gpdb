@@ -1762,36 +1762,6 @@ def impl(context, proc):
     check_return_code(context, 0)  # 0 means one or more processes were matched
 
 
-@when('wait until the results from boolean sql "{sql}" is "{boolean}"')
-@then('wait until the results from boolean sql "{sql}" is "{boolean}"')
-@given('wait until the results from boolean sql "{sql}" is "{boolean}"')
-def impl(context, sql, boolean):
-    cmd = Command(name='psql', cmdStr='psql --tuples-only -d postgres -c "%s"' % sql)
-    start_time = current_time = datetime.now()
-    result = None
-    while (current_time - start_time).seconds < 120:
-        cmd.run()
-        if cmd.get_return_code() != 0:
-            break
-        result = cmd.get_stdout()
-        if _str2bool(result) == _str2bool(boolean):
-            break
-        time.sleep(2)
-        current_time = datetime.now()
-
-    if cmd.get_return_code() != 0:
-        context.ret_code = cmd.get_return_code()
-        context.error_message = 'psql internal error: %s' % cmd.get_stderr()
-        check_return_code(context, 0)
-    else:
-        if _str2bool(result) != _str2bool(boolean):
-            raise Exception("sql output '%s' is not same as '%s'" % (result, boolean))
-
-
-def _str2bool(string):
-    return string.lower().strip() in ['t', 'true', '1', 'yes', 'y']
-
-
 @given('the user creates an index for table "{table_name}" in database "{db_name}"')
 @when('the user creates an index for table "{table_name}" in database "{db_name}"')
 @then('the user creates an index for table "{table_name}" in database "{db_name}"')

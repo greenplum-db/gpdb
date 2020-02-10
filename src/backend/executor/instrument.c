@@ -509,4 +509,4 @@ static void gp_gettmid(int32* tmid)
 	else
 		/* On QD */
 		*tmid = (int32)getDtxStartTime();
-} 
+}
