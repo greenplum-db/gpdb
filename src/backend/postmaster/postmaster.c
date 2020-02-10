@@ -399,6 +399,13 @@ static BackgroundWorker PMAuxProcList[MaxPMAuxProc] =
 	 0, /* restart immediately if sweeper process exits with non-zero code */
 	 BackoffSweeperMain, {0}, {0}, 0, {0}, 0,
 	 BackoffSweeperStartRule},
+
+	/*
+	 * Remember to set the MaxPMAuxProc to the number of this list
+	 *
+	 * It's used as a number at other places, so end-of-list marker doesn't
+	 * work here.
+	 */
 };
 
 static bool ReachedNormalRunning = false;		/* T if we've reached PM_RUN */

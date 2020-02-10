@@ -20,7 +20,6 @@ Fault Tolerance Service (FTS):
    these two functions are FtsProbeMain() and FtsProbeStartRule(),
    respectively.  This is hard-coded in postmaster.c.
 
-      #define MaxPMAuxProc 6
       static BackgroundWorker PMAuxProcList[MaxPMAuxProc]
 
    In Postmaster, we will check the following condition:
