@@ -21,7 +21,7 @@
     <p>Following are steps to use this Ansible playbook.</p>
     <ol id="ol_umm_h25_yhb">
       <li>Install Ansible on the control node using your package manager. See the <xref
-          href="https://docs.ansible.com" format="html" scope="external">Ansible documention</xref>
+          href="https://docs.ansible.com" format="html" scope="external">Ansible documentation</xref>
         for help with installation.</li>
       <li>Set up passwordless SSH from the control node to all hosts that will be a part of the
         Greenplum Database cluster. You can use the <codeph>ssh-copy-id</codeph> command to install
