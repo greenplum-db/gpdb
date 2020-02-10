@@ -462,7 +462,7 @@ cdbconn_get_motion_listener_port(PGconn *conn)
  *
  * The callback is very limited in what it can do, so it cannot directly
  * forward the Notice to the user->QD connection. Instead, it queues the
- * Notices as a list of QENotice structs. Later, when we are out of of the
+ * Notices as a list of QENotice structs. Later, when we are out of the
  * callback, forwardQENotices() sends the queued Notices to the client.
  *-------------------------------------------------------------------------
  */

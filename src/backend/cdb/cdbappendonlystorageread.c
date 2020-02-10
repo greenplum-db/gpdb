@@ -336,7 +336,7 @@ AppendOnlyStorageRead_OpenFile(AppendOnlyStorageRead *storageRead,
 	Assert(filePathName != NULL);
 
 	/*
-	 * The EOF must be be greater than 0, otherwise we risk transactionally
+	 * The EOF must be greater than 0, otherwise we risk transactionally
 	 * created segment files from disappearing if a concurrent write
 	 * transaction aborts.
 	 */

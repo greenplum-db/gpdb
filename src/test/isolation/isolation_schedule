@@ -8,7 +8,7 @@
 # A GUC gp_enable_global_deadlock_detector is introduced to control GDD.
 # When GDD is enabled, update|delete on heap tables will lock the table in
 # RowExclusiveLock mode. Otherwise, it locks the whole table in ExlusiveLock mode.
-# By default, GDD is set distabled and most the the cases are tested under this
+# By default, GDD is set distabled and most the cases are tested under this
 # condition.
 # Greenplum's logic for Select-Statement with locking clause (for update|no key update|share|key share)
 # is different from upstream:

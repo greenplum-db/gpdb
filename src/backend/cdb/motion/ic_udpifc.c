@@ -919,7 +919,7 @@ initCursorICHistoryTable(CursorICHistoryTable *t)
 
 /*
  * addCursorIcEntry
- * 		Add an entry to the the cursor ic table.
+ * 		Add an entry to the cursor ic table.
  */
 static void
 addCursorIcEntry(CursorICHistoryTable *t, uint32 icId, uint32 cid)

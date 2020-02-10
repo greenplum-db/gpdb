@@ -40,7 +40,7 @@
         unsupervised learning methods. </p>
       <p dir="ltr">In the area of model selection, MADlib supports cross validation and the most
         common prediction metrics for evaluating the quality of predictions of a model. Please refer
-        the the <xref href="http://madlib.apache.org/docs/latest/index.html" format="html"
+        the <xref href="http://madlib.apache.org/docs/latest/index.html" format="html"
           scope="external">MADlib user guide</xref> for more information on these methods.</p>
       <p> </p>
     </section>

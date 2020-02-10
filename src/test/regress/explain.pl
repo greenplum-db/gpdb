@@ -155,8 +155,8 @@ Options:
 
 explain.pl reads EXPLAIN output from a text file (or standard
 input) and formats it in several ways.  The text file must contain
-output in one of the the following formats.  The first is a regular
-EXPLAIN format, starting the the QUERY PLAN header and ending with the
+output in one of the following formats.  The first is a regular
+EXPLAIN format, starting the QUERY PLAN header and ending with the
 number of rows in parentheses.  Indenting must be on:
 
                                                 QUERY PLAN                                                

@@ -58,7 +58,7 @@ test__DeltaCompression__Core(void **state)
 	assert_int_equal(dsw->delta_bitmap.bitOnCount, 0);
 	assert_int_equal(dsw->delta_bitmap.bitCount, 0);
 
-	/* Since physical datum, test the the routines for processing the same */
+	/* Since physical datum, test the routines for processing the same */
 	DatumStreamBlockWrite_DenseIncrItem(dsw, 0, 4);
 	DatumStreamBlockWrite_DeltaMaintain(dsw, UInt32GetDatum(32));
 	assert_int_equal(dsw->physical_datum_count, 1);
@@ -131,7 +131,7 @@ test__DeltaCompression__Core(void **state)
 	assert_true(DatumStreamBitMapWrite_CurrentIsOn(&dsw->delta_bitmap));
 	assert_true(dsw->not_first_datum);
 
-	/* Again since physical datum, test the the routines for processing the same */
+	/* Again since physical datum, test the routines for processing the same */
 	DatumStreamBlockWrite_DenseIncrItem(dsw, 0, 4);
 	DatumStreamBlockWrite_DeltaMaintain(dsw, UInt32GetDatum(23 + MAX_DELTA_SUPPORTED_DELTA_COMPRESSION + 1));
 	assert_int_equal(dsw->physical_datum_count, 2);

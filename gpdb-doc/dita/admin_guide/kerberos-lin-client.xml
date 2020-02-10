@@ -103,7 +103,7 @@
           for the Greenplum Database user. </li>
         <li id="kd158478">Run <codeph>kinit</codeph> specifying the keytab file to create a ticket
           on the client machine. For this example, the keytab file
-            <codeph>gpdb-kerberos.keytab</codeph> is in the the current directory. The ticket cache
+            <codeph>gpdb-kerberos.keytab</codeph> is in the current directory. The ticket cache
           file is in the <codeph>gpadmin</codeph> user home directory.
           <codeblock>&gt; kinit -k -t gpdb-kerberos.keytab -c /home/gpadmin/cache.txt 
    gpadmin/kerberos-gpdb@KRB.EXAMPLE.COM</codeblock></li>

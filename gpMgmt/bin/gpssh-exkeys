@@ -541,7 +541,7 @@ try:
     ######################
     #  step 1
     #
-    #    Creates an SSH id_rsa key pair for for the current user if not already available
+    #    Creates an SSH id_rsa key pair for the current user if not already available
     #    and appends the id_rsa.pub key to the local authorized_keys file.
     #
     print '[STEP 1 of 5] create local ID and authorize on local host'

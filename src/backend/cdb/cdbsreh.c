@@ -469,7 +469,7 @@ PreprocessByteaData(char *src)
 /*
  * IsRejectLimitValid
  *
- * verify that the the reject limit specified by the user is within the
+ * verify that the reject limit specified by the user is within the
  * allowed values for ROWS or PERCENT.
  */
 void

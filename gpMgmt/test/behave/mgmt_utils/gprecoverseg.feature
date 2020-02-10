@@ -245,7 +245,7 @@ Feature: gprecoverseg tests
         And gprecoverseg should print "Heap checksum setting is consistent between master and the segments that are candidates for recoverseg" to stdout
         And all the segments are running
         And the segments are synchronized
-        # validate the the new segment has the correct setting by getting admin connection to that segment
+        # validate the new segment has the correct setting by getting admin connection to that segment
         Then the saved primary segment reports the same value for sql "show data_checksums" db "template1" as was saved
 
     @concourse_cluster

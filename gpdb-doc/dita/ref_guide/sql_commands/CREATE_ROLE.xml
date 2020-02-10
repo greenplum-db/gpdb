@@ -185,7 +185,7 @@
                 </plentry>
                 <plentry>
                     <pt>RESOURCE GROUP <varname>group_name</varname></pt>
-                    <pd> The name of the resource group to assign to the the new role. The role will
+                    <pd> The name of the resource group to assign to the new role. The role will
                         be subject to the concurrent transaction, memory, and CPU limits configured
                         for the resource group. You can assign a single resource group to one or
                         more roles.</pd>

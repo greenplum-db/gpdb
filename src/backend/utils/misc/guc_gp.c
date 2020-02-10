@@ -4402,7 +4402,7 @@ struct config_string ConfigureNamesString_gp[] =
 	},
 	{
 		{"pljava_classpath", PGC_SUSET, CUSTOM_OPTIONS,
-			gettext_noop("classpath used by the the JVM"),
+			gettext_noop("classpath used by the JVM"),
 			NULL,
 			GUC_NOT_IN_SAMPLE
 		},

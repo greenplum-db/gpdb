@@ -277,7 +277,7 @@ ssb   2048R/4FD2EFBB 2015-01-13
 # gpg -a --export-secret-keys 2027CC30 &gt; secret.key</codeblock></li>
       </ol>
       <p>See the <xref href="https://www.postgresql.org/docs/9.4/pgcrypto.html" format="html"
-          scope="external">pgcrypto</xref> documentation for for more information about PGP
+          scope="external">pgcrypto</xref> documentation for more information about PGP
         encryption functions. </p>
     </section>
     <section id="section_emf_3kr_bs">

@@ -63,5 +63,5 @@ ENCODING=UNICODE
 #DATABASE_NAME=name_of_database
 
 #### Specify the location of the host address file here instead of
-#### with the the -h option of gpinitsystem.
+#### with the -h option of gpinitsystem.
 #MACHINE_LIST_FILE=/home/gpadmin/gpconfigs/hostfile_gpinitsystem

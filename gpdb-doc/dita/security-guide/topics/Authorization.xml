@@ -343,7 +343,7 @@ DENY DAY 'Sunday'</codeblock>
       <p> The following examples demonstrate creating a role with time-based constraints and
         modifying a role to add time-based constraints. Only the statements needed for time-based
         constraints are shown. For more details on creating and altering roles see the descriptions
-        of <codeph>CREATE ROLE</codeph> and <codeph>ALTER ROLE</codeph> in in the <i>Greenplum
+        of <codeph>CREATE ROLE</codeph> and <codeph>ALTER ROLE</codeph> in the <i>Greenplum
           Database Reference Guide</i>. </p>
       <section>
         <title> Example 1 – Create a New Role with Time-based Constraints </title>

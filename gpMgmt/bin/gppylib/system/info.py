@@ -29,7 +29,7 @@ def get_max_available_thread_count():
     # assuming a generous 10K bytes per line of error output,
     # 20 MB allows 2000 errors in a single run; if user has more,
     # we will explain in the manual
-    # the the user can always set batch (number of threads) manually
+    # the user can always set batch (number of threads) manually
     thread_size = 20 * MB + stack_size
 
     mem = psutil.virtual_memory()

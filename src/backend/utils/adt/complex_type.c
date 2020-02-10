@@ -777,7 +777,7 @@ pg_cpow_n(Complex x, int k)
 		 *	Loop invariant: r = z*x^k
 		 *			 x is the base
 		 *			 k is the power
-		 *			 z is the the remaining which makes the loop invariant valid
+		 *			 z is the remaining which makes the loop invariant valid
 		 *	End condition: k == 0, r = z*x^0, so r = z
 		 *
 		 *	while k > 1:

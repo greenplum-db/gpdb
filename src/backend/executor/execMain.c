@@ -1687,7 +1687,7 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 			{
 				/*
 				 * On QD, the lock on the table has already been taken during parsing, so if it's a child
-				 * partition, we don't need to take a lock. If there a a deadlock GDD will come in place
+				 * partition, we don't need to take a lock. If there a deadlock GDD will come in place
 				 * and resolve the deadlock. ORCA Update / Delete plans only contains the root relation, so
 				 * no locks on leaf partition are taken here. The below changes makes planner as well to not
 				 * take locks on leaf partitions with GDD on.
@@ -3290,7 +3290,7 @@ ExecWithCheckOptions(WCOKind kind, ResultRelInfo *resultRelInfo,
 					 * the permissions on the relation (that is, if the user
 					 * could view it directly anyway).  For RLS violations, we
 					 * don't include the data since we don't know if the user
-					 * should be able to view the tuple as as that depends on
+					 * should be able to view the tuple as that depends on
 					 * the USING policy.
 					 */
 				case WCO_VIEW_CHECK:
