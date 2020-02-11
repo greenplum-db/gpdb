@@ -193,45 +193,6 @@ FROM gp_master_mirroring;</codeblock></p>
                 </table>
             </body>
         </topic>
-        <topic id="topic_atb_b2g_rp">
-            <title>Database Alert Log Monitoring </title>
-            <body>
-                <table frame="all" id="table_dvp_d2g_rp">
-                    <title>Database Alert Log Monitoring Activities</title>
-                    <tgroup cols="3">
-                        <colspec colname="c1" colnum="1"/>
-                        <colspec colname="c2" colnum="2"/>
-                        <colspec colname="c3" colnum="3"/>
-                        <thead>
-                            <row>
-                                <entry>Activity</entry>
-                                <entry>Procedure</entry>
-                                <entry>Corrective Actions</entry>
-                            </row>
-                        </thead>
-                        <tbody>
-                            <row>
-                                <entry>Check for FATAL and ERROR log messages from the
-                                        system.<p>Recommended frequency: run every 15
-                                        minutes</p><p>Severity: WARNING</p><p><i>This activity and
-                                            the next are two methods for monitoring messages in the
-                                            log_alert_history table. It is only necessary to set up
-                                            one or the other.</i></p></entry>
-                                <entry>
-                                    <p>Run the following query in the <codeph>gpperfmon</codeph>
-                                        database:<codeblock>SELECT * FROM log_alert_history
-WHERE logseverity in ('FATAL', 'ERROR')
-   AND logtime &gt; (now() - interval '15 minutes');</codeblock></p>
-                                </entry>
-                                <entry>Send an alert to the DBA to analyze the alert. You may want
-                                    to add additional filters to the query to ignore certain
-                                    messages of low interest.</entry>
-                            </row>
-                        </tbody>
-                    </tgroup>
-                </table>
-            </body>
-        </topic>
         <topic id="topic_y4c_4gg_rp">
             <title>Hardware and Operating System Monitoring</title>
             <body>

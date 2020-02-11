@@ -79,12 +79,6 @@
           </row>
           <row>
             <entry>
-              <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/logs/gpmon.*.log</codeph>
-            </entry>
-            <entry>gpperfmon logs</entry>
-          </row>
-          <row>
-            <entry>
               <codeph>$MASTER_DATA_DIRECTORY/pg_log/*.csv</codeph>,
               <codeph>$GPDATA_DIR/<varname>segprefixN</varname>/pg_log/*.csv</codeph>
             </entry>

@@ -210,9 +210,6 @@
             </li>
             <li><xref href="#gp_enable_global_deadlock_detector"/></li>
             <li>
-              <xref href="#gp_enable_gpperfmon"/>
-            </li>
-            <li>
               <xref href="#gp_enable_groupext_distinct_gather"/>
             </li>
             <li>
@@ -265,9 +262,6 @@
               <xref href="#gp_global_deadlock_detector_period"/>
             </li>
             <li>
-              <xref href="#gp_gpperfmon_send_interval"/>
-            </li>
-            <li>
               <xref href="#gp_hashjoin_tuples_per_bucket"/>
             </li>
             <li>
@@ -282,12 +276,6 @@
             <li><xref href="#gp_workfile_limit_files_per_query"/></li>
             <li><xref href="#gp_workfile_limit_per_query"/></li>
             <li><xref href="#gp_workfile_limit_per_segment"/></li>
-            <li>
-              <xref href="#gpperfmon_log_alert_level"/>
-            </li>
-            <li>
-              <xref href="#gpperfmon_port"/>
-            </li>
             <li><xref href="#ignore_checksum_failure" format="dita"/></li>
             <li>
               <xref href="#integer_datetimes"/>
@@ -2819,34 +2807,6 @@
       </table>
     </body>
   </topic>
-  <topic id="gp_enable_gpperfmon">
-    <title>gp_enable_gpperfmon</title>
-    <body>
-      <p>Enables or disables the data collection agents that populate the <codeph>gpperfmon</codeph>
-        database.</p>
-      <table id="gp_enable_gpperfmon_table">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">Boolean</entry>
-              <entry colname="col2">off</entry>
-              <entry colname="col3">local<p>system</p><p>restart</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
   <topic id="gp_enable_groupext_distinct_gather">
     <title>gp_enable_groupext_distinct_gather</title>
     <body>
@@ -3477,68 +3437,6 @@
               <entry colname="col1">OFF<p>TERSE</p><p>VERBOSE</p><p>DEBUG</p></entry>
               <entry colname="col2">OFF</entry>
               <entry colname="col3">master<p>session</p><p>restart</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
-  <topic id="gp_gpperfmon_send_interval">
-    <title>gp_gpperfmon_send_interval</title>
-    <body>
-      <p>Sets the frequency that the Greenplum Database server processes send query execution
-        updates to the data collection agent processes used to populate the
-          <codeph>gpperfmon</codeph> database. Query operations executed during
-        this interval are sent through UDP to the segment monitor agents. If you find that an
-        excessive number of UDP packets are dropped during long-running, complex queries, you may
-        consider increasing this value.</p>
-      <table id="gp_gpperfmon_send_interval_table">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">Any valid time expression (number and unit)</entry>
-              <entry colname="col2">1sec</entry>
-              <entry colname="col3">master<p>system</p><p>restart</p><p>superuser</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
-  <topic id="gpperfmon_log_alert_level">
-    <title>gpperfmon_log_alert_level</title>
-    <body>
-      <p>Controls which message levels are written to the gpperfmon log. Each level includes all the
-        levels that follow it. The later the level, the fewer messages are sent to the log. </p>
-      <note>If the <codeph>gpperfmon</codeph> database is installed and is monitoring the database,
-        the default value is warning.</note>
-      <table id="gpperfmon_log_alert_level_table">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">none <p>warning</p><p>error</p><p>fatal</p><p>panic</p></entry>
-              <entry colname="col2">none</entry>
-              <entry colname="col3">local<p>system</p><p>restart</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -5076,34 +4974,6 @@
               <entry colname="col1">kilobytes</entry>
               <entry colname="col2">0</entry>
               <entry colname="col3">local <p>system </p><p>restart</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
-  <topic id="gpperfmon_port">
-    <title>gpperfmon_port</title>
-    <body>
-      <p>Sets the port on which all data collection agents communicate with the
-        master. </p>
-      <table id="gpperfmon_port_table">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">integer</entry>
-              <entry colname="col2">8888</entry>
-              <entry colname="col3">master<p>system</p><p>restart</p></entry>
             </row>
           </tbody>
         </tgroup>

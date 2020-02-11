@@ -10,7 +10,6 @@
         <topicref href="topics/ports_and_protocols.xml"/>
         <topicref href="topics/Authenticate.xml"/>
         <topicref href="topics/Authorization.xml"/>
-        <topicref href="topics/gpcc.xml" otherprops="pivotal"/>
         <topicref href="topics/Auditing.xml"/>
         <topicref href="topics/Encryption.xml"/>
         <topicref href="topics/BestPractices.xml"/>

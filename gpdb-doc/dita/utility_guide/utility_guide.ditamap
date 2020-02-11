@@ -41,7 +41,6 @@
         <!-- hidden until testing is complete -msk
         <topicref href="ref/gpmovemirrors.xml"/>
 -->
-        <topicref href="ref/gpperfmon_install.xml"/>
         <topicref href="ref/gppkg.xml"/>
         <topicref href="ref/gprecoverseg.xml"/>
         <topicref href="ref/gpreload.xml"/>
