@@ -528,6 +528,16 @@ SanityCheckBackgroundWorker(BackgroundWorker *worker, int elevel)
 		return false;
 	}
 
+	if (!worker->bgw_main &&
+		(!worker->bgw_library_name[0] || !worker->bgw_function_name[0]))
+	{
+		ereport(elevel,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("background worker \"%s\": invalid entry function",
+						worker->bgw_name)));
+		return false;
+	}
+
 	return true;
 }
 

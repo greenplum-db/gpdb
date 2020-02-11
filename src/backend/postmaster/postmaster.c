@@ -401,7 +401,7 @@ static BackgroundWorker PMAuxProcList[MaxPMAuxProc] =
 	 BackoffSweeperStartRule},
 
 	/*
-	 * Remember to set the MaxPMAuxProc to the number of this list
+	 * Remember to set the MaxPMAuxProc to the number of items in this list
 	 *
 	 * It's used as a number at other places, so end-of-list marker doesn't
 	 * work here.
