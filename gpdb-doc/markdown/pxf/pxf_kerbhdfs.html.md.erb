@@ -119,8 +119,7 @@ When you configure PXF for secure HDFS using an AD Kerberos KDC server, you will
 
     ``` shell
     gpadmin@master$ $GPHOME/pxf/bin/pxf cluster sync
-    gpadmin@master$ $GPHOME/pxf/bin/pxf cluster stop
-    gpadmin@master$ $GPHOME/pxf/bin/pxf cluster start
+    gpadmin@master$ $GPHOME/pxf/bin/pxf cluster restart
     ```
 
 6. Step 7 does not synchronize the keytabs in `$PXF_CONF`. You must distribute the keytab file to `$PXF_CONF/keytabs/`. Locate the keytab file, copy the file to the `$PXF_CONF` user configuration directory, and set required permissions. For example:

@@ -16,6 +16,7 @@ where `<command>` is:
 help
 init
 reset
+restart
 start
 status
 stop
@@ -28,7 +29,7 @@ The `pxf cluster` utility command manages PXF on the master, standby master, and
 
 - Initialize PXF configuration on all hosts in the Greenplum Database cluster.
 - Reset the PXF service instance on all hosts to its uninitialized state.
-- Start and stop the PXF service instance on all segment hosts.
+- Start, stop, and restart the PXF service instance on all segment hosts.
 - Display the status of the PXF service instance on all segment hosts.
 - Synchronize the PXF configuration from the Greenplum Database master host to the standby master and to all segment hosts.
 
@@ -46,6 +47,9 @@ The `pxf cluster` utility command manages PXF on the master, standby master, and
 
 <dt>reset</dt>
 <dd>Reset the PXF service instance on the master, standby master, and on all segment hosts. Resetting removes PXF runtime files and directories, and returns PXF to an uninitialized state. You must stop the PXF service instance running on each segment host before you reset PXF in your Greenplum Database cluster.</dd>
+
+<dt>restart</dt>
+<dd>Stop, and then start, the PXF service instance on all segment hosts.</dd>
 
 <dt>start</dt>
 <dd>Start the PXF service instance on all segment hosts.</dd>
