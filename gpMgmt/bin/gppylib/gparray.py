@@ -1499,7 +1499,7 @@ class GpArray:
     def reOrderExpansionSegs(self):
         """
         The expansion segments content ID may have changed during the expansion.
-        This method will re-order the the segments into their proper positions.
+        This method will re-order the segments into their proper positions.
         Since there can be no gaps in the content id (see validateExpansionSegs),
         the self.expansionSegmentPairs list is the same length.
         """

@@ -1397,7 +1397,7 @@ select avg('1000000000000000000'::int8) from generate_series(1, 100000);
 
 -- Test cases where the planner would like to distribute on a column, to implement
 -- grouping or distinct, but can't because the datatype isn't GPDB-hashable.
--- These are all variants of the the same issue; all of these used to miss the
+-- These are all variants of the same issue; all of these used to miss the
 -- check on whether the column is GPDB_hashble, producing an assertion failure.
 create table int2vectortab (distkey int, t int2vector,t2 int2vector) distributed by (distkey);
 insert into int2vectortab values

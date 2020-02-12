@@ -1574,7 +1574,7 @@ class gpexpand:
         self.statusLogger.set_status('PREPARE_EXPANSION_SCHEMA_DONE')
         self.statusLogger.set_status('EXPANSION_PREPARE_DONE')
 
-        # At this point, no rollback is possible and the the system
+        # At this point, no rollback is possible and the system
         # including new segments has been started once before so finalize
         self.finalize_prepare()
 

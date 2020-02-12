@@ -1281,7 +1281,7 @@ GetOldestXmin(Relation rel, bool ignoreVacuum)
 	 * In QD node, all distributed transactions have an entry in the proc array,
 	 * so we're done.
 	 *
-	 * During binary upgrade and in in maintenance mode, we don't have
+	 * During binary upgrade and in maintenance mode, we don't have
 	 * distributed transactions, so we're done there too. This ensures correct
 	 * operation of VACUUM FREEZE during pg_upgrade and maintenance mode.
 	 *

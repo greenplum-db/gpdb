@@ -899,7 +899,7 @@ XLogReaderValidatePageHeader(XLogReaderState *state, XLogRecPtr recptr,
 }
 
 /*
- * In GPDB, this is used in in the test in src/test/walrep, so we need it in the
+ * In GPDB, this is used in the test in src/test/walrep, so we need it in the
  * backend, too.
  */
 /* #ifdef FRONTEND */

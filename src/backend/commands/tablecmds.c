@@ -15370,7 +15370,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 													 ldistro->numsegments);
 
 				/*
-				 * See if the the old policy is the same as the new one but
+				 * See if the old policy is the same as the new one but
 				 * remember, we still might have to rebuild if there are new
 				 * storage options.
 				 */

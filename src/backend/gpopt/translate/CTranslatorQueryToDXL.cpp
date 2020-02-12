@@ -4208,7 +4208,7 @@ CTranslatorQueryToDXL::TranslateExprToDXLProject
 
 	if (IsA(expr, Var) && !insist_new_colids)
 	{
-		// project elem is a a reference to a column - use the colref id
+		// project elem is a reference to a column - use the colref id
 		GPOS_ASSERT(EdxlopScalarIdent == child_dxlnode->GetOperator()->GetDXLOperator());
 		CDXLScalarIdent *dxl_ident = (CDXLScalarIdent *) child_dxlnode->GetOperator();
 		project_elem_id = dxl_ident->GetDXLColRef()->Id();

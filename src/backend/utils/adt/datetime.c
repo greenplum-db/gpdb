@@ -3936,7 +3936,7 @@ EncodeTimezone(char *str, int tz, int style)
 
 /* 
  * Convenience routine for encoding dates faster than sprintf does.
- * tm is the the timestamp structure, str is the string, pos is position in
+ * tm is the timestamp structure, str is the string, pos is position in
  * the string which we are at. Upon returning, it is set to the offset of the
  * last character we set in str.
  */

@@ -419,7 +419,7 @@ ResAlterQueue(Oid queueid, Cost limits[NUM_RES_LIMIT_TYPES], bool overcommit,
 	}
 
 	/*
-	 * If threshold and overcommit alterations are all ok, do the the changes.
+	 * If threshold and overcommit alterations are all ok, do the changes.
 	 */
 	if (result == ALTERQUEUE_OK)
 	{

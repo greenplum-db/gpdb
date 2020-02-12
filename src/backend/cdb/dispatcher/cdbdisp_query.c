@@ -1063,7 +1063,7 @@ cdbdisp_dispatchX(QueryDesc* queryDesc,
 	 * allocate gangs, and associate them with slices.
 	 *
 	 * On return, gangs have been allocated and CDBProcess lists have
-	 * been filled in in the slice table.)
+	 * been filled in the slice table.)
 	 * 
 	 * Notice: This must be done before cdbdisp_buildPlanQueryParms
 	 */

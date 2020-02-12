@@ -320,7 +320,7 @@ CREATE ROLE <replaceable class="PARAMETER">name</replaceable> [ [ WITH ] <replac
       <term><literal>RESOURCE GROUP</> <replaceable class="parameter">group_name</replaceable></term>
       <listitem>
        <para>
-        The name of the resource group to assign to the the new role. The
+        The name of the resource group to assign to the new role. The
         role will be subject to the concurrent transaction, memory, and
         CPU limits configured for the resource group. You can assign a
         single resource group to one or more roles.

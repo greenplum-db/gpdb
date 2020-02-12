@@ -767,7 +767,7 @@ ExplainPrintTriggers(ExplainState *es, QueryDesc *queryDesc)
 	/*
 	 * GPDB_91_MERGE_FIXME: If the target is a partitioned table, we
 	 * should also report information on the triggers in the partitions.
-	 * I.e. we should scan the the 'ri_partition_hash' of each
+	 * I.e. we should scan the 'ri_partition_hash' of each
 	 * ResultRelInfo as well. This is somewhat academic, though, as long
 	 * as we don't support triggers in GPDB in general..
 	 */
@@ -2976,7 +2976,7 @@ ExplainTargetRel(Plan *plan, Index rti, ExplainState *es)
 
 				/*
 				 * Unlike in a FunctionScan, in a TableFunctionScan the call
-				 * should always be a a function call of a single function.
+				 * should always be a function call of a single function.
 				 * Get the real name of the function.
 				 */
 				{

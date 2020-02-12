@@ -904,7 +904,7 @@ ExecEagerFreeShareInputScan(ShareInputScanState *node)
 	}
 
 	/* 
-	 * Reset our copy of the pointer to the the ts_state. The tuplestore can still be accessed by 
+	 * Reset our copy of the pointer to the ts_state. The tuplestore can still be accessed by
 	 * the other consumers, but we don't have a pointer to it anymore
 	 */ 
 	node->ts_state = NULL; 

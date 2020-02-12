@@ -98,7 +98,7 @@ typedef struct Slice
 	 * A list of CDBProcess nodes corresponding to the worker processes
 	 * allocated to implement this plan slice.
 	 *
-	 * The number of processes must agree with the the plan slice to be
+	 * The number of processes must agree with the plan slice to be
 	 * implemented.
 	 */
 	List		*primaryProcesses;

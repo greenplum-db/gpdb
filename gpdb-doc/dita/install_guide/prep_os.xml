@@ -243,7 +243,7 @@ kernel.shmmax = 810810728448</codeblock>
             65535</codeph>, set the Greenplum Database base port numbers to these values. </p>
         <codeblock>PORT_BASE = 6000
 MIRROR_PORT_BASE = 7000</codeblock>
-        <p>For information about the the <codeph>gpinitsystem</codeph> cluster configuration file,
+        <p>For information about the <codeph>gpinitsystem</codeph> cluster configuration file,
           see <xref href="../install_guide/init_gpdb.html#topic4" scope="peer" format="dita"
             >Initializing a Greenplum Database System</xref>.</p>
         <p>For Azure deployments with Greenplum Database avoid using port 65330; add the following
