@@ -15,7 +15,7 @@
   <topic id="topic2" xml:lang="en" otherprops="pivotal">
     <title id="kj157177">Monitoring Database Activity and Performance</title>
     <body>
-      <p otherprops="pivotal">Pivotal Greenplum Command Center, an optional web-based interface,
+      <p>Pivotal Greenplum Command Center, an optional web-based interface,
         provides cluster status information, graphical administrative tools, real-time query
         monitoring, and historical cluster and query data. Download the Greenplum Command Center
         package from <xref href="https://network.pivotal.io/products/pivotal-gpdb" scope="external"
