@@ -269,7 +269,7 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 	MemoryContext oldcontext;
 	GpExecIdentity exec_identity;
 	bool		shouldDispatch;
-	bool		needDtxTwoPhase;
+	bool		needDtx;
 
 	/* sanity checks: queryDesc must not be started already */
 	Assert(queryDesc != NULL);
@@ -632,9 +632,9 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 			 * ExecutorSaysTransactionDoesWrites() before any dispatch
 			 * work for this query.
 			 */
-			needDtxTwoPhase = ExecutorSaysTransactionDoesWrites();
-			if (needDtxTwoPhase)
-				setupTwoPhaseTransaction();
+			needDtx = ExecutorSaysTransactionDoesWrites();
+			if (needDtx)
+				setupDtxTransaction();
 
 			if (queryDesc->ddesc != NULL)
 			{
@@ -687,7 +687,7 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 			 * Main plan is parallel, send plan to it.
 			 */
 			if (queryDesc->plannedstmt->planTree->dispatch == DISPATCH_PARALLEL)
-				CdbDispatchPlan(queryDesc, needDtxTwoPhase, true);
+				CdbDispatchPlan(queryDesc, needDtx, true);
 		}
 
 		/*

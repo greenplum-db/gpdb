@@ -64,8 +64,6 @@ DtxStateToString(DtxState state)
 			return "Inserting Committed";
 		case DTX_STATE_INSERTED_COMMITTED:
 			return "Inserted Committed";
-		case DTX_STATE_FORCED_COMMITTED:
-			return "Forced Committed";
 		case DTX_STATE_NOTIFYING_COMMIT_PREPARED:
 			return "Notifying Commit Prepared";
 		case DTX_STATE_INSERTING_FORGET_COMMITTED:

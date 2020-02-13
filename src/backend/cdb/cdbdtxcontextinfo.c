@@ -49,7 +49,7 @@ DtxContextInfo_CreateOnMaster(DtxContextInfo *dtxContextInfo, bool inCursor,
 	dtxContextInfo->distributedXid = getDistributedTransactionId();
 	if (dtxContextInfo->distributedXid != InvalidDistributedTransactionId)
 	{
-		dtxContextInfo->distributedTimeStamp = getDtxStartTime();
+		dtxContextInfo->distributedTimeStamp = getDtmStartTime();
 
 		getDistributedTransactionIdentifier(dtxContextInfo->distributedId);
 		dtxContextInfo->curcid = curcid;
@@ -121,9 +121,9 @@ DtxContextInfo_CreateOnMaster(DtxContextInfo *dtxContextInfo, bool inCursor,
 			 dtxContextInfo->curcid);
 
 		elog((Debug_print_full_dtm ? LOG : DEBUG5),
-			 "DtxContextInfo_CreateOnMaster txnOptions = 0x%x, needTwoPhase = %s, explicitBegin = %s, isoLevel = %s, readOnly = %s.",
+			 "DtxContextInfo_CreateOnMaster txnOptions = 0x%x, needDtx = %s, explicitBegin = %s, isoLevel = %s, readOnly = %s.",
 			 txnOptions,
-			 (isMppTxOptions_NeedTwoPhase(txnOptions) ? "true" : "false"),
+			 (isMppTxOptions_NeedDtx(txnOptions) ? "true" : "false"),
 			 (isMppTxOptions_ExplicitBegin(txnOptions) ? "true" : "false"),
 			 IsoLevelAsUpperString(mppTxOptions_IsoLevel(txnOptions)),
 			 (isMppTxOptions_ReadOnly(txnOptions) ? "true" : "false"));
