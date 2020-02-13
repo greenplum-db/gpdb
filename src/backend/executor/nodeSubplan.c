@@ -1124,7 +1124,7 @@ PG_TRY();
 		function_scan_create_bufname_prefix(rwfile_prefix, sizeof(rwfile_prefix));
 		
 		node->ts_state->matstore = ntuplestore_create_readerwriter(rwfile_prefix, PlanStateOperatorMemKB((PlanState *)(node->planstate)) * 1024, true, false);
-		ntuplestore_delete_file_on_close(node->ts_state->matstore, false);
+		ntuplestore_set_is_temp_file(node->ts_state->matstore, false);
 		
 		node->ts_pos = (void *)ntuplestore_create_accessor(node->ts_state->matstore, true);
 	}
@@ -1141,11 +1141,9 @@ PG_TRY();
 
 		if (subLinkType == INITPLAN_FUNC_SUBLINK)
 		{
-
 			ntuplestore_acc_put_tupleslot((NTupleStoreAccessor *) node->ts_pos, slot);
 			continue;
 		}
-
 
 		if (subLinkType == EXISTS_SUBLINK || subLinkType == NOT_EXISTS_SUBLINK)
 		{
@@ -1216,7 +1214,10 @@ PG_TRY();
 	/*
 	 * Flush and cleanup the tuplestore writer
 	 *
-	 * Note that the file of tuplestore will no be deleted.
+	 * Note that the file of tuplestore will not be deleted at here.
+	 * This is due to the tuplestore reader is outside initplan, and
+	 * reader will delete the file when it finished.
+	 *
 	 */
 	if (subLinkType == INITPLAN_FUNC_SUBLINK && node->ts_state->matstore)
 	{

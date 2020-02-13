@@ -2130,13 +2130,13 @@ typedef struct FunctionScanState
 	bool		delayEagerFree;		/* is is safe to free memory used by this node,
 									 * when this node has outputted its last row? */
 
-	Param      *param;				/* function scan run as initplan */
+	Param      *param;				/* param passed from initplan of function scan */
 	/* tuplestore info when function scan run as initplan */
-	void       *ts_pos;
-	GenericTupStore *ts_state;
+	void       *ts_pos;				/* accessor to the tuplestore */
+	GenericTupStore *ts_state;		/* tuple store state */
 } FunctionScanState;
 
-extern void function_scan_create_bufname_prefix(char* p, int size);
+extern void function_scan_create_bufname_prefix(char *p, int size);
 
 /* ----------------
  * TableFunctionState information

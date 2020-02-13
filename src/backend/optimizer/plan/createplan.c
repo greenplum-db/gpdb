@@ -271,7 +271,7 @@ static TargetEntry *find_junk_tle(List *targetList, const char *junkAttrName);
 static Motion *cdbpathtoplan_create_motion_plan(PlannerInfo *root,
 								 CdbMotionPath *path,
 								 Plan *subplan);
-static void append_initplan_for_function_scan(PlannerInfo *root, Path *best_path, Plan * plan);
+static void append_initplan_for_function_scan(PlannerInfo *root, Path *best_path, Plan *plan);
 
 /*
  * create_plan
@@ -7588,7 +7588,11 @@ cdbpathtoplan_create_motion_plan(PlannerInfo *root,
  * append_initplan_for_function_scan
  *
  * CDB: gpdb specific function to append an initplan node for function scan.
- * Note that for function including DDLs, they cannot run on QEs
+ *
+ * Note that append initplan for function scan node only takes effect when
+ * the function location is PROEXECLOCATION_INITPLAN and optimizer is off.
+ *
+ * Considering functions which include DDLs, they cannot run on QEs.
  * But for query like 'create table t as select * from f();' QD needs to do
  * the CTAS work and function f() will be run on EntryDB, which is also a QE.
  * To support this kind of query in GPDB, we run the function scan on initplan
@@ -7601,14 +7605,15 @@ append_initplan_for_function_scan(PlannerInfo *root, Path *best_path, Plan *plan
 {
 	FunctionScan *fsplan = (FunctionScan *)plan;
 	char	exec_location;
+	Param	*prm;
 	RangeTblFunction	*rtfunc;
 	FuncExpr	*funcexpr;
-	
+
 	/* ORCA doesn't support this feature */
 	if (optimizer)
 		return;
 
-	/* Currently we limit function number is one */
+	/* Currently we limit function number to one */
 	if (list_length(fsplan->functions) != 1)
 		return;
 
@@ -7630,7 +7635,6 @@ append_initplan_for_function_scan(PlannerInfo *root, Path *best_path, Plan *plan
 	 * Original FunctionScan just read the tuple store
 	 * (indicated by Param) and return the result to upper plan node.
 	 */
-	Param	   *prm;
 	prm = makeNode(Param);
 	prm->paramkind = PARAM_EXEC;
 	prm->paramid = root->glob->nParamExec++;

@@ -1398,13 +1398,13 @@ ntuplestore_create_spill_files(NTupleStore *nts)
 }
 
 /*
- * Specify whether to delete the file when close it explicitly
+ * Specify the BufFiles used by tuplestore are temp files or not
  */
 void
-ntuplestore_delete_file_on_close(NTupleStore *ts, bool isDelete)
+ntuplestore_set_is_temp_file(NTupleStore *ts, bool isTempFile)
 {	
-	BufFileDeleteFileOnClose(ts->pfile, isDelete);
-	BufFileDeleteFileOnClose(ts->plobfile, isDelete);
+	BufFileSetIsTempFile(ts->pfile, isTempFile);
+	BufFileSetIsTempFile(ts->plobfile, isTempFile);
 }
 
 /* EOF */

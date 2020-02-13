@@ -331,15 +331,14 @@ BufFileClose(BufFile *file)
 }
 
 /*
- * BufFileDeleteFileOnClose
+ * BufFileSetIsTempFile
  *
- * Specify whether to delete the file
- * when close it explicitly
+ * Set the file of BufFile is temp file or not
  */
 void 
-BufFileDeleteFileOnClose(BufFile *file, bool isDelete)
+BufFileSetIsTempFile(BufFile *file, bool isTempFile)
 {
-	FileDeleteOnClose(file->file, isDelete);
+	FileSetIsTempFile(file->file, isTempFile);
 }
 
 /*

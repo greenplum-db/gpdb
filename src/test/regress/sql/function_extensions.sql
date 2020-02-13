@@ -233,7 +233,12 @@ END;
 $$ LANGUAGE plpgsql volatile;
 SELECT trigger_unique();
 
--- test CTAS select * from f()
+-- Test CTAS select * from f()
+-- Above query will fail in past in f() contains DDLs.
+-- Since CTAS is write gang and f() could only be run at EntryDB(QE)
+-- But EntryDB and QEs cannot run DDLs which needs to do dispatch.
+-- We introduce new function location 'EXECUTE ON INITPLAN' to run
+-- the function on initplan to overcome the above issue.
 
 set optimizer=off;
 
@@ -262,13 +267,16 @@ AS $$
   end; $$
 LANGUAGE 'plpgsql' EXECUTE ON INITPLAN;
 
-CREATE TEMP TABLE t1 AS SELECT * FROM get_country();
-INSERT INTO t1 SELECT * FROM get_country();
-INSERT INTO t1 SELECT * FROM get_country();
-SELECT count(*) FROM t1;
+DROP TABLE IF EXISTS t1_function_scan;
+EXPLAIN CREATE TABLE t1_function_scan AS SELECT * FROM get_country();
+CREATE TABLE t1_function_scan AS SELECT * FROM get_country();
+INSERT INTO t1_function_scan SELECT * FROM get_country();
+INSERT INTO t1_function_scan SELECT * FROM get_country();
+SELECT count(*) FROM t1_function_scan;
 
-CREATE TABLE ti (id int, val int);
-INSERT INTO ti SELECT k, k+1 FROM generate_series(1,100000) AS k;
+DROP TABLE IF EXISTS t2_function_scan;
+CREATE TABLE t2_function_scan (id int, val int);
+INSERT INTO t2_function_scan SELECT k, k+1 FROM generate_series(1,100000) AS k;
 
 CREATE OR REPLACE FUNCTION get_id()
  RETURNS TABLE (
@@ -278,15 +286,12 @@ CREATE OR REPLACE FUNCTION get_id()
 AS $$
   begin
   RETURN QUERY
-  SELECT * FROM ti;
+  SELECT * FROM t2_function_scan;
   END; $$
 LANGUAGE 'plpgsql' EXECUTE ON INITPLAN;
 
-CREATE TEMP TABLE t2 AS SELECT * FROM get_id();
-SELECT count(*) FROM t2;
-
-DROP FUNCTION get_country();
-DROP FUNCTION get_id();
-DROP TABLE ti;
+DROP TABLE IF EXISTS t3_function_scan;
+CREATE TABLE t3_function_scan AS SELECT * FROM get_id();
+SELECT count(*) FROM t3_function_scan;
 
 reset optimizer;

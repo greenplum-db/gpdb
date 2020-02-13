@@ -3545,13 +3545,12 @@ FileSetIsWorkfile(File file)
 }
 
 /*
- * Specify whether to delete the file
- * when close it explicitly
+ * Set file is temp file or not
  */
 void
-FileDeleteOnClose(File file, bool isDelete)
+FileSetIsTempFile(File file, bool isTempFile)
 {
-	if (isDelete)
+	if (isTempFile)
 		VfdCache[file].fdstate |= FD_TEMPORARY;
 	else
 		VfdCache[file].fdstate &= ~FD_TEMPORARY;

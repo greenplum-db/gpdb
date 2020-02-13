@@ -66,6 +66,6 @@ extern bool ntuplestore_acc_seek_first(NTupleStoreAccessor *tsa);
 extern bool ntuplestore_acc_seek_last(NTupleStoreAccessor *tsa);
 extern void ntuplestore_acc_seek_bof(NTupleStoreAccessor *tsa);
 extern void ntuplestore_acc_seek_eof(NTupleStoreAccessor *tsa);
-extern void ntuplestore_delete_file_on_close(NTupleStore *ts, bool isDelete);
+extern void ntuplestore_set_is_temp_file(NTupleStore *ts, bool isTempFile);
 
 #endif /* TUPSTORE_NEW_H */

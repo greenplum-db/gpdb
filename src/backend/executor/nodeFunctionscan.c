@@ -112,7 +112,7 @@ FunctionNext_guts(FunctionScanState *node)
 			 * the file even if initplan ended. 
 			 * we should let the reader to delete it when reader's job finished.
 			 */
-			ntuplestore_delete_file_on_close(node->ts_state->matstore, true);
+			ntuplestore_set_is_temp_file(node->ts_state->matstore, true);
 			
 			node->ts_pos = (NTupleStoreAccessor *) ntuplestore_create_accessor(node->ts_state->matstore, false);
 			ntuplestore_acc_seek_bof((NTupleStoreAccessor *) node->ts_pos);
