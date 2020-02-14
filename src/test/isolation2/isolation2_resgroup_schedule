@@ -7,10 +7,6 @@ test: resgroup/resgroup_syntax
 test: resgroup/resgroup_transaction
 test: resgroup/resgroup_name_convention
 
-# fault injection tests
-test: resgroup/resgroup_assign_slot_fail
-test: resgroup/resgroup_unassign_entrydb
-
 # functions
 test: resgroup/resgroup_concurrency
 test: resgroup/resgroup_bypass
@@ -22,7 +18,6 @@ test: resgroup/resgroup_memory_runaway
 test: resgroup/resgroup_alter_memory
 test: resgroup/resgroup_cpu_rate_limit
 test: resgroup/resgroup_alter_memory_spill_ratio
-test: resgroup/resgroup_cpuset
 test: resgroup/resgroup_cpuset_empty_default
 test: resgroup/resgroup_set_memory_spill_ratio
 test: resgroup/resgroup_unlimit_memory_spill_ratio

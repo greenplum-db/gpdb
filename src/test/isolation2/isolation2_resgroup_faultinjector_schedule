@@ -1,0 +1,6 @@
+# This schedule file only contains tests that depend on fault injector
+
+test: resgroup/resgroup_assign_slot_fail
+test: resgroup/resgroup_unassign_entrydb
+test: resgroup/resgroup_cpuset
+

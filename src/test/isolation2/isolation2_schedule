@@ -7,17 +7,6 @@ test: dml_on_root_locks_all_parts
 test: select_dropped_table
 test: update_hash_col_utilitymode execute_on_utilitymode
 
-# Tests for crash recovery
-test: uao_crash_compaction_column
-test: uao_crash_compaction_row
-test: crash_recovery
-test: crash_recovery_redundant_dtx
-test: crash_recovery_dtm
-test: unlogged_heap_tables
-test: unlogged_appendonly_tables
-test: udf_exception_blocks_panic_scenarios
-test: ao_same_trans_truncate_crash
-
 # Tests for packcore, will use the coredumps generated in crash_recovery_dtm,
 # so must be scheduled after that one.
 test: packcore
@@ -29,7 +18,6 @@ test: gdd/dist-deadlock-01 gdd/dist-deadlock-04 gdd/dist-deadlock-05 gdd/dist-de
 ignore: gdd/non-lock-107
 # keep this in a separate group
 test: gdd/extended_protocol_test
-test: gdd/avoid-qd-deadlock
 test: gdd/delete-deadlock-root-leaf-concurrent-op
 test: gdd/update-deadlock-root-leaf-concurrent-op
 test: gdd/dml_locks_only_targeted_table_in_query
@@ -42,47 +30,24 @@ test: gdd/end
 
 test: modify_table_data_corrupt
 
-# The following test injects a fault at a generic location
-# (StartTransaction).  The fault can be easily triggered by a
-# concurrent test, so run the test by itself.
-test: deadlock_under_entry_db_singleton
-
 #  this case creates table & index in utility mode, which may cause oid
 #  conflict when running in parallel with other cases.
 test: misc
 
 test: starve_case pg_views_concurrent_drop alter_blocks_for_update_and_viceversa drop_rename reader_waits_for_lock resource_queue
 
-# below test(s) inject faults so each of them need to be in a separate group
-test: pg_terminate_backend
-
-# this case contains fault injection, must be put in a separate test group
-test: terminate_in_gang_creation
-
 # below case will cause failures on catalog changes,
 # please keep it in a separate test group
 test: gpexpand_catalog_lock
 
-test: reindex
-test: reindex_gpfastsequence
-test: commit_transaction_block_checkpoint
 test: instr_in_shmem_setup
 test: instr_in_shmem_terminate
 test: vacuum_recently_dead_tuple_due_to_distributed_snapshot
 test: distributedlog-bug
 test: invalidated_toast_index
-test: distributed_snapshot
-test: gp_collation
 test: ao_upgrade
 
-# below test utilizes fault injectors so it needs to be in a group by itself
-test: external_table
-
-# This test validates that for AO we delay fsync to checkpointer on mirror.
-test: fsync_ao
-
 # Tests on Append-Optimized tables (row-oriented).
-test: concurrent_index_creation_should_not_deadlock
 test: uao/alter_while_vacuum_row uao/alter_while_vacuum2_row
 test: uao/compaction_full_stats_row
 test: uao/compaction_utility_row
@@ -126,10 +91,7 @@ test: uao/vacuum_self_serializable3_row
 test: uao/vacuum_self_function_row
 test: uao/vacuum_while_insert_row
 test: uao/vacuum_while_vacuum_row
-test: uao/vacuum_cleanup_row
 test: reorganize_after_ao_vacuum_skip_drop truncate_after_ao_vacuum_skip_drop mark_all_aoseg_await_drop
-# below test(s) inject faults so each of them need to be in a separate group
-test: segwalrep/master_xlog_switch
 
 # Tests on Append-Optimized tables (column-oriented).
 test: uao/alter_while_vacuum_column uao/alter_while_vacuum2_column
@@ -175,26 +137,11 @@ test: uao/vacuum_self_serializable3_column
 test: uao/vacuum_self_function_column
 test: uao/vacuum_while_insert_column
 test: uao/vacuum_while_vacuum_column
-test: uao/vacuum_cleanup_column
 test: add_column_after_vacuum_skip_drop_column
 test: vacuum_after_vacuum_skip_drop_column
 
-test: segwalrep/die_commit_pending_replication
-
-# Tests for FTS
-test: fts_errors
-test: segwalrep/commit_blocking
-test: segwalrep/fts_unblock_primary
-test: segwalrep/mirror_promotion
-test: segwalrep/cancel_commit_pending_replication
-test: segwalrep/twophase_tolerance_with_mirror_promotion
-test: segwalrep/failover_with_many_records
-test: segwalrep/dtm_recovery_on_standby
-test: segwalrep/commit_blocking_on_standby
-test: segwalrep/dtx_recovery_wait_lsn
 test: pg_basebackup
 test: pg_basebackup_with_tablespaces
-test: fts_manual_probe
 
 # Reindex tests
 test: reindex/abort_reindex
@@ -218,7 +165,6 @@ test: reindex/vacuum_while_reindex_ao_bitmap reindex/vacuum_while_reindex_heap_b
 test: cancel_plpython
 
 # Test concurrent UPDATE
-test: concurrent_update
 test: concurrent_update_distkeys
 test: concurrent_update_epq
 
