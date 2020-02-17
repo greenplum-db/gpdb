@@ -44,6 +44,7 @@ CREATE [READABLE] EXTERNAL [TEMPORARY | TEMP] TABLE table_name
                [NEWLINE [ AS ] 'LF' | 'CR' | 'CRLF']
                [FILL MISSING FIELDS] )]
            | 'CUSTOM' (Formatter=<formatter specifications>)
+     [ OPTIONS ( key 'value' [, ...] ) ]
      [ ENCODING 'encoding' ]
      [ [LOG ERRORS] SEGMENT REJECT LIMIT count
        [ROWS | PERCENT] ]
@@ -72,6 +73,7 @@ CREATE [READABLE] EXTERNAL WEB [TEMPORARY | TEMP] TABLE table_name
                [NEWLINE [ AS ] 'LF' | 'CR' | 'CRLF']
                [FILL MISSING FIELDS] )]
            | 'CUSTOM' (Formatter=<formatter specifications>)
+     [ OPTIONS ( key 'value' [, ...] ) ]
      [ ENCODING 'encoding' ]
      [ [LOG ERRORS] SEGMENT REJECT LIMIT count
        [ROWS | PERCENT] ]
@@ -91,6 +93,7 @@ CREATE WRITABLE EXTERNAL [TEMPORARY | TEMP] TABLE table_name
                [FORCE QUOTE column [, ...]] ]
                [ESCAPE [AS] 'escape'] )]
            | 'CUSTOM' (Formatter=<formatter specifications>)
+    [ OPTIONS ( key 'value' [, ...] ) ]
     [ ENCODING 'write_encoding' ]
     [ DISTRIBUTED BY (column [opclass], [ ... ] ) | DISTRIBUTED RANDOMLY ]
 CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE table_name
@@ -107,6 +110,7 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE table_name
                [FORCE QUOTE column [, ...]] ]
                [ESCAPE [AS] 'escape'] )]
            | 'CUSTOM' (Formatter=<formatter specifications>)
+    [ OPTIONS ( key 'value' [, ...] ) ]
     [ ENCODING 'write_encoding' ]
     [ DISTRIBUTED BY (column [opclass], [ ... ] ) | DISTRIBUTED RANDOMLY ]
 
