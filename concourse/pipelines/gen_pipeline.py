@@ -74,6 +74,9 @@ JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = (
         'test_gpdb_clients_windows',
         'walrep_2',
         'Publish Server Builds',
+        'compile_gpdb_sles12',
+        'icw_gporca_sles12',
+        'icw_planner_sles12',
     ] + RELEASE_VALIDATOR_JOB + JOBS_THAT_ARE_GATES
 )
 
@@ -292,7 +295,7 @@ def main():
         action='store',
         dest='os_types',
         default=['centos6'],
-        choices=['centos6', 'centos7', 'ubuntu18.04', 'win'],
+        choices=['centos6', 'centos7', 'ubuntu18.04', 'sles12', 'win'],
         nargs='+',
         help='List of OS values to support'
     )
@@ -369,7 +372,7 @@ def main():
         args.pipeline_configuration = 'prod'
 
     if args.pipeline_configuration == 'prod' or args.pipeline_configuration == 'full':
-        args.os_types = ['centos6', 'centos7', 'ubuntu18.04', 'win']
+        args.os_types = ['centos6', 'centos7', 'ubuntu18.04', 'sles12', 'win']
         args.test_sections = [
             'ICW',
             'Replication',

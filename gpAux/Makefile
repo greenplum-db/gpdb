@@ -132,8 +132,8 @@ aix7_ppc_64_CONFIGFLAGS=--disable-gpcloud --without-readline --without-libcurl -
 rhel6_x86_64_CONFIGFLAGS=--with-quicklz  --enable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce ${ORCA_CONFIG} --with-libxml $(APU_CONFIG)
 rhel7_x86_64_CONFIGFLAGS=--with-quicklz  --enable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce ${ORCA_CONFIG} --with-libxml $(APU_CONFIG)
 linux_x86_64_CONFIGFLAGS=${ORCA_CONFIG} --with-libxml $(APR_CONFIG)
-ubuntu18.04_x86_64_CONFIGFLAGS=--with-quicklz  --enable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce ${ORCA_CONFIG} --with-libxml $(APU_CONFIG)
-
+ubuntu18.04_x86_64_CONFIGFLAGS=--with-quicklz --with-gssapi --enable-mapreduce --enable-orafce ${ORCA_CONFIG} --with-libxml
+sles12_x86_64_CONFIGFLAGS=--with-quicklz --with-gssapi --enable-mapreduce --enable-orafce ${ORCA_CONFIG} --with-libxml
 BLD_CONFIGFLAGS=$($(BLD_ARCH)_CONFIGFLAGS)
 
 CONFIGFLAGS=$(strip $(BLD_CONFIGFLAGS) --with-pgport=$(DEFPORT) $(BLD_DEPLOYMENT_SETTING))
@@ -165,7 +165,7 @@ CONFIGFLAGS+= --with-includes="$(CONFIG_INCLUDES)" --with-libraries="$(CONFIG_LI
 
 # Configure in "authlibs"...
 # ...without an ext/ dir copy of curl-config on Tiger or AIX
-ifeq "$(findstring $(BLD_ARCH),aix7_ppc_64 rhel6_x86_64 rhel7_x86_64 ubuntu18.04_x86_64)" ""
+ifeq "$(findstring $(BLD_ARCH),aix7_ppc_64 rhel6_x86_64 rhel7_x86_64 ubuntu18.04_x86_64 sles12_x86_64)" ""
 BLD_CURL_CONFIG=CURL_CONFIG=$(BLD_THIRDPARTY_BIN_DIR)/curl-config
 endif
 # ...and do not include the authlibs on Windows or AIX
