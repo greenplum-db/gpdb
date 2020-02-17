@@ -1200,7 +1200,7 @@ doDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 		PQclear(results[i]);
 
 	if (results)
-		free(results);
+		pfree(results);
 
 	return (numOfFailed == 0);
 }
