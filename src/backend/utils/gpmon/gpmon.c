@@ -164,7 +164,7 @@ void gpmon_gettmid(int32* tmid)
 		*tmid = (int32)QEDtxContextInfo.distributedSnapshot.distribTransactionTimeStamp;
 	else
 		/* On QD */
-		*tmid = (int32)getDtmStartTime();
+		*tmid = (int32)getDtxStartTime();
 } 
 
 

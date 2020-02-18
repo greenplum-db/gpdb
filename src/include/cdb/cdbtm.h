@@ -275,7 +275,7 @@ extern volatile int *shmNumCommittedGxacts;
 extern char *DtxStateToString(DtxState state);
 extern char *DtxProtocolCommandToString(DtxProtocolCommand command);
 extern char *DtxContextToString(DtxContext context);
-extern DistributedTransactionTimeStamp getDtmStartTime(void);
+extern DistributedTransactionTimeStamp getDtxStartTime(void);
 extern void dtxCrackOpenGid(const char	*gid,
 							DistributedTransactionTimeStamp	*distribTimeStamp,
 							DistributedTransactionId		*distribXid);

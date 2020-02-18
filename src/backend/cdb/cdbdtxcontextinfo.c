@@ -49,7 +49,7 @@ DtxContextInfo_CreateOnMaster(DtxContextInfo *dtxContextInfo, bool inCursor,
 	dtxContextInfo->distributedXid = getDistributedTransactionId();
 	if (dtxContextInfo->distributedXid != InvalidDistributedTransactionId)
 	{
-		dtxContextInfo->distributedTimeStamp = getDtmStartTime();
+		dtxContextInfo->distributedTimeStamp = getDtxStartTime();
 
 		getDistributedTransactionIdentifier(dtxContextInfo->distributedId);
 		dtxContextInfo->curcid = curcid;

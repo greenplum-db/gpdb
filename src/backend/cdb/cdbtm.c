@@ -166,7 +166,7 @@ isDtxContext(void)
  */
 
 DistributedTransactionTimeStamp
-getDtmStartTime(void)
+getDtxStartTime(void)
 {
 	if (shmDistribTimeStamp != NULL)
 		return *shmDistribTimeStamp;
@@ -265,7 +265,7 @@ currentDtxActivate(void)
 				(errmsg("reached the limit of %u global transactions per start",
 						LastDistributedTransactionId)));
 
-	MyTmGxact->distribTimeStamp = getDtmStartTime();
+	MyTmGxact->distribTimeStamp = getDtxStartTime();
 	MyTmGxact->sessionId = gp_session_id;
 	setCurrentDtxState(DTX_STATE_ACTIVE_DISTRIBUTED);
 }
