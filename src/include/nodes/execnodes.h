@@ -2130,8 +2130,8 @@ typedef struct FunctionScanState
 	bool		delayEagerFree;		/* is is safe to free memory used by this node,
 									 * when this node has outputted its last row? */
 
-	Param      *param;				/* param passed from initplan of function scan */
 	/* tuplestore info when function scan run as initplan */
+	bool		resultInTupleStore; /* function result stored in tuplestore */
 	void       *ts_pos;				/* accessor to the tuplestore */
 	GenericTupStore *ts_state;		/* tuple store state */
 } FunctionScanState;

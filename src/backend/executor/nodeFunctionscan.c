@@ -91,7 +91,7 @@ FunctionNext_guts(FunctionScanState *node)
 	 * of executing the real function.
 	 * Tuplestore is filled by the FunctionScan's initplan.
 	 */
-	if(node->param && Gp_role != GP_ROLE_DISPATCH)
+	if(node->resultInTupleStore && Gp_role != GP_ROLE_DISPATCH)
 	{
 		bool gotOK = false;
 		bool forward = true;
@@ -413,7 +413,7 @@ ExecInitFunctionScan(FunctionScan *node, EState *estate, int eflags)
 	scanstate->ss.ps.plan = (Plan *) node;
 	scanstate->ss.ps.state = estate;
 	scanstate->eflags = eflags;
-	scanstate->param = node->param;
+	scanstate->resultInTupleStore = node->resultInTupleStore;
 	scanstate->ts_state = palloc0(sizeof(GenericTupStore));
 	scanstate->ts_pos = NULL;
 	/*

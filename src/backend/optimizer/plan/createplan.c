@@ -5711,6 +5711,7 @@ make_functionscan(List *qptlist,
 	node->scan.scanrelid = scanrelid;
 	node->functions = functions;
 	node->funcordinality = funcordinality;
+	node->resultInTupleStore = false;
 
 	return node;
 }
@@ -7609,10 +7610,6 @@ append_initplan_for_function_scan(PlannerInfo *root, Path *best_path, Plan *plan
 	RangeTblFunction	*rtfunc;
 	FuncExpr	*funcexpr;
 
-	/* ORCA doesn't support this feature */
-	if (optimizer)
-		return;
-
 	/* Currently we limit function number to one */
 	if (list_length(fsplan->functions) != 1)
 		return;
@@ -7633,16 +7630,20 @@ append_initplan_for_function_scan(PlannerInfo *root, Path *best_path, Plan *plan
 	 * Initplan is responsible to run the real function
 	 * and store the result into tuplestore.
 	 * Original FunctionScan just read the tuple store
-	 * (indicated by Param) and return the result to upper plan node.
+	 * (indicated by resultInTupleStore) and return the
+	 * result to upper plan node.
+	 *
+	 * the following param of initplan is a dummy param.
+	 * this param is not used by the main plan, since when
+	 * function scan is running in initplan, it stores the
+	 * result rows in tuplestore instead of a scalar param
 	 */
 	prm = makeNode(Param);
 	prm->paramkind = PARAM_EXEC;
 	prm->paramid = root->glob->nParamExec++;
-	prm->paramtype = 0;
-	prm->paramtypmod = 0;
-	prm->paramcollid = 0;
-	prm->location = -1;
+	
 	fsplan->param = prm;
+	fsplan->resultInTupleStore = true;
 
 	/*
 	 * We are going to construct what is effectively a sub-SELECT query, so
@@ -7672,6 +7673,7 @@ append_initplan_for_function_scan(PlannerInfo *root, Path *best_path, Plan *plan
 
 	/* create initplan for this FunctionScan plan */
 	FunctionScan* initplan =(FunctionScan*) copyObject(plan);
+	
 	SS_make_initplan_from_plan(root, subroot, (Plan *)initplan, root->curSlice, prm, true);
 	SS_attach_initplans(root, plan);
 	root->init_plans = NIL;
