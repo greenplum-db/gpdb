@@ -433,7 +433,7 @@ AS $$
   c.country_id,
   c.country
   FROM
-  public.country c;
+  public.country c order by country_id;
   end; $$
 LANGUAGE 'plpgsql' EXECUTE ON INITPLAN;
 DROP TABLE IF EXISTS t1_function_scan;
@@ -467,6 +467,18 @@ SELECT count(*) FROM t1_function_scan;
  count 
 -------
      9
+(1 row)
+
+-- also test with limit clause
+CREATE TABLE t1_function_scan_limit AS SELECT * FROM get_country() limit 2;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'country_id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'country_id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT count(*) FROM t1_function_scan_limit;
+ count 
+-------
+     2
 (1 row)
 
 DROP TABLE IF EXISTS t2_function_scan;

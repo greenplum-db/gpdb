@@ -123,8 +123,6 @@ FunctionNext_guts(FunctionScanState *node)
 
 		if(!gotOK)
 		{
-			ntuplestore_destroy_accessor((NTupleStoreAccessor *) node->ts_pos);
-			ntuplestore_destroy(node->ts_state->matstore);
 			return NULL;
 		}
 		return scanslot;
@@ -711,6 +709,15 @@ ExecEndFunctionScan(FunctionScanState *node)
 	ExecClearTuple(node->ss.ss_ScanTupleSlot);
 
 	ExecEagerFreeFunctionScan(node);
+
+	/*
+	 * destroy tuplestore reader if exists
+	 */
+	if (node->ts_state->matstore != NULL)
+	{
+		ntuplestore_destroy_accessor((NTupleStoreAccessor *) node->ts_pos);
+		ntuplestore_destroy(node->ts_state->matstore);
+	}
 }
 
 /* ----------------------------------------------------------------

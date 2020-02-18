@@ -263,7 +263,7 @@ AS $$
   c.country_id,
   c.country
   FROM
-  public.country c;
+  public.country c order by country_id;
   end; $$
 LANGUAGE 'plpgsql' EXECUTE ON INITPLAN;
 
@@ -273,6 +273,10 @@ CREATE TABLE t1_function_scan AS SELECT * FROM get_country();
 INSERT INTO t1_function_scan SELECT * FROM get_country();
 INSERT INTO t1_function_scan SELECT * FROM get_country();
 SELECT count(*) FROM t1_function_scan;
+
+-- also test with limit clause
+CREATE TABLE t1_function_scan_limit AS SELECT * FROM get_country() limit 2;
+SELECT count(*) FROM t1_function_scan_limit;
 
 DROP TABLE IF EXISTS t2_function_scan;
 CREATE TABLE t2_function_scan (id int, val int);
