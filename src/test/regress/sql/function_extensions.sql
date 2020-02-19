@@ -240,8 +240,6 @@ SELECT trigger_unique();
 -- We introduce new function location 'EXECUTE ON INITPLAN' to run
 -- the function on initplan to overcome the above issue.
 
-set optimizer=off;
-
 CREATE OR REPLACE FUNCTION get_country()
  RETURNS TABLE (
   country_id integer,
@@ -298,4 +296,3 @@ DROP TABLE IF EXISTS t3_function_scan;
 CREATE TABLE t3_function_scan AS SELECT * FROM get_id();
 SELECT count(*) FROM t3_function_scan;
 
-reset optimizer;
