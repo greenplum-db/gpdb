@@ -435,6 +435,27 @@ AS $$
   public.country c order by country_id;
   end; $$
 LANGUAGE 'plpgsql' EXECUTE ON INITPLAN;
+SELECT * FROM get_country();
+NOTICE:  table "country" does not exist, skipping
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'country_id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+ country_id | country 
+------------+---------
+        111 | INDIA
+        222 | CANADA
+        333 | USA
+(3 rows)
+
+SELECT get_country();
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'country_id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+ get_country  
+--------------
+ (111,INDIA)
+ (222,CANADA)
+ (333,USA)
+(3 rows)
+
 DROP TABLE IF EXISTS t1_function_scan;
 NOTICE:  table "t1_function_scan" does not exist, skipping
 EXPLAIN CREATE TABLE t1_function_scan AS SELECT * FROM get_country();
@@ -468,7 +489,9 @@ SELECT count(*) FROM t1_function_scan;
      9
 (1 row)
 
--- also test with limit clause
+-- test with limit clause
+DROP TABLE IF EXISTS t1_function_scan_limit;
+NOTICE:  table "t1_function_scan_limit" does not exist, skipping
 CREATE TABLE t1_function_scan_limit AS SELECT * FROM get_country() limit 2;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'country_id' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
@@ -478,6 +501,48 @@ SELECT count(*) FROM t1_function_scan_limit;
  count 
 -------
      2
+(1 row)
+
+-- test with order by clause
+DROP TABLE IF EXISTS t1_function_scan_order_by;
+NOTICE:  table "t1_function_scan_order_by" does not exist, skipping
+CREATE TABLE t1_function_scan_order_by AS SELECT * FROM get_country() f1 ORDER BY f1.country_id DESC limit 1;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'country_id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'country_id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT * FROM t1_function_scan_order_by;
+ country_id | country 
+------------+---------
+        333 | USA
+(1 row)
+
+-- test with group by clause
+DROP TABLE IF EXISTS t1_function_scan_group_by;
+NOTICE:  table "t1_function_scan_group_by" does not exist, skipping
+CREATE TABLE t1_function_scan_group_by AS SELECT f1.country_id, count(*) FROM get_country() f1 GROUP BY f1.country_id;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'country_id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'country_id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT count(*) FROM t1_function_scan_group_by;
+ count 
+-------
+     3
+(1 row)
+
+-- test join table
+DROP TABLE IF EXISTS t1_function_scan_join;
+NOTICE:  table "t1_function_scan_join" does not exist, skipping
+CREATE TABLE t1_function_scan_join AS SELECT f1.country_id, f1.country FROM get_country() f1, t1_function_scan_limit;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'country_id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'country_id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT count(*) FROM t1_function_scan_join;
+ count 
+-------
+     6
 (1 row)
 
 DROP TABLE IF EXISTS t2_function_scan;
