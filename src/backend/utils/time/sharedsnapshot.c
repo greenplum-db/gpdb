@@ -71,10 +71,10 @@
  * a single user session. Within a single segment database this essentially
  * defines what it means to be "segmates."  The shared snapshot slot is
  * identified by this unique session id. The unique session id is sent in from
- * the QD as a GUC called "mpp_session_id". So the slot's field "slotid" will
- * store the "mpp_session_id" that WRITER to the slot will use. Readers of the
+ * the QD as a GUC called "gp_session_id". So the slot's field "slotid" will
+ * store the "gp_session_id" that WRITER to the slot will use. Readers of the
  * slot will find the correct slot by finding the one that has the slotid
- * equal to their own mpp_session_id.
+ * equal to their own gp_session_id.
  *
  * Single Writer: Mechanism is simplified by introducing the restriction of
  * only having a single qExec in a set of segmates capable of writing. Single
@@ -93,7 +93,7 @@
  * general, we cannot assume that the writer will get to setting it before the
  * reader needs it and so we need to build a mechanism for the reader to (1)
  * know that its reading the right snapshot and (2) know when it can read.
- * The Mpp_session_id stored in the SharedSnapshotSlot is the piece of
+ * The gp_session_id stored in the SharedSnapshotSlot is the piece of
  * information that lets the reader know it has got the right slot. And it
  * knows can read it when the xid and cid in the slot match the transactionid
  * and curid sent in from the QD in the SnapshotInfo field.  Basically QE
@@ -173,7 +173,6 @@
 DtxContext DistributedTransactionContext = DTX_CONTEXT_LOCAL_ONLY;
 
 DtxContextInfo QEDtxContextInfo = DtxContextInfo_StaticInit;
-
 /* MPP Shared Snapshot. */
 typedef struct SharedSnapshotStruct
 {
@@ -192,6 +191,13 @@ typedef struct SharedSnapshotStruct
 
 	TransactionId	   *xips;		/* VARIABLE LENGTH ARRAY */
 } SharedSnapshotStruct;
+
+typedef struct dsm_handle_kv
+{
+	uint32 key;
+	dsm_segment *segment;
+	dsm_handle handle;
+} dsm_handle_kv;
 
 static volatile SharedSnapshotStruct *sharedSnapshotArray;
 
@@ -265,6 +271,7 @@ CreateSharedSnapshotArray(void)
 		 * We're the first - initialize.
 		 */
 		LWLockPadded *lock_base;
+		HASHCTL	hash_ctl;
 
 		sharedSnapshotArray->numSlots = 0;
 
@@ -293,6 +300,15 @@ CreateSharedSnapshotArray(void)
 		/* xips start just after the last slot structure */
 		xip_base = (TransactionId *)&sharedSnapshotArray->slots[sharedSnapshotArray->maxSlots];
 
+		/*
+		 * Initialize cursor_dump_hash to store snapshot for cursor.
+		 */
+		MemSet(&hash_ctl, 0, sizeof(hash_ctl));
+		hash_ctl.keysize = sizeof(uint32);
+		hash_ctl.entrysize = sizeof(dsm_handle_kv);
+		hash_ctl.hash = uint32_hash;
+		char hashtablename[256];
+
 		lock_base = GetNamedLWLockTranche("SharedSnapshotLocks");
 		for (i=0; i < sharedSnapshotArray->maxSlots; i++)
 		{
@@ -310,6 +326,25 @@ CreateSharedSnapshotArray(void)
 			 */
 			tmpSlot->snapshot.xip = &xip_base[0];
 			xip_base += xipEntryCount;
+
+			snprintf(hashtablename, sizeof(hashtablename), "cursor dump hashtable:%d",i);
+
+			/* So far, we do not have dynamic shared hashtable, after 12 merge, this can be
+			 * replaced. If hashtable is packed, sharedsnapshot message will regress to
+			 * dump by BufFile.
+			 */
+			tmpSlot->cursor_dump_hash = ShmemInitHash(hashtablename,
+			                                          max_prepared_xacts,
+			                                          max_prepared_xacts,
+			                                          &hash_ctl,
+			                                          HASH_ELEM | HASH_FUNCTION);
+
+			if (tmpSlot->cursor_dump_hash == NULL) {
+				ereport(ERROR,
+				        (errcode(ERRCODE_OUT_OF_MEMORY),
+					        (errmsg("not enough shared memory for shared snapshot"))));
+			}
+
 		}
 	}
 
@@ -649,10 +684,12 @@ sharedLocalSnapshot_filename(TransactionId xid, uint32 segmateSync)
 }
 
 /*
- * Dump the shared local snapshot, so that the readers can pick it up.
+ * dump_forCursor_byBufFile
+ *
+ * Dump current SharedSnapshotSlot information into template file
  */
-void
-dumpSharedLocalSnapshot_forCursor(void)
+static void
+dump_by_BufFile()
 {
 	SharedSnapshotSlot *src = NULL;
 	char* fname = NULL;
@@ -661,8 +698,7 @@ dumpSharedLocalSnapshot_forCursor(void)
 	ResourceOwner oldowner;
 	MemoryContext oldcontext;
 
-	Assert(Gp_role == GP_ROLE_DISPATCH || (Gp_role == GP_ROLE_EXECUTE && Gp_is_writer));
-	Assert(SharedLocalSnapshotSlot != NULL);
+	elog(DEBUG1, "dump shared snapshot by BufFile");
 
 	LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_SHARED);
 
@@ -744,8 +780,106 @@ dumpSharedLocalSnapshot_forCursor(void)
 	elog(ERROR, "Failed to write shared snapshot to temp-file");
 }
 
+/*
+ * dump_forCursor_byDSM
+ *
+ * Dump current SharedSnapshotSlot information into DSM
+ */
+static bool
+dump_by_DSM()
+{
+	bool foundPtr;
+	bool ret = false;
+	int count = 0;
+	SharedSnapshotSlot *src = NULL;
+	ResourceOwner oldowner;
+	MemoryContext oldcontext;
+	dsm_handle_kv *kv;
+
+	LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_SHARED);
+	Assert(SharedLocalSnapshotSlot->cursor_dump_hash != NULL);
+
+	do
+	{
+		src = (SharedSnapshotSlot *)SharedLocalSnapshotSlot;
+
+
+		oldowner = CurrentResourceOwner;
+		CurrentResourceOwner = TopTransactionResourceOwner;
+		oldcontext = MemoryContextSwitchTo(TopTransactionContext);
+
+		uint32 key = src->segmateSync;
+		kv = (dsm_handle_kv *) hash_search(SharedLocalSnapshotSlot->cursor_dump_hash,
+		                                   &key,
+		                                   HASH_ENTER_NULL,
+		                                   &foundPtr);
+
+		if (kv == NULL)
+			break;
+
+#define DSM_DUMP(p, field) \
+	memcpy(p, &field, sizeof(field)); \
+	p += sizeof(field);
+
+		/* count dsm memory size */
+		count += sizeof(src->xid);
+		count += sizeof(src->startTimestamp);
+		count += sizeof(src->combocidcnt);
+		count += sizeof(src->combocids);
+		count += sizeof(src->snapshot.xmin);
+		count += sizeof(src->snapshot.xmax);
+		count += sizeof(src->snapshot.xcnt);
+		count += src->snapshot.xcnt * sizeof(TransactionId);
+		count += sizeof(src->snapshot.curcid);
+
+		dsm_segment *segment;
+		segment = dsm_create(count, DSM_CREATE_NULL_IF_MAXSEGMENTS);
+
+		if (segment != NULL)
+		{
+			/* dump all info into dsm */
+			unsigned char *p = dsm_segment_address(segment);
+			DSM_DUMP(p, src->xid);
+			DSM_DUMP(p, src->startTimestamp);
+			DSM_DUMP(p, src->combocidcnt);
+			DSM_DUMP(p, src->combocids);
+			DSM_DUMP(p, src->snapshot.xmin);
+			DSM_DUMP(p, src->snapshot.xmax);
+			DSM_DUMP(p, src->snapshot.xcnt);
+
+			memcpy(p, &src->snapshot.xip, src->snapshot.xcnt * sizeof(TransactionId));
+			p += src->snapshot.xcnt * sizeof(TransactionId);
+
+			DSM_DUMP(p, src->snapshot.curcid);
+
+			kv->segment = segment;
+			kv->handle = dsm_segment_handle(segment);
+			ret = TRUE;
+		}
+	} while(0);
+
+	MemoryContextSwitchTo(oldcontext);
+	CurrentResourceOwner = oldowner;
+	LWLockRelease(SharedLocalSnapshotSlot->slotLock);
+	return ret;
+}
+
+/*
+ * Dump the shared local snapshot, so that the readers can pick it up.
+ */
 void
-readSharedLocalSnapshot_forCursor(Snapshot snapshot, DtxContext distributedTransactionContext)
+dumpSharedLocalSnapshot_forCursor(void)
+{
+	Assert(Gp_role == GP_ROLE_DISPATCH || (Gp_role == GP_ROLE_EXECUTE && Gp_is_writer));
+	Assert(SharedLocalSnapshotSlot != NULL);
+
+	/* if DSM dose not have enough space, create a template file to dump */
+	if(!dump_by_DSM())
+		dump_by_BufFile();
+}
+
+static void
+read_by_BufFile(Snapshot snapshot, DtxContext distributedTransactionContext)
 {
 	BufFile *f;
 	char *fname=NULL;
@@ -844,6 +978,118 @@ readSharedLocalSnapshot_forCursor(Snapshot snapshot, DtxContext distributedTrans
 	return;
 }
 
+static bool
+read_by_DSM(Snapshot snapshot, DtxContext distributedTransactionContext)
+{
+	uint8 *p = NULL;
+	dsm_handle_kv *kv = NULL;
+
+	TransactionId localXid;
+	TimestampTz localXactStartTimestamp;
+
+	uint32 combocidcnt;
+	ComboCidKeyData tmp_combocids[MaxComboCids];
+
+	kv = (dsm_handle_kv *) hash_search(SharedLocalSnapshotSlot->cursor_dump_hash,
+	                                   &QEDtxContextInfo.segmateSync,
+	                                   HASH_FIND,
+	                                   NULL);
+
+	if (kv == NULL)
+	{
+		int pid;
+		if (Gp_is_writer)
+		{
+			pid = MyProc->pid;
+		}
+		else
+		{
+			if (lockHolderProcPtr == NULL)
+			{
+				/* get lockholder! */
+				elog(ERROR, "NO LOCK HOLDER POINTER.");
+			}
+			pid = lockHolderProcPtr->pid;
+		}
+
+		elog(DEBUG1,"can not find sess: %u, pid: %u,"
+		            " xid: %u sync: %u sharedsnapshot hash entry",
+		     gp_session_id,
+		     pid,
+		     QEDtxContextInfo.distributedXid,
+		     QEDtxContextInfo.segmateSync);
+		return FALSE;
+	}
+
+	dsm_segment* segment = dsm_attach(kv->handle);
+	p = dsm_segment_address(segment);
+
+	memcpy(&localXid, p, sizeof(localXid));
+	p += sizeof(localXid);
+
+	memcpy(&localXactStartTimestamp, p, sizeof(localXactStartTimestamp));
+	p += sizeof(localXactStartTimestamp);
+
+	memcpy(&combocidcnt, p, sizeof(combocidcnt));
+	p += sizeof(combocidcnt);
+
+	memcpy(tmp_combocids, p, sizeof(tmp_combocids));
+	p += sizeof(tmp_combocids);
+
+	/* handle the combocid stuff (same as in GetSnapshotData()) */
+	if (usedComboCids != combocidcnt)
+	{
+		if (usedComboCids == 0)
+		{
+			MemoryContext oldCtx =  MemoryContextSwitchTo(TopTransactionContext);
+			comboCids = palloc(combocidcnt * sizeof(ComboCidKeyData));
+			MemoryContextSwitchTo(oldCtx);
+		}
+		else
+			repalloc(comboCids, combocidcnt * sizeof(ComboCidKeyData));
+	}
+	memcpy(comboCids, tmp_combocids, combocidcnt * sizeof(ComboCidKeyData));
+	usedComboCids = ((combocidcnt < MaxComboCids) ? combocidcnt : MaxComboCids);
+
+	memcpy(&snapshot->xmin, p, sizeof(snapshot->xmin));
+	p += sizeof(snapshot->xmin);
+
+	memcpy(&snapshot->xmax, p, sizeof(snapshot->xmax));
+	p += sizeof(snapshot->xmax);
+
+	memcpy(&snapshot->xcnt, p, sizeof(snapshot->xcnt));
+	p += sizeof(snapshot->xcnt);
+
+	memcpy(snapshot->xip, p, snapshot->xcnt * sizeof(TransactionId));
+	p += snapshot->xcnt * sizeof(TransactionId);
+
+	/* zero out the slack in the xip-array */
+	MemSet(snapshot->xip + snapshot->xcnt, 0, (xipEntryCount - snapshot->xcnt)*sizeof(TransactionId));
+
+	memcpy(&snapshot->curcid, p, sizeof(snapshot->curcid));
+
+	dsm_detach(segment);
+
+	SetSharedTransactionId_reader(
+		localXid,
+		snapshot->curcid,
+		distributedTransactionContext);
+
+	return TRUE;
+}
+
+void
+readSharedLocalSnapshot_forCursor(Snapshot snapshot, DtxContext distributedTransactionContext)
+{
+	Assert(Gp_role == GP_ROLE_EXECUTE);
+	Assert(!Gp_is_writer);
+	Assert(SharedLocalSnapshotSlot != NULL);
+	Assert(snapshot->xip != NULL);
+
+	if((!read_by_DSM(snapshot, distributedTransactionContext)))
+		read_by_BufFile(snapshot, distributedTransactionContext);
+}
+
 /*
  * Free any shared snapshot files.
  */
@@ -861,6 +1107,25 @@ AtEOXact_SharedSnapshot(void)
 		BufFileClose((BufFile * ) lfirst(lc));
 	}
 	list_free(oldlist);
+
+	if (SharedLocalSnapshotSlot != NULL
+	   && (Gp_role == GP_ROLE_DISPATCH
+		  || (Gp_role == GP_ROLE_EXECUTE && Gp_is_writer)))
+	{
+		HASH_SEQ_STATUS status;
+		dsm_handle_kv *kv;
+		SharedSnapshotSlot *slot = (SharedSnapshotSlot *)SharedLocalSnapshotSlot;
+
+		hash_seq_init(&status, slot->cursor_dump_hash);
+		while ((kv = (dsm_handle_kv *) hash_seq_search(&status)) != NULL)
+		{
+			dsm_detach(kv->segment);
+			hash_search(slot->cursor_dump_hash,
+			            &kv->key,
+			            HASH_REMOVE,
+			            NULL);
+		}
+	}
 }
 
 /*

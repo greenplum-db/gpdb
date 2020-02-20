@@ -16,6 +16,7 @@
 #include "storage/proc.h"
 #include "utils/combocid.h"
 #include "utils/tqual.h"
+#include "storage/dsm.h"
 
 /* MPP Shared Snapshot */
 typedef struct SharedSnapshotSlot
@@ -29,6 +30,7 @@ typedef struct SharedSnapshotSlot
 	volatile uint32			segmateSync;
 	SnapshotData	snapshot;
 	LWLock		   *slotLock;
+	HTAB           *cursor_dump_hash;
 
 	/* for debugging only */
 	TransactionId	xid;
