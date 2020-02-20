@@ -3248,6 +3248,7 @@ _outAlterTableCmd(StringInfo str, const AlterTableCmd *node)
 	WRITE_BOOL_FIELD(part_expanded);
 	WRITE_NODE_FIELD(partoids);
 	WRITE_BOOL_FIELD(missing_ok);
+	WRITE_BOOL_FIELD(aoco_alter_type_norewrite);
 }
 
 static void

@@ -1690,6 +1690,9 @@ typedef struct AlterTableCmd	/* one subcommand of an ALTER TABLE */
 	bool		part_expanded;	/* expands from another command, for partitioning */
 	List	   *partoids;		/* If applicable, OIDs of partition part tables */
 	bool		missing_ok;		/* skip error if missing? */
+
+	bool		aoco_alter_type_norewrite;		/* GPDB: do not re-write aoco table if possible */
+
 	/* addition info for partition table */
 	Bitmapset	*ps_none;
 	Bitmapset	*ps_root;

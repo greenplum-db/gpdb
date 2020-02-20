@@ -3535,6 +3535,7 @@ _copyAlterTableCmd(const AlterTableCmd *from)
 	/* Need to copy AT workspace since process uses copy internally. */
 	COPY_NODE_FIELD(partoids);
 	COPY_SCALAR_FIELD(missing_ok);
+	COPY_SCALAR_FIELD(aoco_alter_type_norewrite);
 
 	return newnode;
 }

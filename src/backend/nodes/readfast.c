@@ -607,6 +607,7 @@ _readAlterTableCmd(void)
 	READ_BOOL_FIELD(part_expanded);
 	READ_NODE_FIELD(partoids);
 	READ_BOOL_FIELD(missing_ok);
+	READ_BOOL_FIELD(aoco_alter_type_norewrite);
 
 	READ_DONE();
 }

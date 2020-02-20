@@ -360,6 +360,7 @@ static void ATRewriteTable(AlteredTableInfo *tab, Oid OIDNewHeap, LOCKMODE lockm
 static void ATAocsWriteNewColumns(
 		AOCSAddColumnDesc idesc, AOCSHeaderScanDesc sdesc,
 		AlteredTableInfo *tab, ExprContext *econtext, TupleTableSlot *slot);
+static void ATAocsACNoRewrite(AlteredTableInfo *tab);
 static bool ATAocsNoRewrite(AlteredTableInfo *tab);
 static AlteredTableInfo *ATGetQueueEntry(List **wqueue, Relation rel);
 static void ATSimplePermissions(Relation rel, int allowed_targets);
@@ -3974,6 +3975,94 @@ AlterTableGetLockLevel(List *cmds)
 }
 
 /*
+ * This is the wax off phase of the aoco alter table alter type optimization.
+ *
+ * IF command preparation was successfull, then decide if we should procceed
+ * with optimization. If we should proceed, then remove the AlterType command
+ * from the list. Otherwise, remove the Drop and Add commands.
+ * The reason for needing this, is that once we have committed in succeeding,
+ * then we can not afford to fail after the drop command has been executed.
+ */
+static void
+aoco_optimize_alter_type_cmd(Relation rel, List *wqueue, List *cmds, bool is_partition)
+{
+	AlteredTableInfo *tab;
+	bool shall_we;
+	ListCell *lcmd;
+
+	if (!RelationIsAoCols(rel))
+		return;
+
+	tab = (AlteredTableInfo *) linitial(wqueue);
+	Assert(tab->relid == RelationGetRelid(rel));
+
+	/*
+	 * If we do not have to rewrite the column AND
+	 * we are not part of a partition (either root or child (via wqueue))
+	 * AND not part of the distribution key,
+	 * THEN we can possibly optimize.
+	 */
+	shall_we = !!((tab->rewrite & AT_REWRITE_COLUMN_REWRITE) &&
+							!is_partition && (list_length(wqueue) == 1) &&
+							(!tab->dist_opfamily_changed && !tab->new_opclass));
+
+	/* further all cmds should have aoco_alter_type_norewrite set */
+	foreach(lcmd, cmds)
+	{
+		AlterTableCmd *cmd = (AlterTableCmd *) lfirst(lcmd);
+		shall_we = !!(shall_we && cmd->aoco_alter_type_norewrite);
+		if (!shall_we)
+			break;
+	}
+
+	if (shall_we)
+	{
+		/* We shall optimize, remove the alter type pass */
+		Assert(tab->subcmds[AT_PASS_ALTER_TYPE]);
+		tab->subcmds[AT_PASS_ALTER_TYPE] = NIL; /* Happy leak */
+	}
+	else
+	{
+		ListCell *prev;
+
+restart:
+		/* We shall NOT optimize, wax off the added commands */
+		prev = NULL;
+		foreach(lcmd, cmds)
+		{
+			AlterTableCmd *cmd = (AlterTableCmd *) lfirst(lcmd);
+			if (cmd->aoco_alter_type_norewrite)
+			{
+				switch (cmd->subtype)
+				{
+					case AT_DropColumn:
+						/* intentional fallthrough */
+					case AT_DropColumnRecurse:
+						tab->subcmds[AT_PASS_DROP] = NIL;
+						cmds = list_delete_cell(cmds, lcmd, prev);
+						goto restart;
+						break;
+					case AT_AddColumn:
+						/* intentional fallthrough */
+					case AT_AddColumnRecurse:
+						tab->subcmds[AT_PASS_ADD_COL] = NIL;
+						cmds = list_delete_cell(cmds, lcmd, prev);
+						goto restart;
+						break;
+					case AT_AlterColumnType:
+						cmd->aoco_alter_type_norewrite = false;
+						break;
+					default:
+						/* Should not be reached */
+						elog(ERROR, "aoco internal error");
+				}
+			}
+			prev = lcmd;
+		}
+	}
+}
+
+/*
  * ATController provides top level control over the phases.
  *
  * parsetree is passed in to allow it to be passed to event triggers
@@ -4012,6 +4101,8 @@ ATController(AlterTableStmt *parsetree,
 
 		ATPrepCmd(&wqueue, rel, cmd, recurse, false, lockmode);
 	}
+
+	aoco_optimize_alter_type_cmd(rel, wqueue, cmds, is_partition);
 
 	if (is_partition)
 		relation_close(rel, AccessExclusiveLock);
@@ -5775,6 +5866,20 @@ ATRewriteTables(AlterTableStmt *parsetree, List **wqueue, LOCKMODE lockmode)
 				if (i != AT_PASS_ADD_COL && tab->subcmds[i])
 					canOptimize = false;
 			}
+
+			/*
+			 * If we can not Optimize for the classic method, check
+			 * if we are part of the aoco alter type optimization
+			 */
+			if (!canOptimize && tab->subcmds[AT_PASS_ADD_COL])
+			{
+				AlterTableCmd *addColumCmd = linitial(tab->subcmds[AT_PASS_ADD_COL]);
+				if (addColumCmd->aoco_alter_type_norewrite)
+				{
+					ATAocsACNoRewrite(tab);
+					continue;
+				}
+			}
 			if (canOptimize && ATAocsNoRewrite(tab))
 				continue;
 		}
@@ -6112,6 +6217,107 @@ column_to_scan(AOCSFileSegInfo **segInfos, int nseg, int natts, Relation aocsrel
 		AOCSDrop(aocsrel, drop_segno_list);
 
 	return scancol;
+}
+
+/*
+ * This is the crux of the alter table alter type optimiziation.
+ * The alter type command has been re-writen as drop column add column.
+ * This is the add column part. The main difference from the default case is
+ * that we will need to read the data from the already dropped column, which are
+ * still visible in the current snapshot.
+ *
+ * This operation can not fallback to the 'non' optimized case, since the column
+ * is already dropped. Most of the code is shared with ATAocsNoRewrite.
+ */
+static void
+ATAocsACNoRewrite(AlteredTableInfo *tab)
+{
+	AOCSFileSegInfo **segInfos;
+	EState			 *estate;
+	List			 *addColCmds;
+	NewColumnValue	 *newval;
+	const char		 *basepath;
+	AOCSAddColumnDesc idesc;
+	Relation		  rel;
+	Snapshot		  snapshot;
+	int32			  nseg;
+
+	addColCmds = tab->subcmds[AT_PASS_ADD_COL];
+	Assert(addColCmds);
+
+	snapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
+	estate = CreateExecutorState();
+
+	/* The first expression is the preprocessed alter column change type */
+	newval = linitial(tab->newvals);
+	newval->exprstate = ExecPrepareExpr((Expr *)newval->expr, estate);
+
+	rel = heap_open(tab->relid, NoLock);
+	basepath = relpathbackend(rel->rd_node, rel->rd_backend, MAIN_FORKNUM);
+	segInfos = GetAllAOCSFileSegInfo(rel, snapshot, &nseg);
+	if (nseg > 0)
+		aocs_addcol_emptyvpe(rel, segInfos, nseg, 1);
+
+	if (Gp_role != GP_ROLE_DISPATCH && nseg > 0)
+	{
+		RelFileNodeBackend rnode;
+		TupleTableSlot	  *oldslot;
+		bool			  *proj;
+
+		/* We want the old Description tuple, i.e. before the drop */
+		proj = palloc0(tab->oldDesc->natts * sizeof(*proj));
+		proj[newval->attnum -1] = true;
+
+		/*
+		 * Create new segfiles for new columns for current
+		 * appendonly segment.
+		 */
+		rnode.node = rel->rd_node;
+		rnode.backend = rel->rd_backend;
+		idesc = aocs_addcol_init(rel, 1);
+
+		for (int segindex = 0; segindex < nseg; segindex++)
+		{
+			ExprContext *econtext;
+			AOCSScanDesc sdesc;
+
+			aocs_addcol_newsegfile(idesc, segInfos[segindex], (char *)basepath, rnode);
+
+			oldslot = MakeSingleTupleTableSlot(tab->oldDesc);
+			sdesc = aocs_beginscan(rel, snapshot, snapshot, tab->oldDesc, proj);
+			while (aocs_getnext(sdesc, ForwardScanDirection, oldslot))
+			{
+				Datum newDatum;
+				bool  newDatumIsNull;
+				MemoryContext oldCxt;
+
+				oldCxt = MemoryContextSwitchTo(GetPerTupleMemoryContext(estate));
+				econtext = GetPerTupleExprContext(estate);
+				econtext->ecxt_scantuple = oldslot;
+				newDatum = ExecEvalExpr(newval->exprstate,
+										econtext,
+										&newDatumIsNull,
+										NULL);
+				/*
+				 * XXX: Is it possible to fail on NULL values here?
+				 */
+
+				aocs_addcol_insert_datum(idesc, &newDatum, &newDatumIsNull);
+				ResetExprContext(econtext);
+				MemoryContextSwitchTo(oldCxt);
+			}
+			ExecDropSingleTupleTableSlot(oldslot);
+			aocs_endscan(sdesc);
+		}
+		aocs_addcol_finish(idesc);
+	}
+
+	if (Gp_role == GP_ROLE_DISPATCH)
+		AORelRemoveHashEntry(tab->relid);
+
+	heap_close(rel, NoLock);
+	FreeExecutorState(estate);
+	UnregisterSnapshot(snapshot);
 }
 
 /*
@@ -7405,6 +7611,37 @@ check_of_type(HeapTuple typetuple)
 						format_type_be(HeapTupleGetOid(typetuple)))));
 }
 
+static void
+aoco_check_set_enconding_clause(Relation rel, AlterTableCmd *cmd)
+{
+	/*
+	 * If there's an encoding clause, this better be an append only
+	 * column oriented table.
+	 */
+	ColumnDef *def = (ColumnDef *)cmd->def;
+	if (def->encoding && !RelationIsAoCols(rel))
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("ENCODING clause not supported on non column orientated table")));
+
+	if (!RelationIsAoCols(rel))
+		return;
+
+	if (def->encoding)
+		def->encoding = transformStorageEncodingClause(def->encoding);
+	else if (cmd->aoco_alter_type_norewrite)
+	{
+		List **col_encs = RelationGetUntransformedAttributeOptions(rel);
+		AttrNumber attnum = get_attnum(RelationGetRelid(rel), cmd->name);
+		Assert(col_encs);
+		Assert(attnum != InvalidAttrNumber);
+
+		def->encoding = copyObject(col_encs[attnum -1]);
+	}
+}
+
+
+
 
 /*
  * ALTER TABLE ADD COLUMN
@@ -7424,18 +7661,7 @@ static void
 ATPrepAddColumn(List **wqueue, Relation rel, bool recurse, bool recursing,
 				bool is_view, AlterTableCmd *cmd, LOCKMODE lockmode)
 {
-	/* 
-	 * If there's an encoding clause, this better be an append only
-	 * column oriented table.
-	 */
-	ColumnDef *def = (ColumnDef *)cmd->def;
-	if (def->encoding && !RelationIsAoCols(rel))
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("ENCODING clause not supported on non column orientated table")));
-
-	if (def->encoding)
-		def->encoding = transformStorageEncodingClause(def->encoding);
+	aoco_check_set_enconding_clause(rel, cmd);
 
 	if (rel->rd_rel->reloftype && !recursing)
 		ereport(ERROR,
