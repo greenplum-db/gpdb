@@ -446,7 +446,10 @@ bring_to_outer_query(PlannerInfo *root, RelOptInfo *rel, List *outer_quals)
 		Path	   *path;
 		CdbPathLocus outerquery_locus;
 
-		if (!CdbPathLocus_IsOuterQuery(origpath->locus))
+		if (CdbPathLocus_IsGeneral(origpath->locus) ||
+			CdbPathLocus_IsOuterQuery(origpath->locus))
+			path = origpath;
+		else
 		{
 			/*
 			 * Cannot pass a param through motion, so if this is a parameterized
@@ -463,8 +466,7 @@ bring_to_outer_query(PlannerInfo *root, RelOptInfo *rel, List *outer_quals)
 											  false,
 											  outerquery_locus);
 		}
-		else
-			path = origpath;
+
 		if (outer_quals)
 			path = (Path *) create_projection_path_with_quals(root,
 															  rel,
