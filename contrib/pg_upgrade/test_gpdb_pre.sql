@@ -49,3 +49,4 @@ DROP TABLE IF EXISTS public.parttest_t;
 DROP TABLE IF EXISTS public.pt_dropped_col_distkey;
 DROP TABLE IF EXISTS partition_pruning.sales;
 DROP TABLE IF EXISTS public.partdisttest;
+DROP TABLE IF EXISTS public.users_test;
