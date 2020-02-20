@@ -595,7 +595,8 @@ make_agg_subplan(PlannerInfo *root, MinMaxAggInfo *mminfo)
 		SS_make_initplan_from_plan(subroot, plan,
 								   exprType((Node *) mminfo->target),
 								   -1,
-								   exprCollation((Node *) mminfo->target));
+								   exprCollation((Node *) mminfo->target),
+								   false);
 
 	/*
 	 * Make sure the initplan gets into the outer PlannerInfo, along with any

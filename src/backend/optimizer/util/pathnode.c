@@ -2661,6 +2661,18 @@ create_functionscan_path(PlannerInfo *root, RelOptInfo *rel,
 					}
 					exec_location = PROEXECLOCATION_MASTER;
 					break;
+				case PROEXECLOCATION_INITPLAN:
+					/*
+					 * This function forces the execution to master.
+					 */
+					if (exec_location == PROEXECLOCATION_ALL_SEGMENTS)
+					{
+						ereport(ERROR,
+								(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+								 (errmsg("cannot mix EXECUTE ON INITPLAN and ALL SEGMENTS functions in same function scan"))));
+					}
+					exec_location = PROEXECLOCATION_INITPLAN;
+					break;
 				case PROEXECLOCATION_ALL_SEGMENTS:
 					/*
 					 * This function forces the execution to segments.
@@ -2702,6 +2714,9 @@ create_functionscan_path(PlannerInfo *root, RelOptInfo *rel,
 										 getgpsegmentCount());
 			break;
 		case PROEXECLOCATION_MASTER:
+			CdbPathLocus_MakeEntry(&pathnode->locus);
+			break;
+		case PROEXECLOCATION_INITPLAN:
 			CdbPathLocus_MakeEntry(&pathnode->locus);
 			break;
 		case PROEXECLOCATION_ALL_SEGMENTS:

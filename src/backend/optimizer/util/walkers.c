@@ -271,6 +271,8 @@ plan_tree_walker(Node *node,
 		case T_FunctionScan:
 			if (walker((Node *) ((FunctionScan *) node)->functions, context))
 				return true;
+			if (walker((Node *) ((FunctionScan *) node)->param, context))
+				return true;
 			if (walk_scan_node_fields((Scan *) node, walker, context))
 				return true;
 			break;

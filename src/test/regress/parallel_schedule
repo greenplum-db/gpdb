@@ -9,7 +9,6 @@
 # we'd prefer not to have checkpoints later in the tests because that
 # interferes with crash-recovery testing.
 test: tablespace
-
 # ----------
 # The first group of parallel tests
 # ----------

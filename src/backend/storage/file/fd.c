@@ -3366,3 +3366,15 @@ data_sync_elevel(int elevel)
 {
 	return data_sync_retry ? elevel : PANIC;
 }
+
+/*
+ * Set file is temp file or not
+ */
+void
+FileSetIsTempFile(File file, bool isTempFile)
+{
+	if (isTempFile)
+		VfdCache[file].fdstate |= FD_TEMPORARY;
+	else
+		VfdCache[file].fdstate &= ~FD_TEMPORARY;
+}

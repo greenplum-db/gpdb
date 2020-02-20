@@ -666,6 +666,8 @@ interpret_exec_location(DefElem *defel)
 		exec_location = PROEXECLOCATION_ANY;
 	else if (strcmp(str, "master") == 0)
 		exec_location = PROEXECLOCATION_MASTER;
+	else if (strcmp(str, "initplan") == 0)
+		exec_location = PROEXECLOCATION_INITPLAN;
 	else if (strcmp(str, "all_segments") == 0)
 		exec_location = PROEXECLOCATION_ALL_SEGMENTS;
 	else
@@ -693,6 +695,13 @@ validate_sql_exec_location(char exec_location, bool proretset)
 				ereport(ERROR,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 						 errmsg("EXECUTE ON MASTER is only supported for set-returning functions")));
+			break;
+
+		case PROEXECLOCATION_INITPLAN:
+			if (!proretset)
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("EXECUTE ON INITPLAN is only supported for set-returning functions")));
 			break;
 
 		case PROEXECLOCATION_ALL_SEGMENTS:

@@ -5249,6 +5249,7 @@ DESCR("import collations from operating system");
 
 #define PROEXECLOCATION_ANY		'a'
 #define PROEXECLOCATION_MASTER	'm'
+#define PROEXECLOCATION_INITPLAN 'i'
 #define PROEXECLOCATION_ALL_SEGMENTS 's'
 
 #endif   /* PG_PROC_H */

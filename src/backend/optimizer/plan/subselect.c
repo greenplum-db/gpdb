@@ -3011,7 +3011,7 @@ finalize_agg_primnode(Node *node, finalize_primnode_context *context)
 Param *
 SS_make_initplan_from_plan(PlannerInfo *root, Plan *plan,
 						   Oid resulttype, int32 resulttypmod,
-						   Oid resultcollation)
+						   Oid resultcollation, bool is_initplan_func_sublink)
 {
 	SubPlan    *node;
 	Param	   *prm;
@@ -3042,7 +3042,10 @@ SS_make_initplan_from_plan(PlannerInfo *root, Plan *plan,
 	 * comments in ExecReScan).
 	 */
 	node = makeNode(SubPlan);
-	node->subLinkType = EXPR_SUBLINK;
+	if (is_initplan_func_sublink)
+		node->subLinkType = INITPLAN_FUNC_SUBLINK;
+	else
+		node->subLinkType = EXPR_SUBLINK;
 	get_first_col_type(plan, &node->firstColType, &node->firstColTypmod,
 					   &node->firstColCollation);
     node->qDispSliceId = 0;             /*CDB*/

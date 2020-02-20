@@ -62,5 +62,6 @@ extern void BufFileResume(BufFile *buffile);
 
 extern bool gp_workfile_compression;
 extern void BufFilePledgeSequential(BufFile *buffile);
+extern void BufFileSetIsTempFile(BufFile *file, bool isTempFile);
 
 #endif   /* BUFFILE_H */

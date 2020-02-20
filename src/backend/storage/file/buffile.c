@@ -321,6 +321,17 @@ BufFileClose(BufFile *file)
 }
 
 /*
+ * BufFileSetIsTempFile
+ *
+ * Set the file of BufFile is temp file or not
+ */
+void 
+BufFileSetIsTempFile(BufFile *file, bool isTempFile)
+{
+	FileSetIsTempFile(file->file, isTempFile);
+}
+
+/*
  * BufFileLoadBuffer
  *
  * Load some data into buffer, if possible, starting from curOffset.

@@ -32,6 +32,7 @@
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "access/heapam.h"
+#include "utils/tuplestorenew.h"
 #include "cdb/cdbexplain.h"             /* cdbexplain_recvExecStats */
 #include "cdb/cdbvars.h"
 #include "cdb/cdbdisp.h"
@@ -716,6 +717,8 @@ ExecInitSubPlan(SubPlan *subplan, PlanState *parent)
 	sstate->tab_eq_funcs = NULL;
 	sstate->lhs_hash_funcs = NULL;
 	sstate->cur_eq_funcs = NULL;
+	sstate->ts_state = palloc0(sizeof(GenericTupStore));
+	sstate->ts_pos = NULL;
 
 	/*
 	 * If this plan is un-correlated or undirect correlated one and want to
@@ -1038,6 +1041,25 @@ PG_TRY();
 	oldcontext = MemoryContextSwitchTo(econtext->ecxt_per_query_memory);
 
 	/*
+	 * Setup the tuplestore writer for functionscan initplan
+	 * 
+	 * Note that the file of tuplestore should not be deleted when
+	 * closing file. This is due to the tuplestore reader is outside
+	 * initplan, and reader will delete the file when it finished.
+	 */
+	if (subLinkType == INITPLAN_FUNC_SUBLINK && !node->ts_state->matstore)
+	{
+		char rwfile_prefix[100];
+
+		function_scan_create_bufname_prefix(rwfile_prefix, sizeof(rwfile_prefix));
+		
+		node->ts_state->matstore = ntuplestore_create_readerwriter(rwfile_prefix, PlanStateOperatorMemKB((PlanState *)(node->planstate)) * 1024, true, false);
+		ntuplestore_set_is_temp_file(node->ts_state->matstore, false);
+		
+		node->ts_pos = (void *)ntuplestore_create_accessor(node->ts_state->matstore, true);
+	}
+
+	/*
 	 * Run the plan.  (If it needs to be rescanned, the first ExecProcNode
 	 * call will take care of that.)
 	 */
@@ -1046,6 +1068,12 @@ PG_TRY();
 		 slot = ExecProcNode(planstate))
 	{
 		int			i = 1;
+
+		if (subLinkType == INITPLAN_FUNC_SUBLINK)
+		{
+			ntuplestore_acc_put_tupleslot((NTupleStoreAccessor *) node->ts_pos, slot);
+			continue;
+		}
 
 		if (subLinkType == EXISTS_SUBLINK || subLinkType == NOT_EXISTS_SUBLINK)
 		{
@@ -1110,6 +1138,23 @@ PG_TRY();
 			prm->value = memtuple_getattr(node->curTuple, slot->tts_mt_bind, i, &(prm->isnull));
 			i++;
 		}
+	}
+
+	/*
+	 * Flush and cleanup the tuplestore writer
+	 *
+	 * Note that the file of tuplestore will not be deleted at here.
+	 * This is due to the tuplestore reader is outside initplan, and
+	 * reader will delete the file when it finished.
+	 *
+	 */
+	if (subLinkType == INITPLAN_FUNC_SUBLINK && node->ts_state->matstore)
+	{
+		ntuplestore_acc_seek_bof((NTupleStoreAccessor *) node->ts_pos);
+		ntuplestore_flush(node->ts_state->matstore);
+		
+		ntuplestore_destroy_accessor((NTupleStoreAccessor *) node->ts_pos);
+		ntuplestore_destroy(node->ts_state->matstore);
 	}
 
 	if (!found)

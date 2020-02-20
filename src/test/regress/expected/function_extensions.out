@@ -402,3 +402,199 @@ NOTICE:  unique_violation
  
 (1 row)
 
+-- Test CTAS select * from f()
+-- Above query will fail in past in f() contains DDLs.
+-- Since CTAS is write gang and f() could only be run at EntryDB(QE)
+-- But EntryDB and QEs cannot run DDLs which needs to do dispatch.
+-- We introduce new function location 'EXECUTE ON INITPLAN' to run
+-- the function on initplan to overcome the above issue.
+CREATE OR REPLACE FUNCTION get_country()
+ RETURNS TABLE (
+  country_id integer,
+  country character varying(50)
+  )
+AS $$
+  begin
+  drop table if exists public.country;
+  create table public.country( country_id integer,
+    country character varying(50));
+  insert into public.country
+  (country_id, country)
+  select 111,'INDIA'
+  union all select 222,'CANADA'
+  union all select 333,'USA' ;
+  RETURN QUERY
+  SELECT
+  c.country_id,
+  c.country
+  FROM
+  public.country c order by country_id;
+  end; $$
+LANGUAGE 'plpgsql' EXECUTE ON INITPLAN;
+SELECT * FROM get_country();
+NOTICE:  table "country" does not exist, skipping
+CONTEXT:  SQL statement "drop table if exists public.country"
+PL/pgSQL function get_country() line 3 at SQL statement
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'country_id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CONTEXT:  SQL statement "create table public.country( country_id integer,
+    country character varying(50))"
+PL/pgSQL function get_country() line 4 at SQL statement
+ country_id | country 
+------------+---------
+        111 | INDIA
+        222 | CANADA
+        333 | USA
+(3 rows)
+
+SELECT get_country();
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'country_id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CONTEXT:  SQL statement "create table public.country( country_id integer,
+    country character varying(50))"
+PL/pgSQL function get_country() line 4 at SQL statement
+ get_country  
+--------------
+ (111,INDIA)
+ (222,CANADA)
+ (333,USA)
+(3 rows)
+
+DROP TABLE IF EXISTS t1_function_scan;
+NOTICE:  table "t1_function_scan" does not exist, skipping
+EXPLAIN CREATE TABLE t1_function_scan AS SELECT * FROM get_country();
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'country_id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+                                           QUERY PLAN                                            
+-------------------------------------------------------------------------------------------------
+ Redistribute Motion 1:3  (slice1)  (cost=0.25..30.25 rows=1000 width=36)
+   Hash Key: get_country.country_id
+   ->  Function Scan on get_country  (cost=0.25..10.25 rows=1000 width=36)
+         InitPlan 1 (returns $0)  (slice2)
+           ->  Function Scan on get_country get_country_1  (cost=0.25..10.25 rows=1000 width=36)
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+CREATE TABLE t1_function_scan AS SELECT * FROM get_country();
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'country_id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  table "country" does not exist, skipping
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'country_id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CONTEXT:  SQL statement "create table public.country( country_id integer,
+    country character varying(50))"
+PL/pgSQL function get_country() line 4 at SQL statement
+INSERT INTO t1_function_scan SELECT * FROM get_country();
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'country_id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CONTEXT:  SQL statement "create table public.country( country_id integer,
+    country character varying(50))"
+PL/pgSQL function get_country() line 4 at SQL statement
+INSERT INTO t1_function_scan SELECT * FROM get_country();
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'country_id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CONTEXT:  SQL statement "create table public.country( country_id integer,
+    country character varying(50))"
+PL/pgSQL function get_country() line 4 at SQL statement
+SELECT count(*) FROM t1_function_scan;
+ count 
+-------
+     9
+(1 row)
+
+-- test with limit clause
+DROP TABLE IF EXISTS t1_function_scan_limit;
+NOTICE:  table "t1_function_scan_limit" does not exist, skipping
+CREATE TABLE t1_function_scan_limit AS SELECT * FROM get_country() limit 2;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'country_id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'country_id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CONTEXT:  SQL statement "create table public.country( country_id integer,
+    country character varying(50))"
+PL/pgSQL function get_country() line 4 at SQL statement
+SELECT count(*) FROM t1_function_scan_limit;
+ count 
+-------
+     2
+(1 row)
+
+-- test with order by clause
+DROP TABLE IF EXISTS t1_function_scan_order_by;
+NOTICE:  table "t1_function_scan_order_by" does not exist, skipping
+CREATE TABLE t1_function_scan_order_by AS SELECT * FROM get_country() f1 ORDER BY f1.country_id DESC limit 1;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'country_id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'country_id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CONTEXT:  SQL statement "create table public.country( country_id integer,
+    country character varying(50))"
+PL/pgSQL function get_country() line 4 at SQL statement
+SELECT * FROM t1_function_scan_order_by;
+ country_id | country 
+------------+---------
+        333 | USA
+(1 row)
+
+-- test with group by clause
+DROP TABLE IF EXISTS t1_function_scan_group_by;
+NOTICE:  table "t1_function_scan_group_by" does not exist, skipping
+CREATE TABLE t1_function_scan_group_by AS SELECT f1.country_id, count(*) FROM get_country() f1 GROUP BY f1.country_id;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'country_id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'country_id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CONTEXT:  SQL statement "create table public.country( country_id integer,
+    country character varying(50))"
+PL/pgSQL function get_country() line 4 at SQL statement
+SELECT count(*) FROM t1_function_scan_group_by;
+ count 
+-------
+     3
+(1 row)
+
+-- test join table
+DROP TABLE IF EXISTS t1_function_scan_join;
+NOTICE:  table "t1_function_scan_join" does not exist, skipping
+CREATE TABLE t1_function_scan_join AS SELECT f1.country_id, f1.country FROM get_country() f1, t1_function_scan_limit;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'country_id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'country_id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CONTEXT:  SQL statement "create table public.country( country_id integer,
+    country character varying(50))"
+PL/pgSQL function get_country() line 4 at SQL statement
+SELECT count(*) FROM t1_function_scan_join;
+ count 
+-------
+     6
+(1 row)
+
+DROP TABLE IF EXISTS t2_function_scan;
+NOTICE:  table "t2_function_scan" does not exist, skipping
+CREATE TABLE t2_function_scan (id int, val int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO t2_function_scan SELECT k, k+1 FROM generate_series(1,100000) AS k;
+CREATE OR REPLACE FUNCTION get_id()
+ RETURNS TABLE (
+  id integer,
+  val integer
+  )
+AS $$
+  begin
+  RETURN QUERY
+  SELECT * FROM t2_function_scan;
+  END; $$
+LANGUAGE 'plpgsql' EXECUTE ON INITPLAN;
+DROP TABLE IF EXISTS t3_function_scan;
+NOTICE:  table "t3_function_scan" does not exist, skipping
+CREATE TABLE t3_function_scan AS SELECT * FROM get_id();
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT count(*) FROM t3_function_scan;
+ count  
+--------
+ 100000
+(1 row)
+
