@@ -999,7 +999,7 @@ create_join_plan(PlannerInfo *root, JoinPath *best_path)
 		((Join *) plan)->prefetch_joinqual = true;
 
 	/* CDB: if the join's locus is bottleneck which means the
-	 * join gang only contain on process, so there is no
+	 * join gang only contains one process, so there is no
 	 * risk for motion deadlock.
 	 */
 	if (CdbPathLocus_IsBottleneck(best_path->path.locus))

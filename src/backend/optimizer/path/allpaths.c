@@ -143,6 +143,7 @@ static void recurse_push_qual(Node *setOp, Query *topquery,
 static void remove_unused_subquery_outputs(Query *subquery, RelOptInfo *rel);
 
 static void bring_to_outer_query(PlannerInfo *root, RelOptInfo *rel, List *outer_quals);
+static void bring_to_singleQE(PlannerInfo *root, RelOptInfo *rel);
 
 
 /*
@@ -479,6 +480,69 @@ bring_to_outer_query(PlannerInfo *root, RelOptInfo *rel, List *outer_quals)
 }
 
 /*
+ * The following function "steals" ideas and most of the code from the
+ * function bring_to_outer_query.
+ *
+ * Decorate the Paths of 'rel' with Motions to bring the relation's
+ * result to SingleQE locus. The final plan will look something like
+ * this:
+ *
+ *   Result (with quals from 'outer_quals')
+ *           \
+ *            \_Material
+ *                   \
+ *                    \_ Gather
+ *                           \
+ *                            \_SeqScan (with quals from 'baserestrictinfo')
+ */
+static void
+bring_to_singleQE(PlannerInfo *root, RelOptInfo *rel)
+{
+	List	   *origpathlist;
+	ListCell   *lc;
+
+	origpathlist = rel->pathlist;
+	rel->cheapest_startup_path = NULL;
+	rel->cheapest_total_path = NULL;
+	rel->cheapest_unique_path = NULL;
+	rel->cheapest_parameterized_paths = NIL;
+	rel->pathlist = NIL;
+
+	foreach(lc, origpathlist)
+	{
+		Path	     *origpath = (Path *) lfirst(lc);
+		Path	     *path;
+		CdbPathLocus  target_locus;
+
+		if (CdbPathLocus_IsGeneral(origpath->locus) ||
+			CdbPathLocus_IsSingleQE(origpath->locus) ||
+			CdbPathLocus_IsOuterQuery(origpath->locus))
+			path = origpath;
+		else
+		{
+			/*
+			 * Cannot pass a param through motion, so if this is a parameterized
+			 * path, we can't use it.
+			 */
+			if (origpath->param_info)
+				continue;
+
+			CdbPathLocus_MakeSingleQE(&target_locus,
+									  origpath->locus.numsegments);
+
+			path = cdbpath_create_motion_path(root,
+											  origpath,
+											  NIL, // DESTROY pathkeys
+											  false,
+											  target_locus);
+		}
+
+		add_path(rel, path);
+	}
+	set_cheapest(rel);
+}
+
+/*
  * set_rel_pathlist
  *	  Build access paths for a base relation
  */
@@ -559,6 +623,17 @@ set_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
 
 	if (rel->upperrestrictinfo)
 		bring_to_outer_query(root, rel, rel->upperrestrictinfo);
+	else if (root->config->force_singleQE)
+	{
+		/*
+		 * CDB: we cannot pass parameters across motion,
+		 * if this is the inner plan of a lateral join and
+		 * it contains limit clause, we will reach here.
+		 * Planner will gather all the data into singleQE
+		 * and materialize it.
+		 */
+		bring_to_singleQE(root, rel);
+	}
 
 	/* Now find the cheapest of the paths for this rel */
 	set_cheapest(rel);
@@ -1907,6 +1982,17 @@ set_subquery_pathlist(PlannerInfo *root, RelOptInfo *rel,
 		/* Generate a subroot and Paths for the subquery */
 		config = CopyPlannerConfig(root->config);
 		config->honor_order_by = false;		/* partial order is enough */
+
+		/*
+		 * CDB: if this subquery is the inner plan of a lateral
+		 * join and if it contains a limit, we can only gather
+		 * it to singleQE and materialize the data because we
+		 * cannot pass params across motion.
+		 */
+		config->force_singleQE = false;
+		if ((!bms_is_empty(required_outer)) &&
+			(subquery->limitCount || subquery->limitOffset))
+			config->force_singleQE = true;
 
 		/* plan_params should not be in use in current query level */
 		Assert(root->plan_params == NIL);
