@@ -171,9 +171,6 @@ bool		debug_basebackup = false;
 
 int rep_lag_avoidance_threshold = 0;
 
-/* Latch mechanism debug GUCs */
-bool		debug_latch = false;
-
 bool		gp_keep_all_xlog = false;
 
 #define DEBUG_DTM_ACTION_PRIMARY_DEFAULT true
@@ -1602,17 +1599,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&debug_basebackup,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"debug_latch", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Print debug messages for latch mechanism."),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&debug_latch,
 		false,
 		NULL, NULL, NULL
 	},
