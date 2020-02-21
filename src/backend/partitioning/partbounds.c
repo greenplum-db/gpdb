@@ -780,6 +780,8 @@ partition_bounds_copy(PartitionBoundInfo src,
 	int			ndatums;
 	int			nindexes;
 	int			partnatts;
+	bool		hash_part;
+	int			natts;
 
 	dest = (PartitionBoundInfo) palloc(sizeof(PartitionBoundInfoData));
 
@@ -809,16 +811,16 @@ partition_bounds_copy(PartitionBoundInfo src,
 	else
 		dest->kind = NULL;
 
+	/*
+	 * For hash partitioning, datums array will have two elements - modulus and
+	 * remainder.
+	 */
+	hash_part = (key->strategy == PARTITION_STRATEGY_HASH);
+	natts = hash_part ? 2 : partnatts;
+
 	for (i = 0; i < ndatums; i++)
 	{
 		int			j;
-
-		/*
-		 * For a corresponding hash partition, datums array will have two
-		 * elements - modulus and remainder.
-		 */
-		bool		hash_part = (key->strategy == PARTITION_STRATEGY_HASH);
-		int			natts = hash_part ? 2 : partnatts;
 
 		dest->datums[i] = (Datum *) palloc(sizeof(Datum) * natts);
 
