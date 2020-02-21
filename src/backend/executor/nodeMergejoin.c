@@ -160,6 +160,7 @@ typedef enum
 #define MarkInnerTuple(innerTupleSlot, mergestate) \
 	ExecCopySlot((mergestate)->mj_MarkedTupleSlot, (innerTupleSlot))
 
+extern bool Test_print_prefech_joinqual;
 
 /*
  * MJExamineQuals
@@ -1581,6 +1582,12 @@ ExecInitMergeJoin(MergeJoin *node, EState *estate, int eflags)
 
 	mergestate->prefetch_inner = node->join.prefetch_inner;
 	mergestate->prefetch_joinqual = ShouldPrefetchJoinQual(estate, &node->join);
+
+	if (Test_print_prefech_joinqual && mergestate->prefetch_joinqual)
+		elog(NOTICE,
+			 "prefetch join qual in slice %d of plannode %d",
+			 currentSliceId, ((Plan *) node)->plan_node_id);
+
 	/* Prepare inner operators for rewind after the prefetch */
 	rewindflag = mergestate->prefetch_inner ? EXEC_FLAG_REWIND : 0;
 

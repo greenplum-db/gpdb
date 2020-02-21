@@ -45,6 +45,8 @@
 /* Returns true if doing null-fill on inner relation */
 #define HJ_FILL_INNER(hjstate)	((hjstate)->hj_NullOuterTupleSlot != NULL)
 
+extern bool Test_print_prefech_joinqual;
+
 static TupleTableSlot *ExecHashJoinOuterGetTuple(PlanState *outerNode,
 						  HashJoinState *hjstate,
 						  uint32 *hashvalue);
@@ -601,6 +603,11 @@ ExecInitHashJoin(HashJoin *node, EState *estate, int eflags)
 	 */
 	hjstate->prefetch_inner = node->join.prefetch_inner;
 	hjstate->prefetch_joinqual = ShouldPrefetchJoinQual(estate, &node->join);
+
+	if (Test_print_prefech_joinqual && hjstate->prefetch_joinqual)
+		elog(NOTICE,
+			 "prefetch join qual in slice %d of plannode %d",
+			 currentSliceId, ((Plan *) node)->plan_node_id);
 
 	/*
 	 * initialize child nodes

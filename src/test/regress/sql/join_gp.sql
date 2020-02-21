@@ -555,6 +555,7 @@ join t_randomly_dist_table on t_subquery_general.a = t_randomly_dist_table.c;
 
 drop table t_randomly_dist_table;
 
+
 -- test lateral join inner plan contains limit
 -- we cannot pass params across motion so we
 -- can only generate a plan to gather all the
@@ -578,3 +579,22 @@ explain select * from t1_lateral_limit as t1 cross join lateral
 
 select * from t1_lateral_limit as t1 cross join lateral
 (select ((c).x+t2.b) as n  from t2_lateral_limit as t2 order by n limit 1)s;
+
+-- test prefetch join qual
+-- we do not handle this correct
+-- the only case we need to prefetch join qual is:
+--   1. outer plan contains motion
+--   2. the join qual contains subplan that contains motion
+reset client_min_messages;
+set Test_print_prefetch_joinqual = true;
+
+create table t1_test_pretch_join_qual(a int, b int, c int);
+create table t2_test_pretch_join_qual(a int, b int, c int);
+explain select * from t1_test_pretch_join_qual t1 join t2_test_pretch_join_qual t2
+on t1.b = t2.b and t1.c > t2.c;
+-- the above plan contains redistribute motion in both inner and outer plan
+-- the join qual is t1.c > t2.c, it contains no motion, should not prefetch
+select * from t1_test_pretch_join_qual t1 join t2_test_pretch_join_qual t2
+on t1.b = t2.b and t1.c > t2.c;
+
+reset Test_print_prefetch_joinqual;

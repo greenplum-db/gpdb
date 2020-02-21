@@ -23,11 +23,14 @@
 
 #include "postgres.h"
 
+#include "cdb/cdbvars.h"
 #include "executor/execdebug.h"
 #include "executor/nodeNestloop.h"
 #include "optimizer/clauses.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
+
+extern bool Test_print_prefech_joinqual;
 
 static void splitJoinQualExpr(NestLoopState *nlstate);
 static void extractFuncExprArgs(FuncExprState *fstate, List **lclauses, List **rclauses);
@@ -391,7 +394,12 @@ ExecInitNestLoop(NestLoop *node, EState *estate, int eflags)
 
 	nlstate->prefetch_inner = node->join.prefetch_inner;
 	nlstate->prefetch_joinqual = ShouldPrefetchJoinQual(estate, &node->join);
-	
+
+	if (Test_print_prefech_joinqual && nlstate->prefetch_joinqual)
+		elog(NOTICE,
+			 "prefetch join qual in slice %d of plannode %d",
+			 currentSliceId, ((Plan *) node)->plan_node_id);
+
 	/*CDB-OLAP*/
 	nlstate->reset_inner = false;
 	nlstate->require_inner_reset = !node->singleton_outer;
