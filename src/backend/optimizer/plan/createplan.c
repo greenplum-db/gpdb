@@ -986,18 +986,6 @@ create_join_plan(PlannerInfo *root, JoinPath *best_path)
 	if (partition_selector_created)
 		((Join *) plan)->prefetch_inner = true;
 
-	/*
-	 * A motion deadlock can also happen when outer and joinqual both contain
-	 * motions.  It is not easy to check for joinqual here, so we set the
-	 * prefetch_joinqual mark only according to outer motion, and check for
-	 * joinqual later in the executor.
-	 *
-	 * See ExecPrefetchJoinQual() for details.
-	 */
-	if (best_path->outerjoinpath &&
-		best_path->outerjoinpath->motionHazard)
-		((Join *) plan)->prefetch_joinqual = true;
-
 	/* CDB: if the join's locus is bottleneck which means the
 	 * join gang only contains one process, so there is no
 	 * risk for motion deadlock.
