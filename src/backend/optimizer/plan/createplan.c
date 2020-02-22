@@ -4255,7 +4255,8 @@ create_nestloop_plan(PlannerInfo *root,
 	 * See ExecPrefetchJoinQual() for details.
 	 */
 	if (best_path->outerjoinpath &&
-		best_path->outerjoinpath->motionHazard)
+		best_path->outerjoinpath->motionHazard &&
+		join_plan->join.joinqual != NIL)
 		join_plan->join.prefetch_joinqual = true;
 
 	return join_plan;
@@ -4594,14 +4595,16 @@ create_mergejoin_plan(PlannerInfo *root,
 	 * See ExecPrefetchJoinQual() for details.
 	 */
 	if (best_path->jpath.outerjoinpath &&
-		best_path->jpath.outerjoinpath->motionHazard)
+		best_path->jpath.outerjoinpath->motionHazard &&
+		join_plan->join.joinqual != NIL)
 		join_plan->join.prefetch_joinqual = true;
 	/*
 	 * If inner motion is not under a Material or Sort node then there could
 	 * also be motion deadlock between inner and joinqual in mergejoin.
 	 */
 	if (best_path->jpath.innerjoinpath &&
-		best_path->jpath.innerjoinpath->motionHazard)
+		best_path->jpath.innerjoinpath->motionHazard &&
+		join_plan->join.joinqual != NIL)
 		join_plan->join.prefetch_joinqual = true;
 
 	/* Costs of sort and material steps are included in path cost already */
@@ -4776,7 +4779,8 @@ create_hashjoin_plan(PlannerInfo *root,
 	 * See ExecPrefetchJoinQual() for details.
 	 */
 	if (best_path->jpath.outerjoinpath &&
-		best_path->jpath.outerjoinpath->motionHazard)
+		best_path->jpath.outerjoinpath->motionHazard &&
+		join_plan->join.joinqual != NIL)
 		join_plan->join.prefetch_joinqual = true;
 
 	copy_generic_path_info(&join_plan->join.plan, &best_path->jpath.path);
