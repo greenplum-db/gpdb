@@ -1581,7 +1581,7 @@ ExecInitMergeJoin(MergeJoin *node, EState *estate, int eflags)
 	mergestate->mj_ConstFalseJoin = false;
 
 	mergestate->prefetch_inner = node->join.prefetch_inner;
-	mergestate->prefetch_joinqual = ShouldPrefetchJoinQual(estate, &node->join);
+	mergestate->prefetch_joinqual = node->join.prefetch_joinqual;
 
 	if (Test_print_prefech_joinqual && mergestate->prefetch_joinqual)
 		elog(NOTICE,

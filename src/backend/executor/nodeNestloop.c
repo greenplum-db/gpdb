@@ -393,7 +393,7 @@ ExecInitNestLoop(NestLoop *node, EState *estate, int eflags)
 	nlstate->shared_outer = node->shared_outer;
 
 	nlstate->prefetch_inner = node->join.prefetch_inner;
-	nlstate->prefetch_joinqual = ShouldPrefetchJoinQual(estate, &node->join);
+	nlstate->prefetch_joinqual = node->join.prefetch_joinqual;
 
 	if (Test_print_prefech_joinqual && nlstate->prefetch_joinqual)
 		elog(NOTICE,

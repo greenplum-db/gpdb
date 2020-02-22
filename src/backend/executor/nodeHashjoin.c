@@ -602,7 +602,7 @@ ExecInitHashJoin(HashJoin *node, EState *estate, int eflags)
 	 * the fix to MPP-989)
 	 */
 	hjstate->prefetch_inner = node->join.prefetch_inner;
-	hjstate->prefetch_joinqual = ShouldPrefetchJoinQual(estate, &node->join);
+	hjstate->prefetch_joinqual = node->join.prefetch_joinqual;
 
 	if (Test_print_prefech_joinqual && hjstate->prefetch_joinqual)
 		elog(NOTICE,

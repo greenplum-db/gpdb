@@ -1193,36 +1193,6 @@ ExecPrefetchJoinQual(JoinState *node)
 	return true;
 }
 
-/*
- * Decide if should prefetch joinqual.
- *
- * Joinqual should be prefetched when both outer and joinqual contain motions.
- * In create_*join_plan() functions we set prefetch_joinqual according to the
- * outer motions, now we detect for joinqual motions to make the final
- * decision.
- *
- * See ExecPrefetchJoinQual() for details.
- *
- * This function should be called in ExecInit*Join() functions.
- *
- * Return true if JoinQual should be prefetched.
- */
-bool
-ShouldPrefetchJoinQual(EState *estate, Join *join)
-{
-	ExecSlice  *localSlice;
-
-	if (!join->prefetch_joinqual)
-		return false;
-
-	/* Is this slice the sender of a Motion? */
-	if (!estate->es_sliceTable)
-		return false;
-	localSlice = &estate->es_sliceTable->slices[estate->currentSliceId];
-
-	return (localSlice->parentIndex != -1);
-}
-
 /* ----------------------------------------------------------------
  *		CDB Slice Table utilities
  * ----------------------------------------------------------------
