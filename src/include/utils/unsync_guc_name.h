@@ -83,7 +83,6 @@
 		"debug_dtm_action_segment",
 		"debug_dtm_action_sql_command_tag",
 		"debug_dtm_action_target",
-		"debug_latch",
 		"debug_pretty_print",
 		"debug_print_full_dtm",
 		"debug_print_parse",

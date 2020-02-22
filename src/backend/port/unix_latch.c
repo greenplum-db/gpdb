@@ -287,9 +287,6 @@ WaitLatchOrSocket(volatile Latch *latch, int wakeEvents, pgsocket sock,
 		{
 			result |= WL_LATCH_SET;
 
-			elogif(debug_latch, LOG,
-					"latch wait -- Latch is set. No need to wait now.");
-
 			/*
 			 * Leave loop immediately, avoid blocking again. We don't attempt
 			 * to report any other events that might also be satisfied.
@@ -326,9 +323,6 @@ WaitLatchOrSocket(volatile Latch *latch, int wakeEvents, pgsocket sock,
 			pfds[nfds].revents = 0;
 			nfds++;
 		}
-
-		elogif(debug_latch, LOG,
-				"latch wait -- poll() timeout set to %d", (int)cur_timeout);
 
 		/* Sleep */
 		rc = poll(pfds, nfds, (int) cur_timeout);
@@ -522,15 +516,9 @@ SetLatch(volatile Latch *latch)
 
 	/* Quick exit if already set */
 	if (latch->is_set)
-	{
-		elogif(debug_latch, LOG, "latch set -- Latch for process (pid %u) is already set.",
-									latch->owner_pid);
 		return;
-	}
 
 	latch->is_set = true;
-	elogif(debug_latch, LOG, "latch set -- Latch for process (pid %u) is now set.",
-								latch->owner_pid);
 
 	/*
 	 * See if anyone's waiting for the latch. It can be the current process if
@@ -555,23 +543,14 @@ SetLatch(volatile Latch *latch)
 	 */
 	owner_pid = latch->owner_pid;
 	if (owner_pid == 0)
-	{
-		elogif(debug_latch, LOG, "latch set -- Owner_pid of latch is 0. No process to signal.");
 		return;
-	}
 	else if (owner_pid == MyProcPid)
 	{
 		if (waiting)
-		{
 			sendSelfPipeByte();
-			elogif(debug_latch, LOG, "latch set -- Sent a byte to self pipe.");
-		}
 	}
 	else
-	{
 		kill(owner_pid, SIGUSR1);
-		elogif(debug_latch, LOG, "latch set -- Sent SIGUSR1 to process, pid %u.",owner_pid);
-	}
 }
 
 /*
@@ -595,8 +574,6 @@ ResetLatch(volatile Latch *latch)
 	 * For the moment, callers must supply their own synchronization of flag
 	 * variables (see latch.h).
 	 */
-
-	elogif(debug_latch, LOG, "latch reset -- Latch is now reset for process (pid %u).", latch->owner_pid);
 }
 
 /*
@@ -672,15 +649,9 @@ drainSelfPipe(void)
 		if (rc < 0)
 		{
 			if (errno == EAGAIN || errno == EWOULDBLOCK)
-			{
-				elogif(debug_latch, LOG, "latch drainpipe -- pipe read() returned empty.");
 				break;			/* the pipe is empty */
-			}
 			else if (errno == EINTR)
-			{
-				elogif(debug_latch, LOG, "latch drainpipe --pipe read() was interrupted.");
 				continue;		/* retry */
-			}
 			else
 			{
 				waiting = false;
@@ -693,11 +664,7 @@ drainSelfPipe(void)
 			elog(ERROR, "unexpected EOF on self-pipe");
 		}
 		else if (rc < sizeof(buf))
-		{
-			/* we successfully drained the pipe; no need to read() again */
-			elogif(debug_latch, LOG, "latch drainpipe -- pipe read() was successful.");
 			break;
-		}
 		/* else buffer wasn't big enough, so read again */
 	}
 }
