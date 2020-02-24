@@ -438,8 +438,6 @@ ExecEndTidScan(TidScanState *node)
 	 * close the heap relation.
 	 */
 	ExecCloseScanRelation(node->ss.ss_currentRelation);
-
-	EndPlanStateGpmonPkt(&node->ss.ps);
 }
 
 /* ----------------------------------------------------------------

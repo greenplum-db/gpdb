@@ -9,6 +9,12 @@ create or replace language plpythonu;
 --
 create or replace function pg_ctl(datadir text, command text, command_mode text default 'immediate')
 returns text as $$
+    class PgCtlError(Exception):
+        def __init__(self, errmsg):
+            self.errmsg = errmsg
+        def __str__(self):
+            return repr(self.errmsg)
+
     import subprocess
     if command == 'promote':
         cmd = 'pg_ctl promote -D %s' % datadir
@@ -18,7 +24,13 @@ returns text as $$
     else:
         return 'Invalid command input'
 
-    return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace('.', '')
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                            shell=True)
+    stdout, stderr = proc.communicate()
+    if proc.returncode == 0:
+        return 'OK'
+    else:
+        raise PgCtlError(stdout+'|'+stderr)
 $$ language plpythonu;
 
 

@@ -216,8 +216,6 @@ ExecEndDynamicBitmapIndexScan(DynamicBitmapIndexScanState *node)
 {
 	endCurrentBitmapIndexScan(node);
 
-	EndPlanStateGpmonPkt(&node->ss.ps);
-
 	MemoryContextDelete(node->partitionMemoryContext);
 }
 
@@ -234,6 +232,4 @@ ExecReScanDynamicBitmapIndex(DynamicBitmapIndexScanState *node)
 		ExecEndBitmapIndexScan(node->bitmapIndexScanState);
 		node->bitmapIndexScanState = NULL;
 	}
-
-	CheckSendPlanStateGpmonPkt(&node->ss.ps);
 }

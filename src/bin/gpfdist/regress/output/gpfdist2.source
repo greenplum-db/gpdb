@@ -34,7 +34,7 @@ select * from gpfdist2_start;
 drop table if exists lineitem;
 NOTICE:  table "lineitem" does not exist, skipping
 drop external table if exists ext_lineitem;
-NOTICE:  table "ext_lineitem" does not exist, skipping
+NOTICE:  foreign table "ext_lineitem" does not exist, skipping
 -- end_ignore
 -- test 1 using a .gz file
 CREATE EXTERNAL TABLE ext_lineitem (
@@ -581,15 +581,15 @@ FORMAT 'text'
 )
 ;
 CREATE INDEX index ON ext_lineitem (L_ORDERKEY);
-ERROR:  cannot create indexes on external tables
+ERROR:  cannot create index on foreign table "ext_lineitem"
 TRUNCATE ext_lineitem;
-ERROR:  "ext_lineitem" is an external relation and can't be truncated
+ERROR:  "ext_lineitem" is not a table
 DELETE FROM ext_lineitem where L_ORDERKEY > 10;
-ERROR:  cannot update or delete from external relation "ext_lineitem"
+ERROR:  cannot delete from foreign table "ext_lineitem"
 UPDATE ext_lineitem SET L_ORDERKEY = 10 where L_ORDERKEY > 10;
-ERROR:  cannot update or delete from external relation "ext_lineitem"
-INSERT INTO ext_lineitem VALUES (1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1);
-ERROR:  cannot change a readable external table "ext_lineitem"
+ERROR:  cannot update foreign table "ext_lineitem"
+INSERT INTO ext_lineitem VALUES (1,1,1,1,1,1,1,1,1,1,null,null,null,1,1,1);
+ERROR:  foreign table "ext_lineitem" does not allow inserts
 DROP EXTERNAL TABLE ext_lineitem;
 -- test 17 different delimiter
 CREATE EXTERNAL TABLE ext_lineitem (
@@ -899,7 +899,7 @@ ERROR:  relation "ext_lineitem" does not exist
 LINE 1: SELECT count(*) FROM ext_lineitem;
                              ^
 DROP EXTERNAL TABLE ext_lineitem;
-ERROR:  table "ext_lineitem" does not exist
+ERROR:  foreign table "ext_lineitem" does not exist
 -- test 24 inherit external table
 CREATE EXTERNAL TABLE ext_lineitem (
                 L_ORDERKEY INT8,

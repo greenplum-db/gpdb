@@ -577,6 +577,7 @@ class Hostname(Command):
         return self.results.stdout.strip()
 
 
+# todo: This class should be replaced with gp.IfAddrs
 class InterfaceAddrs(Command):
     """Returns list of interface IP Addresses.  List does not include loopback."""
 

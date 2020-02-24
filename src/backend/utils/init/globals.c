@@ -160,9 +160,6 @@ int			VacuumPageDirty = 0;
 int			VacuumCostBalance = 0;		/* working state for vacuum */
 bool		VacuumCostActive = false;
 
-/* gpperfmon port number */
-int 	gpperfmon_port = 8888;
-
 /* for pljava */
 char*	pljava_vmoptions = NULL;
 char*	pljava_classpath = NULL;

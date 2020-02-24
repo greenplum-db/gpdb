@@ -70,7 +70,6 @@
             <!-- hidden until testing is complete -msk
             <p><xref href="ref/gpmovemirrors.xml#topic1"/>
               </p -->
-            <p><xref href="ref/gpperfmon_install.xml#topic1"/></p>
             <p><xref href="ref/gppkg.xml#topic1" type="topic" format="dita"/></p>
             <p><xref href="ref/gprecoverseg.xml#topic1" type="topic" format="dita"/></p>
             <p><xref href="ref/gpreload.xml#topic1"/></p>

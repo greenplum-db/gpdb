@@ -146,10 +146,7 @@ namespace gpdxl
 			// list of result relations range table indexes for DML statements,
 			// or NULL for select queries
 			List *m_result_rel_list;
-			
-			// external scan counter
-			ULONG m_external_scan_counter;
-			
+
 			// number of segments
 			ULONG m_num_of_segments;
 
@@ -386,14 +383,6 @@ namespace gpdxl
 			Plan *TranslateDXLSplit
 				(
 				const CDXLNode *split_dxlnode,
-				CDXLTranslateContext *output_context,
-				CDXLTranslationContextArray *ctxt_translation_prev_siblings // translation contexts of previous siblings
-				);
-			
-			// translate a row trigger operator
-			Plan *TranslateDXLRowTrigger
-				(
-				const CDXLNode *row_trigger_dxlnode,
 				CDXLTranslateContext *output_context,
 				CDXLTranslationContextArray *ctxt_translation_prev_siblings // translation contexts of previous siblings
 				);

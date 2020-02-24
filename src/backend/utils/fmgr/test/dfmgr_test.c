@@ -3,8 +3,8 @@
 #include <setjmp.h>
 #include "cmockery.h"
 
-#include "c.h"
 #include "postgres.h"
+#include "lib/stringinfo.h"
 #include "nodes/nodes.h"
 #include "utils/memutils.h"
 

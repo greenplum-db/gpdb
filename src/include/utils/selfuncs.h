@@ -255,5 +255,6 @@ extern Selectivity scalararraysel_containment(PlannerInfo *root,
 extern Datum arraycontsel(PG_FUNCTION_ARGS);
 extern Datum arraycontjoinsel(PG_FUNCTION_ARGS);
 extern double estimate_num_groups_per_segment(double groupNum, double numPerGroup, double numsegments);
+extern double estimate_num_groups_across_segments(double groupNum, double numPerGroup, double numsegments);
 
 #endif   /* SELFUNCS_H */

@@ -469,11 +469,11 @@ SELECT * FROM partition_tables_show_all();
 --  node.
 --create the index at the root; should only be able to drop it from root
 SELECT recreate_three_level_table();
-CREATE UNIQUE INDEX myidx_onroot ON r USING btree(r_key);
+CREATE UNIQUE INDEX myidx_onroot ON r USING btree(r_key,r_name);
 SELECT * FROM dependencies_show_for_idx();
-DROP INDEX r_1_prt_r2_r_key_idx;         --should fail: cannot drop from non-creating node
+DROP INDEX r_1_prt_r2_r_key_r_name_idx;         --should fail: cannot drop from non-creating node
 SELECT * FROM dependencies_show_for_idx();
-DROP INDEX r_1_prt_r2_2_prt_b_r_key_idx; --should fail: cannot drop from non-creating node
+DROP INDEX r_1_prt_r2_2_prt_b_r_key_r_name_idx; --should fail: cannot drop from non-creating node
 SELECT * FROM dependencies_show_for_idx();
 DROP INDEX myidx_onroot;                 --works: is root of index hierarchy
 SELECT * FROM dependencies_show_for_idx();
@@ -491,16 +491,16 @@ SELECT * FROM dependencies_show_for_idx();
 --yes, this is inconsistent with index subsumption but upstream does it this way
 --in particular, there's no subsumption going on here.
 SELECT recreate_three_level_table();
-CREATE UNIQUE INDEX ON r USING btree(r_key);
+CREATE UNIQUE INDEX ON r USING btree(r_key,r_name);
 SELECT * FROM dependencies_show_for_idx();
-CREATE UNIQUE INDEX ON r USING btree(r_key);
+CREATE UNIQUE INDEX ON r USING btree(r_key,r_name);
 SELECT * FROM dependencies_show_for_idx();
 
 --test subsumption of lower-level index from upper-level one
 SELECT recreate_three_level_table();
 CREATE UNIQUE INDEX myidx_midlevel ON r_1_prt_r1 USING btree(r_key);
 SELECT * FROM dependencies_show_for_idx();
-CREATE UNIQUE INDEX myidx_onroot ON r USING btree(r_key);
+CREATE UNIQUE INDEX myidx_onroot ON r USING btree(r_key,r_name);
 SELECT * FROM dependencies_show_for_idx();
 
 --show subsumption works across rename
@@ -509,7 +509,7 @@ CREATE UNIQUE INDEX myidx_midlevel ON r_1_prt_r1 USING btree(r_key);
 SELECT * FROM dependencies_show_for_idx();
 ALTER INDEX myidx_midlevel RENAME TO myidx_midlevel_renamed;
 SELECT * FROM dependencies_show_for_idx();
-CREATE UNIQUE INDEX myidx_midlevel ON r USING btree(r_key);
+CREATE UNIQUE INDEX myidx_midlevel ON r USING btree(r_key,r_name);
 SELECT * FROM dependencies_show_for_idx();
 
 --show that renaming still does not allow a name conflict
@@ -518,14 +518,14 @@ CREATE UNIQUE INDEX myidx_midlevel ON r_1_prt_r1 USING btree(r_key);
 SELECT * FROM dependencies_show_for_idx();
 ALTER INDEX myidx_midlevel RENAME TO myidx_midlevel_renamed;
 SELECT * FROM dependencies_show_for_idx();
-CREATE UNIQUE INDEX myidx_midlevel_renamed ON r USING btree(r_key);   --should fail: index already exists
+CREATE UNIQUE INDEX myidx_midlevel_renamed ON r USING btree(r_key,r_name);   --should fail: index already exists
 SELECT * FROM dependencies_show_for_idx();
 
 --show that renaming a mid-level index still prevents it from being dropped.
 SELECT recreate_three_level_table();
-CREATE UNIQUE INDEX myidx_onroot ON r USING btree(r_key);
+CREATE UNIQUE INDEX myidx_onroot ON r USING btree(r_key,r_name);
 SELECT * FROM dependencies_show_for_idx();
-ALTER INDEX r_1_prt_r1_r_key_idx RENAME TO middle_index_renamed;
+ALTER INDEX r_1_prt_r1_r_key_r_name_idx RENAME TO middle_index_renamed;
 SELECT * FROM dependencies_show_for_idx();
 DROP INDEX middle_index_renamed;  --should fail: this renamed index is still controlled by the root index that created it
 SELECT * FROM dependencies_show_for_idx();

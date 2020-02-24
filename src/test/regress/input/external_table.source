@@ -168,7 +168,7 @@ format 'text' (delimiter '|');
 create external table ext (a int, x text)
 location ('file://@hostname@@abs_srcdir@/data/no/such/place/badt1.tbl' )
 format 'text';
-alter table ext drop column a; -- should pass with warning
+alter table ext drop column a; -- should pass
 alter external table ext add column a int; -- pass
 alter external table ext drop column a; -- pass
 alter external table ext add column extnewcol int not null; -- should fail (constraints not allowed)
@@ -184,7 +184,7 @@ alter external table ext alter column x type integer; -- pass
 truncate ext;
 delete from ext;
 update ext set x='1' where x='2';
-insert into ext(x) values('a');
+insert into ext(x) values(123);
 create index ext_index on ext(x); -- should fail
 drop table ext; -- should fail (wrong object)
 drop external table ext;

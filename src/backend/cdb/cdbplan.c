@@ -211,17 +211,6 @@ plan_tree_mutator(Node *node,
 			}
 			break;
 
-		case T_Repeat:
-			{
-				Repeat	   *repeat = (Repeat *) node;
-				Repeat	   *newrepeat;
-
-				FLATCOPY(newrepeat, repeat, Repeat);
-				PLANMUTATE(newrepeat, repeat);
-				return (Node *) newrepeat;
-			}
-			break;
-
 		case T_Append:
 			{
 				Append	   *append = (Append *) node;
@@ -373,22 +362,6 @@ plan_tree_mutator(Node *node,
 				FLATCOPY(newDynamicSeqScan, dynamicSeqScan, DynamicSeqScan);
 				SCANMUTATE(newDynamicSeqScan, dynamicSeqScan);
 				return (Node *) newDynamicSeqScan;
-			}
-			break;
-
-		case T_ExternalScan:
-			{
-				ExternalScan *extscan = (ExternalScan *) node;
-				ExternalScan *newextscan;
-
-				FLATCOPY(newextscan, extscan, ExternalScan);
-				SCANMUTATE(newextscan, extscan);
-
-				MUTATE(newextscan->uriList, extscan->uriList, List *);
-				newextscan->fmtType = extscan->fmtType;
-				newextscan->isMasterOnly = extscan->isMasterOnly;
-
-				return (Node *) newextscan;
 			}
 			break;
 
@@ -636,6 +609,23 @@ plan_tree_mutator(Node *node,
 				PLANMUTATE(newagg, agg);
 				COPYARRAY(newagg, agg, numCols, grpColIdx);
 				return (Node *) newagg;
+			}
+			break;
+
+		case T_TupleSplit:
+			{
+				TupleSplit  *tup_split = (TupleSplit *) node;
+				TupleSplit  *new_tup_split;
+
+				FLATCOPY(new_tup_split, tup_split, TupleSplit);
+				PLANMUTATE(new_tup_split, tup_split);
+				COPYARRAY(new_tup_split, tup_split, numCols, grpColIdx);
+
+				new_tup_split->dqa_args_id_bms = palloc0(sizeof(Bitmapset *) * tup_split->numDisDQAs);
+				for (int i = 0; i < tup_split->numDisDQAs; i++)
+					new_tup_split->dqa_args_id_bms[i] = bms_copy(tup_split->dqa_args_id_bms[i]);
+
+				return (Node *) new_tup_split;
 			}
 			break;
 

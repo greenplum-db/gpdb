@@ -105,7 +105,6 @@ FROM (SELECT count(*) c, gp_segment_id FROM facts GROUP BY 2) AS a;</codeblock>
      1 | template1
  10898 | template0
  38817 | pws
- 39682 | gpperfmon
 (6 rows)
 </codeblock></p></li>
           <li>Run a <codeph>gpssh</codeph> command to check file sizes across all of the segment

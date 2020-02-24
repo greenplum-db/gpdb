@@ -1494,7 +1494,7 @@ RemoveUserMappingById(Oid umId)
  * call after DefineRelation().
  */
 void
-CreateForeignTable(CreateForeignTableStmt *stmt, Oid relid)
+CreateForeignTable(CreateForeignTableStmt *stmt, Oid relid, bool skip_permission_check)
 {
 	Relation	ftrel;
 	Datum		ftoptions;
@@ -1526,9 +1526,12 @@ CreateForeignTable(CreateForeignTableStmt *stmt, Oid relid)
 	 * get the actual FDW for option validation etc.
 	 */
 	server = GetForeignServerByName(stmt->servername, false);
-	aclresult = pg_foreign_server_aclcheck(server->serverid, ownerId, ACL_USAGE);
-	if (aclresult != ACLCHECK_OK)
-		aclcheck_error(aclresult, ACL_KIND_FOREIGN_SERVER, server->servername);
+	if (!skip_permission_check)
+	{
+		aclresult = pg_foreign_server_aclcheck(server->serverid, ownerId, ACL_USAGE);
+		if (aclresult != ACLCHECK_OK)
+			aclcheck_error(aclresult, ACL_KIND_FOREIGN_SERVER, server->servername);
+	}
 
 	fdw = GetForeignDataWrapper(server->fdwid);
 

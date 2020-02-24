@@ -569,7 +569,7 @@ CREATE INDEX index ON ext_lineitem (L_ORDERKEY);
 TRUNCATE ext_lineitem;
 DELETE FROM ext_lineitem where L_ORDERKEY > 10;
 UPDATE ext_lineitem SET L_ORDERKEY = 10 where L_ORDERKEY > 10;
-INSERT INTO ext_lineitem VALUES (1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1);
+INSERT INTO ext_lineitem VALUES (1,1,1,1,1,1,1,1,1,1,null,null,null,1,1,1);
 DROP EXTERNAL TABLE ext_lineitem;
 
 -- test 17 different delimiter

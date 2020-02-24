@@ -372,13 +372,6 @@ typedef struct ViewOptions
 	((bool)((relation)->rd_rel->relstorage == RELSTORAGE_HEAP))
 
 /*
- * RelationIsExternal
- * 		True iff relation has external storage
- */
-#define RelationIsExternal(relation) \
-	((bool)((relation)->rd_rel->relstorage == RELSTORAGE_EXTERNAL))
-
-/*
  * RelationIsAoRows
  * 		True iff relation has append only storage with row orientation
  */

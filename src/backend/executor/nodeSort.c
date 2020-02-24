@@ -161,9 +161,6 @@ ExecSort(SortState *node)
 			tuplesort_set_instrument(tuplesortstate,
 									 node->ss.ps.instrument,
 									 node->ss.ps.cdbexplainbuf);
-
-		tuplesort_set_gpmon(tuplesortstate, &node->ss.ps.gpmon_pkt,
-							&node->ss.ps.gpmon_plan_tick);
 	}
 
 	/*
@@ -197,7 +194,6 @@ ExecSort(SortState *node)
 		 */
 		tuplesort_performsort(tuplesortstate);
 
-		CheckSendPlanStateGpmonPkt(&node->ss.ps);
 		/*
 		 * restore to user specified direction
 		 */
@@ -414,8 +410,6 @@ ExecEndSort(SortState *node)
 
 	SO1_printf("ExecEndSort: %s\n",
 			   "sort node shutdown");
-
-	EndPlanStateGpmonPkt(&node->ss.ps);
 }
 
 /* ----------------------------------------------------------------

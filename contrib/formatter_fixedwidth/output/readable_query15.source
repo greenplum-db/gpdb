@@ -18,7 +18,7 @@ LINE 5: LOCATION ("file://path/doesnt/path/doesnt/matter.tbl")
 -- system correctly fails the create operation
 -- and shows the correct syntax error message
 DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
-NOTICE:  table "tbl_ext_fixedwidth" does not exist, skipping
+NOTICE:  foreign table "tbl_ext_fixedwidth" does not exist, skipping
 CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth (
     s1 char(10), s2 varchar(10), s3 text, dt timestamp,
     n1 smallint, n2 integer, n3 bigint, n4 decimal,
@@ -33,7 +33,7 @@ LINE 6: FORMAT "CUSTOM" (formatter='fixedwidth_in', s1='10',
 -- Can successfully create the external table
 -- with values in Field Locations doubled quoted
 DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
-NOTICE:  table "tbl_ext_fixedwidth" does not exist, skipping
+NOTICE:  foreign table "tbl_ext_fixedwidth" does not exist, skipping
 CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth (
     s1 char(10), s2 varchar(10), s3 text, dt timestamp,
     n1 smallint, n2 integer, n3 bigint, n4 decimal,

@@ -364,11 +364,11 @@ def get_table_name():
     except Exception,e:
         errorMessage = str(e)
         print 'could not connect to database: ' + errorMessage
-    queryString = """SELECT tablename
-                     from pg_tables
-                     WHERE tablename
+    queryString = """SELECT relname
+                     from pg_class
+                     WHERE relname
                      like 'ext_gpload_reusable%'
-                     OR tablename
+                     OR relname
                      like 'staging_gpload_reusable%';"""
     resultList = db.query(queryString.encode('utf-8')).getresult()
     return resultList

@@ -102,8 +102,6 @@ extern void cost_bitmap_heap_scan(Path *path, PlannerInfo *root, RelOptInfo *bas
 					  ParamPathInfo *param_info,
 					  Path *bitmapqual, double loop_count);
 /* GPDB_92_MERGE_FIXME: Suspect we need to add ParamPathInfo for some scans below. */
-extern void cost_externalscan(ExternalPath *path, PlannerInfo *root, RelOptInfo *baserel,
-					  ParamPathInfo *param_info);
 extern void cost_bitmap_appendonly_scan(Path *path, PlannerInfo *root, RelOptInfo *baserel,
 					  ParamPathInfo *param_info,
 					  Path *bitmapqual, double loop_count);
@@ -145,7 +143,10 @@ extern void cost_agg(Path *path, PlannerInfo *root,
 		 double input_tuples,
 		 struct HashAggTableSizes *hash_info,
 		 bool hash_streaming);
-
+extern void cost_tup_split(Path *path, PlannerInfo *root,
+						   int numDQAs,
+						   Cost input_startup_cost, Cost input_total_cost,
+						   double input_tuples);
 extern void cost_windowagg(Path *path, PlannerInfo *root,
 			   List *windowFuncs, int numPartCols, int numOrderCols,
 			   Cost input_startup_cost, Cost input_total_cost,
@@ -223,13 +224,6 @@ extern void set_cte_size_estimates(PlannerInfo *root, RelOptInfo *rel,
 					   double cte_rows);
 extern void set_foreign_size_estimates(PlannerInfo *root, RelOptInfo *rel);
 extern PathTarget *set_pathtarget_cost_width(PlannerInfo *root, PathTarget *target);
-
-/* Additional costsize.c prototypes for CDB incremental cost functions. */
-extern Cost incremental_hashjoin_cost(double rows, 
-									  int inner_width, int outer_width, 
-									  List *hashclauses,
-									  PlannerInfo *root);
-extern Cost incremental_mergejoin_cost(double rows, List *mergeclauses, PlannerInfo *root);
 
 /*
  * prototypes for clausesel.c

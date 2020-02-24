@@ -45,6 +45,7 @@
 #include "nodes/nodeFuncs.h"
 #include "parser/parsetree.h"
 #include "utils/lsyscache.h"
+#include "utils/memutils.h"
 
 
 static void setupFunctionArguments(TableFunctionState *node);
@@ -469,8 +470,6 @@ ExecEndTableFunction(TableFunctionState *node)
 	
 	/* End the subplans */
 	ExecEndNode(outerPlanState(node));
-	
-	EndPlanStateGpmonPkt(&node->ss.ps);
 }
 
 void

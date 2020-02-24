@@ -7611,11 +7611,20 @@ is_exchangeable(Relation rel, Relation oldrel, Relation newrel, bool throw)
 {
 	TupleConversionMap *map_new = NULL;
 	TupleConversionMap *map_old = NULL;
+	bool		old_is_external;
+	bool		new_is_external;
+	bool		old_is_exchangeable;
+	bool		new_is_exchangeable;
 	bool		congruent = TRUE;
 
 	/* Both parts must be relations. */
-	if (!(oldrel->rd_rel->relkind == RELKIND_RELATION ||
-		  newrel->rd_rel->relkind == RELKIND_RELATION))
+	old_is_external = (oldrel->rd_rel->relkind == RELKIND_FOREIGN_TABLE &&
+					   rel_is_external_table(RelationGetRelid(oldrel)));
+	new_is_external = (newrel->rd_rel->relkind == RELKIND_FOREIGN_TABLE &&
+					   rel_is_external_table(RelationGetRelid(newrel)));
+	old_is_exchangeable = (oldrel->rd_rel->relkind == RELKIND_RELATION || old_is_external);
+	new_is_exchangeable = (newrel->rd_rel->relkind == RELKIND_RELATION || new_is_external);
+	if (!(old_is_exchangeable || new_is_exchangeable))
 	{
 		congruent = FALSE;
 		if (throw)
@@ -7634,7 +7643,7 @@ is_exchangeable(Relation rel, Relation oldrel, Relation newrel, bool throw)
 					errmsg("cannot exchange relations with differing persistence types")));
 	}
 
-	if (RelationIsExternal(newrel))
+	if (new_is_external)
 	{
 		if (rel_is_default_partition(oldrel->rd_id))
 		{
@@ -7746,7 +7755,7 @@ is_exchangeable(Relation rel, Relation oldrel, Relation newrel, bool throw)
 	 * either the oldpart or the newpart is external.
 	 */
 	if (congruent && Gp_role == GP_ROLE_DISPATCH &&
-		!RelationIsExternal(newrel) && !RelationIsExternal(oldrel))
+		!new_is_external && !old_is_external)
 	{
 		GpPolicy   *parpol = rel->rd_cdbpolicy;
 		GpPolicy   *oldpol = oldrel->rd_cdbpolicy;
@@ -8896,20 +8905,15 @@ has_external_partition(PartitionNode *n)
 	for (int i = 0; i < n->num_rules; i++)
 	{
 		PartitionRule *rule = n->rules[i];
-		Relation rel = heap_open(rule->parchildrelid, NoLock);
 
-		if (RelationIsExternal(rel))
+		if (rel_is_external_table(rule->parchildrelid))
 		{
-			heap_close(rel, NoLock);
 			return true;
 		}
 		else
 		{
-			heap_close(rel, NoLock);
 			if (rule->children && has_external_partition(rule->children))
-			{
 				return true;
-			}
 		}
 	}
 

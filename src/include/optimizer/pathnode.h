@@ -38,8 +38,6 @@ extern void cdb_add_join_path(PlannerInfo *root, RelOptInfo *parent_rel, JoinTyp
 				  Relids required_outer, JoinPath *new_path);
 extern Path *create_seqscan_path(PlannerInfo *root, RelOptInfo *rel,
 					Relids required_outer, int parallel_workers);
-extern ExternalPath *create_external_path(PlannerInfo *root, RelOptInfo *rel,
-					Relids required_outer);
 extern AppendOnlyPath *create_appendonly_path(PlannerInfo *root, RelOptInfo *rel,
 					Relids required_outer);
 extern AOCSPath *create_aocs_path(PlannerInfo *root, RelOptInfo *rel,
@@ -213,6 +211,23 @@ extern AggPath *create_agg_path(PlannerInfo *root,
 				const AggClauseCosts *aggcosts,
 				double numGroups,
 				struct HashAggTableSizes *hash_info);
+
+extern TupleSplitPath *create_tup_split_path(PlannerInfo *root,
+											 RelOptInfo *rel,
+											 Path *subpath,
+											 PathTarget *target,
+											 List *groupClause,
+											 Bitmapset **bitmapset,
+											 int numDisDQAs);
+
+extern AggPath *create_shadow_eliminate_path(PlannerInfo *root,
+											 RelOptInfo *rel,
+											 Path *subpath,
+											 PathTarget *target,
+											 double numGroups,
+											 int mapSz,
+											 int *shadow_mapping);
+
 extern GroupingSetsPath *create_groupingsets_path(PlannerInfo *root,
 						 RelOptInfo *rel,
 						 Path *subpath,

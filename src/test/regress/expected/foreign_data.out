@@ -1,6 +1,20 @@
 --
 -- Test foreign-data wrapper and server management.
 --
+-- In GPDB, there are a couple of special built-in objects, to handle
+-- backwards-compatibility with external tables. They are the FDW called
+-- 'pg_exttable_fdw', foreign server 'pg_exttable_server'. We don't want those
+-- to appear in the test output, to keep the expected output unchanged from
+-- upstream, as much as possible. The queries on the pg_foreign_* catalog
+-- tables, and the \dew and \des commands, have been modified to exclude them.
+--
+-- There's no way to match everything that does *not* contain a string in a \d
+-- pattern, so we use a pattern that is close enough for our purposes: This
+-- pattern includes everything that begins with a letter other than 'p', and
+-- also including everything that begins with 'p' followed by any other letter
+-- but 'g' (the 2nd rule is needed to include the 'postgresql' FDW used in the
+-- test).
+\set NO_BUILTINS ([a-oq-z]?*)|(p[a-fh-z]?*)
 -- Clean up in case a prior regression run failed
 -- Suppress NOTICE messages when roles don't exist
 SET client_min_messages TO 'warning';
@@ -17,14 +31,14 @@ CREATE FOREIGN DATA WRAPPER dummy;
 COMMENT ON FOREIGN DATA WRAPPER dummy IS 'useless';
 CREATE FOREIGN DATA WRAPPER postgresql VALIDATOR postgresql_fdw_validator;
 -- At this point we should have 2 built-in wrappers and no servers.
-SELECT fdwname, fdwhandler::regproc, fdwvalidator::regproc, fdwoptions FROM pg_foreign_data_wrapper ORDER BY 1, 2, 3;
+SELECT fdwname, fdwhandler::regproc, fdwvalidator::regproc, fdwoptions FROM pg_foreign_data_wrapper WHERE fdwname <> 'pg_exttable_fdw' ORDER BY 1, 2, 3;
   fdwname   | fdwhandler |       fdwvalidator       | fdwoptions 
 ------------+------------+--------------------------+------------
  dummy      | -          | -                        | 
  postgresql | -          | postgresql_fdw_validator | 
 (2 rows)
 
-SELECT srvname, srvoptions FROM pg_foreign_server;
+SELECT srvname, srvoptions FROM pg_foreign_server WHERE srvname <> 'pg_exttable_server';
  srvname | srvoptions 
 ---------+------------
 (0 rows)
@@ -38,7 +52,7 @@ SELECT * FROM pg_user_mapping;
 CREATE FOREIGN DATA WRAPPER foo VALIDATOR bar;            -- ERROR
 ERROR:  function bar(text[], oid) does not exist
 CREATE FOREIGN DATA WRAPPER foo;
-\dew
+\dew :NO_BUILTINS
                         List of foreign-data wrappers
     Name    |           Owner           | Handler |        Validator         
 ------------+---------------------------+---------+--------------------------
@@ -51,7 +65,7 @@ CREATE FOREIGN DATA WRAPPER foo; -- duplicate
 ERROR:  foreign-data wrapper "foo" already exists
 DROP FOREIGN DATA WRAPPER foo;
 CREATE FOREIGN DATA WRAPPER foo OPTIONS (testing '1');
-\dew+
+\dew+ :NO_BUILTINS
                                                  List of foreign-data wrappers
     Name    |           Owner           | Handler |        Validator         | Access privileges |  FDW Options  | Description 
 ------------+---------------------------+---------+--------------------------+-------------------+---------------+-------------
@@ -64,7 +78,7 @@ DROP FOREIGN DATA WRAPPER foo;
 CREATE FOREIGN DATA WRAPPER foo OPTIONS (testing '1', testing '2');   -- ERROR
 ERROR:  option "testing" provided more than once
 CREATE FOREIGN DATA WRAPPER foo OPTIONS (testing '1', another '2');
-\dew+
+\dew+ :NO_BUILTINS
                                                        List of foreign-data wrappers
     Name    |           Owner           | Handler |        Validator         | Access privileges |        FDW Options         | Description 
 ------------+---------------------------+---------+--------------------------+-------------------+----------------------------+-------------
@@ -80,7 +94,7 @@ ERROR:  permission denied to create foreign-data wrapper "foo"
 HINT:  Must be superuser to create a foreign-data wrapper.
 RESET ROLE;
 CREATE FOREIGN DATA WRAPPER foo VALIDATOR postgresql_fdw_validator;
-\dew+
+\dew+ :NO_BUILTINS
                                                 List of foreign-data wrappers
     Name    |           Owner           | Handler |        Validator         | Access privileges | FDW Options | Description 
 ------------+---------------------------+---------+--------------------------+-------------------+-------------+-------------
@@ -97,7 +111,7 @@ LINE 1: ALTER FOREIGN DATA WRAPPER foo;
 ALTER FOREIGN DATA WRAPPER foo VALIDATOR bar;               -- ERROR
 ERROR:  function bar(text[], oid) does not exist
 ALTER FOREIGN DATA WRAPPER foo NO VALIDATOR;
-\dew+
+\dew+ :NO_BUILTINS
                                                 List of foreign-data wrappers
     Name    |           Owner           | Handler |        Validator         | Access privileges | FDW Options | Description 
 ------------+---------------------------+---------+--------------------------+-------------------+-------------+-------------
@@ -112,7 +126,7 @@ ERROR:  option "c" not found
 ALTER FOREIGN DATA WRAPPER foo OPTIONS (DROP c);            -- ERROR
 ERROR:  option "c" not found
 ALTER FOREIGN DATA WRAPPER foo OPTIONS (ADD x '1', DROP x);
-\dew+
+\dew+ :NO_BUILTINS
                                                  List of foreign-data wrappers
     Name    |           Owner           | Handler |        Validator         | Access privileges |  FDW Options   | Description 
 ------------+---------------------------+---------+--------------------------+-------------------+----------------+-------------
@@ -122,7 +136,7 @@ ALTER FOREIGN DATA WRAPPER foo OPTIONS (ADD x '1', DROP x);
 (3 rows)
 
 ALTER FOREIGN DATA WRAPPER foo OPTIONS (DROP a, SET b '3', ADD c '4');
-\dew+
+\dew+ :NO_BUILTINS
                                                  List of foreign-data wrappers
     Name    |           Owner           | Handler |        Validator         | Access privileges |  FDW Options   | Description 
 ------------+---------------------------+---------+--------------------------+-------------------+----------------+-------------
@@ -134,7 +148,7 @@ ALTER FOREIGN DATA WRAPPER foo OPTIONS (DROP a, SET b '3', ADD c '4');
 ALTER FOREIGN DATA WRAPPER foo OPTIONS (a '2');
 ALTER FOREIGN DATA WRAPPER foo OPTIONS (b '4');             -- ERROR
 ERROR:  option "b" provided more than once
-\dew+
+\dew+ :NO_BUILTINS
                                                      List of foreign-data wrappers
     Name    |           Owner           | Handler |        Validator         | Access privileges |      FDW Options      | Description 
 ------------+---------------------------+---------+--------------------------+-------------------+-----------------------+-------------
@@ -149,7 +163,7 @@ ERROR:  permission denied to alter foreign-data wrapper "foo"
 HINT:  Must be superuser to alter a foreign-data wrapper.
 SET ROLE regress_test_role_super;
 ALTER FOREIGN DATA WRAPPER foo OPTIONS (ADD d '5');
-\dew+
+\dew+ :NO_BUILTINS
                                                         List of foreign-data wrappers
     Name    |           Owner           | Handler |        Validator         | Access privileges |         FDW Options          | Description 
 ------------+---------------------------+---------+--------------------------+-------------------+------------------------------+-------------
@@ -168,7 +182,7 @@ ALTER FOREIGN DATA WRAPPER foo OPTIONS (ADD e '6');         -- ERROR
 ERROR:  permission denied to alter foreign-data wrapper "foo"
 HINT:  Must be superuser to alter a foreign-data wrapper.
 RESET ROLE;
-\dew+
+\dew+ :NO_BUILTINS
                                                         List of foreign-data wrappers
     Name    |           Owner           | Handler |        Validator         | Access privileges |         FDW Options          | Description 
 ------------+---------------------------+---------+--------------------------+-------------------+------------------------------+-------------
@@ -178,7 +192,7 @@ RESET ROLE;
 (3 rows)
 
 ALTER FOREIGN DATA WRAPPER foo RENAME TO foo1;
-\dew+
+\dew+ :NO_BUILTINS
                                                         List of foreign-data wrappers
     Name    |           Owner           | Handler |        Validator         | Access privileges |         FDW Options          | Description 
 ------------+---------------------------+---------+--------------------------+-------------------+------------------------------+-------------
@@ -193,7 +207,7 @@ DROP FOREIGN DATA WRAPPER nonexistent;                      -- ERROR
 ERROR:  foreign-data wrapper "nonexistent" does not exist
 DROP FOREIGN DATA WRAPPER IF EXISTS nonexistent;
 NOTICE:  foreign-data wrapper "nonexistent" does not exist, skipping
-\dew+
+\dew+ :NO_BUILTINS
                                                         List of foreign-data wrappers
     Name    |           Owner           | Handler |        Validator         | Access privileges |         FDW Options          | Description 
 ------------+---------------------------+---------+--------------------------+-------------------+------------------------------+-------------
@@ -209,7 +223,7 @@ SET ROLE regress_test_role_super;
 DROP FOREIGN DATA WRAPPER foo;
 RESET ROLE;
 DROP ROLE regress_test_role_super;
-\dew+
+\dew+ :NO_BUILTINS
                                                 List of foreign-data wrappers
     Name    |           Owner           | Handler |        Validator         | Access privileges | FDW Options | Description 
 ------------+---------------------------+---------+--------------------------+-------------------+-------------+-------------
@@ -221,7 +235,7 @@ CREATE FOREIGN DATA WRAPPER foo;
 CREATE SERVER s1 FOREIGN DATA WRAPPER foo;
 COMMENT ON SERVER s1 IS 'foreign server';
 CREATE USER MAPPING FOR current_user SERVER s1;
-\dew+
+\dew+ :NO_BUILTINS
                                                 List of foreign-data wrappers
     Name    |           Owner           | Handler |        Validator         | Access privileges | FDW Options | Description 
 ------------+---------------------------+---------+--------------------------+-------------------+-------------+-------------
@@ -230,7 +244,7 @@ CREATE USER MAPPING FOR current_user SERVER s1;
  postgresql | regress_foreign_data_user | -       | postgresql_fdw_validator |                   |             | 
 (3 rows)
 
-\des+
+\des+ :NO_BUILTINS
                                                    List of foreign servers
  Name |           Owner           | Foreign-data wrapper | Access privileges | Type | Version | FDW Options |  Description   
 ------+---------------------------+----------------------+-------------------+------+---------+-------------+----------------
@@ -257,7 +271,7 @@ DROP FOREIGN DATA WRAPPER foo CASCADE;
 NOTICE:  drop cascades to 2 other objects
 DETAIL:  drop cascades to server s1
 drop cascades to user mapping for regress_foreign_data_user on server s1
-\dew+
+\dew+ :NO_BUILTINS
                                                 List of foreign-data wrappers
     Name    |           Owner           | Handler |        Validator         | Access privileges | FDW Options | Description 
 ------------+---------------------------+---------+--------------------------+-------------------+-------------+-------------
@@ -265,7 +279,7 @@ drop cascades to user mapping for regress_foreign_data_user on server s1
  postgresql | regress_foreign_data_user | -       | postgresql_fdw_validator |                   |             | 
 (2 rows)
 
-\des+
+\des+ :NO_BUILTINS
                                        List of foreign servers
  Name | Owner | Foreign-data wrapper | Access privileges | Type | Version | FDW Options | Description 
 ------+-------+----------------------+-------------------+------+---------+-------------+-------------
@@ -294,7 +308,7 @@ CREATE SERVER s8 FOREIGN DATA WRAPPER postgresql OPTIONS (foo '1'); -- ERROR
 ERROR:  invalid option "foo"
 HINT:  Valid options in this context are: authtype, service, connect_timeout, dbname, host, hostaddr, port, tty, options, requiressl, sslmode, gsslib
 CREATE SERVER s8 FOREIGN DATA WRAPPER postgresql OPTIONS (host 'localhost', dbname 's8db');
-\des+
+\des+ :NO_BUILTINS
                                                              List of foreign servers
  Name |           Owner           | Foreign-data wrapper | Access privileges |  Type  | Version |            FDW Options            | Description 
 ------+---------------------------+----------------------+-------------------+--------+---------+-----------------------------------+-------------
@@ -316,7 +330,7 @@ GRANT USAGE ON FOREIGN DATA WRAPPER foo TO regress_test_role;
 SET ROLE regress_test_role;
 CREATE SERVER t1 FOREIGN DATA WRAPPER foo;
 RESET ROLE;
-\des+
+\des+ :NO_BUILTINS
                                                              List of foreign servers
  Name |           Owner           | Foreign-data wrapper | Access privileges |  Type  | Version |            FDW Options            | Description 
 ------+---------------------------+----------------------+-------------------+--------+---------+-----------------------------------+-------------
@@ -340,7 +354,7 @@ RESET ROLE;
 GRANT regress_test_indirect TO regress_test_role;
 SET ROLE regress_test_role;
 CREATE SERVER t2 FOREIGN DATA WRAPPER foo;
-\des+
+\des+ :NO_BUILTINS
                                                              List of foreign servers
  Name |           Owner           | Foreign-data wrapper | Access privileges |  Type  | Version |            FDW Options            | Description 
 ------+---------------------------+----------------------+-------------------+--------+---------+-----------------------------------+-------------
@@ -370,7 +384,7 @@ ALTER SERVER s2 VERSION '1.1';
 ALTER SERVER s3 OPTIONS ("tns name" 'orcl', port '1521');
 GRANT USAGE ON FOREIGN SERVER s1 TO regress_test_role;
 GRANT USAGE ON FOREIGN SERVER s6 TO regress_test_role2 WITH GRANT OPTION;
-\des+
+\des+ :NO_BUILTINS
                                                                                List of foreign servers
  Name |           Owner           | Foreign-data wrapper |                   Access privileges                   |  Type  | Version |            FDW Options            | Description 
 ------+---------------------------+----------------------+-------------------------------------------------------+--------+---------+-----------------------------------+-------------
@@ -421,7 +435,7 @@ DROP ROLE regress_test_indirect;                            -- ERROR
 ERROR:  role "regress_test_indirect" cannot be dropped because some objects depend on it
 DETAIL:  owner of server s1
 privileges for foreign-data wrapper foo
-\des+
+\des+ :NO_BUILTINS
                                                                                  List of foreign servers
  Name |           Owner           | Foreign-data wrapper |                   Access privileges                   |  Type  | Version |             FDW Options              | Description 
 ------+---------------------------+----------------------+-------------------------------------------------------+--------+---------+--------------------------------------+-------------
@@ -439,7 +453,7 @@ privileges for foreign-data wrapper foo
 (10 rows)
 
 ALTER SERVER s8 RENAME to s8new;
-\des+
+\des+ :NO_BUILTINS
                                                                                  List of foreign servers
  Name  |           Owner           | Foreign-data wrapper |                   Access privileges                   |  Type  | Version |             FDW Options              | Description 
 -------+---------------------------+----------------------+-------------------------------------------------------+--------+---------+--------------------------------------+-------------
@@ -462,7 +476,7 @@ DROP SERVER nonexistent;                                    -- ERROR
 ERROR:  server "nonexistent" does not exist
 DROP SERVER IF EXISTS nonexistent;
 NOTICE:  server "nonexistent" does not exist, skipping
-\des
+\des :NO_BUILTINS
                  List of foreign servers
  Name |           Owner           | Foreign-data wrapper 
 ------+---------------------------+----------------------
@@ -483,7 +497,7 @@ DROP SERVER s2;                                             -- ERROR
 ERROR:  must be owner of foreign server s2
 DROP SERVER s1;
 RESET ROLE;
-\des
+\des :NO_BUILTINS
                  List of foreign servers
  Name |           Owner           | Foreign-data wrapper 
 ------+---------------------------+----------------------
@@ -502,7 +516,7 @@ ALTER SERVER s2 OWNER TO regress_test_role;
 SET ROLE regress_test_role;
 DROP SERVER s2;
 RESET ROLE;
-\des
+\des :NO_BUILTINS
                  List of foreign servers
  Name |           Owner           | Foreign-data wrapper 
 ------+---------------------------+----------------------
@@ -530,7 +544,7 @@ DETAIL:  user mapping for regress_foreign_data_user on server s3 depends on serv
 HINT:  Use DROP ... CASCADE to drop the dependent objects too.
 DROP SERVER s3 CASCADE;
 NOTICE:  drop cascades to user mapping for regress_foreign_data_user on server s3
-\des
+\des :NO_BUILTINS
                  List of foreign servers
  Name |           Owner           | Foreign-data wrapper 
 ------+---------------------------+----------------------
@@ -872,7 +886,7 @@ NOTICE:  relation "doesnt_exist_ft1" does not exist, skipping
 ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 RENAME TO foreign_table_1;
 NOTICE:  relation "doesnt_exist_ft1" does not exist, skipping
 -- Information schema
-SELECT * FROM information_schema.foreign_data_wrappers ORDER BY 1, 2;
+SELECT * FROM information_schema.foreign_data_wrappers WHERE foreign_data_wrapper_name <> 'pg_exttable_fdw' ORDER BY 1, 2;
  foreign_data_wrapper_catalog | foreign_data_wrapper_name | authorization_identifier  | library_name | foreign_data_wrapper_language 
 ------------------------------+---------------------------+---------------------------+--------------+-------------------------------
  regression                   | dummy                     | regress_foreign_data_user |              | c
@@ -886,7 +900,7 @@ SELECT * FROM information_schema.foreign_data_wrapper_options ORDER BY 1, 2, 3;
  regression                   | foo                       | test wrapper | true
 (1 row)
 
-SELECT * FROM information_schema.foreign_servers ORDER BY 1, 2;
+SELECT * FROM information_schema.foreign_servers WHERE foreign_server_name <> 'pg_exttable_server'  ORDER BY 1, 2;
  foreign_server_catalog | foreign_server_name | foreign_data_wrapper_catalog | foreign_data_wrapper_name | foreign_server_type | foreign_server_version | authorization_identifier  
 ------------------------+---------------------+------------------------------+---------------------------+---------------------+------------------------+---------------------------
  regression             | s0                  | regression                   | dummy                     |                     |                        | regress_foreign_data_user
@@ -952,7 +966,7 @@ SELECT * FROM information_schema.role_usage_grants WHERE object_type LIKE 'FOREI
  regress_test_indirect     | regress_test_role2        | regression     |               | s6          | FOREIGN SERVER       | USAGE          | YES
 (4 rows)
 
-SELECT * FROM information_schema.foreign_tables ORDER BY 1, 2, 3;
+SELECT * FROM information_schema.foreign_tables WHERE foreign_table_schema <> 'gp_toolkit' ORDER BY 1, 2, 3;
  foreign_table_catalog | foreign_table_schema | foreign_table_name | foreign_server_catalog | foreign_server_name 
 -----------------------+----------------------+--------------------+------------------------+---------------------
  regression            | foreign_schema       | foreign_table_1    | regression             | s0
@@ -1844,12 +1858,12 @@ NOTICE:  drop cascades to server s0
 \c
 DROP ROLE regress_foreign_data_user;
 -- At this point we should have no wrappers, no servers, and no mappings.
-SELECT fdwname, fdwhandler, fdwvalidator, fdwoptions FROM pg_foreign_data_wrapper;
+SELECT fdwname, fdwhandler, fdwvalidator, fdwoptions FROM pg_foreign_data_wrapper WHERE fdwname <> 'pg_exttable_fdw';
  fdwname | fdwhandler | fdwvalidator | fdwoptions 
 ---------+------------+--------------+------------
 (0 rows)
 
-SELECT srvname, srvoptions FROM pg_foreign_server;
+SELECT srvname, srvoptions FROM pg_foreign_server WHERE srvname <> 'pg_exttable_server';
  srvname | srvoptions 
 ---------+------------
 (0 rows)

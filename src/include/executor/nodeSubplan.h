@@ -33,7 +33,6 @@ extern void ExecReScanSetParamPlan(SubPlanState *node, PlanState *parent);
  */
 extern void ExecSetParamPlan(SubPlanState *node, ExprContext *econtext, QueryDesc *gbl_queryDesc);
 
-/* Gpmon: It seems does not make any sense to gpmon this node. */
 extern void ExecSetParamPlanMulti(const Bitmapset *params, ExprContext *econtext, QueryDesc *gbl_queryDesc);
 
 #endif   /* NODESUBPLAN_H */

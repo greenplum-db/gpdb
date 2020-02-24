@@ -19,7 +19,6 @@
 
 #include "nodes/execnodes.h"
 #include "tcop/dest.h"
-#include "gpmon/gpmon.h"
 
 struct CdbExplain_ShowStatCtx;  /* private, in "cdb/cdbexplain.c" */
 
@@ -84,7 +83,7 @@ typedef struct ExecSlice
 	 * A list of CDBProcess nodes corresponding to the worker processes
 	 * allocated to implement this plan slice.
 	 *
-	 * The number of processes must agree with the the plan slice to be
+	 * The number of processes must agree with the plan slice to be
 	 * implemented.
 	 */
 	List		*primaryProcesses;
@@ -239,14 +238,8 @@ typedef struct QueryDesc
 	/* CDB: EXPLAIN ANALYZE statistics */
 	struct CdbExplain_ShowStatCtx  *showstatctx;
 
-	/* Gpmon */
-	gpmon_packet_t *gpmon_pkt;
-
 	/* This is always set NULL by the core system, but plugins can change it */
 	struct Instrumentation *totaltime;	/* total time spent in ExecutorRun */
-
-	/* The overall memory consumption account (i.e., outside of an operator) */
-	MemoryAccountIdType memoryAccountId;
 } QueryDesc;
 
 /* in pquery.c */

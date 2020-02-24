@@ -2532,22 +2532,6 @@ relation_is_updatable(Oid reloid,
 	if (rel == NULL)
 		return 0;
 
-	/* If this is an external table, check if it's writeable */
-	if (rel->rd_rel->relkind == RELKIND_RELATION &&
-		rel->rd_rel->relstorage == RELSTORAGE_EXTERNAL)
-	{
-		ExtTableEntry	   *extentry;
-
-		extentry = GetExtTableEntry(reloid);
-
-		if (extentry->iswritable)
-			events |= (1 << CMD_INSERT);
-
-		pfree(extentry);
-		relation_close(rel, AccessShareLock);
-		return events;
-	}
-
 	/* If the relation is a table, it is always updatable */
 	/* GPDB: except if it's an external table, which we checked above */
 	if (rel->rd_rel->relkind == RELKIND_RELATION)

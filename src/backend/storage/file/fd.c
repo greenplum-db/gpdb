@@ -3543,3 +3543,15 @@ FileSetIsWorkfile(File file)
 {
 	VfdCache[file].fdstate |= FD_WORKFILE;
 }
+
+/*
+ * Set file is temp file or not
+ */
+void
+FileSetIsTempFile(File file, bool isTempFile)
+{
+	if (isTempFile)
+		VfdCache[file].fdstate |= FD_TEMPORARY;
+	else
+		VfdCache[file].fdstate &= ~FD_TEMPORARY;
+}

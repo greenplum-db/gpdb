@@ -105,7 +105,7 @@ inject_partition_selectors_for_join(PlannerInfo *root, JoinPath *join_path,
 	bool		any_selectors_created = false;
 	bool		good_type = false;
 
-	if (Gp_role != GP_ROLE_DISPATCH || !root->config->gp_dynamic_partition_pruning)
+	if (Gp_role != GP_ROLE_DISPATCH || !gp_dynamic_partition_pruning)
 		return false;
 
 	/*

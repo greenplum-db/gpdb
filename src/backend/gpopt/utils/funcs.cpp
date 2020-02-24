@@ -18,6 +18,7 @@
 extern "C" {
 #include "postgres.h"
 #include "fmgr.h"
+#include "lib/stringinfo.h"
 #include "utils/builtins.h"
 }
 

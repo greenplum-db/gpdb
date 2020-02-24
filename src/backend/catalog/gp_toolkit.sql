@@ -675,7 +675,6 @@ AS
 --
 -- @doc:
 --        Compute coefficient of variance given an array of rowcounts;
---        Multiply by 100 to be in sync with gpperfmon's measure
 --
 --------------------------------------------------------------------------------
 CREATE FUNCTION gp_toolkit.gp_skew_coefficient(targetoid oid, OUT skcoid oid, OUT skccoeff numeric)

@@ -22,8 +22,8 @@
       </li>
     </ul>
     <p>For information about the Greenplum Database PL/R Language, see <xref scope="peer"
-        type="topic" format="dita" href="../ref_guide/extensions/pl_r.xml#topic1">Greenplum PL/R
-        Language Extension</xref>.</p>
+        type="topic" format="dita" href="../analytics/pl_r.xml#topic1">Greenplum PL/R Language
+        Extension</xref>.</p>
   </body>
   <topic xml:lang="en" id="topic2">
     <title>R Data Science Libraries</title>

@@ -82,7 +82,6 @@ CTranslatorDXLToPlStmt::CTranslatorDXLToPlStmt
 	m_cmd_type(CMD_SELECT),
 	m_is_tgt_tbl_distributed(false),
 	m_result_rel_list(NULL),
-	m_external_scan_counter(0),
 	m_num_of_segments(num_of_segments),
 	m_partition_selector_counter(0)
 {
@@ -147,7 +146,6 @@ CTranslatorDXLToPlStmt::InitTranslators()
 			{EdxlopPhysicalTVF,						&gpopt::CTranslatorDXLToPlStmt::TranslateDXLTvf},
 			{EdxlopPhysicalDML,						&gpopt::CTranslatorDXLToPlStmt::TranslateDXLDml},
 			{EdxlopPhysicalSplit,					&gpopt::CTranslatorDXLToPlStmt::TranslateDXLSplit},
-			{EdxlopPhysicalRowTrigger,				&gpopt::CTranslatorDXLToPlStmt::TranslateDXLRowTrigger},
 			{EdxlopPhysicalAssert,					&gpopt::CTranslatorDXLToPlStmt::TranslateDXLAssert},
 			{EdxlopPhysicalCTEProducer, 			&gpopt::CTranslatorDXLToPlStmt::TranslateDXLCTEProducerToSharedScan},
 			{EdxlopPhysicalCTEConsumer, 			&gpopt::CTranslatorDXLToPlStmt::TranslateDXLCTEConsumerToSharedScan},
@@ -390,32 +388,37 @@ CTranslatorDXLToPlStmt::TranslateDXLTblScan
 	rte->requiredPerms |= ACL_SELECT;
 	m_dxl_to_plstmt_context->AddRTE(rte);
 
+	// a table scan node must have 2 children: projection list and filter
+	GPOS_ASSERT(2 == tbl_scan_dxlnode->Arity());
+
+	// translate proj list and filter
+	CDXLNode *project_list_dxlnode = (*tbl_scan_dxlnode)[EdxltsIndexProjList];
+	CDXLNode *filter_dxlnode = (*tbl_scan_dxlnode)[EdxltsIndexFilter];
+
+	List *targetlist = NIL;
+	List *qual = NIL;
+
+	TranslateProjListAndFilter
+		(
+		project_list_dxlnode,
+		filter_dxlnode,
+		&base_table_context,	// translate context for the base table
+		NULL,			// translate_ctxt_left and pdxltrctxRight,
+		&targetlist,
+		&qual,
+		output_context
+		);
+
 	Plan *plan = NULL;
 	Plan *plan_return = NULL;
 	if (IMDRelation::ErelstorageExternal == md_rel->RetrieveRelStorageType())
 	{
-		const IMDRelationExternal *md_rel_ext = dynamic_cast<const IMDRelationExternal*>(md_rel);
 		OID oidRel = CMDIdGPDB::CastMdid(md_rel->MDId())->Oid();
-		ExtTableEntry *ext_table_entry = gpdb::GetExternalTableEntry(oidRel);
-		bool isMasterOnly;
-		
-		// create external scan node
-		ExternalScan *ext_scan = MakeNode(ExternalScan);
-		ext_scan->scan.scanrelid = index;
-		ext_scan->uriList = gpdb::GetExternalScanUriList(ext_table_entry, &isMasterOnly);
-		ext_scan->fmtOptString = ext_table_entry->fmtopts;
-		ext_scan->fmtType = ext_table_entry->fmtcode;
-		ext_scan->isMasterOnly = isMasterOnly;
-		GPOS_ASSERT((IMDRelation::EreldistrMasterOnly == md_rel_ext->GetRelDistribution()) == isMasterOnly);
-		ext_scan->logErrors = ext_table_entry->logerrors;
-		ext_scan->rejLimit = md_rel_ext->RejectLimit();
-		ext_scan->rejLimitInRows = md_rel_ext->IsRejectLimitInRows();
 
-		ext_scan->encoding = ext_table_entry->encoding;
-		ext_scan->scancounter = m_external_scan_counter++;
-
-		plan = &(ext_scan->scan.plan);
-		plan_return = (Plan *) ext_scan;
+		// create foreign scan node
+		ForeignScan *foreign_scan = gpdb::CreateForeignScanForExternalTable(oidRel, index, qual, targetlist);
+		plan = &(foreign_scan->scan.plan);
+		plan_return = (Plan *) foreign_scan;
 	}
 	else
 	{
@@ -424,7 +427,11 @@ CTranslatorDXLToPlStmt::TranslateDXLTblScan
 		seq_scan->scanrelid = index;
 		plan = &(seq_scan->plan);
 		plan_return = (Plan *) seq_scan;
+
+		plan->targetlist = targetlist;
+		plan->qual = qual;
 	}
+
 
 	plan->plan_node_id = m_dxl_to_plstmt_context->GetNextPlanId();
 
@@ -436,24 +443,6 @@ CTranslatorDXLToPlStmt::TranslateDXLTblScan
 		&(plan->total_cost),
 		&(plan->plan_rows),
 		&(plan->plan_width)
-		);
-
-	// a table scan node must have 2 children: projection list and filter
-	GPOS_ASSERT(2 == tbl_scan_dxlnode->Arity());
-
-	// translate proj list and filter
-	CDXLNode *project_list_dxlnode = (*tbl_scan_dxlnode)[EdxltsIndexProjList];
-	CDXLNode *filter_dxlnode = (*tbl_scan_dxlnode)[EdxltsIndexFilter];
-
-	TranslateProjListAndFilter
-		(
-		project_list_dxlnode,
-		filter_dxlnode,
-		&base_table_context,	// translate context for the base table
-		NULL,			// translate_ctxt_left and pdxltrctxRight,
-		&plan->targetlist,
-		&plan->qual,
-		output_context
 		);
 
 	SetParamIds(plan);
@@ -3714,13 +3703,22 @@ CTranslatorDXLToPlStmt::TranslateDXLDml
 			break;
 		}
 	}
-	
+
 	IMDId *mdid_target_table = phy_dml_dxlop->GetDXLTableDescr()->MDId();
-	if (IMDRelation::EreldistrMasterOnly != m_md_accessor->RetrieveRel(mdid_target_table)->GetRelDistribution())
+	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(mdid_target_table);
+
+	if (IMDRelation::EreldistrMasterOnly != md_rel->GetRelDistribution())
 	{
 		m_is_tgt_tbl_distributed = true;
 	}
-	
+
+	if (CMD_UPDATE == m_cmd_type &&
+	    gpdb::HasUpdateTriggers(CMDIdGPDB::CastMdid(mdid_target_table)->Oid()))
+	{
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+			   GPOS_WSZ_LIT("UPDATE on a table with UPDATE triggers"));
+	}
+
 	// translation context for column mappings in the base relation
 	CDXLTranslateContextBaseTable base_table_context(m_mp);
 
@@ -3728,8 +3726,6 @@ CTranslatorDXLToPlStmt::TranslateDXLDml
 	Index index = gpdb::ListLength(m_dxl_to_plstmt_context->GetRTableEntriesList()) + 1;
 	
 	m_result_rel_list = gpdb::LAppendInt(m_result_rel_list, index);
-
-	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(phy_dml_dxlop->GetDXLTableDescr()->MDId());
 
 	CDXLTableDescr *table_descr = phy_dml_dxlop->GetDXLTableDescr();
 	RangeTblEntry *rte = TranslateDXLTblDescrToRangeTblEntry(table_descr, NULL /*index_descr_dxl*/, index, &base_table_context);
@@ -3800,6 +3796,8 @@ CTranslatorDXLToPlStmt::TranslateDXLDml
 	dml->resultRelations = ListMake1Int(index);
 	dml->resultRelIndex = list_length(m_result_rel_list) - 1;
 	dml->plans = ListMake1(child_plan);
+
+	dml->fdwPrivLists = ListMake1(NIL);
 
 	// ORCA plans all updates as split updates
 	if (m_cmd_type == CMD_UPDATE)
@@ -4088,98 +4086,6 @@ CTranslatorDXLToPlStmt::TranslateDXLAssert
 	child_contexts->Release();
 
 	return (Plan *) assert_node;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorDXLToPlStmt::TranslateDXLRowTrigger
-//
-//	@doc:
-//		Translates a DXL Row Trigger node
-//
-//---------------------------------------------------------------------------
-Plan *
-CTranslatorDXLToPlStmt::TranslateDXLRowTrigger
-	(
-	const CDXLNode *row_trigger_dxlnode,
-	CDXLTranslateContext *output_context,
-	CDXLTranslationContextArray *ctxt_translation_prev_siblings
-	)
-{
-	CDXLPhysicalRowTrigger *phy_row_trigger_dxlop = CDXLPhysicalRowTrigger::Cast(row_trigger_dxlnode->GetOperator());
-
-	// create RowTrigger node
-	RowTrigger *row_trigger = MakeNode(RowTrigger);
-	Plan *plan = &(row_trigger->plan);
-
-	CDXLNode *project_list_dxlnode = (*row_trigger_dxlnode)[0];
-	CDXLNode *child_dxlnode = (*row_trigger_dxlnode)[1];
-
-	CDXLTranslateContext child_context(m_mp, false, output_context->GetColIdToParamIdMap());
-
-	Plan *child_plan = TranslateDXLOperatorToPlan(child_dxlnode, &child_context, ctxt_translation_prev_siblings);
-
-	CDXLTranslationContextArray *child_contexts = GPOS_NEW(m_mp) CDXLTranslationContextArray(m_mp);
-	child_contexts->Append(&child_context);
-
-	// translate proj list and filter
-	plan->targetlist = TranslateDXLProjList
-		(
-		project_list_dxlnode,
-		NULL,			// translate context for the base table
-		child_contexts,
-		output_context
-		);
-
-	Oid relid_oid = CMDIdGPDB::CastMdid(phy_row_trigger_dxlop->GetRelMdId())->Oid();
-	GPOS_ASSERT(InvalidOid != relid_oid);
-	row_trigger->relid = relid_oid;
-	row_trigger->eventFlags = phy_row_trigger_dxlop->GetType();
-
-	// translate old and new columns
-	ULongPtrArray *colids_old_array = phy_row_trigger_dxlop->GetColIdsOld();
-	ULongPtrArray *colids_new_array = phy_row_trigger_dxlop->GetColIdsNew();
-
-	GPOS_ASSERT_IMP(NULL != colids_old_array && NULL != colids_new_array,
-					colids_new_array->Size() == colids_old_array->Size());
-
-	if (NULL == colids_old_array)
-	{
-		row_trigger->oldValuesColIdx = NIL;
-	}
-	else
-	{
-		row_trigger->oldValuesColIdx = CTranslatorUtils::ConvertColidToAttnos(colids_old_array, &child_context);
-	}
-
-	if (NULL == colids_new_array)
-	{
-		row_trigger->newValuesColIdx = NIL;
-	}
-	else
-	{
-		row_trigger->newValuesColIdx = CTranslatorUtils::ConvertColidToAttnos(colids_new_array, &child_context);
-	}
-
-	plan->lefttree = child_plan;
-	plan->plan_node_id = m_dxl_to_plstmt_context->GetNextPlanId();
-
-	SetParamIds(plan);
-
-	// cleanup
-	child_contexts->Release();
-
-	// translate operator costs
-	TranslatePlanCosts
-		(
-		CDXLPhysicalProperties::PdxlpropConvert(row_trigger_dxlnode->GetProperties())->GetDXLOperatorCost(),
-		&(plan->startup_cost),
-		&(plan->total_cost),
-		&(plan->plan_rows),
-		&(plan->plan_width)
-		);
-
-	return (Plan *) row_trigger;
 }
 
 //---------------------------------------------------------------------------

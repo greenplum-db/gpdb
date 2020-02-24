@@ -1877,66 +1877,87 @@ CONTEXT:  SQL function "recreate_three_level_table" statement 2
  
 (1 row)
 
-CREATE UNIQUE INDEX myidx_onroot ON r USING btree(r_key);
+CREATE UNIQUE INDEX myidx_onroot ON r USING btree(r_key,r_name);
 SELECT * FROM dependencies_show_for_idx();
-           depname            |       refname        | deptype 
-------------------------------+----------------------+---------
- myidx_onroot                 | r                    | a
- r_1_prt_r1_2_prt_a_r_key_idx | r_1_prt_r1_2_prt_a   | I
- r_1_prt_r1_2_prt_a_r_key_idx | r_1_prt_r1_r_key_idx | I
- r_1_prt_r1_2_prt_b_r_key_idx | r_1_prt_r1_2_prt_b   | I
- r_1_prt_r1_2_prt_b_r_key_idx | r_1_prt_r1_r_key_idx | I
- r_1_prt_r1_r_key_idx         | myidx_onroot         | I
- r_1_prt_r1_r_key_idx         | r_1_prt_r1           | I
- r_1_prt_r2_2_prt_a_r_key_idx | r_1_prt_r2_2_prt_a   | I
- r_1_prt_r2_2_prt_a_r_key_idx | r_1_prt_r2_r_key_idx | I
- r_1_prt_r2_2_prt_b_r_key_idx | r_1_prt_r2_2_prt_b   | I
- r_1_prt_r2_2_prt_b_r_key_idx | r_1_prt_r2_r_key_idx | I
- r_1_prt_r2_r_key_idx         | myidx_onroot         | I
- r_1_prt_r2_r_key_idx         | r_1_prt_r2           | I
-(13 rows)
+               depname               |           refname           | deptype 
+-------------------------------------+-----------------------------+---------
+ myidx_onroot                        | r                           | a
+ myidx_onroot                        | r                           | a
+ r_1_prt_r1_2_prt_a_r_key_r_name_idx | r_1_prt_r1_2_prt_a          | I
+ r_1_prt_r1_2_prt_a_r_key_r_name_idx | r_1_prt_r1_2_prt_a          | I
+ r_1_prt_r1_2_prt_a_r_key_r_name_idx | r_1_prt_r1_r_key_r_name_idx | I
+ r_1_prt_r1_2_prt_b_r_key_r_name_idx | r_1_prt_r1_2_prt_b          | I
+ r_1_prt_r1_2_prt_b_r_key_r_name_idx | r_1_prt_r1_2_prt_b          | I
+ r_1_prt_r1_2_prt_b_r_key_r_name_idx | r_1_prt_r1_r_key_r_name_idx | I
+ r_1_prt_r1_r_key_r_name_idx         | myidx_onroot                | I
+ r_1_prt_r1_r_key_r_name_idx         | r_1_prt_r1                  | I
+ r_1_prt_r1_r_key_r_name_idx         | r_1_prt_r1                  | I
+ r_1_prt_r2_2_prt_a_r_key_r_name_idx | r_1_prt_r2_2_prt_a          | I
+ r_1_prt_r2_2_prt_a_r_key_r_name_idx | r_1_prt_r2_2_prt_a          | I
+ r_1_prt_r2_2_prt_a_r_key_r_name_idx | r_1_prt_r2_r_key_r_name_idx | I
+ r_1_prt_r2_2_prt_b_r_key_r_name_idx | r_1_prt_r2_2_prt_b          | I
+ r_1_prt_r2_2_prt_b_r_key_r_name_idx | r_1_prt_r2_2_prt_b          | I
+ r_1_prt_r2_2_prt_b_r_key_r_name_idx | r_1_prt_r2_r_key_r_name_idx | I
+ r_1_prt_r2_r_key_r_name_idx         | myidx_onroot                | I
+ r_1_prt_r2_r_key_r_name_idx         | r_1_prt_r2                  | I
+ r_1_prt_r2_r_key_r_name_idx         | r_1_prt_r2                  | I
+(20 rows)
 
-DROP INDEX r_1_prt_r2_r_key_idx;         --should fail: cannot drop from non-creating node
-ERROR:  cannot drop index r_1_prt_r2_r_key_idx because index myidx_onroot requires it
+DROP INDEX r_1_prt_r2_r_key_r_name_idx;         --should fail: cannot drop from non-creating node
+ERROR:  cannot drop index r_1_prt_r2_r_key_r_name_idx because index myidx_onroot requires it
 HINT:  You can drop index myidx_onroot instead.
 SELECT * FROM dependencies_show_for_idx();
-           depname            |       refname        | deptype 
-------------------------------+----------------------+---------
- myidx_onroot                 | r                    | a
- r_1_prt_r1_2_prt_a_r_key_idx | r_1_prt_r1_2_prt_a   | I
- r_1_prt_r1_2_prt_a_r_key_idx | r_1_prt_r1_r_key_idx | I
- r_1_prt_r1_2_prt_b_r_key_idx | r_1_prt_r1_2_prt_b   | I
- r_1_prt_r1_2_prt_b_r_key_idx | r_1_prt_r1_r_key_idx | I
- r_1_prt_r1_r_key_idx         | myidx_onroot         | I
- r_1_prt_r1_r_key_idx         | r_1_prt_r1           | I
- r_1_prt_r2_2_prt_a_r_key_idx | r_1_prt_r2_2_prt_a   | I
- r_1_prt_r2_2_prt_a_r_key_idx | r_1_prt_r2_r_key_idx | I
- r_1_prt_r2_2_prt_b_r_key_idx | r_1_prt_r2_2_prt_b   | I
- r_1_prt_r2_2_prt_b_r_key_idx | r_1_prt_r2_r_key_idx | I
- r_1_prt_r2_r_key_idx         | myidx_onroot         | I
- r_1_prt_r2_r_key_idx         | r_1_prt_r2           | I
-(13 rows)
+               depname               |           refname           | deptype 
+-------------------------------------+-----------------------------+---------
+ myidx_onroot                        | r                           | a
+ myidx_onroot                        | r                           | a
+ r_1_prt_r1_2_prt_a_r_key_r_name_idx | r_1_prt_r1_2_prt_a          | I
+ r_1_prt_r1_2_prt_a_r_key_r_name_idx | r_1_prt_r1_2_prt_a          | I
+ r_1_prt_r1_2_prt_a_r_key_r_name_idx | r_1_prt_r1_r_key_r_name_idx | I
+ r_1_prt_r1_2_prt_b_r_key_r_name_idx | r_1_prt_r1_2_prt_b          | I
+ r_1_prt_r1_2_prt_b_r_key_r_name_idx | r_1_prt_r1_2_prt_b          | I
+ r_1_prt_r1_2_prt_b_r_key_r_name_idx | r_1_prt_r1_r_key_r_name_idx | I
+ r_1_prt_r1_r_key_r_name_idx         | myidx_onroot                | I
+ r_1_prt_r1_r_key_r_name_idx         | r_1_prt_r1                  | I
+ r_1_prt_r1_r_key_r_name_idx         | r_1_prt_r1                  | I
+ r_1_prt_r2_2_prt_a_r_key_r_name_idx | r_1_prt_r2_2_prt_a          | I
+ r_1_prt_r2_2_prt_a_r_key_r_name_idx | r_1_prt_r2_2_prt_a          | I
+ r_1_prt_r2_2_prt_a_r_key_r_name_idx | r_1_prt_r2_r_key_r_name_idx | I
+ r_1_prt_r2_2_prt_b_r_key_r_name_idx | r_1_prt_r2_2_prt_b          | I
+ r_1_prt_r2_2_prt_b_r_key_r_name_idx | r_1_prt_r2_2_prt_b          | I
+ r_1_prt_r2_2_prt_b_r_key_r_name_idx | r_1_prt_r2_r_key_r_name_idx | I
+ r_1_prt_r2_r_key_r_name_idx         | myidx_onroot                | I
+ r_1_prt_r2_r_key_r_name_idx         | r_1_prt_r2                  | I
+ r_1_prt_r2_r_key_r_name_idx         | r_1_prt_r2                  | I
+(20 rows)
 
-DROP INDEX r_1_prt_r2_2_prt_b_r_key_idx; --should fail: cannot drop from non-creating node
-ERROR:  cannot drop index r_1_prt_r2_2_prt_b_r_key_idx because index r_1_prt_r2_r_key_idx requires it
-HINT:  You can drop index r_1_prt_r2_r_key_idx instead.
+DROP INDEX r_1_prt_r2_2_prt_b_r_key_r_name_idx; --should fail: cannot drop from non-creating node
+ERROR:  cannot drop index r_1_prt_r2_2_prt_b_r_key_r_name_idx because index r_1_prt_r2_r_key_r_name_idx requires it
+HINT:  You can drop index r_1_prt_r2_r_key_r_name_idx instead.
 SELECT * FROM dependencies_show_for_idx();
-           depname            |       refname        | deptype 
-------------------------------+----------------------+---------
- myidx_onroot                 | r                    | a
- r_1_prt_r1_2_prt_a_r_key_idx | r_1_prt_r1_2_prt_a   | I
- r_1_prt_r1_2_prt_a_r_key_idx | r_1_prt_r1_r_key_idx | I
- r_1_prt_r1_2_prt_b_r_key_idx | r_1_prt_r1_2_prt_b   | I
- r_1_prt_r1_2_prt_b_r_key_idx | r_1_prt_r1_r_key_idx | I
- r_1_prt_r1_r_key_idx         | myidx_onroot         | I
- r_1_prt_r1_r_key_idx         | r_1_prt_r1           | I
- r_1_prt_r2_2_prt_a_r_key_idx | r_1_prt_r2_2_prt_a   | I
- r_1_prt_r2_2_prt_a_r_key_idx | r_1_prt_r2_r_key_idx | I
- r_1_prt_r2_2_prt_b_r_key_idx | r_1_prt_r2_2_prt_b   | I
- r_1_prt_r2_2_prt_b_r_key_idx | r_1_prt_r2_r_key_idx | I
- r_1_prt_r2_r_key_idx         | myidx_onroot         | I
- r_1_prt_r2_r_key_idx         | r_1_prt_r2           | I
-(13 rows)
+               depname               |           refname           | deptype 
+-------------------------------------+-----------------------------+---------
+ myidx_onroot                        | r                           | a
+ myidx_onroot                        | r                           | a
+ r_1_prt_r1_2_prt_a_r_key_r_name_idx | r_1_prt_r1_2_prt_a          | I
+ r_1_prt_r1_2_prt_a_r_key_r_name_idx | r_1_prt_r1_2_prt_a          | I
+ r_1_prt_r1_2_prt_a_r_key_r_name_idx | r_1_prt_r1_r_key_r_name_idx | I
+ r_1_prt_r1_2_prt_b_r_key_r_name_idx | r_1_prt_r1_2_prt_b          | I
+ r_1_prt_r1_2_prt_b_r_key_r_name_idx | r_1_prt_r1_2_prt_b          | I
+ r_1_prt_r1_2_prt_b_r_key_r_name_idx | r_1_prt_r1_r_key_r_name_idx | I
+ r_1_prt_r1_r_key_r_name_idx         | myidx_onroot                | I
+ r_1_prt_r1_r_key_r_name_idx         | r_1_prt_r1                  | I
+ r_1_prt_r1_r_key_r_name_idx         | r_1_prt_r1                  | I
+ r_1_prt_r2_2_prt_a_r_key_r_name_idx | r_1_prt_r2_2_prt_a          | I
+ r_1_prt_r2_2_prt_a_r_key_r_name_idx | r_1_prt_r2_2_prt_a          | I
+ r_1_prt_r2_2_prt_a_r_key_r_name_idx | r_1_prt_r2_r_key_r_name_idx | I
+ r_1_prt_r2_2_prt_b_r_key_r_name_idx | r_1_prt_r2_2_prt_b          | I
+ r_1_prt_r2_2_prt_b_r_key_r_name_idx | r_1_prt_r2_2_prt_b          | I
+ r_1_prt_r2_2_prt_b_r_key_r_name_idx | r_1_prt_r2_r_key_r_name_idx | I
+ r_1_prt_r2_r_key_r_name_idx         | myidx_onroot                | I
+ r_1_prt_r2_r_key_r_name_idx         | r_1_prt_r2                  | I
+ r_1_prt_r2_r_key_r_name_idx         | r_1_prt_r2                  | I
+(20 rows)
 
 DROP INDEX myidx_onroot;                 --works: is root of index hierarchy
 SELECT * FROM dependencies_show_for_idx();
@@ -2014,56 +2035,77 @@ CONTEXT:  SQL function "recreate_three_level_table" statement 2
  
 (1 row)
 
-CREATE UNIQUE INDEX ON r USING btree(r_key);
+CREATE UNIQUE INDEX ON r USING btree(r_key,r_name);
 SELECT * FROM dependencies_show_for_idx();
-           depname            |       refname        | deptype 
-------------------------------+----------------------+---------
- r_1_prt_r1_2_prt_a_r_key_idx | r_1_prt_r1_2_prt_a   | I
- r_1_prt_r1_2_prt_a_r_key_idx | r_1_prt_r1_r_key_idx | I
- r_1_prt_r1_2_prt_b_r_key_idx | r_1_prt_r1_2_prt_b   | I
- r_1_prt_r1_2_prt_b_r_key_idx | r_1_prt_r1_r_key_idx | I
- r_1_prt_r1_r_key_idx         | r_1_prt_r1           | I
- r_1_prt_r1_r_key_idx         | r_r_key_idx          | I
- r_1_prt_r2_2_prt_a_r_key_idx | r_1_prt_r2_2_prt_a   | I
- r_1_prt_r2_2_prt_a_r_key_idx | r_1_prt_r2_r_key_idx | I
- r_1_prt_r2_2_prt_b_r_key_idx | r_1_prt_r2_2_prt_b   | I
- r_1_prt_r2_2_prt_b_r_key_idx | r_1_prt_r2_r_key_idx | I
- r_1_prt_r2_r_key_idx         | r_1_prt_r2           | I
- r_1_prt_r2_r_key_idx         | r_r_key_idx          | I
- r_r_key_idx                  | r                    | a
-(13 rows)
+               depname               |           refname           | deptype 
+-------------------------------------+-----------------------------+---------
+ r_1_prt_r1_2_prt_a_r_key_r_name_idx | r_1_prt_r1_2_prt_a          | I
+ r_1_prt_r1_2_prt_a_r_key_r_name_idx | r_1_prt_r1_2_prt_a          | I
+ r_1_prt_r1_2_prt_a_r_key_r_name_idx | r_1_prt_r1_r_key_r_name_idx | I
+ r_1_prt_r1_2_prt_b_r_key_r_name_idx | r_1_prt_r1_2_prt_b          | I
+ r_1_prt_r1_2_prt_b_r_key_r_name_idx | r_1_prt_r1_2_prt_b          | I
+ r_1_prt_r1_2_prt_b_r_key_r_name_idx | r_1_prt_r1_r_key_r_name_idx | I
+ r_1_prt_r1_r_key_r_name_idx         | r_1_prt_r1                  | I
+ r_1_prt_r1_r_key_r_name_idx         | r_1_prt_r1                  | I
+ r_1_prt_r1_r_key_r_name_idx         | r_r_key_r_name_idx          | I
+ r_1_prt_r2_2_prt_a_r_key_r_name_idx | r_1_prt_r2_2_prt_a          | I
+ r_1_prt_r2_2_prt_a_r_key_r_name_idx | r_1_prt_r2_2_prt_a          | I
+ r_1_prt_r2_2_prt_a_r_key_r_name_idx | r_1_prt_r2_r_key_r_name_idx | I
+ r_1_prt_r2_2_prt_b_r_key_r_name_idx | r_1_prt_r2_2_prt_b          | I
+ r_1_prt_r2_2_prt_b_r_key_r_name_idx | r_1_prt_r2_2_prt_b          | I
+ r_1_prt_r2_2_prt_b_r_key_r_name_idx | r_1_prt_r2_r_key_r_name_idx | I
+ r_1_prt_r2_r_key_r_name_idx         | r_1_prt_r2                  | I
+ r_1_prt_r2_r_key_r_name_idx         | r_1_prt_r2                  | I
+ r_1_prt_r2_r_key_r_name_idx         | r_r_key_r_name_idx          | I
+ r_r_key_r_name_idx                  | r                           | a
+ r_r_key_r_name_idx                  | r                           | a
+(20 rows)
 
-CREATE UNIQUE INDEX ON r USING btree(r_key);
+CREATE UNIQUE INDEX ON r USING btree(r_key,r_name);
 SELECT * FROM dependencies_show_for_idx();
-            depname            |        refname        | deptype 
--------------------------------+-----------------------+---------
- r_1_prt_r1_2_prt_a_r_key_idx  | r_1_prt_r1_2_prt_a    | I
- r_1_prt_r1_2_prt_a_r_key_idx  | r_1_prt_r1_r_key_idx  | I
- r_1_prt_r1_2_prt_a_r_key_idx1 | r_1_prt_r1_2_prt_a    | I
- r_1_prt_r1_2_prt_a_r_key_idx1 | r_1_prt_r1_r_key_idx1 | I
- r_1_prt_r1_2_prt_b_r_key_idx  | r_1_prt_r1_2_prt_b    | I
- r_1_prt_r1_2_prt_b_r_key_idx  | r_1_prt_r1_r_key_idx  | I
- r_1_prt_r1_2_prt_b_r_key_idx1 | r_1_prt_r1_2_prt_b    | I
- r_1_prt_r1_2_prt_b_r_key_idx1 | r_1_prt_r1_r_key_idx1 | I
- r_1_prt_r1_r_key_idx          | r_1_prt_r1            | I
- r_1_prt_r1_r_key_idx          | r_r_key_idx           | I
- r_1_prt_r1_r_key_idx1         | r_1_prt_r1            | I
- r_1_prt_r1_r_key_idx1         | r_r_key_idx1          | I
- r_1_prt_r2_2_prt_a_r_key_idx  | r_1_prt_r2_2_prt_a    | I
- r_1_prt_r2_2_prt_a_r_key_idx  | r_1_prt_r2_r_key_idx  | I
- r_1_prt_r2_2_prt_a_r_key_idx1 | r_1_prt_r2_2_prt_a    | I
- r_1_prt_r2_2_prt_a_r_key_idx1 | r_1_prt_r2_r_key_idx1 | I
- r_1_prt_r2_2_prt_b_r_key_idx  | r_1_prt_r2_2_prt_b    | I
- r_1_prt_r2_2_prt_b_r_key_idx  | r_1_prt_r2_r_key_idx  | I
- r_1_prt_r2_2_prt_b_r_key_idx1 | r_1_prt_r2_2_prt_b    | I
- r_1_prt_r2_2_prt_b_r_key_idx1 | r_1_prt_r2_r_key_idx1 | I
- r_1_prt_r2_r_key_idx          | r_1_prt_r2            | I
- r_1_prt_r2_r_key_idx          | r_r_key_idx           | I
- r_1_prt_r2_r_key_idx1         | r_1_prt_r2            | I
- r_1_prt_r2_r_key_idx1         | r_r_key_idx1          | I
- r_r_key_idx                   | r                     | a
- r_r_key_idx1                  | r                     | a
-(26 rows)
+               depname                |           refname            | deptype 
+--------------------------------------+------------------------------+---------
+ r_1_prt_r1_2_prt_a_r_key_r_name_idx  | r_1_prt_r1_2_prt_a           | I
+ r_1_prt_r1_2_prt_a_r_key_r_name_idx  | r_1_prt_r1_2_prt_a           | I
+ r_1_prt_r1_2_prt_a_r_key_r_name_idx  | r_1_prt_r1_r_key_r_name_idx  | I
+ r_1_prt_r1_2_prt_a_r_key_r_name_idx1 | r_1_prt_r1_2_prt_a           | I
+ r_1_prt_r1_2_prt_a_r_key_r_name_idx1 | r_1_prt_r1_2_prt_a           | I
+ r_1_prt_r1_2_prt_a_r_key_r_name_idx1 | r_1_prt_r1_r_key_r_name_idx1 | I
+ r_1_prt_r1_2_prt_b_r_key_r_name_idx  | r_1_prt_r1_2_prt_b           | I
+ r_1_prt_r1_2_prt_b_r_key_r_name_idx  | r_1_prt_r1_2_prt_b           | I
+ r_1_prt_r1_2_prt_b_r_key_r_name_idx  | r_1_prt_r1_r_key_r_name_idx  | I
+ r_1_prt_r1_2_prt_b_r_key_r_name_idx1 | r_1_prt_r1_2_prt_b           | I
+ r_1_prt_r1_2_prt_b_r_key_r_name_idx1 | r_1_prt_r1_2_prt_b           | I
+ r_1_prt_r1_2_prt_b_r_key_r_name_idx1 | r_1_prt_r1_r_key_r_name_idx1 | I
+ r_1_prt_r1_r_key_r_name_idx          | r_1_prt_r1                   | I
+ r_1_prt_r1_r_key_r_name_idx          | r_1_prt_r1                   | I
+ r_1_prt_r1_r_key_r_name_idx          | r_r_key_r_name_idx           | I
+ r_1_prt_r1_r_key_r_name_idx1         | r_1_prt_r1                   | I
+ r_1_prt_r1_r_key_r_name_idx1         | r_1_prt_r1                   | I
+ r_1_prt_r1_r_key_r_name_idx1         | r_r_key_r_name_idx1          | I
+ r_1_prt_r2_2_prt_a_r_key_r_name_idx  | r_1_prt_r2_2_prt_a           | I
+ r_1_prt_r2_2_prt_a_r_key_r_name_idx  | r_1_prt_r2_2_prt_a           | I
+ r_1_prt_r2_2_prt_a_r_key_r_name_idx  | r_1_prt_r2_r_key_r_name_idx  | I
+ r_1_prt_r2_2_prt_a_r_key_r_name_idx1 | r_1_prt_r2_2_prt_a           | I
+ r_1_prt_r2_2_prt_a_r_key_r_name_idx1 | r_1_prt_r2_2_prt_a           | I
+ r_1_prt_r2_2_prt_a_r_key_r_name_idx1 | r_1_prt_r2_r_key_r_name_idx1 | I
+ r_1_prt_r2_2_prt_b_r_key_r_name_idx  | r_1_prt_r2_2_prt_b           | I
+ r_1_prt_r2_2_prt_b_r_key_r_name_idx  | r_1_prt_r2_2_prt_b           | I
+ r_1_prt_r2_2_prt_b_r_key_r_name_idx  | r_1_prt_r2_r_key_r_name_idx  | I
+ r_1_prt_r2_2_prt_b_r_key_r_name_idx1 | r_1_prt_r2_2_prt_b           | I
+ r_1_prt_r2_2_prt_b_r_key_r_name_idx1 | r_1_prt_r2_2_prt_b           | I
+ r_1_prt_r2_2_prt_b_r_key_r_name_idx1 | r_1_prt_r2_r_key_r_name_idx1 | I
+ r_1_prt_r2_r_key_r_name_idx          | r_1_prt_r2                   | I
+ r_1_prt_r2_r_key_r_name_idx          | r_1_prt_r2                   | I
+ r_1_prt_r2_r_key_r_name_idx          | r_r_key_r_name_idx           | I
+ r_1_prt_r2_r_key_r_name_idx1         | r_1_prt_r2                   | I
+ r_1_prt_r2_r_key_r_name_idx1         | r_1_prt_r2                   | I
+ r_1_prt_r2_r_key_r_name_idx1         | r_r_key_r_name_idx1          | I
+ r_r_key_r_name_idx                   | r                            | a
+ r_r_key_r_name_idx                   | r                            | a
+ r_r_key_r_name_idx1                  | r                            | a
+ r_r_key_r_name_idx1                  | r                            | a
+(40 rows)
 
 --test subsumption of lower-level index from upper-level one
 SELECT recreate_three_level_table();
@@ -2095,24 +2137,36 @@ SELECT * FROM dependencies_show_for_idx();
  r_1_prt_r1_2_prt_b_r_key_idx | r_1_prt_r1_2_prt_b | I
 (5 rows)
 
-CREATE UNIQUE INDEX myidx_onroot ON r USING btree(r_key);
+CREATE UNIQUE INDEX myidx_onroot ON r USING btree(r_key,r_name);
 SELECT * FROM dependencies_show_for_idx();
-           depname            |       refname        | deptype 
-------------------------------+----------------------+---------
- myidx_midlevel               | myidx_onroot         | I
- myidx_midlevel               | r_1_prt_r1           | a
- myidx_onroot                 | r                    | a
- r_1_prt_r1_2_prt_a_r_key_idx | myidx_midlevel       | I
- r_1_prt_r1_2_prt_a_r_key_idx | r_1_prt_r1_2_prt_a   | I
- r_1_prt_r1_2_prt_b_r_key_idx | myidx_midlevel       | I
- r_1_prt_r1_2_prt_b_r_key_idx | r_1_prt_r1_2_prt_b   | I
- r_1_prt_r2_2_prt_a_r_key_idx | r_1_prt_r2_2_prt_a   | I
- r_1_prt_r2_2_prt_a_r_key_idx | r_1_prt_r2_r_key_idx | I
- r_1_prt_r2_2_prt_b_r_key_idx | r_1_prt_r2_2_prt_b   | I
- r_1_prt_r2_2_prt_b_r_key_idx | r_1_prt_r2_r_key_idx | I
- r_1_prt_r2_r_key_idx         | myidx_onroot         | I
- r_1_prt_r2_r_key_idx         | r_1_prt_r2           | I
-(13 rows)
+               depname               |           refname           | deptype 
+-------------------------------------+-----------------------------+---------
+ myidx_midlevel                      | r_1_prt_r1                  | a
+ myidx_onroot                        | r                           | a
+ myidx_onroot                        | r                           | a
+ r_1_prt_r1_2_prt_a_r_key_idx        | myidx_midlevel              | I
+ r_1_prt_r1_2_prt_a_r_key_idx        | r_1_prt_r1_2_prt_a          | I
+ r_1_prt_r1_2_prt_a_r_key_r_name_idx | r_1_prt_r1_2_prt_a          | I
+ r_1_prt_r1_2_prt_a_r_key_r_name_idx | r_1_prt_r1_2_prt_a          | I
+ r_1_prt_r1_2_prt_a_r_key_r_name_idx | r_1_prt_r1_r_key_r_name_idx | I
+ r_1_prt_r1_2_prt_b_r_key_idx        | myidx_midlevel              | I
+ r_1_prt_r1_2_prt_b_r_key_idx        | r_1_prt_r1_2_prt_b          | I
+ r_1_prt_r1_2_prt_b_r_key_r_name_idx | r_1_prt_r1_2_prt_b          | I
+ r_1_prt_r1_2_prt_b_r_key_r_name_idx | r_1_prt_r1_2_prt_b          | I
+ r_1_prt_r1_2_prt_b_r_key_r_name_idx | r_1_prt_r1_r_key_r_name_idx | I
+ r_1_prt_r1_r_key_r_name_idx         | myidx_onroot                | I
+ r_1_prt_r1_r_key_r_name_idx         | r_1_prt_r1                  | I
+ r_1_prt_r1_r_key_r_name_idx         | r_1_prt_r1                  | I
+ r_1_prt_r2_2_prt_a_r_key_r_name_idx | r_1_prt_r2_2_prt_a          | I
+ r_1_prt_r2_2_prt_a_r_key_r_name_idx | r_1_prt_r2_2_prt_a          | I
+ r_1_prt_r2_2_prt_a_r_key_r_name_idx | r_1_prt_r2_r_key_r_name_idx | I
+ r_1_prt_r2_2_prt_b_r_key_r_name_idx | r_1_prt_r2_2_prt_b          | I
+ r_1_prt_r2_2_prt_b_r_key_r_name_idx | r_1_prt_r2_2_prt_b          | I
+ r_1_prt_r2_2_prt_b_r_key_r_name_idx | r_1_prt_r2_r_key_r_name_idx | I
+ r_1_prt_r2_r_key_r_name_idx         | myidx_onroot                | I
+ r_1_prt_r2_r_key_r_name_idx         | r_1_prt_r2                  | I
+ r_1_prt_r2_r_key_r_name_idx         | r_1_prt_r2                  | I
+(25 rows)
 
 --show subsumption works across rename
 SELECT recreate_three_level_table();
@@ -2155,24 +2209,36 @@ SELECT * FROM dependencies_show_for_idx();
  r_1_prt_r1_2_prt_b_r_key_idx | r_1_prt_r1_2_prt_b     | I
 (5 rows)
 
-CREATE UNIQUE INDEX myidx_midlevel ON r USING btree(r_key);
+CREATE UNIQUE INDEX myidx_midlevel ON r USING btree(r_key,r_name);
 SELECT * FROM dependencies_show_for_idx();
-           depname            |        refname         | deptype 
-------------------------------+------------------------+---------
- myidx_midlevel               | r                      | a
- myidx_midlevel_renamed       | myidx_midlevel         | I
- myidx_midlevel_renamed       | r_1_prt_r1             | a
- r_1_prt_r1_2_prt_a_r_key_idx | myidx_midlevel_renamed | I
- r_1_prt_r1_2_prt_a_r_key_idx | r_1_prt_r1_2_prt_a     | I
- r_1_prt_r1_2_prt_b_r_key_idx | myidx_midlevel_renamed | I
- r_1_prt_r1_2_prt_b_r_key_idx | r_1_prt_r1_2_prt_b     | I
- r_1_prt_r2_2_prt_a_r_key_idx | r_1_prt_r2_2_prt_a     | I
- r_1_prt_r2_2_prt_a_r_key_idx | r_1_prt_r2_r_key_idx   | I
- r_1_prt_r2_2_prt_b_r_key_idx | r_1_prt_r2_2_prt_b     | I
- r_1_prt_r2_2_prt_b_r_key_idx | r_1_prt_r2_r_key_idx   | I
- r_1_prt_r2_r_key_idx         | myidx_midlevel         | I
- r_1_prt_r2_r_key_idx         | r_1_prt_r2             | I
-(13 rows)
+               depname               |           refname           | deptype 
+-------------------------------------+-----------------------------+---------
+ myidx_midlevel                      | r                           | a
+ myidx_midlevel                      | r                           | a
+ myidx_midlevel_renamed              | r_1_prt_r1                  | a
+ r_1_prt_r1_2_prt_a_r_key_idx        | myidx_midlevel_renamed      | I
+ r_1_prt_r1_2_prt_a_r_key_idx        | r_1_prt_r1_2_prt_a          | I
+ r_1_prt_r1_2_prt_a_r_key_r_name_idx | r_1_prt_r1_2_prt_a          | I
+ r_1_prt_r1_2_prt_a_r_key_r_name_idx | r_1_prt_r1_2_prt_a          | I
+ r_1_prt_r1_2_prt_a_r_key_r_name_idx | r_1_prt_r1_r_key_r_name_idx | I
+ r_1_prt_r1_2_prt_b_r_key_idx        | myidx_midlevel_renamed      | I
+ r_1_prt_r1_2_prt_b_r_key_idx        | r_1_prt_r1_2_prt_b          | I
+ r_1_prt_r1_2_prt_b_r_key_r_name_idx | r_1_prt_r1_2_prt_b          | I
+ r_1_prt_r1_2_prt_b_r_key_r_name_idx | r_1_prt_r1_2_prt_b          | I
+ r_1_prt_r1_2_prt_b_r_key_r_name_idx | r_1_prt_r1_r_key_r_name_idx | I
+ r_1_prt_r1_r_key_r_name_idx         | myidx_midlevel              | I
+ r_1_prt_r1_r_key_r_name_idx         | r_1_prt_r1                  | I
+ r_1_prt_r1_r_key_r_name_idx         | r_1_prt_r1                  | I
+ r_1_prt_r2_2_prt_a_r_key_r_name_idx | r_1_prt_r2_2_prt_a          | I
+ r_1_prt_r2_2_prt_a_r_key_r_name_idx | r_1_prt_r2_2_prt_a          | I
+ r_1_prt_r2_2_prt_a_r_key_r_name_idx | r_1_prt_r2_r_key_r_name_idx | I
+ r_1_prt_r2_2_prt_b_r_key_r_name_idx | r_1_prt_r2_2_prt_b          | I
+ r_1_prt_r2_2_prt_b_r_key_r_name_idx | r_1_prt_r2_2_prt_b          | I
+ r_1_prt_r2_2_prt_b_r_key_r_name_idx | r_1_prt_r2_r_key_r_name_idx | I
+ r_1_prt_r2_r_key_r_name_idx         | myidx_midlevel              | I
+ r_1_prt_r2_r_key_r_name_idx         | r_1_prt_r2                  | I
+ r_1_prt_r2_r_key_r_name_idx         | r_1_prt_r2                  | I
+(25 rows)
 
 --show that renaming still does not allow a name conflict
 SELECT recreate_three_level_table();
@@ -2215,7 +2281,7 @@ SELECT * FROM dependencies_show_for_idx();
  r_1_prt_r1_2_prt_b_r_key_idx | r_1_prt_r1_2_prt_b     | I
 (5 rows)
 
-CREATE UNIQUE INDEX myidx_midlevel_renamed ON r USING btree(r_key);   --should fail: index already exists
+CREATE UNIQUE INDEX myidx_midlevel_renamed ON r USING btree(r_key,r_name);   --should fail: index already exists
 ERROR:  relation "myidx_midlevel_renamed" already exists
 SELECT * FROM dependencies_show_for_idx();
            depname            |        refname         | deptype 
@@ -2246,61 +2312,80 @@ CONTEXT:  SQL function "recreate_three_level_table" statement 2
  
 (1 row)
 
-CREATE UNIQUE INDEX myidx_onroot ON r USING btree(r_key);
+CREATE UNIQUE INDEX myidx_onroot ON r USING btree(r_key,r_name);
 SELECT * FROM dependencies_show_for_idx();
-           depname            |       refname        | deptype 
-------------------------------+----------------------+---------
- myidx_onroot                 | r                    | a
- r_1_prt_r1_2_prt_a_r_key_idx | r_1_prt_r1_2_prt_a   | I
- r_1_prt_r1_2_prt_a_r_key_idx | r_1_prt_r1_r_key_idx | I
- r_1_prt_r1_2_prt_b_r_key_idx | r_1_prt_r1_2_prt_b   | I
- r_1_prt_r1_2_prt_b_r_key_idx | r_1_prt_r1_r_key_idx | I
- r_1_prt_r1_r_key_idx         | myidx_onroot         | I
- r_1_prt_r1_r_key_idx         | r_1_prt_r1           | I
- r_1_prt_r2_2_prt_a_r_key_idx | r_1_prt_r2_2_prt_a   | I
- r_1_prt_r2_2_prt_a_r_key_idx | r_1_prt_r2_r_key_idx | I
- r_1_prt_r2_2_prt_b_r_key_idx | r_1_prt_r2_2_prt_b   | I
- r_1_prt_r2_2_prt_b_r_key_idx | r_1_prt_r2_r_key_idx | I
- r_1_prt_r2_r_key_idx         | myidx_onroot         | I
- r_1_prt_r2_r_key_idx         | r_1_prt_r2           | I
-(13 rows)
+               depname               |           refname           | deptype 
+-------------------------------------+-----------------------------+---------
+ myidx_onroot                        | r                           | a
+ myidx_onroot                        | r                           | a
+ r_1_prt_r1_2_prt_a_r_key_r_name_idx | r_1_prt_r1_2_prt_a          | I
+ r_1_prt_r1_2_prt_a_r_key_r_name_idx | r_1_prt_r1_2_prt_a          | I
+ r_1_prt_r1_2_prt_a_r_key_r_name_idx | r_1_prt_r1_r_key_r_name_idx | I
+ r_1_prt_r1_2_prt_b_r_key_r_name_idx | r_1_prt_r1_2_prt_b          | I
+ r_1_prt_r1_2_prt_b_r_key_r_name_idx | r_1_prt_r1_2_prt_b          | I
+ r_1_prt_r1_2_prt_b_r_key_r_name_idx | r_1_prt_r1_r_key_r_name_idx | I
+ r_1_prt_r1_r_key_r_name_idx         | myidx_onroot                | I
+ r_1_prt_r1_r_key_r_name_idx         | r_1_prt_r1                  | I
+ r_1_prt_r1_r_key_r_name_idx         | r_1_prt_r1                  | I
+ r_1_prt_r2_2_prt_a_r_key_r_name_idx | r_1_prt_r2_2_prt_a          | I
+ r_1_prt_r2_2_prt_a_r_key_r_name_idx | r_1_prt_r2_2_prt_a          | I
+ r_1_prt_r2_2_prt_a_r_key_r_name_idx | r_1_prt_r2_r_key_r_name_idx | I
+ r_1_prt_r2_2_prt_b_r_key_r_name_idx | r_1_prt_r2_2_prt_b          | I
+ r_1_prt_r2_2_prt_b_r_key_r_name_idx | r_1_prt_r2_2_prt_b          | I
+ r_1_prt_r2_2_prt_b_r_key_r_name_idx | r_1_prt_r2_r_key_r_name_idx | I
+ r_1_prt_r2_r_key_r_name_idx         | myidx_onroot                | I
+ r_1_prt_r2_r_key_r_name_idx         | r_1_prt_r2                  | I
+ r_1_prt_r2_r_key_r_name_idx         | r_1_prt_r2                  | I
+(20 rows)
 
-ALTER INDEX r_1_prt_r1_r_key_idx RENAME TO middle_index_renamed;
+ALTER INDEX r_1_prt_r1_r_key_r_name_idx RENAME TO middle_index_renamed;
 SELECT * FROM dependencies_show_for_idx();
-           depname            |       refname        | deptype 
-------------------------------+----------------------+---------
- middle_index_renamed         | myidx_onroot         | I
- myidx_onroot                 | r                    | a
- r_1_prt_r1_2_prt_a_r_key_idx | middle_index_renamed | I
- r_1_prt_r1_2_prt_a_r_key_idx | r_1_prt_r1_2_prt_a   | I
- r_1_prt_r1_2_prt_b_r_key_idx | middle_index_renamed | I
- r_1_prt_r1_2_prt_b_r_key_idx | r_1_prt_r1_2_prt_b   | I
- r_1_prt_r2_2_prt_a_r_key_idx | r_1_prt_r2_2_prt_a   | I
- r_1_prt_r2_2_prt_a_r_key_idx | r_1_prt_r2_r_key_idx | I
- r_1_prt_r2_2_prt_b_r_key_idx | r_1_prt_r2_2_prt_b   | I
- r_1_prt_r2_2_prt_b_r_key_idx | r_1_prt_r2_r_key_idx | I
- r_1_prt_r2_r_key_idx         | myidx_onroot         | I
- r_1_prt_r2_r_key_idx         | r_1_prt_r2           | I
-(12 rows)
+               depname               |           refname           | deptype 
+-------------------------------------+-----------------------------+---------
+ middle_index_renamed                | myidx_onroot                | I
+ myidx_onroot                        | r                           | a
+ myidx_onroot                        | r                           | a
+ r_1_prt_r1_2_prt_a_r_key_r_name_idx | middle_index_renamed        | I
+ r_1_prt_r1_2_prt_a_r_key_r_name_idx | r_1_prt_r1_2_prt_a          | I
+ r_1_prt_r1_2_prt_a_r_key_r_name_idx | r_1_prt_r1_2_prt_a          | I
+ r_1_prt_r1_2_prt_b_r_key_r_name_idx | middle_index_renamed        | I
+ r_1_prt_r1_2_prt_b_r_key_r_name_idx | r_1_prt_r1_2_prt_b          | I
+ r_1_prt_r1_2_prt_b_r_key_r_name_idx | r_1_prt_r1_2_prt_b          | I
+ r_1_prt_r2_2_prt_a_r_key_r_name_idx | r_1_prt_r2_2_prt_a          | I
+ r_1_prt_r2_2_prt_a_r_key_r_name_idx | r_1_prt_r2_2_prt_a          | I
+ r_1_prt_r2_2_prt_a_r_key_r_name_idx | r_1_prt_r2_r_key_r_name_idx | I
+ r_1_prt_r2_2_prt_b_r_key_r_name_idx | r_1_prt_r2_2_prt_b          | I
+ r_1_prt_r2_2_prt_b_r_key_r_name_idx | r_1_prt_r2_2_prt_b          | I
+ r_1_prt_r2_2_prt_b_r_key_r_name_idx | r_1_prt_r2_r_key_r_name_idx | I
+ r_1_prt_r2_r_key_r_name_idx         | myidx_onroot                | I
+ r_1_prt_r2_r_key_r_name_idx         | r_1_prt_r2                  | I
+ r_1_prt_r2_r_key_r_name_idx         | r_1_prt_r2                  | I
+(18 rows)
 
 DROP INDEX middle_index_renamed;  --should fail: this renamed index is still controlled by the root index that created it
 ERROR:  cannot drop index middle_index_renamed because index myidx_onroot requires it
 HINT:  You can drop index myidx_onroot instead.
 SELECT * FROM dependencies_show_for_idx();
-           depname            |       refname        | deptype 
-------------------------------+----------------------+---------
- middle_index_renamed         | myidx_onroot         | I
- myidx_onroot                 | r                    | a
- r_1_prt_r1_2_prt_a_r_key_idx | middle_index_renamed | I
- r_1_prt_r1_2_prt_a_r_key_idx | r_1_prt_r1_2_prt_a   | I
- r_1_prt_r1_2_prt_b_r_key_idx | middle_index_renamed | I
- r_1_prt_r1_2_prt_b_r_key_idx | r_1_prt_r1_2_prt_b   | I
- r_1_prt_r2_2_prt_a_r_key_idx | r_1_prt_r2_2_prt_a   | I
- r_1_prt_r2_2_prt_a_r_key_idx | r_1_prt_r2_r_key_idx | I
- r_1_prt_r2_2_prt_b_r_key_idx | r_1_prt_r2_2_prt_b   | I
- r_1_prt_r2_2_prt_b_r_key_idx | r_1_prt_r2_r_key_idx | I
- r_1_prt_r2_r_key_idx         | myidx_onroot         | I
- r_1_prt_r2_r_key_idx         | r_1_prt_r2           | I
-(12 rows)
+               depname               |           refname           | deptype 
+-------------------------------------+-----------------------------+---------
+ middle_index_renamed                | myidx_onroot                | I
+ myidx_onroot                        | r                           | a
+ myidx_onroot                        | r                           | a
+ r_1_prt_r1_2_prt_a_r_key_r_name_idx | middle_index_renamed        | I
+ r_1_prt_r1_2_prt_a_r_key_r_name_idx | r_1_prt_r1_2_prt_a          | I
+ r_1_prt_r1_2_prt_a_r_key_r_name_idx | r_1_prt_r1_2_prt_a          | I
+ r_1_prt_r1_2_prt_b_r_key_r_name_idx | middle_index_renamed        | I
+ r_1_prt_r1_2_prt_b_r_key_r_name_idx | r_1_prt_r1_2_prt_b          | I
+ r_1_prt_r1_2_prt_b_r_key_r_name_idx | r_1_prt_r1_2_prt_b          | I
+ r_1_prt_r2_2_prt_a_r_key_r_name_idx | r_1_prt_r2_2_prt_a          | I
+ r_1_prt_r2_2_prt_a_r_key_r_name_idx | r_1_prt_r2_2_prt_a          | I
+ r_1_prt_r2_2_prt_a_r_key_r_name_idx | r_1_prt_r2_r_key_r_name_idx | I
+ r_1_prt_r2_2_prt_b_r_key_r_name_idx | r_1_prt_r2_2_prt_b          | I
+ r_1_prt_r2_2_prt_b_r_key_r_name_idx | r_1_prt_r2_2_prt_b          | I
+ r_1_prt_r2_2_prt_b_r_key_r_name_idx | r_1_prt_r2_r_key_r_name_idx | I
+ r_1_prt_r2_r_key_r_name_idx         | myidx_onroot                | I
+ r_1_prt_r2_r_key_r_name_idx         | r_1_prt_r2                  | I
+ r_1_prt_r2_r_key_r_name_idx         | r_1_prt_r2                  | I
+(18 rows)
 
 DROP TABLE IF EXISTS r;

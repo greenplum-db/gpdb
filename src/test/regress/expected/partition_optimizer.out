@@ -81,31 +81,7 @@ select gp_segment_id, relname from gp_dist_random('pg_class') where relkind = 'r
              2 | region_1_prt_region3
 (12 rows)
 
-create unique index region_pkey on region(r_regionkey);
-NOTICE:  building index for child partition "region_1_prt_region1"
-NOTICE:  building index for child partition "region_1_prt_region1_2_prt_africa"
-NOTICE:  building index for child partition "region_1_prt_region1_2_prt_america"
-NOTICE:  building index for child partition "region_1_prt_region1_2_prt_asia"
-NOTICE:  building index for child partition "region_1_prt_region1_2_prt_europe"
-NOTICE:  building index for child partition "region_1_prt_region1_2_prt_mideast"
-NOTICE:  building index for child partition "region_1_prt_region1_2_prt_australia"
-NOTICE:  building index for child partition "region_1_prt_region1_2_prt_antarctica"
-NOTICE:  building index for child partition "region_1_prt_region2"
-NOTICE:  building index for child partition "region_1_prt_region2_2_prt_africa"
-NOTICE:  building index for child partition "region_1_prt_region2_2_prt_america"
-NOTICE:  building index for child partition "region_1_prt_region2_2_prt_asia"
-NOTICE:  building index for child partition "region_1_prt_region2_2_prt_europe"
-NOTICE:  building index for child partition "region_1_prt_region2_2_prt_mideast"
-NOTICE:  building index for child partition "region_1_prt_region2_2_prt_australia"
-NOTICE:  building index for child partition "region_1_prt_region2_2_prt_antarctica"
-NOTICE:  building index for child partition "region_1_prt_region3" for table "region"
-NOTICE:  building index for child partition "region_1_prt_region3_2_prt_africa"
-NOTICE:  building index for child partition "region_1_prt_region3_2_prt_america"
-NOTICE:  building index for child partition "region_1_prt_region3_2_prt_asia"
-NOTICE:  building index for child partition "region_1_prt_region3_2_prt_europe"
-NOTICE:  building index for child partition "region_1_prt_region3_2_prt_mideast"
-NOTICE:  building index for child partition "region_1_prt_region3_2_prt_australia"
-NOTICE:  building index for child partition "region_1_prt_region3_2_prt_antarctica"
+create unique index region_pkey on region(r_regionkey, r_name);
 copy region from stdin with delimiter '|';
 -- Test indexes
 set enable_seqscan to off;
@@ -157,8 +133,8 @@ select * from region where r_regionkey = '7';
 -- tables since we cannot enforce them. But since this insert maps to a
 -- single definitive partition, we can detect it.
 insert into region values(7, 'AUSTRALIA', 'def');
-ERROR:  duplicate key value violates unique constraint "region_1_prt_region3_2_prt_australia_r_regionkey_idx"  (seg0 127.0.1.1:25432 pid=8607)
-DETAIL:  Key (r_regionkey)=(7) already exists.
+ERROR:  duplicate key value violates unique constraint "region_1_prt_region3_2_prt_australia_r_regionkey_r_name_idx"  (seg0 127.0.1.1:7002 pid=122565)
+DETAIL:  Key (r_regionkey, r_name)=(7, AUSTRALIA                ) already exists.
 drop table region;
 -- exchange
 -- 1) test all sanity checking
@@ -4070,49 +4046,47 @@ partition by range (j)
 (start(1) end(3) every(1));
 NOTICE:  CREATE TABLE will create partition "ti_1_prt_1" for table "ti"
 NOTICE:  CREATE TABLE will create partition "ti_1_prt_2" for table "ti"
-create unique index ti_pkey on ti(i);
-NOTICE:  building index for child partition "ti_1_prt_1"
-NOTICE:  building index for child partition "ti_1_prt_2"
+create unique index ti_pkey on ti(i,j);
 select * from pg_indexes where schemaname = 'public' and tablename like 'ti%';
- schemaname | tablename  |    indexname     | tablespace |                                 indexdef                                  
-------------+------------+------------------+------------+---------------------------------------------------------------------------
- public     | ti         | ti_pkey          |            | CREATE UNIQUE INDEX ti_pkey ON public.ti USING btree (i)
- public     | ti_1_prt_1 | ti_1_prt_1_i_idx |            | CREATE UNIQUE INDEX ti_1_prt_1_i_idx ON public.ti_1_prt_1 USING btree (i)
- public     | ti_1_prt_2 | ti_1_prt_2_i_idx |            | CREATE UNIQUE INDEX ti_1_prt_2_i_idx ON public.ti_1_prt_2 USING btree (i)
+ schemaname | tablename  |     indexname      | tablespace |                                    indexdef                                    
+------------+------------+--------------------+------------+--------------------------------------------------------------------------------
+ public     | ti_1_prt_1 | ti_1_prt_1_i_j_idx |            | CREATE UNIQUE INDEX ti_1_prt_1_i_j_idx ON public.ti_1_prt_1 USING btree (i, j)
+ public     | ti         | ti_pkey            |            | CREATE UNIQUE INDEX ti_pkey ON public.ti USING btree (i, j)
+ public     | ti_1_prt_2 | ti_1_prt_2_i_j_idx |            | CREATE UNIQUE INDEX ti_1_prt_2_i_j_idx ON public.ti_1_prt_2 USING btree (i, j)
 (3 rows)
 
 create index ti_j_idx on ti using bitmap(j);
 NOTICE:  building index for child partition "ti_1_prt_1"
 NOTICE:  building index for child partition "ti_1_prt_2"
 select * from pg_indexes where schemaname = 'public' and tablename like 'ti%';
- schemaname | tablename  |    indexname     | tablespace |                                 indexdef                                  
-------------+------------+------------------+------------+---------------------------------------------------------------------------
- public     | ti         | ti_pkey          |            | CREATE UNIQUE INDEX ti_pkey ON public.ti USING btree (i)
- public     | ti_1_prt_1 | ti_1_prt_1_i_idx |            | CREATE UNIQUE INDEX ti_1_prt_1_i_idx ON public.ti_1_prt_1 USING btree (i)
- public     | ti_1_prt_2 | ti_1_prt_2_i_idx |            | CREATE UNIQUE INDEX ti_1_prt_2_i_idx ON public.ti_1_prt_2 USING btree (i)
- public     | ti         | ti_j_idx         |            | CREATE INDEX ti_j_idx ON public.ti USING bitmap (j)
- public     | ti_1_prt_1 | ti_1_prt_1_j_idx |            | CREATE INDEX ti_1_prt_1_j_idx ON public.ti_1_prt_1 USING bitmap (j)
- public     | ti_1_prt_2 | ti_1_prt_2_j_idx |            | CREATE INDEX ti_1_prt_2_j_idx ON public.ti_1_prt_2 USING bitmap (j)
+ schemaname | tablename  |     indexname      | tablespace |                                    indexdef                                    
+------------+------------+--------------------+------------+--------------------------------------------------------------------------------
+ public     | ti_1_prt_1 | ti_1_prt_1_i_j_idx |            | CREATE UNIQUE INDEX ti_1_prt_1_i_j_idx ON public.ti_1_prt_1 USING btree (i, j)
+ public     | ti         | ti_pkey            |            | CREATE UNIQUE INDEX ti_pkey ON public.ti USING btree (i, j)
+ public     | ti_1_prt_2 | ti_1_prt_2_i_j_idx |            | CREATE UNIQUE INDEX ti_1_prt_2_i_j_idx ON public.ti_1_prt_2 USING btree (i, j)
+ public     | ti_1_prt_1 | ti_1_prt_1_j_idx   |            | CREATE INDEX ti_1_prt_1_j_idx ON public.ti_1_prt_1 USING bitmap (j)
+ public     | ti         | ti_j_idx           |            | CREATE INDEX ti_j_idx ON public.ti USING bitmap (j)
+ public     | ti_1_prt_2 | ti_1_prt_2_j_idx   |            | CREATE INDEX ti_1_prt_2_j_idx ON public.ti_1_prt_2 USING bitmap (j)
 (6 rows)
 
 alter table ti add partition p3 start(3) end(10);
 NOTICE:  CREATE TABLE will create partition "ti_1_prt_p3" for table "ti"
 select * from pg_indexes where schemaname = 'public' and tablename like 'ti%';
- schemaname |  tablename  |     indexname     | tablespace |                                  indexdef                                   
-------------+-------------+-------------------+------------+-----------------------------------------------------------------------------
- public     | ti          | ti_pkey           |            | CREATE UNIQUE INDEX ti_pkey ON public.ti USING btree (i)
- public     | ti_1_prt_1  | ti_1_prt_1_i_idx  |            | CREATE UNIQUE INDEX ti_1_prt_1_i_idx ON public.ti_1_prt_1 USING btree (i)
- public     | ti_1_prt_2  | ti_1_prt_2_i_idx  |            | CREATE UNIQUE INDEX ti_1_prt_2_i_idx ON public.ti_1_prt_2 USING btree (i)
- public     | ti          | ti_j_idx          |            | CREATE INDEX ti_j_idx ON public.ti USING bitmap (j)
- public     | ti_1_prt_1  | ti_1_prt_1_j_idx  |            | CREATE INDEX ti_1_prt_1_j_idx ON public.ti_1_prt_1 USING bitmap (j)
- public     | ti_1_prt_2  | ti_1_prt_2_j_idx  |            | CREATE INDEX ti_1_prt_2_j_idx ON public.ti_1_prt_2 USING bitmap (j)
- public     | ti_1_prt_p3 | ti_1_prt_p3_i_idx |            | CREATE UNIQUE INDEX ti_1_prt_p3_i_idx ON public.ti_1_prt_p3 USING btree (i)
- public     | ti_1_prt_p3 | ti_1_prt_p3_j_idx |            | CREATE INDEX ti_1_prt_p3_j_idx ON public.ti_1_prt_p3 USING bitmap (j)
+ schemaname |  tablename  |      indexname      | tablespace |                                     indexdef                                     
+------------+-------------+---------------------+------------+----------------------------------------------------------------------------------
+ public     | ti_1_prt_1  | ti_1_prt_1_i_j_idx  |            | CREATE UNIQUE INDEX ti_1_prt_1_i_j_idx ON public.ti_1_prt_1 USING btree (i, j)
+ public     | ti          | ti_pkey             |            | CREATE UNIQUE INDEX ti_pkey ON public.ti USING btree (i, j)
+ public     | ti_1_prt_2  | ti_1_prt_2_i_j_idx  |            | CREATE UNIQUE INDEX ti_1_prt_2_i_j_idx ON public.ti_1_prt_2 USING btree (i, j)
+ public     | ti_1_prt_1  | ti_1_prt_1_j_idx    |            | CREATE INDEX ti_1_prt_1_j_idx ON public.ti_1_prt_1 USING bitmap (j)
+ public     | ti          | ti_j_idx            |            | CREATE INDEX ti_j_idx ON public.ti USING bitmap (j)
+ public     | ti_1_prt_2  | ti_1_prt_2_j_idx    |            | CREATE INDEX ti_1_prt_2_j_idx ON public.ti_1_prt_2 USING bitmap (j)
+ public     | ti_1_prt_p3 | ti_1_prt_p3_i_j_idx |            | CREATE UNIQUE INDEX ti_1_prt_p3_i_j_idx ON public.ti_1_prt_p3 USING btree (i, j)
+ public     | ti_1_prt_p3 | ti_1_prt_p3_j_idx   |            | CREATE INDEX ti_1_prt_p3_j_idx ON public.ti_1_prt_p3 USING bitmap (j)
 (8 rows)
 
 -- Should not be able to drop child indexes added implicitly via ADD PARTITION
-drop index ti_1_prt_p3_i_idx;
-ERROR:  cannot drop index ti_1_prt_p3_i_idx because index ti_pkey requires it
+drop index ti_1_prt_p3_i_j_idx;
+ERROR:  cannot drop index ti_1_prt_p3_i_j_idx because index ti_pkey requires it
 HINT:  You can drop index ti_pkey instead.
 drop index ti_1_prt_p3_j_idx;
 ERROR:  cannot drop index ti_1_prt_p3_j_idx because index ti_j_idx requires it
@@ -4123,29 +4097,29 @@ NOTICE:  dropped partition "p3" for relation "ti"
 NOTICE:  CREATE TABLE will create partition "ti_1_prt_pnew1" for table "ti"
 NOTICE:  CREATE TABLE will create partition "ti_1_prt_pnew2" for table "ti"
 select * from pg_indexes where schemaname = 'public' and tablename like 'ti%';
- schemaname |   tablename    |      indexname       | tablespace |                                     indexdef                                      
-------------+----------------+----------------------+------------+-----------------------------------------------------------------------------------
- public     | ti_1_prt_pnew2 | ti_1_prt_pnew2_i_idx |            | CREATE UNIQUE INDEX ti_1_prt_pnew2_i_idx ON public.ti_1_prt_pnew2 USING btree (i)
- public     | ti_1_prt_pnew2 | ti_1_prt_pnew2_j_idx |            | CREATE INDEX ti_1_prt_pnew2_j_idx ON public.ti_1_prt_pnew2 USING bitmap (j)
- public     | ti             | ti_pkey              |            | CREATE UNIQUE INDEX ti_pkey ON public.ti USING btree (i)
- public     | ti_1_prt_1     | ti_1_prt_1_i_idx     |            | CREATE UNIQUE INDEX ti_1_prt_1_i_idx ON public.ti_1_prt_1 USING btree (i)
- public     | ti_1_prt_2     | ti_1_prt_2_i_idx     |            | CREATE UNIQUE INDEX ti_1_prt_2_i_idx ON public.ti_1_prt_2 USING btree (i)
- public     | ti             | ti_j_idx             |            | CREATE INDEX ti_j_idx ON public.ti USING bitmap (j)
- public     | ti_1_prt_1     | ti_1_prt_1_j_idx     |            | CREATE INDEX ti_1_prt_1_j_idx ON public.ti_1_prt_1 USING bitmap (j)
- public     | ti_1_prt_2     | ti_1_prt_2_j_idx     |            | CREATE INDEX ti_1_prt_2_j_idx ON public.ti_1_prt_2 USING bitmap (j)
- public     | ti_1_prt_pnew1 | ti_1_prt_pnew1_i_idx |            | CREATE UNIQUE INDEX ti_1_prt_pnew1_i_idx ON public.ti_1_prt_pnew1 USING btree (i)
- public     | ti_1_prt_pnew1 | ti_1_prt_pnew1_j_idx |            | CREATE INDEX ti_1_prt_pnew1_j_idx ON public.ti_1_prt_pnew1 USING bitmap (j)
+ schemaname |   tablename    |       indexname        | tablespace |                                        indexdef                                        
+------------+----------------+------------------------+------------+----------------------------------------------------------------------------------------
+ public     | ti_1_prt_1     | ti_1_prt_1_i_j_idx     |            | CREATE UNIQUE INDEX ti_1_prt_1_i_j_idx ON public.ti_1_prt_1 USING btree (i, j)
+ public     | ti             | ti_pkey                |            | CREATE UNIQUE INDEX ti_pkey ON public.ti USING btree (i, j)
+ public     | ti_1_prt_2     | ti_1_prt_2_i_j_idx     |            | CREATE UNIQUE INDEX ti_1_prt_2_i_j_idx ON public.ti_1_prt_2 USING btree (i, j)
+ public     | ti_1_prt_1     | ti_1_prt_1_j_idx       |            | CREATE INDEX ti_1_prt_1_j_idx ON public.ti_1_prt_1 USING bitmap (j)
+ public     | ti             | ti_j_idx               |            | CREATE INDEX ti_j_idx ON public.ti USING bitmap (j)
+ public     | ti_1_prt_2     | ti_1_prt_2_j_idx       |            | CREATE INDEX ti_1_prt_2_j_idx ON public.ti_1_prt_2 USING bitmap (j)
+ public     | ti_1_prt_pnew1 | ti_1_prt_pnew1_i_j_idx |            | CREATE UNIQUE INDEX ti_1_prt_pnew1_i_j_idx ON public.ti_1_prt_pnew1 USING btree (i, j)
+ public     | ti_1_prt_pnew1 | ti_1_prt_pnew1_j_idx   |            | CREATE INDEX ti_1_prt_pnew1_j_idx ON public.ti_1_prt_pnew1 USING bitmap (j)
+ public     | ti_1_prt_pnew2 | ti_1_prt_pnew2_i_j_idx |            | CREATE UNIQUE INDEX ti_1_prt_pnew2_i_j_idx ON public.ti_1_prt_pnew2 USING btree (i, j)
+ public     | ti_1_prt_pnew2 | ti_1_prt_pnew2_j_idx   |            | CREATE INDEX ti_1_prt_pnew2_j_idx ON public.ti_1_prt_pnew2 USING bitmap (j)
 (10 rows)
 
 -- Should not be able to drop child indexes added implicitly via SPLIT PARTITION
-drop index ti_1_prt_pnew1_i_idx;
-ERROR:  cannot drop index ti_1_prt_pnew1_i_idx because index ti_pkey requires it
+drop index ti_1_prt_pnew1_i_j_idx;
+ERROR:  cannot drop index ti_1_prt_pnew1_i_j_idx because index ti_pkey requires it
 HINT:  You can drop index ti_pkey instead.
 drop index ti_1_prt_pnew1_j_idx;
 ERROR:  cannot drop index ti_1_prt_pnew1_j_idx because index ti_j_idx requires it
 HINT:  You can drop index ti_j_idx instead.
-drop index ti_1_prt_pnew2_i_idx;
-ERROR:  cannot drop index ti_1_prt_pnew2_i_idx because index ti_pkey requires it
+drop index ti_1_prt_pnew2_i_j_idx;
+ERROR:  cannot drop index ti_1_prt_pnew2_i_j_idx because index ti_pkey requires it
 HINT:  You can drop index ti_pkey instead.
 drop index ti_1_prt_pnew2_j_idx;
 ERROR:  cannot drop index ti_1_prt_pnew2_j_idx because index ti_j_idx requires it

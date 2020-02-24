@@ -21,9 +21,10 @@
 #include "storage/spin.h"
 #include "executor/instrument.h"
 #include "utils/memutils.h"
-#include "gpmon/gpmon.h"
 #include "miscadmin.h"
 #include "storage/shmem.h"
+#include "cdb/cdbdtxcontextinfo.h"
+#include "cdb/cdbtm.h"
 
 BufferUsage pgBufferUsage;
 static BufferUsage save_pgBufferUsage;
@@ -37,6 +38,7 @@ static bool shouldPickInstrInShmem(NodeTag tag);
 static Instrumentation *pickInstrFromShmem(const Plan *plan, int instrument_options);
 static void instrShmemRecycleCallback(ResourceReleasePhase phase, bool isCommit,
 						  bool isTopLevel, void *arg);
+static void gp_gettmid(int32* tmid);
 
 InstrumentationHeader *InstrumentGlobal = NULL;
 static int  scanNodeCounter = 0;
@@ -431,7 +433,7 @@ pickInstrFromShmem(const Plan *plan, int instrument_options)
 		instr = &(slot->data);
 		slot->segid = (int16) GpIdentity.segindex;
 		slot->pid = MyProcPid;
-		gpmon_gettmid(&(slot->tmid));
+		gp_gettmid(&(slot->tmid));
 		slot->ssid = gp_session_id;
 		slot->ccnt = gp_command_count;
 		slot->nid = (int16) plan->plan_node_id;
@@ -497,4 +499,14 @@ instrShmemRecycleCallback(ResourceReleasePhase phase, bool isCommit, bool isTopL
 		pfree(curr);
 	}
 	SpinLockRelease(&InstrumentGlobal->lock);
+}
+
+static void gp_gettmid(int32* tmid)
+{
+	if (QEDtxContextInfo.distributedSnapshot.distribTransactionTimeStamp > 0)
+		/* On QE */
+		*tmid = (int32)QEDtxContextInfo.distributedSnapshot.distribTransactionTimeStamp;
+	else
+		/* On QD */
+		*tmid = (int32)getDtmStartTime();
 }

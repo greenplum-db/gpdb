@@ -114,7 +114,7 @@ ADD_PG_HBA_ENTRIES() {
 CREATE_QES_PRIMARY () {
     LOG_MSG "[INFO][$INST_COUNT]:-Start Function $FUNCNAME"
     LOG_MSG "[INFO][$INST_COUNT]:-Processing segment $GP_HOSTADDRESS"
-    # build initdb command, capturing output in ${GP_DIR}.initdb
+    # build initdb command
     cmd="$EXPORT_LIB_PATH;$INITDB"
     cmd="$cmd -E $ENCODING"
     cmd="$cmd -D $GP_DIR"
@@ -125,15 +125,10 @@ CREATE_QES_PRIMARY () {
     if [ x"$HEAP_CHECKSUM" == x"on" ]; then
         cmd="$cmd --data-checksums"
     fi
-    cmd="$cmd --backend_output=$GP_DIR.initdb"
     
     $TRUSTED_SHELL ${GP_HOSTADDRESS} $cmd >> $LOG_FILE 2>&1
     RETVAL=$?
     
-    if [ $RETVAL -ne 0 ]; then
-        $TRUSTED_SHELL ${GP_HOSTADDRESS} "cat $GP_DIR.initdb" >> $LOG_FILE 2>&1
-    fi
-    $TRUSTED_SHELL ${GP_HOSTADDRESS} "rm -f $GP_DIR.initdb" >> $LOG_FILE 2>&1
     BACKOUT_COMMAND "$TRUSTED_SHELL ${GP_HOSTADDRESS} \"$RM -rf $GP_DIR > /dev/null 2>&1\""
     BACKOUT_COMMAND "$ECHO \"removing directory $GP_DIR on $GP_HOSTADDRESS\""
     PARA_EXIT $RETVAL "to start segment instance database $GP_HOSTADDRESS $GP_DIR"
@@ -229,8 +224,24 @@ CREATE_QES_MIRROR () {
     # on mirror, just copy data from primary as the primary has all the relevant pg_hba.conf content
     # only the entry for replication is added on the primary if mirror hosts are there
     LOG_MSG "[INFO]:-Running pg_basebackup to init mirror on ${GP_HOSTADDRESS} using primary on ${PRIMARY_HOSTADDRESS} ..." 1
-    RUN_COMMAND_REMOTE ${PRIMARY_HOSTADDRESS} "${EXPORT_GPHOME}; . ${GPHOME}/greenplum_path.sh; echo 'host  replication ${GP_USER} samenet trust' >> ${PRIMARY_DIR}/pg_hba.conf; pg_ctl -D ${PRIMARY_DIR} reload"
-    RUN_COMMAND_REMOTE ${GP_HOSTADDRESS} "${EXPORT_GPHOME}; . ${GPHOME}/greenplum_path.sh; rm -rf ${GP_DIR}; ${GPHOME}/bin/pg_basebackup --xlog-method=stream --slot='internal_wal_replication_slot' -R -c fast -E ./db_dumps -E ./gpperfmon/data -E ./gpperfmon/logs -D ${GP_DIR} -h ${PRIMARY_HOSTADDRESS} -p ${PRIMARY_PORT} --target-gp-dbid ${GP_DBID};"
+    # Add the samehost replication entry to support single-host development
+    local PG_HBA_ENTRIES="${PG_HBA_ENTRIES}"$'\n'"host  replication ${GP_USER} samehost trust"
+    if [ $HBA_HOSTNAMES -eq 0 ];then
+        local MIRROR_ADDRESSES=($($TRUSTED_SHELL ${GP_HOSTADDRESS} "${GPHOME}"/libexec/ifaddrs --no-loopback))
+        local PRIMARY_ADDRESSES=($($TRUSTED_SHELL ${PRIMARY_HOSTADDRESS} "${GPHOME}"/libexec/ifaddrs --no-loopback))
+        for ADDR in "${MIRROR_ADDRESSES[@]}" "${PRIMARY_ADDRESSES[@]}"
+        do
+            CIDR_ADDR=$(GET_CIDRADDR $ADDR)
+            PG_HBA_ENTRIES="${PG_HBA_ENTRIES}"$'\n'"host  replication ${GP_USER} ${CIDR_ADDR} trust"
+        done
+    else
+        PG_HBA_ENTRIES="${PG_HBA_ENTRIES}"$'\n'"host  replication ${GP_USER} ${GP_HOSTADDRESS} trust"
+        if [ "${GP_HOSTADDRESS}" != "${PRIMARY_HOSTADDRESS}" ]; then
+            PG_HBA_ENTRIES="${PG_HBA_ENTRIES}"$'\n'"host  replication ${GP_USER} ${PRIMARY_HOSTADDRESS} trust"
+        fi
+    fi
+    RUN_COMMAND_REMOTE ${PRIMARY_HOSTADDRESS} "${EXPORT_GPHOME}; . ${GPHOME}/greenplum_path.sh; cat - >> ${PRIMARY_DIR}/pg_hba.conf; pg_ctl -D ${PRIMARY_DIR} reload" <<< "${PG_HBA_ENTRIES}"
+    RUN_COMMAND_REMOTE ${GP_HOSTADDRESS} "${EXPORT_GPHOME}; . ${GPHOME}/greenplum_path.sh; rm -rf ${GP_DIR}; ${GPHOME}/bin/pg_basebackup --xlog-method=stream --slot='internal_wal_replication_slot' -R -c fast -E ./db_dumps -D ${GP_DIR} -h ${PRIMARY_HOSTADDRESS} -p ${PRIMARY_PORT} --target-gp-dbid ${GP_DBID};"
     START_QE "-w"
     RETVAL=$?
     PARA_EXIT $RETVAL "pg_basebackup of segment data directory from ${PRIMARY_HOSTADDRESS} to ${GP_HOSTADDRESS}"

@@ -177,32 +177,32 @@ CREATE TABLE heap_t1 (a int, b int) DISTRIBUTED BY (b);
 CREATE EXTERNAL TABLE ext_table_no_fallback (a int, b int) LOCATION ('gpfdist://myhost:8080/test.csv') FORMAT 'CSV';
 -- end_ignore
 EXPLAIN SELECT * FROM ext_table_no_fallback;
-                                      QUERY PLAN                                       
----------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..472.74 rows=1000000 width=8)
-   ->  External Scan on ext_table_no_fallback  (cost=0.00..437.97 rows=333334 width=8)
- Optimizer: Pivotal Optimizer (GPORCA) version 2.67.0
+                                      QUERY PLAN                                      
+--------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..467.24 rows=1000000 width=8)
+   ->  Foreign Scan on ext_table_no_fallback  (cost=0.00..432.47 rows=333334 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.88.0
 (3 rows)
 
 EXPLAIN SELECT * FROM ONLY ext_table_no_fallback;
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: ONLY in the FROM clause
-                                       QUERY PLAN
------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..11000.00 rows=1000000 width=8)
-   ->  External Scan on ext_table_no_fallback  (cost=0.00..11000.00 rows=333334 width=8)
+                                       QUERY PLAN                                       
+----------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..31000.00 rows=1000000 width=8)
+   ->  Foreign Scan on ext_table_no_fallback  (cost=0.00..11000.00 rows=333334 width=8)
  Optimizer: Postgres query optimizer
 (3 rows)
 
 EXPLAIN INSERT INTO heap_t1 SELECT * FROM ONLY ext_table_no_fallback;
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: ONLY in the FROM clause
-                                           QUERY PLAN
+                                           QUERY PLAN                                            
 -------------------------------------------------------------------------------------------------
- Insert on heap_t1  (cost=0.00..11000.00 rows=333334 width=8)
-   ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..11000.00 rows=333334 width=8)
+ Insert on heap_t1  (cost=0.00..31000.00 rows=333334 width=8)
+   ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..31000.00 rows=333334 width=8)
          Hash Key: ext_table_no_fallback.b
-         ->  External Scan on ext_table_no_fallback  (cost=0.00..11000.00 rows=333334 width=8)
+         ->  Foreign Scan on ext_table_no_fallback  (cost=0.00..11000.00 rows=333334 width=8)
  Optimizer: Postgres query optimizer
 (5 rows)
 

@@ -469,15 +469,6 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 #pljava_statement_cache_size = 0            # Size of the prepared statement MRU cache
 #pljava_release_lingering_savepoints = off  # on/off to release/abort lingering savepoints
 
-
-#------------------------------------------------------------------------------
-# PERFORMANCE MONITOR
-#------------------------------------------------------------------------------
-
-#gp_enable_gpperfmon=on		# Enable the performance monitor
-#gpperfmon_port=8888		# Port used by the performance monitor daemons
-
-										
 #------------------------------------------------------------------------------
 # RUNTIME STATISTICS
 #------------------------------------------------------------------------------

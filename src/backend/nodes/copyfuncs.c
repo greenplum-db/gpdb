@@ -208,10 +208,6 @@ CopyPlanFields(const Plan *from, Plan *newnode)
 	COPY_NODE_FIELD(flow);
 
 	COPY_SCALAR_FIELD(operatorMemKB);
-	/*
-	 * Don't copy memoryAccountId and this is an index to the account array
-	 * specific to this process only.
-	 */
 }
 
 /*
@@ -279,28 +275,6 @@ _copyResult(const Result *from)
 		COPY_POINTER_FIELD(hashFilterColIdx, from->numHashFilterCols * sizeof(AttrNumber));
 		COPY_POINTER_FIELD(hashFilterFuncs, from->numHashFilterCols * sizeof(Oid));
 	}
-
-	return newnode;
-}
-
-/*
- * _copyRepeat
- */
-static Repeat *
-_copyRepeat(const Repeat *from)
-{
-	Repeat *newnode = makeNode(Repeat);
-
-	/*
-	 * copy node superclass fields
-	 */
-	CopyPlanFields((Plan *)from, (Plan *)newnode);
-
-	/*
-	 * copy remainder of node
-	 */
-	COPY_NODE_FIELD(repeatCountExpr);
-	COPY_SCALAR_FIELD(grouping);
 
 	return newnode;
 }
@@ -554,21 +528,13 @@ _copyDynamicSeqScan(const DynamicSeqScan *from)
 }
 
 /*
- * _copyExternalScan
+ * _copyExternalScanInfo
  */
-static ExternalScan *
-_copyExternalScan(const ExternalScan *from)
+static ExternalScanInfo *
+_copyExternalScanInfo(const ExternalScanInfo *from)
 {
-	ExternalScan    *newnode = makeNode(ExternalScan);
+	ExternalScanInfo *newnode = makeNode(ExternalScanInfo);
 
-	/*
-	 * copy node superclass fields
-	 */
-	CopyScanFields((Scan *) from, (Scan *) newnode);
-
-	/*
-	 * copy remainder of node
-	 */
 	COPY_NODE_FIELD(uriList);
 	COPY_STRING_FIELD(fmtOptString);
 	COPY_SCALAR_FIELD(fmtType);
@@ -817,6 +783,8 @@ _copyFunctionScan(const FunctionScan *from)
 	 */
 	COPY_NODE_FIELD(functions);
 	COPY_SCALAR_FIELD(funcordinality);
+	COPY_NODE_FIELD(param);
+	COPY_SCALAR_FIELD(resultInTupleStore);
 
 	return newnode;
 }
@@ -1172,6 +1140,29 @@ _copyAgg(const Agg *from)
 	COPY_NODE_FIELD(chain);
 	COPY_SCALAR_FIELD(streaming);
 
+	COPY_SCALAR_FIELD(agg_expr_id);
+	return newnode;
+}
+
+/*
+ * _copyTupleSplit
+ */
+static TupleSplit *
+_copyTupleSplit(const TupleSplit *from)
+{
+	TupleSplit  *newnode = makeNode(TupleSplit);
+
+	CopyPlanFields((const Plan *) from, (Plan *) newnode);
+	COPY_SCALAR_FIELD(numCols);
+	if (from->numCols > 0)
+	{
+		COPY_POINTER_FIELD(grpColIdx, from->numCols * sizeof(AttrNumber));
+	}
+
+	COPY_SCALAR_FIELD(numDisDQAs);
+	for (int i = 0; i < from->numDisDQAs; i ++)
+		COPY_BITMAPSET_FIELD(dqa_args_id_bms[i]);
+
 	return newnode;
 }
 
@@ -1437,27 +1428,6 @@ _copySplitUpdate(const SplitUpdate *from)
 	COPY_SCALAR_FIELD(numHashAttrs);
 	COPY_POINTER_FIELD(hashAttnos, from->numHashAttrs * sizeof(AttrNumber));
 	COPY_POINTER_FIELD(hashFuncs, from->numHashAttrs * sizeof(Oid));
-
-	return newnode;
-}
-
-/*
- * _copyRowTrigger
- */
-static RowTrigger *
-_copyRowTrigger(const RowTrigger *from)
-{
-	RowTrigger *newnode = makeNode(RowTrigger);
-
-	/*
-	 * copy node superclass fields
-	 */
-	CopyPlanFields((Plan *) from, (Plan *) newnode);
-
-	COPY_SCALAR_FIELD(relid);
-	COPY_SCALAR_FIELD(eventFlags);
-	COPY_NODE_FIELD(oldValuesColIdx);
-	COPY_NODE_FIELD(newValuesColIdx);
 
 	return newnode;
 }
@@ -5455,6 +5425,11 @@ _copyForeignKeyCacheInfo(const ForeignKeyCacheInfo *from)
 	return newnode;
 }
 
+static AggExprId*
+_copyAggExprId(const AggExprId *from)
+{
+	return makeNode(AggExprId);
+}
 
 /*
  * copyObject
@@ -5493,9 +5468,6 @@ copyObject(const void *from)
 		case T_Result:
 			retval = _copyResult(from);
 			break;
-		case T_Repeat:
-			retval = _copyRepeat(from);
-			break;
 		case T_ModifyTable:
 			retval = _copyModifyTable(from);
 			break;
@@ -5529,8 +5501,8 @@ copyObject(const void *from)
 		case T_DynamicSeqScan:
 			retval = _copyDynamicSeqScan(from);
 			break;
-		case T_ExternalScan:
-			retval = _copyExternalScan(from);
+		case T_ExternalScanInfo:
+			retval = _copyExternalScanInfo(from);
 			break;
 		case T_SampleScan:
 			retval = _copySampleScan(from);
@@ -5604,6 +5576,9 @@ copyObject(const void *from)
 		case T_Agg:
 			retval = _copyAgg(from);
 			break;
+		case T_TupleSplit:
+			retval = _copyTupleSplit(from);
+			break;
 		case T_WindowAgg:
 			retval = _copyWindowAgg(from);
 			break;
@@ -5639,9 +5614,6 @@ copyObject(const void *from)
 			break;
 		case T_SplitUpdate:
 			retval = _copySplitUpdate(from);
-			break;
-		case T_RowTrigger:
-			retval = _copyRowTrigger(from);
 			break;
 		case T_AssertOp:
 			retval = _copyAssertOp(from);
@@ -6463,6 +6435,10 @@ copyObject(const void *from)
 			 */
 		case T_ForeignKeyCacheInfo:
 			retval = _copyForeignKeyCacheInfo(from);
+			break;
+
+		case T_AggExprId:
+			retval = _copyAggExprId(from);
 			break;
 
 		default:

@@ -160,13 +160,6 @@ UserPtr_GetVmemPtrSize(void *ptr)
 	return UserPtrSize_GetVmemPtrSize(VmemPtr_GetUserPtrSize(UserPtr_GetVmemPtr(ptr)));
 }
 
-/* The end address of a user pointer */
-static inline void*
-UserPtr_GetEndPtr(void *ptr)
-{
-	return (((char *)ptr) + UserPtr_GetUserPtrSize(ptr));
-}
-
 /* Initialize header/footer of a Vmem pointer */
 static inline void
 VmemPtr_Initialize(VmemHeader *ptr, size_t size)

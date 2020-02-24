@@ -1448,3 +1448,90 @@ reset session authorization;
 DROP TABLE part_expr_test_range;
 DROP TABLE part_expr_test_list;
 DROP ROLE part_expr_role;
+
+--
+-- Test handling of dropped columns in SPLIT PARTITION. (PR #9386)
+--
+DROP TABLE IF EXISTS users_test;
+
+CREATE TABLE users_test
+(
+  id          INT,
+  dd          TEXT,
+  user_name   VARCHAR(40),
+  user_email  VARCHAR(60),
+  born_time   TIMESTAMP,
+  create_time TIMESTAMP
+)
+DISTRIBUTED BY (id)
+PARTITION BY RANGE (create_time)
+(
+  PARTITION p2019 START ('2019-01-01'::TIMESTAMP) END ('2020-01-01'::TIMESTAMP),
+  DEFAULT PARTITION extra
+);
+
+-- Drop useless column dd for some reason
+ALTER TABLE users_test DROP COLUMN dd;
+
+-- Assume we forgot/failed to split out new partitions beforehand
+INSERT INTO users_test VALUES(1, 'A', 'A@abc.com', '1970-01-01', '2019-01-01 12:00:00');
+INSERT INTO users_test VALUES(2, 'B', 'B@abc.com', '1980-01-01', '2020-01-01 12:00:00');
+INSERT INTO users_test VALUES(3, 'C', 'C@abc.com', '1990-01-01', '2021-01-01 12:00:00');
+
+-- New partition arrives late
+ALTER TABLE users_test SPLIT DEFAULT PARTITION START ('2020-01-01'::TIMESTAMP) END ('2021-01-01'::TIMESTAMP)
+ INTO (PARTITION p2020, DEFAULT PARTITION);
+
+-- Expect A
+SELECT user_name FROM users_test_1_prt_p2019;
+-- Expect B
+SELECT user_name FROM users_test_1_prt_p2020;
+-- Expect C
+SELECT user_name FROM users_test_1_prt_extra;
+
+-- Github issue: https://github.com/greenplum-db/gpdb/issues/9460
+-- When creating unique or primary key index on Partition table,
+-- the cols in index must contain all partition keys.
+CREATE TABLE t_idx_col_contain_partkey(a int, b int) DISTRIBUTED BY (a)
+PARTITION BY list (b)
+(PARTITION t1 values (1),
+ PARTITION t2 values (2));
+
+-- the following statement should fail because index cols does not contain part key
+CREATE UNIQUE INDEX uidx_t_idx_col_contain_partkey on t_idx_col_contain_partkey(a);
+-- the following statement should work
+CREATE UNIQUE INDEX uidx_t_idx_col_contain_partkey on t_idx_col_contain_partkey(a, b);
+DROP INDEX uidx_t_idx_col_contain_partkey;
+DROP TABLE t_idx_col_contain_partkey;
+
+-- test unique index for multi level partition table
+CREATE TABLE t_idx_col_contain_partkey
+(
+        r_regionkey integer not null,
+        r_name char(25),
+        r_comment varchar(152)
+)
+DISTRIBUTED BY (r_regionkey)
+PARTITION BY RANGE (r_regionkey)
+SUBPARTITION BY LIST (r_name) SUBPARTITION TEMPLATE
+(
+        SUBPARTITION africa VALUES ('AFRICA'),
+        SUBPARTITION america VALUES ('AMERICA'),
+        SUBPARTITION asia VALUES ('ASIA'),
+        SUBPARTITION europe VALUES ('EUROPE'),
+        SUBPARTITION mideast VALUES ('MIDDLE EAST'),
+        SUBPARTITION australia VALUES ('AUSTRALIA'),
+        SUBPARTITION antarctica VALUES ('ANTARCTICA')
+)
+(
+        PARTITION region1 start (0),
+        PARTITION region2 start (3),
+        PARTITION region3 start (5) end (8)
+);
+
+-- should fail, must contain all the partition keys of all levels
+CREATE UNIQUE INDEX uidx_t_idx_col_contain_partkey on t_idx_col_contain_partkey(r_regionkey);
+-- should work
+CREATE UNIQUE INDEX uidx_t_idx_col_contain_partkey on t_idx_col_contain_partkey(r_regionkey, r_name);
+DROP INDEX uidx_t_idx_col_contain_partkey;
+DROP TABLE t_idx_col_contain_partkey;

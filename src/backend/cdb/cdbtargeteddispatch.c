@@ -382,12 +382,6 @@ DirectDispatchUpdateContentIdsFromPlan(PlannerInfo *root, Plan *plan)
 																  plan->qual);
 			break;
 
-		case T_ExternalScan:
-			DisableTargetedDispatch(&dispatchInfo); /* not sure about
-													 * external tables ...
-													 * so disable */
-			break;
-
 		case T_IndexScan:
 			{
 				IndexScan  *indexScan = (IndexScan *) plan;
@@ -460,6 +454,7 @@ DirectDispatchUpdateContentIdsFromPlan(PlannerInfo *root, Plan *plan)
 		case T_Material:
 		case T_Sort:
 		case T_Agg:
+		case T_TupleSplit:
 		case T_Unique:
 		case T_Gather:
 		case T_Hash:
@@ -487,7 +482,6 @@ DirectDispatchUpdateContentIdsFromPlan(PlannerInfo *root, Plan *plan)
 			break;
 		case T_WindowAgg:
 		case T_TableFunctionScan:
-		case T_Repeat:
 		case T_RecursiveUnion:
 			/* no change to dispatchInfo */
 			break;

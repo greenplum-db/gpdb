@@ -33,10 +33,6 @@
 20180409:14:08:46:031194 gpstop:nyu-vm-centos:gpadmin-[INFO]:-----------------------------------------------------
 20180409:14:08:46:031194 gpstop:nyu-vm-centos:gpadmin-[INFO]:-Successfully shutdown 6 of 6 segment instances 
 20180409:14:08:46:031194 gpstop:nyu-vm-centos:gpadmin-[INFO]:-Database successfully shutdown with no errors reported
-20180409:14:08:46:031194 gpstop:nyu-vm-centos:gpadmin-[INFO]:-Cleaning up leftover gpmmon process
-20180409:14:08:46:031194 gpstop:nyu-vm-centos:gpadmin-[INFO]:-No leftover gpmmon process found
-20180409:14:08:46:031194 gpstop:nyu-vm-centos:gpadmin-[INFO]:-Cleaning up leftover gpsmon processes
-20180409:14:08:46:031194 gpstop:nyu-vm-centos:gpadmin-[INFO]:-No leftover gpsmon processes on some hosts. not attempting forceful termination on these hosts
 20180409:14:08:46:031194 gpstop:nyu-vm-centos:gpadmin-[INFO]:-Cleaning up leftover shared memory
 20180409:14:08:46:031194 gpstop:nyu-vm-centos:gpadmin-[INFO]:-Restarting System...
 -- end_ignore

@@ -232,3 +232,87 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql volatile;
 SELECT trigger_unique();
+
+-- Test CTAS select * from f()
+-- Above query will fail in past in f() contains DDLs.
+-- Since CTAS is write gang and f() could only be run at EntryDB(QE)
+-- But EntryDB and QEs cannot run DDLs which needs to do dispatch.
+-- We introduce new function location 'EXECUTE ON INITPLAN' to run
+-- the function on initplan to overcome the above issue.
+
+CREATE OR REPLACE FUNCTION get_country()
+ RETURNS TABLE (
+  country_id integer,
+  country character varying(50)
+  )
+
+AS $$
+  begin
+  drop table if exists public.country;
+  create table public.country( country_id integer,
+    country character varying(50));
+  insert into public.country
+  (country_id, country)
+  select 111,'INDIA'
+  union all select 222,'CANADA'
+  union all select 333,'USA' ;
+  RETURN QUERY
+  SELECT
+  c.country_id,
+  c.country
+  FROM
+  public.country c order by country_id;
+  end; $$
+LANGUAGE 'plpgsql' EXECUTE ON INITPLAN;
+
+SELECT * FROM get_country();
+SELECT get_country();
+
+DROP TABLE IF EXISTS t1_function_scan;
+EXPLAIN CREATE TABLE t1_function_scan AS SELECT * FROM get_country();
+CREATE TABLE t1_function_scan AS SELECT * FROM get_country();
+INSERT INTO t1_function_scan SELECT * FROM get_country();
+INSERT INTO t1_function_scan SELECT * FROM get_country();
+SELECT count(*) FROM t1_function_scan;
+
+
+-- test with limit clause
+DROP TABLE IF EXISTS t1_function_scan_limit;
+CREATE TABLE t1_function_scan_limit AS SELECT * FROM get_country() limit 2;
+SELECT count(*) FROM t1_function_scan_limit;
+
+-- test with order by clause
+DROP TABLE IF EXISTS t1_function_scan_order_by;
+CREATE TABLE t1_function_scan_order_by AS SELECT * FROM get_country() f1 ORDER BY f1.country_id DESC limit 1;
+SELECT * FROM t1_function_scan_order_by;
+
+-- test with group by clause
+DROP TABLE IF EXISTS t1_function_scan_group_by;
+CREATE TABLE t1_function_scan_group_by AS SELECT f1.country_id, count(*) FROM get_country() f1 GROUP BY f1.country_id;
+SELECT count(*) FROM t1_function_scan_group_by;
+
+-- test join table
+DROP TABLE IF EXISTS t1_function_scan_join;
+CREATE TABLE t1_function_scan_join AS SELECT f1.country_id, f1.country FROM get_country() f1, t1_function_scan_limit;
+SELECT count(*) FROM t1_function_scan_join;
+
+DROP TABLE IF EXISTS t2_function_scan;
+CREATE TABLE t2_function_scan (id int, val int);
+INSERT INTO t2_function_scan SELECT k, k+1 FROM generate_series(1,100000) AS k;
+
+CREATE OR REPLACE FUNCTION get_id()
+ RETURNS TABLE (
+  id integer,
+  val integer
+  )
+AS $$
+  begin
+  RETURN QUERY
+  SELECT * FROM t2_function_scan;
+  END; $$
+LANGUAGE 'plpgsql' EXECUTE ON INITPLAN;
+
+DROP TABLE IF EXISTS t3_function_scan;
+CREATE TABLE t3_function_scan AS SELECT * FROM get_id();
+SELECT count(*) FROM t3_function_scan;
+

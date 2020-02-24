@@ -20,7 +20,7 @@
 #include "postgres.h"
 
 #include "libpq/pqsignal.h"
-#include "cdb/cdbvars.h"                /* currentSliceId */
+#include "cdb/cdbvars.h"                /* gp_reraise_signal */
 
 #include <unistd.h>
 

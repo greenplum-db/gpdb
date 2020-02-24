@@ -284,6 +284,9 @@ exprType(const Node *expr)
 		case T_PartListNullTestExpr:
 			type = BOOLOID;
 			break;
+		case T_AggExprId:
+			type = INT4OID;
+			break;
 
 		default:
 			elog(ERROR, "unrecognized node type: %d", (int) nodeTag(expr));
@@ -972,6 +975,9 @@ exprCollation(const Node *expr)
 			 * ORCA currently does not support collation,
 			 * so return invalid oid for ORCA only expressions
 			 */
+			coll = InvalidOid;
+			break;
+		case T_AggExprId:
 			coll = InvalidOid;
 			break;
 		default:
@@ -1945,6 +1951,7 @@ expression_tree_walker(Node *node,
 		case T_PartBoundOpenExpr:
 		case T_PartListRuleExpr:
 		case T_PartListNullTestExpr:
+		case T_AggExprId:
 			/* primitive node types with no expression subnodes */
 			break;
 		case T_WithCheckOption:
@@ -2602,7 +2609,6 @@ expression_tree_mutator(Node *node,
 		case T_RangeTblRef:
 		case T_String:
 		case T_Null:
-		case T_RowTrigger:
 		case T_PartSelectedExpr:
 		case T_PartDefaultExpr:
 		case T_PartBoundExpr:
@@ -3237,6 +3243,14 @@ expression_tree_mutator(Node *node,
 				MUTATE(newnode->args, tsc->args, List *);
 				MUTATE(newnode->repeatable, tsc->repeatable, Expr *);
 				return (Node *) newnode;
+			}
+			break;
+		case T_AggExprId:
+			{
+				AggExprId *exprId = (AggExprId *)node;
+				AggExprId *new_exprId;
+				FLATCOPY(new_exprId, exprId, AggExprId);
+				return (Node *)new_exprId;
 			}
 			break;
 		default:

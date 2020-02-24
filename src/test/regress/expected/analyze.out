@@ -918,3 +918,37 @@ select relname, reltuples from pg_class where relname like 'aocs_analyze_test%' 
 (2 rows)
 
 reset default_statistics_target;
+-- Test column name called totalrows
+create table test_tr (totalrows int4);
+analyze test_tr;
+drop table test_tr;
+--
+-- Test with both a dropped column and an oversized column
+-- (github issue https://github.com/greenplum-db/gpdb/issues/9503)
+--
+create table analyze_dropped_col (a text, b text, c text, d text);
+insert into analyze_dropped_col values('a','bbb', repeat('x', 5000), 'dddd');
+alter table analyze_dropped_col drop column b;
+analyze analyze_dropped_col;
+select attname, null_frac, avg_width, n_distinct from pg_stats where tablename ='analyze_dropped_col';
+ attname | null_frac | avg_width | n_distinct 
+---------+-----------+-----------+------------
+ a       |         0 |         2 |         -1
+ c       |         0 |      1024 |          0
+ d       |         0 |         5 |         -1
+(3 rows)
+
+-- Test analyze without USAGE privilege on schema
+create schema test_ns;
+revoke all on schema test_ns from public;
+create role nsuser1;
+grant create on schema test_ns to nsuser1;
+set search_path to 'test_ns';
+create extension citext;
+create table testid (id int , test citext);
+alter table testid owner to nsuser1;
+analyze testid;
+drop table testid;
+drop extension citext;
+drop schema test_ns;
+drop role nsuser1;

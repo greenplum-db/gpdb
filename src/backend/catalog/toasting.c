@@ -482,9 +482,6 @@ needs_toast_table(Relation rel)
 	int32		tuple_length;
 	int			i;
 
-	if(RelationIsExternal(rel))
-		return false;
-	
 	tupdesc = rel->rd_att;
 	att = tupdesc->attrs;
 

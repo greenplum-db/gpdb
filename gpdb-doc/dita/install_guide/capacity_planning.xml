@@ -107,7 +107,7 @@
           utilize the system resources of those hosts. The resource consumption of the data
           collection agent processes on these hosts is minimal and should not significantly impact
           database performance. Historical data collected by the collection agents is stored in its
-          own Command Center database (named <codeph>gpperfmon</codeph>) within your Greenplum
+          own Command Center database within your Greenplum
           Database system. Collected data is distributed just like regular database data, so you
           will need to account for disk space in the data directory locations of your Greenplum
           segment instances. The amount of space required depends on the amount of historical data

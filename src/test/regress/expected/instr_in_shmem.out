@@ -174,8 +174,8 @@ SELECT count(*) FROM (SELECT 1 FROM gp_instrument_shmem_detail GROUP BY ssid, cc
 
 DROP SCHEMA QUERY_METRICS CASCADE;
 NOTICE:  drop cascades to 7 other objects
-DETAIL:  drop cascades to external table __gp_localid
-drop cascades to external table __gp_masterid
+DETAIL:  drop cascades to foreign table __gp_localid
+drop cascades to foreign table __gp_masterid
 drop cascades to function gp_instrument_shmem_summary_f()
 drop cascades to view gp_instrument_shmem_summary
 drop cascades to function gp_instrument_shmem_detail_f()

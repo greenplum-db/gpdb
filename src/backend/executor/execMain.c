@@ -220,31 +220,16 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 	MemoryContext oldcontext;
 	GpExecIdentity exec_identity;
 	bool		shouldDispatch;
-	bool		needDtxTwoPhase;
+	bool		needDtx;
 
 	/* sanity checks: queryDesc must not be started already */
 	Assert(queryDesc != NULL);
 	Assert(queryDesc->estate == NULL);
 	Assert(queryDesc->plannedstmt != NULL);
-	Assert(queryDesc->memoryAccountId == MEMORY_OWNER_TYPE_Undefined);
-
-	queryDesc->memoryAccountId = MemoryAccounting_CreateExecutorMemoryAccount();
-
-	START_MEMORY_ACCOUNT(queryDesc->memoryAccountId);
 
 	Assert(queryDesc->plannedstmt->intoPolicy == NULL ||
 		GpPolicyIsPartitioned(queryDesc->plannedstmt->intoPolicy) ||
 		GpPolicyIsReplicated(queryDesc->plannedstmt->intoPolicy));
-
-	/**
-	 * Perfmon related stuff.
-	 */
-	if (gp_enable_gpperfmon
-		&& Gp_role == GP_ROLE_DISPATCH
-		&& queryDesc->gpmon_pkt)
-	{
-		gpmon_qlog_query_start(queryDesc->gpmon_pkt);
-	}
 
 	/* GPDB hook for collecting query info */
 	if (query_info_collect_hook)
@@ -519,12 +504,6 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 	 */
 	estate->eliminateAliens = execute_pruned_plan && estate->es_sliceTable && estate->es_sliceTable->hasMotions && !IS_QUERY_DISPATCHER();
 
-	/*
-	 * Assign a Motion Node to every Plan Node. This makes it
-	 * easy to identify which slice any Node belongs to
-	 */
-	AssignParentMotionToPlanNodes(queryDesc->plannedstmt);
-
 	/* If the interconnect has been set up; we need to catch any
 	 * errors to shut it down -- so we have to wrap InitPlan in a PG_TRY() block. */
 	PG_TRY();
@@ -592,9 +571,9 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 			 * ExecutorSaysTransactionDoesWrites() before any dispatch
 			 * work for this query.
 			 */
-			needDtxTwoPhase = ExecutorSaysTransactionDoesWrites();
-			if (needDtxTwoPhase)
-				setupTwoPhaseTransaction();
+			needDtx = ExecutorSaysTransactionDoesWrites();
+			if (needDtx)
+				setupDtxTransaction();
 
 			if (queryDesc->ddesc != NULL)
 			{
@@ -648,7 +627,7 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 			 */
 			if (estate->es_sliceTable->slices[0].gangType != GANGTYPE_UNALLOCATED ||
 				estate->es_sliceTable->slices[0].children)
-				CdbDispatchPlan(queryDesc, needDtxTwoPhase, true);
+				CdbDispatchPlan(queryDesc, needDtx, true);
 		}
 
 		/*
@@ -715,8 +694,6 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 				break;
 		}
 	}
-
-	END_MEMORY_ACCOUNT();
 
 	/*
 	 * Set up an AFTER-trigger statement context, unless told not to, or
@@ -793,10 +770,6 @@ standard_ExecutorRun(QueryDesc *queryDesc,
 
 	Assert(estate != NULL);
 	Assert(!(estate->es_top_eflags & EXEC_FLAG_EXPLAIN_ONLY));
-
-	Assert(NULL != queryDesc->plannedstmt && MEMORY_OWNER_TYPE_Undefined != queryDesc->memoryAccountId);
-
-	START_MEMORY_ACCOUNT(queryDesc->memoryAccountId);
 
 	/*
 	 * Switch into per-query memory context
@@ -981,7 +954,6 @@ standard_ExecutorRun(QueryDesc *queryDesc,
 		InstrStopNode(queryDesc->totaltime, estate->es_processed);
 
 	MemoryContextSwitchTo(oldcontext);
-	END_MEMORY_ACCOUNT();
 }
 
 /* ----------------------------------------------------------------
@@ -1083,12 +1055,8 @@ standard_ExecutorEnd(QueryDesc *queryDesc)
 
 	Assert(estate != NULL);
 
-	Assert(NULL != queryDesc->plannedstmt && MEMORY_OWNER_TYPE_Undefined != queryDesc->memoryAccountId);
-
 	/* GPDB: Save SPI flag first in case the memory context of plannedstmt is cleaned up*/
 	isInnerQuery = estate->es_plannedstmt->metricsQueryType > TOP_LEVEL_QUERY;
-
-	START_MEMORY_ACCOUNT(queryDesc->memoryAccountId);
 
 	if (DEBUG1 >= log_min_messages)
 	{
@@ -1192,17 +1160,6 @@ standard_ExecutorEnd(QueryDesc *queryDesc)
 	 */
 	FreeExecutorState(estate);
 	
-	/**
-	 * Perfmon related stuff.
-	 */
-	if (gp_enable_gpperfmon 
-			&& Gp_role == GP_ROLE_DISPATCH
-			&& queryDesc->gpmon_pkt)
-	{			
-		gpmon_qlog_query_end(queryDesc->gpmon_pkt);
-		queryDesc->gpmon_pkt = NULL;
-	}
-
 	/* GPDB hook for collecting query info */
 	if (query_info_collect_hook)
 		(*query_info_collect_hook)(isInnerQuery ? METRICS_INNER_QUERY_DONE : METRICS_QUERY_DONE, queryDesc);
@@ -1224,7 +1181,6 @@ standard_ExecutorEnd(QueryDesc *queryDesc)
 				break;
 		}
 	}
-	END_MEMORY_ACCOUNT();
 
 	ReportOOMConsumption();
 }
@@ -1249,10 +1205,6 @@ ExecutorRewind(QueryDesc *queryDesc)
 
 	Assert(estate != NULL);
 
-	Assert(NULL != queryDesc->plannedstmt && MEMORY_OWNER_TYPE_Undefined != queryDesc->memoryAccountId);
-
-	START_MEMORY_ACCOUNT(queryDesc->memoryAccountId);
-
 	/* It's probably not sensible to rescan updating queries */
 	Assert(queryDesc->operation == CMD_SELECT);
 
@@ -1267,8 +1219,6 @@ ExecutorRewind(QueryDesc *queryDesc)
 	ExecReScan(queryDesc->planstate);
 
 	MemoryContextSwitchTo(oldcontext);
-
-	END_MEMORY_ACCOUNT();
 }
 
 
@@ -1538,7 +1488,7 @@ ExecCheckXactReadOnly(PlannedStmt *plannedstmt)
 		 * local mpp tables
 		 */
 		relstorage = get_rel_relstorage(rte->relid);
-		if (relstorage == RELSTORAGE_EXTERNAL || relstorage == RELSTORAGE_FOREIGN)
+		if (relstorage == RELSTORAGE_FOREIGN)
 			continue;
 
 		if (isTempNamespace(get_rel_namespace(rte->relid)))
@@ -1687,7 +1637,7 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 			{
 				/*
 				 * On QD, the lock on the table has already been taken during parsing, so if it's a child
-				 * partition, we don't need to take a lock. If there a a deadlock GDD will come in place
+				 * partition, we don't need to take a lock. If there a deadlock GDD will come in place
 				 * and resolve the deadlock. ORCA Update / Delete plans only contains the root relation, so
 				 * no locks on leaf partition are taken here. The below changes makes planner as well to not
 				 * take locks on leaf partitions with GDD on.
@@ -3290,7 +3240,7 @@ ExecWithCheckOptions(WCOKind kind, ResultRelInfo *resultRelInfo,
 					 * the permissions on the relation (that is, if the user
 					 * could view it directly anyway).  For RLS violations, we
 					 * don't include the data since we don't know if the user
-					 * should be able to view the tuple as as that depends on
+					 * should be able to view the tuple as that depends on
 					 * the USING policy.
 					 */
 				case WCO_VIEW_CHECK:

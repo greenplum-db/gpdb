@@ -43,7 +43,7 @@ gpcloud:
 
 pxf:
 	@if [ "$(enable_pxf)" = "yes" ]; then \
-		$(MAKE) -C pxf; \
+		$(MAKE) -C pxf_fdw; \
 	fi
 
 mapreduce:
@@ -65,7 +65,7 @@ install:
 		$(MAKE) -C gpmapreduce install; \
 	fi
 	@if [ "$(enable_pxf)" = "yes" ]; then \
-		$(MAKE) -C pxf install; \
+		$(MAKE) -C pxf_fdw install; \
 	fi
 	@if [ "$(enable_orafce)" = "yes" ]; then \
 		$(MAKE) -C orafce NO_PGXS=true install; \
@@ -74,14 +74,14 @@ install:
 clean:
 	if [ "$(enable_mapreduce)" = "yes" ]; then $(MAKE) -C gpmapreduce clean; fi
 	if [ "$(enable_gpcloud)" = "yes" ]; then $(MAKE) -C gpcloud cleanall; fi
-	if [ "$(enable_pxf)" = "yes" ]; then $(MAKE) -C pxf clean; fi
+	if [ "$(enable_pxf)" = "yes" ]; then $(MAKE) -C pxf_fdw clean; fi
 	if [ "${enable_orafce}" = "yes" ]; then $(MAKE) -C orafce NO_PGXS=true clean; fi
 
 
 distclean:
 	if [ "$(enable_mapreduce)" = "yes" ]; then $(MAKE) -C gpmapreduce distclean; fi
 	if [ "$(enable_gpcloud)" = "yes" ]; then $(MAKE) -C gpcloud distclean; fi
-	if [ "$(enable_pxf)" = "yes" ]; then $(MAKE) -C pxf distclean; fi
+	if [ "$(enable_pxf)" = "yes" ]; then $(MAKE) -C pxf_fdw distclean; fi
 	if [ "${enable_orafce}" = "yes" ]; then $(MAKE) -C orafce NO_PGXS=true distclean; fi
 
 installcheck:
@@ -90,6 +90,7 @@ installcheck:
 		$(MAKE) -C gpmapreduce installcheck; \
 	fi
 	if [ "$(enable_orafce)" = "yes" ]; then $(MAKE) -C orafce installcheck; fi
+	if [ "$(enable_pxf)" = "yes" ]; then $(MAKE) -C pxf_fdw installcheck; fi
 
 ifeq "$(with_zstd)" "yes"
 	$(MAKE) -C zstd installcheck
@@ -98,8 +99,3 @@ endif
 ifeq "$(with_quicklz)" "yes"
 	$(MAKE) -C quicklz installcheck
 endif
-
-unittest-check:
-	@if [ "$(enable_pxf)" = "yes" ]; then \
-		$(MAKE) -C pxf unittest-check; \
-	fi

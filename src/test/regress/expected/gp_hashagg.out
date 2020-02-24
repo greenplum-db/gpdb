@@ -21,16 +21,6 @@ select grp,sum(v) from hashagg_test where id1 = 1 and id2 = 1 and day between '1
  there |   6
 (2 rows)
 
--- this will get the wrong answer (right number of rows, wrong aggregates)
-set enable_seqscan=off;
-set gp_hashagg_streambottom=off;
-select grp,sum(v) from hashagg_test where id1 = 1 and id2 = 1 and day between '1/1/2006' and '1/31/2006' group by grp order by sum(v) desc;
-  grp  | sum 
--------+-----
- hi    |   9
- there |   6
-(2 rows)
-
 create index hashagg_test_idx_bm on hashagg_test using bitmap (id1,id2,day,grp);
 set enable_indexscan=off; -- turn off b-tree index
 select grp,sum(v) from hashagg_test where id1 = 1 and id2 = 1 and day between '1/1/2006' and '1/31/2006' group by grp order by sum(v) desc;

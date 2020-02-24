@@ -524,7 +524,7 @@ VarBlockIsValid(
 	}
 
 	/*
-	 * Verify the data security zero pad between the last item and the the
+	 * Verify the data security zero pad between the last item and the
 	 * offset array.
 	 */
 	for (z = VARBLOCK_HEADER_LEN + itemLenSum; z < offsetToOffsetArray; z++)

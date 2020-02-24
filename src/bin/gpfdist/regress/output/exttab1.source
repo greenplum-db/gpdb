@@ -159,40 +159,30 @@ Execute successully
 Execute successully
 -- test: multiple reader for pipe is forbidden
 DROP EXTERNAL WEB TABLE IF EXISTS create_pipe;
--- start_ignore
-NOTICE:  table "create_pipe" does not exist, skipping
--- end_ignore
+NOTICE:  foreign table "create_pipe" does not exist, skipping
 CREATE EXTERNAL WEB TABLE create_pipe (x text)
 execute E'(rm @abs_srcdir@/data/test_pipe; mkfifo @abs_srcdir@/data/test_pipe) > /dev/null 2>&1; echo "creating pipe..."'
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 DROP EXTERNAL WEB TABLE IF EXISTS write_pipe;
--- start_ignore
-NOTICE:  table "write_pipe" does not exist, skipping
--- end_ignore
+NOTICE:  foreign table "write_pipe" does not exist, skipping
 CREATE EXTERNAL WEB TABLE write_pipe (x text)
 execute E'((for i in `seq 1 5000`;do cat @abs_srcdir@/data/exttab1/nation.tbl;done > @abs_srcdir@/data/test_pipe); echo "writing pipe...")'
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 DROP EXTERNAL WEB TABLE IF EXISTS cat_sqlout_result;
--- start_ignore
-NOTICE:  table "cat_sqlout_result" does not exist, skipping
--- end_ignore
+NOTICE:  foreign table "cat_sqlout_result" does not exist, skipping
 CREATE EXTERNAL WEB TABLE cat_sqlout_result (x text)
 execute E'(grep -q "Multiple reader to a pipe is forbidden" @abs_srcdir@/data/sql1.out @abs_srcdir@/data/sql2.out && echo "Report error: Multiple reader to a pipe is forbidden";)'
  on SEGMENT 0
  FORMAT 'text' (delimiter '|');
 DROP EXTERNAL TABLE IF EXISTS pipe_ext1;
--- start_ignore
-NOTICE:  table "pipe_ext1" does not exist, skipping
--- end_ignore
+NOTICE:  foreign table "pipe_ext1" does not exist, skipping
 CREATE EXTERNAL TABLE pipe_ext1(LIKE EXT_NATION)
 location ('gpfdist://@hostname@:7070/test_pipe' )
 FORMAT 'text' (delimiter '|');
 DROP EXTERNAL TABLE IF EXISTS pipe_ext2;
--- start_ignore
-NOTICE:  table "pipe_ext2" does not exist, skipping
--- end_ignore
+NOTICE:  foreign table "pipe_ext2" does not exist, skipping
 CREATE EXTERNAL TABLE pipe_ext2(LIKE EXT_NATION)
 location ('file://@hostname@@abs_srcdir@/data/test_pipe' )
 FORMAT 'text' (delimiter '|');
@@ -628,7 +618,7 @@ ERROR:  relation "bad_whois" does not exist
 LINE 1: select count(*) from bad_whois;
                              ^
 drop external table bad_whois;
-ERROR:  table "bad_whois" does not exist
+ERROR:  foreign table "bad_whois" does not exist
 --
 -- Test invalid locations
 --
@@ -683,7 +673,7 @@ SELECT DISTINCT(R_NAME) FROM ret_region ORDER BY R_NAME;
 DROP TABLE IF EXISTS table_multi_locations;
 NOTICE:  table "table_multi_locations" does not exist, skipping
 DROP EXTERNAL TABLE IF EXISTS ext_table_multi_locations;
-NOTICE:  table "ext_table_multi_locations" does not exist, skipping
+NOTICE:  foreign table "ext_table_multi_locations" does not exist, skipping
 -- end_ignore
 -- The use of more than one gpfdist. Each gpfdist points to a different file to write into
 CREATE TABLE table_multi_locations (a int, b text) DISTRIBUTED BY (a);

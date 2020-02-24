@@ -3,7 +3,7 @@
 -- As of Postgres 9.2, the executor provides details in errors for offending
 -- tuples when constraints are violated during an INSERT / UPDATE. However, we
 -- are generally masking out these details (using matchsubs) in upstream tests
--- because failing tuples might land on multiple segments, and the the precise
+-- because failing tuples might land on multiple segments, and the precise
 -- error becomes time-sensitive and less predictable.
 -- To preserve coverage, we test those error details here (with greater care).
 --

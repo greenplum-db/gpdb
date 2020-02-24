@@ -146,13 +146,10 @@ static const char BinarySignature[11] = "PGCOPY\n\377\r\n\0";
 
 
 /* non-export function prototypes */
-static CopyState BeginCopy(bool is_from, Relation rel, Node *raw_query,
-		  const char *queryString, const Oid queryRelId, List *attnamelist,
-		  List *options, TupleDesc tupDesc);
 static void EndCopy(CopyState cstate);
-static CopyState BeginCopyTo(Relation rel, Node *query, const char *queryString,
-			const Oid queryRelId, const char *filename, bool is_program,
-			List *attnamelist, List *options, bool skip_ext_partition);
+static CopyState BeginCopyTo(Relation rel, Node *query, const char *queryString, const Oid queryRelId,
+					const char *filename, bool is_program, List *attnamelist,
+					List *options, bool skip_ext_partition);
 static void EndCopyTo(CopyState cstate, uint64 *processed);
 static uint64 DoCopyTo(CopyState cstate);
 static uint64 CopyToDispatch(CopyState cstate);
@@ -1809,7 +1806,7 @@ ProcessCopyOptions(CopyState cstate,
  * If in the text format, delimit columns with delimiter <delim> and print
  * NULL values as <null_print>.
  */
-static CopyState
+CopyState
 BeginCopy(bool is_from,
 		  Relation rel,
 		  Node *raw_query,
@@ -1846,7 +1843,7 @@ BeginCopy(bool is_from,
 	 * Since external scan calls BeginCopyFrom to init CopyStateData.
 	 * Current relation may be an external relation.
 	 */
-	if (rel != NULL && RelationIsExternal(rel))
+	if (rel != NULL && rel_is_external_table(RelationGetRelid(rel)))
 	{
 		is_copy = false;
 		num_columns = rel->rd_att->natts;
@@ -2014,17 +2011,6 @@ BeginCopy(bool is_from,
 		if (cstate->on_segment)
 			cstate->queryDesc->plannedstmt->copyIntoClause =
 					MakeCopyIntoClause(glob_copystmt);
-
-		if (gp_enable_gpperfmon && Gp_role == GP_ROLE_DISPATCH)
-		{
-			Assert(queryString);
-			gpmon_qlog_query_submit(cstate->queryDesc->gpmon_pkt);
-			gpmon_qlog_query_text(cstate->queryDesc->gpmon_pkt,
-					queryString,
-					application_name,
-					GetResqueueName(GetResQueueId()),
-					GetResqueuePriority(GetResQueueId()));
-		}
 
 		/* GPDB hook for collecting query info */
 		if (query_info_collect_hook)
@@ -2486,8 +2472,7 @@ BeginCopyTo(Relation rel,
 	CopyState	cstate;
 	MemoryContext oldcontext;
 
-	if (rel != NULL && rel->rd_rel->relkind != RELKIND_RELATION &&
-		!RelationIsExternal(rel))
+	if (rel != NULL && rel->rd_rel->relkind != RELKIND_RELATION)
 	{
 		if (rel->rd_rel->relkind == RELKIND_VIEW)
 			ereport(ERROR,
@@ -2517,14 +2502,6 @@ BeginCopyTo(Relation rel,
 					(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 					 errmsg("cannot copy from non-table relation \"%s\"",
 							RelationGetRelationName(rel))));
-	}
-	if (rel != NULL && RelationIsExternal(rel))
-	{
-		ereport(ERROR,
-				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-				 errmsg("cannot copy from external relation \"%s\"",
-						RelationGetRelationName(rel)),
-				 errhint("Try the COPY (SELECT ...) TO variant.")));
 	}
 
 	cstate = BeginCopy(false, rel, query, queryString, queryRelId, attnamelist,
@@ -2657,7 +2634,7 @@ BeginCopyToForExternalTable(Relation extrel, List *options)
 {
 	CopyState	cstate;
 
-	Assert(RelationIsExternal(extrel));
+	Assert(rel_is_external_table(RelationGetRelid(extrel)));
 
 	cstate = BeginCopy(false, extrel, NULL, NULL, InvalidOid, NIL, options, NULL);
 	cstate->dispatch_mode = COPY_DIRECT;
@@ -3229,7 +3206,7 @@ CopyTo(CopyState cstate)
 
 				pfree(proj);
 			}
-			else if(RelationIsExternal(rel))
+			else if (rel->rd_rel->relkind == RELKIND_FOREIGN_TABLE)
 			{
 				/* should never get here */
 				if (!cstate->skip_ext_partition)
@@ -3628,10 +3605,13 @@ CopyFrom(CopyState cstate)
 	bool	   *baseNulls;
 	GpDistributionData *part_distData = NULL;
 	int			firstBufferedLineNo = 0;
+	bool		is_external_table;
 
 	Assert(cstate->rel);
 
-	if (cstate->rel->rd_rel->relkind != RELKIND_RELATION)
+	is_external_table = (cstate->rel->rd_rel->relkind == RELKIND_FOREIGN_TABLE &&
+						 rel_is_external_table(RelationGetRelid(cstate->rel)));
+	if (cstate->rel->rd_rel->relkind != RELKIND_RELATION && !is_external_table)
 	{
 		if (cstate->rel->rd_rel->relkind == RELKIND_VIEW)
 			ereport(ERROR,
@@ -4141,7 +4121,7 @@ CopyFrom(CopyState cstate)
 					aocs_insert_init(resultRelInfo->ri_RelationDesc,
 									 resultRelInfo->ri_aosegno, false);
 			}
-			else if (relstorage == RELSTORAGE_EXTERNAL &&
+			else if (is_external_table &&
 					 resultRelInfo->ri_extInsertDesc == NULL)
 			{
 				resultRelInfo->ri_extInsertDesc =
@@ -4257,7 +4237,7 @@ CopyFrom(CopyState cstate)
 					aocs_insert(resultRelInfo->ri_aocsInsertDesc, slot);
 					insertedTid = *slot_get_ctid(slot);
 				}
-				else if (relstorage == RELSTORAGE_EXTERNAL)
+				else if (is_external_table)
 				{
 					HeapTuple tuple;
 
@@ -4609,7 +4589,8 @@ BeginCopyFrom(Relation rel,
 	if (cstate->on_segment || data_source_cb)
 		cstate->dispatch_mode = COPY_DIRECT;
 	else if (Gp_role == GP_ROLE_DISPATCH &&
-			 cstate->rel && cstate->rel->rd_cdbpolicy)
+			 cstate->rel && cstate->rel->rd_cdbpolicy &&
+			 cstate->rel->rd_cdbpolicy->ptype != POLICYTYPE_ENTRY)
 		cstate->dispatch_mode = COPY_DISPATCH;
 	else if (Gp_role == GP_ROLE_EXECUTE)
 		cstate->dispatch_mode = COPY_EXECUTOR;

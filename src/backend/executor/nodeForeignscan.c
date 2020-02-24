@@ -28,6 +28,8 @@
 #include "utils/memutils.h"
 #include "utils/rel.h"
 
+#include "optimizer/var.h"
+
 static TupleTableSlot *ForeignNext(ForeignScanState *node);
 static bool ForeignRecheck(ForeignScanState *node, TupleTableSlot *slot);
 
@@ -65,6 +67,15 @@ ForeignNext(ForeignScanState *node)
 		(void) ExecMaterializeSlot(slot);
 
 		//tup->t_tableOid = RelationGetRelid(node->ss.ss_currentRelation);
+
+		/*
+		 * CDB: Label each row with a synthetic ctid if needed for subquery dedup.
+		 */
+		if (node->cdb_want_ctid &&
+			!TupIsNull(slot))
+		{
+			slot_set_ctid_from_fake(slot, &node->cdb_fake_ctid);
+		}
 	}
 
 	return slot;
@@ -167,11 +178,21 @@ ExecInitForeignScan(ForeignScan *node, EState *estate, int eflags)
 		ExecInitExpr((Expr *) node->fdw_recheck_quals,
 					 (PlanState *) scanstate);
 
+	/* Check if targetlist or qual contains a var node referencing the ctid column */
+	scanstate->cdb_want_ctid = contain_ctid_var_reference(&node->scan);
+	ItemPointerSetInvalid(&scanstate->cdb_fake_ctid);
+
 	/*
 	 * tuple table initialization
+	 *
+	 * In GPDB, cannot use ExecInitScanTupleSlot() on foreign scans of join
+	 * relations.
 	 */
 	ExecInitResultTupleSlot(estate, &scanstate->ss.ps);
-	ExecInitScanTupleSlot(estate, &scanstate->ss);
+	if (scanrelid > 0)
+		ExecInitScanTupleSlot(estate, &scanstate->ss);
+	else
+		scanstate->ss.ss_ScanTupleSlot = ExecAllocTableSlot(&estate->es_tupleTable);
 
 	/*
 	 * open the base relation, if any, and acquire an appropriate lock on it;
@@ -252,7 +273,10 @@ ExecEndForeignScan(ForeignScanState *node)
 	if (plan->operation != CMD_SELECT)
 		node->fdwroutine->EndDirectModify(node);
 	else
-		node->fdwroutine->EndForeignScan(node);
+	{
+		if (!node->is_squelched)
+			node->fdwroutine->EndForeignScan(node);
+	}
 
 	/* Shut down any outer plan. */
 	if (outerPlanState(node))
@@ -280,6 +304,8 @@ void
 ExecReScanForeignScan(ForeignScanState *node)
 {
 	PlanState  *outerPlan = outerPlanState(node);
+
+	ItemPointerSet(&node->cdb_fake_ctid, 0, 0);
 
 	node->fdwroutine->ReScanForeignScan(node);
 
@@ -354,4 +380,26 @@ ExecForeignScanInitializeWorker(ForeignScanState *node, shm_toc *toc)
 		coordinate = shm_toc_lookup(toc, plan_node_id);
 		fdwroutine->InitializeWorkerForeignScan(node, toc, coordinate);
 	}
+}
+
+
+
+/* ----------------------------------------------------------------
+*		ExecSquelchForeignScan
+*
+*		Performs identically to ExecEndForeignScan except that
+*		closure errors are ignored.  This function is called for
+*		normal termination when the external data source is NOT
+*		exhausted (such as for a LIMIT clause).
+* ----------------------------------------------------------------
+*/
+void
+ExecSquelchForeignScan(ForeignScanState *node)
+{
+	ForeignScan *plan = (ForeignScan *) node->ss.ps.plan;
+
+	node->is_squelched = true;
+
+	if (plan->operation == CMD_SELECT)
+		node->fdwroutine->EndForeignScan(node);
 }

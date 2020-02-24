@@ -24,12 +24,6 @@
 #include <sys/select.h>
 #endif
 
-#include "access/genam.h"
-#include "access/heapam.h"
-#include "catalog/indexing.h"
-#include "catalog/pg_authid.h"
-#include "catalog/pg_auth_time_constraint.h"
-#include "cdb/cdbvars.h"
 #include "libpq/auth.h"
 #include "libpq/crypt.h"
 #include "libpq/ip.h"
@@ -37,6 +31,15 @@
 #include "libpq/pqformat.h"
 #include "libpq/md5.h"
 #include "miscadmin.h"
+#include "replication/walsender.h"
+#include "storage/ipc.h"
+
+#include "access/genam.h"
+#include "access/heapam.h"
+#include "catalog/indexing.h"
+#include "catalog/pg_authid.h"
+#include "catalog/pg_auth_time_constraint.h"
+#include "cdb/cdbvars.h"
 #include "pgtime.h"
 #include "postmaster/postmaster.h"
 #include "utils/builtins.h"
@@ -47,8 +50,6 @@
 #include "utils/syscache.h"
 #include "utils/timestamp.h"
 #include "utils/tqual.h"
-#include "replication/walsender.h"
-#include "storage/ipc.h"
 
 extern bool gp_reject_internal_tcp_conn;
 
@@ -890,7 +891,7 @@ recv_password_packet(Port *port)
 
 
 /*----------------------------------------------------------------
- * hashed password (MD5, SHA-256) authentication
+ * MD5 authentication
  *----------------------------------------------------------------
  */
 
@@ -910,7 +911,7 @@ recv_and_check_password_packet(Port *port, char **logdetail)
 	if (passwd == NULL)
 		return STATUS_EOF;		/* client wouldn't send password */
 
-	result = hashed_passwd_verify(port, port->user_name, passwd, logdetail);
+	result = md5_crypt_verify(port, port->user_name, passwd, logdetail);
 
 	pfree(passwd);
 
@@ -1516,8 +1517,6 @@ pg_SSPI_recvauth(Port *port)
 		ereport(ERROR,
 		  (errmsg_internal("could not get token information: error code %lu",
 						   GetLastError())));
-
-	CloseHandle(token);
 
 	CloseHandle(token);
 

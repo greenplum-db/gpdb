@@ -781,7 +781,7 @@ vacuumStatement_Relation(Oid relid, List *relations, BufferAccessStrategy bstrat
 		 onerel->rd_rel->relkind != RELKIND_AOSEGMENTS &&
 		 onerel->rd_rel->relkind != RELKIND_AOBLOCKDIR &&
 		 onerel->rd_rel->relkind != RELKIND_AOVISIMAP)
-		|| RelationIsExternal(onerel) || RelationIsForeign(onerel))
+		|| RelationIsForeign(onerel))
 	{
 		ereport(WARNING,
 				(errmsg("skipping \"%s\" --- cannot vacuum non-tables, external tables, foreign tables or special system tables",
@@ -1317,8 +1317,7 @@ get_rel_oids(Oid relid, const RangeVar *vacrel,
 			if (classForm->relkind != RELKIND_RELATION &&
 				classForm->relkind != RELKIND_MATVIEW)
 				continue;
-			if (classForm->relstorage == RELSTORAGE_EXTERNAL ||
-				classForm->relstorage == RELSTORAGE_FOREIGN  ||
+			if (classForm->relstorage == RELSTORAGE_FOREIGN  ||
 				classForm->relstorage == RELSTORAGE_VIRTUAL)
 				continue;
 

@@ -771,8 +771,6 @@ ExecEndHashJoin(HashJoinState *node)
 	 */
 	ExecEndNode(outerPlanState(node));
 	ExecEndNode(innerPlanState(node));
-
-	EndPlanStateGpmonPkt(&node->js.ps);
 }
 
 /*
@@ -878,8 +876,6 @@ ExecHashJoinOuterGetTuple(PlanState *outerNode,
 #ifdef HJDEBUG
 		elog(gp_workfile_caching_loglevel, "HashJoin built table with %.1f tuples for batch %d", hashtable->totalTuples, curbatch);
 #endif
-
-		CheckSendPlanStateGpmonPkt(&hjstate->js.ps);
 	}
 
 	/* End of this batch */
@@ -1125,11 +1121,6 @@ ExecHashJoinSaveTuple(PlanState *ps, MemTuple tuple, uint32 hashvalue,
 		ereport(ERROR,
 				(errcode_for_file_access(),
 				 errmsg("could not write to temporary file: %m")));
-	}
-
-	if (ps)
-	{
-		CheckSendPlanStateGpmonPkt(ps);
 	}
 }
 

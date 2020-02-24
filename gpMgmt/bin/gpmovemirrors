@@ -370,25 +370,32 @@ try:
 
     if numberOfWorkers > 0:
         pool = WorkerPool(numWorkers=numberOfWorkers)
-        replicationStr = ". {0}/greenplum_path.sh; echo '{1}' >> {2}/pg_hba.conf; pg_ctl -D {2} reload"
         try:
-            for entry in PgHbaEntriesToUpdate:
-                allow_pair_hba_line_entries = []
-                primary_datadir = entry[0]
-                primary_hostname = entry[1]
-                newMirror_hostname = entry[2]
+            for primary_datadir, primary_hostname, newMirror_hostname in PgHbaEntriesToUpdate:
+                # Start with an empty string so that the later .join prepends a newline to the first entry
+                entries = ['']
+                # Add the samehost replication entry to support single-host development
+                entries.append("host replication {username} samehost trust".format(username=unix.getUserName()))
                 if options.hba_hostnames:
                     hostname, _, _ = socket.gethostbyaddr(newMirror_hostname)
-                    hba_line_entry = "\nhost all {0} {1} trust".format(unix.getUserName(), hostname)
-                    allow_pair_hba_line_entries.append(hba_line_entry)
+                    entries.append("host all {username} {hostname} trust".format(username=unix.getUserName(), hostname=hostname))
+                    entries.append("host replication {username} {hostname} trust".format(username=unix.getUserName(), hostname=hostname))
                 else:
                     newMirror_ips = unix.InterfaceAddrs.remote('get mirror ips', newMirror_hostname)
                     for ip in newMirror_ips:
                         cidr_suffix = '/128' if ':' in ip else '/32'
                         cidr = ip + cidr_suffix
-                        hba_line_entry = "\nhost all {0} {1} trust".format(unix.getUserName(), cidr)
-                        allow_pair_hba_line_entries.append(hba_line_entry)
-                cmdStr = replicationStr.format(os.environ["GPHOME"], " ".join(allow_pair_hba_line_entries), primary_datadir)
+                        entries.append("host all {username} {cidr} trust".format(username=unix.getUserName(), cidr=cidr))
+                    new_mirror_if_addrs = IfAddrs.list_addrs(newMirror_hostname)
+                    for ip in new_mirror_if_addrs:
+                        cidr_suffix = '/128' if ':' in ip else '/32'
+                        cidr = ip + cidr_suffix
+                        entries.append("host replication {username} {cidr} trust".format(username=unix.getUserName(), cidr=cidr))
+                cmdStr = ". {gphome}/greenplum_path.sh; echo '{entries}' >> {datadir}/pg_hba.conf; pg_ctl -D {datadir} reload".format(
+                    gphome=os.environ["GPHOME"],
+                    entries="\n".join(entries),
+                    datadir=primary_datadir
+                )
                 logger.info("Updating pg_hba.conf entries on primary %s:%s with new mirror %s information" % (primary_hostname, primary_datadir, newMirror_hostname))
                 cmd = Command(name="append to pg_hba.conf", cmdStr=cmdStr, ctxt=REMOTE, remoteHost=primary_hostname)
                 pool.addCommand(cmd)

@@ -329,9 +329,16 @@ flagInhTables(TableInfo *tblinfo, int numTables,
 		/* Some kinds never have parents */
 		if (tblinfo[i].relkind == RELKIND_SEQUENCE ||
 			tblinfo[i].relkind == RELKIND_VIEW ||
-			tblinfo[i].relkind == RELKIND_MATVIEW ||
-			tblinfo[i].relstorage == RELSTORAGE_EXTERNAL ||
-			tblinfo[i].relstorage == RELSTORAGE_FOREIGN)
+			tblinfo[i].relkind == RELKIND_MATVIEW)
+			continue;
+
+		/*
+		 * FIXME: In PostgreSQL, foreign tables can be inherited. But
+		 * pg_dump chokes on external tables, if an external table is
+		 * used as a partition, and a column has attislocal=false.
+		 */
+		if (tblinfo[i].relkind == RELKIND_FOREIGN_TABLE ||
+			tblinfo[i].relstorage == 'x' /* RELSTORAGE_EXTERNAL */)
 			continue;
 
 		/* Don't bother computing anything for non-target tables, either */
@@ -377,9 +384,16 @@ flagInhAttrs(DumpOptions *dopt, TableInfo *tblinfo, int numTables)
 		/* Some kinds never have parents */
 		if (tbinfo->relkind == RELKIND_SEQUENCE ||
 			tbinfo->relkind == RELKIND_VIEW ||
-			tbinfo->relkind == RELKIND_MATVIEW ||
-			tbinfo->relstorage == RELSTORAGE_EXTERNAL ||
-			tbinfo->relstorage == RELSTORAGE_FOREIGN)
+			tbinfo->relkind == RELKIND_MATVIEW)
+			continue;
+
+		/*
+		 * FIXME: In PostgreSQL, foreign tables can be inherited. But
+		 * pg_dump chokes on external tables, if an external table is
+		 * used as a partition, and a column has attislocal=false.
+		 */
+		if (tblinfo[i].relkind == RELKIND_FOREIGN_TABLE ||
+			tblinfo[i].relstorage == 'x' /* RELSTORAGE_EXTERNAL */)
 			continue;
 
 		/* Don't bother computing anything for non-target tables, either */

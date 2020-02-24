@@ -18,50 +18,6 @@
 
 #include "nodes/plannodes.h"
 #include "nodes/relation.h"
-#include "optimizer/clauses.h" /* AggClauseCounts */
-#include "utils/uri.h"
-
-/*
- * A structure that contains information for planning GROUP BY 
- * queries.
- */
-typedef struct GroupContext
-{
-	Path *best_path;
-	Path *cheapest_path;
-
-	/*
-	 * If subplan is given, use it (including its targetlist).  
-	 *
-	 * If sub_tlist and no subplan is given, then use sub_tlist
-	 * on the input plan. (This is intended to  assure that targets 
-	 * that appear in the SortClauses of AggOrder  nodes have targets 
-	 * in the subplan that match in sortgroupref.
-	 *
-	 * If neither subplan nor sub_tlist is given, just make a plan with
-	 * a flat target list.
-	 */
-	Plan *subplan;
-	List *sub_tlist;
-
-	List *tlist;
-	bool use_hashed_grouping;
-	double tuple_fraction;
-	uint64 grouping;
-
-	/*
-	 * When subplan is privided, groupColIdx and distinctColIdx are also provided.
-	 */
-	int numGroupCols;
-	AttrNumber *groupColIdx;
-	Oid		   *groupOperators;
-	int numDistinctCols;
-	AttrNumber *distinctColIdx;
-
-	double *p_dNumGroups;
-	List **pcurrent_pathkeys;
-	bool *querynode_changed;
-} GroupContext;
 
 /* possible values for force_parallel_mode */
 typedef enum
@@ -152,21 +108,14 @@ extern MergeJoin *make_mergejoin(List *tlist,
 extern Material *make_material(Plan *lefttree);
 extern Plan *materialize_finished_plan(PlannerInfo *root, Plan *subplan);
 extern Result *make_result(List *tlist, Node *resconstantqual, Plan *subplan);
-extern Repeat *make_repeat(List *tlist,
-						   List *qual,
-						   Expr *repeatCountExpr,
-						   uint64 grouping,
-						   Plan *subplan);
 extern bool is_projection_capable_path(Path *path);
 extern bool is_projection_capable_plan(Plan *plan);
 extern Plan *add_sort_cost(PlannerInfo *root, Plan *input, 
 						   double limit_tuples);
 extern Plan *plan_pushdown_tlist(PlannerInfo *root, Plan *plan, List *tlist);      /*CDB*/
 
-extern List *create_external_scan_uri_list(struct ExtTableEntry *extEntry, bool *ismasteronly);
-
 /* External use of these functions is deprecated: */
-extern Sort *make_sort_from_pathkeys(Plan *lefttree, List *pathkeys, bool add_keys_to_targetlist);
+extern Sort *make_sort_from_pathkeys(Plan *lefttree, List *pathkeys);
 extern Sort *make_sort_from_sortclauses(List *sortcls,
 						   Plan *lefttree);
 extern Sort *make_sort_from_groupcols(List *groupcls, AttrNumber *grpColIdx,
@@ -178,6 +127,10 @@ extern Agg *make_agg(List *tlist, List *qual,
 		 List *groupingSets, List *chain,
 		 double dNumGroups, Plan *lefttree);
 extern Limit *make_limit(Plan *lefttree, Node *limitOffset, Node *limitCount);
+extern TupleSplit *make_tup_split(List *tlist,
+								  int numDQAs, Bitmapset **dqas_ref_bms,
+								  int numGroupCols, AttrNumber *grpColIdx,
+								  Plan *lefttree);
 
 /*
  * prototypes for plan/initsplan.c

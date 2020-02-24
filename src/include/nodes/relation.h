@@ -674,12 +674,10 @@ typedef struct RelOptInfo
 	Oid			serverid;		/* identifies server for the table or join */
 	Oid			userid;			/* identifies user to check access as */
 	bool		useridiscurrent;	/* join is only valid for current user */
+	char		exec_location;  /* execute on MASTER, ANY or ALL SEGMENTS, Greenplum MPP specific */
 	/* use "struct FdwRoutine" to avoid including fdwapi.h here */
 	struct FdwRoutine *fdwroutine;
 	void	   *fdw_private;
-
-	/* used by external scan */
-	struct ExtTableEntry *extEntry;
 
 	/* used by various scans and joins: */
 	List	   *baserestrictinfo;		/* RestrictInfo structures (if base
@@ -697,9 +695,6 @@ typedef struct RelOptInfo
 	 */
 	List	   *upperrestrictinfo;		/* RestrictInfo structures (if base
 										 * rel) */
-
-	/* used by foreign scan */
-	ForeignTable		*ftEntry;
 } RelOptInfo;
 
 /*
@@ -1152,17 +1147,6 @@ typedef struct AOCSPath
 
 	/* for now it's pretty plain.. */
 } AOCSPath;
-
-
-/*
- * ExternalPath is used for external table scans.
- */
-typedef struct ExternalPath
-{
-	Path		path;
-
-	/* for now it's pretty plain.. */
-} ExternalPath;
 
 /*
  * PartitionSelectorPath is used for injection of partition selectors
@@ -1713,6 +1697,23 @@ typedef struct AggPath
 	List	   *qual;			/* quals (HAVING quals), if any */
 	bool		streaming;
 } AggPath;
+
+/*
+ * TupleSplitPath represents tuple split by DQAs expr
+ *
+ * In gpdb, we need to split one input tuple to n output tuples for MultiDQA
+ * MPP execution. Each output tuple only contains one DQA expr and all GROUP BY
+ * exprs.
+ */
+typedef struct TupleSplitPath
+{
+	Path		path;
+	Path	   *subpath;		/* path representing input source */
+	List	   *groupClause;	/* a list of SortGroupClause's */
+
+	int         numDisDQAs;     /* the number of different DQAs */
+	Bitmapset **agg_args_id_bms;  /* the bitmapsets which store the dqa arg indexes */
+} TupleSplitPath;
 
 /*
  * GroupingSetsPath represents a GROUPING SETS aggregation

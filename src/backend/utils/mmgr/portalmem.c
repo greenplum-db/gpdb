@@ -258,11 +258,6 @@ CreatePortal(const char *name, bool allowDup, bool dupSilent)
 	/* put portal in table (sets portal->name) */
 	PortalHashTableInsert(portal, name);
 
-	/* Setup gpmon. Siva - should this be moved elsewhere? */
-	gpmon_init();
-
-	/* End Gpmon */
-
 	return portal;
 }
 

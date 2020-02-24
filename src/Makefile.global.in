@@ -108,6 +108,7 @@ datarootdir := @datarootdir@
 
 bindir := @bindir@
 sbindir := @sbindir@
+libexecdir := @libexecdir@
 
 datadir := @datadir@
 ifeq "$(findstring pgsql, $(datadir))" ""
@@ -200,8 +201,6 @@ with_uuid	= @with_uuid@
 with_zlib	= @with_zlib@
 with_libbz2	= @with_libbz2@
 with_apr_config	= @with_apr_config@
-with_apu_config	= @with_apu_config@
-with_libsigar	= @with_libsigar@
 enable_shared	= @enable_shared@
 enable_rpath	= @enable_rpath@
 # NLS is not supported in Greenplum, see comment documenting
@@ -221,7 +220,6 @@ enable_debug_extensions = @enable_debug_extensions@
 enable_orafce		= @enable_orafce@
 enable_mapreduce    = @enable_mapreduce@
 enable_gpcloud 	    = @enable_gpcloud@
-enable_gpperfmon    = @enable_gpperfmon@
 
 enable_tap_tests = @enable_tap_tests@
 
@@ -354,11 +352,6 @@ apr_includes		= @apr_includes@
 apr_link_ld_libs	= @apr_link_ld_libs@
 apr_cflags			= @apr_cflags@
 apr_cppflags		= @apr_cppflags@
-
-# apu-1-config
-APU_1_CONFIG		= @APU_1_CONFIG@
-apu_includes		= @apu_includes@
-apu_link_ld_libs	= @apu_link_ld_libs@
 
 # Miscellaneous
 

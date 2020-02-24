@@ -174,7 +174,6 @@
 			<topicref href="datatype-range.xml"/>
 		</topicref>
 		<topicref href="function-summary.xml" id="func_summary"/>
-		<topicref href="extensions/extensions.ditamap" format="ditamap"/>
 		<topicref href="modules/modules.ditamap" format="ditamap"/>
 		<topicref href="character_sets.xml" id="character_sets"/>
 		<topicref href="config_params/guc_config.ditamap" id="guc_config" format="ditamap"/>
@@ -284,7 +283,6 @@
 			</topicref>
 		</topicref>
 		<topicref href="gp_toolkit.ditamap" format="ditamap"/>
-		<topicref href="gpperfmon/gpperfmon.ditamap" format="ditamap"/>
 		<topicref href="extensions/serverapi.ditamap" format="ditamap"/>
 		<topicref href="misc.ditamap" format="ditamap"/>
 	</topicref>

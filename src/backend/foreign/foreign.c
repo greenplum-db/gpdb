@@ -307,6 +307,28 @@ GetForeignTable(Oid relid)
 	return ft;
 }
 
+/*
+ * Is the given table a GPDB external table, rather than a normal foreign
+ * table?
+ */
+bool
+rel_is_external_table(Oid relid)
+{
+	Form_pg_foreign_table tableform;
+	HeapTuple	tp;
+	bool		result;
+
+	tp = SearchSysCache1(FOREIGNTABLEREL, ObjectIdGetDatum(relid));
+	if (!HeapTupleIsValid(tp))
+		return false;
+	tableform = (Form_pg_foreign_table) GETSTRUCT(tp);
+
+	result = (tableform->ftserver == PG_EXTTABLE_SERVER_OID);
+
+	ReleaseSysCache(tp);
+
+	return result;
+}
 
 /*
  * GetForeignColumnOptions - Get attfdwoptions of given relation/attnum

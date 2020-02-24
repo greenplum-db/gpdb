@@ -32,7 +32,6 @@
 #include "cdb/memquota.h"
 #include "commands/vacuum.h"
 #include "miscadmin.h"
-#include "libpq/password_hash.h"
 #include "optimizer/cost.h"
 #include "optimizer/planmain.h"
 #include "pgstat.h"
@@ -171,9 +170,6 @@ bool		debug_basebackup = false;
 
 int rep_lag_avoidance_threshold = 0;
 
-/* Latch mechanism debug GUCs */
-bool		debug_latch = false;
-
 bool		gp_keep_all_xlog = false;
 
 #define DEBUG_DTM_ACTION_PRIMARY_DEFAULT true
@@ -227,12 +223,7 @@ double		gp_resource_group_cpu_limit;
 double		gp_resource_group_memory_limit;
 bool		gp_resource_group_bypass;
 
-/* Perfmon segment GUCs */
-int			gp_perfmon_segment_interval;
-
-/* Perfmon debug GUC */
-bool		gp_perfmon_print_packet_info;
-
+/* Metrics collector debug GUC */
 bool		vmem_process_interrupt = false;
 bool		execute_pruned_plan = false;
 
@@ -251,9 +242,6 @@ bool		gp_ignore_window_exclude = false;
 
 /* Time based authentication GUC */
 char	   *gp_auth_time_override_str = NULL;
-
-/* Password hashing */
-int			password_hash_algorithm = PASSWORD_HASH_MD5;
 
 /* include file/line information to stack traces */
 bool		gp_log_stack_trace_lines;
@@ -274,12 +262,8 @@ bool		gp_enable_minmax_optimization = true;
 bool		gp_enable_multiphase_agg = true;
 bool		gp_enable_preunique = TRUE;
 bool		gp_eager_preunique = FALSE;
-bool		gp_hashagg_streambottom = true;
 bool		gp_enable_agg_distinct = true;
 bool		gp_enable_dqa_pruning = true;
-bool		gp_eager_dqa_pruning = FALSE;
-bool		gp_eager_one_phase_agg = FALSE;
-bool		gp_eager_two_phase_agg = FALSE;
 bool		gp_dynamic_partition_pruning = true;
 bool		gp_log_dynamic_partition_pruning = false;
 bool		gp_cte_sharing = false;
@@ -342,7 +326,6 @@ bool		optimizer_enable_outerjoin_to_unionall_rewrite;
 bool		optimizer_enable_ctas;
 bool		optimizer_enable_partial_index;
 bool		optimizer_enable_dml;
-bool		optimizer_enable_dml_triggers;
 bool		optimizer_enable_dml_constraints;
 bool		optimizer_enable_master_only_queries;
 bool		optimizer_enable_hashjoin;
@@ -484,6 +467,7 @@ static const struct config_enum_entry optimizer_minidump_options[] = {
 static const struct config_enum_entry optimizer_cost_model_options[] = {
 	{"legacy", OPTIMIZER_GPDB_LEGACY},
 	{"calibrated", OPTIMIZER_GPDB_CALIBRATED},
+	{"experimental", OPTIMIZER_GPDB_EXPERIMENTAL},
 	{NULL, 0}
 };
 
@@ -491,7 +475,6 @@ static const struct config_enum_entry explain_memory_verbosity_options[] = {
 	{"suppress", EXPLAIN_MEMORY_VERBOSITY_SUPPRESS},
 	{"summary", EXPLAIN_MEMORY_VERBOSITY_SUMMARY},
 	{"detail", EXPLAIN_MEMORY_VERBOSITY_DETAIL},
-	{"debug", EXPLAIN_MEMORY_VERBOSITY_DEBUG},
 	{NULL, 0}
 };
 
@@ -543,22 +526,6 @@ static const struct config_enum_entry gp_resqueue_memory_policies[] = {
 	{"none", RESMANAGER_MEMORY_POLICY_NONE},
 	{"auto", RESMANAGER_MEMORY_POLICY_AUTO},
 	{"eager_free", RESMANAGER_MEMORY_POLICY_EAGER_FREE},
-	{NULL, 0}
-};
-
-static const struct config_enum_entry gp_gpperfmon_log_alert_level[] = {
-	{"none", GPPERFMON_LOG_ALERT_LEVEL_NONE},
-	{"warning", GPPERFMON_LOG_ALERT_LEVEL_WARNING},
-	{"error", GPPERFMON_LOG_ALERT_LEVEL_ERROR},
-	{"fatal", GPPERFMON_LOG_ALERT_LEVEL_FATAL},
-	{"panic", GPPERFMON_LOG_ALERT_LEVEL_PANIC},
-	{NULL, 0}
-};
-
-static const struct config_enum_entry password_hash_algorithm_options[] = {
-	/* {"none", PASSWORD_HASH_NONE}, * this option is not exposed */
-	{"MD5", PASSWORD_HASH_MD5},
-	{"SHA-256", PASSWORD_HASH_SHA_256},
 	{NULL, 0}
 };
 
@@ -763,44 +730,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"gp_eager_agg_distinct_pruning", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Prefer 3-phase aggregation [and join] to compute distinct-qualified aggregates."),
-			gettext_noop("The planner will prefer to use 3-phase aggregation and join to compute "
-				"distinct-qualified aggregates whenever enabled and possible"
-						 "regardless of cost estimates."),
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_eager_dqa_pruning,
-		false,
-		NULL, NULL, NULL
-	},
-
-	/* GPDB_96_MERGE_FIXME: This doesn't do anything anymore. Do we need to resurrect it? How? */
-	{
-		{"gp_eager_one_phase_agg", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Prefer 1-phase aggregation."),
-			gettext_noop("The planner will prefer to use 1-phase aggregation whenever possible"
-						 "regardless of cost estimates."),
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_eager_one_phase_agg,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_eager_two_phase_agg", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Prefer 2-phase aggregation."),
-			gettext_noop("The planner will prefer to use 2-phase aggregation whenever"
-					   "enabled and possible regardless of cost estimates."),
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_eager_two_phase_agg,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
 		{"gp_enable_explain_allstat", PGC_USERSET, CLIENT_CONN_OTHER,
 			gettext_noop("Experimental feature: dump stats for all segments in EXPLAIN ANALYZE."),
 			NULL,
@@ -856,17 +785,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 		NULL, NULL, NULL
 	},
 #endif
-
-	{
-		{"gp_hashagg_streambottom", PGC_USERSET, QUERY_TUNING_METHOD,
-			gettext_noop("Stream the bottom stage of two stage hashagg"),
-			gettext_noop("Avoid spilling at the bottom stage of two stage hashagg"),
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_hashagg_streambottom,
-		true,
-		NULL, NULL, NULL
-	},
 
 	{
 		{"gp_enable_motion_deadlock_sanity", PGC_USERSET, DEVELOPER_OPTIONS,
@@ -1563,16 +1481,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"gp_enable_gpperfmon", PGC_POSTMASTER, UNGROUPED,
-			gettext_noop("Enable gpperfmon monitoring."),
-			NULL,
-		},
-		&gp_enable_gpperfmon,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
 		{"gp_enable_query_metrics", PGC_POSTMASTER, UNGROUPED,
 			gettext_noop("Enable all query metrics collection."),
 			NULL
@@ -1685,17 +1593,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"debug_latch", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Print debug messages for latch mechanism."),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&debug_latch,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
 		{"gp_encoding_check_locale_compatibility", PGC_POSTMASTER, CLIENT_CONN_LOCALE,
 			gettext_noop("Enable check for compatibility of encoding and locale in createdb"),
 			NULL,
@@ -1746,17 +1643,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&gp_partitioning_dynamic_selection_log,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_perfmon_print_packet_info", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Print out debugging info for a Perfmon packet"),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_perfmon_print_packet_info,
 		false,
 		NULL, NULL, NULL
 	},
@@ -2717,17 +2603,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"optimizer_enable_dml_triggers", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Support DML with triggers."),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&optimizer_enable_dml_triggers,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
 		{"optimizer_enable_dml_constraints", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Support DML with CHECK constraints and NOT NULL constraints."),
 			NULL,
@@ -2807,7 +2682,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 
 	{
 		{"optimizer_use_gpdb_allocators", PGC_POSTMASTER, RESOURCES_MEM,
-			gettext_noop("Enable ORCA to use GPDB Memory Accounting"),
+			gettext_noop("Enable ORCA to use GPDB Memory Contexts"),
 			NULL,
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
@@ -3746,26 +3621,6 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"gp_gpperfmon_send_interval", PGC_SUSET, LOGGING_WHAT,
-			gettext_noop("Interval in seconds between sending messages to gpperfmon."),
-			NULL
-		},
-		&gp_gpperfmon_send_interval,
-		1, 1, 3600,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"gpperfmon_port", PGC_POSTMASTER, UNGROUPED,
-			gettext_noop("Sets the port number of gpperfmon."),
-			NULL,
-		},
-		&gpperfmon_port,
-		8888, 1024, 65535,
-		NULL, NULL, NULL
-	},
-
-	{
 		{"gp_instrument_shmem_size", PGC_POSTMASTER, UNGROUPED,
 			gettext_noop("Sets the size of shmem allocated for instrumentation."),
 			NULL,
@@ -3853,17 +3708,6 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&gp_resqueue_priority_grouping_timeout,
 		1000, 1000, INT_MAX,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_perfmon_segment_interval", PGC_POSTMASTER, STATS,
-			gettext_noop("Interval (in ms) between sending segment statistics to perfmon."),
-			NULL,
-			GUC_NO_SHOW_ALL
-		},
-		&gp_perfmon_segment_interval,
-		1000, 500, INT_MAX,
 		NULL, NULL, NULL
 	},
 
@@ -4402,7 +4246,7 @@ struct config_string ConfigureNamesString_gp[] =
 	},
 	{
 		{"pljava_classpath", PGC_SUSET, CUSTOM_OPTIONS,
-			gettext_noop("classpath used by the the JVM"),
+			gettext_noop("classpath used by the JVM"),
 			NULL,
 			GUC_NOT_IN_SAMPLE
 		},
@@ -4534,20 +4378,9 @@ struct config_enum ConfigureNamesEnum_gp[] =
 	},
 
 	{
-		{"password_hash_algorithm", PGC_SUSET, CONN_AUTH_SECURITY,
-			gettext_noop("The cryptograph hash algorithm to apply to passwords before storing them."),
-			gettext_noop("Valid values are MD5 or SHA-256."),
-			GUC_SUPERUSER_ONLY
-		},
-		&password_hash_algorithm,
-		PASSWORD_HASH_MD5, password_hash_algorithm_options,
-		NULL, NULL, NULL
-	},
-
-	{
 		{"optimizer_cost_model", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Set optimizer cost model."),
-			gettext_noop("Valid values are legacy, calibrated"),
+			gettext_noop("Valid values are legacy, calibrated, experimental"),
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_cost_model,
@@ -4677,16 +4510,6 @@ struct config_enum ConfigureNamesEnum_gp[] =
 		},
 		&gp_resgroup_memory_policy,
 		RESMANAGER_MEMORY_POLICY_EAGER_FREE, gp_resqueue_memory_policies, NULL, NULL
-	},
-
-	{
-		{"gpperfmon_log_alert_level", PGC_USERSET, LOGGING,
-			gettext_noop("Specify the log alert level used by gpperfmon."),
-			gettext_noop("Valid values are 'none', 'warning', 'error', 'fatal', 'panic'.")
-		},
-		&gpperfmon_log_alert_level,
-		GPPERFMON_LOG_ALERT_LEVEL_NONE, gp_gpperfmon_log_alert_level,
-		NULL, NULL, NULL
 	},
 
 	{
@@ -5048,27 +4871,6 @@ set_gp_replication_config(const char *name, const char *value)
 	AlterSystemStmt alterSystemStmt = {.type = T_AlterSystemStmt, .setstmt = &setstmt};
     
 	AlterSystemSetConfigFile(&alterSystemStmt);
-}
-
-/*
- * lookup_loglevel_by_name
- *
- * Return the enum value for the specified name. This is a specialized version
- * of config_enum_lookup_by_value() for use by syslogger.c where the severity
- * is matched with perfmon log alert levels.
- */
-GpperfmonLogAlertLevel
-lookup_loglevel_by_name(const char *name)
-{
-	const struct config_enum_entry *entry;
-
-	for (entry = gp_gpperfmon_log_alert_level; entry && entry->name; entry++)
-	{
-		if (pg_strcasecmp(entry->name, name) == 0)
-			return entry->val;
-	}
-
-	return GPPERFMON_LOG_ALERT_LEVEL_NONE;
 }
 
 /*

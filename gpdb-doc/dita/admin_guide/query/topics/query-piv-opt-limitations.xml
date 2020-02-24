@@ -33,6 +33,8 @@
             </ul></li>
           <li>SortMergeJoin (SMJ).</li>
           <li>Ordered aggregations.</li>
+          <li>Multi-argument <codeph>DISTINCT</codeph> qualified aggregates, for example
+              <codeph>SELECT corr(DISTINCT a, b) FROM tbl1;</codeph></li>
           <li>These analytics extensions:<ul id="ul_iwr_3yl_vp">
               <li>CUBE</li>
               <li>Multiple grouping sets</li>

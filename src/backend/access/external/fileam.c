@@ -150,7 +150,6 @@ external_beginscan(Relation relation, uint32 scancounter,
 	 */
 	scan = (FileScanDesc) palloc0(sizeof(FileScanDescData));
 
-	scan->fs_inited = false;
 	scan->fs_ctup.t_data = NULL;
 	ItemPointerSetInvalid(&scan->fs_ctup.t_self);
 	scan->fs_rd = relation;
@@ -873,7 +872,6 @@ externalgettup_defined(FileScanDesc scan)
 					  &loaded_oid))
 	{
 		MemoryContextSwitchTo(oldcontext);
-		scan->fs_inited = false;
 		return NULL;
 	}
 
@@ -1042,7 +1040,6 @@ externalgettup_custom(FileScanDesc scan)
 	/*
 	 * if we got here we finished reading all the data.
 	 */
-	scan->fs_inited = false;
 
 	return NULL;
 }
@@ -1071,17 +1068,6 @@ externalgettup(FileScanDesc scan,
 	externalscan_error_context.previous = error_context_stack;
 
 	error_context_stack = &externalscan_error_context;
-
-	if (!scan->fs_inited)
-	{
-		/* more init stuff here... */
-		scan->fs_inited = true;
-	}
-	else
-	{
-		/* continue from previously returned tuple */
-		/* (set current state...) */
-	}
 
 	if (!custom)
 		tup = externalgettup_defined(scan); /* text/csv */

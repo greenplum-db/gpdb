@@ -62,4 +62,6 @@ cdbpath_dedup_fixup(PlannerInfo *root, Path *path);
 bool
 cdbpath_contains_wts(Path *path);
 
+extern void failIfUpdateTriggers(Oid relid);
+
 #endif   /* CDBPATH_H */

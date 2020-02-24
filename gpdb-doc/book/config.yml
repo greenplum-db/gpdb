@@ -30,6 +30,15 @@ dita_sections:
   ditamap_location: install_guide.ditamap
   ditaval_location: ../gpdb-oss-webhelp.ditaval
 
+
+- repository:
+    name: dita
+    at_path: analytics
+  directory: 7-0/analytics
+  ditamap_location: analytics.ditamap
+  ditaval_location: ../gpdb-oss-webhelp.ditaval
+
+
 - repository:
     name: dita
     at_path: admin_guide

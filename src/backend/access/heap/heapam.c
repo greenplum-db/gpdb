@@ -1469,7 +1469,7 @@ relation_openrv(const RangeVar *relation, LOCKMODE lockmode)
  */
 Relation
 relation_openrv_extended(const RangeVar *relation, LOCKMODE lockmode,
-						 bool missing_ok, bool noWait)
+						 bool missing_ok)
 {
 	Oid			relOid;
 
@@ -1488,7 +1488,7 @@ relation_openrv_extended(const RangeVar *relation, LOCKMODE lockmode,
 		return NULL;
 
 	/* Let try_relation_open do the rest */
-	return try_relation_open(relOid, lockmode, noWait);
+	return relation_open(relOid, lockmode);
 }
 
 /* ----------------
@@ -1633,7 +1633,7 @@ heap_openrv_extended(const RangeVar *relation, LOCKMODE lockmode,
 {
 	Relation	r;
 
-	r = relation_openrv_extended(relation, lockmode, missing_ok, false);
+	r = relation_openrv_extended(relation, lockmode, missing_ok);
 
 	if (r)
 	{

@@ -2313,25 +2313,6 @@ _SPI_execute_plan(SPIPlanPtr plan, ParamListInfo paramLI,
 				if (query_info_collect_hook)
 					(*query_info_collect_hook)(METRICS_QUERY_SUBMIT, qdesc);
 			
-				if (gp_enable_gpperfmon 
-						&& Gp_role == GP_ROLE_DISPATCH 
-						&& log_min_messages < DEBUG4)
-				{
-					/* For log level of DEBUG4, gpmon is sent information about SPI internal queries as well */
-					Assert(plansource->query_string);
-					gpmon_qlog_query_submit(qdesc->gpmon_pkt);
-					gpmon_qlog_query_text(qdesc->gpmon_pkt,
-										  plansource->query_string,
-										  application_name,
-										  NULL /* resqueue name */,
-										  NULL /* priority */);
-				}
-				else
-				{
-					/* Otherwise, we do not record information about internal queries */
-					qdesc->gpmon_pkt = NULL;
-				}
-
 				res = _SPI_pquery(qdesc, fire_triggers,
 								  canSetTag ? tcount : 0);
 				FreeQueryDesc(qdesc);
@@ -2620,8 +2601,6 @@ _SPI_pquery(QueryDesc *queryDesc, bool fire_triggers, uint64 tcount)
 		ResetUsage();
 #endif
 
-	bool orig_gp_enable_gpperfmon = gp_enable_gpperfmon;
-
 	/* Select execution options */
 	if (fire_triggers)
 		eflags = 0;				/* default run-to-completion flags */
@@ -2633,15 +2612,6 @@ _SPI_pquery(QueryDesc *queryDesc, bool fire_triggers, uint64 tcount)
 		Oid			relationOid = InvalidOid; 	/* relation that is modified */
 		AutoStatsCmdType cmdType = AUTOSTATS_CMDTYPE_SENTINEL; 	/* command type */
 		bool		checkTuples;
-
-		/*
-		 * Temporarily disable gpperfmon since we don't send information for internal queries in
-		 * most cases, except when the debugging level is set to DEBUG4 or DEBUG5.
-		 */
-		if (log_min_messages > DEBUG4)
-		{
-			gp_enable_gpperfmon = false;
-		}
 
 		ExecutorStart(queryDesc, 0);
 
@@ -2693,15 +2663,12 @@ _SPI_pquery(QueryDesc *queryDesc, bool fire_triggers, uint64 tcount)
 #endif /* FAULT_INJECTOR */
 		}
 
-		gp_enable_gpperfmon = orig_gp_enable_gpperfmon;
-
 		/* MPP-14001: Running auto_stats */
 		if (Gp_role == GP_ROLE_DISPATCH)
 			auto_stats(cmdType, relationOid, queryDesc->es_processed, true /* inFunction */);
 	}
 	PG_CATCH();
 	{
-		gp_enable_gpperfmon = orig_gp_enable_gpperfmon;
 		PG_RE_THROW();
 	}
 	PG_END_TRY();

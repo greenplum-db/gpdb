@@ -9,7 +9,6 @@ from generate_series(0, 99) i;
 insert into dqa_t2 select i%34, i%45, (i%10) || '', '2009-06-10'::date + ( (i%56) || ' days')::interval
 from generate_series(0, 99) i;
 
-set gp_eager_agg_distinct_pruning=on;
 set enable_hashagg=on;
 set enable_groupagg=off;
 
@@ -63,6 +62,52 @@ explain (costs off) select count(distinct dqa_t1.dt) from dqa_t1, dqa_t2 where d
 select count(distinct dqa_t1.dt) from dqa_t1, dqa_t2 where dqa_t1.c = dqa_t2.c group by dqa_t2.dt;
 explain (costs off) select count(distinct dqa_t1.dt) from dqa_t1, dqa_t2 where dqa_t1.c = dqa_t2.c group by dqa_t2.dt;
 
+-- multidqa with groupby and order by
+select sum(distinct d), count(distinct i), count(distinct c),i,c from dqa_t1 group by i,c order by i,c;
+explain (costs off) select sum(distinct d), count(distinct i), count(distinct c),i,c from dqa_t1 group by i,c order by i,c;
+
+-- multi args singledqa
+select corr(distinct d, i) from dqa_t1;
+explain (costs off) select corr(distinct d, i) from dqa_t1;
+
+-- multi args singledqa with group by
+select corr(distinct d, i) from dqa_t1 group by d;
+explain (costs off) select corr(distinct d, i) from dqa_t1 group by d;
+
+select corr(distinct d, i) from dqa_t1 group by c;
+explain (costs off) select corr(distinct d, i) from dqa_t1 group by c;
+
+-- multi args multidqa
+select count(distinct c), corr(distinct d, i) from dqa_t1;
+explain (costs off) select count(distinct c), corr(distinct d, i) from dqa_t1;
+
+select count(distinct d), corr(distinct d, i) from dqa_t1;
+explain (costs off) select count(distinct d), corr(distinct d, i) from dqa_t1;
+
+select count(distinct d), count(distinct i), corr(distinct d, i) from dqa_t1;
+explain (costs off) select count(distinct d), count(distinct i), corr(distinct d, i) from dqa_t1;
+
+select count(distinct c), count(distinct d), count(distinct i), corr(distinct d, i) from dqa_t1;
+explain (costs off) select count(distinct c), count(distinct d), count(distinct i), corr(distinct d, i) from dqa_t1;
+
+-- multi args multidqa with group by
+select count(distinct c), corr(distinct d, i), d from dqa_t1 group by d;
+explain (costs off) select count(distinct c), corr(distinct d, i), d from dqa_t1 group by d;
+
+select count(distinct c), corr(distinct d, i), d, i from dqa_t1 group by d,i;
+explain (costs off) select count(distinct c), corr(distinct d, i), d, i from dqa_t1 group by d,i;
+
+select count(distinct c), corr(distinct d, i), dt from dqa_t1 group by dt;
+explain (costs off) select count(distinct c), corr(distinct d, i), dt from dqa_t1 group by dt;
+
+select count(distinct d), corr(distinct d, i), i from dqa_t1 group by i;
+explain (costs off) select count(distinct d), corr(distinct d, i), i from dqa_t1 group by i;
+
+select count(distinct d), corr(distinct d, i), d from dqa_t1 group by d;
+explain (costs off) select count(distinct d), corr(distinct d, i), d from dqa_t1 group by d;
+
+select count(distinct d), corr(distinct d, i), c from dqa_t1 group by c;
+explain (costs off) select count(distinct d), corr(distinct d, i), c from dqa_t1 group by c;
 
 -- MPP-19037
 drop table if exists fact_route_aggregation;
@@ -238,3 +283,18 @@ SELECT distinct C.z, count(distinct FS.x), count(distinct FS.y) FROM (SELECT i A
 
 
 drop table foo_mdqa;
+
+-- non-strict agg test
+
+-- Like COUNT(col), but also counts NULLs
+create or replace function countall_trans(c int, newval int) returns int as $$
+  SELECT $1 + 1;
+$$ language sql;
+create aggregate countall(sfunc = countall_trans, basetype = int, stype = int, initcond = 0, combinefunc = int4pl);
+
+-- Test table
+create table nonullstab (a int, b int);
+insert into nonullstab select 1, 1 from generate_series(1, 100);
+
+-- This returns wrong result. countall(distinct a) should return 1.
+select countall(distinct a), count(distinct b) from nonullstab;

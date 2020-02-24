@@ -204,14 +204,15 @@ DESCR("");
  * RELSTORAGE_VIRTUAL - has virtual storage, meaning, relation has no
  *						data directly stored forit  (right now this
  *						relates to views and comp types).
- * RELSTORAGE_EXTERNAL-	stored externally using external tables.
  * RELSTORAGE_FOREIGN - stored in another server.  
+ *
+ * GPDB 6.x and below used RELSTORAGE_EXTERNAL ('x') for external tables.
+ * Now they look like foreign tables.
  */
 #define		  RELSTORAGE_HEAP	'h'
 #define		  RELSTORAGE_AOROWS	'a'
 #define 	  RELSTORAGE_AOCOLS	'c'
 #define		  RELSTORAGE_VIRTUAL	'v'
-#define		  RELSTORAGE_EXTERNAL 'x'
 #define		  RELSTORAGE_FOREIGN 'f'
 
 static inline bool relstorage_is_heap(char c)
@@ -222,16 +223,6 @@ static inline bool relstorage_is_heap(char c)
 static inline bool relstorage_is_ao(char c)
 {
 	return (c == RELSTORAGE_AOROWS || c == RELSTORAGE_AOCOLS);
-}
-
-static inline bool relstorage_is_external(char c)
-{
-	return (c == RELSTORAGE_EXTERNAL);
-}
-
-static inline bool relstorage_is_foreign(char c)
-{
-	return (c == RELSTORAGE_FOREIGN);
 }
 
 #endif   /* PG_CLASS_H */

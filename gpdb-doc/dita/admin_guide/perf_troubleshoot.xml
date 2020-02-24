@@ -114,17 +114,9 @@ a.query
                     the current memory utilization and idle time for sessions that are running
                     queries on Greenplum Database. For information about the view, see <xref
                         href="managing/monitor.xml#topic_slt_ddv_1q"/>.</p>
-                <p>You can enable a dedicated database, <codeph>gpperfmon</codeph>, in which data
-                    collection agents running on each segment host save query and system utilization
-                    metrics. Refer to the <codeph>gpperfmon_install</codeph> management utility
-                    reference in the <cite>Greenplum Database Management Utility Reference
-                        Guide</cite> for help creating the <codeph>gpperfmon</codeph> database and
-                    managing the agents. See documentation for the tables and views in the
-                        <codeph>gpperfmon</codeph> database in the <cite>Greenplum Database
-                        Reference Guide</cite>.</p>
                 <p otherprops="pivotal">The optional Greenplum Command Center web-based user
-                    interface graphically displays query and system utilization metrics saved in the
-                        <codeph>gpperfmon</codeph> database. See the <xref
+                    interface graphically displays query and system utilization metrics.
+                        See the <xref
                         href="https://gpcc.docs.pivotal.io" format="html" scope="external">Greenplum
                         Command Center Documentation</xref> web site for procedures to enable
                     Greenplum Command Center.</p>

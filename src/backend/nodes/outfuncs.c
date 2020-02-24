@@ -478,17 +478,6 @@ _outResult(StringInfo str, const Result *node)
 #endif
 
 static void
-_outRepeat(StringInfo str, const Repeat *node)
-{
-	WRITE_NODE_TYPE("REPEAT");
-
-	_outPlanInfo(str, (Plan *) node);
-
-	WRITE_NODE_FIELD(repeatCountExpr);
-	WRITE_UINT64_FIELD(grouping);
-}
-
-static void
 _outModifyTable(StringInfo str, const ModifyTable *node)
 {
 	WRITE_NODE_TYPE("MODIFYTABLE");
@@ -660,11 +649,9 @@ _outSampleScan(StringInfo str, const SampleScan *node)
 }
 
 static void
-_outExternalScan(StringInfo str, const ExternalScan *node)
+_outExternalScanInfo(StringInfo str, const ExternalScanInfo *node)
 {
-	WRITE_NODE_TYPE("EXTERNALSCAN");
-
-	_outScanInfo(str, (Scan *) node);
+	WRITE_NODE_TYPE("EXTERNALSCANINFO");
 
 	WRITE_NODE_FIELD(uriList);
 	WRITE_STRING_FIELD(fmtOptString);
@@ -826,6 +813,8 @@ _outFunctionScan(StringInfo str, const FunctionScan *node)
 
 	WRITE_NODE_FIELD(functions);
 	WRITE_BOOL_FIELD(funcordinality);
+	WRITE_NODE_FIELD(param);
+	WRITE_BOOL_FIELD(resultInTupleStore);
 }
 
 static void
@@ -989,6 +978,29 @@ _outAgg(StringInfo str, const Agg *node)
 	WRITE_NODE_FIELD(groupingSets);
 	WRITE_NODE_FIELD(chain);
 	WRITE_BOOL_FIELD(streaming);
+
+	WRITE_UINT_FIELD(agg_expr_id);
+}
+#endif /* COMPILING_BINARY_FUNCS */
+
+#ifndef COMPILING_BINARY_FUNCS
+static void
+_outTupleSplit(StringInfo str, const TupleSplit *node)
+{
+	int         i;
+
+	WRITE_NODE_TYPE("TupleSplit");
+
+	_outPlanInfo(str, (const Plan *) node);
+
+	WRITE_INT_FIELD(numCols);
+	appendStringInfoString(str, " :grpColIdx");
+	for (i = 0; i < node->numCols; i++)
+		appendStringInfo(str, " %d", node->grpColIdx[i]);
+
+	WRITE_INT_FIELD(numDisDQAs);
+	for (i = 0; i < node->numDisDQAs; i++)
+		WRITE_BITMAPSET_FIELD(dqa_args_id_bms[i]);
 }
 #endif /* COMPILING_BINARY_FUNCS */
 
@@ -1300,22 +1312,6 @@ _outSplitUpdate(StringInfo str, const SplitUpdate *node)
 	for (int i = 0; i < node->numHashAttrs; i++)
 		appendStringInfo(str, " %u", node->hashFuncs[i]);
 #endif
-
-	_outPlanInfo(str, (Plan *) node);
-}
-
-/*
- * _outRowTrigger
- */
-static void
-_outRowTrigger(StringInfo str, const RowTrigger *node)
-{
-	WRITE_NODE_TYPE("RowTrigger");
-
-	WRITE_INT_FIELD(relid);
-	WRITE_INT_FIELD(eventFlags);
-	WRITE_NODE_FIELD(oldValuesColIdx);
-	WRITE_NODE_FIELD(newValuesColIdx);
 
 	_outPlanInfo(str, (Plan *) node);
 }
@@ -5251,9 +5247,6 @@ outNode(StringInfo str, const void *obj)
 			case T_Result:
 				_outResult(str, obj);
 				break;
-			case T_Repeat:
-				_outRepeat(str, obj);
-				break;
 			case T_ModifyTable:
 				_outModifyTable(str, obj);
 				break;
@@ -5287,8 +5280,8 @@ outNode(StringInfo str, const void *obj)
 			case T_DynamicSeqScan:
 				_outDynamicSeqScan(str, obj);
 				break;
-			case T_ExternalScan:
-				_outExternalScan(str, obj);
+			case T_ExternalScanInfo:
+				_outExternalScanInfo(str, obj);
 				break;
 			case T_SampleScan:
 				_outSampleScan(str, obj);
@@ -5353,6 +5346,9 @@ outNode(StringInfo str, const void *obj)
 			case T_Agg:
 				_outAgg(str, obj);
 				break;
+			case T_TupleSplit:
+				_outTupleSplit(str, obj);
+				break;
 			case T_WindowAgg:
 				_outWindowAgg(str, obj);
 				break;
@@ -5397,9 +5393,6 @@ outNode(StringInfo str, const void *obj)
 				break;
 			case T_SplitUpdate:
 				_outSplitUpdate(str, obj);
-				break;
-			case T_RowTrigger:
-				_outRowTrigger(str, obj);
 				break;
 			case T_AssertOp:
 				_outAssertOp(str, obj);

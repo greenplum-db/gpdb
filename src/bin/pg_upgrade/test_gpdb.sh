@@ -496,7 +496,6 @@ main() {
 		cp "${NEW_DATADIR}/dbfast$i/demoDataDir$j.old/internal.auto.conf" "${NEW_DATADIR}/dbfast$i/demoDataDir$j/internal.auto.conf"
 		# Remove QD only files
 		rm -f "${NEW_DATADIR}/dbfast$i/demoDataDir$j/gpssh.conf"
-		rm -rf "${NEW_DATADIR}/dbfast$i/demoDataDir$j/gpperfmon"
 		# Upgrade the segment data files without dump/restore of the schema
 	
 		local epoch_for_perf_QEstart=`date +%s`

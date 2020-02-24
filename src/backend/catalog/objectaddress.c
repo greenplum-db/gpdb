@@ -785,7 +785,6 @@ get_object_address(ObjectType objtype, List *objname, List *objargs,
 			case OBJECT_VIEW:
 			case OBJECT_MATVIEW:
 			case OBJECT_FOREIGN_TABLE:
-			case OBJECT_EXTTABLE:
 				address =
 					get_relation_by_qualified_name(objtype, objname,
 												   &relation, lockmode,
@@ -1226,8 +1225,7 @@ get_relation_by_qualified_name(ObjectType objtype, List *objname,
 	address.objectSubId = 0;
 
 	relation = relation_openrv_extended(makeRangeVarFromNameList(objname),
-										lockmode, missing_ok,
-										false);
+										lockmode, missing_ok);
 	if (!relation)
 		return address;
 
@@ -1273,14 +1271,6 @@ get_relation_by_qualified_name(ObjectType objtype, List *objname,
 				ereport(ERROR,
 						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 						 errmsg("\"%s\" is not a foreign table",
-								RelationGetRelationName(relation))));
-			break;
-		case OBJECT_EXTTABLE:
-			if (relation->rd_rel->relkind != RELKIND_RELATION ||
-				relation->rd_rel->relstorage != RELSTORAGE_EXTERNAL)
-				ereport(ERROR,
-						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-						 errmsg("\"%s\" is not an external table",
 								RelationGetRelationName(relation))));
 			break;
 		default:
@@ -2128,7 +2118,6 @@ check_object_ownership(Oid roleid, ObjectType objtype, ObjectAddress address,
 		case OBJECT_VIEW:
 		case OBJECT_MATVIEW:
 		case OBJECT_FOREIGN_TABLE:
-		case OBJECT_EXTTABLE:
 		case OBJECT_COLUMN:
 		case OBJECT_RULE:
 		case OBJECT_TRIGGER:
@@ -3391,8 +3380,6 @@ getRelationDescription(StringInfo buffer, Oid relid)
 				appendStringInfo(buffer, _("append only table %s"), relname);
 			else if (relForm->relstorage == RELSTORAGE_AOCOLS)
 				appendStringInfo(buffer, _("append only columnar table %s"), relname);
-			else if (relForm->relstorage == RELSTORAGE_EXTERNAL)
-				appendStringInfo(buffer, _("external table %s"), relname);
 			else
 				appendStringInfo(buffer, _("table %s"), relname);
 			break;

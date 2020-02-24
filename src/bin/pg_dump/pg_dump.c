@@ -50,6 +50,7 @@
 #include "catalog/pg_am.h"
 #include "catalog/pg_cast.h"
 #include "catalog/pg_class.h"
+#include "catalog/pg_foreign_server.h"
 #include "catalog/pg_magic_oid.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_default_acl.h"
@@ -147,6 +148,9 @@ char		g_comment_end[10];
 static const CatalogId nilCatalogId = {0, 0};
 
 const char *EXT_PARTITION_NAME_POSTFIX = "_external_partition__";
+
+/* pg_class.relstorage value used in GPDB 6.x and below to mark external tables. */
+#define RELSTORAGE_EXTERNAL 'x'
 
 /* flag indicating whether or not this GP database supports partitioning */
 static bool gp_partitioning_available = false;
@@ -600,7 +604,7 @@ main(int argc, char **argv)
 
 	InitDumpOptions(&dopt);
 
-	while ((c = getopt_long(argc, argv, "abcCd:E:f:F:h:j:n:N:oOp:RsS:t:T:uU:vwWxZ:",
+	while ((c = getopt_long(argc, argv, "abcCd:E:f:F:h:j:n:N:oOp:RsS:t:T:U:vwWxZ:",
 							long_options, &optindex)) != -1)
 	{
 		switch (c)
@@ -685,11 +689,6 @@ main(int argc, char **argv)
 
 			case 'T':			/* exclude table(s) */
 				simple_string_list_append(&table_exclude_patterns, optarg);
-				break;
-
-			case 'u':
-				prompt_password = TRI_YES;
-				dopt.username = simple_prompt("User name: ", 100, true);
 				break;
 
 			case 'U':
@@ -2465,14 +2464,14 @@ makeTableDataInfo(DumpOptions *dopt, TableInfo *tbinfo, bool oids)
 	if (tbinfo->dataObj != NULL)
 		return;
 
-	/* Skip EXTERNAL TABLEs */
-	if (tbinfo->relstorage == RELSTORAGE_EXTERNAL)
-		return;
 	/* Skip VIEWs (no data to dump) */
 	if (tbinfo->relkind == RELKIND_VIEW)
 		return;
 	/* Skip FOREIGN TABLEs (no data to dump) */
 	if (tbinfo->relkind == RELKIND_FOREIGN_TABLE)
+		return;
+	/* Skip EXTERNAL TABLEs (like foreign tables in GPDB 6.x and below) */
+	if (tbinfo->relstorage == RELSTORAGE_EXTERNAL)
 		return;
 
 	/* Don't dump data in unlogged tables, if so requested */
@@ -8444,8 +8443,9 @@ getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
 			 * attributes are marked as local.  Applicable to partitioned
 			 * tables where a partition is exchanged for an external table.
 			 */
-			if (tbinfo->relstorage == RELSTORAGE_EXTERNAL && tbinfo->attislocal[j])
-				tbinfo->attislocal[j] = false;
+			// FIXME
+			//if (tbinfo->relstorage == RELSTORAGE_EXTERNAL && tbinfo->attislocal[j])
+			//	tbinfo->attislocal[j] = false;
 		}
 
 		PQclear(res);
@@ -8700,8 +8700,7 @@ shouldPrintColumn(DumpOptions *dopt, TableInfo *tbinfo, int colno)
 {
 	if (dopt->binary_upgrade)
 		return true;
-	return ((tbinfo->attislocal[colno] || tbinfo->relstorage == RELSTORAGE_EXTERNAL) &&
-	        !tbinfo->attisdropped[colno]);
+	return (tbinfo->attislocal[colno] && !tbinfo->attisdropped[colno]);
 }
 
 
@@ -9189,6 +9188,10 @@ getForeignDataWrappers(Archive *fout, int *numForeignDataWrappers)
 		/* Decide whether we want to dump it */
 		selectDumpableObject(&(fdwinfo[i].dobj), fout);
 
+		/* Leave out the built-in pg_exttable_fdw */
+		if (fdwinfo[i].dobj.catId.oid < (Oid) FirstNormalObjectId)
+			fdwinfo[i].dobj.dump = DUMP_COMPONENT_NONE;
+
 		/* Do not try to dump ACL if no ACL exists. */
 		if (PQgetisnull(res, i, i_fdwacl) && PQgetisnull(res, i, i_rfdwacl) &&
 			PQgetisnull(res, i, i_initfdwacl) &&
@@ -9338,6 +9341,10 @@ getForeignServers(Archive *fout, int *numForeignServers)
 
 		/* Decide whether we want to dump it */
 		selectDumpableObject(&(srvinfo[i].dobj), fout);
+
+		/* Leave out the built-in pg_exttable_server */
+		if (srvinfo[i].dobj.catId.oid < (Oid) FirstNormalObjectId)
+			srvinfo[i].dobj.dump = DUMP_COMPONENT_NONE;
 
 		/* Do not try to dump ACL if no ACL exists. */
 		if (PQgetisnull(res, i, i_srvacl) && PQgetisnull(res, i, i_rsrvacl) &&
@@ -12281,6 +12288,8 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 		appendPQExpBuffer(q, " EXECUTE ON MASTER");
 	else if (proexeclocation[0] == PROEXECLOCATION_ALL_SEGMENTS)
 		appendPQExpBuffer(q, " EXECUTE ON ALL SEGMENTS");
+	else if (proexeclocation[0] == PROEXECLOCATION_INITPLAN)
+		appendPQExpBuffer(q, " EXECUTE ON INITPLAN");
 	else
 	{
 		write_msg(NULL, "unrecognized proexeclocation value: %c\n", proexeclocation[0]);
@@ -16204,13 +16213,6 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 			appendPQExpBuffer(q, "\n  WITH %s CHECK OPTION", tbinfo->checkoption);
 		appendPQExpBufferStr(q, ";\n");
 	}
-	/* START MPP ADDITION */
-	else if (tbinfo->relstorage == RELSTORAGE_EXTERNAL)
-	{
-		reltypename = "EXTERNAL TABLE";
-		dumpExternal(fout, tbinfo, q, delq);
-	}
-	/* END MPP ADDITION */
 	else
 	{
 		switch (tbinfo->relkind)
@@ -16245,6 +16247,15 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 					ftoptions = pg_strdup(PQgetvalue(res, 0, i_ftoptions));
 					PQclear(res);
 					destroyPQExpBuffer(query);
+
+					/* START MPP ADDITION */
+					if (strcmp(srvname, PG_EXTTABLE_SERVER_NAME) == 0)
+					{
+						reltypename = "EXTERNAL TABLE";
+						break;
+					}
+					/* END MPP ADDITION */
+
 					break;
 				}
 			case (RELKIND_MATVIEW):
@@ -16256,8 +16267,23 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 				reltypename = "TABLE";
 				srvname = NULL;
 				ftoptions = NULL;
-		}
 
+				/* Is it an external table (server GPDB 6.x and below.) */
+				if (tbinfo->relstorage == RELSTORAGE_EXTERNAL)
+					reltypename = "EXTERNAL TABLE";
+		}
+	}
+
+	if (strcmp(reltypename, "EXTERNAL TABLE") == 0)
+	{
+		dumpExternal(fout, tbinfo, q, delq);
+	}
+	else if (strcmp(reltypename, "VIEW") == 0)
+	{
+		/* handled above already */
+	}
+	else
+	{
 		numParents = tbinfo->numParents;
 		parents = tbinfo->parents;
 
@@ -16600,16 +16626,25 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 
 			if (isPartitioned)
 			{
-				/* Find out if there are any external partitions. */
+				/*
+				 * Find out if there are any external partitions.
+				 *
+				 * In GPDB 6.X and below, external tables have
+				 * relkind=RELKIND_RELATION and relstorage=RELSTORAGE_EXTERNAL.
+				 * In later versions, they are just foreign tables. This query
+				 * works on all server versions.
+				 */
 				resetPQExpBuffer(query);
 				appendPQExpBuffer(query, "SELECT EXISTS (SELECT 1 "
 										 "  FROM pg_class part "
 										 "  JOIN pg_partition_rule pr ON (part.oid = pr.parchildrelid) "
 										 "  JOIN pg_partition p ON (pr.paroid = p.oid) "
 										 "WHERE p.parrelid = '%u'::pg_catalog.oid "
-										 "  AND part.relstorage = '%c') "
+										 "  AND (part.relstorage = '%c' OR part.relkind = '%c')) "
 										 "AS has_external_partitions;",
-								  tbinfo->dobj.catId.oid, RELSTORAGE_EXTERNAL);
+								  tbinfo->dobj.catId.oid,
+								  RELSTORAGE_EXTERNAL,
+								  RELKIND_FOREIGN_TABLE);
 
 				res = ExecuteSqlQueryForSingleRow(fout, query->data);
 				hasExternalPartitions = (PQgetvalue(res, 0, 0)[0] == 't');
@@ -16659,8 +16694,9 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 					"JOIN pg_partitions ps on (c.relname = ps.tablename) "
 					"JOIN pg_class cc on (ps.partitiontablename = cc.relname) "
 					"JOIN pg_partition_rule pp on (cc.oid = pp.parchildrelid) "
-					"WHERE p.parrelid = %u AND cc.relstorage = '%c';",
-					tbinfo->dobj.catId.oid, RELSTORAGE_EXTERNAL);
+					"WHERE p.parrelid = %u AND (cc.relstorage='%c' OR cc.relkind = '%c');",
+					tbinfo->dobj.catId.oid,
+					RELSTORAGE_EXTERNAL, RELKIND_FOREIGN_TABLE);
 
 			res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
 

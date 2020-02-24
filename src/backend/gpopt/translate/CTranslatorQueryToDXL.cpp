@@ -62,7 +62,6 @@ using namespace gpmd;
 
 extern bool	optimizer_enable_ctas;
 extern bool optimizer_enable_dml;
-extern bool optimizer_enable_dml_triggers;
 extern bool optimizer_enable_dml_constraints;
 extern bool optimizer_enable_multiple_distinct_aggs;
 
@@ -754,10 +753,6 @@ CTranslatorQueryToDXL::TranslateInsertQueryToDXL()
 
 	CDXLTableDescr *table_descr = CTranslatorUtils::GetTableDescr(m_mp, m_md_accessor, m_context->m_colid_counter, rte, &m_context->m_has_distributed_tables);
 	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(table_descr->MDId());
-	if (!optimizer_enable_dml_triggers && CTranslatorUtils::RelHasTriggers(m_mp, m_md_accessor, md_rel, Edxldmlinsert))
-	{
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("INSERT with triggers"));
-	}
 
 	BOOL rel_has_constraints = CTranslatorUtils::RelHasConstraints(md_rel);
 	if (!optimizer_enable_dml_constraints && rel_has_constraints)
@@ -1176,10 +1171,6 @@ CTranslatorQueryToDXL::TranslateDeleteQueryToDXL()
 
 	CDXLTableDescr *table_descr = CTranslatorUtils::GetTableDescr(m_mp, m_md_accessor, m_context->m_colid_counter, rte, &m_context->m_has_distributed_tables);
 	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(table_descr->MDId());
-	if (!optimizer_enable_dml_triggers && CTranslatorUtils::RelHasTriggers(m_mp, m_md_accessor, md_rel, Edxldmldelete))
-	{
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("DELETE with triggers"));
-	}
 
 	// make note of the operator classes used in the distribution key
 	NoteDistributionPolicyOpclasses(rte);
@@ -1233,10 +1224,6 @@ CTranslatorQueryToDXL::TranslateUpdateQueryToDXL()
 
 	CDXLTableDescr *table_descr = CTranslatorUtils::GetTableDescr(m_mp, m_md_accessor, m_context->m_colid_counter, rte, &m_context->m_has_distributed_tables);
 	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(table_descr->MDId());
-	if (!optimizer_enable_dml_triggers && CTranslatorUtils::RelHasTriggers(m_mp, m_md_accessor, md_rel, Edxldmlupdate))
-	{
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("UPDATE with triggers"));
-	}
 	
 	if (!optimizer_enable_dml_constraints && CTranslatorUtils::RelHasConstraints(md_rel))
 	{
@@ -4170,7 +4157,7 @@ CTranslatorQueryToDXL::TranslateExprToDXLProject
 
 	if (IsA(expr, Var) && !insist_new_colids)
 	{
-		// project elem is a a reference to a column - use the colref id
+		// project elem is a reference to a column - use the colref id
 		GPOS_ASSERT(EdxlopScalarIdent == child_dxlnode->GetOperator()->GetDXLOperator());
 		CDXLScalarIdent *dxl_ident = (CDXLScalarIdent *) child_dxlnode->GetOperator();
 		project_elem_id = dxl_ident->GetDXLColRef()->Id();

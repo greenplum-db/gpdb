@@ -272,45 +272,6 @@ cost_seqscan(Path *path, PlannerInfo *root,
 }
 
 /*
- * cost_externalscan
- *	  Determines and returns the cost of scanning an external relation.
- *
- *	  Right now this is not very meaningful at all but we'll probably
- *	  want to make some good estimates in the future.
- */
-void
-cost_externalscan(ExternalPath *path, PlannerInfo *root,
-				  RelOptInfo *baserel, ParamPathInfo *param_info)
-{
-	Cost		startup_cost = 0;
-	Cost		run_cost = 0;
-	Cost		cpu_per_tuple;
-
-	/* Should only be applied to external relations */
-	Assert(baserel->relid > 0);
-	Assert(baserel->rtekind == RTE_RELATION);
-
-	/* Mark the path with the correct row estimate */
-	if (param_info)
-		path->path.rows = param_info->ppi_rows;
-	else
-		path->path.rows = baserel->rows;
-
-	/*
-	 * disk costs
-	 */
-	run_cost += seq_page_cost * baserel->pages;
-
-	/* CPU costs */
-	startup_cost += baserel->baserestrictcost.startup;
-	cpu_per_tuple = cpu_tuple_cost + baserel->baserestrictcost.per_tuple;
-	run_cost += cpu_per_tuple * baserel->tuples;
-
-	path->path.startup_cost = startup_cost;
-	path->path.total_cost = startup_cost + run_cost;
-}
-
-/*
  * cost_samplescan
  *	  Determines and returns the cost of scanning a relation using sampling.
  *
@@ -1716,7 +1677,7 @@ cost_sort(Path *path, PlannerInfo *root,
 	double		output_tuples;
 	long		sort_mem_bytes = (long) global_work_mem(root);
 
-	if (!(root ? root->config->enable_sort : enable_sort))
+	if (!enable_sort)
 		startup_cost += disable_cost;
 
 	path->rows = tuples;
@@ -2117,6 +2078,29 @@ cost_agg(Path *path, PlannerInfo *root,
 }
 
 /*
+ * cost_tup_split
+ *		Determines and returns the cost of performing an TupleSplit plan node,
+ *		including the cost of its input.
+ */
+void cost_tup_split(Path *path, PlannerInfo *root,
+					int numDQAs,
+					Cost input_startup_cost, Cost input_total_cost,
+					double input_tuples)
+{
+	double		output_tuples;
+	Cost		startup_cost;
+	Cost		total_cost;
+
+	output_tuples = numDQAs * input_tuples;
+	startup_cost = input_total_cost;
+	total_cost = startup_cost + cpu_operator_cost * input_tuples;
+
+	path->rows = output_tuples;
+	path->startup_cost = startup_cost;
+	path->total_cost = total_cost;
+}
+
+/*
  * cost_windowagg
  *		Determines and returns the cost of performing a WindowAgg plan node,
  *		including the cost of its input.
@@ -2382,7 +2366,7 @@ final_cost_nestloop(PlannerInfo *root, NestPath *path,
 	 * would amount to optimizing for the case where the join method is
 	 * disabled, which doesn't seem like the way to bet.
 	 */
-	if (!(root ? root->config->enable_nestloop: enable_nestloop))
+	if (!enable_nestloop)
 		startup_cost += disable_cost;
 
 	/* cost of inner-relation source data (we already dealt with outer rel) */
@@ -2805,7 +2789,7 @@ final_cost_mergejoin(PlannerInfo *root, MergePath *path,
 	 * would amount to optimizing for the case where the join method is
 	 * disabled, which doesn't seem like the way to bet.
 	 */
-	if (!(root ? root->config->enable_mergejoin : enable_mergejoin))
+	if (!enable_mergejoin)
 		startup_cost += disable_cost;
 
 	/*
@@ -3178,7 +3162,7 @@ final_cost_hashjoin(PlannerInfo *root, HashPath *path,
 	 * would amount to optimizing for the case where the join method is
 	 * disabled, which doesn't seem like the way to bet.
 	 */
-	if (!(root ? root->config->enable_hashjoin : enable_hashjoin))
+	if (!enable_hashjoin)
 		startup_cost += disable_cost;
 
 	/* mark the path with estimated # of batches */
@@ -5435,131 +5419,4 @@ double global_work_mem(PlannerInfo *root)
 	int			segment_count = planner_segment_count(NULL);
 
 	return (double) planner_work_mem * 1024L * segment_count;	
-}
-
-/* CDB -- The incremental cost functions below are for use outside the
- *        the usual optimizer (in the aggregation planner, etc.)  They
- *        are modeled on corresponding cost function, but address the
- *        specific needs of the planner.
- */
-
-/* incremental_hashjoin_cost
- *
- * Globals: seq_page_cost, cpu_operator_cost.
- */
-Cost incremental_hashjoin_cost(double rows, int inner_width, int outer_width, List *hashclauses, PlannerInfo *root)
-{
-	Cost startup_cost;
-	Cost run_cost;
-	QualCost hash_qual_cost;
-	int numbuckets;
-	int numbatches;
-	int			num_skew_mcvs;
-	double virtualbuckets;
-	Selectivity innerbucketsize;
-	int num_hashclauses = list_length(hashclauses);
-
-	/*
-	 * Each inner row joins to a single outer row and vice versa, no
-	 * selectivity issues.
-	 */
-	startup_cost = 0;
-	run_cost = 0;
-	
-	/*
-	 * Cost of computing hash function: must do it once per input tuple. We
-	 * charge one cpu_operator_cost for each column's hash function.  Also,
-	 * tack on one cpu_tuple_cost per inner row, to model the costs of
-	 * inserting the row into the hashtable.
-	 */
-	startup_cost += (cpu_operator_cost * num_hashclauses + cpu_tuple_cost) * rows;
-	run_cost += cpu_operator_cost * num_hashclauses * rows;
-
-	/* Get hash table size that executor would use for inner relation */
-	ExecChooseHashTableSize(rows,
-							inner_width,
-							true /* useSkew */,
-							global_work_mem(root) / 1024L,
-							&numbuckets,
-							&numbatches,
-							&num_skew_mcvs);
-	virtualbuckets = (double) numbuckets *(double) numbatches;
-
-	/*
-	 * Determine bucketsize fraction for inner relation.  Both inner and
-	 * outer relations are unique in the join key.
-	 */
-	innerbucketsize = 1.0 / virtualbuckets;
-
-	/*
-	 * If inner relation is too big then we will need to "batch" the join,
-	 * which implies writing and reading most of the tuples to disk an extra
-	 * time.  Charge seq_page_cost per page, since the I/O should be nice and
-	 * sequential.  Writing the inner rel counts as startup cost,
-	 * all the rest as run cost.
-	 */
-	if (numbatches > 1)
-	{
-		double		outerpages = page_size(rows, outer_width);
-		double		innerpages = page_size(rows, inner_width);
-
-		startup_cost += seq_page_cost * innerpages;
-		run_cost += seq_page_cost * (innerpages + 2 * outerpages);
-	}
-
-	/*
-	 * The number of tuple comparisons needed is the number of outer tuples
-	 * times half the typical number of tuples in a hash bucket, which is 
-	 * the inner relation size times its bucketsize fraction.  At each one, 
-	 * we need to evaluate the hashjoin quals.  But actually, charging the 
-	 * full qual eval cost at each tuple is pessimistic, since we don't 
-	 * evaluate the quals  unless the hash values match exactly.  For lack 
-	 * of a better idea, halve the cost estimate to allow for that.
-     *
-     * CDB: Assume there are no rows that pass the hash value comparison but
-     * fail the full qual eval.  Thus the full comparison is charged for just 
-     * 'hashjointuples', i.e. those rows that pass the hashjoin quals.
-	 */
-	cost_qual_eval(&hash_qual_cost, hashclauses, root);
-	startup_cost += hash_qual_cost.startup;
-	run_cost += hash_qual_cost.per_tuple * rows * 0.5;
-
-	if (gp_cost_hashjoin_chainwalk)
-	{
-		/* CDB: Add a small charge for walking the hash chains. */
-		run_cost += 0.05 * cpu_operator_cost * 2 * rows * innerbucketsize;
-	}
-
-	return startup_cost + run_cost;
-}
-
-
-
-/* incremental_mergejoin_cost
- *
- * Globals: cpu_tuple_cost
- */
-Cost incremental_mergejoin_cost(double rows, List *mergeclauses, PlannerInfo *root)
-{
-	QualCost merge_qual_cost;
-	Cost startup_cost = 0;
-	Cost per_tuple_cost = 0;
-	Cost run_cost = 0;
-
-	cost_qual_eval(&merge_qual_cost, mergeclauses, root);
-
-	startup_cost += merge_qual_cost.startup;
-	per_tuple_cost = merge_qual_cost.per_tuple;
-	
-	/* CPU costs */
-
-	/*
-	 * The number of tuple comparisons needed is number of outer
-	 * rows plus number of inner rows.
-	 */
-	startup_cost += merge_qual_cost.startup;
-	run_cost += merge_qual_cost.per_tuple * 2 * rows;
-	run_cost += (cpu_tuple_cost + per_tuple_cost) * rows;
-	
-	return startup_cost + run_cost;
 }

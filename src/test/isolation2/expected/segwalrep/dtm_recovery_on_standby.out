@@ -55,10 +55,9 @@ select gp_wait_until_triggered_fault('transaction_abort_failure', 1, dbid) from 
 
 -- Promote standby
 select pg_ctl(datadir, 'promote') from gp_segment_configuration where content = -1 and role = 'm';
- pg_ctl            
--------------------
- server promoting
- 
+ pg_ctl 
+--------
+ OK     
 (1 row)
 
 -- "-1S" means connect to standby's port assuming it's accepting
@@ -95,11 +94,9 @@ ERROR:  fault triggered, fault name:'transaction_abort_after_distributed_prepare
 
 -- Destroy and recreate the standby
 select pg_ctl(datadir, 'stop', 'immediate') from gp_segment_configuration where content = -1 and role = 'm';
- pg_ctl                                               
-------------------------------------------------------
- waiting for server to shut down done
-server stopped
- 
+ pg_ctl 
+--------
+ OK     
 (1 row)
 -- Standby details need to be stored in a separate table because
 -- reinitialize_standby() first removes standby from catalog and then

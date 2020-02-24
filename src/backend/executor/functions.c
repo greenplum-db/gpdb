@@ -931,26 +931,6 @@ postquel_start(execution_state *es, SQLFunctionCachePtr fcache)
 		/* GPDB hook for collecting query info */
 		if (query_info_collect_hook)
 			(*query_info_collect_hook)(METRICS_QUERY_SUBMIT, es->qd);
-
-		if (gp_enable_gpperfmon 
-			&& Gp_role == GP_ROLE_DISPATCH 
-			&& log_min_messages < DEBUG4)
-		{
-			/* For log level of DEBUG4, gpmon is sent information about queries inside SQL functions as well */
-			Assert(fcache->src);
-			gpmon_qlog_query_submit(es->qd->gpmon_pkt);
-			gpmon_qlog_query_text(es->qd->gpmon_pkt,
-					fcache->src,
-					application_name,
-					NULL /* resqueue name */,
-					NULL /* priority */);
-
-		}
-		else
-		{
-			/* Otherwise, we do not record information about internal queries. */
-			es->qd->gpmon_pkt = NULL;
-		}
 	}
 	else
 		es->qd = CreateUtilityQueryDesc(es->stmt,
@@ -1266,21 +1246,8 @@ fmgr_sql(PG_FUNCTION_ARGS)
 	if (!fcache->tstore)
 		fcache->tstore = tuplestore_begin_heap(randomAccess, false, work_mem);
 
-	bool orig_gp_enable_gpperfmon = gp_enable_gpperfmon;
-
 PG_TRY();
 {
-	/*
-	 * Temporarily disable gpperfmon since we don't send information for internal queries in
-	 * most cases, except when the debugging level is set to DEBUG4 or DEBUG5.
-	 */
-	if (log_min_messages > DEBUG4)
-	{
-		gp_enable_gpperfmon = false;
-	}
-
-	gp_enable_gpperfmon = orig_gp_enable_gpperfmon;
-
 	/*
 	 * Execute each command in the function one after another until we either
 	 * run out of commands or get a result row from a lazily-evaluated SELECT.
@@ -1383,12 +1350,9 @@ PG_TRY();
 			}
 		}
 	}
-
-	gp_enable_gpperfmon = orig_gp_enable_gpperfmon;
 }
 PG_CATCH();
 {
-	gp_enable_gpperfmon = orig_gp_enable_gpperfmon;
 	PG_RE_THROW();
 }
 PG_END_TRY();

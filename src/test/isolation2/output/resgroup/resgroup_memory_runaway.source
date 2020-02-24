@@ -48,10 +48,6 @@ CREATE
 20191213:05:03:50:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-----------------------------------------------------
 20191213:05:03:50:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Successfully shutdown 6 of 6 segment instances 
 20191213:05:03:50:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Database successfully shutdown with no errors reported
-20191213:05:03:50:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Cleaning up leftover gpmmon process
-20191213:05:03:50:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-No leftover gpmmon process found
-20191213:05:03:50:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Cleaning up leftover gpsmon processes
-20191213:05:03:50:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-No leftover gpsmon processes on some hosts. not attempting forceful termination on these hosts
 20191213:05:03:50:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Cleaning up leftover shared memory
 20191213:05:03:50:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Restarting System...
 

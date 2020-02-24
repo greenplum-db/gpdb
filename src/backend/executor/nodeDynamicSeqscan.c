@@ -290,8 +290,6 @@ ExecEndDynamicSeqScan(DynamicSeqScanState *node)
 	DynamicSeqScanEndCurrentScan(node);
 
 	ExecClearTuple(node->ss.ps.ps_ResultTupleSlot);
-
-	EndPlanStateGpmonPkt(&node->ss.ps);
 }
 
 /*

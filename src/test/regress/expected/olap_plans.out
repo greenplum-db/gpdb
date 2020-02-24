@@ -1,3 +1,7 @@
+--
+-- Test the planner's ability to produce different kinds of plans to implement
+-- grouping and aggregation.
+--
 drop table if exists olap_test;
 NOTICE:  table "olap_test" does not exist, skipping
 drop table if exists olap_test_single;
@@ -136,16 +140,16 @@ select sum(distinct a) from olap_test_single;
 
 -- Otherwise, need a more complicated plans
 explain select sum(distinct b) from olap_test_single;
-                                                  QUERY PLAN                                                  
---------------------------------------------------------------------------------------------------------------
- Finalize Aggregate  (cost=165.16..165.17 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=165.12..165.15 rows=1 width=8)
-         ->  Partial Aggregate  (cost=165.12..165.13 rows=1 width=8)
-               ->  HashAggregate  (cost=165.09..165.12 rows=1 width=4)
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
+ Finalize Aggregate  (cost=166.23..166.24 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=166.19..166.22 rows=1 width=8)
+         ->  Partial Aggregate  (cost=166.19..166.20 rows=1 width=8)
+               ->  HashAggregate  (cost=166.16..166.19 rows=1 width=4)
                      Group Key: b
-                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=165.00..165.09 rows=1 width=4)
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=165.00..165.99 rows=11 width=4)
                            Hash Key: b
-                           ->  Streaming HashAggregate  (cost=165.00..165.03 rows=1 width=4)
+                           ->  Streaming HashAggregate  (cost=165.00..165.33 rows=11 width=4)
                                  Group Key: b
                                  ->  Seq Scan on olap_test_single  (cost=0.00..115.00 rows=3334 width=4)
  Optimizer: Postgres query optimizer
@@ -155,6 +159,24 @@ select sum(distinct b) from olap_test_single;
  sum 
 -----
   55
+(1 row)
+
+-- If there are a lot of distinct values, then the preliminary aggregation and
+-- redistribution steps are not worth the trouble, it's cheaper to just gather
+-- all the input
+explain select sum(distinct d) from olap_test_single;
+                                       QUERY PLAN                                       
+----------------------------------------------------------------------------------------
+ Aggregate  (cost=340.00..340.01 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..315.00 rows=10000 width=4)
+         ->  Seq Scan on olap_test_single  (cost=0.00..115.00 rows=3334 width=4)
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+select sum(distinct d) from olap_test_single;
+   sum    
+----------
+ 50005000
 (1 row)
 
 --

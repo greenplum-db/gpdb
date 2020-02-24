@@ -2826,6 +2826,8 @@ _readFunctionScan(void)
 
 	READ_NODE_FIELD(functions);
 	READ_BOOL_FIELD(funcordinality);
+	READ_NODE_FIELD(param);
+	READ_BOOL_FIELD(resultInTupleStore);
 
 	READ_DONE();
 }
@@ -3088,6 +3090,25 @@ _readAgg(void)
 	READ_NODE_FIELD(groupingSets);
 	READ_NODE_FIELD(chain);
 	READ_BOOL_FIELD(streaming);
+	READ_UINT_FIELD(agg_expr_id);
+
+	READ_DONE();
+}
+
+static TupleSplit *
+_readTupleSplit(void)
+{
+	READ_LOCALS(TupleSplit);
+
+	ReadCommonPlan(&local_node->plan);
+
+	READ_INT_FIELD(numCols);
+	READ_ATTRNUMBER_ARRAY(grpColIdx, local_node->numCols);
+	READ_INT_FIELD(numDisDQAs);
+
+	local_node->dqa_args_id_bms = palloc0(sizeof(Bitmapset *) * local_node->numDisDQAs);
+	for (int i = 0; i < local_node->numDisDQAs; i++)
+		local_node->dqa_args_id_bms[i] = _readBitmapset();
 
 	READ_DONE();
 }
@@ -4233,6 +4254,8 @@ parseNodeString(void)
 		return_value = _readSort();
 	else if (MATCH("AGG", 3))
 		return_value = _readAgg();
+	else if (MATCH("TupleSplit", 10))
+		return_value = _readTupleSplit();
 	else if (MATCH("WINDOWAGG", 9))
 		return_value = _readWindowAgg();
 	else if (MATCH("UNIQUE", 6))

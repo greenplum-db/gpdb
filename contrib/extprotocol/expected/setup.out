@@ -61,7 +61,7 @@ NOTICE:  protocol "demoprot" does not exist, skipping
 (1 row)
 
     DROP EXTERNAL TABLE IF EXISTS clean_exttabtest_files;
-NOTICE:  table "clean_exttabtest_files" does not exist, skipping
+NOTICE:  foreign table "clean_exttabtest_files" does not exist, skipping
     CREATE EXTERNAL WEB TABLE clean_exttabtest_files(stdout text) EXECUTE 'rm -f exttabtest*' ON ALL FORMAT 'text';
     GRANT ALL ON clean_exttabtest_files TO PUBLIC;
     SELECT * FROM clean_exttabtest_files;

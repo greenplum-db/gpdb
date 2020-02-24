@@ -11,11 +11,13 @@
    [<b>--compression-level</b> <varname>level</varname>]
    [<b>--data-only</b>]
    [<b>--debug</b>]
-   [<b>--exclude-schema</b> <varname>schema_name</varname>]
-   [<b>--exclude-table</b> <varname>schema.table</varname>]
+   [<b>--exclude-schema</b> <varname>schema_name</varname> [<b>--exclude-schema</b> <varname>schema_name</varname> ...]]
+   [<b>--exclude-table</b> <varname>schema.table</varname> [<b>--exclude-table</b> <varname>schema.table</varname> ...]]
+   [<b>--exclude-schema-file</b> <varname>file_name</varname>]
    [<b>--exclude-table-file</b> <varname>file_name</varname>]
-   [<b>--include-schema</b> <varname>schema_name</varname>]
-   [<b>--include-table</b> <varname>schema.table</varname>]
+   [<b>--include-schema</b> <varname>schema_name</varname> [<b>--include-schema</b> <varname>schema_name</varname> ...]]
+   [<b>--include-table</b> <varname>schema.table</varname> [<b>--include-table</b> <varname>schema.table</varname> ...]]
+   [<b>--include-schema-file</b> <varname>file_name</varname>]
    [<b>--include-table-file</b> <varname>file_name</varname>]
    [<b>--incremental</b> [<b>--from-timestamp</b> <varname>backup-timestamp</varname>]]
    [<b>--jobs</b> <varname>int</varname>]
@@ -44,6 +46,8 @@
           <codeph>--with-globals</codeph> option with <codeph>gprestore</codeph> to restore global
         objects. See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_x3s_lqj_tbb"/>
         for additional information.</p>
+      <p>For materialized views, data is not backed up, only the materialized view definition is
+        backed up.</p>
       <p><codeph>gpbackup</codeph> stores the object metadata files and DDL files for a backup in
         the Greenplum Database master data directory by default. Greenplum Database segments use the
           <codeph>COPY ... ON SEGMENT</codeph> command to store their data for backed-up tables in
@@ -127,10 +131,29 @@
             <varname>schema_name</varname></pt>
           <pd>Optional. Specifies a database schema to exclude from the backup. You can specify this
             option multiple times to exclude multiple schemas. You cannot combine this option with
-            the option <codeph>--include-schema</codeph>, or a table filtering option such as
-              <codeph>--include-table</codeph>. See <xref
-              href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/> for more
-            information.</pd>
+            the option <codeph>--include-schema</codeph>, <codeph>--include-schema-file</codeph>, or
+            a table filtering option such as <codeph>--include-table</codeph>. </pd>
+          <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/>
+            for more information. </pd>
+          <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_vh5_1hd_tbb"/>
+            for limitations when leaf partitions of a partitioned table are in different schemas
+            from the root partition.</pd>
+        </plentry>
+        <plentry>
+          <pt><b>--exclude-schema-file</b>
+            <varname>file_name</varname></pt>
+          <pd>Optional. Specifies a text file containing a list of schemas to exclude from the
+            backup. Each line in the text file must define a single schema. The file must not
+            include trailing lines. If a schema name uses any character other than a lowercase
+            letter, number, or an underscore character, then you must include that name in double
+            quotes. You cannot combine this option with the option <codeph>--include-schema</codeph>
+            or <codeph>--include-schema-file</codeph>, or a table filtering option such as
+              <codeph>--include-table</codeph>. </pd>
+          <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/>
+            for more information. </pd>
+          <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_vh5_1hd_tbb"/>
+            for limitations when leaf partitions of a partitioned table are in different schemas
+            from the root partition.</pd>
         </plentry>
         <plentry>
           <pt><b>--exclude-table</b>
@@ -139,8 +162,9 @@
             format <codeph>&lt;schema-name>.&lt;table-name></codeph>. If a table or schema name uses
             any character other than a lowercase letter, number, or an underscore character, then
             you must include that name in double quotes. You can specify this option multiple times.
-            You cannot combine this option with the option <codeph>--exclude-schema</codeph>, or
-            another a table filtering option such as <codeph>--include-table</codeph>.</pd>
+            You cannot combine this option with the option <codeph>--exclude-schema</codeph>,
+              <codeph>--exclude-schema-file</codeph>, or another a table filtering option such as
+              <codeph>--include-table</codeph>.</pd>
           <pd>You cannot use this option in combination with <codeph>--leaf-partition-data</codeph>.
             Although you can specify leaf partition names, <codeph>gpbackup</codeph> ignores the
             partition names.</pd>
@@ -155,8 +179,9 @@
               <codeph>&lt;schema-name>.&lt;table-name></codeph>. The file must not include trailing
             lines. If a table or schema name uses any character other than a lowercase letter,
             number, or an underscore character, then you must include that name in double quotes.
-            You cannot combine this option with the option <codeph>--exclude-schema</codeph>, or
-            another a table filtering option such as <codeph>--include-table</codeph>.</pd>
+            You cannot combine this option with the option <codeph>--exclude-schema</codeph>,
+              <codeph>--exclude-schema-file</codeph>, or another a table filtering option such as
+              <codeph>--include-table</codeph>.</pd>
           <pd>You cannot use this option in combination with <codeph>--leaf-partition-data</codeph>.
             Although you can specify leaf partition names in a file specified with
               <codeph>--exclude-table-file</codeph>, <codeph>gpbackup</codeph> ignores the partition
@@ -171,8 +196,19 @@
             option multiple times to include multiple schemas. If you specify this option, any
             schemas that are not included in subsequent <codeph>--include-schema</codeph> options
             are omitted from the backup set. You cannot combine this option with the options
-              <codeph>--exclude-schema</codeph>, <codeph>--include-table</codeph>, or
+              <codeph>--exclude-schema</codeph>, <codeph>--exclude-schema-file</codeph>,
+              <codeph>--exclude-schema-file</codeph>, <codeph>--include-table</codeph>, or
               <codeph>--include-table-file</codeph>. See <xref
+              href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/> for more
+            information.</pd>
+        </plentry>
+        <plentry>
+          <pt><b>--include-schema-file</b>
+            <varname>file_name</varname></pt>
+          <pd>Optional. Specifies a text file containing a list of schemas to back up. Each line in
+            the text file must define a single schema. The file must not include trailing lines. If
+            a schema name uses any character other than a lowercase letter, number, or an underscore
+            character, then you must include that name in double quotes. See <xref
               href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/> for more
             information.</pd>
         </plentry>
@@ -182,17 +218,18 @@
           <pd>Optional. Specifies a table to include in the backup. The table must be in the format
               <codeph>&lt;schema-name>.&lt;table-name></codeph>. If a table or schema name uses any
             character other than a lowercase letter, number, or an underscore character, then you
-            must include that name in single quotes. See <xref href="#topic1/table_names" format="dita"
-              >Schema and Table Names</xref> for information about characters that are supported in
-            schema and table names.</pd>
+            must include that name in single quotes. See <xref href="#topic1/table_names"
+              format="dita">Schema and Table Names</xref> for information about characters that are
+            supported in schema and table names.</pd>
           <pd>You can specify this option multiple times. You cannot combine this option with a
             schema filtering option such as <codeph>--include-schema</codeph>, or another table
             filtering option such as <codeph>--exclude-table-file</codeph>.</pd>
-          <pd>You can also specify the qualified name of a sequence or a view. </pd>
+          <pd>You can also specify the qualified name of a sequence, a view, or a materialized view. </pd>
           <pd>If you specify this option, the utility does not automatically back up dependent
             objects. You must also explicitly specify dependent objects that are required. For
-            example if you back up a view, you must also back up the tables that the view uses. If
-            you back up a table that uses a sequence, you must also back up the sequence.</pd>
+            example if you back up a view or a materialized view, you must also back up the tables
+            that the view or materialized view uses. If you back up a table that uses a sequence,
+            you must also back up the sequence.</pd>
           <pd>You can optionally specify a table leaf partition name in place of the table name, to
             include only specific leaf partitions in a backup with the
               <codeph>--leaf-partition-data</codeph> option. When a leaf partition is backed up, the
@@ -211,11 +248,12 @@
           <pd>Any tables not listed in this file are omitted from the backup set. You cannot combine
             this option with a schema filtering option such as <codeph>--include-schema</codeph>, or
             another table filtering option such as <codeph>--exclude-table-file</codeph>.</pd>
-          <pd>You can also specify the qualified name of a sequence or a view. </pd>
+          <pd>You can also specify the qualified name of a sequence, a view, or a materialized view. </pd>
           <pd>If you specify this option, the utility does not automatically back up dependent
             objects. You must also explicitly specify dependent objects that are required. For
-            example if you back up a view, you must also specify the tables that the view uses. If
-            you specify a table that uses a sequence, you must also specify the sequence.</pd>
+            example if you back up a view or a materialized view, you must also specify the tables
+            that the view or the materialized view uses. If you specify a table that uses a
+            sequence, you must also specify the sequence.</pd>
           <pd>You can optionally specify a table leaf partition name in place of the table name, to
             include only specific leaf partitions in a backup with the
               <codeph>--leaf-partition-data</codeph> option. When a leaf partition is backed up, the

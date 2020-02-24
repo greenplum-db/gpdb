@@ -105,6 +105,10 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 	 */
 	check_greenplum();
 
+	/* GPDB 7 removed support for SHA-256 hashed passwords */
+	if (GET_MAJOR_VERSION(old_cluster.major_version) <= 905)
+		old_GPDB6_check_for_unsupported_sha256_password_hashes();
+
 	/* 9.5 and below should not have roles starting with pg_ */
 	if (GET_MAJOR_VERSION(old_cluster.major_version) <= 905)
 		check_for_pg_role_prefix(&old_cluster);

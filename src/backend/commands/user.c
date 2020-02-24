@@ -32,10 +32,7 @@
 #include "commands/dbcommands.h"
 #include "commands/seclabel.h"
 #include "commands/user.h"
-#include "libpq/auth.h"
-#include "libpq/password_hash.h"
 #include "libpq/md5.h"
-#include "libpq/pg_sha2.h"
 #include "miscadmin.h"
 #include "storage/lmgr.h"
 #include "utils/acl.h"
@@ -52,6 +49,7 @@
 #include "catalog/pg_resqueue.h"
 #include "commands/resgroupcmds.h"
 #include "executor/execdesc.h"
+#include "libpq/auth.h"
 #include "utils/resource_manager.h"
 
 #include "cdb/cdbdisp_query.h"
@@ -116,7 +114,7 @@ CreateRole(CreateRoleStmt *stmt)
 	ListCell   *option;
 	char	   *password = NULL;	/* user password */
 	bool		encrypt_password = Password_encryption; /* encrypt password? */
-	char		encrypted_password[MAX_PASSWD_HASH_LEN + 1];
+	char		encrypted_password[MD5_PASSWD_LEN + 1];
 	bool		issuper = false;	/* Make the user a superuser? */
 	bool		inherit = true; /* Auto inherit privileges? */
 	bool		createrole = false;		/* Can this user create roles? */
@@ -481,16 +479,14 @@ CreateRole(CreateRoleStmt *stmt)
 
 	if (password)
 	{
-		if (!encrypt_password || isHashedPasswd(password))
+		if (!encrypt_password || isMD5(password))
 			new_record[Anum_pg_authid_rolpassword - 1] =
 				CStringGetTextDatum(password);
 		else
 		{
-			if (!hash_password(password, stmt->role, strlen(stmt->role),
-							   encrypted_password))
-			{
+			if (!pg_md5_encrypt(password, stmt->role, strlen(stmt->role),
+								encrypted_password))
 				elog(ERROR, "password encryption failed");
-			}
 
 			new_record[Anum_pg_authid_rolpassword - 1] =
 				CStringGetTextDatum(encrypted_password);
@@ -703,7 +699,7 @@ AlterRole(AlterRoleStmt *stmt)
 	char	   *rolename = NULL;
 	char	   *password = NULL;	/* user password */
 	bool		encrypt_password = Password_encryption; /* encrypt password? */
-	char		encrypted_password[MAX_PASSWD_HASH_LEN + 1];
+	char		encrypted_password[MD5_PASSWD_LEN + 1];
 	int			issuper = -1;	/* Make the user a superuser? */
 	int			inherit = -1;	/* Auto inherit privileges? */
 	int			createrole = -1;	/* Can this user create roles? */
@@ -1111,18 +1107,13 @@ AlterRole(AlterRoleStmt *stmt)
 	/* password */
 	if (password)
 	{
-		if (!encrypt_password || isHashedPasswd(password))
+		if (!encrypt_password || isMD5(password))
 			new_record[Anum_pg_authid_rolpassword - 1] =
 				CStringGetTextDatum(password);
 		else
 		{
-			/*
-			 * GPDB: hash_password() includes pg_md5_encrypt() along with a
-			 * SHA-256 and SHA-256-FIPS implementation which is controlled by
-			 * password_hash_algorithm Greenplum GUC.
-			 */
-			if (!hash_password(password, rolename, strlen(rolename),
-							   encrypted_password))
+			if (!pg_md5_encrypt(password, rolename, strlen(rolename),
+								encrypted_password))
 				elog(ERROR, "password encryption failed");
 			new_record[Anum_pg_authid_rolpassword - 1] =
 				CStringGetTextDatum(encrypted_password);

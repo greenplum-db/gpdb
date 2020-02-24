@@ -114,17 +114,9 @@ CreateQueryDesc(PlannedStmt *plannedstmt,
 	qd->portal_name = NULL;
 
 	qd->ddesc = NULL;
-	qd->gpmon_pkt = NULL;
-	qd->memoryAccountId = MEMORY_OWNER_TYPE_Undefined;
 	
 	if (Gp_role != GP_ROLE_EXECUTE)
 		increment_command_count();
-
-	if(gp_enable_gpperfmon && Gp_role == GP_ROLE_DISPATCH)
-	{
-		qd->gpmon_pkt = (gpmon_packet_t *) palloc0(sizeof(gpmon_packet_t));
-		gpmon_qlog_packet_init(qd->gpmon_pkt);
-	}
 
 	return qd;
 }
@@ -232,17 +224,6 @@ ProcessQuery(Portal portal,
 									dest, params,
 									GP_INSTRUMENT_OPTS);
 	queryDesc->ddesc = portal->ddesc;
-
-	if (gp_enable_gpperfmon && Gp_role == GP_ROLE_DISPATCH)
-	{
-		Assert(portal->sourceText);
-		gpmon_qlog_query_submit(queryDesc->gpmon_pkt);
-		gpmon_qlog_query_text(queryDesc->gpmon_pkt,
-				portal->sourceText,
-				application_name,
-				GetResqueueName(portal->queueId),
-				GetResqueuePriority(portal->queueId));
-	}
 
 	/* GPDB hook for collecting query info */
 	if (query_info_collect_hook)
@@ -667,17 +648,6 @@ PortalStart(Portal portal, ParamListInfo params,
 											GP_INSTRUMENT_OPTS);
 				queryDesc->ddesc = ddesc;
 				
-				if (gp_enable_gpperfmon && Gp_role == GP_ROLE_DISPATCH)
-				{			
-					Assert(portal->sourceText);
-					gpmon_qlog_query_submit(queryDesc->gpmon_pkt);
-					gpmon_qlog_query_text(queryDesc->gpmon_pkt,
-							portal->sourceText,
-							application_name,
-							GetResqueueName(portal->queueId),
-							GetResqueuePriority(portal->queueId));
-				}
-
 				/* GPDB hook for collecting query info */
 				if (query_info_collect_hook)
 					(*query_info_collect_hook)(METRICS_QUERY_SUBMIT, queryDesc);

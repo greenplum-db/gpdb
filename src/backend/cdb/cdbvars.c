@@ -279,11 +279,6 @@ int			gp_workfile_limit_per_query = 0;
 /* Maximum number of workfiles to be created by a query */
 int			gp_workfile_limit_files_per_query = 0;
 
-/* Gpmon */
-bool		gp_enable_gpperfmon = false;
-int			gp_gpperfmon_send_interval = 1;
-int			gpperfmon_log_alert_level = GPPERFMON_LOG_ALERT_LEVEL_NONE;
-
 /* Enable single-slice single-row inserts ?*/
 bool		gp_enable_fast_sri = true;
 

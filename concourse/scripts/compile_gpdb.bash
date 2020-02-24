@@ -42,8 +42,6 @@ function prep_env() {
 function install_deps_for_centos() {
   rpm -i libquicklz-installer/libquicklz-*.rpm
   rpm -i libquicklz-devel-installer/libquicklz-*.rpm
-  # install libsigar from tar.gz
-  tar zxf libsigar-installer/sigar-*.targz -C gpdb_src/gpAux/ext
 }
 
 function install_deps_for_ubuntu() {
@@ -194,6 +192,9 @@ function export_gpdb_clients() {
   TARBALL="${GPDB_ARTIFACTS_DIR}/${GPDB_CL_FILENAME}"
   pushd ${GREENPLUM_CL_INSTALL_DIR}
     source ./greenplum_clients_path.sh
+    mkdir -p bin/ext/gppylib
+    cp ${GREENPLUM_INSTALL_DIR}/lib/python/gppylib/__init__.py ./bin/ext/gppylib
+    cp  ${GREENPLUM_INSTALL_DIR}/lib/python/gppylib/gpversion.py ./bin/ext/gppylib
     chmod -R 755 .
     tar -czf "${TARBALL}" ./*
   popd

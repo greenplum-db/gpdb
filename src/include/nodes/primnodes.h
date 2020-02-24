@@ -376,6 +376,16 @@ typedef struct GroupingSetId
 } GroupingSetId;
 
 /*
+ * AggExprId
+ *
+ *    A hint for aggregation which agg expr is this split tuple for.
+ */
+typedef struct AggExprId
+{
+	Expr        xpr;
+} AggExprId;
+
+/*
  * GroupingFunc
  *
  * A GroupingFunc is a GROUPING(...) expression, which behaves in many ways
@@ -661,6 +671,13 @@ typedef struct TableValueExpr
  *	MULTIEXPR_SUBLINK	(SELECT with multiple targetlist items ...)
  *	ARRAY_SUBLINK		ARRAY(SELECT with single targetlist item ...)
  *	CTE_SUBLINK			WITH query (never actually part of an expression)
+ *	INITPLAN_FUNC_SUBLINK	for function run as initplan.
+ * For query like (create table t as select * from f()), QD is used to run
+ * CTAS, hence f() could only be run on entryDB(or QEs). But entryDB could not
+ * do the dispatch work. So if f() contains DDLs, the above query would fail.
+ * We introduce this new INITPLAN_FUNC_SUBLINK to make f() run as initplan
+ * and store intermidiate result into tuplestore. CTAS will fetch tuples from
+ * this tuplestore.
  * For ALL, ANY, and ROWCOMPARE, the lefthand is a list of expressions of the
  * same length as the subselect's targetlist.  ROWCOMPARE will *always* have
  * a list with more than one entry; if the subselect has just one target
@@ -708,6 +725,7 @@ typedef enum SubLinkType
 	MULTIEXPR_SUBLINK,
 	ARRAY_SUBLINK,
 	CTE_SUBLINK,				/* for SubPlans only */
+	INITPLAN_FUNC_SUBLINK,		/* for function run as initplan */
 	NOT_EXISTS_SUBLINK /* GPORCA uses NOT_EXIST_SUBLINK to implement correlated left anti semijoin. */
 } SubLinkType;
 

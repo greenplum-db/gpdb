@@ -2,6 +2,20 @@
 -- Test foreign-data wrapper and server management.
 --
 
+-- In GPDB, there are a couple of special built-in objects, to handle
+-- backwards-compatibility with external tables. They are the FDW called
+-- 'pg_exttable_fdw', foreign server 'pg_exttable_server'. We don't want those
+-- to appear in the test output, to keep the expected output unchanged from
+-- upstream, as much as possible. The queries on the pg_foreign_* catalog
+-- tables, and the \dew and \des commands, have been modified to exclude them.
+--
+-- There's no way to match everything that does *not* contain a string in a \d
+-- pattern, so we use a pattern that is close enough for our purposes: This
+-- pattern includes everything that begins with a letter other than 'p', and
+-- also including everything that begins with 'p' followed by any other letter
+-- but 'g' (the 2nd rule is needed to include the 'postgresql' FDW used in the
+-- test).
+\set NO_BUILTINS ([a-oq-z]?*)|(p[a-fh-z]?*)
 -- Clean up in case a prior regression run failed
 
 -- Suppress NOTICE messages when roles don't exist
@@ -25,56 +39,56 @@ COMMENT ON FOREIGN DATA WRAPPER dummy IS 'useless';
 CREATE FOREIGN DATA WRAPPER postgresql VALIDATOR postgresql_fdw_validator;
 
 -- At this point we should have 2 built-in wrappers and no servers.
-SELECT fdwname, fdwhandler::regproc, fdwvalidator::regproc, fdwoptions FROM pg_foreign_data_wrapper ORDER BY 1, 2, 3;
-SELECT srvname, srvoptions FROM pg_foreign_server;
+SELECT fdwname, fdwhandler::regproc, fdwvalidator::regproc, fdwoptions FROM pg_foreign_data_wrapper WHERE fdwname <> 'pg_exttable_fdw' ORDER BY 1, 2, 3;
+SELECT srvname, srvoptions FROM pg_foreign_server WHERE srvname <> 'pg_exttable_server';
 SELECT * FROM pg_user_mapping;
 
 -- CREATE FOREIGN DATA WRAPPER
 CREATE FOREIGN DATA WRAPPER foo VALIDATOR bar;            -- ERROR
 CREATE FOREIGN DATA WRAPPER foo;
-\dew
+\dew :NO_BUILTINS
 
 CREATE FOREIGN DATA WRAPPER foo; -- duplicate
 DROP FOREIGN DATA WRAPPER foo;
 CREATE FOREIGN DATA WRAPPER foo OPTIONS (testing '1');
-\dew+
+\dew+ :NO_BUILTINS
 
 DROP FOREIGN DATA WRAPPER foo;
 CREATE FOREIGN DATA WRAPPER foo OPTIONS (testing '1', testing '2');   -- ERROR
 CREATE FOREIGN DATA WRAPPER foo OPTIONS (testing '1', another '2');
-\dew+
+\dew+ :NO_BUILTINS
 
 DROP FOREIGN DATA WRAPPER foo;
 SET ROLE regress_test_role;
 CREATE FOREIGN DATA WRAPPER foo; -- ERROR
 RESET ROLE;
 CREATE FOREIGN DATA WRAPPER foo VALIDATOR postgresql_fdw_validator;
-\dew+
+\dew+ :NO_BUILTINS
 
 -- ALTER FOREIGN DATA WRAPPER
 ALTER FOREIGN DATA WRAPPER foo;                             -- ERROR
 ALTER FOREIGN DATA WRAPPER foo VALIDATOR bar;               -- ERROR
 ALTER FOREIGN DATA WRAPPER foo NO VALIDATOR;
-\dew+
+\dew+ :NO_BUILTINS
 
 ALTER FOREIGN DATA WRAPPER foo OPTIONS (a '1', b '2');
 ALTER FOREIGN DATA WRAPPER foo OPTIONS (SET c '4');         -- ERROR
 ALTER FOREIGN DATA WRAPPER foo OPTIONS (DROP c);            -- ERROR
 ALTER FOREIGN DATA WRAPPER foo OPTIONS (ADD x '1', DROP x);
-\dew+
+\dew+ :NO_BUILTINS
 
 ALTER FOREIGN DATA WRAPPER foo OPTIONS (DROP a, SET b '3', ADD c '4');
-\dew+
+\dew+ :NO_BUILTINS
 
 ALTER FOREIGN DATA WRAPPER foo OPTIONS (a '2');
 ALTER FOREIGN DATA WRAPPER foo OPTIONS (b '4');             -- ERROR
-\dew+
+\dew+ :NO_BUILTINS
 
 SET ROLE regress_test_role;
 ALTER FOREIGN DATA WRAPPER foo OPTIONS (ADD d '5');         -- ERROR
 SET ROLE regress_test_role_super;
 ALTER FOREIGN DATA WRAPPER foo OPTIONS (ADD d '5');
-\dew+
+\dew+ :NO_BUILTINS
 
 ALTER FOREIGN DATA WRAPPER foo OWNER TO regress_test_role;  -- ERROR
 ALTER FOREIGN DATA WRAPPER foo OWNER TO regress_test_role_super;
@@ -82,38 +96,38 @@ ALTER ROLE regress_test_role_super NOSUPERUSER;
 SET ROLE regress_test_role_super;
 ALTER FOREIGN DATA WRAPPER foo OPTIONS (ADD e '6');         -- ERROR
 RESET ROLE;
-\dew+
+\dew+ :NO_BUILTINS
 
 ALTER FOREIGN DATA WRAPPER foo RENAME TO foo1;
-\dew+
+\dew+ :NO_BUILTINS
 ALTER FOREIGN DATA WRAPPER foo1 RENAME TO foo;
 
 -- DROP FOREIGN DATA WRAPPER
 DROP FOREIGN DATA WRAPPER nonexistent;                      -- ERROR
 DROP FOREIGN DATA WRAPPER IF EXISTS nonexistent;
-\dew+
+\dew+ :NO_BUILTINS
 
 DROP ROLE regress_test_role_super;                          -- ERROR
 SET ROLE regress_test_role_super;
 DROP FOREIGN DATA WRAPPER foo;
 RESET ROLE;
 DROP ROLE regress_test_role_super;
-\dew+
+\dew+ :NO_BUILTINS
 
 CREATE FOREIGN DATA WRAPPER foo;
 CREATE SERVER s1 FOREIGN DATA WRAPPER foo;
 COMMENT ON SERVER s1 IS 'foreign server';
 CREATE USER MAPPING FOR current_user SERVER s1;
-\dew+
-\des+
+\dew+ :NO_BUILTINS
+\des+ :NO_BUILTINS
 \deu+
 DROP FOREIGN DATA WRAPPER foo;                              -- ERROR
 SET ROLE regress_test_role;
 DROP FOREIGN DATA WRAPPER foo CASCADE;                      -- ERROR
 RESET ROLE;
 DROP FOREIGN DATA WRAPPER foo CASCADE;
-\dew+
-\des+
+\dew+ :NO_BUILTINS
+\des+ :NO_BUILTINS
 \deu+
 
 -- exercise CREATE SERVER
@@ -129,7 +143,7 @@ CREATE SERVER s6 VERSION '16.0' FOREIGN DATA WRAPPER foo OPTIONS (host 'a', dbna
 CREATE SERVER s7 TYPE 'oracle' VERSION '17.0' FOREIGN DATA WRAPPER foo OPTIONS (host 'a', dbname 'b');
 CREATE SERVER s8 FOREIGN DATA WRAPPER postgresql OPTIONS (foo '1'); -- ERROR
 CREATE SERVER s8 FOREIGN DATA WRAPPER postgresql OPTIONS (host 'localhost', dbname 's8db');
-\des+
+\des+ :NO_BUILTINS
 SET ROLE regress_test_role;
 CREATE SERVER t1 FOREIGN DATA WRAPPER foo;                 -- ERROR: no usage on FDW
 RESET ROLE;
@@ -137,7 +151,7 @@ GRANT USAGE ON FOREIGN DATA WRAPPER foo TO regress_test_role;
 SET ROLE regress_test_role;
 CREATE SERVER t1 FOREIGN DATA WRAPPER foo;
 RESET ROLE;
-\des+
+\des+ :NO_BUILTINS
 
 REVOKE USAGE ON FOREIGN DATA WRAPPER foo FROM regress_test_role;
 GRANT USAGE ON FOREIGN DATA WRAPPER foo TO regress_test_indirect;
@@ -147,7 +161,7 @@ RESET ROLE;
 GRANT regress_test_indirect TO regress_test_role;
 SET ROLE regress_test_role;
 CREATE SERVER t2 FOREIGN DATA WRAPPER foo;
-\des+
+\des+ :NO_BUILTINS
 RESET ROLE;
 REVOKE regress_test_indirect FROM regress_test_role;
 
@@ -159,7 +173,7 @@ ALTER SERVER s2 VERSION '1.1';
 ALTER SERVER s3 OPTIONS ("tns name" 'orcl', port '1521');
 GRANT USAGE ON FOREIGN SERVER s1 TO regress_test_role;
 GRANT USAGE ON FOREIGN SERVER s6 TO regress_test_role2 WITH GRANT OPTION;
-\des+
+\des+ :NO_BUILTINS
 SET ROLE regress_test_role;
 ALTER SERVER s1 VERSION '1.1';                              -- ERROR
 ALTER SERVER s1 OWNER TO regress_test_role;                 -- ERROR
@@ -184,31 +198,31 @@ SET ROLE regress_test_role;
 ALTER SERVER s1 OWNER TO regress_test_indirect;
 RESET ROLE;
 DROP ROLE regress_test_indirect;                            -- ERROR
-\des+
+\des+ :NO_BUILTINS
 
 ALTER SERVER s8 RENAME to s8new;
-\des+
+\des+ :NO_BUILTINS
 ALTER SERVER s8new RENAME to s8;
 
 -- DROP SERVER
 DROP SERVER nonexistent;                                    -- ERROR
 DROP SERVER IF EXISTS nonexistent;
-\des
+\des :NO_BUILTINS
 SET ROLE regress_test_role;
 DROP SERVER s2;                                             -- ERROR
 DROP SERVER s1;
 RESET ROLE;
-\des
+\des :NO_BUILTINS
 ALTER SERVER s2 OWNER TO regress_test_role;
 SET ROLE regress_test_role;
 DROP SERVER s2;
 RESET ROLE;
-\des
+\des :NO_BUILTINS
 CREATE USER MAPPING FOR current_user SERVER s3;
 \deu
 DROP SERVER s3;                                             -- ERROR
 DROP SERVER s3 CASCADE;
-\des
+\des :NO_BUILTINS
 \deu
 
 -- CREATE USER MAPPING
@@ -380,15 +394,15 @@ ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 RENAME TO foreign_table_1;
 
 -- Information schema
 
-SELECT * FROM information_schema.foreign_data_wrappers ORDER BY 1, 2;
+SELECT * FROM information_schema.foreign_data_wrappers WHERE foreign_data_wrapper_name <> 'pg_exttable_fdw' ORDER BY 1, 2;
 SELECT * FROM information_schema.foreign_data_wrapper_options ORDER BY 1, 2, 3;
-SELECT * FROM information_schema.foreign_servers ORDER BY 1, 2;
+SELECT * FROM information_schema.foreign_servers WHERE foreign_server_name <> 'pg_exttable_server'  ORDER BY 1, 2;
 SELECT * FROM information_schema.foreign_server_options ORDER BY 1, 2, 3;
 SELECT * FROM information_schema.user_mappings ORDER BY lower(authorization_identifier), 2, 3;
 SELECT * FROM information_schema.user_mapping_options ORDER BY lower(authorization_identifier), 2, 3, 4;
 SELECT * FROM information_schema.usage_privileges WHERE object_type LIKE 'FOREIGN%' AND object_name IN ('s6', 'foo') ORDER BY 1, 2, 3, 4, 5;
 SELECT * FROM information_schema.role_usage_grants WHERE object_type LIKE 'FOREIGN%' AND object_name IN ('s6', 'foo') ORDER BY 1, 2, 3, 4, 5;
-SELECT * FROM information_schema.foreign_tables ORDER BY 1, 2, 3;
+SELECT * FROM information_schema.foreign_tables WHERE foreign_table_schema <> 'gp_toolkit' ORDER BY 1, 2, 3;
 SELECT * FROM information_schema.foreign_table_options ORDER BY 1, 2, 3, 4;
 SET ROLE regress_test_role;
 SELECT * FROM information_schema.user_mapping_options ORDER BY 1, 2, 3, 4;
@@ -733,6 +747,6 @@ DROP FOREIGN DATA WRAPPER dummy CASCADE;
 DROP ROLE regress_foreign_data_user;
 
 -- At this point we should have no wrappers, no servers, and no mappings.
-SELECT fdwname, fdwhandler, fdwvalidator, fdwoptions FROM pg_foreign_data_wrapper;
-SELECT srvname, srvoptions FROM pg_foreign_server;
+SELECT fdwname, fdwhandler, fdwvalidator, fdwoptions FROM pg_foreign_data_wrapper WHERE fdwname <> 'pg_exttable_fdw';
+SELECT srvname, srvoptions FROM pg_foreign_server WHERE srvname <> 'pg_exttable_server';
 SELECT * FROM pg_user_mapping;

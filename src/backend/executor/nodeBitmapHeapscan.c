@@ -368,8 +368,6 @@ BitmapHeapNext(BitmapHeapScanState *node)
 			else
 				node->lossy_pages++;
 
-			CheckSendPlanStateGpmonPkt(&node->ss.ps);
-
 			/*
 			 * Set rs_cindex to first slot to examine
 			 */
@@ -699,7 +697,6 @@ BitmapAppendOnlyNext(BitmapHeapScanState *node)
 
 			/* Make sure we never cross 15-bit offset number [MPP-24326] */
 			Assert(tbmres->ntuples <= INT16_MAX + 1);
-			CheckSendPlanStateGpmonPkt(&node->ss.ps);
 
 			node->baos_gotpage = true;
 
@@ -935,8 +932,6 @@ ExecEndBitmapHeapScan(BitmapHeapScanState *node)
 	 * close the heap relation.
 	 */
 	ExecCloseScanRelation(relation);
-
-	EndPlanStateGpmonPkt(&node->ss.ps);
 }
 
 /* ----------------------------------------------------------------

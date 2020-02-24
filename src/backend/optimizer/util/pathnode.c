@@ -175,7 +175,6 @@ pathnode_walk_kids(Path            *path,
 	{
 		case T_SeqScan:
 		case T_SampleScan:
-		case T_ExternalScan:
 		case T_ForeignScan:
 		case T_IndexScan:
 		case T_IndexOnlyScan:
@@ -241,6 +240,9 @@ pathnode_walk_kids(Path            *path,
 			break;
 		case T_Agg:
 			v = pathnode_walk_node(((AggPath *)path)->subpath, walker, context);
+			break;
+		case T_TupleSplit:
+			v = pathnode_walk_node(((TupleSplitPath *)path)->subpath, walker, context);
 			break;
 		case T_WindowAgg:
 			v = pathnode_walk_node(((WindowAggPath *)path)->subpath, walker, context);
@@ -1256,37 +1258,6 @@ create_seqscan_path(PlannerInfo *root, RelOptInfo *rel,
 	pathnode->sameslice_relids = rel->relids;
 
 	cost_seqscan(pathnode, root, rel, pathnode->param_info);
-
-	return pathnode;
-}
-
-/*
-* Create a path for scanning an external table
- */
-ExternalPath *
-create_external_path(PlannerInfo *root, RelOptInfo *rel, Relids required_outer)
-{
-	ExternalPath   *pathnode = makeNode(ExternalPath);
-
-	pathnode->path.pathtype = T_ExternalScan;
-	pathnode->path.parent = rel;
-	pathnode->path.pathtarget = rel->reltarget;
-	pathnode->path.param_info = get_baserel_parampathinfo(root, rel,
-													 required_outer);
-	pathnode->path.pathkeys = NIL;	/* external scan has unordered result */
-
-	pathnode->path.locus = cdbpathlocus_from_baserel(root, rel);
-	pathnode->path.motionHazard = false;
-
-	/*
-	 * Mark external tables as non-rescannable. While rescan is possible,
-	 * it can lead to surprising results if the external table produces
-	 * different results when invoked twice.
-	 */
-	pathnode->path.rescannable = false;
-	pathnode->path.sameslice_relids = rel->relids;
-
-	cost_externalscan(pathnode, root, rel, pathnode->path.param_info);
 
 	return pathnode;
 }
@@ -2819,6 +2790,18 @@ create_functionscan_path(PlannerInfo *root, RelOptInfo *rel,
 					}
 					exec_location = PROEXECLOCATION_MASTER;
 					break;
+				case PROEXECLOCATION_INITPLAN:
+					/*
+					 * This function forces the execution to master.
+					 */
+					if (exec_location == PROEXECLOCATION_ALL_SEGMENTS)
+					{
+						ereport(ERROR,
+								(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+								 (errmsg("cannot mix EXECUTE ON INITPLAN and ALL SEGMENTS functions in same function scan"))));
+					}
+					exec_location = PROEXECLOCATION_INITPLAN;
+					break;
 				case PROEXECLOCATION_ALL_SEGMENTS:
 					/*
 					 * This function forces the execution to segments.
@@ -2867,6 +2850,11 @@ create_functionscan_path(PlannerInfo *root, RelOptInfo *rel,
 		case PROEXECLOCATION_MASTER:
 			if (contain_outer_params)
 				elog(ERROR, "cannot execute EXECUTE ON MASTER function in a subquery with arguments from outer query");
+			CdbPathLocus_MakeEntry(&pathnode->locus);
+			break;
+		case PROEXECLOCATION_INITPLAN:
+			if (contain_outer_params)
+				elog(ERROR, "cannot execute EXECUTE ON INITPLAN function in a subquery with arguments from outer query");
 			CdbPathLocus_MakeEntry(&pathnode->locus);
 			break;
 		case PROEXECLOCATION_ALL_SEGMENTS:
@@ -3142,7 +3130,7 @@ create_foreignscan_path(PlannerInfo *root, RelOptInfo *rel,
 	pathnode->path.total_cost = total_cost;
 	pathnode->path.pathkeys = pathkeys;
 
-	switch (rel->ftEntry->exec_location)
+	switch (rel->exec_location)
 	{
 		case FTEXECLOCATION_ANY:
 			CdbPathLocus_MakeGeneral(&(pathnode->path.locus));
@@ -3154,7 +3142,7 @@ create_foreignscan_path(PlannerInfo *root, RelOptInfo *rel,
 			CdbPathLocus_MakeEntry(&(pathnode->path.locus));
 			break;
 		default:
-			elog(ERROR, "unrecognized exec_location '%c'", rel->ftEntry->exec_location);
+			elog(ERROR, "unrecognized exec_location '%c'", rel->exec_location);
 	}
 
 	pathnode->fdw_outerpath = fdw_outerpath;
@@ -3603,8 +3591,7 @@ create_hashjoin_path(PlannerInfo *root,
 	 * the right row count, in case Broadcast Motion is inserted above an
 	 * input path.
 	 */
-	if (jointype == JOIN_INNER &&
-		root->config->gp_enable_hashjoin_size_heuristic)
+	if (jointype == JOIN_INNER && gp_enable_hashjoin_size_heuristic)
 	{
 		double		outersize;
 		double		innersize;
@@ -4090,6 +4077,60 @@ create_agg_path(PlannerInfo *root,
 		target->cost.per_tuple * pathnode->path.rows;
 
 	pathnode->path.locus = subpath->locus;
+
+	return pathnode;
+}
+
+/*
+ * create_tup_split_path
+ *	  Creates a pathnode that represents performing TupleSplit
+ *
+ * 'rel' is the parent relation associated with the result
+ * 'subpath' is the path representing the source of data
+ * 'target' is the PathTarget to be computed
+ * 'groupClause' is a list of SortGroupClause's representing the grouping
+ * 'numGroups' is the estimated number of groups (1 if not grouping)
+ * 'bitmapset' is the bitmap of DQA expr Index in PathTarget
+ * 'numDisDQAs' is the number of bitmapset size
+ */
+TupleSplitPath *
+create_tup_split_path(PlannerInfo *root,
+					  RelOptInfo *rel,
+					  Path *subpath,
+					  PathTarget *target,
+					  List *groupClause,
+					  Bitmapset **bitmapset,
+					  int numDisDQAs)
+{
+	TupleSplitPath *pathnode = makeNode(TupleSplitPath);
+
+	pathnode->path.pathtype = T_TupleSplit;
+	pathnode->path.parent = rel;
+	pathnode->path.pathtarget = target;
+
+	/* For now, assume we are above any joins, so no parameterization */
+	pathnode->path.param_info = NULL;
+	pathnode->path.parallel_aware = false;
+	pathnode->path.parallel_safe = rel->consider_parallel &&
+		subpath->parallel_safe;
+	pathnode->path.parallel_workers = subpath->parallel_workers;
+	pathnode->path.pathkeys = NIL;
+
+	pathnode->subpath = subpath;
+	pathnode->groupClause = groupClause;
+
+	pathnode->numDisDQAs = numDisDQAs;
+
+	pathnode->agg_args_id_bms = palloc0(sizeof(Bitmapset *) * numDisDQAs);
+	for (int i = 0 ; i < numDisDQAs; i ++)
+		pathnode->agg_args_id_bms[i] = bms_copy(bitmapset[i]);
+
+	cost_tup_split(&pathnode->path, root, numDisDQAs,
+				   subpath->startup_cost, subpath->total_cost,
+				   subpath->rows);
+
+	CdbPathLocus_MakeStrewn(&pathnode->path.locus,
+							subpath->locus.numsegments);
 
 	return pathnode;
 }

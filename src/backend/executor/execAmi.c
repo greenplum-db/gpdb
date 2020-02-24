@@ -49,6 +49,7 @@
 #include "executor/nodeSubplan.h"
 #include "executor/nodeSubqueryscan.h"
 #include "executor/nodeTidscan.h"
+#include "executor/nodeTupleSplit.h"
 #include "executor/nodeUnique.h"
 #include "executor/nodeValuesscan.h"
 #include "executor/nodeWindowAgg.h"
@@ -56,7 +57,6 @@
 #include "executor/nodeAssertOp.h"
 #include "executor/nodeDynamicSeqscan.h"
 #include "executor/nodeDynamicIndexscan.h"
-#include "executor/nodeExternalscan.h"
 #include "executor/nodeMotion.h"
 #include "executor/nodeSequence.h"
 #include "executor/nodeTableFunction.h"
@@ -111,6 +111,13 @@ ExecReScan(PlanState *node)
 			SubPlanState *sstate = (SubPlanState *) lfirst(l);
 			PlanState  *splan = sstate->planstate;
 
+			/*
+			 * If 'splan' is NULL, then InitPlan() thought it was "alien".  We
+			 * should not get here then, but let's sanity check.
+			 */
+			if (splan == NULL)
+				elog(ERROR, "subplan not initialized in this slice");
+
 			if (splan->plan->extParam != NULL)	/* don't care about child
 												 * local Params */
 				UpdateChangedParamSet(splan, node->chgParam);
@@ -121,6 +128,13 @@ ExecReScan(PlanState *node)
 		{
 			SubPlanState *sstate = (SubPlanState *) lfirst(l);
 			PlanState  *splan = sstate->planstate;
+
+			/*
+			 * If 'splan' is NULL, then InitPlan() thought it was "alien".  We
+			 * should not get here then, but let's sanity check.
+			 */
+			if (splan == NULL)
+				elog(ERROR, "subplan not initialized in this slice");
 
 			if (splan->plan->extParam != NULL)
 				UpdateChangedParamSet(splan, node->chgParam);
@@ -186,10 +200,6 @@ ExecReScan(PlanState *node)
 		case T_IndexScanState:
 			ExecReScanIndexScan((IndexScanState *) node);
 			break;
-
-		case T_ExternalScanState:
-			ExecReScanExternal((ExternalScanState *) node);
-			break;			
 
 		case T_DynamicSeqScanState:
 			ExecReScanDynamicSeqScan((DynamicSeqScanState *) node);
@@ -283,6 +293,10 @@ ExecReScan(PlanState *node)
 			ExecReScanAgg((AggState *) node);
 			break;
 
+		case T_TupleSplit:
+			ExecReScanTupleSplit((TupleSplitState *) node);
+			break;
+
 		case T_WindowAggState:
 			ExecReScanWindowAgg((WindowAggState *) node);
 			break;
@@ -332,9 +346,6 @@ ExecReScan(PlanState *node)
 		bms_free(node->chgParam);
 		node->chgParam = NULL;
 	}
-
-	/* Now would be a good time to also send an update to gpmon */
-	CheckSendPlanStateGpmonPkt(node);
 }
 
 /*
@@ -358,10 +369,6 @@ ExecMarkPos(PlanState *node)
 		case T_IndexScanState:
 			ExecIndexMarkPos((IndexScanState *) node);
 			break;
-
-		case T_ExternalScanState:
-			elog(ERROR, "Marking scan position for external relation is not supported");
-			break;			
 
 		case T_IndexOnlyScanState:
 			ExecIndexOnlyMarkPos((IndexOnlyScanState *) node);
@@ -423,10 +430,6 @@ ExecRestrPos(PlanState *node)
 			ExecIndexRestrPos((IndexScanState *) node);
 			break;
 
-		case T_ExternalScanState:
-			elog(ERROR, "Restoring scan position is not yet supported for external relation scan");
-			break;			
-
 		case T_IndexOnlyScanState:
 			ExecIndexOnlyRestrPos((IndexOnlyScanState *) node);
 			break;
@@ -462,9 +465,6 @@ ExecRestrPos(PlanState *node)
 			elog(ERROR, "unrecognized node type: %d", (int) nodeTag(node));
 			break;
 	}
-
-	/* Now would be a good time to also send an update to gpmon */
-	CheckSendPlanStateGpmonPkt(node);
 }
 
 /*
@@ -698,7 +698,6 @@ ExecSquelchNode(PlanState *node)
 		case T_LockRowsState:
 		case T_NestLoopState:
 		case T_MergeJoinState:
-		case T_RepeatState:
 		case T_SetOpState:
 		case T_UniqueState:
 		case T_HashState:
@@ -719,7 +718,6 @@ ExecSquelchNode(PlanState *node)
 		case T_IndexOnlyScanState:
 		case T_DynamicBitmapIndexScanState:
 		case T_BitmapIndexScanState:
-		case T_ForeignScanState:
 		case T_ValuesScanState:
 		case T_TidScanState:
 		case T_TableFunctionState:
@@ -734,8 +732,8 @@ ExecSquelchNode(PlanState *node)
 			ExecSquelchRecursiveUnion((RecursiveUnionState *) node);
 			break;
 
-		case T_ExternalScanState:
-			ExecSquelchExternalScan((ExternalScanState *) node);
+		case T_ForeignScanState:
+			ExecSquelchForeignScan((ForeignScanState *) node);
 			break;
 
 		case T_BitmapHeapScanState:
@@ -760,6 +758,10 @@ ExecSquelchNode(PlanState *node)
 
 		case T_AggState:
 			ExecSquelchAgg((AggState*) node);
+			break;
+
+		case T_TupleSplitState:
+			ExecSquelchTupleSplit((TupleSplitState*) node);
 			break;
 
 		case T_WindowAggState:

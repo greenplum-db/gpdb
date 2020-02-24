@@ -47,7 +47,7 @@ FORMAT 'text' (delimiter '|');
 -- 19. MPP-14467 import data from file - field names with spaces
 -- 1.  import data into table with string and numeric fields - data OK 
 DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
-NOTICE:  table "tbl_ext_fixedwidth" does not exist, skipping
+NOTICE:  foreign table "tbl_ext_fixedwidth" does not exist, skipping
 CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth 
 (s1 char(10), s2 varchar(10), s3 text, dt timestamp, n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)                                                              
 LOCATION ('gpfdist://@hostname@:7575/fixedwidth_small_correct.tbl')
@@ -164,7 +164,7 @@ SELECT relname,linenum,errmsg FROM gp_read_error_log('tbl_ext_fixedwidth') ORDER
 DROP EXTERNAL TABLE tbl_ext_fixedwidth;
 -- 9.  import data into table with string and numeric fields - FORMAT string syntax error  -- field definition error
 DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
-NOTICE:  table "tbl_ext_fixedwidth" does not exist, skipping
+NOTICE:  foreign table "tbl_ext_fixedwidth" does not exist, skipping
 CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth 
 (s1 char(10), s2 varchar(10), s3 text, dt timestamp, n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)                                                              
 LOCATION ('gpfdist://@hostname@:7575/fixedwidth_small_correct.tbl')       
@@ -179,7 +179,7 @@ LINE 1: SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
 -- 10. import data into table with string and numeric fields - FORMAT string syntax error  -- fields order does not corespond to file order
 --     canno't be caught when testing string syntax, will appear as a type error and only if the swap was between fields of different type
 DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
-NOTICE:  table "tbl_ext_fixedwidth" does not exist, skipping
+NOTICE:  foreign table "tbl_ext_fixedwidth" does not exist, skipping
 CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth 
 (s1 char(10), s2 varchar(10), s3 text, dt timestamp, n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)                                                              
 LOCATION ('gpfdist://@hostname@:7575/fixedwidth_small_correct.tbl')       
@@ -10367,7 +10367,7 @@ SELECT * FROM tbl_ext_fixedwidth ORDER BY "s 1";
 -- --------------------------------------
 -- Helper to remove the output file
 DROP EXTERNAL WEB TABLE IF EXISTS clean_out_file;
-NOTICE:  table "clean_out_file" does not exist, skipping
+NOTICE:  foreign table "clean_out_file" does not exist, skipping
 CREATE EXTERNAL WEB TABLE clean_out_file (x text)
 EXECUTE E'( rm -f @abs_srcdir@/data/fixedwidth/fixedwidth_out.tbl)'
 on SEGMENT 0

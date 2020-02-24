@@ -154,10 +154,6 @@
                   >password_encryption</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#password_hash_algorithm" type="section"
-                  >password_hash_algorithm</xref>
-              </p>
-              <p>
                 <xref href="guc-list.xml#ssl" type="section">ssl</xref>
               </p>
               <p>
@@ -821,40 +817,6 @@
       </body>
     </topic>
   </topic>
-  <topic id="topic33" xml:lang="en">
-    <title id="kh171299">System Monitoring Parameters</title>
-    <abstract>These configuration parameters control Greenplum Database data collection and
-      notifications related to database monitoring.</abstract>
-    <topic id="topic36" xml:lang="en">
-      <title>Greenplum Performance Database</title>
-      <body>
-        <p>The following parameters configure the data collection agents that populate the
-            <codeph>gpperfmon</codeph> database.</p>
-        <simpletable id="kh171891" frame="none">
-          <strow>
-            <stentry>
-              <p>
-                <xref href="guc-list.xml#gp_enable_gpperfmon" type="section"
-                  >gp_enable_gpperfmon</xref>
-              </p>
-              <p>
-                <xref href="guc-list.xml#gp_gpperfmon_send_interval" type="section"
-                  >gp_gpperfmon_send_interval</xref>
-              </p>
-            </stentry>
-            <stentry>
-              <p>
-                <xref href="guc-list.xml#gpperfmon_log_alert_level" type="section"
-                  >gpperfmon_log_alert_level</xref>
-              </p>
-              <p>
-                <xref href="guc-list.xml#gpperfmon_port" type="section">gpperfmon_port</xref>
-              </p>
-            </stentry>
-          </strow>
-        </simpletable>
-      </body>
-    </topic>
     <topic id="query-metrics">
       <title>Query Metrics Collection Parameters</title>
       <body>
@@ -880,7 +842,6 @@
         </simpletable>
       </body>
     </topic>
-  </topic>
   <topic id="topic37" xml:lang="en">
     <title id="kh171364">Runtime Statistics Collection Parameters</title>
     <body>
@@ -1189,6 +1150,10 @@
             </p>
             <p>
               <xref href="guc-list.xml#memory_spill_ratio" type="section">memory_spill_ratio</xref>
+            </p>
+            <p>
+              <xref href="guc-list.xml#runaway_detector_activation_percent" type="section"
+                >runaway_detector_activation_percent</xref>
             </p>
             <p>
               <xref href="guc-list.xml#statement_mem" type="section">statement_mem</xref>

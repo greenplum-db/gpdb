@@ -137,13 +137,13 @@ build_simple_rel(PlannerInfo *root, int relid, RelOptKind reloptkind)
 	rel->pages = 0;
 	rel->tuples = 0;
 	rel->allvisfrac = 0;
-	rel->extEntry = NULL;
 	rel->subroot = NULL;
 	rel->subplan_params = NIL;
 	rel->rel_parallel_workers = -1;		/* set up in GetRelationInfo */
 	rel->serverid = InvalidOid;
 	rel->userid = rte->checkAsUser;
 	rel->useridiscurrent = false;
+	rel->exec_location = FTEXECLOCATION_NOT_DEFINED;
 	rel->fdwroutine = NULL;
 	rel->fdw_private = NULL;
 	rel->baserestrictinfo = NIL;
@@ -449,6 +449,7 @@ build_join_rel(PlannerInfo *root,
 	joinrel->serverid = InvalidOid;
 	joinrel->userid = InvalidOid;
 	joinrel->useridiscurrent = false;
+	joinrel->exec_location = FTEXECLOCATION_NOT_DEFINED;
 	joinrel->fdwroutine = NULL;
 	joinrel->fdw_private = NULL;
 	joinrel->baserestrictinfo = NIL;
@@ -473,9 +474,13 @@ build_join_rel(PlannerInfo *root,
 	 *
 	 * Otherwise these fields are left invalid, so GetForeignJoinPaths will
 	 * not be called for the join relation.
+	 *
+	 * GPDB: Also, EXECUTE ON must match. (Perhaps we shouldn't allow EXECUTE
+	 * ON on individual tables? Then it would be enough to compare server id)
 	 */
 	if (OidIsValid(outer_rel->serverid) &&
-		inner_rel->serverid == outer_rel->serverid)
+		inner_rel->serverid == outer_rel->serverid &&
+		inner_rel->exec_location == outer_rel->exec_location)
 	{
 		if (inner_rel->userid == outer_rel->userid)
 		{
@@ -483,6 +488,7 @@ build_join_rel(PlannerInfo *root,
 			joinrel->userid = outer_rel->userid;
 			joinrel->useridiscurrent = outer_rel->useridiscurrent || inner_rel->useridiscurrent;
 			joinrel->fdwroutine = outer_rel->fdwroutine;
+			joinrel->exec_location = outer_rel->exec_location;
 		}
 		else if (!OidIsValid(inner_rel->userid) &&
 				 outer_rel->userid == GetUserId())
@@ -491,6 +497,7 @@ build_join_rel(PlannerInfo *root,
 			joinrel->userid = outer_rel->userid;
 			joinrel->useridiscurrent = true;
 			joinrel->fdwroutine = outer_rel->fdwroutine;
+			joinrel->exec_location = outer_rel->exec_location;
 		}
 		else if (!OidIsValid(outer_rel->userid) &&
 				 inner_rel->userid == GetUserId())
@@ -499,6 +506,7 @@ build_join_rel(PlannerInfo *root,
 			joinrel->userid = inner_rel->userid;
 			joinrel->useridiscurrent = true;
 			joinrel->fdwroutine = outer_rel->fdwroutine;
+			joinrel->exec_location = outer_rel->exec_location;
 		}
 	}
 

@@ -35,7 +35,7 @@
           <codeph>VACUUM FULL</codeph> ignores the value of
           <codeph>gp_appendonly_compaction_threshold</codeph> and rewrites the segment file
         regardless of the ratio.</p>
-      <p>You can use the <codeph>__gp_aovisimap_compaction_info()</codeph> function in the the
+      <p>You can use the <codeph>__gp_aovisimap_compaction_info()</codeph> function in the
           <i>gp_toolkit</i> schema to investigate the effectiveness of a <cmdname>VACUUM</cmdname>
         operation on append-optimized tables. </p>
       <p>For information about the <codeph>__gp_aovisimap_compaction_info()</codeph> function see,

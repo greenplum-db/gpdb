@@ -226,11 +226,7 @@ planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 		if (gp_log_optimization_time)
 			INSTR_TIME_SET_CURRENT(starttime);
 
-		START_MEMORY_ACCOUNT(MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_PlannerHook));
-		{
-			result = (*planner_hook) (parse, cursorOptions, boundParams);
-		}
-		END_MEMORY_ACCOUNT();
+		result = (*planner_hook) (parse, cursorOptions, boundParams);
 
 		if (gp_log_optimization_time)
 		{
@@ -261,7 +257,6 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	PlannerConfig *config;
 	instr_time		starttime;
 	instr_time		endtime;
-	MemoryAccountIdType curMemoryAccountId;
 
 	/*
 	 * Use ORCA only if it is enabled and we are in a master QD process.
@@ -300,14 +295,6 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	 */
 	if (gp_log_optimization_time)
 		INSTR_TIME_SET_CURRENT(starttime);
-
-	curMemoryAccountId = MemoryAccounting_GetOrCreatePlannerAccount();
-	/*
-	 * Incorrectly indented on purpose to avoid re-indenting an entire upstream
-	 * function
-	 */
-	START_MEMORY_ACCOUNT(curMemoryAccountId);
-	{
 
 	/* Cursor options may come from caller or from DECLARE CURSOR stmt */
 	if (parse->utilityStmt &&
@@ -675,9 +662,6 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 		INSTR_TIME_SUBTRACT(endtime, starttime);
 		elog(LOG, "Planner Time: %.3f ms", INSTR_TIME_GET_MILLISEC(endtime));
 	}
-
-	}
-	END_MEMORY_ACCOUNT();
 
 	return result;
 }
@@ -2458,6 +2442,7 @@ grouping_planner(PlannerInfo *root, bool inheritance_update,
 	final_rel->userid = current_rel->userid;
 	final_rel->useridiscurrent = current_rel->useridiscurrent;
 	final_rel->fdwroutine = current_rel->fdwroutine;
+	final_rel->exec_location = current_rel->exec_location;
 
 	if (root->is_split_update)
 	{
@@ -3913,6 +3898,7 @@ create_grouping_paths(PlannerInfo *root,
 	grouped_rel->userid = input_rel->userid;
 	grouped_rel->useridiscurrent = input_rel->useridiscurrent;
 	grouped_rel->fdwroutine = input_rel->fdwroutine;
+	grouped_rel->exec_location = input_rel->exec_location;
 
 	/*
 	 * Check for degenerate grouping.
@@ -4703,6 +4689,7 @@ create_window_paths(PlannerInfo *root,
 	window_rel->userid = input_rel->userid;
 	window_rel->useridiscurrent = input_rel->useridiscurrent;
 	window_rel->fdwroutine = input_rel->fdwroutine;
+	window_rel->exec_location = input_rel->exec_location;
 
 	/*
 	 * Consider computing window functions starting from the existing
@@ -4928,7 +4915,7 @@ create_distinct_paths(PlannerInfo *root,
 		/* Apply the preunique optimization, if enabled and worthwhile. */
 		/* GPDB_84_MERGE_FIXME: pre-unique for hash distinct not implemented. */
 		/* GPDB_96_MERGE_FIXME: disabled altogether */
-		if (root->config->gp_enable_preunique && needMotion && !use_hashed_distinct)
+		if (gp_enable_preunique && needMotion && !use_hashed_distinct)
 		{
 			double		base_cost,
 				alt_cost;
@@ -4943,7 +4930,7 @@ create_distinct_paths(PlannerInfo *root,
 			alt_cost += cpu_operator_cost * numDistinct
 				* list_length(parse->distinctClause);
 
-			if (alt_cost < base_cost || root->config->gp_eager_preunique)
+			if (alt_cost < base_cost || gp_eager_preunique)
 			{
 				/*
 				 * Reduce the number of rows to move by adding a [Sort
@@ -5011,6 +4998,7 @@ create_distinct_paths(PlannerInfo *root,
 	distinct_rel->userid = input_rel->userid;
 	distinct_rel->useridiscurrent = input_rel->useridiscurrent;
 	distinct_rel->fdwroutine = input_rel->fdwroutine;
+	distinct_rel->exec_location = input_rel->exec_location;
 
 	/* Estimate number of distinct rows there will be */
 	if (parse->groupClause || parse->groupingSets || parse->hasAggs ||
@@ -5358,6 +5346,7 @@ create_ordered_paths(PlannerInfo *root,
 	ordered_rel->userid = input_rel->userid;
 	ordered_rel->useridiscurrent = input_rel->useridiscurrent;
 	ordered_rel->fdwroutine = input_rel->fdwroutine;
+	ordered_rel->exec_location = input_rel->exec_location;
 
 	foreach(lc, input_rel->pathlist)
 	{

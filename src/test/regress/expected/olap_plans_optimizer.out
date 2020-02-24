@@ -1,3 +1,7 @@
+--
+-- Test the planner's ability to produce different kinds of plans to implement
+-- grouping and aggregation.
+--
 drop table if exists olap_test;
 NOTICE:  table "olap_test" does not exist, skipping
 drop table if exists olap_test_single;
@@ -153,6 +157,27 @@ select sum(distinct b) from olap_test_single;
  sum 
 -----
   55
+(1 row)
+
+-- If there are a lot of distinct values, then the preliminary aggregation and
+-- redistribution steps are not worth the trouble, it's cheaper to just gather
+-- all the input
+explain select sum(distinct d) from olap_test_single;
+                                               QUERY PLAN                                                
+---------------------------------------------------------------------------------------------------------
+ Finalize Aggregate  (cost=0.00..431.15 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.15 rows=1 width=8)
+         ->  Partial Aggregate  (cost=0.00..431.15 rows=1 width=8)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.15 rows=3334 width=4)
+                     Hash Key: d
+                     ->  Seq Scan on olap_test_single  (cost=0.00..431.08 rows=3334 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.88.0
+(7 rows)
+
+select sum(distinct d) from olap_test_single;
+   sum    
+----------
+ 50005000
 (1 row)
 
 --

@@ -227,13 +227,9 @@ ALTER
  Success:                      
 (1 row)
 11: SELECT pg_ctl(datadir, 'restart') from gp_segment_configuration where role = 'p' and content = 0;
- pg_ctl                                                                                               
-------------------------------------------------------------------------------------------------------
- waiting for server to shut down done
-server stopped
-waiting for server to start done
-server started
- 
+ pg_ctl 
+--------
+ OK     
 (1 row)
 12<:  <... completed>
 ERROR:  Error on receive from seg0 127.0.0.1:7002 pid=25361: server closed the connection unexpectedly

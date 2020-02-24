@@ -3810,7 +3810,7 @@ transformLockingClause(ParseState *pstate, Query *qry, LockingClause *lc,
 			switch (rte->rtekind)
 			{
 				case RTE_RELATION:
-					if (get_rel_relstorage(rte->relid) == RELSTORAGE_EXTERNAL)
+					if (rel_is_external_table(rte->relid))
 						ereport(ERROR,
 								(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 								 errmsg("SELECT FOR UPDATE/SHARE cannot be applied to external tables")));
@@ -3867,7 +3867,7 @@ transformLockingClause(ParseState *pstate, Query *qry, LockingClause *lc,
 					switch (rte->rtekind)
 					{
 						case RTE_RELATION:
-							if (get_rel_relstorage(rte->relid) == RELSTORAGE_EXTERNAL)
+							if (rel_is_external_table(rte->relid))
 								ereport(ERROR,
 										(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 										 errmsg("SELECT FOR UPDATE/SHARE cannot be applied to external tables")));

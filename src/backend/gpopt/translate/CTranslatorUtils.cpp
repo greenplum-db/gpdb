@@ -23,7 +23,6 @@
 #include "access/sysattr.h"
 #include "catalog/pg_type.h"
 #include "catalog/pg_proc.h"
-#include "catalog/pg_trigger.h"
 #include "catalog/pg_statistic.h"
 #include "optimizer/walkers.h"
 #include "utils/rel.h"
@@ -54,7 +53,6 @@
 #include "naucrates/md/CMDIdRelStats.h"
 #include "naucrates/md/IMDAggregate.h"
 #include "naucrates/md/IMDRelation.h"
-#include "naucrates/md/IMDTrigger.h"
 #include "naucrates/md/IMDIndex.h"
 #include "naucrates/md/IMDTypeBool.h"
 #include "naucrates/md/IMDTypeInt2.h"
@@ -2219,10 +2217,12 @@ CTranslatorUtils::CreateDXLProjElemConstNULL
 	}
 	else
 	{
+		const IMDType *md_type = md_accessor->RetrieveType(mdid);
 		datum_dxl = CMDTypeGenericGPDB::CreateDXLDatumVal
 										(
 										mp,
 										mdid,
+										md_type,
 										default_type_modifier,
 										true /*fConstNull*/,
 										NULL, /*pba */
@@ -2409,80 +2409,6 @@ CTranslatorUtils::MapSublinkTypeToDXLSubplan
 	 GPOS_ASSERT(found && "Invalid SubLinkType");
 
         return dxl_subplan_type;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorUtils::RelHasTriggers
-//
-//	@doc:
-//		Check whether there are triggers for the given operation on
-//		the given relation
-//
-//---------------------------------------------------------------------------
-BOOL
-CTranslatorUtils::RelHasTriggers
-	(
-	CMemoryPool *mp,
-	CMDAccessor *md_accessor,
-	const IMDRelation *rel,
-	const EdxlDmlType dml_type_dxl
-	)
-{
-	const ULONG num_triggers = rel->TriggerCount();
-	for (ULONG ul = 0; ul < num_triggers; ul++)
-	{
-		if (IsApplicableTrigger(md_accessor, rel->TriggerMDidAt(ul), dml_type_dxl))
-		{
-			return true;
-		}
-	}
-
-	// if table is partitioned, check for triggers on child partitions as well
-	INT type = 0;
-	if (Edxldmlinsert == dml_type_dxl)
-	{
-		type = TRIGGER_TYPE_INSERT;
-	}
-	else if (Edxldmldelete == dml_type_dxl)
-	{
-		type = TRIGGER_TYPE_DELETE;
-	}
-	else
-	{
-		GPOS_ASSERT(Edxldmlupdate == dml_type_dxl);
-		type = TRIGGER_TYPE_UPDATE;
-	}
-
-	OID rel_oid = CMDIdGPDB::CastMdid(rel->MDId())->Oid();
-	return gpdb::ChildPartHasTriggers(rel_oid, type);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorUtils::IsApplicableTrigger
-//
-//	@doc:
-//		Check whether the given trigger is applicable to the given DML operation
-//
-//---------------------------------------------------------------------------
-BOOL
-CTranslatorUtils::IsApplicableTrigger
-	(
-	CMDAccessor *md_accessor,
-	IMDId *trigger_mdid,
-	const EdxlDmlType dml_type_dxl
-	)
-{
-	const IMDTrigger *trigger = md_accessor->RetrieveTrigger(trigger_mdid);
-	if (!trigger->IsEnabled())
-	{
-		return false;
-	}
-
-	return ((Edxldmlinsert == dml_type_dxl && trigger->IsInsert()) ||
-			(Edxldmldelete == dml_type_dxl && trigger->IsDelete()) ||
-			(Edxldmlupdate == dml_type_dxl && trigger->IsUpdate()));
 }
 
 //---------------------------------------------------------------------------

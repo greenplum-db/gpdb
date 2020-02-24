@@ -250,7 +250,7 @@ add_paths_to_joinrel(PlannerInfo *root,
 	 * before being joined.  As above, disregard enable_hashjoin for full
 	 * joins, because there may be no other alternative.
 	 */
-	if (root->config->enable_hashjoin || jointype == JOIN_FULL)
+	if (enable_hashjoin || jointype == JOIN_FULL)
 		hash_inner_and_outer(root, joinrel, outerrel, innerrel,
 							 jointype, &extra);
 

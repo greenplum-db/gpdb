@@ -80,6 +80,7 @@ extern ForeignDataWrapper *GetForeignDataWrapper(Oid fdwid);
 extern ForeignDataWrapper *GetForeignDataWrapperByName(const char *name,
 							bool missing_ok);
 extern ForeignTable *GetForeignTable(Oid relid);
+extern bool rel_is_external_table(Oid relid);
 
 extern List *GetForeignColumnOptions(Oid relid, AttrNumber attnum);
 

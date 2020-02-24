@@ -318,8 +318,6 @@ ExecEndDynamicIndexScan(DynamicIndexScanState *node)
 		node->shouldCallHashSeqTerm = false;
 	}
 
-	EndPlanStateGpmonPkt(&node->ss.ps);
-
 	MemoryContextDelete(node->partitionMemoryContext);
 }
 
@@ -344,8 +342,6 @@ ExecReScanDynamicIndex(DynamicIndexScanState *node)
 
 	/* Force reloading the hash table */
 	node->pidxIndex = NULL;
-
-	CheckSendPlanStateGpmonPkt(&node->ss.ps);
 }
 
 

@@ -790,8 +790,6 @@ ExecEndIndexScan(IndexScanState *node)
 	 * close the heap relation.
 	 */
 	ExecCloseScanRelation(relation);
-
-	EndPlanStateGpmonPkt(&node->ss.ps);
 }
 
 /* ----------------------------------------------------------------

@@ -1206,7 +1206,7 @@ CREATE_QD_DB () {
 		LC_ALL_SETTINGS=" $LC_COLLATE_SETTING $LC_CTYPE_SETTING $LC_MESSAGES_SETTING $LC_MONETARY_SETTING $LC_NUMERIC_SETTING $LC_TIME_SETTING"
 
 
-		# build initdb command, capturing output in ${GP_DIR}.initdb
+		# build initdb command
 		cmd="$INITDB"
 		cmd="$cmd -E $ENCODING"
 		cmd="$cmd -D $GP_DIR"
@@ -1217,17 +1217,10 @@ CREATE_QD_DB () {
 		if [ x"$HEAP_CHECKSUM" == x"on" ]; then
 			cmd="$cmd --data-checksums"
 		fi
-		cmd="$cmd --backend_output=$GP_DIR.initdb"
-
 		LOG_MSG "[INFO]:-Commencing local $cmd"
 		$cmd >> $LOG_FILE 2>&1
 		RETVAL=$?
 
-		# if there was an error, copy ${GP_DIR}.initdb to the log
-		if [ $RETVAL -ne 0 ]; then
-		    $CAT ${GP_DIR}.initdb >> $LOG_FILE
-		fi    
-		$RM -f ${GP_DIR}.initdb
 		if [ $RETVAL -ne 0 ]; then
 		    ERROR_EXIT "[FATAL]:- Command $cmd failed with error status $RETVAL, see log file $LOG_FILE for more detail"
 		fi
@@ -1272,9 +1265,6 @@ CREATE_QD_DB () {
 		BUILD_MASTER_PG_HBA_FILE $GP_DIR $HBA_HOSTNAMES
 		LOG_MSG "[INFO]:-Creating gpssh configuration file"
 		BUILD_GPSSH_CONF $GP_DIR
-		LOG_MSG "[INFO]:-Creating perfmon directories and configuration file"
-		BUILD_PERFMON $GP_DIR
-		ERROR_CHK $? "create perfmon directories and configuration file" 1
 		LOG_MSG "[INFO]:-Starting the Master in admin mode" 1
 		export PGPORT=$GP_PORT;$PG_CTL -w -l $GP_DIR/pg_log/startup.log -D $GP_DIR -o "-i -p $GP_PORT -c gp_role=utility \
 		-m" start >> /dev/null 2>&1

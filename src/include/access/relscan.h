@@ -153,7 +153,6 @@ typedef struct FileScanDescData
 	Oid			in_func_oid;
 	
 	/* current file scan state */
-	bool		fs_inited;		/* false = scan not init'd yet */
 	TupleDesc	fs_tupDesc;
 	HeapTupleData fs_ctup;		/* current tuple in scan, if any */
 

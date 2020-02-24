@@ -454,6 +454,68 @@ old_GPDB5_check_for_unsupported_distribution_key_data_types(void)
 		check_ok();
 }
 
+/*
+ * old_GPDB6_check_for_unsupported_distribution_key_data_types()
+ *
+ *  Support for password_hash_algorithm='sha-256' was removed in GPDB 7. Check if
+ *  any roles have SHA-256 password hashes.
+ */
+void
+old_GPDB6_check_for_unsupported_sha256_password_hashes(void)
+{
+	FILE	   *script = NULL;
+	bool		found = false;
+	char		output_path[MAXPGPATH];
+
+	prep_status("Checking for SHA-256 hashed passwords");
+
+	snprintf(output_path, sizeof(output_path), "roles_using_sha256_passwords.txt");
+
+	/* It's enough to check this in one database, pg_authid is a shared catalog. */
+	{
+		PGresult   *res;
+		int			ntups;
+		int			rowno;
+		int			i_rolname;
+		DbInfo	   *active_db = &old_cluster.dbarr.dbs[0];
+		PGconn	   *conn = connectToServer(&old_cluster, active_db->db_name);
+
+		res = executeQueryOrDie(conn,
+								"SELECT rolname FROM pg_catalog.pg_authid "
+								"WHERE rolpassword LIKE 'sha256%%'");
+
+		ntups = PQntuples(res);
+		i_rolname = PQfnumber(res, "rolname");
+		for (rowno = 0; rowno < ntups; rowno++)
+		{
+			found = true;
+			if (script == NULL && (script = fopen_priv(output_path, "w")) == NULL)
+				pg_fatal("Could not open file \"%s\": %s\n",
+						 output_path, getErrorText());
+			fprintf(script, "  %s\n",
+					PQgetvalue(res, rowno, i_rolname));
+		}
+
+		PQclear(res);
+
+		PQfinish(conn);
+	}
+
+	if (script)
+		fclose(script);
+
+	if (found)
+	{
+		pg_log(PG_REPORT, "fatal\n");
+		pg_fatal("Your installation contains roles with SHA-256 hashed passwords. Using\n"
+				 "SHA-256 for password hashes is no longer supported. You can use\n"
+				 "ALTER ROLE <role name> WITH PASSWORD NULL as superuser to clear passwords,\n"
+				 "and restart the upgrade.  A list of the problem roles is in the file:\n"
+				 "    %s\n\n", output_path);
+	}
+	else
+		check_ok();
+}
 
 /*
  * new_gpdb_invalidate_bitmap_indexes()

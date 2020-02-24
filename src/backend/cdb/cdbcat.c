@@ -33,6 +33,7 @@
 #include "cdb/cdbhash.h"
 #include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"		/* Gp_role */
+#include "foreign/foreign.h"
 #include "utils/array.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
@@ -287,7 +288,7 @@ GpPolicyFetch(Oid tbloid)
 	 * pg_exttable.location. See if it's "MASTER_ONLY". Other types of
 	 * external tables have a gp_distribution_policy row, like normal tables.
 	 */
-	if (get_rel_relstorage(tbloid) == RELSTORAGE_EXTERNAL)
+	if (rel_is_external_table(tbloid))
 	{
 		/*
 		 * An external table really should have a pg_exttable entry, but

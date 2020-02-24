@@ -84,9 +84,6 @@
 
 #include "utils/logtape.h"
 
-#include "cdb/cdbvars.h"                /* currentSliceId */
-
-
 /* A logical tape block, log tape blocks are organized into doulbe linked lists */
 #define LOGTAPE_BLK_PAYLOAD_SIZE ((BLCKSZ - sizeof(long)*2 - sizeof(int) ))
 typedef struct LogicalTapeBlock

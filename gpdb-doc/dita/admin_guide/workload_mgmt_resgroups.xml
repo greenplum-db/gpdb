@@ -50,13 +50,14 @@
           <li id="im16806f">
             <xref href="#topic10" type="topic" format="dita"/>
           </li>
+          <li><xref href="#topic_jlz_hzg_pkb" format="dita"/></li>
           <li id="im16806g">
             <xref href="#topic17" type="topic" format="dita"/>
           </li>
+        </ul></li>
           <li id="im16806h">
             <xref href="#topic22" type="topic" format="dita"/>
           </li>
-        </ul></li>
       <li>
         <xref href="#topic777999" type="topic" format="dita"/>
       </li>
@@ -228,6 +229,14 @@
           </tbody>
         </tgroup>
       </table>
+      <p>
+        <note>For queries managed by resource groups that are configured to use the
+            <codeph>vmtracker</codeph> memory auditor, Greenplum Database supports the automatic
+          termination of queries based on the amount of memory the queries are using. See the server
+          configuration parameter <codeph><xref
+              href="../ref_guide/config_params/guc-list.xml#runaway_detector_activation_percent"
+              type="section"/></codeph>. </note>
+      </p>
     </body>
   </topic>
   <topic id="topic8339717179" xml:lang="en">
@@ -547,7 +556,7 @@ SET statement_mem='10 MB';</codeblock></p>
     </body>
   </topic>
   <topic id="topic71717999" xml:lang="en">
-    <title>Using Resource Groups</title>
+    <title>Configuring and Using Resource Groups</title>
     <body>
       <note type="important">Significant Greenplum Database performance degradation has been
         observed when enabling resource group-based workload management on RedHat 6.x and CentOS 6.x
@@ -820,6 +829,24 @@ gpstart
       <p>
         <codeblock>=# DROP RESOURCE GROUP <i>exec</i>; </codeblock>
       </p>
+    </body>
+  </topic>
+  <topic id="topic_jlz_hzg_pkb">
+    <title>Configuring Automatic Query Termination</title>
+    <body>
+      <p>When resource groups have a global shared memory pool, the server configuration parameter
+            <codeph><xref
+            href="../ref_guide/config_params/guc-list.xml#runaway_detector_activation_percent"
+            type="section"/></codeph> sets the percent of utilized global shared memory that
+        triggers the termination of queries that are managed by resource groups that are configured
+        to use the <codeph>vmtracker</codeph> memory auditor, such as <codeph>admin_group</codeph>
+        and <codeph>default_group</codeph>. </p>
+      <p>Resource groups have a global shared memory pool when the sum of the
+          <codeph>MEMORY_LIMIT</codeph> attribute values configured for all resource groups is less
+        than 100. For example, if you have 3 resource groups configured with
+          <codeph>MEMORY_LIMIT</codeph> values of 10 , 20, and 30, then global shared memory is 40%
+        = 100% - (10% + 20% + 30%). </p>
+      <p>For information about global shared memory, see <xref href="#topic833glob"/>.</p>
     </body>
   </topic>
   <topic id="topic17" xml:lang="en">

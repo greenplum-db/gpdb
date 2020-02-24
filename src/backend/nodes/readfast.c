@@ -1417,22 +1417,6 @@ _readOidAssignment(void)
 	READ_DONE();
 }
 
-/*
- * _readRepeat
- */
-static Repeat *
-_readRepeat(void)
-{
-	READ_LOCALS(Repeat);
-
-	ReadCommonPlan(&local_node->plan);
-
-	READ_NODE_FIELD(repeatCountExpr);
-	READ_UINT64_FIELD(grouping);
-
-	READ_DONE();
-}
-
 static Sequence *
 _readSequence(void)
 {
@@ -1455,14 +1439,12 @@ _readDynamicSeqScan(void)
 }
 
 /*
- * _readExternalScan
+ * _readExternalScanInfo
  */
-static ExternalScan *
-_readExternalScan(void)
+static ExternalScanInfo *
+_readExternalScanInfo(void)
 {
-	READ_LOCALS(ExternalScan);
-
-	ReadCommonScan(&local_node->scan);
+	READ_LOCALS(ExternalScanInfo);
 
 	READ_NODE_FIELD(uriList);
 	READ_STRING_FIELD(fmtOptString);
@@ -1570,24 +1552,6 @@ _readSplitUpdate(void)
 	READ_INT_FIELD(numHashAttrs);
 	READ_ATTRNUMBER_ARRAY(hashAttnos, local_node->numHashAttrs);
 	READ_OID_ARRAY(hashFuncs, local_node->numHashAttrs);
-
-	ReadCommonPlan(&local_node->plan);
-
-	READ_DONE();
-}
-
-/*
- * _readRowTrigger
- */
-static RowTrigger *
-_readRowTrigger(void)
-{
-	READ_LOCALS(RowTrigger);
-
-	READ_INT_FIELD(relid);
-	READ_INT_FIELD(eventFlags);
-	READ_NODE_FIELD(oldValuesColIdx);
-	READ_NODE_FIELD(newValuesColIdx);
 
 	ReadCommonPlan(&local_node->plan);
 
@@ -2086,6 +2050,13 @@ _readLockingClause(void)
 	READ_DONE();
 }
 
+static AggExprId *
+_readAggExprId(void)
+{
+	READ_LOCALS(AggExprId);
+	READ_DONE();
+}
+
 static Node *
 _readValue(NodeTag nt)
 {
@@ -2238,9 +2209,6 @@ readNodeBinary(void)
 			case T_Result:
 				return_value = _readResult();
 				break;
-			case T_Repeat:
-				return_value = _readRepeat();
-				break;
 			case T_Append:
 				return_value = _readAppend();
 				break;
@@ -2271,8 +2239,8 @@ readNodeBinary(void)
 			case T_DynamicSeqScan:
 				return_value = _readDynamicSeqScan();
 				break;
-			case T_ExternalScan:
-				return_value = _readExternalScan();
+			case T_ExternalScanInfo:
+				return_value = _readExternalScanInfo();
 				break;
 			case T_IndexScan:
 				return_value = _readIndexScan();
@@ -2337,6 +2305,9 @@ readNodeBinary(void)
 			case T_Agg:
 				return_value = _readAgg();
 				break;
+			case T_TupleSplit:
+				return_value = _readTupleSplit();
+				break;
 			case T_WindowAgg:
 				return_value = _readWindowAgg();
 				break;
@@ -2378,9 +2349,6 @@ readNodeBinary(void)
 				break;
 			case T_SplitUpdate:
 				return_value = _readSplitUpdate();
-				break;
-			case T_RowTrigger:
-				return_value = _readRowTrigger();
 				break;
 			case T_AssertOp:
 				return_value = _readAssertOp();
@@ -3066,7 +3034,9 @@ readNodeBinary(void)
 			case T_LockingClause:
 				return_value = _readLockingClause();
 				break;
-
+			case T_AggExprId:
+				return_value = _readAggExprId();
+				break;
 			default:
 				return_value = NULL; /* keep the compiler silent */
 				elog(ERROR, "could not deserialize unrecognized node type: %d",

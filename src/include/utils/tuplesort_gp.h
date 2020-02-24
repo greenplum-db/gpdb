@@ -27,7 +27,6 @@
 #include "utils/tuplesort.h"
 #include "nodes/execnodes.h"
 #include "utils/workfile_mgr.h"
-#include "gpmon/gpmon.h"
 
 /*
  *-------------------------------------------------------------------------
@@ -90,15 +89,6 @@ extern void tuplesort_restorepos_pos(struct Tuplesortstate *state, TuplesortPos 
 extern void tuplesort_set_instrument(struct Tuplesortstate *state,
                          struct Instrumentation    *instrument,
                          struct StringInfoData     *explainbuf);
-
-/* Gpmon */
-extern void 
-tuplesort_set_gpmon(struct Tuplesortstate *state,
-					gpmon_packet_t *gpmon_pkt,
-					int *gpmon_tick);
-
-extern void 
-tuplesort_checksend_gpmonpkt(gpmon_packet_t *pkt, int *tick);
 
 #endif   /* TUPLESORT_GP_H */
 

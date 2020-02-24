@@ -261,7 +261,6 @@ static bool find_unaggregated_cols_walker(Node *node, Bitmapset **colnos);
 static TupleTableSlot *agg_retrieve_direct(AggState *aggstate);
 static void agg_fill_hash_table(AggState *aggstate);
 static TupleTableSlot *agg_retrieve_hash_table(AggState *aggstate);
-static void ExecAggExplainEnd(PlanState *planstate, struct StringInfoData *buf);
 static void ExecEagerFreeAgg(AggState *node);
 static TupleTableSlot *agg_retrieve_hash_table_internal(AggState *aggstate);
 static void build_pertrans_for_aggref(AggStatePerTrans pertrans,
@@ -752,6 +751,18 @@ advance_aggregates(AggState *aggstate, AggStatePerGroup pergroup)
 		/* Evaluate the current input expressions for this aggregate */
 		slot = ExecProject(pertrans->evalproj, NULL);
 		slot_getallattrs(slot);
+
+		/* if AggExprId is in input, trans function bitmap should match */
+		if (aggstate->AggExprId_AttrNum > 0)
+		{
+			AttrNumber exprid;
+			Datum *input_vtup = slot_get_values(aggstate->tmpcontext->ecxt_outertuple);
+
+			exprid = input_vtup[aggstate->AggExprId_AttrNum - 1];
+
+			if (exprid != pertrans->agg_expr_id)
+				continue;
+		}
 
 		if (pertrans->numSortCols > 0)
 		{
@@ -1354,7 +1365,7 @@ finalize_aggregate(AggState *aggstate,
 	 * If result is pass-by-ref, make sure it is in the right context.
 	 */
 	if (!peragg->resulttypeByVal && !*resultIsNull &&
-		!MemoryContextContainsGenericAllocation(CurrentMemoryContext,
+		!MemoryContextContains(CurrentMemoryContext,
 							   DatumGetPointer(*resultVal)))
 		*resultVal = datumCopy(*resultVal,
 							   peragg->resulttypeByVal,
@@ -1411,7 +1422,7 @@ finalize_partialaggregate(AggState *aggstate,
 
 	/* If result is pass-by-ref, make sure it is in the right context. */
 	if (!peragg->resulttypeByVal && !*resultIsNull &&
-		!MemoryContextContainsGenericAllocation(CurrentMemoryContext,
+		!MemoryContextContains(CurrentMemoryContext,
 							   DatumGetPointer(*resultVal)))
 		*resultVal = datumCopy(*resultVal,
 							   peragg->resulttypeByVal,
@@ -2012,6 +2023,8 @@ agg_retrieve_direct(AggState *aggstate)
 				 */
 				for (;;)
 				{
+					slot_getallattrs(tmpcontext->ecxt_outertuple);
+
 					if (DO_AGGSPLIT_COMBINE(aggstate->aggsplit))
 						combine_aggregates(aggstate, pergroup);
 					else
@@ -2234,7 +2247,7 @@ agg_retrieve_hash_table_internal(AggState *aggstate)
 		 * for it, so that it can be used in ExecProject.
 		 */
 		ExecStoreMinimalTuple((MemTuple)entry->tuple_and_aggs, firstSlot, false);
-		pergroup = (AggStatePerGroup)((char *)entry->tuple_and_aggs + 
+		pergroup = (AggStatePerGroup)((char *)entry->tuple_and_aggs +
 					      MAXALIGN(memtuple_get_size((MemTuple)entry->tuple_and_aggs)));
 
 		finalize_aggregates(aggstate, peragg, pergroup, 0);
@@ -2388,11 +2401,7 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 	 */
 	if (estate->es_instrument && (estate->es_instrument & INSTRUMENT_CDB))
 	{
-		/* Allocate string buffer. */
 		aggstate->ss.ps.cdbexplainbuf = makeStringInfo();
-
-		/* Request a callback at end of query. */
-		aggstate->ss.ps.cdbexplainfun = ExecAggExplainEnd;
 	}
 
 	/*
@@ -2907,6 +2916,63 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 	aggstate->mem_manager.free = cxt_free;
 	aggstate->mem_manager.manager = aggstate;
 	aggstate->mem_manager.realloc_ratio = 1;
+
+	aggstate->AggExprId_AttrNum = node->agg_expr_id;
+
+	/* > 0: there is a TupleSplit node under agg */
+	if (aggstate->AggExprId_AttrNum > 0)
+	{
+		List *allTupleSplit = extract_nodes_plan((Plan*) node, T_TupleSplit, false);
+		Assert(list_length(allTupleSplit) == 1);
+
+		/* fetch TupleSplit provided bitmap sets for each trans function */
+		TupleSplit *tupleSplit = linitial(allTupleSplit);
+		Bitmapset **dqa_args_attr_num = palloc0(sizeof(Bitmapset *) * tupleSplit->numDisDQAs);
+
+		/* create bitmap set for each dqa's aggs */
+		for (i = 0; i < tupleSplit->numDisDQAs; i++)
+		{
+			Bitmapset *bms = tupleSplit->dqa_args_id_bms[i];
+
+			j = -1;
+			while ((j = bms_next_member(bms, j)) >= 0)
+			{
+				TargetEntry *te = get_sortgroupref_tle((Index)j, tupleSplit->plan.targetlist);
+				dqa_args_attr_num[i] = bms_add_member(dqa_args_attr_num[i], te->resno);
+			}
+		}
+
+		for (i = 0; i < aggstate->numtrans; i++)
+		{
+			AggStatePerTrans pertrans = &aggstate->pertrans[i];
+			Bitmapset *args_attr_num = NULL;
+
+			foreach(l, pertrans->args)
+			{
+				GenericExprState *gExpr = (GenericExprState *)lfirst(l);
+
+				/* All exprs should be calculated before TupleSplit */
+				Assert(IsA(gExpr->arg->expr,Var));
+
+				Var *var = (Var *)gExpr->arg->expr;
+
+				args_attr_num =
+					bms_add_member(args_attr_num, var->varattno);
+			}
+
+			for (j = 0; j < tupleSplit->numDisDQAs; j++)
+			{
+				/* set trans agg_expr_id if trans args bitmapset matched */
+				if (bms_equal(args_attr_num, dqa_args_attr_num[j]))
+				{
+					pertrans->agg_expr_id = j;
+					break;
+				}
+			}
+
+			bms_free(args_attr_num);
+		}
+	}
 
 	return aggstate;
 }
@@ -3424,8 +3490,6 @@ ExecEndAgg(AggState *node)
 
 	outerPlan = outerPlanState(node);
 	ExecEndNode(outerPlan);
-
-	EndPlanStateGpmonPkt(&node->ss.ps);
 }
 
 /*
@@ -3469,29 +3533,6 @@ ExecReScanAgg(AggState *node)
 	if (node->ss.ps.lefttree->chgParam == NULL)
 		ExecReScan(node->ss.ps.lefttree);
 }
-
-
-/***********************************************************************
- * API exposed to aggregate functions
- ***********************************************************************/
-
-
-/*
- * ExecAggExplainEnd
- *		Called before ExecutorEnd to finish EXPLAIN ANALYZE reporting.
- */
-void
-ExecAggExplainEnd(PlanState *planstate, struct StringInfoData *buf)
-{
-	//AggState   *aggstate = (AggState *) planstate;
-
-	/* Report executor memory used by our memory context. */
-
-	// FIXME: This isn't so simple anymore, each grouping set has its
-	// own context. Sum them all up?
-	//planstate->instrument->execmemused +=
-	//	(double) MemoryContextGetPeakSpace(aggstate->aggcontext);
-}	/* ExecAggExplainEnd */
 
 
 /***********************************************************************

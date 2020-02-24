@@ -232,7 +232,7 @@ def scan_datetime(string, pos=0, endpos=None):
         yyyy, m, d, mm, dd = datematch.groups()
         if m:
             # delimited format
-            if len(d) <> 2 and len(d) <> 1:
+            if len(d) != 2 and len(d) != 1:
                 raise ValueError, 'day should have 1 or 2 digits'
             year, month, day = int(yyyy), int(m), int(d)
             timepat = _colontimepat
@@ -253,9 +253,9 @@ def scan_datetime(string, pos=0, endpos=None):
             hh, mm, ss, frac = timematch.groups()
             if len(hh) > 2:
                 raise ValueError, 'hour should have 1 or 2 digits'
-            if len(mm) <> 2:
+            if len(mm) != 2:
                 raise ValueError, 'minute should have 2 digits'
-            if ss is not None and len(ss) <> 2:
+            if ss is not None and len(ss) != 2:
                 raise ValueError, 'second should have 2 digits'
         else:
             # numeric format

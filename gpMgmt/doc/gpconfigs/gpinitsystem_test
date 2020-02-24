@@ -63,5 +63,5 @@ declare -a MIRROR_DATA_DIRECTORY=(/media/ephemeral1/mirror /media/ephemeral1/mir
 #DATABASE_NAME=name_of_database
 
 #### Specify the location of the host address file here instead of
-#### with the the -h option of gpinitsystem.
+#### with the -h option of gpinitsystem.
 MACHINE_LIST_FILE=hostfile_gpinitsystem

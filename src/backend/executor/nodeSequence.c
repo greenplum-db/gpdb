@@ -128,8 +128,6 @@ ExecEndSequence(SequenceState *node)
 		Assert(node->subplans[no] != NULL);
 		ExecEndNode(node->subplans[no]);
 	}
-
-	EndPlanStateGpmonPkt(&node->ps);
 }
 
 void

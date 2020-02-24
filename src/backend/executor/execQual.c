@@ -220,6 +220,9 @@ static Datum ExecEvalPartListRuleExpr(PartListRuleExprState *exprstate,
 static Datum ExecEvalPartListNullTestExpr(PartListNullTestExprState *exprstate,
 							ExprContext *econtext,
 							bool *isNull, ExprDoneCond *isDone);
+static Datum ExecEvalAggExprId(AggExprIdState *exprstate,
+							   ExprContext *econtext,
+							   bool *isNull, ExprDoneCond *isDone);
 
 static bool ExecIsExprUnsafeToConst_walker(Node *node, void *context);
 static bool ExecIsExprUnsafeToConst(Node *node);
@@ -5130,6 +5133,34 @@ static Datum ExecEvalPartListNullTestExpr(PartListNullTestExprState *exprstate,
 }
 
 /* ----------------------------------------------------------------
+ *		ExecEvalAggExprId
+ *
+ *		Evaluate the AggExprId, which is zero indexed, indicates which DQA is
+ *		this tuple for, in the tuple split case.
+ * ----------------------------------------------------------------
+ */
+static Datum ExecEvalAggExprId(AggExprIdState *exprstate,
+							   ExprContext *econtext,
+							   bool *isNull, ExprDoneCond *isDone)
+{
+	Assert(NULL != exprstate);
+	Assert(NULL != isNull);
+	if (IsA(exprstate->parent, TupleSplitState))
+	{
+		TupleSplitState *tsState = (TupleSplitState *)exprstate->parent;
+
+		*isNull = false;
+		*isDone = ExprSingleResult;
+
+		return Int32GetDatum(tsState->currentExprId);
+	}
+
+	*isNull = true;
+	*isDone = ExprSingleResult;
+	return Int32GetDatum(0);
+}
+
+/* ----------------------------------------------------------------
  *		ExecEvalCoerceViaIO
  *
  *		Evaluate a CoerceViaIO node.
@@ -6187,6 +6218,17 @@ ExecInitExpr(Expr *node, PlanState *parent)
 			}
 			break;
 
+		case T_AggExprId:
+			{
+				AggExprIdState *exprstate = makeNode(AggExprIdState);
+
+				exprstate->xprstate.evalfunc = (ExprStateEvalFunc) ExecEvalAggExprId;
+				exprstate->parent = parent;
+
+				state = (ExprState *) exprstate;
+			}
+			break;
+
 		default:
 			elog(ERROR, "unrecognized node type: %d",
 				 (int) nodeTag(node));
@@ -6764,11 +6806,12 @@ neededColumnContextWalker(Node *node, neededColumnContext *c)
 	{
 		Var *var = (Var *)node;
 
-		if (var->varattno > 0)
-		{
-			Assert(var->varattno <= c->n);
+		if (IS_SPECIAL_VARNO(var->varno))
+			return false;
+
+		if (var->varattno > 0 && var->varattno <= c->n)
 			c->mask[var->varattno - 1] = true;
-		}
+
 		/*
 		 * If all attributes are included,
 		 * set all entries in mask to true.

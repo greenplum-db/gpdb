@@ -41,6 +41,7 @@ class GpCheckCatTestCase(GpTestCase):
                                ('arbitrary_catalog_table', ['pkey1', 'pkey2'], [('r1', 'r2'), ('r3', 'r4')])]
         self.foreign_key_check.runCheck.return_value = issues_list
 
+        self.subject.GV.master_dbid = 0
         self.subject.GV.cfg = {0:dict(hostname='host0', port=123, id=1, address='123', datadir='dir', content=-1, dbid=0),
                                1:dict(hostname='host1', port=123, id=1, address='123', datadir='dir', content=1, dbid=1)}
         self.subject.GV.checkStatus = True

@@ -156,7 +156,7 @@ ALTER EXTERNAL TABLE "dE_external_table" OWNER TO test_psql_de_role;
                                         List of relations
       Schema      |       Name        |     Type      |       Owner       |       Storage        
 ------------------+-------------------+---------------+-------------------+----------------------
- test_psql_schema | dE_external_table | table         | test_psql_de_role | external
+ test_psql_schema | dE_external_table | foreign table | test_psql_de_role | foreign
  test_psql_schema | dE_foreign_table  | foreign table | test_psql_de_role | foreign
  test_psql_schema | d_ao              | table         | test_psql_de_role | append only
  test_psql_schema | d_aocs            | table         | test_psql_de_role | append only columnar
@@ -168,7 +168,7 @@ ALTER EXTERNAL TABLE "dE_external_table" OWNER TO test_psql_de_role;
                                                     List of relations
       Schema      |       Name        |     Type      |       Owner       |       Storage        |  Size   | Description 
 ------------------+-------------------+---------------+-------------------+----------------------+---------+-------------
- test_psql_schema | dE_external_table | table         | test_psql_de_role | external             | 0 bytes | 
+ test_psql_schema | dE_external_table | foreign table | test_psql_de_role | foreign              | 0 bytes | 
  test_psql_schema | dE_foreign_table  | foreign table | test_psql_de_role | foreign              | 0 bytes | 
  test_psql_schema | d_ao              | table         | test_psql_de_role | append only          | 128 kB  | 
  test_psql_schema | d_aocs            | table         | test_psql_de_role | append only columnar | 128 kB  | 
@@ -208,7 +208,7 @@ ALTER EXTERNAL TABLE "dE_external_table" OWNER TO test_psql_de_role;
                             List of relations
       Schema      |       Name        |     Type      |       Owner       
 ------------------+-------------------+---------------+-------------------
- test_psql_schema | dE_external_table | table         | test_psql_de_role
+ test_psql_schema | dE_external_table | foreign table | test_psql_de_role
  test_psql_schema | dE_foreign_table  | foreign table | test_psql_de_role
 (2 rows)
 
@@ -216,7 +216,7 @@ ALTER EXTERNAL TABLE "dE_external_table" OWNER TO test_psql_de_role;
                             List of relations
       Schema      |       Name        |     Type      |       Owner       
 ------------------+-------------------+---------------+-------------------
- test_psql_schema | dE_external_table | table         | test_psql_de_role
+ test_psql_schema | dE_external_table | foreign table | test_psql_de_role
  test_psql_schema | dE_foreign_table  | foreign table | test_psql_de_role
 (2 rows)
 

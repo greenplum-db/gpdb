@@ -239,8 +239,6 @@ extern char pkglib_path[];
 extern char postgres_exec_path[];
 #endif
 
-extern PGDLLIMPORT int gpperfmon_port; 
-
 /* for pljava */
 extern PGDLLIMPORT char* pljava_vmoptions;
 extern PGDLLIMPORT char* pljava_classpath;

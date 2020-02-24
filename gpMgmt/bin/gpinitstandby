@@ -509,31 +509,40 @@ def update_pg_hba_conf(options, array):
             index += 1
 
         new_section = ['# standby master host ip addresses\n']
-        for ip in standby_ips:
-            if not options.hba_hostnames:
+
+        def add_entry_to_new_section(values):
+            newline = '\t'.join(values) + '\n'
+            if newline not in pg_hba_conf:
+                new_section.append(newline)
+
+        if not options.hba_hostnames:
+            for ip in standby_ips:
                 cidr_suffix = '/128' if ':' in ip else '/32' # MPP-15889
                 address = ip + cidr_suffix
-            else:
-                address = options.standby_host
-            values = ['host', 'all', current_user, address, 'trust']
+                add_entry_to_new_section(['host', 'all', current_user, address, 'trust'])
+        else:
+            add_entry_to_new_section(['host', 'all', current_user, options.standby_host, 'trust'])
 
-            newline = '\t'.join(values) + '\n'
-            if newline not in pg_hba_conf:
-                new_section.append(newline)
-
-            # new replication requires 'replication' string in database
-            # column to allow walsender connections.  We still keep 'all'
-            # because sometimes it is necessary to connect psql from
-            # standby host.  The host is known as trusted standby master
-            # anyway.
-            values[1] = 'replication'
-            newline = '\t'.join(values) + '\n'
-            if newline not in pg_hba_conf:
-                new_section.append(newline)
+        # new replication requires 'replication' string in database
+        # column to allow walsender connections.  We still keep 'all'
+        # because sometimes it is necessary to connect psql from
+        # standby host.  The host is known as trusted standby master
+        # anyway. Use IfAddrs to correctly get all non-loopback
+        # ipv4 and ipv6 addresses.
+        # Add samehost replication to support single-host development.
+        add_entry_to_new_section(['host', 'replication', current_user, 'samehost', 'trust'])
+        if not options.hba_hostnames:
+            if_addrs = gp.IfAddrs.list_addrs(options.standby_host)
+            for ip in if_addrs:
+                cidr_suffix = '/128' if ':' in ip else '/32'  # MPP-15889
+                address = ip + cidr_suffix
+                add_entry_to_new_section(['host', 'replication', current_user, address, 'trust'])
+        else:
+            add_entry_to_new_section(['host', 'replication', current_user, options.standby_host, 'trust'])
 
         # insert new section
         pg_hba_conf[index:index] = new_section
-        
+
         # write it out
         fp = open(pg_hba_path, 'w')
         fp.writelines(pg_hba_conf)

@@ -352,10 +352,7 @@ heap_create(const char *relname,
 			reltablespace = InvalidOid;
 			break;
 		default:
-			if(relstorage_is_external(relstorage))
-				create_storage = false;
-			else
-				create_storage = true;
+			create_storage = true;
 			break;
 	}
 
@@ -1212,14 +1209,6 @@ AddNewRelationTuple(Relation pg_class_desc,
 			/* The relation is real, but as yet empty */
 			new_rel_reltup->relpages = 0;
 			new_rel_reltup->reltuples = 0;
-
-			/* estimated stats for external tables */
-			/* NOTE: look at cdb_estimate_rel_size() if changing these values */
-			if(relstorage_is_external(relstorage))
-			{
-				new_rel_reltup->relpages = 1000;
-				new_rel_reltup->reltuples = 1000000;
-			}
 			new_rel_reltup->relallvisible = 0;
 			break;
 		case RELKIND_SEQUENCE:
@@ -1804,7 +1793,8 @@ heap_create_with_catalog(const char *relname,
 	{
 		MemoryContext oldcontext;
 
-		Assert(relkind == RELKIND_RELATION || relkind == RELKIND_MATVIEW);
+		Assert(relkind == RELKIND_RELATION || relkind == RELKIND_MATVIEW ||
+			   relkind == RELKIND_FOREIGN_TABLE);
 
 		oldcontext = MemoryContextSwitchTo(GetMemoryChunkContext(new_rel_desc));
 		new_rel_desc->rd_cdbpolicy = GpPolicyCopy(policy);
@@ -2366,7 +2356,7 @@ heap_drop_with_catalog(Oid relid)
 	relkind = rel->rd_rel->relkind;
 
 	is_appendonly_rel = RelationIsAppendOptimized(rel);
-	is_external_rel = RelationIsExternal(rel);
+	is_external_rel = rel_is_external_table(relid);
 
 	/*
 	 * There can no longer be anyone *else* touching the relation, but we
@@ -2408,8 +2398,7 @@ heap_drop_with_catalog(Oid relid)
 	 */
 	if (relkind != RELKIND_VIEW &&
 		relkind != RELKIND_COMPOSITE_TYPE &&
-		relkind != RELKIND_FOREIGN_TABLE &&
-		!RelationIsExternal(rel))
+		relkind != RELKIND_FOREIGN_TABLE)
 	{
 		RelationDropStorage(rel);
 	}
@@ -2484,7 +2473,7 @@ heap_drop_with_catalog(Oid relid)
 	/*
 	 * Remove distribution policy, if any.
  	 */
-	if (relkind == RELKIND_RELATION || relkind == RELKIND_MATVIEW)
+	if (relkind == RELKIND_RELATION || relkind == RELKIND_MATVIEW || relkind == RELKIND_FOREIGN_TABLE)
 		GpPolicyRemove(relid);
 
 	/*
@@ -3727,8 +3716,7 @@ should_have_valid_relfrozenxid(char relkind, char relstorage,
 	switch (relkind)
 	{
 		case RELKIND_RELATION:
-			if (relstorage == RELSTORAGE_EXTERNAL ||
-				relstorage == RELSTORAGE_FOREIGN  ||
+			if (relstorage == RELSTORAGE_FOREIGN  ||
 				relstorage == RELSTORAGE_VIRTUAL ||
 				relstorage == RELSTORAGE_AOROWS ||
 				relstorage == RELSTORAGE_AOCOLS)

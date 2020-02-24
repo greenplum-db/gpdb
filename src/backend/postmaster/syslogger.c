@@ -70,7 +70,6 @@
 bool		Logging_collector = false;
 int			Log_RotationAge = HOURS_PER_DAY * MINS_PER_HOUR;
 int			Log_RotationSize = 10 * 1024;
-int			Alert_Log_RotationSize = 1024;
 char	   *Log_directory = NULL;
 char	   *Log_filename = NULL;
 bool		Log_truncate_on_rotation = false;
@@ -95,15 +94,6 @@ static FILE *csvlogFile = NULL;
 NON_EXEC_STATIC pg_time_t first_syslogger_file_time = 0;
 static char *last_file_name = NULL;
 static char *last_csv_file_name = NULL;
-// Store only those logs the severe of that are at least WARNING level to
-// speed up the access for it when log files become very huge.
-static FILE *alertLogFile = NULL;
-// The directory used by gpperfmon where we store alert logs.
-static const char *gp_perf_mon_directory = "gpperfmon/logs";
-static const char *alert_file_pattern = "gpdb-alert-%Y-%m-%d_%H%M%S.csv";
-static char *alert_last_file_name = NULL;
-static bool alert_log_level_opened = false;
-static bool write_to_alert_log = false;
 
 /*
  * Buffers for saving partial messages from different backends.
@@ -157,7 +147,6 @@ static void syslogger_flush_chunks(void);
  */
 static volatile sig_atomic_t got_SIGHUP = false;
 static volatile sig_atomic_t rotation_requested = false;
-static volatile sig_atomic_t alert_rotation_requested = false;
 
 
 /* Local subroutines */
@@ -405,7 +394,6 @@ SysLoggerMain(int argc, char *argv[])
 	{
 		bool		time_based_rotation = false;
 		int			size_rotation_for = 0;
-		bool		size_rotation_for_alert = false;
 		long		cur_timeout;
 		int			cur_flags;
 
@@ -486,10 +474,6 @@ SysLoggerMain(int argc, char *argv[])
 			if (now >= next_rotation_time)
 			{
 				rotation_requested = time_based_rotation = true;
-				if (alert_log_level_opened)
-				{
-					alert_rotation_requested = true;
-				}
 			}
 		}
 
@@ -509,18 +493,7 @@ SysLoggerMain(int argc, char *argv[])
 			}
 		}
 
-		if (!alert_rotation_requested && alert_log_level_opened && alertLogFile)
-		{
-			/* Do a rotation if file is too big */
-			if (ftell(alertLogFile) >= Alert_Log_RotationSize * 1024L)
-			{
-				alert_rotation_requested = true;
-				size_rotation_for_alert = true;
-			}
-		}
-
-		all_rotations_occurred = rotation_requested ||
-								 (alert_log_level_opened && alert_rotation_requested);
+		all_rotations_occurred = rotation_requested;
 
 		if (rotation_requested)
 		{
@@ -541,15 +514,6 @@ SysLoggerMain(int argc, char *argv[])
 				logfile_rotate(time_based_rotation, (size_rotation_for & LOG_DESTINATION_CSVLOG) != 0,
 							   ".csv", Log_directory, Log_filename,
 							   &csvlogFile, &last_csv_file_name);
-		}
-
-		if (alert_log_level_opened && alert_rotation_requested)
-		{
-			alert_rotation_requested = false;
-			all_rotations_occurred &=
-				logfile_rotate(time_based_rotation, size_rotation_for_alert,
-							   NULL, gp_perf_mon_directory, alert_file_pattern,
-							   &alertLogFile, &alert_last_file_name);
 		}
 
 		/*
@@ -799,37 +763,6 @@ SysLoggerMain(int argc, char *argv[])
 	}
 }
 
-static void
-open_alert_log_file()
-{
-	if (IsUnderMasterDispatchMode() &&
-        gpperfmon_log_alert_level != GPPERFMON_LOG_ALERT_LEVEL_NONE)
-    {
-        alert_log_level_opened = true;
-        if(mkdir(gp_perf_mon_directory, 0700) == -1)
-		{
-			ereport(WARNING,
-			        (errcode_for_file_access(),
-			         (errmsg("could not create log file directory \"%s\": %m",
-					  gp_perf_mon_directory))));
-		}
-        char *alert_file_name = logfile_getname(time(NULL), NULL, gp_perf_mon_directory, alert_file_pattern);
-        alertLogFile = fopen(alert_file_name, "a");
-        if (!alertLogFile)
-        {
-	        ereport(WARNING,
-			        (errcode_for_file_access(),
-			         (errmsg("could not create log file \"%s\": %m",
-					  alert_file_name))));
-        }
-        else
-        {
-            setvbuf(alertLogFile, NULL, LBF_MODE, 0);
-        }
-		pfree(alert_file_name);
-    }
-}
-
 /*
  * Postmaster subroutine to start a syslogger subprocess.
  */
@@ -900,8 +833,6 @@ SysLogger_Start(void)
 	filename = logfile_getname(first_syslogger_file_time, NULL, Log_directory, Log_filename);
 
 	syslogFile = logfile_open(filename, "a", false);
-
-	open_alert_log_file();
 
 	pfree(filename);
 
@@ -1011,11 +942,6 @@ SysLogger_Start(void)
 			/* postmaster will never write the file(s); close 'em */
 			fclose(syslogFile);
 			syslogFile = NULL;
-			if (alertLogFile != NULL)
-			{
-				fclose(alertLogFile);
-				alertLogFile = NULL;
-			}
 			if (csvlogFile != NULL)
 			{
 				fclose(csvlogFile);
@@ -1065,24 +991,6 @@ syslogger_forkexec(void)
 #endif   /* WIN32 */
 	av[ac++] = filenobuf;
 
-	if (alert_log_level_opened)
-	{
-#ifndef WIN32
-		if (alertLogFile != NULL)
-			snprintf(alertFilenobuf, sizeof(alertFilenobuf), "%d",
-					 fileno(alertLogFile));
-		else
-			strcpy(alertFilenobuf, "-1");
-#else							/* WIN32 */
-		if (alertLogFile != NULL)
-			snprintf(alertFilenobuf, sizeof(alertFilenobuf), "%ld",
-					 _get_osfhandle(_fileno(alertLogFile)));
-		else
-			strcpy(alertFilenobuf, "0");
-#endif
-		av[ac++] = alertFilenobuf;
-	}
-
 #ifndef WIN32
 	if (csvlogFile != NULL)
 		snprintf(csvfilenobuf, sizeof(csvfilenobuf), "%d",
@@ -1115,7 +1023,7 @@ syslogger_parseArgs(int argc, char *argv[])
 	int			fd;
 	int         alertFd;
 
-	Assert(argc == alert_log_level_opened ? 5 : 4);
+	Assert(argc == 4);
 	argv += 3;
 
 	/*
@@ -1160,28 +1068,6 @@ syslogger_parseArgs(int argc, char *argv[])
 		}
 	}
 #endif   /* WIN32 */
-
-    if (alert_log_level_opened)
-    {
-        alertFd = atoi(*argv++);
-#ifndef WIN32
-        if (alertFd != -1)
-        {
-            alertLogFile = fdopen(alertFd, "a");
-            setvbuf(alertLogFile, NULL, PG_IOLBF, 0);
-        }
-#else							/* WIN32 */
-        if (alertFd != 0)
-        {
-            alertFd = _open_osfhandle(alertFd, _O_APPEND | _O_TEXT);
-            if (alertFd > 0)
-            {
-                alertLogFile = fdopen(alertFd, "a");
-                setvbuf(alertLogFile, NULL, PG_IOLBF, 0);
-            }
-        }
-#endif   /* WIN32 */
-    }
 }
 #endif   /* EXEC_BACKEND */
 
@@ -1623,27 +1509,6 @@ syslogger_write_errordata(PipeProtoHeader *chunkHeader, GpErrorData *errorData, 
 	write_syslogger_file_binary(LOG_EOL, strlen(LOG_EOL), LOG_DESTINATION_STDERR);
 }
 
-static void set_write_to_alert_log(const char *severity)
-{
-    if (alert_log_level_opened)
-    {
-        GpperfmonLogAlertLevel alert_level = lookup_loglevel_by_name(severity);
-        /*
-         * gpperfmon_log_alert_level cannot be GPPERFMON_LOG_ALERT_LEVEL_NONE,
-         * because alert_log_level_opened is true
-         */
-        if (alert_level >= gpperfmon_log_alert_level)
-        {
-            write_to_alert_log = true;
-        }
-    }
-}
-
-static void unset_write_to_alert_log()
-{
-    write_to_alert_log = false;
-}
-
 /*
  * syslogger_log_segv_chunk
  *   Write the chunk for the message sent inside a SEGV/BUS/ILL handler to the log.
@@ -1659,13 +1524,11 @@ syslogger_log_segv_chunk(PipeProtoChunk *chunk)
 
 	GpErrorData errorData;
 	fillinErrorDataFromSegvChunk(&errorData, chunk);
-    set_write_to_alert_log(errorData.error_severity);
 	syslogger_write_errordata(&chunk->hdr, &errorData, chunk->hdr.log_format == 'c');
 	freeErrorDataFields(&errorData);
 	
 	/* mark chunk as unused */
 	chunk->hdr.pid = 0;
-    unset_write_to_alert_log();
 }
 
 static size_t
@@ -1830,9 +1693,6 @@ void syslogger_log_chunk_list(PipeProtoChunk *chunk)
         errorData.error_filename = get_str_from_chunk(&chunkstr,saved_chunks);
         errorData.stacktrace = get_str_from_chunk(&chunkstr,saved_chunks);
 
-        // We only send to alert for csv format log.
-        set_write_to_alert_log(errorData.error_severity);
-
         /*
          * timestamp_with_milliseconds 
          */
@@ -1916,8 +1776,6 @@ void syslogger_log_chunk_list(PipeProtoChunk *chunk)
         free(errorData.remote_host ); errorData.remote_host = NULL;
         free(errorData.databasename ); errorData.databasename = NULL;
         free(errorData.username ); errorData.username = NULL;
-
-        unset_write_to_alert_log();
     }
 
     /* Free the chunks */
@@ -2200,10 +2058,6 @@ void write_syslogger_file_binary(const char *buffer, int count, int destination)
 	else if (destination &= LOG_DESTINATION_CSVLOG)
 		write_binary_to_file(buffer, count,
 							 csvlogFile != NULL ? csvlogFile : syslogFile);
-
-	/* also write to the alert log if requested */
-	if (write_to_alert_log)
-        write_binary_to_file(buffer, count, alertLogFile);
 }
 /*
  * Write text to the currently open logfile
@@ -2554,9 +2408,6 @@ logfile_getname(pg_time_t timestamp, const char *suffix,
 
 	/*
 	 * Only change .csv to .log if gp_log_format is TEXT, otherwise leave it.
-	 *
-	 * This is to handle the case for open_alert_log_file(), which doesn't depends
-	 * on .log or .csv, but just use timestamp as extension.
 	 */
 	if (gp_log_format == 0 && pg_strcasecmp(tmp_suffix, CSV_SUFFIX) == 0)
 	{

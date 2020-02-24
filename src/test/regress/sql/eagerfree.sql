@@ -27,7 +27,6 @@ set statement_mem=128000;
 
 -- DQA
 set gp_enable_agg_distinct=off;
-set gp_eager_one_phase_agg=on;
 set gp_enable_multiphase_agg=off;
 select count(distinct d) from smallt;
 explain analyze select count(distinct d) from smallt;
@@ -38,7 +37,6 @@ explain analyze select count(distinct d) from bigt;
 set statement_mem=128000;
 
 set gp_enable_agg_distinct=on;
-set gp_eager_one_phase_agg=off;
 set gp_enable_multiphase_agg=on;
 
 -- Rescan on Agg (with Material in the inner side of nestloop)

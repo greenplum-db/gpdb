@@ -39,6 +39,7 @@ struct ListCell;
 struct TargetEntry;
 struct Expr;
 struct ExtTableEntry;
+struct ForeignScan;
 struct Uri;
 struct CdbComponentDatabases;
 struct StringInfoData;
@@ -509,6 +510,9 @@ namespace gpdb {
 	// check whether a relation is inherited
 	bool HasSubclassSlow(Oid rel_oid);
 
+	// check whether table with given oid is an external table
+	bool RelIsExternalTable(Oid relid);
+
     // return the distribution policy of a relation; if the table is partitioned
     // and the parts are distributed differently, return Random distribution
     GpPolicy *GetDistributionPolicy(Relation rel);
@@ -549,8 +553,8 @@ namespace gpdb {
 	// get external table entry with given oid
 	ExtTableEntry *GetExternalTableEntry(Oid rel_oid);
 
-	// get external table entry with given oid
-	List *GetExternalScanUriList(ExtTableEntry *ext, bool *ismasteronlyp);
+	// get ForeignScan node to scan an external table
+	ForeignScan *CreateForeignScanForExternalTable(Oid rel_oid, Index scanrelid, List *qual, List *targetlist);
 
 	// return the first member of the given targetlist whose expression is
 	// equal to the given expression, or NULL if no such member exists
@@ -568,6 +572,8 @@ namespace gpdb {
 
 	// check whether a type is composite
 	bool IsCompositeType(Oid typid);
+
+	bool IsTextRelatedType(Oid typid);
 
 	// get integer value from an Integer value node
 	int GetIntFromValue(Node *node);
@@ -611,7 +617,10 @@ namespace gpdb {
 
 	// check permissions on range table 
 	void CheckRTPermissions(List *rtable);
-	
+
+	// throw an error if table has update triggers.
+	bool HasUpdateTriggers(Oid relid);
+
 	// get index operator family properties
 	void IndexOpProperties(Oid opno, Oid opfamily, int *strategy, Oid *subtype);
 	
@@ -660,9 +669,13 @@ namespace gpdb {
 						   int numsegments);
 
 
+	uint32 HashChar(Datum d);
+
 	uint32 HashBpChar(Datum d);
 
 	uint32 HashText(Datum d);
+
+	uint32 HashName(Datum d);
 
 	uint32 UUIDHash(Datum d);
 

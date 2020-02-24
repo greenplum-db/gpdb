@@ -295,11 +295,11 @@ CdbDispatchSetCommand(const char *strCommand, bool cancelOnError)
 
 		cdbdisp_dispatchToGang(ds, rg, -1);
 	}
-	addToGxactTwophaseSegments(primaryGang);
+	addToGxactDtxSegments(primaryGang);
 
 	/*
 	 * No need for two-phase commit, so no need to call
-	 * addToGxactTwophaseSegments.
+	 * addToGxactDtxSegments.
 	 */
 
 	cdbdisp_waitDispatchFinish(ds);
@@ -359,7 +359,7 @@ CdbDispatchCommandToSegments(const char *strCommand,
 	bool needTwoPhase = flags & DF_NEED_TWO_PHASE;
 
 	if (needTwoPhase)
-		setupTwoPhaseTransaction();
+		setupDtxTransaction();
 
 	elogif((Debug_print_full_dtm || log_min_messages <= DEBUG5), LOG,
 		   "CdbDispatchCommand: %s (needTwoPhase = %s)",
@@ -397,7 +397,7 @@ CdbDispatchUtilityStatement(struct Node *stmt,
 	bool needTwoPhase = flags & DF_NEED_TWO_PHASE;
 
 	if (needTwoPhase)
-		setupTwoPhaseTransaction();
+		setupDtxTransaction();
 
 	elogif((Debug_print_full_dtm || log_min_messages <= DEBUG5), LOG,
 		   "CdbDispatchUtilityStatement: %s (needTwoPhase = %s)",
@@ -443,7 +443,7 @@ cdbdisp_dispatchCommandInternal(DispatchCommandQueryParms *pQueryParms,
 	cdbdisp_dispatchToGang(ds, primaryGang, -1);
 
 	if ((flags & DF_NEED_TWO_PHASE) != 0 || isDtxExplicitBegin())
-		addToGxactTwophaseSegments(primaryGang);
+		addToGxactDtxSegments(primaryGang);
 
 	cdbdisp_waitDispatchFinish(ds);
 
@@ -680,19 +680,6 @@ compare_slice_order(const void *aa, const void *bb)
 	{
 		Assert(b->slice->gangType == GANGTYPE_UNALLOCATED);
 		return -1;
-	}
-
-	/*
-	 * sort the writer gang slice first, because he sets the shared snapshot
-	 */
-	if (a->slice->primaryGang->gang_id == 1)
-	{
-		Assert(b->slice->primaryGang->gang_id != 1);
-		return -1;
-	}
-	if (b->slice->primaryGang->gang_id == 1)
-	{
-		return 1;
 	}
 
 	/* sort slice with larger size first because it has a bigger chance to contain writers */
@@ -1064,7 +1051,7 @@ cdbdisp_dispatchX(QueryDesc* queryDesc,
 	 * allocate gangs, and associate them with slices.
 	 *
 	 * On return, gangs have been allocated and CDBProcess lists have
-	 * been filled in in the slice table.)
+	 * been filled in the slice table.)
 	 * 
 	 * Notice: This must be done before cdbdisp_buildPlanQueryParms
 	 */
@@ -1157,7 +1144,7 @@ cdbdisp_dispatchX(QueryDesc* queryDesc,
 
 		cdbdisp_dispatchToGang(ds, primaryGang, si);
 		if (planRequiresTxn || isDtxExplicitBegin())
-			addToGxactTwophaseSegments(primaryGang);
+			addToGxactDtxSegments(primaryGang);
 
 		SIMPLE_FAULT_INJECTOR("after_one_slice_dispatched");
 	}
@@ -1417,7 +1404,7 @@ CdbDispatchCopyStart(struct CdbCopy *cdbCopy, Node *stmt, int flags)
 	bool needTwoPhase = flags & DF_NEED_TWO_PHASE;
 
 	if (needTwoPhase)
-		setupTwoPhaseTransaction();
+		setupDtxTransaction();
 
 	elogif((Debug_print_full_dtm || log_min_messages <= DEBUG5), LOG,
 		   "CdbDispatchCopyStart: %s (needTwoPhase = %s)",
@@ -1443,7 +1430,7 @@ CdbDispatchCopyStart(struct CdbCopy *cdbCopy, Node *stmt, int flags)
 
 	cdbdisp_dispatchToGang(ds, primaryGang, -1);
 	if ((flags & DF_NEED_TWO_PHASE) != 0 || isDtxExplicitBegin())
-		addToGxactTwophaseSegments(primaryGang);
+		addToGxactDtxSegments(primaryGang);
 
 	cdbdisp_waitDispatchFinish(ds);
 

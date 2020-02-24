@@ -22,6 +22,7 @@
 #include "catalog/oid_dispatch.h"
 #include "catalog/pg_exttable.h"
 #include "catalog/pg_extprotocol.h"
+#include "catalog/pg_foreign_server.h"
 #include "catalog/pg_authid.h"
 #include "commands/copy.h"
 #include "commands/defrem.h"
@@ -60,15 +61,17 @@ static Datum optionsListToArray(List *options);
 * to leave it intact and do another dispatch.
 * ----------------------------------------------------------------
 */
-extern void
+void
 DefineExternalRelation(CreateExternalStmt *createExtStmt)
 {
-	CreateStmt *createStmt = makeNode(CreateStmt);
+	CreateForeignTableStmt *createForeignTableStmt;
+	CreateStmt *createStmt;
 	ExtTableTypeDesc *exttypeDesc = (ExtTableTypeDesc *) createExtStmt->exttypedesc;
 	SingleRowErrorDesc *singlerowerrorDesc = NULL;
 	DefElem    *dencoding = NULL;
 	ListCell   *option;
 	ObjectAddress objAddr;
+	Oid			userid;
 	Oid			reloid = 0;
 	Datum		formatOptStr;
 	Datum		optionsStr;
@@ -87,10 +90,15 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 	bool		shouldDispatch = (Gp_role == GP_ROLE_DISPATCH &&
 								  IsNormalProcessingMode());
 
+	/* Identify user ID that will own the table */
+	userid = GetUserId();
+
 	/*
 	 * now set the parameters for keys/inheritance etc. Most of these are
 	 * uninteresting for external relations...
 	 */
+	createForeignTableStmt = makeNode(CreateForeignTableStmt);
+	createStmt = &createForeignTableStmt->base;
 	createStmt->relation = createExtStmt->relation;
 	createStmt->tableElts = createExtStmt->tableElts;
 	createStmt->inhRelations = NIL;
@@ -99,6 +107,7 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 	createStmt->oncommit = ONCOMMIT_NOOP;
 	createStmt->tablespacename = NULL;
 	createStmt->distributedBy = createExtStmt->distributedBy; /* policy was set in transform */
+	createStmt->ownerid = userid;
 
 	switch (exttypeDesc->exttabletype)
 	{
@@ -165,7 +174,6 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 				 */
 
 				bool		isnull;
-				Oid			userid = GetUserId();
 				HeapTuple	tuple;
 
 				tuple = SearchSysCache1(AUTHOID, ObjectIdGetDatum(userid));
@@ -368,18 +376,19 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 
 	/*
 	 * First, create the pg_class and other regular relation catalog entries.
-	 * Under the covers this will dispatch a CREATE TABLE statement to all the
-	 * QEs.
 	 */
-	if (Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_UTILITY)
-	{
-		objAddr = DefineRelation(createStmt, RELKIND_RELATION, InvalidOid,
-								 NULL, RELSTORAGE_EXTERNAL, true, true, NULL);
-		reloid = objAddr.objectId;
-	}
+	objAddr = DefineRelation(createStmt,
+							 RELKIND_FOREIGN_TABLE,
+							 InvalidOid,
+							 NULL,
+							 RELSTORAGE_FOREIGN,
+							 false, /* dispatch */
+							 true,
+							 NULL);
+	reloid = objAddr.objectId;
 
 	/*
-	 * Now we take care of pg_exttable.
+	 * Now add pg_foreign_table and pg_exttable entries.
 	 *
 	 * get our pg_class external rel OID. If we're the QD we just created it
 	 * above. If we're a QE DefineRelation() was already dispatched to us and
@@ -390,9 +399,11 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 	else
 		reloid = RangeVarGetRelid(createExtStmt->relation, NoLock, true);
 
-	/*
-	 * create a pg_exttable entry for this external table.
-	 */
+	createForeignTableStmt->servername = PG_EXTTABLE_SERVER_NAME;
+	createForeignTableStmt->options = NIL;
+	CreateForeignTable(createForeignTableStmt, reloid,
+					   true /* skip permission checks, we checked the ourselves */);
+
 	InsertExtTableEntry(reloid,
 						iswritable,
 						issreh,

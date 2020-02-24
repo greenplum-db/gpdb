@@ -2306,7 +2306,6 @@ explain select count(*) from gpexp_hash h join gpexp_repl r on h.a=r.a;
 select count(*) as expect_20 from gpexp_hash h join gpexp_repl r on h.a=r.a;
 explain select count(*) as expect_20 from noexp_hash h join gpexp_repl r on h.a=r.a;
 select count(*) as expect_20 from noexp_hash h join gpexp_repl r on h.a=r.a;
-
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore

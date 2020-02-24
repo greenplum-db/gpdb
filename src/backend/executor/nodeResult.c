@@ -431,8 +431,6 @@ ExecEndResult(ResultState *node)
 	 */
 	ExecEndNode(outerPlanState(node));
 
-	EndPlanStateGpmonPkt(&node->ps);
-
 }
 
 void

@@ -37,6 +37,7 @@
 
 #include "cdb/cdbhash.h"
 #include "cdb/cdbpullup.h"		/* cdbpullup_expr(), cdbpullup_make_var() */
+#include "optimizer/cost.h"
 
 static bool pathkey_is_redundant(PathKey *new_pathkey, List *pathkeys);
 static bool right_merge_direction(PlannerInfo *root, PathKey *pathkey);
@@ -347,7 +348,7 @@ generate_implied_quals(PlannerInfo *root)
 {
 	ListCell   *lc;
 
-	if (!root->config->gp_enable_predicate_propagation)
+	if (!gp_enable_predicate_propagation)
 		return;
 
 	foreach(lc, root->non_eq_clauses)

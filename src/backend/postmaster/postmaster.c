@@ -123,10 +123,8 @@
 #include "postmaster/pgarch.h"
 #include "postmaster/postmaster.h"
 #include "postmaster/fts.h"
-#include "postmaster/perfmon.h"
 #include "postmaster/syslogger.h"
 #include "postmaster/backoff.h"
-#include "postmaster/perfmon_segmentinfo.h"
 #include "postmaster/bgworker.h"
 #include "replication/walsender.h"
 #include "storage/fd.h"
@@ -142,6 +140,7 @@
 #include "utils/faultinjector.h"
 #include "utils/gdd.h"
 #include "utils/memutils.h"
+#include "utils/metrics_utils.h"
 #include "utils/ps_status.h"
 #include "utils/timeout.h"
 
@@ -394,13 +393,6 @@ static BackgroundWorker PMAuxProcList[MaxPMAuxProc] =
 	 DtxRecoveryMain, {0}, {0}, 0, {0}, 0,
 	 DtxRecoveryStartRule},
 
-	{"stats sender process",
-	 BGWORKER_SHMEM_ACCESS,
-	 BgWorkerStart_RecoveryFinished,
-	 0, /* restart immediately if stats sender exits with non-zero code */
-	 SegmentInfoSenderMain, {0}, {0}, 0, {0}, 0,
-	 SegmentInfoSenderStartRule},
-
 	{"sweeper process",
 	 BGWORKER_SHMEM_ACCESS,
 	 BgWorkerStart_RecoveryFinished,
@@ -408,12 +400,12 @@ static BackgroundWorker PMAuxProcList[MaxPMAuxProc] =
 	 BackoffSweeperMain, {0}, {0}, 0, {0}, 0,
 	 BackoffSweeperStartRule},
 
-	{"perfmon process",
-	 BGWORKER_SHMEM_ACCESS,
-	 BgWorkerStart_RecoveryFinished,
-	 0, /* restart immediately if perfmon process exits with non-zero code */
-	 PerfmonMain, {0}, {0}, 0, {0}, 0,
-	 PerfmonStartRule},
+	/*
+	 * Remember to set the MaxPMAuxProc to the number of items in this list
+	 *
+	 * It's used as a number at other places, so end-of-list marker doesn't
+	 * work here.
+	 */
 };
 
 static bool ReachedNormalRunning = false;		/* T if we've reached PM_RUN */
@@ -651,6 +643,12 @@ HANDLE		PostmasterHandle;
 #endif
 
 /*
+ * query info collector hook
+ * Use this hook to collect real-time query information and status data.
+ */
+query_info_collect_hook_type query_info_collect_hook = NULL;
+
+/*
  * Postmaster main entry point
  */
 void
@@ -772,7 +770,7 @@ PostmasterMain(int argc, char *argv[])
 			 * but we co-opted this letter for this... I'm afraid to change it,
 			 * because I don't know where this is used.
              * ... it's used only here in postmaster.c; it causes the postmaster to
-			 * fork a QD specific process. For example, FTS, perfmon, global
+			 * fork a QD specific process. For example, FTS, global
 			 * deadlock detector.
 			 */
 			case 'E':
@@ -5122,12 +5120,6 @@ retry:
 }
 #endif   /* WIN32 */
 
-#ifdef EXEC_BACKEND
-/* This should really be in a header file */
-NON_EXEC_STATIC void
-PerfmonMain(int argc, char *argv[]);
-#endif
-
 /*
  * SubPostmasterMain -- Get the fork/exec'd process into a state equivalent
  *			to what it would be if we'd simply forked on Unix, and then
@@ -5365,16 +5357,6 @@ SubPostmasterMain(int argc, char *argv[])
 		/* Do not want to attach to shared memory */
 
 		SysLoggerMain(argc, argv);		/* does not return */
-	}
-	if (strcmp(argv[1], "--forkperfmon") == 0)
-	{
-		/* Close the postmaster's sockets */
-		ClosePostmasterPorts(false);
-
-		/* Do not want to attach to shared memory */
-
-		PerfmonMain(argc - 2, argv + 2);
-		proc_exit(0);
 	}
 
 	abort();					/* shouldn't get here */

@@ -1901,7 +1901,7 @@ class gpload:
         if self.schema is None:
             queryString = """SELECT n.nspname
                              FROM pg_catalog.pg_class c
-                             LEFT JOIN pg_catalog.pg_namespace n
+                             INNER JOIN pg_catalog.pg_namespace n
                              ON n.oid = c.relnamespace
                              WHERE c.relname = '%s'
                              AND pg_catalog.pg_table_is_visible(c.oid);""" % quote_unident(self.table)
@@ -2029,7 +2029,7 @@ class gpload:
                             on (pg_class.oid = attrelid)
                             %s
                         where
-                            relstorage = 'x' and
+                            relstorage in ('x', 'f') and
                             relname like 'ext_gpload_reusable_%%' and
                             attnum > 0 and
                             not attisdropped and %s
@@ -2116,7 +2116,7 @@ class gpload:
                     on(pg_class.oid = pgext.reloid)
                     %s
                     where
-                    relstorage = 'x' and
+                    relstorage in ('x', 'f') and
                     relname like 'ext_gpload_reusable_%%' and
 		    %s
                     """
@@ -2361,21 +2361,19 @@ class gpload:
                 if '.' in self.staging_table:
                     self.log(self.ERROR, "Character '.' is not allowed in staging_table parameter. Please use EXTERNAL->SCHEMA to set the schema of external table")
                 self.extTableName = quote_unident(self.staging_table) 
-                if self.extSchemaName is None:
-                    sql = """SELECT n.nspname as Schema,
-                            c.relname as Name
-                        FROM pg_catalog.pg_class c
-                            LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-                        WHERE c.relkind IN ('r','v','S','')
-                            AND c.relstorage IN ('h', 'a', 'c','x','v','')
-                            AND n.nspname <> 'pg_catalog'
-                            AND n.nspname <> 'information_schema'
-                            AND n.nspname !~ '^pg_toast'
-                            AND c.relname = '%s'
-                            AND pg_catalog.pg_table_is_visible(c.oid)
-                        ORDER BY 1,2;""" % self.extTableName
+                sql = """SELECT n.nspname as Schema, c.relname as Name
+                         FROM pg_catalog.pg_class c
+                         INNER JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+                         WHERE c.relkind IN ('r','v','S','f','')
+                           AND c.relname = '%s'
+                        """ % self.extTableName
+                if self.extSchemaName is not None:
+                    sql += "AND n.nspname = '%s'" % quote_unident(self.extSchemaName)
                 else:
-                    sql = "select * from pg_catalog.pg_tables where schemaname = '%s' and tablename = '%s'" % (quote_unident(self.extSchemaName),  self.extTableName)
+                    sql += """AND pg_catalog.pg_table_is_visible(c.oid)
+                              AND n.nspname <> 'pg_catalog'
+                              AND n.nspname <> 'information_schema'
+                              AND n.nspname !~ '^pg_toast'"""
                 result = self.db.query(sql.encode('utf-8')).getresult()
                 if len(result) > 0:
                     self.extSchemaTable = self.get_ext_schematable(quote_unident(self.extSchemaName), self.extTableName)

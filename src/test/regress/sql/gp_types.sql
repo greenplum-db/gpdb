@@ -88,17 +88,19 @@ DROP TABLE IF EXISTS dml_timestamp;
 CREATE TABLE dml_timestamp( a timestamp) distributed by (a);
 
 -- Simple DML
-INSERT INTO dml_timestamp VALUES (to_date('2012-02-31', 'YYYY-MM-DD BC'));
+INSERT INTO dml_timestamp VALUES (to_date('2012-02-21', 'YYYY-MM-DD BC'));
 SELECT * FROM dml_timestamp ORDER BY 1;
 INSERT INTO dml_timestamp VALUES (to_date('4714-01-27 AD', 'YYYY-MM-DD BC'));
 SELECT * FROM dml_timestamp ORDER BY 1;
-UPDATE dml_timestamp SET a = to_date('2012-02-31', 'YYYY-MM-DD BC');
+UPDATE dml_timestamp SET a = to_date('2012-02-21', 'YYYY-MM-DD BC');
 SELECT * FROM dml_timestamp ORDER BY 1;
 
 -- out of range values
 INSERT INTO dml_timestamp VALUES ('294277-01-27 AD'::timestamp);
 SELECT * FROM dml_timestamp ORDER BY 1;
 UPDATE dml_timestamp SET a = '294277-01-27 AD'::timestamp;
+SELECT * FROM dml_timestamp ORDER BY 1;
+INSERT INTO dml_timestamp VALUES ('2012-02-31 AD'::timestamp);
 SELECT * FROM dml_timestamp ORDER BY 1;
 
 -- Greenplum 4.3 and 5 had support for YYYYMMDDHH24MISS, which was removed in

@@ -116,6 +116,7 @@
 #include "utils/syscache.h"
 #include "utils/timestamp.h"
 #include "utils/tqual.h"
+#include "utils/typcache.h"
 
 #include "catalog/heap.h"
 #include "cdb/cdbappendonlyam.h"
@@ -141,6 +142,9 @@
  * we consider everything as distinct.
  */
 #define GP_HLL_ERROR_MARGIN  0.003
+
+/* Fix attr number of return record of function gp_acquire_sample_rows */
+#define FIX_ATTR_NUM  3
 
 /* Per-index data for ANALYZE */
 typedef struct AnlIndexData
@@ -324,9 +328,8 @@ analyze_rel_internal(Oid relid, RangeVar *relation, int options,
 	 * used to do this in get_rel_oids() but seems safer to check after we've
 	 * locked the relation.
 	 */
-	if ((onerel->rd_rel->relkind == RELKIND_RELATION ||
-		 onerel->rd_rel->relkind == RELKIND_MATVIEW) &&
-		!RelationIsExternal(onerel))
+	if (onerel->rd_rel->relkind == RELKIND_RELATION ||
+		onerel->rd_rel->relkind == RELKIND_MATVIEW)
 	{
 		/* Regular table, so we'll use the regular row acquisition function */
 		acquirefunc = acquire_sample_rows;
@@ -334,8 +337,7 @@ analyze_rel_internal(Oid relid, RangeVar *relation, int options,
 		/* Also get regular table's size */
 		relpages = acquire_number_of_blocks(onerel);
 	}
-	else if (onerel->rd_rel->relkind == RELKIND_FOREIGN_TABLE &&
-			 !RelationIsExternal(onerel))
+	else if (onerel->rd_rel->relkind == RELKIND_FOREIGN_TABLE)
 	{
 		/*
 		 * For a foreign table, call the FDW's hook function to see whether it
@@ -727,7 +729,7 @@ do_analyze_rel(Relation onerel, int options, VacuumParams *params,
 			}
 			Assert(sample_needed);
 
-			Bitmapset  *rowIndexes = colLargeRowIndexes[i];
+			Bitmapset  *rowIndexes = colLargeRowIndexes[stats->attr->attnum - 1];
 			int			validRowsLength;
 
 			/* If there are too wide rows in the sample, remove them
@@ -2189,6 +2191,154 @@ acquire_index_number_of_blocks(Relation indexrel, Relation tablerel)
 }
 
 /*
+ * parse_record_to_string
+ *
+ * CDB: a copy of record_in, but only parse the record string
+ * into separate strs for each column.
+ */
+static void
+parse_record_to_string(char *string, TupleDesc tupdesc, char** values, bool *nulls)
+{
+	char	*ptr;
+	int	ncolumns;
+	int	i;
+	bool	needComma;
+	StringInfoData	buf;
+
+	Assert(string != NULL);
+	Assert(values != NULL);
+	Assert(nulls != NULL);
+	
+	ncolumns = tupdesc->natts;
+	needComma = false;
+
+	/*
+	 * Scan the string.  We use "buf" to accumulate the de-quoted data for
+	 * each column, which is then fed to the appropriate input converter.
+	 */
+	ptr = string;
+
+	/* Allow leading whitespace */
+	while (*ptr && isspace((unsigned char) *ptr))
+		ptr++;
+	if (*ptr++ != '(')
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
+				 errmsg("malformed record literal: \"%s\"", string),
+				 errdetail("Missing left parenthesis.")));
+	}
+
+	initStringInfo(&buf);
+
+	for (i = 0; i < ncolumns; i++)
+	{
+		/* Ignore dropped columns in datatype, but fill with nulls */
+		if (tupdesc->attrs[i]->attisdropped)
+		{
+			values[i] = NULL;
+			nulls[i] = true;
+			continue;
+		}
+
+		if (needComma)
+		{
+			/* Skip comma that separates prior field from this one */
+			if (*ptr == ',')
+				ptr++;
+			else
+			{
+				/* *ptr must be ')' */
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
+						 errmsg("malformed record literal: \"%s\"", string),
+						 errdetail("Too few columns.")));
+			}
+		}
+
+		/* Check for null: completely empty input means null */
+		if (*ptr == ',' || *ptr == ')')
+		{
+			values[i] = NULL;
+			nulls[i] = true;
+		}
+		else
+		{
+			/* Extract string for this column */
+			bool		inquote = false;
+
+			resetStringInfo(&buf);
+			while (inquote || !(*ptr == ',' || *ptr == ')'))
+			{
+				char		ch = *ptr++;
+
+				if (ch == '\0')
+				{
+					ereport(ERROR,
+							(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
+							 errmsg("malformed record literal: \"%s\"",
+									string),
+							 errdetail("Unexpected end of input.")));
+				}
+				if (ch == '\\')
+				{
+					if (*ptr == '\0')
+					{
+						ereport(ERROR,
+								(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
+								 errmsg("malformed record literal: \"%s\"",
+										string),
+								 errdetail("Unexpected end of input.")));
+					}
+					appendStringInfoChar(&buf, *ptr++);
+				}
+				else if (ch == '"')
+				{
+					if (!inquote)
+						inquote = true;
+					else if (*ptr == '"')
+					{
+						/* doubled quote within quote sequence */
+						appendStringInfoChar(&buf, *ptr++);
+					}
+					else
+						inquote = false;
+				}
+				else
+					appendStringInfoChar(&buf, ch);
+			}
+
+			values[i] = palloc(strlen(buf.data) + 1);
+			memcpy(values[i], buf.data, strlen(buf.data) + 1);
+			nulls[i] = false;
+		}
+
+		/*
+		 * Prep for next column
+		 */
+		needComma = true;
+	}
+
+	if (*ptr++ != ')')
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
+				 errmsg("malformed record literal: \"%s\"", string),
+				 errdetail("Too many columns.")));
+	}
+	/* Allow trailing whitespace */
+	while (*ptr && isspace((unsigned char) *ptr))
+		ptr++;
+	if (*ptr)
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
+				 errmsg("malformed record literal: \"%s\"", string),
+				 errdetail("Junk after right parenthesis.")));
+	}
+}
+
+/*
  * Collect a sample from segments.
  *
  * Calls the gp_acquire_sample_rows() helper function on each segment,
@@ -2205,15 +2355,20 @@ acquire_sample_rows_dispatcher(Relation onerel, bool inh, int elevel,
 	 */
 	Bitmapset **colLargeRowIndexes = acquire_func_colLargeRowIndexes;
 	TupleDesc	relDesc = RelationGetDescr(onerel);
-	TupleDesc	newDesc;
+	TupleDesc	funcTupleDesc;
+	TupleDesc	sampleTupleDesc;
 	AttInMetadata *attinmeta;
 	StringInfoData str;
 	int			sampleTuples;	/* 32 bit - assume that number of tuples will not > 2B */
-	char	  **values;
+	char 	  **funcRetValues;
+	bool 	   *funcRetNulls;
+	char 	  **values;
 	int			numLiveColumns;
 	int			perseg_targrows;
+	int			ncolumns;
 	CdbPgResults cdb_pgresults = {NULL, 0};
 	int			i;
+	int			index = 0;
 
 	Assert(targrows > 0.0);
 
@@ -2253,34 +2408,17 @@ acquire_sample_rows_dispatcher(Relation onerel, bool inh, int elevel,
 
 	/*
 	 * Construct SQL command to dispatch to segments.
+	 *
+	 * Did not use 'select * from pg_catalog.gp_acquire_sample_rows(...) as (..);'
+	 * here. Because it requires to specify columns explicitly which leads to
+	 * permission check on each columns. This is not consistent with GPDB5 and
+	 * may result in different behaviour under different acl configuration.
 	 */
 	initStringInfo(&str);
-	appendStringInfo(&str, "select * from pg_catalog.gp_acquire_sample_rows(%u, %d, '%s')",
+	appendStringInfo(&str, "select pg_catalog.gp_acquire_sample_rows(%u, %d, '%s');",
 					 RelationGetRelid(onerel),
 					 perseg_targrows,
 					 inh ? "t" : "f");
-
-	/* special columns */
-	appendStringInfoString(&str, " as (");
-	appendStringInfoString(&str, "totalrows pg_catalog.float8, ");
-	appendStringInfoString(&str, "totaldeadrows pg_catalog.float8, ");
-	appendStringInfoString(&str, "oversized_cols_bitmap pg_catalog.text");
-
-	/* table columns */
-	for (i = 0; i < relDesc->natts; i++)
-	{
-		Form_pg_attribute attr = relDesc->attrs[i];
-		Oid			typid = gp_acquire_sample_rows_col_type(attr->atttypid);
-
-		if (attr->attisdropped)
-			continue;
-
-		appendStringInfo(&str, ", %s %s",
-						 quote_identifier(NameStr(attr->attname)),
-						 format_type_be(typid));
-	}
-
-	appendStringInfoString(&str, ")");
 
 	/*
 	 * Execute it.
@@ -2293,21 +2431,46 @@ acquire_sample_rows_dispatcher(Relation onerel, bool inh, int elevel,
 	 *
 	 * Some datatypes need special treatment, so we cannot use the relation's
 	 * original tupledesc.
+	 *
+	 * Also create tupledesc of return record of function gp_acquire_sample_rows.
 	 */
-	newDesc = CreateTupleDescCopy(relDesc);
+	sampleTupleDesc = CreateTupleDescCopy(relDesc);
+	ncolumns = numLiveColumns + FIX_ATTR_NUM;
+	
+	funcTupleDesc = CreateTemplateTupleDesc(ncolumns, false);
+	TupleDescInitEntry(funcTupleDesc, (AttrNumber) 1, "", FLOAT8OID, -1, 0);
+	TupleDescInitEntry(funcTupleDesc, (AttrNumber) 2, "", FLOAT8OID, -1, 0);
+	TupleDescInitEntry(funcTupleDesc, (AttrNumber) 3, "", TEXTOID, -1, 0);
+	
 	for (i = 0; i < relDesc->natts; i++)
 	{
 		Form_pg_attribute attr = relDesc->attrs[i];
+		
 		Oid			typid = gp_acquire_sample_rows_col_type(attr->atttypid);
 
-		newDesc->attrs[i]->atttypid = typid;
+		sampleTupleDesc->attrs[i]->atttypid = typid;
+
+		if (!attr->attisdropped)
+		{
+			TupleDescInitEntry(funcTupleDesc, (AttrNumber) 4 + index, "",
+							   typid, attr->atttypmod, attr->attndims);
+		
+			index++;
+		}
 	}
-	attinmeta = TupleDescGetAttInMetadata(newDesc);
+
+	/* For RECORD results, make sure a typmod has been assigned */
+	Assert(funcTupleDesc->tdtypeid == RECORDOID && funcTupleDesc->tdtypmod < 0);
+	assign_record_type_typmod(funcTupleDesc);
+
+	attinmeta = TupleDescGetAttInMetadata(sampleTupleDesc);
 
 	/*
 	 * Read the result set from each segment. Gather the sample rows *rows,
 	 * and sum up the summary rows for grand 'totalrows' and 'totaldeadrows'.
 	 */
+	funcRetValues = (char **) palloc0(funcTupleDesc->natts * sizeof(char *));
+	funcRetNulls = (bool *) palloc(funcTupleDesc->natts * sizeof(bool));
 	values = (char **) palloc0(relDesc->natts * sizeof(char *));
 	sampleTuples = 0;
 	*totalrows = 0;
@@ -2342,32 +2505,42 @@ acquire_sample_rows_dispatcher(Relation onerel, bool inh, int elevel,
 
 		for (int rowno = 0; rowno < PQntuples(pgresult); rowno++)
 		{
-			if (!PQgetisnull(pgresult, rowno, 0))
+			/*
+			 * We cannot use record_in function to get row record here.
+			 * Since the result row may contain just the totalrows info where the data columns
+			 * are NULLs. Consider domain: 'create domain dnotnull varchar(15) NOT NULL;'
+			 * NULLs are not allowed in data columns.
+			 */
+			char * rowStr = PQgetvalue(pgresult, rowno, 0);
+
+			if (rowStr == NULL)
+				elog(ERROR, "got NULL pointer from return value of gp_acquire_sample_rows");
+
+			parse_record_to_string(rowStr, funcTupleDesc, funcRetValues, funcRetNulls);
+
+			if (!funcRetNulls[0])
 			{
 				/* This is a summary row. */
 				if (got_summary)
 					elog(ERROR, "got duplicate summary row from gp_acquire_sample_rows");
 
 				this_totalrows = DatumGetFloat8(DirectFunctionCall1(float8in,
-																	CStringGetDatum(PQgetvalue(pgresult, rowno, 0))));
+																	CStringGetDatum(funcRetValues[0])));
 				this_totaldeadrows = DatumGetFloat8(DirectFunctionCall1(float8in,
-																		CStringGetDatum(PQgetvalue(pgresult, rowno, 1))));
+																		CStringGetDatum(funcRetValues[1])));
 				got_summary = true;
 			}
 			else
 			{
 				/* This is a sample row. */
-				int			index;
-
 				if (sampleTuples >= targrows)
 					elog(ERROR, "too many sample rows received from gp_acquire_sample_rows");
 
 				/* Read the 'toolarge' bitmap, if any */
-				if (colLargeRowIndexes && !PQgetisnull(pgresult, rowno, 2))
+				if (colLargeRowIndexes && !funcRetNulls[2])
 				{
 					char	   *toolarge;
-
-					toolarge = PQgetvalue(pgresult, rowno, 2);
+					toolarge = funcRetValues[2];
 					if (strlen(toolarge) != numLiveColumns)
 						elog(ERROR, "'toolarge' bitmap has incorrect length");
 
@@ -2394,10 +2567,10 @@ acquire_sample_rows_dispatcher(Relation onerel, bool inh, int elevel,
 					if (attr->attisdropped)
 						continue;
 
-					if (PQgetisnull(pgresult, rowno, 3 + index))
+					if (funcRetNulls[3 + index])
 						values[i] = NULL;
 					else
-						values[i] = PQgetvalue(pgresult, rowno, 3 + index);
+						values[i] = funcRetValues[3 + index];
 					index++; /* Move index to the next result set attribute */
 				}
 
@@ -2428,6 +2601,14 @@ acquire_sample_rows_dispatcher(Relation onerel, bool inh, int elevel,
 		(*totalrows) += this_totalrows;
 		(*totaldeadrows) += this_totaldeadrows;
 	}
+	for (i = 0; i < funcTupleDesc->natts; i++)
+	{
+		if (funcRetValues[i])
+			pfree(funcRetValues[i]);
+	}
+	pfree(funcRetValues);
+	pfree(funcRetNulls);
+	pfree(values);
 
 	cdbdisp_clearCdbPgResults(&cdb_pgresults);
 

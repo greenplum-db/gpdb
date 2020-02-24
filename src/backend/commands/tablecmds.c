@@ -537,8 +537,6 @@ static char *alterTableCmdString(AlterTableType subtype);
 
 static void change_dropped_col_datatypes(Relation rel);
 
-static void CheckDropRelStorage(RangeVar *rel, ObjectType removeType);
-
 static void inherit_parent(Relation parent_rel, Relation child_rel,
 						   bool is_partition, List *inhAttrNameList);
 static inline void SetConstraints(TupleDesc tupleDesc, char *relName, List **constraints, AttrNumber *attnos);
@@ -660,7 +658,6 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 		relkind == RELKIND_VIEW ||
 		relkind == RELKIND_COMPOSITE_TYPE ||
 		(relkind == RELKIND_RELATION && (
-			relstorage == RELSTORAGE_EXTERNAL ||
 			relstorage == RELSTORAGE_FOREIGN  ||
 			relstorage == RELSTORAGE_VIRTUAL)))
 	{
@@ -913,7 +910,7 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 					 errhint("Use OIDS=FALSE.")));
 	}
 
-	bool valid_opts = (relstorage == RELSTORAGE_EXTERNAL || !useChangedOpts);
+	bool valid_opts = !useChangedOpts;
 
 	/*
 	 * Create the relation.  Inherited defaults and constraints are passed in
@@ -1246,7 +1243,6 @@ RemoveRelations(DropStmt *drop)
 	/* Determine required relkind */
 	switch (drop->removeType)
 	{
-		case OBJECT_EXTTABLE:
 		case OBJECT_TABLE:
 			relkind = RELKIND_RELATION;
 			break;
@@ -1315,9 +1311,6 @@ RemoveRelations(DropStmt *drop)
 			DropErrorMsgNonExistent(rel, relkind, drop->missing_ok);
 			continue;
 		}
-
-		if (drop->removeType == OBJECT_EXTTABLE || drop->removeType == OBJECT_TABLE)
-			CheckDropRelStorage(rel, drop->removeType);
 
 		/* Disallow direct DROP TABLE of a partition (MPP-3260) */
 		if (rel_is_child_partition(relOid) && !drop->bAllowPartn)
@@ -1543,7 +1536,7 @@ ExecuteTruncate(TruncateStmt *stmt)
 				 * This check is performed outside truncate_check_rel() in
 				 * order to provide a more reasonable error message.
 				 */
-				if (RelationIsExternal(rel))
+				if (rel_is_external_table(childrelid))
 					ereport(ERROR,
 							(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 							 errmsg("cannot truncate table having external partition: \"%s\"",
@@ -1861,13 +1854,6 @@ truncate_check_rel(Relation rel)
 				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 				 errmsg("\"%s\" is not a table",
 						RelationGetRelationName(rel))));
-
-	if (RelationIsExternal(rel))
-		ereport(ERROR,
-				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-				 errmsg("\"%s\" is an external relation and can't be truncated",
-						RelationGetRelationName(rel))));
-
 
 	/* Permissions checks */
 	aclresult = pg_class_aclcheck(RelationGetRelid(rel), GetUserId(),
@@ -3508,38 +3494,9 @@ ATVerifyObject(AlterTableStmt *stmt, Relation rel)
 		return;
 
 	/*
-	 * Verify the object specified against relstorage in the catalog.
-	 * Enforce correct syntax usage. 
-	 */
-	if (RelationIsExternal(rel) && stmt->relkind != OBJECT_EXTTABLE)
-	{
-		/*
-		 * special case: in order to support 3.3 dumps with ALTER TABLE OWNER of
-		 * external tables, we will allow using ALTER TABLE (without EXTERNAL)
-		 * temporarily, and use a deprecation warning. This should be removed
-		 * in future releases.
-		 */
-		if(stmt->relkind == OBJECT_TABLE)
-		{
-			if (Gp_role == GP_ROLE_DISPATCH) /* why are WARNINGs emitted from all segments? */
-				ereport(WARNING,
-						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-						 errmsg("\"%s\" is an external table. ALTER TABLE for external tables is deprecated.", RelationGetRelationName(rel)),
-						 errhint("Use ALTER EXTERNAL TABLE instead")));
-		}
-		else
-		{
-			ereport(ERROR,
-					(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-					 errmsg("\"%s\" is an external table", RelationGetRelationName(rel)),
-					 errhint("Use ALTER EXTERNAL TABLE instead")));
-		}
-	}
-
-	/*
 	 * Check the ALTER command type is supported for this object
 	 */
-	if (RelationIsExternal(rel))
+	if (rel_is_external_table(RelationGetRelid(rel)))
 	{
 		ListCell *lcmd;
 
@@ -4029,7 +3986,7 @@ ATController(AlterTableStmt *parsetree,
 	List	   *wqueue = NIL;
 	ListCell   *lcmd;
 	bool is_partition = false;
-	bool is_external = RelationIsExternal(rel);
+	bool is_external = rel_is_external_table(RelationGetRelid(rel));
 
 	cdb_sync_oid_to_segments();
 
@@ -4618,7 +4575,8 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 			pass = AT_PASS_MISC;
 			break;
 		case AT_ExpandTable:
-			ATSimplePermissions(rel, ATT_TABLE);
+			/* External tables can be expanded */
+			ATSimplePermissions(rel, ATT_TABLE | ATT_FOREIGN_TABLE);
 			if (!recursing)
 			{
 				Oid relid = RelationGetRelid(rel);
@@ -5646,7 +5604,7 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation *rel_p,
 		case AT_SetDistributedBy:	/* SET DISTRIBUTED BY */
 			ATExecSetDistributedBy(rel, (Node *) cmd->def, cmd);
 			break;
-		case AT_ExpandTable:	/* SET DISTRIBUTED BY */
+		case AT_ExpandTable:	/* EXPAND TABLE */
 			ATExecExpandTable(wqueue, rel, cmd);
 			break;
 			/* CDB: Partitioned Table commands */
@@ -5759,11 +5717,6 @@ ATRewriteTables(AlterTableStmt *parsetree, List **wqueue, LOCKMODE lockmode)
 
 		/* We will lock the table iff we decide to actually rewrite it */
 		OldHeap = relation_open(tab->relid, NoLock);
-		if (RelationIsExternal(OldHeap))
-		{
-			heap_close(OldHeap, NoLock);
-			continue;
-		}
 		oldTableSpace = OldHeap->rd_rel->reltablespace;
 		oldRelPersistence = OldHeap->rd_rel->relpersistence;
 
@@ -8293,7 +8246,7 @@ ATPrepColumnDefault(Relation rel, bool recurse, AlterTableCmd *cmd)
 				continue;
 
 			childrel = heap_open(childrelid, AccessShareLock);
-			if (RelationIsExternal(childrel))
+			if (rel_is_external_table(childrelid))
 			{
 				heap_close(childrel, NoLock);
 				continue;
@@ -11170,8 +11123,7 @@ ATPrepAlterColumnType(List **wqueue,
 		}
 	}
 
-	if (tab->relkind == RELKIND_RELATION &&
-		rel->rd_rel->relstorage != RELSTORAGE_EXTERNAL)
+	if (tab->relkind == RELKIND_RELATION)
 	{
 		/*
 		 * Set up an expression to transform the old data value to the new
@@ -11272,7 +11224,8 @@ ATPrepAlterColumnType(List **wqueue,
 			tab->rewrite |= AT_REWRITE_COLUMN_REWRITE;
 	}
 	else if (transform &&
-			 rel->rd_rel->relstorage == RELSTORAGE_EXTERNAL)
+			 rel->rd_rel->relkind == RELKIND_FOREIGN_TABLE &&
+			 rel_is_external_table(RelationGetRelid(rel)))
 	{
 		/* Just to give a better error message than "foo is not a table" */
 		ereport(ERROR,
@@ -15234,16 +15187,23 @@ ATExecExpandTable(List **wqueue, Relation rel, AlterTableCmd *cmd)
 			rootCmd->def = (Node*)makeNode(ExpandStmtSpec);
 	}
 
-	if (RelationIsExternal(rel))
+	if (rel->rd_rel->relkind == RELKIND_FOREIGN_TABLE)
 	{
-		ExtTableEntry* ext = GetExtTableEntry(relid);
-		bool           iswritable = ext->iswritable;
+		if (rel_is_external_table(relid))
+		{
+			ExtTableEntry *ext = GetExtTableEntry(relid);
+
+			if (!ext->iswritable)
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("unsupported ALTER command for external table")));
+		}
+		else
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("unsupported ALTER command for foreign table")));
 
 		relation_close(rel, NoLock);
-		if (!iswritable)
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-							errmsg("unsupported ALTER command for external table")));
 	}
 	else
 	{
@@ -15307,13 +15267,6 @@ ATExecExpandTableCTAS(AlterTableCmd *rootCmd, Relation rel, AlterTableCmd *cmd)
 						untransformRelOptions(newOptions),
 						&tmprv,
 						true);
-
-		/*
-		 * bypass gpmon info collecting in following ExecutorStart
-		 * to be consistent with other alter table commands,
-		 * ALTER TABLE SET DISTRIBUTED BY should not be logged in gpperfmon.
-		 */
-		queryDesc->gpmon_pkt = NULL;
 
 		/*
 		 * We need to update our snapshot here to make sure we see all
@@ -15737,7 +15690,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 													 ldistro->numsegments);
 
 				/*
-				 * See if the the old policy is the same as the new one but
+				 * See if the old policy is the same as the new one but
 				 * remember, we still might have to rebuild if there are new
 				 * storage options.
 				 */
@@ -15858,13 +15811,6 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 						untransformRelOptions(newOptions),
 						&tmprv,
 						true);
-
-		/*
-		 * bypass gpmon info collecting in following ExecutorStart
-		 * to be consistent with other alter table commands,
-		 * ALTER TABLE SET DISTRIBUTED BY should not be logged in gpperfmon.
-		 */
-		queryDesc->gpmon_pkt = NULL;
 
 		/* 
 		 * We need to update our snapshot here to make sure we see all
@@ -17094,7 +17040,7 @@ ATPExecPartExchange(AlteredTableInfo *tab, Relation rel, AlterPartitionCmd *pc)
 		Oid				 newrel_type;
 
 		newrel = heap_open(newrelid, AccessExclusiveLock);
-		if (RelationIsExternal(newrel) && validate)
+		if (rel_is_external_table(newrelid) && validate)
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("validation of external tables not supported"),
@@ -17699,7 +17645,7 @@ split_rows(Relation intoa, Relation intob, Relation temprel)
 	ExprState *bchk = NULL;
 
 	/*
-	 * Set up for reconstructMatchingTupleSlot.  In split operation,
+	 * Set up for reconstructPartitionTupleSlot.  In split operation,
 	 * slot/tupdesc should look same between A and B, but here we don't
 	 * assume so just in case, to be safe.
 	 */
@@ -17804,19 +17750,31 @@ split_rows(Relation intoa, Relation intob, Relation temprel)
 				break;
 		}
 
-		/* prepare for ExecQual */
-		econtext->ecxt_scantuple = slotT;
+		/*
+		 * Map attributes from origin to target. We should consider dropped
+		 * columns in the origin.
+		 * 
+		 * ExecQual should use targetSlot rather than slotT in case possible 
+		 * partition key mapping.
+		 */
+		AssertImply(!PointerIsValid(achk), PointerIsValid(bchk));
+		targetSlot = reconstructPartitionTupleSlot(slotT, achk ? rria : rrib);
+		econtext->ecxt_scantuple = targetSlot;
 
 		/* determine if we are inserting into a or b */
 		if (achk)
 		{
 			targetIsA = ExecQual((List *)achk, econtext, false);
+
+			if (!targetIsA)
+				targetSlot = reconstructPartitionTupleSlot(slotT, rrib);
 		}
 		else
 		{
-			Assert(PointerIsValid(bchk));
-
 			targetIsA = !ExecQual((List *)bchk, econtext, false);
+
+			if (targetIsA)
+				targetSlot = reconstructPartitionTupleSlot(slotT, rria);
 		}
 
 		/* load variables for the specific target */
@@ -17834,12 +17792,6 @@ split_rows(Relation intoa, Relation intob, Relation temprel)
 			targetAOCSDescPtr = &aocsinsertdesc_b;
 			targetRelInfo = rrib;
 		}
-
-		/*
-		 * Map attributes from origin to target.  We should consider dropped
-		 * columns in the origin.
-		 */
-		targetSlot = reconstructPartitionTupleSlot(slotT, targetRelInfo);
 
 		/* insert into the target table */
 		if (RelationIsHeap(targetRelation))
@@ -18117,13 +18069,8 @@ ATPExecPartSplit(Relation *rel,
 		prule = get_part_rule(*rel, pid, true, true, NULL, false);
 
 		/* Error out on external partition */
-		existrel = heap_open(prule->topRule->parchildrelid, NoLock);
-		if (RelationIsExternal(existrel))
-		{
-			heap_close(existrel, NoLock);
+		if (rel_is_external_table(prule->topRule->parchildrelid))
 			elog(ERROR, "Cannot split external partition");
-		}
-		heap_close(existrel, NoLock);
 
 		/*
 		 * In order to implement SPLIT, we do the following:
@@ -19558,7 +19505,7 @@ ATPExecPartTruncate(Relation rel,
 		Relation	  	 rel2;
 
 		rel2 = heap_open(prule->topRule->parchildrelid, AccessShareLock);
-		if (RelationIsExternal(rel2))
+		if (rel_is_external_table(prule->topRule->parchildrelid))
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("cannot truncate external partition")));
@@ -20528,69 +20475,6 @@ char *alterTableCmdString(AlterTableType subtype)
 	}
 	
 	return cmdstring;
-}
-
-/*
- * CheckDropRelStorage
- *
- * Catch a mismatch between the DROP object type requested and the
- * actual object in the catalog. For example, if DROP EXTERNAL TABLE t
- * was issued, verify that t is indeed an external table, error if not.
- */
-static void
-CheckDropRelStorage(RangeVar *rel, ObjectType removeType)
-{
-	Oid relOid;
-	HeapTuple tuple;
-	char relstorage;
-
-	relOid = RangeVarGetRelid(rel, NoLock, true);
-
-	if (!OidIsValid(relOid))
-		elog(ERROR, "Oid %u is invalid", relOid);
-
-	/* Find out the relstorage */
-	tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(relOid));
-	if (!HeapTupleIsValid(tuple))
-		elog(ERROR, "cache lookup failed for relation %u", relOid);
-	relstorage = ((Form_pg_class) GETSTRUCT(tuple))->relstorage;
-	ReleaseSysCache(tuple);
-
-	/*
-	 * Skip the check if it's external partition. Also, rel_is_child_partition
-	 * is only performed on QD and since we do the check there, no need to do
-	 * it again on QE.
-	 */
-	if (relstorage == RELSTORAGE_EXTERNAL &&
-		(!IS_QUERY_DISPATCHER() || rel_is_child_partition(relOid)))
-		return;
-
-	if ((removeType == OBJECT_EXTTABLE && relstorage != RELSTORAGE_EXTERNAL) ||
-		(removeType == OBJECT_TABLE && (relstorage == RELSTORAGE_EXTERNAL ||
-										relstorage == RELSTORAGE_FOREIGN)))
-	{
-		/* we have a mismatch. format an error string and shoot */
-
-		char *want_type;
-		char *hint;
-
-		if (removeType == OBJECT_EXTTABLE)
-			want_type = pstrdup("an external");
-		else
-			want_type = pstrdup("a base");
-
-		if (relstorage == RELSTORAGE_EXTERNAL)
-			hint = pstrdup("Use DROP EXTERNAL TABLE to remove an external table.");
-		else if (relstorage == RELSTORAGE_FOREIGN)
-			hint = pstrdup("Use DROP FOREIGN TABLE to remove a foreign table.");
-		else
-			hint = pstrdup("Use DROP TABLE to remove a base table.");
-
-		ereport(ERROR,
-				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-						errmsg("\"%s\" is not %s table", rel->relname, want_type),
-						errhint("%s", hint)));
-	}
 }
 
 /*

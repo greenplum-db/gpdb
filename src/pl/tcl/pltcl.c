@@ -512,7 +512,7 @@ pltcl_init_load_unknown(Tcl_Interp *interp)
 	 * this next bit of code is the same as try_relation_openrv(),
 	 * which only exists in 8.4 and up.
 	 ************************************************************/
-	pmrel = relation_openrv_extended(makeRangeVar(NULL, "pltcl_modules", -1), AccessShareLock, true, true);
+	pmrel = relation_openrv_extended(makeRangeVar(NULL, "pltcl_modules", -1), AccessShareLock, true);
 	if (pmrel == NULL)
 		return;
 	/* sanity-check the relation kind */

@@ -162,9 +162,6 @@ function _main() {
     export -f import_remote_key
     export -f run_remote_test
     export -f gpadmin_run_tests
-    pushd bin_gpdb
-        mv *.tar.gz bin_gpdb.tar.gz
-    popd
 
     pushd bin_gpdb_clients_windows
         tar xzvf *.tar.gz

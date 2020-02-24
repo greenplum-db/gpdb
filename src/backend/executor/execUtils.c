@@ -114,6 +114,7 @@ CreateExecutorState(void)
 									 ALLOCSET_DEFAULT_MINSIZE,
 									 ALLOCSET_DEFAULT_INITSIZE,
 									 ALLOCSET_DEFAULT_MAXSIZE);
+	MemoryContextDeclareAccountingRoot(qcontext);
 
 	/*
 	 * Make the EState node within the per-query context.  This way, we don't
@@ -1209,9 +1210,17 @@ ExecPrefetchJoinQual(JoinState *node)
 bool
 ShouldPrefetchJoinQual(EState *estate, Join *join)
 {
-	return (join->prefetch_joinqual &&
-			findSenderMotion(estate->es_plannedstmt,
-							 estate->currentSliceId));
+	ExecSlice  *localSlice;
+
+	if (!join->prefetch_joinqual)
+		return false;
+
+	/* Is this slice the sender of a Motion? */
+	if (!estate->es_sliceTable)
+		return false;
+	localSlice = &estate->es_sliceTable->slices[estate->currentSliceId];
+
+	return (localSlice->parentIndex != -1);
 }
 
 /* ----------------------------------------------------------------
@@ -1408,33 +1417,6 @@ bool
 sliceRunsOnQE(ExecSlice *slice)
 {
 	return (slice != NULL && slice->gangType != GANGTYPE_UNALLOCATED);
-}
-
-/**
- * Calculate the number of sending processes that should in be a slice.
- */
-int
-sliceCalculateNumSendingProcesses(ExecSlice *slice)
-{
-	switch(slice->gangType)
-	{
-		case GANGTYPE_UNALLOCATED:
-			return 0; /* does not send */
-
-		case GANGTYPE_ENTRYDB_READER:
-			return 1; /* on master */
-
-		case GANGTYPE_SINGLETON_READER:
-			return 1; /* on segment */
-
-		case GANGTYPE_PRIMARY_WRITER:
-		case GANGTYPE_PRIMARY_READER:
-			return list_length(slice->segments);
-
-		default:
-			Insist(false);
-			return -1;
-	}
 }
 
 /* Forward declarations */
@@ -1731,18 +1713,6 @@ void mppExecutorCleanup(QueryDesc *queryDesc)
 		(*query_info_collect_hook)(METRICS_QUERY_CANCELING, queryDesc);
 
 	/*
-	 * If this query is being canceled, record that when the gpperfmon
-	 * is enabled.
-	 */
-	if (gp_enable_gpperfmon &&
-		Gp_role == GP_ROLE_DISPATCH &&
-		queryDesc->gpmon_pkt &&
-		QueryCancelCleanup)
-	{			
-		gpmon_qlog_query_canceling(queryDesc->gpmon_pkt);
-	}
-
-	/*
 	 * Request any commands still executing on qExecs to stop.
 	 * Wait for them to finish and clean up the dispatching structures.
 	 * Replace current error info with QE error info if more interesting.
@@ -1764,18 +1734,6 @@ void mppExecutorCleanup(QueryDesc *queryDesc)
 	if (query_info_collect_hook)
 		(*query_info_collect_hook)(QueryCancelCleanup ? METRICS_QUERY_CANCELED : METRICS_QUERY_ERROR, queryDesc);
 	
-	/**
-	 * Perfmon related stuff.
-	 */
-	if (gp_enable_gpperfmon 
-			&& Gp_role == GP_ROLE_DISPATCH
-			&& queryDesc->gpmon_pkt)
-	{			
-		gpmon_qlog_query_error(queryDesc->gpmon_pkt);
-		pfree(queryDesc->gpmon_pkt);
-		queryDesc->gpmon_pkt = NULL;
-	}
-
 	ReportOOMConsumption();
 
 	/**
@@ -1785,13 +1743,6 @@ void mppExecutorCleanup(QueryDesc *queryDesc)
 	{
 		SPI_InitMemoryReservation();
 	}
-}
-
-void ResetExprContext(ExprContext *econtext)
-{
-	MemoryContext memctxt = econtext->ecxt_per_tuple_memory;
-	if(memctxt->allBytesAlloc - memctxt->allBytesFreed > 50000)
-		MemoryContextReset(memctxt);
 }
 
 /**
@@ -1813,13 +1764,7 @@ uint64 PlanStateOperatorMemKB(const PlanState *ps)
 	}
 	else
 	{
-		if (IsA(ps, AggState))
-		{
-			/* Retrieve all relinquished memory (quota the other node not using) */
-			result = ps->plan->operatorMemKB + (MemoryAccounting_RequestQuotaIncrease() >> 10);
-		}
-		else
-			result = ps->plan->operatorMemKB;
+		result = ps->plan->operatorMemKB;
 	}
 	
 	return result;
@@ -2104,87 +2049,6 @@ ExtractParamsFromInitPlans(PlannedStmt *plannedstmt, Plan *root, EState *estate)
 	Assert(Gp_role == GP_ROLE_EXECUTE);
 
 	ParamExtractorWalker(root, &ctx);
-}
-
-typedef struct MotionAssignerContext
-{
-	plan_tree_base_prefix base; /* Required prefix for plan_tree_walker/mutator */
-	List *motStack; /* Motion Stack */
-} MotionAssignerContext;
-
-/*
- * Walker to set plan->motionNode for every Plan node to its corresponding parent
- * motion node.
- *
- * This function maintains a stack of motion nodes. When we encounter a motion node
- * we push it on to the stack, walk its subtree, and then pop it off the stack.
- * When we encounter any plan node (motion nodes included) we assign its plan->motionNode
- * to the top of the stack.
- *
- * NOTE: Motion nodes will have their motionNode value set to the previous motion node
- * we encountered while walking the subtree.
- */
-static bool
-MotionAssignerWalker(Plan *node,
-				  void *context)
-{
-	if (node == NULL) return false;
-
-	Assert(context);
-	MotionAssignerContext *ctx = (MotionAssignerContext *) context;
-
-	if (is_plan_node((Node*)node))
-	{
-		Plan *plan = (Plan *) node;
-		/*
-		 * TODO: For cached plan we may be assigning multiple times.
-		 * The eventual goal is to relocate it to planner. For now,
-		 * ignore already assigned nodes.
-		 */
-		if (NULL != plan->motionNode)
-			return true;
-		plan->motionNode = ctx->motStack != NIL ? (Plan *) lfirst(list_head(ctx->motStack)) : NULL;
-	}
-
-	/*
-	 * Subplans get dynamic motion assignment as they can be executed from
-	 * arbitrary expressions. So, we don't assign any motion to these nodes.
-	 */
-	if (IsA(node, SubPlan))
-	{
-		return false;
-	}
-
-	if (IsA(node, Motion))
-	{
-		ctx->motStack = lcons(node, ctx->motStack);
-		plan_tree_walker((Node *)node, MotionAssignerWalker, ctx, true);
-		ctx->motStack = list_delete_first(ctx->motStack);
-
-		return false;
-	}
-
-	/* Continue walking */
-	return plan_tree_walker((Node*)node, MotionAssignerWalker, ctx, true);
-}
-
-/*
- * Assign every node in plannedstmt->planTree its corresponding
- * parent Motion Node if it has one
- *
- * NOTE: Some plans may not be rooted by a motion on the segment so
- * this function does not guarantee that every node will have a non-NULL
- * motionNode value.
- */
-void AssignParentMotionToPlanNodes(PlannedStmt *plannedstmt)
-{
-	MotionAssignerContext ctx;
-	ctx.base.node = (Node*)plannedstmt;
-	ctx.motStack = NIL;
-
-	MotionAssignerWalker(plannedstmt->planTree, &ctx);
-	/* The entire motion stack should have been unwounded */
-	Assert(ctx.motStack == NIL);
 }
 
 /**

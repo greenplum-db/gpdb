@@ -362,7 +362,6 @@ void test__VmemTracker_ReserveVmem__OOMLoggingBeforeReservation(void **state)
 	will_be_called(UpdateTimeAtomically);
 	expect_any_count(write_stderr, fmt, -1);
 	will_be_called(write_stderr);
-	will_be_called(MemoryAccounting_SaveToLog);
 	expect_any(MemoryContextStats, context);
 	will_be_called(MemoryContextStats);
 

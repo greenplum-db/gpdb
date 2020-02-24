@@ -433,3 +433,6 @@ CREATE FUNCTION cdblegacyhash_uuid(uuid) RETURNS int4 LANGUAGE internal IMMUTABL
 CREATE FUNCTION cdblegacyhash_anyenum(anyenum) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT PARALLEL SAFE AS 'cdblegacyhash_anyenum' WITH (OID=6171, DESCRIPTION="Legacy cdbhash function");
 
 CREATE FUNCTION gp_create_restore_point(text) RETURNS SETOF record LANGUAGE internal IMMUTABLE STRICT AS 'gp_create_restore_point' WITH (OID=6998,  DESCRIPTION="Create a named restore point on all segments");
+
+
+CREATE FUNCTION gp_exttable_fdw_handler(internal) RETURNS internal LANGUAGE internal IMMUTABLE STRICT AS 'exttable_fdw_handler' WITH (OID=5107, DESCRIPTION="handler for internal external table FDW");

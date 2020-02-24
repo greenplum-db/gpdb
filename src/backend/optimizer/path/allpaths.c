@@ -799,17 +799,6 @@ set_plain_rel_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 	/* Consider sequential scan */
 	switch (rel->relstorage)
 	{
-		case RELSTORAGE_EXTERNAL:
-
-			/*
-			 * If the relation is external, create an external path for it and
-			 * select it (only external path is considered for an external
-			 * base rel).
-			 */
-			add_path(rel, (Path *) create_external_path(root, rel, required_outer));
-			set_cheapest(rel);
-			return;
-
 		case RELSTORAGE_AOROWS:
 		case RELSTORAGE_AOCOLS:
 		case RELSTORAGE_HEAP:

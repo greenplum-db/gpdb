@@ -332,7 +332,6 @@ RunawayCleaner_RunawayCleanupDoneForProcess(bool ignoredCleanup)
 	 * Now, we have some head room to actually record our usage.
 	 */
 	write_stderr("Logging memory usage because of runaway cleanup. Note, this is a post-cleanup logging and may be incomplete.");
-	MemoryAccounting_SaveToLog();
 	MemoryContextStats(TopMemoryContext);
 }
 

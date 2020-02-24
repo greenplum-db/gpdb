@@ -12,18 +12,10 @@
     <p>Also, be sure to review <xref href="../monitoring/monitoring.dita#topic_kmz_lbg_rp"/> for
       monitoring activities you can script to quickly detect problems in the system. </p>
   </body>
-  <topic id="topic2" xml:lang="en">
+  <topic id="topic2" xml:lang="en" otherprops="pivotal">
     <title id="kj157177">Monitoring Database Activity and Performance</title>
     <body>
-      <p>Greenplum Database includes an optional system monitoring and management database,
-          <codeph>gpperfmon</codeph>, that administrators can enable. The
-          <codeph>gpperfmon_install</codeph> command-line utility creates the
-          <codeph>gpperfmon</codeph> database and enables data collection agents that collect and
-        store query and system metrics in the database. Administrators can query metrics in the
-          <codeph>gpperfmon</codeph> database. See the documentation for the
-          <codeph>gpperfmon</codeph> database in the <cite>Greenplum Database Reference
-        Guide</cite>.</p>
-      <p otherprops="pivotal">Pivotal Greenplum Command Center, an optional web-based interface,
+      <p>Pivotal Greenplum Command Center, an optional web-based interface,
         provides cluster status information, graphical administrative tools, real-time query
         monitoring, and historical cluster and query data. Download the Greenplum Command Center
         package from <xref href="https://network.pivotal.io/products/pivotal-gpdb" scope="external"

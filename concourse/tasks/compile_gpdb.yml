@@ -6,8 +6,6 @@ inputs:
   - name: libquicklz-installer
   - name: libquicklz-devel-installer
     optional: true
-  - name: libsigar-installer
-    optional: true
   - name: python-tarball
 outputs:
   - name: gpdb_artifacts
@@ -19,5 +17,5 @@ params:
   BLD_TARGETS:
   OUTPUT_ARTIFACT_DIR: gpdb_artifacts
   CONFIGURE_FLAGS:
-  ORCA_TAG: v3.88.0
+  ORCA_TAG: v3.92.0
   RC_BUILD_TYPE_GCS:

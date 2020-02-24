@@ -775,36 +775,6 @@
         </body>
       </topic>
     </topic>
-    <topic id="topic33" xml:lang="en">
-      <title id="kh171299">System Monitoring Parameters</title>
-      <topic id="topic36" xml:lang="en">
-        <title>Greenplum Performance Monitoring Data Collection Agents</title>
-        <body>
-          <p>The following parameters configure the data collection agents for the
-              (<codeph>gpperfmon</codeph>) database.</p>
-          <simpletable id="kh171891">
-            <strow>
-              <stentry>
-                <p>
-                  <codeph>gp_enable_gpperfmon</codeph>
-                </p>
-                <p>
-                  <codeph>gp_gpperfmon_send_interval</codeph>
-                </p>
-              </stentry>
-              <stentry>
-                <p>
-                  <codeph>gpperfmon_log_alert_level</codeph>
-                </p>
-                <p>
-                  <codeph>gpperfmon_port</codeph>
-                </p>
-              </stentry>
-            </strow>
-          </simpletable>
-        </body>
-      </topic>
-    </topic>
     <topic id="topic37" xml:lang="en">
       <title id="kh171364">Runtime Statistics Collection Parameters</title>
       <body>

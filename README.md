@@ -164,16 +164,6 @@ Currently, GPDB is built with PXF by default (--enable-pxf is on).
 In order to build GPDB without pxf, simply invoke `./configure` with additional option `--disable-pxf`.
 PXF requires curl, so `--enable-pxf` is not compatible with the `--without-libcurl` option.
 
-### Building GPDB with gpperfmon enabled
-
-gpperfmon tracks a variety of queries, statistics, system properties, and metrics.
-To build with it enabled, change your `configure` to have an additional option
-`--enable-gpperfmon`
-
-See [more information about gpperfmon here](gpAux/gpperfmon/README.md)
-
-gpperfmon is dependent on several libraries like apr, apu, and libsigar
-
 ### Building GPDB with Python3 enabled
 
 GPDB supports Python3 with plpython3u UDF

@@ -128,11 +128,6 @@ get_raw_page_internal(text *relname, ForkNumber forknum, BlockNumber blkno)
 				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 				 errmsg("cannot get raw page from append-optimized relation \"%s\"",
 						RelationGetRelationName(rel))));
-	if (rel->rd_rel->relstorage == RELSTORAGE_EXTERNAL)
-		ereport(ERROR,
-				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-				 errmsg("cannot get raw page from external relation \"%s\"",
-						RelationGetRelationName(rel))));
 
 	/*
 	 * Reject attempts to read non-local temporary relations; we would be

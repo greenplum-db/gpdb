@@ -543,8 +543,6 @@ ExecEndNestLoop(NestLoopState *node)
 
 	NL1_printf("ExecEndNestLoop: %s\n",
 			   "node processing ended");
-
-	EndPlanStateGpmonPkt(&node->js.ps);
 }
 
 /* ----------------------------------------------------------------

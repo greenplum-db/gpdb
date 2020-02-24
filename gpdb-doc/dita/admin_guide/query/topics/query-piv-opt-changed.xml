@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-
 <topic id="topic1">
-  <title>Changed Behavior with the GPORCA</title>
+  <title>Changed Behavior with GPORCA</title>
   <abstract>
     <shortdesc>There are changes to Greenplum Database behavior with the GPORCA optimizer enabled
       (the default) as compared to the Postgres Planner.</shortdesc>

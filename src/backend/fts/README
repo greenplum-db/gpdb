@@ -15,12 +15,11 @@ Fault Tolerance Service (FTS):
 
    Two functions pointers are important members of the
    BackgroundWorker structure. One points to main entry function of
-   the GP background process. The other points to the the function
+   the GP background process. The other points to the function
    that determine if the process should be started or not. For FTS,
    these two functions are FtsProbeMain() and FtsProbeStartRule(),
    respectively.  This is hard-coded in postmaster.c.
 
-      #define MaxPMAuxProc 6
       static BackgroundWorker PMAuxProcList[MaxPMAuxProc]
 
    In Postmaster, we will check the following condition:
@@ -154,7 +153,7 @@ requests 1, 2, and 3 which should share the same results since they request
 before the start of a new fts loop, and after the results of the previous probe
 - that is in the lower portion.
 
-2) Ensuring fresh results from an external probe. This is depicted as as request
+2) Ensuring fresh results from an external probe. This is depicted as request
 4 incoming during a current probe in progress. This request should get fresh
 results rather than using the current results (ie: "piggybacking").
 

@@ -32,8 +32,12 @@
 #include "utils/memutils.h"
 #include "pg_trace.h"
 
-/* Buffer size required to store a compressed version of backup block image */
-#define PGLZ_MAX_BLCKSZ PGLZ_MAX_OUTPUT(BLCKSZ)
+#ifdef HAVE_LIBZSTD
+/* Zstandard library is provided */
+#include <zstd.h>
+/* zstandard compression level to use. */
+#define COMPRESS_LEVEL 3
+#endif			/* HAVE_LIBZSTD */
 
 /*
  * For each block reference registered with XLogRegisterBuffer, we fill in
@@ -57,7 +61,7 @@ typedef struct
 								 * backup block data in XLogRecordAssemble() */
 
 	/* buffer to store a compressed version of backup block image */
-	char		compressed_page[PGLZ_MAX_BLCKSZ];
+	char		compressed_page[BLCKSZ];
 } registered_buffer;
 
 static registered_buffer *registered_buffers;
@@ -784,6 +788,8 @@ static bool
 XLogCompressBackupBlock(char *page, uint16 hole_offset, uint16 hole_length,
 						char *dest, uint16 *dlen)
 {
+#ifdef HAVE_LIBZSTD
+	static ZSTD_CCtx  *cxt = NULL;      /* ZSTD compression context */
 	int32		orig_len = BLCKSZ - hole_length;
 	int32		len;
 	int32		extra_bytes = 0;
@@ -808,18 +814,34 @@ XLogCompressBackupBlock(char *page, uint16 hole_offset, uint16 hole_length,
 	else
 		source = page;
 
+	if (!cxt)
+	{
+		cxt = ZSTD_createCCtx();
+		if (!cxt)
+			elog(ERROR, "out of memory");
+	}
+
+	len = ZSTD_compressCCtx(cxt,
+							dest, BLCKSZ,
+							source, orig_len,
+							COMPRESS_LEVEL);
+
+	if (ZSTD_isError(len))
+		elog(ERROR, "compression failed: %s uncompressed len %d",
+			 ZSTD_getErrorName(len), orig_len);
+
 	/*
-	 * We recheck the actual size even if pglz_compress() reports success and
+	 * We recheck the actual size even if ZSTD reports success and
 	 * see if the number of bytes saved by compression is larger than the
 	 * length of extra data needed for the compressed version of block image.
 	 */
-	len = pglz_compress(source, orig_len, dest, PGLZ_strategy_default);
 	if (len >= 0 &&
 		len + extra_bytes < orig_len)
 	{
 		*dlen = (uint16) len;	/* successful compression */
 		return true;
 	}
+#endif
 	return false;
 }
 

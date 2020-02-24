@@ -235,8 +235,6 @@ ExecEndBitmapAnd(BitmapAndState *node)
 		if (bitmapplans[i])
 			ExecEndNode(bitmapplans[i]);
 	}
-
-	EndPlanStateGpmonPkt(&node->ps);
 }
 
 void

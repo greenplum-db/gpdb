@@ -190,7 +190,7 @@ ERROR:  relation "bad_whois" does not exist
 LINE 1: select count(*) from bad_whois;
                              ^
 drop external table bad_whois;
-ERROR:  table "bad_whois" does not exist
+ERROR:  foreign table "bad_whois" does not exist
 --
 -- try a bad location
 --
@@ -215,9 +215,7 @@ ERROR:  protocol "bad_protocol" does not exist
 create external table ext (a int, x text)
 location ('file://@hostname@@abs_srcdir@/data/no/such/place/badt1.tbl' )
 format 'text';
-alter table ext drop column a; -- should pass with warning
-WARNING:  "ext" is an external table. ALTER TABLE for external tables is deprecated.
-HINT:  Use ALTER EXTERNAL TABLE instead
+alter table ext drop column a; -- should pass
 alter external table ext add column a int; -- pass
 alter external table ext drop column a; -- pass
 alter external table ext add column extnewcol int not null; -- should fail (constraints not allowed)
@@ -233,26 +231,26 @@ alter external table ext alter column x type integer; -- pass
 -- TRUNCATE/UPDATE/DELETE/INSERT (INTO RET)
 --
 truncate ext;
-ERROR:  "ext" is an external relation and can't be truncated
+ERROR:  "ext" is not a table
 delete from ext;
-ERROR:  cannot update or delete from external relation "ext"
+ERROR:  cannot delete from foreign table "ext"
 update ext set x='1' where x='2';
-ERROR:  cannot update or delete from external relation "ext"
-insert into ext(x) values('a');
-ERROR:  cannot change a readable external table "ext"
+ERROR:  cannot update foreign table "ext"
+insert into ext(x) values(123);
+ERROR:  foreign table "ext" does not allow inserts
 create index ext_index on ext(x); -- should fail
-ERROR:  cannot create indexes on external tables
+ERROR:  cannot create index on foreign table "ext"
 drop table ext; -- should fail (wrong object)
-ERROR:  "ext" is not a base table
-HINT:  Use DROP EXTERNAL TABLE to remove an external table.
+ERROR:  "ext" is not a table
+HINT:  Use DROP FOREIGN TABLE to remove a foreign table.
 drop external table ext;
 ----------------------------------------------------------------------
 -- CUSTOM PROTOCOLS
 ----------------------------------------------------------------------
 DROP EXTERNAL TABLE IF EXISTS ext_w;
-NOTICE:  table "ext_w" does not exist, skipping
+NOTICE:  foreign table "ext_w" does not exist, skipping
 DROP EXTERNAL TABLE IF EXISTS ext_r;
-NOTICE:  table "ext_r" does not exist, skipping
+NOTICE:  foreign table "ext_r" does not exist, skipping
 DROP ROLE IF EXISTS extprotu;
 NOTICE:  role "extprotu" does not exist, skipping
 NOTICE:  role "extprotu" does not exist, skipping  (seg0 @hostname@:50000 pid=64819)
@@ -389,7 +387,7 @@ SELECT count(*) FROM pg_exttable WHERE urilocation @> '{file://@hostname@@abs_sr
 (1 row)
 
 DROP SCHEMA exttabletest CASCADE;
-NOTICE:  drop cascades to external table exttabletest.ext_nation
+NOTICE:  drop cascades to foreign table exttabletest.ext_nation
 SELECT count(*) FROM pg_exttable WHERE urilocation @> '{file://@hostname@@abs_srcdir@/data/nation.tbl}';
  count 
 -------
@@ -777,7 +775,7 @@ SELECT count(*) from gp_read_error_log('exttab_basic_7');
 
 -- Drop external table gets rid off error logs
 DROP EXTERNAL TABLE IF EXISTS exttab_error_log;
-NOTICE:  table "exttab_error_log" does not exist, skipping
+NOTICE:  foreign table "exttab_error_log" does not exist, skipping
 CREATE EXTERNAL TABLE exttab_error_log( i int, j text )
 LOCATION ('file://@hostname@@abs_srcdir@/data/exttab.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 2;
@@ -1600,9 +1598,9 @@ SELECT gp_truncate_error_log('exttab_txs_2');
 (1 row)
 
 DROP EXTERNAL TABLE IF EXISTS exttab_txs_3;
-NOTICE:  table "exttab_txs_3" does not exist, skipping
+NOTICE:  foreign table "exttab_txs_3" does not exist, skipping
 DROP EXTERNAL TABLE IF EXISTS exttab_txs_4;
-NOTICE:  table "exttab_txs_4" does not exist, skipping
+NOTICE:  foreign table "exttab_txs_4" does not exist, skipping
 BEGIN;
 -- create an external table that will reach segment reject limit
 -- reaches reject limit
@@ -1933,7 +1931,9 @@ SELECT * FROM exttab_udfs_insert_2;
 -- Scans in union queries with seg reject limit reached
 -- does not reach reject limit
 DROP EXTERNAL TABLE IF EXISTS exttab_union_1;
+NOTICE:  foreign table "exttab_union_1" does not exist, skipping
 DROP EXTERNAL TABLE IF EXISTS exttab_union_2;
+NOTICE:  foreign table "exttab_union_2" does not exist, skipping
 CREATE EXTERNAL TABLE exttab_union_1( i int, j text )
 LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 10;
@@ -2040,9 +2040,9 @@ SELECT * from exttab_union_insert_1 order by i;
 
 -- Views reaching segment reject limit
 DROP EXTERNAL TABLE IF EXISTS exttab_views_1 CASCADE;
-NOTICE:  table "exttab_views_1" does not exist, skipping
+NOTICE:  foreign table "exttab_views_1" does not exist, skipping
 DROP EXTERNAL TABLE IF EXISTS exttab_views_2 CASCADE;
-NOTICE:  table "exttab_views_2" does not exist, skipping
+NOTICE:  foreign table "exttab_views_2" does not exist, skipping
 -- does not reach reject limit
 CREATE EXTERNAL TABLE exttab_views_1( i int, j text )
 LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|')
@@ -2207,9 +2207,9 @@ SELECT * FROM gp_read_error_log('exttab_views_2')
 
 -- Scans in window queries with and without seg reject limit reached
 DROP EXTERNAL TABLE IF EXISTS exttab_windows_1;
-NOTICE:  table "exttab_windows_1" does not exist, skipping
+NOTICE:  foreign table "exttab_windows_1" does not exist, skipping
 DROP EXTERNAL TABLE IF EXISTS exttab_windows_2;
-NOTICE:  table "exttab_windows_2" does not exist, skipping
+NOTICE:  foreign table "exttab_windows_2" does not exist, skipping
 -- does not reach reject limit
 CREATE EXTERNAL TABLE exttab_windows_1( i int, j text )
 LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|')
@@ -2317,9 +2317,9 @@ SELECT * FROM gp_read_error_log('exttab_windows_2')
 
 -- LIMIT queries without segment reject limit reached
 DROP EXTERNAL TABLE IF EXISTS exttab_limit_1 cascade;
-NOTICE:  table "exttab_limit_1" does not exist, skipping
+NOTICE:  foreign table "exttab_limit_1" does not exist, skipping
 DROP EXTERNAL TABLE IF EXISTS exttab_limit_2 cascade;
-NOTICE:  table "exttab_limit_2" does not exist, skipping
+NOTICE:  foreign table "exttab_limit_2" does not exist, skipping
 -- does not reach reject limit
 CREATE EXTERNAL TABLE exttab_limit_1( i int, j text )
 LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|')
@@ -2512,7 +2512,7 @@ SHOW gp_initial_bad_row_limit;
 (1 row)
 
 DROP EXTERNAL TABLE IF EXISTS exttab_first_reject_limit_1 cascade;
-NOTICE:  table "exttab_first_reject_limit_1" does not exist, skipping
+NOTICE:  foreign table "exttab_first_reject_limit_1" does not exist, skipping
 CREATE EXTERNAL TABLE exttab_first_reject_limit_1( i int, j text )
 LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_first_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 20000;
@@ -2550,7 +2550,7 @@ SELECT COUNT(*) FROM gp_read_error_log('exttab_first_reject_limit_1');
 
 -- first segment reject limit should be checked before segment reject limit
 DROP EXTERNAL TABLE IF EXISTS exttab_first_reject_limit_2;
-NOTICE:  table "exttab_first_reject_limit_2" does not exist, skipping
+NOTICE:  foreign table "exttab_first_reject_limit_2" does not exist, skipping
 CREATE EXTERNAL TABLE exttab_first_reject_limit_2( i int, j text )
 LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_first_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 500;
@@ -2603,7 +2603,7 @@ SELECT COUNT(*) > 0 from gp_read_error_log('exttab_first_reject_limit_2');
 (1 row)
 
 DROP EXTERNAL TABLE IF EXISTS exttab_heap_join_1;
-NOTICE:  table "exttab_heap_join_1" does not exist, skipping
+NOTICE:  foreign table "exttab_heap_join_1" does not exist, skipping
 -- does not reach reject limit
 CREATE EXTERNAL TABLE exttab_heap_join_1( i int, j text )
 LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|')
@@ -2659,11 +2659,11 @@ CREATE EXTERNAL TABLE exttab_with_options( i int, j text )
 LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 OPTIONS (hello 'world', bonjour 'again', nihao 'again and again' );
 \d exttab_with_options
-External table "public.exttab_with_options"
- Column |  Type   | Modifiers 
---------+---------+-----------
- i      | integer | 
- j      | text    | 
+ Foreign table "public.exttab_with_options"
+ Column |  Type   | Modifiers | FDW Options 
+--------+---------+-----------+-------------
+ i      | integer |           | 
+ j      | text    |           | 
 Type: readable
 Encoding: UTF8
 Format type: text
@@ -2673,11 +2673,11 @@ External location: file://@hostname@@abs_srcdir@/data/exttab_few_errors.data
 Execute on: all segments
 
 \d exttab_with_option_empty
-External table "public.exttab_with_option_empty"
- Column |  Type   | Modifiers 
---------+---------+-----------
- i      | integer | 
- j      | text    | 
+Foreign table "public.exttab_with_option_empty"
+ Column |  Type   | Modifiers | FDW Options 
+--------+---------+-----------+-------------
+ i      | integer |           | 
+ j      | text    |           | 
 Type: readable
 Encoding: UTF8
 Format type: text
@@ -4744,7 +4744,7 @@ CREATE OR REPLACE FUNCTION gpformatter() RETURNS record
 AS '$libdir/gpformatter.so', 'formatter_import'
 LANGUAGE C STABLE;
 DROP EXTERNAL TABLE IF EXISTS tbl_ext_gpformatter;
-NOTICE:  table "tbl_ext_gpformatter" does not exist, skipping
+NOTICE:  foreign table "tbl_ext_gpformatter" does not exist, skipping
 CREATE READABLE EXTERNAL TABLE tbl_ext_gpformatter (
 d1 text
 )
@@ -4765,10 +4765,10 @@ CONTEXT:  External table tbl_ext_gpformatter
 -- Test information_schema views for external tables
 --
 SELECT * FROM information_schema.tables WHERE table_name IN ('wet_pos4', 'exttab_basic_1');
- table_catalog | table_schema |   table_name   | table_type | self_referencing_column_name | reference_generation | user_defined_type_catalog | user_defined_type_schema | user_defined_type_name | is_insertable_into | is_typed | commit_action 
----------------+--------------+----------------+------------+------------------------------+----------------------+---------------------------+--------------------------+------------------------+--------------------+----------+---------------
- regression    | public       | exttab_basic_1 | BASE TABLE |                              |                      |                           |                          |                        | NO                 | NO       | 
- regression    | public       | wet_pos4       | BASE TABLE |                              |                      |                           |                          |                        | YES                | NO       | 
+ table_catalog | table_schema |   table_name   |  table_type   | self_referencing_column_name | reference_generation | user_defined_type_catalog | user_defined_type_schema | user_defined_type_name | is_insertable_into | is_typed | commit_action 
+---------------+--------------+----------------+---------------+------------------------------+----------------------+---------------------------+--------------------------+------------------------+--------------------+----------+---------------
+ regression    | public       | exttab_basic_1 | FOREIGN TABLE |                              |                      |                           |                          |                        | NO                 | NO       | 
+ regression    | public       | wet_pos4       | FOREIGN TABLE |                              |                      |                           |                          |                        | YES                | NO       | 
 (2 rows)
 
 --

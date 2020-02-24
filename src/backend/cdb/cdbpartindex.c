@@ -480,7 +480,6 @@ constructIndexHashKey(Oid partOid,
 static void
 createIndexHashTables()
 {
-	MemoryContext context = NULL;
 	HASHCTL		hash_ctl;
 
 	/*
@@ -494,7 +493,7 @@ createIndexHashTables()
 	hash_ctl.hash = key_string_hash;
 	hash_ctl.match = key_string_compare;
 	hash_ctl.keycopy = key_string_copy;
-	hash_ctl.hcxt = context;
+	hash_ctl.hcxt = CurrentMemoryContext;
 	PartitionIndexHash = hash_create("Partition Index Hash",
 									 INITIAL_NUM_LOGICAL_INDEXES_ESTIMATE,
 									 &hash_ctl,
@@ -509,7 +508,7 @@ createIndexHashTables()
 	hash_ctl.keysize = sizeof(uint32);
 	hash_ctl.entrysize = sizeof(LogicalIndexInfoHashEntry);
 	hash_ctl.hash = tag_hash;
-	hash_ctl.hcxt = context;
+	hash_ctl.hcxt = CurrentMemoryContext;
 	LogicalIndexInfoHash = hash_create("Logical Index Info Hash",
 									   INITIAL_NUM_LOGICAL_INDEXES_ESTIMATE,
 									   &hash_ctl,

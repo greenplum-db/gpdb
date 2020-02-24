@@ -168,7 +168,7 @@ if (1)
     exit(0) unless (defined($bigh));
 
     # make an array of the token names (keys), sorted descending by
-    # the length of of the replacement value.
+    # the length of the replacement value.
     my @sortlen;
     @sortlen = 
         sort {length($bigh->{$b}) <=> length($bigh->{$a})} keys %{$bigh};

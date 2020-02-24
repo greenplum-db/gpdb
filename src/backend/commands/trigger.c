@@ -87,7 +87,15 @@ static HeapTuple GetTupleForTrigger(EState *estate,
 				   ItemPointer tid,
 				   LockTupleMode lockmode,
 				   TupleTableSlot **newSlot);
-
+static bool TriggerEnabled(EState *estate, ResultRelInfo *relinfo,
+			   Trigger *trigger, TriggerEvent event,
+			   Bitmapset *modifiedCols,
+			   HeapTuple oldtup, HeapTuple newtup);
+static HeapTuple ExecCallTriggerFunc(TriggerData *trigdata,
+					int tgindx,
+					FmgrInfo *finfo,
+					Instrumentation *instr,
+					MemoryContext per_tuple_context);
 static void AfterTriggerSaveEvent(EState *estate, ResultRelInfo *relinfo,
 					  int event, bool row_trigger,
 					  HeapTuple oldtup, HeapTuple newtup,
@@ -1911,7 +1919,7 @@ equalTriggerDescs(TriggerDesc *trigdesc1, TriggerDesc *trigdesc2)
  *
  * Returns the tuple (or NULL) as returned by the function.
  */
-HeapTuple
+static HeapTuple
 ExecCallTriggerFunc(TriggerData *trigdata,
 					int tgindx,
 					FmgrInfo *finfo,
@@ -2774,8 +2782,6 @@ GetTupleForTrigger(EState *estate,
 	/* these should be rejected when you try to create such triggers, but let's check */
 	if (RelationIsAppendOptimized(relation))
 		elog(ERROR, "UPDATE and DELETE triggers are not supported on append-only tables");
-	if (RelationIsExternal(relation))
-		elog(ERROR, "UPDATE and DELETE triggers are not supported on external tables");
 
 	Assert(RelationIsHeap(relation));
 
@@ -2910,7 +2916,7 @@ ltrmark:;
 /*
  * Is trigger enabled to fire?
  */
-bool
+static bool
 TriggerEnabled(EState *estate, ResultRelInfo *relinfo,
 			   Trigger *trigger, TriggerEvent event,
 			   Bitmapset *modifiedCols,

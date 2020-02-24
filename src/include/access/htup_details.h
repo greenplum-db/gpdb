@@ -274,7 +274,10 @@ struct HeapTupleHeaderData
 #define HEAP_HOT_UPDATED		0x4000	/* tuple was HOT-updated */
 #define HEAP_ONLY_TUPLE			0x8000	/* this is heap-only tuple */
 
-#define HEAP2_XACT_MASK			0xE000	/* visibility-related bits */
+#define HEAP2_XACT_MASK			0xF800	/* visibility-related bits
+										 * GPDB: include HEAP_XMIN_DISTRIBUTED_SNAPSHOT_IGNORE
+										 * and HEAP_XMAX_DISTRIBUTED_SNAPSHOT_IGNORE
+										 */
 
 /*
  * HEAP_TUPLE_HAS_MATCH is a temporary flag used during hash joins.  It is

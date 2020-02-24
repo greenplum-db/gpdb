@@ -600,41 +600,9 @@ extern bool gp_enable_agg_distinct;
  * prune values from DISTINCT-qualified aggregate function arguments?
  *
  * The code uses planner estimates to decide whether to use this feature,
- * when enabled.  See, however, gp_eager_dqa_pruning.
+ * when enabled.
  */
 extern bool gp_enable_dqa_pruning;
-
-/*
- * "gp_eager_agg_distinct_pruning"
- *
- * Should Greenplum bias planner estimates so as to favor the use of grouping
- * in the first phases of 3-phase aggregation to prune values from DISTINCT-
- * qualified aggregate function arguments?
- *
- * Note that this has effect only when gp_enable_dqa_pruning it true.  It
- * provided to facilitate testing and is not a tuning parameter.
- */
-extern bool gp_eager_dqa_pruning;
-
-/*
- * "gp_eager_one_phase_agg"
- *
- * Should Greenplum bias planner estimates so as to favor the use of one
- * phase aggregation?
- *
- * It is provided to facilitate testing and is not a tuning parameter.
- */
-extern bool gp_eager_one_phase_agg;
-
-/*
- * "gp_eager_two_phase_agg"
- *
- * Should Greenplum bias planner estimates so as to favor the use of two
- * phase aggregation?
- *
- * It is provided to facilitate testing and is not a tuning parameter.
- */
-extern bool gp_eager_two_phase_agg;
 
 /* May Greenplum apply Unique operator (and possibly a Sort) in parallel prior
  * to the collocation motion for a Unique operator?  The idea is to reduce
@@ -657,6 +625,11 @@ extern bool gp_eager_preunique;
  *
  */
 extern bool gp_enable_explain_allstat;
+
+/*
+ * What level of details of the memory accounting information to show during EXPLAIN ANALYZE?
+ */
+extern int explain_memory_verbosity;
 
 /* May Greenplum restrict ORDER BY sorts to the first N rows if the ORDER BY
  * is wrapped by a LIMIT clause (where N=OFFSET+LIMIT)?
@@ -712,9 +685,6 @@ extern int gp_segworker_relative_priority;
 /*  Max size of dispatched plans; 0 if no limit */
 extern int gp_max_plan_size;
 
-/* If we use two stage hashagg, we can stream the bottom half */
-extern bool gp_hashagg_streambottom;
-
 /* The default number of batches to use when the hybrid hashed aggregation
  * algorithm (re-)spills in-memory groups to disk.
  */
@@ -732,25 +702,11 @@ extern int gp_motion_slice_noop;
 /* Disable setting of hint-bits while reading db pages */
 extern bool gp_disable_tuple_hints;
 
-/* Enable gpmon */
-extern bool gp_enable_gpperfmon;
-extern int gp_gpperfmon_send_interval;
+/* Enable metrics */
 extern bool gp_enable_query_metrics;
 extern int gp_instrument_shmem_size;
 
 extern bool dml_ignore_target_partition_check;
-
-/* gpmon alert level, control log alert level used by gpperfmon */
-typedef enum 
-{
-	GPPERFMON_LOG_ALERT_LEVEL_NONE,
-	GPPERFMON_LOG_ALERT_LEVEL_WARNING,
-	GPPERFMON_LOG_ALERT_LEVEL_ERROR,
-	GPPERFMON_LOG_ALERT_LEVEL_FATAL,
-	GPPERFMON_LOG_ALERT_LEVEL_PANIC
-} GpperfmonLogAlertLevel;
-extern int gpperfmon_log_alert_level;
-
 
 extern int gp_workfile_limit_per_segment;
 extern int gp_workfile_limit_per_query;
@@ -841,7 +797,6 @@ extern void increment_command_count(void);
 extern bool gp_create_table_random_default_distribution;
 
 /* Functions in guc_gp.c to lookup values in enum GUCs */
-extern GpperfmonLogAlertLevel lookup_loglevel_by_name(const char *name);
 extern const char * lookup_autostats_mode_by_value(GpAutoStatsModeValue val);
 
 #endif   /* CDBVARS_H */

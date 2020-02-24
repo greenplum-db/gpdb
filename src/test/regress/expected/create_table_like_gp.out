@@ -88,7 +88,7 @@ begin
   end loop;
 end;
 $$;
-NOTICE:  table "t_ext_r" does not exist, skipping
+NOTICE:  foreign table "t_ext_r" does not exist, skipping
 -- Verify created tables
 SELECT
 	c.relname,
@@ -103,8 +103,8 @@ WHERE
 	c.relname LIKE 't_ext%';
  relname | relstorage |             urilocation              |  execlocation  |                  fmtopts                   
 ---------+------------+--------------------------------------+----------------+--------------------------------------------
- t_ext   | x          | {file://127.0.0.1/tmp/foo}           | {ALL_SEGMENTS} | delimiter '     ' null '\N' escape '\'
- t_ext_b | x          | {file://127.0.0.1/tmp/foo}           | {ALL_SEGMENTS} | delimiter '     ' null '\N' escape '\'
- t_ext_r | x          | {gpfdist://127.0.0.1:8080/tmp/dummy} | {ALL_SEGMENTS} | delimiter ' ' null '' escape '"' quote '"'
+ t_ext   | f          | {file://127.0.0.1/tmp/foo}           | {ALL_SEGMENTS} | delimiter '     ' null '\N' escape '\'
+ t_ext_b | f          | {file://127.0.0.1/tmp/foo}           | {ALL_SEGMENTS} | delimiter '     ' null '\N' escape '\'
+ t_ext_r | f          | {gpfdist://127.0.0.1:8080/tmp/dummy} | {ALL_SEGMENTS} | delimiter ' ' null '' escape '"' quote '"'
 (3 rows)
 

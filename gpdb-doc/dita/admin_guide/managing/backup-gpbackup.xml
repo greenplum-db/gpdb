@@ -52,6 +52,20 @@
           <li>You can execute multiple instances of <codeph>gpbackup</codeph>, but each execution
             requires a distinct timestamp.</li>
           <li>Database object filtering is currently limited to schemas and tables.</li>
+          <li>When backing up a partitioned table where some or all leaf partitions are in different
+            schemas from the root partition, the leaf partition table definitions, including the
+            schemas, are backed up as metadata. This occurs even if the backup operation specifies
+            that schemas that contain the leaf partitions should be excluded. To control data being
+            backed up for this type of partitioned table in this situation, use the
+              <codeph>--leaf-partition-data</codeph> option.<ul id="ul_bbp_35k_skb">
+              <li>If the <codeph>--leaf-partition-data</codeph> option is not specified, the leaf
+                partition data is also backed up even if the backup operation specifies that the
+                leaf partition schemas should excluded.</li>
+              <li>If the <codeph>--leaf-partition-data</codeph> option is specified, the leaf
+                partition data is not be backed up if the backup operation specifies that the leaf
+                partition schemas should excluded. Only the metadata for leaf partition tables are
+                backed up.</li>
+            </ul></li>
           <li>If you use the <codeph>gpbackup --single-data-file</codeph> option to combine table
             backups into a single file per segment, you cannot perform a parallel restore operation
             with <codeph>gprestore</codeph> (cannot set <codeph>--jobs</codeph> to a value higher
@@ -347,16 +361,24 @@ Restore Status: Success</codeblock></section>
       <p><codeph>gpbackup</codeph> backs up all schemas and tables in the specified database, unless
         you exclude or include individual schema or table objects with schema level or table level
         filter options.</p>
-      <p> The schema level options are <codeph>--include-schema</codeph> or
-          <codeph>--exclude-schema</codeph> command-line options to <codeph>gpbackup</codeph>. For
-        example, if the "demo" database includes only two schemas, "wikipedia" and "twitter," both
-        of the following commands back up only the "wikipedia"
+      <p>The schema level options are <codeph>--include-schema</codeph>,
+          <codeph>--include-schema-file</codeph>, or <codeph>--exclude-schema</codeph>,
+          <codeph>--exclude-schema-file</codeph> command-line options to <codeph>gpbackup</codeph>.
+        For example, if the "demo" database includes only two schemas, "wikipedia" and "twitter,"
+        both of the following commands back up only the "wikipedia"
         schema:<codeblock>$ <b>gpbackup --dbname demo --include-schema wikipedia</b>
 $ <b>gpbackup --dbname demo --exclude-schema twitter</b></codeblock></p>
       <p>You can include multiple <codeph>--include-schema</codeph> options in a
           <codeph>gpbackup</codeph>
         <i>or</i> multiple <codeph>--exclude-schema</codeph> options. For
         example:<codeblock>$ <b>gpbackup --dbname demo --include-schema wikipedia --include-schema twitter</b></codeblock></p>
+      <p>If you have a large number of schemas, you can list the schemas in a text file and specify
+        the file with the <codeph>--include-schema-file</codeph> or
+          <codeph>--exclude-schema-file</codeph> options in a <codeph>gpbackup</codeph> command.
+        Each line in the file must define a single schema, and the file cannot contain trailing
+        lines. For example, this command uses a file in the <codeph>gpadmin</codeph> home directory
+        to include a set of
+        schemas.<codeblock><b>gpbackup --dbname demo --include-schema-file /users/home/gpadmin/backup-schemas</b></codeblock></p>
       <p>To filter the individual tables that are included in a backup set, or excluded from a
         backup set, specify individual tables with the <codeph>--include-table</codeph> option or
         the <codeph>--exclude-table</codeph> option. The table must be schema qualified,
@@ -484,8 +506,8 @@ public.sales_1_prt_dec17 </codeblock></p><p>Then
         a back up or restore operation completes. </p>
       <p>To have <codeph>gpbackup</codeph> or <codeph>gprestore</codeph> send out status email
         notifications, you must place a file named <codeph>gp_email_contacts.yaml</codeph> in the
-        home directory of the user running <codeph>gpbackup</codeph> or <codeph>gprestore</codeph> in
-        the same directory as the utilities (<codeph>$GPHOME/bin</codeph>). A utility issues a
+        home directory of the user running <codeph>gpbackup</codeph> or <codeph>gprestore</codeph>
+        in the same directory as the utilities (<codeph>$GPHOME/bin</codeph>). A utility issues a
         message if it cannot locate a <codeph>gp_email_contacts.yaml</codeph> file in either
         location. If both locations contain a <codeph>.yaml</codeph> file, the utility uses the file
         in user <codeph>$HOME</codeph>. </p>
@@ -499,9 +521,9 @@ public.sales_1_prt_dec17 </codeblock></p><p>Then
         number of objects backed up or restored. For information about the contents of a
         notification email, see <xref href="#topic_qgj_b3d_tbb/report_files" format="dita"/>.</p>
       <note>The UNIX mail utility must be running on the Greenplum Database host and must be
-        configured to allow the Greenplum superuser (<codeph>gpadmin</codeph>) to send email.
-        Also ensure that the mail program executable is locatable via the
-        <codeph>gpadmin</codeph> user's <codeph>$PATH</codeph>.</note>
+        configured to allow the Greenplum superuser (<codeph>gpadmin</codeph>) to send email. Also
+        ensure that the mail program executable is locatable via the <codeph>gpadmin</codeph> user's
+          <codeph>$PATH</codeph>.</note>
     </body>
     <topic id="topic_uq5_v5v_scb">
       <title>gpbackup and gprestore Email File Format </title>

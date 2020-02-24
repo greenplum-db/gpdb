@@ -553,9 +553,10 @@ setupCdbProcessList(ExecSlice *slice)
 		slice->primaryProcesses = lappend(slice->primaryProcesses, process);
 		slice->processesMap = bms_add_member(slice->processesMap, segdbDesc->identifier);
 
-		ELOG_DISPATCHER_DEBUG("Gang assignment (gang_id %d): slice%d seg%d %s:%d pid=%d",
-							  gang->gang_id, slice->sliceIndex, process->contentid,
-							  process->listenerAddr, process->listenerPort, process->pid);
+		ELOG_DISPATCHER_DEBUG("Gang assignment: slice%d seg%d %s:%d pid=%d",
+							  slice->sliceIndex, process->contentid,
+							  process->listenerAddr, process->listenerPort,
+							  process->pid);
 	}
 }
 

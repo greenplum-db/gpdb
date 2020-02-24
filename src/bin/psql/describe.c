@@ -15,6 +15,7 @@
 #include <ctype.h>
 
 #include "catalog/pg_default_acl.h"
+#include "catalog/pg_foreign_server.h"
 #include "fe_utils/string_utils.h"
 
 #include "common.h"
@@ -30,6 +31,7 @@ static bool describeOneTableDetails(const char *schemaname,
 						const char *relationname,
 						const char *oid,
 						bool verbose);
+static void add_external_table_footer(printTableContent *const cont, const char *oid);
 static void add_distributed_by_footer(printTableContent *const cont, const char *oid);
 static void add_partition_by_footer(printTableContent *const cont, const char *oid);
 static void add_tablespace_footer(printTableContent *const cont, char relkind,
@@ -2202,276 +2204,6 @@ describeOneTableDetails(const char *schemaname,
 
 		PQclear(result);
 	}
-	else if (tableinfo.relstorage == 'x')
-	{
-		/* Footer information about an external table */
-		PGresult   *result;
-        bool	    gpdb5OrLater = isGPDB5000OrLater();
-        bool	    gpdb6OrLater = isGPDB6000OrLater();
-		char	   *optionsName = gpdb5OrLater ? ", x.options " : "";
-		char	   *execLocations = gpdb5OrLater ? "x.urilocation, x.execlocation" : "x.location";
-
-		if (gpdb6OrLater)
-		{
-			printfPQExpBuffer(&buf,
-							  "SELECT %s, x.fmttype, x.fmtopts, x.command, x.logerrors, "
-									 "x.rejectlimit, x.rejectlimittype, x.writable, "
-									  "pg_catalog.pg_encoding_to_char(x.encoding) "
-									  "%s"
-							  "FROM pg_catalog.pg_exttable x, pg_catalog.pg_class c "
-							  "WHERE x.reloid = c.oid AND c.oid = '%s'\n", execLocations, optionsName, oid);
-		}
-		else
-		{
-			printfPQExpBuffer(&buf,
-							  "SELECT %s, x.fmttype, x.fmtopts, x.command, "
-									 "x.rejectlimit, x.rejectlimittype, x.writable, "
-									 "(SELECT relname "
-									  "FROM pg_class "
-									  "WHERE Oid=x.fmterrtbl) AS errtblname, "
-									  "pg_catalog.pg_encoding_to_char(x.encoding), "
-									  "x.fmterrtbl = x.reloid AS errortofile "
-									  "%s"
-							  "FROM pg_catalog.pg_exttable x, pg_catalog.pg_class c "
-							  "WHERE x.reloid = c.oid AND c.oid = '%s'\n", execLocations, optionsName, oid);
-		}
-
-		result = PSQLexec(buf.data);
-		if (!result)
-			goto error_return;
-		else if (PQntuples(result) != 1)
-		{
-			PQclear(result);
-			goto error_return;
-		}
-		else
-		{
-			char	   *urislocation;
-			char	   *execlocation;
-			char	   *fmttype;
-			char	   *fmtopts;
-			char	   *command;
-			char	   *rejlim;
-			char	   *rejlimtype;
-			char	   *writable;
-			char	   *errtblname = NULL;
-			char	   *extencoding;
-			char	   *errortofile = NULL;
-			char	   *logerrors = NULL;
-			char       *format;
-			char	   *options;
-
-			if (gpdb6OrLater)
-			{
-				urislocation = PQgetvalue(result, 0, 0);
-				execlocation = PQgetvalue(result, 0, 1);
-				fmttype = PQgetvalue(result, 0, 2);
-				fmtopts = PQgetvalue(result, 0, 3);
-				command = PQgetvalue(result, 0, 4);
-				logerrors = PQgetvalue(result, 0, 5);
-				rejlim =  PQgetvalue(result, 0, 6);
-				rejlimtype = PQgetvalue(result, 0, 7);
-				writable = PQgetvalue(result, 0, 8);
-				extencoding = PQgetvalue(result, 0, 9);
-				options = PQgetvalue(result, 0, 10);
-			}
-			else if (gpdb5OrLater)
-			{
-				urislocation = PQgetvalue(result, 0, 0);
-				execlocation = PQgetvalue(result, 0, 1);
-				fmttype = PQgetvalue(result, 0, 2);
-				fmtopts = PQgetvalue(result, 0, 3);
-				command = PQgetvalue(result, 0, 4);
-				rejlim =  PQgetvalue(result, 0, 5);
-				rejlimtype = PQgetvalue(result, 0, 6);
-				writable = PQgetvalue(result, 0, 7);
-				errtblname = PQgetvalue(result, 0, 8);
-				extencoding = PQgetvalue(result, 0, 9);
-				errortofile = PQgetvalue(result, 0, 10);
-				options = PQgetvalue(result, 0, 11);
-			}
-			else
-			{
-				urislocation = PQgetvalue(result, 0, 0);
-				fmttype = PQgetvalue(result, 0, 1);
-				fmtopts = PQgetvalue(result, 0, 2);
-				command = PQgetvalue(result, 0, 3);
-				rejlim =  PQgetvalue(result, 0, 4);
-				rejlimtype = PQgetvalue(result, 0, 5);
-				writable = PQgetvalue(result, 0, 6);
-				errtblname = PQgetvalue(result, 0, 7);
-				extencoding = PQgetvalue(result, 0, 8);
-				errortofile = PQgetvalue(result, 0, 9);
-				execlocation = "";
-				options = "";
-			}
-
-			/* Writable/Readable */
-			printfPQExpBuffer(&tmpbuf, _("Type: %s"), writable[0] == 't' ? "writable" : "readable");
-			printTableAddFooter(&cont, tmpbuf.data);
-
-			/* encoding */
-			printfPQExpBuffer(&tmpbuf, _("Encoding: %s"), extencoding);
-			printTableAddFooter(&cont, tmpbuf.data);
-
-			/* format type */
-			switch ( fmttype[0] )
-			{
-				case 't':
-				{
-					format = "text";
-				}
-				break;
-				case 'c':
-				{
-					format = "csv";
-				}
-				break;
-				case 'b':
-				{
-					format = "custom";
-				}
-				break;
-				default:
-				{
-					format = "";
-					fprintf(stderr, _("Unknown fmttype value: %c\n"), fmttype[0]);
-				}
-				break;
-			};
-			printfPQExpBuffer(&tmpbuf, _("Format type: %s"), format);
-			printTableAddFooter(&cont, tmpbuf.data);
-
-			/* format options */
-			printfPQExpBuffer(&tmpbuf, _("Format options: %s"), fmtopts);
-			printTableAddFooter(&cont, tmpbuf.data);
-
-		    if (gpdb5OrLater)
-			{
-				/* external table options */
-				printfPQExpBuffer(&tmpbuf, _("External options: %s"), options);
-				printTableAddFooter(&cont, tmpbuf.data);
-			}
-
-			if(command && strlen(command) > 0)
-			{
-				/* EXECUTE type table - show command and command location */
-
-				printfPQExpBuffer(&tmpbuf, _("Command: %s"), command);
-				printTableAddFooter(&cont, tmpbuf.data);
-
-				char* on_clause = gpdb5OrLater ? execlocation : urislocation;
-				on_clause[strlen(on_clause) - 1] = '\0'; /* don't print the '}' character */
-				on_clause++; /* don't print the '{' character */
-
-				if(strncmp(on_clause, "HOST:", strlen("HOST:")) == 0)
-					printfPQExpBuffer(&tmpbuf, _("Execute on: host '%s'"), on_clause + strlen("HOST:"));
-				else if(strncmp(on_clause, "PER_HOST", strlen("PER_HOST")) == 0)
-					printfPQExpBuffer(&tmpbuf, _("Execute on: one segment per host"));
-				else if(strncmp(on_clause, "MASTER_ONLY", strlen("MASTER_ONLY")) == 0)
-					printfPQExpBuffer(&tmpbuf, _("Execute on: master segment"));
-				else if(strncmp(on_clause, "SEGMENT_ID:", strlen("SEGMENT_ID:")) == 0)
-					printfPQExpBuffer(&tmpbuf, _("Execute on: segment %s"), on_clause + strlen("SEGMENT_ID:"));
-				else if(strncmp(on_clause, "TOTAL_SEGS:", strlen("TOTAL_SEGS:")) == 0)
-					printfPQExpBuffer(&tmpbuf, _("Execute on: %s random segments"), on_clause + strlen("TOTAL_SEGS:"));
-				else if(strncmp(on_clause, "ALL_SEGMENTS", strlen("ALL_SEGMENTS")) == 0)
-					printfPQExpBuffer(&tmpbuf, _("Execute on: all segments"));
-				else
-					printfPQExpBuffer(&tmpbuf, _("Execute on: ERROR: invalid catalog entry (describe.c)"));
-
-				printTableAddFooter(&cont, tmpbuf.data);
-
-			}
-			else
-			{
-				/* LOCATION type table - show external location */
-
-				urislocation[strlen(urislocation) - 1] = '\0'; /* don't print the '}' character */
-				urislocation++; /* don't print the '{' character */
-				printfPQExpBuffer(&tmpbuf, _("External location: %s"), urislocation);
-				printTableAddFooter(&cont, tmpbuf.data);
-
-				if (gpdb5OrLater)
-				{
-					execlocation[strlen(execlocation) - 1] = '\0'; /* don't print the '}' character */
-					execlocation++; /* don't print the '{' character */
-
-					if(strncmp(execlocation, "HOST:", strlen("HOST:")) == 0)
-						printfPQExpBuffer(&tmpbuf, _("Execute on: host '%s'"), execlocation + strlen("HOST:"));
-					else if(strncmp(execlocation, "PER_HOST", strlen("PER_HOST")) == 0)
-						printfPQExpBuffer(&tmpbuf, _("Execute on: one segment per host"));
-					else if(strncmp(execlocation, "MASTER_ONLY", strlen("MASTER_ONLY")) == 0)
-						printfPQExpBuffer(&tmpbuf, _("Execute on: master segment"));
-					else if(strncmp(execlocation, "SEGMENT_ID:", strlen("SEGMENT_ID:")) == 0)
-						printfPQExpBuffer(&tmpbuf, _("Execute on: segment %s"), execlocation + strlen("SEGMENT_ID:"));
-					else if(strncmp(execlocation, "TOTAL_SEGS:", strlen("TOTAL_SEGS:")) == 0)
-						printfPQExpBuffer(&tmpbuf, _("Execute on: %s random segments"), execlocation + strlen("TOTAL_SEGS:"));
-					else if(strncmp(execlocation, "ALL_SEGMENTS", strlen("ALL_SEGMENTS")) == 0)
-						printfPQExpBuffer(&tmpbuf, _("Execute on: all segments"));
-					else
-						printfPQExpBuffer(&tmpbuf, _("Execute on: ERROR: invalid catalog entry (describe.c)"));
-
-					printTableAddFooter(&cont, tmpbuf.data);
-				}
-			}
-
-			/* Single row error handling */
-			if(rejlim && strlen(rejlim) > 0)
-			{
-				/* reject limit and type */
-				printfPQExpBuffer(&tmpbuf, _("Segment reject limit: %s %s"),
-								  rejlim,
-								  (rejlimtype[0] == 'p' ? "percent" : "rows"));
-				printTableAddFooter(&cont, tmpbuf.data);
-
-				if ((errortofile && errortofile[0] == 't') || (logerrors && logerrors[0] == 't'))
-				{
-					printfPQExpBuffer(&tmpbuf, _("Error Log in File"));
-					printTableAddFooter(&cont, tmpbuf.data);
-				}
-				else if(errtblname && strlen(errtblname) > 0)
-				{
-					printfPQExpBuffer(&tmpbuf, _("Error table: %s"), errtblname);
-					printTableAddFooter(&cont, tmpbuf.data);
-				}
-			}
-
-			if (tableinfo.checks)
-			{
-				int tuples = 0;
-				PGresult *res = NULL;
-				printfPQExpBuffer(&buf,
-								  "SELECT r.conname, "
-								  "pg_catalog.pg_get_constraintdef(r.oid, true)\n"
-								  "FROM pg_catalog.pg_constraint r\n"
-					   "WHERE r.conrelid = '%s' AND r.contype = 'c'\nORDER BY 1",
-								  oid);
-				res = PSQLexec(buf.data);
-				if (!res)
-					goto error_return;
-
-				tuples = PQntuples(res);
-
-				if (tuples > 0)
-				{
-					printTableAddFooter(&cont, _("Check constraints:"));
-					for (i = 0; i < tuples; i++)
-					{
-						/* untranslated contraint name and def */
-						printfPQExpBuffer(&buf, "    \"%s\" %s",
-										  PQgetvalue(res, i, 0),
-										  PQgetvalue(res, i, 1));
-
-						printTableAddFooter(&cont, buf.data);
-					}
-				}
-				PQclear(res);
-			}
-		}
-
-		PQclear(result);
-
-	}
 	else if (tableinfo.relkind == 'S')
 	{
 		/* Footer information about a sequence */
@@ -2516,6 +2248,10 @@ describeOneTableDetails(const char *schemaname,
 		/* Footer information about a table */
 		PGresult   *result = NULL;
 		int			tuples = 0;
+
+		/* external tables were marked in catalogs like this before GPDB 7 */
+		if (tableinfo.relkind == 'r' && tableinfo.relstorage == 'x')
+			add_external_table_footer(&cont, oid);
 
 		/* print append only table information */
 		if (tableinfo.relstorage == 'a' || tableinfo.relstorage == 'c')
@@ -3126,10 +2862,17 @@ describeOneTableDetails(const char *schemaname,
 				goto error_return;
 			}
 
-			/* Print server name */
-			printfPQExpBuffer(&buf, _("Server: %s"),
-							  PQgetvalue(result, 0, 0));
-			printTableAddFooter(&cont, buf.data);
+			if (strcmp(PQgetvalue(result, 0, 0), PG_EXTTABLE_SERVER_NAME) == 0)
+			{
+				add_external_table_footer(&cont, oid);
+			}
+			else
+			{
+				/* Print server name */
+				printfPQExpBuffer(&buf, _("Server: %s"),
+								  PQgetvalue(result, 0, 0));
+				printTableAddFooter(&cont, buf.data);
+			}
 
 			/* Print per-table FDW options, if any */
 			ftoptions = PQgetvalue(result, 0, 1);
@@ -3311,6 +3054,247 @@ error_return:
 		PQclear(res);
 
 	return retval;
+}
+
+/* Print footer information for an external table */
+static void
+add_external_table_footer(printTableContent *const cont, const char *oid)
+{
+	PQExpBufferData buf;
+	PQExpBufferData tmpbuf;
+	PGresult   *result = NULL;
+	bool	    gpdb5OrLater = isGPDB5000OrLater();
+	bool	    gpdb6OrLater = isGPDB6000OrLater();
+	char	   *optionsName = gpdb5OrLater ? ", x.options " : "";
+	char	   *execLocations = gpdb5OrLater ? "x.urilocation, x.execlocation" : "x.location";
+	char	   *urislocation;
+	char	   *execlocation;
+	char	   *fmttype;
+	char	   *fmtopts;
+	char	   *command;
+	char	   *rejlim;
+	char	   *rejlimtype;
+	char	   *writable;
+	char	   *errtblname = NULL;
+	char	   *extencoding;
+	char	   *errortofile = NULL;
+	char	   *logerrors = NULL;
+	char       *format;
+	char	   *options;
+
+	initPQExpBuffer(&buf);
+	initPQExpBuffer(&tmpbuf);
+
+	if (gpdb6OrLater)
+	{
+		printfPQExpBuffer(&buf,
+						  "SELECT %s, x.fmttype, x.fmtopts, x.command, x.logerrors, "
+						  "x.rejectlimit, x.rejectlimittype, x.writable, "
+						  "pg_catalog.pg_encoding_to_char(x.encoding) "
+						  "%s"
+						  "FROM pg_catalog.pg_exttable x, pg_catalog.pg_class c "
+						  "WHERE x.reloid = c.oid AND c.oid = '%s'\n", execLocations, optionsName, oid);
+	}
+	else
+	{
+		printfPQExpBuffer(&buf,
+						  "SELECT %s, x.fmttype, x.fmtopts, x.command, "
+						  "x.rejectlimit, x.rejectlimittype, x.writable, "
+						  "(SELECT relname "
+						  "FROM pg_class "
+						  "WHERE Oid=x.fmterrtbl) AS errtblname, "
+						  "pg_catalog.pg_encoding_to_char(x.encoding), "
+						  "x.fmterrtbl = x.reloid AS errortofile "
+						  "%s"
+						  "FROM pg_catalog.pg_exttable x, pg_catalog.pg_class c "
+						  "WHERE x.reloid = c.oid AND c.oid = '%s'\n", execLocations, optionsName, oid);
+	}
+
+	result = PSQLexec(buf.data);
+	if (!result)
+		goto error_return;
+	if (PQntuples(result) != 1)
+		goto error_return;
+
+	if (gpdb6OrLater)
+	{
+		urislocation = PQgetvalue(result, 0, 0);
+		execlocation = PQgetvalue(result, 0, 1);
+		fmttype = PQgetvalue(result, 0, 2);
+		fmtopts = PQgetvalue(result, 0, 3);
+		command = PQgetvalue(result, 0, 4);
+		logerrors = PQgetvalue(result, 0, 5);
+		rejlim =  PQgetvalue(result, 0, 6);
+		rejlimtype = PQgetvalue(result, 0, 7);
+		writable = PQgetvalue(result, 0, 8);
+		extencoding = PQgetvalue(result, 0, 9);
+		options = PQgetvalue(result, 0, 10);
+	}
+	else if (gpdb5OrLater)
+	{
+		urislocation = PQgetvalue(result, 0, 0);
+		execlocation = PQgetvalue(result, 0, 1);
+		fmttype = PQgetvalue(result, 0, 2);
+		fmtopts = PQgetvalue(result, 0, 3);
+		command = PQgetvalue(result, 0, 4);
+		rejlim =  PQgetvalue(result, 0, 5);
+		rejlimtype = PQgetvalue(result, 0, 6);
+		writable = PQgetvalue(result, 0, 7);
+		errtblname = PQgetvalue(result, 0, 8);
+		extencoding = PQgetvalue(result, 0, 9);
+		errortofile = PQgetvalue(result, 0, 10);
+		options = PQgetvalue(result, 0, 11);
+	}
+	else
+	{
+		urislocation = PQgetvalue(result, 0, 0);
+		fmttype = PQgetvalue(result, 0, 1);
+		fmtopts = PQgetvalue(result, 0, 2);
+		command = PQgetvalue(result, 0, 3);
+		rejlim =  PQgetvalue(result, 0, 4);
+		rejlimtype = PQgetvalue(result, 0, 5);
+		writable = PQgetvalue(result, 0, 6);
+		errtblname = PQgetvalue(result, 0, 7);
+		extencoding = PQgetvalue(result, 0, 8);
+		errortofile = PQgetvalue(result, 0, 9);
+		execlocation = "";
+		options = "";
+	}
+
+	/* Writable/Readable */
+	printfPQExpBuffer(&tmpbuf, _("Type: %s"), writable[0] == 't' ? "writable" : "readable");
+	printTableAddFooter(cont, tmpbuf.data);
+
+	/* encoding */
+	printfPQExpBuffer(&tmpbuf, _("Encoding: %s"), extencoding);
+	printTableAddFooter(cont, tmpbuf.data);
+
+	/* format type */
+	switch ( fmttype[0] )
+	{
+		case 't':
+			{
+				format = "text";
+			}
+			break;
+		case 'c':
+			{
+				format = "csv";
+			}
+			break;
+		case 'b':
+			{
+				format = "custom";
+			}
+			break;
+		default:
+			{
+				format = "";
+				fprintf(stderr, _("Unknown fmttype value: %c\n"), fmttype[0]);
+			}
+			break;
+	};
+	printfPQExpBuffer(&tmpbuf, _("Format type: %s"), format);
+	printTableAddFooter(cont, tmpbuf.data);
+
+	/* format options */
+	printfPQExpBuffer(&tmpbuf, _("Format options: %s"), fmtopts);
+	printTableAddFooter(cont, tmpbuf.data);
+
+	if (gpdb5OrLater)
+	{
+		/* external table options */
+		printfPQExpBuffer(&tmpbuf, _("External options: %s"), options);
+		printTableAddFooter(cont, tmpbuf.data);
+	}
+
+	if(command && strlen(command) > 0)
+	{
+		/* EXECUTE type table - show command and command location */
+
+		printfPQExpBuffer(&tmpbuf, _("Command: %s"), command);
+		printTableAddFooter(cont, tmpbuf.data);
+
+		char* on_clause = gpdb5OrLater ? execlocation : urislocation;
+		on_clause[strlen(on_clause) - 1] = '\0'; /* don't print the '}' character */
+		on_clause++; /* don't print the '{' character */
+
+		if(strncmp(on_clause, "HOST:", strlen("HOST:")) == 0)
+			printfPQExpBuffer(&tmpbuf, _("Execute on: host '%s'"), on_clause + strlen("HOST:"));
+		else if(strncmp(on_clause, "PER_HOST", strlen("PER_HOST")) == 0)
+			printfPQExpBuffer(&tmpbuf, _("Execute on: one segment per host"));
+		else if(strncmp(on_clause, "MASTER_ONLY", strlen("MASTER_ONLY")) == 0)
+			printfPQExpBuffer(&tmpbuf, _("Execute on: master segment"));
+		else if(strncmp(on_clause, "SEGMENT_ID:", strlen("SEGMENT_ID:")) == 0)
+			printfPQExpBuffer(&tmpbuf, _("Execute on: segment %s"), on_clause + strlen("SEGMENT_ID:"));
+		else if(strncmp(on_clause, "TOTAL_SEGS:", strlen("TOTAL_SEGS:")) == 0)
+			printfPQExpBuffer(&tmpbuf, _("Execute on: %s random segments"), on_clause + strlen("TOTAL_SEGS:"));
+		else if(strncmp(on_clause, "ALL_SEGMENTS", strlen("ALL_SEGMENTS")) == 0)
+			printfPQExpBuffer(&tmpbuf, _("Execute on: all segments"));
+		else
+			printfPQExpBuffer(&tmpbuf, _("Execute on: ERROR: invalid catalog entry (describe.c)"));
+
+		printTableAddFooter(cont, tmpbuf.data);
+
+	}
+	else
+	{
+		/* LOCATION type table - show external location */
+
+		urislocation[strlen(urislocation) - 1] = '\0'; /* don't print the '}' character */
+		urislocation++; /* don't print the '{' character */
+		printfPQExpBuffer(&tmpbuf, _("External location: %s"), urislocation);
+		printTableAddFooter(cont, tmpbuf.data);
+
+		if (gpdb5OrLater)
+		{
+			execlocation[strlen(execlocation) - 1] = '\0'; /* don't print the '}' character */
+			execlocation++; /* don't print the '{' character */
+
+			if(strncmp(execlocation, "HOST:", strlen("HOST:")) == 0)
+				printfPQExpBuffer(&tmpbuf, _("Execute on: host '%s'"), execlocation + strlen("HOST:"));
+			else if(strncmp(execlocation, "PER_HOST", strlen("PER_HOST")) == 0)
+				printfPQExpBuffer(&tmpbuf, _("Execute on: one segment per host"));
+			else if(strncmp(execlocation, "MASTER_ONLY", strlen("MASTER_ONLY")) == 0)
+				printfPQExpBuffer(&tmpbuf, _("Execute on: master segment"));
+			else if(strncmp(execlocation, "SEGMENT_ID:", strlen("SEGMENT_ID:")) == 0)
+				printfPQExpBuffer(&tmpbuf, _("Execute on: segment %s"), execlocation + strlen("SEGMENT_ID:"));
+			else if(strncmp(execlocation, "TOTAL_SEGS:", strlen("TOTAL_SEGS:")) == 0)
+				printfPQExpBuffer(&tmpbuf, _("Execute on: %s random segments"), execlocation + strlen("TOTAL_SEGS:"));
+			else if(strncmp(execlocation, "ALL_SEGMENTS", strlen("ALL_SEGMENTS")) == 0)
+				printfPQExpBuffer(&tmpbuf, _("Execute on: all segments"));
+			else
+				printfPQExpBuffer(&tmpbuf, _("Execute on: ERROR: invalid catalog entry (describe.c)"));
+
+			printTableAddFooter(cont, tmpbuf.data);
+		}
+	}
+
+	/* Single row error handling */
+	if(rejlim && strlen(rejlim) > 0)
+	{
+		/* reject limit and type */
+		printfPQExpBuffer(&tmpbuf, _("Segment reject limit: %s %s"),
+						  rejlim,
+						  (rejlimtype[0] == 'p' ? "percent" : "rows"));
+		printTableAddFooter(cont, tmpbuf.data);
+
+		if ((errortofile && errortofile[0] == 't') || (logerrors && logerrors[0] == 't'))
+		{
+			printfPQExpBuffer(&tmpbuf, _("Error Log in File"));
+			printTableAddFooter(cont, tmpbuf.data);
+		}
+		else if(errtblname && strlen(errtblname) > 0)
+		{
+			printfPQExpBuffer(&tmpbuf, _("Error table: %s"), errtblname);
+			printTableAddFooter(cont, tmpbuf.data);
+		}
+	}
+
+error_return:
+	PQclear(result);
+	termPQExpBuffer(&buf);
+	termPQExpBuffer(&tmpbuf);
 }
 
 static void

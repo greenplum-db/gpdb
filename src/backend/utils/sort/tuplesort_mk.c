@@ -109,7 +109,6 @@
 #include "catalog/pg_operator.h"
 #include "executor/instrument.h"	/* Instrumentation */
 #include "lib/stringinfo.h"		/* StringInfo */
-#include "executor/nodeSort.h"	/* gpmon */
 #include "miscadmin.h"
 #include "pg_trace.h"
 #include "utils/datum.h"
@@ -378,10 +377,6 @@ struct Tuplesortstate_mk
 	 * slice
 	 */
 	BufFile	   *tapeset_state_file;
-
-	/* Gpmon */
-	gpmon_packet_t *gpmon_pkt;
-	int		   *gpmon_sort_tick;
 };
 
 static void tuplesort_get_stats_mk(Tuplesortstate_mk* state, const char **sortMethod, const char **spaceType, long *spaceUsed);
@@ -565,6 +560,7 @@ tuplesort_begin_common(ScanState *ss, int workMem, bool randomAccess, bool alloc
 										ALLOCSET_DEFAULT_MINSIZE,
 										ALLOCSET_DEFAULT_INITSIZE,
 										ALLOCSET_DEFAULT_MAXSIZE);
+	MemoryContextDeclareAccountingRoot(sortcontext);
 
 	/*
 	 * Make the Tuplesortstate_mk within the per-sort context.  This way, we
@@ -1079,9 +1075,6 @@ tuplesort_finalize_stats_mk(Tuplesortstate_mk *state)
 	if (state->instrument && state->instrument->need_cdb && !state->statsFinalized)
 	{
 		Size		maxSpaceUsedOnSort = MemoryContextGetPeakSpace(state->sortcontext);
-
-		/* Report executor memory used by our memory context. */
-		state->instrument->execmemused += (double) maxSpaceUsedOnSort;
 
 		if (state->instrument->workmemused < maxSpaceUsedOnSort)
 		{
@@ -1699,9 +1692,6 @@ tuplesort_gettupleslot_pos_mk(Tuplesortstate_mk *state, TuplesortPos_mk *pos,
 		}
 
 #endif
-
-		if (state->gpmon_pkt)
-			Gpmon_Incr_Rows_Out(state->gpmon_pkt);
 
 		return true;
 	}
@@ -2546,9 +2536,6 @@ dumptuples_mk(Tuplesortstate_mk *state, bool alltuples)
 			selectnewtape_mk(state);
 		}
 	}
-
-	if (state->gpmon_pkt)
-		tuplesort_checksend_gpmonpkt(state->gpmon_pkt, state->gpmon_sort_tick);
 }
 
 /*
@@ -3783,13 +3770,6 @@ tuplesort_limit_sort(Tuplesortstate_mk *state)
 
 	mkheap_destroy(state->mkheap);
 	state->mkheap = NULL;
-}
-
-void
-tuplesort_set_gpmon_mk(Tuplesortstate_mk *state, gpmon_packet_t *gpmon_pkt, int *gpmon_tick)
-{
-	state->gpmon_pkt = gpmon_pkt;
-	state->gpmon_sort_tick = gpmon_tick;
 }
 
 /* EOF */

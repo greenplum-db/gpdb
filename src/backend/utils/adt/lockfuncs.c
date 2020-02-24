@@ -663,7 +663,7 @@ pg_lock_status(PG_FUNCTION_ARGS)
 		for (i = 0; i < mystatus->numsegresults; i++)
 			PQclear(mystatus->segresults[i]);
 
-		free(mystatus->segresults);
+		pfree(mystatus->segresults);
 	}
 
 	SRF_RETURN_DONE(funcctx);

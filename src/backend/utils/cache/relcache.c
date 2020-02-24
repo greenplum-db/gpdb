@@ -1107,6 +1107,7 @@ RelationBuildDesc(Oid targetRelId, bool insertIt)
      */
     if ((relation->rd_rel->relkind == RELKIND_RELATION &&
 		 !IsSystemRelation(relation)) ||
+		(relation->rd_rel->relkind == RELKIND_FOREIGN_TABLE) ||
 		relation->rd_rel->relkind == RELKIND_MATVIEW)
 	{
 		MemoryContext oldcontext = MemoryContextSwitchTo(CacheMemoryContext);

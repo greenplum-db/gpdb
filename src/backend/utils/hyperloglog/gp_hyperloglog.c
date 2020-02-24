@@ -825,7 +825,7 @@ gp_hyperloglog_merge_counters(GpHLLCounter counter1, GpHLLCounter counter2)
 		return gp_hll_copy(counter2);
 	}
 	else if (counter2 == NULL) {
-		/* if second counter is null just return the the first estimator */
+		/* if second counter is null just return the first estimator */
 		return gp_hll_copy(counter1);
 	}
 	else
@@ -1173,7 +1173,7 @@ gp_hyperloglog_merge(PG_FUNCTION_ARGS)
 		counter1_merged = PG_GETARG_HLL_P_COPY(1);
 
 	} else if (PG_ARGISNULL(1)) {
-		/* if second counter is null just return the the first estimator */
+		/* if second counter is null just return the first estimator */
 		counter1_merged = PG_GETARG_HLL_P_COPY(0);
 
 	} else {

@@ -29,9 +29,9 @@ drop external table auth_ext_test1;
 drop external table auth_ext_test2;
 drop external table auth_ext_test3;
 drop external table auth_ext_test5;
-ERROR:  table "auth_ext_test5" does not exist
+ERROR:  foreign table "auth_ext_test5" does not exist
 drop external table auth_ext_test7;
-ERROR:  table "auth_ext_test7" does not exist
+ERROR:  foreign table "auth_ext_test7" does not exist
 DROP ROLE exttab1_su;
 DROP ROLE exttab1_u1;
 DROP ROLE exttab1_u2;
@@ -607,11 +607,11 @@ ERROR:  permission denied: no privilege to create a writable gpfdist(s) external
 create readable external web table priv_ext_test3(a int) location ('http://host.invalid:8000/writable_ext_tbl/file') format 'text';  --fail
 ERROR:  permission denied: no privilege to create an http external table
 drop external table priv_ext_test1;
-ERROR:  table "priv_ext_test1" does not exist
+ERROR:  foreign table "priv_ext_test1" does not exist
 drop external table priv_ext_test2;
-ERROR:  table "priv_ext_test2" does not exist
+ERROR:  foreign table "priv_ext_test2" does not exist
 drop external table priv_ext_test3;
-ERROR:  table "priv_ext_test3" does not exist
+ERROR:  foreign table "priv_ext_test3" does not exist
 RESET SESSION AUTHORIZATION;
 --
 CREATE ROLE ext_u40 NOCREATEEXTTABLE(protocol='gpfdist',type='readable') NOCREATEEXTTABLE(protocol='gpfdist', type='readable'); 
@@ -631,11 +631,11 @@ ERROR:  permission denied: no privilege to create a writable gpfdist(s) external
 create readable external web table priv_ext_test3(a int) location ('http://host.invalid:8000/writable_ext_tbl/file') format 'text';  --fail
 ERROR:  permission denied: no privilege to create an http external table
 drop external table priv_ext_test1;
-ERROR:  table "priv_ext_test1" does not exist
+ERROR:  foreign table "priv_ext_test1" does not exist
 drop external table priv_ext_test2;
-ERROR:  table "priv_ext_test2" does not exist
+ERROR:  foreign table "priv_ext_test2" does not exist
 drop external table priv_ext_test3;
-ERROR:  table "priv_ext_test3" does not exist
+ERROR:  foreign table "priv_ext_test3" does not exist
 RESET SESSION AUTHORIZATION;
 --
 CREATE ROLE ext_u37 NOCREATEEXTTABLE(type='readable') NOCREATEEXTTABLE(protocol='gpfdist', type='readable'); 
@@ -655,11 +655,11 @@ ERROR:  permission denied: no privilege to create a writable gpfdist(s) external
 create readable external web table priv_ext_test3(a int) location ('http://host.invalid:8000/writable_ext_tbl/file') format 'text';  --fail
 ERROR:  permission denied: no privilege to create an http external table
 drop external table priv_ext_test1;
-ERROR:  table "priv_ext_test1" does not exist
+ERROR:  foreign table "priv_ext_test1" does not exist
 drop external table priv_ext_test2;
-ERROR:  table "priv_ext_test2" does not exist
+ERROR:  foreign table "priv_ext_test2" does not exist
 drop external table priv_ext_test3;
-ERROR:  table "priv_ext_test3" does not exist
+ERROR:  foreign table "priv_ext_test3" does not exist
 RESET SESSION AUTHORIZATION;
 --
 -- Role to NO create RET gpfdist and NO create RET http
@@ -681,11 +681,11 @@ ERROR:  permission denied: no privilege to create a writable gpfdist(s) external
 create readable external web table priv_ext_test3(a int) location ('http://host.invalid:8000/writable_ext_tbl/file') format 'text';  --fail
 ERROR:  permission denied: no privilege to create an http external table
 drop external table priv_ext_test1;
-ERROR:  table "priv_ext_test1" does not exist
+ERROR:  foreign table "priv_ext_test1" does not exist
 drop external table priv_ext_test2;
-ERROR:  table "priv_ext_test2" does not exist
+ERROR:  foreign table "priv_ext_test2" does not exist
 drop external table priv_ext_test3;
-ERROR:  table "priv_ext_test3" does not exist
+ERROR:  foreign table "priv_ext_test3" does not exist
 RESET SESSION AUTHORIZATION;
 --
 CREATE ROLE ext_u44 NOCREATEEXTTABLE(protocol='gpfdist',type='readable') NOCREATEEXTTABLE(protocol='http', type='readable'); 
@@ -706,11 +706,11 @@ ERROR:  permission denied: no privilege to create a writable gpfdist(s) external
 create readable external web table priv_ext_test3(a int) location ('http://host.invalid:8000/writable_ext_tbl/file') format 'text'; --fail 
 ERROR:  permission denied: no privilege to create an http external table
 drop external table priv_ext_test1;
-ERROR:  table "priv_ext_test1" does not exist
+ERROR:  foreign table "priv_ext_test1" does not exist
 drop external table priv_ext_test2;
-ERROR:  table "priv_ext_test2" does not exist
+ERROR:  foreign table "priv_ext_test2" does not exist
 drop external table priv_ext_test3;
-ERROR:  table "priv_ext_test3" does not exist
+ERROR:  foreign table "priv_ext_test3" does not exist
 RESET SESSION AUTHORIZATION;
 --
 -- Role to NO create RET gpfdist and NO create WET gpfdist
@@ -732,11 +732,11 @@ ERROR:  permission denied: no privilege to create a writable gpfdist(s) external
 create readable external web table priv_ext_test3(a int) location ('http://host.invalid:8000/writable_ext_tbl/file') format 'text';  --fail
 ERROR:  permission denied: no privilege to create an http external table
 drop external table priv_ext_test1;
-ERROR:  table "priv_ext_test1" does not exist
+ERROR:  foreign table "priv_ext_test1" does not exist
 drop external table priv_ext_test2;
-ERROR:  table "priv_ext_test2" does not exist
+ERROR:  foreign table "priv_ext_test2" does not exist
 drop external table priv_ext_test3;
-ERROR:  table "priv_ext_test3" does not exist
+ERROR:  foreign table "priv_ext_test3" does not exist
 RESET SESSION AUTHORIZATION;
 --
 CREATE ROLE ext_u41 NOCREATEEXTTABLE(protocol='gpfdist',type='writable') NOCREATEEXTTABLE(protocol='gpfdist', type='writable'); 
@@ -756,11 +756,11 @@ ERROR:  permission denied: no privilege to create a writable gpfdist(s) external
 create readable external web table priv_ext_test3(a int) location ('http://host.invalid:8000/writable_ext_tbl/file') format 'text';  --fail
 ERROR:  permission denied: no privilege to create an http external table
 drop external table priv_ext_test1;
-ERROR:  table "priv_ext_test1" does not exist
+ERROR:  foreign table "priv_ext_test1" does not exist
 drop external table priv_ext_test2;
-ERROR:  table "priv_ext_test2" does not exist
+ERROR:  foreign table "priv_ext_test2" does not exist
 drop external table priv_ext_test3;
-ERROR:  table "priv_ext_test3" does not exist
+ERROR:  foreign table "priv_ext_test3" does not exist
 RESET SESSION AUTHORIZATION;
 --
 CREATE ROLE ext_u43 NOCREATEEXTTABLE(protocol='gpfdist',type='readable') NOCREATEEXTTABLE(protocol='gpfdist', type='writable'); 
@@ -780,11 +780,11 @@ ERROR:  permission denied: no privilege to create a writable gpfdist(s) external
 create readable external web table priv_ext_test3(a int) location ('http://host.invalid:8000/writable_ext_tbl/file') format 'text';  --fail
 ERROR:  permission denied: no privilege to create an http external table
 drop external table priv_ext_test1;
-ERROR:  table "priv_ext_test1" does not exist
+ERROR:  foreign table "priv_ext_test1" does not exist
 drop external table priv_ext_test2;
-ERROR:  table "priv_ext_test2" does not exist
+ERROR:  foreign table "priv_ext_test2" does not exist
 drop external table priv_ext_test3;
-ERROR:  table "priv_ext_test3" does not exist
+ERROR:  foreign table "priv_ext_test3" does not exist
 RESET SESSION AUTHORIZATION;
 --
 CREATE ROLE ext_u45 NOCREATEEXTTABLE(protocol='gpfdist',type='writable') NOCREATEEXTTABLE(protocol='gpfdist', type='readable');
@@ -804,11 +804,11 @@ ERROR:  permission denied: no privilege to create a writable gpfdist(s) external
 create readable external web table priv_ext_test3(a int) location ('http://host.invalid:8000/writable_ext_tbl/file') format 'text';  --fail
 ERROR:  permission denied: no privilege to create an http external table
 drop external table priv_ext_test1;
-ERROR:  table "priv_ext_test1" does not exist
+ERROR:  foreign table "priv_ext_test1" does not exist
 drop external table priv_ext_test2;
-ERROR:  table "priv_ext_test2" does not exist
+ERROR:  foreign table "priv_ext_test2" does not exist
 drop external table priv_ext_test3;
-ERROR:  table "priv_ext_test3" does not exist
+ERROR:  foreign table "priv_ext_test3" does not exist
 RESET SESSION AUTHORIZATION;
 --
 -- Role to NO create RET http and NO create RET http
@@ -830,11 +830,11 @@ ERROR:  permission denied: no privilege to create a writable gpfdist(s) external
 create readable external web table priv_ext_test3(a int) location ('http://host.invalid:8000/writable_ext_tbl/file') format 'text';  --fail
 ERROR:  permission denied: no privilege to create an http external table
 drop external table priv_ext_test1;
-ERROR:  table "priv_ext_test1" does not exist
+ERROR:  foreign table "priv_ext_test1" does not exist
 drop external table priv_ext_test2;
-ERROR:  table "priv_ext_test2" does not exist
+ERROR:  foreign table "priv_ext_test2" does not exist
 drop external table priv_ext_test3;
-ERROR:  table "priv_ext_test3" does not exist
+ERROR:  foreign table "priv_ext_test3" does not exist
 RESET SESSION AUTHORIZATION;
 --
 CREATE ROLE ext_u42 NOCREATEEXTTABLE(protocol='http',type='readable') NOCREATEEXTTABLE(protocol='http', type='readable'); 
@@ -854,11 +854,11 @@ ERROR:  permission denied: no privilege to create a writable gpfdist(s) external
 create readable external web table priv_ext_test3(a int) location ('http://host.invalid:8000/writable_ext_tbl/file') format 'text';  --fail
 ERROR:  permission denied: no privilege to create an http external table
 drop external table priv_ext_test1;
-ERROR:  table "priv_ext_test1" does not exist
+ERROR:  foreign table "priv_ext_test1" does not exist
 drop external table priv_ext_test2;
-ERROR:  table "priv_ext_test2" does not exist
+ERROR:  foreign table "priv_ext_test2" does not exist
 drop external table priv_ext_test3;
-ERROR:  table "priv_ext_test3" does not exist
+ERROR:  foreign table "priv_ext_test3" does not exist
 RESET SESSION AUTHORIZATION;
 --
 -- Role to NO create WET gpfdist and NO create RET http
@@ -880,11 +880,11 @@ ERROR:  permission denied: no privilege to create a writable gpfdist(s) external
 create readable external web table priv_ext_test3(a int) location ('http://host.invalid:8000/writable_ext_tbl/file') format 'text';  --fail
 ERROR:  permission denied: no privilege to create an http external table
 drop external table priv_ext_test1;
-ERROR:  table "priv_ext_test1" does not exist
+ERROR:  foreign table "priv_ext_test1" does not exist
 drop external table priv_ext_test2;
-ERROR:  table "priv_ext_test2" does not exist
+ERROR:  foreign table "priv_ext_test2" does not exist
 drop external table priv_ext_test3;
-ERROR:  table "priv_ext_test3" does not exist
+ERROR:  foreign table "priv_ext_test3" does not exist
 RESET SESSION AUTHORIZATION;
 --
 -- Role to NO create WET gpfdist and NO create WET gpfdist
@@ -906,11 +906,11 @@ ERROR:  permission denied: no privilege to create a writable gpfdist(s) external
 create readable external web table priv_ext_test3(a int) location ('http://host.invalid:8000/writable_ext_tbl/writable_ext_tbl/file') format 'text';  --fail
 ERROR:  permission denied: no privilege to create an http external table
 drop external table priv_ext_test1;
-ERROR:  table "priv_ext_test1" does not exist
+ERROR:  foreign table "priv_ext_test1" does not exist
 drop external table priv_ext_test2;
-ERROR:  table "priv_ext_test2" does not exist
+ERROR:  foreign table "priv_ext_test2" does not exist
 drop external table priv_ext_test3;
-ERROR:  table "priv_ext_test3" does not exist
+ERROR:  foreign table "priv_ext_test3" does not exist
 RESET SESSION AUTHORIZATION;
 --
 -- Test ALTER ROLE

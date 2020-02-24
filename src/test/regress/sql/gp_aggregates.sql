@@ -35,6 +35,8 @@ SELECT * FROM mpp2687v;
 select case when ten < 5 then ten else ten * 2 end, count(distinct two), count(distinct four) from tenk1 group by 1;
 select ten, ten, count(distinct two), count(distinct four) from tenk1 group by 1,2;
 
+select case when ten < 5 then ten else ten * 2 end, count(distinct two) from tenk1 group by 1;
+
 --MPP-20151: distinct is transformed to a group-by
 select distinct two from tenk1 order by two;
 select distinct two, four from tenk1 order by two, four;

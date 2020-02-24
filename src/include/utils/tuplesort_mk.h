@@ -18,8 +18,6 @@
 
 #include "nodes/execnodes.h"
 #include "utils/workfile_mgr.h"
-#include "gpmon/gpmon.h"
-
 
 typedef struct TuplesortPos_mk TuplesortPos_mk;
 typedef struct Tuplesortstate_mk Tuplesortstate_mk;
@@ -96,11 +94,5 @@ extern void tuplesort_markpos_pos_mk(Tuplesortstate_mk *state, TuplesortPos_mk *
 extern void tuplesort_set_instrument_mk(Tuplesortstate_mk *state,
                          struct Instrumentation    *instrument,
                          struct StringInfoData     *explainbuf);
-
-extern void
-tuplesort_set_gpmon_mk(Tuplesortstate_mk *state,
-					gpmon_packet_t *gpmon_pkt,
-					int *gpmon_tick);
-
 
 #endif   /* TUPLESORT_MK_H */

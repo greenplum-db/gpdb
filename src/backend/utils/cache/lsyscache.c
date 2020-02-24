@@ -1504,99 +1504,45 @@ get_oprjoin(Oid opno)
 
 /*				---------- TRIGGER CACHE ----------					 */
 
-/*
- * get_trigger_name
- *	  returns the name of the trigger with the given triggerid
- *
- * Note: returns a palloc'd copy of the string, or NULL if no such trigger
- */
-char *
-get_trigger_name(Oid triggerid)
+
+/* Does table have update triggers? */
+bool
+has_update_triggers(Oid relid)
 {
-	Relation	rel;
-	HeapTuple	tp;
-	char	   *result = NULL;
-	ScanKeyData	scankey;
-	SysScanDesc sscan;
+	Relation	relation;
+	bool		result = false;
 
-	ScanKeyInit(&scankey, ObjectIdAttributeNumber,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(triggerid));
-	rel = heap_open(TriggerRelationId, AccessShareLock);
-	sscan = systable_beginscan(rel, TriggerOidIndexId, true,
-							   NULL, 1, &scankey);
+	/* Assume the caller already holds a suitable lock. */
+	relation = relation_open(relid, NoLock);
 
-	tp = systable_getnext(sscan);
-	if (HeapTupleIsValid(tp))
+	if (relation->rd_rel->relhastriggers)
 	{
-		Form_pg_trigger trigtup = (Form_pg_trigger) GETSTRUCT(tp);
+		bool	found = false;
 
-		result = pstrdup(NameStr(trigtup->tgname));
+		if (relation->trigdesc == NULL)
+			RelationBuildTriggers(relation);
+
+		if (relation->trigdesc)
+		{
+			for (int i = 0; i < relation->trigdesc->numtriggers && !found; i++)
+			{
+				Trigger trigger = relation->trigdesc->triggers[i];
+				found = trigger_enabled(trigger.tgoid) &&
+					(get_trigger_type(trigger.tgoid) & TRIGGER_TYPE_UPDATE) == TRIGGER_TYPE_UPDATE;
+				if (found)
+					break;
+			}
+		}
+
+		/* GPDB_96_MERGE_FIXME: Why is this not allowed? */
+		if (found || child_triggers(relation->rd_id, TRIGGER_TYPE_UPDATE))
+			result = true;
 	}
-	systable_endscan(sscan);
-	heap_close(rel, AccessShareLock);
+	relation_close(relation, NoLock);
 
 	return result;
 }
 
-/*
- * get_trigger_relid
- *		Given trigger id, return the trigger's relation oid
- */
-Oid
-get_trigger_relid(Oid triggerid)
-{
-	Relation	rel;
-	HeapTuple	tp;
-	Oid			result = InvalidOid;
-	ScanKeyData	scankey;
-	SysScanDesc sscan;
-
-	ScanKeyInit(&scankey, ObjectIdAttributeNumber,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(triggerid));
-	rel = heap_open(TriggerRelationId, AccessShareLock);
-	sscan = systable_beginscan(rel, TriggerOidIndexId, true,
-							   NULL, 1, &scankey);
-
-	tp = systable_getnext(sscan);
-	if (HeapTupleIsValid(tp))
-		result = ((Form_pg_trigger) GETSTRUCT(tp))->tgrelid;
-	systable_endscan(sscan);
-	heap_close(rel, AccessShareLock);
-
-	return result;
-}
-
-/*
- * get_trigger_funcid
- *		Given trigger id, return the trigger's function oid
- */
-Oid
-get_trigger_funcid(Oid triggerid)
-{
-	Relation	rel;
-	HeapTuple	tp;
-	Oid			result = InvalidOid;
-	ScanKeyData	scankey;
-	SysScanDesc sscan;
-
-	ScanKeyInit(&scankey, ObjectIdAttributeNumber,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(triggerid));
-	rel = heap_open(TriggerRelationId, AccessShareLock);
-	sscan = systable_beginscan(rel, TriggerOidIndexId, true,
-							   NULL, 1, &scankey);
-
-	tp = systable_getnext(sscan);
-	if (HeapTupleIsValid(tp))
-		result = ((Form_pg_trigger) GETSTRUCT(tp))->tgfoid;
-
-	systable_endscan(sscan);
-	heap_close(rel, AccessShareLock);
-
-	return result;
-}
 
 /*
  * get_trigger_type

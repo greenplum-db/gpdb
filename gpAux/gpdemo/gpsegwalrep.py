@@ -101,7 +101,7 @@ class InitMirrors():
 
         # 1. create base backup
         commands.append("rm -rf %s" % mirror_dir);
-        commands.append("pg_basebackup -x -R -c fast -E ./pg_log -E ./db_dumps -E ./gpperfmon/data -E ./gpperfmon/logs -D %s -h %s -p %d" % (mirror_dir, self.hostname, primary_port))
+        commands.append("pg_basebackup -x -R -c fast -E ./pg_log -E ./db_dumps -D %s -h %s -p %d" % (mirror_dir, self.hostname, primary_port))
         commands.append("mkdir %s/pg_log;" % (mirror_dir))
 
         if self.init:

@@ -497,31 +497,6 @@
 $ gpstop -u</codeblock></p>
       <p>To set <codeph>password_encryption</codeph> in a session, use the SQL <codeph>SET</codeph>
         command:<codeblock>=# SET password_encryption = 'on';</codeblock></p>
-      <p>Passwords may be hashed using the SHA-256 hash algorithm instead of the
-        default MD5 hash algorithm. The algorithm produces a 64-byte hexadecimal string prefixed
-        with the characters <codeph>sha256</codeph>.</p>
-      <note>
-        <p>Although SHA-256 uses a stronger cryptographic algorithm and produces a longer hash
-          string, it cannot be used with the MD5 authentication method. To use SHA-256 password
-          hashing the authentication method must be set to <codeph>password</codeph> in the
-            <codeph>pg_hba.conf</codeph> configuration file so that clear text passwords are sent to
-            Greenplum Database. Because clear text passwords are sent over the
-          network, it is very important to use SSL for client connections when you use SHA-256. The
-          default <codeph>md5</codeph> authentication method, on the other hand, hashes the password
-          twice before sending it to Greenplum Database, once on the password and role
-          name and then again with a salt value shared between the client and server, so the clear
-          text password is never sent on the network. </p>
-      </note>
-      <p>To enable SHA-256 hashing, change the <codeph>password_hash_algorithm</codeph>
-        configuration parameter from its default value, <codeph>md5</codeph>, to
-          <codeph>sha-256</codeph>. The parameter can be set either
-        globally or at the session level. To set <codeph>password_hash_algorithm</codeph> globally,
-        execute these commands in a shell as the <codeph>gpadmin</codeph>
-        user:<codeblock>$ gpconfig -c password_hash_algorithm -v 'sha-256'
-$ gpstop -u</codeblock></p>
-      <p>To set <codeph>password_hash_algorithm</codeph> in a session, use the SQL
-          <codeph>SET</codeph>
-        command:<codeblock>=# SET password_hash_algorithm = 'sha-256';</codeblock></p>
     </body>
   </topic>
   <topic id="topic13" xml:lang="en">

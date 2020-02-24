@@ -25,6 +25,11 @@
 #include "common/pg_lzcompress.h"
 #include "replication/origin.h"
 
+#ifdef HAVE_LIBZSTD
+/* Zstandard library is provided */
+#include <zstd.h>
+#endif			/* HAVE_LIBZSTD */
+
 #ifndef FRONTEND
 #include "utils/memutils.h"
 #endif
@@ -40,6 +45,9 @@ static int ReadPageInternal(XLogReaderState *state, XLogRecPtr pageptr,
 static void report_invalid_record(XLogReaderState *state, const char *fmt,...) pg_attribute_printf(2, 3);
 
 static void ResetDecoder(XLogReaderState *state);
+static bool zstd_decompress_backupblock(const char *source, int32 slen,
+										char *dest, int32 rawsize,
+										char *errormessage);
 
 /* size of the buffer allocated for error message. */
 #define MAX_ERRORMSG_LEN 1000
@@ -877,7 +885,7 @@ XLogReaderValidatePageHeader(XLogReaderState *state, XLogRecPtr recptr,
 }
 
 /*
- * In GPDB, this is used in in the test in src/test/walrep, so we need it in the
+ * In GPDB, this is used in the test in src/test/walrep, so we need it in the
  * backend, too.
  */
 /* #ifdef FRONTEND */
@@ -1398,14 +1406,17 @@ RestoreBlockImage(XLogReaderState *record, uint8 block_id, char *page)
 
 	if (bkpb->bimg_info & BKPIMAGE_IS_COMPRESSED)
 	{
+		char errormessage[MAX_ERRORMSG_LEN];
 		/* If a backup block image is compressed, decompress it */
-		if (pglz_decompress(ptr, bkpb->bimg_len, tmp,
-							BLCKSZ - bkpb->hole_length) < 0)
+		if (!zstd_decompress_backupblock(ptr, bkpb->bimg_len, tmp,
+										 BLCKSZ - bkpb->hole_length,
+										 errormessage))
 		{
-			report_invalid_record(record, "invalid compressed image at %X/%X, block %d",
+			report_invalid_record(record, "invalid compressed image at %X/%X, block %d (%s)",
 								  (uint32) (record->ReadRecPtr >> 32),
 								  (uint32) record->ReadRecPtr,
-								  block_id);
+								  block_id,
+								  errormessage);
 			return false;
 		}
 		ptr = tmp;
@@ -1427,4 +1438,65 @@ RestoreBlockImage(XLogReaderState *record, uint8 block_id, char *page)
 	}
 
 	return true;
+}
+
+bool
+zstd_decompress_backupblock(const char *source, int32 slen, char *dest,
+							int32 rawsize, char *errormessage)
+{
+#ifdef HAVE_LIBZSTD
+		unsigned long long uncompressed_size;
+		int dst_length_used;
+		static ZSTD_DCtx  *cxt = NULL;      /* ZSTD decompression context */
+		if (!cxt)
+		{
+			cxt = ZSTD_createDCtx();
+			if (!cxt)
+			{
+				snprintf(errormessage, MAX_ERRORMSG_LEN, "out of memory");
+				return false;
+			}
+		}
+
+		uncompressed_size = ZSTD_getFrameContentSize(source, slen);
+		if (uncompressed_size == ZSTD_CONTENTSIZE_UNKNOWN)
+		{
+			snprintf(errormessage, MAX_ERRORMSG_LEN,
+					 "decompressed size not known");
+			return false;
+		}
+
+		if (uncompressed_size == ZSTD_CONTENTSIZE_ERROR)
+		{
+			snprintf(errormessage, MAX_ERRORMSG_LEN,
+					 "error computing decompression size");
+			return false;
+		}
+
+		if (uncompressed_size > rawsize)
+		{
+			snprintf(errormessage, MAX_ERRORMSG_LEN,
+					 "too large ("UINT64_FORMAT") size after decompression",
+					 (uint64) uncompressed_size);
+			return false;
+		}
+
+		dst_length_used = ZSTD_decompressDCtx(cxt,
+											  dest, rawsize,
+											  source, slen);
+
+		if (ZSTD_isError(dst_length_used))
+		{
+			snprintf(errormessage, MAX_ERRORMSG_LEN,
+					 "%s error encountered on decompression",
+					 ZSTD_getErrorName(dst_length_used));
+			return false;
+		}
+
+		Assert(dst_length_used == rawsize);
+		return true;
+#endif
+		snprintf(errormessage, MAX_ERRORMSG_LEN,
+				 "binary not compiled with ZSTD support");
+		return false;
 }

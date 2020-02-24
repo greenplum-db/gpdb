@@ -4491,8 +4491,6 @@ PostgresMain(int argc, char *argv[],
 	volatile bool send_ready_for_query = true;
 	bool		disable_idle_in_transaction_timeout = false;
 
-	MemoryAccountIdType postgresMainMemoryAccountId = MEMORY_OWNER_TYPE_Undefined;
-
 	/*
 	 * CDB: Catch program error signals.
 	 *
@@ -4507,14 +4505,6 @@ PostgresMain(int argc, char *argv[],
 #ifndef WIN32
 	PostmasterPriority = getpriority(PRIO_PROCESS, 0);
 #endif
-
-	/*
-	 * Do not save the return value in any oldMemoryAccount variable.
-	 * In that case, we risk switching to a stale memoryAccount that is no
-	 * longer valid. This is because we reset the memory accounts frequently.
-	 */
-	postgresMainMemoryAccountId = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_MainEntry);
-	MemoryAccounting_SwitchAccount(postgresMainMemoryAccountId);
 
 	set_ps_display("startup", false);
 
@@ -4923,25 +4913,6 @@ PostgresMain(int argc, char *argv[],
 		VmemTracker_ResetMaxVmemReserved();
 		VmemTracker_ResetWaiver();
 
-		/* Reset memory accounting */
-
-		/*
-		 * We finished processing the last query and currently we are not under
-		 * any transaction. So reset memory accounting. Note: any memory
-		 * allocated before resetting will go into the rollover memory account,
-		 * allocated under top memory context.
-		 */
-		MemoryAccounting_Reset();
-
-		postgresMainMemoryAccountId = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_MainEntry);
-		/*
-		 * Don't attempt to save previous memory account. This will be invalid by the time we attempt to restore.
-		 * This is why we are not using our START_MEMORY_ACCOUNT and END_MEMORY_ACCOUNT macros
-		 */
-		MemoryAccounting_SwitchAccount(postgresMainMemoryAccountId);
-
-		/* End of memory accounting setup */
-
 		initStringInfo(&input_message);
 
         /* Reset elog globals */
@@ -5162,6 +5133,13 @@ PostgresMain(int argc, char *argv[],
 						ereport(ERROR,
 								(errcode(ERRCODE_PROTOCOL_VIOLATION),
 								 errmsg("MPP protocol messages are only supported in QD - QE connections")));
+					/*
+					 * QD performs the function body check, hence QE doesn't
+					 * need to do the check again. Turn off the check in QE
+					 * process as an optimization. Also, helps eliminate the
+					 * need for having this GUC in-sync between QD and QE.
+					 */
+					check_function_bodies=false;
 
 					/* Set statement_timestamp() */
  					SetCurrentStatementStartTimestamp();

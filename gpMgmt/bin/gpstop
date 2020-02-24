@@ -203,8 +203,6 @@ class GpStop:
                         self._stop_master()
                         self._stop_standby()
                     self._stop_segments(segs)
-                    self._stop_gpmmon()
-                    self._stop_gpsmon()
                     self._remove_shared_memory()  # this creates a new logfile - why?
                 finally:
                     # Reenable Ctrl-C
@@ -241,70 +239,6 @@ class GpStop:
                     # MPP-15208
                     return 2
         return 0
-
-    ######
-    def _stop_gpmmon(self):
-        logger.info('Cleaning up leftover gpmmon process')
-        gpmmon_running = False
-        cmd = Command('check if gpmmon process is running', cmdStr="ps -ef | grep '[g]pmmon -D' | awk '{print $2}'")
-        try:
-            cmd.run(validateAfter=True)
-        except Exception as e:
-            logger.warning('Unable to determine if gpmmon process is running (%s)' % str(e))
-            logger.warning('Not attempting to stop gpmmon process')
-
-        result = cmd.get_results()
-        if result.rc == 0 and result.stdout.strip() != '':
-            gpmmon_running = True
-
-        if gpmmon_running:
-            cmd = Command('stop the gpmmon process',
-                          cmdStr="ps -ef | grep '[g]pmmon -D' | awk '{print $2}' | xargs kill -9")
-            try:
-                cmd.run(validateAfter=True)
-            except Exception as e:
-                logger.error('Error while stopping gpmmon process (%s)' % str(e))
-        else:
-            logger.info('No leftover gpmmon process found')
-
-    ######
-    def _stop_gpsmon(self):
-        logger.info('Cleaning up leftover gpsmon processes')
-        cluster_hosts = set([gphost.hostname for gphost in self.hostcache.get_hosts()])
-        cluster_hosts.add(self.gparray.master.getSegmentHostName())
-        if self.gparray.standbyMaster:
-            cluster_hosts.add(self.gparray.standbyMaster.getSegmentHostName())
-
-        for host in cluster_hosts:
-            cmd = Command('Check if gpsmon is running', cmdStr="ps -ef | grep '[g]psmon -m' | awk '{print \$2}'",
-                          ctxt=REMOTE, remoteHost=host)
-            self.pool.addCommand(cmd)
-        self.pool.join()
-
-        gpsmon_found = True
-        valid_hosts = set([])
-        for item in self.pool.getCompletedItems():
-            result = item.get_results()
-            if result.rc == 0 and result.stdout.strip() != '':
-                valid_hosts.add(item.remoteHost)
-            else:
-                gpsmon_found = False
-
-        if not gpsmon_found:
-            logger.info(
-                'No leftover gpsmon processes on some hosts. not attempting forceful termination on these hosts')
-
-        for host in valid_hosts:
-            cmd = Command('kill all the gpsmon processes',
-                          cmdStr="ps -ef | grep '[g]psmon -m' | awk '{print \$2}' | xargs kill -9",
-                          ctxt=REMOTE, remoteHost=host)
-            self.pool.addCommand(cmd)
-        self.pool.join()
-
-        for item in self.pool.getCompletedItems():
-            result = item.get_results()
-            if result.rc != 0:
-                logger.warning('Failed to stop gpsmon process on host %s: (%s)' % (item.remoteHost, result.stderr))
 
     ######
     def _remove_shared_memory(self):

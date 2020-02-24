@@ -13,13 +13,17 @@
    [<b>--backup-dir</b> <varname>directory</varname>]
    [<b>--create-db</b>]
    [<b>--debug</b>]
-   [<b>--exclude-schema</b> <varname>schema_name</varname>]
-   [<b>--exclude-table</b> <varname>schema.table</varname>]
+   [<b>--exclude-schema</b> <varname>schema_name</varname> [<b>--exclude-schema</b> <varname>schema_name</varname> ...]]
+   [<b>--exclude-table</b> <varname>schema.table</varname> [<b>--exclude-table</b> <varname>schema.table</varname> ...]]
    [<b>--exclude-table-file</b> <varname>file_name</varname>]
-   [<b>--include-schema</b> <varname>schema_name</varname>]
-   [<b>--include-table</b> <varname>schema.table</varname>]
+   [<b>--exclude-schema-file</b> <varname>file_name</varname>]
+   [<b>--include-schema</b> <varname>schema_name</varname> [<b>--include-schema</b> <varname>schema_name</varname> ...]]
+   [<b>--include-table</b> <varname>schema.table</varname> [<b>--include-table</b> <varname>schema.table</varname> ...]]
+   [<b>--include-schema-file</b> <varname>file_name</varname>]
    [<b>--include-table-file</b> <varname>file_name</varname>]
+   [<b>--redirect-schema</b> <varname>schema_name</varname>]
    [<b>--data-only</b> | <b>--metadata-only</b>]
+   [<b>--incremental</b>]
    [<b>--jobs</b> <varname>int</varname>]
    [<b>--on-error-continue</b>]
    [<b>--plugin-config</b> <varname>config_file_location</varname>]
@@ -66,6 +70,12 @@
         restore those statistics by providing <codeph>--with-stats</codeph> to
           <codeph>gprestore</codeph>. By default, only database objects in the backup set are
         restored.</p>
+      <p>When a materialized view is restored, the data is not restored. To populate the
+        materialized view with data, use <codeph>REFRESH MATERIALIZED VIEW</codeph>. The tables that
+        are referenced by the materialized view definition must be available. The
+          <codeph>gprestore</codeph> log file lists the materialized views that were restored and
+        the <codeph>REFRESH MATERIALIZED VIEW</codeph> commands that are used to populate the
+        materialized views with data.</p>
       <p>Performance of restore operations can be improved by creating multiple parallel connections
         to restore table data and metadata. By default <codeph>gprestore</codeph> uses 1 connection,
         but you can increase this number with the <codeph>--jobs</codeph> option for large restore
@@ -142,21 +152,34 @@
           <pt><b>--exclude-schema</b>
             <varname>schema_name</varname></pt>
           <pd>Optional. Specifies a database schema to exclude from the restore operation. You can
-            specify this option multiple times to exclude multiple schemas. You cannot combine this
-            option with the option <codeph>--include-schema</codeph>, or a table filtering option
-            such as <codeph>--include-table</codeph>. </pd>
+            specify this option multiple times. You cannot combine this option with the option
+              <codeph>--include-schema</codeph>, <codeph>--include-schema-file</codeph>, or a table
+            filtering option such as <codeph>--include-table</codeph>. </pd>
+        </plentry>
+        <plentry>
+          <pt><b>--exclude-schema-file</b>
+            <varname>file_name</varname></pt>
+          <pd>Optional. Specifies a text file containing a list of schemas to exclude from the
+            backup. Each line in the text file must define a single schema. The file must not
+            include trailing lines. If a schema name uses any character other than a lowercase
+            letter, number, or an underscore character, then you must include that name in double
+            quotes. You cannot combine this option with the option <codeph>--include-schema</codeph>
+            or <codeph>--include-schema-file</codeph>, or a table filtering option such as
+              <codeph>--include-table</codeph>.</pd>
         </plentry>
         <plentry>
           <pt><b>--exclude-table</b>
             <varname>schema.table</varname></pt>
-          <pd>Optional. Specifies a table to exclude from the restore operation. The table must be
-            in the format <codeph>&lt;schema-name>.&lt;table-name></codeph>. If a table or schema
-            name uses any character other than a lowercase letter, number, or an underscore
-            character, then you must include that name in double quotes. You can specify this option
-            multiple times. If the table is not in the backup set, the restore operation fails. You
-            cannot specify a leaf partition of a partitioned table.</pd>
-          <pd>You cannot combine this option with the option <codeph>--exclude-schema</codeph>, or
-            another a table filtering option such as <codeph>--include-table</codeph>.</pd>
+          <pd>Optional. Specifies a table to exclude from the restore operation. You can specify
+            this option multiple times. The table must be in the format
+              <codeph>&lt;schema-name>.&lt;table-name></codeph>. If a table or schema name uses any
+            character other than a lowercase letter, number, or an underscore character, then you
+            must include that name in double quotes. You can specify this option multiple times. If
+            the table is not in the backup set, the restore operation fails. You cannot specify a
+            leaf partition of a partitioned table.</pd>
+          <pd>You cannot combine this option with the option <codeph>--exclude-schema</codeph>,
+              <codeph>--exclude-schema-file</codeph>, or another a table filtering option such as
+              <codeph>--include-table</codeph>.</pd>
         </plentry>
         <plentry>
           <pt><b>--exclude-table-file</b>
@@ -168,17 +191,17 @@
             letter, number, or an underscore character, then you must include that name in double
             quotes. If a table is not in the backup set, the restore operation fails. You cannot
             specify a leaf partition of a partitioned table.</pd>
-          <pd>You cannot combine this option with the option <codeph>--exclude-schema</codeph>, or
-            another a table filtering option such as <codeph>--include-table</codeph>.</pd>
+          <pd>You cannot combine this option with the option <codeph>--exclude-schema</codeph>,
+              <codeph>--exclude-schema-file</codeph>, or another a table filtering option such as
+              <codeph>--include-table</codeph>.</pd>
         </plentry>
         <plentry>
           <pt><b>--include-schema</b>
             <varname>schema_name</varname></pt>
           <pd>Optional. Specifies a database schema to restore. You can specify this option multiple
-            times to include multiple schemas. If you specify this option, any schemas that you
-            specify must be available in the backup set. Any schemas that are not included in
-            subsequent <codeph>--include-schema</codeph> options are omitted from the restore
-            operation. </pd>
+            times. If you specify this option, any schemas that you specify must be available in the
+            backup set. Any schemas that are not included in subsequent
+              <codeph>--include-schema</codeph> options are omitted from the restore operation. </pd>
           <pd>If a schema that you specify for inclusion exists in the database, the utility issues
             an error and continues the operation. The utility fails if a table being restored exists
             in the database. </pd>
@@ -188,6 +211,18 @@
               >Filtering the Contents of a Backup or Restore</xref> for more information.</pd>
         </plentry>
         <plentry>
+          <pt><b>--include-schema-file</b>
+            <varname>file_name</varname></pt>
+          <pd>Optional. Specifies a text file containing a list of schemas to restore. Each line in
+            the text file must define a single schema. The file must not include trailing lines. If
+            a schema name uses any character other than a lowercase letter, number, or an underscore
+            character, then you must include that name in double quotes. </pd>
+          <pd>The schemas must exist in the backup set. Any schemas not listed in this file are
+            omitted from the restore operation. </pd>
+          <pd>You cannot use this option if objects in the backup set have dependencies on multiple
+            schemas.</pd>
+        </plentry>
+        <plentry>
           <pt><b>--include-table</b>
             <varname>schema.table</varname></pt>
           <pd>Optional. Specifies a table to restore. The table must be in the format
@@ -195,12 +230,13 @@
             character other than a lowercase letter, number, or an underscore character, then you
             must include that name in double quotes. You can specify this option multiple times. You
             cannot specify a leaf partition of a partitioned table.</pd>
-          <pd>You can also specify the qualified name of a sequence or a view. </pd>
+          <pd>You can also specify the qualified name of a sequence, a view, or a materialized view. </pd>
           <pd>If you specify this option, the utility does not automatically restore dependent
             objects. You must also explicitly specify the dependent objects that are required. For
-            example if you restore a view, you must also restore the tables that the view uses. If
-            you restore a table that uses a sequence, you must also restore the sequence. The
-            dependent objects must exist in the backup set.</pd>
+            example if you restore a view or a materialized view, you must also restore the tables
+            that the view or the materialized view uses. If you restore a table that uses a
+            sequence, you must also restore the sequence. The dependent objects must exist in the
+            backup set.</pd>
           <pd>You cannot combine this option with a schema filtering option such as
               <codeph>--include-schema</codeph>, or another table filtering option such as
               <codeph>--exclude-table-file</codeph>.</pd>
@@ -215,18 +251,59 @@
             number, or an underscore character, then you must include that name in double quotes.
             Any tables not listed in this file are omitted from the restore operation. You cannot
             specify a leaf partition of a partitioned table.</pd>
-          <pd>You can also specify the qualified name of a sequence or a view. </pd>
+          <pd>You can also specify the qualified name of a sequence, a view, or a materialized view. </pd>
           <pd>If you specify this option, the utility does not automatically restore dependent
             objects. You must also explicitly specify dependent objects that are required. For
-            example if you restore a view, you must also specify the tables that the view uses. If
-            you specify a table that uses a sequence, you must also specify the sequence. The
-            dependent objects must exist in the backup set.</pd>
+            example if you restore a view or a materialized view, you must also specify the tables
+            that the view or the materialized uses. If you specify a table that uses a sequence, you
+            must also specify the sequence. The dependent objects must exist in the backup set.</pd>
+          <pd>For a materialized view, the data is not restored. To populate the materialized view
+            with data, you must use <codeph>REFRESH MATERIALIZED VIEW</codeph> and the tables that
+            are referenced by the materialized view definition must be available.</pd>
           <pd>If you use the <codeph>--include-table-file</codeph> option,
               <codeph>gprestore</codeph> does not create roles or set the owner of the tables. The
             utility restores table indexes and rules. Triggers are also restored but are not
             supported in Greenplum Database.</pd>
           <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/>
             for more information.</pd>
+        </plentry>
+        <plentry>
+          <pt>--incremental (Beta)</pt>
+          <pd>Restores only the table data in the incremental backup specified by the
+              <codeph>--timestamp</codeph> option. Table data is not restored from previous
+            incremental backups in the backup set. For information about incremental backups, see
+              <xref href="../../admin_guide/managing/backup-gpbackup-incremental.xml"/>.
+            <note type="warning">This is a Beta feature<ph otherprops="pivotal"> and is not
+                supported in a production environment</ph>.</note></pd>
+          <pd>An incremental backup contains the following table data that can be restored.</pd>
+          <pd>
+            <ul id="ul_idp_wrn_tkb">
+              <li>Data from all heap tables.</li>
+              <li>Data from append-optimized tables that have been modified since the previous
+                backup.</li>
+              <li>Data from leaf partitions that have been modified from the previous backup.</li>
+            </ul>
+          </pd>
+          <pd>When this option is specified, <codeph>gprestore</codeph> restores table data by
+            truncating the table and reloading data into the table.</pd>
+          <pd>
+            <note type="warning">When this option is specified, <codeph>gpbackup</codeph> assumes
+              that no changes have been made to the table definitions of the tables being restored,
+              such as adding or removing columns. </note>
+          </pd>
+        </plentry>
+        <plentry>
+          <pt><b>--redirect-schema</b>
+            <varname>schema_name</varname></pt>
+          <pd>Optional. Restore data in the specified schema instead of the original schemas. The
+            specified schema must already exist. If the data being restored is in multiple schemas,
+            all the data is redirected into the specified schema.</pd>
+          <pd>This option must be used with an option that includes tables,
+              <codeph>--inlcude-table</codeph> or <codeph>--include table-file</codeph>. </pd>
+          <pd>You cannot use this option with an option that excludes schemas or tables such as
+              <codeph>--exclude-schema</codeph> or <codeph>--exclude-table</codeph>.</pd>
+          <pd>You can use this option with the <codeph>--metadata-only</codeph> or
+              <codeph>--data-only</codeph> options.</pd>
         </plentry>
         <plentry>
           <pt><b>--jobs</b>
@@ -257,10 +334,17 @@
           <pt><b>--on-error-continue</b></pt>
           <pd>Optional. Specify this option to continue the restore operation if an SQL error occurs
             when creating database metadata (such as tables, roles, or functions) or restoring data.
-            If another type of error occurs, the utility exits. The utility displays an error
-            summary and writes error information to the <codeph>gprestore</codeph> log file and
-            continues the restore operation. </pd>
-          <pd>The default is to exit on the first error.</pd>
+            If another type of error occurs, the utility exits. The default is to exit on the first
+            error.</pd>
+          <pd>When this option is included, the utility displays an error summary and writes error
+            information to the <codeph>gprestore</codeph> log file and continues the restore
+            operation. The utility also creates text files in the backup directory that contain the
+            list of tables that generated SQL errors. <ul id="ul_d5j_5zn_3kb">
+              <li>Tables with metadata errors -
+                  <codeph>gprestore_&lt;backup-timestamp>_&lt;restore-time>_error_tables_metadata</codeph></li>
+              <li>Tables with data errors -
+                  <codeph>gprestore_&lt;backup-timestamp>_&lt;restore-time>_error_tables_data</codeph></li>
+            </ul></pd>
         </plentry>
         <plentry>
           <pt><b>--plugin-config</b>

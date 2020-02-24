@@ -1382,7 +1382,6 @@ motion_sanity_walker(Node *node, sanity_result_t *result)
 		case T_MergeAppend:
 		case T_SeqScan:
 		case T_SampleScan:
-		case T_ExternalScan:
 		case T_IndexScan:
 		case T_BitmapIndexScan:
 		case T_BitmapHeapScan:
@@ -1391,6 +1390,7 @@ motion_sanity_walker(Node *node, sanity_result_t *result)
 		case T_FunctionScan:
 		case T_ValuesScan:
 		case T_Agg:
+		case T_TupleSplit:
 		case T_Unique:
 		case T_Hash:
 		case T_SetOp:

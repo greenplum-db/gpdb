@@ -181,8 +181,6 @@ ExecEndUnique(UniqueState *node)
 	MemoryContextDelete(node->tempContext);
 
 	ExecEndNode(outerPlanState(node));
-
-	EndPlanStateGpmonPkt(&node->ps);
 }
 
 

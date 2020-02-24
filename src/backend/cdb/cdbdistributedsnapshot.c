@@ -82,7 +82,6 @@ DistributedSnapshotWithLocalMapping_CommittedTest(
 	 * Is this local xid in a process-local cache we maintain?
 	 */
 	if (LocalDistribXactCache_CommittedFind(localXid,
-											ds->distribTransactionTimeStamp,
 											&distribXid))
 	{
 		/*
@@ -130,9 +129,7 @@ DistributedSnapshotWithLocalMapping_CommittedTest(
 			/*
 			 * Since we did not find it in our process local cache, add it.
 			 */
-			LocalDistribXactCache_AddCommitted(
-											   localXid,
-											   ds->distribTransactionTimeStamp,
+			LocalDistribXactCache_AddCommitted(localXid,
 											   distribXid);
 		}
 		else

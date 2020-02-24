@@ -485,11 +485,6 @@ DefineIndex(Oid relationId,
 
 	relationId = RelationGetRelid(rel);
 	namespaceId = RelationGetNamespace(rel);
-
-	if (RelationIsExternal(rel))
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("cannot create indexes on external tables")));
 		
 	/* Note: during bootstrap may see uncataloged relation */
 	if (rel->rd_rel->relkind != RELKIND_RELATION &&
@@ -754,6 +749,17 @@ DefineIndex(Oid relationId,
 		index_check_primary_key(rel, indexInfo, is_alter_table);
 
 	/*
+	 * if the table is partitioned, a constraint must be
+	 * compatible with the partitioning key.
+	 */
+	if (partitioned && (stmt->unique || stmt->primary))
+		index_check_partitioning_compatible(rel,
+											indexInfo->ii_KeyAttrNumbers,
+											indexInfo->ii_ExclusionOps,
+											indexInfo->ii_NumIndexAttrs,
+											stmt->primary);
+	
+	/*
 	 * Check that the index is compatible with the distribution policy.
 	 *
 	 * If the index is unique, the index columns must include all the
@@ -868,17 +874,6 @@ DefineIndex(Oid relationId,
 			}
 		}
 	}
-
-	/*
-	 * Similar to the distribution keys, if the table is partitioned, a
-	 * constraint must be compatible with the partitioning key.
-	 */
-	if ( stmt->isconstraint && rel_is_partitioned(relationId) )
-		index_check_partitioning_compatible(rel,
-											indexInfo->ii_KeyAttrNumbers,
-											indexInfo->ii_ExclusionOps,
-											indexInfo->ii_NumIndexAttrs,
-											stmt->primary);
 
 	if (Gp_role == GP_ROLE_EXECUTE && stmt)
 		quiet = true;

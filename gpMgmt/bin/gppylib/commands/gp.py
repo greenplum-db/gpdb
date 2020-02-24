@@ -9,6 +9,10 @@ TODO: docs!
 import os, pickle, base64, time
 import os.path
 import pipes
+try:
+    import subprocess32 as subprocess
+except:
+    import subprocess
 
 import re, socket
 
@@ -817,17 +821,25 @@ class ModifyConfSetting(Command):
 
 class ModifyPgHbaConfSetting(Command):
     def __init__(self, name, file, ctxt, remoteHost, addresses, is_hba_hostnames):
-        hba_content = ""
+        username = getUserName()
+        # Add a samehost replication entry to support single-host development.
+        hba_content = "\nhost replication {username} samehost trust".format(username=username)
 
         for address in addresses:
             if is_hba_hostnames:
-                hba_content += "\nhost all {0} {1} trust".format(getUserName(), address)
+                hba_content += "\nhost all {username} {hostname} trust".format(username=username, hostname=address)
+                hba_content += "\nhost replication {username} {hostname} trust".format(username=username, hostname=address)
             else:
                 ips = InterfaceAddrs.remote('get mirror ips', address)
                 for ip in ips:
                     cidr_suffix = '/128' if ':' in ip else '/32'
                     cidr = ip + cidr_suffix
-                    hba_content += "\nhost all {0} {1} trust".format(getUserName(), cidr)
+                    hba_content += "\nhost all {username} {cidr} trust".format(username=username, cidr=cidr)
+                if_addrs = IfAddrs.list_addrs(address)
+                for ip in if_addrs:
+                    cidr_suffix = '/128' if ':' in ip else '/32'
+                    cidr = ip + cidr_suffix
+                    hba_content += "\nhost replication {username} {cidr} trust".format(username=username, cidr=cidr)
 
         # You might think you can substitute the primary and mirror addresses
         # with the new primary and mirror addresses, but what if they were the
@@ -1565,6 +1577,20 @@ class GpRecoverSeg(Command):
        cmdStr = "$GPHOME/bin/gprecoverseg %s" % (options)
        Command.__init__(self,name,cmdStr,ctxt,remoteHost)
 
+class IfAddrs:
+    @staticmethod
+    def list_addrs(hostname=None, include_loopback=False):
+        cmd = ['%s/libexec/ifaddrs' % GPHOME]
+        if not include_loopback:
+            cmd.append('--no-loopback')
+        if hostname:
+            args = ['ssh', '-n', hostname]
+            args.append(' '.join(cmd))
+        else:
+            args = cmd
+
+        result = subprocess.check_output(args)
+        return result.splitlines()
 
 if __name__ == '__main__':
 

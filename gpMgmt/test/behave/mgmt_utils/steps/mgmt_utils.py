@@ -16,9 +16,9 @@ import tempfile
 import thread
 import json
 try:
-    from subprocess32 import Popen, PIPE
+    from subprocess32 import check_output, Popen, PIPE
 except:
-    from subprocess import Popen, PIPE
+    from subprocess import check_output, Popen, PIPE
 import commands
 import signal
 from collections import defaultdict
@@ -676,6 +676,7 @@ def run_gpinitstandby(context, hostname, port, standby_data_dir, options='', rem
 
     run_gpcommand(context, cmd + ' ' + options)
 
+
 @when('the user initializes a standby on the same host as master with same port')
 def impl(context):
     hostname = get_master_hostname('postgres')[0][0]
@@ -689,6 +690,53 @@ def impl(context):
 
     cmd = "gpinitstandby -a -s %s -P %d" % (hostname, master_port + 1)
     run_gpcommand(context, cmd)
+
+def init_standby(context, master_hostname, options, segment_hostname):
+    if master_hostname != segment_hostname:
+        context.standby_hostname = segment_hostname
+        context.standby_port = os.environ.get("PGPORT")
+        remote = True
+    else:
+        context.standby_hostname = master_hostname
+        context.standby_port = get_open_port()
+        remote = False
+    # -n option assumes gpinitstandby already ran and put standby in catalog
+    if "-n" not in options:
+        if remote:
+            context.standby_data_dir = master_data_dir
+        else:
+            context.standby_data_dir = tempfile.mkdtemp() + "/standby_datadir"
+    run_gpinitstandby(context, context.standby_hostname, context.standby_port, context.standby_data_dir, options,
+                      remote)
+    context.master_hostname = master_hostname
+    context.master_port = os.environ.get("PGPORT")
+    context.standby_was_initialized = True
+
+@when('running gpinitstandby on host "{master}" to create a standby on host "{standby}"')
+@given('running gpinitstandby on host "{master}" to create a standby on host "{standby}"')
+def impl(context, master, standby):
+    # XXX This code was cribbed from init_standby and modified to support remote
+    # execution.
+    context.master_hostname = master
+    context.standby_hostname = standby
+    context.standby_port = os.environ.get("PGPORT")
+    context.standby_data_dir = master_data_dir
+
+    remove_dir(standby, context.standby_data_dir)
+    create_dir(standby, os.path.dirname(context.standby_data_dir))
+
+    # We do not set port nor data dir here to test gpinitstandby's ability to autogather that info
+    cmd = "gpinitstandby -a -s %s" % standby
+
+    run_command_remote(context,
+                       cmd,
+                       context.master_hostname,
+                       os.getenv("GPHOME") + '/greenplum_path.sh',
+                       'export MASTER_DATA_DIRECTORY=%s' % context.standby_data_dir)
+
+    context.stdout_position = 0
+    context.master_port = os.environ.get("PGPORT")
+    context.standby_was_initialized = True
 
 @when('the user runs gpinitstandby with options "{options}"')
 @then('the user runs gpinitstandby with options "{options}"')
@@ -706,26 +754,7 @@ def impl(context, options):
         raise Exception("Did not get two rows from query: %s" % query)
 
     # if we have two hosts, assume we're testing on a multinode cluster
-    if master_hostname != segment_hostname:
-        context.standby_hostname = segment_hostname
-        context.standby_port = os.environ.get("PGPORT")
-        remote = True
-    else:
-        context.standby_hostname = master_hostname
-        context.standby_port = get_open_port()
-        remote = False
-
-    # -n option assumes gpinitstandby already ran and put standby in catalog
-    if "-n" not in options:
-        if remote:
-            context.standby_data_dir = master_data_dir
-        else:
-            context.standby_data_dir = tempfile.mkdtemp() + "/standby_datadir"
-
-    run_gpinitstandby(context, context.standby_hostname, context.standby_port, context.standby_data_dir, options, remote)
-    context.master_hostname = master_hostname
-    context.master_port = os.environ.get("PGPORT")
-    context.standby_was_initialized = True
+    init_standby(context, master_hostname, options, segment_hostname)
 
 @when('the user runs gpactivatestandby with options "{options}"')
 @then('the user runs gpactivatestandby with options "{options}"')
@@ -733,6 +762,7 @@ def impl(context, options):
     context.execute_steps(u'''Then the user runs command "gpactivatestandby -a %s" from standby master''' % options)
     context.standby_was_activated = True
 
+@when('the user runs command "{command}" from standby master')
 @then('the user runs command "{command}" from standby master')
 def impl(context, command):
     cmd = "PGPORT=%s %s" % (context.standby_port, command)
@@ -754,6 +784,12 @@ def impl(context):
 	master = MasterStop("Stopping Master Standby", context.standby_data_dir, mode='immediate', ctxt=REMOTE,
                         remoteHost=context.standby_hostname)
 	master.run(validateAfter=True)
+
+@when('the master goes down on "{host}"')
+def impl(context, host):
+    master = MasterStop("Stopping Master Standby", master_data_dir, mode='immediate', ctxt=REMOTE,
+                        remoteHost=host)
+    master.run(validateAfter=True)
 
 @then('clean up and revert back to original master')
 def impl(context):
@@ -1726,36 +1762,6 @@ def impl(context, proc):
     check_return_code(context, 0)  # 0 means one or more processes were matched
 
 
-@when('wait until the results from boolean sql "{sql}" is "{boolean}"')
-@then('wait until the results from boolean sql "{sql}" is "{boolean}"')
-@given('wait until the results from boolean sql "{sql}" is "{boolean}"')
-def impl(context, sql, boolean):
-    cmd = Command(name='psql', cmdStr='psql --tuples-only -d gpperfmon -c "%s"' % sql)
-    start_time = current_time = datetime.now()
-    result = None
-    while (current_time - start_time).seconds < 120:
-        cmd.run()
-        if cmd.get_return_code() != 0:
-            break
-        result = cmd.get_stdout()
-        if _str2bool(result) == _str2bool(boolean):
-            break
-        time.sleep(2)
-        current_time = datetime.now()
-
-    if cmd.get_return_code() != 0:
-        context.ret_code = cmd.get_return_code()
-        context.error_message = 'psql internal error: %s' % cmd.get_stderr()
-        check_return_code(context, 0)
-    else:
-        if _str2bool(result) != _str2bool(boolean):
-            raise Exception("sql output '%s' is not same as '%s'" % (result, boolean))
-
-
-def _str2bool(string):
-    return string.lower().strip() in ['t', 'true', '1', 'yes', 'y']
-
-
 @given('the user creates an index for table "{table_name}" in database "{db_name}"')
 @when('the user creates an index for table "{table_name}" in database "{db_name}"')
 @then('the user creates an index for table "{table_name}" in database "{db_name}"')
@@ -1766,99 +1772,6 @@ def impl(context, table_name, db_name):
     with dbconn.connect(dbconn.DbURL(dbname=db_name), unsetSearchPath=False) as conn:
         dbconn.execSQL(conn, index_qry)
         conn.commit()
-
-@when("the user installs gpperfmon")
-def impl(context):
-    master_port = os.getenv('PGPORT', 15432)
-    cmd = "gpperfmon_install --port {master_port} --enable --password foo".format(master_port=master_port)
-    run_command(context, cmd)
-
-@given('gpperfmon is configured and running in qamode')
-@then('gpperfmon is configured and running in qamode')
-def impl(context):
-    master_port = os.getenv('PGPORT', 15432)
-    target_line = 'qamode = 1'
-    gpperfmon_config_file = "%s/gpperfmon/conf/gpperfmon.conf" % os.getenv("MASTER_DATA_DIRECTORY")
-    if not check_db_exists("gpperfmon", "localhost"):
-        context.execute_steps(u'''
-                              When the user runs "gpperfmon_install --port {master_port} --enable --password foo"
-                              Then gpperfmon_install should return a return code of 0
-                              '''.format(master_port=master_port))
-
-    if not file_contains_line(gpperfmon_config_file, target_line):
-        context.execute_steps(u'''
-                              When the user runs command "echo 'qamode = 1' >> $MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf"
-                              Then echo should return a return code of 0
-                              When the user runs command "echo 'verbose = 1' >> $MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf"
-                              Then echo should return a return code of 0
-                              When the user runs command "echo 'min_query_time = 0' >> $MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf"
-                              Then echo should return a return code of 0
-                              When the user runs command "echo 'quantum = 10' >> $MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf"
-                              Then echo should return a return code of 0
-                              When the user runs command "echo 'harvest_interval = 5' >> $MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf"
-                              Then echo should return a return code of 0
-                              ''')
-
-    if not is_process_running("gpsmon"):
-        context.execute_steps(u'''
-                              When the database is not running
-                              Then wait until the process "postgres" goes down
-                              When the user runs "gpstart -a"
-                              Then gpstart should return a return code of 0
-                              And verify that a role "gpmon" exists in database "gpperfmon"
-                              And verify that the last line of the file "postgresql.conf" in the master data directory contains the string "gpperfmon_log_alert_level=warning"
-                              And verify that there is a "heap" table "database_history" in "gpperfmon"
-                              Then wait until the process "gpmmon" is up
-                              And wait until the process "gpsmon" is up
-                              ''')
-
-
-@given('the setting "{variable_name}" is NOT set in the configuration file "{path_to_file}"')
-@when('the setting "{variable_name}" is NOT set in the configuration file "{path_to_file}"')
-def impl(context, variable_name, path_to_file):
-    path = os.path.join(os.getenv("MASTER_DATA_DIRECTORY"), path_to_file)
-    temp_file = "/tmp/gpperfmon_temp_config"
-    with open(path) as oldfile, open(temp_file, 'w') as newfile:
-        for line in oldfile:
-            if variable_name not in line:
-                newfile.write(line)
-    shutil.move(temp_file, path)
-
-
-@given('the setting "{setting_string}" is placed in the configuration file "{path_to_file}"')
-@when('the setting "{setting_string}" is placed in the configuration file "{path_to_file}"')
-def impl(context, setting_string, path_to_file):
-    path = os.path.join(os.getenv("MASTER_DATA_DIRECTORY"), path_to_file)
-    with open(path, 'a') as f:
-        f.write(setting_string)
-        f.write("\n")
-
-
-@given('the latest gpperfmon gpdb-alert log is copied to a file with a fake (earlier) timestamp')
-@when('the latest gpperfmon gpdb-alert log is copied to a file with a fake (earlier) timestamp')
-def impl(context):
-    gpdb_alert_file_path_src = sorted(glob.glob(os.path.join(os.getenv("MASTER_DATA_DIRECTORY"),
-                                    "gpperfmon",
-                                       "logs",
-                                       "gpdb-alert*")))[-1]
-    # typical filename would be gpdb-alert-2017-04-26_155335.csv
-    # setting the timestamp to a string that starts with `-` (em-dash)
-    #   will be sorted (based on ascii) before numeric timestamps
-    #   without colliding with a real timestamp
-    dest = re.sub(r"_\d{6}\.csv$", "_-takeme.csv", gpdb_alert_file_path_src)
-
-    # Let's wait until there's actually something in the file before actually
-    # doing a copy of the log...
-    for _ in range(60):
-        if os.stat(gpdb_alert_file_path_src).st_size != 0:
-            shutil.copy(gpdb_alert_file_path_src, dest)
-            context.fake_timestamp_file = dest
-            return
-        sleep(1)
-
-    raise Exception("File: %s is empty" % gpdb_alert_file_path_src)
-
-
 
 @then('the file with the fake timestamp no longer exists')
 def impl(context):
@@ -2112,9 +2025,11 @@ def _create_cluster(context, master_host, segment_host_list, hba_hostnames='0', 
         segment_host_list = []
     else:
         segment_host_list = segment_host_list.split(",")
-    del os.environ['MASTER_DATA_DIRECTORY']
-    os.environ['MASTER_DATA_DIRECTORY'] = os.path.join(context.working_directory,
-                                                       'data/master/gpseg-1')
+
+    global master_data_dir
+    master_data_dir = os.path.join(context.working_directory, 'data/master/gpseg-1')
+    os.environ['MASTER_DATA_DIRECTORY'] = master_data_dir
+
     try:
         with dbconn.connect(dbconn.DbURL(dbname='template1'), unsetSearchPath=False) as conn:
             curs = dbconn.execSQL(conn, "select count(*) from gp_segment_configuration where role='m';")
@@ -2139,9 +2054,12 @@ def impl(context, master_host, segment_host_list):
     _create_cluster(context, master_host, segment_host_list, with_mirrors=False)
 
 @given('with HBA_HOSTNAMES "{hba_hostnames}" a cluster is created with no mirrors on "{master_host}" and "{segment_host_list}"')
+@when('with HBA_HOSTNAMES "{hba_hostnames}" a cluster is created with no mirrors on "{master_host}" and "{segment_host_list}"')
+@when('with HBA_HOSTNAMES "{hba_hostnames}" a cross-subnet cluster without a standby is created with no mirrors on "{master_host}" and "{segment_host_list}"')
 def impl(context, master_host, segment_host_list, hba_hostnames):
     _create_cluster(context, master_host, segment_host_list, hba_hostnames, with_mirrors=False)
 
+@given('a cross-subnet cluster without a standby is created with mirrors on "{master_host}" and "{segment_host_list}"')
 @given('a cluster is created with mirrors on "{master_host}" and "{segment_host_list}"')
 def impl(context, master_host, segment_host_list):
     _create_cluster(context, master_host, segment_host_list, with_mirrors=True, mirroring_configuration='group')
@@ -2950,3 +2868,29 @@ def impl(context, command, input):
     context.ret_code = p.returncode
     context.stdout_message = stdout
     context.error_message = stderr
+
+def are_on_different_subnets(primary_hostname, mirror_hostname):
+    primary_broadcast = check_output(['ssh', '-n', primary_hostname, "/sbin/ip addr show eth0 | grep 'inet .* brd' | awk '{ print $4 }'"])
+    mirror_broadcast = check_output(['ssh', '-n', mirror_hostname,  "/sbin/ip addr show eth0 | grep 'inet .* brd' | awk '{ print $4 }'"])
+    if not primary_broadcast:
+        raise Exception("primary hostname %s has no broadcast address" % primary_hostname)
+    if not mirror_broadcast:
+        raise Exception("mirror hostname %s has no broadcast address" % mirror_hostname)
+
+    return primary_broadcast != mirror_broadcast
+
+@then('the primaries and mirrors {including} masterStandby are on different subnets')
+def impl(context, including):
+    gparray = GpArray.initFromCatalog(dbconn.DbURL())
+
+    if including == "including":
+        if not gparray.standbyMaster:
+            raise Exception("no standby found for master")
+        if not are_on_different_subnets(gparray.master.hostname, gparray.standbyMaster.hostname):
+            raise Exception("master %s and its standby %s are on same the subnet" % (gparray.master, gparray.standbyMaster))
+
+    for segPair in gparray.segmentPairs:
+        if not segPair.mirrorDB:
+            raise Exception("no mirror found for segPair: %s" % segPair)
+        if not are_on_different_subnets(segPair.primaryDB.hostname, segPair.mirrorDB.hostname):
+            raise Exception("segmentPair on same subnet: %s" % segPair)

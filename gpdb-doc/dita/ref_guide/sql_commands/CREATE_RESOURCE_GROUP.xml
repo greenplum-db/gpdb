@@ -88,8 +88,17 @@
         </plentry>
         <plentry>
           <pt>MEMORY_AUDITOR {vmtracker | cgroup}</pt>
-          <pd>The memory auditor for the resource group. Greenplum Database employs virtual memory tracking for role resources and cgroup memory tracking for resources used by external components. The default <codeph>MEMORY_AUDITOR</codeph> is <codeph>vmtracker</codeph>. When you create a resource group with <codeph>vmtracker</codeph> memory auditing, Greenplum Database tracks that resource group's memory internally.</pd>
-          <pd>When you create a resource group specifying the <codeph>cgroup</codeph> <codeph>MEMORY_AUDITOR</codeph>, Greenplum Database defers the accounting of memory used by that resource group to cgroups. <codeph>CONCURRENCY</codeph> must be zero (0) for a resource group that you create for external components such as PL/Container. You cannot assign a resource group that you create for external components to a Greenplum Database role.</pd>
+          <pd>The memory auditor for the resource group. Greenplum Database employs virtual memory
+            tracking for role resources and cgroup memory tracking for resources used by external
+            components. The default <codeph>MEMORY_AUDITOR</codeph> is <codeph>vmtracker</codeph>.
+            When you create a resource group with <codeph>vmtracker</codeph> memory auditing,
+            Greenplum Database tracks that resource group's memory internally.</pd>
+          <pd>When you create a resource group specifying the <codeph>cgroup</codeph>
+            <codeph>MEMORY_AUDITOR</codeph>, Greenplum Database defers the accounting of memory used
+            by that resource group to cgroups. <codeph>CONCURRENCY</codeph> must be zero (0) for a
+            resource group that you create for external components such as PL/Container. You cannot
+            assign a resource group that you create for external components to a Greenplum Database
+            role.</pd>
         </plentry>
       </parml>
     </section>

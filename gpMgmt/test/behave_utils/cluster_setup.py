@@ -110,8 +110,7 @@ class TestCluster:
         segment_mirroring_option = '--mirror-mode=spread' if mirroring_configuration == 'spread' else ''
         gpinitsystem_cmd = clean_env + 'gpinitsystem -a -c  %s %s' % (self.init_file, segment_mirroring_option)
         res = run_shell_command(gpinitsystem_cmd, 'run gpinitsystem', verbose=True)
-        # initsystem returns 1 for warnings and 2 for errors
-        if res['rc'] > 1:
+        if res['rc'] != 0:
             raise Exception("Failed initializing the cluster. Look into gpAdminLogs for more information")
         self._generate_env_file()
 

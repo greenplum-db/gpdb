@@ -53,12 +53,6 @@ ALTER ROLE role_setting_test_6 IN DATABASE regression RESET ALL;
 -- if you dump the regression database.
 
 
--- SHA-256 testing
-set password_hash_algorithm to "SHA-256";
-create role sha256 password 'abc';
-select rolname, rolpassword from pg_authid where rolname = 'sha256';
-drop role sha256;
-
 create role superuser;
 create role u1;
 set role superuser;

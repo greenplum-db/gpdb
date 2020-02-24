@@ -111,7 +111,7 @@ query_planner(PlannerInfo *root, List *tlist,
 
 			exec_location = check_execute_on_functions((Node *) parse->targetList);
 
-			if (exec_location == PROEXECLOCATION_MASTER)
+			if (exec_location == PROEXECLOCATION_MASTER || exec_location == PROEXECLOCATION_INITPLAN)
 				CdbPathLocus_MakeEntry(&result_path->locus);
 			else if (exec_location == PROEXECLOCATION_ALL_SEGMENTS)
 				CdbPathLocus_MakeStrewn(&result_path->locus,
@@ -303,30 +303,10 @@ query_planner(PlannerInfo *root, List *tlist,
 PlannerConfig *DefaultPlannerConfig(void)
 {
 	PlannerConfig *c1 = (PlannerConfig *) palloc(sizeof(PlannerConfig));
-	c1->enable_sort = enable_sort;
-	c1->enable_hashagg = enable_hashagg;
-	c1->enable_groupagg = enable_groupagg;
-	c1->enable_nestloop = enable_nestloop;
-	c1->enable_mergejoin = enable_mergejoin;
-	c1->enable_hashjoin = enable_hashjoin;
-	c1->gp_enable_hashjoin_size_heuristic = gp_enable_hashjoin_size_heuristic;
-	c1->gp_enable_predicate_propagation = gp_enable_predicate_propagation;
-	c1->constraint_exclusion = constraint_exclusion;
 
 	c1->gp_enable_minmax_optimization = gp_enable_minmax_optimization;
 	c1->gp_enable_multiphase_agg = gp_enable_multiphase_agg;
-	c1->gp_enable_preunique = gp_enable_preunique;
-	c1->gp_eager_preunique = gp_eager_preunique;
-	c1->gp_hashagg_streambottom = gp_hashagg_streambottom;
-	c1->gp_enable_agg_distinct = gp_enable_agg_distinct;
-	c1->gp_enable_dqa_pruning = gp_enable_dqa_pruning;
-	c1->gp_eager_dqa_pruning = gp_eager_dqa_pruning;
-	c1->gp_eager_one_phase_agg = gp_eager_one_phase_agg;
-	c1->gp_eager_two_phase_agg = gp_eager_two_phase_agg;
-	c1->gp_enable_sort_distinct = gp_enable_sort_distinct;
-
 	c1->gp_enable_direct_dispatch = gp_enable_direct_dispatch;
-	c1->gp_dynamic_partition_pruning = gp_dynamic_partition_pruning;
 
 	c1->gp_cte_sharing = gp_cte_sharing;
 

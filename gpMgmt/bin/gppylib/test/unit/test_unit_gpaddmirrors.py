@@ -123,7 +123,8 @@ class GpAddMirrorsTest(GpTestCase):
 
     @patch('gppylib.programs.clsAddMirrors.Command')
     @patch('gppylib.programs.clsAddMirrors.unix.InterfaceAddrs.remote', return_value=['192.168.2.1', '192.168.1.1'])
-    def test_pghbaconf_updated_successfully(self, mock1, mock2):
+    @patch('gppylib.programs.clsAddMirrors.gp.IfAddrs.list_addrs', return_value=['192.168.2.1', '192.168.1.1'])
+    def test_pghbaconf_updated_successfully(self, mock1, mock2, mock3):
         sys.argv = ['gpaddmirrors', '-i', '/tmp/nonexistent/file']
         options, _ = self.parser.parse_args()
         self.subject = GpAddMirrorsProgram(options)
@@ -133,7 +134,8 @@ class GpAddMirrorsTest(GpTestCase):
 
     @patch('gppylib.programs.clsAddMirrors.Command', side_effect=Exception("boom"))
     @patch('gppylib.programs.clsAddMirrors.unix.InterfaceAddrs.remote', return_value=['192.168.2.1', '192.168.1.1'])
-    def test_pghbaconf_updated_fails(self, mock1, mock2):
+    @patch('gppylib.programs.clsAddMirrors.gp.IfAddrs.list_addrs', return_value=['192.168.2.1', '192.168.1.1'])
+    def test_pghbaconf_updated_fails(self, mock1, mock2, mock3):
         sys.argv = ['gpaddmirrors', '-i', '/tmp/nonexistent/file']
         options, _ = self.parser.parse_args()
         self.subject = GpAddMirrorsProgram(options)

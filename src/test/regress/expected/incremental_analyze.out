@@ -1696,7 +1696,7 @@ INSERT INTO foo SELECT i, i%9, i%100 FROM generate_series(1,500)i;
 ANALYZE VERBOSE rootpartition foo;
 INFO:  analyzing "public.foo" inheritance tree
 INFO:  column c of partition foo_1_prt_1 is not analyzed, so ANALYZE will collect sample for stats calculation
-INFO:  Executing SQL: select * from pg_catalog.gp_acquire_sample_rows(17861, 400, 't') as (totalrows pg_catalog.float8, totaldeadrows pg_catalog.float8, oversized_cols_bitmap pg_catalog.text, a integer, b integer, c integer)
+INFO:  Executing SQL: select pg_catalog.gp_acquire_sample_rows(17861, 400, 't')
 -- Testing auto merging root statistics for all columns
 -- where column attnums are differents due to dropped columns
 -- and split partitions.

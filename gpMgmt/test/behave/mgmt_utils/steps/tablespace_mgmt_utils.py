@@ -203,3 +203,9 @@ def impl(context):
 def impl(context):
     for _, tbs in context.tablespaces.items():
         tbs.verify_for_gpexpand()
+
+@then('all tablespaces are dropped')
+def impl(context):
+    for tablespace in context.tablespaces.values():
+        tablespace.cleanup()
+    context.tablespaces = {}

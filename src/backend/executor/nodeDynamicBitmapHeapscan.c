@@ -316,8 +316,6 @@ ExecEndDynamicBitmapHeapScan(DynamicBitmapHeapScanState *node)
 	 * close down subplans
 	 */
 	ExecEndNode(outerPlanState(node));
-
-	EndPlanStateGpmonPkt(&node->ss.ps);
 }
 
 /*

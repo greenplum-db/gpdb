@@ -22,8 +22,8 @@
       </li>
     </ul>
     <p>For information about the Greenplum Database PL/Python Language, see <xref scope="peer"
-        type="topic" format="dita" href="../ref_guide/extensions/pl_python.xml#topic1">Greenplum
-        PL/Python Language Extension</xref>.</p>
+        type="topic" format="dita" href="../analytics/pl_python.xml#topic1">Greenplum PL/Python
+        Language Extension</xref>.</p>
   </body>
   <topic id="topic_pydatascimod">
     <title>Python Data Science Modules</title>

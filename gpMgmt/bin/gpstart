@@ -128,14 +128,7 @@ class GpStart:
                 logger.info("Skipping Standby activation status checking.")
 
             logger.info("Shutting down master")
-            cmd = gp.GpStop("Shutting down master", masterOnly=True,
-                            fast=True, quiet=logging_is_quiet(),
-                            verbose=logging_is_verbose(),
-                            datadir=self.master_datadir,
-                            parallel=self.parallel,
-                            logfileDirectory=self.logfileDirectory)
-            cmd.run()
-            logger.debug("results of forcing master shutdown: %s" % cmd)
+            self.shutdown_master_only()
             # TODO: check results of command.
 
         finally:
@@ -225,14 +218,34 @@ class GpStart:
 
         self._remove_postmaster_tmpfile(self.port)
 
+    def shutdown_master_only(self):
+        cmd = gp.GpStop("Shutting down master", masterOnly=True,
+                        fast=True, quiet=logging_is_quiet(),
+                        verbose=logging_is_verbose(),
+                        datadir=self.master_datadir,
+                        parallel=self.parallel,
+                        logfileDirectory=self.logfileDirectory)
+        cmd.run()
+        logger.debug("results of forcing master shutdown: %s" % cmd)
+
     def fetch_tli(self, data_dir_path, remoteHost=None):
         if not remoteHost:
-            controldata = PgControlData("Latest checkpoint's TimeLineID", data_dir_path)
+            controldata = PgControlData("fetching pg_controldata locally", data_dir_path)
         else:
-            controldata = PgControlData("Latest checkpoint's TimeLineID", data_dir_path, REMOTE, remoteHost)
+            controldata = PgControlData("fetching pg_controldata remotely", data_dir_path, REMOTE, remoteHost)
 
-        controldata.run(validateAfter=True)
-        return int(controldata.get_value("Latest checkpoint's TimeLineID"))
+        try:
+            controldata.run(validateAfter=True)
+            return int(controldata.get_value("Latest checkpoint's TimeLineID"))
+        except base.ExecutionError as err:
+            logger.warning("Standby host is unreachable, cannot determine whether the standby is currently acting as the master. Received error: %s" % err)
+            logger.warning("Continue only if you are certain that the standby is not acting as the master.")
+            if not self.interactive or not userinput.ask_yesno(None, "\nContinue with startup", 'N'):
+                if not self.interactive:
+                    logger.warning("Non interactive mode detected. Not starting the cluster. Start the cluster in interactive mode.")
+                self.shutdown_master_only()
+                raise UserAbortedException()
+            return 0  # a 0 won't lead to standby promotion, as TimeLineIDs start at 1
 
     def _check_standby_activated(self):
         logger.debug("Checking if standby has been activated...")

@@ -806,7 +806,7 @@ FETCH 1 from c;
 (1 row)
 
 UPDATE ucexttest SET x = 'bar' WHERE CURRENT OF c;
-ERROR:  cannot update or delete from external relation "ucexttest"
+ERROR:  "ucexttest" is not simply updatable
 ROLLBACK;
 DROP EXTERNAL TABLE ucexttest;
 -- Negative, cursor-agnostic: cannot update AO

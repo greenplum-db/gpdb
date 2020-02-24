@@ -9,7 +9,7 @@ create event trigger regress_event_trigger on ddl_command_start
 CREATE EXTERNAL WEB TABLE echotest (x text) EXECUTE 'echo foo;' FORMAT 'text';
 NOTICE:  test_event_trigger: ddl_command_start CREATE EXTERNAL TABLE
 DROP EXTERNAL TABLE echotest;
-NOTICE:  test_event_trigger: ddl_command_start DROP EXTERNAL TABLE
+NOTICE:  test_event_trigger: ddl_command_start DROP FOREIGN TABLE
 CREATE OR REPLACE FUNCTION write_to_file() RETURNS integer as '$libdir/gpextprotocol.so', 'demoprot_export' LANGUAGE C STABLE NO SQL;
 NOTICE:  test_event_trigger: ddl_command_start CREATE FUNCTION
 CREATE OR REPLACE FUNCTION read_from_file() RETURNS integer as '$libdir/gpextprotocol.so', 'demoprot_import' LANGUAGE C STABLE NO SQL;
@@ -19,7 +19,7 @@ NOTICE:  test_event_trigger: ddl_command_start CREATE PROTOCOL
 CREATE WRITABLE EXTERNAL TABLE demoprot_w(a int) location('demoprot_event_trig_test://demoprotfile.txt') format 'text';
 NOTICE:  test_event_trigger: ddl_command_start CREATE EXTERNAL TABLE
 DROP EXTERNAL TABLE demoprot_w CASCADE;
-NOTICE:  test_event_trigger: ddl_command_start DROP EXTERNAL TABLE
+NOTICE:  test_event_trigger: ddl_command_start DROP FOREIGN TABLE
 DROP PROTOCOL demoprot_event_trig_test;
 NOTICE:  test_event_trigger: ddl_command_start DROP PROTOCOL
 drop event trigger regress_event_trigger;

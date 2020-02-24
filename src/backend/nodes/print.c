@@ -518,8 +518,6 @@ plannode_type(Plan *p)
 			return "SCAN";
 		case T_SeqScan:
 			return "SEQSCAN";
-		case T_ExternalScan:
-			return "EXTERNALSCAN";
 		case T_IndexScan:
 			return "INDEXSCAN";
 		case T_BitmapIndexScan:
@@ -550,6 +548,8 @@ plannode_type(Plan *p)
 			return "SORT";
 		case T_Agg:
 			return "AGG";
+		case T_TupleSplit:
+			return "TupleSplit";
 		case T_WindowAgg:
 			return "WINDOWAGG";
 		case T_TableFunctionScan:
@@ -564,8 +564,6 @@ plannode_type(Plan *p)
 			return "HASH";
 		case T_Motion:
 			return "MOTION";
-		case T_Repeat:
-			return "REPEAT";
 		case T_ForeignScan:
 			return "FOREIGNSCAN";
 		case T_SplitUpdate:

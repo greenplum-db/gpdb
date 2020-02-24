@@ -330,35 +330,6 @@ setTargetTable(ParseState *pstate, RangeVar *relation,
 				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 				 errmsg("permission denied: \"%s\" is a system catalog",
 						 RelationGetRelationName(pstate->p_target_relation))));
-
-	/* special check for DML on external relations */
-	if(RelationIsExternal(pstate->p_target_relation))
-	{
-		if (requiredPerms != ACL_INSERT)
-		{
-			/* UPDATE/DELETE */
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("cannot update or delete from external relation \"%s\"",
-							RelationGetRelationName(pstate->p_target_relation))));
-		}
-		else
-		{
-			/* INSERT */
-			Oid reloid = RelationGetRelid(pstate->p_target_relation);
-			ExtTableEntry* 	extentry;
-			
-			extentry = GetExtTableEntry(reloid);
-			
-			if(!extentry->iswritable)
-				ereport(ERROR,
-						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-						 errmsg("cannot change a readable external table \"%s\"",
-								 RelationGetRelationName(pstate->p_target_relation))));
-
-			pfree(extentry);
-		}
-	}
 	
     /* MPP-21035: Directly modify a part of a partitioned table is disallowed */
     PartStatus targetRelPartStatus = rel_part_status(RelationGetRelid(pstate->p_target_relation));

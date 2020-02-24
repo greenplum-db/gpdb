@@ -68,6 +68,8 @@ extern Selectivity join_selectivity(PlannerInfo *root,
 extern bool has_row_triggers(PlannerInfo *root, Index rti, CmdType event);
 
 #define DEFAULT_EXTERNAL_TABLE_PAGES 1000
+#define DEFAULT_EXTERNAL_TABLE_TUPLES 1000000
+
 #define DEFAULT_INTERNAL_TABLE_PAGES 100
 
 #endif   /* PLANCAT_H */

@@ -21,9 +21,4 @@ extern Node *MultiExecDynamicBitmapIndexScan(DynamicBitmapIndexScanState *node);
 extern void ExecEndDynamicBitmapIndexScan(DynamicBitmapIndexScanState *node);
 extern void ExecReScanDynamicBitmapIndex(DynamicBitmapIndexScanState *node);
 
-static inline gpmon_packet_t * GpmonPktFromDynamicBitmapIndexScanState(DynamicBitmapIndexScanState *node)
-{
-	return &((DynamicBitmapIndexScanState*)node)->ss.ps.gpmon_pkt;
-}
-
 #endif   /* NODEDYNAMICBITMAPINDEXSCAN_H */

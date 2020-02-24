@@ -290,15 +290,8 @@
     <title>Greenplum Performance Monitoring</title>
     <!--Pivotal-->
     <body>
-      <p>Greenplum Database includes a dedicated system monitoring and management database, named
-        gpperfmon, that administrators can install and enable. When this database is enabled, data
-        collection agents on each segment host collect query status and system metrics. At regular
-        intervals (typically every 15 seconds), an agent on the Greenplum master requests the data
-        from the segment agents and updates the gpperfmon database. Users can query the gpperfmon
-        database to see the stored query and system metrics. For more information see the "gpperfmon
-        Database Reference" in the <cite>Greenplum Database Reference Guide</cite>.</p>
       <p>Greenplum Command Center is an optional web-based performance monitoring and management
-        tool for Greenplum Database, based on the gpperfmon database. Administrators can install
+        tool for Greenplum Database. Administrators can install
         Command Center separately from Greenplum Database.</p>
       <fig id="fig_f5t_whm_kbb">
         <title>Greenplum Performance Monitoring Architecture</title>

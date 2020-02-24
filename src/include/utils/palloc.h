@@ -46,9 +46,7 @@
  * debugging info preceding the first byte of the area.  The added
  * header fields identify the allocation call site (source file name
  * and line number).  Also each context keeps a linked list of all
- * of its allocated areas.  The dump_memory_allocation() and
- * dump_memory_allocation_ctxt() functions in aset.c may be called 
- * from a debugger to write the area headers to a file.
+ * of its allocated areas.
  */
 
 /*
@@ -70,8 +68,6 @@
 #if defined(CDB_PALLOC_TAGS) && !defined(CDB_PALLOC_CALLER_ID)
 #define CDB_PALLOC_CALLER_ID
 #endif
-
-#include "utils/memaccounting.h"
 
 /*
  * We track last OOM time to identify culprit processes that
@@ -234,7 +230,6 @@ extern void MemoryContextStats(MemoryContext context);
 		Assert(MemoryProtection_IsOwnerThread());\
 		UpdateTimeAtomically(&alreadyReportedOOMTime);\
 		write_stderr("One or more query execution processes ran out of memory on this segment. Logging memory usage.");\
-		MemoryAccounting_SaveToLog();\
 		MemoryContextStats(TopMemoryContext);\
 	}\
 }

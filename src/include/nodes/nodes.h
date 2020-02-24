@@ -69,7 +69,6 @@ typedef enum NodeTag
 	T_BitmapOr,
 	T_SeqScan,
 	T_DynamicSeqScan,
-	T_ExternalScan,
 	T_SampleScan,
 	T_IndexScan,
 	T_DynamicIndexScan,
@@ -93,6 +92,7 @@ typedef enum NodeTag
 	T_Material,
 	T_Sort,
 	T_Agg,
+	T_TupleSplit,
 	T_WindowAgg,
 	T_Unique,
 	T_Gather,
@@ -102,9 +102,7 @@ typedef enum NodeTag
 	T_Limit,
 	T_Motion,
 	T_ShareInputScan,
-	T_Repeat,
 	T_SplitUpdate,
-	T_RowTrigger,
 	T_AssertOp,
 	T_PartitionSelector,
 	T_Plan_End,
@@ -135,7 +133,6 @@ typedef enum NodeTag
 	T_BitmapOrState,
 	T_SeqScanState,
 	T_DynamicSeqScanState,
-	T_ExternalScanState,
 	T_SampleScanState,
 	T_IndexScanState,
 	T_DynamicIndexScanState,
@@ -159,6 +156,7 @@ typedef enum NodeTag
 	T_MaterialState,
 	T_SortState,
 	T_AggState,
+	T_TupleSplitState,
 	T_WindowAggState,
 	T_UniqueState,
 	T_GatherState,
@@ -168,9 +166,7 @@ typedef enum NodeTag
 	T_LimitState,
 	T_MotionState,
 	T_ShareInputScanState,
-	T_RepeatState,
 	T_SplitUpdateState,
-	T_RowTriggerState,
 	T_AssertOpState,
 	T_PartitionSelectorState,
 
@@ -238,6 +234,7 @@ typedef enum NodeTag
 	T_Flow,
 	T_GroupId,
 	T_GroupingSetId,
+	T_AggExprId,
 	T_DistributedBy,
 	T_DMLActionExpr,
 	T_PartSelectedExpr,
@@ -291,6 +288,7 @@ typedef enum NodeTag
 	T_PartBoundOpenExprState,
 	T_PartListRuleExprState,
 	T_PartListNullTestExprState,
+	T_AggExprIdState,
 
 	/*
 	 * TAGS FOR PLANNER NODES (relation.h)
@@ -332,6 +330,7 @@ typedef enum NodeTag
 	T_GroupingSetsPath,
 	T_MinMaxAggPath,
 	T_WindowAggPath,
+	T_TupleSplitPath,
 	T_SetOpPath,
 	T_RecursiveUnionPath,
 	T_LockRowsPath,
@@ -611,6 +610,7 @@ typedef enum NodeTag
 	T_FormatterData,            /* in access/formatter.h */
 	T_ExtProtocolData,          /* in access/extprotocol.h */
 	T_ExtProtocolValidatorData, /* in access/extprotocol.h */
+	T_ExternalScanInfo,			/* in access/plannodes.h */
 	T_SelectedParts,            /* in executor/nodePartitionSelector.h */
 	T_CookedConstraint,			/* in catalog/heap.h */
 

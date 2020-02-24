@@ -17,7 +17,7 @@ all:
 	$(MAKE) -C contrib/formatter all
 	$(MAKE) -C contrib/formatter_fixedwidth all
 	$(MAKE) -C contrib/fuzzystrmatch all
-	$(MAKE) -C contrib/extprotocol all	
+	$(MAKE) -C contrib/extprotocol all
 	$(MAKE) -C contrib/dblink all
 	$(MAKE) -C contrib/indexscan all
 	$(MAKE) -C contrib/pageinspect all  # needed by src/test/isolation
@@ -27,7 +27,6 @@ ifeq ($(with_openssl), yes)
 	$(MAKE) -C contrib/sslinfo all
 endif
 	$(MAKE) -C gpAux/extensions all
-	$(MAKE) -C gpAux/gpperfmon all
 	$(MAKE) -C gpMgmt all
 	$(MAKE) -C gpcontrib all
 	+@echo "All of Greenplum Database successfully made. Ready to install."
@@ -54,7 +53,7 @@ install:
 	$(MAKE) -C contrib/fuzzystrmatch $@
 	$(MAKE) -C contrib/extprotocol $@
 	$(MAKE) -C contrib/dblink $@
-	$(MAKE) -C contrib/indexscan $@ 
+	$(MAKE) -C contrib/indexscan $@
 	$(MAKE) -C contrib/pageinspect $@  # needed by src/test/isolation
 	$(MAKE) -C contrib/hstore $@
 	$(MAKE) -C contrib/pgcrypto $@
@@ -63,7 +62,6 @@ ifeq ($(with_openssl), yes)
 endif
 	$(MAKE) -C gpMgmt $@
 	$(MAKE) -C gpAux/extensions $@
-	$(MAKE) -C gpAux/gpperfmon $@
 	$(MAKE) -C gpcontrib $@
 	+@echo "Greenplum Database installation complete."
 
@@ -92,7 +90,6 @@ clean:
 # gpAux/Makefile is the entry point for the enterprise build, which ends up
 # calling top-level configure and this Makefile
 	$(MAKE) -C gpAux/extensions $@
-	$(MAKE) -C gpAux/gpperfmon $@
 	$(MAKE) -C gpMgmt $@
 
 # Important: distclean `src' last, otherwise Makefile.global
@@ -100,7 +97,6 @@ clean:
 distclean maintainer-clean:
 #	$(MAKE) -C doc $@
 	$(MAKE) -C gpAux/extensions $@
-	$(MAKE) -C gpAux/gpperfmon $@
 	$(MAKE) -C contrib $@
 	$(MAKE) -C gpcontrib $@
 	$(MAKE) -C config $@
@@ -172,7 +168,6 @@ $(call recurse,installcheck-world,src/bin/pg_upgrade,check)
 unittest-check:
 	$(MAKE) -C src/backend unittest-check
 	$(MAKE) -C src/bin unittest-check
-	$(MAKE) -C gpcontrib unittest-check
 
 GNUmakefile: GNUmakefile.in $(top_builddir)/config.status
 	./config.status $@

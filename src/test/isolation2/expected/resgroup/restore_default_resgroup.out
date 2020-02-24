@@ -38,10 +38,6 @@
 20170830:00:35:33:440808 gpstop:sdw6:gpadmin-[INFO]:-----------------------------------------------------
 20170830:00:35:33:440808 gpstop:sdw6:gpadmin-[INFO]:-Successfully shutdown 6 of 6 segment instances 
 20170830:00:35:33:440808 gpstop:sdw6:gpadmin-[INFO]:-Database successfully shutdown with no errors reported
-20170830:00:35:33:440808 gpstop:sdw6:gpadmin-[INFO]:-Cleaning up leftover gpmmon process
-20170830:00:35:33:440808 gpstop:sdw6:gpadmin-[INFO]:-No leftover gpmmon process found
-20170830:00:35:33:440808 gpstop:sdw6:gpadmin-[INFO]:-Cleaning up leftover gpsmon processes
-20170830:00:35:33:440808 gpstop:sdw6:gpadmin-[INFO]:-No leftover gpsmon processes on some hosts. not attempting forceful termination on these hosts
 20170830:00:35:33:440808 gpstop:sdw6:gpadmin-[INFO]:-Cleaning up leftover shared memory
 20170830:00:35:33:440808 gpstop:sdw6:gpadmin-[INFO]:-Restarting System...
 

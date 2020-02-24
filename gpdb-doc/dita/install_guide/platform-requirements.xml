@@ -52,7 +52,8 @@
         Database that is running large workloads to hang in the workload. The Greenplum Database
         issue is caused by Linux kernel bugs. <p>RHEL 7.3 and CentOS 7.3 resolves the
         issue.</p></note>
-      <p>Greenplum Database supports TLS V2.</p>
+      <p>Greenplum Database server supports TLS version 1.2 on RHEL/CentOS systems, and TLS version
+        1.3 on Ubuntu systems.</p>
     </body>
     <topic id="topic_i4k_nlx_zgb">
       <title>Software Dependencies</title>
@@ -370,7 +371,7 @@
             href="https://cwiki.apache.org/confluence/display/MADLIB/FAQ#FAQ-Q1-2WhatdatabaseplatformsdoesMADlibsupportandwhatistheupgradematrix?"
             format="html" scope="external">MADlib FAQ</xref>. <p><sup>2</sup>PL/R supports R 3.5.1.
             On RHEL and CenOS the PL/R package installs R 3.3.3. See <xref
-              href="../ref_guide/extensions/pl_r.xml" format="dita" scope="peer">PL/R
+              href="../analytics/pl_r.xml" format="dita" scope="peer">PL/R
               Language</xref>.</p><p><sup>3</sup>For information about the Python package, including
             the modules provided, see the <xref href="../install_guide/install_python_dsmod.xml"
               format="dita" scope="peer">Python Data Science Module Package</xref>.

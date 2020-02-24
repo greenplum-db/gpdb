@@ -799,13 +799,7 @@ cdbdisp_returnResults(CdbDispatchResults *primaryResults, CdbPgResults *cdb_pgre
 	for (i = 0; i < primaryResults->resultCount; ++i)
 		nslots += cdbdisp_numPGresult(&primaryResults->resultArray[i]);
 
-
-	cdb_pgresults->pg_results = (struct pg_result **) calloc(nslots, sizeof(struct pg_result *));
-
-	if (!cdb_pgresults->pg_results)
-		ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY),
-						errmsg
-						("cdbdisp_returnResults failed: out of memory")));
+	cdb_pgresults->pg_results = (struct pg_result **) palloc0(nslots * sizeof(struct pg_result *));
 
 	/*
 	 * Collect results from primary gang.
@@ -900,6 +894,12 @@ cdbdisp_clearCdbPgResults(CdbPgResults *cdb_pgresults)
 
 	for (i = 0; i < cdb_pgresults->numResults; i++)
 		PQclear(cdb_pgresults->pg_results[i]);
+
+	if (cdb_pgresults->pg_results)
+	{
+		pfree(cdb_pgresults->pg_results);
+		cdb_pgresults->pg_results = NULL;
+	}
 
 	cdb_pgresults->numResults = 0;
 }

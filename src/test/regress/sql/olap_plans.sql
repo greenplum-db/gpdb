@@ -1,3 +1,8 @@
+--
+-- Test the planner's ability to produce different kinds of plans to implement
+-- grouping and aggregation.
+--
+
 drop table if exists olap_test;
 drop table if exists olap_test_single;
 
@@ -40,6 +45,12 @@ select sum(distinct a) from olap_test_single;
 -- Otherwise, need a more complicated plans
 explain select sum(distinct b) from olap_test_single;
 select sum(distinct b) from olap_test_single;
+
+-- If there are a lot of distinct values, then the preliminary aggregation and
+-- redistribution steps are not worth the trouble, it's cheaper to just gather
+-- all the input
+explain select sum(distinct d) from olap_test_single;
+select sum(distinct d) from olap_test_single;
 
 
 --

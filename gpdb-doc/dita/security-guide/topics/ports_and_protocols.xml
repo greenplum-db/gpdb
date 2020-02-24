@@ -127,14 +127,6 @@ MIRROR_PORT_BASE = 7000</codeblock></note>
                 ranges specified in a configuration file.</p></entry>
           </row>
           <row>
-            <entry>Gpperfmon agents</entry>
-            <entry>TCP 8888</entry>
-            <entry>Connection port for gpperfmon agents (<codeph>gpmmon</codeph> and
-                <codeph>gpsmon</codeph>) executing on Greenplum Database hosts. Configure by setting
-              the <codeph>gpperfmon_port</codeph> configuration variable in
-                <filepath>postgresql.conf</filepath> on master and segment hosts.</entry>
-          </row>
-          <row>
             <entry>Backup completion notification</entry>
             <entry>TCP 25, TCP 587, SMTP</entry>
             <entry>The <codeph>gpbackup</codeph> backup utility can optionally send email to a list

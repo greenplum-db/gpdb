@@ -3574,7 +3574,7 @@ estimate_hash_bucketsize(PlannerInfo *root, Node *hashkey, double nbuckets,
 												list_make1(hashkey), false))
 		{
 			/*
-			 * This is the case the path's distribution is collcated with
+			 * This is the case the path's distribution is collocated with
 			 * the hash table's hash key, then on each segment, we only
 			 * contains (ndistinct/numsegments) distinct groups. So, no need
 			 * to do the compensation.
@@ -3584,12 +3584,10 @@ estimate_hash_bucketsize(PlannerInfo *root, Node *hashkey, double nbuckets,
 		{
 			Assert(CdbPathLocus_IsPartitioned(path->locus));
 			/*
-			 * This is the case the path's distribution is not collcated with
-			 * the hash table's hash key, then we use the following formula to
-			 * compute the number of distinct groups on each segment and then
-			 * do the compensation.
+			 * This is the case the path's distribution is not collocated with
+			 * the hash table's hash key.
 			 */
-			ndistinct = estimate_num_groups_per_segment(ndistinct, path->rows, numsegments) * numsegments;
+			ndistinct = estimate_num_groups_across_segments(ndistinct, path->rows, numsegments);
 		}
 	}
 
@@ -8073,6 +8071,47 @@ estimate_num_groups_per_segment(double groupNum, double rows, double numsegments
 	double group_num;
 	group_num = (1-pow((numsegments-1)/numsegments, numPerGroup))*groupNum;
 	return group_num;
+}
+
+/*
+ * Number of groups seen by each segment, as calculated by
+ * estimate_num_groups_per_segment() is more intuitive, but we often want that
+ * value multiplied by the number of segments. This function is shorthand for
+ * that.
+ *
+ * For example, in a two-stage aggregate like this, on a three-segment cluster:
+ *
+ * postgres=# explain select count(*) from tenk1 group by thousand;
+ *                                              QUERY PLAN                                              
+ * -----------------------------------------------------------------------------------------------------
+ *  Gather Motion 3:1  (slice1; segments: 3)  (cost=342.18..372.18 rows=1000 width=12)
+ *    ->  Finalize HashAggregate  (cost=342.18..352.18 rows=334 width=12)
+ *          Group Key: thousand
+ *          ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=239.00..327.44 rows=983 width=12)
+ *                Hash Key: thousand
+ *                ->  Partial HashAggregate  (cost=239.00..268.48 rows=983 width=12)
+ *                      Group Key: thousand
+ *                      ->  Seq Scan on tenk1  (cost=0.00..189.00 rows=3334 width=4)
+ *  Optimizer: Postgres query optimizer
+ * (9 rows)
+ *
+ * The Partial HashAggregate step is estimated to encounter 983 distinct values
+ * on each segment, out of 1000 distinct values in total. So the total number
+ * of rows output by the Partial HashAggregate step is 3 * 983 = 2949. 2949 is
+ * the correct row count estimate to be stored in the Agg path's 'rows' field,
+ * and that's what this function computes.
+ *
+ * Note that EXPLAIN divides the rows estimates by the number of segments, to
+ * display the estimated number of rows per segment. So in the above query, the
+ * 'rows' estimate stored on the Partial HashAggregate node is indeed 2949, even
+ * though the EXPLAIN output says 983.
+ */
+double
+estimate_num_groups_across_segments(double groupNum, double rows, double numsegments)
+{
+	return estimate_num_groups_per_segment(groupNum,
+										   rows,
+										   numsegments) * numsegments;
 }
 
 static void

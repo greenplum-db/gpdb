@@ -85,7 +85,6 @@
 #define tuplesort_markpos_pos tuplesort_markpos_pos_pg
 #define tuplesort_restorepos_pos tuplesort_restorepos_pos_pg
 #define tuplesort_set_instrument tuplesort_set_instrument_pg
-#define tuplesort_set_gpmon tuplesort_set_gpmon_pg
 
 #include "access/itup.h"
 #include "executor/tuptable.h"
@@ -231,7 +230,6 @@ extern void tuplesort_restorepos(Tuplesortstate *state);
 #undef tuplesort_markpos_pos
 #undef tuplesort_restorepos_pos
 #undef tuplesort_set_instrument
-#undef tuplesort_set_gpmon
 
 #include "tuplesort_mk.h"
 
@@ -630,17 +628,6 @@ switcheroo_tuplesort_set_instrument(switcheroo_Tuplesortstate *state,
 		tuplesort_set_instrument_pg((Tuplesortstate_pg *) state, instrument, explainbuf);
 }
 
-static inline void
-switcheroo_tuplesort_set_gpmon(switcheroo_Tuplesortstate *state,
-							   gpmon_packet_t *gpmon_pkt,
-							   int *gpmon_tick)
-{
-	if (state->is_mk_tuplesortstate)
-		tuplesort_set_gpmon_mk((Tuplesortstate_mk *) state, gpmon_pkt, gpmon_tick);
-	else
-		tuplesort_set_gpmon_pg((Tuplesortstate_pg *) state, gpmon_pkt, gpmon_tick);
-}
-
 /* these are in tuplesort.h */
 #undef Tuplesortstate
 #define Tuplesortstate switcheroo_Tuplesortstate
@@ -677,7 +664,6 @@ switcheroo_tuplesort_set_gpmon(switcheroo_Tuplesortstate *state,
 #define tuplesort_markpos_pos switcheroo_tuplesort_markpos_pos
 #define tuplesort_restorepos_pos switcheroo_tuplesort_restorepos_pos
 #define tuplesort_set_instrument switcheroo_tuplesort_set_instrument
-#define tuplesort_set_gpmon switcheroo_tuplesort_set_gpmon
 
 #endif
 

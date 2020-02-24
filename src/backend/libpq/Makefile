@@ -23,7 +23,7 @@ OBJS += be-secure-openssl.o fe-secure-openssl.o
 endif
 
 # Greenplum objects follow
-OBJS += sha2.o pg_sha2.o fe-protocol3.o fe-connect.o \
+OBJS += fe-protocol3.o fe-connect.o \
         fe-exec.o pqexpbuffer.o fe-auth.o fe-misc.o fe-protocol2.o fe-secure.o \
         $(filter getpeereid.o, $(LIBOBJS))
 

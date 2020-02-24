@@ -17,10 +17,8 @@
       reserved.</p>
     <p>The tablespace names <codeph>pg_default</codeph> and <codeph>pg_global</codeph> are
       reserved.</p>
-    <p>The role names <codeph>gpadmin</codeph> and <codeph>gpmon</codeph> are reserved.
-        <codeph>gpadmin</codeph> is the default Greenplum Database superuser role. The
-        <codeph>gpmon</codeph> role owns the <codeph>gpperfmon</codeph> database<ph
-        otherprops="pivotal"> and is also used by Greenplum Command Center</ph>.</p>
+    <p>The role name <codeph>gpadmin</codeph> is reserved.
+        <codeph>gpadmin</codeph> is the default Greenplum Database superuser role.</p>
     <p>In data files, the characters that delimit fields (columns) and rows have a special meaning.
       If they appear within the data you must escape them so that Greenplum Database treats them as
       data and not as delimiters. The backslash character (<codeph>\</codeph>) is the default escape

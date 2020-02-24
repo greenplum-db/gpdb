@@ -25,7 +25,7 @@ SUBDIRS = access bootstrap catalog commands common datatype \
 	port/win32_msvc/sys port/win32/arpa port/win32/netinet \
 	port/win32/sys portability
 
-SUBDIRS += cdb gpmon
+SUBDIRS += cdb
 
 # Install all headers
 install: all installdirs

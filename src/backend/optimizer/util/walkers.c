@@ -192,11 +192,6 @@ plan_tree_walker(Node *node,
 				return true;
 			break;
 
-		case T_Repeat:
-			if (walk_plan_node_fields((Plan *) node, walker, context))
-				return true;
-			break;
-
 		case T_Append:
 			if (walk_plan_node_fields((Plan *) node, walker, context))
 				return true;
@@ -243,7 +238,6 @@ plan_tree_walker(Node *node,
 		case T_SeqScan:
 		case T_SampleScan:
 		case T_DynamicSeqScan:
-		case T_ExternalScan:
 		case T_BitmapHeapScan:
 		case T_DynamicBitmapHeapScan:
 		case T_WorkTableScan:
@@ -287,6 +281,8 @@ plan_tree_walker(Node *node,
 
 		case T_FunctionScan:
 			if (walker((Node *) ((FunctionScan *) node)->functions, context))
+				return true;
+			if (walker((Node *) ((FunctionScan *) node)->param, context))
 				return true;
 			if (walk_scan_node_fields((Scan *) node, walker, context))
 				return true;
@@ -368,6 +364,12 @@ plan_tree_walker(Node *node,
 			break;
 
 		case T_Agg:
+			if (walk_plan_node_fields((Plan *) node, walker, context))
+				return true;
+			/* Other fields are simple items and lists of simple items. */
+			break;
+
+		case T_TupleSplit:
 			if (walk_plan_node_fields((Plan *) node, walker, context))
 				return true;
 			/* Other fields are simple items and lists of simple items. */
@@ -508,7 +510,6 @@ plan_tree_walker(Node *node,
 			break;
 
 		case T_SplitUpdate:
-		case T_RowTrigger:
 		case T_AssertOp:
 			if (walk_plan_node_fields((Plan *) node, walker, context))
 				return true;
