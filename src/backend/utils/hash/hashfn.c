@@ -16,7 +16,8 @@
  *	  It is expected that every bit of a hash function's 32-bit result is
  *	  as random as every other; failure to ensure this is likely to lead
  *	  to poor performance of hash tables.  In most cases a hash
- *	  function should use hash_any() or its variant hash_uint32().
+ *	  function should use hash_bytes() or its variant hash_bytes_uint32(),
+ *	  or the wrappers hash_any() and hash_uint32 defined in hashfn.h.
  *
  * NOTES
  *	  It is expected that every bit of a hash function's 32-bit result is
@@ -28,9 +29,7 @@
  */
 #include "postgres.h"
 
-#include "fmgr.h"
 #include "utils/hashutils.h"
-#include "utils/hsearch.h"
 
 
 /*
@@ -132,7 +131,7 @@
 }
 
 /*
- * hash_any() -- hash a variable-length key into a 32-bit value
+ * hash_bytes() -- hash a variable-length key into a 32-bit value
  *		k		: the key (the unaligned variable-length array of bytes)
  *		len		: the length of the key, counting by bytes
  *
@@ -149,8 +148,8 @@
  * by using the final values of both b and c.  b is perhaps a little less
  * well mixed than c, however.
  */
-Datum
-hash_any(register const unsigned char *k, register int keylen)
+uint32
+hash_bytes(const unsigned char *k, int keylen)
 {
 	register uint32 a,
 				b,
@@ -364,20 +363,19 @@ hash_any(register const unsigned char *k, register int keylen)
 	final(a, b, c);
 
 	/* report the result */
-	return UInt32GetDatum(c);
+	return c;
 }
 
 /*
- * hash_any_extended() -- hash into a 64-bit value, using an optional seed
+ * hash_bytes_extended() -- hash into a 64-bit value, using an optional seed
  *		k		: the key (the unaligned variable-length array of bytes)
  *		len		: the length of the key, counting by bytes
  *		seed	: a 64-bit seed (0 means no seed)
  *
- * Returns a uint64 value.  Otherwise similar to hash_any.
+ * Returns a uint64 value.  Otherwise similar to hash_bytes.
  */
-Datum
-hash_any_extended(register const unsigned char *k, register int keylen,
-				  uint64 seed)
+uint64
+hash_bytes_extended(const unsigned char *k, int keylen, uint64 seed)
 {
 	register uint32 a,
 				b,
@@ -604,18 +602,18 @@ hash_any_extended(register const unsigned char *k, register int keylen,
 	final(a, b, c);
 
 	/* report the result */
-	PG_RETURN_UINT64(((uint64) b << 32) | c);
+	return ((uint64) b << 32) | c;
 }
 
 /*
- * hash_uint32() -- hash a 32-bit value to a 32-bit value
+ * hash_bytes_uint32() -- hash a 32-bit value to a 32-bit value
  *
  * This has the same result as
- *		hash_any(&k, sizeof(uint32))
+ *		hash_bytes(&k, sizeof(uint32))
  * but is faster and doesn't force the caller to store k into memory.
  */
-Datum
-hash_uint32(uint32 k)
+uint32
+hash_bytes_uint32(uint32 k)
 {
 	register uint32 a,
 				b,
@@ -627,16 +625,16 @@ hash_uint32(uint32 k)
 	final(a, b, c);
 
 	/* report the result */
-	return UInt32GetDatum(c);
+	return c;
 }
 
 /*
- * hash_uint32_extended() -- hash a 32-bit value to a 64-bit value, with a seed
+ * hash_bytes_uint32_extended() -- hash 32-bit value to 64-bit value, with seed
  *
- * Like hash_uint32, this is a convenience function.
+ * Like hash_bytes_uint32, this is a convenience function.
  */
-Datum
-hash_uint32_extended(uint32 k, uint64 seed)
+uint64
+hash_bytes_uint32_extended(uint32 k, uint64 seed)
 {
 	register uint32 a,
 				b,
@@ -656,7 +654,7 @@ hash_uint32_extended(uint32 k, uint64 seed)
 	final(a, b, c);
 
 	/* report the result */
-	PG_RETURN_UINT64(((uint64) b << 32) | c);
+	return ((uint64) b << 32) | c;
 }
 
 /*
@@ -675,8 +673,7 @@ string_hash(const void *key, Size keysize)
 	Size		s_len = strlen((const char *) key);
 
 	s_len = Min(s_len, keysize - 1);
-	return DatumGetUInt32(hash_any((const unsigned char *) key,
-								   (int) s_len));
+	return hash_bytes((const unsigned char *) key, (int) s_len);
 }
 
 /*
@@ -685,8 +682,7 @@ string_hash(const void *key, Size keysize)
 uint32
 tag_hash(const void *key, Size keysize)
 {
-	return DatumGetUInt32(hash_any((const unsigned char *) key,
-								   (int) keysize));
+	return hash_bytes((const unsigned char *) key, (int) keysize);
 }
 
 /*
@@ -698,7 +694,7 @@ uint32
 uint32_hash(const void *key, Size keysize)
 {
 	Assert(keysize == sizeof(uint32));
-	return DatumGetUInt32(hash_uint32(*((const uint32 *) key)));
+	return hash_bytes_uint32(*((const uint32 *) key));
 }
 /*
  * int32_hash: hash function for int32: no-op
