@@ -29,7 +29,6 @@
 #include "postgres.h"
 
 #include "fmgr.h"
-#include "nodes/bitmapset.h"
 #include "utils/hashutils.h"
 #include "utils/hsearch.h"
 
@@ -701,7 +700,6 @@ uint32_hash(const void *key, Size keysize)
 	Assert(keysize == sizeof(uint32));
 	return DatumGetUInt32(hash_uint32(*((const uint32 *) key)));
 }
-
 /*
  * int32_hash: hash function for int32: no-op
  */
@@ -709,27 +707,4 @@ uint32
 int32_hash(const void *key, Size keysize)
 {
 	return *(uint32 *)key;
-}
-
-/*
- * bitmap_hash: hash function for keys that are (pointers to) Bitmapsets
- *
- * Note: don't forget to specify bitmap_match as the match function!
- */
-uint32
-bitmap_hash(const void *key, Size keysize)
-{
-	Assert(keysize == sizeof(Bitmapset *));
-	return bms_hash_value(*((const Bitmapset *const *) key));
-}
-
-/*
- * bitmap_match: match function to use with bitmap_hash
- */
-int
-bitmap_match(const void *key1, const void *key2, Size keysize)
-{
-	Assert(keysize == sizeof(Bitmapset *));
-	return !bms_equal(*((const Bitmapset *const *) key1),
-					  *((const Bitmapset *const *) key2));
 }
