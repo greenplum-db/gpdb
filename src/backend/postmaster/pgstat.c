@@ -78,6 +78,7 @@
 #include "commands/resgroupcmds.h"
 #include "libpq/pqformat.h"
 #include "utils/faultinjector.h"
+#include "utils/hashutils.h"
 #include "utils/lsyscache.h"
 
 

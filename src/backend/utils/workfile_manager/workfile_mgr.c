@@ -85,6 +85,7 @@
 #include "storage/shmem.h"
 #include "utils/builtins.h"
 #include "utils/faultinjector.h"
+#include "utils/hashutils.h"
 #include "utils/workfile_mgr.h"
 
 /*

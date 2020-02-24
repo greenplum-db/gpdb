@@ -35,7 +35,7 @@
 #include "storage/shmem.h"
 #include "tcop/dest.h"
 #include "utils/faultinjector.h"
-#include "utils/hsearch.h"
+#include "utils/hashutils.h"
 #include "miscadmin.h"
 
 /*

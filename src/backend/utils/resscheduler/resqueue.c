@@ -37,6 +37,7 @@
 #include "storage/lmgr.h"
 #include "utils/builtins.h"
 #include "utils/guc_tables.h"
+#include "utils/hashutils.h"
 #include "utils/memutils.h"
 #include "utils/portal.h"
 #include "utils/ps_status.h"

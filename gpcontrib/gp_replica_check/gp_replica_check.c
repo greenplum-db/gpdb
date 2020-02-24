@@ -15,7 +15,7 @@
 #include "storage/fd.h"
 #include "storage/lwlock.h"
 #include "utils/builtins.h"
-#include "utils/hsearch.h"
+#include "utils/hashutils.h"
 #include "utils/relmapper.h"
 #include "utils/varlena.h"
 

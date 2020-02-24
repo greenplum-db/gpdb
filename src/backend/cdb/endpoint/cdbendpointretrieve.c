@@ -38,6 +38,7 @@
 #include "utils/dynahash.h"
 #include "utils/elog.h"
 #include "utils/faultinjector.h"
+#include "utils/hashutils.h"
 #include "utils/guc.h"
 #include "cdbendpoint_private.h"
 #include "cdb/cdbendpoint.h"

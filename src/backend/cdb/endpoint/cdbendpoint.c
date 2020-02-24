@@ -73,6 +73,7 @@
 #include "storage/procsignal.h"
 #include "utils/backend_cancel.h"
 #include "utils/builtins.h"
+#include "utils/hashutils.h"
 #include "utils/faultinjector.h"
 #include "utils/guc.h"
 #include "cdb/cdbdisp_query.h"

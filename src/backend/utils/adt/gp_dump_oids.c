@@ -19,7 +19,7 @@
 #include "optimizer/planmain.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
-#include "utils/hsearch.h"
+#include "utils/hashutils.h"
 #include "utils/syscache.h"
 
 static List *proc_oids_for_dump = NIL;

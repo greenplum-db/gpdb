@@ -29,7 +29,7 @@
 #include "miscadmin.h"
 #include "storage/proc.h"
 #include "utils/guc.h"
-#include "utils/hsearch.h"
+#include "utils/hashutils.h"
 #include "utils/memutils.h"
 
 /*  ***************************************************************************** */

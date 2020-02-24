@@ -65,6 +65,7 @@
 #include "storage/procarray.h"
 #include "storage/procsignal.h"
 #include "utils/builtins.h"
+#include "utils/hashutils.h"
 #include "utils/memutils.h"
 #include "utils/ps_status.h"
 #include "utils/resgroup-ops.h"
