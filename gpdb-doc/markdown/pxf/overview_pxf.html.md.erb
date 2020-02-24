@@ -21,9 +21,9 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-With the explosion of data stores and cloud services, data now resides across many disparate systems and in a variety of formats. Often, the data is classified by how often it is accessed - real-time or transactional (hot), less frequent (warm), or archival (cold) - and the location of and operations performed on the data.
+With the explosion of data stores and cloud services, data now resides across many disparate systems and in a variety of formats. Often, data is classified both by its location and the operations performed on the data, as well as how often the data is accessed:  real-time or transactional (hot), less frequent (warm), or archival (cold).
 
-The diagram below describes a data source that tracks monthly sales across many years. Real-time operational data is stored in MySQL. Data subject to analytic and business intelligence operations is housed in Greenplum Database. And the rarely accessed, archival data resides in AWS S3.
+The diagram below describes a data source that tracks monthly sales across many years. Real-time operational data is stored in MySQL. Data subject to analytic and business intelligence operations is stored in Greenplum Database. The rarely accessed, archival data resides in AWS S3.
 
 <img src="graphics/datatemp.png" class="image" width="630" alt="centered image"/>
 
@@ -31,7 +31,7 @@ When multiple, related data sets exist in external systems, it is often more eff
 
 With PXF, you can use Greenplum and SQL to query these heterogeneous data sources:
 
-- Hadoop versions 2 and 3, Hive versions 1, 2, and 3, HBase version 1.3.2
+- Hadoop, Hive, and HBase
 - Azure Blob Storage and Azure Data Lake
 - AWS S3
 - Minio
@@ -66,13 +66,13 @@ The Greenplum Database administrator manages PXF, Greenplum Database user privil
 - [Installing](about_pxf_dir.html), [configuring](instcfg_pxf.html), [starting](cfginitstart_pxf.html), [monitoring](monitor_pxf.html), and [troubleshooting](troubleshooting_pxf.html) the PXF service.
 - Managing PXF [upgrade](upgrade_pxf_6x.html) and [migration](migrate_5to6.html).
 - [Configuring](cfg_server.html) and publishing one or more server definitions for each external data source. This definition specifies the location of, and access credentials to, the external data source. 
-- Considering and [configuring](using_pxf.html) Greenplum user access to PXF and PXF external tables.
+- [Granting](using_pxf.html) Greenplum user access to PXF and PXF external tables.
 
 ## <a id="getstart_user"></a> Get Started Using PXF
 
-A Greenplum Database user [creates](intro_pxf.html#create_external_table) a PXF external table that references a file or other data in the external data source, and uses the external table to query or load the external data in Greenplum:
+A Greenplum Database user [creates](intro_pxf.html#create_external_table) a PXF external table that references a file or other data in the external data source, and uses the external table to query or load the external data in Greenplum. Tasks are external data store-dependent:
 
-- [Accessing Hadoop with PXF](access_hdfs.html) describes the operations required when the data resides in Hadoop.
-- [Accessing Azure, Google Cloud Storage, Minio, and S3 Object Stores with PXF](access_objstore.html) describes the operations required when the data resides in an object store.
-- [Accessing an SQL Database with PXF](jdbc_pxf.html) describes the operations required when the data resides in an external SQL database.
+- See [Accessing Hadoop with PXF](access_hdfs.html) when the data resides in Hadoop.
+- See [Accessing Azure, Google Cloud Storage, Minio, and S3 Object Stores with PXF](access_objstore.html) when the data resides in an object store.
+- See [Accessing an SQL Database with PXF](jdbc_pxf.html) when the data resides in an external SQL database.
 
