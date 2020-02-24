@@ -587,14 +587,24 @@ select * from t1_lateral_limit as t1 cross join lateral
 --   2. the join qual contains subplan that contains motion
 reset client_min_messages;
 set Test_print_prefetch_joinqual = true;
+-- prefetch join qual is only set correct for planner
+set optimizer = off;
 
 create table t1_test_pretch_join_qual(a int, b int, c int);
 create table t2_test_pretch_join_qual(a int, b int, c int);
-explain select * from t1_test_pretch_join_qual t1 join t2_test_pretch_join_qual t2
-on t1.b = t2.b and t1.c > t2.c;
--- the above plan contains redistribute motion in both inner and outer plan
+
+-- the following plan contains redistribute motion in both inner and outer plan
 -- the join qual is t1.c > t2.c, it contains no motion, should not prefetch
-select * from t1_test_pretch_join_qual t1 join t2_test_pretch_join_qual t2
+explain (costs off) select * from t1_test_pretch_join_qual t1 join t2_test_pretch_join_qual t2
 on t1.b = t2.b and t1.c > t2.c;
 
+create table t3_test_pretch_join_qual(a int, b int, c int);
+
+-- the following plan contains motion in both outer plan and join qual,
+-- so we should prefetch join qual
+explain (costs off) select * from t1_test_pretch_join_qual t1 join t2_test_pretch_join_qual t2
+on t1.b = t2.b and t1.a > any (select sum(b) from t3_test_pretch_join_qual t3 where c > t2.a);
+
 reset Test_print_prefetch_joinqual;
+reset optimizer;
+

@@ -1161,7 +1161,7 @@ ExecGetShareNodeEntry(EState* estate, int shareidx, bool fCreate)
  *
  * Return true if the JoinQual is prefetched.
  */
-bool
+void
 ExecPrefetchJoinQual(JoinState *node)
 {
 	EState	   *estate = node->ps.state;
@@ -1170,9 +1170,9 @@ ExecPrefetchJoinQual(JoinState *node)
 	PlanState  *outer = outerPlanState(node);
 	List	   *joinqual = node->joinqual;
 	TupleTableSlot *innertuple = econtext->ecxt_innertuple;
+	ListCell   *lc;
 
-	if (!joinqual)
-		return false;
+	Assert(joinqual);
 
 	/* Outer tuples should not be fetched before us */
 	Assert(econtext->ecxt_outertuple == NULL);
@@ -1184,13 +1184,19 @@ ExecPrefetchJoinQual(JoinState *node)
 													  ExecGetResultType(outer));
 
 	/* Fetch subplan with the fake inner & outer tuples */
-	ExecQual(joinqual, econtext, false);
+	foreach(lc, joinqual)
+	{
+		/*
+		 * Force every joinqual is prefech because
+		 * our target is to materialize motion node.
+		 */
+		ExprState  *clause = (ExprState *) lfirst(lc);
+		(void) ExecQual(list_make1(clause), econtext, false);
+	}
 
 	/* Restore previous state */
 	econtext->ecxt_innertuple = innertuple;
 	econtext->ecxt_outertuple = NULL;
-
-	return true;
 }
 
 /* ----------------------------------------------------------------

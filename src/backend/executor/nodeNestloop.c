@@ -30,7 +30,7 @@
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 
-extern bool Test_print_prefech_joinqual;
+extern bool Test_print_prefetch_joinqual;
 
 static void splitJoinQualExpr(NestLoopState *nlstate);
 static void extractFuncExprArgs(FuncExprState *fstate, List **lclauses, List **rclauses);
@@ -150,8 +150,11 @@ ExecNestLoop_guts(NestLoopState *node)
 	 *
 	 * See ExecPrefetchJoinQual() for details.
 	 */
-	if (node->prefetch_joinqual && ExecPrefetchJoinQual(&node->js))
+	if (node->prefetch_joinqual)
+	{
+		ExecPrefetchJoinQual(&node->js);
 		node->prefetch_joinqual = false;
+	}
 
 	/*
 	 * Ok, everything is setup for the join so now loop until we return a
@@ -395,7 +398,7 @@ ExecInitNestLoop(NestLoop *node, EState *estate, int eflags)
 	nlstate->prefetch_inner = node->join.prefetch_inner;
 	nlstate->prefetch_joinqual = node->join.prefetch_joinqual;
 
-	if (Test_print_prefech_joinqual && nlstate->prefetch_joinqual)
+	if (Test_print_prefetch_joinqual && nlstate->prefetch_joinqual)
 		elog(NOTICE,
 			 "prefetch join qual in slice %d of plannode %d",
 			 currentSliceId, ((Plan *) node)->plan_node_id);

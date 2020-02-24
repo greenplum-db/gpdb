@@ -91,6 +91,13 @@
 #define CP_SMALL_TLIST		0x0002		/* Prefer narrower tlists */
 #define CP_LABEL_TLIST		0x0004		/* tlist must contain sortgrouprefs */
 
+typedef struct
+{
+	plan_tree_base_prefix base; /* Required prefix for
+								 * plan_tree_walker/mutator */
+	Bitmapset            *seen_subplans;
+	bool                  result;
+} contain_motion_walk_context;
 
 static Plan *create_scan_plan(PlannerInfo *root, Path *best_path,
 				 int flags);
@@ -272,6 +279,8 @@ static Motion *cdbpathtoplan_create_motion_plan(PlannerInfo *root,
 								 CdbMotionPath *path,
 								 Plan *subplan);
 static void append_initplan_for_function_scan(PlannerInfo *root, Path *best_path, Plan *plan);
+static bool contain_motion(PlannerInfo *root, Node *node);
+static bool contain_motion_walk(Node *node, contain_motion_walk_context *ctx);
 
 /*
  * create_plan
@@ -994,6 +1003,14 @@ create_join_plan(PlannerInfo *root, JoinPath *best_path)
 	{
 		((Join *) plan)->prefetch_inner = false;
 		((Join *) plan)->prefetch_joinqual = false;
+	}
+
+	if (((Join *) plan)->prefetch_joinqual)
+	{
+		List *joinqual = ((Join *) plan)->joinqual;
+
+		((Join *) plan)->prefetch_joinqual = contain_motion(root,
+															(Node *) joinqual);
 	}
 
 	/*
@@ -7635,4 +7652,54 @@ append_initplan_for_function_scan(PlannerInfo *root, Path *best_path, Plan *plan
 
 	/* Decorate the top node of the plan with a Flow node. */
 	initplan->scan.plan.flow = cdbpathtoplan_create_flow(root, best_path->locus);
+}
+
+static bool
+contain_motion(PlannerInfo *root, Node *node)
+{
+	contain_motion_walk_context ctx;
+	planner_init_plan_tree_base(&ctx.base, root);
+	ctx.result = false;
+	ctx.seen_subplans = NULL;
+
+	(void) contain_motion_walk(node, &ctx);
+
+	return ctx.result;
+}
+
+static bool
+contain_motion_walk(Node *node, contain_motion_walk_context *ctx)
+{
+	PlannerInfo *root = (PlannerInfo *) ctx->base.node;
+
+	if (ctx->result)
+		return true;
+
+	if (node == NULL)
+		return false;
+
+	if (IsA(node, SubPlan))
+	{
+		SubPlan	   *spexpr = (SubPlan *) node;
+		int			plan_id = spexpr->plan_id;
+
+		if (!bms_is_member(plan_id, ctx->seen_subplans))
+		{
+			ctx->seen_subplans = bms_add_member(ctx->seen_subplans, plan_id);
+
+			if (spexpr->is_initplan)
+				return false;
+
+			Plan *plan = list_nth(root->glob->subplans, plan_id - 1);
+			return plan_tree_walker((Node *) plan, contain_motion_walk, ctx, true);
+		}
+	}
+
+	if (IsA(node, Motion))
+	{
+		ctx->result = true;
+		return true;
+	}
+
+	return plan_tree_walker((Node *) node, contain_motion_walk, ctx, true);
 }
