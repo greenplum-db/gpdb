@@ -535,6 +535,8 @@ bring_to_singleQE(PlannerInfo *root, RelOptInfo *rel)
 											  NIL, // DESTROY pathkeys
 											  false,
 											  target_locus);
+
+			path = (Path *) create_material_path(root, rel, path);
 		}
 
 		add_path(rel, path);

@@ -571,6 +571,7 @@ create type mytype_for_lateral_test as (x int, y int);
 create table t1_lateral_limit(a int, b int, c mytype_for_lateral_test);
 create table t2_lateral_limit(a int, b int);
 insert into t1_lateral_limit values (1, 1, '(1,1)');
+insert into t1_lateral_limit values (1, 2, '(2,2)');
 insert into t2_lateral_limit values (2, 2);
 insert into t2_lateral_limit values (3, 3);
 
@@ -579,6 +580,25 @@ explain select * from t1_lateral_limit as t1 cross join lateral
 
 select * from t1_lateral_limit as t1 cross join lateral
 (select ((c).x+t2.b) as n  from t2_lateral_limit as t2 order by n limit 1)s;
+
+-- The following case is from Github Issue
+-- https://github.com/greenplum-db/gpdb/issues/8860
+-- It is the same issue as the above test suite.
+create table t_mylog_issue_8860 (myid int, log_date timestamptz );
+insert into  t_mylog_issue_8860 values (1,timestamptz '2000-01-02 03:04'),(1,timestamptz '2000-01-02 03:04'-'1 hour'::interval);
+insert into  t_mylog_issue_8860 values (2,timestamptz '2000-01-02 03:04'),(2,timestamptz '2000-01-02 03:04'-'2 hour'::interval);
+
+explain select ml1.myid, log_date as first_date, ml2.next_date from t_mylog_issue_8860 ml1
+inner join lateral
+(select myid, log_date as next_date
+ from t_mylog_issue_8860 where myid = ml1.myid and log_date > ml1.log_date order by log_date asc limit 1) ml2
+on true;
+
+select ml1.myid, log_date as first_date, ml2.next_date from t_mylog_issue_8860 ml1
+inner join lateral
+(select myid, log_date as next_date
+ from t_mylog_issue_8860 where myid = ml1.myid and log_date > ml1.log_date order by log_date asc limit 1) ml2
+on true;
 
 -- test prefetch join qual
 -- we do not handle this correct
@@ -607,4 +627,3 @@ on t1.b = t2.b and t1.a > any (select sum(b) from t3_test_pretch_join_qual t3 wh
 
 reset Test_print_prefetch_joinqual;
 reset optimizer;
-

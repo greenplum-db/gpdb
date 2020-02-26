@@ -1181,31 +1181,75 @@ create type mytype_for_lateral_test as (x int, y int);
 create table t1_lateral_limit(a int, b int, c mytype_for_lateral_test);
 create table t2_lateral_limit(a int, b int);
 insert into t1_lateral_limit values (1, 1, '(1,1)');
+insert into t1_lateral_limit values (1, 2, '(2,2)');
 insert into t2_lateral_limit values (2, 2);
 insert into t2_lateral_limit values (3, 3);
 explain select * from t1_lateral_limit as t1 cross join lateral
 (select ((c).x+t2.b) as n  from t2_lateral_limit as t2 order by n limit 1)s;
-                                                QUERY PLAN                                                
-----------------------------------------------------------------------------------------------------------
- Nested Loop  (cost=10000000001.05..10000000002.11 rows=4 width=41)
+                                                   QUERY PLAN                                                   
+----------------------------------------------------------------------------------------------------------------
+ Nested Loop  (cost=10000000001.06..10000000002.12 rows=4 width=41)
    ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.03 rows=1 width=37)
          ->  Seq Scan on t1_lateral_limit t1  (cost=0.00..1.01 rows=1 width=37)
-   ->  Materialize  (cost=1.05..1.07 rows=1 width=4)
-         ->  Limit  (cost=1.05..1.06 rows=1 width=4)
-               ->  Sort  (cost=1.05..1.06 rows=1 width=4)
+   ->  Materialize  (cost=1.06..1.08 rows=1 width=4)
+         ->  Limit  (cost=1.06..1.06 rows=1 width=4)
+               ->  Sort  (cost=1.06..1.06 rows=1 width=4)
                      Sort Key: (((t1.c).x + t2.b))
-                     ->  Result  (cost=0.00..1.04 rows=1 width=4)
-                           ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
-                                 ->  Seq Scan on t2_lateral_limit t2  (cost=0.00..1.01 rows=1 width=4)
+                     ->  Result  (cost=0.00..1.05 rows=1 width=4)
+                           ->  Materialize  (cost=0.00..1.03 rows=1 width=4)
+                                 ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
+                                       ->  Seq Scan on t2_lateral_limit t2  (cost=0.00..1.01 rows=1 width=4)
  Optimizer: Postgres query optimizer
-(11 rows)
+(12 rows)
 
 select * from t1_lateral_limit as t1 cross join lateral
 (select ((c).x+t2.b) as n  from t2_lateral_limit as t2 order by n limit 1)s;
  a | b |   c   | n 
 ---+---+-------+---
  1 | 1 | (1,1) | 3
-(1 row)
+ 1 | 2 | (2,2) | 4
+(2 rows)
+
+-- The following case is from Github Issue
+-- https://github.com/greenplum-db/gpdb/issues/8860
+-- It is the same issue as the above test suite.
+create table t_mylog_issue_8860 (myid int, log_date timestamptz );
+insert into  t_mylog_issue_8860 values (1,timestamptz '2000-01-02 03:04'),(1,timestamptz '2000-01-02 03:04'-'1 hour'::interval);
+insert into  t_mylog_issue_8860 values (2,timestamptz '2000-01-02 03:04'),(2,timestamptz '2000-01-02 03:04'-'2 hour'::interval);
+explain select ml1.myid, log_date as first_date, ml2.next_date from t_mylog_issue_8860 ml1
+inner join lateral
+(select myid, log_date as next_date
+ from t_mylog_issue_8860 where myid = ml1.myid and log_date > ml1.log_date order by log_date asc limit 1) ml2
+on true;
+                                                           QUERY PLAN                                                            
+---------------------------------------------------------------------------------------------------------------------------------
+ Nested Loop  (cost=10000000001.10..10000000002.21 rows=4 width=20)
+   ->  Materialize  (cost=0.00..1.07 rows=2 width=12)
+         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.06 rows=2 width=12)
+               ->  Seq Scan on t_mylog_issue_8860 ml1  (cost=0.00..1.02 rows=1 width=12)
+   ->  Materialize  (cost=1.10..1.12 rows=1 width=8)
+         ->  Subquery Scan on ml2  (cost=1.10..1.11 rows=1 width=8)
+               ->  Limit  (cost=1.10..1.10 rows=1 width=12)
+                     ->  Sort  (cost=1.10..1.10 rows=2 width=12)
+                           Sort Key: t_mylog_issue_8860.log_date
+                           ->  Result  (cost=0.00..1.09 rows=2 width=12)
+                                 Filter: ((t_mylog_issue_8860.log_date > ml1.log_date) AND (t_mylog_issue_8860.myid = ml1.myid))
+                                 ->  Materialize  (cost=0.00..1.07 rows=2 width=12)
+                                       ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1.06 rows=2 width=12)
+                                             ->  Seq Scan on t_mylog_issue_8860  (cost=0.00..1.02 rows=1 width=12)
+ Optimizer: Postgres query optimizer
+(15 rows)
+
+select ml1.myid, log_date as first_date, ml2.next_date from t_mylog_issue_8860 ml1
+inner join lateral
+(select myid, log_date as next_date
+ from t_mylog_issue_8860 where myid = ml1.myid and log_date > ml1.log_date order by log_date asc limit 1) ml2
+on true;
+ myid |          first_date          |          next_date           
+------+------------------------------+------------------------------
+    1 | Sun Jan 02 02:04:00 2000 PST | Sun Jan 02 03:04:00 2000 PST
+    2 | Sun Jan 02 01:04:00 2000 PST | Sun Jan 02 03:04:00 2000 PST
+(2 rows)
 
 -- test prefetch join qual
 -- we do not handle this correct
