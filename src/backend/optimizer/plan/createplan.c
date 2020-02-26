@@ -793,6 +793,16 @@ create_join_plan(PlannerInfo *root, JoinPath *best_path)
 		best_path->outerjoinpath->motionHazard)
 		((Join *) plan)->prefetch_joinqual = true;
 
+	/* CDB: if the join's locus is bottleneck which means the
+	 * join gang only contains one process, so there is no
+	 * risk for motion deadlock.
+	 */
+	if (CdbPathLocus_IsBottleneck(best_path->path.locus))
+	{
+		((Join *) plan)->prefetch_inner = false;
+		((Join *) plan)->prefetch_joinqual = false;
+	}
+
 	plan->flow = cdbpathtoplan_create_flow(root,
 			best_path->path.locus,
 			best_path->path.parent ? best_path->path.parent->relids

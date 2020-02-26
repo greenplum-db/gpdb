@@ -48,6 +48,7 @@ typedef struct PlannerConfig
 
 	/* These ones are tricky */
 	//GpRoleValue	Gp_role; // TODO: this one is tricky
+	bool        force_singleQE; /* True means force gather base rel to singleQE  */
 } PlannerConfig;
 
 extern PlannerConfig *DefaultPlannerConfig(void);
