@@ -27,6 +27,7 @@
 
 #include "cdb/cdblocaldistribxact.h"  /* LocalDistribXactData */
 #include "cdb/cdbtm.h"  /* TMGXACT */
+#include "dsm.h"
 
 /*
  * Each backend advertises up to PGPROC_MAX_CACHED_SUBXIDS TransactionIds
@@ -175,6 +176,7 @@ struct PGPROC
 	 * Information for our combocid-map (populated in writer/dispatcher backends only)
 	 */
 	uint32		combocid_map_count; /* how many entries in the map ? */
+	dsm_handle  combocid_map_handle;
 
 	/*
 	 * Current command_id for the running query

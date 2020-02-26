@@ -39,6 +39,7 @@
  *-------------------------------------------------------------------------
  */
 
+#include <unistd.h>
 #include "postgres.h"
 
 #include "miscadmin.h"
@@ -54,9 +55,9 @@
 #include "access/twophase.h"  /* max_prepared_xacts */
 
 #include "cdb/cdbvars.h"
-#include "storage/buffile.h"
 #include "storage/proc.h"
-
+#include "storage/dsm.h"
+#include "utils/resowner.h"
 /*
  * We now maintain two hashtables.
  *
@@ -99,6 +100,8 @@ volatile int sizeComboCids = 0;			/* allocated size of array */
  */
 static HTAB *readerComboHash = NULL;
 
+static ResourceOwner combocidResOwner = NULL;	/* combocid resources */
+
 /*
  * Key structure:
  */
@@ -121,7 +124,7 @@ static CommandId GetComboCommandId(TransactionId xmin, CommandId cmin, CommandId
 static CommandId GetRealCmin(TransactionId xmin, CommandId combocid);
 static CommandId GetRealCmax(TransactionId xmin, CommandId combocid);
 
-static BufFile *combocid_map = NULL;
+dsm_segment *combocid_map = NULL;
 static void dumpSharedComboCommandId(TransactionId xmin, CommandId cmin, CommandId cmax, CommandId combocid);
 static void loadSharedComboCommandId(TransactionId xmin, CommandId combocid, CommandId *cmin, CommandId *cmax);
 
@@ -280,6 +283,35 @@ GetComboCommandId(TransactionId xmin, CommandId cmin, CommandId cmax)
 								CCID_HASH_SIZE,
 								&hash_ctl,
 								HASH_ELEM | HASH_BLOBS | HASH_CONTEXT);
+
+		if ((Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_EXECUTE)
+			&& combocid_map == NULL)
+		{
+			/* This is the first time a combo cid is to be written by this writer. */
+			MemoryContext oldCtx;
+			ResourceOwner oldowner;
+
+			if (combocidResOwner == NULL)
+				combocidResOwner = ResourceOwnerCreate(NULL, "ComboCid");
+
+			MyProc->combocid_map_count = 0;
+
+			/* create dsm, as appropriate: this will throw an error if the create-fails. */
+			oldowner = CurrentResourceOwner;
+			CurrentResourceOwner = combocidResOwner;
+			oldCtx = MemoryContextSwitchTo(TopMemoryContext);
+
+			combocid_map = dsm_create(sizeComboCids * sizeof(ComboCidEntryData),
+			                          DSM_CREATE_NULL_IF_MAXSEGMENTS);
+
+			if (combocid_map == NULL)
+				elog(ERROR, "Can not create dsm in combocid.c");
+
+			MyProc->combocid_map_handle = dsm_segment_handle(combocid_map);
+
+			MemoryContextSwitchTo(oldCtx);
+			CurrentResourceOwner = oldowner;
+		}
 	}
 
 	/*
@@ -293,6 +325,40 @@ GetComboCommandId(TransactionId xmin, CommandId cmin, CommandId cmax)
 
 		comboCids = (ComboCidKeyData *)
 			repalloc(comboCids, sizeof(ComboCidKeyData) * newsize);
+
+		if (combocid_map != NULL)
+		{
+			MemoryContext oldCtx;
+			ResourceOwner oldowner;
+
+			Assert(combocidResOwner != NULL);
+
+			oldowner = CurrentResourceOwner;
+			CurrentResourceOwner = combocidResOwner;
+			oldCtx = MemoryContextSwitchTo(TopMemoryContext);
+
+			/* DSM provide a dsm_resize function to expend memory size. However
+			 * the function not work well. Sometimes, it failed internal, so
+			 * creating a new segment should be the safe way deal with it.
+			 */
+			dsm_segment* newsegment = dsm_create(sizeof(ComboCidEntryData) * newsize,
+			                                     DSM_CREATE_NULL_IF_MAXSEGMENTS);
+			char *pNew = dsm_segment_address(newsegment);
+			char *pOld = dsm_segment_address(combocid_map);
+
+			/* copy dumps */
+			memcpy(pNew, pOld, sizeof(ComboCidEntryData) * sizeComboCids);
+
+			/* replace both dsm_segment pointer and dsm_handle value */
+			dsm_detach(combocid_map);
+			combocid_map = newsegment;
+
+			MyProc->combocid_map_handle = dsm_segment_handle(combocid_map);
+
+			MemoryContextSwitchTo(oldCtx);
+			CurrentResourceOwner = oldowner;
+		}
+
 		sizeComboCids = newsize;
 	}
 
@@ -512,66 +578,33 @@ dumpSharedComboCommandId(TransactionId xmin, CommandId cmin, CommandId cmax, Com
 {
 	/*
 	 * In any given segment, there are many readers, but only one writer. The
-	 * combo cid file information is stored in the MyProc of the writer process,
+	 * combo cid dsm_handle is stored in the MyProc of the writer process,
 	 * and is referenced by reader process via lockHolderProcPtr.  The writer
-	 * will setup and/or dump combocids to a combo cid file when appropriate.
-	 * The writer keeps track of the number of entries in the combo cid file in
+	 * will setup and/or dump combocids to a combo cid dsm_handle when appropriate.
+	 * The writer keeps track of the number of entries in the combo cid dsm_handle in
 	 * MyProc->combocid_map_count. Readers reference the count via
 	 * lockHolderProcPtr->combocid_map_count.
 	 *
-	 * Since combo cid file entries are always appended to the end of a combo
-	 * cid file and because there is only one writer, it is not necessary to
-	 * lock the combo cid file during reading or writing. A new combo cid will
+	 * Since combo cid entries are always appended to the end of a combo
+	 * cid dsm segment and because there is only one writer, it is not necessary to
+	 * lock the combo cid dsm segment during reading or writing. A new combo cid will
 	 * not become visable to the reader until the combocid_map_count variable
 	 * has been incremented.
 	 */
 
-	ComboCidEntryData entry;
+	ComboCidEntry entry;
 
 	Assert(Gp_role != GP_ROLE_EXECUTE || Gp_is_writer);
 
-	if (combocid_map == NULL)
-	{
-		/* This is the first time a combo cid is to be written by this writer. */
-		MemoryContext oldCtx;
-		char			path[MAXPGPATH];
-
-		MyProc->combocid_map_count = 0;
-
-		ComboCidMapName(path, gp_session_id, MyProc->pid);
-
-		/* open our file, as appropriate: this will throw an error if the create-fails. */
-		oldCtx = MemoryContextSwitchTo(TopMemoryContext);
-
-		/*
-		 * XXX: We could probably close and delete the file at the end of
-		 * transaction.  We would then need to keep combocid_map_count
-		 * synchronized with open files at (sub-) xact boundaries.
-		 */
-		combocid_map = BufFileCreateNamedTemp(path,
-											  true /* interXact */,
-											  NULL /* work_set */);
-		MemoryContextSwitchTo(oldCtx);
-	}
-	Assert(combocid_map != NULL);
-
-	/* Seek to the end: BufFileSeek() doesn't support SEEK_END! */
-
 	/* build our entry */
-	memset(&entry, 0, sizeof(entry));
-	entry.key.cmin = cmin;
-	entry.key.cmax = cmax;
-	entry.key.xmin = xmin;
-	entry.combocid = combocid;
+	entry = (ComboCidEntry) dsm_segment_address(combocid_map);
 
-	/* write our entry */
-	if (BufFileWrite(combocid_map, &entry, sizeof(entry)) != sizeof(entry))
-	{
-		elog(ERROR, "Combocid map I/O error!");
-	}
-
-	/* flush our output */
-	BufFileFlush(combocid_map);
+	int id = MyProc->combocid_map_count;
+	memset(&entry[id], 0, sizeof(ComboCidEntryData));
+	entry[id].key.cmin = cmin;
+	entry[id].key.cmax = cmax;
+	entry[id].key.xmin = xmin;
+	entry[id].combocid = combocid;
 
 	/* Increment combocid count to make new combocid visible to Readers */
 	MyProc->combocid_map_count += 1;
@@ -581,7 +614,7 @@ void
 loadSharedComboCommandId(TransactionId xmin, CommandId combocid, CommandId *cmin, CommandId *cmax)
 {
 	bool		found = false;
-	ComboCidEntryData entry;
+	ComboCidEntry entry;
 	int			i;
 
 	Assert(Gp_role == GP_ROLE_EXECUTE);
@@ -595,25 +628,22 @@ loadSharedComboCommandId(TransactionId xmin, CommandId combocid, CommandId *cmin
 		elog(ERROR, "loadSharedComboCommandId: NO LOCK HOLDER POINTER.");
 	}
 
-	if (combocid_map == NULL)
-	{
-		MemoryContext oldCtx;
-		char			path[MAXPGPATH];
 
-		ComboCidMapName(path, gp_session_id, lockHolderProcPtr->pid);
-		/* open our file, as appropriate: this will throw an error if the create-fails. */
-		oldCtx = MemoryContextSwitchTo(TopMemoryContext);
-		combocid_map = BufFileOpenNamedTemp(path,
-											true /* interXact */);
-		MemoryContextSwitchTo(oldCtx);
-	}
+	MemoryContext oldCtx;
+	ResourceOwner oldowner;
+
+	/* attach our handle, as appropriate: this will throw an error if the create-fails. */
+	oldowner = CurrentResourceOwner;
+	CurrentResourceOwner = TopTransactionResourceOwner;
+	oldCtx = MemoryContextSwitchTo(TopMemoryContext);
+
+	dsm_segment *combocid_map =
+		            (dsm_segment *)dsm_attach(lockHolderProcPtr->combocid_map_handle);
+
+	MemoryContextSwitchTo(oldCtx);
+	CurrentResourceOwner = oldowner;
+
 	Assert(combocid_map != NULL);
-
-	/* Seek to the beginning to start our search ? */
-	if (BufFileSeek(combocid_map, 0 /* fileno */, 0 /* offset */, SEEK_SET) != 0)
-	{
-		elog(ERROR, "loadSharedComboCommandId: seek to beginning failed.");
-	}
 
 	/*
 	 * Read this entry in ...
@@ -623,12 +653,10 @@ loadSharedComboCommandId(TransactionId xmin, CommandId combocid, CommandId *cmin
 	 */
 	for (i = 0; i < lockHolderProcPtr->combocid_map_count; i++)
 	{
-		if (BufFileRead(combocid_map, &entry, sizeof(ComboCidEntryData)) != sizeof(ComboCidEntryData))
-		{
-			elog(ERROR, "loadSharedComboCommandId: read failed I/O error.");
-		}
 
-		if (entry.key.xmin == xmin)
+		entry = dsm_segment_address(combocid_map);
+
+		if (entry[i].key.xmin == xmin)
 		{
 			bool		cached = false;
 			readerComboCidKeyData reader_key;
@@ -636,34 +664,50 @@ loadSharedComboCommandId(TransactionId xmin, CommandId combocid, CommandId *cmin
 
 			memset(&reader_key, 0, sizeof(reader_key));
 			reader_key.writer_pid = lockHolderProcPtr->pid;
-			reader_key.xmin = entry.key.xmin;
+			reader_key.xmin = entry[i].key.xmin;
 			reader_key.session = gp_session_id;
-			reader_key.combocid = entry.combocid;
+			reader_key.combocid = entry[i].combocid;
 
 			reader_entry = (readerComboCidEntryData *)
 				hash_search(readerComboHash, &reader_key, HASH_ENTER, &cached);
 
 			if (!cached)
 			{
-				reader_entry->cmin = entry.key.cmin;
-				reader_entry->cmax = entry.key.cmax;
+				reader_entry->cmin = entry[i].key.cmin;
+				reader_entry->cmax = entry[i].key.cmax;
 			}
 
 			/*
 			 * This was our entry -- we're going to continue our scan,
 			 * to pull in any additional entries for our xmin
 			 */
-			if (entry.combocid == combocid)
+			if (entry[i].combocid == combocid)
 			{
-				*cmin = entry.key.cmin;
-				*cmax = entry.key.cmax;
+				*cmin = entry[i].key.cmin;
+				*cmax = entry[i].key.cmax;
 				found = true;
 			}
 		}
 	}
 
+	dsm_detach(combocid_map);
+
 	if (!found)
 	{
 		elog(ERROR, "loadSharedComboCommandId: no combocid entry found for %u/%u", xmin, combocid);
 	}
+}
+
+void
+AtEOXact_ComboCid_Dsm_Detach(void)
+{
+	if ( combocid_map != NULL
+		&& (Gp_role == GP_ROLE_DISPATCH
+			|| (Gp_role == GP_ROLE_EXECUTE && Gp_is_writer))
+		)
+	{
+		dsm_detach(combocid_map);
+		combocid_map = NULL;
+	}
+
 }

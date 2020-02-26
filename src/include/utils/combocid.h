@@ -45,6 +45,7 @@ extern volatile ComboCidKey comboCids;
 extern volatile int usedComboCids;
 extern volatile int sizeComboCids;
 
+extern void AtEOXact_ComboCid_Dsm_Detach(void);
 extern void AtEOXact_ComboCid(void);
 extern void RestoreComboCIDState(char *comboCIDstate);
 extern void SerializeComboCIDState(Size maxsize, char *start_address);
