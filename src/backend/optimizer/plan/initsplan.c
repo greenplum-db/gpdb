@@ -2107,7 +2107,8 @@ distribute_restrictinfo_to_rels(PlannerInfo *root,
 
 			/* Add clause to rel's restriction list */
 			if (restrictinfo->contain_outer_query_references &&
-				rel_need_upper(root, rel))
+				rel_need_upper(root, rel) &&
+				root->config->force_singleQE)
 			{
 				List	   *vars = pull_var_clause((Node *) restrictinfo->clause,
 												   PVC_RECURSE_AGGREGATES,

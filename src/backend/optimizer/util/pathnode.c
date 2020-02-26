@@ -3610,18 +3610,16 @@ reparameterize_path(PlannerInfo *root, Path *path,
 }
 
 /*
- * create_projection_path
- *	  Creates a pathnode that represents performing a projection.
+ * create_projection_path_with_quals
+ *	  Creates a pathnode that represents performing a projection and filter.
  *
  * 'rel' is the parent relation associated with the result
  * 'subpath' is the path representing the source of data
- * 'target' is the PathTarget to be computed
  */
 ProjectionPath *
 create_projection_path_with_quals(PlannerInfo *root,
 								  RelOptInfo *rel,
 								  Path *subpath,
-								  List *tlist,
 								  List *restrict_clauses)
 {
 	ProjectionPath *pathnode = makeNode(ProjectionPath);

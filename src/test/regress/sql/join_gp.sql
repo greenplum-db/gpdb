@@ -471,3 +471,47 @@ join t_randomly_dist_table on t_subquery_general.a = t_randomly_dist_table.c;
 reset enable_hashjoin;
 reset enable_mergejoin;
 reset enable_nestloop;
+
+-- test lateral join inner plan contains limit
+-- we cannot pass params across motion so we
+-- can only generate a plan to gather all the
+-- data to singleQE. Here we create a compound
+-- data type as params to pass into inner plan.
+-- By doing so, if we fail to pass correct params
+-- into innerplan, it will throw error because
+-- of nullpointer reference. If we only use int
+-- type as params, the nullpointer reference error
+-- may not happen because we parse null to integer 0.
+
+create type mytype_for_lateral_test as (x int, y int);
+create table t1_lateral_limit(a int, b int, c mytype_for_lateral_test);
+create table t2_lateral_limit(a int, b int);
+insert into t1_lateral_limit values (1, 1, '(1,1)');
+insert into t1_lateral_limit values (1, 2, '(2,2)');
+insert into t2_lateral_limit values (2, 2);
+insert into t2_lateral_limit values (3, 3);
+
+explain select * from t1_lateral_limit as t1 cross join lateral
+(select ((c).x+t2.b) as n  from t2_lateral_limit as t2 order by n limit 1)s;
+
+select * from t1_lateral_limit as t1 cross join lateral
+(select ((c).x+t2.b) as n  from t2_lateral_limit as t2 order by n limit 1)s;
+
+-- The following case is from Github Issue
+-- https://github.com/greenplum-db/gpdb/issues/8860
+-- It is the same issue as the above test suite.
+create table t_mylog_issue_8860 (myid int, log_date timestamptz );
+insert into  t_mylog_issue_8860 values (1,timestamptz '2000-01-02 03:04'),(1,timestamptz '2000-01-02 03:04'-'1 hour'::interval);
+insert into  t_mylog_issue_8860 values (2,timestamptz '2000-01-02 03:04'),(2,timestamptz '2000-01-02 03:04'-'2 hour'::interval);
+
+explain select ml1.myid, log_date as first_date, ml2.next_date from t_mylog_issue_8860 ml1
+inner join lateral
+(select myid, log_date as next_date
+ from t_mylog_issue_8860 where myid = ml1.myid and log_date > ml1.log_date order by log_date asc limit 1) ml2
+on true;
+
+select ml1.myid, log_date as first_date, ml2.next_date from t_mylog_issue_8860 ml1
+inner join lateral
+(select myid, log_date as next_date
+ from t_mylog_issue_8860 where myid = ml1.myid and log_date > ml1.log_date order by log_date asc limit 1) ml2
+on true;

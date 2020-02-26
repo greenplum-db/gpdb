@@ -378,6 +378,8 @@ PlannerConfig *DefaultPlannerConfig(void)
 
 	c1->is_under_subplan = false;
 
+	c1->force_singleQE = false;
+
 	return c1;
 }
 
