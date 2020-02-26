@@ -121,7 +121,7 @@
           and Loader Tools Package</i> for Linux. You can obtain the most up-to-date
           version of the <i>Greenplum Streaming Server</i> and
           <i>Greenplum-Kafka Integration</i> from
-          <xref href="https://network.pivotal.io/products/pivotal-gpss"
+          <xref href="https://network.pivotal.io/products/greenplum-streaming-server"
             scope="external" format="html" ><ph>Pivotal Network</ph></xref>.</p>
         </note>
     </body>
