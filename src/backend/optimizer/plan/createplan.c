@@ -1005,6 +1005,12 @@ create_join_plan(PlannerInfo *root, JoinPath *best_path)
 		((Join *) plan)->prefetch_joinqual = false;
 	}
 
+	/*
+	 * We may set prefetch_joinqual to true if there is
+	 * potential risk when create_xxxjoin_plan. Here, we
+	 * have all the information at hand, this is the final
+	 * logic to set prefetch_joinqual.
+	 */
 	if (((Join *) plan)->prefetch_joinqual)
 	{
 		List *joinqual = ((Join *) plan)->joinqual;
@@ -7654,6 +7660,12 @@ append_initplan_for_function_scan(PlannerInfo *root, Path *best_path, Plan *plan
 	initplan->scan.plan.flow = cdbpathtoplan_create_flow(root, best_path->locus);
 }
 
+/*
+ * contain_motion
+ * This function walks the joinqual list to  see there is
+ * any motion node in it. The only case a qual contains motion
+ * is that it is a SubPlan and the SubPlan contains motion.
+ */
 static bool
 contain_motion(PlannerInfo *root, Node *node)
 {
