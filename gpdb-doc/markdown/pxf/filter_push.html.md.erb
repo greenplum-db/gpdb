@@ -50,17 +50,17 @@ You can use PXF filter pushdown with these arithmetic and logical operators (con
 
 PXF accesses data sources using profiles exposed by different connectors, and filter pushdown support is determined by the specific connector implementation. The following PXF profiles support some aspect of filter pushdown:
 
-|Profile | <,&nbsp;&nbsp; >,&nbsp;&nbsp; <=,&nbsp;&nbsp; >=,&nbsp;&nbsp; =,&nbsp;&nbsp;<> | LIKE | isNULL | !isNull | IN | AND | OR | NOT |
-|-------|------------------------|----|----|----|----|----|----|----|
-| Jdbc | Y | Y | Y | Y | Y | Y | Y | Y | Y | N | Y | Y | Y |
-| *:parquet | Y<sup>1</sup> | N | Y<sup>1</sup> | Y<sup>1</sup> | N | Y<sup>1</sup> | Y<sup>1</sup> | Y<sup>1</sup> |
-| s3:parquet and s3:text with S3-Select | Y |  N | Y | Y | Y | Y | Y | Y |
-| HBase | Y | N | Y | Y | N | Y | Y | N |
-| Hive | Y<sup>2</sup> | N | N | N | N | Y<sup>2</sup> | Y<sup>2</sup> | N |
-| HiveText | Y<sup>2</sup> | N | N | N | N | Y<sup>2</sup> | Y<sup>2</sup> | N |
-| HiveRC | Y<sup>2</sup> |  N | N | N | N | Y<sup>2</sup> | Y<sup>2</sup> | N |
-| HiveORC | Y, Y<sup>2</sup> |  N | Y | Y | Y | Y, Y<sup>2</sup> | Y, Y<sup>2</sup> | Y |
-| HiveVectorizedORC | Y, Y<sup>2</sup> |  N | Y | Y | Y | Y, Y<sup>2</sup> | Y, Y<sup>2</sup> | Y |
+|Profile | <,&nbsp;&nbsp; >,</br><=,&nbsp;&nbsp; >=,</br>=,&nbsp;&nbsp;<> | LIKE | IS [NOT] NULL | IN | AND | OR | NOT |
+|-------|:------------------------:|:----:|:----:|:----:|:----:|:----:|:----:|:----:|
+| Jdbc | Y | Y | Y | Y | Y | Y | Y | Y | N | Y | Y | Y |
+| *:parquet | Y<sup>1</sup> | N | Y<sup>1</sup> | N | Y<sup>1</sup> | Y<sup>1</sup> | Y<sup>1</sup> |
+| s3:parquet and s3:text with S3-Select | Y |  N | Y | Y | Y | Y | Y |
+| HBase | Y | N | Y | N | Y | Y | N |
+| Hive | Y<sup>2</sup> | N | N | N | Y<sup>2</sup> | Y<sup>2</sup> | N |
+| HiveText | Y<sup>2</sup> | N | N | N | Y<sup>2</sup> | Y<sup>2</sup> | N |
+| HiveRC | Y<sup>2</sup> |  N | N | N | Y<sup>2</sup> | Y<sup>2</sup> | N |
+| HiveORC | Y, Y<sup>2</sup> |  N | Y | Y | Y, Y<sup>2</sup> | Y, Y<sup>2</sup> | Y |
+| HiveVectorizedORC | Y, Y<sup>2</sup> |  N | Y | Y | Y, Y<sup>2</sup> | Y, Y<sup>2</sup> | Y |
 
 </br><sup>1</sup>&nbsp;PXF applies the predicate, rather than the remote system, reducing CPU usage and the memory footprint.
 </br><sup>2</sup>&nbsp;PXF supports partition pruning based on partition keys.
