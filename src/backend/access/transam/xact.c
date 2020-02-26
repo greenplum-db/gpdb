@@ -2819,6 +2819,7 @@ CommitTransaction(void)
 					  : XACT_EVENT_COMMIT);
 	CallXactCallbacksOnce(XACT_EVENT_COMMIT);
 
+	AtEOXact_ComboCid_Dsm_Detach();
 	ResourceOwnerRelease(TopTransactionResourceOwner,
 						 RESOURCE_RELEASE_BEFORE_LOCKS,
 						 true, true);
