@@ -93,6 +93,7 @@ btree_desc(StringInfo buf, XLogReaderState *record)
 		case XLOG_BTREE_INSERT_LEAF:
 		case XLOG_BTREE_INSERT_UPPER:
 		case XLOG_BTREE_INSERT_META:
+		case XLOG_BTREE_INSERT_POST:
 			{
 				xl_btree_insert *xlrec = (xl_btree_insert *) rec;
 
@@ -105,8 +106,16 @@ btree_desc(StringInfo buf, XLogReaderState *record)
 			{
 				xl_btree_split *xlrec = (xl_btree_split *) rec;
 
-				appendStringInfo(buf, "level %u, firstright %d",
-								 xlrec->level, xlrec->firstright);
+				appendStringInfo(buf, "level %u, firstright %d, newitemoff %d, postingoff %d",
+								 xlrec->level, xlrec->firstright,
+								 xlrec->newitemoff, xlrec->postingoff);
+				break;
+			}
+		case XLOG_BTREE_DEDUP:
+			{
+				xl_btree_dedup *xlrec = (xl_btree_dedup *) rec;
+
+				appendStringInfo(buf, "nintervals %u", xlrec->nintervals);
 				break;
 			}
 		case XLOG_BTREE_VACUUM:
@@ -122,7 +131,7 @@ btree_desc(StringInfo buf, XLogReaderState *record)
 				xl_btree_delete *xlrec = (xl_btree_delete *) rec;
 
 				appendStringInfo(buf, "%d items, latest removed xid %u",
-								 xlrec->nitems, xlrec->latestRemovedXid);
+								 xlrec->ndeleted, xlrec->latestRemovedXid);
 				out_delete(buf, record);
 				break;
 			}
@@ -198,6 +207,12 @@ btree_identify(uint8 info)
 			break;
 		case XLOG_BTREE_SPLIT_R:
 			id = "SPLIT_R";
+			break;
+		case XLOG_BTREE_INSERT_POST:
+			id = "INSERT_POST";
+			break;
+		case XLOG_BTREE_DEDUP:
+			id = "DEDUP";
 			break;
 		case XLOG_BTREE_VACUUM:
 			id = "VACUUM";

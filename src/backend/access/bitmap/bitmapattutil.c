@@ -131,7 +131,7 @@ _bitmap_create_lov_heapandindex(Relation rel,
 		btree_metabuf = _bt_getbuf(lovIndex, P_NEW, BT_WRITE);
 		Assert (BTREE_METAPAGE == BufferGetBlockNumber(btree_metabuf));
 		btree_metapage = BufferGetPage(btree_metabuf);
-		_bt_initmetapage(btree_metapage, P_NONE, 0);
+		_bt_initmetapage(btree_metapage, P_NONE, 0, _bt_allequalimage(lovIndex, false));
 
 		/* XLOG the metapage */
 
