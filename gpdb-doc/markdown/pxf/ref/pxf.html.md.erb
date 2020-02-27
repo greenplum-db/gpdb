@@ -79,13 +79,13 @@ The `pxf reset` command takes the following option:
 <dt>-f | &#8211;&#8211;force </dt>
 <dd>Do not prompt before resetting the PXF service instance; reset without user interaction.</dd>
 
-The `pxf sync` command, which you must run on the Greenplum Database master host, takes the following options:
+The `pxf sync` command, which you must run on the Greenplum Database master host, takes the following option and argument:
 
 <dt>-d | &#8211;&#8211;delete </dt>
 <dd>Delete any files in the PXF user configuration on `<gphost>` that are not also present on the master host. If you specify this option, you must provide it on the command line before `<gphost>`.</dd>
 
 <dt>\<gphost\> </dt>
-<dd>The Greenplum Database host to which to synchronize the PXF configuration. `<gphost>` must identify the standy master host or a segment host.</dd>
+<dd>The Greenplum Database host to which to synchronize the PXF configuration. Required. `<gphost>` must identify the standy master host or a segment host.</dd>
 
 ## <a id="topic1__section5"></a>Examples
 
