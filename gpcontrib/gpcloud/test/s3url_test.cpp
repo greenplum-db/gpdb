@@ -93,3 +93,29 @@ TEST(S3UrlTest, Region_apnortheast2) {
     EXPECT_EQ("s3test.pivotal.io", s3Url.getBucket());
     EXPECT_EQ("dataset1/normal", s3Url.getPrefix());
 }
+
+TEST(S3UrlTest, Extension) {
+    S3Url s3Url("http://s3-us-west-2.amazonaws.com/bucket/");
+    EXPECT_EQ("", s3Url.getPrefix());
+    EXPECT_EQ("", s3Url.getExtension());
+    s3Url.setPrefix("abc");
+    EXPECT_EQ("", s3Url.getExtension());
+    s3Url.setPrefix("a.b.c");
+    EXPECT_EQ(".c", s3Url.getExtension());
+    s3Url.setPrefix("/");
+    EXPECT_EQ("", s3Url.getExtension());
+    s3Url.setPrefix("//");
+    EXPECT_EQ("", s3Url.getExtension());
+    s3Url.setPrefix("./");
+    EXPECT_EQ("", s3Url.getExtension());
+    s3Url.setPrefix("/a.b/");
+    EXPECT_EQ("", s3Url.getExtension());
+    s3Url.setPrefix("/.");
+    EXPECT_EQ(".", s3Url.getExtension());
+    s3Url.setPrefix("a.b");
+    EXPECT_EQ(".b", s3Url.getExtension());
+    s3Url.setPrefix("/a.b");
+    EXPECT_EQ(".b", s3Url.getExtension());
+    s3Url.setPrefix("ab/a.b");
+    EXPECT_EQ(".b", s3Url.getExtension());
+}

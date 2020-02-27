@@ -49,6 +49,8 @@ class S3Url {
 
     bool isValidUrl() const;
 
+    string getExtension() const;
+
    private:
     string extractField(const struct http_parser_url *urlParser, http_parser_url_fields i);
 

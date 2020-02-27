@@ -1,0 +1,12 @@
+CREATE READABLE EXTERNAL TABLE s3regress_deflate (date text, time text, open float, high float,
+        low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/deflate_normal1/ config=@config_file@') FORMAT 'csv';
+
+SELECT count(*) count, round(sum(open)) sum, round(avg(open)) avg FROM s3regress_deflate;
+
+DROP EXTERNAL TABLE s3regress_deflate;
+
+CREATE READABLE EXTERNAL TABLE s3regress_deflate (Year text, Month text, DayofMonth text, DayOfWeek text, DepTime text, CRSDepTime text, ArrTime text,CRSArrTime text, UniqueCarrier text, FlightNum text,TailNum text, ActualElapsedTime text, CRSElapsedTime text, AirTime text, ArrDelay text, DepDelay text, Origin text, Dest text, Distance text, TaxiIn text, TaxiOut text, Cancelled text, CancellationCode text, Diverted text, CarrierDelay text, WeatherDelay text, NASDelay text, SecurityDelay text, LateAircraftDelay text) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/deflate_2002and2003/ config=@config_file@') format 'csv' SEGMENT REJECT LIMIT 100 PERCENT;
+
+SELECT count(*) FROM s3regress_deflate;
+
+DROP EXTERNAL TABLE s3regress_deflate;
