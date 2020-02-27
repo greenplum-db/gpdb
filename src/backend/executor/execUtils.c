@@ -1135,6 +1135,18 @@ ExecGetShareNodeEntry(EState* estate, int shareidx, bool fCreate)
 	return (ShareNodeEntry *) list_nth(*estate->es_sharenode, shareidx);
 }
 
+/*
+ * flatten_logic_exprs
+ * This function is only used by ExecPrefetchJoinQual.
+ * ExecPrefetchJoinQual need to prefetch subplan in join
+ * qual that contains motion to materialize it to avoid
+ * motion deadlock. This function is going to flatten
+ * the bool exprs to avoid shortcut of bool logic.
+ * An example is:
+ * (a and b or c) or (d or e and f or g) and (h and i or j)
+ * will be transformed to
+ * (a, b, c, d, e, f, g, h, i, j).
+ */
 static List *
 flatten_logic_exprs(Node *node)
 {
