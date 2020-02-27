@@ -171,6 +171,7 @@ bool		Test_appendonly_override = false;
 bool		Test_print_direct_dispatch_info = false;
 bool		gp_test_orientation_override = false;
 bool		gp_permit_persistent_metadata_update = false;
+bool        Test_print_prefetch_joinqual = false;
 bool		gp_permit_relation_node_change = false;
 int			Test_compresslevel_override = 0;
 int			Test_blocksize_override = 0;
@@ -1852,6 +1853,17 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&gp_startup_integrity_checks,
 		true, NULL, NULL
+	},
+
+	{
+		{"test_print_prefetch_joinqual", PGC_SUSET, DEVELOPER_OPTIONS,
+			gettext_noop("For testing purposes, print information about if we prefetch join qual."),
+			NULL,
+			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&Test_print_prefetch_joinqual,
+		false,
+		NULL, NULL, NULL
 	},
 
 	{

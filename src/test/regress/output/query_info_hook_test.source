@@ -116,9 +116,9 @@ WARNING:  Query submit
 WARNING:  Query start
 WARNING:  Plan node initializing
 WARNING:  Plan node executing node_type: NESTLOOP
-WARNING:  Plan node executing node_type: MATERIAL
 WARNING:  Plan node executing node_type: LIMIT
 WARNING:  Plan node executing node_type: SEQSCAN
+WARNING:  Plan node executing node_type: MATERIAL
 WARNING:  Plan node executing node_type: LIMIT
 WARNING:  Plan node executing node_type: SEQSCAN
 WARNING:  function inner query submit

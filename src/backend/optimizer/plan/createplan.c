@@ -48,6 +48,13 @@
 #include "cdb/cdbsreh.h"
 #include "cdb/cdbvars.h"
 
+typedef struct
+{
+	plan_tree_base_prefix base; /* Required prefix for
+								 * plan_tree_walker/mutator */
+	Bitmapset            *seen_subplans;
+	bool                  result;
+} contain_motion_walk_context;
 
 static Plan *create_subplan(PlannerInfo *root, Path *best_path);		/* CDB */
 static Plan *create_scan_plan(PlannerInfo *root, Path *best_path);
@@ -169,7 +176,8 @@ static Sort *make_sort(PlannerInfo *root, Plan *lefttree, int numCols,
 		  AttrNumber *sortColIdx, Oid *sortOperators, bool *nullsFirst,
 		  double limit_tuples);
 static List *flatten_grouping_list(List *groupcls);
-
+static bool contain_motion(PlannerInfo *root, Node *node);
+static bool contain_motion_walk(Node *node, contain_motion_walk_context *ctx);
 
 /*
  * create_plan
@@ -681,6 +689,16 @@ create_join_plan(PlannerInfo *root, JoinPath *best_path)
 		best_path->outerjoinpath->motionHazard)
 		((Join *) plan)->prefetch_joinqual = true;
 
+	/* CDB: if the join's locus is bottleneck which means the
+	 * join gang only contains one process, so there is no
+	 * risk for motion deadlock.
+	 */
+	if (CdbPathLocus_IsBottleneck(best_path->path.locus))
+	{
+		((Join *) plan)->prefetch_inner = false;
+		((Join *) plan)->prefetch_joinqual = false;
+	}
+
 	plan->flow = cdbpathtoplan_create_flow(root,
 			best_path->path.locus,
 			best_path->path.parent ? best_path->path.parent->relids
@@ -695,6 +713,20 @@ create_join_plan(PlannerInfo *root, JoinPath *best_path)
 	if (plan->flow && plan->flow->hashExpr)
 	{
 		plan->targetlist = add_to_flat_tlist(plan->targetlist, plan->flow->hashExpr, true /* resjunk */ );
+	}
+
+	/*
+	 * We may set prefetch_joinqual to true if there is
+	 * potential risk when create_xxxjoin_plan. Here, we
+	 * have all the information at hand, this is the final
+	 * logic to set prefetch_joinqual.
+	 */
+	if (((Join *) plan)->prefetch_joinqual)
+	{
+		List *joinqual = ((Join *) plan)->joinqual;
+
+		((Join *) plan)->prefetch_joinqual = contain_motion(root,
+															(Node *) joinqual);
 	}
 
 	/*
@@ -2986,7 +3018,8 @@ create_nestloop_plan(PlannerInfo *root,
 	 * See ExecPrefetchJoinQual() for details.
 	 */
 	if (best_path->outerjoinpath &&
-		best_path->outerjoinpath->motionHazard)
+		best_path->outerjoinpath->motionHazard &&
+		join_plan->join.joinqual != NIL)
 		join_plan->join.prefetch_joinqual = true;
 
 	return join_plan;
@@ -3320,14 +3353,16 @@ create_mergejoin_plan(PlannerInfo *root,
 	 * See ExecPrefetchJoinQual() for details.
 	 */
 	if (best_path->jpath.outerjoinpath &&
-		best_path->jpath.outerjoinpath->motionHazard)
+		best_path->jpath.outerjoinpath->motionHazard &&
+		join_plan->join.joinqual != NIL)
 		join_plan->join.prefetch_joinqual = true;
 	/*
 	 * If inner motion is not under a Material or Sort node then there could
 	 * also be motion deadlock between inner and joinqual in mergejoin.
 	 */
 	if (best_path->jpath.innerjoinpath &&
-		best_path->jpath.innerjoinpath->motionHazard)
+		best_path->jpath.innerjoinpath->motionHazard &&
+		join_plan->join.joinqual != NIL)
 		join_plan->join.prefetch_joinqual = true;
 
 	copy_path_costsize(root, &join_plan->join.plan, &best_path->jpath.path);
@@ -3431,7 +3466,8 @@ create_hashjoin_plan(PlannerInfo *root,
 	 * See ExecPrefetchJoinQual() for details.
 	 */
 	if (best_path->jpath.outerjoinpath &&
-		best_path->jpath.outerjoinpath->motionHazard)
+		best_path->jpath.outerjoinpath->motionHazard &&
+		join_plan->join.joinqual != NIL)
 		join_plan->join.prefetch_joinqual = true;
 
 	copy_path_costsize(root, &join_plan->join.plan, &best_path->jpath.path);
@@ -5807,4 +5843,58 @@ flatten_grouping_list(List *groupcls)
 	}
 
 	return result;
+}
+
+/*
+ * contain_motion
+ * This function walks the joinqual list to  see there is
+ * any motion node in it. The only case a qual contains motion
+ * is that it is a SubPlan and the SubPlan contains motion.
+ * XXX: an over kill method is used here, for details please
+ * refer to the following function `contain_motion_walk`.
+ */
+static bool
+contain_motion(PlannerInfo *root, Node *node)
+{
+	contain_motion_walk_context ctx;
+	planner_init_plan_tree_base(&ctx.base, root);
+	ctx.result = false;
+	ctx.seen_subplans = NULL;
+
+	(void) contain_motion_walk(node, &ctx);
+
+	return ctx.result;
+}
+
+static bool
+contain_motion_walk(Node *node, contain_motion_walk_context *ctx)
+{
+	if (ctx->result)
+		return true;
+
+	if (node == NULL)
+		return false;
+
+	if (IsA(node, SubPlan))
+	{
+		/*
+		 * In 5X we add motions for SubPlan after we have gotten
+		 * the plan. So at the time of this function calling,
+		 * we do not know if the SubPlan contains motion. We might
+		 * walk the plannedstmt to accurately determine this, but
+		 * that makes the code not that clean. So, we adopt an over
+		 * kill method here: any SubPlan contains motion. At least,
+		 * this can avoid motion deadlock.
+		 */
+		ctx->result = true;
+		return true;
+	}
+
+	if (IsA(node, Motion))
+	{
+		ctx->result = true;
+		return true;
+	}
+
+	return plan_tree_walker((Node *) node, contain_motion_walk, ctx);
 }
