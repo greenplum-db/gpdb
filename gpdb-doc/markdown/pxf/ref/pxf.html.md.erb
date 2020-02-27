@@ -71,17 +71,17 @@ You can start, stop, or restart the PXF service instance on a specific segment h
 
 The `pxf init` command takes the following option:
 
-<dt>-y </dt>
+<dt>&#8211;y </dt>
 <dd>Do not prompt, use the default `$PXF_CONF` directory location if the environment variable is not set.</dd>
 
 The `pxf reset` command takes the following option:
 
-<dt>-f | &#8211;&#8211;force </dt>
+<dt>&#8211;f | &#8211;&#8211;force </dt>
 <dd>Do not prompt before resetting the PXF service instance; reset without user interaction.</dd>
 
 The `pxf sync` command, which you must run on the Greenplum Database master host, takes the following option and argument:
 
-<dt>-d | &#8211;&#8211;delete </dt>
+<dt>&#8211;d | &#8211;&#8211;delete </dt>
 <dd>Delete any files in the PXF user configuration on `<gphost>` that are not also present on the master host. If you specify this option, you must provide it on the command line before `<gphost>`.</dd>
 
 <dt>\<gphost\> </dt>
