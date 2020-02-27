@@ -27,6 +27,7 @@
 #include "catalog/pg_type.h"
 #include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"
+#include "common/hashfn.h"
 #include "libpq/libpq.h"
 #include "libpq/pqformat.h"
 #include "postmaster/autovacuum.h"
@@ -35,7 +36,6 @@
 #include "storage/shmem.h"
 #include "tcop/dest.h"
 #include "utils/faultinjector.h"
-#include "utils/hashutils.h"
 #include "miscadmin.h"
 
 /*

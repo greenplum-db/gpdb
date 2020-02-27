@@ -76,9 +76,9 @@
 #include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbvars.h"
 #include "commands/resgroupcmds.h"
+#include "common/hashfn.h"
 #include "libpq/pqformat.h"
 #include "utils/faultinjector.h"
-#include "utils/hashutils.h"
 #include "utils/lsyscache.h"
 
 

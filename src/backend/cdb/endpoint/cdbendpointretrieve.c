@@ -33,12 +33,12 @@
 
 #include "access/session.h"
 #include "access/xact.h"
+#include "common/hashfn.h"
 #include "storage/ipc.h"
 #include "utils/backend_cancel.h"
 #include "utils/dynahash.h"
 #include "utils/elog.h"
 #include "utils/faultinjector.h"
-#include "utils/hashutils.h"
 #include "utils/guc.h"
 #include "cdbendpoint_private.h"
 #include "cdb/cdbendpoint.h"

@@ -15,6 +15,7 @@
 #include "access/stratnum.h"
 #include "catalog/pg_opfamily.h"
 #include "catalog/pg_type.h"
+#include "common/hashfn.h"
 #include "common/ip.h"
 #include "libpq/libpq-be.h"
 #include "libpq/pqformat.h"
@@ -24,7 +25,6 @@
 #include "nodes/supportnodes.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
-#include "utils/hashutils.h"
 #include "utils/inet.h"
 #include "utils/lsyscache.h"
 

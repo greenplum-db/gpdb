@@ -14,9 +14,9 @@
 #include "postgres.h"
 
 #include "catalog/pg_collation.h"
+#include "common/hashfn.h"
 #include "miscadmin.h"
 #include "utils/builtins.h"
-#include "utils/hashutils.h"
 #include "utils/jsonb.h"
 #include "utils/memutils.h"
 #include "utils/varlena.h"

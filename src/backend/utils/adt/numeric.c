@@ -27,6 +27,7 @@
 #include <math.h>
 
 #include "catalog/pg_type.h"
+#include "common/hashfn.h"
 #include "common/int.h"
 #include "funcapi.h"
 #include "lib/hyperloglog.h"
@@ -39,7 +40,6 @@
 #include "utils/builtins.h"
 #include "utils/float.h"
 #include "utils/guc.h"
-#include "utils/hashutils.h"
 #include "utils/int8.h"
 #include "utils/memutils.h"
 #include "utils/numeric.h"

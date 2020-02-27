@@ -14,12 +14,12 @@
 
 #include "catalog/pg_inherits.h"
 #include "catalog/pg_proc.h"
+#include "common/hashfn.h"
 #include "tcop/tcopprot.h"
 #include "optimizer/optimizer.h"
 #include "optimizer/planmain.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
-#include "utils/hashutils.h"
 #include "utils/syscache.h"
 
 static List *proc_oids_for_dump = NIL;
