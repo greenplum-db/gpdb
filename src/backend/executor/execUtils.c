@@ -80,6 +80,7 @@
 
 static bool get_last_attnums(Node *node, ProjectionInfo *projInfo);
 static void ShutdownExprContext(ExprContext *econtext, bool isCommit);
+static List *flatten_logic_exprs(Node *node);
 
 
 /* ----------------------------------------------------------------
@@ -1134,6 +1135,37 @@ ExecGetShareNodeEntry(EState* estate, int shareidx, bool fCreate)
 	return (ShareNodeEntry *) list_nth(*estate->es_sharenode, shareidx);
 }
 
+static List *
+flatten_logic_exprs(Node *node)
+{
+	if (node == NULL)
+		return NIL;
+
+	if (IsA(node, BoolExpr))
+	{
+		BoolExpr *be = (BoolExpr *) node;
+		return flatten_logic_exprs((Node *) (be->args));
+	}
+
+	if (IsA(node, List))
+	{
+		List     *es = (List *) node;
+		List     *result = NIL;
+		ListCell *lc = NULL;
+
+		foreach(lc, es)
+		{
+			Node *n = (Node *) lfirst(lc);
+			result = list_concat(result,
+								 flatten_logic_exprs(n));
+		}
+
+		return result;
+	}
+
+	return list_make1(node);
+}
+
 /*
  * Prefetch JoinQual to prevent motion hazard.
  *
@@ -1170,7 +1202,9 @@ ExecPrefetchJoinQual(JoinState *node)
 	PlanState  *outer = outerPlanState(node);
 	List	   *joinqual = node->joinqual;
 	TupleTableSlot *innertuple = econtext->ecxt_innertuple;
-	ListCell   *lc;
+
+	ListCell   *lc = NULL;
+	List       *quals = NIL;
 
 	Assert(joinqual);
 
@@ -1183,8 +1217,10 @@ ExecPrefetchJoinQual(JoinState *node)
 	econtext->ecxt_outertuple = ExecInitNullTupleSlot(estate,
 													  ExecGetResultType(outer));
 
+	quals = flatten_logic_exprs((Node *) joinqual);
+
 	/* Fetch subplan with the fake inner & outer tuples */
-	foreach(lc, joinqual)
+	foreach(lc, quals)
 	{
 		/*
 		 * Force every joinqual is prefech because
