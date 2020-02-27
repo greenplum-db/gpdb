@@ -79,7 +79,7 @@ Stop the PXF service instance on all segment hosts:
 $ $GPHOME/pxf/bin/pxf cluster stop
 ```
 
-Synchronize the PXF configuration to the standby and all segment hosts, deleting files that do not exist on the master:
+Synchronize the PXF configuration to the standby and all segment hosts, deleting files that do not exist on the master host:
 
 ``` shell
 $ $GPHOME/pxf/bin/pxf cluster sync --delete
