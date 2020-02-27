@@ -104,6 +104,7 @@
 		"statement_timeout",
 		"temp_buffers",
 		"test_copy_qd_qe_split",
+		"test_print_prefetch_joinqual",
 		"TimeZone",
 		"verify_gpfdists_cert",
 		"vmem_process_interrupt",
