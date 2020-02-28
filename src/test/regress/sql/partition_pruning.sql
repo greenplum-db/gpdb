@@ -825,6 +825,7 @@ insert into sales_exchange_part values(1, '2011-01-01', 10.1, 'usa');
 ALTER TABLE sales 
 ALTER PARTITION FOR (RANK(1))
 EXCHANGE PARTITION FOR ('usa') WITH TABLE sales_exchange_part ;
+ANALYZE sales;
 
 -- TODO: #141973839. Expected 10 parts, currently selecting 15 parts. First level: 4 parts + 1 default. Second level 2 parts. Total 10 parts.
 select get_selected_parts('explain analyze select * from sales where region = ''usa'' or region = ''asia'';');

@@ -11788,3 +11788,54 @@ select count(*) as expect_20 from noexp_hash h join gpexp_repl r on h.a=r.a;
         20
 (1 row)
 
+create table part1(a int, b int) partition by range(b) (start(1) end(5) every(1));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "part1_1_prt_1" for table "part1"
+NOTICE:  CREATE TABLE will create partition "part1_1_prt_2" for table "part1"
+NOTICE:  CREATE TABLE will create partition "part1_1_prt_3" for table "part1"
+NOTICE:  CREATE TABLE will create partition "part1_1_prt_4" for table "part1"
+create table part2(a int, b int) partition by range(b) (start(1) end(5) every(1));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "part2_1_prt_1" for table "part2"
+NOTICE:  CREATE TABLE will create partition "part2_1_prt_2" for table "part2"
+NOTICE:  CREATE TABLE will create partition "part2_1_prt_3" for table "part2"
+NOTICE:  CREATE TABLE will create partition "part2_1_prt_4" for table "part2"
+insert into part1 select i, (i % 2) + 1 from generate_series(1, 1000) i;
+insert into part2 select i, (i % 2) + 1 from generate_series(1, 100) i;
+-- make sure some child partitions have not been analyzed. This just means that
+-- stats are missing for some child partition but not necessarily that the relation
+-- is empty. So we should not flag this as an empty relation 
+analyze part1_1_prt_1;
+analyze part1_1_prt_2;
+analyze part2_1_prt_1;
+analyze part2_1_prt_2;
+-- the plan should contain a 2 stage limit. If we incorrectly estimate that the
+-- relation is empty, we would end up choosing a single stage limit. 
+explain select * from part1, part2 where part1.b = part2.b limit 5;
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=410984.11..410984.89 rows=5 width=16)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=410984.11..410984.89 rows=5 width=16)
+         ->  Limit  (cost=410984.11..410984.79 rows=2 width=16)
+               ->  Hash Join  (cost=7528.75..4042082.35 rows=9947454 width=16)
+                     Hash Cond: (part1_1_prt_1.b = part2_1_prt_1.b)
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..5402.00 rows=57734 width=8)
+                           Hash Key: part1_1_prt_1.b
+                           ->  Append  (cost=0.00..1938.00 rows=57734 width=8)
+                                 ->  Seq Scan on part1_1_prt_1  (cost=0.00..8.00 rows=167 width=8)
+                                 ->  Seq Scan on part1_1_prt_2  (cost=0.00..8.00 rows=167 width=8)
+                                 ->  Seq Scan on part1_1_prt_3  (cost=0.00..961.00 rows=28700 width=8)
+                                 ->  Seq Scan on part1_1_prt_4  (cost=0.00..961.00 rows=28700 width=8)
+                     ->  Hash  (cost=5375.00..5375.00 rows=57434 width=8)
+                           ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..5375.00 rows=57434 width=8)
+                                 Hash Key: part2_1_prt_1.b
+                                 ->  Append  (cost=0.00..1929.00 rows=57434 width=8)
+                                       ->  Seq Scan on part2_1_prt_1  (cost=0.00..3.50 rows=17 width=8)
+                                       ->  Seq Scan on part2_1_prt_2  (cost=0.00..3.50 rows=17 width=8)
+                                       ->  Seq Scan on part2_1_prt_3  (cost=0.00..961.00 rows=28700 width=8)
+                                       ->  Seq Scan on part2_1_prt_4  (cost=0.00..961.00 rows=28700 width=8)
+ Optimizer: Postgres query optimizer
+(21 rows)
+

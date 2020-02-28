@@ -13838,6 +13838,7 @@ SELECT * FROM mpp21090_xchange_pttab_dropcol_addcol_dml_char_candidate ORDER BY 
 
 -- DML on partition table
 INSERT INTO mpp21090_xchange_pttab_dropcol_addcol_dml_char SELECT  'a','b', 1, 'a', 'a';
+ANALYZE mpp21090_xchange_pttab_dropcol_addcol_dml_char;
 SELECT * FROM mpp21090_xchange_pttab_dropcol_addcol_dml_char ORDER BY 1,2,3;
  col2 | col3 | col4 | col5 | col1 
 ------+------+------+------+------
@@ -13909,6 +13910,7 @@ NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_addc
 NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_addcol_dml_decimal_1_prt_parttwo" for table "mpp21090_xchange_pttab_dropcol_addcol_dml_decimal"
 NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_addcol_dml_decim_1_prt_partthree" for table "mpp21090_xchange_pttab_dropcol_addcol_dml_decimal"
 INSERT INTO mpp21090_xchange_pttab_dropcol_addcol_dml_decimal VALUES(2.00,2.00,'a',0, 2.00);
+ANALYZE mpp21090_xchange_pttab_dropcol_addcol_dml_decimal;
 SELECT * FROM mpp21090_xchange_pttab_dropcol_addcol_dml_decimal ORDER BY 1,2,3,4;
  col1 | col2 | col3 | col4 | col5 
 ------+------+------+------+------
@@ -14014,6 +14016,7 @@ NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_addc
 NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_addcol_dml_int4_1_prt_parttwo" for table "mpp21090_xchange_pttab_dropcol_addcol_dml_int4"
 NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_addcol_dml_int4_1_prt_partthree" for table "mpp21090_xchange_pttab_dropcol_addcol_dml_int4"
 INSERT INTO mpp21090_xchange_pttab_dropcol_addcol_dml_int4 VALUES(20000000,20000000,'a',0, 20000000);
+ANALYZE mpp21090_xchange_pttab_dropcol_addcol_dml_int4;
 SELECT * FROM mpp21090_xchange_pttab_dropcol_addcol_dml_int4 ORDER BY 1,2,3,4;
    col1   |   col2   | col3 | col4 |   col5   
 ----------+----------+------+------+----------
@@ -14119,6 +14122,7 @@ NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_addc
 NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_addcol_dml_int8_1_prt_parttwo" for table "mpp21090_xchange_pttab_dropcol_addcol_dml_int8"
 NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_addcol_dml_int8_1_prt_partthree" for table "mpp21090_xchange_pttab_dropcol_addcol_dml_int8"
 INSERT INTO mpp21090_xchange_pttab_dropcol_addcol_dml_int8 VALUES(200000000000000000,200000000000000000,'a',0, 200000000000000000);
+ANALYZE mpp21090_xchange_pttab_dropcol_addcol_dml_int8;
 SELECT * FROM mpp21090_xchange_pttab_dropcol_addcol_dml_int8 ORDER BY 1,2,3,4;
         col1        |        col2        | col3 | col4 |        col5        
 --------------------+--------------------+------+------+--------------------
@@ -14224,6 +14228,7 @@ NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_addc
 NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_addcol_dml_interva_1_prt_parttwo" for table "mpp21090_xchange_pttab_dropcol_addcol_dml_interval"
 NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_addcol_dml_inter_1_prt_partthree" for table "mpp21090_xchange_pttab_dropcol_addcol_dml_interval"
 INSERT INTO mpp21090_xchange_pttab_dropcol_addcol_dml_interval VALUES('10 secs','10 secs','a',0, '10 secs');
+ANALYZE mpp21090_xchange_pttab_dropcol_addcol_dml_interval;
 SELECT * FROM mpp21090_xchange_pttab_dropcol_addcol_dml_interval ORDER BY 1,2,3,4;
    col1   |   col2   | col3 | col4 |   col5   
 ----------+----------+------+------+----------
@@ -14329,6 +14334,7 @@ NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_addc
 NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_addcol_dml_numeric_1_prt_parttwo" for table "mpp21090_xchange_pttab_dropcol_addcol_dml_numeric"
 NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_addcol_dml_numer_1_prt_partthree" for table "mpp21090_xchange_pttab_dropcol_addcol_dml_numeric"
 INSERT INTO mpp21090_xchange_pttab_dropcol_addcol_dml_numeric VALUES(2.000000,2.000000,'a',0, 2.000000);
+ANALYZE mpp21090_xchange_pttab_dropcol_addcol_dml_numeric;
 SELECT * FROM mpp21090_xchange_pttab_dropcol_addcol_dml_numeric ORDER BY 1,2,3,4;
    col1   |   col2   | col3 | col4 |   col5   
 ----------+----------+------+------+----------
@@ -14434,6 +14440,7 @@ NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_dml_
 NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_dml_char_1_prt_parttwo" for table "mpp21090_xchange_pttab_dropcol_dml_char"
 NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_dml_char_1_prt_partthree" for table "mpp21090_xchange_pttab_dropcol_dml_char"
 INSERT INTO mpp21090_xchange_pttab_dropcol_dml_char VALUES('g','g','a',0, 'g');
+ANALYZE mpp21090_xchange_pttab_dropcol_dml_char;
 SELECT * FROM mpp21090_xchange_pttab_dropcol_dml_char ORDER BY 1,2,3,4;
  col1 | col2 | col3 | col4 | col5 
 ------+------+------+------+------
@@ -14538,6 +14545,7 @@ NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_dml_
 NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_dml_decimal_1_prt_parttwo" for table "mpp21090_xchange_pttab_dropcol_dml_decimal"
 NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_dml_decimal_1_prt_partthree" for table "mpp21090_xchange_pttab_dropcol_dml_decimal"
 INSERT INTO mpp21090_xchange_pttab_dropcol_dml_decimal VALUES(2.00,2.00,'a',0, 2.00);
+ANALYZE mpp21090_xchange_pttab_dropcol_dml_decimal;
 SELECT * FROM mpp21090_xchange_pttab_dropcol_dml_decimal ORDER BY 1,2,3,4;
  col1 | col2 | col3 | col4 | col5 
 ------+------+------+------+------
@@ -14642,6 +14650,7 @@ NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_dml_
 NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_dml_int4_1_prt_parttwo" for table "mpp21090_xchange_pttab_dropcol_dml_int4"
 NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_dml_int4_1_prt_partthree" for table "mpp21090_xchange_pttab_dropcol_dml_int4"
 INSERT INTO mpp21090_xchange_pttab_dropcol_dml_int4 VALUES(20000000,20000000,'a',0, 20000000);
+ANALYZE mpp21090_xchange_pttab_dropcol_dml_int4;
 SELECT * FROM mpp21090_xchange_pttab_dropcol_dml_int4 ORDER BY 1,2,3,4;
    col1   |   col2   | col3 | col4 |   col5   
 ----------+----------+------+------+----------
@@ -14746,6 +14755,7 @@ NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_dml_
 NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_dml_int8_1_prt_parttwo" for table "mpp21090_xchange_pttab_dropcol_dml_int8"
 NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_dml_int8_1_prt_partthree" for table "mpp21090_xchange_pttab_dropcol_dml_int8"
 INSERT INTO mpp21090_xchange_pttab_dropcol_dml_int8 VALUES(200000000000000000,200000000000000000,'a',0, 200000000000000000);
+ANALYZE mpp21090_xchange_pttab_dropcol_dml_int8;
 SELECT * FROM mpp21090_xchange_pttab_dropcol_dml_int8 ORDER BY 1,2,3,4;
         col1        |        col2        | col3 | col4 |        col5        
 --------------------+--------------------+------+------+--------------------
@@ -14850,6 +14860,7 @@ NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_dml_
 NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_dml_interval_1_prt_parttwo" for table "mpp21090_xchange_pttab_dropcol_dml_interval"
 NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_dml_interval_1_prt_partthree" for table "mpp21090_xchange_pttab_dropcol_dml_interval"
 INSERT INTO mpp21090_xchange_pttab_dropcol_dml_interval VALUES('10 secs','10 secs','a',0, '10 secs');
+ANALYZE mpp21090_xchange_pttab_dropcol_dml_interval;
 SELECT * FROM mpp21090_xchange_pttab_dropcol_dml_interval ORDER BY 1,2,3,4;
    col1   |   col2   | col3 | col4 |   col5   
 ----------+----------+------+------+----------
@@ -14954,6 +14965,7 @@ NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_dml_
 NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_dml_numeric_1_prt_parttwo" for table "mpp21090_xchange_pttab_dropcol_dml_numeric"
 NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_dml_numeric_1_prt_partthree" for table "mpp21090_xchange_pttab_dropcol_dml_numeric"
 INSERT INTO mpp21090_xchange_pttab_dropcol_dml_numeric VALUES(2.000000,2.000000,'a',0, 2.000000);
+ANALYZE mpp21090_xchange_pttab_dropcol_dml_numeric;
 SELECT * FROM mpp21090_xchange_pttab_dropcol_dml_numeric ORDER BY 1,2,3,4;
    col1   |   col2   | col3 | col4 |   col5   
 ----------+----------+------+------+----------
@@ -15058,6 +15070,7 @@ NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_idx_
 NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_idx_dml_char_1_prt_parttwo" for table "mpp21090_xchange_pttab_dropcol_idx_dml_char"
 NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_idx_dml_char_1_prt_partthree" for table "mpp21090_xchange_pttab_dropcol_idx_dml_char"
 INSERT INTO mpp21090_xchange_pttab_dropcol_idx_dml_char VALUES('g','g','a',0, 'g');
+ANALYZE mpp21090_xchange_pttab_dropcol_idx_dml_char;
 SELECT * FROM mpp21090_xchange_pttab_dropcol_idx_dml_char ORDER BY 1,2,3,4;
  col1 | col2 | col3 | col4 | col5 
 ------+------+------+------+------
@@ -15168,6 +15181,7 @@ NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_idx_
 NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_idx_dml_decimal_1_prt_parttwo" for table "mpp21090_xchange_pttab_dropcol_idx_dml_decimal"
 NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_idx_dml_decimal_1_prt_partthree" for table "mpp21090_xchange_pttab_dropcol_idx_dml_decimal"
 INSERT INTO mpp21090_xchange_pttab_dropcol_idx_dml_decimal VALUES(2.00,2.00,'a',0, 2.00);
+ANALYZE mpp21090_xchange_pttab_dropcol_idx_dml_decimal;
 SELECT * FROM mpp21090_xchange_pttab_dropcol_idx_dml_decimal ORDER BY 1,2,3,4;
  col1 | col2 | col3 | col4 | col5 
 ------+------+------+------+------
@@ -15278,6 +15292,7 @@ NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_idx_
 NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_idx_dml_int4_1_prt_parttwo" for table "mpp21090_xchange_pttab_dropcol_idx_dml_int4"
 NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_idx_dml_int4_1_prt_partthree" for table "mpp21090_xchange_pttab_dropcol_idx_dml_int4"
 INSERT INTO mpp21090_xchange_pttab_dropcol_idx_dml_int4 VALUES(20000000,20000000,'a',0, 20000000);
+ANALYZE mpp21090_xchange_pttab_dropcol_idx_dml_int4;
 SELECT * FROM mpp21090_xchange_pttab_dropcol_idx_dml_int4 ORDER BY 1,2,3,4;
    col1   |   col2   | col3 | col4 |   col5   
 ----------+----------+------+------+----------
@@ -15388,6 +15403,7 @@ NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_idx_
 NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_idx_dml_int8_1_prt_parttwo" for table "mpp21090_xchange_pttab_dropcol_idx_dml_int8"
 NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_idx_dml_int8_1_prt_partthree" for table "mpp21090_xchange_pttab_dropcol_idx_dml_int8"
 INSERT INTO mpp21090_xchange_pttab_dropcol_idx_dml_int8 VALUES(200000000000000000,200000000000000000,'a',0, 200000000000000000);
+ANALYZE mpp21090_xchange_pttab_dropcol_idx_dml_int8;
 SELECT * FROM mpp21090_xchange_pttab_dropcol_idx_dml_int8 ORDER BY 1,2,3,4;
         col1        |        col2        | col3 | col4 |        col5        
 --------------------+--------------------+------+------+--------------------
@@ -15498,6 +15514,7 @@ NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_idx_
 NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_idx_dml_interval_1_prt_parttwo" for table "mpp21090_xchange_pttab_dropcol_idx_dml_interval"
 NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_idx_dml_interval_1_prt_partthree" for table "mpp21090_xchange_pttab_dropcol_idx_dml_interval"
 INSERT INTO mpp21090_xchange_pttab_dropcol_idx_dml_interval VALUES('10 secs','10 secs','a',0, '10 secs');
+ANALYZE mpp21090_xchange_pttab_dropcol_idx_dml_interval;
 SELECT * FROM mpp21090_xchange_pttab_dropcol_idx_dml_interval ORDER BY 1,2,3,4;
    col1   |   col2   | col3 | col4 |   col5   
 ----------+----------+------+------+----------
@@ -15608,6 +15625,7 @@ NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_idx_
 NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_idx_dml_numeric_1_prt_parttwo" for table "mpp21090_xchange_pttab_dropcol_idx_dml_numeric"
 NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_idx_dml_numeric_1_prt_partthree" for table "mpp21090_xchange_pttab_dropcol_idx_dml_numeric"
 INSERT INTO mpp21090_xchange_pttab_dropcol_idx_dml_numeric VALUES(2.000000,2.000000,'a',0, 2.000000);
+ANALYZE mpp21090_xchange_pttab_dropcol_idx_dml_numeric;
 SELECT * FROM mpp21090_xchange_pttab_dropcol_idx_dml_numeric ORDER BY 1,2,3,4;
    col1   |   col2   | col3 | col4 |   col5   
 ----------+----------+------+------+----------

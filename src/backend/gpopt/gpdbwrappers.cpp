@@ -2379,13 +2379,12 @@ gpdb::CdbEstimateRelationSize
 double
 gpdb::CdbEstimatePartitionedNumTuples
 	(
-	Relation rel,
-	bool *stats_missing_p
+	Relation rel
 	)
 {
 	GP_WRAP_START;
 	{
-		return cdb_estimate_partitioned_numtuples(rel, stats_missing_p);
+		return cdb_estimate_partitioned_numtuples(rel);
 	}
 	GP_WRAP_END;
 }

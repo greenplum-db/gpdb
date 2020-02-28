@@ -11966,3 +11966,47 @@ DETAIL:  Unknown error: Partially Distributed Data
         20
 (1 row)
 
+create table part1(a int, b int) partition by range(b) (start(1) end(5) every(1));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "part1_1_prt_1" for table "part1"
+NOTICE:  CREATE TABLE will create partition "part1_1_prt_2" for table "part1"
+NOTICE:  CREATE TABLE will create partition "part1_1_prt_3" for table "part1"
+NOTICE:  CREATE TABLE will create partition "part1_1_prt_4" for table "part1"
+create table part2(a int, b int) partition by range(b) (start(1) end(5) every(1));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "part2_1_prt_1" for table "part2"
+NOTICE:  CREATE TABLE will create partition "part2_1_prt_2" for table "part2"
+NOTICE:  CREATE TABLE will create partition "part2_1_prt_3" for table "part2"
+NOTICE:  CREATE TABLE will create partition "part2_1_prt_4" for table "part2"
+insert into part1 select i, (i % 2) + 1 from generate_series(1, 1000) i;
+insert into part2 select i, (i % 2) + 1 from generate_series(1, 100) i;
+-- make sure some child partitions have not been analyzed. This just means that
+-- stats are missing for some child partition but not necessarily that the relation
+-- is empty. So we should not flag this as an empty relation 
+analyze part1_1_prt_1;
+analyze part1_1_prt_2;
+analyze part2_1_prt_1;
+analyze part2_1_prt_2;
+-- the plan should contain a 2 stage limit. If we incorrectly estimate that the
+-- relation is empty, we would end up choosing a single stage limit. 
+explain select * from part1, part2 where part1.b = part2.b limit 5;
+                                                               QUERY PLAN                                                                
+-----------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..862.14 rows=5 width=16)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.14 rows=5 width=16)
+         ->  Limit  (cost=0.00..862.13 rows=2 width=16)
+               ->  Hash Join  (cost=0.00..862.13 rows=334 width=16)
+                     Hash Cond: (part1.b = part2.b)
+                     ->  Dynamic Seq Scan on part1 (dynamic scan id: 1)  (cost=0.00..431.01 rows=334 width=8)
+                     ->  Hash  (cost=100.00..100.00 rows=34 width=4)
+                           ->  Partition Selector for part1 (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.02 rows=100 width=8)
+                                       ->  Sequence  (cost=0.00..431.00 rows=34 width=8)
+                                             ->  Partition Selector for part2 (dynamic scan id: 2)  (cost=10.00..100.00 rows=34 width=4)
+                                                   Partitions selected: 4 (out of 4)
+                                             ->  Dynamic Seq Scan on part2 (dynamic scan id: 2)  (cost=0.00..431.00 rows=34 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.93.0
+(13 rows)
+

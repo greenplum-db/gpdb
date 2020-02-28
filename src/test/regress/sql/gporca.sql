@@ -2306,6 +2306,22 @@ explain select count(*) from gpexp_hash h join gpexp_repl r on h.a=r.a;
 select count(*) as expect_20 from gpexp_hash h join gpexp_repl r on h.a=r.a;
 explain select count(*) as expect_20 from noexp_hash h join gpexp_repl r on h.a=r.a;
 select count(*) as expect_20 from noexp_hash h join gpexp_repl r on h.a=r.a;
+
+create table part1(a int, b int) partition by range(b) (start(1) end(5) every(1));
+create table part2(a int, b int) partition by range(b) (start(1) end(5) every(1));
+insert into part1 select i, (i % 2) + 1 from generate_series(1, 1000) i;
+insert into part2 select i, (i % 2) + 1 from generate_series(1, 100) i;
+-- make sure some child partitions have not been analyzed. This just means that
+-- stats are missing for some child partition but not necessarily that the relation
+-- is empty. So we should not flag this as an empty relation 
+analyze part1_1_prt_1;
+analyze part1_1_prt_2;
+analyze part2_1_prt_1;
+analyze part2_1_prt_2;
+-- the plan should contain a 2 stage limit. If we incorrectly estimate that the
+-- relation is empty, we would end up choosing a single stage limit. 
+explain select * from part1, part2 where part1.b = part2.b limit 5;
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore

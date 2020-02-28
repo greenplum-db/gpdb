@@ -141,7 +141,7 @@ INSERT INTO constraint_pt1 SELECT i, '2008-01-13', i FROM generate_series(1,5)i;
 INSERT INTO constraint_pt1 SELECT i, '2008-02-13', i FROM generate_series(1,5)i;
 INSERT INTO constraint_pt1 SELECT i, '2008-03-13', i FROM generate_series(1,5)i;
 INSERT INTO constraint_t1 SELECT i, '2008-02-02', i FROM generate_series(11,15)i;
-
+ANALYZE constraint_pt1;
 ALTER TABLE constraint_pt1 EXCHANGE PARTITION Feb08 WITH TABLE constraint_t1;
 
 select verify('constraint_pt1_1_prt_feb08');
@@ -179,6 +179,8 @@ INSERT INTO constraint_t2 SELECT i, '2008-02-02', i FROM generate_series(11,15)i
 ALTER TABLE constraint_pt2 EXCHANGE PARTITION Feb08 WITH TABLE constraint_t2,
       SPLIT PARTITION FOR ('2008-01-01') AT ('2008-01-16') INTO
        (PARTITION jan08_15, PARTITION jan08_31);
+
+ANALYZE constraint_pt2;
 
 select verify('constraint_pt2_1_prt_feb08');
 select verify('constraint_t2');

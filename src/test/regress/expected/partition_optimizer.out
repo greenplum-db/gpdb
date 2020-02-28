@@ -427,6 +427,7 @@ alter table foo_p exchange partition for(rank(6)) with table bar_p;
 ERROR:  exchange table contains a row which violates the partitioning specification of "foo_p"  (seg1 slarimac:40001 pid=97876)
 alter table foo_p exchange partition for(rank(6)) with table bar_p without
 validation;
+analyze foo_p;
 select * from foo_p;
   i  
 -----
@@ -451,6 +452,7 @@ NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_9" for table "foo_p"
 create table bar_p(i int, j int) distributed by (i);
 insert into bar_p values(6);
 alter table foo_p exchange partition for(rank(6)) with table bar_p;
+analyze foo_p;
 select * from foo_p;
  i | j 
 ---+---
@@ -524,6 +526,7 @@ create table bar_p(i int, j int) distributed by (i);
 insert into foo_p values(1, 1), (2, 1), (3, 1);
 insert into bar_p values(6, 6);
 alter table foo_p exchange partition for(rank(6)) with table bar_p;
+analyze foo_p;
 select * from foo_p;
  i | j 
 ---+---
@@ -552,6 +555,7 @@ create table bar_p(i int, j int) with(appendonly = true) distributed by (i);
 insert into foo_p values(1, 1), (2, 1), (3, 2);
 insert into bar_p values(6, 6);
 alter table foo_p exchange partition for(rank(6)) with table bar_p;
+analyze foo_p;
 select * from foo_p;
  i | j 
 ---+---
@@ -580,6 +584,7 @@ create table bar_p(i int, j int) with(appendonly = true) distributed by (i);
 insert into foo_p values(1, 2), (2, 3), (3, 4);
 insert into bar_p values(6, 6);
 alter table foo_p exchange partition for(rank(6)) with table bar_p;
+analyze foo_p;
 select * from foo_p;
  i | j 
 ---+---
@@ -607,6 +612,7 @@ NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_9" for table "foo_p"
 create table bar_p(i int, j int) distributed by (i);
 insert into bar_p values(6, 6);
 alter table foo_p exchange partition for(rank(6)) with table bar_p;
+analyze foo_p;
 select * from foo_p;
  i | j 
 ---+---
@@ -7233,6 +7239,7 @@ select * from part_tab_1_prt_2;
 
 -- Right part
 insert into part_tab_1_prt_3 values(5,5);
+analyze part_tab;
 select * from part_tab;
  i | j 
 ---+---
@@ -7270,6 +7277,7 @@ insert into input2 select i, i from (select generate_series(1,10) as i) as t;
 insert into part_tab_1_prt_1 select i1.x, i2.y from input1 as i1 join input2 as i2 on i1.x = i2.x where i2.y = 5;
 ERROR:  trying to insert row into wrong partition  (seg0 slarimac:40000 pid=97899)
 DETAIL:  Expected partition: part_tab_1_prt_3, provided partition: part_tab_1_prt_1.
+analyze part_tab;
 select * from part_tab;
  i | j 
 ---+---
@@ -7434,6 +7442,7 @@ select * from deep_part;
 
 -- Correct leaf part
 insert into deep_part_1_prt_male_2_prt_1_3_prt_1 values (1, 1, 1, 'M');
+analyze deep_part;
 select * from deep_part;
  i | j | k |   s   
 ---+---+---+-------
@@ -7534,6 +7543,7 @@ NOTICE:  CREATE TABLE will create partition "part_tab_1_prt_4" for table "part_t
 NOTICE:  CREATE TABLE will create partition "part_tab_1_prt_5" for table "part_tab"
 -- Wrong part
 insert into part_tab_1_prt_1 values(5,5);
+analyze part_tab;
 select * from part_tab;
  i | j 
 ---+---
@@ -7599,6 +7609,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 insert into input2 select i, i from (select generate_series(1,10) as i) as t;
 -- Multiple range table entries in the plan
 insert into part_tab_1_prt_1 select i1.x, i2.y from input1 as i1 join input2 as i2 on i1.x = i2.x where i2.y = 5;
+analyze part_tab;
 select * from part_tab;
  i | j 
 ---+---
@@ -7784,6 +7795,7 @@ select * from deep_part;
 
 -- Correct leaf part
 insert into deep_part_1_prt_male_2_prt_1_3_prt_1 values (1, 1, 1, 'M');
+analyze deep_part;
 select * from deep_part;
  i | j | k |   s   
 ---+---+---+-------
