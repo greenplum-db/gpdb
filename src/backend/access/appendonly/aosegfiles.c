@@ -1084,14 +1084,14 @@ gp_aoseg_history(PG_FUNCTION_ARGS)
 
 		context->aoRelOid = aoRelOid;
 
-		aocsRel = heap_open(aoRelOid, NoLock);
+		aocsRel = heap_open(aoRelOid, AccessShareLock);
 		if (!RelationIsAoRows(aocsRel))
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("'%s' is not an append-only row relation",
 							RelationGetRelationName(aocsRel))));
 
-		pg_aoseg_rel = heap_open(aocsRel->rd_appendonly->segrelid, NoLock);
+		pg_aoseg_rel = heap_open(aocsRel->rd_appendonly->segrelid, AccessShareLock);
 
 		context->aoSegfileArray =
 			GetAllFileSegInfo_pg_aoseg_rel(
@@ -1100,8 +1100,8 @@ gp_aoseg_history(PG_FUNCTION_ARGS)
 										   SnapshotAny, //Get ALL tuples from pg_aoseg_ % including aborted and in - progress ones.
 										   & context->totalAoSegFiles);
 
-		heap_close(pg_aoseg_rel, NoLock);
-		heap_close(aocsRel, NoLock);
+		heap_close(pg_aoseg_rel, AccessShareLock);
+		heap_close(aocsRel, AccessShareLock);
 
 		/* Iteration position. */
 		context->segfileArrayIndex = 0;
@@ -1398,14 +1398,14 @@ gp_aoseg(PG_FUNCTION_ARGS)
 
 		context->aoRelOid = aoRelOid;
 
-		aocsRel = heap_open(aoRelOid, NoLock);
+		aocsRel = heap_open(aoRelOid, AccessShareLock);
 		if (!RelationIsAoRows(aocsRel))
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("'%s' is not an append-only row relation",
 							RelationGetRelationName(aocsRel))));
 
-		pg_aoseg_rel = heap_open(aocsRel->rd_appendonly->segrelid, NoLock);
+		pg_aoseg_rel = heap_open(aocsRel->rd_appendonly->segrelid, AccessShareLock);
 
 		Snapshot	snapshot;
 		snapshot = RegisterSnapshot(GetLatestSnapshot());
@@ -1416,8 +1416,8 @@ gp_aoseg(PG_FUNCTION_ARGS)
 										   &context->totalAoSegFiles);
 		UnregisterSnapshot(snapshot);
 
-		heap_close(pg_aoseg_rel, NoLock);
-		heap_close(aocsRel, NoLock);
+		heap_close(pg_aoseg_rel, AccessShareLock);
+		heap_close(aocsRel, AccessShareLock);
 
 		/* Iteration position. */
 		context->segfileArrayIndex = 0;

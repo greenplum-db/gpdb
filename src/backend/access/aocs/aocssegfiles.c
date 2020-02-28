@@ -1190,7 +1190,7 @@ gp_aocsseg_internal(PG_FUNCTION_ARGS, Oid aocsRelOid)
 
 		context->aocsRelOid = aocsRelOid;
 
-		aocsRel = heap_open(aocsRelOid, NoLock);
+		aocsRel = heap_open(aocsRelOid, AccessShareLock);
 		if (!RelationIsAoCols(aocsRel))
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
@@ -1200,7 +1200,7 @@ gp_aocsseg_internal(PG_FUNCTION_ARGS, Oid aocsRelOid)
 		/* Remember the number of columns. */
 		context->relnatts = aocsRel->rd_rel->relnatts;
 
-		pg_aocsseg_rel = heap_open(aocsRel->rd_appendonly->segrelid, NoLock);
+		pg_aocsseg_rel = heap_open(aocsRel->rd_appendonly->segrelid, AccessShareLock);
 
 		context->aocsSegfileArray = GetAllAOCSFileSegInfo_pg_aocsseg_rel(
 																		 aocsRel->rd_rel->relnatts,
@@ -1209,8 +1209,8 @@ gp_aocsseg_internal(PG_FUNCTION_ARGS, Oid aocsRelOid)
 																		 appendOnlyMetaDataSnapshot,
 																		 &context->totalAocsSegFiles);
 
-		heap_close(pg_aocsseg_rel, NoLock);
-		heap_close(aocsRel, NoLock);
+		heap_close(pg_aocsseg_rel, AccessShareLock);
+		heap_close(aocsRel, AccessShareLock);
 
 		/* Iteration positions. */
 		context->segfileArrayIndex = 0;
@@ -1400,7 +1400,7 @@ gp_aocsseg_history(PG_FUNCTION_ARGS)
 
 		context->aocsRelOid = aocsRelOid;
 
-		aocsRel = heap_open(aocsRelOid, NoLock);
+		aocsRel = heap_open(aocsRelOid, AccessShareLock);
 		if (!RelationIsAoCols(aocsRel))
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
@@ -1410,7 +1410,7 @@ gp_aocsseg_history(PG_FUNCTION_ARGS)
 		/* Remember the number of columns. */
 		context->relnatts = aocsRel->rd_rel->relnatts;
 
-		pg_aocsseg_rel = heap_open(aocsRel->rd_appendonly->segrelid, NoLock);
+		pg_aocsseg_rel = heap_open(aocsRel->rd_appendonly->segrelid, AccessShareLock);
 
 		context->aocsSegfileArray = GetAllAOCSFileSegInfo_pg_aocsseg_rel(
 																		 RelationGetNumberOfAttributes(aocsRel),
@@ -1419,8 +1419,8 @@ gp_aocsseg_history(PG_FUNCTION_ARGS)
 																		 SnapshotAny, //Get ALL tuples from pg_aocsseg_ % including aborted and in - progress ones.
 																		 & context->totalAocsSegFiles);
 
-		heap_close(pg_aocsseg_rel, NoLock);
-		heap_close(aocsRel, NoLock);
+		heap_close(pg_aocsseg_rel, AccessShareLock);
+		heap_close(aocsRel, AccessShareLock);
 
 		/* Iteration positions. */
 		context->segfileArrayIndex = 0;
