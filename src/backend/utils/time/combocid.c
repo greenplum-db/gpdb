@@ -39,7 +39,6 @@
  *-------------------------------------------------------------------------
  */
 
-#include <unistd.h>
 #include "postgres.h"
 
 #include "miscadmin.h"
@@ -58,6 +57,7 @@
 #include "storage/proc.h"
 #include "storage/dsm.h"
 #include "utils/resowner.h"
+
 /*
  * We now maintain two hashtables.
  *
@@ -124,7 +124,7 @@ static CommandId GetComboCommandId(TransactionId xmin, CommandId cmin, CommandId
 static CommandId GetRealCmin(TransactionId xmin, CommandId combocid);
 static CommandId GetRealCmax(TransactionId xmin, CommandId combocid);
 
-dsm_segment *combocid_map = NULL;
+static dsm_segment *combocid_map = NULL;
 static void dumpSharedComboCommandId(TransactionId xmin, CommandId cmin, CommandId cmax, CommandId combocid);
 static void loadSharedComboCommandId(TransactionId xmin, CommandId combocid, CommandId *cmin, CommandId *cmax);
 
@@ -305,7 +305,9 @@ GetComboCommandId(TransactionId xmin, CommandId cmin, CommandId cmax)
 			                          DSM_CREATE_NULL_IF_MAXSEGMENTS);
 
 			if (combocid_map == NULL)
-				elog(ERROR, "Can not create dsm in combocid.c");
+				ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY),
+					errmsg("Can not create dsm in combocid.c, ComboCids size: %d",
+					       sizeComboCids)));
 
 			MyProc->combocid_map_handle = dsm_segment_handle(combocid_map);
 
@@ -341,19 +343,22 @@ GetComboCommandId(TransactionId xmin, CommandId cmin, CommandId cmax)
 			 * the function not work well. Sometimes, it failed internal, so
 			 * creating a new segment should be the safe way deal with it.
 			 */
+			dsm_segment *oldsegment = combocid_map;
 			dsm_segment* newsegment = dsm_create(sizeof(ComboCidEntryData) * newsize,
 			                                     DSM_CREATE_NULL_IF_MAXSEGMENTS);
 			char *pNew = dsm_segment_address(newsegment);
-			char *pOld = dsm_segment_address(combocid_map);
+			char *pOld = dsm_segment_address(oldsegment);
 
 			/* copy dumps */
 			memcpy(pNew, pOld, sizeof(ComboCidEntryData) * sizeComboCids);
 
-			/* replace both dsm_segment pointer and dsm_handle value */
-			dsm_detach(combocid_map);
-			combocid_map = newsegment;
+			/* memcpy must finish before handle assignment */
+			pg_write_barrier();
 
+			/* replace both dsm_segment pointer and dsm_handle value */
+			combocid_map = newsegment;
 			MyProc->combocid_map_handle = dsm_segment_handle(combocid_map);
+			dsm_detach(oldsegment);
 
 			MemoryContextSwitchTo(oldCtx);
 			CurrentResourceOwner = oldowner;
@@ -606,6 +611,9 @@ dumpSharedComboCommandId(TransactionId xmin, CommandId cmin, CommandId cmax, Com
 	entry[id].key.xmin = xmin;
 	entry[id].combocid = combocid;
 
+	/* combocid_map_count += 1 must process after entry assignment done */
+	pg_write_barrier();
+
 	/* Increment combocid count to make new combocid visible to Readers */
 	MyProc->combocid_map_count += 1;
 }
@@ -637,8 +645,21 @@ loadSharedComboCommandId(TransactionId xmin, CommandId combocid, CommandId *cmin
 	CurrentResourceOwner = TopTransactionResourceOwner;
 	oldCtx = MemoryContextSwitchTo(TopMemoryContext);
 
-	dsm_segment *combocid_map =
-		            (dsm_segment *)dsm_attach(lockHolderProcPtr->combocid_map_handle);
+	int combocid_map_count = 0;
+	int retry = 3;
+	do {
+		combocid_map_count = lockHolderProcPtr->combocid_map_count;
+		combocid_map =
+			(dsm_segment *)dsm_attach(lockHolderProcPtr->combocid_map_handle);
+
+		if (likely(combocid_map != NULL))
+			break;
+
+		pg_usleep(100000L); /* 0.1 sec */
+	}while (--retry) ;
+
+	if(combocid_map == NULL)
+		elog(ERROR,"Can not find relevant dsm_segment");
 
 	MemoryContextSwitchTo(oldCtx);
 	CurrentResourceOwner = oldowner;
@@ -651,7 +672,7 @@ loadSharedComboCommandId(TransactionId xmin, CommandId combocid, CommandId *cmin
 	 * We're going to read in the entire table, caching all occurrences of
 	 * our xmin.
 	 */
-	for (i = 0; i < lockHolderProcPtr->combocid_map_count; i++)
+	for (i = 0; i < combocid_map_count; i++)
 	{
 
 		entry = dsm_segment_address(combocid_map);
@@ -691,6 +712,7 @@ loadSharedComboCommandId(TransactionId xmin, CommandId combocid, CommandId *cmin
 	}
 
 	dsm_detach(combocid_map);
+	combocid_map = NULL;
 
 	if (!found)
 	{
@@ -701,13 +723,11 @@ loadSharedComboCommandId(TransactionId xmin, CommandId combocid, CommandId *cmin
 void
 AtEOXact_ComboCid_Dsm_Detach(void)
 {
-	if ( combocid_map != NULL
-		&& (Gp_role == GP_ROLE_DISPATCH
-			|| (Gp_role == GP_ROLE_EXECUTE && Gp_is_writer))
-		)
+	if (combocid_map != NULL)
 	{
 		dsm_detach(combocid_map);
 		combocid_map = NULL;
+		MyProc->combocid_map_handle = 0;
 	}
 
 }
