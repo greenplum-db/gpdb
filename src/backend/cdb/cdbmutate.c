@@ -3577,3 +3577,42 @@ sri_optimize_for_result(PlannerInfo *root, Plan *plan, RangeTblEntry *rte,
 		}
 	}
 }
+
+/*
+ * Does the given expression contain Params that are passed down from
+ * outer query?
+ */
+bool
+contains_outer_params(Node *node, void *context)
+{
+	PlannerInfo *root = (PlannerInfo *) context;
+
+	if (node == NULL)
+		return false;
+	if (IsA(node, Param))
+	{
+		Param	   *param = (Param *) node;
+
+		if (param->paramkind == PARAM_EXEC)
+		{
+			/* Does this Param refer to a value that an outer query provides? */
+			PlannerInfo *parent = root->parent_root;
+
+			while (parent)
+			{
+				ListCell   *lc;
+
+				foreach (lc, parent->plan_params)
+				{
+					PlannerParamItem *ppi = (PlannerParamItem *) lfirst(lc);
+
+					if (ppi->paramId == param->paramid)
+						return true;		/* abort the tree traversal and return true */
+				}
+
+				parent = parent->parent_root;
+			}
+		}
+	}
+	return expression_tree_walker(node, contains_outer_params, context);
+}

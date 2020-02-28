@@ -161,6 +161,12 @@ extern Path *reparameterize_path(PlannerInfo *root, Path *path,
 					Relids required_outer,
 					double loop_count);
 
+extern ProjectionPath *create_projection_path_with_quals(PlannerInfo *root,
+								  RelOptInfo *rel,
+								  Path *subpath,
+								  List *tlist,
+								  List *restrict_clauses);
+
 /*
  * prototypes for relnode.c
  */

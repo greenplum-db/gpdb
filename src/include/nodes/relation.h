@@ -605,6 +605,15 @@ typedef struct RelOptInfo
 								 * involving this rel */
 	bool		has_eclass_joins;		/* T means joininfo is incomplete */
 
+	/*
+	 * In a subquery, if this base relation contains quals that must
+	 * be evaluated at "outerquery" locus, and the base relation has a
+	 * different locus, they are kept here in 'upperrestrictinfo', instead of
+	 * 'baserestrictinfo'.
+	 */
+	List	   *upperrestrictinfo;		/* RestrictInfo structures (if base
+										 * rel) */
+
 	/* used by foreign scan */
 	ForeignTable		*ftEntry;
 } RelOptInfo;
@@ -1354,6 +1363,29 @@ typedef struct HashPath
 } HashPath;
 
 /*
+ * ProjectionPath represents a projection (that is, targetlist computation)
+ *
+ * Nominally, this path node represents using a Result plan node to do a
+ * projection step.  However, if the input plan node supports projection,
+ * we can just modify its output targetlist to do the required calculations
+ * directly, and not need a Result.  In some places in the planner we can just
+ * jam the desired PathTarget into the input path node (and adjust its cost
+ * accordingly), so we don't need a ProjectionPath.  But in other places
+ * it's necessary to not modify the input path node, so we need a separate
+ * ProjectionPath node, which is marked dummy to indicate that we intend to
+ * assign the work to the input plan node.  The estimated cost for the
+ * ProjectionPath node will account for whether a Result will be used or not.
+ */
+typedef struct ProjectionPath
+{
+	Path		path;
+	Path	   *subpath;		/* path representing input source */
+	bool		dummypp;		/* true if no separate Result is needed */
+
+	List	   *cdb_restrict_clauses;
+} ProjectionPath;
+
+/*
  * Restriction clause info.
  *
  * We create one of these for each AND sub-clause of a restriction condition
@@ -1497,6 +1529,12 @@ typedef struct RestrictInfo
 	bool		can_join;		/* see comment above */
 
 	bool		pseudoconstant; /* see comment above */
+
+	/*
+	 * GPDB: does the clause refer to outer query levels? (Which implies that
+	 * it must be evaluted in the same slice as the parent query)
+	 */
+	bool		contain_outer_query_references;
 
 	/* The set of relids (varnos) actually referenced in the clause: */
 	Relids		clause_relids;
