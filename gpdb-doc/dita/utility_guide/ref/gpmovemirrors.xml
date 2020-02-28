@@ -53,7 +53,7 @@
           <pd>
             <codeblock>&lt;old_address>|&lt;port>|&lt;data_dir> &lt;new_address>|&lt;port>|&lt;data_dir></codeblock>
           </pd>
-          <pd>Where <codeph>&lt;old_address></codeph> and <codeph>&lt;old_address></codeph> are the
+          <pd>Where <codeph>&lt;old_address></codeph> and <codeph>&lt;new_address></codeph> are the
             host names or IP addresses of the segment hosts, <codeph>&lt;port></codeph> is the
             communication port, and <codeph>&lt;data_dir></codeph> is the segment instance data
             directory.</pd>
