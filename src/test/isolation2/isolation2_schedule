@@ -103,6 +103,7 @@ test: fsync_ao
 
 # Test deadlock situation when waiting on a resource queue lock
 test: resource_queue_deadlock
+test: resource_queue_query_cancel_deadlock_timeout
 
 # Tests on Append-Optimized tables (row-oriented).
 test: concurrent_index_creation_should_not_deadlock

@@ -2047,9 +2047,30 @@ ResLockWaitCancel(void)
 
 	if (lockAwaited != NULL)
 	{
+		/*
+		 * Disable the timers, if they are still running.  As in LockErrorCleanup,
+		 * we must preserve the LOCK_TIMEOUT indicator flag: if a lock timeout has
+		 * already caused QueryCancelPending to become set, we want the cancel to
+		 * be reported as a lock timeout, not a user cancel.
+		 */
+		if (LockTimeout > 0)
+		{
+			DisableTimeoutParams timeouts[2];
+
+			timeouts[0].id = DEADLOCK_TIMEOUT;
+			timeouts[0].keep_indicator = false;
+			timeouts[1].id = LOCK_TIMEOUT;
+			timeouts[1].keep_indicator = true;
+			disable_timeouts(timeouts, 2);
+		}
+		else
+			disable_timeout(DEADLOCK_TIMEOUT, false);
+
 		/* Unlink myself from the wait queue, if on it  */
 		partitionLock = LockHashPartitionLock(lockAwaited->hashcode);
 		LWLockAcquire(partitionLock, LW_EXCLUSIVE);
+
+		SIMPLE_FAULT_INJECTOR("reslock_wait_cancel_after_acquire_partition_lock");
 
 		if (MyProc->links.next != NULL)
 		{
