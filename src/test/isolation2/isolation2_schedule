@@ -27,6 +27,7 @@ test: eval_record
 
 # Test deadlock situation when waiting on a resource queue lock
 test: resource_queue_deadlock
+test: resource_queue_query_cancel_deadlock_timeout
 
 # Test simple cancellation for resource queues and cancellation/deadlocks for
 # sessions with multiple portals.

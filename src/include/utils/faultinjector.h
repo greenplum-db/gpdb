@@ -261,6 +261,8 @@ typedef enum FaultInjectorIdentifier_e {
 
 	ResIncrementAddOOSM,
 
+	ReslockWaitCancelAfterAcquirePartitionLock,
+
 	/* INSERT has to be done before that line */
 	FaultInjectorIdMax,
 	

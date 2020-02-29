@@ -62,6 +62,7 @@
 #include "cdb/cdblocaldistribxact.h"
 #include "cdb/cdbvars.h"  /*Gp_is_writer*/
 #include "port/atomics.h"
+#include "utils/faultinjector.h"
 #include "utils/session_state.h"
 #include "tcop/idle_resource_cleaner.h"
 
@@ -1992,9 +1993,14 @@ ResLockWaitCancel(void)
 
 	if (lockAwaited != NULL)
 	{
+		/* Turn off the deadlock timer, if it's still running (see ResProcSleep) */
+		disable_sig_alarm(false);
+
 		/* Unlink myself from the wait queue, if on it  */
 		partitionLock = LockHashPartitionLock(lockAwaited->hashcode);
 		LWLockAcquire(partitionLock, LW_EXCLUSIVE);
+
+		SIMPLE_FAULT_INJECTOR(ReslockWaitCancelAfterAcquirePartitionLock);
 
 		if (MyProc->links.next != INVALID_OFFSET)
 		{
