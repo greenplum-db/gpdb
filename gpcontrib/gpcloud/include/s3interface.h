@@ -18,6 +18,7 @@
 enum S3CompressionType {
     S3_COMPRESSION_GZIP,
     S3_COMPRESSION_PLAIN,
+    S3_COMPRESSION_DEFLATE,
 };
 
 struct BucketContent {

@@ -157,7 +157,6 @@ MultiExecHash(HashState *node)
 			}
 		}
 	}
-	MemoryAccounting_DeclareDone();
 
 	/* Now we have set up all the initial batches & primary overflow batches. */
 	hashtable->nbatch_outstart = hashtable->nbatch;
@@ -289,8 +288,6 @@ ExecHashTableCreate(HashState *hashState, HashJoinState *hjstate, List *hashOper
 	ListCell   *ho;
 	MemoryContext oldcxt;
 
-	START_MEMORY_ACCOUNT(hashState->ps.memoryAccountId);
-	{
 	Hash *node = (Hash *) hashState->ps.plan;
 
 	/*
@@ -435,8 +432,6 @@ ExecHashTableCreate(HashState *hashState, HashJoinState *hjstate, List *hashOper
 		ExecHashBuildSkewHash(hashtable, node, num_skew_mcvs);
 
 	MemoryContextSwitchTo(oldcxt);
-	}
-	END_MEMORY_ACCOUNT();
 
 	return hashtable;
 }
@@ -700,9 +695,6 @@ ExecHashTableDestroy(HashState *hashState, HashJoinTable hashtable)
 	Assert(hashtable);
 	Assert(!hashtable->eagerlyReleased);
 
-	START_MEMORY_ACCOUNT(hashState->ps.memoryAccountId);
-	{
-
 	/*
 	 * Make sure all the temp files are closed.
 	 */
@@ -727,8 +719,6 @@ ExecHashTableDestroy(HashState *hashState, HashJoinTable hashtable)
 
 	/* Release working memory (batchCxt is a child, so it goes away too) */
 	MemoryContextDelete(hashtable->hashCxt);
-	}
-	END_MEMORY_ACCOUNT();
 }
 
 /*
@@ -1014,9 +1004,6 @@ ExecHashTableInsert(HashState *hashState, HashJoinTable hashtable,
 	MemTuple tuple = ExecFetchSlotMemTuple(slot);
 	int			bucketno;
 	int			batchno;
-
-	START_MEMORY_ACCOUNT(hashState->ps.memoryAccountId);
-	{
 	PlanState *ps = &hashState->ps;
 
 	ExecHashGetBucketAndBatch(hashtable, hashvalue,
@@ -1098,8 +1085,6 @@ ExecHashTableInsert(HashState *hashState, HashJoinTable hashtable,
 							  &hashtable->innerBatchFile[batchno],
 							  hashtable->bfCxt);
 	}
-	}
-	END_MEMORY_ACCOUNT();
 
 	return (batchno == hashtable->curbatch);
 }
@@ -1133,9 +1118,6 @@ ExecHashGetHashValue(HashState *hashState, HashJoinTable hashtable,
 	int			i = 0;
 	MemoryContext oldContext;
 	bool		result = true;
-
-	START_MEMORY_ACCOUNT(hashState->ps.memoryAccountId);
-	{
 
 	Assert(hashkeys_null);
 
@@ -1209,8 +1191,6 @@ ExecHashGetHashValue(HashState *hashState, HashJoinTable hashtable,
 	MemoryContextSwitchTo(oldContext);
 
 	*hashvalue = hashkey;
-	}
-	END_MEMORY_ACCOUNT();
 	return result;
 }
 
@@ -1278,8 +1258,6 @@ ExecScanHashBucket(HashState *hashState, HashJoinState *hjstate,
 	HashJoinTuple hashTuple = hjstate->hj_CurTuple;
 	uint32		hashvalue = hjstate->hj_CurHashValue;
 
-	START_MEMORY_ACCOUNT(hashState->ps.memoryAccountId);
-	{
 	/*
 	 * hj_CurTuple is the address of the tuple last returned from the current
 	 * bucket, or NULL if it's time to start scanning a new bucket.
@@ -1318,8 +1296,6 @@ ExecScanHashBucket(HashState *hashState, HashJoinState *hjstate,
 
 		hashTuple = hashTuple->next;
 	}
-	}
-	END_MEMORY_ACCOUNT();
 
 	/*
 	 * no match
@@ -1429,8 +1405,6 @@ ExecHashTableReset(HashState *hashState, HashJoinTable hashtable)
 	MemoryContext oldcxt;
 	int			nbuckets = hashtable->nbuckets;
 
-	START_MEMORY_ACCOUNT(hashState->ps.memoryAccountId);
-	{
 	Assert(!hashtable->eagerlyReleased);
 
 	/*
@@ -1448,8 +1422,6 @@ ExecHashTableReset(HashState *hashState, HashJoinTable hashtable)
 	hashtable->totalTuples = 0;
 
 	MemoryContextSwitchTo(oldcxt);
-	}
-	END_MEMORY_ACCOUNT();
 
 	/* Forget the chunks (the memory was freed by the context reset above). */
 	hashtable->chunks = NULL;
@@ -1507,8 +1479,6 @@ ExecHashTableExplainInit(HashState *hashState, HashJoinState *hjstate,
 	MemoryContext oldcxt;
 	int			nbatch = Max(hashtable->nbatch, 1);
 
-    START_MEMORY_ACCOUNT(hashState->ps.memoryAccountId);
-    {
     /* Switch to a memory context that survives until ExecutorEnd. */
     oldcxt = MemoryContextSwitchTo(hjstate->js.ps.state->es_query_cxt);
 
@@ -1526,8 +1496,6 @@ ExecHashTableExplainInit(HashState *hashState, HashJoinState *hjstate,
 
     /* Restore caller's memory context. */
     MemoryContextSwitchTo(oldcxt);
-    }
-    END_MEMORY_ACCOUNT();
 }                               /* ExecHashTableExplainInit */
 
 
@@ -1562,19 +1530,6 @@ ExecHashTableExplainEnd(PlanState *planstate, struct StringInfoData *buf)
 
 		/* Report on batch in progress, in case the join is being ended early. */
 		ExecHashTableExplainBatchEnd(hashState, hashtable);
-
-		/* Report executor memory used by our memory context. */
-		jinstrument->execmemused +=
-				(double)MemoryContextGetPeakSpace(hashtable->hashCxt);
-	}
-	else
-	{
-		/*
-		 * Memory has been eagerly released. We can't get statistics
-		 * from the memory context. We approximate from stats structure.
-		 */
-
-		jinstrument->execmemused += (double) stats->workmem_max;
 	}
 	
     /* Report actual work_mem high water mark. */
@@ -1786,8 +1741,6 @@ ExecHashTableExplainBatchEnd(HashState *hashState, HashJoinTable hashtable)
     HashJoinBatchStats *batchstats = &stats->batchstats[curbatch];
     int                 i;
     
-    START_MEMORY_ACCOUNT(hashState->ps.memoryAccountId);
-    {
     Assert(!hashtable->eagerlyReleased);
 
     /* Already reported on this batch? */
@@ -1870,9 +1823,6 @@ ExecHashTableExplainBatchEnd(HashState *hashState, HashJoinTable hashtable)
 			cdbexplain_agg_upd(&stats->chainlength, chainlength, i);
 		}
 	}
-
-    }
-    END_MEMORY_ACCOUNT();
 }                               /* ExecHashTableExplainBatchEnd */
 
 

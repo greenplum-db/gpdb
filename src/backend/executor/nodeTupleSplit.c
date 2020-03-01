@@ -14,6 +14,7 @@
 #include "executor/executor.h"
 #include "executor/nodeTupleSplit.h"
 #include "optimizer/tlist.h"
+#include "utils/memutils.h"
 
 /* -----------------
  * ExecInitTupleSplit

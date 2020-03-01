@@ -225,13 +225,6 @@ extern void set_cte_size_estimates(PlannerInfo *root, RelOptInfo *rel,
 extern void set_foreign_size_estimates(PlannerInfo *root, RelOptInfo *rel);
 extern PathTarget *set_pathtarget_cost_width(PlannerInfo *root, PathTarget *target);
 
-/* Additional costsize.c prototypes for CDB incremental cost functions. */
-extern Cost incremental_hashjoin_cost(double rows, 
-									  int inner_width, int outer_width, 
-									  List *hashclauses,
-									  PlannerInfo *root);
-extern Cost incremental_mergejoin_cost(double rows, List *mergeclauses, PlannerInfo *root);
-
 /*
  * prototypes for clausesel.c
  *	  routines to compute clause selectivities

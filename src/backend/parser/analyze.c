@@ -4135,7 +4135,8 @@ setQryDistributionPolicy(IntoClause *into, Query *qry)
 			tle = list_nth(qry->targetList, keyindex - 1);
 
 			keytype = exprType((Node *) tle->expr);
-			keyopclass = GetIndexOpClass(ielem->opclass, keytype, "hash", HASH_AM_OID);
+			keyopclass = cdb_get_opclass_for_column_def(ielem->opclass,
+														keytype);
 
 			policykeys = lappend_int(policykeys, keyindex);
 			policyopclasses = lappend_oid(policyopclasses, keyopclass);

@@ -16,8 +16,10 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+#include "postgres.h"
 
 #include "libchurl.h"
+#include "lib/stringinfo.h"
 #include "miscadmin.h"
 #include "utils/guc.h"
 

@@ -859,6 +859,19 @@ typedef struct GenericExprState
 } GenericExprState;
 
 /* ----------------
+ *         Generic tuplestore structure
+ *	 used to communicate between ShareInputScan nodes,
+ *	 Materialize and Sort
+ *
+ * ----------------
+ */
+typedef union GenericTupStore
+{
+	struct NTupleStore        *matstore;     /* Used by Materialize */
+	void	   *sortstore;	/* Used by Sort */
+} GenericTupStore;
+
+/* ----------------
  *		WholeRowVarExprState node
  * ----------------
  */
@@ -1153,6 +1166,8 @@ typedef struct SubPlanState
 	FmgrInfo   *tab_eq_funcs;	/* equality functions for table datatype(s) */
 	FmgrInfo   *lhs_hash_funcs; /* hash functions for lefthand datatype(s) */
 	FmgrInfo   *cur_eq_funcs;	/* equality functions for LHS vs. table */
+	void	   *ts_pos;
+	GenericTupStore *ts_state;
 } SubPlanState;
 
 /* ----------------
@@ -1432,11 +1447,11 @@ typedef struct PlanState
 	void      (*cdbexplainfun)(struct PlanState *planstate, struct StringInfoData *buf);
 	/* callback before ExecutorEnd */
 
+	MemoryContext node_context;
+
 	bool		fHadSentNodeStart;
 
 	bool		squelched;		/* has ExecSquelchNode() been called already? */
-	/* MemoryAccount to use for recording the memory usage of different plan nodes. */
-	MemoryAccountIdType memoryAccountId;
 } PlanState;
 
 extern uint64 PlanStateOperatorMemKB(const PlanState *ps);
@@ -1496,20 +1511,6 @@ typedef struct ResultState
 
 	struct CdbHash *hashFilter;
 } ResultState;
-
-/* ----------------
- *	 RepeatState information
- * ----------------
- */
-typedef struct RepeatState
-{
-	PlanState	ps;				/* its first field is NodeTag */
-
-	bool		repeat_done;	/* are we done? */
-	TupleTableSlot *slot;		/* The current tuple */
-	int			repeat_count;	/* The number of repeats for the current tuple */
-	ExprState  *expr_state;		/* The state to evaluate the expression */
-} RepeatState;
 
 /* ----------------
  *	 ModifyTableState information
@@ -2114,8 +2115,14 @@ typedef struct FunctionScanState
 
 	bool		delayEagerFree;		/* is is safe to free memory used by this node,
 									 * when this node has outputted its last row? */
+
+	/* tuplestore info when function scan run as initplan */
+	bool		resultInTupleStore; /* function result stored in tuplestore */
+	void       *ts_pos;				/* accessor to the tuplestore */
+	GenericTupStore *ts_state;		/* tuple store state */
 } FunctionScanState;
 
+extern void function_scan_create_bufname_prefix(char *p, int size);
 
 /* ----------------
  * TableFunctionState information
@@ -2468,18 +2475,6 @@ typedef struct HashJoinState
  * ----------------------------------------------------------------
  */
 
-/* ----------------
- *         Generic tuplestore structure
- *	 used to communicate between ShareInputScan nodes,
- *	 Materialize and Sort
- *
- * ----------------
- */
-typedef union GenericTupStore
-{
-	struct NTupleStore        *matstore;     /* Used by Materialize */
-	void	   *sortstore;	/* Used by Sort */
-} GenericTupStore;
 
 /* ----------------
  *	 MaterialState information
@@ -3013,9 +3008,11 @@ typedef struct MotionState
 								 * each source segindex */
 
 	/* For sorted Motion recv */
-	struct binaryheap *tupleheap;
-	struct CdbTupleHeapInfo *tupleheap_entries;
-	struct CdbMergeComparatorContext *tupleheap_cxt;
+	int			numSortCols;
+	SortSupport sortKeys;
+	TupleTableSlot **slots;
+	struct binaryheap *tupleheap; /* binary heap of slot indices */
+	int			lastSortColIdx;
 
 	/* The following can be used for debugging, usage stats, etc.  */
 	int			numTuplesFromChild;	/* Number of tuples received from child */
@@ -3038,7 +3035,7 @@ typedef struct MotionState
 	int			numInputSegs;	/* the number of segments on the sending slice */
 } MotionState;
 
-/*zx
+/*
  * ExecNode for PartitionSelector.
  * This operator contains a Plannode in PlanState.
  */

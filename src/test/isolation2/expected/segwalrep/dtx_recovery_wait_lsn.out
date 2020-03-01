@@ -1,0 +1,157 @@
+include: helpers/server_helpers.sql;
+CREATE
+
+-- Test this scenario:
+-- mirror has latency replaying the WAL from the primary, the master is reset
+-- from PANIC, master will start the DTX recovery process to recover the
+-- in-progress two-phase transactions.
+-- The FTS process should be able to continue probe and 'sync off' the mirror
+-- while the 'dtx recovery' process is hanging recovering distributed transactions.
+!\retcode gpconfig -c gp_fts_probe_retries -v 2 --masteronly;
+-- start_ignore
+20200123:08:10:59:395805 gpconfig:09c5497cf854:gpadmin-[INFO]:-completed successfully with parameters '-c gp_fts_probe_retries -v 2 --masteronly'
+
+-- end_ignore
+(exited with code 0)
+
+1: create or replace function wait_until_standby_in_state(targetstate text) returns void as $$ declare replstate text; /* in func */ begin loop select state into replstate from pg_stat_replication; /* in func */ exit when replstate = targetstate; /* in func */ perform pg_sleep(0.1); /* in func */ end loop; /* in func */ end; /* in func */ $$ language plpgsql;
+CREATE
+
+1: create table t_wait_lsn(a int);
+CREATE
+
+-- suspend segment 0 before performing 'COMMIT PREPARED'
+2: select gp_inject_fault_infinite('finish_prepared_start_of_function', 'suspend', dbid) from gp_segment_configuration where content=0 and role='p';
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+2&: select gp_wait_until_triggered_fault('finish_prepared_start_of_function', 1, dbid) from gp_segment_configuration where content=0 and role='p';  <waiting ...>
+1&: insert into t_wait_lsn select generate_series(1,12);  <waiting ...>
+2<:  <... completed>
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+
+-- let walreceiver on mirror 0 skip WAL flush
+2: select gp_inject_fault_infinite('walrecv_skip_flush', 'skip', dbid) from gp_segment_configuration where content=0 and role='m';
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+-- resume 'COMMIT PREPARED', session 1 will hang on 'SyncRepWaitForLSN'
+2: select gp_inject_fault_infinite('finish_prepared_start_of_function', 'reset', dbid) from gp_segment_configuration where content=0 and role='p';
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+
+0U: select count(*) from pg_prepared_xacts;
+ count 
+-------
+ 1     
+(1 row)
+
+-- stop mirror
+3: SELECT pg_ctl(datadir, 'stop', 'immediate') FROM gp_segment_configuration WHERE content=0 AND role = 'm';
+ pg_ctl 
+--------
+ OK     
+(1 row)
+-- trigger master reset
+3: select gp_inject_fault('before_read_command', 'panic', 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+3: select 1;
+PANIC:  fault triggered, fault name:'before_read_command' fault type:'panic'
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+
+-- wait for master finish crash recovery
+-1U: select wait_until_standby_in_state('streaming');
+ wait_until_standby_in_state 
+-----------------------------
+                             
+(1 row)
+
+-- wait for FTS to 'sync off' the mirror, meanwhile, dtx recovery process will restart repeatedly
+4: select count(*) from t_wait_lsn;
+ count 
+-------
+ 12    
+(1 row)
+
+!\retcode gprecoverseg -a;
+-- start_ignore
+20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Starting gprecoverseg with args: -a
+20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.5441.g9dc261e1f2 build dev'
+20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-master Greenplum Version: 'PostgreSQL 9.6beta4 (Greenplum Database 7.0.0-alpha.0+dev.5441.g9dc261e1f2 build dev) on x86_64-unknown-linux-gnu, compiled by gcc (GCC) 6.2.0, 64-bit compiled on Jan 23 2020 07:13:04'
+20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Obtaining Segment details from master...
+20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Heap checksum setting is consistent between master and the segments that are candidates for recoverseg
+20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Greenplum instance recovery parameters
+20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:----------------------------------------------------------
+20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Recovery type              = Standard
+20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:----------------------------------------------------------
+20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Recovery 1 of 1
+20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:----------------------------------------------------------
+20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Synchronization mode                 = Incremental
+20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Failed instance host                 = 09c5497cf854
+20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Failed instance address              = 09c5497cf854
+20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Failed instance directory            = /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror1/demoDataDir0
+20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Failed instance port                 = 7005
+20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Recovery Source instance host        = 09c5497cf854
+20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Recovery Source instance address     = 09c5497cf854
+20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Recovery Source instance directory   = /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0
+20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Recovery Source instance port        = 7002
+20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-   Recovery Target                      = in-place
+20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:----------------------------------------------------------
+20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-1 segment(s) to recover
+20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Ensuring 1 failed segment(s) are stopped
+20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Ensuring that shared memory is cleaned up for stopped segments
+20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Updating configuration with new mirrors
+20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Updating mirrors
+20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Running pg_rewind on required mirrors
+20200123:08:12:03:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Starting mirrors
+20200123:08:12:03:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-era is 2f92440ff12fbc4d_200123081054
+20200123:08:12:03:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Commencing parallel segment instance startup, please wait...
+20200123:08:12:03:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Process results...
+20200123:08:12:03:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Triggering FTS probe
+20200123:08:12:03:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-******************************************************************
+20200123:08:12:03:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Updating segments for streaming is completed.
+20200123:08:12:03:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-For segments updated successfully, streaming will continue in the background.
+20200123:08:12:03:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Use  gpstate -s  to check the streaming progress.
+20200123:08:12:03:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-******************************************************************
+
+-- end_ignore
+(exited with code 0)
+-- loop while segments come in sync
+4: do $$ begin /* in func */ for i in 1..120 loop /* in func */ if (select count(*) = 2 from gp_segment_configuration where content in (0, 1) and mode = 's' and role = 'p') then /* in func */ return; /* in func */ end if; /* in func */ perform gp_request_fts_probe_scan(); /* in func */ end loop; /* in func */ end; /* in func */ $$;
+DO
+
+!\retcode gpconfig -c gp_fts_probe_retries -v 2 --masteronly;
+-- start_ignore
+20200123:08:12:04:396100 gpconfig:09c5497cf854:gpadmin-[INFO]:-completed successfully with parameters '-c gp_fts_probe_retries -v 2 --masteronly'
+
+-- end_ignore
+(exited with code 0)
+
+4: select count(*) from t_wait_lsn;
+ count 
+-------
+ 12    
+(1 row)
+4: drop table t_wait_lsn;
+DROP
+4q: ... <quitting>
+Traceback (most recent call last):
+  File "./sql_isolation_testcase.py", line 696, in <module>
+    executor.process_isolation_file(sys.stdin, sys.stdout)
+  File "./sql_isolation_testcase.py", line 488, in process_isolation_file
+    process.stop()
+  File "./sql_isolation_testcase.py", line 130, in stop
+    raise Exception("Should not finish test case while waiting for results")
+Exception: Should not finish test case while waiting for results

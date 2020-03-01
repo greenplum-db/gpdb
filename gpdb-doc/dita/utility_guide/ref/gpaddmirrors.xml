@@ -2,7 +2,7 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1">
-    <!-- install_guide/refs/gpaddmirrors.xml has a conref to this topic. -->
+    <!-- install guide has a link to this topic. -->
     <title id="jp20941">gpaddmirrors</title>
     <body>
         <p>Adds mirror segments to a Greenplum Database system that was initially configured without
@@ -53,23 +53,23 @@ Enter mirror segment data directory location 2 of 2 &gt; /gpdb/m2</codeblock>
                 detailed configuration file using the <codeph>-i</codeph> option. This is useful if
                 you want your mirror segments on a completely different set of hosts than your
                 primary segments. The format of the mirror configuration file is:</p>
-            <codeblock><varname>&lt;row_id></varname>=<varname>&lt;contentID></varname>|<varname>&lt;address></varname>|<varname>&lt;port></varname>|<varname>&lt;data_dir></varname></codeblock>
-            <p>Where <codeph>row_id</codeph> is the row in the file, <varname>contentID</varname> is
-                the segment instance content ID, <varname>address</varname> is the host name or IP
-                address of the segment host, <varname>port</varname> is the communication port, and
-                    <codeph>data_dir</codeph> is the segment instance data directory.</p>
+            <codeblock>&lt;contentID>|&lt;address>|&lt;port>|&lt;data_dir></codeblock>
+            <p>Where <codeph>&lt;contentID></codeph> is the segment instance content ID,
+                    <codeph>&lt;address></codeph> is the host name or IP address of the segment
+                host, <codeph>&lt;port></codeph> is the communication port, and
+                    <codeph>&lt;data_dir></codeph> is the segment instance data directory.</p>
             <p>For
-                example:<codeblock>0=0|sdw1-1|60000|/gpdata/mir1/gp0
-1=1|sdw1-1|60001|/gpdata/mir2/gp1</codeblock></p>
+                example:<codeblock>0|sdw1-1|60000|/gpdata/m1/gp0
+1|sdw1-1|60001|/gpdata/m2/gp1</codeblock></p>
             <p>The <codeph>gp_segment_configuration</codeph> system catalog table can help you
                 determine your current primary segment configuration so that you can plan your
                 mirror segment configuration. For example, run the following query:</p>
             <codeblock>=# SELECT dbid, content, address as host_address, port, datadir 
    FROM gp_segment_configuration
    ORDER BY dbid;</codeblock>
-            <p>If creating your mirrors on alternate mirror hosts, the new mirror segment hosts must
-                be pre-installed with the Greenplum Database software and configured exactly the
-                same as the existing primary segment hosts. </p>
+            <p>If you are creating mirrors on alternate mirror hosts, the new mirror segment hosts
+                must be pre-installed with the Greenplum Database software and configured exactly
+                the same as the existing primary segment hosts. </p>
             <p>You must make sure that the user who runs <codeph>gpaddmirrors</codeph> (the
                     <codeph>gpadmin</codeph> user) has permissions to write to the data directory
                 locations specified. You may want to create these directories on the segment hosts
@@ -110,14 +110,13 @@ Enter mirror segment data directory location 2 of 2 &gt; /gpdb/m2</codeblock>
                         the system. The format of this file is as follows (as per attributes in the
                             <codeph>gp_segment_configuration</codeph> catalog table):</pd>
                     <pd>
-                        <codeblock><varname>&lt;row_id></varname>=<varname>&lt;contentID></varname>|<varname>&lt;address></varname>|<varname>&lt;port></varname>|<varname>&lt;data_dir></varname></codeblock>
+                        <codeblock>&lt;contentID>|&lt;address>|&lt;port>|&lt;data_dir></codeblock>
                     </pd>
                     <pd>
-                        <p>Where <codeph>row_id</codeph> is the row in the file,
-                                <varname>contentID</varname> is the segment instance content ID,
-                                <varname>address</varname> is the host name or IP address of the
-                            segment host, <varname>port</varname> is the communication port, and
-                                <codeph>data_dir</codeph> is the segment instance data
+                        <p>Where <codeph>&lt;contentID></codeph> is the segment instance content ID,
+                                <codeph>&lt;address></codeph> is the host name or IP address of the
+                            segment host, <codeph>&lt;port></codeph> is the communication port, and
+                                <codeph>&lt;data_dir></codeph> is the segment instance data
                             directory.</p>
                     </pd>
                 </plentry>
@@ -153,8 +152,8 @@ Enter mirror segment data directory location 2 of 2 &gt; /gpdb/m2</codeblock>
                     <pt>-p <varname>port_offset</varname></pt>
                     <pd>Optional. This number is used to calculate the database ports used for
                         mirror segments. The default offset is 1000. Mirror port assignments are
-                        calculated as follows: </pd>
-                    <pd>primary port + offset = mirror database port</pd>
+                        calculated as
+                        follows:<codeblock>primary_port + offset = mirror_database_port</codeblock></pd>
                     <pd>For example, if a primary segment has port 50001, then its mirror will use a
                         database port of 51001, by default.</pd>
                 </plentry>
@@ -191,10 +190,10 @@ Enter mirror segment data directory location 2 of 2 &gt; /gpdb/m2</codeblock>
                 from your primary data:</p>
             <codeblock>$ gpaddmirrors -i mirror_config_file</codeblock>
             <p>Where <codeph>mirror_config_file</codeph> looks something like this:</p>
-            <codeblock>0=0|sdw1-1|52001|/gpdata/mir1/gp0
-1=1|sdw1-2|52002|/gpdata/mir2/gp1
-2=2|sdw2-1|52001|/gpdata/mir1/gp2
-3=3|sdw2-2|52002|/gpdata/mir2/gp3</codeblock>
+            <codeblock>0|sdw1-1|52001|/gpdata/m1/gp0
+1|sdw1-2|52002|/gpdata/m2/gp1
+2|sdw2-1|52001|/gpdata/m1/gp2
+3|sdw2-2|52002|/gpdata/m2/gp3</codeblock>
             <p>Generate a sample mirror configuration file with the <codeph>-o</codeph> option to
                 use with <codeph>gpaddmirrors -i</codeph>:</p>
             <codeblock>$ gpaddmirrors -o /home/gpadmin/sample_mirror_config</codeblock>

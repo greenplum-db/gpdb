@@ -236,6 +236,9 @@ ExplainQuery(ExplainStmt *stmt, const char *queryString,
 	/* currently, summary option is not exposed to users; just set it */
 	es->summary = es->analyze;
 
+	if (explain_memory_verbosity >= EXPLAIN_MEMORY_VERBOSITY_DETAIL)
+		es->memory_detail = true;
+
 	/*
 	 * Parse analysis was done already, but we still have to run the rule
 	 * rewriter.  We do not do AcquireRewriteLocks: we assume the query either
@@ -535,6 +538,9 @@ ExplainOnePlan(PlannedStmt *plannedstmt, IntoClause *into, ExplainState *es,
 
 	if (es->analyze)
 		instrument_option |= INSTRUMENT_CDB;
+
+	if (es->memory_detail)
+		instrument_option |= INSTRUMENT_MEMORY_DETAIL;
 
 	/*
 	 * We always collect timing for the entire statement, even when node-level
@@ -1196,9 +1202,6 @@ ExplainNode(PlanState *planstate, List *ancestors,
 					pname = "???";
 					break;
 			}
-			break;
-		case T_Repeat:
-			pname = sname = "Repeat";
 			break;
 		case T_Append:
 			pname = sname = "Append";
@@ -2087,9 +2090,6 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			break;
 		case T_Hash:
 			show_hash_info((HashState *) planstate, es);
-			break;
-		case T_Repeat:
-			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es);
 			break;
 		case T_Motion:
 			{

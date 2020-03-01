@@ -24,6 +24,8 @@
 #include "access/stratnum.h"
 #include "access/sysattr.h"
 #include "catalog/pg_class.h"
+#include "catalog/pg_exttable.h"
+#include "catalog/pg_proc.h"
 #include "foreign/fdwapi.h"
 #include "miscadmin.h"
 #include "nodes/extensible.h"
@@ -49,6 +51,7 @@
 #include "parser/parse_clause.h"
 #include "parser/parsetree.h"
 #include "parser/parse_oper.h"	/* ordering_oper_opid */
+#include "rewrite/rewriteManip.h"
 #include "utils/guc.h"
 #include "utils/lsyscache.h"
 #include "utils/uri.h"
@@ -88,6 +91,13 @@
 #define CP_SMALL_TLIST		0x0002		/* Prefer narrower tlists */
 #define CP_LABEL_TLIST		0x0004		/* tlist must contain sortgrouprefs */
 
+typedef struct
+{
+	plan_tree_base_prefix base; /* Required prefix for
+								 * plan_tree_walker/mutator */
+	Bitmapset            *seen_subplans;
+	bool                  result;
+} contain_motion_walk_context;
 
 static Plan *create_scan_plan(PlannerInfo *root, Path *best_path,
 				 int flags);
@@ -237,7 +247,7 @@ static Plan *prepare_sort_from_pathkeys(Plan *lefttree, List *pathkeys,
 						   AttrNumber **p_sortColIdx,
 						   Oid **p_sortOperators,
 						   Oid **p_collations,
-						   bool **p_nullsFirst, bool add_keys_to_targetlist);
+						   bool **p_nullsFirst);
 static EquivalenceMember *find_ec_member_for_tle(EquivalenceClass *ec,
 					   TargetEntry *tle,
 					   Relids relids);
@@ -268,6 +278,9 @@ static TargetEntry *find_junk_tle(List *targetList, const char *junkAttrName);
 static Motion *cdbpathtoplan_create_motion_plan(PlannerInfo *root,
 								 CdbMotionPath *path,
 								 Plan *subplan);
+static void append_initplan_for_function_scan(PlannerInfo *root, Path *best_path, Plan *plan);
+static bool contain_motion(PlannerInfo *root, Node *node);
+static bool contain_motion_walk(Node *node, contain_motion_walk_context *ctx);
 
 /*
  * create_plan
@@ -656,6 +669,7 @@ create_scan_plan(PlannerInfo *root, Path *best_path, int flags)
 													 best_path,
 													 tlist,
 													 scan_clauses);
+			append_initplan_for_function_scan(root, best_path, plan);
 			break;
 
 		case T_TableFunctionScan:
@@ -981,17 +995,29 @@ create_join_plan(PlannerInfo *root, JoinPath *best_path)
 	if (partition_selector_created)
 		((Join *) plan)->prefetch_inner = true;
 
-	/*
-	 * A motion deadlock can also happen when outer and joinqual both contain
-	 * motions.  It is not easy to check for joinqual here, so we set the
-	 * prefetch_joinqual mark only according to outer motion, and check for
-	 * joinqual later in the executor.
-	 *
-	 * See ExecPrefetchJoinQual() for details.
+	/* CDB: if the join's locus is bottleneck which means the
+	 * join gang only contains one process, so there is no
+	 * risk for motion deadlock.
 	 */
-	if (best_path->outerjoinpath &&
-		best_path->outerjoinpath->motionHazard)
-		((Join *) plan)->prefetch_joinqual = true;
+	if (CdbPathLocus_IsBottleneck(best_path->path.locus))
+	{
+		((Join *) plan)->prefetch_inner = false;
+		((Join *) plan)->prefetch_joinqual = false;
+	}
+
+	/*
+	 * We may set prefetch_joinqual to true if there is
+	 * potential risk when create_xxxjoin_plan. Here, we
+	 * have all the information at hand, this is the final
+	 * logic to set prefetch_joinqual.
+	 */
+	if (((Join *) plan)->prefetch_joinqual)
+	{
+		List *joinqual = ((Join *) plan)->joinqual;
+
+		((Join *) plan)->prefetch_joinqual = contain_motion(root,
+															(Node *) joinqual);
+	}
 
 	/*
 	 * If there are any pseudoconstant clauses attached to this node, insert a
@@ -1122,8 +1148,7 @@ create_merge_append_plan(PlannerInfo *root, MergeAppendPath *best_path)
 									  &node->sortColIdx,
 									  &node->sortOperators,
 									  &node->collations,
-									  &node->nullsFirst,
-									  true);
+									  &node->nullsFirst);
 
 	/*
 	 * Now prepare the child plans.  We must apply prepare_sort_from_pathkeys
@@ -1153,8 +1178,7 @@ create_merge_append_plan(PlannerInfo *root, MergeAppendPath *best_path)
 											 &sortColIdx,
 											 &sortOperators,
 											 &collations,
-											 &nullsFirst,
-											 true);
+											 &nullsFirst);
 
 		/*
 		 * Check that we got the same sort key information.  We just Assert
@@ -1617,8 +1641,7 @@ create_sort_plan(PlannerInfo *root, SortPath *best_path, int flags)
 	subplan = create_plan_recurse(root, best_path->subpath,
 								  flags | CP_SMALL_TLIST);
 
-	plan = make_sort_from_pathkeys(subplan, best_path->path.pathkeys,
-								   false /* GPDB_96_MERGE_FIXME: is 'false' correct here? */);
+	plan = make_sort_from_pathkeys(subplan, best_path->path.pathkeys);
 
 	copy_generic_path_info(&plan->plan, (Path *) best_path);
 
@@ -1975,7 +1998,7 @@ create_minmaxagg_plan(PlannerInfo *root, MinMaxAggPath *best_path)
 		plan->parallel_aware = false;
 
 		/* Convert the plan into an InitPlan in the outer query. */
-		SS_make_initplan_from_plan(root, subroot, plan, root->curSlice, mminfo->param);
+		SS_make_initplan_from_plan(root, subroot, plan, root->curSlice, mminfo->param, false);
 	}
 
 	/* Generate the output plan --- basically just a Result */
@@ -2051,8 +2074,7 @@ create_windowagg_plan(PlannerInfo *root, WindowAggPath *best_path)
 										 &sortColIdx,
 										 &sortOperators,
 										 &collations,
-										 &nullsFirst,
-										 true);
+										 &nullsFirst);
 
 	/* Now deconstruct that into partition and ordering portions */
 	get_column_info_for_window(root,
@@ -4256,7 +4278,8 @@ create_nestloop_plan(PlannerInfo *root,
 	 * See ExecPrefetchJoinQual() for details.
 	 */
 	if (best_path->outerjoinpath &&
-		best_path->outerjoinpath->motionHazard)
+		best_path->outerjoinpath->motionHazard &&
+		join_plan->join.joinqual != NIL)
 		join_plan->join.prefetch_joinqual = true;
 
 	return join_plan;
@@ -4353,8 +4376,7 @@ create_mergejoin_plan(PlannerInfo *root,
 	if (best_path->outersortkeys)
 	{
 		Sort	   *sort = make_sort_from_pathkeys(outer_plan,
-												   best_path->outersortkeys,
-												   true);
+												   best_path->outersortkeys);
 
 		label_sort_with_costsize(root, sort, -1.0);
 		outer_plan = (Plan *) sort;
@@ -4366,8 +4388,7 @@ create_mergejoin_plan(PlannerInfo *root,
 	if (best_path->innersortkeys)
 	{
 		Sort	   *sort = make_sort_from_pathkeys(inner_plan,
-												   best_path->innersortkeys,
-												   true);
+												   best_path->innersortkeys);
 
 		label_sort_with_costsize(root, sort, -1.0);
 		inner_plan = (Plan *) sort;
@@ -4597,14 +4618,16 @@ create_mergejoin_plan(PlannerInfo *root,
 	 * See ExecPrefetchJoinQual() for details.
 	 */
 	if (best_path->jpath.outerjoinpath &&
-		best_path->jpath.outerjoinpath->motionHazard)
+		best_path->jpath.outerjoinpath->motionHazard &&
+		join_plan->join.joinqual != NIL)
 		join_plan->join.prefetch_joinqual = true;
 	/*
 	 * If inner motion is not under a Material or Sort node then there could
 	 * also be motion deadlock between inner and joinqual in mergejoin.
 	 */
 	if (best_path->jpath.innerjoinpath &&
-		best_path->jpath.innerjoinpath->motionHazard)
+		best_path->jpath.innerjoinpath->motionHazard &&
+		join_plan->join.joinqual != NIL)
 		join_plan->join.prefetch_joinqual = true;
 
 	/* Costs of sort and material steps are included in path cost already */
@@ -4779,7 +4802,8 @@ create_hashjoin_plan(PlannerInfo *root,
 	 * See ExecPrefetchJoinQual() for details.
 	 */
 	if (best_path->jpath.outerjoinpath &&
-		best_path->jpath.outerjoinpath->motionHazard)
+		best_path->jpath.outerjoinpath->motionHazard &&
+		join_plan->join.joinqual != NIL)
 		join_plan->join.prefetch_joinqual = true;
 
 	copy_generic_path_info(&join_plan->join.plan, &best_path->jpath.path);
@@ -5706,6 +5730,7 @@ make_functionscan(List *qptlist,
 	node->scan.scanrelid = scanrelid;
 	node->functions = functions;
 	node->funcordinality = funcordinality;
+	node->resultInTupleStore = false;
 
 	return node;
 }
@@ -6144,8 +6169,7 @@ prepare_sort_from_pathkeys(Plan *lefttree, List *pathkeys,
 						   AttrNumber **p_sortColIdx,
 						   Oid **p_sortOperators,
 						   Oid **p_collations,
-						   bool **p_nullsFirst,
-						   bool add_keys_to_targetlist)
+						   bool **p_nullsFirst)
 {
 	List	   *tlist = lefttree->targetlist;
 	ListCell   *i;
@@ -6257,9 +6281,6 @@ prepare_sort_from_pathkeys(Plan *lefttree, List *pathkeys,
 			 * WindowFunc in a sort expression, treat it as a variable.
 			 */
 			Expr	   *sortexpr = NULL;
-
-			if (!add_keys_to_targetlist)
-				break;
 
 			foreach(j, ec->ec_members)
 			{
@@ -6421,8 +6442,7 @@ find_ec_member_for_tle(EquivalenceClass *ec,
  *				subplan's tlist.
  */
 Sort *
-make_sort_from_pathkeys(Plan *lefttree, List *pathkeys,
-						bool add_keys_to_targetlist)
+make_sort_from_pathkeys(Plan *lefttree, List *pathkeys)
 {
 	int			numsortkeys;
 	AttrNumber *sortColIdx;
@@ -6439,14 +6459,7 @@ make_sort_from_pathkeys(Plan *lefttree, List *pathkeys,
 										  &sortColIdx,
 										  &sortOperators,
 										  &collations,
-										  &nullsFirst,
-										  add_keys_to_targetlist);
-
-	if (lefttree == NULL)
-	{
-		Assert(!add_keys_to_targetlist);
-		return NULL;
-	}
+										  &nullsFirst);
 
 	/* Now build the Sort node */
 	return make_sort(lefttree, numsortkeys,
@@ -7084,34 +7097,6 @@ make_result(List *tlist,
 }
 
 /*
- * make_repeat
- *	  Build a Repeat plan node
- */
-Repeat *
-make_repeat(List *tlist,
-			List *qual,
-			Expr *repeatCountExpr,
-			uint64 grouping,
-			Plan *subplan)
-{
-	Repeat	   *node = makeNode(Repeat);
-	Plan	   *plan = &node->plan;
-
-	Assert(subplan != NULL);
-	copy_plan_costsize(plan, subplan);
-
-	plan->targetlist = tlist;
-	plan->qual = qual;
-	plan->lefttree = subplan;
-	plan->righttree = NULL;
-
-	node->repeatCountExpr = repeatCountExpr;
-	node->grouping = grouping;
-
-	return node;
-}
-
-/*
  * make_modifytable
  *	  Build a ModifyTable plan node
  */
@@ -7488,8 +7473,7 @@ cdbpathtoplan_create_motion_plan(PlannerInfo *root,
 											  &sortColIdx,
 											  &sortOperators,
 											  &collations,
-											  &nullsFirst,
-											  true /* add_keys_to_targetlist */);
+											  &nullsFirst);
 
 			if (prep)
 			{
@@ -7578,3 +7562,156 @@ cdbpathtoplan_create_motion_plan(PlannerInfo *root,
 
 	return motion;
 }								/* cdbpathtoplan_create_motion_plan */
+
+/*
+ * append_initplan_for_function_scan
+ *
+ * CDB: gpdb specific function to append an initplan node for function scan.
+ *
+ * Note that append initplan for function scan node only takes effect when
+ * the function location is PROEXECLOCATION_INITPLAN and optimizer is off.
+ *
+ * Considering functions which include DDLs, they cannot run on QEs.
+ * But for query like 'create table t as select * from f();' QD needs to do
+ * the CTAS work and function f() will be run on EntryDB, which is also a QE.
+ * To support this kind of query in GPDB, we run the function scan on initplan
+ * firstly, and store the results into tuplestore, later the function scan
+ * on EnrtyDB could fetch tuple from tuplestore instead of executing the real
+ * fucntion.
+ */
+static void
+append_initplan_for_function_scan(PlannerInfo *root, Path *best_path, Plan *plan)
+{
+	FunctionScan *fsplan = (FunctionScan *)plan;
+	char	exec_location;
+	Param	*prm;
+	RangeTblFunction	*rtfunc;
+	FuncExpr	*funcexpr;
+
+	/* Currently we limit function number to one */
+	if (list_length(fsplan->functions) != 1)
+		return;
+
+	rtfunc = (RangeTblFunction *) linitial(fsplan->functions);
+	
+	if (!IsA(rtfunc->funcexpr, FuncExpr))
+		return;
+
+	/* function must be specified EXECUTE ON INITPLAN */
+	funcexpr = (FuncExpr *) rtfunc->funcexpr;
+	exec_location = func_exec_location(funcexpr->funcid);
+	if (exec_location != PROEXECLOCATION_INITPLAN)
+		return;
+
+	/* 
+	 * create a copied FunctionScan plan as a initplan
+	 * Initplan is responsible to run the real function
+	 * and store the result into tuplestore.
+	 * Original FunctionScan just read the tuple store
+	 * (indicated by resultInTupleStore) and return the
+	 * result to upper plan node.
+	 *
+	 * the following param of initplan is a dummy param.
+	 * this param is not used by the main plan, since when
+	 * function scan is running in initplan, it stores the
+	 * result rows in tuplestore instead of a scalar param
+	 */
+	prm = makeNode(Param);
+	prm->paramkind = PARAM_EXEC;
+	prm->paramid = root->glob->nParamExec++;
+	
+	fsplan->param = prm;
+	fsplan->resultInTupleStore = true;
+
+	/*
+	 * We are going to construct what is effectively a sub-SELECT query, so
+	 * clone the current query level's state and adjust it to make it look
+	 * like a subquery.  Any outer references will now be one level higher
+	 * than before.  (This means that when we are done, there will be no Vars
+	 * of level 1, which is why the subquery can become an initplan.)
+	 */
+	PlannerInfo *subroot;
+	Query	   *parse;
+	subroot = (PlannerInfo *) palloc(sizeof(PlannerInfo));
+	memcpy(subroot, root, sizeof(PlannerInfo));
+	subroot->query_level++;
+	subroot->parent_root = root;
+	/* reset subplan-related stuff */
+	subroot->plan_params = NIL;
+	subroot->outer_params = NULL;
+	subroot->init_plans = NIL;
+	subroot->cte_plan_ids = NIL;
+
+	subroot->parse = parse = (Query *) copyObject(root->parse);
+	IncrementVarSublevelsUp((Node *) parse, 1, 1);
+
+	/* append_rel_list might contain outer Vars? */
+	subroot->append_rel_list = (List *) copyObject(root->append_rel_list);
+	IncrementVarSublevelsUp((Node *) subroot->append_rel_list, 1, 1);
+
+	/* create initplan for this FunctionScan plan */
+	FunctionScan* initplan =(FunctionScan*) copyObject(plan);
+	
+	SS_make_initplan_from_plan(root, subroot, (Plan *)initplan, root->curSlice, prm, true);
+	SS_attach_initplans(root, plan);
+	root->init_plans = NIL;
+
+	/* Decorate the top node of the plan with a Flow node. */
+	initplan->scan.plan.flow = cdbpathtoplan_create_flow(root, best_path->locus);
+}
+
+/*
+ * contain_motion
+ * This function walks the joinqual list to  see there is
+ * any motion node in it. The only case a qual contains motion
+ * is that it is a SubPlan and the SubPlan contains motion.
+ */
+static bool
+contain_motion(PlannerInfo *root, Node *node)
+{
+	contain_motion_walk_context ctx;
+	planner_init_plan_tree_base(&ctx.base, root);
+	ctx.result = false;
+	ctx.seen_subplans = NULL;
+
+	(void) contain_motion_walk(node, &ctx);
+
+	return ctx.result;
+}
+
+static bool
+contain_motion_walk(Node *node, contain_motion_walk_context *ctx)
+{
+	PlannerInfo *root = (PlannerInfo *) ctx->base.node;
+
+	if (ctx->result)
+		return true;
+
+	if (node == NULL)
+		return false;
+
+	if (IsA(node, SubPlan))
+	{
+		SubPlan	   *spexpr = (SubPlan *) node;
+		int			plan_id = spexpr->plan_id;
+
+		if (!bms_is_member(plan_id, ctx->seen_subplans))
+		{
+			ctx->seen_subplans = bms_add_member(ctx->seen_subplans, plan_id);
+
+			if (spexpr->is_initplan)
+				return false;
+
+			Plan *plan = list_nth(root->glob->subplans, plan_id - 1);
+			return plan_tree_walker((Node *) plan, contain_motion_walk, ctx, true);
+		}
+	}
+
+	if (IsA(node, Motion))
+	{
+		ctx->result = true;
+		return true;
+	}
+
+	return plan_tree_walker((Node *) node, contain_motion_walk, ctx, true);
+}

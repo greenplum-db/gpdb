@@ -1056,9 +1056,6 @@ tuplestore_gettuple(Tuplestorestate *state, bool forward,
 			 * word. If seek fails, assume we are at start of file.
 			 */
 
-			ereport(ERROR, (errmsg("Backward scanning of tuplestores are not supported at this time")));
-			return NULL;
-#if 0
 			if (BufFileSeek(state->myfile, readptr->file, -(long) sizeof(unsigned int),
 							SEEK_CUR) != 0)
 			{
@@ -1114,7 +1111,6 @@ tuplestore_gettuple(Tuplestorestate *state, bool forward,
 				 errmsg("could not seek in tuplestore temporary file: %m")));
 			tup = READTUP(state, tuplen);
 			return tup;
-#endif
 		default:
 			elog(ERROR, "invalid tuplestore state");
 			return NULL;		/* keep compiler quiet */
@@ -1600,6 +1596,26 @@ readtup_heap(Tuplestorestate *state, unsigned int len)
 {
 	void	   *tup = NULL;
 	uint32		tuplen = 0;
+
+	/*
+	 * CDB: in backward mode the passed-in len is the trailing length, it does
+	 * not contain the leading bit as the leading length used in forward mode.
+	 * The leading bit is necessary to determine the tuple type, a memory tuple
+	 * or a heap tuple, so we must re-read the leading length to make this
+	 * decision.
+	 */
+	if (state->backward)
+	{
+		TSReadPointer *readptr = &state->readptrs[state->activeptr];
+
+		if (BufFileSeek(state->myfile, readptr->file,
+						-(long) sizeof(unsigned int), SEEK_CUR) != 0)
+			ereport(ERROR,
+					(errcode_for_file_access(),
+					 errmsg("could not seek in tuplestore temporary file: %m")));
+
+		len = getlen(state, false);
+	}
 
 	if (is_len_memtuplen(len))
 	{

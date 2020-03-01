@@ -66,6 +66,9 @@ int main(int argc, char *argv[])
 			continue;
 		}
 
+		if (addr == NULL)
+			continue;
+
 		switch (addr->sa_family)
 		{
 			case AF_INET:

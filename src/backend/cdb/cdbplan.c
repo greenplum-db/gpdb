@@ -211,17 +211,6 @@ plan_tree_mutator(Node *node,
 			}
 			break;
 
-		case T_Repeat:
-			{
-				Repeat	   *repeat = (Repeat *) node;
-				Repeat	   *newrepeat;
-
-				FLATCOPY(newrepeat, repeat, Repeat);
-				PLANMUTATE(newrepeat, repeat);
-				return (Node *) newrepeat;
-			}
-			break;
-
 		case T_Append:
 			{
 				Append	   *append = (Append *) node;

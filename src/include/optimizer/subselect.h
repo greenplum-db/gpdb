@@ -43,7 +43,7 @@ extern Param *SS_make_initplan_output_param(PlannerInfo *root,
 extern void SS_make_initplan_from_plan(PlannerInfo *root,
 						   PlannerInfo *subroot, Plan *plan,
 						   PlanSlice *subslice,
-						   Param *prm);
+						   Param *prm, bool is_initplan_func_sublink);
 extern Param *assign_nestloop_param_var(PlannerInfo *root, Var *var);
 extern Param *assign_nestloop_param_placeholdervar(PlannerInfo *root,
 									 PlaceHolderVar *phv);

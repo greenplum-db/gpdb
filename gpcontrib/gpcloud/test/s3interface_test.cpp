@@ -397,6 +397,11 @@ TEST_F(S3InterfaceServiceTest, checkSmallFile) {
     EXPECT_EQ(S3_COMPRESSION_PLAIN, this->checkCompressionType(s3Url.getFullUrlForCurl()));
 }
 
+TEST_F(S3InterfaceServiceTest, checkItsDeflateCompressed) {
+    S3Url s3Url("https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever.deflate");
+    EXPECT_EQ(S3_COMPRESSION_DEFLATE, this->checkCompressionType(s3Url));
+}
+
 TEST_F(S3InterfaceServiceTest, checkItsGzipCompressed) {
     vector<uint8_t> raw;
     raw.resize(4);

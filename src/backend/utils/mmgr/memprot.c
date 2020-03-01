@@ -336,7 +336,6 @@ static void gp_failed_to_alloc(MemoryAllocationStatus ec, int en, int sz)
 		elog(ERROR, "Unknown memory failure error code");
 
 	RedZoneHandler_LogVmemUsageOfAllSessions();
-	MemoryAccounting_SaveToLog();
 	MemoryContextStats(TopMemoryContext);
 
 	if (coredump_on_memerror)

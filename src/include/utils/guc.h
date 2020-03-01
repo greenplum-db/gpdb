@@ -23,8 +23,9 @@
 #define MAX_PRE_AUTH_DELAY (60)
 /*
  * One connection must be reserved for FTS to always able to probe
- * primary. So, this acts as lower limit on reserved superuser connections.
-*/
+ * primary. So, this acts as lower limit on reserved superuser connections on
+ * primaries.
+ */
 #define RESERVED_FTS_CONNECTIONS (1)
 
 
@@ -317,7 +318,7 @@ extern bool Debug_resource_group;
 extern bool gp_create_table_random_default_distribution;
 extern bool gp_allow_non_uniform_partitioning_ddl;
 extern bool gp_enable_exchange_default_partition;
-extern int  dtx_phase2_retry_count;
+extern int  dtx_phase2_retry_second;
 
 /* WAL replication debug gucs */
 extern bool debug_walrepl_snd;
@@ -326,9 +327,6 @@ extern bool debug_walrepl_rcv;
 extern bool debug_basebackup;
 
 extern int rep_lag_avoidance_threshold;
-
-/* Latch mechanism debug GUCs */
-extern bool debug_latch;
 
 extern bool gp_maintenance_mode;
 extern bool gp_maintenance_conn;
@@ -426,6 +424,11 @@ extern bool gp_encoding_check_locale_compatibility;
 extern int	gp_connection_send_timeout;
 
 extern bool create_restartpoint_on_ckpt_record_replay;
+
+/* Macros to define the level of memory accounting to show in EXPLAIN ANALYZE */
+#define EXPLAIN_MEMORY_VERBOSITY_SUPPRESS	0 /* Suppress memory reporting in explain analyze */
+#define EXPLAIN_MEMORY_VERBOSITY_SUMMARY	1 /* Summary of memory usage for each owner in explain analyze */
+#define EXPLAIN_MEMORY_VERBOSITY_DETAIL		2 /* Detail memory accounting tree for each slice in explain analyze */
 
 /* ORCA related definitions */
 #define OPTIMIZER_XFORMS_COUNT 400 /* number of transformation rules */

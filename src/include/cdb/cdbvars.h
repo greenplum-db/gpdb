@@ -626,6 +626,11 @@ extern bool gp_eager_preunique;
  */
 extern bool gp_enable_explain_allstat;
 
+/*
+ * What level of details of the memory accounting information to show during EXPLAIN ANALYZE?
+ */
+extern int explain_memory_verbosity;
+
 /* May Greenplum restrict ORDER BY sorts to the first N rows if the ORDER BY
  * is wrapped by a LIMIT clause (where N=OFFSET+LIMIT)?
  *

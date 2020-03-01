@@ -111,7 +111,7 @@ query_planner(PlannerInfo *root, List *tlist,
 
 			exec_location = check_execute_on_functions((Node *) parse->targetList);
 
-			if (exec_location == PROEXECLOCATION_MASTER)
+			if (exec_location == PROEXECLOCATION_MASTER || exec_location == PROEXECLOCATION_INITPLAN)
 				CdbPathLocus_MakeEntry(&result_path->locus);
 			else if (exec_location == PROEXECLOCATION_ALL_SEGMENTS)
 				CdbPathLocus_MakeStrewn(&result_path->locus,
@@ -313,6 +313,8 @@ PlannerConfig *DefaultPlannerConfig(void)
 	c1->honor_order_by = true;
 
 	c1->is_under_subplan = false;
+
+	c1->force_singleQE = false;
 
 	return c1;
 }

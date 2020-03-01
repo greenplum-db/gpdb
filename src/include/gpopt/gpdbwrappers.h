@@ -336,6 +336,9 @@ namespace gpdb {
 	// get the default hash opclass for type
 	Oid GetDefaultDistributionOpclassForType(Oid typid);
 
+	// get the column-definition hash opclass for type
+	Oid GetColumnDefOpclassForType(List *opclassName, Oid typid);
+
 	// get the hash function in an opfamily for given datatype
 	Oid GetHashProcInOpfamily(Oid opfamily, Oid typid);
 

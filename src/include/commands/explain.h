@@ -34,6 +34,7 @@ typedef struct ExplainState
 	bool		buffers;		/* print buffer usage */
 	bool		dxl;			/* CDB: print DXL */
 	bool		slicetable;		/* CDB: print slice table */
+	bool		memory_detail;	/* CDB: print per-node memory usage */
 	bool		timing;			/* print detailed node timing */
 	bool		summary;		/* print total planning and execution timing */
 	ExplainFormat format;		/* output format */

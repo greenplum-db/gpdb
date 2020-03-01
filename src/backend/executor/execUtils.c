@@ -80,6 +80,7 @@
 
 static bool get_last_attnums(Node *node, ProjectionInfo *projInfo);
 static void ShutdownExprContext(ExprContext *econtext, bool isCommit);
+static List *flatten_logic_exprs(Node *node);
 
 
 /* ----------------------------------------------------------------
@@ -114,6 +115,7 @@ CreateExecutorState(void)
 									 ALLOCSET_DEFAULT_MINSIZE,
 									 ALLOCSET_DEFAULT_INITSIZE,
 									 ALLOCSET_DEFAULT_MAXSIZE);
+	MemoryContextDeclareAccountingRoot(qcontext);
 
 	/*
 	 * Make the EState node within the per-query context.  This way, we don't
@@ -1134,6 +1136,49 @@ ExecGetShareNodeEntry(EState* estate, int shareidx, bool fCreate)
 }
 
 /*
+ * flatten_logic_exprs
+ * This function is only used by ExecPrefetchJoinQual.
+ * ExecPrefetchJoinQual need to prefetch subplan in join
+ * qual that contains motion to materialize it to avoid
+ * motion deadlock. This function is going to flatten
+ * the bool exprs to avoid shortcut of bool logic.
+ * An example is:
+ * (a and b or c) or (d or e and f or g) and (h and i or j)
+ * will be transformed to
+ * (a, b, c, d, e, f, g, h, i, j).
+ */
+static List *
+flatten_logic_exprs(Node *node)
+{
+	if (node == NULL)
+		return NIL;
+
+	if (IsA(node, BoolExpr))
+	{
+		BoolExpr *be = (BoolExpr *) node;
+		return flatten_logic_exprs((Node *) (be->args));
+	}
+
+	if (IsA(node, List))
+	{
+		List     *es = (List *) node;
+		List     *result = NIL;
+		ListCell *lc = NULL;
+
+		foreach(lc, es)
+		{
+			Node *n = (Node *) lfirst(lc);
+			result = list_concat(result,
+								 flatten_logic_exprs(n));
+		}
+
+		return result;
+	}
+
+	return list_make1(node);
+}
+
+/*
  * Prefetch JoinQual to prevent motion hazard.
  *
  * A motion hazard is a deadlock between motions, a classic motion hazard in a
@@ -1160,7 +1205,7 @@ ExecGetShareNodeEntry(EState* estate, int shareidx, bool fCreate)
  *
  * Return true if the JoinQual is prefetched.
  */
-bool
+void
 ExecPrefetchJoinQual(JoinState *node)
 {
 	EState	   *estate = node->ps.state;
@@ -1170,8 +1215,10 @@ ExecPrefetchJoinQual(JoinState *node)
 	List	   *joinqual = node->joinqual;
 	TupleTableSlot *innertuple = econtext->ecxt_innertuple;
 
-	if (!joinqual)
-		return false;
+	ListCell   *lc = NULL;
+	List       *quals = NIL;
+
+	Assert(joinqual);
 
 	/* Outer tuples should not be fetched before us */
 	Assert(econtext->ecxt_outertuple == NULL);
@@ -1182,44 +1229,22 @@ ExecPrefetchJoinQual(JoinState *node)
 	econtext->ecxt_outertuple = ExecInitNullTupleSlot(estate,
 													  ExecGetResultType(outer));
 
+	quals = flatten_logic_exprs((Node *) joinqual);
+
 	/* Fetch subplan with the fake inner & outer tuples */
-	ExecQual(joinqual, econtext, false);
+	foreach(lc, quals)
+	{
+		/*
+		 * Force every joinqual is prefech because
+		 * our target is to materialize motion node.
+		 */
+		ExprState  *clause = (ExprState *) lfirst(lc);
+		(void) ExecQual(list_make1(clause), econtext, false);
+	}
 
 	/* Restore previous state */
 	econtext->ecxt_innertuple = innertuple;
 	econtext->ecxt_outertuple = NULL;
-
-	return true;
-}
-
-/*
- * Decide if should prefetch joinqual.
- *
- * Joinqual should be prefetched when both outer and joinqual contain motions.
- * In create_*join_plan() functions we set prefetch_joinqual according to the
- * outer motions, now we detect for joinqual motions to make the final
- * decision.
- *
- * See ExecPrefetchJoinQual() for details.
- *
- * This function should be called in ExecInit*Join() functions.
- *
- * Return true if JoinQual should be prefetched.
- */
-bool
-ShouldPrefetchJoinQual(EState *estate, Join *join)
-{
-	ExecSlice  *localSlice;
-
-	if (!join->prefetch_joinqual)
-		return false;
-
-	/* Is this slice the sender of a Motion? */
-	if (!estate->es_sliceTable)
-		return false;
-	localSlice = &estate->es_sliceTable->slices[estate->currentSliceId];
-
-	return (localSlice->parentIndex != -1);
 }
 
 /* ----------------------------------------------------------------
@@ -1744,13 +1769,6 @@ void mppExecutorCleanup(QueryDesc *queryDesc)
 	}
 }
 
-void ResetExprContext(ExprContext *econtext)
-{
-	MemoryContext memctxt = econtext->ecxt_per_tuple_memory;
-	if(memctxt->allBytesAlloc - memctxt->allBytesFreed > 50000)
-		MemoryContextReset(memctxt);
-}
-
 /**
  * This method is used to determine how much memory a specific operator
  * is supposed to use (in KB). 
@@ -1770,13 +1788,7 @@ uint64 PlanStateOperatorMemKB(const PlanState *ps)
 	}
 	else
 	{
-		if (IsA(ps, AggState))
-		{
-			/* Retrieve all relinquished memory (quota the other node not using) */
-			result = ps->plan->operatorMemKB + (MemoryAccounting_RequestQuotaIncrease() >> 10);
-		}
-		else
-			result = ps->plan->operatorMemKB;
+		result = ps->plan->operatorMemKB;
 	}
 	
 	return result;

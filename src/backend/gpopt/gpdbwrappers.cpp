@@ -1400,6 +1400,22 @@ gpdb::GetDefaultDistributionOpclassForType
 }
 
 Oid
+gpdb::GetColumnDefOpclassForType
+	(
+	List *opclassName,
+	Oid typid
+	)
+{
+	GP_WRAP_START;
+	{
+		/* catalog tables: pg_type, pg_opclass */
+		return cdb_get_opclass_for_column_def(opclassName, typid);
+	}
+	GP_WRAP_END;
+	return false;
+}
+
+Oid
 gpdb::GetHashProcInOpfamily
 	(
 	Oid opfamily,
@@ -3250,11 +3266,18 @@ gpdb::GPDBAllocSetContextCreate()
 {
 	GP_WRAP_START;
 	{
-		return AllocSetContextCreate(OptimizerMemoryContext,
-		"GPORCA memory pool",
-		ALLOCSET_DEFAULT_MINSIZE,
-		ALLOCSET_DEFAULT_INITSIZE,
-		ALLOCSET_DEFAULT_MAXSIZE);
+		MemoryContext cxt;
+
+		cxt = AllocSetContextCreate(OptimizerMemoryContext,
+					    "GPORCA memory pool",
+					    ALLOCSET_DEFAULT_SIZES);
+		/*
+		 * Declare it as accounting root so that we can call
+		 * MemoryContextGetCurrentSpace() on it.
+		 */
+		MemoryContextDeclareAccountingRoot(cxt);
+
+		return cxt;
 	}
 	GP_WRAP_END;
 	return NULL;

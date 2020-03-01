@@ -226,11 +226,6 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 	Assert(queryDesc != NULL);
 	Assert(queryDesc->estate == NULL);
 	Assert(queryDesc->plannedstmt != NULL);
-	Assert(queryDesc->memoryAccountId == MEMORY_OWNER_TYPE_Undefined);
-
-	queryDesc->memoryAccountId = MemoryAccounting_CreateExecutorMemoryAccount();
-
-	START_MEMORY_ACCOUNT(queryDesc->memoryAccountId);
 
 	Assert(queryDesc->plannedstmt->intoPolicy == NULL ||
 		GpPolicyIsPartitioned(queryDesc->plannedstmt->intoPolicy) ||
@@ -700,8 +695,6 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 		}
 	}
 
-	END_MEMORY_ACCOUNT();
-
 	/*
 	 * Set up an AFTER-trigger statement context, unless told not to, or
 	 * unless it's EXPLAIN-only mode (when ExecutorFinish won't be called).
@@ -777,10 +770,6 @@ standard_ExecutorRun(QueryDesc *queryDesc,
 
 	Assert(estate != NULL);
 	Assert(!(estate->es_top_eflags & EXEC_FLAG_EXPLAIN_ONLY));
-
-	Assert(NULL != queryDesc->plannedstmt && MEMORY_OWNER_TYPE_Undefined != queryDesc->memoryAccountId);
-
-	START_MEMORY_ACCOUNT(queryDesc->memoryAccountId);
 
 	/*
 	 * Switch into per-query memory context
@@ -965,7 +954,6 @@ standard_ExecutorRun(QueryDesc *queryDesc,
 		InstrStopNode(queryDesc->totaltime, estate->es_processed);
 
 	MemoryContextSwitchTo(oldcontext);
-	END_MEMORY_ACCOUNT();
 }
 
 /* ----------------------------------------------------------------
@@ -1067,12 +1055,8 @@ standard_ExecutorEnd(QueryDesc *queryDesc)
 
 	Assert(estate != NULL);
 
-	Assert(NULL != queryDesc->plannedstmt && MEMORY_OWNER_TYPE_Undefined != queryDesc->memoryAccountId);
-
 	/* GPDB: Save SPI flag first in case the memory context of plannedstmt is cleaned up*/
 	isInnerQuery = estate->es_plannedstmt->metricsQueryType > TOP_LEVEL_QUERY;
-
-	START_MEMORY_ACCOUNT(queryDesc->memoryAccountId);
 
 	if (DEBUG1 >= log_min_messages)
 	{
@@ -1197,7 +1181,6 @@ standard_ExecutorEnd(QueryDesc *queryDesc)
 				break;
 		}
 	}
-	END_MEMORY_ACCOUNT();
 
 	ReportOOMConsumption();
 }
@@ -1222,10 +1205,6 @@ ExecutorRewind(QueryDesc *queryDesc)
 
 	Assert(estate != NULL);
 
-	Assert(NULL != queryDesc->plannedstmt && MEMORY_OWNER_TYPE_Undefined != queryDesc->memoryAccountId);
-
-	START_MEMORY_ACCOUNT(queryDesc->memoryAccountId);
-
 	/* It's probably not sensible to rescan updating queries */
 	Assert(queryDesc->operation == CMD_SELECT);
 
@@ -1240,8 +1219,6 @@ ExecutorRewind(QueryDesc *queryDesc)
 	ExecReScan(queryDesc->planstate);
 
 	MemoryContextSwitchTo(oldcontext);
-
-	END_MEMORY_ACCOUNT();
 }
 
 

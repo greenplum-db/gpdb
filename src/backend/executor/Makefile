@@ -33,7 +33,6 @@ OBJS += nodeDynamicIndexscan.o \
        nodeDynamicBitmapHeapscan.o \
        nodeDynamicBitmapIndexscan.o \
        nodeMotion.o \
-       nodeRepeat.o \
        nodeShareInputScan.o \
        nodeTableFunction.o \
        nodeDynamicSeqscan.o \

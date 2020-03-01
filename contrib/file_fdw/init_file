@@ -1,0 +1,7 @@
+-- This file contains global patterns of messages that should be ignored or
+-- masked out, when comparing test results with the expected output.
+-- Individual tests can contain additional patterns specific to the test.
+
+-- start_matchignore
+m/^ Settings:.*/
+-- end_matchignore

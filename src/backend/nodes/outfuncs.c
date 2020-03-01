@@ -478,17 +478,6 @@ _outResult(StringInfo str, const Result *node)
 #endif
 
 static void
-_outRepeat(StringInfo str, const Repeat *node)
-{
-	WRITE_NODE_TYPE("REPEAT");
-
-	_outPlanInfo(str, (Plan *) node);
-
-	WRITE_NODE_FIELD(repeatCountExpr);
-	WRITE_UINT64_FIELD(grouping);
-}
-
-static void
 _outModifyTable(StringInfo str, const ModifyTable *node)
 {
 	WRITE_NODE_TYPE("MODIFYTABLE");
@@ -824,6 +813,8 @@ _outFunctionScan(StringInfo str, const FunctionScan *node)
 
 	WRITE_NODE_FIELD(functions);
 	WRITE_BOOL_FIELD(funcordinality);
+	WRITE_NODE_FIELD(param);
+	WRITE_BOOL_FIELD(resultInTupleStore);
 }
 
 static void
@@ -5255,9 +5246,6 @@ outNode(StringInfo str, const void *obj)
 				break;
 			case T_Result:
 				_outResult(str, obj);
-				break;
-			case T_Repeat:
-				_outRepeat(str, obj);
 				break;
 			case T_ModifyTable:
 				_outModifyTable(str, obj);

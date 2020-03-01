@@ -114,7 +114,6 @@ CreateQueryDesc(PlannedStmt *plannedstmt,
 	qd->portal_name = NULL;
 
 	qd->ddesc = NULL;
-	qd->memoryAccountId = MEMORY_OWNER_TYPE_Undefined;
 	
 	if (Gp_role != GP_ROLE_EXECUTE)
 		increment_command_count();

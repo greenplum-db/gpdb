@@ -32,14 +32,7 @@ SET gp_external_enable_filter_pushdown TO 'on';
 
 **Note:** Some external data sources do not support filter pushdown. Also, filter pushdown may not be supported with certain data types or operators. If a query accesses a data source that does not support filter push-down for the query constraints, the query is instead executed without filter pushdown (the data is filtered after it is transferred to Greenplum Database).
 
-PXF accesses data sources using different connectors, and filter pushdown support is determined by the specific connector implementation. The following PXF connectors support filter pushdown:
-
-- Hive Connector, all profiles
-- HBase Connector
-- JDBC Connector
-- S3 Connector using the Amazon S3 Select service to access CSV and Parquet data
-
-PXF filter pushdown can be used with these data types (connector-specific):
+PXF filter pushdown can be used with these data types (connector- and profile-specific):
 
 - `INT2`, `INT4`, `INT8`
 - `CHAR`, `TEXT`
@@ -48,13 +41,31 @@ PXF filter pushdown can be used with these data types (connector-specific):
 - `BOOL`
 - `DATE`, `TIMESTAMP` (available only with the JDBC connector and the S3 connector when using S3 Select)
 
-You can use PXF filter pushdown with these operators:
+You can use PXF filter pushdown with these arithmetic and logical operators (connector- and profile-specific):
 
 - `<`, `<=`, `>=`, `>`
 - `<>`, `=`
 - `AND`, `OR`, `NOT`
-- `IN` operator on arrays of `INT` and `TEXT` (JDBC connector only)
 - `LIKE` (`TEXT` fields, JDBC connector only)
+
+PXF accesses data sources using profiles exposed by different connectors, and filter pushdown support is determined by the specific connector implementation. The following PXF profiles support some aspect of filter pushdown:
+
+|Profile | <,&nbsp;&nbsp; >,</br><=,&nbsp;&nbsp; >=,</br>=,&nbsp;&nbsp;<> | LIKE | IS [NOT] NULL | IN | AND | OR | NOT |
+|-------|:------------------------:|:----:|:----:|:----:|:----:|:----:|:----:|:----:|
+| Jdbc | Y | Y | Y | Y | Y | Y | Y | Y | N | Y | Y | Y |
+| *:parquet | Y<sup>1</sup> | N | Y<sup>1</sup> | N | Y<sup>1</sup> | Y<sup>1</sup> | Y<sup>1</sup> |
+| s3:parquet and s3:text with S3-Select | Y |  N | Y | Y | Y | Y | Y |
+| HBase | Y | N | Y | N | Y | Y | N |
+| Hive | Y<sup>2</sup> | N | N | N | Y<sup>2</sup> | Y<sup>2</sup> | N |
+| HiveText | Y<sup>2</sup> | N | N | N | Y<sup>2</sup> | Y<sup>2</sup> | N |
+| HiveRC | Y<sup>2</sup> |  N | N | N | Y<sup>2</sup> | Y<sup>2</sup> | N |
+| HiveORC | Y, Y<sup>2</sup> |  N | Y | Y | Y, Y<sup>2</sup> | Y, Y<sup>2</sup> | Y |
+| HiveVectorizedORC | Y, Y<sup>2</sup> |  N | Y | Y | Y, Y<sup>2</sup> | Y, Y<sup>2</sup> | Y |
+
+</br><sup>1</sup>&nbsp;PXF applies the predicate, rather than the remote system, reducing CPU usage and the memory footprint.
+</br><sup>2</sup>&nbsp;PXF supports partition pruning based on partition keys.
+
+PXF does not support filter pushdown for any profile not mentioned in the table above, including: *:avro, *:AvroSequenceFile, *:SequenceFile, *:json, *:text, and *:text:multi.
 
 To summarize, all of the following criteria must be met for filter pushdown to occur:
 

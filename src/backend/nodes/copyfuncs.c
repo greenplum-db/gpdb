@@ -280,28 +280,6 @@ _copyResult(const Result *from)
 }
 
 /*
- * _copyRepeat
- */
-static Repeat *
-_copyRepeat(const Repeat *from)
-{
-	Repeat *newnode = makeNode(Repeat);
-
-	/*
-	 * copy node superclass fields
-	 */
-	CopyPlanFields((Plan *)from, (Plan *)newnode);
-
-	/*
-	 * copy remainder of node
-	 */
-	COPY_NODE_FIELD(repeatCountExpr);
-	COPY_SCALAR_FIELD(grouping);
-
-	return newnode;
-}
-
-/*
  * _copyModifyTable
  */
 static ModifyTable *
@@ -805,6 +783,8 @@ _copyFunctionScan(const FunctionScan *from)
 	 */
 	COPY_NODE_FIELD(functions);
 	COPY_SCALAR_FIELD(funcordinality);
+	COPY_NODE_FIELD(param);
+	COPY_SCALAR_FIELD(resultInTupleStore);
 
 	return newnode;
 }
@@ -5487,9 +5467,6 @@ copyObject(const void *from)
 			break;
 		case T_Result:
 			retval = _copyResult(from);
-			break;
-		case T_Repeat:
-			retval = _copyRepeat(from);
 			break;
 		case T_ModifyTable:
 			retval = _copyModifyTable(from);

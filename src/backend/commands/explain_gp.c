@@ -29,7 +29,6 @@
 #include "libpq/pqformat.h"		/* pq_beginmessage() etc. */
 #include "miscadmin.h"
 #include "utils/resscheduler.h"
-#include "utils/memaccounting.h"
 #include "utils/memutils.h"		/* MemoryContextGetPeakSpace() */
 #include "utils/vmem_tracker.h"
 
@@ -106,7 +105,6 @@ typedef struct CdbExplain_StatInst
 	double		workmemwanted;	/* work_mem to avoid workfile i/o (bytes) */
 	bool		workfileCreated;	/* workfile created in this node */
 	instr_time	firststart;		/* Start time of first iteration of node */
-	double		peakMemBalance; /* Max mem account balance */
 	int			numPartScanned; /* Number of part tables scanned */
 	ExplainSortMethod sortMethod;	/* Type of sort */
 	ExplainSortSpaceType sortSpaceType; /* Sort space type */
@@ -121,8 +119,6 @@ typedef struct CdbExplain_SliceWorker
 {
 	double		peakmemused;	/* bytes alloc in per-query mem context tree */
 	double		vmem_reserved;	/* vmem reserved by a QE */
-	double		memory_accounting_global_peak;	/* peak memory observed during
-												 * memory accounting */
 } CdbExplain_SliceWorker;
 
 
@@ -134,10 +130,6 @@ typedef struct CdbExplain_StatHdr
 	int			nInst;			/* num of StatInst entries following StatHdr */
 	int			bnotes;			/* offset to extra text area */
 	int			enotes;			/* offset to end of extra text area */
-
-	int			memAccountCount;	/* How many mem account we serialized */
-	int			memAccountStartOffset;	/* Where in the header our memory
-										 * account array is serialized */
 
 	CdbExplain_SliceWorker worker;	/* qExec's overall stats for slice */
 
@@ -175,7 +167,6 @@ typedef struct CdbExplain_NodeSummary
 	CdbExplain_Agg workmemused;
 	CdbExplain_Agg workmemwanted;
 	CdbExplain_Agg totalWorkfileCreated;
-	CdbExplain_Agg peakMemBalance;
 	/* Used for DynamicSeqScan, DynamicIndexScan and DynamicBitmapHeapScan */
 	CdbExplain_Agg totalPartTableScanned;
 	/* Summary of space used by sort */
@@ -200,24 +191,10 @@ typedef struct CdbExplain_SliceSummary
 	int			segindex0;		/* segment id of workers[0] */
 	CdbExplain_SliceWorker *workers;	/* -> array [0..nworker-1] of
 										 * SliceWorker */
-
-	/*
-	 * We use void ** as we don't have access to MemoryAccount struct, which
-	 * is private to memory accounting framework
-	 */
-	void	  **memoryAccounts; /* Array of pointers to serialized memory
-								 * accounts array, one array per worker
-								 * [0...nworker-1]. */
-	MemoryAccountIdType *memoryAccountCount;	/* Array of memory account
-												 * counts, one per slice */
-
 	CdbExplain_Agg peakmemused; /* Summary of SliceWorker stats over all of
 								 * the slice's workers */
 
 	CdbExplain_Agg vmem_reserved;	/* vmem reserved by QEs */
-
-	CdbExplain_Agg memory_accounting_global_peak;	/* Peak memory accounting
-													 * balance by QEs */
 
 	/* Rollup of per-node stats over all of the slice's workers and nodes */
 	double		workmemused_max;
@@ -506,7 +483,6 @@ cdbexplain_sendExecStats(QueryDesc *queryDesc)
 	PlanState  *planstate;
 	CdbExplain_SendStatCtx ctx;
 	StringInfoData notebuf;
-	StringInfoData memoryAccountTreeBuffer;
 
 	/* Header offset (where header begins in the message buffer) */
 	int			hoff;
@@ -562,15 +538,6 @@ cdbexplain_sendExecStats(QueryDesc *queryDesc)
 
 	/* Obtain per-slice stats and put them in StatHdr. */
 	cdbexplain_collectSliceStats(planstate, &ctx.hdr.worker);
-
-	/* Append MemoryAccount Tree */
-	ctx.hdr.memAccountStartOffset = ctx.buf.len - hoff;
-	initStringInfo(&memoryAccountTreeBuffer);
-	uint		totalSerialized = MemoryAccounting_Serialize(&memoryAccountTreeBuffer);
-
-	ctx.hdr.memAccountCount = totalSerialized;
-	appendBinaryStringInfo(&ctx.buf, memoryAccountTreeBuffer.data, memoryAccountTreeBuffer.len);
-	pfree(memoryAccountTreeBuffer.data);
 
 	/* Append the extra message text. */
 	ctx.hdr.bnotes = ctx.buf.len - hoff;
@@ -711,7 +678,6 @@ cdbexplain_recvExecStats(struct PlanState *planstate,
 		if ((size_t) statcell->len < sizeof(*hdr) ||
 			(size_t) statcell->len != (sizeof(*hdr) - sizeof(hdr->inst) +
 									   hdr->nInst * sizeof(hdr->inst) +
-									   hdr->memAccountCount * MemoryAccounting_SizeOfAccountInBytes() +
 									   hdr->enotes - hdr->bnotes) ||
 			statcell->len != hdr->enotes ||
 			hdr->segindex < -1 ||
@@ -843,9 +809,6 @@ cdbexplain_collectSliceStats(PlanState *planstate,
 		(double) MemoryContextGetPeakSpace(estate->es_query_cxt);
 
 	out_worker->vmem_reserved = (double) VmemTracker_GetMaxReservedVmemBytes();
-
-	out_worker->memory_accounting_global_peak = (double) MemoryAccounting_GetGlobalPeak();
-
 }								/* cdbexplain_collectSliceStats */
 
 
@@ -898,8 +861,6 @@ cdbexplain_depositSliceStats(CdbExplain_StatHdr *hdr,
 		ss->segindex0 = recvstatctx->segindexMin;
 		ss->nworker = recvstatctx->segindexMax + 1 - ss->segindex0;
 		ss->workers = (CdbExplain_SliceWorker *) palloc0(ss->nworker * sizeof(ss->workers[0]));
-		ss->memoryAccounts = (void **) palloc0(ss->nworker * sizeof(ss->memoryAccounts[0]));
-		ss->memoryAccountCount = (MemoryAccountIdType *) palloc0(ss->nworker * sizeof(ss->memoryAccountCount[0]));
 	}
 
 	/* Save a copy of this SliceWorker instance in the worker array. */
@@ -909,26 +870,9 @@ cdbexplain_depositSliceStats(CdbExplain_StatHdr *hdr,
 	Insist(ssw->peakmemused == 0);	/* each worker should be seen just once */
 	*ssw = hdr->worker;
 
-	const char *originalSerializedMemoryAccountingStartAddress = ((const char *) hdr) +
-	hdr->memAccountStartOffset;
-
-	size_t		byteCount = MemoryAccounting_SizeOfAccountInBytes() * hdr->memAccountCount;
-
-	/*
-	 * We need to copy of the serialized bits. These bits have shorter
-	 * lifespan and can get out of scope before we finish explain analyze.
-	 */
-	void	   *copiedSerializedMemoryAccountingStartAddress = palloc(byteCount);
-
-	memcpy(copiedSerializedMemoryAccountingStartAddress, originalSerializedMemoryAccountingStartAddress, byteCount);
-
-	ss->memoryAccounts[iworker] = copiedSerializedMemoryAccountingStartAddress;
-	ss->memoryAccountCount[iworker] = hdr->memAccountCount;
-
 	/* Rollup of per-worker stats into SliceSummary */
 	cdbexplain_agg_upd(&ss->peakmemused, hdr->worker.peakmemused, hdr->segindex);
 	cdbexplain_agg_upd(&ss->vmem_reserved, hdr->worker.vmem_reserved, hdr->segindex);
-	cdbexplain_agg_upd(&ss->memory_accounting_global_peak, hdr->worker.memory_accounting_global_peak, hdr->segindex);
 
 	/* Rollup of per-node stats over all nodes of the slice into SliceSummary */
 	ss->workmemused_max = recvstatctx->workmemused_max;
@@ -971,6 +915,9 @@ cdbexplain_collectStatsFromNode(PlanState *planstate, CdbExplain_SendStatCtx *ct
 	if (si->bnotes < si->enotes)
 		appendStringInfoChar(ctx->notebuf, '\0');
 
+	if (planstate->node_context)
+		si->execmemused = (double) MemoryContextGetPeakSpace(planstate->node_context);
+
 	/* Transfer this node's statistics from Instrumentation into StatInst. */
 	si->starttime = instr->starttime;
 	si->counter = instr->counter;
@@ -979,11 +926,9 @@ cdbexplain_collectStatsFromNode(PlanState *planstate, CdbExplain_SendStatCtx *ct
 	si->total = instr->total;
 	si->ntuples = instr->ntuples;
 	si->nloops = instr->nloops;
-	si->execmemused = instr->execmemused;
 	si->workmemused = instr->workmemused;
 	si->workmemwanted = instr->workmemwanted;
 	si->workfileCreated = instr->workfileCreated;
-	si->peakMemBalance = MemoryAccounting_GetAccountPeakBalance(planstate->memoryAccountId);
 	si->firststart = instr->firststart;
 	si->numPartScanned = instr->numPartScanned;
 	si->sortMethod = String2ExplainSortMethod(instr->sortMethod);
@@ -1112,8 +1057,6 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	CdbExplain_DepStatAcc totalWorkfileCreated;
 	CdbExplain_DepStatAcc peakmemused;
 	CdbExplain_DepStatAcc vmem_reserved;
-	CdbExplain_DepStatAcc memory_accounting_global_peak;
-	CdbExplain_DepStatAcc peakMemBalance;
 	CdbExplain_DepStatAcc totalPartTableScanned;
 	CdbExplain_DepStatAcc sortSpaceUsed[NUM_SORT_SPACE_TYPE][NUM_SORT_METHOD];
 	int			imsgptr;
@@ -1138,7 +1081,6 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	cdbexplain_depStatAcc_init0(&workmemused);
 	cdbexplain_depStatAcc_init0(&workmemwanted);
 	cdbexplain_depStatAcc_init0(&totalWorkfileCreated);
-	cdbexplain_depStatAcc_init0(&peakMemBalance);
 	cdbexplain_depStatAcc_init0(&totalPartTableScanned);
 	for (int idx = 0; idx < NUM_SORT_METHOD; ++idx)
 	{
@@ -1149,7 +1091,6 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	/* Initialize per-slice accumulators. */
 	cdbexplain_depStatAcc_init0(&peakmemused);
 	cdbexplain_depStatAcc_init0(&vmem_reserved);
-	cdbexplain_depStatAcc_init0(&memory_accounting_global_peak);
 
 	/* Examine the statistics from each qExec. */
 	for (imsgptr = 0; imsgptr < ctx->nmsgptr; imsgptr++)
@@ -1182,7 +1123,6 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 		cdbexplain_depStatAcc_upd(&workmemused, rsi->workmemused, rsh, rsi, nsi);
 		cdbexplain_depStatAcc_upd(&workmemwanted, rsi->workmemwanted, rsh, rsi, nsi);
 		cdbexplain_depStatAcc_upd(&totalWorkfileCreated, (rsi->workfileCreated ? 1 : 0), rsh, rsi, nsi);
-		cdbexplain_depStatAcc_upd(&peakMemBalance, rsi->peakMemBalance, rsh, rsi, nsi);
 		cdbexplain_depStatAcc_upd(&totalPartTableScanned, rsi->numPartScanned, rsh, rsi, nsi);
 		if (rsi->sortMethod < NUM_SORT_METHOD && rsi->sortMethod != UNINITIALIZED_SORT && rsi->sortSpaceType != UNINITIALIZED_SORT_SPACE_TYPE)
 		{
@@ -1193,7 +1133,6 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 		/* Update per-slice accumulators. */
 		cdbexplain_depStatAcc_upd(&peakmemused, rsh->worker.peakmemused, rsh, rsi, nsi);
 		cdbexplain_depStatAcc_upd(&vmem_reserved, rsh->worker.vmem_reserved, rsh, rsi, nsi);
-		cdbexplain_depStatAcc_upd(&memory_accounting_global_peak, rsh->worker.memory_accounting_global_peak, rsh, rsi, nsi);
 	}
 
 	/* Save per-node accumulated stats in NodeSummary. */
@@ -1202,7 +1141,6 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	ns->workmemused = workmemused.agg;
 	ns->workmemwanted = workmemwanted.agg;
 	ns->totalWorkfileCreated = totalWorkfileCreated.agg;
-	ns->peakMemBalance = peakMemBalance.agg;
 	ns->totalPartTableScanned = totalPartTableScanned.agg;
 	for (int idx = 0; idx < NUM_SORT_METHOD; ++idx)
 	{
@@ -1530,39 +1468,11 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 
 	Assert(instr != NULL);
 
-	if ((EXPLAIN_MEMORY_VERBOSITY_DETAIL <= explain_memory_verbosity)
-		&& planstate->type == T_MotionState)
-	{
-		Motion	   *pMotion = (Motion *) planstate->plan;
-		int			curSliceId = pMotion->motionID;
-
-		for (int iWorker = 0; iWorker < ctx->slices[curSliceId].nworker; iWorker++)
-		{
-			if (es->format == EXPLAIN_FORMAT_TEXT)
-			{
-				appendStringInfoSpaces(es->str, es->indent * 2);
-				appendStringInfo(es->str, "slice %d, seg %d\n", curSliceId, iWorker);
-			}
-			else
-			{
-				ExplainOpenGroup("MemoryAccounting", NULL, false, es);
-				ExplainPropertyInteger("Slice", curSliceId, es);
-				ExplainPropertyInteger("Segment", iWorker, es);
-			}
-
-			MemoryAccounting_CombinedAccountArrayToExplain(ctx->slices[curSliceId].memoryAccounts[iWorker],
-														   ctx->slices[curSliceId].memoryAccountCount[iWorker],
-														   es);
-			if (es->format != EXPLAIN_FORMAT_TEXT)
-				ExplainCloseGroup("MemoryAccounting", NULL, false, es);
-		}
-	}
-
 	/*
 	 * Executor memory used by this individual node, if it allocates from a
 	 * memory context of its own instead of sharing the per-query context.
 	 */
-	if (es->analyze && es->verbose && ns->execmemused.vcnt > 0)
+	if (es->analyze && ns->execmemused.vcnt > 0)
 	{
 		if (es->format == EXPLAIN_FORMAT_TEXT)
 		{
@@ -1657,31 +1567,6 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 			}
 
 			ExplainCloseGroup("work_mem", "work_mem", true, es);
-		}
-	}
-
-	if (es->verbose && EXPLAIN_MEMORY_VERBOSITY_SUPPRESS < explain_memory_verbosity)
-	{
-		/*
-		 * Memory account balance without overhead
-		 */
-		appendStringInfoSpaces(es->str, es->indent * 2);
-		cdbexplain_formatMemory(maxbuf, sizeof(maxbuf), ns->peakMemBalance.vmax);
-		if (ns->peakMemBalance.vcnt == 1)
-		{
-			appendStringInfo(es->str,
-							 "Memory:  %s.\n",
-							 maxbuf);
-		}
-		else
-		{
-			cdbexplain_formatSeg(segbuf, sizeof(segbuf), ns->peakMemBalance.imax, ns->ninst);
-			cdbexplain_formatMemory(avgbuf, sizeof(avgbuf), cdbexplain_agg_avg(&ns->peakMemBalance));
-			appendStringInfo(es->str,
-							 "Memory:  %s avg, %s max%s.\n",
-							 avgbuf,
-							 maxbuf,
-							 segbuf);
 		}
 	}
 
@@ -2152,69 +2037,6 @@ gpexplain_formatSlicesOutput(struct CdbExplain_ShowStatCtx *showstatctx,
 
         if (EXPLAIN_MEMORY_VERBOSITY_SUPPRESS < explain_memory_verbosity)
         {
-            /* Memory accounting global peak memory usage */
-            double peakMemoryUsage = ss->memory_accounting_global_peak.vmax;
-            int workers = 1;
-            cdbexplain_formatMemory(maxbuf, sizeof(maxbuf), peakMemoryUsage);
-			peakMemoryUsage = kb(peakMemoryUsage);
-			
-            if (ss->memory_accounting_global_peak.vcnt == 1)
-            {
-                
-                if (es->format == EXPLAIN_FORMAT_TEXT)
-                {
-                    const char *seg = segbuf;
-
-                    if (ss->memory_accounting_global_peak.imax >= 0)
-                    {
-                        cdbexplain_formatSeg(segbuf, sizeof(segbuf), ss->memory_accounting_global_peak.imax, 999);
-                    }
-                    else if (slice && list_length(slice->segments) > 0)
-                    {
-                        seg = " (entry db)";
-                    }
-                    else
-                    {
-                        seg = "";
-                    }
-                    appendStringInfo(es->str,
-                                     "  Peak memory: %s%s.",
-                                     maxbuf,
-                                     seg);
-                } 
-                else
-                {
-                    ExplainPropertyInteger("Global Peak Memory", ss->memory_accounting_global_peak.vmax, es);
-                }
-            }
-            else if (ss->memory_accounting_global_peak.vcnt > 1)
-            {
-				if (es->format == EXPLAIN_FORMAT_TEXT)
-                {
-                	peakMemoryUsage = cdbexplain_agg_avg(&ss->memory_accounting_global_peak);
-                	workers = ss->memory_accounting_global_peak.vcnt;
-                	peakMemoryUsage = kb(peakMemoryUsage);
-                	cdbexplain_formatMemory(avgbuf, sizeof(avgbuf), peakMemoryUsage);
-                	cdbexplain_formatSeg(segbuf, sizeof(segbuf), ss->memory_accounting_global_peak.imax, ss->nworker);
-                	appendStringInfo(es->str,
-                	                 "  Peak memory: %s avg x %d workers, %s max%s.",
-                	                 avgbuf,
-                	                 ss->memory_accounting_global_peak.vcnt,
-                	                 maxbuf,
-                	                 segbuf);
-				}
-				else
-                {
-                    ExplainOpenGroup("Global Peak Memory", "Global Peak Memory", true, es);
-                    ExplainPropertyInteger("Average", cdbexplain_agg_avg(&ss->memory_accounting_global_peak), es);
-                    ExplainPropertyInteger("Workers", ss->memory_accounting_global_peak.vcnt, es);
-                    ExplainPropertyInteger("Maximum Memory Used", ss->memory_accounting_global_peak.vmax, es);
-                    ExplainCloseGroup("Global Peak Memory", "Global Peak Memory", true, es);
-                }
-            }
-
-            total_memory_across_slices += (peakMemoryUsage * workers);
-
             /* Vmem reserved by QEs */
             cdbexplain_formatMemory(maxbuf, sizeof(maxbuf), ss->vmem_reserved.vmax);
             if (ss->vmem_reserved.vcnt == 1)

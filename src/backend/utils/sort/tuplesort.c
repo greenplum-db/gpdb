@@ -725,6 +725,7 @@ tuplesort_begin_common(int workMem, bool randomAccess, bool allocmemtuple)
 										ALLOCSET_DEFAULT_MINSIZE,
 										ALLOCSET_DEFAULT_INITSIZE,
 										ALLOCSET_DEFAULT_MAXSIZE);
+	MemoryContextDeclareAccountingRoot(sortcontext);
 
 	/*
 	 * Caller tuple (e.g. IndexTuple) memory context.
@@ -5356,10 +5357,6 @@ tuplesort_finalize_stats(Tuplesortstate *state)
         workmemused = MemoryContextGetPeakSpace(state->sortcontext);
         if (state->instrument->workmemused < workmemused)
             state->instrument->workmemused = workmemused;
-
-        /* Report executor memory used by our memory context. */
-        state->instrument->execmemused +=
-            (double)MemoryContextGetPeakSpace(state->sortcontext);
 
 		state->statsFinalized = true;
 		tuplesort_get_stats(state,

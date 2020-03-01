@@ -1886,11 +1886,11 @@ static struct config_int ConfigureNamesInt[] =
 	{
 		{"superuser_reserved_connections", PGC_POSTMASTER, CONN_AUTH_SETTINGS,
 			gettext_noop("Sets the number of connection slots reserved for "
-						"superusers (including reserved FTS connections)."),
+						"superusers (including reserved FTS connection for primaries)."),
 			NULL
 		},
 		&ReservedBackends,
-		3, RESERVED_FTS_CONNECTIONS, MAX_BACKENDS,
+		10, RESERVED_FTS_CONNECTIONS, MAX_BACKENDS,
 		NULL, NULL, NULL
 	},
 

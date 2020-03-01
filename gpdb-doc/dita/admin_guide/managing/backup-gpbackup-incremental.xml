@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-
 <topic id="backup-incremental" xml:lang="en">
-  <title>Creating Incremental Backups with gpbackup and gprestore</title>
+  <title>Creating and Using Incremental Backups with gpbackup and gprestore</title>
   <body>
     <p>The <codeph>gpbackup</codeph> and <codeph>gprestore</codeph> utilities support creating
       incremental backups of append-optimized tables and restoring from incremental backups. An
@@ -108,9 +107,7 @@
       <p>If you try to add an incremental backup to a backup set, the backup operation fails if the
           <codeph>gpbackup</codeph> options are not consistent.</p>
       <p>For information about the <codeph>gpbackup</codeph> and <codeph>gprestore</codeph> utility
-        options, see <xref href="../../utility_guide/ref/gpbackup.xml">gpbackup</xref>
-        and <xref href="../../utility_guide/ref/gprestore.xml">gprestore</xref><ph
-          otherprops="op-print"> in the <cite>Greenplum Database Utility Guide</cite></ph>.</p>
+        options, see the <xref href="../../utility_guide/ref/gpbackup.xml">gpbackup</xref> and <xref href="../../utility_guide/ref/gprestore.xml">gprestore</xref> reference documentation.</p>
       <section id="incr_backup_scenario">
         <title>Example Using Incremental Backup Sets</title>
         <p>Each backup has a timestamp taken when the backup is created. For example, if you create

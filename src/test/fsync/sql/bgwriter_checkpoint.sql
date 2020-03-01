@@ -15,8 +15,8 @@
 -- the hit times of fsync_counter is undetermined, both 5, 6 or 7 are
 -- correct, so mark them out to make case stable.
 -- start_matchsubs
--- m/num times hit:\'[5-7]\'/
--- s/num times hit:\'[5-7]\'/num times hit:\'greater_than_two\'/
+-- m/num times hit:\'[4-7]\'/
+-- s/num times hit:\'[4-7]\'/num times hit:\'greater_than_two\'/
 -- end_matchsubs
 begin;
 create function num_dirty(relid oid) returns bigint as
@@ -60,6 +60,7 @@ insert into fsync_test1 select i, i from generate_series(1,100)i;
 insert into fsync_test2 select -i, i from generate_series(1,100)i;
 end;
 
+vacuum pg_proc;
 -- Reset all faults.
 -- 
 -- NOTICE: important.

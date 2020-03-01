@@ -61,12 +61,15 @@ typedef struct MemoryContextMethods
 	void	   *(*realloc) (MemoryContext context, void *pointer, Size size);
 	void		(*init) (MemoryContext context);
 	void		(*reset) (MemoryContext context);
-	void		(*delete_context) (MemoryContext context);
+	void		(*delete_context) (MemoryContext context, MemoryContext parent);
 	Size		(*get_chunk_space) (MemoryContext context, void *pointer);
 	bool		(*is_empty) (MemoryContext context);
 	void		(*stats) (MemoryContext context, int level, bool print,
 									  MemoryContextCounters *totals);
-	void		(*release_accounting)(MemoryContext context);
+	void		(*declare_accounting_root) (MemoryContext context);
+	Size		(*get_current_usage) (MemoryContext context);
+	Size		(*get_peak_usage) (MemoryContext context);
+	Size		(*set_peak_usage) (MemoryContext context, Size nbytes);
 #ifdef MEMORY_CONTEXT_CHECKING
 	void		(*check) (MemoryContext context);
 #endif
@@ -79,17 +82,12 @@ typedef struct MemoryContextData
 	/* these two fields are placed here to minimize alignment wastage: */
 	bool		isReset;		/* T = no space alloced since last reset */
 	bool		allowInCritSection;		/* allow palloc in critical section */
-	MemoryContextMethods methods;		/* virtual function table */
+	MemoryContextMethods *methods;		/* virtual function table */
 	MemoryContext parent;		/* NULL if no parent (toplevel context) */
 	MemoryContext firstchild;	/* head of linked list of children */
 	MemoryContext prevchild;	/* previous child of same parent */
 	MemoryContext nextchild;	/* next child of same parent */
 	char	   *name;			/* context name (just for debugging) */
-    /* CDB: Lifetime cumulative stats for this context and all descendants */
-    uint64      allBytesAlloc;  /* bytes allocated from lower level mem mgr */
-    uint64      allBytesFreed;  /* bytes returned to lower level mem mgr */
-    Size        maxBytesHeld;   /* high-water mark for total bytes held */
-    Size        localMinHeld;   /* low-water mark since last increase in hwm */
 #ifdef CDB_PALLOC_CALLER_ID
     const char *callerFile;     /* __FILE__ of most recent caller */
     int         callerLine;     /* __LINE__ of most recent caller */

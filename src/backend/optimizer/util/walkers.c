@@ -192,11 +192,6 @@ plan_tree_walker(Node *node,
 				return true;
 			break;
 
-		case T_Repeat:
-			if (walk_plan_node_fields((Plan *) node, walker, context))
-				return true;
-			break;
-
 		case T_Append:
 			if (walk_plan_node_fields((Plan *) node, walker, context))
 				return true;
@@ -286,6 +281,8 @@ plan_tree_walker(Node *node,
 
 		case T_FunctionScan:
 			if (walker((Node *) ((FunctionScan *) node)->functions, context))
+				return true;
+			if (walker((Node *) ((FunctionScan *) node)->param, context))
 				return true;
 			if (walk_scan_node_fields((Scan *) node, walker, context))
 				return true;

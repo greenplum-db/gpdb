@@ -39,7 +39,6 @@
 #define CHECK_FOR_RUNAWAY_CLEANUP_MEMORY_LOGGING() \
 	will_be_called(write_stderr); \
 	expect_any(write_stderr, fmt); \
-	will_be_called(MemoryAccounting_SaveToLog); \
 	will_be_called(MemoryContextStats); \
 	expect_any(MemoryContextStats, context); \
 

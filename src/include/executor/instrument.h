@@ -45,6 +45,7 @@ typedef enum InstrumentOption
 	INSTRUMENT_TIMER = 1 << 0,	/* needs timer (and row counts) */
 	INSTRUMENT_BUFFERS = 1 << 1,	/* needs buffer usage (not implemented yet) */
 	INSTRUMENT_ROWS = 1 << 2,	/* needs row count */
+	INSTRUMENT_MEMORY_DETAIL = 0x20000000,	/* needs detailed memory accounting */
 	INSTRUMENT_CDB = 0x40000000,	/* needs cdb statistics */
 	INSTRUMENT_ALL = PG_INT32_MAX
 } InstrumentOption;

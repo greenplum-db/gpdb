@@ -402,7 +402,7 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 	createForeignTableStmt->servername = PG_EXTTABLE_SERVER_NAME;
 	createForeignTableStmt->options = NIL;
 	CreateForeignTable(createForeignTableStmt, reloid,
-					   true /* skip permission checks, we checked the ourselves */);
+					   true /* skip permission checks, we checked them ourselves */);
 
 	InsertExtTableEntry(reloid,
 						iswritable,
@@ -711,7 +711,7 @@ transformFormatType(char *formatname)
  *
  * The result is an array that includes the format string.
  *
- * This method is a backported FDW's function from upper stream .
+ * This method is a backported FDW's function from upstream .
  */
 static Datum
 optionsListToArray(List *options)

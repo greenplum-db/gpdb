@@ -22,7 +22,6 @@
 --
 -- end_matchsubs
 
-1:set dtx_phase2_retry_count=10;
 !\retcode gpconfig -c gp_fts_probe_retries -v 2 --masteronly;
 -- Allow extra time for mirror promotion to complete recovery to avoid
 -- gprecoverseg BEGIN failures due to gang creation failure as some primaries

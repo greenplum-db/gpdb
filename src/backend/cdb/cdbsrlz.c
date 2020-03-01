@@ -17,7 +17,6 @@
 
 #include "cdb/cdbsrlz.h"
 #include "nodes/nodes.h"
-#include "utils/memaccounting.h"
 #include "utils/memutils.h"
 
 #ifdef HAVE_LIBZSTD
@@ -47,21 +46,18 @@ serializeNode(Node *node, int *size, int *uncompressed_size_out)
 
 	Assert(node != NULL);
 	Assert(size != NULL);
-	START_MEMORY_ACCOUNT(MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Serializer));
-	{
-		pszNode = nodeToBinaryStringFast(node, &uncompressed_size);
-		Assert(pszNode != NULL);
 
-		/* If we have been compiled with libzstd, use it to compress it */
+	pszNode = nodeToBinaryStringFast(node, &uncompressed_size);
+	Assert(pszNode != NULL);
+
+	/* If we have been compiled with libzstd, use it to compress it */
 #ifdef HAVE_LIBZSTD
-		sNode = compress_string(pszNode, uncompressed_size, size);
-		pfree(pszNode);
+	sNode = compress_string(pszNode, uncompressed_size, size);
+	pfree(pszNode);
 #else
-		sNode = pszNode;
-		*size = uncompressed_size;
+	sNode = pszNode;
+	*size = uncompressed_size;
 #endif
-	}
-	END_MEMORY_ACCOUNT();
 
 	if (NULL != uncompressed_size_out)
 		*uncompressed_size_out = uncompressed_size;
@@ -77,26 +73,22 @@ Node *
 deserializeNode(const char *strNode, int size)
 {
 	Node	   *node;
+#ifdef HAVE_LIBZSTD
+	char	   *sNode;
+	int			uncompressed_len;
+#endif			/* HAVE_LIBZSTD */
 
 	Assert(strNode != NULL);
 
-	START_MEMORY_ACCOUNT(MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Deserializer));
-	{
-		/* If we have been compiled with libzstd, decompress */
+	/* If we have been compiled with libzstd, decompress */
 #ifdef HAVE_LIBZSTD
-		char	   *sNode;
-		int			uncompressed_len;
-
-		sNode = uncompress_string(strNode, size, &uncompressed_len);
-		Assert(sNode != NULL);
-		node = readNodeFromBinaryString(sNode, uncompressed_len);
-		pfree(sNode);
+	sNode = uncompress_string(strNode, size, &uncompressed_len);
+	Assert(sNode != NULL);
+	node = readNodeFromBinaryString(sNode, uncompressed_len);
+	pfree(sNode);
 #else
-		node = readNodeFromBinaryString(strNode, size);
+	node = readNodeFromBinaryString(strNode, size);
 #endif			/* HAVE_LIBZSTD */
-
-	}
-	END_MEMORY_ACCOUNT();
 
 	return node;
 }

@@ -89,7 +89,7 @@ init_tuplestore_state(ShareInputScanState *node)
 	
 		node->ts_state = palloc0(sizeof(GenericTupStore));
 
-		node->ts_state->matstore = ntuplestore_create_readerwriter(rwfile_prefix, 0, false);
+		node->ts_state->matstore = ntuplestore_create_readerwriter(rwfile_prefix, 0, false, false);
 		node->ts_pos = (void *) ntuplestore_create_accessor(node->ts_state->matstore, false);
 		ntuplestore_acc_seek_bof((NTupleStoreAccessor *)node->ts_pos);
 	}

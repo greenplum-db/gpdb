@@ -6,6 +6,7 @@ void S3CommonReader::open(const S3Params &params) {
     S3CompressionType compressionType = s3InterfaceService->checkCompressionType(params.getS3Url());
 
     switch (compressionType) {
+        case S3_COMPRESSION_DEFLATE:
         case S3_COMPRESSION_GZIP:
             this->upstreamReader = &this->decompressReader;
             this->decompressReader.setReader(&this->keyReader);

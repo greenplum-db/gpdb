@@ -1417,22 +1417,6 @@ _readOidAssignment(void)
 	READ_DONE();
 }
 
-/*
- * _readRepeat
- */
-static Repeat *
-_readRepeat(void)
-{
-	READ_LOCALS(Repeat);
-
-	ReadCommonPlan(&local_node->plan);
-
-	READ_NODE_FIELD(repeatCountExpr);
-	READ_UINT64_FIELD(grouping);
-
-	READ_DONE();
-}
-
 static Sequence *
 _readSequence(void)
 {
@@ -2224,9 +2208,6 @@ readNodeBinary(void)
 				break;
 			case T_Result:
 				return_value = _readResult();
-				break;
-			case T_Repeat:
-				return_value = _readRepeat();
 				break;
 			case T_Append:
 				return_value = _readAppend();

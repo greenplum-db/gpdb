@@ -698,7 +698,6 @@ ExecSquelchNode(PlanState *node)
 		case T_LockRowsState:
 		case T_NestLoopState:
 		case T_MergeJoinState:
-		case T_RepeatState:
 		case T_SetOpState:
 		case T_UniqueState:
 		case T_HashState:

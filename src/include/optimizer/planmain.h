@@ -108,11 +108,6 @@ extern MergeJoin *make_mergejoin(List *tlist,
 extern Material *make_material(Plan *lefttree);
 extern Plan *materialize_finished_plan(PlannerInfo *root, Plan *subplan);
 extern Result *make_result(List *tlist, Node *resconstantqual, Plan *subplan);
-extern Repeat *make_repeat(List *tlist,
-						   List *qual,
-						   Expr *repeatCountExpr,
-						   uint64 grouping,
-						   Plan *subplan);
 extern bool is_projection_capable_path(Path *path);
 extern bool is_projection_capable_plan(Plan *plan);
 extern Plan *add_sort_cost(PlannerInfo *root, Plan *input, 
@@ -120,7 +115,7 @@ extern Plan *add_sort_cost(PlannerInfo *root, Plan *input,
 extern Plan *plan_pushdown_tlist(PlannerInfo *root, Plan *plan, List *tlist);      /*CDB*/
 
 /* External use of these functions is deprecated: */
-extern Sort *make_sort_from_pathkeys(Plan *lefttree, List *pathkeys, bool add_keys_to_targetlist);
+extern Sort *make_sort_from_pathkeys(Plan *lefttree, List *pathkeys);
 extern Sort *make_sort_from_sortclauses(List *sortcls,
 						   Plan *lefttree);
 extern Sort *make_sort_from_groupcols(List *groupcls, AttrNumber *grpColIdx,

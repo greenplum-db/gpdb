@@ -826,10 +826,13 @@ AppendOnlyExecutorReadBlock_Init(AppendOnlyExecutorReadBlock *executorReadBlock,
 {
 	MemoryContext oldcontext;
 
+	AssertArg(MemoryContextIsValid(memoryContext));
+
 	oldcontext = MemoryContextSwitchTo(memoryContext);
 	executorReadBlock->uncompressedBuffer = (uint8 *) palloc(usableBlockSize * sizeof(uint8));
 
 	executorReadBlock->storageRead = storageRead;
+	executorReadBlock->memoryContext = memoryContext;
 
 	MemoryContextSwitchTo(oldcontext);
 }
@@ -2989,7 +2992,7 @@ appendonly_insert(AppendOnlyInsertDesc aoInsertDesc,
 		 */
 		Assert(itemPtr == NULL);
 		Assert(!need_toast);
-		Assert(instup == tup);
+		Assert(relation->rd_rel->relhasoids || instup == tup);
 
 		/*
 		 * "Cancel" the last block allocation, if one.

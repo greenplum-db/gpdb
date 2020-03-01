@@ -12288,6 +12288,8 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 		appendPQExpBuffer(q, " EXECUTE ON MASTER");
 	else if (proexeclocation[0] == PROEXECLOCATION_ALL_SEGMENTS)
 		appendPQExpBuffer(q, " EXECUTE ON ALL SEGMENTS");
+	else if (proexeclocation[0] == PROEXECLOCATION_INITPLAN)
+		appendPQExpBuffer(q, " EXECUTE ON INITPLAN");
 	else
 	{
 		write_msg(NULL, "unrecognized proexeclocation value: %c\n", proexeclocation[0]);

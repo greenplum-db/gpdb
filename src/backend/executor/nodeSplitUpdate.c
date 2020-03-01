@@ -69,17 +69,6 @@ evalHashKey(SplitUpdateState *node, Datum *values, bool *isnulls)
 	return target_seg;
 }
 
-/*
- * Estimated Memory Usage of Split DML Node.
- * */
-void
-ExecSplitUpdateExplainEnd(PlanState *planstate, struct StringInfoData *buf)
-{
-	/* Add memory size of context */
-	planstate->instrument->execmemused += SPLITUPDATE_MEM;
-}
-
-
 /* Split TupleTableSlot into a DELETE and INSERT TupleTableSlot */
 static void
 SplitTupleTableSlot(TupleTableSlot *slot,
@@ -288,10 +277,7 @@ ExecInitSplitUpdate(SplitUpdate *node, EState *estate, int eflags)
 
 	if (estate->es_instrument && (estate->es_instrument & INSTRUMENT_CDB))
 	{
-			splitupdatestate->ps.cdbexplainbuf = makeStringInfo();
-
-			/* Request a callback at end of query. */
-			splitupdatestate->ps.cdbexplainfun = ExecSplitUpdateExplainEnd;
+		splitupdatestate->ps.cdbexplainbuf = makeStringInfo();
 	}
 
 	return splitupdatestate;
