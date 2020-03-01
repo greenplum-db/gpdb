@@ -70,8 +70,8 @@ gp_create_restore_point(PG_FUNCTION_ARGS)
 		funcctx->tuple_desc = BlessTupleDesc(tupdesc);
 
 		context = (Context *) palloc(sizeof(Context));
-		context->cdb_pgresults.pg_results =
-			(struct pg_result **) palloc(getgpsegmentCount() * sizeof(struct pg_result *));
+		context->cdb_pgresults.pg_results = NULL;
+		context->cdb_pgresults.numResults = 0;
 		context->index = 0;
 		funcctx->user_fctx = (void *) context;
 
