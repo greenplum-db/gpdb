@@ -696,9 +696,11 @@ static void icBufferListReturn(ICBufferList *list, bool inExpirationQueue);
 
 static ChunkTransportState *SetupUDPIFCInterconnect_Internal(SliceTable *sliceTable);
 static inline TupleChunkListItem RecvTupleChunkFromAnyUDPIFC_Internal(ChunkTransportState *transportStates,
+									 MotionNodeEntry *pMNEntry,
 									 int16 motNodeID,
 									 int16 *srcRoute);
 static inline TupleChunkListItem RecvTupleChunkFromUDPIFC_Internal(ChunkTransportState *transportStates,
+								  MotionNodeEntry *pMNEntry,
 								  int16 motNodeID,
 								  int16 srcRoute);
 static void TeardownUDPIFCInterconnect_Internal(ChunkTransportState *transportStates,
@@ -708,13 +710,16 @@ static void freeDisorderedPackets(MotionConn *conn);
 
 static void prepareRxConnForRead(MotionConn *conn);
 static TupleChunkListItem RecvTupleChunkFromAnyUDPIFC(ChunkTransportState *transportStates,
+							MotionNodeEntry *pMNEntry,
 							int16 motNodeID,
 							int16 *srcRoute);
 
 static TupleChunkListItem RecvTupleChunkFromUDPIFC(ChunkTransportState *transportStates,
+						 MotionNodeEntry *pMNEntry,
 						 int16 motNodeID,
 						 int16 srcRoute);
 static TupleChunkListItem receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEntry *pEntry,
+					MotionNodeEntry *pMNEntry,
 					int16 motNodeID, int16 *srcRoute, MotionConn *conn);
 
 static void SendEosUDPIFC(ChunkTransportState *transportStates,
@@ -3700,6 +3705,7 @@ prepareRxConnForRead(MotionConn *conn)
  */
 static TupleChunkListItem
 receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEntry *pEntry,
+					MotionNodeEntry *pMNEntry,
 					int16 motNodeID, int16 *srcRoute, MotionConn *conn)
 {
 	int			retries = 0;
@@ -3731,6 +3737,14 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 	/* we didn't have any data, so we've got to read it from the network. */
 	for (;;)
 	{
+		/* check if QD has finished */
+		if (QueryFinishPending)
+		{
+			pMNEntry->moreNetWork = false;
+			pthread_mutex_unlock(&ic_control_info.lock);
+			return NULL;
+		}
+
 		/* 1. Do we have data ready */
 		if (rx_control_info.mainWaitingState.reachRoute != ANY_ROUTE)
 		{
@@ -3842,6 +3856,7 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
  */
 static inline TupleChunkListItem
 RecvTupleChunkFromAnyUDPIFC_Internal(ChunkTransportState *transportStates,
+									 MotionNodeEntry *pMNEntry,
 									 int16 motNodeID,
 									 int16 *srcRoute)
 {
@@ -3911,7 +3926,7 @@ RecvTupleChunkFromAnyUDPIFC_Internal(ChunkTransportState *transportStates,
 	}
 
 	/* receiveChunksUDPIFC() releases ic_control_info.lock as a side-effect */
-	tcItem = receiveChunksUDPIFC(transportStates, pEntry, motNodeID, srcRoute, NULL);
+	tcItem = receiveChunksUDPIFC(transportStates, pEntry, pMNEntry, motNodeID, srcRoute, NULL);
 
 	pEntry->scanStart = *srcRoute + 1;
 
@@ -3924,6 +3939,7 @@ RecvTupleChunkFromAnyUDPIFC_Internal(ChunkTransportState *transportStates,
  */
 static TupleChunkListItem
 RecvTupleChunkFromAnyUDPIFC(ChunkTransportState *transportStates,
+							MotionNodeEntry *pMNEntry,
 							int16 motNodeID,
 							int16 *srcRoute)
 {
@@ -3931,7 +3947,7 @@ RecvTupleChunkFromAnyUDPIFC(ChunkTransportState *transportStates,
 
 	PG_TRY();
 	{
-		icItem = RecvTupleChunkFromAnyUDPIFC_Internal(transportStates, motNodeID, srcRoute);
+		icItem = RecvTupleChunkFromAnyUDPIFC_Internal(transportStates, pMNEntry, motNodeID, srcRoute);
 
 		/* error if mutex still held (debug build only) */
 		Assert(pthread_mutex_unlock(&ic_control_info.lock) != 0);
@@ -3953,6 +3969,7 @@ RecvTupleChunkFromAnyUDPIFC(ChunkTransportState *transportStates,
  */
 static inline TupleChunkListItem
 RecvTupleChunkFromUDPIFC_Internal(ChunkTransportState *transportStates,
+								  MotionNodeEntry *pMNEntry,
 								  int16 motNodeID,
 								  int16 srcRoute)
 {
@@ -4017,7 +4034,7 @@ RecvTupleChunkFromUDPIFC_Internal(ChunkTransportState *transportStates,
 	/* no existing data, we've got to read a packet */
 	/* receiveChunksUDPIFC() releases ic_control_info.lock as a side-effect */
 
-	TupleChunkListItem chunks = receiveChunksUDPIFC(transportStates, pEntry, motNodeID, &route, conn);
+	TupleChunkListItem chunks = receiveChunksUDPIFC(transportStates, pEntry, pMNEntry, motNodeID, &route, conn);
 
 	return chunks;
 }
@@ -4028,6 +4045,7 @@ RecvTupleChunkFromUDPIFC_Internal(ChunkTransportState *transportStates,
  */
 static TupleChunkListItem
 RecvTupleChunkFromUDPIFC(ChunkTransportState *transportStates,
+						 MotionNodeEntry *pMNEntry,
 						 int16 motNodeID,
 						 int16 srcRoute)
 {
@@ -4035,7 +4053,7 @@ RecvTupleChunkFromUDPIFC(ChunkTransportState *transportStates,
 
 	PG_TRY();
 	{
-		icItem = RecvTupleChunkFromUDPIFC_Internal(transportStates, motNodeID, srcRoute);
+		icItem = RecvTupleChunkFromUDPIFC_Internal(transportStates, pMNEntry, motNodeID, srcRoute);
 
 		/* error if mutex still held (debug build only) */
 		Assert(pthread_mutex_unlock(&ic_control_info.lock) != 0);

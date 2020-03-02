@@ -97,10 +97,12 @@ static void flushInterconnectListenerBacklog(void);
 static void waitOnOutbound(ChunkTransportStateEntry *pEntry);
 
 static TupleChunkListItem RecvTupleChunkFromAnyTCP(ChunkTransportState *transportStates,
+						 MotionNodeEntry *pMNEntry,
 						 int16 motNodeID,
 						 int16 *srcRoute);
 
 static TupleChunkListItem RecvTupleChunkFromTCP(ChunkTransportState *transportStates,
+					  MotionNodeEntry *pMNEntry,
 					  int16 motNodeID,
 					  int16 srcRoute);
 
@@ -2413,6 +2415,7 @@ doSendStopMessageTCP(ChunkTransportState *transportStates, int16 motNodeID)
 
 static TupleChunkListItem
 RecvTupleChunkFromTCP(ChunkTransportState *transportStates,
+					  MotionNodeEntry *pMNEntry,
 					  int16 motNodeID,
 					  int16 srcRoute)
 {
@@ -2434,6 +2437,7 @@ RecvTupleChunkFromTCP(ChunkTransportState *transportStates,
 
 static TupleChunkListItem
 RecvTupleChunkFromAnyTCP(ChunkTransportState *transportStates,
+						 MotionNodeEntry *pMNEntry,
 						 int16 motNodeID,
 						 int16 *srcRoute)
 {

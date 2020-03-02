@@ -521,8 +521,8 @@ typedef struct ChunkTransportState
 
 	/* Function pointers to our send/receive functions */
 	bool (*SendChunk)(struct ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntry, MotionConn *conn, TupleChunkListItem tcItem, int16 motionId);
-	TupleChunkListItem (*RecvTupleChunkFrom)(struct ChunkTransportState *transportStates, int16 motNodeID, int16 srcRoute);
-	TupleChunkListItem (*RecvTupleChunkFromAny)(struct ChunkTransportState *transportStates, int16 motNodeID, int16 *srcRoute);
+	TupleChunkListItem (*RecvTupleChunkFrom)(struct ChunkTransportState *transportStates, MotionNodeEntry *pMNEntry, int16 motNodeID, int16 srcRoute);
+	TupleChunkListItem (*RecvTupleChunkFromAny)(struct ChunkTransportState *transportStates, MotionNodeEntry *pMNEntry, int16 motNodeID, int16 *srcRoute);
 	void (*doSendStopMessage)(struct ChunkTransportState *transportStates, int16 motNodeID);
 	void (*SendEos)(struct ChunkTransportState *transportStates, int motNodeID, TupleChunkListItem tcItem);
 } ChunkTransportState;

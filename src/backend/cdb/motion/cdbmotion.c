@@ -656,9 +656,9 @@ processIncomingChunks(MotionLayerState *mlStates,
 	 * the chunk-sorter.
 	 */
 	if (srcRoute == ANY_ROUTE)
-		tcItem = transportStates->RecvTupleChunkFromAny(transportStates, motNodeID, &srcRoute);
+		tcItem = transportStates->RecvTupleChunkFromAny(transportStates, pMNEntry, motNodeID, &srcRoute);
 	else
-		tcItem = transportStates->RecvTupleChunkFrom(transportStates, motNodeID, srcRoute);
+		tcItem = transportStates->RecvTupleChunkFrom(transportStates, pMNEntry, motNodeID, srcRoute);
 
 	numChunks = 0;
 	chunkBytes = 0;
