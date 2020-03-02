@@ -210,6 +210,23 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid,
 	if (rel->rd_rel->reltoastrelid != InvalidOid)
 		return false;
 
+    /*
+     * Toast tables for regular relations go in pg_toast; those for temp
+     * relations go into the per-backend temp-toast-table namespace.
+     */
+    if (isTempOrToastNamespace(rel->rd_rel->relnamespace))
+        namespaceid = GetTempToastNamespace();
+    else
+        namespaceid = PG_TOAST_NAMESPACE;
+
+    /*
+     * Create the toast table name and its index name
+     */
+    snprintf(toast_relname, sizeof(toast_relname),
+             "pg_toast_%u", relOid);
+    snprintf(toast_idxname, sizeof(toast_idxname),
+             "pg_toast_%u_index", relOid);
+
 	/*
 	 * Check to see whether the table actually needs a TOAST table.
 	 */
@@ -250,6 +267,23 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid,
 		 *	!OidIsValid(binary_upgrade_next_toast_pg_type_oid))
 		 *	return false;
 		 */
+
+		/*
+		 * Check if there is a preassigned oid for the toast relation, bailout
+		 * if not.
+		 * When the default statistic target for a column is not the default, pg_dump
+		 * will dump an ALTER command to set the statistics for the
+		 * target column. Thus, during restore, it will come here to add a toast table
+		 * if required.
+		 *
+		 */
+        toastOid = GetPreassignedOidForRelation(namespaceid, toast_relname);
+        if (!OidIsValid(toastOid))
+            return false;
+
+        /* Use binary-upgrade override for pg_type.oid */
+        toast_typid = GetPreassignedOidForType(namespaceid, toast_relname, true);
+
 	}
 
 	/*
@@ -258,14 +292,6 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid,
 	 */
 	if (check && lockmode != AccessExclusiveLock)
 		elog(ERROR, "AccessExclusiveLock required to add toast table.");
-
-	/*
-	 * Create the toast table and its index
-	 */
-	snprintf(toast_relname, sizeof(toast_relname),
-			 "pg_toast_%u", relOid);
-	snprintf(toast_idxname, sizeof(toast_idxname),
-			 "pg_toast_%u_index", relOid);
 
 	/* this is pretty painful...  need a tuple descriptor */
 	tupdesc = CreateTemplateTupleDesc(3, false);
@@ -290,24 +316,6 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid,
 	tupdesc->attrs[0]->attstorage = 'p';
 	tupdesc->attrs[1]->attstorage = 'p';
 	tupdesc->attrs[2]->attstorage = 'p';
-
-	/*
-	 * Toast tables for regular relations go in pg_toast; those for temp
-	 * relations go into the per-backend temp-toast-table namespace.
-	 */
-	if (isTempOrToastNamespace(rel->rd_rel->relnamespace))
-		namespaceid = GetTempToastNamespace();
-	else
-		namespaceid = PG_TOAST_NAMESPACE;
-
-	/* Use binary-upgrade override for pg_type.oid */
-	if (IsBinaryUpgrade)
-	{
-		toastOid = GetPreassignedOidForRelation(namespaceid, toast_relname);
-		if (!OidIsValid(toastOid))
-			return false;
-		toast_typid = GetPreassignedOidForType(namespaceid, toast_relname, true);
-	}
 
 	toast_relid = heap_create_with_catalog(toast_relname,
 										   namespaceid,
