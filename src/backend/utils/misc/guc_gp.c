@@ -5810,13 +5810,15 @@ assign_pljava_classpath_insecure(bool newval, bool doit, GucSource source)
 static const char *
 assign_optimizer_minidump(const char *val, bool assign, GucSource source)
 {
-	if (pg_strcasecmp(val, "onerror") == 0 && assign)
+	if (pg_strcasecmp(val, "onerror") == 0)
 	{
-		optimizer_minidump = OPTIMIZER_MINIDUMP_FAIL;
+		if (assign)
+			optimizer_minidump = OPTIMIZER_MINIDUMP_FAIL;
 	}
-	else if (pg_strcasecmp(val, "always") == 0 && assign)
+	else if (pg_strcasecmp(val, "always") == 0)
 	{
-		optimizer_minidump = OPTIMIZER_MINIDUMP_ALWAYS;
+		if (assign)
+			optimizer_minidump = OPTIMIZER_MINIDUMP_ALWAYS;
 	}
 	else
 	{
@@ -5829,17 +5831,20 @@ assign_optimizer_minidump(const char *val, bool assign, GucSource source)
 static const char *
 assign_optimizer_cost_model(const char *val, bool assign, GucSource source)
 {
-	if (pg_strcasecmp(val, "legacy") == 0 && assign)
+	if (pg_strcasecmp(val, "legacy") == 0)
 	{
-		optimizer_cost_model = OPTIMIZER_GPDB_LEGACY;
+		if (assign)
+			optimizer_cost_model = OPTIMIZER_GPDB_LEGACY;
 	}
-	else if (pg_strcasecmp(val, "calibrated") == 0 && assign)
+	else if (pg_strcasecmp(val, "calibrated") == 0)
 	{
-		optimizer_cost_model = OPTIMIZER_GPDB_CALIBRATED;
+		if (assign)
+			optimizer_cost_model = OPTIMIZER_GPDB_CALIBRATED;
 	}
-	else if (pg_strcasecmp(val, "experimental") == 0 && assign)
+	else if (pg_strcasecmp(val, "experimental") == 0)
 	{
-		optimizer_cost_model = OPTIMIZER_GPDB_EXPERIMENTAL;
+		if (assign)
+			optimizer_cost_model = OPTIMIZER_GPDB_EXPERIMENTAL;
 	}
 	else
 	{
