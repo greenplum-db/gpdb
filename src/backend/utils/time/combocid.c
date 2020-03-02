@@ -93,13 +93,6 @@ volatile int sizeComboCids = 0;			/* allocated size of array */
 /* Initial size of the array */
 #define CCID_ARRAY_SIZE			100
 
-/*
- * HASH TABLE 2:
- *
- * Used by reader gangs to lookup using combocid/xmin to find cmin/cmax.
- */
-static HTAB *readerComboHash = NULL;
-
 static ResourceOwner combocidResOwner = NULL;	/* combocid resources */
 
 /*
@@ -126,7 +119,6 @@ static CommandId GetRealCmax(TransactionId xmin, CommandId combocid);
 
 static dsm_segment *combocid_map = NULL;
 static void dumpSharedComboCommandId(TransactionId xmin, CommandId cmin, CommandId cmax, CommandId combocid);
-static void loadSharedComboCommandId(TransactionId xmin, CommandId combocid, CommandId *cmin, CommandId *cmax);
 
 /**** External API ****/
 
@@ -226,8 +218,6 @@ AtEOXact_ComboCid(void)
 	 */
 	comboHash = NULL;
 
-	readerComboHash = NULL;
-
 	comboCids = NULL;
 	usedComboCids = 0;
 	sizeComboCids = 0;
@@ -288,7 +278,6 @@ GetComboCommandId(TransactionId xmin, CommandId cmin, CommandId cmax)
 			&& combocid_map == NULL)
 		{
 			/* This is the first time a combo cid is to be written by this writer. */
-			MemoryContext oldCtx;
 			ResourceOwner oldowner;
 
 			if (combocidResOwner == NULL)
@@ -299,7 +288,6 @@ GetComboCommandId(TransactionId xmin, CommandId cmin, CommandId cmax)
 			/* create dsm, as appropriate: this will throw an error if the create-fails. */
 			oldowner = CurrentResourceOwner;
 			CurrentResourceOwner = combocidResOwner;
-			oldCtx = MemoryContextSwitchTo(TopMemoryContext);
 
 			combocid_map = dsm_create(sizeComboCids * sizeof(ComboCidEntryData),
 			                          DSM_CREATE_NULL_IF_MAXSEGMENTS);
@@ -311,7 +299,6 @@ GetComboCommandId(TransactionId xmin, CommandId cmin, CommandId cmax)
 
 			MyProc->combocid_map_handle = dsm_segment_handle(combocid_map);
 
-			MemoryContextSwitchTo(oldCtx);
 			CurrentResourceOwner = oldowner;
 		}
 	}
@@ -416,54 +403,73 @@ enum minmax
 static CommandId
 getSharedComboCidEntry(TransactionId xmin, CommandId combocid, enum minmax min_or_max)
 {
-	bool		found;
-	readerComboCidKeyData reader_key;
-	readerComboCidEntryData *reader_entry;
-
 	CommandId	cmin = 0,
 				cmax = 0;
+	bool		found = false;
+	ComboCidEntry entry;
+	int			i;
+
+	Assert(Gp_role == GP_ROLE_EXECUTE);
+	Assert(!Gp_is_writer);
 
 	if (lockHolderProcPtr == NULL)
 	{
 		/* get lockholder! */
-		elog(ERROR, "getSharedComboCidEntry: NO LOCK HOLDER POINTER.");
+		elog(ERROR, "loadSharedComboCommandId: NO LOCK HOLDER POINTER.");
 	}
+
+	ResourceOwner oldowner;
+
+	/* attach our handle, as appropriate: this will throw an error if the create-fails. */
+	oldowner = CurrentResourceOwner;
+	CurrentResourceOwner = TopTransactionResourceOwner;
+
+	int combocid_map_count = 0;
+	int retry = 3;
+	do {
+		combocid_map_count = lockHolderProcPtr->combocid_map_count;
+		combocid_map =
+			(dsm_segment *)dsm_attach(lockHolderProcPtr->combocid_map_handle);
+
+		if (likely(combocid_map != NULL))
+			break;
+
+		pg_usleep(100000L); /* 0.1 sec */
+	}while (--retry) ;
+
+	if(combocid_map == NULL)
+		elog(ERROR,"Can not find relevant dsm_segment");
+
+	CurrentResourceOwner = oldowner;
+
+	Assert(combocid_map != NULL);
 
 	/*
-	 * Create the reader hash table and array the first time we need
-	 * to use combo cids in the transaction.
+	 * Read this entry in ...
+	 *
+	 * We're going to read in the entire table, caching all occurrences of
+	 * our xmin.
 	 */
-	if (readerComboHash == NULL)
+	for (i = 0; i < combocid_map_count; i++)
 	{
-		HASHCTL		hash_ctl;
 
-		memset(&hash_ctl, 0, sizeof(hash_ctl));
-		hash_ctl.keysize = sizeof(readerComboCidKeyData);
-		hash_ctl.entrysize = sizeof(readerComboCidEntryData);
-		hash_ctl.hash = tag_hash;
-		hash_ctl.hcxt = TopTransactionContext;
+		entry = dsm_segment_address(combocid_map);
 
-		readerComboHash = hash_create("Combo CIDs", CCID_HASH_SIZE, &hash_ctl,
-									  HASH_ELEM | HASH_FUNCTION | HASH_CONTEXT);
+		if (entry[i].key.xmin == xmin
+			&& entry[i].combocid == combocid)
+		{
+			cmin = entry[i].key.cmin;
+			cmax = entry[i].key.cmax;
+			found = true;
+		}
 	}
 
-	memset(&reader_key, 0, sizeof(reader_key));
-	reader_key.writer_pid = lockHolderProcPtr->pid;
-	reader_key.xmin = xmin;
-	reader_key.session = gp_session_id;
-	reader_key.combocid = combocid;
+	dsm_detach(combocid_map);
+	combocid_map = NULL;
 
-	reader_entry = (readerComboCidEntryData *)
-		hash_search(readerComboHash, &reader_key, HASH_FIND, &found);
-
-	if (reader_entry != NULL)
+	if (!found)
 	{
-		cmin = reader_entry->cmin;
-		cmax = reader_entry->cmax;
-	}
-	else
-	{
-		loadSharedComboCommandId(xmin, combocid, &cmin, &cmax);
+		elog(ERROR, "loadSharedComboCommandId: no combocid entry found for %u/%u", xmin, combocid);
 	}
 
 	return (min_or_max == CMIN ? cmin : cmax);
@@ -618,107 +624,6 @@ dumpSharedComboCommandId(TransactionId xmin, CommandId cmin, CommandId cmax, Com
 	MyProc->combocid_map_count += 1;
 }
 
-void
-loadSharedComboCommandId(TransactionId xmin, CommandId combocid, CommandId *cmin, CommandId *cmax)
-{
-	bool		found = false;
-	ComboCidEntry entry;
-	int			i;
-
-	Assert(Gp_role == GP_ROLE_EXECUTE);
-	Assert(!Gp_is_writer);
-	Assert(cmin != NULL);
-	Assert(cmax != NULL);
-
-	if (lockHolderProcPtr == NULL)
-	{
-		/* get lockholder! */
-		elog(ERROR, "loadSharedComboCommandId: NO LOCK HOLDER POINTER.");
-	}
-
-
-	MemoryContext oldCtx;
-	ResourceOwner oldowner;
-
-	/* attach our handle, as appropriate: this will throw an error if the create-fails. */
-	oldowner = CurrentResourceOwner;
-	CurrentResourceOwner = TopTransactionResourceOwner;
-	oldCtx = MemoryContextSwitchTo(TopMemoryContext);
-
-	int combocid_map_count = 0;
-	int retry = 3;
-	do {
-		combocid_map_count = lockHolderProcPtr->combocid_map_count;
-		combocid_map =
-			(dsm_segment *)dsm_attach(lockHolderProcPtr->combocid_map_handle);
-
-		if (likely(combocid_map != NULL))
-			break;
-
-		pg_usleep(100000L); /* 0.1 sec */
-	}while (--retry) ;
-
-	if(combocid_map == NULL)
-		elog(ERROR,"Can not find relevant dsm_segment");
-
-	MemoryContextSwitchTo(oldCtx);
-	CurrentResourceOwner = oldowner;
-
-	Assert(combocid_map != NULL);
-
-	/*
-	 * Read this entry in ...
-	 *
-	 * We're going to read in the entire table, caching all occurrences of
-	 * our xmin.
-	 */
-	for (i = 0; i < combocid_map_count; i++)
-	{
-
-		entry = dsm_segment_address(combocid_map);
-
-		if (entry[i].key.xmin == xmin)
-		{
-			bool		cached = false;
-			readerComboCidKeyData reader_key;
-			readerComboCidEntryData *reader_entry;
-
-			memset(&reader_key, 0, sizeof(reader_key));
-			reader_key.writer_pid = lockHolderProcPtr->pid;
-			reader_key.xmin = entry[i].key.xmin;
-			reader_key.session = gp_session_id;
-			reader_key.combocid = entry[i].combocid;
-
-			reader_entry = (readerComboCidEntryData *)
-				hash_search(readerComboHash, &reader_key, HASH_ENTER, &cached);
-
-			if (!cached)
-			{
-				reader_entry->cmin = entry[i].key.cmin;
-				reader_entry->cmax = entry[i].key.cmax;
-			}
-
-			/*
-			 * This was our entry -- we're going to continue our scan,
-			 * to pull in any additional entries for our xmin
-			 */
-			if (entry[i].combocid == combocid)
-			{
-				*cmin = entry[i].key.cmin;
-				*cmax = entry[i].key.cmax;
-				found = true;
-			}
-		}
-	}
-
-	dsm_detach(combocid_map);
-	combocid_map = NULL;
-
-	if (!found)
-	{
-		elog(ERROR, "loadSharedComboCommandId: no combocid entry found for %u/%u", xmin, combocid);
-	}
-}
 
 void
 AtEOXact_ComboCid_Dsm_Detach(void)
