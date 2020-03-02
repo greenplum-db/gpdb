@@ -707,8 +707,6 @@ dumpSharedLocalSnapshot_forCursor(void)
 		FileWriteFieldWithCount(count, f, src->xid);
 		FileWriteFieldWithCount(count, f, src->startTimestamp);
 
-		FileWriteFieldWithCount(count, f, src->combocidcnt);
-		FileWriteFieldWithCount(count, f, src->combocids);
 		FileWriteFieldWithCount(count, f, src->snapshot.xmin);
 		FileWriteFieldWithCount(count, f, src->snapshot.xmax);
 		FileWriteFieldWithCount(count, f, src->snapshot.xcnt);
@@ -756,9 +754,6 @@ readSharedLocalSnapshot_forCursor(Snapshot snapshot, DtxContext distributedTrans
 
 	TransactionId localXid;
 	TimestampTz localXactStartTimestamp;
-
-	uint32 combocidcnt;
-	ComboCidKeyData tmp_combocids[MaxComboCids];
 
 	Assert(Gp_role == GP_ROLE_EXECUTE);
 	Assert(!Gp_is_writer);
@@ -817,27 +812,6 @@ readSharedLocalSnapshot_forCursor(Snapshot snapshot, DtxContext distributedTrans
 
 	memcpy(&localXactStartTimestamp, p, sizeof(localXactStartTimestamp));
 	p += sizeof(localXactStartTimestamp);
-
-	memcpy(&combocidcnt, p, sizeof(combocidcnt));
-	p += sizeof(combocidcnt);
-
-	memcpy(tmp_combocids, p, sizeof(tmp_combocids));
-	p += sizeof(tmp_combocids);
-
-	/* handle the combocid stuff (same as in GetSnapshotData()) */
-	if (usedComboCids != combocidcnt)
-	{
-		if (usedComboCids == 0)
-		{
-			MemoryContext oldCtx =  MemoryContextSwitchTo(TopTransactionContext);
-			comboCids = palloc(combocidcnt * sizeof(ComboCidKeyData));
-			MemoryContextSwitchTo(oldCtx);
-		}
-		else
-			repalloc(comboCids, combocidcnt * sizeof(ComboCidKeyData));
-	}
-	memcpy(comboCids, tmp_combocids, combocidcnt * sizeof(ComboCidKeyData));
-	usedComboCids = ((combocidcnt < MaxComboCids) ? combocidcnt : MaxComboCids);
 
 	memcpy(&snapshot->xmin, p, sizeof(snapshot->xmin));
 	p += sizeof(snapshot->xmin);

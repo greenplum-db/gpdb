@@ -1576,8 +1576,6 @@ updateSharedLocalSnapshot(DtxContextInfo *dtxContextInfo,
 						  Snapshot snapshot,
 						  char *debugCaller)
 {
-	int combocidSize;
-
 	Assert(SharedLocalSnapshotSlot != NULL);
 
 	Assert(snapshot != NULL);
@@ -1607,18 +1605,11 @@ updateSharedLocalSnapshot(DtxContextInfo *dtxContextInfo,
 		memcpy(SharedLocalSnapshotSlot->snapshot.xip, snapshot->xip, snapshot->xcnt * sizeof(TransactionId));
 	}
 	
-	/* combocid stuff */
-	combocidSize = ((usedComboCids < MaxComboCids) ? usedComboCids : MaxComboCids );
-
-	SharedLocalSnapshotSlot->combocidcnt = combocidSize;
-	memcpy((void *)SharedLocalSnapshotSlot->combocids, comboCids,
-		   combocidSize * sizeof(ComboCidKeyData));
-
 	SharedLocalSnapshotSlot->snapshot.curcid = snapshot->curcid;
 
 	ereport((Debug_print_full_dtm ? LOG : DEBUG5),
-			(errmsg("updateSharedLocalSnapshot: combocidsize is now %d max %d segmateSync %d->%d",
-					combocidSize, MaxComboCids, SharedLocalSnapshotSlot->segmateSync, dtxContextInfo->segmateSync)));
+			(errmsg("updateSharedLocalSnapshot: segmateSync %d->%d",
+					SharedLocalSnapshotSlot->segmateSync, dtxContextInfo->segmateSync)));
 
 	SetSharedTransactionId_writer(distributedTransactionContext);
 	
@@ -1687,17 +1678,6 @@ copyLocalSnapshot(Snapshot snapshot)
 
 	snapshot->curcid = SharedLocalSnapshotSlot->snapshot.curcid;
 	snapshot->subxcnt = -1;
-
-	/* combocid */
-	usedComboCids = SharedLocalSnapshotSlot->combocidcnt;
-	Assert(usedComboCids <= MaxComboCids);
-	if (usedComboCids > 0)
-	{
-		if (comboCids == NULL)
-			comboCids = MemoryContextAlloc(TopTransactionContext, MaxComboCids * sizeof(ComboCidKeyData));
-
-		memcpy(comboCids, (char *)SharedLocalSnapshotSlot->combocids, usedComboCids * sizeof(ComboCidKeyData));
-	}
 
 	if (TransactionIdPrecedes(snapshot->xmin, TransactionXmin))
 		TransactionXmin = snapshot->xmin;
@@ -3146,8 +3126,6 @@ UpdateSerializableCommandId(CommandId curcid)
 		 SharedLocalSnapshotSlot != NULL &&
 		 FirstSnapshotSet)
 	{
-		int combocidSize;
-
 		LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_EXCLUSIVE);
 
 		if (SharedLocalSnapshotSlot->QDxid != QEDtxContextInfo.distributedXid)
@@ -3170,16 +3148,6 @@ UpdateSerializableCommandId(CommandId curcid)
 						SharedLocalSnapshotSlot->snapshot.curcid,
 						getDistributedTransactionId(),
 						DtxContextToString(DistributedTransactionContext))));
-
-		ereport((Debug_print_snapshot_dtm ? LOG : DEBUG5),
-				(errmsg("serializable writer updating combocid: used combocids %d shared %d",
-						usedComboCids, SharedLocalSnapshotSlot->combocidcnt)));
-
-		combocidSize = ((usedComboCids < MaxComboCids) ? usedComboCids : MaxComboCids );
-
-		SharedLocalSnapshotSlot->combocidcnt = combocidSize;	
-		memcpy((void *)SharedLocalSnapshotSlot->combocids, comboCids,
-			   combocidSize * sizeof(ComboCidKeyData));
 
 		SharedLocalSnapshotSlot->snapshot.curcid = curcid;
 		SharedLocalSnapshotSlot->segmateSync = QEDtxContextInfo.segmateSync;
