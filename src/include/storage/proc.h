@@ -173,10 +173,10 @@ struct PGPROC
 	uint32		waitPortalId;	/* portal id we are waiting on */
 
 	/*
-	 * Information for our combocid-map (populated in writer/dispatcher backends only)
+	 * Handle for our shared comboCids array (populated in writer/dispatcher
+	 * backends only)
 	 */
-	uint32		combocid_map_count; /* how many entries in the map ? */
-	dsm_handle  combocid_map_handle;
+	dsm_handle  comboCidsHandle;
 
 	/*
 	 * Current command_id for the running query

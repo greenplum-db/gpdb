@@ -1145,12 +1145,6 @@ HeapTupleSatisfiesMVCC(Relation relation, HeapTuple htup, Snapshot snapshot,
 				return true;
 			}
 
-			/*
-			 * MPP-8317: cursors can't always *tell* that this is the current transaction.
-			 */
-			Assert(QEDtxContextInfo.cursorContext ||
-				   TransactionIdIsCurrentTransactionId(HeapTupleHeaderGetRawXmax(tuple)));
-
 			if (HeapTupleHeaderGetCmax(tuple) >= snapshot->curcid)
 				return true;	/* deleted after scan started */
 			else
