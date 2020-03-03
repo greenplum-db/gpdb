@@ -54,9 +54,9 @@ Initializing PXF also creates the `$PXF_CONF` user configuration directory if it
 - `conf/` -  user-customizable files for PXF runtime and logging configuration settings
 - `templates/` - template configuration files
 
-If the `$PXF_CONF` directory you specify during initialization already exists, PXF updates only the `templates` subdirectory.
+PXF remembers the `JAVA_HOME` setting that you specified during initialization by updating the property of the same name in the `$PXF_CONF/conf/pxf-env.sh` user configuration file. PXF sources this environment file on startup, allowing it to run with a Java installation that is different than the system default Java.
 
-**Note**: PXF remembers the `JAVA_HOME` setting that you specified during initialization by updating the property of the same name in the `$PXF_CONF/conf/pxf-env.sh` user configuration file. PXF sources this environment file on startup, allowing PXF to run with a Java installation that is different than the system default Java.
+If the `$PXF_CONF` directory that you specify during initialization already exists, PXF updates only the `templates` subdirectory and the `$PXF_CONF/conf/pxf-env.sh` environment configuration file.
 
 
 ## <a id="init-pxf-prereq"></a>Prerequisites
