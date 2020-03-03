@@ -1,0 +1,26 @@
+platform: linux
+image_resource:
+  type: docker-image
+  source:
+    repository: pivotaldata/qp-gpdbdev
+inputs:
+  - name: gporca-commits-to-test
+  - name: bin_orca
+  - name: bin_xerces
+  - name: bin_gpdb
+    optional: true
+  - name: gpdb_main_src
+  - name: gpdb_tarball
+  - name: explain_test_suite
+    optional: true
+outputs:
+  - name: gpdb_binary
+  - name: package_tarball
+  - name: icg_output
+run:
+  path: gpdb_main_src/concourse/scripts/untar_and_build_gpdb.py
+params:
+  ACTION:
+  MODE:
+  CONFIGURE_OPTION:
+  BLDWRAP_POSTGRES_CONF_ADDONS: statement_mem=250MB

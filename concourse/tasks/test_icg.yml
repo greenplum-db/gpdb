@@ -4,20 +4,21 @@ image_resource:
   source:
     repository: pivotaldata/qp-gpdbdev
 inputs:
+  - name: gpdb_src
   - name: bin_orca
   - name: bin_xerces
-  - name: gpdb_src
-outputs:
   - name: bin_gpdb
+outputs:
+  - name: icg_output
 params:
+  BLDWRAP_POSTGRES_CONF_ADDONS:
   MODE:
-  OUTPUTDIR:
   ACTION:
   CONFIGURE_OPTION:
-  OTHER_CONFIGS:
+  GPDB_BINARY:
 run:
   path: sh
   args:
   - -exc
   - |
-    gpdb_src/concourse/scripts/build_gpdb.py ${MODE} ${OUTPUTDIR} ${ACTION} ${CONFIGURE_OPTION} ${OTHER_CONFIGS}
+    gpdb_src/concourse/scripts/build_gpdb.py ${MODE} ${ACTION} ${CONFIGURE_OPTION} ${GPDB_BINARY}
