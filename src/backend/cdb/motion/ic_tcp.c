@@ -20,6 +20,7 @@
 #include "miscadmin.h"
 #include "libpq/libpq-be.h"
 #include "libpq/ip.h"
+#include "postmaster/postmaster.h"
 #include "utils/builtins.h"
 
 #include "cdb/cdbselect.h"
@@ -141,8 +142,7 @@ setupTCPListeningSocket(int backlog, int *listenerSocketFd, uint16 *listenerPort
 			   *rp;
 	int			s;
 	char		service[32];
-	char		myname[128];
-	char	   *localname = NULL;
+	char		*localname;
 
 	/*
 	 * we let the system pick the TCP port here so we don't have to manage
@@ -160,9 +160,7 @@ setupTCPListeningSocket(int backlog, int *listenerSocketFd, uint16 *listenerPort
 	 * QD local connections tend to be AF_UNIX, or on 127.0.0.1 -- so bind
 	 * everything)
 	 */
-	if (Gp_role == GP_ROLE_DISPATCH || MyProcPort == NULL ||
-		(MyProcPort->laddr.addr.ss_family != AF_INET &&
-		 MyProcPort->laddr.addr.ss_family != AF_INET6))
+	if (Gp_role == GP_ROLE_DISPATCH)
 		localname = NULL;		/* We will listen on all network adapters */
 	else
 	{
@@ -170,11 +168,9 @@ setupTCPListeningSocket(int backlog, int *listenerSocketFd, uint16 *listenerPort
 		 * Restrict what IP address we will listen on to just the one that was
 		 * used to create this QE session.
 		 */
-		getnameinfo((const struct sockaddr *) &(MyProcPort->laddr.addr), MyProcPort->laddr.salen,
-					myname, sizeof(myname),
-					NULL, 0, NI_NUMERICHOST);
-		hints.ai_flags |= AI_NUMERICHOST;
-		localname = myname;
+		localname = interconnect_address;
+		if (localname)
+			hints.ai_flags |= AI_NUMERICHOST;
 		elog(DEBUG1, "binding to %s only", localname);
 		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
 			ereport(DEBUG4, (errmsg("binding listener %s", localname)));

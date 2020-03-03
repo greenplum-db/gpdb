@@ -221,6 +221,11 @@ char	   *Unix_socket_directories;
 char	   *ListenAddresses;
 
 /*
+ * The interconnect address. We assume the interconnect is the address
+ * in gp_segment_configuration. And it's never changed at runtime.
+ */
+char	   *interconnect_address = NULL;
+/*
  * ReservedBackends is the number of backends reserved for superuser use.
  * This number is taken out of the pool size given by MaxBackends so
  * number of backend slots available to non-superusers is
@@ -2793,6 +2798,21 @@ ConnCreate(int serverFd)
 		return NULL;
 	}
 
+	if (interconnect_address == NULL &&
+		(port->laddr.addr.ss_family == AF_INET ||
+		 port->laddr.addr.ss_family == AF_INET6))
+	{
+		/*
+		 * We assume that the QD, using the address in gp_segment_configuration
+		 * as its destination IP address, connects to the segment/QE.
+		 * So, the local address in the PORT can be used for interconnect.
+		 */
+		char local_addr[128];
+		getnameinfo((const struct sockaddr *)&port->laddr.addr, port->laddr.salen,
+					local_addr, sizeof(local_addr),
+					NULL, 0, NI_NUMERICHOST);
+		interconnect_address = MemoryContextStrdup(TopMemoryContext, local_addr);
+	}
 	/*
 	 * Precompute password salt values to use for this connection. It's
 	 * slightly annoying to do this long in advance of knowing whether we'll

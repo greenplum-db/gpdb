@@ -36,6 +36,7 @@
 #include "libpq/ip.h"
 #include "port/atomics.h"
 #include "port/pg_crc32c.h"
+#include "postmaster/postmaster.h"
 #include "storage/latch.h"
 #include "storage/pmsignal.h"
 #include "utils/builtins.h"
@@ -1173,6 +1174,7 @@ setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFami
 	struct sockaddr_storage our_addr;
 	socklen_t	our_addr_len;
 	char		service[32];
+	char		*localname;
 
 	snprintf(service, 32, "%d", 0);
 	memset(&hints, 0, sizeof(struct addrinfo));
@@ -1187,7 +1189,27 @@ setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFami
 #endif
 
 	fun = "getaddrinfo";
-	s = getaddrinfo(NULL, service, &hints, &addrs);
+	/*
+	 * We use INADDR_ANY if we don't have a valid address for ourselves (e.g.
+	 * QD local connections tend to be AF_UNIX, or on 127.0.0.1 -- so bind
+	 * everything)
+	 */
+	if (Gp_role == GP_ROLE_DISPATCH)
+		localname = NULL;		/* We will listen on all network adapters */
+	else
+	{
+		/*
+		 * Restrict what IP address we will listen on to just the one that was
+		 * used to create this QE session.
+		 */
+		localname = interconnect_address;
+		if (interconnect_address)
+			hints.ai_flags |= AI_NUMERICHOST;
+		elog(DEBUG1, "binding to %s only", localname);
+		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
+			ereport(DEBUG4, (errmsg("binding listener %s", localname)));
+	}
+	s = getaddrinfo(localname, service, &hints, &addrs);
 	if (s != 0)
 		elog(ERROR, "getaddrinfo says %s", gai_strerror(s));
 
