@@ -557,6 +557,9 @@ CConfigParamMapping::PackConfigParamInBitset
 		traceflag_bitset->ExchangeSet(EopttraceCalibratedBitmapIndexCostModel);
 	}
 
+	// Keep current behavior for range predicates in DPE for 5x
+	traceflag_bitset->ExchangeSet(EopttraceAllowGeneralPredicatesforDPE);
+
 	return traceflag_bitset;
 }
 
