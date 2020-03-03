@@ -740,11 +740,9 @@ adjustMasterRouting(ExecSlice *recvSlice)
 	foreach(lc, recvSlice->primaryProcesses)
 	{
 		CdbProcess *cdbProc = (CdbProcess *) lfirst(lc);
-
 		if (cdbProc)
 		{
-			if (cdbProc->listenerAddr == NULL)
-				cdbProc->listenerAddr = pstrdup(MyProcPort->remote_host);
+			Assert(cdbProc->listenerAddr);
 		}
 	}
 }

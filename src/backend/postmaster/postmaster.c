@@ -2796,21 +2796,6 @@ ConnCreate(int serverFd)
 		return NULL;
 	}
 
-	if (interconnect_address == NULL &&
-		(port->laddr.addr.ss_family == AF_INET ||
-		 port->laddr.addr.ss_family == AF_INET6))
-	{
-		/*
-		 * We assume that the QD, using the address in gp_segment_configuration
-		 * as its destination IP address, connects to the segment/QE.
-		 * So, the local address in the PORT can be used for interconnect.
-		 */
-		char local_addr[128];
-		getnameinfo((const struct sockaddr *)&port->laddr.addr, port->laddr.salen,
-					local_addr, sizeof(local_addr),
-					NULL, 0, NI_NUMERICHOST);
-		interconnect_address = MemoryContextStrdup(TopMemoryContext, local_addr);
-	}
 	/*
 	 * Precompute password salt values to use for this connection. It's
 	 * slightly annoying to do this long in advance of knowing whether we'll
@@ -4686,6 +4671,25 @@ BackendInitialize(Port *port)
 	if (status != STATUS_OK)
 		proc_exit(0);
 
+	/*
+	 * We record interconnect_address on the segment, and the value on the master
+	 * is set in a different way. See cdb_setup().
+	 */
+	if (Gp_role == GP_ROLE_EXECUTE && interconnect_address == NULL &&
+		(port->laddr.addr.ss_family == AF_INET ||
+		 port->laddr.addr.ss_family == AF_INET6))
+	{
+		/*
+		 * We assume that the QD, using the address in gp_segment_configuration
+		 * as its destination IP address, connects to the segment/QE.
+		 * So, the local address in the PORT can be used for interconnect.
+		 */
+		char local_addr[128];
+		getnameinfo((const struct sockaddr *)&port->laddr.addr, port->laddr.salen,
+					local_addr, sizeof(local_addr),
+					NULL, 0, NI_NUMERICHOST);
+		interconnect_address = MemoryContextStrdup(TopMemoryContext, local_addr);
+	}
 	/*
 	 * Now that we have the user and database name, we can set the process
 	 * title for ps.  It's good to do this as early as possible in startup.

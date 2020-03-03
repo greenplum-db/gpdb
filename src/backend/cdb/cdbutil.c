@@ -48,6 +48,7 @@
 #include "storage/ipc.h"
 #include "storage/proc.h"
 #include "postmaster/fts.h"
+#include "postmaster/postmaster.h"
 #include "catalog/namespace.h"
 #include "utils/gpexpand.h"
 #include "access/xact.h"
@@ -1015,6 +1016,25 @@ cdb_setup(void)
 	/* If gp_role is UTILITY, skip this call. */
 	if (Gp_role != GP_ROLE_UTILITY)
 	{
+		/* set interconnect_address for QD and entry db */
+		if (Gp_role == GP_ROLE_DISPATCH)
+		{
+			/*
+			 * Here, we can only retrieve the ADDRESS in gp_segment_configuration
+			 * from `cdbcomponent*`. We couldn't get it in a way as the QEs.
+			 */
+			CdbComponentDatabaseInfo *qdInfo;
+			qdInfo = cdbcomponent_getComponentInfo(MASTER_CONTENT_ID);
+			interconnect_address = MemoryContextStrdup(TopMemoryContext, qdInfo->config->hostip);
+		}
+		else if (GpIdentity.segindex == MASTER_CONTENT_ID && qdHostname && qdHostname[0] != '\0')
+		{
+			/*
+			 * QE on the master can't get its interconnect address like that on the primary.
+			 * The QD connects to its postmaster via the unix domain socket.
+			 */
+			interconnect_address = qdHostname;
+		}
 		/* Initialize the Motion Layer IPC subsystem. */
 		InitMotionLayerIPC();
 	}
