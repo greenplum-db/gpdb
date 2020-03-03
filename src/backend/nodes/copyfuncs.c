@@ -1160,6 +1160,7 @@ _copyTupleSplit(const TupleSplit *from)
 	}
 
 	COPY_SCALAR_FIELD(numDisDQAs);
+	newnode->dqa_args_id_bms = palloc0(sizeof(Bitmapset *) * from->numDisDQAs);
 	for (int i = 0; i < from->numDisDQAs; i ++)
 		COPY_BITMAPSET_FIELD(dqa_args_id_bms[i]);
 
