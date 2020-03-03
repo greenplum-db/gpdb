@@ -372,6 +372,7 @@
 		"optimizer_enable_partial_index",
 		"optimizer_enable_partition_propagation",
 		"optimizer_enable_partition_selection",
+		"optimizer_enable_range_predicate_dpe",
 		"optimizer_enable_sort",
 		"optimizer_enable_space_pruning",
 		"optimizer_enable_streaming_material",
