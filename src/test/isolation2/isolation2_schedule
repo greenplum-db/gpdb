@@ -7,10 +7,6 @@ test: dml_on_root_locks_all_parts
 test: select_dropped_table
 test: update_hash_col_utilitymode execute_on_utilitymode
 
-# Tests for packcore, will use the coredumps generated in crash_recovery_dtm,
-# so must be scheduled after that one.
-test: packcore
-
 # Tests on global deadlock detector
 test: gdd/prepare
 test: gdd/dist-deadlock-01 gdd/dist-deadlock-04 gdd/dist-deadlock-05 gdd/dist-deadlock-06 gdd/dist-deadlock-07 gdd/dist-deadlock-102 gdd/dist-deadlock-103 gdd/dist-deadlock-104 gdd/dist-deadlock-106 gdd/dist-deadlock-upsert gdd/non-lock-105

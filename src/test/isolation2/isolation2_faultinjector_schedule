@@ -1,8 +1,8 @@
 # This schedule file only contains tests that depend on fault injector
 
+# Tests for crash recovery
 test: uao_crash_compaction_column
 test: uao_crash_compaction_row
-# Tests for crash recovery
 test: crash_recovery
 test: crash_recovery_redundant_dtx
 test: crash_recovery_dtm
@@ -10,8 +10,17 @@ test: unlogged_heap_tables
 test: unlogged_appendonly_tables
 test: udf_exception_blocks_panic_scenarios
 test: ao_same_trans_truncate_crash
+# Tests for packcore, will use the coredumps generated in crash_recovery_dtm,
+# so must be scheduled after that one.
+test: packcore
+
+# Tests on global deadlock detector
 test: gdd/avoid-qd-deadlock
 test: gdd/planner_insert_while_vacuum_drop
+
+# The following test injects a fault at a generic location
+# (StartTransaction).  The fault can be easily triggered by a
+# concurrent test, so run the test by itself.
 test: deadlock_under_entry_db_singleton
 
 test: concurrent_update
@@ -26,12 +35,15 @@ test: external_table
 # This test validates that for AO we delay fsync to checkpointer on mirror.
 test: fsync_ao
 test: concurrent_index_creation_should_not_deadlock
+# Tests on Append-Optimized tables
 test: uao/vacuum_cleanup_row
 test: uao/insert_should_not_use_awaiting_drop_row
 test: segwalrep/master_xlog_switch
 test: uao/vacuum_cleanup_column
 test: uao/insert_should_not_use_awaiting_drop_column
 test: segwalrep/die_commit_pending_replication
+
+# Tests for FTS
 test: fts_errors
 test: segwalrep/commit_blocking
 test: segwalrep/fts_unblock_primary
