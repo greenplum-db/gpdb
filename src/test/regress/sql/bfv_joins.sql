@@ -227,8 +227,8 @@ select * from nlj1, nlj2 where nlj1.a = nlj2.a;
 explain select * from nlj1, nlj2 where nlj1.a is not distinct from nlj2.a;
 select * from nlj1, nlj2 where nlj1.a is not distinct from nlj2.a;
 
-explain select * from nlj1, (select NULL a, b from nlj2) other where nlj1.a is not distinct from other.a;
-select * from nlj1, (select NULL a, b from nlj2) other where nlj1.a is not distinct from other.a;
+explain select * from nlj1, (select NULL::int a, b from nlj2) other where nlj1.a is not distinct from other.a;
+select * from nlj1, (select NULL::int a, b from nlj2) other where nlj1.a is not distinct from other.a;
 
 explain select * from nlj1, nlj2 where nlj1.a is distinct from nlj2.a;
 select * from nlj1, nlj2 where nlj1.a is distinct from nlj2.a;

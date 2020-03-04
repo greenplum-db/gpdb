@@ -1,3 +1,8 @@
+-- GPDB_10_MERGE_FIXME: this shouldn't be needed after merge of upstream commit 1e7c4bb004. Remove when we get there.
+-- start_matchsubs
+-- m/^(ERROR:  .*)\(parse_coerce\.c:\d+\)$/
+-- s/\(parse_coerce\.c:\d+\)$/(parse_coerce.c:XXX)/
+-- end_matchsubs
 --
 -- STRINGS
 -- Test various data entry syntaxes.

@@ -1444,9 +1444,9 @@ select
     f, 
     sum(g) over (partition by f)
 from
-    (select 'A', 1) b(j, g)
+    (select 'A'::text, 1) b(j, g)
     join 
-    (select 'A', 'B') c(j, f)
+    (select 'A'::text, 'B'::text) c(j, f)
     using(j)
 group by 
     1,
@@ -1457,9 +1457,9 @@ select
     f, 
     sum(b.g) over (partition by f)
 from
-    (select 'A', 1) b(j, g)
+    (select 'A'::text, 1) b(j, g)
     join 
-    (select 'A', 'B') c(j, f)
+    (select 'A'::text, 'B'::text) c(j, f)
     using(j)
 group by 
     1,
@@ -1470,9 +1470,9 @@ select
     lower(c.f),
     sum(2*b.g) over (partition by lower(c.f))
 from
-    (select 'A', 1) b(j, g)
+    (select 'A'::text, 1) b(j, g)
     join 
-    (select 'A', 'B') c(j, f)
+    (select 'A'::text, 'B'::text) c(j, f)
     using(j)
 group by 
     2*b.g,
@@ -1483,9 +1483,9 @@ select
     lower(c.f),
     sum(2*g) over (partition by lower(c.f))
 from
-    (select 'A', 1) b(j, g)
+    (select 'A'::text, 1) b(j, g)
     join 
-    (select 'A', 'B') c(j, f)
+    (select 'A'::text, 'B'::text) c(j, f)
     using(j)
 group by 
     2*b.g,

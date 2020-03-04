@@ -3173,7 +3173,7 @@ select * from nlj1, nlj2 where nlj1.a is not distinct from nlj2.a;
  1 | 1 | 1 | 5
 (2 rows)
 
-explain select * from nlj1, (select NULL a, b from nlj2) other where nlj1.a is not distinct from other.a;
+explain select * from nlj1, (select NULL::int a, b from nlj2) other where nlj1.a is not distinct from other.a;
                                               QUERY PLAN                                              
 ------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.53 rows=4 width=16)
@@ -3187,7 +3187,7 @@ explain select * from nlj1, (select NULL a, b from nlj2) other where nlj1.a is n
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
 (9 rows)
 
-select * from nlj1, (select NULL a, b from nlj2) other where nlj1.a is not distinct from other.a;
+select * from nlj1, (select NULL::int a, b from nlj2) other where nlj1.a is not distinct from other.a;
  a | b | a | b 
 ---+---+---+---
    |   |   | 5

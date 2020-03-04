@@ -803,6 +803,8 @@ ALTER TABLE dropped_col_tab DROP COLUMN col4;
 ALTER TABLE dropped_col_tab DROP COLUMN col5;
 INSERT INTO dropped_col_tab SELECT 1;
 ERROR:  INSERT has more expressions than target columns
+LINE 1: INSERT INTO dropped_col_tab SELECT 1;
+                                           ^
 SELECT * FROM dropped_col_tab;
 --
 (1 row)
