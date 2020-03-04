@@ -305,6 +305,17 @@ explain (costs off) select * from a, b, c where b.i = a.i and (a.i + b.i) = c.j;
 
 select * from a, b, c where b.i = a.i and (a.i + b.i) = c.j;
 
+-- The above plan will prefetch inner plan and the inner plan refers
+-- outerParams. Previously, we do not handle this case correct and forgot
+-- to set the Params for nestloop in econtext. The outer Param is a compound
+-- data type instead of simple integer, it will lead to PANIC.
+-- See Github Issue: https://github.com/greenplum-db/gpdb/issues/9679
+-- for details.
+create type mytype_prefetch_params as (x int, y int);
+alter table b add column mt_col mytype_prefetch_params;
+explain select a.*, b.i, c.* from a, b, c where ((mt_col).x > a.i or b.i = a.i) and (a.i + b.i) = c.j;
+select a.*, b.i, c.* from a, b, c where ((mt_col).x > a.i or b.i = a.i) and (a.i + b.i) = c.j;
+
 reset enable_hashjoin;
 reset enable_mergejoin;
 reset enable_nestloop;

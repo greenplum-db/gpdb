@@ -435,6 +435,7 @@ extern void check_exclusion_constraint(Relation heap, Relation index,
 /* Share input utilities defined in execUtils.c */
 extern ShareNodeEntry * ExecGetShareNodeEntry(EState *estate, int shareid, bool fCreate);
 
+extern void fake_outer_params(JoinState *node);
 extern void ExecPrefetchJoinQual(JoinState *node);
 
 /* ResultRelInfo and Append Only segment assignment */
