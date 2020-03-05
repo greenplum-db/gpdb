@@ -824,8 +824,6 @@ dump_by_DSM()
 		/* count dsm memory size */
 		count += sizeof(src->xid);
 		count += sizeof(src->startTimestamp);
-		count += sizeof(src->combocidcnt);
-		count += sizeof(src->combocids);
 		count += sizeof(src->snapshot.xmin);
 		count += sizeof(src->snapshot.xmax);
 		count += sizeof(src->snapshot.xcnt);
@@ -841,8 +839,6 @@ dump_by_DSM()
 			unsigned char *p = dsm_segment_address(segment);
 			DSM_DUMP(p, src->xid);
 			DSM_DUMP(p, src->startTimestamp);
-			DSM_DUMP(p, src->combocidcnt);
-			DSM_DUMP(p, src->combocids);
 			DSM_DUMP(p, src->snapshot.xmin);
 			DSM_DUMP(p, src->snapshot.xmax);
 			DSM_DUMP(p, src->snapshot.xcnt);
@@ -987,9 +983,6 @@ read_by_DSM(Snapshot snapshot, DtxContext distributedTransactionContext)
 	TransactionId localXid;
 	TimestampTz localXactStartTimestamp;
 
-	uint32 combocidcnt;
-	ComboCidKeyData tmp_combocids[MaxComboCids];
-
 	kv = (dsm_handle_kv *) hash_search(SharedLocalSnapshotSlot->cursor_dump_hash,
 	                                   &QEDtxContextInfo.segmateSync,
 	                                   HASH_FIND,
@@ -1029,27 +1022,6 @@ read_by_DSM(Snapshot snapshot, DtxContext distributedTransactionContext)
 
 	memcpy(&localXactStartTimestamp, p, sizeof(localXactStartTimestamp));
 	p += sizeof(localXactStartTimestamp);
-
-	memcpy(&combocidcnt, p, sizeof(combocidcnt));
-	p += sizeof(combocidcnt);
-
-	memcpy(tmp_combocids, p, sizeof(tmp_combocids));
-	p += sizeof(tmp_combocids);
-
-	/* handle the combocid stuff (same as in GetSnapshotData()) */
-	if (usedComboCids != combocidcnt)
-	{
-		if (usedComboCids == 0)
-		{
-			MemoryContext oldCtx =  MemoryContextSwitchTo(TopTransactionContext);
-			comboCids = palloc(combocidcnt * sizeof(ComboCidKeyData));
-			MemoryContextSwitchTo(oldCtx);
-		}
-		else
-			repalloc(comboCids, combocidcnt * sizeof(ComboCidKeyData));
-	}
-	memcpy(comboCids, tmp_combocids, combocidcnt * sizeof(ComboCidKeyData));
-	usedComboCids = ((combocidcnt < MaxComboCids) ? combocidcnt : MaxComboCids);
 
 	memcpy(&snapshot->xmin, p, sizeof(snapshot->xmin));
 	p += sizeof(snapshot->xmin);
