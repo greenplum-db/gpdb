@@ -286,6 +286,7 @@ static void postgresExplainForeignModify(ModifyTableState *mtstate,
 static bool postgresAnalyzeForeignTable(Relation relation,
 							AcquireSampleRowsFunc *func,
 							BlockNumber *totalpages);
+static int greenplumCheckIsGreenplum(ForeignServer *server, UserMapping *user);
 
 /*
  * Helper functions
@@ -1669,8 +1670,19 @@ postgresIsForeignRelUpdatable(Relation rel)
 	/*
 	 * Currently "updatable" means support for INSERT, UPDATE and DELETE.
 	 */
-	return updatable ?
-		(1 << CMD_INSERT) | (1 << CMD_UPDATE) | (1 << CMD_DELETE) : 0;
+	if (!updatable)
+		return 0;
+
+	/*
+	 * Greenplum only supports INSERT, because UPDATE/DELETE SELECT requires
+	 * the hidden column gp_segment_id and the other "ModifyTable mixes
+	 * distributed and entry-only tables" issue.
+	 */
+	UserMapping *user = GetUserMapping(rel->rd_rel->relowner, table->serverid);
+	if (greenplumCheckIsGreenplum(server, user))
+		return (1 << CMD_INSERT);
+	else
+		return (1 << CMD_INSERT) | (1 << CMD_UPDATE) | (1 << CMD_DELETE);
 }
 
 /*
@@ -2764,4 +2776,30 @@ conversion_error_callback(void *arg)
 		errcontext("column \"%s\" of foreign table \"%s\"",
 				   NameStr(tupdesc->attrs[errpos->cur_attno - 1]->attname),
 				   RelationGetRelationName(errpos->rel));
+}
+
+static int
+greenplumCheckIsGreenplum(ForeignServer *server, UserMapping *user)
+{
+	PGconn     *conn;
+	PGresult   *res;
+	int                     ret;
+
+	char *query =  "SELECT version()";
+
+	conn = GetConnection(server, user, false);
+
+	res = pgfdw_exec_query(conn, query);
+	if (PQresultStatus(res) != PGRES_TUPLES_OK)
+		pgfdw_report_error(ERROR, res, conn, true, query);
+
+	if (PQntuples(res) == 0)
+		pgfdw_report_error(ERROR, res, conn, true, query);
+
+	ret = strstr(PQgetvalue(res, 0, 0), "Greenplum Database") ? 1 : 0;
+
+	PQclear(res);
+	ReleaseConnection(conn);
+
+	return ret;
 }
