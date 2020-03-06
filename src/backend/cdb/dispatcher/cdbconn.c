@@ -225,6 +225,10 @@ cdbconn_doConnectStart(SegmentDatabaseDescriptor *segdbDesc,
 	}
 	nkeywords++;
 
+	keywords[nkeywords] = GPCONN_TYPE;
+	values[nkeywords] = GPCONN_TYPE_INTERNAL;
+	nkeywords++;
+
 	keywords[nkeywords] = NULL;
 	values[nkeywords] = NULL;
 
