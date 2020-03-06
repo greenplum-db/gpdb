@@ -487,6 +487,15 @@ dumpSharedComboCommandIds(void)
 							sizeComboCids)));
 		shared_comboCids = newsegment;
 
+		/* update dsm size */
+		shared_sizeComboCids = sizeComboCids;
+
+		/* reset current usage amount */
+		shared_usedComboCids = 0;
+		shared_ptr = dsm_segment_address(shared_comboCids);
+		num_elements_ptr = (int *) shared_ptr;
+		*num_elements_ptr = 0;
+
 		CurrentResourceOwner = oldowner;
 	}
 
@@ -510,6 +519,7 @@ dumpSharedComboCommandIds(void)
 	 */
 	pg_write_barrier();
 	*num_elements_ptr = usedComboCids;
+	shared_usedComboCids = usedComboCids;
 
 	/*
 	 * If we had to allocate a new segment, we swap it in place and release the
@@ -619,6 +629,9 @@ AtEOXact_ComboCid_Dsm_Detach(void)
 		MyProc->comboCidsHandle = 0;
 		dsm_detach(shared_comboCids);
 		shared_comboCids = NULL;
+
+		shared_usedComboCids = 0;
+		shared_sizeComboCids = 0;
 	}
 
 }
