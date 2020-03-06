@@ -4,9 +4,9 @@ written in C/C++.
 
 Take GPPC as a wrapper that links the C/C++ UDF and Greenplum Database.
 You can define a UDF with with the GPPC API, and GPPC translates the UDF
-to Greenplum Database compatible UDFs. This lets the GPCC UDF work on
+to Greenplum Database compatible UDFs. This lets the GPPC UDF work on
 different GPDB platforms, for example, different version of GPDB,
-without the need to recompile or modify the GPCC UDF.
+without the need to recompile or modify the GPPC UDF.
 
 GPPC supports UDFs written in C/C++ and is similar to the Postgres UDFs written
 in C.
@@ -62,13 +62,13 @@ SELECT textcopyfunc('white', true), textcopyfunc('white', false);
 ```
 
 Following the previous steps, you can use the following example UDF
-definition to create a GPCC function. The function name is textcopyfunc
+definition to create a GPPC function. The function name is textcopyfunc
 with two input parameters, a text and a bool. If the second parameter is
-true, the function changes the first character of the input text to “!”,
+true, the function changes the first character of the input text to "!",
 otherwise, it returns the original text.
 
 ```
-#include “gppc.h”
+#include "gppc.h"
 
 GPPC_FUNCTION_INFO(textcopyfunc);
 GppcDatum textcopyfunc(GPPC_FUNCTION_ARGS);
@@ -181,9 +181,9 @@ GppcDatum GppcSPIGetDatumByName(GppcSPIResult result, const char *fname, bool *i
 
 ### Table Functions
 
-The GPCC API provides a set of functions that support tables as the
-input or output value for a UDF. For example, the GPCC transform function which
-is implemented with GPCC table function:
+The GPPC API provides a set of functions that support tables as the
+input or output value for a UDF. For example, the GPPC transform function which
+is implemented with GPPC table function:
 
 ```
 FUNCTION transform(a anytable) RETURNS SETOF outtable
@@ -198,11 +198,12 @@ SELECT * FROM transform(
     )  AS t (a text, b int) order by b;
 ```
 
-The more examples of using GPCC table function are listed in
-https://github.com/greenplum-db/gpdb/tree/master/src/interfaces/gppc/test/tabfunc_gppc_demo
+The more examples of using GPPC table function are listed in  
+https://github.com/greenplum-db/gpdb/tree/master/src/interfaces/gppc/test/tabfunc_gppc_demo.c
 
 ### Reference
-https://www.postgresql.org/docs/devel/xfunc-c.html
-https://github.com/greenplum-db/gpdb/blob/master/src/include/gppc.h  
-https://github.com/greenplum-db/gpdb/tree/master/src/interfaces/gppc/test/gppc_demo  
-https://github.com/greenplum-db/gpdb/tree/master/src/interfaces/gppc/test/tabfunc_gppc_demo
+https://www.postgresql.org/docs/devel/xfunc-c.html  
+https://github.com/greenplum-db/gpdb/blob/master/src/include/gppc/gppc.h  
+https://github.com/greenplum-db/gpdb/tree/master/src/interfaces/gppc/test/gppc_demo.c  
+https://github.com/greenplum-db/gpdb/tree/master/src/interfaces/gppc/test/tabfunc_gppc_demo.c
+
