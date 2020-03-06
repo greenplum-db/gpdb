@@ -1203,9 +1203,9 @@ setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFami
 		 * used to create this QE session.
 		 */
 		hints.ai_flags |= AI_NUMERICHOST;
-		elog(DEBUG1, "binding to %s only", interconnect_address);
+		ereport(DEBUG1, (errmsg("binding to %s only", interconnect_address)));
 		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-			ereport(DEBUG4, (errmsg("binding listener %s", interconnect_address)));
+			ereport(DEBUG4, (errmsg("binding address %s", interconnect_address)));
 	}
 	s = getaddrinfo(interconnect_address, service, &hints, &addrs);
 	if (s != 0)
@@ -6894,7 +6894,7 @@ SendDummyPacket(void)
 	hint.ai_flags = AI_NUMERICHOST;
 #endif
 
-	ret = pg_getaddrinfo_all(NULL, port_str, &hint, &addrs);
+	ret = pg_getaddrinfo_all(interconnect_address, port_str, &hint, &addrs);
 	if (ret || !addrs)
 	{
 		elog(LOG, "send dummy packet failed, pg_getaddrinfo_all(): %m");

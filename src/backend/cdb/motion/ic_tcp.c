@@ -169,7 +169,7 @@ setupTCPListeningSocket(int backlog, int *listenerSocketFd, uint16 *listenerPort
 		 * used to create this QE session.
 		 */
 		hints.ai_flags |= AI_NUMERICHOST;
-		elog(DEBUG1, "binding to %s only", interconnect_address);
+		ereport(DEBUG1, (errmsg("binding to %s only", interconnect_address)));
 		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
 			ereport(DEBUG4, (errmsg("binding listener %s", interconnect_address)));
 	}

@@ -723,20 +723,15 @@ removeChunkTransportState(ChunkTransportState *transportStates,
 }
 
 /*
- * Set the listener address associated with the slice to
- * the master address that is established through libpq
- * connection. This guarantees that the outgoing connections
- * will connect to an address that is reachable in the event
- * when the master can not be reached by segments through
- * the network interface recorded in the catalog.
+ * The listenerAddr is always non-null.
  */
 void
 adjustMasterRouting(ExecSlice *recvSlice)
 {
-	ListCell   *lc = NULL;
-
 	Assert(MyProcPort);
 
+#ifdef USE_ASSERT_CHECKING
+	ListCell   *lc = NULL;
 	foreach(lc, recvSlice->primaryProcesses)
 	{
 		CdbProcess *cdbProc = (CdbProcess *) lfirst(lc);
@@ -745,6 +740,7 @@ adjustMasterRouting(ExecSlice *recvSlice)
 			Assert(cdbProc->listenerAddr);
 		}
 	}
+#endif /* USE_ASSERT_CHECKING */
 }
 
 /*
