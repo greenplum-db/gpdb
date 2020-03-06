@@ -93,8 +93,6 @@ static int	sizeComboCids = 0;	/* allocated size of array */
 /* Initial size of the array */
 #define CCID_ARRAY_SIZE			100
 
-static ResourceOwner combocidResOwner = NULL;	/* combocid resources */
-
 /* prototypes for internal functions */
 static CommandId GetComboCommandId(CommandId cmin, CommandId cmax);
 static CommandId GetRealCmin(CommandId combocid);
@@ -465,11 +463,8 @@ dumpSharedComboCommandIds(void)
 		ResourceOwner oldowner;
 		dsm_segment *newsegment;
 
-		if (combocidResOwner == NULL)
-			combocidResOwner = ResourceOwnerCreate(NULL, "ComboCid");
-
 		oldowner = CurrentResourceOwner;
-		CurrentResourceOwner = combocidResOwner;
+		CurrentResourceOwner = TopTransactionResourceOwner;
 
 		/*
 		 * DSM segments cannot be resized, so we have to allocate a whole new
@@ -485,6 +480,12 @@ dumpSharedComboCommandIds(void)
 					(errcode(ERRCODE_OUT_OF_MEMORY),
 					 errmsg("could not create DSM segment for %d combo CIDs",
 							sizeComboCids)));
+		/*
+		 * let current ResourceOwner forget this dsm
+		 * and manage the lifecycle by ourselves
+		 */
+		dsm_pin_mapping(newsegment);
+
 		shared_comboCids = newsegment;
 
 		/* update dsm size */
