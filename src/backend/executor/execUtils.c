@@ -1727,6 +1727,52 @@ flatten_logic_exprs(Node *node)
 }
 
 /*
+ * fake_outer_params
+ *   helper function to fake the nestloop's nestParams
+ *   so that prefetch inner or prefetch joinqual will
+ *   not encounter NULL pointer reference issue. It is
+ *   only invoked in ExecNestLoop and ExecPrefetchJoinQual
+ *   when the join is a nestloop join.
+ */
+void
+fake_outer_params(JoinState *node)
+{
+	ExprContext    *econtext = node->ps.ps_ExprContext;
+	PlanState      *inner = innerPlanState(node);
+	TupleTableSlot *outerTupleSlot = econtext->ecxt_outertuple;
+	NestLoop       *nl = (NestLoop *) (node->ps.plan);
+	ListCell       *lc = NULL;
+
+	/* only nestloop contains nestParams */
+	Assert(IsA(node->ps.plan, NestLoop));
+
+	/* econtext->ecxt_outertuple must have been set fakely. */
+	Assert(outerTupleSlot != NULL);
+	/*
+	 * fetch the values of any outer Vars that must be passed to the
+	 * inner scan, and store them in the appropriate PARAM_EXEC slots.
+	 */
+	foreach(lc, nl->nestParams)
+	{
+		NestLoopParam *nlp = (NestLoopParam *) lfirst(lc);
+		int			paramno = nlp->paramno;
+		ParamExecData *prm;
+
+		prm = &(econtext->ecxt_param_exec_vals[paramno]);
+		/* Param value should be an OUTER_VAR var */
+		Assert(IsA(nlp->paramval, Var));
+		Assert(nlp->paramval->varno == OUTER_VAR);
+		Assert(nlp->paramval->varattno > 0);
+		prm->value = slot_getattr(outerTupleSlot,
+								  nlp->paramval->varattno,
+								  &(prm->isnull));
+		/* Flag parameter value as changed */
+		inner->chgParam = bms_add_member(inner->chgParam,
+										 paramno);
+	}
+}
+
+/*
  * Prefetch JoinQual to prevent motion hazard.
  *
  * A motion hazard is a deadlock between motions, a classic motion hazard in a
@@ -1776,6 +1822,13 @@ ExecPrefetchJoinQual(JoinState *node)
 													  ExecGetResultType(inner));
 	econtext->ecxt_outertuple = ExecInitNullTupleSlot(estate,
 													  ExecGetResultType(outer));
+
+	if (IsA(node->ps.plan, NestLoop))
+	{
+		NestLoop *nl = (NestLoop *) (node->ps.plan);
+		if (nl->nestParams)
+			fake_outer_params(node);
+	}
 
 	quals = flatten_logic_exprs((Node *) joinqual);
 

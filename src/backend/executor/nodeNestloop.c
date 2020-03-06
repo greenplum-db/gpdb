@@ -111,6 +111,26 @@ ExecNestLoop_guts(NestLoopState *node)
 	 */
 	if (node->prefetch_inner)
 	{
+		/*
+		 * Prefetch inner is Greenplum specific behavior.
+		 * However, inner plan may depend on outer plan as
+		 * outerParams. If so, we have to fake those params
+		 * to avoid null pointer reference issue. And because
+		 * of the nestParams, those inner results prefetched
+		 * will be discarded (following code will rescan inner,
+		 * even if inner's top is material node because of chgParam
+		 * it will be re-executed too) that it is safe to fake
+		 * nestParams here. The target is to materialize motion scan.
+		 */
+		if (nl->nestParams)
+		{
+			EState	   *estate = node->js.ps.state;
+
+			econtext->ecxt_outertuple = ExecInitNullTupleSlot(estate,
+															  ExecGetResultType(outerPlan));
+			fake_outer_params(&(node->js));
+		}
+
 		innerTupleSlot = ExecProcNode(innerPlan);
 		node->reset_inner = true;
 		econtext->ecxt_innertuple = innerTupleSlot;
