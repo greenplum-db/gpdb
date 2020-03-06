@@ -277,6 +277,8 @@ typedef struct
 	char	   *db_name;		/* database name */
 	char		db_tablespace[MAXPGPATH];		/* database default tablespace
 												 * path */
+	uint32 		datfrozenxid;
+	uint32 		datminmxid;
 	RelInfoArr	rel_arr;		/* array of all user relinfos */
 } DbInfo;
 

@@ -377,6 +377,8 @@ get_db_infos(ClusterInfo *cluster)
 				i_oid,
 				i_spclocation;
 	char		query[QUERY_ALLOC];
+	int 		i_datafrozenxid;
+	int 		i_datminmxid = 0;
 
 	/*
 	 * greenplum specific indexes
@@ -384,7 +386,7 @@ get_db_infos(ClusterInfo *cluster)
 	int         i_tablespace_oid;
 
 	snprintf(query, sizeof(query),
-			 "SELECT d.oid, d.datname, t.oid as tablespace_oid, %s "
+			 "SELECT d.oid, d.datname, t.oid as tablespace_oid, %s , datfrozenxid %s "
 			 "FROM pg_catalog.pg_database d "
 			 " LEFT OUTER JOIN pg_catalog.pg_tablespace t "
 			 " ON d.dattablespace = t.oid "
@@ -394,7 +396,9 @@ get_db_infos(ClusterInfo *cluster)
 	/* 9.2 removed the spclocation column */
 	/* GPDB_XX_MERGE_FIXME: spclocation was removed in 6.0 cycle */
 			 (GET_MAJOR_VERSION(cluster->major_version) <= 803) ?
-			 "t.spclocation" : "pg_catalog.pg_tablespace_location(t.oid) AS spclocation");
+			 "t.spclocation" : "pg_catalog.pg_tablespace_location(t.oid) AS spclocation",
+			 (GET_MAJOR_VERSION(cluster->major_version) <= 803) ?
+			 " ": ", datminmxid");
 
 	res = executeQueryOrDie(conn, "%s", query);
 
@@ -402,6 +406,9 @@ get_db_infos(ClusterInfo *cluster)
 	i_datname = PQfnumber(res, "datname");
 	i_spclocation = PQfnumber(res, "spclocation");
 	i_tablespace_oid = PQfnumber(res, "tablespace_oid");
+	i_datafrozenxid = PQfnumber(res, "datfrozenxid");
+	if (GET_MAJOR_VERSION(cluster->major_version) > 803)
+		i_datminmxid = PQfnumber(res, "datminmxid");
 
 	ntups = PQntuples(res);
 	dbinfos = (DbInfo *) pg_malloc(sizeof(DbInfo) * ntups);
@@ -410,6 +417,9 @@ get_db_infos(ClusterInfo *cluster)
 	{
 		dbinfos[tupnum].db_oid = atooid(PQgetvalue(res, tupnum, i_oid));
 		dbinfos[tupnum].db_name = pg_strdup(PQgetvalue(res, tupnum, i_datname));
+		dbinfos[tupnum].datfrozenxid = strtoul(PQgetvalue(res, tupnum, i_datafrozenxid), NULL, 10);
+		if (GET_MAJOR_VERSION(cluster->major_version) > 803)
+			dbinfos[tupnum].datminmxid = strtoul(PQgetvalue(res, tupnum, i_datminmxid), NULL, 10);
 		snprintf(dbinfos[tupnum].db_tablespace, sizeof(dbinfos[tupnum].db_tablespace), "%s",
 		         determine_db_tablespace_path(
 		                 cluster,
