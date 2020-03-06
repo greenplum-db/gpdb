@@ -38,15 +38,16 @@ reset_system_identifier(void)
 
 /*
  * Greenplum upgrade involves copying the MASTER_DATA_DIRECTORY to
- * each primary segment. We need to freeze the master data *after* the master
- * schema has been restored to allow the data to be visible on the segments.
+ * each primary segment. We need to freeze the master and segments data
+ * *after* the master schema has been restored and pg_resetxlog has been run
+ * to set the control values. In postgres, autovacuum is supposed to take care
+ * of it.
  * All databases need to be frozen including those where datallowconn is false.
  *
- * Note: No further updates should occur after freezing the master data
- * directory.
+ * Note: No further updates should occur after freezing the data directory.
  */
 void
-freeze_master_data(void)
+freeze_database(void)
 {
        PGconn                  *conn;
        PGconn                  *conn_template1;

@@ -164,12 +164,27 @@ main(int argc, char **argv)
 	/* -- NEW -- */
 	start_postmaster(&new_cluster, true);
 
+	/*
+	 * Before we restore anything, set frozenxids of initdb-created tables.
+	 * This step is required for master and segments, because during copy_clog_xlog_xid,
+	 * pg_resetxlog has set the values on the database segment based on the corresponding
+	 * source segment database.
+	 */
+	set_frozenxids(false);
+
 	if (is_greenplum_dispatcher_mode())
 	{
 		prepare_new_databases();
 
 		create_new_objects();
 	}
+
+	/*
+	 * We don't have minmxids for databases or relations in pre-9.3
+	 * clusters, so set those after we have restored the schema.
+	 */
+	if (GET_MAJOR_VERSION(old_cluster.major_version) < 903)
+		set_frozenxids(true);
 
 	/*
 	 * In a segment, the data directory already contains all the objects,
@@ -181,11 +196,7 @@ main(int argc, char **argv)
 	 */
 	restore_aosegment_tables();
 
-	if (is_greenplum_dispatcher_mode())
-	{
-		/* freeze master data *right before* stopping */
-		freeze_master_data();
-	}
+	freeze_database();
 
 	stop_postmaster(false);
 
@@ -507,11 +518,6 @@ static void
 prepare_new_databases(void)
 {
 	/*
-	 * Before we restore anything, set frozenxids of initdb-created tables.
-	 */
-	set_frozenxids(false);
-
-	/*
 	 * Now restore global objects (roles and tablespaces).
 	 */
 	prep_status("Restoring global objects in the new cluster");
@@ -607,13 +613,6 @@ create_new_objects(void)
 
 	end_progress_output();
 	check_ok();
-
-	/*
-	 * We don't have minmxids for databases or relations in pre-9.3
-	 * clusters, so set those after we have restored the schema.
-	 */
-	if (GET_MAJOR_VERSION(old_cluster.major_version) < 903)
-		set_frozenxids(true);
 
 	/* regenerate now that we have objects in the databases */
 	get_db_and_rel_infos(&new_cluster);
