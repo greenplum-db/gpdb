@@ -273,9 +273,19 @@ SELECT foo();</codeblock><p>In
                         execute on all primary segment instances, but not the master, for each
                         invocation. The overall result of the function is the <codeph>UNION
                             ALL</codeph> of the results from all segment instances. </pd>
-                    <pd><codeph>EXECUTE ON INITPLAN</codeph> indicates that the function is executed
-                        on segment instances by a Query Executor as part of an InitPlan node when
+                    <pd><codeph>EXECUTE ON INITPLAN</codeph> indicates that the function contains an
+                        SQL command that dispatches queries to the segment instances and requires
+                        special processing on the master instance by Greenplum Database when
                         possible.
+                        <note><codeph>EXECUTE ON INITPLAN</codeph> is a Beta feature <ph
+                                otherprops="pivotal">and is not supported in a production
+                                environment</ph>. The attribute is only supported in functions that
+                            are used in the <codeph>FROM</codeph> clause of a of a <codeph>CREATE
+                                TABLE</codeph> or <codeph>INSERT</codeph> command such as the
+                                <codeph>get_data()</codeph> function in these
+                            commands.<codeblock>CREATE TABLE t AS SELECT * FROM get_data();
+
+INSERT INTO t1 SELECT * FROM get_data();</codeblock></note>
                         <note>Greenplum Database does not support the <codeph>EXECUTE ON
                                 INITPLAN</codeph> attribute in a function that is used in the
                                 <codeph>WITH</codeph> clause of a query, a CTE (common table
@@ -451,23 +461,24 @@ $SomeTag$Dianne's horse$SomeTag$</codeblock>
                             <codeph>FROM</codeph> clause.</li>
                     <li>A query that includes the function falls back from GPORCA to the Postgres
                         Planner.</li>
-                </ul><p>In some cases, you might want a function to execute on segment instances
-                    based on the query plan. The <codeph>EXECUTE ON INITPLAN</codeph> attribute
-                    indicates that the function should be executed on segment instances by a Query
-                    Executor as part of an InitPlan node when possible. This allows the function to
-                    contain a SQL command, such as a <codeph>SELECT</codeph> query that requires
-                    dispatching to segment instances. For example, the attribute allows a function
-                    to be in the <codeph>FROM</codeph> clause of a <codeph>CREATE TABLE AS</codeph>
-                    (CTAS) command or an <codeph>INSERT</codeph> command where the function
-                    retrieves data from segment instances, such as the <codeph>get_data()</codeph>
-                    function in these
-                    commands.</p><codeblock>CREATE TABLE t AS SELECT * FROM get_data();
-
-INSERT INTO t1 SELECT * FROM get_data();</codeblock><p>This
-                    simple example uses the function <codeph>get_data()</codeph> in a CTAS command
-                    to create a table using data from the table <codeph>country</codeph>. The
-                    function contains a <codeph>SELECT</codeph> command that retrieves data from the
-                    table <codeph>country</codeph> and uses the <codeph>EXECUTE ON INITPLAN</codeph>
+                </ul><p>The Beta attribute <codeph>EXECUTE ON INITPLAN</codeph> indicates that the
+                    function contains an SQL command that dispatches queries to the segment
+                    instances and requires special processing on the master instance by Greenplum
+                    Database. When possible, Greenplum Database handles the function on the master
+                    instance in the following manner.<ol id="ol_dnl_fqh_ykb">
+                        <li>First, Greenplum Database executes the function as part of an InitPlan
+                            node on the master instance and holds the function output
+                            temporarily.</li>
+                        <li>Then, in the MainPlan of the query plan, the function is called in an
+                            EntryDB (a special query executor (QE) that runs on the master instance)
+                            and Greenplum Database returns the data that was captured when the
+                            function was executed as part of the InitPlan node. The function is not
+                            executed in the MainPlan.</li>
+                    </ol></p><p>This simple example uses the function <codeph>get_data()</codeph> in
+                    a CTAS command to create a table using data from the table
+                        <codeph>country</codeph>. The function contains a <codeph>SELECT</codeph>
+                    command that retrieves data from the table <codeph>country</codeph> and uses the
+                        <codeph>EXECUTE ON INITPLAN</codeph>
                     attribute.<codeblock>CREATE TABLE country( 
   c_id integer, c_name text, region int) 
   DISTRIBUTED RANDOMLY;
@@ -487,10 +498,13 @@ $$
 LANGUAGE SQL EXECUTE ON INITPLAN;
 
 CREATE TABLE t AS SELECT * FROM get_data() DISTRIBUTED RANDOMLY;</codeblock></p><p>If
-                    you view the query plan of CTAS command with <codeph>EXPLAIN</codeph>, the plan
-                    shows that the function is run as part of an InitPlan node.</p><p>If the
-                    function did not contain the <codeph>EXECUTE ON INITPLAN</codeph> attribute, the
-                    CTAS command returns the error <codeph>function cannot execute on a QE
+                    you view the query plan of the CTAS command with <codeph>EXPLAIN ANALYZE
+                        VERBOSE</codeph>, the plan shows that the function is run as part of an
+                    InitPlan node and one of the listed slices is labeled as <codeph>entry
+                        db</codeph>. The query plan of a simple CTAS command without the function
+                    does not have an InitPlan node or an <codeph>entry db</codeph> slice.</p><p>If
+                    the function did not contain the <codeph>EXECUTE ON INITPLAN</codeph> attribute,
+                    the CTAS command returns the error <codeph>function cannot execute on a QE
                         slice</codeph>.</p><p>When a function uses the <codeph>EXECUTE ON
                         INITPLAN</codeph> attribute, a command that uses the function such as
                         <codeph>CREATE TABLE t SELECT * FROM get_data()</codeph> gathers the results
