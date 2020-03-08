@@ -57,6 +57,7 @@
 #include "storage/ipc.h"
 #include "storage/pmsignal.h"
 #include "storage/procarray.h"
+#include "utils/builtins.h"
 #include "utils/guc.h"
 #include "utils/ps_status.h"
 #include "utils/resowner.h"
@@ -69,6 +70,7 @@
 int			wal_receiver_status_interval = 10;
 int			wal_receiver_timeout;
 bool		hot_standby_feedback;
+int 		wal_receiver_start_condition;
 
 /* libpqreceiver hooks to these when loaded */
 walrcv_connect_type walrcv_connect = NULL;
@@ -162,6 +164,110 @@ ProcessWalRcvInterrupts(void)
 	}
 }
 
+
+/*
+ * Persist startpoint to recovery.conf file.  This is used to start
+ * replication without waiting for startup process to let us know where to
+ * start streaming from.
+ */
+static void
+SaveStartPoint(XLogRecPtr startpoint, TimeLineID startpointTLI)
+{
+	XLogSegNo oldseg, startseg;
+	XLogSegNo LastFlushedSeg = 0;
+	TimeLineID oldTLI;
+	TimeLineID LastFlushedTLI = 0;
+	FILE	   *fd;
+	ConfigVariable *item,
+			   *head = NULL,
+			   *tail = NULL;
+	bool	   parsed;
+
+	/* Start point should be saved only at WAL segment boundary. */
+	Assert(startpoint % XLogSegSize == 0);
+
+	fd = AllocateFile(RECOVERY_COMMAND_FILE, "r");
+	if (fd == NULL)
+	{
+		if (errno == ENOENT)
+			return;				/* not there, so no archive recovery */
+		ereport(FATAL,
+				(errcode_for_file_access(),
+				 errmsg("could not open recovery command file \"%s\": %m",
+						RECOVERY_COMMAND_FILE)));
+	}
+
+	/*
+	 * Report any parsing error as warning and return without writing
+	 * anything.
+	 */
+	parsed = ParseConfigFp(fd, RECOVERY_COMMAND_FILE, 0, WARNING, &head, &tail);
+
+	FreeFile(fd);
+
+	if (!parsed)
+	{
+		FreeConfigVariables(head);
+		return;
+	}
+
+	for (item = head; item; item = item->next)
+	{
+		if (strcmp(item->name, "last_flush_tli") == 0)
+		{
+			errno = 0;
+			LastFlushedTLI = (TimeLineID) strtoul(item->value, NULL, 0);
+			if (errno == EINVAL || errno == ERANGE)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+						 errmsg("invalid value \"%s\" for parameter \"%s\"",
+								item->value, item->name)));
+			ereport(DEBUG2,
+					(errmsg_internal("last_flushed_tli = '%s'", item->value)));
+		}
+		else if (strcmp(item->name, "last_flushed_seg") == 0)
+		{
+			errno = 0;
+			LastFlushedSeg = (XLogSegNo) strtoul(item->value, NULL, 0);
+			if (errno == EINVAL || errno == ERANGE)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+						 errmsg("invalid value \"%s\" for parameter \"%s\"",
+								item->value, item->name)));
+			ereport(DEBUG2,
+					(errmsg_internal("last_flushed_seg = '%s'", item->value)));
+		}
+	}
+
+	XLByteToSeg(startpoint, startseg);
+
+#ifdef USE_ASSERT_CHECKING
+	/*
+	 * On a given timeline, the WAL segment to start streaming from should
+	 * never move backwards.
+	 */
+	if (LastFlushedTLI == startpointTLI)
+		Assert(LastFlushedSeg <= startseg);
+#endif
+
+	oldseg = LastFlushedSeg;
+	oldTLI = LastFlushedTLI;
+	if (oldseg < startseg || oldTLI != startpointTLI)
+	{
+		 /* 26 = MAXINT8LEN + 1 */
+		char segnostr[26];
+		char tlistr[26];
+
+		pg_lltoa(startseg, segnostr);
+		pg_lltoa(startpointTLI, tlistr);
+		UpdateLastFlushedXLog(RECOVERY_COMMAND_FILE, segnostr, tlistr, &head, &tail);
+		elog(DEBUG3,
+			 "lastFlushedSeg (seg, TLI) old: (%lu, %u), new: (%s, %s)",
+			 oldseg, oldTLI, segnostr, tlistr);
+	}
+
+	FreeConfigVariables(head);
+}
 
 /* Main entry point for walreceiver process */
 void
@@ -1039,6 +1145,27 @@ XLogWalRcvFlush(bool dying)
 		/* Also let the master know that we made some progress */
 		if (!dying)
 		{
+			/*
+			 * When a WAL segment file is completely filled,
+			 * LogstreamResult.Flush points to a location in the new WAL
+			 * segment file that will be created shortly.  Before sending a
+			 * reply with a LSN from the new WAL segment for the first time,
+			 * remember the LSN in recovery.conf.  The LSN is used as the
+			 * startpoint to resume streaming if the WAL receiver process
+			 * exits and starts again.
+			 *
+			 * It is important to persist the flush LSN on standby before
+			 * including it in a replay back to the WAL sender.  Once WAL
+			 * sender receives the flush LSN from standby reply, any older WAL
+			 * segments that do not contain the flush LSN may be cleaned up.
+			 * If the WAL receiver dies after sending a reply but before
+			 * updating recovery.conf, it is possible that the saved starting
+			 * segment is no longer available on master when it attempts to
+			 * resume streaming.
+			 */
+			if (!XLByteInSeg(LogstreamResult.Flush, recvSegNo))
+				SaveStartPoint(LogstreamResult.Flush, ThisTimeLineID);
+
 			XLogWalRcvSendReply(false, false);
 			XLogWalRcvSendHSFeedback(false);
 		}

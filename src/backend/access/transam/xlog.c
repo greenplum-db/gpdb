@@ -82,7 +82,6 @@
 extern uint32 bootstrap_data_checksum_version;
 
 /* File path names (all relative to $PGDATA) */
-#define RECOVERY_COMMAND_FILE	"recovery.conf"
 #define RECOVERY_COMMAND_DONE	"recovery.done"
 #define PROMOTE_SIGNAL_FILE		"promote"
 #define FALLBACK_PROMOTE_SIGNAL_FILE "fallback_promote"
@@ -260,6 +259,8 @@ static bool StandbyModeRequested = false;
 static char *PrimaryConnInfo = NULL;
 static char *PrimarySlotName = NULL;
 static char *TriggerFile = NULL;
+static TimeLineID LastFlushedTLI = 0;
+static XLogSegNo LastFlushedSeg = 0;
 
 /* are we currently in standby mode? */
 bool		StandbyMode = false;
@@ -5427,6 +5428,30 @@ readRecoveryCommandFile(void)
 			ereport(DEBUG2,
 					(errmsg_internal("recovery_min_apply_delay = '%s'", item->value)));
 		}
+		else if (strcmp(item->name, "last_flushed_tli") == 0)
+		{
+			errno = 0;
+			LastFlushedTLI = (TimeLineID) strtoul(item->value, NULL, 0);
+			if (errno == EINVAL || errno == ERANGE)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+						 errmsg("invalid value \"%s\" for parameter \"%s\"",
+								item->value, item->name)));
+			ereport(DEBUG2,
+					(errmsg_internal("last_flushed_tli = '%s'", item->value)));
+		}
+		else if (strcmp(item->name, "last_flushed_seg") == 0)
+		{
+			errno = 0;
+			LastFlushedSeg = (XLogSegNo) strtoul(item->value, NULL, 0);
+			if (errno == EINVAL || errno == ERANGE)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+						 errmsg("invalid value \"%s\" for parameter \"%s\"",
+								item->value, item->name)));
+			ereport(DEBUG2,
+					(errmsg_internal("last_flushed_seg = '%s'", item->value)));
+		}
 		else
 			ereport(FATAL,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
@@ -7138,6 +7163,52 @@ StartupXLOG(void)
 				HandleStartupProcInterrupts();
 
 				/*
+				 * Start WAL receiver without waiting for startup process to
+				 * finish replay, so that streaming replication is established
+				 * at the earliest.  When the replication is configured to be
+				 * synchronous this would unblock commits waiting for WAL to
+				 * be written and/or flushed by synchronous standby.
+				 */
+				if (StandbyModeRequested &&
+					reachedConsistency &&
+					(
+						wal_receiver_start_condition == WAL_RCV_START_AT_CONSISTENCY
+#ifdef FAULT_INJECTOR
+						/*
+						 * The wal_redo fault is used for doing two things
+						 * here.  (1) to perform action as specified by the
+						 * test, e.g. sleep and (2) to bypass
+						 * wal_receiver_start_condition GUC.  This hack can be
+						 * avoided if the test sets this GUC.  However, it is
+						 * cumbersome to set a GUC on a mirror from a test.
+						 * Using the fault like this allows the test to be
+						 * simple.  See replay_lag.sql regress test.
+						 */
+						||
+						SIMPLE_FAULT_INJECTOR("wal_redo") != FaultInjectorTypeNotSpecified
+#endif
+					) &&
+					!WalRcvStreaming())
+				{
+					XLogRecPtr startpoint;
+					if (LastFlushedTLI == 0)
+					{
+						/* Read details of last record flushed by WAL receiver. */
+						readRecoveryCommandFile();
+					}
+					if (LastFlushedTLI > 0)
+					{
+						elog(LOG, "found last flushed segment %lu on time line %d, starting WAL receiver",
+							 LastFlushedSeg, LastFlushedTLI);
+						XLogSegNoOffsetToRecPtr(LastFlushedSeg, 0, startpoint);
+						RequestXLogStreaming(LastFlushedTLI,
+											 startpoint,
+											 PrimaryConnInfo,
+											 PrimarySlotName);
+					}
+				}
+
+				/*
 				 * Pause WAL replay, if requested by a hot-standby session via
 				 * SetRecoveryPause().
 				 *
@@ -7278,8 +7349,6 @@ StartupXLOG(void)
 
 				/* Now apply the WAL record itself */
 				RmgrTable[record->xl_rmid].rm_redo(ReadRecPtr, EndRecPtr, record);
-
-				SIMPLE_FAULT_INJECTOR("wal_redo");
 
 				/* Pop the error context stack */
 				error_context_stack = errcallback.previous;

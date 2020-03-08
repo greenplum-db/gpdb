@@ -373,6 +373,7 @@ extern void do_pg_abort_backup(void);
 /* File path names (all relative to $PGDATA) */
 #define BACKUP_LABEL_FILE		"backup_label"
 #define BACKUP_LABEL_OLD		"backup_label.old"
+#define RECOVERY_COMMAND_FILE	"recovery.conf"
 
 /* Greenplum additions */
 extern List *XLogReadTimeLineHistory(TimeLineID targetTLI);

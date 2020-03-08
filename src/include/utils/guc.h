@@ -784,8 +784,8 @@ extern bool gpvars_check_gp_enable_gpperfmon(bool *newval, void **extra, GucSour
 extern bool gpvars_check_gp_gpperfmon_send_interval(int *newval, void **extra, GucSource source);
 extern int guc_name_compare(const char *namea, const char *nameb);
 extern void DispatchSyncPGVariable(struct config_generic * gconfig);
-
-
 extern StdRdOptions *defaultStdRdOptions(char relkind);
+extern void UpdateLastFlushedXLog(char *conffilename, char *segnostr, char *tlistr,
+								  ConfigVariable **head, ConfigVariable **tail);
 
 #endif   /* GUC_H */

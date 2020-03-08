@@ -259,10 +259,6 @@ RequestXLogStreaming(TimeLineID tli, XLogRecPtr recptr, const char *conninfo,
 
 	SpinLockAcquire(&walrcv->mutex);
 
-	/* It better be stopped if we try to restart it */
-	Assert(walrcv->walRcvState == WALRCV_STOPPED ||
-		   walrcv->walRcvState == WALRCV_WAITING);
-
 	if (conninfo != NULL)
 		strlcpy((char *) walrcv->conninfo, conninfo, MAXCONNINFO);
 	else
@@ -273,12 +269,26 @@ RequestXLogStreaming(TimeLineID tli, XLogRecPtr recptr, const char *conninfo,
 	else
 		walrcv->slotname[0] = '\0';
 
+	/*
+	 * We used to assert that the WAL receiver is either in WALRCV_STOPPED or
+	 * in WALRCV_WAITING state.
+	 *
+	 * Such an assertion is not possible, now that this function is called by
+	 * startup process on two occasions.  One is just before starting to
+	 * replay WAL when starting up.  And the other is when it has finished
+	 * replaying all WAL in pg_xlog directory.  If the standby is starting up
+	 * after clean shutdown, there is not much WAL to be replayed and both
+	 * calls to this funcion can occur in quick succession.  By the time the
+	 * second request to start streaming is made, the WAL receiver can be in
+	 * any state.  We therefore cannot make any assertion on the state here.
+	 */
+
 	if (walrcv->walRcvState == WALRCV_STOPPED)
 	{
 		launch = true;
 		walrcv->walRcvState = WALRCV_STARTING;
 	}
-	else
+	else if (walrcv->walRcvState == WALRCV_WAITING)
 		walrcv->walRcvState = WALRCV_RESTARTING;
 	walrcv->startTime = now;
 
