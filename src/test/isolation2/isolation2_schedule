@@ -9,8 +9,7 @@ test: ao_partition_lock
 test: dml_on_root_locks_all_parts
 
 test: select_dropped_table
-# test update hash col under utility mode
-test: update_hash_col_utilitymode
+test: update_hash_col_utilitymode execute_on_utilitymode
 
 # Tests for crash recovery
 test: uao_crash_compaction_column
