@@ -1720,15 +1720,17 @@ explain (costs off)
 select a from dml_union_r where a > 95
 union all
 select g from generate_series(1,2) g;
-                   QUERY PLAN                   
-------------------------------------------------
- Append
-   ->  Gather Motion 3:1  (slice1; segments: 3)
+                         QUERY PLAN                          
+-------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Append
          ->  Seq Scan on dml_union_r
                Filter: (a > 95)
-   ->  Function Scan on generate_series g
+         ->  Result
+               One-Time Filter: (gp_execution_segment() = 0)
+               ->  Function Scan on generate_series g
  Optimizer: Postgres query optimizer
-(6 rows)
+(8 rows)
 
 select a from dml_union_r where a > 95
 union all

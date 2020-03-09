@@ -265,7 +265,9 @@ select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used
 
 drop table if exists testsisc;
 create table testsisc (i1 int, i2 int, i3 int, i4 int);
+-- start_ignore
 insert into testsisc select i, i % 1000, i % 100000, i % 75 from generate_series(0,1000000) i;
+-- end_ignore
 
 set statement_mem="2MB";
 set gp_enable_mk_sort=off;

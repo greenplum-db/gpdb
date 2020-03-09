@@ -32,6 +32,7 @@
 
 #include "catalog/pg_proc.h"
 #include "cdb/cdbhash.h"        /* cdb_default_distribution_opfamily_for_type() */
+#include "cdb/cdbmutate.h"
 #include "cdb/cdbpath.h"        /* cdb_create_motion_path() etc */
 #include "cdb/cdbutil.h"		/* getgpsegmentCount() */
 #include "cdb/cdbvars.h"
@@ -1417,15 +1418,16 @@ set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
 		/*
 		 * If everything is partitioned, then the result can be partitioned, too.
 		 * But if it's a mix of partitioned and replicated, then we have to bring
-		 * everything to a single QE. Otherwise, the replicated (or general) children
-		 * will contribute rows on every QE. XXX: it would be nice to force the child
-		 * to be executed on a single QE, but I couldn't figure out how to do that.
-		 * A motion from General to SingleQE is not possible.
+		 * everything to a single QE. Otherwise, the replicated children
+		 * will contribute rows on every QE.
+		 * If it's a mix of partitioned and general, we still consider the
+		 * result as partitioned. But the general part will be restricted to
+		 * only produce rows on a single QE.
 		 */
 		{ CdbLocusType_Strewn, CdbLocusType_Strewn,         CdbLocusType_Strewn },
 		{ CdbLocusType_Strewn, CdbLocusType_Replicated,     CdbLocusType_SingleQE },
-		{ CdbLocusType_Strewn, CdbLocusType_SegmentGeneral, CdbLocusType_SingleQE },
-		{ CdbLocusType_Strewn, CdbLocusType_General,        CdbLocusType_SingleQE },
+		{ CdbLocusType_Strewn, CdbLocusType_SegmentGeneral, CdbLocusType_Strewn },
+		{ CdbLocusType_Strewn, CdbLocusType_General,        CdbLocusType_Strewn },
 
 		{ CdbLocusType_Replicated, CdbLocusType_Replicated, CdbLocusType_Replicated },
 		{ CdbLocusType_Replicated, CdbLocusType_SegmentGeneral, CdbLocusType_Replicated },
@@ -1518,20 +1520,28 @@ set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
 			Path	   *subpath = (Path *) lfirst(l);
 			CdbPathLocus projectedlocus;
 
-			Assert(CdbPathLocus_IsPartitioned(subpath->locus));
-
-			/* Transform subpath locus into the appendrel's space for comparison. */
-			if (subpath->parent == rel ||
-				subpath->parent->reloptkind != RELOPT_OTHER_MEMBER_REL)
-				projectedlocus = subpath->locus;
+			if (CdbPathLocus_IsGeneral(subpath->locus) ||
+				CdbPathLocus_IsSegmentGeneral(subpath->locus))
+			{
+				/* Afterwards, General/SegmentGeneral will be projected as Strewn */
+				CdbPathLocus_MakeStrewn(&projectedlocus, numsegments);
+			}
 			else
-				projectedlocus =
-					cdbpathlocus_pull_above_projection(root,
-													   subpath->locus,
-													   subpath->parent->relids,
-													   subpath->parent->reltargetlist,
-													   rel->reltargetlist,
-													   rel->relid);
+			{
+				Assert(CdbPathLocus_IsPartitioned(subpath->locus));
+				/* Transform subpath locus into the appendrel's space for comparison. */
+				if (subpath->parent == rel ||
+					subpath->parent->reloptkind != RELOPT_OTHER_MEMBER_REL)
+					projectedlocus = subpath->locus;
+				else
+					projectedlocus =
+						cdbpathlocus_pull_above_projection(root,
+						                                   subpath->locus,
+						                                   subpath->parent->relids,
+														   subpath->parent->reltargetlist,
+														   rel->reltargetlist,
+						                                   rel->relid);
+			}
 
 			/*
 			 * CDB: If all the scans are distributed alike, set
@@ -1571,7 +1581,7 @@ set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
 	else
 		elog(ERROR, "unexpected Append target locus type");
 
-	/* Ok, we now know the target locus. Add Motions to any subpaths that need it */
+	/* Ok, we now know the target locus. Add Motions/Projections to any subpaths that need it */
 	new_subpaths = NIL;
 	foreach(l, subpaths)
 	{
@@ -1579,6 +1589,36 @@ set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
 
 		if (CdbPathLocus_IsPartitioned(targetlocus))
 		{
+			if (CdbPathLocus_IsGeneral(subpath->locus) ||
+				CdbPathLocus_IsSegmentGeneral(subpath->locus))
+			{
+				/*
+				 * If a General/SegmentGeneral is mixed with other Strewn's,
+				 * add a projection path with cdb_restrict_clauses, so that only
+				 * a single QE will actually produce rows.
+				 */
+				if (CdbPathLocus_IsGeneral(subpath->locus))
+					numsegments = targetlocus.numsegments;
+				else
+					numsegments = subpath->locus.numsegments;
+				RestrictInfo *restrict_info =
+					             make_restrictinfo((Expr *) makeSegmentFilterExpr(
+						             gp_session_id % numsegments),
+					                               false,
+					                               false,
+					                               true,
+					                               NULL,
+					                               NULL,
+					                               NULL);
+				subpath = (Path *) create_projection_path_with_quals(
+					root,
+					subpath->parent,
+					subpath,
+					list_make1(restrict_info));
+				CdbPathLocus_MakeStrewn(&(subpath->locus),
+				                        numsegments);
+			}
+
 			/* we already determined that all the loci are compatible */
 			Assert(CdbPathLocus_IsPartitioned(subpath->locus));
 		}
