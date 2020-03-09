@@ -277,25 +277,22 @@ SELECT foo();</codeblock><p>In
                         SQL command that dispatches queries to the segment instances and requires
                         special processing on the master instance by Greenplum Database when
                         possible.
-                        <note><codeph>EXECUTE ON INITPLAN</codeph> is a Beta feature <ph
-                                otherprops="pivotal">and is not supported in a production
-                                environment</ph>. The attribute is only supported in functions that
-                            are used in the <codeph>FROM</codeph> clause of a of a <codeph>CREATE
-                                TABLE</codeph> or <codeph>INSERT</codeph> command such as the
+                        <note><codeph>EXECUTE ON INITPLAN</codeph> is only supported in functions
+                            that are used in the <codeph>FROM</codeph> clause of a <codeph>CREATE
+                                TABLE AS</codeph> or <codeph>INSERT</codeph> command such as the
                                 <codeph>get_data()</codeph> function in these
                             commands.<codeblock>CREATE TABLE t AS SELECT * FROM get_data();
 
-INSERT INTO t1 SELECT * FROM get_data();</codeblock></note>
-                        <note>Greenplum Database does not support the <codeph>EXECUTE ON
-                                INITPLAN</codeph> attribute in a function that is used in the
-                                <codeph>WITH</codeph> clause of a query, a CTE (common table
-                            expression). For example, specifying <codeph>EXECUTE ON
-                                INITPLAN</codeph> in function <codeph>get_data()</codeph> in this
-                            CTE is not
-                            supported.<codeblock>WITH tbl_a as (SELECT * FROM get_data() )
+INSERT INTO t1 SELECT * FROM get_data();</codeblock><p>Greenplum
+                                Database does not support the <codeph>EXECUTE ON INITPLAN</codeph>
+                                attribute in a function that is used in the <codeph>WITH</codeph>
+                                clause of a query, a CTE (common table expression). For example,
+                                specifying <codeph>EXECUTE ON INITPLAN</codeph> in function
+                                    <codeph>get_data()</codeph> in this CTE is not
+                                supported.<codeblock>WITH tbl_a AS (SELECT * FROM get_data() )
    SELECT * from tbl_a
    UNION
-   SELECT * FROM tbl_b;</codeblock></note></pd>
+   SELECT * FROM tbl_b;</codeblock></p></note></pd>
                     <pd>For information about using <codeph>EXECUTE ON</codeph> attributes, see
                             <xref href="#topic1/section6" format="dita">Notes</xref>.</pd>
                 </plentry>
@@ -461,7 +458,7 @@ $SomeTag$Dianne's horse$SomeTag$</codeblock>
                             <codeph>FROM</codeph> clause.</li>
                     <li>A query that includes the function falls back from GPORCA to the Postgres
                         Planner.</li>
-                </ul><p>The Beta attribute <codeph>EXECUTE ON INITPLAN</codeph> indicates that the
+                </ul><p>The attribute <codeph>EXECUTE ON INITPLAN</codeph> indicates that the
                     function contains an SQL command that dispatches queries to the segment
                     instances and requires special processing on the master instance by Greenplum
                     Database. When possible, Greenplum Database handles the function on the master
@@ -500,17 +497,17 @@ LANGUAGE SQL EXECUTE ON INITPLAN;
 CREATE TABLE t AS SELECT * FROM get_data() DISTRIBUTED RANDOMLY;</codeblock></p><p>If
                     you view the query plan of the CTAS command with <codeph>EXPLAIN ANALYZE
                         VERBOSE</codeph>, the plan shows that the function is run as part of an
-                    InitPlan node and one of the listed slices is labeled as <codeph>entry
+                    InitPlan node, and one of the listed slices is labeled as <codeph>entry
                         db</codeph>. The query plan of a simple CTAS command without the function
                     does not have an InitPlan node or an <codeph>entry db</codeph> slice.</p><p>If
                     the function did not contain the <codeph>EXECUTE ON INITPLAN</codeph> attribute,
                     the CTAS command returns the error <codeph>function cannot execute on a QE
                         slice</codeph>.</p><p>When a function uses the <codeph>EXECUTE ON
                         INITPLAN</codeph> attribute, a command that uses the function such as
-                        <codeph>CREATE TABLE t SELECT * FROM get_data()</codeph> gathers the results
-                    of the function onto the master segment and then redistributes the results to
-                    segment instances when inserting the data. If the function returns a large
-                    amount of data, the master might become a bottleneck when gathering and
+                        <codeph>CREATE TABLE t AS SELECT * FROM get_data()</codeph> gathers the
+                    results of the function onto the master segment and then redistributes the
+                    results to segment instances when inserting the data. If the function returns a
+                    large amount of data, the master might become a bottleneck when gathering and
                     redistributing data. Performance might improve if you rewrite the function to
                     run the CTAS command in the user defined function and use the table name as an
                     input parameter. In this example, the function executes a CTAS command and does

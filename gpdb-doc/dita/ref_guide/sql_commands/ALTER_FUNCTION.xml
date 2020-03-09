@@ -123,9 +123,7 @@ RESET ALL</codeblock></section>
             instances. </pd>
           <pd><codeph>EXECUTE ON INITPLAN</codeph> indicates that the function contains an SQL
             command that dispatches queries to the segment instances and requires special processing
-            on the master instance by Greenplum Database when possible.
-            <note><codeph>EXECUTE ON INITPLAN</codeph> is a Beta feature <ph otherprops="pivotal"
-                >and is not supported in a production environment</ph>.</note></pd>
+            on the master instance by Greenplum Database when possible. </pd>
           <pd>For more information about the <codeph>EXECUTE ON</codeph> attributes, see
                 <codeph><xref href="CREATE_FUNCTION.xml#topic1">CREATE
             FUNCTION</xref></codeph>.</pd>
