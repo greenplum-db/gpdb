@@ -1548,13 +1548,6 @@ START_QD_PRODUCTION () {
     LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
 
-SET_GP_USER_PW () {
-    LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-    $PSQL -p $MASTER_PORT -d "$DEFAULTDB" -c"alter user $USER_NAME password '$GP_PASSWD';" >> $LOG_FILE 2>&1
-    ERROR_CHK $? "update Greenplum superuser password" 1
-    LOG_MSG "[INFO]:-End Function $FUNCNAME"
-}
-
 CREATE_DATABASE () {
 		LOG_MSG "[INFO]:-Start Function $FUNCNAME"
 		SET_VAR $QD_PRIMARY_ARRAY
