@@ -273,8 +273,13 @@ solarisTest:
 		echo "SOLARIS" ; \
 	fi
 
+
+.PHONY: installcheck-bash
+installcheck-bash:
+	./test/suite.bash
+
 .PHONY: installcheck
-installcheck:
+installcheck: installcheck-bash
 	$(MAKE) -C gpload_test $@
 
 clean distclean:
