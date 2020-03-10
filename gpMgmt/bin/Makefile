@@ -78,7 +78,7 @@ pygresql:
 	@echo "--- PyGreSQL"
 	if [ ! -f $(DESTDIR)$(prefix)/greenplum_path.sh ]; then \
 		unset LIBPATH; \
-		./generate-greenplum-path.sh $(prefix) > $(DESTDIR)$(prefix)/greenplum_path.sh ; \
+		./generate-greenplum-path.sh > $(DESTDIR)$(prefix)/greenplum_path.sh ; \
 	fi
 	. $(DESTDIR)$(prefix)/greenplum_path.sh && unset PYTHONHOME && \
 	if [ "$(BLD_ARCH)" = 'aix7_ppc_64' ]; then \
