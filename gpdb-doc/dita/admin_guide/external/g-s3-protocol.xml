@@ -222,10 +222,10 @@ s3://s3-us-west-2.amazonaws.com/test1/abcdefff</codeblock>
             or a carriage return (<codeph>\r</codeph>). Also, the column delimiter cannot be a
             newline character (<codeph>\n</codeph>) or a carriage return character
                (<codeph>\r</codeph>). </p>
-         <p>For read-only S3 tables, the <codeph>s3</codeph> protocol recognizes a file with the
-               <codeph>.gz</codeph> suffix as a gzip compressed file and the
-               <codeph>.deflate</codeph> suffix as a deflate compressed file. The files are
-            automatically decompressed.</p>
+         <p>For read-only S3 tables, the <codeph>s3</codeph> protocol recognizes gzip and deflate
+            compression. The protocol recognizes the format of a gzip compressed file and assumes a
+            file with the <codeph>.deflate</codeph> suffix is a deflate compressed file. The files
+            are automatically decompressed.</p>
          <p>The S3 file permissions must be <codeph>Open/Download</codeph> and <codeph>View</codeph>
             for the S3 user ID that is accessing the files. Writable S3 tables require the S3 user
             ID to have <codeph>Upload/Delete</codeph> permissions.</p>
@@ -588,8 +588,9 @@ gpcheckcloud <b>-h</b></codeblock>
                <pd>Download data from the specified S3 location with the configuration specified in
                   the <codeph>s3</codeph> protocol URL and send the output to
                      <codeph>STDOUT</codeph>.</pd>
-               <pd>If files have a <codeph>.gz</codeph> or a <codeph>.deflate</codeph> suffix, the
-                  uncompressed data is sent to <codeph>STDOUT</codeph>.</pd>
+               <pd>If files are gzip compressed or have a <codeph>.deflate</codeph> suffix to
+                  indicate deflate compression, the uncompressed data is sent to
+                     <codeph>STDOUT</codeph>.</pd>
             </plentry>
             <plentry>
                <pt>-u</pt>
