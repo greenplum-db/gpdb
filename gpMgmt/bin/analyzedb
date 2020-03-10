@@ -503,7 +503,7 @@ class AnalyzeDb(Operation):
                 included_cols = self._get_include_or_exclude_cols(toks, '-i')
                 excluded_cols = self._get_include_or_exclude_cols(toks, '-x')
                 self._parse_column(col_dict, orig_table, schema, table, included_cols, excluded_cols,
-                                   [table] in all_root_partitions)
+                                   [orig_table] in all_root_partitions)
 
         else:  # all user tables in database
             alltables = run_sql(self.conn, GET_ALL_DATA_TABLES_SQL)
