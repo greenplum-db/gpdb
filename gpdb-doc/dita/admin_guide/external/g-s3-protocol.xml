@@ -223,9 +223,10 @@ s3://s3-us-west-2.amazonaws.com/test1/abcdefff</codeblock>
             newline character (<codeph>\n</codeph>) or a carriage return character
                (<codeph>\r</codeph>). </p>
          <p>For read-only S3 tables, the <codeph>s3</codeph> protocol recognizes gzip and deflate
-            compression. The protocol recognizes the format of a gzip compressed file and assumes a
-            file with the <codeph>.deflate</codeph> suffix is a deflate compressed file. The files
-            are automatically decompressed.</p>
+            compressed files and automatically decompresses the files. For gzip compression, the
+            protocol recognizes the format of a gzip compressed file. For deflate compression, the
+            protocol assumes a file with the <codeph>.deflate</codeph> suffix is a deflate
+            compressed file.</p>
          <p>The S3 file permissions must be <codeph>Open/Download</codeph> and <codeph>View</codeph>
             for the S3 user ID that is accessing the files. Writable S3 tables require the S3 user
             ID to have <codeph>Upload/Delete</codeph> permissions.</p>
