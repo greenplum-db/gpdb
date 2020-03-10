@@ -67,12 +67,14 @@
 
 #include "catalog/pg_compression.h"
 #include "catalog/pg_type_encoding.h"
+#include "catalog/pg_attribute_encoding.h"
 #include "cdb/cdbhash.h"
 #include "cdb/cdbpartition.h"
 #include "cdb/partitionselection.h"
 #include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"
 #include "parser/parse_partition.h"
+#include "rewrite/rewriteHandler.h"
 #include "utils/fmgroids.h"
 #include "utils/memutils.h"
 
@@ -3659,6 +3661,121 @@ transformRuleStmt(RuleStmt *stmt, const char *queryString,
 	heap_close(rel, NoLock);
 }
 
+/*
+ * If there exists only only ONE command
+ * and the command is AT_AlterColumnType and the relation is AOCO
+ *
+ * Then
+ * Add two extra commands, i.e. drop column and add column.
+ *
+ * During the Alter table preparation, then we will check, if we
+ * can optimise and not re-write the whole relation but use the newly
+ * added commands. These commands have to be added here and not during
+ * execution, because we need to fail early, i.e. during preparation of the
+ * newly added commands also. Meaning if we have commited to perform the
+ * composite action, we should not fail after removing the original column.
+ *
+ * There are a couple of caveats here, regarding default values and constraints
+ * It is very possible that we will have to perform that step during the add
+ * column command, try here for now though... This is a big XXX
+ */
+static void
+aoco_optimize_alter_type(Relation rel, List *commands)
+{
+	AlterTableCmd *cmd;
+	AlterTableCmd *dropColumn;
+	AlterTableCmd *addColumn;
+	ColumnDef	  *def;
+	Form_pg_attribute attribute;
+
+	if (!RelationIsAoCols(rel) || list_length(commands) != 1)
+		return;
+
+	cmd = (AlterTableCmd *) linitial(commands);
+	Assert(IsA(cmd, AlterTableCmd));
+	if (cmd->subtype != AT_AlterColumnType)
+		return;
+
+	attribute = NULL;
+	for (int i = 0; i < RelationGetDescr(rel)->natts && !attribute; i++)
+	{
+		Form_pg_attribute attr = RelationGetDescr(rel)->attrs[i];
+		if (strcmp(NameStr(attr->attname), cmd->name) != 0)
+			continue;
+
+		attribute = attr;
+	}
+
+	if (!attribute || attribute->attinhcount || attribute->attisdropped)
+		return;
+
+	cmd->aoco_alter_type_norewrite = true;
+
+	dropColumn = makeNode(AlterTableCmd);
+	dropColumn->subtype = AT_DropColumn;
+	dropColumn->behavior = DROP_RESTRICT;
+	dropColumn->name = pstrdup(cmd->name);
+	dropColumn->missing_ok = false;
+	dropColumn->aoco_alter_type_norewrite = true;
+
+	commands = lappend(commands, dropColumn);
+
+	addColumn = makeNode(AlterTableCmd);
+	addColumn->subtype = AT_AddColumn;
+	addColumn->name = pstrdup(cmd->name);
+	addColumn->missing_ok = false;
+	addColumn->aoco_alter_type_norewrite = true;
+
+	addColumn->def = copyObject(cmd->def);
+	def = (ColumnDef *)addColumn->def;
+
+	if (!def->colname)
+		def->colname = pstrdup(NameStr(attribute->attname));
+
+	Assert(def->typeName);
+
+	if (!def->is_local)
+		def->is_local = attribute->attislocal;
+
+	if (!def->is_not_null)
+		def->is_not_null = attribute->attnotnull;
+
+	if (!def->constraints)
+			;	/* other constraints on column */
+
+	if (!def->raw_default && attribute->atthasdef)
+	{
+#if 0
+		/* XXX: This has to be done in Add column, no way around it */
+		Node	   *defaultexpr;
+		Oid			targettype;
+		int32		targettypmod;
+
+		typenameTypeIdAndMod(NULL, def->typeName, &targettype, &targettypmod);
+
+		defaultexpr = build_column_default(rel, attribute->attnum);
+		Assert(defaultexpr);
+
+		defaultexpr = strip_implicit_coercions(defaultexpr);
+		defaultexpr = coerce_to_target_type(NULL,		/* no UNKNOWN params */
+										  defaultexpr, exprType(defaultexpr),
+										  targettype, targettypmod,
+										  COERCION_ASSIGNMENT,
+										  COERCE_IMPLICIT_CAST,
+										  -1);
+
+		if (defaultexpr == NULL)
+			ereport(ERROR,
+					(errcode(ERRCODE_DATATYPE_MISMATCH),
+					 errmsg("default for column \"%s\" cannot be cast automatically to type %s",
+						def->colname, format_type_be(targettype))));
+
+		def->raw_default = defaultexpr;
+#endif
+	}
+
+	commands = lappend(commands, addColumn);
+}
 
 /*
  * transformAlterTableStmt -
@@ -3702,6 +3819,8 @@ transformAlterTableStmt(Oid relid, AlterTableStmt *stmt,
 	 * partitioned CREATE TABLE.
 	 */
 	rel = relation_open(relid, NoLock);
+
+	aoco_optimize_alter_type(rel, stmt->cmds);
 
 	/* Set up pstate */
 	pstate = make_parsestate(NULL);
@@ -3881,6 +4000,7 @@ transformAlterTableStmt(Oid relid, AlterTableStmt *stmt,
 				break;
 		}
 	}
+
 
 	/*
 	 * transformIndexConstraints wants cxt.alist to contain only index
