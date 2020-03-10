@@ -17,6 +17,7 @@ if [ "$2" = "ISO" ] ; then
 	EOF
 else
 	cat <<-EOF
+		#!/usr/bin/env bash
 		GPHOME=${GPHOME_PATH}
 	EOF
 fi
@@ -32,45 +33,23 @@ cat << EOF
 
 # Replace with symlink path if it is present and correct
 if [ -h \${GPHOME}/../greenplum-db ]; then
-    GPHOME_BY_SYMLINK=\`(cd \${GPHOME}/../greenplum-db/ && pwd -P)\`
+    GPHOME_BY_SYMLINK=\$(cd \${GPHOME}/../greenplum-db/ && pwd -P)
     if [ x"\${GPHOME_BY_SYMLINK}" = x"\${GPHOME}" ]; then
-        GPHOME=\`(cd \${GPHOME}/../greenplum-db/ && pwd -L)\`/.
+        GPHOME=\$(cd \${GPHOME}/../greenplum-db/ && pwd -L)/.
     fi
     unset GPHOME_BY_SYMLINK
 fi
 EOF
 
 cat <<EOF
-#setup PYTHONHOME
-if [ -x \$GPHOME/ext/python/bin/python ]; then
-    PYTHONHOME="\$GPHOME/ext/python"
-    export PYTHONHOME
-fi
-EOF
 
-#setup PYTHONPATH
-if [ "x${PYTHONPATH}" == "x" ]; then
-    PYTHONPATH="\$GPHOME/lib/python"
-else
-    PYTHONPATH="\$GPHOME/lib/python:${PYTHONPATH}"
-fi
-cat <<EOF
-PYTHONPATH=${PYTHONPATH}
-EOF
+PYTHONHOME="\${GPHOME}/ext/python"
+export PYTHONHOME
+PYTHONPATH=\${GPHOME}/lib/python
 
-GP_BIN_PATH=\$GPHOME/bin
-GP_LIB_PATH=\$GPHOME/lib
+PATH=\${GPHOME}/bin:\${PYTHONHOME}/bin:\${PATH}
 
-if [ -n "$PYTHONHOME" ]; then
-    GP_BIN_PATH=${GP_BIN_PATH}:\$PYTHONHOME/bin
-    GP_LIB_PATH=${GP_LIB_PATH}:\$PYTHONHOME/lib
-fi
-cat <<EOF
-PATH=${GP_BIN_PATH}:\$PATH
-EOF
-
-cat <<EOF
-LD_LIBRARY_PATH=${GP_LIB_PATH}:\${LD_LIBRARY_PATH-}
+LD_LIBRARY_PATH=\${GPHOME}/lib:\${PYTHONHOME}/lib:\${LD_LIBRARY_PATH-}
 export LD_LIBRARY_PATH
 EOF
 
@@ -88,7 +67,7 @@ fi
 
 # openssl configuration file path
 cat <<EOF
-if [ -e \$GPHOME/etc/openssl.cnf ]; then
+if [ -e "\$GPHOME/etc/openssl.cnf" ]; then
 OPENSSL_CONF=\$GPHOME/etc/openssl.cnf
 export OPENSSL_CONF
 fi
