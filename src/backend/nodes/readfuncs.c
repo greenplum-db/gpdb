@@ -619,7 +619,6 @@ _readCopyIntoClause(void)
 	READ_BOOL_FIELD(is_program);
 	READ_STRING_FIELD(filename);
 	READ_NODE_FIELD(options);
-	READ_NODE_FIELD(ao_segnos);
 
 	READ_DONE();
 }
@@ -2348,7 +2347,6 @@ _readPlannedStmt(void)
 
 	READ_BITMAPSET_FIELD(rewindPlanIDs);
 	READ_NODE_FIELD(result_partitions);
-	READ_NODE_FIELD(result_aosegnos);
 	READ_NODE_FIELD(queryPartOids);
 	READ_NODE_FIELD(queryPartsMetadata);
 	READ_NODE_FIELD(numSelectorsPerScanId);
@@ -3861,19 +3859,6 @@ _readConstraintsSetStmt(void)
 	READ_DONE();
 }
 
-static AOVacuumPhaseConfig *
-_readAOVacuumPhaseConfig()
-{
-	READ_LOCALS(AOVacuumPhaseConfig);
-
-	READ_NODE_FIELD(appendonly_compaction_segno);
-	READ_NODE_FIELD(appendonly_compaction_insert_segno);
-	READ_BOOL_FIELD(appendonly_relation_empty);
-	READ_ENUM_FIELD(appendonly_phase,AOVacuumPhase);
-
-	READ_DONE();
-}
-
 /*
  * _readVacuumStmt
  */
@@ -3885,9 +3870,6 @@ _readVacuumStmt(void)
 	READ_INT_FIELD(options);
 	READ_NODE_FIELD(relation);
 	READ_NODE_FIELD(va_cols);
-
-	READ_BOOL_FIELD(skip_twophase);
-	READ_NODE_FIELD(ao_vacuum_phase_config);
 
 	READ_DONE();
 }
@@ -4440,8 +4422,6 @@ parseNodeString(void)
 		return_value = _readTypeName();
 	else if (MATCHX("VACUUMSTMT"))
 		return_value = _readVacuumStmt();
-	else if (MATCHX("AOVACUUMPHASECONFIG"))
-		return_value = _readAOVacuumPhaseConfig();
 	else if (MATCHX("VARIABLESETSTMT"))
 		return_value = _readVariableSetStmt();
 	else if (MATCHX("VIEWSTMT"))

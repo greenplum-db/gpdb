@@ -7,27 +7,14 @@ CREATE
 CREATE INDEX foo_index ON foo(b);
 CREATE
 
-INSERT INTO foo VALUES (1, 1, 'c');
-INSERT 1
-SELECT segno, tupcount, state FROM gp_ao_or_aocs_seg('foo');
- segno | tupcount | state 
--------+----------+-------
- 1     | 1        | 1     
-(1 row)
 0U: INSERT INTO foo VALUES (2, 2, 'c');
 INSERT 1
 0U: INSERT INTO foo VALUES (3, 3, 'c');
 INSERT 1
-0U: SELECT segno, tupcount, state FROM gp_ao_or_aocs_seg('foo') where segno = 0;
- segno | tupcount | state 
--------+----------+-------
- 0     | 2        | 1     
-(1 row)
--- We know that the master does update its tupcount yet
-SELECT segno, tupcount, state FROM gp_ao_or_aocs_seg('foo');
- segno | tupcount | state 
--------+----------+-------
- 1     | 1        | 1     
+SELECT *, segno, tupcount, state FROM gp_ao_or_aocs_seg('foo');
+ segment_id | segno | tupcount | modcount | formatversion | state | segno | tupcount | state 
+------------+-------+----------+----------+---------------+-------+-------+----------+-------
+ 0          | 0     | 2        | 2        | 3             | 1     | 0     | 2        | 1     
 (1 row)
 DELETE FROM foo WHERE a = 2;
 DELETE 1
@@ -35,13 +22,10 @@ UPDATE foo SET b = -1 WHERE a = 3;
 UPDATE 1
 VACUUM foo;
 VACUUM
-0U: SELECT segno, tupcount, state FROM gp_ao_or_aocs_seg('foo') where segno = 0;
- segno | tupcount | state 
--------+----------+-------
- 0     | 0        | 1     
-(1 row)
-SELECT segno, tupcount, state FROM gp_ao_or_aocs_seg('foo');
- segno | tupcount | state 
--------+----------+-------
- 1     | 2        | 1     
-(1 row)
+SELECT segment_id, segno, tupcount, state FROM gp_ao_or_aocs_seg('foo');
+ segment_id | segno | tupcount | state 
+------------+-------+----------+-------
+ 0          | 0     | 0        | 1     
+ 0          | 1     | 1        | 1     
+ 0          | 2     | 0        | 1     
+(3 rows)

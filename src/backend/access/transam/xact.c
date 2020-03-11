@@ -20,7 +20,6 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "access/appendonlywriter.h"
 #include "access/commit_ts.h"
 #include "access/multixact.h"
 #include "access/parallel.h"
@@ -2680,9 +2679,6 @@ CommitTransaction(void)
 	if (Gp_role == GP_ROLE_DISPATCH && IsResQueueEnabled())
 		AtCommit_ResScheduler();
 
-	/* Perform any AO table commit processing */
-	AtCommit_AppendOnly();
-
 	/*
 	 * Let ON COMMIT management do its thing (must happen after closing
 	 * cursors, to avoid dangling-reference problems)
@@ -2873,7 +2869,6 @@ CommitTransaction(void)
 
 	AtCommit_TablespaceStorage();
 
-	AtEOXact_AppendOnly();
 	AtCommit_Notify();
 	AtEOXact_GUC(true, 1);
 	AtEOXact_SPI(true);
@@ -3349,9 +3344,6 @@ AbortTransaction(void)
 	/* Perform any Resource Scheduler abort procesing. */
 	if (Gp_role == GP_ROLE_DISPATCH && IsResQueueEnabled())
 		AtAbort_ResScheduler();
-		
-	/* Perform any AO table abort processing */
-	AtAbort_AppendOnly();
 
 	AtEOXact_DispatchOids(false);
 
@@ -3430,7 +3422,6 @@ AbortTransaction(void)
 		DatabaseStorageResetSessionLock();
 
 		AtAbort_TablespaceStorage();
-		AtEOXact_AppendOnly();
 		gp_guc_need_restore = true;
 		AtEOXact_GUC(false, 1);
 		gp_guc_need_restore = false;

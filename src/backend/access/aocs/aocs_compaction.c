@@ -22,6 +22,7 @@
 #include "access/aomd.h"
 #include "access/aocs_compaction.h"
 #include "access/appendonly_compaction.h"
+#include "access/appendonlywriter.h"
 #include "catalog/catalog.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_appendonly_fn.h"
@@ -48,9 +49,8 @@
  * the relation is dropped later, the code in mdunlink() will remove all
  * segments, including any empty ones we've left behind.
  */
-static void
-AOCSCompaction_DropSegmentFile(Relation aorel,
-							   int segno)
+void
+AOCSCompaction_DropSegmentFile(Relation aorel, int segno)
 {
 	int			col;
 
@@ -90,25 +90,25 @@ AOCSCompaction_DropSegmentFile(Relation aorel,
 /*
  * AOCSSegmentFileTruncateToEOF()
  *
- * Assumes that the segment file lock is already held.
+ * Truncates the files for all columns of logical segfile 'segno' to
+ * the EOF values from 'vpinfo'. The caller is responsible for locking so
+ * that a concurrent backend doesn't write to the segfile while we truncate
+ * it.
  *
- * For the segment file is truncates to the eof.
+ * This is used to clean up space left behind by aborted or crashed
+ * transactions.
  */
-static void
-AOCSSegmentFileTruncateToEOF(Relation aorel,
-							 AOCSFileSegInfo *fsinfo)
+void
+AOCSSegmentFileTruncateToEOF(Relation aorel, int segno, AOCSVPInfo *vpinfo)
 {
 	const char *relname = RelationGetRelationName(aorel);
-	int			segno;
 	int			j;
 
-	Assert(fsinfo);
 	Assert(RelationIsAoCols(aorel));
 
-	segno = fsinfo->segno;
 	relname = RelationGetRelationName(aorel);
 
-	for (j = 0; j < fsinfo->vpinfo.nEntry; ++j)
+	for (j = 0; j < vpinfo->nEntry; ++j)
 	{
 		int64		segeof;
 		char		filenamepath[MAXPGPATH];
@@ -116,7 +116,7 @@ AOCSSegmentFileTruncateToEOF(Relation aorel,
 		File		fd;
 		int32		fileSegNo;
 
-		entry = getAOCSVPEntry(fsinfo, j);
+		entry = &vpinfo->entry[j];
 		segeof = entry->eof;
 
 		/* Open and truncate the relation segfile to its eof */
@@ -166,84 +166,6 @@ AOCSSegmentFileTruncateToEOF(Relation aorel,
 	}
 }
 
-/*
- * Truncates each segment file to the AOCS relation to its EOF.
- * If we cannot get a lock on the segment file (because e.g. a concurrent insert)
- * the segment file is skipped.
- */
-void
-AOCSTruncateToEOF(Relation aorel)
-{
-	const char *relname;
-	int			total_segfiles;
-	AOCSFileSegInfo **segfile_array;
-	int			i,
-				segno;
-	LockAcquireResult acquireResult;
-	AOCSFileSegInfo *fsinfo;
-	Snapshot	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
-
-	Assert(RelationIsAoCols(aorel));
-
-	relname = RelationGetRelationName(aorel);
-
-	elogif(Debug_appendonly_print_compaction, LOG,
-		   "Compact AO relation %s", relname);
-
-	/* Get information about all the file segments we need to scan */
-	segfile_array = GetAllAOCSFileSegInfo(aorel, appendOnlyMetaDataSnapshot, &total_segfiles);
-
-	for (i = 0; i < total_segfiles; i++)
-	{
-		segno = segfile_array[i]->segno;
-
-		/*
-		 * Try to get the transaction write-lock for the Append-Only segment
-		 * file.
-		 *
-		 * NOTE: This is a transaction scope lock that must be held until
-		 * commit / abort.
-		 */
-		acquireResult = LockRelationAppendOnlySegmentFile(
-														  &aorel->rd_node,
-														  segfile_array[i]->segno,
-														  AccessExclusiveLock,
-														   /* dontWait */ true);
-		if (acquireResult == LOCKACQUIRE_NOT_AVAIL)
-		{
-			elog(DEBUG5, "truncate skips AO segfile %d, "
-				 "relation %s", segfile_array[i]->segno, relname);
-			continue;
-		}
-
-		/* Re-fetch under the write lock to get latest committed eof. */
-		fsinfo = GetAOCSFileSegInfo(aorel, appendOnlyMetaDataSnapshot, segno);
-
-		/*
-		 * This should not occur since this segfile info was found by the
-		 * "all" method, but better to catch for trouble shooting (possibly
-		 * index corruption?)
-		 */
-		if (fsinfo == NULL)
-			elog(ERROR, "file seginfo for AOCS relation %s %u/%u/%u (segno=%u) is missing",
-				 relname,
-				 aorel->rd_node.spcNode,
-				 aorel->rd_node.dbNode,
-				 aorel->rd_node.relNode,
-				 segno);
-
-		AOCSSegmentFileTruncateToEOF(aorel, fsinfo);
-		pfree(fsinfo);
-	}
-
-	if (segfile_array)
-	{
-		FreeAllAOCSSegFileInfo(segfile_array, total_segfiles);
-		pfree(segfile_array);
-	}
-	UnregisterSnapshot(appendOnlyMetaDataSnapshot);
-}
-
 static void
 AOCSMoveTuple(TupleTableSlot *slot,
 			  AOCSInsertDesc insertDesc,
@@ -281,8 +203,7 @@ AOCSMoveTuple(TupleTableSlot *slot,
 }
 
 /*
- * Assumes that the segment file lock is already held.
- * Assumes that the segment file should be compacted.
+ * Subroutine of AOCSCompact().
  */
 static bool
 AOCSSegmentFileFullCompaction(Relation aorel,
@@ -385,8 +306,7 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 		}
 	}
 
-	SetAOCSFileSegInfoState(aorel, compact_segno,
-							AOSEG_STATE_AWAITING_DROP);
+	MarkAOCSFileSegInfoAwaitingDrop(aorel, compact_segno);
 
 	AppendOnlyVisimap_DeleteSegmentFile(&visiMap,
 										compact_segno);
@@ -419,190 +339,68 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 	return true;
 }
 
-
-/*
- * Performs a compaction of an append-only AOCS relation.
- *
- * In non-utility mode, all compaction segment files should be
- * marked as in-use/in-compaction in the appendonlywriter.c code.
- *
- */
-void
-AOCSDrop(Relation aorel,
-		 List *compaction_segno)
-{
-	const char *relname;
-	int			total_segfiles;
-	AOCSFileSegInfo **segfile_array;
-	int			i,
-				segno;
-	AOCSFileSegInfo *fsinfo;
-	Snapshot	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
-
-	Assert(Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
-	Assert(RelationIsAoCols(aorel));
-
-	relname = RelationGetRelationName(aorel);
-
-	elogif(Debug_appendonly_print_compaction, LOG,
-		   "Drop AOCS relation %s", relname);
-
-	/* Get information about all the file segments we need to scan */
-	segfile_array = GetAllAOCSFileSegInfo(aorel,
-										  appendOnlyMetaDataSnapshot, &total_segfiles);
-
-	for (i = 0; i < total_segfiles; i++)
-	{
-		segno = segfile_array[i]->segno;
-		if (!list_member_int(compaction_segno, segno))
-		{
-			continue;
-		}
-
-		/*
-		 * Get the transaction write-lock for the Append-Only segment file.
-		 *
-		 * NOTE: This is a transaction scope lock that must be held until
-		 * commit / abort.
-		 */
-		LockRelationAppendOnlySegmentFile(&aorel->rd_node,
-										  segfile_array[i]->segno,
-										  AccessExclusiveLock,
-										  /* dontWait */ false);
-
-		/* Re-fetch under the write lock to get latest committed eof. */
-		fsinfo = GetAOCSFileSegInfo(aorel, appendOnlyMetaDataSnapshot, segno);
-
-		if (fsinfo->state == AOSEG_STATE_AWAITING_DROP)
-		{
-			Assert(HasLockForSegmentFileDrop(aorel));
-			AOCSCompaction_DropSegmentFile(aorel, segno);
-			ClearAOCSFileSegInfo(aorel, segno, AOSEG_STATE_DEFAULT);
-		}
-		pfree(fsinfo);
-	}
-
-	if (segfile_array)
-	{
-		FreeAllAOCSSegFileInfo(segfile_array, total_segfiles);
-		pfree(segfile_array);
-	}
-	UnregisterSnapshot(appendOnlyMetaDataSnapshot);
-}
-
-
 /*
  * Performs a compaction of an append-only relation in column-orientation.
  *
- * In non-utility mode, all compaction segment files should be
- * marked as in-use/in-compaction in the appendonlywriter.c code. If
- * set, the insert_segno should also be marked as in-use.
-  * When the insert segno is negative, only truncate to eof operations
- * can be executed.
+ * The compaction segment file should be locked for this transaction in
+ * the appendonlywriter.c code.
+ *
+ * On exit, *insert_segno will be set to the the segment that was used as the
+ * insertion target. The segfiles listed in 'avoid_segnos' will not be used
+ * for insertion.
  *
  * The caller is required to hold either an AccessExclusiveLock (vacuum full)
  * or a ShareLock on the relation.
  */
 void
 AOCSCompact(Relation aorel,
-			List *compaction_segno,
-			int insert_segno,
-			bool isFull)
+			int compaction_segno,
+			int *insert_segno,
+			bool isFull,
+			List *avoid_segnos)
 {
 	const char *relname;
-	int			total_segfiles;
-	AOCSFileSegInfo **segfile_array;
 	AOCSInsertDesc insertDesc = NULL;
-	int			i,
-				segno;
-	LockAcquireResult acquireResult;
 	AOCSFileSegInfo *fsinfo;
 	Snapshot	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
 
 	Assert(RelationIsAoCols(aorel));
 	Assert(Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
-	Assert(insert_segno >= 0);
 
 	relname = RelationGetRelationName(aorel);
-
 	elogif(Debug_appendonly_print_compaction, LOG,
 		   "Compact AO relation %s", relname);
 
-	/* Get information about all the file segments we need to scan */
-	segfile_array = GetAllAOCSFileSegInfo(aorel, appendOnlyMetaDataSnapshot, &total_segfiles);
+	/* Fetch under the write lock to get latest committed eof. */
+	fsinfo = GetAOCSFileSegInfo(aorel, appendOnlyMetaDataSnapshot, compaction_segno, true);
 
-	if (insert_segno >= 0)
+	if (AppendOnlyCompaction_ShouldCompact(aorel,
+										   compaction_segno, fsinfo->total_tupcount, isFull,
+										   appendOnlyMetaDataSnapshot))
 	{
-		insertDesc = aocs_insert_init(aorel, insert_segno, false);
-	}
-
-	for (i = 0; i < total_segfiles; i++)
-	{
-		segno = segfile_array[i]->segno;
-		if (!list_member_int(compaction_segno, segno))
+		if (*insert_segno == -1)
 		{
-			continue;
-		}
-		if (segno == insert_segno)
-		{
-			/* We cannot compact the segment file we are inserting to. */
-			continue;
+			/* get the insertion segment on first call. */
+			*insert_segno = ChooseSegnoForCompactionWrite(aorel, avoid_segnos);
 		}
 
-		/*
-		 * Try to get the transaction write-lock for the Append-Only segment
-		 * file.
-		 *
-		 * NOTE: This is a transaction scope lock that must be held until
-		 * commit / abort.
-		 */
-		acquireResult = LockRelationAppendOnlySegmentFile(
-														  &aorel->rd_node,
-														  segfile_array[i]->segno,
-														  AccessExclusiveLock,
-														   /* dontWait */ true);
-		if (acquireResult == LOCKACQUIRE_NOT_AVAIL)
+		if (*insert_segno != -1)
 		{
-			elog(DEBUG5, "compaction skips AOCS segfile %d, "
-				 "relation %s", segfile_array[i]->segno, relname);
-			continue;
-		}
+			insertDesc = aocs_insert_init(aorel, *insert_segno, false);
 
-		/* Re-fetch under the write lock to get latest committed eof. */
-		fsinfo = GetAOCSFileSegInfo(aorel, appendOnlyMetaDataSnapshot, segno);
-
-		/*
-		 * This should not occur since this segfile info was found by the
-		 * "all" method, but better to catch for trouble shooting (possibly
-		 * index corruption?)
-		 */
-		if (fsinfo == NULL)
-			elog(ERROR, "file seginfo for AOCS relation %s %u/%u/%u (segno=%u) is missing",
-				 relname,
-				 aorel->rd_node.spcNode,
-				 aorel->rd_node.dbNode,
-				 aorel->rd_node.relNode,
-				 segno);
-
-		if (AppendOnlyCompaction_ShouldCompact(aorel,
-											   fsinfo->segno, fsinfo->total_tupcount, isFull,
-											   appendOnlyMetaDataSnapshot))
-		{
-			AOCSSegmentFileFullCompaction(aorel, insertDesc, fsinfo,
+			AOCSSegmentFileFullCompaction(aorel,
+										  insertDesc,
+										  fsinfo,
 										  appendOnlyMetaDataSnapshot);
+			aocs_insert_finish(insertDesc);
 		}
-
-		pfree(fsinfo);
+		else
+		{
+			/* FIXME: Could not find a target segment. What now? */
+		}
 	}
 
-	if (insertDesc != NULL)
-		aocs_insert_finish(insertDesc);
-
-	if (segfile_array)
-	{
-		FreeAllAOCSSegFileInfo(segfile_array, total_segfiles);
-		pfree(segfile_array);
-	}
+	pfree(fsinfo);
 
 	UnregisterSnapshot(appendOnlyMetaDataSnapshot);
 }

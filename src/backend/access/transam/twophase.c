@@ -436,7 +436,6 @@ MarkAsPreparing(TransactionId xid,
 	proc->lwWaitMode = 0;
 	proc->waitLock = NULL;
 	proc->waitProcLock = NULL;
-	proc->serializableIsoLevel = false;
 
 	proc->localDistribXactData = *localDistribXactRef;
 

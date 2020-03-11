@@ -16,6 +16,11 @@ SELECT COUNT(*) FROM foo;
 -------
  81    
 (1 row)
+0U: SELECT segno, state, case when tupcount = 0 then 'zero' when tupcount <= 5 then 'few' else 'many' end FROM gp_ao_or_aocs_seg('foo');
+ segno | state | case 
+-------+-------+------
+ 1     | 1     | many 
+(1 row)
 0U: VACUUM foo;
 VACUUM
 SELECT COUNT(*) FROM foo;
@@ -23,9 +28,9 @@ SELECT COUNT(*) FROM foo;
 -------
  81    
 (1 row)
-0U: SELECT segno, case when tupcount = 0 then 'zero' when tupcount <= 5 then 'few' else 'many' end FROM gp_ao_or_aocs_seg('foo');
- segno | case 
--------+------
- 0     | many 
- 1     | zero 
+0U: SELECT segno, state, case when tupcount = 0 then 'zero' when tupcount <= 5 then 'few' else 'many' end FROM gp_ao_or_aocs_seg('foo');
+ segno | state | case 
+-------+-------+------
+ 0     | 1     | many 
+ 1     | 2     | many 
 (2 rows)

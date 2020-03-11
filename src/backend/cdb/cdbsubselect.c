@@ -64,8 +64,6 @@ typedef struct ConvertSubqueryToJoinContext
 	Node	   *joinQual;		/* Qual to employ to join subquery */
 	Node	   *innerQual;		/* Qual to leave behind in subquery */
 	List	   *targetList;		/* targetlist for subquery */
-	bool		extractGrouping;	/* extract grouping information based on
-									 * join conditions */
 	List	   *groupClause;	/* grouping clause for subquery */
 } ConvertSubqueryToJoinContext;
 
@@ -134,7 +132,6 @@ InitConvertSubqueryToJoinContext(ConvertSubqueryToJoinContext *ctx)
 	ctx->innerQual = NULL;
 	ctx->groupClause = NIL;
 	ctx->targetList = NIL;
-	ctx->extractGrouping = false;
 }
 
 /**
@@ -145,55 +142,39 @@ InitConvertSubqueryToJoinContext(ConvertSubqueryToJoinContext *ctx)
 static bool
 IsCorrelatedOpExpr(OpExpr *opexp, Expr **innerExpr)
 {
-	Assert(opexp);
-	Assert(list_length(opexp->args) > 1);
-	Assert(innerExpr);
+	Expr	   *e1;
+	Expr	   *e2;
 
 	if (list_length(opexp->args) != 2)
-	{
 		return false;
-	}
 
-	Expr	   *e1 = (Expr *) list_nth(opexp->args, 0);
-	Expr	   *e2 = (Expr *) list_nth(opexp->args, 1);
+	e1 = (Expr *) list_nth(opexp->args, 0);
+	e2 = (Expr *) list_nth(opexp->args, 1);
 
-	/**
+	/*
 	 * One of the vars must be outer, and other must be inner.
-	 *
-	 * If both sides of the condition referring to outer variable,
-	 * then fail to extract the innerExpr.
 	 */
-	if (contain_vars_of_level((Node *) e1, 1) && contain_vars_of_level((Node *) e2, 1))
+	if (contain_vars_of_level((Node *) e1, 1) &&
+			!contain_vars_of_level((Node *) e1, 0) &&
+			contain_vars_of_level((Node *) e2, 0) &&
+			!contain_vars_of_level((Node *) e2, 1))
 	{
-		return false;
+		*innerExpr = (Expr *) copyObject(e2);
+
+		return true;
 	}
 
-	Expr	   *tOuterExpr = NULL;
-	Expr	   *tInnerExpr = NULL;
-
-	if (contain_vars_of_level((Node *) e1, 1))
+	if (contain_vars_of_level((Node *) e1, 0) &&
+			!contain_vars_of_level((Node *) e1, 1) &&
+			contain_vars_of_level((Node *) e2, 1) &&
+			!contain_vars_of_level((Node *) e2, 0))
 	{
-		tOuterExpr = (Expr *) copyObject(e1);
-		tInnerExpr = (Expr *) copyObject(e2);
-	}
-	else if ((contain_vars_of_level((Node *) e2, 1)))
-	{
-		tOuterExpr = (Expr *) copyObject(e2);
-		tInnerExpr = (Expr *) copyObject(e1);
-	}
+		*innerExpr = (Expr *) copyObject(e1);
 
-	/**
-	 * It is correlated only if we found an outer var and inner expr
-	 */
-
-	if (tOuterExpr && contain_vars_of_level((Node *) tInnerExpr, 0))
-	{
-		*innerExpr = tInnerExpr;
 		return true;
 	}
 
 	return false;
-
 }
 
 /**
@@ -417,29 +398,26 @@ SubqueryToJoinWalker(Node *node, ConvertSubqueryToJoinContext *context)
 
 		if (considerOpExpr)
 		{
+			TargetEntry *tle;
+			SortGroupClause *gc;
 
-			TargetEntry *tle = makeTargetEntry(copyObject(innerExpr),
+			tle = makeTargetEntry(innerExpr,
 											   list_length(context->targetList) + 1,
 											   NULL,
 											   false);
-
-			if (context->extractGrouping)
-			{
-				SortGroupClause *gc = makeNode(SortGroupClause);
-
-				gc->tleSortGroupRef = list_length(context->groupClause) + 1;
-				gc->eqop = eqOp;
-				gc->sortop = sortOp;
-				gc->hashable = hashable;
-
-				context->groupClause = lappend(context->groupClause, gc);
-				tle->ressortgroupref = list_length(context->targetList) + 1;
-			}
-
+			tle->ressortgroupref = list_length(context->targetList) + 1;
 			context->targetList = lappend(context->targetList, tle);
-			context->joinQual = make_and_qual(context->joinQual, (Node *) opexp);
 
-			AssertImply(context->extractGrouping, list_length(context->groupClause) == list_length(context->targetList));
+			gc = makeNode(SortGroupClause);
+			gc->tleSortGroupRef = list_length(context->groupClause) + 1;
+			gc->eqop = eqOp;
+			gc->sortop = sortOp;
+			gc->hashable = hashable;
+			context->groupClause = lappend(context->groupClause, gc);
+
+			Assert(list_length(context->groupClause) == list_length(context->targetList));
+
+			context->joinQual = make_and_qual(context->joinQual, (Node *) opexp);
 
 			return;
 		}
@@ -571,7 +549,6 @@ convert_EXPR_to_join(PlannerInfo *root, OpExpr *opexp)
 	ConvertSubqueryToJoinContext ctx1;
 
 	InitConvertSubqueryToJoinContext(&ctx1);
-	ctx1.extractGrouping = true;
 
 	if (safe_to_convert_EXPR(sublink, &ctx1))
 	{

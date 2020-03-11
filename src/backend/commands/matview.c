@@ -591,15 +591,21 @@ transientrel_receive(TupleTableSlot *slot, DestReceiver *self)
 
 		tuple = ExecCopySlotMemTuple(slot);
 		if (myState->ao_insertDesc == NULL)
+		{
+			LockSegnoForWrite(myState->transientrel, RESERVED_SEGNO);
 			myState->ao_insertDesc = appendonly_insert_init(myState->transientrel, RESERVED_SEGNO, false);
+		}
 
 		appendonly_insert(myState->ao_insertDesc, tuple, InvalidOid, &aoTupleId);
 		pfree(tuple);
 	}
 	else if (RelationIsAoCols(myState->transientrel))
 	{
-		if(myState->aocs_insertDes == NULL)
+		if (myState->aocs_insertDes == NULL)
+		{
+			LockSegnoForWrite(myState->transientrel, RESERVED_SEGNO);
 			myState->aocs_insertDes = aocs_insert_init(myState->transientrel, RESERVED_SEGNO, false);
+		}
 
 		aocs_insert(myState->aocs_insertDes, slot);
 	}

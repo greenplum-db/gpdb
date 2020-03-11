@@ -342,7 +342,6 @@ _outPlannedStmt(StringInfo str, const PlannedStmt *node)
 
 	WRITE_BITMAPSET_FIELD(rewindPlanIDs);
 	WRITE_NODE_FIELD(result_partitions);
-	WRITE_NODE_FIELD(result_aosegnos);
 	WRITE_NODE_FIELD(queryPartOids);
 	WRITE_NODE_FIELD(queryPartsMetadata);
 	WRITE_NODE_FIELD(numSelectorsPerScanId);
@@ -367,16 +366,64 @@ _outPlannedStmt(StringInfo str, const PlannedStmt *node)
 	WRITE_INT_FIELD(metricsQueryType);
 }
 
+
 static void
 _outQueryDispatchDesc(StringInfo str, const QueryDispatchDesc *node)
 {
 	WRITE_NODE_TYPE("QUERYDISPATCHDESC");
 
 	WRITE_STRING_FIELD(intoTableSpaceName);
+	WRITE_NODE_FIELD(paramInfo);
 	WRITE_NODE_FIELD(oidAssignments);
 	WRITE_NODE_FIELD(sliceTable);
 	WRITE_NODE_FIELD(cursorPositions);
 	WRITE_BOOL_FIELD(useChangedAOOpts);
+}
+
+static void
+_outSerializedParams(StringInfo str, const SerializedParams *node)
+{
+	WRITE_NODE_TYPE("SERIALIZEDPARAMS");
+
+	WRITE_INT_FIELD(nExternParams);
+	for (int i = 0; i < node->nExternParams; i++)
+	{
+		WRITE_BOOL_FIELD(externParams[i].isnull);
+		WRITE_INT_FIELD(externParams[i].pflags);
+		WRITE_OID_FIELD(externParams[i].ptype);
+		WRITE_INT_FIELD(externParams[i].plen);
+		WRITE_BOOL_FIELD(externParams[i].pbyval);
+
+		if (!node->externParams[i].isnull)
+			outDatum(str,
+					 node->externParams[i].value,
+					 node->externParams[i].plen,
+					 node->externParams[i].pbyval);
+	}
+
+	WRITE_INT_FIELD(nExecParams);
+	for (int i = 0; i < node->nExecParams; i++)
+	{
+		WRITE_BOOL_FIELD(execParams[i].isnull);
+		WRITE_BOOL_FIELD(execParams[i].isvalid);
+		WRITE_INT_FIELD(execParams[i].plen);
+		WRITE_BOOL_FIELD(execParams[i].pbyval);
+
+		if (node->execParams[i].isvalid && !node->execParams[i].isnull)
+			outDatum(str,
+					 node->execParams[i].value,
+					 node->execParams[i].plen,
+					 node->execParams[i].pbyval);
+		WRITE_BOOL_FIELD(execParams[i].pbyval);
+	}
+
+	/*
+	 * No text output function for TupleDescNodes. But that's OK, we
+	 * only support text output for debugging purposes.
+	 */
+#ifdef COMPILING_BINARY_FUNCS
+	WRITE_NODE_FIELD(transientTypes);
+#endif
 }
 
 static void
@@ -1412,8 +1459,6 @@ _outCopyIntoClause(StringInfo str, const CopyIntoClause *node)
 	WRITE_BOOL_FIELD(is_program);
 	WRITE_STRING_FIELD(filename);
 	WRITE_NODE_FIELD(options);
-	WRITE_NODE_FIELD(ao_segnos);
-
 }
 
 static void
@@ -3830,7 +3875,6 @@ _outCopyStmt(StringInfo str, const CopyStmt *node)
 	WRITE_NODE_FIELD(options);
 	WRITE_NODE_FIELD(sreh);
 	WRITE_NODE_FIELD(partitions);
-	WRITE_NODE_FIELD(ao_segnos);
 }
 #endif/* COMPILING_BINARY_FUNCS */
 
@@ -4938,17 +4982,6 @@ _outCreatePLangStmt(StringInfo str, const CreatePLangStmt *node)
 }
 
 static void
-_outAOVacuumPhaseConfig(StringInfo str, const AOVacuumPhaseConfig *node)
-{
-	WRITE_NODE_TYPE("AOVACUUMPHASECONFIG");
-
-	WRITE_NODE_FIELD(appendonly_compaction_segno);
-	WRITE_NODE_FIELD(appendonly_compaction_insert_segno);
-	WRITE_BOOL_FIELD(appendonly_relation_empty);
-	WRITE_ENUM_FIELD(appendonly_phase,AOVacuumPhase);
-}
-
-static void
 _outVacuumStmt(StringInfo str, const VacuumStmt *node)
 {
 	WRITE_NODE_TYPE("VACUUMSTMT");
@@ -4956,9 +4989,6 @@ _outVacuumStmt(StringInfo str, const VacuumStmt *node)
 	WRITE_INT_FIELD(options);
 	WRITE_NODE_FIELD(relation);
 	WRITE_NODE_FIELD(va_cols);
-
-	WRITE_BOOL_FIELD(skip_twophase);
-	WRITE_NODE_FIELD(ao_vacuum_phase_config);
 }
 
 static void
@@ -5237,6 +5267,9 @@ outNode(StringInfo str, const void *obj)
 				break;
 			case T_QueryDispatchDesc:
 				_outQueryDispatchDesc(str, obj);
+				break;
+			case T_SerializedParams:
+				_outSerializedParams(str, obj);
 				break;
 			case T_OidAssignment:
 				_outOidAssignment(str, obj);
@@ -6093,9 +6126,6 @@ outNode(StringInfo str, const void *obj)
 				break;
 			case T_VacuumStmt:
 				_outVacuumStmt(str, obj);
-				break;
-			case T_AOVacuumPhaseConfig:
-				_outAOVacuumPhaseConfig(str, obj);
 				break;
 			case T_CdbProcess:
 				_outCdbProcess(str, obj);

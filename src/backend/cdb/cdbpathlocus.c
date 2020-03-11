@@ -192,6 +192,10 @@ cdb_build_distribution_keys(PlannerInfo *root, Index rti, GpPolicy *policy)
  * If the target table is distributed, but the distribution keys cannot be
  * represented as Equivalence Classes (because a datatype is missing merge
  * opfamilies), returns a NULL locus.
+ *
+ * Currently, this function is only invoked  by `create_motion_path_for_insert`
+ * and `create_split_update_path`, and under the condition that policy type
+ * is always partitioned type.
  */
 CdbPathLocus
 cdbpathlocus_for_insert(PlannerInfo *root, GpPolicy *policy,
@@ -199,105 +203,94 @@ cdbpathlocus_for_insert(PlannerInfo *root, GpPolicy *policy,
 {
 	CdbPathLocus targetLocus;
 
-	if (policy->ptype == POLICYTYPE_PARTITIONED)
+	Assert(policy->ptype == POLICYTYPE_PARTITIONED);
+
+	/* rows are distributed by hashing on specified columns */
+	List	   *distkeys = NIL;
+	Index		maxRef = 0;
+	bool		failed = false;
+
+	for (int i = 0; i < list_length(pathtarget->exprs); i++)
+		maxRef = Max(maxRef, pathtarget->sortgrouprefs[i]);
+
+	for (int i = 0; i < policy->nattrs; ++i)
 	{
-		/* rows are distributed by hashing on specified columns */
-		List	   *distkeys = NIL;
-		Index		maxRef = 0;
-		bool		failed = false;
+		AttrNumber	attno = policy->attrs[i];
+		DistributionKey *cdistkey;
+		Expr	   *expr;
+		Oid			typeoid;
+		Oid			eqopoid;
+		Oid			opfamily = get_opclass_family(policy->opclasses[i]);
+		Oid			opcintype = get_opclass_input_type(policy->opclasses[i]);
+		List	   *mergeopfamilies;
+		EquivalenceClass *eclass;
 
-		for (int i = 0; i < list_length(pathtarget->exprs); i++)
-			maxRef = Max(maxRef, pathtarget->sortgrouprefs[i]);
+		expr = list_nth(pathtarget->exprs, attno - 1);
+		typeoid = exprType((Node *) expr);
 
-		for (int i = 0; i < policy->nattrs; ++i)
+		/*
+		 * Look up the equality operator corresponding to the distribution
+		 * opclass.
+		 */
+		eqopoid = get_opfamily_member(opfamily, opcintype, opcintype, 1);
+
+		if (pathtarget->sortgrouprefs[attno - 1] == 0 &&
+			contain_volatile_functions((Node *) expr))
 		{
-			AttrNumber	attno = policy->attrs[i];
-			DistributionKey *cdistkey;
-			Expr	   *expr;
-			Oid			typeoid;
-			Oid			eqopoid;
-			Oid			opfamily = get_opclass_family(policy->opclasses[i]);
-			Oid			opcintype = get_opclass_input_type(policy->opclasses[i]);
-			List	   *mergeopfamilies;
-			EquivalenceClass *eclass;
-
-			expr = list_nth(pathtarget->exprs, attno - 1);
-			typeoid = exprType((Node *) expr);
-
 			/*
-			 * Look up the equality operator corresponding to the distribution
-			 * opclass.
+			 * GPDB_96_MERGE_FIXME: this modifies the subpath's targetlist in place.
+			 * That's a bit ugly.
 			 */
-			eqopoid = get_opfamily_member(opfamily, opcintype, opcintype, 1);
+			pathtarget->sortgrouprefs[attno - 1] = ++maxRef;
+		}
 
-			if (pathtarget->sortgrouprefs[attno - 1] == 0 &&
-				contain_volatile_functions((Node *) expr))
-			{
-				/*
-				 * GPDB_96_MERGE_FIXME: this modifies the subpath's targetlist in place.
-				 * That's a bit ugly.
-				 */
-				pathtarget->sortgrouprefs[attno - 1] = ++maxRef;
-			}
-
+		/*
+		 * Get Oid of the sort operator that would be used for a sort-merge
+		 * equijoin on a pair of exprs of the same type.
+		 */
+		if (failed || eqopoid == InvalidOid || !op_mergejoinable(eqopoid, typeoid))
+		{
 			/*
-			 * Get Oid of the sort operator that would be used for a sort-merge
-			 * equijoin on a pair of exprs of the same type.
+			 * It's in principle possible that there is no b-tree operator family
+			 * that's compatible with the hash opclass's equality operator. However,
+			 * we cannot construct an EquivalenceClass without the b-tree operator
+			 * family, and therefore cannot build a DistributionKey to represent it.
+			 * Bail out. (That makes the distribution key rather useless.)
 			 */
-			if (failed || eqopoid == InvalidOid || !op_mergejoinable(eqopoid, typeoid))
-			{
-				/*
-				 * It's in principle possible that there is no b-tree operator family
-				 * that's compatible with the hash opclass's equality operator. However,
-				 * we cannot construct an EquivalenceClass without the b-tree operator
-				 * family, and therefore cannot build a DistributionKey to represent it.
-				 * Bail out. (That makes the distribution key rather useless.)
-				 */
-				failed = true;
-				continue;
-			}
-
-			mergeopfamilies = get_mergejoin_opfamilies(eqopoid);
-
-			eclass = get_eclass_for_sort_expr(root, (Expr *) expr,
-											  NULL, /* nullable_relids */ /* GPDB_94_MERGE_FIXME: is NULL ok here? */
-											  mergeopfamilies,
-											  opcintype,
-											  exprCollation((Node *) expr),
-											  pathtarget->sortgrouprefs[attno - 1],
-											  NULL,
-											  true);
-
-			/* Create a distribution key for it. */
-			cdistkey = makeNode(DistributionKey);
-			cdistkey->dk_opfamily = opfamily;
-			cdistkey->dk_eclasses = list_make1(eclass);
-
-			distkeys = lappend(distkeys, cdistkey);
+			failed = true;
+			continue;
 		}
 
-		if (failed)
-		{
-			CdbPathLocus_MakeNull(&targetLocus);
-		}
-		else if (distkeys)
-			CdbPathLocus_MakeHashed(&targetLocus, distkeys, policy->numsegments);
-		else
-		{
-			/* DISTRIBUTED RANDOMLY */
-			CdbPathLocus_MakeStrewn(&targetLocus, policy->numsegments);
-		}
+		mergeopfamilies = get_mergejoin_opfamilies(eqopoid);
+
+		eclass = get_eclass_for_sort_expr(root, (Expr *) expr,
+										  NULL, /* nullable_relids */ /* GPDB_94_MERGE_FIXME: is NULL ok here? */
+										  mergeopfamilies,
+										  opcintype,
+										  exprCollation((Node *) expr),
+										  pathtarget->sortgrouprefs[attno - 1],
+										  NULL,
+										  true);
+
+		/* Create a distribution key for it. */
+		cdistkey = makeNode(DistributionKey);
+		cdistkey->dk_opfamily = opfamily;
+		cdistkey->dk_eclasses = list_make1(eclass);
+
+		distkeys = lappend(distkeys, cdistkey);
 	}
-	else if (policy->ptype == POLICYTYPE_ENTRY)
+
+	if (failed)
 	{
-		CdbPathLocus_MakeEntry(&targetLocus);
+		CdbPathLocus_MakeNull(&targetLocus);
 	}
-	else if (policy->ptype == POLICYTYPE_REPLICATED)
-	{
-		CdbPathLocus_MakeReplicated(&targetLocus, policy->numsegments);
-	}
+	else if (distkeys)
+		CdbPathLocus_MakeHashed(&targetLocus, distkeys, policy->numsegments);
 	else
-		elog(ERROR, "unrecognized policy type %u", policy->ptype);
+	{
+			/* DISTRIBUTED RANDOMLY */
+		CdbPathLocus_MakeStrewn(&targetLocus, policy->numsegments);
+	}
 
 	return targetLocus;
 }

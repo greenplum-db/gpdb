@@ -669,9 +669,6 @@ class GpRecoverSegmentProgram:
             if not mirrorBuilder.buildMirrors("recover", gpEnv, gpArray):
                 sys.exit(1)
 
-            confProvider.sendPgElogFromMaster("Recovery of %d segment(s) has been started." % \
-                                              len(mirrorBuilder.getMirrorsToBuild()), True)
-
             self.trigger_fts_probe(port=gpEnv.getMasterPort())
 
             self.logger.info("******************************************************************")

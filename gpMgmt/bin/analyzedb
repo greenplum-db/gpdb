@@ -198,18 +198,7 @@ def verify_lines_in_file(fname, expected):
 def get_partition_state_tuples(pg_port, dbname, catalog_schema, partition_info):
     """
     Reads the partition state for an AO or AOCS relation, which is the sum of
-    the modification counters over all ao segment files.
-    The sum might be an invalid number even when the relation contains tuples.
-    The reason is that the master aoseg info tuple for segno 0 is not there
-    after the CTAS. Vacuum will correct in missing state on the master.
-
-    Thus, partition state returns 0 also when the aoseg relation is empty.
-    Why is that correct?
-    A table that as a modcount of 0 can only be there iff the last operation
-    was a special operation (TRUNCATE, CREATE, ALTER TABLE). Every DML operation
-    will increase the modcount by 1. Therefore it is save to assume that to
-    relations with modcount 0 with the same last special operation do not have a
-    logical change in them.
+    the modification counters over all ao segment files, on all QE nodes.
 
     The result is a list of tuples, of the format (schema_schema, partition_name, modcount)
     """
@@ -218,7 +207,7 @@ def get_partition_state_tuples(pg_port, dbname, catalog_schema, partition_info):
     num_sqls = 0
     with dbconn.connect(dburl) as conn:
         for (oid, schemaname, partition_name, tupletable) in partition_info:
-            modcount_sql = "select to_char(coalesce(sum(modcount::bigint), 0), '999999999999999999999') from %s.%s" % (catalog_schema, tupletable)
+            modcount_sql = "select to_char(coalesce(sum(modcount::bigint), 0), '999999999999999999999') from gp_dist_random('%s.%s')" % (catalog_schema, tupletable)
             modcount = dbconn.execSQLForSingleton(conn, modcount_sql)
             num_sqls += 1
             if num_sqls == 1000: # The choice of batch size was chosen arbitrarily

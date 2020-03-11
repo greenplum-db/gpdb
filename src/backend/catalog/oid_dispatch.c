@@ -146,6 +146,10 @@ static List *preassigned_oids = NIL;
  */
 static List *dispatch_oids = NIL;
 
+static MemoryContext oids_context = NULL;
+
+static bool preserve_oids_on_commit = false;
+
 /*
  * These will be used by the schema restoration process during binary upgrade,
  * so any new object must not use any Oid in this structure or else there will
@@ -158,6 +162,38 @@ typedef struct
 } OidPreassignment;
 
 static RBTree *binary_upgrade_preassigned_oids;
+
+static MemoryContext
+get_oids_context(void)
+{
+	if (!oids_context)
+		oids_context = AllocSetContextCreate(TopMemoryContext,
+											 "Oid dispatch context",
+											 ALLOCSET_SMALL_SIZES);
+
+	return oids_context;
+}
+
+/*
+ * Some commands, like VACUUM, start transactions of their own. Normally,
+ * the list of assigned OIDs is reset at transaction commit, and warnings
+ * are printed for any assignments that haven't been dispatched to the
+ * segments. Calling PreserveOidAssignmentsOnCommit() changes that, so
+ * that the list of assigned OIDs is preserved across commits, until you
+ * call ClearOidAssignmentsOnCommit() to reset the flag. Abort always
+ * clears the list and resets the flag.
+ */
+void
+PreserveOidAssignmentsOnCommit(void)
+{
+	preserve_oids_on_commit = true;
+}
+
+void
+ClearOidAssignmentsOnCommit(void)
+{
+	preserve_oids_on_commit = false;
+}
 
 /*
  * Create an OidAssignment struct, for a catalog table tuple.
@@ -532,10 +568,10 @@ AddPreassignedOids(List *l)
 	 * oid was assigned. But I'm not sure if that's true for *all* commands,
 	 * and so we don't require it. It is OK if an OID assignment is included
 	 * in one dispatched command, but the command that needs the OID is only
-	 * dispatched later in the same transaction. Therefore, keep the
-	 * 'preassigned_oids' list in TopTransactionContext.
+	 * dispatched later in the same transaction. Therefore, don't reset the
+	 * 'preassigned_oids' list, when it's dispatched.
 	 */
-	old_context = MemoryContextSwitchTo(TopTransactionContext);
+	old_context = MemoryContextSwitchTo(get_oids_context());
 
 	foreach(lc, l)
 	{
@@ -927,7 +963,7 @@ AddDispatchOidFromTuple(Relation catalogrel, HeapTuple tuple)
 		return;
 	}
 
-	oldcontext = MemoryContextSwitchTo(TopTransactionContext);
+	oldcontext = MemoryContextSwitchTo(get_oids_context());
 
 	assignment.oid = HeapTupleGetOid(tuple);
 	dispatch_oids = lappend(dispatch_oids, copyObject(&assignment));
@@ -963,6 +999,13 @@ GetAssignedOidsForDispatch(void)
 void
 AtEOXact_DispatchOids(bool isCommit)
 {
+	if (preserve_oids_on_commit)
+	{
+		if (isCommit)
+			return;
+		preserve_oids_on_commit = false;
+	}
+
 	/*
 	 * Reset the list of to-be-dispatched OIDs. (in QD)
 	 *
@@ -1014,6 +1057,8 @@ AtEOXact_DispatchOids(bool isCommit)
 		}
 #endif
 		preassigned_oids = NIL;
+
+		MemoryContextReset(get_oids_context());
 	}
 }
 

@@ -66,7 +66,7 @@ main(int argc, char **argv)
 {
 	RestoreOptions *opts;
 	int			c;
-	int			exit_code = 0;
+	int			exit_code;
 	int			numWorkers = 1;
 	Archive    *AH;
 	char	   *inputFileSpec;

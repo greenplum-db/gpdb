@@ -6,29 +6,12 @@
 #include "../tablecmds.c"
 
 /*
- * Check that two segno lists have the same values.
- */
-static int check_segno_list(const LargestIntegralType arg1, const LargestIntegralType arg2)
-{
-	const List *value = (const List *)arg1; 
-	const List *check_value = (const List *)arg2;
-	List *compare;
-
-	if (list_length(value) != list_length(check_value))
-		return false;
-
-	compare = list_union_int(value, check_value);
-	return list_length(compare) == list_length(value);
-}
-
-/*
  * Ensure that the column having the smallest on-disk segfile is
  * chosen for headerscan during ALTER TABLE ADD COLUMN operation.
  */
 static void
 test__column_to_scan(void **state)
 {
-	List *drop_segno_list = NIL;
 	RelationData reldata;
 	AOCSFileSegInfo *segInfos[4];
 	int numcols = 3;
@@ -89,13 +72,6 @@ test__column_to_scan(void **state)
 	segInfos[3]->vpinfo.entry[1].eof_uncompressed = 650;
 	segInfos[3]->vpinfo.entry[2].eof = 100;
 	segInfos[3]->vpinfo.entry[2].eof_uncompressed = 120;
-
-	/* AOCSDrop should be called with segno 3 to drop */
-	drop_segno_list = lappend_int(drop_segno_list, 3);
-	Gp_role = GP_ROLE_EXECUTE;
-	expect_value(AOCSDrop, aorel, &reldata);
-	expect_check(AOCSDrop, compaction_segno, check_segno_list, drop_segno_list);
-	will_be_called(AOCSDrop);
 
 	/* Column 1 (vpe index 1) has the smallest eof */
 	col = column_to_scan(segInfos, 4, numcols, &reldata);

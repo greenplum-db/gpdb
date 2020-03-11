@@ -126,20 +126,32 @@ DELETE 20
 update fsync_co set b = -a;
 UPDATE 70
 -- Expect two segment files for each table (ao table) or each column (co table).
-select segno, state from gp_toolkit.__gp_aoseg('fsync_ao');
- segno | state 
--------+-------
- 1     | 1     
- 2     | 1     
-(2 rows)
-select segno, column_num, physical_segno, state from gp_toolkit.__gp_aocsseg('fsync_co');
- segno | column_num | physical_segno | state 
--------+------------+----------------+-------
- 1     | 0          | 1              | 1     
- 1     | 1          | 129            | 1     
- 2     | 0          | 2              | 1     
- 2     | 1          | 130            | 1     
-(4 rows)
+select segment_id, segno, state from gp_toolkit.__gp_aoseg('fsync_ao');
+ segment_id | segno | state 
+------------+-------+-------
+ 0          | 1     | 1     
+ 0          | 2     | 1     
+ 1          | 1     | 1     
+ 1          | 2     | 1     
+ 2          | 1     | 1     
+ 2          | 2     | 1     
+(6 rows)
+select segment_id, segno, column_num, physical_segno, state from gp_toolkit.__gp_aocsseg('fsync_co');
+ segment_id | segno | column_num | physical_segno | state 
+------------+-------+------------+----------------+-------
+ 0          | 1     | 0          | 1              | 1     
+ 0          | 1     | 1          | 129            | 1     
+ 0          | 2     | 0          | 2              | 1     
+ 0          | 2     | 1          | 130            | 1     
+ 1          | 1     | 0          | 1              | 1     
+ 1          | 1     | 1          | 129            | 1     
+ 1          | 2     | 0          | 2              | 1     
+ 1          | 2     | 1          | 130            | 1     
+ 2          | 1     | 0          | 1              | 1     
+ 2          | 1     | 1          | 129            | 1     
+ 2          | 2     | 0          | 2              | 1     
+ 2          | 2     | 1          | 130            | 1     
+(12 rows)
 vacuum fsync_ao;
 VACUUM
 vacuum fsync_co;
@@ -157,8 +169,8 @@ select gp_wait_until_triggered_fault('restartpoint_guts', 3, dbid) from gp_segme
 select gp_inject_fault('ao_fsync_counter', 'status', dbid) from gp_segment_configuration where content=0 and role='m';
  gp_inject_fault                                                                                                                                                                                                         
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Success: fault name:'ao_fsync_counter' fault type:'skip' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'14' 
  
+ Success: fault name:'ao_fsync_counter' fault type:'skip' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'12' 
 (1 row)
 
 -- Test that replay of drop table operation removes fsync requests
@@ -194,8 +206,8 @@ select gp_wait_until_triggered_fault('restartpoint_guts', 4, dbid) from gp_segme
 select gp_inject_fault('ao_fsync_counter', 'status', dbid) from gp_segment_configuration where content=0 and role='m';
  gp_inject_fault                                                                                                                                                                                                         
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Success: fault name:'ao_fsync_counter' fault type:'skip' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'15' 
  
+ Success: fault name:'ao_fsync_counter' fault type:'skip' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'13' 
 (1 row)
 
 -- Reset all faults.

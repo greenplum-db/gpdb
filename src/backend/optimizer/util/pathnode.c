@@ -1761,15 +1761,16 @@ set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
 		/*
 		 * If everything is partitioned, then the result can be partitioned, too.
 		 * But if it's a mix of partitioned and replicated, then we have to bring
-		 * everything to a single QE. Otherwise, the replicated (or general) children
-		 * will contribute rows on every QE. XXX: it would be nice to force the child
-		 * to be executed on a single QE, but I couldn't figure out how to do that.
-		 * A motion from General to SingleQE is not possible.
+		 * everything to a single QE. Otherwise, the replicated children
+		 * will contribute rows on every QE.
+		 * If it's a mix of partitioned and general, we still consider the
+		 * result as partitioned. But the general part will be restricted to
+		 * only produce rows on a single QE.
 		 */
 		{ CdbLocusType_Strewn, CdbLocusType_Strewn,         CdbLocusType_Strewn },
 		{ CdbLocusType_Strewn, CdbLocusType_Replicated,     CdbLocusType_SingleQE },
-		{ CdbLocusType_Strewn, CdbLocusType_SegmentGeneral, CdbLocusType_SingleQE },
-		{ CdbLocusType_Strewn, CdbLocusType_General,        CdbLocusType_SingleQE },
+		{ CdbLocusType_Strewn, CdbLocusType_SegmentGeneral, CdbLocusType_Strewn },
+		{ CdbLocusType_Strewn, CdbLocusType_General,        CdbLocusType_Strewn },
 
 		{ CdbLocusType_Replicated, CdbLocusType_Replicated, CdbLocusType_Replicated },
 		{ CdbLocusType_Replicated, CdbLocusType_SegmentGeneral, CdbLocusType_Replicated },
@@ -1867,20 +1868,28 @@ set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
 			Path	   *subpath = (Path *) lfirst(l);
 			CdbPathLocus projectedlocus;
 
-			Assert(CdbPathLocus_IsPartitioned(subpath->locus));
-
-			/* Transform subpath locus into the appendrel's space for comparison. */
-			if (subpath->parent == rel ||
-				subpath->parent->reloptkind != RELOPT_OTHER_MEMBER_REL)
-				projectedlocus = subpath->locus;
+			if (CdbPathLocus_IsGeneral(subpath->locus) ||
+				CdbPathLocus_IsSegmentGeneral(subpath->locus))
+			{
+				/* Afterwards, General/SegmentGeneral will be projected as Strewn */
+				CdbPathLocus_MakeStrewn(&projectedlocus, numsegments);
+			}
 			else
-				projectedlocus =
-					cdbpathlocus_pull_above_projection(root,
-													   subpath->locus,
-													   subpath->parent->relids,
-													   subpath->parent->reltarget->exprs,
-													   rel->reltarget->exprs,
-													   rel->relid);
+			{
+				Assert(CdbPathLocus_IsPartitioned(subpath->locus));
+				/* Transform subpath locus into the appendrel's space for comparison. */
+				if (subpath->parent == rel ||
+					subpath->parent->reloptkind != RELOPT_OTHER_MEMBER_REL)
+					projectedlocus = subpath->locus;
+				else
+					projectedlocus =
+						cdbpathlocus_pull_above_projection(root,
+						                                   subpath->locus,
+						                                   subpath->parent->relids,
+						                                   subpath->parent->reltarget->exprs,
+						                                   rel->reltarget->exprs,
+						                                   rel->relid);
+			}
 
 			/*
 			 * CDB: If all the scans are distributed alike, set
@@ -1919,7 +1928,7 @@ set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
 	else
 		elog(ERROR, "unexpected Append target locus type");
 
-	/* Ok, we now know the target locus. Add Motions to any subpaths that need it */
+	/* Ok, we now know the target locus. Add Motions/Projections to any subpaths that need it */
 	new_subpaths = NIL;
 	foreach(l, subpaths)
 	{
@@ -1927,6 +1936,37 @@ set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
 
 		if (CdbPathLocus_IsPartitioned(targetlocus))
 		{
+			if (CdbPathLocus_IsGeneral(subpath->locus) ||
+				CdbPathLocus_IsSegmentGeneral(subpath->locus))
+			{
+				/*
+				 * If a General/SegmentGeneral is mixed with other Strewn's,
+				 * add a projection path with cdb_restrict_clauses, so that only
+				 * a single QE will actually produce rows.
+				 */
+				if (CdbPathLocus_IsGeneral(subpath->locus))
+					numsegments = targetlocus.numsegments;
+				else
+					numsegments = subpath->locus.numsegments;
+				RestrictInfo *restrict_info =
+					             make_restrictinfo((Expr *) makeSegmentFilterExpr(
+						             gp_session_id % numsegments),
+					                               false,
+					                               false,
+					                               true,
+					                               NULL,
+					                               NULL,
+					                               NULL);
+				subpath = (Path *) create_projection_path_with_quals(
+					root,
+					subpath->parent,
+					subpath,
+					subpath->pathtarget,
+					list_make1(restrict_info));
+				CdbPathLocus_MakeStrewn(&(subpath->locus),
+				                        numsegments);
+			}
+
 			/* we already determined that all the loci are compatible */
 			Assert(CdbPathLocus_IsPartitioned(subpath->locus));
 		}
@@ -2718,9 +2758,6 @@ create_functionscan_path(PlannerInfo *root, RelOptInfo *rel,
 {
 	Path	   *pathnode = makeNode(Path);
 	ListCell   *lc;
-	char		exec_location;
-	bool		contain_mutables = false;
-	bool		contain_outer_params = false;
 
 	pathnode->pathtype = T_FunctionScan;
 	pathnode->parent = rel;
@@ -2733,139 +2770,147 @@ create_functionscan_path(PlannerInfo *root, RelOptInfo *rel,
 	pathnode->pathkeys = pathkeys;
 
 	/*
-	 * If the function desires to run on segments, mark randomly-distributed.
-	 * If expression contains mutable functions, evaluate it on entry db.
-	 * Otherwise let it be evaluated in the same slice as its parent operator.
-	 */
-	Assert(rte->rtekind == RTE_FUNCTION);
-
-	foreach (lc, rel->baserestrictinfo)
-	{
-		RestrictInfo *rinfo = (RestrictInfo *) lfirst(lc);
-
-		if (rinfo->contain_outer_query_references)
-		{
-			contain_outer_params = true;
-			break;
-		}
-	}
-
-	/*
 	 * Decide where to execute the FunctionScan.
 	 */
-	contain_mutables = false;
-	exec_location = PROEXECLOCATION_ANY;
-	foreach (lc, rte->functions)
+	if (Gp_role == GP_ROLE_DISPATCH)
 	{
-		RangeTblFunction *rtfunc = (RangeTblFunction *) lfirst(lc);
+		char		exec_location = PROEXECLOCATION_ANY;
+		bool		contain_mutables = false;
+		bool		contain_outer_params = false;
 
-		if (rtfunc->funcexpr && IsA(rtfunc->funcexpr, FuncExpr))
+		/*
+		 * If the function desires to run on segments, mark randomly-distributed.
+		 * If expression contains mutable functions, evaluate it on entry db.
+		 * Otherwise let it be evaluated in the same slice as its parent operator.
+		 */
+		Assert(rte->rtekind == RTE_FUNCTION);
+
+		foreach (lc, rel->baserestrictinfo)
 		{
-			FuncExpr   *funcexpr = (FuncExpr *) rtfunc->funcexpr;
-			char		this_exec_location;
+			RestrictInfo *rinfo = (RestrictInfo *) lfirst(lc);
 
-			this_exec_location = func_exec_location(funcexpr->funcid);
-
-			switch (this_exec_location)
+			if (rinfo->contain_outer_query_references)
 			{
-				case PROEXECLOCATION_ANY:
-					/*
-					 * This can be executed anywhere. Remember if it was
-					 * mutable (or contained any mutable arguments), that
-					 * will affect the decision after this loop on where
-					 * to actually execute it.
-					 */
-					if (!contain_mutables)
-						contain_mutables = contain_mutable_functions((Node *) funcexpr);
-					break;
-				case PROEXECLOCATION_MASTER:
-					/*
-					 * This function forces the execution to master.
-					 */
-					if (exec_location == PROEXECLOCATION_ALL_SEGMENTS)
-					{
-						ereport(ERROR,
-								(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-								 (errmsg("cannot mix EXECUTE ON MASTER and ALL SEGMENTS functions in same function scan"))));
-					}
-					exec_location = PROEXECLOCATION_MASTER;
-					break;
-				case PROEXECLOCATION_INITPLAN:
-					/*
-					 * This function forces the execution to master.
-					 */
-					if (exec_location == PROEXECLOCATION_ALL_SEGMENTS)
-					{
-						ereport(ERROR,
-								(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-								 (errmsg("cannot mix EXECUTE ON INITPLAN and ALL SEGMENTS functions in same function scan"))));
-					}
-					exec_location = PROEXECLOCATION_INITPLAN;
-					break;
-				case PROEXECLOCATION_ALL_SEGMENTS:
-					/*
-					 * This function forces the execution to segments.
-					 */
-					if (exec_location == PROEXECLOCATION_MASTER)
-					{
-						ereport(ERROR,
-								(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-								 (errmsg("cannot mix EXECUTE ON MASTER and ALL SEGMENTS functions in same function scan"))));
-					}
-					exec_location = PROEXECLOCATION_ALL_SEGMENTS;
-					break;
-				default:
-					elog(ERROR, "unrecognized proexeclocation '%c'", exec_location);
+				contain_outer_params = true;
+				break;
 			}
 		}
-		else
+
+		foreach (lc, rte->functions)
 		{
-			/*
-			 * The expression might've been simplified into a Const. Which can
-			 * be executed anywhere.
-			 */
+			RangeTblFunction *rtfunc = (RangeTblFunction *) lfirst(lc);
+
+			if (rtfunc->funcexpr && IsA(rtfunc->funcexpr, FuncExpr))
+			{
+				FuncExpr   *funcexpr = (FuncExpr *) rtfunc->funcexpr;
+				char		this_exec_location;
+
+				this_exec_location = func_exec_location(funcexpr->funcid);
+
+				switch (this_exec_location)
+				{
+					case PROEXECLOCATION_ANY:
+						/*
+						 * This can be executed anywhere. Remember if it was
+						 * mutable (or contained any mutable arguments), that
+						 * will affect the decision after this loop on where
+						 * to actually execute it.
+						 */
+						if (!contain_mutables)
+							contain_mutables = contain_mutable_functions((Node *) funcexpr);
+						break;
+					case PROEXECLOCATION_MASTER:
+						/*
+						 * This function forces the execution to master.
+						 */
+						if (exec_location == PROEXECLOCATION_ALL_SEGMENTS)
+						{
+							ereport(ERROR,
+									(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+									 (errmsg("cannot mix EXECUTE ON MASTER and ALL SEGMENTS functions in same function scan"))));
+						}
+						exec_location = PROEXECLOCATION_MASTER;
+						break;
+					case PROEXECLOCATION_INITPLAN:
+						/*
+						 * This function forces the execution to master.
+						 */
+						if (exec_location == PROEXECLOCATION_ALL_SEGMENTS)
+						{
+							ereport(ERROR,
+									(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+									 (errmsg("cannot mix EXECUTE ON INITPLAN and ALL SEGMENTS functions in same function scan"))));
+						}
+						exec_location = PROEXECLOCATION_INITPLAN;
+						break;
+					case PROEXECLOCATION_ALL_SEGMENTS:
+						/*
+						 * This function forces the execution to segments.
+						 */
+						if (exec_location == PROEXECLOCATION_MASTER)
+						{
+							ereport(ERROR,
+									(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+									 (errmsg("cannot mix EXECUTE ON MASTER and ALL SEGMENTS functions in same function scan"))));
+						}
+						exec_location = PROEXECLOCATION_ALL_SEGMENTS;
+						break;
+					default:
+						elog(ERROR, "unrecognized proexeclocation '%c'", exec_location);
+				}
+			}
+			else
+			{
+				/*
+				 * The expression might've been simplified into a Const. Which can
+				 * be executed anywhere.
+				 */
+			}
+
+			if (!contain_outer_params &&
+				contains_outer_params(rtfunc->funcexpr, root))
+				contain_outer_params = true;
 		}
 
-		if (!contain_outer_params &&
-			contains_outer_params(rtfunc->funcexpr, root))
-			contain_outer_params = true;
-	}
-	switch (exec_location)
-	{
-		case PROEXECLOCATION_ANY:
-			/*
-			 * If all the functions are ON ANY, we presumably could execute
-			 * the function scan anywhere. However, historically, before the
-			 * EXECUTE ON syntax was introduced, we always executed
-			 * non-IMMUTABLE functions on the master. Keep that behavior
-			 * for backwards compatibility.
-			 */
-			if (contain_outer_params)
-				CdbPathLocus_MakeOuterQuery(&pathnode->locus);
-			else if (contain_mutables)
+		switch (exec_location)
+		{
+			case PROEXECLOCATION_ANY:
+				/*
+				 * If all the functions are ON ANY, we presumably could execute
+				 * the function scan anywhere. However, historically, before the
+				 * EXECUTE ON syntax was introduced, we always executed
+				 * non-IMMUTABLE functions on the master. Keep that behavior
+				 * for backwards compatibility.
+				 */
+				if (contain_outer_params)
+					CdbPathLocus_MakeOuterQuery(&pathnode->locus);
+				else if (contain_mutables)
+					CdbPathLocus_MakeEntry(&pathnode->locus);
+				else
+					CdbPathLocus_MakeGeneral(&pathnode->locus);
+				break;
+			case PROEXECLOCATION_MASTER:
+				if (contain_outer_params)
+					elog(ERROR, "cannot execute EXECUTE ON MASTER function in a subquery with arguments from outer query");
 				CdbPathLocus_MakeEntry(&pathnode->locus);
-			else
-				CdbPathLocus_MakeGeneral(&pathnode->locus);
-			break;
-		case PROEXECLOCATION_MASTER:
-			if (contain_outer_params)
-				elog(ERROR, "cannot execute EXECUTE ON MASTER function in a subquery with arguments from outer query");
-			CdbPathLocus_MakeEntry(&pathnode->locus);
-			break;
-		case PROEXECLOCATION_INITPLAN:
-			if (contain_outer_params)
-				elog(ERROR, "cannot execute EXECUTE ON INITPLAN function in a subquery with arguments from outer query");
-			CdbPathLocus_MakeEntry(&pathnode->locus);
-			break;
-		case PROEXECLOCATION_ALL_SEGMENTS:
-			if (contain_outer_params)
-				elog(ERROR, "cannot execute EXECUTE ON ALL SEGMENTS function in a subquery with arguments from outer query");
-			CdbPathLocus_MakeStrewn(&pathnode->locus,
-									getgpsegmentCount());
-			break;
-		default:
-			elog(ERROR, "unrecognized proexeclocation '%c'", exec_location);
+				break;
+			case PROEXECLOCATION_INITPLAN:
+				if (contain_outer_params)
+					elog(ERROR, "cannot execute EXECUTE ON INITPLAN function in a subquery with arguments from outer query");
+				CdbPathLocus_MakeEntry(&pathnode->locus);
+				break;
+			case PROEXECLOCATION_ALL_SEGMENTS:
+				if (contain_outer_params)
+					elog(ERROR, "cannot execute EXECUTE ON ALL SEGMENTS function in a subquery with arguments from outer query");
+				CdbPathLocus_MakeStrewn(&pathnode->locus,
+										getgpsegmentCount());
+				break;
+			default:
+				elog(ERROR, "unrecognized proexeclocation '%c'", exec_location);
+		}
 	}
+	else
+		CdbPathLocus_MakeEntry(&pathnode->locus);
 
 	pathnode->motionHazard = false;
 

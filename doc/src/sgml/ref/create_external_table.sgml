@@ -1,11 +1,16 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/create_external_table.sgml,v 1.105 2006/09/16 00:30:17 momjian Exp $
+doc/src/sgml/ref/create_external_table.sgml
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-CREATEEXTERNALTABLE">
+ <indexterm zone="sql-createexternaltable">
+  <primary>CREATE EXTERNAL TABLE</primary>
+ </indexterm>
+
  <refmeta>
-  <refentrytitle id="sql-createexternaltable-title">CREATE EXTERNAL TABLE</refentrytitle>
+  <refentrytitle>CREATE EXTERNAL TABLE</refentrytitle>
+  <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
 
@@ -13,10 +18,6 @@ PostgreSQL documentation
   <refname>CREATE EXTERNAL TABLE</refname>
   <refpurpose>define a new external table</refpurpose>
  </refnamediv>
-
- <indexterm zone="sql-createexternaltable">
-  <primary>CREATE EXTERNAL TABLE</primary>
- </indexterm>
 
  <refsynopsisdiv>
 <synopsis> 
@@ -44,6 +45,7 @@ CREATE [READABLE] EXTERNAL [TEMPORARY | TEMP] TABLE table_name
                [NEWLINE [ AS ] 'LF' | 'CR' | 'CRLF']
                [FILL MISSING FIELDS] )]
            | 'CUSTOM' (Formatter=<formatter specifications>)
+     [ OPTIONS ( key 'value' [, ...] ) ]
      [ ENCODING 'encoding' ]
      [ [LOG ERRORS] SEGMENT REJECT LIMIT count
        [ROWS | PERCENT] ]
@@ -72,6 +74,7 @@ CREATE [READABLE] EXTERNAL WEB [TEMPORARY | TEMP] TABLE table_name
                [NEWLINE [ AS ] 'LF' | 'CR' | 'CRLF']
                [FILL MISSING FIELDS] )]
            | 'CUSTOM' (Formatter=<formatter specifications>)
+     [ OPTIONS ( key 'value' [, ...] ) ]
      [ ENCODING 'encoding' ]
      [ [LOG ERRORS] SEGMENT REJECT LIMIT count
        [ROWS | PERCENT] ]
@@ -91,6 +94,7 @@ CREATE WRITABLE EXTERNAL [TEMPORARY | TEMP] TABLE table_name
                [FORCE QUOTE column [, ...]] ]
                [ESCAPE [AS] 'escape'] )]
            | 'CUSTOM' (Formatter=<formatter specifications>)
+    [ OPTIONS ( key 'value' [, ...] ) ]
     [ ENCODING 'write_encoding' ]
     [ DISTRIBUTED BY (column [opclass], [ ... ] ) | DISTRIBUTED RANDOMLY ]
 CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE table_name
@@ -107,6 +111,7 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE table_name
                [FORCE QUOTE column [, ...]] ]
                [ESCAPE [AS] 'escape'] )]
            | 'CUSTOM' (Formatter=<formatter specifications>)
+    [ OPTIONS ( key 'value' [, ...] ) ]
     [ ENCODING 'write_encoding' ]
     [ DISTRIBUTED BY (column [opclass], [ ... ] ) | DISTRIBUTED RANDOMLY ]
 

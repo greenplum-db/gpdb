@@ -36,10 +36,19 @@ function prep_env() {
       ;;
     esac
     ;;
+  sles)
+    case "${TARGET_OS_VERSION}" in
+    12) export BLD_ARCH=sles12_x86_64 ;;
+    *)
+      echo "TARGET_OS_VERSION not set or recognized for SLES"
+      exit 1
+      ;;
+    esac
+    ;;
   esac
 }
 
-function install_deps_for_centos() {
+function install_deps_for_centos_or_sles() {
   rpm -i libquicklz-installer/libquicklz-*.rpm
   rpm -i libquicklz-devel-installer/libquicklz-*.rpm
 }
@@ -50,7 +59,7 @@ function install_deps_for_ubuntu() {
 
 function install_deps() {
   case "${TARGET_OS}" in
-    centos) install_deps_for_centos;;
+    centos | sles) install_deps_for_centos_or_sles;;
     ubuntu) install_deps_for_ubuntu;;
   esac
 }
@@ -113,7 +122,7 @@ function unittest_check_gpdb() {
 function include_zstd() {
   local libdir
   case "${TARGET_OS}" in
-    centos) libdir=/usr/lib64 ;;
+    centos | sles) libdir=/usr/lib64 ;;
     ubuntu) libdir=/usr/lib ;;
     *) return ;;
   esac
@@ -127,7 +136,7 @@ function include_zstd() {
 function include_quicklz() {
   local libdir
   case "${TARGET_OS}" in
-    centos) libdir=/usr/lib64 ;;
+    centos | sles) libdir=/usr/lib64 ;;
     ubuntu) libdir=/usr/local/lib ;;
     *) return ;;
   esac
@@ -228,7 +237,7 @@ function _main() {
   mkdir gpdb_src/gpAux/ext
 
   case "${TARGET_OS}" in
-    centos|ubuntu)
+    centos|ubuntu|sles)
       prep_env
       fetch_orca_src "${ORCA_TAG}"
       build_xerces
@@ -241,7 +250,7 @@ function _main() {
         CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --disable-pxf"
         ;;
     *)
-        echo "only centos, ubuntu, and win32 are supported TARGET_OS'es"
+        echo "only centos, ubuntu, sles and win32 are supported TARGET_OS'es"
         false
         ;;
   esac

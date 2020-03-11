@@ -41,11 +41,12 @@ select * from unlogged_appendonly_table_managers order by id;
  1  | Joe   
  2  | Susan 
 (2 rows)
-select count(1) from gp_toolkit.__gp_aoseg('unlogged_appendonly_table_managers');
- count 
--------
- 1     
-(1 row)
+select segment_id, segno, tupcount from gp_toolkit.__gp_aoseg('unlogged_appendonly_table_managers');
+ segment_id | segno | tupcount 
+------------+-------+----------
+ 0          | 1     | 2        
+ 1          | 1     | 1        
+(2 rows)
 
 
 -- force an unclean stop and recovery:
@@ -55,11 +56,10 @@ select count(1) from gp_toolkit.__gp_aoseg('unlogged_appendonly_table_managers')
  id | name 
 ----+------
 (0 rows)
-2: select count(1) from gp_toolkit.__gp_aoseg('unlogged_appendonly_table_managers');
- count 
--------
- 1     
-(1 row)
+2: select segment_id, segno, tupcount from gp_toolkit.__gp_aoseg('unlogged_appendonly_table_managers');
+ segment_id | segno | tupcount 
+------------+-------+----------
+(0 rows)
 
 
 -- expect: insert/update/select works
@@ -75,11 +75,12 @@ UPDATE 1
  1  | Joe   
  2  | Susan 
 (2 rows)
-3: select count(1) from gp_toolkit.__gp_aoseg('unlogged_appendonly_table_managers');
- count 
--------
- 1     
-(1 row)
+3: select segment_id, segno, tupcount from gp_toolkit.__gp_aoseg('unlogged_appendonly_table_managers');
+ segment_id | segno | tupcount 
+------------+-------+----------
+ 0          | 1     | 2        
+ 1          | 1     | 1        
+(2 rows)
 
 -- force a clean stop and recovery:
 
@@ -90,11 +91,12 @@ UPDATE 1
  1  | Joe   
  2  | Susan 
 (2 rows)
-4: select count(1) from gp_toolkit.__gp_aoseg('unlogged_appendonly_table_managers');
- count 
--------
- 1     
-(1 row)
+4: select segment_id, segno, tupcount from gp_toolkit.__gp_aoseg('unlogged_appendonly_table_managers');
+ segment_id | segno | tupcount 
+------------+-------+----------
+ 0          | 1     | 2        
+ 1          | 1     | 1        
+(2 rows)
 
 -- expect: drop table succeeds
 5: drop table unlogged_appendonly_table_managers;

@@ -172,10 +172,10 @@ typedef enum NodeTag
 
 	/*
 	 * TupleDesc and ParamListInfo are not Nodes as such, but you can wrap
-	 * them in TupleDescNode and SerializedParamExternData structs for serialization.
+	 * them in TupleDescNode and SerializedParams structs for serialization.
 	 */
 	T_TupleDescNode,
-	T_SerializedParamExternData,
+	T_SerializedParams,
 
 	/*
 	 * TAGS FOR PRIMITIVE NODES (primnodes.h)
@@ -527,7 +527,6 @@ typedef enum NodeTag
 	T_AlterTypeStmt,
 	T_SetDistributionCmd,
 	T_ExpandStmtSpec,
-	T_AOVacuumPhaseConfig,
 
 	/*
 	 * TAGS FOR PARSE TREE NODES (parsenodes.h)

@@ -592,13 +592,12 @@ cdb_estimate_rel_size(RelOptInfo   *relOptInfo,
  * analyzed, this returns 0 rather than the default constant estimate.
  */
 double
-cdb_estimate_partitioned_numtuples(Relation rel, bool *stats_missing)
+cdb_estimate_partitioned_numtuples(Relation rel)
 {
 	List	   *inheritors;
 	ListCell   *lc;
 	double		totaltuples;
 
-	*stats_missing = false;
 
 	if (rel->rd_rel->reltuples > 0)
 		return rel->rd_rel->reltuples;
@@ -619,22 +618,6 @@ cdb_estimate_partitioned_numtuples(Relation rel, bool *stats_missing)
 			childrel = rel;
 
 		childtuples = childrel->rd_rel->reltuples;
-
-		/*
-		 * relpages == 0 means stats are missing. There's a special
-		 * case in ANALYZE/VACUUM, to set relpages to 1 even if the
-		 * table is completely empty, so relpages is zero only if the
-		 * table hasn't been analyzed yet.
-		 */
-		if (childrel->rd_rel->relpages == 0)
-		{
-			/*
-			 * In the root partition of a partitioned table, though,
-			 * it's expected.
-			 */
-			if (childrel != rel)
-				*stats_missing = true;
-		}
 
 		if (gp_enable_relsize_collection && childtuples == 0)
 		{

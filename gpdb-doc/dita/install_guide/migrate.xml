@@ -216,11 +216,24 @@
           not permit tables <codeph>DISTRIBUTED RANDOMLY</codeph> to have primary keys or unique
           indexes. Restoring such a table from a Greenplum 4.3 or 5 backup will cause an error.</li>
         <li>Greenplum 6 no longer automatically converts from the deprecated timestamp format
-          YYYYMMDDHH24MISS. The format could not be parsed unambiguously in previous Greenplum
-          Database releases. You can still specify the YYYYMMDDHH24MISS format in conversion
-          functions such as <codeph>to_timestamp</codeph> and <codeph>to_char</codeph> for
-          compatibility with other database systems. You can use input formats for converting text
-          to date or timestamp values to avoid unexpected results or query execution failures.</li>
+            <codeph>YYYYMMDDHH24MISS</codeph>. The format could not be parsed unambiguously in
+          previous Greenplum Database releases. You can still specify the
+            <codeph>YYYYMMDDHH24MISS</codeph> format in conversion functions such as
+            <codeph>to_timestamp</codeph> and <codeph>to_char</codeph> for compatibility with other
+          database systems. You can use input formats for converting text to date or timestamp
+          values to avoid unexpected results or query execution failures. For example, this
+            <codeph>SELECT</codeph> command returns a timestamp in Greenplum Database 5 and fails in
+            6.<codeblock>SELECT to_timestamp('20190905140000');</codeblock><p>To convert the string
+            to a timestamp in Greenplum Database 6, you must use a valid format. Both of these
+            commands return a timestamp in Greenplum Database 6. The first example explicitly
+            specifies a timestamp format. The second example uses the string in a format that
+            Greenplum Database
+            recognizes.<codeblock>SELECT to_timestamp('20190905140000','YYYYMMDDHH24MISS');
+SELECT to_timestamp('201909051 40000');</codeblock></p><p>The
+            timestamp issue also applies when you use the <codeph>::</codeph> syntax. In Greenplum
+            Database 6, the first command returns an error. The second command returns a timestamp.
+            <codeblock>SELECT '20190905140000'::timestamp ;
+SELECT '20190905 140000'::timestamp ;</codeblock></p></li>
         <li>Creating a table using the <codeph>CREATE TABLE AS</codeph> command in Greenplum 4.3 or
           5 could create a table with a duplicate distribution key. The <codeph>gpbackup</codeph>
           utility saves the table to the backup using a <codeph>CREATE TABLE</codeph> command that

@@ -34,6 +34,7 @@
               [NEWLINE [ AS ] 'LF' | 'CR' | 'CRLF']
               [FILL MISSING FIELDS] )]
           | 'CUSTOM' (Formatter=<varname>&lt;formatter_specifications&gt;</varname>)
+    [ OPTIONS ( <varname>key</varname> '<varname>value</varname>' [, ...] ) ]
     [ ENCODING '<varname>encoding</varname>' ]
       [ [LOG ERRORS] SEGMENT REJECT LIMIT <varname>count</varname>
       [ROWS | PERCENT] ]
@@ -63,6 +64,7 @@ CREATE [READABLE] EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</var
                [NEWLINE [ AS ] 'LF' | 'CR' | 'CRLF']
                [FILL MISSING FIELDS] )]
            | 'CUSTOM' (Formatter=<varname>&lt;formatter specifications&gt;</varname>)
+     [ OPTIONS ( <varname>key</varname> '<varname>value</varname>' [, ...] ) ]
      [ ENCODING '<varname>encoding</varname>' ]
      [ [LOG ERRORS] SEGMENT REJECT LIMIT <varname>count</varname>
        [ROWS | PERCENT] ]
@@ -85,6 +87,7 @@ CREATE WRITABLE EXTERNAL [TEMPORARY | TEMP] TABLE <varname>table_name</varname>
                [ESCAPE [AS] '<varname>escape</varname>'] )]
 
            | 'CUSTOM' (Formatter=<varname>&lt;formatter specifications&gt;</varname>)
+    [ OPTIONS ( <varname>key</varname> '<varname>value</varname>' [, ...] ) ]
     [ ENCODING '<varname>write_encoding</varname>' ]
     [ DISTRIBUTED BY ({<varname>column</varname> [<varname>opclass</varname>]}, [ ... ] ) | DISTRIBUTED RANDOMLY ]
 
@@ -117,6 +120,7 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varna
                [FORCE QUOTE <varname>column</varname> [, ...]] | * ]
                [ESCAPE [AS] '<varname>escape</varname>'] )]
            | 'CUSTOM' (Formatter=<varname>&lt;formatter specifications&gt;</varname>)
+    [ OPTIONS ( <varname>key</varname> '<varname>value</varname>' [, ...] ) ]
     [ ENCODING '<varname>write_encoding</varname>' ]
     [ DISTRIBUTED BY ({<varname>column</varname> [<varname>opclass</varname>]}, [ ... ] ) | DISTRIBUTED RANDOMLY ]</codeblock>
     </section>
@@ -419,6 +423,14 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varna
             missing data fields at the end of a line or row. Blank rows, fields with a <codeph>NOT
               NULL</codeph> constraint, and trailing delimiters on a line will still report an
             error.</pd>
+        </plentry>
+        <plentry>
+          <pt>OPTIONS <varname>key</varname> '<varname>value'</varname>[, <varname>key</varname>'
+              <varname>value</varname>' ...]</pt>
+          <pd>Optional. Specifies parameters and values as key-value pairs that are set to a custom
+            data access protocol when the protocol is used as a external table protocol for an
+            external table. It is the responsibility of the custom data access protocol to process
+            and validate the key-value pairs.</pd>
         </plentry>
         <plentry>
           <pt>ENCODING <varname>'encoding'</varname></pt>

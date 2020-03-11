@@ -5,8 +5,7 @@ test: ao_partition_lock
 test: dml_on_root_locks_all_parts
 
 test: select_dropped_table
-# test update hash col under utility mode
-test: update_hash_col_utilitymode
+test: update_hash_col_utilitymode execute_on_utilitymode
 
 # Tests for crash recovery
 test: uao_crash_compaction_column
@@ -32,7 +31,6 @@ ignore: gdd/non-lock-107
 test: gdd/extended_protocol_test
 test: gdd/avoid-qd-deadlock
 test: gdd/delete-deadlock-root-leaf-concurrent-op
-test: gdd/planner_insert_while_vacuum_drop
 test: gdd/update-deadlock-root-leaf-concurrent-op
 test: gdd/dml_locks_only_targeted_table_in_query
 
@@ -54,7 +52,6 @@ test: deadlock_under_entry_db_singleton
 test: misc
 
 test: starve_case pg_views_concurrent_drop alter_blocks_for_update_and_viceversa drop_rename reader_waits_for_lock resource_queue
-test: vacuum_drop_phase_ao
 
 # below test(s) inject faults so each of them need to be in a separate group
 test: pg_terminate_backend
@@ -126,10 +123,10 @@ test: uao/update_while_vacuum_row
 test: uao/vacuum_self_serializable_row
 test: uao/vacuum_self_serializable2_row
 test: uao/vacuum_self_serializable3_row
+test: uao/vacuum_self_function_row
 test: uao/vacuum_while_insert_row
 test: uao/vacuum_while_vacuum_row
 test: uao/vacuum_cleanup_row
-test: uao/insert_should_not_use_awaiting_drop_row
 test: reorganize_after_ao_vacuum_skip_drop truncate_after_ao_vacuum_skip_drop mark_all_aoseg_await_drop
 # below test(s) inject faults so each of them need to be in a separate group
 test: segwalrep/master_xlog_switch
@@ -175,10 +172,10 @@ test: uao/update_while_vacuum_column
 test: uao/vacuum_self_serializable_column
 test: uao/vacuum_self_serializable2_column
 test: uao/vacuum_self_serializable3_column
+test: uao/vacuum_self_function_column
 test: uao/vacuum_while_insert_column
 test: uao/vacuum_while_vacuum_column
 test: uao/vacuum_cleanup_column
-test: uao/insert_should_not_use_awaiting_drop_column
 test: add_column_after_vacuum_skip_drop_column
 test: vacuum_after_vacuum_skip_drop_column
 

@@ -121,7 +121,7 @@ make_externalscan_info(ExtTableEntry *extEntry)
 	{
 		/*
 		 * single row error handling is requested, make sure reject limit and
-		 * error table (if requested) are valid.
+		 * reject type are valid.
 		 *
 		 * NOTE: this should never happen unless somebody modified the catalog
 		 * manually. We are just being pedantic here.

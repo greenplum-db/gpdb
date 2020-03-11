@@ -50,6 +50,13 @@
 
 extern bool Test_print_direct_dispatch_info;
 
+typedef struct ParamWalkerContext
+{
+	plan_tree_base_prefix base; /* Required prefix for
+								 * plan_tree_walker/mutator */
+	List	   *params;
+} ParamWalkerContext;
+
 /*
  * We need an array describing the relationship between a slice and
  * the number of "child" slices which depend on it.
@@ -77,8 +84,6 @@ typedef struct DispatchCommandQueryParms
 	int			serializedPlantreelen;
 	char	   *serializedQueryDispatchDesc;
 	int			serializedQueryDispatchDesclen;
-	char	   *serializedParams;
-	int			serializedParamslen;
 
 	/*
 	 * Additional information.
@@ -114,13 +119,32 @@ cdbdisp_dispatchX(QueryDesc *queryDesc,
 			bool planRequiresTxn,
 			bool cancelOnError);
 
-static char *serializeParamListInfo(ParamListInfo paramLI, int *len_p);
+static List *formIdleSegmentIdList(void);
 
-static List * formIdleSegmentIdList(void);
+static bool param_walker(Node *node, ParamWalkerContext *context);
+static Oid	findParamType(List *params, int paramid);
+static Bitmapset *getExecParamsToDispatch(PlannedStmt *stmt, ParamExecData *intPrm,
+										  List **paramExecTypes);
+static SerializedParams *serializeParamsForDispatch(QueryDesc *queryDesc,
+													ParamListInfo externParams,
+													ParamExecData *execParams,
+													List *paramExecTypes,
+													Bitmapset *sendParams);
+
+
+
 /*
  * Compose and dispatch the MPPEXEC commands corresponding to a plan tree
  * within a complete parallel plan. (A plan tree will correspond either
  * to an initPlan or to the main plan.)
+ *
+ * 'execParams', 'paramExecTypes' and 'sendParams' describe executor
+ * parameters (PARAM_EXEC) that should be sent with the query.
+ * 'sendParams' indicates which parameters are included and 'execParams'
+ * contains their values. 'paramExecTypes' is a list indexed by paramid,
+ * containing the datatype OID of each parameter.
+ * GPDB_11_MERGE_FIXME: In PostgreSQL v11, we have paramExecTypes in
+ * PlannedStmt, so it will no longer be necessary to pass it as a param.
  *
  * If cancelOnError is true, then any dispatching error, a cancellation
  * request from the client, or an error from any of the associated QEs,
@@ -148,21 +172,19 @@ static List * formIdleSegmentIdList(void);
  * Note that the slice tree dispatched is the one specified in the EState
  * of the argument QueryDesc as es_cur__slice.
  *
- * Note that the QueryDesc params must include PARAM_EXEC_REMOTE parameters
- * containing the values of any initplans required by the slice to be run.
- * (This is handled by calls to addRemoteExecParamsToParamList() from the
- * functions preprocess_initplans() and ExecutorRun().)
- *
  * Each QE receives its assignment as a message of type 'M' in PostgresMain().
  * The message is deserialized and processed by exec_mpp_query() in postgres.c.
  */
 void
 CdbDispatchPlan(struct QueryDesc *queryDesc,
+				ParamExecData *execParams,
 				bool planRequiresTxn,
 				bool cancelOnError)
 {
 	PlannedStmt *stmt;
 	bool		is_SRI = false;
+	List	   *paramExecTypes;
+	Bitmapset  *sendParams;
 
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 	Assert(queryDesc != NULL && queryDesc->estate != NULL);
@@ -213,6 +235,19 @@ CdbDispatchPlan(struct QueryDesc *queryDesc,
 
 		queryDesc->ddesc->cursorPositions = (List *) copyObject(cursors);
 	}
+
+	/*
+	 * Fill in parameter info.
+	 *
+	 * First, figure out which executor parameters (PARAM_EXEC) have valid
+	 * values that need to be included with the query. Then serialize them,
+	 * and also any PARAM_EXTERN parameters.
+	 */
+	sendParams = getExecParamsToDispatch(stmt, execParams, &paramExecTypes);
+	queryDesc->ddesc->paramInfo =
+		serializeParamsForDispatch(queryDesc,
+								   queryDesc->params,
+								   execParams, paramExecTypes, sendParams);
 
 	/*
 	 * Cursor queries and bind/execute path queries don't run on the
@@ -564,13 +599,11 @@ cdbdisp_buildPlanQueryParms(struct QueryDesc *queryDesc,
 							bool planRequiresTxn)
 {
 	char	   *splan,
-			   *sddesc,
-			   *sparams;
+			   *sddesc;
 
 	int			splan_len,
 				splan_len_uncompressed,
 				sddesc_len,
-				sparams_len,
 				rootIdx;
 
 	rootIdx = RootSliceIndex(queryDesc->estate);
@@ -601,16 +634,6 @@ cdbdisp_buildPlanQueryParms(struct QueryDesc *queryDesc,
 
 	Assert(splan != NULL && splan_len > 0 && splan_len_uncompressed > 0);
 
-	if (queryDesc->params != NULL && queryDesc->params->numParams > 0)
-	{
-		sparams = serializeParamListInfo(queryDesc->params, &sparams_len);
-	}
-	else
-	{
-		sparams = NULL;
-		sparams_len = 0;
-	}
-
 	sddesc = serializeNode((Node *) queryDesc->ddesc, &sddesc_len, NULL /* uncompressed_size */ );
 
 	pQueryParms->strCommand = queryDesc->sourceText;
@@ -618,8 +641,6 @@ cdbdisp_buildPlanQueryParms(struct QueryDesc *queryDesc,
 	pQueryParms->serializedQuerytreelen = 0;
 	pQueryParms->serializedPlantree = splan;
 	pQueryParms->serializedPlantreelen = splan_len;
-	pQueryParms->serializedParams = sparams;
-	pQueryParms->serializedParamslen = sparams_len;
 	pQueryParms->serializedQueryDispatchDesc = sddesc;
 	pQueryParms->serializedQueryDispatchDesclen = sddesc_len;
 
@@ -816,8 +837,6 @@ buildGpQueryString(DispatchCommandQueryParms *pQueryParms,
 	int			querytree_len = pQueryParms->serializedQuerytreelen;
 	const char *plantree = pQueryParms->serializedPlantree;
 	int			plantree_len = pQueryParms->serializedPlantreelen;
-	const char *params = pQueryParms->serializedParams;
-	int			params_len = pQueryParms->serializedParamslen;
 	const char *sddesc = pQueryParms->serializedQueryDispatchDesc;
 	int			sddesc_len = pQueryParms->serializedQueryDispatchDesclen;
 	const char *dtxContextInfo = pQueryParms->serializedDtxContextInfo;
@@ -869,14 +888,12 @@ buildGpQueryString(DispatchCommandQueryParms *pQueryParms,
 		sizeof(command_len) +
 		sizeof(querytree_len) +
 		sizeof(plantree_len) +
-		sizeof(params_len) +
 		sizeof(sddesc_len) +
 		sizeof(dtxContextInfo_len) +
 		dtxContextInfo_len +
 		command_len +
 		querytree_len +
 		plantree_len +
-		params_len +
 		sddesc_len +
 		sizeof(numsegments) +
 		sizeof(resgroupInfo.len) +
@@ -934,10 +951,6 @@ buildGpQueryString(DispatchCommandQueryParms *pQueryParms,
 	memcpy(pos, &tmp, sizeof(plantree_len));
 	pos += sizeof(plantree_len);
 
-	tmp = htonl(params_len);
-	memcpy(pos, &tmp, sizeof(params_len));
-	pos += sizeof(params_len);
-
 	tmp = htonl(sddesc_len);
 	memcpy(pos, &tmp, sizeof(tmp));
 	pos += sizeof(tmp);
@@ -967,12 +980,6 @@ buildGpQueryString(DispatchCommandQueryParms *pQueryParms,
 	{
 		memcpy(pos, plantree, plantree_len);
 		pos += plantree_len;
-	}
-
-	if (params_len > 0)
-	{
-		memcpy(pos, params, params_len);
-		pos += params_len;
 	}
 
 	if (sddesc_len > 0)
@@ -1211,133 +1218,25 @@ cdbdisp_dispatchX(QueryDesc* queryDesc,
 }
 
 /*
- * Serialization of query parameters (ParamListInfos).
- *
- * When a query is dispatched from QD to QE, we also need to dispatch any
- * query parameters, contained in the ParamListInfo struct. We need to
- * serialize ParamListInfo, but there are a few complications:
- *
- * - ParamListInfo is not a Node type, so we cannot use the usual
- * nodeToStringBinary() function directly. We turn the array of
- * ParamExternDatas into a List of SerializedParamExternData nodes,
- * which we can then pass to nodeToStringBinary().
- *
- * - The paramFetch callback, which could be used in this process to fetch
- * parameter values on-demand, cannot be used in a different process.
- * Therefore, fetch all parameters before serializing them. When
- * deserializing, leave the callbacks NULL.
- *
- * - In order to deserialize correctly, the receiver needs the typlen and
- * typbyval information for each datatype. The receiver has access to the
- * catalogs, so it could look them up, but for the sake of simplicity and
- * robustness in the receiver, we include that information in
- * SerializedParamExternData.
- *
- * - RECORD types. Type information of transient record is kept only in
- * backend private memory, indexed by typmod. The recipient will not know
- * what a record type's typmod means. And record types can also be nested.
- * Because of that, if there are any RECORD, we include a copy of the whole
- * transient record type cache.
- *
- * If there are no record types involved, we dispatch a list of
- * SerializedParamListInfos, i.e.
- *
- * List<SerializedParamListInfo>
- *
- * With record types, we dispatch:
- *
- * List(List<TupleDescNode>, List<SerializedParamListInfo>)
- *
- * XXX: Sending *all* record types can be quite bulky, but ATM there is no
- * easy way to extract just the needed record types.
+ * Copy external query parameters from serialized form into a ParamListInfo.
  */
-static char *
-serializeParamListInfo(ParamListInfo paramLI, int *len_p)
-{
-	int			i;
-	List	   *sparams;
-	bool		found_records = false;
-
-	/* Construct a list of SerializedParamExternData */
-	sparams = NIL;
-	for (i = 0; i < paramLI->numParams; i++)
-	{
-		ParamExternData *prm = &paramLI->params[i];
-		SerializedParamExternData *sprm;
-
-		/*
-		 * First, use paramFetch to fetch any "lazy" parameters. (The callback
-		 * function is of no use in the QE.)
-		 */
-		if (paramLI->paramFetch && !OidIsValid(prm->ptype))
-			(*paramLI->paramFetch) (paramLI, i + 1);
-
-		sprm = makeNode(SerializedParamExternData);
-
-		sprm->value = prm->value;
-		sprm->isnull = prm->isnull;
-		sprm->pflags = prm->pflags;
-		sprm->ptype = prm->ptype;
-
-		if (OidIsValid(prm->ptype))
-		{
-			get_typlenbyval(prm->ptype, &sprm->plen, &sprm->pbyval);
-
-			if (prm->ptype == RECORDOID && !prm->isnull)
-			{
-				/*
-				 * Note: We don't want to use lookup_rowtype_tupdesc_copy here, because
-				 * it copies defaults and constraints too. We don't want those.
-				 */
-				found_records = true;
-			}
-		}
-		else
-		{
-			sprm->plen = 0;
-			sprm->pbyval = true;
-		}
-
-		sparams = lappend(sparams, sprm);
-	}
-
-	/*
-	 * If there were any record types, include the transient record type cache.
-	 */
-	if (found_records)
-		sparams = lcons(build_tuple_node_list(0), sparams);
-
-	return nodeToBinaryStringFast(sparams, len_p);
-}
-
 ParamListInfo
-deserializeParamListInfo(const char *str, int slen)
+deserializeExternParams(SerializedParams *sparams)
 {
-	List	   *sparams;
-	ListCell   *lc;
 	TupleRemapper *remapper;
 	ParamListInfo paramLI;
-	int			numParams;
-	int			iparam;
 
-	sparams = (List *) readNodeFromBinaryString(str, slen);
-	if (!IsA(sparams, List))
-		elog(ERROR, "could not deserialize query parameters");
-
-	if (!sparams)
-		return NULL;;
+	if (sparams->nExternParams == 0)
+		return NULL;
 
 	/*
 	 * If a transient record type cache was included, load it into
 	 * a TupleRemapper.
 	 */
-	if (IsA(linitial(sparams), List))
+	if (sparams->transientTypes)
 	{
-		List *typelist = (List *) linitial(sparams);
-		sparams = list_delete_first(sparams);
-
 		remapper = CreateTupleRemapper();
-		TRHandleTypeLists(remapper, typelist);
+		TRHandleTypeLists(remapper, sparams->transientTypes);
 	}
 	else
 		remapper = NULL;
@@ -1345,24 +1244,19 @@ deserializeParamListInfo(const char *str, int slen)
 	/*
 	 * Build a new ParamListInfo.
 	 */
-	numParams = list_length(sparams);
-
-	paramLI = palloc(offsetof(ParamListInfoData, params) + numParams * sizeof(ParamExternData));
+	paramLI = palloc(offsetof(ParamListInfoData, params) +
+					 sparams->nExternParams * sizeof(ParamExternData));
 	/* this clears the callback fields, among others */
 	memset(paramLI, 0, offsetof(ParamListInfoData, params));
-	paramLI->numParams = numParams;
+	paramLI->numParams = sparams->nExternParams;
 
 	/*
 	 * Read the ParamExternDatas
 	 */
-	iparam = 0;
-	foreach(lc, sparams)
+	for (int i = 0; i < sparams->nExternParams; i++)
 	{
-		SerializedParamExternData *sprm = (SerializedParamExternData *) lfirst(lc);
-		ParamExternData *prm = &paramLI->params[iparam];
-
-		if (!IsA(sprm, SerializedParamExternData))
-			elog(ERROR, "could not deserialize query parameters");
+		SerializedParamExternData *sprm = &sparams->externParams[i];
+		ParamExternData *prm = &paramLI->params[i];
 
 		prm->ptype = sprm->ptype;
 		prm->isnull = sprm->isnull;
@@ -1373,8 +1267,6 @@ deserializeParamListInfo(const char *str, int slen)
 			prm->value = TRRemapDatum(remapper, sprm->ptype, sprm->value);
 		else
 			prm->value = sprm->value;
-
-		iparam++;
 	}
 
 	return paramLI;
@@ -1486,4 +1378,256 @@ formIdleSegmentIdList(void)
 	}
 
 	return segments;
+}
+
+
+/*
+ * Serialization of query parameters (ParamListInfos and executor params)
+ *
+ * When a query is dispatched from QD to QE, we also need to dispatch any
+ * query parameters (contained in the ParamListInfo struct), and executor
+ * parameters that have already been evaluated in the QD. We need to
+ * serialize ParamListInfo, but there are a few complications:
+ *
+ * - ParamListInfo is not a Node type, so we cannot use the usual
+ * nodeToStringBinary() function directly. We turn the array of
+ * ParamExternDatas into a List of SerializedParamExternData nodes,
+ * which we can then pass to nodeToStringBinary().
+ *
+ * - The paramFetch callback, which could be used in this process to fetch
+ * parameter values on-demand, cannot be used in a different process.
+ * Therefore, fetch all parameters before serializing them. When
+ * deserializing, leave the callbacks NULL.
+ *
+ * - In order to deserialize correctly, the receiver needs the typlen and
+ * typbyval information for each datatype. The receiver has access to the
+ * catalogs, so it could look them up, but for the sake of simplicity and
+ * robustness in the receiver, we include that information in
+ * SerializedParamExternData.
+ *
+ * - RECORD types. Type information of transient record is kept only in
+ * backend private memory, indexed by typmod. The recipient will not know
+ * what a record type's typmod means. And record types can also be nested.
+ * Because of that, if there are any RECORD, we include a copy of the whole
+ * transient record type cache.
+ *
+ * We form a SerializedParams struct, which contains enough information
+ * to reconstruct in the QEs.
+ *
+ * XXX: Sending *all* record types can be quite bulky, but ATM there is no
+ * easy way to extract just the needed record types.
+ */
+static SerializedParams *
+serializeParamsForDispatch(QueryDesc *queryDesc,
+						   ParamListInfo externParams,
+						   ParamExecData *execParams,
+						   List *paramExecTypes,
+						   Bitmapset *sendParams)
+{
+	SerializedParams *result = makeNode(SerializedParams);
+	bool		found_records = false;
+
+	/* materialize Extern params */
+	if (externParams)
+	{
+		result->nExternParams = externParams->numParams;
+		result->externParams = palloc0(externParams->numParams * sizeof(SerializedParamExternData));
+
+		for (int i = 0; i < externParams->numParams; i++)
+		{
+			ParamExternData *prm = &externParams->params[i];
+			SerializedParamExternData *sprm = &result->externParams[i];
+
+			/*
+			 * First, use paramFetch to fetch any "lazy" parameters. (The callback
+			 * function is of no use in the QE.)
+			 */
+			if (externParams->paramFetch && !OidIsValid(prm->ptype))
+				(*externParams->paramFetch) (externParams, i + 1);
+
+			sprm->value = prm->value;
+			sprm->isnull = prm->isnull;
+			sprm->pflags = prm->pflags;
+			sprm->ptype = prm->ptype;
+
+			if (OidIsValid(prm->ptype))
+			{
+				get_typlenbyval(prm->ptype, &sprm->plen, &sprm->pbyval);
+				if (prm->ptype == RECORDOID && !prm->isnull)
+					found_records = true;
+			}
+			else
+			{
+				sprm->plen = 0;
+				sprm->pbyval = true;
+			}
+		}
+	}
+
+	/* materialize Exec params */
+	if (!bms_is_empty(sendParams))
+	{
+		int			numExecParams = list_length(paramExecTypes);
+		int			x;
+
+		result->nExecParams = numExecParams;
+		result->execParams = palloc0(numExecParams * sizeof(SerializedParamExecData));
+
+		x = -1;
+		while ((x = bms_next_member(sendParams, x)) >= 0)
+		{
+			ParamExecData *prm = &execParams[x];
+			SerializedParamExecData *sprm = &result->execParams[x];
+			Oid			ptype = list_nth_oid(paramExecTypes, x);
+
+			sprm->value = prm->value;
+			sprm->isnull = prm->isnull;
+			sprm->isvalid = true;
+
+			get_typlenbyval(ptype, &sprm->plen, &sprm->pbyval);
+			if (ptype == RECORDOID && !prm->isnull)
+				found_records = true;
+		}
+	}
+
+	/*
+	 * If there were any record types, include the transient record type cache.
+	 */
+	if (found_records)
+		result->transientTypes = build_tuple_node_list(0);
+
+	return result;
+}
+
+/*
+ * Function: getExecParamsToDispatch()
+ *
+ * Determine which PARAM_EXEC values are valid, and should be included
+ * when the query is dispatched to the QEs.
+ *
+ * When the query eventually runs (on the QD or a QE), it will have access
+ * to these PARAM_EXEC values (locally or through serialization).
+
+ * Then, rather than lazily-evaluating the SubPlan to get its value (as for
+ * an internal parameter), the plan will just use the value that's already
+ * in the EState->es_param_exec_vals array.
+ */
+static Bitmapset *
+getExecParamsToDispatch(PlannedStmt *stmt, ParamExecData *intPrm,
+						List **paramExecTypes)
+{
+	ParamWalkerContext context;
+	int			i;
+	Plan	   *plan = stmt->planTree;
+	int			nIntPrm = stmt->nParamExec;
+	Bitmapset  *sendParams = NULL;
+
+	if (nIntPrm == 0)
+	{
+		*paramExecTypes = NIL;
+		return NULL;
+	}
+	Assert(intPrm != NULL);		/* So there must be some internal parameters. */
+
+	/*
+	 * Walk the plan, looking for Param nodes of kind PARAM_EXEC, i.e.,
+	 * executor internal parameters.
+	 *
+	 * We need these for their paramtype field, which isn't available in
+	 * either the ParamExecData struct or the SubPlan struct.
+	 */
+
+	exec_init_plan_tree_base(&context.base, stmt);
+	context.params = NIL;
+	param_walker((Node *) plan, &context);
+
+	/*
+	 * mpp-25490: subplanX may is within subplan Y, try to param_walker the
+	 * subplans list
+	 */
+	if (list_length(context.params) < nIntPrm)
+	{
+		ListCell   *sb;
+
+		foreach(sb, stmt->subplans)
+		{
+			Node	   *subplan = lfirst(sb);
+
+			param_walker((Node *) subplan, &context);
+		}
+	}
+
+	/*
+	 * Now set the bit corresponding to each init plan param. Use the datatype
+	 * info harvested above.
+	 */
+	*paramExecTypes = NIL;
+	for (i = 0; i < nIntPrm; i++)
+	{
+		Oid			paramType = findParamType(context.params, i);
+
+		*paramExecTypes = lappend_oid(*paramExecTypes, paramType);
+		if (paramType != InvalidOid)
+		{
+			sendParams = bms_add_member(sendParams, i);
+		}
+		else
+		{
+			/*
+			 * Param of id i not found. Likely has been removed by constant
+			 * folding.
+			 */
+		}
+	}
+
+	list_free(context.params);
+
+	return sendParams;
+}
+
+/*
+ * Helper function param_walker() walks a plan and adds any Param nodes
+ * to a list in the ParamWalkerContext.
+ *
+ * This list is input to the function findParamType(), which loops over the
+ * list looking for a specific paramid, and returns its type.
+ */
+static bool
+param_walker(Node *node, ParamWalkerContext *context)
+{
+	if (node == NULL)
+		return false;
+
+	if (nodeTag(node) == T_Param)
+	{
+		Param	   *param = (Param *) node;
+
+		if (param->paramkind == PARAM_EXEC)
+		{
+			context->params = lappend(context->params, param);
+			return false;
+		}
+	}
+	return plan_tree_walker(node, param_walker, context, true);
+}
+
+/*
+ * Helper function findParamType() iterates over a list of Param nodes,
+ * trying to match on the passed-in paramid. Returns the paramtype of a
+ * match, else error.
+ */
+static Oid
+findParamType(List *params, int paramid)
+{
+	ListCell   *l;
+
+	foreach(l, params)
+	{
+		Param	   *p = lfirst(l);
+
+		if (p->paramid == paramid)
+			return p->paramtype;
+	}
+
+	return InvalidOid;
 }

@@ -424,6 +424,30 @@ DistributedLog_SetCommittedTree(TransactionId xid, int nxids, TransactionId *xid
 }
 
 /*
+ * Get the corresponding distributed xid and timestamp of a local xid.
+ */
+void
+DistributedLog_GetDistributedXid(
+	TransactionId 						localXid,
+	DistributedTransactionTimeStamp		*distribTimeStamp,
+	DistributedTransactionId 			*distribXid)
+{
+	int			page = TransactionIdToPage(localXid);
+	int			entryno = TransactionIdToEntry(localXid);
+	int			slotno;
+	DistributedLogEntry *ptr;
+
+	Assert(!IS_QUERY_DISPATCHER());
+
+	slotno = SimpleLruReadPage_ReadOnly(DistributedLogCtl, page, localXid);
+	ptr = (DistributedLogEntry *) DistributedLogCtl->shared->page_buffer[slotno];
+	ptr += entryno;
+	*distribTimeStamp = ptr->distribTimeStamp;
+	*distribXid = ptr->distribXid;
+	LWLockRelease(DistributedLogControlLock);
+}
+
+/*
  * Determine if a distributed transaction committed in the distributed log.
  */
 bool

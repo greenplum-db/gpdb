@@ -17,6 +17,11 @@
 
 include: helpers/server_helpers.sql;
 
+-- Make the test faster and also make some queries fail as expected after
+-- 2pc retry PANIC (do not finish earlier before PANIC happens).
+alter system set dtx_phase2_retry_second to 5;
+select pg_reload_conf();
+
 -- This function is used to loop until master shutsdown, to make sure
 -- next command executed is only after restart and doesn't go through
 -- while PANIC is still being processed by master, as master continues
@@ -116,10 +121,10 @@ $$ LANGUAGE plpgsql;
 11: INSERT INTO QE_panic_test_table SELECT * from generate_series(0, 9);
 -- To help speedy recovery
 11: CHECKPOINT;
--- Set to maximum number of 2PC retries to avoid any failures. Alter
+-- Increase 2PC retry timeout to avoid any failures. Alter
 -- system is required to set the GUC and can't be set on session level
 -- as session reset happens for every abort retry.
-11: alter system set dtx_phase2_retry_count to 1500;
+11: alter system set dtx_phase2_retry_second to 600;
 11: select pg_reload_conf();
 -- skip FTS probes always
 11: SELECT gp_inject_fault_infinite('fts_probe', 'skip', dbid)
@@ -139,5 +144,8 @@ $$ LANGUAGE plpgsql;
 13: SELECT * FROM gp_dist_random('pg_prepared_xacts');
 13: SELECT gp_inject_fault('fts_probe', 'reset', dbid)
     from gp_segment_configuration where role='p' and content=-1;
-13: alter system reset dtx_phase2_retry_count;
+13: alter system reset dtx_phase2_retry_second;
 13: select pg_reload_conf();
+
+14: alter system reset dtx_phase2_retry_second;
+14: select pg_reload_conf();

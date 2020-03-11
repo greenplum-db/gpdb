@@ -3,8 +3,13 @@ PostgreSQL documentation
 -->
 
 <refentry id="SQL-ALTERPROTOCOL">
+ <indexterm zone="sql-alterprotocol">
+  <primary>ALTER PROTOCOL</primary>
+ </indexterm>
+
  <refmeta>
   <refentrytitle id="sql-alterprotocol-title">ALTER PROTOCOL</refentrytitle>
+  <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
 
@@ -12,10 +17,6 @@ PostgreSQL documentation
   <refname>ALTER PROTOCOL</refname>
   <refpurpose>change the definition of a custom data access protocol</refpurpose>
  </refnamediv>
-
- <indexterm zone="sql-alterprotocol">
-  <primary>ALTER PROTOCOL</primary>
- </indexterm>
 
  <refsynopsisdiv>
 <synopsis>

@@ -2847,11 +2847,9 @@ copytup_heap(Tuplesortstate_mk *state, MKEntry *e, void *tup)
 	TupleTableSlot *slot = (TupleTableSlot *) tup;
 
 	slot_getallattrs(slot);
-	e->ptr = (void *) memtuple_form_to(state->mt_bind,
-									   slot_get_values(slot),
-									   slot_get_isnull(slot),
-									   NULL, NULL, false
-		);
+	e->ptr = (void *) memtuple_form(state->mt_bind,
+									slot_get_values(slot),
+									slot_get_isnull(slot));
 
 	state->totalTupleBytes += memtuple_get_size((MemTuple) e->ptr);
 

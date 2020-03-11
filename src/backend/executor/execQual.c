@@ -1171,15 +1171,6 @@ ExecEvalConst(ExprState *exprstate, ExprContext *econtext,
  *		Returns the value of a PARAM_EXEC parameter.
  * ----------------------------------------------------------------
  */
-
-/*
- * Greenplum Database Changes:
- * In executor mode, a PARAM_EXEC parameter can not be evaluated by executing
- * the subplan.  The subplan was executed on the dispatcher prior to
- * launching the main query.  The value of the result is passed to the qExec
- * in the ParamInfo, with a kind of PARAM_EXEC_REMOTE.
- * So, this function was changed to just do a lookup in that case.
- */
 static Datum
 ExecEvalParamExec(ExprState *exprstate, ExprContext *econtext,
 				  bool *isNull, ExprDoneCond *isDone)

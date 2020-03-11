@@ -336,6 +336,9 @@ namespace gpdb {
 	// get the default hash opclass for type
 	Oid GetDefaultDistributionOpclassForType(Oid typid);
 
+	// get the column-definition hash opclass for type
+	Oid GetColumnDefOpclassForType(List *opclassName, Oid typid);
+
 	// get the hash function in an opfamily for given datatype
 	Oid GetHashProcInOpfamily(Oid opfamily, Oid typid);
 
@@ -530,7 +533,7 @@ namespace gpdb {
 
 	// estimate the relation size using the real number of blocks and tuple density
 	void CdbEstimateRelationSize (RelOptInfo *relOptInfo, Relation rel, int32 *attr_widths, BlockNumber *pages, double *tuples, double *allvisfrac);
-	double CdbEstimatePartitionedNumTuples (Relation rel, bool *stats_missing);
+	double CdbEstimatePartitionedNumTuples (Relation rel);
 
 	// close the given relation
 	void CloseRelation(Relation rel);

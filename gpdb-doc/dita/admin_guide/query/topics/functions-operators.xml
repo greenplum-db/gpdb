@@ -126,6 +126,14 @@
                                 master.</entry>
                             <entry colname="col4"/>
                         </row>
+                        <row>
+                            <entry colname="col1">EXECUTE ON INITPLAN</entry>
+                            <entry colname="col3">Indicates that the function contains an SQL
+                                command that dispatches queries to the segment instances and
+                                requires special processing on the master instance by Greenplum
+                                Database when possible. </entry>
+                            <entry colname="col4"/>
+                        </row>
                     </tbody>
                 </tgroup>
             </table>

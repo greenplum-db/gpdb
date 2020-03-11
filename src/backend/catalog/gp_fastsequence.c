@@ -14,6 +14,8 @@
  */
 #include "postgres.h"
 
+#include "access/appendonlywriter.h"
+#include "access/htup_details.h"
 #include "catalog/gp_fastsequence.h"
 #include "catalog/indexing.h"
 #include "utils/relcache.h"
@@ -23,7 +25,6 @@
 #include "access/heapam.h"
 #include "utils/syscache.h"
 #include "utils/tqual.h"
-#include "access/appendonlywriter.h"
 
 static void insert_or_update_fastsequence(
 	Relation gp_fastsequence_rel,

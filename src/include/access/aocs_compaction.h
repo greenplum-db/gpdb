@@ -16,11 +16,13 @@
 #include "nodes/pg_list.h"
 #include "utils/rel.h"
 
-extern void AOCSDrop(Relation aorel,
-		 List *compaction_segno);
+struct AOCSVPInfo;
+extern void AOCSSegmentFileTruncateToEOF(Relation aorel, int segno, struct AOCSVPInfo *vpinfo);
+extern void AOCSCompaction_DropSegmentFile(Relation aorel, int segno);
 extern void AOCSCompact(Relation aorel,
-			List *compaction_segno_list,
-			int insert_segno,
-			bool isFull);
-extern void AOCSTruncateToEOF(Relation aorel);
+						int compaction_segno,
+						int *insert_segno,
+						bool isFull,
+						List *avoid_segnos);
+
 #endif

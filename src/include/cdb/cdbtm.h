@@ -233,6 +233,7 @@ typedef struct TMGXACTLOCAL
 
 	Bitmapset					*dtxSegmentsMap;
 	List						*dtxSegments;
+	List						*waitGxids;
 }	TMGXACTLOCAL;
 
 typedef struct TMGXACTSTATUS

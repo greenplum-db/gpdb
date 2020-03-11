@@ -126,3 +126,19 @@ INSERT INTO dml_timestamptz VALUES ('4714-01-27 BC'::timestamptz);
 SELECT * FROM dml_timestamptz ORDER BY 1;
 UPDATE dml_timestamptz SET a = '4714-01-27 BC'::timestamptz;
 SELECT * FROM dml_timestamptz ORDER BY 1;
+
+--
+-- Float8: test if you can dump/restore subnormal (1e-323) values using COPY
+--
+CREATE TABLE FLOATS(a float8);
+INSERT INTO FLOATS select 1e-307::float8 / 10^i FROM generate_series(1,16) i;
+
+SELECT * FROM FLOATS ORDER BY a;
+
+SELECT float8in(float8out(a)) FROM FLOATS ORDER BY a;
+
+COPY FLOATS TO '/tmp/floats';
+TRUNCATE FLOATS;
+COPY FLOATS FROM '/tmp/floats';
+
+SELECT * FROM FLOATS ORDER BY a;

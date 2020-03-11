@@ -106,6 +106,7 @@ query_planner(PlannerInfo *root, List *tlist,
 		root->canon_pathkeys = NIL;
 		(*qp_callback) (root, qp_extra);
 
+		if (Gp_role == GP_ROLE_DISPATCH)
 		{
 			char		exec_location;
 
@@ -117,6 +118,8 @@ query_planner(PlannerInfo *root, List *tlist,
 				CdbPathLocus_MakeStrewn(&result_path->locus,
 										getgpsegmentCount());
 		}
+		else
+			CdbPathLocus_MakeEntry(&result_path->locus);
 
 		return final_rel;
 	}
@@ -313,6 +316,8 @@ PlannerConfig *DefaultPlannerConfig(void)
 	c1->honor_order_by = true;
 
 	c1->is_under_subplan = false;
+
+	c1->force_singleQE = false;
 
 	return c1;
 }

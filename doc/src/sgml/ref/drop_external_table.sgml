@@ -1,11 +1,16 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/drop_external_table.sgml,v 1.25 2006/09/16 00:30:18 momjian Exp $
+doc/src/sgml/ref/drop_external_table.sgml
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-DROPEXTERNALTABLE">
+ <indexterm zone="sql-dropexternaltable">
+  <primary>DROP EXTERNAL TABLE</primary>
+ </indexterm>
+
  <refmeta>
-  <refentrytitle id="SQL-DROPEXTERNALTABLE-TITLE">DROP EXTERNAL TABLE</refentrytitle>
+  <refentrytitle>DROP EXTERNAL TABLE</refentrytitle>
+  <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
 
@@ -13,10 +18,6 @@ PostgreSQL documentation
   <refname>DROP EXTERNAL TABLE</refname>
   <refpurpose>remove an external table definition</refpurpose>
  </refnamediv>
-
- <indexterm zone="sql-dropexternaltable">
-  <primary>DROP EXTERNAL TABLE</primary>
- </indexterm>
 
  <refsynopsisdiv>
 <synopsis>

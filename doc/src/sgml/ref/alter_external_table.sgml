@@ -1,11 +1,16 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/alter_external_table.sgml,v 1.105 2006/09/16 00:30:17 momjian Exp $
+doc/src/sgml/ref/alter_external_table.sgml
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-ALTEREXTERNALTABLE">
+ <indexterm zone="sql-alterexternaltable">
+  <primary>ALTER EXTERNAL TABLE</primary>
+ </indexterm>
+
  <refmeta>
-  <refentrytitle id="sql-alterexternaltable-title">ALTER EXTERNAL TABLE</refentrytitle>
+  <refentrytitle>ALTER EXTERNAL TABLE</refentrytitle>
+  <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
 
@@ -13,10 +18,6 @@ PostgreSQL documentation
   <refname>ALTER EXTERNAL TABLE</refname>
   <refpurpose>change the definition of an external table</refpurpose>
  </refnamediv>
-
- <indexterm zone="sql-alterexternaltable">
-  <primary>ALTER EXTERNAL TABLE</primary>
- </indexterm>
 
  <refsynopsisdiv>
 <synopsis>
@@ -35,10 +36,9 @@ where action is one of:
   OWNER TO new_owner
 
 </synopsis>
-
  </refsynopsisdiv>
 
- <refsect1 id="SQL-ALTEREXTERNALTABLE-description">
+ <refsect1>
   <title>Description</title>
 
   <para>

@@ -35,6 +35,7 @@
 #define DF_WITH_SNAPSHOT  0x4
 
 struct QueryDesc;
+struct SerializedParams;
 struct CdbDispatcherState;
 struct CdbPgResults;
 struct CdbCopy;
@@ -56,17 +57,16 @@ struct CdbCopy;
  * To wait for completion, check for errors, and clean up, it is
  * suggested that the caller use cdbdisp_finishCommand().
  */
-void
-CdbDispatchPlan(struct QueryDesc *queryDesc,
-					 bool planRequiresTxn,
-					 bool cancelOnError);
+extern void CdbDispatchPlan(struct QueryDesc *queryDesc,
+							ParamExecData *execParams,
+							bool planRequiresTxn,
+							bool cancelOnError);
 
 /*
  * Special for sending SET commands that change GUC variables, so they go to all
  * gangs, both reader and writer
  */
-void
-CdbDispatchSetCommand(const char *strCommand, bool cancelOnError);
+extern void CdbDispatchSetCommand(const char *strCommand, bool cancelOnError);
 
 /*
  * CdbDispatchCommand
@@ -79,16 +79,14 @@ CdbDispatchSetCommand(const char *strCommand, bool cancelOnError);
  * 	Is the combination of EUS_NEED_TWO_PHASE, EUS_WITH_SNAPSHOT,EUS_CANCEL_ON_ERROR
  *
  */
-void
-CdbDispatchCommand(const char* strCommand,
-                    int flags,
-                    struct CdbPgResults* cdb_pgresults);
+extern void CdbDispatchCommand(const char *strCommand,
+							   int flags,
+							   struct CdbPgResults *cdb_pgresults);
 
-void
-CdbDispatchCommandToSegments(const char* strCommand,
-							 int flags,
-							 List *segments,
-							 struct CdbPgResults* cdb_pgresults);
+extern void CdbDispatchCommandToSegments(const char *strCommand,
+										 int flags,
+										 List *segments,
+										 struct CdbPgResults *cdb_pgresults);
 
 /*
  * CdbDispatchUtilityStatement
@@ -106,15 +104,14 @@ CdbDispatchCommandToSegments(const char* strCommand,
  * If returnPgResults is true, caller need to call cdbdisp_freeCdbPgResults() to
  * clear pg_results.
  */
-void
-CdbDispatchUtilityStatement(struct Node *stmt,
-							int flags,
-							List *oid_assignments,
-							struct CdbPgResults* cdb_pgresults);
+extern void CdbDispatchUtilityStatement(struct Node *stmt,
+										int flags,
+										List *oid_assignments,
+										struct CdbPgResults* cdb_pgresults);
 
 extern void CdbDispatchCopyStart(struct CdbCopy *cdbCopy, Node *stmt, int flags);
 extern void CdbDispatchCopyEnd(struct CdbCopy *cdbCopy);
 
-extern ParamListInfo deserializeParamListInfo(const char *str, int slen);
+extern ParamListInfo deserializeExternParams(struct SerializedParams *sparams);
 
 #endif   /* CDBDISP_QUERY_H */

@@ -77,6 +77,11 @@ setup_gpadmin_user() {
       user_add_cmd="/usr/sbin/useradd -G supergroup,tty gpadmin -s /bin/bash"
       create_gpadmin_if_not_existing ${user_add_cmd}
       ;;
+    sles)
+      # create a default group gpadmin, and add user gpadmin to group gapdmin, supergroup, tty
+      user_add_cmd="/usr/sbin/useradd -U -G supergroup,tty gpadmin"
+      create_gpadmin_if_not_existing ${user_add_cmd}
+      ;;
     *) echo "Unknown OS: $TEST_OS"; exit 1 ;;
   esac
   echo -e "password\npassword" | passwd gpadmin
@@ -123,16 +128,19 @@ determine_os() {
     echo "ubuntu"
     return
   fi
+  if grep -q 'ID="sles"' /etc/os-release ; then
+    echo "sles"
+    return
+  fi
   echo "Could not determine operating system type" >/dev/stderr
   exit 1
 }
 
-# This might no longer be necessary, as the centos7 base image has been updated
-# with ping's setcap set properly, although it would need to be verified to work
-# for other OSs used by Concourse.
-# https://github.com/Pivotal-DataFabric/toolsmiths-images/pull/27
+# Set the "Set-User-ID" bit of ping, or else gpinitsystem will error by following message:
+# [FATAL]:-Unknown host d6f9f630-65a3-4c98-4c03-401fbe5dd60b: ping: socket: Operation not permitted
+# This is needed in centos7, sles12sp5, but not for centos6, ubuntu18.04
 workaround_before_concourse_stops_stripping_suid_bits() {
-  chmod u+s /bin/ping
+  chmod u+s $(which ping)
 }
 
 _main() {

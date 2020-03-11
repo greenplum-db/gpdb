@@ -192,8 +192,7 @@ extern int	vacuum_multixact_freeze_table_age;
 extern void ExecVacuum(VacuumStmt *vacstmt, bool isTopLevel);
 extern void vacuum(int options, RangeVar *relation, Oid relid,
 	   VacuumParams *params, List *va_cols,
-	   BufferAccessStrategy bstrategy, bool isTopLevel,
-	   bool skip_twophase, AOVacuumPhaseConfig *ao_vacuum_phase_config);
+	   BufferAccessStrategy bstrategy, bool isTopLevel);
 extern void vac_open_indexes(Relation relation, LOCKMODE lockmode,
 				 int *nindexes, Relation **Irel);
 extern void vac_close_indexes(int nindexes, Relation *Irel, LOCKMODE lockmode);
@@ -225,22 +224,23 @@ extern void vacuum_delay_point(void);
 extern bool vacuumStatement_IsTemporary(Relation onerel);
 
 /* in commands/vacuumlazy.c */
-extern void lazy_vacuum_rel(Relation onerel, int options,
-				VacuumParams *params, BufferAccessStrategy bstrategy,
-				AOVacuumPhaseConfig *ao_vacuum_phase_config);
+extern void lazy_vacuum_rel_heap(Relation onerel, int options,
+							VacuumParams *params, BufferAccessStrategy bstrategy);
+extern void scan_index(Relation indrel, double num_tuples, int elevel);
+
+/* in commands/vacuum_ao.c */
+
+extern void ao_vacuum_rel_pre_cleanup(Relation onerel, int options, VacuumParams *params,
+									  BufferAccessStrategy bstrategy);
+extern void ao_vacuum_rel_compact(Relation onerel, int options, VacuumParams *params,
+								  BufferAccessStrategy bstrategy);
+extern void ao_vacuum_rel_post_cleanup(Relation onerel, int options, VacuumParams *params,
+									   BufferAccessStrategy bstrategy);
 
 /* in commands/analyze.c */
 extern void analyze_rel(Oid relid, RangeVar *relation, int options,
 			VacuumParams *params, List *va_cols, bool in_outer_xact,
 			BufferAccessStrategy bstrategy);
-
-/* GPDB only */
-extern void vacuum_appendonly_rel(Relation aorel, int options,
-								  AOVacuumPhaseConfig *ao_vacuum_phase_config);
-extern void vacuum_appendonly_fill_stats(Relation aorel, Snapshot snapshot,
-										 BlockNumber *rel_pages, double *rel_tuples,
-										 bool *relhasindex);
-extern int vacuum_appendonly_indexes(Relation aoRelation, int options);
 
 extern bool std_typanalyze(VacAttrStats *stats);
 

@@ -3,8 +3,13 @@ PostgreSQL documentation
 -->
 
 <refentry id="SQL-CREATEPROTOCOL">
+ <indexterm zone="sql-createprotocol">
+  <primary>CREATE PROTOCOL</primary>
+ </indexterm>
+
  <refmeta>
-  <refentrytitle id="sql-createprotocol-title">CREATE PROTOCOL</refentrytitle>
+  <refentrytitle>CREATE PROTOCOL</refentrytitle>
+  <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
 
@@ -12,10 +17,6 @@ PostgreSQL documentation
   <refname>CREATE PROTOCOL</refname>
   <refpurpose>create a custom data access protocol</refpurpose>
  </refnamediv>
-
- <indexterm zone="sql-createprotocol">
-  <primary>CREATE PROTOCOL</primary>
- </indexterm>
 
  <refsynopsisdiv>
 <synopsis>

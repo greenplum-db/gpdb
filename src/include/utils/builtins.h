@@ -1414,9 +1414,6 @@ Datum int4_pivot_accum(PG_FUNCTION_ARGS);
 Datum int8_pivot_accum(PG_FUNCTION_ARGS);
 Datum float8_pivot_accum(PG_FUNCTION_ARGS);
 
-/* utils/error/elog.c */
-extern Datum gp_elog(PG_FUNCTION_ARGS);
-
 /* utils/fmgr/deprecated.c */
 extern Datum gp_deprecated(PG_FUNCTION_ARGS);
 

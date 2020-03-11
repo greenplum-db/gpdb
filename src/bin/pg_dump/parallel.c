@@ -63,7 +63,6 @@
 #include <sys/select.h>
 #endif
 
-#include "pg_backup_utils.h"
 #include "parallel.h"
 #include "pg_backup_utils.h"
 #include "fe_utils/string_utils.h"

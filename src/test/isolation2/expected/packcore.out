@@ -10,7 +10,7 @@ def check_call(cmds): ret = subprocess.Popen(cmds, stdout=subprocess.PIPE, stder
 # generate the tarball, the packcore command should return 0 check_call(cmds) assert os.path.isfile(tarball) 
 # extract the tarball check_call(['tar', '-zxf', tarball]) assert os.path.isdir(dirname) 
 # verify that binary and shared libraries are included assert os.path.exists('{}/postgres'.format(dirname)) assert os.path.exists('{}/lib64/ld-linux-x86-64.so.2'.format(dirname)) 
-if os.path.exists('/usr/bin/gdb'): # load the coredump and run some simple gdb commands os.chdir(dirname) check_call(['./runGDB.sh', '--batch', '--nx', '--eval-command=bt', '--eval-command=p main', '--eval-command=p fork']) os.chdir('..') 
+if os.path.exists('/usr/bin/gdb'): # load the coredump and run some simple gdb commands os.chdir(dirname) # remove LD_LIBRARY_PATH before invoking gdb ld_library_path = None if 'LD_LIBRARY_PATH' in os.environ: ld_library_path = os.environ.pop('LD_LIBRARY_PATH') check_call(['./runGDB.sh', '--batch', '--nx', '--eval-command=bt', '--eval-command=p main', '--eval-command=p fork']) # restore LD_LIBRARY_PATH to its previous value if ld_library_path is not None: os.environ['LD_LIBRARY_PATH'] = ld_library_path os.chdir('..') 
 # gzip runs much faster with -1 os.putenv('GZIP', '-1') 
 # do not put the packcore results under master data, that will cause # failures in other tests os.chdir('/tmp') 
 gphome = os.getenv('GPHOME') assert gphome 

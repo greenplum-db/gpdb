@@ -10,7 +10,7 @@ begin
 
   execute 'select relname from pg_class where oid=(select segrelid from pg_class, pg_appendonly where relname=''' || relname || ''' and relid = pg_class.oid)' into aosegname;
   if aosegname is not null then
-	  execute 'select tupcount from pg_aoseg.' || aosegname into tupcount;
+         execute 'select sum(tupcount) from gp_dist_random(''pg_aoseg.' || aosegname || ''')' into tupcount;
   end if;
   return tupcount;
 end; $$ language plpgsql volatile READS SQL DATA;
@@ -424,18 +424,40 @@ select * from tenk_aocs5 where unique1=1;
 ---------------------
 -- UAO
 ---------------------
+
+-- ------------------
+-- functions for snapshotting the current mod counts, and checking the diff
+-- vs last snapshot
+-- ------------------
+create temp table modcounts_aocs_snapshot (segment_id int, aosegno int, column_num int2, modcount bigint) distributed randomly;
+
+create or replace function snapshot_aocs_modcounts(relname regclass) returns void as $$
+begin
+  delete from modcounts_aocs_snapshot;
+
+  insert into modcounts_aocs_snapshot select segment_id, segno, column_num, modcount from  gp_toolkit.__gp_aocsseg(relname);
+end;
+$$ language plpgsql volatile;
+
+create or replace function diff_aocs_modcounts(relname regclass, segment_id out int, aosegno out int, column_num out int2, modcount_diff out bigint) returns setof record as $$
+  select a.segment_id, a.segno, a.column_num, a.modcount - coalesce(b.modcount, 0) mod_diff from gp_toolkit.__gp_aocsseg($1) a left outer join modcounts_aocs_snapshot b on a.segment_id = b.segment_id and a.segno = b.aosegno and a.column_num = b.column_num;
+$$ language sql;
+
+select snapshot_aocs_modcounts('tenk_aocs1');
+
 -- DELETE
-select count(*) from gp_toolkit.__gp_aocsseg('tenk_aocs1') where modcount > 0;
+select count(*) from diff_aocs_modcounts('tenk_aocs1') where modcount_diff > 0; --sanity check our test function
 DELETE FROM tenk_aocs1 WHERE unique1 = 1;
 -- modcount after DELETE must increment to flag table should be included in
 -- incremental backup
-select count(*) from gp_toolkit.__gp_aocsseg('tenk_aocs1') where modcount > 0;
+select count(*) from diff_aocs_modcounts('tenk_aocs1') where modcount_diff > 0;
 -- UPDATE
+select snapshot_aocs_modcounts('tenk_aocs1');
 UPDATE tenk_aocs1 SET unique2 = 1 WHERE unique2 = 2;
 UPDATE tenk_aocs1 SET two = 2;
 -- modcount after UPDATE must increment to flag table should be included in
 -- incremental backup
-select count(*) from gp_toolkit.__gp_aocsseg('tenk_aocs1') where modcount > 1;
+select count(*) from diff_aocs_modcounts('tenk_aocs1') where modcount_diff > 0;
 
 --------------------
 -- system columns

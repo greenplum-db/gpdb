@@ -1,46 +1,6 @@
 --
 -- GEOMETRY
 --
--- create needed tables
-CREATE TABLE BOX_GEOM_TBL (f1 box);
-INSERT INTO BOX_GEOM_TBL (f1) VALUES ('(2.0,2.0,0.0,0.0)');
-INSERT INTO BOX_GEOM_TBL (f1) VALUES ('(1.0,1.0,3.0,3.0)');
-INSERT INTO BOX_GEOM_TBL (f1) VALUES ('(2.5, 2.5, 2.5,3.5)');
-INSERT INTO BOX_GEOM_TBL (f1) VALUES ('(3.0, 3.0,3.0,3.0)');
-CREATE TABLE CIRCLE_GEOM_TBL (f1 circle);
-INSERT INTO CIRCLE_GEOM_TBL VALUES ('<(5,1),3>');
-INSERT INTO CIRCLE_GEOM_TBL VALUES ('<(1,2),100>');
-INSERT INTO CIRCLE_GEOM_TBL VALUES ('1,3,5');
-INSERT INTO CIRCLE_GEOM_TBL VALUES ('((1,2),3)');
-INSERT INTO CIRCLE_GEOM_TBL VALUES ('<(100,200),10>');
-INSERT INTO CIRCLE_GEOM_TBL VALUES ('<(100,1),115>');
-CREATE TABLE LSEG_GEOM_TBL (s lseg);
-INSERT INTO LSEG_GEOM_TBL VALUES ('[(1,2),(3,4)]');
-INSERT INTO LSEG_GEOM_TBL VALUES ('(0,0),(6,6)');
-INSERT INTO LSEG_GEOM_TBL VALUES ('10,-10 ,-3,-4');
-INSERT INTO LSEG_GEOM_TBL VALUES ('[-1e6,2e2,3e5, -4e1]');
-INSERT INTO LSEG_GEOM_TBL VALUES ('(11,22,33,44)');
-CREATE TABLE PATH_GEOM_TBL (s serial, f1 path);
-INSERT INTO PATH_GEOM_TBL(f1) VALUES ('[(1,2),(3,4)]');
-INSERT INTO PATH_GEOM_TBL(f1) VALUES ('((1,2),(3,4))');
-INSERT INTO PATH_GEOM_TBL(f1) VALUES ('[(0,0),(3,0),(4,5),(1,6)]');
-INSERT INTO PATH_GEOM_TBL(f1) VALUES ('((1,2),(3,4))');
-INSERT INTO PATH_GEOM_TBL(f1) VALUES ('1,2 ,3,4');
-INSERT INTO PATH_GEOM_TBL(f1) VALUES ('[1,2,3, 4]');
-INSERT INTO PATH_GEOM_TBL(f1) VALUES ('[11,12,13,14]');
-INSERT INTO PATH_GEOM_TBL(f1) VALUES ('(11,12,13,14)');
-CREATE TABLE POLYGON_GEOM_TBL(s serial, f1 polygon);
-INSERT INTO POLYGON_GEOM_TBL(f1) VALUES ('(2.0,0.0),(2.0,4.0),(0.0,0.0)');
-INSERT INTO POLYGON_GEOM_TBL(f1) VALUES ('(3.0,1.0),(3.0,3.0),(1.0,0.0)');
-INSERT INTO POLYGON_GEOM_TBL(f1) VALUES ('(0.0,0.0)');
-INSERT INTO POLYGON_GEOM_TBL(f1) VALUES ('(0.0,1.0),(0.0,1.0)');
-CREATE TABLE POINT_GEOM_TBL(f1 point);
-INSERT INTO POINT_GEOM_TBL(f1) VALUES ('(0.0,0.0)');
-INSERT INTO POINT_GEOM_TBL(f1) VALUES ('(-10.0,0.0)');
-INSERT INTO POINT_GEOM_TBL(f1) VALUES ('(-3.0,4.0)');
-INSERT INTO POINT_GEOM_TBL(f1) VALUES ('(5.1, 34.5)');
-INSERT INTO POINT_GEOM_TBL(f1) VALUES ('(-5.0,-12.0)');
-INSERT INTO POINT_GEOM_TBL(f1) VALUES ('10.0,10.0');
 -- Back off displayed precision a little bit to reduce platform-to-platform
 -- variation in results.
 SET extra_float_digits TO -3;
@@ -48,7 +8,7 @@ SET extra_float_digits TO -3;
 -- Points
 --
 SELECT '' AS four, center(f1) AS center
-   FROM BOX_GEOM_TBL;
+   FROM BOX_TBL;
  four | center  
 ------+---------
       | (1,1)
@@ -58,7 +18,7 @@ SELECT '' AS four, center(f1) AS center
 (4 rows)
 
 SELECT '' AS four, (@@ f1) AS center
-   FROM BOX_GEOM_TBL;
+   FROM BOX_TBL;
  four | center  
 ------+---------
       | (1,1)
@@ -68,7 +28,7 @@ SELECT '' AS four, (@@ f1) AS center
 (4 rows)
 
 SELECT '' AS six, point(f1) AS center
-   FROM CIRCLE_GEOM_TBL;
+   FROM CIRCLE_TBL;
  six |  center   
 -----+-----------
      | (5,1)
@@ -80,7 +40,7 @@ SELECT '' AS six, point(f1) AS center
 (6 rows)
 
 SELECT '' AS six, (@@ f1) AS center
-   FROM CIRCLE_GEOM_TBL;
+   FROM CIRCLE_TBL;
  six |  center   
 -----+-----------
      | (5,1)
@@ -92,7 +52,7 @@ SELECT '' AS six, (@@ f1) AS center
 (6 rows)
 
 SELECT '' AS two, (@@ f1) AS center
-   FROM POLYGON_GEOM_TBL
+   FROM POLYGON_TBL
    WHERE (# f1) > 2;
  two |            center             
 -----+-------------------------------
@@ -102,7 +62,7 @@ SELECT '' AS two, (@@ f1) AS center
 
 -- "is horizontal" function
 SELECT '' AS two, p1.f1
-   FROM POINT_GEOM_TBL p1
+   FROM POINT_TBL p1
    WHERE ishorizontal(p1.f1, point '(0,0)');
  two |   f1    
 -----+---------
@@ -112,7 +72,7 @@ SELECT '' AS two, p1.f1
 
 -- "is horizontal" operator
 SELECT '' AS two, p1.f1
-   FROM POINT_GEOM_TBL p1
+   FROM POINT_TBL p1
    WHERE p1.f1 ?- point '(0,0)';
  two |   f1    
 -----+---------
@@ -122,7 +82,7 @@ SELECT '' AS two, p1.f1
 
 -- "is vertical" function
 SELECT '' AS one, p1.f1
-   FROM POINT_GEOM_TBL p1
+   FROM POINT_TBL p1
    WHERE isvertical(p1.f1, point '(5.1,34.5)');
  one |     f1     
 -----+------------
@@ -131,7 +91,7 @@ SELECT '' AS one, p1.f1
 
 -- "is vertical" operator
 SELECT '' AS one, p1.f1
-   FROM POINT_GEOM_TBL p1
+   FROM POINT_TBL p1
    WHERE p1.f1 ?| point '(5.1,34.5)';
  one |     f1     
 -----+------------
@@ -143,14 +103,14 @@ SELECT '' AS one, p1.f1
 --
 -- intersection
 SELECT '' AS count, p.f1, l.s, l.s # p.f1 AS intersection
-   FROM LSEG_GEOM_TBL l, POINT_GEOM_TBL p;
+   FROM LSEG_TBL l, POINT_TBL p;
 ERROR:  operator does not exist: lseg # point
 LINE 1: SELECT '' AS count, p.f1, l.s, l.s # p.f1 AS intersection
                                            ^
 HINT:  No operator matches the given name and argument type(s). You might need to add explicit type casts.
 -- closest point
 SELECT '' AS thirty, p.f1, l.s, p.f1 ## l.s AS closest
-   FROM LSEG_GEOM_TBL l, POINT_GEOM_TBL p;
+   FROM LSEG_TBL l, POINT_TBL p;
  thirty |     f1     |               s               |             closest              
 --------+------------+-------------------------------+----------------------------------
         | (0,0)      | [(1,2),(3,4)]                 | (1,2)
@@ -188,7 +148,7 @@ SELECT '' AS thirty, p.f1, l.s, p.f1 ## l.s AS closest
 --
 -- Boxes
 --
-SELECT '' as six, box(f1) AS box FROM CIRCLE_GEOM_TBL;
+SELECT '' as six, box(f1) AS box FROM CIRCLE_TBL;
  six |                              box                               
 -----+----------------------------------------------------------------
      | (7.12132034356,3.12132034356),(2.87867965644,-1.12132034356)
@@ -201,7 +161,7 @@ SELECT '' as six, box(f1) AS box FROM CIRCLE_GEOM_TBL;
 
 -- translation
 SELECT '' AS twentyfour, b.f1 + p.f1 AS translation
-   FROM BOX_GEOM_TBL b, POINT_GEOM_TBL p;
+   FROM BOX_TBL b, POINT_TBL p;
  twentyfour |       translation       
 ------------+-------------------------
             | (2,2),(0,0)
@@ -231,7 +191,7 @@ SELECT '' AS twentyfour, b.f1 + p.f1 AS translation
 (24 rows)
 
 SELECT '' AS twentyfour, b.f1 - p.f1 AS translation
-   FROM BOX_GEOM_TBL b, POINT_GEOM_TBL p;
+   FROM BOX_TBL b, POINT_TBL p;
  twentyfour |        translation        
 ------------+---------------------------
             | (2,2),(0,0)
@@ -262,7 +222,7 @@ SELECT '' AS twentyfour, b.f1 - p.f1 AS translation
 
 -- scaling and rotation
 SELECT '' AS twentyfour, b.f1 * p.f1 AS rotation
-   FROM BOX_GEOM_TBL b, POINT_GEOM_TBL p;
+   FROM BOX_TBL b, POINT_TBL p;
  twentyfour |          rotation           
 ------------+-----------------------------
             | (0,0),(0,0)
@@ -292,7 +252,7 @@ SELECT '' AS twentyfour, b.f1 * p.f1 AS rotation
 (24 rows)
 
 SELECT '' AS twenty, b.f1 / p.f1 AS rotation
-   FROM BOX_GEOM_TBL b, POINT_GEOM_TBL p
+   FROM BOX_TBL b, POINT_TBL p
    WHERE (p.f1 <-> point '(0,0)') >= 1;
  twenty |                               rotation                               
 --------+----------------------------------------------------------------------
@@ -355,7 +315,7 @@ SELECT bound_box(a.f1, b.f1)
 --
 -- Paths
 --
-SELECT '' AS eight, npoints(f1) AS npoints, f1 AS path FROM PATH_GEOM_TBL;
+SELECT '' AS eight, npoints(f1) AS npoints, f1 AS path FROM PATH_TBL;
  eight | npoints |           path            
 -------+---------+---------------------------
        |       2 | [(1,2),(3,4)]
@@ -368,7 +328,7 @@ SELECT '' AS eight, npoints(f1) AS npoints, f1 AS path FROM PATH_GEOM_TBL;
        |       2 | ((11,12),(13,14))
 (8 rows)
 
-SELECT '' AS four, path(f1) FROM POLYGON_GEOM_TBL;
+SELECT '' AS four, path(f1) FROM POLYGON_TBL;
  four |        path         
 ------+---------------------
       | ((2,0),(2,4),(0,0))
@@ -379,7 +339,7 @@ SELECT '' AS four, path(f1) FROM POLYGON_GEOM_TBL;
 
 -- translation
 SELECT '' AS eight, p1.f1 + point '(10,10)' AS dist_add
-   FROM PATH_GEOM_TBL p1;
+   FROM PATH_TBL p1;
  eight |             dist_add              
 -------+-----------------------------------
        | [(11,12),(13,14)]
@@ -394,7 +354,7 @@ SELECT '' AS eight, p1.f1 + point '(10,10)' AS dist_add
 
 -- scaling and rotation
 SELECT '' AS eight, p1.f1 * point '(2,-1)' AS dist_mul
-   FROM PATH_GEOM_TBL p1;
+   FROM PATH_TBL p1;
  eight |           dist_mul           
 -------+------------------------------
        | [(4,3),(10,5)]
@@ -412,7 +372,7 @@ SELECT '' AS eight, p1.f1 * point '(2,-1)' AS dist_mul
 --
 -- containment
 SELECT '' AS twentyfour, p.f1, poly.f1, poly.f1 @> p.f1 AS contains
-   FROM POLYGON_GEOM_TBL poly, POINT_GEOM_TBL p;
+   FROM POLYGON_TBL poly, POINT_TBL p;
  twentyfour |     f1     |         f1          | contains 
 ------------+------------+---------------------+----------
             | (0,0)      | ((2,0),(2,4),(0,0)) | t
@@ -442,7 +402,7 @@ SELECT '' AS twentyfour, p.f1, poly.f1, poly.f1 @> p.f1 AS contains
 (24 rows)
 
 SELECT '' AS twentyfour, p.f1, poly.f1, p.f1 <@ poly.f1 AS contained
-   FROM POLYGON_GEOM_TBL poly, POINT_GEOM_TBL p;
+   FROM POLYGON_TBL poly, POINT_TBL p;
  twentyfour |     f1     |         f1          | contained 
 ------------+------------+---------------------+-----------
             | (0,0)      | ((2,0),(2,4),(0,0)) | t
@@ -472,7 +432,7 @@ SELECT '' AS twentyfour, p.f1, poly.f1, p.f1 <@ poly.f1 AS contained
 (24 rows)
 
 SELECT '' AS four, npoints(f1) AS npoints, f1 AS polygon
-   FROM POLYGON_GEOM_TBL;
+   FROM POLYGON_TBL;
  four | npoints |       polygon       
 ------+---------+---------------------
       |       3 | ((2,0),(2,4),(0,0))
@@ -482,7 +442,7 @@ SELECT '' AS four, npoints(f1) AS npoints, f1 AS polygon
 (4 rows)
 
 SELECT '' AS four, polygon(f1)
-   FROM BOX_GEOM_TBL;
+   FROM BOX_TBL;
  four |                  polygon                  
 ------+-------------------------------------------
       | ((0,0),(0,2),(2,2),(2,0))
@@ -492,7 +452,7 @@ SELECT '' AS four, polygon(f1)
 (4 rows)
 
 SELECT '' AS four, polygon(f1)
-   FROM PATH_GEOM_TBL WHERE isclosed(f1);
+   FROM PATH_TBL WHERE isclosed(f1);
  four |      polygon      
 ------+-------------------
       | ((1,2),(3,4))
@@ -502,7 +462,7 @@ SELECT '' AS four, polygon(f1)
 (4 rows)
 
 SELECT '' AS four, f1 AS open_path, polygon( pclose(f1)) AS polygon
-   FROM PATH_GEOM_TBL
+   FROM PATH_TBL
    WHERE isopen(f1);
  four |         open_path         |          polygon          
 ------+---------------------------+---------------------------
@@ -514,7 +474,7 @@ SELECT '' AS four, f1 AS open_path, polygon( pclose(f1)) AS polygon
 
 -- convert circles to polygons using the default number of points
 SELECT '' AS six, polygon(f1)
-   FROM CIRCLE_GEOM_TBL;
+   FROM CIRCLE_TBL;
  six |                                                                                                       polygon                                                                                                        
 -----+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
      | ((2,1),(2.40192378865,2.5),(3.5,3.59807621135),(5,4),(6.5,3.59807621135),(7.59807621135,2.5),(8,1),(7.59807621135,-0.5),(6.5,-1.59807621135),(5,-2),(3.5,-1.59807621135),(2.40192378865,-0.5))
@@ -527,7 +487,7 @@ SELECT '' AS six, polygon(f1)
 
 -- convert the circle to an 8-point polygon
 SELECT '' AS six, polygon(8, f1)
-   FROM CIRCLE_GEOM_TBL;
+   FROM CIRCLE_TBL;
  six |                                                                             polygon                                                                              
 -----+------------------------------------------------------------------------------------------------------------------------------------------------------------------
      | ((2,1),(2.87867965644,3.12132034356),(5,4),(7.12132034356,3.12132034356),(8,1),(7.12132034356,-1.12132034356),(5,-2),(2.87867965644,-1.12132034356))
@@ -542,7 +502,7 @@ SELECT '' AS six, polygon(8, f1)
 -- Circles
 --
 SELECT '' AS six, circle(f1, 50.0)
-   FROM POINT_GEOM_TBL;
+   FROM POINT_TBL;
  six |     circle      
 -----+-----------------
      | <(0,0),50>
@@ -554,7 +514,7 @@ SELECT '' AS six, circle(f1, 50.0)
 (6 rows)
 
 SELECT '' AS four, circle(f1)
-   FROM BOX_GEOM_TBL;
+   FROM BOX_TBL;
  four |        circle         
 ------+-----------------------
       | <(1,1),1.41421356237>
@@ -564,7 +524,7 @@ SELECT '' AS four, circle(f1)
 (4 rows)
 
 SELECT '' AS two, circle(f1)
-   FROM POLYGON_GEOM_TBL
+   FROM POLYGON_TBL
    WHERE (# f1) >= 3;
  two |                    circle                     
 -----+-----------------------------------------------
@@ -573,7 +533,7 @@ SELECT '' AS two, circle(f1)
 (2 rows)
 
 SELECT '' AS twentyfour, c1.f1 AS circle, p1.f1 AS point, (p1.f1 <-> c1.f1) AS distance
-   FROM CIRCLE_GEOM_TBL c1, POINT_GEOM_TBL p1
+   FROM CIRCLE_TBL c1, POINT_TBL p1
    WHERE (p1.f1 <-> c1.f1) > 0
    ORDER BY distance, area(c1.f1), p1.f1[0];
  twentyfour |     circle     |   point    |   distance    
@@ -601,10 +561,3 @@ SELECT '' AS twentyfour, c1.f1 AS circle, p1.f1 AS point, (p1.f1 <-> c1.f1) AS d
             | <(100,200),10> | (-5,-12)   | 226.577682802
 (21 rows)
 
--- Clean up GPDB-added tables
-DROP TABLE box_geom_tbl;
-DROP TABLE circle_geom_tbl;
-DROP TABLE lseg_geom_tbl;
-DROP TABLE path_geom_tbl;
-DROP TABLE polygon_geom_tbl;
-DROP TABLE point_geom_tbl;

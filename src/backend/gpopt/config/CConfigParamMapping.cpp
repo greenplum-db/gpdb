@@ -401,6 +401,12 @@ CConfigParamMapping::SConfigMappingElem CConfigParamMapping::m_elements[] =
 		&optimizer_prune_unused_columns,
 		true, // m_negate_param
 		GPOS_WSZ_LIT("Prune unused columns from the query.")
+		},
+		{
+		EopttraceAllowGeneralPredicatesforDPE,
+		&optimizer_enable_range_predicate_dpe,
+		false, // m_negate_param
+		GPOS_WSZ_LIT("Enable range predicates for dynamic partition elimination.")
 		}
 	
 };

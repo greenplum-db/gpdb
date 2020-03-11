@@ -21,7 +21,7 @@ ALTER FUNCTION <varname>name</varname> ( [ [<varname>argmode</varname>] [<varnam
       of:</p><codeblock>{CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT}
 {IMMUTABLE | STABLE | VOLATILE | [ NOT ] LEAKPROOF}
 {[EXTERNAL] SECURITY INVOKER | [EXTERNAL] SECURITY DEFINER}
-EXECUTE ON { ANY | MASTER | ALL SEGMENTS }
+EXECUTE ON { ANY | MASTER | ALL SEGMENTS | INITPLAN }
 COST <varname>execution_cost</varname>
 SET <varname>configuration_parameter</varname> { TO | = } { <varname>value</varname> | DEFAULT }
 SET <varname>configuration_parameter</varname> FROM CURRENT
@@ -108,6 +108,7 @@ RESET ALL</codeblock></section>
           <pt>EXECUTE ON ANY</pt>
           <pt>EXECUTE ON MASTER</pt>
           <pt>EXECUTE ON ALL SEGMENTS</pt>
+          <pt>EXECUTE ON INITPLAN</pt>
           <pd>The <codeph>EXECUTE ON</codeph> attributes specify where (master or segment instance)
             a function executes when it is invoked during the query execution process.</pd>
           <pd><codeph>EXECUTE ON ANY</codeph> (the default) indicates that the function can be
@@ -120,11 +121,13 @@ RESET ALL</codeblock></section>
             all primary segment instances, but not the master, for each invocation. The overall
             result of the function is the <codeph>UNION ALL</codeph> of the results from all segment
             instances. </pd>
+          <pd><codeph>EXECUTE ON INITPLAN</codeph> indicates that the function contains an SQL
+            command that dispatches queries to the segment instances and requires special processing
+            on the master instance by Greenplum Database when possible. </pd>
           <pd>For more information about the <codeph>EXECUTE ON</codeph> attributes, see
                 <codeph><xref href="CREATE_FUNCTION.xml#topic1">CREATE
             FUNCTION</xref></codeph>.</pd>
         </plentry>
-
         <plentry>
           <pt>COST <varname>execution_cost</varname></pt>
           <pd>Change the estimated execution cost of the function. See <codeph><xref

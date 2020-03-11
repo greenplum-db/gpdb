@@ -244,8 +244,16 @@ SELECT '' AS five, f.f1, @f.f1 AS abs_f1 FROM FLOAT4_TBL f;
       | 1.23457e-20 | 1.23457e-20
 (5 rows)
 
--- MPP doesn't support this yet.
---UPDATE FLOAT4_TBL
---   SET f1 = FLOAT4_TBL.f1 * '-1'
---   WHERE FLOAT4_TBL.f1 > '0.0';
---SELECT '' AS five, * FROM FLOAT4_TBL;
+UPDATE FLOAT4_TBL
+   SET f1 = FLOAT4_TBL.f1 * '-1'
+   WHERE FLOAT4_TBL.f1 > '0.0';
+SELECT '' AS five, * FROM FLOAT4_TBL;
+ five |      f1      
+------+--------------
+      |            0
+      |       -34.84
+      |      -1004.3
+      | -1.23457e+20
+      | -1.23457e-20
+(5 rows)
+

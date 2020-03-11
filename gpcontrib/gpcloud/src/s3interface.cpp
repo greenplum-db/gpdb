@@ -353,6 +353,11 @@ uint64_t S3InterfaceService::fetchData(uint64_t offset, S3VectorUInt8 &data, uin
 }
 
 S3CompressionType S3InterfaceService::checkCompressionType(const S3Url &s3Url) {
+    string ext = s3Url.getExtension();
+    if (ext == ".deflate") {
+        return S3_COMPRESSION_DEFLATE;
+    }
+
     HTTPHeaders headers;
 
     char rangeBuf[S3_RANGE_HEADER_STRING_LEN] = {0};

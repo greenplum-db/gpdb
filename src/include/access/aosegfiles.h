@@ -43,18 +43,14 @@
  * The state AOSEG_STATE_USECURRENT is a pseudo-state that is used
  * when a state parameter in a function should not change the
  * current state. It should not appear on disk.
- * AOSEG_STATE_DEFAULT is the default state. The segment file can be used for
- * insertions and compactions. The contents if the segment file
- * is visible under the limitations  of the visimap and the eof.
- * AOSEG_STATE_AWAITING_DROP is used if a compaction drop transaction on that
- * segment fails because the transaction was aborted. The segment
- * cannot be used for insertions. It has the highest priority for
- * compactions (to repeat the drop transaction) and its contents
- * is not visible to scan/fetches.
  *
- * The state of the segment file is only maintained at the
- * segment node level. The state at the master is always
- * AOSEG_STATE_DEFAULT.
+ * AOSEG_STATE_DEFAULT is the default state. The segment file can be used for
+ * insertions and compactions. The contents if the segment file is visible
+ * under the limitations of the visimap and the eof.
+ *
+ * AOSEG_STATE_AWAITING_DROP marks a segfile that has been compacted, but
+ * there might still be old transactions that need it. The segment cannot be
+ * used for insertions.
  */
 typedef enum FileSegInfoState
 {
@@ -64,11 +60,6 @@ typedef enum FileSegInfoState
 	AOSEG_STATE_AWAITING_DROP = 2
 } FileSegInfoState;
 
-
-/*
- * GUC variables
- */
-extern int	MaxAppendOnlyTables;	/* Max # of tables */
 
 /*
  * Descriptor of a single AO relation file segment.
@@ -145,7 +136,7 @@ extern void ValidateAppendonlySegmentDataBeforeStorage(int segno);
   * of the pg_aoseg information on this segment file and exclusive right to
   * append data to the segment file.
   */
-extern FileSegInfo *GetFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int segno);
+extern FileSegInfo *GetFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int segno, bool locked);
 
 extern FileSegInfo **GetAllFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int *totalsegs);
 
@@ -158,8 +149,9 @@ extern void UpdateFileSegInfo(Relation parentrel,
 				  int64 modcount_added,
 				  FileSegInfoState newState);
 
-extern void ClearFileSegInfo(Relation parentrel, int segno, FileSegInfoState newState);
-extern void SetFileSegInfoState(Relation parentrel, int segno, FileSegInfoState newState);
+extern void ClearFileSegInfo(Relation parentrel, int segno);
+extern void MarkFileSegInfoAwaitingDrop(Relation parentrel, int segno);
+extern void IncrementFileSegInfoModCount(Relation parentrel, int segno);
 extern FileSegTotals *GetSegFilesTotals(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot);
 
 extern int64 GetAOTotalBytes(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot);
@@ -167,7 +159,9 @@ extern int64 GetAOTotalBytes(Relation parentrel, Snapshot appendOnlyMetaDataSnap
 extern void FreeAllSegFileInfo(FileSegInfo **allSegInfo,
 				   int totalSegFiles);
 
-extern Datum gp_update_ao_master_stats(PG_FUNCTION_ARGS);
+extern bool pg_aoseg_tuple_could_be_updated(Relation relation, HeapTuple tuple);
+extern bool pg_aoseg_tuple_is_locked_by_me(HeapTuple tuple);
+
 extern Datum get_ao_distribution(PG_FUNCTION_ARGS);
 extern Datum get_ao_compression_ratio(PG_FUNCTION_ARGS);
 

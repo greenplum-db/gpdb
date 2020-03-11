@@ -40,16 +40,12 @@ DETAIL:  Proceeding with relation creation anyway.
  b      | integer | 
 Distributed by: (a)
 
+-- start_matchsubs
+-- m/^(ERROR:  .*)\(parse_coerce\.c:\d+\)$/
+-- s/\(parse_coerce\.c:\d+\)$/(parse_coerce.c:XXX)/
+-- end_matchsubs
 select action, b from ctas_baz order by 1,2 limit 5;
-  action   | b 
------------+---
- delete me | 1
- delete me | 1
- delete me | 1
- delete me | 1
- delete me | 1
-(5 rows)
-
+ERROR:  failed to find conversion function from unknown to text (parse_coerce.c:544)
 select action, b from ctas_baz order by 2 limit 5;
   action   | b 
 -----------+---

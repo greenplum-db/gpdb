@@ -816,6 +816,28 @@ select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t
  abc | 1 | 2 | xyz
 (3 rows)
 
+-- subquery contains quals of form 'function(outervar, innervar1) = innvervar2'
+explain select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t0.n + t1.n =t1.i);
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.03 rows=1 width=17)
+   ->  Seq Scan on csq_pullup t0  (cost=0.00..1.01 rows=1 width=17)
+         Filter: (1 = (SubPlan 1))
+         SubPlan 1
+           ->  Aggregate  (cost=1.05..1.06 rows=1 width=8)
+                 ->  Result  (cost=0.00..1.04 rows=1 width=0)
+                       Filter: ((t0.n + t1.n) = (t1.i)::numeric)
+                       ->  Materialize  (cost=0.00..1.03 rows=1 width=9)
+                             ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1.03 rows=1 width=9)
+                                   ->  Seq Scan on csq_pullup t1  (cost=0.00..1.01 rows=1 width=9)
+ Optimizer: Postgres query optimizer
+(11 rows)
+
+select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t0.n + t1.n =t1.i);
+ t | n | i | v 
+---+---+---+---
+(0 rows)
+
 --
 -- NOT EXISTS CSQs to joins
 --
@@ -1335,6 +1357,8 @@ where exists (select 1 from CT where CT.a = foo.a);
 ---+---
 (0 rows)
 
+drop table foo;
+drop table bar;
 --
 -- Multiple SUBPLAN nodes referring to the same plan_id
 --
@@ -2167,3 +2191,119 @@ select * from simplify_sub t1 where not exists (select sum(t2.i) from simplify_s
 (0 rows)
 
 drop table if exists simplify_sub;
+--
+-- Test a couple of cases where a SubPlan is used in a Motion's hash key.
+--
+create table foo (i int4, j int4) distributed by (i);
+create table bar (i int4, j int4) distributed by (i);
+create table baz (i int4, j int4) distributed by (i);
+insert into foo select g, g from generate_series(1, 10) g;
+insert into bar values (1, 1);
+insert into baz select g, g from generate_series(5, 100) g;
+explain (verbose, costs off)
+select * from foo left outer join baz on (select bar.i from bar where bar.i = foo.i) + 1  = baz.j;
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: foo.i, foo.j, baz.i, baz.j
+   ->  Hash Right Join
+         Output: foo.i, foo.j, baz.i, baz.j
+         Hash Cond: (baz.j = (((SubPlan 1)) + 1))
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)
+               Output: baz.i, baz.j
+               Hash Key: baz.j
+               ->  Seq Scan on subselect_gp.baz
+                     Output: baz.i, baz.j
+         ->  Hash
+               Output: foo.i, foo.j, ((SubPlan 1))
+               ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                     Output: foo.i, foo.j, ((SubPlan 1))
+                     Hash Key: (((SubPlan 1)) + 1)
+                     ->  Seq Scan on subselect_gp.foo
+                           Output: foo.i, foo.j, (SubPlan 1)
+                           SubPlan 1
+                             ->  Result
+                                   Output: bar.i
+                                   Filter: (bar.i = foo.i)
+                                   ->  Materialize
+                                         Output: bar.i
+                                         ->  Broadcast Motion 3:3  (slice4; segments: 3)
+                                               Output: bar.i
+                                               ->  Seq Scan on subselect_gp.bar
+                                                     Output: bar.i
+ Optimizer: Postgres query optimizer
+ Settings: optimizer=off
+(29 rows)
+
+select * from foo left outer join baz on (select bar.i from bar where bar.i = foo.i) + 1  = baz.j;
+ i  | j  | i | j 
+----+----+---+---
+ 10 | 10 |   |  
+  9 |  9 |   |  
+  6 |  6 |   |  
+  5 |  5 |   |  
+  8 |  8 |   |  
+  7 |  7 |   |  
+  4 |  4 |   |  
+  3 |  3 |   |  
+  2 |  2 |   |  
+  1 |  1 |   |  
+(10 rows)
+
+-- This is a variant of a query in the upstream 'subselect' test, with the
+-- twist that baz.i is the distribution key for the table. In the plan, the
+-- CASE WHEN construct with SubPlan is used as Hash Key in the Redistribute
+-- Motion. It is a planned as a hashed SubPlan. (We had a bug at one point,
+-- where the hashed SubPlan was added to the target list twice, which
+-- caused an error at runtime when the executor tried to build the hash
+-- table twice, because the Motion in the SubPlan couldn't be rescanned.)
+explain (verbose, costs off)
+select * from foo where
+  (case when foo.i in (select a.i from baz a) then foo.i else null end) in
+  (select b.i from baz b);
+                                                    QUERY PLAN                                                     
+-------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: foo.i, foo.j
+   ->  Result
+         Output: foo.i, foo.j
+         ->  HashAggregate
+               Output: foo.i, foo.j, foo.ctid, foo.gp_segment_id
+               Group Key: foo.ctid, foo.gp_segment_id
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Output: foo.i, foo.j, foo.ctid, foo.gp_segment_id
+                     Hash Key: foo.ctid
+                     ->  Hash Join
+                           Output: foo.i, foo.j, foo.ctid, foo.gp_segment_id
+                           Hash Cond: (b.i = CASE WHEN ((hashed SubPlan 1)) THEN foo.i ELSE NULL::integer END)
+                           ->  Seq Scan on subselect_gp.baz b
+                                 Output: b.i, b.j
+                           ->  Hash
+                                 Output: foo.i, foo.j, ((hashed SubPlan 1)), foo.ctid, foo.gp_segment_id
+                                 ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                       Output: foo.i, foo.j, ((hashed SubPlan 1)), foo.ctid, foo.gp_segment_id
+                                       Hash Key: CASE WHEN ((hashed SubPlan 1)) THEN foo.i ELSE NULL::integer END
+                                       ->  Seq Scan on subselect_gp.foo
+                                             Output: foo.i, foo.j, (hashed SubPlan 1), foo.ctid, foo.gp_segment_id
+                                             SubPlan 1
+                                               ->  Broadcast Motion 3:3  (slice4; segments: 3)
+                                                     Output: a.i
+                                                     ->  Seq Scan on subselect_gp.baz a
+                                                           Output: a.i
+ Optimizer: Postgres query optimizer
+ Settings: optimizer=off
+(29 rows)
+
+select * from foo where
+  (case when foo.i in (select a.i from baz a) then foo.i else null end) in
+  (select b.i from baz b);
+ i  | j  
+----+----
+  6 |  6
+  7 |  7
+ 10 | 10
+  5 |  5
+  8 |  8
+  9 |  9
+(6 rows)
+

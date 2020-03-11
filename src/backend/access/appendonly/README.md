@@ -148,3 +148,33 @@ segment file, leaves out those tuples that are dead, and writes other
 tuples back to a different segment file. Finally, the old segment file
 is deleted. This is like `VACUUM FULL` on heap tables: new index entries
 are created for every moved tuple.
+
+
+# Locking and snapshots
+
+Scans lock the table using the lockmode determined by normal PostgreSQL
+rules. A scan uses its snapshot to read the pg_aoseg table, and then
+proceeds to read the segfiles that were visible to the snapshot.
+
+When an insert or update needs a target segfile to insert rows to, it
+scans pg_aoseg table for a suitable segfile, and locks its pg_aoseg
+tuple, using heap_lock_tuple(). This scan is made with a fresh catalog
+snapshot (formerly SnapshotNow). To make this scan and locking free from
+race conditions, it can be only performed by one segment at a time. For
+that, the backend holds the relation extension lock while scanning
+pg_aoseg for the target segment, but that lock is released as soon as
+the pg_aoseg tuple is locked.
+
+Vacuum truncation (to release space used by aborted tranactions) also
+scans pg_aoseg with a fresh catalog snapshot, and holds the relation
+extension lock. It skips over tuples that are locked, to not interfere
+with inserters.
+
+Vacuum compaction locks both the segfile being compacted, and the
+insertion target segment where the surviving rows are copied, the same
+way that an insertion does.
+
+Vacuum drop phase, to recycle segments that have been compacted,
+checks the xmin of each AWAITING_DROP segment. If it's visible to
+everyone, the segfile is recycled. It uses the relation extension lock
+to protect the scan over pg_aoseg.

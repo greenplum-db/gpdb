@@ -23,11 +23,14 @@
 
 #include "postgres.h"
 
+#include "cdb/cdbvars.h"
 #include "executor/execdebug.h"
 #include "executor/nodeNestloop.h"
 #include "optimizer/clauses.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
+
+extern bool Test_print_prefetch_joinqual;
 
 static void splitJoinQualExpr(NestLoopState *nlstate);
 static void extractFuncExprArgs(FuncExprState *fstate, List **lclauses, List **rclauses);
@@ -108,6 +111,26 @@ ExecNestLoop_guts(NestLoopState *node)
 	 */
 	if (node->prefetch_inner)
 	{
+		/*
+		 * Prefetch inner is Greenplum specific behavior.
+		 * However, inner plan may depend on outer plan as
+		 * outerParams. If so, we have to fake those params
+		 * to avoid null pointer reference issue. And because
+		 * of the nestParams, those inner results prefetched
+		 * will be discarded (following code will rescan inner,
+		 * even if inner's top is material node because of chgParam
+		 * it will be re-executed too) that it is safe to fake
+		 * nestParams here. The target is to materialize motion scan.
+		 */
+		if (nl->nestParams)
+		{
+			EState	   *estate = node->js.ps.state;
+
+			econtext->ecxt_outertuple = ExecInitNullTupleSlot(estate,
+															  ExecGetResultType(outerPlan));
+			fake_outer_params(&(node->js));
+		}
+
 		innerTupleSlot = ExecProcNode(innerPlan);
 		node->reset_inner = true;
 		econtext->ecxt_innertuple = innerTupleSlot;
@@ -147,8 +170,11 @@ ExecNestLoop_guts(NestLoopState *node)
 	 *
 	 * See ExecPrefetchJoinQual() for details.
 	 */
-	if (node->prefetch_joinqual && ExecPrefetchJoinQual(&node->js))
+	if (node->prefetch_joinqual)
+	{
+		ExecPrefetchJoinQual(&node->js);
 		node->prefetch_joinqual = false;
+	}
 
 	/*
 	 * Ok, everything is setup for the join so now loop until we return a
@@ -390,8 +416,13 @@ ExecInitNestLoop(NestLoop *node, EState *estate, int eflags)
 	nlstate->shared_outer = node->shared_outer;
 
 	nlstate->prefetch_inner = node->join.prefetch_inner;
-	nlstate->prefetch_joinqual = ShouldPrefetchJoinQual(estate, &node->join);
-	
+	nlstate->prefetch_joinqual = node->join.prefetch_joinqual;
+
+	if (Test_print_prefetch_joinqual && nlstate->prefetch_joinqual)
+		elog(NOTICE,
+			 "prefetch join qual in slice %d of plannode %d",
+			 currentSliceId, ((Plan *) node)->plan_node_id);
+
 	/*CDB-OLAP*/
 	nlstate->reset_inner = false;
 	nlstate->require_inner_reset = !node->singleton_outer;

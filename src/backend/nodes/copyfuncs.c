@@ -119,7 +119,6 @@ _copyPlannedStmt(const PlannedStmt *from)
 	COPY_BITMAPSET_FIELD(rewindPlanIDs);
 
 	COPY_NODE_FIELD(result_partitions);
-	COPY_NODE_FIELD(result_aosegnos);
 	COPY_NODE_FIELD(queryPartOids);
 	COPY_NODE_FIELD(queryPartsMetadata);
 	COPY_NODE_FIELD(numSelectorsPerScanId);
@@ -162,6 +161,46 @@ _copyQueryDispatchDesc(const QueryDispatchDesc *from)
 	COPY_NODE_FIELD(oidAssignments);
 	COPY_NODE_FIELD(cursorPositions);
 	COPY_SCALAR_FIELD(useChangedAOOpts);
+	COPY_NODE_FIELD(paramInfo);
+
+	return newnode;
+}
+
+static SerializedParams *
+_copySerializedParams(const SerializedParams *from)
+{
+	SerializedParams *newnode = makeNode(SerializedParams);
+
+	COPY_SCALAR_FIELD(nExternParams);
+	newnode->externParams = palloc0(from->nExternParams * sizeof(SerializedParamExternData));
+	for (int i = 0; i < from->nExternParams; i++)
+	{
+		COPY_SCALAR_FIELD(externParams[i].isnull);
+		COPY_SCALAR_FIELD(externParams[i].pflags);
+		COPY_SCALAR_FIELD(externParams[i].ptype);
+		COPY_SCALAR_FIELD(externParams[i].plen);
+		COPY_SCALAR_FIELD(externParams[i].pbyval);
+
+		if (!from->externParams[i].isnull)
+			newnode->externParams[i].value = datumCopy(from->externParams[i].value,
+													   from->externParams[i].pbyval,
+													   from->externParams[i].plen);
+	}
+
+	COPY_SCALAR_FIELD(nExecParams);
+	newnode->execParams = palloc0(from->nExecParams * sizeof(SerializedParamExecData));
+	for (int i = 0; i < from->nExecParams; i++)
+	{
+		COPY_SCALAR_FIELD(execParams[i].isnull);
+		COPY_SCALAR_FIELD(execParams[i].isvalid);
+		COPY_SCALAR_FIELD(execParams[i].plen);
+		COPY_SCALAR_FIELD(execParams[i].pbyval);
+
+		if (!from->execParams[i].isnull)
+			newnode->execParams[i].value = datumCopy(from->externParams[i].value,
+													 from->externParams[i].pbyval,
+													 from->externParams[i].plen);
+	}
 
 	return newnode;
 }
@@ -1160,6 +1199,7 @@ _copyTupleSplit(const TupleSplit *from)
 	}
 
 	COPY_SCALAR_FIELD(numDisDQAs);
+	newnode->dqa_args_id_bms = palloc0(sizeof(Bitmapset *) * from->numDisDQAs);
 	for (int i = 0; i < from->numDisDQAs; i ++)
 		COPY_BITMAPSET_FIELD(dqa_args_id_bms[i]);
 
@@ -1552,7 +1592,6 @@ _copyCopyIntoClause(const CopyIntoClause *from)
 	COPY_SCALAR_FIELD(is_program);
 	COPY_STRING_FIELD(filename);
 	COPY_NODE_FIELD(options);
-	COPY_NODE_FIELD(ao_segnos);
 
 	return newnode;
 }
@@ -4453,9 +4492,6 @@ _copyVacuumStmt(const VacuumStmt *from)
 	COPY_NODE_FIELD(relation);
 	COPY_NODE_FIELD(va_cols);
 
-	COPY_SCALAR_FIELD(skip_twophase);
-	COPY_NODE_FIELD(ao_vacuum_phase_config);
-
 	return newnode;
 }
 
@@ -5458,6 +5494,9 @@ copyObject(const void *from)
 			break;
 		case T_QueryDispatchDesc:
 			retval = _copyQueryDispatchDesc(from);
+			break;
+		case T_SerializedParams:
+			retval = _copySerializedParams(from);
 			break;
 		case T_OidAssignment:
 			retval = _copyOidAssignment(from);

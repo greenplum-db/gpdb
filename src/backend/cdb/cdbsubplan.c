@@ -22,17 +22,7 @@
 #include "cdb/cdbllize.h"
 #include "cdb/cdbsubplan.h"
 #include "cdb/cdbvars.h"		/* currentSliceId */
-#include "cdb/ml_ipc.h"
 
-typedef struct ParamWalkerContext
-{
-	plan_tree_base_prefix base; /* Required prefix for
-								 * plan_tree_walker/mutator */
-	List	   *params;
-} ParamWalkerContext;
-
-static bool param_walker(Node *node, ParamWalkerContext *context);
-static Oid	findParamType(List *params, int paramid);
 static bool isParamExecutableNow(SubPlanState *spstate, ParamExecData *prmList);
 
 /*
@@ -69,8 +59,6 @@ static bool isParamExecutableNow(SubPlanState *spstate, ParamExecData *prmList);
 void
 preprocess_initplans(QueryDesc *queryDesc)
 {
-	ParamListInfo originalPli,
-				augmentedPli;
 	int			i;
 	EState	   *estate = queryDesc->estate;
 	int			originalSlice,
@@ -78,8 +66,6 @@ preprocess_initplans(QueryDesc *queryDesc)
 
 	if (queryDesc->plannedstmt->nParamExec == 0)
 		return;
-
-	originalPli = queryDesc->params;
 
 	originalSlice = LocallyExecutingSliceIndex(queryDesc->estate);
 	Assert(originalSlice == 0); /* Original slice being executed is slice 0 */
@@ -98,19 +84,6 @@ preprocess_initplans(QueryDesc *queryDesc)
 
 		prm = &estate->es_param_exec_vals[i];
 		sps = (SubPlanState *) prm->execPlan;
-
-		/*
-		 * Append all the es_param_exec_vals datum values on to the external
-		 * parameter list so they can be serialized in the mppexec call to the
-		 * QEs.  Do this inside the loop since later initplans may depend on
-		 * the results of earlier ones.
-		 *
-		 * TODO Some of the work of addRemoteExecParamsToParmList could be
-		 * factored out of the loop.
-		 */
-		augmentedPli = addRemoteExecParamsToParamList(queryDesc->plannedstmt,
-													  originalPli,
-													  estate->es_param_exec_vals);
 
 		if (isParamExecutableNow(sps, estate->es_param_exec_vals))
 		{
@@ -140,12 +113,6 @@ preprocess_initplans(QueryDesc *queryDesc)
 				currentSliceId = rootIndex;
 
 				/*
-				 * This runs the SubPlan and puts the answer back into
-				 * prm->value.
-				 */
-				queryDesc->params = augmentedPli;
-
-				/*
 				 * Use ExprContext to set the param. If ExprContext is not
 				 * initialized, create a new one here. (see MPP-3511)
 				 */
@@ -158,10 +125,14 @@ preprocess_initplans(QueryDesc *queryDesc)
 				Assert(LocallyExecutingSliceIndex(sps->planstate->state) == qDispSliceId);
 
 				/*
-				 * sps->planstate->state->es_cur_slice_idx =
-				 * qDispSliceId;
+				 * Dispatch this initplan query. ExecSetParamPlan() calls
+				 * CdbDispatchPlan() to dispatch it.
+				 *
+				 * Note that this will rebuild the array of dispatched PARAM_EXEC
+				 * values on every iteration. That's important because the set
+				 * of valid PARAM_EXEC values grows on every iteration, and
+				 * later Init plans can depend on previous ones.
 				 */
-
 				ExecSetParamPlan(sps, sps->planstate->ps_ExprContext, queryDesc);
 
 				/*
@@ -172,124 +143,9 @@ preprocess_initplans(QueryDesc *queryDesc)
 			}
 		}
 
-		queryDesc->params = originalPli;
 		queryDesc->estate->es_sliceTable->localSlice = originalSlice;
 		currentSliceId = originalSlice;
-
-		pfree(augmentedPli);
 	}
-}
-
-/*
- * Function: addRemoteExecParamsToParamList()
- *
- * Creates a new ParamListInfo array from the existing one by appending
- * the array of ParamExecData (internal parameter) values as a new Param
- * type: PARAM_EXEC_REMOTE.
- *
- * When the query eventually runs (on the QD or a QE), it will have access
- * to the augmented ParamListInfo (locally or through serialization).
- *
- * Then, rather than lazily-evaluating the SubPlan to get its value (as for
- * an internal parameter), the plan will just look up the param value in the
- * ParamListInfo (as for an external parameter).
- */
-ParamListInfo
-addRemoteExecParamsToParamList(PlannedStmt *stmt, ParamListInfo extPrm, ParamExecData *intPrm)
-{
-	ParamListInfo augPrm;
-	ParamWalkerContext context;
-	int			i;
-	int			nParams;
-	Plan	   *plan = stmt->planTree;
-	int			nIntPrm = stmt->nParamExec;
-
-	if (nIntPrm == 0)
-		return extPrm;
-	Assert(intPrm != NULL);		/* So there must be some internal parameters. */
-
-	/* Count existing external parameters. */
-	nParams = (extPrm == NULL ? 0 : extPrm->numParams);
-
-	/* Allocate space for augmented array and set final sentinel. */
-	augPrm = palloc0(sizeof(ParamListInfoData) + (nParams + nIntPrm) * sizeof(ParamExternData));
-
-	/* Copy in the existing external parameter entries. */
-	for (i = 0; i < nParams; i++)
-	{
-		memcpy(&augPrm->params[i], &extPrm->params[i], sizeof(ParamExternData));
-	}
-
-	/*
-	 * Walk the plan, looking for Param nodes of kind PARAM_EXEC, i.e.,
-	 * executor internal parameters.
-	 *
-	 * We need these for their paramtype field, which isn't available in
-	 * either the ParamExecData struct or the SubPlan struct.
-	 */
-
-	exec_init_plan_tree_base(&context.base, stmt);
-	context.params = NIL;
-	param_walker((Node *) plan, &context);
-
-	/*
-	 * mpp-25490: subplanX may is within subplan Y, try to param_walker the
-	 * subplans list
-	 */
-	if (list_length(context.params) < nIntPrm)
-	{
-		ListCell   *sb;
-
-		foreach(sb, stmt->subplans)
-		{
-			Node	   *subplan = lfirst(sb);
-
-			param_walker((Node *) subplan, &context);
-		}
-	}
-
-	/*
-	 * Now initialize the ParamListInfo elements corresponding to the
-	 * initplans we're "parameterizing".  Use the datatype info harvested
-	 * above.
-	 */
-	int			j = nParams;
-
-	for (i = 0; i < nIntPrm; i++)
-	{
-		Oid			paramType = findParamType(context.params, i);
-
-		if (InvalidOid == paramType)
-		{
-			/* param of id i not found. Likely have been removed because of */
-			/* constant folding */
-			j++;
-			continue;
-		}
-
-		augPrm->params[j].ptype = paramType;
-		augPrm->params[j].isnull = intPrm[i].isnull;
-		augPrm->params[j].pflags = 0;
-		augPrm->params[j].value = intPrm[i].value;
-
-		j++;
-	}
-
-	/*
-	 * Set number of params. Note that we don't copy the hook functions from
-	 * the original ParamListInfo, on purpose. The code that set the hooks
-	 * might get confused, if we called the hook with a different ParamListInfo
-	 * struct, with more parameters, than it originally set the hook on.
-	 * (PL/pgSQL has an assertion for the number of params, at least.)
-	 * This function is used just before serializing all the parameters,
-	 * and the caller has already "fetched" any parameters it can, so we don't
-	 * really need the hook anymore, anyway.
-	 */
-	augPrm->numParams = j;
-
-	list_free(context.params);
-
-	return augPrm;
 }
 
 static bool
@@ -327,51 +183,4 @@ isParamExecutableNow(SubPlanState *spstate, ParamExecData *prmList)
 		}
 	}
 	return true;
-}
-
-/*
- * Helper function param_walker() walks a plan and adds any Param nodes
- * to a list in the ParamWalkerContext.
- *
- * This list is input to the function findParamType(), which loops over the
- * list looking for a specific paramid, and returns its type.
- */
-static bool
-param_walker(Node *node, ParamWalkerContext *context)
-{
-	if (node == NULL)
-		return false;
-
-	if (nodeTag(node) == T_Param)
-	{
-		Param	   *param = (Param *) node;
-
-		if (param->paramkind == PARAM_EXEC)
-		{
-			context->params = lappend(context->params, param);
-			return false;
-		}
-	}
-	return plan_tree_walker(node, param_walker, context, true);
-}
-
-/*
- * Helper function findParamType() iterates over a list of Param nodes,
- * trying to match on the passed-in paramid. Returns the paramtype of a
- * match, else error.
- */
-static Oid
-findParamType(List *params, int paramid)
-{
-	ListCell   *l;
-
-	foreach(l, params)
-	{
-		Param	   *p = lfirst(l);
-
-		if (p->paramid == paramid)
-			return p->paramtype;
-	}
-
-	return InvalidOid;
 }

@@ -1144,8 +1144,7 @@ DoCopy(const CopyStmt *stmt, const char *queryString, uint64 *processed)
 		PreventCommandIfParallelMode("COPY FROM");
 
 		cstate = BeginCopyFrom(rel, stmt->filename, stmt->is_program,
-							   NULL, NULL, stmt->attlist, options,
-							   stmt->ao_segnos);
+							   NULL, NULL, stmt->attlist, options);
 		cstate->range_table = range_table;
 
 		/*
@@ -2189,8 +2188,6 @@ CopyDispatchOnSegment(CopyState cstate, const CopyStmt *stmt)
 
 			all_relids = list_concat(all_relids, all_partition_relids(pn));
 		}
-
-		dispatchStmt->ao_segnos = assignPerRelSegno(all_relids);
 	}
 
 	dispatchStmt->skip_ext_partition = cstate->skip_ext_partition;
@@ -2293,7 +2290,6 @@ MakeCopyIntoClause(CopyStmt *stmt)
 	copyIntoClause = makeNode(CopyIntoClause);
 
 	copyIntoClause->is_program = stmt->is_program;
-	copyIntoClause->ao_segnos = stmt->ao_segnos;
 	copyIntoClause->filename = stmt->filename;
 	copyIntoClause->options = stmt->options;
 	copyIntoClause->attlist = stmt->attlist;
@@ -2805,7 +2801,6 @@ CopyToDispatch(CopyState cstate)
 
 		cdbCopyStart(cdbCopy, stmt,
 					 RelationBuildPartitionDesc(cstate->rel, false),
-					 NIL,
 					 cstate->file_encoding);
 
 		if (cstate->binary)
@@ -3743,7 +3738,7 @@ CopyFrom(CopyState cstate)
 					  cstate->rel,
 					  1,		/* dummy rangetable index */
 					  0);
-	ResultRelInfoSetSegno(resultRelInfo, cstate->ao_segnos);
+	ResultRelInfoChooseSegno(resultRelInfo);
 
 	parentResultRelInfo = resultRelInfo;
 
@@ -3921,7 +3916,7 @@ CopyFrom(CopyState cstate)
 		elog(DEBUG5, "COPY command sent to segdbs");
 
 		cdbCopyStart(cdbCopy, glob_copystmt,
-					 estate->es_result_partitions, cstate->ao_segnos, cstate->file_encoding);
+					 estate->es_result_partitions, cstate->file_encoding);
 
 		/*
 		 * Skip header processing if dummy file get from master for COPY FROM ON
@@ -4108,7 +4103,7 @@ CopyFrom(CopyState cstate)
 			if (relstorage == RELSTORAGE_AOROWS &&
 				resultRelInfo->ri_aoInsertDesc == NULL)
 			{
-				ResultRelInfoSetSegno(resultRelInfo, cstate->ao_segnos);
+				ResultRelInfoChooseSegno(resultRelInfo);
 				resultRelInfo->ri_aoInsertDesc =
 					appendonly_insert_init(resultRelInfo->ri_RelationDesc,
 										   resultRelInfo->ri_aosegno, false);
@@ -4116,7 +4111,7 @@ CopyFrom(CopyState cstate)
 			else if (relstorage == RELSTORAGE_AOCOLS &&
 					 resultRelInfo->ri_aocsInsertDesc == NULL)
 			{
-				ResultRelInfoSetSegno(resultRelInfo, cstate->ao_segnos);
+				ResultRelInfoChooseSegno(resultRelInfo);
 				resultRelInfo->ri_aocsInsertDesc =
 					aocs_insert_init(resultRelInfo->ri_RelationDesc,
 									 resultRelInfo->ri_aosegno, false);
@@ -4288,8 +4283,6 @@ CopyFrom(CopyState cstate)
 			 * count, so this counter is meaningless.
 			 */
 			processed++;
-			if (relstorage_is_ao(relstorage))
-				resultRelInfo->ri_aoprocessed++;
 			if (cstate->cdbsreh)
 				cstate->cdbsreh->processed++;
 		}
@@ -4382,9 +4375,6 @@ CopyFrom(CopyState cstate)
 				cstate->on_segment ? processed : 0);
 	}
 
-	if (estate->es_result_partitions && Gp_role == GP_ROLE_EXECUTE)
-		SendAOTupCounts(estate);
-
 	/* update AO tuple counts */
 	if (cstate->dispatch_mode == COPY_DISPATCH)
 	{
@@ -4396,29 +4386,10 @@ CopyFrom(CopyState cstate)
 			{
 				int64 tupcount;
 
-				if (cdbCopy->aotupcounts)
-				{
-					HTAB *ht = cdbCopy->aotupcounts;
-					struct {
-						Oid relid;
-						int64 tupcount;
-					} *ao;
-					bool found;
-					Oid relid = RelationGetRelid(resultRelInfo->ri_RelationDesc);
-
-					ao = hash_search(ht, &relid, HASH_FIND, &found);
-					if (found)
-						tupcount = ao->tupcount;
-					else
-						tupcount = 0;
-				}
-				else
-				{
-					tupcount = processed;
-				}
+				tupcount = processed;
 
 				/* find out which segnos the result rels in the QE's used */
-				ResultRelInfoSetSegno(resultRelInfo, cstate->ao_segnos);
+				ResultRelInfoChooseSegno(resultRelInfo);
 
 				if (resultRelInfo->ri_aoInsertDesc)
 					resultRelInfo->ri_aoInsertDesc->insertCount += tupcount;
@@ -4563,8 +4534,7 @@ BeginCopyFrom(Relation rel,
 			  copy_data_source_cb data_source_cb,
 			  void *data_source_cb_extra,
 			  List *attnamelist,
-			  List *options,
-			  List *ao_segnos)
+			  List *options)
 {
 	CopyState	cstate;
 	TupleDesc	tupDesc;
@@ -4790,31 +4760,6 @@ BeginCopyFrom(Relation rel,
 		{
 			PartitionNode *pn = RelationBuildPartitionDesc(cstate->rel, false);
 			all_relids = list_concat(all_relids, all_partition_relids(pn));
-		}
-
-		cstate->ao_segnos = assignPerRelSegno(all_relids);
-	}
-	else
-	{
-		if (ao_segnos)
-		{
-			/* We must be a QE if we received the aosegnos config */
-			Assert(Gp_role == GP_ROLE_EXECUTE);
-			cstate->ao_segnos = ao_segnos;
-		}
-		else
-		{
-			/*
-			 * utility mode (or dispatch mode for no policy table).
-			 * create a one entry map for our one and only relation
-			 */
-			if (RelationIsAoRows(cstate->rel) || RelationIsAoCols(cstate->rel))
-			{
-				SegfileMapNode *n = makeNode(SegfileMapNode);
-				n->relid = RelationGetRelid(cstate->rel);
-				n->segno = SetSegnoForWrite(cstate->rel, InvalidFileSegNumber);
-				cstate->ao_segnos = lappend(cstate->ao_segnos, n);
-			}
 		}
 	}
 

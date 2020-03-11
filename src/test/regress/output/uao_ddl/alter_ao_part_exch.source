@@ -47,6 +47,7 @@ insert into ao_part(col1, col2, col3) values
  (1, '2008-03-04', 'ao_row'), (1, '2008-03-04', 'heap'), (1, '2008-03-04', 'ao_col'),
  (1, '2008-04-15', 'ao_row'), (1, '2008-04-15', 'heap'), (1, '2008-04-05', 'ao_col'),
  (1, '2008-05-06', 'ao_row');
+analyze ao_part;
 select count(*) FROM pg_appendonly WHERE visimapidxid is not NULL AND
 visimapidxid is not NULL AND relid in (SELECT c.oid FROM pg_class c
 inner join pg_namespace n ON c.relnamespace = n.oid and c.relname like

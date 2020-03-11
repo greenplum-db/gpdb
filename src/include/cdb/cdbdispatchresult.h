@@ -270,9 +270,6 @@ cdbdisp_sumCmdTuples(CdbDispatchResults *results, int sliceIndex);
 void
 cdbdisp_sumRejectedRows(CdbDispatchResults *results);
 
-HTAB *
-cdbdisp_sumAoPartTupCount(CdbDispatchResults *results);
-
 /*
  * max of the lastOid values returned from the QEs
  */
@@ -312,8 +309,5 @@ cdbdisp_makeDispatchResults(struct CdbDispatcherState *ds,
 
 void
 cdbdisp_clearCdbPgResults(CdbPgResults* cdb_pgresults);
-
-extern struct HTAB *
-PQprocessAoTupCounts(struct HTAB *ht, void *aotupcounts, int naotupcounts);
 
 #endif   /* CDBDISPATCHRESULT_H */

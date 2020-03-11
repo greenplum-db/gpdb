@@ -42,6 +42,7 @@
 #include "access/heapam.h"
 #include "utils/tuplestorenew.h"
 #include "cdb/cdbexplain.h"             /* cdbexplain_recvExecStats */
+#include "cdb/cdbsubplan.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbdisp.h"
 #include "cdb/cdbdisp_query.h"
@@ -989,14 +990,11 @@ ExecInitSubPlan(SubPlan *subplan, PlanState *parent)
 
 /*
  * Greenplum Database Changes:
- * In the case where this is running on the dispatcher, and it's a parallel dispatch
- * subplan, we need to dispatch the query to the qExecs as well, like in ExecutorRun.
- * except in this case we don't have to worry about insert statements.
- * In order to serialize the parameters (including PARAM_EXEC parameters that
- * are converted into PARAM_EXEC_REMOTE parameters, I had to add a parameter to this
- * function: ParamListInfo p.  This may be NULL in the non-dispatch case.
+ * In the case where this is running on the dispatcher, and it's a parallel
+ * dispatch subplan, we need to dispatch the query to the qExecs as well, like
+ * in ExecutorRun. Except in this case we don't have to worry about insert
+ * statements.
  */
-
 void
 ExecSetParamPlan(SubPlanState *node, ExprContext *econtext, QueryDesc *queryDesc)
 {
@@ -1054,7 +1052,9 @@ PG_TRY();
 		 * command to the appropriate segdbs.  It does not wait for them
 		 * to finish unless an error is detected before all are dispatched.
 		 */
-		CdbDispatchPlan(queryDesc, needDtx, true);
+		CdbDispatchPlan(queryDesc,
+						estate->es_param_exec_vals,
+						needDtx, true);
 
 		/*
 		 * Set up the interconnect for execution of the initplan root slice.

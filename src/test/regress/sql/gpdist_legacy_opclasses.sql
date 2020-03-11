@@ -2,6 +2,10 @@
 -- Tests for legacy cdbhash opclasses
 --
 
+drop schema if exists gpdist_legacy_opclasses;
+create schema gpdist_legacy_opclasses;
+set search_path to gpdist_legacy_opclasses;
+
 -- Basic sanity check of all the legacy hash opclasses. Create a table that
 -- uses all of them in the distribution key, and insert a value.
 set gp_use_legacy_hashops=on;
@@ -174,3 +178,62 @@ insert into legacy_enum values ('red'), ('green'), ('blue');
 
 explain (costs off) select * from legacy_enum a inner join legacy_enum b on a.color = b.color;
 select * from legacy_enum a inner join legacy_enum b on a.color = b.color;
+
+--
+-- A regression issue that the data is reorganized incorrectly when
+-- gp_use_legacy_hashops has non-default value.
+--
+-- The ALTER TABLE command reorganizes the data by using a temporary table, if
+-- a "distributed by" clause is specified without the opclasses, the default
+-- opclasses will be chosen.  There was a bug that the non-legacy opclasses are
+-- always chosen, regarding the setting of gp_use_legacy_hashops.  However the
+-- table's new opclasses are determined with gp_use_legacy_hashops, so when
+-- gp_use_legacy_hashops is true the data will be incorrectly redistributed.
+--
+
+-- set the guc to the non-default value
+set gp_use_legacy_hashops to on;
+
+create table legacy_data_reorg (c1 int) distributed by (c1);
+insert into legacy_data_reorg select i from generate_series(1, 10) i;
+
+-- verify the opclass and data distribution
+select gp_segment_id, c1 from legacy_data_reorg order by 1, 2;
+select dp.localoid::regclass::name as name, oc.opcname
+  from gp_distribution_policy dp
+  join pg_opclass oc
+    on oc.oid::text = dp.distclass::text
+ where dp.localoid = 'legacy_data_reorg'::regclass::oid;
+
+-- when reorganizing the table we set the distributed-by without an explicit
+-- opclass, so the default one should be chosen according to
+-- gp_use_legacy_hashops.
+alter table legacy_data_reorg set with (reorganize) distributed by (c1);
+
+-- double-check the opclass and data distribution
+select gp_segment_id, c1 from legacy_data_reorg order by 1, 2;
+select dp.localoid::regclass::name as name, oc.opcname
+  from gp_distribution_policy dp
+  join pg_opclass oc
+    on oc.oid::text = dp.distclass::text
+ where dp.localoid = 'legacy_data_reorg'::regclass::oid;
+
+--
+-- A regression issue similar to previous one, with CTAS.
+--
+-- The default opclasses in CTAS should also be determined with
+-- gp_use_legacy_hashops.
+--
+
+set gp_use_legacy_hashops=off;
+create table ctastest_off as select 123 as col distributed by (col);
+
+set gp_use_legacy_hashops=on;
+create table ctastest_on as select 123 as col distributed by (col);
+
+select dp.localoid::regclass::name as name, oc.opcname
+  from gp_distribution_policy dp
+  join pg_opclass oc
+    on oc.oid::text = dp.distclass::text
+ where dp.localoid in ('ctastest_on'::regclass::oid,
+                       'ctastest_off'::regclass::oid);

@@ -4,7 +4,7 @@
 # Most of the logic is in installcheck.sh.
 #
 
-subdir = src/test/kerberos
+subdir = src/test/gpkerberos
 top_builddir = ../../..
 include $(top_builddir)/src/Makefile.global
 

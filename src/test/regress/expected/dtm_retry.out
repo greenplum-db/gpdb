@@ -5,7 +5,6 @@
 -- Check if retry logic handles errors correctly.  The retry logic had
 -- a bug where error state wasn't cleaned up correctly during retries,
 -- leading to PANIC due to ERRORDATA_STACK_SIZE exeeded.
-set dtx_phase2_retry_count = 11;
 -- Set a fault on one of the QEs such that an error is raised exactly
 -- 10 times at the beginning of 2nd phase of 2PC.
 -- ERRORDATA_STACK_SIZE is defined as 10.  By erroring out 10 times,

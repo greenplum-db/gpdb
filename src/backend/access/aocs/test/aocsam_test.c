@@ -37,21 +37,17 @@ test__aocs_begin_headerscan(void **state)
 	strncpy(&pgclass.relname.data[0], "mock_relation", 13);
 	expect_value(RelationGetAttributeOptions, rel, &reldata);
 	will_return(RelationGetAttributeOptions, &opts);
-	expect_any(AppendOnlyStorageRead_Init, storageRead);
-	expect_any(AppendOnlyStorageRead_Init, memoryContext);
-	expect_any(AppendOnlyStorageRead_Init, maxBufferLen);
-	expect_any(AppendOnlyStorageRead_Init, relationName);
-	expect_any(AppendOnlyStorageRead_Init, title);
-	expect_any(AppendOnlyStorageRead_Init, storageAttributes);
 
 	/*
-	 * AppendOnlyStorageRead_Init assigns storageRead->storageAttributes.
-	 * will_assign_*() functions mandate a paramter as an argument.  Here we
-	 * want to set selective members of a parameter.  I don't know how this
-	 * can be achieved using cmockery.  This test will be meaningful only when
-	 * we are able to set storageAttributes member of desc.ao_read.
+	 * We used to mock AppendOnlyStorageRead_Init() here, however as the mocked
+	 * one does not initialize desc->ao_read.storageAttributes at all, it makes
+	 * the following assertion flaky.
+	 *
+	 * On the other hand aocs_begin_headerscan() itself does not do many useful
+	 * things, the actual job is done inside AppendOnlyStorageRead_Init(), so
+	 * to make the test more useful we removed the mocking and test against the
+	 * real AppendOnlyStorageRead_Init() now.
 	 */
-	will_be_called(AppendOnlyStorageRead_Init);
 	desc = aocs_begin_headerscan(&reldata, 0);
 	assert_false(desc->ao_read.storageAttributes.compress);
 	assert_int_equal(desc->colno, 0);

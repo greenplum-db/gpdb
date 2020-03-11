@@ -394,7 +394,6 @@ typedef struct ResultRelInfo
 	RelationUpdateDesc ri_updateDesc;
 
 	int			ri_aosegno;
-	uint64		ri_aoprocessed; /* tuples added/deleted for AO */
 
 	/* Attribute map for mapping tuples from parent table format to child partition */
 	struct TupleConversionMap *ri_partInsertMap;
@@ -571,9 +570,6 @@ typedef struct EState
 
 	/* partitioning info for target relation */
 	PartitionNode *es_result_partitions;
-
-	/* AO fileseg info for target relation */
-	List	   *es_result_aosegnos;
 
 	TupleTableSlot *es_trig_tuple_slot; /* for trigger output tuples */
 	TupleTableSlot *es_trig_oldtup_slot;		/* for TriggerEnabled */

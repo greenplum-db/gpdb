@@ -295,12 +295,13 @@ makeHashAggEntryForInput(AggState *aggstate, TupleTableSlot *inputslot, uint32 h
 	MemoryContext oldcxt;
 	HashAggTable *hashtable = aggstate->hhashtable;
 	TupleTableSlot *hashslot = aggstate->hashslot;
-	Datum *values = slot_get_values(aggstate->hashslot); 
-	bool *isnull = slot_get_isnull(aggstate->hashslot); 
-	ListCell *lc;
-	uint32 tup_len;
-	uint32 aggs_len;
-	uint32 len;
+	Datum	   *values = slot_get_values(aggstate->hashslot);
+	bool	   *isnull = slot_get_isnull(aggstate->hashslot);
+	ListCell   *lc;
+	uint32		aggs_len;
+	uint32		len;
+	uint32		null_save_len;
+	bool		has_nulls;
 
 	/*
 	 * Extract the grouping columns from the inputslot, and store them into
@@ -313,7 +314,6 @@ makeHashAggEntryForInput(AggState *aggstate, TupleTableSlot *inputslot, uint32 h
 		values[n-1] = slot_getattr(inputslot, n, &(isnull[n-1])); 
 	}
 
-	tup_len = 0;
 	aggs_len = aggstate->numaggs * sizeof(AggStatePerGroupData);
 
 	oldcxt = MemoryContextSwitchTo(hashtable->entry_cxt);
@@ -332,14 +332,10 @@ makeHashAggEntryForInput(AggState *aggstate, TupleTableSlot *inputslot, uint32 h
 	 *
 	 * The memtuple_form_to() next time does the actual memtuple copy.
 	 */
-	entry->tuple_and_aggs = (void *)memtuple_form_to(hashslot->tts_mt_bind,
-													 values,
-													 isnull,
-													 entry->tuple_and_aggs,
-													 &tup_len, false);
-	Assert(tup_len > 0 && entry->tuple_and_aggs == NULL);
+	len = compute_memtuple_size(hashslot->tts_mt_bind, values, isnull,
+								&null_save_len, &has_nulls);
 
-	if (GET_TOTAL_USED_SIZE(hashtable) + MAXALIGN(MAXALIGN(tup_len) + aggs_len) >=
+	if (GET_TOTAL_USED_SIZE(hashtable) + MAXALIGN(MAXALIGN(len) + aggs_len) >=
 		hashtable->max_mem)
 	{
 		MemoryContextSwitchTo(oldcxt);
@@ -350,14 +346,13 @@ makeHashAggEntryForInput(AggState *aggstate, TupleTableSlot *inputslot, uint32 h
 	 * Form memtuple into group_buf.
 	 */
 	entry->tuple_and_aggs = mpool_alloc(hashtable->group_buf,
-										MAXALIGN(MAXALIGN(tup_len) + aggs_len));
-	len = tup_len;
-	entry->tuple_and_aggs = (void *)memtuple_form_to(hashslot->tts_mt_bind,
-													 values,
-													 isnull,
-													 entry->tuple_and_aggs,
-													 &len, false);
-	Assert(len == tup_len && entry->tuple_and_aggs != NULL);
+										MAXALIGN(MAXALIGN(len) + aggs_len));
+
+	memtuple_form_to(hashslot->tts_mt_bind,
+					 values,
+					 isnull,
+					 len, null_save_len, has_nulls,
+					 entry->tuple_and_aggs);
 
 	MemoryContextSwitchTo(oldcxt);
 	return entry;

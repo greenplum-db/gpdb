@@ -41,10 +41,13 @@
 1&: vacuum ao_@orientation@_vacuum_cleanup3;
 
 -- Wait till compaction phase is completed and only then start the serializable
--- transaction to ensure that only drop phase is skipped
+-- transaction to ensure that only drop phase runs after the serializable
+-- transaction started. Because the transaction is holding a lock on the table,
+-- the drop phase cannot upgrade to AccessExclusiveLock and so recycling the
+-- segfiles is skipped.
 2: select gp_wait_until_triggered_fault('vacuum_relation_open_relation_during_drop_phase', 1, 1);
 2: begin isolation level serializable;
-2: select 123;
+2: select * from ao_@orientation@_vacuum_cleanup3;
 2: select gp_inject_fault('vacuum_relation_open_relation_during_drop_phase', 'reset', 1);
 
 1<:
@@ -54,6 +57,6 @@
 -- (AWAITING_DROP)
 -- This result is related to data distribution.
 -- Current hash algorithm is jump-consistent-hash.
-1: SELECT gp_ao_or_aocs_seg('ao_@orientation@_vacuum_cleanup3') from gp_dist_random('gp_id');
+1: SELECT * FROM gp_ao_or_aocs_seg('ao_@orientation@_vacuum_cleanup3');
 
 2: commit;

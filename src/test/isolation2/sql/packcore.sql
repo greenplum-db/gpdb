@@ -53,12 +53,19 @@ stderr: {stderr}
         if os.path.exists('/usr/bin/gdb'):
             # load the coredump and run some simple gdb commands
             os.chdir(dirname)
+            # remove LD_LIBRARY_PATH before invoking gdb
+            ld_library_path = None
+            if 'LD_LIBRARY_PATH' in os.environ:
+                ld_library_path = os.environ.pop('LD_LIBRARY_PATH')
             check_call(['./runGDB.sh',
                         '--batch',
                         '--nx',
                         '--eval-command=bt',
                         '--eval-command=p main',
                         '--eval-command=p fork'])
+            # restore LD_LIBRARY_PATH to its previous value
+            if ld_library_path is not None:
+                os.environ['LD_LIBRARY_PATH'] = ld_library_path
             os.chdir('..')
 
     # gzip runs much faster with -1

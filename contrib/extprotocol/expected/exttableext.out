@@ -747,6 +747,8 @@ NOTICE:  dropping a column that is part of the distribution policy forces a NULL
     -- Write to WET 
     INSERT INTO exttabtest_w_invalid (SELECT * from exttabtest);
 ERROR:  INSERT has more expressions than target columns
+LINE 1: INSERT INTO exttabtest_w_invalid (SELECT * from exttabtest);
+                                                 ^
 -- Test 60: setup source table
 -- This table is our example database table for formatter test
 DROP TABLE IF EXISTS formatsource CASCADE;

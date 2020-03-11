@@ -14,7 +14,7 @@ select coalesce(
   locktype,
   'master'::text as node
 from pg_locks l
-left outer join pg_class c on ((l.locktype = 'append-only segment file' and l.relation = c.relfilenode) or (l.locktype != 'append-only segment file' and l.relation = c.oid)),
+left outer join pg_class c on l.relation = c.oid,
 pg_database d
 where relation is not null
 and l.database = d.oid
@@ -31,7 +31,7 @@ select relname,
   l.gp_segment_id as node,
   relation
 from pg_locks l
-left outer join pg_class c on ((l.locktype = 'append-only segment file' and l.relation = c.relfilenode) or (l.locktype != 'append-only segment file' and l.relation = c.oid)),
+left outer join pg_class c on l.relation = c.oid,
 pg_database d
 where relation is not null
 and l.database = d.oid
