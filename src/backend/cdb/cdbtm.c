@@ -1656,7 +1656,7 @@ setupQEDtxContext(DtxContextInfo *dtxContextInfo)
 		{
 			if (DTM_DEBUG5 >= log_min_messages)
 			{
-				LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_SHARED);
+				LWLockAcquire(SharedLocalSnapshotLock->slotLock, LW_SHARED);
 				elog(DTM_DEBUG5,
 					 "setupQEDtxContext inputs (part 2b):  shared local snapshot xid = %u "
 					 "(xmin: %u xmax: %u xcnt: %u) curcid: %d, QDxid = %u/%u",
@@ -1667,7 +1667,7 @@ setupQEDtxContext(DtxContextInfo *dtxContextInfo)
 					 SharedLocalSnapshotSlot->snapshot.curcid,
 					 SharedLocalSnapshotSlot->QDxid,
 					 SharedLocalSnapshotSlot->segmateSync);
-				LWLockRelease(SharedLocalSnapshotSlot->slotLock);
+				LWLockRelease(SharedLocalSnapshotLock->slotLock);
 			}
 		}
 	}

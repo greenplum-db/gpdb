@@ -1588,7 +1588,7 @@ updateSharedLocalSnapshot(DtxContextInfo *dtxContextInfo,
 					snapshot->xcnt,
 					snapshot->curcid)));
 
-	LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_EXCLUSIVE);
+	LWLockAcquire(SharedLocalSnapshotLock->slotLock, LW_EXCLUSIVE);
 
 	SharedLocalSnapshotSlot->snapshot.xmin = snapshot->xmin;
 	SharedLocalSnapshotSlot->snapshot.xmax = snapshot->xmax;
@@ -1632,10 +1632,10 @@ updateSharedLocalSnapshot(DtxContextInfo *dtxContextInfo,
 					QEDtxContextInfo.distributedSnapshot.distribSnapshotId,
 					SharedLocalSnapshotSlot->QDxid,
 					getDistributedTransactionId(),
-					SharedLocalSnapshotSlot->slotid,
+					SharedLocalSnapshotLock->slotid,
 					debugCaller,
 					DtxContextToString(distributedTransactionContext))));
-	LWLockRelease(SharedLocalSnapshotSlot->slotLock);
+	LWLockRelease(SharedLocalSnapshotLock->slotLock);
 }
 
 static void
@@ -1741,7 +1741,7 @@ readerFillLocalSnapshot(Snapshot snapshot, DtxContext distributedTransactionCont
 	 */
 	for (;;)
 	{
-		LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_SHARED);
+		LWLockAcquire(SharedLocalSnapshotLock->slotLock, LW_SHARED);
 
 		if (QEDtxContextInfo.segmateSync == SharedLocalSnapshotSlot->segmateSync &&
 			SharedLocalSnapshotSlot->ready)
@@ -1752,13 +1752,13 @@ readerFillLocalSnapshot(Snapshot snapshot, DtxContext distributedTransactionCont
 							QEDtxContextInfo.distributedXid, SharedLocalSnapshotSlot->QDxid);
 			copyLocalSnapshot(snapshot);
 			SetSharedTransactionId_reader(SharedLocalSnapshotSlot->xid, snapshot->curcid, distributedTransactionContext);
-			LWLockRelease(SharedLocalSnapshotSlot->slotLock);
+			LWLockRelease(SharedLocalSnapshotLock->slotLock);
 			return;
 		}
 
 		if (total_sleep_time_us >= segmate_timeout_us)
 		{
-			LWLockRelease(SharedLocalSnapshotSlot->slotLock);
+			LWLockRelease(SharedLocalSnapshotLock->slotLock);
 			ereport(ERROR,
 					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 					 errmsg("GetSnapshotData timed out waiting for Writer to set the shared snapshot."),
@@ -1772,7 +1772,7 @@ readerFillLocalSnapshot(Snapshot snapshot, DtxContext distributedTransactionCont
 							   QEDtxContextInfo.segmateSync,
 							   SharedLocalSnapshotSlot->segmateSync, SharedLocalSnapshotSlot->ready,
 							   DtxContextToString(distributedTransactionContext),
-							   SharedLocalSnapshotSlot->slotindex, SharedSnapshotDump())));
+							   SharedLocalSnapshotLock->slotindex, SharedSnapshotDump())));
 		}
 
 		if (warning_sleep_time_us > 1000 * 1000)
@@ -1798,12 +1798,12 @@ readerFillLocalSnapshot(Snapshot snapshot, DtxContext distributedTransactionCont
 							QEDtxContextInfo.distributedXid, QEDtxContextInfo.segmateSync,
 							SharedLocalSnapshotSlot->QDxid, SharedLocalSnapshotSlot->segmateSync,
 							SharedLocalSnapshotSlot->ready,
-							SharedLocalSnapshotSlot->slotindex,
+							SharedLocalSnapshotLock->slotindex,
 							DtxContextToString(distributedTransactionContext))));
 			warning_sleep_time_us = 0;
 		}
 
-		LWLockRelease(SharedLocalSnapshotSlot->slotLock);
+		LWLockRelease(SharedLocalSnapshotLock->slotLock);
 		/* UNDONE: Back-off from checking every millisecond... */
 
 		/*
@@ -3126,7 +3126,7 @@ UpdateSerializableCommandId(CommandId curcid)
 		 SharedLocalSnapshotSlot != NULL &&
 		 FirstSnapshotSet)
 	{
-		LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_EXCLUSIVE);
+		LWLockAcquire(SharedLocalSnapshotLock->slotLock, LW_EXCLUSIVE);
 
 		if (SharedLocalSnapshotSlot->QDxid != QEDtxContextInfo.distributedXid)
 		{
@@ -3136,7 +3136,7 @@ UpdateSerializableCommandId(CommandId curcid)
 							SharedLocalSnapshotSlot->QDxid,
 							getDistributedTransactionId(),
 							DtxContextToString(DistributedTransactionContext))));
-			LWLockRelease(SharedLocalSnapshotSlot->slotLock);
+			LWLockRelease(SharedLocalSnapshotLock->slotLock);
 			return;
 		}
 
@@ -3152,7 +3152,7 @@ UpdateSerializableCommandId(CommandId curcid)
 		SharedLocalSnapshotSlot->snapshot.curcid = curcid;
 		SharedLocalSnapshotSlot->segmateSync = QEDtxContextInfo.segmateSync;
 
-		LWLockRelease(SharedLocalSnapshotSlot->slotLock);
+		LWLockRelease(SharedLocalSnapshotLock->slotLock);
 	}
 }
 

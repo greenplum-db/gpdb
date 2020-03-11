@@ -971,19 +971,19 @@ bool IsCurrentTransactionIdForReader(TransactionId xid)
 
 	Assert(SharedLocalSnapshotSlot);
 
-	LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_SHARED);
+	LWLockAcquire(SharedLocalSnapshotLock->slotLock, LW_SHARED);
 
 	PGPROC* writer_proc = SharedLocalSnapshotSlot->writer_proc;
 	PGXACT* writer_xact = SharedLocalSnapshotSlot->writer_xact;
 
 	if (!writer_proc)
 	{
-		LWLockRelease(SharedLocalSnapshotSlot->slotLock);
+		LWLockRelease(SharedLocalSnapshotLock->slotLock);
 		elog(ERROR, "reference to writer proc not found in shared snapshot");
 	}
 	else if (!writer_proc->pid)
 	{
-		LWLockRelease(SharedLocalSnapshotSlot->slotLock);
+		LWLockRelease(SharedLocalSnapshotLock->slotLock);
 		elog(ERROR, "writer proc reference shared with reader is invalid");
 	}
 
@@ -1017,7 +1017,7 @@ bool IsCurrentTransactionIdForReader(TransactionId xid)
 	}
 
 	/* release the lock before accessing pg_subtrans */
-	LWLockRelease(SharedLocalSnapshotSlot->slotLock);
+	LWLockRelease(SharedLocalSnapshotLock->slotLock);
 
 	/*
 	 * Case 3: if subxids overflowed, check topmostxid of xid from pg_subtrans
@@ -2197,7 +2197,7 @@ void
 SetSharedTransactionId_writer(DtxContext distributedTransactionContext)
 {
 	Assert(SharedLocalSnapshotSlot != NULL);
-	Assert(LWLockHeldByMe(SharedLocalSnapshotSlot->slotLock));
+	Assert(LWLockHeldByMe(SharedLocalSnapshotLock->slotLock));
 
 	Assert(distributedTransactionContext == DTX_CONTEXT_QD_DISTRIBUTED_CAPABLE ||
 		   distributedTransactionContext == DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER ||
@@ -2354,14 +2354,14 @@ StartTransaction(void)
 		{
 			if (SharedLocalSnapshotSlot != NULL)
 			{
-				LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_EXCLUSIVE);
+				LWLockAcquire(SharedLocalSnapshotLock->slotLock, LW_EXCLUSIVE);
 				ereportif(Debug_print_full_dtm, LOG,
 						  (errmsg("setting shared snapshot startTimestamp = "
 								  INT64_FORMAT "[old=" INT64_FORMAT "])",
 								  stmtStartTimestamp,
 								  SharedLocalSnapshotSlot->startTimestamp)));
 				SharedLocalSnapshotSlot->startTimestamp = stmtStartTimestamp;
-				LWLockRelease(SharedLocalSnapshotSlot->slotLock);
+				LWLockRelease(SharedLocalSnapshotLock->slotLock);
 			}
 		}
 		break;
@@ -2421,7 +2421,7 @@ StartTransaction(void)
 
 			if (SharedLocalSnapshotSlot != NULL)
 			{
-				LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_EXCLUSIVE);
+				LWLockAcquire(SharedLocalSnapshotLock->slotLock, LW_EXCLUSIVE);
 
 				SharedLocalSnapshotSlot->ready = false;
 				SharedLocalSnapshotSlot->xid = s->transactionId;
@@ -2443,7 +2443,7 @@ StartTransaction(void)
 							  SharedLocalSnapshotSlot->ready ? "true" : "false",
 							  SharedLocalSnapshotSlot->startTimestamp,
 							  xactStartTimestamp)));
-				LWLockRelease(SharedLocalSnapshotSlot->slotLock);
+				LWLockRelease(SharedLocalSnapshotLock->slotLock);
 			}
 		}
 		break;
@@ -3592,7 +3592,7 @@ StartTransactionCommand(void)
 			 */
 			if (Gp_role == GP_ROLE_EXECUTE && Gp_is_writer && SharedLocalSnapshotSlot != NULL)
 			{
-				LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_EXCLUSIVE);
+				LWLockAcquire(SharedLocalSnapshotLock->slotLock, LW_EXCLUSIVE);
 
 				TransactionId oldXid = SharedLocalSnapshotSlot->xid;
 				TimestampTz oldStartTimestamp = SharedLocalSnapshotSlot->startTimestamp;
@@ -3611,7 +3611,7 @@ StartTransactionCommand(void)
 				SharedLocalSnapshotSlot->startTimestamp = xactStartTimestamp;
 				SharedLocalSnapshotSlot->QDxid = QEDtxContextInfo.distributedXid;
 
-				LWLockRelease(SharedLocalSnapshotSlot->slotLock);
+				LWLockRelease(SharedLocalSnapshotLock->slotLock);
 
 				ereportif(Debug_print_full_dtm, LOG,
 						  (errmsg("qExec WRITER updating shared xid: %u -> %u "

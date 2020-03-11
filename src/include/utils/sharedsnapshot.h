@@ -17,32 +17,38 @@
 #include "utils/combocid.h"
 #include "utils/tqual.h"
 
-/* MPP Shared Snapshot */
-typedef struct SharedSnapshotSlot
+
+typedef struct SharedSnapshotLockSlot
 {
 	int32			slotindex;  /* where in the array this one is. */
 	int32	 		slotid;
+	LWLock		   *slotLock;
+}SharedSnapshotLockSlot;
+
+/* MPP Shared Snapshot */
+typedef struct SharedSnapshotSlot
+{
 	PGPROC			*writer_proc;
 	PGXACT			*writer_xact;
 	volatile TransactionId   QDxid;
 	volatile bool			ready;
 	volatile uint32			segmateSync;
 	SnapshotData	snapshot;
-	LWLock		   *slotLock;
 
 	/* for debugging only */
 	TransactionId	xid;
 	TimestampTz		startTimestamp;
 } SharedSnapshotSlot;
 
-extern volatile SharedSnapshotSlot *SharedLocalSnapshotSlot;
+extern volatile SharedSnapshotLockSlot *SharedLocalSnapshotLock;
+extern volatile SharedSnapshotSlot  *SharedLocalSnapshotSlot;
 
 /* MPP Shared Snapshot */
 extern Size SharedSnapshotShmemSize(void);
 extern void CreateSharedSnapshotArray(void);
 extern char *SharedSnapshotDump(void);
 
-extern void SharedSnapshotRemove(volatile SharedSnapshotSlot *slot, char *creatorDescription);
+extern void SharedSnapshotRemove(volatile SharedSnapshotLockSlot *slot, char *creatorDescription);
 extern void addSharedSnapshot(char *creatorDescription, int id);
 extern void lookupSharedSnapshot(char *lookerDescription, char *creatorDescription, int id);
 

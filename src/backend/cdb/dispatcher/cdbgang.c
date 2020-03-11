@@ -705,9 +705,9 @@ CheckForResetSession(void)
 	/* Update the slotid for our singleton reader. */
 	if (SharedLocalSnapshotSlot != NULL)
 	{
-		LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_EXCLUSIVE);
-		SharedLocalSnapshotSlot->slotid = gp_session_id;
-		LWLockRelease(SharedLocalSnapshotSlot->slotLock);
+		LWLockAcquire(SharedLocalSnapshotLock->slotLock, LW_EXCLUSIVE);
+		SharedLocalSnapshotLock->slotid = gp_session_id;
+		LWLockRelease(SharedLocalSnapshotLock->slotLock);
 	}
 
 	elog(LOG, "The previous session was reset because its gang was disconnected (session id = %d). "

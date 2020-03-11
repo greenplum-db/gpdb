@@ -175,7 +175,7 @@ DtxContext DistributedTransactionContext = DTX_CONTEXT_LOCAL_ONLY;
 DtxContextInfo QEDtxContextInfo = DtxContextInfo_StaticInit;
 
 /* MPP Shared Snapshot. */
-typedef struct SharedSnapshotStruct
+typedef struct SharedSnapshotLockStruct
 {
 	int 		numSlots;		/* number of valid Snapshot entries */
 	int			maxSlots;		/* allocated size of sharedSnapshotArray */
@@ -188,12 +188,16 @@ typedef struct SharedSnapshotStruct
 	 *
 	 * Be very careful when accessing fields inside here.
 	 */
-	SharedSnapshotSlot	   *slots;
+	SharedSnapshotLockSlot	   *slots;
 
 	TransactionId	   *xips;		/* VARIABLE LENGTH ARRAY */
-} SharedSnapshotStruct;
+} SharedSnapshotLockStruct;
 
-static volatile SharedSnapshotStruct *sharedSnapshotArray;
+static volatile SharedSnapshotLockStruct *sharedSnapshotLockArray;
+
+static dsm_segment *SharedSnapshotSegment = NULL;
+
+volatile SharedSnapshotLockSlot *SharedLocalSnapshotLock = NULL;
 
 volatile SharedSnapshotSlot *SharedLocalSnapshotSlot = NULL;
 
@@ -208,8 +212,8 @@ static Size xipEntryCount = 0;
 static List *shared_snapshot_files = NIL;
 
 /* prototypes for internal functions */
-static SharedSnapshotSlot *SharedSnapshotAdd(int32 slotId);
-static SharedSnapshotSlot *SharedSnapshotLookup(int32 slotId);
+static SharedSnapshotLockSlot *SharedSnapshotAddLock(int32 slotId);
+static SharedSnapshotLockSlot *SharedSnapshotLookupLock(int32 slotId);
 
 /*
  * Report shared-memory space needed by CreateSharedSnapshot.
@@ -222,8 +226,7 @@ SharedSnapshotShmemSize(void)
 	/* should be the same as PROCARRAY_MAXPROCS */
 	xipEntryCount = MaxBackends + max_prepared_xacts;
 
-	slotSize = sizeof(SharedSnapshotSlot);
-	slotSize += mul_size(sizeof(TransactionId), (xipEntryCount));
+	slotSize = sizeof(SharedSnapshotLockSlot);
 	slotSize = MAXALIGN(slotSize);
 
 	/*
@@ -233,7 +236,7 @@ SharedSnapshotShmemSize(void)
 	 */
 	slotCount = NUM_SHARED_SNAPSHOT_SLOTS;
 
-	size = offsetof(SharedSnapshotStruct, xips);
+	size = offsetof(SharedSnapshotLockStruct, xips);
 	size = add_size(size, mul_size(slotSize, slotCount));
 
 	RequestNamedLWLockTranche("SharedSnapshotLocks", slotCount);
@@ -250,14 +253,12 @@ CreateSharedSnapshotArray(void)
 {
 	bool	found;
 	int		i;
-	TransactionId *xip_base=NULL;
 
 	/* Create or attach to the SharedSnapshot shared structure */
-	sharedSnapshotArray = (SharedSnapshotStruct *)
+	sharedSnapshotLockArray = (SharedSnapshotLockStruct *)
 		ShmemInitStruct("Shared Snapshot", SharedSnapshotShmemSize(), &found);
 
 	Assert(slotCount != 0);
-	Assert(xipEntryCount != 0);
 
 	if (!found)
 	{
@@ -266,7 +267,7 @@ CreateSharedSnapshotArray(void)
 		 */
 		LWLockPadded *lock_base;
 
-		sharedSnapshotArray->numSlots = 0;
+		sharedSnapshotLockArray->numSlots = 0;
 
 		/* TODO:  MaxBackends is only somewhat right.  What we really want here
 		 *        is the MaxBackends value from the QD.  But this is at least
@@ -280,36 +281,24 @@ CreateSharedSnapshotArray(void)
 		 *
 		 * slotCount is initialized in SharedSnapshotShmemSize().
 		 */
-		sharedSnapshotArray->maxSlots = slotCount;
-		sharedSnapshotArray->nextSlot = 0;
+		sharedSnapshotLockArray->maxSlots = slotCount;
+		sharedSnapshotLockArray->nextSlot = 0;
 
 		/*
 		 * Set slots to point to the next byte beyond what was allocated for
 		 * SharedSnapshotStruct. xips is the last element in the struct but is
 		 * not included in SharedSnapshotShmemSize allocation.
 		 */
-		sharedSnapshotArray->slots = (SharedSnapshotSlot *)&sharedSnapshotArray->xips;
-
-		/* xips start just after the last slot structure */
-		xip_base = (TransactionId *)&sharedSnapshotArray->slots[sharedSnapshotArray->maxSlots];
+		sharedSnapshotLockArray->slots = (SharedSnapshotLockSlot *)&sharedSnapshotLockArray->xips;
 
 		lock_base = GetNamedLWLockTranche("SharedSnapshotLocks");
-		for (i=0; i < sharedSnapshotArray->maxSlots; i++)
+		for (i=0; i < sharedSnapshotLockArray->maxSlots; i++)
 		{
-			SharedSnapshotSlot *tmpSlot = &sharedSnapshotArray->slots[i];
+			SharedSnapshotLockSlot *tmpSlot = &sharedSnapshotLockArray->slots[i];
 
 			tmpSlot->slotid = -1;
 			tmpSlot->slotindex = i;
 			tmpSlot->slotLock = &lock_base[i].lock;
-
-			/*
-			 * Fixup xip array pointer reference space allocated after slot structs:
-			 *
-			 * Note: xipEntryCount is initialized in SharedSnapshotShmemSize().
-			 * So each slot gets (MaxBackends + max_prepared_xacts) transaction-ids.
-			 */
-			tmpSlot->snapshot.xip = &xip_base[0];
-			xip_base += xipEntryCount;
 		}
 	}
 
@@ -323,6 +312,7 @@ char *
 SharedSnapshotDump(void)
 {
 	StringInfoData str;
+#if 0
 	volatile SharedSnapshotStruct *arrayP = sharedSnapshotArray;
 	int			index;
 
@@ -348,6 +338,7 @@ SharedSnapshotDump(void)
 	}
 
 	LWLockRelease(SharedSnapshotLock);
+#endif
 
 	return str.data;
 }
@@ -361,11 +352,11 @@ SharedSnapshotDump(void)
  * will need to be communicated to the "reader" qExecs so that they can find
  * this slot.
  */
-static SharedSnapshotSlot *
-SharedSnapshotAdd(int32 slotId)
+static SharedSnapshotLockSlot *
+SharedSnapshotAddLock(int32 slotId)
 {
-	SharedSnapshotSlot *slot;
-	volatile SharedSnapshotStruct *arrayP = sharedSnapshotArray;
+	SharedSnapshotLockSlot *slot;
+	volatile SharedSnapshotLockStruct *arrayP = sharedSnapshotLockArray;
 	int nextSlot = -1;
 	int i;
 	int retryCount = gp_snapshotadd_timeout * 10; /* .1 s per wait */
@@ -377,7 +368,7 @@ retry:
 
 	for (i=0; i < arrayP->maxSlots; i++)
 	{
-		SharedSnapshotSlot *testSlot = &arrayP->slots[i];
+		SharedSnapshotLockSlot *testSlot = &arrayP->slots[i];
 
 		if (testSlot->slotindex > arrayP->maxSlots)
 			elog(ERROR, "Shared Local Snapshots Array appears corrupted: %s", SharedSnapshotDump());
@@ -391,8 +382,7 @@ retry:
 
 	if (slot != NULL)
 	{
-		elog(DEBUG1, "SharedSnapshotAdd: found existing entry for our session-id. id %d retry %d pid %u", slotId, retryCount,
-				slot->writer_proc ? slot->writer_proc->pid : 0);
+		elog(DEBUG1, "SharedSnapshotAddLock: found existing entry for our session-id. id %d retry %d ", slotId, retryCount);
 		LWLockRelease(SharedSnapshotLock);
 
 		if (retryCount > 0)
@@ -432,7 +422,7 @@ retry:
 	 */
 	for (i=arrayP->nextSlot+1; i < arrayP->maxSlots; i++)
 	{
-		SharedSnapshotSlot *tmpSlot = &arrayP->slots[i];
+		SharedSnapshotLockSlot *tmpSlot = &arrayP->slots[i];
 
 		if (tmpSlot->slotid == -1)
 		{
@@ -451,13 +441,6 @@ retry:
 
 	/* initialize some things */
 	slot->slotid = slotId;
-	slot->xid = 0;
-	slot->startTimestamp = 0;
-	slot->QDxid = 0;
-	slot->segmateSync = 0;
-	/* Remember the writer proc for IsCurrentTransactionIdForReader */
-	slot->writer_proc = MyProc;
-	slot->writer_xact = MyPgXact;
 
 	LWLockRelease(SharedSnapshotLock);
 
@@ -467,8 +450,8 @@ retry:
 void
 GetSlotTableDebugInfo(void **snapshotArray, int *maxSlots)
 {
-	*snapshotArray = (void *)sharedSnapshotArray;
-	*maxSlots = sharedSnapshotArray->maxSlots;
+	*snapshotArray = (void *)sharedSnapshotLockArray;
+	*maxSlots = sharedSnapshotLockArray->maxSlots;
 }
 
 /*
@@ -479,11 +462,11 @@ GetSlotTableDebugInfo(void **snapshotArray, int *maxSlots)
  *
  * MPP-4599: retry in the same pattern as the writer.
  */
-static SharedSnapshotSlot *
-SharedSnapshotLookup(int32 slotId)
+static SharedSnapshotLockSlot *
+SharedSnapshotLookupLock(int32 slotId)
 {
-	SharedSnapshotSlot *slot = NULL;
-	volatile SharedSnapshotStruct *arrayP = sharedSnapshotArray;
+	SharedSnapshotLockSlot *slot = NULL;
+	volatile SharedSnapshotLockStruct *arrayP = sharedSnapshotLockArray;
 	int retryCount = gp_snapshotadd_timeout * 10; /* .1 s per wait */
 	int index;
 
@@ -495,7 +478,7 @@ SharedSnapshotLookup(int32 slotId)
 
 		for (index=0; index < arrayP->maxSlots; index++)
 		{
-			SharedSnapshotSlot *testSlot;
+			SharedSnapshotLockSlot *testSlot;
 
 			testSlot = &arrayP->slots[index];
 
@@ -542,7 +525,7 @@ SharedSnapshotLookup(int32 slotId)
  *
  */
 void
-SharedSnapshotRemove(volatile SharedSnapshotSlot *slot, char *creatorDescription)
+SharedSnapshotRemove(volatile SharedSnapshotLockSlot *slot, char *creatorDescription)
 {
 	int slotId = slot->slotid;
 
@@ -551,23 +534,25 @@ SharedSnapshotRemove(volatile SharedSnapshotSlot *slot, char *creatorDescription
 	/* determine if we need to modify the next available slot to use.  we
 	 * only do this is our slotindex is lower then the existing one.
 	 */
-	if (sharedSnapshotArray->nextSlot == -1 || slot->slotindex < sharedSnapshotArray->nextSlot)
+	if (sharedSnapshotLockArray->nextSlot == -1 || slot->slotindex < sharedSnapshotLockArray->nextSlot)
 	{
-		if (slot->slotindex > sharedSnapshotArray->maxSlots)
+		if (slot->slotindex > sharedSnapshotLockArray->maxSlots)
 			elog(ERROR, "Shared Local Snapshots slot has a bogus slotindex: %d. slot array dump: %s",
 				 slot->slotindex, SharedSnapshotDump());
 
-		sharedSnapshotArray->nextSlot = slot->slotindex;
+		sharedSnapshotLockArray->nextSlot = slot->slotindex;
 	}
 
 	/* reset the slotid which marks it as being unused. */
 	slot->slotid = -1;
-	slot->xid = 0;
-	slot->startTimestamp = 0;
-	slot->QDxid = 0;
-	slot->segmateSync = 0;
 
-	sharedSnapshotArray->numSlots -= 1;
+	sharedSnapshotLockArray->numSlots -= 1;
+
+	/* we do not need worry SharedSnapshotSegment, it will free when process exits */
+	MyProc->sharedSnapshotHandle = 0;
+
+	SharedSnapshotSegment = NULL;
+	SharedLocalSnapshotSlot = NULL;
 
 	LWLockRelease(SharedSnapshotLock);
 
@@ -578,11 +563,11 @@ SharedSnapshotRemove(volatile SharedSnapshotSlot *slot, char *creatorDescription
 void
 addSharedSnapshot(char *creatorDescription, int id)
 {
-	SharedSnapshotSlot *slot;
+	SharedSnapshotLockSlot *lockSlot;
 
-	slot = SharedSnapshotAdd(id);
+	lockSlot = SharedSnapshotAddLock(id);
 
-	if (slot==NULL)
+	if (lockSlot==NULL)
 	{
 		ereport(ERROR,
 				(errmsg("%s could not set the Shared Local Snapshot!",
@@ -592,7 +577,36 @@ addSharedSnapshot(char *creatorDescription, int id)
 						   SharedSnapshotDump())));
 	}
 
-	SharedLocalSnapshotSlot = slot;
+	SharedLocalSnapshotLock = lockSlot;
+
+	int slotSize = 0;
+	TransactionId *xip_base=NULL;
+
+	Assert(xipEntryCount != 0);
+
+	/* calculate slot size */
+	slotSize = sizeof(SharedSnapshotSlot);
+	slotSize += mul_size(sizeof(TransactionId), (xipEntryCount));
+	slotSize = MAXALIGN(slotSize);
+
+	/* create shared memory */
+	dsm_segment *segment = dsm_create(slotSize, 0);
+	dsm_pin_mapping(segment);
+
+	SharedSnapshotSlot * tmpSlot = dsm_segment_address(segment);
+	MemSet(tmpSlot, 0, slotSize);
+
+	xip_base = (TransactionId *)&tmpSlot[1];
+	tmpSlot->snapshot.xip = &xip_base[0];
+
+	SharedSnapshotSegment = segment;
+	SharedLocalSnapshotSlot = tmpSlot;
+
+	SharedLocalSnapshotSlot->writer_proc = MyProc;
+	SharedLocalSnapshotSlot->writer_xact = MyPgXact;
+	pg_write_barrier();
+	/* fill out hash entry */
+	MyProc->sharedSnapshotHandle = dsm_segment_handle(SharedSnapshotSegment);
 
 	elog((Debug_print_full_dtm ? LOG : DEBUG5),"%s added Shared Local Snapshot slot for gp_session_id = %d (address %p)",
 		 creatorDescription, id, SharedLocalSnapshotSlot);
@@ -601,11 +615,13 @@ addSharedSnapshot(char *creatorDescription, int id)
 void
 lookupSharedSnapshot(char *lookerDescription, char *creatorDescription, int id)
 {
-	SharedSnapshotSlot *slot;
+	SharedSnapshotLockSlot *lockslot;
 
-	slot = SharedSnapshotLookup(id);
+	Assert(lockHolderProcPtr->sharedSnapshotHandle != 0);
 
-	if (slot == NULL)
+	lockslot = SharedSnapshotLookupLock(id);
+
+	if (lockslot == NULL)
 	{
 		ereport(ERROR,
 				(errmsg("%s could not find Shared Local Snapshot!",
@@ -617,7 +633,12 @@ lookupSharedSnapshot(char *lookerDescription, char *creatorDescription, int id)
 						 lookerDescription, creatorDescription, creatorDescription)));
 	}
 
-	SharedLocalSnapshotSlot = slot;
+	SharedLocalSnapshotLock = lockslot;
+
+	SharedSnapshotSegment = dsm_attach(lockHolderProcPtr->sharedSnapshotHandle);
+	dsm_pin_mapping(SharedSnapshotSegment);
+
+	SharedLocalSnapshotSlot = dsm_segment_address(SharedSnapshotSegment);
 
 	elog((Debug_print_full_dtm ? LOG : DEBUG5),"%s found Shared Local Snapshot slot for gp_session_id = %d created by %s (address %p)",
 		 lookerDescription, id, creatorDescription, SharedLocalSnapshotSlot);
@@ -664,7 +685,7 @@ dumpSharedLocalSnapshot_forCursor(void)
 	Assert(Gp_role == GP_ROLE_DISPATCH || (Gp_role == GP_ROLE_EXECUTE && Gp_is_writer));
 	Assert(SharedLocalSnapshotSlot != NULL);
 
-	LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_SHARED);
+	LWLockAcquire(SharedLocalSnapshotLock->slotLock, LW_SHARED);
 
 	src = (SharedSnapshotSlot *)SharedLocalSnapshotSlot;
 	fname = sharedLocalSnapshot_filename(src->QDxid, src->segmateSync);
@@ -735,12 +756,12 @@ dumpSharedLocalSnapshot_forCursor(void)
 		 * BufFileClose(f);
 		 */
 
-		LWLockRelease(SharedLocalSnapshotSlot->slotLock);
+		LWLockRelease(SharedLocalSnapshotLock->slotLock);
 		return;
 	}
 	while (0);
 
-	LWLockRelease(SharedLocalSnapshotSlot->slotLock);
+	LWLockRelease(SharedLocalSnapshotLock->slotLock);
 	elog(ERROR, "Failed to write shared snapshot to temp-file");
 }
 
