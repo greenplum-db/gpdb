@@ -473,8 +473,25 @@ CContextDXLToPlStmt::GetDistributionHashOpclassForType(Oid typid)
 			// added to the range table only later. If it uses
 			// legacy ops, we have already decided to use default
 			// ops here, and we fall back unnecessarily.
-			m_distribution_hashops = DistrUseDefaultHashOps;
-			opclass = gpdb::GetDefaultDistributionOpclassForType(typid);
+			//
+			// On the other hand, when the opclass is not specified in the
+			// distributed-by clause one should be decided according to the
+			// gp_use_legacy_hashops setting.
+			opclass = gpdb::GetColumnDefOpclassForType(NIL, typid);
+			// update m_distribution_hashops accordingly
+			if (opclass == gpdb::GetDefaultDistributionOpclassForType(typid))
+			{
+				m_distribution_hashops = DistrUseDefaultHashOps;
+			}
+			else if (opclass == gpdb::GetLegacyCdbHashOpclassForBaseType(typid))
+			{
+				m_distribution_hashops = DistrUseLegacyHashOps;
+			}
+			else
+			{
+				GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
+						   GPOS_WSZ_LIT("Unsupported distribution hashops policy"));
+			}
 			break;
 	}
 

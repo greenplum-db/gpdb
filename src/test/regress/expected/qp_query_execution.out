@@ -85,7 +85,7 @@ select a.*
 from 
   (
     select
-1,1,1,'a','a','a','a',11111,1111,11,16,6,0,0.125,0,0.25,0.875,0.125,0,0,0.9375,0.0625,125.9375,20.30810708273,0,1,0,'asdf',0,0,89,1,'aaa',0,0,'',33.5,69,38,5,6,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,2.29411764705882,5.57142857142857,33.5,0
+1,1,1,'a','a','a','a',11111,1111,11,16,6,0,0.125,0,0.25,0.875,0.125,0,0,0.9375,0.0625,125.9375,20.30810708273,0,1,0,'asdf',0,0,89,1,'aaa',0,0,'',33.5,69,38,5,6,NULL::int,NULL::int,NULL::int,NULL::int,NULL::int,NULL::int,NULL::int,NULL::int,NULL::int,NULL::int,NULL::int,2.29411764705882,5.57142857142857,33.5,0
   ) a,
   generate_series(1,100000) b;
 set statement_mem="10MB";
@@ -909,12 +909,18 @@ ERROR:  relation "b" already exists
 insert into a_p select i || 'SOME NUMBER', i || 'SN', i || 'SN SN', i, i%10 from generate_series(1, 1000)i;
 insert into b select i % 7 || 'SOME NUMBER', i%6 || 'SN', i % 9 || 'SOME NUMBER', i % 9, i % 4 from generate_series(1, 100)i;
 ERROR:  column "b" is of type integer but expression is of type text
+LINE 1: insert into b select i % 7 || 'SOME NUMBER', i%6 || 'SN', i ...
+                                                     ^
 HINT:  You will need to rewrite or cast the expression.
 insert into b select i % 7 || 'SOME NUMBER', i%6 || 'SN' , i % 9 || 'SOME NUMBER', i % 9, i % 4 from generate_series(1, 1000)i;
 ERROR:  column "b" is of type integer but expression is of type text
+LINE 1: insert into b select i % 7 || 'SOME NUMBER', i%6 || 'SN' , i...
+                                                     ^
 HINT:  You will need to rewrite or cast the expression.
 insert into b select i % 7 || 'SOME NUMBER', i%6 || 'SN' , i % 9 || 'SOME NUMBER', i % 9, i % 4 from generate_series(1, 1000)i;
 ERROR:  column "b" is of type integer but expression is of type text
+LINE 1: insert into b select i % 7 || 'SOME NUMBER', i%6 || 'SN' , i...
+                                                     ^
 HINT:  You will need to rewrite or cast the expression.
 analyze a_p;
 analyze b;

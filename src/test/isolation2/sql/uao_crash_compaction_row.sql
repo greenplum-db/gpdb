@@ -31,9 +31,7 @@
 3:INSERT INTO crash_vacuum_in_appendonly_insert SELECT i AS a, 1 AS b, 'hello world' AS c FROM generate_series(1, 10) AS i;
 3:UPDATE crash_vacuum_in_appendonly_insert SET b = 2;
 
--- suspend at intended points. Only one AO table can be in drop phase in a
--- system at a time hence we must wait for this table's VACUUM to reach cleanup
--- phase before triggering another VACUUM.
+-- suspend at intended points.
 3:SELECT gp_inject_fault('compaction_before_cleanup_phase', 'suspend', '', '', 'crash_before_cleanup_phase', 1, -1, 0, 2);
 1&:VACUUM crash_before_cleanup_phase;
 3:SELECT gp_wait_until_triggered_fault('compaction_before_cleanup_phase', 1, 2);

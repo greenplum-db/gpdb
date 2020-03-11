@@ -2923,7 +2923,7 @@ autovacuum_do_vac_analyze(autovac_table *tab, BufferAccessStrategy bstrategy)
 	autovac_report_activity(tab);
 
 	vacuum(tab->at_vacoptions, &rangevar, tab->at_relid, &tab->at_params, NIL,
-		   bstrategy, true, false, NULL);
+		   bstrategy, true);
 }
 
 /*

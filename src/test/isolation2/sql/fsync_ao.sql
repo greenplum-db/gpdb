@@ -74,8 +74,8 @@ insert into fsync_co select i, i from generate_series(21,40)i;
 delete from fsync_ao where a > 20;
 update fsync_co set b = -a;
 -- Expect two segment files for each table (ao table) or each column (co table).
-select segno, state from gp_toolkit.__gp_aoseg('fsync_ao');
-select segno, column_num, physical_segno, state from gp_toolkit.__gp_aocsseg('fsync_co');
+select segment_id, segno, state from gp_toolkit.__gp_aoseg('fsync_ao');
+select segment_id, segno, column_num, physical_segno, state from gp_toolkit.__gp_aocsseg('fsync_co');
 vacuum fsync_ao;
 vacuum fsync_co;
 checkpoint;

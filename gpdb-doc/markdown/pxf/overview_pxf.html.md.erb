@@ -21,39 +21,58 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-The Greenplum Platform Extension Framework (PXF) provides parallel, high throughput data access and federated queries across heterogeneous data sources via built-in connectors that map a Greenplum Database external table definition to an external data source. PXF has its roots in the Apache HAWQ project.
+With the explosion of data stores and cloud services, data now resides across many disparate systems and in a variety of formats. Often, data is classified both by its location and the operations performed on the data, as well as how often the data is accessed:  real-time or transactional (hot), less frequent (warm), or archival (cold).
 
--   [Introduction to PXF](intro_pxf.html)
+The diagram below describes a data source that tracks monthly sales across many years. Real-time operational data is stored in MySQL. Data subject to analytic and business intelligence operations is stored in Greenplum Database. The rarely accessed, archival data resides in AWS S3.
 
-    This topic introduces PXF concepts and usage.
+<img src="graphics/datatemp.png" class="image" width="630" alt="centered image"/>
 
--   [Administering PXF](about_pxf_dir.html)
+When multiple, related data sets exist in external systems, it is often more efficient to join data sets remotely and return only the results, rather than negotiate the time and storage requirements of performing a rather expensive full data load operation. The *Greenplum Platform Extension Framework (PXF)*, a Greenplum extension that provides parallel, high throughput data access and federated query processing, provides this capability.
 
-    This set of topics details the administration of PXF including installation, configuration, initialization, upgrade, and management procedures.
+With PXF, you can use Greenplum and SQL to query these heterogeneous data sources:
 
--   [Accessing Hadoop with PXF](access_hdfs.html)
+- Hadoop, Hive, and HBase
+- Azure Blob Storage and Azure Data Lake
+- AWS S3
+- Minio
+- Google Cloud Storage
+- SQL databases including Apache Ignite, Hive, MySQL, ORACLE, Microsoft SQL Server, DB2, and PostgreSQL (via JDBC)
 
-    This set of topics describe the PXF Hadoop connectors, the data types they support, and the profiles that you can use to read from and write to HDFS.
+And these data formats:
 
--   [Accessing Azure, Google Cloud Storage, Minio, and S3 Object Stores with PXF](access_objstore.html)
+- Avro, AvroSequenceFile
+- JSON
+- ORC
+- Parquet
+- RCFile
+- SequenceFile
+- Text (plain, delimited, embedded line feeds)
 
-    This set of topics describe the PXF object storage connectors, the data types they support, and the profiles that you can use to read data from and write data to the object stores.
+## <a id="basic_usage"></a> Basic Usage
 
--   [Accessing an SQL Database with PXF (JDBC)](jdbc_pxf.html)
+You use PXF to map data from an external source to a Greenplum Database *external table* definition. You can then use the PXF external table and SQL to:
 
-    This topic describes how to use the PXF JDBC connector to read from and write to an external SQL database such as Postgres or MySQL.
+- Perform queries on the external data, leaving the referenced data in place on the remote system.
+- Load a subset of the external data into Greenplum Database.
+- Run complex queries on local data residing in Greenplum tables and remote data referenced via PXF external tables.
+- Write data to the external data source.
 
--   [Troubleshooting PXF](troubleshooting_pxf.html)
+Check out the [PXF introduction](intro_pxf.html) for a high level overview important PXF concepts.
 
-    This topic details the service- and database- level logging configuration procedures for PXF. It also identifies some common PXF errors and describes how to address PXF memory issues.
+## <a id="getstart_cfg"></a> Get Started Configuring PXF
 
--   [PXF Utility Reference](ref/pxf-ref.html)
+The Greenplum Database administrator manages PXF, Greenplum Database user privileges, and external data source configuration. Tasks include:
 
-    The PXF utility reference.
+- [Installing](about_pxf_dir.html), [configuring](instcfg_pxf.html), [starting](cfginitstart_pxf.html), [monitoring](monitor_pxf.html), and [troubleshooting](troubleshooting_pxf.html) the PXF service.
+- Managing PXF [upgrade](upgrade_pxf_6x.html) and [migration](migrate_5to6.html).
+- [Configuring](cfg_server.html) and publishing one or more server definitions for each external data source. This definition specifies the location of, and access credentials to, the external data source. 
+- [Granting](using_pxf.html) Greenplum user access to PXF and PXF external tables.
 
-<!--
--   [Using the PXF Java SDK](sdk/dev_overview.html)
+## <a id="getstart_user"></a> Get Started Using PXF
 
-    The PXF SDK provides the Java classes and interfaces that you use to add support for external data stores and new data formats and data access APIs to Greenplum Database. This set of topics describe how to set up your PXF development environment, use the PXF API, and deploy your extension.
--->
+A Greenplum Database user [creates](intro_pxf.html#create_external_table) a PXF external table that references a file or other data in the external data source, and uses the external table to query or load the external data in Greenplum. Tasks are external data store-dependent:
+
+- See [Accessing Hadoop with PXF](access_hdfs.html) when the data resides in Hadoop.
+- See [Accessing Azure, Google Cloud Storage, Minio, and S3 Object Stores with PXF](access_objstore.html) when the data resides in an object store.
+- See [Accessing an SQL Database with PXF](jdbc_pxf.html) when the data resides in an external SQL database.
 

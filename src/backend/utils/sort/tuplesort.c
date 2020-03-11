@@ -4240,11 +4240,9 @@ copytup_heap(Tuplesortstate *state, SortTuple *stup, void *tup)
 	MemoryContext oldcontext = MemoryContextSwitchTo(state->tuplecontext);
 
 	slot_getallattrs(slot);
-	stup->tuple = memtuple_form_to(state->mt_bind, 
-			slot_get_values(slot),
-			slot_get_isnull(slot),
-			NULL, NULL, false
-			);
+	stup->tuple = memtuple_form(state->mt_bind,
+								slot_get_values(slot),
+								slot_get_isnull(slot));
 	USEMEM(state, GetMemoryChunkSpace(stup->tuple));
 
 	Assert(state->mt_bind);

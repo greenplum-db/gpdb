@@ -262,6 +262,8 @@ insert into testbug_char5 (timest,user_id,to_be_drop) select '201203',1111,'1000
 insert into testbug_char5 (timest,user_id,to_be_drop) select '201204',1111,'10000';
 insert into testbug_char5 (timest,user_id,to_be_drop) select '201205',1111,'10000';
 
+analyze testbug_char5;
+
 select * from testbug_char5 order by 1,2;
 
 ALTER TABLE testbug_char5 drop column to_be_drop;

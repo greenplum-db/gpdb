@@ -74,6 +74,8 @@ static bool forceoverwrite = false;
 #define MAX_EXCLUDE 255
 static int	num_exclude = 0;
 static char *excludes[MAX_EXCLUDE];
+static int	num_exclude_from = 0;
+static char *excludefroms[MAX_EXCLUDE];
 static int target_gp_dbid = 0;
 
 /* Progress counters */
@@ -274,6 +276,8 @@ usage(void)
 	printf(_("  -w, --no-password      never prompt for password\n"));
 	printf(_("  -W, --password         force password prompt (should happen automatically)\n"));
 	printf(_("  -E, --exclude          exclude path names\n"));
+	printf(_("      --exclude-from=FILE\n"
+			 "                         get path names to exclude from FILE\n"));
 	printf(_("\nReport bugs to <bugs@greenplum.org>.\n"));
 }
 
@@ -1696,31 +1700,69 @@ WriteRecoveryConf(void)
 	fclose(cf);
 }
 
+static void
+add_to_exclude_list(PQExpBufferData *buf, const char *exclude)
+{
+	char		quoted[MAXPGPATH];
+	int			error;
+	size_t		len;
+
+	error = 1;
+	len = PQescapeStringConn(conn, quoted, exclude, MAXPGPATH, &error);
+	if (len == 0 || error != 0)
+	{
+		fprintf(stderr, _("%s: could not process exclude \"%s\": %s\n"),
+				progname, exclude, PQerrorMessage(conn));
+		disconnect_and_exit(1);
+	}
+	appendPQExpBuffer(buf, " EXCLUDE '%s'", quoted);
+}
+
 static char *
-build_exclude_list(char **exclude_list, int num)
+build_exclude_list(void)
 {
 	PQExpBufferData	buf;
 	int				i;
-	char			quoted[MAXPGPATH];
-	int				error;
-	size_t			len;
 
-	if (num == 0)
+	if (num_exclude == 0 && num_exclude_from == 0)
 		return "";
 
 	initPQExpBuffer(&buf);
 
-	for (i = 0; i < num; i++)
+	for (i = 0; i < num_exclude; i++)
+		add_to_exclude_list(&buf, excludes[i]);
+
+	for (i = 0; i < num_exclude_from; i++)
 	{
-		error = 1;
-		len = PQescapeStringConn(conn, quoted, exclude_list[i], MAXPGPATH, &error);
-		if (len == 0 || error != 0)
+		const char *filename = excludefroms[i];
+		FILE	   *file = fopen(filename, "r");
+		char		str[MAXPGPATH];
+
+		if (file == NULL)
 		{
-			fprintf(stderr, _("%s: could not process exclude \"%s\": %s\n"),
-					progname, exclude_list[i], PQerrorMessage(conn));
+			fprintf(stderr, _("%s: could not open exclude-from file \"%s\": %m\n"),
+					progname, filename);
 			disconnect_and_exit(1);
 		}
-		appendPQExpBuffer(&buf, "EXCLUDE '%s'", quoted);
+
+		/*
+		 * Each line contains a pathname to exclude.
+		 *
+		 * We must use fgets() instead of fscanf("%s") to correctly handle the
+		 * spaces in the filenames.
+		 */
+		while (fgets(str, sizeof(str), file))
+		{
+			/* Remove all trailing \r and \n */
+			for (int len = strlen(str);
+				 len > 0 && (str[len - 1] == '\r' || str[len - 1] == '\n');
+				 len--)
+				str[len - 1] = '\0';
+
+			add_to_exclude_list(&buf, str);
+		}
+
+		fclose(file);
 	}
 
 	if (PQExpBufferDataBroken(buf))
@@ -1813,7 +1855,7 @@ BaseBackup(void)
 	if (maxrate > 0)
 		maxrate_clause = psprintf("MAX_RATE %u", maxrate);
 
-	exclude_list = build_exclude_list(excludes, num_exclude);
+	exclude_list = build_exclude_list();
 
 	if (verbose)
 		fprintf(stderr,
@@ -1834,7 +1876,7 @@ BaseBackup(void)
 				 format == 't' ? "TABLESPACE_MAP" : "",
 				 exclude_list);
 
-	if (num_exclude != 0)
+	if (exclude_list[0] != '\0')
 		free(exclude_list);
 
 	if (PQsendQuery(conn, basebkp) == 0)
@@ -2155,6 +2197,7 @@ main(int argc, char **argv)
 		{"progress", no_argument, NULL, 'P'},
 		{"xlogdir", required_argument, NULL, 1},
 		{"exclude", required_argument, NULL, 'E'},
+		{"exclude-from", required_argument, NULL, 2},
 		{"force-overwrite", no_argument, NULL, 128},
 		{"target-gp-dbid", required_argument, NULL, 129},
 		{NULL, 0, NULL, 0}
@@ -2182,6 +2225,7 @@ main(int argc, char **argv)
 	}
 
 	num_exclude = 0;
+	num_exclude_from = 0;
 	while ((c = getopt_long(argc, argv, "D:F:r:RT:xX:l:zZ:d:c:h:p:U:s:S:wWvPE:",
 							long_options, &option_index)) != -1)
 	{
@@ -2323,10 +2367,21 @@ main(int argc, char **argv)
 				{
 					fprintf(stderr, _("%s: too many elements in exclude list: max is %d"),
 							progname, MAX_EXCLUDE);
+					fprintf(stderr, _("hint: use --exclude-from to load a large exclude list from a file"));
 					exit(1);
 				}
 
 				excludes[num_exclude++] = pg_strdup(optarg);
+				break;
+			case 2:			/* --exclude-from=FILE */
+				if (num_exclude_from >= MAX_EXCLUDE)
+				{
+					fprintf(stderr, _("%s: too many elements in exclude-from list: max is %d"),
+							progname, MAX_EXCLUDE);
+					exit(1);
+				}
+
+				excludefroms[num_exclude_from++] = pg_strdup(optarg);
 				break;
 			case 128:
 				forceoverwrite = true;

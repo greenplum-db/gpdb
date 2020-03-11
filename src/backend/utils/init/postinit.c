@@ -600,6 +600,7 @@ BaseInit(void)
 static void check_superuser_connection_limit()
 {
 	if (!am_ftshandler &&
+		!IS_QUERY_DISPATCHER() &&
 		!HaveNFreeProcs(RESERVED_FTS_CONNECTIONS))
 		ereport(FATAL,
 				(errcode(ERRCODE_TOO_MANY_CONNECTIONS),

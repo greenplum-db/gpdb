@@ -662,7 +662,7 @@ compute_dest_tuplen(TupleDesc tupdesc, MemTupleBinding *pbind, bool hasnull, Dat
 	if(pbind) 
 	{
 		uint32 nullsave_dummy;
-		return (int) compute_memtuple_size(pbind, d, isnull, hasnull, &nullsave_dummy);
+		return (int) compute_memtuple_size(pbind, d, isnull, &nullsave_dummy, &hasnull);
 	}
 
 	return heap_compute_data_size(tupdesc, d, isnull);
@@ -1171,7 +1171,7 @@ toast_insert_or_update_generic(Relation rel, GenericTuple newtup, GenericTuple o
 	{
 		if(ismemtuple)
 		{
-			result_gtuple = (GenericTuple) memtuple_form_to(pbind, toast_values, toast_isnull, NULL, NULL, false);
+			result_gtuple = (GenericTuple) memtuple_form(pbind, toast_values, toast_isnull);
 			if (mtbind_has_oid(pbind))
 			{
 				Oid			oid;

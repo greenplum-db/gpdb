@@ -145,10 +145,13 @@ extern MemTupleBinding* create_memtuple_binding(TupleDesc tupdesc);
 extern Datum memtuple_getattr(MemTuple mtup, MemTupleBinding *pbind, int attnum, bool *isnull);
 extern bool memtuple_attisnull(MemTuple mtup, MemTupleBinding *pbind, int attnum);
 
-extern uint32 compute_memtuple_size(MemTupleBinding *pbind, Datum *values, bool *isnull, bool hasnull, uint32 *nullsaves);
+extern uint32 compute_memtuple_size(MemTupleBinding *pbind, Datum *values, bool *isnull, uint32 *nullsaves, bool *has_nulls);
 
-extern MemTuple memtuple_copy_to(MemTuple mtup, MemTuple dest, uint32 *destlen);
-extern MemTuple memtuple_form_to(MemTupleBinding *pbind, Datum *values, bool *isnull, MemTuple dest, uint32 *destlen, bool inline_toast);
+extern MemTuple memtuple_copy(MemTuple mtup);
+extern MemTuple memtuple_form(MemTupleBinding *pbind, Datum *values, bool *isnull);
+extern void memtuple_form_to(MemTupleBinding *pbind, Datum *values, bool *isnull,
+							 uint32 len, uint32 null_save_len, bool hasnull,
+							 MemTuple mtup);
 extern void memtuple_deform(MemTuple mtup, MemTupleBinding *pbind, Datum *datum, bool *isnull);
 extern void memtuple_deform_misaligned(MemTuple mtup, MemTupleBinding *pbind, Datum *datum, bool *isnull);
 

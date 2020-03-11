@@ -17,7 +17,7 @@ select coalesce(
   locktype,
   'master'::text as node
 from pg_locks l
-left outer join pg_class c on ((l.locktype = 'append-only segment file' and l.relation = c.relfilenode) or (l.locktype != 'append-only segment file' and l.relation = c.oid)),
+left outer join pg_class c on l.relation = c.oid,
 pg_database d
 where relation is not null
 and l.database = d.oid
@@ -33,7 +33,7 @@ select relname,
   l.gp_segment_id as node,
   relation
 from pg_locks l
-left outer join pg_class c on ((l.locktype = 'append-only segment file' and l.relation = c.relfilenode) or (l.locktype != 'append-only segment file' and l.relation = c.oid)),
+left outer join pg_class c on l.relation = c.oid,
 pg_database d
 where relation is not null
 and l.database = d.oid
@@ -169,35 +169,22 @@ insert into partlockt values(1), (2), (3);
 insert into partlockt values(1), (2), (3);
 insert into partlockt values(1), (2), (3);
 select * from locktest_master where coalesce not like 'gp_%' and coalesce not like 'pg_%';
-     coalesce      |        mode         |         locktype         |  node  
--------------------+---------------------+--------------------------+--------
- partlockt         | RowExclusiveLock    | relation                 | master
- partlockt_1_prt_1 | AccessExclusiveLock | append-only segment file | master
- partlockt_1_prt_1 | AccessShareLock     | relation                 | master
- partlockt_1_prt_1 | RowExclusiveLock    | relation                 | master
- partlockt_1_prt_2 | AccessExclusiveLock | append-only segment file | master
- partlockt_1_prt_2 | AccessShareLock     | relation                 | master
- partlockt_1_prt_2 | RowExclusiveLock    | relation                 | master
- partlockt_1_prt_3 | AccessExclusiveLock | append-only segment file | master
- partlockt_1_prt_3 | AccessShareLock     | relation                 | master
- partlockt_1_prt_3 | RowExclusiveLock    | relation                 | master
-(10 rows)
+     coalesce      |       mode       | locktype |  node  
+-------------------+------------------+----------+--------
+ partlockt         | RowExclusiveLock | relation | master
+ partlockt_1_prt_1 | RowExclusiveLock | relation | master
+ partlockt_1_prt_2 | RowExclusiveLock | relation | master
+ partlockt_1_prt_3 | RowExclusiveLock | relation | master
+(4 rows)
 
 select * from locktest_segments where coalesce not like 'gp_%' and coalesce not like 'pg_%';
-     coalesce      |        mode         |         locktype         |    node    
--------------------+---------------------+--------------------------+------------
- partlockt         | RowExclusiveLock    | relation                 | n segments
- aoseg table       | AccessShareLock     | relation                 | n segments
- aoseg table       | AccessShareLock     | relation                 | n segments
- partlockt_1_prt_1 | AccessExclusiveLock | append-only segment file | 1 segment
- partlockt_1_prt_3 | AccessExclusiveLock | append-only segment file | 1 segment
- partlockt_1_prt_3 | RowExclusiveLock    | relation                 | 1 segment
- partlockt_1_prt_2 | RowExclusiveLock    | relation                 | 1 segment
- partlockt_1_prt_2 | AccessExclusiveLock | append-only segment file | 1 segment
- aoseg table       | AccessShareLock     | relation                 | n segments
- aoseg table       | AccessShareLock     | relation                 | n segments
- partlockt_1_prt_1 | RowExclusiveLock    | relation                 | 1 segment
-(11 rows)
+     coalesce      |       mode       | locktype |    node    
+-------------------+------------------+----------+------------
+ partlockt_1_prt_1 | RowExclusiveLock | relation | 1 segment
+ partlockt_1_prt_3 | RowExclusiveLock | relation | 1 segment
+ partlockt         | RowExclusiveLock | relation | n segments
+ partlockt_1_prt_2 | RowExclusiveLock | relation | 1 segment
+(4 rows)
 
 commit;
 -- drop

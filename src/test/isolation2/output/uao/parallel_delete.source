@@ -16,11 +16,10 @@ BEGIN
 2: DELETE FROM ao WHERE a = 2;
 DELETE 1
 2: SELECT * FROM locktest_master WHERE coalesce = 'ao';
- coalesce | mode                | locktype                 | node   
-----------+---------------------+--------------------------+--------
- ao       | AccessExclusiveLock | append-only segment file | master 
- ao       | ExclusiveLock       | relation                 | master 
-(2 rows)
+ coalesce | mode          | locktype | node   
+----------+---------------+----------+--------
+ ao       | ExclusiveLock | relation | master 
+(1 row)
 2: SELECT * FROM locktest_segments WHERE coalesce = 'ao';
  coalesce | mode             | locktype | node      
 ----------+------------------+----------+-----------

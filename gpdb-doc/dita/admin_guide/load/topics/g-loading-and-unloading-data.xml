@@ -35,8 +35,14 @@
            PXF, refer to <xref href="../../external/pxf-overview.xml" format="dita" scope="peer">Accessing External Data with PXF</xref>.</li>
         <li otherprops="pivotal">The Greenplum-Kafka Integration provides high-speed, parallel
            data transfer from Kafka to Greenplum Database. For information about using
-           these tools, refer to the documentation at <xref
-            href="../../../greenplum-kafka/intro.xml" format="dita" scope="peer">Pivotal Greenplum-Kafka Integration</xref>.</li>
+           these tools, refer to the <xref
+            href="https://greenplum.docs.pivotal.io/streaming-server/1-3-1/kafka/intro.html" format="html" scope="external">Greenplum-Kafka Integration</xref>
+            documentation.</li>
+        <li otherprops="pivotal">The Greenplum Streaming Server is an ETL tool and API that you
+           can use to load data into Greenplum Database. For information about using this tool,
+           refer to the <xref
+            href="https://greenplum.docs.pivotal.io/streaming-server/1-3-1/intro.html" format="html" scope="external">Greenplum Streaming Server</xref>
+            documentation.</li>
         <li otherprops="pivotal">The Greenplum-Spark Connector provides high speed, parallel data
           transfer between Pivotal Greenplum Database and Apache Spark. For information about using
           the Greenplum-Spark Connector, refer to the documentation at <xref

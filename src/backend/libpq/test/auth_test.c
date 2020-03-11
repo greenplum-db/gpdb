@@ -45,7 +45,7 @@ pg_authid_tuple_attribute_will_be(HeapTuple tuple, AttrNumber attr, Datum retval
 }
 
 /* Unit tests for check_valid_until_for_gssapi() function */
-void
+static void
 test_checkValidUntilForGssapi_returns_error_for_nonexistent_user(void **state)
 {
 	int			result;
@@ -58,7 +58,7 @@ test_checkValidUntilForGssapi_returns_error_for_nonexistent_user(void **state)
 	assert_true(result == STATUS_ERROR);
 }
 
-void
+static void
 test_checkValidUntilForGssapi_returns_ok_for_user_with_null_validuntil(void **state)
 {
 	int			result;
@@ -73,7 +73,7 @@ test_checkValidUntilForGssapi_returns_ok_for_user_with_null_validuntil(void **st
 	assert_true(result == STATUS_OK);
 }
 
-void
+static void
 test_checkValidUntilForGssapi_returns_error_for_user_with_expired_validuntil(void **state)
 {
 	int			result;
@@ -89,7 +89,7 @@ test_checkValidUntilForGssapi_returns_error_for_user_with_expired_validuntil(voi
 	assert_true(result == STATUS_ERROR);
 }
 
-void
+static void
 test_checkValidUntilForGssapi_returns_ok_for_user_with_unexpired_validuntil(void **state)
 {
 	int			result;

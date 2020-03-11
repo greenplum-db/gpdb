@@ -3,8 +3,13 @@ PostgreSQL documentation
 -->
 
 <refentry id="SQL-DROPPROTOCOL">
+ <indexterm zone="sql-dropprotocol">
+  <primary>DROP PROTOCOL</primary>
+ </indexterm>
+
  <refmeta>
-  <refentrytitle id="sql-dropprotocol-title">DROP PROTOCOL</refentrytitle>
+  <refentrytitle>DROP PROTOCOL</refentrytitle>
+  <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
 
@@ -12,10 +17,6 @@ PostgreSQL documentation
   <refname>DROP PROTOCOL</refname>
   <refpurpose>remove a custom access protocol</refpurpose>
  </refnamediv>
-
- <indexterm zone="sql-dropprotocol">
-  <primary>DROP PROTOCOL</primary>
- </indexterm>
 
  <refsynopsisdiv>
 <synopsis>

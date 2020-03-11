@@ -293,10 +293,20 @@ open_next_scan_seg(AOCSScanDesc scan)
 			 */
 			if (scan->num_proj_atts > 0)
 			{
-				AOCSVPInfoEntry *e = getAOCSVPEntry(curSegInfo, scan->proj_atts[0]);
-
-				if (e->eof == 0 || curSegInfo->state == AOSEG_STATE_AWAITING_DROP)
+				/*
+				 * subtle: we must check for AWAITING_DROP before calling getAOCSVPEntry().
+				 * ALTER TABLE ADD COLUMN does not update vpinfos on AWAITING_DROP segments.
+				 */
+				if (curSegInfo->state == AOSEG_STATE_AWAITING_DROP)
 					emptySeg = true;
+				else
+				{
+					AOCSVPInfoEntry *e;
+
+					e = getAOCSVPEntry(curSegInfo, scan->proj_atts[0]);
+					if (e->eof == 0)
+						emptySeg = true;
+				}
 			}
 
 			if (!emptySeg)
@@ -395,8 +405,8 @@ aocs_beginrangescan(Relation relation,
 
 	for (i = 0; i < segfile_count; i++)
 	{
-		seginfo[	i] = GetAOCSFileSegInfo(relation, appendOnlyMetaDataSnapshot,
-											segfile_no_arr[i]);
+		seginfo[i] = GetAOCSFileSegInfo(relation, appendOnlyMetaDataSnapshot,
+										segfile_no_arr[i], false);
 	}
 	return aocs_beginscan_internal(relation,
 								   seginfo,
@@ -744,41 +754,21 @@ OpenAOCSDatumStreams(AOCSInsertDesc desc)
 
 	desc->ds = (DatumStreamWrite **) palloc0(sizeof(DatumStreamWrite *) * nvp);
 
-	/*
-	 * In order to append to this file segment entry we must first acquire the
-	 * relation Append-Only segment file (transaction-scope) lock (tag
-	 * LOCKTAG_RELATION_APPENDONLY_SEGMENT_FILE) in order to guarantee
-	 * stability of the pg_aoseg information on this segment file and
-	 * exclusive right to append data to the segment file.
-	 *
-	 * NOTE: This is a transaction scope lock that must be held until commit /
-	 * abort.
-	 */
-	LockRelationAppendOnlySegmentFile(&desc->aoi_rel->rd_node,
-									  desc->cur_segno,
-									  AccessExclusiveLock,
-									   /* dontWait */ false);
-
 	open_ds_write(desc->aoi_rel, desc->ds, tupdesc,
 				  desc->aoi_rel->rd_appendonly->checksum);
 
 	/* Now open seg info file and get eof mark. */
 	seginfo = GetAOCSFileSegInfo(desc->aoi_rel,
 								 desc->appendOnlyMetaDataSnapshot,
-								 desc->cur_segno);
-
-	if (seginfo == NULL)
-	{
-		InsertInitialAOCSFileSegInfo(desc->aoi_rel, desc->cur_segno, nvp);
-		seginfo = NewAOCSFileSegInfo(desc->cur_segno, nvp);
-	}
-
+								 desc->cur_segno,
+								 true);
 	desc->fsInfo = seginfo;
 
 	/* Never insert into a segment that is awaiting a drop */
-	elogif(desc->fsInfo->state == AOSEG_STATE_AWAITING_DROP, ERROR,
-		   "cannot insert into segno (%d) for AO relid %d that is in state AOSEG_STATE_AWAITING_DROP",
-		   desc->cur_segno, RelationGetRelid(desc->aoi_rel));
+	if (desc->fsInfo->state == AOSEG_STATE_AWAITING_DROP)
+		elog(ERROR,
+			 "cannot insert into segno (%d) for AO relid %d that is in state AOSEG_STATE_AWAITING_DROP",
+			 desc->cur_segno, RelationGetRelid(desc->aoi_rel));
 
 	desc->rowCount = seginfo->total_tupcount;
 
@@ -1151,9 +1141,6 @@ openFetchSegmentFile(AOCSFetchDesc aocsFetchDesc,
 		segmentFileNum = fsInfo->segno;
 		if (openSegmentFileNum == segmentFileNum)
 		{
-			AOCSVPInfoEntry *entry = getAOCSVPEntry(fsInfo, colNo);
-
-			logicalEof = entry->eof;
 			break;
 		}
 		i++;
@@ -1162,9 +1149,17 @@ openFetchSegmentFile(AOCSFetchDesc aocsFetchDesc,
 	/*
 	 * Don't try to open a segment file when its EOF is 0, since the file may
 	 * not exist. See MPP-8280. Also skip the segment file if it is awaiting a
-	 * drop
+	 * drop.
+	 *
+	 * Check for awaiting-drop first, before accessing the vpinfo, because
+	 * vpinfo might not be valid on awaiting-drop segment after adding a column.
 	 */
-	if (logicalEof == 0 || fsInfo->state == AOSEG_STATE_AWAITING_DROP)
+	if (fsInfo->state == AOSEG_STATE_AWAITING_DROP)
+		return false;
+
+	AOCSVPInfoEntry *entry = getAOCSVPEntry(fsInfo, colNo);
+	logicalEof = entry->eof;
+	if (logicalEof == 0)
 		return false;
 
 	open_datumstreamread_segfile(aocsFetchDesc->basepath, aocsFetchDesc->relation->rd_node,

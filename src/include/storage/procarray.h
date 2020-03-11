@@ -83,7 +83,6 @@ extern void CancelDBBackends(Oid databaseid, ProcSignalReason sigmode, bool conf
 extern int	CountUserBackends(Oid roleid);
 extern bool CountOtherDBBackends(Oid databaseId,
 					 int *nbackends, int *nprepared);
-extern bool HasSerializableBackends(bool allDbs);
 
 extern void XidCacheRemoveRunningXids(TransactionId xid,
 						  int nxids, const TransactionId *xids,
@@ -106,5 +105,6 @@ extern void ProcArraySetReplicationSlotXmin(TransactionId xmin,
 
 extern void ProcArrayGetReplicationSlotXmin(TransactionId *xmin,
 								TransactionId *catalog_xmin);
+extern DistributedTransactionId LocalXidGetDistributedXid(TransactionId xid);
 
 #endif   /* PROCARRAY_H */

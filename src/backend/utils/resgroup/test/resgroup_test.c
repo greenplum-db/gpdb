@@ -8,7 +8,7 @@
 #define test_with_setup_and_teardown(test_func) \
 	unit_test_setup_teardown(test_func, setup, teardown)
 
-MemoryContext *OrigMessageContext;
+MemoryContext OrigMessageContext;
 
 static void
 setup(void **state)

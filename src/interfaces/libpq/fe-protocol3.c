@@ -28,6 +28,7 @@
 
 #include "libpq-fe.h"
 #include "libpq-int.h"
+#include "nodes/pg_list.h"
 
 #include "mb/pg_wchar.h"
 
@@ -84,6 +85,7 @@ pqParseInput3(PGconn *conn)
 	int			msgLength;
 	int			avail;
 #ifndef FRONTEND
+	int			i;
 	int64		numRejected  = 0;
 	int64		numCompleted = 0;
 #endif
@@ -247,39 +249,6 @@ pqParseInput3(PGconn *conn)
 								CMDSTATUS_LEN);
 					conn->asyncStatus = PGASYNC_READY;
 					break;
-#ifndef FRONTEND
-				case 'o':
-				{
-					int i;
-					PQaoRelTupCount *ao;
-
-					/* row count for AO partitioned tables */
-					if (conn->result == NULL)
-					{
-						conn->result = PQmakeEmptyPGresult(conn, PGRES_COMMAND_OK);
-						if (!conn->result)
-							return;
-					}
-
-					if (pqGetInt(&(conn->result->naotupcounts), 4, conn))
-						return;
-
-					/* now just loop through */
-					conn->result->aotupcounts =
-						malloc(sizeof(PQaoRelTupCount) * conn->result->naotupcounts);
-					ao = conn->result->aotupcounts;
-					for (i = 0; i < conn->result->naotupcounts; i++)
-					{
-						if (pqGetInt((int *)&(ao->aorelid), 4, conn))
-							return;
-						if (pqGetInt64(&(ao->tupcount), conn))
-							return;
-
-						ao++;
-					}
-				}
-				break;
-#endif
 				case 'E':		/* error return */
 					if (pqGetErrorNotice3(conn, true))
 						return;
@@ -533,6 +502,33 @@ pqParseInput3(PGconn *conn)
 						return;
 					conn->asyncStatus = PGASYNC_READY;
 
+					break;
+
+				case 'w':
+					/*
+					 * 'commit prepared' and 'one-phase commit' reports a list of gxids
+					 * that the transaction has waited.
+					 */
+					if (conn->result == NULL)
+					{
+						conn->result = PQmakeEmptyPGresult(conn, PGRES_COMMAND_OK);
+						if (!conn->result)
+							return;
+					}
+
+					if (pqGetInt(&conn->result->nWaits, 4, conn))
+						return;
+
+					if (conn->result->nWaits > 0)
+					{
+						conn->result->waitGxids = malloc(sizeof(int) * conn->result->nWaits);
+						for (i = 0; i < conn->result->nWaits; i++)
+						{
+							int gxid;
+							pqGetInt(&gxid, 4, conn);
+							conn->result->waitGxids[i] = gxid;
+						}
+					}
 					break;
 #endif
 				default:

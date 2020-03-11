@@ -41,7 +41,7 @@ extern void cdb_estimate_rel_size(RelOptInfo   *relOptInfo,
 							  BlockNumber  *pages,
 							  double       *tuples,
 							  double       *allvisfrac);
-extern double cdb_estimate_partitioned_numtuples(Relation rel, bool *stats_missing);
+extern double cdb_estimate_partitioned_numtuples(Relation rel);
 
 extern int32 get_relation_data_width(Oid relid, int32 *attr_widths);
 

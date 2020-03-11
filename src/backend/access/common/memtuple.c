@@ -441,30 +441,32 @@ MemTupleBinding *create_memtuple_binding(TupleDesc tupdesc)
 	return pbind;
 }
 
-static uint32 compute_memtuple_size_using_bind(
-		Datum *values,
-		bool *isnull,
-		bool hasnull,
-		int nullbit_extra,
-		uint32 *nullsaves,
-		MemTupleBindingCols *colbind,
-		TupleDesc tupdesc)
+static uint32
+compute_memtuple_size_using_bind(Datum *values,
+								 bool *isnull,
+								 int nullbit_extra,
+								 int first_null_idx,
+								 uint32 *nullsaves,
+								 MemTupleBindingCols *colbind,
+								 TupleDesc tupdesc)
 {
 	uint32 data_length = colbind->var_start; 
 	int i;
 
 	*nullsaves = 0;
 
-	if(hasnull)
+	if (first_null_idx < tupdesc->natts)
 	{
 		data_length += nullbit_extra;
 
-		for(i=0; i<tupdesc->natts; ++i)
+		for(i = first_null_idx; i < tupdesc->natts; ++i)
 		{
-			if(isnull[i])
+			Form_pg_attribute attr = tupdesc->attrs[i];
+			MemTupleAttrBinding *bind = &colbind->bindings[i];
+
+			if (isnull[i] || attr->attisdropped)
 			{
-				MemTupleAttrBinding *bind = &colbind->bindings[i];
-				int len = 0;
+				int			len;
 
 				Assert(bind->len >= 0);
 				Assert(bind->len_aligned >= 0);
@@ -478,12 +480,15 @@ static uint32 compute_memtuple_size_using_bind(
 		}
 	}
 
-	for(i=0; i<tupdesc->natts; ++i)
+	for(i = 0; i < tupdesc->natts; ++i)
 	{
 		MemTupleAttrBinding *bind = &colbind->bindings[i];
 		Form_pg_attribute attr = tupdesc->attrs[i];
 
-		if(isnull[i] || bind->flag == MTB_ByVal_Native || bind->flag == MTB_ByVal_Ptr)
+		if (isnull[i] || attr->attisdropped)
+			continue;
+
+		if (bind->flag == MTB_ByVal_Native || bind->flag == MTB_ByVal_Ptr)
 			continue;
 
 		/* Varlen stuff */
@@ -514,18 +519,52 @@ static uint32 compute_memtuple_size_using_bind(
 	return MEMTUP_ALIGN(data_length);
 }
 
-/* Compute the memtuple size. 
- * nullsave is an output param
+/*
+ * Compute the memtuple size.
+ *
+ * Returns the size. *nullsaves is an output parameter. It is set to the
+ * length that is "saved" by null attributes; it should of no interest to
+ * the caller, except that if you call memtuple_form_to(), you need to pass
+ * it along as an argument. Similarly *has_nulls is an output parameter that
+ * is set to indicate whether any of the attributes were nulls.
  */
-uint32 compute_memtuple_size(MemTupleBinding *pbind, Datum *values, bool *isnull, bool hasnull, uint32 *nullsaves)
+uint32
+compute_memtuple_size(MemTupleBinding *pbind, Datum *values, bool *isnull,
+					  uint32 *nullsaves, bool *has_nulls)
 {
-	uint32 ret_len = 0;
-	ret_len = compute_memtuple_size_using_bind(values, isnull, hasnull, pbind->null_bitmap_extra_size, nullsaves, &pbind->bind, pbind->tupdesc);
+	int			first_null_idx;
+	uint32		ret_len;
+	int			i;
+
+	/*
+	 * Check for nulls. Dropped attributes are also treated as NULLs.
+	 */
+	*has_nulls = false;
+	for (i = 0; i < pbind->tupdesc->natts; ++i)
+	{
+		Form_pg_attribute attr = pbind->tupdesc->attrs[i];
+
+		/* treat dropped attibutes as null */
+		if (isnull[i] || attr->attisdropped)
+		{
+			*has_nulls = true;
+			break;
+		}
+	}
+	first_null_idx = i;
+
+	ret_len = compute_memtuple_size_using_bind(values, isnull,
+											   pbind->null_bitmap_extra_size,
+											   first_null_idx, nullsaves,
+											   &pbind->bind, pbind->tupdesc);
 
 	if(ret_len <= MEMTUPLE_LEN_FITSHORT) 
 		return ret_len;
 
-	ret_len = compute_memtuple_size_using_bind(values, isnull, hasnull, pbind->null_bitmap_extra_size, nullsaves, &pbind->large_bind, pbind->tupdesc);
+	ret_len = compute_memtuple_size_using_bind(values, isnull,
+											   pbind->null_bitmap_extra_size,
+											   first_null_idx, nullsaves,
+											   &pbind->large_bind, pbind->tupdesc);
 	Assert(ret_len > MEMTUPLE_LEN_FITSHORT);
 
 	return ret_len;
@@ -558,110 +597,58 @@ static inline unsigned char *memtuple_get_nullp(MemTuple mtup, MemTupleBinding *
 	return mtup->PRIVATE_mt_bits + (mtbind_has_oid(pbind) ? sizeof(Oid) : 0);
 }
 
-/* form a memtuple from values and isnull, to a prespecified buffer */
-MemTuple memtuple_form_to(
-		MemTupleBinding *pbind,
-		Datum *values,
-		bool *isnull,
-		MemTuple mtup,
-		uint32 *destlen,
-		bool inline_toast)
+/*
+ * Form a memtuple from values and isnull. Returns a palloc'd tuple.
+ *
+ * This corresponds to heap_form_tuple() for HeapTuples.
+ */
+MemTuple
+memtuple_form(MemTupleBinding *pbind, Datum *values, bool *isnull)
 {
-	bool hasnull = false;
-	bool hasext = false;
-	int i;
-	uint32 len;
+	uint32		len;
+	uint32		null_save_len;
+	bool		has_nulls;
+	MemTuple	result;
+
+	len = compute_memtuple_size(pbind, values, isnull, &null_save_len, &has_nulls);
+
+	result = palloc(len);
+
+	memtuple_form_to(pbind, values, isnull, len, null_save_len, has_nulls,
+					 result);
+
+	return result;
+}
+
+/*
+ * Form a memtuple from values and isnull, to a prespecified buffer
+ *
+ * You must call compute_memtuple_size() before this, and verify that
+ * the buffer is large enough. Pass through the 'len', 'null_save_len'
+ * and 'hasnull' values that compute_memtuple_size() returned.
+ *
+ * The tuple is written to 'mtup', which must be large enough to hold
+ * 'len' bytes.
+ */
+void
+memtuple_form_to(MemTupleBinding *pbind,
+				 Datum *values,
+				 bool *isnull,
+				 uint32 len,
+				 uint32 null_save_len,
+				 bool hasnull,
+				 MemTuple mtup)
+{
+	bool		hasext = false;
+	int			i;
 	unsigned char *nullp = NULL;
-	char *start;
-	char *varlen_start;
-	uint32 null_save_len;
+	char	   *start;
+	char	   *varlen_start;
 	MemTupleBindingCols *colbind;
-	Datum *old_values = NULL;
 
-	/*
-	 * Check for nulls and embedded tuples; expand any toasted attributes in
-	 * embedded tuples.  This preserves the invariant that toasting can only
-	 * go one level deep.
-	 *
-	 * We can skip calling toast_flatten_tuple_attribute() if the attribute
-	 * couldn't possibly be of composite type.  All composite datums are
-	 * varlena and have alignment 'd'; furthermore they aren't arrays. Also,
-	 * if an attribute is already toasted, it must have been sent to disk
-	 * already and so cannot contain toasted attributes.
-	 */
-	for(i=0; i<pbind->tupdesc->natts; ++i)
-	{
-		Form_pg_attribute attr = pbind->tupdesc->attrs[i];
-		
-		/* treat dropped attibutes as null */
-		if (attr->attisdropped)
-		{
-			isnull[i] = true;
-		}
-
-		if(isnull[i])
-		{
-			hasnull = true;
-			continue;
-		}
-
-		if (attr->attlen == -1 && VARATT_IS_EXTERNAL(DatumGetPointer(values[i])))
-		{
-			if(inline_toast)
-			{
-				if (old_values == NULL)
-					old_values = (Datum *)palloc0(pbind->tupdesc->natts * sizeof(Datum));
-				old_values[i] = values[i];
-				values[i] = PointerGetDatum(heap_tuple_fetch_attr((struct varlena *)DatumGetPointer(values[i])));
-
-				if (old_values[i] == values[i])
-					old_values[i] = 0;
-			}
-			else if (!VARATT_IS_EXTERNAL_EXPANDED(DatumGetPointer(values[i])))
-				hasext = true;
-		}
-	}
-
-	/* compute needed length */
-	len = compute_memtuple_size(pbind, values, isnull, hasnull, &null_save_len);
 	colbind = (len <= MEMTUPLE_LEN_FITSHORT) ? &pbind->bind : &pbind->large_bind;
 
-	if(!destlen)
-	{
-		Assert(!mtup);
-		mtup = (MemTuple) palloc0(len);
-	}
-	else if(*destlen < len)
-	{
-		*destlen = len;
-
-		/*
-		 * Set values to their old values if we have changed their values
-		 * during de-toasting, and release the space allocated during
-		 * de-toasting.
-		 */
-		if (old_values != NULL)
-		{
-			for(i=0; i<pbind->tupdesc->natts; ++i)
-			{
-				if (DatumGetPointer(old_values[i]) != NULL)
-				{
-					Assert(DatumGetPointer(values[i]) != NULL);
-					pfree(DatumGetPointer(values[i]));
-					values[i] = old_values[i];
-				}
-			}
-			pfree(old_values);
-		}
-		
-		return NULL;
-	}
-	else
-	{
-		*destlen = len;
-		Assert(mtup);
-		memset(mtup, 0, len);
-	}
+	memset(mtup, 0, len);
 
 	/* Set mtlen, this set the lead bit, len, and clears hasnull bit 
 	 * because the len returned from compute size is always max aligned
@@ -671,9 +658,6 @@ MemTuple memtuple_form_to(
 
 	if(len > MEMTUPLE_LEN_FITSHORT)
 		memtuple_set_islarge(mtup);
-
-	if(hasext)
-		memtuple_set_hasext(mtup);
 
 	/* Clear Oid */ 
 	if(mtbind_has_oid(pbind))
@@ -702,13 +686,18 @@ MemTuple memtuple_form_to(
 	 * beginning of next loop), because physical col order is different
 	 * from logical. 
 	 */
-	for(i=0; i<pbind->tupdesc->natts; ++i)
+	if (hasnull)
 	{
-		if(isnull[i])
+		for(i=0; i<pbind->tupdesc->natts; ++i)
 		{
-			MemTupleAttrBinding *bind = &(colbind->bindings[i]);
-			Assert(hasnull);
-			nullp[bind->null_byte] |= bind->null_mask;
+			Form_pg_attribute attr = pbind->tupdesc->attrs[i];
+
+			if (isnull[i] || attr->attisdropped)
+			{
+				MemTupleAttrBinding *bind = &(colbind->bindings[i]);
+				Assert(hasnull);
+				nullp[bind->null_byte] |= bind->null_mask;
+			}
 		}
 	}
 
@@ -720,7 +709,7 @@ MemTuple memtuple_form_to(
 
 		uint32 attr_len;
 
-		if(isnull[i])
+		if(isnull[i] || attr->attisdropped)
 			continue;
 
 		Assert(bind->offset != 0);
@@ -781,6 +770,8 @@ MemTuple memtuple_form_to(
 						attr_len = VARSIZE_EXTERNAL(DatumGetPointer(values[i]));
 						Assert((varlen_start - (char *) mtup) + attr_len <= len);
 						memcpy(varlen_start, DatumGetPointer(values[i]), attr_len);
+
+						hasext = true;
 					}
 				}
 				else if(VARATT_IS_SHORT(DatumGetPointer(values[i])))
@@ -838,29 +829,10 @@ MemTuple memtuple_form_to(
 				break;
 		}
 	}
-
 	Assert((varlen_start - (char *) mtup) <= len);
 
-	/*
-	 * Set values to their old values if we have changed their values
-	 * during de-toasting, and release the space allocated during
-	 * de-toasting.
-	 */
-	if (old_values != NULL)
-	{
-		for(i=0; i<pbind->tupdesc->natts; ++i)
-		{
-			if (DatumGetPointer(old_values[i]) != NULL)
-			{
-				Assert(DatumGetPointer(values[i]) != NULL);
-				pfree(DatumGetPointer(values[i]));
-				values[i] = old_values[i];
-			}
-		}
-		pfree(old_values);
-	}
-
-	return mtup;
+	if (hasext)
+		memtuple_set_hasext(mtup);
 }
 
 bool memtuple_attisnull(MemTuple mtup, MemTupleBinding *pbind, int attnum)
@@ -935,24 +907,18 @@ Datum memtuple_getattr(MemTuple mtup, MemTupleBinding *pbind, int attnum, bool *
 	return memtuple_getattr_by_alignment(mtup, pbind, attnum, isnull, true /* aligned */);
 }
 
-
-MemTuple memtuple_copy_to(MemTuple mtup, MemTuple dest, uint32 *destlen)
+/*
+ * Return a palloc'd copy of 'mtup'.
+ *
+ * This corresponds to heap_copytuple() for HeapTuples.
+ */
+MemTuple
+memtuple_copy(MemTuple mtup)
 {
-	uint32 len = memtuple_get_size(mtup);
+	MemTuple	dest;
+	uint32		len = memtuple_get_size(mtup);
 
-	if(!destlen)
-		dest = (MemTuple) palloc(len);
-	else
-	{
-		if(*destlen < len)
-		{
-			*destlen = len;
-			return NULL;
-		}
-
-		*destlen = len;
-	}
-
+	dest = (MemTuple) palloc(len);
 	memcpy((char *) dest, (char *) mtup, len);
 	return dest;
 }

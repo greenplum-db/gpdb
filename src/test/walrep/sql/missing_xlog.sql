@@ -155,7 +155,7 @@ select count(*) = 2 as mirror_up from gp_segment_configuration
 select wait_for_mirror_sync(0::smallint);
 select role, preferred_role, content, mode, status from gp_segment_configuration;
 -- start_ignore
-\! gpconfig -c gp_fts_mark_mirror_down_grace_period -v 30
+\! gpconfig -r gp_fts_mark_mirror_down_grace_period
 \! gpconfig -r wal_keep_segments
 \! gpstop -u
 -- end_ignore

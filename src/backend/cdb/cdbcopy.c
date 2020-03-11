@@ -109,9 +109,6 @@ makeCdbCopy(CopyState cstate, bool is_copy_in)
 	c->dispatcherState = NULL;
 	initStringInfo(&(c->copy_out_buf));
 
-	/* init total_segs */
-	c->aotupcounts = NULL;
-
 	/*
 	 * COPY replicated table TO file, pick only one replica, otherwise, duplicate
 	 * rows will be copied.
@@ -144,7 +141,7 @@ makeCdbCopy(CopyState cstate, bool is_copy_in)
  */
 void
 cdbCopyStart(CdbCopy *c, CopyStmt *stmt,
-			 PartitionNode *partitions, List *ao_segnos, int file_encoding)
+			 PartitionNode *partitions, int file_encoding)
 {
 	int			flags;
 
@@ -152,9 +149,6 @@ cdbCopyStart(CdbCopy *c, CopyStmt *stmt,
 
 	/* add in partitions for dispatch */
 	stmt->partitions = partitions;
-
-	/* add in AO segno map for dispatch */
-	stmt->ao_segnos = ao_segnos;
 
 	/*
 	 * If the output needs to be in a different encoding, tell the segment.
@@ -635,9 +629,6 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 			if (res->numCompleted > 0)
 				segment_rows_completed = res->numCompleted;
 
-			/* Get AO tuple counts */
-			c->aotupcounts = PQprocessAoTupCounts(c->aotupcounts,
-												  res->aotupcounts, res->naotupcounts);
 			/* free the PGresult object */
 			PQclear(res);
 		}

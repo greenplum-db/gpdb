@@ -92,7 +92,6 @@ static int	no_security_labels = 0;
 static int	no_unlogged_table_data = 0;
 static int	server_version;
 
-
 static FILE *OPF;
 static char *filename = NULL;
 
@@ -2445,7 +2444,6 @@ connectDatabase(const char *dbname, const char *connection_string,
 			values[i] = dbname;
 			i++;
 		}
-
 		keywords[i] = "fallback_application_name";
 		values[i] = progname;
 		i++;

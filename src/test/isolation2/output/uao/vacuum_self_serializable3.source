@@ -23,16 +23,22 @@ SELECT COUNT(*) FROM ao;
 SELECT segno, tupcount FROM gp_ao_or_aocs_seg('ao');
  segno | tupcount 
 -------+----------
- 1     | 100      
-(1 row)
+ 1     | 25       
+ 1     | 37       
+ 1     | 38       
+(3 rows)
 VACUUM ao;
 VACUUM
 SELECT segno, tupcount FROM gp_ao_or_aocs_seg('ao');
  segno | tupcount 
 -------+----------
  1     | 0        
- 2     | 70       
-(2 rows)
+ 1     | 0        
+ 1     | 0        
+ 2     | 14       
+ 2     | 26       
+ 2     | 30       
+(6 rows)
 SELECT COUNT(*) FROM ao;
  count 
 -------

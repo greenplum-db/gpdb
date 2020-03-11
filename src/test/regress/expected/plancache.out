@@ -260,3 +260,91 @@ NOTICE:  3
  
 (1 row)
 
+-- Test plan_cache_mode
+create table test_mode (a int);
+-- GPDB:setting the number of rows slightly higher to get a plan with
+-- Index Only Scan (similar to upstream)
+insert into test_mode select 1 from generate_series(1,15000) union all select 2;
+create index on test_mode (a);
+analyze test_mode;
+prepare test_mode_pp (int) as select count(*) from test_mode where a = $1;
+-- up to 5 executions, custom plan is used
+explain (costs off) execute test_mode_pp(2);
+                        QUERY PLAN                        
+----------------------------------------------------------
+ Aggregate
+   ->  Gather Motion 1:1  (slice1; segments: 1)
+         ->  Index Only Scan using test_mode_a_idx on test_mode
+               Index Cond: (a = 2)
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+-- force generic plan
+set plan_cache_mode to force_generic_plan;
+explain (costs off) execute test_mode_pp(2);
+                   QUERY PLAN                   
+------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Seq Scan on test_mode
+                     Filter: (a = $1)
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+-- get to generic plan by 5 executions
+set plan_cache_mode to auto;
+execute test_mode_pp(1); -- 1x
+ count 
+-------
+ 15000
+(1 row)
+
+execute test_mode_pp(1); -- 2x
+ count 
+-------
+ 15000
+(1 row)
+
+execute test_mode_pp(1); -- 3x
+ count 
+-------
+ 15000
+(1 row)
+
+execute test_mode_pp(1); -- 4x
+ count 
+-------
+ 15000
+(1 row)
+
+execute test_mode_pp(1); -- 5x
+ count 
+-------
+ 15000
+(1 row)
+
+-- we should now get a really bad plan
+explain (costs off) execute test_mode_pp(2);
+         QUERY PLAN          
+-----------------------------
+ Aggregate
+   ->  Gather Motion 1:1  (slice1; segments: 1)
+         ->  Index Only Scan using test_mode_a_idx on test_mode
+               Index Cond: (a = 2)
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+-- but we can force a custom plan
+set plan_cache_mode to force_custom_plan;
+explain (costs off) execute test_mode_pp(2);
+                        QUERY PLAN                        
+----------------------------------------------------------
+ Aggregate
+   ->  Gather Motion 1:1  (slice1; segments: 1)
+         ->  Index Only Scan using test_mode_a_idx on test_mode
+               Index Cond: (a = 2)
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+drop table test_mode;

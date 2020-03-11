@@ -34,10 +34,10 @@ const char *const LockTagTypeNames[] = {
 	"tuple",
 	"transactionid",
 	"virtualxid",
-	"append-only segment file",
 	"speculative token",
 	"object",
 	"resource queue",
+	"distributed xid",
 	"userlock",
 	"advisory"
 };
@@ -405,6 +405,18 @@ pg_lock_status(PG_FUNCTION_ARGS)
 				nulls[8] = true;
 				nulls[9] = true;
 				break;
+			case LOCKTAG_DISTRIB_TRANSACTION:
+				values[6] =
+					TransactionIdGetDatum(instance->locktag.locktag_field1);
+				nulls[1] = true;
+				nulls[2] = true;
+				nulls[3] = true;
+				nulls[4] = true;
+				nulls[5] = true;
+				nulls[7] = true;
+				nulls[8] = true;
+				nulls[9] = true;
+				break;
 			case LOCKTAG_VIRTUALTRANSACTION:
 				values[5] = VXIDGetDatum(instance->locktag.locktag_field1,
 										 instance->locktag.locktag_field2);
@@ -414,17 +426,6 @@ pg_lock_status(PG_FUNCTION_ARGS)
 				nulls[4] = true;
 				nulls[6] = true;
 				nulls[7] = true;
-				nulls[8] = true;
-				nulls[9] = true;
-				break;
-			case LOCKTAG_RELATION_APPENDONLY_SEGMENT_FILE:
-				values[1] = ObjectIdGetDatum(instance->locktag.locktag_field1);
-				values[2] = ObjectIdGetDatum(instance->locktag.locktag_field2);
-				values[7] = ObjectIdGetDatum(instance->locktag.locktag_field3);
-				nulls[3] = true;
-				nulls[4] = true;
-				nulls[5] = true;
-				nulls[6] = true;
 				nulls[8] = true;
 				nulls[9] = true;
 				break;

@@ -99,10 +99,10 @@ select count(*) from uao_table_tupcount_changes_after_delete;
 -- Verify the tupcount changes in pg_aoseg when updating uao table
 create table uao_table_tupcount_changes_after_update(i int, j varchar(20), k int ) with (appendonly=true) DISTRIBUTED BY (i);
 insert into uao_table_tupcount_changes_after_update select i,'aa'||i,i+10 from generate_series(1,10) as i;
-select tupcount from gp_toolkit.__gp_aoseg('uao_table_tupcount_changes_after_update');
+select sum(tupcount) from gp_toolkit.__gp_aoseg('uao_table_tupcount_changes_after_update');
 select count(*) from uao_table_tupcount_changes_after_update;
 update uao_table_tupcount_changes_after_update set j=j||'test11' where i = 1;
-select tupcount from gp_toolkit.__gp_aoseg('uao_table_tupcount_changes_after_update');
+select sum(tupcount) from gp_toolkit.__gp_aoseg('uao_table_tupcount_changes_after_update');
 select count(*) from uao_table_tupcount_changes_after_update;
 vacuum full uao_table_tupcount_changes_after_update;
 select sum(tupcount) from gp_toolkit.__gp_aoseg('uao_table_tupcount_changes_after_update');
@@ -111,17 +111,17 @@ select count(*) from uao_table_tupcount_changes_after_update;
 -- Verify the hidden tup_count using UDF gp_aovisimap_hidden_info(oid) for uao relation after delete and vacuum
 create table uao_table_check_hidden_tup_count_after_delete(i int, j varchar(20), k int ) with (appendonly=true) DISTRIBUTED BY (i);
 insert into uao_table_check_hidden_tup_count_after_delete select i,'aa'||i,i+10 from generate_series(1,10) as i;
-select gp_toolkit.__gp_aovisimap_hidden_info('uao_table_check_hidden_tup_count_after_delete'::regclass) from gp_dist_random('gp_id');
+select * from gp_toolkit.__gp_aovisimap_hidden_info('uao_table_check_hidden_tup_count_after_delete'::regclass);
 delete from uao_table_check_hidden_tup_count_after_delete;
-select gp_toolkit.__gp_aovisimap_hidden_info('uao_table_check_hidden_tup_count_after_delete'::regclass) from gp_dist_random('gp_id');
+select * from gp_toolkit.__gp_aovisimap_hidden_info('uao_table_check_hidden_tup_count_after_delete'::regclass);
 vacuum full uao_table_check_hidden_tup_count_after_delete;
-select gp_toolkit.__gp_aovisimap_hidden_info('uao_table_check_hidden_tup_count_after_delete'::regclass) from gp_dist_random('gp_id');
+select * from gp_toolkit.__gp_aovisimap_hidden_info('uao_table_check_hidden_tup_count_after_delete'::regclass);
 
 -- Verify the hidden tup_count using UDF gp_aovisimap_hidden_info(oid) for uao relation after update and vacuum
 create table uao_table_check_hidden_tup_count_after_update(i int, j varchar(20), k int ) with (appendonly=true) DISTRIBUTED BY (i);
 insert into uao_table_check_hidden_tup_count_after_update select i,'aa'||i,i+10 from generate_series(1,10) as i;
-select gp_toolkit.__gp_aovisimap_hidden_info('uao_table_check_hidden_tup_count_after_update'::regclass) from gp_dist_random('gp_id');
+select * from gp_toolkit.__gp_aovisimap_hidden_info('uao_table_check_hidden_tup_count_after_update'::regclass);
 update uao_table_check_hidden_tup_count_after_update set j = 'test21';
-select gp_toolkit.__gp_aovisimap_hidden_info('uao_table_check_hidden_tup_count_after_update'::regclass) from gp_dist_random('gp_id');
+select * from gp_toolkit.__gp_aovisimap_hidden_info('uao_table_check_hidden_tup_count_after_update'::regclass);
 vacuum full uao_table_check_hidden_tup_count_after_update;
-select gp_toolkit.__gp_aovisimap_hidden_info('uao_table_check_hidden_tup_count_after_update'::regclass) from gp_dist_random('gp_id');
+select * from gp_toolkit.__gp_aovisimap_hidden_info('uao_table_check_hidden_tup_count_after_update'::regclass);

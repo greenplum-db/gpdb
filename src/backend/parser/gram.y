@@ -3934,7 +3934,6 @@ CopyStmt:	COPY opt_binary qualified_name opt_column_list opt_oids
 					n->filename = $8;
 					n->sreh = $12;
 					n->partitions = NULL;
-					n->ao_segnos = NIL;
 
 					if (n->is_program && n->filename == NULL)
 						ereport(ERROR,
@@ -3967,7 +3966,6 @@ CopyStmt:	COPY opt_binary qualified_name opt_column_list opt_oids
 					n->filename = $7;
 					n->options = $9;
 					n->partitions = NULL;
-					n->ao_segnos = NIL;
 					n->skip_ext_partition = false;
 
 					if (n->is_program && n->filename == NULL)

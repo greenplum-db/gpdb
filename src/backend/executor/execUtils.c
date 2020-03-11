@@ -80,6 +80,7 @@
 
 static bool get_last_attnums(Node *node, ProjectionInfo *projInfo);
 static void ShutdownExprContext(ExprContext *econtext, bool isCommit);
+static List *flatten_logic_exprs(Node *node);
 
 
 /* ----------------------------------------------------------------
@@ -937,51 +938,6 @@ ExecCloseScanRelation(Relation scanrel)
 }
 
 /*
- * ExecUpdateAOtupCount
- *		Update the tuple count on the master for an append only relation segfile.
- */
-static void
-ExecUpdateAOtupCount(ResultRelInfo *result_rels,
-					 Snapshot shapshot,
-					 int num_result_rels,
-					 EState* estate,
-					 uint64 tupadded)
-{
-	int		i;
-
-	Assert(Gp_role == GP_ROLE_DISPATCH);
-
-	bool was_delete = estate && estate->es_plannedstmt &&
-		(estate->es_plannedstmt->commandType == CMD_DELETE);
-
-	for (i = num_result_rels; i > 0; i--)
-	{
-		if(RelationIsAppendOptimized(result_rels->ri_RelationDesc))
-		{
-			Assert(result_rels->ri_aosegno != InvalidFileSegNumber);
-
-			if (was_delete && tupadded > 0)
-			{
-				/* Touch the ao seg info */
-				UpdateMasterAosegTotals(result_rels->ri_RelationDesc,
-									result_rels->ri_aosegno,
-									0,
-									1);
-			} 
-			else if (!was_delete)
-			{
-				UpdateMasterAosegTotals(result_rels->ri_RelationDesc,
-									result_rels->ri_aosegno,
-									tupadded,
-									1);
-			}
-		}
-
-		result_rels++;
-	}
-}
-
-/*
  * UpdateChangedParamSet
  *		Add changed parameters to a plan node's chgParam set
  */
@@ -1135,6 +1091,95 @@ ExecGetShareNodeEntry(EState* estate, int shareidx, bool fCreate)
 }
 
 /*
+ * flatten_logic_exprs
+ * This function is only used by ExecPrefetchJoinQual.
+ * ExecPrefetchJoinQual need to prefetch subplan in join
+ * qual that contains motion to materialize it to avoid
+ * motion deadlock. This function is going to flatten
+ * the bool exprs to avoid shortcut of bool logic.
+ * An example is:
+ * (a and b or c) or (d or e and f or g) and (h and i or j)
+ * will be transformed to
+ * (a, b, c, d, e, f, g, h, i, j).
+ */
+static List *
+flatten_logic_exprs(Node *node)
+{
+	if (node == NULL)
+		return NIL;
+
+	if (IsA(node, BoolExprState))
+	{
+		BoolExprState *be = (BoolExprState *) node;
+		return flatten_logic_exprs((Node *) (be->args));
+	}
+
+	if (IsA(node, List))
+	{
+		List     *es = (List *) node;
+		List     *result = NIL;
+		ListCell *lc = NULL;
+
+		foreach(lc, es)
+		{
+			Node *n = (Node *) lfirst(lc);
+			result = list_concat(result,
+								 flatten_logic_exprs(n));
+		}
+
+		return result;
+	}
+
+	return list_make1(node);
+}
+
+/*
+ * fake_outer_params
+ *   helper function to fake the nestloop's nestParams
+ *   so that prefetch inner or prefetch joinqual will
+ *   not encounter NULL pointer reference issue. It is
+ *   only invoked in ExecNestLoop and ExecPrefetchJoinQual
+ *   when the join is a nestloop join.
+ */
+void
+fake_outer_params(JoinState *node)
+{
+	ExprContext    *econtext = node->ps.ps_ExprContext;
+	PlanState      *inner = innerPlanState(node);
+	TupleTableSlot *outerTupleSlot = econtext->ecxt_outertuple;
+	NestLoop       *nl = (NestLoop *) (node->ps.plan);
+	ListCell       *lc = NULL;
+
+	/* only nestloop contains nestParams */
+	Assert(IsA(node->ps.plan, NestLoop));
+
+	/* econtext->ecxt_outertuple must have been set fakely. */
+	Assert(outerTupleSlot != NULL);
+	/*
+	 * fetch the values of any outer Vars that must be passed to the
+	 * inner scan, and store them in the appropriate PARAM_EXEC slots.
+	 */
+	foreach(lc, nl->nestParams)
+	{
+		NestLoopParam *nlp = (NestLoopParam *) lfirst(lc);
+		int			paramno = nlp->paramno;
+		ParamExecData *prm;
+
+		prm = &(econtext->ecxt_param_exec_vals[paramno]);
+		/* Param value should be an OUTER_VAR var */
+		Assert(IsA(nlp->paramval, Var));
+		Assert(nlp->paramval->varno == OUTER_VAR);
+		Assert(nlp->paramval->varattno > 0);
+		prm->value = slot_getattr(outerTupleSlot,
+								  nlp->paramval->varattno,
+								  &(prm->isnull));
+		/* Flag parameter value as changed */
+		inner->chgParam = bms_add_member(inner->chgParam,
+										 paramno);
+	}
+}
+
+/*
  * Prefetch JoinQual to prevent motion hazard.
  *
  * A motion hazard is a deadlock between motions, a classic motion hazard in a
@@ -1161,7 +1206,7 @@ ExecGetShareNodeEntry(EState* estate, int shareidx, bool fCreate)
  *
  * Return true if the JoinQual is prefetched.
  */
-bool
+void
 ExecPrefetchJoinQual(JoinState *node)
 {
 	EState	   *estate = node->ps.state;
@@ -1171,8 +1216,10 @@ ExecPrefetchJoinQual(JoinState *node)
 	List	   *joinqual = node->joinqual;
 	TupleTableSlot *innertuple = econtext->ecxt_innertuple;
 
-	if (!joinqual)
-		return false;
+	ListCell   *lc = NULL;
+	List       *quals = NIL;
+
+	Assert(joinqual);
 
 	/* Outer tuples should not be fetched before us */
 	Assert(econtext->ecxt_outertuple == NULL);
@@ -1183,44 +1230,29 @@ ExecPrefetchJoinQual(JoinState *node)
 	econtext->ecxt_outertuple = ExecInitNullTupleSlot(estate,
 													  ExecGetResultType(outer));
 
+	if (IsA(node->ps.plan, NestLoop))
+	{
+		NestLoop *nl = (NestLoop *) (node->ps.plan);
+		if (nl->nestParams)
+			fake_outer_params(node);
+	}
+
+	quals = flatten_logic_exprs((Node *) joinqual);
+
 	/* Fetch subplan with the fake inner & outer tuples */
-	ExecQual(joinqual, econtext, false);
+	foreach(lc, quals)
+	{
+		/*
+		 * Force every joinqual is prefech because
+		 * our target is to materialize motion node.
+		 */
+		ExprState  *clause = (ExprState *) lfirst(lc);
+		(void) ExecQual(list_make1(clause), econtext, false);
+	}
 
 	/* Restore previous state */
 	econtext->ecxt_innertuple = innertuple;
 	econtext->ecxt_outertuple = NULL;
-
-	return true;
-}
-
-/*
- * Decide if should prefetch joinqual.
- *
- * Joinqual should be prefetched when both outer and joinqual contain motions.
- * In create_*join_plan() functions we set prefetch_joinqual according to the
- * outer motions, now we detect for joinqual motions to make the final
- * decision.
- *
- * See ExecPrefetchJoinQual() for details.
- *
- * This function should be called in ExecInit*Join() functions.
- *
- * Return true if JoinQual should be prefetched.
- */
-bool
-ShouldPrefetchJoinQual(EState *estate, Join *join)
-{
-	ExecSlice  *localSlice;
-
-	if (!join->prefetch_joinqual)
-		return false;
-
-	/* Is this slice the sender of a Motion? */
-	if (!estate->es_sliceTable)
-		return false;
-	localSlice = &estate->es_sliceTable->slices[estate->currentSliceId];
-
-	return (localSlice->parentIndex != -1);
 }
 
 /* ----------------------------------------------------------------
@@ -1569,7 +1601,6 @@ void mppExecutorFinishup(QueryDesc *queryDesc)
 		CdbDispatcherState *ds = estate->dispatcherState;
 		DispatchWaitMode waitMode = DISPATCH_WAIT_NONE;
 		ErrorData *qeError = NULL;
-		HTAB *aopartcounts = NULL;
 
 		/*
 		 * If we are finishing a query before all the tuples of the query
@@ -1609,66 +1640,10 @@ void mppExecutorFinishup(QueryDesc *queryDesc)
 				cdbdisp_sumCmdTuples(pr, primaryWriterSliceIndex);
 			estate->es_lastoid =
 				cdbdisp_maxLastOid(pr, primaryWriterSliceIndex);
-
-			if (estate->es_result_partitions)
-				aopartcounts = cdbdisp_sumAoPartTupCount(pr);
 		}
 
 		/* sum up rejected rows if any (single row error handling only) */
 		cdbdisp_sumRejectedRows(pr);
-
-		/* sum up inserted rows into any AO relation */
-		if (aopartcounts)
-		{
-			/* counts from a partitioned AO table */
-
-			ListCell *lc;
-
-			foreach(lc, estate->es_result_aosegnos)
-			{
-				SegfileMapNode *map = lfirst(lc);
-				struct {
-					Oid relid;
-			   		int64 tupcount;
-				} *entry;
-				bool found;
-
-				entry = hash_search(aopartcounts,
-									&(map->relid),
-									HASH_FIND,
-									&found);
-
-				/*
-				 * Must update the mod count only for segfiles where actual tuples were touched 
-				 * (added/deleted) based on entry->tupcount.
-				 */
-				if (found && entry->tupcount)
-				{
-					bool was_delete = estate->es_plannedstmt && (estate->es_plannedstmt->commandType == CMD_DELETE);
-
-					Relation r = heap_open(map->relid, AccessShareLock);
-					if (was_delete)
-					{
-						UpdateMasterAosegTotals(r, map->segno, 0, 1);
-					}
-					else
-					{
-						UpdateMasterAosegTotals(r, map->segno, entry->tupcount, 1);	
-					}
-					heap_close(r, NoLock);
-				}
-			}
-		}
-		else
-		{
-			/* counts from a (non partitioned) AO table */
-
-			ExecUpdateAOtupCount(estate->es_result_relations,
-								 estate->es_snapshot,
-								 estate->es_num_result_relations,
-								 estate,
-								 estate->es_processed);
-		}
 
 		/*
 		 * Check and free the results of all gangs. If any QE had an
@@ -1938,117 +1913,30 @@ getLocallyExecutableSubplans(PlannedStmt *plannedstmt, Plan *root_plan)
 	return ctx.bms_subplans;
 }
 
-typedef struct ParamExtractorContext
-{
-	plan_tree_base_prefix base; /* Required prefix for plan_tree_walker/mutator */
-	EState *estate;
-} ParamExtractorContext;
-
 /*
- * Given a subplan determine if it is an initPlan (subplan->is_initplan) then copy its params
- * from estate-> es_param_list_info to estate->es_param_exec_vals.
- */
-static void ExtractSubPlanParam(SubPlan *subplan, EState *estate)
-{
-	/*
-	 * If this plan is un-correlated or undirect correlated one and want to
-	 * set params for parent plan then mark parameters as needing evaluation.
-	 *
-	 * Note that in the case of un-correlated subqueries we don't care about
-	 * setting parent->chgParam here: indices take care about it, for others -
-	 * it doesn't matter...
-	 */
-	if (subplan->setParam != NIL)
-	{
-		ListCell   *lst;
-
-		foreach(lst, subplan->setParam)
-		{
-			int			paramid = lfirst_int(lst);
-			ParamExecData *prmExec = &(estate->es_param_exec_vals[paramid]);
-
-			/**
-			 * Has this parameter been already
-			 * evaluated as part of preprocess_initplan()? If so,
-			 * we shouldn't re-evaluate it. If it has been evaluated,
-			 * we will simply substitute the actual value from
-			 * the external parameters.
-			 */
-			if (subplan->is_initplan)
-			{
-				ParamListInfo paramInfo = estate->es_param_list_info;
-				ParamExternData *prmExt = NULL;
-				int extParamIndex = -1;
-
-				Assert(paramInfo);
-				Assert(paramInfo->numParams > 0);
-
-				/*
-				 * To locate the value of this pre-evaluated parameter, we need to find
-				 * its location in the external parameter list.
-				 */
-				extParamIndex = paramInfo->numParams - estate->es_plannedstmt->nParamExec + paramid;
-				prmExt = &paramInfo->params[extParamIndex];
-
-				/* Make sure the types are valid */
-				if (!OidIsValid(prmExt->ptype))
-				{
-					prmExec->execPlan = NULL;
-					prmExec->isnull = true;
-					prmExec->value = (Datum) 0;
-				}
-				else
-				{
-					/** Hurray! Copy value from external parameter and don't bother setting up execPlan. */
-					prmExec->execPlan = NULL;
-					prmExec->isnull = prmExt->isnull;
-					prmExec->value = prmExt->value;
-				}
-			}
-		}
-	}
-}
-
-/*
- * Walker to extract all the precomputer InitPlan params in a plan tree.
- */
-static bool
-ParamExtractorWalker(Plan *node,
-				  void *context)
-{
-	Assert(context);
-	ParamExtractorContext *ctx = (ParamExtractorContext *) context;
-
-	/* Assuming InitPlan always runs on the master */
-	if (node == NULL)
-	{
-		return false;	/* don't visit subtree */
-	}
-
-	if (IsA(node, SubPlan))
-	{
-		SubPlan *sub_plan = (SubPlan *) node;
-		ExtractSubPlanParam(sub_plan, ctx->estate);
-	}
-
-	/* Continue walking */
-	return plan_tree_walker((Node*)node, ParamExtractorWalker, ctx, true);
-}
-
-/*
- * Find and extract all the InitPlan setParams in a root node's subtree.
+ * Copy PARAM_EXEC parameter values that were received from the QD into
+ * our EState.
  */
 void
-ExtractParamsFromInitPlans(PlannedStmt *plannedstmt, Plan *root, EState *estate)
+InstallDispatchedExecParams(QueryDispatchDesc *ddesc, EState *estate)
 {
-	ParamExtractorContext ctx;
-
-	ctx.base.node = (Node *) plannedstmt;
-	ctx.estate = estate;
-
 	Assert(Gp_role == GP_ROLE_EXECUTE);
 
-	ParamExtractorWalker(root, &ctx);
+	if (ddesc->paramInfo == NULL)
+		return;
+
+	for (int i = 0; i < ddesc->paramInfo->nExecParams; i++)
+	{
+		SerializedParamExecData *sprm = &ddesc->paramInfo->execParams[i];
+		ParamExecData *prmExec = &estate->es_param_exec_vals[i];
+
+		if (!sprm->isvalid)
+			continue;	/* not dispatched */
+
+		prmExec->execPlan = NULL;
+		prmExec->value = sprm->value;
+		prmExec->isnull = sprm->isnull;
+	}
 }
 
 /**

@@ -304,22 +304,3 @@ FROM (SELECT 10*cosd(a), 10*sind(a)
       FROM generate_series(0, 360, 90) AS t(a)) AS t(x,y);
 
 RESET extra_float_digits;
-
--- test if you can dump/restore subnormal (1e-323) values
--- using COPY
-
-CREATE TABLE FLOATS(a float8);
-
-INSERT INTO FLOATS select 1e-307::float8 / 10^i FROM generate_series(1,16) i;
-
-SELECT * FROM FLOATS ORDER BY a;
-
-SELECT float8in(float8out(a)) FROM FLOATS ORDER BY a;
-
-COPY FLOATS TO '/tmp/floats';
-
-TRUNCATE FLOATS;
-
-COPY FLOATS FROM '/tmp/floats';
-
-SELECT * FROM FLOATS ORDER BY a;

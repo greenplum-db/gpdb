@@ -1,0 +1,76 @@
+-- @Description Test scenario where a backend accesses AO table with a snapshot
+-- that was acquired before vacuum.
+--
+DROP TABLE IF EXISTS ao;
+DROP
+CREATE TABLE ao (a INT, b INT) WITH (appendonly=true, orientation=@orientation@);
+CREATE
+INSERT INTO ao SELECT i as a, i as b FROM generate_series(1, 100) AS i;
+INSERT 100
+
+DELETE FROM ao WHERE a <= 30;
+DELETE 30
+
+create or replace function myfunc() returns bigint as $$ begin  /* inside a function */ perform pg_sleep(10); /* inside a function */ return (select count(*) from ao);  /* inside a function */ end;  /* inside a function */ $$ stable language plpgsql;
+CREATE
+
+-- Launch function into the background.
+1&: select myfunc();  <waiting ...>
+
+-- Meanwhile, DELETE some rows and VACUUM. VACUUM should not recycle the
+-- old tuple versions that are still needed by the function later. It will
+-- compact the segfile, but keep the old segfile in AWAITING_DROP state.
+2: DELETE FROM ao WHERE a <= 50;
+DELETE 20
+2: SELECT segno, tupcount, state FROM gp_ao_or_aocs_seg('ao');
+ segno | tupcount | state 
+-------+----------+-------
+ 1     | 25       | 1     
+ 1     | 37       | 1     
+ 1     | 38       | 1     
+(3 rows)
+2: VACUUM ao;
+VACUUM
+2: SELECT segno, tupcount, state FROM gp_ao_or_aocs_seg('ao');
+ segno | tupcount | state 
+-------+----------+-------
+ 1     | 38       | 2     
+ 2     | 20       | 1     
+ 1     | 37       | 2     
+ 2     | 19       | 1     
+ 1     | 25       | 2     
+ 2     | 11       | 1     
+(6 rows)
+
+-- A second VACUUM shouldn't recycle them either.
+2: VACUUM ao;
+VACUUM
+2: SELECT segno, tupcount, state FROM gp_ao_or_aocs_seg('ao');
+ segno | tupcount | state 
+-------+----------+-------
+ 1     | 25       | 2     
+ 1     | 37       | 2     
+ 1     | 38       | 2     
+ 2     | 11       | 1     
+ 2     | 19       | 1     
+ 2     | 20       | 1     
+(6 rows)
+1<:  <... completed>
+ myfunc 
+--------
+ 70     
+(1 row)
+
+-- Now that the first transaction has finished, VACUUM can recycle.
+2: VACUUM ao;
+VACUUM
+2: SELECT segno, tupcount, state FROM gp_ao_or_aocs_seg('ao');
+ segno | tupcount | state 
+-------+----------+-------
+ 1     | 0        | 1     
+ 1     | 0        | 1     
+ 1     | 0        | 1     
+ 2     | 11       | 1     
+ 2     | 19       | 1     
+ 2     | 20       | 1     
+(6 rows)

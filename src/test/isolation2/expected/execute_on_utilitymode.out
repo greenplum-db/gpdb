@@ -1,0 +1,102 @@
+--
+-- Test using functions with EXECUTE ON options in utility mode.
+--
+
+-- First, create test functions with different EXECUTE ON options
+
+create function srf_on_master () returns setof text as $$ begin	/* in func */ return next 'foo ' || current_setting('gp_contentid');	/* in func */ return next 'bar ' || current_setting('gp_contentid');	/* in func */ end;	/* in func */ $$ language plpgsql EXECUTE ON MASTER;
+CREATE
+
+create function srf_on_all_segments () returns setof text as $$ begin	/* in func */ return next 'foo ' || current_setting('gp_contentid');	/* in func */ return next 'bar ' || current_setting('gp_contentid');	/* in func */ end;	/* in func */ $$ language plpgsql EXECUTE ON ALL SEGMENTS;
+CREATE
+
+create function srf_on_any () returns setof text as $$ begin	/* in func */ return next 'foo ' || current_setting('gp_contentid');	/* in func */ return next 'bar ' || current_setting('gp_contentid');	/* in func */ end;	/* in func */ $$ language plpgsql EXECUTE ON ANY IMMUTABLE;
+CREATE
+
+create function srf_on_initplan () returns setof text as $$ begin	/* in func */ return next 'foo ' || current_setting('gp_contentid');	/* in func */ return next 'bar ' || current_setting('gp_contentid');	/* in func */ end;	/* in func */ $$ language plpgsql EXECUTE ON INITPLAN;
+CREATE
+
+-- Now try executing them in utility mode, in the master node and on a
+-- segment. The expected behavior is that the function runs on the node
+-- we're connected to, ignoring the EXECUTE ON directives.
+--
+-- Join with a table, to give the planner something more exciting to do
+-- than just create the FunctionScan plan.
+create table fewrows (t text) distributed by (t);
+CREATE
+insert into fewrows select g from generate_series(1, 10) g;
+INSERT 10
+
+-1U: select * from srf_on_master()       as srf (x) left join fewrows on x = t;
+ x      | t 
+--------+---
+ foo -1 |   
+ bar -1 |   
+(2 rows)
+-1U: select * from srf_on_all_segments() as srf (x) left join fewrows on x = t;
+ x      | t 
+--------+---
+ foo -1 |   
+ bar -1 |   
+(2 rows)
+-1U: select * from srf_on_any()          as srf (x) left join fewrows on x = t;
+ x      | t 
+--------+---
+ foo -1 |   
+ bar -1 |   
+(2 rows)
+-1U: select * from srf_on_initplan()     as srf (x) left join fewrows on x = t;
+ x      | t 
+--------+---
+ foo -1 |   
+ bar -1 |   
+(2 rows)
+
+1U: select * from srf_on_master(),       fewrows;
+ srf_on_master | t 
+---------------+---
+ foo 1         | 2 
+ foo 1         | 3 
+ foo 1         | 4 
+ foo 1         | 7 
+ bar 1         | 2 
+ bar 1         | 3 
+ bar 1         | 4 
+ bar 1         | 7 
+(8 rows)
+1U: select * from srf_on_all_segments(), fewrows;
+ srf_on_all_segments | t 
+---------------------+---
+ foo 1               | 2 
+ foo 1               | 3 
+ foo 1               | 4 
+ foo 1               | 7 
+ bar 1               | 2 
+ bar 1               | 3 
+ bar 1               | 4 
+ bar 1               | 7 
+(8 rows)
+1U: select * from srf_on_any(),          fewrows;
+ srf_on_any | t 
+------------+---
+ foo 1      | 2 
+ foo 1      | 3 
+ foo 1      | 4 
+ foo 1      | 7 
+ bar 1      | 2 
+ bar 1      | 3 
+ bar 1      | 4 
+ bar 1      | 7 
+(8 rows)
+1U: select * from srf_on_initplan(),     fewrows;
+ srf_on_initplan | t 
+-----------------+---
+ foo 1           | 2 
+ foo 1           | 3 
+ foo 1           | 4 
+ foo 1           | 7 
+ bar 1           | 2 
+ bar 1           | 3 
+ bar 1           | 4 
+ bar 1           | 7 
+(8 rows)

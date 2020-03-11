@@ -26,7 +26,7 @@
  */
 
 #include "postgres.h"
-#include <string.h>
+
 #include "fmgr.h"
 #include "funcapi.h"
 
@@ -136,7 +136,8 @@ gp_aoseg_history_wrapper(PG_FUNCTION_ARGS)
  * For example,
  *
  * CREATE FUNCTION get_gp_aocsseg(regclass)
- *   RETURNS TABLE ( gp_tid tid
+ *   RETURNS TABLE (segment_id integer
+ *                 , gp_tid tid
  *                 , segno integer
  *                 , column_num smallint
  *                 , physical_segno integer
@@ -146,7 +147,9 @@ gp_aoseg_history_wrapper(PG_FUNCTION_ARGS)
  *                 , modcount bigint
  *                 , state smallint
  *                 )
- *   AS '$libdir/gp_ao_co_diagnostics', 'gp_aocsseg_wrapper' LANGUAGE C STRICT;
+ *   AS '$libdir/gp_ao_co_diagnostics', 'gp_aocsseg_wrapper'
+ *   LANGUAGE C STRICT
+ *   EXECUTE ON ALL SEGMENTS;
  *
  */
 Datum
@@ -165,16 +168,19 @@ gp_aocsseg_wrapper(PG_FUNCTION_ARGS)
  * For example,
  *
  * CREATE FUNCTION get_gp_aoseg(regclass)
- *   RETURNS TABLE ( 
- *                 segno integer
+ *   RETURNS TABLE (segment_id integer
+ *                 , segno integer
  *                 , eof bigint
  *                 , tupcount bigint
  *                 , varblockcount bigint
  *                 , eof_uncompressed bigint
  *                 , modcount bigint
+ *                 , formatversion smallint
  *                 , state smallint
  *                 )
- *   AS '$libdir/gp_ao_co_diagnostics', 'gp_aoseg_wrapper' LANGUAGE C STRICT;
+ *   AS '$libdir/gp_ao_co_diagnostics', 'gp_aoseg_wrapper'
+ *   LANGUAGE C STRICT
+ *   EXECUTE ON ALL SEGMENTS;
  *
  */
 Datum
@@ -266,131 +272,4 @@ gp_aovisimap_entry_wrapper(PG_FUNCTION_ARGS)
 	Datum returnValue = gp_aovisimap_entry(fcinfo);
 
 	PG_RETURN_DATUM(returnValue);
-}
-
-static void not_query_dispatcher_error() {
-	elog(ERROR, "ao entries are maintained only on query dispatcher");
-}
-
-
-/*
- * Interface to remove an entry from AppendOnlyHash cache.
- */
-Datum
-gp_remove_ao_entry_from_cache(PG_FUNCTION_ARGS)
-{
-	if (!IS_QUERY_DISPATCHER())
-		not_query_dispatcher_error();
-
-	Oid relid = PG_GETARG_OID(0);
-
-	GpRemoveEntryFromAppendOnlyHash(relid);
-
-	PG_RETURN_DATUM(0);
-}
-
-/*
- * Interface to obtain details of an entry from AppendOnlyHash cache.
- */
-struct GetAOEntryContext
-{
-	int segno;
-	AORelHashEntryData aoentry;
-};
-
-Datum
-gp_get_ao_entry_from_cache(PG_FUNCTION_ARGS)
-{
-	if (!IS_QUERY_DISPATCHER())
-		not_query_dispatcher_error();
-
-	Oid relid = PG_GETARG_OID(0);
-	FuncCallContext *funcctx;
-	struct GetAOEntryContext *context;
-
-	if (SRF_IS_FIRSTCALL())
-	{
-		TupleDesc	tupdesc;
-		MemoryContext oldcontext;
-
-		/* create a function context for cross-call persistence */
-		funcctx = SRF_FIRSTCALL_INIT();
-
-		/*
-		 * switch to memory context appropriate for multiple function
-		 * calls
-		 */
-		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
-
-		/* build tupdesc for result tuples */
-#define NUM_ATTRS 9
-		tupdesc = CreateTemplateTupleDesc(NUM_ATTRS, false);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "segno",
-						   INT2OID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "total_tupcount",
-						   INT8OID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 3, "tuples_added",
-						   INT8OID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 4, "inserting_transaction",
-						   XIDOID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 5, "latest_committed_inserting_dxid",
-						   XIDOID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 6, "state",
-						   INT2OID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 7, "format_version",
-						   INT2OID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 8, "is_full",
-						   BOOLOID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 9, "aborted",
-						   BOOLOID, -1, 0);
-
-		funcctx->tuple_desc = BlessTupleDesc(tupdesc);
-
-		context = palloc(sizeof(struct GetAOEntryContext));
-		context->segno = 0;
-		GpFetchEntryFromAppendOnlyHash(relid, &context->aoentry);
-
-		funcctx->user_fctx = (void *) context;
-
-		MemoryContextSwitchTo(oldcontext);
-		elog(NOTICE, "transactions using relid %d: %d",
-			 relid, context->aoentry.txns_using_rel);
-	}
-
-	funcctx = SRF_PERCALL_SETUP();
-	context = (struct GetAOEntryContext *) funcctx->user_fctx;
-
-	if (context->segno < MAX_AOREL_CONCURRENCY)
-	{
-		Datum		values[NUM_ATTRS];
-		bool		nulls[NUM_ATTRS];
-		HeapTuple	tuple;
-		Datum		result;
-
-		AOSegfileStatus *aosegfile =
-			&(context->aoentry.relsegfiles[context->segno]);
-
-		/*
-		 * Form tuple with appropriate data.
-		 */
-		MemSet(values, 0, sizeof(values));
-		MemSet(nulls, false, sizeof(nulls));
-
-		values[0] = Int16GetDatum(context->segno);
-		values[1] = Int64GetDatum(aosegfile->total_tupcount);
-		values[2] = Int64GetDatum(aosegfile->tupsadded);
-		values[3] = TransactionIdGetDatum(aosegfile->xid);
-		values[4] = TransactionIdGetDatum(aosegfile->latestWriteXid);
-		values[5] = Int16GetDatum(aosegfile->state);
-		values[6] = Int16GetDatum(aosegfile->formatversion);
-		values[7] = BoolGetDatum(aosegfile->isfull);
-		values[8] = BoolGetDatum(aosegfile->aborted);
-
-		tuple = heap_form_tuple(funcctx->tuple_desc, values, nulls);
-		result = HeapTupleGetDatum(tuple);
-
-		context->segno++;
-		SRF_RETURN_NEXT(funcctx, result);
-	}
-	SRF_RETURN_DONE(funcctx);
 }

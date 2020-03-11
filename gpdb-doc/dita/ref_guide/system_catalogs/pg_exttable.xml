@@ -79,7 +79,7 @@
             <entry colname="col2">char</entry>
             <entry colname="col3"/>
             <entry colname="col4">Type of reject limit threshold: <codeph>r</codeph> for number of
-              rows.</entry>
+              rows, or <codeph>p</codeph> for percent.</entry>
           </row>
           <row>
             <entry colname="col1"><codeph>logerrors</codeph></entry>

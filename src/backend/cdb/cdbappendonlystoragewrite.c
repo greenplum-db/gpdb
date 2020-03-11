@@ -248,10 +248,6 @@ AppendOnlyStorageWrite_FinishSession(AppendOnlyStorageWrite *storageWrite)
 
 /*
  * Creates an on-demand Append-Only segment file under transaction.
- *
- * logicalEof	- The last committed write transaction's EOF value to use as
- *				  the end of the segment file. If 0, we will create the file
- *				  if necessary. Otherwise, it must already exist.
  */
 void
 AppendOnlyStorageWrite_TransactionCreateFile(AppendOnlyStorageWrite *storageWrite,

@@ -19,6 +19,7 @@
 
 #include "miscadmin.h"
 #include "access/genam.h"
+#include "access/hash.h"
 #include "access/xact.h"
 #include "access/xlog_internal.h"		/* for pg_start/stop_backup */
 #include "cdb/cdbvars.h"
@@ -62,14 +63,14 @@ typedef struct
 	bool		includewal;
 	uint32		maxrate;
 	bool		sendtblspcmapfile;
-	List	   *exclude;
+	HTAB	   *exclude;
 } basebackup_options;
 
 
-static bool match_exclude_list(char *path, List *exclude);
+static bool match_exclude_list(char *path, HTAB *exclude);
 
 static int64 sendDir(char *path, int basepathlen, bool sizeonly,
-		List *tablespaces, bool sendtblspclinks, List *exclude);
+					 List *tablespaces, bool sendtblspclinks, HTAB *exclude);
 static bool sendFile(char *readfilename, char *tarfilename,
 		 struct stat * statbuf, bool missing_ok);
 static void sendFileWithContent(const char *filename, const char *content);
@@ -614,6 +615,35 @@ compareWalFileNames(const void *a, const void *b)
 	return strcmp(fna + 8, fnb + 8);
 }
 
+/* Hash entire string */
+static uint32
+key_string_hash(const void *key, Size keysize)
+{
+	Size		s_len = strlen((const char *) key);
+
+	Assert(keysize == sizeof(char *));
+	return DatumGetUInt32(hash_any((const unsigned char *) key, (int) s_len));
+}
+
+/* Compare entire string. */
+static int
+key_string_compare(const void *key1, const void *key2, Size keysize)
+{
+	Assert(keysize == sizeof(char *));
+
+	return strcmp(*((const char **) key1), key2);
+}
+
+/* Copy string by copying pointer. */
+static void *
+key_string_copy(void *dest, const void *src, Size keysize)
+{
+	Assert(keysize == sizeof(char *));
+
+	*((char **) dest) = (char *) src;	/* trust caller re allocation */
+	return NULL;				/* not used */
+}
+
 /*
  * Parse the base backup options passed down by the parser
  */
@@ -630,7 +660,14 @@ parse_basebackup_options(List *options, basebackup_options *opt)
 	bool		o_tablespace_map = false;
 
 	MemSet(opt, 0, sizeof(*opt));
-	opt->exclude = NIL;
+
+	/*
+	 * The exclude hash table is only created if EXCLUDE options are specified.
+	 * The matching function is optimized to run fast when the hash table is
+	 * NULL.
+	 */
+	opt->exclude = NULL;
+
 	foreach(lopt, options)
 	{
 		DefElem    *defel = (DefElem *) lfirst(lopt);
@@ -702,7 +739,39 @@ parse_basebackup_options(List *options, basebackup_options *opt)
 		else if (strcmp(defel->defname, "exclude") == 0)
 		{
 			/* EXCLUDE option can be specified multiple times */
-			opt->exclude = lappend(opt->exclude, defel->arg);
+			bool		found;
+
+			if (unlikely(opt->exclude == NULL))
+			{
+				HASHCTL		hashctl;
+
+				/*
+				 * The hash table stores the string keys in-place if the
+				 * `match` and `keycopy` functions are not explicitly
+				 * specified.  In our case MAXPGPATH bytes need to be reserved
+				 * for each key, which is too wasteful.
+				 *
+				 * By specifying the `match` and `keycopy` functions we could
+				 * allocate the strings separately and store only the string
+				 * pointers in the hash table.
+				 */
+				hashctl.hash = key_string_hash;
+				hashctl.match = key_string_compare;
+				hashctl.keycopy = key_string_copy;
+
+				/* The hash table is used as a set, only the keys are meaningful */
+				hashctl.keysize = sizeof(char *);
+				hashctl.entrysize = hashctl.keysize;
+
+				opt->exclude = hash_create("replication exclude",
+										   64 /* nelem */,
+										   &hashctl,
+										   HASH_ELEM | HASH_FUNCTION |
+										   HASH_COMPARE | HASH_KEYCOPY);
+			}
+
+			hash_search(opt->exclude, pstrdup(strVal(defel->arg)),
+						HASH_ENTER, &found);
 		}
 		else if (strcmp(defel->defname, "tablespace_map") == 0)
 		{
@@ -719,6 +788,9 @@ parse_basebackup_options(List *options, basebackup_options *opt)
 	}
 	if (opt->label == NULL)
 		opt->label = "base backup";
+
+	if (opt->exclude)
+		hash_freeze(opt->exclude);
 
 	elogif(debug_basebackup, LOG,
 			"basebackup options -- "
@@ -1016,7 +1088,7 @@ sendTablespace(char *path, bool sizeonly)
 	size = 512;					/* Size of the header just added */
 
 	/* Send all the files in the tablespace version directory */
-	size += sendDir(pathbuf, strlen(path), sizeonly, NIL, true, NIL);
+	size += sendDir(pathbuf, strlen(path), sizeonly, NIL, true, NULL);
 
 	return size;
 }
@@ -1027,19 +1099,14 @@ sendTablespace(char *path, bool sizeonly)
  * "./pg_log" etc).
  */
 static bool
-match_exclude_list(char *path, List *exclude)
+match_exclude_list(char *path, HTAB *exclude)
 {
-	ListCell	   *l;
+	bool		found = false;
 
-	foreach (l, exclude)
-	{
-		char	   *val = strVal(lfirst(l));
+	if (unlikely(exclude))
+		hash_search(exclude, path, HASH_FIND, &found);
 
-		if (strcmp(val, path) == 0)
-			return true;
-	}
-
-	return false;
+	return found;
 }
 
 /*
@@ -1058,7 +1125,7 @@ match_exclude_list(char *path, List *exclude)
  */
 static int64
 sendDir(char *path, int basepathlen, bool sizeonly, List *tablespaces,
-		bool sendtblspclinks, List *exclude)
+		bool sendtblspclinks, HTAB *exclude)
 {
 	DIR		   *dir;
 	struct dirent *de;

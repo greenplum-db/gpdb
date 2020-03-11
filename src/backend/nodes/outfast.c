@@ -203,6 +203,8 @@
 
 static void _outNode(StringInfo str, void *obj);
 
+#define outDatum(str, value, typlen, typbyval) _outDatum(str, value, typlen, typbyval)
+
 static void
 _outList(StringInfo str, List *node)
 {
@@ -355,7 +357,6 @@ _outCopyStmt(StringInfo str, CopyStmt *node)
 	WRITE_NODE_FIELD(options);
 	WRITE_NODE_FIELD(sreh);
 	WRITE_NODE_FIELD(partitions);
-	WRITE_NODE_FIELD(ao_segnos);
 }
 
 static void
@@ -1067,21 +1068,6 @@ _outTupleDescNode(StringInfo str, TupleDescNode *node)
 	WRITE_INT_FIELD(tuple->tdtypmod);
 	WRITE_BOOL_FIELD(tuple->tdhasoid);
 	WRITE_INT_FIELD(tuple->tdrefcount);
-}
-
-static void
-_outSerializedParamExternData(StringInfo str, SerializedParamExternData *node)
-{
-	WRITE_NODE_TYPE("SERIALIZEDPARAMEXTERNDATA");
-
-	WRITE_BOOL_FIELD(isnull);
-	WRITE_INT16_FIELD(pflags);
-	WRITE_OID_FIELD(ptype);
-	WRITE_INT16_FIELD(plen);
-	WRITE_BOOL_FIELD(pbyval);
-
-	if (!node->isnull)
-		_outDatum(str, node->value, node->plen, node->pbyval);
 }
 
 static void
@@ -1989,9 +1975,6 @@ _outNode(StringInfo str, void *obj)
 			case T_VacuumStmt:
 				_outVacuumStmt(str, obj);
 				break;
-			case T_AOVacuumPhaseConfig:
-				_outAOVacuumPhaseConfig(str, obj);
-				break;
 			case T_CdbProcess:
 				_outCdbProcess(str, obj);
 				break;
@@ -2095,8 +2078,8 @@ _outNode(StringInfo str, void *obj)
 			case T_TupleDescNode:
 				_outTupleDescNode(str, obj);
 				break;
-			case T_SerializedParamExternData:
-				_outSerializedParamExternData(str, obj);
+			case T_SerializedParams:
+				_outSerializedParams(str, obj);
 				break;
 
 			case T_AlterTSConfigurationStmt:

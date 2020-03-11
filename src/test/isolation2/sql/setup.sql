@@ -6,6 +6,7 @@
 -- and thinks that a ';' at end of line ends the command. The /* in func */
 -- comments at the end of each line thwarts that.
 CREATE OR REPLACE FUNCTION gp_ao_or_aocs_seg(rel regclass,
+  segment_id OUT integer,
   segno OUT integer,
   tupcount OUT bigint,
   modcount OUT bigint,
@@ -17,11 +18,11 @@ declare
 begin	/* in func */
   select relstorage into relstorage_var from pg_class where oid = rel; /* in func */
   if relstorage_var = 'c' then	/* in func */
-    for segno, tupcount, modcount, formatversion, state in SELECT DISTINCT x.segno, x.tupcount, x.modcount, x.formatversion, x.state FROM gp_toolkit.__gp_aocsseg(rel) x loop	/* in func */
+    for segment_id, segno, tupcount, modcount, formatversion, state in SELECT DISTINCT x.segment_id, x.segno, x.tupcount, x.modcount, x.formatversion, x.state FROM gp_toolkit.__gp_aocsseg(rel) x loop	/* in func */
       return next;	/* in func */
     end loop;	/* in func */
   else	/* in func */
-    for segno, tupcount, modcount, formatversion, state in SELECT x.segno, x.tupcount, x.modcount, x.formatversion, x.state FROM gp_toolkit.__gp_aoseg(rel) x loop	/* in func */
+    for segment_id, segno, tupcount, modcount, formatversion, state in SELECT x.segment_id, x.segno, x.tupcount, x.modcount, x.formatversion, x.state FROM gp_toolkit.__gp_aoseg(rel) x loop	/* in func */
       return next;	/* in func */
     end loop;	/* in func */
   end if;	/* in func */

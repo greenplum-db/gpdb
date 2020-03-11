@@ -24,7 +24,9 @@
 #include "miscadmin.h"
 #include "storage/lmgr.h"
 #include "storage/procarray.h"
+#include "storage/proc.h"
 #include "utils/inval.h"
+#include "utils/memutils.h"
 
 #include "access/heapam.h"
 #include "catalog/namespace.h"
@@ -449,33 +451,6 @@ UnlockRelationForExtension(Relation relation, LOCKMODE lockmode)
 	LockRelease(&tag, lockmode, false);
 }
 
-LockAcquireResult
-LockRelationAppendOnlySegmentFile(RelFileNode *relFileNode, int32 segno, LOCKMODE lockmode, bool dontWait)
-{
-	LOCKTAG		tag;
-
-	SET_LOCKTAG_RELATION_APPENDONLY_SEGMENT_FILE(tag,
-						 relFileNode->dbNode,
-						 relFileNode->relNode,
-						 segno);
-
-	return LockAcquire(&tag, lockmode, false, dontWait);
-}
-
-void
-UnlockRelationAppendOnlySegmentFile(RelFileNode *relFileNode, int32 segno, LOCKMODE lockmode)
-{
-	LOCKTAG		tag;
-
-	SET_LOCKTAG_RELATION_APPENDONLY_SEGMENT_FILE(tag,
-						 relFileNode->dbNode,
-						 relFileNode->relNode,
-						 segno);
-
-	LockRelease(&tag, lockmode, false);
-}
-
-
 /*
  *		LockPage
  *
@@ -646,6 +621,29 @@ XactLockTableWait(TransactionId xid, Relation rel, ItemPointer ctid,
 	bool		first = true;
 
 	/*
+	 * Concurrent update and delete will wait on segment when GDD is enabled,
+	 * need to report the waited transactions to QD to make sure the they have
+	 * the same transaction order on the master.
+	 */
+	if (gp_enable_global_deadlock_detector && Gp_role == GP_ROLE_EXECUTE)
+	{
+		MemoryContext oldContext;
+		DistributedTransactionId gxid = LocalXidGetDistributedXid(xid);
+
+		if (gxid != InvalidDistributedTransactionId)
+		{
+			/*
+			 * allocate waitGxids in TopMemoryContext since it's used in
+			 * 'commit prepared' and the TopTransactionContext has been delete
+			 * after 'prepare'
+			 */
+			oldContext = MemoryContextSwitchTo(TopMemoryContext);
+			MyTmGxactLocal->waitGxids = lappend_int(MyTmGxactLocal->waitGxids, gxid);
+			MemoryContextSwitchTo(oldContext);
+		}
+	}
+
+	/*
 	 * If an operation is specified, set up our verbose error context
 	 * callback.
 	 */
@@ -701,6 +699,45 @@ XactLockTableWait(TransactionId xid, Relation rel, ItemPointer ctid,
 
 	if (oper != XLTW_None)
 		error_context_stack = callback.previous;
+}
+
+/*
+ *		GxactLockTableInsert
+ *
+ * CDB: a copy of XactLockTableInsert
+ * Insert a lock showing that the given distributed transaction ID is running
+ */
+void
+GxactLockTableInsert(DistributedTransactionId gxid)
+{
+	LOCKTAG		tag;
+
+	Assert(Gp_role == GP_ROLE_DISPATCH);
+
+	SET_LOCKTAG_DISTRIB_TRANSACTION(tag, gxid);
+
+	(void) LockAcquire(&tag, ExclusiveLock, false, false);
+}
+
+/*
+ *		GxactLockTableWait
+ *
+ * CDB: a copy of XactLockTableWait, no need to take care of sub-transaction.
+ * Wait for the specified distributed transaction to commit or abort.
+ */
+void
+GxactLockTableWait(DistributedTransactionId gxid)
+{
+	LOCKTAG		tag;
+
+	Assert(gxid != InvalidDistributedTransactionId);
+	Assert(Gp_role == GP_ROLE_DISPATCH);
+
+	SET_LOCKTAG_DISTRIB_TRANSACTION(tag, gxid);
+
+	(void) LockAcquire(&tag, ShareLock, false, false);
+
+	LockRelease(&tag, ShareLock, false);
 }
 
 /*
@@ -1094,16 +1131,14 @@ DescribeLockTag(StringInfo buf, const LOCKTAG *tag)
 							 tag->locktag_field2,
 							 tag->locktag_field1);
 			break;
-		case LOCKTAG_RELATION_APPENDONLY_SEGMENT_FILE:
-			appendStringInfo(buf,
-							 _("segment file %u of appendonly relation %u of database %u"),
-							 tag->locktag_field3,
-							 tag->locktag_field2,
-							 tag->locktag_field1);
-			break;
 		case LOCKTAG_TRANSACTION:
 			appendStringInfo(buf,
 							 _("transaction %u"),
+							 tag->locktag_field1);
+			break;
+		case LOCKTAG_DISTRIB_TRANSACTION:
+			appendStringInfo(buf,
+							 _("distributed transaction %u"),
 							 tag->locktag_field1);
 			break;
 		case LOCKTAG_VIRTUALTRANSACTION:
@@ -1172,7 +1207,6 @@ LockTagIsTemp(const LOCKTAG *tag)
 		case LOCKTAG_RELATION_EXTEND:
 		case LOCKTAG_PAGE:
 		case LOCKTAG_TUPLE:
-		case LOCKTAG_RELATION_APPENDONLY_SEGMENT_FILE:
 			/* check for lock on a temp relation */
 			/* field1 is dboid, field2 is reloid for all of these */
 			if ((Oid) tag->locktag_field1 == InvalidOid)

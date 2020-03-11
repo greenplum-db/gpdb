@@ -22,7 +22,9 @@
 #include "catalog/pg_authid.h"
 #include "cdb/cdbtm.h"
 #include "libpq/libpq-be.h"
+#include "libpq/pqformat.h"
 #include "miscadmin.h"
+#include "storage/lmgr.h"
 #include "storage/s_lock.h"
 #include "storage/shmem.h"
 #include "storage/ipc.h"
@@ -124,6 +126,7 @@ static void setCurrentDtxState(DtxState state);
 static bool isDtxQueryDispatcher(void);
 static void performDtxProtocolCommitPrepared(const char *gid, bool raiseErrorIfNotFound);
 static void performDtxProtocolAbortPrepared(const char *gid, bool raiseErrorIfNotFound);
+static void sendWaitGxidsToQD(List *waitGxids);
 
 extern void CheckForResetSession(void);
 
@@ -264,6 +267,7 @@ currentDtxActivate(void)
 	MyTmGxact->distribTimeStamp = getDtmStartTime();
 	MyTmGxact->sessionId = gp_session_id;
 	setCurrentDtxState(DTX_STATE_ACTIVE_DISTRIBUTED);
+	GxactLockTableInsert(MyTmGxact->gxid);
 }
 
 static void
@@ -304,6 +308,8 @@ notifyCommittedDtxTransactionIsNeeded(void)
 void
 notifyCommittedDtxTransaction(void)
 {
+	ListCell   *l;
+
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 	Assert(DistributedTransactionContext == DTX_CONTEXT_QD_DISTRIBUTED_CAPABLE);
 	Assert(isCurrentDtxActivated());
@@ -320,6 +326,12 @@ notifyCommittedDtxTransaction(void)
 			ereport(ERROR,
 					(errmsg("Unexpected DTX state"),
 					 TM_ERRDETAIL));
+	}
+
+
+	foreach(l, MyTmGxactLocal->waitGxids)
+	{
+		GxactLockTableWait(lfirst_int(l));
 	}
 }
 
@@ -486,6 +498,8 @@ doNotifyingCommitPrepared(void)
 	int			retry = 0;
 	volatile int savedInterruptHoldoffCount;
 	MemoryContext oldcontext = CurrentMemoryContext;;
+	time_t		retry_time_start;
+	bool		retry_timedout;
 
 	elog(DTM_DEBUG5, "doNotifyingCommitPrepared entering in state = %s", DtxStateToString(MyTmGxactLocal->state));
 
@@ -532,15 +546,19 @@ doNotifyingCommitPrepared(void)
 		setDistributedTransactionContext(DTX_CONTEXT_QD_RETRY_PHASE_2);
 	}
 
-	while (!succeeded && dtx_phase2_retry_count > retry++)
+	retry_timedout = (dtx_phase2_retry_second == 0) ? true : false;
+	retry_time_start = time(NULL);
+
+	while (!succeeded && !retry_timedout)
 	{
+		retry++;
 		/*
-		 * sleep for brief duration before retry, to increase chances of
-		 * success if first try failed due to segment panic/restart. Otherwise
-		 * all the retries complete in less than a sec, defeating the purpose
-		 * of the retry.
+		 * Sleep for some time before retry to avoid too many reries for some
+		 * scenarios that retry completes soon. Also delay for longer when
+		 * retry fails more and more times.
 		 */
-		pg_usleep(DTX_PHASE2_SLEEP_TIME_BETWEEN_RETRIES_MSECS * 1000);
+		pg_usleep(DTX_PHASE2_SLEEP_TIME_BETWEEN_RETRIES_MSECS * 1000 *
+				  Min(Max(retry - 10, 1), 50));
 
 		ereport(WARNING,
 				(errmsg("the distributed transaction 'Commit Prepared' broadcast "
@@ -570,6 +588,9 @@ doNotifyingCommitPrepared(void)
 			FlushErrorState();
 		}
 		PG_END_TRY();
+
+		if ((time(NULL) - retry_time_start) > dtx_phase2_retry_second)
+			retry_timedout = true;
 	}
 
 	if (!succeeded)
@@ -598,9 +619,15 @@ retryAbortPrepared(void)
 	bool		succeeded = false;
 	volatile int savedInterruptHoldoffCount;
 	MemoryContext oldcontext = CurrentMemoryContext;;
+	time_t 		retry_time_start;
+	bool		retry_timedout;
 
-	while (!succeeded && dtx_phase2_retry_count > retry++)
+	retry_timedout = (dtx_phase2_retry_second == 0) ? true : false;
+	retry_time_start = time(NULL);
+
+	while (!succeeded && !retry_timedout)
 	{
+		retry++;
 		/*
 		 * By deallocating the gang, we will force a new gang to connect to
 		 * all the segment instances.  And, we will abort the transactions in
@@ -610,12 +637,12 @@ retryAbortPrepared(void)
 		{
 			elog(NOTICE, "Releasing segworker groups to retry broadcast.");
 			/*
-			 * sleep for brief duration before retry, to increase chances of
-			 * success if first try failed due to segment panic/restart. Otherwise
-			 * all the retries complete in less than a sec, defeating the purpose
-			 * of the retry.
+			 * Sleep for some time before retry to avoid too many reries for
+			 * some scenarios that retry completes soon. Also delay for longer
+			 * when retry fails more and more times.
 			 */
-			pg_usleep(DTX_PHASE2_SLEEP_TIME_BETWEEN_RETRIES_MSECS * 1000);
+			pg_usleep(DTX_PHASE2_SLEEP_TIME_BETWEEN_RETRIES_MSECS * 1000 *
+					  Min(Max(retry - 10, 1), 50));
 		}
 
 		ResetAllGangs();
@@ -642,6 +669,9 @@ retryAbortPrepared(void)
 			FlushErrorState();
 		}
 		PG_END_TRY();
+
+		if ((time(NULL) - retry_time_start) > dtx_phase2_retry_second)
+			retry_timedout = true;
 	}
 
 	if (!succeeded)
@@ -1091,6 +1121,17 @@ isMppTxOptions_ExplicitBegin(int txnOptions)
 /*=========================================================================
  * HELPER FUNCTIONS
  */
+static int
+compare_int(const void *va, const void *vb)
+{
+	int			a = *((const int *) va);
+	int			b = *((const int *) vb);
+
+	if (a == b)
+		return 0;
+	return (a > b) ? 1 : -1;
+}
+
 bool
 currentDtxDispatchProtocolCommand(DtxProtocolCommand dtxProtocolCommand, bool raiseError)
 {
@@ -1116,6 +1157,9 @@ doDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 	char	   *dtxProtocolCommandStr = 0;
 
 	struct pg_result **results;
+	MemoryContext oldContext;
+	int *waitGxids = NULL;
+	int totalWaits = 0;
 
 	if (!dtxSegments)
 		return true;
@@ -1196,8 +1240,50 @@ doDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 		}
 	}
 
+	/* gather all the waited gxids from segments and remove the duplicates */
 	for (i = 0; i < resultCount; i++)
-		PQclear(results[i]);
+		totalWaits += results[i]->nWaits;
+
+	if (totalWaits > 0)
+		waitGxids = palloc(sizeof(int) * totalWaits);
+
+	totalWaits = 0;
+	for (i = 0; i < resultCount; i++)
+	{
+		struct pg_result *result = results[i];
+
+		if (result->nWaits > 0)
+		{
+			memcpy(&waitGxids[totalWaits], result->waitGxids, sizeof(int) * result->nWaits);
+			totalWaits += result->nWaits;
+		}
+		PQclear(result);
+	}
+
+	if (totalWaits > 0)
+	{
+		int lastRepeat = -1;
+		if (MyTmGxactLocal->waitGxids)
+		{
+			pfree(MyTmGxactLocal->waitGxids);
+			MyTmGxactLocal->waitGxids = NULL;
+		}
+
+		qsort(waitGxids, totalWaits, sizeof(int), compare_int);
+
+		oldContext = MemoryContextSwitchTo(TopTransactionContext);
+		for (i = 0; i < totalWaits; i++)
+		{
+			if (waitGxids[i] == lastRepeat)
+				continue;
+			MyTmGxactLocal->waitGxids = lappend_int(MyTmGxactLocal->waitGxids, waitGxids[i]);
+			lastRepeat = waitGxids[i];
+		}
+		MemoryContextSwitchTo(oldContext);
+	}
+
+	if (waitGxids)
+		pfree(waitGxids);
 
 	if (results)
 		pfree(results);
@@ -1286,6 +1372,11 @@ resetGxact(void)
 	MyTmGxactLocal->dtxSegmentsMap = NULL;
 	MyTmGxactLocal->dtxSegments = NIL;
 	MyTmGxactLocal->isOnePhaseCommit = false;
+	if (MyTmGxactLocal->waitGxids != NULL)
+	{
+		pfree(MyTmGxactLocal->waitGxids);
+		MyTmGxactLocal->waitGxids = NULL;
+	}
 	setCurrentDtxState(DTX_STATE_NONE);
 }
 
@@ -1868,7 +1959,24 @@ performDtxProtocolPrepare(const char *gid)
 	setDistributedTransactionContext(DTX_CONTEXT_QE_PREPARED);
 }
 
+static void
+sendWaitGxidsToQD(List *waitGxids)
+{
+	ListCell *lc;
+	StringInfoData buf;
+	int len = list_length(waitGxids);
 
+	if (len == 0)
+		return;
+
+	pq_beginmessage(&buf, 'w');
+	pq_sendint(&buf, len, 4);
+	foreach(lc, waitGxids)
+	{
+		pq_sendint(&buf, lfirst_int(lc), 4);
+	}
+	pq_endmessage(&buf);
+}
 /**
  * On the QE, run the Commit one-phase operation.
  */
@@ -1877,6 +1985,8 @@ performDtxProtocolCommitOnePhase(const char *gid)
 {
 	DistributedTransactionTimeStamp distribTimeStamp;
 	DistributedTransactionId gxid;
+	List *waitGxids = list_copy(MyTmGxactLocal->waitGxids);
+
 	elog(DTM_DEBUG5,
 		 "performDtxProtocolCommitOnePhase going to call CommitTransaction for distributed transaction %s", gid);
 
@@ -1898,6 +2008,8 @@ performDtxProtocolCommitOnePhase(const char *gid)
 
 	finishDistributedTransactionContext("performDtxProtocolCommitOnePhase -- Commit onephase", false);
 	MyProc->localDistribXactData.state = LOCALDISTRIBXACT_STATE_NONE;
+
+	sendWaitGxidsToQD(waitGxids);
 }
 
 /**
@@ -1910,6 +2022,8 @@ performDtxProtocolCommitPrepared(const char *gid, bool raiseErrorIfNotFound)
 
 	elog(DTM_DEBUG5,
 		 "performDtxProtocolCommitPrepared going to call FinishPreparedTransaction for distributed transaction %s", gid);
+
+	List *waitGxids = list_copy(MyTmGxactLocal->waitGxids);
 
 	StartTransactionCommand();
 
@@ -1932,6 +2046,8 @@ performDtxProtocolCommitPrepared(const char *gid, bool raiseErrorIfNotFound)
 	 * work to be performed.
 	 */
 	CommitTransactionCommand();
+
+	sendWaitGxidsToQD(waitGxids);
 
 	finishDistributedTransactionContext("performDtxProtocolCommitPrepared -- Commit Prepared", false);
 }

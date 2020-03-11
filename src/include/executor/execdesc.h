@@ -24,6 +24,76 @@ struct CdbExplain_ShowStatCtx;  /* private, in "cdb/cdbexplain.c" */
 
 
 /*
+ * SerializedParams is used to serialize external query parameters
+ * (PARAM_EXTERN) and executor parameters (PARAM_EXEC), when dispatching
+ * a query from QD to QEs.
+ */
+typedef struct SerializedParamExternData
+{
+	/* Fields from ParamExternData */
+	Datum		value;			/* parameter value */
+	bool		isnull;			/* is it NULL? */
+	uint16		pflags;			/* flag bits, see above */
+	Oid			ptype;			/* parameter's datatype, or 0 */
+
+	/* Extra information about the type */
+	int16		plen;
+	bool		pbyval;
+} SerializedParamExternData;
+
+typedef struct SerializedParamExecData
+{
+	/* Fields from ParamExecData */
+	Datum		value;			/* parameter value */
+	bool		isnull;			/* is it NULL? */
+
+	/* Is this parameter included? */
+	bool		isvalid;
+
+	/* Extra information about the type */
+	int16		plen;
+	bool		pbyval;
+} SerializedParamExecData;
+
+typedef struct SerializedParams
+{
+	NodeTag		type;
+
+	int			nExternParams;
+	SerializedParamExternData *externParams;
+
+	int			nExecParams;
+	SerializedParamExecData *execParams;
+
+	/* Transient record types used in the params */
+	List	   *transientTypes;
+
+} SerializedParams;
+
+/*
+ * When a CREATE command is dispatched to segments, the OIDs used for the
+ * new objects are sent in a list of OidAssignments.
+ */
+typedef struct
+{
+	NodeTag		type;
+
+	/*
+	 * Key data. Depending on the catalog table, different fields are used.
+	 * See CreateKeyFromCatalogTuple().
+	 */
+	Oid			catalog;		/* OID of the catalog table, e.g. pg_class */
+	Oid			namespaceOid;	/* namespace OID for most objects */
+	char	   *objname;		/* object name (e.g. relation name) */
+	Oid			keyOid1;		/* generic OID field, meaning depends on object type */
+	Oid			keyOid2;		/* 2nd generic OID field, meaning depends on object type */
+
+	Oid			oid;			/* OID to assign */
+
+} OidAssignment;
+
+
+/*
  * MPP Plan Slice information
  *
  * These structures summarize how a plan tree is sliced up into separate
@@ -114,6 +184,7 @@ typedef struct SliceTable
 	uint32		ic_instance_id;
 } SliceTable;
 
+
 /*
  * Holds information about a cursor's current position.
  */
@@ -140,6 +211,13 @@ typedef struct CursorPosInfo
 typedef struct QueryDispatchDesc
 {
 	NodeTag		type;
+
+	/*
+	 * Copies of external query parameters (QueryDesc->params) and current
+	 * executor interal parameters (estate->es_param_exec_vals), in a format
+	 * that's suitable for serialization.
+	 */
+	SerializedParams *paramInfo;
 
 	/*
 	 * For a SELECT INTO statement, this stores the tablespace to use for the
@@ -176,27 +254,6 @@ typedef struct QueryDispatchDesc
 	bool useChangedAOOpts;
 } QueryDispatchDesc;
 
-/*
- * When a CREATE command is dispatched to segments, the OIDs used for the
- * new objects are sent in a list of OidAssignments.
- */
-typedef struct
-{
-	NodeTag		type;
-
-	/*
-	 * Key data. Depending on the catalog table, different fields are used.
-	 * See CreateKeyFromCatalogTuple().
-	 */
-	Oid			catalog;		/* OID of the catalog table, e.g. pg_class */
-	Oid			namespaceOid;	/* namespace OID for most objects */
-	char	   *objname;		/* object name (e.g. relation name) */
-	Oid			keyOid1;		/* generic OID field, meaning depends on object type */
-	Oid			keyOid2;		/* 2nd generic OID field, meaning depends on object type */
-
-	Oid			oid;			/* OID to assign */
-
-} OidAssignment;
 
 /* ----------------
  *		query descriptor:

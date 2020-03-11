@@ -16,6 +16,8 @@
 #include "postgres.h"
 
 #include "access/htup.h"
+#include "access/memtup.h"
+#include "access/tuptoaster.h"
 #include "catalog/pg_type.h"
 #include "cdb/cdbmotion.h"
 #include "cdb/cdbsrlz.h"
@@ -30,8 +32,6 @@
 #include "utils/builtins.h"
 #include "utils/syscache.h"
 #include "utils/typcache.h"
-
-#include "access/memtup.h"
 
 /*
  * Transient record types table is sent to upsteam via a specially constructed
@@ -427,47 +427,83 @@ SerializeTuple(TupleTableSlot *slot, SerTupInfo *pSerInfo, struct directTranspor
 		 * Send it as a MemTuple.
 		 */
 		MemTuple	tuple;
-		int			tupleSize;
+		uint32		tupleSize;
 		int			paddedSize;
+		uint32		null_save_len = 0;
+		bool		has_nulls = false;
 
 		if (slot->PRIVATE_tts_memtuple &&
 			!memtuple_get_hasext(slot->PRIVATE_tts_memtuple))
 		{
 			/* we can use the existing MemTuple as it is. */
 			tuple = slot->PRIVATE_tts_memtuple;
+			tupleSize = memtuple_get_size(tuple);
 		}
 		else
 		{
+			Datum	   *values = slot_get_values(slot);
+			bool	   *isnull = slot_get_isnull(slot);
 			MemoryContext oldContext;
-			oldContext = MemoryContextSwitchTo(s_tupSerMemCtxt);
+
 			slot_getallattrs(slot);
-			tuple = memtuple_form_to(slot->tts_mt_bind, slot_get_values(slot), slot_get_isnull(slot),
-									  NULL, NULL, true);
+
+			oldContext = MemoryContextSwitchTo(s_tupSerMemCtxt);
+
+			/*
+			 * If the tuple contains any toasted attributes, fetch them now,
+			 * because the receiver cannot fetch them.
+			 */
+			for (int i = 0; i < tupdesc->natts; i++)
+			{
+				Form_pg_attribute attr = tupdesc->attrs[i];
+
+				/* memtuple_form_to() treats dropped attibutes as null */
+				if (attr->attisdropped || isnull[i])
+					continue;
+
+				if (attr->attlen == -1 && VARATT_IS_EXTERNAL(DatumGetPointer(values[i])))
+				{
+					if (values == slot_get_values(slot))
+					{
+						values = (Datum *) palloc(tupdesc->natts * sizeof(Datum));
+						memcpy(values, slot_get_values(slot), tupdesc->natts * sizeof(Datum));
+					}
+					values[i] = PointerGetDatum(heap_tuple_fetch_attr((struct varlena *)DatumGetPointer(values[i])));
+				}
+			}
+
+			tupleSize = compute_memtuple_size(slot->tts_mt_bind, values, isnull,
+											  &null_save_len, &has_nulls);
+			tuple = palloc(tupleSize);
+			memtuple_form_to(slot->tts_mt_bind, values, isnull,
+							 tupleSize, null_save_len, has_nulls,
+							 tuple);
 			MemoryContextSwitchTo(oldContext);
 		}
 
-		if (CandidateForSerializeDirect(targetRoute, b))
+		/*
+		 * Here we first try to in-line serialize the tuple directly into
+		 * buffer.
+		 */
+		paddedSize = TYPEALIGN(TUPLE_CHUNK_ALIGN, tupleSize);
+		if (CandidateForSerializeDirect(targetRoute, b) &&
+			paddedSize + TUPLE_CHUNK_HEADER_SIZE <= b->prilen)
 		{
 			/*
-			 * Here we first try to in-line serialize the tuple directly into
-			 * buffer.
+			 * Will fit.
+			 *
+			 * XXX: We could almost point memtuple_form_to() directly at the
+			 * target buffer, instead of forming a palloc'd copy first, but alas,
+			 * memtuple_form_to() assumes that the target pointer is aligned.
 			 */
-			tupleSize = memtuple_get_size(tuple);
+			memcpy(b->pri + TUPLE_CHUNK_HEADER_SIZE, tuple, tupleSize);
+			memset(b->pri + TUPLE_CHUNK_HEADER_SIZE + tupleSize, 0, paddedSize - tupleSize);
 
-			paddedSize = TYPEALIGN(TUPLE_CHUNK_ALIGN, tupleSize);
+			dataSize += paddedSize;
 
-			if (paddedSize + TUPLE_CHUNK_HEADER_SIZE <= b->prilen)
-			{
-				/* will fit. */
-				memcpy(b->pri + TUPLE_CHUNK_HEADER_SIZE, tuple, tupleSize);
-				memset(b->pri + TUPLE_CHUNK_HEADER_SIZE + tupleSize, 0, paddedSize - tupleSize);
-
-				dataSize += paddedSize;
-
-				SetChunkType(b->pri, TC_WHOLE);
-				SetChunkDataSize(b->pri, dataSize - TUPLE_CHUNK_HEADER_SIZE);
-				return dataSize;
-			}
+			SetChunkType(b->pri, TC_WHOLE);
+			SetChunkDataSize(b->pri, dataSize - TUPLE_CHUNK_HEADER_SIZE);
+			return dataSize;
 		}
 
 		/*
@@ -481,8 +517,8 @@ SerializeTuple(TupleTableSlot *slot, SerTupInfo *pSerInfo, struct directTranspor
 
 		AssertState(s_tupSerMemCtxt != NULL);
 
-		addByteStringToChunkList(tcList, (char *) tuple, memtuple_get_size(tuple), &pSerInfo->chunkCache);
-		addPadding(tcList, &pSerInfo->chunkCache, memtuple_get_size(tuple));
+		addByteStringToChunkList(tcList, (char *) tuple, tupleSize, &pSerInfo->chunkCache);
+		addPadding(tcList, &pSerInfo->chunkCache, tupleSize);
 
 		MemoryContextReset(s_tupSerMemCtxt);
 	}

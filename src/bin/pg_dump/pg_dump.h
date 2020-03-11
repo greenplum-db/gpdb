@@ -16,9 +16,6 @@
 #ifndef PG_DUMP_H
 #define PG_DUMP_H
 
-#include "postgres_fe.h"
-#include "pqexpbuffer.h"
-#include "libpq-fe.h"
 #include "pg_backup.h"
 
 
@@ -636,9 +633,11 @@ extern char g_comment_end[10];
 extern char g_opaque_type[10];	/* name for the opaque type */
 
 extern const char *EXT_PARTITION_NAME_POSTFIX;
+
 /*
  *	common utility functions
  */
+
 extern TableInfo *getSchemaData(Archive *fout, int *numTablesPtr);
 
 extern void AssignDumpId(DumpableObject *dobj);
@@ -650,8 +649,6 @@ extern void getDumpableObjects(DumpableObject ***objs, int *numObjs);
 
 extern void addObjectDependency(DumpableObject *dobj, DumpId refId);
 extern void removeObjectDependency(DumpableObject *dobj, DumpId refId);
-
-extern DumpableObject *findObjectByOid(Oid oid, DumpableObject **indexArray, int numObjs);
 
 extern TableInfo *findTableByOid(Oid oid);
 extern TypeInfo *findTypeByOid(Oid oid);

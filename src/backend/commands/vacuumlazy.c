@@ -152,7 +152,6 @@ static BufferAccessStrategy vac_strategy;
 
 
 /* non-export function prototypes */
-static void lazy_vacuum_aorel(Relation onerel, int options, AOVacuumPhaseConfig *ao_vacuum_phase_config);
 static void lazy_scan_heap(Relation onerel, int options,
 			   LVRelStats *vacrelstats, Relation *Irel, int nindexes,
 			   bool aggressive);
@@ -178,7 +177,6 @@ static int	vac_cmp_itemptr(const void *left, const void *right);
 static bool heap_page_is_all_visible(Relation rel, Buffer buf,
 					 TransactionId *visibility_cutoff_xid, bool *all_frozen);
 
-
 /*
  *	lazy_vacuum_rel() -- perform LAZY VACUUM for one heap relation
  *
@@ -189,9 +187,8 @@ static bool heap_page_is_all_visible(Relation rel, Buffer buf,
  *		and locked the relation.
  */
 void
-lazy_vacuum_rel(Relation onerel, int options, VacuumParams *params,
-				BufferAccessStrategy bstrategy,
-				AOVacuumPhaseConfig *ao_vacuum_phase_config)
+lazy_vacuum_rel_heap(Relation onerel, int options, VacuumParams *params,
+				BufferAccessStrategy bstrategy)
 {
 	LVRelStats *vacrelstats;
 	Relation   *Irel;
@@ -230,27 +227,6 @@ lazy_vacuum_rel(Relation onerel, int options, VacuumParams *params,
 	if (Gp_role == GP_ROLE_DISPATCH)
 		elevel = DEBUG2; /* vacuum and analyze messages aren't interesting from the QD */
 
-#ifdef FAULT_INJECTOR
-	if (ao_vacuum_phase_config != NULL &&
-		ao_vacuum_phase_config->appendonly_phase == AOVAC_DROP)
-	{
-			FaultInjector_InjectFaultIfSet(
-				"compaction_before_segmentfile_drop",
-				DDLNotSpecified,
-				"",	// databaseName
-				RelationGetRelationName(onerel)); // tableName
-	}
-	if (ao_vacuum_phase_config != NULL &&
-		ao_vacuum_phase_config->appendonly_phase == AOVAC_CLEANUP)
-	{
-			FaultInjector_InjectFaultIfSet(
-				"compaction_before_cleanup_phase",
-				DDLNotSpecified,
-				"",	// databaseName
-				RelationGetRelationName(onerel)); // tableName
-	}
-#endif
-
 	pgstat_progress_start_command(PROGRESS_COMMAND_VACUUM,
 								  RelationGetRelid(onerel));
 
@@ -282,16 +258,6 @@ lazy_vacuum_rel(Relation onerel, int options, VacuumParams *params,
 											  mxactFullScanLimit);
 	if (options & VACOPT_DISABLE_PAGE_SKIPPING)
 		aggressive = true;
-
-	/*
-	 * Execute the various vacuum operations. Appendonly tables are treated
-	 * differently.
-	 */
-	if (RelationIsAppendOptimized(onerel))
-	{
-		lazy_vacuum_aorel(onerel, options, ao_vacuum_phase_config);
-		return;
-	}
 
 	/* heap relation */
 
@@ -471,113 +437,6 @@ lazy_vacuum_rel(Relation onerel, int options, VacuumParams *params,
 	}
 }
 
-/*
- * lazy_vacuum_aorel -- perform LAZY VACUUM for one Append-only relation.
- */
-static void
-lazy_vacuum_aorel(Relation onerel, int options, AOVacuumPhaseConfig *ao_vacuum_phase_config)
-{
-	LVRelStats *vacrelstats;
-	bool		update_relstats = true;
-
-	vacrelstats = (LVRelStats *) palloc0(sizeof(LVRelStats));
-
-	switch (ao_vacuum_phase_config->appendonly_phase)
-	{
-		case AOVAC_PREPARE:
-			elogif(Debug_appendonly_print_compaction, LOG,
-				   "Vacuum prepare phase %s", RelationGetRelationName(onerel));
-
-			vacuum_appendonly_indexes(onerel, options);
-			if (RelationIsAoRows(onerel))
-				AppendOnlyTruncateToEOF(onerel);
-			else
-				AOCSTruncateToEOF(onerel);
-
-			/*
-			 * MPP-23647.  For empty tables, we skip compaction phase
-			 * and cleanup phase.  Therefore, we update the stats
-			 * (specifically, relfrozenxid) in prepare phase if the
-			 * table is empty.  Otherwise, the stats will be updated in
-			 * the cleanup phase, when we would have computed the
-			 * correct values for stats.
-			 */
-			if (ao_vacuum_phase_config->appendonly_relation_empty)
-			{
-				update_relstats = true;
-				/*
-				 * For an empty relation, the only stats we care about
-				 * is relfrozenxid and relhasindex.  We need to be
-				 * mindful of correctly setting relhasindex here.
-				 * relfrozenxid is already taken care of above by
-				 * calling vacuum_set_xid_limits().
-				 */
-				vacrelstats->hasindex = onerel->rd_rel->relhasindex;
-			}
-			else
-			{
-				/*
-				 * For a non-empty relation, follow the usual
-				 * compaction phases and do not update stats in
-				 * prepare phase.
-				 */
-				update_relstats = false;
-			}
-			break;
-
-		case AOVAC_COMPACT:
-		case AOVAC_DROP:
-			vacuum_appendonly_rel(onerel, options, ao_vacuum_phase_config);
-			update_relstats = false;
-			break;
-
-		case AOVAC_CLEANUP:
-			elogif(Debug_appendonly_print_compaction, LOG,
-				   "Vacuum cleanup phase %s", RelationGetRelationName(onerel));
-
-			vacuum_appendonly_fill_stats(onerel, GetActiveSnapshot(),
-										 &vacrelstats->rel_pages,
-										 &vacrelstats->new_rel_tuples,
-										 &vacrelstats->hasindex);
-			/* reset the remaining LVRelStats values */
-			vacrelstats->nonempty_pages = 0;
-			vacrelstats->num_dead_tuples = 0;
-			vacrelstats->max_dead_tuples = 0;
-			vacrelstats->tuples_deleted = 0;
-			vacrelstats->pages_removed = 0;
-			break;
-
-		default:
-			elog(ERROR, "invalid AO vacuum phase %d", ao_vacuum_phase_config->appendonly_phase);
-	}
-
-	if (update_relstats)
-	{
-		/* Update statistics in pg_class */
-		vac_update_relstats(onerel,
-							vacrelstats->rel_pages,
-							vacrelstats->new_rel_tuples,
-							0, /* AO does not currently have an equivalent to
-							      Heap's 'all visible pages' */
-							vacrelstats->hasindex,
-							FreezeLimit,
-							MultiXactCutoff,
-							false,
-							true /* isvacuum */);
-
-		/*
-		 * Report results to the stats collector.
-		 * Explicitly pass 0 as num_dead_tuples. AO tables use hidden
-		 * tuples in a conceptually similar way that regular tables
-		 * use dead tuples. However with regards to pgstat these are
-		 * semantically distinct thus exposing them will be ambiguous.
-		 */
-		pgstat_report_vacuum(RelationGetRelid(onerel),
-							 onerel->rd_rel->relisshared,
-							 vacrelstats->new_rel_tuples,
-							 0 /* num_dead_tuples */);
-	}
-}
 
 /*
  * For Hot Standby we need to know the highest transaction id that will
@@ -2019,168 +1878,6 @@ lazy_truncate_heap(Relation onerel, LVRelStats *vacrelstats)
 		old_rel_pages = new_rel_pages;
 	} while (new_rel_pages > vacrelstats->nonempty_pages &&
 			 vacrelstats->lock_waiter_detected);
-}
-
-
-/*
- * Fills in the relation statistics for an append-only relation.
- *
- *	This information is used to update the reltuples and relpages information
- *	in pg_class. reltuples is the same as "pg_aoseg_<oid>:tupcount"
- *	column and we simulate relpages by subdividing the eof value
- *	("pg_aoseg_<oid>:eof") over the defined page size.
- *
- * Note: In QD, we don't track the file size across segments, so even
- * though the tuple count is returned correctly, the number of pages is
- * always 0.
- */
-void
-vacuum_appendonly_fill_stats(Relation aorel, Snapshot snapshot,
-							 BlockNumber *rel_pages, double *rel_tuples,
-							 bool *relhasindex)
-{
-	FileSegTotals *fstotal;
-	BlockNumber nblocks;
-	char	   *relname;
-	double		num_tuples;
-	double		totalbytes;
-	double		eof;
-	int64       hidden_tupcount;
-	AppendOnlyVisimap visimap;
-
-	Assert(RelationIsAppendOptimized(aorel));
-
-	relname = RelationGetRelationName(aorel);
-
-	/* get updated statistics from the pg_aoseg table */
-	if (RelationIsAoRows(aorel))
-	{
-		fstotal = GetSegFilesTotals(aorel, snapshot);
-	}
-	else
-	{
-		Assert(RelationIsAoCols(aorel));
-		fstotal = GetAOCSSSegFilesTotals(aorel, snapshot);
-	}
-
-	/* calculate the values we care about */
-	eof = (double)fstotal->totalbytes;
-	num_tuples = (double)fstotal->totaltuples;
-	totalbytes = eof;
-	nblocks = (uint32)RelationGuessNumberOfBlocks(totalbytes);
-
-	AppendOnlyVisimap_Init(&visimap,
-						   aorel->rd_appendonly->visimaprelid,
-						   aorel->rd_appendonly->visimapidxid,
-						   AccessShareLock,
-						   snapshot);
-	hidden_tupcount = AppendOnlyVisimap_GetRelationHiddenTupleCount(&visimap);
-	num_tuples -= hidden_tupcount;
-	Assert(num_tuples > -1.0);
-	AppendOnlyVisimap_Finish(&visimap, AccessShareLock);
-
-	elogif (Debug_appendonly_print_compaction, LOG,
-			"Gather statistics after vacuum for append-only relation %s: "
-			"page count %d, tuple count %f",
-			relname,
-			nblocks, num_tuples);
-
-	*rel_pages = nblocks;
-	*rel_tuples = num_tuples;
-	*relhasindex = aorel->rd_rel->relhasindex;
-
-	ereport(elevel,
-			(errmsg("\"%s\": found %.0f rows in %u pages.",
-					relname, num_tuples, nblocks)));
-	pfree(fstotal);
-}
-
-/*
- *	vacuum_appendonly_rel() -- vaccum an append-only relation
- *
- *		This procedure will be what gets executed both for VACUUM
- *		and VACUUM FULL (and also ANALYZE or any other thing that
- *		needs the pg_class stats updated).
- *
- *		The function can compact append-only segment files or just
- *		truncating the segment file to its existing eof.
- *
- *		Afterwards, the reltuples and relpages information in pg_class
- *		are updated. reltuples is the same as "pg_aoseg_<oid>:tupcount"
- *		column and we simulate relpages by subdividing the eof value
- *		("pg_aoseg_<oid>:eof") over the defined page size.
- *
- *
- *		There are txn ids, hint bits, free space, dead tuples,
- *		etc. these are all irrelevant in the append only relation context.
- *
- */
-void
-vacuum_appendonly_rel(Relation aorel, int options, AOVacuumPhaseConfig *ao_vacuum_phase_config)
-{
-	char	   *relname;
-
-	Assert(RelationIsAppendOptimized(aorel));
-
-	relname = RelationGetRelationName(aorel);
-	ereport(elevel,
-			(errmsg("vacuuming \"%s.%s\"",
-					get_namespace_name(RelationGetNamespace(aorel)),
-					relname)));
-
-	if (Gp_role == GP_ROLE_DISPATCH)
-	{
-		return;
-	}
-
-	if (ao_vacuum_phase_config->appendonly_phase == AOVAC_DROP)
-	{
-		Assert(!ao_vacuum_phase_config->appendonly_compaction_insert_segno);
-
-		elogif(Debug_appendonly_print_compaction, LOG,
-			"Vacuum drop phase %s", RelationGetRelationName(aorel));
-
-		if (RelationIsAoRows(aorel))
-		{
-			AppendOnlyDrop(aorel, ao_vacuum_phase_config->appendonly_compaction_segno);
-		}
-		else
-		{
-			Assert(RelationIsAoCols(aorel));
-			AOCSDrop(aorel, ao_vacuum_phase_config->appendonly_compaction_segno);
-		}
-	}
-	else
-	{
-		Assert(ao_vacuum_phase_config->appendonly_phase == AOVAC_COMPACT);
-		Assert(list_length(ao_vacuum_phase_config->appendonly_compaction_insert_segno) == 1);
-
-		int insert_segno = linitial_int(ao_vacuum_phase_config->appendonly_compaction_insert_segno);
-
-		if (insert_segno == APPENDONLY_COMPACTION_SEGNO_INVALID)
-		{
-			elogif(Debug_appendonly_print_compaction, LOG,
-			"Vacuum pseudo-compaction phase %s", RelationGetRelationName(aorel));
-		}
-		else
-		{
-			elogif(Debug_appendonly_print_compaction, LOG,
-				"Vacuum compaction phase %s", RelationGetRelationName(aorel));
-			if (RelationIsAoRows(aorel))
-			{
-				AppendOnlyCompact(aorel,
-								  ao_vacuum_phase_config->appendonly_compaction_segno,
-								  insert_segno, (options & VACOPT_FULL));
-			}
-			else
-			{
-				Assert(RelationIsAoCols(aorel));
-				AOCSCompact(aorel,
-							ao_vacuum_phase_config->appendonly_compaction_segno,
-							insert_segno, (options & VACOPT_FULL));
-			}
-		}
-	}
 }
 
 /*

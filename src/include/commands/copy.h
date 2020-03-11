@@ -242,7 +242,6 @@ typedef struct CopyStateData
 	bool		stopped_processing_at_delim;
 
 	PartitionNode *partitions; /* partitioning meta data from dispatcher */
-	List		  *ao_segnos;  /* AO table meta data from dispatcher */
 	bool          skip_ext_partition;  /* skip external partition */
 
 	bool		on_segment; /* QE save data files locally */
@@ -287,7 +286,7 @@ extern void ProcessCopyOptions(CopyState cstate, bool is_from, List *options,
 extern CopyState BeginCopyFrom(Relation rel, const char *filename,
 			  bool is_program, copy_data_source_cb data_source_cb,
 			  void *data_source_cb_extra,
-			  List *attnamelist, List *options, List *ao_segnos);
+			  List *attnamelist, List *options);
 extern CopyState BeginCopy(bool is_from, Relation rel, Node *raw_query,
 						   const char *queryString, const Oid queryRelId, List *attnamelist, List *options,
 						   TupleDesc tupDesc);

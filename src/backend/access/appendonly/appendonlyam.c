@@ -259,11 +259,8 @@ SetNextFileSegForRead(AppendOnlyScanDesc scan)
 		scan->aos_segfiles_processed++;
 
 		/*
-		 * special case: we are the QD reading from an AO table in utility
-		 * mode. We see entries in the aoseg table but no files or
-		 * data actually exist. If we try to open this file we'll get an
-		 * error, so we must skip to the next. For now, we can test if the
-		 * file exists by looking at the eof value - it's always 0 on the QD.
+		 * If the 'eof' is zero or it's just a lingering dropped segment
+		 * (which we see as dead, too), skip it.
 		 */
 		if (eof > 0 && fsinfo->state != AOSEG_STATE_AWAITING_DROP)
 		{
@@ -439,38 +436,18 @@ SetCurrentFileSegForWrite(AppendOnlyInsertDesc aoInsertDesc)
 	Assert(strlen(aoInsertDesc->appendFilePathName) + 1 <= aoInsertDesc->appendFilePathNameMaxLen);
 
 	/*
-	 * In order to append to this file segment entry we must first acquire the
-	 * relation Append-Only segment file (transaction-scope) lock (tag
-	 * LOCKTAG_RELATION_APPENDONLY_SEGMENT_FILE) in order to guarantee
-	 * stability of the pg_aoseg information on this segment file and
-	 * exclusive right to append data to the segment file.
-	 *
-	 * NOTE: This is a transaction scope lock that must be held until commit /
-	 * abort.
-	 */
-	LockRelationAppendOnlySegmentFile(&aoInsertDesc->aoi_rel->rd_node,
-									  aoInsertDesc->cur_segno,
-									  AccessExclusiveLock,
-									   /* dontWait */ false);
-
-	/*
 	 * Now, get the information for the file segment we are going to append
 	 * to.
 	 */
 	aoInsertDesc->fsInfo = GetFileSegInfo(aoInsertDesc->aoi_rel,
 										  aoInsertDesc->appendOnlyMetaDataSnapshot,
-										  aoInsertDesc->cur_segno);
-
-	if (aoInsertDesc->fsInfo == NULL)
-	{
-		InsertInitialSegnoEntry(aoInsertDesc->aoi_rel, aoInsertDesc->cur_segno);
-		aoInsertDesc->fsInfo = NewFileSegInfo(aoInsertDesc->cur_segno);
-	}
+										  aoInsertDesc->cur_segno,
+										  true);
 
 	/* Never insert into a segment that is awaiting a drop */
-	elogif(aoInsertDesc->fsInfo->state == AOSEG_STATE_AWAITING_DROP,
-		   ERROR, "cannot insert into segno (%d) from AO relid %d that is in state AOSEG_STATE_AWAITING_DROP",
-		   aoInsertDesc->cur_segno, RelationGetRelid(aoInsertDesc->aoi_rel));
+	if (aoInsertDesc->fsInfo->state == AOSEG_STATE_AWAITING_DROP)
+		elog(ERROR, "cannot insert into segno (%d) from AO relid %u that is in state AOSEG_STATE_AWAITING_DROP",
+			 aoInsertDesc->cur_segno, RelationGetRelid(aoInsertDesc->aoi_rel));
 
 	fsinfo = aoInsertDesc->fsInfo;
 	Assert(fsinfo);
@@ -826,10 +803,13 @@ AppendOnlyExecutorReadBlock_Init(AppendOnlyExecutorReadBlock *executorReadBlock,
 {
 	MemoryContext oldcontext;
 
+	AssertArg(MemoryContextIsValid(memoryContext));
+
 	oldcontext = MemoryContextSwitchTo(memoryContext);
 	executorReadBlock->uncompressedBuffer = (uint8 *) palloc(usableBlockSize * sizeof(uint8));
 
 	executorReadBlock->storageRead = storageRead;
+	executorReadBlock->memoryContext = memoryContext;
 
 	MemoryContextSwitchTo(oldcontext);
 }
@@ -944,14 +924,14 @@ upgrade_tuple(AppendOnlyExecutorReadBlock *executorReadBlock,
 		/* get attribute values form mis-aligned tuple */
 		memtuple_deform_misaligned(mtup, pbind, values, isnull);
 		/* Form a new, properly-aligned, tuple */
-		newtuple = memtuple_form_to(pbind, values, isnull, NULL, NULL, true);
+		newtuple = memtuple_form(pbind, values, isnull);
 	}
 	else
 	{
 		/*
 		 * make a modifiable copy
 		 */
-		newtuple = memtuple_copy_to(mtup, NULL, NULL);
+		newtuple = memtuple_copy(mtup);
 	}
 
 	/*
@@ -1673,8 +1653,8 @@ appendonly_beginrangescan(Relation relation,
 
 	for (i = 0; i < segfile_count; i++)
 	{
-		seginfo[	i] = GetFileSegInfo(relation, appendOnlyMetaDataSnapshot,
-										segfile_no_arr[i]);
+		seginfo[i] = GetFileSegInfo(relation, appendOnlyMetaDataSnapshot,
+									segfile_no_arr[i], false);
 	}
 	return appendonly_beginrangescan_internal(relation,
 											  snapshot,
@@ -2572,6 +2552,9 @@ appendonly_update(AppendOnlyUpdateDesc aoUpdateDesc,
 /*
  * appendonly_insert_init
  *
+ * 'segno' must be a segment that has been previously locked for this
+ * transaction, by calling LockSegnoForWrite() or ChooseSegnoForWrite().
+ *
  * before using appendonly_insert() to insert tuples we need to call
  * this function to initialize our varblock and bufferedAppend structures
  * and memory for appending data into the relation file.
@@ -2605,8 +2588,8 @@ appendonly_insert_init(Relation rel, int segno, bool update_mode)
 	aoInsertDesc->aoi_rel = rel;
 
 	/*
-	 * Writers uses this since they have exclusive access to the lock acquired
-	 * with LockRelationAppendOnlySegmentFile for the segment-file.
+	 * We want to see an up-to-date view of the metadata. The target segment's
+	 * pg_aoseg row is already locked for us.
 	 */
 	aoInsertDesc->appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
 
@@ -2862,7 +2845,7 @@ appendonly_insert(AppendOnlyInsertDesc aoInsertDesc,
 		 * so performance of this case isn't important.
 		 */
 		if (tup == instup)
-			tup = memtuple_copy_to(instup, NULL, NULL);
+			tup = memtuple_copy(instup);
 
 		/*
 		 * If the object id of this tuple has already been assigned, trust the
@@ -2989,7 +2972,7 @@ appendonly_insert(AppendOnlyInsertDesc aoInsertDesc,
 		 */
 		Assert(itemPtr == NULL);
 		Assert(!need_toast);
-		Assert(instup == tup);
+		Assert(relation->rd_rel->relhasoids || instup == tup);
 
 		/*
 		 * "Cancel" the last block allocation, if one.

@@ -697,9 +697,7 @@ InitCopyState(PxfFdwScanState *pxfsstate)
 						   &PxfBridgeRead,	/* data_source_cb */
 						   pxfsstate,	/* data_source_cb_extra */
 						   NIL, /* attnamelist */
-						   pxfsstate->options->copy_options,	/* copy options */
-						   NIL);	/* ao_segnos */
-
+						   pxfsstate->options->copy_options);	/* copy options */
 
 	if (pxfsstate->options->reject_limit == -1)
 	{

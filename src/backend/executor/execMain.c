@@ -39,7 +39,6 @@
  */
 #include "postgres.h"
 
-#include "access/aosegfiles.h"
 #include "access/appendonlywriter.h"
 #include "access/fileam.h"
 #include "access/htup_details.h"
@@ -48,7 +47,6 @@
 #include "access/xact.h"
 #include "catalog/namespace.h"
 #include "catalog/pg_tablespace.h"
-#include "catalog/aoseg.h"
 #include "catalog/aoblkdir.h"
 #include "catalog/aovisimap.h"
 #include "catalog/catalog.h"
@@ -582,39 +580,11 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 			}
 
 			/*
-			 * First, see whether we need to pre-execute any initPlan subplans.
+			 * First, pre-execute any initPlan subplans.
 			 */
 			if (queryDesc->plannedstmt->nParamExec > 0)
 			{
-				ParamListInfoData *pli = queryDesc->params;
-
-				/*
-				 * First, use paramFetch to fetch any "lazy" parameters, so that
-				 * they are dispatched along with the queries. The QE nodes cannot
-				 * call the callback function on their own.
-				 */
-				if (pli && pli->paramFetch)
-				{
-					int			iparam;
-
-					for (iparam = 0; iparam < queryDesc->params->numParams; iparam++)
-					{
-						ParamExternData *prm = &pli->params[iparam];
-
-						if (!OidIsValid(prm->ptype))
-							(*pli->paramFetch) (pli, iparam + 1);
-					}
-				}
-
 				preprocess_initplans(queryDesc);
-
-				/*
-				 * Copy the values of the preprocessed subplans to the
-				 * external parameters.
-				 */
-				queryDesc->params = addRemoteExecParamsToParamList(queryDesc->plannedstmt,
-																   queryDesc->params,
-																   queryDesc->estate->es_param_exec_vals);
 			}
 
 			/*
@@ -627,7 +597,11 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 			 */
 			if (estate->es_sliceTable->slices[0].gangType != GANGTYPE_UNALLOCATED ||
 				estate->es_sliceTable->slices[0].children)
-				CdbDispatchPlan(queryDesc, needDtx, true);
+			{
+				CdbDispatchPlan(queryDesc,
+								estate->es_param_exec_vals,
+								needDtx, true);
+			}
 		}
 
 		/*
@@ -1676,12 +1650,10 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 		if (Gp_role == GP_ROLE_EXECUTE)
 		{
 			estate->es_result_partitions = plannedstmt->result_partitions;
-			estate->es_result_aosegnos = plannedstmt->result_aosegnos;
 		}
 		else
 		{
 			List          *resultRelations = plannedstmt->resultRelations;
-			int            numResultRelations = list_length(resultRelations);
 			List          *all_relids = NIL;
 			Oid            relid = getrelid(linitial_int(resultRelations), rangeTable);
 			bool           containRoot = false;
@@ -1769,24 +1741,7 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 				}
 			}
 
-			/*
-			 * We also assign a segno for a deletion operation.
-			 * That segno will later be touched to ensure a correct
-			 * incremental backup.
-			 */
-			estate->es_result_aosegnos = assignPerRelSegno(all_relids);
-
 			plannedstmt->result_partitions = estate->es_result_partitions;
-			plannedstmt->result_aosegnos = estate->es_result_aosegnos;
-
-			/* Set any QD resultrels segno, just in case. The QEs set their own in ExecInsert(). */
-			int relno = 0;
-			ResultRelInfo* relinfo;
-			for (relno = 0; relno < numResultRelations; relno ++)
-			{
-				relinfo = &(resultRelInfos[relno]);
-				ResultRelInfoSetSegno(relinfo, estate->es_result_aosegnos);
-			}
 		}
 	}
 	else
@@ -1798,7 +1753,6 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 		estate->es_num_result_relations = 0;
 		estate->es_result_relation_info = NULL;
 		estate->es_result_partitions = NULL;
-		estate->es_result_aosegnos = NIL;
 	}
 
 	estate->es_partition_state = NULL;
@@ -2025,11 +1979,11 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 	}
 
 	/*
-	 * If this is a query that was dispatched from the QE, extract precomputed
-	 * parameters from all init plans
+	 * If this is a query that was dispatched from the QE, install precomputed
+	 * parameter values from all init plans into our EState.
 	 */
 	if (Gp_role == GP_ROLE_EXECUTE && queryDesc->ddesc)
-		ExtractParamsFromInitPlans(plannedstmt, plannedstmt->planTree, estate);
+		InstallDispatchedExecParams(queryDesc->ddesc, estate);
 
 	/*
 	 * Initialize the private state information for all the nodes in the query
@@ -2444,6 +2398,8 @@ CloseResultRelInfo(ResultRelInfo *resultRelInfo)
 			Assert(RelationIsAoCols(resultRelInfo->ri_RelationDesc));
 			aocs_delete_finish(resultRelInfo->ri_deleteDesc);
 		}
+		if (!resultRelInfo->ri_aoInsertDesc && !resultRelInfo->ri_aocsInsertDesc)
+			AORelIncrementModCount(resultRelInfo->ri_RelationDesc);
 		resultRelInfo->ri_deleteDesc = NULL;
 	}
 	if (resultRelInfo->ri_updateDesc != NULL)
@@ -2455,6 +2411,11 @@ CloseResultRelInfo(ResultRelInfo *resultRelInfo)
 			Assert(RelationIsAoCols(resultRelInfo->ri_RelationDesc));
 			aocs_update_finish(resultRelInfo->ri_updateDesc);
 		}
+		/*
+		 * No need to update modcount here, because UPDATE works like
+		 * delete+insert, and the insertion shows up in the tupcount.
+		 */
+		//AORelIncrementModCount(resultRelInfo->ri_RelationDesc);
 		resultRelInfo->ri_updateDesc = NULL;
 	}
 
@@ -2498,7 +2459,7 @@ CloseResultRelInfo(ResultRelInfo *resultRelInfo)
 }
 
 /*
- * ResultRelInfoSetSegno
+ * ResultRelInfoChooseSegno
  *
  * based on a list of relid->segno mapping, look for our own resultRelInfo
  * relid in the mapping and find the segfile number that this resultrel should
@@ -2510,41 +2471,22 @@ CloseResultRelInfo(ResultRelInfo *resultRelInfo)
  * data during this transaction. For non partitioned tables the mapping list
  * will have only one element - our table. for partitioning it may have
  * multiple (depending on how many partitions are AO).
- *
  */
 void
-ResultRelInfoSetSegno(ResultRelInfo *resultRelInfo, List *mapping)
+ResultRelInfoChooseSegno(ResultRelInfo *resultRelInfo)
 {
-   	ListCell *relid_to_segno;
-   	bool	  found = false;
+	if (resultRelInfo->ri_aosegno != InvalidFileSegNumber)
+		return;		/* a target was chosen already */
 
 	/* only relevant for AO relations */
 	if(!relstorage_is_ao(RelinfoGetStorage(resultRelInfo)))
 		return;
 
-	Assert(mapping);
 	Assert(resultRelInfo->ri_RelationDesc);
 
-   	/* lookup the segfile # to write into, according to my relid */
+	resultRelInfo->ri_aosegno = ChooseSegnoForWrite(resultRelInfo->ri_RelationDesc);
 
-   	foreach(relid_to_segno, mapping)
-   	{
-		SegfileMapNode *n = (SegfileMapNode *)lfirst(relid_to_segno);
-		Oid myrelid = RelationGetRelid(resultRelInfo->ri_RelationDesc);
-		if(n->relid == myrelid)
-		{
-			Assert(n->segno != InvalidFileSegNumber);
-			resultRelInfo->ri_aosegno = n->segno;
-
-			elogif(Debug_appendonly_print_insert, LOG,
-				"Appendonly: setting pre-assigned segno %d in result "
-				"relation with relid %d", n->segno, n->relid);
-
-			found = true;
-		}
-	}
-
-	Assert(found);
+	Assert(resultRelInfo->ri_aosegno != InvalidFileSegNumber);
 }
 
 /*
@@ -2691,71 +2633,6 @@ ExecContextForcesOids(PlanState *planstate, bool *hasoids)
 	return false;
 }
 
-void
-SendAOTupCounts(EState *estate)
-{
-	StringInfoData buf;
-	ResultRelInfo *resultRelInfo;
-	int			i;
-	List	   *all_ao_rels = NIL;
-	ListCell   *lc;
-
-	/*
-	 * If we're inserting into partitions, send tuple counts for
-	 * AO tables back to the QD.
-	 */
-	if (Gp_role != GP_ROLE_EXECUTE || !estate->es_result_partitions)
-		return;
-
-	resultRelInfo = estate->es_result_relations;
-	for (i = 0; i < estate->es_num_result_relations; i++)
-	{
-		resultRelInfo = &estate->es_result_relations[i];
-
-		if (relstorage_is_ao(RelinfoGetStorage(resultRelInfo)))
-			all_ao_rels = lappend(all_ao_rels, resultRelInfo);
-
-		if (resultRelInfo->ri_partition_hash)
-		{
-			HASH_SEQ_STATUS hash_seq_status;
-			ResultPartHashEntry *entry;
-
-			hash_seq_init(&hash_seq_status, resultRelInfo->ri_partition_hash);
-			while ((entry = hash_seq_search(&hash_seq_status)) != NULL)
-			{
-				if (relstorage_is_ao(RelinfoGetStorage(&entry->resultRelInfo)))
-					all_ao_rels = lappend(all_ao_rels, &entry->resultRelInfo);
-			}
-		}
-	}
-
-	if (!all_ao_rels)
-		return;
-
-	if (Debug_appendonly_print_insert)
-		ereport(LOG,(errmsg("QE sending tuple counts of %d partitioned "
-							"AO relations... ", list_length(all_ao_rels))));
-
-	pq_beginmessage(&buf, 'o');
-	pq_sendint(&buf, list_length(all_ao_rels), 4);
-
-	foreach(lc, all_ao_rels)
-	{
-		resultRelInfo = (ResultRelInfo *) lfirst(lc);
-		Oid			relid = RelationGetRelid(resultRelInfo->ri_RelationDesc);
-		uint64		tupcount = resultRelInfo->ri_aoprocessed;
-
-		pq_sendint(&buf, relid, 4);
-		pq_sendint64(&buf, tupcount);
-
-		if (Debug_appendonly_print_insert)
-			ereport(LOG,(errmsg("sent tupcount " INT64_FORMAT " for "
-								"relation %d", tupcount, relid)));
-
-	}
-	pq_endmessage(&buf);
-}
-
 /* ----------------------------------------------------------------
  *		ExecPostprocessPlan
  *
@@ -2840,9 +2717,6 @@ ExecEndPlan(PlanState *planstate, EState *estate)
 	 * away anyway.
 	 */
 	ExecResetTupleTable(estate->es_tupleTable, false);
-
-	/* Report how many tuples we may have inserted into AO tables */
-	SendAOTupCounts(estate);
 
 	/* Adjust INSERT/UPDATE/DELETE count for replicated table ON QD */
 	AdjustReplicatedTableCounts(estate);
@@ -4382,6 +4256,13 @@ targetid_get_partition(Oid targetid, EState *estate, bool openIndices)
 	ResultRelInfo *childInfo = estate->es_result_relations;
 	ResultPartHashEntry *entry;
 	bool		found;
+
+	/*
+	 * If the resolved target is the table/partition that was named as the
+	 * update target itself, don't create a new ResultRelInfo entry for it.
+	 */
+	if (targetid == RelationGetRelid(parentInfo->ri_RelationDesc))
+		return parentInfo;
 
 	if (parentInfo->ri_partition_hash == NULL)
 	{

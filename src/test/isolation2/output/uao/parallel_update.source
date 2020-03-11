@@ -16,17 +16,15 @@ BEGIN
 2: UPDATE ao SET b = 42 WHERE a = 2;
 UPDATE 1
 2: SELECT * FROM locktest_master WHERE coalesce = 'ao';
- coalesce | mode                | locktype                 | node   
-----------+---------------------+--------------------------+--------
- ao       | AccessExclusiveLock | append-only segment file | master 
- ao       | ExclusiveLock       | relation                 | master 
-(2 rows)
+ coalesce | mode          | locktype | node   
+----------+---------------+----------+--------
+ ao       | ExclusiveLock | relation | master 
+(1 row)
 2: SELECT * FROM locktest_segments WHERE coalesce = 'ao';
- coalesce | mode                | locktype                 | node      
-----------+---------------------+--------------------------+-----------
- ao       | AccessExclusiveLock | append-only segment file | 1 segment 
- ao       | RowExclusiveLock    | relation                 | 1 segment 
-(2 rows)
+ coalesce | mode             | locktype | node      
+----------+------------------+----------+-----------
+ ao       | RowExclusiveLock | relation | 1 segment 
+(1 row)
 -- The case here should update a tuple at the same seg with(2).
 -- Under jump hash, (2) and (3) are on the same seg(seg0).
 1&: UPDATE ao SET b = 42 WHERE a = 3;  <waiting ...>

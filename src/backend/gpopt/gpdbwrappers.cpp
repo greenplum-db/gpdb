@@ -1400,6 +1400,22 @@ gpdb::GetDefaultDistributionOpclassForType
 }
 
 Oid
+gpdb::GetColumnDefOpclassForType
+	(
+	List *opclassName,
+	Oid typid
+	)
+{
+	GP_WRAP_START;
+	{
+		/* catalog tables: pg_type, pg_opclass */
+		return cdb_get_opclass_for_column_def(opclassName, typid);
+	}
+	GP_WRAP_END;
+	return false;
+}
+
+Oid
 gpdb::GetHashProcInOpfamily
 	(
 	Oid opfamily,
@@ -2363,13 +2379,12 @@ gpdb::CdbEstimateRelationSize
 double
 gpdb::CdbEstimatePartitionedNumTuples
 	(
-	Relation rel,
-	bool *stats_missing_p
+	Relation rel
 	)
 {
 	GP_WRAP_START;
 	{
-		return cdb_estimate_partitioned_numtuples(rel, stats_missing_p);
+		return cdb_estimate_partitioned_numtuples(rel);
 	}
 	GP_WRAP_END;
 }

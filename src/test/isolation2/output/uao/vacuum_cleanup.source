@@ -78,7 +78,10 @@ DELETE 100
 1&: vacuum ao_@orientation@_vacuum_cleanup3;  <waiting ...>
 
 -- Wait till compaction phase is completed and only then start the serializable
--- transaction to ensure that only drop phase is skipped
+-- transaction to ensure that only drop phase runs after the serializable
+-- transaction started. Because the transaction is holding a lock on the table,
+-- the drop phase cannot upgrade to AccessExclusiveLock and so recycling the
+-- segfiles is skipped.
 2: select gp_wait_until_triggered_fault('vacuum_relation_open_relation_during_drop_phase', 1, 1);
  gp_wait_until_triggered_fault 
 -------------------------------
@@ -86,11 +89,10 @@ DELETE 100
 (1 row)
 2: begin isolation level serializable;
 BEGIN
-2: select 123;
- ?column? 
-----------
- 123      
-(1 row)
+2: select * from ao_@orientation@_vacuum_cleanup3;
+ a | b 
+---+---
+(0 rows)
 2: select gp_inject_fault('vacuum_relation_open_relation_during_drop_phase', 'reset', 1);
  gp_inject_fault 
 -----------------
@@ -110,15 +112,15 @@ VACUUM
 -- (AWAITING_DROP)
 -- This result is related to data distribution.
 -- Current hash algorithm is jump-consistent-hash.
-1: SELECT gp_ao_or_aocs_seg('ao_@orientation@_vacuum_cleanup3') from gp_dist_random('gp_id');
- gp_ao_or_aocs_seg 
--------------------
- (1,25,1,3,2)      
- (2,0,1,3,1)       
- (1,37,1,3,2)      
- (2,0,1,3,1)       
- (1,38,1,3,2)      
- (2,0,1,3,1)       
+1: SELECT * FROM gp_ao_or_aocs_seg('ao_@orientation@_vacuum_cleanup3');
+ segment_id | segno | tupcount | modcount | formatversion | state 
+------------+-------+----------+----------+---------------+-------
+ 2          | 1     | 25       | 2        | 3             | 2     
+ 2          | 2     | 0        | 1        | 3             | 1     
+ 1          | 1     | 37       | 2        | 3             | 2     
+ 1          | 2     | 0        | 1        | 3             | 1     
+ 0          | 1     | 38       | 2        | 3             | 2     
+ 0          | 2     | 0        | 1        | 3             | 1     
 (6 rows)
 
 2: commit;

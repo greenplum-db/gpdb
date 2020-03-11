@@ -52,12 +52,9 @@ ORDER BY gp_segment_id, xrecoff;
 ---------------+------------------------+--------------------------+-----------------+-----------+-------------
              0 | generate_ao_xlog_table | XLOG_APPENDONLY_TRUNCATE |               1 |        24 |         128
              0 | generate_ao_xlog_table | XLOG_APPENDONLY_INSERT   |               1 |       152 |         128
-             0 | generate_ao_xlog_table | XLOG_APPENDONLY_INSERT   |               2 |        24 |           0
              1 | generate_ao_xlog_table | XLOG_APPENDONLY_TRUNCATE |               1 |        24 |          88
              1 | generate_ao_xlog_table | XLOG_APPENDONLY_INSERT   |               1 |        64 |          88
-             1 | generate_ao_xlog_table | XLOG_APPENDONLY_INSERT   |               2 |        24 |           0
              2 | generate_ao_xlog_table | XLOG_APPENDONLY_TRUNCATE |               1 |        24 |         160
              2 | generate_ao_xlog_table | XLOG_APPENDONLY_INSERT   |               1 |       128 |         160
-             2 | generate_ao_xlog_table | XLOG_APPENDONLY_INSERT   |               2 |        24 |           0
-(9 rows)
+(6 rows)
 

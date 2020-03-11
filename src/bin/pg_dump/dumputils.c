@@ -14,6 +14,8 @@
  */
 #include "postgres_fe.h"
 
+#include <ctype.h>
+
 #include "dumputils.h"
 #include "fe_utils/string_utils.h"
 
@@ -27,6 +29,7 @@ static bool parseAclItem(const char *item, const char *type,
 static char *copyAclUserName(PQExpBuffer output, char *input);
 static void AddAcl(PQExpBuffer aclbuf, const char *keyword,
 	   const char *subname);
+
 
 /*
  * Build GRANT/REVOKE command(s) for an object.
@@ -193,7 +196,7 @@ buildACLCommands(const char *name, const char *subname, const char *nspname,
 				if (privswgo->len > 0)
 				{
 					appendPQExpBuffer(firstsql,
-							   "%sREVOKE GRANT OPTION FOR %s ON %s ",
+									  "%sREVOKE GRANT OPTION FOR %s ON %s ",
 									  prefix, privswgo->data, type);
 					if (nspname && *nspname)
 						appendPQExpBuffer(firstsql, "%s.", fmtId(nspname));
@@ -674,6 +677,7 @@ AddAcl(PQExpBuffer aclbuf, const char *keyword, const char *subname)
 	if (subname)
 		appendPQExpBuffer(aclbuf, "(%s)", subname);
 }
+
 
 /*
  * buildShSecLabelQuery

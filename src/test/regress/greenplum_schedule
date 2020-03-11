@@ -41,7 +41,7 @@ test: leastsquares opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp li
 # below test(s) inject faults so each of them need to be in a separate group
 test: gpcopy
 
-test: filter gpctas gpdist gpdist_opclasses gpdist_legacy_opclasses matrix toast sublink table_functions olap_setup complex opclass_ddl information_schema guc_env_var gp_explain distributed_transactions explain_format olap_plans
+test: filter gpctas gpdist gpdist_opclasses gpdist_legacy_opclasses matrix toast sublink table_functions olap_setup complex opclass_ddl information_schema guc_env_var gp_explain distributed_transactions explain_format olap_plans misc_jiras
 # below test(s) inject faults so each of them need to be in a separate group
 test: guc_gp
 
@@ -88,7 +88,7 @@ test: cursor
 # so it needs to be in a group by itself
 test: query_finish_pending
 
-test: gpdiffcheck gptokencheck gp_hashagg sequence_gp tidscan co_nestloop_idxscan dml_in_udf gpdtm_plpgsql
+test: gpdiffcheck gptokencheck gp_hashagg sequence_gp tidscan_gp co_nestloop_idxscan dml_in_udf gpdtm_plpgsql
 
 # The test must be run by itself as it injects a fault on QE to fail
 # at the 2nd phase of 2PC.
@@ -200,11 +200,12 @@ test: uaocs_compaction/drop_column
 
 test: uao_ddl/cursor_row uao_ddl/cursor_column uao_ddl/alter_ao_table_statistics_row uao_ddl/analyze_ao_table_every_dml_row uao_ddl/analyze_ao_table_every_dml_column uao_ddl/alter_ao_table_statistics_column uao_ddl/alter_ao_table_setdefault_row uao_ddl/alter_ao_table_index_row uao_ddl/alter_ao_table_owner_column
 test: uao_ddl/alter_ao_table_owner_row uao_ddl/alter_ao_table_setstorage_row uao_ddl/alter_ao_table_constraint_row uao_ddl/alter_ao_table_constraint_column uao_ddl/alter_ao_table_index_column uao_ddl/blocksize_row uao_ddl/compresstype_column uao_ddl/alter_ao_table_setdefault_column uao_ddl/blocksize_column uao_ddl/temp_on_commit_delete_rows_row uao_ddl/temp_on_commit_delete_rows_column
-# Do not add the two uao*_catalog_tables tests to a group that runs
-# serializable transactions.  They run VACUUM FULL on append-optimized
-# tables and assume that no AWAITING_DROP segfiles exist at the end of
-# VACUUM FULL.
-test: uao_catalog_tables uaocs_catalog_tables uao_ddl/alter_ao_table_setstorage_column uao_ddl/alter_ao_table_col_ddl_row uao_ddl/compresstype_row uao_ddl/alter_ao_table_col_ddl_column uao_ddl/alter_ao_part_tables_splitpartition_row uao_ddl/alter_ao_part_tables_splitpartition_column uao_ddl/create_ao_tables_row uao_ddl/create_ao_table_500cols_row uao_ddl/create_ao_tables_column uao_ddl/alter_ao_part_exch_row
+# Run uao[cs]_catalog_tables separately. They run VACUUM FULL on
+# append-optimized tables and assume that no AWAITING_DROP segfiles exist at
+# the end of VACUUM FULL.
+test: uao_catalog_tables
+test: uaocs_catalog_tables
+test: uao_ddl/alter_ao_table_setstorage_column uao_ddl/alter_ao_table_col_ddl_row uao_ddl/compresstype_row uao_ddl/alter_ao_table_col_ddl_column uao_ddl/alter_ao_part_tables_splitpartition_row uao_ddl/alter_ao_part_tables_splitpartition_column uao_ddl/create_ao_tables_row uao_ddl/create_ao_table_500cols_row uao_ddl/create_ao_tables_column uao_ddl/alter_ao_part_exch_row
 test: uao_ddl/alter_ao_part_exch_column uao_ddl/alter_ao_part_tables_row uao_ddl/create_ao_table_500cols_column uao_ddl/alter_ao_part_tables_column
 
 test: uao_ddl/alter_drop_allcol_row uao_ddl/alter_drop_allcol_column uao_ddl/alter_rollback_row uao_ddl/alter_rollback_column uao_ddl/uao_allalter_row uao_ddl/uao_allalter_column uao_col/alter_ao_table_oid_column uao_row/alter_ao_table_oid_row

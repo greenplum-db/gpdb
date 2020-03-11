@@ -626,51 +626,83 @@ ExecCopySlotMemTuple(TupleTableSlot *slot)
 	 * tts_mintuple since that's a tad cheaper.
 	 */
 	if (slot->PRIVATE_tts_memtuple)
-		return memtuple_copy_to(slot->PRIVATE_tts_memtuple, NULL, NULL);
+		return memtuple_copy(slot->PRIVATE_tts_memtuple);
 	
 	slot_getallattrs(slot);
 
 	/*
 	 * Otherwise we need to build a tuple from the Datum array.
 	 */
-	return memtuple_form_to(slot->tts_mt_bind, slot_get_values(slot), slot_get_isnull(slot), NULL, 0, false);
+	return memtuple_form(slot->tts_mt_bind, slot_get_values(slot), slot_get_isnull(slot));
 }
 
+/*
+ * Copy the tuple in 'slot' as a MemTuple, to a pre-allocated buffer.
+ *
+ * On entry, *destlen must be set to the size of the buffer. If the tuple doesn't
+ * fit and 'pctxt' is valid, a new buffer is allocated in that context. If it doesn't
+ * fit, and 'pctxt' is NULL, the function returns NULL.
+ *
+ * In all cases, *destlen is updated with the actual size of the tuple.
+ */
 MemTuple
-ExecCopySlotMemTupleTo(TupleTableSlot *slot, MemoryContext pctxt, char *dest, unsigned int *len)
+ExecCopySlotMemTupleTo(TupleTableSlot *slot, MemoryContext pctxt, char *dest, unsigned int *destlen)
 {
-	uint32 dumlen;
-	MemTuple mtup = NULL;
+	uint32		len;
+	uint32		null_save_len;
+	bool		has_nulls;
+	MemTuple	mtup;
 
+	Assert(destlen);
 	Assert(!TupIsNull(slot));
 	Assert(slot->tts_mt_bind);
 
-	if(!len)
-		len = &dumlen;
-	
 	if (TupHasMemTuple(slot))
 	{
-		mtup = memtuple_copy_to(slot->PRIVATE_tts_memtuple, (MemTuple) dest, len);
-		if(mtup || !pctxt)
-			return mtup;
+		len = memtuple_get_size(slot->PRIVATE_tts_memtuple);
 
-		mtup = (MemTuple) MemoryContextAlloc(pctxt, *len);
-		mtup = memtuple_copy_to(slot->PRIVATE_tts_memtuple, mtup, len);
-		Assert(mtup);
+		if (len > *destlen)
+		{
+			if (pctxt == NULL)
+			{
+				*destlen = len;
+				return NULL;
+			}
+			mtup = MemoryContextAlloc(pctxt, len);
+		}
+		else
+			mtup = (MemTuple) dest;
 
+		memcpy((char *) mtup, (char *) slot->PRIVATE_tts_memtuple, len);
+		*destlen = len;
 		return mtup;
 	}
+	else
+	{
 
-	slot_getallattrs(slot);
-	mtup = memtuple_form_to(slot->tts_mt_bind, slot_get_values(slot), slot_get_isnull(slot), (MemTuple) dest, len, false);
+		slot_getallattrs(slot);
 
-	if(mtup || !pctxt)
+		len = compute_memtuple_size(slot->tts_mt_bind, slot_get_values(slot), slot_get_isnull(slot),
+									&null_save_len, &has_nulls);
+
+		if (len > *destlen)
+		{
+			if (pctxt == NULL)
+			{
+				*destlen = len;
+				return NULL;
+			}
+			mtup = MemoryContextAlloc(pctxt, len);
+		}
+		else
+			mtup = (MemTuple) dest;
+
+		memtuple_form_to(slot->tts_mt_bind, slot_get_values(slot), slot_get_isnull(slot),
+						 len, null_save_len, has_nulls,
+						 mtup);
+		*destlen = len;
 		return mtup;
-	mtup = (MemTuple) MemoryContextAlloc(pctxt, *len);
-	mtup = memtuple_form_to(slot->tts_mt_bind, slot_get_values(slot), slot_get_isnull(slot), mtup, len, false);
-
-	Assert(mtup);
-	return mtup;
+	}
 }
 		
 /* --------------------------------
@@ -724,8 +756,9 @@ ExecFetchSlotHeapTuple(TupleTableSlot *slot)
 MemTuple
 ExecFetchSlotMemTuple(TupleTableSlot *slot)
 {
-	MemTuple newTuple;
-	uint32 tuplen;
+	uint32		tuplen;
+	uint32		null_save_len;
+	bool		has_nulls;
 
 	Assert(!TupIsNull(slot));
 	Assert(slot->tts_mt_bind);
@@ -735,26 +768,23 @@ ExecFetchSlotMemTuple(TupleTableSlot *slot)
 
 	slot_getallattrs(slot);
 
-	tuplen = slot->PRIVATE_tts_mtup_buf_len;
-	newTuple = memtuple_form_to(slot->tts_mt_bind, slot_get_values(slot), slot_get_isnull(slot),
-				(MemTuple) slot->PRIVATE_tts_mtup_buf, &tuplen, false);
+	tuplen = compute_memtuple_size(slot->tts_mt_bind, slot_get_values(slot), slot_get_isnull(slot),
+								   &null_save_len, &has_nulls);
 
-	if(!newTuple)
+	if (!slot->PRIVATE_tts_mtup_buf || tuplen > slot->PRIVATE_tts_mtup_buf_len)
 	{
-		if(slot->PRIVATE_tts_mtup_buf)
+		if (slot->PRIVATE_tts_mtup_buf)
 			pfree(slot->PRIVATE_tts_mtup_buf);
 
 		slot->PRIVATE_tts_mtup_buf = MemoryContextAlloc(slot->tts_mcxt, tuplen);
 		slot->PRIVATE_tts_mtup_buf_len = tuplen;
-
-		newTuple = memtuple_form_to(slot->tts_mt_bind, slot_get_values(slot), slot_get_isnull(slot),
-			(MemTuple) slot->PRIVATE_tts_mtup_buf, &tuplen, false);
 	}
+	memtuple_form_to(slot->tts_mt_bind, slot_get_values(slot), slot_get_isnull(slot),
+					 tuplen, null_save_len, has_nulls,
+					 (MemTuple) slot->PRIVATE_tts_mtup_buf);
+	slot->PRIVATE_tts_memtuple = (MemTuple) slot->PRIVATE_tts_mtup_buf;
 
-	Assert(newTuple);
-	slot->PRIVATE_tts_memtuple = newTuple;
-
-	return newTuple;
+	return (MemTuple) slot->PRIVATE_tts_mtup_buf;
 }
 
 /* --------------------------------

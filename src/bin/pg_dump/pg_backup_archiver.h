@@ -173,8 +173,6 @@ typedef int (*MasterEndParallelItemPtr) (ArchiveHandle *AH, TocEntry *te,
 
 typedef size_t (*CustomOutPtr) (ArchiveHandle *AH, const void *buf, size_t len);
 
-typedef void (*DieFuncPtr) (int taskRC, char * pszErrorMsg);
-
 typedef enum
 {
 	SQL_SCAN = 0,				/* normal */
@@ -328,7 +326,6 @@ struct _archiveHandle
 	char	   *fSpec;			/* Archive File Spec */
 	FILE	   *FH;				/* General purpose file handle */
 	void	   *OF;
-
 	int			gzOut;			/* Output file */
 
 	struct _tocEntry *toc;		/* Header of circular list of TOC entries */
@@ -363,8 +360,6 @@ struct _archiveHandle
 	RestorePass restorePass;	/* used only during parallel restore */
 	struct _tocEntry *currentTE;
 	struct _tocEntry *lastErrorTE;
-
-	DieFuncPtr dieFuncPtr;      /* Called upon die to report the status */
 };
 
 struct _tocEntry

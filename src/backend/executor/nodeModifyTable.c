@@ -995,14 +995,6 @@ ldelete:;
 	if (canSetTag)
 		(estate->es_processed)++;
 
-	if (!isUpdate)
-	{
-		/*
-		 * To notify master if tuples deleted or not, to update mod_count.
-		 */
-		(resultRelInfo->ri_aoprocessed)++;
-	}
-
 	/*
 	 * Note: Normally one would think that we have to delete index tuples
 	 * associated with the heap tuple now...
@@ -2708,7 +2700,7 @@ table_insert(ResultRelInfo *resultRelInfo, EState *estate, TupleTableSlot *slot,
 		if (resultRelInfo->ri_aoInsertDesc == NULL)
 		{
 			/* Set the pre-assigned fileseg number to insert into */
-			ResultRelInfoSetSegno(resultRelInfo, estate->es_result_aosegnos);
+			ResultRelInfoChooseSegno(resultRelInfo);
 
 			resultRelInfo->ri_aoInsertDesc =
 				appendonly_insert_init(resultRelationDesc,
@@ -2718,20 +2710,18 @@ table_insert(ResultRelInfo *resultRelInfo, EState *estate, TupleTableSlot *slot,
 
 		mtuple = ExecFetchSlotMemTuple(slot);
 		newId = appendonly_insert(resultRelInfo->ri_aoInsertDesc, mtuple, tuple_oid, (AOTupleId *) lastTid);
-		(resultRelInfo->ri_aoprocessed)++;
 	}
 	else if (RelationIsAoCols(resultRelationDesc))
 	{
 		if (resultRelInfo->ri_aocsInsertDesc == NULL)
 		{
-			ResultRelInfoSetSegno(resultRelInfo, estate->es_result_aosegnos);
+			ResultRelInfoChooseSegno(resultRelInfo);
 			resultRelInfo->ri_aocsInsertDesc = aocs_insert_init(resultRelationDesc,
 																resultRelInfo->ri_aosegno, false);
 		}
 
 		newId = aocs_insert(resultRelInfo->ri_aocsInsertDesc, slot);
 		*lastTid = *slot_get_ctid(slot);
-		(resultRelInfo->ri_aoprocessed)++;
 	}
 	else if (RelationIsHeap(resultRelationDesc))
 	{
@@ -2802,7 +2792,7 @@ table_update(ResultRelInfo *resultRelInfo, EState *estate, ItemPointer tupleid, 
 
 		if (resultRelInfo->ri_updateDesc == NULL)
 		{
-			ResultRelInfoSetSegno(resultRelInfo, estate->es_result_aosegnos);
+			ResultRelInfoChooseSegno(resultRelInfo);
 			resultRelInfo->ri_updateDesc = (AppendOnlyUpdateDesc)
 				appendonly_update_init(resultRelationDesc, GetActiveSnapshot(),
 									   resultRelInfo->ri_aosegno);
@@ -2811,7 +2801,6 @@ table_update(ResultRelInfo *resultRelInfo, EState *estate, ItemPointer tupleid, 
 		mtuple = ExecFetchSlotMemTuple(slot);
 		result = appendonly_update(resultRelInfo->ri_updateDesc,
 								   mtuple, (AOTupleId *) tupleid, (AOTupleId *) &lastTid);
-		(resultRelInfo->ri_aoprocessed)++;
 		*tupleid = lastTid;
 		*wasHotUpdate = false;
 	}
@@ -2828,14 +2817,13 @@ table_update(ResultRelInfo *resultRelInfo, EState *estate, ItemPointer tupleid, 
 
 		if (resultRelInfo->ri_updateDesc == NULL)
 		{
-			ResultRelInfoSetSegno(resultRelInfo, estate->es_result_aosegnos);
+			ResultRelInfoChooseSegno(resultRelInfo);
 			resultRelInfo->ri_updateDesc = (AppendOnlyUpdateDesc)
 				aocs_update_init(resultRelationDesc, resultRelInfo->ri_aosegno);
 		}
 
 		result = aocs_update(resultRelInfo->ri_updateDesc,
 							 slot, (AOTupleId *) tupleid, (AOTupleId *) &lastTid);
-		(resultRelInfo->ri_aoprocessed)++;
 		*tupleid = lastTid;
 		*wasHotUpdate = false;
 	}

@@ -148,8 +148,6 @@
 
  CREATE FUNCTION get_ao_compression_ratio(regclass) RETURNS float8 LANGUAGE internal VOLATILE STRICT READS SQL DATA AS 'get_ao_compression_ratio' WITH (OID=7171, DESCRIPTION="show append only table compression ratio");
 
- CREATE FUNCTION gp_update_ao_master_stats(regclass) RETURNS int8 LANGUAGE internal VOLATILE MODIFIES SQL DATA AS 'gp_update_ao_master_stats' WITH (OID=7173, DESCRIPTION="append only tables utility function");
-
 -- the bitmap index access method routines
  CREATE FUNCTION bmhandler(internal) RETURNS index_am_handler LANGUAGE internal VOLATILE STRICT PARALLEL SAFE AS 'bmhandler' WITH (OID=7050, DESCRIPTION="bitmap(internal)");
 
@@ -174,11 +172,6 @@
  CREATE FUNCTION gp_read_error_log(exttable text, OUT cmdtime timestamptz, OUT relname text, OUT filename text, OUT linenum int4, OUT bytenum int4, OUT errmsg text, OUT rawdata text, OUT rawbytes bytea) RETURNS SETOF record LANGUAGE INTERNAL STRICT VOLATILE PARALLEL SAFE EXECUTE ON ALL SEGMENTS AS 'gp_read_error_log' WITH (OID = 7076, DESCRIPTION="read the error log for the specified external table");
 
  CREATE FUNCTION gp_truncate_error_log(text) RETURNS bool LANGUAGE INTERNAL STRICT VOLATILE PARALLEL SAFE AS 'gp_truncate_error_log' WITH (OID=7069, DESCRIPTION="truncate the error log for the specified external table");
-
--- elog related
- CREATE FUNCTION gp_elog(text) RETURNS void LANGUAGE internal IMMUTABLE STRICT PARALLEL SAFE AS 'gp_elog' WITH (OID=5044, DESCRIPTION="Insert text into the error log");
-
- CREATE FUNCTION gp_elog(text, bool) RETURNS void LANGUAGE internal IMMUTABLE STRICT PARALLEL SAFE AS 'gp_elog' WITH (OID=5045, DESCRIPTION="Insert text into the error log");
 
 -- Segment and master administration functions, see utils/gp/segadmin.c
  CREATE FUNCTION gp_add_master_standby(text, text, text) RETURNS int2 LANGUAGE internal VOLATILE PARALLEL RESTRICTED AS 'gp_add_master_standby' WITH (OID=5046, DESCRIPTION="Perform the catalog operations necessary for adding a new standby");

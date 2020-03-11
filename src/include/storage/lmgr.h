@@ -61,10 +61,6 @@ extern bool ConditionalLockRelationForExtension(Relation relation,
 									LOCKMODE lockmode);
 extern int	RelationExtensionLockWaiterCount(Relation relation);
 
-/* Lock a relation for Append-Only segment files. */
-extern LockAcquireResult LockRelationAppendOnlySegmentFile(RelFileNode *relFileNode, int32 segno, LOCKMODE lockmode, bool dontWait);
-extern void UnlockRelationAppendOnlySegmentFile(RelFileNode *relFileNode, int32 segno, LOCKMODE lockmode);
-
 /* Lock a page (currently only used within indexes) */
 extern void LockPage(Relation relation, BlockNumber blkno, LOCKMODE lockmode);
 extern bool ConditionalLockPage(Relation relation, BlockNumber blkno, LOCKMODE lockmode);
@@ -119,4 +115,6 @@ extern bool LockTagIsTemp(const LOCKTAG *tag);
 
 extern bool CondUpgradeRelLock(Oid relid, bool noWait);
 
+extern void GxactLockTableInsert(DistributedTransactionId xid);
+extern void GxactLockTableWait(DistributedTransactionId xid);
 #endif   /* LMGR_H */

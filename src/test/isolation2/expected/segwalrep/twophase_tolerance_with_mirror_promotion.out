@@ -22,8 +22,6 @@
 --
 -- end_matchsubs
 
-1:set dtx_phase2_retry_count=10;
-SET
 !\retcode gpconfig -c gp_fts_probe_retries -v 2 --masteronly;
 -- start_ignore
 -- end_ignore

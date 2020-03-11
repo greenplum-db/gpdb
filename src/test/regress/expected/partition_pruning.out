@@ -3178,6 +3178,7 @@ ALTER TABLE sales
 ALTER PARTITION FOR (RANK(1))
 EXCHANGE PARTITION FOR ('usa') WITH TABLE sales_exchange_part ;
 NOTICE:  exchanged partition "usa" of partition for rank 1 of relation "sales" with relation "sales_exchange_part"
+ANALYZE sales;
 -- TODO: #141973839. Expected 10 parts, currently selecting 15 parts. First level: 4 parts + 1 default. Second level 2 parts. Total 10 parts.
 select get_selected_parts('explain analyze select * from sales where region = ''usa'' or region = ''asia'';');
  get_selected_parts 
@@ -3219,25 +3220,19 @@ NOTICE:  building index for child partition "sales_1_prt_5_2_prt_asia"
 NOTICE:  building index for child partition "sales_1_prt_5_2_prt_europe"
 NOTICE:  building index for child partition "sales_1_prt_5_2_prt_other_regions"
 explain select * from sales where date = '2011-01-01' and region = 'usa';
-                                                             QUERY PLAN                                                              
--------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=100.46..4773.02 rows=5 width=47)
-   ->  Append  (cost=100.46..4773.02 rows=2 width=47)
-         ->  Bitmap Heap Scan on sales_1_prt_outlying_dates_2_prt_usa  (cost=100.46..1524.29 rows=1 width=54)
-               Recheck Cond: (date = '01-01-2011'::date)
+                                                                                 QUERY PLAN                                                                                  
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.12..800.58 rows=4 width=45)
+   ->  Append  (cost=0.12..800.58 rows=2 width=45)
+         ->  Index Scan using sales_1_prt_outlying_dates_2_prt_usa_date_idx on sales_1_prt_outlying_dates_2_prt_usa  (cost=0.12..200.14 rows=1 width=54)
+               Index Cond: (date = '01-01-2011'::date)
                Filter: (region = 'usa'::text)
-               ->  Bitmap Index Scan on sales_1_prt_outlying_dates_2_prt_usa_date_idx  (cost=0.00..100.46 rows=13 width=0)
-                     Index Cond: (date = '01-01-2011'::date)
-         ->  Bitmap Heap Scan on sales_1_prt_outlying_dates_2_prt_other_regions  (cost=100.46..1524.29 rows=1 width=54)
-               Recheck Cond: (date = '01-01-2011'::date)
+         ->  Index Scan using sales_1_prt_outlying_dates_2_prt_other_regions_date_idx on sales_1_prt_outlying_dates_2_prt_other_regions  (cost=0.12..200.14 rows=1 width=54)
+               Index Cond: (date = '01-01-2011'::date)
                Filter: (region = 'usa'::text)
-               ->  Bitmap Index Scan on sales_1_prt_outlying_dates_2_prt_other_regions_date_idx  (cost=0.00..100.46 rows=13 width=0)
-                     Index Cond: (date = '01-01-2011'::date)
-         ->  Bitmap Heap Scan on sales_1_prt_2_2_prt_other_regions  (cost=100.46..1524.29 rows=1 width=54)
-               Recheck Cond: (date = '01-01-2011'::date)
+         ->  Index Scan using sales_1_prt_2_2_prt_other_regions_date_idx on sales_1_prt_2_2_prt_other_regions  (cost=0.12..200.14 rows=1 width=54)
+               Index Cond: (date = '01-01-2011'::date)
                Filter: (region = 'usa'::text)
-               ->  Bitmap Index Scan on sales_1_prt_2_2_prt_other_regions_date_idx  (cost=0.00..100.46 rows=13 width=0)
-                     Index Cond: (date = '01-01-2011'::date)
          ->  Index Scan using sales_1_prt_2_2_prt_usa_date_idx on sales_1_prt_2_2_prt_usa  (cost=0.12..200.14 rows=1 width=19)
                Index Cond: (date = '01-01-2011'::date)
                Filter: (region = 'usa'::text)
