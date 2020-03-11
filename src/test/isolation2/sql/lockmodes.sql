@@ -289,6 +289,20 @@ create table t_lockmods_ao1 (c int) with (appendonly=true) distributed randomly;
 2: select * from show_locks_lockmodes;
 1: abort;
 
+-- 1.6 select for update NOWAIT/SKIP LOCKED
+-- NOWAIT/SKIP LOCKED should not affect the table-level lock
+1: begin;
+1: select * from t_lockmods for share;
+2&: select * from t_lockmods for update nowait;
+1: abort;
+2<:
+
+1: begin;
+1: select * from t_lockmods for share;
+2&: select * from t_lockmods for update skip locked;
+1: abort;
+2<:
+
 1q:
 2q:
 
@@ -572,6 +586,16 @@ create table t_lockmods_ao1 (c int) with (appendonly=true) distributed randomly;
 -- because of the "LockRows loses sort order" issue.
 --1: select * from t_lockmods order by c for update;
 2: select * from show_locks_lockmodes;
+1: abort;
+
+-- 2.6 select for update NOWAIT/SKIP LOCKED
+-- with GDD, select for update could be optimized to not upgrade lock.
+1: begin;
+1: select * from t_lockmods where c<3 for share;
+2: select * from t_lockmods for share;
+2: select * from t_lockmods for update skip locked;
+2: select * from t_lockmods where c>=3 for update nowait;
+2: select * from t_lockmods for update nowait;
 1: abort;
 
 1q:

@@ -1235,7 +1235,7 @@ LockTagIsTemp(const LOCKTAG *tag)
  * we have to keep upgrading locks for AO table.
  */
 bool
-CondUpgradeRelLock(Oid relid, bool noWait)
+CondUpgradeRelLock(Oid relid)
 {
 	Relation rel;
 	bool upgrade = false;
@@ -1247,7 +1247,7 @@ CondUpgradeRelLock(Oid relid, bool noWait)
 	 * try_relation_open will throw error if
 	 * the relation is invaliad
 	 */
-	rel = try_relation_open(relid, NoLock, noWait);
+	rel = try_relation_open(relid, NoLock, false);
 
 	if (!rel)
 		return false;

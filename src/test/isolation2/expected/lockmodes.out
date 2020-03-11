@@ -955,43 +955,63 @@ BEGIN
 1: abort;
 ABORT
 
+-- 1.6 select for update NOWAIT/SKIP LOCKED
+-- NOWAIT/SKIP LOCKED should not affect the table-level lock
+1: begin;
+BEGIN
+1: select * from t_lockmods for share;
+ c 
+---
+ 1 
+ 2 
+ 3 
+ 4 
+ 5 
+(5 rows)
+2&: select * from t_lockmods for update nowait;  <waiting ...>
+1: abort;
+ABORT
+2<:  <... completed>
+ c 
+---
+ 1 
+ 2 
+ 3 
+ 4 
+ 5 
+(5 rows)
+
+1: begin;
+BEGIN
+1: select * from t_lockmods for share;
+ c 
+---
+ 1 
+ 2 
+ 3 
+ 4 
+ 5 
+(5 rows)
+2&: select * from t_lockmods for update skip locked;  <waiting ...>
+1: abort;
+ABORT
+2<:  <... completed>
+ c 
+---
+ 1 
+ 2 
+ 3 
+ 4 
+ 5 
+(5 rows)
+
 1q: ... <quitting>
 2q: ... <quitting>
 
 -- start_ignore
 ! gpconfig -c gp_enable_global_deadlock_detector -v on;
-20190515:15:53:44:050050 gpconfig:zlv:gpadmin-[INFO]:-completed successfully with parameters '-c gp_enable_global_deadlock_detector -v on'
 
 ! gpstop -rai;
-20190515:15:53:44:050220 gpstop:zlv:gpadmin-[INFO]:-Starting gpstop with args: -rai
-20190515:15:53:44:050220 gpstop:zlv:gpadmin-[INFO]:-Gathering information and validating the environment...
-20190515:15:53:44:050220 gpstop:zlv:gpadmin-[INFO]:-Obtaining Greenplum Master catalog information
-20190515:15:53:44:050220 gpstop:zlv:gpadmin-[INFO]:-Obtaining Segment details from master...
-20190515:15:53:44:050220 gpstop:zlv:gpadmin-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.196.g0f8a703 build dev'
-20190515:15:53:44:050220 gpstop:zlv:gpadmin-[INFO]:-There are 1 connections to the database
-20190515:15:53:44:050220 gpstop:zlv:gpadmin-[INFO]:-Commencing Master instance shutdown with mode='immediate'
-20190515:15:53:44:050220 gpstop:zlv:gpadmin-[INFO]:-Master host=zlv
-20190515:15:53:44:050220 gpstop:zlv:gpadmin-[INFO]:-Commencing Master instance shutdown with mode=immediate
-20190515:15:53:44:050220 gpstop:zlv:gpadmin-[INFO]:-Master segment instance directory=/home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
-20190515:15:53:44:050220 gpstop:zlv:gpadmin-[INFO]:-Attempting forceful termination of any leftover master process
-20190515:15:53:44:050220 gpstop:zlv:gpadmin-[INFO]:-Terminating processes for segment /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
-20190515:15:53:44:050220 gpstop:zlv:gpadmin-[INFO]:-Stopping master standby host zlv mode=fast
-20190515:15:53:45:050220 gpstop:zlv:gpadmin-[INFO]:-Successfully shutdown standby process on zlv
-20190515:15:53:45:050220 gpstop:zlv:gpadmin-[INFO]:-Targeting dbid [2, 5, 3, 6, 4, 7] for shutdown
-20190515:15:53:45:050220 gpstop:zlv:gpadmin-[INFO]:-Commencing parallel primary segment instance shutdown, please wait...
-20190515:15:53:45:050220 gpstop:zlv:gpadmin-[INFO]:-0.00% of jobs completed
-20190515:15:53:45:050220 gpstop:zlv:gpadmin-[INFO]:-100.00% of jobs completed
-20190515:15:53:45:050220 gpstop:zlv:gpadmin-[INFO]:-Commencing parallel mirror segment instance shutdown, please wait...
-20190515:15:53:45:050220 gpstop:zlv:gpadmin-[INFO]:-0.00% of jobs completed
-20190515:15:53:46:050220 gpstop:zlv:gpadmin-[INFO]:-100.00% of jobs completed
-20190515:15:53:46:050220 gpstop:zlv:gpadmin-[INFO]:-----------------------------------------------------
-20190515:15:53:46:050220 gpstop:zlv:gpadmin-[INFO]:-   Segments stopped successfully      = 6
-20190515:15:53:46:050220 gpstop:zlv:gpadmin-[INFO]:-   Segments with errors during stop   = 0
-20190515:15:53:46:050220 gpstop:zlv:gpadmin-[INFO]:-----------------------------------------------------
-20190515:15:53:46:050220 gpstop:zlv:gpadmin-[INFO]:-Successfully shutdown 6 of 6 segment instances 
-20190515:15:53:46:050220 gpstop:zlv:gpadmin-[INFO]:-Database successfully shutdown with no errors reported
-20190515:15:53:46:050220 gpstop:zlv:gpadmin-[INFO]:-Cleaning up leftover shared memory
-20190515:15:53:46:050220 gpstop:zlv:gpadmin-[INFO]:-Restarting System...
 
 -- end_ignore
 
@@ -1929,43 +1949,51 @@ BEGIN
 1: abort;
 ABORT
 
+-- 2.6 select for update NOWAIT/SKIP LOCKED
+-- with GDD, select for update could be optimized to not upgrade lock.
+1: begin;
+BEGIN
+1: select * from t_lockmods where c<3 for share;
+ c 
+---
+ 2 
+ 1 
+(2 rows)
+2: select * from t_lockmods for share;
+ c 
+---
+ 2 
+ 5 
+ 3 
+ 1 
+ 4 
+(5 rows)
+2: select * from t_lockmods for update skip locked;
+ c 
+---
+ 3 
+ 5 
+ 4 
+(3 rows)
+2: select * from t_lockmods where c>=3 for update nowait;
+ c 
+---
+ 5 
+ 4 
+ 3 
+(3 rows)
+2: select * from t_lockmods for update nowait;
+ERROR:  could not obtain lock on row in relation "t_lockmods"  (seg1 slice1 10.140.0.3:7003 pid=15182)
+1: abort;
+ABORT
+
 1q: ... <quitting>
 2q: ... <quitting>
 
 -- start_ignore
 ! gpconfig -c gp_enable_global_deadlock_detector -v off;
-20190515:15:53:50:051138 gpconfig:zlv:gpadmin-[INFO]:-completed successfully with parameters '-c gp_enable_global_deadlock_detector -v off'
 
 ! gpstop -rai;
-20190515:15:53:50:051308 gpstop:zlv:gpadmin-[INFO]:-Starting gpstop with args: -rai
-20190515:15:53:50:051308 gpstop:zlv:gpadmin-[INFO]:-Gathering information and validating the environment...
-20190515:15:53:50:051308 gpstop:zlv:gpadmin-[INFO]:-Obtaining Greenplum Master catalog information
-20190515:15:53:50:051308 gpstop:zlv:gpadmin-[INFO]:-Obtaining Segment details from master...
-20190515:15:53:50:051308 gpstop:zlv:gpadmin-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.196.g0f8a703 build dev'
-20190515:15:53:50:051308 gpstop:zlv:gpadmin-[INFO]:-There are 0 connections to the database
-20190515:15:53:50:051308 gpstop:zlv:gpadmin-[INFO]:-Commencing Master instance shutdown with mode='immediate'
-20190515:15:53:50:051308 gpstop:zlv:gpadmin-[INFO]:-Master host=zlv
-20190515:15:53:50:051308 gpstop:zlv:gpadmin-[INFO]:-Commencing Master instance shutdown with mode=immediate
-20190515:15:53:50:051308 gpstop:zlv:gpadmin-[INFO]:-Master segment instance directory=/home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
-20190515:15:53:51:051308 gpstop:zlv:gpadmin-[INFO]:-Attempting forceful termination of any leftover master process
-20190515:15:53:51:051308 gpstop:zlv:gpadmin-[INFO]:-Terminating processes for segment /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
-20190515:15:53:51:051308 gpstop:zlv:gpadmin-[INFO]:-Stopping master standby host zlv mode=fast
-20190515:15:53:51:051308 gpstop:zlv:gpadmin-[INFO]:-Successfully shutdown standby process on zlv
-20190515:15:53:51:051308 gpstop:zlv:gpadmin-[INFO]:-Targeting dbid [2, 5, 3, 6, 4, 7] for shutdown
-20190515:15:53:51:051308 gpstop:zlv:gpadmin-[INFO]:-Commencing parallel primary segment instance shutdown, please wait...
-20190515:15:53:51:051308 gpstop:zlv:gpadmin-[INFO]:-0.00% of jobs completed
-20190515:15:53:52:051308 gpstop:zlv:gpadmin-[INFO]:-100.00% of jobs completed
-20190515:15:53:52:051308 gpstop:zlv:gpadmin-[INFO]:-Commencing parallel mirror segment instance shutdown, please wait...
-20190515:15:53:52:051308 gpstop:zlv:gpadmin-[INFO]:-0.00% of jobs completed
-20190515:15:53:52:051308 gpstop:zlv:gpadmin-[INFO]:-100.00% of jobs completed
-20190515:15:53:52:051308 gpstop:zlv:gpadmin-[INFO]:-----------------------------------------------------
-20190515:15:53:52:051308 gpstop:zlv:gpadmin-[INFO]:-   Segments stopped successfully      = 6
-20190515:15:53:52:051308 gpstop:zlv:gpadmin-[INFO]:-   Segments with errors during stop   = 0
-20190515:15:53:52:051308 gpstop:zlv:gpadmin-[INFO]:-----------------------------------------------------
-20190515:15:53:52:051308 gpstop:zlv:gpadmin-[INFO]:-Successfully shutdown 6 of 6 segment instances 
-20190515:15:53:52:051308 gpstop:zlv:gpadmin-[INFO]:-Database successfully shutdown with no errors reported
-20190515:15:53:53:051308 gpstop:zlv:gpadmin-[INFO]:-Cleaning up leftover shared memory
-20190515:15:53:53:051308 gpstop:zlv:gpadmin-[INFO]:-Restarting System...
 
 -- end_ignore
 
