@@ -1850,6 +1850,7 @@ grouping_planner(PlannerInfo *root, bool inheritance_update,
 	int64		count_est = 0;
 	double		limit_tuples = -1.0;
 	bool		have_postponed_srfs = false;
+	List       *saved_pathkeys = NIL;
 	double		tlist_rows;
 	PathTarget *final_target;
 	RelOptInfo *current_rel;
@@ -2509,6 +2510,41 @@ grouping_planner(PlannerInfo *root, bool inheritance_update,
 
 			if (newmarks)
 			{
+				/*
+				 * Greenplum specific behavior:
+				 * LockRowsPath will clear the pathkeys info since
+				 * when some other transactions concurrently update
+				 * the same relation then it cannot guarantee the order.
+				 * Postgres will not consider parallel path for the
+				 * select statement with locking clause (it sets parallel_safe
+				 * to false and parallel_workers to 0 in function
+				 * create_lockrows_path). However, Greenplum contains many
+				 * segments and is innately parallel. If we simply clear
+				 * the pathkey here, then if later we need a gather, we will
+				 * not choose merge gather so even if there is no concurrent
+				 * transaction, the data is not in order. See Github issue:
+				 * https://github.com/greenplum-db/gpdb/issues/9724.
+				 * So here, just before the finaly gather, we save the pathkeys
+				 * and then invoke create_lockrows_path. In the following
+				 * gather, if we found saved_pathkeys is not NIL, we just
+				 * create a merge gather.
+				 *
+				 * Another need to mention here is that, the condition that
+				 * code can reach here is very rigour: the query has to be
+				 * a toplevel select statement and the range table has to be
+				 * a normal heap table and there is only one table invole the
+				 * query and other conditions (refer `checkCanOptSelectLockingClause`
+				 * for details. As the above analysis, if the code reaches
+				 * here and the path->pathkeys is not NIL, the following gather
+				 * has to be the final gather. This is very important because
+				 * if it is not the final gather, it might be used by others
+				 * as subpath, and its pathkeys is not NIL which breaks the
+				 * rules for lockrows path. We need to keep the pathkeys in
+				 * the final gather here.
+				 */
+				if (path->pathkeys != NIL)
+					saved_pathkeys = copyObject(path->pathkeys);
+
 				path = (Path *) create_lockrows_path(root, final_rel, path,
 									root->rowMarks,
 									SS_assign_special_param(root));
@@ -2544,7 +2580,7 @@ grouping_planner(PlannerInfo *root, bool inheritance_update,
 			 * because we don't have them available anymore.
 			 */
 			pathkeys =
-				cdbpullup_truncatePathKeysForTargetList(path->pathkeys,
+				cdbpullup_truncatePathKeysForTargetList(saved_pathkeys == NIL ? path->pathkeys : saved_pathkeys,
 														make_tlist_from_pathtarget(path->pathtarget));
 
 			CdbPathLocus_MakeSingleQE(&locus, getgpsegmentCount());

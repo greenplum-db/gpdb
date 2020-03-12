@@ -559,18 +559,9 @@ create table t_lockmods_ao1 (c int) with (appendonly=true) distributed randomly;
 1: abort;
 
 -- 2.5 test order-by's plan
--- This doesn't actually return the rows in order, only in partial order.
--- That's because the LockRows node might need to fetch a new different value
--- in EvalPlanQual. PostgreSQL does the same, but it's worse in GPDB: we cannot
--- have a Gather Motion on top of the input, because the input isn't always
--- ordered, but that means that we definitely lose the ordering.
--- GPDB_96_MERGE_FIXME: Before 9.6, we used to create a sorted Gather Motion
--- plan anyway. That seems a bit bogus, but maybe we should keep doing that?
 1: begin;
 1: explain select * from t_lockmods order by c for update;
--- GPDB_96_MERGE_FIXME: this test had indeterministic row order differences,
--- because of the "LockRows loses sort order" issue.
---1: select * from t_lockmods order by c for update;
+1: select * from t_lockmods order by c for update;
 2: select * from show_locks_lockmodes;
 1: abort;
 

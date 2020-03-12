@@ -1898,28 +1898,28 @@ BEGIN
 ABORT
 
 -- 2.5 test order-by's plan
--- This doesn't actually return the rows in order, only in partial order.
--- That's because the LockRows node might need to fetch a new different value
--- in EvalPlanQual. PostgreSQL does the same, but it's worse in GPDB: we cannot
--- have a Gather Motion on top of the input, because the input isn't always
--- ordered, but that means that we definitely lose the ordering.
--- GPDB_96_MERGE_FIXME: Before 9.6, we used to create a sorted Gather Motion
--- plan anyway. That seems a bit bogus, but maybe we should keep doing that?
 1: begin;
 BEGIN
 1: explain select * from t_lockmods order by c for update;
  QUERY PLAN                                                                  
 -----------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=3.11..3.17 rows=5 width=10) 
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=3.11..3.27 rows=5 width=10) 
+   Merge Key: c                                                              
    ->  LockRows  (cost=3.11..3.17 rows=2 width=10)                           
          ->  Sort  (cost=3.11..3.12 rows=2 width=10)                         
                Sort Key: c                                                   
                ->  Seq Scan on t_lockmods  (cost=0.00..3.05 rows=2 width=10) 
  Optimizer: Postgres query optimizer                                         
 (7 rows)
--- GPDB_96_MERGE_FIXME: this test had indeterministic row order differences,
--- because of the "LockRows loses sort order" issue.
---1: select * from t_lockmods order by c for update;
+1: select * from t_lockmods order by c for update;
+ c 
+---
+ 1 
+ 2 
+ 3 
+ 4 
+ 5 
+(5 rows)
 2: select * from show_locks_lockmodes;
  locktype | mode            | granted | relation   
 ----------+-----------------+---------+------------
