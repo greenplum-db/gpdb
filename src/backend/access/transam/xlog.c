@@ -9143,7 +9143,16 @@ CreateCheckPoint(int flags)
 			 XLogLastInsertDataLen());
 	}
 
+	/* free heap memory allocated by palloc, to prevent the long-live memory context */
+	/* rdata[0].data uses the stack buffer */
+	/* rdata[1] is dtxCheckPointInfo */
 	freeDtxCheckPointInfoAndUnlock(dtxCheckPointInfo, dtxCheckPointInfoSize, &recptr);
+	/* rdata[2], rdata[3], rdata[4] are allocated by mmxlog_append_checkpoint_data() */
+	pfree(rdata[2].data);
+	pfree(rdata[3].data);
+	pfree(rdata[4].data);
+	/* rdata[5] is allocated by getTwoPhasePreparedTransactionData() */
+	pfree(rdata[5].data);
 
 	XLogFlush(recptr);
 
