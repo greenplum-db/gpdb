@@ -154,15 +154,31 @@ static char *
 build_header_str(const char *format, const char *key, const char *value)
 {
 	char	   *header_option = NULL;
+	char	   *output = NULL;
 
 	if (value == NULL)			/* the option is just a "key" */
 		header_option = pstrdup(key);
 	else						/* the option is a "key: value" */
 	{
 		StringInfoData formatter;
-
 		initStringInfo(&formatter);
-		appendStringInfo(&formatter, format, key, value);
+
+		/* Only encode custom headers */
+		if (pg_strncasecmp("X-GP-", key, 5) == 0)
+		{
+			output = curl_easy_escape(NULL, value, strlen(value));
+
+			if (!output)
+				elog(ERROR, "internal error: curl_easy_escape failed for value %s", value);
+
+			appendStringInfo(&formatter, format, key, output);
+			curl_free(output);
+		}
+		else
+		{
+			appendStringInfo(&formatter, format, key, value);
+		}
+
 		header_option = formatter.data;
 	}
 	return header_option;
@@ -184,7 +200,6 @@ churl_headers_append(CHURL_HEADERS headers, const char *key, const char *value)
 void
 churl_headers_override(CHURL_HEADERS headers, const char *key, const char *value)
 {
-
 	churl_settings *settings = (churl_settings *) headers;
 	struct curl_slist *header_cell = settings->headers;
 	char	   *key_option = NULL;

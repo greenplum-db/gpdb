@@ -183,6 +183,7 @@ test_build_http_headers(void **state)
 	expect_headers_append(input_data->headers, "X-GP-OPTIONS-ENCODING", "UTF8");
 	expect_headers_append(input_data->headers, "X-GP-ATTRS", "0");
 
+	expect_headers_append(input_data->headers, "X-GP-ENCODED-HEADER-VALUES", "true");
 	expect_headers_append(input_data->headers, "X-GP-USER", "pxfuser");
 	expect_headers_append(input_data->headers, "X-GP-SEGMENT-ID", "SegId");
 	expect_headers_append(input_data->headers, "X-GP-SEGMENT-COUNT", "10");
@@ -289,6 +290,7 @@ test__build_http_header__where_is_not_supported(void **state)
 //	expect_any(extractPxfAttributes, qualsAreSupported);
 	will_return(extractPxfAttributes, NULL);
 
+	expect_headers_append(input_data->headers, "X-GP-ENCODED-HEADER-VALUES", "true");
 	expect_headers_append(input_data->headers, "X-GP-USER", "pxfuser");
 	expect_headers_append(input_data->headers, "X-GP-SEGMENT-ID", mock_extvar.GP_SEGMENT_ID);
 	expect_headers_append(input_data->headers, "X-GP-SEGMENT-COUNT", mock_extvar.GP_SEGMENT_COUNT);
