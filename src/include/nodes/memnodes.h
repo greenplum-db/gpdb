@@ -68,6 +68,7 @@ typedef struct MemoryContextMethods
 									  MemoryContextCounters *totals);
 	void		(*declare_accounting_root) (MemoryContext context);
 	Size		(*get_current_usage) (MemoryContext context);
+	Size		(*get_local_usage) (MemoryContext context);
 	Size		(*get_peak_usage) (MemoryContext context);
 	Size		(*set_peak_usage) (MemoryContext context, Size nbytes);
 #ifdef MEMORY_CONTEXT_CHECKING

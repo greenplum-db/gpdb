@@ -239,7 +239,7 @@ IS_MEMORY_ACCOUNT(AllocSet set)
 }
 
 static inline void
-MEMORY_ACCOUNT_UPDATE_ALLOCATED(AllocSet set, Size newbytes)
+MEMORY_ACCOUNT_INC_ALLOCATED(AllocSet set, Size newbytes)
 {
 	AllocSet	parent = set->accountingParent;
 
@@ -248,6 +248,23 @@ MEMORY_ACCOUNT_UPDATE_ALLOCATED(AllocSet set, Size newbytes)
 	parent->currentAllocated += newbytes;
 	parent->peakAllocated = Max(parent->peakAllocated,
 							  parent->currentAllocated);
+
+	/* Make sure these values are not overflow */
+	Assert(set->localAllocated >= newbytes);
+	Assert(parent->currentAllocated >= set->localAllocated);
+}
+
+static inline void
+MEMORY_ACCOUNT_DEC_ALLOCATED(AllocSet set, Size newbytes)
+{
+	AllocSet	parent = set->accountingParent;
+
+	Assert(set->localAllocated >= newbytes);
+	Assert(parent->currentAllocated >= set->localAllocated);
+
+	set->localAllocated -= newbytes;
+	parent->currentAllocated -= newbytes;
+
 }
 
 /*
@@ -330,6 +347,7 @@ static void AllocSetStats(MemoryContext context, int level, bool print,
 
 static void AllocSetDeclareAccountingRoot(MemoryContext context);
 static Size AllocSetGetCurrentUsage(MemoryContext context);
+static Size AllocSetGetLocalUsage(MemoryContext context);
 static Size AllocSetGetPeakUsage(MemoryContext context);
 static Size AllocSetSetPeakUsage(MemoryContext context, Size nbytes);
 
@@ -354,6 +372,7 @@ static MemoryContextMethods AllocSetMethods = {
 	/* GPDB additions */
 	AllocSetDeclareAccountingRoot,
 	AllocSetGetCurrentUsage,
+	AllocSetGetLocalUsage,
 	AllocSetGetPeakUsage,
 	AllocSetSetPeakUsage
 #ifdef MEMORY_CONTEXT_CHECKING
@@ -662,8 +681,12 @@ AllocSetReset(MemoryContext context)
 	AllocSetCheck(context);
 #endif
 
-	set->accountingParent->currentAllocated -= set->localAllocated;
-	set->localAllocated = 0;
+	/*
+	 * Make sure all children have been deleted,
+	 * or the accounting data is incorrect.
+	 */
+	Assert(context->firstchild == NULL);
+	MEMORY_ACCOUNT_DEC_ALLOCATED(set, set->localAllocated);
 
 	/* Clear chunk freelists */
 	MemSetAligned(set->freelist, 0, sizeof(set->freelist));
@@ -728,6 +751,9 @@ AllocSetDelete(MemoryContext context, MemoryContext parent)
 	AllocSetCheck(context);
 #endif
 
+	/* Make sure all children have been deleted */
+	Assert(context->firstchild == NULL);
+	MEMORY_ACCOUNT_DEC_ALLOCATED(set, set->localAllocated);
 	if (IS_MEMORY_ACCOUNT(set))
 	{
 		/* Roll up our peak value to the parent, before this context goes away. */
@@ -737,9 +763,6 @@ AllocSetDelete(MemoryContext context, MemoryContext parent)
 			Max(set->peakAllocated,
 				parentset->accountingParent->peakAllocated);
 	}
-	else
-		set->accountingParent->currentAllocated -= set->localAllocated;
-	set->localAllocated = 0;
 
 	/* Make it look empty, just in case... */
 	MemSetAligned(set->freelist, 0, sizeof(set->freelist));
@@ -848,7 +871,7 @@ AllocSetAlloc(MemoryContext context, Size size)
 		VALGRIND_MAKE_MEM_NOACCESS((char *) chunk + ALLOC_CHUNK_PUBLIC,
 						 chunk_size + ALLOC_CHUNKHDRSZ - ALLOC_CHUNK_PUBLIC);
 
-		MEMORY_ACCOUNT_UPDATE_ALLOCATED(set, chunk->size);
+		MEMORY_ACCOUNT_INC_ALLOCATED(set, chunk->size);
 
 		return AllocChunkGetPointer(chunk);
 	}
@@ -885,7 +908,7 @@ AllocSetAlloc(MemoryContext context, Size size)
 
 		AllocAllocInfo(set, chunk);
 
-		MEMORY_ACCOUNT_UPDATE_ALLOCATED(set, chunk->size);
+		MEMORY_ACCOUNT_INC_ALLOCATED(set, chunk->size);
 
 		return AllocChunkGetPointer(chunk);
 	}
@@ -1052,7 +1075,7 @@ AllocSetAlloc(MemoryContext context, Size size)
 #endif
 
 	AllocAllocInfo(set, chunk);
-	MEMORY_ACCOUNT_UPDATE_ALLOCATED(set, chunk->size);
+	MEMORY_ACCOUNT_INC_ALLOCATED(set, chunk->size);
 	return AllocChunkGetPointer(chunk);
 }
 
@@ -1068,7 +1091,7 @@ AllocSetFree(MemoryContext context, void *pointer)
 
 	AllocFreeInfo(set, chunk);
 
-	MEMORY_ACCOUNT_UPDATE_ALLOCATED(set, -chunk->size);
+	MEMORY_ACCOUNT_DEC_ALLOCATED(set, chunk->size);
 
 #ifdef USE_ASSERT_CHECKING
 	/*
@@ -1276,7 +1299,10 @@ AllocSetRealloc(MemoryContext context, void *pointer, Size size)
 		/* Make any trailing alignment padding NOACCESS. */
 		VALGRIND_MAKE_MEM_NOACCESS((char *) pointer + size, chksize - size);
 
-		MEMORY_ACCOUNT_UPDATE_ALLOCATED(set, chksize - oldsize);
+		if (chksize > oldsize)
+			MEMORY_ACCOUNT_INC_ALLOCATED(set, chksize - oldsize);
+		else
+			MEMORY_ACCOUNT_DEC_ALLOCATED(set, oldsize - chksize);
 
 		return pointer;
 	}
@@ -1488,6 +1514,13 @@ AllocSetGetCurrentUsage(MemoryContext context)
 	Assert(IS_MEMORY_ACCOUNT(set));
 
 	return set->currentAllocated;
+}
+
+static Size
+AllocSetGetLocalUsage(MemoryContext context)
+{
+	AllocSet	set = (AllocSet) context;
+	return set->localAllocated;
 }
 
 static Size

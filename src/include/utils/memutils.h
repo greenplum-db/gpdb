@@ -118,6 +118,7 @@ extern bool MemoryContextIsEmpty(MemoryContext context);
 /* Statistics */
 extern void MemoryContextDeclareAccountingRoot(MemoryContext context);
 extern Size MemoryContextGetCurrentSpace(MemoryContext context);
+extern Size MemoryContextGetLocalSpace(MemoryContext context);
 extern Size MemoryContextGetPeakSpace(MemoryContext context);
 extern Size MemoryContextSetPeakSpace(MemoryContext context, Size nbytes);
 
