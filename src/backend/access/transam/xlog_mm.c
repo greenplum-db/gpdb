@@ -1598,6 +1598,10 @@ mmxlog_append_checkpoint_data(XLogRecData rdata[6])
 				 "mmxlog_append_checkpoint_data: no tablespace and filespace information for checkpoint because gp_before_filespace_setup GUC is true");
 
 			SUPPRESS_ERRCONTEXT_POP();
+
+			rdata[2].len = 0;
+			rdata[3].len = 0;
+			rdata[4].len = 0;
 		}
 		return;
 	}

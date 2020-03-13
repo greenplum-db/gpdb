@@ -9082,8 +9082,12 @@ CreateCheckPoint(int flags)
 	rdata[5].data = (char*)p;
 	rdata[5].buffer = InvalidBuffer;
 	rdata[5].len = PREPARED_TRANSACTION_CHECKPOINT_BYTES(p->count);
-	rdata[4].next = &(rdata[5]);
 	rdata[5].next = NULL;
+	/* if !gp_before_filespace_setup then rdata[2...4] are valid */
+	if (gp_before_filespace_setup)
+		rdata[1].next = &(rdata[5]);
+	else
+		rdata[4].next = &(rdata[5]);
 
 	if (Debug_persistent_recovery_print)
 	{
@@ -9143,16 +9147,25 @@ CreateCheckPoint(int flags)
 			 XLogLastInsertDataLen());
 	}
 
-	/* free heap memory allocated by palloc, to prevent the long-live memory context */
-	/* rdata[0].data uses the stack buffer */
-	/* rdata[1] is dtxCheckPointInfo */
+	/*
+	 * free heap memory allocated by palloc, to prevent memory leak
+	 * in the long-live memory context.
+	 * rdata[0].data uses the stack buffer.
+	 * rdata[1] is dtxCheckPointInfo.
+	 */
 	freeDtxCheckPointInfoAndUnlock(dtxCheckPointInfo, dtxCheckPointInfoSize, &recptr);
-	/* rdata[2], rdata[3], rdata[4] are allocated by mmxlog_append_checkpoint_data() */
-	pfree(rdata[2].data);
-	pfree(rdata[3].data);
-	pfree(rdata[4].data);
-	/* rdata[5] is allocated by getTwoPhasePreparedTransactionData() */
-	pfree(rdata[5].data);
+	/*
+	 * pfree data starting from rdata[1].next to the end.
+	 * if gp_before_filespace_setup is on, rdata[2], rdata[3], rdata[4] are empty,
+	 * otherwise, they are allocated by mmxlog_append_checkpoint_data()
+	 */
+	{
+		XLogRecData *prdata = rdata[1].next;
+		for(; prdata; prdata = prdata->next)
+			pfree(prdata->data);
+		dtxCheckPointInfo = NULL;
+		p = NULL;
+	}
 
 	XLogFlush(recptr);
 
