@@ -74,27 +74,19 @@
           <li>install Docker on all hosts,</li>
           <li>install the PL/Container utility,</li>
           <li>install the PL/Container R or Python images.</li>
-        </ul><p>In the following sections we describe each one of these tasks in detail.</p>
+        </ul><p>The following sections describe these tasks in detail.</p>
       </section>
       
     <section id="requirements">
           <title>Prerequisites</title>
-      
         <ol>
-          <li>For PL/Container 1.x and 2.0.x use Greenplum Database 5.2.x and later on Red Hat
-            Enterprise Linux (RHEL) 7.x (or later) and CentOS 7.x (or later). </li>
           <li>For PL/Container 2.1.0 and later use Greenplum Database 6 on CentOS 7.x (or later),
             RHEL 7.x (or later), or Ubuntu 18.04. <note>PL/Container 2.1.0 and later supports Docker
               images with Python 3 installed.</note></li>
           <li>The minimum Linux OS kernel version supported is 3.10. To verfiy your kernel release:
             <codeblock>$ uname -r</codeblock>
           </li>
-          <li>The minimum Docker versions on all hosts need to be: <ul id="ul_z2t_bxd_rbb">
-              <li>For PL/Container 1.x or 2.0.x on RHEL or CentOS 7.x - Docker 17.05</li>
-              <li>
-                <p>For PL/Container 2.1.x on CentOS or RHEL 7.x, or Ubuntu 18.04 - Docker 19.03</p>
-              </li>
-            </ul></li>
+          <li>The minimum Docker versions on all hosts needs to be Docker 19.03.</li>
           <li>On each Greenplum Database host, the <codeph>gpadmin</codeph> user should be part of
             the <codeph>docker</codeph> group for the user to be able to manage Docker images and
             containers.</li>
@@ -145,8 +137,7 @@
       <title>Install PL/Container </title>
       <!--Pivotal content-->
       
-        <p>Install the PL/Container language extension using the <codeph>gppkg</codeph> utility
-          (PL/Container 1.1 and later).</p>
+        <p>Install the PL/Container language extension using the <codeph>gppkg</codeph> utility.</p>
         <ol id="ul_w5b_nzp_dw">
           <li>Download the PL/Container package version that applies to your Greenplum Database
             version, from <xref href="https://network.pivotal.io" format="html" scope="external"
@@ -161,16 +152,14 @@
           <li>Source the file
             <codeph>$GPHOME/greenplum_path.sh</codeph>.<codeblock>source $GPHOME/greenplum_path.sh</codeblock></li>
           <li>Restart Greenplum Database.<codeblock>gpstop -ra</codeblock></li>
-          <li>Login into one of the available databases, for example, postgres:
+          <li>Login into one of the available databases, for example:
             <codeblock>psql postgres;</codeblock></li>
           <li>Register the PL/Container extension, which installs the <codeph>plcontainer</codeph>
             utility and creates PL/Container-specific functions and
-            views:<codeblock>CREATE EXTENSION plcontainer; </codeblock>For PL/Container 1.0, the
-            command
-            is:<codeblock>psql -d <varname>your_database</varname> -f $GPHOME/share/postgresql/plcontainer/plcontainer_install.sql</codeblock></li>
+            views:<codeblock>CREATE EXTENSION plcontainer; </codeblock></li>
         </ol>
-        <p>Now, using the <codeph>plcontainer</codeph> utility you can manage Docker images and the
-          PL/Container configuration. </p>
+        <p>Now, using the <codeph>plcontainer</codeph> utility you can register and manage Docker
+          images with the PL/Container configuration. </p>
       
     </section>
     
@@ -185,16 +174,12 @@
         <!--Pivotal content-->
         <ul id="ul_h5t_sbz_vkb">
           <li>Download the images. Download the tar.gz files that contains the Docker images from
-              <i>Pivotal Network</i>. For example, for Greenplum 5.24: <ul id="ul_gbj_wbz_vkb">
-              <li>PL/Container Docker Image <b>for R</b> 1.5.0 with file name
-                  <b>plcontainer-r-images-1.5.0.tar.gz</b>, which includes Python 2.7.12 and the
-                  <i>Python Data Science Module Package</i>. </li>
-              <li>PL/Container Docker Image <b>for Python</b> 1.5.0 with file name
-                  <b>plcontainer-python-images-1.5.0.tar.gz </b>which includes Python 2.7.12 and the
-                  <i>Python Data Science Module Package</i>. </li>
-            </ul><p>If you require different images from the ones provided by Pivotal, you can
-              create custom Docker images, install the image and add the image to the PL/ Container
-              configuration. </p></li>
+              <i>Pivotal Network</i>. For example, for Greenplum 6.3,   download PL/Container Docker
+            Image <b>for Python</b> with file name <b>plcontainer-python-image-2.1.0-gp6.tar.gz </b>
+            which includes Python 2.7.12 and the <i>Python Data Science Module Package</i>. <p>If
+              you require different images from the ones provided by Pivotal, you can create custom
+              Docker images, install the image and add the image to the PL/ Container configuration.
+            </p></li>
           <li>
             <p>Use the already installed <codeph>plcontainer </codeph> utility to install the
               downloaded Docker images on all Greenplum Database hosts, using <codeph>image-add
@@ -219,9 +204,7 @@
               page. </p>
           </li>
           <li>Use <codeph>plcontainer image-list </codeph> to display the installed Docker images on
-            the local host and identify the IDs that you’ll insert in the
-              <codeph>runtime-add</codeph> command.
-              <codeblock>$ plcontainer image-list</codeblock><simpletable frame="all"
+            the local host. <codeblock>$ plcontainer image-list</codeblock><simpletable frame="all"
               relcolwidth="1.0* 1.0* 1.0* 1.0*" id="simpletable_xqr_cdz_vkb">
               <sthead>
                 <stentry>REPOSITORY</stentry>
@@ -248,125 +231,95 @@
                 <stentry>5 months ago</stentry>
               </strow>
             </simpletable></li>
-          <li><p>To allow PL/Container to access the Docker images, use the <codeph>plcontainer
-                runtime-add</codeph> command to add the image information to the PL/Container
-              configuration file. The configuration file information allows PL/Container to create
-              Docker containers with specified Docker images. </p><p>The <codeph>-r</codeph> option
-              specifies the runtime ID and the <codeph>-l</codeph> option specifies the language
-              that is contained in the Docker image.
-              <codeblock># Add a Python 2 based runtime
-            plcontainer runtime-add -r e36827eba53e -i pivotaldata/plcontainer_python_shared:devel -l python
+          <li><p>Use the <codeph>plcontainer runtime-add</codeph> command to add the image
+              information to the PL/Container configuration file, to allow PL/Container to associate
+              containers with specified Docker images. </p><p>Use the <codeph>-r</codeph> option to
+              specify a user defined runtime ID name, use the <codeph>-i</codeph> option to specify
+              the Docker image, and the <codeph>-l</codeph> option to specify the Docker image
+              language. The TAG version, separated by ":", is used with the image name when there
+              are multiple versions of the same docker
+              image.<codeblock># Add a Python 2 based runtime
+plcontainer runtime-add -r plc_python_shared -i pivotaldata/plcontainer_python_shared:devel -l python
             
-            # Add a Python 3 based runtime that is supported with PL/Container 2.1.0 and later
-            plcontainer runtime-add -r y32827ebe55b -i pivotaldata/plcontainer_python3_shared:devel -l python3
+# Add a Python 3 based runtime that is supported with PL/Container 2.1.0 and later
+plcontainer runtime-add -r plc_python3_shared -i pivotaldata/plcontainer_python3_shared:devel -l python3
             
-            # Add an R based runtime
-            plcontainer runtime-add -r 7427f920669d -i pivotaldata/plcontainer_r_shared:devel -l r</codeblock></p>The
+# Add an R based runtime
+plcontainer runtime-add -r plc_r_shared -i pivotaldata/plcontainer_r_shared:devel -l r</codeblock></p>The
             utility displays progress information as it updates the PL/Container configuration file
             on the Greenplum Database instances. <p>For details on the runtime-add options, see
                 <xref href="plcontainer_ref.xml" format="html" scope="peer"><i>The plcontainer
                   Utility</i></xref>reference page. </p></li>
-          <li>From PL/Container 1.2.0, you can use Greenplum Database resource groups to manage and
-            limit the total CPU and memory resources of containers in PL/Container runtimes.  In
-            this example, <codeph>-s</codeph> specifies a preconfigured resource group 16391, to be
-            used for the python
-              runtime.<codeblock>plcontainer runtime-add -r e36827eba53e -i pivotaldata/plcontainer_python_shared:devel -l
+          <li>You can use Greenplum Database resource groups to manage and limit the total CPU and
+            memory resources of containers in PL/Container runtimes. In this example,
+              <codeph>-s</codeph> specifies a preconfigured resource group 16391, to be used for the
+            python
+              runtime.<codeblock>plcontainer runtime-add -r plc_python_shared -i pivotaldata/plcontainer_python_shared:devel -l
       python -s resource_group_id=16391</codeblock><p>For
               more information about enabling, configuring, and using Greenplum Database resource
               groups with PL/Container, see <xref href="pl_container_using.xml" scope="peer"
-                >PL/Container Resource Management </xref>topic. </p><p>You can view the PL/Container
-              configuration information with the <codeph>plcontainer runtime-show -r
-                &lt;runtime_id></codeph> command. You can view the PL/Container configuration XML
-              file with the <codeph>plcontainer runtime-edit</codeph> command. </p></li>
+                >PL/Container Resource Management </xref> topic. </p></li>
+            
         </ul>
-        <p>You have now installed the PL/Container utility, with the related Docker images. Next
-          step is to create UDFs that are using the specific containers and docker images. See  </p>
+      <p>You can view the PL/Container configuration information with the <codeph>plcontainer runtime-show -r
+        &lt;runtime_id></codeph> command. You can view the PL/Container configuration XML
+        file with the <codeph>plcontainer runtime-edit</codeph> command. </p>
       </section>
-     
+      <section>
+        <title>Test the PL/Container Docker Installation</title>
+        <p>You have now installed the PL/Container utility with the related Docker images and linked
+          the images with specific runtime IDs. Next step is to create UDFs that use those runtimes. </p>
+        <p>First list all the names of the runtimes your created and added to the PL/Container XML
+          file:<codeblock>plcontainer runtime-show
+</codeblock><codeblock>PL/Container Runtime Configuration: 
+---------------------------------------------------------
+  Runtime ID: plc_python_shared
+  Linked Docker Image: pivotaldata/plcontainer_python_shared:devel
+  Runtime Setting(s): 
+  Shared Directory: 
+  ---- Shared Directory From HOST '/usr/local/greenplum-db/./bin/plcontainer_clients' to Container '/clientdir', access mode is 'ro'
+---------------------------------------------------------
+
+</codeblock>
+        </p>
+        <p>Now use the runtime <codeph>plc_python_shared</codeph> to create a function using the
+            <codeph>psql</codeph> utility:</p>
+        <codeblock>psql postgres;</codeblock>
+        <p>If PL/Container extension is not registered with postgres database, first create the
+          extension: </p>
+        <codeblock>postgres=# CREATE EXTENSION plcontainer;</codeblock>
+        <p>Create a simple function to test your installation:</p>
+        <codeblock>postgres=# CREATE FUNCTION dummyPython() RETURNS text AS $$
+# container: plc_python_shared
+return 'hello from Python'
+$$ LANGUAGE plcontainer;</codeblock>
+        <p>And test the function using:</p>
+        <codeblock>postgres=# SELECT dummyPython();
+    dummypython    
+-------------------
+ hello from Python
+(1 row)
+</codeblock>
+        <p>For further function usage details and examples, see <xref
+            href="pl_container_using.xml#function_examples" format="html" scope="peer"
+              >PL/Container Functions </xref>.</p>
+      </section>
     </body>
  </topic>
   
     <topic id="upgrade_plcontainer">
       <title>Upgrade PL/Container</title>
       <body>
-      <p>To upgrade PL/Container, follow the steps described below.</p>
-      <ul>
-        <li>Pivotal only You cannot upgrade from version 1.0 to 1.1 or later with the gppkg utility
-          -u option.</li>
-        <li>You uninstall version 1.0 and install the new version.</li>
-      </ul>
-      <section>
-        <title>Upgrade from PL/Container 1.0</title>
-        <p>To upgrade to PL/Container 1.1 or later, uninstall version 1.0 and install the new
-          version. You cannot use the <codeph>gppkg</codeph> option <codeph>-u</codeph>. The
-            <codeph>gppkg</codeph> utility installs PL/Container 1.1 and later as a Greenplum
-          Database extension, while PL/Container 1.0 is installed as a Greenplum Database language.
-          The Docker images and the PL/Container configuration do not change when upgrading
-          PL/Container, only the PL/Container extension installation changes.</p>
-        <p>As part of the upgrade process, you must drop PL/Container from all databases that are
-          configured with PL/Container.</p>
-        <note type="important">Dropping PL/Container from a database drops all PL/Container UDFs
-          from the database, including user-created PL/Container UDFs. If the UDFs are required,
-          ensure you can re-create the UDFs before dropping PL/Container. This
-            <codeph>SELECT</codeph> command lists the names of and body of PL/Container UDFs in a
-            database.<codeblock>SELECT proname, prosrc FROM pg_proc WHERE prolang = (SELECT oid FROM pg_language WHERE lanname = 'plcontainer');</codeblock><p>For
-            information about the catalog tables, <codeph>pg_proc</codeph> and
-              <codeph>pg_language</codeph>, see <xref
-              href="../ref_guide/system_catalogs/catalog_ref-tables.xml" format="dita" scope="peer"
-              >System Tables</xref>. </p></note>
-        <p>These steps upgrade from PL/Container 1.0 to PL/Container 1.1 or later in a database. The
-          steps save the PL/Container 1.0 configuration and restore the configuration for use with
-          PL/Container 1.1 or later.<ol id="ol_j1j_bml_vkb">
-            <li>Save the PL/Container configuration. This example saves the configuration to
-                <codeph>plcontainer10-backup.xml</codeph> in the local
-              directory.<codeblock>plcontainer runtime-backup -f plcontainer10-backup.xml</codeblock></li>
-            <li>Remove any <codeph>setting</codeph> elements that contain the
-                <codeph>use_container_network</codeph> attribute from the configuration file. For
-              example, this <codeph>setting</codeph> element must be removed from the configuration
-              file.<codeblock>&lt;setting use_container_network="yes"/></codeblock></li>
-            <li>Run the <codeph>plcontainer_uninstall.sql</codeph> script as the
-                <codeph>gpadmin</codeph> user for each database that is configured with
-              PL/Container. For example, this command drops the <codeph>plcontainer</codeph>
-              language in the <codeph>mytest</codeph> database.
-                <codeblock>psql -d mytest -f $GPHOME/share/postgresql/plcontainer/plcontainer_uninstall.sql</codeblock><p>The
-                script drops the <codeph>plcontainer</codeph> language with the
-                  <codeph>CASCADE</codeph> clause that drops PL/Container-specific functions and
-                views in the database. </p></li>
-            <li>Use the Greenplum Database <codeph>gppkg</codeph> utility with the
-                <codeph>-r</codeph> option to uninstall the PL/Container language extension. This
-              example uninstalls the PL/Container language extension on a Linux
-              system.<codeblock>$ gppkg -r plcontainer-1.0.0</codeblock></li>
-            <li>Run the package installation command. This example installs the PL/Container 2.1.0
-              language extension on a Linux
-              system.<codeblock>gppkg -i plcontainer-2.1.0-gp6-rhel7_x86_64.gppkg</codeblock></li>
-            <li>Source the file
-              <codeph>$GPHOME/greenplum_path.sh</codeph>.<codeblock>source $GPHOME/greenplum_path.sh</codeblock></li>
-            <li>Update the PL/Container configuration. This command restores the saved
-              configuration.<codeblock>plcontainer runtime-restore -f plcontainer10-backup.xml</codeblock></li>
-            <li>Restart Greenplum Database.<codeblock>gpstop -ra</codeblock></li>
-            <li>Register the new PL/Container extension as an extension for each database that uses
-              PL/Container UDFs. This <codeph>psql</codeph> command runs a <codeph>CREATE
-                EXTENSION</codeph> command to register PL/Container in the database
-                <codeph>mytest</codeph>.
-                <codeblock>psql -d mytest -c 'CREATE EXTENSION plcontainer;'</codeblock><p>The
-                command registers PL/Container as an extension and creates PL/Container-specific
-                functions and views.</p></li>
-          </ol></p>
-        <p>After upgrading PL/Container for a database, re-install any user-created PL/Container
-          UDFs that are required.</p>
-      </section>
-      <section>
-        <title>Upgrade from PL/Container 1.1</title>
         <p>To upgrade from PL/Container 1.1 or higher, you save the current configuration, upgrade
           PL/Container, and then restore the configuration after upgrade. There is no need to update
           the Docker images when you upgrade PL/Container.</p>
         <note>Before you perform this upgrade procedure, ensure that you have migrated your
-          PL/Container 1.1 package from your previous Greenplum Database installation to your new
+          PL/Container package from your previous Greenplum Database installation to your new
           Greenplum Database installation. Refer to the <xref
             href="../utility_guide/ref/gppkg.xml#topic1" format="dita" scope="peer">gppkg</xref>
           command for package installation and migration information.</note>
-        <p>Perform the following procedure to upgrade from PL/Container 1.1 to PL/Container version
-          1.2 or later.<ol id="ol_l1j_bml_vkb">
+        <p>To upgrade, perform the following procedure:  
+          <ol id="ol_l1j_bml_vkb">
             <li>Save the PL/Container configuration. For example, to save the configuration to a
               file named <codeph>plcontainer110-backup.xml</codeph> in the local
               directory:<codeblock>$ plcontainer runtime-backup -f plcontainer110-backup.xml</codeblock></li>
@@ -377,23 +330,16 @@
               system:<codeblock>$ gppkg -u plcontainer-2.1.0-gp6-rhel7_x86_64.gppkg</codeblock></li>
             <li>Source the Greenplum Database environment file
                 <codeph>$GPHOME/greenplum_path.sh</codeph>.<codeblock>$ source $GPHOME/greenplum_path.sh</codeblock></li>
-            <li>Restore the PL/Container configuration. For example, this command restores the
-              PL/Container configuration that you saved in a previous step:
-              <codeblock>$ plcontainer runtime-restore -f plcontainer110-backup.xml</codeblock></li>
+            <li>Restore the PL/Container configuration that you saved in a previous step:
+            <codeblock>$ plcontainer runtime-restore -f plcontainer110-backup.xml</codeblock></li>
             <li>Restart Greenplum Database.<codeblock>$ gpstop -ra</codeblock></li>
             <li>You do not need to re-register the PL/Container extension in the databases in which
-              you previously created the extension. You must register the PL/Container extension in
-              each new database that will run PL/Container UDFs. For example, the following command
-              registers PL/Container in a database named <codeph>mytest</codeph>:
-                <codeblock>$ psql -d mytest -c 'CREATE EXTENSION plcontainer;'</codeblock><p>The
-                command also creates PL/Container-specific functions and views.</p></li>
+            you previously created the extension but ensure that you register the PL/Container
+            extension in each new database that will run PL/Container UDFs. For example, the
+            following command registers PL/Container in a database named <codeph>mytest</codeph>:
+              <codeblock>$ psql -d mytest -c 'CREATE EXTENSION plcontainer;'</codeblock><p>The
+              command also creates PL/Container-specific functions and views.</p></li>
           </ol></p>
-        <note>PL/Container 1.2 and later utilizes the new resource group capabilities introduced in
-          Greenplum Database 5.8.0. If you downgrade to a Greenplum Database system that uses
-          PL/Container 1.1. or earlier, you must use <codeph>plcontainer runtime-edit</codeph> to
-          remove any <codeph>resource_group_id</codeph> settings from your PL/Container runtime
-          configuration.</note>
-      </section>
     </body>
     </topic>
 
@@ -464,8 +410,6 @@
       <body>
         <ul id="ul_j4g_vgs_wbb">
           <li>PL/Container does not support the Greenplum Database domain object.</li>
-          
-          <li/>
           <li>If a PL/Container Docker container exceeds the maximum allowed memory, it is
             terminated and an out of memory warning is displayed. On Red Hat 6 or CentOS 6 systems
             that are configured with Docker version 1.7.1, the out of memory warning is also

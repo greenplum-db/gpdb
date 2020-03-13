@@ -438,7 +438,7 @@
             </section>
         
         <section xml:lang="en" id="topic_kwg_qfg_mjb">
-            <title id="pz215232">Examples</title>
+            <title id="function_examples">Examples</title>
             
                 <p>The values in the <codeph># container</codeph> lines of the examples,
                         <codeph>plc_python_shared</codeph> and <codeph>plc_r_shared</codeph>, are
@@ -452,15 +452,15 @@
                 <p>This is an example of PL/Python function that runs using the
                         <codeph>plc_python_shared</codeph> container that contains Python
                     2:<codeblock>CREATE OR REPLACE FUNCTION pylog100() RETURNS double precision AS $$
-                    # container: plc_python_shared
-                    import math
-                    return math.log10(100)
-                    $$ LANGUAGE plcontainer;</codeblock></p>
+ # container: plc_python_shared
+ import math
+ return math.log10(100)
+ $$ LANGUAGE plcontainer;</codeblock></p>
                 <p>This is an example of a similar function using the <codeph>plc_r_shared</codeph>
                     container:<codeblock>CREATE OR REPLACE FUNCTION rlog100() RETURNS text AS $$
-                    # container: plc_r_shared
-                    return(log10(100))
-                    $$ LANGUAGE plcontainer;</codeblock></p>
+# container: plc_r_shared
+return(log10(100))
+$$ LANGUAGE plcontainer;</codeblock></p>
                 <p>If the <codeph># container</codeph> line in a UDF specifies an ID that is not in
                     the PL/Container configuration file, Greenplum Database returns an error when
                     you try to execute the UDF.</p>
