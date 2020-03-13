@@ -1506,8 +1506,10 @@ heap_create_with_catalog(const char *relname,
 
 	/*
 	 * Determine the relation's initial permissions.
+	 * If rel is partition child, leave it NULL here, Because CopyRelationAcls()
+	 * will copy relacl from parent later.
 	 */
-	if (use_user_acl)
+	if (use_user_acl && !is_part_child)
 	{
 		switch (relkind)
 		{
