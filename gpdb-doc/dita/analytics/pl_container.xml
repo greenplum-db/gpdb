@@ -16,7 +16,7 @@
     <p>The PL/Container language extension is available as an open source module. For information
       about the module, see the README file in the GitHub repository at <xref
         href="https://github.com/greenplum-db/plcontainer" format="html" scope="external"
-        >https://github.com/greenplum-db/plcontainer</xref>.</p>
+        >https://github.com/greenplum-db/plcontainer</xref></p>
   </body>
   <topic id="about_pl_container" xml:lang="en">
     <title>About PL/Container Language Extension</title>
@@ -29,17 +29,16 @@
           >https://www.docker.com/</xref>. </p>
       <p>The Greenplum supported procedural languages, PL/Python and PL/R, allow only Greenplum
         Database administrators to create any UDF, due to their untrusted nature. This limits the
-        convenience of data scientists using their functions for training and debugging models.
-        PL/Container allows the sandboxing of  PL/Python and PL/R execution inside a Docker
-        container. </p>
+        convenience of data scientists using their functions for training and debugging models.  </p>
       <p>Running the UDFs inside the Docker container ensures:</p>
       <ul>
         <li>Isolation of the execution process in a separate environment which enables the
           decoupling of data processing.  SQL operators such as "scan," "filter," and "project" are
           executed at query executor side, and advanced data analysis is executed at container side. </li>
-        <li>the user code cannot access the OS or the file system of the local host,</li>
-        <li>the code cannot introduce any security risks,</li>
-        <li>the functions cannot connect back to the Greenplum Database if the container is started with limited or no network access</li>
+        <li>the user code cannot access the OS or the file system of the local host.</li>
+        <li>the code cannot introduce any security risks.</li>
+        <li>the functions cannot connect back to the Greenplum Database if the container is started
+          with limited or no network access.</li>
         <li>the user functions cannot open any unsecure external connections.</li>
       </ul>
       
@@ -51,11 +50,13 @@
             height="550" align="center"/>
         </fig>
         
-        <p>Consider a query that selects table data using all available
-          segments, and transforms the data using a PL/Container function. In this
-          case, the query executor on master, on the first call to a function in a segment container, starts the container on that segment host. 
-          It then contacts the running container to obtain the results. The container might respond with an SPI - SQL query executed by the container to
-          get some data back from the database - returning the result to the query executor.</p>
+        <p><b>Example of the process flow</b>:</p>
+        <p>Consider a query that selects table data using all available segments, and transforms the
+          data using a PL/Container function. In this case, the query executor on master, on the
+          first call to a function in a segment container, starts the container on that segment
+          host. It then contacts the running container to obtain the results. The container might
+          respond with an SPI - SQL query executed by the container to get some data back from the
+          database - returning the result to the query executor.</p>
         <p>A container running in standby mode waits on the socket and does not consume any CPU
           resources. PL/Container memory consumption depends on the amount of data cached in global
           dictionaries.</p>
@@ -70,10 +71,15 @@
     <title id="pz214493">Install PL/Container </title>
     
     <body>
-    <section>In order to use PL/Container, you need to: <ul>
-          <li>install Docker on all hosts,</li>
-          <li>install the PL/Container utility,</li>
-          <li>install the PL/Container R or Python images.</li>
+    <section>This topic includes how to: <p/><ul>
+          <li><xref href="#install_docker" format="dita" scope="local">install Docker on all
+              hosts</xref></li>
+          <li><xref href="#topic3/install_pl_utility" format="dita">install the PL/Container
+              utility</xref></li>
+          <li><xref href="#topic3/install_docker_images" format="dita">install the PL/Container R or
+              Python images</xref></li>
+          <li><xref href="#topic3/test_installation" format="dita">test the PL/Container
+              installation</xref>.</li>
         </ul><p>The following sections describe these tasks in detail.</p>
       </section>
       
@@ -94,7 +100,7 @@
       
     </section>
     
-    <section id="topic_ydt_rtc_rbb">
+    <section id="install_docker">
         <title>Install Docker</title>
         <p>To use PL/Container install Docker on all Greenplum Database host systems. The these
           instructions show how to set up the Docker service on CentOS 7 but RHEL 7 is a similar
@@ -102,9 +108,9 @@
         <p>These steps install the docker package and start the Docker service as a user with sudo
           privileges. </p>
         <ol>
-          <li>The CentOS <codeph>extras</codeph> repository is accessible.</li>
-          <li>The user has sudo privileges or is root.</li>
-          <li>Install dependencies required for
+          <li>Ensure the CentOS <codeph>extras</codeph> repository is accessible.</li>
+          <li>Ensure the user has sudo privileges or is root.</li>
+          <li>Install the dependencies required for
             Docker<codeblock>sudo yum install -y yum-utils device-mapper-persistent-data lvm2</codeblock></li>
           <li>Add the Docker
             repo<codeblock>sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo</codeblock></li>
@@ -122,27 +128,23 @@
           <li>After you install Docker on all Greenplum Database hosts, restart the Greenplum
             Database system to give Greenplum Database access to Docker.
             <codeblock>gpstop -ra</codeblock></li>
-          <li>On each Greenplum Database host, the gpadmin user is part of the docker group to
-            manage Docker images and containers. </li>
         </ol>
-        <p>See also the Docker site installation instructions for CentOS <xref
-            href="https://docs.docker.com/engine/installation/linux/centos/" format="html"
-            scope="external">https://docs.docker.com/engine/installation/linux/centos/</xref>. For a
-          list of Docker commands, see the Docker engine Run Reference <xref
+        <p>See also the <xref href="https://docs.docker.com/engine/installation/linux/centos/"
+            format="html" scope="external"> Docker site installation instructions for CentOS</xref>.
+          For a list of Docker commands, see the <xref
             href="https://docs.docker.com/engine/reference/run/" format="html" scope="external"
-            >https://docs.docker.com/engine/reference/run/</xref>.</p>
+            >Docker engine Run Reference</xref>.</p>
       </section>
       
-    <section id="topic_ifk_2tr_dw" otherprops="pivotal">
-      <title>Install PL/Container </title>
-      <!--Pivotal content-->
-      
+    <section id="install_pl_utility" otherprops="pivotal">
+        <title>Install PL/Container </title>
+        <!--Pivotal content-->
         <p>Install the PL/Container language extension using the <codeph>gppkg</codeph> utility.</p>
         <ol id="ul_w5b_nzp_dw">
           <li>Download the PL/Container package version that applies to your Greenplum Database
             version, from <xref href="https://network.pivotal.io" format="html" scope="external"
               >Pivotal Network</xref>. PL/Container is listed under Greenplum Database Language
-            extensions.  </li>
+            extensions. </li>
           <li>As <codeph>gpadmin</codeph>, copy the PL/Container language extension package to the
             master host.</li>
           <li>Make sure Greenplum Database is up and running:<codeblock>gpstate -s</codeblock>If
@@ -160,10 +162,9 @@
         </ol>
         <p>Now, using the <codeph>plcontainer</codeph> utility you can register and manage Docker
           images with the PL/Container configuration. </p>
-      
-    </section>
+      </section>
     
-    <section id="topic_qcr_bfk_rbb">
+    <section id="install_docker_images">
         <title>Install PL/Container Docker Images</title>
         <!--oss only content-->
         <p otherprops="oss-only">The PL/Container open source module contains dockerfiles to build
@@ -173,26 +174,25 @@
             scope="external">https://github.com/greenplum-db/plcontainer</xref>.</p>
         <!--Pivotal content-->
         <ul id="ul_h5t_sbz_vkb">
-          <li>Download the images. Download the tar.gz files that contains the Docker images from
-              <i>Pivotal Network</i>. For example, for Greenplum 6.3,   download PL/Container Docker
-            Image <b>for Python</b> with file name <b>plcontainer-python-image-2.1.0-gp6.tar.gz </b>
-            which includes Python 2.7.12 and the <i>Python Data Science Module Package</i>. <p>If
-              you require different images from the ones provided by Pivotal, you can create custom
-              Docker images, install the image and add the image to the PL/ Container configuration.
-            </p></li>
+          <li>Download the tar.gz files that contain the Docker images from <i>Pivotal Network</i>.
+            For example, for Greenplum 6.3, download PL/Container Docker Image <b>for Python</b>
+            with file name <b>plcontainer-python-image-2.1.0-gp6.tar.gz </b> which includes Python
+            2.7.12 and the <i>Python Data Science Module Package</i>. <p>If you require different
+              images from the ones provided by Pivotal, you can create custom Docker images, install
+              the image and add the image to the PL/ Container configuration. </p></li>
           <li>
             <p>Use the already installed <codeph>plcontainer </codeph> utility to install the
               downloaded Docker images on all Greenplum Database hosts, using <codeph>image-add
                 -f</codeph>, where <codeph>-f </codeph>indicates the location of the downloaded
               files: </p>
             <codeblock># Install a Python 2 based Docker image
-            plcontainer image-add -f /home/gpadmin/plcontainer-python-image-2.1.0-gp6.tar.gz
+plcontainer image-add -f /home/gpadmin/plcontainer-python-image-2.1.0-gp6.tar.gz
             
-            # Install a Python 3 based Docker image
-            plcontainer image-add -f /home/gpadmin/plcontainer-python3-image-2.1.0-gp6.tar.gz
+# Install a Python 3 based Docker image
+plcontainer image-add -f /home/gpadmin/plcontainer-python3-image-2.1.0-gp6.tar.gz
             
-            # Install an R based Docker image
-            plcontainer image-add -f /home/gpadmin/plcontainer-r-image-2.1.0-gp6.tar.gz</codeblock>
+# Install an R based Docker image
+plcontainer image-add -f /home/gpadmin/plcontainer-r-image-2.1.0-gp6.tar.gz</codeblock>
             <p>The utility displays progress information as it installs the Docker image on the
               Greenplum Database hosts, similar to:</p>
             <codeblock>20200127:21:54:43:004607 plcontainer:mdw:gpadmin-[INFO]:-Checking whether docker is installed on all hosts...
@@ -203,8 +203,8 @@
                 href="plcontainer_ref.xml#topic_rw3_52s_dw">plcontainer utility reference</xref>
               page. </p>
           </li>
-          <li>Use <codeph>plcontainer image-list </codeph> to display the installed Docker images on
-            the local host. <codeblock>$ plcontainer image-list</codeblock><simpletable frame="all"
+          <li>To display the installed Docker images on the local host use:
+              <codeblock>$ plcontainer image-list</codeblock><simpletable frame="all"
               relcolwidth="1.0* 1.0* 1.0* 1.0*" id="simpletable_xqr_cdz_vkb">
               <sthead>
                 <stentry>REPOSITORY</stentry>
@@ -231,13 +231,13 @@
                 <stentry>5 months ago</stentry>
               </strow>
             </simpletable></li>
-          <li><p>Use the <codeph>plcontainer runtime-add</codeph> command to add the image
-              information to the PL/Container configuration file, to allow PL/Container to associate
-              containers with specified Docker images. </p><p>Use the <codeph>-r</codeph> option to
-              specify a user defined runtime ID name, use the <codeph>-i</codeph> option to specify
-              the Docker image, and the <codeph>-l</codeph> option to specify the Docker image
-              language. The TAG version, separated by ":", is used with the image name when there
-              are multiple versions of the same docker
+          <li><p> Add the image information to the PL/Container configuration file, to allow
+              PL/Container to associate containers with specified Docker images, using
+                <codeph>plcontainer runtime-add</codeph> .</p><p>Use the <codeph>-r</codeph> option
+              to specify your own user defined runtime ID name, use the <codeph>-i</codeph> option
+              to specify the Docker image, and the <codeph>-l</codeph> option to specify the Docker
+              image language. The TAG version, separated by ":", is used with the image name when
+              there are multiple versions of the same docker
               image.<codeblock># Add a Python 2 based runtime
 plcontainer runtime-add -r plc_python_shared -i pivotaldata/plcontainer_python_shared:devel -l python
             
@@ -247,26 +247,25 @@ plcontainer runtime-add -r plc_python3_shared -i pivotaldata/plcontainer_python3
 # Add an R based runtime
 plcontainer runtime-add -r plc_r_shared -i pivotaldata/plcontainer_r_shared:devel -l r</codeblock></p>The
             utility displays progress information as it updates the PL/Container configuration file
-            on the Greenplum Database instances. <p>For details on the runtime-add options, see
-                <xref href="plcontainer_ref.xml" format="html" scope="peer"><i>The plcontainer
-                  Utility</i></xref>reference page. </p></li>
-          <li>You can use Greenplum Database resource groups to manage and limit the total CPU and
+            on the Greenplum Database instances. <p>For details on other
+                <codeph>runtime-add</codeph> options, see <xref href="plcontainer_ref.xml"
+                format="html" scope="peer">The plcontainer Utility</xref> reference page. </p></li>
+          <li>Optional: Use Greenplum Database resource groups to manage and limit the total CPU and
             memory resources of containers in PL/Container runtimes. In this example,
               <codeph>-s</codeph> specifies a preconfigured resource group 16391, to be used for the
-            python
+            Python
               runtime.<codeblock>plcontainer runtime-add -r plc_python_shared -i pivotaldata/plcontainer_python_shared:devel -l
       python -s resource_group_id=16391</codeblock><p>For
               more information about enabling, configuring, and using Greenplum Database resource
               groups with PL/Container, see <xref href="pl_container_using.xml" scope="peer"
-                >PL/Container Resource Management </xref> topic. </p></li>
-            
+                >PL/Container Resource Management </xref> . </p></li>
         </ul>
-      <p>You can view the PL/Container configuration information with the <codeph>plcontainer runtime-show -r
-        &lt;runtime_id></codeph> command. You can view the PL/Container configuration XML
-        file with the <codeph>plcontainer runtime-edit</codeph> command. </p>
+        <p>You can view the PL/Container configuration information with the <codeph>plcontainer
+            runtime-show -r &lt;runtime_id></codeph> command. You can view the PL/Container
+          configuration XML file with the <codeph>plcontainer runtime-edit</codeph> command. </p>
       </section>
-      <section>
-        <title>Test the PL/Container Docker Installation</title>
+      <section id="test_installation">
+        <title>Test the PL/Container Installation</title>
         <p>You have now installed the PL/Container utility with the related Docker images and linked
           the images with specific runtime IDs. Next step is to create UDFs that use those runtimes. </p>
         <p>First list all the names of the runtimes your created and added to the PL/Container XML
@@ -301,8 +300,8 @@ $$ LANGUAGE plcontainer;</codeblock>
 (1 row)
 </codeblock>
         <p>For further function usage details and examples, see <xref
-            href="pl_container_using.xml#function_examples" format="html" scope="peer"
-              >PL/Container Functions </xref>.</p>
+            href="pl_container_using.xml#function_examples" format="html" scope="peer">PL/Container
+            Functions </xref>.</p>
       </section>
     </body>
  </topic>
