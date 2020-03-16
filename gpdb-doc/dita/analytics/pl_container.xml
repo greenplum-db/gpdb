@@ -93,9 +93,6 @@
             <codeblock>$ uname -r</codeblock>
           </li>
           <li>The minimum Docker versions on all hosts needs to be Docker 19.03.</li>
-          <li>On each Greenplum Database host, the <codeph>gpadmin</codeph> user should be part of
-            the <codeph>docker</codeph> group for the user to be able to manage Docker images and
-            containers.</li>
         </ol>
       
     </section>
@@ -117,8 +114,9 @@
           <li>Update yum cache<codeblock>sudo yum makecache fast</codeblock></li>
           <li>Install Docker<codeblock>sudo yum -y install docker-ce</codeblock></li>
           <li>Start Docker daemon.<codeblock>sudo systemctl start docker</codeblock></li>
-          <li>Assign the Greenplum Database administrator <codeph>gpadmin</codeph> to the group
-            docker, to give access to the Docker daemon and docker commands:
+          <li>On each Greenplum Database host, the <codeph>gpadmin</codeph> user should be part of
+            the docker group for the user to be able to manage Docker images and containers. Assign
+            the Greenplum Database administrator <codeph>gpadmin</codeph> to the group docker:
             <codeblock>sudo usermod -aG docker gpadmin</codeblock></li>
           <li>Exit the session and login again to update the privileges.</li>
           <li>Configure Docker to start when the host system
@@ -248,8 +246,9 @@ plcontainer runtime-add -r plc_python3_shared -i pivotaldata/plcontainer_python3
 plcontainer runtime-add -r plc_r_shared -i pivotaldata/plcontainer_r_shared:devel -l r</codeblock></p>The
             utility displays progress information as it updates the PL/Container configuration file
             on the Greenplum Database instances. <p>For details on other
-                <codeph>runtime-add</codeph> options, see <xref href="plcontainer_ref.xml"
-                format="html" scope="peer">The plcontainer Utility</xref> reference page. </p></li>
+                <codeph>runtime-add</codeph> options, see the <xref
+                href="plcontainer_ref.xml#topic_rw3_52s_dw">plcontainer utility reference</xref>
+              page. </p></li>
           <li>Optional: Use Greenplum Database resource groups to manage and limit the total CPU and
             memory resources of containers in PL/Container runtimes. In this example,
               <codeph>-s</codeph> specifies a preconfigured resource group 16391, to be used for the
@@ -257,8 +256,8 @@ plcontainer runtime-add -r plc_r_shared -i pivotaldata/plcontainer_r_shared:deve
               runtime.<codeblock>plcontainer runtime-add -r plc_python_shared -i pivotaldata/plcontainer_python_shared:devel -l
       python -s resource_group_id=16391</codeblock><p>For
               more information about enabling, configuring, and using Greenplum Database resource
-              groups with PL/Container, see <xref href="pl_container_using.xml" scope="peer"
-                >PL/Container Resource Management </xref> . </p></li>
+              groups with PL/Container, see <xref href="pl_container_using.xml">PL/Container
+                Resource Management </xref> . </p></li>
         </ul>
         <p>You can view the PL/Container configuration information with the <codeph>plcontainer
             runtime-show -r &lt;runtime_id></codeph> command. You can view the PL/Container
@@ -300,8 +299,8 @@ $$ LANGUAGE plcontainer;</codeblock>
 (1 row)
 </codeblock>
         <p>For further function usage details and examples, see <xref
-            href="pl_container_using.xml#function_examples" format="html" scope="peer">PL/Container
-            Functions </xref>.</p>
+            href="pl_container_using.xml#function_examples" format="html">PL/Container Functions
+          </xref>.</p>
       </section>
     </body>
  </topic>
@@ -407,24 +406,11 @@ $$ LANGUAGE plcontainer;</codeblock>
     <topic id="plc_notes">
       <title>Notes</title>
       <body>
+      <p id="docker_notes"><b>Docker Notes</b></p>
         <ul id="ul_j4g_vgs_wbb">
           <li>PL/Container does not support the Greenplum Database domain object.</li>
           <li>If a PL/Container Docker container exceeds the maximum allowed memory, it is
-            terminated and an out of memory warning is displayed. On Red Hat 6 or CentOS 6 systems
-            that are configured with Docker version 1.7.1, the out of memory warning is also
-            displayed if the PL/Container Docker container main program (PID 1) is terminated.</li>
-          <li>In some cases, when PL/Container is running in a high concurrency environment, the
-            Docker daemon hangs with log entries that indicate a memory shortage. This can happen
-            even when the system seems to have adequate free memory.<p>The issue seems to be
-              triggered by a combination of two factors, the aggressive virtual memory requirement
-              of the Go language (<codeph>golang</codeph>) runtime that is used by PL/Container, and
-              the Greenplum Database Linux server kernel parameter setting for
-                <codeph>overcommit_memory</codeph>. The parameter is set to 2 which does not allow
-              memory overcommit. </p><p>A workaround that might help is to increase the amount of
-              swap space and increase the Linux server kernel parameter
-                <codeph>overcommit_ratio</codeph>. If the issue still occurs after the changes,
-              there might be memory shortage. You should check free memory on the system and add
-              more RAM if needed. You can also decrease the cluster load.</p></li>
+          terminated and an out of memory warning is displayed. </li>
           <li>PL/Container does not limit the Docker base device size, the size of the Docker
             container. In some cases, the Docker daemon controls the base device size. For example,
             if the Docker storage driver is devicemapper, the Docker daemon
@@ -437,38 +423,53 @@ $$ LANGUAGE plcontainer;</codeblock>
               format="html" scope="external">Daemon storage-driver</xref>. <p>When setting the
               Docker base device size, the size must be set on all Greenplum Database
             hosts.</p></li>
-          <li>When PL/Container logging is enabled, you can set the log level with the Greenplum
+        </ul>
+      <p><i>Known issue</i>: </p>
+      <p>In some cases, when PL/Container is running in a high concurrency environment, the Docker
+        daemon hangs with log entries that indicate a memory shortage. This can happen even when the
+        system seems to have adequate free memory.</p>
+      <p>The issue seems to be triggered by a combination of two factors, the aggressive virtual
+        memory requirement of the Go language (golang) runtime that is used by PL/Container, and the
+        Greenplum Database Linux server kernel parameter setting for overcommit_memory. The
+        parameter is set to 2 which does not allow memory overcommit. </p>
+      <p>A workaround that might help is to increase the amount of swap space and increase the Linux
+        server kernel parameter overcommit_ratio. If the issue still occurs after the changes, there
+        might be memory shortage. You should check free memory on the system and add more RAM if
+        needed. You can also decrease the cluster load.</p>
+        <p id="pl_logging_notes"><b>PL/Container logging</b></p>
+        
+        <p>When PL/Container logging is enabled, you can set the log level with the Greenplum
             Database server configuration parameter <codeph><xref
                 href="../ref_guide/config_params/guc-list.xml#log_min_messages" scope="peer"
                 >log_min_messages</xref></codeph>. The default log level is
             <codeph>warning</codeph>. The parameter controls the PL/Container log level and also
-            controls the Greenplum Database log level.<ul id="ul_knd_jhl_mcb">
+            controls the Greenplum Database log level.</p>
+        
+        <ul id="ul_knd_jhl_mcb">
               <li>PL/Container logging is enabled or disabled for each runtime ID with the
                   <codeph>setting</codeph> attribute <codeph>use_container_logging</codeph>. The
                 default is no logging. </li>
               <li>The PL/Container log information is the information from the UDF that is run in
-                the Docker container. By default, the PL/Container log information is sent to a
-                system service. On Red Hat 7 or CentOS 7 systems, the log information is sent to the
-                  <codeph>journald</codeph> service. On Red Hat 6 or CentOS 6 systems, the log
-                information is sent to the <codeph>syslogd</codeph> service. The PL/Container log
-                information is sent to the log file of the host were the Docker container runs. </li>
+              the Docker container. By default, the PL/Container log information is sent to a system
+              service. On Red Hat 7 or CentOS 7 systems, the log information is sent to the
+                <codeph>journald</codeph> service. </li>
               <li>The Greenplum Database log information is sent to log file on the Greenplum
                 Database master.</li>
-            </ul><p>When testing or troubleshooting a PL/Container UDF, you can change the Greenplum
+              <li>When testing or troubleshooting a PL/Container UDF, you can change the Greenplum
               Database log level with the <codeph>SET</codeph> command. You can set the parameter in
               the session before you run your PL/Container UDF. This example sets the log level to
-                <codeph>debug1</codeph>.</p><codeblock>SET log_min_messages='debug1' ;</codeblock>
+                <codeph>debug1</codeph>.
+                <codeblock>SET log_min_messages='debug1' ;</codeblock>
             <note>The parameter <codeph>log_min_messages</codeph> controls both the Greenplum
               Database and PL/Container logging, increasing the log level might affect Greenplum
-              Database performance even if a PL/Container UDF is not running.</note></li>
-        </ul>
+              Database performance even if a PL/Container UDF is not running.</note></li></ul>
       </body>
     </topic>
   
     
     
   <topic xml:lang="en" id="topic_kds_plk_rbb">
-    <title>References</title>
+    <title>Docker References</title>
       <body>
       <p>Docker home page <xref href="https://www.docker.com/" format="html" scope="external"
           >https://www.docker.com/</xref></p>

@@ -360,10 +360,10 @@
                     configuration file <codeph>plcontainer_configuration.xml</codeph>, there is a
                         <codeph>runtime</codeph> XML element that contains a corresponding
                         <codeph>id</codeph> XML element that specifies the Docker container startup
-                    information. See <xref href="#topic_sk1_gdq_dw" format="dita"/> for information
-                    about how PL/Container maps the <varname>ID</varname> to a Docker image. See
-                        <xref href="#topic_kwg_qfg_mjb" format="dita"/> for example UDF
-                    definitions.</p>
+                    information. See <xref href="plcontainer-configuration-xml.xml" format="dita"/>
+                    for information about how PL/Container maps the <varname>ID</varname> to a
+                    Docker image. See <xref href="pl_container_using.xml" format="dita"/> for
+                    example UDF definitions.</p>
                 <p>The PL/Container configuration file is read only on the first invocation of a
                     PL/Container function in each Greenplum Database session that runs PL/Container
                     functions. You can force the configuration file to be re-read by performing a

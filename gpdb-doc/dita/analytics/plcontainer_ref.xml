@@ -79,8 +79,6 @@
             <pd>Add configuration information to the PL/Container configuration file on all
               Greenplum Database hosts. If the specified <varname>runtime_id</varname> exists, the
               utility returns an error and the configuration information is not added. </pd>
-            <pd>For information about PL/Container configuration, see <xref href="#topic_ojn_r2s_dw"
-                format="dita"/>. </pd>
             <pd>These are the supported options:</pd>
             <pd>
               <parml>
@@ -116,8 +114,7 @@
                       <codeph>id</codeph> element in the PL/Container configuration file. Maximum
                     length is 63 Bytes.</pd>
                   <pd>You specify the name in the Greenplum Database UDF on the <codeph>#
-                      container</codeph> line. See <xref href="#topic_kwg_qfg_mjb" format="dita"
-                    />.</pd>
+                  container</codeph> line. </pd>
                 </plentry>
                 <plentry>
                   <pt>{<b>-s</b> | <b>--setting</b>}
