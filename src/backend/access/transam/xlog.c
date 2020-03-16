@@ -5586,6 +5586,99 @@ exitArchiveRecovery(TimeLineID endTLI, XLogSegNo endLogSegNo)
 			(errmsg("archive recovery complete")));
 }
 
+static int
+XLogReadFirstPage(XLogRecPtr targetPagePtr, char *readBuf)
+{
+	int fd;
+	XLogSegNo segno;
+	char xlogfname[MAXFNAMELEN];
+
+	XLByteToSeg(targetPagePtr, segno);
+	elogif(debug_xlog_record_read, LOG,
+		   "reading first page of segment %lu", segno);
+	fd = XLogFileReadAnyTLI(segno, LOG, XLOG_FROM_PG_XLOG);
+	if (fd == -1)
+		return -1;
+
+	/* Seek to the beginning, we want to check if the first page is valid */
+	if (lseek(fd, (off_t) 0, SEEK_SET) < 0)
+	{
+		XLogFileName(xlogfname, ThisTimeLineID, segno);
+		close(fd);
+		elog(ERROR, "could not seek XLOG file %s, segment %lu: %m",
+			 xlogfname, segno);
+	}
+
+	if (read(fd, readBuf, XLOG_BLCKSZ) != XLOG_BLCKSZ)
+	{
+		close(fd);
+		elog(ERROR, "could not read from XLOG file %s, segment %lu: %m",
+			 xlogfname, segno);
+	}
+
+	close(fd);
+	return XLOG_BLCKSZ;
+}
+
+/*
+ * Find the LSN that points to the beginning of the segment file most recently
+ * flushed by WAL receiver.  It will be used as start point by new instance of
+ * WAL receiver.
+ *
+ * The XLogReaderState abstraction is not suited for this purpose.  The
+ * interface it offers is XLogReadRecord, which is not suited to read a
+ * specific page from WAL.
+ */
+static XLogRecPtr
+GetLastLSN(XLogRecPtr lsn)
+{
+	XLogSegNo lastValidSegNo;
+	char readBuf[XLOG_BLCKSZ];
+
+	XLByteToSeg(lsn, lastValidSegNo);
+	/*
+	 * We know that lsn falls in a valid segment.  Start searching from the
+	 * next segment.
+	 */
+	XLogSegNoOffsetToRecPtr(lastValidSegNo+1, 0, lsn);
+
+	elog(LOG, "scanning WAL for last valid segment, starting from %X/%X",
+		 (uint32) (lsn >> 32), (uint32) lsn);
+
+	while (XLogReadFirstPage(lsn, readBuf) == XLOG_BLCKSZ)
+	{
+		/*
+		 * Validate page header, it must be a long header because we are
+		 * inspecting the first page in a segment file.  The big if condition
+		 * is modelled according to XLogReaderValidatePageHeader.
+		 */
+		XLogLongPageHeader longhdr = (XLogLongPageHeader) readBuf;
+		if ((longhdr->std.xlp_info & XLP_LONG_HEADER) == 0 ||
+			(longhdr->std.xlp_magic != XLOG_PAGE_MAGIC) ||
+			((longhdr->std.xlp_info & ~XLP_ALL_FLAGS) != 0) ||
+			(longhdr->xlp_sysid != ControlFile->system_identifier) ||
+			(longhdr->xlp_seg_size != XLogSegSize) ||
+			(longhdr->xlp_xlog_blcksz != XLOG_BLCKSZ) ||
+			(longhdr->std.xlp_pageaddr != lsn) ||
+			(longhdr->std.xlp_tli != ThisTimeLineID))
+		{
+			break;
+		}
+		XLByteToSeg(lsn, lastValidSegNo);
+		XLogSegNoOffsetToRecPtr(lastValidSegNo+1, 0, lsn);
+	}
+
+	/*
+	 * The last valid segment number is previous to the one that was just
+	 * found to be invalid.
+	 */
+	XLogSegNoOffsetToRecPtr(lastValidSegNo, 0, lsn);
+
+	elog(LOG, "last valid segment number = %lu", lastValidSegNo);
+
+	return lsn;
+}
+
 /*
  * Remove WAL files that are not part of the given timeline's history.
  *
@@ -7138,6 +7231,46 @@ StartupXLOG(void)
 				HandleStartupProcInterrupts();
 
 				/*
+				 * Start WAL receiver without waiting for startup process to
+				 * finish replay, so that streaming replication is established
+				 * at the earliest.  When the replication is configured to be
+				 * synchronous this would unblock commits waiting for WAL to
+				 * be written and/or flushed by synchronous standby.
+				 */
+				if (StandbyModeRequested &&
+					reachedConsistency &&
+					(
+						wal_receiver_start_condition == WAL_RCV_START_AT_CONSISTENCY
+#ifdef FAULT_INJECTOR
+						/*
+						 * The wal_redo fault is used for doing two things
+						 * here.  (1) to perform action as specified by the
+						 * test, e.g. sleep and (2) to bypass
+						 * wal_receiver_start_condition GUC.  This hack can be
+						 * avoided if the test sets this GUC.  However, it is
+						 * cumbersome to set a GUC on a mirror from a test.
+						 * Using the fault like this allows the test to be
+						 * simple.  See replay_lag.sql regress test.
+						 */
+						||
+						SIMPLE_FAULT_INJECTOR("wal_redo") != FaultInjectorTypeNotSpecified
+#endif
+					) &&
+					!WalRcvStreaming())
+				{
+					XLogRecPtr startpoint = GetLastLSN(record->xl_prev);
+					if (startpoint != InvalidXLogRecPtr)
+					{
+						elog(LOG, "starting WAL receiver, startpoint %X/%X",
+							 (uint32) (startpoint >> 32), (uint32) startpoint);
+						RequestXLogStreaming(ThisTimeLineID,
+											 startpoint,
+											 PrimaryConnInfo,
+											 PrimarySlotName);
+					}
+				}
+
+				/*
 				 * Pause WAL replay, if requested by a hot-standby session via
 				 * SetRecoveryPause().
 				 *
@@ -7278,8 +7411,6 @@ StartupXLOG(void)
 
 				/* Now apply the WAL record itself */
 				RmgrTable[record->xl_rmid].rm_redo(ReadRecPtr, EndRecPtr, record);
-
-				SIMPLE_FAULT_INJECTOR("wal_redo");
 
 				/* Pop the error context stack */
 				error_context_stack = errcallback.previous;

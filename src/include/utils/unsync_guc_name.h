@@ -521,3 +521,4 @@
 		"xmlbinary",
 		"xmloption",
 		"zero_damaged_pages",
+		"wal_receiver_start_condition",

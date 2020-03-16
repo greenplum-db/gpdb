@@ -69,6 +69,7 @@
 int			wal_receiver_status_interval = 10;
 int			wal_receiver_timeout;
 bool		hot_standby_feedback;
+int 		wal_receiver_start_condition;
 
 /* libpqreceiver hooks to these when loaded */
 walrcv_connect_type walrcv_connect = NULL;

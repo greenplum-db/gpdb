@@ -219,6 +219,11 @@ static double defunct_double = 0;
  *
  * NOTE! Option values may not contain double quotes!
  */
+const struct config_enum_entry wal_rcv_start_options[] = {
+	{"catchup", WAL_RCV_START_AT_CATCHUP, true},
+	{"consistency", WAL_RCV_START_AT_CONSISTENCY, true},
+	{NULL, 0, false}
+};
 
 static const struct config_enum_entry bytea_output_options[] = {
 	{"escape", BYTEA_OUTPUT_ESCAPE, false},
@@ -3592,6 +3597,16 @@ static struct config_enum ConfigureNamesEnum[] =
 		},
 		&plan_cache_mode,
 		PLAN_CACHE_MODE_AUTO, plan_cache_mode_options,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"wal_receiver_start_condition", PGC_POSTMASTER, REPLICATION_STANDBY,
+			gettext_noop("When to start WAL receiver."),
+			NULL,
+		},
+		&wal_receiver_start_condition,
+		WAL_RCV_START_AT_CATCHUP, wal_rcv_start_options,
 		NULL, NULL, NULL
 	},
 
