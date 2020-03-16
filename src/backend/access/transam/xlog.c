@@ -8988,6 +8988,8 @@ CreateCheckPoint(int flags)
 
 	XLogFlush(recptr);
 
+	pfree(dtxCheckPointInfo);
+
 	/*
 	 * We mustn't write any new WAL after a shutdown checkpoint, or it will be
 	 * overwritten at next startup.  No-one should even try, this just allows
