@@ -12,6 +12,7 @@
 
 #include "../sharedsnapshot.c"
 
+#if 0
 /*
  * Write shared snapshot to file using dumpSharedLocalSnapshot_forCursor()
  * first.  Then read the snapshot from file using
@@ -148,6 +149,7 @@ test_boundaries_of_CreateSharedSnapshotArray(void **state)
 												sharedSnapshotShmemSize));
 	}
 }
+#endif
 
 int
 main(int argc, char* argv[])

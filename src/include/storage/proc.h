@@ -182,7 +182,7 @@ struct PGPROC
 	 * Handle for our shared snapshot array (populated in writer/dispatcher
 	 * backends only)
 	 */
-	dsm_handle  sharedSnapshotHandle;
+	dsm_handle  sharedSnapshotDescHandle;
 
 	/*
 	 * Current command_id for the running query

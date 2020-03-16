@@ -703,11 +703,11 @@ CheckForResetSession(void)
 	pgstat_report_sessionid(newSessionId);
 
 	/* Update the slotid for our singleton reader. */
-	if (SharedLocalSnapshotSlot != NULL)
+	if (SharedSnapshot.desc != NULL)
 	{
-		LWLockAcquire(SharedLocalSnapshotLock->slotLock, LW_EXCLUSIVE);
-		SharedLocalSnapshotLock->slotid = gp_session_id;
-		LWLockRelease(SharedLocalSnapshotLock->slotLock);
+		LWLockAcquire(SharedSnapshot.lockSlot->lock, LW_EXCLUSIVE);
+		SharedSnapshot.lockSlot->session_id = gp_session_id;
+		LWLockRelease(SharedSnapshot.lockSlot->lock);
 	}
 
 	elog(LOG, "The previous session was reset because its gang was disconnected (session id = %d). "

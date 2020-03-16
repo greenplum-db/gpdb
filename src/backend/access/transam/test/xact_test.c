@@ -155,13 +155,14 @@ test_IsCurrentTransactionIdForReader(void **state)
 	PGXACT testXAct = {0};
 	LWLock localslotLock;
 
-	SharedSnapshotSlot testSlot = {0};
-	SharedLocalSnapshotSlot = &testSlot;
+	SharedSnapshotDesc desc = {0};
+	SharedSnapshotLockSlot lockSlot = {0};
+	SharedSnapshot.desc = &desc;
+	SharedSnapshot.lockSlot = &lockSlot;
 	/* lwlock is mocked, so assign any integer ID to slotLock. */
-	testSlot.slotLock = &localslotLock;
+	SharedSnapshot.lockSlot->lock = &localslotLock;
+	SharedSnapshot.desc->writer_proc = NULL;
 
-	/* test: writer_proc is null */
-	SharedLocalSnapshotSlot->writer_proc = NULL;
 	helper_ExpectLWLock();
 	PG_TRY();
 	{
@@ -174,8 +175,8 @@ test_IsCurrentTransactionIdForReader(void **state)
 	PG_END_TRY();
 
 	/* test: writer_proc->pid is invalid */
-	testSlot.writer_proc = &testProc;
-	testSlot.writer_xact = &testXAct;
+	SharedSnapshot.desc->writer_proc = &testProc;
+	SharedSnapshot.desc->writer_xact = &testXAct;
 	testProc.pid = 0;
 	helper_ExpectLWLock();
 	PG_TRY();
