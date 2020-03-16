@@ -356,6 +356,9 @@ MemoryContextSetParent(MemoryContext context, MemoryContext new_parent)
 	if (new_parent == context->parent)
 		return;
 
+	/* update memory accounting */
+	AllocSetTransferAccounting(context, new_parent);
+
 	/* Delink from existing parent, if any */
 	if (context->parent)
 	{

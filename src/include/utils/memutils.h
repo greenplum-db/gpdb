@@ -163,6 +163,10 @@ extern MemoryContext AllocSetContextCreate(MemoryContext parent,
 					  Size initBlockSize,
 					  Size maxBlockSize);
 
+/* this function should be only called by MemoryContextSetParent() */
+extern void AllocSetTransferAccounting(MemoryContext context,
+									   MemoryContext new_parent);
+
 /* mpool.c */
 typedef struct MPool MPool;
 extern MPool *mpool_create(MemoryContext parent,

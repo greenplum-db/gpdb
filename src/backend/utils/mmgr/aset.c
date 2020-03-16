@@ -1575,6 +1575,37 @@ AllocSetSetPeakUsage(MemoryContext context, Size nbytes)
 	return oldpeak;
 }
 
+void
+AllocSetTransferAccounting(MemoryContext context, MemoryContext new_parent)
+{
+	AllocSet set = (AllocSet)context;
+	AllocSet np = (AllocSet)new_parent;
+
+	if (set->accountingParent == set || set->accountingParent == np ||
+		(np && set->accountingParent == np->accountingParent))
+		return;
+
+	while (np && np != set->accountingParent)
+		np = (AllocSet)np->header.parent;
+
+	if (np == set->accountingParent)
+	{
+		/*
+		 * if set->accountingParent is the ancestor of the new parent,
+		 * the accoutingParent doesn't need to change.
+		 */
+	}
+	else
+	{
+		/* new_parent is NULL or new_parent is not the ancestor of context */
+		set->accountingParent->currentAllocated -= set->localAllocated;
+		set->accountingParent = set;
+		set->currentAllocated = set->localAllocated;
+		set->peakAllocated = set->localAllocated;
+	}
+	
+}
+
 #ifdef MEMORY_CONTEXT_CHECKING
 
 /*
