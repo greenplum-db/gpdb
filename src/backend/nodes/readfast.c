@@ -1492,6 +1492,7 @@ _readExternalScanInfo(void)
 	READ_BOOL_FIELD(logErrors);
 	READ_INT_FIELD(encoding);
 	READ_INT_FIELD(scancounter);
+	READ_NODE_FIELD(extOptions);
 
 	READ_DONE();
 }

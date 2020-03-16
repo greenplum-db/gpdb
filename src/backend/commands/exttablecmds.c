@@ -273,6 +273,7 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 	/*
 	 * Parse and validate OPTION clause.
 	 */
+	ValidateExtTableOptions(createExtStmt->extOptions);
 	optionsStr = optionsListToArray(createExtStmt->extOptions);
 	if (DatumGetPointer(optionsStr) == NULL)
 	{

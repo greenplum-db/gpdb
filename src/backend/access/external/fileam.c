@@ -69,7 +69,8 @@ static void InitParseState(CopyState pstate, Relation relation,
 			   bool writable,
 			   char fmtType,
 			   char *uri, int rejectlimit,
-			   bool islimitinrows, bool logerrors);
+			   bool islimitinrows, bool logerrors,
+			   List *options);
 
 static void FunctionCallPrepareFormatter(FunctionCallInfoData *fcinfo,
 							 int nArgs,
@@ -124,8 +125,9 @@ elog(DEBUG2, "external_getnext returning tuple")
 */
 FileScanDesc
 external_beginscan(Relation relation, uint32 scancounter,
-			   List *uriList, char *fmtOptString, char fmtType, bool isMasterOnly,
-			  int rejLimit, bool rejLimitInRows, bool logErrors, int encoding)
+				   List *uriList, char *fmtOptString, char fmtType, bool isMasterOnly,
+				   int rejLimit, bool rejLimitInRows, bool logErrors, int encoding,
+				   List *extOptions)
 {
 	FileScanDesc scan;
 	TupleDesc	tupDesc = NULL;
@@ -291,7 +293,7 @@ external_beginscan(Relation relation, uint32 scancounter,
 
 	/* Initialize all the parsing and state variables */
 	InitParseState(scan->fs_pstate, relation, false, fmtType,
-				   scan->fs_uri, rejLimit, rejLimitInRows, logErrors);
+				   scan->fs_uri, rejLimit, rejLimitInRows, logErrors, extOptions);
 
 	if (fmttype_is_custom(fmtType))
 	{
@@ -630,7 +632,8 @@ external_insert_init(Relation rel)
 				   extInsertDesc->ext_uri,
 				   extentry->rejectlimit,
 				   (extentry->rejectlimittype == 'r'),
-				   extentry->logerrors);
+				   extentry->logerrors,
+				   extentry->options);
 
 	if (fmttype_is_custom(extentry->fmtcode))
 	{
@@ -1148,7 +1151,8 @@ InitParseState(CopyState pstate, Relation relation,
 			   bool iswritable,
 			   char fmtType,
 			   char *uri, int rejectlimit,
-			   bool islimitinrows, bool logerrors)
+			   bool islimitinrows, bool logerrors,
+			   List *options)
 {
 	/*
 	 * Error handling setup
@@ -1181,6 +1185,10 @@ InitParseState(CopyState pstate, Relation relation,
 									  logerrors);
 
 		pstate->cdbsreh->relid = RelationGetRelid(relation);
+
+		/* whether make the error log persistent*/
+		if (logerrors && NeedErrorLogPersistent(options))
+			pstate->cdbsreh->error_log_persistent = true;
 	}
 
 	/* Initialize 'out_functions', like CopyTo() would. */

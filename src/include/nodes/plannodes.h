@@ -847,7 +847,7 @@ typedef struct ExternalScanInfo
 	bool		logErrors;      /* true to log errors into file       */
 	int			encoding;		/* encoding of external table data    */
 	uint32      scancounter;	/* counter incr per scan node created */
-
+	List	   *extOptions;		/* external options */
 } ExternalScanInfo;
 
 /* ----------------
