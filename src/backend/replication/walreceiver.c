@@ -420,6 +420,8 @@ WalReceiverMain(void)
 					ereport(FATAL,
 							(errmsg("cannot continue WAL streaming, recovery has already ended")));
 
+				SIMPLE_FAULT_INJECTOR("walrcv_loop");
+
 				/* Process any requests or signals received recently */
 				ProcessWalRcvInterrupts();
 

@@ -245,6 +245,10 @@ test: session_reset
 # below test(s) inject faults so each of them need to be in a separate group
 test: fts_error
 
+# The test affects WAL replication between a primary / mirror pair,
+# run it by itself so as not to interfere with other tests.
+test: replay_lag
+
 test: psql_gp_commands pg_resetxlog dropdb_check_shared_buffer_cache gp_upgrade_cornercases
 
 # Check for shmem leak for instrumentation slots
