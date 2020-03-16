@@ -1672,10 +1672,10 @@ setupQEDtxContext(DtxContextInfo *dtxContextInfo)
 					 "setupQEDtxContext inputs (part 2b):  shared local snapshot xid = %u "
 					 "(xmin: %u xmax: %u xcnt: %u) curcid: %d, segmate = %u",
 					 SharedSnapshot.desc->xid,
-					 SharedSnapshot.snapshot->xmin,
-					 SharedSnapshot.snapshot->xmax,
-					 SharedSnapshot.snapshot->xcnt,
-					 SharedSnapshot.snapshot->curcid,
+					 SharedSnapshot.desc->snapshot.xmin,
+					 SharedSnapshot.desc->snapshot.xmax,
+					 SharedSnapshot.desc->snapshot.xcnt,
+					 SharedSnapshot.desc->snapshot.curcid,
 					 SharedSnapshot.desc->segmateSync);
 				LWLockRelease(SharedSnapshot.lockSlot->lock);
 			}
