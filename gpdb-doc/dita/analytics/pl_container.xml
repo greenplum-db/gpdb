@@ -4,7 +4,13 @@
 <topic id="topic1" xml:lang="en">
   <title id="pz212122">PL/Container Language</title>
   <body>
-    <p>This section includes the following information about PL/Container:</p>
+    <p>User defined functions (UDFs), using the Greenplum supported procedural languages, PL/Python
+      and PL/R, should only be created and used by trusted Greenplum Database administrators. This
+      restricts the data scientists using their own functions for training and debugging models.
+      PL/Container overcomes this limitation by allowing users to run UDFs inside a restricted
+      environment with no security risks.</p>
+    <p>This topic covers information about the architecture, installation, and setup of
+      PL/Container:</p>
     <ul>
       <li id="pz219023"><xref href="#about_pl_container" type="topic" format="dita"/></li>
       <li id="pz213664" otherprops="pivotal"><xref href="#topic3" type="topic" format="dita"/></li>
@@ -13,6 +19,14 @@
       </li>
       <li><xref href="#topic_kds_plk_rbb" format="dita"/></li>
     </ul>
+    <p>For detailed information about using PL/Container, refer to:</p>
+    <p>
+      <ul id="ul_ozt_t1j_blb">
+        <li><xref href="pl_container_using.xml#topic_resmgmt">PL/Container Resource
+            Management</xref></li>
+        <li><xref href="pl_container_using.xml#topic_rh3_p3q_dw">PL/Container Functions</xref></li>
+      </ul>
+    </p>
     <p>The PL/Container language extension is available as an open source module. For information
       about the module, see the README file in the GitHub repository at <xref
         href="https://github.com/greenplum-db/plcontainer" format="html" scope="external"
@@ -25,12 +39,7 @@
         PL/Python or PL/R user-defined functions (UDFs) securely, inside a Docker container. A
         Docker container is a Linux process that runs in a managed way by using Linux kernel
         features such as cgroups, namespaces and union file systems. For information about Docker,
-        see the Docker web site <xref href="https://www.docker.com/" format="html" scope="external"
-          >https://www.docker.com/</xref>. </p>
-      <p>The Greenplum supported procedural languages, PL/Python and PL/R, have an untrusted nature
-        and should only be used by Greenplum Database administrators to create any UDFs. This limits
-        the convenience of data scientists using their own functions for training and debugging
-        models. </p>
+        see the <xref href="https://www.docker.com" format="html">Docker web site</xref>. </p>
       <p>Running UDFs inside the Docker container has several benefits:</p>
       <ul>
         <li> ensures isolation of the execution process in a separate environment and allows
