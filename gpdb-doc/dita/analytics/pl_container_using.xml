@@ -157,7 +157,7 @@
                             href="plcontainer_ref.xml" format="dita"/> reference page.</p></li>
             </ol></section>
             
-            <section>
+            <section id="plc_notes">
                 <title>Notes</title>
                 <p id="pl_logging_notes"><b>PL/Container logging</b></p>
                 <p>When PL/Container logging is enabled, you can set the log level with the

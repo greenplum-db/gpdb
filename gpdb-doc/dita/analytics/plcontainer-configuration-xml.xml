@@ -204,16 +204,16 @@
                                                   <pt>resource_group_id="<varname>rg_groupid</varname>"</pt>
                                                   <pd>Optional. The value specifies the
                                                   <codeph>groupid</codeph> of the resource group to
-                                                  assign to the PL/Container runtime. The resource
-                                                  group limits the total CPU and memory resource
-                                                  usage for all running containers that share this
-                                                  runtime configuration. You must specify the
+                                                assign to the PL/Container runtime. The resource
+                                                group limits the total CPU and memory resource usage
+                                                for all running containers that share this runtime
+                                                configuration. You must specify the
                                                   <codeph>groupid</codeph> of the resource group. If
-                                                  you do not assign a resource group to a
-                                                  PL/Container runtime configuration, its container
-                                                  instances are limited only by system resources.
-                                                  For information about managing PL/Container
-                                                  resources, see <xref href="#topic_resmgmt"
+                                                you do not assign a resource group to a PL/Container
+                                                runtime configuration, its container instances are
+                                                limited only by system resources. For information
+                                                about managing PL/Container resources, see <xref
+                                                  href="pl_container_using.xml#topic_resmgmt"
                                                   format="dita">About PL/Container Resource
                                                   Management</xref>.</pd>
                                                 </plentry>
@@ -242,14 +242,14 @@
                                                   attribute value <codeph>no</codeph> disables
                                                   logging (the default). </pd>
                                                   <pd>The Greenplum Database server configuration
-                                                  parameter <codeph><xref
+                                                parameter <codeph><xref
                                                   href="../ref_guide/config_params/guc-list.xml#log_min_messages"
                                                   scope="peer">log_min_messages</xref></codeph>
-                                                  controls the PL/Container log level. The default
-                                                  log level is <codeph>warning</codeph>. For
-                                                  information about PL/Container log information,
-                                                  see <xref href="#plc_notes" format="dita"
-                                                  >Notes</xref>.</pd>
+                                                controls the PL/Container log level. The default log
+                                                level is <codeph>warning</codeph>. For information
+                                                about PL/Container log information, see <xref
+                                                  href="pl_container_using.xml#plc_notes"
+                                                  format="dita">Notes</xref>.</pd>
                                                   <pd>
                                                   <p>By default, the PL/Container log information is
                                                   sent to a system service. On Red Hat 7 or CentOS 7
