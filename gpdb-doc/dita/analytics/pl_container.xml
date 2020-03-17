@@ -247,8 +247,8 @@ plcontainer runtime-add -r plc_r_shared -i pivotaldata/plcontainer_r_shared:deve
             utility displays progress information as it updates the PL/Container configuration file
             on the Greenplum Database instances. <p>For details on other
                 <codeph>runtime-add</codeph> options, see the <xref
-                href="plcontainer_ref.xml#topic_rw3_52s_dw">plcontainer utility reference</xref>
-              page. </p></li>
+                href="plcontainer_ref.xml#topic_rw3_52s_dw">plcontainer</xref> reference page.
+            </p></li>
           <li>Optional: Use Greenplum Database resource groups to manage and limit the total CPU and
             memory resources of containers in PL/Container runtimes. In this example,
               <codeph>-s</codeph> specifies a preconfigured resource group 16391, to be used for the
@@ -256,8 +256,8 @@ plcontainer runtime-add -r plc_r_shared -i pivotaldata/plcontainer_r_shared:deve
               runtime.<codeblock>plcontainer runtime-add -r plc_python_shared -i pivotaldata/plcontainer_python_shared:devel -l
       python -s resource_group_id=16391</codeblock><p>For
               more information about enabling, configuring, and using Greenplum Database resource
-              groups with PL/Container, see <xref href="pl_container_using.xml">PL/Container
-                Resource Management </xref> . </p></li>
+              groups with PL/Container, see <xref href="pl_container_using.xml#topic_resmgmt"
+                >PL/Container Resource Management </xref> . </p></li>
         </ul>
         <p>You can view the PL/Container configuration information with the <codeph>plcontainer
             runtime-show -r &lt;runtime_id></codeph> command. You can view the PL/Container
