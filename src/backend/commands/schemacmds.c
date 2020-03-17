@@ -34,6 +34,7 @@
 #include "utils/syscache.h"
 
 #include "cdb/cdbdisp_query.h"
+#include "cdb/cdbsreh.h"
 #include "cdb/cdbsrlz.h"
 #include "cdb/cdbvars.h"
 
@@ -313,6 +314,11 @@ RemoveSchemaById(Oid schemaOid)
 	ReleaseSysCache(tup);
 
 	heap_close(relation, RowExclusiveLock);
+
+	/*
+	 * Remove all persistent error logs belonging to the the schema.
+	 */
+	PersistentErrorLogDelete(MyDatabaseId, schemaOid, NULL);
 }
 
 /*

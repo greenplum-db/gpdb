@@ -68,7 +68,8 @@ static void InitParseState(CopyState pstate, Relation relation,
 			   Datum *values, bool *nulls, bool writable,
 			   List *fmtOpts, char fmtType,
 			   char *uri, int rejectlimit,
-			   bool islimitinrows, Oid fmterrtbl, int encoding);
+			   bool islimitinrows, Oid fmterrtbl, int encoding,
+			   List *extOptions);
 
 static void FunctionCallPrepareFormatter(FunctionCallInfoData *fcinfo,
 							 int nArgs,
@@ -127,6 +128,7 @@ external_beginscan(Relation relation, Index scanrelid, uint32 scancounter,
 	int			attnum;
 	int			segindex = GpIdentity.segindex;
 	char	   *uri = NULL;
+	ExtTableEntry *extentry = NULL;
 
 	/*
 	 * increment relation ref count while scanning relation
@@ -267,8 +269,11 @@ external_beginscan(Relation relation, Index scanrelid, uint32 scancounter,
 	scan->fs_pstate = (CopyStateData *) palloc0(sizeof(CopyStateData));
 
 	/* Initialize all the parsing and state variables */
-	InitParseState(scan->fs_pstate, relation, NULL, NULL, false, fmtOpts, fmtType,
-				scan->fs_uri, rejLimit, rejLimitInRows, fmterrtbl, encoding);
+	extentry = GetExtTableEntry(RelationGetRelid(relation));
+	InitParseState(scan->fs_pstate, relation, NULL, NULL,
+				   false, fmtOpts, fmtType,
+				   scan->fs_uri, rejLimit, rejLimitInRows,
+				   fmterrtbl, encoding, extentry->options);
 
 	if (fmttype_is_custom(fmtType))
 	{
@@ -582,7 +587,8 @@ external_insert_init(Relation rel)
 				   extentry->rejectlimit,
 				   (extentry->rejectlimittype == 'r'),
 				   extentry->fmterrtbl,
-				   extentry->encoding);
+				   extentry->encoding,
+				   extentry->options);
 
 	if (fmttype_is_custom(extentry->fmtcode))
 	{
@@ -1290,7 +1296,8 @@ InitParseState(CopyState pstate, Relation relation,
 			   Datum *values, bool *nulls, bool iswritable,
 			   List *fmtOpts, char fmtType,
 			   char *uri, int rejectlimit,
-			   bool islimitinrows, Oid fmterrtbl, int encoding)
+			   bool islimitinrows, Oid fmterrtbl, int encoding,
+			   List *extOptions)
 {
 	TupleDesc	tupDesc = NULL;
 	char	   *format_str = NULL;
@@ -1355,6 +1362,9 @@ InitParseState(CopyState pstate, Relation relation,
 									  log_to_file);
 
 		pstate->cdbsreh->relid = RelationGetRelid(relation);
+		/* whether make the error log persistent*/
+		if (log_to_file && NeedErrorLogPersistent(extOptions))
+			pstate->cdbsreh->error_log_persistent = true;
 
 		pstate->num_consec_csv_err = 0;
 	}

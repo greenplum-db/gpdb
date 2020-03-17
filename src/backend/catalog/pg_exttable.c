@@ -21,6 +21,7 @@
 #include "catalog/pg_extprotocol.h"
 #include "catalog/pg_type.h"
 #include "catalog/pg_proc.h"
+#include "commands/defrem.h"
 #include "access/genam.h"
 #include "access/heapam.h"
 #include "access/reloptions.h"
@@ -38,6 +39,60 @@
 
 /* backport from FDW to support options */
 extern Datum pg_options_to_table(PG_FUNCTION_ARGS);
+
+/*
+ * ValidateExtTableOptions
+ *
+ * Validate external options. Since the options are stored in pg_exttable catalog
+ * not pg_foreign_table, so no need to create fdw validate handler.
+ *
+ * Now only validate error_log_persistent option.
+ */
+void
+ValidateExtTableOptions(List *options)
+{
+	ListCell   *cell;
+	bool		find = false;
+
+	foreach(cell, options)
+	{
+		DefElem    *def = (DefElem *) lfirst(cell);
+		if (strcmp(def->defname, "error_log_persistent") == 0)
+		{
+			if (find)
+			{
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						errmsg("%s shows more than once",
+								def->defname)));
+			}
+			/* these accept only boolean values */
+			(void) defGetBoolean(def);
+			find = true;
+		}
+	}
+}
+
+/*
+ * NeedErrorLogPersistent - check the external options to see whether need
+ * to make the error log persistent.
+ */
+bool
+NeedErrorLogPersistent(List *options)
+{
+	ListCell   *cell;
+
+	foreach(cell, options)
+	{
+		DefElem    *def = (DefElem *) lfirst(cell);
+		if (strcmp(def->defname, "error_log_persistent") == 0)
+		{
+			/* these accept only boolean values */
+			return defGetBoolean(def);
+		}
+	}
+	return false;
+}
 
 /*
  * InsertExtTableEntry
@@ -435,22 +490,7 @@ GetExtTableEntryIfExists(Oid relid)
 	}
 	else
 	{
-		Datum	   *elems;
-		int			nelems;
-		int			i;
-		char*		option_str = NULL;
-
-		deconstruct_array(DatumGetArrayTypeP(options),
-						  TEXTOID, -1, false, 'i',
-						  &elems, NULL, &nelems);
-
-		for (i = 0; i < nelems; i++)
-		{
-			option_str = DatumGetCString(DirectFunctionCall1(textout, elems[i]));
-
-			/* append to a list of Value nodes, size nelems */
-			extentry->options = lappend(extentry->options, makeString(pstrdup(option_str)));
-		}
+		extentry->options = untransformRelOptions(options);
 	}
 
 	/* get the reject limit */
