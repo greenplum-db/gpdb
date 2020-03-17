@@ -350,6 +350,11 @@ select max(a0) from table_a where a0=1;
 explain select a0 from table_a where a0 in (select max(a1) from table_a where a0=1);
 reset test_print_direct_dispatch_info;
 
+-- the filter is over a window, do not direct dispatch
+create table foo_direct_dispatch (dist_key int, non_dist_key int);
+insert into foo_direct_dispatch select i, i from generate_series (1,100)i;
+select rank from ( select rank() over ( order by dist_key asc ) as rank , * from foo_direct_dispatch )a where 10 = dist_key;
+explain select rank from ( select rank() over ( order by dist_key asc ) as rank , * from foo_direct_dispatch )a where 10 = dist_key;
 -- ----------------------------------------------------------------------
 -- Test: teardown.sql
 -- ----------------------------------------------------------------------
