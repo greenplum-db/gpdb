@@ -191,6 +191,7 @@ typedef struct AlteredTableInfo
 	List	   *newvals;		/* List of NewColumnValue */
 	bool		new_notnull;	/* T if we added new NOT NULL constraints */
 	bool		rewrite;		/* T if a rewrite is forced */
+	bool		aocs_write_new_columns_only; /* T for ADD COLUMN on AOCS relation */
 	bool		dist_opfamily_changed; /* T if changing datatype of distribution key column and new opclass is in different opfamily than old one */
 	Oid			new_opclass;		/* new opclass, if changing a distribution key column */
 	Oid			newTableSpace;	/* new tablespace; 0 means no change */
@@ -337,10 +338,10 @@ static void ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation *rel_p,
 		  AlterTableCmd *cmd, LOCKMODE lockmode);
 static void ATRewriteTables(List **wqueue, LOCKMODE lockmode);
 static void ATRewriteTable(AlteredTableInfo *tab, Oid OIDNewHeap, LOCKMODE lockmode);
-static void ATAocsWriteNewColumns(
+static void ATAocsWriteSegFileNewColumns(
 		AOCSAddColumnDesc idesc, AOCSHeaderScanDesc sdesc,
 		AlteredTableInfo *tab, ExprContext *econtext, TupleTableSlot *slot);
-static bool ATAocsNoRewrite(AlteredTableInfo *tab);
+static void ATAocsWriteNewColumns(AlteredTableInfo *tab);
 static AlteredTableInfo *ATGetQueueEntry(List **wqueue, Relation rel);
 static void ATSimplePermissions(Relation rel, int allowed_targets);
 static void ATWrongRelkindError(Relation rel, int allowed_targets);
@@ -5778,20 +5779,10 @@ ATRewriteTables(List **wqueue, LOCKMODE lockmode)
 		}
 		heap_close(OldHeap, NoLock);
 
-		if (tab->newvals && relstorage == RELSTORAGE_AOCOLS)
+		if (tab->rewrite && tab->aocs_write_new_columns_only)
 		{
-			/*
-			 * ADD COLUMN for CO can be optimized only if it is the
-			 * only subcommand being performed.
-			 */
-			bool canOptimize = true;
-			for (int i=0; i < AT_NUM_PASSES && canOptimize; ++i)
-			{
-				if (i != AT_PASS_ADD_COL && tab->subcmds[i])
-					canOptimize = false;
-			}
-			if (canOptimize && ATAocsNoRewrite(tab))
-				continue;
+			ATAocsWriteNewColumns(tab);
+			continue;
 		}
 		/*
 		 * We only need to rewrite the table if at least one column needs to
@@ -5902,11 +5893,11 @@ ATRewriteTables(List **wqueue, LOCKMODE lockmode)
 }
 
 /*
- * Scan an existing column for varblock headers, write one new segfile
- * each for new columns.  newvals is a list of NewColumnValue items.
+ * A helper for ATAocsWriteNewColumns(). It scans an existing column for
+ * varblock headers. Write one new segfile each for new columns.
  */
 static void
-ATAocsWriteNewColumns(
+ATAocsWriteSegFileNewColumns(
 		AOCSAddColumnDesc idesc, AOCSHeaderScanDesc sdesc,
 		AlteredTableInfo *tab, ExprContext *econtext, TupleTableSlot *slot)
 {
@@ -5993,8 +5984,8 @@ ATAocsWriteNewColumns(
 							if(!ExecQual(con->qualstate, econtext, true))
 								ereport(ERROR,
 										(errcode(ERRCODE_CHECK_VIOLATION),
-										 errmsg("check constraint \"%s\" is "
-												"violated",	con->name)));
+										 errmsg("check constraint \"%s\" is violated by some row",
+											con->name)));
 							break;
 						case CONSTR_FOREIGN:
 							/* Nothing to do */
@@ -6073,14 +6064,8 @@ column_to_scan(AOCSFileSegInfo **segInfos, int nseg, int natts, Relation aocsrel
 	return scancol;
 }
 
-/*
- * ATAocsNoRewrite: Leverage column orientation to avoid rewrite.
- *
- * Return true if rewrite can be avoided for this command.  Return
- * false to go the usual ATRewriteTable way.
- */
-static bool
-ATAocsNoRewrite(AlteredTableInfo *tab)
+static void
+ATAocsWriteNewColumns(AlteredTableInfo *tab)
 {
 	AOCSFileSegInfo **segInfos;
 	AOCSHeaderScanDesc sdesc;
@@ -6097,13 +6082,7 @@ ATAocsNoRewrite(AlteredTableInfo *tab)
 	int32 scancol; /* chosen column number to scan from */
 	ListCell *l;
 	Snapshot snapshot;
-
-	/*
-	 * only ADD COLUMN subcommand is supported at this time
-	 */
-	List *addColCmds = tab->subcmds[AT_PASS_ADD_COL];
-	if (addColCmds == NULL)
-		return false;
+	int addcols;
 
 	snapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
 
@@ -6125,6 +6104,7 @@ ATAocsNoRewrite(AlteredTableInfo *tab)
 					 (int) con->contype);
 		}
 	}
+	Assert(tab->newvals);
 	foreach(l, tab->newvals)
 	{
 		newval = lfirst(l);
@@ -6132,6 +6112,9 @@ ATAocsNoRewrite(AlteredTableInfo *tab)
 	}
 
 	rel = heap_open(tab->relid, NoLock);
+
+	Assert(rel->rd_rel->relstorage == RELSTORAGE_AOCOLS);
+
 	segInfos = GetAllAOCSFileSegInfo(rel, snapshot, &nseg);
 	basepath = relpathbackend(rel->rd_node, rel->rd_backend, MAIN_FORKNUM);
 	if (nseg > 0)
@@ -6173,7 +6156,14 @@ ATAocsNoRewrite(AlteredTableInfo *tab)
 			   RelationGetDescr(rel)->natts * sizeof(bool));
 
 		sdesc = aocs_begin_headerscan(rel, scancol);
-		idesc = aocs_addcol_init(rel, list_length(addColCmds));
+		addcols = RelationGetDescr(rel)->natts - tab->oldDesc->natts;
+		/*
+		 * Protect against potential negative number here.
+		 * Note that natts is not decremented to reflect dropped columns,
+		 * so this should be safe
+		 */
+		Assert(addcols > 0);
+		idesc = aocs_addcol_init(rel, addcols);
 
 		/* Loop over all appendonly segments */
 		for (segi = 0; segi < nseg; ++segi)
@@ -6213,7 +6203,7 @@ ATAocsNoRewrite(AlteredTableInfo *tab)
 			aocs_addcol_newsegfile(idesc, segInfos[segi],
 								   basepath, rnode);
 
-			ATAocsWriteNewColumns(idesc, sdesc, tab, econtext, slot);
+			ATAocsWriteSegFileNewColumns(idesc, sdesc, tab, econtext, slot);
 		}
 		aocs_end_headerscan(sdesc);
 		aocs_addcol_finish(idesc);
@@ -6241,7 +6231,6 @@ ATAocsNoRewrite(AlteredTableInfo *tab)
 	FreeExecutorState(estate);
 	heap_close(rel, NoLock);
 	UnregisterSnapshot(snapshot);
-	return true;
 }
 
 /*
@@ -7784,6 +7773,54 @@ ATExecAddColumn(List **wqueue, AlteredTableInfo *tab, Relation rel,
 		colDef = copyObject(colDef);
 		colDef->inhcount = 1;
 		colDef->is_local = false;
+	}
+
+	/*
+	 * Leave a flag on tables in the partition hierarchy that can benefit from the
+	 * optimization for columnar tables.
+	 * We have to do it while processing the root partition because that's the
+	 * only level where the `ADD COLUMN` subcommands are populated.
+	 */
+	if (!recursing && tab->relkind == RELKIND_RELATION)
+	{
+		bool	aocs_write_new_columns_only;
+		/*
+		 * ADD COLUMN for CO can be optimized only if it is the
+		 * only subcommand being performed.
+		 */
+		aocs_write_new_columns_only = true;
+		for (int i = 0; i < AT_NUM_PASSES; ++i)
+		{
+			if (i != AT_PASS_ADD_COL && tab->subcmds[i])
+			{
+				aocs_write_new_columns_only = false;
+				break;
+			}
+		}
+
+		if (aocs_write_new_columns_only)
+		{
+			/*
+			 * We have acquired lockmode on the root and first-level partitions
+			 * already. This leaves the deeper subpartitions unlocked, but no
+			 * operations can drop (or alter) those relations without locking
+			 * through the root. Note that find_all_inheritors() also includes
+			 * the root partition in the returned list.
+			 */
+			List *all_inheritors = find_all_inheritors(tab->relid, NoLock, NULL);
+			ListCell *lc;
+			foreach (lc, all_inheritors)
+			{
+				Oid r = lfirst_oid(lc);
+				Relation rel = heap_open(r, NoLock);
+				AlteredTableInfo *childtab;
+				childtab = ATGetQueueEntry(wqueue, rel);
+
+				if (rel->rd_rel->relstorage == RELSTORAGE_AOCOLS)
+					childtab->aocs_write_new_columns_only = true;
+				heap_close(rel, NoLock);
+			}
+		}
 	}
 
 	foreach(child, children)
