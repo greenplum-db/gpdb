@@ -23,9 +23,9 @@
     <body>
       <p>The Greenplum Database PL/Container language extension allows users to create and run
         Python or R user-defined functions (UDFs) securely, inside a Docker container. A Docker
-          <i>container</i> is a Linux process that runs in a managed way by using Linux kernel
-        features such as cgroups, namespaces and union file systems. For information about Docker,
-        see the Docker web site <xref href="https://www.docker.com/" format="html" scope="external"
+        container is a Linux process that runs in a managed way by using Linux kernel features such
+        as cgroups, namespaces and union file systems. For information about Docker, see the Docker
+        web site <xref href="https://www.docker.com/" format="html" scope="external"
           >https://www.docker.com/</xref>. </p>
       <p>The Greenplum supported procedural languages, PL/Python and PL/R, allow only Greenplum
         Database administrators to create any UDF, due to their untrusted nature. This limits the
@@ -52,16 +52,16 @@
         
         <p><b>Example of the process flow</b>:</p>
         <p>Consider a query that selects table data using all available segments, and transforms the
-          data using a PL/Container function. In this case, the query executor on master, on the
-          first call to a function in a segment container, starts the container on that segment
-          host. It then contacts the running container to obtain the results. The container might
-          respond with an SPI - SQL query executed by the container to get some data back from the
+          data using a PL/Container function. On the first call to a function in a segment
+          container, the query executor on master host starts the container on that segment host. It
+          then contacts the running container to obtain the results. The container might respond
+          with an SPI - a SQL query executed by the container to get some data back from the
           database - returning the result to the query executor.</p>
         <p>A container running in standby mode waits on the socket and does not consume any CPU
           resources. PL/Container memory consumption depends on the amount of data cached in global
           dictionaries.</p>
-        <p>By closing the Greenplum Database session that started the container, the container
-          connection is closed, and the container shuts down.</p>
+        <p>The container connection is closed by closing the Greenplum Database session that started
+          the container, and the container shuts down.</p>
         
       </section>
     </body>
@@ -299,8 +299,7 @@ $$ LANGUAGE plcontainer;</codeblock>
 (1 row)
 </codeblock>
         <p>For further function usage details and examples, see <xref
-            href="pl_container_using.xml#function_examples" format="html">PL/Container Functions
-          </xref>.</p>
+            href="pl_container_using.xml#topic_kwg_qfg_mjb">PL/Container Functions </xref>.</p>
       </section>
     </body>
  </topic>
