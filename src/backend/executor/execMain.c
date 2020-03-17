@@ -2816,6 +2816,13 @@ ExecutePlan(EState *estate,
 	TupleTableSlot *result;
 
 	/*
+	 * For holdable cursor, the plan is executed without rewinding on gpdb. We
+	 * need to quit if the executor has already emitted all tuples.
+	 */
+	if (estate->es_got_eos)
+		return;
+
+	/*
 	 * initialize local variables
 	 */
 	current_tuple_count = 0;
