@@ -161,6 +161,35 @@
                                 href="plcontainer_ref.xml" format="dita"/> reference page.</p></li>
                 </ol>
             </section>
+            <section>
+                <title>Notes</title>
+                <p id="pl_logging_notes"><b>PL/Container logging</b></p>
+                <p>When PL/Container logging is enabled, you can set the log level with the
+                    Greenplum Database server configuration parameter <codeph><xref
+                            href="../ref_guide/config_params/guc-list.xml#log_min_messages"
+                            scope="peer">log_min_messages</xref></codeph>. The default log level is
+                        <codeph>warning</codeph>. The parameter controls the PL/Container log level
+                    and also controls the Greenplum Database log level.</p>
+                <ul id="ul_knd_jhl_mcb">
+                    <li>PL/Container logging is enabled or disabled for each runtime ID with the
+                            <codeph>setting</codeph> attribute
+                            <codeph>use_container_logging</codeph>. The default is no logging. </li>
+                    <li>The PL/Container log information is the information from the UDF that is run
+                        in the Docker container. By default, the PL/Container log information is
+                        sent to a system service. On Red Hat 7 or CentOS 7 systems, the log
+                        information is sent to the <codeph>journald</codeph> service. </li>
+                    <li>The Greenplum Database log information is sent to log file on the Greenplum
+                        Database master.</li>
+                    <li>When testing or troubleshooting a PL/Container UDF, you can change the
+                        Greenplum Database log level with the <codeph>SET</codeph> command. You can
+                        set the parameter in the session before you run your PL/Container UDF. This
+                        example sets the log level to <codeph>debug1</codeph>. <codeblock>SET log_min_messages='debug1' ;</codeblock>
+                        <note>The parameter <codeph>log_min_messages</codeph> controls both the
+                            Greenplum Database and PL/Container logging, increasing the log level
+                            might affect Greenplum Database performance even if a PL/Container UDF
+                            is not running.</note></li>
+                </ul>
+            </section>
         </body>
     </topic>
         
@@ -168,14 +197,15 @@
         <title>PL/Container Functions</title>
         <body>
             <p>When you enable PL/Container in a database of a Greenplum Database system, the
-                language <codeph>plcontainer</codeph> is registered in the database. You can create
-                and run user-defined functions in the procedural languages supported by the
-                PL/Container Docker images when you specify <codeph>plcontainer</codeph> as a
-                language in a UDF definition.</p>
+                language <codeph>plcontainer</codeph> is registered in that database. Specify
+                    <codeph>plcontainer</codeph> as a language in a UDF definition to create and run
+                user-defined functions in the procedural languages supported by the PL/Container
+                Docker images.</p>
             
             <section id="topic_c3v_clg_wkb">
                 <title>Limitations</title>
-                <p>Review the following limitations when using PL/Container Python and R functions: </p>
+                <p>Review the following limitations when creating and using PL/Container PL/Python
+                    and PL/R functions: </p>
                 <ul id="ul_d3v_clg_wkb">
                     <li>Greenplum Database domains are not supported.</li>
                     <li>Multi-dimensional arrays are not supported.</li>
@@ -195,8 +225,8 @@
                 </ul>
             </section>
             
-            <section>
-                <title>Running PL/Container functions</title>
+            <section id="using_functions">
+                <title>Using PL/Container functions</title>
                 <p>A UDF definition that uses PL/Container must have the these items.</p>
                 <ul id="ul_z2m_1kj_kw">
                     <li>The first line of the UDF must be <codeph># container:
@@ -239,27 +269,27 @@
                     information from the master and segment instances. This is an example of the
                     start and end of the view
                     output.<codeblock>INFO:  plcontainer: Container 'plc_py_test' configuration
-                INFO:  plcontainer:     image = 'pivotaldata/plcontainer_python_shared:devel'
-                INFO:  plcontainer:     memory_mb = '1024'
-                INFO:  plcontainer:     use container network = 'no'
-                INFO:  plcontainer:     use container logging  = 'no'
-                INFO:  plcontainer:     shared directory from host '/usr/local/greenplum-db/./bin/plcontainer_clients' to container '/clientdir'
-                INFO:  plcontainer:         access = readonly
+ INFO:  plcontainer:     image = 'pivotaldata/plcontainer_python_shared:devel'
+ INFO:  plcontainer:     memory_mb = '1024'
+ INFO:  plcontainer:     use container network = 'no'
+ INFO:  plcontainer:     use container logging  = 'no'
+ INFO:  plcontainer:     shared directory from host '/usr/local/greenplum-db/./bin/plcontainer_clients' to container '/clientdir'
+ INFO:  plcontainer:     access = readonly
                 
-                ...
+ ...
                 
-                INFO:  plcontainer: Container 'plc_r_example' configuration  (seg0 slice3 192.168.180.45:40000 pid=3304)
-                INFO:  plcontainer:     image = 'pivotaldata/plcontainer_r_without_clients:0.2'  (seg0 slice3 192.168.180.45:40000 pid=3304)
-                INFO:  plcontainer:     memory_mb = '1024'  (seg0 slice3 192.168.180.45:40000 pid=3304)
-                INFO:  plcontainer:     use container network = 'no'  (seg0 slice3 192.168.180.45:40000 pid=3304)
-                INFO:  plcontainer:     use container logging  = 'yes'  (seg0 slice3 192.168.180.45:40000 pid=3304)
-                INFO:  plcontainer:     shared directory from host '/usr/local/greenplum-db/bin/plcontainer_clients' to container '/clientdir'  (seg0 slice3 192.168.180.45:40000 pid=3304)
-                INFO:  plcontainer:         access = readonly  (seg0 slice3 192.168.180.45:40000 pid=3304)
-                gp_segment_id | plcontainer_show_local_config
-                ---------------+-------------------------------
-                0 | ok
-                -1 | ok
-                1 | ok</codeblock></p>
+ INFO:  plcontainer: Container 'plc_r_example' configuration  (seg0 slice3 192.168.180.45:40000 pid=3304)
+ INFO:  plcontainer:     image = 'pivotaldata/plcontainer_r_without_clients:0.2'  (seg0 slice3 192.168.180.45:40000 pid=3304)
+ INFO:  plcontainer:     memory_mb = '1024'  (seg0 slice3 192.168.180.45:40000 pid=3304)
+ INFO:  plcontainer:     use container network = 'no'  (seg0 slice3 192.168.180.45:40000 pid=3304)
+ INFO:  plcontainer:     use container logging  = 'yes'  (seg0 slice3 192.168.180.45:40000 pid=3304)
+ INFO:  plcontainer:     shared directory from host '/usr/local/greenplum-db/bin/plcontainer_clients' to container '/clientdir'  (seg0 slice3 192.168.180.45:40000 pid=3304)
+ INFO:  plcontainer:         access = readonly  (seg0 slice3 192.168.180.45:40000 pid=3304)
+ gp_segment_id | plcontainer_show_local_config
+ ---------------+-------------------------------
+  0 | ok
+ -1 | ok
+  1 | ok</codeblock></p>
                 <p>The PL/Container function <codeph>plcontainer_containers_summary()</codeph>
                     displays information about the currently running Docker
                     containers.<codeblock>SELECT * FROM plcontainer_containers_summary();</codeblock></p>
