@@ -8989,6 +8989,7 @@ CreateCheckPoint(int flags)
 	XLogFlush(recptr);
 
 	pfree(dtxCheckPointInfo);
+	dtxCheckPointInfo = NULL;
 
 	/*
 	 * We mustn't write any new WAL after a shutdown checkpoint, or it will be
