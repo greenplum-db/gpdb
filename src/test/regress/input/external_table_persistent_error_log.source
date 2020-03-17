@@ -91,5 +91,18 @@ SELECT relname, linenum, errmsg FROM gp_read_persistent_error_log('ext_error_per
 SELECT gp_truncate_persistent_error_log('ext_error_persistent');
 SELECT relname, linenum, errmsg FROM gp_read_persistent_error_log('ext_error_persistent');
 
+CREATE EXTERNAL TABLE ext_bytea (id int, content bytea)
+LOCATION (
+    'file://@hostname@@abs_srcdir@/data/bytea.data'
+) FORMAT 'CSV'
+OPTIONS (error_log_persistent 'true')
+LOG ERRORS SEGMENT REJECT LIMIT 5;
+
+SELECT * FROM ext_bytea;
+
+SELECT relname, linenum, errmsg FROM gp_read_persistent_error_log('ext_bytea');
+SELECT gp_truncate_persistent_error_log('ext_bytea');
+SELECT relname, linenum, errmsg FROM gp_read_persistent_error_log('ext_bytea');
+
 
 \! rm @abs_srcdir@/data/tableerr.csv

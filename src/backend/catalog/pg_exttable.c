@@ -62,7 +62,7 @@ ValidateExtTableOptions(List *options)
 			{
 				ereport(ERROR,
 						(errcode(ERRCODE_SYNTAX_ERROR),
-						errmsg("%s shows more than onece",
+						errmsg("%s shows more than once",
 								def->defname)));
 			}
 			/* these accept only boolean values */

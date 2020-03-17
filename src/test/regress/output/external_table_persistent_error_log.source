@@ -214,4 +214,36 @@ SELECT relname, linenum, errmsg FROM gp_read_persistent_error_log('ext_error_per
 ---------+---------+--------
 (0 rows)
 
+CREATE EXTERNAL TABLE ext_bytea (id int, content bytea)
+LOCATION (
+    'file://@hostname@@abs_srcdir@/data/bytea.data'
+) FORMAT 'CSV'
+OPTIONS (error_log_persistent 'true')
+LOG ERRORS SEGMENT REJECT LIMIT 5;
+SELECT * FROM ext_bytea;
+NOTICE:  found 1 data formatting errors (1 or more input rows), rejected related input data
+ id |                   content                    
+----+----------------------------------------------
+  1 | \x546869732069732072617720746578742064617461
+  2 | \x74747474736466736466
+  3 | \x013d7d16d7ad4fefb61bd95b765c8ceb
+(3 rows)
+
+SELECT relname, linenum, errmsg FROM gp_read_persistent_error_log('ext_bytea');
+  relname  | linenum |                     errmsg                     
+-----------+---------+------------------------------------------------
+ ext_bytea |       4 | invalid hexadecimal digit: "T", column content
+(1 row)
+
+SELECT gp_truncate_persistent_error_log('ext_bytea');
+ gp_truncate_persistent_error_log 
+----------------------------------
+ t
+(1 row)
+
+SELECT relname, linenum, errmsg FROM gp_read_persistent_error_log('ext_bytea');
+ relname | linenum | errmsg 
+---------+---------+--------
+(0 rows)
+
 \! rm @abs_srcdir@/data/tableerr.csv

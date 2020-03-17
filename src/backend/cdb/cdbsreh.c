@@ -53,6 +53,7 @@ static void ErrorLogWrite(CdbSreh *cdbsreh);
 static Datum ReadValidErrorLogDatum(FILE *fp, TupleDesc tupledesc, const char* fname);
 static bool RetrievePersistentErrorLogFromRangeVar(RangeVar *relrv, AclMode mode, char *fname /*out*/);
 static bool ErrorLogPrefixDelete(Oid databaseId, Oid namespaceId, bool persistent);
+static bool TruncateErrorLog(text *relname, bool persistent);
 
 #define ErrorLogDir "errlog"
 #define PersistentErrorLogDir "errlogpersistent"
@@ -102,7 +103,7 @@ ErrorLogFileName(Oid dbid, Oid relid, bool persistent, char *fname /* out */)
 		if (OidIsValid(namespace))
 			ErrorLogPersistentFileName(fname, dbid, namespace, relname);
 		else
-			elog(ERROR, "relid %u is not exist for db %u", relid, dbid);
+			elog(ERROR, "relid %u does not exist for db %u", relid, dbid);
 	}
 	else
 		ErrorLogNormalFileName(fname, dbid, relid);
@@ -875,6 +876,11 @@ RetrievePersistentErrorLogFromRangeVar(RangeVar *relrv, AclMode mode, char *fnam
 	return false;
 }
 
+/*
+ * gp_read_persistent_error_log
+ *
+ * Returns set of persistent error log tuples.
+ */
 Datum
 gp_read_persistent_error_log(PG_FUNCTION_ARGS)
 {
@@ -1213,6 +1219,11 @@ gp_truncate_error_log(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(TruncateErrorLog(relname, false));
 }
 
+/*
+ * Delete persistent error log of the specified relation.
+ * This returns true from master iif all segments and
+ * master find the relation.
+ */
 Datum
 gp_truncate_persistent_error_log(PG_FUNCTION_ARGS)
 {
