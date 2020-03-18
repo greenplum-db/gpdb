@@ -978,3 +978,324 @@ check_collation_walker(Node *node, check_collation_context *context)
 	}
 }
 
+bool path_walker(Node *node,
+				 bool (*walker) (),
+				 void *context)
+{
+	if (node == NULL)
+		return false;
+
+	/* Guard against stack overflow due to overly complex expressions */
+	check_stack_depth();
+
+	switch (nodeTag(node))
+	{
+		case T_IndexPath:
+			{
+				IndexPath *path = (IndexPath *) node;
+				if (walker((Node *) path->indexclauses, context))
+					return true;
+				if (walker((Node *) path->indexquals, context))
+					return true;
+				if (walker((Node *) path->indexorderbys, context))
+					return true;
+			}
+			break;
+		case T_CtePath:
+			{
+				CtePath *path = (CtePath *) node;
+				return path_walker((Node* ) path->subpath, walker, context);
+			}
+		case T_BitmapHeapPath:
+			{
+				BitmapHeapPath *path = (BitmapHeapPath *) node;
+				return path_walker((Node *) path->bitmapqual, walker, context);
+			}
+		case T_BitmapAndPath:
+			{
+				BitmapAndPath *path = (BitmapAndPath *) node;
+				if (walker((Node *) path->bitmapquals, context))
+					return true;
+			}
+			break;
+		case T_BitmapOrPath:
+			{
+				BitmapOrPath *path = (BitmapOrPath *) node;
+				if (walker((Node *) path->bitmapquals, context))
+					return true;
+			}
+			break;
+		case T_TidPath:
+			{
+				TidPath *path = (TidPath *) node;
+				if (walker((Node *) path->tidquals, context))
+					return true;
+			}
+			break;
+		case T_SubqueryScanPath:
+			{
+				SubqueryScanPath *path = (SubqueryScanPath *) node;
+				return path_walker((Node *) path->subpath, walker, context);
+			}
+		case T_TableFunctionScanPath:
+			{
+				TableFunctionScanPath *path = (TableFunctionScanPath *) node;
+				return path_walker((Node *) path->subpath, walker, context);
+			}
+		case T_ForeignPath:
+			{
+				ForeignPath *path = (ForeignPath *) node;
+				if (walker((Node *) path->fdw_private, context))
+					return true;
+				return path_walker((Node *) path->fdw_outerpath, walker, context);
+			}
+		case T_CustomPath:
+			{
+				CustomPath *path = (CustomPath *) node;
+				if (walker((Node *) path->custom_paths, context))
+					return true;
+				if (walker((Node *) path->custom_private, context))
+					return true;
+			}
+			break;
+		case T_NestPath:
+			{
+				NestPath *path = (NestPath *) node;
+				if (path_walker((Node *) path->outerjoinpath, walker, context))
+					return true;
+				if (path_walker((Node *) path->innerjoinpath, walker, context))
+					return true;
+				if (walker((Node *) path->joinrestrictinfo, context))
+					return true;
+			}
+			break;
+		case T_MergePath:
+			{
+				MergePath *path = (MergePath *) node;
+				if (path_walker((Node *) &(path->jpath), walker, context))
+					return true;
+				if (walker((Node *) path->path_mergeclauses, context))
+					return true;
+				if (walker((Node *) path->outersortkeys, context))
+					return true;
+				if (walker((Node *) path->innersortkeys, context))
+					return true;
+			}
+			break;
+		case T_HashPath:
+			{
+				HashPath *path = (HashPath *) node;
+				if (path_walker((Node *) &(path->jpath), walker, context))
+					return true;
+				if (walker((Node *) path->path_hashclauses, context))
+					return true;
+			}
+			break;
+		case T_AppendPath:
+			{
+				AppendPath *path = (AppendPath *) node;
+				ListCell   *lc;
+				foreach(lc, path->subpaths)
+				{
+					if (path_walker((Node *) lfirst(lc), walker, context))
+						return true;
+				}
+			}
+			break;
+		case T_MergeAppendPath:
+			{
+				MergeAppendPath *path = (MergeAppendPath *) node;
+				ListCell   *lc;
+				foreach(lc, path->subpaths)
+				{
+					if (path_walker((Node *) lfirst(lc), walker, context))
+						return true;
+				}
+			}
+			break;
+		case T_ResultPath:
+			{
+				ResultPath *path = (ResultPath *) node;
+				if (walker((Node *) path->quals, context))
+					return true;
+			}
+			break;
+		case T_MaterialPath:
+			{
+				MaterialPath *path = (MaterialPath *) node;
+				if (path_walker((Node *) path->subpath, walker, context))
+					return true;
+			}
+			break;
+		case T_UniquePath:
+			{
+				UniquePath *path = (UniquePath *) node;
+				if (path_walker((Node *) path->subpath, walker, context))
+					return true;
+				if (walker((Node *) path->in_operators, context))
+					return true;
+				if (walker((Node *) path->uniq_exprs, context))
+					return true;
+			}
+			break;
+		case T_GatherPath:
+			{
+				GatherPath *path = (GatherPath *) node;
+				if (path_walker((Node *) path->subpath, walker, context))
+					return true;
+			}
+			break;
+		case T_ProjectionPath:
+			{
+				ProjectionPath *path = (ProjectionPath *) node;
+				if (path_walker((Node *) path->subpath, walker, context))
+					return true;
+				if (walker((Node *) path->cdb_restrict_clauses, context))
+					return true;
+			}
+			break;
+		case T_SortPath:
+			{
+				SortPath *path = (SortPath *) node;
+				if (path_walker((Node *) path->subpath, walker, context))
+					return true;
+			}
+			break;
+		case T_GroupPath:
+			{
+				GroupPath *path = (GroupPath *) node;
+				if (path_walker((Node *) path->subpath, walker, context))
+					return true;
+				if (walker((Node *) path->groupClause, context))
+					return true;
+				if (walker((Node *) path->qual, context))
+					return true;
+			}
+			break;
+		case T_UpperUniquePath:
+			{
+				UpperUniquePath *path = (UpperUniquePath *) node;
+				if (path_walker((Node *) path->subpath, walker, context))
+					return true;
+			}
+			break;
+		case T_AggPath:
+			{
+				AggPath *path = (AggPath *) node;
+				if (path_walker((Node *) path->subpath, walker, context))
+					return true;
+				if (walker((Node *) path->groupClause, context))
+					return true;
+				if (walker((Node *) path->qual, context))
+					return true;
+			}
+			break;
+		case T_GroupingSetsPath:
+			{
+				GroupingSetsPath *path = (GroupingSetsPath *) node;
+				if (path_walker((Node *) path->subpath, walker, context))
+					return true;
+				if (walker((Node *) path->rollup_groupclauses, context))
+					return true;
+				if (walker((Node *) path->rollup_lists, context))
+					return true;
+				if (walker((Node *) path->qual, context))
+					return true;
+			}
+			break;
+		case T_WindowAggPath:
+			{
+				WindowAggPath *path = (WindowAggPath *) node;
+				if (path_walker((Node *) path->subpath, walker, context))
+					return true;
+				if (walker((Node *) path->winclause, context))
+					return true;
+				if (walker((Node *) path->winpathkeys, context))
+					return true;
+			}
+			break;
+		case T_MinMaxAggPath:
+			{
+				MinMaxAggPath *path = (MinMaxAggPath *) node;
+				if (walker((Node *) path->mmaggregates, context))
+					return true;
+				if (walker((Node *) path->quals, context))
+					return true;
+			}
+			break;
+		case T_TupleSplitPath:
+			{
+				TupleSplitPath *path = (TupleSplitPath *) node;
+				if (path_walker((Node *) path->subpath, walker, context))
+					return true;
+				if (walker((Node *) path->groupClause, context))
+					return true;
+			}
+			break;
+		case T_SetOpPath:
+			{
+				SetOpPath *path = (SetOpPath *) node;
+				if (path_walker((Node *) path->subpath, walker, context))
+					return true;
+				if (walker((Node *) path->distinctList, context))
+					return true;
+			}
+			break;
+		case T_RecursiveUnionPath:
+			{
+				RecursiveUnionPath *path = (RecursiveUnionPath *) node;
+				if (path_walker((Node *) path->leftpath, walker, context))
+					return true;
+				if (path_walker((Node *) path->rightpath, walker, context))
+					return true;
+				if (walker((Node *) path->distinctList, context))
+					return true;
+			}
+			break;
+		case T_LockRowsPath:
+			{
+				LockRowsPath *path = (LockRowsPath *) node;
+				if (path_walker((Node *) path->subpath, walker, context))
+					return true;
+				if (walker((Node *) path->rowMarks, context))
+					return true;
+			}
+			break;
+		case T_LimitPath:
+			{
+				LimitPath *path = (LimitPath *) node;
+				if (path_walker((Node *) path->subpath, walker, context))
+					return true;
+				if (walker((Node *) path->limitOffset, context))
+					return true;
+				if (walker((Node *) path->limitCount, context))
+					return true;
+			}
+			break;
+		case T_PartitionSelectorPath:
+			{
+				PartitionSelectorPath *path = (PartitionSelectorPath *) node;
+				if (path_walker((Node *) path->subpath, walker, context))
+					return true;
+				if (walker((Node *) path->dsinfo, context))
+					return true;
+				if (walker((Node *) path->partKeyExprs, context))
+					return true;
+				if (walker((Node *) path->partKeyAttnos, context))
+					return true;
+			}
+			break;
+		case T_SplitUpdatePath:
+			{
+				SplitUpdatePath *path = (SplitUpdatePath *) node;
+				if (path_walker((Node *) path->subpath, walker, context))
+					return true;
+			}
+			break;
+		case T_ModifyTablePath:
+		default:
+			break;
+	}
+
+	return false;
+}

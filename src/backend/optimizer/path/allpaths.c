@@ -144,6 +144,8 @@ static void remove_unused_subquery_outputs(Query *subquery, RelOptInfo *rel);
 
 static void bring_to_outer_query(PlannerInfo *root, RelOptInfo *rel, List *outer_quals);
 static void bring_to_singleQE(PlannerInfo *root, RelOptInfo *rel);
+static bool is_path_contain_outer_params(Node *node, void *context);
+static bool path_param_walk(Node *node, void *context);
 
 
 /*
@@ -415,6 +417,18 @@ set_rel_size(PlannerInfo *root, RelOptInfo *rel,
 	Assert(rel->rows > 0 || IS_DUMMY_REL(rel));
 }
 
+static bool
+path_param_walk(Node *node, void *context)
+{
+	return contains_outer_params(node, context);
+}
+
+static bool
+is_path_contain_outer_params(Node *node, void *context)
+{
+	return path_walker(node, path_param_walk, context);
+}
+
 /*
  * Decorate the Paths of 'rel' with Motions to bring the relation's
  * result to OuterQuery locus. The final plan will look something like
@@ -454,9 +468,16 @@ bring_to_outer_query(PlannerInfo *root, RelOptInfo *rel, List *outer_quals)
 		{
 			/*
 			 * Cannot pass a param through motion, so if this is a parameterized
-			 * path, we can't use it.
+			 * path, we can't use it. Only check param_info field of a path is
+			 * not enough, we have to walk the path's parts to find if any exprs
+			 * ref outerParams. See github issue https://github.com/greenplum-db/gpdb/issues/9733
+			 * for details.
 			 */
 			if (origpath->param_info)
+				continue;
+
+			if (is_path_contain_outer_params((Node *) origpath,
+											 (void *) root))
 				continue;
 
 			CdbPathLocus_MakeOuterQuery(&outerquery_locus);
@@ -525,6 +546,10 @@ bring_to_singleQE(PlannerInfo *root, RelOptInfo *rel)
 			 * path, we can't use it.
 			 */
 			if (origpath->param_info)
+				continue;
+
+			if (is_path_contain_outer_params((Node *) origpath,
+											 (void *) root))
 				continue;
 
 			CdbPathLocus_MakeSingleQE(&target_locus,

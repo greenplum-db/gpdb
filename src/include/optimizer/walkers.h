@@ -35,6 +35,8 @@ extern bool walk_plan_node_fields(Plan *plan, bool (*walker) (), void *context);
 
 extern bool plan_tree_walker(Node *node, bool (*walker) (), void *context, bool recurse_into_subplans);
 
+extern bool path_walker(Node *node, bool (*walker) (), void *context);
+
 #ifdef __cplusplus
 extern "C" {
 #endif
