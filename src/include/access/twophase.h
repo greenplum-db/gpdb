@@ -94,7 +94,7 @@ extern void TwoPhaseAddPreparedTransactionInit(
 					      , int                             *maxCount);
 
 struct XLogRecData;
-extern XLogRecPtr *getTwoPhaseOldestPreparedTransactionXLogRecPtr(struct XLogRecData *rdata);
+extern XLogRecPtr *getTwoPhaseOldestPreparedTransactionXLogRecPtr(prepared_transaction_agg_state *ptas);
 
 extern void TwoPhaseAddPreparedTransaction(
                  prepared_transaction_agg_state **ptas

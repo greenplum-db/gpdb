@@ -65,6 +65,9 @@ $$ LANGUAGE plpgsql;
 4: SELECT * from commit_phase1_panic;
 4: INSERT INTO commit_phase1_panic select i,i from generate_series(1, 10)i;
 4: SELECT count(*) from commit_phase1_panic;
+1q:
+3q:
+4q:
 
 -- Scenario 2: Inject FATAL on master after recording commit but
 -- before broadcasting COMMIT_PREPARED to segments. FATAL must convert
@@ -85,6 +88,9 @@ $$ LANGUAGE plpgsql;
 7: SELECT * FROM gp_dist_random('pg_prepared_xacts');
 7: SELECT gp_inject_fault('dtm_broadcast_commit_prepared', 'reset', dbid)
    from gp_segment_configuration where role='p' and content=-1;
+5q:
+6q:
+7q:
 
 -- Scenario 3: Inject ERROR after prepare phase has completed to
 -- trigger abort. Then on abort inject FATAL on master before sending
@@ -109,6 +115,9 @@ $$ LANGUAGE plpgsql;
     from gp_segment_configuration where role='p' and content=-1;
 10: SELECT gp_inject_fault('dtm_broadcast_abort_prepared', 'reset', dbid)
     from gp_segment_configuration where role='p' and content=-1;
+8q:
+9q:
+10q:
 
 -- Scenario 4: QE panics after writing prepare xlog record. This
 -- should cause master to broadcast abort and QEs handle the abort in
@@ -138,7 +147,44 @@ $$ LANGUAGE plpgsql;
 12<:
 13: SELECT count(*) from QE_panic_test_table;
 13: SELECT * FROM gp_dist_random('pg_prepared_xacts');
-13: SELECT gp_inject_fault('fts_probe', 'reset', dbid)
+11q:
+12q:
+13q:
+
+-- Scenario 5: QE panics before committing prepared transactions. The WAL record of `prepare transaction` could have
+-- been added either before the checkpoint or after it.
+1: TRUNCATE TABLE QE_panic_test_table;
+1: SELECT gp_inject_fault_infinite('finish_prepared_start_of_function', 'infinite_loop', dbid)
+    from gp_segment_configuration where role='p' and content=0;
+-- this prepared transaction should be recorded in the checkpoint or on the file
+2&: INSERT INTO QE_panic_test_table SELECT i, i+1 from generate_series(1, 10) i;
+1: CHECKPOINT;
+3: BEGIN;
+3: INSERT INTO QE_panic_test_table SELECT i, i+1 from generate_series(11, 20) i;
+3: CREATE TABLE QE_panic_test_table2(i int);
+3&: END;
+
+1: SELECT gp_wait_until_triggered_fault('finish_prepared_start_of_function', 2, dbid)
+   from gp_segment_configuration where role='p' and content=0;
+1: SELECT pg_ctl(datadir, 'restart') from gp_segment_configuration where role = 'p' and content = 0;
+4: SELECT pg_sleep(2);
+2<:
+3<:
+4: SELECT * from QE_panic_test_table;
+4: SELECT * from QE_panic_test_table2;
+1q:
+2q:
+3q:
+4q:
+
+
+
+-- cleanup
+1: SELECT gp_inject_fault('fts_probe', 'reset', dbid)
     from gp_segment_configuration where role='p' and content=-1;
-13: alter system reset dtx_phase2_retry_count;
-13: select pg_reload_conf();
+1: alter system reset dtx_phase2_retry_count;
+1: select pg_reload_conf();
+1: select dbid, content, role, status
+    from gp_segment_configuration
+    where role != preferred_role or status='d';
+1q:

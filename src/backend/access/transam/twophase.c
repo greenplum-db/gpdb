@@ -2293,9 +2293,8 @@ TwoPhaseAddPreparedTransaction(prepared_transaction_agg_state **ptas,
  * is empty.
  */
 XLogRecPtr *
-getTwoPhaseOldestPreparedTransactionXLogRecPtr(XLogRecData *rdata)
+getTwoPhaseOldestPreparedTransactionXLogRecPtr(prepared_transaction_agg_state *ptas)
 {
-	prepared_transaction_agg_state *ptas = (prepared_transaction_agg_state *)rdata->data;
 	int			map_count = ptas->count;
 	prpt_map   *m = ptas->maps;
 	XLogRecPtr *oldest = NULL;

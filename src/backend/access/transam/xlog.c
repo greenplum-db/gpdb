@@ -8579,7 +8579,7 @@ CreateCheckPoint(int flags)
 	CheckPoint	checkPoint;
 	XLogRecPtr	recptr;
 	XLogCtlInsert *Insert = &XLogCtl->Insert;
-	XLogRecData rdata[6];
+	XLogRecData rdata[3];
 	char* 		dtxCheckPointInfo;
 	int			dtxCheckPointInfoSize;
 	uint32		freespace;
@@ -8919,17 +8919,14 @@ CreateCheckPoint(int flags)
 	rdata[1].data = (char *) dtxCheckPointInfo;
 	rdata[1].len = dtxCheckPointInfoSize;
 	rdata[1].buffer = InvalidBuffer;
-	rdata[1].next = NULL;
+	rdata[1].next = &(rdata[2]);
 
 	prepared_transaction_agg_state *p = NULL;
-
 	getTwoPhasePreparedTransactionData(&p);
-	rdata[5].data = (char*)p;
-	rdata[5].buffer = InvalidBuffer;
-	rdata[5].len = PREPARED_TRANSACTION_CHECKPOINT_BYTES(p->count);
-	rdata[4].next = &(rdata[5]);
-	rdata[5].next = NULL;
-
+	rdata[2].data = (char*)p;
+	rdata[2].len = PREPARED_TRANSACTION_CHECKPOINT_BYTES(p->count);
+	rdata[2].buffer = InvalidBuffer;
+	rdata[2].next = NULL;
 	/*
 	 * Need to save the oldest prepared transaction XLogRecPtr for use later.
 	 * It is not sufficient to just save the pointer because we may remove the
@@ -8940,7 +8937,7 @@ CreateCheckPoint(int flags)
 
 	memset(&ptrd_oldest, 0, sizeof(ptrd_oldest));
 
-	ptrd_oldest_ptr = getTwoPhaseOldestPreparedTransactionXLogRecPtr(&rdata[5]);
+	ptrd_oldest_ptr = getTwoPhaseOldestPreparedTransactionXLogRecPtr(p);
 
 	if (ptrd_oldest_ptr != NULL)
 		memcpy(&ptrd_oldest, ptrd_oldest_ptr, sizeof(ptrd_oldest));
@@ -8951,6 +8948,13 @@ CreateCheckPoint(int flags)
 						rdata);
 
 	XLogFlush(recptr);
+
+	/*
+	 * pfree memory blocks used by XLog to avoid memory leak in checkpointer.
+	 * Don't relay on the memory context's reset()
+	 */
+	pfree(dtxCheckPointInfo);
+	pfree(p);
 
 	/*
 	 * We mustn't write any new WAL after a shutdown checkpoint, or it will be
