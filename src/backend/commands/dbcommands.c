@@ -1026,6 +1026,10 @@ dropdb(const char *dbname, bool missing_ok)
 	 */
 	remove_dbtablespaces(db_id);
 
+	/* Cleanup error log files for this database. */
+	ErrorLogDelete(db_id, InvalidOid);
+	PersistentErrorLogDelete(db_id, InvalidOid, NULL);
+
 	/*
 	 * Close pg_database, but keep lock till commit.
 	 */

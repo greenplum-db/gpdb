@@ -98,6 +98,10 @@ typedef struct ExtTableEntry
 
 /* No initial contents. */
 
+extern void ValidateExtTableOptions(List *options);
+
+extern bool NeedErrorLogPersistent(List *options);
+
 extern void InsertExtTableEntry(Oid 	tbloid,
 					bool 	iswritable,
 					bool	issreh,

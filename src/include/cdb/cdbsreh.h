@@ -64,11 +64,24 @@ typedef struct CdbSreh
 	bool	is_limit_in_rows; /* ROWS = true, PERCENT = false */
 
 	MemoryContext badrowcontext;	/* per-badrow evaluation context */
-	char	   filename[MAXPGPATH];		/* "uri [filename]" */
+	char	   filename[MAXPGPATH];	/* "uri [filename]" */
 
-	bool	log_to_file;		/* or log into file? */
-	Oid		relid;				/* parent relation id */
+	bool	log_to_file;			/* or log into file? */
+	bool	error_log_persistent;	/* persistent error table, when drop the
+									   external table, the error log not get dropped */
+	Oid		relid;					/* parent relation id */
 } CdbSreh;
+
+/*
+ * Function context for gp_read_error_log and gp_read_persistent_error_log.
+ *
+ * gp_read_persistent_error_log is under gpcontrib/gp_error_handling module.
+ */
+typedef struct ReadErrorLogContext
+{
+	FILE	   *fp;				/* file pointer to the error log */
+	char		filename[MAXPGPATH];	/* filename of fp */
+} ReadErrorLogContext;
 
 extern int gp_initial_bad_row_limit;
 
@@ -85,6 +98,7 @@ extern bool ExceedSegmentRejectHardLimit(CdbSreh *cdbsreh);
 extern bool IsRejectLimitReached(CdbSreh *cdbsreh);
 extern void VerifyRejectLimit(char rejectlimittype, int rejectlimit);
 
+extern bool PersistentErrorLogDelete(Oid databaseId, Oid namespaceId, const char* fname);
 extern bool ErrorLogDelete(Oid databaseId, Oid relationId);
 extern Datum gp_read_error_log(PG_FUNCTION_ARGS);
 extern Datum gp_truncate_error_log(PG_FUNCTION_ARGS);

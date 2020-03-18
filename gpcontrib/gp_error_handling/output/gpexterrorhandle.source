@@ -1,0 +1,134 @@
+-- Adjust this setting to control where the objects get created.
+SET search_path = public;
+-- Here only test some simple cases, the main tests are under src/test/regress/ external_table_persistent_error_log.
+DROP EXTERNAL TABLE IF EXISTS ext_error_persistent;
+\i gpexterrorhandle.sql
+-- Adjust this setting to control where the objects get created.
+SET search_path = public;
+CREATE OR REPLACE FUNCTION gp_read_persistent_error_log(
+    exttable text,
+    OUT cmdtime timestamptz,
+    OUT relname text,
+    OUT filename text,
+    OUT linenum int4,
+    OUT bytenum int4,
+    OUT errmsg text,
+    OUT rawdata text,
+    OUT rawbytes bytea
+)
+RETURNS SETOF record
+AS '$libdir/gpexterrorhandle', 'gp_read_persistent_error_log'
+LANGUAGE C STRICT VOLATILE EXECUTE ON ALL SEGMENTS;
+CREATE OR REPLACE FUNCTION gp_truncate_persistent_error_log(text)
+RETURNS bool
+AS '$libdir/gpexterrorhandle',  'gp_truncate_persistent_error_log'
+LANGUAGE C STRICT VOLATILE;
+CREATE EXTERNAL TABLE ext_error_persistent(a int, b int)
+LOCATION ('file://@hostname@@abs_srcdir@/data/data.csv')
+FORMAT 'csv'
+OPTIONS (error_log_persistent 'true')
+LOG ERRORS SEGMENT REJECT limit 10;
+select * from ext_error_persistent;
+NOTICE:  found 2 data formatting errors (2 or more input rows), rejected related input data
+ a | b 
+---+---
+ 1 |  
+ 1 | 2
+(2 rows)
+
+SELECT (gp_read_persistent_error_log('ext_error_persistent')).errmsg;
+                errmsg                 
+---------------------------------------
+ extra data after last expected column
+ missing data for column "b"
+(2 rows)
+
+SELECT gp_truncate_persistent_error_log('ext_error_persistent');
+ gp_truncate_persistent_error_log 
+----------------------------------
+ t
+(1 row)
+
+SELECT relname, linenum, errmsg FROM gp_read_persistent_error_log('ext_error_persistent');
+ relname | linenum | errmsg 
+---------+---------+--------
+(0 rows)
+
+select * from ext_error_persistent;
+NOTICE:  found 2 data formatting errors (2 or more input rows), rejected related input data
+ a | b 
+---+---
+ 1 |  
+ 1 | 2
+(2 rows)
+
+SELECT relname, linenum, errmsg FROM gp_read_persistent_error_log('ext_error_persistent');
+       relname        | linenum |                errmsg                 
+----------------------+---------+---------------------------------------
+ ext_error_persistent |       2 | extra data after last expected column
+ ext_error_persistent |       4 | missing data for column "b"
+(2 rows)
+
+SELECT gp_truncate_persistent_error_log('*');
+ gp_truncate_persistent_error_log 
+----------------------------------
+ t
+(1 row)
+
+SELECT relname, linenum, errmsg FROM gp_read_persistent_error_log('ext_error_persistent');
+ relname | linenum | errmsg 
+---------+---------+--------
+(0 rows)
+
+select * from ext_error_persistent;
+NOTICE:  found 2 data formatting errors (2 or more input rows), rejected related input data
+ a | b 
+---+---
+ 1 |  
+ 1 | 2
+(2 rows)
+
+DROP EXTERNAL TABLE ext_error_persistent;
+SELECT relname, linenum, errmsg FROM gp_read_persistent_error_log('ext_error_persistent');
+       relname        | linenum |                errmsg                 
+----------------------+---------+---------------------------------------
+ ext_error_persistent |       2 | extra data after last expected column
+ ext_error_persistent |       4 | missing data for column "b"
+(2 rows)
+
+SELECT gp_truncate_persistent_error_log('*.*');
+ gp_truncate_persistent_error_log 
+----------------------------------
+ t
+(1 row)
+
+SELECT relname, linenum, errmsg FROM gp_read_persistent_error_log('ext_error_persistent');
+ relname | linenum | errmsg 
+---------+---------+--------
+(0 rows)
+
+\i uninstall_gpexterrorhandle.sql
+-- Adjust this setting to control where the objects get dropped.
+SET search_path = public;
+DROP FUNCTION gp_read_persistent_error_log(
+    exttable text,
+    OUT cmdtime timestamptz,
+    OUT relname text,
+    OUT filename text,
+    OUT linenum int4,
+    OUT bytenum int4,
+    OUT errmsg text,
+    OUT rawdata text,
+    OUT rawbytes bytea
+);
+DROP FUNCTION gp_truncate_persistent_error_log(text);
+SELECT * FROM gp_read_persistent_error_log('aaa');
+ERROR:  function gp_read_persistent_error_log(unknown) does not exist
+LINE 1: SELECT * FROM gp_read_persistent_error_log('aaa');
+                      ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+SELECT * FROM gp_truncate_persistent_error_log('aaa')
+ERROR:  function gp_truncate_persistent_error_log(unknown) does not exist
+LINE 1: SELECT * FROM gp_truncate_persistent_error_log('aaa')
+                      ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.

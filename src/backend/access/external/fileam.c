@@ -69,7 +69,8 @@ static void InitParseState(CopyState pstate, Relation relation,
 			   bool writable,
 			   char fmtType,
 			   char *uri, int rejectlimit,
-			   bool islimitinrows, bool logerrors);
+			   bool islimitinrows, bool logerrors,
+			   List *extOptions);
 
 static void FunctionCallPrepareFormatter(FunctionCallInfoData *fcinfo,
 							 int nArgs,
@@ -133,6 +134,7 @@ external_beginscan(Relation relation, uint32 scancounter,
 	int			segindex = GpIdentity.segindex;
 	char	   *uri = NULL;
 	List	   *copyFmtOpts;
+	ExtTableEntry *extentry = NULL;
 	char	   *custom_formatter_name = NULL;
 	List	   *custom_formatter_params = NIL;
 
@@ -298,8 +300,10 @@ external_beginscan(Relation relation, uint32 scancounter,
 									NIL);
 
 	/* Initialize all the parsing and state variables */
+	extentry = GetExtTableEntry(RelationGetRelid(relation));
 	InitParseState(scan->fs_pstate, relation, false, fmtType,
-				   scan->fs_uri, rejLimit, rejLimitInRows, logErrors);
+				   scan->fs_uri, rejLimit, rejLimitInRows,
+				   logErrors, extentry->options);
 
 	if (fmttype_is_custom(fmtType))
 	{
@@ -641,7 +645,8 @@ external_insert_init(Relation rel)
 				   extInsertDesc->ext_uri,
 				   extentry->rejectlimit,
 				   (extentry->rejectlimittype == 'r'),
-				   extentry->logerrors);
+				   extentry->logerrors,
+				   extentry->options);
 
 	if (fmttype_is_custom(extentry->fmtcode))
 	{
@@ -1185,7 +1190,8 @@ InitParseState(CopyState pstate, Relation relation,
 			   bool iswritable,
 			   char fmtType,
 			   char *uri, int rejectlimit,
-			   bool islimitinrows, bool logerrors)
+			   bool islimitinrows, bool logerrors,
+			   List *extOptions)
 {
 	/*
 	 * Error handling setup
@@ -1218,6 +1224,9 @@ InitParseState(CopyState pstate, Relation relation,
 									  logerrors);
 
 		pstate->cdbsreh->relid = RelationGetRelid(relation);
+		/* whether make the error log persistent*/
+		if (logerrors && NeedErrorLogPersistent(extOptions))
+			pstate->cdbsreh->error_log_persistent = true;
 	}
 
 	/* Initialize 'out_functions', like CopyTo() would. */

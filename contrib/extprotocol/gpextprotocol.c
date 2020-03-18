@@ -4,6 +4,7 @@
 
 #include "access/extprotocol.h"
 #include "catalog/pg_proc.h"
+#include "commands/defrem.h"
 #include "utils/array.h"
 #include "utils/builtins.h"
 #include "utils/memutils.h"
@@ -41,19 +42,20 @@ typedef struct {
 
 static void check_ext_options(const FunctionCallInfo fcinfo)
 {
-        ListCell *cell;
-        Relation rel = EXTPROTOCOL_GET_RELATION(fcinfo);
-        ExtTableEntry *exttbl = GetExtTableEntry(rel->rd_id);
-        List *options = exttbl->options;
+	ListCell *cell;
+	Relation rel = EXTPROTOCOL_GET_RELATION(fcinfo);
+	ExtTableEntry *exttbl = GetExtTableEntry(rel->rd_id);
+	List *options = exttbl->options;
 
-        foreach(cell, options) {
-                Value *value = (Value *) lfirst(cell);
-                char *key = value->val.str;
+	foreach(cell, options) {
+		DefElem *def = (DefElem *) lfirst(cell);
+		char *key = def->defname;
+		char *value = defGetString(def);
 
-                if (key && strcasestr(key, "database") && !strcasestr(key, "greenplum")) {
-                        ereport(ERROR, (0, errmsg("This is greenplum.")));
-                }
-        }
+		if (key && strcasestr(key, "database") && !strcasestr(value, "greenplum")) {
+				ereport(ERROR, (0, errmsg("This is greenplum.")));
+		}
+	}
 }
 
 /*

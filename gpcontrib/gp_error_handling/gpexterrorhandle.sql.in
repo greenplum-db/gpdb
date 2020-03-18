@@ -1,0 +1,23 @@
+-- Adjust this setting to control where the objects get created.
+SET search_path = public;
+
+CREATE OR REPLACE FUNCTION gp_read_persistent_error_log(
+    exttable text,
+    OUT cmdtime timestamptz,
+    OUT relname text,
+    OUT filename text,
+    OUT linenum int4,
+    OUT bytenum int4,
+    OUT errmsg text,
+    OUT rawdata text,
+    OUT rawbytes bytea
+)
+RETURNS SETOF record
+AS 'MODULE_PATHNAME', 'gp_read_persistent_error_log'
+LANGUAGE C STRICT VOLATILE EXECUTE ON ALL SEGMENTS;
+
+CREATE OR REPLACE FUNCTION gp_truncate_persistent_error_log(text)
+RETURNS bool
+AS 'MODULE_PATHNAME',  'gp_truncate_persistent_error_log'
+LANGUAGE C STRICT VOLATILE;
+
