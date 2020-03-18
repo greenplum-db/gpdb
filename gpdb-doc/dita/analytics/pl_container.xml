@@ -205,9 +205,8 @@ plcontainer image-add -f /home/gpadmin/plcontainer-r-image-2.1.0-gp6.tar.gz</cod
 20200127:21:54:43:004607 plcontainer:mdw:gpadmin-[INFO]:-Distributing image file /home/gpadmin/plcontainer-python-images-1.5.0.tar to all hosts...
 20200127:21:54:55:004607 plcontainer:mdw:gpadmin-[INFO]:-Loading image on all hosts...
 20200127:21:55:37:004607 plcontainer:mdw:gpadmin-[INFO]:-Removing temporary image files on all hosts...</codeblock>
-            <p>For more information on the <codeph>image-add</codeph> options, visit the <xref
-                href="plcontainer_ref.xml#topic_rw3_52s_dw">plcontainer </xref> utility reference
-              page. </p>
+            <p>For more information on <codeph>image-add</codeph> options, visit the <xref
+                href="plcontainer_ref.xml#topic_rw3_52s_dw">plcontainer </xref> reference page. </p>
           </li>
           <li>To display the installed Docker images on the local host use:
               <codeblock>$ plcontainer image-list</codeblock><simpletable frame="all"
@@ -242,16 +241,16 @@ plcontainer image-add -f /home/gpadmin/plcontainer-r-image-2.1.0-gp6.tar.gz</cod
               containers with specified Docker images.</p><p>Use the <codeph>-r</codeph> option to
               specify your own user defined runtime ID name, use the <codeph>-i</codeph> option to
               specify the Docker image, and the <codeph>-l</codeph> option to specify the Docker
-              image language. The TAG version, specified after ":", is used after the image name
-              when there are multiple versions of the same docker image, for example 1.0.0 or
-              1.2.0.<codeblock># Add a Python 2 based runtime
+              image language.  When there are multiple versions of the same docker image, for
+              example 1.0.0 or 1.2.0, specify the TAG version using ":" after the image name.
+            </p><codeblock># Add a Python 2 based runtime
 plcontainer runtime-add -r plc_python_shared -i pivotaldata/plcontainer_python_shared:devel -l python
             
 # Add a Python 3 based runtime that is supported with PL/Container 2.1.0 and later
 plcontainer runtime-add -r plc_python3_shared -i pivotaldata/plcontainer_python3_shared:devel -l python3
             
 # Add an R based runtime
-plcontainer runtime-add -r plc_r_shared -i pivotaldata/plcontainer_r_shared:devel -l r</codeblock></p>The
+plcontainer runtime-add -r plc_r_shared -i pivotaldata/plcontainer_r_shared:devel -l r</codeblock>The
             utility displays progress information as it updates the PL/Container configuration file
             on the Greenplum Database instances. <p>For details on other
                 <codeph>runtime-add</codeph> options, see the <xref
@@ -266,15 +265,15 @@ plcontainer runtime-add -r plc_r_shared -i pivotaldata/plcontainer_r_shared:deve
               groups with PL/Container, see <xref href="pl_container_using.xml#topic_resmgmt"
                 >PL/Container Resource Management </xref> . </p></li>
         </ul>
-        <p>You can now test your PL/Container installation. </p>
+        <p>You can now create a simple function to test your PL/Container installation. </p>
       </section>
       <section id="test_installation">
         <title>Test the PL/Container Installation</title>
-        <p>You have installed the PL/Container utility with the related Docker images and linked the
-          images with specific runtime IDs. Next step is to create UDFs that use those runtimes. </p>
-        <p>First list all the names of the runtimes your created and added to the PL/Container XML
+        <p>List the names of the runtimes your created and added to the PL/Container XML
           file:<codeblock>plcontainer runtime-show
-</codeblock><codeblock>PL/Container Runtime Configuration: 
+</codeblock></p>
+        <p>Which will show a list of all installed
+          runtimes:<codeblock>PL/Container Runtime Configuration: 
 ---------------------------------------------------------
   Runtime ID: plc_python_shared
   Linked Docker Image: pivotaldata/plcontainer_python_shared:devel
@@ -288,10 +287,10 @@ plcontainer runtime-add -r plc_r_shared -i pivotaldata/plcontainer_r_shared:deve
         <p>You can also view the PL/Container configuration information with the <codeph>plcontainer
             runtime-show -r &lt;runtime_id></codeph> command. You can view the PL/Container
           configuration XML file with the <codeph>plcontainer runtime-edit</codeph> command. </p>
-        <p>Create a function using the <codeph>psql</codeph> utility: </p>
+        <p>Use the <codeph>psql</codeph> utility and select an existing database: </p>
         <codeblock>psql postgres;</codeblock>
-        <p>If PL/Container extension is not registered with the <codeph>postgres</codeph> database,
-          first create the extension: </p>
+        <p>If PL/Container extension is not registered with the selected database, first enable the
+          extension: </p>
         <codeblock>postgres=# CREATE EXTENSION plcontainer;</codeblock>
         <p>Create a simple function to test your installation, where the function will use the
           runtime <codeph>plc_python_shared</codeph>:</p>
