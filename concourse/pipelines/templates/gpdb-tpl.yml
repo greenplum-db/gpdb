@@ -1377,7 +1377,6 @@ jobs:
         AWS_DEFAULT_REGION: {{aws-region}}
 
 - name: compile_gpdb_open_source_centos6
-  public: true
   plan:
   - aggregate:
     - get: reduced-frequency-trigger
