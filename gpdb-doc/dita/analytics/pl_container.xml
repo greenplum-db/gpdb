@@ -189,9 +189,9 @@
               Docker images, install the image and add the image to the PL/ Container configuration.
             </p></li>
           <li>
-            <p>Use the <codeph>plcontainer </codeph> utility command <codeph>image-add -f</codeph>
-              to install the images on all Greenplum Database hosts. <codeph>-f </codeph>indicates
-              the location of the downloaded files: </p>
+            <p>Use the <codeph>plcontainer </codeph> utility command <codeph>image-add</codeph> to
+              install the images on all Greenplum Database hosts where  <codeph>-f
+              </codeph>indicates the location of the downloaded files: </p>
             <codeblock># Install a Python 2 based Docker image
 plcontainer image-add -f /home/gpadmin/plcontainer-python-image-2.1.0-gp6.tar.gz
             
