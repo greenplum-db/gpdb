@@ -20,7 +20,7 @@
 #include "cdb/cdbcopy.h"
 #include "utils/memutils.h"
 
-
+typedef struct pg_result PGresult;                  /* PGresult ... #include "libpq-fe.h" */
 /*
  * The error table is ALWAYS of the following format
  * cmdtime     timestamptz,
@@ -87,6 +87,22 @@ typedef struct CdbSreh
 									   external table, the error log not get dropped */
 	Oid		relid;					/* parent relation id */
 } CdbSreh;
+
+/*
+ * Function context for gp_read_error_log and gp_read_persistent_error_log.
+ * 
+ * gp_read_persistent_error_log is under contrib/gp_error_handling module.
+ */
+typedef struct ReadErrorLogContext
+{
+	FILE	   *fp;					/* file pointer to the error log */
+	char		filename[MAXPGPATH];/* filename of fp */
+	int			numTuples;			/* number of total tuples when dispatch */
+	PGresult  **segResults;			/* dispatch results */
+	int			numSegResults;		/* number of segResults */
+	int			currentResult;		/* current index in segResults to read */
+	int			currentRow;			/* current row in current result */
+} ReadErrorLogContext;
 
 extern int gp_initial_bad_row_limit;
 

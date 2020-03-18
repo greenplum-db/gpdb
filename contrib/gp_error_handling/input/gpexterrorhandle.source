@@ -1,0 +1,35 @@
+-- Adjust this setting to control where the objects get created.
+SET search_path = public;
+-- Here only test some simple cases, the main tests are under src/test/regress/ external_table_persistent_error_log.
+
+DROP EXTERNAL TABLE IF EXISTS ext_error_persistent;
+
+\i gpexterrorhandle.sql
+
+CREATE EXTERNAL TABLE ext_error_persistent(a int, b int)
+LOCATION ('file://@hostname@@abs_srcdir@/data/data.csv')
+FORMAT 'csv'
+OPTIONS (error_log_persistent 'true')
+LOG ERRORS SEGMENT REJECT limit 10;
+
+select * from ext_error_persistent;
+SELECT (gp_read_persistent_error_log('ext_error_persistent')).errmsg;
+SELECT gp_truncate_persistent_error_log('ext_error_persistent');
+SELECT relname, linenum, errmsg FROM gp_read_persistent_error_log('ext_error_persistent');
+
+select * from ext_error_persistent;
+SELECT relname, linenum, errmsg FROM gp_read_persistent_error_log('ext_error_persistent');
+SELECT gp_truncate_persistent_error_log('*');
+SELECT relname, linenum, errmsg FROM gp_read_persistent_error_log('ext_error_persistent');
+
+
+select * from ext_error_persistent;
+DROP EXTERNAL TABLE ext_error_persistent;
+SELECT relname, linenum, errmsg FROM gp_read_persistent_error_log('ext_error_persistent');
+SELECT gp_truncate_persistent_error_log('*.*');
+SELECT relname, linenum, errmsg FROM gp_read_persistent_error_log('ext_error_persistent');
+
+\i uninstall_gpexterrorhandle.sql
+
+SELECT * FROM gp_read_persistent_error_log('aaa');
+SELECT * FROM gp_truncate_persistent_error_log('aaa')

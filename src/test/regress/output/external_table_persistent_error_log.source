@@ -24,6 +24,9 @@
 -- s/Found.+//
 --
 -- end_matchsubs
+\i @bindir@/../share/postgresql/contrib/gpexterrorhandle.sql
+-- Adjust this setting to control where the objects get created.
+SET search_path = public;
 CREATE OR REPLACE FUNCTION gp_read_persistent_error_log(
     exttable text,
     OUT cmdtime timestamptz,
@@ -34,12 +37,13 @@ CREATE OR REPLACE FUNCTION gp_read_persistent_error_log(
     OUT errmsg text,
     OUT rawdata text,
     OUT rawbytes bytea
-) RETURNS SETOF record
-    AS'$libdir/gpexterrorhandle.so', 'gp_read_persistent_error_log'
+)
+RETURNS SETOF record
+AS '$libdir/gpexterrorhandle', 'gp_read_persistent_error_log'
 LANGUAGE C STRICT VOLATILE;
 CREATE OR REPLACE FUNCTION gp_truncate_persistent_error_log(text)
 RETURNS bool
-    AS '$libdir/gpexterrorhandle.so',  'gp_truncate_persistent_error_log'
+AS '$libdir/gpexterrorhandle',  'gp_truncate_persistent_error_log'
 LANGUAGE C STRICT VOLATILE;
 COPY (VALUES('1,2'),('1,2,3'),('1,'),('1')) TO '@abs_srcdir@/data/tableerr.csv';
 create external table ext_error_persistent(a int, b int)

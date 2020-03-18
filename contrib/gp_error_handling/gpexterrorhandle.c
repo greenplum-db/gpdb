@@ -1,3 +1,11 @@
+/*--------------------------------------------------------------------------
+ *
+ * gpexterrorhandle.c
+ *	  Provides routines for external table's persistent error log
+ *
+ * Portions Copyright (c) 2020-Present Pivotal Software, Inc.
+ *--------------------------------------------------------------------------
+ */
 #include "postgres.h"
 
 #include "fmgr.h"
@@ -10,17 +18,6 @@
 #include "cdb/cdbvars.h"
 #include "utils/builtins.h"
 #include "utils/bytea.h"
-
-typedef struct ReadPersistentErrorLogContext
-{
-	FILE	   *fp;					/* file pointer to the error log */
-	char		filename[MAXPGPATH];/* filename of fp */
-	int			numTuples;			/* number of total tuples when dispatch */
-	PGresult  **segResults;			/* dispatch results */
-	int			numSegResults;		/* number of segResults */
-	int			currentResult;		/* current index in segResults to read */
-	int			currentRow;			/* current row in current result */
-} ReadPersistentErrorLogContext;
 
 extern TupleDesc GetErrorTupleDesc(void);
 extern Datum ReadValidErrorLogDatum(FILE *fp, TupleDesc tupledesc, const char* fname);
@@ -64,7 +61,7 @@ Datum
 gp_read_persistent_error_log(PG_FUNCTION_ARGS)
 {
 	FuncCallContext	   *funcctx;
-	ReadPersistentErrorLogContext *context;
+	ReadErrorLogContext *context;
 	HeapTuple			tuple;
 	Datum				result;
 
@@ -81,7 +78,7 @@ gp_read_persistent_error_log(PG_FUNCTION_ARGS)
 		relname = PG_GETARG_TEXT_P(0);
 		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
 
-		context = palloc0(sizeof(ReadPersistentErrorLogContext));
+		context = palloc0(sizeof(ReadErrorLogContext));
 		funcctx->user_fctx = (void *) context;
 
 		funcctx->tuple_desc = BlessTupleDesc(GetErrorTupleDesc());
@@ -103,7 +100,7 @@ gp_read_persistent_error_log(PG_FUNCTION_ARGS)
 			 * construct SQL
 			 */
 			appendStringInfo(&sql,
-					"SELECT * FROM gp_read_persistent_error_log(%s) ",
+					"SELECT * FROM public.gp_read_persistent_error_log(%s) ",
 							 quote_literal_internal(text_to_cstring(relname)));
 
 			CdbDispatchCommand(sql.data, DF_WITH_SNAPSHOT, &cdb_pgresults);
@@ -154,7 +151,7 @@ gp_read_persistent_error_log(PG_FUNCTION_ARGS)
 	}
 
 	funcctx = SRF_PERCALL_SETUP();
-	context = (ReadPersistentErrorLogContext *) funcctx->user_fctx;
+	context = (ReadErrorLogContext *) funcctx->user_fctx;
 
 	/*
 	 * Read error log, probably on segments.  We don't check Gp_role, however,
@@ -241,3 +238,4 @@ gp_truncate_persistent_error_log(PG_FUNCTION_ARGS)
 
 	PG_RETURN_BOOL(TruncateErrorLog(relname, true));
 }
+

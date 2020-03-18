@@ -64,20 +64,6 @@ extern bool TruncateErrorLog(text *relname, bool persistent);
 #define ErrorLogPersistentFileName(fname, dbId, namespaceId, relName) \
 	snprintf(fname, MAXPGPATH, "%s/%u_%u_%s", PersistentErrorLogDir, dbId, namespaceId, relName)
 
-/*
- * Function context for gp_read_error_log
- */
-typedef struct ReadErrorLogContext
-{
-	FILE	   *fp;					/* file pointer to the error log */
-	char		filename[MAXPGPATH];/* filename of fp */
-	int			numTuples;			/* number of total tuples when dispatch */
-	PGresult  **segResults;			/* dispatch results */
-	int			numSegResults;		/* number of segResults */
-	int			currentResult;		/* current index in segResults to read */
-	int			currentRow;			/* current row in current result */
-} ReadErrorLogContext;
-
 typedef enum RejectLimitCode
 {
 	REJECT_NONE = 0,
@@ -1245,7 +1231,7 @@ TruncateErrorLog(text *relname, bool persistent)
 		CdbPgResults cdb_pgresults = {NULL, 0};
 
 		if (persistent)
-			sql = psprintf("SELECT gp_truncate_persistent_error_log(%s)",
+			sql = psprintf("SELECT public.gp_truncate_persistent_error_log(%s)",
 					   quote_literal_internal(text_to_cstring(relname)));
 		else
 			sql = psprintf("SELECT pg_catalog.gp_truncate_error_log(%s)",
