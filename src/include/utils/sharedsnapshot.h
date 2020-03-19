@@ -17,8 +17,8 @@
 #include "utils/combocid.h"
 #include "utils/tqual.h"
 
-#define INVALIDATE_SEGMATE 0
-#define IS_VALIDATE_SEGMATE(x)  ((x != INVALIDATE_SEGMATE))
+#define INVALID_SEGMATE 0
+#define IS_VALID_SEGMATE(x)  ((x != INVALID_SEGMATE))
 
 typedef struct SharedSnapshotLockSlot
 {

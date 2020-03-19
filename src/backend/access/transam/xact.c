@@ -2423,7 +2423,7 @@ StartTransaction(void)
 			{
 				LWLockAcquire(SharedSnapshot.lockSlot->lock, LW_EXCLUSIVE);
 
-				SharedSnapshot.desc->segmateSync = INVALIDATE_SEGMATE;
+				SharedSnapshot.desc->segmateSync = INVALID_SEGMATE;
 				SharedSnapshot.desc->xid = s->transactionId;
 				SharedSnapshot.desc->startTimestamp = stmtStartTimestamp;
 
@@ -2436,7 +2436,7 @@ StartTransaction(void)
 							  QEDtxContextInfo.distributedXid,
 							  SharedSnapshot.desc->xid,
 							  s->transactionId,
-							  IS_VALIDATE_SEGMATE(SharedSnapshot.desc->segmateSync) ? "true" : "false",
+							  IS_VALID_SEGMATE(SharedSnapshot.desc->segmateSync) ? "true" : "false",
 							  SharedSnapshot.desc->startTimestamp,
 							  xactStartTimestamp)));
 				LWLockRelease(SharedSnapshot.lockSlot->lock);
@@ -3583,8 +3583,8 @@ StartTransactionCommand(void)
 		case TBLOCK_SUBINPROGRESS:
 			/*
 			 * There may be reader gangs waiting for us to update the
-			 * QDSentXID -- make sure the state of the sharedsnapshot
-			 * slot properly tracks the qd-xid
+			 * xid -- make sure the state of the sharedsnapshot slot
+			 * properly tracks the qd-xid
 			 */
 			if (Gp_role == GP_ROLE_EXECUTE && Gp_is_writer && SharedSnapshot.desc != NULL)
 			{

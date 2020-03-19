@@ -1686,7 +1686,7 @@ readerFillLocalSnapshot(Snapshot snapshot, DtxContext distributedTransactionCont
 
 		if (QEDtxContextInfo.cursorContext ||
 			(QEDtxContextInfo.segmateSync <= SharedSnapshot.desc->segmateSync &&
-			IS_VALIDATE_SEGMATE(SharedSnapshot.desc->segmateSync)))
+			IS_VALID_SEGMATE(SharedSnapshot.desc->segmateSync)))
 		{
 			syncSharedSnapshot(QEDtxContextInfo.segmateSync, QEDtxContextInfo.cursorContext);
 			copyLocalSnapshot(snapshot);
@@ -1708,7 +1708,7 @@ readerFillLocalSnapshot(Snapshot snapshot, DtxContext distributedTransactionCont
 							   "Dump of all sharedsnapshots in shmem: %s",
 							   QEDtxContextInfo.distributedXid, QEDtxContextInfo.segmateSync,
 							   SharedSnapshot.desc->segmateSync,
-							   IS_VALIDATE_SEGMATE(SharedSnapshot.desc->segmateSync),
+							   IS_VALID_SEGMATE(SharedSnapshot.desc->segmateSync),
 							   DtxContextToString(distributedTransactionContext),
 							   SharedSnapshot.lockSlot->slotindex, SharedSnapshotDump())));
 		}
@@ -1734,7 +1734,7 @@ readerFillLocalSnapshot(Snapshot snapshot, DtxContext distributedTransactionCont
 							"DistributedTransactionContext = %s.",
 							QEDtxContextInfo.distributedXid, QEDtxContextInfo.segmateSync,
 							SharedSnapshot.desc->segmateSync,
-							IS_VALIDATE_SEGMATE(SharedSnapshot.desc->segmateSync),
+							IS_VALID_SEGMATE(SharedSnapshot.desc->segmateSync),
 							SharedSnapshot.lockSlot->slotindex,
 							DtxContextToString(distributedTransactionContext))));
 			warning_sleep_time_us = 0;
