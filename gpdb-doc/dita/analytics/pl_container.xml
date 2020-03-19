@@ -85,7 +85,7 @@
             <li>Supports more containers running concurrently.</li>
             <li>Includes improved log messages to help diagnose problems.</li>
           </ul></p>
-        <p>PL/Container 3 is currently a Beta feature, and provides only an R Docker image for
+        <p>PL/Container 3 is currently a Beta feature, and provides only an Beta R Docker image for
           executing functions; Python images are not yet available. Save and uninstall any existing
           PL/Container software before you install PL/Container 3 Beta.</p>
       </section>
@@ -223,7 +223,7 @@ plcontainer image-add -f /home/gpadmin/plcontainer-python3-image-2.1.1-gp6.tar.g
 # Install an R based Docker image
 plcontainer image-add -f /home/gpadmin/plcontainer-r-image-2.1.1-gp6.tar.gz
 
-# Install the R image with PL/Container 3.0.0 Beta
+# Install the Beta R image for use with PL/Container 3.0.0 Beta
 plcontainer image-add -f /home/gpadmin/plcontainer-r-image-3.0.0-beta-gp6.tar.gz</codeblock>
             <p>The utility displays progress information, similar to:</p>
             <codeblock>20200127:21:54:43:004607 plcontainer:mdw:gpadmin-[INFO]:-Checking whether docker is installed on all hosts...
@@ -358,8 +358,8 @@ postgres=# select dummyR();
           Greenplum Database installation. Refer to the <xref
             href="../utility_guide/ref/gppkg.xml#topic1" format="dita" scope="peer">gppkg</xref>
           command for package installation and migration information.</note>
-      <note>You cannot upgrade to PL/Container 3.0 Beta. To install PL/Container 3.0 Beta, first
-        save and then uninstall your existing PL/Container software. Then follow the instructions in
+      <note>You cannot upgrade to PL/Container 3 Beta. To install PL/Container 3 Beta, first save
+        and then uninstall your existing PL/Container software. Then follow the instructions in
           <xref href="#topic3/install_pl_utility" format="dita"/>.</note>
         <p>To upgrade, perform the following procedure:  
           <ol id="ol_l1j_bml_vkb">
@@ -427,12 +427,14 @@ postgres=# select dummyR();
       </body>
     </topic>
     <topic id="topic_llg_d4w_blb">
-      <title>Remove PL/Container 3.0 Beta Shared Library</title>
+      <title>Remove PL/Container 3 Beta Shared Library</title>
       <body>
-        <p>This step is required only if you have installed PL/Container 3.0 Beta. Before you remove
+        <p>This step is required only if you have installed PL/Container 3 Beta. Before you remove
           the extension from your system with <codeph>gppkg</codeph>, remove the shared library
-          configuration for the <codeph>plc_coordinator</codeph> process. For
-          example:<codeblock>$ gpconfig -r shared_preload_libraries
+          configuration for the <codeph>plc_coordinator</codeph> process. For example, the following
+          command comments-out the <codeph>shared_preload_libraries</codeph> setting in
+            <filepath>postgresql.conf
+          </filepath>:<codeblock>$ gpconfig -r shared_preload_libraries
 $ gpstop -ra</codeblock></p>
       </body>
     </topic>
