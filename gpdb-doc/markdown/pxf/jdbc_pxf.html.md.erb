@@ -90,7 +90,7 @@ You include JDBC connector custom options in the `LOCATION` URI, prefacing each 
 
 | Option Name   | Operation | Description
 |---------------|------------|--------|
-| BATCH_SIZE | Write | Integer that identifies the number of `INSERT` operations to batch to the external SQL database. PXF always validates a `BATCH_SIZE` option, even when provided on a read operation. Write batching is enabled by default; the default value is 100. |
+| BATCH_SIZE | Write | Integer that identifies the number of `INSERT` operations to batch to the external SQL database. Write batching is enabled by default; the default value is 100. |
 | FETCH_SIZE | Read | Integer that identifies the number of rows to buffer when reading from an external SQL database. Read row batching is enabled by default; the default read fetch size is 1000. |
 | QUERY_TIMEOUT | Read/Write | Integer that identifies the amount of time (in seconds) that the JDBC driver waits for a statement to execute. The default wait time is infinite. |
 | POOL_SIZE | Write | Enable thread pooling on `INSERT` operations and identify the number of threads in the pool. Thread pooling is disabled by default. |
