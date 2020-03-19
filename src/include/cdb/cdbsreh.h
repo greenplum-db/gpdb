@@ -20,6 +20,14 @@
 #include "cdb/cdbcopy.h"
 #include "utils/memutils.h"
 
+#define LOG_ERRORS_ENABLE			't'
+#define LOG_ERRORS_PERSISTENTLY		'p'
+#define LOG_ERRORS_DISABLE			'f'
+
+#define IS_LOG_TO_FILE(c)				(c == 't' || c == 'p')
+#define IS_LOG_ERRORS_ENABLE(c)			(c == 't')
+#define IS_LOG_ERRORS_PERSISTENTLY(c)	(c == 'p')
+#define IS_LOG_ERRORS_DISABLE(c)		(c == 'f')
 
 /*
  * The error table is ALWAYS of the following format
@@ -66,8 +74,8 @@ typedef struct CdbSreh
 	MemoryContext badrowcontext;	/* per-badrow evaluation context */
 	char	filename[MAXPGPATH];	/* "uri [filename]" */
 
-	bool	log_to_file;			/* or log into file? */
-	bool	error_log_persistent;	/* persistent error table, when drop the
+	char	logerrors;				/* 't' to log errors into file, 'f' to disable log error,
+									   'p' means log errors persistently, when drop the
 									   external table, the error log not get dropped */
 	Oid		relid;					/* parent relation id */
 } CdbSreh;
@@ -75,7 +83,7 @@ typedef struct CdbSreh
 extern int gp_initial_bad_row_limit;
 
 extern CdbSreh *makeCdbSreh(int rejectlimit, bool is_limit_in_rows,
-							char *filename, char *relname, bool log_to_file);
+							char *filename, char *relname, char logerrors);
 extern void destroyCdbSreh(CdbSreh *cdbsreh);
 extern void HandleSingleRowError(CdbSreh *cdbsreh);
 extern void ReportSrehResults(CdbSreh *cdbsreh, uint64 total_rejected);

@@ -118,7 +118,7 @@ ErrorLogFileName(Oid dbid, Oid relid, bool persistent, char *fname /* out */)
 CdbSreh *
 makeCdbSreh(int rejectlimit, bool is_limit_in_rows,
 			char *filename, char *relname,
-			bool log_to_file)
+			char logerrors)
 {
 	CdbSreh    *h;
 
@@ -133,8 +133,7 @@ makeCdbSreh(int rejectlimit, bool is_limit_in_rows,
 	h->is_limit_in_rows = is_limit_in_rows;
 	h->rejectcount = 0;
 	h->is_server_enc = false;
-	h->log_to_file = log_to_file;
-	h->error_log_persistent = false;
+	h->logerrors = logerrors;
 
 	snprintf(h->filename, sizeof(h->filename),
 			 "%s", filename ? filename : "<stdin>");
@@ -188,7 +187,7 @@ HandleSingleRowError(CdbSreh *cdbsreh)
 	 * error: QD - send the bad data row to a random QE (via roundrobin). QE -
 	 * log the error in the error log file.
 	 */
-	if (cdbsreh->log_to_file)
+	if (IS_LOG_TO_FILE(cdbsreh->logerrors))
 	{
 		if (Gp_role == GP_ROLE_DISPATCH)
 			elog(ERROR, "cannot not log suppressed input error in dispatcher");
@@ -552,7 +551,8 @@ ErrorLogWrite(CdbSreh *cdbsreh)
 
 	Assert(OidIsValid(cdbsreh->relid));
 	ErrorLogFileName(MyDatabaseId, cdbsreh->relid,
-					 cdbsreh->error_log_persistent, filename/* out */);
+					 IS_LOG_ERRORS_PERSISTENTLY(cdbsreh->logerrors),
+					 filename/* out */);
 	tuple = FormErrorTuple(cdbsreh);
 
 	INIT_CRC32C(crc);
@@ -570,7 +570,7 @@ ErrorLogWrite(CdbSreh *cdbsreh)
 	if (!fp && errno == ENOENT)
 	{
 		char	   *errordir = ErrorLogDir;
-		if (cdbsreh->error_log_persistent)
+		if (IS_LOG_ERRORS_PERSISTENTLY(cdbsreh->logerrors))
 			errordir = PersistentErrorLogDir;
 		ret = mkdir(errordir, S_IRWXU);
 		if (ret == 0)

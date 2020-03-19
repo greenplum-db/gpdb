@@ -69,7 +69,7 @@ static void InitParseState(CopyState pstate, Relation relation,
 			   bool writable,
 			   char fmtType,
 			   char *uri, int rejectlimit,
-			   bool islimitinrows, bool logerrors,
+			   bool islimitinrows, char logerrors,
 			   List *options);
 
 static void FunctionCallPrepareFormatter(FunctionCallInfoData *fcinfo,
@@ -126,7 +126,7 @@ elog(DEBUG2, "external_getnext returning tuple")
 FileScanDesc
 external_beginscan(Relation relation, uint32 scancounter,
 				   List *uriList, char *fmtOptString, char fmtType, bool isMasterOnly,
-				   int rejLimit, bool rejLimitInRows, bool logErrors, int encoding,
+				   int rejLimit, bool rejLimitInRows, char logErrors, int encoding,
 				   List *extOptions)
 {
 	FileScanDesc scan;
@@ -1151,7 +1151,7 @@ InitParseState(CopyState pstate, Relation relation,
 			   bool iswritable,
 			   char fmtType,
 			   char *uri, int rejectlimit,
-			   bool islimitinrows, bool logerrors,
+			   bool islimitinrows, char logerrors,
 			   List *options)
 {
 	/*
@@ -1166,7 +1166,7 @@ InitParseState(CopyState pstate, Relation relation,
 	else
 	{
 		/* select the SREH mode */
-		if (logerrors)
+		if (IS_LOG_TO_FILE(logerrors))
 		{
 			/* errors into file */
 			pstate->errMode = SREH_LOG;
@@ -1185,10 +1185,6 @@ InitParseState(CopyState pstate, Relation relation,
 									  logerrors);
 
 		pstate->cdbsreh->relid = RelationGetRelid(relation);
-
-		/* whether make the error log persistent*/
-		if (logerrors && NeedErrorLogPersistent(options))
-			pstate->cdbsreh->error_log_persistent = true;
 	}
 
 	/* Initialize 'out_functions', like CopyTo() would. */

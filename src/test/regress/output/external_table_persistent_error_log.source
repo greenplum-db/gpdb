@@ -28,8 +28,7 @@ COPY (VALUES('1,2'),('1,2,3'),('1,'),('1')) TO '@abs_srcdir@/data/tableerr.csv';
 create external table ext_error_persistent(a int, b int)
 location ('file://@hostname@@abs_srcdir@/data/tableerr.csv')
 format 'csv'
-OPTIONS (error_log_persistent 'true')
-log errors segment reject limit 10;
+log errors persistently segment reject limit 10;
 select * from ext_error_persistent;
 NOTICE:  found 2 data formatting errors (2 or more input rows), rejected related input data
  a | b 

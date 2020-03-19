@@ -71,6 +71,7 @@
 #include "cdb/cdbpartition.h"
 #include "cdb/partitionselection.h"
 #include "cdb/cdbutil.h"
+#include "cdb/cdbsreh.h"
 #include "cdb/cdbvars.h"
 #include "parser/parse_partition.h"
 #include "utils/fmgroids.h"
@@ -1790,7 +1791,7 @@ transformCreateExternalStmt(CreateExternalStmt *stmt, const char *queryString)
 			{
 				SingleRowErrorDesc *srehDesc = (SingleRowErrorDesc *)stmt->sreh;
 
-				if(srehDesc && srehDesc->into_file)
+				if(srehDesc && srehDesc->log_error_type != LOG_ERRORS_DISABLE)
 					ereport(ERROR,
 							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
 							 errmsg("external web table with ON MASTER clause cannot use LOG ERRORS feature")));

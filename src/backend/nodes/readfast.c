@@ -1489,7 +1489,7 @@ _readExternalScanInfo(void)
 	READ_BOOL_FIELD(isMasterOnly);
 	READ_INT_FIELD(rejLimit);
 	READ_BOOL_FIELD(rejLimitInRows);
-	READ_BOOL_FIELD(logErrors);
+	READ_CHAR_FIELD(logErrors);
 	READ_INT_FIELD(encoding);
 	READ_INT_FIELD(scancounter);
 	READ_NODE_FIELD(extOptions);

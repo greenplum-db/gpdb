@@ -46,6 +46,9 @@
  * not pg_foreign_table, so no need to create fdw validate handler.
  *
  * Now only validate error_log_persistent option.
+ * Since for GPDB 5 and 6, we store LOG ERRORS PERSISTENTLY in
+ * pg_exttable catalog options as error_log_persistent. If user dump the DDL,
+ * we could load from optons.
  */
 void
 ValidateExtTableOptions(List *options)
@@ -73,22 +76,24 @@ ValidateExtTableOptions(List *options)
 }
 
 /*
- * NeedErrorLogPersistent - check the external options to see whether need
- * to make the error log persistent.
+ * ExtractErrorLogPersistent - load LOG ERRORS PERSISTENTLY from optons.
  */
 bool
-NeedErrorLogPersistent(List *options)
+ExtractErrorLogPersistent(List **options)
 {
 	ListCell   *cell;
+	ListCell *prev = NULL;
 
-	foreach(cell, options)
+	foreach(cell, *options)
 	{
 		DefElem    *def = (DefElem *) lfirst(cell);
 		if (strcmp(def->defname, "error_log_persistent") == 0)
 		{
+			*options = list_delete_cell(*options, cell, prev);
 			/* these accept only boolean values */
 			return defGetBoolean(def);
 		}
+		prev = cell;
 	}
 	return false;
 }
@@ -109,7 +114,7 @@ InsertExtTableEntry(Oid 	tbloid,
 					char	rejectlimittype,
 					char*	commandString,
 					int		rejectlimit,
-					bool    logerrors,
+					char    logerrors,
 					int		encoding,
 					Datum	formatOptStr,
 					Datum   optionsStr,
@@ -166,7 +171,7 @@ InsertExtTableEntry(Oid 	tbloid,
 		nulls[Anum_pg_exttable_rejectlimittype - 1] = true;
 	}
 
-	values[Anum_pg_exttable_logerrors - 1] = BoolGetDatum(logerrors);
+	values[Anum_pg_exttable_logerrors - 1] = CharGetDatum(logerrors);
 	values[Anum_pg_exttable_encoding - 1] = Int32GetDatum(encoding);
 	values[Anum_pg_exttable_writable - 1] = BoolGetDatum(iswritable);
 
@@ -436,7 +441,7 @@ GetExtTableEntryIfExists(Oid relid)
 							 &isNull);
 
 	Insist(!isNull);
-	extentry->logerrors = DatumGetBool(logerrors);
+	extentry->logerrors = DatumGetChar(logerrors);
 
 	/* get the table encoding */
 	encoding = heap_getattr(tuple,
