@@ -2550,16 +2550,16 @@ BeginCopyTo(Relation rel,
 }
 
 /*
- * Set up CopyState for writing to an external table.
+ * Set up CopyState for writing to a foreign or external table.
  */
 CopyState
-BeginCopyToForExternalTable(Relation extrel, List *options)
+BeginCopyToForeignTable(Relation forrel, List *options)
 {
 	CopyState	cstate;
 
-	Assert(RelationIsExternal(extrel));
+	Assert(RelationIsExternal(forrel) || RelationIsForeign(forrel));
 
-	cstate = BeginCopy(false, extrel, NULL, NULL, NIL, options, NULL);
+	cstate = BeginCopy(false, forrel, NULL, NULL, NIL, options, NULL);
 	cstate->dispatch_mode = COPY_DIRECT;
 
 	/*
