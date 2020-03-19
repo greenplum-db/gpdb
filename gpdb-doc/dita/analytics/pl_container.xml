@@ -62,8 +62,8 @@
           data using a PL/Container function. On the first call to a function in a segment
           container, the query executor on the master host starts the container on that segment
           host. It then contacts the running container to obtain the results. The container might
-          respond with an Service Provider Interface (SPI) - a SQL query executed by the container
-          to get some data back from the database - returning the result to the query executor.</p>
+          respond with a Service Provider Interface (SPI) - a SQL query executed by the container to
+          get some data back from the database - returning the result to the query executor.</p>
         <p>A container running in standby mode waits on the socket and does not consume any CPU
           resources. PL/Container memory consumption depends on the amount of data cached in global
           dictionaries.</p>
@@ -284,11 +284,11 @@ plcontainer runtime-add -r plc_r_shared -i pivotaldata/plcontainer_r_shared:deve
           configuration XML file with the <codeph>plcontainer runtime-edit</codeph> command. </p>
         <p>Use the <codeph>psql</codeph> utility and select an existing database: </p>
         <codeblock>psql postgres;</codeblock>
-        <p>If PL/Container extension is not registered with the selected database, first enable the
-          extension: </p>
+        <p>If the PL/Container extension is not registered with the selected database, first enable
+          it using: </p>
         <codeblock>postgres=# CREATE EXTENSION plcontainer;</codeblock>
-        <p>Create a simple function to test your installation, where the function will use the
-          runtime <codeph>plc_python_shared</codeph>:</p>
+        <p>Create a simple function to test your installation; in the example, the function will use
+          the runtime <codeph>plc_python_shared</codeph>:</p>
         <codeblock>postgres=# CREATE FUNCTION dummyPython() RETURNS text AS $$
 # container: plc_python_shared
 return 'hello from Python'
