@@ -357,7 +357,11 @@ testdb=#\q</codeblock>
         <ul>
           <li>The <codeph>db.gpapply()</codeph> and <codeph>db.gptapply()</codeph>
             functions currently operate only on <codeph>conn.id = 1</codeph>.</li>
-          <li>The GreenplumR function reference pages are not yet published.</li>
+          <li>The GreenplumR function reference pages are not yet published. You
+            can find <codeph>html</codeph> versions of the reference pages in your
+            R library <codeph>R/&lt;platform>-library/3.6/GreenplumR/html</codeph>
+            directory. Open the <codeph>00Index.html</codeph> file in the browser
+            of your choice and select the function of interest.</li>
           <li>The <codeph>GreenplumR()</codeph> graphical user interface is
             currently unsupported.</li>
         </ul>
@@ -367,18 +371,11 @@ testdb=#\q</codeblock>
     <title>Function Summary</title>
     <body>
       <p>GreenplumR provides several functions. To obtain reference information
-        for GreenplumR functions:</p>
-      <ul>
-        <li>Navigate to the R library
-          <codeph>R/&lt;platform>-library/3.6/GreenplumR/html/00Index.html</codeph>
-            file in the browser of your choice and select the function of
-            interest. Or,</li>
-        <li>Invoke the <codeph>help()</codeph> function. For example, to
-          display the reference information for the GreenplumR
-          <codeph>db.data.frame()</codeph> function:
-          <codeblock>> help( db.data.frame )</codeblock></li>
-      </ul>
-      <p>GreenplumR provides the following functions:</p>
+        for GreenplumR functions while running the R console, invoke the
+        <codeph>help()</codeph> function. For example, to display the reference
+        information for the GreenplumR <codeph>db.data.frame()</codeph> function:
+        <codeblock>> help( db.data.frame )</codeblock></p>
+      <p>GreenplumR functions include:</p>
       <table>
         <title>GreenplumR Functions</title>
         <tgroup cols="3">
@@ -395,46 +392,67 @@ testdb=#\q</codeblock>
           <tbody>
             <row>
               <entry colname="col1">Aggregate Functions</entry>
-              <entry colname="col2">XXX</entry>
-              <entry colname="col3">Functions that perform a calculation on multiple values and return a single value.</entry>
+              <entry colname="col2">mean(), sum(), count(), max(), min(), sd(), var(), colMeans(), colSums(), colAgg(), db.array()</entry>
+              <entry colname="col3">Functions that perform a calculation on
+                multiple values and return a single value.</entry>
             </row>
             <row>
-              <entry colname="col1" morerows="4">Connection-Related Functions</entry>
+              <entry colname="col1" morerows="4">Connectivity Functions</entry>
               <entry colname="col2">connection info</entry>
-              <entry colname="col3">Extract connection information</entry>
+              <entry colname="col3">Extract connection information.</entry>
             </row>
             <row>
               <entry colname="col2">db.connect()</entry>
-              <entry colname="col3">Create a database connection</entry>
+              <entry colname="col3">Create a database connection.</entry>
             </row>
             <row>
               <entry colname="col2">db.connect.dsn()</entry>
-              <entry colname="col3">Create a database connection using a DSN</entry>
+              <entry colname="col3">Create a database connection using a DSN.</entry>
             </row>
             <row>
               <entry colname="col2">db.disconnect()</entry>
-              <entry colname="col3">Disconnect a database connection</entry>
+              <entry colname="col3">Disconnect a database connection.</entry>
             </row>
             <row>
               <entry colname="col2">db.list()</entry>
-              <entry colname="col3">List database connections</entry>
+              <entry colname="col3">List database connections.</entry>
             </row>
             <row>
               <entry colname="col1" morerows="3">Database Object Functions</entry>
               <entry colname="col2">as.db.data.frame()</entry>
-              <entry colname="col3">Create a db.data.frame from a file or data.frame, optionally writing the data to a Greenplum table.</entry>
+              <entry colname="col3">Create a db.data.frame from a file or data.frame,
+                optionally writing the data to a Greenplum table.</entry>
             </row>
             <row>
               <entry colname="col2">db.data.frame()</entry>
-              <entry colname="col3">Create a data frame that references a view or table in the database</entry>
+              <entry colname="col3">Create a data frame that references a view or
+                 table in the database.</entry>
             </row>
             <row>
               <entry colname="col2">db.objects()</entry>
-              <entry colname="col3">List the table and view objects in the database</entry>
+              <entry colname="col3">List the table and view objects in the database.</entry>
             </row>
             <row>
               <entry colname="col2">db.existsObject()</entry>
-              <entry colname="col3">Identifies whether a table or view exists in the database.</entry>
+              <entry colname="col3">Identifies whether a table or view exists in the
+                database.</entry>
+            </row>
+            <row>
+              <entry colname="col1">Mathematical Functions</entry>
+              <entry colname="col2">exp(), abs(), log(), log10(), sign(), sqrt(), factorial(), sin(), cos(), tan(), asin(), acos(), atan(), atan2()</entry>
+              <entry colname="col3">Mathematical functions that take db.obj as an
+                argument.</entry>
+            </row>
+            <row>
+              <entry colname="col1" morerows="1">Greenplum Functions</entry>
+              <entry colname="col2">db.gpapply()</entry>
+              <entry colname="col3">Wrap an R function with a UDF and run it on
+                every row of data in a Greenplum table.</entry>
+            </row>
+            <row>
+              <entry colname="col2">db.gptapply()</entry>
+              <entry colname="col3">Wrap an R function with a UDF and run it on
+                every row of data grouped by an index in a Greenplum table.</entry>
             </row>
           </tbody>
         </tgroup>
