@@ -45,22 +45,19 @@ extern Path *create_motion_path_for_insert(PlannerInfo *root, GpPolicy *targetPo
 extern Path *create_motion_path_for_upddel(PlannerInfo *root, Index rti, GpPolicy *targetPolicy, Path *subpath);
 extern Path *create_split_update_path(PlannerInfo *root, Index rti, GpPolicy *targetPolicy, Path *subpath);
 
-CdbPathLocus
+extern CdbPathLocus
 cdbpath_motion_for_join(PlannerInfo    *root,
                         JoinType        jointype,           /* JOIN_INNER/FULL/LEFT/RIGHT/IN */
                         Path          **p_outer_path,       /* INOUT */
                         Path          **p_inner_path,       /* INOUT */
+						int			   *p_rowidexpr_id,
                         List           *redistribution_clauses,   /* equijoin RestrictInfo list */
                         List           *outer_pathkeys,
                         List           *inner_pathkeys,
                         bool            outer_require_existing_order,
                         bool            inner_require_existing_order);
 
-void 
-cdbpath_dedup_fixup(PlannerInfo *root, Path *path);
-
-bool
-cdbpath_contains_wts(Path *path);
+extern bool cdbpath_contains_wts(Path *path);
 
 extern void failIfUpdateTriggers(Oid relid);
 

@@ -374,6 +374,9 @@ retry:
 		int			primaryFileBytesRead;
 		int			mirrorFileBytesRead;
 		int			diff;
+		bool		do_check;
+
+		do_check = true;
 
 		CHECK_FOR_INTERRUPTS();
 
@@ -438,14 +441,21 @@ retry:
 				goto retry;
 			}
 
-			if (!PageIsNew(primaryFileBuf) && !PageIsNew(mirrorFileBuf))
+			/*
+			 * PG supports block bulk-extend. In such case some pages are
+			 * extended, initialized but not xlogged. On mirror those pages are
+			 * just zero filled so we'd skip comparison for these pages.
+			 */
+			if (PageIsEmpty(primaryFileBuf) && PageIsNew(mirrorFileBuf))
+				do_check = false;
+			else if (!PageIsNew(primaryFileBuf) && !PageIsNew(mirrorFileBuf))
 			{
 				mask_block(primaryFileBuf, blockno, rentry->relam, rentry->relkind);
 				mask_block(mirrorFileBuf, blockno, rentry->relam, rentry->relkind);
 			}
 		}
 
-		if ((diff = memcmp(primaryFileBuf, mirrorFileBuf, primaryFileBytesRead)) != 0)
+		if (do_check && (diff = memcmp(primaryFileBuf, mirrorFileBuf, primaryFileBytesRead)) != 0)
 		{
 			/* different contents */
 			ereport(NOTICE,

@@ -4038,6 +4038,17 @@ struct config_int ConfigureNamesInt_gp[] =
 struct config_real ConfigureNamesReal_gp[] =
 {
 	{
+		{"disable_cost", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Sets the planner's cost of a disabled path."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&disable_cost,
+		1.0e10, 1.0e10, 1.0e30,
+		NULL, NULL, NULL
+	},
+
+	{
 		{"gp_motion_cost_per_row", PGC_USERSET, QUERY_TUNING_COST,
 			gettext_noop("Sets the planner's estimate of the cost of "
 						 "moving a row between worker processes."),

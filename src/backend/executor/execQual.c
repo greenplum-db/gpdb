@@ -223,6 +223,9 @@ static Datum ExecEvalPartListNullTestExpr(PartListNullTestExprState *exprstate,
 static Datum ExecEvalAggExprId(AggExprIdState *exprstate,
 							   ExprContext *econtext,
 							   bool *isNull, ExprDoneCond *isDone);
+static Datum ExecEvalRowIdExpr(RowIdExprState *exprstate,
+							   ExprContext *econtext,
+							   bool *isNull, ExprDoneCond *isDone);
 
 static bool ExecIsExprUnsafeToConst_walker(Node *node, void *context);
 static bool ExecIsExprUnsafeToConst(Node *node);
@@ -5151,6 +5154,30 @@ static Datum ExecEvalAggExprId(AggExprIdState *exprstate,
 	return Int32GetDatum(0);
 }
 
+
+/* ----------------------------------------------------------------
+ *		ExecEvalRowIdExpr
+ *
+ *		Evaluate the RowIdExpr, which is zero indexed, indicates which DQA is
+ *		this tuple for, in the tuple split case.
+ * ----------------------------------------------------------------
+ */
+static Datum
+ExecEvalRowIdExpr(RowIdExprState *exprstate,
+				  ExprContext *econtext,
+				  bool *isNull, ExprDoneCond *isDone)
+{
+	Assert(NULL != exprstate);
+	Assert(NULL != isNull);
+
+	exprstate->rowcounter++;
+
+	*isNull = false;
+	if (isDone)
+		*isDone = ExprSingleResult;
+	return Int64GetDatum(exprstate->rowcounter);
+}
+
 /* ----------------------------------------------------------------
  *		ExecEvalCoerceViaIO
  *
@@ -6215,6 +6242,24 @@ ExecInitExpr(Expr *node, PlanState *parent)
 
 				exprstate->xprstate.evalfunc = (ExprStateEvalFunc) ExecEvalAggExprId;
 				exprstate->parent = parent;
+
+				state = (ExprState *) exprstate;
+			}
+			break;
+
+		case T_RowIdExpr:
+			{
+				RowIdExprState *exprstate = makeNode(RowIdExprState);
+
+				/*
+				 * Generate a number that's unique for this row, within this query
+				 * execution. Different segments can generate rows in parallel, so
+				 * we include the segment ID in the value so that two segments never
+				 * generate the same value.
+				 */
+				exprstate->rowcounter = ((uint64) GpIdentity.dbid) << 48 ;
+
+				exprstate->xprstate.evalfunc = (ExprStateEvalFunc) ExecEvalRowIdExpr;
 
 				state = (ExprState *) exprstate;
 			}

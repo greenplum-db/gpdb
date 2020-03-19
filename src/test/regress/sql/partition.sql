@@ -4079,3 +4079,37 @@ create index user_id_idx2 on employee_table_1_prt_part2(user_id);
 
 insert into employee_table values('01-03-2012'::date,0,'tag1','(1, ''foo'')'::employee_type);
 select * from employee_table where user_id = 2;
+
+
+-- Test partition table with ACL.
+-- We grant default SELECT permission to a new user, this new user should be
+-- able to SELECT from any partition table we create later.
+-- (https://github.com/greenplum-db/gpdb/issues/9524)
+DROP TABLE IF EXISTS public.t_part_acl;
+DROP ROLE IF EXISTS user_prt_acl;
+
+CREATE ROLE user_prt_acl;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO user_prt_acl;
+
+CREATE TABLE public.t_part_acl (dt date)
+PARTITION BY RANGE (dt)
+(
+    START (date '2019-12-01') INCLUSIVE
+    END (date '2020-02-01') EXCLUSIVE
+    EVERY (INTERVAL '1 month')
+);
+INSERT INTO public.t_part_acl VALUES (date '2019-12-01'), (date '2020-01-31');
+
+-- check if parent and child table have same relacl
+SELECT relname FROM pg_class
+WHERE relname LIKE 't_part_acl%'
+  AND relacl = (SELECT relacl FROM pg_class WHERE relname = 't_part_acl');
+
+-- check if new user can SELECT all data
+SET ROLE user_prt_acl;
+SELECT * FROM public.t_part_acl;
+
+RESET ROLE;
+DROP TABLE public.t_part_acl;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE SELECT ON TABLES FROM user_prt_acl;
+DROP ROLE user_prt_acl;

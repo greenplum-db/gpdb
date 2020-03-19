@@ -1512,6 +1512,27 @@ Feature: Incrementally analyze the database
         And "public.sales_1_prt_4" should appear in the latest state files
         And "public.sales_1_prt_3" should appear in the latest state files
 
+    @analyzedb_core @analyzedb_partition_tables
+    Scenario: Partition table with root partition passed to config file for AO table
+        Given no state files exist for database "incr_analyze"
+        And the user runs command "printf 'public.sales' > config_file"
+        When the user runs "analyzedb -a -d incr_analyze -f config_file"
+        Then analyzedb should return a return code of 0
+        And output should contain both "-public.sales_1_prt_2" and "-public.sales_1_prt_2"
+        And "public.sales_1_prt_2" should appear in the latest state files
+        And "public.sales_1_prt_3" should appear in the latest state files
+        And "public.sales_1_prt_4" should appear in the latest state files
+
+    @analyzedb_core @analyzedb_partition_tables
+    Scenario: Partition table with root partition passed to config file for heap table
+        Given no state files exist for database "incr_analyze"
+        And the user runs "psql -d incr_analyze -c 'create table foo (a int, b int) partition by range (b) (start (1) end  (4) every (1))'"
+        And the user runs command "printf 'public.foo' > config_file"
+        When the user runs "analyzedb -a -d incr_analyze -f config_file"
+        Then analyzedb should return a return code of 0
+	And output should contain both "-public.foo_1_prt_1" and "-public.foo_1_prt_3"
+        And the user runs "psql -d incr_analyze -c 'drop table foo'"
+
     @analyzedb_core @analyzedb_root_and_partition_tables
     Scenario: Partition tables, (entries for all parts, no change, some parts, root parts)
         Given no state files exist for database "incr_analyze"

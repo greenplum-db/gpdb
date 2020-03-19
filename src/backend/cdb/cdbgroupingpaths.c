@@ -481,6 +481,10 @@ add_twostage_group_agg_path(PlannerInfo *root,
 		/*
 		 * We have grouping sets, possibly with aggregation.  Make
 		 * a GroupingSetsPath.
+		 *
+		 * NOTE: We don't pass the HAVING quals here. HAVING quals can
+		 * only be evaluated in the Finalize stage, after computing the
+		 * final aggregate values.
 		 */
 		initial_agg_path =
 			(Path *) create_groupingsets_path(root,
@@ -488,7 +492,7 @@ add_twostage_group_agg_path(PlannerInfo *root,
 											  path,
 											  grouping_sets_partial_target,
 											  AGGSPLIT_INITIAL_SERIAL,
-											  (List *) parse->havingQual,
+											  NIL,
 											  ctx->rollup_lists,
 											  ctx->rollup_groupclauses,
 											  ctx->agg_partial_costs,

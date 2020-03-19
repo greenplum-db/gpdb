@@ -16,13 +16,13 @@ INSERT INTO t_concurrent_update VALUES(1,1,'test');
 DROP TABLE t_concurrent_update;
 
 
--- Test the concurrent update transaction order on the segment is reflected on master
--- enable gdd
 --start_ignore
 ! gpconfig -c gp_enable_global_deadlock_detector -v on;
 ! gpstop -rai;
 --end_ignore
 
+-- Test the concurrent update transaction order on the segment is reflected on master
+-- enable gdd
 1: SHOW gp_enable_global_deadlock_detector;
 1: CREATE TABLE t_concurrent_update(a int, b int);
 1: INSERT INTO t_concurrent_update VALUES(1,1);
@@ -52,10 +52,34 @@ DROP TABLE t_concurrent_update;
 3q:
 
 1: SELECT * FROM t_concurrent_update;
-1: DROP TABLE t_concurrent_update;
+1q:
+
+-- Same test as the above, except the first transaction commits before the
+-- second transaction check the wait gxid, it should get the gxid from
+-- pg_distributedlog instead of the procarray.
+4: BEGIN;
+4: SET optimizer=off;
+4: UPDATE t_concurrent_update SET b=b+10 WHERE a=1;
+
+5: BEGIN;
+5: SET optimizer=off;
+-- suspend before get 'wait gxid'
+5: SELECT gp_inject_fault('before_get_distributed_xid', 'suspend', dbid) FROM gp_segment_configuration WHERE role='p' AND content=1;
+5&: UPDATE t_concurrent_update SET b=b+10 WHERE a=1;
+
+6: SELECT gp_wait_until_triggered_fault('before_get_distributed_xid', 1, dbid) FROM gp_segment_configuration WHERE role='p' AND content=1;
+4: END;
+4: SELECT gp_inject_fault('before_get_distributed_xid', 'reset', dbid) FROM gp_segment_configuration WHERE role='p' AND content=1;
+
+5<:
+5: END;
+6: SELECT * FROM t_concurrent_update;
+6: DROP TABLE t_concurrent_update;
+4q:
+5q:
+6q:
 
 --start_ignore
 ! gpconfig -r gp_enable_global_deadlock_detector;
 ! gpstop -rai;
 --end_ignore 
-1q:

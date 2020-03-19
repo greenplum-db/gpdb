@@ -1142,7 +1142,6 @@ set_append_rel_size(PlannerInfo *root, RelOptInfo *rel,
 		Node	   *childqual;
 		ListCell   *parentvars;
 		ListCell   *childvars;
-		ListCell   *targetListVars;
 
 		/* append_rel_list contains all append rels; ignore others */
 		if (appinfo->parent_relid != parentRTindex)
@@ -1222,30 +1221,6 @@ set_append_rel_size(PlannerInfo *root, RelOptInfo *rel,
 			adjust_appendrel_attrs(root,
 								   (Node *) rel->reltarget->exprs,
 								   appinfo);
-
-		/*
-		 * Set a not-null value in childrel's attr_needed.
-		 * cdbpath_dedup_fixup_append() checkes the length of reltargetlist
-		 * and expects the length of append rel equal to the sub rel.
-		 *
-		 * GPDB_92_MERGE_FIXME: is childrel->attr_needed accurate?
-		 */
-		foreach (targetListVars, childrel->reltarget->exprs)
-		{
-			int attno;
-			Var *v = (Var*)lfirst(targetListVars);
-
-			if (!IsA(v, Var))
-				continue;
-
-			attno = v->varattno;
-			if (attno <= FirstLowInvalidHeapAttributeNumber)
-				continue;
-
-			attno -= childrel->min_attr;
-			if (childrel->attr_needed[attno] == NULL)
-				childrel->attr_needed[attno] = bms_make_singleton(childrel->relid);
-		}
 
 		/*
 		 * We have to make child entries in the EquivalenceClass data

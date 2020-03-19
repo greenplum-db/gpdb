@@ -60,11 +60,11 @@ EXPLAIN SELECT count(*) FROM bmscantest2 WHERE a = 1 AND b = 1 AND c = 1;
                                         QUERY PLAN                                         
 -------------------------------------------------------------------------------------------
  Aggregate  (cost=0.00..6.35 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.35 rows=2 width=1)
-         ->  Index Scan using i_bmtest2_c on bmscantest2  (cost=0.00..6.35 rows=1 width=1)
+   ->  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..6.35 rows=2 width=1)
+         ->  Index Scan using i_bmtest2_c on bmscantest2  (cost=0.00..6.35 rows=2 width=1)
                Index Cond: (c = 1)
                Filter: ((a = 1) AND (b = 1))
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.95.0
 (6 rows)
 
 SELECT count(*) FROM bmscantest2 WHERE a = 1 AND b = 1 AND c = 1;
@@ -125,7 +125,7 @@ EXPLAIN SELECT count(*) FROM bmscantest_ao WHERE a = 1 AND b = 1 AND c = 1;
                                              QUERY PLAN                                             
 ----------------------------------------------------------------------------------------------------
  Aggregate  (cost=0.00..431.06 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.06 rows=2 width=1)
+   ->  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.06 rows=2 width=1)
          ->  Bitmap Heap Scan on bmscantest_ao  (cost=0.00..431.06 rows=1 width=1)
                Recheck Cond: ((b = 1) AND (a = 1) AND (c = 1))
                ->  BitmapAnd  (cost=0.00..0.00 rows=0 width=0)
@@ -149,7 +149,7 @@ EXPLAIN SELECT count(*) FROM bmscantest_ao WHERE a = 1 AND (b = 1 OR c = 1) AND 
                                              QUERY PLAN                                             
 ----------------------------------------------------------------------------------------------------
  Aggregate  (cost=0.00..431.06 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.06 rows=3 width=1)
+   ->  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.06 rows=3 width=1)
          ->  Bitmap Heap Scan on bmscantest_ao  (cost=0.00..431.06 rows=1 width=1)
                Recheck Cond: (((b = 1) OR (c = 1)) AND ((d = 1) AND (a = 1)))
                ->  BitmapAnd  (cost=0.00..0.00 rows=0 width=0)
@@ -240,7 +240,7 @@ EXPLAIN SELECT count(*) FROM bmscantest_aocs WHERE a = 1 AND b = 1 AND c = 1;
                                               QUERY PLAN                                              
 ------------------------------------------------------------------------------------------------------
  Aggregate  (cost=0.00..431.06 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.06 rows=2 width=1)
+   ->  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.06 rows=2 width=1)
          ->  Bitmap Heap Scan on bmscantest_aocs  (cost=0.00..431.06 rows=1 width=1)
                Recheck Cond: ((b = 1) AND (a = 1) AND (c = 1))
                ->  BitmapAnd  (cost=0.00..0.00 rows=0 width=0)
@@ -264,7 +264,7 @@ EXPLAIN SELECT count(*) FROM bmscantest_aocs WHERE a = 1 AND (b = 1 OR c = 1) AN
                                               QUERY PLAN                                              
 ------------------------------------------------------------------------------------------------------
  Aggregate  (cost=0.00..431.06 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.06 rows=3 width=1)
+   ->  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.06 rows=3 width=1)
          ->  Bitmap Heap Scan on bmscantest_aocs  (cost=0.00..431.06 rows=1 width=1)
                Recheck Cond: (((b = 1) OR (c = 1)) AND ((d = 1) AND (a = 1)))
                ->  BitmapAnd  (cost=0.00..0.00 rows=0 width=0)

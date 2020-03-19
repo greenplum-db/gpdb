@@ -946,14 +946,6 @@ typedef struct RangeTblEntry
 	Bitmapset  *insertedCols;	/* columns needing INSERT permission */
 	Bitmapset  *updatedCols;	/* columns needing UPDATE permission */
 	List	   *securityQuals;	/* any security barrier quals to apply */
-
-    List       *pseudocols;     /* CDB: List of CdbRelColumnInfo nodes defining
-                                 *  pseudo columns for targetlist of scan node.
-                                 *  Referenced by Var nodes with varattno =
-                                 *  FirstLowInvalidHeapAttributeNumber minus
-                                 *  the 0-based position in the list.  Used
-                                 *  only in planner & EXPLAIN, not in executor.
-                                 */
 } RangeTblEntry;
 
 /*

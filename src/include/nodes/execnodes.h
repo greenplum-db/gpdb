@@ -2068,8 +2068,6 @@ typedef struct SubqueryScanState
 {
 	ScanState	ss;				/* its first field is NodeTag */
 	PlanState  *subplan;
-	bool		cdb_want_ctid;	/* true => ctid is referenced in targetlist */
-	ItemPointerData cdb_fake_ctid;
 } SubqueryScanState;
 
 /* ----------------
@@ -2085,9 +2083,6 @@ typedef struct SubqueryScanState
  *		nfuncs				number of functions being executed
  *		funcstates			per-function execution states (private in
  *							nodeFunctionscan.c)
- *		cdb_want_ctid		true => ctid is referenced in targetlist
- *		cdb_fake_ctid
- *		cdb_mark_ctid
  *		argcontext			memory context to evaluate function arguments in
  * ----------------
  */
@@ -2104,10 +2099,6 @@ typedef struct FunctionScanState
 	struct FunctionScanPerFuncState *funcstates;		/* array of length
 														 * nfuncs */
 	MemoryContext argcontext;
-
-	bool		cdb_want_ctid;
-	ItemPointerData cdb_fake_ctid;
-	ItemPointerData cdb_mark_ctid;
 
 	bool		delayEagerFree;		/* is is safe to free memory used by this node,
 									 * when this node has outputted its last row? */
@@ -2166,7 +2157,6 @@ typedef struct ValuesScanState
 	List	  **exprlists;
 	int			array_len;
 	int			curr_idx;
-	bool		cdb_want_ctid;	/* true => ctid is referenced in targetlist */
 } ValuesScanState;
 
 /* ----------------
@@ -2221,8 +2211,6 @@ typedef struct ForeignScanState
 	struct FdwRoutine *fdwroutine;
 	void	   *fdw_state;		/* foreign-data wrapper can keep state here */
 
-	bool		cdb_want_ctid;
-	ItemPointerData cdb_fake_ctid;
 	bool		is_squelched;
 } ForeignScanState;
 
@@ -2700,6 +2688,13 @@ typedef struct AggExprIdState
 
 	PlanState   *parent;
 } AggExprIdState;
+
+typedef struct RowIdExprState
+{
+	ExprState	xprstate;
+
+	uint64		rowcounter;
+} RowIdExprState;
 
 /* ----------------
  *	WindowAggState information

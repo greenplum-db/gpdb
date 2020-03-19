@@ -216,16 +216,6 @@ static void set_plan_references_input_asserts(PlannerGlobal *glob, Plan *plan, L
 		if (!IsA(plan, ModifyTable) && var->varno != var->varnoold)
 			Assert(false && "Varno and varnoold do not agree!");
 #endif
-
-		/** If a pseudo column, there should be a corresponding entry in the relation */
-		if (var->varattno <= FirstLowInvalidHeapAttributeNumber)
-		{
-			RangeTblEntry *rte = rt_fetch(var->varno, rtable);
-			Assert(rte);
-			Assert(rte->pseudocols);
-			Assert(list_length(rte->pseudocols) > var->varattno - FirstLowInvalidHeapAttributeNumber);
-		}
-
 	}
 }
 
@@ -1711,25 +1701,6 @@ fix_expr_common(PlannerInfo *root, Node *node)
 				lappend_oid(root->glob->relationOids,
 							DatumGetObjectId(con->constvalue));
 	}
-    else if (IsA(node, Var))
-    {
-        Var    *var = (Var *)node;
-
-        /*
-         * CDB: If Var node refers to a pseudo column, note its varno.
-         * By this point, no such Var nodes should be seen except for
-         * local references in Scan or Append exprs.
-         *
-         * XXX callers must reinitialize this appropriately.  Ought
-         *     to find a better way.
-         */
-        if (var->varattno <= FirstLowInvalidHeapAttributeNumber)
-        {
-            Assert(var->varlevelsup == 0 &&
-                   var->varno > 0 &&
-                   var->varno <= list_length(root->glob->finalrtable));
-        }
-    }
 	else if (IsA(node, GroupingFunc))
 	{
 		GroupingFunc *g = (GroupingFunc *) node;
@@ -1807,16 +1778,28 @@ fix_scan_expr(PlannerInfo *root, Node *node, int rtoffset)
 	context.root = root;
 	context.rtoffset = rtoffset;
 
-	/*
-	 * Postgres has an optimization to mutate the expression tree only if
-	 * rtoffset is non-zero. However, this optimization does not work for
-	 * GPDB planner. The planner in GPDB produces plans where rtoffset
-	 * may be zero, but it uses gp_subplan_id as a pseudo column
-	 * to deduplicate all the partition scans. This pseudo var needs
-	 * to be unnested (i.e., the underlying expr needs to replace the Var)
-	 * using mutation. Therefore, in GPDB we need to unconditionally mutate the tree.
-	 */
-	return fix_scan_expr_mutator(node, &context);
+	if (rtoffset != 0 ||
+		root->multiexpr_params != NIL ||
+		root->glob->lastPHId != 0 ||
+		root->minmax_aggs != NIL)
+	{
+		return fix_scan_expr_mutator(node, &context);
+	}
+	else
+	{
+		/*
+		 * If rtoffset == 0, we don't need to change any Vars, and if there
+		 * are no MULTIEXPR subqueries then we don't need to replace
+		 * PARAM_MULTIEXPR Params, and if there are no placeholders anywhere
+		 * we won't need to remove them, and if there are no minmax Aggrefs we
+		 * won't need to replace them.  Then it's OK to just scribble on the
+		 * input node tree instead of copying (since the only change, filling
+		 * in any unset opfuncid fields, is harmless).  This saves just enough
+		 * cycles to be noticeable on trivial queries.
+		 */
+		(void) fix_scan_expr_walker(node, &context);
+		return node;
+	}
 }
 
 static Node *
@@ -1840,30 +1823,7 @@ fix_scan_expr_mutator(Node *node, fix_scan_expr_context *context)
 			var->varno += context->rtoffset;
 		if (var->varnoold > 0)
 			var->varnoold += context->rtoffset;
-
-        /* Pseudo column reference? */
-        if (var->varattno <= FirstLowInvalidHeapAttributeNumber)
-        {
-            RangeTblEntry          *rte = NULL;
-            CdbRelColumnInfo       *rci = NULL;
-            Node 				   *exprCopy = NULL;
-            
-            /* Look up the pseudo column definition. */
-            rte = rt_fetch(var->varno, context->root->glob->finalrtable);
-            rci = cdb_rte_find_pseudo_column(rte, var->varattno);
-            Assert(rci && rci->defexpr && "No expression for pseudo column");
-
-            exprCopy = copyObject((Node *) rci->defexpr);
-            /* Fill in OpExpr operator ids. */
-            fix_scan_expr_walker(exprCopy, context);
-
-            /* Replace the Var node with a copy of the defining expr. */
-			return (Node *) exprCopy;
-		}
-		else
-		{
-			return (Node *) var;
-		}
+		return (Node *) var;
 	}
 	if (IsA(node, Param))
 		return fix_param_node(context->root, (Param *) node);

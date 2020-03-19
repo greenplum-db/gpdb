@@ -1,0 +1,99 @@
+--
+-- GPFDISTS test cases
+--
+
+-- start_ignore
+drop external table if exists gpfdist_ssl_start;
+drop external table if exists gpfdist_ssl_stop;
+-- end_ignore
+
+-- --------------------------------------
+-- 'gpfdists' protocol
+-- --------------------------------------
+CREATE EXTERNAL WEB TABLE gpfdist_ssl_start (x text)
+execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data --ssl @abs_srcdir@/data/gpfdist_ssl/certs_multiCA </dev/null >/dev/null 2>&1 &); for i in `seq 1 60`; do curl 127.0.0.1:7070 >/dev/null 2>&1 && break; sleep 1; done; ps -A -o pid,comm |grep [g]pfdist |grep -v postgres:) '
+on SEGMENT 0
+FORMAT 'text' (delimiter '|');
+
+CREATE EXTERNAL WEB TABLE gpfdist_ssl_stop (x text)
+execute E'(ps -A -o pid,comm |grep [g]pfdist |grep -v postgres: |awk \'{print $1;}\' |xargs kill) > /dev/null 2>&1; echo "stopping..."'
+on SEGMENT 0
+FORMAT 'text' (delimiter '|');
+
+-- start_ignore
+\! bash gen_multiCA_certs.bash data/gpfdist_ssl/certs_multiCA
+select * from gpfdist_ssl_stop;
+select * from gpfdist_ssl_start;
+-- end_ignore
+
+-- Helper to remove the output file
+DROP EXTERNAL WEB TABLE IF EXISTS clean_out_file;
+CREATE EXTERNAL WEB TABLE clean_out_file (x text)
+EXECUTE E'(rm -f @abs_srcdir@/data/gpfdist_ssl/tbl2.tbl)'
+on SEGMENT 0
+FORMAT 'text';
+
+-- Execute query to clean out the output file
+SELECT * FROM clean_out_file;
+
+-- gpfdists_multiCA case 1
+-- writable external table
+DROP TABLE IF EXISTS tbl_on_heap;
+CREATE TABLE tbl_on_heap (
+            s1 text, s2 text, s3 text, dt timestamp,
+            n1 smallint, n2 integer, n3 bigint, n4 decimal,
+            n5 numeric, n6 real, n7 double precision);
+INSERT INTO tbl_on_heap VALUES
+('aaa','twoa','shpits','2011-06-01 12:30:30',23,732,834567,45.67,789.123,7.12345,123.456789),
+('bbb','twob','shpits','2011-06-01 12:30:30',23,732,834567,45.67,789.123,7.12345,123.456789),
+('ccc','twoc','shpits','2011-06-01 12:30:30',23,732,834567,45.67,789.123,7.12345,123.456789 );
+DROP EXTERNAL TABLE IF EXISTS tbl;
+CREATE WRITABLE EXTERNAL TABLE tbl (s1 text, s2 text, s3 text, dt timestamp,n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)
+LOCATION ('gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl2.tbl')
+FORMAT 'TEXT' (DELIMITER '|' );
+INSERT INTO tbl SELECT * FROM tbl_on_heap;
+SELECT * FROM tbl_on_heap ORDER BY s1;
+
+-- gpfdists_multiCA case 2
+-- readable external table
+DROP TABLE IF EXISTS tbl_on_heap2;
+CREATE TABLE tbl_on_heap2 (
+            s1 text, s2 text, s3 text, dt timestamp,
+            n1 smallint, n2 integer, n3 bigint, n4 decimal,
+            n5 numeric, n6 real, n7 double precision);
+DROP EXTERNAL TABLE IF EXISTS tbl2;
+CREATE EXTERNAL TABLE tbl2 (s1 text, s2 text, s3 text, dt timestamp,n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)
+LOCATION ('gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl2.tbl')
+FORMAT 'TEXT' (DELIMITER '|' );
+INSERT INTO tbl_on_heap2 SELECT * FROM tbl2;
+SELECT * FROM tbl_on_heap2 ORDER BY s1;
+
+-- gpfdists_multiCA case 3
+-- multiple location on same ETL server
+DROP TABLE IF EXISTS tbl_on_heap;
+CREATE TABLE tbl_on_heap (
+            s1 text, s2 text, s3 text, dt timestamp,
+            n1 smallint, n2 integer, n3 bigint, n4 decimal,
+            n5 numeric, n6 real, n7 double precision);
+DROP EXTERNAL TABLE IF EXISTS tbl;
+CREATE EXTERNAL TABLE tbl (s1 text, s2 text, s3 text, dt timestamp,n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)
+LOCATION ('gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl','gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl2.tbl')
+FORMAT 'TEXT' (DELIMITER '|' );
+INSERT INTO tbl_on_heap SELECT * FROM tbl;
+SELECT * FROM tbl_on_heap ORDER BY s1;
+
+-- start_ignore
+\! bash change_client_cert.bash 
+-- end_ignore
+
+-- gpfdists_multiCA case 4
+-- client cert changed
+DROP EXTERNAL TABLE IF EXISTS tbl;
+CREATE EXTERNAL TABLE tbl (s1 text, s2 text, s3 text, dt timestamp,n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)
+LOCATION ('gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl')
+FORMAT 'TEXT' (DELIMITER '|' );
+SELECT * FROM tbl;
+
+-- start_ignore
+select * from gpfdist_ssl_stop;
+-- end_ignore

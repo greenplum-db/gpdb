@@ -197,7 +197,7 @@ s3://s3-us-west-2.amazonaws.com/test1/abcdefff</codeblock>
          <title>About S3 Data Files</title>
          <p>For each <codeph>INSERT</codeph> operation to a writable S3 table, each Greenplum
             Database segment uploads a single file to the configured S3 bucket using the filename
-            format <codeph> &lt;prefix>&lt;segment_id>&lt;random>.&lt;extension>[.gz]</codeph>
+            format <codeph>&lt;prefix>&lt;segment_id>&lt;random>.&lt;extension>[.gz]</codeph>
                where:<ul id="ul_sw1_qvs_3x">
                <li><codeph>&lt;prefix></codeph> is the prefix specified in the S3 URL.</li>
                <li><codeph>&lt;segment_id></codeph> is the Greenplum Database segment ID.</li>
@@ -222,8 +222,11 @@ s3://s3-us-west-2.amazonaws.com/test1/abcdefff</codeblock>
             or a carriage return (<codeph>\r</codeph>). Also, the column delimiter cannot be a
             newline character (<codeph>\n</codeph>) or a carriage return character
                (<codeph>\r</codeph>). </p>
-         <p>The <codeph>s3</codeph> protocol recognizes the gzip format and uncompress the files.
-            Only the gzip compression format is supported. </p>
+         <p>For read-only S3 tables, the <codeph>s3</codeph> protocol recognizes gzip and deflate
+            compressed files and automatically decompresses the files. For gzip compression, the
+            protocol recognizes the format of a gzip compressed file. For deflate compression, the
+            protocol assumes a file with the <codeph>.deflate</codeph> suffix is a deflate
+            compressed file.</p>
          <p>The S3 file permissions must be <codeph>Open/Download</codeph> and <codeph>View</codeph>
             for the S3 user ID that is accessing the files. Writable S3 tables require the S3 user
             ID to have <codeph>Upload/Delete</codeph> permissions.</p>
@@ -586,7 +589,8 @@ gpcheckcloud <b>-h</b></codeblock>
                <pd>Download data from the specified S3 location with the configuration specified in
                   the <codeph>s3</codeph> protocol URL and send the output to
                      <codeph>STDOUT</codeph>.</pd>
-               <pd>If files are gzip compressed, the uncompressed data is sent to
+               <pd>If files are gzip compressed or have a <codeph>.deflate</codeph> suffix to
+                  indicate deflate compression, the uncompressed data is sent to
                      <codeph>STDOUT</codeph>.</pd>
             </plentry>
             <plentry>

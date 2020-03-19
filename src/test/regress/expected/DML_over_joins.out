@@ -55,41 +55,40 @@ insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
 explain update s set b = b + 1 where exists (select 1 from r where s.a = r.b);
                                                          QUERY PLAN                                                         
 ----------------------------------------------------------------------------------------------------------------------------
- Update on s  (cost=162.65..168.23 rows=34 width=24)
-   ->  Explicit Redistribute Motion 3:3  (slice3; segments: 3)  (cost=162.65..168.23 rows=34 width=24)
-         ->  Result  (cost=162.65..166.23 rows=34 width=24)
-               ->  HashAggregate  (cost=162.65..164.98 rows=34 width=34)
-                     Group Key: s.ctid, s.gp_segment_id
-                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=11.75..164.25 rows=34 width=34)
-                           Hash Key: s.ctid
-                           ->  Hash Join  (cost=11.75..162.25 rows=34 width=34)
+ Update on s  (cost=152.38..155.96 rows=34 width=24)
+   ->  Explicit Redistribute Motion 3:3  (slice1; segments: 3)  (cost=152.38..155.96 rows=34 width=24)
+         ->  Result  (cost=152.38..153.96 rows=34 width=24)
+               ->  HashAggregate  (cost=152.38..152.71 rows=34 width=24)
+                     Group Key: (RowIdExpr)
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=11.75..151.88 rows=34 width=24)
+                           Hash Key: (RowIdExpr)
+                           ->  Hash Join  (cost=11.75..149.88 rows=34 width=24)
                                  Hash Cond: (r.b = s.a)
                                  ->  Seq Scan on r  (cost=0.00..112.00 rows=3334 width=10)
                                  ->  Hash  (cost=8.00..8.00 rows=100 width=18)
-                                       ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..8.00 rows=100 width=18)
+                                       ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..8.00 rows=100 width=18)
                                              ->  Seq Scan on s  (cost=0.00..4.00 rows=34 width=18)
  Optimizer: Postgres query optimizer
 (14 rows)
 
 update s set b = b + 1 where exists (select 1 from r where s.a = r.b);
 explain delete from s where exists (select 1 from r where s.a = r.b);
-                                                         QUERY PLAN                                                         
-----------------------------------------------------------------------------------------------------------------------------
- Delete on s  (cost=162.65..165.65 rows=34 width=16)
-   ->  Explicit Redistribute Motion 3:3  (slice3; segments: 3)  (cost=162.65..165.65 rows=34 width=16)
-         ->  Result  (cost=162.65..165.65 rows=34 width=16)
-               ->  HashAggregate  (cost=162.65..165.65 rows=34 width=26)
-                     Group Key: s.ctid, s.gp_segment_id
-                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=11.75..164.25 rows=34 width=26)
-                           Hash Key: s.ctid
-                           ->  Hash Join  (cost=11.75..162.25 rows=34 width=26)
-                                 Hash Cond: (r.b = s.a)
-                                 ->  Seq Scan on r  (cost=0.00..112.00 rows=3334 width=10)
-                                 ->  Hash  (cost=8.00..8.00 rows=100 width=14)
-                                       ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..8.00 rows=100 width=14)
-                                             ->  Seq Scan on s  (cost=0.00..4.00 rows=34 width=14)
+                                                      QUERY PLAN                                                      
+----------------------------------------------------------------------------------------------------------------------
+ Delete on s  (cost=152.38..154.71 rows=34 width=16)
+   ->  Explicit Redistribute Motion 3:3  (slice1; segments: 3)  (cost=152.38..154.71 rows=34 width=16)
+         ->  HashAggregate  (cost=152.38..152.71 rows=34 width=16)
+               Group Key: (RowIdExpr)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=11.75..151.88 rows=34 width=16)
+                     Hash Key: (RowIdExpr)
+                     ->  Hash Join  (cost=11.75..149.88 rows=34 width=16)
+                           Hash Cond: (r.b = s.a)
+                           ->  Seq Scan on r  (cost=0.00..112.00 rows=3334 width=10)
+                           ->  Hash  (cost=8.00..8.00 rows=100 width=14)
+                                 ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..8.00 rows=100 width=14)
+                                       ->  Seq Scan on s  (cost=0.00..4.00 rows=34 width=14)
  Optimizer: Postgres query optimizer
-(14 rows)
+(13 rows)
 
 delete from s where exists (select 1 from r where s.a = r.b);
 -- ----------------------------------------------------------------------

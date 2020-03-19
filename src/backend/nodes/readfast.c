@@ -2077,6 +2077,14 @@ _readAggExprId(void)
 	READ_DONE();
 }
 
+static RowIdExpr *
+_readRowIdExpr(void)
+{
+	READ_LOCALS(RowIdExpr);
+	READ_INT_FIELD(rowidexpr_id);
+	READ_DONE();
+}
+
 static Node *
 _readValue(NodeTag nt)
 {
@@ -3053,6 +3061,9 @@ readNodeBinary(void)
 				break;
 			case T_AggExprId:
 				return_value = _readAggExprId();
+				break;
+			case T_RowIdExpr:
+				return_value = _readRowIdExpr();
 				break;
 			default:
 				return_value = NULL; /* keep the compiler silent */

@@ -1202,3 +1202,43 @@ fetch all in c2;
 fetch backward all in c2;
 ERROR:  backward scan is not supported in this version of Greenplum Database
 rollback;
+-- gpdb: Test executor should return NULL directly during commit for holdable
+-- cursor if previously executor has emitted all tuples. We've seen two issues
+-- below.
+-- Assert failure:
+-- DETAIL:  FailedAssertion("!(!((heap)->bh_size == 0) && heap->bh_has_heap_property)", File: "binaryheap.c", Line: 161)
+CREATE TABLE foo1_tbl (a int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO foo1_tbl values(2);
+BEGIN;
+DECLARE foo1 CURSOR WITH HOLD FOR SELECT * FROM foo1_tbl ORDER BY a;
+FETCH ALL FROM foo1;
+ a 
+---
+ 2
+(1 row)
+
+COMMIT;
+FETCH ALL FROM foo1;
+ a 
+---
+(0 rows)
+
+CLOSE foo1;
+DROP TABLE foo1_tbl;
+-- ERROR:  cannot execute squelched plan node of type: 232 (execProcnode.c:887)
+BEGIN;
+DECLARE foo2 CURSOR WITH HOLD FOR SELECT relname, spcname FROM pg_catalog.pg_tablespace t, pg_catalog.pg_class c where c.reltablespace = t.oid AND c.relname = 'foo1_tbl';
+FETCH ALL FROM foo2;
+ relname | spcname 
+---------+---------
+(0 rows)
+
+COMMIT;
+FETCH ALL FROM foo2;
+ relname | spcname 
+---------+---------
+(0 rows)
+
+CLOSE foo2;

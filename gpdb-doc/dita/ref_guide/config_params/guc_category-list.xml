@@ -23,9 +23,6 @@
       <li id="kh158533">
         <xref href="#topic29" type="topic" format="dita"/>
       </li>
-      <li id="kh171207">
-        <xref href="#topic33" type="topic" format="dita"/>
-      </li>
       <li id="kh158545">
         <xref href="#topic37" type="topic" format="dita"/>
       </li>
@@ -660,6 +657,7 @@
           <strow>
             <stentry>
               <p><xref href="guc-list.xml#gp_max_slices">gp_max_slices</xref></p>
+              <p><xref href="guc-list.xml#plan_cache_mode">plan_cache_mode</xref></p>
             </stentry>
           </strow>
         </simpletable>

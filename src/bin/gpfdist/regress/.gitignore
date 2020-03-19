@@ -6,5 +6,7 @@ expected
 results
 data/gpfdist_ssl/tbl2.tbl
 data/gpfdist_ssl/certs_matching
+data/gpfdist_ssl/certs_multiCA
+data/gpfdist_ssl/certs_not_matching/root.crt
 regression.diffs
 regression.out

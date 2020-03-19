@@ -1611,12 +1611,6 @@ expand_oid_patterns(SimpleStringList *patterns, SimpleOidList *oids)
 	{
 		const char *seperator = ",";
 		char *oidstr = pg_strdup(cell->val);
-		if (oidstr == NULL)
-		{
-			write_msg(NULL, "memory allocation failed for function \"expand_oid_patterns\"\n");
-			exit_nicely(1);
-		}
-
 		char *token = strtok(oidstr, seperator);
 		while (token)
 		{

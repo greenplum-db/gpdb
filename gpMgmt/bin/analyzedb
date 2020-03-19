@@ -207,17 +207,24 @@ def get_partition_state_tuples(pg_port, dbname, catalog_schema, partition_info):
     num_sqls = 0
     with dbconn.connect(dburl) as conn:
         for (oid, schemaname, partition_name, tupletable) in partition_info:
-            modcount_sql = "select to_char(coalesce(sum(modcount::bigint), 0), '999999999999999999999') from gp_dist_random('%s.%s')" % (catalog_schema, tupletable)
-            modcount = dbconn.execSQLForSingleton(conn, modcount_sql)
-            num_sqls += 1
-            if num_sqls == 1000: # The choice of batch size was chosen arbitrarily
-                logger.debug('Completed executing batch of 1000 tuple count SQLs')
-                conn.commit()
-                num_sqls = 0
-            if modcount:
-                modcount = modcount.strip()
-            validate_modcount(schemaname, partition_name, modcount)
-            partition_list.append((schemaname, partition_name, modcount))
+            try:
+                modcount_sql = "select to_char(coalesce(sum(modcount::bigint), 0), '999999999999999999999') from gp_dist_random('%s.%s')" % (catalog_schema, tupletable)
+                modcount = dbconn.execSQLForSingleton(conn, modcount_sql)
+            except pg.DatabaseError as e:
+                if "does not exist" in str(e):
+                    logger.debug("Table %s.%s (%s) no longer exists", schemaname, partition_name, tupletable)
+                else:
+                    logger.error(str(e))
+            else:
+                num_sqls += 1
+                if num_sqls == 1000: # The choice of batch size was chosen arbitrarily
+                    logger.debug('Completed executing batch of 1000 tuple count SQLs')
+                    conn.commit()
+                    num_sqls = 0
+                if modcount:
+                    modcount = modcount.strip()
+                validate_modcount(schemaname, partition_name, modcount)
+                partition_list.append((schemaname, partition_name, modcount))
     return partition_list
 
 def validate_modcount(schema, tablename, cnt):
@@ -568,7 +575,7 @@ class AnalyzeDb(Operation):
                 included_cols = self._get_include_or_exclude_cols(toks, '-i')
                 excluded_cols = self._get_include_or_exclude_cols(toks, '-x')
                 self._parse_column(col_dict, orig_table, schema, table, included_cols, excluded_cols,
-                                   [table] in all_root_partitions)
+                                   [orig_table] in all_root_partitions)
 
         else:  # all user tables in database
             alltables = run_sql(self.conn, GET_ALL_DATA_TABLES_SQL)
@@ -912,25 +919,20 @@ def generate_timestamp():
     return timestamp.strftime("%Y%m%d%H%M%S")
 
 
-def construct_oid_regclass_str(schema_table):
-    schema = schema_table[0]
-    table = schema_table[1]
-
-    return "'" + pg.escape_string("%s.%s" % (escape_identifier(schema), escape_identifier(table))) + "'::regclass"
-
-
 # The argument is a list of (schema, table) tuples. The output is a string containing an
-# SQL expression like: 'schema.table'::regclass, that can be embedded safely in an SQL string.
+# SQL expression like: to_regclass('schema.table'), that can be embedded safely in an SQL string.
 # The escaping is a bit tricky here: the schema and table name need to be double-quoted, and the
 # whole string needs to be in single quotes.
 def get_oid_str(table_list):
     return ','.join(map((lambda x: regclass_schema_tbl(x[0], x[1])), table_list))
 
 
+# Returns a string that uses to_regclass instead of ::regclass
+# to_regclass returns NULL instead of an error if the table does not exist
 def regclass_schema_tbl(schema, tbl):
     schema_tbl = "%s.%s" % (escape_identifier(schema), escape_identifier(tbl))
 
-    return "'%s'::regclass" % (pg.escape_string(schema_tbl))
+    return "to_regclass('%s')" % (pg.escape_string(schema_tbl))
 
 
 # Escape double-quotes in a string, so that the resulting string is suitable for

@@ -296,9 +296,11 @@ SELECT count(*) FROM pg_exttable WHERE urilocation @> '{file://@hostname@@abs_sr
 DROP SCHEMA exttabletest CASCADE;
 SELECT count(*) FROM pg_exttable WHERE urilocation @> '{file://@hostname@@abs_srcdir@/data/nation.tbl}';
 
--- Tests for MPP17980: generating artificial CTIDs for external table scans
--- This is necessary because the planner currently generates plans that include
--- the CTID attribute for external tables.
+-- Test selecting the CTID system column on an external table. In the past,
+-- it was necessary that we generated artificial CTIDs for external table
+-- scans, because the planner generated plans that used the CTID attribute
+-- to implement certain semi-joins. Nowadays, we use generated row IDs in
+-- such plans, and don't need CTID for that purpose anymore.
 
 CREATE EXTERNAL TABLE ext_mpp17980 ( id int , id1 int , id2 int)
 LOCATION ('file://@hostname@@abs_srcdir@/data/mpp17980.data')

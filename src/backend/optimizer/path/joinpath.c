@@ -24,6 +24,7 @@
 #include "optimizer/pathnode.h"
 #include "optimizer/paths.h"
 #include "optimizer/planmain.h"
+#include "optimizer/tlist.h"
 #include "utils/lsyscache.h"
 
 #include "executor/nodeHash.h"                  /* ExecHashRowSize() */
@@ -360,10 +361,11 @@ try_nestloop_path(PlannerInfo *root,
 						  workspace.startup_cost, workspace.total_cost,
 						  pathkeys, required_outer))
 	{
-		cdb_add_join_path(root, joinrel, orig_jointype, required_outer, (JoinPath *)
+		add_path(joinrel, (Path *)
 				 create_nestloop_path(root,
 									  joinrel,
 									  jointype,
+									  orig_jointype,
 									  &workspace,
 									  extra->sjinfo,
 									  &extra->semifactors,
@@ -393,6 +395,7 @@ try_partial_nestloop_path(PlannerInfo *root,
 						  Path *inner_path,
 						  List *pathkeys,
 						  JoinType jointype,
+						  JoinType orig_jointype,
 						  JoinPathExtraData *extra)
 {
 	JoinCostWorkspace workspace;
@@ -427,6 +430,7 @@ try_partial_nestloop_path(PlannerInfo *root,
 					 create_nestloop_path(root,
 										  joinrel,
 										  jointype,
+										  orig_jointype,
 										  &workspace,
 										  extra->sjinfo,
 										  &extra->semifactors,
@@ -496,10 +500,11 @@ try_mergejoin_path(PlannerInfo *root,
 						  workspace.startup_cost, workspace.total_cost,
 						  pathkeys, required_outer))
 	{
-		cdb_add_join_path(root, joinrel, orig_jointype, required_outer, (JoinPath *)
+		add_path(joinrel, (Path *)
 				 create_mergejoin_path(root,
 									   joinrel,
 									   jointype,
+									   orig_jointype,
 									   &workspace,
 									   extra->sjinfo,
 									   outer_path,
@@ -563,10 +568,11 @@ try_hashjoin_path(PlannerInfo *root,
 						  workspace.startup_cost, workspace.total_cost,
 						  NIL, required_outer))
 	{
-		cdb_add_join_path(root, joinrel, orig_jointype, required_outer, (JoinPath *)
+		add_path(joinrel, (Path *)
 				 create_hashjoin_path(root,
 									  joinrel,
 									  jointype,
+									  orig_jointype,
 									  &workspace,
 									  extra->sjinfo,
 									  &extra->semifactors,
@@ -596,6 +602,7 @@ try_partial_hashjoin_path(PlannerInfo *root,
 						  Path *inner_path,
 						  List *hashclauses,
 						  JoinType jointype,
+						  JoinType orig_jointype,
 						  JoinPathExtraData *extra)
 {
 	JoinCostWorkspace workspace;
@@ -630,6 +637,7 @@ try_partial_hashjoin_path(PlannerInfo *root,
 					 create_hashjoin_path(root,
 										  joinrel,
 										  jointype,
+										  orig_jointype,
 										  &workspace,
 										  extra->sjinfo,
 										  &extra->semifactors,
@@ -1285,7 +1293,11 @@ consider_parallel_nestloop(PlannerInfo *root,
 						   JoinType jointype,
 						   JoinPathExtraData *extra)
 {
+	JoinType	save_jointype = jointype;
 	ListCell   *lc1;
+
+	if (jointype == JOIN_UNIQUE_INNER)
+		jointype = JOIN_INNER;
 
 	foreach(lc1, outerrel->partial_pathlist)
 	{
@@ -1318,17 +1330,20 @@ consider_parallel_nestloop(PlannerInfo *root,
 			 * consider, because cheapest_total_path might not be
 			 * parallel-safe.
 			 */
-			if (jointype == JOIN_UNIQUE_INNER)
+			if (save_jointype == JOIN_UNIQUE_INNER)
 			{
 				if (!bms_is_empty(PATH_REQ_OUTER(innerpath)))
 					continue;
 				innerpath = (Path *) create_unique_path(root, innerrel,
-												   innerpath, extra->sjinfo);
+														innerpath,
+														extra->sjinfo);
 				Assert(innerpath);
 			}
 
 			try_partial_nestloop_path(root, joinrel, outerpath, innerpath,
-									  pathkeys, jointype, extra);
+									  pathkeys, jointype,
+									  save_jointype,
+									  extra);
 		}
 	}
 }
@@ -1579,7 +1594,9 @@ hash_inner_and_outer(PlannerInfo *root,
 				try_partial_hashjoin_path(root, joinrel,
 										  cheapest_partial_outer,
 										  cheapest_safe_inner,
-										  hashclauses, jointype, extra);
+										  hashclauses, jointype,
+										  save_jointype,
+										  extra);
 		}
 	}
 }

@@ -569,6 +569,28 @@ GROUP BY ROLLUP((qty)) order by 1;
      
 (4 rows)
 
+--
+-- Test two-stage aggregate with grouping sets and a HAVING clause
+--
+-- persuade planner to choose a two-stage plan.
+set gp_motion_cost_per_row TO 1000;
+select cn, sum(qty) from sale group by rollup(cn,vn) having sum(qty)=1;
+ cn | sum 
+----+-----
+  1 |   1
+  1 |   1
+  1 |   1
+  2 |   1
+  3 |   1
+(5 rows)
+
+-- same, but the HAVING clause matches a rolled up row.
+select cn, sum(qty) from sale group by rollup(cn,vn) having sum(qty)=1144;
+ cn | sum  
+----+------
+    | 1144
+(1 row)
+
 -- CLEANUP
 -- start_ignore
 drop schema bfv_olap cascade;

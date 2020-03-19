@@ -25,10 +25,9 @@
  */
 #include "postgres.h"
 
-#include "cdb/cdbvars.h"
 #include "executor/executor.h"
 #include "executor/nodeValuesscan.h"
-#include "optimizer/var.h"              /* CDB: contain_var_reference() */
+#include "optimizer/clauses.h"
 #include "utils/expandeddatum.h"
 
 
@@ -178,15 +177,6 @@ ValuesNext(ValuesScanState *node)
 		 * And return the virtual tuple.
 		 */
 		ExecStoreVirtualTuple(slot);
-
-        /* CDB: Label each row with a synthetic ctid for subquery dedup. */
-        if (node->cdb_want_ctid)
-        {
-            HeapTuple   tuple = ExecFetchSlotHeapTuple(slot); 
-
-            ItemPointerSet(&tuple->t_self, node->curr_idx >> 16,
-                           (OffsetNumber)node->curr_idx);
-        }
 	}
 
 	return slot;
@@ -274,9 +264,6 @@ ExecInitValuesScan(ValuesScan *node, EState *estate, int eflags)
 	scanstate->ss.ps.qual = (List *)
 		ExecInitExpr((Expr *) node->scan.plan.qual,
 					 (PlanState *) scanstate);
-
-	/* Check if targetlist or qual contains a var node referencing the ctid column */
-	scanstate->cdb_want_ctid = contain_ctid_var_reference(&node->scan);
 
 	/*
 	 * get info about values list

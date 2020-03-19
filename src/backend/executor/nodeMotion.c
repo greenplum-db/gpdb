@@ -535,10 +535,11 @@ execMotionSortedReceiver(MotionState *node)
 			}
 #endif
 		}
-
-		/* At EOS, drop this sender from the priority queue. */
-		else if (!binaryheap_empty(hp))
+		else
+		{
+			/* At EOS, drop this sender from the priority queue. */
 			binaryheap_remove_first(hp);
+		}
 	}
 
 	/* Finished if all senders have returned EOS. */
