@@ -75,6 +75,20 @@
           the container, and the container shuts down.</p>
         
       </section>
+      <section>
+        <title>About PL/Container 3 Beta</title>
+        <p>Greenplum Database 6.5 introduces PL/Container version 3.0 Beta, which:<ul
+            id="ul_jj3_lyq_blb">
+            <li>Provides support for the new GreenplumR interface.</li>
+            <li>Reduces the number of processes created by PL/Container, in order to save system
+              resources.</li>
+            <li>Supports more containers running concurrently.</li>
+            <li>Includes improved log messages to help diagnose problems.</li>
+          </ul></p>
+        <p>PL/Container 3 is currently a Beta feature, and is provided only for CentOS/RHEL7
+          systems. An R Docker image is available for executing functions; Python images are not yet
+          available. </p>
+      </section>
     </body>
   </topic>
   
@@ -97,7 +111,8 @@
         <ol>
           <li>For PL/Container 2.1.0 and later use Greenplum Database 6 on CentOS 7.x (or later),
             RHEL 7.x (or later), or Ubuntu 18.04. <note>PL/Container 2.1.0 and later supports Docker
-              images with Python 3 installed.</note></li>
+              images with Python 3 installed.</note><note>PL/Container 3.0.0 Beta requires
+              RHEL/CentOS 7.x and Greenplum Database 6.1 or later.</note></li>
           <li>The minimum Linux OS kernel version supported is 3.10. To verfiy your kernel release
             use: <codeblock>$ uname -r</codeblock>
           </li>
@@ -158,6 +173,9 @@
             command:<codeblock>gppkg -i plcontainer-2.1.1-rhel7-x86_64.gppkg</codeblock></li>
           <li>Source the file
             <codeph>$GPHOME/greenplum_path.sh</codeph>:<codeblock>source $GPHOME/greenplum_path.sh</codeblock></li>
+          <li>For PL/Container version 3.0.0 Beta only, enable the <codeph>plc_coordinator</codeph>
+            shared library using the
+            command:<codeblock>gpconfig -c shared_preload_libraries -v 'plc_coordinator'</codeblock></li>
           <li>Restart Greenplum Database:<codeblock>gpstop -ra</codeblock></li>
           <li>Login into one of the available databases, for example:
             <codeblock>psql postgres</codeblock></li>
@@ -188,6 +206,9 @@
               you require different images from the ones provided by Pivotal, you can create custom
               Docker images, install the image and add the image to the PL/ Container configuration.
             </p></li>
+          <li>If you are using PL/Container 3.0.0 Beta, note that this Beta version is compatible
+            only with the associated <filepath>plcontainer-r-image-3.0.0-beta-gp6.tar.gz</filepath>
+            image.</li>
           <li>
             <p>Use the <codeph>plcontainer </codeph> utility command <codeph>image-add</codeph> to
               install the images on all Greenplum Database hosts where  <codeph>-f
@@ -199,7 +220,10 @@ plcontainer image-add -f /home/gpadmin/plcontainer-python-image-2.1.1-gp6.tar.gz
 plcontainer image-add -f /home/gpadmin/plcontainer-python3-image-2.1.1-gp6.tar.gz
             
 # Install an R based Docker image
-plcontainer image-add -f /home/gpadmin/plcontainer-r-image-2.1.1-gp6.tar.gz</codeblock>
+plcontainer image-add -f /home/gpadmin/plcontainer-r-image-2.1.1-gp6.tar.gz
+
+# Install the R image with PL/Container 3.0.0 Beta
+plcontainer image-add -f /home/gpadmin/plcontainer-r-image-3.0.0-beta-gp6.tar.gz</codeblock>
             <p>The utility displays progress information, similar to:</p>
             <codeblock>20200127:21:54:43:004607 plcontainer:mdw:gpadmin-[INFO]:-Checking whether docker is installed on all hosts...
 20200127:21:54:43:004607 plcontainer:mdw:gpadmin-[INFO]:-Distributing image file /home/gpadmin/plcontainer-python-images-1.5.0.tar to all hosts...
@@ -305,6 +329,17 @@ $$ LANGUAGE plcontainer;</codeblock>
  hello from Python
 (1 row)
 </codeblock>
+        <p>Similarly, to test the R
+          runtime:<codeblock>postgres=# CREATE FUNCTION dummyR() RETURNS text AS $$
+# container: plc_r_shared
+return ('hello from R')
+$$ LANGUAGE plcontainer;
+CREATE FUNCTION
+postgres=# select dummyR();
+    dummyr    
+--------------
+ hello from R
+(1 row)</codeblock></p>
         <p>For further details and examples about using PL/Container functions, see <xref
             href="pl_container_using.xml#topic_kwg_qfg_mjb">PL/Container Functions </xref>.</p>
       </section>
