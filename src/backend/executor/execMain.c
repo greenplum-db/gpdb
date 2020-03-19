@@ -1515,11 +1515,31 @@ InitializeResultRelations(PlannedStmt *plannedstmt, EState *estate, CmdType oper
 		estate->es_result_partitions = BuildPartitionNodeFromRoot(relid);
 		
 		/*
-		 * list all the relids that may take part in this insert operation
+		 * List all the relids that may take part in this insert operation.
+		 * The logic here is that:
+		 *   - If root partition is in the resultRelations, all_relids
+		 *     contains the root and all its all_inheritors
+		 *   - Otherwise, all_relids is a map of result_partitions to
+		 *     get each element's relation oid.
 		 */
-		all_relids = lappend_oid(all_relids, relid);
-		all_relids = list_concat(all_relids,
-								 all_partition_relids(estate->es_result_partitions));
+		if (is_root_table)
+		{
+			all_relids = lappend_oid(all_relids, relid);
+			all_relids = list_concat(all_relids,
+						 all_partition_relids(estate->es_result_partitions));
+		}
+		else
+		{
+			ListCell *lc;
+			int       idx;
+
+			foreach(lc, resultRelations)
+			{
+				idx = lfirst_int(lc);
+				all_relids = lappend_oid(all_relids,
+							 getrelid(idx, rangeTable));
+			}
+		}
 
 		/*
 		 * For partitioned tables, in case of DELETE/UPDATE or INSERT
