@@ -85,9 +85,8 @@
             <li>Supports more containers running concurrently.</li>
             <li>Includes improved log messages to help diagnose problems.</li>
           </ul></p>
-        <p>PL/Container 3 is currently a Beta feature, and is provided only for CentOS/RHEL7
-          systems. An R Docker image is available for executing functions; Python images are not yet
-          available. </p>
+        <p>PL/Container 3 is currently a Beta feature, and provides only an R Docker image for
+          executing functions; Python images are not yet available. </p>
       </section>
     </body>
   </topic>
@@ -96,7 +95,7 @@
     <title id="pz214493">Install PL/Container </title>
     
     <body>
-    <section>This topic includes how to: <p/><ul>
+    <section>This topic includes how to: <ul>
           <li><xref href="#install_docker" format="dita" scope="local">install Docker</xref></li>
           <li><xref href="#topic3/install_pl_utility" format="dita">install PL/Container</xref></li>
           <li><xref href="#topic3/install_docker_images" format="dita">install the PL/Container
@@ -111,8 +110,8 @@
         <ol>
           <li>For PL/Container 2.1.0 and later use Greenplum Database 6 on CentOS 7.x (or later),
             RHEL 7.x (or later), or Ubuntu 18.04. <note>PL/Container 2.1.0 and later supports Docker
-              images with Python 3 installed.</note><note>PL/Container 3.0.0 Beta requires
-              RHEL/CentOS 7.x and Greenplum Database 6.1 or later.</note></li>
+              images with Python 3 installed.</note><note>PL/Container 3.0.0 Beta requires Greenplum
+              Database 6.1 or later.</note></li>
           <li>The minimum Linux OS kernel version supported is 3.10. To verfiy your kernel release
             use: <codeblock>$ uname -r</codeblock>
           </li>
