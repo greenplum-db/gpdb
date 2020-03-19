@@ -448,7 +448,7 @@ REVOKE EXECUTE ON FUNCTION pg_config() FROM PUBLIC;
 
 -- Statistics views
 
-CREATE VIEW pg_stat_all_tables_internal AS
+CREATE VIEW pg_stat_all_tables AS
     SELECT
             C.oid AS relid,
             N.nspname AS schemaname,
@@ -478,72 +478,6 @@ CREATE VIEW pg_stat_all_tables_internal AS
          LEFT JOIN pg_namespace N ON (N.oid = C.relnamespace)
     WHERE C.relkind IN ('r', 't', 'm')
     GROUP BY C.oid, N.nspname, C.relname;
-
--- Gather data from segments on user tables, and use data on master on system tables.
-
-CREATE VIEW pg_stat_all_tables AS
-SELECT
-    s.relid,
-    s.schemaname,
-    s.relname,
-    m.seq_scan,
-    m.seq_tup_read,
-    m.idx_scan,
-    m.idx_tup_fetch,
-    m.n_tup_ins,
-    m.n_tup_upd,
-    m.n_tup_del,
-    m.n_tup_hot_upd,
-    m.n_live_tup,
-    m.n_dead_tup,
-    s.n_mod_since_analyze,
-    s.last_vacuum,
-    s.last_autovacuum,
-    s.last_analyze,
-    s.last_autoanalyze,
-    s.vacuum_count,
-    s.autovacuum_count,
-    s.analyze_count,
-    s.autoanalyze_count
-FROM
-    (SELECT
-         relid,
-         schemaname,
-         relname,
-         max(seq_scan) as seq_scan,
-         sum(seq_tup_read) as seq_tup_read,
-         max(idx_scan) as idx_scan,
-         sum(idx_tup_fetch) as idx_tup_fetch,
-         sum(n_tup_ins) as n_tup_ins,
-         sum(n_tup_upd) as n_tup_upd,
-         sum(n_tup_del) as n_tup_del,
-         sum(n_tup_hot_upd) as n_tup_hot_upd,
-         sum(n_live_tup) as n_live_tup,
-         sum(n_dead_tup) as n_dead_tup,
-         max(n_mod_since_analyze) as n_mod_since_analyze,
-         max(last_vacuum) as last_vacuum,
-         max(last_autovacuum) as last_autovacuum,
-         max(last_analyze) as last_analyze,
-         max(last_autoanalyze) as last_autoanalyze,
-         max(vacuum_count) as vacuum_count,
-         max(autovacuum_count) as autovacuum_count,
-         max(analyze_count) as analyze_count,
-         max(autoanalyze_count) as autoanalyze_count
-     FROM
-         gp_dist_random('pg_stat_all_tables_internal')
-     WHERE
-             relid >= 16384
-     GROUP BY relid, schemaname, relname
-
-     UNION ALL
-
-     SELECT
-         *
-     FROM
-         pg_stat_all_tables_internal
-     WHERE
-             relid < 16384) m, pg_stat_all_tables_internal s
-WHERE m.relid = s.relid;
 
 CREATE VIEW pg_stat_xact_all_tables AS
     SELECT
@@ -620,7 +554,7 @@ CREATE VIEW pg_statio_user_tables AS
     WHERE schemaname NOT IN ('pg_catalog', 'information_schema') AND
           schemaname !~ '^pg_toast';
 
-CREATE VIEW pg_stat_all_indexes_internal AS
+CREATE VIEW pg_stat_all_indexes AS
     SELECT
             C.oid AS relid,
             I.oid AS indexrelid,
@@ -635,44 +569,6 @@ CREATE VIEW pg_stat_all_indexes_internal AS
             pg_class I ON I.oid = X.indexrelid
             LEFT JOIN pg_namespace N ON (N.oid = C.relnamespace)
     WHERE C.relkind IN ('r', 't', 'm');
-
--- Gather data from segments on user tables, and use data on master on system tables.
-
-CREATE VIEW pg_stat_all_indexes AS
-SELECT
-    s.relid,
-    s.indexrelid,
-    s.schemaname,
-    s.relname,
-    s.indexrelname,
-    m.idx_scan,
-    m.idx_tup_read,
-    m.idx_tup_fetch
-FROM
-    (SELECT
-         relid,
-         indexrelid,
-         schemaname,
-         relname,
-         indexrelname,
-         max(idx_scan) as idx_scan,
-         sum(idx_tup_read) as idx_tup_read,
-         sum(idx_tup_fetch) as idx_tup_fetch
-     FROM
-         gp_dist_random('pg_stat_all_indexes_internal')
-     WHERE
-             relid >= 16384
-     GROUP BY relid, indexrelid, schemaname, relname, indexrelname
-
-     UNION ALL
-
-     SELECT
-         *
-     FROM
-         pg_stat_all_indexes_internal
-     WHERE
-             relid < 16384) m, pg_stat_all_indexes_internal s
-WHERE m.relid = s.relid;
 
 CREATE VIEW pg_stat_sys_indexes AS
     SELECT * FROM pg_stat_all_indexes

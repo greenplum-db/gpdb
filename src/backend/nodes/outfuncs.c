@@ -2384,9 +2384,6 @@ _outUniquePath(StringInfo str, const UniquePath *node)
 	WRITE_ENUM_FIELD(umethod, UniquePathMethod);
 	WRITE_NODE_FIELD(in_operators);
 	WRITE_NODE_FIELD(uniq_exprs);
-
-    WRITE_BOOL_FIELD(must_repartition);                 /*CDB*/
-    WRITE_BITMAPSET_FIELD(distinct_on_rowid_relids);    /*CDB*/
 }
 
 static void
@@ -4507,10 +4504,6 @@ _outRangeTblEntry(StringInfo str, const RangeTblEntry *node)
 	WRITE_NODE_FIELD(securityQuals);
 
 	WRITE_BOOL_FIELD(forceDistRandom);
-	/*
-	 * pseudocols is intentionally not serialized. It's only used in the planning
-	 * stage, so no need to transfer it to the QEs.
-	 */
 }
 
 static void

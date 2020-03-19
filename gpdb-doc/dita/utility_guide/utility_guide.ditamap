@@ -59,6 +59,8 @@
         <topicref href="ref/pgbouncer.xml"/>
         <topicref href="ref/pgbouncer-ini.xml"/>
         <topicref href="ref/pgbouncer-admin.xml"/>
+            <topicref href="ref/plcontainer.xml"/>
+            <topicref href="ref/plcontainer-configuration.xml"/>
         <topicref href="ref/psql.xml"/>
         <topicref href="../pxf/ref/pxf.html" scope="peer" navtitle="pxf"/>
         <topicref href="../pxf/ref/pxf-cluster.html" scope="peer" navtitle="pxf cluster"/>

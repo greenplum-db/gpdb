@@ -319,11 +319,17 @@ notifyCommittedDtxTransaction(void)
 		case DTX_STATE_INSERTED_COMMITTED:
 			doNotifyingCommitPrepared();
 			break;
+		case DTX_STATE_NOTIFYING_ONE_PHASE_COMMIT:
 		case DTX_STATE_ONE_PHASE_COMMIT:
-			doNotifyingOnePhaseCommit();
+			/* Already notified for one phase commit or no need to notify. */
 			break;
 		default:
-			ereport(ERROR,
+			/*
+			 * If local commit xlog is written we can not throw error and then
+			 * abort transaction (that will cause panic) so directly panic
+			 * for that case with more details.
+			 */
+			ereport(ExecutorDidWriteXLog() ? PANIC : ERROR,
 					(errmsg("Unexpected DTX state"),
 					 TM_ERRDETAIL));
 	}
@@ -471,7 +477,6 @@ static void
 doNotifyingOnePhaseCommit(void)
 {
 	bool		succeeded;
-	volatile int savedInterruptHoldoffCount;
 
 	if (MyTmGxactLocal->dtxSegments == NIL)
 		return;
@@ -481,13 +486,14 @@ doNotifyingOnePhaseCommit(void)
 	Assert(MyTmGxactLocal->state == DTX_STATE_ONE_PHASE_COMMIT);
 	setCurrentDtxState(DTX_STATE_NOTIFYING_ONE_PHASE_COMMIT);
 
-	savedInterruptHoldoffCount = InterruptHoldoffCount;
-
 	succeeded = currentDtxDispatchProtocolCommand(DTX_PROTOCOL_COMMAND_COMMIT_ONEPHASE, true);
 	if (!succeeded)
 	{
+		/* If error is not thrown after failure then we have to throw it. */
 		Assert(MyTmGxactLocal->state == DTX_STATE_NOTIFYING_ONE_PHASE_COMMIT);
-		elog(ERROR, "one phase commit failed");
+		ereport(ERROR,
+				(errmsg("one phase commit notification failed"),
+				TM_ERRDETAIL));
 	}
 }
 
@@ -823,6 +829,11 @@ prepareDtxTransaction(void)
 		(!markXidCommitted && list_length(MyTmGxactLocal->dtxSegments) < 2))
 	{
 		setCurrentDtxState(DTX_STATE_ONE_PHASE_COMMIT);
+		/*
+		 * Notify one phase commit to QE before local transaction xlog recording
+		 * since if it fails we still have chance of aborting the transaction.
+		 */
+		doNotifyingOnePhaseCommit();
 		return;
 	}
 
@@ -1986,6 +1997,8 @@ performDtxProtocolCommitOnePhase(const char *gid)
 	DistributedTransactionTimeStamp distribTimeStamp;
 	DistributedTransactionId gxid;
 	List *waitGxids = list_copy(MyTmGxactLocal->waitGxids);
+
+	SIMPLE_FAULT_INJECTOR("start_performDtxProtocolCommitOnePhase");
 
 	elog(DTM_DEBUG5,
 		 "performDtxProtocolCommitOnePhase going to call CommitTransaction for distributed transaction %s", gid);

@@ -47,6 +47,27 @@ select gp_inject_fault('sync_rep_query_die', 'reset', dbid) from gp_segment_conf
 -- check if the insert fails or not.
 select gp_segment_id, * from die_commit_pending_replication;
 
+--
+-- Test 1PC: if there is transaction xlog commit on QD, and QE quits during the
+-- "notification" stage, QD won't panic. Previously the notification code is
+-- after xlog commit code on QD so QE quitting will cause notification on QD
+-- elog(ERROR) but at that moment the transaction can not be aborted (caused by
+-- elog(ERROR)), else panic with message as below, "cannot abort transaction
+-- %u, it was already committed".
+--
+
+2: create temp table die_commit_pending_replication2(a int);
+2: insert into die_commit_pending_replication2 values(2),(1);
+
+-- Insert fault before the "notification" code on QE and susped there.
+select gp_inject_fault_infinite('start_performDtxProtocolCommitOnePhase', 'error', dbid) from gp_segment_configuration where role='p' and content = 0;
+
+-- Start an one phase query that writes commit xlog on QD.
+2: begin; select txid_current(); select * from die_commit_pending_replication2; end;
+
+-- Reset start_performDtxProtocolCommitOnePhase.
+select gp_inject_fault_infinite('start_performDtxProtocolCommitOnePhase', 'reset', dbid) from gp_segment_configuration where role='p' and content = 0;
+
 -- cleanup
 drop table die_commit_pending_replication;
 drop table store_session_id;

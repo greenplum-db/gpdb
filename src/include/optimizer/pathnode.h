@@ -34,8 +34,6 @@ extern int compare_fractional_path_costs(Path *path1, Path *path2,
 							  double fraction);
 extern void set_cheapest(RelOptInfo *parent_rel);
 extern void add_path(RelOptInfo *parent_rel, Path *new_path);
-extern void cdb_add_join_path(PlannerInfo *root, RelOptInfo *parent_rel, JoinType orig_jointype,
-				  Relids required_outer, JoinPath *new_path);
 extern Path *create_seqscan_path(PlannerInfo *root, RelOptInfo *rel,
 					Relids required_outer, int parallel_workers);
 extern AppendOnlyPath *create_appendonly_path(PlannerInfo *root, RelOptInfo *rel,
@@ -89,10 +87,10 @@ extern MaterialPath *create_material_path(PlannerInfo *root, RelOptInfo *rel, Pa
 extern UniquePath *create_unique_path(PlannerInfo *root, RelOptInfo *rel,
 				   Path *subpath, SpecialJoinInfo *sjinfo);
 extern UniquePath *create_unique_rowid_path(PlannerInfo *root,
-						 RelOptInfo *rel,
-                         Path        *subpath,
-                         Relids       distinct_relids,
-						 Relids       required_outer);
+											RelOptInfo *rel,
+											Path *subpath,
+											Relids required_outer,
+											int rowidexpr_id);
 extern GatherPath *create_gather_path(PlannerInfo *root,
 				   RelOptInfo *rel, Path *subpath, PathTarget *target,
 				   Relids required_outer, double *rows);
@@ -127,22 +125,24 @@ extern Relids calc_nestloop_required_outer(Path *outer_path, Path *inner_path);
 extern Relids calc_non_nestloop_required_outer(Path *outer_path, Path *inner_path);
 
 extern bool path_contains_inner_index(Path *path);
-extern NestPath *create_nestloop_path(PlannerInfo *root,
+extern Path *create_nestloop_path(PlannerInfo *root,
 					 RelOptInfo *joinrel,
 					 JoinType jointype,
+					 JoinType orig_jointype,		/* CDB */
 					 JoinCostWorkspace *workspace,
 					 SpecialJoinInfo *sjinfo,
 					 SemiAntiJoinFactors *semifactors,
 					 Path *outer_path,
 					 Path *inner_path,
 					 List *restrict_clauses,
-					 List *redistribution_clauses,    /*CDB*/
+					 List *redistribution_clauses,	/* CDB */
 					 List *pathkeys,
 					 Relids required_outer);
 
-extern MergePath *create_mergejoin_path(PlannerInfo *root,
+extern Path *create_mergejoin_path(PlannerInfo *root,
 					  RelOptInfo *joinrel,
 					  JoinType jointype,
+					  JoinType orig_jointype,		/* CDB */
 					  JoinCostWorkspace *workspace,
 					  SpecialJoinInfo *sjinfo,
 					  Path *outer_path,
@@ -151,13 +151,14 @@ extern MergePath *create_mergejoin_path(PlannerInfo *root,
 					  List *pathkeys,
 					  Relids required_outer,
 					  List *mergeclauses,
-                      List *redistribution_clauses,    /*CDB*/
+					  List *redistribution_clauses,	/* CDB */
 					  List *outersortkeys,
 					  List *innersortkeys);
 
-extern HashPath *create_hashjoin_path(PlannerInfo *root,
+extern Path *create_hashjoin_path(PlannerInfo *root,
 					 RelOptInfo *joinrel,
 					 JoinType jointype,
+					 JoinType orig_jointype,		/* CDB */
 					 JoinCostWorkspace *workspace,
 					 SpecialJoinInfo *sjinfo,
 					 SemiAntiJoinFactors *semifactors,
@@ -165,7 +166,7 @@ extern HashPath *create_hashjoin_path(PlannerInfo *root,
 					 Path *inner_path,
 					 List *restrict_clauses,
 					 Relids required_outer,
-                     List *redistribution_clauses,    /*CDB*/
+					 List *redistribution_clauses,	/* CDB */
 					 List *hashclauses);
 
 extern ProjectionPath *create_projection_path(PlannerInfo *root,
@@ -309,16 +310,6 @@ extern Relids min_join_parameterization(PlannerInfo *root,
 						  RelOptInfo *inner_rel);
 extern RelOptInfo *build_empty_join_rel(PlannerInfo *root);
 extern void build_joinrel_tlist(PlannerInfo *root, RelOptInfo *joinrel, List *input_tlist);
-
-extern Var *cdb_define_pseudo_column(PlannerInfo   *root,
-                         RelOptInfo    *rel,
-                         const char    *colname,
-                         Expr          *defexpr,
-                         int32          width);
-
-extern CdbRelColumnInfo *cdb_find_pseudo_column(PlannerInfo *root, Var *var);
-
-extern CdbRelColumnInfo *cdb_rte_find_pseudo_column(RangeTblEntry *rte, AttrNumber attno);
 
 extern RelOptInfo *fetch_upper_rel(PlannerInfo *root, UpperRelationKind kind,
 				Relids relids);

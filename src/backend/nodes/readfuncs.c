@@ -2241,7 +2241,6 @@ _readRangeTblEntry(void)
 	READ_NODE_FIELD(securityQuals);
 
 	READ_BOOL_FIELD(forceDistRandom);
-	/* 'pseudocols' is intentionally missing, see out function */
 
 	READ_DONE();
 }

@@ -37,7 +37,6 @@
 #include "cdb/cdbvars.h"
 #include "cdb/memquota.h"
 #include "executor/spi.h"
-#include "optimizer/var.h"              /* CDB: contain_ctid_var_reference() */
 
 
 /*
@@ -178,16 +177,6 @@ FunctionNext_guts(FunctionScanState *node)
 									   ScanDirectionIsForward(direction),
 									   false,
 									   scanslot);
-
-		/*
-		 * CDB: Label each row with a synthetic ctid if needed for subquery dedup.
-		 */
-		if (node->cdb_want_ctid &&
-			!TupIsNull(scanslot))
-		{
-			slot_set_ctid_from_fake(scanslot, &node->cdb_fake_ctid);
-		}
-
 		return scanslot;
 	}
 
@@ -300,20 +289,6 @@ FunctionNext_guts(FunctionScanState *node)
 				scanslot->PRIVATE_tts_values[att] = slot_getattr(fs->func_slot, i + 1,
 														 &scanslot->PRIVATE_tts_isnull[att]);
 				att++;
-			}
-
-			/* CDB: Label each row with a synthetic ctid for subquery dedup. */
-			if (node->cdb_want_ctid)
-			{
-				HeapTuple   tuple = ExecFetchSlotHeapTuple(scanslot); 
-
-				/* Increment 48-bit row count */
-				node->cdb_fake_ctid.ip_posid++;
-				if (node->cdb_fake_ctid.ip_posid == 0)
-					ItemPointerSetBlockNumber(&node->cdb_fake_ctid,
-											  1 + ItemPointerGetBlockNumber(&node->cdb_fake_ctid));
-
-				tuple->t_self = node->cdb_fake_ctid;
 			}
 
 			/*
@@ -558,12 +533,6 @@ ExecInitFunctionScan(FunctionScan *node, EState *estate, int eflags)
 		i++;
 	}
 
-	/* Check if targetlist or qual contains a var node referencing the ctid column */
-	scanstate->cdb_want_ctid = contain_ctid_var_reference(&node->scan);
-
-    ItemPointerSet(&scanstate->cdb_fake_ctid, 0, 0);
-    ItemPointerSet(&scanstate->cdb_mark_ctid, 0, 0);
-
 	/*
 	 * Create the combined TupleDesc
 	 *
@@ -743,8 +712,6 @@ ExecReScanFunctionScan(FunctionScanState *node)
 	}
 
 	ExecScanReScan(&node->ss);
-
-	ItemPointerSet(&node->cdb_fake_ctid, 0, 0);
 
 	/*
 	 * Here we have a choice whether to drop the tuplestores (and recompute

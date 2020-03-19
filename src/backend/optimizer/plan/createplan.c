@@ -307,10 +307,6 @@ create_plan(PlannerInfo *root, Path *best_path, PlanSlice *curSlice)
 	/* plan_params should not be in use in current query level */
 	Assert(root->plan_params == NIL);
 
-	/* Modify path to support unique rowid operation for subquery preds. */
-	if (root->join_info_list)
-		cdbpath_dedup_fixup(root, best_path);
-
 	/* Initialize this module's workspace in PlannerInfo */
 	root->curOuterRels = NULL;
 	root->curOuterParams = NIL;
@@ -785,7 +781,6 @@ static bool
 use_physical_tlist(PlannerInfo *root, Path *path, int flags)
 {
 	RelOptInfo *rel = path->parent;
-	RangeTblEntry *rte;
 	int			i;
 	ListCell   *lc;
 
@@ -874,11 +869,6 @@ use_physical_tlist(PlannerInfo *root, Path *path, int flags)
 			i++;
 		}
 	}
-
-	/* CDB: Don't use physical tlist if rel has pseudo columns. */
-	rte = rt_fetch(rel->relid, root->parse->rtable);
-	if (rte->pseudocols)
-		return false;
 
 	return true;
 }

@@ -30,7 +30,9 @@
 #include "parser/parsetree.h"
 #include "utils/lsyscache.h"
 #include "utils/selfuncs.h"
+#include "optimizer/tlist.h"
 
+#include "catalog/pg_operator.h"
 #include "catalog/pg_proc.h"
 #include "cdb/cdbhash.h"        /* cdb_default_distribution_opfamily_for_type() */
 #include "cdb/cdbmutate.h"
@@ -865,63 +867,6 @@ add_path(RelOptInfo *parent_rel, Path *new_path)
 			pfree(new_path);
 	}
 }                               /* add_path */
-
-
-/*
- * Wrapper around add_path(), for join paths.
- *
- * If the join was originally a semi-join, that's been implemented as an
- * inner-join, followed by removing duplicates, adds the UniquePath on
- * top of the join. Otherwise, just passes through the Path to add_path().
- */
-void
-cdb_add_join_path(PlannerInfo *root, RelOptInfo *parent_rel, JoinType orig_jointype,
-				  Relids required_outer, JoinPath *new_path)
-{
-	Path	   *path = (Path *) new_path;
-
-	if (!new_path)
-		return;
-
-	if (orig_jointype == JOIN_DEDUP_SEMI)
-	{
-		Assert(new_path->jointype == JOIN_INNER);
-
-		/*
-		 * Skip rowid unique path if distinct rels are replicated tables
-		 * The reason is ctid + gp_segment_id can not identify a logical
-		 * row of replicated table.
-		 *
-		 * TODO: add a motion on top of segmentGeneral node to support
-		 * rowid unique.
-		 */
-		if (CdbPathLocus_IsPartitioned(path->locus) &&
-		    CdbPathLocus_IsSegmentGeneral(((JoinPath *)path)->outerjoinpath->locus))
-			return;
-
-		path = (Path *) create_unique_rowid_path(root,
-												 parent_rel,
-												 (Path *) new_path,
-												 new_path->outerjoinpath->parent->relids,
-												 required_outer);
-	}
-	else if (orig_jointype == JOIN_DEDUP_SEMI_REVERSE)
-	{
-		Assert(new_path->jointype == JOIN_INNER);
-
-		if (CdbPathLocus_IsPartitioned(path->locus) &&
-		    CdbPathLocus_IsSegmentGeneral(((JoinPath *)path)->innerjoinpath->locus))
-			return;
-
-		path = (Path *) create_unique_rowid_path(root,
-												 parent_rel,
-												 (Path *) new_path,
-												 new_path->innerjoinpath->parent->relids,
-												 required_outer);
-	}
-
-	add_path(parent_rel, path);
-}
 
 /*
  * add_path_precheck
@@ -2377,9 +2322,8 @@ create_unique_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath,
 /*
  * create_unique_rowid_path (GPDB)
  *
- * Create a UniquePath to deduplicate based on the ctid and gp_segment_id,
- * or some other columns that uniquely identify a row. This is used as part
- * of implementing semi-joins (such as "x IN (SELECT ...)").
+ * Create a UniquePath to deduplicate based on a RowIdExp column. This is
+ * used as part of implementing semi-joins (such as "x IN (SELECT ...)").
  *
  * In PostgreSQL, semi-joins are implemented with JOIN_SEMI join types, or
  * by first eliminating duplicates from the inner side, and then performing
@@ -2391,24 +2335,21 @@ create_unique_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath,
  * The JOIN_DEDUP_SEMI plan will look something like this:
  *
  * postgres=# explain select * from s where exists (select 1 from r where s.a = r.b);
- *                                                       QUERY PLAN                                                      
- * ----------------------------------------------------------------------------------------------------------------------
- *  Gather Motion 3:1  (slice3; segments: 3)  (cost=189.75..190.75 rows=100 width=18)
- *    ->  HashAggregate  (cost=189.75..190.75 rows=34 width=18)
- *          Group By: s.ctid::bigint, s.gp_segment_id
- *          ->  Result  (cost=11.75..189.25 rows=34 width=18)
- *                ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=11.75..189.25 rows=34 width=18)
- *                      Hash Key: s.ctid
- *                      ->  Hash Join  (cost=11.75..187.25 rows=34 width=18)
- *                            Hash Cond: r.b = s.a
- *                            ->  Seq Scan on r  (cost=0.00..112.00 rows=3334 width=4)
- *                            ->  Hash  (cost=8.00..8.00 rows=100 width=18)
- *                                  ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..8.00 rows=100 width=18)
- *                                        ->  Seq Scan on s  (cost=0.00..4.00 rows=34 width=18)
- *  Settings:  optimizer=off
- *  Optimizer status: Postgres query optimizer
- * (14 rows)
- *
+ *                                                   QUERY PLAN                                                   
+ * ---------------------------------------------------------------------------------------------------------------
+ *  Gather Motion 3:1  (slice1; segments: 3)  (cost=153.50..155.83 rows=100 width=8)
+ *    ->  HashAggregate  (cost=153.50..153.83 rows=34 width=8)
+ *          Group Key: (RowIdExpr)
+ *          ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=11.75..153.00 rows=34 width=8)
+ *                Hash Key: (RowIdExpr)
+ *                ->  Hash Join  (cost=11.75..151.00 rows=34 width=8)
+ *                      Hash Cond: (r.b = s.a)
+ *                      ->  Seq Scan on r  (cost=0.00..112.00 rows=3334 width=4)
+ *                      ->  Hash  (cost=8.00..8.00 rows=100 width=8)
+ *                            ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..8.00 rows=100 width=8)
+ *                                  ->  Seq Scan on s  (cost=0.00..4.00 rows=34 width=8)
+ *  Optimizer: Postgres query optimizer
+ * (12 rows)
  *
  * In PostgreSQL, this is never better than doing a JOIN_SEMI directly.
  * But it can be a win in GPDB, if the distribution of the outer and inner
@@ -2431,7 +2372,7 @@ create_unique_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath,
  *
  * The role of this function is to insert the UniquePath to represent
  * the deduplication above the join. Returns a UniquePath node representing
- * a "DISTINCT ON r1,...,rn" operator, where (r1,...,rn) represents a unique
+ * a "DISTINCT ON (RowIdExpr)" operator, where (r1,...,rn) represents a unique
  * identifier for each row of the cross product of the tables specified by
  * the 'distinct_relids' parameter.
  *
@@ -2447,9 +2388,9 @@ create_unique_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath,
 UniquePath *
 create_unique_rowid_path(PlannerInfo *root,
 						 RelOptInfo *rel,
-                         Path        *subpath,
-                         Relids       distinct_relids,
-						 Relids       required_outer)
+						 Path        *subpath,
+						 Relids       required_outer,
+						 int          rowidexpr_id)
 {
 	UniquePath *pathnode;
 	CdbPathLocus locus;
@@ -2459,19 +2400,56 @@ create_unique_rowid_path(PlannerInfo *root,
 	bool		all_btree;
 	bool		all_hash;
 
-    Assert(!bms_is_empty(distinct_relids));
+	Assert(rowidexpr_id > 0);
 
 	/*
 	 * For easier merging (albeit it's going to manual), keep this function
 	 * similar to create_unique_path(). In this function, we deduplicate based
-	 * on ctid and gp_segment_id, or other unique identifiers that we generate
-	 * on the fly. Sorting and hashing are both possible, but we keep these
-	 * as variables to resemble create_unique_path().
+	 * on RowIdExpr that we generate on the fly. Sorting and hashing are both
+	 * possible, but we keep these as variables to resemble
+	 * create_unique_path().
 	 */
 	all_btree = true;
 	all_hash = true;
 
-	locus = subpath->locus;
+	RowIdExpr *rowidexpr = makeNode(RowIdExpr);
+	rowidexpr->rowidexpr_id = rowidexpr_id;
+
+	subpath->pathtarget = copy_pathtarget(subpath->pathtarget);
+	add_column_to_pathtarget(subpath->pathtarget, (Expr *) rowidexpr, 0);
+
+	/* Repartition first if duplicates might be on different QEs. */
+	if (!CdbPathLocus_IsBottleneck(subpath->locus))
+	{
+		int			numsegments = CdbPathLocus_NumSegments(subpath->locus);
+
+		locus = cdbpathlocus_from_exprs(root,
+										list_make1(rowidexpr),
+										list_make1_oid(cdb_default_distribution_opfamily_for_type(INT8OID)),
+										list_make1_int(0),
+										numsegments);
+		subpath = cdbpath_create_motion_path(root, subpath, NIL, false, locus);
+
+		/*
+		 * The motion path has been created correctly, but there's a little
+		 * problem with the locus. The locus has RowIdExpr as the distribution
+		 * key, but because there are no Vars in it, the EC machinery will
+		 * consider it a pseudo-constant. We don't want that, as it would
+		 * mean that all rows were considered to live on the same segment,
+		 * which is not how this works. Therefore set the locus of the Unique
+		 * path to Strewn, which doesn't have that problem. No node above the
+		 * Unique will care about the row id expresssion, so it's OK to forget
+		 * that the rows are currently hashed by the row id.
+		 */
+		CdbPathLocus_MakeStrewn(&locus, numsegments);
+	}
+	else
+	{
+		/* XXX If the join result is on a single node, a DEDUP plan probably doesn't
+		 * make sense.
+		 */
+		locus = subpath->locus;
+	}
 
 	/*
 	 * Start building the result Path object.
@@ -2482,12 +2460,12 @@ create_unique_rowid_path(PlannerInfo *root,
 	pathnode->path.parent = rel;
 	pathnode->path.pathtarget = rel->reltarget;
 	pathnode->path.locus = locus;
-	pathnode->path.param_info = get_baserel_parampathinfo(root, rel,
-													 required_outer);
+	pathnode->path.param_info = subpath->param_info;
 	pathnode->path.parallel_aware = false;
 	pathnode->path.parallel_safe = rel->consider_parallel &&
 		subpath->parallel_safe;
 	pathnode->path.parallel_workers = subpath->parallel_workers;
+
 	/*
 	 * Treat the output as always unsorted, since we don't necessarily have
 	 * pathkeys to represent it.
@@ -2495,20 +2473,14 @@ create_unique_rowid_path(PlannerInfo *root,
 	pathnode->path.pathkeys = NIL;
 
 	pathnode->subpath = subpath;
-	pathnode->in_operators = NIL;
-	pathnode->uniq_exprs = NIL;
-	pathnode->distinct_on_rowid_relids = distinct_relids;
+	pathnode->in_operators = list_make1_oid(Int8EqualOperator);
+	pathnode->uniq_exprs = list_make1(rowidexpr);
 
 	/*
-	 * For cost estimation purposes, assume we'll deduplicate based on ctid and
-	 * gp_segment_id. If the outer side of the join is a join relation itself,
-	 * we'll need to deduplicate based on gp_segment_id and ctid of all the
-	 * involved base tables, or other identifiers. See cdbpath_dedup_fixup()
-	 * for the details, but here, for cost estimation purposes, just assume
-	 * it's going to be two columns.
+	 * This just removes duplicates generated by broadcasting rows earlier.
 	 */
-	numCols	= 2;
-	((Path*)pathnode)->rows = rel->rows;
+	pathnode->path.rows = rel->rows;
+	numCols = 1;		/* the RowIdExpr */
 
 	if (all_btree)
 	{
@@ -2583,35 +2555,6 @@ create_unique_rowid_path(PlannerInfo *root,
 		pathnode->path.startup_cost = sort_path.startup_cost;
 		pathnode->path.total_cost = sort_path.total_cost;
 	}
-
-    /* Add repartitioning cost if duplicates might be on different QEs. */
-    if (!CdbPathLocus_IsBottleneck(subpath->locus) &&
-        !cdbpathlocus_is_hashed_on_relids(subpath->locus, distinct_relids))
-    {
-        CdbMotionPath   motionpath;     /* dummy for cost estimate */
-        Cost            repartition_cost;
-
-        /* Tell create_unique_plan() to insert Motion operator atop subpath. */
-        pathnode->must_repartition = true;
-
-        /* Set a fake locus.  Repartitioning key won't be built until later. */
-        CdbPathLocus_MakeStrewn(&pathnode->path.locus,
-								CdbPathLocus_NumSegments(subpath->locus));
-		pathnode->path.sameslice_relids = NULL;
-
-        /* Estimate repartitioning cost. */
-        memset(&motionpath, 0, sizeof(motionpath));
-        motionpath.path.type = T_CdbMotionPath;
-        motionpath.path.parent = subpath->parent;
-        motionpath.path.locus = pathnode->path.locus;
-        motionpath.path.rows = subpath->rows;
-        motionpath.subpath = subpath;
-        cdbpath_cost_motion(root, &motionpath);
-
-        /* Add MotionPath cost to UniquePath cost. */
-        repartition_cost = motionpath.path.total_cost - subpath->total_cost;
-        pathnode->path.total_cost += repartition_cost;
-    }
 
 	/* see MPP-1140 */
 	if (pathnode->umethod == UNIQUE_PATH_HASH)
@@ -3268,17 +3211,18 @@ calc_non_nestloop_required_outer(Path *outer_path, Path *inner_path)
  *
  * Returns the resulting path node.
  */
-NestPath *
+Path *
 create_nestloop_path(PlannerInfo *root,
 					 RelOptInfo *joinrel,
 					 JoinType jointype,
+					 JoinType orig_jointype,		/* CDB */
 					 JoinCostWorkspace *workspace,
 					 SpecialJoinInfo *sjinfo,
 					 SemiAntiJoinFactors *semifactors,
 					 Path *outer_path,
 					 Path *inner_path,
 					 List *restrict_clauses,
-					 List *redistribution_clauses,    /*CDB*/
+					 List *redistribution_clauses,	/* CDB */
 					 List *pathkeys,
 					 Relids required_outer)
 {
@@ -3288,12 +3232,14 @@ create_nestloop_path(PlannerInfo *root,
 	bool		outer_must_be_local = !bms_is_empty(outer_req_outer);
 	Relids		inner_req_outer = PATH_REQ_OUTER(inner_path);
 	bool		inner_must_be_local = !bms_is_empty(inner_req_outer);
+	int			rowidexpr_id;
 
 	/* Add motion nodes above subpaths and decide where to join. */
 	join_locus = cdbpath_motion_for_join(root,
-										 jointype,
+										 orig_jointype,
 										 &outer_path,       /* INOUT */
 										 &inner_path,       /* INOUT */
+										 &rowidexpr_id,		/* OUT */
 										 redistribution_clauses,
 										 pathkeys,
 										 NIL,
@@ -3418,7 +3364,17 @@ create_nestloop_path(PlannerInfo *root,
 
 	final_cost_nestloop(root, pathnode, workspace, sjinfo, semifactors);
 
-	return pathnode;
+	if (orig_jointype == JOIN_DEDUP_SEMI ||
+		orig_jointype == JOIN_DEDUP_SEMI_REVERSE)
+	{
+		return (Path *) create_unique_rowid_path(root,
+												 joinrel,
+												 (Path *) pathnode,
+												 pathnode->innerjoinpath->parent->relids,
+												 rowidexpr_id);
+	}
+
+	return (Path *) pathnode;
 }
 
 /*
@@ -3448,10 +3404,11 @@ create_nestloop_path(PlannerInfo *root,
  * 'innersortkeys' are the sort varkeys for the inner relation
  *      or NIL to use existing ordering
  */
-MergePath *
+Path *
 create_mergejoin_path(PlannerInfo *root,
 					  RelOptInfo *joinrel,
 					  JoinType jointype,
+					  JoinType orig_jointype,		/* CDB */
 					  JoinCostWorkspace *workspace,
 					  SpecialJoinInfo *sjinfo,
 					  Path *outer_path,
@@ -3460,7 +3417,7 @@ create_mergejoin_path(PlannerInfo *root,
 					  List *pathkeys,
 					  Relids required_outer,
 					  List *mergeclauses,
-					  List *redistribution_clauses,    /*CDB*/
+					  List *redistribution_clauses,	/* CDB */
 					  List *outersortkeys,
 					  List *innersortkeys)
 {
@@ -3470,6 +3427,7 @@ create_mergejoin_path(PlannerInfo *root,
 	List	   *innermotionkeys;
 	bool		preserve_outer_ordering;
 	bool		preserve_inner_ordering;
+	int			rowidexpr_id;
 
 	/*
 	 * GPDB_92_MERGE_FIXME: Should we keep the pathkeys_contained_in calls?
@@ -3511,9 +3469,10 @@ create_mergejoin_path(PlannerInfo *root,
 	preserve_inner_ordering = preserve_inner_ordering || !bms_is_empty(PATH_REQ_OUTER(inner_path));
 
 	join_locus = cdbpath_motion_for_join(root,
-										 jointype,
+										 orig_jointype,
 										 &outer_path,       /* INOUT */
 										 &inner_path,       /* INOUT */
+										 &rowidexpr_id,
 										 redistribution_clauses,
 										 outermotionkeys,
 										 innermotionkeys,
@@ -3577,7 +3536,17 @@ create_mergejoin_path(PlannerInfo *root,
 
 	final_cost_mergejoin(root, pathnode, workspace, sjinfo);
 
-	return pathnode;
+	if (orig_jointype == JOIN_DEDUP_SEMI ||
+		orig_jointype == JOIN_DEDUP_SEMI_REVERSE)
+	{
+		return (Path *) create_unique_rowid_path(root,
+												 joinrel,
+												 (Path *) pathnode,
+												 pathnode->jpath.innerjoinpath->parent->relids,
+												 rowidexpr_id);
+	}
+	else
+		return (Path *) pathnode;
 }
 
 /*
@@ -3596,10 +3565,11 @@ create_mergejoin_path(PlannerInfo *root,
  * 'hashclauses' are the RestrictInfo nodes to use as hash clauses
  *		(this should be a subset of the restrict_clauses list)
  */
-HashPath *
+Path *
 create_hashjoin_path(PlannerInfo *root,
 					 RelOptInfo *joinrel,
 					 JoinType jointype,
+					 JoinType orig_jointype,		/* CDB */
 					 JoinCostWorkspace *workspace,
 					 SpecialJoinInfo *sjinfo,
 					 SemiAntiJoinFactors *semifactors,
@@ -3607,19 +3577,21 @@ create_hashjoin_path(PlannerInfo *root,
 					 Path *inner_path,
 					 List *restrict_clauses,
 					 Relids required_outer,
-					 List *redistribution_clauses,    /*CDB*/
+					 List *redistribution_clauses,	/* CDB */
 					 List *hashclauses)
 {
 	HashPath   *pathnode;
 	CdbPathLocus join_locus;
 	bool		outer_must_be_local = !bms_is_empty(PATH_REQ_OUTER(outer_path));
 	bool		inner_must_be_local = !bms_is_empty(PATH_REQ_OUTER(inner_path));
+	int			rowidexpr_id;
 
 	/* Add motion nodes above subpaths and decide where to join. */
 	join_locus = cdbpath_motion_for_join(root,
-										 jointype,
+										 orig_jointype,
 										 &outer_path,       /* INOUT */
 										 &inner_path,       /* INOUT */
+										 &rowidexpr_id,
 										 redistribution_clauses,
 										 NIL,   /* don't care about ordering */
 										 NIL,
@@ -3715,7 +3687,17 @@ create_hashjoin_path(PlannerInfo *root,
 
 	final_cost_hashjoin(root, pathnode, workspace, sjinfo, semifactors);
 
-	return pathnode;
+	if (orig_jointype == JOIN_DEDUP_SEMI ||
+		orig_jointype == JOIN_DEDUP_SEMI_REVERSE)
+	{
+		return (Path *) create_unique_rowid_path(root,
+												 joinrel,
+												 (Path *) pathnode,
+												 pathnode->jpath.innerjoinpath->parent->relids,
+												 rowidexpr_id);
+	}
+	else
+		return (Path *) pathnode;
 }
 
 /*
