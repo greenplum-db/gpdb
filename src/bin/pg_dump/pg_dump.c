@@ -13647,6 +13647,7 @@ dumpExternal(Archive *fout, TableInfo *tbinfo, PQExpBuffer q, PQExpBuffer delq)
 		char	   *logerrors = NULL;
 		char	   *on_clause;
 		char	   *qualrelname;
+		bool		log_errors_persistently = false;
 		PQExpBuffer query = createPQExpBuffer();
 
 		qualrelname = pg_strdup(fmtQualifiedDumpable(tbinfo));
@@ -13931,7 +13932,27 @@ dumpExternal(Archive *fout, TableInfo *tbinfo, PQExpBuffer q, PQExpBuffer delq)
 
 		if (options && options[0] != '\0')
 		{
-			appendPQExpBuffer(q, "OPTIONS (\n %s\n )\n", options);
+			char *error_log_persistent = "error_log_persistent 'true'";
+			char *pos = strstr(options, error_log_persistent);
+			int error_log_len = strlen(error_log_persistent);
+			if (pos)
+			{
+				log_errors_persistently = true;
+				if (*(pos + error_log_len) == ',')
+						error_log_len += 6;
+				if (strlen(options) - error_log_len != 0)
+				{
+					char opts[strlen(options) - error_log_len + 1];
+					int prev_len = pos - options;
+					if (prev_len > 0)
+						strncpy(opts, options, prev_len);
+					StrNCpy(opts + prev_len, pos + error_log_len,
+							strlen(options) - prev_len - error_log_len + 1 /* for \0 */);
+					appendPQExpBuffer(q, "OPTIONS (\n %s\n )\n", opts);
+				}
+			}
+			else
+				appendPQExpBuffer(q, "OPTIONS (\n %s\n )\n", options);
 		}
 
 		if (fout->remoteVersion >= 80205)
@@ -13949,7 +13970,11 @@ dumpExternal(Archive *fout, TableInfo *tbinfo, PQExpBuffer q, PQExpBuffer delq)
 				 * logging.
 				 */
 				if (logerrors && strlen(logerrors) > 0)
+				{
 					appendPQExpBufferStr(q, "LOG ERRORS ");
+					if (log_errors_persistently)
+						appendPQExpBufferStr(q, "PERSISTENTLY ");
+				}
 
 				/* reject limit */
 				appendPQExpBuffer(q, "SEGMENT REJECT LIMIT %s", rejlim);
