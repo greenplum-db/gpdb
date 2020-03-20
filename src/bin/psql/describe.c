@@ -3284,6 +3284,11 @@ add_external_table_footer(printTableContent *const cont, const char *oid)
 			printfPQExpBuffer(&tmpbuf, _("Error Log in File"));
 			printTableAddFooter(cont, tmpbuf.data);
 		}
+		else if (logerrors && logerrors[0] == 'p')
+		{
+			printfPQExpBuffer(&tmpbuf, _("Error Log in Persistent File"));
+			printTableAddFooter(cont, tmpbuf.data);
+		}
 		else if(errtblname && strlen(errtblname) > 0)
 		{
 			printfPQExpBuffer(&tmpbuf, _("Error table: %s"), errtblname);

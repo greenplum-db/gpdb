@@ -2080,9 +2080,9 @@ class gpload:
                 sql += " WHERE pgext.fmterrtbl IS NULL "
         else:
             if log_errors:
-                sql += " WHERE pgext.logerrors "
+                sql += " WHERE pgext.logerrors='t' "
             else:
-                sql += " WHERE NOT pgext.logerrors "
+                sql += " WHERE pgext.logerrors='f' "
 
         for i, l in enumerate(self.locations):
             sql += " and pgext.urilocation[%s] = %s\n" % (i + 1, quote(l))
@@ -2162,9 +2162,9 @@ class gpload:
                 sql += " and pgext.fmterrtbl IS NULL "
         else:
             if log_errors:
-                sql += " and pgext.logerrors "
+                sql += " and pgext.logerrors='t' "
             else:
-                sql += " and NOT pgext.logerrors "
+                sql += " and pgext.logerrors='f' "
 
         for i, l in enumerate(self.locations):
             sql += " and pgext.urilocation[%s] = %s\n" % (i + 1, quote(l))

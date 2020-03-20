@@ -411,7 +411,7 @@ _readSingleRowErrorDesc(void)
 
 	READ_INT_FIELD(rejectlimit);
 	READ_BOOL_FIELD(is_limit_in_rows);
-	READ_BOOL_FIELD(into_file);
+	READ_CHAR_FIELD(log_error_type);
 
 	READ_DONE();
 }

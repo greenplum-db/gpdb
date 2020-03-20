@@ -44,7 +44,6 @@ test_write_read_shared_snapshot_for_cursor(void **state)
 	slot.QDxid = 10;
 	slot.ready = true;
 	slot.segmateSync = 1;
-	slot.combocidcnt = 0;
 	slot.snapshot.xmin = 99;
 	slot.snapshot.xmax = 110;
 	slot.snapshot.xcnt = XCNT;
@@ -59,11 +58,11 @@ test_write_read_shared_snapshot_for_cursor(void **state)
 	expect_any(LWLockAcquire, mode);
 	will_be_called(LWLockAcquire);
 
-	expect_any_count(FaultInjector_InjectFaultIfSet, faultName, 11);
-	expect_any_count(FaultInjector_InjectFaultIfSet, ddlStatement, 11);
-	expect_any_count(FaultInjector_InjectFaultIfSet, databaseName, 11);
-	expect_any_count(FaultInjector_InjectFaultIfSet, tableName, 11);
-	will_be_called_count(FaultInjector_InjectFaultIfSet, 11);
+	expect_any_count(FaultInjector_InjectFaultIfSet, faultName, 9);
+	expect_any_count(FaultInjector_InjectFaultIfSet, ddlStatement, 9);
+	expect_any_count(FaultInjector_InjectFaultIfSet, databaseName, 9);
+	expect_any_count(FaultInjector_InjectFaultIfSet, tableName, 9);
+	will_be_called_count(FaultInjector_InjectFaultIfSet, 9);
 
 	expect_any(LWLockRelease, lock);
 	will_be_called(LWLockRelease);

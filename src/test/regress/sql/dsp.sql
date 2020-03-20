@@ -361,6 +361,10 @@ create external table ext_t2 (a int, b int)
     log errors segment reject limit 100;
 \d+ ext_t2
 
+create external table ext_t3 (a int, b int)
+    location ('file:///tmp/test.txt') format 'text'
+    log errors persistently segment reject limit 100;
+\d+ ext_t3
 -- Make sure gp_default_storage_options GUC value is set in newly created cdbgangs
 -- after previous idle cdbgang is stopped
 SET gp_vmem_idle_resource_timeout=30;

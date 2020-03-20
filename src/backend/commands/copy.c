@@ -1154,12 +1154,13 @@ DoCopy(const CopyStmt *stmt, const char *queryString, uint64 *processed)
 		{
 			/* Single row error handling requested */
 			SingleRowErrorDesc *sreh = cstate->sreh;
-			bool		log_to_file = false;
+			char		log_to_file = LOG_ERRORS_DISABLE;
 
-			if (sreh->into_file)
+			if (IS_LOG_TO_FILE(sreh->log_error_type))
 			{
 				cstate->errMode = SREH_LOG;
-				log_to_file = true;
+				/* LOG ERRORS PERSISTENTLY for COPY is not allowed for now. */
+				log_to_file = LOG_ERRORS_ENABLE;
 			}
 			else
 			{
@@ -4333,7 +4334,7 @@ CopyFrom(CopyState cstate)
 			 * counts it again as a rejected row. So we ignore the reject count
 			 * from the master and only consider the reject count from segments.
 			 */
-			if (cstate->cdbsreh->log_to_file)
+			if (IS_LOG_TO_FILE(cstate->cdbsreh->logerrors))
 				total_rejected_from_qd = 0;
 
 			total_rejected = total_rejected_from_qd + total_rejected_from_qes;
@@ -5011,7 +5012,7 @@ HandleCopyError(CopyState cstate)
 		}
 		cstate->cdbsreh->errmsg = errormsg;
 
-		if (cstate->cdbsreh->log_to_file)
+		if (IS_LOG_TO_FILE(cstate->cdbsreh->logerrors))
 		{
 			if (Gp_role == GP_ROLE_DISPATCH && !cstate->on_segment)
 			{

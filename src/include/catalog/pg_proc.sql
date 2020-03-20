@@ -173,6 +173,10 @@
 
  CREATE FUNCTION gp_truncate_error_log(text) RETURNS bool LANGUAGE INTERNAL STRICT VOLATILE PARALLEL SAFE AS 'gp_truncate_error_log' WITH (OID=7069, DESCRIPTION="truncate the error log for the specified external table");
 
+ CREATE FUNCTION gp_read_persistent_error_log(exttable text, OUT cmdtime timestamptz, OUT relname text, OUT filename text, OUT linenum int4, OUT bytenum int4, OUT errmsg text, OUT rawdata text, OUT rawbytes bytea) RETURNS SETOF record LANGUAGE INTERNAL STRICT VOLATILE PARALLEL SAFE EXECUTE ON ALL SEGMENTS AS 'gp_read_persistent_error_log' WITH (OID = 7080, DESCRIPTION="read the persistent error log for the specified external table");
+
+ CREATE FUNCTION gp_truncate_persistent_error_log(text) RETURNS bool LANGUAGE INTERNAL STRICT VOLATILE PARALLEL SAFE AS 'gp_truncate_persistent_error_log' WITH (OID=7081, DESCRIPTION="truncate the persistent error log for the specified external table");
+
 -- Segment and master administration functions, see utils/gp/segadmin.c
  CREATE FUNCTION gp_add_master_standby(text, text, text) RETURNS int2 LANGUAGE internal VOLATILE PARALLEL RESTRICTED AS 'gp_add_master_standby' WITH (OID=5046, DESCRIPTION="Perform the catalog operations necessary for adding a new standby");
 

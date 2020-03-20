@@ -282,7 +282,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 		CreateExternalStmt
 		CreateQueueStmt CreateResourceGroupStmt
 		DropQueueStmt DropResourceGroupStmt
-		ExtTypedesc OptSingleRowErrorHandling
+		ExtTypedesc OptSingleRowErrorHandling ExtSingleRowErrorHandling
 
 %type <node>    deny_login_role deny_interval deny_point deny_day_specifier
 
@@ -432,7 +432,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 %type <fun_param_mode> arg_class
 %type <typnam>	func_return func_type
 
-%type <boolean>  OptWeb OptWritable OptSrehLimitType OptLogErrorTable
+%type <boolean>  OptWeb OptWritable OptSrehLimitType OptLogErrorTable ExtLogErrorTable
 
 %type <boolean>  opt_trusted opt_restart_seqs
 %type <ival>	 OptTemp
@@ -771,7 +771,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 
 	ORDERED OTHERS OVERCOMMIT
 
-	PARTITIONS PERCENT PROTOCOL
+	PARTITIONS PERCENT PERSISTENTLY PROTOCOL
 
 	QUEUE
 
@@ -1002,6 +1002,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 			%nonassoc PARTITIONS
 			%nonassoc PASSWORD
 			%nonassoc PERCENT
+			%nonassoc PERSISTENTLY
 			%nonassoc PREPARE
 			%nonassoc PREPARED
 			%nonassoc PRIOR
@@ -5500,7 +5501,7 @@ opt_with_data:
  *****************************************************************************/
 	
 CreateExternalStmt:	CREATE OptWritable EXTERNAL OptWeb OptTemp TABLE qualified_name '(' OptExtTableElementList ')' 
-					ExtTypedesc FORMAT Sconst format_opt ext_options_opt ext_opt_encoding_list OptSingleRowErrorHandling OptDistributedBy
+					ExtTypedesc FORMAT Sconst format_opt ext_options_opt ext_opt_encoding_list ExtSingleRowErrorHandling OptDistributedBy
 						{
 							CreateExternalStmt *n = makeNode(CreateExternalStmt);
 							n->iswritable = $2;
@@ -5769,7 +5770,7 @@ OptSingleRowErrorHandling:
 		OptLogErrorTable SEGMENT REJECT_P LIMIT Iconst OptSrehLimitType
 		{
 			SingleRowErrorDesc *n = makeNode(SingleRowErrorDesc);
-			n->into_file = $1;
+			n->log_error_type = $1;
 			n->rejectlimit = $5;
 			n->is_limit_in_rows = $6; /* true for ROWS false for PERCENT */
 
@@ -5789,7 +5790,7 @@ OptSingleRowErrorHandling:
 		}
 		| /*EMPTY*/		{ $$ = NULL; }
 		;
-	
+
 OptLogErrorTable:
 		LOG_P ERRORS INTO qualified_name
 		{
@@ -5808,10 +5809,43 @@ OptLogErrorTable:
 					 errhint("Set gp_ignore_error_table to ignore the [INTO error-table] clause for backward compatibility."),
 					 parser_errposition(@3)));
 			}
-			$$ = TRUE;
+			$$ = 't';
 		}
-		| LOG_P ERRORS                        { $$ = TRUE; }
-		| /*EMPTY*/							{ $$ = FALSE; }
+		| LOG_P ERRORS						{ $$ = 't'; }
+		| /*EMPTY*/							{ $$ = 'f'; }
+		;
+
+/*
+ * External table Single row error handling SQL
+ */
+ExtSingleRowErrorHandling:
+		ExtLogErrorTable SEGMENT REJECT_P LIMIT Iconst OptSrehLimitType
+		{
+			SingleRowErrorDesc *n = makeNode(SingleRowErrorDesc);
+			n->log_error_type = $1;
+			n->rejectlimit = $5;
+			n->is_limit_in_rows = $6; /* true for ROWS false for PERCENT */
+
+			/* PERCENT value check */
+			if(!n->is_limit_in_rows && (n->rejectlimit < 1 || n->rejectlimit > 100))
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+						 errmsg("invalid PERCENT value. Should be (1 - 100)")));
+
+			/* ROW values check */
+			if(n->is_limit_in_rows && n->rejectlimit < 2)
+			   ereport(ERROR,
+					   (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+						errmsg("invalid (ROWS) reject limit. Should be 2 or larger")));
+
+			$$ = (Node *)n;
+		}
+		| /*EMPTY*/		{ $$ = NULL; }
+		;
+
+ExtLogErrorTable:
+		OptLogErrorTable					{ $$ = $1; }
+		| LOG_P ERRORS PERSISTENTLY			{ $$ = 'p'; }
 		;
 	
 OptSrehLimitType:		
@@ -16674,6 +16708,7 @@ unreserved_keyword:
 			| PASSING
 			| PASSWORD
 			| PERCENT
+			| PERSISTENTLY
 			| PLANS
 			| POLICY
 			| PREPARE
@@ -16972,6 +17007,7 @@ PartitionIdentKeyword: ABORT_P
 			| PARTITIONS
 			| PASSWORD
 			| PERCENT
+			| PERSISTENTLY
 			| PREPARE
 			| PREPARED
 			| PRESERVE

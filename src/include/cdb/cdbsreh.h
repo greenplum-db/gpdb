@@ -20,6 +20,14 @@
 #include "cdb/cdbcopy.h"
 #include "utils/memutils.h"
 
+#define LOG_ERRORS_ENABLE			't'
+#define LOG_ERRORS_PERSISTENTLY		'p'
+#define LOG_ERRORS_DISABLE			'f'
+
+#define IS_LOG_TO_FILE(c)				(c == 't' || c == 'p')
+#define IS_LOG_ERRORS_ENABLE(c)			(c == 't')
+#define IS_LOG_ERRORS_PERSISTENTLY(c)	(c == 'p')
+#define IS_LOG_ERRORS_DISABLE(c)		(c == 'f')
 
 /*
  * The error table is ALWAYS of the following format
@@ -64,16 +72,18 @@ typedef struct CdbSreh
 	bool	is_limit_in_rows; /* ROWS = true, PERCENT = false */
 
 	MemoryContext badrowcontext;	/* per-badrow evaluation context */
-	char	filename[MAXPGPATH];		/* "uri [filename]" */
+	char	filename[MAXPGPATH];	/* "uri [filename]" */
 
-	bool	log_to_file;		/* or log into file? */
-	Oid		relid;				/* parent relation id */
+	char	logerrors;				/* 't' to log errors into file, 'f' to disable log error,
+									   'p' means log errors persistently, when drop the
+									   external table, the error log not get dropped */
+	Oid		relid;					/* parent relation id */
 } CdbSreh;
 
 extern int gp_initial_bad_row_limit;
 
 extern CdbSreh *makeCdbSreh(int rejectlimit, bool is_limit_in_rows,
-							char *filename, char *relname, bool log_to_file);
+							char *filename, char *relname, char logerrors);
 extern void destroyCdbSreh(CdbSreh *cdbsreh);
 extern void HandleSingleRowError(CdbSreh *cdbsreh);
 extern void ReportSrehResults(CdbSreh *cdbsreh, uint64 total_rejected);
@@ -84,9 +94,12 @@ extern bool ExceedSegmentRejectHardLimit(CdbSreh *cdbsreh);
 extern bool IsRejectLimitReached(CdbSreh *cdbsreh);
 extern void VerifyRejectLimit(char rejectlimittype, int rejectlimit);
 
+extern bool PersistentErrorLogDelete(Oid databaseId, Oid namespaceId, const char* fname);
 extern bool ErrorLogDelete(Oid databaseId, Oid relationId);
 extern Datum gp_read_error_log(PG_FUNCTION_ARGS);
 extern Datum gp_truncate_error_log(PG_FUNCTION_ARGS);
+extern Datum gp_read_persistent_error_log(PG_FUNCTION_ARGS);
+extern Datum gp_truncate_persistent_error_log(PG_FUNCTION_ARGS);
 
 
 #endif /* CDBSREH_H */

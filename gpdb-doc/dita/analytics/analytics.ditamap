@@ -25,4 +25,5 @@
       <topicref href="pl_python.xml" linking="none"/>
       <topicref href="pl_r.xml" linking="none"/>
     </topicref>
+    <topicref href="greenplum_r_client.xml" linking="none"/>
 </map>

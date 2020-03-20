@@ -27,8 +27,6 @@ typedef struct SharedSnapshotSlot
 	volatile TransactionId   QDxid;
 	volatile bool			ready;
 	volatile uint32			segmateSync;
-	uint32			combocidcnt;
-	ComboCidKeyData combocids[MaxComboCids];
 	SnapshotData	snapshot;
 	LWLock		   *slotLock;
 

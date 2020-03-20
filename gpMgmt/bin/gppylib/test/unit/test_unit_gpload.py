@@ -50,7 +50,7 @@ class GpLoadTestCase(unittest.TestCase):
         gploader.gpdb_version = "6.0.0"
 
         sql = gploader.get_reuse_exttable_query('csv', 'header', None, {}, None, False, None)
-        self.assertTrue('NOT pgext.logerrors' in sql)
+        self.assertTrue("pgext.logerrors='f'" in sql)
         self.assertTrue('pgext.rejectlimit IS NULL' in sql)
 
     def test_case_merge_transaction(self):

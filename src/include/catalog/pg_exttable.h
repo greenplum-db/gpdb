@@ -42,7 +42,7 @@ CATALOG(pg_exttable,6040) BKI_WITHOUT_OIDS
 	text	command;			/* the command string to EXECUTE */
 	int32	rejectlimit;		/* error count reject limit per segment */
 	char	rejectlimittype;	/* 'r' (rows) or 'p' (percent) */
-	bool	logerrors;			/* 't' to log errors into file */
+	char	logerrors;			/* 't' to log errors into file, 'f' to disable log error, 'p' means log errors persistently */
 	int32	encoding;			/* character encoding of this external table */
 	bool	writable;			/* 't' if writable, 'f' if readable */
 #endif
@@ -92,13 +92,17 @@ typedef struct ExtTableEntry
 	char*	command;
 	int		rejectlimit;
 	char	rejectlimittype;
-	bool	logerrors;
+	char	logerrors;
     int		encoding;
     bool	iswritable;
     bool	isweb;		/* extra state, not cataloged */
 } ExtTableEntry;
 
 /* No initial contents. */
+
+extern void ValidateExtTableOptions(List *options);
+
+extern bool ExtractErrorLogPersistent(List **options);
 
 extern void InsertExtTableEntry(Oid 	tbloid,
 					bool 	iswritable,
@@ -107,7 +111,7 @@ extern void InsertExtTableEntry(Oid 	tbloid,
 					char	rejectlimittype,
 					char*	commandString,
 					int		rejectlimit,
-					bool	logerrors,
+					char	logerrors,
 					int		encoding,
 					Datum	formatOptStr,
 					Datum	optionsStr,
