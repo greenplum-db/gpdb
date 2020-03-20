@@ -2840,7 +2840,7 @@ ExecutePlan(EState *estate,
 	 * need to quit if the executor has already emitted all tuples.
 	 */
 	if (estate->es_got_eos)
-		return;
+		return NULL;
 
 	/*
 	 * initialize local variables
