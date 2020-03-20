@@ -3077,6 +3077,7 @@ _outSingleRowErrorDesc(StringInfo str, SingleRowErrorDesc *node)
 	WRITE_INT_FIELD(rejectlimit);
 	WRITE_BOOL_FIELD(is_limit_in_rows);
 	WRITE_BOOL_FIELD(into_file);
+	WRITE_ENUM_FIELD(log_errors_type, LogErrorsType);
 }
 
 #ifndef COMPILING_BINARY_FUNCS
