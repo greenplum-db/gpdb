@@ -57,7 +57,7 @@
                     limits. For example, the following command creates a resource group named
                         <codeph>plpy_run1_rg</codeph> for a PL/Container runtime:
                     <codeblock>CREATE RESOURCE GROUP plpy_run1_rg WITH (MEMORY_AUDITOR=cgroup, CONCURRENCY=0,
-                            CPU_RATE_LIMIT=10, MEMORY_LIMIT=10);</codeblock></p>
+                                                  CPU_RATE_LIMIT=10, MEMORY_LIMIT=10);</codeblock></p>
                 <p>PL/Container does not use the <codeph>MEMORY_SHARED_QUOTA</codeph> and
                         <codeph>MEMORY_SPILL_RATIO</codeph> resource group memory limits. Refer to
                     the <codeph><xref href="../ref_guide/sql_commands/CREATE_RESOURCE_GROUP.xml"
@@ -132,7 +132,7 @@
                         resources among 2 resource groups 60/40, the following SQL commands create
                         the resource
                         groups:<codeblock>CREATE RESOURCE GROUP plr_run1_rg WITH (MEMORY_AUDITOR=cgroup, CONCURRENCY=0,
-                                                 CPU_RATE_LIMIT=15, MEMORY_LIMIT=15);
+                                           CPU_RATE_LIMIT=15, MEMORY_LIMIT=15);
  CREATE RESOURCE GROUP plpy_run1_rg WITH (MEMORY_AUDITOR=cgroup, CONCURRENCY=0,
                                           CPU_RATE_LIMIT=10, MEMORY_LIMIT=10);</codeblock></li>
                 <li>Find and note the <codeph>groupid</codeph> associated with each resource group
@@ -146,15 +146,16 @@ plpy_run1_rg |   16391
 plr_run1_rg  |   16393
 (1 row)</codeblock></li>
                 <li>Assign each resource group that you created to the desired PL/Container runtime
-                    configuration. If you have not yet created the runtime configuration, use the
-                        <codeph>plcontainer runtime-add</codeph> command. If the runtime already
-                    exists, use the <codeph>plcontainer runtime-replace</codeph> or
-                        <codeph>plcontainer runtime-edit</codeph> command to add the resource group
-                    assignment to the runtime configuration. For example:
-                        <codeblock>plcontainer runtime-add -r python_run1 -i pivotaldata/plcontainer_python_shared:devel -l python -s resource_group_id=16391
-                                    plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel -l r -s resource_group_id=16393</codeblock><p>For
-                        information about the <codeph>plcontainer</codeph> command, see <xref
-                            href="../utility_guide/ref/plcontainer.xml" format="dita"/> reference page.</p></li>
+                        configuration. If you have not yet created the runtime configuration, use
+                        the <codeph>plcontainer runtime-add</codeph> command. If the runtime already
+                        exists, use the <codeph>plcontainer runtime-replace</codeph> or
+                            <codeph>plcontainer runtime-edit</codeph> command to add the resource
+                        group assignment to the runtime configuration. For example:
+                            <codeblock>plcontainer runtime-add -r python_run1 -i pivotaldata/plcontainer_python_shared:devel -l python -s resource_group_id=16391
+plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel -l r -s resource_group_id=16393</codeblock><p>For
+                            information about the <codeph>plcontainer</codeph> command, see <xref
+                                href="../utility_guide/ref/plcontainer.xml" format="dita"/>
+                            reference page.</p></li>
             </ol></section>
             
             <section id="plc_notes">
