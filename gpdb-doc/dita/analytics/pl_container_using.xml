@@ -57,7 +57,7 @@
                     limits. For example, the following command creates a resource group named
                         <codeph>plpy_run1_rg</codeph> for a PL/Container runtime:
                     <codeblock>CREATE RESOURCE GROUP plpy_run1_rg WITH (MEMORY_AUDITOR=cgroup, CONCURRENCY=0,
-                            CPU_RATE_LIMIT=10, MEMORY_LIMIT=10);</codeblock></p>
+                                                  CPU_RATE_LIMIT=10, MEMORY_LIMIT=10);</codeblock></p>
                 <p>PL/Container does not use the <codeph>MEMORY_SHARED_QUOTA</codeph> and
                         <codeph>MEMORY_SPILL_RATIO</codeph> resource group memory limits. Refer to
                     the <codeph><xref href="../ref_guide/sql_commands/CREATE_RESOURCE_GROUP.xml"
@@ -72,12 +72,12 @@
                     <codeph>gp_toolkit</codeph> view. For example, the following query displays the
                         <codeph>groupid</codeph> of a resource group named
                         <codeph>plpy_run1_rg</codeph>:<codeblock>SELECT groupname, groupid FROM gp_toolkit.gp_resgroup_config
-                            WHERE groupname='plpy_run1_rg';
+ WHERE groupname='plpy_run1_rg';
                             
-                            groupname   |  groupid
-                            --------------+----------
-                            plpy_run1_rg |   16391
-                            (1 row)</codeblock></p>
+ groupname   |  groupid
+ --------------+----------
+ plpy_run1_rg |   16391
+ (1 row)</codeblock></p>
                 <p>You assign a resource group to a PL/Container runtime configuration by specifying
                     the <codeph>-s resource_group_id=<varname>rg_groupid</varname></codeph> option
                     to the <codeph>plcontainer runtime-add</codeph> (new runtime) or
@@ -127,34 +127,35 @@
                         <li>The resource-group-to-PL/Container-runtime assignment(s).</li>
                     </ul></li>
                 <li>Create the PL/Container resource groups that you identified in the step above.
-                    For example, suppose that you choose to allocate 25% of both memory and CPU
-                    Greenplum Database resources to PL/Container. If you further split these
-                    resources among 2 resource groups 60/40, the following SQL commands create the
-                    resource
-                    groups:<codeblock>CREATE RESOURCE GROUP plr_run1_rg WITH (MEMORY_AUDITOR=cgroup, CONCURRENCY=0,
-                                    CPU_RATE_LIMIT=15, MEMORY_LIMIT=15);
-                                    CREATE RESOURCE GROUP plpy_run1_rg WITH (MEMORY_AUDITOR=cgroup, CONCURRENCY=0,
-                                    CPU_RATE_LIMIT=10, MEMORY_LIMIT=10);</codeblock></li>
+                        For example, suppose that you choose to allocate 25% of both memory and CPU
+                        Greenplum Database resources to PL/Container. If you further split these
+                        resources among 2 resource groups 60/40, the following SQL commands create
+                        the resource
+                        groups:<codeblock>CREATE RESOURCE GROUP plr_run1_rg WITH (MEMORY_AUDITOR=cgroup, CONCURRENCY=0,
+                                           CPU_RATE_LIMIT=15, MEMORY_LIMIT=15);
+ CREATE RESOURCE GROUP plpy_run1_rg WITH (MEMORY_AUDITOR=cgroup, CONCURRENCY=0,
+                                          CPU_RATE_LIMIT=10, MEMORY_LIMIT=10);</codeblock></li>
                 <li>Find and note the <codeph>groupid</codeph> associated with each resource group
-                    that you created. For
-                    example:<codeblock>SELECT groupname, groupid FROM gp_toolkit.gp_resgroup_config
-                                    WHERE groupname IN ('plpy_run1_rg', 'plr_run1_rg');
+                        that you created. For
+                        example:<codeblock>SELECT groupname, groupid FROM gp_toolkit.gp_resgroup_config
+WHERE groupname IN ('plpy_run1_rg', 'plr_run1_rg');
                                     
-                                    groupname   |  groupid
-                                    --------------+----------
-                                    plpy_run1_rg |   16391
-                                    plr_run1_rg  |   16393
-                                    (1 row)</codeblock></li>
+groupname   |  groupid
+--------------+----------
+plpy_run1_rg |   16391
+plr_run1_rg  |   16393
+(1 row)</codeblock></li>
                 <li>Assign each resource group that you created to the desired PL/Container runtime
-                    configuration. If you have not yet created the runtime configuration, use the
-                        <codeph>plcontainer runtime-add</codeph> command. If the runtime already
-                    exists, use the <codeph>plcontainer runtime-replace</codeph> or
-                        <codeph>plcontainer runtime-edit</codeph> command to add the resource group
-                    assignment to the runtime configuration. For example:
-                        <codeblock>plcontainer runtime-add -r python_run1 -i pivotaldata/plcontainer_python_shared:devel -l python -s resource_group_id=16391
-                                    plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel -l r -s resource_group_id=16393</codeblock><p>For
-                        information about the <codeph>plcontainer</codeph> command, see <xref
-                            href="../utility_guide/ref/plcontainer.xml" format="dita"/> reference page.</p></li>
+                        configuration. If you have not yet created the runtime configuration, use
+                        the <codeph>plcontainer runtime-add</codeph> command. If the runtime already
+                        exists, use the <codeph>plcontainer runtime-replace</codeph> or
+                            <codeph>plcontainer runtime-edit</codeph> command to add the resource
+                        group assignment to the runtime configuration. For example:
+                            <codeblock>plcontainer runtime-add -r python_run1 -i pivotaldata/plcontainer_python_shared:devel -l python -s resource_group_id=16391
+plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel -l r -s resource_group_id=16393</codeblock><p>For
+                            information about the <codeph>plcontainer</codeph> command, see <xref
+                                href="../utility_guide/ref/plcontainer.xml" format="dita"/>
+                            reference page.</p></li>
             </ol></section>
             
             <section id="plc_notes">
@@ -251,11 +252,11 @@
                 <p>Running the command executes a PL/Container function that updates the
                     configuration on the master and segment instances and returns the status of the
                     refresh.<codeblock> gp_segment_id | plcontainer_refresh_local_config
-                ---------------+----------------------------------
-                1 | ok
-                0 | ok
-                -1 | ok
-                (3 rows)</codeblock></p>
+ ---------------+----------------------------------
+ 1 | ok
+ 0 | ok
+-1 | ok
+(3 rows)</codeblock></p>
                 <p>Also, you can show all the configurations in the session by performing a
                         <codeph>SELECT</codeph> command on the view
                         <codeph>plcontainer_show_config</codeph>. For example, this
@@ -295,10 +296,10 @@
                     created by Greenplum Database users is displayed. This is sample output when 2
                     containers are running.</p>
                 <codeblock> SEGMENT_ID |                           CONTAINER_ID                           |   UP_TIME    |  OWNER  | MEMORY_USAGE(KB)
-            ------------+------------------------------------------------------------------+--------------+---------+------------------
-            1          | 693a6cb691f1d2881ec0160a44dae2547a0d5b799875d4ec106c09c97da422ea | Up 8 seconds | gpadmin | 12940
-            1          | bc9a0c04019c266f6d8269ffe35769d118bfb96ec634549b2b1bd2401ea20158 | Up 2 minutes | gpadmin | 13628
-            (2 rows)</codeblock>
+ ------------+------------------------------------------------------------------+--------------+---------+------------------
+ 1          | 693a6cb691f1d2881ec0160a44dae2547a0d5b799875d4ec106c09c97da422ea | Up 8 seconds | gpadmin | 12940
+ 1          | bc9a0c04019c266f6d8269ffe35769d118bfb96ec634549b2b1bd2401ea20158 | Up 2 minutes | gpadmin | 13628
+ (2 rows)</codeblock>
                 <p>When Greenplum Database executes a PL/Container UDF, Query Executer (QE)
                     processes start Docker containers and reuse them as needed. After a certain
                     amount of idle time, a QE process quits and destroys its Docker containers. You

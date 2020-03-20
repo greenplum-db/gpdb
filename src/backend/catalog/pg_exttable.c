@@ -21,6 +21,7 @@
 #include "catalog/pg_extprotocol.h"
 #include "catalog/pg_type.h"
 #include "catalog/pg_proc.h"
+#include "commands/defrem.h"
 #include "access/genam.h"
 #include "access/heapam.h"
 #include "access/htup_details.h"
@@ -39,6 +40,65 @@
 #include "miscadmin.h"
 
 /*
+ * ValidateExtTableOptions
+ *
+ * Validate external options. Since the options are stored in pg_exttable catalog
+ * not pg_foreign_table, so no need to create fdw validate handler.
+ *
+ * Now only validate error_log_persistent option.
+ * Since for GPDB 5 and 6, we store LOG ERRORS PERSISTENTLY in
+ * pg_exttable catalog options as error_log_persistent. If user dump the DDL,
+ * we could load from optons.
+ */
+void
+ValidateExtTableOptions(List *options)
+{
+	ListCell   *cell;
+	bool		find = false;
+
+	foreach(cell, options)
+	{
+		DefElem    *def = (DefElem *) lfirst(cell);
+		if (strcmp(def->defname, "error_log_persistent") == 0)
+		{
+			if (find)
+			{
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						errmsg("%s shows more than once",
+								def->defname)));
+			}
+			/* these accept only boolean values */
+			(void) defGetBoolean(def);
+			find = true;
+		}
+	}
+}
+
+/*
+ * ExtractErrorLogPersistent - load LOG ERRORS PERSISTENTLY from optons.
+ */
+bool
+ExtractErrorLogPersistent(List **options)
+{
+	ListCell   *cell;
+	ListCell *prev = NULL;
+
+	foreach(cell, *options)
+	{
+		DefElem    *def = (DefElem *) lfirst(cell);
+		if (strcmp(def->defname, "error_log_persistent") == 0)
+		{
+			*options = list_delete_cell(*options, cell, prev);
+			/* these accept only boolean values */
+			return defGetBoolean(def);
+		}
+		prev = cell;
+	}
+	return false;
+}
+
+/*
  * InsertExtTableEntry
  *
  * Adds an entry into the pg_exttable catalog table. The entry
@@ -54,7 +114,7 @@ InsertExtTableEntry(Oid 	tbloid,
 					char	rejectlimittype,
 					char*	commandString,
 					int		rejectlimit,
-					bool    logerrors,
+					char    logerrors,
 					int		encoding,
 					Datum	formatOptStr,
 					Datum   optionsStr,
@@ -111,7 +171,7 @@ InsertExtTableEntry(Oid 	tbloid,
 		nulls[Anum_pg_exttable_rejectlimittype - 1] = true;
 	}
 
-	values[Anum_pg_exttable_logerrors - 1] = BoolGetDatum(logerrors);
+	values[Anum_pg_exttable_logerrors - 1] = CharGetDatum(logerrors);
 	values[Anum_pg_exttable_encoding - 1] = Int32GetDatum(encoding);
 	values[Anum_pg_exttable_writable - 1] = BoolGetDatum(iswritable);
 
@@ -348,22 +408,7 @@ GetExtTableEntryIfExists(Oid relid)
 	}
 	else
 	{
-		Datum	   *elems;
-		int			nelems;
-		int			i;
-		char	   *option_str;
-
-		deconstruct_array(DatumGetArrayTypeP(options),
-						  TEXTOID, -1, false, 'i',
-						  &elems, NULL, &nelems);
-
-		for (i = 0; i < nelems; i++)
-		{
-			option_str = TextDatumGetCString(elems[i]);
-
-			/* append to a list of Value nodes, size nelems */
-			extentry->options = lappend(extentry->options, makeString(option_str));
-		}
+		extentry->options = untransformRelOptions(options);
 	}
 
 	/* get the reject limit */
@@ -396,7 +441,7 @@ GetExtTableEntryIfExists(Oid relid)
 							 &isNull);
 
 	Insist(!isNull);
-	extentry->logerrors = DatumGetBool(logerrors);
+	extentry->logerrors = DatumGetChar(logerrors);
 
 	/* get the table encoding */
 	encoding = heap_getattr(tuple,

@@ -40,6 +40,7 @@
 
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbvars.h"
+#include "cdb/cdbsreh.h"
 
 
 static void AlterSchemaOwner_internal(HeapTuple tup, Relation rel, Oid newOwnerId);
@@ -276,6 +277,11 @@ RemoveSchemaById(Oid schemaOid)
 	ReleaseSysCache(tup);
 
 	heap_close(relation, RowExclusiveLock);
+
+	/*
+	 * Remove all persistent error logs belonging to the the schema.
+	 */
+	PersistentErrorLogDelete(MyDatabaseId, schemaOid, NULL);
 }
 
 

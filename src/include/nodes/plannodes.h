@@ -844,10 +844,10 @@ typedef struct ExternalScanInfo
 	bool		isMasterOnly;   /* true for EXECUTE on master seg only */
 	int			rejLimit;       /* reject limit (-1 for no sreh)      */
 	bool		rejLimitInRows; /* true if ROWS false if PERCENT      */
-	bool		logErrors;      /* true to log errors into file       */
+	char		logErrors;      /* 't', 'p' to log errors into file. 'p' makes persistent error log */
 	int			encoding;		/* encoding of external table data    */
 	uint32      scancounter;	/* counter incr per scan node created */
-
+	List	   *extOptions;		/* external options */
 } ExternalScanInfo;
 
 /* ----------------

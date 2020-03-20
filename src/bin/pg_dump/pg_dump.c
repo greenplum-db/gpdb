@@ -15781,7 +15781,7 @@ dumpExternal(Archive *fout, TableInfo *tbinfo, PQExpBuffer q, PQExpBuffer delq)
 			appendPQExpBuffer(query,
 					"SELECT x.urilocation, x.execlocation, x.fmttype, x.fmtopts, x.command, "
 						   "x.rejectlimit, x.rejectlimittype, "
-						   "CASE WHEN x.logerrors THEN true ELSE null END AS logerrors, "
+						   "CASE WHEN x.logerrors='f' THEN null ELSE x.logerrors::text END AS logerrors, "
 						   "pg_catalog.pg_encoding_to_char(x.encoding), "
 						   "x.writable, "
 						   "array_to_string(ARRAY( "
@@ -16065,7 +16065,11 @@ dumpExternal(Archive *fout, TableInfo *tbinfo, PQExpBuffer q, PQExpBuffer delq)
 				 * logging.
 				 */
 				if (logerrors && strlen(logerrors) > 0)
+				{
 					appendPQExpBufferStr(q, "LOG ERRORS ");
+					if (logerrors[0] == 'p' && strlen(logerrors) == 1)
+						appendPQExpBufferStr(q, "PERSISTENTLY ");
+				}
 
 				/* reject limit */
 				appendPQExpBuffer(q, "SEGMENT REJECT LIMIT %s", rejlim);

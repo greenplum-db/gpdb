@@ -84,7 +84,8 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 	int			rejectlimit = -1;
 	int			encoding = -1;
 	bool		issreh = false; /* is single row error handling requested? */
-	bool 		logerrors = false;
+	char 		logerrors = LOG_ERRORS_DISABLE;
+	bool		log_persistent_option = false;
 	bool		iswritable = createExtStmt->iswritable;
 	bool		isweb = createExtStmt->isweb;
 	bool		shouldDispatch = (Gp_role == GP_ROLE_DISPATCH &&
@@ -273,6 +274,8 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 	/*
 	 * Parse and validate OPTION clause.
 	 */
+	ValidateExtTableOptions(createExtStmt->extOptions);
+	log_persistent_option = ExtractErrorLogPersistent(&createExtStmt->extOptions);
 	optionsStr = optionsListToArray(createExtStmt->extOptions);
 	if (DatumGetPointer(optionsStr) == NULL)
 	{
@@ -289,7 +292,12 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 
 		issreh = true;
 
-		logerrors = singlerowerrorDesc->into_file;
+		logerrors = singlerowerrorDesc->log_error_type;
+		if (IS_LOG_ERRORS_ENABLE(logerrors) && log_persistent_option)
+		{
+			logerrors = LOG_ERRORS_PERSISTENTLY;
+			singlerowerrorDesc->log_error_type = LOG_ERRORS_PERSISTENTLY;
+		}
 
 		/* get reject limit, and reject limit type */
 		rejectlimit = singlerowerrorDesc->rejectlimit;

@@ -893,6 +893,25 @@ Execute on: all segments
 Segment reject limit: 100 rows
 Error Log in File
 
+create external table ext_t3 (a int, b int)
+    location ('file:///tmp/test.txt') format 'text'
+    log errors persistently segment reject limit 100;
+\d+ ext_t3
+                           Foreign table "public.ext_t3"
+ Column |  Type   | Modifiers | FDW Options | Storage | Stats target | Description 
+--------+---------+-----------+-------------+---------+--------------+-------------
+ a      | integer |           |             | plain   |              | 
+ b      | integer |           |             | plain   |              | 
+Type: readable
+Encoding: UTF8
+Format type: text
+Format options: delimiter '	' null '\N' escape '\'
+External options: {}
+External location: file:///tmp/test.txt
+Execute on: all segments
+Segment reject limit: 100 rows
+Error Log in Persistent File
+
 -- Make sure gp_default_storage_options GUC value is set in newly created cdbgangs
 -- after previous idle cdbgang is stopped
 SET gp_vmem_idle_resource_timeout=30;

@@ -1856,10 +1856,12 @@ typedef struct GrantRoleStmt
  */
 typedef struct SingleRowErrorDesc
 {
-	NodeTag		type;
-	int			rejectlimit;		/* per segment error reject limit */
-	bool		is_limit_in_rows;	/* true for ROWS false for PERCENT */
-	bool		into_file;			/* log into file not table */
+	NodeTag			type;
+	int				rejectlimit;		/* per segment error reject limit */
+	bool			is_limit_in_rows;	/* true for ROWS false for PERCENT */
+	char			log_error_type;		/* 't' enable log errors.
+										   'p' enable log errors persistently.
+										   'f' disable log errors */
 } SingleRowErrorDesc;
 
 /* ----------------------
