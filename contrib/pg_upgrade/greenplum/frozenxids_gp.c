@@ -36,8 +36,10 @@ update_segment_db_xids(void)
 	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
 	{
 		DbInfo	   *active_db = &old_cluster.dbarr.dbs[dbnum];
+		char *escaped_datname = pg_malloc(strlen(active_db->db_name) * 2 + 1);
 		uint32 datfrozenxid = active_db->datfrozenxid;
 		uint32 datminmxid = active_db->datminmxid;
+		PQescapeString(escaped_datname, active_db->db_name, strlen(active_db->db_name));
 
 		conn = connectToServer(&new_cluster, active_db->db_name);
 
@@ -51,7 +53,7 @@ update_segment_db_xids(void)
 								  datfrozenxid,
 								  (GET_MAJOR_VERSION(old_cluster.major_version) <= 803) ?
 								  old_cluster.controldata.chkpnt_nxtmulti : datminmxid,
-								  active_db->db_name));
+								  escaped_datname));
 
 		/*
 		 * include heap, materialized view, temporary/toast and AO tables
