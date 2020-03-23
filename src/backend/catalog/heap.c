@@ -3456,7 +3456,7 @@ heap_truncate_one_relid(Oid relid)
 	}
 }
 
-static void
+void
 ao_aux_tables_truncate(Relation rel)
 {
 	Oid ao_base_relid = RelationGetRelid(rel);

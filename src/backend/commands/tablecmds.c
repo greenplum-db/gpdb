@@ -1705,7 +1705,14 @@ ExecuteTruncate(TruncateStmt *stmt)
 			 inSubTransaction && createdInThisTransactionScope))
 		{
 			/* Immediate, non-rollbackable truncation is OK */
-			heap_truncate_one_rel(rel);
+			if (RelationIsAppendOptimized(rel))
+			{
+				ao_truncate_one_rel(rel);
+			}
+			else
+			{
+				heap_truncate_one_rel(rel);
+			}
 		}
 		else
 		{

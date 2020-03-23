@@ -32,6 +32,7 @@
 #include "access/appendonlytid.h"
 #include "access/appendonlywriter.h"
 #include "catalog/catalog.h"
+#include "catalog/heap.h"	/* for ao_aux_tables_truncate */
 #include "cdb/cdbappendonlystorage.h"
 #include "cdb/cdbappendonlyxlog.h"
 #include "common/relpath.h"
@@ -39,6 +40,7 @@
 
 static bool mdunlink_ao_perFile(const int segno, void *ctx);
 static bool copy_append_only_data_perFile(const int segno, void *ctx);
+static bool truncate_ao_perFile(const int segno, void *ctx);
 
 int
 AOSegmentFilePathNameLen(Relation rel)
@@ -213,6 +215,12 @@ TruncateAOSegmentFile(File fd, Relation rel, int32 segFileNum, int64 offset)
 struct mdunlink_ao_callback_ctx {
 	char *segPath;
 	char *segpathSuffixPosition;
+};
+
+struct truncate_ao_callback_ctx {
+	char *segPath;
+	char *segpathSuffixPosition;
+	Relation rel;
 };
 
 void
@@ -416,3 +424,66 @@ copy_append_only_data_perFile(const int segno, void *ctx)
 	return true;
 }
 
+/*
+ * ao_truncate_one_rel
+ *
+ * This routine deletes all data within the specified ao relation.
+ */
+void
+ao_truncate_one_rel(Relation rel)
+{
+	char *basepath;
+	char *segPath;
+	char *segPathSuffixPosition;
+	struct truncate_ao_callback_ctx truncateFiles = { 0 };
+	int pathSize;
+
+	/* Get base path for this relation file */
+	basepath = relpathbackend(rel->rd_node, rel->rd_backend, MAIN_FORKNUM);
+
+	pathSize = strlen(basepath);
+	segPath = (char *) palloc(pathSize + 12);
+	segPathSuffixPosition = segPath + pathSize;
+	strncpy(segPath, basepath, pathSize);
+
+	truncateFiles.segPath = segPath;
+	truncateFiles.segpathSuffixPosition = segPathSuffixPosition;
+	truncateFiles.rel = rel;
+
+	/* Truncate the actual file */
+	ao_foreach_extent_file(truncate_ao_perFile, &truncateFiles);
+
+	/* Truncate auxiliary table */
+	ao_aux_tables_truncate(rel);
+
+	pfree(segPath);
+	pfree(basepath);
+}
+
+/*
+ * Truncate a specific segment file of ao relation.
+ */
+static bool
+truncate_ao_perFile(const int segno, void *ctx)
+{
+	File		fd;
+	Relation aorel;
+
+	const struct truncate_ao_callback_ctx *truncateFiles = ctx;
+
+	char *segPath = truncateFiles->segPath;
+	char *segPathSuffixPosition = truncateFiles->segpathSuffixPosition;
+	aorel = truncateFiles->rel;
+
+	sprintf(segPathSuffixPosition, ".%u", segno);
+
+	fd = OpenAOSegmentFile(aorel, segPath, segno, 0);
+
+	if (fd >= 0)
+	{
+		TruncateAOSegmentFile(fd, aorel, segno, 0);
+		CloseAOSegmentFile(fd);
+	}
+
+	return true;
+}
