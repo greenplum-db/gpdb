@@ -1128,6 +1128,47 @@ SET_GP_USER_PW () {
     LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
 
+SET_VAR () {
+	# MPP-13617: If segment contains a ~, we assume ~ is the field delimiter.
+	# Otherwise we assume : is the delimiter.  This allows us to easily
+	# handle IPv6 addresses which may contain a : by using a ~ as a delimiter.
+	I=$1
+	case $I in
+		*~*)
+			S="~"
+			;;
+		*)
+			S=":"
+			;;
+	esac
+	if [ -z "$I" ]; then
+		return
+	fi
+
+	local fields=()
+	IFS=$S read -ra fields <<< "$I"
+
+	if [[ ! "${#fields[@]}" == "6" ]]; then
+		ERROR_EXIT "[FATAL]:-$I has the wrong number of fields" 2
+	fi
+
+	GP_HOSTNAME="${fields[0]}"
+	GP_HOSTADDRESS="${fields[1]}"
+	GP_PORT="${fields[2]}"
+	GP_DIR="${fields[3]}"
+	GP_DBID="${fields[4]}"
+	GP_CONTENT="${fields[5]}"
+
+	# Quick sanity checks on value types to ensure that e.g. passing an old-
+	# format config file isn't misread as a new-format file and mis-parsed.
+	if ! [[ "$GP_PORT" =~ ^[0-9]+$ && "$GP_DBID" =~ ^[0-9]+$ && "$GP_CONTENT" =~ ^-?[0-9]+$ ]]; then
+		ERROR_EXIT "[FATAL]:-One or more numeric fields in $I have a non-numeric value" 2
+	fi
+	if ! [[ "$GP_DIR" =~ ^/[^/]+ ]]; then
+		ERROR_EXIT "[FATAL]:-Value for directory field in $I is not a valid path" 2
+	fi
+}
+
 #******************************************************************************
 # Main Section
 #******************************************************************************
