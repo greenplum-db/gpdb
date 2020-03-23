@@ -5703,7 +5703,11 @@ doSendStopMessageUDPIFC(ChunkTransportState *transportStates, int16 motNodeID)
 				 */
 
 #ifdef FAULT_INJECTOR
-				if (SIMPLE_FAULT_INJECTOR("interconnect_stop_ack_is_lost") == FaultInjectorTypeSkip)
+				if (FaultInjector_InjectFaultIfSet(
+												   "interconnect_stop_ack_is_lost",
+												   DDLNotSpecified,
+												   "" /* databaseName */ ,
+												   "" /* tableName */ ) == FaultInjectorTypeSkip)
 				{
 					continue;
 				}

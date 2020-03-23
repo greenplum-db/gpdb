@@ -189,7 +189,8 @@ DistributedLog_AdvanceOldestXmin(TransactionId oldestLocalXmin,
 	if (MyProcPort)
 		dbname = MyProcPort->database_name;
 
-	FAULT_INJECTOR_DATABASE("distributedlog_advance_oldest_xmin", dbname ? dbname : "");
+	FaultInjector_InjectFaultIfSet("distributedlog_advance_oldest_xmin", DDLNotSpecified,
+								   dbname?dbname: "", "");
 #endif
 
 	LWLockAcquire(DistributedLogTruncateLock, LW_SHARED);

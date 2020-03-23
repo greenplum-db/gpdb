@@ -904,7 +904,10 @@ standard_ExecutorRun(QueryDesc *queryDesc,
 	if (estate->es_processed >= 10000 && estate->es_processed <= 1000000)
 	//if (estate->es_processed >= 10000)
 	{
-		if (SIMPLE_FAULT_INJECTOR("executor_run_high_processed") == FaultInjectorTypeSkip)
+		if (FaultInjector_InjectFaultIfSet("executor_run_high_processed",
+										   DDLNotSpecified,
+										   "" /* databaseName */,
+										   "" /* tableName */) == FaultInjectorTypeSkip)
 		{
 			/*
 			 * For testing purposes, pretend that we have already processed
@@ -2890,7 +2893,10 @@ ExecutePlan(EState *estate,
 			 */
 			if (estate->es_processed >= 10000 && estate->es_processed <= 1000000)
 			{
-				if (SIMPLE_FAULT_INJECTOR("executor_run_high_processed") == FaultInjectorTypeSkip)
+				if (FaultInjector_InjectFaultIfSet("executor_run_high_processed",
+												   DDLNotSpecified,
+												   "" /* databaseName */,
+												   "" /* tableName */) == FaultInjectorTypeSkip)
 				{
 					/*
 					 * For testing purposes, pretend that we have already processed

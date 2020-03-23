@@ -414,7 +414,10 @@ PLy_spi_execute_fetch_result(SPITupleTable *tuptable, uint64 rows, int status)
 #ifdef FAULT_INJECTOR
 	if (rows >= 10000 && rows <= 1000000)
 	{
-		if (SIMPLE_FAULT_INJECTOR("executor_run_high_processed") == FaultInjectorTypeSkip)
+		if (FaultInjector_InjectFaultIfSet("executor_run_high_processed",
+											DDLNotSpecified,
+											"" /* databaseName */,
+											"" /* tableName */) == FaultInjectorTypeSkip)
 		{
 			/*
 			 * For testing purposes, pretend that we have already processed

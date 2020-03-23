@@ -98,7 +98,12 @@ quicklz_decompressor(int level, const char *source, void *destination,
 Datum
 quicklz_constructor(PG_FUNCTION_ARGS)
 {
-	SIMPLE_FAULT_INJECTOR("malloc_failure");
+#ifdef FAULT_INJECTOR
+	FaultInjector_InjectFaultIfSet("malloc_failure",
+					DDLNotSpecified,
+					"", // databaseName
+					""); // tableName
+#endif
 
 	/* PG_GETARG_POINTER(0) is TupleDesc that is currently unused.
 	 * It is passed as NULL */

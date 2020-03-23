@@ -1827,10 +1827,17 @@ vacuum_rel(Oid relid, RangeVar *relation, int options, VacuumParams *params,
 
 	if (ao_vacuum_phase == VACOPT_AO_POST_CLEANUP_PHASE)
 	{
-		FAULT_INJECTOR_TABLE("compaction_before_cleanup_phase",
-							 RelationGetRelationName(onerel));
-		FAULT_INJECTOR_TABLE("compaction_before_segmentfile_drop",
-							 RelationGetRelationName(onerel));
+		FaultInjector_InjectFaultIfSet(
+			"compaction_before_cleanup_phase",
+			DDLNotSpecified,
+			"",	// databaseName
+			RelationGetRelationName(onerel)); // tableName
+
+		FaultInjector_InjectFaultIfSet(
+			"compaction_before_segmentfile_drop",
+			DDLNotSpecified,
+			"",	// databaseName
+			RelationGetRelationName(onerel)); // tableName
 	}
 
 	/*

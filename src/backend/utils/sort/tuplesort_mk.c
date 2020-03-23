@@ -2028,8 +2028,13 @@ mergeruns(Tuplesortstate_mk *state)
 	 * handled within the fault injector itself.
 	 */
 	HOLD_INTERRUPTS();
-	SIMPLE_FAULT_INJECTOR("execsort_mksort_mergeruns");
-	RESUME_INTERRUPTS();
+	FaultInjector_InjectFaultIfSet(
+								   "execsort_mksort_mergeruns",
+								   DDLNotSpecified,
+								   "", //databaseName
+								   "");
+	//tableName
+		RESUME_INTERRUPTS();
 #endif
 
 	if (QueryFinishPending)

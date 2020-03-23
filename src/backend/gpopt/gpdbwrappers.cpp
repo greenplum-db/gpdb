@@ -3002,17 +3002,12 @@ gpdb::InjectFaultInOptTasks
 	const char *fault_name
 	)
 {
-#ifdef FAULT_INJECTOR
 	GP_WRAP_START;
 	{
-		return SIMPLE_FAULT_INJECTOR(fault_name);
+		return FaultInjector_InjectFaultIfSet(fault_name, DDLNotSpecified, "", "");
 	}
 	GP_WRAP_END;
 	return FaultInjectorTypeNotSpecified;
-#else
-	GPOS_RAISE(gpdxl::ExmaGPDB, gpdxl::ExmiGPDBError,
-		   GPOS_WSZ_LIT("InjectFaultInOptTasks can only be called when fault injector is enabled"));
-#endif
 }
 
 gpos::ULONG

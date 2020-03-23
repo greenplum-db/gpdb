@@ -9,7 +9,7 @@
 #ifndef FAULTINJECTOR_H
 #define FAULTINJECTOR_H
 
-#include "pg_config.h"
+#include "pg_config_manual.h"
 
 #define FAULTINJECTOR_MAX_SLOTS	16
 
@@ -105,15 +105,9 @@ extern bool am_faulthandler;
 #define IsFaultHandler am_faulthandler
 #define SIMPLE_FAULT_INJECTOR(FaultName) \
 	FaultInjector_InjectFaultIfSet(FaultName, DDLNotSpecified, "", "")
-#define FAULT_INJECTOR_DATABASE(FaultName, DatabaseName) \
-	FaultInjector_InjectFaultIfSet(FaultName, DDLNotSpecified, DatabaseName, "")
-#define FAULT_INJECTOR_TABLE(FaultName, TableName) \
-	FaultInjector_InjectFaultIfSet(FaultName, DDLNotSpecified, "", TableName)
 #else
 #define IsFaultHandler false
 #define SIMPLE_FAULT_INJECTOR(FaultName)
-#define FAULT_INJECTOR_DATABASE(FaultName, DatabaseName)
-#define FAULT_INJECTOR_TABLE(FaultName, TableName)
 #endif
 
 #endif	/* FAULTINJECTOR_H */

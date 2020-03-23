@@ -9,26 +9,13 @@ set -e
 
 fault_injection_tests=$(mktemp fault_injection_tests.XXX)
 parallel_tests=$(mktemp parallel_tests.XXX)
-row_col_tests=$(mktemp row_col_tests.XXXX)
 retcode=0
 
-grep -ERIl '@orientation@' input \
-| sed 's,^[^/]*/\(.*\)\.[^.]*$,\1,' \
-| sort -u \
-> $row_col_tests
-
 # list the tests that inject faults
-grep -ERIli '(\s+gp_inject_fault)|force_mirrors_to_catch_up' sql input \
+grep -ERIli '(select|perform)\s+gp_inject_fault' sql input \
 | sed 's,^[^/]*/\(.*\)\.[^.]*$,\1,' \
 | sort -u \
 > $fault_injection_tests
-# source files under input may contain two types of tests: _row and _column
-comm -23 $fault_injection_tests $row_col_tests > $parallel_tests
-comm -12 $fault_injection_tests $row_col_tests \
-| sed 's,^\(.*\)$,\1_row \1_column,' \
-| tr ' ' '\n' \
->> $parallel_tests
-sort -u $parallel_tests > $fault_injection_tests
 
 echo "scanning for flaky fault-injection tests..."
 
@@ -48,7 +35,7 @@ for schedule in *_schedule; do
 	fi
 done
 
-rm -f $fault_injection_tests $parallel_tests $row_col_tests
+rm -f $fault_injection_tests $parallel_tests
 
 if [ $retcode = 0 ]; then
 	echo "done"

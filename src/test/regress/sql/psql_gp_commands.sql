@@ -1,9 +1,11 @@
 --
 -- Test \dx and \dx+, to display extensions.
 --
--- We just use plpgsql as an example of an extension here.
-\dx plpgsql
-\dx+ plpgsql
+-- We just use gp_inject_fault as an example of an extension here. We don't
+-- inject any faults.
+
+\dx gp_inject*
+\dx+ gp_inject*
 
 
 --
