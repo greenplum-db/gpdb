@@ -253,6 +253,12 @@ ifdef ADDON_DIR
 CONFIGFLAGS+=ADDON_DIR=$(ADDON_DIR)
 endif
 
+ifneq "$(findstring $(BLD_ARCH),rhel6 rhel7)" ""
+CONFIGFLAGS+= --disable-rpath
+CONFIGFLAGS+= LDFLAGS='-Wl,--enable-new-dtags -Wl,-rpath,\$$$$ORIGIN/../lib'
+CONFIGFLAGS+= LDFLAGS_SL='-Wl,--enable-new-dtags -Wl,-rpath,\$$$$ORIGIN/../lib'
+endif
+
 RECONFIG :
 	rm -f Debug/GNUmakefile
 	rm -f Release/GNUmakefile
@@ -334,7 +340,11 @@ BLD_GPDB_BUILDSET=$($(BLD_ARCH)_GPDB_BUILDSET)
 # set default build steps
 define BUILD_STEPS
 	@rm -rf $(INSTLOC)
-	cd $(BUILDDIR) && $(MAKE) $(PARALLEL_MAKE_OPTS) install
+	if [ "$(findstring $(BLD_ARCH),rhel6 rhel7)" = "" ]; then \
+	  cd $(BUILDDIR) && $(MAKE) $(PARALLEL_MAKE_OPTS) install; \
+	else \
+	  cd $(BUILDDIR) && PYGRESQL_LDFLAGS='-Wl,-rpath,\$$$$ORIGIN/../../../lib -Wl,--enable-new-dtags' $(MAKE) $(PARALLEL_MAKE_OPTS) install; \
+	fi \
 	#@$(MAKE) greenplum_path INSTLOC=$(INSTLOC)
 	#@$(MAKE) mgmtcopy INSTLOC=$(INSTLOC)
 	@$(MAKE) mkpgbouncer INSTLOC=$(INSTLOC) BUILDDIR=$(BUILDDIR)

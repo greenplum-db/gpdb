@@ -64,7 +64,7 @@ pygresql:
 	elif [ "$(BLD_ARCH)" = 'aix7_ppc_64' ]; then \
 	    cd $(PYLIB_SRC)/$(PYGRESQL_DIR) && DESTDIR="$(DESTDIR)" CC="$(CC)" python_64 setup.py build; \
 	else \
-	    cd $(PYLIB_SRC)/$(PYGRESQL_DIR) && DESTDIR="$(DESTDIR)" CC="$(CC)" python setup.py build; \
+	    cd $(PYLIB_SRC)/$(PYGRESQL_DIR) && DESTDIR="$(DESTDIR)" CC="$(CC)" LDFLAGS='$(LDFLAGS) $(PYGRESQL_LDFLAGS)' python setup.py build; \
 	fi
 	mkdir -p $(PYLIB_DIR)/pygresql
 	if [ `uname -s` = 'Darwin' ]; then \
