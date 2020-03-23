@@ -255,7 +255,27 @@ DistributedLog_AdvanceOldestXmin(TransactionId oldestLocalXmin,
 		LWLockRelease(DistributedLogControlLock);
 	}
 
-	pg_atomic_write_u32((pg_atomic_uint32 *)&DistributedLogShared->oldestXmin, oldestXmin);
+	/*
+	 * The shared oldestXmin (DistributedLogShared->oldestXmin) may be updated
+	 * concurrently. It should be set to a higher value, because a higher xmin
+	 * can belong to another distributed log segment, its older segments might
+	 * already be truncated.
+	 */
+	if (!TransactionIdEquals(oldOldestXmin, oldestXmin))
+	{
+		uint32 expected = (uint32)oldOldestXmin;
+
+		while (1)
+		{
+			if (pg_atomic_compare_exchange_u32((pg_atomic_uint32 *)&DistributedLogShared->oldestXmin, 
+											&expected, (uint32)oldestXmin))
+				break;
+
+			if (TransactionIdPrecedesOrEquals(oldestXmin, expected))
+				break;
+		}
+	}
+
 	LWLockRelease(DistributedLogTruncateLock);
 
 	if (TransactionIdToSegment(oldOldestXmin) < TransactionIdToSegment(oldestXmin))
