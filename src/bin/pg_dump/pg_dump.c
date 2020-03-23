@@ -13942,13 +13942,14 @@ dumpExternal(Archive *fout, TableInfo *tbinfo, PQExpBuffer q, PQExpBuffer delq)
 						error_log_len += 6;
 				if (strlen(options) - error_log_len != 0)
 				{
-					char opts[strlen(options) - error_log_len + 1];
+					char *opts = pg_malloc(sizeof(char) * (strlen(options) - error_log_len + 1));
 					int prev_len = pos - options;
 					if (prev_len > 0)
 						strncpy(opts, options, prev_len);
 					StrNCpy(opts + prev_len, pos + error_log_len,
 							strlen(options) - prev_len - error_log_len + 1 /* for \0 */);
 					appendPQExpBuffer(q, "OPTIONS (\n %s\n )\n", opts);
+					free(opts);
 				}
 			}
 			else
