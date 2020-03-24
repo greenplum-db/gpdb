@@ -231,25 +231,6 @@ add_vars_to_targetlist_x(PlannerInfo *root, List *vars,
 			RelOptInfo *rel = find_base_rel(root, var->varno);
 			int			attno = var->varattno;
 
-			/* Pseudo column? */
-			if (attno <= FirstLowInvalidHeapAttributeNumber)
-			{
-				CdbRelColumnInfo *rci = cdb_find_pseudo_column(root, var);
-
-				/* Add to targetlist. */
-				if (bms_is_empty(rci->where_needed))
-				{
-					Assert(rci->targetresno == 0);
-					rci->targetresno = list_length(rel->reltarget->exprs);
-					rel->reltarget->exprs = lappend(rel->reltarget->exprs, copyObject(var));
-				}
-
-				/* Note relids which are consumers of the data from this column. */
-				rci->where_needed = bms_add_members(rci->where_needed, where_needed);
-				continue;
-			}
-
-			/* System-defined attribute, whole row, or user-defined attribute */
 			if (bms_is_subset(where_needed, rel->relids) && !force)
 				continue;
 			Assert(attno >= rel->min_attr && attno <= rel->max_attr);

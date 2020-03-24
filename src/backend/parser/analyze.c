@@ -1186,7 +1186,6 @@ transformGroupedWindows(ParseState *pstate, Query *qry)
 	/* Default?
 	 * rte->inh = 0;
 	 * rte->checkAsUser = 0;
-	 * rte->pseudocols = 0;
 	*/
 
 	/* Make a reference to the new range table entry .

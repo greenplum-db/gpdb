@@ -12,11 +12,19 @@
     <topicref href="postGIS.xml" navtitle="Geospatial Analytics" otherprops="pivotal" linking="none"/>
     <topicref href="text.xml" navtitle="Text Analytics and Search" otherprops="pivotal" linking="none"/>
     <topicref href="intro.xml" navtitle="Procedural Languages" linking="none">
-      <topicref href="pl_container.xml" navtitle="PL/Container" linking="none"/>
+    <topicref href="pl_container.xml" navtitle="PL/Container" linking="none">
+          <topicref href="pl_container.xml#about_pl_container" navtitle="About PL/Container Language Extension" linking="none"/>
+          <topicref href="pl_container.xml#topic3" navtitle="Install PL/Container" linking="none"/>
+          <topicref href="pl_container.xml#upgrade_plcontainer" navtitle="Upgrade PL/Container" linking="none"/>
+          <topicref href="pl_container.xml#uninstall_plcontainer" navtitle="Unistall PL/Container" linking="none"/>
+          <topicref href="pl_container.xml#topic_kds_plk_rbb" navtitle="PL/Container References" linking="none"/>
+          <topicref href="pl_container_using.xml" linking="none"/>
+          </topicref>
       <topicref href="pl_java.xml" linking="none"/>
       <topicref href="pl_perl.xml" linking="none"/>
       <topicref href="pl_sql.xml" linking="none"/>
       <topicref href="pl_python.xml" linking="none"/>
       <topicref href="pl_r.xml" linking="none"/>
     </topicref>
+    <topicref href="greenplum_r_client.xml" linking="none"/>
 </map>

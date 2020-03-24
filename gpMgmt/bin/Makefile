@@ -220,8 +220,13 @@ unitdevel:
 	PYTHONPATH=$(SERVER_SRC):$(SERVER_SBIN):$(PYTHONPATH):$(PYTHONSRC_INSTALL_PYTHON_PATH):$(SRC)/ext:$(SBIN_DIR):$(LIB_DIR):$(PYLIB_DIR)/mock-1.0.1 \
 	    python -m unittest discover --verbose -s $(SRC)/gppylib -p "test_unit*.py"
 
+
+.PHONY: installcheck-bash
+installcheck-bash:
+	./test/suite.bash
+
 .PHONY: installcheck
-installcheck:
+installcheck: installcheck-bash
 	$(MAKE) -C gpload_test $@
 
 clean distclean:

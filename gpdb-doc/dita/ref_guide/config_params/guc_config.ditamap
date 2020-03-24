@@ -11,7 +11,6 @@
             <topicref href="guc_category-list.xml#topic57"/>
             <topicref href="guc_category-list.xml#topic21"/>
             <topicref href="guc_category-list.xml#topic29"/>
-            <topicref href="guc_category-list.xml#topic33"/>
             <topicref href="guc_category-list.xml#topic37"/>
             <topicref href="guc_category-list.xml#topic38"/>
             <topicref href="guc_category-list.xml#topic39"/>
@@ -235,6 +234,7 @@
             <topicref href="guc-list.xml#optimizer_sort_factor"/>
             <topicref href="guc-list.xml#optimizer_use_gpdb_allocators"/>
             <topicref href="guc-list.xml#password_encryption"/>
+            <topicref href="guc-list.xml#plan_cache_mode"/>
             <topicref href="guc-list.xml#pljava_classpath"/>
             <topicref href="guc-list.xml#pljava_classpath_insecure"/>
             <topicref href="guc-list.xml#pljava_statement_cache_size"/>

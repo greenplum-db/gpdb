@@ -429,8 +429,6 @@ exttable_ReScanForeignScan(ForeignScanState *node)
 {
 	exttable_fdw_state *fdw_state = (exttable_fdw_state *) node->fdw_state;
 
-	ItemPointerSet(&node->cdb_fake_ctid, 0, 0);
-
 	external_rescan(fdw_state->ess_ScanDesc);
 }
 

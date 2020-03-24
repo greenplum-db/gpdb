@@ -28,8 +28,6 @@
 #include "utils/memutils.h"
 #include "utils/rel.h"
 
-#include "optimizer/var.h"
-
 static TupleTableSlot *ForeignNext(ForeignScanState *node);
 static bool ForeignRecheck(ForeignScanState *node, TupleTableSlot *slot);
 
@@ -67,15 +65,6 @@ ForeignNext(ForeignScanState *node)
 		(void) ExecMaterializeSlot(slot);
 
 		//tup->t_tableOid = RelationGetRelid(node->ss.ss_currentRelation);
-
-		/*
-		 * CDB: Label each row with a synthetic ctid if needed for subquery dedup.
-		 */
-		if (node->cdb_want_ctid &&
-			!TupIsNull(slot))
-		{
-			slot_set_ctid_from_fake(slot, &node->cdb_fake_ctid);
-		}
 	}
 
 	return slot;
@@ -177,10 +166,6 @@ ExecInitForeignScan(ForeignScan *node, EState *estate, int eflags)
 	scanstate->fdw_recheck_quals = (List *)
 		ExecInitExpr((Expr *) node->fdw_recheck_quals,
 					 (PlanState *) scanstate);
-
-	/* Check if targetlist or qual contains a var node referencing the ctid column */
-	scanstate->cdb_want_ctid = contain_ctid_var_reference(&node->scan);
-	ItemPointerSetInvalid(&scanstate->cdb_fake_ctid);
 
 	/*
 	 * tuple table initialization
@@ -304,8 +289,6 @@ void
 ExecReScanForeignScan(ForeignScanState *node)
 {
 	PlanState  *outerPlan = outerPlanState(node);
-
-	ItemPointerSet(&node->cdb_fake_ctid, 0, 0);
 
 	node->fdwroutine->ReScanForeignScan(node);
 

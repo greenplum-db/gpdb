@@ -356,7 +356,15 @@
               </row>
               <row>
                 <entry>PL/Container and PL/Container images for Python, R </entry>
-                <entry>2.1.0</entry>
+                <entry>2.1.1</entry>
+              </row>
+              <row>
+                <entry>PL/Container and image for R </entry>
+                <entry>3.0.0 Beta</entry>
+              </row>
+              <row>
+                <entry>GreenplumR</entry>
+                <entry>1.0.0 Beta</entry>
               </row>
               <row class="- topic/row ">
                 <entry colname="col1" class="- topic/entry ">PostGIS Spatial and Geographic Objects
@@ -394,7 +402,7 @@
       <body>
         <p>
           <ul id="ul_ckf_sfc_hbb">
-            <li>Greenplum Platform Extension Framework (PXF) v5.10.1 - PXF, integrated with
+            <li>Greenplum Platform Extension Framework (PXF) v5.11.1 - PXF, integrated with
               Greenplum Database 6, provides access to Hadoop, object store, and SQL external data
               stores. Refer to <xref scope="peer" href="../admin_guide/external/pxf-overview.xml"
                 >Accessing External Data with PXF</xref> in the <cite>Greenplum Database
@@ -465,7 +473,7 @@
     <title id="pm357649">Hadoop Distributions</title>
     <body>
       <p>Greenplum Database provides access to HDFS with the Greenplum Platform Extension Framework
-          (PXF).<ph otherprops="oss-only"> PXF v5.10.0 is integrated with Greenplum Database 6, and
+          (PXF).<ph otherprops="oss-only"> PXF v5.11.1 is integrated with Greenplum Database 6, and
           provides access to Hadoop, object store, and SQL external data stores. Refer to <xref
             scope="peer" href="../admin_guide/external/pxf-overview.xml">Accessing External Data
             with PXF</xref> in the <cite>Greenplum Database Administrator Guide</cite> for PXF
@@ -490,7 +498,7 @@
           </thead>
           <tbody>
             <row>
-              <entry colname="col1">5.10.0</entry>
+              <entry colname="col1">5.11.1, 5.10.1</entry>
               <entry colname="col2">2.x, 3.1+</entry>
               <entry colname="col3">1.x, 2.x, 3.1+</entry>
               <entry colname="col4">1.3.2</entry>

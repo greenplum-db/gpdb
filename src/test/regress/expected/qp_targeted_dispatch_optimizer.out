@@ -511,7 +511,7 @@ INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 select count(*) from mpp7638 where a =1;
-INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to SINGLE content
  count 
 -------
      5
@@ -521,7 +521,7 @@ explain select count(*) from mpp7638 where a =1;
                                                     QUERY PLAN                                                     
 -------------------------------------------------------------------------------------------------------------------
  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=1)
+   ->  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=1 width=1)
          ->  Result  (cost=0.00..431.00 rows=1 width=1)
                ->  Sequence  (cost=0.00..431.00 rows=1 width=4)
                      ->  Partition Selector for mpp7638 (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
@@ -616,7 +616,7 @@ INFO:  (slice 1) Dispatch command to SINGLE content
 (1 row)
 
 select count(*) from range_table where id=1;
-INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to SINGLE content
  count 
 -------
      1
@@ -796,7 +796,7 @@ INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 (1 row)
 
 select max(a0) from table_a where a0=1;
-INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to SINGLE content
  max 
 -----
    1
@@ -820,6 +820,32 @@ explain select a0 from table_a where a0 in (select max(a1) from table_a where a0
 (12 rows)
 
 reset test_print_direct_dispatch_info;
+-- the filter is over a window, do not direct dispatch
+create table foo_direct_dispatch (dist_key int, non_dist_key int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'dist_key' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into foo_direct_dispatch select i, i from generate_series (1,100)i;
+select rank from ( select rank() over ( order by dist_key asc ) as rank , * from foo_direct_dispatch )a where 10 = dist_key;
+ rank 
+------
+   10
+(1 row)
+
+explain select rank from ( select rank() over ( order by dist_key asc ) as rank , * from foo_direct_dispatch )a where 10 = dist_key;
+                                          QUERY PLAN                                          
+----------------------------------------------------------------------------------------------
+ Result  (cost=0.00..431.01 rows=1 width=8)
+   Filter: (dist_key = 10)
+   ->  WindowAgg  (cost=0.00..431.01 rows=34 width=12)
+         Order By: dist_key
+         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.01 rows=100 width=4)
+               Merge Key: dist_key
+               ->  Sort  (cost=0.00..431.00 rows=34 width=4)
+                     Sort Key: dist_key
+                     ->  Seq Scan on foo_direct_dispatch  (cost=0.00..431.00 rows=34 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.93.0
+(10 rows)
+
 -- ----------------------------------------------------------------------
 -- Test: teardown.sql
 -- ----------------------------------------------------------------------

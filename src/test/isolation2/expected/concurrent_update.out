@@ -29,8 +29,6 @@ DROP TABLE t_concurrent_update;
 DROP
 
 
--- Test the concurrent update transaction order on the segment is reflected on master
--- enable gdd
 --start_ignore
 ! gpconfig -c gp_enable_global_deadlock_detector -v on;
 20200305:08:04:41:016395 gpconfig:09c5497cf854:gpadmin-[INFO]:-completed successfully with parameters '-c gp_enable_global_deadlock_detector -v on'
@@ -65,6 +63,8 @@ DROP
 
 --end_ignore
 
+-- Test the concurrent update transaction order on the segment is reflected on master
+-- enable gdd
 1: SHOW gp_enable_global_deadlock_detector;
  gp_enable_global_deadlock_detector 
 ------------------------------------
@@ -128,8 +128,57 @@ END
 ---+----
  1 | 21 
 (1 row)
-1: DROP TABLE t_concurrent_update;
+1q: ... <quitting>
+
+-- Same test as the above, except the first transaction commits before the
+-- second transaction check the wait gxid, it should get the gxid from
+-- pg_distributedlog instead of the procarray.
+4: BEGIN;
+BEGIN
+4: SET optimizer=off;
+SET
+4: UPDATE t_concurrent_update SET b=b+10 WHERE a=1;
+UPDATE 1
+
+5: BEGIN;
+BEGIN
+5: SET optimizer=off;
+SET
+-- suspend before get 'wait gxid'
+5: SELECT gp_inject_fault('before_get_distributed_xid', 'suspend', dbid) FROM gp_segment_configuration WHERE role='p' AND content=1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+5&: UPDATE t_concurrent_update SET b=b+10 WHERE a=1;  <waiting ...>
+
+6: SELECT gp_wait_until_triggered_fault('before_get_distributed_xid', 1, dbid) FROM gp_segment_configuration WHERE role='p' AND content=1;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+4: END;
+END
+4: SELECT gp_inject_fault('before_get_distributed_xid', 'reset', dbid) FROM gp_segment_configuration WHERE role='p' AND content=1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+5<:  <... completed>
+UPDATE 1
+5: END;
+END
+6: SELECT * FROM t_concurrent_update;
+ a | b  
+---+----
+ 1 | 41 
+(1 row)
+6: DROP TABLE t_concurrent_update;
 DROP
+4q: ... <quitting>
+5q: ... <quitting>
+6q: ... <quitting>
 
 --start_ignore
 ! gpconfig -r gp_enable_global_deadlock_detector;
@@ -164,4 +213,3 @@ DROP
 20200305:08:04:48:017053 gpstop:09c5497cf854:gpadmin-[INFO]:-Restarting System...
 
 --end_ignore
-1q: ... <quitting>

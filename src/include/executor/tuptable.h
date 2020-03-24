@@ -298,8 +298,6 @@ static inline void slot_set_ctid(TupleTableSlot *slot, ItemPointer new_ctid)
 		slot->PRIVATE_tts_synthetic_ctid = *new_ctid;
 }
 
-extern void slot_set_ctid_from_fake(TupleTableSlot *slot, ItemPointerData *fake_ctid);
-
 /*
  * Retrieve the synthetic ctid value from the slot.
  *

@@ -596,30 +596,20 @@ probeRecordResponse(fts_segment_info *ftsInfo, PGresult *result)
 {
 	ftsInfo->result.isPrimaryAlive = true;
 
-	int *isMirrorAlive = (int *) PQgetvalue(result, 0,
-											Anum_fts_message_response_is_mirror_up);
-	Assert (isMirrorAlive);
-	ftsInfo->result.isMirrorAlive = *isMirrorAlive;
+	ftsInfo->result.isMirrorAlive = *PQgetvalue(result, 0,
+			Anum_fts_message_response_is_mirror_up);
 
-	int *isInSync = (int *) PQgetvalue(result, 0,
-								   Anum_fts_message_response_is_in_sync);
-	Assert (isInSync);
-	ftsInfo->result.isInSync = *isInSync;
+	ftsInfo->result.isInSync = *PQgetvalue(result, 0,
+			Anum_fts_message_response_is_in_sync);
 
-	int *isSyncRepEnabled = (int *) PQgetvalue(result, 0,
-											   Anum_fts_message_response_is_syncrep_enabled);
-	Assert (isSyncRepEnabled);
-	ftsInfo->result.isSyncRepEnabled = *isSyncRepEnabled;
+	ftsInfo->result.isSyncRepEnabled = *PQgetvalue(result, 0,
+			Anum_fts_message_response_is_syncrep_enabled);
 
-	int *isRoleMirror = (int *) PQgetvalue(result, 0,
-										   Anum_fts_message_response_is_role_mirror);
-	Assert (isRoleMirror);
-	ftsInfo->result.isRoleMirror = *isRoleMirror;
+	ftsInfo->result.isRoleMirror = *PQgetvalue(result, 0,
+			Anum_fts_message_response_is_role_mirror);
 
-	int *retryRequested = (int *) PQgetvalue(result, 0,
-											 Anum_fts_message_response_request_retry);
-	Assert (retryRequested);
-	ftsInfo->result.retryRequested = *retryRequested;
+	ftsInfo->result.retryRequested = *PQgetvalue(result, 0,
+			Anum_fts_message_response_request_retry);
 
 	elogif(gp_log_fts >= GPVARS_VERBOSITY_DEBUG, LOG,
 		   "FTS: segment (content=%d, dbid=%d, role=%c) reported "

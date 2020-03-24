@@ -2500,24 +2500,6 @@ _copyOnConflictExpr(const OnConflictExpr *from)
  */
 
 /*
- * _copyCdbRelColumnInfo
- */
-static CdbRelColumnInfo *
-_copyCdbRelColumnInfo(const CdbRelColumnInfo *from)
-{
-	CdbRelColumnInfo *newnode = makeNode(CdbRelColumnInfo);
-
-	COPY_SCALAR_FIELD(pseudoattno);
-    COPY_SCALAR_FIELD(targetresno);
-	COPY_NODE_FIELD(defexpr);
-	COPY_BITMAPSET_FIELD(where_needed);
-	COPY_SCALAR_FIELD(attr_width);
-    COPY_BINARY_FIELD(colname, sizeof(from->colname));
-
-	return newnode;
-}
-
-/*
  * _copyPathKey
  */
 static PathKey *
@@ -2734,7 +2716,6 @@ _copyRangeTblEntry(const RangeTblEntry *from)
 	COPY_NODE_FIELD(ctecoltypmods);
 
 	COPY_SCALAR_FIELD(forceDistRandom);
-	COPY_NODE_FIELD(pseudocols);                /*CDB*/
 
 	return newnode;
 }
@@ -5467,6 +5448,16 @@ _copyAggExprId(const AggExprId *from)
 	return makeNode(AggExprId);
 }
 
+static RowIdExpr *
+_copyRowIdExpr(const RowIdExpr *from)
+{
+	RowIdExpr *newnode = makeNode(RowIdExpr);
+
+	newnode->rowidexpr_id = from->rowidexpr_id;
+
+	return newnode;
+}
+
 /*
  * copyObject
  *
@@ -5827,9 +5818,6 @@ copyObject(const void *from)
 			/*
 			 * RELATION NODES
 			 */
-		case T_CdbRelColumnInfo:
-			retval = _copyCdbRelColumnInfo(from);
-			break;
 		case T_PathKey:
 			retval = _copyPathKey(from);
 			break;
@@ -6478,6 +6466,10 @@ copyObject(const void *from)
 
 		case T_AggExprId:
 			retval = _copyAggExprId(from);
+			break;
+
+		case T_RowIdExpr:
+			retval = _copyRowIdExpr(from);
 			break;
 
 		default:

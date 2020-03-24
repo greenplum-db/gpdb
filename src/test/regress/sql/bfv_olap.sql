@@ -381,6 +381,16 @@ SELECT sale.qty
 FROM sale
 GROUP BY ROLLUP((qty)) order by 1;
 
+--
+-- Test two-stage aggregate with grouping sets and a HAVING clause
+--
+
+-- persuade planner to choose a two-stage plan.
+set gp_motion_cost_per_row TO 1000;
+select cn, sum(qty) from sale group by rollup(cn,vn) having sum(qty)=1;
+-- same, but the HAVING clause matches a rolled up row.
+select cn, sum(qty) from sale group by rollup(cn,vn) having sum(qty)=1144;
+
 
 -- CLEANUP
 -- start_ignore

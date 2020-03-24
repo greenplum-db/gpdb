@@ -5153,20 +5153,8 @@ set_rel_width(PlannerInfo *root, RelOptInfo *rel)
 			int			ndx;
 			int32		item_width;
 
-			/*
-			 * Postgres Upstream asserts for var->varattno >= rel->min_attr and
-			 * var->varattno <= rel->max_attr are not valid in GPDB since GPDB
-			 * also handles cases for virtual columns.
-			 */
-
-			/* Virtual column? */
-			if (var->varattno <= FirstLowInvalidHeapAttributeNumber)
-			{
-				CdbRelColumnInfo   *rci = cdb_find_pseudo_column(root, var);
-
-				tuple_width += rci->attr_width;
-				continue;
-			}
+			Assert(var->varattno >= rel->min_attr);
+			Assert(var->varattno <= rel->max_attr);
 
 			ndx = var->varattno - rel->min_attr;
 

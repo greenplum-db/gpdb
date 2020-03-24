@@ -4747,6 +4747,7 @@ LocalXidGetDistributedXid(TransactionId xid)
 	DistributedTransactionId gxid = InvalidDistributedTransactionId;
 	ProcArrayStruct *arrayP = procArray;
 
+	SIMPLE_FAULT_INJECTOR("before_get_distributed_xid");
 	LWLockAcquire(ProcArrayLock, LW_SHARED);
 	for (index = 0; index < arrayP->numProcs; index++)
 	{
@@ -4764,7 +4765,7 @@ LocalXidGetDistributedXid(TransactionId xid)
 	/* The transaction has already committed on segment */
 	if (gxid == InvalidDistributedTransactionId)
 	{
-		DistributedLog_GetDistributedXid(xid, &gxid, &tstamp);
+		DistributedLog_GetDistributedXid(xid, &tstamp, &gxid);
 		AssertImply(gxid != InvalidDistributedTransactionId,
 					tstamp == MyTmGxact->distribTimeStamp);
 	}

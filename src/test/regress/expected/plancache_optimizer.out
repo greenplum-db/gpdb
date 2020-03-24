@@ -273,7 +273,7 @@ explain (costs off) execute test_mode_pp(2);
                         QUERY PLAN                        
 ----------------------------------------------------------
  Aggregate
-   ->  Gather Motion 3:1  (slice1; segments: 3)
+   ->  Gather Motion 1:1  (slice1; segments: 1)
          ->  Index Scan using test_mode_a_idx on test_mode
                Index Cond: (a = 2)
  Optimizer: Pivotal Optimizer (GPORCA) version 3.93.0
@@ -329,7 +329,7 @@ explain (costs off) execute test_mode_pp(2);
          QUERY PLAN          
 -----------------------------
  Aggregate
-   ->  Gather Motion 3:1  (slice1; segments: 3)
+   ->  Gather Motion 1:1  (slice1; segments: 1)
          ->  Index Scan using test_mode_a_idx on test_mode
                Index Cond: (a = 2)
  Optimizer: Pivotal Optimizer (GPORCA) version 3.93.0
@@ -341,7 +341,7 @@ explain (costs off) execute test_mode_pp(2);
                         QUERY PLAN                        
 ----------------------------------------------------------
  Aggregate
-   ->  Gather Motion 3:1  (slice1; segments: 3)
+   ->  Gather Motion 1:1  (slice1; segments: 1)
          ->  Index Scan using test_mode_a_idx on test_mode
                Index Cond: (a = 2)
  Optimizer: Pivotal Optimizer (GPORCA) version 3.93.0

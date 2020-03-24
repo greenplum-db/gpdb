@@ -235,6 +235,7 @@ typedef enum NodeTag
 	T_GroupId,
 	T_GroupingSetId,
 	T_AggExprId,
+	T_RowIdExpr,
 	T_DistributedBy,
 	T_DMLActionExpr,
 	T_PartSelectedExpr,
@@ -289,6 +290,7 @@ typedef enum NodeTag
 	T_PartListRuleExprState,
 	T_PartListNullTestExprState,
 	T_AggExprIdState,
+	T_RowIdExprState,
 
 	/*
 	 * TAGS FOR PLANNER NODES (relation.h)
