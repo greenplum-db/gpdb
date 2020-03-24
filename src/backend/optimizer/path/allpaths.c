@@ -459,6 +459,18 @@ bring_to_outer_query(PlannerInfo *root, RelOptInfo *rel, List *outer_quals)
 			if (origpath->param_info)
 				continue;
 
+			/*
+			 * param_info cannot cover the case that an index path's orderbyclauses
+			 * See github issue: https://github.com/greenplum-db/gpdb/issues/9733
+			 */
+			if (IsA(origpath, IndexPath))
+			{
+				IndexPath *ipath = (IndexPath *) origpath;
+				if (contains_outer_params((Node *) ipath->indexorderbys,
+										  (void *) root))
+					continue;
+			}
+
 			CdbPathLocus_MakeOuterQuery(&outerquery_locus);
 
 			path = cdbpath_create_motion_path(root,
@@ -526,6 +538,18 @@ bring_to_singleQE(PlannerInfo *root, RelOptInfo *rel)
 			 */
 			if (origpath->param_info)
 				continue;
+
+			/*
+			 * param_info cannot cover the case that an index path's orderbyclauses
+			 * See github issue: https://github.com/greenplum-db/gpdb/issues/9733
+			 */
+			if (IsA(origpath, IndexPath))
+			{
+				IndexPath *ipath = (IndexPath *) origpath;
+				if (contains_outer_params((Node *) ipath->indexorderbys,
+										  (void *) root))
+					continue;
+			}
 
 			CdbPathLocus_MakeSingleQE(&target_locus,
 									  origpath->locus.numsegments);
