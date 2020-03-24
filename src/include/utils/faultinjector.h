@@ -59,6 +59,8 @@ typedef enum FaultInjectorIdentifier_e {
 	
 	FileRepResync,
 	
+	FileRepResyncShutdown,
+
 	FileRepResyncInProgress,	
 	
 	FileRepResyncWorker,
@@ -84,7 +86,11 @@ typedef enum FaultInjectorIdentifier_e {
 	FileRepImmediateShutdownRequested,
 	
 	Checkpoint,
-	
+
+	FileRepResyncManagerXLogFlush,
+
+	FileRepResyncOneRelComplete,
+
 	ChangeTrackingCompactingReport,
 	
 	ChangeTrackingDisable,

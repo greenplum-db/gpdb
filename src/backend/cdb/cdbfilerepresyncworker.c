@@ -166,6 +166,7 @@ FileRepPrimary_RunResyncWorker(void)
 				}					
 				
 				status = FileRepResync_UpdateEntry(entry);
+				SIMPLE_FAULT_INJECTOR(FileRepResyncOneRelComplete);
 			}
 		}
 		

@@ -82,6 +82,7 @@
 #include "cdb/cdbtm.h"
 #include "cdb/cdbfilerep.h"
 #include "cdb/cdbfilerepresyncmanager.h"
+#include "cdb/cdbfilerepservice.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbpersistentrelation.h"
 #include "cdb/cdbmirroredflatfile.h"
@@ -2223,6 +2224,11 @@ XLogFlush(XLogRecPtr record)
 #endif
 
 	START_CRIT_SECTION();
+
+#ifdef FAULT_INJECTOR
+	if (fileRepProcessType == FileRepProcessTypeResyncManager)
+		SIMPLE_FAULT_INJECTOR(FileRepResyncManagerXLogFlush);
+#endif
 
 	/*
 	 * Since fsync is usually a horribly expensive operation, we try to

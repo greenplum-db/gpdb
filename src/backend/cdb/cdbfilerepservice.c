@@ -38,6 +38,7 @@
 #include "storage/proc.h"
 #include "storage/sinvaladt.h"
 #include "tcop/tcopprot.h"
+#include "utils/faultinjector.h"
 #include "utils/guc.h"
 #include "utils/memutils.h"
 #include "utils/ps_status.h"
@@ -164,13 +165,14 @@ FileRepSubProcess_ShutdownHandler(SIGNAL_ARGS)
 				 */
 				if (fileRepProcessType == FileRepProcessTypeResyncManager)
 				{
+					SIMPLE_FAULT_INJECTOR(FileRepResyncShutdown);
 					FileRepResync_Cleanup();
 				}
 				else
 				{
 					LockReleaseAll(DEFAULT_LOCKMETHOD, false);
 				}
-				
+
 				/*
 				 * We remove ourself from LW waiter list (if applicable).
 				 *

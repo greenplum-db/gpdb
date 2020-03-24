@@ -153,6 +153,8 @@ FaultInjectorIdentifierEnumToString[] = {
 		/* inject fault before fsync is issued to file system */
 	_("filerep_resync"),
 		/* inject fault while InResync when first relations is inserted to be resynced */
+	_("filerep_resync_shutdown"),
+		/* inject fault in shutdown handler of filerep resync backends */
 	_("filerep_resync_in_progress"),
 		/* inject fault while InResync when more then 10 relations in progress */
 	_("filerep_resync_worker"),
@@ -181,6 +183,10 @@ FaultInjectorIdentifierEnumToString[] = {
 		/* inject fault just before sending SIGQUIT to child flerep processes */
 	_("checkpoint"),
 		/* inject fault before checkpoint is taken */
+	_("filerep_resync_manager_xlog_flush"),
+		/* inject fault in a filerep process that is in critical section of XLogFlush */
+	_("filerep_resync_one_rel_complete"),
+		/* inject fault in filerep resync worker once a relation is completely sync'ed */
 	_("change_tracking_compacting_report"),
 		/* report if compacting is in progress */
 	_("change_tracking_disable"),
@@ -1082,6 +1088,8 @@ FaultInjector_NewHashEntry(
 			case DecreaseToastMaxChunkSize:
 			case ProcessStartupPacketFault:
 			case DynamicIndexScanContextReset:
+			case FileRepResyncShutdown:
+			case FileRepResyncManagerXLogFlush:
 
 				break;
 			default:
