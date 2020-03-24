@@ -38,6 +38,8 @@
 #include "common/relpath.h"
 #include "utils/guc.h"
 
+#define SEGNO_SUFFIX_LENGTH 12
+
 static bool mdunlink_ao_perFile(const int segno, void *ctx);
 static bool copy_append_only_data_perFile(const int segno, void *ctx);
 static bool truncate_ao_perFile(const int segno, void *ctx);
@@ -237,7 +239,7 @@ mdunlink_ao(const char *path, ForkNumber forkNumber)
 	Assert(forkNumber == MAIN_FORKNUM);
 
 	int pathSize = strlen(path);
-	char *segPath = (char *) palloc(pathSize + 12);
+	char *segPath = (char *) palloc(pathSize + SEGNO_SUFFIX_LENGTH);
 	char *segPathSuffixPosition = segPath + pathSize;
 	struct mdunlink_ao_callback_ctx unlinkFiles = { 0 };
 
@@ -442,7 +444,7 @@ ao_truncate_one_rel(Relation rel)
 	basepath = relpathbackend(rel->rd_node, rel->rd_backend, MAIN_FORKNUM);
 
 	pathSize = strlen(basepath);
-	segPath = (char *) palloc(pathSize + 12);
+	segPath = (char *) palloc(pathSize + SEGNO_SUFFIX_LENGTH);
 	segPathSuffixPosition = segPath + pathSize;
 	strncpy(segPath, basepath, pathSize);
 
@@ -483,6 +485,11 @@ truncate_ao_perFile(const int segno, void *ctx)
 	{
 		TruncateAOSegmentFile(fd, aorel, segno, 0);
 		CloseAOSegmentFile(fd);
+	}
+	else
+	{
+		/* it is ok that the file we were about to truncate didn't exist */
+		elog(DEBUG1, "could not truncate segfile %s, because it does not exist", segPath);
 	}
 
 	return true;
