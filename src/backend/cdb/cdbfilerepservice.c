@@ -141,7 +141,16 @@ FileRepSubProcess_ShutdownHandler(SIGNAL_ARGS)
 
 	if ( FileRepIsBackendSubProcess(fileRepProcessType))
 	{
-		if (FileRepPrimary_IsResyncManagerOrWorker())
+		/*
+		 * Perform extra cleanup needed by a resync backend only if the backend
+		 * is not in the middle of a critical section.  The expectation is that
+		 * the SIGUSR2 signal will be sent again, until all filerep children
+		 * have exited, so there will be another chance to cleanup.
+		 */
+		if (FileRepPrimary_IsResyncManagerOrWorker() &&
+			(ImmediateInterruptOK || ImmediateDieOK) &&
+			InterruptHoldoffCount == 0 && CritSectionCount == 0)
+
 		{
 			getFileRepRoleAndState(&fileRepRole, &segmentState, &dataState, &isInTransition, &dataStateTransition);
 			
@@ -178,11 +187,16 @@ FileRepSubProcess_ShutdownHandler(SIGNAL_ARGS)
 				LWLockWaitCancel();
 				LWLockReleaseAll();
 
-				proc_exit(0);
-				return;
+				/*
+				 * We used to call proc_exit() here, but that could lead to
+				 * PANIC if the signal handler is invoked when the resync
+				 * backend process is inside a critical section (e.g. resync
+				 * manager performing XLogFlush).  Using PostgreSQL native
+				 * die() wrapper avoids the PANIC.
+				 */
 			}
 		}
-					
+
 		/* call the normal postgres die so that it requests query cancel/procdie */
 		die(PASS_SIGNAL_ARGS);
 	}
