@@ -1191,6 +1191,8 @@ tuplesort_putindextuplevalues_mk(Tuplesortstate_mk *state, Relation rel,
 
 	COPYTUP(state, &e, (void *) tuple);
 	puttuple_common(state, &e);
+	
+	pfree(tuple);
 
 	MemoryContextSwitchTo(oldcontext);
 }
