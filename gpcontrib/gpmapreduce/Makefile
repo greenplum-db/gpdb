@@ -42,7 +42,7 @@ $(MAPREDOBJS): override CPPFLAGS += -DFRONTEND
 all: submake-libpq gpmapreduce all-lib
 
 gpmapreduce: $(MAPREDOBJS) $(libpq_builddir)/libpq.a
-	$(CC) $(CFLAGS) $(MAPREDOBJS) $(libpq_pgport) $(LDFLAGS) $(LIBS) -o $@$(X)
+	$(CC) $(CFLAGS) $(MAPREDOBJS) $(libpq_pgport) $(LDFLAGS) $(LIBS) -lyaml -o $@$(X)
 
 $(SRCDIR)/yaml_scan.c: $(SRCDIR)/yaml_parse.h $(SRCDIR)/yaml_scan.l
 ifdef FLEX
