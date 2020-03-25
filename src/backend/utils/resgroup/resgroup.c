@@ -3979,6 +3979,9 @@ CpusetToBitset(const char *cpuset, int len)
 	Bitmapset	*bms = NULL;
 	if (cpuset == NULL || len <= 0)
 		return bms;
+	#pragma GCC diagnostic push
+	#pragma GCC diagnostic ignored "-Wuninitialized"
+	// False positive with gcc.
 	while (pos < len && cpuset[pos])
 	{
 		char c = cpuset[pos++];
@@ -4048,6 +4051,7 @@ CpusetToBitset(const char *cpuset, int len)
 			goto error_logic;
 		}
 	}
+	#pragma GCC diagnostic pop
 	if (s == Number)
 	{
 		bms = bms_union(bms, bms_make_singleton(num1));
