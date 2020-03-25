@@ -20,7 +20,6 @@ ifeq ($(PORTNAME),aix)
 endif
 
 ifeq ($(have_yaml),yes)
-  GPFDIST_LIBS += -lyaml
   OBJS += transform.o
   ifneq ($(PORTNAME),win32)
     override CPPFLAGS := -DGPFXDIST $(CPPFLAGS)
