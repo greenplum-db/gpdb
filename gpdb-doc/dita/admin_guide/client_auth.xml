@@ -327,8 +327,8 @@ max_prepared_transactions=100
               such as <codeph>root.crt</codeph> (trusted certificate authorities), the files must be
               on both the master host and standby master host.</p></li>
         </ul> Greenplum Database can be started with SSL enabled by setting the server configuration
-        parameter <codeph>ssl=on</codeph> in the <codeph>postgresql.conf</codeph> on the master and
-        standby master hosts. This <codeph>gpconfig</codeph> command sets the
+        parameter <codeph>ssl=on</codeph> in the <codeph>postgresql.conf</codeph> file on the master
+        and standby master hosts. This <codeph>gpconfig</codeph> command sets the
         parameter:<codeblock>gpconfig -c ssl -m on -v off</codeblock></p>
       <p>Setting the parameter requires a server restart. This command restarts the system:
           <codeph>gpstop -ra -M fast</codeph>.</p>
