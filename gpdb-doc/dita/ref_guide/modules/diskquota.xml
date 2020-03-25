@@ -18,7 +18,13 @@
         <li> Add the <codeph>diskquota</codeph> shared library to the Greenplum Database
             <codeph>shared_preload_libraries</codeph> server configuration parameter and restart
           Greenplum
-          Database.<codeblock>$ gpconfig -c shared_preload_libraries -v 'diskquota'
+          Database. Be sure to retain the previous setting of the configuration parameter.
+          For example:<codeblock>$ gpconfig -s shared_preload_libraries
+Values on all segments are consistent
+GUC          : shared_preload_libraries
+Master  value: auto_explain
+Segment value: auto_explain
+$ gpconfig -c shared_preload_libraries -v 'auto_explain,diskquota'
 $ gpstop -ar</codeblock></li>
         <li> Register the <codeph>diskquota</codeph> extension in databases where you want to
           enforce disk usage quotas. <codeph>diskquota</codeph> can be registered in up to ten

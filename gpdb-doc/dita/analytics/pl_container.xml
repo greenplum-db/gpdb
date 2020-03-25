@@ -169,9 +169,15 @@
             <codeph>$GPHOME/greenplum_path.sh</codeph>:<codeblock>source $GPHOME/greenplum_path.sh</codeblock></li>
           <li>Make sure Greenplum Database is up and running:<codeblock>gpstate -s</codeblock>If
             it's not, start it:<codeblock>gpstart -a</codeblock></li>
-          <li>For PL/Container version 3 Beta only, enable the <codeph>plc_coordinator</codeph>
-            shared library using the
-            command:<codeblock>gpconfig -c shared_preload_libraries -v 'plc_coordinator'</codeblock></li>
+          <li>For PL/Container version 3 Beta only, add the <codeph>plc_coordinator</codeph>
+            shared library to the Greenplum Database <codeph>shared_preload_libraries</codeph>
+            server configuration parameter. Be sure to retain any previous setting of the
+            parameter. For example:<codeblock>gpconfig -s shared_preload_libraries
+Values on all segments are consistent
+GUC          : shared_preload_libraries
+Master  value: diskquota
+Segment value: diskquota
+gpconfig -c shared_preload_libraries -v 'diskquota,plc_coordinator'</codeblock></li>
           <li>Restart Greenplum Database:<codeblock>gpstop -ra</codeblock></li>
           <li>Login into one of the available databases, for example:
             <codeblock>psql postgres</codeblock></li>
@@ -426,11 +432,22 @@ postgres=# select dummyR();
       <body>
         <p>This step is required only if you have installed PL/Container 3 Beta. Before you remove
           the extension from your system with <codeph>gppkg</codeph>, remove the shared library
-          configuration for the <codeph>plc_coordinator</codeph> process. For example, the following
-          command comments-out the <codeph>shared_preload_libraries</codeph> setting in
-            <filepath>postgresql.conf
-          </filepath>:<codeblock>$ gpconfig -r shared_preload_libraries
-$ gpstop -ra</codeblock></p>
+          configuration for the <codeph>plc_coordinator</codeph> process:</p>
+        <ol>
+          <li>Examine the <codeph>shared_preload_libraries</codeph> server configuration
+            parameter setting.<codeblock>$ gpconfig -s shared_preload_libraries</codeblock><ul>
+              <li>If <codeph>plc_coordinator</codeph> is the only library listed, remove
+                the configuration parameter setting: <codeblock>$ gpconfig -r shared_preload_libraries</codeblock>
+                <p>Removing a server configuration parameter comments out the setting in the
+                <filepath>postgresql.conf</filepath> file.</p></li>
+              <li>If there are multiple libraries listed, remove
+                <codeph>plc_coordinator</codeph> from the list and re-set the configuration
+                parameter. For example, if <codeph>shared_preload_libraries</codeph> is set
+                to <codeph>'diskquota,plc_coordinator'</codeph>:
+                <codeblock>$ gpconfig -c shared_preload_libraries -v 'diskquota'</codeblock></li>
+            </ul></li>
+          <li>Restart the Greenplum Database cluster:<codeblock>$ gpstop -ra</codeblock></li>
+        </ol>
       </body>
     </topic>
     <topic xml:lang="en" id="topic_dty_fcj_kw" otherprops="pivotal">

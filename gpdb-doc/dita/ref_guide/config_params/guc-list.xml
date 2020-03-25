@@ -8159,6 +8159,8 @@
         is pgsql, perl, tcl, or python. By preloading a shared library, the library startup time is
         avoided when the library is first used. If a specified library is not found, the server will
         fail to start.</p>
+      <note>When you add a library to <codeph>shared_preload_libraries</codeph>, be sure to
+        retain any previous setting of the parameter.</note>
       <table id="shared_preload_libraries_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
