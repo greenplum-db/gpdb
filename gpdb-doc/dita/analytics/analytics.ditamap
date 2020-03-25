@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
 <map title="Greenplum Integrated Analytics">
+    <topicref href="../../7-0/homenav.html" scope="external"
+        navtitle="Pivotal Greenplum® 7.0 Beta Documentation" format="html" otherprops="op-help"/>
     <topicref href="overview.xml" linking="none"/>
     <topicref href="madlib.xml" navtitle="Machine Learning and Deep Learning" linking="none">
       <topicref href="madlib.xml#topic3" navtitle="Installing MADlib" linking="none"/>
