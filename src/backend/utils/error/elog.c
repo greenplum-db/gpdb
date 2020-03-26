@@ -1827,10 +1827,6 @@ EmitErrorReport(void)
 	oldcontext = MemoryContextSwitchTo(edata->assoc_context);
 
 	/* CDB: Tidy up the message */
-	/*
-	 * TODO Why do we want to do this?  it seems pointless
-	 * and makes the error messages harder to read.
-	 */
 	if (edata->output_to_server ||
 		edata->output_to_client)
 		cdb_tidy_message(edata);
@@ -2718,11 +2714,17 @@ cdb_strip_trailing_whitespace(char **buf)
 	}
 }							   /* cdb_strip_trailing_whitespace */
 
+/*
+ * cdb_tidy_message is a gpdb specific error message postprocessing function.
+ *
+ * It supplies useful error information for debug which upstream is missing:
+ * 1. append the filename and line number for internal error.
+ * 2. truncate the trailing whitespace for edata
+ */
 void
 cdb_tidy_message(ErrorData *edata)
 {
 	char	   *bp;
-	char	   *cp;
 	char	   *ep;
 	char	   *tp;
 	int			m, n;
@@ -2743,49 +2745,6 @@ cdb_tidy_message(ErrorData *edata)
 	}
 	else
 		ep = bp = "";
-
-	/*
-	 * If more than one line, move lines after the first to errdetail.
-	 * Make an exception for LOG messages because statement logging would
-	 * be uglified.  Skip DEBUG messages too, 'cause users don't see 'em.
-	 */
-	if (edata->elevel > LOG &&
-		0 != (cp = strchr(bp, '\n')))
-	{
-		char   *dp = cp;
-
-		/* If just one extra line, strip its leading '\n' and whitespace. */
-		if (!strchr(dp+1, '\n'))
-		{
-			while (*dp <= ' ' &&
-				   *dp > '\0')
-				dp++;
-		}
-
-		/* Insert in front of detail message. */
-		if (!edata->detail)
-			edata->detail = pstrdup(dp);
-		else
-		{
-			m = ep - dp;
-			n = strlen(edata->detail) + 1;
-			tp = palloc(m + 1 + n);
-			memcpy(tp, dp, m);
-			tp[m] = '\n';
-			memcpy(tp + m + 1, edata->detail, n);
-
-			pfree(edata->detail);
-			edata->detail = tp;
-		}
-
-		/* Drop from main message. */
-		ep = cp;
-		while (bp < ep &&
-			   ep[-1] <= ' ' &&
-			   ep[-1] > '\0')
-			ep--;
-		*ep = '\0';
-	}
 
 	/*
 	 * If internal error, append the filename and line number.

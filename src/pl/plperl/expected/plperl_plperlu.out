@@ -73,7 +73,7 @@ AS $$
 use Errno;
 $$;
 ERROR:  Unable to load Errno.pm into plperl at line 2.
-DETAIL:  BEGIN failed--compilation aborted at line 2.
+BEGIN failed--compilation aborted at line 2.
 CONTEXT:  compilation of PL/Perl function "use_plperl"
 -- make sure our overloaded require op gets restored/set correctly
 select use_plperlu();
@@ -87,5 +87,5 @@ AS $$
 use Errno;
 $$;
 ERROR:  Unable to load Errno.pm into plperl at line 2.
-DETAIL:  BEGIN failed--compilation aborted at line 2.
+BEGIN failed--compilation aborted at line 2.
 CONTEXT:  compilation of PL/Perl function "use_plperl"
