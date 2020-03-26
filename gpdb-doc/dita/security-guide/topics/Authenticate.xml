@@ -179,7 +179,7 @@ hostnossl  <varname>database</varname>  <varname>user</varname>  <varname>IP-add
         receives a SIGHUP signal. If you edit the file on an active system, you must reload the file
         using this command:<codeblock>$ gpstop -u</codeblock></p>
       <note type="caution">For a more secure system, remove records for remote connections that use
-        <codeph>trust</codeph> authentication from the <codeph>pg_hba.conf</codeph> file. <codeph>rust</codeph> authentication grants
+        <codeph>trust</codeph> authentication from the <codeph>pg_hba.conf</codeph> file. <codeph>trust</codeph> authentication grants
         any user who can connect to the server access to the database using any role they specify.
         You can safely replace <codeph>trust</codeph> authentication with <codeph>ident</codeph> authentication for local UNIX-socket
         connections. You can also use <codeph>ident</codeph> authentication for local and remote TCP clients, but the
@@ -599,28 +599,48 @@ Hostssl testdb all 192.168.0.0/16 cert map=gpuser
     </body>
   </topic>
   <topic id="topic_yxp_5h2_jr">
-    <title>PAM Based Authentication</title>
+    <title>PAM-Based Authentication</title>
     <body>
-      <p>"PAM" (Pluggable Authentication Modules) is used to validate username/password pairs,
-        similar to basic authentication. PAM authentication only works if the users already exist in
-        the database. </p>
-      <section>
-        <title>Parameters</title>
-        <p>
-          <parml>
-            <plentry>
-              <pt>
-                <codeph>pamservice</codeph>
-              </pt>
-              <pd>The default PAM service is <codeph>postgresql</codeph>. Note that if PAM is set up
-                to read <codeph>/etc/shadow</codeph>, authentication will fail because the
-                PostgreSQL server is started by a non-root user.</pd>
-            </plentry>
-          </parml>
-        </p>
-        <p>Following are sample <codeph>pg_hba.conf</codeph> entries for PAM client
-          authentication:<codeblock>local    all gpuser am pamservice=postgresql</codeblock></p>
-      </section>
+      <p>The "PAM" (Pluggable Authentication Modules) authentication method validates
+        username/password pairs, similar to basic authentication. You can use PAM
+        authentication only if the operating system user name also exists as a
+        Greenplum Database role name.</p>
+      <p>Greenplum uses the <codeph>pamservice</codeph> authentication parameter
+        to identify the service from which to obtain the PAM configuration. The
+        default PAM service is named <codeph>postgresql</codeph>.</p>
+      <note>If PAM is set up to read <codeph>/etc/shadow</codeph>, authentication will
+        fail because the PostgreSQL server is started by a non-root user. This is not
+        an issue when PAM is configured to use LDAP or other authentication methods.</note>
+      <p>Greenplum Database does not install a PAM configuration file. If you choose
+        to use PAM authentication with Greenplum, you must identify the PAM service
+        name for Greenplum and create the associated PAM service configuration file
+        and configure Greenplum Database to use PAM authentication as described below:</p>
+      <ol>
+        <li>Log in to the Greenplum Database master host and set up your environment.
+          For example:<codeblock>$ ssh gpadmin@&lt;gpmaster&gt;
+gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh</codeblock></li>
+        <li>Identify the <codeph>pamservice</codeph> name for Greenplum Database. In
+          this procedure, we choose the name <codeph>greenplum</codeph>.</li>
+        <li>Create the PAM service configuration file, <codeph>/etc/pam.d/greenplum</codeph>,
+          and add the text below. You must have operating system superuser
+          privileges to create the <codeph>/etc/pam.d</codeph> directory (if
+          necessary) and the <codeph>greenplum</codeph> PAM configuration file.
+<codeblock>#%PAM-1.0
+auth		include		password-auth
+account		include		password-auth
+</codeblock></li>
+        <li>Ensure that the <codeph>/etc/pam.d/greenplum</codeph> file is readable
+          by all users: <codeblock>sudo chmod 644 /etc/pam.d/greenplum</codeblock></li>
+        <li>Add one or more entries to the <codeph>pg_hba.conf</codeph> configuration
+          file to enable PAM authentication in Greenplum Database. These entries must
+          specify the <codeph>pam</codeph> <i>auth-method</i>. You must also specify
+          the <codeph>pamservice=greenplum</codeph> <i>auth-option</i>. For example:
+<codeblock>
+host     &lt;user-name>     &lt;db-name>     &lt;address>     pam     pamservice=greenplum
+</codeblock></li>
+        <li>Reload the Greenplum Database configuration:
+          <codeblock>$ gpstop -u</codeblock></li>
+      </ol>
     </body>
   </topic>
   <topic id="topic_ed4_d32_jr">
