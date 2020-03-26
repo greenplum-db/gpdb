@@ -324,14 +324,16 @@ notifyCommittedDtxTransaction(void)
 			/* Already notified for one phase commit or no need to notify. */
 			break;
 		default:
+			;
+			TransactionId xid = GetTopTransactionIdIfAny();
+			bool markXidCommitted = TransactionIdIsValid(xid);
 			/*
 			 * If local commit xlog is written we can not throw error and then
 			 * abort transaction (that will cause panic) so directly panic
 			 * for that case with more details.
 			 */
-			ereport(ExecutorDidWriteXLog() ? PANIC : ERROR,
-					(errmsg("Unexpected DTX state"),
-					 TM_ERRDETAIL));
+			ereport(markXidCommitted ? PANIC : ERROR,
+					(errmsg("Unexpected DTX state"), TM_ERRDETAIL));
 	}
 
 
