@@ -26,6 +26,8 @@
  * ----- Declarations of Greenplum-specific global variables ------
  */
 
+#define WRITER_IS_MISSING_MSG "reader could not find writer proc entry"
+
 #ifdef sparc
 #define TUPLE_CHUNK_ALIGN	4
 #else

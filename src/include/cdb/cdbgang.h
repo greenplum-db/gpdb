@@ -67,8 +67,6 @@ extern const char *gangTypeToString(GangType type);
 
 extern void setupCdbProcessList(ExecSlice *slice);
 
-extern bool GangOK(Gang *gp);
-
 extern List *getCdbProcessesForQD(int isPrimary);
 
 extern Gang *AllocateGang(struct CdbDispatcherState *ds, enum GangType type, List *segments);
@@ -86,6 +84,7 @@ bool build_gpqeid_param(char *buf, int bufsz, bool is_writer, int identifier, in
 
 char *makeOptions(void);
 extern bool segment_failure_due_to_recovery(const char *error_message);
+extern bool segment_failure_due_to_missing_writer(const char *error_message);
 
 /*
  * cdbgang_parse_gpqeid_params
