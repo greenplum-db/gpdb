@@ -75,6 +75,7 @@ pgrowlocks(PG_FUNCTION_ARGS)
 	Datum		result;
 	MyData	   *mydata;
 	Relation	rel;
+    rel = NULL;
 
 	if (SRF_IS_FIRSTCALL())
 	{
