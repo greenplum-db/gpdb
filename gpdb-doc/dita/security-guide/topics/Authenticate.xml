@@ -610,7 +610,7 @@ Hostssl testdb all 192.168.0.0/16 cert map=gpuser
         default PAM service is named <codeph>postgresql</codeph>.</p>
       <note>If PAM is set up to read <codeph>/etc/shadow</codeph>, authentication will
         fail because the PostgreSQL server is started by a non-root user. This is not
-        an issue when PAM is configured to use LDAP or other authentication methods.</note>
+        an issue when PAM is configured to use LDAP or another authentication method.</note>
       <p>Greenplum Database does not install a PAM configuration file. If you choose
         to use PAM authentication with Greenplum, you must identify the PAM service
         name for Greenplum and create the associated PAM service configuration file
