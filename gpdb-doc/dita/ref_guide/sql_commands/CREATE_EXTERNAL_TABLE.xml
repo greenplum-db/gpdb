@@ -432,13 +432,13 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varna
           <pd>This is an optional clause that can precede a <codeph>SEGMENT REJECT LIMIT</codeph>
             clause to log information about rows with formatting errors. The error log data is
             stored internally and is deleted when the external table is dropped unless you specify
-            the keyword <codeph>PERSISENTLY</codeph>. If the keyword is specified, the log data
+            the keyword <codeph>PERSISTENTLY</codeph>. If the keyword is specified, the log data
             persists after the external table is dropped.</pd>
           <pd>The error log data is accessed with the Greenplum Database built-in SQL function
               <codeph>gp_read_error_log()</codeph>, or with the SQL function
-              <codeph>gp_read_persistent_error_log()</codeph> if the <codeph>PERSISENTLY</codeph>
+              <codeph>gp_read_persistent_error_log()</codeph> if the <codeph>PERSISTENTLY</codeph>
             keyword is specified.</pd>
-          <pd>If you use the <codeph>PERSISENTLY</codeph> keyword, you must install the functions
+          <pd>If you use the <codeph>PERSISTENTLY</codeph> keyword, you must install the functions
             that manage the persistent error log information.</pd>
           <pd>See <xref href="#topic1/section8" format="dita"/> for information about the error log
             information and built-in functions for viewing and managing error log information.</pd>
@@ -548,11 +548,11 @@ customer_id=123;</codeblock>
               href="../../admin_guide/load/topics/g-viewing-bad-rows-in-the-error-table-or-error-log.xml#topic58"
           >Viewing Bad Rows in the Error Log</xref>.</p>
       <p>You can view and manage the captured error log data. The functions to manage log data
-        depend on whether the data is persistent (the <codeph>PERSISTENLY</codeph> keyword is used
+        depend on whether the data is persistent (the <codeph>PERSISTENTLY</codeph> keyword is used
         with the <codeph>LOG ERRORS</codeph> clause). </p>
       <ul id="ul_wk3_jdj_bp">
         <li>Functions that manage non-persistent error log data from external tables that were
-          defined without the <codeph>PERSISTENLY</codeph> keyword.<ul id="ul_bft_yn5_dlb">
+          defined without the <codeph>PERSISTENTLY</codeph> keyword.<ul id="ul_bft_yn5_dlb">
             <li>The built-in SQL function
                 <codeph>gp_read_error_log('<varname>table_name</varname>')</codeph> displays error
               log information for an external table. This example displays the error log data from
@@ -572,7 +572,7 @@ customer_id=123;</codeblock>
                 exist.</p></li>
           </ul></li>
         <li>Functions that manage persistent error log data from external tables that were defined
-          with the <codeph>PERSISTENLY</codeph> keyword.
+          with the <codeph>PERSISTENTLY</codeph> keyword.
           <note>The functions that manage persistent error log data from external tables are defined
             in the file <codeph>$GPHOME/share/postgresql/contrib/gpexterrorhandle.sql</codeph>. The
             functions must be installed in the databases use persistent error log data from external
@@ -587,7 +587,7 @@ customer_id=123;</codeblock>
                 been dropped.</p></li>
             <li>The SQL function
                   <codeph>gp_truncate_persistent_error_log('<varname>table_name</varname>')</codeph>
-              to truncate persistent log data for a table.<p>For persistent log data, you must
+              truncates persistent log data for a table.<p>For persistent log data, you must
                 manually delete the data. Dropping the external table does not delete persistent log
                 data. </p></li>
           </ul></li>
