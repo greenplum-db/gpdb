@@ -2785,7 +2785,7 @@ WHERE sotd.sotdoid=pg_class.oid ORDER BY relname;</codeblock>
       <body class="- topic/body ">
         <p>This view shows the size on disk of partitioned child tables and their indexes. This view
           is accessible to all users, however non-superusers will only be able to see relations that
-          they have permission to access..</p>
+          they have permission to access.</p>
         <table id="ie181803" class="- topic/table ">
           <title class="- topic/title ">gp_size_of_partition_and_indexes_disk view</title>
           <tgroup cols="2" class="- topic/tgroup ">

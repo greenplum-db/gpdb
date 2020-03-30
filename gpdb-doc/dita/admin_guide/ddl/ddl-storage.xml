@@ -209,7 +209,7 @@
               (<codeph>compresslevel=1</codeph>), QuickLZ and zlib have comparable compression
             ratios, though at different speeds. Using zlib with <codeph>compresslevel=6</codeph> can
             significantly increase the compression ratio compared to QuickLZ, though with lower
-            compression speed. ZStandard compression can provide for either good compression ratio or
+            compression speed. Zstandard compression can provide for either good compression ratio or
 	    speed, depending on compression level, or a good compromise on both.  </p></li>
         <li id="im201783">Speed of decompression/scan rate. Performance with compressed
           append-optimized tables depends on hardware, query tuning settings, and other factors.
@@ -362,7 +362,7 @@
                 <codeph>compresstype</codeph>
               </entry>
               <entry colname="col2">Type of compression.</entry>
-              <entry colname="col3"><codeph>zstd: </codeph>ZStandard
+              <entry colname="col3"><codeph>zstd: </codeph>Zstandard
                     algorithm<p><codeph>zlib: </codeph>deflate
                       algorithm</p><p><codeph>quicklz</codeph>: fast
                     compression</p><p><codeph>RLE_TYPE</codeph>: run-length encoding
