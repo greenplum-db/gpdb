@@ -84,12 +84,11 @@ SET_VAR () {
 	    S=":"
             ;;
     esac
-    GP_HOSTNAME=`$ECHO $I|$CUT -d$S -f1`
-    GP_HOSTADDRESS=`$ECHO $I|$CUT -d$S -f2`
-    GP_PORT=`$ECHO $I|$CUT -d$S -f3`
-    GP_DIR=`$ECHO $I|$CUT -d$S -f4`
-    GP_DBID=`$ECHO $I|$CUT -d$S -f5`
-    GP_CONTENT=`$ECHO $I|$CUT -d$S -f6`
+    GP_HOSTADDRESS=`$ECHO $I|$CUT -d$S -f1`
+    GP_PORT=`$ECHO $I|$CUT -d$S -f2`
+    GP_DIR=`$ECHO $I|$CUT -d$S -f3`
+    GP_DBID=`$ECHO $I|$CUT -d$S -f4`
+    GP_CONTENT=`$ECHO $I|$CUT -d$S -f5`
 }
 
 PARA_EXIT () {
