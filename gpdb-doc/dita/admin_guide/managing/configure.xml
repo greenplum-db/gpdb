@@ -1195,14 +1195,14 @@
         <p>The parameters in this topic control the configuration of the replication between
           Greenplum Database primary master and standby master.</p>
         <ul>
-          <li id="kh184294">
-            <codeph>keep_wal_segments</codeph>
-          </li>
           <li id="kh184295">
             <codeph>repl_catchup_within_range</codeph>
           </li>
           <li id="kh184296">
             <codeph>replication_timeout</codeph>
+          </li>
+          <li id="kh184294">
+            <codeph>wal_keep_segments</codeph>
           </li>
           <li id="kh184297">
             <codeph>wal_receiver_status_interval</codeph>

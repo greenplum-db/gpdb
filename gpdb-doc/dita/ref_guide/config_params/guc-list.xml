@@ -9217,7 +9217,7 @@ statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
         files that are saved by the by the active Greenplum Database master if a checkpoint
         operation occurs.</p>
       <p>The segment files are used to synchronize the active master on the standby master. </p>
-      <table id="keep_wal_segments_table">
+      <table id="wal_keep_segments_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
           <colspec colnum="2" colname="col2" colwidth="1*"/>

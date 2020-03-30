@@ -1491,11 +1491,11 @@
             <p><xref href="guc-list.xml#wait_for_replication_threshold" type="section"
                 >wait_for_replication_threshold</xref>
             </p>
+            <p><xref href="guc-list.xml#wal_keep_segments" type="section">wal_keep_segments</xref>
+            </p>
             <p>
               <xref href="guc-list.xml#wal_receiver_status_interval" type="section"
                 >wal_receiver_status_interval</xref>
-            </p>
-            <p><xref href="guc-list.xml#wal_keep_segments" type="section">wal_keep_segments</xref>
             </p>
           </stentry>
         </strow>
