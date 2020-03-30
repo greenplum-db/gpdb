@@ -431,9 +431,12 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varna
           <pt>LOG ERRORS [PERSISTENTLY]</pt>
           <pd>This is an optional clause that can precede a <codeph>SEGMENT REJECT LIMIT</codeph>
             clause to log information about rows with formatting errors. The error log data is
-            stored internally and is deleted when the external table is dropped unless you specify
-            the keyword <codeph>PERSISTENTLY</codeph>. If the keyword is specified, the log data
-            persists after the external table is dropped.</pd>
+            stored internally. If error log data exists for a specified external table, new data is
+            appended to existing error log data. The error log data is not replicated to mirror
+            segments.</pd>
+          <pd>The data is deleted when the external table is dropped unless you specify the keyword
+              <codeph>PERSISTENTLY</codeph>. If the keyword is specified, the log data persists
+            after the external table is dropped.</pd>
           <pd>The error log data is accessed with the Greenplum Database built-in SQL function
               <codeph>gp_read_error_log()</codeph>, or with the SQL function
               <codeph>gp_read_persistent_error_log()</codeph> if the <codeph>PERSISTENTLY</codeph>
@@ -575,16 +578,17 @@ customer_id=123;</codeblock>
           with the <codeph>PERSISTENTLY</codeph> keyword.
           <note>The functions that manage persistent error log data from external tables are defined
             in the file <codeph>$GPHOME/share/postgresql/contrib/gpexterrorhandle.sql</codeph>. The
-            functions must be installed in the databases use persistent error log data from external
-            table. This <codeph>psql</codeph> command installs the functions into the database
+            functions must be installed in the databases that use persistent error log data from an
+            external table. This <codeph>psql</codeph> command installs the functions into the
+            database
               <codeph>testdb</codeph>.<codeblock>psql -d test -U gpadmin -f $GPHOME/share/postgresql/contrib/gpexterrorhandle.sql</codeblock></note><ul
             id="ul_htb_m45_dlb">
             <li>The SQL function
                 <codeph>gp_read_persistent_error_log('<varname>table_name</varname>')</codeph>
               displays persistent log data for an external table. <p>The function returns no data if
-                you created the external table with the <codeph>LOG ERRORS</codeph> clause. The
-                function returns persistent log data for an external table even after the table has
-                been dropped.</p></li>
+                you created the external table without the <codeph>PERSISTENTLY</codeph> keyword.
+                The function returns persistent log data for an external table even after the table
+                has been dropped.</p></li>
             <li>The SQL function
                   <codeph>gp_truncate_persistent_error_log('<varname>table_name</varname>')</codeph>
               truncates persistent log data for a table.<p>For persistent log data, you must
@@ -593,8 +597,6 @@ customer_id=123;</codeblock>
           </ul></li>
         <li>These items apply to both non-persistent and persistent error log data and the related
             functions.<ul id="ul_bj5_tfd_2lb">
-            <li>If error log data exists for a specified external table, the new data is appended to
-              existing error log data. The error log data is not replicated to mirror segments.</li>
             <li>The <codeph>gp_read_*</codeph> functions require <codeph>SELECT</codeph> privilege
               on the table.</li>
             <li>The <codeph>gp_truncate_*</codeph> functions require owner privilege on the
@@ -606,7 +608,7 @@ customer_id=123;</codeblock>
                 <codeph>*</codeph> is specified, database owner privilege is required. If
                 <codeph>*.*</codeph> is specified, operating system super-user privilege is
               required. Non-persistent and persistent error log data must be deleted with their
-              respective <codeph>gp_truncate_*</codeph> function.</li>
+              respective <codeph>gp_truncate_*</codeph> functions.</li>
           </ul></li>
       </ul>
       <p>When multiple Greenplum Database external tables are defined with the
