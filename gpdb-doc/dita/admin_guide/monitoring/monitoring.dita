@@ -300,15 +300,6 @@ FROM gp_master_mirroring;</codeblock></p>
                                 <entry>Run repair scripts for any issues detected.</entry>
                             </row>
                             <row>
-                                <entry>Run a persistent table catalog check.<p>Recommended
-                                        frequency: monthly</p><p>Severity: CRITICAL</p></entry>
-                                <entry>During a downtime, with no users on the system, run the
-                                        Greenplum
-                                    <codeph>gpcheckcat</codeph> utility in each
-                                    database:<codeblock>gpcheckcat -R persistent</codeblock></entry>
-                                <entry>Run repair scripts for any issues detected.</entry>
-                            </row>
-                            <row>
                                 <entry>Check for <codeph>pg_class</codeph> entries that have no
                                     corresponding pg_<codeph>attribute</codeph> entry.<p>Recommended
                                         frequency: monthly</p><p>Severity: IMPORTANT</p></entry>
