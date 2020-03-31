@@ -75,9 +75,9 @@ function build_gpdb() {
     # make it much faster, and -j4 is small enough to not hurt too badly even on
     # a single-CPU system
     if [ -n "$1" ]; then
-      make "$1" GPROOT=/usr/local PARALLEL_MAKE_OPTS=-j4 -s dist
+      make "$1" GPROOT=/usr/local PARALLEL_MAKE_OPTS=-j4  dist
     else
-      make GPROOT=/usr/local PARALLEL_MAKE_OPTS=-j4 -s dist
+      make GPROOT=/usr/local PARALLEL_MAKE_OPTS=-j4  dist
     fi
   popd
 }
