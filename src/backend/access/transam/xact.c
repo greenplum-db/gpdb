@@ -2985,8 +2985,6 @@ PrepareTransaction(void)
 	/* Shut down the deferred-trigger manager */
 	AfterTriggerEndXact(true);
 
-	AtEOXact_SharedSnapshot();
-
 	/*
 	 * Let ON COMMIT management do its thing (must happen after closing
 	 * cursors, to avoid dangling-reference problems)

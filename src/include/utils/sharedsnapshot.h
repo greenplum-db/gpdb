@@ -17,6 +17,16 @@
 #include "utils/combocid.h"
 #include "utils/tqual.h"
 
+typedef struct SnapshotDump
+{
+	uint32 segmateSync;
+	TransactionId xid;
+	dsm_handle  handle;
+	dsm_segment *segment;
+} SnapshotDump;
+
+#define SNAPSHOTDUMPARRAYSZ 32
+
 /* MPP Shared Snapshot */
 typedef struct SharedSnapshotSlot
 {
@@ -30,6 +40,8 @@ typedef struct SharedSnapshotSlot
 	SnapshotData	snapshot;
 	LWLock		   *slotLock;
 
+	volatile int    cur_dump_id;
+	volatile SnapshotDump    dump[SNAPSHOTDUMPARRAYSZ];
 	/* for debugging only */
 	TransactionId	xid;
 	TimestampTz		startTimestamp;
