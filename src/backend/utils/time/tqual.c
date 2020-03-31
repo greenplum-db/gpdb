@@ -1385,7 +1385,7 @@ GetTransactionSnapshot(void)
 	/* First call in transaction? */
 	if (SerializableSnapshot == NULL)
 	{
-		SerializableSnapshot = GetSnapshotData(&SerializableSnapshotData, true);
+		SerializableSnapshot = GetSnapshotData(&SerializableSnapshotData);
 		return SerializableSnapshot;
 	}
 
@@ -1406,7 +1406,7 @@ GetTransactionSnapshot(void)
 		 getDistributedTransactionId(),
 		 DtxContextToString(DistributedTransactionContext));
 
-	LatestSnapshot = GetSnapshotData(&LatestSnapshotData, false);
+	LatestSnapshot = GetSnapshotData(&LatestSnapshotData);
 
 	return LatestSnapshot;
 }
@@ -1423,7 +1423,7 @@ GetLatestSnapshot(void)
 	if (SerializableSnapshot == NULL)
 		elog(ERROR, "no snapshot has been set");
 
-	LatestSnapshot = GetSnapshotData(&LatestSnapshotData, false);
+	LatestSnapshot = GetSnapshotData(&LatestSnapshotData);
 
 	return LatestSnapshot;
 }

@@ -815,6 +815,66 @@ select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t
 (3 rows)
 
 --
+-- Test a few cases where pulling up an aggregate subquery is not possible
+--
+-- subquery contains a LIMIT
+explain select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t0.t=t1.t LIMIT 1);
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..5172.20 rows=1 width=17)
+   ->  Result  (cost=0.00..5172.20 rows=1 width=17)
+         Filter: (1 = (SubPlan 1))
+         ->  Table Scan on csq_pullup  (cost=0.00..5172.19 rows=334 width=36)
+         SubPlan 1
+           ->  Limit  (cost=0.00..431.00 rows=1 width=8)
+                 ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                       ->  Result  (cost=0.00..431.00 rows=1 width=1)
+                             Filter: (csq_pullup.t = csq_pullup_1.t)
+                             ->  Materialize  (cost=0.00..431.00 rows=1 width=4)
+                                   ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                                         ->  Table Scan on csq_pullup  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
+(13 rows)
+
+select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t0.t=t1.t LIMIT 1);
+  t  | n | i |  v  
+-----+---+---+-----
+ xyz | 2 | 3 | def
+ def | 3 | 1 | abc
+ abc | 1 | 2 | xyz
+(3 rows)
+
+-- subquery contains a HAVING clause
+explain select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t0.t=t1.t HAVING count(*) < 10);
+                                                       QUERY PLAN                                                        
+-------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=17)
+   ->  Result  (cost=0.00..862.00 rows=1 width=17)
+         Filter: (1 = COALESCE((count()), '0'::bigint))
+         ->  Result  (cost=0.00..862.00 rows=1 width=36)
+               ->  Hash Left Join  (cost=0.00..862.00 rows=1 width=25)
+                     Hash Cond: (csq_pullup.t = csq_pullup_1.t)
+                     ->  Table Scan on csq_pullup  (cost=0.00..431.00 rows=1 width=17)
+                     ->  Hash  (cost=431.00..431.00 rows=1 width=12)
+                           ->  Result  (cost=0.00..431.00 rows=1 width=12)
+                                 Filter: ((count()) < 10)
+                                 ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=20)
+                                       Group Key: csq_pullup_1.t
+                                       ->  Sort  (cost=0.00..431.00 rows=1 width=4)
+                                             Sort Key: csq_pullup_1.t
+                                             ->  Table Scan on csq_pullup  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
+(16 rows)
+
+select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t0.t=t1.t HAVING count(*) < 10);
+  t  | n | i |  v  
+-----+---+---+-----
+ xyz | 2 | 3 | def
+ def | 3 | 1 | abc
+ abc | 1 | 2 | xyz
+(3 rows)
+
+--
 -- NOT EXISTS CSQs to joins
 --
 --

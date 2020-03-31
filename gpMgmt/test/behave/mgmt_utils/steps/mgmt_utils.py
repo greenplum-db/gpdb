@@ -5855,3 +5855,21 @@ def impl(context, config_file):
 def impl(context, config_file):
     run_gpcommand(context, 'gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -O %s' % config_file)
     check_return_code(context, 0)
+
+@given(u'a mirror has crashed')
+def step_impl(context):
+    host, datadir = execute_sql("postgres", """
+        SELECT hostname, fselocation
+          FROM gp_segment_configuration c
+          JOIN pg_filespace_entry e
+            ON c.dbid = e.fsedbid
+         WHERE role = 'm' AND content = 0
+    """).fetchone()
+
+    # NOTE that these commands are manually escaped; beware when adding dollar
+    # signs or double-quotes!
+    cmd = "ps aux | grep '[p]ostgres .* %s' | awk '{print \$2}' | xargs kill -9" % datadir
+    cmd = 'ssh %s "%s"' % (host, cmd)
+    run_command(context, cmd)
+
+    wait_for_unblocked_transactions(context)

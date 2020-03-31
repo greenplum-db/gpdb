@@ -3149,6 +3149,7 @@ _copySingleRowErrorDesc(SingleRowErrorDesc *from)
 	COPY_SCALAR_FIELD(rejectlimit);
 	COPY_SCALAR_FIELD(is_limit_in_rows);
 	COPY_SCALAR_FIELD(into_file);
+	COPY_SCALAR_FIELD(log_errors_type);
 
 	return newnode;
 }

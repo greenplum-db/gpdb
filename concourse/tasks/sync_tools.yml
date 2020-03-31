@@ -10,6 +10,8 @@ inputs:
 
 outputs:
 - name: gpAux_ext
+- name: gphdfs_dist
+
 
 run:
   path: gpdb_src/concourse/scripts/sync_tools.bash

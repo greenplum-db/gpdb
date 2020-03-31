@@ -167,6 +167,13 @@ function _main() {
   # Copy input ext dir; assuming ext doesnt exist
   mv gpAux_ext/ext ${GPDB_SRC_PATH}/gpAux
 
+  # Copy .ant dir
+  mv gphdfs_dist/.ant /root/
+  mkdir -p ${GPDB_SRC_PATH}/gpAux/extensions/gphdfs/dist
+  mv gphdfs_dist/dist/*.jar ${GPDB_SRC_PATH}/gpAux/extensions/gphdfs/dist/
+  mv gphdfs_dist/dist/*.tar ${GPDB_SRC_PATH}/gpAux/extensions/gphdfs/
+
+
   case "${TARGET_OS}" in
     sles) link_tools_for_sles ;;
   esac

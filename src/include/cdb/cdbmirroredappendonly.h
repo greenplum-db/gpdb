@@ -280,9 +280,6 @@ extern void MirroredAppendOnly_Append(
 
 	int32		appendDataLen,
 	
-				/* The byte length of the Append-Only data. */
-	int 		*primaryError,
-	
 	bool		*mirrorDataLossOccurred);
 
 // -----------------------------------------------------------------------------

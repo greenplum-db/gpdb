@@ -204,7 +204,10 @@ typedef HeapTupleHeaderData *HeapTupleHeader;
 #define HEAP_HOT_UPDATED		0x4000	/* tuple was HOT-updated */
 #define HEAP_ONLY_TUPLE			0x8000	/* this is heap-only tuple */
 
-#define HEAP2_XACT_MASK			0xC000	/* visibility-related bits */
+#define HEAP2_XACT_MASK			0xD800	/* visibility-related bits
+										 * GPDB: include HEAP_XMIN_DISTRIBUTED_SNAPSHOT_IGNORE
+										 * and HEAP_XMAX_DISTRIBUTED_SNAPSHOT_IGNORE
+										 */
 
 /*
  * HeapTupleHeader accessor macros

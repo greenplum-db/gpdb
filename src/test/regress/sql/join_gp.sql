@@ -354,3 +354,86 @@ SELECT btrim(hexpr_t1.c2::text)::character varying AS foo FROM hexpr_t1 LEFT JOI
 ON hexpr_t2.c3::text = btrim(hexpr_t1.c2::text);
 SELECT btrim(hexpr_t1.c2::text)::character varying AS foo FROM hexpr_t1 LEFT JOIN hexpr_t2
 ON hexpr_t2.c3::text = btrim(hexpr_t1.c2::text);
+
+-- test if subquery locus is general, then
+-- we should keep it general
+set enable_hashjoin to on;
+set enable_mergejoin to off;
+set enable_nestloop to off;
+create table t_randomly_dist_table(c int) distributed randomly;
+-- the following plan should not contain redistributed motion (for planner)
+explain
+select * from (
+  select a from length('123')a
+  union all
+  select a from length('123')a
+) t_subquery_general
+join t_randomly_dist_table on t_subquery_general.a = t_randomly_dist_table.c;
+
+reset enable_hashjoin;
+reset enable_mergejoin;
+reset enable_nestloop;
+
+-- test the scenario that the nestloop/merge join is in a subquery and the
+-- parameter passed to the outer of the join. We should not squelch the inner
+-- if the outer doesn't return a qualified tuple, because squelch the inner
+-- would stop the motion and when the next parameter comes in, the inner rescan
+-- can't get the correct data.
+
+set optimizer=off;
+create table t_join_squelch_a (a int, b int);
+insert into t_join_squelch_a values (2, 2);
+create table t_join_squelch_b (x int, y int);
+insert into t_join_squelch_b values (2, 2);
+create table t_join_squelch_c(i int);
+insert into t_join_squelch_c values (1), (2);
+analyze t_join_squelch_a;
+analyze t_join_squelch_b;
+analyze t_join_squelch_c;
+
+set enable_nestloop to on;
+set enable_hashjoin to off;
+set enable_mergejoin to off;
+
+explain select (select count(*) from (select 'random' from t_join_squelch_a a join t_join_squelch_b b on a.a = b.x and a.b = c.i) x)d from t_join_squelch_c c;
+select (select count(*) from (select 'random' from t_join_squelch_a a join t_join_squelch_b b on a.a = b.x and a.b = c.i) x)d from t_join_squelch_c c;
+
+set enable_nestloop to off;
+set enable_hashjoin to off;
+set enable_mergejoin to on;
+
+explain select (select count(*) from (select 'random' from t_join_squelch_a a join t_join_squelch_b b on a.a = b.x and a.b = c.i) x)d from t_join_squelch_c c;
+select (select count(*) from (select 'random' from t_join_squelch_a a join t_join_squelch_b b on a.a = b.x and a.b = c.i) x)d from t_join_squelch_c c;
+drop table t_join_squelch_a, t_join_squelch_b, t_join_squelch_c;
+reset optimizer;
+reset enable_nestloop;
+reset enable_hashjoin;
+reset enable_mergejoin;
+
+-- test prefetch join qual
+-- we do not handle this correct
+-- the only case we need to prefetch join qual is:
+--   1. outer plan contains motion
+--   2. the join qual contains subplan that contains motion
+reset client_min_messages;
+set Test_print_prefetch_joinqual = true;
+-- prefetch join qual is only set correct for planner
+set optimizer = off;
+
+create table t1_test_pretch_join_qual(a int, b int, c int);
+create table t2_test_pretch_join_qual(a int, b int, c int);
+
+-- the following plan contains redistribute motion in both inner and outer plan
+-- the join qual is t1.c > t2.c, it contains no motion, should not prefetch
+explain select * from t1_test_pretch_join_qual t1 join t2_test_pretch_join_qual t2
+on t1.b = t2.b and t1.c > t2.c;
+
+create table t3_test_pretch_join_qual(a int, b int, c int);
+
+-- the following plan contains motion in both outer plan and join qual,
+-- so we should prefetch join qual
+explain select * from t1_test_pretch_join_qual t1 join t2_test_pretch_join_qual t2
+on t1.b = t2.b and t1.a > any (select sum(b) from t3_test_pretch_join_qual t3 where c > t2.a);
+
+reset Test_print_prefetch_joinqual;
+reset optimizer;

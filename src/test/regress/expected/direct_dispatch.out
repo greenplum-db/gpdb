@@ -258,7 +258,6 @@ INFO:  Distributed transaction command 'Distributed Abort (No Prepared)' to ALL 
 -------------------
 -- MPP-7634: bitmap index scan
 --
--- Known_opt_diff: MPP-21346
 select count(*) from direct_test_bitmap where dt='2008-02-05';
 INFO:  Dispatch command to SINGLE content
  count 
@@ -266,7 +265,6 @@ INFO:  Dispatch command to SINGLE content
      0
 (1 row)
 
--- Known_opt_diff: MPP-21346
 select count(*) from direct_test_bitmap where dt='2008-02-01';
 INFO:  Dispatch command to SINGLE content
  count 
@@ -291,7 +289,6 @@ INFO:  Dispatch command to SINGLE content
 ----------------------------------------------------------------------------------
 -- MPP-7638: range table partition
 --
--- Known_opt_diff: MPP-21346
 select count(*) from direct_test_range_partition where a =1;
 INFO:  Dispatch command to SINGLE content
  count 

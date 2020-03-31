@@ -641,6 +641,16 @@ safe_to_convert_EXPR(SubLink *sublink, ConvertSubqueryToJoinContext *ctx1)
 		return false;
 
 	/**
+	 * A LIMIT or OFFSET could interfere with the transformation of the
+	 * correlated qual to GROUP BY. (LIMIT >0 in a subquery that contains a
+	 * plain aggregate is actually a no-op, so we could try to remove it,
+	 * but it doesn't seem worth the trouble to optimize queries with
+	 * pointless limits like that.)
+	 */
+	if (subselect->limitOffset || subselect->limitCount)
+		return false;
+
+	/**
 	 * Cannot support grouping clause in subselect.
 	 */
 	if (subselect->groupClause)

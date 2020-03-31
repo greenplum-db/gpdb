@@ -391,10 +391,23 @@ static void
 readCdbComponentInfoAndUpdateStatus(MemoryContext probeContext)
 {
 	int i;
-	MemoryContext save = MemoryContextSwitchTo(probeContext);
+	/*
+	 * Commit/abort transaction below will destroy
+	 * CurrentResourceOwner.  We need it for catalog reads.
+	 */
+	ResourceOwner rsave = CurrentResourceOwner;
+
+	/* Need a transaction to access the catalogs */
+	StartTransactionCommand();
+
+	MemoryContext msave = MemoryContextSwitchTo(probeContext);
 	/* cdb_component_dbs is free'd by FtsLoop(). */
 	cdb_component_dbs = getCdbComponentInfo(false);
-	MemoryContextSwitchTo(save);
+	MemoryContextSwitchTo(msave);
+
+	/* close the transaction we started above */
+	CommitTransactionCommand();
+	CurrentResourceOwner = rsave;
 
 	for (i=0; i < cdb_component_dbs->total_segment_dbs; i++)
 	{

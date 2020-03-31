@@ -60,6 +60,35 @@
 /* Fast mod using a bit mask, assuming that y is a power of 2 */
 #define FASTMOD(x,y)		((x) & ((y)-1))
 
+/* 
+ * arrays of types that have compatible cdbhash functions. InvalidOid is used to terminate each array
+ * this array is based on function hashDatum.
+ */
+#define COMPAT_TABLE_LENGTH 24
+static const Oid cdbhash_type_compatibility_table[COMPAT_TABLE_LENGTH] = 
+{
+	/* integer types */
+	INT2OID, INT4OID, INT8OID,
+	InvalidOid,
+
+	/* text types */
+	BPCHAROID, TEXTOID, VARCHAROID, BYTEAOID,
+	InvalidOid,
+
+	/* network types */
+	INETOID, CIDROID,
+	InvalidOid,
+  
+	/* bit string */
+	BITOID, VARBITOID,
+	InvalidOid,
+
+	/* object identifier types */
+	OIDOID, REGPROCOID, REGPROCEDUREOID, REGOPEROID,
+	REGOPERATOROID, REGCLASSOID, REGTYPEOID, ANYENUMOID,
+	InvalidOid
+};
+
 /* local function declarations */
 static uint32 fnv1_32_buf(void *buf, size_t len, uint32 hashval);
 static int	inet_getkey(inet *addr, unsigned char *inet_key, int key_size);
@@ -844,6 +873,74 @@ bool isGreenplumDbOprRedistributable(Oid oprid)
 }
 
 /*
+ * isGreenplumDbPathkeyDistCompatible
+ *
+ * Return true if there exists one const type and one non-Const
+ * type in an EC of pathkey have the compatible hash value.
+ * 
+ * This is used check whether we could redistribute single rel in
+ * join. See comments in cdbpath_match_preds_to_partkey_tail() for
+ * details.
+ */
+bool
+isGreenplumDbPathkeyDistCompatible(PathKey *pathkey)
+{
+	ListCell			*j;
+	EquivalenceClass	*ec;
+	Oid					non_const_ec_type = InvalidOid;
+
+
+	ec = pathkey->pk_eclass;
+	/*
+	 * Values of different types(float4, float8) could be in the same EC.
+	 * But they may have different hash values to do Motion.
+	 * In GPDB5 cdbhash treat some types, e.g. all integers, have the same
+	 * hash values. But other types, e.g. float4 and float8, have different
+	 * hash values. See cdbhash_type_compatibility_table for details.
+	 * This function checks whether items in an EC have the same cdbhash value.
+	 */
+	foreach(j, ec->ec_members)
+	{
+		EquivalenceMember *em = (EquivalenceMember *) lfirst(j);
+		
+		/* 
+		 * the first loop only check non-Const items in EC
+		 * non-Const items must have the compatible data type.
+		 */
+		if (em->em_is_const)
+			continue;
+
+		if (non_const_ec_type == InvalidOid)
+			non_const_ec_type = em->em_datatype;
+		else if (cdbhash_type_compatible(em->em_datatype, non_const_ec_type))
+			continue;
+		else
+			return false;
+	}
+	
+	/* no non-Const items in EC */
+	if(non_const_ec_type == InvalidOid)
+		return false;
+
+	foreach(j, ec->ec_members)
+	{
+		EquivalenceMember *em = (EquivalenceMember *) lfirst(j);
+
+		/* 
+		 * the second loop only check const items in EC 
+		 * one of the const_items matches the non_const_ec_type is enough
+		 */
+		if (!em->em_is_const)
+			continue;
+
+		if (cdbhash_type_compatible(em->em_datatype, non_const_ec_type))
+			return true;
+	}
+
+	return false;
+}
+
+/*
  * fnv1_32_buf - perform a 32 bit FNV 1 hash on a buffer
  *
  * input:
@@ -948,4 +1045,34 @@ static int
 ispowof2(int numsegs)
 {
 	return !(numsegs & (numsegs - 1));
+}
+
+/*
+ * check whether two types are cdbhash compatible.
+ */
+bool
+cdbhash_type_compatible(Oid ltypid, Oid rtypid)
+{
+	int i;
+	int ltypeGroup = -1;
+	int rtypeGroup = -1;
+	int groupNo = 0;
+
+	if (ltypid == rtypid)
+		return true;
+
+	for (i = 0; i < COMPAT_TABLE_LENGTH; i++)
+	{
+		if (cdbhash_type_compatibility_table[i] == ltypid)
+			ltypeGroup = groupNo;
+		if (cdbhash_type_compatibility_table[i] == rtypid)
+			rtypeGroup = groupNo;
+		if (cdbhash_type_compatibility_table[i] == InvalidOid)
+			groupNo++;
+	}
+
+	if (ltypeGroup == -1 || rtypeGroup == -1)
+		return false;
+
+	return (ltypeGroup == rtypeGroup) ? true : false;
 }

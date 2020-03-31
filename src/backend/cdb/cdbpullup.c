@@ -15,15 +15,17 @@
 
 #include "postgres.h"
 
+#include "access/hash.h"				/* HashEqualStrategyNumber */
+#include "cdb/cdbhash.h"              	/* cdbhash_type_compatible() */
 #include "nodes/makefuncs.h"            /* makeVar() */
 #include "nodes/plannodes.h"            /* Plan */
 #include "optimizer/clauses.h"          /* expression_tree_walker/mutator */
 #include "optimizer/tlist.h"            /* tlist_member() */
 #include "parser/parse_expr.h"          /* exprType() and exprTypmod() */
 #include "parser/parsetree.h"           /* get_tle_by_resno() */
+#include "utils/lsyscache.h"			/* get_opfamily_member() */
 
 #include "cdb/cdbpullup.h"              /* me */
-
 
 /*
  * cdbpullup_colIdx
@@ -382,6 +384,7 @@ Expr *
 cdbpullup_findPathKeyExprInTargetList(PathKey *item, List *targetlist)
 {
 	ListCell *lc;
+	List	 *nonConstTypeList = NIL;
 	EquivalenceClass *eclass = item->pk_eclass;
 
 	foreach(lc, eclass->ec_members)
@@ -389,9 +392,15 @@ cdbpullup_findPathKeyExprInTargetList(PathKey *item, List *targetlist)
 		EquivalenceMember *em = (EquivalenceMember *) lfirst(lc);
 		Expr	   *key = (Expr *) em->em_expr;
 
-		/* A constant is OK regardless of the target list */
+		/*
+		 * Don't process constant now
+		 * Since constants in EC may has different types, it may choose
+		 * a wrong type as the distkey.
+		 */
 		if (em->em_is_const)
-			return key;
+			continue;
+
+		nonConstTypeList = lappend_oid(nonConstTypeList, em->em_datatype);
 
 		if (targetlist)
 		{
@@ -433,6 +442,27 @@ cdbpullup_findPathKeyExprInTargetList(PathKey *item, List *targetlist)
 			}
 		}
 	}
+
+	/*
+	 * It's OK to return a constant member, as long as it's
+	 * compatible with all the non-Const members.
+	 */
+	foreach(lc, eclass->ec_members)
+	{
+		EquivalenceMember *em = (EquivalenceMember *) lfirst(lc);
+		Expr	   *key = (Expr *) em->em_expr;
+		if (em->em_is_const)
+		{
+			ListCell   *cell;
+			foreach(cell, nonConstTypeList)
+			{
+				if(cdbhash_type_compatible(lfirst_oid(cell), em->em_datatype))
+					return key;
+			}
+		}
+	}
+
+	list_free(nonConstTypeList);
 
 	return NULL;
 }

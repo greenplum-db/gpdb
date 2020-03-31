@@ -483,6 +483,12 @@ drop table table_a cascade;
 drop sequence s;
 --end_ignore
 
+-- the filter is over a window, do not direct dispatch
+create table foo_direct_dispatch (dist_key int, non_dist_key int);
+insert into foo_direct_dispatch select i, i from generate_series (1,100)i;
+select rank from ( select rank() over ( order by dist_key asc ) as rank , * from foo_direct_dispatch )a where 10 = dist_key;
+explain select rank from ( select rank() over ( order by dist_key asc ) as rank , * from foo_direct_dispatch )a where 10 = dist_key;
+
 RESET ALL;
 
 -- ----------------------------------------------------------------------

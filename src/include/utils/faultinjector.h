@@ -250,6 +250,8 @@ typedef enum FaultInjectorIdentifier_e {
 
 	DecreaseToastMaxChunkSize,
 
+	DynamicIndexScanContextReset,
+
 	/* INSERT has to be done before that line */
 	FaultInjectorIdMax,
 	

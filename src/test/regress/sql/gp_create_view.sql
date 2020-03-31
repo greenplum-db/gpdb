@@ -54,3 +54,12 @@ create view v_sourcetable2 as
 select * from v_sourcetable2;
 
 drop view v_sourcetable2;
+
+-- Check that views with gp_dist_random in them will be reconstructed back properly.
+CREATE TEMP VIEW view_with_gp_dist_random AS SELECT 1 FROM gp_dist_random('pg_class');
+SELECT pg_get_viewdef('view_with_gp_dist_random');
+CREATE SCHEMA "schema_view\'.gp_dist_random";
+CREATE TABLE "schema_view\'.gp_dist_random"."foo\'.bar" (a int);
+CREATE TEMP VIEW view_with_gp_dist_random_special_chars AS SELECT * FROM gp_dist_random(E'"schema_view\\''.gp_dist_random"."foo\\''.bar"');
+SELECT pg_get_viewdef('view_with_gp_dist_random_special_chars');
+DROP SCHEMA "schema_view\'.gp_dist_random" CASCADE;

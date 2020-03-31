@@ -258,17 +258,15 @@ INFO:  Distributed transaction command 'Distributed Abort (No Prepared)' to ALL 
 -------------------
 -- MPP-7634: bitmap index scan
 --
--- Known_opt_diff: MPP-21346
 select count(*) from direct_test_bitmap where dt='2008-02-05';
-INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to SINGLE content
  count 
 -------
      0
 (1 row)
 
--- Known_opt_diff: MPP-21346
 select count(*) from direct_test_bitmap where dt='2008-02-01';
-INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to SINGLE content
  count 
 -------
    100
@@ -291,9 +289,8 @@ INFO:  Dispatch command to SINGLE content
 ----------------------------------------------------------------------------------
 -- MPP-7638: range table partition
 --
--- Known_opt_diff: MPP-21346
 select count(*) from direct_test_range_partition where a =1;
-INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to SINGLE content
  count 
 -------
      1
@@ -436,9 +433,9 @@ INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL cont
 EXPLAIN SELECT a.* FROM MPP_22019_a a INNER JOIN MPP_22019_b b ON a.i = b.i WHERE a.j NOT IN (SELECT j FROM MPP_22019_a a2 where a2.j = b.j) and a.i = 1;
                                                    QUERY PLAN                                                    
 -----------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..1765377.40 rows=1 width=16)
-   ->  Result  (cost=0.00..1765377.40 rows=1 width=16)
-         ->  Result  (cost=0.00..1765377.40 rows=1 width=16)
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1765376.88 rows=1 width=8)
+   ->  Result  (cost=0.00..1765376.88 rows=1 width=8)
+         ->  Result  (cost=0.00..1765376.88 rows=1 width=8)
                Filter: (subplan)
                ->  Hash Join  (cost=0.00..862.00 rows=1 width=24)
                      Hash Cond: public.mpp_22019_a.i = mpp_22019_b.i

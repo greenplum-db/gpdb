@@ -32,3 +32,27 @@ DROP TABLE  mksort_limit_test_table;
 
 select * from generate_series(1,10) g limit g;
 select * from generate_series(1,10) g limit count(*);
+
+-- Check volatile limit should not pushdown.
+create table t_volatile_limit (i int4);
+create table t_volatile_limit_1 (a int, b int) distributed randomly;
+
+-- Greenplum may generate two-stage limit plan to improve performance.
+-- But for limit clause contains volatile functions, if we push them down
+-- below the final gather motion, those volatile functions will be evaluated
+-- many times. For such cases, we should not push down the limit.
+
+-- Below test cases' limit clause contain function call `random` with order by.
+-- `random()` is a volatile function it may return different results each time
+-- invoked. If we push down to generate two-stage limit plan, `random()` will
+-- execute on each segment which leads to different limit values of QEs
+-- and QD and this cannot guarantee correct results. Suppose seg 0 contains the
+-- top 3 minimum values, but random() returns 1, then you lose 2 values.
+explain select * from t_volatile_limit order by i limit (random() * 10);
+explain select * from t_volatile_limit order by i limit 2 offset (random()*5);
+
+explain select distinct(a), sum(b) from t_volatile_limit_1 group by a order by a, sum(b) limit (random()+3);
+explain select distinct(a), sum(b) from t_volatile_limit_1 group by a order by a, sum(b) limit 2 offset (random()*2);
+
+drop table t_volatile_limit;
+drop table t_volatile_limit_1;

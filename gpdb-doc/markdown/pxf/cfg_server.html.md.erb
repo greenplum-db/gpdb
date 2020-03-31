@@ -26,9 +26,9 @@ PXF provides a template configuration file for each connector.  These server tem
 
 ```
 gpadmin@gpmaster$ ls $PXF_CONF/templates
-adl-site.xml   hbase-site.xml  jdbc-site.xml    s3-site.xml
-core-site.xml  hdfs-site.xml   mapred-site.xml  wasbs-site.xml
-gs-site.xml    hive-site.xml   minio-site.xml   yarn-site.xml
+adl-site.xml   hbase-site.xml  jdbc-site.xml    pxf-site.xml    yarn-site.xml
+core-site.xml  hdfs-site.xml   mapred-site.xml  s3-site.xml
+gs-site.xml    hive-site.xml   minio-site.xml   wasbs-site.xml
 ```
 
 For example, the contents of the `s3-site.xml` template file follow:
@@ -62,8 +62,6 @@ PXF defines a special server named `default`. When you initialize PXF, it automa
 
 PXF automatically uses the `default` server configuration if you omit the `SERVER=<server_name>` setting in the `CREATE EXTERNAL TABLE` command `LOCATION` clause.
 
-**Note**: You *must* configure a Hadoop server as the PXF `default` server when your Hadoop cluster utilizes Kerberos authentication.
-
 
 ## <a id="cfgproc"></a>Configuring a Server
 
@@ -84,14 +82,40 @@ After you configure a PXF server, you publish the server name to Greenplum Datab
 To configure a PXF server, refer to the connector configuration topic:
 
 - To configure a PXF server for Hadoop, refer to [Configuring PXF Hadoop Connectors ](client_instcfg.html).
-- To configure a PXF server for an  object store, refer to [Configuring Connectors to Azure, Google Cloud Storage, Minio, and S3 Object Stores](objstore_cfg.html).
+- To configure a PXF server for an  object store, refer to [Configuring Connectors to Minio and S3 Object Stores](s3_objstore_cfg.html) and [Configuring Connectors to Azure and Google Cloud Storage Object Stores](objstore_cfg.html).
 - To configure a PXF JDBC server, refer to [Configuring the JDBC Connector ](jdbc_cfg.html).
+
+## <a id="pxf-site"></a>About Kerberos and User Impersonation Configuration (pxf-site.xml)
+
+PXF includes a template file named `pxf-site.xml`. You use the `pxf-site.xml` template file to specify Kerberos and/or user impersonation settings for a server configuration.
+
+<div class="note">The settings in this file apply only to Hadoop and JDBC server configurations; they do not apply to object store server configurations.</div>
+
+You configure properties in the `pxf-site.xml` file for a PXF server when one or more of the following conditions hold:
+
+- The remote Hadoop system utilizes Kerberos authentication.
+- You want to enable/disable user impersonation on the the remote Hadoop or external database system.
+
+`pxf-site.xml` includes the following properties:
+
+| Property       | Description                                | Default Value |
+|----------------|--------------------------------------------|---------------|
+| pxf.service.kerberos.principal | The Kerberos principal name. | gpadmin/\_HOST@EXAMPLE.COM |
+| pxf.service.kerberos.keytab | The file system path to the Kerberos keytab file. | $PXF_CONF/keytabs/pxf.service.keytab |
+| pxf.service.user.name | The log in user for the remote system. | The operating system user that starts the pxf process, typically `gpadmin`. |
+| pxf.service.user.impersonation | Enables/disables user impersonation on the remote system. | The value of the (deprecated) `PXF_USER_IMPERSONATION` property when that property is set. If the `PXF_USER_IMPERSONATION` property does not exist and the `pxf.service.user.impersonation` property is missing from `pxf-site.xml`, the default is `false`, user impersonation is disabled on the remote system. |
+
+Refer to [Configuring PXF Hadoop Connectors ](client_instcfg.html) and [Configuring the JDBC Connector ](jdbc_cfg.html) for information about relevant `pxf-site.xml` property settings for Hadoop and JDBC server configurations, respectively.
+
 
 ## <a id="usercfg"></a>Configuring a PXF User
 
 You can configure access to an external data store on a per-server, per-Greenplum-user basis.
 
+<div class="note info">PXF per-server, per-user configuration provides the most benefit for JDBC servers.</div>
+
 You configure external data store user access credentials and properties for a specific Greenplum Database user by providing a `<greenplum_user_name>-user.xml` user configuration file in the PXF server configuration directory, `$PXF_CONF/servers/<server_name>/`. For example, you specify the properties for the Greenplum Database user named `bill` in the file `$PXF_CONF/servers/<server_name>/bill-user.xml`. You can configure zero, one, or more users in a PXF server configuration.
+
 
 The properties that you specify in a user configuration file are connector-specific. You can specify any configuration property supported by the PXF connector server in a `<greenplum_user_name>-user.xml` configuration file.
 

@@ -64,7 +64,6 @@
  /*
   * backlog for listen() call:
   */
-#define LISTEN_BACKLOG 64
 #define getInt16(pNetData)	  ntohs(*((int16 *)(pNetData)))
 #define getInt32(pNetData)	  ntohl(*((int32 *)(pNetData)))
 #define getOid(pNetData)	
@@ -1012,7 +1011,7 @@ listenerSetup(void)
 		
 	}
 
-	if (listen(listenerFd, LISTEN_BACKLOG) < 0)
+	if (listen(listenerFd, listenerBacklog) < 0)
 	{
 		ereport(ERROR, (errcode(ERRCODE_GP_INTERNAL_ERROR),
 						errmsg("SeqServer Error: Could not setup listener socket: %s", strerror(errno)),

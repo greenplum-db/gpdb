@@ -9519,6 +9519,7 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 		char	   *options;
 		bool		gpdb5OrLater = isGPDB5000OrLater();
 		char	   *on_clause;
+		bool		log_errors_persistently = false;
 
 		/*
 		 * DROP must be fully qualified in case same name appears in
@@ -9787,7 +9788,28 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 
 		if (options && options[0] != '\0')
 		{
-			appendPQExpBuffer(q, "OPTIONS (\n %s\n )\n", options);
+			char *error_log_persistent = "error_log_persistent 'true'";
+			char *pos = strstr(options, error_log_persistent);
+			int error_log_len = strlen(error_log_persistent);
+			if (pos)
+			{
+				log_errors_persistently = true;
+				if (*(pos + error_log_len) == ',')
+						error_log_len += 6;
+				if (strlen(options) - error_log_len != 0)
+				{
+					char *opts = pg_malloc(sizeof(char) * (strlen(options) - error_log_len + 1));
+					int prev_len = pos - options;
+					if (prev_len > 0)
+						strncpy(opts, options, prev_len);
+					StrNCpy(opts + prev_len, pos + error_log_len,
+							strlen(options) - prev_len - error_log_len + 1 /* for \0 */);
+					appendPQExpBuffer(q, "OPTIONS (\n %s\n )\n", opts);
+					free(opts);
+				}
+			}
+			else
+				appendPQExpBuffer(q, "OPTIONS (\n %s\n )\n", options);
 		}
 
 		if (g_fout->remoteVersion >= 80205)
@@ -9807,7 +9829,11 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 				 * attribute so we use the errtblname for emitting LOG ERRORS.
 				 */
 				if (errtblname && strlen(errtblname) > 0)
+				{
 					appendPQExpBufferStr(q, "LOG ERRORS ");
+					if (log_errors_persistently)
+						appendPQExpBufferStr(q, "PERSISTENTLY ");
+				}
 
 				/* reject limit */
 				appendPQExpBuffer(q, "SEGMENT REJECT LIMIT %s", rejlim);

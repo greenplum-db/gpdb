@@ -1002,7 +1002,7 @@ QEwriterSnapshotUpToDate(void)
  * We also update the following backend-global variables:
  *		TransactionXmin: the oldest xmin of any snapshot in use in the
  *			current transaction (this is the same as MyProc->xmin).  This
- *			is just the xmin computed for the first, serializable snapshot.
+ *			is just the xmin computed for the first snapshot.
  *		RecentXmin: the xmin computed for the most recent snapshot.  XIDs
  *			older than this are known not running any more.
  *		RecentGlobalXmin: the global xmin (oldest TransactionXmin across all
@@ -1010,7 +1010,7 @@ QEwriterSnapshotUpToDate(void)
  *			the same computation done by GetOldestXmin(true, true).
  */
 Snapshot
-GetSnapshotData(Snapshot snapshot, bool serializable)
+GetSnapshotData(Snapshot snapshot)
 {
 	ProcArrayStruct *arrayP = procArray;
 	TransactionId xmin;
@@ -1296,12 +1296,7 @@ GetSnapshotData(Snapshot snapshot, bool serializable)
 
 	/* Serializable snapshot must be computed before any other... */
 	ereport((Debug_print_full_dtm ? LOG : DEBUG5),
-			(errmsg("GetSnapshotData serializable %s, xmin %u",
-					(serializable ? "true" : "false"),
-					MyProc->xmin)));
-	Assert(serializable ?
-		   !TransactionIdIsValid(MyProc->xmin) :
-		   TransactionIdIsValid(MyProc->xmin));
+			(errmsg("GetSnapshotData xmin %u", MyProc->xmin)));
 
 	/*
 	 * It is sufficient to get shared lock on ProcArrayLock, even if we are
@@ -1398,7 +1393,7 @@ GetSnapshotData(Snapshot snapshot, bool serializable)
 		}
 	}
 
-	if (serializable)
+	if (!TransactionIdIsValid(MyProc->xmin))
 	{
 		/* Not that these values are not set atomically. However,
 		 * each of these assignments is itself assumed to be atomic. */

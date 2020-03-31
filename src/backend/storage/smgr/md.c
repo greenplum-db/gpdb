@@ -1686,20 +1686,15 @@ mdnblocks(SMgrRelation reln)
 		if (v->mdmir_chain == NULL)
 		{
 			/*
-			 * Because we pass true for createIfDoesntExist, we will create the next segment (with
-			 * zero length) immediately, if the last segment is of length
-			 * RELSEG_SIZE.  While perhaps not strictly necessary, this keeps
-			 * the logic simple.
+			 * We used to pass O_CREAT here, but that's has the disadvantage
+			 * that it might create a segment which has vanished through some
+			 * operating system misadventure.  In such a case, creating the
+			 * segment here undermine _mdfd_getseg's attempts to notice and
+			 * report an error upon access to a missing segment.
 			 */
-			v->mdmir_chain = _mdmir_openseg(reln, segno, true /* createIfDoesntExist */);
+			v->mdmir_chain = _mdmir_openseg(reln, segno, false /* createIfDoesntExist */);
 			if (v->mdmir_chain == NULL)
-				ereport(ERROR,
-						(errcode_for_file_access(),
-				 errmsg("could not open segment %u of relation %u/%u/%u: %m",
-						segno,
-						reln->smgr_rnode.spcNode,
-						reln->smgr_rnode.dbNode,
-						reln->smgr_rnode.relNode)));
+				return segno * ((BlockNumber) RELSEG_SIZE);
 		}
 
 		v = v->mdmir_chain;

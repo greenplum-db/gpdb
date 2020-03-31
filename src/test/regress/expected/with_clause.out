@@ -1949,3 +1949,36 @@ select * from x, yy;
 (4 rows)
 
 -- End of MPP-17848
+-- test subquery locus
+create table t_test_subquery_locus(a int) distributed randomly;
+explain
+with base(a) as (select * from t_test_subquery_locus where a < 10)
+select * from base where a > 20
+union all
+select port from gp_segment_configuration;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Append  (cost=0.00..1.04 rows=2 width=4)
+   ->  Result  (cost=0.00..0.01 rows=1 width=0)
+         One-Time Filter: false
+   ->  Seq Scan on gp_segment_configuration  (cost=0.00..1.00 rows=1 width=4)
+ Settings:  optimizer=off
+ Optimizer status: legacy query optimizer
+(6 rows)
+
+with base(a) as (select * from t_test_subquery_locus where a < 10)
+select * from base where a > 20
+union all
+select port from gp_segment_configuration;
+   a   
+-------
+ 15432
+ 25432
+ 25433
+ 25434
+ 25435
+ 25436
+ 25437
+ 16432
+(8 rows)
+

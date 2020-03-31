@@ -9,7 +9,7 @@
             <title>Synopsis</title>
             <codeblock><b>gpload</b> <b>-f</b> <varname>control_file</varname> [<b>-l</b> <varname>log_file</varname>] [<b>-h</b> <varname>hostname</varname>] [<b>-p</b> <varname>port</varname>] 
    [<b>-U</b> <varname>username</varname>] [<b>-d</b> <varname>database</varname>] [<b>-W</b>] [<b>--gpfdist_timeout</b> <varname>seconds</varname>] 
-   [<b>--no_auto_trans</b>] [[<b>-v</b> | <b>-V</b>] [<b>-q</b>]] [<b>-D</b>]
+   [<b>--no_auto_trans</b>] [<b>--max_retries</b> <varname>retry_times</varname>] [[<b>-v</b> | <b>-V</b>] [<b>-q</b>]] [<b>-D</b>]
 
 <b>gpload</b> <b>-?</b> 
 
@@ -48,7 +48,8 @@
                     4.x cannot be used with Greenplum Database 5.x or 6.x.</note>
                 <note>The Greenplum Database 5.22 and later <codeph>gpload</codeph> for Linux is
                   compatible with Greenplum Database 6.x. The Greenplum Database 6.x
-                  <codeph>gpload</codeph> for both Linux and Windows is compatible with Greenplum 5.x.</note>
+                  <codeph>gpload</codeph> for both Linux and Windows is compatible with Greenplum
+                  5.x.</note>
                 <note id="gpload-limitation"><codeph>MERGE</codeph> and <codeph>UPDATE</codeph>
                     operations are not supported if the target table column name is a reserved
                     keyword, has capital letters, or includes any character that requires quotes ("
@@ -139,6 +140,17 @@
                             server is listening for connections. If not specified, reads from the
                             load control file, the environment variable <codeph>$PGPORT</codeph> or
                             defaults to 5432.</pd>
+                    </plentry>
+                    <plentry>
+                        <pt>--max_retries <varname>retry_times</varname></pt>
+                        <pd>
+                            <p>Specifies the maximum number of times <codeph>gpload</codeph>
+                                attempts to connect to Greenplum Database after a connection
+                                timeout. The default value is <codeph>0</codeph>, do not attempt to
+                                connect after a connection timeout. A negative integer, such as
+                                    <codeph>-1</codeph>, specifies an unlimited number of
+                                attempts.</p>
+                        </pd>
                     </plentry>
                     <plentry>
                         <pt>-U <varname>username</varname></pt>

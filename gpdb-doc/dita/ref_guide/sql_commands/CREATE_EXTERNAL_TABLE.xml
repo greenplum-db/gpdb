@@ -38,7 +38,7 @@
           | 'PARQUET'
           | 'CUSTOM' (Formatter=<varname>&lt;formatter_specifications&gt;</varname>)
     [ ENCODING '<varname>encoding</varname>' ]
-      [ [LOG ERRORS] SEGMENT REJECT LIMIT <varname>count</varname>
+      [ [LOG ERRORS [PERSISTENTLY]] SEGMENT REJECT LIMIT <varname>count</varname>
       [ROWS | PERCENT] ]
 
 CREATE [READABLE] EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varname>     
@@ -67,7 +67,7 @@ CREATE [READABLE] EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</var
                [FILL MISSING FIELDS] )]
            | 'CUSTOM' (Formatter=<varname>&lt;formatter specifications&gt;</varname>)
      [ ENCODING '<varname>encoding</varname>' ]
-     [ [LOG ERRORS] SEGMENT REJECT LIMIT <varname>count</varname>
+     [ [LOG ERRORS [PERSISTENTLY]] SEGMENT REJECT LIMIT <varname>count</varname>
        [ROWS | PERCENT] ]
 
 CREATE WRITABLE EXTERNAL [TEMPORARY | TEMP] TABLE <varname>table_name</varname>
@@ -443,11 +443,21 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varna
               href="../character_sets.xml" type="topic" format="dita"/>.</pd>
         </plentry>
         <plentry>
-          <pt>LOG ERRORS</pt>
+          <pt>LOG ERRORS [PERSISTENTLY]</pt>
           <pd>This is an optional clause that can precede a <codeph>SEGMENT REJECT LIMIT</codeph>
-            clause to log information about rows with formatting errors. The error log information
-            is stored internally and is accessed with the Greenplum Database built-in SQL function
-              <codeph>gp_read_error_log()</codeph>.</pd>
+            clause to log information about rows with formatting errors. The error log data is
+            stored internally. If error log data exists for a specified external table, new data is
+            appended to existing error log data. The error log data is not replicated to mirror
+            segments.</pd>
+          <pd>The data is deleted when the external table is dropped unless you specify the keyword
+              <codeph>PERSISTENTLY</codeph>. If the keyword is specified, the log data persists
+            after the external table is dropped.</pd>
+          <pd>The error log data is accessed with the Greenplum Database built-in SQL function
+              <codeph>gp_read_error_log()</codeph>, or with the SQL function
+              <codeph>gp_read_persistent_error_log()</codeph> if the <codeph>PERSISTENTLY</codeph>
+            keyword is specified.</pd>
+          <pd>If you use the <codeph>PERSISTENTLY</codeph> keyword, you must install the functions
+            that manage the persistent error log information.</pd>
           <pd>See <xref href="#topic1/section8" format="dita"/> for information about the error log
             information and built-in functions for viewing and managing error log information.</pd>
         </plentry>
@@ -550,35 +560,70 @@ customer_id=123;</codeblock>
     <section id="section8">
       <title>Notes</title>
       <p>When you specify the <codeph>LOG ERRORS</codeph> clause, Greenplum Database captures errors
-        that occur while reading the external table data. You can view and manage the captured error
-        log data. </p>
-      <ul id="ul_wk3_jdj_bp">
-        <li>Use the built-in SQL function
-            <codeph>gp_read_error_log('<varname>table_name</varname>')</codeph>. It requires
-            <codeph>SELECT</codeph> privilege on <varname>table_name</varname>. This example
-          displays the error log information for data loaded into table
-            <codeph>ext_expenses</codeph> with a <codeph>COPY</codeph>
-            command:<codeblock>SELECT * from gp_read_error_log('ext_expenses');</codeblock><p>For
-            information about the error log format, see <xref
+        that occur while reading the external table data. For information about the error log
+        format, see <xref
               href="../../admin_guide/load/topics/g-viewing-bad-rows-in-the-error-table-or-error-log.xml#topic58"
-              >Viewing Bad Rows in the Error Log</xref> in the <cite>Greenplum Database
-              Administrator Guide</cite>.</p><p>The function returns <codeph>FALSE</codeph> if
-              <varname>table_name</varname> does not exist.</p></li>
-        <li>If error log data exists for the specified table, the new error log data is appended to
-          existing error log data. The error log information is not replicated to mirror
-          segments.</li>
-        <li>Use the built-in SQL function
-              <codeph>gp_truncate_error_log('<varname>table_name</varname>')</codeph> to delete the
-          error log data for <varname>table_name</varname>. It requires the table owner privilege
-          This example deletes the error log information captured when moving data into the table
-            <codeph>ext_expenses</codeph>:<codeblock>SELECT gp_truncate_error_log('ext_expenses'); </codeblock><p>The
-            function returns <codeph>FALSE</codeph> if <varname>table_name</varname> does not
-            exist.</p><p>Specify the <codeph>*</codeph> wildcard character to delete error log
+          >Viewing Bad Rows in the Error Log</xref>.</p>
+      <p>You can view and manage the captured error log data. The functions to manage log data
+        depend on whether the data is persistent (the <codeph>PERSISTENTLY</codeph> keyword is used
+        with the <codeph>LOG ERRORS</codeph> clause). </p>
+      <ul id="ul_wk3_jdj_bp">
+        <li>Functions that manage non-persistent error log data from external tables that were
+          defined without the <codeph>PERSISTENTLY</codeph> keyword.<ul id="ul_bft_yn5_dlb">
+            <li>The built-in SQL function
+                <codeph>gp_read_error_log('<varname>table_name</varname>')</codeph> displays error
+              log information for an external table. This example displays the error log data from
+              the external table
+                <codeph>ext_expenses</codeph>.<codeblock>SELECT * from gp_read_error_log('ext_expenses');</codeblock><p>The
+                function returns no data if you created the external table with the <codeph>LOG
+                  ERRORS PERSISTENTLY</codeph> clause, or if the external table does not exist.
+              </p></li>
+            <li>The built-in SQL function
+                  <codeph>gp_truncate_error_log('<varname>table_name</varname>')</codeph> deletes
+              the error log data for <varname>table_name</varname>. This example deletes the error
+              log data captured from the external table
+                <codeph>ext_expenses</codeph>:<codeblock>SELECT gp_truncate_error_log('ext_expenses'); </codeblock><p>Dropping
+                the table also deletes the table's log data. The function does not truncate log data
+                if the external table is defined with the <codeph>LOG ERRORS PERSISTENTLY</codeph>
+                clause. </p><p>The function returns <codeph>FALSE</codeph> if the table does not
+                exist.</p></li>
+          </ul></li>
+        <li>Functions that manage persistent error log data from external tables that were defined
+          with the <codeph>PERSISTENTLY</codeph> keyword.
+          <note>The functions that manage persistent error log data from external tables are defined
+            in the file <codeph>$GPHOME/share/postgresql/contrib/gpexterrorhandle.sql</codeph>. The
+            functions must be installed in the databases that use persistent error log data from an
+            external table. This <codeph>psql</codeph> command installs the functions into the
+            database
+              <codeph>testdb</codeph>.<codeblock>psql -d test -U gpadmin -f $GPHOME/share/postgresql/contrib/gpexterrorhandle.sql</codeblock></note><ul
+            id="ul_htb_m45_dlb">
+            <li>The SQL function
+                <codeph>gp_read_persistent_error_log('<varname>table_name</varname>')</codeph>
+              displays persistent log data for an external table. <p>The function returns no data if
+                you created the external table without the <codeph>PERSISTENTLY</codeph> keyword.
+                The function returns persistent log data for an external table even after the table
+                has been dropped.</p></li>
+            <li>The SQL function
+                  <codeph>gp_truncate_persistent_error_log('<varname>table_name</varname>')</codeph>
+              truncates persistent log data for a table.<p>For persistent log data, you must
+                manually delete the data. Dropping the external table does not delete persistent log
+                data. </p></li>
+          </ul></li>
+        <li>These items apply to both non-persistent and persistent error log data and the related
+            functions.<ul id="ul_bj5_tfd_2lb">
+            <li>The <codeph>gp_read_*</codeph> functions require <codeph>SELECT</codeph> privilege
+              on the table.</li>
+            <li>The <codeph>gp_truncate_*</codeph> functions require owner privilege on the
+              table.</li>
+            <li>You can use the <codeph>*</codeph> wildcard character to delete error log
             information for existing tables in the current database. Specify the string
-              <codeph>*.*</codeph> to delete all database error log information, including error log
-            information that was not deleted due to previous database issues. If * is specified,
-            database owner privilege is required. If <codeph>*.*</codeph> is specified, operating
-            system super-user privilege is required.</p></li>
+                <codeph>*.*</codeph> to delete all database error log information, including error
+              log information that was not deleted due to previous database issues. If
+                <codeph>*</codeph> is specified, database owner privilege is required. If
+                <codeph>*.*</codeph> is specified, operating system super-user privilege is
+              required. Non-persistent and persistent error log data must be deleted with their
+              respective <codeph>gp_truncate_*</codeph> functions.</li>
+          </ul></li>
       </ul>
       <p>When multiple Greenplum Database external tables are defined with the
           <codeph>gpfdist</codeph>, <codeph>gpfdists</codeph>, or <codeph>file</codeph> protocol and

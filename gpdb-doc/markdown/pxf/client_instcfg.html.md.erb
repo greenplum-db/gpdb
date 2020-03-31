@@ -15,7 +15,7 @@ Configuring PXF Hadoop connectors involves copying configuration files from your
 
 Perform the following procedure to configure the desired PXF Hadoop-related connectors on the Greenplum Database master host. After you configure the connectors, you will use the `pxf cluster sync` command to copy the PXF configuration to the Greenplum Database cluster.
 
-In this procedure, you use the `default`, or create a new, PXF server configuration. You copy Hadoop configuration files to the server configuration directory on the Greenplum Database master host. You may also copy libraries to `$PXF_CONF/lib` for MapR support. You then synchronize the PXF configuration on the master host to the standby master and segment hosts. (PXF creates the`$PXF_CONF/*` directories when you run `pxf cluster init`.)
+In this procedure, you use the `default`, or create a new, PXF server configuration. You copy Hadoop configuration files to the server configuration directory on the Greenplum Database master host. You identify Kerberos and user impersonation settings required for access, if applicable. You may also copy libraries to `$PXF_CONF/lib` for MapR support. You then synchronize the PXF configuration on the master host to the standby master and segment hosts. (PXF creates the`$PXF_CONF/*` directories when you run `pxf cluster init`.)
 
 1. Log in to your Greenplum Database master node:
 
@@ -23,7 +23,7 @@ In this procedure, you use the `default`, or create a new, PXF server configurat
     $ ssh gpadmin@<gpmaster>
     ```
 
-2. Identify the name of your PXF Hadoop server configuration. If your Hadoop cluster is Kerberized, you must use the `default` PXF server.
+2. Identify the name of your PXF Hadoop server configuration.
 
 3. If you are not using the `default` PXF server, create the `$PXF_CONF/servers/<server_name>` directory. For example, use the following command to create a Hadoop server configuration named `hdp3`:
 
@@ -86,7 +86,7 @@ In this procedure, you use the `default`, or create a new, PXF server configurat
 6. If your Hadoop cluster is secured with Kerberos, you must configure PXF and generate Kerberos principals and keytabs for each segment host as described in [Configuring PXF for Secure HDFS](pxf_kerbhdfs.html).
 
 
-## <a id="client-cfg-update"></a>Updating Hadoop Configuration
+## <a id="client-cfg-update"></a>About Updating the Hadoop Configuration
 
 If you update your Hadoop, Hive, or HBase configuration while the PXF service is running, you must copy the updated configuration to the `$PXF_CONF/servers/<server_name>` directory and re-sync the PXF configuration to your Greenplum Database cluster. For example:
 

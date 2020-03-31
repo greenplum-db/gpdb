@@ -2990,6 +2990,7 @@ SetupUDPIFCInterconnect_Internal(EState *estate)
 
 	estate->interconnect_context->teardownActive = false;
 	estate->interconnect_context->activated = false;
+	estate->interconnect_context->networkTimeoutIsLogged = false;
 	estate->interconnect_context->incompleteConns = NIL;
 	estate->interconnect_context->sliceTable = NULL;
 	estate->interconnect_context->sliceId = -1;
@@ -4924,7 +4925,7 @@ handleAckForDuplicatePkt(MotionConn *conn, icpkthdr *pkt)
  *		check network timeout case.
  */
 static inline void
-checkNetworkTimeout(ICBuffer *buf, uint64 now)
+checkNetworkTimeout(ICBuffer *buf, uint64 now, bool *networkTimeoutIsLogged)
 {
 	/* Using only the time to first sent time to decide timeout is not enough,
 	 * since there is a possibility the sender process is not scheduled or blocked
@@ -4944,6 +4945,28 @@ checkNetworkTimeout(ICBuffer *buf, uint64 now)
 		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 						errmsg("Interconnect encountered a network error, please check your network"),
 						errdetail("Failed to send packet (seq %d) to %s (pid %d cid %d) after %d retries in %d seconds", buf->pkt->seq, buf->conn->remoteHostAndPort, buf->pkt->dstPid, buf->pkt->dstContentId, buf->nRetry, Gp_interconnect_transmit_timeout)));
+	}
+
+	/*
+	 * Default value of Gp_interconnect_transmit_timeout is one hours.
+	 * It taks too long time to detect a network error and it is not user friendly.
+	 *
+	 * Packets would be dropped repeatly on some specific ports. We'd better have
+	 * a warning messgage for this case and give the DBA a chance to detect this error
+	 * earlier. Since packets would also be dropped when network is bad, we should not
+	 * error out here, but just give a warning message. Erroring our is still handled
+	 * by GUC Gp_interconnect_transmit_timeout as above. Note that warning message should
+	 * be printed for each statement only once.
+	 */
+	if ((buf->nRetry >= Gp_interconnect_min_retries_before_timeout) && !(*networkTimeoutIsLogged))
+	{
+		ereport(WARNING,
+				(errmsg("interconnect may encountered a network error, please check your network"),
+				 errdetail("Failed to send packet (seq %d) to %s (pid %d cid %d) after %d retries.",
+						   buf->pkt->seq, buf->conn->remoteHostAndPort,
+						   buf->pkt->dstPid, buf->pkt->dstContentId,
+						   buf->nRetry)));
+		*networkTimeoutIsLogged = true;
 	}
 }
 
@@ -4984,7 +5007,7 @@ checkExpiration(ChunkTransportState *transportStates, ChunkTransportStateEntry *
 			curBuf->conn->stat_count_resent++;
 			curBuf->conn->stat_max_resent = Max(curBuf->conn->stat_max_resent, curBuf->conn->stat_count_resent);
 
-			checkNetworkTimeout(curBuf, now);
+			checkNetworkTimeout(curBuf, now, &transportStates->networkTimeoutIsLogged);
 
 		#ifdef AMS_VERBOSE_LOGGING
 			write_log("RESEND pkt with seq %d (retry %d, rtt " UINT64_FORMAT ") to route %d", curBuf->pkt->seq, curBuf->nRetry, curBuf->conn->rtt, curBuf->conn->route);
@@ -5143,7 +5166,7 @@ checkExpirationCapacityFC(ChunkTransportState *transportStates, ChunkTransportSt
 		ic_control_info.lastPacketSendTime = now;
 
 		updateRetransmitStatistics(conn);
-		checkNetworkTimeout(buf, now);
+		checkNetworkTimeout(buf, now, &transportStates->networkTimeoutIsLogged);
 	}
 }
 

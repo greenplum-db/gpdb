@@ -716,7 +716,6 @@ open_alert_log_file()
         Gp_role == GP_ROLE_DISPATCH &&
         gpperfmon_log_alert_level != GPPERFMON_LOG_ALERT_LEVEL_NONE)
     {
-        alert_log_level_opened = true;
         if(mkdir(gp_perf_mon_directory, 0700) == -1)
 		{
 			ereport(WARNING,
@@ -736,6 +735,12 @@ open_alert_log_file()
         else
         {
             setvbuf(alertLogFile, NULL, LBF_MODE, 0);
+
+			/*
+			 * Do not mark this flag as true until we really have opened the
+			 * file successfully.
+			 */
+			alert_log_level_opened = true;
         }
         pfree(alert_file_name);
     }

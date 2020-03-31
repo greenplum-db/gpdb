@@ -38,7 +38,6 @@
 #undef small                    /*  but I want it for a variable name */
 #endif
 
-
 /*
  * cdbpath_cost_motion
  *    Fills in the cost estimate fields in a MotionPath node.
@@ -322,6 +321,13 @@ cdbpath_match_preds_to_partkey_tail(CdbpathMatchPredsContext *ctx,
 	 * so the caller can join T and U by redistributing only U.
 	 * (Note that "T.D = <constant expr>" won't be in the mergeclause_list
 	 * because it isn't a join pred.)
+	 *
+	 * In gpdb5, items in an EC may have different cdbhash values,
+	 * which means their distributed keys may be different as well.
+	 * For example, in T.D = <constant expr>, if T.D is float4, while
+	 * <constant expr> is float8. Even if they are both 1.0, we could not
+	 * consider they could be distributed on the same segment after motion.
+	 * So isGreenplumDbPathkeyDistCompatible() is added to fix this issue.
 	 *----------------
 	 */
 	copathkey = NULL;
@@ -330,7 +336,12 @@ cdbpath_match_preds_to_partkey_tail(CdbpathMatchPredsContext *ctx,
 	{
 		PathKey    *pathkey = (PathKey *) lfirst(partkeycell);
 
-		if (CdbPathkeyEqualsConstant(pathkey))
+		/*
+		 * In gpdb5 items in an EC may have different cdbhash values,
+		 * which means their distributed key may be different.
+		 *
+		 */
+		if (CdbPathkeyEqualsConstant(pathkey) && isGreenplumDbPathkeyDistCompatible(pathkey))
 			copathkey = pathkey;
 	}
 	else if (ctx->locus.locustype == CdbLocusType_HashedOJ)
@@ -342,7 +353,7 @@ cdbpath_match_preds_to_partkey_tail(CdbpathMatchPredsContext *ctx,
 		{
 			PathKey    *pathkey = (PathKey *) lfirst(cell);
 
-			if (CdbPathkeyEqualsConstant(pathkey))
+			if (CdbPathkeyEqualsConstant(pathkey) && isGreenplumDbPathkeyDistCompatible(pathkey))
 			{
 				copathkey = pathkey;
 				break;

@@ -6533,6 +6533,122 @@ select lead(c,c+d,1000) over(order by c,d) from orca.s order by 1;
  1000
 (30 rows)
 
+-- test normalization of window functions
+create table orca_w1(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table orca_w2(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table orca_w3(a int, b text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into orca_w1 select i, i from generate_series(1, 3) i;
+insert into orca_w2 select i, i from generate_series(2, 4) i;
+insert into orca_w3 select i, i from generate_series(3, 5) i;
+-- outer ref in subquery in target list and window func in target list
+select (select b from orca_w3 where a = orca_w1.a) as one, row_number() over(partition by orca_w1.a) as two from orca_w2, orca_w1;
+ one | two 
+-----+-----
+ 3   |   1
+ 3   |   2
+ 3   |   3
+     |   1
+     |   2
+     |   3
+     |   1
+     |   2
+     |   3
+(9 rows)
+
+-- aggref in subquery with window func in target list
+select orca_w1.a, (select sum(orca_w2.a) from orca_w2 where orca_w1.b = orca_w2.b), count(*), rank() over (order by orca_w1.b) from orca_w1 group by orca_w1.a, orca_w1.b order by orca_w1.a;
+ a | ?column? | count | rank 
+---+----------+-------+------
+ 1 |          |     1 |    1
+ 2 |        2 |     1 |    2
+ 3 |        3 |     1 |    3
+(3 rows)
+
+-- window function inside subquery inside target list with outer ref
+select orca_w1.a, (select rank() over (order by orca_w1.b) from orca_w2 where orca_w1.b = orca_w2.b), count(*) from orca_w1 group by orca_w1.a, orca_w1.b order by orca_w1.a;
+ a | ?column? | count 
+---+----------+-------
+ 1 |          |     1
+ 2 |        1 |     1
+ 3 |        1 |     1
+(3 rows)
+
+-- window function clause inside subquery inside target list with outer ref
+select (select rank() over(order by a) from orca_w3 where a = orca_w1.a) as one, row_number() over(partition by orca_w1.a) as two from orca_w1, orca_w2 order by orca_w1.a;
+ one | two 
+-----+-----
+     |   2
+     |   3
+     |   1
+     |   2
+     |   3
+     |   1
+   1 |   2
+   1 |   3
+   1 |   1
+(9 rows)
+
+-- window function in IN clause
+select (select a from orca_w3 where a = orca_w1.a) as one from orca_w1 where orca_w1.a IN (select rank() over(order by orca_w1.a) + 1 from orca_w1, orca_w2);
+ one 
+-----
+    
+(1 row)
+
+-- window function in subquery inside target list with outer ref in partition clause
+select (select row_number() over(partition by orca_w2.a) from orca_w3 where a = orca_w1.a) as one, row_number() over(partition by orca_w1.a) as two from orca_w1, orca_w2 order by orca_w1.a;
+ one | two 
+-----+-----
+     |   2
+     |   3
+     |   1
+     |   2
+     |   3
+     |   1
+   1 |   2
+   1 |   3
+   1 |   1
+(9 rows)
+
+-- window function in subquery inside target list with outer ref in order clause
+select (select rank() over(order by orca_w2.a) from orca_w3 where a = orca_w1.a) as one, row_number() over(partition by orca_w1.a) as two from orca_w1, orca_w2 order by orca_w1.a;
+ one | two 
+-----+-----
+     |   2
+     |   3
+     |   1
+     |   2
+     |   3
+     |   1
+   1 |   2
+   1 |   3
+   1 |   1
+(9 rows)
+
+-- window function with outer ref in arguments
+select (select sum(orca_w1.a + a) over(order by b) + 1 from orca_w2 where orca_w1.a = orca_w2.a) from orca_w1 order by orca_w1.a;
+ ?column? 
+----------
+         
+        5
+        7
+(3 rows)
+
+-- window function with outer ref in window clause and arguments 
+select (select sum(orca_w1.a + a) over(order by b + orca_w1.a) + 1 from orca_w2 where orca_w1.a = orca_w2.a) from orca_w1 order by orca_w1.a;
+ ?column? 
+----------
+         
+        5
+        7
+(3 rows)
+
 -- cte
 with x as (select a, b from orca.r)
 select rank() over(partition by a, case when b = 0 then a+b end order by b asc) as rank_within_parent from x order by a desc ,case when a+b = 0 then a end ,b;
@@ -10201,52 +10317,102 @@ drop function canSetTag_Func(x int);
 drop table canSetTag_bug_table;
 drop table canSetTag_input_data;
 -- Test B-Tree index scan with in list
-CREATE TABLE btree_test as SELECT * FROM generate_series(1,100) as a distributed randomly;
+CREATE TABLE btree_test as SELECT i a, i b FROM generate_series(1,100) i distributed randomly;
 CREATE INDEX btree_test_index ON btree_test(a);
+set optimizer_enable_tablescan = off;
+-- start_ignore
+select disable_xform('CXformSelect2IndexGet');
+           disable_xform           
+-----------------------------------
+ CXformSelect2IndexGet is disabled
+(1 row)
+
+-- end_ignore
 EXPLAIN SELECT * FROM btree_test WHERE a in (1, 47);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-                                 QUERY PLAN
-----------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..4.25 rows=2 width=4)
-   ->  Seq Scan on btree_test  (cost=0.00..4.25 rows=1 width=4)
-         Filter: a = ANY ('{1,47}'::integer[])
- Settings:  optimizer=on; optimizer_metadata_caching=on
- Optimizer status: legacy query optimizer
-(5 rows)
+                                     QUERY PLAN                                      
+-------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..204.38 rows=3 width=8)
+   ->  Bitmap Table Scan on btree_test  (cost=0.00..204.38 rows=1 width=8)
+         Recheck Cond: a = ANY ('{1,47}'::integer[])
+         ->  Bitmap Index Scan on btree_test_index  (cost=0.00..0.00 rows=0 width=0)
+               Index Cond: a = ANY ('{1,47}'::integer[])
+ Settings:  optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
+ Optimizer status: PQO version 3.82.0
+(7 rows)
 
 EXPLAIN SELECT * FROM btree_test WHERE a in ('2', 47);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-                                 QUERY PLAN
-----------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..4.25 rows=2 width=4)
-   ->  Seq Scan on btree_test  (cost=0.00..4.25 rows=1 width=4)
-         Filter: a = ANY ('{2,47}'::integer[])
- Settings:  optimizer=on; optimizer_metadata_caching=on
- Optimizer status: legacy query optimizer
-(5 rows)
+                                     QUERY PLAN                                      
+-------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..204.38 rows=3 width=8)
+   ->  Bitmap Table Scan on btree_test  (cost=0.00..204.38 rows=1 width=8)
+         Recheck Cond: a = ANY ('{2,47}'::integer[])
+         ->  Bitmap Index Scan on btree_test_index  (cost=0.00..0.00 rows=0 width=0)
+               Index Cond: a = ANY ('{2,47}'::integer[])
+ Settings:  optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
+ Optimizer status: PQO version 3.82.0
+(7 rows)
 
 EXPLAIN SELECT * FROM btree_test WHERE a in ('1', '2');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-                                 QUERY PLAN
-----------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..4.25 rows=2 width=4)
-   ->  Seq Scan on btree_test  (cost=0.00..4.25 rows=1 width=4)
-         Filter: a = ANY ('{1,2}'::integer[])
- Settings:  optimizer=on; optimizer_metadata_caching=on
- Optimizer status: legacy query optimizer
-(5 rows)
+                                     QUERY PLAN                                      
+-------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..204.38 rows=3 width=8)
+   ->  Bitmap Table Scan on btree_test  (cost=0.00..204.38 rows=1 width=8)
+         Recheck Cond: a = ANY ('{1,2}'::integer[])
+         ->  Bitmap Index Scan on btree_test_index  (cost=0.00..0.00 rows=0 width=0)
+               Index Cond: a = ANY ('{1,2}'::integer[])
+ Settings:  optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
+ Optimizer status: PQO version 3.82.0
+(7 rows)
 
 EXPLAIN SELECT * FROM btree_test WHERE a in ('1', '2', 47);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-                                 QUERY PLAN
-----------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..4.38 rows=3 width=4)
-   ->  Seq Scan on btree_test  (cost=0.00..4.38 rows=1 width=4)
-         Filter: a = ANY ('{1,2,47}'::integer[])
- Settings:  optimizer=on; optimizer_metadata_caching=on
- Optimizer status: legacy query optimizer
-(5 rows)
+                                     QUERY PLAN                                      
+-------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..613.15 rows=4 width=8)
+   ->  Bitmap Table Scan on btree_test  (cost=0.00..613.15 rows=2 width=8)
+         Recheck Cond: a = ANY ('{1,2,47}'::integer[])
+         ->  Bitmap Index Scan on btree_test_index  (cost=0.00..0.00 rows=0 width=0)
+               Index Cond: a = ANY ('{1,2,47}'::integer[])
+ Settings:  optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
+ Optimizer status: PQO version 3.82.0
+(7 rows)
 
+SELECT * FROM btree_test WHERE a in ('1', '2', 47);
+ a  | b  
+----+----
+  1 |  1
+  2 |  2
+ 47 | 47
+(3 rows)
+
+CREATE INDEX btree_test_index_ab ON btree_test using btree(a,b);
+EXPLAIN SELECT * FROM btree_test WHERE a in (1, 2, 47) AND b > 1;
+                                       QUERY PLAN                                       
+----------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.06 rows=4 width=8)
+   ->  Bitmap Table Scan on btree_test  (cost=0.00..431.06 rows=2 width=8)
+         Recheck Cond: (a = ANY ('{1,2,47}'::integer[])) AND b > 1
+         ->  Bitmap Index Scan on btree_test_index_ab  (cost=0.00..0.00 rows=0 width=0)
+               Index Cond: (a = ANY ('{1,2,47}'::integer[])) AND b > 1
+ Settings:  optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
+ Optimizer status: PQO version 3.82.0
+(7 rows)
+
+SELECT * FROM btree_test WHERE a in (1, 2, 47) AND b > 1;
+ a  | b  
+----+----
+ 47 | 47
+  2 |  2
+(2 rows)
+
+-- start_ignore
+select enable_xform('CXformSelect2IndexGet');
+           enable_xform           
+----------------------------------
+ CXformSelect2IndexGet is enabled
+(1 row)
+
+-- end_ignore
+reset optimizer_enable_tablescan;
 -- Test Bitmap index scan with in list
 CREATE TABLE bitmap_test as SELECT * FROM generate_series(1,100) as a distributed randomly;
 CREATE INDEX bitmap_index ON bitmap_test USING BITMAP(a);
@@ -11314,4 +11480,134 @@ SELECT * from tc4 where a IS NULL;
 ---+---
    |  
 (1 row)
+
+-- test simulated gpexpand phase 1
+-- alter partitions to be random-partitioned, similar to what happens in gpexpand
+-- ORCA should handle these plans unless noted
+drop table if exists noexp_hash, gpexp_hash;
+NOTICE:  table "noexp_hash" does not exist, skipping
+NOTICE:  table "gpexp_hash" does not exist, skipping
+create table noexp_hash(a int, b int) distributed by (a);
+insert into  noexp_hash select i, i from generate_series(1,20) i;
+-- simulated expanded table
+create table gpexp_hash(a int, b int) distributed by (a)
+  partition by range (b) (start (1) end (21) every (5));
+NOTICE:  CREATE TABLE will create partition "gpexp_hash_1_prt_1" for table "gpexp_hash"
+NOTICE:  CREATE TABLE will create partition "gpexp_hash_1_prt_2" for table "gpexp_hash"
+NOTICE:  CREATE TABLE will create partition "gpexp_hash_1_prt_3" for table "gpexp_hash"
+NOTICE:  CREATE TABLE will create partition "gpexp_hash_1_prt_4" for table "gpexp_hash"
+insert into gpexp_hash select i, i from generate_series(1,10) i;
+alter table gpexp_hash_1_prt_1 set distributed randomly;
+alter table gpexp_hash_1_prt_3 set distributed randomly;
+explain insert into  gpexp_hash select i, i from generate_series(11,20) i;
+                                             QUERY PLAN                                             
+----------------------------------------------------------------------------------------------------
+ Insert  (cost=0.00..10.45 rows=334 width=4)
+   ->  Redistribute Motion 1:3  (slice1)  (cost=0.00..0.04 rows=1000 width=8)
+         Hash Key: generate_series.generate_series
+         ->  Result  (cost=0.00..0.02 rows=334 width=8)
+               ->  Result  (cost=0.00..0.02 rows=334 width=8)
+                     ->  Partition Selector for gpexp_hash  (cost=0.00..0.01 rows=334 width=4)
+                           ->  Function Scan on generate_series  (cost=0.00..0.00 rows=334 width=4)
+ Settings:  optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
+ Optimizer status: PQO version 3.85.0
+(9 rows)
+
+insert into  gpexp_hash select i, i from generate_series(11,20) i;
+-- join should have a redistribute motion for gpexp_hash
+explain select count(*) from noexp_hash n join gpexp_hash x on n.a=x.a;
+                                                               QUERY PLAN                                                               
+----------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..862.00 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..862.00 rows=1 width=8)
+               ->  Hash Join  (cost=0.00..862.00 rows=1 width=1)
+                     Hash Cond: noexp_hash.a = gpexp_hash.a
+                     ->  Table Scan on noexp_hash  (cost=0.00..431.00 rows=7 width=4)
+                     ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+                           ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                                 Hash Key: gpexp_hash.a
+                                 ->  Sequence  (cost=0.00..431.00 rows=1 width=4)
+                                       ->  Partition Selector for gpexp_hash (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                             Partitions selected: 4 (out of 4)
+                                       ->  Dynamic Table Scan on gpexp_hash (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=4)
+ Settings:  optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
+ Optimizer status: PQO version 3.85.0
+(15 rows)
+
+select count(*) from noexp_hash n join gpexp_hash x on n.a=x.a;
+ count 
+-------
+    20
+(1 row)
+
+delete from gpexp_hash where b between 16 and 20;
+select count(*) expect_15 from gpexp_hash;
+ expect_15 
+-----------
+        15
+(1 row)
+
+update gpexp_hash set b=1 where b between 11 and 100;
+select b, count(*) from gpexp_hash group by b order by b;
+ b  | count 
+----+-------
+  1 |     6
+  2 |     1
+  3 |     1
+  4 |     1
+  5 |     1
+  6 |     1
+  7 |     1
+  8 |     1
+  9 |     1
+ 10 |     1
+(10 rows)
+
+explain update gpexp_hash o set b=(select a from gpexp_hash i where o.a = i.a) where a > 5;
+                                                                      QUERY PLAN                                                                      
+------------------------------------------------------------------------------------------------------------------------------------------------------
+ Update  (cost=0.00..1324061.08 rows=1 width=1)
+   ->  Partition Selector for gpexp_hash  (cost=0.00..1324061.01 rows=1 width=26)
+         ->  Explicit Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..1324061.01 rows=1 width=26)
+               ->  Split  (cost=0.00..1324061.01 rows=1 width=26)
+                     ->  Result  (cost=0.00..1324061.01 rows=1 width=22)
+                           ->  Sequence  (cost=0.00..431.00 rows=1 width=18)
+                                 ->  Partition Selector for gpexp_hash (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                       Partitions selected: 4 (out of 4)
+                                 ->  Dynamic Table Scan on gpexp_hash (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=18)
+                                       Filter: a > 5
+                           SubPlan 1
+                             ->  Result  (cost=0.00..431.00 rows=1 width=4)
+                                   Filter: $0 = orca.gpexp_hash.a
+                                   ->  Materialize  (cost=0.00..431.00 rows=1 width=4)
+                                         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                                               ->  Sequence  (cost=0.00..431.00 rows=1 width=4)
+                                                     ->  Partition Selector for gpexp_hash (dynamic scan id: 2)  (cost=10.00..100.00 rows=34 width=4)
+                                                           Partitions selected: 4 (out of 4)
+                                                     ->  Dynamic Table Scan on gpexp_hash (dynamic scan id: 2)  (cost=0.00..431.00 rows=1 width=4)
+ Settings:  optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
+ Optimizer status: PQO version 3.85.0
+(21 rows)
+
+update gpexp_hash o set b=(select a from gpexp_hash i where o.a = i.a) where a > 5;
+select * from gpexp_hash order by a;
+ a  | b  
+----+----
+  1 |  1
+  2 |  2
+  3 |  3
+  4 |  4
+  5 |  5
+  6 |  6
+  7 |  7
+  8 |  8
+  9 |  9
+ 10 | 10
+ 11 | 11
+ 12 | 12
+ 13 | 13
+ 14 | 14
+ 15 | 15
+(15 rows)
 

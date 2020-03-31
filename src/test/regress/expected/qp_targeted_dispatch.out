@@ -1118,6 +1118,44 @@ drop sequence s;
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
 --end_ignore
+-- the filter is over a window, do not direct dispatch
+create table foo_direct_dispatch (dist_key int, non_dist_key int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'dist_key' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+insert into foo_direct_dispatch select i, i from generate_series (1,100)i;
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=231997"
+INFO:  Dispatch command to ALL contents
+CONTEXT:  SQL statement "select Ta.dist_key , Ta.non_dist_key  from public.foo_direct_dispatch as Ta  limit 30000 "
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+select rank from ( select rank() over ( order by dist_key asc ) as rank , * from foo_direct_dispatch )a where 10 = dist_key;
+INFO:  Dispatch command to ALL contents
+ rank 
+------
+   10
+(1 row)
+
+explain select rank from ( select rank() over ( order by dist_key asc ) as rank , * from foo_direct_dispatch )a where 10 = dist_key;
+                                         QUERY PLAN                                         
+--------------------------------------------------------------------------------------------
+ Subquery Scan a  (cost=7.32..11.07 rows=1 width=8)
+   Filter: 10 = a.dist_key
+   ->  Window  (cost=7.32..9.82 rows=100 width=8)
+         Order By: foo_direct_dispatch.dist_key
+         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=7.32..9.57 rows=100 width=8)
+               Merge Key: foo_direct_dispatch.dist_key
+               ->  Sort  (cost=7.32..7.57 rows=34 width=8)
+                     Sort Key: foo_direct_dispatch.dist_key
+                     ->  Seq Scan on foo_direct_dispatch  (cost=0.00..4.00 rows=34 width=8)
+ Settings:  optimizer=off
+ Optimizer status: legacy query optimizer
+(11 rows)
+
 RESET ALL;
 -- ----------------------------------------------------------------------
 -- Test: teardown.sql

@@ -1515,11 +1515,31 @@ InitializeResultRelations(PlannedStmt *plannedstmt, EState *estate, CmdType oper
 		estate->es_result_partitions = BuildPartitionNodeFromRoot(relid);
 		
 		/*
-		 * list all the relids that may take part in this insert operation
+		 * List all the relids that may take part in this insert operation.
+		 * The logic here is that:
+		 *   - If root partition is in the resultRelations, all_relids
+		 *     contains the root and all its all_inheritors
+		 *   - Otherwise, all_relids is a map of result_partitions to
+		 *     get each element's relation oid.
 		 */
-		all_relids = lappend_oid(all_relids, relid);
-		all_relids = list_concat(all_relids,
-								 all_partition_relids(estate->es_result_partitions));
+		if (is_root_table)
+		{
+			all_relids = lappend_oid(all_relids, relid);
+			all_relids = list_concat(all_relids,
+						 all_partition_relids(estate->es_result_partitions));
+		}
+		else
+		{
+			ListCell *lc;
+			int       idx;
+
+			foreach(lc, resultRelations)
+			{
+				idx = lfirst_int(lc);
+				all_relids = lappend_oid(all_relids,
+							 getrelid(idx, rangeTable));
+			}
+		}
 
 		/*
 		 * For partitioned tables, in case of DELETE/UPDATE or INSERT
@@ -2816,6 +2836,13 @@ ExecutePlan(EState *estate,
 	TupleTableSlot *result;
 
 	/*
+	 * For holdable cursor, the plan is executed without rewinding on gpdb. We
+	 * need to quit if the executor has already emitted all tuples.
+	 */
+	if (estate->es_got_eos)
+		return NULL;
+
+	/*
 	 * initialize local variables
 	 */
 	current_tuple_count = 0;
@@ -2996,11 +3023,13 @@ lnext:	;
 
 			/*
 			 * extract the 'ctid' junk attribute.
+			 * extract the 'gp_segment_id' and do tuple locality check.
 			 */
 			if (operation == CMD_UPDATE || operation == CMD_DELETE)
 			{
 				Datum		datum;
 				bool		isNull;
+				AttrNumber      segno;
 
 				datum = ExecGetJunkAttribute(slot, junkfilter->jf_junkAttNo,
 											 &isNull);
@@ -3011,6 +3040,26 @@ lnext:	;
 				tupleid = (ItemPointer) DatumGetPointer(datum);
 				tuple_ctid = *tupleid;	/* make sure we don't free the ctid!! */
 				tupleid = &tuple_ctid;
+
+				segno = ExecFindJunkAttribute(junkfilter, "gp_segment_id");
+				if (AttributeNumberIsValid(segno) && Gp_role != GP_ROLE_UTILITY)
+				{
+					  int32 segid;
+					  datum = ExecGetJunkAttribute(slot, segno, &isNull);
+					  /* shouldn't ever get a null result... */
+					  if (isNull)
+					    elog(ERROR, "gp_segment_id is NULL");
+					  /*
+					   * Sanity check the distribution of the tuple to prevent
+					   * potential data corruption in case users manipulate data
+					   * incorrectly (e.g. insert data on incorrect segment through
+					   * utility mode) or there is bug in code, etc.
+					   */
+					  segid = DatumGetInt32(datum);
+					  if (segid != GpIdentity.segindex)
+					    elog(ERROR, "distribution key of the tuple doesn't belong to "
+						 "current segment (actually from seg%d)", segid);
+				}
 			}
 
 			/*
@@ -4919,9 +4968,7 @@ OpenIntoRel(QueryDesc *queryDesc)
 	estate->es_into_relation_is_bulkload = bufferPoolBulkLoad;
 	estate->es_into_relation_descriptor = intoRelationDesc;
 
-	relFileNode.spcNode = tablespaceId;
-	relFileNode.dbNode = MyDatabaseId;
-	relFileNode.relNode = intoRelationId;
+	relFileNode = intoRelationDesc->rd_node;
 	if (estate->es_into_relation_is_bulkload)
 	{
 		MirroredBufferPool_BeginBulkLoad(

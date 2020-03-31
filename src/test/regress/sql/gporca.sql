@@ -281,6 +281,42 @@ select lead(a) over(order by a) from orca.r order by 1;
 select lag(c,d) over(order by c,d) from orca.s order by 1;
 select lead(c,c+d,1000) over(order by c,d) from orca.s order by 1;
 
+-- test normalization of window functions
+create table orca_w1(a int, b int);
+create table orca_w2(a int, b int);
+create table orca_w3(a int, b text);
+
+insert into orca_w1 select i, i from generate_series(1, 3) i;
+insert into orca_w2 select i, i from generate_series(2, 4) i;
+insert into orca_w3 select i, i from generate_series(3, 5) i;
+
+-- outer ref in subquery in target list and window func in target list
+select (select b from orca_w3 where a = orca_w1.a) as one, row_number() over(partition by orca_w1.a) as two from orca_w2, orca_w1;
+
+-- aggref in subquery with window func in target list
+select orca_w1.a, (select sum(orca_w2.a) from orca_w2 where orca_w1.b = orca_w2.b), count(*), rank() over (order by orca_w1.b) from orca_w1 group by orca_w1.a, orca_w1.b order by orca_w1.a;
+
+-- window function inside subquery inside target list with outer ref
+select orca_w1.a, (select rank() over (order by orca_w1.b) from orca_w2 where orca_w1.b = orca_w2.b), count(*) from orca_w1 group by orca_w1.a, orca_w1.b order by orca_w1.a;
+
+-- window function clause inside subquery inside target list with outer ref
+select (select rank() over(order by a) from orca_w3 where a = orca_w1.a) as one, row_number() over(partition by orca_w1.a) as two from orca_w1, orca_w2 order by orca_w1.a;
+
+-- window function in IN clause
+select (select a from orca_w3 where a = orca_w1.a) as one from orca_w1 where orca_w1.a IN (select rank() over(order by orca_w1.a) + 1 from orca_w1, orca_w2);
+
+-- window function in subquery inside target list with outer ref in partition clause
+select (select row_number() over(partition by orca_w2.a) from orca_w3 where a = orca_w1.a) as one, row_number() over(partition by orca_w1.a) as two from orca_w1, orca_w2 order by orca_w1.a;
+
+-- window function in subquery inside target list with outer ref in order clause
+select (select rank() over(order by orca_w2.a) from orca_w3 where a = orca_w1.a) as one, row_number() over(partition by orca_w1.a) as two from orca_w1, orca_w2 order by orca_w1.a;
+
+-- window function with outer ref in arguments
+select (select sum(orca_w1.a + a) over(order by b) + 1 from orca_w2 where orca_w1.a = orca_w2.a) from orca_w1 order by orca_w1.a;
+
+-- window function with outer ref in window clause and arguments 
+select (select sum(orca_w1.a + a) over(order by b + orca_w1.a) + 1 from orca_w2 where orca_w1.a = orca_w2.a) from orca_w1 order by orca_w1.a;
+
 -- cte
 with x as (select a, b from orca.r)
 select rank() over(partition by a, case when b = 0 then a+b end order by b asc) as rank_within_parent from x order by a desc ,case when a+b = 0 then a end ,b;
@@ -1405,12 +1441,24 @@ drop table canSetTag_bug_table;
 drop table canSetTag_input_data;
 
 -- Test B-Tree index scan with in list
-CREATE TABLE btree_test as SELECT * FROM generate_series(1,100) as a distributed randomly;
+CREATE TABLE btree_test as SELECT i a, i b FROM generate_series(1,100) i distributed randomly;
 CREATE INDEX btree_test_index ON btree_test(a);
+set optimizer_enable_tablescan = off;
+-- start_ignore
+select disable_xform('CXformSelect2IndexGet');
+-- end_ignore
 EXPLAIN SELECT * FROM btree_test WHERE a in (1, 47);
 EXPLAIN SELECT * FROM btree_test WHERE a in ('2', 47);
 EXPLAIN SELECT * FROM btree_test WHERE a in ('1', '2');
 EXPLAIN SELECT * FROM btree_test WHERE a in ('1', '2', 47);
+SELECT * FROM btree_test WHERE a in ('1', '2', 47);
+CREATE INDEX btree_test_index_ab ON btree_test using btree(a,b);
+EXPLAIN SELECT * FROM btree_test WHERE a in (1, 2, 47) AND b > 1;
+SELECT * FROM btree_test WHERE a in (1, 2, 47) AND b > 1;
+-- start_ignore
+select enable_xform('CXformSelect2IndexGet');
+-- end_ignore
+reset optimizer_enable_tablescan;
 
 -- Test Bitmap index scan with in list
 CREATE TABLE bitmap_test as SELECT * FROM generate_series(1,100) as a distributed randomly;
@@ -1835,6 +1883,37 @@ reset optimizer_array_constraints;
 CREATE TABLE tc4 (a int, b int, check(a + b > 1 and a = b));
 INSERT INTO tc4 VALUES(NULL, NULL);
 SELECT * from tc4 where a IS NULL;
+
+-- test simulated gpexpand phase 1
+-- alter partitions to be random-partitioned, similar to what happens in gpexpand
+-- ORCA should handle these plans unless noted
+
+drop table if exists noexp_hash, gpexp_hash;
+create table noexp_hash(a int, b int) distributed by (a);
+insert into  noexp_hash select i, i from generate_series(1,20) i;
+
+-- simulated expanded table
+create table gpexp_hash(a int, b int) distributed by (a)
+  partition by range (b) (start (1) end (21) every (5));
+insert into gpexp_hash select i, i from generate_series(1,10) i;
+
+alter table gpexp_hash_1_prt_1 set distributed randomly;
+alter table gpexp_hash_1_prt_3 set distributed randomly;
+
+explain insert into  gpexp_hash select i, i from generate_series(11,20) i;
+insert into  gpexp_hash select i, i from generate_series(11,20) i;
+
+-- join should have a redistribute motion for gpexp_hash
+explain select count(*) from noexp_hash n join gpexp_hash x on n.a=x.a;
+select count(*) from noexp_hash n join gpexp_hash x on n.a=x.a;
+delete from gpexp_hash where b between 16 and 20;
+select count(*) expect_15 from gpexp_hash;
+update gpexp_hash set b=1 where b between 11 and 100;
+select b, count(*) from gpexp_hash group by b order by b;
+
+explain update gpexp_hash o set b=(select a from gpexp_hash i where o.a = i.a) where a > 5;
+update gpexp_hash o set b=(select a from gpexp_hash i where o.a = i.a) where a > 5;
+select * from gpexp_hash order by a;
 
 -- start_ignore
 DROP SCHEMA orca CASCADE;

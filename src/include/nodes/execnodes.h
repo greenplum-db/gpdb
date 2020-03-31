@@ -2578,6 +2578,7 @@ typedef struct DMLState
 	PlanState	ps;
 	JunkFilter *junkfilter;			/* filter that removes junk and dropped attributes */
 	TupleTableSlot *cleanedUpSlot;	/* holds 'final' tuple which matches the target relation schema */
+        AttrNumber	segid_attno;		/* attribute number of "gp_segment_id" */
 } DMLState;
 
 /*

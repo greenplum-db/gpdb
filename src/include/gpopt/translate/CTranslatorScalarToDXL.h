@@ -475,7 +475,7 @@ namespace gpdxl
 			static
 			LINT ExtractLintValueFromDatum
 				(
-				IMDId *mdid,
+				const IMDType *md_type,
 				BOOL is_null,
 				BYTE *bytes,
 				ULONG len

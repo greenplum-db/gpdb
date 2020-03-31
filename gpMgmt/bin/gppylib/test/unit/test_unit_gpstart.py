@@ -5,10 +5,13 @@ import sys
 
 from mock import Mock, patch
 
-from gparray import GpDB, GpArray
+from gppylib.gparray import GpDB, GpArray
 from gppylib.operations.startSegments import StartSegmentsResult
 from gppylib.test.unit.gp_unittest import GpTestCase, run_tests
 from gppylib.commands import gp
+from gppylib.commands.base import ExecutionError
+from gppylib.commands.pg import PgControlData
+from gppylib.mainUtils import UserAbortedException
 
 
 class GpStart(GpTestCase):
@@ -56,7 +59,6 @@ class GpStart(GpTestCase):
             patch("gpstart.gp.MasterStart.local"),
             patch("gpstart.pg.DbStatus.local"),
             patch("gpstart.TableLogger"),
-            patch('gpstart.PgControlData'),
         ])
 
         self.mockFilespaceConsistency = self.get_mock_from_apply_patch("CheckFilespaceConsistency")
@@ -85,6 +87,12 @@ class GpStart(GpTestCase):
     def tearDown(self):
         super(GpStart, self).tearDown()
 
+    def setup_gpstart(self):
+        parser = self.subject.GpStart.createParser()
+        options, args = parser.parse_args()
+        gpstart = self.subject.GpStart.createProgram(options, args)
+        return gpstart
+
     def test_option_master_success_without_auto_accept(self):
         sys.argv = ["gpstart", "-m"]
         self.mock_userinput.ask_yesno.return_value = True
@@ -92,10 +100,7 @@ class GpStart(GpTestCase):
 
         self.mock_os_path_exists.side_effect = os_exists_check
 
-        parser = self.subject.GpStart.createParser()
-        options, args = parser.parse_args()
-
-        gpstart = self.subject.GpStart.createProgram(options, args)
+        gpstart = self.setup_gpstart()
         return_code = gpstart.run()
 
         self.assertEqual(self.mock_userinput.ask_yesno.call_count, 1)
@@ -111,10 +116,7 @@ class GpStart(GpTestCase):
 
         self.mock_os_path_exists.side_effect = os_exists_check
 
-        parser = self.subject.GpStart.createParser()
-        options, args = parser.parse_args()
-
-        gpstart = self.subject.GpStart.createProgram(options, args)
+        gpstart = self.setup_gpstart()
         return_code = gpstart.run()
 
         self.assertEqual(self.mock_userinput.ask_yesno.call_count, 0)
@@ -127,9 +129,7 @@ class GpStart(GpTestCase):
         self.mock_userinput.ask_yesno.return_value = True
         self.subject.unix.PgPortIsActive.local.return_value = False
         self.mock_os_path_exists.side_effect = os_exists_check
-        parser = self.subject.GpStart.createParser()
-        options, args = parser.parse_args()
-        gpstart = self.subject.GpStart.createProgram(options, args)
+        gpstart = self.setup_gpstart()
 
         return_code = gpstart.run()
 
@@ -146,9 +146,7 @@ class GpStart(GpTestCase):
         self.mock_heap_checksum.return_value.get_segments_checksum_settings.return_value = ([1], [1])
         self.subject.unix.PgPortIsActive.local.return_value = False
         self.mock_os_path_exists.side_effect = os_exists_check
-        parser = self.subject.GpStart.createParser()
-        options, args = parser.parse_args()
-        gpstart = self.subject.GpStart.createProgram(options, args)
+        gpstart = self.setup_gpstart()
 
         return_code = gpstart.run()
 
@@ -167,14 +165,89 @@ class GpStart(GpTestCase):
         start_failure.addFailure(self.mirror1, "fictitious reason", gp.SEGSTART_ERROR_CHECKSUM_MISMATCH)
         self.mock_start_result.return_value.startSegments.return_value.getFailedSegmentObjs.return_value = start_failure.getFailedSegmentObjs()
 
-        parser = self.subject.GpStart.createParser()
-        options, args = parser.parse_args()
-        gpstart = self.subject.GpStart.createProgram(options, args)
+        gpstart = self.setup_gpstart()
 
         return_code = gpstart.run()
         self.assertEqual(return_code, 1)
         messages = [msg[0][0] for msg in self.subject.logger.info.call_args_list]
         self.assertIn("DBID:5  FAILED  host:'sdw1' datadir:'/data/mirror1' with reason:'fictitious reason'", messages)
+
+    def test_prepare_segment_start_returns_up_and_down_segments(self):
+        # Boilerplate: create a gpstart object
+        parser = self.subject.GpStart.createParser()
+        options, args = parser.parse_args([])
+        gpstart = self.subject.GpStart.createProgram(options, args)
+
+        # Up segments
+        master = GpDB.initFromString("1|-1|p|p|n|u|mdw|mdw|5432|5532|/data/master||")
+        primary1 = GpDB.initFromString("3|1|p|p|n|u|sdw2|sdw2|40001|41001|/data/primary1||")
+        mirror0 = GpDB.initFromString("4|0|m|m|n|u|sdw2|sdw2|50000|51000|/data/mirror0||")
+
+        # Down segments
+        primary0 = GpDB.initFromString("2|0|p|p|n|d|sdw1|sdw1|40000|41000|/data/primary0||")
+        mirror1 = GpDB.initFromString("5|1|m|m|n|d|sdw1|sdw1|50001|51001|/data/mirror1||")
+        standby = GpDB.initFromString("6|-1|m|m|n|d|sdw3|sdw3|5433|5533|/data/standby||")
+
+        gpstart.gparray = GpArray([master, primary0, primary1, mirror0, mirror1, standby])
+
+        up, down = gpstart._prepare_segment_start()
+
+        # The master and standby should not be accounted for in these lists.
+        self.assertItemsEqual(up, [primary1, mirror0])
+        self.assertItemsEqual(down, [primary0, mirror1])
+
+
+    @patch("gppylib.commands.pg.PgControlData.run")
+    @patch("gppylib.commands.pg.PgControlData.get_value", return_value="2")
+    def test_fetch_tli_returns_TimeLineID_when_standby_is_accessible(self, mock1, mock2):
+        gpstart = self.setup_gpstart()
+
+        self.assertEqual(gpstart.fetch_tli("", "foo"), 2)
+
+    @patch("gpstart.GpStart.shutdown_master_only")
+    @patch("gppylib.commands.pg.PgControlData.run")
+    @patch("gppylib.commands.pg.PgControlData.get_value", side_effect=ExecutionError("foobar", Mock()))
+    def test_fetch_tli_returns_0_when_standby_is_not_accessible_and_user_proceeds(self, mock_value, mock_run, mock_shutdown):
+        gpstart = self.setup_gpstart()
+        self.mock_userinput.ask_yesno.return_value = True
+
+        self.assertEqual(gpstart.fetch_tli("", "foo"), 0)
+        self.assertFalse(mock_shutdown.called)
+
+    @patch("gpstart.GpStart.shutdown_master_only")
+    @patch("gppylib.commands.pg.PgControlData.run")
+    @patch("gppylib.commands.pg.PgControlData.get_value", side_effect=ExecutionError("foobar", Mock()))
+    def test_fetch_tli_raises_exception_when_standby_is_not_accessible_and_user_aborts(self, mock_value, mock_run, mock_shutdown):
+        gpstart = self.setup_gpstart()
+        self.mock_userinput.ask_yesno.return_value = False
+
+        with self.assertRaises(UserAbortedException):
+            gpstart.fetch_tli("", "foo")
+        self.assertTrue(mock_shutdown.called)
+
+    @patch("gpstart.GpStart.shutdown_master_only")
+    @patch("gppylib.commands.pg.PgControlData.run")
+    @patch("gppylib.commands.pg.PgControlData.get_value", side_effect=ExecutionError("cmd foobar failed", Mock()))
+    def test_fetch_tli_logs_warning_when_standby_is_not_accessible(self, mock_value, mock_run, mock_shutdown):
+        gpstart = self.setup_gpstart()
+        self.mock_userinput.ask_yesno.return_value = False
+
+        with self.assertRaises(UserAbortedException):
+            gpstart.fetch_tli("", "foo")
+        self.subject.logger.warning.assert_any_call(StringContains("Received error: ExecutionError: 'cmd foobar failed' occurred."))
+        self.subject.logger.warning.assert_any_call("Continue only if you are certain that the standby is not acting as the master.")
+
+    @patch("gpstart.GpStart.shutdown_master_only")
+    @patch("gppylib.commands.pg.PgControlData.run")
+    @patch("gppylib.commands.pg.PgControlData.get_value", side_effect=ExecutionError("foobar", Mock()))
+    def test_fetch_tli_logs_non_interactive_warning_when_standby_is_not_accessible(self, mock_value, mock_run, mock_shutdown):
+        gpstart = self.setup_gpstart()
+        gpstart.interactive = False
+
+        with self.assertRaises(UserAbortedException):
+            gpstart.fetch_tli("", "foo")
+        self.assertTrue(mock_shutdown.called)
+        self.subject.logger.warning.assert_any_call("Non interactive mode detected. Not starting the cluster. Start the cluster in interactive mode.")
 
     def _createGpArrayWith2Primary2Mirrors(self):
         self.master = GpDB.initFromString(
@@ -204,6 +277,11 @@ def os_exists_check(arg):
     elif 'postmaster.pid' in arg or '.s.PGSQL' in arg:
         return False
     return False
+
+
+class StringContains(str):
+    def __eq__(self, other):
+        return self in other
 
 
 if __name__ == '__main__':

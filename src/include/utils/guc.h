@@ -363,6 +363,8 @@ extern int	tcp_keepalives_count;
 
 extern int	gp_connection_send_timeout;
 
+extern int	listenerBacklog;
+
 extern int	gp_filerep_tcp_keepalives_idle;
 extern int	gp_filerep_tcp_keepalives_interval;
 extern int	gp_filerep_tcp_keepalives_count;
@@ -387,6 +389,7 @@ extern char  *data_directory;
 /* optimizer cost model */
 #define OPTIMIZER_GPDB_LEGACY           0       /* GPDB's legacy cost model */
 #define OPTIMIZER_GPDB_CALIBRATED       1       /* GPDB's calibrated cost model */
+#define OPTIMIZER_GPDB_EXPERIMENTAL     2       /* GPDB's experimental cost model */
 
 /* Optimizer related gucs */
 extern bool	optimizer;
@@ -516,9 +519,10 @@ extern int	gp_max_slices;
 extern bool	optimizer_partition_selection_log;
 
 /* optimizer join heuristic models */
-#define JOIN_ORDER_IN_QUERY                 0
-#define JOIN_ORDER_GREEDY_SEARCH            1
-#define JOIN_ORDER_EXHAUSTIVE_SEARCH        2
+#define JOIN_ORDER_IN_QUERY                  0
+#define JOIN_ORDER_GREEDY_SEARCH             1
+#define JOIN_ORDER_EXHAUSTIVE_SEARCH         2
+#define JOIN_ORDER_EXHAUSTIVE2_SEARCH        3
 
 extern char  *gp_email_smtp_server;
 extern char  *gp_email_smtp_userid;

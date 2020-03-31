@@ -128,8 +128,6 @@ extern struct config_generic *find_option(const char *name, bool create_placehol
 
 extern bool enable_partition_rules;
 
-extern int listenerBacklog;
-
 /* GUC lists for gp_guc_list_show().  (List of struct config_generic) */
 List	   *gp_guc_list_for_explain;
 List	   *gp_guc_list_for_no_plan;
@@ -173,6 +171,7 @@ bool		Test_appendonly_override = false;
 bool		Test_print_direct_dispatch_info = false;
 bool		gp_test_orientation_override = false;
 bool		gp_permit_persistent_metadata_update = false;
+bool        Test_print_prefetch_joinqual = false;
 bool		gp_permit_relation_node_change = false;
 int			Test_compresslevel_override = 0;
 int			Test_blocksize_override = 0;
@@ -1854,6 +1853,17 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&gp_startup_integrity_checks,
 		true, NULL, NULL
+	},
+
+	{
+		{"test_print_prefetch_joinqual", PGC_SUSET, DEVELOPER_OPTIONS,
+			gettext_noop("For testing purposes, print information about if we prefetch join qual."),
+			NULL,
+			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&Test_print_prefetch_joinqual,
+		false,
+		NULL, NULL, NULL
 	},
 
 	{
@@ -4116,7 +4126,7 @@ struct config_int ConfigureNamesInt_gp[] =
 
 	{
 		{"gp_interconnect_tcp_listener_backlog", PGC_USERSET, GP_ARRAY_TUNING,
-			gettext_noop("Size of the listening queue for each TCP interconnect socket"),
+			gettext_noop("Size of the listening queue for each TCP interconnect socket and sequence server socket"),
 			gettext_noop("Cooperate with kernel parameter net.core.somaxconn and net.ipv4.tcp_max_syn_backlog to tune network performance."),
 			GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
 		},
@@ -4820,7 +4830,7 @@ struct config_int ConfigureNamesInt_gp[] =
 			GUC_SUPERUSER_ONLY |  GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
 		},
 		&dtx_phase2_retry_count,
-		2, 0, 15, NULL, NULL
+		10, 0, INT_MAX, NULL, NULL
 	},
 
 	{
@@ -5127,7 +5137,7 @@ struct config_string ConfigureNamesString_gp[] =
 	{
 		{"optimizer_cost_model", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Set optimizer cost model."),
-			gettext_noop("Valid values are legacy, calibrated"),
+			gettext_noop("Valid values are legacy, calibrated, experimental"),
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_cost_model_str,
@@ -5812,13 +5822,15 @@ assign_pljava_classpath_insecure(bool newval, bool doit, GucSource source)
 static const char *
 assign_optimizer_minidump(const char *val, bool assign, GucSource source)
 {
-	if (pg_strcasecmp(val, "onerror") == 0 && assign)
+	if (pg_strcasecmp(val, "onerror") == 0)
 	{
-		optimizer_minidump = OPTIMIZER_MINIDUMP_FAIL;
+		if (assign)
+			optimizer_minidump = OPTIMIZER_MINIDUMP_FAIL;
 	}
-	else if (pg_strcasecmp(val, "always") == 0 && assign)
+	else if (pg_strcasecmp(val, "always") == 0)
 	{
-		optimizer_minidump = OPTIMIZER_MINIDUMP_ALWAYS;
+		if (assign)
+			optimizer_minidump = OPTIMIZER_MINIDUMP_ALWAYS;
 	}
 	else
 	{
@@ -5831,13 +5843,20 @@ assign_optimizer_minidump(const char *val, bool assign, GucSource source)
 static const char *
 assign_optimizer_cost_model(const char *val, bool assign, GucSource source)
 {
-	if (pg_strcasecmp(val, "legacy") == 0 && assign)
+	if (pg_strcasecmp(val, "legacy") == 0)
 	{
-		optimizer_cost_model = OPTIMIZER_GPDB_LEGACY;
+		if (assign)
+			optimizer_cost_model = OPTIMIZER_GPDB_LEGACY;
 	}
-	else if (pg_strcasecmp(val, "calibrated") == 0 && assign)
+	else if (pg_strcasecmp(val, "calibrated") == 0)
 	{
-		optimizer_cost_model = OPTIMIZER_GPDB_CALIBRATED;
+		if (assign)
+			optimizer_cost_model = OPTIMIZER_GPDB_CALIBRATED;
+	}
+	else if (pg_strcasecmp(val, "experimental") == 0)
+	{
+		if (assign)
+			optimizer_cost_model = OPTIMIZER_GPDB_EXPERIMENTAL;
 	}
 	else
 	{
@@ -5907,6 +5926,11 @@ assign_optimizer_join_order_options(const char *newval, bool doit, GucSource sou
 	{
 		if (doit)
 			optimizer_join_order = JOIN_ORDER_EXHAUSTIVE_SEARCH;
+	}
+	else if (pg_strcasecmp(newval, "exhaustive2") == 0)
+	{
+		if (doit)
+			optimizer_join_order = JOIN_ORDER_EXHAUSTIVE2_SEARCH;
 	}
 	else
 	{

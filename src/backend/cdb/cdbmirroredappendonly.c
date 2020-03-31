@@ -1115,8 +1115,6 @@ static void MirroredAppendOnly_DoCopyDataToMirror(
 	int32	bufferLen;
 	int 	retval;
 
-	int		primaryError;
-
 	bufferLen = (Size) Min(2*BLCKSZ, endOffset - readOffset);
 	buffer = (char*) palloc(bufferLen);
 
@@ -1145,9 +1143,7 @@ static void MirroredAppendOnly_DoCopyDataToMirror(
 							  mirroredOpen,
 							  buffer,
 							  bufferLen,
-							  &primaryError,
 							  mirrorDataLossOccurred);
-		Assert(primaryError == 0);	// No primary writes.
 
 		if (*mirrorDataLossOccurred)
 			break;
@@ -2131,16 +2127,14 @@ void MirroredAppendOnly_Append(
 	int32					bufferLen,
 				/* Byte length of buffer. */
 
-	int 					*primaryError,
-
 	bool					*mirrorDataLossOccurred)
 {
 	MIRRORED_LOCK_DECLARE;
+	int file_write_errno = 0;
 
 	Assert(open != NULL);
 	Assert(open->isActive);
 
-	*primaryError = 0;
 	*mirrorDataLossOccurred = false;
 
 	if (open->guardOtherCallsWithMirroredLock)
@@ -2201,7 +2195,7 @@ void MirroredAppendOnly_Append(
 			/* if write didn't set errno, assume problem is no disk space */
 			if (errno == 0)
 				errno = ENOSPC;
-			*primaryError = errno;
+			file_write_errno = errno;
 		}
 	}
 
@@ -2212,6 +2206,15 @@ void MirroredAppendOnly_Append(
 
 	*mirrorDataLossOccurred = open->mirrorDataLossOccurred;	// Keep reporting -- it may have occurred anytime during the open session.
 
+	if (file_write_errno)
+		ereport(ERROR,
+				(errcode_for_file_access(),
+				 errmsg("write file %u/%u/%u.%u : %s",
+						open->relFileNode.dbNode,
+						open->relFileNode.spcNode,
+						open->relFileNode.relNode,
+						open->segmentFileNum,
+						strerror(file_write_errno))));
 }
 
 // -----------------------------------------------------------------------------

@@ -55,7 +55,7 @@ extern void XidCacheRemoveRunningXids(TransactionId xid,
 extern PGPROC *FindProcByGpSessionId(long gp_session_id);
 extern void UpdateSerializableCommandId(void);
 
-extern struct SnapshotData* GetSnapshotData(struct SnapshotData *snapshot, bool serializable);
+extern struct SnapshotData* GetSnapshotData(struct SnapshotData *snapshot);
 extern void updateSharedLocalSnapshot(struct DtxContextInfo *dtxContextInfo, struct SnapshotData *snapshot, char* debugCaller);
 
 extern void GetSlotTableDebugInfo(void **snapshotArray, int *maxSlots);

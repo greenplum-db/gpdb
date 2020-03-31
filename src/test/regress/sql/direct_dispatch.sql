@@ -145,9 +145,7 @@ rollback;
 -------------------
 -- MPP-7634: bitmap index scan
 --
--- Known_opt_diff: MPP-21346
 select count(*) from direct_test_bitmap where dt='2008-02-05';
--- Known_opt_diff: MPP-21346
 select count(*) from direct_test_bitmap where dt='2008-02-01';
 ----------------------------------------------------------------------------------
 -- MPP-7637: partitioned table
@@ -157,7 +155,6 @@ select * from direct_test_partition where trans_id =1;
 ----------------------------------------------------------------------------------
 -- MPP-7638: range table partition
 --
--- Known_opt_diff: MPP-21346
 select count(*) from direct_test_range_partition where a =1;
 ----------------------------------------------------------------------------------
 -- Prepared statements

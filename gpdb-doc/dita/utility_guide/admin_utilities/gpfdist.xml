@@ -48,9 +48,9 @@
         errors.</note>
       <p>For readable external tables, if load files are compressed using <codeph>gzip</codeph> or
           <codeph>bzip2</codeph> (have a <codeph>.gz</codeph> or <codeph>.bz2</codeph> file
-        extension), <codeph>gpfdist</codeph> uncompresses the files before loading. For writable
-        external tables, <codeph>gpfdist</codeph> compresses the data using <codeph>gzip</codeph> if
-        the target file has a <codeph>.gz</codeph> extension.</p>
+        extension), <codeph>gpfdist</codeph> uncompresses the data while loading the data (on the
+        fly). For writable external tables, <codeph>gpfdist</codeph> compresses the data using
+          <codeph>gzip</codeph> if the target file has a <codeph>.gz</codeph> extension.</p>
       <note type="note">Compression is not supported for readable and writeable external tables when
         the <codeph>gpfdist</codeph> utility runs on Windows platforms.</note>
       <p>When reading or writing data with the <codeph>gpfdist</codeph> or <codeph>gpfdists</codeph>
@@ -217,7 +217,7 @@
         can generate a core dump the next time a hang occurs to help debug the issue. Set the
         environment variable <codeph>GPFDIST_WATCHDOG_TIMER</codeph> to the number of seconds of no
         activity to wait before <codeph>gpfdist</codeph> is forced to exit. When the environment
-        variable is set and <codeph>gpfidst</codeph> hangs, the utility aborts after the specified
+        variable is set and <codeph>gpfdist</codeph> hangs, the utility aborts after the specified
         number of seconds, creates a core dump, and sends abort information to the log file.</p>
       <p>This example sets the environment variable on a Linux system so that
           <codeph>gpfdist</codeph> exits after 300 seconds (5 minutes) of no

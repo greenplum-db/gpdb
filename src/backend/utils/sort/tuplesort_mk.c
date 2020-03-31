@@ -1195,7 +1195,11 @@ tuplesort_putdatum_mk(Tuplesortstate_mk *state, Datum val, bool isNull)
 	{
 		mke_set_not_null(&e);
 		e.d = datumCopy(val, false, state->datumTypeLen);
-		state->totalTupleBytes += state->datumTypeLen;
+
+		if (state->datumTypeLen > 0)
+			state->totalTupleBytes += state->datumTypeLen;
+		else
+			state->totalTupleBytes += datumGetSize(val, state->datumTypeByVal, state->datumTypeLen);
 	}
 
 	puttuple_common(state, &e);

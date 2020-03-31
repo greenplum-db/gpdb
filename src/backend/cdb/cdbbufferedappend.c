@@ -170,21 +170,13 @@ static void BufferedAppendWrite(
 
 	while (writeLen > 0) 
 	{
-		int primaryError;
 		bool mirrorDataLossOccurred;
 		
 		MirroredAppendOnly_Append(
 							&bufferedAppend->mirroredOpen,
 							(char*)largeWriteMemory,
 							writeLen,
-							&primaryError,
 							&mirrorDataLossOccurred);
-		if (primaryError != 0)
-			ereport(ERROR,
-					(errcode_for_file_access(),
-					 errmsg("Could not write in table \"%s\" to segment file \"%s\": %m",
-					 		bufferedAppend->relationName,
-							bufferedAppend->filePathName)));
 	   
 		elogif(Debug_appendonly_print_append_block, LOG,
 				"Append-Only storage write: table \"%s\", segment file \"%s\", write position " INT64_FORMAT ", "

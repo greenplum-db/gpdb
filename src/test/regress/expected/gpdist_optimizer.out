@@ -617,3 +617,31 @@ select * from a full join b on (a.i=b.i) full join c on (b.i=c.i);
  3 | 3 | 3
 (7 rows)
 
+-- Simple sanity tests for gp_dist_random()
+CREATE TEMP TABLE gp_dist_random_table (a int);
+INSERT INTO gp_dist_random_table SELECT generate_series(1,5);
+SELECT * FROM gp_dist_random('gp_dist_random_table');
+ a 
+---
+ 5
+ 2
+ 3
+ 4
+ 1
+(5 rows)
+
+CREATE SCHEMA "gp.dist.random.schema";
+CREATE TABLE "gp.dist.random.schema".gp_dist_random_table_with_schema
+    AS SELECT * FROM gp_dist_random('"gp_dist_random_table"');
+SELECT * FROM gp_dist_random('"gp.dist.random.schema".gp_dist_random_table_with_schema');
+ a 
+---
+ 5
+ 2
+ 3
+ 4
+ 1
+(5 rows)
+
+DROP SCHEMA "gp.dist.random.schema" CASCADE;
+NOTICE:  drop cascades to table "gp.dist.random.schema".gp_dist_random_table_with_schema

@@ -9562,14 +9562,7 @@ copy_append_only_data(
 							  &mirroredDstOpen,
 							  buffer,
 							  bufferLen,
-							  &primaryError,
 							  &mirrorDataLossOccurred);
-		if (primaryError != 0)
-			ereport(ERROR,
-					(errcode_for_file_access(),
-					 errmsg("could not write file \"%s\": %s",
-							dstFileName,
-							strerror(primaryError))));
 		
 		readOffset += bufferLen;
 		
@@ -14194,19 +14187,31 @@ split_rows(Relation intoa, Relation intob, Relation temprel)
 				break;
 		}
 
-		/* prepare for ExecQual */
-		econtext->ecxt_scantuple = slotT;
+		/*
+		 * Map attributes from origin to target. We should consider dropped
+		 * columns in the origin.
+		 * 
+		 * ExecQual should use targetSlot rather than slotT in case possible 
+		 * partition key mapping.
+		 */
+		AssertImply(!PointerIsValid(achk), PointerIsValid(bchk));
+		targetSlot = reconstructMatchingTupleSlot(slotT, achk ? rria : rrib);
+		econtext->ecxt_scantuple = targetSlot;
 
 		/* determine if we are inserting into a or b */
 		if (achk)
 		{
 			targetIsA = ExecQual((List *)achk, econtext, false);
+
+			if (!targetIsA)
+				targetSlot = reconstructMatchingTupleSlot(slotT, rrib);
 		}
 		else
 		{
-			Assert(PointerIsValid(bchk));
-
 			targetIsA = !ExecQual((List *)bchk, econtext, false);
+
+			if (targetIsA)
+				targetSlot = reconstructMatchingTupleSlot(slotT, rria);
 		}
 
 		/* load variables for the specific target */
@@ -14224,12 +14229,6 @@ split_rows(Relation intoa, Relation intob, Relation temprel)
 			targetAOCSDescPtr = &aocsinsertdesc_b;
 			targetRelInfo = rrib;
 		}
-
-		/*
-		 * Map attributes from origin to target.  We should consider dropped
-		 * columns in the origin.
-		 */
-		targetSlot = reconstructMatchingTupleSlot(slotT, targetRelInfo);
 
 		/* insert into the target table */
 		if (RelationIsHeap(targetRelation))

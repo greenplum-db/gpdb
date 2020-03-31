@@ -1303,6 +1303,7 @@ CTranslatorDXLToPlStmt::TranslateDXLIndexScan
 		index_cond_list_dxlnode,
 		physical_idx_scan_dxlop->GetDXLTableDescr(),
 		is_index_only_scan,
+		false, // is_bitmap_index_probe
 		md_index,
 		md_rel,
 		output_context,
@@ -1371,6 +1372,7 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions
 	CDXLNode *index_cond_list_dxlnode,
 	const CDXLTableDescr *dxl_tbl_descr,
 	BOOL is_index_only_scan,
+	BOOL is_bitmap_index_probe,
 	const IMDIndex *index,
 	const IMDRelation *md_rel,
 	CDXLTranslateContext *output_context,
@@ -1398,7 +1400,9 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions
 		GPOS_ASSERT((IsA(index_cond_expr, OpExpr) || IsA(index_cond_expr, ScalarArrayOpExpr))
 				&& "expected OpExpr or ScalarArrayOpExpr in index qual");
 
-		if (IsA(index_cond_expr, ScalarArrayOpExpr) && IMDIndex::EmdindBitmap != index->IndexType())
+		if (!is_bitmap_index_probe &&
+			IsA(index_cond_expr, ScalarArrayOpExpr) &&
+			IMDIndex::EmdindBitmap != index->IndexType())
 		{
 			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtConversion, GPOS_WSZ_LIT("ScalarArrayOpExpr condition on index scan"));
 		}
@@ -4236,6 +4240,7 @@ CTranslatorDXLToPlStmt::TranslateDXLDynIdxScan
 		index_cond_list_dxlnode,
 		dyn_index_scan_dxlop->GetDXLTableDescr(),
 		false, // is_index_only_scan
+		false, // is_bitmap_index_probe
 		md_index,
 		md_rel,
 		output_context,
@@ -6061,6 +6066,7 @@ CTranslatorDXLToPlStmt::TranslateDXLBitmapIndexProbe
 		index_cond_list_dxlnode,
 		table_descr,
 		false /*is_index_only_scan*/,
+		true  /*is_bitmap_index_probe*/,
 		index,
 		md_rel,
 		output_context,

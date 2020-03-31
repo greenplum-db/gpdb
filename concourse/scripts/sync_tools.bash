@@ -13,6 +13,14 @@ function make_sync_tools() {
   popd
 }
 
+function make_gphdfs_dist() {
+  pushd gpdb_src/gpAux/extensions/gphdfs
+    ant download-ivy
+    make USE_PGXS=1 dist
+    mv gnet-1.2-javadoc.tar dist
+  popd
+}
+
 function _main() {
   case "${TARGET_OS}" in
     centos)
@@ -74,6 +82,12 @@ function _main() {
 
   # Move ext directory to output dir
   mv ${GPDB_SRC_PATH}/gpAux/ext gpAux_ext/
+
+  make_gphdfs_dist
+
+  # Move hdfs output directory to output dir
+  mv ${GPDB_SRC_PATH}/gpAux/extensions/gphdfs/dist gphdfs_dist/
+  mv /root/.ant gphdfs_dist/
 
 }
 

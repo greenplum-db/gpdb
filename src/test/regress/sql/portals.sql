@@ -399,3 +399,13 @@ BEGIN;
 DECLARE c1 CURSOR FOR SELECT * FROM LOWER('TEST');
 FETCH ALL FROM c1;
 COMMIT;
+
+-- gpdb: Test executor should return NULL directly during commit for holdable
+-- cursor if previously executor has emitted all tuples. e.g. below test case
+-- would cause panic if without the fix.
+BEGIN;
+DECLARE foo1 CURSOR WITH HOLD FOR SELECT nspname, relname FROM pg_class c JOIN pg_namespace n ON (c.relnamespace = n.oid) WHERE nspname ~ 'test_schema_[12]';
+FETCH ALL FROM foo1;
+COMMIT;
+FETCH ALL FROM foo1;
+CLOSE foo1;

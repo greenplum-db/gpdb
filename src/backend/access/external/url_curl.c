@@ -219,7 +219,7 @@ destroy_curlhandle(curlhandle_t *h)
 			CURLMcode e = curl_multi_remove_handle(multi_handle, h->handle);
 
 			if (CURLM_OK != e)
-				elog(WARNING, "internal error curl_multi_remove_handle (%d - %s)", e, curl_easy_strerror(e));
+				elog(LOG, "internal error curl_multi_remove_handle (%d - %s)", e, curl_easy_strerror(e));
 			h->in_multi_handle = false;
 		}
 
@@ -259,7 +259,7 @@ url_curl_abort_callback(ResourceReleasePhase phase,
 		if (curr->owner == CurrentResourceOwner)
 		{
 			if (isCommit)
-				elog(WARNING, "url_curl reference leak: %p still referenced", curr);
+				elog(LOG, "url_curl reference leak: %p still referenced", curr);
 
 			destroy_curlhandle(curr);
 		}
@@ -571,10 +571,23 @@ gp_curl_easy_perform_backoff_and_check_response(URL_CURL_FILE *file)
 		CURLcode e = curl_easy_perform(file->curl->handle);
 		if (CURLE_OK != e)
 		{
-			elog(WARNING, "%s error (%d - %s)", file->curl_url, e, curl_easy_strerror(e));
+			/* For curl timeout, retry 2 times before reporting error */
 			if (CURLE_OPERATION_TIMEDOUT == e)
 			{
 				timeout_count++;
+				elog(LOG, "curl operation timeout, timeout_count = %d", timeout_count);
+				if (timeout_count >= 2)
+				{
+					ereport(ERROR,
+					(errcode(ERRCODE_CONNECTION_FAILURE),
+					errmsg("error when writing data to gpfdist %s, quit after %d timeout_count",
+							file->curl_url, timeout_count)));
+				}
+				continue;
+			}
+			else
+			{
+				elog(LOG, "%s error (%d - %s)", file->curl_url, e, curl_easy_strerror(e));
 			}
 		}
 		else
@@ -588,6 +601,7 @@ gp_curl_easy_perform_backoff_and_check_response(URL_CURL_FILE *file)
 					return;
 
 				case FDIST_TIMEOUT:
+					elog(LOG, "%s timeout from gpfdist", file->curl_url);
 					break;
 
 				default:
@@ -601,7 +615,11 @@ gp_curl_easy_perform_backoff_and_check_response(URL_CURL_FILE *file)
 			response_string = NULL;
 		}
 
-		if (wait_time > MAX_TRY_WAIT_TIME || timeout_count >= 2)
+		/*
+		 * For FDIST_TIMEOUT and curl errors except CURLE_OPERATION_TIMEDOUT
+		 * Retry until MAX_TRY_WAIT_TIME
+		 */
+		if (wait_time > MAX_TRY_WAIT_TIME)
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_CONNECTION_FAILURE),
@@ -610,7 +628,7 @@ gp_curl_easy_perform_backoff_and_check_response(URL_CURL_FILE *file)
 		}
 		else
 		{
-			elog(WARNING, "failed to send request to gpfdist (%s), will retry after %d seconds", file->curl_url, wait_time);
+			elog(LOG, "failed to send request to gpfdist (%s), will retry after %d seconds", file->curl_url, wait_time);
 			unsigned int for_wait = 0;
 			while (for_wait++ < wait_time)
 			{

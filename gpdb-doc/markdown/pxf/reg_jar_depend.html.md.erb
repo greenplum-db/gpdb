@@ -31,7 +31,6 @@ Should you need to add an additional JAR dependency for PXF, for example a JDBC 
 $ ssh gpadmin@<gpmaster>
 gpadmin@gpmaster$ cp new_dependent_jar.jar $PXF_CONF/lib/
 gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster sync
-gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster stop
-gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster start
+gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster restart
 ```
 

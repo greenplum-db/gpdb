@@ -10,6 +10,8 @@ from gppylib.operations.unix import CheckDir, CheckFile, ListFiles, ListFilesByP
 from gppylib.operations.utils import RemoteOperation, ParallelOperation
 from gppylib.operations.backup_utils import *
 
+from pygresql.pg import DatabaseError
+
 logger = gplog.get_default_logger()
 
 FULL_DUMP_TS_WITH_NBU = None
@@ -146,7 +148,7 @@ def get_partition_state_tuples(context, catalog_schema, partition_info):
 
         Thus, partition state returns 0 also when the aoseg relation is empty.
         Why is that correct?
-        A table that as a modcount of 0 can only be there iff the last operation
+        A table that has a modcount of 0 can only be there iff the last operation
         was a special operation (TRUNCATE, CREATE, ALTER TABLE). That is handled
         in a special way by backup. Every DML operation will increase the
         modcount by 1. Therefore it is save to assume that to relations with
@@ -155,6 +157,39 @@ def get_partition_state_tuples(context, catalog_schema, partition_info):
 
         The result is a list of tuples, of the format:
         (schema_schema, partition_name, modcount)
+    """
+    partition_list = list()
+
+    dburl = dbconn.DbURL(port=context.master_port, dbname=context.target_db)
+    num_sqls = 0
+    with dbconn.connect(dburl) as conn:
+        for (oid, schemaname, partition_name, tupletable) in partition_info:
+            try:
+                modcount_sql = "select to_char(coalesce(sum(modcount::bigint), 0), '999999999999999999999') from %s.%s" % (catalog_schema, tupletable)
+                modcount = execSQLForSingleton(conn, modcount_sql)
+            except DatabaseError as e:
+                if "does not exist" in str(e):
+                    logger.debug("Table %s.%s (%s) no longer exists", schemaname, partition_name, tupletable)
+                else:
+                    logger.error(str(e))
+            else:
+                num_sqls += 1
+                if num_sqls == 1000: # The choice of batch size was chosen arbitrarily
+                    logger.debug('Completed executing batch of 1000 tuple count SQLs')
+                    conn.commit()
+                    num_sqls = 0
+                if modcount:
+                    modcount = modcount.strip()
+                validate_modcount(schemaname, partition_name, modcount)
+                partition_list.append((schemaname, partition_name, modcount))
+
+    return partition_list
+
+def get_partition_state(context, catalog_schema, partition_info):
+    """
+    A legacy version of get_partition_state_tuples() that returns a list of strings
+    instead of tuples. Should not be used in new code, because the string
+    representation doesn't handle schema or table names with commas.
     """
     partition_list = list()
 
@@ -174,15 +209,7 @@ def get_partition_state_tuples(context, catalog_schema, partition_info):
             validate_modcount(schemaname, partition_name, modcount)
             partition_list.append((schemaname, partition_name, modcount))
 
-    return partition_list
-
-def get_partition_state(context, catalog_schema, partition_info):
-    """
-    A legacy version of get_partition_state_tuples() that returns a list of strings
-    instead of tuples. Should not be used in new code, because the string
-    representation doesn't handle schema or table names with commas.
-    """
-    tuples = get_partition_state_tuples(context, catalog_schema, partition_info)
+    tuples = partition_list
 
     # Don't put space after comma, which can mess up with the space in schema and table name
     return map((lambda x: '%s, %s, %s' % x), tuples)

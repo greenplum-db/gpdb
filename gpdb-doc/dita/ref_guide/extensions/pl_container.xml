@@ -448,8 +448,8 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
       <p otherprops="pivotal">Download the <codeph>tar.gz</codeph> file that contains the Docker
         images from <xref href="https://network.pivotal.io/products/pivotal-gpdb" scope="external"
           format="html" class="- topic/xref ">Pivotal Network</xref>. <ul id="ul_vsj_pxb_tbb">
-          <li><codeph>plcontainer-python-images-1.0.0.tar.gz</codeph></li>
-          <li><codeph>plcontainer-r-images-1.0.0.tar.gz</codeph></li>
+          <li><codeph>plcontainer-python-images-1.5.0.tar.gz</codeph></li>
+          <li><codeph>plcontainer-r-images-1.5.0.tar.gz</codeph></li>
         </ul></p>
       <!--oss only conent-->
       <p otherprops="oss-only">The PL/Container open source module contains dockerfiles to build
@@ -463,7 +463,7 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
         file in <codeph>/home/gpadmin</codeph>.</p>
       <p>This <codeph>plcontainer</codeph> command installs the Docker image for PL/Python from a
         Docker image file.
-        <codeblock>plcontainer image-add -f /home/gpadmin/plcontainer-python-images-1.0.0.tar.gz</codeblock></p>
+        <codeblock>plcontainer image-add -f /home/gpadmin/plcontainer-python-images-1.5.0.tar.gz</codeblock></p>
       <p>The utility displays progress information as it installs the Docker image on the Greenplum
         Database hosts. </p>
       <p>Use the <codeph>plcontainer image-list</codeph> command to display the installed Docker

@@ -829,6 +829,61 @@ select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t
 (3 rows)
 
 --
+-- Test a few cases where pulling up an aggregate subquery is not possible
+--
+-- subquery contains a LIMIT
+explain select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t0.t=t1.t LIMIT 1);
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.03 rows=1 width=17)
+   ->  Seq Scan on csq_pullup t0  (cost=0.00..1.01 rows=1 width=17)
+         Filter: (1 = (SubPlan 1))
+         SubPlan 1
+           ->  Limit  (cost=1.05..1.06 rows=1 width=8)
+                 ->  Aggregate  (cost=1.05..1.06 rows=1 width=8)
+                       ->  Result  (cost=0.00..1.04 rows=1 width=0)
+                             Filter: (t0.t = t1.t)
+                             ->  Materialize  (cost=0.00..1.03 rows=1 width=4)
+                                   ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
+                                         ->  Seq Scan on csq_pullup t1  (cost=0.00..1.01 rows=1 width=4)
+ Optimizer: Postgres query optimizer
+(12 rows)
+
+select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t0.t=t1.t LIMIT 1);
+  t  | n | i |  v  
+-----+---+---+-----
+ xyz | 2 | 3 | def
+ def | 3 | 1 | abc
+ abc | 1 | 2 | xyz
+(3 rows)
+
+-- subquery contains a HAVING clause
+explain select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t0.t=t1.t HAVING count(*) < 10);
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.03 rows=1 width=17)
+   ->  Seq Scan on csq_pullup t0  (cost=0.00..1.01 rows=1 width=17)
+         Filter: (1 = (SubPlan 1))
+         SubPlan 1
+           ->  Aggregate  (cost=1.05..1.06 rows=1 width=8)
+                 Filter: (count(*) < 10)
+                 ->  Result  (cost=0.00..1.04 rows=1 width=0)
+                       Filter: (t0.t = t1.t)
+                       ->  Materialize  (cost=0.00..1.03 rows=1 width=4)
+                             ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
+                                   ->  Seq Scan on csq_pullup t1  (cost=0.00..1.01 rows=1 width=4)
+ Optimizer: Postgres query optimizer
+(12 rows)
+
+select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t0.t=t1.t HAVING count(*) < 10);
+  t  | n | i |  v  
+-----+---+---+-----
+ xyz | 2 | 3 | def
+ def | 3 | 1 | abc
+ abc | 1 | 2 | xyz
+(3 rows)
+
+--
 -- NOT EXISTS CSQs to joins
 --
 --

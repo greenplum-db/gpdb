@@ -514,6 +514,9 @@ typedef struct ChunkTransportState
 	bool		activated;
 
 	bool		aggressiveRetry;
+	
+	/* whether we've logged when network timeout happens */
+	bool		networkTimeoutIsLogged;
 
 	bool		teardownActive;
 	List		*incompleteConns;

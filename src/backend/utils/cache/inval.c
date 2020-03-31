@@ -233,6 +233,14 @@ AddInvalidationMessage(InvalidationChunk **listHdr,
 		/* Need another chunk; double size of last chunk */
 		int			chunksize = 2 * chunk->maxitems;
 
+		/*
+		 * Keep in mind: the max allowed alloc size is about 1GB, for
+		 * simplification we set the upper limit to half of that.
+		 */
+#define MAXCHUNKSIZE (MaxAllocSize / 2 / sizeof(SharedInvalidationMessage))
+		if (chunksize > MAXCHUNKSIZE)
+			chunksize >>= 1;
+
 		chunk = (InvalidationChunk *)
 			MemoryContextAlloc(CurTransactionContext,
 							   sizeof(InvalidationChunk) +

@@ -33,26 +33,61 @@ Ensure that you have met the PXF Hadoop [Prerequisites](access_hdfs.html#hadoop_
 
 ## <a id="datatype_map"></a>Data Type Mapping
 
-To read and write Parquet primitive data types in Greenplum Database, map Parquet data values to Greenplum Database columns of the same type. The following table summarizes the external mapping rules:
+To read and write Parquet primitive data types in Greenplum Database, map Parquet data values to Greenplum Database columns of the same type. 
+
+Parquet supports a small set of primitive data types, and uses metadata annotations to extend the data types that it supports. These annotations specify how to interpret the primitive type. For example, Parquet stores both `INTEGER` and `DATE` types as the `INT32` primitive type. An annotation identifies the original type as a `DATE`.
+
+### <a id="datatype_map_read "></a>Read Mapping
 
 <a id="p2g_type_mapping_table"></a>
 
-| Parquet Data Type | PXF/Greenplum Data Type |
-|-------------------|-------------------------|
-| boolean | Boolean |
-| byte_array | Bytea, Text |
-| double | Float8 |
-| fixed\_len\_byte\_array | Numeric |
-| float | Real |
-| int\_8, int\_16 | Smallint, Integer |
-| int64 | Bigint |
-| int96 | Timestamp, Timestamptz |
+PXF uses the following data type mapping when reading Parquet data:
 
-<div class="note">When writing to Parquet:
-<ul>
-  <li>PXF localizes a <code>timestamp</code> to the current system timezone and converts it to universal time (UTC) before finally converting to <code>int96</code>.</li>
-  <li>PXF converts a <code>timestamptz</code> to a UTC <code>timestamp</code> and then converts to <code>int96</code>. PXF loses the time zone information during this conversion.</li>
-</ul></div>
+| Parquet Data Type | Original Type | PXF/Greenplum Data Type |
+|-------------------|---------------|--------------------------|
+| binary (byte_array) | Date | Date |
+| binary (byte_array) | Timestamp_millis | Timestamp |
+| binary (byte_array) | all others | Text |
+| binary (byte_array) | -- | Bytea |
+| boolean | -- | Boolean |
+| double | -- | Float8 |
+| fixed\_len\_byte\_array | -- | Numeric |
+| float | -- | Real |
+| int32 | Date | Date |
+| int32 | Decimal | Numeric |
+| int32 | int_8 | Smallint |
+| int32 | int_16 | Smallint |
+| int32 | -- | Integer |
+| int64 | Decimal | Numeric |
+| int64 | -- | Bigint |
+| int96 | -- | Timestamp |
+
+**Note**: PXF supports filter predicate pushdown on all parquet data types listed above, *except* the `fixed_len_byte_array` and `int96` types.
+
+### <a id="datatype_map_Write "></a>Write Mapping
+
+PXF uses the following data type mapping when writing Parquet data:
+
+| PXF/Greenplum Data Type | Original Type | Parquet Data Type |
+|-------------------|---------------|--------------------------|
+| Boolean | -- | boolean |
+| Bytea | -- | binary |
+| Bigint | -- | int64 |
+| SmallInt | int_16 | int32 |
+| Integer | -- | int32 |
+| Real | -- | float |
+| Float8 | -- | double |
+| Numeric/Decimal | Decimal | fixed\_len\_byte\_array |
+| Timestamp<sup>1</sup> | -- | int96 |
+| Timestamptz<sup>2</sup> | -- | int96 |
+| Date | utf8 | binary |
+| Time | utf8 | binary |
+| Varchar | utf8 | binary |
+| Text | utf8 | binary |
+| OTHERS | -- | UNSUPPORTED |
+
+</br><sup>1</sup>&nbsp;PXF localizes a <code>Timestamp</code> to the current system timezone and converts it to universal time (UTC) before finally converting to <code>int96</code>.
+</br><sup>2</sup>&nbsp;PXF converts a <code>Timestamptz</code> to a UTC <code>timestamp</code> and then converts to <code>int96</code>. PXF loses the time zone information during this conversion.
 
 
 ## <a id="profile_cet"></a>Creating the External Table

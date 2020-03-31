@@ -70,7 +70,7 @@ namespace gpdxl
 				Query *m_query;
 
 				// the new target list of the group by (derived) query
-				List *m_groupby_tlist;
+				List *m_derived_table_tlist;
 
 				// the current query level
 				ULONG m_current_query_level;
@@ -81,22 +81,26 @@ namespace gpdxl
 				// indicate whether we are mutating the argument of an aggregate
 				BOOL m_is_mutating_agg_arg;
 
+				// indice whether we are mutating the argument of a window function
+				BOOL m_is_mutating_window_arg;
+
 				// ctor
 				SContextGrpbyPlMutator
 					(
 					CMemoryPool *mp,
 					CMDAccessor *mda,
 					Query *query,
-					List *groupby_tlist
+					List *derived_query_tlist
 					)
 						:
 					m_mp(mp),
 					m_mda(mda),
 					m_query(query),
-					m_groupby_tlist(groupby_tlist),
+					m_derived_table_tlist(derived_query_tlist),
 					m_current_query_level(0),
 					m_agg_levels_up(gpos::ulong_max),
-					m_is_mutating_agg_arg(false)
+					m_is_mutating_agg_arg(false),
+					m_is_mutating_window_arg(false)
 				{
 				}
 
@@ -202,6 +206,10 @@ namespace gpdxl
 			// make a copy of the aggref (minus the arguments)
 			static
 			Aggref *FlatCopyAggref(Aggref *aggref);
+
+			// make a copy of the window function (minus the arguments)
+			static
+			WindowRef *FlatCopyWindowRef (WindowRef *old_windowref);
 
 			// create a new entry in the derived table and return its corresponding var
 			static

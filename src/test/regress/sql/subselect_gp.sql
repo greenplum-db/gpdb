@@ -333,6 +333,20 @@ explain select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1
 
 select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t0.n + 1=t1.i + 1);
 
+--
+-- Test a few cases where pulling up an aggregate subquery is not possible
+--
+
+-- subquery contains a LIMIT
+explain select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t0.t=t1.t LIMIT 1);
+
+select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t0.t=t1.t LIMIT 1);
+
+-- subquery contains a HAVING clause
+explain select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t0.t=t1.t HAVING count(*) < 10);
+
+select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t0.t=t1.t HAVING count(*) < 10);
+
 
 --
 -- NOT EXISTS CSQs to joins

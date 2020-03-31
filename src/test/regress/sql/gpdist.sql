@@ -439,3 +439,13 @@ create temporary table b as select generate_series(2, 6) as i distributed by (i)
 create temporary table c as select generate_series(3, 7) as i distributed by (i);
 explain select * from a full join b on (a.i=b.i) full join c on (b.i=c.i);
 select * from a full join b on (a.i=b.i) full join c on (b.i=c.i);
+
+-- Simple sanity tests for gp_dist_random()
+CREATE TEMP TABLE gp_dist_random_table (a int);
+INSERT INTO gp_dist_random_table SELECT generate_series(1,5);
+SELECT * FROM gp_dist_random('gp_dist_random_table');
+CREATE SCHEMA "gp.dist.random.schema";
+CREATE TABLE "gp.dist.random.schema".gp_dist_random_table_with_schema
+    AS SELECT * FROM gp_dist_random('"gp_dist_random_table"');
+SELECT * FROM gp_dist_random('"gp.dist.random.schema".gp_dist_random_table_with_schema');
+DROP SCHEMA "gp.dist.random.schema" CASCADE;

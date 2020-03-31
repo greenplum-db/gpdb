@@ -444,20 +444,27 @@ db = ...
             <pt>server_reset_query</pt>
             <pd>Query sent to server on connection release, before making it available to other
               clients. At that moment no transaction is in progress so it should not include
-                <codeph>ABORT</codeph> or <codeph>ROLLBACK</codeph>.<p>The query should clean any changes made to a database session so that the next client gets a connection in a well-defined state. Default is <codeph>DISCARD ALL</codeph> which cleans everything, but that leaves the next client no pre-cached state.</p> <p>When
-                transaction pooling is used, the <codeph>server_reset_query</codeph> should be
-                empty, as clients should not use any session features. If clients do use session
-                features, they will be broken because transaction pooling does not guarantee
-                that the next query will run on the same connection.</p><p>Default:
-                  <codeph>DISCARD ALL;</codeph></p></pd>
+                <codeph>ABORT</codeph> or <codeph>ROLLBACK</codeph>.<p>The query should clean any
+                changes made to a database session so that the next client gets a connection in a
+                well-defined state. Default is <codeph>DISCARD ALL</codeph> which cleans everything,
+                but that leaves the next client no pre-cached state.
+                <note>Greenplum Database does not support <codeph>DISCARD ALL</codeph>.
+                </note></p><p>You can use other commands to clean up the session state. For example,
+                  <codeph>DEALLOCATE ALL</codeph> drops prepared statements, and <codeph>DISCARD
+                  TEMP</codeph> drops temporary tables. </p><p>When transaction pooling is used, the
+                  <codeph>server_reset_query</codeph> should be empty, as clients should not use any
+                session features. If clients do use session features, they will be broken because
+                transaction pooling does not guarantee that the next query will run on the same
+                connection.</p><p>Default: <codeph>DISCARD ALL;</codeph> (Not supported by Greenplum
+                Database.)</p></pd>
           </plentry>
           <plentry>
             <pt>server_reset_query_always</pt>
             <pd>
               <p>Whether <codeph>server_reset_query</codeph> should be run in all pooling modes.
-                When this setting is off (default), the <codeph>server_reset_query</codeph> will
-                be run only in pools that are in sessions pooling mode. Connections in
-                transaction pooling mode should not have any need for reset query.</p>
+                When this setting is off (default), the <codeph>server_reset_query</codeph> will be
+                run only in pools that are in sessions pooling mode. Connections in transaction
+                pooling mode should not have any need for reset query.</p>
               <p>Default: 0</p>
             </pd>
           </plentry>

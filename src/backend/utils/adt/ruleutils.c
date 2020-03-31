@@ -5947,10 +5947,18 @@ get_from_clause_item(Node *jtnode, Query *query, deparse_context *context)
 		{
 			case RTE_RELATION:
 				/* Normal relation RTE */
-				appendStringInfo(buf, "%s%s",
-								 only_marker(rte),
-								 generate_relation_name(rte->relid,
-														context->namespaces));
+				if (rte->forceDistRandom)
+				{
+					char * relname = generate_relation_name(rte->relid,
+															context->namespaces);
+					appendStringInfo(buf, "gp_dist_random(%s)",
+									 quote_literal_internal(relname));
+				}
+				else
+					appendStringInfo(buf, "%s%s",
+									 only_marker(rte),
+									 generate_relation_name(rte->relid,
+															context->namespaces));
 				break;
 			case RTE_SUBQUERY:
 				/* Subquery RTE */

@@ -41,6 +41,7 @@
 #include "libpq-int.h"
 #include "libpq/ip.h"
 #include "cdb/cdbfts.h"
+#include "storage/procarray.h"
 
 /*
  * Helper Functions
@@ -64,30 +65,13 @@ typedef struct HostSegsEntry
 	int  segmentCount;
 } HostSegsEntry;
 
-/*
- * getCdbComponentDatabases
- *
- *
- * Storage for the SegmentInstances block and all subsidiary
- * strucures are allocated from the caller's context.
- */
-CdbComponentDatabases *
-getCdbComponentInfo(bool DNSLookupAsError)
+static CdbComponentDatabases *
+readCdbComponentInfo(bool DNSLookupAsError, HTAB *hostSegsHash)
 {
-	CdbComponentDatabaseInfo *pOld = NULL;
-	CdbComponentDatabaseInfo *cdbInfo;
-	CdbComponentDatabases *component_databases = NULL;
-
 	Relation gp_seg_config_rel;
 	HeapTuple gp_seg_config_tuple = NULL;
 	HeapScanDesc gp_seg_config_scan;
-
-	/*
-	 * Initial size for info arrays.
-	 */
-	int			segment_array_size = 500;
-	int			entry_array_size = 4; /* we currently support a max of 2 */
-
+	CdbComponentDatabaseInfo *pOld = NULL;
 	/*
 	 * isNull and attr are used when getting the data for a specific column from a HeapTuple
 	 */
@@ -99,18 +83,23 @@ getCdbComponentInfo(bool DNSLookupAsError)
 	 */
 	int			dbid;
 	int			content;
-
 	char		role;
 	char		preferred_role;
 	char		mode = 0;
 	char		status = 0;
-
-	int			i;
-	int			x = 0;
-
-	bool		found;
 	HostSegsEntry *hsEntry;
-	HTAB		*hostSegsHash = hostSegsHashTableInit();
+	bool		found;
+
+	CdbComponentDatabases *component_databases;
+
+	static SnapshotData tmpSnapshotData = {HeapTupleSatisfiesMVCC};
+	Snapshot	snapshot;
+
+	/*
+	 * Initial size for info arrays.
+	 */
+	int segment_array_size = 500;
+	int entry_array_size = 4; /* we currently support a max of 2 */
 
 	/*
 	 * Allocate component_databases return structure and
@@ -120,18 +109,53 @@ getCdbComponentInfo(bool DNSLookupAsError)
 	 * doubling each time we run out.
 	 */
 	component_databases = palloc0(sizeof(CdbComponentDatabases));
-
 	component_databases->segment_db_info =
 		(CdbComponentDatabaseInfo *) palloc0(sizeof(CdbComponentDatabaseInfo) * segment_array_size);
-
 	component_databases->entry_db_info =
 		(CdbComponentDatabaseInfo *) palloc0(sizeof(CdbComponentDatabaseInfo) * entry_array_size);
 
+	/*
+	 * Take an MVCC snapshot to use while scanning through
+	 * gp_segment_configuration table.
+	 *
+	 * Traversing gp_segment_configuration with an MVCC snapshot is necessary
+	 * to provide us with a consistent view. Using SnapshotNow here would risk
+	 * seeing the same dbid entry multiple times, or worse not seeing a dbid
+	 * entry at all, if its tuple is moved around by a concurrent update (eg
+	 * an FTS updating status from sync to resync).
+	 *
+	 * Inconsistency of this sort is inherent to all SnapshotNow scans, unless
+	 * some lock is held to prevent concurrent updates of the rows being
+	 * sought. Since AccessShareLock is used to scan gp_segment_configuration
+	 * table SnapshotNow will yield undesirable effects.
+	 *
+	 * This is on similar lines to why MVCC snapshot is used for pg_tablespace
+	 * in createdb().
+	 */
+	if (IsTransactionState())
+	{
+		/* Get latest snapshot */
+		snapshot = GetSnapshotData(&tmpSnapshotData);
+	}
+	else
+	{
+		/*
+		 * Outside of transaction, we have to use SnapshotNow. In phase 2 of
+		 * 2PC. If COMMIT_PREPARED or ABORT_PREPARED failed, dispather
+		 * disconnect and destroy all gangs and fetch the latest
+		 * configurations from catalog gp_segment_configuration which is
+		 * updated by FTS, then do RETRY_COMMIT_PREPARED or
+		 * RETRY_ABORT_PREPARED. The problem is, in phase 2 we have marked
+		 * current transaction state to TRANS_COMMIT/ABORT and MyProc->xmin is
+		 * set to 0, hence can't acquire MVCC snapshot in this state.
+		 */
+		snapshot = SnapshotNow;
+	}
+
 	gp_seg_config_rel = heap_open(GpSegmentConfigRelationId, AccessShareLock);
-
-	gp_seg_config_scan = heap_beginscan(gp_seg_config_rel, SnapshotNow, 0, NULL);
-
-	while (HeapTupleIsValid(gp_seg_config_tuple = heap_getnext(gp_seg_config_scan, ForwardScanDirection)))
+	gp_seg_config_scan = heap_beginscan(gp_seg_config_rel, snapshot, 0, NULL);
+	while (HeapTupleIsValid(gp_seg_config_tuple =
+							heap_getnext(gp_seg_config_scan, ForwardScanDirection)))
 	{
 		/*
 		 * Grab the fields that we need from gp_configuration.  We do
@@ -289,6 +313,30 @@ getCdbComponentInfo(bool DNSLookupAsError)
 	heap_endscan(gp_seg_config_scan);
 	heap_close(gp_seg_config_rel, AccessShareLock);
 
+	return component_databases;
+}
+
+/*
+ * getCdbComponentDatabases
+ *
+ *
+ * Storage for the SegmentInstances block and all subsidiary
+ * strucures are allocated from the caller's context.
+ */
+CdbComponentDatabases *
+getCdbComponentInfo(bool DNSLookupAsError)
+{
+	CdbComponentDatabaseInfo *cdbInfo;
+	CdbComponentDatabases *component_databases = NULL;
+	int			i;
+	int			x = 0;
+	HostSegsEntry *hsEntry;
+	HTAB		*hostSegsHash = hostSegsHashTableInit();
+
+	component_databases = readCdbComponentInfo(DNSLookupAsError, hostSegsHash);
+
+	Assert(component_databases != NULL);
+
 	/*
 	 * Validate that there exists at least one entry and one segment
 	 * database in the configuration
@@ -327,6 +375,17 @@ getCdbComponentInfo(bool DNSLookupAsError)
 			(component_databases->segment_db_info[i].segindex != component_databases->segment_db_info[i - 1].segindex))
 		{
 			component_databases->total_segments++;
+		}
+
+		if (i != 0 &&
+			(component_databases->segment_db_info[i].dbid ==
+			 component_databases->segment_db_info[i - 1].dbid))
+		{
+			int dbid = component_databases->segment_db_info[i].dbid;
+			ereport(ERROR,
+					(errcode(ERRCODE_DATA_EXCEPTION),
+					 errmsg("duplicate entries encountered in gp_segment_configuration for dbid = %d",
+							dbid)));
 		}
 	}
 
@@ -397,6 +456,7 @@ getCdbComponentInfo(bool DNSLookupAsError)
 
 	for (i = 0; i < component_databases->total_segment_dbs; i++)
 	{
+		bool found;
 		cdbInfo = &component_databases->segment_db_info[i];
 
 		if (cdbInfo->role != SEGMENT_ROLE_PRIMARY || cdbInfo->hostip == NULL)
@@ -409,6 +469,7 @@ getCdbComponentInfo(bool DNSLookupAsError)
 
 	for (i = 0; i < component_databases->total_entry_dbs; i++)
 	{
+		bool found;
 		cdbInfo = &component_databases->entry_db_info[i];
 
 		if (cdbInfo->role != SEGMENT_ROLE_PRIMARY || cdbInfo->hostip == NULL)

@@ -726,6 +726,7 @@ namespace gpdxl
 				CDXLNode *index_cond_list_dxlnode,
 				const CDXLTableDescr *dxl_tbl_descr,
 				BOOL is_index_only_scan,
+				BOOL is_bitmap_index_probe,
 				const IMDIndex *index,
 				const IMDRelation *md_rel,
 				CDXLTranslateContext *output_context,

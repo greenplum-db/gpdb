@@ -393,6 +393,15 @@ cdbpathlocus_from_subquery(struct PlannerInfo  *root,
         case FLOW_SINGLETON:
             if (flow->segindex == -1)
                 CdbPathLocus_MakeEntry(&locus);
+	    else if (flow->locustype == CdbLocusType_General)
+	    {
+        	 /*
+	          * If a subquery's locus is general, we should keep it
+	          * general here. And general locus's numsegments should
+		  * be the cluster size.
+		  */
+  	         CdbPathLocus_MakeGeneral(&locus);
+	    }
             else
                 CdbPathLocus_MakeSingleQE(&locus);
             break;

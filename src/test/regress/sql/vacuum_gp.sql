@@ -1,3 +1,9 @@
+-- Test vacuum a catalog can succeed.
+-- Previously, we have a redundant Assert in the function
+-- localXidSatisfiesAnyDistributedSnapshot that will fail this.
+-- See Github Issue 6793.
+vacuum full pg_proc;
+
 set optimizer_print_missing_stats = off;
 -- MPP-23647 Create a partitioned appendonly table, let its age
 -- increase during the test.  We will vacuum it at the end of the

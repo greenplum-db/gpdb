@@ -212,7 +212,7 @@ pylint:
 $(MOCK_BIN):
 	@echo "--- mock for platform $(UBUNTU_PLATFORM)"
 	@if [ $(UBUNTU_PLATFORM) = "Ubuntu" ]; then\
-       pip install mock;\
+       pip install mock==1.0.1;\
      else\
        mkdir -p $(PYTHONSRC_INSTALL_SITE) && \
 	   cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(MOCK_DIR).tar.gz && \
@@ -273,8 +273,13 @@ solarisTest:
 		echo "SOLARIS" ; \
 	fi
 
+
+.PHONY: installcheck-bash
+installcheck-bash:
+	./test/suite.bash
+
 .PHONY: installcheck
-installcheck:
+installcheck: installcheck-bash
 	$(MAKE) -C gpload_test $@
 
 clean distclean:

@@ -513,14 +513,7 @@ static void copy_append_only_segment_file(
 							  &mirroredDstOpen,
 							  buffer,
 							  bufferLen,
-							  &primaryError,
 							  &mirrorDataLossOccurred);
-		if (primaryError != 0)
-			ereport(ERROR,
-					(errcode_for_file_access(),
-					 errmsg("could not write file \"%s\": %s",
-							dstFileName,
-							strerror(primaryError))));
 		
 		readOffset += bufferLen;
 		
@@ -1637,6 +1630,7 @@ dropdb(const char *dbname, bool missing_ok)
 
 	/* Cleanup error log files for this database. */
 	ErrorLogDelete(db_id, InvalidOid);
+	PersistentErrorLogDelete(db_id, InvalidOid, NULL);
 
 	/*
 	 * Close pg_database, but keep lock till commit (this is important to

@@ -1045,6 +1045,39 @@ a.c1
 (1 row)
 
 drop table bms_ao_bug;
+-- When an index is created on an AOCO table, test that we correctly scan
+-- all the columns that are needed to build the index.
+create table aocs_index_cols (id int4, a text, b text) with (appendonly=true, orientation=column);
+insert into aocs_index_cols values (1, 'foo', 'bar');
+-- Create an index on the table. This is the first index on the table, so it
+-- creates the ao block directory, and scans all columns.
+create index aocs_index_cols_plain on aocs_index_cols (id);
+-- Create a partial index. This index needs to scan two columns; one is used
+-- as the index column, and the other in the WHERE clause.
+create index aocs_index_cols_partial on aocs_index_cols (id) WHERE a like 'f%';
+-- Also try an expression index.
+create index aocs_index_cols_expr on aocs_index_cols (length(b));
+-- Check that the row is found using all the indexes.
+set enable_seqscan=off;
+select * from aocs_index_cols where id = 1;
+ id |  a  |  b  
+----+-----+-----
+  1 | foo | bar
+(1 row)
+
+select * from aocs_index_cols where a like 'f%';
+ id |  a  |  b  
+----+-----+-----
+  1 | foo | bar
+(1 row)
+
+select * from aocs_index_cols where length(b) = 3;
+ id |  a  |  b  
+----+-----+-----
+  1 | foo | bar
+(1 row)
+
+reset enable_seqscan;
 -- Small content as well as bulk dense content headers need to be used
 -- appropriately if compression is found to be not useful.  This test
 -- cover a bug where only small content headers were generated in such

@@ -340,3 +340,17 @@ with yy as (
 )
 select * from x, yy;
 -- End of MPP-17848
+
+-- test subquery locus
+create table t_test_subquery_locus(a int) distributed randomly;
+
+explain
+with base(a) as (select * from t_test_subquery_locus where a < 10)
+select * from base where a > 20
+union all
+select port from gp_segment_configuration;
+
+with base(a) as (select * from t_test_subquery_locus where a < 10)
+select * from base where a > 20
+union all
+select port from gp_segment_configuration;

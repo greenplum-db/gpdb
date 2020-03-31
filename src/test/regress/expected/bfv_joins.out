@@ -3228,3 +3228,155 @@ DROP TABLE member;
 DROP TABLE member_group;
 DROP TABLE member_subgroup;
 DROP TABLE region;
+--
+-- Test the query have equivalence class with const members.
+-- Mix timestamp and timestamptz in a join. We cannot use a Redistribute
+-- Motion, because the cross-datatype = operator between them doesn't belong
+-- to any hash operator class. We cannot hash rows in a way that matches would
+-- land on the same segment in that case.
+--
+CREATE TABLE gp_timestamp1 (a int, b timestamp) DISTRIBUTED BY (a, b);
+CREATE TABLE gp_timestamp2 (c int, d timestamp) DISTRIBUTED BY (c, d);
+INSERT INTO gp_timestamp1 SELECT i, timestamp '2016/11/06' + i * interval '1 day' FROM generate_series(1, 12) i;
+INSERT INTO gp_timestamp1 SELECT i, timestamp '2016/11/09' FROM generate_series(1, 12) i;
+INSERT INTO gp_timestamp2 SELECT i, timestamp '2016/11/06' + i * interval '1 day' FROM generate_series(1, 12) i;
+ANALYZE gp_timestamp1;
+ANALYZE gp_timestamp2;
+-- col b is type of timestamp, but const is type of timestamptz. Their hash values are not compatible
+SELECT a, b FROM gp_timestamp1 JOIN gp_timestamp2 ON a = c AND b = timestamptz '2016/11/09' order by a;
+ a  |            b             
+----+--------------------------
+  1 | Wed Nov 09 00:00:00 2016
+  2 | Wed Nov 09 00:00:00 2016
+  3 | Wed Nov 09 00:00:00 2016
+  3 | Wed Nov 09 00:00:00 2016
+  4 | Wed Nov 09 00:00:00 2016
+  5 | Wed Nov 09 00:00:00 2016
+  6 | Wed Nov 09 00:00:00 2016
+  7 | Wed Nov 09 00:00:00 2016
+  8 | Wed Nov 09 00:00:00 2016
+  9 | Wed Nov 09 00:00:00 2016
+ 10 | Wed Nov 09 00:00:00 2016
+ 11 | Wed Nov 09 00:00:00 2016
+ 12 | Wed Nov 09 00:00:00 2016
+(13 rows)
+
+-- col b is type of timestamp, so is const. Their hash values are compatible
+SELECT a, b FROM gp_timestamp1 JOIN gp_timestamp2 ON a = c AND b = timestamp '2016/11/09' order by a;
+ a  |            b             
+----+--------------------------
+  1 | Wed Nov 09 00:00:00 2016
+  2 | Wed Nov 09 00:00:00 2016
+  3 | Wed Nov 09 00:00:00 2016
+  3 | Wed Nov 09 00:00:00 2016
+  4 | Wed Nov 09 00:00:00 2016
+  5 | Wed Nov 09 00:00:00 2016
+  6 | Wed Nov 09 00:00:00 2016
+  7 | Wed Nov 09 00:00:00 2016
+  8 | Wed Nov 09 00:00:00 2016
+  9 | Wed Nov 09 00:00:00 2016
+ 10 | Wed Nov 09 00:00:00 2016
+ 11 | Wed Nov 09 00:00:00 2016
+ 12 | Wed Nov 09 00:00:00 2016
+(13 rows)
+
+-- Another variation: There are two constants in the same equivalence class. One's
+-- datatype is compatible with the distribution key, the other's is not. We can
+-- redistribute based on the compatible constant.
+SELECT a, b FROM gp_timestamp1 JOIN gp_timestamp2 ON a = c AND b = timestamptz '2016/11/09' AND b = timestamp '2016/11/09' order by a;
+ a  |            b             
+----+--------------------------
+  1 | Wed Nov 09 00:00:00 2016
+  2 | Wed Nov 09 00:00:00 2016
+  3 | Wed Nov 09 00:00:00 2016
+  3 | Wed Nov 09 00:00:00 2016
+  4 | Wed Nov 09 00:00:00 2016
+  5 | Wed Nov 09 00:00:00 2016
+  6 | Wed Nov 09 00:00:00 2016
+  7 | Wed Nov 09 00:00:00 2016
+  8 | Wed Nov 09 00:00:00 2016
+  9 | Wed Nov 09 00:00:00 2016
+ 10 | Wed Nov 09 00:00:00 2016
+ 11 | Wed Nov 09 00:00:00 2016
+ 12 | Wed Nov 09 00:00:00 2016
+(13 rows)
+
+-- Similar case. Here, the =(float8, float4) cross-type operator would not be
+-- hashable in 5X, since they use different hash functions. Check function
+-- cdbhash() for details.
+-- Note that in 6X and above, float8 and float4 have the same hash values when
+-- they are equal by default (except legacy cdbhash opclass). Check catalog
+-- pg_amop for detailed compatibility. The legacy cdbhash opclass refers to
+-- cdbhash in 5X. For example, legacy cdbhash opclass includes cdbhash_integer_ops,
+-- cdbhash_float4_ops and cdbhash_float8_ops, which means all integer are compatible,
+-- but float4 and float8 are not compatible.
+CREATE TABLE gp_f1 (a int, b float4) DISTRIBUTED BY (a, b);
+CREATE TABLE gp_f2 (c int, d float4) DISTRIBUTED BY (c, d);
+INSERT INTO gp_f1 SELECT i, i FROM generate_series(1, 12) i;
+INSERT INTO gp_f1 SELECT i, 3 FROM generate_series(1, 12) i;
+INSERT INTO gp_f2 SELECT i, i FROM generate_series(1, 12) i;
+ANALYZE gp_f1;
+ANALYZE gp_f2;
+-- col b is type of float4, but const is type of float8. Their hash values are not compatible
+SELECT a, b FROM gp_f1 JOIN gp_f2 ON a = c AND b = 3.0::float8 order by a;
+ a  | b 
+----+---
+  1 | 3
+  2 | 3
+  3 | 3
+  3 | 3
+  4 | 3
+  5 | 3
+  6 | 3
+  7 | 3
+  8 | 3
+  9 | 3
+ 10 | 3
+ 11 | 3
+ 12 | 3
+(13 rows)
+
+-- col b is type of float4, so is const. Their hash values are compatible
+SELECT a, b FROM gp_f1 JOIN gp_f2 ON a = c AND b = 3.0::float4 order by a;
+ a  | b 
+----+---
+  1 | 3
+  2 | 3
+  3 | 3
+  3 | 3
+  4 | 3
+  5 | 3
+  6 | 3
+  7 | 3
+  8 | 3
+  9 | 3
+ 10 | 3
+ 11 | 3
+ 12 | 3
+(13 rows)
+
+-- Another variation: There are two constants in the same equivalence class. One's
+-- datatype is compatible with the distribution key, the other's is not. We can
+-- redistribute based on the compatible constant.
+SELECT a, b FROM gp_f1 JOIN gp_f2 ON a = c AND b = 3.0::float8 AND b = 3.0::float4 order by a;
+ a  | b 
+----+---
+  1 | 3
+  2 | 3
+  3 | 3
+  3 | 3
+  4 | 3
+  5 | 3
+  6 | 3
+  7 | 3
+  8 | 3
+  9 | 3
+ 10 | 3
+ 11 | 3
+ 12 | 3
+(13 rows)
+
+DROP TABLE gp_timestamp1;
+DROP TABLE gp_timestamp2;
+DROP TABLE gp_f1;
+DROP TABLE gp_f2;

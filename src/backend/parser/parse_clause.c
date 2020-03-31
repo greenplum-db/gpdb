@@ -47,6 +47,8 @@
 #include "cdb/cdbvars.h"
 #include "cdb/cdbpartition.h"
 #include "catalog/catalog.h"
+#include "catalog/namespace.h"
+#include "utils/builtins.h"
 #include "miscadmin.h"
 
 /* clause types for findTargetlistEntrySQL92 */
@@ -1200,7 +1202,6 @@ transformRangeFunction(ParseState *pstate, RangeFunction *r)
 		{
 			/* OK, now we need to check the arguments and generate a RTE */
 			FuncCall *fc;
-			RangeVar *rel;
 
 			fc = (FuncCall *)r->funccallnode;
 
@@ -1210,8 +1211,8 @@ transformRangeFunction(ParseState *pstate, RangeFunction *r)
 			if (IsA(linitial(fc->args), A_Const))
 			{
 				A_Const *arg_val;
-				char *schemaname;
-				char *tablename;
+				List *qualified_name_list;
+				RangeVar *rel;
 
 				arg_val = linitial(fc->args);
 				if (!IsA(&arg_val->val, String))
@@ -1219,22 +1220,9 @@ transformRangeFunction(ParseState *pstate, RangeFunction *r)
 					elog(ERROR, "%s: invalid argument type, non-string in value", GP_DIST_RANDOM_NAME);
 				}
 
-				schemaname = strVal(&arg_val->val);
-				tablename = strchr(schemaname, '.');
-				if (tablename)
-				{
-					*tablename = 0;
-					tablename++;
-				}
-				else
-				{
-					/* no schema */
-					tablename = schemaname;
-					schemaname = NULL;
-				}
-
-				/* Got the name of the table, now we need to build the RTE for the table. */
-				rel = makeRangeVar(schemaname, tablename, arg_val->location);
+				/* Build the RTE for the table. */
+				qualified_name_list = stringToQualifiedNameList(strVal(&arg_val->val));
+				rel = makeRangeVarFromNameList(qualified_name_list);
 				rel->location = arg_val->location;
 
 				rte = addRangeTableEntry(pstate, rel, r->alias, false, true);

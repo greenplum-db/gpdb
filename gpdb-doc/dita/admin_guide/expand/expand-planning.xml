@@ -141,8 +141,7 @@
                     id="image_rcs_t1m_2r"/>
                 </entry>
                 <entry>Initialize new segments into the array and create an expansion schema
-                    (<codeph>gpexpand</codeph><codeph>-i</codeph>
-                  <varname>input_file</varname>). </entry>
+                    (<codeph>gpexpand -i <varname>input_file</varname></codeph>).</entry>
               </row>
               <row>
                 <entry namest="c1" nameend="c2"><p><b>Online Expansion and Table

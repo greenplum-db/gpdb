@@ -6,6 +6,8 @@
     <title id="is142464">gpcheck</title>
     <body>
         <p>Verifies and validates Greenplum Database platform settings.</p>
+        <note>This utility is deprecated and will be removed in the Greenplum Database 6
+            release.</note>
         <section id="section2">
             <title>Synopsis</title>
             <codeblock><b>gpcheck</b> {{<b>-f</b> | <b>--file</b>} <varname>hostfile_gpcheck</varname> | {<b>-h</b> | <b>--host</b>} <varname>host_ID</varname>| <b>--local</b> } 

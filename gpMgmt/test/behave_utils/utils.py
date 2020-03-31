@@ -67,9 +67,13 @@ if master_data_dir is None:
 
 
 def execute_sql(dbname, sql):
+    result = None
+
     with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
-        dbconn.execSQL(conn, sql)
+        result = dbconn.execSQL(conn, sql)
         conn.commit()
+
+    return result
 
 
 def execute_sql_singleton(dbname, sql):
@@ -1742,3 +1746,27 @@ def replace_special_char_env(str):
             str = str.replace("$%s" % var, os.environ[var])
     return str
 
+
+def wait_for_unblocked_transactions(context, num_retries=150):
+    """
+    Tries once a second to successfully commit a transaction to the database
+    running on PGHOST/PGPORT. Raises an Exception after failing <num_retries>
+    times.
+    """
+    attempt = 0
+    while attempt < num_retries:
+        try:
+            with dbconn.connect(dbconn.DbURL()) as conn:
+                # Cursor.execute() will issue an implicit BEGIN for us.
+                # Empty block of 'BEGIN' and 'END' won't start a distributed transaction,
+                # execute a DDL query to start a distributed transaction.
+                conn.cursor().execute('CREATE TEMP TABLE temp_test(a int)')
+                conn.cursor().execute('COMMIT')
+                break
+        except Exception as e:
+            attempt += 1
+            pass
+        time.sleep(1)
+
+    if attempt == num_retries:
+        raise Exception('Unable to establish a connection to database !!!')

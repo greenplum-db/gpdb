@@ -108,7 +108,6 @@ NOTICE:  Releasing segworker groups to retry broadcast.
 NOTICE:  Releasing segworker groups to retry broadcast.
 NOTICE:  Releasing segworker groups to retry broadcast.
 NOTICE:  Releasing segworker groups to retry broadcast.
-NOTICE:  Releasing segworker groups to retry broadcast.
 ERROR:  The distributed transaction 'Prepare' broadcast failed to one or more segments for gid DUMMY
 -- Verify that the table wasn't truncated due to prevous transaction
 -- being aborted.
@@ -168,7 +167,6 @@ truncate table dtm_retry_table;
 -- abort_prepared message succeeds.
 end;
 WARNING:  the distributed transaction 'Abort Prepared' broadcast failed to one or more segments for gid DUMMY
-NOTICE:  Releasing segworker groups to retry broadcast.
 NOTICE:  Releasing segworker groups to retry broadcast.
 NOTICE:  Releasing segworker groups to retry broadcast.
 NOTICE:  Releasing segworker groups to retry broadcast.
