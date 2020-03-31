@@ -179,12 +179,6 @@ struct PGPROC
 	dsm_handle  comboCidsHandle;
 
 	/*
-	 * Handle for our shared snapshot array (populated in writer/dispatcher
-	 * backends only)
-	 */
-	dsm_handle  sharedSnapshotDescHandle;
-
-	/*
 	 * Current command_id for the running query
 	 * This counter is not dead code although there is no consumer in the gpdb
 	 * code tree, it is required by external monitoring infrastructure.

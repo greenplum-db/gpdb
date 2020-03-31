@@ -1475,14 +1475,7 @@ verify_shared_snapshot_ready(int cid)
 					   DF_NEED_TWO_PHASE,
 					   NULL);
 
-	/* For serialization isolation level, gpdb hack segmateSync and combocid.
-	 * To be safe, publish it again.
-	 */
-	LWLockAcquire(SharedSnapshot.lockSlot->lock, LW_EXCLUSIVE);
-	publishSharedSnapshot(SharedSnapshot.desc->segmateSync,
-	                      &SharedSnapshot.desc->snapshot,
-	                      true /*for_cursor*/);
-	LWLockRelease(SharedSnapshot.lockSlot->lock);
+	dumpSharedLocalSnapshot_forCursor();
 	MySessionState->latestCursorCommandId = cid;
 }
 
@@ -1514,11 +1507,7 @@ assign_gp_write_shared_snapshot(bool newval, void *extra)
 
 			if (Gp_is_writer)
 			{
-				LWLockAcquire(SharedSnapshot.lockSlot->lock, LW_EXCLUSIVE);
-				publishSharedSnapshot(SharedSnapshot.desc->segmateSync,
-				                      &SharedSnapshot.desc->snapshot,
-				                      true /*for_cursor*/);
-				LWLockRelease(SharedSnapshot.lockSlot->lock);
+				dumpSharedLocalSnapshot_forCursor();
 			}
 
 			PopActiveSnapshot();
@@ -1551,7 +1540,7 @@ isDtxQueryDispatcher(void)
 	bool		isSharedLocalSnapshotSlotPresent;
 
 	isDtmStarted = (shmDtmStarted != NULL && *shmDtmStarted);
-	isSharedLocalSnapshotSlotPresent = (SharedSnapshot.desc != NULL);
+	isSharedLocalSnapshotSlotPresent = (SharedLocalSnapshotSlot != NULL);
 
 	return (Gp_role == GP_ROLE_DISPATCH &&
 			isDtmStarted &&
@@ -1648,7 +1637,7 @@ setupQEDtxContext(DtxContextInfo *dtxContextInfo)
 	explicitBegin = isMppTxOptions_ExplicitBegin(txnOptions);
 
 	haveDistributedSnapshot = dtxContextInfo->haveDistributedSnapshot;
-	isSharedLocalSnapshotSlotPresent = (SharedSnapshot.desc != NULL);
+	isSharedLocalSnapshotSlotPresent = (SharedLocalSnapshotSlot != NULL);
 
 	if (DEBUG5 >= log_min_messages || Debug_print_full_dtm)
 	{
@@ -1678,17 +1667,18 @@ setupQEDtxContext(DtxContextInfo *dtxContextInfo)
 		{
 			if (DTM_DEBUG5 >= log_min_messages)
 			{
-				LWLockAcquire(SharedSnapshot.lockSlot->lock, LW_SHARED);
+				LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_SHARED);
 				elog(DTM_DEBUG5,
 					 "setupQEDtxContext inputs (part 2b):  shared local snapshot xid = %u "
-					 "(xmin: %u xmax: %u xcnt: %u) curcid: %d, segmate = %u",
-					 SharedSnapshot.desc->xid,
-					 SharedSnapshot.desc->snapshot.xmin,
-					 SharedSnapshot.desc->snapshot.xmax,
-					 SharedSnapshot.desc->snapshot.xcnt,
-					 SharedSnapshot.desc->snapshot.curcid,
-					 SharedSnapshot.desc->segmateSync);
-				LWLockRelease(SharedSnapshot.lockSlot->lock);
+					 "(xmin: %u xmax: %u xcnt: %u) curcid: %d, QDxid = %u/%u",
+					 SharedLocalSnapshotSlot->xid,
+					 SharedLocalSnapshotSlot->snapshot.xmin,
+					 SharedLocalSnapshotSlot->snapshot.xmax,
+					 SharedLocalSnapshotSlot->snapshot.xcnt,
+					 SharedLocalSnapshotSlot->snapshot.curcid,
+					 SharedLocalSnapshotSlot->QDxid,
+					 SharedLocalSnapshotSlot->segmateSync);
+				LWLockRelease(SharedLocalSnapshotSlot->slotLock);
 			}
 		}
 	}
@@ -1707,7 +1697,7 @@ setupQEDtxContext(DtxContextInfo *dtxContextInfo)
 				 * StartTransaction() gets called during connection setup
 				 * before we even have time to setup our shared snapshot slot.
 				 */
-				if (SharedSnapshot.desc == NULL)
+				if (SharedLocalSnapshotSlot == NULL)
 				{
 					if (explicitBegin || haveDistributedSnapshot)
 					{

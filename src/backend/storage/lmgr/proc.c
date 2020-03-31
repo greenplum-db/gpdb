@@ -957,11 +957,12 @@ ProcKill(int code, Datum arg)
 	/*
 	 * Remove the shared snapshot slot.
 	 */
-	if (SharedSnapshot.desc != NULL)
+	if (SharedLocalSnapshotSlot != NULL)
 	{
 		if (Gp_role == GP_ROLE_DISPATCH)
 		{
-			SharedSnapshotRemove("Query Dispatcher");
+			SharedSnapshotRemove(SharedLocalSnapshotSlot,
+								 "Query Dispatcher");
 		}
 	    else if (IS_QUERY_DISPATCHER() && Gp_role == GP_ROLE_EXECUTE && !Gp_is_writer)
 	    {
@@ -971,9 +972,10 @@ ProcKill(int code, Datum arg)
 	    }
 		else if (Gp_role == GP_ROLE_EXECUTE && Gp_is_writer)
 		{
-			SharedSnapshotRemove("Writer qExec");
+			SharedSnapshotRemove(SharedLocalSnapshotSlot,
+								 "Writer qExec");
 		}
-		SharedSnapshot.desc = NULL;
+		SharedLocalSnapshotSlot = NULL;
 	}
 
 	SyncRepCleanupAtProcExit();
