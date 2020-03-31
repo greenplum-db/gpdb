@@ -19,6 +19,7 @@
 #include "pg_regress.h"
 
 #include <ctype.h>
+#include <string.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <signal.h>
@@ -83,6 +84,7 @@ char	   *tablespacedir = ".";
 char	   *prehook = "";
 char	   *bindir = PGBINDIR;
 char	   *launcher = NULL;
+char	   *hook_file = NULL;
 bool        print_failure_diffs_is_enabled = false;
 bool 		optimizer_enabled = false;
 bool 		resgroup_enabled = false;
@@ -106,6 +108,9 @@ static char *user = NULL;
 static _stringlist *extraroles = NULL;
 static char *config_auth_datadir = NULL;
 static bool  ignore_plans = false;
+static char  *hook_test = NULL;
+static char **hook_points_array;
+static int  n_hook_points = 0;
 
 /* internal variables */
 static const char *progname;
@@ -1093,6 +1098,116 @@ doputenv(const char *var, const char *val)
 	putenv(s);
 }
 
+static int tests_cmp(const void *a, const void *b)
+{
+	const char *sa = *(const char **)a;
+	const char *sb = *(const char **)b;
+	return strcmp(sa, sb);
+}
+
+
+static char *parse_nonempty_line(FILE *pfile, char *buffer, int buflen)
+{
+	char *p;
+	while (fgets(buffer, buflen, pfile))
+	{
+		char *q;
+		p = buffer;
+		while (isspace(*p))
+			p++;
+		if (*p == '#' || *p == '\0')
+			continue;
+		q = strchr(p, '#');
+		if (q)
+			*q = '\0';
+		q = p + strlen(p) - 1;
+		while(q >= p && isspace(*q))
+			q--;
+		q[1] = '\0';
+		return p;
+	}
+	return NULL;
+}
+
+static void parse_hook_content(FILE *pfile, char *buffer, int buflen, char ***hook_array, int *n_hook_array)
+{
+	char **array = NULL;
+	int cap_array;
+	int cnt;
+	char *line;
+	
+	/* parse hook script */
+	line = parse_nonempty_line(pfile, buffer, buflen);
+	if (!line)
+		return;
+	hook_test = strdup(line);
+
+	cap_array = 16;
+	array = (char**)malloc(sizeof(char**) * cap_array);
+	if (array == NULL)
+	{
+		fprintf(stderr, "OOM for hook points\n");
+		return;
+	}
+	cnt = 0;
+	while ((line = parse_nonempty_line(pfile, buffer, buflen)))
+	{
+		if (cnt >= cap_array)
+		{
+			char **tmp;
+			int new_cap = cap_array * 2;
+			tmp = (char**)realloc(array, sizeof(char**) * new_cap);
+			if (tmp == NULL)
+			{
+				fprintf(stderr, "OOM for hook points\n");
+				goto out2;
+			}
+			array = tmp;
+		}
+		array[cnt] = strdup(line);
+		if (array[cnt] == NULL)
+		{
+			fprintf(stderr, "OOM for hook points\n");
+			goto out2;
+		}
+		cnt++;
+	}
+
+out2:
+	if (cnt == 0)
+	{
+		*hook_array = NULL;
+		free(array);
+	}
+	else
+	{
+		/* try to shrink the array */
+		*hook_array = realloc(array, sizeof(char**) * cnt);
+		if (*hook_array == NULL)
+			*hook_array = array;
+	}
+	*n_hook_array = cnt;
+	if (cnt > 0)
+		qsort(*hook_array, cnt, sizeof(char*), tests_cmp);
+}
+
+static void parse_hook_file(const char *filename, char ***hook_array, int *n_hook_array)
+{
+	FILE *pfile;
+	char buffer[1024];
+	int  buflen = (int)sizeof(buffer);
+
+	pfile = fopen(filename, "r");
+	if (pfile == NULL)
+	{
+		fprintf(stderr, "cann't find hook point file '%s'\n", filename);
+		return;
+	}
+	parse_hook_content(pfile, buffer, buflen, hook_array, n_hook_array);
+
+	fclose(pfile);
+}
+
 /*
  * Prepare environment variables for running regression tests
  */
@@ -1990,6 +2105,73 @@ log_child_failure(int exitstatus)
 			   exitstatus);
 }
 
+static const char *
+match_hook_point(const char **hook_points_array, int n_array, const char **tests, int n_tests)
+{
+	int i;
+	int a, b, m, rc;
+	for (i = 0; i < n_tests; i++)
+	{
+		a = 0;
+		b = n_array - 1;
+		while (a <= b)
+		{
+			m = a + ((b - a) >> 1);
+			rc = strcmp(hook_points_array[m], tests[i]);
+			if (rc == 0)
+				return tests[i];
+			if (rc < 0)
+				a = m + 1;
+			else
+				b = m - 1;
+		}
+	}
+	return NULL;
+}
+
+static void
+run_post_hook(const char *testname, test_function tfunc, const char **hook_points_array, int n_array, const char **tests, int n_tests)
+{
+	if (testname == NULL)
+		return;
+	const char *matched_test;
+	if (n_array > 0)
+	{
+		matched_test = match_hook_point(hook_points_array, n_array, tests, n_tests);
+		if (matched_test == NULL)
+			return;
+	}
+	else
+	{
+		matched_test = tests[0];
+	}
+
+
+	PID_TYPE pids;
+	int statuses;
+	_stringlist *resultfiles = NULL;
+	_stringlist *expectfiles = NULL;
+	_stringlist *tags = NULL;
+
+	pids = tfunc(testname, &resultfiles, &expectfiles, &tags);
+	wait_for_tests(&pids, &statuses, NULL, NULL, 1);
+
+	bool diff = results_differ(testname, resultfiles->str, expectfiles->str);
+	free_stringlist(&resultfiles);
+	free_stringlist(&expectfiles);
+	free_stringlist(&tags);
+	if (!diff)
+		return;
+
+	/* report error */
+	if (n_tests > 1)
+		fprintf(stderr, "running hook '%s' failed after parallel group\n", testname);
+	else
+		fprintf(stderr, "running hook '%s' failed after '%s'\n", testname, matched_test);
+	status_end();
+	exit(2);
+}
+
 /*
  * Run all the tests specified in one schedule file
  */
@@ -2238,6 +2420,8 @@ run_schedule(const char *schedule, test_function tfunc)
 
 			status_end();
 		}
+		run_post_hook(hook_test, tfunc, (const char **)hook_points_array,
+				n_hook_points, (const char **)tests, num_tests);
 	}
 
 	free_stringlist(&ignorelist);
@@ -2301,6 +2485,8 @@ run_single_test(const char *test, test_function tfunc)
 	if (exit_status != 0)
 		log_child_failure(exit_status);
 
+	run_post_hook(hook_test, tfunc, (const char **)hook_points_array,
+			n_hook_points, (const char **)&test, 1);
 	status_end();
 }
 
@@ -2583,10 +2769,11 @@ help(void)
 	printf(_("  --use-existing            use an existing installation\n"));
 	/* Please put GPDB specific options at the end */
 	printf(_("  --exclude-tests=TEST      command or space delimited tests to exclude from running\n"));
-    printf(_(" --init-file=GPD_INIT_FILE  init file to be used for gpdiff (could be used multiple times)\n"));
+	printf(_("  --init-file=GPD_INIT_FILE  init file to be used for gpdiff (could be used multiple times)\n"));
 	printf(_("  --ignore-plans            ignore any explain plan diffs\n"));
 	printf(_("  --print-failure-diffs     Print the diff file to standard out after a failure\n"));
 	printf(_("  --tablespace-dir=DIR      place tablespace files in DIR/testtablespace (default \"./testtablespace\")\n"));
+	printf(_("  --hook-file               post hook configuration file: to run the hook for all test cases or a set of test cases. [posthook.txt]\n"));
 	printf(_("\n"));
 	printf(_("Options for \"temp-instance\" mode:\n"));
 	printf(_("  --no-locale               use C locale\n"));
@@ -2637,6 +2824,7 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 		{"prehook", required_argument, NULL, 28},
 		{"print-failure-diffs", no_argument, NULL, 29},
 		{"tablespace-dir", required_argument, NULL, 80},
+		{"hook-file", required_argument, NULL, 81},
 		{NULL, 0, NULL, 0}
 	};
 
@@ -2768,6 +2956,9 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 			case 80:
 				tablespacedir = strdup(optarg);
 				break;
+			case 81:
+				hook_file = strdup(optarg);
+				break;
 			default:
 				/* getopt_long already emitted a complaint */
 				fprintf(stderr, _("\nTry \"%s -h\" for more information.\n"),
@@ -2837,6 +3028,9 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 			}
 		}
 	}
+
+	if (hook_file)
+		parse_hook_file(hook_file, &hook_points_array, &n_hook_points);
 
 	initialize_environment();
 
