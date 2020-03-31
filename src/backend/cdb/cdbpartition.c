@@ -8229,7 +8229,7 @@ fixCreateStmtForPartitionedTable(CreateStmt *stmt)
 		}
 	}
 
-	used_names = list_union(used_names, NIL);	/* eliminate dups */
+	used_names = list_union(NIL, used_names);	/* eliminate dups */
 
 	for (i = 0; i < list_length(unnamed_cons); i++)
 	{
