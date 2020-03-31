@@ -389,23 +389,13 @@ COMMIT;
 --
 -- Shared snapshot files for cursor should be gone after transaction commits.
 --
-CREATE EXTERNAL WEB TABLE check_cursor_files(a int)
-EXECUTE 'find base | grep pgsql_tmp | grep _sync | wc -l'
-FORMAT 'TEXT';
-
 BEGIN;
 DECLARE c CURSOR FOR SELECT * FROM ctest ORDER BY id;
 FETCH 1 FROM c;
 
--- There should be a shared snapshot file on every segment.
-SELECT DISTINCT a FROM check_cursor_files;
-
 -- holdable cursor should be ok
 DECLARE c_hold CURSOR WITH HOLD FOR SELECT * FROM ctest ORDER BY id;
 COMMIT;
-
--- After commit, the shared snapshot files should be deleted.
-SELECT DISTINCT a FROM check_cursor_files;
 
 FETCH 1 FROM c_hold;
 
