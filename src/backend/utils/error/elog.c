@@ -1826,9 +1826,13 @@ EmitErrorReport(void)
 	CHECK_STACK_DEPTH();
 	oldcontext = MemoryContextSwitchTo(edata->assoc_context);
 
-	/* CDB: Tidy up the message */
-	if (edata->output_to_server ||
-		edata->output_to_client)
+	/* 
+	 * CDB: Tidy up the message sent to client
+	 *
+	 * Strip trailing whitespace.
+	 * Append file name and line numebr.
+	 */
+	if (edata->output_to_client)
 		cdb_tidy_message(edata);
 
 	/*
