@@ -60,11 +60,6 @@ matrix:
                   packages:
                       - *common_packages
                       - clang-7
-        # macOS, XCode11
-        - os: osx
-          compiler: clang
-          osx_image: xcode11
-          env: T=macos
         #
         # Configuration variations
         # ----------------------------------------------------------------
@@ -157,24 +152,6 @@ script:
         make -C gpAux/gpdemo cluster
         source gpAux/gpdemo/gpdemo-env.sh
         make -C src/test/regress installcheck-small
-      fi
-  - |
-      set -eo pipefail
-      if [ "$T" = "macos" ]; then
-        ./configure \
-            --prefix=${TRAVIS_BUILD_DIR}/gpsql \
-            --with-perl \
-            --with-python \
-            --disable-orca \
-            --enable-orafce \
-            --disable-gpfdist \
-            --disable-pxf \
-            --disable-gpcloud \
-            --without-zstd \
-            $C
-        make -s install
-        source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
-        make -s unittest-check
       fi
 
 after_script:
