@@ -174,6 +174,16 @@ DtxContext DistributedTransactionContext = DTX_CONTEXT_LOCAL_ONLY;
 
 DtxContextInfo QEDtxContextInfo = DtxContextInfo_StaticInit;
 
+#define DUMP_HASH_SZ    1024
+typedef struct DumpEntry
+{
+	uint32  segmate;
+	TransactionId localXid;
+	Snapshot snapshot;
+} DumpEntry;
+
+/* local hash table to store cursor snapshot dump*/
+static HTAB *dumpHtab = NULL;
 static bool created_dump = false;
 
 static ResourceOwner DumpResOwner = NULL;	/* shared snapshot dump resources */
@@ -204,17 +214,6 @@ volatile SharedSnapshotSlot *SharedLocalSnapshotSlot = NULL;
 static Size slotSize = 0;
 static Size slotCount = 0;
 static Size xipEntryCount = 0;
-
-#define DUMP_HASH_SZ    1024
-typedef struct DumpEntry
-{
-	uint32  segmate;
-	TransactionId localXid;
-	Snapshot snapshot;
-} DumpEntry;
-
-/* local hash table to store cursor snapshot dump*/
-static HTAB *dumpHtab = NULL;
 
 /* prototypes for internal functions */
 static SharedSnapshotSlot *SharedSnapshotAdd(int32 slotId);
