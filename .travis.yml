@@ -78,6 +78,17 @@ matrix:
         # Configuration variations
         # ----------------------------------------------------------------
         #
+        # Production build without any debugging or assertions
+        - os: linux
+          dist: bionic
+          compiler: gcc
+          env:
+              - T=production C=""
+              - OVERRIDE_CC="CC=gcc-8" OVERRIDE_CXX="CXX=g++-8"
+          addons:
+              apt:
+                  sources: *common_sources
+                  packages: *common_packages
         # Debug build without any compression algorithms supplied
         - os: linux
           dist: bionic
