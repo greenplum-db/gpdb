@@ -32,7 +32,7 @@ matrix:
         # OS and Compiler variations
         # ----------------------------------------------------------------
         #
-        # Ubuntu Bionic, gcc 8
+        # Ubuntu Bionic, gcc 8, AMD64
         - os: linux
           dist: bionic
           compiler: gcc
@@ -45,7 +45,7 @@ matrix:
                       - *common_sources
                   packages:
                       - *common_packages
-        # Ubuntu Xenial, clang 7
+        # Ubuntu Xenial, clang 7, AMD64
         - os: linux
           dist: xenial
           compiler: clang
@@ -60,6 +60,20 @@ matrix:
                   packages:
                       - *common_packages
                       - clang-7
+        # Ubuntu Bionic, gcc 8, ARM64
+        - os: linux
+          dist: bionic
+          compiler: gcc
+          arch: arm64
+          env:
+              - T=debug C=""
+              - OVERRIDE_CC="CC=gcc-8" OVERRIDE_CXX="CXX=g++-8"
+          addons:
+              apt:
+                  sources:
+                      - *common_sources
+                  packages:
+                      - *common_packages
         #
         # Configuration variations
         # ----------------------------------------------------------------
