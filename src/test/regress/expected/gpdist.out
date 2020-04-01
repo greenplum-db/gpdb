@@ -714,24 +714,42 @@ select * from a full join b on (a.i=b.i) full join c on (b.i=c.i);
 --
 create table xidtab (x xid) distributed by (x);
 insert into xidtab select g::text::xid from generate_series(1,5) g;
+insert into xidtab values ('1'); -- insert a duplicate
 select * from xidtab a, xidtab b, xidtab c where a.x=b.x and b.x = c.x;
  x | x | x 
 ---+---+---
- 1 | 1 | 1
+ 5 | 5 | 5
  2 | 2 | 2
  3 | 3 | 3
  4 | 4 | 4
- 5 | 5 | 5
-(5 rows)
+ 1 | 1 | 1
+ 1 | 1 | 1
+ 1 | 1 | 1
+ 1 | 1 | 1
+ 1 | 1 | 1
+ 1 | 1 | 1
+ 1 | 1 | 1
+ 1 | 1 | 1
+(12 rows)
 
 select * from xidtab group by x;
  x 
 ---
+ 5
+ 1
  2
  4
  3
- 1
+(5 rows)
+
+select distinct x from xidtab;
+ x 
+---
  5
+ 1
+ 2
+ 4
+ 3
 (5 rows)
 
 -- Simple sanity tests for gp_dist_random()

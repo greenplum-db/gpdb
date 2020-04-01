@@ -2893,19 +2893,10 @@ transformDistinctToGroupBy(ParseState *pstate, List **targetlist,
 		{
 			TargetEntry *tle = (TargetEntry *) lfirst(lc);
 			if (!tle->resjunk)
-			{
-				SortBy sortby;
-
-				sortby.type = T_SortBy;
-				sortby.sortby_dir = SORTBY_DEFAULT;
-				sortby.sortby_nulls = SORTBY_NULLS_DEFAULT;
-				sortby.useOp = NIL;
-				sortby.location = -1;
-				sortby.node = (Node *) tle->expr;
-				group_clause_list = addTargetToSortList(pstate, tle,
-														group_clause_list, *targetlist,
-														&sortby, true);
-			}
+				group_clause_list = addTargetToGroupList(pstate, tle,
+														 group_clause_list, *targetlist,
+														 true,
+														 exprLocation((Node *) tle));
 		}
 	}
 

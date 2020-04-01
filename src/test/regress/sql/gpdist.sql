@@ -519,8 +519,10 @@ select * from a full join b on (a.i=b.i) full join c on (b.i=c.i);
 --
 create table xidtab (x xid) distributed by (x);
 insert into xidtab select g::text::xid from generate_series(1,5) g;
+insert into xidtab values ('1'); -- insert a duplicate
 select * from xidtab a, xidtab b, xidtab c where a.x=b.x and b.x = c.x;
 select * from xidtab group by x;
+select distinct x from xidtab;
 
 -- Simple sanity tests for gp_dist_random()
 CREATE TEMP TABLE gp_dist_random_table (a int);

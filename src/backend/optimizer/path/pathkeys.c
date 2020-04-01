@@ -1402,6 +1402,18 @@ make_distribution_exprs_for_groupclause(PlannerInfo *root, List *groupclause, Li
 		if (!sortcl->hashable)
 			continue;
 
+		/*
+		 * If this expression is not sortable, we cannot construct a PathKey
+		 * to represent it. Give up.
+		 *
+		 * In principle, we could still use it as distribution key, but we'd
+		 * need a different representation for it. For now, though, we don't
+		 * bother. A datatype without ordering operators is a rare thing in
+		 * practice.
+		 */
+		if (sortcl->sortop == InvalidOid)
+			continue;
+
 		expr = (Expr *) get_sortgroupclause_expr(sortcl, tlist);
 
 		pathkey = make_pathkey_from_sortop(root,
