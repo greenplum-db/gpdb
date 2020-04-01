@@ -75,6 +75,18 @@ matrix:
               apt:
                   sources: *common_sources
                   packages: *common_packages
+        # Build without lots of things, not because it's a recommended setup
+        # but because it might trigger compiler warnings otherwise not seen.
+        - os: linux
+          dist: bionic
+          compiler: gcc
+          env:
+              - T=debug C="--without-openssl --disable-strong-random --disable-atomics --disable-spinlocks"
+              - OVERRIDE_CC="CC=gcc-8" OVERRIDE_CXX="CXX=g++-8"
+          addons:
+              apt:
+                  sources: *common_sources
+                  packages: *common_packages
 
 ## ----------------------------------------------------------------------
 ## Build tools
