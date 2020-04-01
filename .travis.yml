@@ -8,6 +8,12 @@ sudo: false
 git:
   submodules: false
 
+env:
+  global:
+    - EXPERIMENTAL=no
+
+jobs:
+
 addons:
     apt:
         config:
@@ -28,6 +34,9 @@ addons:
             - libzstd1-dev
 
 matrix:
+    allow_failures:
+      - env: - T=experimental OVERRIDE_CC="CC=gcc-8" OVERRIDE_CXX="CXX=g++-8"
+    fast_finish: true
     include:
         # OS and Compiler variations
         # ----------------------------------------------------------------
@@ -66,7 +75,7 @@ matrix:
           compiler: gcc
           arch: arm64
           env:
-              - T=debug C=""
+              - T=experimental
               - OVERRIDE_CC="CC=gcc-8" OVERRIDE_CXX="CXX=g++-8"
           addons:
               apt:
@@ -95,18 +104,6 @@ matrix:
           compiler: gcc
           env:
               - T=debug C="--without-zlib --without-libbz2 --without-zstd --without-quicklz"
-              - OVERRIDE_CC="CC=gcc-8" OVERRIDE_CXX="CXX=g++-8"
-          addons:
-              apt:
-                  sources: *common_sources
-                  packages: *common_packages
-        # Build without lots of things, not because it's a recommended setup
-        # but because it might trigger compiler warnings otherwise not seen.
-        - os: linux
-          dist: bionic
-          compiler: gcc
-          env:
-              - T=debug C="--without-openssl --disable-strong-random --disable-atomics --disable-spinlocks"
               - OVERRIDE_CC="CC=gcc-8" OVERRIDE_CXX="CXX=g++-8"
           addons:
               apt:
@@ -190,6 +187,32 @@ script:
         source gpAux/gpdemo/gpdemo-env.sh
         make -C src/test/regress installcheck-small
       fi
+  - |
+      set -eo pipefail
+      if [ "$T" = "experimental" ]; then
+        ./configure \
+            --prefix=${TRAVIS_BUILD_DIR}/gpsql \
+            --enable-cassert \
+            --enable-debug \
+            --enable-debug-extensions \
+            --with-perl \
+            --with-python \
+            --disable-orca \
+            --with-openssl \
+            --with-ldap \
+            --with-libcurl \
+            --with-libxml \
+            --enable-mapreduce \
+            --enable-orafce \
+            $C
+        make -j 2 -s install
+        source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
+        make -s unittest-check
+        make -C gpAux/gpdemo cluster
+        source gpAux/gpdemo/gpdemo-env.sh
+        make -C src/test/regress installcheck-small
+      fi
+
 
 after_script:
   - source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
