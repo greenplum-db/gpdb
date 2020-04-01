@@ -150,7 +150,7 @@ script:
             --enable-mapreduce \
             --enable-orafce \
             $C
-        make -s install
+        make -j 2 -s install
         source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
         make -s unittest-check
         make -C gpAux/gpdemo cluster
@@ -172,7 +172,7 @@ script:
             --enable-mapreduce \
             --enable-orafce \
             $C
-        make -s install
+        make -j 2 -s install
         source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
         make -s unittest-check
         make -C gpAux/gpdemo cluster
