@@ -491,7 +491,8 @@ new_gpdb_invalidate_bitmap_indexes(void)
 									  "  FROM pg_class c "
 									  " WHERE c.oid = indexrelid AND "
 									  "       indexrelid >= %u AND "
-									  "       relam = 3013;",
+									  "       relam IN (SELECT oid FROM pg_am "
+									  "       WHERE amname = 'bitmap');",
 									  FirstNormalObjectId));
 		}
 		PQfinish(conn);
@@ -561,7 +562,7 @@ get_numeric_types(PGconn *conn)
 }
 
 void
-after_create_new_objects_greenplum(void)
+invalidate_indexes(void)
 {
 	/*
 	 * If we're upgrading from GPDB4, mark all indexes as invalid.
@@ -570,12 +571,89 @@ after_create_new_objects_greenplum(void)
 	 * indexes. Also, the heap conversion relocates tuples, so
 	 * any indexes on heaps would need to be rebuilt for that
 	 * reason, anyway.
+	 *
+	 * If we'are upgrading from GPDB6 to GPDB6, then don't mark any index
+	 * as invalid, as its inplace upgrade.
 	 */
 	if (GET_MAJOR_VERSION(old_cluster.major_version) == 802)
 		new_gpdb5_0_invalidate_indexes();
-	else
+	else if (!(is_gpdb6(&old_cluster) && is_gpdb6(&new_cluster)))
 	{
 		/* TODO: Bitmap indexes are not supported, so mark them as invalid. */
 		new_gpdb_invalidate_bitmap_indexes();
 	}
+}
+
+/*
+ * In greenplum, after collecting the relation information, bitmap
+ * indexes are marked as invalid. The same catalog is copied to the segment,
+ * and when information is collected about the objects, invalid indexes are
+ * not considered from the new segment. But the segment should be reset to
+ * the original state where the indexes were valid else upgrade will report
+ * failure indicating that there are missing index objects in the source segment
+ * and the target segment.
+ *
+ * Note: After the relation information is collected, these indexes are marked
+ * invalid.
+ */
+void
+reset_invalid_indexes(void)
+{
+
+	/* Should be run only on segment databases */
+	Assert(!is_greenplum_dispatcher_mode());
+	Assert(!user_opts.check);
+
+	prep_status("Resetting indexes marked as invalid");
+
+	int			dbnum;
+
+	for (dbnum = 0; dbnum < new_cluster.dbarr.ndbs; dbnum++)
+	{
+
+		DbInfo	   *active_db = &new_cluster.dbarr.dbs[dbnum];
+		PGconn	   *conn = connectToServer(&new_cluster, active_db->db_name);
+
+		PQclear(executeQueryOrDie(conn, "SET allow_system_table_mods=true"));
+
+		if (GET_MAJOR_VERSION(old_cluster.major_version) <= 803)
+		{
+			/*
+			 * Enable btree based bpchar_pattern_ops indexes
+			 */
+			PQclear(executeQueryOrDie(conn,
+									  "UPDATE pg_catalog.pg_index i "
+									  "SET	indisvalid = true "
+									  "FROM	pg_catalog.pg_class c, "
+									  "		pg_catalog.pg_namespace n "
+									  "WHERE	indexrelid = c.oid AND "
+									  "		c.relnamespace = n.oid AND "
+									  "		( "
+									  "			SELECT	o.oid "
+									  "			FROM	pg_catalog.pg_opclass o, "
+									  "					pg_catalog.pg_am a"
+									  "			WHERE	a.amname NOT IN ('hash', 'gin', 'bitmap') AND "
+									  "					a.oid = o.opcmethod AND "
+									  "					o.opcname = 'bpchar_pattern_ops') "
+									  "		= ANY (i.indclass)"));
+		}
+
+
+		/*
+		 * Enable bitmap indexes
+		 */
+		PQclear(executeQueryOrDie(conn,
+								  "UPDATE pg_index SET indisvalid = true "
+								  "  FROM pg_class c "
+								  " WHERE c.oid = indexrelid AND "
+								  "       indexrelid >= %u AND "
+								  "       relam IN (SELECT oid FROM pg_am "
+								  "       WHERE amname = 'bitmap');",
+								  FirstNormalObjectId));
+
+		PQfinish(conn);
+	}
+
+	check_ok();
+
 }

@@ -592,10 +592,10 @@ old_8_3_invalidate_bpchar_pattern_ops_indexes(ClusterInfo *cluster,
 								"		c.relnamespace = n.oid AND "
 								"		( "
 								"			SELECT	o.oid "
-				   "			FROM	pg_catalog.pg_opclass o, "
-				  "					pg_catalog.pg_am a"
-		"			WHERE	a.amname NOT IN ('hash', 'gin', 'bitmap') AND "
-			"					a.oid = o.opcmethod AND "
+								"			FROM	pg_catalog.pg_opclass o, "
+								"					pg_catalog.pg_am a"
+								"			WHERE	a.amname NOT IN ('hash', 'gin', 'bitmap') AND "
+								"					a.oid = o.opcmethod AND "
 								"					o.opcname = 'bpchar_pattern_ops') "
 								"		= ANY (i.indclass) AND "
 								SKIP_TSVECTOR_TABLES);
@@ -629,7 +629,17 @@ old_8_3_invalidate_bpchar_pattern_ops_indexes(ClusterInfo *cluster,
 		PQclear(res);
 
 		if (!check_mode && found)
-			/* mark bpchar_pattern_ops indexes as invalid */
+		{
+			/*
+			 * mark bpchar_pattern_ops indexes as invalid.
+			 * In upstream, bitmap index are not there, so the subquery
+			 * does not return multiple rows, but GPDB does have bitmap
+			 * indexes so the suqbuery will return multiple rows which is
+			 * not allowed.
+			 * So, look for btree based indexes only.
+			 */
+			PQclear(executeQueryOrDie(conn, "SET allow_system_table_mods=true"));
+
 			PQclear(executeQueryOrDie(conn,
 									  "UPDATE pg_catalog.pg_index i "
 									  "SET	indisvalid = false "
@@ -639,14 +649,16 @@ old_8_3_invalidate_bpchar_pattern_ops_indexes(ClusterInfo *cluster,
 									  "		c.relnamespace = n.oid AND "
 									  "		( "
 									  "			SELECT	o.oid "
-						 "			FROM	pg_catalog.pg_opclass o, "
-						"					pg_catalog.pg_am a"
-			  "			WHERE	a.amname NOT IN ('hash', 'gin') AND "
-				  "					a.oid = o.opcmethod AND "
+									  "			FROM	pg_catalog.pg_opclass o, "
+									  "					pg_catalog.pg_am a"
+									  "			WHERE	a.amname NOT IN ('hash', 'gin', 'bitmap') AND "
+									  "					a.oid = o.opcmethod AND "
 									  "					o.opcname = 'bpchar_pattern_ops') "
 									  "		= ANY (i.indclass)"));
+		}
 
 		PQfinish(conn);
+
 	}
 
 	if (script)

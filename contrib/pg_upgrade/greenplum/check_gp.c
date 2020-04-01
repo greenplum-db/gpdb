@@ -30,6 +30,7 @@ static void check_unique_primary_constraint(void);
 static void check_for_array_of_partition_table_types(ClusterInfo *cluster);
 static void check_partition_schemas(void);
 static void check_large_objects(void);
+static void check_invalid_indexes(void);
 
 
 /*
@@ -55,6 +56,7 @@ check_greenplum(void)
 	check_for_array_of_partition_table_types(&old_cluster);
 	check_partition_schemas();
 	check_large_objects();
+	check_invalid_indexes();
 }
 
 /*
@@ -1028,6 +1030,85 @@ check_large_objects(void)
 				 "by the new cluster and must be dropped.\n"
 				 "A list of databases which contains large objects is in the file:\n"
 				 "\t%s\n\n", output_path);
+	}
+	else
+		check_ok();
+}
+
+/*
+ * check_invalid_indexes
+ *
+ * Check if there are any invalid indexes and let the users know that.
+ * In greenplum, upgrade for bitmap and bpchar_pattern_ops indexes is not supported,
+ * these indexes are marked invalid during the upgrade of the master database, and are reset
+ * to valid state at the start of segment upgrade. Since, there is no way to identify what
+ * indexes are marked invalid by pg_upgrade vs what were already invalid in the source cluster,
+ * there is an expectation that the old cluster does not have any invalid index.
+ *
+ * Note: Indexes are marked invalid with CREATE INDEX CONCURRENTLY statement, however, its
+ * not supported in Greenplum, so we shouldn't have any invalid indexes in the source cluster
+ * to start with.
+ */
+static void
+check_invalid_indexes(void)
+{
+	char		output_path[MAXPGPATH];
+	FILE	   *script = NULL;
+	bool		found = false;
+	int			dbnum;
+	int			i_indexname;
+	int			i_relname;
+
+	prep_status("Checking for invalid indexes");
+
+	snprintf(output_path, sizeof(output_path), "invalid_indexes.txt");
+
+
+	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
+	{
+		PGresult   *res;
+		int			ntups;
+		int			rowno;
+		DbInfo	   *active_db = &old_cluster.dbarr.dbs[dbnum];
+		PGconn	   *conn;
+		bool		db_used = false;
+
+		conn = connectToServer(&old_cluster, active_db->db_name);
+		res = executeQueryOrDie(conn,
+								"SELECT indexrelid::pg_catalog.regclass indexname, indrelid::pg_catalog.regclass relname "
+								"FROM pg_catalog.pg_index i "
+								"WHERE i.indisvalid = false;");
+
+		ntups = PQntuples(res);
+
+		i_indexname = PQfnumber(res, "indexname");
+		i_relname = PQfnumber(res, "relname");
+		for (rowno = 0; rowno < ntups; rowno++)
+		{
+			found = true;
+			if (script == NULL && (script = fopen(output_path, "w")) == NULL)
+				pg_fatal("Could not create necessary file:  %s\n", output_path);
+			if (!db_used)
+			{
+				fprintf(script, "Database: %s\n", active_db->db_name);
+				db_used = true;
+			}
+			fprintf(script, "  %s on relation %s\n",
+					PQgetvalue(res, rowno, i_indexname),
+					PQgetvalue(res, rowno, i_relname));
+		}
+
+		PQclear(res);
+		PQfinish(conn);
+	}
+	if (found)
+	{
+		fclose(script);
+		pg_log(PG_REPORT, "fatal\n");
+		pg_fatal("Your installation contains invalid indexes.  These indexes either \n"
+			     "need to be dropped or reindexed before proceeding to upgrade.\n"
+			     "A list of invalid indexes is provided in the file:\n"
+		         "\t%s\n\n", output_path);
 	}
 	else
 		check_ok();

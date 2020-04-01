@@ -183,6 +183,8 @@ main(int argc, char **argv)
 		set_frozenxids(false);
 	}
 
+	invalidate_indexes();
+
 	/*
 	 * vacuum freeze the database before restoring the ao segment tables
 	 * catalog data on segments. The catalog copied from the master indicates
@@ -649,7 +651,6 @@ create_new_objects(void)
 
 	uninstall_support_functions_from_new_cluster();
 
-	after_create_new_objects_greenplum();
 }
 
 

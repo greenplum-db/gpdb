@@ -1,3 +1,6 @@
+-- start_matchignore
+-- m/^Checking.*\s+warning$/
+-- end_matchignore
 -- given: tables with distribution column type using abstime, reltime, tinterval, money
 -- when: upgrade check is performed
 -- then: fails listing the tables which have these columns
