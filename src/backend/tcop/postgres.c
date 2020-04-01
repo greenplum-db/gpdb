@@ -4448,7 +4448,7 @@ process_postgres_switches(int argc, char *argv[], GucContext ctx,
  * received, and is used to construct the error message.
  */
 static void
-check_forbidden_in_gpdb_handlers(char firstchar)
+check_forbidden_in_gpdb_handlers(int firstchar)
 {
 	if (am_ftshandler || IsFaultHandler)
 	{
