@@ -590,6 +590,8 @@ create table t_lockmods_ao1 (c int) with (appendonly=true) distributed randomly;
 
 -- 2.6 select for update NOWAIT/SKIP LOCKED
 -- with GDD, select for update could be optimized to not upgrade lock.
+1: set optimizer = off;
+2: set optimizer = off;
 1: begin;
 1: select * from t_lockmods where c<3 for share;
 2: select * from t_lockmods for share;

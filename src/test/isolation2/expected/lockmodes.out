@@ -1951,6 +1951,10 @@ ABORT
 
 -- 2.6 select for update NOWAIT/SKIP LOCKED
 -- with GDD, select for update could be optimized to not upgrade lock.
+1: set optimizer = off;
+SET
+2: set optimizer = off;
+SET
 1: begin;
 BEGIN
 1: select * from t_lockmods where c<3 for share;
