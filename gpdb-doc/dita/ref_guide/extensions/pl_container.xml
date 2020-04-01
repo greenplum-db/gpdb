@@ -7,6 +7,7 @@
     <p>This section includes the following information about PL/Container 1.1 and later:</p>
     <ul>
       <li id="pz219023"><xref href="#topic2" type="topic" format="dita"/></li>
+      <li><xref href="#topic_i31_3tr_dw" format="dita"/></li>
       <li><xref href="#topic_resmgmt" format="dita"/></li>
       <li>
         <xref href="#topic_tcm_htd_gw" format="dita"/></li>
@@ -22,14 +23,6 @@
       <li><xref href="#topic_ydt_rtc_rbb" format="dita"/></li>
       <li><xref href="#topic_kds_plk_rbb" format="dita"/></li>
     </ul>
-    <note otherprops="pivotal">The extension PL/Container 1.1 and later is installed by
-        <codeph>gppkg</codeph> as a Greenplum Database extension, while the extension PL/Container
-      1.0 is installed as a Greenplum Database language. To upgrade to PL/Container 1.1 or later
-      from PL/Container 1.0, you uninstall the old version and install the new version. See <xref
-        href="#topic_qbl_dkq_vcb" format="dita"/>.</note>
-    <note type="warning">PL/Container is compatible with Greenplum Database 5.2.0 and later.
-      PL/Container has not been tested for compatibility with Greenplum Database 5.1.0 or 5.0.0.
-    </note>
   </body>
   <topic id="topic2" xml:lang="en">
     <title id="pz217886">About the PL/Container Language Extension</title>
@@ -61,12 +54,68 @@
         the Greenplum Database session that started the container. A container running in standby
         mode has almost no consumption of CPU resources as it is waiting on the socket. PL/Container
         memory consumption depends on the amount of data you cache in global dictionaries.</p>
-      <note type="warning">PL/Container is not supported when Greenplum Database is run within a
-        Docker container.</note>
       <p>The PL/Container language extension is available as an open source module. For information
         about the module, see the README file in the GitHub repository at <xref
           href="https://github.com/greenplum-db/plcontainer" format="html" scope="external"
           >https://github.com/greenplum-db/plcontainer</xref>.</p>
+    </body>
+  </topic>
+  <topic id="topic_i31_3tr_dw">
+    <title>Requirements and Limitations</title>
+    <body>
+      <section>
+        <title>Requirements</title>
+        <p>These are requirements for running PL/Container with Greenplum Database:</p>
+        <ul id="ul_ztj_kzp_dw">
+          <li>PL/Container is supported with these Greenplum Database releases:<ul
+              id="ul_ccm_fqf_hkb">
+              <li>PL/Container 1.x is supported on Greenplum Database 5.2.x and later on Red Hat
+                Enterprise Linux (RHEL) 7.x (or later) and CentOS 7.x (or later). <note>PL/Container
+                  1.6.0 and later supports Docker images with Python 3 installed.</note></li>
+            </ul>
+            <note type="warning">PL/Container is not supported when Greenplum Database is run within
+              a Docker container. </note></li>
+          <li>For the Docker host RHEL 7.x and CentOS 7.x operating system, the minimum supported
+            Linux OS kernel version is 3.10.<p>You can check your kernel version with the command
+                <codeph>uname -r</codeph>.</p></li>
+        </ul>
+        <ul id="ul_b5j_kzp_dw">
+          <li>These are the minimum Docker versions that must be installed on Greenplum Database
+            hosts (master, primary and all standby hosts):<ul id="ul_z2t_bxd_rbb">
+              <li>For PL/Container versions up to 1.5.0 - Docker 17.05</li>
+              <li>For PL/Container 1.6.0 and later - Docker 19.03</li>
+            </ul><p>See <xref href="#topic_ydt_rtc_rbb" format="dita"/>.</p></li>
+          <li>On each Greenplum Database host, the <codeph>gpadmin</codeph> user should be part of
+            the <codeph>docker</codeph> group for the user to be able to manage Docker images and
+            containers.</li>
+        </ul>
+      </section>
+      <section>
+        <title>Limitations</title>
+        <p>These are PL/Container limitations:</p>
+        <ul id="ul_usf_l4f_hkb">
+          <li>Python and R call stack information is not displayed when debugging a UDF.</li>
+          <li>The <codeph>plpy.execute()</codeph> methods <codeph>nrows()</codeph> and
+              <codeph>status()</codeph> are not supported.</li>
+          <li>Multi-dimensional arrays are not supported.</li>
+          <li>The PL/Python function <codeph>plpy.SPIError()</codeph> is not supported.</li>
+          <li>Executing the <codeph>SAVEPOINT</codeph> command with <codeph>plpy.execute()</codeph>
+            is not supported.</li>
+          <li>Greenplum Database domains are not supported.</li>
+          <li>The <codeph>DO</codeph> command is not supported.</li>
+          <li>Only PL/Container 1.2.x and later can be managed by Greenplum Database resource
+            groups. Resource Groups are available in Greenplum Database 5.8.0 and later. See <xref
+              href="#topic_resmgmt" format="dita"/>.</li>
+          <li><codeph>OUT</codeph> parameters are not supported.</li>
+          <li>The Python <codeph>dict</codeph> type cannot be returned from a PL/Python UDF. When
+            returning the Python <codeph>dict</codeph> type from a UDF, you can convert the
+              <codeph>dict</codeph> type to a Greenplum Database user-defined data type (UDT).</li>
+          <li otherprops="pivotal"><!--Pivotal only -->You cannot upgrade from version 1.0 to 1.1 or
+            later with the <codeph>gppkg</codeph> utility <codeph>-u</codeph> option. You uninstall
+            version 1.0 and install the new version. See <xref href="#topic_qbl_dkq_vcb"
+              format="dita"/>.</li>
+        </ul>
+      </section>
     </body>
   </topic>
   <topic id="topic_resmgmt">
@@ -75,9 +124,10 @@
       <p>Greenplum Database runs PL/Container user-defined functions in Docker containers. The
         Docker containers and the Greenplum Database server share CPU and memory resources on the
         same hosts. In the default case, Greenplum Database is unaware of the resources consumed by
-        running PL/Container instances. In PL/Container version 1.2 and later, you can use Greenplum
-        Database resource groups to control overall CPU and memory resource usage for running
-        PL/Container instances, as described in the following section.</p>
+        running PL/Container instances. Using PL/Container 1.2 and later with Greenplum Database
+        5.8.0 and later, you can use Greenplum Database resource groups to control overall CPU and
+        memory resource usage for running PL/Container instances, as described in the following
+        section.</p>
       <p>PL/Container manages resource usage at two levels - the container level and the runtime
         level. You can control container-level CPU and memory resources with the
           <codeph>memory_mb</codeph> and <codeph>cpu_share</codeph> settings that you configure for
@@ -85,14 +135,14 @@
         to each container instance. The <codeph>cpu_share</codeph> setting identifies the relative
         weighting of a container's CPU usage compared to other containers. Refer to <xref
           href="#topic_ojn_r2s_dw" format="dita"/> for PL/Container configuration information.</p>
-      <p>You cannot by default restrict the number of executing PL/Container container instances,
+      <p>You cannot, by default, restrict the number of executing PL/Container container instances,
         nor can you restrict the total amount of memory or CPU resources that they consume.</p>
     </body>
     <topic id="topic_resgroup">
       <title>Using Resource Groups to Manage PL/Container Resources</title>
       <body>
-        <p>In PL/Container version 1.2.0 and later, you can use Greenplum Database resource groups
-          to manage and limit the total CPU and memory resources of containers in PL/Container
+        <p>With PL/Container 1.2.0 and later, you can use Greenplum Database resource groups to
+          manage and limit the total CPU and memory resources of containers in PL/Container
           runtimes. For more information about enabling, configuring, and using Greenplum Database
           resource groups, refer to <xref href="../../admin_guide/workload_mgmt_resgroups.xml"
             format="dita" scope="peer">Using Resource Groups</xref> in the <cite>Greenplum Database
@@ -154,11 +204,11 @@
       <body>
         <p>To use Greenplum Database resource groups to manage PL/Container resources, you must
           explicitly configure both resource groups and PL/Container.</p>
-        <note>PL/Container version 1.2 utilizes the new resource group capabilities introduced in
-          Greenplum Database version 5.8.0. If you downgrade to a Greenplum Database system that
-          uses PL/Container version 1.1. or earlier, you must use <codeph>plcontainer
-            runtime-edit</codeph> to remove any <codeph>resource_group_id</codeph> settings from
-          your PL/Container runtime configuration.</note>
+        <note>PL/Container 1.2 and later utilizes the new resource group capabilities introduced in
+          Greenplum Database 5.8.0. If you downgrade to a Greenplum Database system that uses
+          PL/Container 1.1. or earlier, you must use <codeph>plcontainer runtime-edit</codeph> to
+          remove any <codeph>resource_group_id</codeph> settings from your PL/Container runtime
+          configuration.</note>
       </body>
       <topic id="topic_resgroupcfg_proc">
         <title>Procedure</title>
@@ -222,57 +272,27 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
   <topic id="topic_tcm_htd_gw">
     <title>PL/Container Docker Images</title>
     <body>
-      <p>A PL/Python image and a PL/R image are available from the Greenplum Database product
-        download site of Pivotal Network at <xref
-          href="https://network.pivotal.io/products/pivotal-gpdb" format="html" scope="external"
-          >https://network.pivotal.io/</xref>.</p>
-      <ul id="ul_epg_t2v_qbb">
-        <li>PL/Container for Python - Docker image with Python 2.7.12 installed.<p>The Python Data
-            Science Module is also installed. The module contains a set python libraries related to
-            data science. <ph otherprops="pivotal">For information about the module, see <xref
-                href="../../install_guide/install_python_dsmod.xml" format="dita" scope="peer"
-                >Python Data Science Module Package</xref>.</ph></p></li>
-      </ul>
-      <ul id="ul_fpg_t2v_qbb">
-        <li>PL/Container for R - A Docker image with container with R-3.3.3 installed. <p>The R Data
-            Science package is also installed. The package contains a set of R libraries related to
-            data science. <ph otherprops="pivotal">For information about the module, see <xref
-                href="../../install_guide/install_r_dslib.xml" format="dita" scope="peer">R Data
-                Science Library Package</xref>.</ph></p></li>
-      </ul>
-      <p>The Docker image tag represents the PL/Container release version (for example, 1.0.0). For
+      <p>PL/Python and PL/R image are available from the Greenplum Database product download site of
+        Pivotal Network at <xref href="https://network.pivotal.io/products/pivotal-gpdb"
+          format="html" scope="external">https://network.pivotal.io/</xref>.<ul id="ul_epg_t2v_qbb">
+          <li>PL/Container for Python 3 - Docker image with Python 3.7 and the Python Data Science
+            Module package installed. <note>PL/Container 1.6.0 and later supports Docker images with
+              Python 3 installed.</note></li>
+          <li>PL/Container for Python 2 - Docker image with Python 2.7.12 and the Python Data
+            Science Module package installed.</li>
+          <li>PL/Container for R - A Docker image with container with R-3.3.3 and the R Data Science
+            Library package installed. </li>
+        </ul></p>
+      <p>The Data Science packages contain a set of Python modules or R functions and data sets
+        related to data science. For information about the packages, see <xref
+          href="../../install_guide/install_python_dsmod.xml" format="dita" scope="peer">Python Data
+          Science Module Package</xref> and <xref href="../../install_guide/install_r_dslib.xml"
+          format="dita" scope="peer">R Data Science Library Package</xref>.</p>
+      <p>The Docker image tag represents the PL/Container release version (for example, 1.6.0). For
         example, the full Docker image name for the PL/Container for Python Docker image is similar
-        to <codeph>pivotaldata/plc_python_shared:1.0.0</codeph>. This is the name that is referred
-        to in the default PL/Container configuration. Also, You can create custom Docker images,
+        to <codeph>pivotaldata/plc_python_shared:1.6.0</codeph>. This is the name that is referred
+        to in the default PL/Container configuration. Also, you can create custom Docker images,
         install the image and add the image to the PL/Container configuration. </p>
-    </body>
-  </topic>
-  <topic id="topic_i31_3tr_dw">
-    <title>Prerequisites</title>
-    <body>
-      <p>Ensure your Greenplum Database system meets the following prerequisites:</p>
-      <ul id="ul_ztj_kzp_dw">
-        <li>PL/Container is supported on <ph otherprops="pivotal">Pivotal </ph>Greenplum Database
-          5.2.x on Red Hat Enterprise Linux (RHEL) 7.x (or later) and CentOS 7.x (or later).<note
-            id="plc-issue">PL/Container is not supported on RHEL/CentOS 6.x systems, because those
-            platforms do not officially support Docker.</note></li>
-        <li>These are Docker host operating system prerequisites.<p>RHEL or CentOS 7.x - Minimum
-            supported Linux OS kernel version is 3.10. RHEL 7.x and CentOS 7.x use this kernel
-            version.</p><p>You can check your kernel version with the command <codeph>uname
-              -r</codeph></p>
-          <note>The Red Hat provided, maintained, and supported version of Docker is only available
-            on RHEL 7. Docker feature developments are tied to RHEL7.x infrastructure components for
-            kernel, devicemapper (thin provisioning, direct lvm), sVirt and systemd.</note></li>
-      </ul>
-      <ul id="ul_b5j_kzp_dw">
-        <li>Docker is installed on Greenplum Database hosts (master, primary and all standby
-            hosts)<ul id="ul_z2t_bxd_rbb">
-            <li>For RHEL or CentOS 7.x - Docker 17.05</li>
-          </ul><p>See <xref href="#topic_ydt_rtc_rbb" format="dita"/>.</p></li>
-        <li>On each Greenplum Database host the <codeph>gpadmin</codeph> user should be part of the
-            <codeph>docker</codeph> group for the user to be able to manage Docker images and
-          containers.</li>
-      </ul>
     </body>
   </topic>
   <topic id="topic3" xml:lang="en">
@@ -303,7 +323,7 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
           <li>Make sure Greenplum Database is up and running. If not, bring it up with this
             command.<codeblock>gpstart -a</codeblock></li>
           <li>Run the package installation
-            command.<codeblock>gppkg -i plcontainer-1.1.0-rhel7-x86_64.gppkg</codeblock></li>
+            command.<codeblock>gppkg -i plcontainer-1.6.0-rhel7-x86_64.gppkg</codeblock></li>
           <li>Source the file
             <codeph>$GPHOME/greenplum_path.sh</codeph>.<codeblock>source $GPHOME/greenplum_path.sh</codeblock></li>
           <li>Restart Greenplum Database.<codeblock>gpstop -ra</codeblock></li>
@@ -327,11 +347,12 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
     <topic id="topic_qbl_dkq_vcb" otherprops="pivotal">
       <title>Upgrading from PL/Container 1.0</title>
       <body>
-        <p>To upgrade to version 1.1 or higher, uninstall version 1.0 and install the new version.
-          The <codeph>gppkg</codeph> utility installs PL/Container version 1.1 and later as a
-          Greenplum Database extension, while PL/Container 1.0 is installed as a Greenplum Database
-          language. The Docker images and the PL/Container configuration do not change when
-          upgrading PL/Container, only the PL/Container extension installation changes.</p>
+        <p>To upgrade to PL/Container 1.1 or later, uninstall version 1.0 and install the new
+          version. You cannot use the <codeph>gppkg</codeph> option <codeph>-u</codeph>. The
+            <codeph>gppkg</codeph> utility installs PL/Container 1.1 and later as a Greenplum
+          Database extension, while PL/Container 1.0 is installed as a Greenplum Database language.
+          The Docker images and the PL/Container configuration do not change when upgrading
+          PL/Container, only the PL/Container extension installation changes.</p>
         <p>As part of the upgrade process, you must drop PL/Container from all databases that are
           configured with PL/Container.</p>
         <note type="important">Dropping PL/Container from a database drops all PL/Container UDFs
@@ -364,9 +385,9 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
                 <codeph>-r</codeph> option to uninstall the PL/Container language extension. This
               example uninstalls the PL/Container language extension on a Linux
               system.<codeblock>$ gppkg -r plcontainer-1.0.0</codeblock></li>
-            <li>Run the package installation command. This example installs the PL/Container 1.1
+            <li>Run the package installation command. This example installs the PL/Container 1.6.0
               language extension on a Linux
-              system.<codeblock>gppkg -i plcontainer-1.1.0-rhel7-x86_64.gppkg</codeblock></li>
+              system.<codeblock>gppkg -i plcontainer-1.6.0-rhel7-x86_64.gppkg</codeblock></li>
             <li>Source the file
               <codeph>$GPHOME/greenplum_path.sh</codeph>.<codeblock>source $GPHOME/greenplum_path.sh</codeblock></li>
             <li>Update the PL/Container configuration. This command restores the saved
@@ -387,9 +408,9 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
     <topic id="topic_upg110" otherprops="pivotal">
       <title>Upgrading from PL/Container 1.1</title>
       <body>
-        <p>To upgrade from PL/Container version 1.1 or higher, you save the current configuration,
-          upgrade PL/Container, and then restore the configuration after upgrade. There is no need
-          to update the Docker images when you upgrade PL/Container.</p>
+        <p>To upgrade from PL/Container 1.1 or higher, you save the current configuration, upgrade
+          PL/Container, and then restore the configuration after upgrade. There is no need to update
+          the Docker images when you upgrade PL/Container.</p>
         <note>Before you perform this upgrade procedure, ensure that you have migrated your
           PL/Container 1.1 package from your previous Greenplum Database installation to your new
           Greenplum Database installation. Refer to the <xref
@@ -403,8 +424,8 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
             <li>Use the Greenplum Database <codeph>gppkg</codeph> utility with the
                 <codeph>-u</codeph> option to update the PL/Container language extension. For
               example, the following command updates the PL/Container language extension to version
-              1.2 on a Linux
-              system:<codeblock>$ gppkg -u plcontainer-1.2.0-rhel7-x86_64.gppkg</codeblock></li>
+              1.6.0 on a Linux
+              system:<codeblock>$ gppkg -u plcontainer-1.6.0-rhel7-x86_64.gppkg</codeblock></li>
             <li>Source the Greenplum Database environment file
                 <codeph>$GPHOME/greenplum_path.sh</codeph>.<codeblock>$ source $GPHOME/greenplum_path.sh</codeblock></li>
             <li>Restore the PL/Container configuration. For example, this command restores the
@@ -412,16 +433,17 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
               <codeblock>$ plcontainer runtime-restore -f plcontainer110-backup.xml</codeblock></li>
             <li>Restart Greenplum Database.<codeblock>$ gpstop -ra</codeblock></li>
             <li>You do not need to re-register the PL/Container extension in the databases in which
-              you previously created the extension. Do register the PL/Container extension in each
-              new database that will run PL/Container UDFs. For example, the following command
-              registers PL/Container in a database named <codeph>mytest</codeph>: <codeblock>$ psql -d mytest -c 'CREATE EXTENSION plcontainer;'</codeblock>
-              <p>The command also creates PL/Container-specific functions and views.</p></li>
+              you previously created the extension. You must register the PL/Container extension in
+              each new database that will run PL/Container UDFs. For example, the following command
+              registers PL/Container in a database named <codeph>mytest</codeph>:
+                <codeblock>$ psql -d mytest -c 'CREATE EXTENSION plcontainer;'</codeblock><p>The
+                command also creates PL/Container-specific functions and views.</p></li>
           </ol></p>
-        <note>PL/Container version 1.2 utilizes the new resource group capabilities introduced in
-          Greenplum Database version 5.8.0. If you downgrade to a Greenplum Database system that
-          uses PL/Container version 1.1. or earlier, you must use <codeph>plcontainer
-            runtime-edit</codeph> to remove any <codeph>resource_group_id</codeph> settings from
-          your PL/Container runtime configuration.</note>
+        <note>PL/Container 1.2 and later utilizes the new resource group capabilities introduced in
+          Greenplum Database 5.8.0. If you downgrade to a Greenplum Database system that uses
+          PL/Container 1.1. or earlier, you must use <codeph>plcontainer runtime-edit</codeph> to
+          remove any <codeph>resource_group_id</codeph> settings from your PL/Container runtime
+          configuration.</note>
       </body>
     </topic>
     <topic id="topic_i2t_v2n_sbb" otherprops="oss-only">
@@ -430,7 +452,7 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
       <body>
         <p>The PL/Container language extension is available as an open source module. For
           information about the building and installing the module as part of Greenplum Database,
-          see the README file in the GitHub repository at <xref
+          see the <codeph>README</codeph> file in the GitHub repository at <xref
             href="https://github.com/greenplum-db/plcontainer" format="html" scope="external"
             >https://github.com/greenplum-db/plcontainer</xref>.</p>
       </body>
@@ -448,8 +470,9 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
       <p otherprops="pivotal">Download the <codeph>tar.gz</codeph> file that contains the Docker
         images from <xref href="https://network.pivotal.io/products/pivotal-gpdb" scope="external"
           format="html" class="- topic/xref ">Pivotal Network</xref>. <ul id="ul_vsj_pxb_tbb">
-          <li><codeph>plcontainer-python-images-1.5.0.tar.gz</codeph></li>
-          <li><codeph>plcontainer-r-images-1.5.0.tar.gz</codeph></li>
+          <li><codeph>plcontainer-python3-images-&lt;version>.tar.gz</codeph></li>
+          <li><codeph>plcontainer-python-images-&lt;version>.tar.gz</codeph></li>
+          <li><codeph>plcontainer-r-images-&lt;version>.tar.gz</codeph></li>
         </ul></p>
       <!--oss only conent-->
       <p otherprops="oss-only">The PL/Container open source module contains dockerfiles to build
@@ -469,7 +492,7 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
       <p>Use the <codeph>plcontainer image-list</codeph> command to display the installed Docker
         images on the local host.</p>
       <p>This command adds information to the PL/Container configuration file so that PL/Container
-        can access the Docker image to create a Docker
+        can access the Docker image that contains Python 2 to create a Docker
         container.<codeblock>plcontainer runtime-add -r plc_py -i pivotaldata/plcontainer_python_shared:devel -l python</codeblock></p>
       <p>The utility displays progress information as it updates the PL/Container configuration file
         on the Greenplum Database instances.</p>
@@ -515,10 +538,11 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
           <title>PL/Container 1.1 and Later</title>
           <p>For PL/Container 1.1 and later, drop the extension from the database. This
               <codeph>psql</codeph> command runs a <codeph>DROP EXTENION</codeph> command to remove
-            PL/Container in the database <codeph>mytest</codeph>.
-            <codeblock>psql -d mytest -c 'DROP EXTENSION plcontainer cascade;'</codeblock></p>
-          <p>The command drops the <codeph>plcontainer</codeph> extension and drops
-            PL/Container-specific functions and views from the database.</p>
+            PL/Container in the database
+            <codeph>mytest</codeph>.<codeblock>psql -d mytest -c 'DROP EXTENSION plcontainer CASCADE;'</codeblock></p>
+          <p>The command drops the <codeph>plcontainer</codeph> extension. The
+              <codeph>CASCADE</codeph> keyword drops PL/Container-specific functions and views from
+            the database.</p>
         </section>
         <section>
           <title>PL/Container 1.0</title>
@@ -542,7 +566,7 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
           <li>Use the Greenplum Database <codeph>gppkg</codeph> utility with the <codeph>-r</codeph>
             option to uninstall the PL/Container language extension. This example uninstalls the
             PL/Container language extension on a Linux
-              system:<codeblock>$ gppkg -r plcontainer-1.1.0</codeblock><p>You can run the
+              system:<codeblock>$ gppkg -r plcontainer-1.6.0</codeblock><p>You can run the
                 <codeph>gppkg</codeph> utility with the options <codeph>-q --all</codeph> to list
               the installed extensions and their versions.</p></li>
           <li>Reload
@@ -641,8 +665,8 @@ gp_segment_id | plcontainer_show_local_config
           configuring PL/Container and viewing the configuration settings, see <xref
             href="#topic_sk1_gdq_dw" format="dita"/>.</p>
         <p>This is an example of PL/Python function that runs using the
-            <codeph>plc_python_shared</codeph>
-          container:<codeblock>CREATE OR REPLACE FUNCTION pylog100() RETURNS double precision AS $$
+            <codeph>plc_python_shared</codeph> container that contains Python
+          2:<codeblock>CREATE OR REPLACE FUNCTION pylog100() RETURNS double precision AS $$
 # container: plc_python_shared
 import math
 return math.log10(100)
@@ -693,8 +717,8 @@ $$ LANGUAGE plcontainer;</codeblock></p>
           documentation for additional information about
           <codeph>plpy.subtransaction()</codeph>.</li>
       </ul>
-      <p>If an error of level ERROR or FATAL is raised in a nested Python function call, the message
-        includes the list of enclosing functions.</p>
+      <p>If an error of level <codeph>ERROR</codeph> or <codeph>FATAL</codeph> is raised in a nested
+        Python function call, the message includes the list of enclosing functions.</p>
       <p>The Python language container supports these string quoting functions that are useful when
         constructing ad-hoc queries. <ul id="ul_jwf_nd2_kfb">
           <li><codeph>plpy.quote_literal(string)</codeph> - Returns the string quoted to be used as
@@ -740,8 +764,8 @@ $$ LANGUAGE plcontainer;</codeblock></p>
         contains these methods:</p>
       <ul id="ul_mqz_t3q_dw">
         <li><codeph>pg.spi.exec(stmt)</codeph> - Executes the query string <codeph>stmt</codeph> and
-          returns query result in R data.frame. To be able to access the result fields make sure
-          your query returns named fields.</li>
+          returns query result in R <codeph>data.frame</codeph>. To be able to access the result
+          fields make sure your query returns named fields.</li>
         <li><codeph>pg.spi.prepare(stmt[, argtypes])</codeph> - Prepares the execution plan for a
           query. It is called with a query string and a list of parameter types if you have
           parameter references in the query.</li>
@@ -886,13 +910,16 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                     information including the name and tag (the Repository and Tag columns).</pd>
                 </plentry>
                 <plentry>
-                  <pt>{-l | --language} python | r</pt>
+                  <pt>{-l | --language} python | python3 | r</pt>
                   <pd>Required. Specify the PL/Container language type, supported values are
-                      <codeph>python</codeph> (PL/Python) and <codeph>r</codeph> (PL/R). When adding
+                      <codeph>python</codeph> (PL/Python using Python 2), <codeph>python3</codeph>
+                    (PL/Python using Python 3) and <codeph>r</codeph> (PL/R). When adding
                     configuration information for a new runtime, the utility adds a startup command
                     to the configuration based on the language you specify.</pd>
-                  <pd>Startup command for the Python
+                  <pd>Startup command for the Python 2
                     language.<codeblock>/clientdir/pyclient.sh</codeblock></pd>
+                  <pd>Startup command for the Python 3
+                    language.<codeblock>/clientdir/pyclient3.sh</codeblock></pd>
                   <pd>Startup command for the R
                     language.<codeblock>/clientdir/rclient.sh</codeblock></pd>
                 </plentry>
@@ -1190,8 +1217,10 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                     element, the <codeph>plcontainer</codeph> utility adds a
                       <codeph>command</codeph> element based on the language (the
                       <codeph>-l</codeph> option).</pd>
-                  <pd><codeph>command</codeph> element for the python
+                  <pd><codeph>command</codeph> element for the Python 2
                     language.<codeblock>&lt;command>/clientdir/pyclient.sh&lt;/command></codeblock></pd>
+                  <pd><codeph>command</codeph> element for the Python 3
+                    language.<codeblock>&lt;command>/clientdir/pyclient3.sh&lt;/command></codeblock></pd>
                   <pd><codeph>command</codeph> element for the R
                     language.<codeblock>&lt;command>/clientdir/rclient.sh&lt;/command></codeblock></pd>
                   <pd>You should modify the value only if you build a custom container and want to
@@ -1448,7 +1477,7 @@ $$ LANGUAGE plcontainer;</codeblock></p>
           >https://docs.docker.com/engine/reference/run/</xref>.</p>
       <section>
         <title>Installing Docker on CentOS 7</title>
-        <p>These steps install the docker package and start the docker service as a user with sudo
+        <p>These steps install the Docker package and start the Docker service as a user with sudo
           privileges.</p>
         <ol id="ol_e4g_sb2_rbb">
           <li>Install dependencies required for
@@ -1459,7 +1488,7 @@ $$ LANGUAGE plcontainer;</codeblock></p>
           <li>Install Docker<codeblock>sudo yum -y install docker-ce</codeblock></li>
           <li>Start Docker daemon.<codeblock>sudo systemctl start docker</codeblock></li>
           <li>To give access to the Docker daemon and docker commands, assign the Greenplum Database
-            administrator (gpadmin) to the group
+            administrator (<codeph>gpadmin</codeph>) to the group
             <codeph>docker</codeph>.<codeblock>sudo usermod -aG docker gpadmin</codeblock></li>
           <li>Exit the session and login again to update the privileges.</li>
           <li>Run a Docker command to test the Docker installation. This command lists the currently
@@ -1512,6 +1541,10 @@ $$ LANGUAGE plcontainer;</codeblock></p>
       <p>Control and configure Docker with systemd <xref
           href="https://docs.docker.com/engine/admin/systemd/" format="html" scope="external"
           >https://docs.docker.com/engine/admin/systemd/</xref></p>
+      <p>Changes to Python <xref href="https://docs.python.org/3/whatsnew/index.html" format="html"
+          scope="external">What’s New in Python</xref></p>
+      <p>Porting from Python 2 to 3 <xref href="https://docs.python.org/3/howto/pyporting.html"
+          format="html" scope="external">Porting Python 2 Code to Python 3</xref></p>
     </body>
   </topic>
 </topic>
