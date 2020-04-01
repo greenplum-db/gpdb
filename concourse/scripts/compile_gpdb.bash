@@ -1,4 +1,4 @@
-#!/bin/bash -l
+#!/bin/bash
 set -exo pipefail
 
 GREENPLUM_INSTALL_DIR=/usr/local/greenplum-db-devel
