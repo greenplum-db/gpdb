@@ -1,0 +1,61 @@
+--
+-- external tables - short and simple functional tests.
+--
+-- start_matchsubs
+--
+-- # replace return code in error message (platform specific)
+--
+-- m/ERROR\:\s+external table .* command ended with .* not found/
+-- s/nosuchcommand\:\s*(command)? not found/nosuchcommand\: NOT FOUND/
+--
+-- m/ERROR\:\s+external table .* command ended with .*No such file.*/
+-- s/nosuchfile\.txt\:\s*No such file (or directory)?/nosuchfile\.txt\: NO SUCH FILE/
+-- m/ERROR\:\s+external table .* command ended with .*No such file.*/i
+-- s/cat\: (cannot open)? nosuchfile\.txt/cat\: nosuchfile\.txt/
+--
+-- # remove line number - redhat
+-- m/ERROR\:\s+external table .* command ended with .*NOT FOUND.*/i
+-- s/\s+line \d+\://
+-- # remove line number - Debian
+-- m/ERROR\:\s+external table .* command ended with .*sh: 1: .*NOT FOUND.*/i
+-- s/ sh: 1: / sh: /
+--
+-- m/DETAIL:  Found \d+ URLs and \d+ primary segments./
+-- s/Found.+//
+--
+-- end_matchsubs
+
+-- start_ignore
+DROP EXTERNAL TABLE IF EXISTS ext_transform;
+DROP EXTERNAL TABLE IF EXISTS ext_transform_set_returns;
+
+CREATE TEMP TABLE fromtbl1 (a text, b json, c json);
+CREATE TEMP TABLE fromtbl2 (a int, b int);
+-- end_ignore
+
+COPY (VALUES('1,2'),('5,10'),('1,100')) TO '@abs_srcdir@/data/transformset.csv';
+
+CREATE EXTERNAL TABLE ext_transform (exists boolean)
+LOCATION (
+    'file://@hostname@@abs_srcdir@/data/exttab_transform.csv'
+)
+FORMAT 'CSV'
+OPTIONS (transform_from 'fromtbl1', transform_expression '($1->>1)::boolean', transform_arguments '2')
+LOG ERRORS SEGMENT REJECT LIMIT 5;
+
+SELECT * FROM ext_transform;
+SELECT relname, linenum, errmsg FROM gp_read_error_log('ext_transform');
+
+CREATE EXTERNAL TABLE ext_transform_set_returns (a int)
+LOCATION (
+    'file://@hostname@@abs_srcdir@/data/transformset.csv'
+)
+FORMAT 'CSV'
+OPTIONS (transform_from 'fromtbl2', transform_expression 'generate_series($1, $2)', transform_arguments '1,2')
+LOG ERRORS SEGMENT REJECT LIMIT 5;
+
+SELECT * FROM ext_transform_set_returns;
+SELECT relname, linenum, errmsg FROM gp_read_error_log('ext_transform_set_returns');
+
+\! rm @abs_srcdir@/data/transformset.csv
+

@@ -40,6 +40,7 @@
 #include "access/fileam.h"
 #include "access/formatter.h"
 #include "access/heapam.h"
+#include "access/transformer.h"
 #include "access/valid.h"
 #include "catalog/pg_exttable.h"
 #include "catalog/pg_proc.h"
@@ -69,8 +70,7 @@ static void InitParseState(CopyState pstate, Relation relation,
 			   bool writable,
 			   char fmtType,
 			   char *uri, int rejectlimit,
-			   bool islimitinrows, char logerrors,
-			   List *options);
+			   bool islimitinrows, char logerrors);
 
 static void FunctionCallPrepareFormatter(FunctionCallInfoData *fcinfo,
 							 int nArgs,
@@ -97,7 +97,6 @@ static void base16_encode(char *raw, int len, char *encoded);
 static char *get_eol_delimiter(List *params);
 static void external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape,
 				 char *quote, int eol_type, bool header, uint32 scancounter, List *params);
-
 
 /* ----------------------------------------------------------------
 *				   external_ interface functions
@@ -168,6 +167,7 @@ external_beginscan(Relation relation, uint32 scancounter,
 	{
 		scan->fs_hasConstraints = false;
 	}
+	scan->transformer = initTransformerInfo(extOptions);
 
 
 	/*
@@ -285,7 +285,8 @@ external_beginscan(Relation relation, uint32 scancounter,
 	/*
 	 * Allocate and init our structure that keeps track of data parsing state
 	 */
-	scan->fs_pstate = BeginCopyFrom(relation, NULL, false,
+	scan->fs_pstate = BeginCopyFrom(scan->transformer ? scan->transformer->fromrel : relation,
+									NULL, false,
 									external_getdata_callback,
 									(void *) scan,
 									NIL,
@@ -293,7 +294,7 @@ external_beginscan(Relation relation, uint32 scancounter,
 
 	/* Initialize all the parsing and state variables */
 	InitParseState(scan->fs_pstate, relation, false, fmtType,
-				   scan->fs_uri, rejLimit, rejLimitInRows, logErrors, extOptions);
+				   scan->fs_uri, rejLimit, rejLimitInRows, logErrors);
 
 	if (fmttype_is_custom(fmtType))
 	{
@@ -377,6 +378,11 @@ external_endscan(FileScanDesc scan)
 	{
 		pfree(scan->typioparams);
 		scan->typioparams = NULL;
+	}
+	if (scan->transformer)
+	{
+		freeTransformerInfo(scan->transformer);
+		scan->transformer = NULL;
 	}
 
 	if (scan->fs_pstate != NULL && scan->fs_pstate->rowcontext != NULL)
@@ -632,8 +638,7 @@ external_insert_init(Relation rel)
 				   extInsertDesc->ext_uri,
 				   extentry->rejectlimit,
 				   (extentry->rejectlimittype == 'r'),
-				   extentry->logerrors,
-				   extentry->options);
+				   extentry->logerrors);
 
 	if (fmttype_is_custom(extentry->fmtcode))
 	{
@@ -796,65 +801,6 @@ pstate->line_buf.len = 0; \
 pstate->line_buf.data[0] = '\0'; \
 pstate->line_buf.cursor = 0;
 
-/*
- * A data error happened. This code block will always be inside a PG_CATCH()
- * block right when a higher stack level produced an error. We handle the error
- * by checking which error mode is set (SREH or all-or-nothing) and do the right
- * thing accordingly. Note that we MUST have this code in a macro (as opposed
- * to a function) as elog_dismiss() has to be inlined with PG_CATCH in order to
- * access local error state variables.
- */
-#define FILEAM_HANDLE_ERROR \
-if (pstate->errMode == ALL_OR_NOTHING) \
-{ \
-	/* re-throw error and abort */ \
-	PG_RE_THROW(); \
-} \
-else \
-{ \
-	/* SREH - release error state */ \
-\
-	ErrorData	*edata; \
-	MemoryContext oldcontext;\
-\
-	/* SREH must only handle data errors. all other errors must not be caught */\
-	if(ERRCODE_TO_CATEGORY(elog_geterrcode()) != ERRCODE_DATA_EXCEPTION)\
-	{\
-		PG_RE_THROW(); \
-	}\
-\
-	/* save a copy of the error info */ \
-	oldcontext = MemoryContextSwitchTo(pstate->cdbsreh->badrowcontext);\
-	edata = CopyErrorData();\
-	MemoryContextSwitchTo(oldcontext);\
-\
-	if (!elog_dismiss(DEBUG5)) \
-		PG_RE_THROW(); /* <-- hope to never get here! */ \
-\
-	truncateEol(&pstate->line_buf, pstate->eol_type); \
-	pstate->cdbsreh->rawdata = pstate->line_buf.data; \
-	pstate->cdbsreh->is_server_enc = pstate->line_buf_converted; \
-	pstate->cdbsreh->linenumber = pstate->cur_lineno; \
-	pstate->cdbsreh->processed++; \
-\
-	/* set the error message. Use original msg and add column name if available */ \
-	if (pstate->cur_attname)\
-	{\
-		pstate->cdbsreh->errmsg = psprintf("%s, column %s", \
-				edata->message, \
-				pstate->cur_attname); \
-	}\
-	else\
-	{\
-		pstate->cdbsreh->errmsg = pstrdup(edata->message); \
-	}\
-\
-	HandleSingleRowError(pstate->cdbsreh); \
-	FreeErrorData(edata);\
-	if (!IsRejectLimitReached(pstate->cdbsreh)) \
-		pfree(pstate->cdbsreh->errmsg); \
-}
-
 static HeapTuple
 externalgettup_defined(FileScanDesc scan)
 {
@@ -869,8 +815,8 @@ externalgettup_defined(FileScanDesc scan)
 	/* Get a line */
 	if (!NextCopyFrom(pstate,
 					  NULL,
-					  scan->values,
-					  scan->nulls,
+					  scan->transformer ? scan->transformer->values : scan->values,
+					  scan->transformer ? scan->transformer->nulls : scan->nulls,
 					  &loaded_oid))
 	{
 		MemoryContextSwitchTo(oldcontext);
@@ -886,7 +832,9 @@ externalgettup_defined(FileScanDesc scan)
 	 * whether we need heaptuple or memtuple upstream, so make the
 	 * right decision here.
 	 */
-	tuple = heap_form_tuple(scan->fs_tupDesc, scan->values, scan->nulls);
+	tuple = heap_form_tuple(scan->transformer ? scan->transformer->tupledesc : scan->fs_tupDesc,
+							scan->transformer ? scan->transformer->values : scan->values,
+							scan->transformer ? scan->transformer->nulls : scan->nulls);
 
 	return tuple;
 }
@@ -934,7 +882,11 @@ externalgettup_custom(FileScanDesc scan)
 			{
 				FunctionCallInfoData fcinfo;
 
-				/* per call formatter prep */
+				/*
+				 * per call formatter prep
+				 * Not replace the relation with scan->transformer->fromrel in case the formatter
+				 * want the external table relation info.
+				 */
 				FunctionCallPrepareFormatter(&fcinfo,
 						0,
 						pstate,
@@ -942,9 +894,9 @@ externalgettup_custom(FileScanDesc scan)
 						scan->fs_custom_formatter_params,
 						formatter,
 						scan->fs_rd,
-						scan->fs_tupDesc,
-						scan->in_functions,
-						scan->typioparams);
+						scan->transformer ? scan->transformer->tupledesc : scan->fs_tupDesc,
+						scan->transformer ? scan->transformer->in_functions : scan->in_functions,
+						scan->transformer ? scan->transformer->typioparams : scan->typioparams);
 				(void) FunctionCallInvoke(&fcinfo);
 
 			}
@@ -957,7 +909,7 @@ externalgettup_custom(FileScanDesc scan)
 				/*
 				 * Save any bad row information that was set by the user
 				 * in the formatter UDF (if any). Then handle the error in
-				 * FILEAM_HANDLE_ERROR.
+				 * HANDLE_DATA_ERROR.
 				 */
 				pstate->cur_lineno = formatter->fmt_badrow_num;
 				resetStringInfo(&pstate->line_buf);
@@ -977,7 +929,7 @@ externalgettup_custom(FileScanDesc scan)
 					}
 				}
 
-				FILEAM_HANDLE_ERROR;
+				HANDLE_DATA_ERROR(pstate);
 				FlushErrorState();
 
 				MemoryContextSwitchTo(oldctxt);
@@ -1071,10 +1023,26 @@ externalgettup(FileScanDesc scan,
 
 	error_context_stack = &externalscan_error_context;
 
-	if (!custom)
-		tup = externalgettup_defined(scan); /* text/csv */
-	else
-		tup = externalgettup_custom(scan);  /* custom */
+	if (scan->transformer)
+		tup = retrieveTransformedTuple(scan->transformer);
+
+	if (!tup)
+	{
+		while(true)
+		{
+			bool errskipped = false;
+			if (!custom)
+				tup = externalgettup_defined(scan); /* text/csv */
+			else
+				tup = externalgettup_custom(scan);  /* custom */
+
+			if (scan->transformer && tup)
+				tup = executeTupleTransform(scan->transformer, tup, scan->fs_pstate, &errskipped);
+			if (errskipped)
+				continue;
+			break;
+		}
+	}
 
 	/* Restore the previous error callback */
 	error_context_stack = externalscan_error_context.previous;
@@ -1151,8 +1119,7 @@ InitParseState(CopyState pstate, Relation relation,
 			   bool iswritable,
 			   char fmtType,
 			   char *uri, int rejectlimit,
-			   bool islimitinrows, char logerrors,
-			   List *options)
+			   bool islimitinrows, char logerrors)
 {
 	/*
 	 * Error handling setup
@@ -1181,7 +1148,7 @@ InitParseState(CopyState pstate, Relation relation,
 		pstate->cdbsreh = makeCdbSreh(rejectlimit,
 									  islimitinrows,
 									  uri,
-									  (char *) pstate->cur_relname,
+									  RelationGetRelationName(relation),
 									  logerrors);
 
 		pstate->cdbsreh->relid = RelationGetRelid(relation);
@@ -2286,3 +2253,68 @@ appendCopyEncodingOption(List *copyFmtOpts, int encoding)
 {
 	return lappend(copyFmtOpts, makeDefElem("encoding", (Node *)makeString((char *)pg_encoding_to_char(encoding))));
 }
+
+/*
+ * parseTransformFromRel
+ *
+ * Parse "transform_from" relation oid for transformer.
+ */
+Oid
+parseTransformFromRel(char *relname)
+{
+	RangeVar   *relrv;
+	Oid			relid;
+	AclResult	aclresult;
+
+	relrv = makeRangeVarFromNameList(stringToQualifiedNameList(relname));
+	relid = RangeVarGetRelid(relrv, NoLock, true);
+
+	if (OidIsValid(relid))
+	{
+		aclresult = pg_class_aclcheck(relid, GetUserId(), ACL_SELECT);
+		if (aclresult != ACLCHECK_OK)
+			aclcheck_error(aclresult, ACL_KIND_CLASS, relrv->relname);
+	}
+	else
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+				 errmsg("Relation in 'transform_from' '%s' does not exist.", relname)));
+	}
+
+	return relid;
+}
+
+/*
+ * parseTransformArguments
+ *
+ * Parse "transform_arguments" values for transformer.
+ */
+List *
+parseTransformArguments(char *argstr)
+{
+	List	   *args = NIL;
+	char	   *token;
+	const char *whitespace = " \t\n\r,";
+	char		nonstd_backslash = 0;
+	int			encoding = GetDatabaseEncoding();
+
+	token = strtokx2(argstr, whitespace, NULL, NULL,
+					 0, false, true, encoding);
+
+	while(token)
+	{
+		int res = atoi(token);
+		if (res == 0)
+			ereport(ERROR,
+				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+				 errmsg("'transform_argumnts' should be integer value and start from 1.")));
+		args = lappend_int(args, res);
+
+		token = strtokx2(NULL, whitespace, NULL, NULL,
+						nonstd_backslash, true, true, encoding);
+	}
+
+	return args;
+}
+

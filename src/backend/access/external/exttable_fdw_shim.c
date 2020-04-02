@@ -25,10 +25,12 @@
 #include "access/exttable_fdw_shim.h"
 #include "access/fileam.h"
 #include "access/relscan.h"
+#include "access/transformer.h"
 #include "cdb/cdbsreh.h"
 #include "cdb/cdbvars.h"
 #include "catalog/pg_exttable.h"
 #include "catalog/pg_foreign_server.h"
+#include "commands/defrem.h"
 #include "foreign/fdwapi.h"
 #include "nodes/execnodes.h"
 #include "nodes/relation.h"
@@ -549,6 +551,100 @@ exttable_fdw_handler(PG_FUNCTION_ARGS)
 };
 
 
+/*
+ * ValidateExtTableOptions
+ *
+ * Validate external options. Since the options are stored in pg_exttable catalog
+ * not pg_foreign_table, so no need to create fdw validate handler.
+ *
+ * We'll move the external table's options into pg_foreign_table.
+ * So this function will be replaced by fdw validator.
+ *
+ * Since for GPDB 5 and 6, we store LOG ERRORS PERSISTENTLY in
+ * pg_exttable catalog options as error_log_persistent. If user dump the DDL,
+ * we could load from optons.
+ */
+void
+validate_exttable_options(List *options, bool iswritable)
+{
+	ListCell   *cell;
+	bool		logPersistent = false;
+	Oid			reloid = InvalidOid;
+	char	   *expression = NULL;
+	List	   *arguments = NIL;
+	bool		handleAllError  = false;
+	bool		alreadyExist = false;
+	bool		checkTransformer = false;
+
+	foreach(cell, options)
+	{
+		DefElem    *def = (DefElem *) lfirst(cell);
+		if (strcmp(def->defname, "error_log_persistent") == 0)
+		{
+			if (logPersistent)
+				alreadyExist = true;
+			else
+			{
+				/* these accept only boolean values */
+				(void) defGetBoolean(def);
+				logPersistent = true;
+			}
+		}
+		else if (strcmp(def->defname, "transform_from") == 0)
+		{
+			checkTransformer = true;
+			if (OidIsValid(reloid))
+				alreadyExist = true;
+			else
+				reloid =  parseTransformFromRel(defGetString(def));
+		}
+		else if (strcmp(def->defname, "transform_expression") == 0)
+		{
+			checkTransformer = true;
+			if (expression)
+				alreadyExist = true;
+			else
+				expression = defGetString(def);
+		}
+		else if (strcmp(def->defname, "transform_arguments") == 0)
+		{
+			checkTransformer = true;
+			if (arguments)
+				alreadyExist = true;
+			else
+				arguments = parseTransformArguments(defGetString(def));
+		}
+		else if (strcmp(def->defname, "transform_handle_error") == 0)
+		{
+			checkTransformer = true;
+			if (handleAllError)
+				alreadyExist = true;
+			else
+				handleAllError = defGetBoolean(def);
+		}
+
+		if (checkTransformer && iswritable)
+			ereport(ERROR,
+					(errcode(ERRCODE_SYNTAX_ERROR),
+					errmsg("'transform_*' options only work with readable external table.")));
+
+		if (alreadyExist)
+			ereport(ERROR,
+					(errcode(ERRCODE_SYNTAX_ERROR),
+					errmsg("%s shows more than once", def->defname)));
+
+	}
+
+	if (checkTransformer)
+	{
+		if (!OidIsValid(reloid) || !expression || !arguments)
+			ereport(ERROR,
+					(errcode(ERRCODE_SYNTAX_ERROR),
+					errmsg("'transform_from', 'transform_expression', "
+						   "'transform_arguments' should be provided at the same time "
+						   "when any 'transform_*' options provided.")));
+	}
+}
 
 static List *
 create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)

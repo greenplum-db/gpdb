@@ -1,0 +1,8 @@
+array,"[""zero"", ""one"",""two"",null,""four"",""five"", [1,2,3],{""f1"":9}]","""a scalar"""
+array,"[""zero"", ""t""]","[""a"", ""a""]"
+scalar,"""a scalar""","[""a"", ""a""]"
+object,"{""field1"":""val1"", ""field2"": 4, ""field3"": [1,2,3], ""field4"": {""f1"":9}}"
+array,"[""zero"", ""one"",""two"",null,""four"",""five"", [1,2,3],{""f1"":9}]","""a scalar"""
+array,"[""zero"", ""t""]","[""a"", ""t""]"
+scalar,"""a scalar""","[""a"", ""a""]"
+object,"{""field1"":""val1"", ""field2"": 4, ""field3"": [1,2,3], ""field4"": {""f1"":9}}"

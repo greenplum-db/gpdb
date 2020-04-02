@@ -19,6 +19,7 @@
 #include "nodes/plannodes.h"
 
 extern Datum exttable_fdw_handler(PG_FUNCTION_ARGS);
+extern void validate_exttable_options(List *options, bool iswritable);
 
 extern ForeignScan *create_foreignscan_for_external_table(Oid relid, Index scanrelid, List *qual, List *targetlist);
 

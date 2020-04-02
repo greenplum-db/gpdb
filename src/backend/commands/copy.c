@@ -4958,7 +4958,7 @@ NextCopyFrom(CopyState cstate, ExprContext *econtext,
  * to a function) as elog_dismiss() has to be inlined with PG_CATCH in order to
  * access local error state variables.
  *
- * changing me? take a look at FILEAM_HANDLE_ERROR in fileam.c as well.
+ * changing me? take a look at HANDLE_DATA_ERROR in fileam.h as well.
  */
 static void
 HandleCopyError(CopyState cstate)

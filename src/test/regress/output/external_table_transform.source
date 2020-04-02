@@ -1,0 +1,179 @@
+--
+-- external tables - short and simple functional tests.
+--
+-- start_matchsubs
+--
+-- # replace return code in error message (platform specific)
+--
+-- m/ERROR\:\s+external table .* command ended with .* not found/
+-- s/nosuchcommand\:\s*(command)? not found/nosuchcommand\: NOT FOUND/
+--
+-- m/ERROR\:\s+external table .* command ended with .*No such file.*/
+-- s/nosuchfile\.txt\:\s*No such file (or directory)?/nosuchfile\.txt\: NO SUCH FILE/
+-- m/ERROR\:\s+external table .* command ended with .*No such file.*/i
+-- s/cat\: (cannot open)? nosuchfile\.txt/cat\: nosuchfile\.txt/
+--
+-- # remove line number - redhat
+-- m/ERROR\:\s+external table .* command ended with .*NOT FOUND.*/i
+-- s/\s+line \d+\://
+-- # remove line number - Debian
+-- m/ERROR\:\s+external table .* command ended with .*sh: 1: .*NOT FOUND.*/i
+-- s/ sh: 1: / sh: /
+--
+-- m/DETAIL:  Found \d+ URLs and \d+ primary segments./
+-- s/Found.+//
+--
+-- end_matchsubs
+COPY (VALUES('1,2'),('5,10'),('1,100')) TO '@abs_srcdir@/data/transformset.csv';
+CREATE EXTERNAL TABLE ext_transform (exists boolean)
+LOCATION (
+    'file://@hostname@@abs_srcdir@/data/exttab_transform.csv'
+)
+FORMAT 'CSV'
+OPTIONS (transform_from 'fromtbl1', transform_expression '($1->>1)::boolean', transform_arguments '2')
+LOG ERRORS SEGMENT REJECT LIMIT 5;
+SELECT * FROM ext_transform;
+NOTICE:  found 4 data formatting errors (4 or more input rows), rejected related input data
+ exists 
+--------
+ t
+ 
+ t
+ 
+(4 rows)
+
+SELECT relname, linenum, errmsg FROM gp_read_error_log('ext_transform');
+    relname    | linenum |                    errmsg                    
+---------------+---------+----------------------------------------------
+ ext_transform |       1 | invalid input syntax for type boolean: "one"
+ ext_transform |       4 | missing data for column "c"
+ ext_transform |       5 | invalid input syntax for type boolean: "one"
+ ext_transform |       8 | missing data for column "c"
+(4 rows)
+
+CREATE EXTERNAL TABLE ext_transform_set_returns (a int)
+LOCATION (
+    'file://@hostname@@abs_srcdir@/data/transformset.csv'
+)
+FORMAT 'CSV'
+OPTIONS (transform_from 'fromtbl2', transform_expression 'generate_series($1, $2)', transform_arguments '1,2')
+LOG ERRORS SEGMENT REJECT LIMIT 5;
+SELECT * FROM ext_transform_set_returns;
+  a  
+-----
+   1
+   2
+   5
+   6
+   7
+   8
+   9
+  10
+   1
+   2
+   3
+   4
+   5
+   6
+   7
+   8
+   9
+  10
+  11
+  12
+  13
+  14
+  15
+  16
+  17
+  18
+  19
+  20
+  21
+  22
+  23
+  24
+  25
+  26
+  27
+  28
+  29
+  30
+  31
+  32
+  33
+  34
+  35
+  36
+  37
+  38
+  39
+  40
+  41
+  42
+  43
+  44
+  45
+  46
+  47
+  48
+  49
+  50
+  51
+  52
+  53
+  54
+  55
+  56
+  57
+  58
+  59
+  60
+  61
+  62
+  63
+  64
+  65
+  66
+  67
+  68
+  69
+  70
+  71
+  72
+  73
+  74
+  75
+  76
+  77
+  78
+  79
+  80
+  81
+  82
+  83
+  84
+  85
+  86
+  87
+  88
+  89
+  90
+  91
+  92
+  93
+  94
+  95
+  96
+  97
+  98
+  99
+ 100
+(108 rows)
+
+SELECT relname, linenum, errmsg FROM gp_read_error_log('ext_transform_set_returns');
+ relname | linenum | errmsg 
+---------+---------+--------
+(0 rows)
+
+\! rm @abs_srcdir@/data/transformset.csv

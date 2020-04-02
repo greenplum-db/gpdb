@@ -41,7 +41,9 @@ typedef struct FormatterData
 	NodeTag			type;                 /* see T_FormatterData */
 	
 	/* metadata */
-	Relation    	fmt_relation;
+	Relation    	fmt_relation;	/* Note if the transform is used for external table,
+									   the relation's tuple desc will be different from the fmt_tupDesc.
+									   More details see TransformerInfo in transformer.c. */
 	TupleDesc   	fmt_tupDesc;
 	List		   *fmt_args;
 	FmtNotification fmt_notification;

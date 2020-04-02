@@ -21,6 +21,50 @@
 #include "access/url.h"
 #include "utils/rel.h"
 
+struct TransformerInfo;
+
+/*
+ * used for scan of external relations with the file protocol
+ */
+typedef struct FileScanDescData
+{
+	/* scan parameters */
+	Relation	fs_rd;			/* target relation descriptor */
+	struct URL_FILE *fs_file;	/* the file pointer to our URI */
+	char	   *fs_uri;			/* the URI string */
+	bool		fs_noop;		/* no op. this segdb has no file to scan */
+	uint32      fs_scancounter;	/* copied from struct ExternalScan in plan */
+
+	/* transfromer for source data transform */
+	struct TransformerInfo *transformer;
+
+	/* current file parse state */
+	struct CopyStateData *fs_pstate;
+
+	Form_pg_attribute *attr;
+	AttrNumber	num_phys_attrs;
+	Datum	   *values;
+	bool	   *nulls;
+	FmgrInfo   *in_functions;
+	Oid		   *typioparams;
+	Oid			in_func_oid;
+
+	/* current file scan state */
+	TupleDesc	fs_tupDesc;
+	HeapTupleData fs_ctup;		/* current tuple in scan, if any */
+
+	/* custom data formatter */
+	FmgrInfo   *fs_custom_formatter_func; /* function to convert to custom format */
+	List	   *fs_custom_formatter_params; /* list of defelems that hold user's format parameters */
+	FormatterData *fs_formatter;
+
+	/* external partition */
+	bool		fs_hasConstraints;
+	List		**fs_constraintExprs;
+}	FileScanDescData;
+
+typedef FileScanDescData *FileScanDesc;
+
 /*
  * ExternalInsertDescData is used for storing state related
  * to inserting data into a writable external table.
@@ -67,6 +111,70 @@ typedef enum DataLineStatus
 	END_MARKER
 } DataLineStatus;
 
+/*
+ * A data error happened. This code block will always be inside a PG_CATCH()
+ * block right when a higher stack level produced an error. We handle the error
+ * by checking which error mode is set (SREH or all-or-nothing) and do the right
+ * thing accordingly. Note that we MUST have this code in a macro (as opposed
+ * to a function) as elog_dismiss() has to be inlined with PG_CATCH in order to
+ * access local error state variables.
+ */
+#define CHECK_DATA_EXCEPTION \
+/* SREH must only handle data errors. all other errors must not be caught */\
+if(ERRCODE_TO_CATEGORY(elog_geterrcode()) != ERRCODE_DATA_EXCEPTION)\
+{\
+	PG_RE_THROW(); \
+}
+
+#define HANDLE_ALL_SINGLE_ROW_ERROR(pstate) \
+if (pstate->errMode == ALL_OR_NOTHING) \
+{ \
+	/* re-throw error and abort */ \
+	PG_RE_THROW(); \
+} \
+else \
+{ \
+	/* SREH - release error state */ \
+\
+	ErrorData	*edata; \
+	MemoryContext oldcontext;\
+\
+	/* save a copy of the error info */ \
+	oldcontext = MemoryContextSwitchTo(pstate->cdbsreh->badrowcontext);\
+	edata = CopyErrorData();\
+\
+	if (!elog_dismiss(DEBUG5)) \
+		PG_RE_THROW(); /* <-- hope to never get here! */ \
+\
+	truncateEol(&pstate->line_buf, pstate->eol_type); \
+	pstate->cdbsreh->rawdata = pstate->line_buf.data; \
+	pstate->cdbsreh->is_server_enc = pstate->line_buf_converted; \
+	pstate->cdbsreh->linenumber = pstate->cur_lineno; \
+	pstate->cdbsreh->processed++; \
+\
+	/* set the error message. Use original msg and add column name if available */ \
+	if (pstate->cur_attname)\
+	{\
+		pstate->cdbsreh->errmsg = psprintf("%s, column %s", \
+				edata->message, \
+				pstate->cur_attname); \
+	}\
+	else\
+	{\
+		pstate->cdbsreh->errmsg = pstrdup(edata->message); \
+	}\
+\
+	HandleSingleRowError(pstate->cdbsreh); \
+	FreeErrorData(edata);\
+	if (!IsRejectLimitReached(pstate->cdbsreh)) \
+		pfree(pstate->cdbsreh->errmsg); \
+	MemoryContextSwitchTo(oldcontext);\
+}
+
+#define HANDLE_DATA_ERROR(pstate) \
+CHECK_DATA_EXCEPTION; \
+HANDLE_ALL_SINGLE_ROW_ERROR(pstate)
+
 extern FileScanDesc external_beginscan(Relation relation,
 				   uint32 scancounter, List *uriList,
 				   char *fmtOptString, char fmtType, bool isMasterOnly,
@@ -94,5 +202,7 @@ extern char *make_command(const char *cmd, extvar_t *ev);
 
 extern List *parseCopyFormatString(Relation rel, char *fmtstr, char fmttype);
 extern List *appendCopyEncodingOption(List *copyFmtOpts, int encoding);
+extern Oid parseTransformFromRel(char *relname);
+extern List *parseTransformArguments(char *argstr);
 
 #endif   /* FILEAM_H */

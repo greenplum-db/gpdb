@@ -38,6 +38,7 @@
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbsreh.h"
+#include "access/exttable_fdw_shim.h"
 
 static Datum transformLocationUris(List *locs, bool isweb, bool iswritable);
 static Datum transformExecOnClause(List *on_clause);
@@ -274,7 +275,7 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 	/*
 	 * Parse and validate OPTION clause.
 	 */
-	ValidateExtTableOptions(createExtStmt->extOptions);
+	validate_exttable_options(createExtStmt->extOptions, createExtStmt->iswritable);
 	log_persistent_option = ExtractErrorLogPersistent(&createExtStmt->extOptions);
 	optionsStr = optionsListToArray(createExtStmt->extOptions);
 	if (DatumGetPointer(optionsStr) == NULL)

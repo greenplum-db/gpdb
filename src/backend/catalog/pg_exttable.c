@@ -40,42 +40,6 @@
 #include "miscadmin.h"
 
 /*
- * ValidateExtTableOptions
- *
- * Validate external options. Since the options are stored in pg_exttable catalog
- * not pg_foreign_table, so no need to create fdw validate handler.
- *
- * Now only validate error_log_persistent option.
- * Since for GPDB 5 and 6, we store LOG ERRORS PERSISTENTLY in
- * pg_exttable catalog options as error_log_persistent. If user dump the DDL,
- * we could load from optons.
- */
-void
-ValidateExtTableOptions(List *options)
-{
-	ListCell   *cell;
-	bool		find = false;
-
-	foreach(cell, options)
-	{
-		DefElem    *def = (DefElem *) lfirst(cell);
-		if (strcmp(def->defname, "error_log_persistent") == 0)
-		{
-			if (find)
-			{
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						errmsg("%s shows more than once",
-								def->defname)));
-			}
-			/* these accept only boolean values */
-			(void) defGetBoolean(def);
-			find = true;
-		}
-	}
-}
-
-/*
  * ExtractErrorLogPersistent - load LOG ERRORS PERSISTENTLY from optons.
  */
 bool
