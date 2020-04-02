@@ -791,9 +791,10 @@ AtEOXact_SharedSnapshot(void)
 	{
 		LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_EXCLUSIVE);
 
-		ResourceOwnerRelease(TopTransactionResourceOwner,
+		/* release dump dsm */
+		ResourceOwnerRelease(DumpResOwner,
 		                     RESOURCE_RELEASE_BEFORE_LOCKS,
-		                     false,
+		                     false, /* isCommit */
 		                     true); /* isTopLevel */
 
 		SharedLocalSnapshotSlot->cur_dump_id = 0;
