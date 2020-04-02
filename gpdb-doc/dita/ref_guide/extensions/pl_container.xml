@@ -315,8 +315,8 @@ plcontainer runtime-add -r plc_r_shared -i pivotaldata/plcontainer_r_shared:deve
               16391:<codeblock>plcontainer runtime-add -r plc_python_shared -i pivotaldata/plcontainer_python_shared:devel -l
  python -s resource_group_id=16391</codeblock><p>For
               more information about enabling, configuring, and using Greenplum Database resource
-              groups with PL/Container, see <xref href="pl_container_using.xml#topic_resmgmt"
-                >PL/Container Resource Management </xref> . </p></li>
+              groups with PL/Container, see <xref href="#topic_resmgmt">PL/Container Resource
+                Management </xref> . </p></li>
         </ul>
         <p>You can now create a simple function to test your PL/Container installation. </p>
       </section>
@@ -369,7 +369,7 @@ postgres=# select dummyR();
  hello from R
 (1 row)</codeblock></p>
         <p>For further details and examples about using PL/Container functions, see <xref
-            href="pl_container_using.xml#topic_kwg_qfg_mjb">PL/Container Functions </xref>.</p>
+            href="#topic_kwg_qfg_mjb">PL/Container Functions </xref>.</p>
       </section>
     </body>
   </topic>
