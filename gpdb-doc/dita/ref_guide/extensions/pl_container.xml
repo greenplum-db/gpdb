@@ -16,7 +16,7 @@
       </li>
       <li><xref href="#topic_kds_plk_rbb" format="dita"/></li>
     </ul>
-    <p>For detailed information about using PL/Container, refer to:</p>
+    <p>For detailed information about using PL/Container, refer to the sections:</p>
     <p>
       <ul id="ul_ozt_t1j_blb">
         <li><xref href="pl_container_using.xml#topic_resmgmt">PL/Container Resource
@@ -24,6 +24,12 @@
         <li><xref href="pl_container_using.xml#topic_rh3_p3q_dw">PL/Container Functions</xref></li>
       </ul>
     </p>
+    <p>For reference documentation, see:<ul id="ul_r5n_zq4_flb">
+        <li><xref href="plcontainer.xml#topic_rw3_52s_dw">plcontainer utility</xref> reference
+          page</li>
+        <li><xref href="plcontainer-configuration.xml#topic_sk1_gdq_dw">plcontainer configuration
+            file</xref> reference page</li>
+      </ul></p>
     <p>The PL/Container language extension is available as an open source module. For information
       about the module, see the README file in the GitHub repository at <xref
         href="https://github.com/greenplum-db/plcontainer" format="html" scope="external"
@@ -87,11 +93,10 @@
         <title>Prerequisites</title>
         <ul>
           <li>PL/Container is supported on <ph otherprops="pivotal">Pivotal </ph>Greenplum Database
-            5.2.x on Red Hat Enterprise Linux (RHEL) 7.x (or later) and CentOS 7.x (or
-              later).<note>PL/Container 1.6.0 (GPDB 5.26) and later supports Docker images with
-              Python 3 installed.</note><note id="plc-issue">PL/Container is not supported on
-              RHEL/CentOS 6.x systems, because those platforms do not officially support
-              Docker.</note></li>
+            5.2.x on Red Hat Enterprise Linux (RHEL) 7.x (or later) and CentOS 7.x (or later).
+            PL/Container is not supported on RHEL/CentOS 6.x systems, because those platforms do not
+            officially support Docker.<note>PL/Container 1.6.0 (GPDB 5.26) and later supports Docker
+              images with Python 3 installed.</note></li>
           <li>The minimum Linux OS kernel version supported is 3.10. To verfiy your kernel release
             use: <codeblock>$ uname -r</codeblock>
           </li>
@@ -133,6 +138,39 @@
         <p>For a list of observations while using Docker and PL/Container, see the <xref
             href="#plc_notes">Notes</xref> section. For a list of Docker reference documentation,
           see <xref href="#topic_kds_plk_rbb">Docker References</xref>.</p>
+      </section>
+      <section id="plc_notes">
+        <title>Docker Notes</title>
+        <ul id="ul_j4g_vgs_wbb">
+          <li>If a PL/Container Docker container exceeds the maximum allowed memory, it is
+            terminated and an out of memory warning is displayed. </li>
+          <li>PL/Container does not limit the Docker base device size, the size of the Docker
+            container. In some cases, the Docker daemon controls the base device size. For example,
+            if the Docker storage driver is devicemapper, the Docker daemon
+              <codeph>--storage-opt</codeph> option flag <codeph>dm.basesize</codeph> controls the
+            base device size. The default base device size for devicemapper is 10GB. The Docker
+            command <codeph>docker info</codeph> displays Docker system information including the
+            storage driver. The base device size is displayed in Docker 1.12 and later. For
+            information about Docker storage drivers, see the Docker information <xref
+              href="https://docs.docker.com/engine/reference/commandline/dockerd/#daemon-storage-driver"
+              format="html" scope="external">Daemon storage-driver</xref>. <p>When setting the
+              Docker base device size, the size must be set on all Greenplum Database
+            hosts.</p></li>
+          <li>
+            <p><i>Known issue</i>: </p>
+            <p>Occasionally, when PL/Container is running in a high concurrency environment, the
+              Docker daemon hangs with log entries that indicate a memory shortage. This can happen
+              even when the system seems to have adequate free memory.</p>
+            <p>The issue seems to be triggered by the aggressive virtual memory requirement of the
+              Go language (golang) runtime that is used by PL/Container, and the Greenplum Database
+              Linux server kernel parameter setting for <i>overcommit_memory</i>. The parameter is
+              set to 2 which does not allow memory overcommit. </p>
+            <p>A workaround that might help is to increase the amount of swap space and increase the
+              Linux server kernel parameter overcommit_ratio. If the issue still occurs after the
+              changes, there might be memory shortage. You should check free memory on the system
+              and add more RAM if needed. You can also decrease the cluster load.</p>
+          </li>
+        </ul>
       </section>
       <section id="install_pl_utility" otherprops="pivotal">
         <title>Install PL/Container </title>
@@ -222,8 +260,7 @@ plcontainer image-add -f /home/gpadmin/plcontainer-r-image-1.6.0-gp6.tar.gz
 20200127:21:54:55:004607 plcontainer:mdw:gpadmin-[INFO]:-Loading image on all hosts...
 20200127:21:55:37:004607 plcontainer:mdw:gpadmin-[INFO]:-Removing temporary image files on all hosts...</codeblock>
             <p>For more information on <codeph>image-add</codeph> options, visit the <xref
-                href="../utility_guide/ref/plcontainer.xml#topic_rw3_52s_dw">plcontainer </xref>
-              reference page. </p>
+                href="plcontainer.xml#topic_rw3_52s_dw">plcontainer </xref> reference page. </p>
           </li>
           <li>To display the installed Docker images on the local host use:
               <codeblock>$ plcontainer image-list</codeblock><simpletable frame="all"
@@ -271,13 +308,12 @@ plcontainer runtime-add -r plc_r_shared -i pivotaldata/plcontainer_r_shared:deve
             utility displays progress information as it updates the PL/Container configuration file
             on the Greenplum Database instances. <p>For details on other
                 <codeph>runtime-add</codeph> options, see the <xref
-                href="../utility_guide/ref/plcontainer.xml#topic_rw3_52s_dw">plcontainer</xref>
-              reference page. </p></li>
+                href="plcontainer.xml#topic_rw3_52s_dw">plcontainer</xref> reference page. </p></li>
           <li>Optional: Use Greenplum Database resource groups to manage and limit the total CPU and
             memory resources of containers in PL/Container runtimes. In this example, the Python
             runtime will be used with a preconfigured resource group
-              16391:.<codeblock>plcontainer runtime-add -r plc_python_shared -i pivotaldata/plcontainer_python_shared:devel -l
-      python -s resource_group_id=16391</codeblock><p>For
+              16391:<codeblock>plcontainer runtime-add -r plc_python_shared -i pivotaldata/plcontainer_python_shared:devel -l
+ python -s resource_group_id=16391</codeblock><p>For
               more information about enabling, configuring, and using Greenplum Database resource
               groups with PL/Container, see <xref href="pl_container_using.xml#topic_resmgmt"
                 >PL/Container Resource Management </xref> . </p></li>
@@ -298,7 +334,6 @@ plcontainer runtime-add -r plc_r_shared -i pivotaldata/plcontainer_r_shared:deve
   Shared Directory: 
   ---- Shared Directory From HOST '/usr/local/greenplum-db/./bin/plcontainer_clients' to Container '/clientdir', access mode is 'ro'
 ---------------------------------------------------------
-
 </codeblock>
         </p>
         <p>You can also view the PL/Container configuration information with the <codeph>plcontainer
@@ -338,6 +373,7 @@ postgres=# select dummyR();
       </section>
     </body>
   </topic>
+ 
   <topic id="upgrade_plcontainer">
     <title>Upgrade PL/Container</title>
     <body>
@@ -413,7 +449,7 @@ postgres=# select dummyR();
             href="../../utility_guide/admin_utilities/gppkg.html#topic1" format="dita" scope="peer"
             >gppkg</xref> command for package installation and migration information.</note>
         <p>Perform the following procedure to upgrade from PL/Container 1.1 to PL/Container version
-          1.2 or later.<ol id="ol_axf_mmq_vcb">
+          1.2 or later.<ol id="ol_upgrade">
             <li>Save the PL/Container configuration. For example, to save the configuration to a
               file named <codeph>plcontainer110-backup.xml</codeph> in the local
               directory:<codeblock>$ plcontainer runtime-backup -f plcontainer110-backup.xml</codeblock></li>
@@ -482,18 +518,6 @@ postgres=# select dummyR();
         <p>The <codeph>CASCADE</codeph> keyword drops PL/Container-specific functions and views.</p>
       </body>
     </topic>
-    <topic id="topic_llg_d4w_blb">
-      <title>Remove PL/Container 3 Beta Shared Library</title>
-      <body>
-        <p>This step is required only if you have installed PL/Container 3 Beta. Before you remove
-          the extension from your system with <codeph>gppkg</codeph>, remove the shared library
-          configuration for the <codeph>plc_coordinator</codeph> process. For example, the following
-          command comments-out the <codeph>shared_preload_libraries</codeph> setting in
-            <filepath>postgresql.conf
-          </filepath>:<codeblock>$ gpconfig -r shared_preload_libraries
-$ gpstop -ra</codeblock></p>
-      </body>
-    </topic>
     <topic xml:lang="en" id="topic_dty_fcj_kw" otherprops="pivotal">
       <title>Uninstall the PL/Container Language Extension</title>
       <body>
@@ -540,8 +564,7 @@ $ gpstop -ra</codeblock></p>
           for the PL/Container runtime. <codeph>memory_mb</codeph> governs the memory resources
           available to each container instance. The <codeph>cpu_share</codeph> setting identifies
           the relative weighting of a container's CPU usage compared to other containers. See <xref
-            href="../utility_guide/ref/plcontainer-configuration.xml" format="dita"/> for further
-          details.</p>
+            href="plcontainer-configuration.xml" format="dita"/> for further details.</p>
         <p>You cannot, by default, restrict the number of executing PL/Container container
           instances, nor can you restrict the total amount of memory or CPU resources that they
           consume.</p>
@@ -567,7 +590,7 @@ $ gpstop -ra</codeblock></p>
           addition to the required CPU and memory limits. For example, the following command creates
           a resource group named <codeph>plpy_run1_rg</codeph> for a PL/Container runtime:
           <codeblock>CREATE RESOURCE GROUP plpy_run1_rg WITH (MEMORY_AUDITOR=cgroup, CONCURRENCY=0,
-                                                  CPU_RATE_LIMIT=10, MEMORY_LIMIT=10);</codeblock></p>
+          CPU_RATE_LIMIT=10, MEMORY_LIMIT=10);</codeblock></p>
         <p>PL/Container does not use the <codeph>MEMORY_SHARED_QUOTA</codeph> and
             <codeph>MEMORY_SPILL_RATIO</codeph> resource group memory limits. Refer to the
               <codeph><xref href="../ref_guide/sql_commands/CREATE_RESOURCE_GROUP.xml" format="dita"
@@ -596,8 +619,8 @@ $ gpstop -ra</codeblock></p>
           <codeblock>plcontainer runtime-add -r python_run1 -i pivotaldata/plcontainer_python_shared:devel -l python -s resource_group_id=16391</codeblock></p>
         <p>You can also assign a resource group to a PL/Container runtime using the
             <codeph>plcontainer runtime-edit</codeph> command. For information about the
-            <codeph>plcontainer</codeph> command, see <xref
-            href="../utility_guide/ref/plcontainer.xml" format="dita"/> reference page.</p>
+            <codeph>plcontainer</codeph> command, see <xref href="plcontainer.xml" format="dita"/>
+          reference page.</p>
         <p>After you assign a resource group to a PL/Container runtime, all container instances that
           share the same runtime configuration are subject to the memory limit and the CPU limit
           that you configured for the group. If you decrease the memory limit of a PL/Container
@@ -636,9 +659,9 @@ $ gpstop -ra</codeblock></p>
             Database resources to PL/Container. If you further split these resources among 2
             resource groups 60/40, the following SQL commands create the resource
             groups:<codeblock>CREATE RESOURCE GROUP plr_run1_rg WITH (MEMORY_AUDITOR=cgroup, CONCURRENCY=0,
-                                           CPU_RATE_LIMIT=15, MEMORY_LIMIT=15);
+                                   CPU_RATE_LIMIT=15, MEMORY_LIMIT=15);
  CREATE RESOURCE GROUP plpy_run1_rg WITH (MEMORY_AUDITOR=cgroup, CONCURRENCY=0,
-                                          CPU_RATE_LIMIT=10, MEMORY_LIMIT=10);</codeblock></li>
+                                   CPU_RATE_LIMIT=10, MEMORY_LIMIT=10);</codeblock></li>
           <li>Find and note the <codeph>groupid</codeph> associated with each resource group that
             you created. For
             example:<codeblock>SELECT groupname, groupid FROM gp_toolkit.gp_resgroup_config
@@ -658,7 +681,7 @@ plr_run1_rg  |   16393
               <codeblock>plcontainer runtime-add -r python_run1 -i pivotaldata/plcontainer_python_shared:devel -l python -s resource_group_id=16391
 plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel -l r -s resource_group_id=16393</codeblock><p>For
               information about the <codeph>plcontainer</codeph> command, see <xref
-                href="../utility_guide/ref/plcontainer.xml" format="dita"/> reference page.</p></li>
+                href="plcontainer.xml" format="dita"/> reference page.</p></li>
         </ol>
       </section>
       <section id="plc_notes">
@@ -733,10 +756,9 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
             <codeph>plcontainer_configuration.xml</codeph>, there is a <codeph>runtime</codeph> XML
           element that contains a corresponding <codeph>id</codeph> XML element that specifies the
           Docker container startup information. See <xref
-            href="../utility_guide/ref/plcontainer-configuration.xml#topic_sk1_gdq_dw" format="dita"
-          /> for information about how PL/Container maps the <varname>ID</varname> to a Docker
-          image. See <xref href="#topic_kwg_qfg_mjb" format="dita"/> for example UDF
-          definitions.</p>
+            href="plcontainer-configuration.xml#topic_sk1_gdq_dw" format="dita"/> for information
+          about how PL/Container maps the <varname>ID</varname> to a Docker image. See <xref
+            href="#function_examples" format="dita"/> for example UDF definitions.</p>
         <p>The PL/Container configuration file is read only on the first invocation of a
           PL/Container function in each Greenplum Database session that runs PL/Container functions.
           You can force the configuration file to be re-read by performing a <codeph>SELECT</codeph>
@@ -814,7 +836,7 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
           specifies the Docker image to be started. If you configured PL/Container with a different
           ID, change the value of the <codeph># container</codeph> line. For information about
           configuring PL/Container and viewing the configuration settings, see <xref
-            href="../utility_guide/ref/plcontainer-configuration.xml" format="dita"/>.</p>
+            href="plcontainer-configuration.xml" format="dita"/>.</p>
         <p>This is an example of PL/Python function that runs using the
             <codeph>plc_python_shared</codeph> container that contains Python
           2:<codeblock>CREATE OR REPLACE FUNCTION pylog100() RETURNS double precision AS $$
@@ -941,41 +963,6 @@ $$ LANGUAGE plcontainer;</codeblock></p>
             scope="external"
             >http://www.joeconway.com/plr/doc/plr-spi-rsupport-funcs-normal.html</xref></p>
       </section>
-    </body>
-  </topic>
-  <topic id="plc_notes">
-    <title>Notes</title>
-    <body>
-      <p id="docker_notes"><b>Docker Notes</b></p>
-      <ul id="ul_j4g_vgs_wbb">
-        <li>If a PL/Container Docker container exceeds the maximum allowed memory, it is terminated
-          and an out of memory warning is displayed. </li>
-        <li>PL/Container does not limit the Docker base device size, the size of the Docker
-          container. In some cases, the Docker daemon controls the base device size. For example, if
-          the Docker storage driver is devicemapper, the Docker daemon
-            <codeph>--storage-opt</codeph> option flag <codeph>dm.basesize</codeph> controls the
-          base device size. The default base device size for devicemapper is 10GB. The Docker
-          command <codeph>docker info</codeph> displays Docker system information including the
-          storage driver. The base device size is displayed in Docker 1.12 and later. For
-          information about Docker storage drivers, see the Docker information <xref
-            href="https://docs.docker.com/engine/reference/commandline/dockerd/#daemon-storage-driver"
-            format="html" scope="external">Daemon storage-driver</xref>. <p>When setting the Docker
-            base device size, the size must be set on all Greenplum Database hosts.</p></li>
-        <li>
-          <p><i>Known issue</i>: </p>
-          <p>Occasionally, when PL/Container is running in a high concurrency environment, the
-            Docker daemon hangs with log entries that indicate a memory shortage. This can happen
-            even when the system seems to have adequate free memory.</p>
-          <p>The issue seems to be triggered by the aggressive virtual memory requirement of the Go
-            language (golang) runtime that is used by PL/Container, and the Greenplum Database Linux
-            server kernel parameter setting for <i>overcommit_memory</i>. The parameter is set to 2
-            which does not allow memory overcommit. </p>
-          <p>A workaround that might help is to increase the amount of swap space and increase the
-            Linux server kernel parameter overcommit_ratio. If the issue still occurs after the
-            changes, there might be memory shortage. You should check free memory on the system and
-            add more RAM if needed. You can also decrease the cluster load.</p>
-        </li>
-      </ul>
     </body>
   </topic>
   <topic xml:lang="en" id="topic_kds_plk_rbb">
