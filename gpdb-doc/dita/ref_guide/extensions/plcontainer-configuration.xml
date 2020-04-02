@@ -213,7 +213,7 @@
                                                 runtime configuration, its container instances are
                                                 limited only by system resources. For information
                                                 about managing PL/Container resources, see <xref
-                                                  href="../../analytics/pl_container_using.xml#topic_resmgmt"
+                                                  href="pl_container.xml#topic_resmgmt"
                                                   format="dita">About PL/Container Resource
                                                   Management</xref>.</pd>
                                                 </plentry>
@@ -248,8 +248,8 @@
                                                 controls the PL/Container log level. The default log
                                                 level is <codeph>warning</codeph>. For information
                                                 about PL/Container log information, see <xref
-                                                  href="../../analytics/pl_container_using.xml#plc_notes"
-                                                  format="dita">Notes</xref>.</pd>
+                                                  href="pl_container.xml#plc_notes" format="dita"
+                                                  >Notes</xref>.</pd>
                                                   <pd>
                                                   <p>By default, the PL/Container log information is
                                                   sent to a system service. On Red Hat 7 or CentOS 7

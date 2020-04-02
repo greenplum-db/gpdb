@@ -56,7 +56,7 @@
       <section id="plcontainer_arch">
         <title>PL/Container Architecture</title>
         <fig id="pl_container_image">
-          <image placement="break" href="../../graphics/pl_container_architecture.png" width="650"
+          <image placement="break" href="../graphics/pl_container_architecture.png" width="650"
             height="550" align="center"/>
         </fig>
         <p><b>Example of the process flow</b>:</p>
