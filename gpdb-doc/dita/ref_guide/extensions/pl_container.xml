@@ -235,11 +235,12 @@
               </ul></p><p>The Data Science packages contain a set of Python modules or R functions
               and data sets related to data science. For information about the packages, see <xref
                 href="../../install_guide/install_python_dsmod.xml" format="dita" scope="peer"
-                >Python Data Science Module Package</xref> and <xref
-                href="../../install_guide/install_r_dslib.xml" format="dita" scope="peer">R Data
-                Science Library Package</xref>.</p><p>If you require different images from the ones
-              provided by Pivotal Greenplum, you can create custom Docker images, install the image
-              and add the image to the PL/ Container configuration. </p></li>
+                otherprops="pivotal">Python Data Science Module Package</xref> and <xref
+                href="../../install_guide/install_r_dslib.xml" format="dita" scope="peer"
+                otherprops="pivotal">R Data Science Library Package</xref>.</p><p>If you require
+              different images from the ones provided by Pivotal Greenplum, you can create custom
+              Docker images, install the image and add the image to the PL/ Container configuration.
+            </p></li>
           <li>
             <p>Use the <codeph>plcontainer </codeph> utility command <codeph>image-add</codeph> to
               install the images on all Greenplum Database hosts where <codeph>-f </codeph>indicates
@@ -574,7 +575,7 @@ postgres=# select dummyR();
         <p>With PL/Container 1.2.0 and later, you can use Greenplum Database resource groups to
           manage and limit the total CPU and memory resources of containers in PL/Container
           runtimes. For more information about enabling, configuring, and using Greenplum Database
-          resource groups, refer to <xref href="../admin_guide/workload_mgmt_resgroups.xml"
+          resource groups, refer to <xref href="../../admin_guide/workload_mgmt_resgroups.xml"
             format="dita" scope="peer">Using Resource Groups</xref> in the <cite>Greenplum Database
             Administrator Guide</cite>.</p>
         <note>If you do not explicitly configure resource groups for a PL/Container runtime, its
@@ -593,7 +594,7 @@ postgres=# select dummyR();
           CPU_RATE_LIMIT=10, MEMORY_LIMIT=10);</codeblock></p>
         <p>PL/Container does not use the <codeph>MEMORY_SHARED_QUOTA</codeph> and
             <codeph>MEMORY_SPILL_RATIO</codeph> resource group memory limits. Refer to the
-              <codeph><xref href="../ref_guide/sql_commands/CREATE_RESOURCE_GROUP.xml" format="dita"
+              <codeph><xref href="../../ref_guide/sql_commands/CREATE_RESOURCE_GROUP.xml"
               scope="peer">CREATE RESOURCE GROUP</xref></codeph> reference page for detailed
           information about this SQL command.</p>
         <p>You can create one or more resource groups to manage your running PL/Container instances.
@@ -637,7 +638,7 @@ postgres=# select dummyR();
         <ol id="ol_qdq_vmh_blb">
           <li>If you have not already configured and enabled resource groups in your Greenplum
             Database deployment, configure cgroups and enable Greenplum Database resource groups as
-            described in <xref href="../admin_guide/workload_mgmt_resgroups.xml#topic71717999"
+            described in <xref href="../../admin_guide/workload_mgmt_resgroups.xml#topic71717999"
               format="dita" scope="peer">Using Resource Groups</xref> in the <cite>Greenplum
               Database Administrator Guide</cite>. <note>If you have previously configured and
               enabled resource groups in your deployment, ensure that the Greenplum Database
@@ -689,7 +690,7 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
         <p id="pl_logging_notes"><b>PL/Container logging</b></p>
         <p>When PL/Container logging is enabled, you can set the log level with the Greenplum
           Database server configuration parameter <codeph><xref
-              href="../ref_guide/config_params/guc-list.xml#log_min_messages" scope="peer"
+              href="../../ref_guide/config_params/guc-list.xml#log_min_messages" scope="peer"
               >log_min_messages</xref></codeph>. The default log level is <codeph>warning</codeph>.
           The parameter controls the PL/Container log level and also controls the Greenplum Database
           log level.</p>
@@ -819,7 +820,7 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
           Docker containers and reuse them as needed. After a certain amount of idle time, a QE
           process quits and destroys its Docker containers. You can control the amount of idle time
           with the Greenplum Database server configuration parameter <codeph><xref
-              href="../ref_guide/config_params/guc-list.xml#gp_vmem_idle_resource_timeout"
+              href="../../ref_guide/config_params/guc-list.xml#gp_vmem_idle_resource_timeout"
               scope="peer">gp_vmem_idle_resource_timeout</xref></codeph>. Controlling the idle time
           might help with Docker container reuse and avoid the overhead of creating and starting a
           Docker container. </p>
