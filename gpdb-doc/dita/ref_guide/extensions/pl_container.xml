@@ -10,7 +10,7 @@
       of PL/Container:</p>
     <ul>
       <li id="pz219023"><xref href="#about_pl_container" type="topic" format="dita"/></li>
-      <li id="pz213664" otherprops="pivotal"><xref href="#topic3" type="topic" format="dita"/></li>
+      <li id="pz213664"><xref href="#topic3" type="topic" format="dita"/></li>
       <li><xref href="#upgrade_plcontainer" type="topic" format="dita"/></li>
       <li id="pz213668"><xref href="#uninstall_plcontainer" type="topic" format="dita"/>
       </li>
@@ -19,9 +19,8 @@
     <p>For detailed information about using PL/Container, refer to the sections:</p>
     <p>
       <ul id="ul_ozt_t1j_blb">
-        <li><xref href="pl_container_using.xml#topic_resmgmt">PL/Container Resource
-            Management</xref></li>
-        <li><xref href="pl_container_using.xml#topic_rh3_p3q_dw">PL/Container Functions</xref></li>
+        <li><xref href="#topic_resmgmt">PL/Container Resource Management</xref></li>
+        <li><xref href="#topic_rh3_p3q_dw">PL/Container Functions</xref></li>
       </ul>
     </p>
     <p>For reference documentation, see:<ul id="ul_r5n_zq4_flb">
@@ -81,7 +80,8 @@
       <note type="warning">PL/Container is compatible with Greenplum Database 5.2.0 and later.
         PL/Container has not been tested for compatibility with Greenplum Database 5.1.0 or 5.0.0. </note>
       <section>This topic includes how to: <ul>
-          <li><xref href="#install_docker" format="dita" scope="local">Install Docker</xref></li>
+          <li><xref href="#topic3/install_docker" format="dita" scope="local">Install
+            Docker</xref></li>
           <li><xref href="#topic3/install_pl_utility" format="dita">Install PL/Container</xref></li>
           <li><xref href="#topic3/install_docker_images" format="dita">Install the PL/Container
               Docker images</xref></li>
