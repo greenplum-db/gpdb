@@ -287,6 +287,9 @@ SimpleLruZeroPage(SlruCtl ctl, int pageno)
 	/* Assume this page is now the latest active page */
 	shared->latest_page_number = pageno;
 
+	/* update the stats counter of zeroed pages */
+	pgstat_count_slru_page_zeroed(ctl);
+
 	return slotno;
 }
 
@@ -404,6 +407,10 @@ SimpleLruReadPage(SlruCtl ctl, int pageno, bool write_ok,
 			}
 			/* Otherwise, it's ready to use */
 			SlruRecentlyUsed(shared, slotno);
+
+			/* update the stats counter of pages found in the SLRU */
+			pgstat_count_slru_page_hit(ctl);
+
 			return slotno;
 		}
 
@@ -445,6 +452,10 @@ SimpleLruReadPage(SlruCtl ctl, int pageno, bool write_ok,
 			SlruReportIOError(ctl, pageno, xid);
 
 		SlruRecentlyUsed(shared, slotno);
+
+		/* update the stats counter of pages not found in SLRU */
+		pgstat_count_slru_page_read(ctl);
+
 		return slotno;
 	}
 }
@@ -597,6 +608,9 @@ SimpleLruDoesPhysicalPageExist(SlruCtl ctl, int pageno)
 	bool		result;
 	off_t		endpos;
 
+	/* update the stats counter of checked pages */
+	pgstat_count_slru_page_exists(ctl);
+
 	SlruFileName(ctl, path, segno);
 
 	fd = OpenTransientFile(path, O_RDONLY | PG_BINARY);
@@ -730,6 +744,9 @@ SlruPhysicalWritePage(SlruCtl ctl, int pageno, int slotno, SlruFlush fdata)
 	int			offset = rpageno * BLCKSZ;
 	char		path[MAXPGPATH];
 	int			fd = -1;
+
+	/* update the stats counter of written pages */
+	pgstat_count_slru_page_written(ctl);
 
 	/*
 	 * Honor the write-WAL-before-data rule, if appropriate, so that we do not
@@ -1126,6 +1143,9 @@ SimpleLruFlush(SlruCtl ctl, bool allow_redirtied)
 	int			i;
 	bool		ok;
 
+	/* update the stats counter of flushes */
+	pgstat_count_slru_flush(ctl);
+
 	/*
 	 * Find and write dirty pages
 	 */
@@ -1198,6 +1218,9 @@ SimpleLruTruncate_internal(SlruCtl ctl, int cutoffPage, bool lockHeld)
 {
 	SlruShared	shared = ctl->shared;
 	int			slotno;
+
+	/* update the stats counter of truncates */
+	pgstat_count_slru_truncate(ctl);
 
 	/*
 	 * Scan shared memory and remove any pages preceding the cutoff page, to

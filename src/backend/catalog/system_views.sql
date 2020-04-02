@@ -961,6 +961,19 @@ CREATE VIEW gp_stat_replication AS
          ON G.gp_segment_id = R.gp_segment_id
     );
 
+CREATE VIEW pg_stat_slru AS
+    SELECT
+            s.name,
+            s.blks_zeroed,
+            s.blks_hit,
+            s.blks_read,
+            s.blks_written,
+            s.blks_exists,
+            s.flushes,
+            s.truncates,
+            s.stats_reset
+    FROM pg_stat_get_slru() s;
+
 CREATE VIEW pg_stat_wal_receiver AS
     SELECT
             s.pid,
@@ -1704,6 +1717,7 @@ REVOKE EXECUTE ON FUNCTION pg_promote(boolean, integer) FROM public;
 
 REVOKE EXECUTE ON FUNCTION pg_stat_reset() FROM public;
 REVOKE EXECUTE ON FUNCTION pg_stat_reset_shared(text) FROM public;
+REVOKE EXECUTE ON FUNCTION pg_stat_reset_slru(text) FROM public;
 REVOKE EXECUTE ON FUNCTION pg_stat_reset_single_table_counters(oid) FROM public;
 REVOKE EXECUTE ON FUNCTION pg_stat_reset_single_function_counters(oid) FROM public;
 
