@@ -533,10 +533,6 @@ postgres=# select dummyR();
       <p>Control and configure Docker with systemd <xref
           href="https://docs.docker.com/engine/admin/systemd/" format="html" scope="external"
           >https://docs.docker.com/engine/admin/systemd/</xref></p>
-      <p>Changes to Python <xref href="https://docs.python.org/3/whatsnew/index.html" format="html"
-          scope="external">What’s New in Python</xref></p>
-      <p>Porting from Python 2 to 3 <xref href="https://docs.python.org/3/howto/pyporting.html"
-          format="html" scope="external">Porting Python 2 Code to Python 3</xref></p>
       </body>
   </topic>
 

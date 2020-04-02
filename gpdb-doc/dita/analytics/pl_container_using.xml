@@ -426,6 +426,83 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                         >https://www.postgresql.org/docs/9.4/plpython-database.htm</xref>. </p>
             
         </section>
+        <section id="topic_plc_py3">
+            <title>About PL/Container Running PL/Python with Python 3 </title>
+            <p>If you want to use PL/Container to run the same function body in both Python2 and Python3, you must create 2 different user-defined functions.</p>
+            <p>Useful references:</p>
+            <ul>
+              <li>Changes to Python - <xref href="https://docs.python.org/3/whatsnew/3.0.html"
+                format="html" scope="external">What’s New in Python 3</xref></li>
+              <li>Porting from Python 2 to 3 - <xref href="https://docs.python.org/3/howto/pyporting.html"
+          format="html" scope="external">Porting Python 2 Code to Python 3</xref></li>
+            </ul>
+          <sectiondiv id="topic_datatype_map">
+            <b>Data Type Mapping</b>
+            <table id="datatype_mapping">
+              <tgroup cols="2">
+                <colspec colnum="1" colname="col1" colwidth="240pt"/>
+                <colspec colnum="2" colname="col2" colwidth="240pt"/>
+                <thead>
+                  <row>
+                    <entry colname="col2">Greenplum Primitive Type</entry>
+                    <entry colname="col1">Python 3 Type</entry>
+                  </row>
+                </thead>
+                <tbody>
+                  <row>
+                    <entry colname="col1">boolean</entry>
+                    <entry colname="col2">bool<sup>1</sup></entry>
+                  </row>
+                  <row>
+                    <entry colname="col1">bytea</entry>
+                    <entry colname="col2">bytes</entry>
+                  </row>
+                  <row>
+                    <entry colname="col1">smallint, bigint, oid</entry>
+                    <entry colname="col2">int</entry>
+                  </row>
+                  <row>
+                    <entry colname="col1">real, double</entry>
+                    <entry colname="col2">float</entry>
+                  </row>
+                  <row>
+                    <entry colname="col1">numeric</entry>
+                    <entry colname="col2">decimal</entry>
+                  </row>
+                  <row>
+                    <entry colname="col1"><i>other primitive types</i></entry>
+                    <entry colname="col2">string</entry>
+                  </row>
+                  <row>
+                    <entry colname="col1">SQL null value</entry>
+                    <entry colname="col2">None</entry>
+                  </row>
+                </tbody>
+              </tgroup>
+            </table>
+            <p><sup>1</sup>&nbsp;When the UDF return type is <codeph>boolean</codeph>, the
+               Greenplum Database evaluates the return value for truth according to
+               Python rules. That is, <codeph>0</codeph> and empty string are
+               <codeph>false</codeph>, but notably <codeph>'f'</codeph> is
+               <codeph>true</codeph>.</p>
+            <p>Example:</p>
+            <codeblock>testdb=# CREATE OR REPLACE FUNCTION pybool_func(a int) RETURNS boolean AS $$
+# container: plc_python3_shared
+    if (a > 0):
+        return True
+    else:
+        return False
+$$ LANGUAGE plcontainer;
+testdb=# select pybool_func(-1);
+
+ pybool_func
+-------------
+ f
+(1 row)
+</codeblock>
+          </sectiondiv>
+        </section>
+            
         <section id="topic_lqz_t3q_dw">
             <title>About PL/Container Running PL/R</title>
             
