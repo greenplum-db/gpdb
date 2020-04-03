@@ -212,15 +212,16 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
                             <codeph>status()</codeph> are not supported.</li>
                     <li>The PL/Python function <codeph>plpy.SPIError()</codeph> is not
                         supported.</li>
-                    <li>Executing the SAVEPOINT command with <codeph>plpy.execute()</codeph> is not
-                        supported.</li>
-                    <li>The DO command is not supported.</li>
+                    <li>Executing the <codeph>SAVEPOINT</codeph> command with
+                        <codeph>plpy.execute()</codeph> is not supported.</li>
+                    <li>The <codeph>DO</codeph> command is not supported.</li>
                     <li>Container flow control is not supported.</li>
                     <li>Triggers are not supported.</li>
-                    <li>OUT parameters are not supported.</li>
-                    <li>The Python dict type cannot be returned from a PL/Python UDF.
-                      When returning the Python dict type from a UDF, you can convert the dict
-                        type to a Greenplum Database user-defined data type (UDT).</li>
+                    <li><codeph>OUT</codeph> parameters are not supported.</li>
+                    <li>The Python <codeph>dict</codeph> type cannot be returned from
+                      a PL/Python UDF.  When returning the Python <codeph>dict</codeph>
+                      type from a UDF, you can convert the <codeph>dict</codeph> type
+                      to a Greenplum Database user-defined data type (UDT).</li>
                 </ul>
             </section>
             
