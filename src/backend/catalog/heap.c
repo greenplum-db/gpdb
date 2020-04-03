@@ -31,6 +31,7 @@
  */
 #include "postgres.h"
 
+#include "access/aomd.h"
 #include "access/htup_details.h"
 #include "access/multixact.h"
 #include "access/sysattr.h"
@@ -3461,6 +3462,27 @@ heap_truncate_one_relid(Oid relid)
 	}
 }
 
+static void
+ao_aux_tables_truncate(Relation rel)
+{
+	Oid ao_base_relid = RelationGetRelid(rel);
+
+	Oid			aoseg_relid = InvalidOid;
+	Oid			aoblkdir_relid = InvalidOid;
+	Oid			aovisimap_relid = InvalidOid;
+
+	if (!RelationIsAppendOptimized(rel))
+		return;
+
+	GetAppendOnlyEntryAuxOids(ao_base_relid, NULL,
+							  &aoseg_relid,
+							  &aoblkdir_relid, NULL,
+							  &aovisimap_relid, NULL);
+
+	heap_truncate_one_relid(aoseg_relid);
+	heap_truncate_one_relid(aoblkdir_relid);
+	heap_truncate_one_relid(aovisimap_relid);
+}
 
 /*
  *	 heap_truncate_one_rel
@@ -3477,7 +3499,15 @@ heap_truncate_one_rel(Relation rel)
 	Oid			toastrelid;
 
 	/* Truncate the actual file (and discard buffers) */
-	RelationTruncate(rel, 0);
+	if (!RelationIsAppendOptimized(rel))
+	{
+		RelationTruncate(rel, 0);
+	}
+	else
+	{
+		ao_truncate_one_rel(rel);
+		ao_aux_tables_truncate(rel);
+	}
 
 	/* If the relation has indexes, truncate the indexes too */
 	RelationTruncateIndexes(rel);

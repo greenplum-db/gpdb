@@ -32,7 +32,6 @@
 #include "access/appendonlytid.h"
 #include "access/appendonlywriter.h"
 #include "catalog/catalog.h"
-#include "catalog/heap.h"	/* for heap_truncate_one_relid */
 #include "catalog/pg_appendonly_fn.h"
 #include "cdb/cdbappendonlystorage.h"
 #include "cdb/cdbappendonlyxlog.h"
@@ -44,7 +43,6 @@
 static bool mdunlink_ao_perFile(const int segno, void *ctx);
 static bool copy_append_only_data_perFile(const int segno, void *ctx);
 static bool truncate_ao_perFile(const int segno, void *ctx);
-static void ao_aux_tables_truncate(Relation rel);
 
 int
 AOSegmentFilePathNameLen(Relation rel)
@@ -457,9 +455,6 @@ ao_truncate_one_rel(Relation rel)
 	/* Truncate the actual file */
 	ao_foreach_extent_file(truncate_ao_perFile, &truncateFiles);
 
-	/* Truncate auxiliary table */
-	ao_aux_tables_truncate(rel);
-
 	pfree(segPath);
 	pfree(basepath);
 }
@@ -495,29 +490,4 @@ truncate_ao_perFile(const int segno, void *ctx)
 	}
 
 	return true;
-}
-
-/*
- * Truncate auxiliary tables for ao table
- */
-static void
-ao_aux_tables_truncate(Relation rel)
-{
-	Oid ao_base_relid = RelationGetRelid(rel);
-
-	Oid			aoseg_relid = InvalidOid;
-	Oid			aoblkdir_relid = InvalidOid;
-	Oid			aovisimap_relid = InvalidOid;
-
-	if (!RelationIsAppendOptimized(rel))
-		return;
-
-	GetAppendOnlyEntryAuxOids(ao_base_relid, NULL,
-							  &aoseg_relid,
-							  &aoblkdir_relid, NULL,
-							  &aovisimap_relid, NULL);
-
-	heap_truncate_one_relid(aoseg_relid);
-	heap_truncate_one_relid(aoblkdir_relid);
-	heap_truncate_one_relid(aovisimap_relid);
 }
