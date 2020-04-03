@@ -1707,10 +1707,7 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 				{
 					lockmode = NoLock;
 				}
-				resultRelation = CdbOpenRelation(resultRelationOid,
-													 lockmode,
-													 false, /* noWait */
-													 NULL); /* lockUpgraded */
+				resultRelation = CdbOpenRelation(resultRelationOid, lockmode, NULL);
 			}
 			else
 			{

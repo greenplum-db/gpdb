@@ -15,6 +15,13 @@ INSERT INTO t values (1,1), (2,2), (3,3), (4,4);
 2<:
 2: END;
 
+1: BEGIN;
+1: SELECT c2 FROM t WHERE c1 < 3 FOR SHARE;
+2&: SELECT c2 FROM t WHERE c1 >= 3 FOR UPDATE NOWAIT;
+
+1: END;
+2<:
+
 1q:
 2q:
 

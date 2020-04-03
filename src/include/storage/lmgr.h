@@ -107,7 +107,7 @@ extern void DescribeLockTag(StringInfo buf, const LOCKTAG *tag);
 /* Knowledge about which locktags describe temp objects */
 extern bool LockTagIsTemp(const LOCKTAG *tag);
 
-extern bool CondUpgradeRelLock(Oid relid, bool noWait);
+extern bool CondUpgradeRelLock(Oid relid);
 
 extern void GxactLockTableInsert(DistributedTransactionId xid);
 extern void GxactLockTableWait(DistributedTransactionId xid);

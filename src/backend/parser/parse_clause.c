@@ -337,8 +337,7 @@ setTargetTable(ParseState *pstate, RangeVar *relation,
 	else
 	{
 
-		pstate->p_target_relation = parserOpenTable(pstate, relation, RowExclusiveLock,
-													false, NULL);
+		pstate->p_target_relation = parserOpenTable(pstate, relation, RowExclusiveLock, NULL);
 	}
 
 	/*

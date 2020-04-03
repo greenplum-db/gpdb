@@ -1183,7 +1183,7 @@ try_relation_open(Oid relationId, LOCKMODE lockmode, bool noWait)
  * for distributed tables.
  */
 Relation
-CdbTryOpenRelation(Oid relid, LOCKMODE reqmode, bool noWait, bool *lockUpgraded)
+CdbTryOpenRelation(Oid relid, LOCKMODE reqmode, bool *lockUpgraded)
 {
     LOCKMODE    lockmode = reqmode;
 	Relation    rel;
@@ -1205,7 +1205,7 @@ CdbTryOpenRelation(Oid relid, LOCKMODE reqmode, bool noWait, bool *lockUpgraded)
 	if (lockmode == RowExclusiveLock)
 	{
 		if (Gp_role == GP_ROLE_DISPATCH &&
-			CondUpgradeRelLock(relid, noWait))
+			CondUpgradeRelLock(relid))
 		{
 			lockmode = ExclusiveLock;
 			if (lockUpgraded != NULL)
@@ -1213,7 +1213,7 @@ CdbTryOpenRelation(Oid relid, LOCKMODE reqmode, bool noWait, bool *lockUpgraded)
 		}
     }
 
-	rel = try_heap_open(relid, lockmode, noWait);
+	rel = try_heap_open(relid, lockmode, false);
 	if (!RelationIsValid(rel))
 		return NULL;
 
@@ -1244,11 +1244,11 @@ CdbTryOpenRelation(Oid relid, LOCKMODE reqmode, bool noWait, bool *lockUpgraded)
  * an error or a valid opened relation returned.
  */
 Relation
-CdbOpenRelation(Oid relid, LOCKMODE reqmode, bool noWait, bool *lockUpgraded)
+CdbOpenRelation(Oid relid, LOCKMODE reqmode, bool *lockUpgraded)
 {
 	Relation rel;
 
-	rel = CdbTryOpenRelation(relid, reqmode, noWait, lockUpgraded);
+	rel = CdbTryOpenRelation(relid, reqmode, lockUpgraded);
 
 	if (!RelationIsValid(rel))
 	{
@@ -1277,7 +1277,7 @@ CdbOpenRelationRv(const RangeVar *relation, LOCKMODE reqmode, bool noWait,
 
 	/* Look up the appropriate relation using namespace search */
 	relid = RangeVarGetRelid(relation, NoLock, false);
-	rel = CdbTryOpenRelation(relid, reqmode, noWait, lockUpgraded);
+	rel = CdbTryOpenRelation(relid, reqmode, lockUpgraded);
 
 	if (!RelationIsValid(rel))
 	{

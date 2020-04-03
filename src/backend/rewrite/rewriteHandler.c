@@ -190,7 +190,7 @@ AcquireRewriteLocks(Query *parsetree,
 				/* Take a lock either using CDB lock promotion or not */
 				if (needLockUpgrade)
 				{
-					rel = CdbOpenRelation(rte->relid, lockmode, false, NULL);
+					rel = CdbOpenRelation(rte->relid, lockmode, NULL);
 				}
 				else
 				{

@@ -1142,7 +1142,7 @@ LockTagIsTemp(const LOCKTAG *tag)
  * we have to keep upgrading locks for AO table.
  */
 bool
-CondUpgradeRelLock(Oid relid, bool noWait)
+CondUpgradeRelLock(Oid relid)
 {
 	Relation rel;
 	bool upgrade = false;
@@ -1150,10 +1150,10 @@ CondUpgradeRelLock(Oid relid, bool noWait)
 	if (!gp_enable_global_deadlock_detector)
 		return true;
 
-	rel = try_relation_open(relid, NoLock, noWait);
+	rel = try_relation_open(relid, NoLock, false);
 
 	if (!rel)
-		elog(ERROR, "Relation open failed!");
+		return false;
 	else if (RelationIsAppendOptimized(rel))
 		upgrade = true;
 	else

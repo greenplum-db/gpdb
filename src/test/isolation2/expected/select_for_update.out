@@ -26,6 +26,25 @@ UPDATE 1
 2: END;
 END
 
+1: BEGIN;
+BEGIN
+1: SELECT c2 FROM t WHERE c1 < 3 FOR SHARE;
+ c2 
+----
+ 2  
+ 1  
+(2 rows)
+2&: SELECT c2 FROM t WHERE c1 >= 3 FOR UPDATE NOWAIT;  <waiting ...>
+
+1: END;
+END
+2<:  <... completed>
+ c2  
+-----
+ 4   
+ 999 
+(2 rows)
+
 1q: ... <quitting>
 2q: ... <quitting>
 
