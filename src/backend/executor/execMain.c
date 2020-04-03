@@ -1453,10 +1453,7 @@ InitializeResultRelations(PlannedStmt *plannedstmt, EState *estate, CmdType oper
 			resultRelationOid = getrelid(resultRelationIndex, rangeTable);
 			if (operation == CMD_UPDATE || operation == CMD_DELETE)
 			{
-				resultRelation = CdbOpenRelation(resultRelationOid,
-													 lockmode,
-													 false, /* noWait */
-													 NULL); /* lockUpgraded */
+				resultRelation = CdbOpenRelation(resultRelationOid, lockmode, NULL);
 			}
 			else
 			{
@@ -1805,7 +1802,7 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 
         /* CDB: On QD, lock whole table in S or X mode, if distributed. */
 		lockmode = rc->forUpdate ? RowExclusiveLock : RowShareLock;
-		relation = CdbOpenRelation(relid, lockmode, rc->noWait, &lockUpgraded);
+		relation = CdbOpenRelation(relid, lockmode, &lockUpgraded);
 		if (lockUpgraded)
 		{
             heap_close(relation, NoLock);

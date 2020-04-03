@@ -1033,7 +1033,7 @@ try_relation_open(Oid relationId, LOCKMODE lockmode, bool noWait)
  * for distributed tables.
  */
 Relation
-CdbTryOpenRelation(Oid relid, LOCKMODE reqmode, bool noWait, bool *lockUpgraded)
+CdbTryOpenRelation(Oid relid, LOCKMODE reqmode, bool *lockUpgraded)
 {
     LOCKMODE    lockmode = reqmode;
 	Relation    rel;
@@ -1060,7 +1060,7 @@ CdbTryOpenRelation(Oid relid, LOCKMODE reqmode, bool noWait, bool *lockUpgraded)
 	 */
 	if (lockmode == RowExclusiveLock)
 	{
-		rel = try_heap_open(relid, NoLock, noWait);
+		rel = try_heap_open(relid, NoLock, false);
 		if (!rel)
 			return NULL;
 		
@@ -1074,7 +1074,7 @@ CdbTryOpenRelation(Oid relid, LOCKMODE reqmode, bool noWait, bool *lockUpgraded)
 		relation_close(rel, NoLock);
     }
 
-	rel = try_heap_open(relid, lockmode, noWait);
+	rel = try_heap_open(relid, lockmode, false);
 	if (!RelationIsValid(rel))
 		return NULL;
 
@@ -1103,11 +1103,11 @@ CdbTryOpenRelation(Oid relid, LOCKMODE reqmode, bool noWait, bool *lockUpgraded)
  * an error or a valid opened relation returned.
  */
 Relation
-CdbOpenRelation(Oid relid, LOCKMODE reqmode, bool noWait, bool *lockUpgraded)
+CdbOpenRelation(Oid relid, LOCKMODE reqmode, bool *lockUpgraded)
 {
 	Relation rel;
 
-	rel = CdbTryOpenRelation(relid, reqmode, noWait, lockUpgraded);
+	rel = CdbTryOpenRelation(relid, reqmode, lockUpgraded);
 
 	if (!RelationIsValid(rel))
 	{
@@ -1128,15 +1128,14 @@ CdbOpenRelation(Oid relid, LOCKMODE reqmode, bool noWait, bool *lockUpgraded)
  * an error or a valid opened relation returned.
  */
 Relation
-CdbOpenRelationRv(const RangeVar *relation, LOCKMODE reqmode, bool noWait, 
-				  bool *lockUpgraded)
+CdbOpenRelationRv(const RangeVar *relation, LOCKMODE reqmode, bool *lockUpgraded)
 {
 	Oid			relid;
 	Relation	rel;
 
 	/* Look up the appropriate relation using namespace search */
 	relid = RangeVarGetRelid(relation, false);
-	rel = CdbTryOpenRelation(relid, reqmode, noWait, lockUpgraded);
+	rel = CdbTryOpenRelation(relid, reqmode, lockUpgraded);
 
 	if (!RelationIsValid(rel))
 	{

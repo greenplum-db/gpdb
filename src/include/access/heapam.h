@@ -219,12 +219,9 @@ extern Relation try_heap_open(Oid relationId, LOCKMODE lockmode, bool noWait);
 #define heap_close(r,l)  relation_close(r,l)
 
 /* CDB */
-extern Relation CdbOpenRelation(Oid relid, LOCKMODE reqmode, bool noWait, 
-								bool *lockUpgraded);
-extern Relation CdbTryOpenRelation(Oid relid, LOCKMODE reqmode, bool noWait, 
-								   bool *lockUpgraded);
-extern Relation CdbOpenRelationRv(const RangeVar *relation, LOCKMODE reqmode, 
-								  bool noWait, bool *lockUpgraded);
+extern Relation CdbOpenRelation(Oid relid, LOCKMODE reqmode, bool *lockUpgraded);
+extern Relation CdbTryOpenRelation(Oid relid, LOCKMODE reqmode, bool *lockUpgraded);
+extern Relation CdbOpenRelationRv(const RangeVar *relation, LOCKMODE reqmode, bool *lockUpgraded);
 
 
 extern HeapScanDesc heap_beginscan(Relation relation, Snapshot snapshot,

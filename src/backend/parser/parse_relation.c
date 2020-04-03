@@ -746,13 +746,13 @@ buildScalarFunctionAlias(Node *funcexpr, char *funcname,
  */
 static Relation
 parserOpenTable(ParseState *pstate, const RangeVar *relation,
-				int lockmode, bool nowait, bool *lockUpgraded)
+				int lockmode, bool *lockUpgraded)
 {
 	Relation rel = NULL;
 	
 	PG_TRY();
 	{
-		rel = CdbOpenRelationRv(relation, lockmode, nowait, NULL);
+		rel = CdbOpenRelationRv(relation, lockmode, NULL);
 	}
 	PG_CATCH();
 	{
@@ -794,7 +794,6 @@ addRangeTableEntry(ParseState *pstate,
 	RangeTblEntry *rte = makeNode(RangeTblEntry);
 	char	   *refname = alias ? alias->aliasname : relation->relname;
 	LOCKMODE	lockmode = AccessShareLock;
-	bool		nowait = false;
 	LockingClause *locking;
 	Relation	rel;
 	ParseCallbackState pcbstate;
@@ -808,10 +807,9 @@ addRangeTableEntry(ParseState *pstate,
 	if (locking)
 	{
 		lockmode = locking->forUpdate ? RowExclusiveLock : RowShareLock;
-		nowait	 = locking->noWait;
 	}
 	setup_parser_errposition_callback(&pcbstate, pstate, relation->location);
-	rel = parserOpenTable(pstate, relation, lockmode, nowait, NULL);
+	rel = parserOpenTable(pstate, relation, lockmode, NULL);
 	cancel_parser_errposition_callback(&pcbstate);
 
 	/*

@@ -772,9 +772,7 @@ setTargetTable(ParseState *pstate, RangeVar *relation,
 	}
 	else
 	{
-    	pstate->p_target_relation = CdbOpenRelationRv(relation, 
-													  RowExclusiveLock, 
-													  false, NULL);
+		pstate->p_target_relation = CdbOpenRelationRv(relation, RowExclusiveLock, NULL);
 	}
 	cancel_parser_errposition_callback(&pcbstate);
 	
