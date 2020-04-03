@@ -257,6 +257,34 @@ SELECT * FROM composite_type_as_list();
       </body>
     </topic>
 
+    <topic id="topic_setresult" xml:lang="en">
+      <title>Set-Returning Functions</title>
+      <body>
+        <p>A Python function can return a set of scalar or composite types from any
+          sequence type (for example: tuple, list, set).</p>
+        <p>In the following example, you create a composite type and a Python function
+          that returns a <codeph>SETOF</codeph> of the composite type:</p>
+        <codeblock>CREATE TYPE greeting AS (
+  how text,
+  who text
+);
+
+CREATE FUNCTION greet (how text)
+  RETURNS SETOF greeting
+AS $$
+  # return tuple containing lists as composite types
+  # all other combinations work also
+  return ( {"how": how, "who": "World"}, {"how": how, "who": "Greenplum"} )
+$$ LANGUAGE plpythonu;
+
+select greet('hello');
+       greet
+-------------------
+ (hello,World)
+ (hello,Greenplum)
+(2 rows)</codeblock>
+      </body>
+    </topic>
     <topic id="topic8" xml:lang="en">
       <title>Executing and Preparing SQL Queries </title>
       <body>
