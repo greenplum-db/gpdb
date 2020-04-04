@@ -2626,6 +2626,7 @@ WalSndCtlData
 WalSndSendDataCallback
 WalSndState
 WalTimeSample
+WalUsage
 WalWriteMethod
 Walfile
 WindowAgg
