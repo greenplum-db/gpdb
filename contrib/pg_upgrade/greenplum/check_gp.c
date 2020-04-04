@@ -29,6 +29,7 @@ static void check_gphdfs_user_roles(void);
 static void check_unique_primary_constraint(void);
 static void check_for_array_of_partition_table_types(ClusterInfo *cluster);
 static void check_partition_schemas(void);
+static void check_large_objects(void);
 
 
 /*
@@ -53,6 +54,7 @@ check_greenplum(void)
 	check_unique_primary_constraint();
 	check_for_array_of_partition_table_types(&old_cluster);
 	check_partition_schemas();
+	check_large_objects();
 }
 
 /*
@@ -972,6 +974,60 @@ check_partition_schemas(void)
 			"to match them before upgrading. A list of problem tables is in the\n"
 			"file:\n"
 			"    %s\n\n", output_path);
+	}
+	else
+		check_ok();
+}
+
+/*
+ * Greenplum 6 does not support large objects, but 5 does.
+ */
+static void
+check_large_objects(void)
+{
+	int			dbnum;
+	FILE	   *script = NULL;
+	bool		found = false;
+	char		output_path[MAXPGPATH];
+
+	prep_status("Checking for large objects");
+
+	snprintf(output_path, sizeof(output_path), "pg_largeobject.txt");
+
+	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
+	{
+		PGresult   *res;
+		DbInfo	   *active_db = &old_cluster.dbarr.dbs[dbnum];
+		PGconn	   *conn = connectToServer(&old_cluster, active_db->db_name);
+
+		/* find if there are any large objects */
+		res = executeQueryOrDie(conn,
+								"SELECT count(*) > 0 as large_object_exists"
+								" FROM	pg_catalog.pg_largeobject ");
+
+		if (PQgetvalue(res, 0, PQfnumber(res, "large_object_exists"))[0] == 't')
+		{
+			found = true;
+			if (script == NULL && (script = fopen_priv(output_path, "w")) == NULL)
+				pg_fatal("could not open file \"%s\": %s\n", output_path, getErrorText());
+
+			fprintf(script, "Database %s contains large objects\n", active_db->db_name);
+		}
+
+		PQclear(res);
+		PQfinish(conn);
+	}
+
+	if (script)
+		fclose(script);
+
+	if (found)
+	{
+		pg_log(PG_REPORT, "fatal\n");
+		pg_fatal("Your installation contains large objects.  These objects are not supported\n"
+				 "by the new cluster and must be dropped.\n"
+				 "A list of databases which contains large objects is in the file:\n"
+				 "\t%s\n\n", output_path);
 	}
 	else
 		check_ok();

@@ -12,7 +12,11 @@
 #include "pg_upgrade.h"
 
 
-
+#if 0
+/*
+ * In Greenplum, large objects are not supported, so the below
+ * code is not required
+ */
 /*
  * new_9_0_populate_pg_largeobject_metadata()
  *	new >= 9.0, old <= 8.4
@@ -94,6 +98,7 @@ new_9_0_populate_pg_largeobject_metadata(ClusterInfo *cluster, bool check_mode)
 		check_ok();
 }
 
+#endif
 
 /*
  * old_9_3_check_for_line_data_type_usage()

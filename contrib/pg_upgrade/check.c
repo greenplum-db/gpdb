@@ -158,14 +158,14 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 	if (GET_MAJOR_VERSION(old_cluster.major_version) <= 903)
 		old_9_3_check_for_line_data_type_usage(&old_cluster);
 
+#if 0
 	/*
-	 * GPDB_90_MERGE_FIXME: does enabling this work, we don't really support
-	 * large objects but if this works it would be nice to minimize the diff
-	 * to upstream.
+	 * GPDB 6 does not support large objects
 	 */
 	/* Pre-PG 9.0 had no large object permissions */
 	if (GET_MAJOR_VERSION(old_cluster.major_version) <= 804)
 		new_9_0_populate_pg_largeobject_metadata(&old_cluster, true);
+#endif
 
 	/*
 	 * While not a check option, we do this now because this is the only time
@@ -278,10 +278,14 @@ issue_warnings_and_set_wal_level(char *sequence_script_file_name)
 		old_8_3_invalidate_bpchar_pattern_ops_indexes(&new_cluster, false);
 	}
 
-	/* GPDB_90_MERGE_FIXME: See earlier comment on large objects */
+#if 0
+	/*
+	 * GPDB 6 does not support large objects
+	 */
 	/* Create dummy large object permissions for old < PG 9.0? */
 	if (GET_MAJOR_VERSION(old_cluster.major_version) <= 804)
 		new_9_0_populate_pg_largeobject_metadata(&new_cluster, false);
+#endif
 
 	stop_postmaster(false);
 }
