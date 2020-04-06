@@ -48,6 +48,18 @@ matrix:
                       - *common_sources
                   packages:
                       - *common_packages
+        - os: linux
+          dist: bionic
+          compiler: gcc
+          env:
+              - T=memdebug C=""
+              - OVERRIDE_CC="CC=gcc-8" OVERRIDE_CXX="CXX=g++-8"
+          addons:
+              apt:
+                  sources:
+                      - *common_sources
+                  packages:
+                      - *common_packages
         # Ubuntu Xenial, clang 7, AMD64
         - os: linux
           dist: xenial
@@ -137,6 +149,35 @@ script:
       pip install --user setuptools
       if [ "$T" = "debug" ]; then
         ./configure \
+            --prefix=${TRAVIS_BUILD_DIR}/gpsql \
+            --enable-cassert \
+            --enable-debug \
+            --enable-debug-extensions \
+            --with-perl \
+            --with-python \
+            --disable-orca \
+            --with-openssl \
+            --with-ldap \
+            --with-libcurl \
+            --with-libxml \
+            --enable-mapreduce \
+            --enable-orafce \
+            $C
+        make -j 2 -s install
+        source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
+        make -s unittest-check
+        make -C gpAux/gpdemo cluster
+        source gpAux/gpdemo/gpdemo-env.sh
+        make -C src/test/regress installcheck-small
+      fi
+  - |
+      set -eo pipefail
+      pip install --user --upgrade pip
+      pip install --user --pre psutil
+      pip install --user lockfile
+      pip install --user setuptools
+      if [ "$T" = "memdebug" ]; then
+        CFLAGS=-DCACHE_CLOBBER_ALWAYS -DCLOBBER_FREED_MEMORY ./configure \
             --prefix=${TRAVIS_BUILD_DIR}/gpsql \
             --enable-cassert \
             --enable-debug \
