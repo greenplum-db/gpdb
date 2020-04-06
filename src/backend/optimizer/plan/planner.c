@@ -1150,6 +1150,8 @@ preprocess_expression(PlannerInfo *root, Node *expr, int kind)
 				ereport(ERROR,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 						 errmsg("function with EXECUTE ON restrictions cannot be used in the SELECT list of a query with FROM")));
+				if (kind == EXPRKIND_TARGET)
+					elog(LOG, "dummy");
 			}
 		}
 		else
