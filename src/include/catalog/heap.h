@@ -101,8 +101,6 @@ extern void heap_truncate(List *relids);
 
 extern void heap_truncate_one_rel(Relation rel);
 
-extern void heap_truncate_one_relid(Oid relid);
-
 extern void heap_truncate_check_FKs(List *relations, bool tempTables);
 
 extern List *heap_truncate_find_FKs(List *relationIds);

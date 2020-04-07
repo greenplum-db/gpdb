@@ -3451,7 +3451,7 @@ heap_truncate(List *relids)
  *
  *	 This routine deletes all data within the specified relation.
  */
-void
+static void
 heap_truncate_one_relid(Oid relid)
 {
 	if (OidIsValid(relid))
