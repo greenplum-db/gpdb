@@ -214,12 +214,14 @@ TruncateAOSegmentFile(File fd, Relation rel, int32 segFileNum, int64 offset)
 	}
 }
 
-struct mdunlink_ao_callback_ctx {
+struct mdunlink_ao_callback_ctx
+{
 	char *segPath;
 	char *segpathSuffixPosition;
 };
 
-struct truncate_ao_callback_ctx {
+struct truncate_ao_callback_ctx
+{
 	char *segPath;
 	char *segpathSuffixPosition;
 	Relation rel;
@@ -485,8 +487,11 @@ truncate_ao_perFile(const int segno, void *ctx)
 	}
 	else
 	{
-		/* it is ok that the file we were about to truncate didn't exist */
-		elog(DEBUG1, "could not truncate segfile %s, because it does not exist", segPath);
+		/* 
+		 * we traverse possible segment files of AO/AOCS tables and call
+		 * truncate_ao_perFile to truncate them. It is ok that some files do not exist
+		 */
+		return false;
 	}
 
 	return true;

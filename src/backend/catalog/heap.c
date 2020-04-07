@@ -3499,15 +3499,13 @@ heap_truncate_one_rel(Relation rel)
 	Oid			toastrelid;
 
 	/* Truncate the actual file (and discard buffers) */
-	if (!RelationIsAppendOptimized(rel))
-	{
-		RelationTruncate(rel, 0);
-	}
-	else
+	if (RelationIsAppendOptimized(rel))
 	{
 		ao_truncate_one_rel(rel);
 		ao_aux_tables_truncate(rel);
 	}
+	else
+		RelationTruncate(rel, 0);
 
 	/* If the relation has indexes, truncate the indexes too */
 	RelationTruncateIndexes(rel);
