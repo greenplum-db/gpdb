@@ -505,13 +505,11 @@ SELECT mapreduce('@abs_srcdir@/yml/perlerror.yml') ORDER BY 1;
 mapreduce
 ---------------------
 STDERR> ERROR:  syntax error at line 18, near "[]"
-STDERR> DETAIL:  
 STDERR> syntax error at line 20, near ";
 STDERR>  }"
 STDERR> CONTEXT:  compilation of PL/Perl function "mapreduce_1977_grep_map"
 STDERR> Error: Object creation Failure
 STDERR> ERROR:  syntax error at line 28, near "[]"
-STDERR> DETAIL:  
 STDERR> syntax error at line 29, near ";
 STDERR>  }"
 STDERR> CONTEXT:  compilation of PL/Perl function "mapreduce_1992_grep_map"

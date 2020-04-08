@@ -638,7 +638,7 @@ CONTEXT:  PL/Perl anonymous code block
 -- compile-time error: "Unable to load blib.pm into plperl"
 DO $$ use blib; $$ LANGUAGE plperl;
 ERROR:  Unable to load blib.pm into plperl at line 1.
-DETAIL:  BEGIN failed--compilation aborted at line 1.
+BEGIN failed--compilation aborted at line 1.
 CONTEXT:  PL/Perl anonymous code block
 -- check that we can "use" a module that has already been loaded
 -- runtime error: "Can't use string ("foo") as a SCALAR ref while "strict refs" in use

@@ -122,12 +122,10 @@ END
 ERROR:  fault triggered, fault name:'appendonly_insert' fault type:'panic'  (seg0 127.0.0.1:25432 pid=21988)
 1<:  <... completed>
 ERROR:  Error on receive from seg0 127.0.0.1:7002 pid=29474: server closed the connection unexpectedly
-DETAIL:  
 	This probably means the server terminated abnormally
 	before or while processing the request.
 2<:  <... completed>
 ERROR:  Error on receive from seg0 127.0.0.1:7002 pid=29462: server closed the connection unexpectedly
-DETAIL:  
 	This probably means the server terminated abnormally
 	before or while processing the request.
 
@@ -624,7 +622,6 @@ CHECKPOINT
 (1 row)
 4<:  <... completed>
 ERROR:  Error on receive from seg0 127.0.0.1:7002 pid=29553: server closed the connection unexpectedly
-DETAIL:  
 	This probably means the server terminated abnormally
 	before or while processing the request.
 -- Shows entries for new files added to pg_aocsseg table. These are

@@ -985,7 +985,6 @@ CONTEXT:  SQL function "xpath" statement 1
 -- throw an error, only a warning.
 SELECT xpath('/*', '<relativens xmlns=''relative''/>');
 WARNING:  line 1: xmlns: URI relative is not absolute
-DETAIL:  
 <relativens xmlns='relative'/>
                             ^
 CONTEXT:  SQL function "xpath" statement 1

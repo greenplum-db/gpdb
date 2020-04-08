@@ -5408,13 +5408,11 @@ NOTICE:  calling down into outer_func()
 NOTICE:  calling down into inner_func()
 CONTEXT:  PL/pgSQL function outer_outer_func(integer) line 6 at assignment
 NOTICE:  ***PL/pgSQL function inner_func(integer) line 4 at GET DIAGNOSTICS
-DETAIL:  
 PL/pgSQL function outer_func(integer) line 6 at assignment
 PL/pgSQL function outer_outer_func(integer) line 6 at assignment***
 CONTEXT:  PL/pgSQL function outer_func(integer) line 6 at assignment
 PL/pgSQL function outer_outer_func(integer) line 6 at assignment
 NOTICE:  ***PL/pgSQL function inner_func(integer) line 7 at GET DIAGNOSTICS
-DETAIL:  
 PL/pgSQL function outer_func(integer) line 6 at assignment
 PL/pgSQL function outer_outer_func(integer) line 6 at assignment***
 CONTEXT:  PL/pgSQL function outer_func(integer) line 6 at assignment
@@ -5436,13 +5434,11 @@ NOTICE:  calling down into outer_func()
 NOTICE:  calling down into inner_func()
 CONTEXT:  PL/pgSQL function outer_outer_func(integer) line 6 at assignment
 NOTICE:  ***PL/pgSQL function inner_func(integer) line 4 at GET DIAGNOSTICS
-DETAIL:  
 PL/pgSQL function outer_func(integer) line 6 at assignment
 PL/pgSQL function outer_outer_func(integer) line 6 at assignment***
 CONTEXT:  PL/pgSQL function outer_func(integer) line 6 at assignment
 PL/pgSQL function outer_outer_func(integer) line 6 at assignment
 NOTICE:  ***PL/pgSQL function inner_func(integer) line 7 at GET DIAGNOSTICS
-DETAIL:  
 PL/pgSQL function outer_func(integer) line 6 at assignment
 PL/pgSQL function outer_outer_func(integer) line 6 at assignment***
 CONTEXT:  PL/pgSQL function outer_func(integer) line 6 at assignment
@@ -5510,13 +5506,11 @@ NOTICE:  calling down into outer_func()
 NOTICE:  calling down into inner_func()
 CONTEXT:  PL/pgSQL function outer_outer_func(integer) line 6 at assignment
 NOTICE:  ***PL/pgSQL function inner_func(integer) line 10 at GET DIAGNOSTICS
-DETAIL:  
 PL/pgSQL function outer_func(integer) line 6 at assignment
 PL/pgSQL function outer_outer_func(integer) line 6 at assignment***
 CONTEXT:  PL/pgSQL function outer_func(integer) line 6 at assignment
 PL/pgSQL function outer_outer_func(integer) line 6 at assignment
 NOTICE:  ***PL/pgSQL function inner_func(integer) line 15 at GET DIAGNOSTICS
-DETAIL:  
 PL/pgSQL function outer_func(integer) line 6 at assignment
 PL/pgSQL function outer_outer_func(integer) line 6 at assignment***
 CONTEXT:  PL/pgSQL function outer_func(integer) line 6 at assignment
@@ -5538,13 +5532,11 @@ NOTICE:  calling down into outer_func()
 NOTICE:  calling down into inner_func()
 CONTEXT:  PL/pgSQL function outer_outer_func(integer) line 6 at assignment
 NOTICE:  ***PL/pgSQL function inner_func(integer) line 10 at GET DIAGNOSTICS
-DETAIL:  
 PL/pgSQL function outer_func(integer) line 6 at assignment
 PL/pgSQL function outer_outer_func(integer) line 6 at assignment***
 CONTEXT:  PL/pgSQL function outer_func(integer) line 6 at assignment
 PL/pgSQL function outer_outer_func(integer) line 6 at assignment
 NOTICE:  ***PL/pgSQL function inner_func(integer) line 15 at GET DIAGNOSTICS
-DETAIL:  
 PL/pgSQL function outer_func(integer) line 6 at assignment
 PL/pgSQL function outer_outer_func(integer) line 6 at assignment***
 CONTEXT:  PL/pgSQL function outer_func(integer) line 6 at assignment

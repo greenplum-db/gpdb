@@ -235,7 +235,6 @@ ALTER
 (1 row)
 12<:  <... completed>
 ERROR:  Error on receive from seg0 127.0.0.1:7002 pid=25361: server closed the connection unexpectedly
-DETAIL:  
 	This probably means the server terminated abnormally
 	before or while processing the request.
 13: SELECT count(*) from QE_panic_test_table;
