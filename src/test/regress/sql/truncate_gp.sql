@@ -1,4 +1,12 @@
+-- Mask out segment file name
+-- start_matchsubs
+-- m/segfile.*,/
+-- s/segfile.*,/segfile###,/
+-- end_matchsubs
+
+-- start_ignore
 CREATE EXTENSION plpythonu;
+-- end_ignore
 --- Fucntion which lists the table segment file size on each segment.
 CREATE OR REPLACE FUNCTION stat_table_segfile_size(datname text, tabname text)
     RETURNS TABLE (dbid int2, relfilenode_dboid_relative_path text, size int)
@@ -56,13 +64,7 @@ insert into truncate_with_create_ao select i, i from generate_series(1,10)i;
 truncate truncate_with_create_ao;
 end; 
 
-create table truncate_without_create_ao(a int, b int) with (appendoptimized = true, orientation = row) distributed by (a);
-insert into truncate_without_create_ao select i, i from generate_series(1,10)i;
-truncate truncate_without_create_ao;
-
 -- the ao table segment file size after truncate should be zero
--- no matter truncate table and create table are in the same transaction or not
-select stat_table_segfile_size('regression', 'truncate_without_create_ao');
 select stat_table_segfile_size('regression', 'truncate_with_create_ao');
 
 -- test truncate table and create table are in the same transaction for aocs table
@@ -72,13 +74,7 @@ insert into truncate_with_create_aocs select i, i from generate_series(1,10)i;
 truncate truncate_with_create_aocs;
 end; 
 
-create table truncate_without_create_aocs(a int, b int) with (appendoptimized = true, orientation = column) distributed by (a);
-insert into truncate_without_create_aocs select i, i from generate_series(1,10)i;
-truncate truncate_without_create_aocs;
-
 -- the aocs table segment file size after truncate should be zero
--- no matter truncate table and create table are in the same transaction or not
-select stat_table_segfile_size('regression', 'truncate_without_create_aocs');
 select stat_table_segfile_size('regression', 'truncate_with_create_aocs');
 
 -- test truncate table and create table are in the same transaction for heap table
@@ -88,14 +84,5 @@ insert into truncate_with_create_heap select i, i from generate_series(1,10)i;
 truncate truncate_with_create_heap;
 end;
 
-create table truncate_without_create_heap(a int, b int) distributed by (a);
-insert into truncate_without_create_heap select i, i from generate_series(1,10)i;
-truncate truncate_without_create_heap;
-
 -- the heap table segment file size after truncate should be zero
--- no matter truncate table and create table are in the same transaction or not
-select stat_table_segfile_size('regression', 'truncate_without_create_heap');
 select stat_table_segfile_size('regression', 'truncate_with_create_heap');
-
-DROP FUNCTION stat_table_segfile_size(datname text, tabname text);
-DROP EXTENSION plpythonu;

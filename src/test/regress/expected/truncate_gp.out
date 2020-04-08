@@ -1,4 +1,11 @@
+-- Mask out segment file name
+-- start_matchsubs
+-- m/segfile.*,/
+-- s/segfile.*,/segfile###,/
+-- end_matchsubs
+-- start_ignore
 CREATE EXTENSION plpythonu;
+-- end_ignore
 --- Fucntion which lists the table segment file size on each segment.
 CREATE OR REPLACE FUNCTION stat_table_segfile_size(datname text, tabname text)
     RETURNS TABLE (dbid int2, relfilenode_dboid_relative_path text, size int)
@@ -54,28 +61,16 @@ create table truncate_with_create_ao(a int, b int) with (appendoptimized = true,
 insert into truncate_with_create_ao select i, i from generate_series(1,10)i;
 truncate truncate_with_create_ao;
 end; 
-create table truncate_without_create_ao(a int, b int) with (appendoptimized = true, orientation = row) distributed by (a);
-insert into truncate_without_create_ao select i, i from generate_series(1,10)i;
-truncate truncate_without_create_ao;
 -- the ao table segment file size after truncate should be zero
--- no matter truncate table and create table are in the same transaction or not
-select stat_table_segfile_size('regression', 'truncate_without_create_ao');
-  stat_table_segfile_size  
----------------------------
- (2,segfile:16384/19213,0)
- (3,segfile:16384/19219,0)
- (4,segfile:16384/19218,0)
-(3 rows)
-
 select stat_table_segfile_size('regression', 'truncate_with_create_ao');
    stat_table_segfile_size   
 -----------------------------
- (2,segfile:16384/19164,0)
- (2,segfile:16384/19164.1,0)
- (3,segfile:16384/19164,0)
- (3,segfile:16384/19164.1,0)
- (4,segfile:16384/19166,0)
- (4,segfile:16384/19166.1,0)
+ (2,segfile:16384/19161,0)
+ (2,segfile:16384/19161.1,0)
+ (3,segfile:16384/19161,0)
+ (3,segfile:16384/19161.1,0)
+ (4,segfile:16384/19160,0)
+ (4,segfile:16384/19160.1,0)
 (6 rows)
 
 -- test truncate table and create table are in the same transaction for aocs table
@@ -84,31 +79,19 @@ create table truncate_with_create_aocs(a int, b int) with (appendoptimized = tru
 insert into truncate_with_create_aocs select i, i from generate_series(1,10)i;
 truncate truncate_with_create_aocs;
 end; 
-create table truncate_without_create_aocs(a int, b int) with (appendoptimized = true, orientation = column) distributed by (a);
-insert into truncate_without_create_aocs select i, i from generate_series(1,10)i;
-truncate truncate_without_create_aocs;
 -- the aocs table segment file size after truncate should be zero
--- no matter truncate table and create table are in the same transaction or not
-select stat_table_segfile_size('regression', 'truncate_without_create_aocs');
-  stat_table_segfile_size  
----------------------------
- (2,segfile:16384/19284,0)
- (3,segfile:16384/19285,0)
- (4,segfile:16384/19284,0)
-(3 rows)
-
 select stat_table_segfile_size('regression', 'truncate_with_create_aocs');
     stat_table_segfile_size    
 -------------------------------
- (2,segfile:16384/19233,0)
- (2,segfile:16384/19233.1,0)
- (2,segfile:16384/19233.129,0)
- (3,segfile:16384/19233,0)
- (3,segfile:16384/19233.1,0)
- (3,segfile:16384/19233.129,0)
- (4,segfile:16384/19233,0)
- (4,segfile:16384/19233.1,0)
- (4,segfile:16384/19233.129,0)
+ (2,segfile:16384/19196,0)
+ (2,segfile:16384/19196.1,0)
+ (2,segfile:16384/19196.129,0)
+ (3,segfile:16384/19196,0)
+ (3,segfile:16384/19196.1,0)
+ (3,segfile:16384/19196.129,0)
+ (4,segfile:16384/19194,0)
+ (4,segfile:16384/19194.1,0)
+ (4,segfile:16384/19194.129,0)
 (9 rows)
 
 -- test truncate table and create table are in the same transaction for heap table
@@ -117,26 +100,12 @@ create table truncate_with_create_heap(a int, b int) distributed by (a);
 insert into truncate_with_create_heap select i, i from generate_series(1,10)i;
 truncate truncate_with_create_heap;
 end;
-create table truncate_without_create_heap(a int, b int) distributed by (a);
-insert into truncate_without_create_heap select i, i from generate_series(1,10)i;
-truncate truncate_without_create_heap;
 -- the heap table segment file size after truncate should be zero
--- no matter truncate table and create table are in the same transaction or not
-select stat_table_segfile_size('regression', 'truncate_without_create_heap');
-  stat_table_segfile_size  
----------------------------
- (2,segfile:16384/19319,0)
- (3,segfile:16384/19319,0)
- (4,segfile:16384/19319,0)
-(3 rows)
-
 select stat_table_segfile_size('regression', 'truncate_with_create_heap');
   stat_table_segfile_size  
 ---------------------------
- (2,segfile:16384/19299,0)
- (3,segfile:16384/19301,0)
- (4,segfile:16384/19299,0)
+ (2,segfile:16384/19218,0)
+ (3,segfile:16384/19217,0)
+ (4,segfile:16384/19220,0)
 (3 rows)
 
-DROP FUNCTION stat_table_segfile_size(datname text, tabname text);
-DROP EXTENSION plpythonu;

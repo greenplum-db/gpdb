@@ -6775,9 +6775,8 @@ drop language if exists plpythonu cascade;
 drop table if exists sirv_test13_result1;
 drop table if exists sirv_test13_result2;
 
---end_ignore
-
 CREATE LANGUAGE plpythonu;
+--end_ignore
 
 CREATE or replace FUNCTION sirv_test13_fun1 ()
   RETURNS text
@@ -6863,9 +6862,8 @@ drop language if exists plpythonu cascade;
 
 drop table if exists sirv_test14_result1;
 
---end_ignore
-
 CREATE LANGUAGE plpythonu;
+--end_ignore
 
 CREATE or replace FUNCTION sirv_test14_fun1 ()
   RETURNS text
