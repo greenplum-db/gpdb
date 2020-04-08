@@ -8720,6 +8720,7 @@ CreateCheckPoint(int flags)
 	uint32		_logSeg;
 	VirtualTransactionId *vxids;
 	int     nvxids;
+	int i;
 	bool resync_to_sync_transition = (flags & CHECKPOINT_RESYNC_TO_INSYNC_TRANSITION) != 0;
 
 	if (shutdown && ControlFile->state == DB_STARTUP)
@@ -9083,11 +9084,20 @@ CreateCheckPoint(int flags)
 	rdata[5].buffer = InvalidBuffer;
 	rdata[5].len = PREPARED_TRANSACTION_CHECKPOINT_BYTES(p->count);
 	rdata[5].next = NULL;
-	/* if !gp_before_filespace_setup then rdata[2...4] are valid */
-	if (gp_before_filespace_setup)
-		rdata[1].next = &(rdata[5]);
-	else
-		rdata[4].next = &(rdata[5]);
+	/*
+	 * We iterate the rdata because rdata[2,3,4] may or may not be used
+	 * in mmxlog_append_checkpoint_data(). The next pointers of the items
+	 * 2 ~ 4(inclusive) are safely initialized to NULL in
+	 * mmxlog_append_checkpoint_data().
+	 */
+	for (i = 1; i < 5; i++)
+	{
+		if (rdata[i].next == NULL)
+		{
+			rdata[i].next = &rdata[5];
+			break;
+		}
+	}
 
 	if (Debug_persistent_recovery_print)
 	{
