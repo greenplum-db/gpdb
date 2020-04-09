@@ -9098,6 +9098,10 @@ CreateCheckPoint(int flags)
 			break;
 		}
 	}
+	/*
+	 * Save the data pointers that need to be pfreed after XLogInsert.
+	 * This is essential because rdata[x].data may be changed in XLogInsert.
+	 */
 	void *dataptr[6];
 	for (i = 2; i < 6; i++)
 		dataptr[i] = (void*)rdata[i].data;
@@ -9168,7 +9172,7 @@ CreateCheckPoint(int flags)
 	 */
 	freeDtxCheckPointInfoAndUnlock(dtxCheckPointInfo, dtxCheckPointInfoSize, &recptr);
 	/*
-	 * pfree data starting from rdata[1].next to the end.
+	 * pfree data starting from rdata[2].data to the end.
 	 * if gp_before_filespace_setup is on, rdata[2], rdata[3], rdata[4] are empty,
 	 * otherwise, they are allocated by mmxlog_append_checkpoint_data()
 	 */
