@@ -206,18 +206,6 @@ namespace gpnaucrates
 				)
 				const;
 
-			// create a new histogram with updated bucket frequency
-			CHistogram *MakeHistogramUpdateFreq
-						(
-						const CBucketArray *histogram_buckets,
-						CDoubleArray *dest_bucket_freqs,
-						CDouble *num_output_rows,
-						CDouble num_null_rows,
-						CDouble num_NDV_remain,
-						CDouble num_NDV_remain_rows
-						)
-						const;
-
 		public:
 
 			// ctors

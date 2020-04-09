@@ -1778,88 +1778,44 @@ CHistogram::MakeUnionHistogramNormalize
 	// compute the total number of rows having distinct values not captured by the buckets in both the histograms
 	CDouble NDV_remain_num_rows = std::max( (this->GetFreqRemain() * rows), (other_histogram->GetFreqRemain() * rows_other));
 
-	CHistogram *result_histogram = MakeHistogramUpdateFreq
+	// finally, create a normalized histogram using num_tuples_per_bucket, num_null_rows & NDV_remain_num_rows
+	GPOS_ASSERT(num_tuples_per_bucket->Size() == histogram_buckets->Size());
+
+	// compute the total number of rows in the resultant histogram
+	CDouble total_output_rows = num_null_rows + NDV_remain_num_rows;
+	for (ULONG ul = 0; ul < num_tuples_per_bucket->Size(); ++ul)
+	{
+		total_output_rows = total_output_rows + *(*num_tuples_per_bucket)[ul];
+	}
+	*num_output_rows = std::max(CStatistics::MinRows, total_output_rows);
+
+	// set the frequency for each row in the resultant histogram
+	for (ULONG ul = 0; ul < histogram_buckets->Size(); ++ul)
+	{
+		CBucket *bucket = (*histogram_buckets)[ul];
+		CDouble rows = *(*num_tuples_per_bucket)[ul];
+
+		bucket->SetFrequency(rows / *num_output_rows);
+	}
+
+	CDouble null_freq = num_null_rows / *num_output_rows ;
+	CDouble NDV_remain_freq =  NDV_remain_num_rows / *num_output_rows ;
+
+	CHistogram *result_histogram = GPOS_NEW(m_mp) CHistogram
 									(
+									m_mp,
 									histogram_buckets,
-									num_tuples_per_bucket,
-									num_output_rows,
-									num_null_rows,
+									true /* is_well_defined */,
+									null_freq,
 									num_NDV_remain,
-									NDV_remain_num_rows
+									NDV_remain_freq,
+									false /* is_col_stats_missing */
 									);
+
 	// clean up
-	histogram_buckets->Release();
 	num_tuples_per_bucket->Release();
 
 	return result_histogram;
-}
-
-// create a new histogram with updated bucket frequency
-CHistogram *
-CHistogram::MakeHistogramUpdateFreq
-	(
-	const CBucketArray *histogram_buckets,
-	CDoubleArray *dest_bucket_freqs,
-	CDouble *result_num_rows_output,
-	CDouble num_null_rows,
-	CDouble num_NDV_remain,
-	CDouble NDV_remain_num_rows
-	)
-	const
-{
-	GPOS_ASSERT(NULL != histogram_buckets);
-	GPOS_ASSERT(NULL != dest_bucket_freqs);
-
-	const ULONG length = dest_bucket_freqs->Size();
-	GPOS_ASSERT(length == histogram_buckets->Size());
-
-	CDouble cumulative_num_rows = num_null_rows + NDV_remain_num_rows;
-	for (ULONG ul = 0; ul < length; ul++)
-	{
-		CDouble rows = *(*dest_bucket_freqs)[ul];
-		cumulative_num_rows = cumulative_num_rows + rows;
-	}
-
-	*result_num_rows_output = std::max(CStatistics::MinRows, cumulative_num_rows);
-
-	CBucketArray *new_buckets = GPOS_NEW(m_mp) CBucketArray(m_mp);
-	for (ULONG ul = 0; ul < length; ul++)
-	{
-		CDouble rows = *(*dest_bucket_freqs)[ul];
-		CBucket *bucket = (*histogram_buckets)[ul];
-
-		// reuse the points
-		bucket->GetLowerBound()->AddRef();
-		bucket->GetUpperBound()->AddRef();
-
-		CDouble frequency = rows / *result_num_rows_output;
-
-		CBucket *new_bucket = GPOS_NEW(m_mp) CBucket
-										(
-										bucket->GetLowerBound(),
-										bucket->GetUpperBound(),
-										bucket->IsLowerClosed(),
-										bucket->IsUpperClosed(),
-										frequency,
-										bucket->GetNumDistinct()
-										);
-
-		new_buckets->Append(new_bucket);
-	}
-
-	CDouble null_freq = num_null_rows / *result_num_rows_output ;
-	CDouble NDV_remain_freq =  NDV_remain_num_rows / *result_num_rows_output ;
-
-	return GPOS_NEW(m_mp) CHistogram
-							(
-							m_mp,
-							new_buckets,
-							true /* is_well_defined */,
-							null_freq,
-							num_NDV_remain,
-							NDV_remain_freq,
-							false /* is_col_stats_missing */
-							);
 }
 
 // add residual bucket in an union operation to the array of buckets in the histogram
