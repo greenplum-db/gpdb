@@ -1468,6 +1468,7 @@ _outRefreshClause(StringInfo str, const RefreshClause *node)
 	WRITE_NODE_TYPE("REFRESHCLAUSE");
 
 	WRITE_BOOL_FIELD(concurrent);
+	WRITE_BOOL_FIELD(skipData);
 	WRITE_NODE_FIELD(relation);
 }
 
