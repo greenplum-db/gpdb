@@ -1419,8 +1419,8 @@ drop table if exists sirv_test13_result1;
 NOTICE:  table "sirv_test13_result1" does not exist, skipping
 drop table if exists sirv_test13_result2;
 NOTICE:  table "sirv_test13_result2" does not exist, skipping
---end_ignore
 CREATE LANGUAGE plpythonu;
+--end_ignore
 CREATE or replace FUNCTION sirv_test13_fun1 ()
   RETURNS text
 AS $$
@@ -1500,8 +1500,8 @@ NOTICE:  drop cascades to function sirv_test13_fun2(double precision,integer)
 NOTICE:  drop cascades to function sirv_test13_fun1()
 drop table if exists sirv_test14_result1;
 NOTICE:  table "sirv_test14_result1" does not exist, skipping
---end_ignore
 CREATE LANGUAGE plpythonu;
+--end_ignore
 CREATE or replace FUNCTION sirv_test14_fun1 ()
   RETURNS text
 AS $$

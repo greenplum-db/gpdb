@@ -48,6 +48,8 @@ TruncateAOSegmentFile(File fd,
 					  int32 segmentFileNum,
 					  int64 offset);
 
+extern void ao_truncate_one_rel(Relation rel);
+
 extern void
 mdunlink_ao(const char *path, ForkNumber forkNumber);
 
