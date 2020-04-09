@@ -9098,6 +9098,9 @@ CreateCheckPoint(int flags)
 			break;
 		}
 	}
+	void *dataptr[6];
+	for (i = 2; i < 6; i++)
+		dataptr[i] = (void*)rdata[i].data;
 
 	if (Debug_persistent_recovery_print)
 	{
@@ -9170,9 +9173,9 @@ CreateCheckPoint(int flags)
 	 * otherwise, they are allocated by mmxlog_append_checkpoint_data()
 	 */
 	{
-		XLogRecData *prdata = rdata[1].next;
-		for(; prdata; prdata = prdata->next)
-			pfree(prdata->data);
+		for (i = 2; i < 6; i++)
+			if (dataptr[i])
+				pfree(dataptr[i]);
 		dtxCheckPointInfo = NULL;
 		p = NULL;
 	}

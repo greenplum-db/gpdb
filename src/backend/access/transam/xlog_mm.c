@@ -1599,6 +1599,9 @@ mmxlog_append_checkpoint_data(XLogRecData rdata[6])
 
 			SUPPRESS_ERRCONTEXT_POP();
 
+			rdata[2].data = NULL;
+			rdata[3].data = NULL;
+			rdata[4].data = NULL;
 			rdata[2].len = 0;
 			rdata[3].len = 0;
 			rdata[4].len = 0;
