@@ -544,3 +544,45 @@ on t1.b = t2.b and t1.a > any (select sum(b) from t3_test_pretch_join_qual t3 wh
 
 reset Test_print_prefetch_joinqual;
 reset optimizer;
+
+-- Github Issue: https://github.com/greenplum-db/gpdb/issues/9733
+-- Previously in the function bring_to_outer_query and
+-- bring_to_singleQE it depends on the path->param_info field
+-- to determine if the path contains outerParams. This is not
+-- enought. The following case would SegFault before because
+-- the indexpath's orderby clause contains outerParams.
+create table gist_tbl_github9733 (b box, p point, c circle);
+insert into gist_tbl_github9733
+select box(point(0.05*i, 0.05*i), point(0.05*i, 0.05*i)),
+       point(0.05*i, 0.05*i),
+       circle(point(0.05*i, 0.05*i), 1.0)
+from generate_series(0,10000) as i;
+vacuum analyze gist_tbl_github9733;
+create index gist_tbl_point_index_github9733 on gist_tbl_github9733 using gist (p);
+set enable_seqscan=off;
+set enable_bitmapscan=off;
+explain (costs off)
+select p from
+  (values (box(point(0,0), point(0.5,0.5))),
+          (box(point(0.5,0.5), point(0.75,0.75))),
+          (box(point(0.8,0.8), point(1.0,1.0)))) as v(bb)
+cross join lateral
+  (select p from gist_tbl_github9733 where p <@ bb order by p <-> bb[0] limit 2) ss;
+
+reset enable_seqscan;
+explain (costs off)
+select p from
+  (values (box(point(0,0), point(0.5,0.5))),
+          (box(point(0.5,0.5), point(0.75,0.75))),
+          (box(point(0.8,0.8), point(1.0,1.0)))) as v(bb)
+cross join lateral
+  (select p from gist_tbl_github9733 where p <@ bb order by p <-> bb[0] limit 2) ss;
+
+select p from
+  (values (box(point(0,0), point(0.5,0.5))),
+          (box(point(0.5,0.5), point(0.75,0.75))),
+          (box(point(0.8,0.8), point(1.0,1.0)))) as v(bb)
+cross join lateral
+  (select p from gist_tbl_github9733 where p <@ bb order by p <-> bb[0] limit 2) ss;
+
+reset enable_bitmapscan;

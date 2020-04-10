@@ -1133,3 +1133,70 @@ NOTICE:  prefetch join qual in slice 0 of plannode 2
 
 reset Test_print_prefetch_joinqual;
 reset optimizer;
+-- Github Issue: https://github.com/greenplum-db/gpdb/issues/9733
+-- Previously in the function bring_to_outer_query and
+-- bring_to_singleQE it depends on the path->param_info field
+-- to determine if the path contains outerParams. This is not
+-- enought. The following case would SegFault before because
+-- the indexpath's orderby clause contains outerParams.
+create table gist_tbl_github9733 (b box, p point, c circle);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+insert into gist_tbl_github9733
+select box(point(0.05*i, 0.05*i), point(0.05*i, 0.05*i)),
+       point(0.05*i, 0.05*i),
+       circle(point(0.05*i, 0.05*i), 1.0)
+from generate_series(0,10000) as i;
+vacuum analyze gist_tbl_github9733;
+create index gist_tbl_point_index_github9733 on gist_tbl_github9733 using gist (p);
+set enable_seqscan=off;
+set enable_bitmapscan=off;
+explain (costs off)
+select p from
+  (values (box(point(0,0), point(0.5,0.5))),
+          (box(point(0.5,0.5), point(0.75,0.75))),
+          (box(point(0.8,0.8), point(1.0,1.0)))) as v(bb)
+cross join lateral
+  (select p from gist_tbl_github9733 where p <@ bb order by p <-> bb[0] limit 2) ss;
+ERROR:  could not devise a query plan for the given query (pathnode.c:417)
+reset enable_seqscan;
+explain (costs off)
+select p from
+  (values (box(point(0,0), point(0.5,0.5))),
+          (box(point(0.5,0.5), point(0.75,0.75))),
+          (box(point(0.8,0.8), point(1.0,1.0)))) as v(bb)
+cross join lateral
+  (select p from gist_tbl_github9733 where p <@ bb order by p <-> bb[0] limit 2) ss;
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Nested Loop
+   ->  Values Scan on "*VALUES*"
+   ->  Materialize
+         ->  Subquery Scan on ss
+               ->  Limit
+                     ->  Sort
+                           Sort Key: ((gist_tbl_github9733.p <-> ("*VALUES*".column1)[0]))
+                           ->  Result
+                                 Filter: (gist_tbl_github9733.p <@ "*VALUES*".column1)
+                                 ->  Materialize
+                                       ->  Gather Motion 3:1  (slice1; segments: 3)
+                                             ->  Seq Scan on gist_tbl_github9733
+ Optimizer: Postgres query optimizer
+(13 rows)
+
+select p from
+  (values (box(point(0,0), point(0.5,0.5))),
+          (box(point(0.5,0.5), point(0.75,0.75))),
+          (box(point(0.8,0.8), point(1.0,1.0)))) as v(bb)
+cross join lateral
+  (select p from gist_tbl_github9733 where p <@ bb order by p <-> bb[0] limit 2) ss;
+      p      
+-------------
+ (0.5,0.5)
+ (0.45,0.45)
+ (0.75,0.75)
+ (0.7,0.7)
+ (1,1)
+ (0.95,0.95)
+(6 rows)
+
+reset enable_bitmapscan;
