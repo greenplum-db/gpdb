@@ -3924,7 +3924,7 @@ compute_scalar_stats(VacAttrStatsP stats,
 		 * The rows are not necessarily in the order that our sampling
 		 * query returned them, for an append-only table.
 		 */
-		if (values_cnt > 1 && stats->relstorage == RELSTORAGE_HEAP)
+		if (values_cnt > 1)
 		{
 			MemoryContext old_context;
 			float4	   *corrs;

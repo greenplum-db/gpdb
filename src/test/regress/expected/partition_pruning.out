@@ -1923,35 +1923,32 @@ SELECT * FROM pt_lt_tab WHERE col4 is False ORDER BY col2,col3 LIMIT 5;
 (5 rows)
 
 EXPLAIN SELECT * FROM pt_lt_tab WHERE col4 is False ORDER BY col2,col3 LIMIT 5;
-                                                          QUERY PLAN                                                           
--------------------------------------------------------------------------------------------------------------------------------
- Limit  (cost=32014.75..32014.87 rows=5 width=8)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=32014.75..32014.87 rows=5 width=8)
+                                                                 QUERY PLAN                                                                 
+--------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=1300.29..1300.40 rows=5 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=1300.29..1300.40 rows=5 width=8)
          Merge Key: pt_lt_tab_1_prt_part1.col2, pt_lt_tab_1_prt_part1.col3
-         ->  Limit  (cost=32014.75..32014.77 rows=2 width=8)
-               ->  Sort  (cost=32014.75..32014.83 rows=11 width=8)
+         ->  Limit  (cost=1300.29..1300.30 rows=2 width=8)
+               ->  Sort  (cost=1300.28..1300.36 rows=11 width=8)
                      Sort Key: pt_lt_tab_1_prt_part1.col2, pt_lt_tab_1_prt_part1.col3
-                     ->  Append  (cost=0.14..32014.22 rows=11 width=8)
-                           ->  Index Scan using pt_lt_tab_1_prt_part1_col4_idx on pt_lt_tab_1_prt_part1  (cost=0.14..1002.14 rows=1 width=8)
+                     ->  Append  (cost=0.14..1299.75 rows=11 width=8)
+                           ->  Index Scan using pt_lt_tab_1_prt_part1_col4_idx on pt_lt_tab_1_prt_part1  (cost=0.14..40.23 rows=1 width=8)
                                  Index Cond: (col4 = false)
                                  Filter: (col4 IS FALSE)
-                           ->  Index Scan using pt_lt_tab_1_prt_part2_col4_idx on pt_lt_tab_1_prt_part2  (cost=0.14..1002.14 rows=1 width=8)
+                           ->  Index Scan using pt_lt_tab_1_prt_part2_col4_idx on pt_lt_tab_1_prt_part2  (cost=0.14..40.23 rows=1 width=8)
                                  Index Cond: (col4 = false)
                                  Filter: (col4 IS FALSE)
-                           ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part3  (cost=10000.21..10003.31 rows=4 width=8)
+                           ->  Index Scan using pt_lt_tab_1_prt_part3_col4_idx on pt_lt_tab_1_prt_part3  (cost=0.14..406.43 rows=4 width=8)
+                                 Index Cond: (col4 = false)
                                  Filter: (col4 IS FALSE)
-                                 ->  Bitmap Index Scan on pt_lt_tab_1_prt_part3_col4_idx  (cost=0.00..10000.21 rows=4 width=0)
-                                       Index Cond: (col4 = false)
-                           ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part4  (cost=10000.21..10003.31 rows=4 width=8)
+                           ->  Index Scan using pt_lt_tab_1_prt_part4_col4_idx on pt_lt_tab_1_prt_part4  (cost=0.14..406.43 rows=4 width=8)
+                                 Index Cond: (col4 = false)
                                  Filter: (col4 IS FALSE)
-                                 ->  Bitmap Index Scan on pt_lt_tab_1_prt_part4_col4_idx  (cost=0.00..10000.21 rows=4 width=0)
-                                       Index Cond: (col4 = false)
-                           ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part5  (cost=10000.21..10003.31 rows=4 width=8)
+                           ->  Index Scan using pt_lt_tab_1_prt_part5_col4_idx on pt_lt_tab_1_prt_part5  (cost=0.14..406.43 rows=4 width=8)
+                                 Index Cond: (col4 = false)
                                  Filter: (col4 IS FALSE)
-                                 ->  Bitmap Index Scan on pt_lt_tab_1_prt_part5_col4_idx  (cost=0.00..10000.21 rows=4 width=0)
-                                       Index Cond: (col4 = false)
  Optimizer: Postgres query optimizer
-(26 rows)
+(23 rows)
 
 SELECT * FROM pt_lt_tab WHERE col4 = False ORDER BY col2,col3 LIMIT 5;
  col2 | col3 | col4 
@@ -1964,35 +1961,32 @@ SELECT * FROM pt_lt_tab WHERE col4 = False ORDER BY col2,col3 LIMIT 5;
 (5 rows)
 
 EXPLAIN SELECT * FROM pt_lt_tab WHERE col4 = False ORDER BY col2,col3 LIMIT 5;
-                                                          QUERY PLAN                                                           
--------------------------------------------------------------------------------------------------------------------------------
- Limit  (cost=32014.75..32014.87 rows=5 width=8)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=32014.75..32014.87 rows=5 width=8)
+                                                                 QUERY PLAN                                                                 
+--------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=1300.29..1300.40 rows=5 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=1300.29..1300.40 rows=5 width=8)
          Merge Key: pt_lt_tab_1_prt_part1.col2, pt_lt_tab_1_prt_part1.col3
-         ->  Limit  (cost=32014.75..32014.77 rows=2 width=8)
-               ->  Sort  (cost=32014.75..32014.83 rows=11 width=8)
+         ->  Limit  (cost=1300.29..1300.30 rows=2 width=8)
+               ->  Sort  (cost=1300.28..1300.36 rows=11 width=8)
                      Sort Key: pt_lt_tab_1_prt_part1.col2, pt_lt_tab_1_prt_part1.col3
-                     ->  Append  (cost=0.14..32014.22 rows=11 width=8)
-                           ->  Index Scan using pt_lt_tab_1_prt_part1_col4_idx on pt_lt_tab_1_prt_part1  (cost=0.14..1002.14 rows=1 width=8)
+                     ->  Append  (cost=0.14..1299.75 rows=11 width=8)
+                           ->  Index Scan using pt_lt_tab_1_prt_part1_col4_idx on pt_lt_tab_1_prt_part1  (cost=0.14..40.23 rows=1 width=8)
                                  Index Cond: (col4 = false)
                                  Filter: (NOT col4)
-                           ->  Index Scan using pt_lt_tab_1_prt_part2_col4_idx on pt_lt_tab_1_prt_part2  (cost=0.14..1002.14 rows=1 width=8)
+                           ->  Index Scan using pt_lt_tab_1_prt_part2_col4_idx on pt_lt_tab_1_prt_part2  (cost=0.14..40.23 rows=1 width=8)
                                  Index Cond: (col4 = false)
                                  Filter: (NOT col4)
-                           ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part3  (cost=10000.21..10003.31 rows=4 width=8)
+                           ->  Index Scan using pt_lt_tab_1_prt_part3_col4_idx on pt_lt_tab_1_prt_part3  (cost=0.14..406.43 rows=4 width=8)
+                                 Index Cond: (col4 = false)
                                  Filter: (NOT col4)
-                                 ->  Bitmap Index Scan on pt_lt_tab_1_prt_part3_col4_idx  (cost=0.00..10000.21 rows=4 width=0)
-                                       Index Cond: (col4 = false)
-                           ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part4  (cost=10000.21..10003.31 rows=4 width=8)
+                           ->  Index Scan using pt_lt_tab_1_prt_part4_col4_idx on pt_lt_tab_1_prt_part4  (cost=0.14..406.43 rows=4 width=8)
+                                 Index Cond: (col4 = false)
                                  Filter: (NOT col4)
-                                 ->  Bitmap Index Scan on pt_lt_tab_1_prt_part4_col4_idx  (cost=0.00..10000.21 rows=4 width=0)
-                                       Index Cond: (col4 = false)
-                           ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part5  (cost=10000.21..10003.31 rows=4 width=8)
+                           ->  Index Scan using pt_lt_tab_1_prt_part5_col4_idx on pt_lt_tab_1_prt_part5  (cost=0.14..406.43 rows=4 width=8)
+                                 Index Cond: (col4 = false)
                                  Filter: (NOT col4)
-                                 ->  Bitmap Index Scan on pt_lt_tab_1_prt_part5_col4_idx  (cost=0.00..10000.21 rows=4 width=0)
-                                       Index Cond: (col4 = false)
  Optimizer: Postgres query optimizer
-(26 rows)
+(23 rows)
 
 SELECT * FROM pt_lt_tab WHERE col2 > 41 ORDER BY col2,col3 LIMIT 5;
  col2 | col3 | col4 
