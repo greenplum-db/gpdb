@@ -175,6 +175,11 @@ ifneq "$(findstring $(BLD_ARCH),aix7_ppc_64)" ""
 CONFIGFLAGS+= --with-openssl --with-pam --without-krb5 --with-ldap $(BLD_CURL_CONFIG)
 endif
 
+# disable pxf in windows
+ifneq "$(findstring $(BLD_ARCH), win32)" ""
+CONFIGFLAGS+= --disable-pxf
+endif
+
 # Platform-specific config flags
 aix7_ppc_64_CONFIG_ADDITIONS=LDFLAGS="-Wl,-bbigtoc -L/usr/lib/threads"
 

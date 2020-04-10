@@ -241,7 +241,6 @@ function _main() {
       ;;
     win32)
         export BLD_ARCH=win32
-        CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --disable-pxf"
         ;;
     *)
         echo "only centos, ubuntu, sles and win32 are supported TARGET_OS'es"
