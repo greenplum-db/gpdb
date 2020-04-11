@@ -29,10 +29,10 @@ SELECT relname FROM pg_class WHERE relname='pg_class';
 LOG:  statement: SELECT relname FROM pg_class WHERE relname='pg_class';
 LOG:  duration: 0.173 ms  plan:
 Query Text: SELECT relname FROM pg_class WHERE relname='pg_class';
-Seq Scan on pg_class  (cost=0.00..12.46 rows=1 width=64) (actual rows=1 loops=1)
-  Filter: (relname = 'pg_class'::name)
-  Rows Removed by Filter: 438
-  (slice0)    Executor memory: 32K bytes.
+Index Only Scan using pg_class_relname_nsp_index on pg_class  (cost=0.15..4.17 rows=1 width=64) (actual rows=1 loops=1)
+  Index Cond: (relname = 'pg_class'::name)
+  Heap Fetches: 0
+  (slice0)    Executor memory: 105K bytes.
 Memory used:  128000kB
  relname  
 ----------
