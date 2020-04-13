@@ -283,7 +283,7 @@ ERROR_EXIT () {
 						$ECHO "$RM -f $BACKOUT_FILE" >> $BACKOUT_FILE
 				fi
 		fi
-		if [ $IGNORE_WARNINGS -eq 1 ]; then
+		if [[ $IGNORE_WARNINGS -eq 1 ]]; then
 				exit 1
 		else
 				exit $2
@@ -1312,6 +1312,75 @@ SET_GP_USER_PW () {
 
     ERROR_CHK $? "update Greenplum superuser password" 1
     LOG_MSG "[INFO]:-End Function $FUNCNAME"
+}
+
+SET_VAR () {
+	# MPP-13617: If segment contains a ~, we assume ~ is the field delimiter.
+	# Otherwise we assume : is the delimiter.  This allows us to easily
+	# handle IPv6 addresses which may contain a : by using a ~ as a delimiter.
+	I=$1
+	case $I in
+		*~*)
+			S="~"
+			;;
+		*)
+			S=":"
+			;;
+	esac
+	if [ -z "$I" ]; then
+		return
+	fi
+
+	local fields=()
+	IFS=$S read -ra fields <<< "$I"
+
+	# The input_config format for specifying a segment array changed in a 6X
+	# minor release to include the hostname in addition to the address.  To
+	# maintain backwards compatibility, detect when the incoming array needs
+	# the host field to be prepended.  For example, an input line of
+	# QD_PRIMARY_ARRAY=mdw~5432~/data/master/gpseg-1~1~-1
+	# would be treated as
+	# QD_PRIMARY_ARRAY=mdw~mdw~5432~/data/master/gpseg-1~1~-1
+	if [[ ! ( "${#fields[@]}" == "5" || "${#fields[@]}" == "6" ) ]]; then
+		ERROR_EXIT "[FATAL]:-$I has the wrong number of fields" 2
+	fi
+
+	# Handle backward compatibility for configuration file generated
+	# which had ~0 at the end for QD_PRIMARY_ARRAY
+	IS_DEPRECATED_FORMAT_FOR_QD=false
+	if [[ "${fields[5]}" == "0" ]] && [[ "${fields[4]}" == "-1" ]]; then
+		IS_DEPRECATED_FORMAT_FOR_QD=true
+	fi
+
+	if [[ "${#fields[@]}" == "5" ]] || ${IS_DEPRECATED_FORMAT_FOR_QD} ;  then
+		# Ex: mdw~5432~/data/master/gpseg-1~1~-1
+		# or
+		# mdw~5432~/data/master/gpseg-1~1~-1~0
+		GP_HOSTNAME="${fields[0]}"
+		GP_HOSTADDRESS=$GP_HOSTNAME
+		GP_PORT="${fields[1]}"
+		GP_DIR="${fields[2]}"
+		GP_DBID="${fields[3]}"
+		GP_CONTENT="${fields[4]}"
+	else
+		# ARRAY for master / segments
+		# Ex: mdw~mdw~5432~/data/master/gpseg-1~1~-1
+		GP_HOSTNAME="${fields[0]}"
+		GP_HOSTADDRESS="${fields[1]}"
+		GP_PORT="${fields[2]}"
+		GP_DIR="${fields[3]}"
+		GP_DBID="${fields[4]}"
+		GP_CONTENT="${fields[5]}"
+	fi
+
+	# Quick sanity checks on value types to ensure that e.g. passing a 5.X
+	# config file isn't misread as a new-format 6.X file and mis-parsed.
+	if ! [[ "$GP_PORT" =~ ^[0-9]+$ && "$GP_DBID" =~ ^[0-9]+$ && "$GP_CONTENT" =~ ^-?[0-9]+$ ]]; then
+		ERROR_EXIT "[FATAL]:-One or more numeric fields in $I have a non-numeric value" 2
+	fi
+	if ! [[ "$GP_DIR" =~ ^/[^/]+ ]]; then
+		ERROR_EXIT "[FATAL]:-Value for directory field in $I is not a valid path" 2
+	fi
 }
 
 #******************************************************************************

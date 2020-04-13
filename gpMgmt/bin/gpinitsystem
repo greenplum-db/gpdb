@@ -973,7 +973,7 @@ CREATE_QE_ARRAY () {
 	SEG_DIR_VECTOR=0
 	MIR_COUNT=-1
 	MASTER_HOST=`HOST_LOOKUP $MASTER_HOSTNAME`
-	QD_PRIMARY_ARRAY=${MASTER_HOST}~${MASTER_HOSTNAME}~${MASTER_PORT}~${MASTER_DIRECTORY}/${SEG_PREFIX}${CONTENT_COUNT}~${DBID_COUNT}~${CONTENT_COUNT}~0
+	QD_PRIMARY_ARRAY=${MASTER_HOST}~${MASTER_HOSTNAME}~${MASTER_PORT}~${MASTER_DIRECTORY}/${SEG_PREFIX}${CONTENT_COUNT}~${DBID_COUNT}~${CONTENT_COUNT}
 	((DBID_COUNT=$DBID_COUNT+1));((CONTENT_COUNT=$CONTENT_COUNT+1))
 	for QE_PAIR in ${M_HOST_ARRAY[@]}
 	do
@@ -1028,10 +1028,10 @@ ARRAY_REORDER() {
             ;;
     esac
 
-    QE_REORDER_ARRAY=(`$ECHO ${QE_PRIMARY_ARRAY[@]}|$TR ' ' '\n'|$SORT -t$S -n -k2,2|$TR '\n' ' '`)
+    QE_REORDER_ARRAY=(`$ECHO ${QE_PRIMARY_ARRAY[@]}|$TR ' ' '\n'|$SORT -t$S -n -k3,3|$TR '\n' ' '`)
     QE_PRIMARY_ARRAY=(${QE_REORDER_ARRAY[@]})
     if [ $MIRROR_TYPE -eq 1 ];then
-	QE_REORDER_ARRAY=(`$ECHO ${QE_MIRROR_ARRAY[@]}|$TR ' ' '\n'|$SORT -t$S -n -k2,2|$TR '\n' ' '`)
+	QE_REORDER_ARRAY=(`$ECHO ${QE_MIRROR_ARRAY[@]}|$TR ' ' '\n'|$SORT -t$S -n -k3,3|$TR '\n' ' '`)
 	QE_MIRROR_ARRAY=(${QE_REORDER_ARRAY[@]})
     fi
     LOG_MSG "[INFO]:-End Function $FUNCNAME"
@@ -1043,10 +1043,10 @@ CREATE_ARRAY_SORTED_ON_CONTENT_ID() {
 
     local REORDERING_ON_CONTENT
 
-    REORDERING_ON_CONTENT=(`$ECHO ${QE_PRIMARY_ARRAY[@]}|$TR ' ' '\n'|$SORT -t$S -n -k5,5|$TR '\n' ' '`)
+    REORDERING_ON_CONTENT=(`$ECHO ${QE_PRIMARY_ARRAY[@]}|$TR ' ' '\n'|$SORT -t$S -n -k6,6|$TR '\n' ' '`)
     QE_PRIMARY_ARRAY_SORTED_ON_CONTENT_ID=(${REORDERING_ON_CONTENT[@]})
     if [ $MIRRORING -ne 0 ] ; then
-      REORDERING_ON_CONTENT=(`$ECHO ${QE_MIRROR_ARRAY[@]}|$TR ' ' '\n'|$SORT -t$S -n -k5,5|$TR '\n' ' '`)
+      REORDERING_ON_CONTENT=(`$ECHO ${QE_MIRROR_ARRAY[@]}|$TR ' ' '\n'|$SORT -t$S -n -k6,6|$TR '\n' ' '`)
       QE_MIRROR_ARRAY_SORTED_ON_CONTENT_ID=(${REORDERING_ON_CONTENT[@]})
     fi
     LOG_MSG "[INFO]:-End Function $FUNCNAME"
@@ -1172,29 +1172,6 @@ DISPLAY_CONFIG () {
 		GET_REPLY "Continue with Greenplum creation" 
 	fi
 	LOG_MSG "[INFO]:-End Function $FUNCNAME"
-}
-
-SET_VAR () {
-    # 
-    # MPP-13617: If segment contains a ~, we assume ~ is the field delimiter.
-    # Otherwise we assume : is the delimiter.  This allows us to easily 
-    # handle IPv6 addresses which may contain a : by using a ~ as a delimiter. 
-    # 
-    I=$1
-    case $I in
-        *~*)
-	    S="~"
-            ;;
-        *)
-	    S=":"
-            ;;
-    esac
-    GP_HOSTNAME=`$ECHO $I|$CUT -d$S -f1`
-    GP_HOSTADDRESS=`$ECHO $I|$CUT -d$S -f2`
-    GP_PORT=`$ECHO $I|$CUT -d$S -f3`
-    GP_DIR=`$ECHO $I|$CUT -d$S -f4`
-    GP_DBID=`$ECHO $I|$CUT -d$S -f5`
-    GP_CONTENT=`$ECHO $I|$CUT -d$S -f6`
 }
 
 CREATE_QD_DB () {
