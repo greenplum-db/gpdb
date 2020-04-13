@@ -544,9 +544,6 @@ transientrel_startup(DestReceiver *self, int operation, TupleDesc typeinfo)
 	DR_transientrel *myState = (DR_transientrel *) self;
 	Relation	transientrel;
 
-	if (myState->skipData)
-		return;
-
 	transientrel = heap_open(myState->transientoid, NoLock);
 
 	/*
@@ -648,9 +645,6 @@ static void
 transientrel_shutdown(DestReceiver *self)
 {
 	DR_transientrel *myState = (DR_transientrel *) self;
-
-	if (myState->skipData)
-		return;
 
 	FreeBulkInsertState(myState->bistate);
 
