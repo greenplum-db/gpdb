@@ -268,14 +268,6 @@ select row_to_json(ss) from
 select row_to_json(ss) from
   (select q1 as a, q2 as b from int8_tbl offset 0) as ss(x,y);
 
--- GPDB: Make the plan same as PG's to make further merge and testing easy.
--- PG plan is index only scan, while GP plan is seq scan without the guc
--- settings below. That is because:
--- 1) Default large (different as PG's) random_page_cost makes planner incline to seq scan.
--- 2) Low vis fraction estimation (pg_class.relallvisible) on GP causes higher
---    index only scan cost so bitmap index scan outperforms index only scan.
-set random_page_cost = 4;
-set enable_bitmapscan = off;
 explain (costs off)
 select row_to_json(q) from
   (select thousand, tenthous from tenk1
@@ -289,9 +281,6 @@ select row_to_json(q) from
 select row_to_json(q) from
   (select thousand as x, tenthous as y from tenk1
    where thousand = 42 and tenthous < 2000 offset 0) q(a,b);
--- GPDB: restore to the default or previously set values.
-reset random_page_cost;
-reset enable_bitmapscan;
 
 create temp table tt1 as select * from int8_tbl order by 1 limit 2;
 create temp table tt2 () inherits(tt1);

@@ -736,8 +736,6 @@ SELECT * FROM foo ORDER BY f1 DESC NULLS LAST;
 --
 -- Test planning of some cases with partial indexes
 --
--- change cost to match the upstream default, so that you get similar plans.
-set random_page_cost=4;
 -- partial index is usable
 explain (costs off)
 select * from onek2 where unique2 = 11 and stringu1 = 'ATAAAA';

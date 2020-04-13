@@ -3919,11 +3919,6 @@ compute_scalar_stats(VacAttrStatsP stats,
 		}
 
 		/* Generate a correlation entry if there are multiple values */
-		/*
-		 * GPDB: Don't calculate correlation for AO-tables, however.
-		 * The rows are not necessarily in the order that our sampling
-		 * query returned them, for an append-only table.
-		 */
 		if (values_cnt > 1)
 		{
 			MemoryContext old_context;
