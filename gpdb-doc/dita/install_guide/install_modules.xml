@@ -28,6 +28,8 @@
                   format="dita">citext</xref></li>
               <li><xref href="../ref_guide/modules/dblink.xml" type="topic" scope="peer"
                   format="dita">dblink</xref></li>
+              <li><xref href="../ref_guide/modules/diskquota.xml" type="topic" scope="peer"
+                  format="dita">diskquota</xref></li>
               <li><xref href="../ref_guide/modules/fuzzystrmatch.xml" type="topic" scope="peer"
                   format="dita">fuzzystrmatch</xref></li>
               <li><xref href="../ref_guide/modules/gp_sparse_vector.xml" type="topic" scope="peer"

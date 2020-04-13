@@ -35,8 +35,10 @@
         <topicref href="data_sci_pkgs.ditamap" format="ditamap" otherprops="pivotal"/>
         <topicref href="install_modules.xml" navtitle="Installing Additional Supplied Modules"/>
         <topicref href="localization.xml" navtitle="Configuring Localization Settings"/>
-        <topicref href="upgrading.xml"/>
-        <topicref href="migrate.xml"/>
+        <topicref href="upgrade_intro.xml" navtitle="Upgrading to Greenplum 6.x">
+          <topicref href="upgrading.xml"/>
+          <topicref href="migrate.xml"/>
+        </topicref>
         <topicref href="enable_iptables.xml" navtitle="Enabling iptables"/>
         <topicref href="apx_mgmt_utils.xml" navtitle="Installation Management Utilities"/>
         <topicref href="env_var_ref.xml" navtitle="Greenplum Environment Variables">
