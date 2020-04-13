@@ -546,11 +546,14 @@ Hostssl testdb all 192.168.0.0/16 cert map=gpuser
         <title>Configuring the SSL Client Connection</title>
       </section>
       <p>SSL options:<parml>
+        <plentry>
+            <pt>sslmode</pt>
+            <pd>Specifies the level of protection.<parml>
           <plentry>
             <pt>
               <codeph>require</codeph>
             </pt>
-            <pd>Only use SSL connection. If a root CA file is present, verify the certificate in the
+            <pd>Only use an SSL connection. If a root CA file is present, verify the certificate in the
               same way as if <codeph>verify-ca</codeph> was specified.</pd>
           </plentry>
           <plentry>
@@ -567,6 +570,8 @@ Hostssl testdb all 192.168.0.0/16 cert map=gpuser
             <pd>Only use an SSL connection. Verify that the server certificate is issued by a
               trusted CA and that the server host name matches that in the certificate.</pd>
           </plentry>
+         </parml></pd>
+        </plentry>
           <plentry>
             <pt>sslcert</pt>
             <pd>The file name of the client SSL certificate. The default is
