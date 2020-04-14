@@ -1486,20 +1486,28 @@ AC_DEFUN([CHECK_APR], [
   _LIBS="$LIBS"
   LIBS="$LIBS $apr_link_ld_libs"
   AC_SEARCH_LIBS(apr_getopt_long, [apr-1], [], [AC_MSG_ERROR([libapr-1 is required by gpfdist])])
+  LIBS="$_LIBS"
  ])
 
 if test "$enable_gpfdist" = yes ; then
   CHECK_APR()
+  _LIBS="$LIBS"
   AC_SEARCH_LIBS(event_add, [event], [], [AC_MSG_ERROR([libevent is required for gpfdist])])
+  EVENT_LIBS=" -levent"
+  AC_SUBST(EVENT_LIBS)
 
-  AC_SEARCH_LIBS(yaml_parser_initialize, [yaml], [have_yaml=yes], [AC_MSG_WARN([libyaml is not found. disabling transformations for gpfdist.])])
-  LIBS="$_LIBS"
+  AC_SEARCH_LIBS(yaml_parser_initialize, [yaml], [have_yaml=yes; YAML_LIBS=" -lyaml"], [AC_MSG_WARN([libyaml is not found. disabling transformations for gpfdist.])])
+  AC_SUBST(YAML_LIBS)
   AC_SUBST(have_yaml)
+  LIBS="$_LIBS"
 fi
 
-if test "$enable_mapreduce" = yes; then
-  AC_SEARCH_LIBS(yaml_parser_initialize, [yaml], [have_yaml=yes], [AC_MSG_ERROR([libyaml is required for Greenplum Mapreduce])])
+if test "$enable_mapreduce" = yes ; then
+  _LIBS="$LIBS"
+  AC_SEARCH_LIBS(yaml_parser_initialize, [yaml], [have_yaml=yes; YAML_LIBS=" -lyaml"], [AC_MSG_ERROR([libyaml is required for Greenplum Mapreduce])])
+  AC_SUBST(YAML_LIBS)
   AC_SUBST(have_yaml)
+  LIBS="$_LIBS"
 fi
 
 if test "$with_openssl" = yes ; then

@@ -664,6 +664,8 @@ CURL_LIBS
 CURL_CFLAGS
 CURL_CONFIG
 have_yaml
+YAML_LIBS
+EVENT_LIBS
 apr_cppflags
 apr_cflags
 apr_link_ld_libs
@@ -11766,7 +11768,9 @@ else
   as_fn_error $? "libapr-1 is required by gpfdist" "$LINENO" 5
 fi
 
+  LIBS="$_LIBS"
 
+  _LIBS="$LIBS"
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing event_add" >&5
 $as_echo_n "checking for library containing event_add... " >&6; }
 if ${ac_cv_search_event_add+:} false; then :
@@ -11825,6 +11829,8 @@ else
   as_fn_error $? "libevent is required for gpfdist" "$LINENO" 5
 fi
 
+  EVENT_LIBS=" -levent"
+
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing yaml_parser_initialize" >&5
 $as_echo_n "checking for library containing yaml_parser_initialize... " >&6; }
@@ -11879,17 +11885,19 @@ $as_echo "$ac_cv_search_yaml_parser_initialize" >&6; }
 ac_res=$ac_cv_search_yaml_parser_initialize
 if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  have_yaml=yes
+  have_yaml=yes; YAML_LIBS=" -lyaml"
 else
   { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: libyaml is not found. disabling transformations for gpfdist." >&5
 $as_echo "$as_me: WARNING: libyaml is not found. disabling transformations for gpfdist." >&2;}
 fi
 
-  LIBS="$_LIBS"
 
+
+  LIBS="$_LIBS"
 fi
 
-if test "$enable_mapreduce" = yes; then
+if test "$enable_mapreduce" = yes ; then
+  _LIBS="$LIBS"
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing yaml_parser_initialize" >&5
 $as_echo_n "checking for library containing yaml_parser_initialize... " >&6; }
 if ${ac_cv_search_yaml_parser_initialize+:} false; then :
@@ -11943,12 +11951,14 @@ $as_echo "$ac_cv_search_yaml_parser_initialize" >&6; }
 ac_res=$ac_cv_search_yaml_parser_initialize
 if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  have_yaml=yes
+  have_yaml=yes; YAML_LIBS=" -lyaml"
 else
   as_fn_error $? "libyaml is required for Greenplum Mapreduce" "$LINENO" 5
 fi
 
 
+
+  LIBS="$_LIBS"
 fi
 
 if test "$with_openssl" = yes ; then

@@ -10,7 +10,7 @@ OBJS = gpfdist.o gpfdist_helper.o fstream.o gfile.o
 # we are adding the gpfdist libraries here instead
 # of the top level, so that the backend does not
 # need to link with unnecessary libraries.
-GPFDIST_LIBS =-levent
+GPFDIST_LIBS = $(EVENT_LIBS)
 
 ifeq ($(PORTNAME),aix)
   ifeq ($(with_libbz2),yes)
@@ -21,6 +21,7 @@ endif
 
 ifeq ($(have_yaml),yes)
   OBJS += transform.o
+  LIBS += $(YAML_LIBS)
   ifneq ($(PORTNAME),win32)
     override CPPFLAGS := -DGPFXDIST $(CPPFLAGS)
   endif
