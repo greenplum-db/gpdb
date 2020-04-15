@@ -146,13 +146,12 @@
                                     <codeph>VACUUM</codeph> (without <codeph>FULL</codeph>) on
                                 append-optimized tables during processing. </li>
                         </ul>
-                        <note id="lock_note">By default Greenplum Database acquires the more
-                            restrictive <codeph>EXCLUSIVE</codeph> lock (rather than <codeph>ROW
-                                EXCLUSIVE</codeph> in PostgreSQL) for <codeph>UPDATE</codeph>,
-                                <codeph>DELETE</codeph>, and <codeph>SELECT...FOR UPDATE</codeph>.
-                            When the Global Deadlock Detector is enabled the lock mode for
-                                <codeph>DELETE</codeph> and <codeph>UPDATE</codeph> operations on
-                            heap tables is <codeph>ROW EXCLUSIVE</codeph>. See <xref
+                        <note id="lock_note">As the default, Greenplum Database acquires an
+                                <codeph>EXCLUSIVE</codeph> lock on tables for
+                                <codeph>DELETE</codeph>, <codeph>UPDATE</codeph>, and <codeph>SELECT
+                                FOR UPDATE</codeph> operations on heap tables. When the Global
+                            Deadlock Detector is enabled, the lock mode for the operations on heap
+                            tables is <codeph>ROW EXCLUSIVE</codeph>. See <xref
                                 href="../../admin_guide/dml.xml#topic_gdd" format="dita"
                         />.</note></pd>
                 </plentry>
