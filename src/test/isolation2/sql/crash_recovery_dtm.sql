@@ -157,10 +157,10 @@ $$ LANGUAGE plpgsql;
 1: SELECT gp_inject_fault_infinite('finish_prepared_start_of_function', 'infinite_loop', dbid)
     from gp_segment_configuration where role='p' and content=0;
 -- this prepared transaction should be recorded in the checkpoint or on the file
-2&: INSERT INTO QE_panic_test_table SELECT i, i+1 from generate_series(1, 10) i;
+2&: INSERT INTO QE_panic_test_table SELECT i, i+1 from generate_series(1, 6) i;
 1: CHECKPOINT;
 3: BEGIN;
-3: INSERT INTO QE_panic_test_table SELECT i, i+1 from generate_series(11, 20) i;
+3: INSERT INTO QE_panic_test_table SELECT i, i+1 from generate_series(7, 12) i;
 3: CREATE TABLE QE_panic_test_table2(i int);
 3&: END;
 
@@ -170,7 +170,7 @@ $$ LANGUAGE plpgsql;
 4: SELECT pg_sleep(2);
 2<:
 3<:
-4: SELECT * from QE_panic_test_table;
+4: SELECT gp_segment_id, * from QE_panic_test_table order by gp_segment_id, a;
 4: SELECT * from QE_panic_test_table2;
 1q:
 2q:

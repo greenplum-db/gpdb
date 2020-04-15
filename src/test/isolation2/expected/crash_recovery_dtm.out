@@ -269,13 +269,13 @@ TRUNCATE
  Success:                 
 (1 row)
 -- this prepared transaction should be recorded in the checkpoint or on the file
-2&: INSERT INTO QE_panic_test_table SELECT i, i+1 from generate_series(1, 10) i;  <waiting ...>
+2&: INSERT INTO QE_panic_test_table SELECT i, i+1 from generate_series(1, 6) i;  <waiting ...>
 1: CHECKPOINT;
 CHECKPOINT
 3: BEGIN;
 BEGIN
-3: INSERT INTO QE_panic_test_table SELECT i, i+1 from generate_series(11, 20) i;
-INSERT 10
+3: INSERT INTO QE_panic_test_table SELECT i, i+1 from generate_series(7, 12) i;
+INSERT 6
 3: CREATE TABLE QE_panic_test_table2(i int);
 CREATE
 3&: END;  <waiting ...>
@@ -296,33 +296,25 @@ CREATE
           
 (1 row)
 2<:  <... completed>
-INSERT 10
+INSERT 6
 3<:  <... completed>
 END
-4: SELECT * from QE_panic_test_table;
- a  | b  
-----+----
- 1  | 2  
- 12 | 13 
- 15 | 16 
- 20 | 21 
- 5  | 6  
- 6  | 7  
- 9  | 10 
- 10 | 11 
- 11 | 12 
- 13 | 14 
- 14 | 15 
- 17 | 18 
- 2  | 3  
- 3  | 4  
- 4  | 5  
- 7  | 8  
- 8  | 9  
- 16 | 17 
- 18 | 19 
- 19 | 20 
-(20 rows)
+4: SELECT gp_segment_id, * from QE_panic_test_table order by gp_segment_id, a;
+ gp_segment_id | a  | b  
+---------------+----+----
+ 0             | 2  | 3  
+ 0             | 3  | 4  
+ 0             | 4  | 5  
+ 0             | 7  | 8  
+ 0             | 8  | 9  
+ 1             | 1  | 2  
+ 1             | 12 | 13 
+ 2             | 5  | 6  
+ 2             | 6  | 7  
+ 2             | 9  | 10 
+ 2             | 10 | 11 
+ 2             | 11 | 12 
+(12 rows)
 4: SELECT * from QE_panic_test_table2;
  i 
 ---
