@@ -111,14 +111,6 @@ namespace gpos
 				return m_d;
 			}
 
-			// assignment
-			inline CDouble& operator=(const CDouble &right)
-            {
-                this->m_d = right.m_d;
-
-                return (*this);
-            }
-
 			// arithmetic operators
 			friend CDouble operator + (const CDouble &left, const CDouble &right)
             {
