@@ -210,6 +210,12 @@ sdw5|sdw5-1|60012|/gpdata/mirror/gp10|14|10|m</codeblock>
           the expansion schema. The <i>gpexpand</i> schema resides in the
             postgres database. For more information, see <xref
             href="expand-planning.xml#topic9" type="topic" format="dita"/>.</p>
+        <p>After completing the expansion, run <codeph>VACUUM ANALYZE</codeph> command and
+            <codeph>REINDEX</codeph> to optimize the database and update table statistics. See
+            <xref href="../managing/maintain.xml#topic2">Routine Vacuum and Analyze</xref> in the
+            <i>Administration Guide</i> and <xref
+            href="../../ref_guide/sql_commands/VACUUM.xml#topic1/er20941"
+            ><codeph>VACUUM</codeph></xref> in the <i>Reference Guide</i>. </p>
       </section>
     </body>
   </topic>
