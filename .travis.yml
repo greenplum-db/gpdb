@@ -18,6 +18,7 @@ addons:
             - gcc-8
             - libxml2
             - libxml2-dev
+            - libxerces-c-dev
             - libevent-dev
             - libperl-dev
             - g++-8
@@ -73,6 +74,7 @@ matrix:
             homebrew:
               packages:
                 - ccache
+                - xerces-c
           before_install:
             - PATH=/usr/local/opt/ccache/libexec:$PATH
         #
@@ -144,7 +146,7 @@ script:
             --enable-debug-extensions \
             --with-perl \
             --with-python \
-            --disable-orca \
+            --enable-orca \
             --with-openssl \
             --with-ldap \
             --with-libcurl \
@@ -188,7 +190,7 @@ script:
             --prefix=${TRAVIS_BUILD_DIR}/gpsql \
             --with-perl \
             --with-python \
-            --disable-orca \
+            --enable-orca \
             --enable-orafce \
             --disable-gpfdist \
             --disable-pxf \
