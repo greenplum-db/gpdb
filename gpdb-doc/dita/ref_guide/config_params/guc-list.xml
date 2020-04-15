@@ -5548,8 +5548,8 @@
         milliseconds while attempting to acquire a lock on a table, index,
         row, or other database object. The time limit applies separately to
         each lock acquisition attempt. The limit applies both to explicit
-        locking requests (such as <codeph>LOCK TABLE</codeph>, or
-        <codeph>SELECT FOR UPDATE</codeph> without <codeph>NOWAIT</codeph>)
+        locking requests (such as <codeph>LOCK TABLE</codeph> or
+        <codeph>SELECT FOR UPDATE</codeph>)
         and to implicitly-acquired locks. If <codeph>log_min_error_statement</codeph>
         is set to <codeph>ERROR</codeph> or lower, Greenplum Database logs the
         statement that timed out. A value of zero (the default) turns off this 
