@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
-<topic id="topic_rw3_52s_dw">
+<topic id="topic1">
       <title>plcontainer </title>
       <body>
         <p>The <codeph>plcontainer</codeph> utility installs Docker images and manages the
@@ -22,7 +22,7 @@
           <title>plcontainer Syntax</title>
           <codeblock><b>plcontainer</b> [<varname>command</varname>] [<b>-h</b> | <b>--help</b>]  [<b>--verbose</b>]</codeblock>
           <p>Where <varname>command</varname> is one of the following.</p>
-          <codeblock>  image-add {{<b>-f</b> | <b>--file</b>} <varname>image_file</varname>} | {{<b>-u</b> | <b>--URL</b>} <varname>image_URL</varname>}
+          <codeblock>  image-add {{<b>-f</b> | <b>--file</b>} <varname>image_file</varname> [<b>-ulc</b> | <b>--use_local_copy</b>]} | {{<b>-u</b> | <b>--URL</b>} <varname>image_URL</varname>}
   image-delete {<b>-i</b> | <b>--image</b>} <varname>image_name</varname>
   image-list
 
@@ -49,15 +49,20 @@
             <pt>image-add <varname>location</varname></pt>
             <pd>Install a Docker image on the Greenplum Database hosts. Specify either the location
               of the Docker image file on the host or the URL to the Docker image. These are the
-              supported location options.<ul id="ul_ihd_dsv_gcb">
-                <li>{<b>-f</b> | <b>--file</b>} <varname>image_file</varname> Specify the tar
-                  archive file on the host that contains the Docker image. This example points to an
-                  image file in the gpadmin home directory
+              supported location options:<ul id="ul_ihd_dsv_gcb">
+                <li>{<b>-f</b> | <b>--file</b>} <varname>image_file</varname> Specify the file
+                  system location of the Docker image tar archive file on the local host. This example
+                  specifies an image file in the <codeph>gpadmin</codeph> user's home directory:
                     <codeph>/home/gpadmin/test_image.tar.gz</codeph></li>
                 <li>{<b>-u</b> | <b>--URL</b>} <varname>image_URL</varname> Specify the URL of the
                   Docker repository and image. This example URL points to a local Docker repository
                     <codeph>192.168.0.1:5000/images/mytest_plc_r:devel</codeph></li>
               </ul></pd>
+              <pd>By default, the <codeph>image-add</codeph> command copies the image to each
+                Greenplum Database segment and standby master host, and installs the image.
+                When you specify an <varname>image_file</varname> and provide the
+                [<b>-ulc</b> | <b>--use_local_copy</b>] option, <codeph>plcontainer</codeph>
+                installs the image only on the host on which you execute the command.</pd>
             <pd>After installing the Docker image, use the <codeph><xref
                   href="#topic_rw3_52s_dw/runtime_add" format="dita">runtime-add</xref></codeph>
               command to configure PL/Container to use the Docker image.</pd>
@@ -83,7 +88,7 @@
             <pd>
               <parml>
                 <plentry>
-                  <pt>{-i | --image} <varname>docker-image</varname></pt>
+                  <pt>{<b>-i</b> | <b>--image</b>} <varname>docker-image</varname></pt>
                   <pd>Required. Specify the full Docker image name, including the tag, that is
                     installed on the Greenplum Database hosts. For example
                       <codeph>pivotaldata/plcontainer_python:1.0.0</codeph>. </pd>
@@ -93,7 +98,7 @@
                     information including the name and tag (the Repository and Tag columns).</pd>
                 </plentry>
                 <plentry>
-                  <pt>{-l | --language} python | python3 | r</pt>
+                  <pt>{<b>-l</b> | <b>--language</b>} python | python3 | r</pt>
                   <pd>Required. Specify the PL/Container language type, supported values are
                       <codeph>python</codeph> (PL/Python using Python 2), <codeph>python3</codeph>
                     (PL/Python using Python 3) and <codeph>r</codeph> (PL/R). When adding
@@ -154,7 +159,7 @@
                     </ul></pd>
                 </plentry>
                 <plentry>
-                  <pt>{-v | --volume} <varname>shared-volume</varname></pt>
+                  <pt>{<b>-v</b> | <b>--volume</b>} <varname>shared-volume</varname></pt>
                   <pd>Optional. Specify a Docker volume to bind mount. You can specify this option
                     multiple times to define multiple volumes.</pd>
                   <pd>The format for a shared volume:
@@ -254,13 +259,13 @@
             </pd>
           </plentry>
           <plentry>
-            <pt>-h | --help</pt>
+            <pt><b>-h</b> | <b>--help</b></pt>
             <pd>Display help text. If specified without a command, displays help for all
                 <codeph>plcontainer</codeph> commands. If specified with a command, displays help
               for the command.</pd>
           </plentry>
           <plentry>
-            <pt>--verbose</pt>
+            <pt><b>--verbose</b></pt>
             <pd>Enable verbose logging for the command.</pd>
           </plentry>
         </parml>
@@ -275,6 +280,9 @@
                 installing the Docker image, you add or update a runtime entry in the PL/Container
                 configuration file to give PL/Container access to the Docker image to start Docker
                 containers.</p></li>
+            <li>Install the Docker image only on the local Greenplum Database host:
+                <codeblock>plcontainer image-add -f /home/gpadmin/plc_python_image.tar.gz --use_local_copy</codeblock>
+            </li>
             <li>Add a container entry to the PL/Container configuration file. This example adds
               configuration information for a PL/R runtime, and specifies a shared volume and
               settings for memory and logging.
