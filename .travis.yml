@@ -2,7 +2,7 @@
 ## Travis CI build script for Greenplum Database Open Source Project.
 ## ----------------------------------------------------------------------
 
-language: c
+language: cpp
 
 git:
   submodules: false
