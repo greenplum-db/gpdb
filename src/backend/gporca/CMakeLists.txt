@@ -3,7 +3,7 @@
 cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
 project(gpopt_master LANGUAGES CXX C)
 
-set(CMAKE_CXX_STANDARD 98)
+set(CMAKE_CXX_STANDARD 14)
 
 # Default to shared libraries.
 option(BUILD_SHARED_LIBS "build shared libraries" ON)
