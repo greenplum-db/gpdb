@@ -331,8 +331,7 @@ namespace gpopt
 
 				SGroupAndExpression() : m_group_info(NULL), m_expr_index(gpos::ulong_max) {}
 				SGroupAndExpression(SGroupInfo *g, ULONG ix) : m_group_info(g), m_expr_index(ix) {}
-				SGroupAndExpression(const SGroupAndExpression &other) : m_group_info(other.m_group_info),
-																		  m_expr_index(other.m_expr_index) {}
+				SGroupAndExpression(const SGroupAndExpression &other) = default;
 				SExpressionInfo *GetExprInfo() const { return (*m_group_info->m_best_expr_info_array)[m_expr_index]; }
 				BOOL IsValid() { return NULL != m_group_info && gpos::ulong_max != m_expr_index; }
 				BOOL operator == (const SGroupAndExpression &other) const
