@@ -99,11 +99,12 @@ namespace gpos
 			// appends the contents of a buffer to the current string
 			void AppendBuffer(const CHAR *buf);
 
+			// FIXME: use a more portable attribute a la pg_attribute_printf
 			// appends a formatted string
-			void AppendFormat(const CHAR *format, ...);
+			void AppendFormat(const CHAR *format, ...) __attribute__((format(printf, 2, 0)));
 
 			// appends a formatted string based on passed va list
-			void AppendFormatVA(const CHAR *format, VA_LIST va_args);
+			void AppendFormatVA(const CHAR *format, VA_LIST va_args) __attribute__((format(printf, 2, 0)));
 
 			// appends wide character string
 			void AppendConvert(const WCHAR *wc_str);
