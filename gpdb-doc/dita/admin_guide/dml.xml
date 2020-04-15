@@ -112,13 +112,12 @@
           </tbody>
         </tgroup>
       </table>
-      <note id="lock_note">By default, Greenplum Database acquires the more restrictive
+      <note id="lock_note">By default Greenplum Database acquires the more restrictive
           <codeph>EXCLUSIVE</codeph> lock (rather than <codeph>ROW EXCLUSIVE</codeph> in PostgreSQL)
         for <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, and <codeph>SELECT...FOR
           UPDATE</codeph>.<p>When the Global Deadlock Detector is enabled, the lock mode for
-            <codeph>DELETE</codeph>, <codeph>UPDATE</codeph>, and <codeph>SELECT...FOR
-            UPDATE</codeph> operations on heap tables is <codeph>ROW EXCLUSIVE</codeph>. See <xref
-            href="#topic_gdd" format="dita"/>.</p></note>
+            <codeph>DELETE</codeph> and <codeph>UPDATE</codeph> operations on heap tables is
+            <codeph>ROW EXCLUSIVE</codeph>. See <xref href="#topic_gdd" format="dita"/>.</p></note>
     </body>
   </topic>
   <topic id="topic3" xml:lang="en">
