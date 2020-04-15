@@ -132,3 +132,20 @@ COPY (
 COPY partdisttest FROM '/tmp/ten-thousand-and-one-lines.txt';
 
 SELECT tableoid::regclass, count(*) FROM partdisttest GROUP BY 1;
+DROP TABLE partdisttest;
+
+-- Log errors on QEs
+CREATE TABLE partdisttest(id INT, t TIMESTAMP, d VARCHAR(4))
+  DISTRIBUTED BY (id)
+  PARTITION BY RANGE (t)
+  (
+    PARTITION p2020 START ('2020-01-01'::TIMESTAMP) END ('2021-01-01'::TIMESTAMP),
+    DEFAULT PARTITION extra
+  );
+
+COPY partdisttest FROM STDIN LOG ERRORS SEGMENT REJECT LIMIT 2;
+1	'2020-04-15'	abcde
+1	'2020-04-15'	abc
+\.
+
+DROP TABLE partdisttest;
