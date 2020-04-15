@@ -17,7 +17,7 @@ OBJS = catalog.o dependency.o heap.o index.o indexing.o namespace.o aclchk.o \
        pg_operator.o pg_proc.o pg_range.o pg_db_role_setting.o pg_shdepend.o \
        pg_type.o storage.o toasting.o
 
-OBJS += pg_exttable.o pg_extprotocol.o \
+OBJS += pg_extprotocol.o \
        pg_proc_callback.o \
        aoseg.o aoblkdir.o gp_fastsequence.o gp_segment_config.o \
        pg_attribute_encoding.o pg_compression.o aovisimap.o \
@@ -54,7 +54,7 @@ POSTGRES_BKI_SRCS = $(addprefix $(top_srcdir)/src/include/catalog/,\
 	pg_resgroup.h pg_resgroupcapability.h \
 	gp_configuration_history.h gp_id.h gp_policy.h gp_version.h \
 	gp_segment_config.h \
-	pg_exttable.h pg_appendonly.h \
+	pg_appendonly.h \
 	gp_fastsequence.h pg_extprotocol.h \
 	pg_partition.h pg_partition_rule.h \
 	pg_attribute_encoding.h \

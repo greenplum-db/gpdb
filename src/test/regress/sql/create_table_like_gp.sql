@@ -71,11 +71,9 @@ $$;
 SELECT
 	c.relname,
 	c.relstorage,
-	e.urilocation,
-	e.execlocation,
-	e.fmtopts
+	f.ftoptions
 FROM
 	pg_catalog.pg_class c
-		LEFT OUTER JOIN pg_catalog.pg_exttable e ON (c.oid = e.reloid)
+		LEFT OUTER JOIN pg_catalog.pg_foreign_table f ON (c.oid = f.ftrelid)
 WHERE
 	c.relname LIKE 't_ext%';

@@ -69,7 +69,7 @@ typedef enum DataLineStatus
 
 extern FileScanDesc external_beginscan(Relation relation,
 				   uint32 scancounter, List *uriList,
-				   char *fmtOptString, char fmtType, bool isMasterOnly,
+				   char fmtType, bool isMasterOnly,
 				   int rejLimit, bool rejLimitInRows,
 				   char logErrors, int encoding, List *extOptions);
 extern void external_rescan(FileScanDesc scan);
@@ -92,7 +92,6 @@ extern int popen_with_stderr(int *rwepipe, const char *exe, bool forwrite);
 extern int pclose_with_stderr(int pid, int *rwepipe, StringInfo sinfo);
 extern char *make_command(const char *cmd, extvar_t *ev);
 
-extern List *parseCopyFormatString(Relation rel, char *fmtstr, char fmttype);
 extern List *appendCopyEncodingOption(List *copyFmtOpts, int encoding);
 
 #endif   /* FILEAM_H */

@@ -642,8 +642,35 @@ drop external table bad_location2;
 --
 -- positive
 create writable external table wet_pos1(a text, b text) location('gpfdist://@hostname@:7070/wet.out') format 'text';
+\d wet_pos1
+     Foreign table "public.wet_pos1"
+ Column | Type | Modifiers | FDW Options 
+--------+------+-----------+-------------
+ a      | text |           | 
+ b      | text |           | 
+FDW Options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', format_type 't', location_uris 'gpfdist://@hostname@:7070/wet.out', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'true')
+Distributed randomly
+
 create writable external table wet_pos2(a text, b text) location('gpfdist://@hostname@:7070/wet.out') format 'text' distributed by(b);
+\d wet_pos2
+     Foreign table "public.wet_pos2"
+ Column | Type | Modifiers | FDW Options 
+--------+------+-----------+-------------
+ a      | text |           | 
+ b      | text |           | 
+FDW Options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', format_type 't', location_uris 'gpfdist://@hostname@:7070/wet.out', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'true')
+Distributed by: (b)
+
 create writable external table wet_pos3(like wet_pos2) location('gpfdist://@hostname@:7070/wet.out') format 'text' distributed by(a,b);
+\d wet_pos3
+     Foreign table "public.wet_pos3"
+ Column | Type | Modifiers | FDW Options 
+--------+------+-----------+-------------
+ a      | text |           | 
+ b      | text |           | 
+FDW Options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', format_type 't', location_uris 'gpfdist://@hostname@:7070/wet.out', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'true')
+Distributed by: (a, b)
+
 create writable external table wet_region(like reg_region) location('gpfdist://@hostname@:7070/wet_region.out') format 'text';
 NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 create readable external table ret_region(like wet_region) location('gpfdist://@hostname@:7070/wet_region.out') format 'text';

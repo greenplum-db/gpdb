@@ -466,8 +466,11 @@ drop external table bad_location2;
 --
 -- positive
 create writable external table wet_pos1(a text, b text) location('gpfdist://@hostname@:7070/wet.out') format 'text';
+\d wet_pos1
 create writable external table wet_pos2(a text, b text) location('gpfdist://@hostname@:7070/wet.out') format 'text' distributed by(b);
+\d wet_pos2
 create writable external table wet_pos3(like wet_pos2) location('gpfdist://@hostname@:7070/wet.out') format 'text' distributed by(a,b);
+\d wet_pos3
 create writable external table wet_region(like reg_region) location('gpfdist://@hostname@:7070/wet_region.out') format 'text';
 create readable external table ret_region(like wet_region) location('gpfdist://@hostname@:7070/wet_region.out') format 'text';
 

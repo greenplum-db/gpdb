@@ -20,13 +20,7 @@ FORMAT 'CUSTOM' (formatter='fixedwidth_in',
  n1     | smallint             |           | 
  n2     | integer              |           | 
  n3     | bigint               |           | 
-Type: readable
-Encoding: UTF8
-Format type: custom
-Format options: formatter 'fixedwidth_in' col_b '5' col_a '5' col_d '5' col_c '5' n3 '5' n1 '5' n2 '5' 
-External options: {}
-External location: file://@hostname@@abs_srcdir@/data/fixedwidth_field_sequence.tbl
-Execute on: all segments
+FDW Options: (formatter 'fixedwidth_in', col_b '5', col_a '5', col_d '5', col_c '5', n3 '5', n1 '5', n2 '5', format 'custom', format_type 'b', location_uris 'file://@hostname@@abs_srcdir@/data/fixedwidth_field_sequence.tbl', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
 
 -- Can successfully query the ext table, as long as the different column data types are compatible.
 -- However notice the switch between col_a and col_b, col_c and col_d, and n1, n2, and n3.

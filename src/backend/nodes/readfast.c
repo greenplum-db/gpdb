@@ -1184,6 +1184,7 @@ _readCreateForeignTableStmt(void)
 
 	READ_STRING_FIELD(servername);
 	READ_NODE_FIELD(options);
+	READ_NODE_FIELD(distributedBy);
 
 	READ_DONE();
 }
@@ -1485,7 +1486,6 @@ _readExternalScanInfo(void)
 	READ_LOCALS(ExternalScanInfo);
 
 	READ_NODE_FIELD(uriList);
-	READ_STRING_FIELD(fmtOptString);
 	READ_CHAR_FIELD(fmtType);
 	READ_BOOL_FIELD(isMasterOnly);
 	READ_INT_FIELD(rejLimit);

@@ -168,6 +168,8 @@
 
  CREATE FUNCTION gp_list_backend_priorities() RETURNS SETOF record LANGUAGE internal VOLATILE AS 'gp_list_backend_priorities' WITH (OID=5042, DESCRIPTION="list priorities of backends");
 
+ CREATE FUNCTION gp_exttable_permission_check(text, oid) RETURNS void LANGUAGE internal VOLATILE NO SQL AS 'gp_exttable_permission_check' WITH (OID=7070, DESCRIPTION="validator for external tables");
+
 -- Functions to deal with SREH error logs
  CREATE FUNCTION gp_read_error_log(exttable text, OUT cmdtime timestamptz, OUT relname text, OUT filename text, OUT linenum int4, OUT bytenum int4, OUT errmsg text, OUT rawdata text, OUT rawbytes bytea) RETURNS SETOF record LANGUAGE INTERNAL STRICT VOLATILE PARALLEL SAFE EXECUTE ON ALL SEGMENTS AS 'gp_read_error_log' WITH (OID = 7076, DESCRIPTION="read the error log for the specified external table");
 

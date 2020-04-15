@@ -27,6 +27,8 @@
 #include "access/relscan.h"
 #include "cdb/cdbsreh.h"
 #include "cdb/cdbvars.h"
+#include "catalog/pg_authid.h"
+#include "catalog/pg_extprotocol.h"
 #include "catalog/pg_exttable.h"
 #include "catalog/pg_foreign_server.h"
 #include "foreign/fdwapi.h"
@@ -39,6 +41,7 @@
 #include "optimizer/restrictinfo.h"
 #include "optimizer/var.h"
 #include "utils/guc.h"
+#include "utils/syscache.h"
 #include "utils/uri.h"
 
 typedef struct
@@ -53,6 +56,160 @@ static ExternalScanInfo *make_externalscan_info(ExtTableEntry *extEntry);
 static List *create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly);
 static void cost_externalscan(ForeignPath *path, PlannerInfo *root,
 							  RelOptInfo *baserel, ParamPathInfo *param_info);
+
+/* FDW validator for external tables */
+void
+gp_exttable_permission_check(PG_FUNCTION_ARGS)
+{
+	List	   *options_list = untransformRelOptions(PG_GETARG_DATUM(0));
+
+	if (!superuser() && Gp_role == GP_ROLE_DISPATCH)
+	{
+		/*----------
+		 * check permissions to create this external table.
+		 *
+		 * - Always allow if superuser.
+		 * - Never allow EXECUTE or 'file' exttables if not superuser.
+		 * - Allow http, gpfdist or gpfdists tables if pg_auth has the right
+		 *	 permissions for this role and for this type of table
+		 *----------
+		 */
+		ListCell *lc;
+		bool iswritable = false;
+		foreach(lc, options_list)
+		{
+			DefElem    *def = (DefElem *) lfirst(lc);
+
+			if (pg_strcasecmp(def->defname, "command") == 0)
+			{
+				ereport(ERROR,
+						(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+						 errmsg("must be superuser to create an EXECUTE external web table")));
+			}
+			else if (pg_strcasecmp(def->defname, "is_writable") == 0)
+			{
+				iswritable = defGetBoolean(def);
+			}
+		}
+
+		foreach(lc, options_list)
+		{
+			DefElem    *def = (DefElem *) lfirst(lc);
+
+			if (pg_strcasecmp(def->defname, "location_uris") == 0)
+			{
+				List *location_list = tokenizeLocationUris(defGetString(def));
+				ListCell   *first_uri = list_head(location_list);
+				Value	   *v = lfirst(first_uri);
+				char	   *uri_str = pstrdup(v->val.str);
+				Uri		   *uri = ParseExternalTableUri(uri_str);
+
+				/* Assert(exttypeDesc->exttabletype == EXTTBL_TYPE_LOCATION); */
+
+				if (uri->protocol == URI_FILE)
+				{
+					ereport(ERROR,
+							(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+							 errmsg("must be superuser to create an external table with a file protocol")));
+				}
+				else
+				{
+					/*
+					 * Check if this role has the proper 'gpfdist', 'gpfdists' or
+					 * 'http' permissions in pg_auth for creating this table.
+					 */
+
+					bool		isnull;
+					HeapTuple	tuple;
+
+					tuple = SearchSysCache1(AUTHOID, ObjectIdGetDatum(GetUserId()));
+					if (!HeapTupleIsValid(tuple))
+						ereport(ERROR,
+								(errcode(ERRCODE_UNDEFINED_OBJECT),
+								 errmsg("role \"%s\" does not exist (in DefineExternalRelation)",
+										GetUserNameFromId(GetUserId(), false))));
+
+					if ((uri->protocol == URI_GPFDIST || uri->protocol == URI_GPFDISTS) && iswritable)
+					{
+						Datum	 	d_wextgpfd;
+						bool		createwextgpfd;
+
+						d_wextgpfd = SysCacheGetAttr(AUTHOID, tuple,
+													 Anum_pg_authid_rolcreatewextgpfd,
+													 &isnull);
+						createwextgpfd = (isnull ? false : DatumGetBool(d_wextgpfd));
+
+						if (!createwextgpfd)
+							ereport(ERROR,
+									(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+									 errmsg("permission denied: no privilege to create a writable gpfdist(s) external table")));
+					}
+					else if ((uri->protocol == URI_GPFDIST || uri->protocol == URI_GPFDISTS) && !iswritable)
+					{
+						Datum		d_rextgpfd;
+						bool		createrextgpfd;
+
+						d_rextgpfd = SysCacheGetAttr(AUTHOID, tuple,
+													 Anum_pg_authid_rolcreaterextgpfd,
+													 &isnull);
+						createrextgpfd = (isnull ? false : DatumGetBool(d_rextgpfd));
+
+						if (!createrextgpfd)
+							ereport(ERROR,
+									(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+									 errmsg("permission denied: no privilege to create a readable gpfdist(s) external table")));
+					}
+					else if (uri->protocol == URI_HTTP && !iswritable)
+					{
+						Datum		d_exthttp;
+						bool		createrexthttp;
+
+						d_exthttp = SysCacheGetAttr(AUTHOID, tuple,
+													Anum_pg_authid_rolcreaterexthttp,
+													&isnull);
+						createrexthttp = (isnull ? false : DatumGetBool(d_exthttp));
+
+						if (!createrexthttp)
+							ereport(ERROR,
+									(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+									 errmsg("permission denied: no privilege to create an http external table")));
+					}
+					else if (uri->protocol == URI_CUSTOM)
+					{
+						Oid			ownerId = GetUserId();
+						char	   *protname = uri->customprotocol;
+						Oid			ptcId = get_extprotocol_oid(protname, false);
+						AclResult	aclresult;
+
+						/* Check we have the right permissions on this protocol */
+						if (!pg_extprotocol_ownercheck(ptcId, ownerId))
+						{
+							AclMode		mode = (iswritable ? ACL_INSERT : ACL_SELECT);
+
+							aclresult = pg_extprotocol_aclcheck(ptcId, ownerId, mode);
+
+							if (aclresult != ACLCHECK_OK)
+								aclcheck_error(aclresult, ACL_KIND_EXTPROTOCOL, protname);
+						}
+					}
+					else
+						ereport(ERROR,
+								(errcode(ERRCODE_INTERNAL_ERROR),
+								 errmsg("internal error in DefineExternalRelation"),
+								 errdetail("Protocol is %d, writable is %d.",
+										   uri->protocol, iswritable)));
+
+					ReleaseSysCache(tuple);
+				}
+				FreeExternalTableUri(uri);
+				pfree(uri_str);
+				break;
+			}
+		}
+	}
+
+	return;
+}
 
 static void
 exttable_GetForeignRelSize(PlannerInfo *root,
@@ -132,9 +289,6 @@ make_externalscan_info(ExtTableEntry *extEntry)
 	/* assign Uris to segments. */
 	urilist = create_external_scan_uri_list(extEntry, &ismasteronly);
 
-	/* data format description */
-	Assert(extEntry->fmtopts);
-
 	/* single row error handling */
 	if (extEntry->rejectlimit != -1)
 	{
@@ -144,7 +298,6 @@ make_externalscan_info(ExtTableEntry *extEntry)
 	}
 
 	node->uriList = urilist;
-	node->fmtOptString = extEntry->fmtopts;
 	node->fmtType = extEntry->fmtcode;
 	node->isMasterOnly = ismasteronly;
 	node->rejLimit = rejectlimit;
@@ -194,12 +347,9 @@ exttable_GetForeignPlan(PlannerInfo *root,
 						Plan *outer_plan)
 {
 	Index		scan_relid = best_path->path.parent->relid;
-	ExternalScanInfo *externalscan_info;
 	ForeignScan *scan_plan;
 
 	Assert(scan_relid > 0);
-
-	externalscan_info = (ExternalScanInfo *) linitial(best_path->fdw_private);
 
 	/* Reduce RestrictInfo list to bare expressions; ignore pseudoconstants */
 	scan_clauses = extract_actual_clauses(scan_clauses, false);
@@ -305,7 +455,6 @@ exttable_BeginForeignScan(ForeignScanState *node,
 	currentScanDesc = external_beginscan(currentRelation,
 										 externalscan_info->scancounter,
 										 externalscan_info->uriList,
-										 externalscan_info->fmtOptString,
 										 externalscan_info->fmtType,
 										 externalscan_info->isMasterOnly,
 										 externalscan_info->rejLimit,

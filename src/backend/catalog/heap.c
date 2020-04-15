@@ -2464,14 +2464,8 @@ heap_drop_with_catalog(Oid relid)
 	/*
 	 * append-only table? delete the corresponding pg_appendonly tuple
 	 */
-	if(is_appendonly_rel)
+	if (is_appendonly_rel)
 		RemoveAppendonlyEntry(relid);
-
-	/*
-	 * External table? If so, delete the pg_exttable tuple.
-	 */
-	if (is_external_rel)
-		RemoveExtTableEntry(relid);
 
 	/*
 	 * Remove distribution policy, if any.

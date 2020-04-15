@@ -403,7 +403,7 @@ SELECT * FROM information_schema.user_mapping_options ORDER BY lower(authorizati
 SELECT * FROM information_schema.usage_privileges WHERE object_type LIKE 'FOREIGN%' AND object_name IN ('s6', 'foo') ORDER BY 1, 2, 3, 4, 5;
 SELECT * FROM information_schema.role_usage_grants WHERE object_type LIKE 'FOREIGN%' AND object_name IN ('s6', 'foo') ORDER BY 1, 2, 3, 4, 5;
 SELECT * FROM information_schema.foreign_tables WHERE foreign_table_schema <> 'gp_toolkit' ORDER BY 1, 2, 3;
-SELECT * FROM information_schema.foreign_table_options ORDER BY 1, 2, 3, 4;
+SELECT * FROM information_schema.foreign_table_options WHERE foreign_table_schema <> 'gp_toolkit' ORDER BY 1, 2, 3, 4;
 SET ROLE regress_test_role;
 SELECT * FROM information_schema.user_mapping_options ORDER BY 1, 2, 3, 4;
 SELECT * FROM information_schema.usage_privileges WHERE object_type LIKE 'FOREIGN%' AND object_name IN ('s6', 'foo') ORDER BY 1, 2, 3, 4, 5;

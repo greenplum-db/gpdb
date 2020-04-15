@@ -381,9 +381,6 @@ DECLARE_INDEX(pg_partition_rule_parchildrelid_parparentrule_parruleord_index, 51
 DECLARE_INDEX(pg_partition_rule_paroid_parentrule_ruleord_index, 5126, on pg_partition_rule using btree(paroid oid_ops, parparentrule oid_ops, parruleord int2_ops));
 #define PartitionRuleParoidParparentruleParruleordIndexId	5126
 
-DECLARE_UNIQUE_INDEX(pg_exttable_reloid_index, 6041, on pg_exttable using btree(reloid oid_ops));
-#define ExtTableReloidIndexId	6041
-
 DECLARE_UNIQUE_INDEX(gp_segment_config_content_preferred_role_index, 6106, on gp_segment_configuration using btree(content int2_ops, preferred_role char_ops));
 #define GpSegmentConfigContentPreferred_roleIndexId	6106
 DECLARE_UNIQUE_INDEX(gp_segment_config_dbid_index, 6107, on gp_segment_configuration using btree(dbid int2_ops));
