@@ -714,6 +714,7 @@ _readRefreshClause(void)
 	READ_LOCALS(RefreshClause);
 
 	READ_BOOL_FIELD(concurrent);
+	READ_BOOL_FIELD(skipData);
 	READ_NODE_FIELD(relation);
 
 	READ_DONE();
