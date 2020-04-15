@@ -6,4 +6,4 @@ override CPPFLAGS := -I$(top_builddir)/src/backend/gporca/libgpdbcost/include $(
 # backtracing.
 override CXXFLAGS := -Werror -Wextra -Wpedantic -Wno-variadic-macros -fno-omit-frame-pointer $(CXXFLAGS)
 # FIXME: this really should be done in autoconf
-override CXXFLAGS := -std=gnu++98 $(CXXFLAGS)
+override CXXFLAGS := -std=gnu++14 $(CXXFLAGS)
