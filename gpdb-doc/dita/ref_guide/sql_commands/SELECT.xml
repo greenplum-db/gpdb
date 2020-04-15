@@ -863,26 +863,26 @@ OFFSET <varname>start</varname></codeblock><p>where
           prevent the operation from waiting for other transactions to commit, use the
             <codeph>NOWAIT</codeph> option. With <codeph>NOWAIT</codeph>, the statement reports an
           error, rather than waiting, if a selected row cannot be locked immediately. Note that
-            <codeph>NOWAIT</codeph> only affects how the <codeph>SELECT</codeph> statement obtains
-          row-level locks. A required table-level lock is always taken in the ordinary way. For
-          example, a <codeph>SELECT FOR UPDATE NOWAIT</codeph> statement will always wait for the
-          required table-level lock; it behaves as if <codeph>NOWAIT</codeph> was omitted. You can
-          use <codeph>LOCK</codeph> with the <codeph>NOWAIT</codeph> option first, if you need to
-          acquire the table-level lock without waiting.</p><p>If specific tables are named in a
-          locking clause, then only rows coming from those tables are locked; any other tables used
-          in the <codeph>SELECT</codeph> are simply read as usual. A locking clause without a table
-          list affects all tables used in the statement. If a locking clause is applied to a view or
-          sub-query, it affects all tables used in the view or sub-query. However, these clauses do
-          not apply to <codeph>WITH</codeph> queries referenced by the primary query. If you want
-          row locking to occur within a <codeph>WITH</codeph> query, specify a locking clause within
-          the <codeph>WITH</codeph> query.</p><p>Multiple locking clauses can be written if it is
-          necessary to specify different locking behavior for different tables. If the same table is
-          mentioned (or implicitly affected) by both more than one locking clause, then it is
-          processed as if it was only specified by the strongest one. Similarly, a table is
-          processed as <codeph>NOWAIT</codeph> if that is specified in any of the clauses affecting
-          it.</p><p>The locking clauses cannot be used in contexts where returned rows cannot be
-          clearly identified with individual table rows; for example they cannot be used with
-          aggregation.</p><p>When a locking clause appears at the top level of a
+            <codeph>NOWAIT</codeph> only affects whether the <codeph>SELECT</codeph> statement waits
+          to obtain row-level locks. A required table-level lock is always taken in the ordinary
+          way. For example, a <codeph>SELECT FOR UPDATE NOWAIT</codeph> statement will always wait
+          for the required table-level lock; it behaves as if <codeph>NOWAIT</codeph> was omitted.
+          You can use <codeph>LOCK</codeph> with the <codeph>NOWAIT</codeph> option first, if you
+          need to acquire the table-level lock without waiting.</p><p>If specific tables are named
+          in a locking clause, then only rows coming from those tables are locked; any other tables
+          used in the <codeph>SELECT</codeph> are simply read as usual. A locking clause without a
+          table list affects all tables used in the statement. If a locking clause is applied to a
+          view or sub-query, it affects all tables used in the view or sub-query. However, these
+          clauses do not apply to <codeph>WITH</codeph> queries referenced by the primary query. If
+          you want row locking to occur within a <codeph>WITH</codeph> query, specify a locking
+          clause within the <codeph>WITH</codeph> query.</p><p>Multiple locking clauses can be
+          written if it is necessary to specify different locking behavior for different tables. If
+          the same table is mentioned (or implicitly affected) by both more than one locking clause,
+          then it is processed as if it was only specified by the strongest one. Similarly, a table
+          is processed as <codeph>NOWAIT</codeph> if that is specified in any of the clauses
+          affecting it.</p><p>The locking clauses cannot be used in contexts where returned rows
+          cannot be clearly identified with individual table rows; for example they cannot be used
+          with aggregation.</p><p>When a locking clause appears at the top level of a
             <codeph>SELECT</codeph> query, the rows that are locked are exactly those that are
           returned by the query; in the case of a join query, the rows locked are those that
           contribute to returned join rows. In addition, rows that satisfied the query conditions as
