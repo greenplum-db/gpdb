@@ -60,6 +60,10 @@ matrix:
                   packages:
                       - *common_packages
                       - clang-7
+          before_install:
+            - sudo ln -sv ../../bin/ccache /usr/lib/ccache/clang-7
+            - sudo ln -sv ../../bin/ccache /usr/lib/ccache/clang++-7
+
         # macOS, XCode11
         - os: osx
           compiler: clang
