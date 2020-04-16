@@ -73,6 +73,8 @@ matrix:
             homebrew:
               packages:
                 - ccache
+          before_install:
+            - PATH=/usr/local/opt/ccache/libexec:$PATH
         #
         # Configuration variations
         # ----------------------------------------------------------------
