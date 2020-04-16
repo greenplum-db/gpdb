@@ -208,8 +208,8 @@ namespace gpnaucrates
 					CBucket *bucket_other,
 					CDouble rows,
 					CDouble rows_other,
-					CBucket **result_bucket1_new,
-					CBucket **result_bucket2_new,
+					CBucket **bucket1_new,
+					CBucket **bucket2_new,
 					BOOL is_union_all = true
 					);
 

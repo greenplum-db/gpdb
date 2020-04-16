@@ -1062,14 +1062,14 @@ CBucket::MakeBucketMerged
 	CBucket *bucket_other,
 	CDouble rows,
 	CDouble rows_other,
-	CBucket **result_bucket_new1,
-	CBucket **result_bucket_new2,
+	CBucket **bucket_new1,
+	CBucket **bucket_new2,
 	BOOL is_union_all
 	)
 {
 	// we shouldn't be overwriting anything important
-	GPOS_ASSERT(NULL == *result_bucket_new1);
-	GPOS_ASSERT(NULL == *result_bucket_new2);
+	GPOS_ASSERT(NULL == *bucket_new1);
+	GPOS_ASSERT(NULL == *bucket_new2);
 
 	CPoint *result_lower_new = CPoint::MinPoint(this->GetLowerBound(), bucket_other->GetLowerBound());
 	CPoint *result_upper_new = CPoint::MinPoint(this->GetUpperBound(), bucket_other->GetUpperBound());
@@ -1092,17 +1092,20 @@ CBucket::MakeBucketMerged
 
 	if (result_upper_new->IsLessThan(this->GetUpperBound()))
 	{
-		*result_bucket_new1 = this->MakeBucketScaleLower(mp, result_upper_new, !is_upper_closed);
+		// e.g [1, 150) + [50, 100)   -> [100, 150)
+		*bucket_new1 = this->MakeBucketScaleLower(mp, result_upper_new, !is_upper_closed);
 	}
 
-	if (result_upper_new->IsLessThan(bucket_other->GetUpperBound()))
+	else if (result_upper_new->IsLessThan(bucket_other->GetUpperBound()))
 	{
-		*result_bucket_new2 = bucket_other->MakeBucketScaleLower(mp, result_upper_new, !is_upper_closed);
+		// e.g [1, 100) + [50, 150)   -> [100, 150)
+		*bucket_new2 = bucket_other->MakeBucketScaleLower(mp, result_upper_new, !is_upper_closed);
 	}
 
 	result_lower_new->AddRef();
 	result_upper_new->AddRef();
 
+	// TODO: is is_lower_closed = true always? E.g (1, 150) + (50, 100)
 	return GPOS_NEW(mp) CBucket(result_lower_new, result_upper_new, true /* is_lower_closed */, is_upper_closed, frequency, distinct);
 }
 
