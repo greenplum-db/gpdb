@@ -95,6 +95,15 @@ python:
 before_install:
     - eval "${OVERRIDE_CC}"
     - eval "${OVERRIDE_CXX}"
+    - |
+      if [ "${TRAVIS_COMPILER}" = clang ]; then
+        case "${TRAVIS_OS_NAME}" in
+          linux)
+            sudo ln -sv ../../bin/ccache /usr/lib/ccache/${CC}
+            sudo ln -sv ../../bin/ccache /usr/lib/ccache/${CXX}
+            ;;
+        esac
+      fi
 
 ## ----------------------------------------------------------------------
 ## Install supporting Python modules
