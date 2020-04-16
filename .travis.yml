@@ -113,6 +113,7 @@ install:
 before_script:
     - ssh-keygen -t "rsa" -f ~/.ssh/id_rsa -N ""
     - cp ~/.ssh/{id_rsa.pub,authorized_keys}
+    - ccache --zero-stats
 
 script:
   - |
@@ -182,6 +183,7 @@ script:
       fi
 
 after_script:
+  - ccache --show-stats
   - source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
   - postgres --version
   - gpssh --version
