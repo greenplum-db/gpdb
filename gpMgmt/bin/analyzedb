@@ -851,13 +851,8 @@ def generate_timestamp():
 # SQL expression like: 'schema.table'::regclass, that can be embedded safely in an SQL string.
 # The escaping is a bit tricky here: the schema and table name need to be double-quoted, and the
 # whole string needs to be in single quotes.
-# This creates a subquery that will return a list of oids. This is necessary to prevent errors
-# in the case a table is dropped while analyzedb is running
 def get_oid_str(table_list):
-    subquery_str = "(SELECT pg_class.oid FROM pg_class, pg_namespace WHERE pg_class.relnamespace = pg_namespace.oid AND ("
-    tables = " OR ".join(map((lambda x: "(nspname = '%s' AND relname = '%s')" % (pg.escape_string(x[0]), pg.escape_string(x[1]))), table_list))
-    subquery_str = subquery_str + tables + "))"
-    return subquery_str
+    return ','.join(map((lambda x: regclass_schema_tbl(x[0], x[1])), table_list))
 
 
 def regclass_schema_tbl(schema, tbl):
