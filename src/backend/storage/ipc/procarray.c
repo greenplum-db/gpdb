@@ -1732,8 +1732,8 @@ getDtxCheckPointInfo(char **result, int *result_size)
 	gxact_log_array = &gxact_checkpoint->committedGxactArray[0];
 
 	actual = 0;
-	for (i = 0; i < *shmNumCommittedGxacts; i++)
-		gxact_log_array[actual++] = shmCommittedGxactArray[i++];
+	for (; actual < *shmNumCommittedGxacts; actual++)
+		gxact_log_array[actual] = shmCommittedGxactArray[actual];
 
 	SIMPLE_FAULT_INJECTOR("checkpoint_dtx_info");
 
