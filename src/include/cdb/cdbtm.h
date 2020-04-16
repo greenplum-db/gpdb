@@ -316,7 +316,7 @@ extern int	tmShmemSize(void);
 extern void initTM(void);
 
 extern void getDtxCheckPointInfoAndLock(char **result, int *result_size);
-extern void freeDtxCheckPointInfoAndUnlock(char *info, int info_size, XLogRecPtr *recptr);
+extern void freeDtxCheckPointInfoAndUnlock(XLogRecPtr *recptr);
 
 extern void verify_shared_snapshot_ready(void);
 

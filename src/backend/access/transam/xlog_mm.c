@@ -1570,21 +1570,12 @@ mmxlog_add_database(
  *
  * NOTE: You must hold the PersistentObjLock before calling this routine!
  */
-void
-mmxlog_append_checkpoint_data(XLogRecData rdata[6])
+XLogRecData **
+mmxlog_append_checkpoint_data(XLogRecData rdata[3], XLogRecData **pnext)
 {
 	fspc_agg_state *f;
 	tspc_agg_state *t;
 	dbdir_agg_state *d;
-
-	/*
-	 * We must make sure no one traverses the rdata chain into uninitialised
-	 * data if we exit early, below.
-	 */
-	rdata[1].next = NULL;
-	rdata[2].next = NULL;
-	rdata[3].next = NULL;
-	rdata[4].next = NULL;
 
 	if (gp_before_filespace_setup)
 	{
@@ -1598,15 +1589,9 @@ mmxlog_append_checkpoint_data(XLogRecData rdata[6])
 				 "mmxlog_append_checkpoint_data: no tablespace and filespace information for checkpoint because gp_before_filespace_setup GUC is true");
 
 			SUPPRESS_ERRCONTEXT_POP();
-
-			rdata[2].data = NULL;
-			rdata[3].data = NULL;
-			rdata[4].data = NULL;
-			rdata[2].len = 0;
-			rdata[3].len = 0;
-			rdata[4].len = 0;
+			memset(rdata, 0, sizeof(XLogRecData) * 3);
 		}
-		return;
+		return pnext;
 	}
 
 	if (IsStandbyMode())
@@ -1630,19 +1615,21 @@ mmxlog_append_checkpoint_data(XLogRecData rdata[6])
 		get_database_data(&d, "mmxlog_append_checkpoint_data");
 	}
 
-	rdata[2].data = (char*)f;
+	rdata[0].data = (char*)f;
+	rdata[0].buffer = InvalidBuffer;
+	rdata[0].len = FSPC_CHECKPOINT_BYTES(f->count);
+	rdata[1].data = (char*)t;
+	rdata[1].buffer = InvalidBuffer;
+	rdata[1].len = TSPC_CHECKPOINT_BYTES(t->count);
+	rdata[2].data = (char*)d;
 	rdata[2].buffer = InvalidBuffer;
-	rdata[2].len = FSPC_CHECKPOINT_BYTES(f->count);
-	rdata[3].data = (char*)t;
-	rdata[3].buffer = InvalidBuffer;
-	rdata[3].len = TSPC_CHECKPOINT_BYTES(t->count);
-	rdata[4].data = (char*)d;
-	rdata[4].buffer = InvalidBuffer;
-	rdata[4].len = DBDIR_CHECKPOINT_BYTES(d->count);
+	rdata[2].len = DBDIR_CHECKPOINT_BYTES(d->count);
 
+	*pnext = &(rdata[0]);
+	rdata[0].next = &(rdata[1]);
 	rdata[1].next = &(rdata[2]);
-	rdata[2].next = &(rdata[3]);
-	rdata[3].next = &(rdata[4]);
+	pnext = &rdata[2].next;
+	rdata[2].next = NULL;
 
 	if (Debug_persistent_recovery_print)
 	{
@@ -1658,6 +1645,7 @@ mmxlog_append_checkpoint_data(XLogRecData rdata[6])
 
 		SUPPRESS_ERRCONTEXT_POP();
 	}
+	return pnext;
 }
 
 /*

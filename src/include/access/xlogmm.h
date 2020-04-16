@@ -141,7 +141,7 @@ extern void mmxlog_log_create_tablespace(Oid filespace, Oid tablespace);
 extern void mmxlog_log_create_database(Oid tablespace, Oid database);
 extern void mmxlog_log_create_relfilenode(Oid tablespace, Oid database,
 										  Oid relfilenode, uint32 segnum);
-extern void mmxlog_append_checkpoint_data(XLogRecData rdata[5]);
+extern XLogRecData ** mmxlog_append_checkpoint_data(XLogRecData rdata[3], XLogRecData **pnext);
 extern void mmxlog_read_checkpoint_data(MasterMirrorCheckpointInfo mmckptInfo,
 										XLogRecPtr *beginLoc);
 extern bool mmxlog_filespace_get_path(

@@ -2865,10 +2865,8 @@ getDtxCheckPointInfoAndLock(char **result, int *result_size)
 }
 
 void
-freeDtxCheckPointInfoAndUnlock(char *info, int info_size  __attribute__((unused)) , XLogRecPtr *recptr)
+freeDtxCheckPointInfoAndUnlock(XLogRecPtr *recptr)
 {
-	pfree(info);
-
 	releaseTmLock();
 
 	elog(DTM_DEBUG5, "Checkpoint with DTM information written at %X/%X.",
