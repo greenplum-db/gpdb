@@ -234,35 +234,16 @@ CFilterStatsProcessor::MakeStatsFilter
 	}
 	else
 	{
-		if (CStatsPred::EsptDisj == base_pred_stats->GetPredStatsType())
-		{
-			CStatsPredDisj *pred_stats = CStatsPredDisj::ConvertPredStats(base_pred_stats);
-
-			histograms_new  = MakeHistHashMapDisjFilter
-								(
-								mp,
-								stats_config,
-								histograms_copy,
-								input_rows,
-								pred_stats,
-								&scale_factor
-								);
-		}
-		else
-		{
-			GPOS_ASSERT(CStatsPred::EsptConj == base_pred_stats->GetPredStatsType());
-			CStatsPredConj *pred_stats = CStatsPredConj::ConvertPredStats(base_pred_stats);
-			num_predicates = pred_stats->GetNumPreds();
-			histograms_new = MakeHistHashMapConjFilter
+		histograms_new  = MakeHistHashMapConjOrDisjFilter
 							(
 							mp,
 							stats_config,
 							histograms_copy,
 							input_rows,
-							pred_stats,
+							base_pred_stats,
 							&scale_factor
 							);
-		}
+
 		GPOS_ASSERT(CStatistics::MinRows.Get() <= scale_factor.Get());
 		rows_filter = input_rows / scale_factor;
 		rows_filter = std::max(CStatistics::MinRows.Get(), rows_filter.Get());
@@ -649,7 +630,7 @@ CFilterStatsProcessor::MakeHistHashMapDisjFilter
 			GPOS_ASSERT(NULL == disjunctive_child_col_histogram);
 
 			CDouble current_rows_estimate = input_rows / CScaleFactorUtils::CalcScaleFactorCumulativeDisj(stats_config, scale_factors, input_rows);
-			UlongToHistogramMap *merged_histograms = CStatisticsUtils::CreateHistHashMapAfterMergingDisjPreds
+			UlongToHistogramMap *merged_histograms = CStatisticsUtils::MergeHistogramMapsForDisjPreds
 													  	  (
 													  	  mp,
 													  	  non_updatable_cols,
