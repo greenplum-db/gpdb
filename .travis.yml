@@ -102,6 +102,9 @@ before_install:
             sudo ln -sv ../../bin/ccache /usr/lib/ccache/${CC}
             sudo ln -sv ../../bin/ccache /usr/lib/ccache/${CXX}
             ;;
+          osx)
+            PATH=/usr/local/opt/ccache/libexec:$PATH
+            ;;
         esac
       fi
 
