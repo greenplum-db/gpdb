@@ -57,6 +57,8 @@ typedef struct
 
 	int			numSegLocks;	/* Total number of locks being reported back to client */
 	int			numsegresults;	/* If we dispatch to segDBs, the number of segresults */
+	int			whichResultset; /* which result set is being processed */
+	int			whichRow;	/* which row in current result set is being processed */
 	struct pg_result **segresults;	/* pg_result for each segDB */
 } PG_Lock_Status;
 
@@ -166,6 +168,8 @@ pg_lock_status(PG_FUNCTION_ARGS)
 
 		mystatus->numSegLocks = 0;
 		mystatus->numsegresults = 0;
+		mystatus->whichResultset = 0;
+		mystatus->whichRow = 0;
 		mystatus->segresults = NULL;
 
 		/*
@@ -500,34 +504,36 @@ pg_lock_status(PG_FUNCTION_ARGS)
 		Datum		values[NUM_LOCK_STATUS_COLUMNS];
 		bool		nulls[NUM_LOCK_STATUS_COLUMNS];
 		int i;
-		int whichresultset = 0;
-		int whichelement = mystatus->currIdx - lockData->nelements;
-		int whichrow = whichelement;
+		int whichresultset = mystatus->whichResultset;
+		int whichrow = mystatus->whichRow;
 
 		Assert(Gp_role == GP_ROLE_DISPATCH);
 
 		/*
 		 * Because we have one result set per segDB (rather than one big result set with everything),
-		 * we need to figure out which result set we are on, and which row within that result set
-		 * we are returning.
-		 *
-		 * So, we walk through all the result sets and all the rows in each one, in order.
+		 * we use mystatus->whichResultset and mystatus->whichRow to track which result set we are on,
+		 * and which row within that result set we are returning, respectively.
 		 */
-
-		while(whichrow >= PQntuples(mystatus->segresults[whichresultset]))
+		if (whichrow < PQntuples(mystatus->segresults[whichresultset]))
 		{
-			whichrow -= PQntuples(mystatus->segresults[whichresultset]);
+			/* Advance to next row in current result set. */
+			mystatus->whichRow++;
+		}
+		else
+		{
+			/* Advance to next result set. */
+			mystatus->whichResultset++;
+			mystatus->whichRow = 0;
 			whichresultset++;
+			whichrow = 0;
+
+			/*
+			 * If this condition is true, we have already sent everything back,
+			 * and we just want to do the SRF_RETURN_DONE
+			 */
 			if (whichresultset >= mystatus->numsegresults)
 				break;
 		}
-
-		/*
-		 * If this condition is true, we have already sent everything back,
-		 * and we just want to do the SRF_RETURN_DONE
-		 */
-		if (whichresultset >= mystatus->numsegresults)
-			break;
 
 		mystatus->currIdx++;
 
