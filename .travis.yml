@@ -69,7 +69,8 @@ matrix:
         - os: osx
           compiler: clang
           osx_image: xcode11
-          env: T=macos
+          env:
+            - T=macos C="--with-includes=$(brew --prefix xerces-c)/include --with-libs=$(brew --prefix xerces-c)/lib"
           addons:
             homebrew:
               packages:
