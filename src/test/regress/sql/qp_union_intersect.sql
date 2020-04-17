@@ -724,6 +724,16 @@ select 1
 union all
 select * from t_github_issue_9874 where a = 1;
 
+-- Test mixing a SegmentGeneral with General locus scan.
+explain (costs off)
+select a from t_test_append_rep
+union all
+select * from generate_series(100, 105);
+
+select a from t_test_append_rep
+union all
+select * from generate_series(100, 105);
+
 --
 -- Test for creation of MergeAppend paths.
 --
