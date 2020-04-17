@@ -1604,6 +1604,12 @@ typedef struct ProjectionPath
 	bool		dummypp;		/* true if no separate Result is needed */
 
 	List	   *cdb_restrict_clauses;
+
+	/*
+	 * CDB: projection with qual gp_execution_segment() = <segid>,
+	 * for such case we should consider update directdispatch info.
+	 */
+	List	   *direct_dispath_contentIds;
 } ProjectionPath;
 
 /*

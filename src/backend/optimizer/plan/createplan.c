@@ -1581,6 +1581,26 @@ create_projection_plan(PlannerInfo *root, ProjectionPath *best_path)
 		copy_generic_path_info(plan, (Path *) best_path);
 	}
 
+	/*
+	 * Greenplum specific behavior:
+	 * We may use the Result plan with resconstantqual to be
+	 * One-Time Filter: (gp_execution_segment() = <some segid>).
+	 * We should re-consider direct dispatch info in this case.
+	 * See function `set_append_path_locus` and Github Issue
+	 * https://github.com/greenplum-db/gpdb/issues/9874 for more
+	 * detailed info.
+	 */
+	if (best_path->direct_dispath_contentIds)
+	{
+		DirectDispatchInfo dispatchInfo;
+
+		dispatchInfo.isDirectDispatch = true;
+		dispatchInfo.contentIds = best_path->direct_dispath_contentIds;
+		dispatchInfo.haveProcessedAnyCalculations = true;
+
+		MergeDirectDispatchCalculationInfo(&root->curSlice->directDispatch, &dispatchInfo);
+	}
+
 	return plan;
 }
 

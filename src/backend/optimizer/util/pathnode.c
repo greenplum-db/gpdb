@@ -1908,6 +1908,14 @@ set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
 					subpath,
 					subpath->pathtarget,
 					list_make1(restrict_info));
+
+				/*
+				 * We use the skill of Result plannode with one time filter
+				 * gp_execution_segment() = <segid> here, so we should update
+				 * direct dispatch info when creating plan.
+				 */
+				((ProjectionPath *) subpath)->direct_dispath_contentIds = list_make1_int(gp_session_id % numsegments);
+
 				CdbPathLocus_MakeStrewn(&(subpath->locus),
 				                        numsegments);
 			}

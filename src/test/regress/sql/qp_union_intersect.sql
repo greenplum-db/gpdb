@@ -701,6 +701,29 @@ select * from t_test_append_rep
 union all
 select * from t_test_append_hash;
 
+-- Test value scan union all with a distributed table that direct dispatch
+-- value scan's locus is general, so it will use Result plan node with
+-- resconstantqual to be gp_execution_segment() = <some segid> to turn
+-- general locus to partitioned locus to avoid gather partitioned locus
+-- table to singleQE. When the subplan of partitioned table's scan can
+-- use direct dispatch, previously, the result plan does not handle
+-- direct dispatch correctly. This case cannot test plan, this is because
+-- gp_execution_segment() = <some segid> the filter segid is randomly picked.
+-- So the result plan's direct dispatch info is also random. We print the plan
+-- and ignore it for better debugging info if error happens.
+-- See github issue https://github.com/greenplum-db/gpdb/issues/9874 for details.
+
+create table t_github_issue_9874 (a int) distributed by (a);
+-- start_ignore
+explain (costs off)
+select 1
+union all
+select * from t_github_issue_9874 where a = 1;
+-- end_ignore
+select 1
+union all
+select * from t_github_issue_9874 where a = 1;
+
 --
 -- Test for creation of MergeAppend paths.
 --
