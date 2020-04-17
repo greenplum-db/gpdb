@@ -155,7 +155,7 @@ script:
             --enable-mapreduce \
             --enable-orafce \
             $C
-        make -s install
+        travis_wait make -s -j2 install
         source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
         make -s unittest-check
         make -C gpAux/gpdemo cluster
@@ -198,7 +198,7 @@ script:
             --disable-gpcloud \
             --without-zstd \
             $C
-        make -s install
+        travis_wait 45 make -s install
         source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
         make -s unittest-check
       fi
