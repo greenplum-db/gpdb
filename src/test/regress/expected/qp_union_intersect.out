@@ -1744,6 +1744,41 @@ select g from generate_series(1,2) g;
    2
 (7 rows)
 
+-- Test mixing a SegmentGeneral with General locus scan.
+create table t_test_append_rep(a int, b int, c int) distributed replicated;
+insert into t_test_append_rep select i, i+1, i+2 from generate_series(5, 10)i;
+explain (costs off)
+select a from t_test_append_rep
+union all
+select * from generate_series(100, 105);
+                  QUERY PLAN                  
+----------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Append
+         ->  Seq Scan on t_test_append_rep
+         ->  Function Scan on generate_series
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+select a from t_test_append_rep
+union all
+select * from generate_series(100, 105);
+  a  
+-----
+   5
+   6
+   7
+   8
+   9
+  10
+ 100
+ 101
+ 102
+ 103
+ 104
+ 105
+(12 rows)
+
 --
 -- Test for creation of MergeAppend paths.
 --

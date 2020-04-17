@@ -104,6 +104,13 @@ cdbpath_create_motion_path(PlannerInfo *root,
 	numsegments = CdbPathLocus_CommonSegments(subpath->locus, locus);
 	Assert(numsegments > 0);
 
+	/*
+	 * Motion is to change path's locus, if target locus is the
+	 * same as the subpath's, there is no need to add motion.
+	 */
+	if (cdbpathlocus_equal(subpath->locus, locus))
+		return subpath;
+
 	/* Moving subpath output to a single executor process (qDisp or qExec)? */
 	if (CdbPathLocus_IsBottleneck(locus))
 	{
@@ -269,9 +276,13 @@ cdbpath_create_motion_path(PlannerInfo *root,
 	/* If subplan uses no tables, it can run on qDisp or a singleton qExec. */
 	else if (CdbPathLocus_IsGeneral(subpath->locus))
 	{
-		/* No motion needed if general-->general or general-->replicated. */
+		/*
+		 * No motion needed if general-->general or general-->replicated or
+		 * general-->segmentGeneral
+		 */
 		if (CdbPathLocus_IsGeneral(locus) ||
-			CdbPathLocus_IsReplicated(locus))
+			CdbPathLocus_IsReplicated(locus) ||
+			CdbPathLocus_IsSegmentGeneral(locus))
 		{
 			subpath->locus.numsegments = numsegments;
 			return subpath;

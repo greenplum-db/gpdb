@@ -654,6 +654,19 @@ select a from dml_union_r where a > 95
 union all
 select g from generate_series(1,2) g;
 
+-- Test mixing a SegmentGeneral with General locus scan.
+create table t_test_append_rep(a int, b int, c int) distributed replicated;
+insert into t_test_append_rep select i, i+1, i+2 from generate_series(5, 10)i;
+
+explain (costs off)
+select a from t_test_append_rep
+union all
+select * from generate_series(100, 105);
+
+select a from t_test_append_rep
+union all
+select * from generate_series(100, 105);
+
 --
 -- Test for creation of MergeAppend paths.
 --
