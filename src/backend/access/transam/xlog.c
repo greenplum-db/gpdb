@@ -8713,6 +8713,9 @@ CreateCheckPoint(int flags)
 	XLogRecPtr	recptr;
 	XLogCtlInsert *Insert = &XLogCtl->Insert;
 	XLogRecData rdata[6];
+	void 		*dataptr[6];
+	/* pnext is used to link the valid XLogRecData */
+	XLogRecData **pnext;
 	uint32		freespace;
 	uint32		_logId;
 	uint32		_logSeg;
@@ -9053,16 +9056,20 @@ CreateCheckPoint(int flags)
 	 * dropped on the master, break the consistency between the master and the standby.
 	 */
 
-	/* pnext is used to link the valid XLogRecData */
-	XLogRecData **pnext;
-
 	rdata[0].data = (char *) (&checkPoint);
 	rdata[0].len = sizeof(checkPoint);
 	rdata[0].buffer = InvalidBuffer;
 	rdata[0].next = &(rdata[1]);
 
-	getDtxCheckPointInfoAndLock((char **)&rdata[1].data, (int *)&rdata[1].len);
+	{
+		char* 		dtxCheckPointInfo;
+		int			dtxCheckPointInfoSize;
+		getDtxCheckPointInfoAndLock(&dtxCheckPointInfo, &dtxCheckPointInfoSize);
+		rdata[1].data = dtxCheckPointInfo;
+		rdata[1].len = dtxCheckPointInfoSize;
+	}
 	rdata[1].buffer = InvalidBuffer;
+	rdata[1].next = NULL;
 	pnext = &rdata[1].next;
 
 	/*
@@ -9087,7 +9094,6 @@ CreateCheckPoint(int flags)
 	 * Save the data pointers that need to be pfreed after XLogInsert.
 	 * This is essential because rdata[x].data may be changed in XLogInsert.
 	 */
-	void *dataptr[6];
 	MemSet(dataptr, 0, sizeof(dataptr));
 	{
 		XLogRecData *pdata = &rdata[1];
@@ -9157,10 +9163,6 @@ CreateCheckPoint(int flags)
 	}
 
 	freeDtxCheckPointInfoAndUnlock(&recptr);
-	/*
-	 * if gp_before_filespace_setup is on, rdata[2], rdata[3], rdata[4] are empty,
-	 * otherwise, they are allocated by mmxlog_append_checkpoint_data()
-	 */
 	{
 		for (int i = 0; i < 6 && dataptr[i]; i++)
 			pfree(dataptr[i]);
