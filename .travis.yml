@@ -191,7 +191,7 @@ script:
             --prefix=${TRAVIS_BUILD_DIR}/gpsql \
             --with-perl \
             --with-python \
-            --enable-orca \
+            --disable-orca \
             --enable-orafce \
             --disable-gpfdist \
             --disable-pxf \
