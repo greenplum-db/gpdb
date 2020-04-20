@@ -1407,6 +1407,12 @@ select * from int2vectortab union select * from int2vectortab;
 -- end_matchsubs
 select count(*) over (partition by t) from int2vectortab;
 
+-- This is currently broken on 5X_STABLE, although it's been fixed in master.
+CREATE TABLE distinct_agg1 (a int, b int, c int);
+CREATE TABLE distinct_agg2 (d int, e int, f int);
+INSERT INTO distinct_agg1 SELECT i%50, i%2, i%5 from generate_series(1, 100) i ;
+INSERT INTO distinct_agg2 SELECT i%50, i, i%2 from generate_series(1, 100) i ;
+SELECT DISTINCT c, e FROM distinct_agg1 AS t1, distinct_agg2 AS t2 WHERE t1.a = t2.d AND t1.b = 0 GROUP BY 1,2;
 
 -- CLEANUP
 set client_min_messages='warning';

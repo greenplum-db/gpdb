@@ -1605,6 +1605,66 @@ select count(*) over (partition by t) from int2vectortab;
      2
 (5 rows)
 
+-- This is currently broken on 5X_STABLE, although it's been fixed in master.
+CREATE TABLE distinct_agg1 (a int, b int, c int);
+CREATE TABLE distinct_agg2 (d int, e int, f int);
+INSERT INTO distinct_agg1 SELECT i%50, i%2, i%5 from generate_series(1, 100) i ;
+INSERT INTO distinct_agg2 SELECT i%50, i, i%2 from generate_series(1, 100) i ;
+SELECT DISTINCT c, e FROM distinct_agg1 AS t1, distinct_agg2 AS t2 WHERE t1.a = t2.d AND t1.b = 0 GROUP BY 1,2;
+ c |  e  
+---+-----
+ 0 |  10
+ 0 |  20
+ 0 |  30
+ 0 |  40
+ 0 |  50
+ 0 |  60
+ 0 |  70
+ 0 |  80
+ 0 |  90
+ 0 | 100
+ 1 |   6
+ 1 |  16
+ 1 |  26
+ 1 |  36
+ 1 |  46
+ 1 |  56
+ 1 |  66
+ 1 |  76
+ 1 |  86
+ 1 |  96
+ 2 |   2
+ 2 |  12
+ 2 |  22
+ 2 |  32
+ 2 |  42
+ 2 |  52
+ 2 |  62
+ 2 |  72
+ 2 |  82
+ 2 |  92
+ 3 |   8
+ 3 |  18
+ 3 |  28
+ 3 |  38
+ 3 |  48
+ 3 |  58
+ 3 |  68
+ 3 |  78
+ 3 |  88
+ 3 |  98
+ 4 |   4
+ 4 |  14
+ 4 |  24
+ 4 |  34
+ 4 |  44
+ 4 |  54
+ 4 |  64
+ 4 |  74
+ 4 |  84
+ 4 |  94
+(50 rows)
+
 -- CLEANUP
 set client_min_messages='warning';
 drop schema bfv_aggregate cascade;

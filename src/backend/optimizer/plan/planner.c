@@ -1649,9 +1649,16 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 				 * change the previous root->parse Query node, which makes the
 				 * current sort_pathkeys invalid.
 				 */
-				sort_pathkeys = make_pathkeys_for_sortclauses(root, parse->sortClause,
+				PlannerInfo *scroot = NULL;
+				scroot = makeNode(PlannerInfo);
+				memcpy(scroot, root, sizeof(PlannerInfo));
+				scroot->eq_classes = NULL;
+
+				sort_pathkeys = make_pathkeys_for_sortclauses(scroot, parse->sortClause,
 											  result_plan->targetlist, true);
 				sort_pathkeys = canonicalize_pathkeys(root, sort_pathkeys);
+
+				pfree(scroot);
 			}
 		}
 		else	/* Not GP_ROLE_DISPATCH */
