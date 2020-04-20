@@ -1,10 +1,3 @@
---start_ignore
-! gpconfig -c gp_enable_global_deadlock_detector -v on;
-! gpstop -rai;
---end_ignore
-
-1: SHOW gp_enable_global_deadlock_detector;
-
 -- Test concurrent update a table with a varying length type
 CREATE TABLE t_concurrent_update(a int, b int, c char(84));
 INSERT INTO t_concurrent_update VALUES(1,1,'test');
@@ -78,7 +71,60 @@ DROP TABLE t_concurrent_update;
 5q:
 6q:
 
---start_ignore
-! gpconfig -r gp_enable_global_deadlock_detector;
-! gpstop -rai;
---end_ignore 
+-- Test update distkey
+-- IF we enable the GDD, then the lock maybe downgrade to
+-- RowExclusiveLock, when we UPDATE the distribution keys,
+-- A SplitUpdate node will add to the Plan, then an UPDATE
+-- operator may split to DELETE and INSERT.
+-- IF we UPDATE the distribution keys concurrently, the
+-- DELETE operator will not execute EvalPlanQual and the
+-- INSERT operator can not be *blocked*, so it will
+-- generate more tuples in the tables.
+-- We raise an error when the GDD is enabled and the
+-- distribution keys is updated.
+
+0: create table tab_update_hashcol (c1 int, c2 int) distributed by(c1);
+0: insert into tab_update_hashcol values(1,1);
+0: select * from tab_update_hashcol;
+
+1: begin;
+2: begin;
+1: update tab_update_hashcol set c1 = c1 + 1 where c1 = 1;
+2&: update tab_update_hashcol set c1 = c1 + 1 where c1 = 1;
+1: end;
+2<:
+2: end;
+0: select * from tab_update_hashcol;
+0: drop table tab_update_hashcol;
+
+-- Test EvalplanQual
+-- If we enable the GDD, then the lock maybe downgrade to
+-- RowExclusiveLock, so UPDATE/Delete can be executed
+-- concurrently, it may trigger the EvalPlanQual function
+-- to recheck the qualifications.
+-- If the subPlan have Motion node, then we can not execute
+-- EvalPlanQual correctly, so we raise an error when
+-- GDD is enabled and EvalPlanQual is tiggered.
+
+0: create table tab_update_epq1 (c1 int, c2 int) distributed randomly;
+0: create table tab_update_epq2 (c1 int, c2 int) distributed randomly;
+0: insert into tab_update_epq1 values(1,1);
+0: insert into tab_update_epq2 values(1,1);
+0: select * from tab_update_epq1;
+0: select * from tab_update_epq2;
+
+1: set optimizer = off;
+2: set optimizer = off;
+
+1: begin;
+2: begin;
+1: update tab_update_epq1 set c1 = c1 + 1 where c2 = 1;
+2&: update tab_update_epq1 set c1 = tab_update_epq1.c1 + 1 from tab_update_epq2 where tab_update_epq1.c2 = tab_update_epq2.c2;
+1: end;
+2<:
+2: end;
+
+0: select * from tab_update_epq1;
+0: drop table tab_update_epq1;
+0: drop table tab_update_epq2;
+0q:
