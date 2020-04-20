@@ -512,15 +512,8 @@ gpos::ioutils::CreateTempDir
 	CHAR* szRes = NULL;
 
 
-#ifdef GPOS_SunOS
-	// check to simulate I/O error
-	GPOS_CHECK_SIM_IO_ERR(&szRes, mktemp(dir_path));
-
-	ioutils::CreateDir(dir_path, S_IRUSR  | S_IWUSR  | S_IXUSR);
-#else
 	// check to simulate I/O error
 	GPOS_CHECK_SIM_IO_ERR(&szRes, mkdtemp(dir_path));
-#endif // GPOS_SunOS
 
 	if (NULL == szRes)
 	{
