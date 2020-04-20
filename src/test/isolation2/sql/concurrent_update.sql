@@ -1,3 +1,10 @@
+--start_ignore
+! gpconfig -c gp_enable_global_deadlock_detector -v on;
+! gpstop -rai;
+--end_ignore
+
+1: SHOW gp_enable_global_deadlock_detector;
+
 -- Test concurrent update a table with a varying length type
 CREATE TABLE t_concurrent_update(a int, b int, c char(84));
 INSERT INTO t_concurrent_update VALUES(1,1,'test');
@@ -15,15 +22,7 @@ INSERT INTO t_concurrent_update VALUES(1,1,'test');
 
 DROP TABLE t_concurrent_update;
 
-
---start_ignore
-! gpconfig -c gp_enable_global_deadlock_detector -v on;
-! gpstop -rai;
---end_ignore
-
 -- Test the concurrent update transaction order on the segment is reflected on master
--- enable gdd
-1: SHOW gp_enable_global_deadlock_detector;
 1: CREATE TABLE t_concurrent_update(a int, b int);
 1: INSERT INTO t_concurrent_update VALUES(1,1);
 
