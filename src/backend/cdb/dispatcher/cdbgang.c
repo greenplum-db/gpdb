@@ -195,6 +195,29 @@ segment_failure_due_to_recovery(const char *error_message)
 	return false;
 }
 
+/* Check if the segment failure is due to missing writer process on QE node. */
+bool
+segment_failure_due_to_missing_writer(const char *error_message)
+{
+	char	   *fatal = NULL,
+			   *ptr = NULL;
+	int			fatal_len = 0;
+
+	if (error_message == NULL)
+		return false;
+
+	fatal = _("FATAL");
+	fatal_len = strlen(fatal);
+
+	ptr = strstr(error_message, fatal);
+	if ((ptr != NULL) && ptr[fatal_len] == ':' &&
+		strstr(error_message, _(WRITER_IS_MISSING_MSG)))
+		return true;
+
+	return false;
+}
+
+
 /*
  * Reads the GP catalog tables and build a CdbComponentDatabases structure.
  * It then converts this to a Gang structure and initializes all the non-connection related fields.

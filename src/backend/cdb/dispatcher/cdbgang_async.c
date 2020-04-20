@@ -29,6 +29,7 @@
 #include "cdb/cdbfts.h"
 #include "cdb/cdbgang.h"
 #include "cdb/cdbgang_async.h"
+#include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h"
 #include "miscadmin.h"
 
@@ -211,6 +212,8 @@ create_gang_retry:
 						}
 						else
 						{
+							if (segment_failure_due_to_missing_writer(PQerrorMessage(segdbDesc->conn)))
+								markCurrentGxactWriterGangLost();
 							ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 											errmsg("failed to acquire resources on one or more segments"),
 											errdetail("%s (%s)", PQerrorMessage(segdbDesc->conn), segdbDesc->whoami)));
