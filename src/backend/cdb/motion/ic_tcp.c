@@ -20,6 +20,7 @@
 #include "miscadmin.h"
 #include "libpq/libpq-be.h"
 #include "libpq/ip.h"
+#include "postmaster/postmaster.h"
 #include "utils/builtins.h"
 
 #include "cdb/cdbselect.h"
@@ -126,8 +127,6 @@ setupTCPListeningSocket(int backlog, int *listenerSocketFd, uint16 *listenerPort
 			   *rp;
 	int			s;
 	char		service[32];
-	char		myname[128];
-	char	   *localname = NULL;
 
 	/*
 	 * we let the system pick the TCP port here so we don't have to manage
@@ -141,31 +140,26 @@ setupTCPListeningSocket(int backlog, int *listenerSocketFd, uint16 *listenerPort
 	hints.ai_protocol = 0;		/* Any protocol */
 
 	/*
-	 * We use INADDR_ANY if we don't have a valid address for ourselves (e.g.
-	 * QD local connections tend to be AF_UNIX, or on 127.0.0.1 -- so bind
-	 * everything)
+	 * We set interconnect_address on the primary to the local address of the connection from QD
+	 * to the primary, which is the primary's ADDRESS from gp_segment_configuration,
+	 * used for interconnection.
+	 * However it's wrong on the master. Because the connection from the client to the master may
+	 * have different IP addresses as its destination, which is very likely not the master's
+	 * ADDRESS in gp_segment_configuration.
 	 */
-	if (Gp_role == GP_ROLE_DISPATCH || MyProcPort == NULL ||
-		(MyProcPort->laddr.addr.ss_family != AF_INET &&
-		 MyProcPort->laddr.addr.ss_family != AF_INET6))
-		localname = NULL;		/* We will listen on all network adapters */
-	else
+	if (interconnect_address)
 	{
 		/*
 		 * Restrict what IP address we will listen on to just the one that was
 		 * used to create this QE session.
 		 */
-		getnameinfo((const struct sockaddr *) &(MyProcPort->laddr.addr), MyProcPort->laddr.salen,
-					myname, sizeof(myname),
-					NULL, 0, NI_NUMERICHOST);
 		hints.ai_flags |= AI_NUMERICHOST;
-		localname = myname;
-		elog(DEBUG1, "binding to %s only", localname);
+		ereport(DEBUG1, (errmsg("binding to %s only", interconnect_address)));
 		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-			ereport(DEBUG4, (errmsg("binding listener %s", localname)));
+			ereport(DEBUG4, (errmsg("binding listener %s", interconnect_address)));
 	}
 
-	s = getaddrinfo(localname, service, &hints, &addrs);
+	s = getaddrinfo(interconnect_address, service, &hints, &addrs);
 	if (s != 0)
 		elog(ERROR, "getaddrinfo says %s", gai_strerror(s));
 
@@ -499,8 +493,6 @@ startOutgoingConnections(ChunkTransportState *transportStates,
 	*pOutgoingCount = 0;
 
 	recvSlice = (Slice *) list_nth(transportStates->sliceTable->slices, sendSlice->parentIndex);
-
-	adjustMasterRouting(recvSlice);
 
 	if (gp_interconnect_aggressive_retry)
 	{

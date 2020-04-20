@@ -36,6 +36,7 @@
 #include "libpq/ip.h"
 #include "port/atomics.h"
 #include "port/pg_crc32c.h"
+#include "postmaster/postmaster.h"
 #include "storage/latch.h"
 #include "storage/pmsignal.h"
 #include "utils/builtins.h"
@@ -1201,7 +1202,26 @@ setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFami
 #endif
 
 	fun = "getaddrinfo";
-	s = getaddrinfo(NULL, service, &hints, &addrs);
+	/*
+	 * We set interconnect_address on the primary to the local address of the connection from QD
+	 * to the primary, which is the primary's ADDRESS from gp_segment_configuration,
+	 * used for interconnection.
+	 * However it's wrong on the master. Because the connection from the client to the master may
+	 * have different IP addresses as its destination, which is very likely not the master's
+	 * ADDRESS in gp_segment_configuration.
+	 */
+	if (interconnect_address)
+	{
+		/*
+		 * Restrict what IP address we will listen on to just the one that was
+		 * used to create this QE session.
+		 */
+		hints.ai_flags |= AI_NUMERICHOST;
+		ereport(DEBUG1, (errmsg("binding to %s only", interconnect_address)));
+		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
+			ereport(DEBUG4, (errmsg("binding address %s", interconnect_address)));
+	}
+	s = getaddrinfo(interconnect_address, service, &hints, &addrs);
 	if (s != 0)
 		elog(ERROR, "getaddrinfo says %s", gai_strerror(s));
 
@@ -2642,12 +2662,6 @@ startOutgoingUDPConnections(ChunkTransportState *transportStates,
 	*pOutgoingCount = 0;
 
 	recvSlice = (Slice *) list_nth(transportStates->sliceTable->slices, sendSlice->parentIndex);
-
-	/*
-	 * Potentially introduce a Bug (MPP-17186). The workaround is to turn off
-	 * log_hostname guc.
-	 */
-	adjustMasterRouting(recvSlice);
 
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
 		elog(DEBUG1, "Interconnect seg%d slice%d setting up sending motion node",
@@ -6907,7 +6921,7 @@ SendDummyPacket(void)
 	hint.ai_flags = AI_NUMERICHOST;
 #endif
 
-	ret = pg_getaddrinfo_all(NULL, port_str, &hint, &addrs);
+	ret = pg_getaddrinfo_all(interconnect_address, port_str, &hint, &addrs);
 	if (ret || !addrs)
 	{
 		elog(LOG, "send dummy packet failed, pg_getaddrinfo_all(): %m");

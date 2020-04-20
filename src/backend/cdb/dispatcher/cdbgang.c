@@ -667,10 +667,16 @@ getCdbProcessesForQD(int isPrimary)
 	proc = makeNode(CdbProcess);
 
 	/*
-	 * Set QD listener address to NULL. This will be filled during starting up
-	 * outgoing interconnect connection.
+	 * Set QD listener address to the ADDRESS of the master, so the motions that connect to
+	 * the master knows what the interconnect address of the peer is. `adjustMasterRouting()`
+	 * is not necessary, and it could be wrong if the QD/QE on the master binds a single IP
+	 * address for interconnection instead of the wildcard address. Binding the wildcard address
+	 * for interconnection has some flaws:
+	 * 1. All the QD/QE in the same node share the same port space(for a same AF_INET/AF_INET6),
+	 *    which contributes to run out of port.
+	 * 2. When the segments have their own ADDRESS, the connection address could be confusing.
 	 */
-	proc->listenerAddr = NULL;
+	proc->listenerAddr = pstrdup(qdinfo->config->hostip);
 
 	if (Gp_interconnect_type == INTERCONNECT_TYPE_UDPIFC)
 		proc->listenerPort = (Gp_listener_port >> 16) & 0x0ffff;

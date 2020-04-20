@@ -48,11 +48,13 @@
 #include "libpq-fe.h"
 #include "libpq-int.h"
 #include "libpq/ip.h"
+#include "miscadmin.h"		/* MyProcPort */
 #include "cdb/cdbconn.h"
 #include "cdb/cdbfts.h"
 #include "storage/ipc.h"
 #include "storage/proc.h"
 #include "postmaster/fts.h"
+#include "postmaster/postmaster.h"
 #include "catalog/namespace.h"
 #include "utils/gpexpand.h"
 #include "access/xact.h"
@@ -1010,6 +1012,52 @@ cdbcomponent_getComponentInfo(int contentId)
 	return cdbInfo;
 }
 
+static void
+ensureInterconnectAddress(void)
+{
+	if (interconnect_address)
+		return;
+
+	if (GpIdentity.segindex >= 0)
+	{
+		Assert(Gp_role == GP_ROLE_EXECUTE);
+		Assert(MyProcPort != NULL);
+		Assert(MyProcPort->laddr.addr.ss_family == AF_INET
+				|| MyProcPort->laddr.addr.ss_family == AF_INET6);
+		/*
+		 * We assume that the QD, using the address in gp_segment_configuration
+		 * as its destination IP address, connects to the segment/QE.
+		 * So, the local address in the PORT can be used for interconnect.
+		 */
+		char local_addr[NI_MAXHOST];
+		getnameinfo((const struct sockaddr *)&MyProcPort->laddr.addr,
+					MyProcPort->laddr.salen,
+					local_addr, sizeof(local_addr),
+					NULL, 0, NI_NUMERICHOST);
+		interconnect_address = MemoryContextStrdup(TopMemoryContext, local_addr);
+	}
+	else if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		/*
+		 * Here, we can only retrieve the ADDRESS in gp_segment_configuration
+		 * from `cdbcomponent*`. We couldn't get it in a way as the QEs.
+		 */
+		CdbComponentDatabaseInfo *qdInfo;
+		qdInfo = cdbcomponent_getComponentInfo(MASTER_CONTENT_ID);
+		interconnect_address = MemoryContextStrdup(TopMemoryContext, qdInfo->config->hostip);
+	}
+	else if (qdHostname && qdHostname[0] != '\0')
+	{
+		Assert(Gp_role == GP_ROLE_EXECUTE);
+		/*
+		 * QE on the master can't get its interconnect address like that on the primary.
+		 * The QD connects to its postmaster via the unix domain socket.
+		 */
+		interconnect_address = qdHostname;
+	}
+	else
+		Assert(false);
+}
 /*
  * performs all necessary setup required for Greenplum Database mode.
  *
@@ -1023,6 +1071,7 @@ cdb_setup(void)
 	/* If gp_role is UTILITY, skip this call. */
 	if (Gp_role != GP_ROLE_UTILITY)
 	{
+		ensureInterconnectAddress();
 		/* Initialize the Motion Layer IPC subsystem. */
 		InitMotionLayerIPC();
 	}

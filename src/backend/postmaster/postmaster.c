@@ -220,6 +220,12 @@ char	   *Unix_socket_directories;
 char	   *ListenAddresses;
 
 /*
+ * The interconnect address. We assume the interconnect is the address
+ * in gp_segment_configuration. And it's never changed at runtime.
+ */
+char	   *interconnect_address = NULL;
+
+/*
  * ReservedBackends is the number of backends reserved for superuser use.
  * This number is taken out of the pool size given by MaxBackends so
  * number of backend slots available to non-superusers is

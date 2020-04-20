@@ -713,33 +713,6 @@ removeChunkTransportState(ChunkTransportState *transportStates,
 }
 
 /*
- * Set the listener address associated with the slice to
- * the master address that is established through libpq
- * connection. This guarantees that the outgoing connections
- * will connect to an address that is reachable in the event
- * when the master can not be reached by segments through
- * the network interface recorded in the catalog.
- */
-void
-adjustMasterRouting(Slice *recvSlice)
-{
-	ListCell   *lc = NULL;
-
-	Assert(MyProcPort);
-
-	foreach(lc, recvSlice->primaryProcesses)
-	{
-		CdbProcess *cdbProc = (CdbProcess *) lfirst(lc);
-
-		if (cdbProc)
-		{
-			if (cdbProc->listenerAddr == NULL)
-				cdbProc->listenerAddr = pstrdup(MyProcPort->remote_host);
-		}
-	}
-}
-
-/*
  * checkForCancelFromQD
  * 		Check for cancel from QD.
  *
