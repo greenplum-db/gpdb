@@ -123,9 +123,6 @@ namespace gpos
 	// variadic parameter list type
 	typedef va_list VA_LIST;
 
-	// wide char ostream
- 	typedef std::basic_ostream<WCHAR, std::char_traits<WCHAR> >  WOSTREAM;
-
 	// enum for results on OS level (instead of using a global error variable)
 	enum GPOS_RESULT
 	{
