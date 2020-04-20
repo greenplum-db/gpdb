@@ -167,7 +167,6 @@ $$ LANGUAGE plpgsql;
 1: SELECT gp_wait_until_triggered_fault('finish_prepared_start_of_function', 2, dbid)
    from gp_segment_configuration where role='p' and content=0;
 1: SELECT pg_ctl(datadir, 'restart') from gp_segment_configuration where role = 'p' and content = 0;
-4: SELECT pg_sleep(2);
 2<:
 3<:
 4: SELECT gp_segment_id, * from QE_panic_test_table order by gp_segment_id, a;

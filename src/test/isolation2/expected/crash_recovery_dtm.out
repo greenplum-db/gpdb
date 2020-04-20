@@ -290,11 +290,6 @@ CREATE
 --------
  OK     
 (1 row)
-4: SELECT pg_sleep(2);
- pg_sleep 
-----------
-          
-(1 row)
 2<:  <... completed>
 INSERT 6
 3<:  <... completed>
