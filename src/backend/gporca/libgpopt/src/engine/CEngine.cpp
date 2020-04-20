@@ -9,6 +9,7 @@
 //		Implementation of optimization engine
 //---------------------------------------------------------------------------
 #include "gpos/base.h"
+#include "gpos/error/CAutoTrace.h"
 #include "gpos/common/CAutoTimer.h"
 #include "gpos/common/syslibwrapper.h"
 #include "gpos/io/COstreamString.h"

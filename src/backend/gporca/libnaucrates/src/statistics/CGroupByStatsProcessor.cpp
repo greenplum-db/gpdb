@@ -9,7 +9,7 @@
 //		Statistics helper routines for processing group by operations
 //---------------------------------------------------------------------------
 
-#include "gpopt/operators/ops.h"
+#include "gpopt/base/COptCtxt.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
 
 #include "naucrates/statistics/CStatistics.h"

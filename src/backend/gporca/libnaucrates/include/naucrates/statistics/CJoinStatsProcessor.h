@@ -11,7 +11,6 @@
 #ifndef GPNAUCRATES_CJoinStatsProcessor_H
 #define GPNAUCRATES_CJoinStatsProcessor_H
 
-#include "gpopt/operators/ops.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
 
 #include "naucrates/statistics/CStatistics.h"

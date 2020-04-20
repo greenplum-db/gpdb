@@ -49,6 +49,7 @@
 
 #include "gpos/base.h"
 #include "gpos/error/CException.h"
+#include "gpos/io/COstreamString.h"
 
 #include "naucrates/exception.h"
 

@@ -12,7 +12,6 @@
 #define GPNAUCRATES_CFilterStatsProcessor_H
 
 #include "gpos/base.h"
-#include "gpopt/operators/ops.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
 
 #include "naucrates/statistics/CStatistics.h"

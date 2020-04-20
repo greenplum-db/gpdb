@@ -11,6 +11,7 @@
 
 #include "gpos/common/CBitSet.h"
 #include "gpos/common/CDebugCounter.h"
+#include "gpos/error/CAutoTrace.h"
 #include "gpos/error/CErrorHandlerStandard.h"
 #include "gpos/io/CFileDescriptor.h"
 

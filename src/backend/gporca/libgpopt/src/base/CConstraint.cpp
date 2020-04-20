@@ -26,6 +26,7 @@
 #include "gpopt/base/CConstraintNegation.h"
 #include "gpopt/operators/CScalarIdent.h"
 #include "gpopt/operators/CScalarArrayCmp.h"
+#include "gpopt/operators/CScalarCmp.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
 #include "gpopt/operators/CPredicateUtils.h"
 
