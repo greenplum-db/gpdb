@@ -17,6 +17,8 @@
 #include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
 
+#include "naucrates/md/IMDTypeInt4.h"
+
 using namespace gpopt;
 
 

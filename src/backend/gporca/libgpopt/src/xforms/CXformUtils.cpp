@@ -37,7 +37,10 @@
 #include "gpopt/exception.h"
 #include "gpopt/engine/CHint.h"
 
+#include "naucrates/md/IMDTypeBool.h"
+#include "naucrates/md/IMDTypeInt4.h"
 #include "naucrates/statistics/CFilterStatsProcessor.h"
+
 using namespace gpopt;
 
 // predicates less selective than this threshold

@@ -36,6 +36,7 @@
 #include "gpopt/operators/CExpressionPreprocessor.h"
 
 #include "naucrates/exception.h"
+#include "naucrates/base/IDatumBool.h"
 #include "naucrates/base/IDatumInt2.h"
 #include "naucrates/base/IDatumInt4.h"
 #include "naucrates/base/IDatumInt8.h"

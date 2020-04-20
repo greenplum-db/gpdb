@@ -22,6 +22,8 @@
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/xforms/CSubqueryHandler.h"
 
+#include "naucrates/md/IMDTypeBool.h"
+
 using namespace gpopt;
 using namespace gpmd;
 

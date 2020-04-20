@@ -25,6 +25,7 @@
 #include "gpopt/mdcache/CMDAccessor.h"
 
 #include "naucrates/base/IDatum.h"
+#include "naucrates/base/IDatumBool.h"
 #include "naucrates/md/IMDId.h"
 #include "naucrates/md/IMDType.h"
 

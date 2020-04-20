@@ -26,7 +26,6 @@
 #include "gpopt/operators/CScalarProjectList.h"
 #include "gpopt/operators/CScalarSubquery.h"
 #include "gpopt/operators/CScalarAggFunc.h"
-#include "naucrates/md/CMDTypeInt4GPDB.h"
 #include "naucrates/statistics/IStatistics.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
 

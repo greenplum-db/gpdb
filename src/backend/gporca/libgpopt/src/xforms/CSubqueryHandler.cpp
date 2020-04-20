@@ -33,6 +33,7 @@
 #include "gpopt/xforms/CXformUtils.h"
 
 #include "naucrates/md/IMDScalarOp.h"
+#include "naucrates/md/IMDTypeBool.h"
 #include "naucrates/md/IMDTypeInt8.h"
 
 using namespace gpopt;

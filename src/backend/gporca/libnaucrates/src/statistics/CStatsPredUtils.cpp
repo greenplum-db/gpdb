@@ -25,8 +25,10 @@
 
 #include "gpopt/mdcache/CMDAccessor.h"
 
+#include "naucrates/base/IDatumBool.h"
 #include "naucrates/md/IMDScalarOp.h"
 #include "naucrates/md/IMDType.h"
+#include "naucrates/md/IMDTypeBool.h"
 #include "naucrates/statistics/CStatistics.h"
 #include "naucrates/statistics/CStatsPredDisj.h"
 #include "naucrates/statistics/CStatsPredConj.h"
