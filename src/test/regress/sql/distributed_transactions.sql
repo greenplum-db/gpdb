@@ -595,3 +595,16 @@ begin;
 select count(1) = 1 from pg_catalog.pg_export_snapshot();
 select pg_cancel_backend(pg_backend_pid());
 rollback;
+
+-- Test a bug that a two-phase subtransaction is considered as one-phase.
+set optimizer = off; -- orca optimizes value scan so the output is different between orca and postgres optimizer.
+truncate distxact1_4;
+set test_print_direct_dispatch_info = true;
+begin;
+savepoint sp1;
+insert into distxact1_4 values (2),(1);
+release sp1;
+end;
+reset test_print_direct_dispatch_info;
+reset optimizer;
+select count(gp_segment_id) from distxact1_4 group by gp_segment_id; -- sanity check: tuples should be in > 1 segments

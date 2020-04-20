@@ -361,7 +361,7 @@ extern bool IsAbortInProgress(void);
 extern bool IsTransactionPreparing(void);
 extern bool IsAbortedTransactionBlockState(void);
 extern bool TransactionDidWriteXLog(void);
-extern bool ExecutorDidWriteXLog(void);
+extern bool TopXactExecutorDidWriteXLog(void);
 extern void GetAllTransactionXids(
 	DistributedTransactionId	*distribXid,
 	TransactionId				*localXid,
@@ -373,7 +373,7 @@ extern TransactionId GetCurrentTransactionIdIfAny(void);
 extern TransactionId GetStableLatestTransactionId(void);
 extern SubTransactionId GetCurrentSubTransactionId(void);
 extern void MarkCurrentTransactionIdLoggedIfAny(void);
-extern void MarkCurrentTransactionWriteXLogOnExecutor(void);
+extern void MarkTopTransactionWriteXLogOnExecutor(void);
 extern bool SubTransactionIsActive(SubTransactionId subxid);
 extern CommandId GetCurrentCommandId(bool used);
 extern TimestampTz GetCurrentTransactionStartTimestamp(void);
