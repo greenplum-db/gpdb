@@ -509,8 +509,6 @@ startOutgoingConnections(ChunkTransportState *transportStates,
 
 	recvSlice = &transportStates->sliceTable->slices[sendSlice->parentIndex];
 
-	adjustMasterRouting(recvSlice);
-
 	if (gp_interconnect_aggressive_retry)
 	{
 		if ((list_length(recvSlice->children) * list_length(sendSlice->segments)) > listenerBacklog)

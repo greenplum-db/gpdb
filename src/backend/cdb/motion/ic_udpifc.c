@@ -2663,12 +2663,6 @@ startOutgoingUDPConnections(ChunkTransportState *transportStates,
 
 	recvSlice = &transportStates->sliceTable->slices[sendSlice->parentIndex];
 
-	/*
-	 * Potentially introduce a Bug (MPP-17186). The workaround is to turn off
-	 * log_hostname guc.
-	 */
-	adjustMasterRouting(recvSlice);
-
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
 		elog(DEBUG1, "Interconnect seg%d slice%d setting up sending motion node",
 			 GpIdentity.segindex, sendSlice->sliceIndex);

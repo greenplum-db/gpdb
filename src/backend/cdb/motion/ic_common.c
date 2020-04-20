@@ -723,27 +723,6 @@ removeChunkTransportState(ChunkTransportState *transportStates,
 }
 
 /*
- * The listenerAddr is always non-null.
- */
-void
-adjustMasterRouting(ExecSlice *recvSlice)
-{
-	Assert(MyProcPort);
-
-#ifdef USE_ASSERT_CHECKING
-	ListCell   *lc = NULL;
-	foreach(lc, recvSlice->primaryProcesses)
-	{
-		CdbProcess *cdbProc = (CdbProcess *) lfirst(lc);
-		if (cdbProc)
-		{
-			Assert(cdbProc->listenerAddr);
-		}
-	}
-#endif /* USE_ASSERT_CHECKING */
-}
-
-/*
  * checkForCancelFromQD
  * 		Check for cancel from QD.
  *

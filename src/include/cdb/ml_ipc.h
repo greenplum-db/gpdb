@@ -323,7 +323,6 @@ extern void TeardownUDPIFCInterconnect(ChunkTransportState *transportStates,
 								 bool forceEOS);
 
 extern uint32 getActiveMotionConns(void);
-extern void adjustMasterRouting(ExecSlice *recvSlice);
 
 extern char *format_sockaddr(struct sockaddr_storage *sa, char *buf, size_t len);
 
