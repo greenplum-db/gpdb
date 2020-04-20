@@ -15,6 +15,8 @@
 #include "gpos/base.h"
 #include "naucrates/dxl/parser/CParseHandlerLogicalOp.h"
 
+#include "naucrates/md/IMDRelation.h"
+
 
 namespace gpdxl
 {

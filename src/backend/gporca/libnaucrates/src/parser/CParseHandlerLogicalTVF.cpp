@@ -17,6 +17,7 @@
 #include "naucrates/dxl/parser/CParseHandlerLogicalOp.h"
 #include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 #include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/operators/CDXLLogicalTVF.h"
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 
 using namespace gpdxl;
