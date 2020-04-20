@@ -12,14 +12,11 @@
 #define GPOPT_CGroupExpression_H
 
 #include "gpos/base.h"
-#include "gpos/common/CDynamicPtrArray.h"
-#include "gpos/common/CList.h"
 #include "gpos/common/CRefCount.h"
 
 #include "gpopt/base/CCostContext.h"
 #include "gpopt/engine/CPartialPlan.h"
 #include "gpopt/operators/COperator.h"
-#include "gpopt/search/CBinding.h"
 #include "gpopt/search/CGroup.h"
 #include "gpopt/xforms/CXform.h"
 

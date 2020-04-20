@@ -25,7 +25,6 @@
 #include "gpopt/base/CPartIndexMap.h"
 #include "gpopt/base/CDistributionSpecRandom.h"
 #include "gpopt/operators/CPhysicalMotionRandom.h"
-#include "gpopt/operators/ops.h"
 #include "gpopt/operators/CLogicalCTEProducer.h"
 #include "gpopt/operators/CLogicalCTEConsumer.h"
 #include "gpopt/translate/CTranslatorExprToDXLUtils.h"

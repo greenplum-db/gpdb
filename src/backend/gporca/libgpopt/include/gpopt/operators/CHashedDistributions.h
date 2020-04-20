@@ -8,7 +8,6 @@
 #include "gpopt/base/CDistributionSpecHashed.h"
 #include "gpos/memory/CMemoryPool.h"
 #include "gpopt/base/CColRef.h"
-#include "gpopt/base/CUtils.h"
 
 namespace gpopt
 {

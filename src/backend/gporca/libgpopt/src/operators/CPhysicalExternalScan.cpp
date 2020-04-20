@@ -10,7 +10,6 @@
 //---------------------------------------------------------------------------
 
 #include "gpos/base.h"
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CDistributionSpecExternal.h"
 
 #include "gpopt/operators/CExpressionHandle.h"

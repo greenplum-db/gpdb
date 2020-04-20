@@ -40,6 +40,7 @@
 #include "gpopt/operators/CPhysicalSort.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
 
+#include "gpopt/search/CBinding.h"
 #include "gpopt/search/CGroup.h"
 #include "gpopt/search/CGroupExpression.h"
 #include "gpopt/search/CGroupProxy.h"

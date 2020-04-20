@@ -17,13 +17,17 @@
 #include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CConstraintInterval.h"
 #include "gpopt/base/CConstraintDisjunction.h"
+#include "gpopt/base/CFunctionProp.h"
 
 #include "gpopt/exception.h"
 
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalSetOp.h"
 #include "gpopt/operators/CNormalizer.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CPhysicalJoin.h"
+#include "gpopt/operators/CScalarCmp.h"
+#include "gpopt/operators/CScalarFunc.h"
+#include "gpopt/operators/CScalarIdent.h"
 
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/mdcache/CMDAccessorUtils.h"
@@ -39,8 +43,7 @@
 #include "naucrates/md/CMDTypeInt8GPDB.h"
 #include "naucrates/md/CMDTypeBoolGPDB.h"
 #include "naucrates/md/CMDTypeGenericGPDB.h"
-
-#include "naucrates/statistics/CStatistics.h"
+#include "naucrates/md/IMDIndex.h"
 
 using namespace gpopt;
 using namespace gpmd;

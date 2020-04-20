@@ -13,7 +13,6 @@
 
 #include "naucrates/md/IMDScalarOp.h"
 
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/COptCtxt.h"

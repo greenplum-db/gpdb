@@ -13,7 +13,6 @@
 
 #include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CPredicateUtils.h"
-#include "gpopt/operators/ops.h"
 #include "gpopt/operators/CWindowPreprocessor.h"
 #include "gpopt/xforms/CXformUtils.h"
 

@@ -10,7 +10,6 @@
 //---------------------------------------------------------------------------
 
 #include "gpos/base.h"
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
 #include "gpopt/operators/CPhysicalLeftAntiSemiHashJoin.h"
 
