@@ -16,6 +16,7 @@
 #include "gpopt/base/CColRefSet.h"
 
 #include "gpopt/operators/CScalarProjectList.h"
+#include "gpopt/operators/CScalarWindowFunc.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/xforms/CXformUtils.h"
 

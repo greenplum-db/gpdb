@@ -18,6 +18,7 @@
 #include "gpopt/search/CGroupExpression.h"
 
 #include "gpopt/operators/CPhysicalAgg.h"
+#include "gpopt/operators/CPhysicalCTEProducer.h"
 #include "gpopt/operators/CPhysicalMotion.h"
 #include "gpopt/operators/CPhysicalSort.h"
 #include "gpopt/operators/CPhysicalNLJoin.h"

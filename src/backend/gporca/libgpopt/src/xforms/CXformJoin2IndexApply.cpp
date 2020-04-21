@@ -12,7 +12,12 @@
 #include "gpos/base.h"
 
 #include "gpopt/base/CUtils.h"
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalApply.h"
+#include "gpopt/operators/CLogicalCTEAnchor.h"
+#include "gpopt/operators/CLogicalDynamicGet.h"
+#include "gpopt/operators/CLogicalJoin.h"
+#include "gpopt/operators/CLogicalSelect.h"
+#include "gpopt/operators/CLogicalUnionAll.h"
 #include "gpopt/operators/CNormalizer.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/xforms/CSubqueryHandler.h"

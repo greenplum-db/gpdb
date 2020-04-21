@@ -14,9 +14,11 @@
 #include "gpopt/base/CUtils.h"
 #include "gpopt/base/CCastUtils.h"
 #include "gpopt/exception.h"
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CExpressionUtils.h"
 #include "gpopt/operators/CPredicateUtils.h"
+#include "gpopt/operators/CScalarCmp.h"
+#include "gpopt/operators/CScalarIdent.h"
 
 #include "naucrates/statistics/CStatsPredUtils.h"
 #include "naucrates/statistics/CStatisticsUtils.h"

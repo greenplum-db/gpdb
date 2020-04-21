@@ -8,6 +8,11 @@
 #define GPOPT_CXformImplementIndexApply_H
 
 #include "gpos/base.h"
+#include "gpopt/operators/CLogicalIndexApply.h"
+#include "gpopt/operators/CPatternLeaf.h"
+#include "gpopt/operators/CPhysicalInnerIndexNLJoin.h"
+#include "gpopt/operators/CPhysicalLeftOuterIndexNLJoin.h"
+#include "gpopt/operators/CPhysicalNLJoin.h"
 #include "gpopt/xforms/CXformImplementation.h"
 
 namespace gpopt

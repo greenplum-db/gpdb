@@ -16,6 +16,7 @@
 
 #include "gpopt/base/CUtils.h"
 #include "gpopt/base/COptimizationContext.h"
+#include "gpopt/operators/CPhysicalAgg.h"
 #include "gpopt/search/CBinding.h"
 #include "gpopt/search/CGroupExpression.h"
 #include "gpopt/search/CGroupProxy.h"

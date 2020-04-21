@@ -13,7 +13,8 @@
 #include "gpopt/xforms/CXformDelete2DML.h"
 #include "gpopt/xforms/CXformUtils.h"
 
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalDelete.h"
+#include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/metadata/CTableDescriptor.h"
 
 using namespace gpopt;

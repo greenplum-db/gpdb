@@ -12,7 +12,9 @@
 #include "gpos/base.h"
 #include "gpopt/xforms/CXformImplementSequence.h"
 
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalSequence.h"
+#include "gpopt/operators/CPatternMultiLeaf.h"
+#include "gpopt/operators/CPhysicalSequence.h"
 #include "gpopt/metadata/CTableDescriptor.h"
 
 using namespace gpopt;

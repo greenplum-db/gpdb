@@ -18,7 +18,9 @@
 #include "gpopt/xforms/CXformImplementBitmapTableGet.h"
 
 #include "gpopt/metadata/CTableDescriptor.h"
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalBitmapTableGet.h"
+#include "gpopt/operators/CPatternLeaf.h"
+#include "gpopt/operators/CPhysicalBitmapTableScan.h"
 
 using namespace gpopt;
 using namespace gpos;

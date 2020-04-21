@@ -11,7 +11,9 @@
 
 #include "gpos/base.h"
 
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalLeftSemiJoin.h"
+#include "gpopt/operators/CPatternLeaf.h"
+#include "gpopt/operators/CPhysicalLeftSemiNLJoin.h"
 #include "gpopt/xforms/CXformLeftSemiJoin2NLJoin.h"
 #include "gpopt/xforms/CXformUtils.h"
 
