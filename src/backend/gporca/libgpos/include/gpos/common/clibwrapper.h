@@ -28,9 +28,6 @@ namespace gpos
 
 		typedef INT (*Comparator)(const void *, const void *);
 
-		// get an environment variable
-		CHAR *GetEnv(const CHAR *name);
-
 		// compare a specified number of bytes of two regions of memory
 		INT Memcmp(const void *left, const void *right, SIZE_T num_bytes);
 
