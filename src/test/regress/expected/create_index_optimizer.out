@@ -3281,8 +3281,8 @@ explain (costs off)
                                 QUERY PLAN                                 
 ---------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on tenk1
-         Filter: (((thousand = 1) AND (tenthous = 1001)) OR NULL::boolean)
+   ->  Index Scan using tenk1_thous_tenthous on tenk1
+         Index Cond: ((thousand = 1) AND (tenthous = 1001))
  Optimizer: Pivotal Optimizer (GPORCA) version 3.1.0
 (4 rows)
 
