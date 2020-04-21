@@ -210,7 +210,7 @@ sdw5|sdw5-1|60012|/gpdata/mirror/gp10|14|10|m</codeblock>
           the expansion schema. The <i>gpexpand</i> schema resides in the
             postgres database. For more information, see <xref
             href="expand-planning.xml#topic9" type="topic" format="dita"/>.</p>
-        <p>After segment initialization is complete, next step is to <xref
+        <p>After segment initialization is complete,  <xref
             href="expand-redistribute.xml#topic28/expand-redistribute">redistribute the
             tables</xref> to balance existing data over the new segments.</p>
       </section>
