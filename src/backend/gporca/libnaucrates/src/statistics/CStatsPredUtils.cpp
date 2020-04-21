@@ -30,6 +30,7 @@
 #include "naucrates/statistics/CStatistics.h"
 #include "naucrates/statistics/CStatsPredDisj.h"
 #include "naucrates/statistics/CStatsPredConj.h"
+#include "naucrates/statistics/CStatsPredArrayCmp.h"
 
 using namespace gpopt;
 using namespace gpmd;
@@ -943,27 +944,27 @@ CStatsPredUtils::ProcessArrayCmp
 	(
 	CMemoryPool *mp,
 	CExpression *predicate_expr,
-	CStatsPredPtrArry *pred_stats_array
+	CStatsPredPtrArry *result_pred_stats
 	)
 {
-	GPOS_ASSERT(NULL != pred_stats_array);
+	GPOS_ASSERT(NULL != result_pred_stats);
 	GPOS_ASSERT(NULL != predicate_expr);
 	GPOS_ASSERT(2 == predicate_expr->Arity());
 
 	CScalarArrayCmp *scalar_array_cmp_op = CScalarArrayCmp::PopConvert(predicate_expr->Pop());
 	CExpression *expr_scalar_array = CUtils::PexprScalarArrayChild(predicate_expr);
-	BOOL is_cmp_to_const_and_scalar_idents = CPredicateUtils::FCompareCastIdentToConstArray(predicate_expr) ||
-										  CPredicateUtils::FCompareScalarIdentToConstAndScalarIdentArray(predicate_expr);
+	BOOL is_supported_array_cmp = CPredicateUtils::FCompareCastIdentToConstArray(predicate_expr) ||
+								  CPredicateUtils::FCompareScalarIdentToConstAndScalarIdentArray(predicate_expr);
 
-	if (!is_cmp_to_const_and_scalar_idents)
+	if (!is_supported_array_cmp)
 	{
 		// unsupported predicate for stats calculations
-		pred_stats_array->Append(GPOS_NEW(mp) CStatsPredUnsupported(
-			gpos::ulong_max, CStatsPred::EstatscmptOther));
-
+		result_pred_stats->Append(
+			GPOS_NEW(mp) CStatsPredUnsupported(gpos::ulong_max, CStatsPred::EstatscmptOther));
 		return;
 	}
 
+	// extract the colref used in the array predicate expr
 	CExpression *expr_ident;
 	CExpression *left_expr = (*predicate_expr)[0];
 	if (CUtils::FScalarIdent(left_expr))
@@ -975,57 +976,103 @@ CStatsPredUtils::ProcessArrayCmp
 		GPOS_ASSERT(CCastUtils::FBinaryCoercibleCast((*predicate_expr)[0]));
 		expr_ident = (*left_expr)[0];
 	}
+	const CColRef *col_ref = CScalarIdent::PopConvert(expr_ident->Pop())->Pcr();
 
-	CStatsPredPtrArry *pred_stats_child_array = pred_stats_array;
 
-	const ULONG constants = CUtils::UlScalarArrayArity(expr_scalar_array);
 	// comparison semantics for statistics purposes is looser than regular comparison.
 	CStatsPred::EStatsCmpType stats_cmp_type = GetStatsCmpType(scalar_array_cmp_op->MdIdOp());
-
-	CScalarIdent *scalar_ident_op = CScalarIdent::PopConvert(expr_ident->Pop());
-	const CColRef *col_ref = scalar_ident_op->Pcr();
-
 	if (!CHistogram::IsOpSupportedForFilter(stats_cmp_type))
 	{
 		// unsupported predicate for stats calculations
-		pred_stats_array->Append(GPOS_NEW(mp) CStatsPredUnsupported(col_ref->Id(), stats_cmp_type));
-
+		result_pred_stats->Append(
+			GPOS_NEW(mp) CStatsPredUnsupported(col_ref->Id(), stats_cmp_type));
 		return;
 	}
 
+	// Ok handle support cases
+	CStatsPredPtrArry *pred_stats;
+	CPointArray *points = NULL;
 	BOOL is_array_cmp_any = (CScalarArrayCmp::EarrcmpAny == scalar_array_cmp_op->Earrcmpt());
+	BOOL is_array_cmp_eq = (stats_cmp_type == CStatsPred::EstatscmptEq);
+
 	if (is_array_cmp_any)
 	{
-		pred_stats_child_array = GPOS_NEW(mp) CStatsPredPtrArry(mp);
+		// in case of exprs of the form "a op ANY (ARRAY[...])", each element
+		// must be OR-d. So use a different array to collect the stats that
+		// will be later placed under a CStatsPredDisj.
+		pred_stats = GPOS_NEW(mp) CStatsPredPtrArry(mp);
+
+		// In case op is "=", ORCA supports a fast-path for deriving stats using
+		// CStatsPredArrayCmp. Collect "points" from the array list to create that.
+		// TODO: Support more cases in CStatsPredArrayCmp
+		if (is_array_cmp_eq)
+		{
+			points = GPOS_NEW(mp) CPointArray(mp);
+		}
+	}
+	else
+	{
+		GPOS_ASSERT(CScalarArrayCmp::EarrcmpAll == scalar_array_cmp_op->Earrcmpt());
+		// in case of exprs of the form "a op ALL (ARRAY[...])", each element
+		// is implicitly AND-ed, and so can be directly added to result_pred_stats
+		pred_stats = result_pred_stats;
 	}
 
-	for (ULONG ul = 0; ul < constants; ul++)
+	const ULONG num_array_elems = CUtils::UlScalarArrayArity(expr_scalar_array);
+
+	for (ULONG ul = 0; ul < num_array_elems; ++ul)
 	{
-		CExpression *expr_const = CUtils::PScalarArrayExprChildAt(mp, expr_scalar_array, ul);
-		if (COperator::EopScalarConst == expr_const->Pop()->Eopid())
+		CExpression *child_expr = CUtils::PScalarArrayExprChildAt(mp, expr_scalar_array, ul);
+
+		if (COperator::EopScalarConst == child_expr->Pop()->Eopid())
 		{
-			CScalarConst *scalar_const_op = CScalarConst::PopConvert(expr_const->Pop());
-			IDatum *datum_literal = scalar_const_op->GetDatum();
-			CStatsPred *child_pred_stats = NULL;
-			if (!datum_literal->StatsAreComparable(datum_literal))
+			IDatum *datum = CScalarConst::PopConvert(child_expr->Pop())->GetDatum();
+
+			if (!datum->StatsAreComparable(datum))
 			{
 				// stats calculations on such datums unsupported
-				child_pred_stats = GPOS_NEW(mp) CStatsPredUnsupported(col_ref->Id(), stats_cmp_type);
+				CStatsPred *child_pred_stats = GPOS_NEW(mp)
+					CStatsPredUnsupported(col_ref->Id(), stats_cmp_type);
+				pred_stats->Append(child_pred_stats);
+			}
+			else if (is_array_cmp_any && is_array_cmp_eq)
+			{
+				// fast-path using CStatsPredArrayCmp
+				GPOS_ASSERT(points != NULL);
+				datum->AddRef();
+				CPoint *point = GPOS_NEW(mp) CPoint(datum);
+				points->Append(point);
 			}
 			else
 			{
-				child_pred_stats = GPOS_NEW(mp) CStatsPredPoint(mp, col_ref, stats_cmp_type, datum_literal);
+				CStatsPred *child_pred_stats = GPOS_NEW(mp)
+					CStatsPredPoint(mp, col_ref, stats_cmp_type, datum);
+				pred_stats->Append(child_pred_stats);
 			}
-
-			pred_stats_child_array->Append(child_pred_stats);
 		}
-		expr_const->Release();
+
+		child_expr->Release();
 	}
 
 	if (is_array_cmp_any)
 	{
-		CStatsPredDisj *pstatspredOr = GPOS_NEW(mp) CStatsPredDisj(pred_stats_child_array);
-		pred_stats_array->Append(pstatspredOr);
+		if (is_array_cmp_eq)
+		{
+			// "a = ANY (ARRAY[...])"
+			CStatsPredArrayCmp *pred_stats_array_cmp =
+				GPOS_NEW(mp) CStatsPredArrayCmp(col_ref->Id(), stats_cmp_type, points);
+			pred_stats->Append(pred_stats_array_cmp);
+		}
+
+		// "a op ANY (ARRAY[...])"
+		CStatsPredDisj *pred_stats_disj = GPOS_NEW(mp) CStatsPredDisj(pred_stats);
+		result_pred_stats->Append(pred_stats_disj);
+	}
+	else
+	{
+		GPOS_ASSERT(CScalarArrayCmp::EarrcmpAll == scalar_array_cmp_op->Earrcmpt());
+		// "a op ALL (ARRAY[...])"
+		// no additional work needed here, since we already added the preds to the result_pred_stats
 	}
 }
 

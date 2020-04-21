@@ -17,6 +17,7 @@
 #include "naucrates/statistics/CJoinStatsProcessor.h"
 #include "naucrates/statistics/CStatisticsUtils.h"
 #include "naucrates/statistics/CScaleFactorUtils.h"
+#include "naucrates/statistics/CBucket.h"
 
 using namespace gpopt;
 
@@ -404,7 +405,7 @@ CFilterStatsProcessor::MakeHistHashMapConjFilter
 			GPOS_ASSERT(NULL != hist_before);
 
 			CHistogram *result_histogram = NULL;
-			result_histogram = MakeHistSimpleFilter(child_pred_stats, filter_colids, hist_before, &last_scale_factor, &last_colid);
+			result_histogram = MakeHistSimpleFilter(mp, child_pred_stats, filter_colids, hist_before, &last_scale_factor, &last_colid);
 			GPOS_DELETE(hist_before);
 
 			GPOS_ASSERT(NULL != result_histogram);
@@ -567,7 +568,7 @@ CFilterStatsProcessor::MakeHistHashMapDisjFilter
 		if (is_pred_simple)
 		{
 			GPOS_ASSERT(NULL != histogram);
-			disjunctive_child_col_histogram = MakeHistSimpleFilter(child_pred_stats, filter_colids, histogram, &child_scale_factor, &previous_colid);
+			disjunctive_child_col_histogram = MakeHistSimpleFilter(mp, child_pred_stats, filter_colids, histogram, &child_scale_factor, &previous_colid);
 
 			CHistogram *input_histogram = input_histograms->Find(&colid);
 			GPOS_ASSERT(NULL != input_histogram);
@@ -698,6 +699,7 @@ CFilterStatsProcessor::MakeHistHashMapDisjFilter
 CHistogram *
 CFilterStatsProcessor::MakeHistSimpleFilter
 	(
+	CMemoryPool *mp,
 	CStatsPred *pred_stats,
 	CBitSet *filter_colids,
 	CHistogram *hist_before,
@@ -716,6 +718,14 @@ CFilterStatsProcessor::MakeHistSimpleFilter
 		CStatsPredLike *like_pred_stats = CStatsPredLike::ConvertPredStats(pred_stats);
 
 		return MakeHistLikeFilter(like_pred_stats, filter_colids, hist_before, last_scale_factor, target_last_colid);
+	}
+
+	if (CStatsPred::EsptArrayCmp == pred_stats->GetPredStatsType())
+	{
+		CStatsPredArrayCmp *arraycmp_pred_stats = CStatsPredArrayCmp::ConvertPredStats(pred_stats);
+
+		return MakeHistArrayCmpAnyFilter(mp, arraycmp_pred_stats, filter_colids,
+									  hist_before, last_scale_factor, target_last_colid);
 	}
 
 	CStatsPredUnsupported *unsupported_pred_stats = CStatsPredUnsupported::ConvertPredStats(pred_stats);
@@ -811,6 +821,156 @@ CFilterStatsProcessor::MakeHistLikeFilter
 
 	*last_scale_factor = *last_scale_factor * pred_stats->DefaultScaleFactor();
 	*target_last_colid = colid;
+
+	return result_histogram;
+}
+
+// create a new histograms after applying the ArrayCmp filter
+CHistogram *
+CFilterStatsProcessor::MakeHistArrayCmpAnyFilter
+	(
+	CMemoryPool *mp,
+	CStatsPredArrayCmp *pred_stats,
+	CBitSet *filter_colids,
+	CHistogram *base_histogram,
+	CDouble *last_scale_factor,
+	ULONG *target_last_colid
+	)
+{
+	GPOS_ASSERT(NULL != pred_stats);
+	GPOS_ASSERT(NULL != filter_colids);
+	GPOS_ASSERT(NULL != base_histogram);
+	GPOS_ASSERT(pred_stats->GetCmpType() == CStatsPred::EstatscmptEq);
+
+	// Evaluate statistics for "select * from foo where a in (...)" as
+	// "select * from foo join (values (...)) x(a) on foo.a=x.a"
+	// as long as the list is deduplicated
+	//
+	// General algorithm:
+	// 1. Construct a histogram with the same bucket boundaries as present in the
+	//    base_histogram.
+	//    This is better than using a singleton bucket per point, because it that
+	//    case, the frequency of each bucket is so small, it is often less than
+	//    CStatistics::Epsilon, and may be considered as 0, leading to
+	//    cardinality misestimation. Using the same buckets as base_histogram
+	//    also aids in joining histogram later.
+	// 2. Compute the normalized frequency for each bucket based on the number of points (NDV)
+	//    present within each bucket boundary. NB: the points must be de-duplicated
+	//    beforehand to prevent double counting.
+	// 3. Join this "dummy_histogram" with the base_histogram to determine the buckets
+	//    from base_histogram that should be selected.
+	// 4. Compute and adjust the resultant scale factor for the filter.
+
+	// First, de-duplicate the constants in the array list
+	CPointArray *points = pred_stats->GetPoints();
+	if (points->Size() > 1)
+	{
+		points->Sort(&CUtils::CPointCmp);
+	}
+
+	CPointArray *deduped_points = GPOS_NEW(mp) CPointArray(mp);
+	IDatum *prev_datum = NULL;
+
+	for (ULONG ul = 0; ul < points->Size(); ++ul)
+	{
+		CPoint *point = (*points)[ul];
+		IDatum *datum = point->GetDatum();
+		GPOS_ASSERT(datum->StatsAreComparable(datum));
+		if (datum->IsNull())
+		{
+			continue;
+		}
+		if (prev_datum != NULL && prev_datum->StatsAreEqual(datum))
+		{
+			continue;
+		}
+		point->AddRef();
+		deduped_points->Append(point);
+		prev_datum = datum;
+	}
+	CDouble dummy_rows(deduped_points->Size());
+
+	// Create buckets for the result histogram using the same bucket boundaries
+	// as in the base histogram.
+	CBucketArray *dummy_histogram_buckets =
+		CHistogram::DeepCopyHistogramBuckets(mp, base_histogram->GetBuckets());
+	ULONG point_iter = 0;
+	ULONG ndv_remain = 0;
+	for (ULONG bucket_iter = 0; bucket_iter < dummy_histogram_buckets->Size(); ++bucket_iter)
+	{
+		CBucket *bucket = (*dummy_histogram_buckets)[bucket_iter];
+		bucket->SetFrequency(CDouble(0.0));
+		bucket->SetDistinct(CDouble(0.0));
+		ULONG ndv = 0;
+
+		// ignore datums that are before the bucket, add it to ndv_remain
+		while (point_iter < deduped_points->Size() &&
+			   bucket->IsBefore((*deduped_points)[point_iter]))
+		{
+			ndv_remain++;
+			point_iter++;
+		}
+		// if the point is after the bucket, move to the next bucket
+		if (point_iter >= deduped_points->Size() || bucket->IsAfter((*deduped_points)[point_iter]))
+		{
+			continue;
+		}
+
+		// count the number of points that map to the current bucket
+		while (point_iter < deduped_points->Size() &&
+			  bucket->Contains((*deduped_points)[point_iter]))
+		{
+			ndv++;
+			point_iter++;
+		}
+
+		// set frequency based on matched points
+		bucket->SetFrequency(CDouble(ndv) / dummy_rows);
+		bucket->SetDistinct(CDouble(ndv));
+	}
+
+	// if we have gone through all the buckets, and there are still points, add them to ndv_remain
+	if (point_iter < deduped_points->Size())
+	{
+		ndv_remain += deduped_points->Size() - point_iter;
+	}
+
+	CDouble freq_remain(0.0);
+	if (ndv_remain != 0)
+	{
+		freq_remain = CDouble(ndv_remain) / dummy_rows;
+	}
+	CHistogram *dummy_histogram = GPOS_NEW(mp) CHistogram(mp, dummy_histogram_buckets,
+							      true /* is_well_defined */,
+							      CDouble(0.0) /* null_freq */,
+							      CDouble(ndv_remain) /* distinct_remain */,
+							      freq_remain);
+	// dummy histogram should already be normalized since each bucket's frequency
+	// is already adjusted by a scale factor of 1/dummy_rows to avoid unnecessarily
+	// deep-copying the histogram buckets
+	GPOS_ASSERT(dummy_histogram->IsValid() && dummy_histogram->GetNumDistinct() - dummy_rows < CStatistics::Epsilon);
+
+	// Compute the join'ed histogram
+	CHistogram *result_histogram = base_histogram->MakeJoinHistogram(pred_stats->GetCmpType(), dummy_histogram);
+
+	CDouble local_scale_factor = result_histogram->NormalizeHistogram();
+	// Adjust the local scale factor by the scale factor of dummy histogram
+	local_scale_factor = local_scale_factor / dummy_rows;
+	local_scale_factor = CDouble(std::max(local_scale_factor.Get(), 1.0));
+
+	GPOS_ASSERT(DOUBLE(1.0) <= local_scale_factor.Get());
+
+	// update scale factor
+	*last_scale_factor = *last_scale_factor * local_scale_factor;
+
+	// note column id
+	const ULONG colid = pred_stats->GetColId();
+	(void) filter_colids->ExchangeSet(colid);
+	*target_last_colid = colid;
+
+	// clean up
+	GPOS_DELETE(dummy_histogram);
+	deduped_points->Release();
 
 	return result_histogram;
 }

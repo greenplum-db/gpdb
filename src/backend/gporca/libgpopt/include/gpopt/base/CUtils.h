@@ -1052,6 +1052,10 @@ namespace gpopt
 			static
 			INT IDatumCmp(const void *val1, const void *val2);
 
+			// compares two CPoints, useful for sorting functions
+			static
+			INT CPointCmp(const void *val1, const void *val2);
+
 			// check if the equivalance classes are disjoint
 			static
 			BOOL FEquivalanceClassesDisjoint(CMemoryPool *mp, const CColRefSetArray *pdrgpcrs);
