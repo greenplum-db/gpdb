@@ -4718,6 +4718,29 @@ INT CUtils::IDatumCmp
 	return 1;
 }
 
+// compares two points. Takes pointer pointer to a CPoint.
+INT CUtils::CPointCmp
+		(
+		const void *val1,
+		const void *val2
+		)
+{
+	const CPoint *p1 = *(CPoint**)(val1);
+	const CPoint *p2 = *(CPoint**)(val2);
+
+	if (p1->Equals(p2))
+	{
+		return 0;
+	}
+	else if (p1->IsLessThan(p2))
+	{
+		return -1;
+	}
+
+	GPOS_ASSERT(p1->IsGreaterThan(p2));
+	return 1;
+}
+
 // check if the equivalance classes are disjoint
 BOOL
 CUtils::FEquivalanceClassesDisjoint

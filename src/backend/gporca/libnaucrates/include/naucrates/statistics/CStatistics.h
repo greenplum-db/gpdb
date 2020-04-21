@@ -18,6 +18,7 @@
 #include "naucrates/statistics/CStatsPredDisj.h"
 #include "naucrates/statistics/CStatsPredConj.h"
 #include "naucrates/statistics/CStatsPredLike.h"
+#include "naucrates/statistics/CStatsPredArrayCmp.h"
 #include "naucrates/statistics/CStatsPredUnsupported.h"
 #include "naucrates/statistics/CUpperBoundNDVs.h"
 

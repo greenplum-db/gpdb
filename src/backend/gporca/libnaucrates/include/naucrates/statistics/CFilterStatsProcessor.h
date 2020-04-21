@@ -32,6 +32,7 @@ namespace gpnaucrates
 			static
 			CHistogram *MakeHistSimpleFilter
 				(
+				CMemoryPool *mp,
 				CStatsPred *pred_stats,
 												CBitSet *filter_colids,
 				CHistogram *hist_before,
@@ -67,6 +68,18 @@ namespace gpnaucrates
 				(
 				CStatsPredUnsupported *pred_stats,
 												   CBitSet *filter_colids,
+				CHistogram *hist_before,
+				CDouble *last_scale_factor,
+				ULONG *target_last_colid
+				);
+
+			// create a new histogram after applying a pred op ANY(ARRAY[...]) filter
+			static
+			CHistogram *MakeHistArrayCmpAnyFilter
+				(
+				CMemoryPool *mp,
+				CStatsPredArrayCmp *pred_stats,
+				CBitSet *filter_colids,
 				CHistogram *hist_before,
 				CDouble *last_scale_factor,
 				ULONG *target_last_colid

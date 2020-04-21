@@ -29,6 +29,7 @@ OBJS        = CBucket.o \
               CStatsPredDisj.o \
               CStatsPredLike.o \
               CStatsPredPoint.o \
+              CStatsPredArrayCmp.o \
               CStatsPredUnsupported.o \
               CStatsPredUtils.o \
               CUnionAllStatsProcessor.o \
