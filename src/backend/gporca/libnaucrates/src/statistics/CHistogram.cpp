@@ -176,6 +176,15 @@ CHistogram::OsPrint
 	return os;
 }
 
+#ifdef GPOS_DEBUG
+void
+CHistogram::DbgPrint() const
+{
+	CAutoTrace at(CTask::Self()->Pmp());
+	OsPrint(at.Os());
+}
+#endif
+
 // check if histogram is empty
 BOOL
 CHistogram::IsEmpty
@@ -973,8 +982,8 @@ CHistogram::MakeLASJHistogram
 
 	CBucket *candidate_bucket = NULL;
 
-	const ULONG buckets1 = Buckets();
-	const ULONG buckets2 = histogram->Buckets();
+	const ULONG buckets1 = GetNumBuckets();
+	const ULONG buckets2 = histogram->GetNumBuckets();
 
 	while (idx1 < buckets1 && idx2 < buckets2)
 	{
@@ -1041,7 +1050,7 @@ CDouble
 CHistogram::NormalizeHistogram()
 {
 	// trivially normalized
-	if (Buckets() == 0 && CStatistics::Epsilon > m_null_freq && CStatistics::Epsilon > m_distinct_remaining)
+	if (GetNumBuckets() == 0 && CStatistics::Epsilon > m_null_freq && CStatistics::Epsilon > m_distinct_remaining)
 	{
 		return CDouble(GPOS_FP_ABS_MAX);
 	}
@@ -1156,8 +1165,8 @@ CHistogram::MakeJoinHistogramEqualityFilter
 	ULONG idx1 = 0; // index on buckets from this histogram
 	ULONG idx2 = 0; // index on buckets from other histogram
 
-	const ULONG buckets1 = Buckets();
-	const ULONG buckets2 = histogram->Buckets();
+	const ULONG buckets1 = GetNumBuckets();
+	const ULONG buckets2 = histogram->GetNumBuckets();
 
 	CDouble hist1_buckets_freq(0.0);
 	CDouble hist2_buckets_freq(0.0);
@@ -1323,8 +1332,8 @@ CHistogram::CanComputeJoinNDVRemain
 	GPOS_ASSERT(NULL != histogram1);
 	GPOS_ASSERT(NULL != histogram2);
 
-	BOOL has_buckets1 = (0 != histogram1->Buckets());
-	BOOL has_buckets2 = (0 != histogram2->Buckets());
+	BOOL has_buckets1 = (0 != histogram1->GetNumBuckets());
+	BOOL has_buckets2 = (0 != histogram2->GetNumBuckets());
 	BOOL has_distinct_remain1 = CStatistics::Epsilon < histogram1->GetDistinctRemain();
 	BOOL has_distinct_remain2 = CStatistics::Epsilon < histogram2->GetDistinctRemain();
 
@@ -1404,14 +1413,14 @@ CHistogram::ComputeJoinNDVRemainInfo
 	CDouble remaining_join_NDVs = std::max(final_join_NDVs - join_NDVs, CDouble(0.0));
 
 	// compute the frequency of the non-joining buckets in each input histogram
-	CDouble freq_buckets1 =  CStatisticsUtils::GetFrequency(histogram1->ParseDXLToBucketsArray());
-	CDouble freq_buckets2 =  CStatisticsUtils::GetFrequency(histogram2->ParseDXLToBucketsArray());
+	CDouble freq_buckets1 =  CStatisticsUtils::GetFrequency(histogram1->GetBuckets());
+	CDouble freq_buckets2 =  CStatisticsUtils::GetFrequency(histogram2->GetBuckets());
 	CDouble freq_non_join_buckets1 = std::max(CDouble(0), (freq_buckets1 - hist1_buckets_freq));
 	CDouble freq_non_join_buckets2 = std::max(CDouble(0), (freq_buckets2 - hist2_buckets_freq));
 
 	// compute the NDV of the non-joining buckets
-	CDouble NDVs_non_join_buckets1 = CStatisticsUtils::GetNumDistinct(histogram1->ParseDXLToBucketsArray()) - join_NDVs;
-	CDouble NDVs_non_join_buckets2 = CStatisticsUtils::GetNumDistinct(histogram2->ParseDXLToBucketsArray()) - join_NDVs;
+	CDouble NDVs_non_join_buckets1 = CStatisticsUtils::GetNumDistinct(histogram1->GetBuckets()) - join_NDVs;
+	CDouble NDVs_non_join_buckets2 = CStatisticsUtils::GetNumDistinct(histogram2->GetBuckets()) - join_NDVs;
 
 	CDouble freq_remain1 = histogram1->GetFreqRemain();
 	CDouble freq_remain2 = histogram2->GetFreqRemain();
@@ -1554,8 +1563,8 @@ CHistogram::MakeUnionAllHistogramNormalize
 		}
 	}
 
-	const ULONG buckets1 = Buckets();
-	const ULONG buckets2 = histogram->Buckets();
+	const ULONG buckets1 = GetNumBuckets();
+	const ULONG buckets2 = histogram->GetNumBuckets();
 
 	GPOS_ASSERT_IFF(NULL == bucket1, idx1 == buckets1);
 	GPOS_ASSERT_IFF(NULL == bucket2, idx2 == buckets2);
@@ -1751,8 +1760,8 @@ CHistogram::MakeUnionHistogramNormalize
 		}
 	}
 
-	const ULONG buckets1 = Buckets();
-	const ULONG buckets2 = other_histogram->Buckets();
+	const ULONG buckets1 = GetNumBuckets();
+	const ULONG buckets2 = other_histogram->GetNumBuckets();
 
 	GPOS_ASSERT_IFF(NULL == bucket1, idx1 == buckets1);
 	GPOS_ASSERT_IFF(NULL == bucket2, idx2 == buckets2);
@@ -1880,7 +1889,7 @@ CHistogram::operator []
 	)
 	const
 {
-	if (pos < Buckets())
+	if (pos < GetNumBuckets())
 	{
 		return (*m_histogram_buckets) [pos];
 	}
@@ -2067,13 +2076,13 @@ CHistogram::DoNDVBasedCardEstimation
 {
 	GPOS_ASSERT(NULL != histogram);
 
-	if (0 == histogram->Buckets())
+	if (0 == histogram->GetNumBuckets())
 	{
 		// no buckets, so join cardinality estimation is based solely on NDV remain
 		return true;
 	}
 
-	const IBucket *bucket = (*histogram->ParseDXLToBucketsArray())[0];
+	const IBucket *bucket = (*histogram->GetBuckets())[0];
 
 	IDatum *datum = bucket->GetLowerBound()->GetDatum();
 

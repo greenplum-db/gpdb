@@ -71,24 +71,24 @@ CHistogramTest::EresUnittest_CHistogramInt4()
 	CPoint *ppoint0 = CTestUtils::PpointInt4(mp, 9);
 	CHistogram *phist0 = histogram->MakeHistogramFilter(CStatsPred::EstatscmptG, ppoint0);
 	CCardinalityTestUtils::PrintHist(mp, "phist0", phist0);
-	GPOS_RTL_ASSERT(phist0->Buckets() == 9);
+	GPOS_RTL_ASSERT(phist0->GetNumBuckets() == 9);
 
 	CPoint *point1 = CTestUtils::PpointInt4(mp, 35);
 	CHistogram *histogram1 = histogram->MakeHistogramFilter(CStatsPred::EstatscmptL, point1);
 	CCardinalityTestUtils::PrintHist(mp, "histogram1", histogram1);
-	GPOS_RTL_ASSERT(histogram1->Buckets() == 4);
+	GPOS_RTL_ASSERT(histogram1->GetNumBuckets() == 4);
 
 	// edge case where point is equal to upper bound
 	CPoint *point2 = CTestUtils::PpointInt4(mp, 50);
 	CHistogram *histogram2 = histogram->MakeHistogramFilter(CStatsPred::EstatscmptL,point2);
 	CCardinalityTestUtils::PrintHist(mp, "histogram2", histogram2);
-	GPOS_RTL_ASSERT(histogram2->Buckets() == 5);
+	GPOS_RTL_ASSERT(histogram2->GetNumBuckets() == 5);
 
 	// equality check
 	CPoint *point3 = CTestUtils::PpointInt4(mp, 100);
 	CHistogram *phist3 = histogram->MakeHistogramFilter(CStatsPred::EstatscmptEq, point3);
 	CCardinalityTestUtils::PrintHist(mp, "phist3", phist3);
-	GPOS_RTL_ASSERT(phist3->Buckets() == 1);
+	GPOS_RTL_ASSERT(phist3->GetNumBuckets() == 1);
 
 	// normalized output after filter
 	CPoint *ppoint4 = CTestUtils::PpointInt4(mp, 100);
@@ -100,12 +100,12 @@ CHistogramTest::EresUnittest_CHistogramInt4()
 	// lasj
 	CHistogram *phist5 = histogram->MakeLASJHistogram(CStatsPred::EstatscmptEq, histogram2);
 	CCardinalityTestUtils::PrintHist(mp, "phist5", phist5);
-	GPOS_RTL_ASSERT(phist5->Buckets() == 5);
+	GPOS_RTL_ASSERT(phist5->GetNumBuckets() == 5);
 
 	// inequality check
 	CHistogram *phist6 = histogram->MakeHistogramFilter(CStatsPred::EstatscmptNEq, point2);
 	CCardinalityTestUtils::PrintHist(mp, "phist6", phist6);
-	GPOS_RTL_ASSERT(phist6->Buckets() == 10);
+	GPOS_RTL_ASSERT(phist6->GetNumBuckets() == 10);
 
 	// histogram with null fraction and remaining tuples
 	CHistogram *phist7 = PhistExampleInt4Remain(mp);
@@ -125,7 +125,7 @@ CHistogramTest::EresUnittest_CHistogramInt4()
 
 	// equality join, hitting remaining tuples
 	CHistogram *phist10 = phist7->MakeJoinHistogram(CStatsPred::EstatscmptEq, phist7);
-	GPOS_RTL_ASSERT(phist10->Buckets() == 5);
+	GPOS_RTL_ASSERT(phist10->GetNumBuckets() == 5);
 	GPOS_RTL_ASSERT(fabs((phist10->GetDistinctRemain() - 2.0).Get()) < CStatistics::Epsilon);
 	GPOS_RTL_ASSERT(fabs((phist10->GetFreqRemain() - 0.08).Get()) < CStatistics::Epsilon);
 
@@ -173,7 +173,7 @@ CHistogramTest::EresUnittest_CHistogramBool()
 	CDouble scale_factor(0.0);
 	CHistogram *histogram1 = histogram->MakeHistogramFilterNormalize(CStatsPred::EstatscmptEq, point1, &scale_factor);
 	CCardinalityTestUtils::PrintHist(mp, "histogram1", histogram1);
-	GPOS_RTL_ASSERT(histogram1->Buckets() == 1);
+	GPOS_RTL_ASSERT(histogram1->GetNumBuckets() == 1);
 
 	// clean up
 	point1->Release();

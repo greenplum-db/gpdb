@@ -188,11 +188,11 @@ CStatisticsUtils::MergeMCVHist
 	GPOS_ASSERT(NULL != histogram);
 	GPOS_ASSERT(mcv_histogram->IsWellDefined());
 	GPOS_ASSERT(histogram->IsWellDefined());
-	GPOS_ASSERT(0 < mcv_histogram->Buckets());
-	GPOS_ASSERT(0 < histogram->Buckets());
+	GPOS_ASSERT(0 < mcv_histogram->GetNumBuckets());
+	GPOS_ASSERT(0 < histogram->GetNumBuckets());
 
-	const CBucketArray *mcv_buckets = mcv_histogram->ParseDXLToBucketsArray();
-	const CBucketArray *histogram_buckets = histogram->ParseDXLToBucketsArray();
+	const CBucketArray *mcv_buckets = mcv_histogram->GetBuckets();
+	const CBucketArray *histogram_buckets = histogram->GetBuckets();
 
 	IDatum *datum = (*mcv_buckets)[0]->GetLowerBound()->GetDatum();
 

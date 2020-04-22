@@ -160,11 +160,11 @@ CJoinCardinalityTest::EresUnittest_JoinNDVRemain()
 		CDouble dNDVRemainJoin = elem.m_dNDVRemainJoin;
 		CDouble dFreqRemainJoin = elem.m_dFreqRemainJoin;
 
-		CDouble dDiffNDVJoin(fabs((dNDVBucketsJoin - CStatisticsUtils::GetNumDistinct(join_histogram->ParseDXLToBucketsArray())).Get()));
+		CDouble dDiffNDVJoin(fabs((dNDVBucketsJoin - CStatisticsUtils::GetNumDistinct(join_histogram->GetBuckets())).Get()));
 		CDouble dDiffNDVRemainJoin(fabs((dNDVRemainJoin - join_histogram->GetDistinctRemain()).Get()));
 		CDouble dDiffFreqRemainJoin(fabs((dFreqRemainJoin - join_histogram->GetFreqRemain()).Get()));
 
-		if (join_histogram->Buckets() != ulBucketsJoin || (dDiffNDVJoin > CStatistics::Epsilon)
+		if (join_histogram->GetNumBuckets() != ulBucketsJoin || (dDiffNDVJoin > CStatistics::Epsilon)
 			|| (dDiffNDVRemainJoin > CStatistics::Epsilon) || (dDiffFreqRemainJoin > CStatistics::Epsilon))
 		{
 			eres = GPOS_FAILED;
