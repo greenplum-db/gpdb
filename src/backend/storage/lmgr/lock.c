@@ -419,8 +419,8 @@ InitLocks(void)
 	/* Allow for extra entries if resource locking is enabled. */
 	if (Gp_role == GP_ROLE_DISPATCH && IsResQueueEnabled())
 	{
-		add_size(max_table_size, NRESLOCKENTS() );
-		//add_size(max_plock_table_size, NRESPROCLOCKENTS() );
+		max_table_size = add_size(max_table_size, NRESLOCKENTS() );
+		max_table_size = add_size(max_table_size, NRESPROCLOCKENTS() );
 	}
 
 	init_table_size = max_table_size / 2;
@@ -3697,14 +3697,14 @@ LockShmemSize(void)
 
 	if (Gp_role == GP_ROLE_DISPATCH && IsResQueueEnabled())
 	{
-		add_size(max_table_size, NRESLOCKENTS() );
+		max_table_size = add_size(max_table_size, NRESLOCKENTS() );
 	}
 
 	size = add_size(size, hash_estimate_size(max_table_size, sizeof(LOCK)));
 	
 	if (Gp_role == GP_ROLE_DISPATCH && IsResQueueEnabled())
 	{
-		add_size(max_table_size, NRESPROCLOCKENTS() );
+		max_table_size = add_size(max_table_size, NRESPROCLOCKENTS() );
 	}
 
 	/* proclock hash table */
