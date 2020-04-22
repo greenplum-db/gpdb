@@ -3,7 +3,7 @@
 <topic id="topic_dn2_52b_3lb">
   <title>Best Practices when Creating Views</title>
   <body>
-    <p>When defining and using view, remember that a view is just an SQL statement and is replaced
+    <p>When defining and using a view, remember that a view is just an SQL statement and is replaced
       by its definition when the query is executed.</p>
     <p>These are some common uses of views.</p>
     <ul id="ul_jrc_15l_flb">
@@ -22,12 +22,12 @@
       <li>
         <p>Defining many layers of views so that your final queries look deceptively simple.</p>
         <p>Problems arise when you try to enhance or troubleshoot queries that use the views, for
-          example by examining at the execution plan. The query's execution plan tends to be
-          complicated and is difficult to understand and how to improve it.</p>
+          example by examining the execution plan. The query's execution plan tends to be
+          complicated and it is difficult to understand and how to improve it.</p>
       </li>
       <li>
-        <p>Defining a denormalized "world" view. A view that is join of a large number of database
-          tables that is used for a wide variety of queries.</p>
+        <p>Defining a denormalized "world" view. A view that joins a large number of database tables
+          that is used for a wide variety of queries.</p>
         <p>Performance issues can occur for some queries that use the view for some
             <codeph>WHERE</codeph> conditions while other <codeph>WHERE</codeph> conditions work
           well.</p>

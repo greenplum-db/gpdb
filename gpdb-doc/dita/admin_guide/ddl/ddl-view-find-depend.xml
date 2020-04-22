@@ -39,7 +39,7 @@ HINT:  Use DROP ... CASCADE to drop the dependent objects too.</codeblock></p>
         <li><xref href="#topic_find_v_examples/view_defs" format="dita"/></li>
         <li><xref href="#topic_find_v_examples/nested_views" format="dita"/></li>
       </ul>
-      <p>The exanple output is based on the <xref href="#topic_find_v_examples/example_data"
+      <p>The example output is based on the <xref href="#topic_find_v_examples/example_data"
           format="dita"/> at the end of this topic. </p>
       <p>Also, you can use the first example query <xref href="#topic_find_v_examples/depend_table"
           format="dita"/> to find dependencies on user-defined functions (or procedures). The query
@@ -87,7 +87,7 @@ WHERE v.relkind = 'v'         -- filter views only
             href="https://www.postgresql.org/docs/9.4/datatype-oid.html" format="html">Object
             Identifier Types</xref>.</p>
         <p>In some cases, the views are listed multiple times because the view references multiple
-          table columns. You can remove those duplicates using <codeph>DISTINCT</codeph>..</p>
+          table columns. You can remove those duplicates using <codeph>DISTINCT</codeph>.</p>
         <p>You can alter the query to find views with direct dependencies on the function
             <codeph>f</codeph>. <ul id="ul_m2y_mn2_jlb">
             <li>In the <codeph>SELECT</codeph> clause replace the name of the table
@@ -95,8 +95,8 @@ WHERE v.relkind = 'v'         -- filter views only
                 <codeph>d.refobjid::regproc as ref_object</codeph></li>
             <li>In the <codeph>WHERE</codeph> clause replace the catalog of the referenced object
               from <codeph>d.refclassid = 'pg_class'::regclass</codeph> for tables, to
-                <codeph>d.refclassid = 'pg_proc'::regclass</codeph> for a procedures (functions).
-              Also change the object name from <codeph>d.refobjid = 't1'::regclass</codeph> to
+                <codeph>d.refclassid = 'pg_proc'::regclass</codeph> for procedures (functions). Also
+              change the object name from <codeph>d.refobjid = 't1'::regclass</codeph> to
                 <codeph>d.refobjid = 'f'::regproc</codeph></li>
             <li>In the <codeph>WHERE</codeph> clause, replace the name of the table <codeph>refobjid
                 = 't1'::regclass</codeph> with the name of the function <codeph>refobjid =
@@ -143,11 +143,11 @@ WHERE v.relkind = 'v'    -- filter views only
       </section>
       <section id="view_schema">
         <title>Listing View Schemas</title>
-        <p>If you have created views in multiple schemas, you can also list views and the view's
-          schema the table referenced by the view. The query retrieves schema from the catalog table
-            <codeph>pg_namespace</codeph> and excludes the system schemas
+        <p>If you have created views in multiple schemas, you can also list views, each view's
+          schema, and the table referenced by the view. The query retrieves the schema from the
+          catalog table <codeph>pg_namespace</codeph> and excludes the system schemas
             <codeph>pg_catalog</codeph>, <codeph>information_schema</codeph>, and
-            <codeph>gp_toolkit</codeph>. Also. the query does not list a view if the view refers to
+            <codeph>gp_toolkit</codeph>. Also, the query does not list a view if the view refers to
           itself.</p>
         <codeblock>SELECT v.oid::regclass AS view,
   ns.nspname AS schema,       -- view schema,
@@ -226,7 +226,7 @@ WHERE NOT (v.oid = d.refobjid)
       </section>
       <section id="nested_views">
         <title>Listing Nested Views</title>
-        <p>This CTE query lists information about views that reference on another view.</p>
+        <p>This CTE query lists information about views that reference another view.</p>
         <p>The <codeph>WITH</codeph> clause in this CTE query selects all the views in the user
           schemas. The main <codeph>SELECT</codeph> statement finds all views that reference another
           view. </p>

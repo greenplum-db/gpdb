@@ -3,7 +3,7 @@
 <topic id="topic_id4_pfb_3lb">
   <title>About View Storage in Greenplum Database</title>
   <body>
-    <p>A view is similar a table, both are relations, that is "something with columns". All such
+    <p>A view is similar to a table, both are relations, that is "something with columns". All such
       objects are stored in the catalog table <xref
         href="../../ref_guide/system_catalogs/pg_class.xml"><codeph>pg_class</codeph></xref>. These
       are the general differences:</p>
@@ -31,14 +31,14 @@
       <li>Greenplum Database can determine exactly which objects are used in the view definition, so
         it can add dependencies on them.</li>
     </ul>
-    <p>Note that the way Greenplum Database handles views quite different from the way Greenplum
+    <p>Note that the way Greenplum Database handles views is quite different from the way Greenplum
       Database handles functions: function bodies are stored as strings and are not parsed when they
-      are created. Consequently, Greenplum Database does know on which objects a given function
+      are created. Consequently, Greenplum Database does not know on which objects a given function
       depends.</p>
     <section>
       <title>Where View Dependency Information is Stored</title>
-      <p>These system catalog tables contain the information that are used to determine the tables
-        that a view depends on.<ul id="ul_wgn_qrt_jlb">
+      <p>These system catalog tables contain the information used to determine the tables on which a
+        view depends.<ul id="ul_wgn_qrt_jlb">
           <li><xref href="../../ref_guide/system_catalogs/pg_class.xml"
               ><codeph>pg_class</codeph></xref> - object information including tables and views. The
               <codeph>relkind</codeph> column describes the type of object.</li>
