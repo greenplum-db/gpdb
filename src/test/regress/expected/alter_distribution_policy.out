@@ -1410,4 +1410,11 @@ HINT:  Drop the primary key first
 CREATE TABLE alter_table_with_unique_index (a int unique);
 ALTER TABLE alter_table_with_unique_index SET DISTRIBUTED RANDOMLY;
 ERROR:  cannot set to DISTRIBUTED RANDOMLY because relation has unique index
-HINT:  Drop the unique index first
+HINT:  Drop the unique index first.
+-- Enable reorg partition leaf table
+create table reorg_leaf (trans_id int, date text, amount decimal(9,2), region text) distributed by (trans_id)
+partition by range(date)
+(partition p2011 start (date '2011-01-01'::text) end (date '2012-01-01'::text),
+	partition p2012 start (date '2012-01-01'::text) end (date '2013-01-01'::text));
+alter table reorg_leaf_1_prt_p2011 set with (reorganize=true) distributed by (trans_id);
+alter table reorg_leaf_1_prt_p2011 set with (reorganize=true);

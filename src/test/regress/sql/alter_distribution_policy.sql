@@ -428,3 +428,12 @@ CREATE TABLE alter_table_with_primary_key (a int primary key);
 ALTER TABLE alter_table_with_primary_key SET DISTRIBUTED RANDOMLY;
 CREATE TABLE alter_table_with_unique_index (a int unique);
 ALTER TABLE alter_table_with_unique_index SET DISTRIBUTED RANDOMLY;
+
+-- Enable reorg partition leaf table
+create table reorg_leaf (trans_id int, date text, amount decimal(9,2), region text) distributed by (trans_id)
+partition by range(date)
+(partition p2011 start (date '2011-01-01'::text) end (date '2012-01-01'::text),
+	partition p2012 start (date '2012-01-01'::text) end (date '2013-01-01'::text));
+alter table reorg_leaf_1_prt_p2011 set with (reorganize=true) distributed by (trans_id);
+alter table reorg_leaf_1_prt_p2011 set with (reorganize=true);
+
