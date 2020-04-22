@@ -1280,7 +1280,8 @@ PG_TRY();
 	/* Clean up the interconnect. */
 	if (queryDesc && queryDesc->estate && queryDesc->estate->es_interconnect_is_setup)
 	{
-		TeardownInterconnect(queryDesc->estate->interconnect_context, false); /* following success on QD */
+		TeardownInterconnect(queryDesc->estate->interconnect_context,
+							 false, false); /* following success on QD */
 		queryDesc->estate->interconnect_context = NULL;
 		queryDesc->estate->es_interconnect_is_setup = false;
 	}
@@ -1342,7 +1343,8 @@ PG_CATCH();
 	 */
 	if (queryDesc && queryDesc->estate && queryDesc->estate->es_interconnect_is_setup)
 	{
-		TeardownInterconnect(queryDesc->estate->interconnect_context, true);
+		TeardownInterconnect(queryDesc->estate->interconnect_context,
+							 true, false);
 		queryDesc->estate->interconnect_context = NULL;
 		queryDesc->estate->es_interconnect_is_setup = false;
 	}
