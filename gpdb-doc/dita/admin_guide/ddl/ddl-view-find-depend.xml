@@ -56,7 +56,7 @@ HINT:  Use DROP ... CASCADE to drop the dependent objects too.</codeblock></p>
           qualify the query to return only view dependencies.</p>
         <codeblock>SELECT v.oid::regclass AS view,
   d.refobjid::regclass AS ref_object    -- name of table
-  -- d.refobjid::regproc as ref_object  -- name of function
+  -- d.refobjid::regproc AS ref_object  -- name of function
 FROM pg_depend AS d      -- objects that depend on a table
   JOIN pg_rewrite AS r  -- rules depending on a table
      ON r.oid = d.objid
