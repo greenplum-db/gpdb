@@ -3,7 +3,7 @@
 <topic id="topic_id4_pfb_3lb">
   <title>About View Storage in Greenplum Database</title>
   <body>
-    <p>A view is similar to a table, both are relations, that is "something with columns". All such
+    <p>A view is similar to a table, both are relations - that is "something with columns". All such
       objects are stored in the catalog table <xref
         href="../../ref_guide/system_catalogs/pg_class.xml"><codeph>pg_class</codeph></xref>. These
       are the general differences:</p>
