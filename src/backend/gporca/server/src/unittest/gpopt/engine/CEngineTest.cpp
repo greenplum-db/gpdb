@@ -8,6 +8,7 @@
 //	@doc:
 //		Test for CEngine
 //---------------------------------------------------------------------------
+#include "gpos/error/CAutoTrace.h"
 #include "gpos/task/CAutoTraceFlag.h"
 
 #include "gpopt/base/CUtils.h"

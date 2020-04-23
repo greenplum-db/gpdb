@@ -10,6 +10,7 @@
 //---------------------------------------------------------------------------
 #include <string.h>
 
+#include "gpos/error/CAutoTrace.h"
 #include "gpos/io/COstreamString.h"
 #include "gpos/string/CWStringDynamic.h"
 #include "gpos/task/CAutoTraceFlag.h"
@@ -21,6 +22,7 @@
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CScalarProjectElement.h"
 #include "gpopt/operators/CLogicalNAryJoin.h"
+#include "gpopt/operators/CLogicalSelect.h"
 #include "gpopt/operators/CLogicalInnerJoin.h"
 #include "gpopt/operators/CLogicalLeftOuterJoin.h"
 #include "gpopt/operators/CExpressionUtils.h"

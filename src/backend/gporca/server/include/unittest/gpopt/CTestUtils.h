@@ -16,6 +16,7 @@
 #include "gpopt/base/CAutoOptCtxt.h"
 #include "gpopt/base/CColRef.h"
 #include "gpopt/base/CQueryContext.h"
+#include "gpopt/base/CRange.h"
 #include "gpopt/engine/CEnumeratorConfig.h"
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/metadata/CTableDescriptor.h"
