@@ -564,38 +564,46 @@ workfile_mgr_close_set(workfile_set *work_set)
 }
 
 static void
-workfile_report_inconsistency()
+workfile_report_inconsistency(void)
 {
 	dlist_node *node;
 	dlist_iter		iter;
-	int num_freeList = 0;
-	int num_activeList = 0;
+	int			num_freeList = 0;
+	int			num_activeList = 0;
 	dlist_foreach(iter, &workfile_shared->freeList)
 	{
 		num_freeList++;
 		node = iter.cur;
 		if (node->next == NULL || node->next->prev != node)
-			ereport(LOG, (errmsg("workfile freeList is corrupted")));
+			ereport(LOG, (errmsg("workfile freeList is corrupted: "
+							"node = %p, next = %p, next->prev = %p",
+							node, node->next, node->next ? node->next->prev : NULL)));
 	}
 	if (!dlist_is_empty(&workfile_shared->freeList))
 	{
 		node = &workfile_shared->freeList.head;
 		if (node->next == NULL || node->next->prev != node)
-			ereport(LOG, (errmsg("workfile freeList is corrupted")));
+			ereport(LOG, (errmsg("workfile freeList is corrupted: "
+							"node = %p, next = %p, next->prev = %p",
+							node, node->next, node->next ? node->next->prev : NULL)));
 	}
 	dlist_foreach(iter, &workfile_shared->activeList)
 	{
 		num_activeList++;
 		node = iter.cur;
 		if (node->next == NULL || node->next->prev != node)
-			ereport(LOG, (errmsg("workfile activeList is corrupted")));
+			ereport(LOG, (errmsg("workfile activeList is corrupted: "
+							"node = %p, next = %p, next->prev = %p",
+							node, node->next, node->next ? node->next->prev : NULL)));
 
 	}
 	if (!dlist_is_empty(&workfile_shared->activeList))
 	{
 		node = &workfile_shared->activeList.head;
 		if (node->next == NULL || node->next->prev != node);
-			ereport(LOG, (errmsg("workfile activeList is corrupted")));
+			ereport(LOG, (errmsg("workfile activeList is corrupted: "
+							"node = %p, next = %p, next->prev = %p",
+							node, node->next, node->next ? node->next->prev : NULL)));
 	}
 
 	ereport(PANIC,
