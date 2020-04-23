@@ -9,7 +9,7 @@ SHLIB_LINK_INTERNAL = $(libpq)
 EXTENSION = postgres_fdw
 DATA = postgres_fdw--1.0.sql
 
-REGRESS = postgres_fdw
+REGRESS = postgres_fdw gp_postgres_fdw
 
 # the db name is hard-coded in the tests
 override USE_MODULE_DB =

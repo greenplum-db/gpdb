@@ -23,22 +23,18 @@
 #include "catalog/indexing.h"
 #include "catalog/objectaddress.h"
 #include "catalog/pg_exttable.h"
-#include "catalog/pg_namespace.h"
 #include "catalog/pg_opclass.h"
-#include "catalog/pg_type.h"
 #include "cdb/cdbcat.h"
 #include "cdb/cdbhash.h"
 #include "cdb/cdbrelsize.h"
 #include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"		/* Gp_role */
-#include "utils/array.h"
+#include "foreign/foreign.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
-#include "utils/tqual.h"
 #include "utils/syscache.h"
-#include "utils/lsyscache.h"
 
 /*
  * The default numsegments when creating tables.  The value can be an integer
@@ -308,6 +304,35 @@ GpPolicyFetch(Oid tbloid)
 			}
 
 			return createRandomPartitionedPolicy(getgpsegmentCount());
+		}
+	}
+	else if (get_rel_relstorage(tbloid) == RELSTORAGE_FOREIGN)
+	{
+		/*
+		 * Similar to the external table creation, there is a transient state
+		 * during creation of a foreign table, where the pg_class entry has
+		 * been created, before the pg_foreign_table entry has been created.
+		 */
+		HeapTuple	tp = SearchSysCache1(FOREIGNTABLEREL, ObjectIdGetDatum(tbloid));
+
+		if (HeapTupleIsValid(tp))
+		{
+			ReleaseSysCache(tp);
+
+			ForeignTable *f = GetForeignTable(tbloid);
+
+			if (f->exec_location == FTEXECLOCATION_ALL_SEGMENTS)
+			{
+				/*
+				 * Currently, foreign tables do not support a distribution
+				 * policy, as opposed to writable external tables. For now,
+				 * we will create a random partitioned policy for foreign
+				 * tables that run on all segments. This will allow writing
+				 * to foreign tables from all segments when the mpp_execute
+				 * option is set to 'all segments'
+				 */
+				return createRandomPartitionedPolicy(getgpsegmentCount());
+			}
 		}
 	}
 
