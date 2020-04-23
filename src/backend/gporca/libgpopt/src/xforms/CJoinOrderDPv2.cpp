@@ -39,9 +39,9 @@ using namespace gpopt;
 #define GPOPT_DPV2_JOIN_ORDERING_TOPK 10
 // cost penalty (a factor) for cross product for enumeration algorithms other than GreedyAvoidXProd
 // (value determined by simple experiments on TPC-DS queries)
-#define GPOPT_DPV2_CROSS_JOIN_DEFAULT_PENALTY 5
+#define GPOPT_DPV2_CROSS_JOIN_DEFAULT_PENALTY 1024
 // prohibitively high penalty for cross products when in GreedyAvoidXProd
-#define GPOPT_DPV2_CROSS_JOIN_GREEDY_PENALTY 1e9
+#define GPOPT_DPV2_CROSS_JOIN_GREEDY_PENALTY 1e12
 
 
 //---------------------------------------------------------------------------
@@ -180,8 +180,10 @@ CJoinOrderDPv2::ComputeCost
 		if (CUtils::FCrossJoin(expr_info->m_expr))
 		{
 			// penalize cross joins, similar to what we do in the optimization phase
-			dCost = dCost * m_cross_prod_penalty;
+			expr_info->m_cost_penalty = dCost * m_cross_prod_penalty;
 		}
+		expr_info->m_cost_penalty = expr_info->m_cost_penalty + expr_info->m_left_child_expr.GetExprInfo()->m_cost_penalty;
+		expr_info->m_cost_penalty = expr_info->m_cost_penalty + expr_info->m_right_child_expr.GetExprInfo()->m_cost_penalty;
 	}
 
 	expr_info->m_cost = dCost;
@@ -447,11 +449,11 @@ CJoinOrderDPv2::GetBestExprForProperties
 
 		if (IsASupersetOfProperties(expr_info->m_properties, props))
 		{
-			if (gpos::ulong_max == best_ix || expr_info->m_cost < best_cost)
+			if (gpos::ulong_max == best_ix || expr_info->DCost() < best_cost)
 			{
 				// we found a candidate with the best cost so far that satisfies the properties
 				best_ix = ul;
-				best_cost = expr_info->m_cost;
+				best_cost = expr_info->DCost();
 			}
 		}
 	}
@@ -501,7 +503,7 @@ CJoinOrderDPv2::AddExprToGroupIfNecessary
 {
 	// compute the cost for the new expression
 	ComputeCost(new_expr_info, group_info->m_cardinality);
-	CDouble new_cost = new_expr_info->m_cost;
+	CDouble new_cost = new_expr_info->DCost();
 
 	if (group_info->m_atoms->Size() == m_ulComps)
 	{
@@ -554,8 +556,8 @@ CJoinOrderDPv2::AddExprToGroupIfNecessary
 		SExpressionInfo *expr_info = (*group_info->m_best_expr_info_array)[ul];
 		BOOL old_ge_new = IsASupersetOfProperties(expr_info->m_properties, new_expr_info->m_properties);
 		BOOL new_ge_old = IsASupersetOfProperties(new_expr_info->m_properties, expr_info->m_properties);
-		CDouble old_cost = expr_info->m_cost;
-		CDouble new_cost = new_expr_info->m_cost;
+		CDouble old_cost = expr_info->DCost();
+		CDouble new_cost = new_expr_info->DCost();
 
 		if (old_ge_new)
 		{
@@ -974,7 +976,7 @@ CJoinOrderDPv2::GreedySearchJoinOrders
 			SGroupInfo *join_group_info = LookupOrCreateGroupInfo(current_level_info, join_bitset, join_expr_info);
 
 			ComputeCost(join_expr_info, join_group_info->m_cardinality);
-			CDouble join_cost = join_expr_info->m_cost;
+			CDouble join_cost = join_expr_info->DCost();
 
 			if (NULL == best_expr_info_in_level || join_cost < best_cost_in_level)
 			{
@@ -1649,9 +1651,16 @@ CJoinOrderDPv2::OsPrint
 					os << " join ";
 					expr_info->m_right_child_expr.m_group_info->m_atoms->OsPrint(os);
 					os << std::endl;
+					os << "   left child cost: " << expr_info->m_left_child_expr.m_group_info->m_lowest_expr_cost << std::endl;
+					os << "   right child cost: " << expr_info->m_right_child_expr.m_group_info->m_lowest_expr_cost << std::endl;
+
 				}
 				os << "   Cost: ";
 				expr_info->m_cost.OsPrint(os);
+				os << "   Penalty Cost: ";
+				expr_info->m_cost_penalty.OsPrint(os);
+				os << "   Total Cost with Penalty: ";
+				expr_info->DCost().OsPrint(os);
 				os << std::endl;
 				if (lev == 1)
 				{

@@ -73,7 +73,7 @@ namespace gpopt
 				// does the parent/child exist?
 				BOOL exists(ULONG ix) { return ix < m_topk->Size(); }
 				// cost of an entry (this class implements a Min-Heap)
-				CDouble cost(ULONG ix) { return (*m_topk)[ix]->DCost(); }
+				CDouble cost(ULONG ix) { return (*m_topk)[ix]->DCostForHeap(); }
 
 				// push node ix in the tree down into its child tree as much as needed
 				void HeapifyDown(ULONG ix)
@@ -360,6 +360,8 @@ namespace gpopt
 				// cost of the expression
 				CDouble m_cost;
 
+				CDouble m_cost_penalty;
+
 				SExpressionInfo(
 								CExpression *expr,
 								const SGroupAndExpression &left_child_expr_info,
@@ -369,7 +371,8 @@ namespace gpopt
 								   m_left_child_expr(left_child_expr_info),
 								   m_right_child_expr(right_child_expr_info),
 								   m_properties(properties),
-								   m_cost(0.0)
+								   m_cost(0.0),
+								   m_cost_penalty(0.0)
 				{
 				}
 
@@ -378,7 +381,8 @@ namespace gpopt
 								SExpressionProperties &properties
 								) : m_expr(expr),
 									m_properties(properties),
-									m_cost(0.0)
+									m_cost(0.0),
+									m_cost_penalty(0.0)
 				{
 				}
 
@@ -388,7 +392,10 @@ namespace gpopt
 				}
 
 				// cost (use -1 for greedy solutions to ensure we keep all of them)
-				CDouble DCost() { return m_properties.IsGreedy() ? -1.0 : m_cost; }
+				CDouble DCostForHeap() { return m_properties.IsGreedy() ? -1.0 : m_cost + m_cost_penalty; }
+
+				CDouble DCost() { return m_cost + m_cost_penalty; }
+
 				BOOL ChildrenAreEqual(const SExpressionInfo &other) const
 				{ return m_left_child_expr == other.m_left_child_expr && m_right_child_expr == other.m_right_child_expr; }
 			};
@@ -429,7 +436,7 @@ namespace gpopt
 					}
 
 					BOOL IsAnAtom() { return 1 == m_atoms->Size(); }
-					CDouble DCost() { return m_lowest_expr_cost; }
+					CDouble DCostForHeap() { return m_lowest_expr_cost; }
 
 				};
 
