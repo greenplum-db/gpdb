@@ -1681,7 +1681,7 @@ CTranslatorDXLToPlStmt::TranslateDXLMergeJoin
 			GPOS_ASSERT(gpdb::ListLength(opexpr->args) == 2);
 			Expr *leftarg = (Expr *) gpdb::ListNth(opexpr->args, 0);
 
-			Expr *rightarg = (Expr *) gpdb::ListNth(opexpr->args, 1);
+			Expr *rightarg PG_USED_FOR_ASSERTS_ONLY = (Expr *) gpdb::ListNth(opexpr->args, 1);
 			GPOS_ASSERT(gpdb::ExprCollation((Node *) leftarg) ==
 						gpdb::ExprCollation((Node*) rightarg));
 
