@@ -3,7 +3,7 @@
 -- different node with the local deadlock detector.  To make the local
 -- deadlock testcases stable we reset the gdd period to 2min so should
 -- not be triggered during the local deadlock tests.
-ALTER SYSTEM RESET gp_global_deadlock_detector_period;
+ALTER SYSTEM SET gp_global_deadlock_detector_period to '2min';
 SELECT pg_reload_conf();
 -- start new session, which should always have newly reflected value
 1: SHOW gp_global_deadlock_detector_period;
