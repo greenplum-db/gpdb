@@ -2593,25 +2593,20 @@ create_motion_plan(PlannerInfo *root, CdbMotionPath *path)
 		case CdbLocusType_SingleQE:
 			sendSlice->gangType = GANGTYPE_SINGLETON_READER;
 			sendSlice->numsegments = 1;
-			/*
-			 * XXX: for now, always execute the slice in segment 0. Ideally, we
-			 * would assign different SingleQEs to different segments to distribute
-			 * the load more evenly, but keep it simple for now.
-			 */
-			sendSlice->segindex = 0;
+			sendSlice->segindex = gp_session_id % subpath->locus.numsegments;
 			break;
 
 		case CdbLocusType_General:
 			/*  */
-			sendSlice->gangType = GANGTYPE_PRIMARY_READER;
+			sendSlice->gangType = GANGTYPE_SINGLETON_READER;
 			sendSlice->numsegments = 1;
-			sendSlice->segindex = 0;
+			sendSlice->segindex = gp_session_id % getgpsegmentCount();
 			break;
 
 		case CdbLocusType_SegmentGeneral:
 			sendSlice->gangType = GANGTYPE_SINGLETON_READER;
 			sendSlice->numsegments = subpath->locus.numsegments;
-			sendSlice->segindex = 0;
+			sendSlice->segindex = gp_session_id % subpath->locus.numsegments;
 			break;
 
 		case CdbLocusType_Replicated:

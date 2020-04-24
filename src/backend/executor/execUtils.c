@@ -1262,8 +1262,11 @@ ExecPrefetchJoinQual(JoinState *node)
 
 
 static void
-FillSliceGangInfo(ExecSlice *slice, int numsegments, DirectDispatchInfo *dd)
+FillSliceGangInfo(ExecSlice *slice, PlanSlice *ps)
 {
+	int numsegments = ps->numsegments;
+	DirectDispatchInfo *dd = &ps->directDispatch;
+
 	switch (slice->gangType)
 	{
 		case GANGTYPE_UNALLOCATED:
@@ -1294,7 +1297,7 @@ FillSliceGangInfo(ExecSlice *slice, int numsegments, DirectDispatchInfo *dd)
 			break;
 		case GANGTYPE_SINGLETON_READER:
 			slice->planNumSegments = 1;
-			slice->segments = list_make1_int(gp_session_id % numsegments);
+			slice->segments = list_make1_int(ps->segindex);
 			break;
 		default:
 			elog(ERROR, "unexpected gang type");
@@ -1388,7 +1391,7 @@ InitSliceTable(EState *estate, PlannedStmt *plannedstmt)
 		currExecSlice->rootIndex = rootIndex;
 		currExecSlice->gangType = currPlanSlice->gangType;
 
-		FillSliceGangInfo(currExecSlice, currPlanSlice->numsegments, &currPlanSlice->directDispatch);
+		FillSliceGangInfo(currExecSlice, currPlanSlice);
 	}
 	table->numSlices = numSlices;
 

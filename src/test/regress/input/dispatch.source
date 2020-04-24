@@ -170,9 +170,6 @@ AS '@abs_builddir@/regress@DLSUFFIX@', 'hasBackendsExist' LANGUAGE C;
 CREATE OR REPLACE FUNCTION hasGangsExist() RETURNS BOOL
 AS '@abs_builddir@/regress@DLSUFFIX@', 'hasGangsExist' LANGUAGE C;
 
--- disable debug linger to get immediate feedback from FATAL errors.
-set gp_debug_linger to 0;
-
 -- test log debug related code within dispatch
 set gp_log_gang to debug;
 set log_min_messages to DEBUG;
