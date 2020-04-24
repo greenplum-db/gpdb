@@ -619,12 +619,6 @@ if test "$GCC" = yes -a "$ICC" = no; then
   # Disable FP optimizations that cause various errors on gcc 4.5+ or maybe 4.6+
   PGAC_PROG_CC_CFLAGS_OPT([-fexcess-precision=standard])
 
-  # Silence compiler warnings about variables that are set, but otherwise
-  # unused. All of these warnings have been fixed in PostgreSQL, but there is
-  # still someGPDB added code that emit these. TODO: Fix the GPDB code and
-  # remove this.
-  PGAC_PROG_CC_CFLAGS_OPT([-Wno-unused-but-set-variable])
-
   # We rely on /* fallthrough */ comments to signal explicit fallthrough, but
   # some compilers (clang) don't recognize those and give spurious errors. Make
   # sure the compiler supports fallthrough comments by explicitly requesting
