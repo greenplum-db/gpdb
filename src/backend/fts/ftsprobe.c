@@ -200,7 +200,8 @@ ftsConnectStart(fts_segment_info *ftsInfo)
 static void
 checkIfFailedDueToRecoveryInProgress(fts_segment_info *ftsInfo)
 {
-	if (strstr(PQerrorMessage(ftsInfo->conn), _(POSTMASTER_IN_RECOVERY_MSG)))
+	if (strstr(PQerrorMessage(ftsInfo->conn), _(POSTMASTER_IN_RECOVERY_MSG)) ||
+		strstr(PQerrorMessage(ftsInfo->conn), _(POSTMASTER_IN_STARTUP_MSG)))
 	{
 		XLogRecPtr tmpptr;
 		char *ptr = strstr(PQerrorMessage(ftsInfo->conn),
@@ -1068,7 +1069,8 @@ processResponse(fts_context *context)
 				/* If primary is in recovery, do not mark it down and promote mirror */
 				if (ftsInfo->recovery_making_progress)
 				{
-					Assert(strstr(PQerrorMessage(ftsInfo->conn), _(POSTMASTER_IN_RECOVERY_MSG)));
+					Assert(strstr(PQerrorMessage(ftsInfo->conn), _(POSTMASTER_IN_RECOVERY_MSG)) ||
+						   strstr(PQerrorMessage(ftsInfo->conn), _(POSTMASTER_IN_STARTUP_MSG)));
 					elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
 						 "FTS: detected segment is in recovery mode and making "
 						 "progress (content=%d) primary dbid=%d, mirror dbid=%d",

@@ -2538,9 +2538,14 @@ retry1:
 		case CAC_STARTUP:
 			if ((am_ftshandler || IsFaultHandler) && am_mirror)
 				break;
+
+			recptr = last_xlog_replay_location();
+
 			ereport(FATAL,
 					(errcode(ERRCODE_CANNOT_CONNECT_NOW),
-					 errmsg(POSTMASTER_IN_STARTUP_MSG)));
+					 errmsg(POSTMASTER_IN_STARTUP_MSG),
+					 errdetail(POSTMASTER_IN_RECOVERY_DETAIL_MSG " %X/%X",
+						   (uint32) (recptr >> 32), (uint32) recptr)));
 			break;
 		case CAC_SHUTDOWN:
 			ereport(FATAL,
