@@ -141,8 +141,8 @@ run_log(['pg_ctl', '-w', '-D', $node_standby->data_dir, '-l',
 		$node_standby->logfile, '-o', "-c gp_role=utility --gp_dbid=$node_standby->{_dbid} --gp_contentid=0",
 			'start']);
 
-# wait up to 10 seconds for postgres to terminate
-foreach my $i (0..100)
+# wait up to 180s for postgres to terminate
+foreach my $i (0..1800)
 {
 	last if ! -f $node_standby->data_dir . '/postmaster.pid';
 	usleep(100_000);
