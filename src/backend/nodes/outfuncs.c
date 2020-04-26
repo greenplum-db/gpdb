@@ -1324,6 +1324,8 @@ _outMotion(StringInfo str, const Motion *node)
 
 	WRITE_INT_FIELD(segidColIdx);
 
+	WRITE_INT_FIELD(recv_numsegments);
+
 	/* senderSliceInfo is intentionally omitted. It's only used during planning */
 
 	_outPlanInfo(str, (Plan *) node);

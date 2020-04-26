@@ -1356,6 +1356,8 @@ typedef struct Motion
 	Oid		   *collations;		/* OIDs of collations */
 	bool	   *nullsFirst;		/* NULLS FIRST/LAST directions */
 
+	int         recv_numsegments;
+
 	/* sender slice info */
 	PlanSlice  *senderSliceInfo;
 } Motion;

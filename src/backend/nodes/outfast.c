@@ -540,6 +540,7 @@ _outMotion(StringInfo str, Motion *node)
 	WRITE_BOOL_ARRAY(nullsFirst, node->numSortCols);
 
 	WRITE_INT_FIELD(segidColIdx);
+	WRITE_INT_FIELD(recv_numsegments);
 
 	_outPlanInfo(str, (Plan *) node);
 }

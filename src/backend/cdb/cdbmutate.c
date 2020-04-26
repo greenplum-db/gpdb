@@ -66,11 +66,9 @@ static bool replace_shareinput_targetlists_walker(Node *node, PlannerInfo *root,
 
 
 Motion *
-make_union_motion(Plan *lefttree, int numsegments)
+make_union_motion(Plan *lefttree)
 {
 	Motion	   *motion;
-
-	Assert(numsegments > 0);
 
 	motion = make_motion(NULL, lefttree,
 						 0, NULL, NULL, NULL, NULL /* no ordering */);
@@ -85,12 +83,9 @@ make_union_motion(Plan *lefttree, int numsegments)
 Motion *
 make_sorted_union_motion(PlannerInfo *root, Plan *lefttree, int numSortCols,
 						 AttrNumber *sortColIdx, Oid *sortOperators,
-						 Oid *collations, bool *nullsFirst,
-						 int numsegments)
+						 Oid *collations, bool *nullsFirst)
 {
 	Motion	   *motion;
-
-	Assert(numsegments > 0);
 
 	motion = make_motion(root, lefttree,
 						 numSortCols, sortColIdx, sortOperators, collations, nullsFirst);
@@ -104,8 +99,7 @@ make_sorted_union_motion(PlannerInfo *root, Plan *lefttree, int numSortCols,
 Motion *
 make_hashed_motion(Plan *lefttree,
 				   List *hashExprs,
-				   List *hashOpfamilies,
-				   int numsegments)
+				   List *hashOpfamilies)
 {
 	Motion	   *motion;
 	Oid		   *hashFuncs;
@@ -113,7 +107,6 @@ make_hashed_motion(Plan *lefttree,
 	ListCell   *opf_cell;
 	int			i;
 
-	Assert(numsegments > 0);
 	Assert(list_length(hashExprs) == list_length(hashOpfamilies));
 
 	/* Look up the right hash functions for the hash expressions */
@@ -138,11 +131,9 @@ make_hashed_motion(Plan *lefttree,
 }
 
 Motion *
-make_broadcast_motion(Plan *lefttree, int numsegments)
+make_broadcast_motion(Plan *lefttree)
 {
 	Motion	   *motion;
-
-	Assert(numsegments > 0);
 
 	motion = make_motion(NULL, lefttree,
 						 0, NULL, NULL, NULL, NULL /* no ordering */);
@@ -154,14 +145,13 @@ make_broadcast_motion(Plan *lefttree, int numsegments)
 }
 
 Plan *
-make_explicit_motion(PlannerInfo *root, Plan *lefttree, AttrNumber segidColIdx, int numsegments)
+make_explicit_motion(PlannerInfo *root, Plan *lefttree, AttrNumber segidColIdx)
 {
 	Motion	   *motion;
 	plan_tree_base_prefix base;
 
 	base.node = (Node *) root;
 
-	Assert(numsegments > 0);
 	Assert(segidColIdx > 0 && segidColIdx <= list_length(lefttree->targetlist));
 
 	motion = make_motion(NULL, lefttree,

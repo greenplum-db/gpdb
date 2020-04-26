@@ -2636,6 +2636,7 @@ create_motion_plan(PlannerInfo *root, CdbMotionPath *path)
 	/* Add motion operator. */
 	motion = cdbpathtoplan_create_motion_plan(root, path, subplan);
 	motion->senderSliceInfo = sendSlice;
+	motion->recv_numsegments = CdbPathLocus_NumSegments(path->path.locus);
 
 	if (subpath->locus.locustype == CdbLocusType_Replicated)
 		motion->motionType = MOTIONTYPE_GATHER_SINGLE;
@@ -7401,8 +7402,7 @@ cdbpathtoplan_create_motion_plan(PlannerInfo *root,
 		segmentid_tle = find_junk_tle(subplan->targetlist, "gp_segment_id");
 		if (!segmentid_tle)
 			elog(ERROR, "could not find gp_segment_id in subplan's targetlist");
-		motion = (Motion *) make_explicit_motion(root, subplan, segmentid_tle->resno,
-												 numsegments);
+		motion = (Motion *) make_explicit_motion(root, subplan, segmentid_tle->resno);
 	}
 	else if (path->policy)
 	{
@@ -7423,12 +7423,11 @@ cdbpathtoplan_create_motion_plan(PlannerInfo *root,
 
 		motion = make_hashed_motion(subplan,
 									hashExprs,
-									hashOpfamilies,
-									numsegments);
+									hashOpfamilies);
 	}
 	else if (CdbPathLocus_IsOuterQuery(path->path.locus))
 	{
-		motion = make_union_motion(subplan, numsegments);
+		motion = make_union_motion(subplan);
 		motion->motionType = MOTIONTYPE_OUTER_QUERY;
 	}
 	/* Send all tuples to a single process? */
@@ -7473,25 +7472,25 @@ cdbpathtoplan_create_motion_plan(PlannerInfo *root,
 				 */
 				subplan = prep;
 				motion = make_sorted_union_motion(root, subplan, numSortCols, sortColIdx, sortOperators, collations,
-												  nullsFirst, numsegments);
+												  nullsFirst);
 			}
 			else
 			{
 				/* Degenerate ordering... build unordered Union Receive */
-				motion = make_union_motion(subplan, numsegments);
+				motion = make_union_motion(subplan);
 			}
 		}
 
 		/* Unordered Union Receive */
 		else
 		{
-			motion = make_union_motion(subplan, numsegments);
+			motion = make_union_motion(subplan);
 		}
 	}
 
 	/* Send all of the tuples to all of the QEs in gang above... */
 	else if (CdbPathLocus_IsReplicated(path->path.locus))
-		motion = make_broadcast_motion(subplan, numsegments);
+		motion = make_broadcast_motion(subplan);
 
 	/* Hashed redistribution to all QEs in gang above... */
 	else if (CdbPathLocus_IsHashed(path->path.locus) ||
@@ -7509,16 +7508,14 @@ cdbpathtoplan_create_motion_plan(PlannerInfo *root,
 
         motion = make_hashed_motion(subplan,
 									hashExprs,
-									hashOpfamilies,
-									numsegments);
+									hashOpfamilies);
     }
 	/* Hashed redistribution to all QEs in gang above... */
 	else if (CdbPathLocus_IsStrewn(path->path.locus))
 	{
 		motion = make_hashed_motion(subplan,
 									NIL,
-									NIL,
-									numsegments);
+									NIL);
 	}
 	else
 		elog(ERROR, "unexpected target locus type %d for Motion node", path->path.locus.locustype);

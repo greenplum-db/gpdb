@@ -761,7 +761,7 @@ ExecInitMotion(Motion *node, EState *estate, int eflags)
 	motionstate->ps.ps_ProjInfo = NULL;
 
 	/* Set up motion send data structures */
-	motionstate->numHashSegments = recvSlice->planNumSegments;
+	motionstate->numHashSegments = node->recv_numsegments == 0 ? recvSlice->planNumSegments : node->recv_numsegments;
 	if (motionstate->mstype == MOTIONSTATE_SEND && node->motionType == MOTIONTYPE_HASH)
 	{
 		int			nkeys;

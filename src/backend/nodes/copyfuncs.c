@@ -1434,6 +1434,7 @@ _copyMotion(const Motion *from)
 	COPY_POINTER_FIELD(nullsFirst, from->numSortCols * sizeof(bool));
 
 	COPY_SCALAR_FIELD(segidColIdx);
+	COPY_SCALAR_FIELD(recv_numsegments);
 
 	if (from->senderSliceInfo)
 	{
