@@ -4533,10 +4533,6 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 				List 	   *lprime;
 				DistributedBy *ldistro;
 				GpPolicy	  *policy;
-				ListCell	  *lc;
-				List	*policykeys = NIL;
-				List	*policyopclasses = NIL;
-				List	*cols = NIL;
 
 				ATExternalPartitionCheck(cmd->subtype, rel, recursing);
 
@@ -4556,48 +4552,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 								break;
 							ldistro->numsegments = rel->rd_cdbpolicy->numsegments;
 
-							foreach(lc, ldistro->keyCols)
-							{
-								IndexElem  *ielem = (IndexElem *) lfirst(lc);
-								char	   *colName = ielem->name;
-								HeapTuple	tuple;
-								AttrNumber	attnum;
-								Form_pg_attribute attform;
-								Oid			opclass;
-
-								tuple = SearchSysCacheAttName(RelationGetRelid(rel), colName);
-
-								if (!HeapTupleIsValid(tuple))
-									ereport(ERROR,
-											(errcode(ERRCODE_UNDEFINED_COLUMN),
-													errmsg("column \"%s\" of relation \"%s\" does not exist",
-														   colName,
-														   RelationGetRelationName(rel))));
-								attform = (Form_pg_attribute) GETSTRUCT(tuple);
-								attnum = attform->attnum;
-
-								/* Prevent them from altering a system attribute */
-								if (attnum <= 0)
-									ereport(ERROR,
-											(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-													errmsg("cannot distribute by system column \"%s\"",
-														   colName)));
-
-								/*
-								 * Look up the opclass, like we do in for CREATE TABLE.
-								 */
-								opclass = cdb_get_opclass_for_column_def(ielem->opclass, attform->atttypid);
-								policykeys = lappend_int(policykeys, attnum);
-								policyopclasses = lappend_oid(policyopclasses, opclass);
-
-								ReleaseSysCache(tuple);
-								cols = lappend(cols, lfirst(lc));
-							} /* end foreach */
-
-							Assert(policykeys != NIL);
-							policy = createHashPartitionedPolicy(policykeys,
-																 policyopclasses,
-																 ldistro->numsegments);
+							policy =  getPolicyForDistributedBy(ldistro, rel->rd_att);
 
 							if(!GpPolicyEqual(policy, rel->rd_cdbpolicy))
 								/*Reject interior branches of partitioned tables.*/

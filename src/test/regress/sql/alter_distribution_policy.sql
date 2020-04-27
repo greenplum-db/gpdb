@@ -430,10 +430,15 @@ CREATE TABLE alter_table_with_unique_index (a int unique);
 ALTER TABLE alter_table_with_unique_index SET DISTRIBUTED RANDOMLY;
 
 -- Enable reorg partition leaf table
-create table reorg_leaf (trans_id int, date text, amount decimal(9,2), region text) distributed by (trans_id)
-partition by range(date)
-(partition p2011 start (date '2011-01-01'::text) end (date '2012-01-01'::text),
-	partition p2012 start (date '2012-01-01'::text) end (date '2013-01-01'::text));
-alter table reorg_leaf_1_prt_p2011 set with (reorganize=true) distributed by (trans_id);
-alter table reorg_leaf_1_prt_p2011 set with (reorganize=true);
+create table reorg_leaf (a int, b int, c int) distributed by (c)
+partition by range(a)
+(partition p0 start (0) end (5),
+	partition p1 start (5) end (10));
+insert into reorg_leaf select i % 20, i, i from generate_series(0, 9) i;
+select *, gp_segment_id from reorg_leaf_1_prt_p0;
+alter table reorg_leaf_1_prt_p0 set with (reorganize=true) distributed by(b);
+alter table reorg_leaf_1_prt_p0 set with (reorganize=true) distributed by(c);
+select *, gp_segment_id from reorg_leaf_1_prt_p0;
+alter table reorg_leaf_1_prt_p1 set with (reorganize=true);
+select *, gp_segment_id from reorg_leaf_1_prt_p0;
 
