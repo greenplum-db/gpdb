@@ -1267,7 +1267,7 @@ CJoinOrderDPv2::EnumerateDP()
 			}
 			else
 			{
-				// beyond that, use greedy (keep only one group per level)
+				// beyond that, use greedy (keep only one group of DP per level)
 				number_of_allowed_groups = 1;
 			}
 
@@ -1356,10 +1356,16 @@ CJoinOrderDPv2::FindLowestCardTwoWayJoin()
 	for (ULONG ul=0; ul<level_2->m_groups->Size(); ul++)
 	{
 		SGroupInfo *group_2 = (*level_2->m_groups)[ul];
-
-		if (NULL == min_card_group || group_2->m_cardinality < min_card)
+		CDouble group_2_cardinality = group_2->m_cardinality;
+		CExpression *first_expr = (*group_2->m_best_expr_info_array)[0]->m_expr;
+		BOOL isCrossProd = (*first_expr)[2]->Pop()->Eopid() == COperator::EopScalarConst;
+		if (isCrossProd)
 		{
-			min_card = group_2->m_cardinality;
+			group_2_cardinality = group_2_cardinality * GPOPT_DPV2_CROSS_JOIN_GREEDY_PENALTY;
+		}
+		if (NULL == min_card_group || group_2_cardinality < min_card)
+		{
+			min_card = group_2_cardinality;
 			min_card_group = group_2;
 		}
 	}
@@ -1711,6 +1717,13 @@ CJoinOrderDPv2::OsPrintProperty(IOstream &os, SExpressionProperties &props) cons
 			if (!is_first)
 				os << ", ";
 			os << "Mincard";
+			is_first = false;
+		}
+		if (props.Satisfies(EJoinOrderGreedyAvoidXProd))
+		{
+			if (!is_first)
+				os << ", ";
+			os << "GreedyAvoidXProd";
 			is_first = false;
 		}
 		if (props.Satisfies(EJoinOrderStats))

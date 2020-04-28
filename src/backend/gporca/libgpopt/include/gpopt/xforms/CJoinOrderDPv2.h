@@ -319,7 +319,7 @@ namespace gpopt
 
 				BOOL Satisfies(ULONG pt) { return pt == (m_join_order & pt); }
 				void Add(const SExpressionProperties &p) { m_join_order |= p.m_join_order; }
-				BOOL IsGreedy() { return 0 != (m_join_order & (EJoinOrderQuery + EJoinOrderMincard)); }
+				BOOL IsGreedy() { return 0 != (m_join_order & (EJoinOrderQuery + EJoinOrderMincard + EJoinOrderGreedyAvoidXProd)); }
 			};
 
 			// a simple wrapper of an SGroupInfo * plus an index into its array of SExpressionInfos
