@@ -254,6 +254,7 @@ BLD_GPDB_BUILDSET=$($(BLD_ARCH)_GPDB_BUILDSET)
 define BUILD_STEPS
 	@rm -rf $(INSTLOC)
 	cd $(BUILDDIR) && PYGRESQL_LDFLAGS='-Wl,-rpath,\$$$$ORIGIN/../../../lib -Wl,--enable-new-dtags' QUICKLZ_LDFLAGS='-Wl,-rpath,\$$$$ORIGIN/../../lib -Wl,--enable-new-dtags' $(MAKE) $(PARALLEL_MAKE_OPTS) install
+	cd $(BUILDDIR)/src/pl/plpython && $(MAKE) clean && echo 'LDFLAGS += -Wl,-rpath,\$$$$ORIGIN/../../ext/python/lib/ -Wl,--enable-new-dtags' >> Makefile && $(MAKE) $(PARALLEL_MAKE_OPTS) install && cd $(BUILDDIR)
 	#@$(MAKE) greenplum_path INSTLOC=$(INSTLOC)
 	#@$(MAKE) mgmtcopy INSTLOC=$(INSTLOC)
 	@$(MAKE) mkpgbouncer INSTLOC=$(INSTLOC) BUILDDIR=$(BUILDDIR)
