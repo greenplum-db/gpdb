@@ -115,23 +115,6 @@ DROP TABLE public."my table";
 CREATE TABLE "my table" (id integer);
 DROP TABLE "my table";
 
--- test ALTER DATABASE SET FROM CURRENT
-SHOW search_path;
-ALTER DATABASE "dispatch test db" RESET ALL;
-\c
-SHOW search_path;
-SET search_path="my schema", public;
-SHOW search_path;
-ALTER DATABASE "dispatch test db" SET search_path FROM CURRENT;
-\c
-SHOW search_path;
-SELECT 0 as gp_segment_id, setconfig FROM gp_dist_random('pg_db_role_setting')
-WHERE setdatabase = (SELECT oid FROM pg_database WHERE datname='dispatch test db') and gp_segment_id = 0
-UNION
-SELECT -1 as gp_segment_id, setconfig FROM pg_db_role_setting
-WHERE setdatabase = (SELECT oid FROM pg_database WHERE datname='dispatch test db')
-ORDER BY gp_segment_id;
-
 -- Clean up
 \c dispatch_test_db
 DROP DATABASE "dispatch test db";
