@@ -193,8 +193,10 @@ struct PGPROC
 	 * Information for resource group
 	 */
 	void		*resSlot;	/* the resource group slot granted.
-   							 * NULL indicates the resource group is
+							 * NULL indicates the resource group is
 							 * locked for drop. */
+	void		*movetoResSlot; /* the resource group slot move to, valid only on QD */
+	Oid			movetoGroupId;  /* the resource group id move to */
 
 	/* Support for group XID clearing. */
 	/* true, if member of ProcArray group waiting for XID clear */

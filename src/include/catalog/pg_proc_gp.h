@@ -146,6 +146,14 @@ DESCR("get replication error");
 DATA(insert OID = 7154 ( pg_terminate_backend  PGNSP PGUID 12 1 0 0 0 f f f f t f v s 2 0 16 "23 25" _null_ _null_ _null_ _null_ _null_ pg_terminate_backend_msg _null_ _null_ _null_ n a ));
 DESCR("terminate a server process");
 
+/* pg_resgroup_check_move_query(IN session_id int, IN group_id oid, OUT session_mem int, OUT available_mem int) => SETOF pg_catalog.record */
+DATA(insert OID = 6053 ( pg_resgroup_check_move_query PGNSP PGUID 12 1 0 0 0 f f f f t f v u 2 0 2249 "23 26" "{23,26,23,23}" "{i,i,o,o}" "{session_id,group_id,session_mem,available_mem}" _null_ _null_ pg_resgroup_check_move_query _null_ _null_ _null_ ));
+DESCR("get the memory used by a session and the available memory of the destination group");
+
+/* pg_resgroup_move_query(int4, text) => bool */
+DATA(insert OID = 6064 ( pg_resgroup_move_query PGNSP PGUID 12 1 0 0 0 f f f f t f v s 2 0 16 "23 25" _null_ _null_ _null_ _null_ _null_ pg_resgroup_move_query _null_ _null_ _null_ n a ));
+DESCR("move query to a resource group");
+
 /* pg_resgroup_get_status_kv(IN prop_in text, OUT rsgid oid, OUT prop text, OUT value text) => SETOF pg_catalog.record */
 DATA(insert OID = 6065 ( pg_resgroup_get_status_kv  PGNSP PGUID 12 1 1000 0 0 f f f f f t v r 1 0 2249 "25" "{25,26,25,25}" "{i,o,o,o}" "{prop_in,rsgid,prop,value}" _null_ _null_ pg_resgroup_get_status_kv _null_ _null_ _null_ n a ));
 DESCR("statistics: information about resource groups in key-value style");
