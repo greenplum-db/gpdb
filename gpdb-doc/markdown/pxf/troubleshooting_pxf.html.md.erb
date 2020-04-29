@@ -363,7 +363,7 @@ Greenplum Database supports partitioned tables, and permits exchanging a leaf ch
 
 When you read from a partitioned Greenplum table where one or more partitions is a PXF external table and there is no data backing the external table path, PXF returns an error and the query fails. This behavior is not optimal.
 
-The `IGNORE_MISSING_PATH` PXF custom option is a boolean that specifies PXF's action when the external table path is missing or invalid. The default value is `false`, PXF does not ignore a missing path and returns an error. If the external table is a partition of a Greenplum table and you want PXF to ignore a missing path error, set this option to `true`.
+The `IGNORE_MISSING_PATH` PXF custom option is a boolean that specifies PXF's action when the external table path is missing or invalid. The default value is `false`, PXF returns an error when it encounters a missing path. If the external table is a partition of a Greenplum table and you want PXF to ignore a missing path error, set this option to `true`.
 
 For example, PXF ignores missing path errors generated from the following external table:
 
