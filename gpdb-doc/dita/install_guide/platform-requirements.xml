@@ -392,13 +392,13 @@
               <row class="- topic/row ">
                 <entry colname="col1" class="- topic/entry "><xref href="../analytics/madlib.xml"
                     format="dita" scope="peer">MADlib Machine Learning</xref><sup>1</sup></entry>
-                <entry colname="col3" class="- topic/entry ">1.16, 1.17</entry>
+                <entry colname="col3" class="- topic/entry ">1.17, 1.16</entry>
                 <entry></entry>
               </row>
               <row class="- topic/row ">
                 <entry colname="col1" class="- topic/entry "><xref href="../analytics/postGIS.xml"
                     format="dita" scope="peer">PostGIS Spatial and Geographic Objects</xref></entry>
-                <entry colname="col3" class="- topic/entry ">2.1.5+pivotal.2-2</entry>
+                <entry colname="col3" class="- topic/entry ">2.5.4+pivotal.1,<p>2.1.5+pivotal.2-2</p></entry>
                 <entry></entry>
               </row>
             </tbody>
