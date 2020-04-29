@@ -813,49 +813,54 @@ CBucket::MakeBucketIntersect
 	BOOL lower_new_is_closed = true;
 	BOOL upper_new_is_closed = true;
 
-	CDouble distance_new = 1.0;
-	if (!lower_new->Equals(upper_new))
-	{
-		lower_new_is_closed = this->m_is_lower_closed;
-		upper_new_is_closed = this->m_is_upper_closed;
-
-		if (lower_new->Equals(bucket->GetLowerBound()))
-		{
-			lower_new_is_closed = bucket->IsLowerClosed();
-			if (lower_new->Equals(this->GetLowerBound()))
-			{
-				lower_new_is_closed = this->IsLowerClosed() && bucket->IsLowerClosed();
-			}
-		}
-
-		if (upper_new->Equals(bucket->GetUpperBound()))
-		{
-			upper_new_is_closed = bucket->IsUpperClosed();
-			if (upper_new->Equals(this->GetUpperBound()))
-			{
-				upper_new_is_closed = this->IsUpperClosed() && bucket->IsUpperClosed();
-			}
-		}
-
-		distance_new = upper_new->Distance(lower_new);
-	}
-
-	// TODO: , May 1 2013, distance function for data types such as bpchar/varchar
-	// that require binary comparison
-	GPOS_ASSERT(distance_new <= Width());
-	GPOS_ASSERT(distance_new <= bucket->Width());
-
-	// assume the values are equally distributed in the old buckets, so allocate a
-	// proportional value of NDVs to the new bucket
-	CDouble ratio1 = distance_new / Width();
-	CDouble ratio2 = distance_new / bucket->Width();
-
+	CDouble ratio1(0.0);
+	CDouble ratio2(0.0);
 	// edge case
 	if (IsSingleton() && bucket->IsSingleton())
 	{
 		ratio1 = CDouble(1.0);
 		ratio2 = CDouble(1.0);
 	}
+	else
+	{
+		CDouble distance_new = 1.0;
+		if (!lower_new->Equals(upper_new))
+		{
+			lower_new_is_closed = this->m_is_lower_closed;
+			upper_new_is_closed = this->m_is_upper_closed;
+
+			if (lower_new->Equals(bucket->GetLowerBound()))
+			{
+				lower_new_is_closed = bucket->IsLowerClosed();
+				if (lower_new->Equals(this->GetLowerBound()))
+				{
+					lower_new_is_closed = this->IsLowerClosed() && bucket->IsLowerClosed();
+				}
+			}
+
+			if (upper_new->Equals(bucket->GetUpperBound()))
+			{
+				upper_new_is_closed = bucket->IsUpperClosed();
+				if (upper_new->Equals(this->GetUpperBound()))
+				{
+					upper_new_is_closed = this->IsUpperClosed() && bucket->IsUpperClosed();
+				}
+			}
+
+			distance_new = upper_new->Distance(lower_new);
+		}
+
+		// TODO: , May 1 2013, distance function for data types such as bpchar/varchar
+		// that require binary comparison
+		GPOS_ASSERT(distance_new <= Width());
+		GPOS_ASSERT(distance_new <= bucket->Width());
+
+		// assume the values are equally distributed in the old buckets, so allocate a
+		// proportional value of NDVs to the new bucket
+		ratio1 = distance_new / Width();
+		ratio2 = distance_new / bucket->Width();
+	}
+
 
 	// we are assuming an equi-join, so the side with the fewest NDVs determines the
 	// NDV of the join, any values on one side that don't match the other side are
