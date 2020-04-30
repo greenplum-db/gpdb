@@ -525,7 +525,12 @@ ClearTransactionState(TransactionId latestXid)
 	 * To fix this, transactions require two-phase commit should defer clear 
 	 * proc->xid here with ProcArryLock held.
 	 */
-	SIMPLE_FAULT_INJECTOR("before_xact_end_procarray");
+#ifdef FAULT_INJECTOR
+	FaultInjector_InjectFaultIfSet("before_xact_end_procarray",
+			DDLNotSpecified,
+			MyProcPort ? MyProcPort->database_name : "",  // databaseName
+			""); // tableName
+#endif
 	LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
 	ProcArrayEndTransaction(MyProc, latestXid, true);
 	ProcArrayEndGxact();
