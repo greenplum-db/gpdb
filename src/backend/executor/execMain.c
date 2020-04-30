@@ -1450,6 +1450,14 @@ ExecCheckXactReadOnly(PlannedStmt *plannedstmt)
 			PreventCommandIfReadOnly(CreateCommandTag((Node *) plannedstmt));
 	}
 
+	/*
+	 * Refresh matview will write xlog.
+	 */
+	if (plannedstmt->refreshClause != NULL)
+	{
+		PreventCommandIfReadOnly(CreateCommandTag((Node *) plannedstmt));
+	}
+
     rti = 0;
 	/*
 	 * Fail if write permissions are requested in parallel mode for table

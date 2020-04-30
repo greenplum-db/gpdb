@@ -443,11 +443,6 @@ refresh_matview_datafill(DestReceiver *dest, Query *query,
 								GetActiveSnapshot(), InvalidSnapshot,
 								dest, NULL, 0);
 
-	/*
-	 * Refresh matview will write xlog and should use two phase commit.
-	 */
-	ExecutorMarkTransactionDoesWrites();
-
 	/* call ExecutorStart to prepare the plan for execution */
 	ExecutorStart(queryDesc, EXEC_FLAG_WITHOUT_OIDS);
 
