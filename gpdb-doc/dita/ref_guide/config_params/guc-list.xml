@@ -8254,8 +8254,7 @@
       <note>With TLS 1.2 some ciphers in MEDIUM and HIGH strength still use NULL encryption (no
         encryption for transport), which the default <codeph>ssl_ciphers</codeph> string allows. To
         bypass NULL ciphers with TLS 1.2 use a string such as
-          <codeph>HIGH:MEDIUM:+3DES:!aNULL</codeph>, which is the default used in more recent
-        versions of Postgres.</note>
+        <codeph>TLSv1.2:!eNULL:!aNULL</codeph>.</note>
       <p>See the openssl manual page for a list of supported ciphers.</p>
       <table id="ssl_ciphers_table">
         <tgroup cols="3">
