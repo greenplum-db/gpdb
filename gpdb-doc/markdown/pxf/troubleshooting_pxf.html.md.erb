@@ -361,9 +361,9 @@ PXF fragment metadata caching is enabled by default. To turn off fragment metada
 
 Greenplum Database supports partitioned tables, and permits exchanging a leaf child partition with a PXF external table.
 
-When you read from a partitioned Greenplum table where one or more partitions is a PXF external table and there is no data backing the external table path, PXF returns an error and the query fails. This behavior is not optimal.
+When you read from a partitioned Greenplum table where one or more partitions is a PXF external table and there is no data backing the external table path, PXF returns an error and the query fails. This default PXF behavior is not optimal in the partitioned table case; an empty child partition is valid and should not cause a query on the parent table to fail.
 
-The `IGNORE_MISSING_PATH` PXF custom option is a boolean that specifies the action to take when the external table path is missing or invalid. The default value is `false`, PXF returns an error when it encounters a missing path. If the external table is a partition of a Greenplum table and you want PXF to ignore a missing path error, set this option to `true`.
+The `IGNORE_MISSING_PATH` PXF custom option is a boolean that specifies the action to take when the external table path is missing or invalid. The default value is `false`, PXF returns an error when it encounters a missing path. If the external table is a child partition of a Greenplum table, you want PXF to ignore a missing path error, so set this option to `true`.
 
 For example, PXF ignores missing path errors generated from the following external table:
 
