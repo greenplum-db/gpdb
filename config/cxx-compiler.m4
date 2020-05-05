@@ -12,12 +12,12 @@ ac_save_cxx_werror_flag=$ac_cxx_werror_flag
 ac_cxx_werror_flag=yes
 AC_LANG_PUSH(C++)
 _AC_COMPILE_IFELSE([AC_LANG_PROGRAM()],
-                   [eval Ac_cachevar=yes],
-                   [eval Ac_cachevar=no])
+                   [Ac_cachevar=yes],
+                   [Ac_cachevar=no])
 AC_LANG_POP([C++])
 ac_cxx_werror_flag=$ac_save_cxx_werror_flag
 CXXFLAGS="$pgac_save_CXXFLAGS"])
-if eval test x"$Ac_cachevar" = x"yes"; then
+if test x"$Ac_cachevar" = x"yes"; then
   $1="${$1} $2"
 fi
 undefine([Ac_cachevar])dnl
