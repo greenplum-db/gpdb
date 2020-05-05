@@ -148,13 +148,16 @@ CXformExpandNAryJoinDPv2::Transform
 	// Retrieve top K join orders from jodp and add as alternatives
 	CExpression *nextJoinOrder = NULL;
 
-	while (NULL != (nextJoinOrder = jodp.GetNextOfTopK()))
+	while (NULL != (nextJoinOrder = jodp.GetNextOfTopK(jodp.m_top_k_expressions)) ||
+		   NULL != (nextJoinOrder = jodp.GetNextOfTopK(jodp.m_top_k_part_expressions)))
 	{
 		CExpression *pexprNormalized = CNormalizer::PexprNormalize(mp, nextJoinOrder);
 
 		nextJoinOrder->Release();
 		pxfres->Add(pexprNormalized);
 	}
+
+
 }
 
 // EOF

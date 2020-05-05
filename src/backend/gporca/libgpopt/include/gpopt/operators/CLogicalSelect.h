@@ -39,11 +39,20 @@ namespace gpopt
 
 			ExprPredToExprPredPartMap *m_phmPexprPartPred;
 
+			// table descriptor
+			CTableDescriptor *m_ptabdesc;
+
+			// output columns
+			CColRefArray *m_pdrgpcrOutput;
+
 		public:
 
 			// ctor
 			explicit
 			CLogicalSelect(CMemoryPool *mp);
+
+			// ctor
+			CLogicalSelect(CMemoryPool *mp, CTableDescriptor *ptabdesc, CColRefArray *output_cols);
 
 			// dtor
 			virtual
@@ -61,6 +70,20 @@ namespace gpopt
 			{
 				return "CLogicalSelect";
 			}
+
+			// return table's descriptor
+			CTableDescriptor *Ptabdesc() const
+			{
+				return m_ptabdesc;
+			}
+
+			// accessors
+			CColRefArray *PdrgpcrOutput() const
+			{
+				return m_pdrgpcrOutput;
+			}
+
+
 
 			//-------------------------------------------------------------------------------------
 			// Derived Relational Properties

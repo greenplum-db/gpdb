@@ -2264,10 +2264,26 @@ CUtils::PexprLogicalSelect
 	GPOS_ASSERT(NULL != pexpr);
 	GPOS_ASSERT(NULL != pexprPredicate);
 
+	CTableDescriptor *ptabdesc = NULL;
+	CColRefArray *output_cols = NULL;
+	if (pexpr->Pop()->Eopid() == CLogical::EopLogicalSelect || pexpr->Pop()->Eopid() == CLogical::EopLogicalGet || pexpr->Pop()->Eopid() == CLogical::EopLogicalDynamicGet)
+	{
+		ptabdesc = CLogical::PtabdescFromTableGet(pexpr->Pop());
+		GPOS_ASSERT(NULL != ptabdesc);
+		if (ptabdesc)
+		{
+			ptabdesc->AddRef();
+		}
+		output_cols = CLogical::PoutputColsFromTableGet(pexpr->Pop());
+		if (output_cols)
+		{
+			output_cols->AddRef();
+		}
+	}
 	return GPOS_NEW(mp) CExpression
 						(
 						mp,
-						GPOS_NEW(mp) CLogicalSelect(mp),
+						GPOS_NEW(mp) CLogicalSelect(mp, ptabdesc, output_cols),
 						pexpr,
 						pexprPredicate
 						);

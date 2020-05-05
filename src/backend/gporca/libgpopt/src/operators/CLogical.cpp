@@ -33,6 +33,7 @@
 #include "gpopt/operators/CLogicalGet.h"
 #include "gpopt/operators/CLogicalDynamicGet.h"
 #include "gpopt/operators/CLogicalNAryJoin.h"
+#include "gpopt/operators/CLogicalSelect.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CPredicateUtils.h"
@@ -1403,8 +1404,34 @@ CLogical::PtabdescFromTableGet
 			return CLogicalBitmapTableGet::PopConvert(pop)->Ptabdesc();
 		case CLogical::EopLogicalDynamicBitmapTableGet:
 			return CLogicalDynamicBitmapTableGet::PopConvert(pop)->Ptabdesc();
+		case CLogical::EopLogicalSelect:
+			return CLogicalSelect::PopConvert(pop)->Ptabdesc();
 		default:
-			GPOS_ASSERT(false && "Unsupported operator in CLogical::PtabdescFromTableGet");
+			return NULL;
+	}
+}
+
+CColRefArray *
+CLogical::PoutputColsFromTableGet
+	(
+	COperator *pop
+	)
+{
+	GPOS_ASSERT(NULL != pop);
+	switch (pop->Eopid())
+	{
+		case CLogical::EopLogicalGet:
+			return CLogicalGet::PopConvert(pop)->PdrgpcrOutput();
+		case CLogical::EopLogicalDynamicGet:
+			return CLogicalDynamicGet::PopConvert(pop)->PdrgpcrOutput();
+		case CLogical::EopLogicalBitmapTableGet:
+			return CLogicalBitmapTableGet::PopConvert(pop)->PdrgpcrOutput();
+		case CLogical::EopLogicalDynamicBitmapTableGet:
+			return CLogicalDynamicBitmapTableGet::PopConvert(pop)->PdrgpcrOutput();
+		case CLogical::EopLogicalSelect:
+			return CLogicalSelect::PopConvert(pop)->PdrgpcrOutput();
+		default:
+			GPOS_ASSERT(false && "Unsupported operator in CLogical::PoutputColsFromTableGet");
 			return NULL;
 	}
 }
