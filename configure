@@ -5912,10 +5912,12 @@ fi
 # Loop over all options in CFLAGS, and check if they also work with CXX.
 # Add to CXXFLAGS those that do.
 for cflag in $CFLAGS; do
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CXX supports $cflag" >&5
-$as_echo_n "checking if $CXX supports $cflag... " >&6; }
-pgac_save_CXXFLAGS=$CXXFLAGS
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether $CXX supports $cflag" >&5
+$as_echo_n "checking whether $CXX supports $cflag... " >&6; }
+if { as_var=`$as_echo "pgac_cv_prog_cxx_cxxflags_$cflag" | $as_tr_sh`; eval \${$as_var+:} false; }; then :
+  $as_echo_n "(cached) " >&6
+else
+  pgac_save_CXXFLAGS=$CXXFLAGS
 CXXFLAGS="$pgac_save_CXXFLAGS $cflag"
 ac_save_cxx_werror_flag=$ac_cxx_werror_flag
 ac_cxx_werror_flag=yes
@@ -5937,12 +5939,9 @@ main ()
 }
 _ACEOF
 if ac_fn_cxx_try_compile "$LINENO"; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
+  eval `$as_echo "pgac_cv_prog_cxx_cxxflags_$cflag" | $as_tr_sh`=yes
 else
-  CXXFLAGS="$pgac_save_CXXFLAGS"
-                    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
+  eval `$as_echo "pgac_cv_prog_cxx_cxxflags_$cflag" | $as_tr_sh`=no
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 ac_ext=c
@@ -5952,6 +5951,14 @@ ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 ac_cxx_werror_flag=$ac_save_cxx_werror_flag
+CXXFLAGS="$pgac_save_CXXFLAGS"
+fi
+eval ac_res=\$`$as_echo "pgac_cv_prog_cxx_cxxflags_$cflag" | $as_tr_sh`
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test x"$`$as_echo "pgac_cv_prog_cxx_cxxflags_$cflag" | $as_tr_sh`" = x"yes"; then
+  CXXFLAGS="${CXXFLAGS} $cflag"
+fi
 
 done
 
@@ -6312,6 +6319,7 @@ fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: checking whether to build with gpcloud... $enable_gpcloud" >&5
 $as_echo "checking whether to build with gpcloud... $enable_gpcloud" >&6; }
+
 
 
 if test "$enable_gpcloud" = yes; then :
