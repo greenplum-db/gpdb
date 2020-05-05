@@ -19616,6 +19616,8 @@ _ACEOF
 $as_echo "$as_me: using compiler=$cc_string" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}: using CFLAGS=$CFLAGS" >&5
 $as_echo "$as_me: using CFLAGS=$CFLAGS" >&6;}
+{ $as_echo "$as_me:${as_lineno-$LINENO}: using CXXFLAGS=$CXXFLAGS" >&5
+$as_echo "$as_me: using CXXFLAGS=$CXXFLAGS" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}: using CPPFLAGS=$CPPFLAGS" >&5
 $as_echo "$as_me: using CPPFLAGS=$CPPFLAGS" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}: using LDFLAGS=$LDFLAGS" >&5
