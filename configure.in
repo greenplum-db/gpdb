@@ -601,6 +601,8 @@ AC_SUBST(PG_CRC32C_OBJS)
 # CFLAGS we determined above will be added back at the end
 user_CFLAGS=$CFLAGS
 CFLAGS=""
+user_CXXFLAGS=$CXXFLAGS
+CXXFLAGS=""
 
 # set CFLAGS_VECTOR from the environment, if available
 if test "$ac_env_CFLAGS_VECTOR_set" = set; then
@@ -730,6 +732,7 @@ fi
 # user-specified flags (if any) at the end.  This lets users override
 # the automatic additions.
 CFLAGS="$CFLAGS $user_CFLAGS"
+CXXFLAGS="$CXXFLAGS $user_CXXFLAGS"
 
 # Check if the compiler still works with the final flag settings
 AC_MSG_CHECKING([whether the C compiler still works])
