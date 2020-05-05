@@ -2762,13 +2762,6 @@ if test "$GCC" = yes -a "$ICC" = no; then
   PGAC_PROG_CC_CFLAGS_OPT([-Werror=implicit-function-declaration])
 fi
 
-# Begin output steps
-
-AC_MSG_NOTICE([using CFLAGS=$CFLAGS])
-AC_MSG_NOTICE([using CPPFLAGS=$CPPFLAGS])
-AC_MSG_NOTICE([using LDFLAGS=$LDFLAGS])
-AC_MSG_NOTICE([using LIBS=$LIBS])
-
 [BLD_ARCH=`echo $BLD_ARCH`]
 AC_SUBST(BLD_ARCH)
 
@@ -2855,6 +2848,7 @@ AC_MSG_NOTICE([using compiler=$cc_string])
 AC_MSG_NOTICE([using CFLAGS=$CFLAGS])
 AC_MSG_NOTICE([using CPPFLAGS=$CPPFLAGS])
 AC_MSG_NOTICE([using LDFLAGS=$LDFLAGS])
+AC_MSG_NOTICE([using LIBS=$LIBS])
 
 # prepare build tree if outside source tree
 # Note 1: test -ef might not exist, but it's more reliable than `pwd`.
