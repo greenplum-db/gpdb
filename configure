@@ -5294,6 +5294,11 @@ if test x"$pgac_cv_prog_cc_cflags__Wmissing_format_attribute" = x"yes"; then
   CFLAGS="$CFLAGS -Wmissing-format-attribute"
 fi
 
+  # FIXME: ORCA has a couple of printf-like functions that would result in
+  # stern warnings from the compiler for not having a "format" attribute, once
+  # we decorate them all with the "format" attribute, revert this temporary fix
+  # (I promise this is temporary)
+  NOT_THE_CXXFLAGS=""
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether $CXX supports -Wmissing-format-attribute" >&5
 $as_echo_n "checking whether $CXX supports -Wmissing-format-attribute... " >&6; }
 if ${pgac_cv_prog_cxx_cxxflags__Wmissing_format_attribute+:} false; then :
@@ -5338,9 +5343,12 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $pgac_cv_prog_cxx_cxxflags__Wmissing_format_attribute" >&5
 $as_echo "$pgac_cv_prog_cxx_cxxflags__Wmissing_format_attribute" >&6; }
 if test x"$pgac_cv_prog_cxx_cxxflags__Wmissing_format_attribute" = x"yes"; then
-  CXXFLAGS="${CXXFLAGS} -Wmissing-format-attribute"
+  NOT_THE_CXXFLAGS="${NOT_THE_CXXFLAGS} -Wmissing-format-attribute"
 fi
 
+  if test -n "$NOT_THE_CXXFLAGS"; then
+    CXXFLAGS="$CXXFLAGS -Wno-missing-format-attribute"
+  fi
   # This was included in -Wall/-Wformat in older GCC versions
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether $CC supports -Wformat-security" >&5
 $as_echo_n "checking whether $CC supports -Wformat-security... " >&6; }

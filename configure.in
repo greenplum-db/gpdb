@@ -623,7 +623,15 @@ if test "$GCC" = yes -a "$ICC" = no; then
   PGAC_PROG_CC_CFLAGS_OPT([-Wendif-labels])
   PGAC_PROG_CXX_CXXFLAGS_OPT([-Wendif-labels])
   PGAC_PROG_CC_CFLAGS_OPT([-Wmissing-format-attribute])
-  PGAC_PROG_CXX_CXXFLAGS_OPT([-Wmissing-format-attribute])
+  # FIXME: ORCA has a couple of printf-like functions that would result in
+  # stern warnings from the compiler for not having a "format" attribute, once
+  # we decorate them all with the "format" attribute, revert this temporary fix
+  # (I promise this is temporary)
+  NOT_THE_CXXFLAGS=""
+  PGAC_PROG_CXX_VAR_OPT(NOT_THE_CXXFLAGS, [-Wmissing-format-attribute])
+  if test -n "$NOT_THE_CXXFLAGS"; then
+    CXXFLAGS="$CXXFLAGS -Wno-missing-format-attribute"
+  fi
   # This was included in -Wall/-Wformat in older GCC versions
   PGAC_PROG_CC_CFLAGS_OPT([-Wformat-security])
   PGAC_PROG_CXX_CXXFLAGS_OPT([-Wformat-security])
