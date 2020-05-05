@@ -435,15 +435,8 @@ AC_PROG_CC([$pgac_cc_list])
 #
 # C++ compiler
 #
-#
-# AC_PROG_CXX will add "-g -O2" to CXXFLAGS, if CXXFLAGS was not already set.
-# We don't want that, because we derive CXXFLAGS from CFLAGS later on. Set
-# CXXFLAGS to an empty string explicitly before invoking AC_PROG_CXX, to
-# avoid that.
-ac_save_CXXFLAGS=$CXXFLAGS
-CXXFLAGS=""
+
 AC_PROG_CXX
-CXXFLAGS=$ac_save_CXXFLAGS
 
 # Check if it's Intel's compiler, which (usually) pretends to be gcc,
 # but has idiosyncrasies of its own.  We assume icc will define
@@ -461,6 +454,7 @@ choke me
 AC_SUBST(SUN_STUDIO_CC)
 
 unset CFLAGS
+unset CXXFLAGS
 
 #
 # Read the template
