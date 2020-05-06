@@ -344,6 +344,7 @@ define BUILD_STEPS
 	@rm -rf $(INSTLOC)
 	if [ "$(findstring rhel,$(BLD_ARCH))" = "rhel" ]; then \
 	  cd $(BUILDDIR) && PYGRESQL_LDFLAGS='-Wl,-rpath,\$$$$ORIGIN/../../../lib -Wl,--enable-new-dtags' $(MAKE) $(PARALLEL_MAKE_OPTS) install; \
+	  cd $(BUILDDIR)/src/pl/plpython && $(MAKE) clean && echo 'LDFLAGS += -Wl,-rpath,\$$$$ORIGIN/../../ext/python/lib/ -Wl,--enable-new-dtags' >> Makefile && echo 'LDFLAGS_SL += -Wl,-rpath,\$$$$ORIGIN/../../ext/python/lib/ -Wl,--enable-new-dtags' >> Makefile && $(MAKE) $(PARALLEL_MAKE_OPTS) install && cd $(BUILDDIR) ; \
 	else \
 	  cd $(BUILDDIR) && $(MAKE) $(PARALLEL_MAKE_OPTS) install; \
 	fi \
