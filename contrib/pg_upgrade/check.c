@@ -91,7 +91,8 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 	/* Extract a list of databases and tables from the old cluster */
 	get_db_and_rel_infos(&old_cluster);
 
-	init_tablespaces();
+	if (!user_opts.check || is_greenplum_dispatcher_mode())
+		init_tablespaces();
 
 	get_loadable_libraries();
 
