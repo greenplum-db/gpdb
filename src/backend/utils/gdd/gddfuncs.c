@@ -50,6 +50,7 @@ static const char *const LockTagTypeNames[] = {
 	"append-only segment file",
 	"object",
 	"resource queue",
+	"distributed xid",
 	"userlock",
 	"advisory"
 };
