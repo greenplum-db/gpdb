@@ -477,7 +477,7 @@ And query the table:
 postgres=# SELECT month, number_of_orders FROM pxf_parquet_table;
 ```
 
-<div class="note">PXF does not currently support reading a Hive table stored as Parquet when the table is backed by more than one Parquet file, the Parquet files have the same columns in their schema, but the columns are in a different order.</div>
+<div class="note">PXF does not support reading a Hive table stored as Parquet if the table is backed by more than one Parquet file and the columns are in a different order. This limitation applies even when the Parquet files have the same column names in their schema.</div>
 
 
 ## <a id="hive_complex"></a>Working with Complex Data Types
