@@ -90,6 +90,8 @@ CParseHandlerHint::StartElement
 	BOOL enforce_constraint_on_dml = CDXLOperatorFactory::ExtractConvertAttrValueToBool(m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenEnforceConstraintsOnDML, EdxltokenHint, true, true);
 	ULONG push_group_by_below_setop_threshold = CDXLOperatorFactory::ExtractConvertAttrValueToUlong(m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenPushGroupByBelowSetopThreshold, EdxltokenHint, true, PUSH_GROUP_BY_BELOW_SETOP_THRESHOLD);
 
+	CDouble eageragg_threshold = CDXLOperatorFactory::ExtractConvertAttrValueToDouble(m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenEagerAggThreshold, EdxltokenHint, true, EAGERAGG_THRESHOLD);
+
 	m_hint = GPOS_NEW(m_mp) CHint
 								(
 								min_num_of_parts_to_require_sort_on_insert,
@@ -98,7 +100,8 @@ CParseHandlerHint::StartElement
 								join_order_dp_threshold,
 								broadcast_threshold,
 								enforce_constraint_on_dml,
-								push_group_by_below_setop_threshold
+								push_group_by_below_setop_threshold,
+								eageragg_threshold.Get()
 								);
 }
 

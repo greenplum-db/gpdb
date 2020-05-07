@@ -89,7 +89,7 @@ namespace gpopt
 		CXformEagerAgg(const CXformEagerAgg &);
 
 		// check if transform can be applied
-		BOOL CanApplyTransform(CExpression *agg_expr) const;
+		BOOL CanApplyTransform(CMemoryPool *mp, CExpression *agg_expr) const;
 
 		// is this aggregate supported for push down?
 		BOOL CanPushAggBelowJoin(CExpression *scalar_agg_func_expr) const;

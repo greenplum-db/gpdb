@@ -327,7 +327,7 @@
         </dxl:LogicalGroupBy>
       </dxl:LogicalLimit>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="320">
+    <dxl:Plan Id="0" SpaceSize="120">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="862.000677" Rows="1.000000" Width="12"/>
@@ -365,7 +365,7 @@
             </dxl:ProjElem>
             <dxl:ProjElem ColId="20" Alias="max">
               <dxl:AggFunc AggMdid="0.2116.1.0" AggDistinct="false" AggStage="Final">
-                <dxl:Ident ColId="22" ColName="ColRef_0022" TypeMdid="0.23.1.0"/>
+                <dxl:Ident ColId="21" ColName="ColRef_0021" TypeMdid="0.23.1.0"/>
               </dxl:AggFunc>
             </dxl:ProjElem>
           </dxl:ProjList>
@@ -381,8 +381,8 @@
               <dxl:ProjElem ColId="11" Alias="g2">
                 <dxl:Ident ColId="11" ColName="g2" TypeMdid="0.23.1.0"/>
               </dxl:ProjElem>
-              <dxl:ProjElem ColId="22" Alias="ColRef_0022">
-                <dxl:Ident ColId="22" ColName="ColRef_0022" TypeMdid="0.23.1.0"/>
+              <dxl:ProjElem ColId="21" Alias="ColRef_0021">
+                <dxl:Ident ColId="21" ColName="ColRef_0021" TypeMdid="0.23.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
@@ -403,8 +403,8 @@
                 <dxl:ProjElem ColId="11" Alias="g2">
                   <dxl:Ident ColId="11" ColName="g2" TypeMdid="0.23.1.0"/>
                 </dxl:ProjElem>
-                <dxl:ProjElem ColId="22" Alias="ColRef_0022">
-                  <dxl:Ident ColId="22" ColName="ColRef_0022" TypeMdid="0.23.1.0"/>
+                <dxl:ProjElem ColId="21" Alias="ColRef_0021">
+                  <dxl:Ident ColId="21" ColName="ColRef_0021" TypeMdid="0.23.1.0"/>
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
@@ -428,8 +428,8 @@
                   <dxl:ProjElem ColId="11" Alias="g2">
                     <dxl:Ident ColId="11" ColName="g2" TypeMdid="0.23.1.0"/>
                   </dxl:ProjElem>
-                  <dxl:ProjElem ColId="22" Alias="ColRef_0022">
-                    <dxl:Ident ColId="22" ColName="ColRef_0022" TypeMdid="0.23.1.0"/>
+                  <dxl:ProjElem ColId="21" Alias="ColRef_0021">
+                    <dxl:Ident ColId="21" ColName="ColRef_0021" TypeMdid="0.23.1.0"/>
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
@@ -443,7 +443,7 @@
                     <dxl:GroupingColumn ColId="11"/>
                   </dxl:GroupingColumns>
                   <dxl:ProjList>
-                    <dxl:ProjElem ColId="22" Alias="ColRef_0022">
+                    <dxl:ProjElem ColId="21" Alias="ColRef_0021">
                       <dxl:AggFunc AggMdid="0.2116.1.0" AggDistinct="false" AggStage="Partial">
                         <dxl:Ident ColId="2" ColName="s1" TypeMdid="0.23.1.0"/>
                       </dxl:AggFunc>

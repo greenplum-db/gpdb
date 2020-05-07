@@ -18,6 +18,7 @@
 #define JOIN_ORDER_DP_THRESHOLD ULONG(10)
 #define BROADCAST_THRESHOLD ULONG(10000000)
 #define PUSH_GROUP_BY_BELOW_SETOP_THRESHOLD ULONG(10)
+#define EAGERAGG_THRESHOLD DOUBLE(0.0001)
 
 
 namespace gpopt
@@ -51,6 +52,8 @@ namespace gpopt
 
 			ULONG m_ulPushGroupByBelowSetopThreshold;
 
+			CDouble m_EagerAggThreshold;
+
 			// private copy ctor
 			CHint(const CHint &);
 
@@ -65,7 +68,8 @@ namespace gpopt
 				ULONG ulJoinOrderDPLimit,
 				ULONG broadcast_threshold,
 				BOOL enforce_constraint_on_dml,
-				ULONG push_group_by_below_setop_threshold
+				ULONG push_group_by_below_setop_threshold,
+				DOUBLE eageragg_threshold
 				)
 				:
 				m_ulMinNumOfPartsToRequireSortOnInsert(min_num_of_parts_to_require_sort_on_insert),
@@ -74,7 +78,8 @@ namespace gpopt
 				m_ulJoinOrderDPLimit(ulJoinOrderDPLimit),
 				m_ulBroadcastThreshold(broadcast_threshold),
 				m_fEnforceConstraintsOnDML(enforce_constraint_on_dml),
-				m_ulPushGroupByBelowSetopThreshold(push_group_by_below_setop_threshold)
+				m_ulPushGroupByBelowSetopThreshold(push_group_by_below_setop_threshold),
+				m_EagerAggThreshold(eageragg_threshold)
 			{
 			}
 
@@ -133,6 +138,11 @@ namespace gpopt
 				return m_ulPushGroupByBelowSetopThreshold;
 			}
 
+			CDouble EagerAggThreshold() const
+			{
+				return m_EagerAggThreshold;
+			}
+
 			// generate default hint configurations, which disables sort during insert on
 			// append only row-oriented partitioned tables by default
 			static
@@ -145,7 +155,8 @@ namespace gpopt
 					JOIN_ORDER_DP_THRESHOLD, /*ulJoinOrderDPLimit*/
 					BROADCAST_THRESHOLD,	 /*broadcast_threshold*/
 					true,					 /* enforce_constraint_on_dml */
-					PUSH_GROUP_BY_BELOW_SETOP_THRESHOLD /* push_group_by_below_setop_threshold */
+					PUSH_GROUP_BY_BELOW_SETOP_THRESHOLD, /* push_group_by_below_setop_threshold */
+					EAGERAGG_THRESHOLD
 				);
 			}
 

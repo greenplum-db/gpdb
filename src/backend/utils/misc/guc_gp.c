@@ -388,6 +388,7 @@ bool		optimizer_cte_inlining;
 bool		optimizer_enable_space_pruning;
 bool		optimizer_enable_associativity;
 bool		optimizer_enable_eageragg;
+double		optimizer_eageragg_threshold;
 bool		optimizer_enable_range_predicate_dpe;
 
 /* Analyze related GUCs for Optimizer */
@@ -4172,6 +4173,16 @@ struct config_real ConfigureNamesReal_gp[] =
 		},
 		&optimizer_sort_factor,
 		1.0, 0.0, DBL_MAX,
+		NULL, NULL, NULL
+	},
+	{
+		{"optimizer_eageragg_threshold", PGC_USERSET, QUERY_TUNING_METHOD,
+			gettext_noop("Ratio of the number of rows produced by the aggregate to the number of rows produced by the join below it, If the actual value is greater than this threshold then eageragg alternative will not be created"),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_eageragg_threshold,
+		0.0001, 0.0, 1.0,
 		NULL, NULL, NULL
 	},
 

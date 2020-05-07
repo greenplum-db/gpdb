@@ -444,7 +444,9 @@ namespace gpdxl
 				CDXLMemoryManager *dxl_memory_manager,
 				const Attributes &attr,
 				Edxltoken target_attr,
-				Edxltoken target_elem
+				Edxltoken target_elem,
+				BOOL is_optional = false,
+				DOUBLE default_value = 0.0
 				);
 
 			// converts the XMLCh into ULONG. Will raise an exception if the 

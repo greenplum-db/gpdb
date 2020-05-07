@@ -426,6 +426,8 @@ COptTasks::CreateOptimizerConfig
 	ULONG join_order_threshold = (ULONG) optimizer_join_order_threshold;
 	ULONG broadcast_threshold = (ULONG) optimizer_penalize_broadcast_threshold;
 	ULONG push_group_by_below_setop_threshold = (ULONG) optimizer_push_group_by_below_setop_threshold;
+	DOUBLE eageragg_threshold = (DOUBLE) optimizer_eageragg_threshold;
+
 
 	return GPOS_NEW(mp) COptimizerConfig
 						(
@@ -442,7 +444,8 @@ COptTasks::CreateOptimizerConfig
 								broadcast_threshold,
 								false, /* don't create Assert nodes for constraints, we'll
 								      * enforce them ourselves in the executor */
-								push_group_by_below_setop_threshold
+								push_group_by_below_setop_threshold,
+								eageragg_threshold
 								),
 						GPOS_NEW(mp) CWindowOids(OID(F_WINDOW_ROW_NUMBER), OID(F_WINDOW_RANK))
 						);

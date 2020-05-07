@@ -173,6 +173,7 @@ COptimizerConfig::Serialize(CMemoryPool *mp, CXMLSerializer *xml_serializer, CBi
 	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenBroadcastThreshold), m_hint->UlBroadcastThreshold());
 	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenEnforceConstraintsOnDML), m_hint->FEnforceConstraintsOnDML());
 	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenPushGroupByBelowSetopThreshold), m_hint->UlPushGroupByBelowSetopThreshold());
+	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenEagerAggThreshold), m_hint->EagerAggThreshold());
 	xml_serializer->CloseElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), CDXLTokens::GetDXLTokenStr(EdxltokenHint));
 
 	// Serialize traceflags represented in bitset into stream

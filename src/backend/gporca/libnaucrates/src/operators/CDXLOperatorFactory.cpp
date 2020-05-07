@@ -3727,15 +3727,24 @@ CDXLOperatorFactory::ExtractConvertAttrValueToDouble
 	CDXLMemoryManager *dxl_memory_manager,
 	const Attributes &attrs,
 	Edxltoken target_attr,
-	Edxltoken target_elem
+	Edxltoken target_elem,
+	BOOL is_optional,
+	DOUBLE default_value
 	)
 {
 	const XMLCh *attr_val_xml = CDXLOperatorFactory::ExtractAttrValue
 											(
 											attrs,
 											target_attr,
-											target_elem
+											target_elem,
+											is_optional
 											);
+
+	if (NULL == attr_val_xml)
+	{
+		return default_value;
+	}
+
 	return ConvertAttrValueToDouble
 			(
 			dxl_memory_manager,

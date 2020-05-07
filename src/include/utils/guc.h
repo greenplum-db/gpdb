@@ -538,6 +538,7 @@ extern int optimizer_penalize_broadcast_threshold;
 extern double optimizer_cost_threshold;
 extern double optimizer_nestloop_factor;
 extern double optimizer_sort_factor;
+extern double optimizer_eageragg_threshold;
 
 /* Optimizer hints */
 extern int optimizer_array_expansion_threshold;
