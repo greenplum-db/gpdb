@@ -5549,7 +5549,6 @@ retry:
 		MemoryContext oldcontext = MemoryContextSwitchTo(estate->es_query_cxt);
 
 		resultRelInfo = targetid_get_partition(frame.relid, estate, true);
-		estate->es_result_relation_info = resultRelInfo;
 		slot = reconstructMatchingTupleSlot(baseSlot, resultRelInfo);
 
 		MemoryContextSwitchTo(oldcontext);
@@ -5661,6 +5660,7 @@ retry:
 		goto retry;
 
 	ExecStoreVirtualTuple(slot);
+	estate->es_result_relation_info = resultRelInfo;
 
 	/*
 	 * Here we should compute defaults for any columns for which we didn't
