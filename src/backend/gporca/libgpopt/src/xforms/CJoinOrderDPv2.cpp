@@ -39,9 +39,10 @@ using namespace gpopt;
 #define GPOPT_DPV2_JOIN_ORDERING_TOPK 10
 // cost penalty (a factor) for cross product for enumeration algorithms other than GreedyAvoidXProd
 // (value determined by simple experiments on TPC-DS queries)
+// This is the default value for optimizer_nestloop_factor
 #define GPOPT_DPV2_CROSS_JOIN_DEFAULT_PENALTY 1024
 // prohibitively high penalty for cross products when in GreedyAvoidXProd
-#define GPOPT_DPV2_CROSS_JOIN_GREEDY_PENALTY 1e12
+#define GPOPT_DPV2_CROSS_JOIN_GREEDY_PENALTY 1e9
 
 
 //---------------------------------------------------------------------------
@@ -180,10 +181,8 @@ CJoinOrderDPv2::ComputeCost
 		if (CUtils::FCrossJoin(expr_info->m_expr))
 		{
 			// penalize cross joins, similar to what we do in the optimization phase
-			expr_info->m_cost_penalty = dCost * m_cross_prod_penalty;
+			dCost = dCost * m_cross_prod_penalty;
 		}
-		expr_info->m_cost_penalty = expr_info->m_cost_penalty + expr_info->m_left_child_expr.GetExprInfo()->m_cost_penalty;
-		expr_info->m_cost_penalty = expr_info->m_cost_penalty + expr_info->m_right_child_expr.GetExprInfo()->m_cost_penalty;
 	}
 
 	expr_info->m_cost = dCost;
@@ -1214,7 +1213,6 @@ CJoinOrderDPv2::PexprExpand()
 	// for MinCard and GreedyAvoidXProd
 	EnumerateDP();
 	EnumerateQuery();
-	FindLowestCardTwoWayJoin();
 	EnumerateMinCard();
 	EnumerateGreedyAvoidXProd();
 
@@ -1267,7 +1265,7 @@ CJoinOrderDPv2::EnumerateDP()
 			}
 			else
 			{
-				// beyond that, use greedy (keep only one group of DP per level)
+				// beyond that, use greedy (keep only one group per level)
 				number_of_allowed_groups = 1;
 			}
 
@@ -1333,7 +1331,7 @@ CJoinOrderDPv2::EnumerateQuery()
 //
 //---------------------------------------------------------------------------
 void
-CJoinOrderDPv2::FindLowestCardTwoWayJoin()
+CJoinOrderDPv2::FindLowestCardTwoWayJoin(JoinOrderPropType prop_type)
 {
 	if (GPOS_FTRACE(EopttraceQueryOnlyInDPv2))
 	{
@@ -1358,10 +1356,9 @@ CJoinOrderDPv2::FindLowestCardTwoWayJoin()
 		SGroupInfo *group_2 = (*level_2->m_groups)[ul];
 		CDouble group_2_cardinality = group_2->m_cardinality;
 		CExpression *first_expr = (*group_2->m_best_expr_info_array)[0]->m_expr;
-		BOOL isCrossProd = (*first_expr)[2]->Pop()->Eopid() == COperator::EopScalarConst;
-		if (isCrossProd)
+		if (EJoinOrderGreedyAvoidXProd == prop_type && CUtils::FCrossJoin(first_expr))
 		{
-			group_2_cardinality = group_2_cardinality * GPOPT_DPV2_CROSS_JOIN_GREEDY_PENALTY;
+			group_2_cardinality = group_2_cardinality * m_cross_prod_penalty;
 		}
 		if (NULL == min_card_group || group_2_cardinality < min_card)
 		{
@@ -1373,7 +1370,7 @@ CJoinOrderDPv2::FindLowestCardTwoWayJoin()
 	// mark the lowest cardinality 2-way join as the MinCard and GreedyAvoidXProd solutions
 	SGroupAndExpression min_card_2_way_join = GetBestExprForProperties(min_card_group, any_props);
 
-	AddNewPropertyToExpr(min_card_2_way_join.GetExprInfo(), SExpressionProperties(EJoinOrderMincard + EJoinOrderGreedyAvoidXProd));
+	AddNewPropertyToExpr(min_card_2_way_join.GetExprInfo(), SExpressionProperties(prop_type));
 }
 
 
@@ -1395,6 +1392,7 @@ CJoinOrderDPv2::EnumerateMinCard()
 		return;
 	}
 
+	FindLowestCardTwoWayJoin(EJoinOrderMincard);
 	for (ULONG current_join_level = 3; current_join_level <= m_ulComps; current_join_level++)
 	{
 		GreedySearchJoinOrders(current_join_level-1, EJoinOrderMincard);
@@ -1425,13 +1423,15 @@ CJoinOrderDPv2::EnumerateGreedyAvoidXProd()
 
 	// avoid cross products by adding a very high penalty to their cost
 	// note that we can still do mandatory cross products
+	CDouble original_cross_prod_penalty = m_cross_prod_penalty;
 	m_cross_prod_penalty = GPOPT_DPV2_CROSS_JOIN_GREEDY_PENALTY;
 
+	FindLowestCardTwoWayJoin(EJoinOrderGreedyAvoidXProd);
 	for (ULONG current_join_level = 3; current_join_level <= m_ulComps; current_join_level++)
 	{
 		GreedySearchJoinOrders(current_join_level-1, EJoinOrderGreedyAvoidXProd);
 	}
-	m_cross_prod_penalty = GPOPT_DPV2_CROSS_JOIN_DEFAULT_PENALTY;
+	m_cross_prod_penalty = original_cross_prod_penalty;
 }
 
 
@@ -1657,16 +1657,10 @@ CJoinOrderDPv2::OsPrint
 					os << " join ";
 					expr_info->m_right_child_expr.m_group_info->m_atoms->OsPrint(os);
 					os << std::endl;
-					os << "   left child cost: " << expr_info->m_left_child_expr.m_group_info->m_lowest_expr_cost << std::endl;
-					os << "   right child cost: " << expr_info->m_right_child_expr.m_group_info->m_lowest_expr_cost << std::endl;
 
 				}
 				os << "   Cost: ";
 				expr_info->m_cost.OsPrint(os);
-				os << "   Penalty Cost: ";
-				expr_info->m_cost_penalty.OsPrint(os);
-				os << "   Total Cost with Penalty: ";
-				expr_info->DCost().OsPrint(os);
 				os << std::endl;
 				if (lev == 1)
 				{
