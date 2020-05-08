@@ -192,7 +192,7 @@ script:
             --prefix=${TRAVIS_BUILD_DIR}/gpsql \
             --with-perl \
             --with-python \
-            --enable-orca \
+            --disable-orca \
             --enable-orafce \
             --disable-gpfdist \
             --disable-pxf \
@@ -201,7 +201,7 @@ script:
             --with-includes=$(brew --prefix xerces-c)/include \
             --with-libs=$(brew --prefix xerces-c)/lib \
             $C
-        travis_wait 40 make -s install
+        make -s install
         source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
         make -s unittest-check
       fi
