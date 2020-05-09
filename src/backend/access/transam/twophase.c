@@ -138,6 +138,9 @@ typedef struct TwoPhaseStateData
 	/* Head of linked list of free GlobalTransactionData structs */
 	GlobalTransaction freeGXacts;
 
+	/* Oldest prepared but not committed/aborted transaction. Used for restartpoint only. */
+	XLogRecPtr	oldestPrepRecPtr;
+
 	/* Number of valid prepXacts entries. */
 	int			numPrepXacts;
 
@@ -306,6 +309,7 @@ TwoPhaseShmemInit(void)
 		Assert(!found);
 		TwoPhaseState->freeGXacts = NULL;
 		TwoPhaseState->numPrepXacts = 0;
+		TwoPhaseState->oldestPrepRecPtr = InvalidXLogRecPtr;
 
 		/*
 		 * Initialize the linked list of free GlobalTransactionData structs
@@ -1787,6 +1791,65 @@ PrescanPreparedTransactions(TransactionId **xids_p, int *nxids_p)
 	}
 
 	return result;
+}
+
+/*
+ * SetOldestPreparedTransaction
+ *
+ * Find the oldest prepared transaction start LSN from hash table
+ * crashRecoverPostCheckpointPreparedTransactions_map_ht and then save them in
+ * shared memory TwoPhaseState->oldestPrepRecPtr.
+ *
+ * On mirror/standby, prepared transaction information is stored in
+ * crashRecoverPostCheckpointPreparedTransactions_map_ht during replay of
+ * checkpoint xlog and 2pc prepare xlog, and 2pc commit/abort xlog removes the
+ * related entry, so we could get all the existing prepared transactions from
+ * crashRecoverPostCheckpointPreparedTransactions_map_ht at this moment.
+ *
+ * This function is called (Set) in startup process when replaying the
+ * checkpoint wal and is used (Get) when creating startpoint by the
+ * checkpointer.
+ */
+void
+SetOldestPreparedTransaction()
+{
+	prpt_map	*entry = NULL;
+	XLogRecPtr minXLogRecPtr = InvalidXLogRecPtr;
+	HASH_SEQ_STATUS hsStatus;
+
+	if (crashRecoverPostCheckpointPreparedTransactions_map_ht != NULL)
+	{
+		hash_seq_init(&hsStatus,crashRecoverPostCheckpointPreparedTransactions_map_ht);
+
+		while((entry = (prpt_map *)hash_seq_search(&hsStatus)) != NULL)
+		{
+			if (minXLogRecPtr == InvalidXLogRecPtr ||
+				entry->xlogrecptr < minXLogRecPtr)
+				minXLogRecPtr = entry->xlogrecptr;
+		}
+	}
+
+	LWLockAcquire(TwoPhaseStateLock, LW_EXCLUSIVE);
+	TwoPhaseState->oldestPrepRecPtr = minXLogRecPtr;
+	LWLockRelease(TwoPhaseStateLock);
+}
+
+/*
+ * GetOldestPreparedTransaction
+ *
+ * See comment in SetOldestPreparedTransaction() for details. It's used when
+ * creating startpoint.
+ */
+XLogRecPtr
+GetOldestPreparedTransaction()
+{
+	XLogRecPtr recptr;
+
+	LWLockAcquire(TwoPhaseStateLock, LW_SHARED);
+	recptr  = TwoPhaseState->oldestPrepRecPtr;
+	LWLockRelease(TwoPhaseStateLock);
+
+	return recptr;
 }
 
 /*

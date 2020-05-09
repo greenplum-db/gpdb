@@ -9213,6 +9213,12 @@ RecoveryRestartPoint(const CheckPoint *checkPoint)
 	}
 
 	/*
+	 * Find oldest prepared transaction start LSN and store in shared memory so
+	 * that restartpoint could use that for wal segment file removing/recyling.
+	 */
+	SetOldestPreparedTransaction();
+
+	/*
 	 * Copy the checkpoint record to shared memory, so that checkpointer can
 	 * work out the next time it wants to perform a restartpoint.
 	 */
@@ -9350,11 +9356,16 @@ CreateRestartPoint(int flags)
 
 	SIMPLE_FAULT_INJECTOR("restartpoint_guts");
 
+	XLogRecPtr oldest_recptr = GetOldestPreparedTransaction();
+
 	/*
 	 * Select point at which we can truncate the xlog, which we base on the
 	 * prior checkpoint's earliest info.
 	 */
-	XLByteToSeg(ControlFile->checkPointCopy.redo, _logSegNo);
+	if (oldest_recptr != InvalidXLogRecPtr && oldest_recptr <= ControlFile->checkPointCopy.redo)
+		XLByteToSeg(oldest_recptr, _logSegNo);
+	else
+		XLByteToSeg(ControlFile->checkPointCopy.redo, _logSegNo);
 
 	/*
 	 * Update pg_control, using current time.  Check that it still shows
