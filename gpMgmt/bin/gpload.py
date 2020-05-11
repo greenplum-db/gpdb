@@ -40,6 +40,8 @@ try:
 except Exception, e:
     errorMsg = "gpload was unable to import The PyGreSQL Python module (pg.py) - %s\n" % str(e)
     sys.stderr.write(str(errorMsg))
+    errorMsg = "Please check if you have the correct Visual Studio redistributable package installed.\n"
+    sys.stderr.write(str(errorMsg))
     sys.exit(2)
 
 import hashlib
