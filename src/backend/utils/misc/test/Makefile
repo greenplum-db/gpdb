@@ -7,4 +7,4 @@ TARGETS = ps_status bitstream bitmap_compression faultinjector_warnings pg_mkdir
 faultinjector_warnings.t: ../faultinjector_warnings.o faultinjector_warnings_test.o
 
 
-include $(top_builddir)/src/backend/mock.mk
+include $(top_srcdir)/src/backend/mock.mk

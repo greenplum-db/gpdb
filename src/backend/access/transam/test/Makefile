@@ -4,7 +4,7 @@ include $(top_builddir)/src/Makefile.global
 
 TARGETS=xact distributedlog xlog varsup
 
-include $(top_builddir)/src/backend/mock.mk
+include $(top_srcdir)/src/backend/mock.mk
 
 distributedlog.t: \
 	$(MOCK_DIR)/backend/access/transam/slru_mock.o \

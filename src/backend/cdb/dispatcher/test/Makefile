@@ -5,7 +5,7 @@ include $(top_builddir)/src/Makefile.global
 TARGETS=cdbdispatchresult \
 		cdbgang
 
-include $(top_builddir)/src/backend/mock.mk
+include $(top_srcdir)/src/backend/mock.mk
 
 cdbdispatchresult.t: \
 	$(MOCK_DIR)/backend/libpq/pqexpbuffer_mock.o \
@@ -23,4 +23,4 @@ cdbgang.t: \
 	$(MOCK_DIR)/backend/utils/mmgr/redzone_handler_mock.o \
 	$(MOCK_DIR)/backend/utils/misc/faultinjector_mock.o
 
-include $(top_builddir)/src/backend/mock.mk
+include $(top_srcdir)/src/backend/mock.mk
