@@ -38,14 +38,9 @@ import platform
 try:
     from pygresql import pg
 except Exception, e:
-    from struct import calcsize
-    sysWordSize = calcsize("P") * 8
-    if (platform.system()) in ['Windows', 'Microsoft'] and (sysWordSize == 64):
-        errorMsg = "gpload appears to be running in 64-bit Python under Windows.\n"
-        errorMsg = errorMsg + "Currently only 32-bit Python is supported. Please \n"
-        errorMsg = errorMsg + "reinstall a 32-bit Python interpreter.\n"
-    else:
-        errorMsg = "gpload was unable to import The PyGreSQL Python module (pg.py) - %s\n" % str(e)
+    errorMsg = "gpload was unable to import The PyGreSQL Python module (pg.py) - %s\n" % str(e)
+    sys.stderr.write(str(errorMsg))
+    errorMsg = "Please check if you have the correct Visual Studio redistributable package installed.\n"
     sys.stderr.write(str(errorMsg))
     sys.exit(2)
 
