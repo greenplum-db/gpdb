@@ -177,6 +177,8 @@ You can create a Greenplum Database external table to access Hive table data.   
 
 The `HiveText` and `HiveRC` profiles are specifically optimized for text and RCFile formats, respectively. The `HiveORC` and `HiveVectorizedORC` profiles are optimized for ORC file formats. The `Hive` profile is optimized for all file storage types; you can use the `Hive` profile when the underlying Hive table is composed of multiple partitions with differing file formats.
 
+PXF uses column projection to increase query performance when you access a Hive table using the `Hive`, `HiveRC`, `HiveORC`, or `HiveVectorizedORC` profiles.
+
 Use the following syntax to create a Greenplum Database external table that references a Hive table:
 
 ``` sql
@@ -198,6 +200,11 @@ Hive connector-specific keywords and values used in the [CREATE EXTERNAL TABLE](
 | FORMAT (`Hive`, `HiveORC`, and `HiveVectorizedORC` profiles)   | The `FORMAT` clause must specify `'CUSTOM'`. The `CUSTOM` format requires the built-in `pxfwritable_import` `formatter`.   |
 | FORMAT (`HiveText` and `HiveRC` profiles) | The `FORMAT` clause must specify `TEXT`. Specify the single ascii character field delimiter in the `delimiter='<delim>'` formatting option. |
 
+<div class="note">Because Hive tables can be backed by one or more files and each file can have a unique layout or schema, PXF requires that the column names that you specify when you create the external table match the column names defined for the Hive table. This allows you to:<ul>
+<li>Create the PXF external table with columns in a different order than the Hive table.</li>
+<li>Create a PXF external table that reads a subset of the columns in the Hive table.</li>
+<li>Read a Hive table where the files backing the table have a different number of columns.</li></ul></div>
+
 
 ## <a id="hive_text"></a>Accessing TextFile-Format Hive Tables
 
@@ -210,7 +217,7 @@ Use the `Hive` profile to create a readable Greenplum Database external table th
 1. Create the external table:
 
     ``` sql
-    postgres=# CREATE EXTERNAL TABLE salesinfo_hiveprofile(location text, month text, num_orders int, total_sales float8)
+    postgres=# CREATE EXTERNAL TABLE salesinfo_hiveprofile(location text, month text, number_of_orders int, total_sales float8)
                 LOCATION ('pxf://default.sales_info?PROFILE=Hive')
               FORMAT 'custom' (FORMATTER='pxfwritable_import');
     ```
@@ -222,11 +229,11 @@ Use the `Hive` profile to create a readable Greenplum Database external table th
     ```
 
     ``` shell
-       location    | month | num_orders | total_sales
-    ---------------+-------+------------+-------------
-     Prague        | Jan   |        101 |     4875.33
-     Rome          | Mar   |         87 |     1557.39
-     Bangalore     | May   |        317 |     8936.99
+       location    | month | number_of_orders | total_sales
+    ---------------+-------+------------------+-------------
+     Prague        | Jan   |              101 |     4875.33
+     Rome          | Mar   |               87 |     1557.39
+     Bangalore     | May   |              317 |     8936.99
      ...
     ```
 
@@ -237,7 +244,7 @@ Use the PXF `HiveText` profile to create a readable Greenplum Database external 
 1. Create the external table:
 
     ``` sql
-    postgres=# CREATE EXTERNAL TABLE salesinfo_hivetextprofile(location text, month text, num_orders int, total_sales float8)
+    postgres=# CREATE EXTERNAL TABLE salesinfo_hivetextprofile(location text, month text, number_of_orders int, total_sales float8)
                  LOCATION ('pxf://default.sales_info?PROFILE=HiveText')
                FORMAT 'TEXT' (delimiter=E',');
     ```
@@ -251,10 +258,10 @@ Use the PXF `HiveText` profile to create a readable Greenplum Database external 
     ```
 
     ``` shell
-     location | month | num_orders | total_sales
-    ----------+-------+------------+-------------
-     Beijing  | Jul   |        411 |    11600.67
-     Beijing  | Dec   |        100 |     4248.41
+     location | month | number_of_orders | total_sales
+    ----------+-------+------------------+-------------
+     Beijing  | Jul   |              411 |    11600.67
+     Beijing  | Dec   |              100 |     4248.41
     (2 rows)
     ```
 
@@ -298,7 +305,7 @@ Use the `HiveRC` profile to query RCFile-formatted data in a Hive table.
 4. Use the PXF `HiveRC` profile to create a readable Greenplum Database external table that references the Hive `sales_info_rcfile` table that you created in the previous steps. For example:
 
     ``` sql
-    postgres=# CREATE EXTERNAL TABLE salesinfo_hivercprofile(location text, month text, num_orders int, total_sales float8)
+    postgres=# CREATE EXTERNAL TABLE salesinfo_hivercprofile(location text, month text, number_of_orders int, total_sales float8)
                  LOCATION ('pxf://default.sales_info_rcfile?PROFILE=HiveRC')
                FORMAT 'TEXT' (delimiter=E',');
     ```
@@ -387,7 +394,7 @@ In the following example, you will create a Hive table stored in ORC format and 
 4. Use the PXF `HiveORC` profile to create a Greenplum Database external table that references the Hive table named `sales_info_ORC` you created in Step 1. The `FORMAT` clause must specify `'CUSTOM'`. The `HiveORC` `CUSTOM` format supports only the built-in `'pxfwritable_import'` `formatter`.
 
     ``` sql
-    postgres=> CREATE EXTERNAL TABLE salesinfo_hiveORCprofile(location text, month text, num_orders int, total_sales float8)
+    postgres=> CREATE EXTERNAL TABLE salesinfo_hiveORCprofile(location text, month text, number_of_orders int, total_sales float8)
                  LOCATION ('pxf://default.sales_info_ORC?PROFILE=HiveORC')
                  FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
     ```
@@ -423,7 +430,7 @@ In the following example, you will use the `HiveVectorizedORC` profile to query 
 2. Use the PXF `HiveVectorizedORC` profile to create a readable Greenplum Database external table that references the Hive table named `sales_info_ORC` that you created in Step 1 of the previous example. The `FORMAT` clause must specify `'CUSTOM'`. The `HiveVectorizedORC` `CUSTOM` format supports only the built-in `'pxfwritable_import'` `formatter`.
 
     ``` sql
-    postgres=> CREATE EXTERNAL TABLE salesinfo_hiveVectORC(location text, month text, num_orders int, total_sales float8)
+    postgres=> CREATE EXTERNAL TABLE salesinfo_hiveVectORC(location text, month text, number_of_orders int, total_sales float8)
                  LOCATION ('pxf://default.sales_info_ORC?PROFILE=HiveVectorizedORC')
                  FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
     ```
@@ -469,6 +476,9 @@ And query the table:
 ``` sql
 postgres=# SELECT month, number_of_orders FROM pxf_parquet_table;
 ```
+
+<div class="note">PXF does not support reading a Hive table stored as Parquet if the table is backed by more than one Parquet file and the columns are in a different order. This limitation applies even when the Parquet files have the same column names in their schema.</div>
+
 
 ## <a id="hive_complex"></a>Working with Complex Data Types
 
@@ -679,7 +689,7 @@ In this example, you use the `Hive` profile to query a Hive table named `sales_p
 1. Create a Hive table named `sales_part` with two partition columns, `delivery_state` and `delivery_city:`
 
     ``` sql
-    hive> CREATE TABLE sales_part (name string, type string, supplier_key int, price double)
+    hive> CREATE TABLE sales_part (cname string, itype string, supplier_key int, price double)
             PARTITIONED BY (delivery_state string, delivery_city string)
             ROW FORMAT DELIMITED FIELDS TERMINATED BY ',';
     ```
@@ -727,8 +737,8 @@ In this example, you use the `Hive` profile to query a Hive table named `sales_p
 
     ``` sql
     postgres=# CREATE EXTERNAL TABLE pxf_sales_part(
-                 item_name TEXT, item_type TEXT,
-                 supplier_key INTEGER, item_price DOUBLE PRECISION,
+                 cname TEXT, itype TEXT,
+                 supplier_key INTEGER, price DOUBLE PRECISION,
                  delivery_state TEXT, delivery_city TEXT)
                LOCATION ('pxf://sales_part?Profile=Hive')
                FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
@@ -740,13 +750,13 @@ In this example, you use the `Hive` profile to query a Hive table named `sales_p
     postgres=# SELECT * FROM pxf_sales_part;
     ```
 
-6.  Perform another query (no pushdown) on `pxf_sales_part` to return records where the `delivery_city` is `Sacramento` and  `item_name` is `cube`:
+6.  Perform another query (no pushdown) on `pxf_sales_part` to return records where the `delivery_city` is `Sacramento` and  `cname` is `cube`:
 
     ``` sql
-    postgres=# SELECT * FROM pxf_sales_part WHERE delivery_city = 'Sacramento' AND item_name = 'cube';
+    postgres=# SELECT * FROM pxf_sales_part WHERE delivery_city = 'Sacramento' AND cname = 'cube';
     ```
 
-    The query filters the `delivery_city` partition `Sacramento`. The filter on  `item_name` is not pushed down, since it is not a partition column. It is performed on the Greenplum Database side after all the data in the `Sacramento` partition is transferred for processing.
+    The query filters the `delivery_city` partition `Sacramento`. The filter on `cname` is not pushed down, since it is not a partition column. It is performed on the Greenplum Database side after all the data in the `Sacramento` partition is transferred for processing.
 
 7. Query (with pushdown) for all records where `delivery_state` is `CALIFORNIA`:
 
@@ -830,7 +840,7 @@ In this example, you create a partitioned Hive external table. The table is comp
 8. Use the PXF `Hive` profile to create a readable Greenplum Database external table that references the Hive `hive_multiformpart` external table that you created in the previous steps:
 
     ``` sql
-    postgres=# CREATE EXTERNAL TABLE pxf_multiformpart(location text, month text, num_orders int, total_sales float8, year text)
+    postgres=# CREATE EXTERNAL TABLE pxf_multiformpart(location text, month text, number_of_orders int, total_sales float8, year text)
                  LOCATION ('pxf://default.hive_multiformpart?PROFILE=Hive')
                FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
     ```
@@ -842,22 +852,22 @@ In this example, you create a partitioned Hive external table. The table is comp
     ```
 
     ``` shell
-       location    | month | num_orders | total_sales | year 
-    ---------------+-------+------------+-------------+--------
+       location    | month | number_of_orders | total_sales | year 
+    ---------------+-------+------------------+-------------+--------
      ....
-     Prague        | Dec   |        333 |     9894.77 | 2013
-     Bangalore     | Jul   |        271 |     8320.55 | 2013
-     Beijing       | Dec   |        100 |     4248.41 | 2013
-     Prague        | Jan   |        101 |     4875.33 | 2016
-     Rome          | Mar   |         87 |     1557.39 | 2016
-     Bangalore     | May   |        317 |     8936.99 | 2016
+     Prague        | Dec   |              333 |     9894.77 | 2013
+     Bangalore     | Jul   |              271 |     8320.55 | 2013
+     Beijing       | Dec   |              100 |     4248.41 | 2013
+     Prague        | Jan   |              101 |     4875.33 | 2016
+     Rome          | Mar   |               87 |     1557.39 | 2016
+     Bangalore     | May   |              317 |     8936.99 | 2016
      ....
     ```
 
 10. Perform a second query to calculate the total number of orders for the year 2013:
 
     ``` sql
-    postgres=# SELECT sum(num_orders) FROM pxf_multiformpart WHERE month='Dec' AND year='2013';
+    postgres=# SELECT sum(number_of_orders) FROM pxf_multiformpart WHERE month='Dec' AND year='2013';
      sum 
     -----
      433
