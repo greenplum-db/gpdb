@@ -600,7 +600,7 @@ workfile_report_inconsistency(void)
 	if (!dlist_is_empty(&workfile_shared->activeList))
 	{
 		node = &workfile_shared->activeList.head;
-		if (node->next == NULL || node->next->prev != node);
+		if (node->next == NULL || node->next->prev != node)
 			ereport(LOG, (errmsg("workfile activeList is corrupted: "
 							"node = %p, next = %p, next->prev = %p",
 							node, node->next, node->next ? node->next->prev : NULL)));
