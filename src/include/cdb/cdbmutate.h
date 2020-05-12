@@ -25,7 +25,8 @@ extern Motion *make_sorted_union_motion(PlannerInfo *root, Plan *lefttree, int n
 										Oid *collations, bool *nullsFirst);
 extern Motion *make_hashed_motion(Plan *lefttree,
 								  List *hashExpr,
-								  List *hashOpfamilies);
+								  List *hashOpfamilies,
+								  int numHashSegments);
 
 extern Motion *make_broadcast_motion(Plan *lefttree);
 

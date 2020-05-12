@@ -1422,7 +1422,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 				Assert(plan->lefttree);
 
 				motion_snd = list_length(es->currentSlice->segments);
-				motion_recv = (parentSlice == NULL ? 1 : pMotion->recv_numsegments);
+				motion_recv = (parentSlice == NULL ? 1 : pMotion->numHashSegments);
 				if (motion_recv == 0)
 					motion_recv = list_length(parentSlice->segments);
 

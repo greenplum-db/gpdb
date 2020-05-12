@@ -1570,7 +1570,7 @@ _readMotion(void)
 	READ_BOOL_ARRAY(nullsFirst, local_node->numSortCols);
 
 	READ_INT_FIELD(segidColIdx);
-	READ_INT_FIELD(recv_numsegments);
+	READ_INT_FIELD(numHashSegments);
 
 	ReadCommonPlan(&local_node->plan);
 

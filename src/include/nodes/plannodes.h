@@ -1345,6 +1345,7 @@ typedef struct Motion
 	/* For Hash */
 	List		*hashExprs;			/* list of hash expressions */
 	Oid			*hashFuncs;			/* corresponding hash functions */
+	int         numHashSegments;	/* the module number of the hash function */
 
 	/* For Explicit */
 	AttrNumber segidColIdx;			/* index of the segid column in the target list */
@@ -1355,8 +1356,6 @@ typedef struct Motion
 	Oid		   *sortOperators;	/* OIDs of operators to sort them by */
 	Oid		   *collations;		/* OIDs of collations */
 	bool	   *nullsFirst;		/* NULLS FIRST/LAST directions */
-
-	int         recv_numsegments;
 
 	/* sender slice info */
 	PlanSlice  *senderSliceInfo;

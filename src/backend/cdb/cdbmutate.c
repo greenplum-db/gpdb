@@ -99,7 +99,8 @@ make_sorted_union_motion(PlannerInfo *root, Plan *lefttree, int numSortCols,
 Motion *
 make_hashed_motion(Plan *lefttree,
 				   List *hashExprs,
-				   List *hashOpfamilies)
+				   List *hashOpfamilies,
+				   int numHashSegments)
 {
 	Motion	   *motion;
 	Oid		   *hashFuncs;
@@ -107,6 +108,7 @@ make_hashed_motion(Plan *lefttree,
 	ListCell   *opf_cell;
 	int			i;
 
+	Assert(numHashSegments > 0);
 	Assert(list_length(hashExprs) == list_length(hashOpfamilies));
 
 	/* Look up the right hash functions for the hash expressions */
@@ -126,6 +128,7 @@ make_hashed_motion(Plan *lefttree,
 	motion->motionType = MOTIONTYPE_HASH;
 	motion->hashExprs = hashExprs;
 	motion->hashFuncs = hashFuncs;
+	motion->numHashSegments = numHashSegments;
 
 	return motion;
 }
