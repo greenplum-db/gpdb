@@ -2203,8 +2203,8 @@ RecordTransactionAbortPrepared(TransactionId xid,
 void
 getTwoPhasePreparedTransactionData(prepared_transaction_agg_state **ptas)
 {
-	int			numberOfPrepareXacts     = TwoPhaseState->numPrepXacts;
-	GlobalTransaction *globalTransactionArray   = TwoPhaseState->prepXacts;
+	int			numberOfPrepareXacts;
+	GlobalTransaction *globalTransactionArray;
 	TransactionId xid;
 	XLogRecPtr *recordPtr = NULL;
 	int			maxCount;
@@ -2212,6 +2212,11 @@ getTwoPhasePreparedTransactionData(prepared_transaction_agg_state **ptas)
 	Assert(*ptas == NULL);
 
 	TwoPhaseAddPreparedTransactionInit(ptas, &maxCount);
+
+	LWLockAcquire(TwoPhaseStateLock, LW_SHARED);
+
+	numberOfPrepareXacts = TwoPhaseState->numPrepXacts;
+	globalTransactionArray = TwoPhaseState->prepXacts;
 
 	for (int i = 0; i < numberOfPrepareXacts; i++)
     {
@@ -2227,6 +2232,8 @@ getTwoPhasePreparedTransactionData(prepared_transaction_agg_state **ptas)
 									   xid,
 									   recordPtr);
     }
+
+	LWLockRelease(TwoPhaseStateLock);
 }  /* end getTwoPhasePreparedTransactionData */
 
 
