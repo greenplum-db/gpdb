@@ -35,7 +35,6 @@ bin/gpload              -  Sets env variables and calls gpload.py
 List of Management Scripts Written in Python (no libraries)
 -----------------------------------------------------------
 bin/gpload.py           -  Loads data into a Greenplum Database
-bin/gpsys1              -  Print system information on a host  (???)
 
 
 List of Management Scripts Written in Python (gpmlib - old libraries)

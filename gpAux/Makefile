@@ -575,7 +575,6 @@ SET_VERSION_SCRIPTS = \
 	bin/gpstart \
 	bin/gpstate \
 	bin/gpstop \
-	bin/gpsys1 \
 	bin/lib/gpcheckcat \
 	sbin/gpconfig_helper.py \
 	sbin/gpcleansegmentdir.py \
