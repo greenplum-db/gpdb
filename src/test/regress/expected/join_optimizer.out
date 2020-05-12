@@ -5528,12 +5528,10 @@ select * from int4_tbl a,
 ------------------------------------------------------------------------
  Nested Loop
    Output: a.f1, b.f1, c.q1, c.q2
-   ->  Materialize
+   ->  Gather Motion 3:1  (slice1; segments: 3)
          Output: a.f1
-         ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on public.int4_tbl a
                Output: a.f1
-               ->  Seq Scan on public.int4_tbl a
-                     Output: a.f1
    ->  Materialize
          Output: b.f1, c.q1, c.q2
          ->  Hash Right Join

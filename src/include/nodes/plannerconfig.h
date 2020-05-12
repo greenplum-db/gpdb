@@ -24,6 +24,7 @@ typedef struct PlannerConfig
 	bool		is_under_subplan; /* True for plan rooted at a subquery which is planned as a subplan */
 
 	bool        force_singleQE; /* True means force gather base rel to singleQE  */
+	bool        may_rescan; /* true means the subquery may be rescanned. */
 } PlannerConfig;
 
 extern PlannerConfig *DefaultPlannerConfig(void);
