@@ -169,7 +169,8 @@ Bitmapset	**acquire_func_colLargeRowIndexes;
 static void do_analyze_rel(Relation onerel, int options,
 			   VacuumParams *params, List *va_cols,
 			   AcquireSampleRowsFunc acquirefunc, BlockNumber relpages,
-			   bool inh, bool in_outer_xact, int elevel);
+			   bool inh, bool in_outer_xact, int elevel,
+			   gp_acquire_sample_rows_context *ctx);
 static void compute_index_stats(Relation onerel, double totalrows,
 					AnlIndexData *indexdata, int nindexes,
 					HeapTuple *rows, int numrows,
@@ -190,7 +191,8 @@ static Datum ind_fetch_func(VacAttrStatsP stats, int rownum, bool *isNull);
 
 static void analyze_rel_internal(Oid relid, RangeVar *relation, int options,
 								 VacuumParams *params, List *va_cols,
-								 bool in_outer_xact, BufferAccessStrategy bstrategy);
+								 bool in_outer_xact, BufferAccessStrategy bstrategy,
+								 gp_acquire_sample_rows_context *ctx);
 static void acquire_hll_by_query(Relation onerel, int nattrs, VacAttrStats **attrstats, int elevel);
 
 /*
@@ -199,7 +201,7 @@ static void acquire_hll_by_query(Relation onerel, int nattrs, VacAttrStats **att
 void
 analyze_rel(Oid relid, RangeVar *relation, int options,
 			VacuumParams *params, List *va_cols, bool in_outer_xact,
-			BufferAccessStrategy bstrategy)
+			BufferAccessStrategy bstrategy, gp_acquire_sample_rows_context *ctx)
 {
 	bool		optimizerBackup;
 
@@ -214,7 +216,7 @@ analyze_rel(Oid relid, RangeVar *relation, int options,
 	PG_TRY();
 	{
 		analyze_rel_internal(relid, relation, options, params, va_cols,
-				in_outer_xact, bstrategy);
+				in_outer_xact, bstrategy, ctx);
 	}
 	/* Clean up in case of error. */
 	PG_CATCH();
@@ -232,7 +234,7 @@ analyze_rel(Oid relid, RangeVar *relation, int options,
 static void
 analyze_rel_internal(Oid relid, RangeVar *relation, int options,
 			VacuumParams *params, List *va_cols, bool in_outer_xact,
-			BufferAccessStrategy bstrategy)
+			BufferAccessStrategy bstrategy, gp_acquire_sample_rows_context *ctx)
 {
 	Relation	onerel;
 	int			elevel;
@@ -389,14 +391,14 @@ analyze_rel_internal(Oid relid, RangeVar *relation, int options,
 	PartStatus ps = rel_part_status(relid);
 	if (!(ps == PART_STATUS_ROOT || ps == PART_STATUS_INTERIOR))
 		do_analyze_rel(onerel, options, params, va_cols, acquirefunc, relpages,
-					   false, in_outer_xact, elevel);
+					   false, in_outer_xact, elevel, ctx);
 
 	/*
 	 * If there are child tables, do recursive ANALYZE.
 	 */
 	if (onerel->rd_rel->relhassubclass)
 		do_analyze_rel(onerel, options, params, va_cols, acquirefunc, relpages,
-					   true, in_outer_xact, elevel);
+					   true, in_outer_xact, elevel, ctx);
 
 	/* MPP-6929: metadata tracking */
 	if (!vacuumStatement_IsTemporary(onerel) && (Gp_role == GP_ROLE_DISPATCH))
@@ -442,7 +444,7 @@ static void
 do_analyze_rel(Relation onerel, int options, VacuumParams *params,
 			   List *va_cols, AcquireSampleRowsFunc acquirefunc,
 			   BlockNumber relpages, bool inh, bool in_outer_xact,
-			   int elevel)
+			   int elevel, gp_acquire_sample_rows_context *ctx)
 {
 	int			attr_cnt,
 				tcnt,
@@ -659,6 +661,8 @@ do_analyze_rel(Relation onerel, int options, VacuumParams *params,
 	sample_needed = needs_sample(vacattrstats, attr_cnt);
 	if (sample_needed)
 	{
+		if (ctx)
+			MemoryContextSwitchTo(caller_context);
 		rows = (HeapTuple *) palloc(targrows * sizeof(HeapTuple));
 
 		/*
@@ -677,6 +681,8 @@ do_analyze_rel(Relation onerel, int options, VacuumParams *params,
 									  rows, targrows,
 									  &totalrows, &totaldeadrows);
 		acquire_func_colLargeRowIndexes = NULL;
+		if (ctx)
+			MemoryContextSwitchTo(anl_context);
 	}
 	else
 	{
@@ -685,6 +691,14 @@ do_analyze_rel(Relation onerel, int options, VacuumParams *params,
 		totaldeadrows = 0;
 		numrows = 0;
 		rows = NULL;
+	}
+
+	if (ctx)
+	{
+		ctx->sample_rows = rows;
+		ctx->num_sample_rows = numrows;
+		ctx->totalrows = totalrows;
+		ctx->totaldeadrows = totaldeadrows;
 	}
 
 	/*
