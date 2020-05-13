@@ -1192,10 +1192,7 @@ CHistogram::MakeJoinHistogramEqualityFilter
 	CDouble distinct_remaining(0.0);
 	CDouble freq_remaining(0.0);
 
-	BOOL needs_ndv1 = NeedsNDVBasedCardEstimationForEq(this);
-	BOOL needs_ndv2 = NeedsNDVBasedCardEstimationForEq(histogram);
-
-	if (needs_ndv1 || needs_ndv2)
+	if (NeedsNDVBasedCardEstimationForEq(this) || NeedsNDVBasedCardEstimationForEq(histogram))
 	{
 		return MakeNDVBasedJoinHistogramEqualityFilter(histogram);
 	}
@@ -2121,8 +2118,9 @@ CHistogram::NeedsNDVBasedCardEstimationForEq
 			// int like type such as numeric
 			return false;
 		}
-		else if (datum->IsDatumMappableToLINT() && histogram->ContainsOnlySingletonBuckets())
+		else if (histogram->ContainsOnlySingletonBuckets())
 		{
+			GPOS_ASSERT(datum->IsDatumMappableToLINT());
 			// Types such as text should only produce histograms that contain only singleton buckets.
 			// The histograms cannot be used for range predicates but it is ok for equality predicates.
 			return false;
