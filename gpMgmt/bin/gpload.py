@@ -2804,6 +2804,8 @@ class gpload:
         if self.error_table:
             self.log_errors = True
             self.reuse_tables = True
+            self.staging_table = self.getconfig('gpload:preload:staging_table', unicode, default=None)
+            self.fast_match = self.getconfig('gpload:preload:fast_match',bool,False)
         if truncate == True:
             if method=='insert':
                 self.do_truncate(self.schemaTable)
