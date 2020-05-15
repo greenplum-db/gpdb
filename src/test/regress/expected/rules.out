@@ -2060,7 +2060,7 @@ pg_stat_user_tables| SELECT pg_stat_all_tables.relid,
    FROM pg_stat_all_tables
   WHERE ((pg_stat_all_tables.schemaname <> ALL (ARRAY['pg_catalog'::name, 'information_schema'::name])) AND (pg_stat_all_tables.schemaname !~ '^pg_toast'::text));
 pg_stat_wal| SELECT w.wal_records,
-    w.wal_fpi,
+    w.wal_fpw,
     w.wal_bytes,
     w.wal_buffers_full,
     w.wal_write,

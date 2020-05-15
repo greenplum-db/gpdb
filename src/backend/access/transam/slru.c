@@ -161,6 +161,17 @@ SimpleLruShmemSize(int nslots, int nlsns)
 	return BUFFERALIGN(sz) + BLCKSZ * nslots;
 }
 
+/*
+ * Initialize, or attach to, a simple LRU cache in shared memory.
+ *
+ * ctl: address of local (unshared) control structure.
+ * name: name of SLRU.  (This is user-visible, pick with care!)
+ * nslots: number of page slots to use.
+ * nlsns: number of LSN groups per page (set to zero if not relevant).
+ * ctllock: LWLock to use to control access to the shared control structure.
+ * subdir: PGDATA-relative subdirectory that will contain the files.
+ * tranche_id: LWLock tranche ID to use for the SLRU's per-buffer LWLocks.
+ */
 void
 SimpleLruInit(SlruCtl ctl, const char *name, int nslots, int nlsns,
 			  LWLock *ctllock, const char *subdir, int tranche_id)
@@ -1479,7 +1490,7 @@ SlruPagePrecedesTestOffset(SlruCtl ctl, int per_page, uint32 offset)
  *
  * This assumes every uint32 >= FirstNormalTransactionId is a valid key.  It
  * assumes each value occupies a contiguous, fixed-size region of SLRU bytes.
- * (MultiXactMemberCtl separates flags from XIDs.  AsyncCtl has
+ * (MultiXactMemberCtl separates flags from XIDs.  NotifyCtl has
  * variable-length entries, no keys, and no random access.  These unit tests
  * do not apply to them.)
  */

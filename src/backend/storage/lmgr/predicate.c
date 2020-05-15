@@ -214,7 +214,7 @@
 #include "utils/snapmgr.h"
 
 /* Uncomment the next line to test the graceful degradation code. */
-/* #define TEST_OLDSERXID */
+/* #define TEST_SUMMARIZE_SERIAL */
 
 /*
  * Test the most selective fields first, for performance.
@@ -319,37 +319,37 @@
 /*
  * The SLRU buffer area through which we access the old xids.
  */
-static SlruCtlData OldSerXidSlruCtlData;
+static SlruCtlData SerialSlruCtlData;
 
-#define OldSerXidSlruCtl			(&OldSerXidSlruCtlData)
+#define SerialSlruCtl			(&SerialSlruCtlData)
 
-#define OLDSERXID_PAGESIZE			BLCKSZ
-#define OLDSERXID_ENTRYSIZE			sizeof(SerCommitSeqNo)
-#define OLDSERXID_ENTRIESPERPAGE	(OLDSERXID_PAGESIZE / OLDSERXID_ENTRYSIZE)
+#define SERIAL_PAGESIZE			BLCKSZ
+#define SERIAL_ENTRYSIZE			sizeof(SerCommitSeqNo)
+#define SERIAL_ENTRIESPERPAGE	(SERIAL_PAGESIZE / SERIAL_ENTRYSIZE)
 
 /*
  * Set maximum pages based on the number needed to track all transactions.
  */
-#define OLDSERXID_MAX_PAGE			(MaxTransactionId / OLDSERXID_ENTRIESPERPAGE)
+#define SERIAL_MAX_PAGE			(MaxTransactionId / SERIAL_ENTRIESPERPAGE)
 
-#define OldSerXidNextPage(page) (((page) >= OLDSERXID_MAX_PAGE) ? 0 : (page) + 1)
+#define SerialNextPage(page) (((page) >= SERIAL_MAX_PAGE) ? 0 : (page) + 1)
 
-#define OldSerXidValue(slotno, xid) (*((SerCommitSeqNo *) \
-	(OldSerXidSlruCtl->shared->page_buffer[slotno] + \
-	((((uint32) (xid)) % OLDSERXID_ENTRIESPERPAGE) * OLDSERXID_ENTRYSIZE))))
+#define SerialValue(slotno, xid) (*((SerCommitSeqNo *) \
+	(SerialSlruCtl->shared->page_buffer[slotno] + \
+	((((uint32) (xid)) % SERIAL_ENTRIESPERPAGE) * SERIAL_ENTRYSIZE))))
 
-#define OldSerXidPage(xid)	(((uint32) (xid)) / OLDSERXID_ENTRIESPERPAGE)
+#define SerialPage(xid)	(((uint32) (xid)) / SERIAL_ENTRIESPERPAGE)
 
-typedef struct OldSerXidControlData
+typedef struct SerialControlData
 {
 	int			headPage;		/* newest initialized page */
 	TransactionId headXid;		/* newest valid Xid in the SLRU */
 	TransactionId tailXid;		/* oldest xmin we might be interested in */
-}			OldSerXidControlData;
+}			SerialControlData;
 
-typedef struct OldSerXidControlData *OldSerXidControl;
+typedef struct SerialControlData *SerialControl;
 
-static OldSerXidControl oldSerXidControl;
+static SerialControl serialControl;
 
 /*
  * When the oldest committed transaction on the "finished" list is moved to
@@ -441,11 +441,11 @@ static void SetPossibleUnsafeConflict(SERIALIZABLEXACT *roXact, SERIALIZABLEXACT
 static void ReleaseRWConflict(RWConflict conflict);
 static void FlagSxactUnsafe(SERIALIZABLEXACT *sxact);
 
-static bool OldSerXidPagePrecedesLogically(int page1, int page2);
-static void OldSerXidInit(void);
-static void OldSerXidAdd(TransactionId xid, SerCommitSeqNo minConflictCommitSeqNo);
-static SerCommitSeqNo OldSerXidGetMinConflictCommitSeqNo(TransactionId xid);
-static void OldSerXidSetActiveSerXmin(TransactionId xid);
+static bool SerialPagePrecedesLogically(int p, int q);
+static void SerialInit(void);
+static void SerialAdd(TransactionId xid, SerCommitSeqNo minConflictCommitSeqNo);
+static SerCommitSeqNo SerialGetMinConflictCommitSeqNo(TransactionId xid);
+static void SerialSetActiveSerXmin(TransactionId xid);
 
 static uint32 predicatelock_hash(const void *key, Size keysize);
 static void SummarizeOldestCommittedSxact(void);
@@ -787,29 +787,29 @@ FlagSxactUnsafe(SERIALIZABLEXACT *sxact)
 /*------------------------------------------------------------------------*/
 
 /*
- * Decide whether an OldSerXid page number is "older" for truncation purposes.
+ * Decide whether a Serial page number is "older" for truncation purposes.
  * Analogous to CLOGPagePrecedes().
  */
 static bool
-OldSerXidPagePrecedesLogically(int page1, int page2)
+SerialPagePrecedesLogically(int page1, int page2)
 {
 	TransactionId xid1;
 	TransactionId xid2;
 
-	xid1 = ((TransactionId) page1) * OLDSERXID_ENTRIESPERPAGE;
+	xid1 = ((TransactionId) page1) * SERIAL_ENTRIESPERPAGE;
 	xid1 += FirstNormalTransactionId + 1;
-	xid2 = ((TransactionId) page2) * OLDSERXID_ENTRIESPERPAGE;
+	xid2 = ((TransactionId) page2) * SERIAL_ENTRIESPERPAGE;
 	xid2 += FirstNormalTransactionId + 1;
 
 	return (TransactionIdPrecedes(xid1, xid2) &&
-			TransactionIdPrecedes(xid1, xid2 + OLDSERXID_ENTRIESPERPAGE - 1));
+			TransactionIdPrecedes(xid1, xid2 + SERIAL_ENTRIESPERPAGE - 1));
 }
 
 #ifdef USE_ASSERT_CHECKING
 static void
-OldSerXidPagePrecedesLogicallyUnitTests(void)
+SerialPagePrecedesLogicallyUnitTests(void)
 {
-	int			per_page = OLDSERXID_ENTRIESPERPAGE,
+	int			per_page = SERIAL_ENTRIESPERPAGE,
 				offset = per_page / 2;
 	int			newestPage,
 				oldestPage,
@@ -830,21 +830,21 @@ OldSerXidPagePrecedesLogicallyUnitTests(void)
 	 * In this scenario, the SLRU headPage pertains to the last ~1000 XIDs
 	 * assigned.  oldestXact finishes, ~2B XIDs having elapsed since it
 	 * started.  Further transactions cause us to summarize oldestXact to
-	 * tailPage.  Function must return false so OldSerXidAdd() doesn't zero
+	 * tailPage.  Function must return false so SerialAdd() doesn't zero
 	 * tailPage (which may contain entries for other old, recently-finished
 	 * XIDs) and half the SLRU.  Reaching this requires burning ~2B XIDs in
 	 * single-user mode, a negligible possibility.
 	 */
 	headPage = newestPage;
 	targetPage = oldestPage;
-	Assert(!OldSerXidPagePrecedesLogically(headPage, targetPage));
+	Assert(!SerialPagePrecedesLogically(headPage, targetPage));
 
 	/*
 	 * In this scenario, the SLRU headPage pertains to oldestXact.  We're
 	 * summarizing an XID near newestXact.  (Assume few other XIDs used
 	 * SERIALIZABLE, hence the minimal headPage advancement.  Assume
 	 * oldestXact was long-running and only recently reached the SLRU.)
-	 * Function must return true to make OldSerXidAdd() create targetPage.
+	 * Function must return true to make SerialAdd() create targetPage.
 	 *
 	 * Today's implementation mishandles this case, but it doesn't matter
 	 * enough to fix.  Verify that the defect affects just one page by
@@ -855,9 +855,9 @@ OldSerXidPagePrecedesLogicallyUnitTests(void)
 	 */
 	headPage = oldestPage;
 	targetPage = newestPage;
-	Assert(OldSerXidPagePrecedesLogically(headPage, targetPage - 1));
+	Assert(SerialPagePrecedesLogically(headPage, targetPage - 1));
 #if 0
-	Assert(OldSerXidPagePrecedesLogically(headPage, targetPage));
+	Assert(SerialPagePrecedesLogically(headPage, targetPage));
 #endif
 }
 #endif
@@ -866,29 +866,29 @@ OldSerXidPagePrecedesLogicallyUnitTests(void)
  * Initialize for the tracking of old serializable committed xids.
  */
 static void
-OldSerXidInit(void)
+SerialInit(void)
 {
 	bool		found;
 
 	/*
 	 * Set up SLRU management of the pg_serial data.
 	 */
-	OldSerXidSlruCtl->PagePrecedes = OldSerXidPagePrecedesLogically;
-	SimpleLruInit(OldSerXidSlruCtl, "oldserxid",
-				  NUM_OLDSERXID_BUFFERS, 0, OldSerXidLock, "pg_serial",
-				  LWTRANCHE_OLDSERXID_BUFFERS);
+	SerialSlruCtl->PagePrecedes = SerialPagePrecedesLogically;
+	SimpleLruInit(SerialSlruCtl, "Serial",
+				  NUM_SERIAL_BUFFERS, 0, SerialSLRULock, "pg_serial",
+				  LWTRANCHE_SERIAL_BUFFER);
 	/* Override default assumption that writes should be fsync'd */
-	OldSerXidSlruCtl->do_fsync = false;
+	SerialSlruCtl->do_fsync = false;
 #ifdef USE_ASSERT_CHECKING
-	OldSerXidPagePrecedesLogicallyUnitTests();
+	SerialPagePrecedesLogicallyUnitTests();
 #endif
-	SlruPagePrecedesUnitTests(OldSerXidSlruCtl, OLDSERXID_ENTRIESPERPAGE);
+	SlruPagePrecedesUnitTests(SerialSlruCtl, SERIAL_ENTRIESPERPAGE);
 
 	/*
-	 * Create or attach to the OldSerXidControl structure.
+	 * Create or attach to the SerialControl structure.
 	 */
-	oldSerXidControl = (OldSerXidControl)
-		ShmemInitStruct("OldSerXidControlData", sizeof(OldSerXidControlData), &found);
+	serialControl = (SerialControl)
+		ShmemInitStruct("SerialControlData", sizeof(SerialControlData), &found);
 
 	Assert(found == IsUnderPostmaster);
 	if (!found)
@@ -896,9 +896,9 @@ OldSerXidInit(void)
 		/*
 		 * Set control information to reflect empty SLRU.
 		 */
-		oldSerXidControl->headPage = -1;
-		oldSerXidControl->headXid = InvalidTransactionId;
-		oldSerXidControl->tailXid = InvalidTransactionId;
+		serialControl->headPage = -1;
+		serialControl->headXid = InvalidTransactionId;
+		serialControl->tailXid = InvalidTransactionId;
 	}
 }
 
@@ -908,7 +908,7 @@ OldSerXidInit(void)
  * An invalid seqNo means that there were no conflicts out from xid.
  */
 static void
-OldSerXidAdd(TransactionId xid, SerCommitSeqNo minConflictCommitSeqNo)
+SerialAdd(TransactionId xid, SerCommitSeqNo minConflictCommitSeqNo)
 {
 	TransactionId tailXid;
 	int			targetPage;
@@ -918,16 +918,16 @@ OldSerXidAdd(TransactionId xid, SerCommitSeqNo minConflictCommitSeqNo)
 
 	Assert(TransactionIdIsValid(xid));
 
-	targetPage = OldSerXidPage(xid);
+	targetPage = SerialPage(xid);
 
-	LWLockAcquire(OldSerXidLock, LW_EXCLUSIVE);
+	LWLockAcquire(SerialSLRULock, LW_EXCLUSIVE);
 
 	/*
 	 * If no serializable transactions are active, there shouldn't be anything
 	 * to push out to the SLRU.  Hitting this assert would mean there's
 	 * something wrong with the earlier cleanup logic.
 	 */
-	tailXid = oldSerXidControl->tailXid;
+	tailXid = serialControl->tailXid;
 	Assert(TransactionIdIsValid(tailXid));
 
 	/*
@@ -936,41 +936,41 @@ OldSerXidAdd(TransactionId xid, SerCommitSeqNo minConflictCommitSeqNo)
 	 * any new pages that enter the tailXid-headXid range as we advance
 	 * headXid.
 	 */
-	if (oldSerXidControl->headPage < 0)
+	if (serialControl->headPage < 0)
 	{
-		firstZeroPage = OldSerXidPage(tailXid);
+		firstZeroPage = SerialPage(tailXid);
 		isNewPage = true;
 	}
 	else
 	{
-		firstZeroPage = OldSerXidNextPage(oldSerXidControl->headPage);
-		isNewPage = OldSerXidPagePrecedesLogically(oldSerXidControl->headPage,
-												   targetPage);
+		firstZeroPage = SerialNextPage(serialControl->headPage);
+		isNewPage = SerialPagePrecedesLogically(serialControl->headPage,
+												targetPage);
 	}
 
-	if (!TransactionIdIsValid(oldSerXidControl->headXid)
-		|| TransactionIdFollows(xid, oldSerXidControl->headXid))
-		oldSerXidControl->headXid = xid;
+	if (!TransactionIdIsValid(serialControl->headXid)
+		|| TransactionIdFollows(xid, serialControl->headXid))
+		serialControl->headXid = xid;
 	if (isNewPage)
-		oldSerXidControl->headPage = targetPage;
+		serialControl->headPage = targetPage;
 
 	if (isNewPage)
 	{
 		/* Initialize intervening pages. */
 		while (firstZeroPage != targetPage)
 		{
-			(void) SimpleLruZeroPage(OldSerXidSlruCtl, firstZeroPage);
-			firstZeroPage = OldSerXidNextPage(firstZeroPage);
+			(void) SimpleLruZeroPage(SerialSlruCtl, firstZeroPage);
+			firstZeroPage = SerialNextPage(firstZeroPage);
 		}
-		slotno = SimpleLruZeroPage(OldSerXidSlruCtl, targetPage);
+		slotno = SimpleLruZeroPage(SerialSlruCtl, targetPage);
 	}
 	else
-		slotno = SimpleLruReadPage(OldSerXidSlruCtl, targetPage, true, xid);
+		slotno = SimpleLruReadPage(SerialSlruCtl, targetPage, true, xid);
 
-	OldSerXidValue(slotno, xid) = minConflictCommitSeqNo;
-	OldSerXidSlruCtl->shared->page_dirty[slotno] = true;
+	SerialValue(slotno, xid) = minConflictCommitSeqNo;
+	SerialSlruCtl->shared->page_dirty[slotno] = true;
 
-	LWLockRelease(OldSerXidLock);
+	LWLockRelease(SerialSLRULock);
 }
 
 /*
@@ -979,7 +979,7 @@ OldSerXidAdd(TransactionId xid, SerCommitSeqNo minConflictCommitSeqNo)
  * will be returned.
  */
 static SerCommitSeqNo
-OldSerXidGetMinConflictCommitSeqNo(TransactionId xid)
+SerialGetMinConflictCommitSeqNo(TransactionId xid)
 {
 	TransactionId headXid;
 	TransactionId tailXid;
@@ -988,10 +988,10 @@ OldSerXidGetMinConflictCommitSeqNo(TransactionId xid)
 
 	Assert(TransactionIdIsValid(xid));
 
-	LWLockAcquire(OldSerXidLock, LW_SHARED);
-	headXid = oldSerXidControl->headXid;
-	tailXid = oldSerXidControl->tailXid;
-	LWLockRelease(OldSerXidLock);
+	LWLockAcquire(SerialSLRULock, LW_SHARED);
+	headXid = serialControl->headXid;
+	tailXid = serialControl->tailXid;
+	LWLockRelease(SerialSLRULock);
 
 	if (!TransactionIdIsValid(headXid))
 		return 0;
@@ -1003,13 +1003,13 @@ OldSerXidGetMinConflictCommitSeqNo(TransactionId xid)
 		return 0;
 
 	/*
-	 * The following function must be called without holding OldSerXidLock,
+	 * The following function must be called without holding SerialSLRULock,
 	 * but will return with that lock held, which must then be released.
 	 */
-	slotno = SimpleLruReadPage_ReadOnly(OldSerXidSlruCtl,
-										OldSerXidPage(xid), xid);
-	val = OldSerXidValue(slotno, xid);
-	LWLockRelease(OldSerXidLock);
+	slotno = SimpleLruReadPage_ReadOnly(SerialSlruCtl,
+										SerialPage(xid), xid);
+	val = SerialValue(slotno, xid);
+	LWLockRelease(SerialSLRULock);
 	return val;
 }
 
@@ -1020,9 +1020,9 @@ OldSerXidGetMinConflictCommitSeqNo(TransactionId xid)
  * the SLRU can be discarded.
  */
 static void
-OldSerXidSetActiveSerXmin(TransactionId xid)
+SerialSetActiveSerXmin(TransactionId xid)
 {
-	LWLockAcquire(OldSerXidLock, LW_EXCLUSIVE);
+	LWLockAcquire(SerialSLRULock, LW_EXCLUSIVE);
 
 	/*
 	 * When no sxacts are active, nothing overlaps, set the xid values to
@@ -1032,9 +1032,9 @@ OldSerXidSetActiveSerXmin(TransactionId xid)
 	 */
 	if (!TransactionIdIsValid(xid))
 	{
-		oldSerXidControl->tailXid = InvalidTransactionId;
-		oldSerXidControl->headXid = InvalidTransactionId;
-		LWLockRelease(OldSerXidLock);
+		serialControl->tailXid = InvalidTransactionId;
+		serialControl->headXid = InvalidTransactionId;
+		LWLockRelease(SerialSLRULock);
 		return;
 	}
 
@@ -1046,22 +1046,22 @@ OldSerXidSetActiveSerXmin(TransactionId xid)
 	 */
 	if (RecoveryInProgress())
 	{
-		Assert(oldSerXidControl->headPage < 0);
-		if (!TransactionIdIsValid(oldSerXidControl->tailXid)
-			|| TransactionIdPrecedes(xid, oldSerXidControl->tailXid))
+		Assert(serialControl->headPage < 0);
+		if (!TransactionIdIsValid(serialControl->tailXid)
+			|| TransactionIdPrecedes(xid, serialControl->tailXid))
 		{
-			oldSerXidControl->tailXid = xid;
+			serialControl->tailXid = xid;
 		}
-		LWLockRelease(OldSerXidLock);
+		LWLockRelease(SerialSLRULock);
 		return;
 	}
 
-	Assert(!TransactionIdIsValid(oldSerXidControl->tailXid)
-		   || TransactionIdFollows(xid, oldSerXidControl->tailXid));
+	Assert(!TransactionIdIsValid(serialControl->tailXid)
+		   || TransactionIdFollows(xid, serialControl->tailXid));
 
-	oldSerXidControl->tailXid = xid;
+	serialControl->tailXid = xid;
 
-	LWLockRelease(OldSerXidLock);
+	LWLockRelease(SerialSLRULock);
 }
 
 /*
@@ -1075,19 +1075,19 @@ CheckPointPredicate(void)
 {
 	int			tailPage;
 
-	LWLockAcquire(OldSerXidLock, LW_EXCLUSIVE);
+	LWLockAcquire(SerialSLRULock, LW_EXCLUSIVE);
 
 	/* Exit quickly if the SLRU is currently not in use. */
-	if (oldSerXidControl->headPage < 0)
+	if (serialControl->headPage < 0)
 	{
-		LWLockRelease(OldSerXidLock);
+		LWLockRelease(SerialSLRULock);
 		return;
 	}
 
-	if (TransactionIdIsValid(oldSerXidControl->tailXid))
+	if (TransactionIdIsValid(serialControl->tailXid))
 	{
 		/* We can truncate the SLRU up to the page containing tailXid */
-		tailPage = OldSerXidPage(oldSerXidControl->tailXid);
+		tailPage = SerialPage(serialControl->tailXid);
 	}
 	else
 	{
@@ -1115,19 +1115,19 @@ CheckPointPredicate(void)
 		 * - VACUUM to advance XID limits.
 		 * - Consume ~2M XIDs, crossing the former xidWrapLimit.
 		 * - Start, finish, and summarize a SERIALIZABLE transaction.
-		 *   OldSerXidAdd() declines to create the targetPage, because
+		 *   SerialAdd() declines to create the targetPage, because
 		 *   headPage is not regarded as in the past relative to that
 		 *   targetPage.  The transaction instigating the summarize fails in
 		 *   SimpleLruReadPage().
 		 */
-		tailPage = oldSerXidControl->headPage;
-		oldSerXidControl->headPage = -1;
+		tailPage = serialControl->headPage;
+		serialControl->headPage = -1;
 	}
 
-	LWLockRelease(OldSerXidLock);
+	LWLockRelease(SerialSLRULock);
 
 	/* Truncate away pages that are no longer required */
-	SimpleLruTruncate(OldSerXidSlruCtl, tailPage);
+	SimpleLruTruncate(SerialSlruCtl, tailPage);
 
 	/*
 	 * Flush dirty SLRU pages to disk
@@ -1139,7 +1139,7 @@ CheckPointPredicate(void)
 	 * before deleting the file in which they sit, which would be completely
 	 * pointless.
 	 */
-	SimpleLruFlush(OldSerXidSlruCtl, true);
+	SimpleLruFlush(SerialSlruCtl, true);
 }
 
 /*------------------------------------------------------------------------*/
@@ -1353,7 +1353,7 @@ InitPredicateLocks(void)
 	 * Initialize the SLRU storage for old committed serializable
 	 * transactions.
 	 */
-	OldSerXidInit();
+	SerialInit();
 }
 
 /*
@@ -1402,8 +1402,8 @@ PredicateLockShmemSize(void)
 	size = add_size(size, sizeof(SHM_QUEUE));
 
 	/* Shared memory structures for SLRU tracking of old committed xids. */
-	size = add_size(size, sizeof(OldSerXidControlData));
-	size = add_size(size, SimpleLruShmemSize(NUM_OLDSERXID_BUFFERS, 0));
+	size = add_size(size, sizeof(SerialControlData));
+	size = add_size(size, SimpleLruShmemSize(NUM_SERIAL_BUFFERS, 0));
 
 	return size;
 }
@@ -1540,8 +1540,8 @@ SummarizeOldestCommittedSxact(void)
 
 	/* Add to SLRU summary information. */
 	if (TransactionIdIsValid(sxact->topXid) && !SxactIsReadOnly(sxact))
-		OldSerXidAdd(sxact->topXid, SxactHasConflictOut(sxact)
-					 ? sxact->SeqNo.earliestOutConflictCommit : InvalidSerCommitSeqNo);
+		SerialAdd(sxact->topXid, SxactHasConflictOut(sxact)
+				  ? sxact->SeqNo.earliestOutConflictCommit : InvalidSerCommitSeqNo);
 
 	/* Summarize and release the detail. */
 	ReleaseOneSerializableXact(sxact, false, true);
@@ -1805,7 +1805,7 @@ GetSerializableTransactionSnapshotInt(Snapshot snapshot,
 	 * (in particular, an elog(ERROR) in procarray.c would cause us to leak
 	 * the sxact).  Consider refactoring to avoid this.
 	 */
-#ifdef TEST_OLDSERXID
+#ifdef TEST_SUMMARIZE_SERIAL
 	SummarizeOldestCommittedSxact();
 #endif
 	LWLockAcquire(SerializableXactHashLock, LW_EXCLUSIVE);
@@ -1860,7 +1860,7 @@ GetSerializableTransactionSnapshotInt(Snapshot snapshot,
 		Assert(PredXact->SxactGlobalXminCount == 0);
 		PredXact->SxactGlobalXmin = snapshot->xmin;
 		PredXact->SxactGlobalXminCount = 1;
-		OldSerXidSetActiveSerXmin(snapshot->xmin);
+		SerialSetActiveSerXmin(snapshot->xmin);
 	}
 	else if (TransactionIdEquals(snapshot->xmin, PredXact->SxactGlobalXmin))
 	{
@@ -3326,7 +3326,7 @@ SetNewSxactGlobalXmin(void)
 		}
 	}
 
-	OldSerXidSetActiveSerXmin(PredXact->SxactGlobalXmin);
+	SerialSetActiveSerXmin(PredXact->SxactGlobalXmin);
 }
 
 /*
@@ -4238,7 +4238,7 @@ CheckForSerializableConflictOut(bool visible, Relation relation,
 		 */
 		SerCommitSeqNo conflictCommitSeqNo;
 
-		conflictCommitSeqNo = OldSerXidGetMinConflictCommitSeqNo(xid);
+		conflictCommitSeqNo = SerialGetMinConflictCommitSeqNo(xid);
 		if (conflictCommitSeqNo != 0)
 		{
 			if (conflictCommitSeqNo != InvalidSerCommitSeqNo
@@ -5224,7 +5224,7 @@ predicatelock_twophase_recover(TransactionId xid, uint16 info,
 		{
 			PredXact->SxactGlobalXmin = sxact->xmin;
 			PredXact->SxactGlobalXminCount = 1;
-			OldSerXidSetActiveSerXmin(sxact->xmin);
+			SerialSetActiveSerXmin(sxact->xmin);
 		}
 		else if (TransactionIdEquals(sxact->xmin, PredXact->SxactGlobalXmin))
 		{

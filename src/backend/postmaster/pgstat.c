@@ -173,13 +173,13 @@ static WalUsage prevWalUsage;
  * all SLRUs without an explicit entry (e.g. SLRUs in extensions).
  */
 static const char *const slru_names[] = {
-	"async",
-	"clog",
-	"commit_timestamp",
-	"multixact_offset",
-	"multixact_member",
-	"oldserxid",
-	"subtrans",
+	"CommitTs",
+	"MultiXactMember",
+	"MultiXactOffset",
+	"Notify",
+	"Serial",
+	"Subtrans",
+	"Xact",
 	"DistributedLogCtl", 				/* GPDB-specific */
 	"other"						/* has to be last */
 };
