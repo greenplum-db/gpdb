@@ -39,7 +39,7 @@ For GPDB-specific code that lives in files inherited from upstream PostgreSQL,
 there is no clear answer, especially if it is a mix of code from different
 versions of Postgres. One possible answer is to only pgindent GPDB code that
 is added into that file using the version of pgindent corresponding to the
-newest verison of Postgres code that appears in the file.
+newest version of Postgres code that appears in the file.
 
 CONCLUSION:
 

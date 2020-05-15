@@ -14,6 +14,8 @@
 #include "gpos/base.h"
 #include "gpopt/operators/CLogical.h"
 
+#include "naucrates/statistics/CStatistics.h"
+
 namespace gpopt
 {
 

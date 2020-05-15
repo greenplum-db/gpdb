@@ -161,3 +161,27 @@ explain select distinct(a), sum(b) from t_volatile_limit_1 group by a order by a
 
 drop table t_volatile_limit;
 drop table t_volatile_limit_1;
+-- Check LIMIT ALL should not be considered when gathering data to a single node
+create table t_limit_all(a int, b int) distributed by (a);
+insert into t_limit_all select i, i from generate_series(1,10)i;
+explain (costs off)
+select array(select b from t_limit_all order by b asc limit all) t;
+                    QUERY PLAN                    
+--------------------------------------------------
+ Result
+   InitPlan 1 (returns $0)  (slice1)
+     ->  Gather Motion 3:1  (slice2; segments: 3)
+           Merge Key: b
+           ->  Sort
+                 Sort Key: b
+                 ->  Seq Scan on t_limit_all
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+select array(select b from t_limit_all order by b asc limit all) t;
+           t            
+------------------------
+ {1,2,3,4,5,6,7,8,9,10}
+(1 row)
+
+drop table t_limit_all;

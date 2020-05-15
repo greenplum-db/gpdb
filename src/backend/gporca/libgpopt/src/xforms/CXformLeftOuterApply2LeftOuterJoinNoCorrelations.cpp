@@ -10,9 +10,8 @@
 //---------------------------------------------------------------------------
 
 #include "gpos/base.h"
+#include "gpopt/base/CUtils.h"
 #include "gpopt/xforms/CXformLeftOuterApply2LeftOuterJoinNoCorrelations.h"
-
-#include "gpopt/operators/ops.h"
 
 
 using namespace gpopt;

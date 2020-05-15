@@ -58,9 +58,8 @@ where t1.c1 = t2.c1 and t1.c3 = t2.c3;');
  is_workfile_created 
 ---------------------
                    1
-                   0
                    1
-(3 rows)
+(2 rows)
 
 select * from sisc_mat_sort.is_workfile_created('explain (analyze, verbose)
 with ctesisc as 
@@ -71,9 +70,8 @@ where t1.c1 = t2.c1 and t1.c3 = t2.c3 limit 50000;');
  is_workfile_created 
 ---------------------
                    1
-                   0
                    1
-(3 rows)
+(2 rows)
 
 set gp_enable_mk_sort=off;
 select count(*) from (with ctesisc as 
@@ -95,9 +93,8 @@ where t1.c1 = t2.c1 and t1.c3 = t2.c3;');
  is_workfile_created 
 ---------------------
                    1
-                   0
                    1
-(3 rows)
+(2 rows)
 
 select * from sisc_mat_sort.is_workfile_created('explain (analyze, verbose)
 with ctesisc as 
@@ -108,9 +105,8 @@ where t1.c1 = t2.c1 and t1.c3 = t2.c3 limit 50000;');
  is_workfile_created 
 ---------------------
                    1
-                   0
                    1
-(3 rows)
+(2 rows)
 
 drop schema sisc_mat_sort cascade;
 NOTICE:  drop cascades to 2 other objects

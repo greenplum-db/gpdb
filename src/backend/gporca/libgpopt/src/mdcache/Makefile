@@ -4,7 +4,7 @@
 # src/backend/gporca/libgpopt/src/mdcache/Makefile
 #
 
-subdir = src/backend/gporca/libgpopt/src/mdcache/
+subdir = src/backend/gporca/libgpopt/src/mdcache
 top_builddir = ../../../../../..
 include $(top_builddir)/src/Makefile.global
 

@@ -12,6 +12,7 @@
 #define GPOS_CStringStatic_H
 
 #include "gpos/base.h"
+#include "gpos/attributes.h"
 #include "gpos/common/clibwrapper.h"
 
 #define GPOS_SZ_LENGTH(x) gpos::clib::Strlen(x)
@@ -100,10 +101,10 @@ namespace gpos
 			void AppendBuffer(const CHAR *buf);
 
 			// appends a formatted string
-			void AppendFormat(const CHAR *format, ...);
+			void AppendFormat(const CHAR *format, ...) GPOS_ATTRIBUTE_PRINTF(2, 3);
 
 			// appends a formatted string based on passed va list
-			void AppendFormatVA(const CHAR *format, VA_LIST va_args);
+			void AppendFormatVA(const CHAR *format, VA_LIST va_args) GPOS_ATTRIBUTE_PRINTF(2, 0);
 
 			// appends wide character string
 			void AppendConvert(const WCHAR *wc_str);

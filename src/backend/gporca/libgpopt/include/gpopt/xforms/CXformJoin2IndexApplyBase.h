@@ -8,7 +8,7 @@
 #define GPOPT_CXformJoin2IndexApplyBase_H
 
 #include "gpos/base.h"
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalDynamicGet.h"
 #include "gpopt/xforms/CXformJoin2IndexApply.h"
 
 namespace gpopt

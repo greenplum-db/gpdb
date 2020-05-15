@@ -13,7 +13,6 @@
 
 #include "gpos/base.h"
 #include "gpopt/xforms/CXform.h"
-#include "gpopt/operators/ops.h"
 
 namespace gpopt
 {

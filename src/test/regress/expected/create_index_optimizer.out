@@ -85,6 +85,7 @@ INSERT INTO radix_text_tbl
 INSERT INTO radix_text_tbl VALUES ('P0123456789abcde');
 INSERT INTO radix_text_tbl VALUES ('P0123456789abcdefF');
 CREATE INDEX sp_radix_ind ON radix_text_tbl USING spgist (t);
+SET optimizer_enable_tablescan = OFF;
 --
 -- Test GiST and SP-GiST indexes
 --
@@ -404,7 +405,6 @@ SELECT circle_center(f1), round(radius(f1)) as radius FROM gcircle_tbl ORDER BY 
 
 -- Now check the results from plain indexscan
 SET enable_seqscan = OFF;
-SET optimizer_enable_tablescan = OFF;
 SET enable_indexscan = ON;
 SET enable_bitmapscan = OFF;
 EXPLAIN (COSTS OFF)
@@ -2015,7 +2015,6 @@ SELECT count(*) FROM radix_text_tbl WHERE t ~>~  'Worth                         
 (1 row)
 
 RESET enable_seqscan;
-RESET optimizer_enable_tablescan;
 RESET enable_indexscan;
 RESET enable_bitmapscan;
 --
@@ -2024,7 +2023,6 @@ RESET enable_bitmapscan;
 -- Note: GIN currently supports only bitmap scans, not plain indexscans
 --
 SET enable_seqscan = OFF;
-SET optimizer_enable_tablescan = OFF;
 SET enable_indexscan = OFF;
 SET enable_bitmapscan = ON;
 CREATE INDEX intarrayidx ON array_index_op_test USING gin (i);
@@ -2561,7 +2559,6 @@ SELECT * FROM array_op_test WHERE i <@ '{NULL}' ORDER BY seqno;
 (1 row)
 
 RESET enable_seqscan;
-RESET optimizer_enable_tablescan;
 RESET enable_indexscan;
 RESET enable_bitmapscan;
 --
@@ -2901,7 +2898,6 @@ CREATE TABLE onek_with_null AS SELECT unique1, unique2 FROM onek DISTRIBUTED BY 
 INSERT INTO onek_with_null (unique1,unique2) VALUES (NULL, -1), (NULL, NULL);
 CREATE UNIQUE INDEX onek_nulltest ON onek_with_null (unique2,unique1);
 SET enable_seqscan = OFF;
-SET optimizer_enable_tablescan = OFF;
 SET enable_indexscan = ON;
 SET enable_bitmapscan = ON;
 SELECT count(*) FROM onek_with_null WHERE unique1 IS NULL;
@@ -3111,7 +3107,6 @@ SELECT unique1, unique2 FROM onek_with_null WHERE unique2 < 999
 (2 rows)
 
 RESET enable_seqscan;
-RESET optimizer_enable_tablescan;
 RESET enable_indexscan;
 RESET enable_bitmapscan;
 DROP TABLE onek_with_null;
@@ -3119,7 +3114,6 @@ DROP TABLE onek_with_null;
 -- Check bitmap index path planning
 --
 SET enable_seqscan = OFF;
-SET optimizer_enable_tablescan = OFF;
 SET enable_indexscan = ON;
 SET enable_bitmapscan = ON;
 EXPLAIN (COSTS OFF)
@@ -3249,11 +3243,9 @@ ORDER BY thousand;
 (2 rows)
 
 RESET enable_seqscan;
-RESET optimizer_enable_tablescan;
 RESET enable_indexscan;
 RESET enable_bitmapscan;
 SET enable_indexonlyscan = OFF;
-SET random_page_cost = 4; -- prefer index san.
 explain (costs off)
 SELECT thousand, tenthous FROM tenk1
 WHERE thousand < 2 AND tenthous IN (1001,3000)
@@ -3279,7 +3271,6 @@ ORDER BY thousand;
         1 |     1001
 (2 rows)
 
-RESET random_page_cost;
 RESET enable_indexonlyscan;
 RESET enable_indexscan;
 --
@@ -3290,8 +3281,8 @@ explain (costs off)
                                 QUERY PLAN                                 
 ---------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on tenk1
-         Filter: (((thousand = 1) AND (tenthous = 1001)) OR NULL::boolean)
+   ->  Index Scan using tenk1_thous_tenthous on tenk1
+         Index Cond: ((thousand = 1) AND (tenthous = 1001))
  Optimizer: Pivotal Optimizer (GPORCA) version 3.1.0
 (4 rows)
 
@@ -3374,3 +3365,4 @@ DROP ROLE regress_reindexuser;
 SET client_min_messages TO 'warning';
 DROP SCHEMA schema_to_reindex CASCADE;
 RESET client_min_messages;
+RESET optimizer_enable_tablescan;

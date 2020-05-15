@@ -54,7 +54,7 @@ More detailed interface
 -----------------------
 
 A more detailed version of the fault injector interface accepts
-several more paramters.  For example:
+several more parameters.  For example:
 
    select gp_inject_fault('heap_insert', 'error',
           '' /* DDL */, '' /* database name */,
@@ -126,7 +126,7 @@ status
       "set" injected but the fault point has not been reached during
       execution yet.
 
-      "tiggered" the fault point has been reached at least once during
+      "triggered" the fault point has been reached at least once during
       execution.
 
       "completed" the action associated with the fault point will no

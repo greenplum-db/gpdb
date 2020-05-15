@@ -1306,6 +1306,7 @@ _equalCreateStmt(const CreateStmt *a, const CreateStmt *b)
 	COMPARE_SCALAR_FIELD(ownerid);
 	COMPARE_SCALAR_FIELD(buildAoBlkdir);
 	COMPARE_NODE_FIELD(attr_encodings);
+	COMPARE_SCALAR_FIELD(isCtas);
 
 	return true;
 }

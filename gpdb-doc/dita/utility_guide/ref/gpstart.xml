@@ -43,14 +43,32 @@
                     Features</xref> in the <cite>Greenplum Database Admininstartor Guide</cite>.</p>
             <note>Before you can start a Greenplum Database system, you must have initialized the
                 system using <codeph>gpinitsystem</codeph>. Enabling or disabing heap checksums is
-                set when you initialize the system and cannot be changed after initialization.</note>
+                set when you initialize the system and cannot be changed after
+                initialization.</note>
+            <p>If the Greenplum Database system is configured with a standby master, and
+                    <codeph>gpstart</codeph> does not detect it during startup,
+                    <codeph>gpstart</codeph> displays a warning and lets you cancel the startup
+                    operation.<ul id="ul_v3p_mrc_nlb">
+                    <li>If the <codeph>-a</codeph> option (disable interactive mode prompts) is not
+                        specified, <codeph>gpstart</codeph> displays and logs these
+                            messages:<codeblock>Standby host is unreachable, cannot determine whether the standby is currently acting as the master. Received error: &lt;error>
+Continue only if you are certain that the standby is not acting as the master.</codeblock><p>It also
+                            displays this prompt to continue
+                            startup:<codeblock>Continue with startup Yy|Nn (default=N):</codeblock></p></li>
+                    <li>If the <codeph>-a</codeph> option is specified, the utility does not start
+                        the system. The messages are only logged, and <codeph>gpstart</codeph> adds
+                        this log
+                        message:<codeblock>Non interactive mode detected. Not starting the cluster. Start the cluster in interactive mode.</codeblock></li>
+                </ul></p>
+            <p>If the standby master is not accessible, you can start the system and troubleshoot
+                standby master issues while the system is available.</p>
         </section>
         <section id="section4">
             <title>Options</title>
             <parml>
                 <plentry>
                     <pt>-a</pt>
-                    <pd>Do not prompt the user for confirmation.</pd>
+                    <pd>Do not prompt the user for confirmation. Disables interactive mode.</pd>
                 </plentry>
                 <plentry>
                     <pt>-B <varname>parallel_processes</varname></pt>
@@ -94,11 +112,11 @@
                     <pd>During startup, the utility does not validate the consistency of the heap
                         checksum setting among the Greenplum Database master and segment instances.
                         The default is to ensure that the heap checksum setting is the same on all
-                        instances, either enabled or disabled. <note type="warning">Starting
-                            Greenplum Database without this validation could lead to data loss. Use
-                            this option to start Greenplum Database only when it is necessary to
-                            ignore the heap checksum verification errors to recover data or to
-                            troubleshoot the errors.</note></pd>
+                        instances, either enabled or disabled.
+                        <note type="warning">Starting Greenplum Database without this validation
+                            could lead to data loss. Use this option to start Greenplum Database
+                            only when it is necessary to ignore the heap checksum verification
+                            errors to recover data or to troubleshoot the errors.</note></pd>
                 </plentry>
                 <plentry>
                     <pt>-t <varname>timeout_seconds</varname></pt>

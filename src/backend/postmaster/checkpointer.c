@@ -51,6 +51,7 @@
 #include "postmaster/bgwriter.h"
 #include "replication/syncrep.h"
 #include "storage/bufmgr.h"
+#include "storage/condition_variable.h"
 #include "storage/fd.h"
 #include "storage/ipc.h"
 #include "storage/lwlock.h"
@@ -281,6 +282,7 @@ CheckpointerMain(void)
 		 * files.
 		 */
 		LWLockReleaseAll();
+		ConditionVariableCancelSleep();
 		pgstat_report_wait_end();
 		AbortBufferIO();
 		UnlockBuffers();

@@ -245,3 +245,30 @@ y(i) AS (
 )
 SELECT * FROM y LIMIT 10;
 DROP TABLE recursive_table_ic;
+
+-- Test QD can notice the errors in QEs for initplan
+CREATE TABLE qe_errors_ic (a INT, b INT);
+INSERT INTO qe_errors_ic SELECT i, i FROM generate_series(1, 10) i;
+SELECT count(*) FROM qe_errors_ic
+GROUP BY a, b
+HAVING sum(a) > (SELECT max(a) FROM qe_errors_ic WHERE a/0 > 1);
+
+-- Test QD can notice the errors in QEs for cursors
+-- In past, bellow DECLARE and FETCH commands had chances to report
+-- no errors, it was not expected, we expect either DECLARE or FETCH
+-- to report 'division by zero' errors.
+--
+-- In TCP interconnect mode, DECLARE or FETCH all have chance to
+-- report 'division by zero' errors, it depends on the speed of QD
+-- and QEs to set up interconnect, so ignore the output of DECLARE
+-- and FETCH, we verify the test case by checking the fact that the
+-- following commands in the transaction will failed.
+BEGIN;
+--start_ignore
+DECLARE qe_errors_cursor CURSOR FOR SELECT * FROM qe_errors_ic WHERE qe_errors_ic.b / 0 >1;
+FETCH ALL FROM qe_errors_cursor;
+--end_ignore
+select 1;
+ROLLBACK;
+
+DROP TABLE qe_errors_ic;

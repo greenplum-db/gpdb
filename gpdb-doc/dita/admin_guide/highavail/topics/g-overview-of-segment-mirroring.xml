@@ -12,8 +12,9 @@
             unavailable, it changes the role of its mirror segment to primary segment and the role
             of the unavailable primary segment to mirror segment. Transactions in progress when the
             failure occurred roll back and must be restarted. The administrator must then recover
-            the mirror segment, allow the mirror to synchronize with the current primary segment, and
-            then exchange the primary and mirror segments so they are in their preferred roles.</p>
+            the mirror segment, allow the mirror to synchronize with the current primary segment,
+            and then exchange the primary and mirror segments so they are in their preferred
+            roles.</p>
         <p>If segment mirroring is not enabled, the Greenplum Database system shuts down if a
             segment instance fails. Administrators must manually recover all failed segments before
             Greenplum Database operations can resume.</p>
@@ -48,39 +49,47 @@
                         <codeph>walsender</codeph> processes that are used for Greenplum Database
                     master and segment mirroring.</li>
             </ul></p>
-        <section>
+        <section id="mirror_configs">
             <title>About Segment Mirroring Configurations</title>
             <p>Mirror segment instances can be placed on hosts in the cluster in different
                 configurations. As a best practice, a primary segment and the corresponding mirror
                 are placed on different hosts. Each host must have the same number of primary and
                 mirror segments. When you create segment mirrors with the Greenplum Database
-                utilities <codeph><xref
-                        href="../../../utility_guide/ref/gpinitsystem.xml"/></codeph> or
-                        <codeph><xref href="../../../utility_guide/ref/gpaddmirrors.xml"
+                utilities <codeph><xref href="../../../utility_guide/ref/gpinitsystem.xml"
+                    /></codeph> or <codeph><xref href="../../../utility_guide/ref/gpaddmirrors.xml"
                     /></codeph> you can specify the segment mirror configuration, group mirroring
                 (the default) or spread mirroring. With <codeph>gpaddmirrors</codeph>, you can
                 create custom mirroring configurations with a <codeph>gpaddmirrors</codeph>
                 configuration file and specify the file on the command line.</p>
-            <p><i>Group mirroring</i> is the default mirroring configuration. The mirror segments
-                for each host's primary segments are placed on one other host. If a single host
-                fails, the number of active primary segments doubles on the host that backs the
-                failed host. The diagram <xref href="#topic3/fig_rrr_nt2_xt" format="dita"/>
-                illustrates a group mirroring configuration. </p>
-            <!--<fig id="ki169754"><image href="../../graphics/mirrorsegs.png" placement="break" width="485px" height="135px"/></fig>-->
+            <p><i>Group mirroring</i> is the default mirroring configuration when you enable
+                mirroring during system initialization. The mirror segments for each host's primary
+                segments are placed on one other host. If a single host fails, the number of active
+                primary segments doubles on the host that backs the failed host. <xref
+                    href="#topic3/fig_rrr_nt2_xt" format="dita"/> illustrates a group mirroring
+                configuration. </p>
             <fig id="fig_rrr_nt2_xt">
                 <title>Group Segment Mirroring in Greenplum Database</title>
                 <image href="../../graphics/group-mirroring.png" id="image_crm_pt2_xt"/>
             </fig>
-            <p><i>Spread mirroring</i> spreads each host's mirrors over multiple hosts so that if
-                any single host fails, no other host will have more than one mirror promoted to an
-                active primary segment. Spread mirroring is possible only if there are more hosts
-                than segments per host. The diagram <xref href="#topic3/fig_ew1_qgg_xt"
-                    format="dita"/> illustrates the placement of mirrors in a spread segment
-                mirroring configuration.</p>
+            <p><i>Spread mirroring</i> can be specified during system initialization. This
+                configuration spreads each host's mirrors over multiple hosts so that if any single
+                host fails, no other host will have more than one mirror promoted to an active
+                primary segment. Spread mirroring is possible only if there are more hosts than
+                segments per host. <xref href="#topic3/fig_ew1_qgg_xt" format="dita"/> illustrates
+                the placement of mirrors in a spread segment mirroring configuration.</p>
             <fig id="fig_ew1_qgg_xt">
                 <title>Spread Segment Mirroring in Greenplum Database</title>
                 <image href="../../graphics/spread-mirroring.png" id="image_zjm_wgg_xt"/>
             </fig>
+            <note>You must ensure you have the appropriate number of host systems for your mirroring
+                configuration when you create a system or when you expand a system. For example, to
+                create a system that is configured with spread mirroring requires more hosts than
+                segment instances per host, and a system that is configured with group mirroring
+                requires at least two new hosts when expanding the system. For information about
+                segment mirroring configurations, see <xref
+                    href="../../../best_practices/ha.xml#topic_ngz_qf4_tt"/>. For information about
+                expanding systems with segment mirroring enabled, see <xref
+                    href="../../expand/expand-planning.xml#topic7"/>. </note>
         </section>
         <p> </p>
     </body>

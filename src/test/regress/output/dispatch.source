@@ -156,6 +156,48 @@ CREATE TABLE "my table" (id integer);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 DROP TABLE "my table";
+-- test ALTER DATABASE SET FROM CURRENT
+SHOW search_path;
+     search_path     
+---------------------
+ "my schema", public
+(1 row)
+
+ALTER DATABASE "dispatch test db" RESET ALL;
+\c
+SHOW search_path;
+   search_path   
+-----------------
+ "$user", public
+(1 row)
+
+SET search_path="my schema", public;
+SHOW search_path;
+     search_path     
+---------------------
+ "my schema", public
+(1 row)
+
+ALTER DATABASE "dispatch test db" SET search_path FROM CURRENT;
+\c
+SHOW search_path;
+     search_path     
+---------------------
+ "my schema", public
+(1 row)
+
+SELECT 0 as gp_segment_id, setconfig FROM gp_dist_random('pg_db_role_setting')
+WHERE setdatabase = (SELECT oid FROM pg_database WHERE datname='dispatch test db') and gp_segment_id = 0
+UNION
+SELECT -1 as gp_segment_id, setconfig FROM pg_db_role_setting
+WHERE setdatabase = (SELECT oid FROM pg_database WHERE datname='dispatch test db')
+ORDER BY gp_segment_id;
+ gp_segment_id |                   setconfig                   
+---------------+-----------------------------------------------
+            -1 | {"search_path=\"my schema\", public"}
+             0 | {"search_path=\"\"\"my schema\"\", public\""}
+(2 rows)
+
 -- Clean up
 \c dispatch_test_db
 DROP DATABASE "dispatch test db";
@@ -233,8 +275,6 @@ AS '@abs_builddir@/regress@DLSUFFIX@', 'hasBackendsExist' LANGUAGE C;
 -- check if QD has reusable gangs
 CREATE OR REPLACE FUNCTION hasGangsExist() RETURNS BOOL
 AS '@abs_builddir@/regress@DLSUFFIX@', 'hasGangsExist' LANGUAGE C;
--- disable debug linger to get immediate feedback from FATAL errors.
-set gp_debug_linger to 0;
 -- test log debug related code within dispatch
 set gp_log_gang to debug;
 set log_min_messages to DEBUG;

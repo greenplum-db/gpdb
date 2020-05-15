@@ -624,7 +624,7 @@ external_insert_init(Relation rel)
 	/* pass external table's encoding to copy's options */
 	copyFmtOpts = appendCopyEncodingOption(copyFmtOpts, extentry->encoding);
 
-	extInsertDesc->ext_pstate = BeginCopyToForExternalTable(rel, copyFmtOpts);
+	extInsertDesc->ext_pstate = BeginCopyToForeignTable(rel, copyFmtOpts);
 	InitParseState(extInsertDesc->ext_pstate,
 				   rel,
 				   true,

@@ -6,8 +6,15 @@
     <p>Views enable you to save frequently used or complex queries, then access them in a
         <codeph>SELECT</codeph> statement as if they were a table. A view is not physically
       materialized on disk: the query runs as a subquery when you access the view.</p>
-    <p>If a subquery is associated with a single query, consider using the <codeph>WITH</codeph>
-      clause of the <codeph>SELECT</codeph> command instead of creating a seldom-used view.</p>
+    <p>These topics describe various aspects of creating and managing views:</p>
+    <ul id="ul_qv2_1jt_jlb">
+      <li>
+        <xref href="ddl-view-best-practices.xml"/> outlines best practices when creating views.</li>
+      <li>
+        <xref href="ddl-view-find-depend.xml"/> contains examples of listing view information and
+        determining what views depend on a certain object. </li>
+      <li><xref href="ddl-view-storage.xml"/> describes the mechanics behind view dependencies.</li>
+    </ul>
   </body>
   <topic id="topic101" xml:lang="en">
     <title>Creating Views</title>
@@ -29,10 +36,10 @@
         <codeblock>DROP VIEW topten;
 </codeblock>
       </p>
-      <p>The <codeph>DROP VIEW ... CASCADE</codeph> command also removes all dependent objects. As
-      example, if another view depends on the view which is about to be dropped, the other view
-      will be dropped as well. Without the <codeph>CASCADE</codeph> option, the
-      <codeph>DROP VIEW</codeph> command will fail.</p>
+      <p>The <codeph>DROP VIEW...CASCADE</codeph> command also removes all dependent objects. As an
+        example, if another view depends on the view which is about to be dropped, the other view
+        will be dropped as well. Without the <codeph>CASCADE</codeph> option, the <codeph>DROP
+          VIEW</codeph> command will fail.</p>
     </body>
   </topic>
 </topic>

@@ -12,8 +12,6 @@
 #include "gpos/base.h"
 #include "gpopt/xforms/CXformLeftOuterApply2LeftOuterJoin.h"
 
-#include "gpopt/operators/ops.h"
-
 
 using namespace gpopt;
 

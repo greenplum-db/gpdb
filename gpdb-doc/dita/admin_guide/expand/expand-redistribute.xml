@@ -73,18 +73,32 @@
                   href="../../ref_guide/system_catalogs/gp_expansion_status.xml"
                   >gpexpand.status</xref></i> when a session starts and finishes.</p></li>
         </ol>
+        <note>After completing table redistribution, run the <codeph>VACUUM ANALYZE</codeph> and
+            <codeph>REINDEX</codeph>commands on the catalog tables to update table statistics, and
+          rebuild indexes. See <xref href="../managing/maintain.xml#topic2">Routine Vacuum and
+            Analyze</xref> in the <i>Administration Guide</i> and <xref
+            href="../../ref_guide/sql_commands/VACUUM.xml#topic1/er20941"
+            ><codeph>VACUUM</codeph></xref> in the <i>Reference Guide</i>. </note>
       </section>
     </body>
   </topic>
   <topic id="topic31" xml:lang="en">
     <title>Monitoring Table Redistribution</title>
     <body>
-      <p>You can query the expansion schema during the table redistribution process. The view
-            <i><xref href="../../ref_guide/system_catalogs/gpexpand_expansion_progress.xml"
-            >gpexpand.expansion_progress</xref></i> provides a current progress summary, including
-        the estimated rate of table redistribution and estimated time to completion. You can query
-        the table <i><xref href="../../ref_guide/system_catalogs/gp_expansion_tables.xml"
-            >gpexpand.status_detail</xref></i> for per-table status information.</p>
+      <p>During the table redistribution process you can query the expansion schema to view:</p> 
+      <ul
+          id="ul_tn2_xzr_jlb">
+          <li>a current progress summary, the estimated rate of table redistribution, and the
+          estimated time to completion. Use <i><xref
+              href="../../ref_guide/system_catalogs/gpexpand_expansion_progress.xml"
+              >gpexpand.expansion_progress</xref></i>, as described in <xref href="#topic32"
+            format="dita">Viewing Expansion Status</xref>.</li>
+          <li>per-table status information, using <i><xref
+              href="../../ref_guide/system_catalogs/gp_expansion_tables.xml"
+              >gpexpand.status_detail</xref></i>. See <xref href="#topic33" format="dita">Viewing
+            Table Status</xref>.</li>
+        </ul>
+     
       <p>See also <xref href="expand-initialize.xml#topic_wkv_kkd_chb"/> for information about
         monitoring the overall expansion progress with the <codeph>gpstate</codeph> utility.</p>
     </body>

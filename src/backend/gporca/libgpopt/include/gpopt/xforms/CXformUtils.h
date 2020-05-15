@@ -13,13 +13,18 @@
 
 #include "gpos/base.h"
 
+#include "naucrates/md/IMDIndex.h"
 #include "naucrates/md/IMDScalarOp.h"
 
 #include "gpopt/base/CUtils.h"
 #include "gpopt/base/CCastUtils.h"
 #include "gpopt/base/CColRef.h"
+#include "gpopt/operators/CLogicalDML.h"
+#include "gpopt/operators/CLogicalDynamicIndexGet.h"
+#include "gpopt/operators/CLogicalIndexGet.h"
+#include "gpopt/operators/CPhysicalJoin.h"
+#include "gpopt/operators/CPredicateUtils.h"
 
-#include "gpopt/operators/ops.h"
 #include "gpopt/xforms/CXform.h"
 
 namespace gpopt

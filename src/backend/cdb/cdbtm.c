@@ -823,11 +823,11 @@ prepareDtxTransaction(void)
 
 	/*
 	 * If only one segment was involved in the transaction, and no local XID
-	 * has been assigned on the QD either, we can perform one-phase commit
-	 * on that one segment. Otherwise, broadcast PREPARE TRANSACTION to the
-	 * segments.
+	 * has been assigned on the QD either, or there is no xlog writing related
+	 * to this transaction on all segments, we can perform one-phase commit.
+	 * Otherwise, broadcast PREPARE TRANSACTION to the segments.
 	 */
-	if (!ExecutorDidWriteXLog() ||
+	if (!TopXactExecutorDidWriteXLog() ||
 		(!markXidCommitted && list_length(MyTmGxactLocal->dtxSegments) < 2))
 	{
 		setCurrentDtxState(DTX_STATE_ONE_PHASE_COMMIT);

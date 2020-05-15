@@ -138,7 +138,7 @@ determine_os() {
 
 # Set the "Set-User-ID" bit of ping, or else gpinitsystem will error by following message:
 # [FATAL]:-Unknown host d6f9f630-65a3-4c98-4c03-401fbe5dd60b: ping: socket: Operation not permitted
-# This is needed in centos7, sles12sp5, but not for centos6, ubuntu18.04
+# This is needed in centos7, sles12sp5, but not for ubuntu18.04
 workaround_before_concourse_stops_stripping_suid_bits() {
   chmod u+s $(which ping)
 }

@@ -308,8 +308,14 @@ ReportSrehResults(CdbSreh *cdbsreh, uint64 total_rejected)
 	}
 }
 
-static void
-sendnumrows_internal(int64 numrejected, int64 numcompleted)
+/*
+ * SendNumRows
+ *
+ * Using this function the QE sends back to the client QD the number
+ * of rows that were rejected and completed in this last data load
+ */
+void
+SendNumRows(int64 numrejected, int64 numcompleted)
 {
 	StringInfoData buf;
 
@@ -322,30 +328,6 @@ sendnumrows_internal(int64 numrejected, int64 numcompleted)
 								 * ON SEGMENT */
 		pq_sendint64(&buf, numcompleted);
 	pq_endmessage(&buf);
-}
-
-/*
- * SendNumRowsRejected
- *
- * Using this function the QE sends back to the client QD the number
- * of rows that were rejected in this last data load in SREH mode.
- */
-void
-SendNumRowsRejected(int64 numrejected)
-{
-	sendnumrows_internal(numrejected, 0);
-}
-
-/*
- * SendNumRows
- *
- * Using this function the QE sends back to the client QD the number
- * of rows that were rejected and completed in this last data load
- */
-void
-SendNumRows(int64 numrejected, int64 numcompleted)
-{
-	sendnumrows_internal(numrejected, numcompleted);
 }
 
 /* Identify the reject limit type */

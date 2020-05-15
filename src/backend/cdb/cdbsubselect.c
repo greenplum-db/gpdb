@@ -68,8 +68,10 @@ typedef struct ConvertSubqueryToJoinContext
 } ConvertSubqueryToJoinContext;
 
 static void ProcessSubqueryToJoin(Query *subselect, ConvertSubqueryToJoinContext *context);
+static void ProcessSubqueryToJoin_walker(Node *jtree, ConvertSubqueryToJoinContext *context);
 static void SubqueryToJoinWalker(Node *node, ConvertSubqueryToJoinContext *context);
 static void RemoveInnerJoinQuals(Query *subselect);
+static void RemoveInnerJoinQuals_walker(Node *jtree);
 
 static bool find_nonnullable_vars_walker(Node *node, NonNullableVarsContext *context);
 static bool is_attribute_nonnullable(Oid relationOid, AttrNumber attrNumber);
@@ -242,7 +244,15 @@ IsCorrelatedEqualityOpExpr(OpExpr *opexp, Expr **innerExpr, Oid *eqOp, Oid *sort
 }
 
 /**
- * Process subquery to extract useful information to be able to convert it to a join
+ * Process subquery to extract useful information to be able to convert it to
+ * a join.
+ *
+ * This scans the join tree, and verifies that it consists entirely of inner
+ * joins. The inner joins can be represented as explicit JOIN_INNER JoinExprs*
+ * or as FromExprs. All the join quals are collected in context->innerQual.
+ *
+ * context->safeToConvert must be 'true' on entry. This sets it to false if
+ * there are any non-inner joins in the tree.
  */
 static void
 ProcessSubqueryToJoin(Query *subselect, ConvertSubqueryToJoinContext *context)
@@ -250,42 +260,58 @@ ProcessSubqueryToJoin(Query *subselect, ConvertSubqueryToJoinContext *context)
 	Assert(context);
 	Assert(context->safeToConvert);
 	Assert(subselect);
-	Assert(list_length(subselect->jointree->fromlist) == 1);
-	Node	   *joinQual = NULL;
 
-	/**
-	 * If subselect's join tree is not a plain relation or an inner join, we refuse to convert.
-	 */
-	Node	   *jtree = (Node *) list_nth(subselect->jointree->fromlist, 0);
+	ProcessSubqueryToJoin_walker((Node *) subselect->jointree, context);
+}
 
+static void
+ProcessSubqueryToJoin_walker(Node *jtree, ConvertSubqueryToJoinContext *context)
+{
 	if (IsA(jtree, JoinExpr))
 	{
 		JoinExpr   *je = (JoinExpr *) jtree;
 
+		/*
+		 * If subselect's join tree is not a plain relation or an inner join,
+		 * we refuse to convert.
+		 */
 		if (je->jointype != JOIN_INNER)
 		{
 			context->safeToConvert = false;
 			return;
 		}
-		joinQual = je->quals;
+
+		ProcessSubqueryToJoin_walker(je->larg, context);
+		if (!context->safeToConvert)
+			return;
+		ProcessSubqueryToJoin_walker(je->rarg, context);
+		if (!context->safeToConvert)
+			return;
+
+		SubqueryToJoinWalker(je->quals, context);
 	}
-
-	SubqueryToJoinWalker(subselect->jointree->quals, context);
-
-	if (context->safeToConvert)
+	else if (IsA(jtree, FromExpr))
 	{
-		SubqueryToJoinWalker(joinQual, context);
-	}
+		FromExpr   *fe = (FromExpr *) jtree;
+		ListCell   *lc;
 
-	/**
-	 * If we haven't been able to extract a proper joinQual, then it is not safe to convert
-	 */
-	if (!context->joinQual)
+		foreach(lc, fe->fromlist)
+		{
+			ProcessSubqueryToJoin_walker(lfirst(lc), context);
+			if (!context->safeToConvert)
+				return;
+		}
+
+		SubqueryToJoinWalker(fe->quals, context);
+	}
+	else if (IsA(jtree, RangeTblRef))
 	{
-		context->safeToConvert = false;
+		/* nothing to do */
 	}
-
-	return;
+	else
+	{
+		elog(ERROR, "unexpected node of type %d in join tree", jtree->type);
+	}
 }
 
 /**
@@ -294,21 +320,50 @@ ProcessSubqueryToJoin(Query *subselect, ConvertSubqueryToJoinContext *context)
 static void
 RemoveInnerJoinQuals(Query *subselect)
 {
-	Assert(subselect);
-	Assert(list_length(subselect->jointree->fromlist) == 1);
+	RemoveInnerJoinQuals_walker((Node *) subselect->jointree);
+}
 
-	subselect->jointree->quals = NULL;
-
-	Node	   *jtree = (Node *) list_nth(subselect->jointree->fromlist, 0);
-
+static void
+RemoveInnerJoinQuals_walker(Node *jtree)
+{
 	if (IsA(jtree, JoinExpr))
 	{
 		JoinExpr   *je = (JoinExpr *) jtree;
 
-		Assert(je->jointype == JOIN_INNER);
+		/*
+		 * We already checked in ProcessSubqueryToJoin() that there
+		 * are no outer joins, but doesn't hurt to check again.
+		 */
+		if (je->jointype != JOIN_INNER)
+		{
+			elog(ERROR, "unexpected join type encountered while converting subquery to join");
+		}
+
+		RemoveInnerJoinQuals_walker(je->larg);
+		RemoveInnerJoinQuals_walker(je->rarg);
+
 		je->quals = NULL;
 	}
-	return;
+	else if (IsA(jtree, FromExpr))
+	{
+		FromExpr   *fe = (FromExpr *) jtree;
+		ListCell   *lc;
+
+		foreach(lc, fe->fromlist)
+		{
+			RemoveInnerJoinQuals_walker(lfirst(lc));
+		}
+
+		fe->quals = NULL;
+	}
+	else if (IsA(jtree, RangeTblRef))
+	{
+		/* nothing to do */
+	}
+	else
+	{
+		elog(ERROR, "unexpected node of type %d in join tree", jtree->type);
+	}
 }
 
 /**
@@ -593,13 +648,7 @@ convert_EXPR_to_join(PlannerInfo *root, OpExpr *opexp)
 		/**
 		 * Construct the join expression involving the new pulled up subselect.
 		 */
-		Assert(list_length(root->parse->jointree->fromlist) == 1);
-
-		/* represents the top-level join tree entry */
-		Assert(linitial(root->parse->jointree->fromlist) != NULL);
-
 		JoinExpr   *join_expr = make_join_expr(NULL, rteIndex, JOIN_INNER);
-
 		Node	   *joinQual = ctx1.joinQual;
 
 		/**
@@ -1302,8 +1351,6 @@ convert_IN_to_antijoin(PlannerInfo *root, SubLink *sublink,
 		/* Delete ORDER BY and DISTINCT. */
 		cdbsubselect_drop_orderby(subselect);
 		cdbsubselect_drop_distinct(subselect);
-
-		Assert(list_length(parse->jointree->fromlist) == 1);
 
 		int			subq_indx = add_notin_subquery_rte(parse, subselect);
 		bool		inner_nullable = is_targetlist_nullable(subselect);

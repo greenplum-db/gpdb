@@ -2010,7 +2010,7 @@
     <dxl:Plan Id="0" SpaceSize="150">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1324604.464841" Rows="728.177778" Width="28"/>
+          <dxl:Cost StartupCost="0" TotalCost="1324669.231990" Rows="2560.000000" Width="28"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -2039,7 +2039,7 @@
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="Inner">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1324604.388858" Rows="728.177778" Width="28"/>
+            <dxl:Cost StartupCost="0" TotalCost="1324668.964863" Rows="2560.000000" Width="28"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -2068,40 +2068,13 @@
           <dxl:JoinFilter/>
           <dxl:HashCondList>
             <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-              <dxl:Ident ColId="10" ColName="d" TypeMdid="0.23.1.0"/>
               <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
+              <dxl:Ident ColId="10" ColName="d" TypeMdid="0.23.1.0"/>
             </dxl:Comparison>
           </dxl:HashCondList>
-          <dxl:TableScan>
-            <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.062700" Rows="9000.000000" Width="8"/>
-            </dxl:Properties>
-            <dxl:ProjList>
-              <dxl:ProjElem ColId="10" Alias="d">
-                <dxl:Ident ColId="10" ColName="d" TypeMdid="0.23.1.0"/>
-              </dxl:ProjElem>
-              <dxl:ProjElem ColId="11" Alias="e">
-                <dxl:Ident ColId="11" ColName="e" TypeMdid="0.23.1.0"/>
-              </dxl:ProjElem>
-            </dxl:ProjList>
-            <dxl:Filter/>
-            <dxl:TableDescriptor Mdid="0.57371.1.0" TableName="bar">
-              <dxl:Columns>
-                <dxl:Column ColId="10" Attno="1" ColName="d" TypeMdid="0.23.1.0" ColWidth="4"/>
-                <dxl:Column ColId="11" Attno="2" ColName="e" TypeMdid="0.23.1.0" ColWidth="4"/>
-                <dxl:Column ColId="12" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                <dxl:Column ColId="13" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                <dxl:Column ColId="14" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                <dxl:Column ColId="15" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                <dxl:Column ColId="16" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                <dxl:Column ColId="17" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                <dxl:Column ColId="18" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-              </dxl:Columns>
-            </dxl:TableDescriptor>
-          </dxl:TableScan>
           <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1324172.572304" Rows="809.086420" Width="20"/>
+              <dxl:Cost StartupCost="0" TotalCost="1324236.752760" Rows="2844.444444" Width="20"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -2129,7 +2102,7 @@
             </dxl:HashExprList>
             <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1324172.555421" Rows="809.086420" Width="20"/>
+                <dxl:Cost StartupCost="0" TotalCost="1324236.693406" Rows="2844.444444" Width="20"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="a">
@@ -2156,7 +2129,7 @@
                     <dxl:CoerceViaIO TypeMdid="0.23.1.0" CoercionForm="1" Location="0">
                       <dxl:FuncExpr FuncId="0.1773.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
                         <dxl:Ident ColId="19" ColName="f" TypeMdid="0.23.1.0"/>
-                        <dxl:ConstValue TypeMdid="0.25.1.0" IsNull="false" Value="AAAABzk5OQ==" LintValue="724274224"/>
+                        <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABzk5OQ==" LintValue="724274224"/>
                       </dxl:FuncExpr>
                     </dxl:CoerceViaIO>
                   </dxl:Comparison>
@@ -2165,7 +2138,7 @@
                     <dxl:CoerceViaIO TypeMdid="0.23.1.0" CoercionForm="1" Location="0">
                       <dxl:FuncExpr FuncId="0.1773.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
                         <dxl:Ident ColId="19" ColName="f" TypeMdid="0.23.1.0"/>
-                        <dxl:ConstValue TypeMdid="0.25.1.0" IsNull="false" Value="AAAABzk5OQ==" LintValue="724274224"/>
+                        <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABzk5OQ==" LintValue="724274224"/>
                       </dxl:FuncExpr>
                     </dxl:CoerceViaIO>
                   </dxl:Comparison>
@@ -2184,7 +2157,7 @@
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:PartEqFilters>
-                  <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="false" Value="true"/>
+                  <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
                 </dxl:PartEqFilters>
                 <dxl:PartFilters>
                   <dxl:Or>
@@ -2196,7 +2169,7 @@
                             <dxl:CoerceViaIO TypeMdid="0.23.1.0" CoercionForm="1" Location="0">
                               <dxl:FuncExpr FuncId="0.1773.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
                                 <dxl:Ident ColId="19" ColName="f" TypeMdid="0.23.1.0"/>
-                                <dxl:ConstValue TypeMdid="0.25.1.0" IsNull="false" Value="AAAABzk5OQ==" LintValue="724274224"/>
+                                <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABzk5OQ==" LintValue="724274224"/>
                               </dxl:FuncExpr>
                             </dxl:CoerceViaIO>
                           </dxl:Comparison>
@@ -2207,7 +2180,7 @@
                           <dxl:CoerceViaIO TypeMdid="0.23.1.0" CoercionForm="1" Location="0">
                             <dxl:FuncExpr FuncId="0.1773.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
                               <dxl:Ident ColId="19" ColName="f" TypeMdid="0.23.1.0"/>
-                              <dxl:ConstValue TypeMdid="0.25.1.0" IsNull="false" Value="AAAABzk5OQ==" LintValue="724274224"/>
+                              <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABzk5OQ==" LintValue="724274224"/>
                             </dxl:FuncExpr>
                           </dxl:CoerceViaIO>
                         </dxl:Comparison>
@@ -2219,7 +2192,7 @@
                             <dxl:CoerceViaIO TypeMdid="0.23.1.0" CoercionForm="1" Location="0">
                               <dxl:FuncExpr FuncId="0.1773.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
                                 <dxl:Ident ColId="19" ColName="f" TypeMdid="0.23.1.0"/>
-                                <dxl:ConstValue TypeMdid="0.25.1.0" IsNull="false" Value="AAAABzk5OQ==" LintValue="724274224"/>
+                                <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABzk5OQ==" LintValue="724274224"/>
                               </dxl:FuncExpr>
                             </dxl:CoerceViaIO>
                           </dxl:Comparison>
@@ -2230,7 +2203,7 @@
                           <dxl:CoerceViaIO TypeMdid="0.23.1.0" CoercionForm="1" Location="0">
                             <dxl:FuncExpr FuncId="0.1773.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
                               <dxl:Ident ColId="19" ColName="f" TypeMdid="0.23.1.0"/>
-                              <dxl:ConstValue TypeMdid="0.25.1.0" IsNull="false" Value="AAAABzk5OQ==" LintValue="724274224"/>
+                              <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABzk5OQ==" LintValue="724274224"/>
                             </dxl:FuncExpr>
                           </dxl:CoerceViaIO>
                         </dxl:Comparison>
@@ -2246,10 +2219,10 @@
                   </dxl:Or>
                 </dxl:PartFilters>
                 <dxl:ResidualFilter>
-                  <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="false" Value="true"/>
+                  <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
                 </dxl:ResidualFilter>
                 <dxl:PropagationExpression>
-                  <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="false" Value="1"/>
+                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                 </dxl:PropagationExpression>
                 <dxl:PrintableFilter>
                   <dxl:And>
@@ -2258,7 +2231,7 @@
                       <dxl:CoerceViaIO TypeMdid="0.23.1.0" CoercionForm="1" Location="0">
                         <dxl:FuncExpr FuncId="0.1773.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
                           <dxl:Ident ColId="19" ColName="f" TypeMdid="0.23.1.0"/>
-                          <dxl:ConstValue TypeMdid="0.25.1.0" IsNull="false" Value="AAAABzk5OQ==" LintValue="724274224"/>
+                          <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABzk5OQ==" LintValue="724274224"/>
                         </dxl:FuncExpr>
                       </dxl:CoerceViaIO>
                     </dxl:Comparison>
@@ -2267,7 +2240,7 @@
                       <dxl:CoerceViaIO TypeMdid="0.23.1.0" CoercionForm="1" Location="0">
                         <dxl:FuncExpr FuncId="0.1773.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
                           <dxl:Ident ColId="19" ColName="f" TypeMdid="0.23.1.0"/>
-                          <dxl:ConstValue TypeMdid="0.25.1.0" IsNull="false" Value="AAAABzk5OQ==" LintValue="724274224"/>
+                          <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABzk5OQ==" LintValue="724274224"/>
                         </dxl:FuncExpr>
                       </dxl:CoerceViaIO>
                     </dxl:Comparison>
@@ -2349,6 +2322,33 @@
               </dxl:DynamicTableScan>
             </dxl:NestedLoopJoin>
           </dxl:RedistributeMotion>
+          <dxl:TableScan>
+            <dxl:Properties>
+              <dxl:Cost StartupCost="0" TotalCost="431.062700" Rows="9000.000000" Width="8"/>
+            </dxl:Properties>
+            <dxl:ProjList>
+              <dxl:ProjElem ColId="10" Alias="d">
+                <dxl:Ident ColId="10" ColName="d" TypeMdid="0.23.1.0"/>
+              </dxl:ProjElem>
+              <dxl:ProjElem ColId="11" Alias="e">
+                <dxl:Ident ColId="11" ColName="e" TypeMdid="0.23.1.0"/>
+              </dxl:ProjElem>
+            </dxl:ProjList>
+            <dxl:Filter/>
+            <dxl:TableDescriptor Mdid="0.57371.1.0" TableName="bar">
+              <dxl:Columns>
+                <dxl:Column ColId="10" Attno="1" ColName="d" TypeMdid="0.23.1.0" ColWidth="4"/>
+                <dxl:Column ColId="11" Attno="2" ColName="e" TypeMdid="0.23.1.0" ColWidth="4"/>
+                <dxl:Column ColId="12" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                <dxl:Column ColId="13" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                <dxl:Column ColId="14" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                <dxl:Column ColId="15" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                <dxl:Column ColId="16" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                <dxl:Column ColId="17" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                <dxl:Column ColId="18" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+              </dxl:Columns>
+            </dxl:TableDescriptor>
+          </dxl:TableScan>
         </dxl:HashJoin>
       </dxl:GatherMotion>
     </dxl:Plan>

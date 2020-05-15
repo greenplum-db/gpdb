@@ -43,11 +43,7 @@ def get_xerces_source():
     for item in tarball:
         tarball.extract(item, ".")
     tarball.close()
-    patchfile = open("xerces_patch/patches/xerces-c-gpdb.patch", "r")
-    return subprocess.call(
-        ["patch", "-p1"],
-        stdin = patchfile,
-        cwd = XERCES_SOURCE_DIR)
+    return 0
 
 def configure(cxx_compiler, cxxflags, cflags, output_dir):
     os.mkdir("build")

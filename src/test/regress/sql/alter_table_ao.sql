@@ -26,7 +26,7 @@ insert into ao1 values('dd', 4);
 select * from ao1;
 
 alter table ao1 alter column col2 set default 2;
-select adsrc from pg_attrdef pdef, pg_attribute pattr
+select pg_get_expr(adbin, adrelid) from pg_attrdef pdef, pg_attribute pattr
     where pdef.adrelid='ao1'::regclass and pdef.adrelid=pattr.attrelid and pdef.adnum=pattr.attnum and pattr.attname='col2';
 
 alter table ao1 rename col2 to col2_renamed;
@@ -68,7 +68,7 @@ select  pg_class.relname, attname, typname from pg_attribute, pg_class, pg_type 
 
 -- There's an explicit entry in pg_attrdef for the NULL default (although it has
 -- the same effect as no entry).
-select relname, attname, adsrc from pg_class, pg_attribute, pg_attrdef where attrelid = pg_class.oid and adrelid = pg_class.oid and adnum = pg_attribute.attnum and pg_class.relname = 'ao1';
+select relname, attname, pg_get_expr(adbin, adrelid) from pg_class, pg_attribute, pg_attrdef where attrelid = pg_class.oid and adrelid = pg_class.oid and adnum = pg_attribute.attnum and pg_class.relname = 'ao1';
 
 
 ---
@@ -153,7 +153,7 @@ select  pg_class.relname, attname, typname from pg_attribute, pg_class, pg_type 
 
 -- There's an explicit entry in pg_attrdef for the NULL default (although it has
 -- the same effect as no entry).
-select relname, attname, adsrc from pg_class, pg_attribute, pg_attrdef where attrelid = pg_class.oid and adrelid = pg_class.oid and adnum = pg_attribute.attnum and pg_class.relname = 'aoco1';
+select relname, attname, pg_get_expr(adbin, adrelid) from pg_class, pg_attribute, pg_attrdef where attrelid = pg_class.oid and adrelid = pg_class.oid and adnum = pg_attribute.attnum and pg_class.relname = 'aoco1';
 
 ---
 --- check with IS NOT NULL constraint

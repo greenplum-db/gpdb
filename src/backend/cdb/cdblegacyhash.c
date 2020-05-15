@@ -393,9 +393,9 @@ cdblegacyhash_numeric(PG_FUNCTION_ARGS)
 
 	if (numeric_is_nan(num))
 	{
-		uint32		nanbuf = NAN_VAL;
+		static const uint32 nanbuf = NAN_VAL;
 
-		buf = &nanbuf;
+		buf = (void *) &nanbuf;
 		len = sizeof(nanbuf);
 	}
 	else

@@ -40,39 +40,14 @@ struct StringInfoData;                  /* #include "lib/stringinfo.h" */
  * TuplesortState and TuplesortPos are opaque types whose details are not known
  * outside tuplesort.c.
  */
-typedef struct TuplesortPos TuplesortPos;
 struct Tuplesortstate;
 struct ScanState;
-
-extern struct Tuplesortstate *tuplesort_begin_heap_file_readerwriter(
-		struct ScanState * ss,
-		const char* rwfile_prefix, bool isWriter,
-		TupleDesc tupDesc, 
-		int nkeys, AttrNumber *attNums,
-		Oid *sortOperators, Oid *sortCollations,
-		bool *nullsFirstFlags,
-		int workMem, bool randomAccess);
 
 extern void cdb_tuplesort_init(struct Tuplesortstate *state, int unique,
 							   int sort_flags,
 							   int64 maxdistinct);
 
-extern void tuplesort_begin_pos(struct Tuplesortstate *state, TuplesortPos **pos);
-extern bool tuplesort_gettupleslot_pos(struct Tuplesortstate *state, TuplesortPos *pos,
-                          bool forward, TupleTableSlot *slot, Datum *abbrev, MemoryContext mcontext);
-
-extern void tuplesort_flush(struct Tuplesortstate *state);
 extern void tuplesort_finalize_stats(struct Tuplesortstate *state);
-
-/*
- * These routines may only be called if randomAccess was specified 'true'.
- * Likewise, backwards scan in gettuple/getdatum is only allowed if
- * randomAccess was specified.
- */
-
-extern void tuplesort_rescan_pos(struct Tuplesortstate *state, TuplesortPos *pos);
-extern void tuplesort_markpos_pos(struct Tuplesortstate *state, TuplesortPos *pos);
-extern void tuplesort_restorepos_pos(struct Tuplesortstate *state, TuplesortPos *pos);
 
 /*
  * tuplesort_set_instrument

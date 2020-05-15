@@ -8,6 +8,7 @@ from gppylib.mainUtils import getProgramName
 
 import copy
 import datetime
+import glob
 import os
 import random
 import sys
@@ -51,6 +52,13 @@ MAX_BATCH_SIZE = 128
 SEGMENT_CONFIGURATION_BACKUP_FILE = "gpexpand.gp_segment_configuration"
 
 DBNAME = 'postgres'
+
+# an empty b-tree index file is considered invalid, it needs to contain a meta
+# page, so we use the pg_partition_oid_index of template0 as a template of
+# empty index file.
+# NOTE: the database oid of template0 is not a fixed value, it must be filled
+# with the real oid before using.
+EMPTY_INDEX = 'base/<template0 database oid>/5112'
 
 #global var
 _gp_expand = None
@@ -626,6 +634,7 @@ class SegmentTemplate:
         """Builds segment template tar file"""
         self.statusLogger.set_status('BUILD_SEGMENT_TEMPLATE_STARTED', self.tempDir)
         # build segment template should consider tablespace files
+        self._list_master_only_files()
         self._create_template(newTableSpaceInfo)
         self._fixup_template()
         self._tar_template()
@@ -639,6 +648,140 @@ class SegmentTemplate:
         self._configure_new_segments()
         numNewSegments = len(self.gparray.getExpansionSegDbList())
         self.statusLogger.set_status('BUILD_SEGMENTS_DONE', numNewSegments)
+
+    def _list_master_only_files(self):
+        """Build a list of files of master only tables and their indexes.
+
+        The content of master only tables should be cleared or refilled on the
+        new segments, by including an empty copy of the heap & index files less
+        data is transferred via network and there is no need to delete the
+        content on the segments explicitly.
+
+        However empty index files are actually invalid, we need to reindex the
+        master only tables on the new segments to rebuild the index files, this
+        is fast as the heap files are all empty.
+        """
+
+        self.logger.info("Building the file list of master only tables")
+
+        regclasses = ["'%s'::regclass::oid" % tab
+                      for tab in MASTER_ONLY_TABLES]
+        regclasses = "(" + ", ".join(regclasses) + ")"
+        self.logger.debug("master only tables: %s" % regclasses)
+
+        global_relation_sql = """
+SELECT pg_catalog.pg_relation_filepath(c.oid)
+  FROM pg_catalog.pg_class c
+ WHERE c.oid IN %s
+   AND c.relfilenode = 0
+""" % (regclasses)
+
+        global_index_sql = """
+SELECT pg_catalog.pg_relation_filepath(i.indexrelid)
+  FROM pg_catalog.pg_index i
+  JOIN pg_catalog.pg_class c
+    ON i.indexrelid = c.oid
+ WHERE i.indrelid IN %s
+   AND c.relfilenode = 0
+""" % (regclasses)
+
+        per_db_relation_sql = """
+SELECT pg_catalog.pg_relation_filepath(c.oid)
+  FROM pg_catalog.pg_class c
+ WHERE c.oid IN %s
+   AND c.relfilenode <> 0
+""" % (regclasses)
+
+        per_db_index_sql = """
+SELECT pg_catalog.pg_relation_filepath(i.indexrelid)
+  FROM pg_catalog.pg_index i
+  JOIN pg_catalog.pg_class c
+    ON i.indexrelid = c.oid
+ WHERE i.indrelid IN %s
+   AND c.relfilenode <> 0
+""" % (regclasses)
+
+        dboid_of_template0_sql = """
+SELECT oid
+  FROM pg_catalog.pg_database
+ WHERE datname = 'template0'
+"""
+        self.master_only_relation_paths = []
+        self.master_only_index_paths = []
+
+        def scan_paths(paths):
+            """we need to include not only the relation/index files,
+            but also visibility, free space and seg files"""
+            result = []
+            for path in paths:
+                # ${filenode}: the relation file itself
+                result.append(os.path.join('.', path))
+                # ${filenode}_vm: the visibility map
+                # ${filenode}_fsm: the free space map
+                result.extend(glob.glob('./%s_*' % path))
+                # ${filenode}.[1-9][0-9]*: the seg files
+                result.extend(glob.glob('./%s.*' % path))
+            return result
+
+        # the file list will be passed to pg_basebackup as the exclude list,
+        # it expects the paths are like "./global/1234", so we must chdir to
+        # the master data dir.
+        oldcwd = os.getcwd()
+        os.chdir(self.masterDataDirectory)
+
+        # first list the global master-only tables
+        with dbconn.connect(self.dburl, encoding='UTF8') as conn:
+            # the relation paths
+            paths = [str(row[0])
+                     for row in dbconn.execSQL(conn, global_relation_sql).fetchall()]
+            self.logger.debug("raw relation files of global master-only tables: %s" % paths)
+            self.master_only_relation_paths.extend(scan_paths(paths))
+
+            # the index paths
+            paths = [str(row[0])
+                     for row in dbconn.execSQL(conn, global_index_sql).fetchall()]
+            self.logger.debug("raw index files of global master-only tables: %s" % paths)
+            self.master_only_index_paths.extend(scan_paths(paths))
+
+            # also get a list of the databases
+            databases = [str(row[0])
+                         for row in catalog.getDatabaseList(conn)]
+            self.logger.debug("list of databases: %s" % databases)
+
+            # also get the database oid of template0 and build the real path
+            # for EMPTY_INDEX
+            dboid0 = dbconn.execSQLForSingleton(conn, dboid_of_template0_sql)
+            global EMPTY_INDEX
+            EMPTY_INDEX = 'base/%s/5112' % dboid0
+
+        # then list the per-database master-only tables
+        for database in databases:
+            # template0 does not accept connections, so we have no chance to
+            # clear the master-only tables on it, however we expect this
+            # database to be small enough, so it can be safely ignored.
+            if database == 'template0':
+                continue
+
+            dburl = dbconn.DbURL( hostname=self.dburl.pghost
+                                , port=self.dburl.pgport
+                                , dbname=database)
+            with dbconn.connect(dburl, encoding='UTF8') as conn:
+                # the relation paths
+                paths = [str(row[0])
+                         for row in dbconn.execSQL(conn, per_db_relation_sql).fetchall()]
+                self.logger.debug("raw relation files of per-database master-only tables: %s" % paths)
+                self.master_only_relation_paths.extend(scan_paths(paths))
+
+                # the index paths
+                paths = [str(row[0])
+                         for row in dbconn.execSQL(conn, per_db_index_sql).fetchall()]
+                self.logger.debug("raw index files of per-database master-only tables: %s" % paths)
+                self.master_only_relation_paths.extend(scan_paths(paths))
+
+        os.chdir(oldcwd)
+
+        self.logger.debug("relation files of master only tables: %s" % self.master_only_relation_paths)
+        self.logger.debug("index files of master only tables: %s" % self.master_only_index_paths)
 
     def _create_template(self, newTableSpaceInfo=None):
         """Creates the schema template that is used by new segments"""
@@ -659,10 +802,12 @@ class SegmentTemplate:
 
         try:
             masterSeg = self.gparray.master
+            excludes = self.master_only_relation_paths + self.master_only_index_paths
             cmd = PgBaseBackup(pgdata=self.tempDir,
                                host=masterSeg.getSegmentHostName(),
                                port=str(masterSeg.getSegmentPort()),
                                recovery_mode=False,
+                               excludePaths=excludes,
                                target_gp_dbid=dummyDBID)
             cmd.run(validateAfter=True)
         except Exception, msg:
@@ -714,13 +859,36 @@ class SegmentTemplate:
                                                "dumps")
         os.mkdir(tablespace_template_dir)
 
+        # build a list of master-only files that are under tablespaces, these
+        # files will be ignored during the dumping.
+        excludes = self.master_only_relation_paths + self.master_only_index_paths
+        full_exclude_relations = []
+        full_exclude_indices = []
+        for pathname in excludes:
+            if not pathname.startswith('./pg_tblspc/'):
+                # only tablespaces are handled here
+                continue
+            # a pathname is like './pg_tblspc/16385/GPDB_7_301911081/16386/6052_vm'
+            # we need to change it to './16385/<dummyDBID>/GPDB_7_301911081/16386/6052_vm'
+            seps = pathname.split(os.sep)
+            pathname = os.sep.join([seps[2], str(dummyDBID)] + seps[3:])
+            if pathname in self.master_only_relation_paths:
+                full_exclude_relations.append(os.path.join(tablespace_template_dir,
+                                                           pathname))
+            else:
+                full_exclude_indices.append(os.path.join(tablespace_template_dir,
+                                                         pathname))
+
+        full_excludes = full_exclude_relations + full_exclude_indices
         for tbcspc_oid in tbcspc_oids:
             symlink_path = os.path.join(master_tblspc_dir, tbcspc_oid)
             target_path = os.readlink(symlink_path)
             os.mkdir(os.path.join(tablespace_template_dir, tbcspc_oid))
             # the target name for copytree does not impact anything
             shutil.copytree(target_path,
-                        os.path.join(tablespace_template_dir, tbcspc_oid, str(dummyDBID)))
+                            os.path.join(tablespace_template_dir,
+                                         tbcspc_oid, str(dummyDBID)),
+                            shutil.ignore_patterns(full_excludes))
             shutil.rmtree(os.path.join(os.path.dirname(target_path),
                                        str(dummyDBID)))
 
@@ -728,6 +896,30 @@ class SegmentTemplate:
                                "pg_tblspc",
                                "newTableSpaceInfo.json"), "w") as f:
             json.dump(newTableSpaceInfo, f)
+
+        empty_index = os.path.join(tablespace_template_dir, EMPTY_INDEX)
+
+        # the files of the master only tables are already deleted, now add an
+        # empty copy of them, so they are seen as empty on the new segments,
+        # and we do not need to delete them via sql separately.
+        for fullname in full_excludes:
+            # the file should not already exist, however in case it does, which
+            # indicates an error in the excluding logic, raise an error.
+            if os.path.exists(fullname):
+                self.logger.error("Master-only catalog file '%s' is not correctly skipped" % fullname)
+                raise Exception('Invalid exclude list')
+            dirname = os.path.dirname(fullname)
+            # the template dir is not expected to be updated concurrently,
+            # so it is safe to use a check-and-create style to create dirs.
+            if not os.path.isdir(dirname):
+                os.makedirs(dirname)
+            if fullname in full_exclude_relations:
+                # an empty relation file is valid, so touch it directly
+                open(fullname, 'ab')
+            else:
+                # an empty index file is invalid, in needs to contain a b-tree
+                # meta page, so we copy such a file from an existing one
+                shutil.copyfile(empty_index, fullname)
 
     def _gen_DummyDBID(self):
         """gen a random int that surely beyond the possible dbid range"""
@@ -868,6 +1060,43 @@ class SegmentTemplate:
                     dstFile=self.tempDir, dstHost=localHostname,ctxt=REMOTE,
                     remoteHost=self.srcSegHostname)
         cpCmd.run(validateAfter=True)
+
+        excludes = self.master_only_relation_paths + self.master_only_index_paths
+        empty_index = os.path.join(self.tempDir, EMPTY_INDEX)
+
+        # the files of the master only tables are already deleted, now add an
+        # empty copy of them, so they are seen as empty on the new segments,
+        # and we do not need to delete them via sql separately.
+        if excludes:
+            self.logger.info('Creating an empty copy of excluded files')
+            for pathname in excludes:
+                if pathname.startswith('./pg_tblspc/'):
+                    # tablespaces are handled separately
+                    continue
+                fullname = os.path.join(self.tempDir, pathname)
+                filename = os.path.basename(fullname)
+                dirname = os.path.dirname(fullname)
+                if '.' in filename:
+                    # ignore seg files
+                    continue
+                # the file should not already exist, however in case it does,
+                # which indicates an error in the excluding logic, raise an
+                # error.
+                if os.path.exists(fullname):
+                    self.logger.error("Master-only catalog file '%s' is not correctly skipped" % fullname)
+                    raise Exception('Invalid exclude list')
+                # the template dir is not expected to be updated concurrently,
+                # so it is safe to use a check-and-create style to create dirs.
+                if not os.path.isdir(dirname):
+                    os.makedirs(dirname)
+                if pathname in self.master_only_relation_paths:
+                    # an empty relation file is valid, so touch it directly
+                    open(fullname, 'ab')
+                else:
+                    # an empty index file is invalid, in needs to contain a
+                    # b-tree meta page, so we copy such a file from an existing
+                    # one
+                    shutil.copyfile(empty_index, fullname)
 
     def _tar_template(self):
         """Tars up the template files"""
@@ -1392,10 +1621,11 @@ class gpexpand:
         self.pool.check_results()
 
         """
-        Build the list of delete statements based on the MASTER_ONLY_TABLES
+        Build the list of reindex statements based on the MASTER_ONLY_TABLES
         defined in gpcatalog.py
         """
-        statements = ["delete from pg_catalog.%s" % tab for tab in MASTER_ONLY_TABLES]
+        statements = ["REINDEX TABLE pg_catalog.%s" % tab
+                      for tab in MASTER_ONLY_TABLES]
 
         """
           Connect to each database in the new segments, and clean up the catalog tables.
@@ -1417,10 +1647,11 @@ class gpexpand:
                                                          , sqlCommandList=statements
                                                          )
                 self.pool.addCommand(execSQLCmd)
-                self.pool.join()
-                ### need to fix self.pool.check_results(). Call getCompletedItems to clear the queue for now.
-                self.pool.check_results()
-                self.pool.getCompletedItems()
+
+        self.pool.join()
+        ### need to fix self.pool.check_results(). Call getCompletedItems to clear the queue for now.
+        self.pool.check_results()
+        self.pool.getCompletedItems()
 
     # --------------------------------------------------------------------------
     def restore_master(self):

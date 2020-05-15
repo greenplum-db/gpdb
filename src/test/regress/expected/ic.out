@@ -557,3 +557,33 @@ SELECT * FROM y LIMIT 10;
 (1 row)
 
 DROP TABLE recursive_table_ic;
+-- Test QD can notice the errors in QEs for initplan
+CREATE TABLE qe_errors_ic (a INT, b INT);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO qe_errors_ic SELECT i, i FROM generate_series(1, 10) i;
+SELECT count(*) FROM qe_errors_ic
+GROUP BY a, b
+HAVING sum(a) > (SELECT max(a) FROM qe_errors_ic WHERE a/0 > 1);
+ERROR:  division by zero  (seg2 slice3 127.0.0.1:7004 pid=20627)
+-- Test QD can notice the errors in QEs for cursors
+-- In past, bellow DECLARE and FETCH commands had chances to report
+-- no errors, it was not expected, we expect either DECLARE or FETCH
+-- to report 'division by zero' errors.
+--
+-- In TCP interconnect mode, DECLARE or FETCH all have chance to
+-- report 'division by zero' errors, it depends on the speed of QD
+-- and QEs to set up interconnect, so ignore the output of DECLARE
+-- and FETCH, we verify the test case by checking the fact that the
+-- following commands in the transaction will failed.
+BEGIN;
+--start_ignore
+DECLARE qe_errors_cursor CURSOR FOR SELECT * FROM qe_errors_ic WHERE qe_errors_ic.b / 0 >1;
+ERROR:  division by zero  (seg0 slice1 127.0.0.1:7002 pid=20667)
+FETCH ALL FROM qe_errors_cursor;
+ERROR:  current transaction is aborted, commands ignored until end of transaction block
+--end_ignore
+select 1;
+ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ROLLBACK;
+DROP TABLE qe_errors_ic;

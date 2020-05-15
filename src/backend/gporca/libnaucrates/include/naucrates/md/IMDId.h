@@ -146,18 +146,6 @@ namespace gpmd
 				GPOS_ASSERT(NULL != mdid);
 				return mdid->HashValue();
 			}
-
-			// hash function for using mdids in a cache
-			static
-			ULONG MDIdPtrHash
-				(
-				const VOID_PTR & pv
-				)
-			{
-				GPOS_ASSERT(NULL != pv);
-				IMDId *mdid = static_cast<IMDId *> (pv);
-				return mdid->HashValue();
-			}
 			
 			// static equality functions for use in different structures, 
 			// e.g. hashmaps, MD cache, etc.
@@ -172,30 +160,6 @@ namespace gpmd
 				return left_mdid->Equals(right_mdid);
 			}
 			
-			// equality function for using mdids in a cache
-			static BOOL
-			MDIdPtrCompare
-				(
-				const VOID_PTR &pvLeft,
-				const VOID_PTR &pvRight
-				)
-			{
-				if (NULL == pvLeft && NULL == pvRight)
-				{
-					return true;
-				}
-				
-				if (NULL == pvLeft || NULL == pvRight)
-				{
-					return false;
-				}
-				
-			
-				IMDId *left_mdid = static_cast<IMDId *> (pvLeft);
-				IMDId *right_mdid = static_cast<IMDId *> (pvRight);
-				return left_mdid->Equals(right_mdid);
-
-			}
 			
 			// is the mdid valid
 			virtual

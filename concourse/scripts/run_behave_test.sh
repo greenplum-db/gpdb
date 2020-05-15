@@ -6,13 +6,16 @@ source "${CWDIR}/common.bash"
 
 BEHAVE_FLAGS=$@
 
-cat > ~/gpdb-env.sh << EOF
+cat > ~/gpdb-env.sh <<'EOF'
   source /usr/local/greenplum-db-devel/greenplum_path.sh
   export PGPORT=5432
   export MASTER_DATA_DIRECTORY=/data/gpdata/master/gpseg-1
   export PGDATABASE=gptest
 
   alias mdd='cd \$MASTER_DATA_DIRECTORY'
+  # pip installs are done using --user, so are in ~/.local/bin which
+  # is not in the default path over ssh
+  export PATH=~/.local/bin:${PATH}
 EOF
 source ~/gpdb-env.sh
 

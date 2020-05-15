@@ -10414,8 +10414,7 @@ ORDER BY 1 asc ;
                      ->  Result  (cost=0.00..1305.00 rows=1 width=8)
                            ->  Sequence  (cost=0.00..1305.00 rows=1 width=8)
                                  ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=1 width=1)
-                                       ->  Materialize  (cost=0.00..431.00 rows=1 width=1)
-                                             ->  Seq Scan on my_tt_agg_opt  (cost=0.00..431.00 rows=1 width=54)
+                                       ->  Seq Scan on my_tt_agg_opt  (cost=0.00..431.00 rows=1 width=54)
                                  ->  Sequence  (cost=0.00..874.00 rows=1 width=8)
                                        ->  Partition Selector for my_tq_agg_opt_part (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
                                              Partitions selected: 2 (out of 2)
@@ -10436,8 +10435,8 @@ ORDER BY 1 asc ;
                                                    ->  Dynamic Index Scan on my_tq_agg_opt_part my_tq_agg_opt_part_1 (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=1)
                                                          Index Cond: (ets <= share0_ref3.event_ts)
                                                          Filter: (((sym)::bpchar = share0_ref3.symbol) AND (plusone(bid_price) < share0_ref3.trade_price) AND (share0_ref3.event_ts < end_ts))
- Optimizer: Pivotal Optimizer (GPORCA) version 3.64.0
-(33 rows)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(32 rows)
 
 reset optimizer_segments;
 reset optimizer_enable_constant_expression_evaluation;
@@ -11403,12 +11402,11 @@ EXPLAIN WITH abc AS (SELECT onetimefilter1.a, onetimefilter1.b FROM onetimefilte
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1852062876647.47 rows=11 width=12)
    ->  Sequence  (cost=0.00..1852062876647.47 rows=4 width=12)
          ->  Shared Scan (share slice:id 1:0)  (cost=0.00..862.00 rows=4 width=1)
-               ->  Materialize  (cost=0.00..862.00 rows=4 width=1)
-                     ->  Hash Join  (cost=0.00..862.00 rows=4 width=8)
-                           Hash Cond: (onetimefilter1_1.a = onetimefilter2_1.a)
-                           ->  Seq Scan on onetimefilter1 onetimefilter1_1  (cost=0.00..431.00 rows=4 width=8)
-                           ->  Hash  (cost=431.00..431.00 rows=4 width=4)
-                                 ->  Seq Scan on onetimefilter2 onetimefilter2_1  (cost=0.00..431.00 rows=4 width=4)
+               ->  Hash Join  (cost=0.00..862.00 rows=4 width=8)
+                     Hash Cond: (onetimefilter1_1.a = onetimefilter2_1.a)
+                     ->  Seq Scan on onetimefilter1 onetimefilter1_1  (cost=0.00..431.00 rows=4 width=8)
+                     ->  Hash  (cost=431.00..431.00 rows=4 width=4)
+                           ->  Seq Scan on onetimefilter2 onetimefilter2_1  (cost=0.00..431.00 rows=4 width=4)
          ->  Hash Join  (cost=0.00..862.00 rows=4 width=12)
                Hash Cond: (onetimefilter1.b = onetimefilter2.b)
                ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=4 width=8)
@@ -11443,8 +11441,8 @@ EXPLAIN WITH abc AS (SELECT onetimefilter1.a, onetimefilter1.b FROM onetimefilte
                              ->  Broadcast Motion 3:3  (slice6; segments: 3)  (cost=0.00..431.00 rows=11 width=4)
                                    ->  Result  (cost=0.00..431.00 rows=4 width=4)
                                          ->  Shared Scan (share slice:id 6:0)  (cost=0.00..431.00 rows=4 width=4)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
-(44 rows)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(43 rows)
 
 WITH abc AS (SELECT onetimefilter1.a, onetimefilter1.b FROM onetimefilter1, onetimefilter2 WHERE onetimefilter1.a=onetimefilter2.a) SELECT (SELECT 1 FROM abc WHERE f1.b = f2.b LIMIT 1), COALESCE((SELECT 2 FROM abc WHERE f1.a=random() AND f1.a=2), 0), (SELECT b FROM abc WHERE b=f1.b) FROM onetimefilter1 f1, onetimefilter2 f2 WHERE f1.b = f2.b;
  ?column? | coalesce | b  
@@ -12144,12 +12142,10 @@ EXPLAIN SELECT a, b FROM atab_old_hash FULL JOIN btab_old_hash ON a |=| b;
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2586.00 rows=10 width=8)
    ->  Sequence  (cost=0.00..2586.00 rows=4 width=8)
          ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=1 width=1)
-               ->  Materialize  (cost=0.00..431.00 rows=1 width=1)
-                     ->  Seq Scan on atab_old_hash  (cost=0.00..431.00 rows=1 width=34)
+               ->  Seq Scan on atab_old_hash  (cost=0.00..431.00 rows=1 width=34)
          ->  Sequence  (cost=0.00..2155.00 rows=4 width=8)
                ->  Shared Scan (share slice:id 1:1)  (cost=0.00..431.00 rows=2 width=1)
-                     ->  Materialize  (cost=0.00..431.00 rows=2 width=1)
-                           ->  Seq Scan on btab_old_hash  (cost=0.00..431.00 rows=2 width=34)
+                     ->  Seq Scan on btab_old_hash  (cost=0.00..431.00 rows=2 width=34)
                ->  Append  (cost=0.00..1724.00 rows=4 width=8)
                      ->  Hash Left Join  (cost=0.00..862.00 rows=2 width=8)
                            Hash Cond: (share0_ref2.a |=| share1_ref2.b)
@@ -12173,8 +12169,8 @@ EXPLAIN SELECT a, b FROM atab_old_hash FULL JOIN btab_old_hash ON a |=| b;
                                        Hash Key: share0_ref3.a
                                        ->  Result  (cost=0.00..431.00 rows=1 width=4)
                                              ->  Shared Scan (share slice:id 5:0)  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.95.0
-(33 rows)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(31 rows)
 
 SELECT a, b FROM atab_old_hash FULL JOIN btab_old_hash ON a |=| b;
  a  | b  

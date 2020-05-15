@@ -276,9 +276,9 @@ SELECT tableoid::regclass, * FROM ONLY agg;
 
 -- updates aren't supported
 UPDATE agg SET a = 1;
-ERROR:  incompatible loci in target inheritance set
+ERROR:  ModifyTable mixes distributed and entry-only tables
 DELETE FROM agg WHERE a = 100;
-ERROR:  incompatible loci in target inheritance set
+ERROR:  ModifyTable mixes distributed and entry-only tables
 -- but this should be allowed
 SELECT tableoid::regclass, * FROM agg FOR UPDATE;
  tableoid |  a  |    b    

@@ -1825,6 +1825,7 @@ vacuum_rel(Oid relid, RangeVar *relation, int options, VacuumParams *params,
 		return false;
 	}
 
+#ifdef FAULT_INJECTOR
 	if (ao_vacuum_phase == VACOPT_AO_POST_CLEANUP_PHASE)
 	{
 		FaultInjector_InjectFaultIfSet(
@@ -1832,13 +1833,8 @@ vacuum_rel(Oid relid, RangeVar *relation, int options, VacuumParams *params,
 			DDLNotSpecified,
 			"",	// databaseName
 			RelationGetRelationName(onerel)); // tableName
-
-		FaultInjector_InjectFaultIfSet(
-			"compaction_before_segmentfile_drop",
-			DDLNotSpecified,
-			"",	// databaseName
-			RelationGetRelationName(onerel)); // tableName
 	}
+#endif
 
 	/*
 	 * Silently ignore tables that are temp tables of other backends ---

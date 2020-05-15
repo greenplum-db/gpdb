@@ -20,6 +20,7 @@
 #include "unittest/gpopt/CSubqueryTestUtils.h"
 
 #include "naucrates/md/CMDIdGPDB.h"
+#include "naucrates/md/IMDTypeBool.h"
 
 using namespace gpopt;
 

@@ -56,3 +56,13 @@ explain select distinct(a), sum(b) from t_volatile_limit_1 group by a order by a
 
 drop table t_volatile_limit;
 drop table t_volatile_limit_1;
+
+-- Check LIMIT ALL should not be considered when gathering data to a single node
+create table t_limit_all(a int, b int) distributed by (a);
+insert into t_limit_all select i, i from generate_series(1,10)i;
+
+explain (costs off)
+select array(select b from t_limit_all order by b asc limit all) t;
+select array(select b from t_limit_all order by b asc limit all) t;
+
+drop table t_limit_all;

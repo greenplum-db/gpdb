@@ -2357,7 +2357,12 @@ build_startup_packet(const PGconn *conn, char *packet,
 		ADD_STARTUP_OPTION("database", conn->dbName);
 	if (conn->replication && conn->replication[0])
 		ADD_STARTUP_OPTION("replication", conn->replication);
-	if (conn->gpconntype && conn->gpconntype[0])
+	/*
+	 * We don't have an real pg_compatible option, it just
+	 * affects the version number.
+	 */
+	if (conn->gpconntype && conn->gpconntype[0]
+		&& strcmp(conn->gpconntype, GPCONN_TYPE_INTERNAL) != 0)
 		ADD_STARTUP_OPTION(GPCONN_TYPE, conn->gpconntype);
 	if (conn->pgoptions && conn->pgoptions[0])
 		ADD_STARTUP_OPTION("options", conn->pgoptions);

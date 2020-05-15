@@ -12,7 +12,9 @@
 #include "gpos/base.h"
 #include "gpopt/xforms/CXformImplementLimit.h"
 
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalLimit.h"
+#include "gpopt/operators/CPatternLeaf.h"
+#include "gpopt/operators/CPhysicalLimit.h"
 
 using namespace gpopt;
 

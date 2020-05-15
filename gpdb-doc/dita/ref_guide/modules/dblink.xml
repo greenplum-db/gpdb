@@ -162,13 +162,24 @@ testdb=# <b>GRANT EXECUTE ON FUNCTION dblink_connect_u(text, text) TO test_user;
             table.<codeblock>testdb=> <b>SELECT * FROM dblink('testconn', 'SELECT * FROM testdblink') AS dbltab(id int, product text);</b></codeblock></li>
         </ol>
       </section>
+      <section id="dblink_ssl">
+        <title>Using dblink with SSL-Encrypted Connections to Greenplum</title>
+        <p>When you use <codeph>dblink</codeph> to connect to Greenplum Database
+          over an encrypted connection, you must specify the <codeph>sslmode</codeph>
+          property in the connection string. Set <codeph>sslmode</codeph> to at
+          least <codeph>require</codeph> to disallow unencrypted transfers. For example:</p>
+        <codeblock>testdb=# SELECT dblink_connect('greenplum_con_sales', 'dbname=sales host=gpmaster user=gpadmin sslmode=require');</codeblock>
+        <p>Refer to <xref href="../../security-guide/topics/Authenticate.xml#topic_fzv_wb2_jr/ssl_postgresql"
+          format="dita" scope="peer">SSL Client Authentication</xref> for
+          information about configuring Greenplum Database to use SSL.</p>
+      </section>
     </body>
   </topic>
   <topic id="topic_info">
     <title>Additional Module Documentation</title>
     <body>
-      <p>Refer to <xref href="https://www.postgresql.org/docs/9.4/dblink.html" format="html"
-        scope="external">dblink</xref> in the PostgreSQL documentation for detailed
+      <p>Refer to the <xref href="https://www.postgresql.org/docs/9.4/dblink.html" format="html"
+        scope="external">dblink</xref> PostgreSQL documentation for detailed
         information about the individual functions in this module.</p>
     </body>
   </topic>

@@ -13,8 +13,9 @@
 #include "naucrates/dxl/parser/CParseHandlerLogicalLimit.h"
 #include "naucrates/dxl/parser/CParseHandlerSortColList.h"
 #include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
-#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
+#include "naucrates/dxl/operators/CDXLLogicalLimit.h"
+#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 
 using namespace gpdxl;
 

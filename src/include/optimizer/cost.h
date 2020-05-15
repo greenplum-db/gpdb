@@ -24,7 +24,7 @@
 /* NB: cost-estimation code should use the variables, not these constants! */
 /* If you change these, update backend/utils/misc/postgresql.sample.conf */
 #define DEFAULT_SEQ_PAGE_COST  1.0
-#define DEFAULT_RANDOM_PAGE_COST  100.0
+#define DEFAULT_RANDOM_PAGE_COST  4.0
 #define DEFAULT_CPU_TUPLE_COST	0.01
 #define DEFAULT_CPU_INDEX_TUPLE_COST 0.005
 #define DEFAULT_CPU_OPERATOR_COST  0.0025
@@ -101,12 +101,6 @@ extern void cost_index(IndexPath *path, PlannerInfo *root,
 extern void cost_bitmap_heap_scan(Path *path, PlannerInfo *root, RelOptInfo *baserel,
 					  ParamPathInfo *param_info,
 					  Path *bitmapqual, double loop_count);
-/* GPDB_92_MERGE_FIXME: Suspect we need to add ParamPathInfo for some scans below. */
-extern void cost_bitmap_appendonly_scan(Path *path, PlannerInfo *root, RelOptInfo *baserel,
-					  ParamPathInfo *param_info,
-					  Path *bitmapqual, double loop_count);
-extern void cost_bitmap_table_scan(Path *path, PlannerInfo *root, RelOptInfo *baserel,
-					  Path *bitmapqual, RelOptInfo *outer_rel);
 extern void cost_bitmap_and_node(BitmapAndPath *path, PlannerInfo *root);
 extern void cost_bitmap_or_node(BitmapOrPath *path, PlannerInfo *root);
 extern void cost_bitmap_tree_node(Path *path, Cost *cost, Selectivity *selec);

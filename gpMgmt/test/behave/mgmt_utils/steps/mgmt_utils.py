@@ -30,6 +30,7 @@ from time import sleep
 from os import path
 
 from gppylib.gparray import GpArray, ROLE_PRIMARY, ROLE_MIRROR
+from gppylib.gpcatalog import MASTER_ONLY_TABLES
 from gppylib.commands.gp import SegmentStart, GpStandbyStart, MasterStop
 from gppylib.commands import gp
 from gppylib.commands.unix import findCmdInPath, Scp
@@ -398,6 +399,18 @@ def impl(context, command, gphome):
 @then('the user runs command "{command}"')
 def impl(context, command):
     run_command(context, command)
+    if has_exception(context):
+        raise context.exception
+
+@given('the user runs remote command "{command}" on host "{hostname}"')
+@when('the user runs remote command "{command}" on host "{hostname}"')
+@then('the user runs remote command "{command}" on host "{hostname}"')
+def impl(context, command, hostname):
+    run_command_remote(context,
+                       command,
+                       hostname,
+                       os.getenv("GPHOME") + '/greenplum_path.sh',
+                       'export MASTER_DATA_DIRECTORY=%s' % master_data_dir)
     if has_exception(context):
         raise context.exception
 
@@ -2375,6 +2388,31 @@ def impl(context, num_of_segments):
     raise Exception("Incorrect amount of segments.\nprevious: %s\ncurrent:"
             "%s\ndump of gp_segment_configuration: %s" %
             (context.start_data_segments, end_data_segments, rows))
+
+@then('verify that the master-only tables are empty on one new segment')
+def impl(context):
+    dbname = 'gptest'
+
+    # lookup the port of the newest primary segment
+    with dbconn.connect(dbconn.DbURL(dbname=dbname),
+                        unsetSearchPath=False) as conn:
+        query = """SELECT address, port
+                     FROM gp_segment_configuration
+                    WHERE role = 'p'
+                    ORDER BY content DESC
+                    LIMIT 1;"""
+        row = dbconn.execSQLForSingletonRow(conn, query)
+        address = str(row[0])
+        port = int(row[1])
+
+    # verify that all the master-only tables are empty on this new segment
+    with dbconn.connect(dbconn.DbURL(dbname=dbname, hostname=address, port=port),
+                        unsetSearchPath=False, utility=True) as conn:
+        for tab in MASTER_ONLY_TABLES:
+            query = "SELECT count(*) FROM %s;" % tab
+            count = int(dbconn.execSQLForSingleton(conn, query))
+            if count > 0:
+                raise Exception("Master-only table '%s' is not empty on the new segments" % tab)
 
 @given('the cluster is setup for an expansion on hosts "{hostnames}"')
 def impl(context, hostnames):

@@ -1006,11 +1006,23 @@ void
 cdbllize_build_slice_table(PlannerInfo *root, Plan *top_plan,
 						   PlanSlice *top_slice)
 {
+	PlannerGlobal *glob = root->glob;
 	Query	   *query = root->parse;
 	build_slice_table_context cxt;
 	ListCell   *lc;
 	int			sliceIndex;
 	bool		all_root_slices;
+
+	/*
+	 * This can modify nodes, so the nodes we memorized earlier are no longer
+	 * valid. Clear this array just to be sure we don't accidentally use the
+	 * obsolete copies of the nodes later on.
+	 */
+	if (glob->share.shared_plans)
+	{
+		pfree(glob->share.shared_plans);
+		glob->share.shared_plans = NULL;
+	}
 
 	/* subplan_sliceIds array needs to exist, even in non-dispatcher mode */
 	root->glob->subplan_sliceIds = palloc(list_length(root->glob->subplans) * sizeof(int));

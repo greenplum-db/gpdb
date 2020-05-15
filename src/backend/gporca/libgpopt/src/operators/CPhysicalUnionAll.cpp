@@ -1,4 +1,5 @@
 #include "gpopt/base/CDrvdPropCtxtPlan.h"
+#include "gpos/error/CAutoTrace.h"
 
 #include "gpopt/operators/CPhysicalUnionAll.h"
 #include "gpopt/operators/CExpressionHandle.h"

@@ -1,0 +1,868 @@
+-- ===================================================================
+-- Greenplum-specific features for postgres_fdw
+-- ===================================================================
+-- ===================================================================
+-- Create source tables and populate with data
+-- ===================================================================
+CREATE TABLE table_dist_rand
+(
+	f1 int,
+	f2 text,
+	f3 text
+) DISTRIBUTED RANDOMLY;
+CREATE TABLE table_dist_repl
+(
+	f1 int,
+	f2 text,
+	f3 text
+) DISTRIBUTED REPLICATED;
+CREATE TABLE table_dist_int
+(
+	f1 int,
+	f2 text,
+	f3 text
+) DISTRIBUTED BY (f1);
+CREATE TABLE table_dist_text
+(
+	f1 int,
+	f2 text,
+	f3 text
+) DISTRIBUTED BY (f2);
+CREATE TABLE table_dist_int_text
+(
+	f1 int,
+	f2 text,
+	f3 text
+) DISTRIBUTED BY (f1, f2);
+INSERT INTO table_dist_rand
+VALUES (1, 'a', 'aa'),
+	   (2, 'b', 'bb'),
+	   (3, 'c', 'cc'),
+	   (4, 'd', 'dd'),
+	   (5, 'e', 'ee'),
+	   (6, 'f', 'ff'),
+	   (7, 'g', 'gg'),
+	   (8, 'h', 'hh'),
+	   (9, 'i', 'ii'),
+	   (10, 'j', 'jj'),
+	   (11, 'k', 'kk'),
+	   (12, 'l', 'll');
+INSERT INTO table_dist_repl     SELECT * FROM table_dist_rand;
+INSERT INTO table_dist_int      SELECT * FROM table_dist_rand;
+INSERT INTO table_dist_text     SELECT * FROM table_dist_rand;
+INSERT INTO table_dist_int_text SELECT * FROM table_dist_rand;
+-- ===================================================================
+-- create target table
+-- ===================================================================
+CREATE TABLE "S 1"."GP 1" (
+	f1 int,
+	f2 text,
+	f3 text
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- ===================================================================
+-- create foreign tables
+-- ===================================================================
+CREATE FOREIGN TABLE gp_ft1 (
+	f1 int,
+	f2 text,
+	f3 text
+) SERVER loopback OPTIONS (schema_name 'S 1', table_name 'GP 1', mpp_execute 'all segments');
+-- ===================================================================
+-- validate parallel writes (mpp_execute set to all segments)
+-- ===================================================================
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_rand;
+             QUERY PLAN              
+-------------------------------------
+ Insert on gp_ft1
+   ->  Seq Scan on table_dist_rand
+ Optimizer: Postgres query optimizer
+(3 rows)
+
+INSERT INTO gp_ft1 SELECT * FROM table_dist_rand;
+SELECT * FROM "S 1"."GP 1" ORDER BY f1;
+ f1 | f2 | f3 
+----+----+----
+  1 | a  | aa
+  2 | b  | bb
+  3 | c  | cc
+  4 | d  | dd
+  5 | e  | ee
+  6 | f  | ff
+  7 | g  | gg
+  8 | h  | hh
+  9 | i  | ii
+ 10 | j  | jj
+ 11 | k  | kk
+ 12 | l  | ll
+(12 rows)
+
+TRUNCATE TABLE "S 1"."GP 1";
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_repl;
+                      QUERY PLAN                      
+------------------------------------------------------
+ Insert on gp_ft1
+   ->  Redistribute Motion 1:3  (slice1; segments: 1)
+         ->  Seq Scan on table_dist_repl
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+INSERT INTO gp_ft1 SELECT * FROM table_dist_repl;
+SELECT * FROM "S 1"."GP 1" ORDER BY f1;
+ f1 | f2 | f3 
+----+----+----
+  1 | a  | aa
+  2 | b  | bb
+  3 | c  | cc
+  4 | d  | dd
+  5 | e  | ee
+  6 | f  | ff
+  7 | g  | gg
+  8 | h  | hh
+  9 | i  | ii
+ 10 | j  | jj
+ 11 | k  | kk
+ 12 | l  | ll
+(12 rows)
+
+TRUNCATE TABLE "S 1"."GP 1";
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_int;
+             QUERY PLAN              
+-------------------------------------
+ Insert on gp_ft1
+   ->  Seq Scan on table_dist_int
+ Optimizer: Postgres query optimizer
+(3 rows)
+
+INSERT INTO gp_ft1 SELECT * FROM table_dist_int;
+SELECT * FROM "S 1"."GP 1" ORDER BY f1;
+ f1 | f2 | f3 
+----+----+----
+  1 | a  | aa
+  2 | b  | bb
+  3 | c  | cc
+  4 | d  | dd
+  5 | e  | ee
+  6 | f  | ff
+  7 | g  | gg
+  8 | h  | hh
+  9 | i  | ii
+ 10 | j  | jj
+ 11 | k  | kk
+ 12 | l  | ll
+(12 rows)
+
+TRUNCATE TABLE "S 1"."GP 1";
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_text;
+             QUERY PLAN              
+-------------------------------------
+ Insert on gp_ft1
+   ->  Seq Scan on table_dist_text
+ Optimizer: Postgres query optimizer
+(3 rows)
+
+INSERT INTO gp_ft1 SELECT * FROM table_dist_text;
+SELECT * FROM "S 1"."GP 1" ORDER BY f1;
+ f1 | f2 | f3 
+----+----+----
+  1 | a  | aa
+  2 | b  | bb
+  3 | c  | cc
+  4 | d  | dd
+  5 | e  | ee
+  6 | f  | ff
+  7 | g  | gg
+  8 | h  | hh
+  9 | i  | ii
+ 10 | j  | jj
+ 11 | k  | kk
+ 12 | l  | ll
+(12 rows)
+
+TRUNCATE TABLE "S 1"."GP 1";
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_int_text;
+              QUERY PLAN               
+---------------------------------------
+ Insert on gp_ft1
+   ->  Seq Scan on table_dist_int_text
+ Optimizer: Postgres query optimizer
+(3 rows)
+
+INSERT INTO gp_ft1 SELECT * FROM table_dist_int_text;
+SELECT * FROM "S 1"."GP 1" ORDER BY f1;
+ f1 | f2 | f3 
+----+----+----
+  1 | a  | aa
+  2 | b  | bb
+  3 | c  | cc
+  4 | d  | dd
+  5 | e  | ee
+  6 | f  | ff
+  7 | g  | gg
+  8 | h  | hh
+  9 | i  | ii
+ 10 | j  | jj
+ 11 | k  | kk
+ 12 | l  | ll
+(12 rows)
+
+TRUNCATE TABLE "S 1"."GP 1";
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1
+SELECT id,
+	   'AAA' || to_char(id, 'FM000'),
+	   'BBB' || to_char(id, 'FM000')
+FROM generate_series(1, 100) id;
+                      QUERY PLAN                      
+------------------------------------------------------
+ Insert on gp_ft1
+   ->  Redistribute Motion 1:3  (slice1; segments: 1)
+         ->  Function Scan on generate_series id
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+INSERT INTO gp_ft1
+SELECT id,
+       'AAA' || to_char(id, 'FM000'),
+       'BBB' || to_char(id, 'FM000')
+FROM generate_series(1, 100) id;
+SELECT * FROM "S 1"."GP 1" ORDER BY f1;
+ f1  |   f2   |   f3   
+-----+--------+--------
+   1 | AAA001 | BBB001
+   2 | AAA002 | BBB002
+   3 | AAA003 | BBB003
+   4 | AAA004 | BBB004
+   5 | AAA005 | BBB005
+   6 | AAA006 | BBB006
+   7 | AAA007 | BBB007
+   8 | AAA008 | BBB008
+   9 | AAA009 | BBB009
+  10 | AAA010 | BBB010
+  11 | AAA011 | BBB011
+  12 | AAA012 | BBB012
+  13 | AAA013 | BBB013
+  14 | AAA014 | BBB014
+  15 | AAA015 | BBB015
+  16 | AAA016 | BBB016
+  17 | AAA017 | BBB017
+  18 | AAA018 | BBB018
+  19 | AAA019 | BBB019
+  20 | AAA020 | BBB020
+  21 | AAA021 | BBB021
+  22 | AAA022 | BBB022
+  23 | AAA023 | BBB023
+  24 | AAA024 | BBB024
+  25 | AAA025 | BBB025
+  26 | AAA026 | BBB026
+  27 | AAA027 | BBB027
+  28 | AAA028 | BBB028
+  29 | AAA029 | BBB029
+  30 | AAA030 | BBB030
+  31 | AAA031 | BBB031
+  32 | AAA032 | BBB032
+  33 | AAA033 | BBB033
+  34 | AAA034 | BBB034
+  35 | AAA035 | BBB035
+  36 | AAA036 | BBB036
+  37 | AAA037 | BBB037
+  38 | AAA038 | BBB038
+  39 | AAA039 | BBB039
+  40 | AAA040 | BBB040
+  41 | AAA041 | BBB041
+  42 | AAA042 | BBB042
+  43 | AAA043 | BBB043
+  44 | AAA044 | BBB044
+  45 | AAA045 | BBB045
+  46 | AAA046 | BBB046
+  47 | AAA047 | BBB047
+  48 | AAA048 | BBB048
+  49 | AAA049 | BBB049
+  50 | AAA050 | BBB050
+  51 | AAA051 | BBB051
+  52 | AAA052 | BBB052
+  53 | AAA053 | BBB053
+  54 | AAA054 | BBB054
+  55 | AAA055 | BBB055
+  56 | AAA056 | BBB056
+  57 | AAA057 | BBB057
+  58 | AAA058 | BBB058
+  59 | AAA059 | BBB059
+  60 | AAA060 | BBB060
+  61 | AAA061 | BBB061
+  62 | AAA062 | BBB062
+  63 | AAA063 | BBB063
+  64 | AAA064 | BBB064
+  65 | AAA065 | BBB065
+  66 | AAA066 | BBB066
+  67 | AAA067 | BBB067
+  68 | AAA068 | BBB068
+  69 | AAA069 | BBB069
+  70 | AAA070 | BBB070
+  71 | AAA071 | BBB071
+  72 | AAA072 | BBB072
+  73 | AAA073 | BBB073
+  74 | AAA074 | BBB074
+  75 | AAA075 | BBB075
+  76 | AAA076 | BBB076
+  77 | AAA077 | BBB077
+  78 | AAA078 | BBB078
+  79 | AAA079 | BBB079
+  80 | AAA080 | BBB080
+  81 | AAA081 | BBB081
+  82 | AAA082 | BBB082
+  83 | AAA083 | BBB083
+  84 | AAA084 | BBB084
+  85 | AAA085 | BBB085
+  86 | AAA086 | BBB086
+  87 | AAA087 | BBB087
+  88 | AAA088 | BBB088
+  89 | AAA089 | BBB089
+  90 | AAA090 | BBB090
+  91 | AAA091 | BBB091
+  92 | AAA092 | BBB092
+  93 | AAA093 | BBB093
+  94 | AAA094 | BBB094
+  95 | AAA095 | BBB095
+  96 | AAA096 | BBB096
+  97 | AAA097 | BBB097
+  98 | AAA098 | BBB098
+  99 | AAA099 | BBB099
+ 100 | AAA100 | BBB100
+(100 rows)
+
+TRUNCATE TABLE "S 1"."GP 1";
+-- ===================================================================
+-- validate writes on any segment (mpp_execute set to any)
+-- ===================================================================
+ALTER FOREIGN TABLE gp_ft1 OPTIONS ( SET mpp_execute 'any' );
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_rand;
+                   QUERY PLAN                   
+------------------------------------------------
+ Insert on gp_ft1
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on table_dist_rand
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+INSERT INTO gp_ft1 SELECT * FROM table_dist_rand;
+SELECT * FROM "S 1"."GP 1" ORDER BY f1;
+ f1 | f2 | f3 
+----+----+----
+  1 | a  | aa
+  2 | b  | bb
+  3 | c  | cc
+  4 | d  | dd
+  5 | e  | ee
+  6 | f  | ff
+  7 | g  | gg
+  8 | h  | hh
+  9 | i  | ii
+ 10 | j  | jj
+ 11 | k  | kk
+ 12 | l  | ll
+(12 rows)
+
+TRUNCATE TABLE "S 1"."GP 1";
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_repl;
+                   QUERY PLAN                   
+------------------------------------------------
+ Insert on gp_ft1
+   ->  Gather Motion 1:1  (slice1; segments: 1)
+         ->  Seq Scan on table_dist_repl
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+INSERT INTO gp_ft1 SELECT * FROM table_dist_repl;
+SELECT * FROM "S 1"."GP 1" ORDER BY f1;
+ f1 | f2 | f3 
+----+----+----
+  1 | a  | aa
+  2 | b  | bb
+  3 | c  | cc
+  4 | d  | dd
+  5 | e  | ee
+  6 | f  | ff
+  7 | g  | gg
+  8 | h  | hh
+  9 | i  | ii
+ 10 | j  | jj
+ 11 | k  | kk
+ 12 | l  | ll
+(12 rows)
+
+TRUNCATE TABLE "S 1"."GP 1";
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_int;
+                   QUERY PLAN                   
+------------------------------------------------
+ Insert on gp_ft1
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on table_dist_int
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+INSERT INTO gp_ft1 SELECT * FROM table_dist_int;
+SELECT * FROM "S 1"."GP 1" ORDER BY f1;
+ f1 | f2 | f3 
+----+----+----
+  1 | a  | aa
+  2 | b  | bb
+  3 | c  | cc
+  4 | d  | dd
+  5 | e  | ee
+  6 | f  | ff
+  7 | g  | gg
+  8 | h  | hh
+  9 | i  | ii
+ 10 | j  | jj
+ 11 | k  | kk
+ 12 | l  | ll
+(12 rows)
+
+TRUNCATE TABLE "S 1"."GP 1";
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_text;
+                   QUERY PLAN                   
+------------------------------------------------
+ Insert on gp_ft1
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on table_dist_text
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+INSERT INTO gp_ft1 SELECT * FROM table_dist_text;
+SELECT * FROM "S 1"."GP 1" ORDER BY f1;
+ f1 | f2 | f3 
+----+----+----
+  1 | a  | aa
+  2 | b  | bb
+  3 | c  | cc
+  4 | d  | dd
+  5 | e  | ee
+  6 | f  | ff
+  7 | g  | gg
+  8 | h  | hh
+  9 | i  | ii
+ 10 | j  | jj
+ 11 | k  | kk
+ 12 | l  | ll
+(12 rows)
+
+TRUNCATE TABLE "S 1"."GP 1";
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_int_text;
+                   QUERY PLAN                   
+------------------------------------------------
+ Insert on gp_ft1
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on table_dist_int_text
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+INSERT INTO gp_ft1 SELECT * FROM table_dist_int_text;
+SELECT * FROM "S 1"."GP 1" ORDER BY f1;
+ f1 | f2 | f3 
+----+----+----
+  1 | a  | aa
+  2 | b  | bb
+  3 | c  | cc
+  4 | d  | dd
+  5 | e  | ee
+  6 | f  | ff
+  7 | g  | gg
+  8 | h  | hh
+  9 | i  | ii
+ 10 | j  | jj
+ 11 | k  | kk
+ 12 | l  | ll
+(12 rows)
+
+TRUNCATE TABLE "S 1"."GP 1";
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1
+SELECT id,
+	   'AAA' || to_char(id, 'FM000'),
+	   'BBB' || to_char(id, 'FM000')
+FROM generate_series(1, 100) id;
+                QUERY PLAN                 
+-------------------------------------------
+ Insert on gp_ft1
+   ->  Function Scan on generate_series id
+ Optimizer: Postgres query optimizer
+(3 rows)
+
+INSERT INTO gp_ft1
+SELECT id,
+       'AAA' || to_char(id, 'FM000'),
+       'BBB' || to_char(id, 'FM000')
+FROM generate_series(1, 100) id;
+SELECT * FROM "S 1"."GP 1" ORDER BY f1;
+ f1  |   f2   |   f3   
+-----+--------+--------
+   1 | AAA001 | BBB001
+   2 | AAA002 | BBB002
+   3 | AAA003 | BBB003
+   4 | AAA004 | BBB004
+   5 | AAA005 | BBB005
+   6 | AAA006 | BBB006
+   7 | AAA007 | BBB007
+   8 | AAA008 | BBB008
+   9 | AAA009 | BBB009
+  10 | AAA010 | BBB010
+  11 | AAA011 | BBB011
+  12 | AAA012 | BBB012
+  13 | AAA013 | BBB013
+  14 | AAA014 | BBB014
+  15 | AAA015 | BBB015
+  16 | AAA016 | BBB016
+  17 | AAA017 | BBB017
+  18 | AAA018 | BBB018
+  19 | AAA019 | BBB019
+  20 | AAA020 | BBB020
+  21 | AAA021 | BBB021
+  22 | AAA022 | BBB022
+  23 | AAA023 | BBB023
+  24 | AAA024 | BBB024
+  25 | AAA025 | BBB025
+  26 | AAA026 | BBB026
+  27 | AAA027 | BBB027
+  28 | AAA028 | BBB028
+  29 | AAA029 | BBB029
+  30 | AAA030 | BBB030
+  31 | AAA031 | BBB031
+  32 | AAA032 | BBB032
+  33 | AAA033 | BBB033
+  34 | AAA034 | BBB034
+  35 | AAA035 | BBB035
+  36 | AAA036 | BBB036
+  37 | AAA037 | BBB037
+  38 | AAA038 | BBB038
+  39 | AAA039 | BBB039
+  40 | AAA040 | BBB040
+  41 | AAA041 | BBB041
+  42 | AAA042 | BBB042
+  43 | AAA043 | BBB043
+  44 | AAA044 | BBB044
+  45 | AAA045 | BBB045
+  46 | AAA046 | BBB046
+  47 | AAA047 | BBB047
+  48 | AAA048 | BBB048
+  49 | AAA049 | BBB049
+  50 | AAA050 | BBB050
+  51 | AAA051 | BBB051
+  52 | AAA052 | BBB052
+  53 | AAA053 | BBB053
+  54 | AAA054 | BBB054
+  55 | AAA055 | BBB055
+  56 | AAA056 | BBB056
+  57 | AAA057 | BBB057
+  58 | AAA058 | BBB058
+  59 | AAA059 | BBB059
+  60 | AAA060 | BBB060
+  61 | AAA061 | BBB061
+  62 | AAA062 | BBB062
+  63 | AAA063 | BBB063
+  64 | AAA064 | BBB064
+  65 | AAA065 | BBB065
+  66 | AAA066 | BBB066
+  67 | AAA067 | BBB067
+  68 | AAA068 | BBB068
+  69 | AAA069 | BBB069
+  70 | AAA070 | BBB070
+  71 | AAA071 | BBB071
+  72 | AAA072 | BBB072
+  73 | AAA073 | BBB073
+  74 | AAA074 | BBB074
+  75 | AAA075 | BBB075
+  76 | AAA076 | BBB076
+  77 | AAA077 | BBB077
+  78 | AAA078 | BBB078
+  79 | AAA079 | BBB079
+  80 | AAA080 | BBB080
+  81 | AAA081 | BBB081
+  82 | AAA082 | BBB082
+  83 | AAA083 | BBB083
+  84 | AAA084 | BBB084
+  85 | AAA085 | BBB085
+  86 | AAA086 | BBB086
+  87 | AAA087 | BBB087
+  88 | AAA088 | BBB088
+  89 | AAA089 | BBB089
+  90 | AAA090 | BBB090
+  91 | AAA091 | BBB091
+  92 | AAA092 | BBB092
+  93 | AAA093 | BBB093
+  94 | AAA094 | BBB094
+  95 | AAA095 | BBB095
+  96 | AAA096 | BBB096
+  97 | AAA097 | BBB097
+  98 | AAA098 | BBB098
+  99 | AAA099 | BBB099
+ 100 | AAA100 | BBB100
+(100 rows)
+
+TRUNCATE TABLE "S 1"."GP 1";
+-- ===================================================================
+-- validate writes on master (mpp_execute set to master)
+-- ===================================================================
+ALTER FOREIGN TABLE gp_ft1 OPTIONS ( SET mpp_execute 'master' );
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_rand;
+                   QUERY PLAN                   
+------------------------------------------------
+ Insert on gp_ft1
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on table_dist_rand
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+INSERT INTO gp_ft1 SELECT * FROM table_dist_rand;
+SELECT * FROM "S 1"."GP 1" ORDER BY f1;
+ f1 | f2 | f3 
+----+----+----
+  1 | a  | aa
+  2 | b  | bb
+  3 | c  | cc
+  4 | d  | dd
+  5 | e  | ee
+  6 | f  | ff
+  7 | g  | gg
+  8 | h  | hh
+  9 | i  | ii
+ 10 | j  | jj
+ 11 | k  | kk
+ 12 | l  | ll
+(12 rows)
+
+TRUNCATE TABLE "S 1"."GP 1";
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_repl;
+                   QUERY PLAN                   
+------------------------------------------------
+ Insert on gp_ft1
+   ->  Gather Motion 1:1  (slice1; segments: 1)
+         ->  Seq Scan on table_dist_repl
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+INSERT INTO gp_ft1 SELECT * FROM table_dist_repl;
+SELECT * FROM "S 1"."GP 1" ORDER BY f1;
+ f1 | f2 | f3 
+----+----+----
+  1 | a  | aa
+  2 | b  | bb
+  3 | c  | cc
+  4 | d  | dd
+  5 | e  | ee
+  6 | f  | ff
+  7 | g  | gg
+  8 | h  | hh
+  9 | i  | ii
+ 10 | j  | jj
+ 11 | k  | kk
+ 12 | l  | ll
+(12 rows)
+
+TRUNCATE TABLE "S 1"."GP 1";
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_int;
+                   QUERY PLAN                   
+------------------------------------------------
+ Insert on gp_ft1
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on table_dist_int
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+INSERT INTO gp_ft1 SELECT * FROM table_dist_int;
+SELECT * FROM "S 1"."GP 1" ORDER BY f1;
+ f1 | f2 | f3 
+----+----+----
+  1 | a  | aa
+  2 | b  | bb
+  3 | c  | cc
+  4 | d  | dd
+  5 | e  | ee
+  6 | f  | ff
+  7 | g  | gg
+  8 | h  | hh
+  9 | i  | ii
+ 10 | j  | jj
+ 11 | k  | kk
+ 12 | l  | ll
+(12 rows)
+
+TRUNCATE TABLE "S 1"."GP 1";
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_text;
+                   QUERY PLAN                   
+------------------------------------------------
+ Insert on gp_ft1
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on table_dist_text
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+INSERT INTO gp_ft1 SELECT * FROM table_dist_text;
+SELECT * FROM "S 1"."GP 1" ORDER BY f1;
+ f1 | f2 | f3 
+----+----+----
+  1 | a  | aa
+  2 | b  | bb
+  3 | c  | cc
+  4 | d  | dd
+  5 | e  | ee
+  6 | f  | ff
+  7 | g  | gg
+  8 | h  | hh
+  9 | i  | ii
+ 10 | j  | jj
+ 11 | k  | kk
+ 12 | l  | ll
+(12 rows)
+
+TRUNCATE TABLE "S 1"."GP 1";
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_int_text;
+                   QUERY PLAN                   
+------------------------------------------------
+ Insert on gp_ft1
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on table_dist_int_text
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+INSERT INTO gp_ft1 SELECT * FROM table_dist_int_text;
+SELECT * FROM "S 1"."GP 1" ORDER BY f1;
+ f1 | f2 | f3 
+----+----+----
+  1 | a  | aa
+  2 | b  | bb
+  3 | c  | cc
+  4 | d  | dd
+  5 | e  | ee
+  6 | f  | ff
+  7 | g  | gg
+  8 | h  | hh
+  9 | i  | ii
+ 10 | j  | jj
+ 11 | k  | kk
+ 12 | l  | ll
+(12 rows)
+
+TRUNCATE TABLE "S 1"."GP 1";
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1
+SELECT id,
+	   'AAA' || to_char(id, 'FM000'),
+	   'BBB' || to_char(id, 'FM000')
+FROM generate_series(1, 100) id;
+                QUERY PLAN                 
+-------------------------------------------
+ Insert on gp_ft1
+   ->  Function Scan on generate_series id
+ Optimizer: Postgres query optimizer
+(3 rows)
+
+INSERT INTO gp_ft1
+SELECT id,
+       'AAA' || to_char(id, 'FM000'),
+       'BBB' || to_char(id, 'FM000')
+FROM generate_series(1, 100) id;
+SELECT * FROM "S 1"."GP 1" ORDER BY f1;
+ f1  |   f2   |   f3   
+-----+--------+--------
+   1 | AAA001 | BBB001
+   2 | AAA002 | BBB002
+   3 | AAA003 | BBB003
+   4 | AAA004 | BBB004
+   5 | AAA005 | BBB005
+   6 | AAA006 | BBB006
+   7 | AAA007 | BBB007
+   8 | AAA008 | BBB008
+   9 | AAA009 | BBB009
+  10 | AAA010 | BBB010
+  11 | AAA011 | BBB011
+  12 | AAA012 | BBB012
+  13 | AAA013 | BBB013
+  14 | AAA014 | BBB014
+  15 | AAA015 | BBB015
+  16 | AAA016 | BBB016
+  17 | AAA017 | BBB017
+  18 | AAA018 | BBB018
+  19 | AAA019 | BBB019
+  20 | AAA020 | BBB020
+  21 | AAA021 | BBB021
+  22 | AAA022 | BBB022
+  23 | AAA023 | BBB023
+  24 | AAA024 | BBB024
+  25 | AAA025 | BBB025
+  26 | AAA026 | BBB026
+  27 | AAA027 | BBB027
+  28 | AAA028 | BBB028
+  29 | AAA029 | BBB029
+  30 | AAA030 | BBB030
+  31 | AAA031 | BBB031
+  32 | AAA032 | BBB032
+  33 | AAA033 | BBB033
+  34 | AAA034 | BBB034
+  35 | AAA035 | BBB035
+  36 | AAA036 | BBB036
+  37 | AAA037 | BBB037
+  38 | AAA038 | BBB038
+  39 | AAA039 | BBB039
+  40 | AAA040 | BBB040
+  41 | AAA041 | BBB041
+  42 | AAA042 | BBB042
+  43 | AAA043 | BBB043
+  44 | AAA044 | BBB044
+  45 | AAA045 | BBB045
+  46 | AAA046 | BBB046
+  47 | AAA047 | BBB047
+  48 | AAA048 | BBB048
+  49 | AAA049 | BBB049
+  50 | AAA050 | BBB050
+  51 | AAA051 | BBB051
+  52 | AAA052 | BBB052
+  53 | AAA053 | BBB053
+  54 | AAA054 | BBB054
+  55 | AAA055 | BBB055
+  56 | AAA056 | BBB056
+  57 | AAA057 | BBB057
+  58 | AAA058 | BBB058
+  59 | AAA059 | BBB059
+  60 | AAA060 | BBB060
+  61 | AAA061 | BBB061
+  62 | AAA062 | BBB062
+  63 | AAA063 | BBB063
+  64 | AAA064 | BBB064
+  65 | AAA065 | BBB065
+  66 | AAA066 | BBB066
+  67 | AAA067 | BBB067
+  68 | AAA068 | BBB068
+  69 | AAA069 | BBB069
+  70 | AAA070 | BBB070
+  71 | AAA071 | BBB071
+  72 | AAA072 | BBB072
+  73 | AAA073 | BBB073
+  74 | AAA074 | BBB074
+  75 | AAA075 | BBB075
+  76 | AAA076 | BBB076
+  77 | AAA077 | BBB077
+  78 | AAA078 | BBB078
+  79 | AAA079 | BBB079
+  80 | AAA080 | BBB080
+  81 | AAA081 | BBB081
+  82 | AAA082 | BBB082
+  83 | AAA083 | BBB083
+  84 | AAA084 | BBB084
+  85 | AAA085 | BBB085
+  86 | AAA086 | BBB086
+  87 | AAA087 | BBB087
+  88 | AAA088 | BBB088
+  89 | AAA089 | BBB089
+  90 | AAA090 | BBB090
+  91 | AAA091 | BBB091
+  92 | AAA092 | BBB092
+  93 | AAA093 | BBB093
+  94 | AAA094 | BBB094
+  95 | AAA095 | BBB095
+  96 | AAA096 | BBB096
+  97 | AAA097 | BBB097
+  98 | AAA098 | BBB098
+  99 | AAA099 | BBB099
+ 100 | AAA100 | BBB100
+(100 rows)
+
+TRUNCATE TABLE "S 1"."GP 1";

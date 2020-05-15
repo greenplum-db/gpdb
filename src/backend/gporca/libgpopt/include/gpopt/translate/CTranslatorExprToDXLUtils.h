@@ -17,10 +17,10 @@
 #include "naucrates/dxl/operators/CDXLScalarBoolExpr.h"
 #include "naucrates/dxl/operators/CDXLColDescr.h"
 
+#include "gpopt/base/CRange.h"
 #include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/operators/CExpression.h"
-#include "gpopt/operators/ops.h"
 
 #include "gpopt/translate/CTranslatorExprToDXL.h"
 

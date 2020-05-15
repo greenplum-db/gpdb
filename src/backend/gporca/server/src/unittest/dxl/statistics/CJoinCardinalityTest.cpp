@@ -15,6 +15,7 @@
 
 #include <stdint.h>
 
+#include "gpos/error/CAutoTrace.h"
 #include "gpos/io/COstreamString.h"
 #include "gpos/string/CWStringDynamic.h"
 
@@ -160,11 +161,11 @@ CJoinCardinalityTest::EresUnittest_JoinNDVRemain()
 		CDouble dNDVRemainJoin = elem.m_dNDVRemainJoin;
 		CDouble dFreqRemainJoin = elem.m_dFreqRemainJoin;
 
-		CDouble dDiffNDVJoin(fabs((dNDVBucketsJoin - CStatisticsUtils::GetNumDistinct(join_histogram->ParseDXLToBucketsArray())).Get()));
+		CDouble dDiffNDVJoin(fabs((dNDVBucketsJoin - CStatisticsUtils::GetNumDistinct(join_histogram->GetBuckets())).Get()));
 		CDouble dDiffNDVRemainJoin(fabs((dNDVRemainJoin - join_histogram->GetDistinctRemain()).Get()));
 		CDouble dDiffFreqRemainJoin(fabs((dFreqRemainJoin - join_histogram->GetFreqRemain()).Get()));
 
-		if (join_histogram->Buckets() != ulBucketsJoin || (dDiffNDVJoin > CStatistics::Epsilon)
+		if (join_histogram->GetNumBuckets() != ulBucketsJoin || (dDiffNDVJoin > CStatistics::Epsilon)
 			|| (dDiffNDVRemainJoin > CStatistics::Epsilon) || (dDiffFreqRemainJoin > CStatistics::Epsilon))
 		{
 			eres = GPOS_FAILED;
@@ -195,7 +196,6 @@ CJoinCardinalityTest::EresUnittest_Join()
 		{"../data/dxl/statistics/Join-Statistics-Input-Only-Nulls.xml", "../data/dxl/statistics/Join-Statistics-Output-Only-Nulls.xml", false, PdrgpstatspredjoinNullableCols},
 		{"../data/dxl/statistics/Join-Statistics-Input-Only-Nulls.xml", "../data/dxl/statistics/Join-Statistics-Output-LOJ-Only-Nulls.xml", true, PdrgpstatspredjoinNullableCols},
 	    {"../data/dxl/statistics/Join-Statistics-DDistinct-Input.xml", "../data/dxl/statistics/Join-Statistics-DDistinct-Output.xml", false, PdrgpstatspredjoinSingleJoinPredicate},
-		{"../data/dxl/statistics/Join-Statistics-Text-Input.xml", "../data/dxl/statistics/Join-Statistics-Text-Output.xml", false, PdrgpstatspredjoinSingleJoinPredicate},
 	};
 
 	CColumnFactory *col_factory = COptCtxt::PoctxtFromTLS()->Pcf();

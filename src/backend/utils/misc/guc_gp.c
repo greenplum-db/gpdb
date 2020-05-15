@@ -129,7 +129,6 @@ bool        test_AppendOnlyHash_eviction_vs_just_marking_not_inuse = false;
 bool		Debug_appendonly_print_datumstream = false;
 bool		Debug_appendonly_print_visimap = false;
 bool		Debug_appendonly_print_compaction = false;
-bool		Debug_resource_group = false;
 bool		Debug_bitmap_print_insert = false;
 bool		Test_print_direct_dispatch_info = false;
 bool        Test_print_prefetch_joinqual = false;
@@ -194,9 +193,6 @@ int			Debug_dtm_action_protocol = DEBUG_DTM_ACTION_PROTOCOL_DEFAULT;
 
 int			Debug_dtm_action_segment = DEBUG_DTM_ACTION_SEGMENT_DEFAULT;
 int			Debug_dtm_action_nestinglevel = DEBUG_DTM_ACTION_NESTINGLEVEL_DEFAULT;
-
-/* Enable check for compatibility of encoding and locale in createdb */
-bool		gp_encoding_check_locale_compatibility;
 
 int			gp_connection_send_timeout;
 

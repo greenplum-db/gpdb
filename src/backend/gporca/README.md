@@ -165,7 +165,7 @@ that allows for users to quickly and easily update existing mdps. This script
 takes in a logfile that it will use to update the mdps. This logfile can be
 obtained from running ctest as shown below.
 
-Existing minidumps can be updated by runing the following:
+Existing minidumps can be updated by running the following:
 
 
 1. Run `ctest -j8`.

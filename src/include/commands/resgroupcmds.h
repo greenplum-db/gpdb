@@ -40,6 +40,4 @@ extern void GetResGroupCapabilities(Relation rel,
 									ResGroupCaps *resgroupCaps);
 extern void ResGroupCheckForRole(Oid groupId);
 
-extern int32 GetResGroupMemAuditorForId(Oid groupId, LOCKMODE lockmode);
-
 #endif   /* RESGROUPCMDS_H */

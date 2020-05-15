@@ -13,7 +13,6 @@
 
 #include "gpopt/base/CDrvdPropPlan.h"
 #include "gpopt/base/CReqdPropPlan.h"
-#include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CPartIndexMap.h"
 #include "gpopt/base/CCTEMap.h"
 #include "gpopt/base/CCTEReq.h"

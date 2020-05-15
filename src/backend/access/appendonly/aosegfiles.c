@@ -70,20 +70,6 @@ static FileSegInfo **GetAllFileSegInfo_pg_aoseg_rel(char *relationName, Relation
  * ------------------------------------------------------------------------
  */
 
-FileSegInfo *
-NewFileSegInfo(int segno)
-{
-	FileSegInfo *fsinfo;
-
-	fsinfo = (FileSegInfo *) palloc0(sizeof(FileSegInfo));
-	fsinfo->segno = segno;
-	fsinfo->state = AOSEG_STATE_DEFAULT;
-	/* New segments are always created in the latest format */
-	fsinfo->formatversion = AORelationVersion_GetLatest();
-
-	return fsinfo;
-}
-
 void
 ValidateAppendonlySegmentDataBeforeStorage(int segno)
 {

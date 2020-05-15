@@ -20,6 +20,8 @@
 
 #include "gpos/base.h"
 
+#include "gpos/common/CStackObject.h"
+
 namespace gpos
 {
 

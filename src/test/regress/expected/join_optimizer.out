@@ -2352,7 +2352,6 @@ reset enable_hashjoin;
 -- a different check for handling of redundant sort keys in merge joins
 --
 set enable_mergejoin = true;
-set random_page_cost = 4;
 explain (costs off)
 select count(*) from
   (select * from tenk1 x order by x.thousand, x.twothousand, x.fivethous) x
@@ -2387,7 +2386,6 @@ select count(*) from
 (1 row)
 
 reset enable_mergejoin;
-reset random_page_cost;
 --
 -- Clean up
 --
@@ -3189,7 +3187,6 @@ where thousand = (q1 + q2);
 -- test ability to generate a suitable plan for a star-schema query
 --
 set enable_nestloop to true;
-set random_page_cost to 4;
 explain (costs off)
 select * from
   tenk1, int8_tbl a, int8_tbl b
@@ -3214,7 +3211,6 @@ where thousand = a.q1 and tenthous = b.q1 and a.q2 = 1 and b.q2 = 2;
 (15 rows)
 
 reset enable_nestloop;
-reset random_page_cost;
 --
 -- test a corner case in which we shouldn't apply the star-schema optimization
 --
@@ -5532,12 +5528,10 @@ select * from int4_tbl a,
 ------------------------------------------------------------------------
  Nested Loop
    Output: a.f1, b.f1, c.q1, c.q2
-   ->  Materialize
+   ->  Gather Motion 3:1  (slice1; segments: 3)
          Output: a.f1
-         ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on public.int4_tbl a
                Output: a.f1
-               ->  Seq Scan on public.int4_tbl a
-                     Output: a.f1
    ->  Materialize
          Output: b.f1, c.q1, c.q2
          ->  Hash Right Join
@@ -5607,13 +5601,13 @@ select * from
   (select b.q1 as bq1, c.q1 as cq1, least(a.q1,b.q1,c.q1) from
    int8_tbl b cross join int8_tbl c) ss
   on a.q2 = ss.bq1;
-ERROR:  could not devise a query plan for the given query (pathnode.c:469)
+ERROR:  could not devise a query plan for the given query (pathnode.c:472)
 select * from
   int8_tbl a left join lateral
   (select b.q1 as bq1, c.q1 as cq1, least(a.q1,b.q1,c.q1) from
    int8_tbl b cross join int8_tbl c) ss
   on a.q2 = ss.bq1;
-ERROR:  could not devise a query plan for the given query (pathnode.c:469)
+ERROR:  could not devise a query plan for the given query (pathnode.c:472)
 -- case requiring nested PlaceHolderVars
 explain (verbose, costs off)
 select * from

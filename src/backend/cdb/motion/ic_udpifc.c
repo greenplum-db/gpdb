@@ -36,6 +36,7 @@
 #include "libpq/ip.h"
 #include "port/atomics.h"
 #include "port/pg_crc32c.h"
+#include "postmaster/postmaster.h"
 #include "storage/latch.h"
 #include "storage/pmsignal.h"
 #include "utils/builtins.h"
@@ -702,7 +703,7 @@ static inline TupleChunkListItem RecvTupleChunkFromUDPIFC_Internal(ChunkTranspor
 								  int16 motNodeID,
 								  int16 srcRoute);
 static void TeardownUDPIFCInterconnect_Internal(ChunkTransportState *transportStates,
-									bool forceEOS);
+									bool hasErrors);
 
 static void freeDisorderedPackets(MotionConn *conn);
 
@@ -1187,7 +1188,26 @@ setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFami
 #endif
 
 	fun = "getaddrinfo";
-	s = getaddrinfo(NULL, service, &hints, &addrs);
+	/*
+	 * We set interconnect_address on the primary to the local address of the connection from QD
+	 * to the primary, which is the primary's ADDRESS from gp_segment_configuration,
+	 * used for interconnection.
+	 * However it's wrong on the master. Because the connection from the client to the master may
+	 * have different IP addresses as its destination, which is very likely not the master's
+	 * ADDRESS in gp_segment_configuration.
+	 */
+	if (interconnect_address)
+	{
+		/*
+		 * Restrict what IP address we will listen on to just the one that was
+		 * used to create this QE session.
+		 */
+		hints.ai_flags |= AI_NUMERICHOST;
+		ereport(DEBUG1, (errmsg("binding to %s only", interconnect_address)));
+		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
+			ereport(DEBUG4, (errmsg("binding address %s", interconnect_address)));
+	}
+	s = getaddrinfo(interconnect_address, service, &hints, &addrs);
 	if (s != 0)
 		elog(ERROR, "getaddrinfo says %s", gai_strerror(s));
 
@@ -2643,12 +2663,6 @@ startOutgoingUDPConnections(ChunkTransportState *transportStates,
 
 	recvSlice = &transportStates->sliceTable->slices[sendSlice->parentIndex];
 
-	/*
-	 * Potentially introduce a Bug (MPP-17186). The workaround is to turn off
-	 * log_hostname guc.
-	 */
-	adjustMasterRouting(recvSlice);
-
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
 		elog(DEBUG1, "Interconnect seg%d slice%d setting up sending motion node",
 			 GpIdentity.segindex, sendSlice->sliceIndex);
@@ -3350,7 +3364,7 @@ computeNetworkStatistics(uint64 value, uint64 *min, uint64 *max, double *sum)
  */
 static void
 TeardownUDPIFCInterconnect_Internal(ChunkTransportState *transportStates,
-									bool forceEOS)
+									bool hasErrors)
 {
 	ChunkTransportStateEntry *pEntry = NULL;
 	int			i;
@@ -3388,7 +3402,7 @@ TeardownUDPIFCInterconnect_Internal(ChunkTransportState *transportStates,
 	{
 		int			elevel = 0;
 
-		if (forceEOS || !transportStates->activated)
+		if (hasErrors || !transportStates->activated)
 		{
 			if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
 				elevel = LOG;
@@ -3402,7 +3416,7 @@ TeardownUDPIFCInterconnect_Internal(ChunkTransportState *transportStates,
 			ereport(elevel, (errmsg("Interconnect seg%d slice%d cleanup state: "
 									"%s; setup was %s",
 									GpIdentity.segindex, mySlice->sliceIndex,
-									forceEOS ? "force" : "normal",
+									hasErrors ? "hasErrors" : "normal",
 									transportStates->activated ? "completed" : "exited")));
 
 		/* if setup did not complete, log the slicetable */
@@ -3599,7 +3613,7 @@ TeardownUDPIFCInterconnect_Internal(ChunkTransportState *transportStates,
 		 "isSender %d isReceiver %d "
 		 "snd_queue_depth %d recv_queue_depth %d Gp_max_packet_size %d "
 		 "UNACK_QUEUE_RING_SLOTS_NUM %d TIMER_SPAN %lld DEFAULT_RTT %d "
-		 "forceEOS %d, gp_interconnect_id %d ic_id_last_teardown %d "
+		 "hasErrors %d, gp_interconnect_id %d ic_id_last_teardown %d "
 		 "snd_buffer_pool.count %d snd_buffer_pool.maxCount %d snd_sock_bufsize %d recv_sock_bufsize %d "
 		 "snd_pkt_count %d retransmits %d crc_errors %d"
 		 " recv_pkt_count %d recv_ack_num %d"
@@ -3612,7 +3626,7 @@ TeardownUDPIFCInterconnect_Internal(ChunkTransportState *transportStates,
 		 ic_control_info.isSender, isReceiver,
 		 Gp_interconnect_snd_queue_depth, Gp_interconnect_queue_depth, Gp_max_packet_size,
 		 UNACK_QUEUE_RING_SLOTS_NUM, TIMER_SPAN, DEFAULT_RTT,
-		 forceEOS, transportStates->sliceTable->ic_instance_id, rx_control_info.lastTornIcId,
+		 hasErrors, transportStates->sliceTable->ic_instance_id, rx_control_info.lastTornIcId,
 		 snd_buffer_pool.count, snd_buffer_pool.maxCount, ic_control_info.socketSendBufferSize, ic_control_info.socketRecvBufferSize,
 		 ic_statistics.sndPktNum, ic_statistics.retransmits, ic_statistics.crcErrors,
 		 ic_statistics.recvPktNum, ic_statistics.recvAckNum,
@@ -3658,11 +3672,11 @@ TeardownUDPIFCInterconnect_Internal(ChunkTransportState *transportStates,
  */
 void
 TeardownUDPIFCInterconnect(ChunkTransportState *transportStates,
-						   bool forceEOS)
+						   bool hasErrors)
 {
 	PG_TRY();
 	{
-		TeardownUDPIFCInterconnect_Internal(transportStates, forceEOS);
+		TeardownUDPIFCInterconnect_Internal(transportStates, hasErrors);
 
 		Assert(pthread_mutex_unlock(&ic_control_info.lock) != 0);
 	}
@@ -5391,7 +5405,7 @@ SendChunkUDPIFC(ChunkTransportState *transportStates,
 				int16 motionId)
 {
 
-	int			length = TYPEALIGN(TUPLE_CHUNK_ALIGN, tcItem->chunk_length);
+	int			length = tcItem->chunk_length;
 	int			retry = 0;
 	bool		doCheckExpiration = false;
 	bool		gotStops = false;
@@ -6874,7 +6888,7 @@ SendDummyPacket(void)
 	hint.ai_flags = AI_NUMERICHOST;
 #endif
 
-	ret = pg_getaddrinfo_all(NULL, port_str, &hint, &addrs);
+	ret = pg_getaddrinfo_all(interconnect_address, port_str, &hint, &addrs);
 	if (ret || !addrs)
 	{
 		elog(LOG, "send dummy packet failed, pg_getaddrinfo_all(): %m");

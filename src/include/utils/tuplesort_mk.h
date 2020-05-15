@@ -45,15 +45,6 @@ extern Tuplesortstate_mk *tuplesort_begin_datum_mk(struct ScanState * ss,
 					  bool nullsFirstFlag,
 					  int workMem, bool randomAccess);
 
-extern Tuplesortstate_mk *tuplesort_begin_heap_file_readerwriter_mk(
-		struct ScanState * ss,
-		const char* rwfile_prefix, bool isWriter,
-		TupleDesc tupDesc,
-		int nkeys, AttrNumber *attNums,
-		Oid *sortOperators, Oid *sortCollations,
-		bool *nullsFirstFlags,
-		int workMem, bool randomAccess);
-
 extern void cdb_tuplesort_init_mk(Tuplesortstate_mk *state, int unique,
 							   int sort_flags,
 							   int64 maxdistinct);
@@ -67,9 +58,6 @@ extern void tuplesort_putindextuplevalues_mk(Tuplesortstate_mk *state, Relation 
 extern void tuplesort_putdatum_mk(Tuplesortstate_mk *state, Datum val, bool isNull);
 
 extern void tuplesort_performsort_mk(Tuplesortstate_mk *state);
-
-extern void tuplesort_begin_pos_mk(Tuplesortstate_mk *state, TuplesortPos_mk **pos);
-extern bool tuplesort_gettupleslot_pos_mk(Tuplesortstate_mk *state, TuplesortPos_mk *pos, bool forward, TupleTableSlot *slot, Datum *abbrev, MemoryContext mcontext);
 
 extern bool tuplesort_gettupleslot_mk(Tuplesortstate_mk *state, bool forward, TupleTableSlot *slot, Datum *abbrev);
 extern HeapTuple tuplesort_getheaptuple_mk(Tuplesortstate_mk *state, bool forward, bool *should_free);
@@ -85,11 +73,6 @@ extern void tuplesort_finalize_stats_mk(Tuplesortstate_mk *state);
 extern void tuplesort_rescan_mk(Tuplesortstate_mk *state);
 extern void tuplesort_markpos_mk(Tuplesortstate_mk *state);
 extern void tuplesort_restorepos_mk(Tuplesortstate_mk *state);
-
-extern void tuplesort_rescan_pos_mk(Tuplesortstate_mk *state, TuplesortPos_mk *pos);
-extern void tuplesort_restorepos_pos_mk(Tuplesortstate_mk *state, TuplesortPos_mk *pos);
-extern void tuplesort_markpos_pos_mk(Tuplesortstate_mk *state, TuplesortPos_mk *pos);
-
 
 extern void tuplesort_set_instrument_mk(Tuplesortstate_mk *state,
                          struct Instrumentation    *instrument,

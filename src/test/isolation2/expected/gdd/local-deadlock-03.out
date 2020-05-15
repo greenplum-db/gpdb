@@ -3,7 +3,7 @@
 -- different node with the local deadlock detector.  To make the local
 -- deadlock testcases stable we reset the gdd period to 2min so should
 -- not be triggered during the local deadlock tests.
-ALTER SYSTEM RESET gp_global_deadlock_detector_period;
+ALTER SYSTEM SET gp_global_deadlock_detector_period to '2min';
 ALTER
 SELECT pg_reload_conf();
  pg_reload_conf 
@@ -66,8 +66,9 @@ UPDATE 1
 FAILED:  Execution failed
 20q: ... <quitting>
 10<:  <... completed>
-ERROR:  deadlock detected  (seg1 127.0.1.1:25433 pid=29851)
-DETAIL:  Process 29851 waits for ShareLock on transaction 1009; blocked by process 29968.
-Process 29968 waits for ShareLock on transaction 1008; blocked by process 29851.
+ERROR:  deadlock detected  (seg1 127.0.1.1:7003 pid=52248)
+DETAIL:  Process 52248 waits for ShareLock on transaction 632; blocked by process 52265.
+Process 52265 waits for ShareLock on transaction 631; blocked by process 52248.
 HINT:  See server log for query details.
+CONTEXT:  while updating tuple (0,1) in relation "t03"
 10q: ... <quitting>

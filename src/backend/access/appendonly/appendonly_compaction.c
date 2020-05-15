@@ -324,7 +324,7 @@ AppendOnlyThrowAwayTuple(Relation rel,
 	tuple = TupGetMemTuple(slot);
 	if (MemTupleHasExternal(tuple, mt_bind))
 	{
-		toast_delete(rel, (GenericTuple) tuple, mt_bind);
+		toast_delete_memtup(rel, tuple, mt_bind);
 	}
 
 	if (Debug_appendonly_print_compaction)

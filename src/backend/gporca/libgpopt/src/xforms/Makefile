@@ -4,7 +4,7 @@
 # src/backend/gporca/libgpopt/src/xforms/Makefile
 #
 
-subdir = src/backend/gporca/libgpopt/src/xforms/
+subdir = src/backend/gporca/libgpopt/src/xforms
 top_builddir = ../../../../../..
 include $(top_builddir)/src/Makefile.global
 

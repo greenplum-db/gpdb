@@ -1135,6 +1135,7 @@ _readCreateStmt_common(CreateStmt *local_node)
 	READ_OID_FIELD(ownerid);
 	READ_BOOL_FIELD(buildAoBlkdir);
 	READ_NODE_FIELD(attr_encodings);
+	READ_BOOL_FIELD(isCtas);
 
 	/*
 	 * Some extra checks to make sure we didn't get lost
@@ -1529,9 +1530,11 @@ _readShareInputScan(void)
 {
 	READ_LOCALS(ShareInputScan);
 
-	READ_ENUM_FIELD(share_type, ShareType);
+	READ_BOOL_FIELD(cross_slice);
 	READ_INT_FIELD(share_id);
-	READ_INT_FIELD(driver_slice);
+	READ_INT_FIELD(producer_slice_id);
+	READ_INT_FIELD(this_slice_id);
+	READ_INT_FIELD(nconsumers);
 
 	ReadCommonPlan(&local_node->scan.plan);
 
@@ -2566,6 +2569,9 @@ readNodeBinary(void)
 				return_value = _readLockStmt();
 				break;
 
+			case T_RestrictInfo:
+				return_value = _readRestrictInfo();
+				break;
 			case T_ExtensibleNode:
 				return_value = _readExtensibleNode();
 				break;

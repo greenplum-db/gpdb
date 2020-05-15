@@ -64,9 +64,10 @@
               <codeph>cpu</codeph>
             </entry>
             <entry colname="col2">numeric</entry>
-            <entry colname="col3"></entry>
-            <entry colname="col4">The real-time CPU usage of the resource group for the
-              segment instance on the host.</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">The real-time, per-segment instance CPU core usage by the resource
+              group on the host. The value is the sum of the percentages (as a decimal value) of the
+              CPU cores that are used by the resource group for the segment instance.</entry>
           </row>
           <row>
             <entry colname="col1">

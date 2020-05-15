@@ -10,9 +10,11 @@
 //---------------------------------------------------------------------------
 
 #include "gpos/base.h"
+#include "gpopt/operators/CLogicalDML.h"
+#include "gpopt/operators/CPatternLeaf.h"
+#include "gpopt/operators/CPhysicalDML.h"
 #include "gpopt/xforms/CXformImplementDML.h"
 
-#include "gpopt/operators/ops.h"
 #include "gpopt/metadata/CTableDescriptor.h"
 
 using namespace gpopt;

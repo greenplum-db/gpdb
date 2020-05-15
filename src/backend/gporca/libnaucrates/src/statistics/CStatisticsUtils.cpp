@@ -10,12 +10,15 @@
 //---------------------------------------------------------------------------
 
 #include "gpos/base.h"
+#include "gpos/error/CAutoTrace.h"
 
 #include "gpopt/base/CUtils.h"
 #include "gpopt/base/CColRefTable.h"
 #include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/exception.h"
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalDynamicIndexGet.h"
+#include "gpopt/operators/CLogicalIndexGet.h"
+#include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CExpressionUtils.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/mdcache/CMDAccessor.h"
@@ -36,6 +39,7 @@
 #include "naucrates/md/IMDScalarOp.h"
 #include "naucrates/md/IMDType.h"
 #include "naucrates/md/IMDTypeInt2.h"
+#include "naucrates/md/IMDTypeInt4.h"
 #include "naucrates/md/IMDTypeInt8.h"
 #include "naucrates/md/IMDTypeOid.h"
 #include "naucrates/md/CMDIdColStats.h"
@@ -188,11 +192,11 @@ CStatisticsUtils::MergeMCVHist
 	GPOS_ASSERT(NULL != histogram);
 	GPOS_ASSERT(mcv_histogram->IsWellDefined());
 	GPOS_ASSERT(histogram->IsWellDefined());
-	GPOS_ASSERT(0 < mcv_histogram->Buckets());
-	GPOS_ASSERT(0 < histogram->Buckets());
+	GPOS_ASSERT(0 < mcv_histogram->GetNumBuckets());
+	GPOS_ASSERT(0 < histogram->GetNumBuckets());
 
-	const CBucketArray *mcv_buckets = mcv_histogram->ParseDXLToBucketsArray();
-	const CBucketArray *histogram_buckets = histogram->ParseDXLToBucketsArray();
+	const CBucketArray *mcv_buckets = mcv_histogram->GetBuckets();
+	const CBucketArray *histogram_buckets = histogram->GetBuckets();
 
 	IDatum *datum = (*mcv_buckets)[0]->GetLowerBound()->GetDatum();
 

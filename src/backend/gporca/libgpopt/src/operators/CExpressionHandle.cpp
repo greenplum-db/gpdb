@@ -533,6 +533,9 @@ CExpressionHandle::DeriveCostContextStats()
 	{
 		// there is no need to derive stats,
 		// stats are copied from owner group
+		// (note that m_pdrgpstat may not contain the correct DPE
+		// stats of children, but it is used only for deriving the
+		// stats, which we don't need to do anymore)
 
 		return;
 	}
@@ -547,8 +550,19 @@ CExpressionHandle::DeriveCostContextStats()
 		CPhysicalScan *popScan = CPhysicalScan::PopConvert(m_pgexpr->Pop());
 		IStatistics *pstatsDS = popScan->PstatsDerive(m_mp, *this, m_pcc->Poc()->Prpp(), m_pcc->Poc()->Pdrgpstat());
 
-		CRefCount::SafeRelease(m_pstats);
-		m_pstats = pstatsDS;
+		if (NULL == m_pstats || m_pstats->Rows() > pstatsDS->Rows())
+		{
+			// Replace the group stats with our newly derived DPE stats
+			CRefCount::SafeRelease(m_pstats);
+			m_pstats = pstatsDS;
+		}
+		else
+		{
+			// Eliminating partitions can't possibly increase the row count. If the row
+			// count is higher, that's likely due to some heuristics in the estimation.
+			// If the row count is the same, there is no need to use DPE stats.
+			pstatsDS->Release();
+		}
 
 		return;
 	}
@@ -557,7 +571,7 @@ CExpressionHandle::DeriveCostContextStats()
 	CRefCount::SafeRelease(m_pstats);
 	m_pstats = NULL;
 
-	// load stats from child cost context -- these may be different from child groups stats
+	// load stats from child cost context(s) -- these may be different from child groups stats
 	CRefCount::SafeRelease(m_pdrgpstat);
 	m_pdrgpstat = NULL;
 

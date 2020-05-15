@@ -117,7 +117,7 @@ extern void SetupInterconnect(struct EState *estate);
  *
  */
 extern void TeardownInterconnect(ChunkTransportState *transportStates,
-								 bool forceEOS);
+								 bool hasErrors);
 
 extern void WaitInterconnectQuit(void);
 
@@ -304,9 +304,6 @@ extern ChunkTransportStateEntry *createChunkTransportState(ChunkTransportState *
 extern ChunkTransportStateEntry *removeChunkTransportState(ChunkTransportState *transportStates,
 														   int16 motNodeID);
 
-extern void forceEosToPeers(ChunkTransportState    *transportStates,
-							int                     motNodeID);
-
 extern TupleChunkListItem RecvTupleChunk(MotionConn *conn, ChunkTransportState *transportStates);
 
 extern void InitMotionTCP(int *listenerSocketFd, uint16 *listenerPort);
@@ -318,12 +315,11 @@ extern void WaitInterconnectQuitUDPIFC(void);
 extern void SetupTCPInterconnect(EState *estate);
 extern void SetupUDPIFCInterconnect(EState *estate);
 extern void TeardownTCPInterconnect(ChunkTransportState *transportStates,
-									bool forceEOS);
+									bool hasErrors);
 extern void TeardownUDPIFCInterconnect(ChunkTransportState *transportStates,
-								 bool forceEOS);
+								 bool hasErrors);
 
 extern uint32 getActiveMotionConns(void);
-extern void adjustMasterRouting(ExecSlice *recvSlice);
 
 extern char *format_sockaddr(struct sockaddr_storage *sa, char *buf, size_t len);
 

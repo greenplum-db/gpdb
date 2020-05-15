@@ -11,7 +11,9 @@
 
 #include "gpos/base.h"
 
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalLeftAntiSemiJoinNotIn.h"
+#include "gpopt/operators/CPatternLeaf.h"
+#include "gpopt/operators/CPhysicalLeftAntiSemiHashJoinNotIn.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/xforms/CXformLeftAntiSemiJoinNotIn2HashJoinNotIn.h"
 #include "gpopt/xforms/CXformUtils.h"

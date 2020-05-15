@@ -4,7 +4,7 @@
 # src/backend/gporca/libgpopt/src/search/Makefile
 #
 
-subdir = src/backend/gporca/libgpopt/src/search/
+subdir = src/backend/gporca/libgpopt/src/search
 top_builddir = ../../../../../..
 include $(top_builddir)/src/Makefile.global
 

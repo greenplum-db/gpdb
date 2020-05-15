@@ -863,3 +863,25 @@ select count(1) = 1 from pg_catalog.pg_export_snapshot();
 select pg_cancel_backend(pg_backend_pid());
 ERROR:  canceling statement due to user request
 rollback;
+-- Test a bug that a two-phase subtransaction is considered as one-phase.
+set optimizer = off; -- orca optimizes value scan so the output is different between orca and postgres optimizer.
+truncate distxact1_4;
+set test_print_direct_dispatch_info = true;
+begin;
+savepoint sp1;
+insert into distxact1_4 values (2),(1);
+INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to SINGLE content
+release sp1;
+end;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+reset test_print_direct_dispatch_info;
+reset optimizer;
+select count(gp_segment_id) from distxact1_4 group by gp_segment_id; -- sanity check: tuples should be in > 1 segments
+ count 
+-------
+     1
+     1
+(2 rows)
+

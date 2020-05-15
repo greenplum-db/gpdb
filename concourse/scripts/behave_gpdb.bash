@@ -41,7 +41,6 @@ function _main() {
     # sourcing greenplum_path
     time (make_cluster)
 
-    time install_python_hacks
     time install_python_requirements_on_single_host ./gpdb_src/gpMgmt/requirements-dev.txt
 
     time gen_env

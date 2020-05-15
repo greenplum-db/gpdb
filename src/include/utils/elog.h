@@ -202,7 +202,7 @@ extern int	errcode_for_file_access(void);
 extern int	errcode_for_socket_access(void);
 
 extern int sqlstate_to_errcode(const char *sqlstate);
-extern char *errcode_to_sqlstate(int errcode, char outbuf[6]);
+extern void errcode_to_sqlstate(int errcode, char outbuf[6]);
 
 extern int	errmsg(const char *fmt,...) pg_attribute_printf(1, 2);
 extern int	errmsg_internal(const char *fmt,...) pg_attribute_printf(1, 2);

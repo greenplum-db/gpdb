@@ -563,6 +563,55 @@ workfile_mgr_close_set(workfile_set *work_set)
 	/* no op */
 }
 
+static void
+workfile_report_inconsistency(void)
+{
+	dlist_node *node;
+	dlist_iter		iter;
+	int			num_freeList = 0;
+	int			num_activeList = 0;
+	dlist_foreach(iter, &workfile_shared->freeList)
+	{
+		num_freeList++;
+		node = iter.cur;
+		if (node->next == NULL || node->next->prev != node)
+			ereport(LOG, (errmsg("workfile freeList is corrupted: "
+							"node = %p, next = %p, next->prev = %p",
+							node, node->next, node->next ? node->next->prev : NULL)));
+	}
+	if (!dlist_is_empty(&workfile_shared->freeList))
+	{
+		node = &workfile_shared->freeList.head;
+		if (node->next == NULL || node->next->prev != node)
+			ereport(LOG, (errmsg("workfile freeList is corrupted: "
+							"node = %p, next = %p, next->prev = %p",
+							node, node->next, node->next ? node->next->prev : NULL)));
+	}
+	dlist_foreach(iter, &workfile_shared->activeList)
+	{
+		num_activeList++;
+		node = iter.cur;
+		if (node->next == NULL || node->next->prev != node)
+			ereport(LOG, (errmsg("workfile activeList is corrupted: "
+							"node = %p, next = %p, next->prev = %p",
+							node, node->next, node->next ? node->next->prev : NULL)));
+
+	}
+	if (!dlist_is_empty(&workfile_shared->activeList))
+	{
+		node = &workfile_shared->activeList.head;
+		if (node->next == NULL || node->next->prev != node)
+			ereport(LOG, (errmsg("workfile activeList is corrupted: "
+							"node = %p, next = %p, next->prev = %p",
+							node, node->next, node->next ? node->next->prev : NULL)));
+	}
+
+	ereport(PANIC,
+		(errmsg("num_active = %d, the actual size = %d, total size = %d, free size = %d",
+		  workfile_shared->num_active, num_activeList,
+		  gp_workfile_max_entries, num_freeList)));
+}
+
 /*
  * Function copying all workfile cache entries for one segment
  */
@@ -587,7 +636,9 @@ workfile_mgr_cache_entries_get_copy(int *num_active)
 		memcpy(&copied_entries[i], e, sizeof(WorkFileSetSharedEntry));
 		i++;
 	}
-	Assert(i == num_entries);
+	/* if i != num_entries, the shared memory for workfile is inconsistent. */
+	if (i != num_entries)
+		workfile_report_inconsistency();
 
 	LWLockRelease(WorkFileManagerLock);
 

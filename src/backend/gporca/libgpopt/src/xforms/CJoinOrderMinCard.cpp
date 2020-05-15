@@ -20,7 +20,6 @@
 #include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CUtils.h"
-#include "gpopt/operators/ops.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CNormalizer.h"
 #include "gpopt/xforms/CJoinOrderMinCard.h"

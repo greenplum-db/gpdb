@@ -19,7 +19,9 @@
 
 #include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/base/CColRefSetIter.h"
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalJoin.h"
+#include "gpopt/operators/CLogicalInnerJoin.h"
+#include "gpopt/operators/CLogicalLeftOuterJoin.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/xforms/CJoinOrder.h"
 

@@ -154,13 +154,7 @@
         and software configuration. Greenplum also provides hardware build guides for its certified
         hardware platforms. It is recommended that you work with a Greenplum Systems Engineer to
         review your anticipated environment to ensure an appropriate hardware configuration for
-        Greenplum Database.
-        <note type="warning">Running Pivotal Greenplum Database on hyper-converged infrastructure
-          (HCI) has known issues with performance, scalability, and stability and is not recommended
-          as a scalable solution for Pivotal Greenplum and may not be supported by Pivotal if
-          stability problems appear related to the infrastructure. HCI virtualizes all of the
-          elements of conventional hardware systems and includes, at a minimum, virtualized
-          computing, a virtualised SAN, and virtualized networking.</note></p>
+        Greenplum Database. </p>
       <!--OSS only-->
       <p otherprops="oss-only">The following table lists minimum recommended specifications for
         hardware servers intended to support Greenplum Database on Linux systems. All host servers
@@ -336,7 +330,7 @@
               <row class="- topic/row ">
                 <entry colname="col1" class="- topic/entry ">MADlib machine
                   learning<sup>1</sup></entry>
-                <entry colname="col3" class="- topic/entry ">MADlib 1.16</entry>
+                <entry colname="col3" class="- topic/entry ">MADlib 1.17, 1.16</entry>
               </row>
               <row>
                 <entry>PL/Java</entry>
@@ -369,7 +363,8 @@
               <row class="- topic/row ">
                 <entry colname="col1" class="- topic/entry ">PostGIS Spatial and Geographic Objects
                   for Greenplum Database 6.0.x</entry>
-                <entry colname="col3" class="- topic/entry ">2.1.5+pivotal.2-2</entry>
+                <entry colname="col3" class="- topic/entry ">2.5.4+pivotal.1,
+                  2.1.5+pivotal.2-2</entry>
               </row>
             </tbody>
           </tgroup>

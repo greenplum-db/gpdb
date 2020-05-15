@@ -395,13 +395,6 @@ namespace gpdxl
 				CDXLTranslationContextArray *ctxt_translation_prev_siblings // translation contexts of previous siblings
 				);
 
-			// Initialize spooling information
-			void InitializeSpoolingInfo
-				(
-				Plan *plan,
-				ULONG share_id
-				);
-
 			// translate a CTE producer into a GPDB share input scan
 			Plan *TranslateDXLCTEProducerToSharedScan
 				(

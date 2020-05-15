@@ -20,6 +20,7 @@
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/engine/CStatisticsConfig.h"
 
+#include "naucrates/statistics/CStatistics.h"
 #include "naucrates/statistics/CStatsPredUtils.h"
 #include "naucrates/statistics/CStatsPredDisj.h"
 #include "naucrates/statistics/CStatsPredUnsupported.h"

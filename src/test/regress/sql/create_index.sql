@@ -124,6 +124,7 @@ INSERT INTO radix_text_tbl VALUES ('P0123456789abcdefF');
 
 CREATE INDEX sp_radix_ind ON radix_text_tbl USING spgist (t);
 
+SET optimizer_enable_tablescan = OFF;
 --
 -- Test GiST and SP-GiST indexes
 --
@@ -230,7 +231,6 @@ SELECT circle_center(f1), round(radius(f1)) as radius FROM gcircle_tbl ORDER BY 
 
 -- Now check the results from plain indexscan
 SET enable_seqscan = OFF;
-SET optimizer_enable_tablescan = OFF;
 SET enable_indexscan = ON;
 SET enable_bitmapscan = OFF;
 
@@ -580,7 +580,6 @@ SELECT count(*) FROM radix_text_tbl WHERE t ~>~  'Worth                         
 SELECT count(*) FROM radix_text_tbl WHERE t ~>~  'Worth                         St  ';
 
 RESET enable_seqscan;
-RESET optimizer_enable_tablescan;
 RESET enable_indexscan;
 RESET enable_bitmapscan;
 
@@ -591,7 +590,6 @@ RESET enable_bitmapscan;
 --
 
 SET enable_seqscan = OFF;
-SET optimizer_enable_tablescan = OFF;
 SET enable_indexscan = OFF;
 SET enable_bitmapscan = ON;
 
@@ -652,7 +650,6 @@ SELECT * FROM array_op_test WHERE i = '{NULL}' ORDER BY seqno;
 SELECT * FROM array_op_test WHERE i <@ '{NULL}' ORDER BY seqno;
 
 RESET enable_seqscan;
-RESET optimizer_enable_tablescan;
 RESET enable_indexscan;
 RESET enable_bitmapscan;
 
@@ -875,7 +872,6 @@ INSERT INTO onek_with_null (unique1,unique2) VALUES (NULL, -1), (NULL, NULL);
 CREATE UNIQUE INDEX onek_nulltest ON onek_with_null (unique2,unique1);
 
 SET enable_seqscan = OFF;
-SET optimizer_enable_tablescan = OFF;
 SET enable_indexscan = ON;
 SET enable_bitmapscan = ON;
 
@@ -944,7 +940,6 @@ SELECT unique1, unique2 FROM onek_with_null WHERE unique2 < 999
   ORDER BY unique2 DESC LIMIT 2;
 
 RESET enable_seqscan;
-RESET optimizer_enable_tablescan;
 RESET enable_indexscan;
 RESET enable_bitmapscan;
 
@@ -955,7 +950,6 @@ DROP TABLE onek_with_null;
 --
 
 SET enable_seqscan = OFF;
-SET optimizer_enable_tablescan = OFF;
 SET enable_indexscan = ON;
 SET enable_bitmapscan = ON;
 
@@ -1011,12 +1005,10 @@ WHERE thousand < 2 AND tenthous IN (1001,3000)
 ORDER BY thousand;
 
 RESET enable_seqscan;
-RESET optimizer_enable_tablescan;
 RESET enable_indexscan;
 RESET enable_bitmapscan;
 
 SET enable_indexonlyscan = OFF;
-SET random_page_cost = 4; -- prefer index san.
 
 explain (costs off)
 SELECT thousand, tenthous FROM tenk1
@@ -1027,7 +1019,6 @@ SELECT thousand, tenthous FROM tenk1
 WHERE thousand < 2 AND tenthous IN (1001,3000)
 ORDER BY thousand;
 
-RESET random_page_cost;
 RESET enable_indexonlyscan;
 RESET enable_indexscan;
 
@@ -1099,3 +1090,5 @@ DROP ROLE regress_reindexuser;
 SET client_min_messages TO 'warning';
 DROP SCHEMA schema_to_reindex CASCADE;
 RESET client_min_messages;
+
+RESET optimizer_enable_tablescan;

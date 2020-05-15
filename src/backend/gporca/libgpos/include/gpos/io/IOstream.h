@@ -13,9 +13,11 @@
 
 #include "gpos/types.h"
 
-
 namespace gpos
 {
+	// wide char ostream
+	typedef std::basic_ostream<WCHAR, std::char_traits<WCHAR> >  WOSTREAM;
+
 	//---------------------------------------------------------------------------
 	//	@class:
 	//		IOstream

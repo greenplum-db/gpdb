@@ -1,7 +1,7 @@
 MODULES=gplibpq
 PG_CONFIG=pg_config
 
-subdir = src/test/walrep/
+subdir = src/test/walrep
 top_builddir = ../../..
 
 include $(top_builddir)/src/Makefile.global

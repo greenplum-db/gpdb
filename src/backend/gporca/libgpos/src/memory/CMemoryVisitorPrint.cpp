@@ -22,6 +22,7 @@
 #include "gpos/common/CStackDescriptor.h"
 #include "gpos/memory/CMemoryVisitorPrint.h"
 #include "gpos/string/CWStringStatic.h"
+#include "gpos/task/ITask.h"
 
 using namespace gpos;
 
