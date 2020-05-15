@@ -101,6 +101,12 @@ namespace gpnaucrates
 			static
 			GPOS_RESULT EresUnittest_CBucketDifference();
 
+			static
+			GPOS_RESULT EresUnittest_CBucketMergeCommutativityUnion();
+
+			static
+			GPOS_RESULT EresUnittest_CBucketMergeCommutativityUnionAll();
+
 	}; // class CBucketTest
 }
 

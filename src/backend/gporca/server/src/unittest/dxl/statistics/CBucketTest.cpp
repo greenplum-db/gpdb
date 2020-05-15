@@ -50,6 +50,8 @@ CBucketTest::EresUnittest()
 		GPOS_UNITTEST_FUNC(CBucketTest::EresUnittest_CBucketScale),
 		GPOS_UNITTEST_FUNC(CBucketTest::EresUnittest_CBucketDifference),
 		GPOS_UNITTEST_FUNC(CBucketTest::EresUnittest_CBucketIntersect),
+		GPOS_UNITTEST_FUNC(CBucketTest::EresUnittest_CBucketMergeCommutativityUnion),
+		GPOS_UNITTEST_FUNC(CBucketTest::EresUnittest_CBucketMergeCommutativityUnionAll),
 		};
 
 	CAutoMemoryPool amp;
@@ -382,5 +384,114 @@ CBucketTest::FMatchBucketBoundary
 	return false;
 }
 
+// basic merge commutativity test for union
+GPOS_RESULT
+CBucketTest::EresUnittest_CBucketMergeCommutativityUnion()
+{
+	// create memory pool
+	CAutoMemoryPool amp;
+	CMemoryPool *mp = amp.Pmp();
+
+	// 1000 rows
+	CBucket *bucket1 = CCardinalityTestUtils::PbucketIntegerClosedLowerBound(mp, 0, 100, CDouble(0.6), CDouble(100.0));
+
+	// 600 rows
+	CBucket *bucket2 = CCardinalityTestUtils::PbucketIntegerClosedLowerBound(mp, 50, 150, CDouble(0.3), CDouble(100.0));
+
+	CBucket *bucket1_new1 = NULL;
+	CBucket *bucket2_new1 = NULL;
+	CDouble result_rows1(0.0);
+
+	CBucket *result1 = bucket1->MakeBucketMerged(mp, bucket2, 1000, 600, &bucket1_new1, &bucket2_new1, &result_rows1, false /*is_union_all*/);
+
+
+	CBucket *bucket1_new2 = NULL;
+	CBucket *bucket2_new2 = NULL;
+	CDouble result_rows2(0.0);
+	CBucket *result2 = bucket2->MakeBucketMerged(mp, bucket1, 600, 1000, &bucket1_new2, &bucket2_new2, &result_rows2, false /*is_union_all*/);
+
+	{
+		CAutoTrace at(mp);
+		result1->OsPrint(at.Os());
+		result2->OsPrint(at.Os());
+	}
+
+	GPOS_ASSERT(result1->Equals(result2));
+
+	if (NULL != bucket1_new1)
+	{
+		GPOS_ASSERT(bucket1_new1->Equals(bucket2_new2));
+	}
+	else if (NULL != bucket2_new1)
+	{
+		GPOS_ASSERT(bucket2_new1->Equals(bucket1_new2));
+	}
+
+	GPOS_DELETE(bucket1);
+	GPOS_DELETE(bucket2);
+	GPOS_DELETE(result1);
+	GPOS_DELETE(result2);
+	GPOS_DELETE(bucket1_new1);
+	GPOS_DELETE(bucket2_new1);
+	GPOS_DELETE(bucket1_new2);
+	GPOS_DELETE(bucket2_new2);
+
+	return GPOS_OK;
+}
+
+// basic merge commutativity test for union all
+GPOS_RESULT
+CBucketTest::EresUnittest_CBucketMergeCommutativityUnionAll()
+{
+	// create memory pool
+	CAutoMemoryPool amp;
+	CMemoryPool *mp = amp.Pmp();
+
+	// 1000 rows
+	CBucket *bucket1 = CCardinalityTestUtils::PbucketIntegerClosedLowerBound(mp, 0, 100, CDouble(0.6), CDouble(100.0));
+
+	// 600 rows
+	CBucket *bucket2 = CCardinalityTestUtils::PbucketIntegerClosedLowerBound(mp, 50, 150, CDouble(0.3), CDouble(100.0));
+
+	CBucket *bucket1_new1 = NULL;
+	CBucket *bucket2_new1 = NULL;
+	CDouble result_rows1(0.0);
+
+	CBucket *result1 = bucket1->MakeBucketMerged(mp, bucket2, 1000, 600, &bucket1_new1, &bucket2_new1, &result_rows1, true /*is_union_all*/);
+
+
+	CBucket *bucket1_new2 = NULL;
+	CBucket *bucket2_new2 = NULL;
+	CDouble result_rows2(0.0);
+	CBucket *result2 = bucket2->MakeBucketMerged(mp, bucket1, 600, 1000, &bucket1_new2, &bucket2_new2, &result_rows2, true /*is_union_all*/);
+
+	{
+		CAutoTrace at(mp);
+		result1->OsPrint(at.Os());
+		result2->OsPrint(at.Os());
+	}
+
+	GPOS_ASSERT(result1->Equals(result2));
+
+	if (NULL != bucket1_new1)
+	{
+		GPOS_ASSERT(bucket1_new1->Equals(bucket2_new2));
+	}
+	else if (NULL != bucket2_new1)
+	{
+		GPOS_ASSERT(bucket2_new1->Equals(bucket1_new2));
+	}
+
+	GPOS_DELETE(bucket1);
+	GPOS_DELETE(bucket2);
+	GPOS_DELETE(result1);
+	GPOS_DELETE(result2);
+	GPOS_DELETE(bucket1_new1);
+	GPOS_DELETE(bucket2_new1);
+	GPOS_DELETE(bucket1_new2);
+	GPOS_DELETE(bucket2_new2);
+
+	return GPOS_OK;
+}
 // EOF
 

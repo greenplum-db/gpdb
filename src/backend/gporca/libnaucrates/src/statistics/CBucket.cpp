@@ -477,6 +477,26 @@ CBucket::MakeBucketCopy
 	return GPOS_NEW(mp) CBucket(m_bucket_lower_bound, m_bucket_upper_bound, m_is_lower_closed, m_is_upper_closed, m_frequency, m_distinct);
 }
 
+BOOL
+CBucket::Equals
+	(
+	const CBucket *bucket
+	)
+{
+	GPOS_ASSERT(this != NULL);
+	GPOS_ASSERT(bucket != NULL);
+	if (this->GetLowerBound()->Equals(bucket->GetLowerBound()) &&
+		this->IsLowerClosed() == bucket->IsLowerClosed() &&
+		this->GetUpperBound()->Equals(bucket->GetUpperBound()) &&
+		this->IsUpperClosed() == bucket->IsUpperClosed() &&
+		this->GetFrequency() == bucket->GetFrequency() &&
+		this->GetNumDistinct() == bucket->GetNumDistinct())
+	{
+		return true;
+	}
+	return false;
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CBucket::MakeBucketUpdateFrequency

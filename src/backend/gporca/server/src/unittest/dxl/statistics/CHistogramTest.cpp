@@ -39,7 +39,8 @@ CHistogramTest::EresUnittest()
 		GPOS_UNITTEST_FUNC(CHistogramTest::EresUnittest_CHistogramInt4),
 		GPOS_UNITTEST_FUNC(CHistogramTest::EresUnittest_CHistogramBool),
 		GPOS_UNITTEST_FUNC(CHistogramTest::EresUnittest_Skew),
-		GPOS_UNITTEST_FUNC(CHistogramTest::EresUnittest_CHistogramValid)
+		GPOS_UNITTEST_FUNC(CHistogramTest::EresUnittest_CHistogramValid),
+		GPOS_UNITTEST_FUNC(CHistogramTest::EresUnittest_MergeUnion)
 		};
 
 	CAutoMemoryPool amp;
@@ -285,6 +286,56 @@ CHistogramTest::EresUnittest_Skew()
 
 	GPOS_DELETE(histogram1);
 	GPOS_DELETE(histogram2);
+
+	return GPOS_OK;
+}
+
+// basis merge commutativity test
+GPOS_RESULT
+CHistogramTest::EresUnittest_MergeUnion()
+{
+	// create memory pool
+	CAutoMemoryPool amp;
+	CMemoryPool *mp = amp.Pmp();
+
+	// 1000 rows
+	CBucket *bucket1 = CCardinalityTestUtils::PbucketIntegerClosedLowerBound(mp, 1, 100, CDouble(0.6), CDouble(100.0));
+	CBucket *bucket2 = CCardinalityTestUtils::PbucketIntegerClosedLowerBound(mp, 150, 200, CDouble(0.4), CDouble(100.0));
+
+	// 600 rows
+	CBucket *pbucket3 = CCardinalityTestUtils::PbucketIntegerClosedLowerBound(mp, 50, 150, CDouble(0.3), CDouble(100.0));
+	CBucket *pbucket4 = CCardinalityTestUtils::PbucketIntegerClosedLowerBound(mp, 200, 400, CDouble(0.7), CDouble(100.0));
+
+	CBucketArray *pdrgppbucket1 = GPOS_NEW(mp) CBucketArray(mp);
+	pdrgppbucket1->Append(bucket1);
+	pdrgppbucket1->Append(bucket2);
+	CHistogram *histogram1 =  GPOS_NEW(mp) CHistogram(mp, pdrgppbucket1);
+
+	CBucketArray *pdrgppbucket2 = GPOS_NEW(mp) CBucketArray(mp);
+	pdrgppbucket2->Append(pbucket3);
+	pdrgppbucket2->Append(pbucket4);
+	CHistogram *histogram2 =  GPOS_NEW(mp) CHistogram(mp, pdrgppbucket2);
+
+	CDouble output_rows1(0.0);
+	CHistogram *result1 = histogram1->MakeUnionHistogramNormalize(1000, histogram2, 600, &output_rows1);
+
+
+	CDouble output_rows2(0.0);
+	CHistogram *result2 = histogram2->MakeUnionHistogramNormalize(600, histogram1, 1000, &output_rows2);
+
+	{
+		CAutoTrace at(mp);
+		result1->OsPrint(at.Os());
+		result2->OsPrint(at.Os());
+		at.Os() << "Result 1: " << output_rows1 << std::endl;
+		at.Os() << "Result 2: "<< output_rows2 << std::endl;
+	}
+
+	GPOS_ASSERT(output_rows1 == output_rows2);
+	GPOS_DELETE(histogram1);
+	GPOS_DELETE(histogram2);
+	GPOS_DELETE(result1);
+	GPOS_DELETE(result2);
 
 	return GPOS_OK;
 }
