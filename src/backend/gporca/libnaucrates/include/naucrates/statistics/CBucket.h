@@ -210,6 +210,7 @@ namespace gpnaucrates
 					CDouble rows_other,
 					CBucket **bucket1_new,
 					CBucket **bucket2_new,
+					CDouble *result_rows,
 					BOOL is_union_all = true
 					);
 
