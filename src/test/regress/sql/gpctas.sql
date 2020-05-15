@@ -128,3 +128,11 @@ DROP TABLE IF EXISTS unnest_2d_tbl01_out;
 -- The following CTAS fails previously, see Github Issue 9365
 CREATE TABLE unnest_2d_tbl01_out AS
   SELECT id, (array_unnest_2d_to_1d(val)).* FROM unnest_2d_tbl01;
+
+-- Github issue 9790.
+-- Previously, CTAS with no data won't handle the 'WITH' clause
+CREATE TABLE ctas_base(a int, b int);
+CREATE TABLE ctas_aocs WITH (appendonly=true, orientation=column) AS SELECT * FROM ctas_base WITH NO DATA;
+SELECT * FROM ctas_aocs;
+DROP TABLE ctas_base;
+DROP TABLE ctas_aocs;

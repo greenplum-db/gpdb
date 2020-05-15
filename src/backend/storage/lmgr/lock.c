@@ -423,8 +423,8 @@ InitLocks(void)
 	/* Allow for extra entries if resource locking is enabled. */
 	if (Gp_role == GP_ROLE_DISPATCH && IsResQueueEnabled())
 	{
-		add_size(max_table_size, NRESLOCKENTS() );
-		//add_size(max_plock_table_size, NRESPROCLOCKENTS() );
+		max_table_size = add_size(max_table_size, NRESLOCKENTS() );
+		max_table_size = add_size(max_table_size, NRESPROCLOCKENTS() );
 	}
 
 	init_table_size = max_table_size / 2;
@@ -868,10 +868,14 @@ LockAcquireExtended(const LOCKTAG *locktag,
 					lockHolderProcPtr = proc;
 				}
 				else
-					elog(ERROR, "reader could not find writer proc entry, "
-						 "lock [%u,%u] %s %d", locktag->locktag_field1,
-						 locktag->locktag_field2, lock_mode_names[lockmode],
-						 (int)locktag->locktag_type);
+					ereport(FATAL,
+							(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+							 errmsg(WRITER_IS_MISSING_MSG),
+							 errdetail("lock [%u,%u] %s %d. "
+									   "Probably because writer gang is gone somehow. "
+									   "Maybe try rerunning.", locktag->locktag_field1,
+									   locktag->locktag_field2, lock_mode_names[lockmode],
+									   (int)locktag->locktag_type)));
 			}
 		}
 	}
@@ -3815,14 +3819,14 @@ LockShmemSize(void)
 
 	if (Gp_role == GP_ROLE_DISPATCH && IsResQueueEnabled())
 	{
-		add_size(max_table_size, NRESLOCKENTS() );
+		max_table_size = add_size(max_table_size, NRESLOCKENTS() );
 	}
 
 	size = add_size(size, hash_estimate_size(max_table_size, sizeof(LOCK)));
 	
 	if (Gp_role == GP_ROLE_DISPATCH && IsResQueueEnabled())
 	{
-		add_size(max_table_size, NRESPROCLOCKENTS() );
+		max_table_size = add_size(max_table_size, NRESPROCLOCKENTS() );
 	}
 
 	/* proclock hash table */

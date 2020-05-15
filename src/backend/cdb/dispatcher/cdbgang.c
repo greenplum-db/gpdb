@@ -195,6 +195,29 @@ segment_failure_due_to_recovery(const char *error_message)
 	return false;
 }
 
+/* Check if the segment failure is due to missing writer process on QE node. */
+bool
+segment_failure_due_to_missing_writer(const char *error_message)
+{
+	char	   *fatal = NULL,
+			   *ptr = NULL;
+	int			fatal_len = 0;
+
+	if (error_message == NULL)
+		return false;
+
+	fatal = _("FATAL");
+	fatal_len = strlen(fatal);
+
+	ptr = strstr(error_message, fatal);
+	if ((ptr != NULL) && ptr[fatal_len] == ':' &&
+		strstr(error_message, _(WRITER_IS_MISSING_MSG)))
+		return true;
+
+	return false;
+}
+
+
 /*
  * Reads the GP catalog tables and build a CdbComponentDatabases structure.
  * It then converts this to a Gang structure and initializes all the non-connection related fields.
@@ -590,10 +613,16 @@ getCdbProcessesForQD(int isPrimary)
 	proc = makeNode(CdbProcess);
 
 	/*
-	 * Set QD listener address to NULL. This will be filled during starting up
-	 * outgoing interconnect connection.
+	 * Set QD listener address to the ADDRESS of the master, so the motions that connect to
+	 * the master knows what the interconnect address of the peer is. `adjustMasterRouting()`
+	 * is not necessary, and it could be wrong if the QD/QE on the master binds a single IP
+	 * address for interconnection instead of the wildcard address. Binding the wildcard address
+	 * for interconnection has some flaws:
+	 * 1. All the QD/QE in the same node share the same port space(for a same AF_INET/AF_INET6),
+	 *    which contributes to run out of port.
+	 * 2. When the segments have their own ADDRESS, the connection address could be confusing.
 	 */
-	proc->listenerAddr = NULL;
+	proc->listenerAddr = pstrdup(qdinfo->config->hostip);
 
 	if (Gp_interconnect_type == INTERCONNECT_TYPE_UDPIFC)
 		proc->listenerPort = (Gp_listener_port >> 16) & 0x0ffff;
@@ -813,31 +842,6 @@ gangTypeToString(GangType type)
 			Assert(false);
 	}
 	return ret;
-}
-
-bool
-GangOK(Gang *gp)
-{
-	int i;
-
-	if (gp == NULL)
-		return false;
-
-	/*
-	 * Gang is direct-connect (no agents).
-	 */
-
-	for (i = 0; i < gp->size; i++)
-	{
-		SegmentDatabaseDescriptor *segdbDesc = gp->db_descriptors[i];
-
-		if (cdbconn_isBadConnection(segdbDesc))
-			return false;
-		if (FtsIsSegmentDown(segdbDesc->segment_database_info))
-			return false;
-	}
-
-	return true;
 }
 
 void

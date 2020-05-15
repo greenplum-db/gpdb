@@ -68,6 +68,7 @@ CFilterCardinalityTest::EresUnittest()
 		{
 		GPOS_UNITTEST_FUNC(CFilterCardinalityTest::EresUnittest_CStatisticsBasicsFromDXLNumeric),
 		GPOS_UNITTEST_FUNC(CFilterCardinalityTest::EresUnittest_CStatisticsFilter),
+		GPOS_UNITTEST_FUNC(CFilterCardinalityTest::EresUnittest_CStatisticsFilterArrayCmpAny),
 		GPOS_UNITTEST_FUNC(CFilterCardinalityTest::EresUnittest_CStatisticsFilterConj),
 		GPOS_UNITTEST_FUNC(CFilterCardinalityTest::EresUnittest_CStatisticsFilterDisj),
 		GPOS_UNITTEST_FUNC(CFilterCardinalityTest::EresUnittest_CStatisticsNestedPred),
@@ -211,6 +212,74 @@ CFilterCardinalityTest::PstatspredNotNull
 	CStatsPredPtrArry *pdrgpstatspred = GPOS_NEW(mp) CStatsPredPtrArry(mp);
 
 	pdrgpstatspred->Append(GPOS_NEW(mp) CStatsPredPoint(1, CStatsPred::EstatscmptNEq,  CTestUtils::PpointInt4NullVal(mp)));
+
+	return GPOS_NEW(mp) CStatsPredConj(pdrgpstatspred);
+}
+
+// testing ArryCmpAny predicates
+GPOS_RESULT
+CFilterCardinalityTest::EresUnittest_CStatisticsFilterArrayCmpAny()
+{
+	SStatsFilterSTestCase rgstatsdisjtc[] =
+	{
+		{
+			"../data/dxl/statistics/ArrayCmpAny-Input-1.xml",
+			"../data/dxl/statistics/ArrayCmpAny-Output-1.xml",
+			PstatspredArrayCmpAnySimple
+		},
+		{
+			"../data/dxl/statistics/ArrayCmpAny-Input-1.xml",
+			"../data/dxl/statistics/ArrayCmpAny-Output-1.xml",
+			PstatspredArrayCmpAnyDuplicate
+		}
+	};
+
+	const ULONG ulTestCases = GPOS_ARRAY_SIZE(rgstatsdisjtc);
+
+	return EresUnittest_CStatistics(rgstatsdisjtc, ulTestCases);
+}
+
+// create a 'col IN (...)' filter without duplicates
+CStatsPred *
+CFilterCardinalityTest::PstatspredArrayCmpAnySimple
+	(
+	CMemoryPool *mp
+	)
+{
+	CStatsPredPtrArry *pdrgpstatspred = GPOS_NEW(mp) CStatsPredPtrArry(mp);
+
+	CPointArray *arr = GPOS_NEW(mp) CPointArray(mp);
+	arr->Append(CTestUtils::PpointInt4(mp, 1));
+	arr->Append(CTestUtils::PpointInt4(mp, 2));
+	arr->Append(CTestUtils::PpointInt4(mp, 15));
+
+	pdrgpstatspred->Append(GPOS_NEW(mp) CStatsPredArrayCmp(1, CStatsPred::EstatscmptEq, arr));
+
+	return GPOS_NEW(mp) CStatsPredConj(pdrgpstatspred);
+}
+
+// create a 'col IN (...)' filter with duplicates (unsorted)
+CStatsPred *
+CFilterCardinalityTest::PstatspredArrayCmpAnyDuplicate
+	(
+	CMemoryPool *mp
+	)
+{
+	CStatsPredPtrArry *pdrgpstatspred = GPOS_NEW(mp) CStatsPredPtrArry(mp);
+
+	CPointArray *arr = GPOS_NEW(mp) CPointArray(mp);
+	arr->Append(CTestUtils::PpointInt4(mp, 1));
+	arr->Append(CTestUtils::PpointInt4(mp, 1));
+	arr->Append(CTestUtils::PpointInt4(mp, 15));
+	arr->Append(CTestUtils::PpointInt4(mp, 2));
+	arr->Append(CTestUtils::PpointInt4(mp, 1));
+	arr->Append(CTestUtils::PpointInt4(mp, 1));
+	arr->Append(CTestUtils::PpointInt4(mp, 2));
+	arr->Append(CTestUtils::PpointInt4(mp, 15));
+	arr->Append(CTestUtils::PpointInt4(mp, 15));
+	arr->Append(CTestUtils::PpointInt4(mp, 15));
+
+	pdrgpstatspred->Append(GPOS_NEW(mp) CStatsPredArrayCmp(1, CStatsPred::EstatscmptEq, arr));
 
 	return GPOS_NEW(mp) CStatsPredConj(pdrgpstatspred);
 }

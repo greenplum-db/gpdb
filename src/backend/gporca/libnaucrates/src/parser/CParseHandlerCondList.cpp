@@ -12,7 +12,8 @@
 #include "naucrates/dxl/parser/CParseHandlerCondList.h"
 #include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
-
+#include "naucrates/dxl/operators/CDXLScalarHashCondList.h"
+#include "naucrates/dxl/operators/CDXLScalarMergeCondList.h"
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 

@@ -13,8 +13,6 @@
 
 #include "gpos/base.h"
 
-#include "naucrates/statistics/CStatistics.h"
-
 #include "gpos/common/CDynamicPtrArray.h"
 #include "gpos/common/CSyncHashtable.h"
 #include "gpos/common/CSyncList.h"

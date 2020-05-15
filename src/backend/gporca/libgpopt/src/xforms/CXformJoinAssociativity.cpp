@@ -12,7 +12,10 @@
 #include "gpos/base.h"
 #include "gpopt/xforms/CXformJoinAssociativity.h"
 
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalInnerJoin.h"
+#include "gpopt/operators/CPatternLeaf.h"
+#include "gpopt/operators/CPatternTree.h"
+#include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/metadata/CTableDescriptor.h"
 
 using namespace gpopt;

@@ -22,6 +22,8 @@ include $(top_srcdir)/src/Makefile.shlib
 
 override CPPFLAGS += -I$(SRCDIR) -I$(INCDIR) -I$(libpq_srcdir)
 
+LIBS += $(YAML_LIBS)
+
 # Disable -Wimplicit-fallthrough for this module, since it is hard to change some
 # macros using switch-case.
 # -Wimplicit-fallthrough is appended to CFLAGS, so we append it to CFLAGS as well.

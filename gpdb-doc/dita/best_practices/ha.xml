@@ -130,11 +130,11 @@
         work, so performance can be degraded until the balance is restored by recovering the
         original primary. </p>
       <p>Administrators perform the recovery while Greenplum Database is up and running by running
-        the <codeph>gprecoverseg</codeph> utility. This utility locates the failed segments, verifies
-        they are valid, and compares the transactional state with the currently active segment to
-        determine changes made while the segment was offline. <codeph>gprecoverseg</codeph>
-        synchronizes the changed database files with the active segment and brings the segment back
-        online.</p>
+        the <codeph>gprecoverseg</codeph> utility. This utility locates the failed segments,
+        verifies they are valid, and compares the transactional state with the currently active
+        segment to determine changes made while the segment was offline.
+          <codeph>gprecoverseg</codeph> synchronizes the changed database files with the active
+        segment and brings the segment back online.</p>
       <p>It is important to reserve enough memory and CPU resources on segment hosts to allow for
         increased activity from mirrors that assume the primary role during a failure. The formulas
         provided in <xref href="workloads.xml#topic_hhc_z5w_r4/section_r52_rbl_zt"/> for configuring
@@ -217,16 +217,16 @@
             </li>
             <li dir="ltr">
               <p dir="ltr">Use the <codeph>gpbackup</codeph> command to specify only the schema and
-                tables that you want backed up. See the <xref
-                  href="https://gpdb.docs.pivotal.io/latest/utility_guide/ref/gpbackup.html"
-                  format="html" scope="external">gpbackup</xref> reference in the <cite>Greenplum
-                  Database Utility Reference Guide</cite> for more information.</p>
+                tables that you want backed up. See the <codeph><xref
+                    href="https://gpdb.docs.pivotal.io/latest/utility_guide/ref/gpbackup.html"
+                    format="html" scope="external">gpbackup</xref></codeph> reference for more
+                information.</p>
             </li>
             <li dir="ltr">
-              <p dir="ltr"><codeph>gpbackup</codeph> places SHARED ACCESS locks on the set of tables
-                to back up. Backups with fewer tables are more efficient for selectively restoring
-                schemas and tables, since <codeph>gprestore</codeph> does not have to search through
-                the entire database.</p>
+              <p dir="ltr"><codeph>gpbackup</codeph> places <codeph>SHARED ACCESS</codeph> locks on
+                the set of tables to back up. Backups with fewer tables are more efficient for
+                selectively restoring schemas and tables, since <codeph>gprestore</codeph> does not
+                have to search through the entire database.</p>
             </li>
             <li dir="ltr">If backups are saved to local cluster storage, move the files to a safe,
               off-cluster location when the backup is complete. Backup files and database files that
@@ -267,19 +267,22 @@
       </section>
       <section><title>Additional Information</title><i>Greenplum Database Administrator Guide</i>:
           <ul id="ul_wff_k1m_v4">
-          <li>Monitoring a Greenplum System</li>
-          <li>Recovering a Failed Segment</li>
+          <li><xref href="../admin_guide/managing/monitor.xml"/></li>
+          <li><xref href="../admin_guide/highavail/topics/g-recovering-a-failed-segment.xml"/></li>
         </ul><p><i>Greenplum Database Utility Guide</i>:<ul id="ul_fk2_hyl_v4">
-            <li><codeph>gpstate</codeph>&#8212;view state of the Greenplum system</li>
-            <li><codeph>gprecoverseg</codeph>&#8212;recover a failed segment</li>
-            <li><codeph>gpactivatestandby</codeph>&#8212;make the standby master the active
+            <li><codeph><xref href="../utility_guide/ref/gpstate.xml">gpstate</xref></codeph> - view
+              state of the Greenplum system</li>
+            <li><codeph><xref href="../utility_guide/ref/gprecoverseg.xml"
+                >gprecoverseg</xref></codeph> - recover a failed segment</li>
+            <li><codeph><xref href="../utility_guide/ref/gpactivatestandby.xml"
+                  >gpactivatestandby</xref></codeph> - make the standby master the active
               master</li>
           </ul></p><p><xref href="http://tools.ietf.org/html/rfc1697" format="html" scope="external"
             >RDBMS MIB Specification</xref></p></section>
     </body>
   </topic>
   <topic id="topic_ngz_qf4_tt">
-    <title>Segment Mirroring Configuration</title>
+    <title>Segment Mirroring Configurations</title>
     <body>
       <p>Segment mirroring allows database queries to fail over to a backup segment if the primary
         segment fails or becomes unavailable. Pivotal requires mirroring for supported production
@@ -309,15 +312,16 @@
           mirroring</i>:<ul id="ul_uwr_gkv_tt">
           <li><b>Group mirroring</b> — Each host mirrors another host's primary segments. This is
             the default for <codeph><xref href="../utility_guide/ref/gpinitsystem.xml"
-                >gpinitsystem</xref></codeph> and <codeph>gpaddmirrors</codeph>.</li>
+                >gpinitsystem</xref></codeph> and <codeph><xref
+                href="../utility_guide/ref/gpaddmirrors.xml">gpaddmirrors</xref></codeph>.</li>
           <li><b>Spread mirroring</b> — Mirrors are spread across the available hosts. This requires
             that the number of hosts in the cluster is greater than the number of segments per
             host.</li>
         </ul></p>
-      <p>You can design a custom mirroring configuration and use the Greenplum <codeph><xref
-            href="../utility_guide/ref/gpaddmirrors.xml">gpaddmirrors</xref></codeph> or
-          <xref href="../utility_guide/ref/gpmovemirrors.xml">gpaddmirrors</xref>
-        utilities to set up the configuration.</p>
+      <p>You can design a custom mirroring configuration and use the Greenplum
+          <codeph>gpaddmirrors</codeph> or <codeph><xref
+            href="../utility_guide/ref/gpmovemirrors.xml">gpmovemirrors</xref></codeph> utilities to
+        set up the configuration.</p>
       <p><i>Block mirroring</i> is a custom mirror configuration that divides hosts in the cluster
         into equally sized blocks and distributes mirrors evenly to hosts within the block. If a
         primary segment fails, its mirror on another host within the same block becomes the active

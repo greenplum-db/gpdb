@@ -4,8 +4,7 @@
 <topic id="topic_tbx_szy_kbb">
   <title class="- topic/title ">Upgrading from an Earlier Greenplum 6 Release</title>
   <shortdesc>The upgrade path supported for this release is Greenplum Database 6.x to a newer
-    Greenplum Database 6.x release. <ph otherprops="pivotal">Direct upgrade from Greenplum Database
-      4 or 5 to Greenplum 6 is not supported.</ph></shortdesc>
+    Greenplum Database 6.x release.</shortdesc>
   <body class="- topic/body ">
     <note type="important">Set the Greenplum Database timezone to a value that is compatible with
       your host systems. Setting the Greenplum Database timezone prevents Greenplum Database from

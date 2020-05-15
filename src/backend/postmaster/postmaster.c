@@ -220,6 +220,12 @@ char	   *Unix_socket_directories;
 char	   *ListenAddresses;
 
 /*
+ * The interconnect address. We assume the interconnect is the address
+ * in gp_segment_configuration. And it's never changed at runtime.
+ */
+char	   *interconnect_address = NULL;
+
+/*
  * ReservedBackends is the number of backends reserved for superuser use.
  * This number is taken out of the pool size given by MaxBackends so
  * number of backend slots available to non-superusers is
@@ -2532,9 +2538,14 @@ retry1:
 		case CAC_STARTUP:
 			if ((am_ftshandler || IsFaultHandler) && am_mirror)
 				break;
+
+			recptr = last_xlog_replay_location();
+
 			ereport(FATAL,
 					(errcode(ERRCODE_CANNOT_CONNECT_NOW),
-					 errmsg(POSTMASTER_IN_STARTUP_MSG)));
+					 errmsg(POSTMASTER_IN_STARTUP_MSG),
+					 errdetail(POSTMASTER_IN_RECOVERY_DETAIL_MSG " %X/%X",
+						   (uint32) (recptr >> 32), (uint32) recptr)));
 			break;
 		case CAC_SHUTDOWN:
 			ereport(FATAL,

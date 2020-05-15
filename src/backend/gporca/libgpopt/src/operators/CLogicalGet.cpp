@@ -28,6 +28,8 @@
 
 #include "gpopt/translate/CTranslatorDXLToExpr.h"
 
+#include "naucrates/statistics/CStatistics.h"
+
 using namespace gpopt;
 
 

@@ -968,131 +968,6 @@ cost_bitmap_heap_scan(Path *path, PlannerInfo *root, RelOptInfo *baserel,
 }
 
 /*
- * cost_bitmap_appendonly_scan
- *
- * NOTE: This is a copy of cost_bitmap_heap_scan.
- */
-void
-cost_bitmap_appendonly_scan(Path *path, PlannerInfo *root, RelOptInfo *baserel,
-					  ParamPathInfo *param_info,
-					  Path *bitmapqual, double loop_count)
-{
-	Cost		startup_cost = 0;
-	Cost		run_cost = 0;
-	Cost		indexTotalCost;
-	Selectivity indexSelectivity;
-	QualCost	qpqual_cost;
-	Cost		cpu_per_tuple;
-	Cost		cost_per_page;
-	double		tuples_fetched;
-	double		pages_fetched;
-	double		spc_seq_page_cost,
-				spc_random_page_cost;
-	double		T;
-
-	/* Should only be applied to base relations */
-	Assert(IsA(baserel, RelOptInfo));
-	Assert(baserel->relid > 0);
-	Assert(baserel->rtekind == RTE_RELATION);
-
-	/* Mark the path with the correct row estimate */
-	if (param_info)
-		path->rows = param_info->ppi_rows;
-	else
-		path->rows = baserel->rows;
-
-	if (!enable_bitmapscan)
-		startup_cost += disable_cost;
-
-	/*
-	 * Fetch total cost of obtaining the bitmap, as well as its total
-	 * selectivity.
-	 */
-	cost_bitmap_tree_node(bitmapqual, &indexTotalCost, &indexSelectivity);
-
-	startup_cost += indexTotalCost;
-
-	/* Fetch estimated page costs for tablespace containing table. */
-	get_tablespace_page_costs(baserel->reltablespace,
-							  &spc_random_page_cost,
-							  &spc_seq_page_cost);
-
-	/*
-	 * Estimate number of main-table pages fetched.
-	 */
-	tuples_fetched = clamp_row_est(indexSelectivity * baserel->tuples);
-
-	T = (baserel->pages > 1) ? (double) baserel->pages : 1.0;
-
-	if (loop_count > 1)
-	{
-		/*
-		 * For repeated bitmap scans, scale up the number of tuples fetched in
-		 * the Mackert and Lohman formula by the number of scans, so that we
-		 * estimate the number of pages fetched by all the scans. Then
-		 * pro-rate for one scan.
-		 */
-		pages_fetched = index_pages_fetched(tuples_fetched * loop_count,
-											baserel->pages,
-											get_indexpath_pages(bitmapqual),
-											root);
-		pages_fetched /= loop_count;
-	}
-	else
-	{
-		/*
-		 * For a single scan, the number of heap pages that need to be fetched
-		 * is the same as the Mackert and Lohman formula for the case T <= b
-		 * (ie, no re-reads needed).
-		 */
-		pages_fetched = (2.0 * T * tuples_fetched) / (2.0 * T + tuples_fetched);
-	}
-	if (pages_fetched >= T)
-		pages_fetched = T;
-	else
-		pages_fetched = ceil(pages_fetched);
-
-	/*
-	 * For small numbers of pages we should charge spc_random_page_cost
-	 * apiece, while if nearly all the table's pages are being read, it's more
-	 * appropriate to charge spc_seq_page_cost apiece.  The effect is
-	 * nonlinear, too. For lack of a better idea, interpolate like this to
-	 * determine the cost per page.
-	 */
-	if (pages_fetched >= 2.0)
-		cost_per_page = spc_random_page_cost -
-			(spc_random_page_cost - spc_seq_page_cost)
-			* sqrt(pages_fetched / T);
-	else
-		cost_per_page = spc_random_page_cost;
-
-	run_cost += pages_fetched * cost_per_page;
-
-	/*
-	 * Estimate CPU costs per tuple.
-	 *
-	 * Often the indexquals don't need to be rechecked at each tuple ... but
-	 * not always, especially not if there are enough tuples involved that the
-	 * bitmaps become lossy.  For the moment, just assume they will be
-	 * rechecked always.  This means we charge the full freight for all the
-	 * scan clauses.
-	 */
-	get_restriction_qual_cost(root, baserel, param_info, &qpqual_cost);
-
-	startup_cost += qpqual_cost.startup;
-	cpu_per_tuple = cpu_tuple_cost + qpqual_cost.per_tuple;
-
-	run_cost += cpu_per_tuple * tuples_fetched;
-
-	/* tlist eval costs are paid per output row, not per tuple scanned */
-	startup_cost += path->pathtarget->cost.startup;
-	run_cost += path->pathtarget->cost.per_tuple * path->rows;
-
-	path->startup_cost = startup_cost;
-	path->total_cost = startup_cost + run_cost;
-}
-
-/*
  * cost_bitmap_tree_node
  *		Extract cost and selectivity from a bitmap tree node (index/and/or)
  */
@@ -2204,12 +2079,19 @@ cost_group(Path *path, PlannerInfo *root,
 
 /* 
  * cost_shareinputscan
- * 		compute the cost of shareinputscan.  Shareinput scan scans from 
- * 		a material or sort.  It may read disk, but should be costed
- *   	less than material node.
+ * 		compute the cost of shareinputscan.
+ *
+ * A ShareInputScan stores all the tuples in a tuplestore, like a Material
+ * node. However, the materialization is done only once among all the
+ * ShareInputScans that are part of the same share. It's not clear how to
+ * correctly represent that. Our approach is that the startup cost is equal
+ * to the total cost of the underlying node, and the total cost is a bit
+ * higher, to reflect the cost of re-scanning the already-materialized
+ * result.
  */
 void 
-cost_shareinputscan(Path *path, PlannerInfo *root, Cost sharecost, double tuples, int width)
+cost_shareinputscan(Path *path, PlannerInfo *root, Cost sharecost,
+					double tuples, int width)
 {
 	double nbytes = relation_byte_size(tuples, width);
 	double npages = ceil(nbytes/BLCKSZ);

@@ -986,12 +986,26 @@ advance_combine_function(AggState *aggstate,
 			 */
 			if (!pertrans->transtypeByVal)
 			{
+/*
+ * GPDB_12_MERGE_FIXME: We can reinstate the following upstream block when we
+ * absorb the backport to upstream's disk-based hashagg.
+ * Right now, we rely on the mpool to track the memory usage and to make a
+ * spilling decision.
+ */
+#if 0
 				oldContext = MemoryContextSwitchTo(
 												   aggstate->aggcontexts[aggstate->current_set]->ecxt_per_tuple_memory);
 				pergroupstate->transValue = datumCopy(fcinfo->arg[1],
 													pertrans->transtypeByVal,
 													  pertrans->transtypeLen);
 				MemoryContextSwitchTo(oldContext);
+#endif
+				pergroupstate->transValue = datumCopyWithMemManager(
+					pergroupstate->transValue,
+					fcinfo->arg[1],
+					pertrans->transtypeByVal,
+					pertrans->transtypeLen,
+					&aggstate->mem_manager);
 			}
 			else
 				pergroupstate->transValue = fcinfo->arg[1];
@@ -1029,13 +1043,28 @@ advance_combine_function(AggState *aggstate,
 	{
 		if (!fcinfo->isnull)
 		{
+/*
+ * GPDB_12_MERGE_FIXME: We can reinstate the two following upstream blocks when we
+ * absorb the backport to upstream's disk-based hashagg.
+ * Right now, we rely on the mpool to track the memory usage and to make a
+ * spilling decision.
+ */
+#if 0
 			MemoryContextSwitchTo(aggstate->aggcontexts[aggstate->current_set]->ecxt_per_tuple_memory);
 			newVal = datumCopy(newVal,
 							   pertrans->transtypeByVal,
 							   pertrans->transtypeLen);
+#endif
+			newVal = datumCopyWithMemManager(pergroupstate->transValue,
+											 newVal,
+											 pertrans->transtypeByVal,
+											 pertrans->transtypeLen,
+											 &aggstate->mem_manager);
 		}
+#if 0
 		if (!pergroupstate->transValueIsNull)
 			pfree(DatumGetPointer(pergroupstate->transValue));
+#endif
 	}
 
 	pergroupstate->transValue = newVal;

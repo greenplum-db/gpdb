@@ -20,6 +20,7 @@
 
 #include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/operators/CDXLPhysicalPartitionSelector.h"
 
 using namespace gpdxl;
 

@@ -1112,12 +1112,6 @@ _outMaterial(StringInfo str, const Material *node)
 
 	WRITE_BOOL_FIELD(cdb_strict);
 	WRITE_BOOL_FIELD(cdb_shield_child_from_rescans);
-
-	WRITE_ENUM_FIELD(share_type, ShareType);
-	WRITE_INT_FIELD(share_id);
-	WRITE_INT_FIELD(driver_slice);
-	WRITE_INT_FIELD(nsharer);
-	WRITE_INT_FIELD(nsharer_xslice);
 }
 
 static void
@@ -1125,9 +1119,11 @@ _outShareInputScan(StringInfo str, const ShareInputScan *node)
 {
 	WRITE_NODE_TYPE("SHAREINPUTSCAN");
 
-	WRITE_ENUM_FIELD(share_type, ShareType);
+	WRITE_BOOL_FIELD(cross_slice);
 	WRITE_INT_FIELD(share_id);
-	WRITE_INT_FIELD(driver_slice);
+	WRITE_INT_FIELD(producer_slice_id);
+	WRITE_INT_FIELD(this_slice_id);
+	WRITE_INT_FIELD(nconsumers);
 
 	_outPlanInfo(str, (Plan *) node);
 }
@@ -1162,12 +1158,6 @@ _outSort(StringInfo str, const Sort *node)
 
 	/* CDB */
     WRITE_BOOL_FIELD(noduplicates);
-
-	WRITE_ENUM_FIELD(share_type, ShareType);
-	WRITE_INT_FIELD(share_id);
-	WRITE_INT_FIELD(driver_slice);
-	WRITE_INT_FIELD(nsharer);
-	WRITE_INT_FIELD(nsharer_xslice);
 }
 #endif /* COMPILING_BINARY_FUNCS */
 
@@ -1468,6 +1458,7 @@ _outRefreshClause(StringInfo str, const RefreshClause *node)
 	WRITE_NODE_TYPE("REFRESHCLAUSE");
 
 	WRITE_BOOL_FIELD(concurrent);
+	WRITE_BOOL_FIELD(skipData);
 	WRITE_NODE_FIELD(relation);
 }
 
@@ -2629,7 +2620,7 @@ _outPlannerGlobal(StringInfo str, const PlannerGlobal *node)
 	WRITE_BOOL_FIELD(transientPlan);
 	WRITE_BOOL_FIELD(oneoffPlan);
 	WRITE_NODE_FIELD(share.motStack);
-	WRITE_NODE_FIELD(share.qdShares);
+	WRITE_BITMAPSET_FIELD(share.qdShares);
 	WRITE_BOOL_FIELD(dependsOnRole);
 	WRITE_BOOL_FIELD(parallelModeOK);
 	WRITE_BOOL_FIELD(parallelModeNeeded);
@@ -2878,6 +2869,7 @@ _outParamPathInfo(StringInfo str, const ParamPathInfo *node)
 	WRITE_FLOAT_FIELD(ppi_rows, "%.0f");
 	WRITE_NODE_FIELD(ppi_clauses);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static void
 _outRestrictInfo(StringInfo str, const RestrictInfo *node)
@@ -2910,6 +2902,7 @@ _outRestrictInfo(StringInfo str, const RestrictInfo *node)
 	WRITE_OID_FIELD(hashjoinoperator);
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outPlaceHolderVar(StringInfo str, const PlaceHolderVar *node)
 {
@@ -3051,6 +3044,7 @@ _outCreateStmtInfo(StringInfo str, const CreateStmt *node)
 	WRITE_OID_FIELD(ownerid);
 	WRITE_BOOL_FIELD(buildAoBlkdir);
 	WRITE_NODE_FIELD(attr_encodings);
+	WRITE_BOOL_FIELD(isCtas);
 }
 
 static void

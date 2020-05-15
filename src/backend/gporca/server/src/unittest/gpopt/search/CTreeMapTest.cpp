@@ -9,6 +9,7 @@
 //		Test of tree map facility
 //---------------------------------------------------------------------------
 
+#include "gpos/error/CAutoTrace.h"
 #include "gpos/types.h"
 #include "gpos/io/COstreamString.h"
 #include "gpos/string/CWStringDynamic.h"

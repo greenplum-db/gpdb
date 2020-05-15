@@ -20,6 +20,7 @@
 #include <sys/time.h>
 
 #include "libpq-fe.h"
+#include "libpq/pqcomm.h"
 #include "pqexpbuffer.h"
 #include "access/xlog.h"
 #include "miscadmin.h"
@@ -101,8 +102,8 @@ libpqwalreceiver_PG_init(void)
 static void
 libpqrcv_connect(char *conninfo)
 {
-	const char *keys[5];
-	const char *vals[5];
+	const char *keys[6];
+	const char *vals[6];
 
 	/*
 	 * We use the expand_dbname parameter to process the connection string (or
@@ -119,8 +120,10 @@ libpqrcv_connect(char *conninfo)
 	vals[2] = "replication";
 	keys[3] = "fallback_application_name";
 	vals[3] = "walreceiver";
-	keys[4] = NULL;
-	vals[4] = NULL;
+	keys[4] = GPCONN_TYPE;
+	vals[4] = GPCONN_TYPE_INTERNAL;
+	keys[5] = NULL;
+	vals[5] = NULL;
 
 	streamConn = PQconnectdbParams(keys, vals, /* expand_dbname = */ true);
 	if (PQstatus(streamConn) != CONNECTION_OK)

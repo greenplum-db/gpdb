@@ -168,7 +168,7 @@ vm.overcommit_memory = 2 # <b>See <xref href="#topic3/segment_host_memory" forma
 vm.overcommit_ratio = 95 # <b>See <xref href="#topic3/segment_host_memory" format="dita">Segment Host Memory</xref></b>
 
 net.ipv4.ip_local_port_range = 10000 65535 # <b>See <xref href="#topic3/port_settings" format="dita">Port Settings</xref></b>
-kernel.sem = 500 2048000 200 40960
+kernel.sem = 500 2048000 200 4096
 kernel.sysrq = 1
 kernel.core_uses_pid = 1
 kernel.msgmnb = 65536

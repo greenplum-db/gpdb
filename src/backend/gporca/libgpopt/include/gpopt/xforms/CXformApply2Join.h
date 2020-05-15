@@ -12,8 +12,14 @@
 #define GPOPT_CXformApply2Join_H
 
 #include "gpos/base.h"
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalInnerCorrelatedApply.h"
+#include "gpopt/operators/CLogicalLeftAntiSemiCorrelatedApply.h"
+#include "gpopt/operators/CLogicalLeftOuterCorrelatedApply.h"
+#include "gpopt/operators/CLogicalLeftSemiCorrelatedApply.h"
+#include "gpopt/operators/CLogicalLeftSemiCorrelatedApplyIn.h"
 #include "gpopt/operators/CNormalizer.h"
+#include "gpopt/operators/CPatternLeaf.h"
+#include "gpopt/operators/CPatternTree.h"
 #include "gpopt/operators/CPredicateUtils.h"
 
 #include "gpopt/xforms/CDecorrelator.h"

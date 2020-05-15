@@ -51,7 +51,6 @@ extern bool ntuplestore_acc_advance(NTupleStoreAccessor *tsa, int n);
  * to make sure trim does not trim too far ahead
  */
 extern bool ntuplestore_acc_current_tupleslot(NTupleStoreAccessor *tsa, TupleTableSlot *slot);
-extern bool ntuplestore_acc_current_data(NTupleStoreAccessor *tsa, void **data, int *len);
 
 /* Tell/seek position of accessor. */
 

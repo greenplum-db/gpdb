@@ -11,7 +11,8 @@
 
 #include "gpos/base.h"
 
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalSequenceProject.h"
+#include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/xforms/CXformSequenceProject2Apply.h"
 
 using namespace gpopt;

@@ -223,9 +223,7 @@ static gpos::CUnittest rgut[] =
 	GPOS_UNITTEST_STD(CConstExprEvaluatorDefaultTest),
 	GPOS_UNITTEST_STD(CConstExprEvaluatorDXLTest),
 	// disable CEnumeratorTest until it is fixed
-//#if !defined(GPOS_SunOS)
 //	GPOS_UNITTEST_STD(CEnumeratorTest),
-//#endif // GPOS_SunOS
 	// extended tests
 #ifdef GPOS_FPSIMULATOR
 	GPOS_UNITTEST_EXT(CFSimulatorTestExt),

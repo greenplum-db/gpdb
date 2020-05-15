@@ -351,32 +351,6 @@ VarBlockMakerFinish(
 	return bufferLen;
 }
 
-/*
- * Reset the VarBlock maker so it can make another one
- * using the same inputs as given to VarBlockMakerInit.
- */
-void
-VarBlockMakerReset(
-				   VarBlockMaker *varBlockMaker)
-{
-	uint8	   *buffer;
-
-	Assert(varBlockMaker != NULL);
-
-	buffer = (uint8 *) varBlockMaker->header;
-
-	memset(buffer, 0, VARBLOCK_HEADER_LEN);
-	VarBlockSet_version(varBlockMaker->header, InitialVersion);
-	VarBlockSet_offsetsAreSmall(varBlockMaker->header, true);
-
-	varBlockMaker->currentItemLenSum = 0;
-
-	varBlockMaker->nextItemPtr = &buffer[VARBLOCK_HEADER_LEN];
-	varBlockMaker->currentItemCount = 0;
-	varBlockMaker->maxItemCount = varBlockMaker->tempScratchSpaceLen / 2;
-
-}
-
 static VarBlockByteOffset
 VarBlockGetOffset(
 				  VarBlockHeader *header,
@@ -649,62 +623,6 @@ VarBlockIsValid(
 	}
 
 	return VarBlockCheckOk;
-}
-
-/*
- * Given a pointer to a VarBlock with at least VARBLOCK_HEADER_LEN bytes
- * present, return the length of the whole block.
- */
-VarBlockByteLen
-VarBlockLenFromHeader(
-					  uint8 *buffer,
-					  VarBlockByteLen peekLen)
-{
-	VarBlockHeader *header;
-	VarBlockByteLen itemLenSum;
-	VarBlockByteOffset offsetToOffsetArray;
-	int			multiplier;
-	VarBlockByteLen bufferLen;
-	int			headerLen = VARBLOCK_HEADER_LEN;
-	VarBlockByteLen offsetArrayLen;
-
-	Assert(buffer != NULL);
-	if (peekLen < headerLen)
-	{
-		fprintf(stderr, "bufferLen %d minimum %d",
-				peekLen, headerLen);
-		exit(1);
-	}
-	Assert(peekLen >= VARBLOCK_HEADER_LEN);
-
-	header = (VarBlockHeader *) buffer;
-
-	itemLenSum = VarBlockGet_itemLenSum(header);
-
-	/*
-	 * Start offsetArrays on even boundary.
-	 */
-	offsetToOffsetArray = VARBLOCK_HEADER_LEN +
-		((itemLenSum + 1) / 2) * 2;
-
-	if (VarBlockGet_offsetsAreSmall(header))
-	{
-		multiplier = 2;
-	}
-	else
-	{
-		multiplier = VARBLOCK_BYTE_OFFSET_24_LEN;
-	}
-
-	/*
-	 * Round-up to even length.
-	 */
-	offsetArrayLen = VarBlockGet_itemCount(header) * multiplier;
-	offsetArrayLen = ((offsetArrayLen + 1) / 2) * 2;
-
-	bufferLen = offsetToOffsetArray + offsetArrayLen;
-
-	return bufferLen;
 }
 
 /*

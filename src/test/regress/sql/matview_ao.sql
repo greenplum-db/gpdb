@@ -16,6 +16,8 @@ REFRESH MATERIALIZED VIEW CONCURRENTLY m_heap;
 SELECT * FROM m_heap;
 REFRESH MATERIALIZED VIEW m_heap WITH NO DATA;
 SELECT * FROM m_heap;
+-- test WITH NO DATA is also dispatched to QEs
+select relispopulated from gp_dist_random('pg_class') where relname = 'm_heap';
 REFRESH MATERIALIZED VIEW m_heap;
 SELECT * FROM m_heap;
 

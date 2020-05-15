@@ -96,4 +96,15 @@ select reinitialize_standby();
 -- end_ignore
 
 -- Sync state between master and standby must be restored at the end.
+do $$
+begin /* in func */
+  for i in 1..120 loop /* in func */
+    if (select count(*) = 1 from pg_stat_replication) then /* in func */
+      return; /* in func */
+    end if; /* in func */
+    perform pg_sleep(0.1); /* in func */
+  end loop; /* in func */
+end; /* in func */
+$$;
+
 select application_name, state from pg_stat_replication;

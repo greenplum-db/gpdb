@@ -20,6 +20,7 @@
 #include "naucrates/statistics/CLeftAntiSemiJoinStatsProcessor.h"
 #include "naucrates/statistics/CInnerJoinStatsProcessor.h"
 #include "gpos/common/CBitSet.h"
+#include "gpos/error/CAutoTrace.h"
 #include "gpos/memory/CAutoMemoryPool.h"
 
 #include "gpopt/base/CColumnFactory.h"

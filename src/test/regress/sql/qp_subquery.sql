@@ -209,7 +209,65 @@ select * from join_tab1 where i = (select i from join_tab4 where t='satday');
                       
 
 select * from join_tab1 where i = (select i from join_tab4);
-         
+
+
+--
+-- Test references to outer query in join quals
+--
+
+-- Single var
+explain (costs off)
+SELECT (SELECT join_tab1.i - join_tab2.i
+        FROM join_tab1, join_tab2 WHERE join_tab1.i = join_tab2.i and out.f1 > 0
+        LIMIT 1) as x
+FROM subselect_tbl1 out;
+
+SELECT (SELECT join_tab1.i - join_tab2.i
+        FROM join_tab1, join_tab2 WHERE join_tab1.i = join_tab2.i and out.f1 > 0
+        LIMIT 1) as x
+FROM subselect_tbl1 out;
+
+-- Two outer vars
+explain (costs off)
+SELECT (SELECT join_tab1.i - join_tab2.i
+        FROM join_tab1, join_tab2 WHERE join_tab1.i = join_tab2.i and out1.i = out2.i
+        LIMIT 1) as x
+FROM join_tab1 out1, join_tab2 out2;
+
+SELECT (SELECT join_tab1.i - join_tab2.i
+        FROM join_tab1, join_tab2 WHERE join_tab1.i = join_tab2.i and out1.i = out2.i
+        LIMIT 1) as x
+FROM join_tab1 out1, join_tab2 out2;
+
+-- Same, in an outer join
+--
+-- NOTE: The order that the rows come out from the subquery is not
+-- deterministic, so we have to use a dummy coalesce() expression that
+-- returns the same result regardless.
+--
+explain (costs off)
+SELECT (SELECT coalesce(join_tab1.i + join_tab2.i, 0) >= 0
+        FROM join_tab1 LEFT JOIN join_tab2 ON join_tab1.i = join_tab2.i and out.f1 > 0
+        LIMIT 1) as x
+FROM subselect_tbl1 out;
+
+SELECT (SELECT coalesce(join_tab1.i + join_tab2.i, 0) >= 0
+        FROM join_tab1 LEFT JOIN join_tab2 ON join_tab1.i = join_tab2.i and out.f1 > 0
+        LIMIT 1) as x
+FROM subselect_tbl1 out;
+
+explain (costs off)
+SELECT (SELECT coalesce(join_tab1.i + join_tab2.i, 0) >= 0
+        FROM join_tab1 LEFT JOIN join_tab2 ON join_tab1.i = join_tab2.i and out1.i = out2.i
+        LIMIT 1) as x
+FROM join_tab1 out1, join_tab2 out2;
+
+SELECT (SELECT coalesce(join_tab1.i + join_tab2.i, 0) >= 0
+        FROM join_tab1 LEFT JOIN join_tab2 ON join_tab1.i = join_tab2.i and out1.i = out2.i
+        LIMIT 1) as x
+FROM join_tab1 out1, join_tab2 out2;
+
+
 --
 -- Testing NOT-IN Subquery
 --

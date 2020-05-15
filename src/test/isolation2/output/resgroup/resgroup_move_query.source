@@ -1,0 +1,201 @@
+-- start_matchsubs
+--
+-- m/ERROR:  process \d+ is in IDLE state/
+-- s/\d+/XXX/g
+--
+-- m/ERROR:  group \d+ doesn't have enough memory on master, expect:\d+, available:\d+/
+-- s/\d+/XXX/g
+--
+-- m/ERROR:  group \d+ doesn't have enough memory on segment, expect:\d+, available:\d+/
+-- s/\d+/XXX/g
+--
+-- end_matchsubs
+
+CREATE OR REPLACE FUNCTION resGroupPalloc(float) RETURNS int AS '@abs_builddir@/../regress/regress@DLSUFFIX@', 'resGroupPalloc' LANGUAGE C READS SQL DATA;
+CREATE
+
+CREATE OR REPLACE FUNCTION hold_memory_by_percent(int, float) RETURNS int AS $$ SELECT * FROM resGroupPalloc($2) $$ LANGUAGE sql;
+CREATE
+
+CREATE OR REPLACE FUNCTION hold_memory_by_percent_on_qe(int, float) RETURNS int AS $$ SELECT resGroupPalloc($2) FROM gp_dist_random('gp_id') $$ LANGUAGE sql;
+CREATE
+-- check whether a query running in the specific group
+-- @param pid: the pid of QD
+-- @param groupname: resource group id
+-- @return bool: true/false indicating whether it the session is in the resource group
+-- start_ignore
+CREATE LANGUAGE plpythonu;
+CREATE
+-- end_ignore
+
+CREATE OR REPLACE FUNCTION is_session_in_group(pid integer, groupname text) RETURNS BOOL AS $$ import subprocess import pygresql.pg as pg import time import re 
+conn = pg.connect(dbname="isolation2resgrouptest") pt = re.compile(r'con(\d+)') 
+sql = "select sess_id from pg_stat_activity where pid = '%d'" % pid result = conn.query(sql).getresult() session_id = result[0][0] 
+sql = "select groupid from gp_toolkit.gp_resgroup_config where groupname='%s'" % groupname result = conn.query(sql).getresult() groupid = result[0][0] 
+process = subprocess.Popen("ps -ef | grep postgres | grep con%d | grep -v grep | awk '{print $2}'" % session_id, shell=True, stdout=subprocess.PIPE) session_pids = process.communicate()[0].split('\n')[:-1] 
+cgroups_pids = [] path = "@cgroup_mnt_point@/cpu/gpdb/%d/cgroup.procs" % groupid fd = open(path) for line in fd.readlines(): cgroups_pids.append(line.strip('\n')) 
+return set(session_pids).issubset(set(cgroups_pids)) $$ LANGUAGE plpythonu;
+CREATE
+
+DROP ROLE IF EXISTS role_move_query;
+DROP
+-- start_ignore
+DROP RESOURCE GROUP rg_move_query;
+ERROR:  resource group "rg_move_query" does not exist
+-- end_ignore
+CREATE RESOURCE GROUP rg_move_query WITH (concurrency=1, cpu_rate_limit=20, memory_limit=20);
+CREATE
+CREATE ROLE role_move_query RESOURCE GROUP rg_move_query;
+CREATE
+
+-- test1: cannot move IDLE sessions
+1: SET ROLE role_move_query;
+SET
+1: SET gp_vmem_idle_resource_timeout = 0;
+SET
+SELECT pg_resgroup_move_query(pid, 'admin_group') FROM pg_stat_activity WHERE query LIKE '%gp_vmem_idle_resource_timeout%' AND state = 'idle';
+ERROR:  process 506053 is in IDLE state
+SELECT is_session_in_group(pid, 'admin_group') FROM pg_stat_activity WHERE query LIKE '%gp_vmem_idle_resource_timeout%' AND state = 'idle';
+ is_session_in_group 
+---------------------
+ f                   
+(1 row)
+
+-- test2: cannot move sessions that are waiting for slot
+1: SET ROLE role_move_query;
+SET
+1: BEGIN;
+BEGIN
+2: SET ROLE role_move_query;
+SET
+2&: BEGIN;  <waiting ...>
+SELECT pg_resgroup_move_query(pid, 'default_group') FROM pg_stat_activity WHERE wait_event_type='ResourceGroup';
+ERROR:  process 506070 is in IDLE state
+SELECT is_session_in_group(pid, 'default_group') FROM pg_stat_activity WHERE wait_event_type='ResourceGroup';
+ is_session_in_group 
+---------------------
+ f                   
+(1 row)
+1: END;
+END
+2<:  <... completed>
+BEGIN
+2: END;
+END
+
+-- test3: cannot move sessions that don't have enough memory on QD
+CREATE RESOURCE GROUP rg_move_query_mem_small WITH (concurrency=1, cpu_rate_limit=20, memory_limit=10);
+CREATE
+CREATE ROLE role_move_query_mem_small RESOURCE GROUP rg_move_query_mem_small;
+CREATE
+1: SET ROLE role_move_query;
+SET
+1: BEGIN;
+BEGIN
+1: SELECT hold_memory_by_percent(1,1.0);
+ hold_memory_by_percent 
+------------------------
+ 0                      
+(1 row)
+SELECT pg_resgroup_move_query(pid, 'rg_move_query_mem_small') FROM pg_stat_activity WHERE query LIKE '%hold_memory_by_percent%' AND state = 'idle in transaction';
+ERROR:  group 115315 doesn't have enough memory on master, expect:2956, available:1478 (resgroup.c:4582)
+SELECT is_session_in_group(pid, 'rg_move_query_mem_small') FROM pg_stat_activity WHERE query LIKE '%hold_memory_by_percent%' AND state = 'idle in transaction';
+ is_session_in_group 
+---------------------
+ f                   
+(1 row)
+1: END;
+END
+1q: ... <quitting>
+
+-- test4: cannot move sessions that don't have enough memory on QE
+1: SET ROLE role_move_query;
+SET
+1: BEGIN;
+BEGIN
+1: SELECT hold_memory_by_percent_on_qe(1,1.0);
+ hold_memory_by_percent_on_qe 
+------------------------------
+ 0                            
+(1 row)
+SELECT pg_resgroup_move_query(pid, 'rg_move_query_mem_small') FROM pg_stat_activity WHERE query LIKE '%hold_memory_by_percent_on_qe%' AND state = 'idle in transaction';
+ERROR:  group 115315 doesn't have enough memory on segment, expect:2956, available:1478 (resgroup.c:4608)
+SELECT is_session_in_group(pid, 'rg_move_query_mem_small') FROM pg_stat_activity WHERE query LIKE '%hold_memory_by_percent_on_qe%' AND state = 'idle in transaction';
+ is_session_in_group 
+---------------------
+ f                   
+(1 row)
+1: END;
+END
+1q: ... <quitting>
+
+-- test5: move query will wait if the destination group doesn't have slot
+1: SET ROLE role_move_query;
+SET
+1: BEGIN;
+BEGIN
+1: SELECT hold_memory_by_percent_on_qe(1,0.1);
+ hold_memory_by_percent_on_qe 
+------------------------------
+ 0                            
+(1 row)
+2: SET ROLE role_move_query_mem_small;
+SET
+2: BEGIN;
+BEGIN
+3&: SELECT pg_resgroup_move_query(pid, 'rg_move_query_mem_small') FROM pg_stat_activity WHERE query LIKE '%hold_memory_by_percent_on_qe%' AND state = 'idle in transaction';  <waiting ...>
+2: END;
+END
+3<:  <... completed>
+ pg_resgroup_move_query 
+------------------------
+ t                      
+(1 row)
+3: SELECT is_session_in_group(pid, 'rg_move_query_mem_small') FROM pg_stat_activity WHERE query LIKE '%hold_memory_by_percent_on_qe%' AND state = 'idle in transaction';
+ is_session_in_group 
+---------------------
+ t                   
+(1 row)
+1: END;
+END
+1q: ... <quitting>
+
+-- test6: the destination group will wake up 'pg_resgroup_move_query' when a new slot become available
+1: SET ROLE role_move_query;
+SET
+1&: SELECT pg_sleep(5);  <waiting ...>
+2: SET ROLE role_move_query_mem_small;
+SET
+2&: SELECT pg_sleep(10);  <waiting ...>
+3&: SELECT pg_resgroup_move_query(pid, 'rg_move_query') FROM pg_stat_activity WHERE query LIKE '%pg_sleep(10)%' AND rsgname='rg_move_query_mem_small';  <waiting ...>
+1<:  <... completed>
+ pg_sleep 
+----------
+          
+(1 row)
+-- connection 1 finished, it will wake up connection 3
+3<:  <... completed>
+ pg_resgroup_move_query 
+------------------------
+ t                      
+(1 row)
+3: SELECT rsgname, query FROM pg_stat_activity WHERE state = 'active';
+ rsgname       | query                                                               
+---------------+---------------------------------------------------------------------
+ rg_move_query | SELECT pg_sleep(10);                                                
+ admin_group   | SELECT rsgname, query FROM pg_stat_activity WHERE state = 'active'; 
+(2 rows)
+2<:  <... completed>
+ pg_sleep 
+----------
+          
+(1 row)
+
+DROP ROLE role_move_query;
+DROP
+DROP RESOURCE GROUP rg_move_query;
+DROP
+DROP ROLE role_move_query_mem_small;
+DROP
+DROP RESOURCE GROUP rg_move_query_mem_small;
+DROP

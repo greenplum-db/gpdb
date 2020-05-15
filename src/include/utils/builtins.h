@@ -1402,6 +1402,8 @@ extern Datum pg_resqueue_status_kv(PG_FUNCTION_ARGS);
 /* utils/resgroup/resgroup.c */
 extern Datum pg_resgroup_get_status(PG_FUNCTION_ARGS);
 extern Datum pg_resgroup_get_status_kv(PG_FUNCTION_ARGS);
+extern Datum pg_resgroup_move_query(PG_FUNCTION_ARGS);
+extern Datum pg_resgroup_check_move_query(PG_FUNCTION_ARGS);
 
 /* utils/gdd/gddfuncs.c */
 extern Datum gp_dist_wait_status(PG_FUNCTION_ARGS);

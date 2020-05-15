@@ -10,6 +10,7 @@
 //---------------------------------------------------------------------------
 
 #include "gpos/base.h"
+#include "gpos/error/CAutoTrace.h"
 #include "gpos/io/COstreamString.h"
 #include "gpos/string/CWStringDynamic.h"
 #include "gpopt/base/CCostContext.h"
@@ -141,6 +142,14 @@ CCostContext::FNeedsNewStats() const
 	if (pop->FScalar())
 	{
 		// return false if scalar operator
+		return false;
+	}
+
+	if (!m_pdpplan->Ppim()->FContainsUnresolved())
+	{
+		// All partition selectors have been resolved at this level.
+		// No need to use DPE stats for the common ancestor join and
+		// nodes above it, that aren't affected by the partition selector.
 		return false;
 	}
 

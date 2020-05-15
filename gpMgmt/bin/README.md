@@ -1,24 +1,23 @@
+# For Developers
+
+To install the libraries necessary for running scripts or testing, a system python of 2.7 must be available, the version of gcc and g++ used to compile python must be available.
+On most distributions, python will compiled with the same gcc and g++ verion available from the base packages "gcc" and "gcc-c++".
+
+The command `python -VV` will show the compiler used to compile the version of python being used.
+A `make` in from gpMgmt will install the proper libraries provided a gcc and gcc-c++ are present.
+
+To run any of these python scripts, necessary libraries must be installed, and PYTHONPATH must be modified to use the libraries in this path.
+
+```
+PYTHONPATH="\$GPHOME/lib/python:${PYTHONPATH}"
+```
+
+This will be set automatically with a `source $GPHOME/greenplum_path.sh`
 
 
-=-=-=-=-=-=-=-=-=-=-=- PYTHON =-=-=-=-=-=-=-=-=-=-=-=
+## Python Version
 
-For Developers
-==============
-
-If you'd like to run the python scripts directly from this 
-directory you will need to modify your PYTHONPATH variable to add the "ext" 
-directory.  so something like:
-
-	export PYTHONPATH=~/dev/cdb2/gpMgmt/bin/ext
-
-should do the trick.
-
-
-Python Version
---------------
-
-* The current utilities bundle python 2.5.1.  We are planning on moving 
-  forward to 2.6.1 in the near future.
+System python 2.7 is currently required.
 
 
 Where Things Go
@@ -36,7 +35,6 @@ bin/gpload              -  Sets env variables and calls gpload.py
 List of Management Scripts Written in Python (no libraries)
 -----------------------------------------------------------
 bin/gpload.py           -  Loads data into a Greenplum Database
-bin/gpsys1              -  Print system information on a host  (???)
 
 
 List of Management Scripts Written in Python (gpmlib - old libraries)
@@ -158,8 +156,7 @@ util/ssh_session.py  - SSH and SCP related utility functions brought in from gpm
                        that are used by gpssh, gpscp and gpssh-exkeys
 
 
-Testing Management Scripts
---------------------------
+## Testing Management Scripts (unit tests)
 
 This directory contains the unit tests for the management scripts. These tests
 require the following Python modules to be installed: mock and pygresql.
@@ -184,3 +181,22 @@ run all of the unit tests.
 "python -m unittest discover --verbose -s gppylib -p 'test_unit*.py'" will run only the unit
 tests that do not require a running cluster.
 
+## Testing Management Scripts (behave tests)
+
+Behave tests require a running Greenplum cluster, and additional python libraries for testing, available to gpadmin.
+
+Thus, you can install these additional python libraries using any of the following methods:
+
+1. As root user, to be available globally:
+
+```
+sudo pip install -r gpMgmt/requirements-dev.txt
+```
+
+2. As gpadmin user, to be available only to gpadmin user, but overriding any overlapping libraries with the specific verions in this requirements file:
+
+```
+pip install --user -r gpMgmt/requirements-dev.txt
+```
+
+3. As gpadmin, using a virtual env - see additional documentation on using a virtual env on python.org

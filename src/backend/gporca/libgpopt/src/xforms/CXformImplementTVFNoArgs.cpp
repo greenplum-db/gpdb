@@ -12,7 +12,7 @@
 #include "gpos/base.h"
 #include "gpopt/xforms/CXformImplementTVFNoArgs.h"
 
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalTVF.h"
 
 using namespace gpopt;
 

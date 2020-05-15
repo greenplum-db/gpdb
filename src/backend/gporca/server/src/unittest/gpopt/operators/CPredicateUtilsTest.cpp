@@ -8,6 +8,8 @@
 //	@doc:
 //		Test for predicate utilities
 //---------------------------------------------------------------------------
+#include "gpos/error/CAutoTrace.h"
+
 #include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CUtils.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"

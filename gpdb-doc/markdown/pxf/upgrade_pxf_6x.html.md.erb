@@ -53,6 +53,28 @@ After you upgrade to the new version of Greenplum Database, perform the followin
         ```
     3. Save the file and exit the editor.
 
+4. **If you are upgrading from Greenplum Database version 6.7.x or earlier**: The PXF `Hive` and `HiveRC` profiles now support column projection using column name-based mapping. If you have any existing PXF external tables that specify one of these profiles, and the external table relied on column index-based mapping, you may be required to drop and recreate the tables:
+
+    1. Identify all PXF external tables that you created that specify a `Hive` or `HiveRC` profile.
+
+    2. For *each* external table that you identify in step 1, examine the definitions of both the PXF external table and the referenced Hive table. If the column names of the PXF external table *do not* match the column names of the Hive table:
+
+        1. Drop the existing PXF external table. For example:
+
+            ``` sql
+            DROP EXTERNAL TABLE pxf_hive_table1;
+            ```
+
+        2. Recreate the PXF external table using the Hive column names. For example:
+
+            ``` sql
+            CREATE EXTERNAL TABLE pxf_hive_table1( hivecolname int, hivecolname2 text )
+              LOCATION( 'pxf://default.hive_table_name?PROFILE=Hive')
+            FORMAT 'custom' (FORMATTER='pxfwritable_import');
+            ```
+
+        3. Review any SQL scripts that you may have created that reference the PXF external table, and update column names if required.
+
 3. Synchronize the PXF configuration from the master host to the standby master and each Greenplum Database segment host. For example:
 
     ``` shell

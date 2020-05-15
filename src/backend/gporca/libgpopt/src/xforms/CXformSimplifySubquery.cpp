@@ -12,7 +12,7 @@
 
 #include "gpos/base.h"
 
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/COperator.h"
 #include "gpopt/operators/CNormalizer.h"
 #include "gpopt/xforms/CXformSimplifySubquery.h"

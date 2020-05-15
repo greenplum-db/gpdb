@@ -1097,10 +1097,7 @@ pull_up_simple_subquery(PlannerInfo *root, Node *jtnode, RangeTblEntry *rte,
 	{
 		subroot->list_cteplaninfo = init_list_cteplaninfo(list_length(subroot->parse->cteList));
 	}
-    
-    /* Ensure that jointree has been normalized. See normalize_query_jointree_mutator() */
-    AssertImply(subquery->jointree->fromlist, list_length(subquery->jointree->fromlist) == 1);
-    
+
     subroot->config = CopyPlannerConfig(root->config);
 	subroot->config->honor_order_by = false;
 

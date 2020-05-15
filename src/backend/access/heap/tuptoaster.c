@@ -86,6 +86,8 @@ static void toast_close_indexes(Relation *toastidxs, int num_indexes,
 					LOCKMODE lock);
 static void init_toast_snapshot(Snapshot toast_snapshot);
 
+static void toast_delete_common(Relation rel, Datum *toast_values, bool *toast_isnull);
+
 
 /* ----------
  * heap_tuple_fetch_attr -
@@ -571,24 +573,34 @@ toast_datum_size(Datum value)
  * ----------
  */
 void
-toast_delete(Relation rel, GenericTuple oldtup, MemTupleBinding *pbind)
+toast_delete(Relation rel, HeapTuple oldtup, bool is_speculative)
+{
+	Datum		toast_values[MaxHeapAttributeNumber];
+	bool		toast_isnull[MaxHeapAttributeNumber];
+
+	heap_deform_tuple((HeapTuple) oldtup, rel->rd_att, toast_values, toast_isnull);
+
+	toast_delete_common(rel, toast_values, toast_isnull);
+}
+
+void
+toast_delete_memtup(Relation rel, MemTuple oldtup, MemTupleBinding *pbind)
+{
+	Datum		toast_values[MaxHeapAttributeNumber];
+	bool		toast_isnull[MaxHeapAttributeNumber];
+
+	memtuple_deform(oldtup, pbind, toast_values, toast_isnull);
+
+	toast_delete_common(rel, toast_values, toast_isnull);
+}
+
+static void
+toast_delete_common(Relation rel, Datum *toast_values, bool *toast_isnull)
 {
 	TupleDesc	tupleDesc;
 	Form_pg_attribute *att;
 	int			numAttrs;
 	int			i;
-	Datum		toast_values[MaxHeapAttributeNumber];
-	bool		toast_isnull[MaxHeapAttributeNumber];
-	bool 		ismemtuple = is_memtuple(oldtup);
-	
-	AssertImply(ismemtuple, pbind);
-	AssertImply(!ismemtuple, !pbind);
-
-	/*
-	 * We should only ever be called for tuples of plain relations ---
-	 * recursing on a toast rel is bad news.
-	 */
-	Assert(rel->rd_rel->relkind == RELKIND_RELATION);
 
 	/*
 	 * We should only ever be called for tuples of plain relations or
@@ -614,11 +626,6 @@ toast_delete(Relation rel, GenericTuple oldtup, MemTupleBinding *pbind)
 
 	Assert(numAttrs <= MaxHeapAttributeNumber);
 
-	if (ismemtuple)
-		memtuple_deform((MemTuple) oldtup, pbind, toast_values, toast_isnull);
-	else
-		heap_deform_tuple((HeapTuple) oldtup, tupleDesc, toast_values, toast_isnull);
-
 	/*
 	 * Check for external stored attributes and delete them from the secondary
 	 * relation.
@@ -636,7 +643,6 @@ toast_delete(Relation rel, GenericTuple oldtup, MemTupleBinding *pbind)
 		}
 	}
 }
-
 
 /* ----------
  * toast_insert_or_update -

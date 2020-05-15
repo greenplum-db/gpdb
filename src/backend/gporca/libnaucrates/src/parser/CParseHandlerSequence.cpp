@@ -20,6 +20,7 @@
 
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 #include "naucrates/dxl/operators/CDXLPhysicalDynamicTableScan.h"
+#include "naucrates/dxl/operators/CDXLPhysicalSequence.h"
 
 using namespace gpdxl;
 

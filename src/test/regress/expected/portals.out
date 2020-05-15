@@ -995,13 +995,15 @@ COMMIT;
 BEGIN;
 EXPLAIN (costs off)
 DECLARE c1 CURSOR FOR SELECT stringu1 FROM onek WHERE stringu1 = 'DZAAAA';
-                 QUERY PLAN                  
----------------------------------------------
+                      QUERY PLAN                       
+-------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on onek
-         Filter: (stringu1 = 'DZAAAA'::name)
+   ->  Bitmap Heap Scan on onek
+         Recheck Cond: (stringu1 = 'DZAAAA'::name)
+         ->  Bitmap Index Scan on onek_stringu1
+               Index Cond: (stringu1 = 'DZAAAA'::name)
  Optimizer: Postgres query optimizer
-(4 rows)
+(6 rows)
 
 DECLARE c1 CURSOR FOR SELECT stringu1 FROM onek WHERE stringu1 = 'DZAAAA';
 FETCH FROM c1;

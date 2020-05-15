@@ -80,7 +80,7 @@ User data are redistributed in a CTAS-like style, id redistributes all data to
 a new table, swaps old and new table's relfilenode, and finally drop old data.
 CTAS has following characteristics:
 
-* CTAS needs no VACCUM to reclaim moved tuples.
+* CTAS needs no VACUUM to reclaim moved tuples.
 * CTAS rebuilds the index from scratch instead of tuple by tuple.
 
 ## 3. Performance

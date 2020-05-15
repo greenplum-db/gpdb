@@ -19,8 +19,8 @@ function gen_env(){
 		}
 
 		source /usr/local/greenplum-db-devel/greenplum_path.sh
-		source /opt/gcc_env.sh
 		source \${base_path}/gpdb_src/gpAux/gpdemo/gpdemo-env.sh
+
 		cd \${base_path}/gpdb_src/gpMgmt/bin
 		make check
 		# show results into concourse
@@ -42,7 +42,6 @@ function _main() {
     setup_gpadmin_user
     (make_cluster)
 
-    install_python_hacks
     install_python_requirements_on_single_host ./gpdb_src/gpMgmt/requirements-dev.txt
 
     gen_env

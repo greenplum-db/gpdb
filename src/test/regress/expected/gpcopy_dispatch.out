@@ -121,3 +121,18 @@ SELECT tableoid::regclass, count(*) FROM partdisttest GROUP BY 1;
  partdisttest_1_prt_primero | 10001
 (1 row)
 
+DROP TABLE partdisttest;
+-- Log errors on QEs
+CREATE TABLE partdisttest(id INT, t TIMESTAMP, d VARCHAR(4))
+  DISTRIBUTED BY (id)
+  PARTITION BY RANGE (t)
+  (
+    PARTITION p2020 START ('2020-01-01'::TIMESTAMP) END ('2021-01-01'::TIMESTAMP),
+    DEFAULT PARTITION extra
+  );
+NOTICE:  CREATE TABLE will create partition "partdisttest_1_prt_extra" for table "partdisttest"
+NOTICE:  CREATE TABLE will create partition "partdisttest_1_prt_p2020" for table "partdisttest"
+COPY partdisttest FROM STDIN LOG ERRORS SEGMENT REJECT LIMIT 2;
+INFO:  first field processed in the QE: 2
+NOTICE:  found 1 data formatting errors (1 or more input rows), rejected related input data
+DROP TABLE partdisttest;

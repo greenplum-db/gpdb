@@ -12,8 +12,12 @@
 #include "gpos/base.h"
 
 #include "gpopt/base/CUtils.h"
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalLeftOuterJoin.h"
+#include "gpopt/operators/CLogicalNAryJoin.h"
 #include "gpopt/operators/CNormalizer.h"
+#include "gpopt/operators/CPatternMultiLeaf.h"
+#include "gpopt/operators/CPatternLeaf.h"
+#include "gpopt/operators/CPatternTree.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/xforms/CXformPushDownLeftOuterJoin.h"
 

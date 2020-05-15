@@ -19,8 +19,10 @@
 
 #include "naucrates/md/IMDScalarOp.h"
 
-#include "gpopt/operators/ops.h"
 #include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CPredicateUtils.h"
+#include "gpopt/operators/CScalarCmp.h"
+#include "gpopt/operators/CScalarIsDistinctFrom.h"
 
 using namespace gpopt;
 
@@ -1222,6 +1224,7 @@ CPhysicalJoin::PppsRequiredJoinChild
 		return PppsRequiredCompute(mp, exprhdl, pppsRequired, child_index, fNLJoin);
 	}
 
+	// try to find a previously generated CPartitionPropagationSpec in the cache, m_phmpp
 	CPartitionPropagationSpec *ppps = m_phmpp->Find(pppr);
 	if (NULL == ppps)
 	{

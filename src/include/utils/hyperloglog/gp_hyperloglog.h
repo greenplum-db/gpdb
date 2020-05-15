@@ -189,9 +189,6 @@ GpHLLCounter gp_hll_add_element(GpHLLCounter hloglog, const char * element, int 
 /* get an estimate from the hyperloglog counter */
 double gp_hll_estimate(GpHLLCounter hloglog);
 
-/* reset a counter */
-void gp_hll_reset_internal(GpHLLCounter hloglog);
-
 /* data compression/decompression */
 GpHLLCounter gp_hll_compress(GpHLLCounter hloglog);
 GpHLLCounter gp_hll_decompress(GpHLLCounter hloglog);

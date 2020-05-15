@@ -1234,39 +1234,6 @@ bool ntuplestore_acc_current_tupleslot(NTupleStoreAccessor *tsa, TupleTableSlot 
 	return true;
 }
 
-bool ntuplestore_acc_current_data(NTupleStoreAccessor *tsa, void **data, int *len)
-{
-	bool fOK = ntuplestore_acc_current_data_internal(tsa, (void **) data, len);
-
-	if(!fOK)
-	{
-		return false;
-	}
-
-	if(*len < 0)
-	{
-		NTupleStoreLobRef *plobref = (NTupleStoreLobRef *) (*data);
-		Assert(*len == -(int)sizeof(NTupleStoreLobRef));
-
-		if (tsa->tmp_len < plobref->size)
-		{
-			if (tsa->tmp_lob)
-				pfree(tsa->tmp_lob);
-			tsa->tmp_lob = MemoryContextAlloc(tsa->store->mcxt, plobref->size);
-			tsa->tmp_len = plobref->size;
-		}
-
-		*data = tsa->tmp_lob;
-		*len = ntuplestore_get_lob(tsa->store, *data, plobref);
-
-		Assert(*len == plobref->size);
-
-		return true;
-	}
-
-	return true;
-}
-
 bool ntuplestore_acc_tell(NTupleStoreAccessor *tsa, NTupleStorePos *pos)
 {
 	AssertImply(tsa->pos.blockn==-1, tsa->pos.slotn==-1);

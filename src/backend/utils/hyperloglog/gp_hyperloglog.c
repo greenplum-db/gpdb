@@ -519,16 +519,6 @@ gp_hll_add_hash_dense(GpHLLCounter hloglog, uint64_t hash)
     return hloglog;
 }
 
-/* Just reset the counter (set all the counters to 0). We do this by
- * zeroing the data array */
-void 
-gp_hll_reset_internal(GpHLLCounter hloglog)
-{
-
-    memset(hloglog->data, 0, VARSIZE_ANY(hloglog) - sizeof(GpHLLData) );
-
-}
-
 /* Compress header function */
 GpHLLCounter
 gp_hll_compress(GpHLLCounter hloglog)

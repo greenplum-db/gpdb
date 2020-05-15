@@ -13,9 +13,7 @@ function prep_env_for_centos() {
   alternatives --set java "$java7_bin"
   export JAVA_HOME="${java7_bin/jre\/bin\/java/}"
   ln -sf /usr/bin/xsubpp /usr/share/perl5/ExtUtils/xsubpp
-  source /opt/gcc_env.sh
 
-  ln -sf "$BASE_DIR"/gpdb_src/gpAux/ext/${BLD_ARCH}/python-2.7.12 /opt/python-2.7.12
   export PATH=${JAVA_HOME}/bin:${PATH}
 }
 

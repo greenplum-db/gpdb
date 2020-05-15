@@ -13,7 +13,8 @@
 
 #include "gpos/base.h"
 #include "gpopt/xforms/CXformApply2Join.h"
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalLeftAntiSemiApply.h"
+#include "gpopt/operators/CLogicalLeftAntiSemiJoin.h"
 
 
 namespace gpopt

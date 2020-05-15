@@ -165,7 +165,7 @@ that, the backend holds the relation extension lock while scanning
 pg_aoseg for the target segment, but that lock is released as soon as
 the pg_aoseg tuple is locked.
 
-Vacuum truncation (to release space used by aborted tranactions) also
+Vacuum truncation (to release space used by aborted transactions) also
 scans pg_aoseg with a fresh catalog snapshot, and holds the relation
 extension lock. It skips over tuples that are locked, to not interfere
 with inserters.

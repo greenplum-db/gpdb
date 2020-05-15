@@ -7,4 +7,34 @@ about database objects (tables, views, etc.).</p><table id="hr138428"><title>pg_
 on this object.</entry></row><row><entry colname="col1"><codeph id="hr138447">stasubtype</codeph></entry><entry colname="col2">text</entry><entry colname="col3"/><entry colname="col4">The type of object operated on or the subclass
 of operation performed.</entry></row><row><entry colname="col1"><codeph id="hr138456">statime</codeph></entry><entry colname="col2">timestamp with timezone</entry><entry colname="col3"/><entry colname="col4">The timestamp of the operation. This is the same timestamp that is written to
               the Greenplum Database server log files in case you need to look up more
-              detailed information about the operation in the logs.</entry></row></tbody></tgroup></table></body></topic>
+              detailed information about the operation in the logs.</entry></row></tbody></tgroup></table>
+
+    <p>The <codeph>pg_stat_last_operation</codeph> table contains metadata tracking
+      information about operations on database objects. This information includes the
+      object id, DDL action, user, type of object, and operation timestamp. Greenplum
+      Database updates this table when a database object is created, altered,
+      truncated, vacuumed, analyzed, or partitioned, and when privileges are granted
+      to an object.</p>
+    <p>If you want to track the operations performed on a specific object, use the
+      <codeph>objid</codeph> value. Because the <codeph>stasubtype</codeph> value can
+      identify either the type of object operated on or the subclass of operation
+      performed, it is not a suitable parameter when querying the
+      <codeph>pg_stat_last_operation</codeph> table.</p>
+    <p>The following example creates and replaces a view, and then shows how to use
+      <codeph>objid</codeph> as a query parameter on the
+      <codeph>pg_stat_last_operation</codeph> table.</p>
+    <codeblock>testdb=# CREATE VIEW trial AS SELECT * FROM gp_segment_configuration;
+CREATE VIEW
+testdb=# CREATE OR REPLACE VIEW trial AS SELECT * FROM gp_segment_configuration;
+CREATE VIEW
+testdb=# SELECT * FROM pg_stat_last_operation WHERE objid='trial'::regclass::oid;
+ classid | objid | staactionname | stasysid | stausename | stasubtype |            statime            
+---------+-------+---------------+----------+------------+------------+-------------------------------
+  1259  | 24735 | CREATE         |       10 | gpadmin    | VIEW       | 2020-04-07 16:44:28.808811+00
+  1259  | 24735 | ALTER          |       10 | gpadmin    | SET        | 2020-04-07 16:44:38.110615+00
+(2 rows)</codeblock>
+    <p>Notice that the <codeph>pg_stat_last_operation</codeph> table entry for the         view <codeph>REPLACE</codeph> operation specifies the <codeph>ALTER</codeph>
+      action (<codeph>staactionname</codeph>) and the <codeph>SET</codeph> subtype
+      (<codeph>stasubtype</codeph>).</p>
+  </body>
+</topic>

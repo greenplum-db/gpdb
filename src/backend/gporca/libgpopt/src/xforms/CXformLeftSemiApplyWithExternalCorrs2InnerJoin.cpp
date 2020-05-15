@@ -13,9 +13,7 @@
 
 #include "gpos/base.h"
 #include "gpopt/xforms/CXformLeftSemiApplyWithExternalCorrs2InnerJoin.h"
-
-#include "gpopt/operators/ops.h"
-
+#include "gpopt/operators/CScalarProjectList.h"
 
 using namespace gpopt;
 

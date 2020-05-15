@@ -21,9 +21,10 @@
 #include "gpopt/base/CConstraintInterval.h"
 #include "gpopt/exception.h"
 
-#include "gpopt/operators/ops.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CExpressionUtils.h"
+#include "gpopt/operators/CScalarSubqueryExists.h"
+#include "gpopt/operators/CScalarSubqueryNotExists.h"
 
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "naucrates/md/IMDScalarOp.h"

@@ -54,8 +54,6 @@
  */
 #define MIN_RESOURCEQUEUE_MEMORY_LIMIT_KB (10 * 1024L)
 
-static char *GetResqueueCapability(Oid queueOid, int capabilityIndex);
-
 /* MPP-6923: 
  * GetResourceTypeByName: find the named resource in pg_resourcetype
  *
@@ -1594,94 +1592,4 @@ get_resqueue_oid(const char *queuename, bool missing_ok)
 						queuename)));
 
 	return oid;
-}
-
-/*
- * Given a queue id, return its name
- */
-char *
-GetResqueueName(Oid resqueueOid)
-{
-	Relation	rel;
-	ScanKeyData scankey;
-	SysScanDesc sscan;
-	HeapTuple	tuple;
-	char	   *result;
-
-	if (resqueueOid == InvalidOid)
-		return pstrdup("Unknown");
-
-	/* SELECT rsqname FROM pg_resqueue WHERE oid = :1 */
-	rel = heap_open(ResQueueRelationId, AccessShareLock);
-
-	ScanKeyInit(&scankey, ObjectIdAttributeNumber,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(resqueueOid));
-
-	sscan = systable_beginscan(rel, ResQueueOidIndexId, true,
-							   NULL, 1, &scankey);
-
-	tuple = systable_getnext(sscan);
-
-	/* If we cannot find a resource queue id for any reason */
-	if (!tuple)
-		result = pstrdup("Unknown");
-	else
-	{
-		FormData_pg_resqueue *rqform = (FormData_pg_resqueue *) GETSTRUCT(tuple);
-		result = pstrdup(NameStr(rqform->rsqname));
-	}
-
-	systable_endscan(sscan);
-	heap_close(rel, AccessShareLock);
-
-	return result;
-}
-
-/**
- * Given a resource queue id, get its priority in text form
- */
-char *GetResqueuePriority(Oid queueId)
-{
-	if (queueId == InvalidOid)
-		return pstrdup("Unknown");
-	else
-		return GetResqueueCapability(queueId, PG_RESRCTYPE_PRIORITY);
-}
-
-/**
- * Given a queueid and a capability index, return the capability value as a string.
- * Returns NULL if entry is not found.
- * Input:
- * 	queueOid - oid of resource queue
- * 	capabilityIndex - see pg_resqueue.h for values (e.g. PG_RESRCTYPE_PRIORITY)
- */
-static char *GetResqueueCapability(Oid queueOid, int capabilityIndex)
-{
-	/* Update this assert if we add more capabilities */
-	Assert(capabilityIndex <= PG_RESRCTYPE_MEMORY_LIMIT);
-	Assert(queueOid != InvalidOid);
-
-	ListCell *le = NULL;
-	char *result = NULL;
-
-	List *capabilitiesList = GetResqueueCapabilityEntry(queueOid); /* This is a list of lists */
-
-	foreach(le, capabilitiesList)
-	{
-		Value *key = NULL;
-		List *entry = (List *) lfirst(le);
-		Assert(entry);
-		key = (Value *) linitial(entry);
-		Assert(IsA(key,Integer)); /* This is resource type id */
-		if (intVal(key) == capabilityIndex)
-		{
-			Value *val = lsecond(entry);
-			Assert(IsA(val,String));
-			result = pstrdup(strVal(val));
-		}
-	}
-
-	list_free(capabilitiesList);
-	return result;
 }

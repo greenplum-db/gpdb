@@ -13,15 +13,17 @@
     <p>Generally, you should run performance tests when an administrator modifies host networking or
       other special conditions in the system. For example, if you will run the expanded system on
       two network clusters, run tests on each cluster.</p>
+    <note>Preparing host systems for use by a Greenplum Database system assumes that the new hosts'
+      operating system has been properly configured to match the existing hosts, described in <xref
+        href="../../install_guide/prep_os.xml"/>.</note>
   </body>
   <topic id="topic18" xml:lang="en">
     <title id="no159311">Adding New Hosts to the Trusted Host Environment</title>
     <body>
       <p>New hosts must exchange SSH keys with the existing hosts to enable Greenplum administrative
         utilities to connect to all segments without a password prompt. Perform the key exchange
-        process twice with the <codeph><xref
-            href="../../utility_guide/ref/gpssh-exkeys.xml">gpssh-exkeys</xref></codeph>
-        utility.</p>
+        process twice with the <codeph><xref href="../../utility_guide/ref/gpssh-exkeys.xml"
+            >gpssh-exkeys</xref></codeph> utility.</p>
       <p>First perform the process as <codeph>root</codeph>, for administration convenience, and
         then as the user <codeph>gpadmin</codeph>, for management utilities. Perform the following
         tasks in order:</p>
@@ -84,7 +86,7 @@ sdw3-4</codeblock></li>
         <title>To create the <codeph>gpadmin</codeph> user</title>
         <ol id="ol_amb_xjr_g4">
           <li id="no160603">Use <codeph><xref href="../../utility_guide/ref/gpssh.xml"
-                >gpssh</xref></codeph> to create the <codeph>gpadmin</codeph> user on all the new
+              >gpssh</xref></codeph> to create the <codeph>gpadmin</codeph> user on all the new
             segment hosts (if it does not exist already). Use the list of new hosts you created for
             the key exchange. For
             example:<codeblock># gpssh -f <i>new_hosts_file</i> '/usr/sbin/useradd <i>gpadmin</i> -d 
@@ -117,7 +119,7 @@ gpadmin --stdin'</codeblock></li>
     <title id="no159219">Validating Disk I/O and Memory Bandwidth</title>
     <body>
       <p>Use the <codeph><xref href="../../utility_guide/ref/gpcheckperf.xml"
-            >gpcheckperf</xref></codeph> utility to test disk I/O and memory bandwidth. </p>
+          >gpcheckperf</xref></codeph> utility to test disk I/O and memory bandwidth. </p>
       <section id="no159247">
         <title>To run gpcheckperf</title>
         <ol>

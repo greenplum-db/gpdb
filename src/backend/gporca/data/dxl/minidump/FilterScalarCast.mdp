@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 CREATE TABLE foo ( a INT, b VARCHAR (20));
-INSERT INTO foo SELECT i%70, i%70 || 'abc' SELECT i FROM generate_series(1, 100000)i;
+INSERT INTO foo SELECT i%70, i%70 || 'abc' FROM generate_series(1, 100000)i;
 INSERT INTO foo VALUES (70, 'xyz');
 ANALYZE foo;
 EXPLAIN SELECT * FROM foo WHERE b IN ('xyz', 'asds');
@@ -514,7 +514,7 @@ EXPLAIN SELECT * FROM foo WHERE b IN ('xyz', 'asds');
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="432.861857" Rows="1405.718310" Width="9"/>
+          <dxl:Cost StartupCost="0" TotalCost="432.916810" Rows="2810.436620" Width="9"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -528,7 +528,7 @@ EXPLAIN SELECT * FROM foo WHERE b IN ('xyz', 'asds');
         <dxl:SortingColumnList/>
         <dxl:TableScan>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="432.814710" Rows="1405.718310" Width="9"/>
+            <dxl:Cost StartupCost="0" TotalCost="432.822548" Rows="2810.436620" Width="9"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">

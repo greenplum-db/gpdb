@@ -44,8 +44,8 @@ Fault Tolerance Service (FTS):
    accordingly.
 
 2. This sections explains how FTS probes are or can be
-   initiated. Either the probes are trigged at regular defined
-   interval (which can be tuned via GUC) or triggerd on the fly when
+   initiated. Either the probes are triggered at regular defined
+   interval (which can be tuned via GUC) or triggered on the fly when
    required by certain internal components or tests or user via FTS
    probe triggering function.
 

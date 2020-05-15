@@ -64,11 +64,6 @@ function install_deps() {
   esac
 }
 
-function link_python() {
-  tar xf python-tarball/python-*.tar.gz -C $(pwd)/${GPDB_SRC_PATH}/gpAux/ext
-  ln -sf $(pwd)/${GPDB_SRC_PATH}/gpAux/ext/${BLD_ARCH}/python-2.7.12 /opt/python-2.7.12
-}
-
 function generate_build_number() {
   pushd ${GPDB_SRC_PATH}
     #Only if its git repro, add commit SHA as build number
@@ -145,23 +140,6 @@ function include_quicklz() {
   popd
 }
 
-function include_libstdcxx() {
-  if [ "${TARGET_OS}" == "centos" ] ; then
-    pushd /opt/gcc-6*/lib64
-      for libfile in libstdc++.so.*; do
-        case $libfile in
-          *.py)
-            ;; # we don't vendor libstdc++.so.*-gdb.py
-          *)
-            cp -d "$libfile" ${GREENPLUM_INSTALL_DIR}/lib
-            ;; # vendor everything else
-        esac
-      done
-    popd
-  fi
-
-}
-
 function export_gpdb() {
   TARBALL="${GPDB_ARTIFACTS_DIR}/${GPDB_BIN_FILENAME}"
   local server_version
@@ -214,7 +192,6 @@ function build_xerces()
     OUTPUT_DIR="gpdb_src/gpAux/ext/${BLD_ARCH}"
     mkdir -p xerces_patch/concourse
     cp -r gpdb_src/src/backend/gporca/concourse/xerces-c xerces_patch/concourse
-    cp -r gpdb_src/src/backend/gporca/patches/ xerces_patch
     /usr/bin/python xerces_patch/concourse/xerces-c/build_xerces.py --output_dir=${OUTPUT_DIR}
     rm -rf build
 }
@@ -237,7 +214,6 @@ function _main() {
       build_xerces
       test_orca
       install_deps
-      link_python
       ;;
     win32)
         export BLD_ARCH=win32
@@ -271,7 +247,6 @@ function _main() {
   fi
   include_zstd
   include_quicklz
-  include_libstdcxx
   export_gpdb
   export_gpdb_extensions
   export_gpdb_win32_ccl

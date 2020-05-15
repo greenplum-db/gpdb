@@ -86,8 +86,11 @@
               <codeph>cpu_usage</codeph>
             </entry>
             <entry colname="col2">json</entry>
-            <entry colname="col3"></entry>
-            <entry colname="col4">The real-time CPU usage of the resource group on each Greenplum Database segment's host.</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">A set of key-value pairs. For each segment instance (the key), the
+              value is the real-time, per-segment instance CPU core usage by a resource group. The
+              value is the sum of the percentages (as a decimal value) of CPU cores that are used by
+              the resource group for the segment instance.</entry>
           </row>
           <row>
             <entry colname="col1">

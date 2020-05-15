@@ -18,8 +18,6 @@
 #include "naucrates/base/IDatum.h"
 #include "gpopt/operators/CScalar.h"
 
-#include "naucrates/md/CMDTypeBoolGPDB.h"
-
 namespace gpopt
 {
 	using namespace gpos;

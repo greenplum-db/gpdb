@@ -25,7 +25,7 @@ The following syntax creates a Greenplum Database readable external table that r
 ``` sql
 CREATE EXTERNAL TABLE <table_name>
     ( <column_name> text|json | LIKE <other_table> )
-  LOCATION ('pxf://<path-to-files>?PROFILE=hdfs:text:multi[&SERVER=<server_name>]&FILE_AS_ROW=true')
+  LOCATION ('pxf://<path-to-files>?PROFILE=hdfs:text:multi[&SERVER=<server_name>][&IGNORE_MISSING_PATH=<boolean>]&FILE_AS_ROW=true')
 FORMAT 'CSV');
 ```
 
@@ -37,6 +37,7 @@ The keywords and values used in this [CREATE EXTERNAL TABLE](../ref_guide/sql_co
 | PROFILE    | The `PROFILE` keyword must specify `hdfs:text:multi`. |
 | SERVER=\<server_name\>    | The named server configuration that PXF uses to access the data. Optional; PXF uses the `default` server if not specified. |
 | FILE\_AS\_ROW=true    | The required option that instructs PXF to read each file into a single table row. |
+| IGNORE_MISSING_PATH=\<boolean\> | Specify the action to take when \<path-to-files\> is missing or invalid. The default value is `false`, PXF returns an error in this situation. When the value is `true`, PXF ignores missing path errors and returns an empty fragment. |
 | FORMAT | The `FORMAT` must specify `'CSV'`.  |
 
 **Note**: The `hdfs:text:multi` profile does not support additional format options when you specify the `FILE_AS_ROW=true` option.

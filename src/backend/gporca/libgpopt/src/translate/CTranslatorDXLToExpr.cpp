@@ -36,7 +36,6 @@
 #include "gpopt/mdcache/CMDAccessorUtils.h"
 #include "gpopt/metadata/CColumnDescriptor.h"
 #include "gpopt/metadata/CTableDescriptor.h"
-#include "gpopt/operators/ops.h"
 #include "gpopt/translate/CTranslatorDXLToExpr.h"
 #include "gpopt/translate/CTranslatorExprToDXLUtils.h"
 #include "gpopt/exception.h"

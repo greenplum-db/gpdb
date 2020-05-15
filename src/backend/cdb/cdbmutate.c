@@ -560,11 +560,10 @@ create_shareinput_producer_rte(ApplyShareInputContext *ctxt, int share_id,
 	List	   *coltypes = NIL;
 	List	   *coltypmods = NIL;
 	List	   *colcollations = NIL;
-	ShareInputScan *producer;
 
-	Assert(ctxt->producer_count > share_id);
-	producer = ctxt->producers[share_id];
-	subplan = producer->scan.plan.lefttree;
+	Assert(ctxt->shared_plans);
+	Assert(ctxt->shared_input_count > share_id);
+	subplan = ctxt->shared_plans[share_id];
 
 	foreach(lc, subplan->targetlist)
 	{
@@ -623,31 +622,30 @@ create_shareinput_producer_rte(ApplyShareInputContext *ctxt, int share_id,
 }
 
 /*
- * Memorize the producer of a shared input in an array of producers, one
- * producer per share_id.
+ * Memorize the shared plan of a shared input in an array, one per share_id.
  */
 static void
 shareinput_save_producer(ShareInputScan *plan, ApplyShareInputContext *ctxt)
 {
 	int			share_id = plan->share_id;
-	int			new_producer_count = (share_id + 1);
+	int			new_shared_input_count = (share_id + 1);
 
 	Assert(plan->share_id >= 0);
 
-	if (ctxt->producers == NULL)
+	if (ctxt->shared_plans == NULL)
 	{
-		ctxt->producers = palloc0(sizeof(ShareInputScan *) * new_producer_count);
-		ctxt->producer_count = new_producer_count;
+		ctxt->shared_plans = palloc0(sizeof(Plan *) * new_shared_input_count);
+		ctxt->shared_input_count = new_shared_input_count;
 	}
-	else if (ctxt->producer_count < new_producer_count)
+	else if (ctxt->shared_input_count < new_shared_input_count)
 	{
-		ctxt->producers = repalloc(ctxt->producers, new_producer_count * sizeof(ShareInputScan *));
-		memset(&ctxt->producers[ctxt->producer_count], 0, (new_producer_count - ctxt->producer_count) * sizeof(ShareInputScan *));
-		ctxt->producer_count = new_producer_count;
+		ctxt->shared_plans = repalloc(ctxt->shared_plans, new_shared_input_count * sizeof(Plan *));
+		memset(&ctxt->shared_plans[ctxt->shared_input_count], 0, (new_shared_input_count - ctxt->shared_input_count) * sizeof(Plan *));
+		ctxt->shared_input_count = new_shared_input_count;
 	}
 
-	Assert(ctxt->producers[share_id] == NULL);
-	ctxt->producers[share_id] = plan;
+	Assert(ctxt->shared_plans[share_id] == NULL);
+	ctxt->shared_plans[share_id] = plan->scan.plan.lefttree;
 }
 
 /*
@@ -675,21 +673,23 @@ shareinput_mutator_dag_to_tree(Node *node, PlannerInfo *root, bool fPop)
 	{
 		ShareInputScan *siscan = (ShareInputScan *) plan;
 		Plan	   *subplan = plan->lefttree;
-		int			i;
+		int			share_id;
 		int			attno;
 		ListCell   *lc;
 
+		/* on entry, all ShareInputScans should have a child */
+		Assert(subplan);
+
 		/* Is there a producer for this sub-tree already? */
-		for (i = 0; i < ctxt->producer_count; i++)
+		for (share_id = 0; share_id < ctxt->shared_input_count; share_id++)
 		{
-			if (ctxt->producers[i] && ctxt->producers[i]->scan.plan.lefttree == subplan)
+			if (ctxt->shared_plans[share_id] == subplan)
 			{
 				/*
 				 * Yes. This is a consumer. Remove the subtree, and assign the
 				 * same share_id as the producer.
 				 */
-				Assert(get_plan_share_id((Plan *) ctxt->producers[i]) == i);
-				set_plan_share_id((Plan *) plan, ctxt->producers[i]->share_id);
+				siscan->share_id = share_id;
 				siscan->scan.plan.lefttree = NULL;
 				return false;
 			}
@@ -700,9 +700,7 @@ shareinput_mutator_dag_to_tree(Node *node, PlannerInfo *root, bool fPop)
 		 * producer. Add this to the list of producers, and assign a new
 		 * share_id.
 		 */
-		Assert(get_plan_share_id(subplan) == SHARE_ID_NOT_ASSIGNED);
-		set_plan_share_id((Plan *) plan, ctxt->producer_count);
-		set_plan_share_id(subplan, ctxt->producer_count);
+		siscan->share_id = share_id;
 
 		shareinput_save_producer(siscan, ctxt);
 
@@ -765,12 +763,10 @@ collect_shareinput_producers_walker(Node *node, PlannerInfo *root, bool fPop)
 		ShareInputScan *siscan = (ShareInputScan *) node;
 		Plan	   *subplan = siscan->scan.plan.lefttree;
 
-		Assert(get_plan_share_id((Plan *) siscan) >= 0);
+		Assert(siscan->share_id >= 0);
 
 		if (subplan)
-		{
 			shareinput_save_producer(siscan, ctxt);
-		}
 	}
 	return true;
 }
@@ -906,46 +902,10 @@ replace_shareinput_targetlists_walker(Node *node, PlannerInfo *root, bool fPop)
 	return true;
 }
 
-
-typedef struct ShareNodeWithSliceMark
-{
-	Plan	   *plan;
-	int			slice_mark;
-} ShareNodeWithSliceMark;
-
-static bool
-shareinput_find_sharenode(ApplyShareInputContext *ctxt, int share_id, ShareNodeWithSliceMark *result)
-{
-	ShareInputScan *siscan;
-	Plan	   *plan;
-
-	Assert(share_id < ctxt->producer_count);
-	if (share_id >= ctxt->producer_count)
-		return false;
-
-	siscan = ctxt->producers[share_id];
-	if (!siscan)
-		return false;
-
-	plan = siscan->scan.plan.lefttree;
-
-	Assert(get_plan_share_id(plan) == share_id);
-	Assert(IsA(plan, Material) ||IsA(plan, Sort));
-
-	if (result)
-	{
-		result->plan = plan;
-		result->slice_mark = ctxt->sliceMarks[share_id];
-	}
-
-	return true;
-}
-
 /*
- * First walk on shareinput xslice.  It does the following:
- *
- * 1. Build the sliceMarks in context.
- * 2. Build a list a share on QD
+ * First walk on shareinput xslice. Collect information about the producer
+ * and consumer slice IDs for each share. It also builds a list of shares
+ * that should run in the QD.
  */
 static bool
 shareinput_mutator_xslice_1(Node *node, PlannerInfo *root, bool fPop)
@@ -975,35 +935,32 @@ shareinput_mutator_xslice_1(Node *node, PlannerInfo *root, bool fPop)
 		int			motId = shareinput_peekmot(ctxt);
 		Plan	   *shared = plan->lefttree;
 		PlanSlice  *currentSlice;
+		ApplyShareInputContextPerShare *share_info;
+
+		share_info = &ctxt->shared_inputs[sisc->share_id];
 
 		currentSlice = &ctxt->slices[motId];
 		if (currentSlice->gangType == GANGTYPE_UNALLOCATED ||
 			currentSlice->gangType == GANGTYPE_ENTRYDB_READER)
 		{
-				ctxt->qdShares = list_append_unique_int(ctxt->qdShares, sisc->share_id);
+			ctxt->qdShares = bms_add_member(ctxt->qdShares, sisc->share_id);
 		}
 
+		/* Remember information about the slice that this instance appears in. */
 		if (shared)
-		{
-			Assert(get_plan_share_id(plan) == get_plan_share_id(shared));
-			set_plan_driver_slice(shared, motId);
+			ctxt->shared_inputs[sisc->share_id].producer_slice_id = motId;
+		share_info->participant_slices = bms_add_member(share_info->participant_slices, motId);
 
-			/*
-			 * We need to repopulate the producers array. The plan tree might
-			 * have been modified between shareinput_mutator_dag_to_tree() and
-			 * here, destroying the producers array in the process.
-			 */
-			ctxt->producers[sisc->share_id] = sisc;
-			ctxt->sliceMarks[sisc->share_id] = motId;
-		}
+		sisc->this_slice_id = motId;
 	}
 
 	return true;
 }
 
 /*
- * Second pass on shareinput xslice.  It marks the shared node xslice,
- * if a 'shared' is cross-slice.
+ * Second pass:
+ * 1. Mark shareinput scans with multiple consumer slices as cross-slice.
+ * 2. Fill 'share_type' and 'share_id' fields in the shared Material/Sort nodes.
  */
 static bool
 shareinput_mutator_xslice_2(Node *node, PlannerInfo *root, bool fPop)
@@ -1031,96 +988,23 @@ shareinput_mutator_xslice_2(Node *node, PlannerInfo *root, bool fPop)
 	{
 		ShareInputScan *sisc = (ShareInputScan *) plan;
 		int			motId = shareinput_peekmot(ctxt);
-		Plan	   *shared = plan->lefttree;
+		ApplyShareInputContextPerShare *pershare;
 
-		if (!shared)
+		pershare = &ctxt->shared_inputs[sisc->share_id];
+
+		if (bms_num_members(pershare->participant_slices) > 1)
 		{
-			ShareNodeWithSliceMark plan_slicemark = {NULL /* plan */ , 0 /* slice_mark */ };
-			int			shareSliceId = 0;
-
-			shareinput_find_sharenode(ctxt, sisc->share_id, &plan_slicemark);
-			if (plan_slicemark.plan == NULL)
-				elog(ERROR, "could not find shared input node with id %d", sisc->share_id);
-
-			shareSliceId = get_plan_driver_slice(plan_slicemark.plan);
-
-			if (shareSliceId != motId)
-			{
-				ShareType	stype = get_plan_share_type(plan_slicemark.plan);
-
-				if (stype == SHARE_MATERIAL || stype == SHARE_SORT)
-					set_plan_share_type_xslice(plan_slicemark.plan);
-
-				incr_plan_nsharer_xslice(plan_slicemark.plan);
-				sisc->driver_slice = motId;
-			}
+			Assert(!sisc->cross_slice);
+			sisc->cross_slice = true;
 		}
-	}
 
-	return true;
-}
-
-/*
- * Third pass:
- * 	1. Mark shareinput scan xslice,
- * 	2. Bulid a list of QD slices
- */
-static bool
-shareinput_mutator_xslice_3(Node *node, PlannerInfo *root, bool fPop)
-{
-	PlannerGlobal *glob = root->glob;
-	ApplyShareInputContext *ctxt = &glob->share;
-	Plan	   *plan = (Plan *) node;
-
-	if (fPop)
-	{
-		if (IsA(plan, Motion))
-			shareinput_popmot(ctxt);
-		return false;
-	}
-
-	if (IsA(plan, Motion))
-	{
-		Motion	   *motion = (Motion *) plan;
-
-		shareinput_pushmot(ctxt, motion->motionID);
-		return true;
-	}
-
-	if (IsA(plan, ShareInputScan))
-	{
-		ShareInputScan *sisc = (ShareInputScan *) plan;
-		int			motId = shareinput_peekmot(ctxt);
-
-		ShareNodeWithSliceMark plan_slicemark = {NULL, 0};
-		ShareType	stype = SHARE_NOTSHARED;
-
-		shareinput_find_sharenode(ctxt, sisc->share_id, &plan_slicemark);
-
-		if (!plan_slicemark.plan)
-			elog(ERROR, "sub-plan for share_id %d cannot be NULL", sisc->share_id);
-
-		stype = get_plan_share_type(plan_slicemark.plan);
-
-		switch (stype)
-		{
-			case SHARE_MATERIAL_XSLICE:
-				Assert(sisc->share_type == SHARE_MATERIAL);
-				set_plan_share_type_xslice(plan);
-				break;
-			case SHARE_SORT_XSLICE:
-				Assert(sisc->share_type == SHARE_SORT);
-				set_plan_share_type_xslice(plan);
-				break;
-			default:
-				Assert(sisc->share_type == stype);
-				break;
-		}
+		sisc->producer_slice_id = pershare->producer_slice_id;
+		sisc->nconsumers = bms_num_members(pershare->participant_slices) - 1;
 
 		/*
 		 * If this share needs to run in the QD, mark the slice accordingly.
 		 */
-		if (list_member_int(ctxt->qdShares, sisc->share_id))
+		if (bms_is_member(sisc->share_id, ctxt->qdShares))
 		{
 			PlanSlice  *currentSlice = &ctxt->slices[motId];
 
@@ -1142,19 +1026,32 @@ shareinput_mutator_xslice_3(Node *node, PlannerInfo *root, bool fPop)
 	return true;
 }
 
-
+/*
+ * Scan through the plan tree and make note of which Share Input Scans
+ * are cross-slice.
+ */
 Plan *
-apply_shareinput_xslice(Plan *plan, PlannerInfo *root, PlanSlice *sliceTable)
+apply_shareinput_xslice(Plan *plan, PlannerInfo *root)
 {
 	PlannerGlobal *glob = root->glob;
 	ApplyShareInputContext *ctxt = &glob->share;
 	ListCell   *lp, *lr;
+	int			subplan_id;
+
+	/*
+	 * If the plan tree has only one slice, there cannot be any cross-slice
+	 * Share Input Scans. They were all marked as cross_slice=false when they
+	 * were created. Note that we won't set slice_ids on them correctly;
+	 * the executor knows not to expect that when numSlices == 1.
+	 */
+	if (root->glob->numSlices == 1)
+		return plan;
 
 	ctxt->motStack = NULL;
 	ctxt->qdShares = NULL;
-	ctxt->slices = sliceTable;
+	ctxt->slices = root->glob->slices;
 
-	ctxt->sliceMarks = palloc0(ctxt->producer_count * sizeof(int));
+	ctxt->shared_inputs = palloc0(ctxt->shared_input_count * sizeof(ApplyShareInputContextPerShare));
 
 	shareinput_pushmot(ctxt, 0);
 
@@ -1170,33 +1067,34 @@ apply_shareinput_xslice(Plan *plan, PlannerInfo *root, PlanSlice *sliceTable)
 	 * walk through all plans and collect all producer subplans into the
 	 * context, before processing the consumers.
 	 */
+	subplan_id = 0;
 	forboth(lp, glob->subplans, lr, glob->subroots)
 	{
 		Plan	   *subplan = (Plan *) lfirst(lp);
 		PlannerInfo *subroot =  (PlannerInfo *) lfirst(lr);
+		int			slice_id = glob->subplan_sliceIds[subplan_id];
 
+		shareinput_pushmot(ctxt, slice_id);
 		shareinput_walker(shareinput_mutator_xslice_1, (Node *) subplan, subroot);
+		shareinput_popmot(ctxt);
+		subplan_id++;
 	}
 	shareinput_walker(shareinput_mutator_xslice_1, (Node *) plan, root);
 
 	/* Now walk the tree again, and process all the consumers. */
+	subplan_id = 0;
 	forboth(lp, glob->subplans, lr, glob->subroots)
 	{
 		Plan	   *subplan = (Plan *) lfirst(lp);
 		PlannerInfo *subroot =  (PlannerInfo *) lfirst(lr);
+		int			slice_id = glob->subplan_sliceIds[subplan_id];
 
+		shareinput_pushmot(ctxt, slice_id);
 		shareinput_walker(shareinput_mutator_xslice_2, (Node *) subplan, subroot);
+		shareinput_popmot(ctxt);
+		subplan_id++;
 	}
 	shareinput_walker(shareinput_mutator_xslice_2, (Node *) plan, root);
-
-	forboth(lp, glob->subplans, lr, glob->subroots)
-	{
-		Plan	   *subplan = (Plan *) lfirst(lp);
-		PlannerInfo *subroot =  (PlannerInfo *) lfirst(lr);
-
-		shareinput_walker(shareinput_mutator_xslice_3, (Node *) subplan, subroot);
-	}
-	shareinput_walker(shareinput_mutator_xslice_3, (Node *) plan, root);
 
 	return plan;
 }

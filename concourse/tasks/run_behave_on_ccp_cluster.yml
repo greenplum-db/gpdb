@@ -21,7 +21,6 @@ run:
     # cluster_env_files.
     ssh -t ccp-$(cat cluster_env_files/terraform/name)-0 "sudo bash -c '
         source /home/gpadmin/gpdb_src/concourse/scripts/common.bash
-        install_python_hacks
     '"
 
     # ensure cluster is stopped

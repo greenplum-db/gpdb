@@ -4,7 +4,7 @@
 # src/backend/gporca/libnaucrates/src/md/Makefile
 #
 
-subdir = src/backend/gporca/libnaucrates/src/md/
+subdir = src/backend/gporca/libnaucrates/src/md
 top_builddir = ../../../../../..
 include $(top_builddir)/src/Makefile.global
 

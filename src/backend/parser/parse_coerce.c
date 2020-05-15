@@ -2198,8 +2198,6 @@ find_coercion_pathway(Oid targetTypeId, Oid sourceTypeId,
 	if (sourceTypeId == targetTypeId)
 		return COERCION_PATH_RELABELTYPE;
 
-	/* SELECT castcontext from pg_cast */
-
 	/* Look in pg_cast */
 	tuple = SearchSysCache2(CASTSOURCETARGET,
 							ObjectIdGetDatum(sourceTypeId),

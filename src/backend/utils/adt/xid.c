@@ -84,57 +84,6 @@ xideq(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(TransactionIdEquals(xid1, xid2));
 }
 
-Datum
-xidlt(PG_FUNCTION_ARGS)
-{
-	TransactionId xid1 = PG_GETARG_TRANSACTIONID(0);
-	TransactionId xid2 = PG_GETARG_TRANSACTIONID(1);
-
-	PG_RETURN_BOOL(xid1 < xid2);
-}
-
-Datum
-xidgt(PG_FUNCTION_ARGS)
-{
-	TransactionId xid1 = PG_GETARG_TRANSACTIONID(0);
-	TransactionId xid2 = PG_GETARG_TRANSACTIONID(1);
-
-	PG_RETURN_BOOL(xid1 > xid2);
-}
-
-Datum
-xidle(PG_FUNCTION_ARGS)
-{
-	TransactionId xid1 = PG_GETARG_TRANSACTIONID(0);
-	TransactionId xid2 = PG_GETARG_TRANSACTIONID(1);
-
-	PG_RETURN_BOOL(xid1 <= xid2);
-}
-
-Datum
-xidge(PG_FUNCTION_ARGS)
-{
-	TransactionId xid1 = PG_GETARG_TRANSACTIONID(0);
-	TransactionId xid2 = PG_GETARG_TRANSACTIONID(1);
-
-	PG_RETURN_BOOL(xid1 >= xid2);
-}
-
-Datum
-btxidcmp(PG_FUNCTION_ARGS)
-{
-	TransactionId xid1 = PG_GETARG_TRANSACTIONID(0);
-	TransactionId xid2 = PG_GETARG_TRANSACTIONID(1);
-
-	if (xid1 == xid2)
-		PG_RETURN_INT32(0);
-	else if (xid1 > xid2)
-		PG_RETURN_INT32(1);
-	else
-		PG_RETURN_INT32(-1);
-}
-
-
 /*
  *		xidneq			- are two xids different?
  */

@@ -52,13 +52,12 @@ cdbpath_motion_for_join(PlannerInfo    *root,
                         Path          **p_inner_path,       /* INOUT */
 						int			   *p_rowidexpr_id,
                         List           *redistribution_clauses,   /* equijoin RestrictInfo list */
+                        List           *restrict_clauses, /* all RestrictInfos */
                         List           *outer_pathkeys,
                         List           *inner_pathkeys,
                         bool            outer_require_existing_order,
                         bool            inner_require_existing_order);
 
 extern bool cdbpath_contains_wts(Path *path);
-
-extern void failIfUpdateTriggers(Oid relid);
 
 #endif   /* CDBPATH_H */

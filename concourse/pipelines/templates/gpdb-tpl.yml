@@ -45,6 +45,9 @@
 ## NOTE: only one anchors section is allowed per file, so we define this
 ##  at the top of the file so anchors are usable as early as possible.
 anchors:
+- &default_platform
+  PLATFORM: centos7
+
 - &ccp_default_params
   action: create
   delete_on_failure: true
@@ -53,7 +56,7 @@ anchors:
 
 - &ccp_default_vars
   instance_type: n1-standard-1
-  PLATFORM: centos6
+  <<: *default_platform
 
 - &destroy_common
   action: destroy
@@ -92,6 +95,7 @@ anchors:
   BUCKET_PATH: clusters-google/
   BUCKET_NAME: {{tf-bucket-name}}
   CLOUD_PROVIDER: google
+  <<: *default_platform
 
 - &set_failed
   do:
@@ -184,18 +188,11 @@ groups:
 - name: all
   jobs:
   - concourse_unit_tests
-{% if "centos6" in os_types %}
-  - compile_gpdb_centos6
-  - compile_gpdb_binary_swap_centos6
-{% endif %}
 {% if "centos7" in os_types %}
   - compile_gpdb_centos7
 {% endif %}
 {% if "ubuntu18.04" in os_types %}
   - compile_gpdb_ubuntu18.04
-{% endif %}
-{% if "sles12" in os_types %}
-  - compile_gpdb_sles12
 {% endif %}
 {% if "win" in os_types %}
   - compile_gpdb_clients_windows
@@ -203,26 +200,18 @@ groups:
 {% endif %}
 {% if "ICW" in test_sections %}
   ## --------------------------------------------------------------------
-{% if "centos6" in os_types %}
-  - icw_gporca_centos6
-  - icw_planner_centos6
-  - icw_gporca_ictcp_centos6
-{% endif %}
-{% if "centos6" in os_types and "CLI" in test_sections %}
-  - gpexpand
-  - pg_upgrade
-{% endif %}
 {% if "centos7" in os_types %}
   - icw_gporca_centos7
   - icw_planner_centos7
+  - icw_gporca_ictcp_centos7
+{% endif %}
+{% if "centos7" in os_types and "CLI" in test_sections %}
+  - gpexpand
+  - pg_upgrade
 {% endif %}
 {% if "ubuntu18.04" in os_types %}
   - icw_gporca_ubuntu18.04
   - icw_planner_ubuntu18.04
-{% endif %}
-{% if "sles12" in os_types %}
-  - icw_gporca_sles12
-  - icw_planner_sles12
 {% endif %}
   - gate_icw_end
 {% endif %}
@@ -233,7 +222,6 @@ groups:
 {% if "ResourceGroups" in test_sections %}
   ## --------------------------------------------------------------------
   - gate_resource_groups_start
-  - resource_group_centos6
 {% if "centos7" in os_types %}
   - resource_group_centos7
 {% endif %}
@@ -254,12 +242,8 @@ groups:
 {% if "AA" in test_sections %}
   ## --------------------------------------------------------------------
   - gate_advanced_analytics_start
-{% if "centos6" in os_types or "centos7" in os_types%}
+{% if "centos7" in os_types%}
   - madlib_build_gppkg
-{% endif %}
-{% if "centos6" in os_types %}
-  - MADlib_Test_orca_centos6
-  - MADlib_Test_planner_centos6
 {% endif %}
 {% if "centos7" in os_types %}
   - MADlib_Test_orca_centos7
@@ -268,8 +252,8 @@ groups:
 {% endif %}
  ## ---------------------------------------------------------------------
 {% if "Extensions" in test_sections %}
-{% if "centos6" in os_types %}
-  - icw_extensions_gpcloud_centos6
+{% if "centos7" in os_types %}
+  - icw_extensions_gpcloud_centos7
 {% endif %}
 {%endif %}
 
@@ -288,18 +272,11 @@ groups:
 
 - name: Compile
   jobs:
-{% if "centos6" in os_types %}
-  - compile_gpdb_centos6
-  - compile_gpdb_binary_swap_centos6
-{% endif %}
 {% if "centos7" in os_types %}
   - compile_gpdb_centos7
 {% endif %}
 {% if "ubuntu18.04" in os_types %}
   - compile_gpdb_ubuntu18.04
-{% endif %}
-{% if "sles12" in os_types %}
-  - compile_gpdb_sles12
 {% endif %}
 {% if "win" in os_types %}
   - compile_gpdb_clients_windows
@@ -311,29 +288,19 @@ groups:
 
 - name: ICW
   jobs:
-{% if "centos6" in os_types %}
-  - icw_gporca_centos6
-  - icw_planner_centos6
-  - icw_gporca_ictcp_centos6
-  - compile_gpdb_centos6
-{% endif %}
-{% if "centos6" in os_types and "CLI" in test_sections %}
-  - pg_upgrade
-{% endif %}
 {% if "centos7" in os_types %}
   - icw_gporca_centos7
   - icw_planner_centos7
+  - icw_gporca_ictcp_centos7
   - compile_gpdb_centos7
+{% endif %}
+{% if "centos7" in os_types and "CLI" in test_sections %}
+  - pg_upgrade
 {% endif %}
 {% if "ubuntu18.04" in os_types %}
   - icw_gporca_ubuntu18.04
   - icw_planner_ubuntu18.04
   - compile_gpdb_ubuntu18.04
-{% endif %}
-{% if "sles12" in os_types %}
-  - icw_gporca_sles12
-  - icw_planner_sles12
-  - compile_gpdb_sles12
 {% endif %}
   - gate_icw_end
 
@@ -344,18 +311,18 @@ groups:
 {% if "Extensions" in test_sections %}
 - name: Extensions
   jobs:
-{% if "centos6" in os_types %}
-  - icw_extensions_gpcloud_centos6
+{% if "centos7" in os_types %}
+  - icw_extensions_gpcloud_centos7
 {% endif %}
 
 {% endif %}
 {% if "Interconnect" in test_sections %}
 ## ======================================================================
 
-{% if "centos6" in os_types %}
+{% if "centos7" in os_types %}
 - name: Interconnect
   jobs:
-  - compile_gpdb_centos6
+  - compile_gpdb_centos7
   - interconnect
 {% endif %}
 
@@ -366,8 +333,6 @@ groups:
 - name: ResourceGroups
   jobs:
   - gate_resource_groups_start
-  - resource_group_centos6
-  - compile_gpdb_centos6
 {% if "centos7" in os_types %}
   - resource_group_centos7
   - compile_gpdb_centos7
@@ -392,8 +357,8 @@ groups:
 {% endfor %}
   - check_centos
   - combine_cli_coverage
-  - compile_gpdb_centos6
-{% if "centos6" in os_types and "ICW" in test_sections %}
+  - compile_gpdb_centos7
+{% if "centos7" in os_types and "ICW" in test_sections %}
   - gpexpand
   - pg_upgrade
 {% endif %}
@@ -404,12 +369,8 @@ groups:
 - name: AdvancedAnalytics
   jobs:
   - gate_advanced_analytics_start
-{% if "centos6" in os_types or "centos7" in os_types%}
+{% if "centos7" in os_types%}
   - madlib_build_gppkg
-{% endif %}
-{% if "centos6" in os_types %}
-  - MADlib_Test_orca_centos6
-  - MADlib_Test_planner_centos6
 {% endif %}
 {% if "centos7" in os_types %}
   - MADlib_Test_orca_centos7
@@ -452,7 +413,7 @@ resources:
     private_key: {{ccp-git-key}}
     uri: {{ccp-git-remote}}
 
-{% if "centos6" in os_types or
+{% if "centos7" in os_types or
       "ICW"     in test_sections %}
 - name: terraform
   <<: *terraform_cluster
@@ -477,13 +438,13 @@ resources:
 
 {% endif %}
 {% endif %}
-{% if "centos6" in os_types and "ICW" in test_sections %}
-- name: icw_planner_centos6_dump
+{% if "centos7" in os_types and "ICW" in test_sections %}
+- name: icw_planner_centos7_dump
   type: gcs
   source:
     bucket: ((gcs-bucket-intermediates))
     json_key: ((concourse-gcs-resources-service-account-key))
-    versioned_file: ((pipeline-name))/icw_planner_centos6_dump/dump.sql.xz
+    versioned_file: ((pipeline-name))/icw_planner_centos7_dump/dump.sql.xz
 
 {% endif %}
 - name: gpdb_src
@@ -502,34 +463,6 @@ resources:
     uri: https://github.com/bats-core/bats-core.git
     tag_filter: v1.1.0
 
-{% if "centos6" in os_types %}
-- name: gpdb_src_binary_swap
-  type: git
-  source:
-    branch: {{gpdb-binary-swap-git-tag}}
-    uri: {{gpdb-binary-swap-git-remote}}
-    ignore_paths:
-    - gpdb-doc/*
-    - README*
-
-{% endif %}
-
-{% if "centos6" in os_types %}
-- name: libquicklz-centos6
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: gp-internal-artifacts/centos6/libquicklz-(1\.5\.0-.*)-1.el6.x86_64.rpm
-
-- name: libquicklz-devel-centos6
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: gp-internal-artifacts/centos6/libquicklz-devel-(1\.5\.0-.*)-1.el6.x86_64.rpm
-
-{% endif %}
 {% if "centos7" in os_types %}
 - name: libquicklz-centos7
   type: gcs
@@ -554,163 +487,47 @@ resources:
     json_key: ((concourse-gcs-resources-service-account-key))
     regexp: gp-internal-artifacts/ubuntu18.04/libquicklz-dev_(1\.5\.0-.*)-1_amd64.deb
 {% endif %}
-{% if "sles12" in os_types %}
-- name: libquicklz-sles12
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: gp-internal-artifacts/sles12/libquicklz-(1\.5\.0-.*)-1.x86_64.rpm
-
-- name: libquicklz-devel-sles12
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: gp-internal-artifacts/sles12/libquicklz-devel-(1\.5\.0-.*)-1.x86_64.rpm
-
-{% endif %}
-{% if "centos6" in os_types %}
-- name: python-centos6
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: gp-internal-artifacts/centos6/python-(2\.7\.12-.*).tar.gz
-
-{% endif %}
 {% if "centos7" in os_types %}
-- name: python-centos7
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: gp-internal-artifacts/centos7/python-(2\.7\.12-.*).tar.gz
-
-{% endif %}
-{% if "ubuntu18.04" in os_types %}
-- name: python-ubuntu18.04
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: gp-internal-artifacts/ubuntu18.04/python-(2\.7\.12-.*).tar.gz
-
-{% endif %}
-{% if "sles12" in os_types %}
-- name: python-sles12
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: gp-internal-artifacts/sles12/python-(2\.7\.12-.*).tar.gz
-
-{% endif %}
-{% if "centos6" in os_types %}
-- name: gpdb6-centos6-build
+- name: gpdb7-centos7-build
   type: docker-image
   source:
-    repository: pivotaldata/gpdb6-centos6-build
-    tag: latest
-
-- name: gpdb6-centos6-test
-  type: docker-image
-  source:
-    repository: pivotaldata/gpdb6-centos6-test
-    tag: latest
-{% endif %}
-{% if "centos7" in os_types %}
-- name: gpdb6-centos7-build
-  type: docker-image
-  source:
-    repository: pivotaldata/gpdb6-centos7-build
+    repository: pivotaldata/gpdb7-centos7-build
     tag: latest
 
 {% endif %}
 {% if "centos7" in os_types or "CLI" in test_sections %}
-- name: gpdb6-centos7-test
+- name: gpdb7-centos7-test
   type: docker-image
   source:
-    repository: pivotaldata/gpdb6-centos7-test
+    repository: pivotaldata/gpdb7-centos7-test
     tag: latest
 
 {% endif %}
 
-- name: gpdb6-ubuntu18.04-build
+- name: gpdb7-ubuntu18.04-build
   type: docker-image
   source:
-    repository: pivotaldata/gpdb6-ubuntu18.04-build
+    repository: pivotaldata/gpdb7-ubuntu18.04-build
     tag: latest
 
 {% if "ubuntu18.04" in os_types %}
-- name: gpdb6-ubuntu18.04-test
+- name: gpdb7-ubuntu18.04-test
   type: docker-image
   source:
-    repository: pivotaldata/gpdb6-ubuntu18.04-test
+    repository: pivotaldata/gpdb7-ubuntu18.04-test
     tag: latest
 
 {% endif %}
-
-- name: gpdb6-sles12-build
-  type: docker-image
-  source:
-    repository: pivotaldata/gpdb6-sles12-build
-    tag: latest
-    username: ((docker_username))
-    password: ((docker_password))
-
-{% if "sles12" in os_types %}
-- name: gpdb6-sles12-test
-  type: docker-image
-  source:
-    repository: pivotaldata/gpdb6-sles12-test
-    tag: latest
-    username: ((docker_username))
-    password: ((docker_password))
-
-{% endif %}
-
-{% if "centos6" in os_types %}
-- name: bin_gpdb_centos6
-  type: gcs
-  source:
-    bucket: ((gcs-bucket-intermediates))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    versioned_file: ((pipeline-name))/bin_gpdb_centos6/bin_gpdb.tar.gz
-
-- name: bin_gpdb_clients_centos6
-  type: gcs
-  source:
-    bucket: ((gcs-bucket-intermediates))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    versioned_file: ((pipeline-name))/bin_gpdb_clients_centos6/bin_gpdb_clients.tar.gz
 
 {% if pipeline_configuration == "prod" %}
-- name: server-build-centos6
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: server/published/master/server-build-(.*)-rhel6_x86_64((rc-build-type-gcs)).tar.gz
-{% endif %}
-
-{% endif %}
-{% if pipeline_configuration == "prod" %}
-- name: bin_gpdb_centos6_icw_green
+- name: bin_gpdb_centos7_icw_green
   type: s3
   source:
     access_key_id: {{bucket-access-key-id}}
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    versioned_file: bin_gpdb_centos6/gpdb_branch_master/icw_green/bin_gpdb.tar.gz
-
-- name: bin_gpdb_centos6_rc
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: server/published/master/server-rc-(.*)-rhel6_x86_64((rc-build-type-gcs)).tar.gz
+    versioned_file: bin_gpdb_centos7/gpdb_branch_master/icw_green/bin_gpdb.tar.gz
 
 - name: bin_gpdb_centos7_rc
   type: gcs
@@ -726,12 +543,6 @@ resources:
     json_key: ((concourse-gcs-resources-service-account-key))
     regexp: server/published/master/server-rc-(.*)-ubuntu18.04_x86_64((rc-build-type-gcs)).tar.gz
 
-- name: bin_gpdb_clients_centos6_rc
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: clients/published/master/clients-rc-(.*)-rhel6_x86_64((rc-build-type-gcs)).tar.gz
 
 - name: bin_gpdb_clients_centos7_rc
   type: gcs
@@ -746,15 +557,6 @@ resources:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
     regexp: clients/published/master/clients-rc-(.*)-ubuntu18.04_x86_64((rc-build-type-gcs)).tar.gz
-
-{% endif %}
-{% if "centos6" in os_types %}
-- name: binary_swap_gpdb_centos6
-  type: gcs
-  source:
-    bucket: ((gcs-bucket-intermediates))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    versioned_file: ((pipeline-name))/binary_swap_gpdb_centos6/bin_gpdb.tar.gz
 
 {% endif %}
 {% if "centos7" in os_types %}
@@ -808,22 +610,6 @@ resources:
 
 {% endif %}
 
-{% if "sles12" in os_types %}
-- name: bin_gpdb_sles12
-  type: gcs
-  source:
-    bucket: ((gcs-bucket-intermediates))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    versioned_file: ((pipeline-name))/bin_gpdb_sles12/bin_gpdb.tar.gz
-
-- name: bin_gpdb_clients_sles12
-  type: gcs
-  source:
-    bucket: ((gcs-bucket-intermediates))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    versioned_file: ((pipeline-name))/bin_gpdb_clients_sles12/bin_gpdb_clients.tar.gz
-
-{% endif %}
 {% if "win" in os_types %}
 - name: terraform_windows
   type: terraform
@@ -878,7 +664,7 @@ resources:
   source:
     bucket: ((gcs-bucket-intermediates))
     json_key: ((concourse-gcs-resources-service-account-key))
-    versioned_file: ((pipeline-name))/madlib_gppkg/madlib-master-gp6-rhel6-x86_64.gppkg
+    versioned_file: ((pipeline-name))/madlib_gppkg/madlib-master-gp7-rhel7-x86_64.gppkg
 
 - name: cmake_tar
   type: gcs
@@ -945,9 +731,9 @@ jobs:
         - get: bats_core_src
         - get: gpdb_src
           trigger: true
-        - get: gpdb6-ubuntu18.04-build
+        - get: gpdb7-ubuntu18.04-build
     - task: run_unit_tests
-      image: gpdb6-ubuntu18.04-build
+      image: gpdb7-ubuntu18.04-build
       config:
         inputs:
           - name: bats_core_src
@@ -976,41 +762,6 @@ jobs:
 ##                      |_|
 ## ======================================================================
 
-{% if "centos6" in os_types %}
-- name: compile_gpdb_centos6
-  plan:
-  - in_parallel:
-      steps:
-      - get: gpdb_src
-        trigger: ((gpdb_src-trigger-flag))
-      - get: reduced-frequency-trigger
-        trigger: ((reduced-frequency-trigger-flag))
-      - get: gpdb6-centos6-build
-      - get: libquicklz-installer
-        resource: libquicklz-centos6
-      - get: libquicklz-devel-installer
-        resource: libquicklz-devel-centos6
-      - get: python-tarball
-        resource: python-centos6
-  - task: compile_gpdb
-    file: gpdb_src/concourse/tasks/compile_gpdb.yml
-    image: gpdb6-centos6-build
-    params:
-      CONFIGURE_FLAGS: {{configure_flags_with_extensions}}
-      TARGET_OS: centos
-      TARGET_OS_VERSION: 6
-      BLD_TARGETS: "clients"
-      RC_BUILD_TYPE_GCS: ((rc-build-type-gcs))
-  - in_parallel:
-      steps:
-      - put: bin_gpdb_centos6
-        params:
-          file: gpdb_artifacts/bin_gpdb.tar.gz
-      - put: bin_gpdb_clients_centos6
-        params:
-          file: gpdb_artifacts/gpdb-clients-centos6.tar.gz
-
-{% endif %}
 {% if "centos7" in os_types %}
 - name: compile_gpdb_centos7
   plan:
@@ -1020,15 +771,13 @@ jobs:
         trigger: ((reduced-frequency-trigger-flag))
       - get: gpdb_src
         trigger: ((gpdb_src-trigger-flag))
-      - get: gpdb6-centos7-build
+      - get: gpdb7-centos7-build
       - get: libquicklz-installer
         resource: libquicklz-centos7
       - get: libquicklz-devel-installer
         resource: libquicklz-devel-centos7
-      - get: python-tarball
-        resource: python-centos7
   - task: compile_gpdb
-    image: gpdb6-centos7-build
+    image: gpdb7-centos7-build
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
     params:
       CONFIGURE_FLAGS: {{configure_flags_with_extensions}}
@@ -1046,41 +795,6 @@ jobs:
           file: gpdb_artifacts/gpdb-clients-centos7.tar.gz
 
 {% endif %}
-{% if "centos6" in os_types %}
-- name: compile_gpdb_binary_swap_centos6
-  plan:
-  # This acts like a cache as this job will only be run once to get a
-  # binary to use for our binary swap compatibility tests. Setting a new
-  # tag or branch for the gpdb_src_binary_swap resource via set-pipeline
-  # will replace the cached binary.
-  - in_parallel:
-      steps:
-      - get: gpdb_src
-        resource: gpdb_src_binary_swap
-        trigger: true
-      - get: gpdb6-centos6-build
-      - get: libquicklz-installer
-        resource: libquicklz-centos6
-      - get: libquicklz-devel-installer
-        resource: libquicklz-devel-centos6
-      - get: python-tarball
-        resource: python-centos6
-  - task: compile_gpdb
-    file: gpdb_src/concourse/tasks/compile_gpdb.yml
-    image: gpdb6-centos6-build
-    params:
-      CONFIGURE_FLAGS: {{configure_flags_with_extensions}}
-      TARGET_OS: centos
-      TARGET_OS_VERSION: 6
-      BLD_TARGETS: "clients loaders"
-      RC_BUILD_TYPE_GCS: ((rc-build-type-gcs))
-  - in_parallel:
-      steps:
-      - put: binary_swap_gpdb_centos6
-        params:
-          file: gpdb_artifacts/bin_gpdb.tar.gz
-
-{% endif %}
 {% if "ubuntu18.04" in os_types %}
 - name: compile_gpdb_ubuntu18.04
   plan:
@@ -1090,13 +804,11 @@ jobs:
           trigger: ((reduced-frequency-trigger-flag))
         - get: gpdb_src
           trigger: ((gpdb_src-trigger-flag))
-        - get: gpdb6-ubuntu18.04-build
+        - get: gpdb7-ubuntu18.04-build
         - get: libquicklz-installer
           resource: libquicklz-ubuntu18.04
-        - get: python-tarball
-          resource: python-ubuntu18.04
     - task: compile_gpdb
-      image: gpdb6-ubuntu18.04-build
+      image: gpdb7-ubuntu18.04-build
       file: gpdb_src/concourse/tasks/compile_gpdb.yml
       params:
         CONFIGURE_FLAGS: {{configure_flags_with_extensions}}
@@ -1114,40 +826,6 @@ jobs:
             file: gpdb_artifacts/gpdb-clients-ubuntu18.04.tar.gz
 
 {% endif %}
-{% if "sles12" in os_types %}
-- name: compile_gpdb_sles12
-  plan:
-    - in_parallel:
-        steps:
-        - get: reduced-frequency-trigger
-          trigger: ((reduced-frequency-trigger-flag))
-        - get: gpdb_src
-          trigger: ((gpdb_src-trigger-flag))
-        - get: gpdb6-sles12-build
-        - get: libquicklz-installer
-          resource: libquicklz-sles12
-        - get: libquicklz-devel-installer
-          resource: libquicklz-devel-sles12
-        - get: python-tarball
-          resource: python-sles12
-    - task: compile_gpdb
-      image: gpdb6-sles12-build
-      file: gpdb_src/concourse/tasks/compile_gpdb.yml
-      params:
-        CONFIGURE_FLAGS: {{configure_flags_with_extensions}}
-        TARGET_OS: sles
-        TARGET_OS_VERSION: "12"
-        BLD_TARGETS: "clients"
-        RC_BUILD_TYPE_GCS: ((rc-build-type-gcs))
-    - in_parallel:
-        steps:
-        - put: bin_gpdb_sles12
-          params:
-            file: gpdb_artifacts/bin_gpdb.tar.gz
-        - put: bin_gpdb_clients_sles12
-          params:
-            file: gpdb_artifacts/gpdb-clients-sles12.tar.gz
-{% endif %}
 {% if "win" in os_types %}
 - name: compile_gpdb_clients_windows
   serial: true
@@ -1156,10 +834,10 @@ jobs:
       steps:
       - get: gpdb_src
         trigger: true
-      - get: gpdb6-centos6-build
+      - get: gpdb7-centos7-build
   - task: compile_gpdb_windows_remote
     file: gpdb_src/concourse/tasks/compile_gpdb_remote_windows.yml
-    image: gpdb6-centos6-build
+    image: gpdb7-centos7-build
     params:
       REMOTE_HOST: {{remote_win_host_build}}
       REMOTE_PORT: {{remote_win_port_build}}
@@ -1177,7 +855,7 @@ jobs:
       - get: gpdb_src
         trigger: true
         passed: [compile_gpdb_centos7]
-      - get: gpdb6-centos7-test
+      - get: gpdb7-centos7-test
       - get: bin_gpdb_clients_windows
         passed: [compile_gpdb_clients_windows]
       - get: bin_gpdb
@@ -1190,7 +868,7 @@ jobs:
       terraform_source: ccp_src/gpdb_windows_client_test/
   - task: run_tests
     file: gpdb_src/concourse/tasks/windows_remote_test.yml
-    image: gpdb6-centos7-test
+    image: gpdb7-centos7-test
     params:
       REMOTE_PORT: {{remote_win_port_test}}
       REMOTE_USER: {{remote_win_user_test}}
@@ -1215,74 +893,6 @@ jobs:
 ##  | | |___  \ V  V /
 ## |___\____|  \_/\_/
 ## ======================================================================
-
-{% if "centos6" in os_types %}
-- name: icw_planner_centos6
-  plan:
-  - in_parallel:
-      steps:
-      - get: gpdb_src
-        passed: [compile_gpdb_centos6]
-      - get: bin_gpdb
-        passed: [compile_gpdb_centos6]
-        resource: bin_gpdb_centos6
-        trigger: [[ test_trigger ]]
-      - get: binary_swap_gpdb
-        passed: [compile_gpdb_binary_swap_centos6]
-        resource: binary_swap_gpdb_centos6
-        trigger: [[ test_trigger ]]
-      - get: gpdb6-centos6-test
-  - task: ic_gpdb
-    file: gpdb_src/concourse/tasks/ic_gpdb_binary_swap.yml
-    image: gpdb6-centos6-test
-    params:
-      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
-      TEST_OS: centos
-      TEST_BINARY_SWAP: {{test-binary-swap}}
-      CONFIGURE_FLAGS: {{configure_flags}}
-      DUMP_DB: "true"
-  - put: icw_planner_centos6_dump
-    params:
-      file: sqldump/dump.sql.xz
-
-- name: icw_gporca_centos6
-  plan:
-  - in_parallel:
-      steps:
-      - get: gpdb_src
-        passed: [compile_gpdb_centos6]
-      - get: bin_gpdb
-        resource: bin_gpdb_centos6
-        passed: [compile_gpdb_centos6]
-        trigger: [[ test_trigger ]]
-      - get: gpdb6-centos6-test
-  - task: ic_gpdb
-    file: gpdb_src/concourse/tasks/ic_gpdb.yml
-    image: gpdb6-centos6-test
-    params:
-      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
-      TEST_OS: centos
-      CONFIGURE_FLAGS: {{configure_flags}}
-
-- name: icw_gporca_ictcp_centos6
-  plan:
-  - in_parallel:
-      steps:
-      - get: gpdb_src
-        passed: [compile_gpdb_centos6]
-      - get: bin_gpdb
-        resource: bin_gpdb_centos6
-        passed: [compile_gpdb_centos6]
-        trigger: [[ test_trigger ]]
-      - get: gpdb6-centos6-test
-  - task: ic_gpdb
-    file: gpdb_src/concourse/tasks/ic_gpdb.yml
-    image: gpdb6-centos6-test
-    params:
-      MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=tcp -c optimizer=on' installcheck-world
-      TEST_OS: centos
-
-{% endif %}
 {% if "centos7" in os_types %}
 - name: icw_gporca_centos7
   plan:
@@ -1294,10 +904,10 @@ jobs:
         resource: bin_gpdb_centos7
         passed: [compile_gpdb_centos7]
         trigger: [[ test_trigger ]]
-      - get: gpdb6-centos7-test
+      - get: gpdb7-centos7-test
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
-    image: gpdb6-centos7-test
+    image: gpdb7-centos7-test
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
       TEST_OS: centos
@@ -1313,14 +923,37 @@ jobs:
         passed: [compile_gpdb_centos7]
         resource: bin_gpdb_centos7
         trigger: [[ test_trigger ]]
-      - get: gpdb6-centos7-test
+      - get: gpdb7-centos7-test
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
-    image: gpdb6-centos7-test
+    image: gpdb7-centos7-test
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
       TEST_OS: centos
+      TEST_BINARY_SWAP: {{test-binary-swap}}
       CONFIGURE_FLAGS: {{configure_flags}}
+      DUMP_DB: "true"
+  - put: icw_planner_centos7_dump
+    params:
+      file: sqldump/dump.sql.xz
+
+- name: icw_gporca_ictcp_centos7
+  plan:
+  - in_parallel:
+      steps:
+      - get: gpdb_src
+        passed: [compile_gpdb_centos7]
+      - get: bin_gpdb
+        resource: bin_gpdb_centos7
+        passed: [compile_gpdb_centos7]
+        trigger: [[ test_trigger ]]
+      - get: gpdb7-centos7-test
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: gpdb7-centos7-test
+    params:
+      MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=tcp -c optimizer=on' installcheck-world
+      TEST_OS: centos
 
 {% endif %}
 {% if "ubuntu18.04" in os_types %}
@@ -1334,10 +967,10 @@ jobs:
           resource: bin_gpdb_ubuntu18.04
           passed: [compile_gpdb_ubuntu18.04]
           trigger: [[ test_trigger ]]
-        - get: gpdb6-ubuntu18.04-test
+        - get: gpdb7-ubuntu18.04-test
     - task: ic_gpdb
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
-      image: gpdb6-ubuntu18.04-test
+      image: gpdb7-ubuntu18.04-test
       params:
         MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
         TEST_OS: ubuntu
@@ -1353,53 +986,13 @@ jobs:
           passed: [compile_gpdb_ubuntu18.04]
           resource: bin_gpdb_ubuntu18.04
           trigger: [[ test_trigger ]]
-        - get: gpdb6-ubuntu18.04-test
+        - get: gpdb7-ubuntu18.04-test
     - task: ic_gpdb
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
-      image: gpdb6-ubuntu18.04-test
+      image: gpdb7-ubuntu18.04-test
       params:
         MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
         TEST_OS: ubuntu
-        CONFIGURE_FLAGS: {{configure_flags}}
-
-{% endif %}
-{% if "sles12" in os_types %}
-- name: icw_gporca_sles12
-  plan:
-    - in_parallel:
-        steps:
-        - get: gpdb_src
-          passed: [compile_gpdb_sles12]
-        - get: bin_gpdb
-          resource: bin_gpdb_sles12
-          passed: [compile_gpdb_sles12]
-          trigger: [[ test_trigger ]]
-        - get: gpdb6-sles12-test
-    - task: ic_gpdb
-      file: gpdb_src/concourse/tasks/ic_gpdb.yml
-      image: gpdb6-sles12-test
-      params:
-        MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
-        TEST_OS: sles
-        CONFIGURE_FLAGS: {{configure_flags}}
-
-- name: icw_planner_sles12
-  plan:
-    - in_parallel:
-        steps:
-        - get: gpdb_src
-          passed: [compile_gpdb_sles12]
-        - get: bin_gpdb
-          passed: [compile_gpdb_sles12]
-          resource: bin_gpdb_sles12
-          trigger: [[ test_trigger ]]
-        - get: gpdb6-sles12-test
-    - task: ic_gpdb
-      file: gpdb_src/concourse/tasks/ic_gpdb.yml
-      image: gpdb6-sles12-test
-      params:
-        MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
-        TEST_OS: sles
         CONFIGURE_FLAGS: {{configure_flags}}
 
 {% endif %}
@@ -1407,39 +1000,34 @@ jobs:
   plan:
   - in_parallel:
       steps:
-{% if "centos6" in os_types %}
-      - get: bin_gpdb_centos6
+{% if "centos7" in os_types %}
+      - get: bin_gpdb_centos7
         passed:
-        - icw_gporca_centos6
-        - icw_planner_centos6
-        - icw_gporca_ictcp_centos6
+        - icw_gporca_centos7
+        - icw_planner_centos7
+        - icw_gporca_ictcp_centos7
 {% if "Extensions" in test_sections %}
-        - icw_extensions_gpcloud_centos6
+        - icw_extensions_gpcloud_centos7
 {% endif %}
-{% endif %}
-{% if "centos6" in os_types %}
-      - get: icw_planner_centos6_dump
+      - get: icw_planner_centos7_dump
         passed:
-        - icw_planner_centos6
+        - icw_planner_centos7
 {% endif %}
       - get: gpdb_src
         passed:
-{% if "centos6" in os_types %}
-        - icw_gporca_centos6
-        - icw_planner_centos6
-        - icw_gporca_ictcp_centos6
-{% if "Extensions" in test_sections %}
-        - icw_extensions_gpcloud_centos6
-{% endif %}
-{% endif %}
 {% if "centos7" in os_types %}
         - icw_gporca_centos7
+        - icw_planner_centos7
+        - icw_gporca_ictcp_centos7
+{% if "Extensions" in test_sections %}
+        - icw_extensions_gpcloud_centos7
+{% endif %}
 {% endif %}
         trigger: true
-{% if pipeline_configuration == "prod" and "centos6" in os_types %}
-  - put: bin_gpdb_centos6_icw_green
+{% if pipeline_configuration == "prod" and "centos7" in os_types %}
+  - put: bin_gpdb_centos7_icw_green
     params:
-      file: bin_gpdb_centos6/bin_gpdb.tar.gz
+      file: bin_gpdb_centos7/bin_gpdb.tar.gz
 {% endif %}
 
 {% endif %}
@@ -1451,21 +1039,21 @@ jobs:
 ##  | || |\  | | | | |___|  _ <| |__| |_| | |\  | |\  | |__| |___  | |
 ## |___|_| \_| |_| |_____|_| \_\\____\___/|_| \_|_| \_|_____\____| |_|
 ## ======================================================================
-{% if "centos6" in os_types %}
+{% if "centos7" in os_types %}
 - name: interconnect
   plan:
   - in_parallel:
       steps:
       - get: gpdb_src
-        passed: [compile_gpdb_centos6]
+        passed: [compile_gpdb_centos7]
       - get: bin_gpdb
-        passed: [compile_gpdb_centos6]
-        resource: bin_gpdb_centos6
+        passed: [compile_gpdb_centos7]
+        resource: bin_gpdb_centos7
         trigger: [[ test_trigger ]]
-      - get: gpdb6-centos6-test
+      - get: gpdb7-centos7-test
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
-    image: gpdb6-centos6-test
+    image: gpdb7-centos7-test
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off'
         BUILD_TYPE=((rc-build-type)) -C src/test/regress installcheck-icudp
@@ -1489,63 +1077,14 @@ jobs:
       steps:
       - get: gpdb_src
         passed:
-        - compile_gpdb_centos6
 {% if "centos7" in os_types %}
         - compile_gpdb_centos7
-{% endif %}
         trigger: true
-      - get: bin_gpdb_centos6
-        passed:
-        - compile_gpdb_centos6
-{% if "centos7" in os_types %}
       - get: bin_gpdb_centos7
         passed:
         - compile_gpdb_centos7
 {% endif %}
-{% if "centos6" in os_types or "centos7" in os_types %}
-      - get: binary_swap_gpdb
-        passed: [compile_gpdb_binary_swap_centos6]
-        resource: binary_swap_gpdb_centos6
-        trigger: [[ test_trigger ]]
-{% endif %}
 
-- name: resource_group_centos6
-  plan:
-  - in_parallel:
-      steps:
-      - get: gpdb_src
-        passed: [gate_resource_groups_start]
-      - get: gpdb_binary
-        resource: bin_gpdb_centos6
-        passed: [gate_resource_groups_start]
-        trigger: [[ test_trigger ]]
-      - get: ccp_src
-      - get: ccp-image
-      - get: binary_swap_gpdb
-        passed: [gate_resource_groups_start]
-        resource: binary_swap_gpdb_centos6
-        trigger: [[ test_trigger ]]
-  - put: terraform
-    params:
-      <<: *ccp_default_params
-      vars:
-        <<: *ccp_default_vars
-        instance_type: n1-standard-2
-  - task: gen_cluster
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-  - task: gpinitsystem
-    file: ccp_src/ci/tasks/gpinitsystem.yml
-  - task: run_tests
-    file: gpdb_src/concourse/tasks/ic_gpdb_resgroup.yml
-    image: ccp-image
-    params:
-      TEST_OS: centos6
-    on_success:
-      <<: *ccp_destroy
-  ensure:
-    <<: *set_failed
 
 {% if "centos7" in os_types %}
 - name: resource_group_centos7
@@ -1560,10 +1099,6 @@ jobs:
         trigger: [[ test_trigger ]]
       - get: ccp_src
       - get: ccp-image
-      - get: binary_swap_gpdb
-        passed: [gate_resource_groups_start]
-        resource: binary_swap_gpdb_centos6
-        trigger: [[ test_trigger ]]
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -1607,11 +1142,11 @@ jobs:
       steps:
       - get: gpdb_src
         passed:
-        - compile_gpdb_centos6
+        - compile_gpdb_centos7
         trigger: true
-      - get: bin_gpdb_centos6
+      - get: bin_gpdb_centos7
         passed:
-        - compile_gpdb_centos6
+        - compile_gpdb_centos7
 
 - name: check_centos
   plan:
@@ -1620,19 +1155,18 @@ jobs:
       - get: gpdb_src
         passed: [gate_cli_start]
       - get: bin_gpdb
-        resource: bin_gpdb_centos6
+        resource: bin_gpdb_centos7
         passed: [gate_cli_start]
         trigger: [[ test_trigger ]]
-      - get: gpdb6-centos6-test
-      - get: gpdb6-centos7-test
+      - get: gpdb7-centos7-test
   - task: check_centos
     file: gpdb_src/concourse/tasks/gpMgmt_check_gpdb.yml
-    image: gpdb6-centos6-test
+    image: gpdb7-centos7-test
     params:
       TEST_OS: centos
       TEST_NAME: gpmgmt_unit_tests
   - task: publish_coverage
-    image: gpdb6-centos7-test
+    image: gpdb7-centos7-test
     config:
       platform: linux
       inputs:
@@ -1654,14 +1188,13 @@ jobs:
             submodules:
               - gpMgmt/bin/pythonSrc/ext
           passed: [gate_cli_start]
-        - get: gpdb6-centos6-test
-        - get: gpdb6-centos7-test
+        - get: gpdb7-centos7-test
     - in_parallel:
         steps:
         {% if test.use_concourse_cluster %}
         - do:
           - get: gpdb_binary
-            resource: bin_gpdb_centos6
+            resource: bin_gpdb_centos7
             passed: [gate_cli_start]
             trigger: [[ test_trigger ]]
           - get: ccp_src
@@ -1672,6 +1205,7 @@ jobs:
               vars:
                 <<: *ccp_default_vars
                 instance_type: n1-standard-2
+                PLATFORM: centos7
                 [[ test.additional_ccp_vars ]]
           - task: gen_cluster
             file: ccp_src/ci/tasks/gen_cluster.yml
@@ -1693,7 +1227,7 @@ jobs:
             output_mapping:
               coverage: ccp-coverage
           - task: publish_ccp_coverage
-            image: gpdb6-centos7-test
+            image: gpdb7-centos7-test
             config:
               platform: linux
               inputs:
@@ -1707,12 +1241,12 @@ jobs:
         {% endif %}
         - do:
           - get: bin_gpdb
-            resource: bin_gpdb_centos6
+            resource: bin_gpdb_centos7
             passed: [gate_cli_start]
             trigger: [[ test_trigger ]]
           - task: [[ test.name ]]_demo_cluster_tests
             file: gpdb_src/concourse/tasks/behave_gpdb.yml
-            image: gpdb6-centos6-test
+            image: gpdb7-centos7-test
             params:
               BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=~concourse_cluster,demo_cluster
               TEST_NAME: [[ test.name ]]
@@ -1720,7 +1254,7 @@ jobs:
             output_mapping:
               coverage: demo-coverage
           - task: publish_demo_coverage
-            image: gpdb6-centos7-test
+            image: gpdb7-centos7-test
             config:
               platform: linux
               inputs:
@@ -1742,7 +1276,7 @@ jobs:
             submodules:
               - gpMgmt/bin/pythonSrc/ext
           passed: [compile_gpdb_ubuntu18.04]
-        - get: gpdb6-ubuntu18.04-test
+        - get: gpdb7-ubuntu18.04-test
     - in_parallel:
         steps:
         {% if test.use_concourse_cluster %}
@@ -1769,7 +1303,7 @@ jobs:
             file: ccp_src/ci/tasks/gpinitsystem.yml
           - task: [[ test.name ]]_concourse_cluster_tests
             file: gpdb_src/concourse/tasks/run_behave_on_ccp_cluster.yml
-            image: gpdb6-ubuntu18.04-test
+            image: gpdb7-ubuntu18.04-test
             params:
               BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=concourse_cluster
               [[ test.env ]]
@@ -1785,7 +1319,7 @@ jobs:
             trigger: [[ test_trigger ]]
           - task: [[ test.name ]]_demo_cluster_tests
             file: gpdb_src/concourse/tasks/behave_gpdb.yml
-            image: gpdb6-ubuntu18.04-test
+            image: gpdb7-ubuntu18.04-test
             input_mapping:
               bin_gpdb: bin_gpdb_ubuntu18.04
             params:
@@ -1803,9 +1337,9 @@ jobs:
           submodules:
             - gpMgmt/bin/pythonSrc/ext
         passed: [gate_cli_start]
-      - get: gpdb6-centos6-test
+      - get: gpdb7-centos7-test
       - get: gpdb_binary
-        resource: bin_gpdb_centos6
+        resource: bin_gpdb_centos7
         passed: [gate_cli_start]
         trigger: [[ test_trigger ]]
       - get: ccp_src
@@ -1834,6 +1368,7 @@ jobs:
             vars:
               <<: *ccp_default_vars
               instance_type: n1-standard-2
+              PLATFORM: centos7
               subnet: dynamic
               cluster_suffix: '-1'
               custom_ssh_key: "/tmp/build/put/ssh-extra-key/key"
@@ -1851,6 +1386,7 @@ jobs:
             <<: *ccp_default_params
             vars:
               instance_type: n1-standard-2
+              PLATFORM: centos7
               subnet: toolshed
               cluster_suffix: '-2'
               custom_ssh_key: "/tmp/build/put/ssh-extra-key/key"
@@ -1934,11 +1470,11 @@ jobs:
   plan:
     - in_parallel:
         steps:
-        - get: gpdb6-centos7-test
+        - get: gpdb7-centos7-test
         - get: gpdb_src
           passed:
-            - compile_gpdb_centos6
-        - get: bin_gpdb_centos6
+            - compile_gpdb_centos7
+        - get: bin_gpdb_centos7
           trigger: true
           passed:
             - check_centos
@@ -1946,9 +1482,9 @@ jobs:
             - [[ test.name ]]
           {% endfor %}
     - task: combine_coverage
-      image: gpdb6-centos7-test
+      image: gpdb7-centos7-test
       input_mapping:
-        bin_gpdb: bin_gpdb_centos6
+        bin_gpdb: bin_gpdb_centos7
       config:
         platform: linux
         inputs:
@@ -1960,7 +1496,7 @@ jobs:
         params:
           JSON_KEY: ((concourse-gcs-resources-service-account-key))
 
-{% if "centos6" in os_types and "ICW" in test_sections %}
+{% if "centos7" in os_types and "ICW" in test_sections %}
 - name: pg_upgrade
   ensure:
     <<: *set_failed
@@ -1970,12 +1506,12 @@ jobs:
   - in_parallel:
       steps:
       - get: gpdb_src
-        passed: [icw_gporca_centos6]
-      - get: bin_gpdb_centos6
-        passed: [icw_gporca_centos6]
+        passed: [icw_gporca_centos7]
+      - get: bin_gpdb_centos7
+        passed: [icw_gporca_centos7]
         trigger: [[ test_trigger ]]
-      - get: icw_planner_centos6_dump
-        passed: [icw_planner_centos6]
+      - get: icw_planner_centos7_dump
+        passed: [icw_planner_centos7]
       - get: ccp_src
   - put: terraform
     params:
@@ -1983,14 +1519,15 @@ jobs:
       vars:
         <<: *ccp_default_vars
         instance_type: n1-standard-2
+        PLATFORM: centos7
         number_of_nodes: 2
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
-      PLATFORM: centos6
+      PLATFORM: centos7
     input_mapping:
-      gpdb_binary: bin_gpdb_centos6
+      gpdb_binary: bin_gpdb_centos7
   - task: set_gpinitsystem_config
     file: gpdb_src/concourse/tasks/set_gpinitsystem_config.yml
     params:
@@ -2000,7 +1537,7 @@ jobs:
   - task: test_upgrade
     file: gpdb_src/concourse/tasks/test_upgrade.yml
     input_mapping:
-      sqldump: icw_planner_centos6_dump
+      sqldump: icw_planner_centos7_dump
     params:
       NUMBER_OF_NODES: 2
 
@@ -2012,21 +1549,22 @@ jobs:
         params:
           submodules:
           - gpMgmt/bin/pythonSrc/ext
-        passed: [icw_gporca_centos6]
+        passed: [icw_gporca_centos7]
       - get: gpdb_binary
-        resource: bin_gpdb_centos6
-        passed: [icw_gporca_centos6]
+        resource: bin_gpdb_centos7
+        passed: [icw_gporca_centos7]
         trigger: [[ test_trigger ]]
       - get: ccp_src
       - get: ccp-image
-      - get: icw_planner_centos6_dump
-        passed: [icw_planner_centos6]
+      - get: icw_planner_centos7_dump
+        passed: [icw_planner_centos7]
   - put: terraform
     params:
       <<: *ccp_default_params
       vars:
         <<: *ccp_default_vars
         instance_type: n1-standard-4
+        PLATFORM: centos7
         number_of_nodes: 5
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
@@ -2035,7 +1573,7 @@ jobs:
   - task: pre_run_test_setup
     file: gpdb_src/concourse/tasks/setup_for_gpexpand_to_make_new_gpdb.yml
     image: ccp-image
-    input_mapping: {sqldump: icw_planner_centos6_dump}
+    input_mapping: {sqldump: icw_planner_centos7_dump}
   - task: run_tests
     file: gpdb_src/concourse/tasks/run_behave_on_ccp_cluster.yml
     params:
@@ -2064,25 +1602,17 @@ jobs:
       steps:
       - get: gpdb_src
         passed:
-{% if "centos6" in os_types %}
-        - compile_gpdb_centos6
-{% endif %}
 {% if "centos7" in os_types %}
         - compile_gpdb_centos7
 {% endif %}
         trigger: true
-{% if "centos6" in os_types %}
-      - get: bin_gpdb_centos6
-        passed:
-        - compile_gpdb_centos6
-{% endif %}
 {% if "centos7" in os_types %}
       - get: bin_gpdb_centos7
         passed:
         - compile_gpdb_centos7
 {% endif %}
 
-{% if "centos6" in os_types or "centos7" in os_types%}
+{% if "centos7" in os_types%}
 - name: madlib_build_gppkg
   plan:
   - in_parallel:
@@ -2095,70 +1625,21 @@ jobs:
       - get: boost
       - get: gpdb_src
         passed: [gate_advanced_analytics_start]
-      - get: bin_gpdb
-        resource: bin_gpdb_centos6
-        trigger: [[ test_trigger ]]
-        passed: [gate_advanced_analytics_start]
       - get: bin_gpdb_centos7
         passed: [gate_advanced_analytics_start]
-      - get: gpdb6-centos6-build
+      - get: gpdb7-centos7-build
   - task: build_madlib_gppkg_from_source
     file: madlib_ci/concourse/tasks/madlib_build_gppkg_from_source.yml
-    image: gpdb6-centos6-build
+    image: gpdb7-centos7-build
     params:
-      TEST_OS: centos6
-      DB_TYPE: gpdb6
+      TEST_OS: centos7
+      DB_TYPE: gpdb7
       CMAKE_BUILD_TYPE: Release
   - put: madlib_gppkg
     params:
       file: madlib_master_artifacts/madlib-*.gppkg
 {% endif %}
 
-{% if "centos6" in os_types %}
-- name: MADlib_Test_planner_centos6
-  plan:
-  - in_parallel:
-      steps:
-      - get: madlib_ci
-      - get: gpdb_src
-        passed: [madlib_build_gppkg]
-      - get: bin_gpdb
-        resource: bin_gpdb_centos6
-        passed: [madlib_build_gppkg]
-      - get: gpdb6-centos6-test
-      - get: madlib_gppkg
-        passed: [madlib_build_gppkg]
-        trigger: true
-  - task: MADlib_Test_gppkg
-    file: madlib_ci/concourse/tasks/madlib_test_gppkg.yml
-    image: gpdb6-centos6-test
-    params:
-      TEST_OS: centos
-      ORCA: "off"
-      DBVER: gpdb6-assert
-
-- name: MADlib_Test_orca_centos6
-  plan:
-  - in_parallel:
-      steps:
-      - get: madlib_ci
-      - get: gpdb_src
-        passed: [madlib_build_gppkg]
-      - get: bin_gpdb
-        resource: bin_gpdb_centos6
-        passed: [madlib_build_gppkg]
-      - get: gpdb6-centos6-test
-      - get: madlib_gppkg
-        passed: [madlib_build_gppkg]
-        trigger: true
-  - task: MADlib_Test_gppkg
-    file: madlib_ci/concourse/tasks/madlib_test_gppkg.yml
-    image: gpdb6-centos6-test
-    params:
-      TEST_OS: centos
-      ORCA: "on"
-      DBVER: gpdb6-assert
-{% endif %}
 
 {% if "centos7" in os_types %}
 - name: MADlib_Test_planner_centos7
@@ -2171,17 +1652,17 @@ jobs:
       - get: bin_gpdb
         resource: bin_gpdb_centos7
         passed: [madlib_build_gppkg]
-      - get: gpdb6-centos7-test
+      - get: gpdb7-centos7-test
       - get: madlib_gppkg
         passed: [madlib_build_gppkg]
         trigger: true
   - task: MADlib_Test_gppkg
     file: madlib_ci/concourse/tasks/madlib_test_gppkg.yml
-    image: gpdb6-centos7-test
+    image: gpdb7-centos7-test
     params:
       TEST_OS: centos
       ORCA: "off"
-      DBVER: gpdb6-assert
+      DBVER: gpdb7-assert
 
 - name: MADlib_Test_orca_centos7
   plan:
@@ -2193,17 +1674,17 @@ jobs:
       - get: bin_gpdb
         resource: bin_gpdb_centos7
         passed: [madlib_build_gppkg]
-      - get: gpdb6-centos7-test
+      - get: gpdb7-centos7-test
       - get: madlib_gppkg
         passed: [madlib_build_gppkg]
         trigger: true
   - task: MADlib_Test_gppkg
     file: madlib_ci/concourse/tasks/madlib_test_gppkg.yml
-    image: gpdb6-centos7-test
+    image: gpdb7-centos7-test
     params:
       TEST_OS: centos
       ORCA: "on"
-      DBVER: gpdb6-assert
+      DBVER: gpdb7-assert
 {% endif %}
 {% endif %}
 
@@ -2223,19 +1704,15 @@ jobs:
       - get: gpdb_src
         trigger: true
         passed:
-        - compile_gpdb_centos6
         - compile_gpdb_centos7
         - compile_gpdb_ubuntu18.04
-        - icw_planner_centos6
-        - icw_gporca_centos6
         - icw_gporca_centos7
         - icw_planner_centos7
+        - icw_gporca_ictcp_centos7
+        - icw_extensions_gpcloud_centos7
+        - resource_group_centos7
         - icw_gporca_ubuntu18.04
         - icw_planner_ubuntu18.04
-        - icw_gporca_ictcp_centos6
-        - icw_extensions_gpcloud_centos6
-        - resource_group_centos6
-        - resource_group_centos7
         - test_gpdb_clients_windows
         - cli_cross_subnet
 {% for test in CLI_BEHAVE_TESTS %}
@@ -2245,29 +1722,9 @@ jobs:
 {% endif %}
 {% endfor %}
  ##     - madlib_build_gppkg
- ##     - MADlib_Test_orca_centos6
- ##     - MADlib_Test_planner_centos6
  ##     - MADlib_Test_orca_centos7
  ##     - MADlib_Test_planner_centos7
         - pg_upgrade
-        - gpexpand
-        - check_centos
-        - interconnect
-      - get: bin_gpdb_centos6
-        trigger: true
-        passed:
-        - compile_gpdb_centos6
-        - icw_planner_centos6
-        - icw_gporca_centos6
-        - icw_gporca_ictcp_centos6
-        - icw_extensions_gpcloud_centos6
-        - resource_group_centos6
-        - cli_cross_subnet
-{% for test in CLI_BEHAVE_TESTS %}
-        - [[ test.name ]]
-{% endfor %}
- ##     - MADlib_Test_orca_centos6
- ##     - MADlib_Test_planner_centos6
         - gpexpand
         - check_centos
         - interconnect
@@ -2275,14 +1732,20 @@ jobs:
         trigger: true
         passed:
         - compile_gpdb_centos7
-        - icw_gporca_centos7
         - icw_planner_centos7
+        - icw_gporca_centos7
+        - icw_gporca_ictcp_centos7
+        - icw_extensions_gpcloud_centos7
         - resource_group_centos7
+        - cli_cross_subnet
+{% for test in CLI_BEHAVE_TESTS %}
+        - [[ test.name ]]
+{% endfor %}
  ##     - MADlib_Test_orca_centos7
  ##     - MADlib_Test_planner_centos7
-      - get: bin_gpdb_clients_centos6
-        passed:
-        - compile_gpdb_centos6
+        - gpexpand
+        - check_centos
+        - interconnect
       - get: bin_gpdb_clients_centos7
         passed:
         - compile_gpdb_centos7
@@ -2309,11 +1772,8 @@ jobs:
       - get: gpdb_src
         trigger: true
         passed:
-        - compile_gpdb_centos6
         - compile_gpdb_centos7
         - compile_gpdb_ubuntu18.04
-      - get: bin_gpdb_centos6
-        passed: [compile_gpdb_centos6]
       - get: bin_gpdb_centos7
         passed: [compile_gpdb_centos7]
       - get: bin_gpdb_ubuntu18.04
@@ -2324,9 +1784,6 @@ jobs:
       RC_BUILD_TYPE_GCS: ((rc-build-type-gcs))
   - in_parallel:
       steps:
-      - put: server-build-centos6
-        params:
-          file: output/server-build-*-rhel6*.tar.gz
       - put: server-build-centos7
         params:
           file: output/server-build-*-rhel7*.tar.gz
@@ -2341,16 +1798,10 @@ jobs:
       - get: gpdb_src
         trigger: true
         passed: [gate_release_candidate_start]
-      - get: bin_gpdb_centos6
-        trigger: true
-        passed: [gate_release_candidate_start]
       - get: bin_gpdb_centos7
         trigger: true
         passed: [gate_release_candidate_start]
       - get: bin_gpdb_ubuntu18.04
-        trigger: true
-        passed: [gate_release_candidate_start]
-      - get: bin_gpdb_clients_centos6
         trigger: true
         passed: [gate_release_candidate_start]
       - get: bin_gpdb_clients_centos7
@@ -2361,7 +1812,7 @@ jobs:
         passed: [gate_release_candidate_start]
       - get: bin_gpdb_clients_windows
         passed: [gate_release_candidate_start]
-      - get: gpdb6-centos6-build
+      - get: gpdb7-centos7-build
   - in_parallel:
       steps:
       - task: rename_rc_artifacts
@@ -2372,18 +1823,12 @@ jobs:
         file: gpdb_src/concourse/tasks/verify_gpdb_versions.yml
   - in_parallel:
       steps:
-      - put: bin_gpdb_centos6_rc
-        params:
-          file: "release_candidates/server-rc-*rhel6*.tar.gz"
       - put: bin_gpdb_centos7_rc
         params:
           file: "release_candidates/server-rc-*rhel7*.tar.gz"
       - put: bin_gpdb_ubuntu18.04_rc
         params:
           file: "release_candidates/server-rc-*ubuntu18.04*.tar.gz"
-      - put: bin_gpdb_clients_centos6_rc
-        params:
-          file: "release_candidates/clients-rc-*rhel6*.tar.gz"
       - put: bin_gpdb_clients_centos7_rc
         params:
           file: "release_candidates/clients-rc-*rhel7*.tar.gz"
@@ -2405,38 +1850,38 @@ jobs:
 ## ======================================================================
 
 {% if "Extensions" in test_sections %}
-{% if 'centos6' in os_types%}
-- name: icw_extensions_gpcloud_centos6
+{% if 'centos7' in os_types%}
+- name: icw_extensions_gpcloud_centos7
   plan:
   - in_parallel:
       steps:
       - get: gpdb_src
-        passed: [compile_gpdb_centos6]
+        passed: [compile_gpdb_centos7]
         trigger: [[ test_trigger ]]
-      - get: bin_gpdb_centos6
-        passed: [compile_gpdb_centos6]
-      - get: gpdb6-centos6-test
+      - get: bin_gpdb_centos7
+        passed: [compile_gpdb_centos7]
+      - get: gpdb7-centos7-test
   - in_parallel:
       steps:
       - task: unit_tests_gpcloud
         file: gpdb_src/concourse/tasks/unit_tests_gpcloud.yml
-        image: gpdb6-centos6-test
+        image: gpdb7-centos7-test
         params:
           TARGET_OS: centos
       - task: regression_tests_gpcloud_centos
         input_mapping:
-          bin_gpdb: bin_gpdb_centos6
+          bin_gpdb: bin_gpdb_centos7
         file: gpdb_src/concourse/tasks/regression_tests_gpcloud.yml
-        image: gpdb6-centos6-test
+        image: gpdb7-centos7-test
         params:
           gpcloud_access_key_id: {{gpcloud-access-key-id}}
           gpcloud_secret_access_key: {{gpcloud-secret-access-key}}
           TARGET_OS: centos
       - task: gpcheckcloud_tests_gpcloud_centos
         input_mapping:
-          bin_gpdb: bin_gpdb_centos6
+          bin_gpdb: bin_gpdb_centos7
         file: gpdb_src/concourse/tasks/gpcheckcloud_tests_gpcloud.yml
-        image: gpdb6-centos6-test
+        image: gpdb7-centos7-test
         params:
           gpcloud_access_key_id: {{gpcloud-access-key-id}}
           gpcloud_secret_access_key: {{gpcloud-secret-access-key}}

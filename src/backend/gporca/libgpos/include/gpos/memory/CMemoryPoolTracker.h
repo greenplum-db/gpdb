@@ -24,6 +24,7 @@
 #include "gpos/common/CList.h"
 #include "gpos/common/CStackDescriptor.h"
 #include "gpos/memory/CMemoryPool.h"
+#include "gpos/memory/CMemoryPoolStatistics.h"
 
 namespace gpos
 {

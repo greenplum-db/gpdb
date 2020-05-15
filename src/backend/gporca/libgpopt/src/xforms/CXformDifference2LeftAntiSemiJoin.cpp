@@ -14,7 +14,10 @@
 #include "gpopt/exception.h"
 #include "gpopt/xforms/CXformDifference2LeftAntiSemiJoin.h"
 #include "gpopt/xforms/CXformUtils.h"
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalLeftAntiSemiJoin.h"
+#include "gpopt/operators/CLogicalDifference.h"
+#include "gpopt/operators/CPatternMultiLeaf.h"
+#include "gpopt/operators/CScalarProjectList.h"
 
 using namespace gpopt;
 

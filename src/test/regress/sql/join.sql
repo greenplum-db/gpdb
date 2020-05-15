@@ -437,7 +437,6 @@ reset enable_hashjoin;
 -- a different check for handling of redundant sort keys in merge joins
 --
 set enable_mergejoin = true;
-set random_page_cost = 4;
 explain (costs off)
 select count(*) from
   (select * from tenk1 x order by x.thousand, x.twothousand, x.fivethous) x
@@ -451,7 +450,6 @@ select count(*) from
   (select * from tenk1 y order by y.unique2) y
   on x.thousand = y.unique2 and x.twothousand = y.hundred and x.fivethous = y.unique2;
 reset enable_mergejoin;
-reset random_page_cost;
 
 
 --
@@ -931,14 +929,12 @@ where thousand = (q1 + q2);
 --
 
 set enable_nestloop to true;
-set random_page_cost to 4;
 explain (costs off)
 select * from
   tenk1, int8_tbl a, int8_tbl b
 where thousand = a.q1 and tenthous = b.q1 and a.q2 = 1 and b.q2 = 2;
 
 reset enable_nestloop;
-reset random_page_cost;
 --
 -- test a corner case in which we shouldn't apply the star-schema optimization
 --

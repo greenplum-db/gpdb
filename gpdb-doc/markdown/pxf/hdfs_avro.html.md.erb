@@ -119,6 +119,7 @@ The `hdfs:avro` profile supports the following \<custom-option\>s:
 | MAPKEY_DELIM | The delimiter character(s) placed between the key and value of a map entry when PXF maps an Avro complex data type to a text column. The default is the colon `:` character. (Read)|
 | RECORDKEY_DELIM | The delimiter character(s) placed between the field name and value of a record entry when PXF maps an Avro complex data type to a text column. The default is the colon `:` character. (Read)|
 | SCHEMA | The absolute path to the Avro schema file on the segment host or on HDFS, or the relative path to the schema file on the segment host. (Read and Write)|
+| IGNORE_MISSING_PATH | A Boolean value that specifies the action to take when \<path-to-hdfs-file\> is missing or invalid. The default value is `false`, PXF returns an error in this situation. When the value is `true`, PXF ignores missing path errors and returns an empty fragment. |
 
 
 ## <a id="avro_example"></a>Example: Reading Avro Data

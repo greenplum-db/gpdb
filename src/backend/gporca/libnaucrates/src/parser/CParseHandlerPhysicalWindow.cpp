@@ -20,6 +20,7 @@
 #include "naucrates/dxl/parser/CParseHandlerUtils.h"
 
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/operators/CDXLPhysicalWindow.h"
 
 using namespace gpdxl;
 

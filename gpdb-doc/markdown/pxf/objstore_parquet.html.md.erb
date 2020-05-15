@@ -65,7 +65,7 @@ The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guid
 | \<path&#8209;to&#8209;dir\>    | The absolute path to the directory in the object store. |
 | PROFILE=\<objstore\>:parquet    | The `PROFILE` keyword must identify the specific object store. For example, `s3:parquet`. |
 | SERVER=\<server_name\>    | The named server configuration that PXF uses to access the data. |
-| \<custom&#8209;option\>=\<value\> | Parquet-specific custom write options are described in the [PXF HDFS Parquet documentation](hdfs_parquet.html#customopts). |
+| \<custom&#8209;option\>=\<value\> | Parquet-specific custom options are described in the [PXF HDFS Parquet documentation](hdfs_parquet.html#customopts). |
 | FORMAT 'CUSTOM' | Use `FORMAT` '`CUSTOM`' with `(FORMATTER='pxfwritable_export')` (write) or `(FORMATTER='pxfwritable_import')` (read). |
 | DISTRIBUTED BY    | If you want to load data from an existing Greenplum Database table into the writable external table, consider specifying the same distribution policy or \<column_name\> on both tables. Doing so will avoid extra motion of data between segments on the load operation. |
 

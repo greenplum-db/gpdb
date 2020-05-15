@@ -31,6 +31,8 @@
 #include "naucrates/dxl/operators/CDXLDatumBool.h"
 #include "naucrates/dxl/operators/CDXLDatumOid.h"
 
+#include "naucrates/dxl/operators/dxlops.h"
+
 #include <xercesc/util/NumberFormatException.hpp>
 
 using namespace gpos;

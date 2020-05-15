@@ -16,6 +16,7 @@
 
 #include "naucrates/dxl/parser/CParseHandlerBase.h"
 #include "naucrates/md/CDXLStatsDerivedRelation.h"
+#include "naucrates/dxl/operators/CDXLPhysicalProperties.h"
 
 namespace gpdxl
 {

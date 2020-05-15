@@ -961,7 +961,7 @@ select * from
 select nextval('ts1');
  nextval 
 ---------
-   10001
+      11
 (1 row)
 
 --

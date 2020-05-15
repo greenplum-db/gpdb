@@ -12,7 +12,9 @@
 #include "gpos/base.h"
 #include "gpopt/xforms/CXformSelect2Filter.h"
 
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalSelect.h"
+#include "gpopt/operators/CPatternLeaf.h"
+#include "gpopt/operators/CPhysicalFilter.h"
 
 using namespace gpopt;
 

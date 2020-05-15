@@ -363,7 +363,7 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 	/*
 	 * Shared input info is needed when ROLE_EXECUTE or sequential plan
 	 */
-	estate->es_sharenode = (List **) palloc0(sizeof(List *));
+	estate->es_sharenode = NIL;
 
 	/*
 	 * Handling of the Slice table depends on context.
@@ -612,6 +612,16 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 			exec_identity = getGpExecIdentity(queryDesc, ForwardScanDirection, estate);
 		else
 			exec_identity = GP_IGNORE;
+
+		/*
+		 * If we have no slice to execute in this process, mark currentSliceId as
+		 * invalid.
+		 */
+		if (exec_identity == GP_IGNORE)
+		{
+			estate->currentSliceId = -1;
+			currentSliceId = -1;
+		}
 
 #ifdef USE_ASSERT_CHECKING
 		/* non-root on QE */
@@ -2794,10 +2804,6 @@ ExecutePlan(EState *estate,
 	 */
 	estate->es_direction = direction;
 
-	/*
-	 * Make sure slice dependencies are met
-	 */
-	ExecSliceDependencyNode(planstate);
 	/*
 	 * If a tuple count was supplied, we must force the plan to run without
 	 * parallelism, because we might exit early.

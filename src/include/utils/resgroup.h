@@ -163,7 +163,7 @@ extern void DeserializeResGroupInfo(struct ResGroupCaps *capsOut,
 extern bool ShouldAssignResGroupOnMaster(void);
 extern bool ShouldUnassignResGroup(void);
 extern void AssignResGroupOnMaster(void);
-extern void UnassignResGroup(void);
+extern void UnassignResGroup(bool releaseSlot);
 extern void SwitchResGroupOnSegment(const char *buf, int len);
 
 extern bool ResGroupIsAssigned(void);
@@ -220,6 +220,11 @@ extern bool IsGroupInRedZone(void);
 extern void ResGroupGetMemoryRunawayInfo(StringInfo str);
 extern Oid SessionGetResGroupId(SessionState *session);
 extern int32 SessionGetResGroupGlobalShareMemUsage(SessionState *session);
+extern void HandleMoveResourceGroup(void);
+extern void ResGroupMoveQuery(int sessionId, Oid groupId, const char *groupName);
+extern int32 ResGroupGetSessionMemUsage(int sessionId);
+extern int32 ResGroupGetGroupAvailableMem(Oid groupId);
+extern Oid ResGroupGetGroupIdBySessionId(int sessionId);
 
 #define LOG_RESGROUP_DEBUG(...) \
 	do {if (Debug_resource_group) elog(__VA_ARGS__); } while(false);

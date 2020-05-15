@@ -18,6 +18,8 @@
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CColRefTable.h"
 
+#include "naucrates/statistics/CStatistics.h"
+
 using namespace gpopt;
 
 

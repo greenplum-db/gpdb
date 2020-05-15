@@ -23,7 +23,6 @@
 #include "gpopt/base/CDistributionSpecReplicated.h"
 #include "gpopt/base/CDistributionSpecRandom.h"
 #include "gpopt/base/CDistributionSpecNonSingleton.h"
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CDrvdPropCtxtPlan.h"
 
 #include "gpopt/operators/CPhysicalSerialUnionAll.h"

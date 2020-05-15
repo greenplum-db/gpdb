@@ -10,6 +10,7 @@
 //---------------------------------------------------------------------------
 
 #include "gpos/base.h"
+#include "gpos/error/CAutoTrace.h"
 #include "gpos/task/CAutoTraceFlag.h"
 #include "gpos/task/CAutoSuspendAbort.h"
 #include "gpos/task/CWorker.h"
@@ -28,9 +29,12 @@
 #include "gpopt/base/CUtils.h"
 #include "gpopt/base/CPrintPrefix.h"
 #include "gpopt/metadata/CTableDescriptor.h"
-#include "gpopt/operators/ops.h"
 #include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/COperator.h"
+#include "gpopt/operators/CPattern.h"
+#include "gpopt/operators/CPhysicalCTEProducer.h"
 #include "gpopt/search/CGroupExpression.h"
+#include "naucrates/statistics/CStatistics.h"
 #include "naucrates/traceflags/traceflags.h"
 
 

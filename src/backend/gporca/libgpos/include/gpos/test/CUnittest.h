@@ -13,6 +13,8 @@
 
 #include "gpos/base.h"
 #include "gpos/common/CMainArgs.h"
+#include "gpos/common/CStackObject.h"
+#include "gpos/task/ITask.h"
 
 // helper macros
 #define GPOS_UNITTEST_FUNC(x)			gpos::CUnittest(#x, CUnittest::EttStandard, x)
