@@ -1422,9 +1422,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 				Assert(plan->lefttree);
 
 				motion_snd = list_length(es->currentSlice->segments);
-				motion_recv = (parentSlice == NULL ? 1 : pMotion->numHashSegments);
-				if (motion_recv == 0)
-					motion_recv = list_length(parentSlice->segments);
+				motion_recv = parentSlice == NULL ? 1 : list_length(parentSlice->segments);
 
 				/* scale the number of rows by the number of segments sending data */
 				scaleFactor = motion_snd;
@@ -1443,16 +1441,17 @@ ExplainNode(PlanState *planstate, List *ancestors,
 						break;
 					case MOTIONTYPE_HASH:
 						sname = "Redistribute Motion";
+						motion_recv = pMotion->numHashSegments;
 						break;
 					case MOTIONTYPE_BROADCAST:
 						sname = "Broadcast Motion";
-						motion_recv = list_length(parentSlice->segments);
 						break;
 					case MOTIONTYPE_EXPLICIT:
 						sname = "Explicit Redistribute Motion";
 						break;
 					default:
 						sname = "???";
+						motion_recv = -1;
 						break;
 				}
 

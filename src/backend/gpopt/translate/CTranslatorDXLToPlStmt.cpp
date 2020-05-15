@@ -2000,6 +2000,8 @@ CTranslatorDXLToPlStmt::TranslateDXLMotion
 		case EdxlopPhysicalMotionRandom:
 		{
 			motion->motionType = MOTIONTYPE_HASH;
+			motion->numHashSegments = (int)motion_dxlop->GetOutputSegIdsArray()->Size();
+			GPOS_ASSERT(motion->numHashSegments > 0);
 			break;
 		}
 		case EdxlopPhysicalMotionBroadcast:
