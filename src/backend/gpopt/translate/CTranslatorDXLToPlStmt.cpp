@@ -3103,6 +3103,8 @@ CTranslatorDXLToPlStmt::TranslateDXLMaterialize
 	CDXLPhysicalMaterialize *materialize_dxlop = CDXLPhysicalMaterialize::Cast(materialize_dxlnode->GetOperator());
 
 	materialize->cdb_strict = materialize_dxlop->IsEager();
+	// ensure that executor actually materializes results
+	materialize->cdb_shield_child_from_rescans = true;
 
 	// translate operator costs
 	TranslatePlanCosts

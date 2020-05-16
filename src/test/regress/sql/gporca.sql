@@ -2405,6 +2405,27 @@ EXPLAIN SELECT a, b FROM atab_old_hash FULL JOIN btab_old_hash ON a |=| b;
 SELECT a, b FROM atab_old_hash FULL JOIN btab_old_hash ON a |=| b;
 reset optimizer_expand_fulljoin;
 
+-- Test rescanned materialize that is not directly above a motion
+
+DROP TABLE IF EXISTS foo1 CASCADE;
+DROP TABLE IF EXISTS foo2 CASCADE;
+DROP TABLE IF EXISTS foo3 CASCADE;
+CREATE table foo1(a int);
+CREATE table foo2(a int, b int, c int);
+CREATE table foo3(a int, b int);
+CREATE index f2c on foo2 using bitmap(c);
+INSERT INTO foo1 values (1), (2);
+INSERT INTO foo2 values (1,1,1), (2,2,2);
+INSERT INTO foo3 values (1,1), (2,2);
+
+set optimizer_join_order=query;
+select disable_xform('CXformInnerJoin2HashJoin');
+
+EXPLAIN SELECT 1 FROM foo1, foo2 WHERE foo1.a = foo2.a AND foo2.c = 3 AND foo2.b IN (SELECT b FROM foo3);
+SELECT 1 FROM foo1, foo2 WHERE foo1.a = foo2.a AND foo2.c = 3 AND foo2.b IN (SELECT b FROM foo3);
+
+reset optimizer_join_order;
+select enable_xform('CXformInnerJoin2HashJoin');
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore
