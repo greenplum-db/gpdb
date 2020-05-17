@@ -4530,7 +4530,6 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 			{
 				Oid relid = RelationGetRelid(rel);
 				PartStatus ps = rel_part_status(relid);
-				List 	   *lprime;
 				DistributedBy *ldistro;
 				GpPolicy	  *policy;
 
@@ -4544,10 +4543,10 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 						case PART_STATUS_ROOT:
 							break;
 						case PART_STATUS_LEAF:
-							lprime = (List *)cmd->def;
 							Assert(PointerIsValid(cmd->def));
 							Assert(IsA(cmd->def, List));
-							ldistro = (DistributedBy *)lsecond(lprime);
+							/* The distributeby clause is the second element of cmd->def */
+							ldistro = (DistributedBy *)lsecond((List *)cmd->def);
 							if (ldistro == NULL)
 								break;
 							ldistro->numsegments = rel->rd_cdbpolicy->numsegments;
@@ -15425,8 +15424,6 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 		ereport(ERROR,
 			(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 			errmsg("permission denied: \"%s\" is a system catalog", RelationGetRelationName(rel))));
-
-
 
 	Assert(PointerIsValid(node));
 	Assert(IsA(node, List));
