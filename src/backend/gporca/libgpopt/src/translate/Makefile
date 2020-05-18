@@ -8,7 +8,7 @@ subdir = src/backend/gporca/libgpopt/src/translate
 top_builddir = ../../../../../..
 include $(top_builddir)/src/Makefile.global
 
-include $(top_builddir)/src/backend/gporca/gporca.mk
+include $(top_srcdir)/src/backend/gporca/gporca.mk
 
 OBJS        = CTranslatorDXLToExpr.o \
               CTranslatorDXLToExprUtils.o \

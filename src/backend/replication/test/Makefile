@@ -4,7 +4,7 @@ include $(top_builddir)/src/Makefile.global
 
 TARGETS=gp_replication
 
-include $(top_builddir)/src/backend/mock.mk
+include $(top_srcdir)/src/backend/mock.mk
 
 gp_replication.t: \
     $(MOCK_DIR)/backend/utils/error/assert_mock.o \

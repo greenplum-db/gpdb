@@ -4,7 +4,7 @@ include $(top_builddir)/src/Makefile.global
 
 TARGETS=session_state
 
-include $(top_builddir)/src/backend/mock.mk
+include $(top_srcdir)/src/backend/mock.mk
 
 session_state.t: \
 	$(MOCK_DIR)/backend/storage/ipc/shmem_mock.o \

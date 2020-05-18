@@ -4,7 +4,7 @@ include $(top_builddir)/src/Makefile.global
 
 TARGETS=aocsam
 
-include $(top_builddir)/src/backend/mock.mk
+include $(top_srcdir)/src/backend/mock.mk
 
 aocsam.t: \
 	$(MOCK_DIR)/backend/catalog/pg_attribute_encoding_mock.o \

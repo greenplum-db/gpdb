@@ -338,9 +338,7 @@
       </body>
     </topic>
   </topic>
-  <topic id="topic8" xml:lang="en" ditaarch:DITAArchVersion="1.1"
-    domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
-    class="- topic/topic ">
+  <topic id="topic8" xml:lang="en" class="- topic/topic ">
     <title class="- topic/title ">Checking Append-Optimized Tables</title>
     <body class="- topic/body ">
       <p>The <codeph>gp_toolkit</codeph> schema includes a set of diagnostic functions you can use
@@ -354,10 +352,9 @@
           class="+ topic/ph pr-d/codeph ">VACUUM</codeph>. The hidden rows are tracked using an
         auxiliary visibility map table, or visimap. </p>
       <p>The following functions let you access the metadata for append-optimized and
-        column-oriented tables and view non-visible rows. Some of the functions have two versions:
-        one that takes the <codeph class="+ topic/ph pr-d/codeph ">oid</codeph> of the table, and
-        one that takes the name of the table. The latter version has "_name" appended to the
-        function name.</p>
+        column-oriented tables and view non-visible rows. </p>
+      <p>For most of the functions, the input argument is <codeph>regclass</codeph>, either the
+        table <codeph>name</codeph> or the <codeph>oid</codeph> of a table.</p>
     </body>
     <topic id="topic_ylp_gxw_yq">
       <title>__gp_aovisimap_compaction_info(oid)</title>
@@ -368,8 +365,10 @@
           by a <codeph>VACUUM</codeph> operation on an append-optimized table.</p>
         <note>Until a <cmdname>VACUUM</cmdname> operation deletes the row from the data file,
           deleted or updated data rows occupy physical space on disk even though they are hidden to
-          new transactions. The configuration parameter <codeph>gp_appendonly_compaction</codeph>
-          controls the functionality of the <codeph>VACUUM</codeph> command.</note>
+          new transactions. The configuration parameter <codeph><xref
+              href="config_params/guc-list.xml#gp_appendonly_compaction"
+              >gp_appendonly_compaction</xref></codeph> controls the functionality of the
+            <codeph>VACUUM</codeph> command.</note>
         <p>This table describes the <cmdname>__gp_aovisimap_compaction_info</cmdname> function
           output table.</p>
         <table id="table_wr2_dcv_mq">
@@ -418,13 +417,12 @@
         </table>
       </body>
     </topic>
-    <topic id="topic9" xml:lang="en" ditaarch:DITAArchVersion="1.1"
-      domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
-      class="- topic/topic ">
-      <title class="- topic/title ">__gp_aoseg_name('table_name')</title>
+    <topic id="topic9" xml:lang="en">
+      <title class="- topic/title ">__gp_aoseg(regclass)</title>
       <body class="- topic/body ">
         <p>This function returns metadata information contained in the append-optimized table's
           on-disk segment file. </p>
+        <p>The input argument is the name or the oid of an append-optimized table. </p>
         <table id="ie202159" class="- topic/table ">
           <title class="- topic/title ">__gp_aoseg_name output table</title>
           <tgroup cols="2" class="- topic/tgroup ">
@@ -477,18 +475,14 @@
         </table>
       </body>
     </topic>
-    <topic id="topic10" xml:lang="en" ditaarch:DITAArchVersion="1.1"
-      domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
-      class="- topic/topic ">
-      <title class="- topic/title ">__gp_aoseg_history(oid)</title>
+    <topic id="topic10" xml:lang="en" class="- topic/topic ">
+      <title class="- topic/title ">__gp_aoseg_history(regclass)</title>
       <body class="- topic/body ">
         <p>This function returns metadata information contained in the append-optimized table's
           on-disk segment file. It displays all different versions (heap tuples) of the aoseg meta
           information. The data is complex, but users with a deep understanding of the system may
-          find it usefulfor debugging.</p>
-        <p>The input argument is the oid of the append-optimized table. </p>
-        <p>Call __gp_aoseg_history_name('table_name') to get the same result with the table name as
-          an argument.</p>
+          find it useful for debugging.</p>
+        <p>The input argument is the name or the oid of an append-optimized table. </p>
         <table id="ie202200" class="- topic/table ">
           <title class="- topic/title ">__gp_aoseg_history output table</title>
           <tgroup cols="2" class="- topic/tgroup ">
@@ -586,17 +580,13 @@
         </table>
       </body>
     </topic>
-    <topic id="topic11" xml:lang="en" ditaarch:DITAArchVersion="1.1"
-      domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
-      class="- topic/topic ">
-      <title class="- topic/title ">__gp_aocsseg(oid)</title>
+    <topic id="topic11" xml:lang="en" class="- topic/topic ">
+      <title class="- topic/title ">__gp_aocsseg(regclass)</title>
       <body class="- topic/body ">
         <p>This function returns metadata information contained in a column-oriented
           append-optimized table's on-disk segment file, excluding non-visible rows. Each row
           describes a segment for a column in the table.</p>
-        <p>The input argument is the oid of a column-oriented append-optimized table. Call as
-          __gp_aocsseg_name('table_name') to get the same result with the table name as an
-          argument.</p>
+        <p>The input argument is the name or the oid of a column-oriented append-optimized table. </p>
         <table id="ie202280" class="- topic/table ">
           <title class="- topic/title ">__gp_aocsseg(oid) output table</title>
           <tgroup cols="2" class="- topic/tgroup ">
@@ -655,18 +645,14 @@
         </table>
       </body>
     </topic>
-    <topic id="topic12" xml:lang="en" ditaarch:DITAArchVersion="1.1"
-      domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
-      class="- topic/topic ">
-      <title class="- topic/title ">__gp_aocsseg_history(oid)</title>
+    <topic id="topic12" xml:lang="en" class="- topic/topic ">
+      <title class="- topic/title ">__gp_aocsseg_history(regclass)</title>
       <body class="- topic/body ">
         <p>This function returns metadata information contained in a column-oriented
           append-optimized table's on-disk segment file. Each row describes a segment for a column
           in the table. The data is complex, but users with a deep understanding of the system may
           find it useful for debugging.</p>
-        <p>The input argument is the oid of a column-oriented append-optimized table. Call as
-          __gp_aocsseg_history_name('table_name') to get the same result with the table name as
-          argument.</p>
+        <p> The input argument is the name or the oid of a column-oriented append-optimized table. </p>
         <table id="ie202328" class="- topic/table ">
           <title class="- topic/title ">__gp_aocsseg_history output table</title>
           <tgroup cols="2" class="- topic/tgroup ">
@@ -771,16 +757,12 @@
         </table>
       </body>
     </topic>
-    <topic id="topic13" xml:lang="en" ditaarch:DITAArchVersion="1.1"
-      domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
-      class="- topic/topic ">
-      <title class="- topic/title ">__gp_aovisimap(oid)</title>
+    <topic id="topic13" xml:lang="en" class="- topic/topic ">
+      <title class="- topic/title ">__gp_aovisimap(regclass)</title>
       <body class="- topic/body ">
-        <p>This function returns the tuple id, the segment file, and the row number of each
+        <p>This function returns the tuple ID, the segment file, and the row number of each
           non-visible tuple according to the visibility map.</p>
-        <p>The input argument is the oid of an append-optimized table.</p>
-        <p>Use __gp_aovisimap_name('table_name') to get the same result with the table name as
-          argument.</p>
+        <p>The input argument is the name or the oid of an append-optimized table.</p>
         <table id="ie202417" class="- topic/table ">
           <tgroup cols="2" class="- topic/tgroup ">
             <colspec colnum="1" colname="col1" colwidth="108pt" class="- topic/colspec "/>
@@ -810,16 +792,12 @@
         </table>
       </body>
     </topic>
-    <topic id="topic14" xml:lang="en" ditaarch:DITAArchVersion="1.1"
-      domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
-      class="- topic/topic ">
-      <title class="- topic/title ">__gp_aovisimap_hidden_info(oid)</title>
+    <topic id="topic14" xml:lang="en" class="- topic/topic ">
+      <title class="- topic/title ">__gp_aovisimap_hidden_info(regclass)</title>
       <body class="- topic/body ">
         <p>This function returns the numbers of hidden and visible tuples in the segment files for
           an append-optimized table.</p>
-        <p>The input argument is the oid of the append-optimized table. </p>
-        <p>Call __gp_aovisimap_hidden_info_name('table_name') to get the same result with a table
-          name argument.</p>
+        <p>The input argument is the name or the oid of an append-optimized table. </p>
         <table id="ie202442" class="- topic/table ">
           <tgroup cols="2" class="- topic/tgroup ">
             <colspec colnum="1" colname="col1" colwidth="108pt" class="- topic/colspec "/>
@@ -850,15 +828,11 @@
         </table>
       </body>
     </topic>
-    <topic id="topic15" xml:lang="en" ditaarch:DITAArchVersion="1.1"
-      domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
-      class="- topic/topic ">
-      <title class="- topic/title ">__gp_aovisimap_entry(oid) </title>
+    <topic id="topic15" xml:lang="en" class="- topic/topic ">
+      <title class="- topic/title ">__gp_aovisimap_entry(regclass) </title>
       <body class="- topic/body ">
         <p>This function returns information about each visibility map entry for the table.</p>
-        <p>The input argument is the oid of an append-optimized table.</p>
-        <p>Call __gp_aovisimap_entry_name('table_name') to get the same result with a table name
-          argument.</p>
+        <p>The input argument is the name or the oid of an append-optimized table.</p>
         <table id="ie202467" class="- topic/table ">
           <title class="- topic/title ">__gp_aovisimap_entry output table</title>
           <tgroup cols="2" class="- topic/tgroup ">

@@ -428,3 +428,22 @@ CREATE TABLE alter_table_with_primary_key (a int primary key);
 ALTER TABLE alter_table_with_primary_key SET DISTRIBUTED RANDOMLY;
 CREATE TABLE alter_table_with_unique_index (a int unique);
 ALTER TABLE alter_table_with_unique_index SET DISTRIBUTED RANDOMLY;
+
+-- Enable reorg partition leaf table
+create table reorg_leaf (a int, b int, c int) distributed by (c)
+partition by range(a)
+subpartition by range (b)
+subpartition template
+(start(0) end (10) every (5))
+(partition p0 start (0) end (5),
+	partition p1 start (5) end (10));
+insert into reorg_leaf select i, i, i from generate_series(0, 9) i;
+select *, gp_segment_id from reorg_leaf_1_prt_p0;
+alter table reorg_leaf_1_prt_p0 set with (reorganize=true) distributed by(b);
+alter table reorg_leaf_1_prt_p0 set with (reorganize=true) distributed by(c);
+alter table reorg_leaf_1_prt_p0 set with (reorganize=true);
+alter table reorg_leaf_1_prt_p0_2_prt_1 set with (reorganize=true) distributed by(b);
+alter table reorg_leaf_1_prt_p0_2_prt_1 set with (reorganize=true) distributed by(c);
+select *, gp_segment_id from reorg_leaf_1_prt_p0;
+alter table reorg_leaf_1_prt_p0_2_prt_1 set with (reorganize=true);
+select *, gp_segment_id from reorg_leaf_1_prt_p0;

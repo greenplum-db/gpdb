@@ -5,7 +5,6 @@
 
 import os
 import pipes
-import tempfile
 
 from gppylib.gplog import *
 from gppylib.gparray import *
@@ -197,27 +196,17 @@ class PgBaseBackup(Command):
         cmd_tokens.append('--target-gp-dbid')
         cmd_tokens.append(str(target_gp_dbid))
 
-        # Create a temp file to include the exclude paths
-        exclude_fd, exclude_filename = tempfile.mkstemp(suffix='.excludes',
-                                                        prefix='gpexpand-',
-                                                        text=True)
-
-        cmd_tokens.append('--exclude-from')
-        cmd_tokens.append(exclude_filename)
-
-        with open(exclude_filename, 'a') as f:
-            # We exclude certain unnecessary directories from being copied as they will greatly
-            # slow down the speed of gpinitstandby if containing a lot of data
-            f.write('./db_dumps\n')
-            f.write('./promote\n')
-
-            # Also exclude the paths specified by the caller
+        # We exclude certain unnecessary directories from being copied as they will greatly
+        # slow down the speed of gpinitstandby if containing a lot of data
+        if excludePaths is None or len(excludePaths) == 0:
+            cmd_tokens.append('-E')
+            cmd_tokens.append('./db_dumps')
+            cmd_tokens.append('-E')
+            cmd_tokens.append('./promote')
+        else:
             for path in excludePaths:
-                f.write(path + '\n')
-
-        # Record the filename, we will remove it later
-        self.exclude_filename = exclude_filename
-        os.close(int(exclude_fd))
+                cmd_tokens.append('-E')
+                cmd_tokens.append(path)
 
         cmd_tokens.append('--progress')
         cmd_tokens.append('--verbose')
@@ -230,14 +219,6 @@ class PgBaseBackup(Command):
         self.command_tokens = cmd_tokens
 
         Command.__init__(self, 'pg_basebackup', cmd_str, ctxt=ctxt, remoteHost=remoteHost)
-
-    def __del__(self):
-        if hasattr(self, 'exclude_filename') and self.exclude_filename:
-            try:
-                os.unlink(self.exclude_filename)
-            except:
-                # ignore the error if fail to remove the exclude-from file
-                pass
 
     @staticmethod
     def _xlog_arguments(replication_slot_name):

@@ -8,7 +8,7 @@
 # GPPC needs (i.e. headers and makefiles) are installed along with pg_config.
 #-------------------------------------------------------------------------
 
-subdir = src/backend/gppc
+subdir = src/interfaces/gppc
 top_builddir = ../../..
 include $(top_builddir)/src/Makefile.global
 

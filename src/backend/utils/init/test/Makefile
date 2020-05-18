@@ -4,7 +4,7 @@ include $(top_builddir)/src/Makefile.global
 
 TARGETS=postinit
 
-include $(top_builddir)/src/backend/mock.mk
+include $(top_srcdir)/src/backend/mock.mk
 
 postinit.t: \
 	$(MOCK_DIR)/backend/utils/error/elog_mock.o \

@@ -4,7 +4,7 @@ include $(top_builddir)/src/Makefile.global
 
 TARGETS=vmem_tracker redzone_handler runaway_cleaner idle_tracker event_version memprot
 
-include $(top_builddir)/src/backend/mock.mk
+include $(top_srcdir)/src/backend/mock.mk
 
 vmem_tracker.t: \
 	$(MOCK_DIR)/backend/storage/ipc/shmem_mock.o \
