@@ -4600,6 +4600,8 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 			{
 				Oid relid = RelationGetRelid(rel);
 				PartStatus ps = rel_part_status(relid);
+				DistributedBy *ldistro;
+				GpPolicy	  *policy;
 
 				ATExternalPartitionCheck(cmd->subtype, rel, recursing);
 
@@ -4611,6 +4613,25 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 						case PART_STATUS_ROOT:
 							break;
 						case PART_STATUS_LEAF:
+							Assert(PointerIsValid(cmd->def));
+							Assert(IsA(cmd->def, List));
+							/* The distributeby clause is the second element of cmd->def */
+							ldistro = (DistributedBy *)lsecond((List *)cmd->def);
+							if (ldistro == NULL)
+								break;
+							ldistro->numsegments = rel->rd_cdbpolicy->numsegments;
+
+							policy =  getPolicyForDistributedBy(ldistro, rel->rd_att);
+
+							if(!GpPolicyEqual(policy, rel->rd_cdbpolicy))
+								/*Reject interior branches of partitioned tables.*/
+								ereport(ERROR,
+										(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+												errmsg("can't set the distribution policy of \"%s\"",
+													   RelationGetRelationName(rel)),
+												errhint("Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.")));
+							break;
+
 						case PART_STATUS_INTERIOR:
 							/*Reject interior branches of partitioned tables.*/
 							ereport(ERROR,
