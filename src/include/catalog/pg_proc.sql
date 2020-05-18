@@ -168,6 +168,9 @@
 
  CREATE FUNCTION gp_list_backend_priorities() RETURNS SETOF record LANGUAGE internal VOLATILE AS 'gp_list_backend_priorities' WITH (OID=5042, DESCRIPTION="list priorities of backends");
 
+-- Functions to extract external table info
+ CREATE FUNCTION pg_exttable(OUT reloid oid, OUT urilocation _text, OUT execlocation _text, OUT fmttype char, OUT fmtopts text, OUT options _text, OUT command text, OUT rejectlimit int4, OUT rejectlimittype char, OUT logerrors char, OUT encoding int4, OUT writable bool) RETURNS SETOF record LANGUAGE internal VOLATILE EXECUTE ON MASTER AS 'pg_exttable' WITH (OID=7061, DESCRIPTION="original pg_exttable catalog info");
+
  CREATE FUNCTION gp_exttable_permission_check(text, oid) RETURNS void LANGUAGE internal VOLATILE NO SQL AS 'gp_exttable_permission_check' WITH (OID=7070, DESCRIPTION="validator for external tables");
 
 -- Functions to deal with SREH error logs

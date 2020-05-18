@@ -44,6 +44,8 @@ extern ExtTableEntry *GetExtTableEntry(Oid relid);
 
 extern ExtTableEntry *GetExtTableEntryIfExists(Oid relid);
 
+extern ExtTableEntry *GetExtFromForeignTableOptions(List *ftoptons, Oid relid);
+
 #define fmttype_is_custom(c) (c == 'b')
 #define fmttype_is_text(c)   (c == 't')
 #define fmttype_is_csv(c)    (c == 'c')
