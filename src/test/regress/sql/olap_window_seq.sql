@@ -1721,4 +1721,23 @@ EXPLAIN WITH cte as (SELECT *, row_number() over (PARTITION BY date,region) FROM
 -- When there is a disjunct in the filter predicates, it is not possible to push down either into the window function.
 EXPLAIN WITH cte as (SELECT *, row_number() over (PARTITION BY date,region) FROM window_part_sales) SELECT * FROM cte WHERE date > '2011-03-01' OR region = 'usa';
 
+-- Github Issue https://github.com/greenplum-db/gpdb/issues/10143
+create table t1_github_issue_10143(
+	base_ym varchar(6) null,
+	code varchar(5) null,
+	name varchar(60) null
+);
+
+create table t2_github_issue_10143(
+	base_ym varchar(6) null,
+	dong varchar(8) null,
+	code varchar(6) null,
+	salary numeric(18) null
+);
+
+explain select (select name from t1_github_issue_10143 where code = a.code limit 1) as dongnm
+,sum(sum(a.salary)) over()
+from t2_github_issue_10143 a
+group by a.code;
+
 -- End of Test
