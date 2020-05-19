@@ -209,7 +209,7 @@ init_tuplestore_state(ShareInputScanState *node)
 				elog(DEBUG1, "SISC writer (shareid=%d, slice=%d): No tuplestore yet, creating tuplestore",
 					 sisc->share_id, currentSliceId);
 				shareinput_create_bufname_prefix(rwfile_prefix, sizeof(rwfile_prefix), sisc->share_id);
-				ts = ntuplestore_create_readerwriter(rwfile_prefix, PlanStateOperatorMemKB((PlanState *)node) * 1024, true, true);
+				ts = ntuplestore_create_readerwriter(rwfile_prefix, PlanStateOperatorMemKB((PlanState *)node) * 1024, true);
 				tsa = ntuplestore_create_accessor(ts, true);
 			}
 			else
@@ -246,7 +246,7 @@ init_tuplestore_state(ShareInputScanState *node)
 			shareinput_reader_waitready(node->ref);
 
 			shareinput_create_bufname_prefix(rwfile_prefix, sizeof(rwfile_prefix), sisc->share_id);
-			ts = ntuplestore_create_readerwriter(rwfile_prefix, 0, false, false);
+			ts = ntuplestore_create_readerwriter(rwfile_prefix, 0, false);
 			tsa = ntuplestore_create_accessor(ts, false);
 		}
 		local_state->ts_state = ts;

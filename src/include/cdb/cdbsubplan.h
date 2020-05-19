@@ -22,5 +22,6 @@
 #include "nodes/plannodes.h"
 
 extern void preprocess_initplans(QueryDesc *queryDesc);
+extern void postprocess_initplans(QueryDesc *queryDesc);
 
 #endif   /* CDBSUBPLAN_H */
