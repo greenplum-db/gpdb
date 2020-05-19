@@ -2298,8 +2298,8 @@ TwoPhaseRecoverMirror(void)
 void
 getTwoPhasePreparedTransactionData(prepared_transaction_agg_state **ptas, char *caller)
 {
-	int			numberOfPrepareXacts     = TwoPhaseState->numPrepXacts;
-	GlobalTransaction *globalTransactionArray   = TwoPhaseState->prepXacts;
+	int			numberOfPrepareXacts;
+	GlobalTransaction *globalTransactionArray;
 	TransactionId xid;
 	XLogRecPtr *recordPtr = NULL;
 	int			maxCount;
@@ -2311,6 +2311,11 @@ getTwoPhasePreparedTransactionData(prepared_transaction_agg_state **ptas, char *
 	Assert(*ptas == NULL);
 
 	TwoPhaseAddPreparedTransactionInit(ptas, &maxCount);
+
+	LWLockAcquire(TwoPhaseStateLock, LW_SHARED);
+
+	numberOfPrepareXacts = TwoPhaseState->numPrepXacts;
+	globalTransactionArray = TwoPhaseState->prepXacts;
 
 	elog(PersistentRecovery_DebugPrintLevel(),
 		 "getTwoPhasePreparedTransactionData: numberOfPrepareXacts = %d",
@@ -2336,6 +2341,8 @@ getTwoPhasePreparedTransactionData(prepared_transaction_agg_state **ptas, char *
 									   recordPtr,
 									   caller);
     }
+
+	LWLockRelease(TwoPhaseStateLock);
 }  /* end getTwoPhasePreparedTransactionData */
 
 
