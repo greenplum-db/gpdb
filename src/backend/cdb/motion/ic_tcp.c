@@ -49,6 +49,21 @@ typedef struct GpMonotonicTime
 	struct timeval endTime;
 } GpMonotonicTime;
 
+typedef struct ChunkTransportStateEntryTCP
+{
+	ChunkTransportStateEntry entry;
+	/* highest file descriptor in the readSet. */
+	int			highReadSock;
+} ChunkTransportStateEntryTCP;
+
+typedef struct ChunkTransportStateTCP
+{
+	ChunkTransportState base;
+	ChunkTransportStateEntryTCP *states;
+	bool		aggressiveRetry;
+	List		*incompleteConns;
+} ChunkTransportStateTCP;
+
 static void gp_set_monotonic_begin_time(GpMonotonicTime *time);
 static void gp_get_monotonic_time(GpMonotonicTime *time);
 static inline uint64 gp_get_elapsed_ms(GpMonotonicTime *time);
@@ -500,6 +515,7 @@ startOutgoingConnections(ChunkTransportState *transportStates,
 						 int *pOutgoingCount)
 {
 	ChunkTransportStateEntry *pEntry;
+	ChunkTransportStateTCP *transportStatesTCP = (ChunkTransportStateTCP *) transportStates;
 	MotionConn *conn;
 	ListCell   *cell;
 	ExecSlice  *recvSlice;
@@ -512,15 +528,15 @@ startOutgoingConnections(ChunkTransportState *transportStates,
 	if (gp_interconnect_aggressive_retry)
 	{
 		if ((list_length(recvSlice->children) * list_length(sendSlice->segments)) > listenerBacklog)
-			transportStates->aggressiveRetry = true;
+			transportStatesTCP->aggressiveRetry = true;
 	}
 	else
-		transportStates->aggressiveRetry = false;
+		transportStatesTCP->aggressiveRetry = false;
 
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
 		elog(DEBUG4, "Interconnect seg%d slice%d setting up sending motion node (aggressive retry is %s)",
 			 GpIdentity.segindex, sendSlice->sliceIndex,
-			 (transportStates->aggressiveRetry ? "active" : "inactive"));
+			 (transportStatesTCP->aggressiveRetry ? "active" : "inactive"));
 
 	pEntry = createChunkTransportState(transportStates,
 									   sendSlice,
@@ -871,6 +887,7 @@ readRegisterMessage(ChunkTransportState *transportStates,
 	RegisterMessage msg;
 	MotionConn *newConn;
 	ChunkTransportStateEntry *pEntry = NULL;
+	ChunkTransportStateEntryTCP *pEntryTCP = NULL;
 	CdbProcess *cdbproc = NULL;
 	ListCell	*lc;
 
@@ -988,7 +1005,8 @@ readRegisterMessage(ChunkTransportState *transportStates,
 	 * Find state info for the specified Motion node.  The sender's slice
 	 * number equals the motion node id.
 	 */
-	getChunkTransportState(transportStates, msg.sendSliceIndex, &pEntry);
+	pEntry = getChunkTransportState(transportStates, msg.sendSliceIndex);
+	pEntryTCP = (ChunkTransportStateEntryTCP *) pEntry;
 	Assert(pEntry);
 
 	foreach_with_count(lc, pEntry->sendSlice->primaryProcesses, iconn)
@@ -1065,8 +1083,8 @@ readRegisterMessage(ChunkTransportState *transportStates,
 
 	MPP_FD_SET(newConn->sockfd, &pEntry->readSet);
 
-	if (newConn->sockfd > pEntry->highReadSock)
-		pEntry->highReadSock = newConn->sockfd;
+	if (newConn->sockfd > pEntryTCP->highReadSock)
+		pEntryTCP->highReadSock = newConn->sockfd;
 
 #ifdef AMS_VERBOSE_LOGGING
 	dumpEntryConnections(DEBUG4, pEntry);
@@ -1210,6 +1228,21 @@ acceptIncomingConnection(void)
 	return conn;
 }								/* acceptIncomingConnection */
 
+static ChunkTransportStateEntry *
+GetChunkTransportStateEntryTCP(ChunkTransportState *transportState,
+								 int motNodeID)
+{
+	ChunkTransportStateTCP *transportStateTCP = (ChunkTransportStateTCP *) transportState;
+	Assert(transportState != NULL);
+	if (motNodeID > 0 && motNodeID <= transportState->size)
+		return (ChunkTransportStateEntry *) &transportStateTCP->states[motNodeID - 1];
+	else
+		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+			errmsg("Interconnect Error: Unexpected Motion Node Id: %d (size %d). This means"
+				   " a motion node that wasn't setup is requesting interconnect"
+				   " resources.", motNodeID, transportState->size)));
+}
+
 /* See ml_ipc.h */
 void
 SetupTCPInterconnect(EState *estate)
@@ -1235,20 +1268,24 @@ SetupTCPInterconnect(EState *estate)
 	/* we can have at most one of these. */
 	ChunkTransportStateEntry *sendingChunkTransportState = NULL;
 	ChunkTransportState *interconnect_context;
+	ChunkTransportStateTCP *interconnect_context_tcp;
 
 	SIMPLE_FAULT_INJECTOR("interconnect_setup_palloc");
-	interconnect_context = palloc0(sizeof(ChunkTransportState));
+	interconnect_context = palloc0(sizeof(ChunkTransportStateTCP));
+	interconnect_context_tcp = (ChunkTransportStateTCP *) interconnect_context;
+
+	interconnect_context->GetChunkTransportStateEntry = GetChunkTransportStateEntryTCP;
 
 	/* initialize state variables */
 	Assert(interconnect_context->size == 0);
 	interconnect_context->estate = estate;
-	interconnect_context->size = CTS_INITIAL_SIZE;
-	interconnect_context->states = palloc0(CTS_INITIAL_SIZE * sizeof(ChunkTransportStateEntry));
+	interconnect_context->size = sliceTable->numSlices;
+	((ChunkTransportStateTCP *) interconnect_context)->states =
+		palloc0(sliceTable->numSlices * sizeof(ChunkTransportStateEntryTCP));
 
 	interconnect_context->teardownActive = false;
 	interconnect_context->activated = false;
-	interconnect_context->networkTimeoutIsLogged = false;
-	interconnect_context->incompleteConns = NIL;
+	interconnect_context_tcp->incompleteConns = NIL;
 	interconnect_context->sliceTable = copyObject(sliceTable);
 	interconnect_context->sliceId = sliceTable->localSlice;
 
@@ -1351,7 +1388,7 @@ SetupTCPInterconnect(EState *estate)
 		}
 
 		/* Inbound connections awaiting registration message */
-		foreach(cell, interconnect_context->incompleteConns)
+		foreach(cell, interconnect_context_tcp->incompleteConns)
 		{
 			conn = (MotionConn *) lfirst(cell);
 
@@ -1404,7 +1441,7 @@ SetupTCPInterconnect(EState *estate)
 						break;
 					case mcsConnecting:
 						/* Set time limit for connect() to complete. */
-						if (interconnect_context->aggressiveRetry)
+						if (interconnect_context_tcp->aggressiveRetry)
 							conn->wakeup_ms = CONNECT_AGGRESSIVERETRY_MS + elapsed_ms;
 						else
 							conn->wakeup_ms = CONNECT_RETRY_MS + elapsed_ms;
@@ -1616,7 +1653,7 @@ SetupTCPInterconnect(EState *estate)
 		 * expectedTotalIncoming, but that causes problems if some connections
 		 * are left over -- better to just process them here.
 		 */
-		cell = list_head(interconnect_context->incompleteConns);
+		cell = list_head(interconnect_context_tcp->incompleteConns);
 		while (n > 0 && cell != NULL)
 		{
 			conn = (MotionConn *) lfirst(cell);
@@ -1637,7 +1674,7 @@ SetupTCPInterconnect(EState *estate)
 					 * (and has been dropped), or we've added it to the
 					 * appropriate hash table)
 					 */
-					interconnect_context->incompleteConns = list_delete_ptr(interconnect_context->incompleteConns, conn);
+					interconnect_context_tcp->incompleteConns = list_delete_ptr(interconnect_context_tcp->incompleteConns, conn);
 
 					/* is the connection ready ? */
 					if (conn->sockfd != -1)
@@ -1668,7 +1705,7 @@ SetupTCPInterconnect(EState *estate)
 				conn->msgPos = conn->pBuff;
 				conn->remapper = CreateTupleRemapper();
 
-				interconnect_context->incompleteConns = lappend(interconnect_context->incompleteConns, conn);
+				interconnect_context_tcp->incompleteConns = lappend(interconnect_context_tcp->incompleteConns, conn);
 			}
 		}
 
@@ -1742,13 +1779,13 @@ SetupTCPInterconnect(EState *estate)
 	 * out here. It would obviously be better if we could avoid these
 	 * connections in the first place!
 	 */
-	if (list_length(interconnect_context->incompleteConns) != 0)
+	if (list_length(interconnect_context_tcp->incompleteConns) != 0)
 	{
 		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
 			elog(DEBUG2, "Incomplete connections after known connections done, cleaning %d",
-				 list_length(interconnect_context->incompleteConns));
+				 list_length(interconnect_context_tcp->incompleteConns));
 
-		while ((cell = list_head(interconnect_context->incompleteConns)) != NULL)
+		while ((cell = list_head(interconnect_context_tcp->incompleteConns)) != NULL)
 		{
 			conn = (MotionConn *) lfirst(cell);
 
@@ -1760,7 +1797,7 @@ SetupTCPInterconnect(EState *estate)
 				conn->sockfd = -1;
 			}
 
-			interconnect_context->incompleteConns = list_delete_ptr(interconnect_context->incompleteConns, conn);
+			interconnect_context_tcp->incompleteConns = list_delete_ptr(interconnect_context_tcp->incompleteConns, conn);
 
 			if (conn->pBuff)
 				pfree(conn->pBuff);
@@ -1800,6 +1837,7 @@ TeardownTCPInterconnect(ChunkTransportState *transportStates, bool hasErrors)
 {
 	ListCell   *cell;
 	ChunkTransportStateEntry *pEntry = NULL;
+	ChunkTransportStateTCP *transportStatesTCP = (ChunkTransportStateTCP *) transportStates;
 	int			i;
 	ExecSlice  *mySlice;
 	MotionConn *conn;
@@ -1860,14 +1898,14 @@ TeardownTCPInterconnect(ChunkTransportState *transportStates, bool hasErrors)
 	 * NOTE: we don't use foreach() here because we want to trim from the list
 	 * as we go.
 	 */
-	if (transportStates->incompleteConns &&
+	if (transportStatesTCP->incompleteConns &&
 		gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-		elog(DEBUG2, "Found incomplete conn. length %d", list_length(transportStates->incompleteConns));
+		elog(DEBUG2, "Found incomplete conn. length %d", list_length(transportStatesTCP->incompleteConns));
 
 	/*
 	 * These are connected inbound peers that we haven't dealt with quite yet
 	 */
-	while ((cell = list_head(transportStates->incompleteConns)) != NULL)
+	while ((cell = list_head(transportStatesTCP->incompleteConns)) != NULL)
 	{
 		MotionConn *conn = (MotionConn *) lfirst(cell);
 
@@ -1895,11 +1933,11 @@ TeardownTCPInterconnect(ChunkTransportState *transportStates, bool hasErrors)
 		 * incompleteConns = list_delete_first(incompleteConns); or
 		 * incompleteConns = list_delete_ptr(incompleteConns, conn)
 		 */
-		transportStates->incompleteConns = list_delete(transportStates->incompleteConns, conn);
+		transportStatesTCP->incompleteConns = list_delete(transportStatesTCP->incompleteConns, conn);
 	}
 
-	list_free(transportStates->incompleteConns);
-	transportStates->incompleteConns = NIL;
+	list_free(transportStatesTCP->incompleteConns);
+	transportStatesTCP->incompleteConns = NIL;
 
 	/*
 	 * Now "normal" connections which made it through our peer-registration
@@ -1912,7 +1950,7 @@ TeardownTCPInterconnect(ChunkTransportState *transportStates, bool hasErrors)
 			elog(DEBUG3, "Interconnect seg%d slice%d closing connections to slice%d",
 				 GpIdentity.segindex, mySlice->sliceIndex, mySlice->parentIndex);
 
-		getChunkTransportState(transportStates, mySlice->sliceIndex, &pEntry);
+		pEntry = getChunkTransportState(transportStates, mySlice->sliceIndex);
 
 		for (i = 0; i < pEntry->numConns; i++)
 		{
@@ -1941,7 +1979,7 @@ TeardownTCPInterconnect(ChunkTransportState *transportStates, bool hasErrors)
 
 		aSlice = &transportStates->sliceTable->slices[childId];
 
-		getChunkTransportState(transportStates, aSlice->sliceIndex, &pEntry);
+		pEntry = getChunkTransportState(transportStates, aSlice->sliceIndex);
 
 		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
 			elog(DEBUG3, "Interconnect closing connections from slice%d",
@@ -1983,7 +2021,7 @@ TeardownTCPInterconnect(ChunkTransportState *transportStates, bool hasErrors)
 	if (mySlice->parentIndex != -1)
 	{
 		/* cleanup a Sending motion node. */
-		getChunkTransportState(transportStates, mySlice->sliceIndex, &pEntry);
+		pEntry = getChunkTransportState(transportStates, mySlice->sliceIndex);
 
 		/*
 		 * On a normal teardown routine, sender has sent an EOS packet and
@@ -2025,9 +2063,10 @@ TeardownTCPInterconnect(ChunkTransportState *transportStates, bool hasErrors)
 
 	transportStates->activated = false;
 	transportStates->sliceTable = NULL;
-
-	if (transportStates->states != NULL)
-		pfree(transportStates->states);
+	ChunkTransportStateEntry *states =
+								 (ChunkTransportStateEntry *) ((ChunkTransportStateTCP *) transportStates)->states;
+	if (states != NULL)
+		pfree(states);
 	pfree(transportStates);
 
 	if (hasErrors)
@@ -2350,7 +2389,7 @@ doSendStopMessageTCP(ChunkTransportState *transportStates, int16 motNodeID)
 	char		m = 'S';
 	ssize_t		written;
 
-	getChunkTransportState(transportStates, motNodeID, &pEntry);
+	pEntry = getChunkTransportState(transportStates, motNodeID);
 	Assert(pEntry);
 
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
@@ -2409,7 +2448,7 @@ RecvTupleChunkFromTCP(ChunkTransportState *transportStates,
 	elog(DEBUG5, "RecvTupleChunkFrom(motNodID=%d, srcRoute=%d)", motNodeID, srcRoute);
 #endif
 
-	getChunkTransportState(transportStates, motNodeID, &pEntry);
+	pEntry = getChunkTransportState(transportStates, motNodeID);
 	conn = pEntry->conns + srcRoute;
 
 	return RecvTupleChunk(conn, transportStates);
@@ -2421,6 +2460,7 @@ RecvTupleChunkFromAnyTCP(ChunkTransportState *transportStates,
 						 int16 *srcRoute)
 {
 	ChunkTransportStateEntry *pEntry = NULL;
+	ChunkTransportStateEntryTCP *pEntryTCP = NULL;
 	MotionConn *conn;
 	TupleChunkListItem tcItem;
 	mpp_fd_set	rset;
@@ -2435,7 +2475,8 @@ RecvTupleChunkFromAnyTCP(ChunkTransportState *transportStates,
 	elog(DEBUG5, "RecvTupleChunkFromAny(motNodeId=%d)", motNodeID);
 #endif
 
-	getChunkTransportState(transportStates, motNodeID, &pEntry);
+	pEntry = getChunkTransportState(transportStates, motNodeID);
+	pEntryTCP = (ChunkTransportStateEntryTCP *) pEntry;
 
 	int			retry = 0;
 
@@ -2480,7 +2521,7 @@ RecvTupleChunkFromAnyTCP(ChunkTransportState *transportStates,
 		if (skipSelect)
 			break;
 
-		n = select(pEntry->highReadSock + 1, (fd_set *) &rset, NULL, NULL, &timeout);
+		n = select(pEntryTCP->highReadSock + 1, (fd_set *) &rset, NULL, NULL, &timeout);
 		if (n < 0)
 		{
 			if (errno == EINTR)
@@ -2564,7 +2605,7 @@ SendEosTCP(ChunkTransportState *transportStates,
 	/* check em' */
 	ML_CHECK_FOR_INTERRUPTS(transportStates->teardownActive);
 
-	getChunkTransportState(transportStates, motNodeID, &pEntry);
+	pEntry = getChunkTransportState(transportStates, motNodeID);
 
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
 		elog(DEBUG3, "Interconnect seg%d slice%d sending end-of-stream to slice%d",

@@ -326,35 +326,13 @@ typedef struct ChunkTransportStateEntry
 	 */
 	mpp_fd_set  readSet;
 
-	/* highest file descriptor in the readSet. */
-	int			highReadSock;
-
     int         scanStart;
 
 	/* slice table entries */
 	struct ExecSlice *sendSlice;
 	struct ExecSlice *recvSlice;
 
-	/* setup info */
-	int			txfd;
-	int			txfd_family;
-	unsigned short txport;
-
-	bool		sendingEos;
-
-	/* Statistics info for this motion on the interconnect level */
-	uint64 stat_total_ack_time;
-	uint64 stat_count_acks;
-	uint64 stat_max_ack_time;
-	uint64 stat_min_ack_time;
-	uint64 stat_count_resent;
-	uint64 stat_max_resent;
-	uint64 stat_count_dropped;
-
 }	ChunkTransportStateEntry;
-
-/* ChunkTransportState array initial size */
-#define CTS_INITIAL_SIZE (10)
 
 /*
  * This structure is used to keep track of partially completed tuples,
@@ -497,21 +475,11 @@ typedef struct MotionLayerState
 
 typedef struct ChunkTransportState
 {
-	/* array of per-motion-node chunk transport state */
 	int size;
-	ChunkTransportStateEntry *states;
 
 	/* keeps track of if we've "activated" connections via SetupInterconnect(). */
 	bool		activated;
-
-	bool		aggressiveRetry;
-	
-	/* whether we've logged when network timeout happens */
-	bool		networkTimeoutIsLogged;
-
 	bool		teardownActive;
-	List		*incompleteConns;
-
 	/* slice table stuff. */
 	struct SliceTable  *sliceTable;
 	int			sliceId;
@@ -525,6 +493,7 @@ typedef struct ChunkTransportState
 	TupleChunkListItem (*RecvTupleChunkFromAny)(struct ChunkTransportState *transportStates, int16 motNodeID, int16 *srcRoute);
 	void (*doSendStopMessage)(struct ChunkTransportState *transportStates, int16 motNodeID);
 	void (*SendEos)(struct ChunkTransportState *transportStates, int motNodeID, TupleChunkListItem tcItem);
+	ChunkTransportStateEntry *(*GetChunkTransportStateEntry) (struct ChunkTransportState *transportState, int motNodeID);
 } ChunkTransportState;
 
 extern void dumpICBufferList(ICBufferList *list, const char *fname);

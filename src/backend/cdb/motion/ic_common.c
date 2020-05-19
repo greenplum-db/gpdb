@@ -299,7 +299,7 @@ SendTupleChunkToAMS(MotionLayerState *mlStates,
 		 transportStates, transportStates->size, motNodeID, targetRoute);
 #endif
 
-	getChunkTransportState(transportStates, motNodeID, &pEntry);
+	pEntry = getChunkTransportState(transportStates, motNodeID);
 
 	/*
 	 * tcItem can actually be a chain of tcItems.  we need to send out all of
@@ -382,7 +382,7 @@ getTransportDirectBuffer(ChunkTransportState *transportStates,
 
 	do
 	{
-		getChunkTransportState(transportStates, motNodeID, &pEntry);
+		pEntry = getChunkTransportState(transportStates, motNodeID);
 
 		/* handle pt-to-pt message. Primary */
 		conn = pEntry->conns + targetRoute;
@@ -436,7 +436,7 @@ putTransportDirectBuffer(ChunkTransportState *transportStates,
 		elog(FATAL, "putTransportDirectBuffer: can't direct-transport to broadcast");
 	}
 
-	getChunkTransportState(transportStates, motNodeID, &pEntry);
+	pEntry = getChunkTransportState(transportStates, motNodeID);
 
 	/* handle pt-to-pt message. Primary */
 	conn = pEntry->conns + targetRoute;
@@ -472,7 +472,7 @@ DeregisterReadInterest(ChunkTransportState *transportStates,
 	if (!transportStates->activated)
 		return;
 
-	getChunkTransportState(transportStates, motNodeID, &pEntry);
+	pEntry = getChunkTransportState(transportStates, motNodeID);
 	conn = pEntry->conns + srcRoute;
 
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
@@ -601,19 +601,9 @@ createChunkTransportState(ChunkTransportState *transportStates,
 	Assert(sendSlice->sliceIndex > 0);
 
 	motNodeID = sendSlice->sliceIndex;
-	if (motNodeID > transportStates->size)
-	{
-		/* increase size of our table */
-		ChunkTransportStateEntry *newTable;
+	Assert(motNodeID <= transportStates->size);
 
-		newTable = repalloc(transportStates->states, motNodeID * sizeof(ChunkTransportStateEntry));
-		transportStates->states = newTable;
-		/* zero-out the new piece at the end */
-		MemSet(&transportStates->states[transportStates->size], 0, (motNodeID - transportStates->size) * sizeof(ChunkTransportStateEntry));
-		transportStates->size = motNodeID;
-	}
-
-	pEntry = &transportStates->states[motNodeID - 1];
+	pEntry = transportStates->GetChunkTransportStateEntry(transportStates, motNodeID);
 
 	if (pEntry->valid)
 	{
@@ -655,7 +645,6 @@ createChunkTransportState(ChunkTransportState *transportStates,
 
 	return pEntry;
 }
-
 /* Function removeChunkTransportState() is used to remove a ChunkTransportState struct from
  * the hashtab hashtable.
  *
@@ -673,29 +662,8 @@ ChunkTransportStateEntry *
 removeChunkTransportState(ChunkTransportState *transportStates,
 						  int16 motNodeID)
 {
-	ChunkTransportStateEntry *pEntry = NULL;
-
-	if (motNodeID > transportStates->size)
-	{
-		ereport(ERROR,
-				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-				 errmsg("interconnect error: Unexpected Motion Node Id: %d",
-						motNodeID),
-				 errdetail("During remove. (size %d)", transportStates->size)));
-	}
-	else if (!transportStates->states[motNodeID - 1].valid)
-	{
-		ereport(ERROR,
-				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-				 errmsg("interconnect error: Unexpected Motion Node Id: %d",
-						motNodeID),
-				 errdetail("During remove. State not valid")));
-	}
-	else
-	{
-		transportStates->states[motNodeID - 1].valid = false;
-		pEntry = &transportStates->states[motNodeID - 1];
-	}
+	ChunkTransportStateEntry *pEntry = getChunkTransportState(transportStates, motNodeID);
+	pEntry->valid = false;
 
 	MPP_FD_ZERO(&pEntry->readSet);
 

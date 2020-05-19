@@ -179,6 +179,30 @@ struct ConnHashTable
 	int			size;
 };
 
+typedef struct ChunkTransportStateEntryUDP
+{
+	ChunkTransportStateEntry entry;
+	int				txfd;
+	int				txfd_family;
+	unsigned short 	txport;
+	bool			sendingEos;
+	/* Interconnect level statistics for the motion */
+	uint64 			stat_total_ack_time;
+	uint64 			stat_count_acks;
+	uint64 			stat_max_ack_time;
+	uint64 			stat_min_ack_time;
+	uint64 			stat_count_resent;
+	uint64 			stat_max_resent;
+	uint64 			stat_count_dropped;
+} ChunkTransportStateEntryUDP;
+
+typedef struct ChunkTransportStateUDP
+{
+	ChunkTransportState base;
+	ChunkTransportStateEntryUDP *states;
+	bool networkTimeoutIsLogged;
+} ChunkTransportStateUDP;
+
 #define CONN_HASH_VALUE(icpkt) ((uint32)((((icpkt)->srcPid ^ (icpkt)->dstPid)) + (icpkt)->dstContentId))
 #define CONN_HASH_MATCH(a, b) (((a)->motNodeId == (b)->motNodeId && \
 								(a)->dstContentId == (b)->dstContentId && \
@@ -1992,7 +2016,7 @@ MlPutRxBufferIFC(ChunkTransportState *transportStates, int motNodeID, int route)
 	MotionConn *conn = NULL;
 	AckSendParam param;
 
-	getChunkTransportState(transportStates, motNodeID, &pEntry);
+	pEntry = getChunkTransportState(transportStates, motNodeID);
 
 	conn = pEntry->conns + route;
 
@@ -2653,6 +2677,7 @@ startOutgoingUDPConnections(ChunkTransportState *transportStates,
 							int *pOutgoingCount)
 {
 	ChunkTransportStateEntry *pEntry;
+	ChunkTransportStateEntryUDP *pEntryUDP;
 	MotionConn *conn;
 	ListCell   *cell;
 	ExecSlice  *recvSlice;
@@ -2671,7 +2696,7 @@ startOutgoingUDPConnections(ChunkTransportState *transportStates,
 									   sendSlice,
 									   recvSlice,
 									   list_length(recvSlice->primaryProcesses));
-
+	pEntryUDP = (ChunkTransportStateEntryUDP *) pEntry;
 	Assert(pEntry && pEntry->valid);
 
 	/*
@@ -2718,9 +2743,9 @@ startOutgoingUDPConnections(ChunkTransportState *transportStates,
 		conn++;
 	}
 
-	pEntry->txfd = ICSenderSocket;
-	pEntry->txport = ICSenderPort;
-	pEntry->txfd_family = ICSenderFamily;
+	pEntryUDP->txfd = ICSenderSocket;
+	pEntryUDP->txport = ICSenderPort;
+	pEntryUDP->txfd_family = ICSenderFamily;
 
 	return pEntry;
 
@@ -2794,6 +2819,7 @@ void
 setupOutgoingUDPConnection(ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntry, MotionConn *conn)
 {
 	CdbProcess *cdbProc = conn->cdbProc;
+	ChunkTransportStateEntryUDP *pEntryUDP = (ChunkTransportStateEntryUDP *) pEntry;
 
 	Assert(conn->state == mcsSetupOutgoingConnection);
 	Assert(conn->cdbProc);
@@ -2830,14 +2856,14 @@ setupOutgoingUDPConnection(ChunkTransportState *transportStates, ChunkTransportS
 			MemSet(&source_addr, 0, sizeof(source_addr));
 			source_addr_len = sizeof(source_addr);
 
-			if (getsockname(pEntry->txfd, (struct sockaddr *) &source_addr, &source_addr_len) == -1)
+			if (getsockname(pEntryUDP->txfd, (struct sockaddr *) &source_addr, &source_addr_len) == -1)
 			{
 				ereport(ERROR,
 						(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 						 errmsg("interconnect Error: Could not get port from socket"),
 						 errdetail("%m")));
 			}
-			Assert(pEntry->txfd_family == source_addr.ss_family);
+			Assert(pEntryUDP->txfd_family == source_addr.ss_family);
 		}
 #endif
 
@@ -2845,7 +2871,7 @@ setupOutgoingUDPConnection(ChunkTransportState *transportStates, ChunkTransportS
 		 * If the socket was created with a different address family than the
 		 * place we are sending to, we might need to do something special.
 		 */
-		if (pEntry->txfd_family != conn->peer.ss_family)
+		if (pEntryUDP->txfd_family != conn->peer.ss_family)
 		{
 			/*
 			 * If the socket was created AF_INET6, but the address we want to
@@ -2854,7 +2880,7 @@ setupOutgoingUDPConnection(ChunkTransportState *transportStates, ChunkTransportS
 			 * handles this.  But on MAC OSX and Solaris, we need to convert
 			 * the IPv4 address to an V4-MAPPED address in AF_INET6 format.
 			 */
-			if (pEntry->txfd_family == AF_INET6)
+			if (pEntryUDP->txfd_family == AF_INET6)
 			{
 				struct sockaddr_storage temp;
 				const struct sockaddr_in *in = (const struct sockaddr_in *) &conn->peer;
@@ -3012,6 +3038,21 @@ handleCachedPackets(void)
 	}
 }
 
+static ChunkTransportStateEntry *
+GetChunkTransportStateEntryUDP(ChunkTransportState *transportState,
+								 int motNodeID)
+{
+	ChunkTransportStateUDP *transportStateUDP = (ChunkTransportStateUDP *) transportState;
+	Assert(transportState != NULL);
+	if (motNodeID > 0 && motNodeID <= transportState->size)
+		return (ChunkTransportStateEntry *) &transportStateUDP->states[motNodeID - 1];
+	else
+		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+			errmsg("Interconnect Error: Unexpected Motion Node Id: %d (size %d). This means"
+				   " a motion node that wasn't setup is requesting interconnect"
+				   " resources.", motNodeID, transportState->size)));
+}
+
 /*
  * SetupUDPIFCInterconnect_Internal
  * 		Internal function for setting up UDP interconnect.
@@ -3032,6 +3073,7 @@ SetupUDPIFCInterconnect_Internal(SliceTable *sliceTable)
 
 	ChunkTransportStateEntry *sendingChunkTransportState = NULL;
 	ChunkTransportState *interconnect_context;
+	ChunkTransportStateUDP *interconnect_context_udp;
 
 	pthread_mutex_lock(&ic_control_info.lock);
 
@@ -3039,17 +3081,20 @@ SetupUDPIFCInterconnect_Internal(SliceTable *sliceTable)
 
 	Assert(gp_interconnect_id > 0);
 
-	interconnect_context = palloc0(sizeof(ChunkTransportState));
+	interconnect_context = palloc0(sizeof(ChunkTransportStateUDP));
+	interconnect_context_udp = (ChunkTransportStateUDP *) interconnect_context;
+
+	interconnect_context->GetChunkTransportStateEntry = GetChunkTransportStateEntryUDP;
 
 	/* initialize state variables */
 	Assert(interconnect_context->size == 0);
-	interconnect_context->size = CTS_INITIAL_SIZE;
-	interconnect_context->states = palloc0(CTS_INITIAL_SIZE * sizeof(ChunkTransportStateEntry));
+	interconnect_context->size = sliceTable->numSlices;
+	((ChunkTransportStateUDP *) interconnect_context)->states =
+		palloc0(sliceTable->numSlices * sizeof(ChunkTransportStateEntryUDP));
 
-	interconnect_context->networkTimeoutIsLogged = false;
+	interconnect_context_udp->networkTimeoutIsLogged = false;
 	interconnect_context->teardownActive = false;
 	interconnect_context->activated = false;
-	interconnect_context->incompleteConns = NIL;
 	interconnect_context->sliceTable = copyObject(sliceTable);
 	interconnect_context->sliceId = sliceTable->localSlice;
 
@@ -3328,10 +3373,10 @@ static bool
 chunkTransportStateEntryInitialized(ChunkTransportState *transportStates,
 									int16 motNodeID)
 {
-	if (motNodeID > transportStates->size || !transportStates->states[motNodeID - 1].valid)
-		return false;
-
-	return true;
+	ChunkTransportStateEntry *entry;
+	Assert(motNodeID <= transportStates->size);
+	entry = GetChunkTransportStateEntryUDP(transportStates, motNodeID);
+	return entry->valid;
 }
 
 /*
@@ -3367,6 +3412,7 @@ TeardownUDPIFCInterconnect_Internal(ChunkTransportState *transportStates,
 									bool hasErrors)
 {
 	ChunkTransportStateEntry *pEntry = NULL;
+	ChunkTransportStateEntryUDP *states;
 	int			i;
 	ExecSlice  *mySlice;
 	MotionConn *conn;
@@ -3387,7 +3433,8 @@ TeardownUDPIFCInterconnect_Internal(ChunkTransportState *transportStates,
 		return;
 	}
 
-	if (!transportStates->states)
+	states = ((ChunkTransportStateUDP *) transportStates)->states;
+	if (!states)
 	{
 		elog(LOG, "TeardownUDPIFCInterconnect: missing states.");
 		return;
@@ -3650,11 +3697,8 @@ TeardownUDPIFCInterconnect_Internal(ChunkTransportState *transportStates,
 
 	if (transportStates != NULL)
 	{
-		if (transportStates->states != NULL)
-		{
-			pfree(transportStates->states);
-			transportStates->states = NULL;
-		}
+		if (states != NULL)
+			pfree(states);
 		pfree(transportStates);
 	}
 
@@ -3876,7 +3920,7 @@ RecvTupleChunkFromAnyUDPIFC_Internal(ChunkTransportState *transportStates,
 		elog(FATAL, "RecvTupleChunkFromAnyUDPIFC: interconnect context not active!");
 	}
 
-	getChunkTransportState(transportStates, motNodeID, &pEntry);
+	pEntry = getChunkTransportState(transportStates, motNodeID);
 
 	index = pEntry->scanStart;
 
@@ -3994,7 +4038,7 @@ RecvTupleChunkFromUDPIFC_Internal(ChunkTransportState *transportStates,
 	elog(DEBUG5, "RecvTupleChunkFromUDPIFC(motNodID=%d, srcRoute=%d)", motNodeID, srcRoute);
 #endif
 
-	getChunkTransportState(transportStates, motNodeID, &pEntry);
+	pEntry = getChunkTransportState(transportStates, motNodeID);
 	conn = pEntry->conns + srcRoute;
 
 #ifdef AMS_VERBOSE_LOGGING
@@ -4086,17 +4130,19 @@ markUDPConnInactiveIFC(MotionConn *conn)
 static void
 aggregateStatistics(ChunkTransportStateEntry *pEntry)
 {
+	ChunkTransportStateEntryUDP *pEntryUDP = (ChunkTransportStateEntryUDP *) pEntry;
 	/*
 	 * We first clear the stats, and then compute new stats by aggregating the
 	 * stats from each connection.
 	 */
-	pEntry->stat_total_ack_time = 0;
-	pEntry->stat_count_acks = 0;
-	pEntry->stat_max_ack_time = 0;
-	pEntry->stat_min_ack_time = ~((uint64) 0);
-	pEntry->stat_count_resent = 0;
-	pEntry->stat_max_resent = 0;
-	pEntry->stat_count_dropped = 0;
+
+	pEntryUDP->stat_total_ack_time = 0;
+	pEntryUDP->stat_count_acks = 0;
+	pEntryUDP->stat_max_ack_time = 0;
+	pEntryUDP->stat_min_ack_time = ~((uint64) 0);
+	pEntryUDP->stat_count_resent = 0;
+	pEntryUDP->stat_max_resent = 0;
+	pEntryUDP->stat_count_dropped = 0;
 
 	int			connNo;
 
@@ -4104,13 +4150,13 @@ aggregateStatistics(ChunkTransportStateEntry *pEntry)
 	{
 		MotionConn *conn = &pEntry->conns[connNo];
 
-		pEntry->stat_total_ack_time += conn->stat_total_ack_time;
-		pEntry->stat_count_acks += conn->stat_count_acks;
-		pEntry->stat_max_ack_time = Max(pEntry->stat_max_ack_time, conn->stat_max_ack_time);
-		pEntry->stat_min_ack_time = Min(pEntry->stat_min_ack_time, conn->stat_min_ack_time);
-		pEntry->stat_count_resent += conn->stat_count_resent;
-		pEntry->stat_max_resent = Max(pEntry->stat_max_resent, conn->stat_max_resent);
-		pEntry->stat_count_dropped += conn->stat_count_dropped;
+		pEntryUDP->stat_total_ack_time += conn->stat_total_ack_time;
+		pEntryUDP->stat_count_acks += conn->stat_count_acks;
+		pEntryUDP->stat_max_ack_time = Max(pEntryUDP->stat_max_ack_time, conn->stat_max_ack_time);
+		pEntryUDP->stat_min_ack_time = Min(pEntryUDP->stat_min_ack_time, conn->stat_min_ack_time);
+		pEntryUDP->stat_count_resent += conn->stat_count_resent;
+		pEntryUDP->stat_max_resent = Max(pEntryUDP->stat_max_resent, conn->stat_max_resent);
+		pEntryUDP->stat_count_dropped += conn->stat_count_dropped;
 	}
 }
 
@@ -4255,6 +4301,7 @@ handleAcks(ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntr
 	bool		ret = false;
 	MotionConn *ackConn = NULL;
 	int			n;
+	ChunkTransportStateEntryUDP *pEntryUDP = (ChunkTransportStateEntryUDP *) pEntry;
 
 	struct sockaddr_storage peer;
 	socklen_t	peerlen;
@@ -4269,7 +4316,7 @@ handleAcks(ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntr
 
 		/* ready to read on our socket ? */
 		peerlen = sizeof(peer);
-		n = recvfrom(pEntry->txfd, (char *) pkt, MIN_PACKET_SIZE, 0,
+		n = recvfrom(pEntryUDP->txfd, (char *) pkt, MIN_PACKET_SIZE, 0,
 					 (struct sockaddr *) &peer, &peerlen);
 
 		if (n < 0)
@@ -4541,6 +4588,7 @@ static void
 sendOnce(ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntry, ICBuffer *buf, MotionConn *conn)
 {
 	int32		n;
+	ChunkTransportStateEntryUDP *pEntryUDP = (ChunkTransportStateEntryUDP *) pEntry;
 
 #ifdef USE_ASSERT_CHECKING
 	if (testmode_inject_fault(gp_udpic_dropxmit_percent))
@@ -4553,7 +4601,7 @@ sendOnce(ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntry,
 #endif
 
 xmit_retry:
-	n = sendto(pEntry->txfd, buf->pkt, buf->pkt->len, 0,
+	n = sendto(pEntryUDP->txfd, buf->pkt, buf->pkt->len, 0,
 			   (struct sockaddr *) &conn->peer, conn->peer_len);
 	if (n < 0)
 	{
@@ -4612,6 +4660,7 @@ static void
 handleStopMsgs(ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntry, int16 motionId)
 {
 	int			i = 0;
+	ChunkTransportStateEntryUDP *pEntryUDP = (ChunkTransportStateEntryUDP *) pEntry;
 
 #ifdef AMS_VERBOSE_LOGGING
 	elog(DEBUG3, "handleStopMsgs: node %d", motionId);
@@ -4676,7 +4725,7 @@ handleStopMsgs(ChunkTransportState *transportStates, ChunkTransportStateEntry *p
 
 		if (i == pEntry->numConns)
 		{
-			if (pollAcks(transportStates, pEntry->txfd, 0))
+			if (pollAcks(transportStates, pEntryUDP->txfd, 0))
 			{
 				if (handleAcks(transportStates, pEntry))
 				{
@@ -5104,6 +5153,7 @@ checkExpiration(ChunkTransportState *transportStates,
 	/* check for expiration */
 	int			count = 0;
 	int			retransmits = 0;
+	ChunkTransportStateUDP *transportStatesUDP = (ChunkTransportStateUDP *) transportStates;
 
 	Assert(unack_queue_ring.currentTime != 0);
 	while (now >= (unack_queue_ring.currentTime + TIMER_SPAN) && count++ < UNACK_QUEUE_RING_SLOTS_NUM)
@@ -5131,7 +5181,7 @@ checkExpiration(ChunkTransportState *transportStates,
 			curBuf->conn->stat_max_resent = Max(curBuf->conn->stat_max_resent,
 												curBuf->conn->stat_count_resent);
 
-			checkNetworkTimeout(curBuf, now, &transportStates->networkTimeoutIsLogged);
+			checkNetworkTimeout(curBuf, now, &transportStatesUDP->networkTimeoutIsLogged);
 
 #ifdef AMS_VERBOSE_LOGGING
 			write_log("RESEND pkt with seq %d (retry %d, rtt " UINT64_FORMAT ") to route %d",
@@ -5178,6 +5228,7 @@ static void
 checkDeadlock(ChunkTransportStateEntry *pEntry, MotionConn *conn)
 {
 	uint64		deadlockCheckTime;
+	ChunkTransportStateEntryUDP *pEntryUDP = (ChunkTransportStateEntryUDP *) pEntry;
 
 	if (icBufferListLength(&conn->unackQueue) == 0 && conn->capacity == 0 && icBufferListLength(&conn->sndQueue) > 0)
 	{
@@ -5201,7 +5252,7 @@ checkDeadlock(ChunkTransportStateEntry *pEntry, MotionConn *conn)
 		if (((now - ic_control_info.lastDeadlockCheckTime) > deadlockCheckTime) &&
 			((now - conn->deadlockCheckBeginTime) > deadlockCheckTime))
 		{
-			sendStatusQueryMessage(conn, pEntry->txfd, conn->conn_info.seq - 1);
+			sendStatusQueryMessage(conn, pEntryUDP->txfd, conn->conn_info.seq - 1);
 			ic_control_info.lastDeadlockCheckTime = now;
 			ic_statistics.statusQueryMsgNum++;
 
@@ -5287,6 +5338,7 @@ checkExpirationCapacityFC(ChunkTransportState *transportStates,
 						  MotionConn *conn,
 						  int timeout)
 {
+	ChunkTransportStateUDP *transportStatesUDP = (ChunkTransportStateUDP *) transportStates;
 	if (icBufferListLength(&conn->unackQueue) == 0)
 		return;
 
@@ -5303,7 +5355,7 @@ checkExpirationCapacityFC(ChunkTransportState *transportStates,
 		ic_control_info.lastPacketSendTime = now;
 
 		updateRetransmitStatistics(conn);
-		checkNetworkTimeout(buf, now, &transportStates->networkTimeoutIsLogged);
+		checkNetworkTimeout(buf, now, &transportStatesUDP->networkTimeoutIsLogged);
 	}
 }
 
@@ -5409,6 +5461,7 @@ SendChunkUDPIFC(ChunkTransportState *transportStates,
 	int			retry = 0;
 	bool		doCheckExpiration = false;
 	bool		gotStops = false;
+	ChunkTransportStateEntryUDP *pEntryUDP = (ChunkTransportStateEntryUDP *) pEntry;
 
 	Assert(conn->msgSize > 0);
 
@@ -5456,7 +5509,7 @@ SendChunkUDPIFC(ChunkTransportState *transportStates,
 	{
 		int			timeout = (doCheckExpiration ? 0 : computeTimeout(conn, retry));
 
-		if (pollAcks(transportStates, pEntry->txfd, timeout))
+		if (pollAcks(transportStates, pEntryUDP->txfd, timeout))
 		{
 			if (handleAcks(transportStates, pEntry))
 			{
@@ -5510,6 +5563,7 @@ SendEosUDPIFC(ChunkTransportState *transportStates,
 			  TupleChunkListItem tcItem)
 {
 	ChunkTransportStateEntry *pEntry = NULL;
+	ChunkTransportStateEntryUDP *pEntryUDP = NULL;
 	MotionConn *conn;
 	int			i = 0;
 	int			retry = 0;
@@ -5531,7 +5585,8 @@ SendEosUDPIFC(ChunkTransportState *transportStates,
 	/* check em' */
 	ML_CHECK_FOR_INTERRUPTS(transportStates->teardownActive);
 
-	getChunkTransportState(transportStates, motNodeID, &pEntry);
+	pEntry = getChunkTransportState(transportStates, motNodeID);
+	pEntryUDP = (ChunkTransportStateEntryUDP *) pEntry;
 
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
 		elog(DEBUG1, "Interconnect seg%d slice%d sending end-of-stream to slice%d",
@@ -5543,7 +5598,7 @@ SendEosUDPIFC(ChunkTransportState *transportStates,
 	 */
 	doBroadcast(transportStates, pEntry, tcItem, NULL);
 
-	pEntry->sendingEos = true;
+	pEntryUDP->sendingEos = true;
 
 	uint64		now = getCurrentTime();
 
@@ -5561,7 +5616,7 @@ SendEosUDPIFC(ChunkTransportState *transportStates,
 					 conn->conn_info.icId, conn->msgSize);
 
 			/* prepare this for transmit */
-			if (pEntry->sendingEos)
+			if (pEntryUDP->sendingEos)
 				conn->conn_info.flags |= UDPIC_FLAGS_EOS;
 
 			prepareXmit(conn);
@@ -5608,7 +5663,7 @@ SendEosUDPIFC(ChunkTransportState *transportStates,
 				{
 					timeout = computeTimeout(conn, retry);
 
-					if (pollAcks(transportStates, pEntry->txfd, timeout))
+					if (pollAcks(transportStates, pEntryUDP->txfd, timeout))
 						handleAcks(transportStates, pEntry);
 
 					checkExceptions(transportStates, pEntry, conn, retry++, timeout);
@@ -5647,7 +5702,7 @@ doSendStopMessageUDPIFC(ChunkTransportState *transportStates, int16 motNodeID)
 	if (!transportStates->activated)
 		return;
 
-	getChunkTransportState(transportStates, motNodeID, &pEntry);
+	pEntry = getChunkTransportState(transportStates, motNodeID);
 	Assert(pEntry);
 
 	/*

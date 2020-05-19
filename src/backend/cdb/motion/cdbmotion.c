@@ -361,7 +361,7 @@ CheckAndSendRecordCache(MotionLayerState *mlStates,
 	ChunkTransportStateEntry *pEntry = NULL;
 	MotionConn *conn;
 
-	getChunkTransportState(transportStates, motNodeID, &pEntry);
+	pEntry = getChunkTransportState(transportStates, motNodeID);
 
 	/*
 	 * for broadcast we only mark sent_record_typmod for connection 0 for
@@ -997,7 +997,7 @@ addChunkToSorter(MotionLayerState *mlStates,
 
 	chunkSorterEntry = getChunkSorterEntry(mlStates, pMNEntry, srcRoute);
 
-	getChunkTransportState(transportStates, motNodeID, &pEntry);
+	pEntry = getChunkTransportState(transportStates, motNodeID);
 	conn = pEntry->conns + srcRoute;
 
 	/* Look at the chunk's type, to figure out what to do with it. */

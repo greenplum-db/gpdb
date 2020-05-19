@@ -222,26 +222,16 @@ extern void readPacket(MotionConn *conn, ChunkTransportState *transportStates);
  */
 extern void  MlPutRxBufferIFC(ChunkTransportState *transportStates, int motNodeID, int route);
 
-#define getChunkTransportState(transportState, motNodeID, ppEntry) \
-	do { \
-		Assert((transportState) != NULL);		\
-		if ((motNodeID) > 0 &&					\
-			(transportState) &&					 \
-			(motNodeID) <= (transportState)->size &&					\
-			(transportState)->states[(motNodeID)-1].motNodeId == (motNodeID) && \
-			(transportState)->states[(motNodeID)-1].valid)				\
-		{ \
-			*(ppEntry) = &(transportState)->states[(motNodeID) - 1];	\
-		} \
-		else \
-		{ \
+#define getChunkTransportState(transportState, motNodeID) \
+	({ \
+		ChunkTransportStateEntry *entry = (transportState)->GetChunkTransportStateEntry((transportState), (motNodeID)); \
+		if (!entry->valid || entry->motNodeId != (motNodeID)) \
 			ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR), \
-							errmsg("Interconnect Error: Unexpected Motion Node Id: %d (size %d). This means" \
-								   " a motion node that wasn't setup is requesting interconnect" \
-								   " resources.", (motNodeID), (transportState)->size))); \
-			/* not reached */ \
-		} \
-	} while (0)
+								errmsg("Interconnect Error: Unexpected Motion Node Id: %d (size %d). This means" \
+									   " a motion node that wasn't setup is requesting interconnect" \
+									   " resources.", (motNodeID), (transportState)->size))); \
+		entry; \
+	})
 
 #define ML_CHECK_FOR_INTERRUPTS(teardownActive) \
 		do {if (!teardownActive && InterruptPending) CHECK_FOR_INTERRUPTS(); } while (0)
