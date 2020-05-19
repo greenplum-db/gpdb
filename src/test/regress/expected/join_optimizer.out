@@ -4251,17 +4251,17 @@ select * from
    Hash Cond: ((1) = COALESCE((1)))
    ->  Result
    ->  Hash
-         ->  Gather Motion 3:1  (slice1; segments: 3)
-               ->  Merge Full Join
-                     Merge Cond: (unique1 = (1))
+         ->  Merge Full Join
+               Merge Cond: (unique1 = (1))
+               ->  Gather Motion 3:1  (slice1; segments: 3)
+                     Merge Key: unique1
                      ->  Sort
                            Sort Key: unique1
                            ->  Seq Scan on tenk1
-                     ->  Sort
-                           Sort Key: (1)
-                           ->  Result
-                                 ->  Result
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
+               ->  Sort
+                     Sort Key: (1)
+                     ->  Result
+ Optimizer: Pivotal Optimizer (GPORCA)
 (15 rows)
 
 select * from
@@ -4538,11 +4538,18 @@ select d.* from d left join (select id from a union select id from b) s
                      Group Key: a.id
                      ->  Sort
                            Sort Key: a.id
-                           ->  Append
-                                 ->  Seq Scan on a
-                                 ->  Seq Scan on b
- Optimizer: Pivotal Optimizer (GPORCA) version 3.44.0
-(13 rows)
+                           ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                                 Hash Key: a.id
+                                 ->  GroupAggregate
+                                       Group Key: a.id
+                                       ->  Sort
+                                             Sort Key: a.id
+                                             ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                                   ->  Append
+                                                         ->  Seq Scan on a
+                                                         ->  Seq Scan on b
+ Optimizer: Pivotal Optimizer (GPORCA)
+(20 rows)
 
 -- check join removal with a cross-type comparison operator
 explain (costs off)
