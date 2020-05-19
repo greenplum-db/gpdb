@@ -1201,6 +1201,17 @@ standard_ExecutorEnd(QueryDesc *queryDesc)
 		RemoveMotionLayer(estate->motionlayer_context);
 
 		/*
+		 * GPDB specific
+		 * Clean the special resources created by INITPLAN.
+		 * The resources have long life cycle and are used by the main plan.
+		 * It's too early to clean them in preprocess_initplans.
+		 */
+		if (queryDesc->plannedstmt->nParamExec > 0)
+		{
+			postprocess_initplans(queryDesc);
+		}
+
+		/*
 		 * Release EState and per-query memory context.
 		 */
 		FreeExecutorState(estate);
@@ -1208,6 +1219,17 @@ standard_ExecutorEnd(QueryDesc *queryDesc)
 		PG_RE_THROW();
 	}
 	PG_END_TRY();
+
+	/*
+	 * GPDB specific
+	 * Clean the special resources created by INITPLAN.
+	 * The resources have long life cycle and are used by the main plan.
+	 * It's too early to clean them in preprocess_initplans.
+	 */
+	if (queryDesc->plannedstmt->nParamExec > 0)
+	{
+		postprocess_initplans(queryDesc);
+	}
 
     /*
      * If normal termination, let each operator clean itself up.

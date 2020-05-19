@@ -105,14 +105,7 @@ FunctionNext_guts(FunctionScanState *node)
 			char rwfile_prefix[100];
 			function_scan_create_bufname_prefix(rwfile_prefix, sizeof(rwfile_prefix));
 
-			node->ts_state->matstore = ntuplestore_create_readerwriter(rwfile_prefix, 0, false, false);
-			/*
-			 * delete file when close tuplestore reader
-			 * tuplestore writer is created in initplan, so it needs to keep
-			 * the file even if initplan ended. 
-			 * we should let the reader to delete it when reader's job finished.
-			 */
-			ntuplestore_set_is_temp_file(node->ts_state->matstore, true);
+			node->ts_state->matstore = ntuplestore_create_readerwriter(rwfile_prefix, 0, false);
 			
 			node->ts_pos = (NTupleStoreAccessor *) ntuplestore_create_accessor(node->ts_state->matstore, false);
 			ntuplestore_acc_seek_bof((NTupleStoreAccessor *) node->ts_pos);

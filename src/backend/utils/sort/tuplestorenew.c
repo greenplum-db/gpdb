@@ -749,7 +749,7 @@ ntuplestore_create_common(int64 maxBytes, char *operation_name)
  *   useWorkFile specify whether to use workfile for tuplestore
  */
 NTupleStore *
-ntuplestore_create_readerwriter(const char *filename, int64 maxBytes, bool isWriter, bool useWorkFile)
+ntuplestore_create_readerwriter(const char *filename, int64 maxBytes, bool isWriter)
 {
 	NTupleStore* store = NULL;
 	char filenamelob[MAXPGPATH];
@@ -762,8 +762,7 @@ ntuplestore_create_readerwriter(const char *filename, int64 maxBytes, bool isWri
 		store->rwflag = NTS_IS_WRITER;
 		store->lobbytes = 0;
 		store->work_set = NULL;
-		if (useWorkFile)
-			store->work_set = workfile_mgr_create_set(store->operation_name, filename);
+		store->work_set = workfile_mgr_create_set(store->operation_name, filename);
 		store->pfile = BufFileCreateNamedTemp(filename,
 											  false /* interXact */,
 											  store->work_set);
@@ -1397,16 +1396,6 @@ ntuplestore_create_spill_files(NTupleStore *nts)
 
 	if (nts->instrument)
 		nts->instrument->workfileCreated = true;
-}
-
-/*
- * Specify the BufFiles used by tuplestore are temp files or not
- */
-void
-ntuplestore_set_is_temp_file(NTupleStore *ts, bool isTempFile)
-{	
-	BufFileSetIsTempFile(ts->pfile, isTempFile);
-	BufFileSetIsTempFile(ts->plobfile, isTempFile);
 }
 
 /* EOF */

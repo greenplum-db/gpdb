@@ -23,5 +23,6 @@
 
 extern void preprocess_initplans(QueryDesc *queryDesc);
 extern ParamListInfo addRemoteExecParamsToParamList(PlannedStmt *stmt, ParamListInfo p, ParamExecData *prm);
+extern void postprocess_initplans(QueryDesc *queryDesc);
 
 #endif   /* CDBSUBPLAN_H */
