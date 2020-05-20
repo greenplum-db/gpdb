@@ -217,6 +217,9 @@ SELECT * FROM agg_csv FOR UPDATE;
   42 |  324.78
 (3 rows)
 
+-- copy from isn't supported either
+COPY agg_csv FROM STDIN;
+ERROR:  cannot insert into foreign table "agg_csv"
 -- constraint exclusion tests
 \t on
 EXPLAIN (VERBOSE, COSTS FALSE) SELECT * FROM agg_csv WHERE a < 0;

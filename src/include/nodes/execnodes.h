@@ -383,6 +383,9 @@ typedef struct ResultRelInfo
 	AttrNumber	ri_action_attno;	/* is this an INSERT or DELETE ? */
 	AttrNumber	ri_tupleoid_attno;	/* old OID, when updating table with OIDs */
 
+	/* list of RETURNING expressions */
+	List	   *ri_returningList;
+
 	ProjectionInfo *ri_projectReturning;
 	ProjectionInfo *ri_onConflictSetProj;
 	List	   *ri_onConflictSetWhere;
