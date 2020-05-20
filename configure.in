@@ -837,10 +837,6 @@ if test "$PORTNAME" = darwin; then
 	    [Define to 1 to build ORCA for MacOS (GPOS_Darwin=1)])
 fi
 
-AS_IF([test "$enable_orca" = yes],
-[ # then
-  AX_CXX_COMPILE_STDCXX([14], [noext], [mandatory])
-]) # fi
 
 #
 # --enable-mapreduce enables GPMapreduce support
@@ -860,7 +856,7 @@ PGAC_ARG_BOOL(enable, gpcloud, yes, [disable gpcloud support],
 AC_MSG_RESULT([checking whether to build with gpcloud... $enable_gpcloud])
 AC_SUBST(enable_gpcloud)
 
-AS_IF([test "$enable_gpcloud" = yes],
+AS_IF([test "$enable_orca" = yes || test "$enable_gpcloud" = yes],
 [ # then
   AX_CXX_COMPILE_STDCXX([14], [noext], [mandatory])
 ]) # fi
