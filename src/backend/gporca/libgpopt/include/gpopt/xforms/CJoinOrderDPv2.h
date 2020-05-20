@@ -73,7 +73,7 @@ namespace gpopt
 				// does the parent/child exist?
 				BOOL exists(ULONG ix) { return ix < m_topk->Size(); }
 				// cost of an entry (this class implements a Min-Heap)
-				CDouble cost(ULONG ix) { return (*m_topk)[ix]->DCostForHeap(); }
+				CDouble cost(ULONG ix) { return (*m_topk)[ix]->GetCostForHeap(); }
 
 				// push node ix in the tree down into its child tree as much as needed
 				void HeapifyDown(ULONG ix)
@@ -388,9 +388,9 @@ namespace gpopt
 				}
 
 				// cost (use -1 for greedy solutions to ensure we keep all of them)
-				CDouble DCostForHeap() { return m_properties.IsGreedy() ? -1.0 : DCost(); }
+				CDouble GetCostForHeap() { return m_properties.IsGreedy() ? -1.0 : GetCost(); }
 
-				CDouble DCost() { return m_cost; }
+				CDouble GetCost() { return m_cost; }
 
 				BOOL ChildrenAreEqual(const SExpressionInfo &other) const
 				{ return m_left_child_expr == other.m_left_child_expr && m_right_child_expr == other.m_right_child_expr; }
@@ -432,7 +432,7 @@ namespace gpopt
 					}
 
 					BOOL IsAnAtom() { return 1 == m_atoms->Size(); }
-					CDouble DCostForHeap() { return m_lowest_expr_cost; }
+					CDouble GetCostForHeap() { return m_lowest_expr_cost; }
 
 				};
 

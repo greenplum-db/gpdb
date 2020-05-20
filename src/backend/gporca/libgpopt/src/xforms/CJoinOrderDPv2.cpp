@@ -448,11 +448,11 @@ CJoinOrderDPv2::GetBestExprForProperties
 
 		if (IsASupersetOfProperties(expr_info->m_properties, props))
 		{
-			if (gpos::ulong_max == best_ix || expr_info->DCost() < best_cost)
+			if (gpos::ulong_max == best_ix || expr_info->GetCost() < best_cost)
 			{
 				// we found a candidate with the best cost so far that satisfies the properties
 				best_ix = ul;
-				best_cost = expr_info->DCost();
+				best_cost = expr_info->GetCost();
 			}
 		}
 	}
@@ -502,7 +502,7 @@ CJoinOrderDPv2::AddExprToGroupIfNecessary
 {
 	// compute the cost for the new expression
 	ComputeCost(new_expr_info, group_info->m_cardinality);
-	CDouble new_cost = new_expr_info->DCost();
+	CDouble new_cost = new_expr_info->GetCost();
 
 	if (group_info->m_atoms->Size() == m_ulComps)
 	{
@@ -555,8 +555,8 @@ CJoinOrderDPv2::AddExprToGroupIfNecessary
 		SExpressionInfo *expr_info = (*group_info->m_best_expr_info_array)[ul];
 		BOOL old_ge_new = IsASupersetOfProperties(expr_info->m_properties, new_expr_info->m_properties);
 		BOOL new_ge_old = IsASupersetOfProperties(new_expr_info->m_properties, expr_info->m_properties);
-		CDouble old_cost = expr_info->DCost();
-		CDouble new_cost = new_expr_info->DCost();
+		CDouble old_cost = expr_info->GetCost();
+		CDouble new_cost = new_expr_info->GetCost();
 
 		if (old_ge_new)
 		{
@@ -975,7 +975,7 @@ CJoinOrderDPv2::GreedySearchJoinOrders
 			SGroupInfo *join_group_info = LookupOrCreateGroupInfo(current_level_info, join_bitset, join_expr_info);
 
 			ComputeCost(join_expr_info, join_group_info->m_cardinality);
-			CDouble join_cost = join_expr_info->DCost();
+			CDouble join_cost = join_expr_info->GetCost();
 
 			if (NULL == best_expr_info_in_level || join_cost < best_cost_in_level)
 			{
@@ -1657,7 +1657,6 @@ CJoinOrderDPv2::OsPrint
 					os << " join ";
 					expr_info->m_right_child_expr.m_group_info->m_atoms->OsPrint(os);
 					os << std::endl;
-
 				}
 				os << "   Cost: ";
 				expr_info->m_cost.OsPrint(os);
