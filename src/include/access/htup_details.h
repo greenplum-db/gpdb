@@ -82,20 +82,25 @@
  * FULL never try to move a tuple whose Cmin or Cmax is still interesting,
  * ie, an insert-in-progress or delete-in-progress tuple.)
  *
- * A word about t_ctid: whenever a new tuple is stored on disk, its t_ctid
- * is initialized with its own TID (location).  If the tuple is ever updated,
- * its t_ctid is changed to point to the replacement version of the tuple.
+ * A word about t_ctid: whenever a new tuple is stored on disk, its t_ctid is
+ * initialized with its own TID (location).  If the tuple is ever updated, its
+ * t_ctid is changed to point to the replacement version of the tuple.  Or if
+ * the tuple is moved from one Greenplum segment to another, due to an update
+ * of the distribution key, t_ctid is set to a special value to indicate that
+ * (see ItemPointerSetMovedPartitions).  Note that ORCA generates a
+ * split-update plan for any update, not necessarily distribution key update.
  * Thus, a tuple is the latest version of its row iff XMAX is invalid or
  * t_ctid points to itself (in which case, if XMAX is valid, the tuple is
- * either locked or deleted).  One can follow the chain of t_ctid links
- * to find the newest version of the row.  Beware however that VACUUM might
- * erase the pointed-to (newer) tuple before erasing the pointing (older)
- * tuple.  Hence, when following a t_ctid link, it is necessary to check
- * to see if the referenced slot is empty or contains an unrelated tuple.
- * Check that the referenced tuple has XMIN equal to the referencing tuple's
- * XMAX to verify that it is actually the descendant version and not an
- * unrelated tuple stored into a slot recently freed by VACUUM.  If either
- * check fails, one may assume that there is no live descendant version.
+ * either locked or deleted).  One can follow the chain of t_ctid links to
+ * find the newest version of the row, unless it was moved to a different
+ * Greenplum segment.  Beware however that VACUUM might erase the pointed-to
+ * (newer) tuple before erasing the pointing (older) tuple.  Hence, when
+ * following a t_ctid link, it is necessary to check to see if the referenced
+ * slot is empty or contains an unrelated tuple.  Check that the referenced
+ * tuple has XMIN equal to the referencing tuple's XMAX to verify that it is
+ * actually the descendant version and not an unrelated tuple stored into a
+ * slot recently freed by VACUUM.  If either check fails, one may assume that
+ * there is no live descendant version.
  *
  * Following the fixed header fields, the nulls bitmap is stored (beginning
  * at t_bits).  The bitmap is *not* stored if t_infomask shows that there
@@ -411,7 +416,21 @@ do { \
 	(tup)->t_choice.t_heap.t_field3.t_xvac = (xid); \
 } while (0)
 
-#define HeapTupleHeaderGetDatumLength(tup) \
+/*
+ * Greenplum: The following two macros HeapTupleHeaderSetMovedPartitions and
+ * HeapTupleHeaderIndicatesMovedPartitions are from upstream, in upstream they
+ * are used when updating partition key that might lead to tuple moving from
+ * one partition to another partition.  In Greenplum 6X, these two macros are
+ * only used for encoding split-update info into tuple.
+ */
+#define HeapTupleHeaderSetMovedPartitions(tup) \
+	ItemPointerSet(&(tup)->t_ctid, MovedPartitionsBlockNumber, MovedPartitionsOffsetNumber)
+
+#define HeapTupleHeaderIndicatesMovedPartitions(tup) \
+	(ItemPointerGetOffsetNumber(&(tup)->t_ctid) == MovedPartitionsOffsetNumber && \
+	 ItemPointerGetBlockNumberNoCheck(&(tup)->t_ctid) == MovedPartitionsBlockNumber)
+
+#define HeapTupleHeaderGetDatumLength(tup)		\
 	VARSIZE(tup)
 
 #define HeapTupleHeaderSetDatumLength(tup, len) \

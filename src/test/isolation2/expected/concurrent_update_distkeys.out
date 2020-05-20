@@ -9,6 +9,15 @@
 -- We raise an error when the GDD is enabled and the
 -- distribution keys is updated.
 
+include: helpers/server_helpers.sql;
+CREATE
+-- Table to just store the master's data directory path on segment,
+-- this is used to restart master to enable GDD.
+CREATE TABLE ccud_datadir(a int, dir text);
+CREATE
+INSERT INTO ccud_datadir select 1,datadir from gp_segment_configuration where role='p' and content=-1;
+INSERT 1
+
 -- create heap table
 0: show gp_enable_global_deadlock_detector;
  gp_enable_global_deadlock_detector 
@@ -85,11 +94,13 @@ DROP
 0q: ... <quitting>
 
 -- enable gdd
--- start_ignore
-! gpconfig -c gp_enable_global_deadlock_detector -v on;
-
-! gpstop -rai;
--- end_ignore
+ALTER SYSTEM SET gp_enable_global_deadlock_detector TO ON;
+ALTER
+1U:SELECT pg_ctl(dir, 'restart') from ccud_datadir;
+ pg_ctl 
+--------
+ OK     
+(1 row)
 
 -- create heap table
 0: show gp_enable_global_deadlock_detector;
@@ -118,7 +129,7 @@ UPDATE 1
 1: end;
 END
 2<:  <... completed>
-ERROR:  concurrent updates distribution keys on the same row is not allowed  (seg2 127.0.0.1:25434 pid=33685)
+ERROR:  tuple to be updated was already moved to another segment due to concurrent update  (seg1 127.0.0.1:6003 pid=7033)
 2: end;
 END
 0: select * from tab_update_hashcol;
@@ -165,9 +176,73 @@ DROP
 2q: ... <quitting>
 0q: ... <quitting>
 
--- disable gdd
--- start_ignore
-! gpconfig -c gp_enable_global_deadlock_detector -v off;
+-- split update is to implement updating on hash keys,
+-- it deletes the tuple and insert a new tuple in a
+-- new segment, so it is not easy for other transaction
+-- to follow the update link to fetch the new tuple. The
+-- other transaction should raise error for such case.
+-- the following case should be tested with GDD enabled.
+-- See github issue: https://github.com/greenplum-db/gpdb/issues/8919
 
-! gpstop -rai;
--- end_ignore
+0:create table t_splitupdate_raise_error (a int, b int) distributed by (a);
+CREATE
+0:insert into t_splitupdate_raise_error values (1, 1);
+INSERT 1
+
+-- test delete will throw error
+1: begin;
+BEGIN
+1: update t_splitupdate_raise_error set a = a + 1;
+UPDATE 1
+
+2: begin;
+BEGIN
+2&: delete from t_splitupdate_raise_error;  <waiting ...>
+
+1: end;
+END
+2<:  <... completed>
+ERROR:  tuple to be deleted was already moved to another segment due to concurrent update  (seg1 127.0.0.1:6003 pid=7054)
+
+2: abort;
+ABORT
+1q: ... <quitting>
+2q: ... <quitting>
+
+-- test norm update will throw error
+1: begin;
+BEGIN
+1: update t_splitupdate_raise_error set a = a + 1;
+UPDATE 1
+
+2: begin;
+BEGIN
+2&: update t_splitupdate_raise_error set b = 999;  <waiting ...>
+
+1: end;
+END
+2<:  <... completed>
+ERROR:  tuple to be updated was already moved to another segment due to concurrent update  (seg0 127.0.0.1:6002 pid=7066)
+
+2: abort;
+ABORT
+1q: ... <quitting>
+2q: ... <quitting>
+
+0:drop table t_splitupdate_raise_error;
+DROP
+
+-- disable gdd
+0:ALTER SYSTEM RESET gp_enable_global_deadlock_detector;
+ALTER
+0q: ... <quitting>
+1U:SELECT pg_ctl(dir, 'restart') from ccud_datadir;
+ pg_ctl 
+--------
+ OK     
+(1 row)
+0:show gp_enable_global_deadlock_detector;
+ gp_enable_global_deadlock_detector 
+------------------------------------
+ off                                
+(1 row)

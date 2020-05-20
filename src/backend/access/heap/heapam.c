@@ -2231,6 +2231,7 @@ heap_get_latest_tid(Relation relation,
 		 */
 		if ((tp.t_data->t_infomask & HEAP_XMAX_INVALID) ||
 			HeapTupleHeaderIsOnlyLocked(tp.t_data) ||
+			HeapTupleHeaderIndicatesMovedPartitions(tp.t_data) ||
 			ItemPointerEquals(&tp.t_self, &tp.t_data->t_ctid))
 		{
 			UnlockReleaseBuffer(buffer);
@@ -3059,6 +3060,8 @@ xmax_infomask_changed(uint16 new_infomask, uint16 old_infomask)
  *	crosscheck - if not InvalidSnapshot, also check tuple against this
  *	wait - true if should wait for any conflicting update to commit/abort
  *	hufd - output parameter, filled in failure cases (see below)
+ *	isSplitUpdate - true if the tuple is being moved to another segment
+ *		(split-update), false if this is a regular delete.
  *
  * Normal, successful return value is HeapTupleMayBeUpdated, which
  * actually means we did delete it.  Failure return codes are
@@ -3074,7 +3077,7 @@ xmax_infomask_changed(uint16 new_infomask, uint16 old_infomask)
 HTSU_Result
 heap_delete(Relation relation, ItemPointer tid,
 			CommandId cid, Snapshot crosscheck, bool wait,
-			HeapUpdateFailureData *hufd)
+			HeapUpdateFailureData *hufd, bool isSplitUpdate)
 {
 	HTSU_Result result;
 	TransactionId xid = GetCurrentTransactionId();
@@ -3324,6 +3327,16 @@ l1:
 	/* Make sure there is no forward chain link in t_ctid */
 	tp.t_data->t_ctid = tp.t_self;
 
+	/*
+	 * Signal that this delete is actually part of a move to another segment.
+	 * In Greenplum, we do not indicate this flag in WAL record.  This is
+	 * because in a stable branch (6X), we are not allowed to change WAL
+	 * format.  Greenplum 6X does not support hot standby, so this flag need
+	 * not be propagated to mirrors and it can be treated just like hint bits.
+	 */
+	if (isSplitUpdate)
+		HeapTupleHeaderSetMovedPartitions(tp.t_data);
+
 	MarkBufferDirty(buffer);
 
 	/* XLOG stuff */
@@ -3452,7 +3465,8 @@ simple_heap_delete(Relation relation, ItemPointer tid)
 	result = heap_delete(relation, tid,
 						 GetCurrentCommandId(true), InvalidSnapshot,
 						 true /* wait for commit */ ,
-						 &hufd);
+						 &hufd,
+						 false /* isSplitUpdate */);
 	switch (result)
 	{
 		case HeapTupleSelfUpdated:
@@ -5892,7 +5906,9 @@ l4:
 
 next:
 		/* if we find the end of update chain, we're done. */
+		/* XXX: is this dead code in Greenplumn? */
 		if (mytup.t_data->t_infomask & HEAP_XMAX_INVALID ||
+			HeapTupleHeaderIndicatesMovedPartitions(mytup.t_data) ||
 			ItemPointerEquals(&mytup.t_self, &mytup.t_data->t_ctid) ||
 			HeapTupleHeaderIsOnlyLocked(mytup.t_data))
 		{
@@ -5933,7 +5949,12 @@ static HTSU_Result
 heap_lock_updated_tuple(Relation rel, HeapTuple tuple, ItemPointer ctid,
 						TransactionId xid, LockTupleMode mode)
 {
-	if (!ItemPointerEquals(&tuple->t_self, ctid))
+	/*
+	 * If the tuple has not been updated, or has moved into another partition
+	 * (effectively a delete) stop here.
+	 */
+	if (!HeapTupleHeaderIndicatesMovedPartitions(tuple->t_data) &&
+		!ItemPointerEquals(&tuple->t_self, ctid))
 	{
 		/*
 		 * If this is the first possibly-multixact-able operation in the
@@ -9350,6 +9371,21 @@ heap_mask(char *pagedata, BlockNumber blkno)
 			if (HeapTupleHeaderIsSpeculative(page_htup))
 				ItemPointerSet(&page_htup->t_ctid, blkno, off);
 #endif
+			/*
+			 * NB: Not ignoring ctid changes due to the tuple having moved
+			 * (i.e. HeapTupleHeaderIndicatesMovedPartitions), because that's
+			 * important information that needs to be in-sync between primary
+			 * and standby, and thus is WAL logged.
+			 *
+			 * Greenplum 6X: we need to mask ctid changes due to tuple having
+			 * moved to another segment, because that change is not WAL
+			 * logged.  During replay of a heap delete WAL record, the ctid is
+			 * set to self.  Do the same to a tuple if it was deleted as part
+			 * of split-update.
+			 */
+			if (ItemPointerIsValid(&page_htup->t_ctid) &&
+				HeapTupleHeaderIndicatesMovedPartitions(page_htup))
+				ItemPointerSet(&page_htup->t_ctid, blkno, off);
 		}
 
 		/*
