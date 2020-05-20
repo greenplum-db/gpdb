@@ -1,0 +1,115 @@
+-- Test a bug that restarting a primary could lead to startup process hang if
+-- before shutdown checkpoint there are prepared but not yet committed/aborted
+-- transactions.
+
+include: helpers/server_helpers.sql;
+CREATE
+
+-- Allow extra time for mirror promotion to complete recovery to avoid
+-- gprecoverseg BEGIN failures due to gang creation failure as some primaries
+-- are not up. Setting these increase the number of retries in gang creation in
+-- case segment is in recovery.
+!\retcode gpconfig -c gp_gang_creation_retry_count -v 120 --skipvalidation --masteronly;
+-- start_ignore
+20200522:10:14:15:048787 gpconfig:host67:pguo-[INFO]:-completed successfully with parameters '-c gp_gang_creation_retry_count -v 120 --skipvalidation --masteronly'
+
+-- end_ignore
+(exited with code 0)
+!\retcode gpconfig -c gp_gang_creation_retry_timer -v 1000 --skipvalidation --masteronly;
+-- start_ignore
+20200522:10:14:16:048845 gpconfig:host67:pguo-[INFO]:-completed successfully with parameters '-c gp_gang_creation_retry_timer -v 1000 --skipvalidation --masteronly'
+
+-- end_ignore
+(exited with code 0)
+!\retcode gpstop -u;
+-- start_ignore
+20200522:10:14:16:048903 gpstop:host67:pguo-[INFO]:-Starting gpstop with args: -u
+20200522:10:14:16:048903 gpstop:host67:pguo-[INFO]:-Gathering information and validating the environment...
+20200522:10:14:16:048903 gpstop:host67:pguo-[INFO]:-Obtaining Greenplum Master catalog information
+20200522:10:14:16:048903 gpstop:host67:pguo-[INFO]:-Obtaining Segment details from master...
+20200522:10:14:16:048903 gpstop:host67:pguo-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 6.7.1+dev.62.g140d8966aa build dev'
+20200522:10:14:16:048903 gpstop:host67:pguo-[INFO]:-Signalling all postmaster processes to reload
+
+-- end_ignore
+(exited with code 0)
+
+create extension if not exists gp_inject_fault;
+CREATE
+
+create table t_ckpt (a int);
+CREATE
+
+-- generate an 'orphaned' prepare transaction.
+select gp_inject_fault('dtm_broadcast_prepare', 'suspend', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+-- assume (2), (1) are on different segments and one tuple is on the first
+-- segment.  the test finally double-check that.
+1&: insert into t_ckpt values(2),(1);  <waiting ...>
+select gp_wait_until_triggered_fault('dtm_broadcast_prepare', 1, dbid) from gp_segment_configuration where role = 'p' and content = -1;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+
+-- restart seg0 with 'fast' mode.
+-1U: select pg_ctl((SELECT datadir from gp_segment_configuration c where c.role='p' and c.content=0), 'restart', 'fast');
+ pg_ctl 
+--------
+ OK     
+(1 row)
+
+-- run the query and fail as expected since the gangs are gone and will be
+-- recreated in later query.
+select * from t_ckpt;
+ERROR:  terminating connection due to administrator command  (seg0 slice1 192.168.235.128:6002 pid=48781)
+
+-- the below queries also verify that the startup process on seg0 is not hanging.
+
+-- finish the suspended 2pc query.
+select gp_inject_fault('dtm_broadcast_prepare', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1<:  <... completed>
+INSERT 2
+
+-- double confirm the assumption for the test:
+--  1. tuples (2) and (1) are located on two segments (thus we are testing 2pc with prepared transaction).
+--  2. there are tuples on the first segment (we have been testing on the first segment).
+select gp_segment_id, * from t_ckpt;
+ gp_segment_id | a 
+---------------+---
+ 1             | 1 
+ 0             | 2 
+(2 rows)
+
+-- cleanup
+drop table t_ckpt;
+DROP
+!\retcode gpconfig -r gp_gang_creation_retry_count --skipvalidation;
+-- start_ignore
+20200522:10:14:23:048981 gpconfig:host67:pguo-[INFO]:-completed successfully with parameters '-r gp_gang_creation_retry_count --skipvalidation'
+
+-- end_ignore
+(exited with code 0)
+!\retcode gpconfig -r gp_gang_creation_retry_timer --skipvalidation;
+-- start_ignore
+20200522:10:14:23:049123 gpconfig:host67:pguo-[INFO]:-completed successfully with parameters '-r gp_gang_creation_retry_timer --skipvalidation'
+
+-- end_ignore
+(exited with code 0)
+!\retcode gpstop -u;
+-- start_ignore
+20200522:10:14:24:049265 gpstop:host67:pguo-[INFO]:-Starting gpstop with args: -u
+20200522:10:14:24:049265 gpstop:host67:pguo-[INFO]:-Gathering information and validating the environment...
+20200522:10:14:24:049265 gpstop:host67:pguo-[INFO]:-Obtaining Greenplum Master catalog information
+20200522:10:14:24:049265 gpstop:host67:pguo-[INFO]:-Obtaining Segment details from master...
+20200522:10:14:24:049265 gpstop:host67:pguo-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 6.7.1+dev.62.g140d8966aa build dev'
+20200522:10:14:24:049265 gpstop:host67:pguo-[INFO]:-Signalling all postmaster processes to reload
+
+-- end_ignore
+(exited with code 0)

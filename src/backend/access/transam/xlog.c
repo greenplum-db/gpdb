@@ -7383,6 +7383,24 @@ StartupXLOG(void)
 					(errmsg("redo is not required")));
 		}
 	}
+	else
+	{
+		volatile XLogCtlData *xlogctl = XLogCtl;
+
+		/*
+		 * For the !InRecovery case (e.g. there was a clean shutdown on
+		 * primary), we do not do any recovery so the below variables are not
+		 * initialized.  However they are used soon by
+		 * PrescanPreparedTransactions() in this function.  We need to set
+		 * proper values for them else PrescanPreparedTransactions() could hang
+		 * in read_local_xlog_page().
+		 */
+		SpinLockAcquire(&xlogctl->info_lck);
+		xlogctl->lastReplayedEndRecPtr = LastRec;
+		xlogctl->lastReplayedTLI = checkPoint.ThisTimeLineID;
+		SpinLockRelease(&xlogctl->info_lck);
+	}
+
 
 	/*
 	 * Kill WAL receiver, if it's still running, before we continue to write
