@@ -747,6 +747,7 @@ typedef struct FunctionScan
 	bool		funcordinality; /* WITH ORDINALITY */
 	Param      *param;			/* used when funtionscan run as initplan */
 	bool		resultInTupleStore; /* function result stored in tuplestore */
+	int			initplanId;			/* initplan id for function execute on initplan */
 } FunctionScan;
 
 /* ----------------

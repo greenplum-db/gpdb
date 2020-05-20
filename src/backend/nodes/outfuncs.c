@@ -770,6 +770,7 @@ _outFunctionScan(StringInfo str, const FunctionScan *node)
 	WRITE_BOOL_FIELD(funcordinality);
 	WRITE_NODE_FIELD(param);
 	WRITE_BOOL_FIELD(resultInTupleStore);
+	WRITE_INT_FIELD(initplanId);
 }
 
 static void

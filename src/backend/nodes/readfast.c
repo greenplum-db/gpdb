@@ -1825,6 +1825,7 @@ _readFunctionScan(void)
 	READ_BOOL_FIELD(funcordinality);
 	READ_NODE_FIELD(param);
 	READ_BOOL_FIELD(resultInTupleStore);
+	READ_INT_FIELD(initplanId);
 
 	READ_DONE();
 }

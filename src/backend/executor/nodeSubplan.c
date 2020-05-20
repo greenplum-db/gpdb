@@ -1051,7 +1051,7 @@ PG_TRY();
 	{
 		char rwfile_prefix[100];
 
-		function_scan_create_bufname_prefix(rwfile_prefix, sizeof(rwfile_prefix));
+		function_scan_create_bufname_prefix(rwfile_prefix, sizeof(rwfile_prefix), subplan->plan_id);
 		
 		node->ts_state->matstore = ntuplestore_create_readerwriter(rwfile_prefix, PlanStateOperatorMemKB((PlanState *)(node->planstate)) * 1024, true);
 		

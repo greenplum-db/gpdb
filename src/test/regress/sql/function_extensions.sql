@@ -2,7 +2,6 @@
 -- Test extensions to functions (MPP-16060)
 -- 	1. data access indicators
 -- -----------------------------------------------------------------
-
 -- test prodataaccess
 create function func1(int, int) returns int as
 $$
@@ -330,3 +329,17 @@ CREATE TABLE t4_function_scan AS SELECT 444, (1 / (0* random()))::text UNION ALL
 
 -- Temp file number after running INITPLAN function, number should not changed.
 SELECT get_temp_file_num();
+
+-- test join case with two INITPLAN functions
+DROP TABLE IF EXISTS t5_function_scan;
+CREATE TABLE t5_function_scan AS SELECT * FROM get_id(), get_country();
+SELECT count(*) FROM t5_function_scan;
+
+-- test union all 
+DROP TABLE IF EXISTS t6_function_scan;
+CREATE TABLE t6_function_scan AS SELECT 100/(1+ 1* random())::int id, 'cc'::text cc UNION ALL SELECT * FROM  get_country();
+SELECT count(*) FROM t6_function_scan;
+
+DROP TABLE IF EXISTS t7_function_scan;
+CREATE TABLE t7_function_scan AS SELECT * FROM  get_country() UNION ALL SELECT 100/(1+ 1* random())::int, 'cc'::text;
+SELECT count(*) FROM t7_function_scan;
