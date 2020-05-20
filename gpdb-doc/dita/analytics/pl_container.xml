@@ -234,7 +234,8 @@ plcontainer image-add -f /home/gpadmin/plcontainer-r-image-3.0.0-beta-gp6.tar.gz
             <p>By default, the <codeph>image-add</codeph> command copies the image to each Greenplum
               Database segment and standby master host, and installs the image. When you specify
               the <codeph>[-ulc | --use_local_copy]</codeph> option, <codeph>plcontainer</codeph>
-              installs the image only on the host on which you execute the command.</p>
+              installs the image only on the host on which you execute the command. Use this option
+              when the PL/Container image already resides on disk on a host.</p>
             <p>For more information on <codeph>image-add</codeph> options, visit the <xref
                 href="../utility_guide/ref/plcontainer.xml#topic_rw3_52s_dw">plcontainer </xref> reference page. </p>
           </li>
