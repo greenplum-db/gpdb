@@ -57,7 +57,7 @@
 #include "utils/snapmgr.h"
 
 #include "access/appendonlywriter.h"
-#include "access/fileam.h"
+#include "access/url.h"
 #include "catalog/namespace.h"
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbaocsam.h"
@@ -72,6 +72,7 @@
 #include "executor/execDML.h"
 #include "nodes/makefuncs.h"
 #include "postmaster/autostats.h"
+#include "utils/formatting.h"
 #include "utils/metrics_utils.h"
 #include "utils/resscheduler.h"
 #include "utils/string_utils.h"
@@ -3642,12 +3643,9 @@ CopyFrom(CopyState cstate)
 	bool	   *baseNulls;
 	GpDistributionData *part_distData = NULL;
 	int			firstBufferedLineNo = 0;
-	bool		is_external_table;
 
 	Assert(cstate->rel);
 
-	is_external_table = (cstate->rel->rd_rel->relkind == RELKIND_FOREIGN_TABLE &&
-						 rel_is_external_table(RelationGetRelid(cstate->rel)));
 	/*
 	 * The target must be a plain or foreign relation.
 	 */
@@ -4176,12 +4174,6 @@ CopyFrom(CopyState cstate)
 				resultRelInfo->ri_aocsInsertDesc =
 					aocs_insert_init(resultRelInfo->ri_RelationDesc,
 									 resultRelInfo->ri_aosegno, false);
-			}
-			else if (is_external_table &&
-					 resultRelInfo->ri_extInsertDesc == NULL)
-			{
-				resultRelInfo->ri_extInsertDesc =
-					external_insert_init(resultRelInfo->ri_RelationDesc);
 			}
 		}
 

@@ -40,7 +40,6 @@
 #include "postgres.h"
 
 #include "access/appendonlywriter.h"
-#include "access/fileam.h"
 #include "access/htup_details.h"
 #include "access/sysattr.h"
 #include "access/transam.h"
@@ -2374,7 +2373,6 @@ InitResultRelInfo(ResultRelInfo *resultRelInfo,
 	resultRelInfo->ri_projectReturning = NULL;
 	resultRelInfo->ri_aoInsertDesc = NULL;
 	resultRelInfo->ri_aocsInsertDesc = NULL;
-	resultRelInfo->ri_extInsertDesc = NULL;
 	resultRelInfo->ri_deleteDesc = NULL;
 	resultRelInfo->ri_updateDesc = NULL;
 	resultRelInfo->ri_aosegno = InvalidFileSegNumber;
@@ -2393,8 +2391,6 @@ CloseResultRelInfo(ResultRelInfo *resultRelInfo)
 		appendonly_insert_finish(resultRelInfo->ri_aoInsertDesc);
 	if (resultRelInfo->ri_aocsInsertDesc)
 		aocs_insert_finish(resultRelInfo->ri_aocsInsertDesc);
-	if (resultRelInfo->ri_extInsertDesc)
-		external_insert_finish(resultRelInfo->ri_extInsertDesc);
 
 	if (resultRelInfo->ri_deleteDesc != NULL)
 	{

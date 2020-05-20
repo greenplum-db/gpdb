@@ -433,18 +433,7 @@ COPY <replaceable class="parameter">count</replaceable>
    <para>
     <command>COPY</command> can only be used with plain tables, not
     with views.  However, you can write <literal>COPY (SELECT * FROM
-<<<<<<< HEAD
     <replaceable class="parameter">viewname</replaceable>) TO ...</literal>.
-=======
-    <replaceable class="parameter">viewname</replaceable>) TO ...</literal>
-    to copy the current contents of a view.
-   </para>
-
-   <para>
-    <command>COPY FROM</command> can be used with plain, foreign, or
-    partitioned tables or with views that have
-    <literal>INSTEAD OF INSERT</literal> triggers.
->>>>>>> 3d956d9562a... Allow insert and update tuple routing and COPY for foreign tables.
    </para>
 
    <para>

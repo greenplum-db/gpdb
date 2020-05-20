@@ -963,6 +963,30 @@ exttable_EndForeignModify(EState *estate, ResultRelInfo *rinfo)
 	external_insert_finish(extInsertDesc);
 }
 
+static void exttable_BeginForeignInsert(ModifyTableState *mtstate,
+										ResultRelInfo *resultRelInfo)
+{
+	/*
+	 * This would be the natural place to call external_insert_init(), but we
+	 * delay that until the first actual insert. That's because we don't want
+	 * to open the external resource if we don't end up actually inserting any
+	 * rows in this segment. In particular, we don't want to initialize the
+	 * external resource in the QD node, when all the actual insertions happen
+	 * in the segments.
+	 */
+}
+
+static void exttable_EndForeignInsert(EState *estate,
+									  ResultRelInfo *resultRelInfo)
+{
+	ExternalInsertDescData *extInsertDesc = (ExternalInsertDescData *) resultRelInfo->ri_FdwState;
+
+	if (extInsertDesc == NULL)
+		return;
+
+	external_insert_finish(extInsertDesc);
+}
+
 Datum
 exttable_fdw_handler(PG_FUNCTION_ARGS)
 {
@@ -980,6 +1004,8 @@ exttable_fdw_handler(PG_FUNCTION_ARGS)
 	routine->BeginForeignModify = exttable_BeginForeignModify;
 	routine->ExecForeignInsert = exttable_ExecForeignInsert;
 	routine->EndForeignModify = exttable_EndForeignModify;
+	routine->BeginForeignInsert = exttable_BeginForeignInsert;
+	routine->EndForeignInsert = exttable_EndForeignInsert;
 
 	PG_RETURN_POINTER(routine);
 };
