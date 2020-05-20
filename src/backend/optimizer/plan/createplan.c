@@ -7558,6 +7558,15 @@ append_initplan_for_function_scan(PlannerInfo *root, Path *best_path, Plan *plan
 	if (Gp_role != GP_ROLE_DISPATCH)
 		return;
 
+	/*
+	 * If INITPLAN function is executed on QD, there is no 
+	 * need to add additional initplan to run this function.
+	 * Recall that the reason to introduce INITPLAN function
+	 * is that function runing on QE can not do dispatch.
+	 */
+	if (root->curSlice->parentIndex == -1)
+		return;
+
 	/* Currently we limit function number to one */
 	if (list_length(fsplan->functions) != 1)
 		return;
@@ -7621,10 +7630,12 @@ append_initplan_for_function_scan(PlannerInfo *root, Path *best_path, Plan *plan
 
 	/* create initplan for this FunctionScan plan */
 	FunctionScan* initplan =(FunctionScan*) copyObject(plan);
+	initplan->resultInTupleStore = false;
 	
 	SS_make_initplan_from_plan(root, subroot, (Plan *)initplan, root->curSlice, prm, true);
-	SS_attach_initplans(root, plan);
-	root->init_plans = NIL;
+
+	/* record the initplan id which is used to find the right tuplestore */
+	fsplan->initplanId = list_length(root->glob->subplans);
 
 	/* Decorate the top node of the plan with a Flow node. */
 	initplan->scan.plan.flow = cdbpathtoplan_create_flow(root, best_path->locus);

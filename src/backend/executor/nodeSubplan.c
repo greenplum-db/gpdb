@@ -1119,10 +1119,10 @@ PG_TRY();
 	{
 		char rwfile_prefix[100];
 
-		function_scan_create_bufname_prefix(rwfile_prefix, sizeof(rwfile_prefix));
+		function_scan_create_bufname_prefix(rwfile_prefix, sizeof(rwfile_prefix), subplan->plan_id);
 
 		node->ts_state = tuplestore_begin_heap(true, /* randomAccess */
-											  true, /* interXact */
+											  false, /* interXact */
 											  PlanStateOperatorMemKB((PlanState *)(node->planstate)));
 		tuplestore_make_shared(node->ts_state, rwfile_prefix);
 	}
