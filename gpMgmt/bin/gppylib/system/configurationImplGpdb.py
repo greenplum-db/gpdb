@@ -275,7 +275,7 @@ class GpConfigurationProviderUsingGpdbCatalog(GpConfigurationProvider) :
 
     def __callSegmentAddMirror(self, conn, gpArray, seg):
         """
-        Similar to __callSegmentAdd, ideally we should call gp_add_segment_primary() to add the mirror.
+        Similar to __callSegmentAdd, ideally we should call gp_add_segment_mirror() to add the mirror.
         But chicken-egg problem also exists in mirror case. If we use gp_add_segment_mirror(),
         new dbid will be chosen by `get_availableDbId()`, which cannot ensure to be same as dbid
         in internal.auto.conf(see issue-9837). Refer to __callSegmentAdd for details.

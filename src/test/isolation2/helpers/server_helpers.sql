@@ -127,3 +127,21 @@ $$ language plpgsql;
 create or replace function master() returns setof gp_segment_configuration as $$
 	select * from gp_segment_configuration where role='p' and content=-1;
 $$ language sql;
+
+--
+-- generate_recover_config_file:
+--   generate config file used by recoverseg -i
+--
+create or replace function generate_recover_config_file(datadir text, port text)
+returns void as $$
+    import io
+    import os
+    myhost = os.uname()[1]
+    oldConfig = myhost + '|' + port + '|' + datadir
+    newConfig = myhost + '|' + '7016' + '|' + datadir
+    configStr = oldConfig + ' ' + newConfig
+	
+    f = open("/tmp/recover_config_file", "w")
+    f.write(configStr)
+    f.close()
+$$ language plpythonu;
