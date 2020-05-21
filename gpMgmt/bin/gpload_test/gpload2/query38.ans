@@ -1,0 +1,20 @@
+2020-05-14 18:46:55|INFO|gpload session started 2020-05-14 18:46:55
+2020-05-14 18:46:55|WARN|ERROR_TABLE is not supported. We will set LOG_ERRORS and REUSE_TABLES to True for compatibility.
+2020-05-14 18:47:00|INFO|setting schema 'public' for table 'texttable'
+2020-05-14 18:47:00|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2020-05-14 18:47:00|INFO|did not find an external table to reuse. creating ext_gpload_reusable_3a4a5966_95d0_11ea_b773_784f4393479b
+2020-05-14 18:47:00|INFO|running time: 5.13 seconds
+2020-05-14 18:47:00|INFO|rows Inserted          = 16
+2020-05-14 18:47:00|INFO|rows Updated           = 0
+2020-05-14 18:47:00|INFO|data formatting errors = 0
+2020-05-14 18:47:00|INFO|gpload succeeded
+2020-05-14 18:47:00|INFO|gpload session started 2020-05-14 18:47:00
+2020-05-14 18:47:00|WARN|ERROR_TABLE is not supported. We will set LOG_ERRORS and REUSE_TABLES to True for compatibility.
+2020-05-14 18:47:05|INFO|setting schema 'public' for table 'texttable'
+2020-05-14 18:47:05|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2020-05-14 18:47:05|INFO|reusing external table ext_gpload_reusable_3a4a5966_95d0_11ea_b773_784f4393479b
+2020-05-14 18:47:05|INFO|running time: 5.09 seconds
+2020-05-14 18:47:05|INFO|rows Inserted          = 16
+2020-05-14 18:47:05|INFO|rows Updated           = 0
+2020-05-14 18:47:05|INFO|data formatting errors = 0
+2020-05-14 18:47:05|INFO|gpload succeeded
