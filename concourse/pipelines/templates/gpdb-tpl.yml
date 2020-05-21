@@ -1174,7 +1174,6 @@ jobs:
       platform: linux
       inputs:
         - name: gpdb_src
-        - name: bin_gpdb
       outputs:
           - name: python_dependencies_cache
       run:
@@ -1184,7 +1183,7 @@ jobs:
           - |
             set -eox pipefail
             source "gpdb_src/concourse/scripts/common.bash"
-            time install_gpdb
+            ## time install_gpdb
             time install_python_requirements_on_single_host ./gpdb_src/gpMgmt/requirements-dev.txt
             tar zcf python_dependencies_cache/python_dependencies_cache.tgz -C $HOME .cache
   - put: python_dependencies_cache
