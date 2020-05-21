@@ -44,13 +44,6 @@ if (COMPILER_HAS_PEDANTIC_ERRORS)
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic-errors")
 endif()
 
-# Turn off warnings about variadic macros if for some reason the C++ dialect is
-# not compatible with C99.
-check_cxx_compiler_flag("-Wno-variadic-macros" COMPILER_HAS_WNO_VARIADIC_MACROS)
-if (COMPILER_HAS_WNO_VARIADIC_MACROS)
-  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-variadic-macros")
-endif()
-
 # Generate maximum detail for DEBUG information with -g3 if available.
 check_cxx_compiler_flag("-g3" COMPILER_HAS_G3)
 if (COMPILER_HAS_G3)
