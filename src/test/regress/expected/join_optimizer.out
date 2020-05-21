@@ -4251,16 +4251,16 @@ select * from
    Hash Cond: ((1) = COALESCE((1)))
    ->  Result
    ->  Hash
-         ->  Merge Full Join
-               Merge Cond: (unique1 = (1))
-               ->  Gather Motion 3:1  (slice1; segments: 3)
-                     Merge Key: unique1
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               ->  Merge Full Join
+                     Merge Cond: (unique1 = (1))
                      ->  Sort
                            Sort Key: unique1
                            ->  Seq Scan on tenk1
-               ->  Sort
-                     Sort Key: (1)
-                     ->  Result
+                     ->  Sort
+                           Sort Key: (1)
+                           ->  Result
+                                 ->  Result
  Optimizer: Pivotal Optimizer (GPORCA)
 (15 rows)
 
