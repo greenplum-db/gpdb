@@ -156,7 +156,7 @@ namespace gpopt
 					BROADCAST_THRESHOLD,	 /*broadcast_threshold*/
 					true,					 /* enforce_constraint_on_dml */
 					PUSH_GROUP_BY_BELOW_SETOP_THRESHOLD, /* push_group_by_below_setop_threshold */
-					EAGERAGG_THRESHOLD
+					EAGERAGG_THRESHOLD /* eageragg threshold */
 				);
 			}
 

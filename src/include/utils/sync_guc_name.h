@@ -94,7 +94,6 @@
 		"optimizer_partition_selection_log",
 		"optimizer_plan_id",
 		"optimizer_push_group_by_below_setop_threshold",
-		"optimizer_eageragg_threshold",
 		"optimizer_samples_number",
 		"parallel_setup_cost",
 		"parallel_tuple_cost",

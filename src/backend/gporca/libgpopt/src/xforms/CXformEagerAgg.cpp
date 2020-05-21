@@ -245,7 +245,7 @@ BOOL CXformEagerAgg::CanPushAggBelowJoin
 BOOL
 CXformEagerAgg::CanApplyTransform
 	(
-    CMemoryPool *mp,
+	 CMemoryPool *mp,
 	CExpression *gb_agg_expr
 	)
 	const
@@ -264,28 +264,35 @@ CXformEagerAgg::CanApplyTransform
 		return false;
 	}
 
-    if (NULL == gb_agg_expr->Pstats())
-    {
-            CExpressionHandle exprhdl(mp);
-            exprhdl.Attach(gb_agg_expr);
-            exprhdl.DeriveStats(mp, mp, NULL /*prprel*/, NULL /*pdrgpstatCtxt*/);
-    }
+	if (NULL == gb_agg_expr->Pstats())
+	{
+		CExpressionHandle exprhdl(mp);
+		exprhdl.Attach(gb_agg_expr);
+		exprhdl.DeriveStats(mp, mp, NULL /*prprel*/, NULL /*pdrgpstatCtxt*/);
+	}
 
-    if (NULL == join_expr->Pstats())
-    {
-            CExpressionHandle exprhdl(mp);
-            exprhdl.Attach(join_expr);
-            exprhdl.DeriveStats(mp, mp, NULL /*prprel*/, NULL /*pdrgpstatCtxt*/);
-    }
+	if (NULL == join_expr->Pstats())
+	{
+		CExpressionHandle exprhdl(mp);
+		exprhdl.Attach(join_expr);
+		exprhdl.DeriveStats(mp, mp, NULL /*prprel*/, NULL /*pdrgpstatCtxt*/);
+	}
 
-    CDouble gbrows = gb_agg_expr->Pstats()->Rows();
-    CDouble joinrows = join_expr->Pstats()->Rows();
+	CDouble gbrows = gb_agg_expr->Pstats()->Rows();
+	CDouble joinrows = join_expr->Pstats()->Rows();
 	COptimizerConfig *optconfig = COptCtxt::PoctxtFromTLS()->GetOptimizerConfig();
+	CDouble threshold = optconfig->GetHint()->EagerAggThreshold();
 
-    if ((gbrows / joinrows) >= optconfig->GetHint()->EagerAggThreshold())
-    {
-            return false;
-    }
+	if (threshold >= 1)
+	{
+		// always consider EagerAgg if threshold is 1
+		return true;
+	}
+	else if (threshold == 0 || (gbrows > joinrows * threshold))
+	{
+		// do not consider EagerAgg when threshold is 0 or if threshold is not met.
+		return false;
+	}
 
 	const ULONG num_aggregates = agg_proj_list_expr->Arity();
 	if (num_aggregates == 0)

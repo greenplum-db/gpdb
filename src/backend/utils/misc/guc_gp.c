@@ -4176,8 +4176,9 @@ struct config_real ConfigureNamesReal_gp[] =
 		NULL, NULL, NULL
 	},
 	{
+
 		{"optimizer_eageragg_threshold", PGC_USERSET, QUERY_TUNING_METHOD,
-			gettext_noop("Ratio of the number of rows produced by the aggregate to the number of rows produced by the join below it, If the actual value is greater than this threshold then eageragg alternative will not be created"),
+			gettext_noop("Maximum allowed ratio of the number of rows produced by the aggregate to the number of rows produced by the join below it, to consider an eageragg alternative."),
 			NULL,
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
