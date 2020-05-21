@@ -693,26 +693,6 @@ gpos::clib::Strtod
 
 //---------------------------------------------------------------------------
 //	@function:
-//		clib::GetEnv
-//
-//	@doc:
-//		Get an environment variable
-//
-//---------------------------------------------------------------------------
-CHAR*
-gpos::clib::GetEnv
-	(
-	const CHAR *name
-	)
-{
-	GPOS_ASSERT(NULL != name);
-
-	return getenv(name);
-}
-
-
-//---------------------------------------------------------------------------
-//	@function:
 //		clib::Demangle
 //
 //	@doc:

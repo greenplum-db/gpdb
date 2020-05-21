@@ -27,6 +27,7 @@
 #include "cdb/cdblocaldistribxact.h"
 #include "cdb/cdbvars.h"
 #include "commands/async.h"
+#include "executor/nodeShareInputScan.h"
 #include "miscadmin.h"
 #include "pgstat.h"
 #include "postmaster/autovacuum.h"
@@ -183,6 +184,7 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 		size = add_size(size, CheckpointerShmemSize());
 		size = add_size(size, CancelBackendMsgShmemSize());
 		size = add_size(size, WorkFileShmemSize());
+		size = add_size(size, ShareInputShmemSize());
 
 #ifdef FAULT_INJECTOR
 		size = add_size(size, FaultInjector_ShmemSize());
@@ -341,6 +343,7 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 	AsyncShmemInit();
 	BackendCancelShmemInit();
 	WorkFileShmemInit();
+	ShareInputShmemInit();
 
 	/*
 	 * Set up Instrumentation free list

@@ -1,6 +1,6 @@
 top_builddir = ..
 include $(top_builddir)/src/Makefile.global
-include $(top_builddir)/gpMgmt/Makefile.behave
+include $(top_srcdir)/gpMgmt/Makefile.behave
 
 SUBDIRS= sbin bin doc
 

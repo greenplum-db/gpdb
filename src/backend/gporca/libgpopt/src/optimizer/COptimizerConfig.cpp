@@ -10,7 +10,7 @@
 //---------------------------------------------------------------------------
 
 #include "gpos/base.h"
-#include "gpos/io/COstreamFile.h"
+#include "gpos/string/CWStringDynamic.h"
 
 #include "gpopt/cost/ICostModel.h"
 #include "gpopt/optimizer/COptimizerConfig.h"

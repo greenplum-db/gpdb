@@ -495,57 +495,6 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 }
 
 /* ----------------------------------------------------------------
- *		ExecSliceDependencyNode
- *
- *		Exec dependency, block till slice dependency are met
- * ----------------------------------------------------------------
- */
-void
-ExecSliceDependencyNode(PlanState *node)
-{
-	CHECK_FOR_INTERRUPTS();
-
-	if (node == NULL)
-		return;
-
-	if (nodeTag(node) == T_ShareInputScanState)
-		ExecSliceDependencyShareInputScan((ShareInputScanState *) node);
-	else if (nodeTag(node) == T_SubqueryScanState)
-	{
-		SubqueryScanState *subq = (SubqueryScanState *) node;
-
-		ExecSliceDependencyNode(subq->subplan);
-	}
-	else if (nodeTag(node) == T_AppendState)
-	{
-		int			i = 0;
-		AppendState *app = (AppendState *) node;
-
-		for (; i < app->as_nplans; ++i)
-			ExecSliceDependencyNode(app->appendplans[i]);
-	}
-	else if (nodeTag(node) == T_SequenceState)
-	{
-		int			i = 0;
-		SequenceState *ss = (SequenceState *) node;
-
-		for (; i < ss->numSubplans; ++i)
-			ExecSliceDependencyNode(ss->subplans[i]);
-	}
-	else if (nodeTag(node) == T_ModifyTableState)
-	{
-		int			i = 0;
-		ModifyTableState *mt = (ModifyTableState *) node;
-
-		for (; i < mt->mt_nplans; ++i)
-			ExecSliceDependencyNode(mt->mt_plans[i]);
-	}
-
-	ExecSliceDependencyNode(outerPlanState(node));
-	ExecSliceDependencyNode(innerPlanState(node));
-}
-
-/* ----------------------------------------------------------------
  *		ExecProcNode
  *
  *		Execute the given node to return a(nother) tuple.

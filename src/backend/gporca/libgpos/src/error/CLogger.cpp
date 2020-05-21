@@ -206,11 +206,7 @@ CLogger::AppendDate()
 		tm.tm_min,
 		tm.tm_sec,
 		tv.tv_usec,
-#ifdef GPOS_SunOS
-		clib::GetEnv("TZ")
-#else
 		tm.tm_zone
-#endif // GPOS_SunOS
 		)
 		;
 }

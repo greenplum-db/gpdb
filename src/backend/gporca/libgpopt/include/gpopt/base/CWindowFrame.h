@@ -17,8 +17,6 @@
 #include "gpopt/base/CColRef.h"
 #include "gpopt/base/CPropSpec.h"
 
-#include "naucrates/md/IMDId.h"
-
 
 namespace gpopt
 {

@@ -78,28 +78,6 @@ gpos::syslib::GetRusage
 
 //---------------------------------------------------------------------------
 //	@function:
-//		syslib::SchedYield
-//
-//	@doc:
-//		Yield the processor
-//
-//---------------------------------------------------------------------------
-void
-gpos::syslib::SchedYield
-	(
-	)
-{
-#ifdef GPOS_DEBUG
-	INT res =
-#endif // GPOS_DEBUG
-	sched_yield();
-
-	GPOS_ASSERT(0 == res && "Failed to yield");
-}
-
-
-//---------------------------------------------------------------------------
-//	@function:
 //		syslib::OpenLog
 //
 //	@doc:

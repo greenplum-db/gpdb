@@ -25,18 +25,33 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP } | UNLOGGED] TABLE [IF NOT EXISTS]
 [ TABLESPACE <varname>tablespace_name</varname> ]
 [ DISTRIBUTED BY (<varname>column</varname> [<varname>opclass</varname>], [ ... ] ) 
        | DISTRIBUTED RANDOMLY | DISTRIBUTED REPLICATED ]
-[ PARTITION BY <varname>partition_type</varname> (<varname>column</varname>)
-       [ SUBPARTITION BY <varname>partition_type</varname> (<varname>column</varname>) ] 
-          [ SUBPARTITION TEMPLATE ( <varname>template_spec</varname> ) ]
-       [...]
-    ( <varname>partition_spec</varname> ) 
-        | [ SUBPARTITION BY <varname>partition_type</varname> (<varname>column</varname>) ]
-          [...]
-    ( <varname>partition_spec</varname>
-      [ ( <varname>subpartition_spec</varname>
-           [(...)] 
-         ) ] 
-    ) ]
+
+{ <b>--partitioned table using SUBPARTITION TEMPLATE</b>
+[ PARTITION BY <varname>partition_type</varname> (<varname>column</varname>) 
+  {  [ SUBPARTITION BY <varname>partition_type</varname> (<varname>column1</varname>) 
+       SUBPARTITION TEMPLATE ( <varname>template_spec</varname> ) ]
+          [ SUBPARTITION BY partition_type (<varname>column2</varname>) 
+            SUBPARTITION TEMPLATE ( <varname>template_spec</varname> ) ]
+              [...]  }
+  ( <varname>partition_spec</varname> ) ]
+} |
+
+{ <b>-- partitioned table without SUBPARTITION TEMPLATE
+</b>[ PARTITION BY <varname>partition_type</varname> (<varname>column</varname>)
+   [ SUBPARTITION BY <varname>partition_type</varname> (<varname>column1</varname>) ]
+      [ SUBPARTITION BY <varname>partition_type</varname> (<varname>column2</varname>) ]
+         [...]
+  ( <varname>partition_spec</varname>
+     [ ( <varname>subpartition_spec_column1</varname>
+          [ ( <varname>subpartition_spec_column2</varname>
+               [...] ) ] ) ],
+  [ <varname>partition_spec</varname>
+     [ ( <varname>subpartition_spec_column1</varname>
+        [ ( <varname>subpartition_spec_column2</varname>
+             [...] ) ] ) ], ]
+    [...]
+  ) ]
+}
 
 CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE [IF NOT EXISTS] 
    <varname>table_name</varname>
@@ -816,27 +831,71 @@ name   varchar(40) NOT NULL CHECK (name &lt;&gt; '')
       <codeblock>CREATE TABLE sales (txn_id int, qty int, date date) 
 WITH (appendoptimized=true, compresslevel=5) 
 DISTRIBUTED BY (txn_id);</codeblock>
+      <p>Create a simple, single level partitioned
+        table:<codeblock>CREATE TABLE sales (id int, year int, qtr int, c_rank int, code char(1), region text)
+DISTRIBUTED BY (id)
+PARTITION BY LIST (code)
+( PARTITION sales VALUES ('S'),
+  PARTITION returns VALUES ('R')
+);</codeblock></p>
+      <p>Create a three level partitioned table that defines subpartitions without the
+          <codeph>SUBPARTITION TEMPLATE</codeph> clause:
+        <codeblock>CREATE TABLE sales (id int, year int, qtr int, c_rank int, code char(1), region text)
+DISTRIBUTED BY (id)
+PARTITION BY LIST (code)
+  SUBPARTITION BY RANGE (c_rank)
+    SUBPARTITION by LIST (region)
+
+( PARTITION sales VALUES ('S')
+   ( SUBPARTITION cr1 START (1) END (2)
+      ( SUBPARTITION ca VALUES ('CA') ), 
+      SUBPARTITION cr2 START (3) END (4)
+        ( SUBPARTITION ca VALUES ('CA') ) ),
+
+ PARTITION returns VALUES ('R')
+   ( SUBPARTITION cr1 START (1) END (2)
+      ( SUBPARTITION ca VALUES ('CA') ), 
+     SUBPARTITION cr2 START (3) END (4)
+        ( SUBPARTITION ca VALUES ('CA') ) )
+);</codeblock></p>
+      <p>Create the same partitioned table as the previous table using the <codeph>SUBPARTITION
+          TEMPLATE</codeph>
+        clause:<codeblock>CREATE TABLE sales1 (id int, year int, qtr int, c_rank int, code char(1), region text)
+DISTRIBUTED BY (id)
+PARTITION BY LIST (code)
+
+   SUBPARTITION BY RANGE (c_rank)
+     SUBPARTITION TEMPLATE (
+     SUBPARTITION cr1 START (1) END (2),
+     SUBPARTITION cr2 START (3) END (4) )
+
+     SUBPARTITION BY LIST (region)
+       SUBPARTITION TEMPLATE (
+       SUBPARTITION ca VALUES ('CA') )
+
+( PARTITION sales VALUES ('S'),
+  PARTITION  returns VALUES ('R')
+) ;</codeblock></p>
       <p>Create a three level partitioned table using subpartition templates and default partitions
-        at each level:</p>
-      <codeblock>CREATE TABLE sales (id int, year int, month int, day int, 
-region text)
+        at each
+        level:<codeblock>CREATE TABLE sales (id int, year int, qtr int, c_rank int, code char(1), region text)
 DISTRIBUTED BY (id)
 PARTITION BY RANGE (year)
 
-  SUBPARTITION BY RANGE (month)
-    SUBPARTITION TEMPLATE (
-       START (1) END (13) EVERY (1), 
-       DEFAULT SUBPARTITION other_months )
+  SUBPARTITION BY RANGE (qtr)
+    SUBPARTITION TEMPLATE (
+    START (1) END (5) EVERY (1), 
+    DEFAULT SUBPARTITION bad_qtr )
 
-  SUBPARTITION BY LIST (region)
-    SUBPARTITION TEMPLATE (
-       SUBPARTITION usa VALUES ('usa'),
-       SUBPARTITION europe VALUES ('europe'),
-       SUBPARTITION asia VALUES ('asia'),
-       DEFAULT SUBPARTITION other_regions)
+    SUBPARTITION BY LIST (region)
+      SUBPARTITION TEMPLATE (
+      SUBPARTITION usa VALUES ('usa'),
+      SUBPARTITION europe VALUES ('europe'),
+      SUBPARTITION asia VALUES ('asia'),
+      DEFAULT SUBPARTITION other_regions)
 
-( START (2008) END (2016) EVERY (1),
-  DEFAULT PARTITION outlying_years);</codeblock>
+( START (2009) END (2011) EVERY (1),
+  DEFAULT PARTITION outlying_years);</codeblock></p>
     </section>
     <section id="section7">
       <title>Compatibility</title>

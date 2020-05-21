@@ -23,6 +23,8 @@
 #include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/metadata/CName.h"
 
+#include "naucrates/statistics/CStatistics.h"
+
 using namespace gpopt;
 
 

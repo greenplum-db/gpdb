@@ -8,7 +8,7 @@ subdir = src/backend/gporca/libnaucrates/src/statistics
 top_builddir = ../../../../../..
 include $(top_builddir)/src/Makefile.global
 
-include $(top_builddir)/src/backend/gporca/gporca.mk
+include $(top_srcdir)/src/backend/gporca/gporca.mk
 
 OBJS        = CBucket.o \
               CFilterStatsProcessor.o \
@@ -29,6 +29,7 @@ OBJS        = CBucket.o \
               CStatsPredDisj.o \
               CStatsPredLike.o \
               CStatsPredPoint.o \
+              CStatsPredArrayCmp.o \
               CStatsPredUnsupported.o \
               CStatsPredUtils.o \
               CUnionAllStatsProcessor.o \

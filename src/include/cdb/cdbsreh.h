@@ -88,7 +88,6 @@ extern void destroyCdbSreh(CdbSreh *cdbsreh);
 extern void HandleSingleRowError(CdbSreh *cdbsreh);
 extern void ReportSrehResults(CdbSreh *cdbsreh, uint64 total_rejected);
 extern void SendNumRows(int64 numrejected, int64 numcompleted);
-extern void SendNumRowsRejected(int64 numrejected);
 extern void ErrorIfRejectLimitReached(CdbSreh *cdbsreh);
 extern bool ExceedSegmentRejectHardLimit(CdbSreh *cdbsreh);
 extern bool IsRejectLimitReached(CdbSreh *cdbsreh);

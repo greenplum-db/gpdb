@@ -117,23 +117,11 @@ namespace gpos
 
 	typedef double DOUBLE;
 
-	typedef void * VOID_PTR;
-
 	// holds for all platforms
 	GPOS_CPL_ASSERT(sizeof(ULONG_PTR) == sizeof(void*));
 
 	// variadic parameter list type
 	typedef va_list VA_LIST;
-
-	// wide char ostream
- 	typedef std::basic_ostream<WCHAR, std::char_traits<WCHAR> >  WOSTREAM;
- 	typedef std::ios_base IOS_BASE;
-
- 	// bad allocation exception
- 	typedef std::bad_alloc BAD_ALLOC;
-
- 	// no throw type
- 	typedef std::nothrow_t NO_THROW;
 
 	// enum for results on OS level (instead of using a global error variable)
 	enum GPOS_RESULT

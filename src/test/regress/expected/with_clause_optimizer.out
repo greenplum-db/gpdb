@@ -2179,3 +2179,134 @@ WITH RECURSIVE r1 AS (
 )
 SELECT * FROM r1 LIMIT 1;
 ERROR:  joining nested RECURSIVE clauses is not supported
+-- This used to deadlock, before the IPC between ShareInputScans across
+-- slices was rewritten.
+set gp_cte_sharing=on;
+CREATE TEMP TABLE foo (i int, j int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO foo SELECT g, g FROM generate_series(1, 2) g;
+WITH a1 as (select * from foo),
+     a2 as (select * from foo)
+SELECT a1.i
+  FROM a1
+  INNER JOIN a2 ON a2.i = a1.i
+UNION ALL
+SELECT count(a1.i)
+  FROM a1
+  INNER JOIN a2 ON a2.i = a1.i;
+ i 
+---
+ 2
+ 2
+ 1
+(3 rows)
+
+explain (costs off)
+WITH a1 as (select * from foo),
+     a2 as (select * from foo)
+SELECT a1.i
+  FROM a1
+  INNER JOIN a2 ON a2.i = a1.i
+UNION ALL
+SELECT count(a1.i)
+  FROM a1
+  INNER JOIN a2 ON a2.i = a1.i;
+                                       QUERY PLAN                                       
+----------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Sequence
+         ->  Shared Scan (share slice:id 1:0)
+               ->  Seq Scan on foo foo_1
+         ->  Sequence
+               ->  Shared Scan (share slice:id 1:1)
+                     ->  Seq Scan on foo
+               ->  Append
+                     ->  Hash Join
+                           Hash Cond: (share0_ref2.i = share1_ref2.i)
+                           ->  Shared Scan (share slice:id 1:0)
+                           ->  Hash
+                                 ->  Shared Scan (share slice:id 1:1)
+                     ->  Redistribute Motion 1:3  (slice2)
+                           ->  Aggregate
+                                 ->  Gather Motion 3:1  (slice3; segments: 3)
+                                       ->  Hash Join
+                                             Hash Cond: (share0_ref3.i = share1_ref3.i)
+                                             ->  Shared Scan (share slice:id 3:0)
+                                             ->  Hash
+                                                   ->  Shared Scan (share slice:id 3:1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(22 rows)
+
+-- Another cross-slice ShareInputScan test. There is one producing slice,
+-- and two consumers in second slice. Make sure the Share Input Scan
+-- consumer slice doesn't prematurely notify the producer that it's done,
+-- when one of the Scans in the consumer slice finishes, but there are still
+-- Scans left in the same slice.
+explain (costs off)
+WITH cte AS (SELECT * FROM foo)
+  -- This branch runs on different slice. It is the producer slice.
+  (SELECT DISTINCT 'a' as branch, j FROM cte)
+UNION ALL
+  -- This branch runs in the consumer slice. It contains a join. A join
+  -- causes the input to be squelched when it reaches the end.
+  (SELECT 'b', x.i FROM cte x, cte y WHERE x.i = y.i)
+UNION ALL
+  -- Sleep a bit between executing the previous slice and the next slice,
+  -- so that if the squelch from the join incorrectly sent a "done" message
+  -- to the producer slice, the producer has a chance to finish and remove
+  -- the tuplestore, before the next branch tries to open the shared
+  -- tuplestore again.
+  SELECT 'sleep', 1 where pg_sleep(1) is not null
+UNION ALL
+  -- Consumer, runs in same slice as the join above.
+  SELECT 'c', j FROM cte;
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Sequence
+         ->  Shared Scan (share slice:id 1:0)
+               ->  Seq Scan on foo
+         ->  Append
+               ->  GroupAggregate
+                     Group Key: ('a'::text), share0_ref2.j
+                     ->  Sort
+                           Sort Key: ('a'::text), share0_ref2.j
+                           ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                                 Hash Key: ('a'::text), share0_ref2.j
+                                 ->  Result
+                                       ->  Shared Scan (share slice:id 2:0)
+               ->  Hash Join
+                     Hash Cond: (share0_ref4.i = share0_ref3.i)
+                     ->  Shared Scan (share slice:id 1:0)
+                     ->  Hash
+                           ->  Shared Scan (share slice:id 1:0)
+               ->  Result
+                     One-Time Filter: (gp_execution_segment() = 0)
+                     ->  Result
+                           Filter: (NOT (pg_sleep('1'::double precision) IS NULL))
+                           ->  Result
+               ->  Result
+                     ->  Shared Scan (share slice:id 1:0)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(26 rows)
+
+WITH cte AS (SELECT * FROM foo)
+  (SELECT DISTINCT 'a' as branch, j FROM cte)
+UNION ALL
+  (SELECT 'b', x.i FROM cte x, cte y WHERE x.i = y.i)
+UNION ALL
+  SELECT 'sleep', 1 where pg_sleep(1) is not null
+UNION ALL
+  SELECT 'c', j FROM cte;
+ branch | j 
+--------+---
+ b      | 2
+ c      | 2
+ a      | 1
+ a      | 2
+ b      | 1
+ sleep  | 1
+ c      | 1
+(7 rows)
+

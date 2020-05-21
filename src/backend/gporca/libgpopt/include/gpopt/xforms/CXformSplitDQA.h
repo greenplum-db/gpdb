@@ -12,6 +12,7 @@
 #define GPOPT_CXformSplitDQA_H
 
 #include "gpos/base.h"
+#include "gpopt/operators/CLogicalGbAgg.h"
 #include "gpopt/xforms/CXformExploration.h"
 #include "gpopt/base/CUtils.h"
 

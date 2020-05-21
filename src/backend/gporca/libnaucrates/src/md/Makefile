@@ -4,11 +4,11 @@
 # src/backend/gporca/libnaucrates/src/md/Makefile
 #
 
-subdir = src/backend/gporca/libnaucrates/src/md/
+subdir = src/backend/gporca/libnaucrates/src/md
 top_builddir = ../../../../../..
 include $(top_builddir)/src/Makefile.global
 
-include $(top_builddir)/src/backend/gporca/gporca.mk
+include $(top_srcdir)/src/backend/gporca/gporca.mk
 
 OBJS        = CDXLBucket.o \
               CDXLColStats.o \

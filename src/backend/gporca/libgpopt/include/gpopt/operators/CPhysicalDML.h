@@ -12,7 +12,6 @@
 #define GPOS_CPhysicalDML_H
 
 #include "gpos/base.h"
-#include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CPhysical.h"
 #include "gpopt/operators/CLogicalDML.h"
 

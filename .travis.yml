@@ -2,8 +2,8 @@
 ## Travis CI build script for Greenplum Database Open Source Project.
 ## ----------------------------------------------------------------------
 
-language: c
-sudo: false
+language: cpp
+cache: ccache
 
 git:
   submodules: false
@@ -18,6 +18,7 @@ addons:
             - gcc-8
             - libxml2
             - libxml2-dev
+            - libxerces-c-dev
             - libevent-dev
             - libperl-dev
             - g++-8
@@ -65,6 +66,11 @@ matrix:
           compiler: clang
           osx_image: xcode11
           env: T=macos
+          addons:
+            homebrew:
+              packages:
+                - ccache
+                - xerces-c
         #
         # Configuration variations
         # ----------------------------------------------------------------
@@ -91,6 +97,26 @@ python:
 before_install:
     - eval "${OVERRIDE_CC}"
     - eval "${OVERRIDE_CXX}"
+    # ccache 3.2 (from Ubuntu Xenial) has CCACHE_CPP2 default to off (this
+    # setting defaults to on starting from ccache 3.3). That default leads to
+    # unlegible compiler warning outputs because GCC and Clang will emit
+    # warnings using the preprocessed output...
+    - |
+      if [ "${TRAVIS_DIST}" = xenial ]; then
+        ccache --set-config run_second_cpp=true
+      fi
+    - |
+      if [ "${TRAVIS_COMPILER}" = clang ]; then
+        case "${TRAVIS_OS_NAME}" in
+          linux)
+            sudo ln -sv ../../bin/ccache /usr/lib/ccache/${CC}
+            sudo ln -sv ../../bin/ccache /usr/lib/ccache/${CXX}
+            ;;
+          osx)
+            PATH=/usr/local/opt/ccache/libexec:$PATH
+            ;;
+        esac
+      fi
 
 ## ----------------------------------------------------------------------
 ## Install supporting Python modules
@@ -109,6 +135,7 @@ install:
 before_script:
     - ssh-keygen -t "rsa" -f ~/.ssh/id_rsa -N ""
     - cp ~/.ssh/{id_rsa.pub,authorized_keys}
+    - ccache --zero-stats
 
 script:
   - |
@@ -121,7 +148,7 @@ script:
             --enable-debug-extensions \
             --with-perl \
             --with-python \
-            --disable-orca \
+            --enable-orca \
             --with-openssl \
             --with-ldap \
             --with-libcurl \
@@ -129,7 +156,7 @@ script:
             --enable-mapreduce \
             --enable-orafce \
             $C
-        make -s install
+        travis_wait 40 make -s install
         source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
         make -s unittest-check
         make -C gpAux/gpdemo cluster
@@ -143,7 +170,7 @@ script:
             --prefix=${TRAVIS_BUILD_DIR}/gpsql \
             --with-perl \
             --with-python \
-            --disable-orca \
+            --enable-orca \
             --with-openssl \
             --with-ldap \
             --with-libcurl \
@@ -171,6 +198,8 @@ script:
             --disable-pxf \
             --disable-gpcloud \
             --without-zstd \
+            --with-includes=$(brew --prefix xerces-c)/include \
+            --with-libs=$(brew --prefix xerces-c)/lib \
             $C
         make -s install
         source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
@@ -178,6 +207,7 @@ script:
       fi
 
 after_script:
+  - ccache --show-stats
   - source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
   - postgres --version
   - gpssh --version

@@ -127,7 +127,7 @@
                   <image href="../graphics/green-checkbox.jpg" width="29px" height="28px"
                     id="image_rcs_t1m_2r"/>
                 </entry>
-                <entry>Initialize new segments into the array and create an expansion schema
+                <entry>Initialize new segments into the system and create an expansion schema
                     (<codeph>gpexpand -i <varname>input_file</varname></codeph>).</entry>
               </row>
               <row>
@@ -164,9 +164,9 @@
                   <image href="../graphics/green-checkbox.jpg" width="29px" height="28px"
                     id="image_sk2_51m_2r"/>
                 </entry>
-                <entry>Run <codeph>analyze</codeph> to update distribution statistics.<p>During the
-                    expansion, use <codeph>gpexpand -a</codeph>, and post-expansion, use
-                      <codeph>analyze</codeph>.</p></entry>
+                <entry><b>Important:</b> Run <codeph>analyze</codeph> to update distribution
+                    statistics.<p>During the expansion, use <codeph>gpexpand -a</codeph>, and
+                    post-expansion, use <codeph>analyze</codeph>.</p></entry>
               </row>
               <row>
                 <entry namest="c1" nameend="c2"><p><b>Back Up Databases</b></p><ph>* System is up
@@ -208,29 +208,26 @@
           configuration in the particular site and environment. </li>
       </ul>
       <p>After selecting and adding new hardware to your network environment, ensure you perform the
-        burn-in tasks described in <xref href="expand-nodes.xml#topic19" type="topic" format="dita"
-        />.</p>
+        tasks described in <xref href="expand-nodes.xml" type="topic"/>.</p>
     </body>
   </topic>
   <topic id="topic6" xml:lang="en">
     <title>Planning New Segment Initialization</title>
     <body>
       <p>Expanding Greenplum Database can be performed when the system is up and available. Run
-          <codeph>gpexpand</codeph> to initialize new segment instances into the array and create an
-        expansion schema.</p>
+          <codeph>gpexpand</codeph> to initialize new segment instances into the system and create
+        an expansion schema.</p>
       <p>The time required depends on the number of schema objects in the Greenplum system and other
         factors related to hardware performance. In most environments, the initialization of new
         segments requires less than thirty minutes offline.</p>
       <p>These utilities cannot be run while <codeph>gpexpand</codeph> is performing segment
-          initialization.
-        <ul id="ul_c3w_wdp_lgb">
+        initialization. <ul id="ul_c3w_wdp_lgb">
           <li><codeph>gpbackup</codeph></li>
           <li><codeph>gpcheckcat</codeph></li>
           <li><codeph>gpconfig</codeph></li>
           <li><codeph>gppkg</codeph></li>
           <li><codeph>gprestore</codeph></li>
         </ul></p>
-
       <note type="important">After you begin initializing new segments, you can no longer restore
         the system using backup files created for the pre-expansion system. When initialization
         successfully completes, the expansion is committed and cannot be rolled back. </note>
@@ -241,25 +238,27 @@
         <p>If your existing system has mirror segments, the new segments must have mirroring
           configured. If there are no mirrors configured for existing segments, you cannot add
           mirrors to new hosts with the <codeph>gpexpand</codeph> utility. For more information
-          about segment mirroring, see <xref href="../intro/about_ha.xml#about_ha/segment_mirroring"
+          about segment mirroring configurations that are available during system initialization,
+          see <xref
+            href="../highavail/topics/g-overview-of-segment-mirroring.xml#topic3/mirror_configs"
           />.</p>
-        <p>For Greenplum Database arrays with mirror segments, ensure you add enough new host
+        <p>For Greenplum Database systems with mirror segments, ensure you add enough new host
           machines to accommodate new mirror segments. The number of new hosts required depends on
           your mirroring strategy:</p>
         <ul id="ul_dnt_tl5_mr">
-          <li id="no165384"><b>Spread Mirroring</b> — Add at least one more host to the array than
+          <li id="no165386"><b>Group Mirroring</b> — Add at least two new hosts so the mirrors for
+            the first host can reside on the second host, and the mirrors for the second host can
+            reside on the first. This is the default type of mirroring if you enable segment
+            mirroring during system initialization.</li>
+          <li id="no165384"><b>Spread Mirroring</b> — Add at least one more host to the system than
             the number of segments per host. The number of separate hosts must be greater than the
             number of segment instances per host to ensure even spreading. You can specify this type
             of mirroring during system initialization or when you enable segment mirroring for an
             existing system.</li>
-          <li id="no165386"><b>Grouped Mirroring</b> — Add at least two new hosts so the mirrors for
-            the first host can reside on the second host, and the mirrors for the second host can
-            reside on the first. This is the default type of mirroring if you enable segment
-            mirroring during system initialization.</li>
           <li><b>Block Mirroring</b> — Adding one or more blocks of host systems. For example add a
             block of four or eight hosts. Block mirroring is a custom mirroring configuration. For
             more information about block mirroring, see <xref
-              href="../../best_practices/ha.xml#topic_cnm_vxc_54"/><ph otherprops="op-print"> in the
+              href="../../best_practices/ha.xml#topic_ngz_qf4_tt"/><ph otherprops="op-print"> in the
                 <cite>Greenplum Database Best Practices Guide</cite></ph>.</li>
         </ul>
       </body>
@@ -367,7 +366,7 @@
           <p>If your existing hosts have limited disk space, you may prefer to first redistribute
             smaller tables (such as dimension tables) to clear space to store a copy of the largest
             table. Available disk space on the original segments increases as each table is
-            redistributed across the expanded array. When enough free space exists on all segments
+            redistributed across the expanded system. When enough free space exists on all segments
             to store a copy of the largest table, you can redistribute large or critical tables.
             Redistribution of large tables requires exclusive locks; schedule this procedure for
             off-peak hours.</p>

@@ -4,11 +4,11 @@
 # src/backend/gporca/libgpopt/src/search/Makefile
 #
 
-subdir = src/backend/gporca/libgpopt/src/search/
+subdir = src/backend/gporca/libgpopt/src/search
 top_builddir = ../../../../../..
 include $(top_builddir)/src/Makefile.global
 
-include $(top_builddir)/src/backend/gporca/gporca.mk
+include $(top_srcdir)/src/backend/gporca/gporca.mk
 
 OBJS        = CBinding.o \
               CGroup.o \

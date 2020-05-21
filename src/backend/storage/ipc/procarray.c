@@ -72,6 +72,7 @@
 #include "cdb/cdbvars.h"
 #include "utils/faultinjector.h"
 #include "utils/sharedsnapshot.h"
+#include "libpq/libpq-be.h"
 
 /* Our shared memory area */
 typedef struct ProcArrayStruct
@@ -452,7 +453,12 @@ ProcArrayEndTransaction(PGPROC *proc, TransactionId latestXid)
 	PGXACT	   *pgxact = &allPgXact[proc->pgprocno];
 	TMGXACT	   *gxact = &allTmGxact[proc->pgprocno];
 
-	SIMPLE_FAULT_INJECTOR("before_xact_end_procarray");
+#ifdef FAULT_INJECTOR
+	FaultInjector_InjectFaultIfSet("before_xact_end_procarray",
+			DDLNotSpecified,
+			MyProcPort ? MyProcPort->database_name : "",  // databaseName
+			""); // tableName
+#endif
 	if (TransactionIdIsValid(latestXid) || TransactionIdIsValid(gxact->gxid))
 	{
 		/*
@@ -1897,8 +1903,8 @@ getDtxCheckPointInfo(char **result, int *result_size)
 	gxact_log_array = &gxact_checkpoint->committedGxactArray[0];
 
 	actual = 0;
-	for (i = 0; i < *shmNumCommittedGxacts; i++)
-		gxact_log_array[actual++] = shmCommittedGxactArray[i++];
+	for (; actual < *shmNumCommittedGxacts; actual++)
+		gxact_log_array[actual] = shmCommittedGxactArray[actual];
 
 	SIMPLE_FAULT_INJECTOR("checkpoint_dtx_info");
 
@@ -4863,5 +4869,65 @@ KnownAssignedXidsReset(void)
 	pArray->tailKnownAssignedXids = 0;
 	pArray->headKnownAssignedXids = 0;
 
+	LWLockRelease(ProcArrayLock);
+}
+
+int
+GetSessionIdByPid(int pid)
+{
+	int sessionId = -1;
+	ProcArrayStruct *arrayP = procArray;
+
+	LWLockAcquire(ProcArrayLock, LW_SHARED);
+	for (int i = 0; i < arrayP->numProcs; i++)
+	{
+		volatile PGPROC *proc = &allProcs[arrayP->pgprocnos[i]];
+		if (proc->pid == pid)
+		{
+			sessionId = proc->mppSessionId;
+			break;
+		}
+	}
+	LWLockRelease(ProcArrayLock);
+	return sessionId;
+}
+
+/*
+ * Set the destination group slot or group id in PGPROC, and send a signal to the proc.
+ * slot is NULL on QE.
+ */
+void
+ResGroupSignalMoveQuery(int sessionId, void *slot, Oid groupId)
+{
+	pid_t pid;
+	BackendId backendId;
+	ProcArrayStruct *arrayP = procArray;
+
+	LWLockAcquire(ProcArrayLock, LW_SHARED);
+	for (int i = 0; i < arrayP->numProcs; i++)
+	{
+		volatile PGPROC *proc = &allProcs[arrayP->pgprocnos[i]];
+		if (proc->mppSessionId != sessionId)
+			continue;
+
+		pid = proc->pid;
+		backendId = proc->backendId;
+		if (Gp_role == GP_ROLE_DISPATCH)
+		{
+			Assert(proc->movetoResSlot == NULL);
+			Assert(slot != NULL);
+			proc->movetoResSlot = slot;
+			SendProcSignal(pid, PROCSIG_RESOURCE_GROUP_MOVE_QUERY, backendId);
+			break;
+		}
+		else if (Gp_role == GP_ROLE_EXECUTE)
+		{
+			Assert(groupId != InvalidOid);
+			Assert(proc->movetoGroupId == InvalidOid);
+			proc->movetoGroupId = groupId;
+			SendProcSignal(pid, PROCSIG_RESOURCE_GROUP_MOVE_QUERY, backendId);
+			/* don't break, need to signal all the procs of this session */
+		}
+	}
 	LWLockRelease(ProcArrayLock);
 }

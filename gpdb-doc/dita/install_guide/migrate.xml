@@ -2,7 +2,7 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1" xml:lang="en">
-  <title id="kh138244">Migrating Data from Greenplum 4.3 or 5</title>
+  <title id="kh138244">Migrating Data from Greenplum 4.3 or 5 to Greenplum 6</title>
   <shortdesc>You can migrate data from Greenplum Database 4.3 or 5 to Greenplum 6 using the standard
     backup and restore procedures, <codeph>gpbackup</codeph> and <codeph>gprestore</codeph><ph
       otherprops="pivotal">, or by using <codeph>gpcopy</codeph></ph>.</shortdesc>

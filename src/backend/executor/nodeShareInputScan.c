@@ -2,26 +2,57 @@
  *
  * nodeShareInputScan.c
  *
+ * A Share Input Scan node is used to share the result of an operation in
+ * two different branches in the plan tree.
+ *
+ * These come in two variants: local, and cross-slice.
+ *
+ * Local shares
+ * ------------
+ *
+ * In local mode, all the consumers are in the same slice as the producer.
+ * In that case, there's no need to communicate across processes, so we
+ * rely entirely on data structures in backend-private memory to track the
+ * state.
+ *
+ * In local mode, there is no difference between producer and consumer
+ * nodes. In ExecInitShareInputScan(), the producer node stores the
+ * PlanState of the shared child node where all the nodes can find it.
+ * The first ExecShareInputScan() call initializes the store.
+ *
+ * A local-mode ShareInputScan is quite similar to PostgreSQL's CteScan,
+ * but there are some implementation differences. CteScan uses a special
+ * PARAM_EXEC entry to hold the shared state, while ShareInputScan uses
+ * an entry in es_sharenode instead.
+ *
+ * Cross-slice shares
+ * ------------------
+ *
+ * A cross-slice share works basically the same as a local one, except
+ * that the producing slice makes the underlying tuplestore available to
+ * other processes, by forcing it to be written to a file on disk. The
+ * first ExecShareInputScan() call in the producing slice materializes
+ * the whole tuplestore, and advertises that it's ready in shared memory.
+ * Consumer slices wait for that before trying to read the store.
+ *
+ * The producer and the consumers communicate the status of the scan using
+ * shared memory. There's a hash table in shared memory, containing a
+ * 'shareinput_Xslice_state' struct for each shared scan. The producer uses
+ * a condition variable to wake up consumers, when the tuplestore is fully
+ * materialized, and the consumers use the same condition variable to inform
+ * the producer when they're done reading it. The producer slice keeps the
+ * underlying tuplestore open, until all the consumers have finished.
+ *
+ *
  * Portions Copyright (c) 2007-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- *
  * IDENTIFICATION
  *	    src/backend/executor/nodeShareInputScan.c
  *
  *-------------------------------------------------------------------------
- */
-
-/*
- * INTERFACE ROUTINES
- *	ExecInitShareInputScan
- * 	ExecShareInputScan
- * 	ExecEndShareInputScan
- * 	ExecShareInputMarkPosScan
- * 	ExecShareInputRestrPosScan
- * 	ExecShareInputReScanScanv
  */
 
 #include "postgres.h"
@@ -31,25 +62,115 @@
 #include "executor/executor.h"
 #include "executor/nodeShareInputScan.h"
 #include "miscadmin.h"
+#include "storage/condition_variable.h"
 #include "utils/faultinjector.h"
-#include "utils/gp_alloc.h"
-#include "utils/tuplesort.h"
+#include "utils/memutils.h"
+#include "utils/resowner.h"
 #include "utils/tuplestorenew.h"
 
-typedef struct ShareInput_Lk_Context
+/*
+ * In a cross-slice ShareinputScan, the producer and consumer processes
+ * communicate using shared memory. There's a hash table containing one
+ * 'shareinput_share_state' for each in-progress shared input scan.
+ *
+ * The hash table itself,, and the fields within every entry, are protected
+ * by ShareInputScanLock. (Although some operations get away without the
+ * lock, when the field is atomic and/or there's only one possible writer.)
+ *
+ * All producers and consumers that participate in a shared scan hold
+ * a reference to the 'shareinput_Xslice_state' entry of the scan, for
+ * the whole lifecycle of the node from ExecInitShareInputScan() to
+ * ExecEndShareInputScan() (although it can be released early by
+ * ExecSquelchShareInputScan(). The entry in the hash table is created by
+ * the first participant that initializes, which is not necessarily the
+ * producer! When the last participant releases the entry, it is removed
+ * from the hash table.
+ */
+typedef struct shareinput_tag
 {
-	int readyfd;
-	int donefd;
-	int  zcnt;
-	bool del_ready;
-	bool del_done;
-	char lkname_ready[MAXPGPATH];
-	char lkname_done[MAXPGPATH];
-} ShareInput_Lk_Context;
+	int32		session_id;
+	int32		command_count;
+	int32		share_id;
+} shareinput_tag;
 
-static void writer_wait_for_acks(ShareInput_Lk_Context *pctxt, int share_id, int xslice);
+typedef struct shareinput_Xslice_state
+{
+	shareinput_tag tag;			/* hash key */
 
-static void ExecEagerFreeShareInputScan(ShareInputScanState *node);
+	int			refcount;		/* reference count of this entry */
+	bool		ready;			/* is the input fully materialized and ready to be read? */
+	int			ndone;			/* # of consumers that have finished the scan */
+
+	/*
+	 * ready_done_cv is used for signaling when the scan becomes "ready", and
+	 * when it becomes "done". The producer wakes up everyone waiting on this
+	 * condition variable when it sets ready = true. Also, when the last
+	 * consumer finishes the scan (ndone reaches nconsumers), it wakes up the
+	 * producer using this same condition variable.
+	 */
+	ConditionVariable ready_done_cv;
+
+} shareinput_Xslice_state;
+
+/* shared memory hash table holding 'shareinput_Xslice_state' entries */
+static HTAB *shareinput_Xslice_hash = NULL;
+
+/*
+ * 'shareinput_reference' represents a reference or "lease" to an entry
+ * in the shared memory hash table. It is used for garbage collection of
+ * the entries, on transaction abort.
+ *
+ * These are allocated in TopMemoryContext, and held in the
+ * 'shareinput_Xslice_refs' list.
+ */
+typedef struct shareinput_Xslice_reference
+{
+	int			share_id;
+	shareinput_Xslice_state *xslice_state;
+
+	ResourceOwner owner;
+
+	dlist_node	node;
+} shareinput_Xslice_reference;
+
+static dlist_head shareinput_Xslice_refs = DLIST_STATIC_INIT(shareinput_Xslice_refs);
+static bool shareinput_resowner_callback_registered = false;
+
+/*
+ * For local (i.e. intra-slice) variants, we use a 'shareinput_local_state'
+ * to track the status. It is analogous to 'shareinput_share_state' used for
+ * cross-slice scans, but we don't need to keep it in shared memory. These
+ * are held in estate->es_sharenode, indexed by share_id.
+ */
+typedef struct shareinput_local_state
+{
+	bool		ready;
+	bool		closed;
+	int			ndone;
+	int			nsharers;
+
+	/*
+	 * This points to the child node that's being shared. Set by
+	 * ExecInitShareInputScan() of the instance that has the child.
+	 */
+	PlanState  *childState;
+
+	/* Tuplestore that holds the result */
+	NTupleStore *ts_state;
+} shareinput_local_state;
+
+static shareinput_Xslice_reference *get_shareinput_reference(int share_id);
+static void release_shareinput_reference(shareinput_Xslice_reference *ref);
+static void shareinput_release_callback(ResourceReleasePhase phase,
+										bool isCommit,
+										bool isTopLevel,
+										void *arg);
+
+static void shareinput_writer_notifyready(shareinput_Xslice_reference *ref);
+static void shareinput_reader_waitready(shareinput_Xslice_reference *ref);
+static void shareinput_reader_notifydone(shareinput_Xslice_reference *ref, int nconsumers);
+static void shareinput_writer_waitdone(shareinput_Xslice_reference *ref, int nconsumers);
+
 
 /*
  * init_tuplestore_state
@@ -59,83 +180,97 @@ static void ExecEagerFreeShareInputScan(ShareInputScanState *node);
 static void
 init_tuplestore_state(ShareInputScanState *node)
 {
+	EState	   *estate = node->ss.ps.state;
+	ShareInputScan *sisc = (ShareInputScan *) node->ss.ps.plan;
+	shareinput_local_state *local_state = node->local_state;
+	NTupleStore *ts;
+	NTupleStoreAccessor *tsa;
+	TupleTableSlot *outerslot;
+
+	Assert(!node->isready);
 	Assert(node->ts_state == NULL);
-	
-	EState *estate = node->ss.ps.state;
-	ShareInputScan *sisc = (ShareInputScan *)node->ss.ps.plan;
-	ShareNodeEntry *snEntry = ExecGetShareNodeEntry(estate, sisc->share_id, false);
-	PlanState *snState = NULL;
+	Assert(node->ts_pos == NULL);
 
-	ShareType share_type = sisc->share_type;
-
-	if(snEntry)
+	if (sisc->cross_slice)
 	{
-		snState = (PlanState *) snEntry->shareState;
-		if(snState)
+		if (!node->ref)
+			elog(ERROR, "cannot execute ShareInputScan that was not initialized");
+	}
+
+	if (!local_state->ready)
+	{
+		if (currentSliceId == sisc->producer_slice_id || estate->es_plannedstmt->numSlices == 1)
 		{
-			ExecProcNode(snState);
+			/* We are the producer */
+			if (sisc->cross_slice)
+			{
+				char		rwfile_prefix[100];
+
+				elog(DEBUG1, "SISC writer (shareid=%d, slice=%d): No tuplestore yet, creating tuplestore",
+					 sisc->share_id, currentSliceId);
+				shareinput_create_bufname_prefix(rwfile_prefix, sizeof(rwfile_prefix), sisc->share_id);
+				ts = ntuplestore_create_readerwriter(rwfile_prefix, PlanStateOperatorMemKB((PlanState *)node) * 1024, true, true);
+				tsa = ntuplestore_create_accessor(ts, true);
+			}
+			else
+			{
+				/* intra-slice */
+				ts = ntuplestore_create(PlanStateOperatorMemKB((PlanState *) node) * 1024, "Materialize");
+				tsa = ntuplestore_create_accessor(ts, true /* isWriter */);
+			}
+
+			for (;;)
+			{
+				outerslot = ExecProcNode(local_state->childState);
+				if (TupIsNull(outerslot))
+					break;
+				ntuplestore_acc_put_tupleslot(tsa, outerslot);
+			}
+
+			if (sisc->cross_slice)
+			{
+				ntuplestore_flush(ts);
+				shareinput_writer_notifyready(node->ref);
+			}
 		}
-		
 		else
 		{
-			Assert(share_type == SHARE_MATERIAL_XSLICE || share_type == SHARE_SORT_XSLICE);
+			/*
+			 * We are a consumer slice. Wait for the producer to create the
+			 * tuplestore.
+			 */
+			char		rwfile_prefix[100];
+
+			Assert(sisc->cross_slice);
+
+			shareinput_reader_waitready(node->ref);
+
+			shareinput_create_bufname_prefix(rwfile_prefix, sizeof(rwfile_prefix), sisc->share_id);
+			ts = ntuplestore_create_readerwriter(rwfile_prefix, 0, false, false);
+			tsa = ntuplestore_create_accessor(ts, false);
 		}
+		local_state->ts_state = ts;
+		local_state->ready = true;
 	}
-
-	if(share_type == SHARE_MATERIAL_XSLICE)
+	else
 	{
-		char rwfile_prefix[100];
-		shareinput_create_bufname_prefix(rwfile_prefix, sizeof(rwfile_prefix), sisc->share_id);
-	
-		node->ts_state = palloc0(sizeof(GenericTupStore));
-
-		node->ts_state->matstore = ntuplestore_create_readerwriter(rwfile_prefix, 0, false, false);
-		node->ts_pos = (void *) ntuplestore_create_accessor(node->ts_state->matstore, false);
-		ntuplestore_acc_seek_bof((NTupleStoreAccessor *)node->ts_pos);
+		ts = local_state->ts_state;
+		tsa = (void *) ntuplestore_create_accessor(ts, false);
 	}
-	else if(share_type == SHARE_MATERIAL)
+
+	/* Offer extra info for EXPLAIN ANALYZE. */
+	if (node->ss.ps.instrument && node->ss.ps.instrument->need_cdb)
 	{
-		/* The materialstate->ts_state structure should have been initialized already, during init of material node */
-		node->ts_state = ((MaterialState *)snState)->ts_state;
-		Assert(NULL != node->ts_state->matstore);
-		node->ts_pos = (void *) ntuplestore_create_accessor(node->ts_state->matstore, false);
-		ntuplestore_acc_seek_bof((NTupleStoreAccessor *)node->ts_pos);
-	}
-	else if(share_type == SHARE_SORT_XSLICE)
-	{
-		char rwfile_prefix[100];
-		shareinput_create_bufname_prefix(rwfile_prefix, sizeof(rwfile_prefix), sisc->share_id);
-		node->ts_state = palloc0(sizeof(GenericTupStore));
-
-		node->ts_state->sortstore = tuplesort_begin_heap_file_readerwriter(
-			&node->ss,
-			rwfile_prefix,
-			false, /* isWriter */
-			NULL, /* tupDesc */
-			0, /* nkeys */
-			NULL, /* attNums */
-			NULL, /* sortOperators */
-			NULL, /* sortCollations */
-			NULL, /* nullsFirstFlags */
-			PlanStateOperatorMemKB((PlanState *) node),
-			true /* randomAccess */);
-
-		tuplesort_begin_pos(node->ts_state->sortstore, (TuplesortPos **)(&node->ts_pos));
-		tuplesort_rescan_pos(node->ts_state->sortstore, (TuplesortPos *)node->ts_pos);
-	}
-	else 
-	{
-		Assert(sisc->share_type == SHARE_SORT);
-		Assert(snState != NULL);
-
-		node->ts_state = ((SortState *)snState)->tuplesortstate;
-		Assert(NULL != node->ts_state->sortstore);
-		tuplesort_begin_pos(node->ts_state->sortstore, (TuplesortPos **)(&node->ts_pos));
-		tuplesort_rescan_pos(node->ts_state->sortstore, (TuplesortPos *)node->ts_pos);
+		/* Let the tuplestore share our Instrumentation object. */
+		ntuplestore_setinstrument(ts, node->ss.ps.instrument);
 	}
 
-	Assert(NULL != node->ts_state);
-	Assert(NULL != node->ts_state->matstore || NULL != node->ts_state->sortstore);
+	ntuplestore_acc_seek_bof(tsa);
+
+	node->ts_state = ts;
+	node->ts_pos = tsa;
+
+	node->isready = true;
 }
 
 
@@ -147,50 +282,38 @@ init_tuplestore_state(ShareInputScanState *node)
 TupleTableSlot *
 ExecShareInputScan(ShareInputScanState *node)
 {
-	EState *estate;
+	ShareInputScan *sisc = (ShareInputScan *) node->ss.ps.plan;
+	EState	   *estate;
 	ScanDirection dir;
-	bool forward;
+	bool		forward;
 	TupleTableSlot *slot;
 
-	ShareInputScan * sisc = (ShareInputScan *) node->ss.ps.plan;
-
-	ShareType share_type = sisc->share_type;
-
-	/* 
+	/*
 	 * get state info from node
 	 */
 	estate = node->ss.ps.state;
 	dir = estate->es_direction;
 	forward = ScanDirectionIsForward(dir);
 
+	if (sisc->this_slice_id != currentSliceId && estate->es_plannedstmt->numSlices != 1)
+		elog(ERROR, "cannot execute alien Share Input Scan");
 
 	/* if first time call, need to initialize the tuplestore state.  */
-	if(node->ts_state == NULL)
-	{
-		elog(DEBUG1, "SISC (shareid=%d, slice=%d): No tuplestore yet, initializing tuplestore",
-				sisc->share_id, currentSliceId);
+	if (!node->isready)
 		init_tuplestore_state(node);
-	}
 
 	slot = node->ss.ps.ps_ResultTupleSlot;
 
+	Assert(!node->local_state->closed);
+
 	while(1)
 	{
-		bool gotOK = false;
+		bool		gotOK;
 
-		if(share_type == SHARE_MATERIAL || share_type == SHARE_MATERIAL_XSLICE) 
-		{
-			ntuplestore_acc_advance((NTupleStoreAccessor *) node->ts_pos, forward ? 1 : -1);
-			gotOK = ntuplestore_acc_current_tupleslot((NTupleStoreAccessor *) node->ts_pos, slot);
-		}
-		else
-		{
-			gotOK = tuplesort_gettupleslot_pos(node->ts_state->sortstore,
-											   (TuplesortPos *) node->ts_pos, forward, slot, NULL,
-											   CurrentMemoryContext);
-		}
+		ntuplestore_acc_advance(node->ts_pos, forward ? 1 : -1);
+		gotOK = ntuplestore_acc_current_tupleslot(node->ts_pos, slot);
 
-		if(!gotOK)
+		if (!gotOK)
 			return NULL;
 
 		SIMPLE_FAULT_INJECTOR("execshare_input_next");
@@ -203,46 +326,53 @@ ExecShareInputScan(ShareInputScanState *node)
 }
 
 /*  ------------------------------------------------------------------
- * 	ExecInitShareInputScan 
+ * 	ExecInitShareInputScan
  * ------------------------------------------------------------------
  */
 ShareInputScanState *
 ExecInitShareInputScan(ShareInputScan *node, EState *estate, int eflags)
 {
 	ShareInputScanState *sisstate;
-	Plan *outerPlan;
-	TupleDesc tupDesc;
+	Plan	   *outerPlan;
+	PlanState  *childState;
+	TupleDesc	tupDesc;
 
 	Assert(innerPlan(node) == NULL);
-	
+
 	/* create state data structure */
 	sisstate = makeNode(ShareInputScanState);
 	sisstate->ss.ps.plan = (Plan *) node;
 	sisstate->ss.ps.state = estate;
-	
+
 	sisstate->ts_state = NULL;
 	sisstate->ts_pos = NULL;
-	sisstate->ts_markpos = NULL;
 
-	sisstate->share_lk_ctxt = NULL;
-	sisstate->freed = false;
-
-	/* 
-	 * init child node.  
-	 * if outerPlan is NULL, this is no-op (so that the ShareInput node will be 
+	/*
+	 * init child node.
+	 * if outerPlan is NULL, this is no-op (so that the ShareInput node will be
 	 * only init-ed once).
 	 */
-	outerPlan = outerPlan(node);
-	outerPlanState(sisstate) = ExecInitNode(outerPlan, estate, eflags);
 
-	sisstate->ss.ps.targetlist = (List *) 
+	/*
+	 * initialize child nodes
+	 *
+	 * Like a Material node, we shield the child node from the need to support
+	 * BACKWARD, or MARK/RESTORE.
+	 */
+	eflags &= ~(EXEC_FLAG_BACKWARD | EXEC_FLAG_MARK);
+
+	outerPlan = outerPlan(node);
+	childState = ExecInitNode(outerPlan, estate, eflags);
+	outerPlanState(sisstate) = childState;
+
+	sisstate->ss.ps.targetlist = (List *)
 		ExecInitExpr((Expr *) node->scan.plan.targetlist, (PlanState *) sisstate);
 	Assert(node->scan.plan.qual == NULL);
 	sisstate->ss.ps.qual = NULL;
 
-	/* Misc initialization 
-	 * 
-	 * Create expression context 
+	/* Misc initialization
+	 *
+	 * Create expression context
 	 */
 	ExecAssignExprContext(estate, &sisstate->ss.ps);
 
@@ -250,7 +380,7 @@ ExecInitShareInputScan(ShareInputScan *node, EState *estate, int eflags)
 	ExecInitResultTupleSlot(estate, &sisstate->ss.ps);
 	sisstate->ss.ss_ScanTupleSlot = ExecInitExtraTupleSlot(estate);
 
-	/* 
+	/*
 	 * init tuple type.
 	 */
 	ExecAssignResultTypeFromTL(&sisstate->ss.ps);
@@ -262,62 +392,102 @@ ExecInitShareInputScan(ShareInputScan *node, EState *estate, int eflags)
 
 		tupDesc = ExecTypeFromTL(node->scan.plan.targetlist, hasoid);
 	}
-		
+
 	ExecAssignScanType(&sisstate->ss, tupDesc);
 
 	sisstate->ss.ps.ps_ProjInfo = NULL;
 
 	/*
-	 * If this is an intra-slice share node, increment reference count to
-	 * tell the underlying node not to be freed before this node is ready to
-	 * be freed.  fCreate flag to ExecGetShareNodeEntry is true because
-	 * at this point we don't have the entry which will be initialized in
-	 * the underlying node initialization later.
+	 * When doing EXPLAIN only, we won't actually execute anything, so don't
+	 * bother initializing the state. This isn't merely an optimization:
+	 * closing a cross-slice ShareInputScan waits for the consumers to finish,
+	 * but if we don't execute anything, it will hang forever.
+	 *
+	 * We could also exit here immediately if this is an "alien" node, i.e.
+	 * a node that doesn't execute in this slice, but we can't easily
+	 * detect that here.
 	 */
-	if (node->share_type == SHARE_MATERIAL || node->share_type == SHARE_SORT)
+	if ((eflags & EXEC_FLAG_EXPLAIN_ONLY) != 0)
+		return sisstate;
+
+	shareinput_local_state *local_state;
+
+	/* expand the list if necessary */
+	while (list_length(estate->es_sharenode) <= node->share_id)
 	{
-		ShareNodeEntry *snEntry = ExecGetShareNodeEntry(estate, node->share_id, true);
-		snEntry->refcount++;
+		local_state = palloc0(sizeof(shareinput_local_state));
+		local_state->ready = false;
+
+		estate->es_sharenode = lappend(estate->es_sharenode, local_state);
 	}
-	
+
+	local_state = list_nth(estate->es_sharenode, node->share_id);
+	local_state->nsharers++;
+	if (childState)
+		local_state->childState = childState;
+	sisstate->local_state = local_state;
+
+	/* Get a lease on the shared state */
+	if (node->cross_slice)
+		sisstate->ref = get_shareinput_reference(node->share_id);
+	else
+		sisstate->ref = NULL;
+
 	return sisstate;
-}
-
-void
-ExecSliceDependencyShareInputScan(ShareInputScanState *node)
-{
-	ShareInputScan * sisc = (ShareInputScan *) node->ss.ps.plan;
-
-	elog(DEBUG1, "SISC READER (shareid=%d, slice=%d): exec dependency on slice %d, driver_slice is %d",
-			sisc->share_id, currentSliceId,
-			currentSliceId, sisc->driver_slice);
-
-	EState *estate = node->ss.ps.state;
-	if(sisc->driver_slice >= 0 && sisc->driver_slice == currentSliceId)
-	{
-		node->share_lk_ctxt = shareinput_reader_waitready(sisc->share_id,
-			estate->es_plannedstmt->planGen);
-	}
 }
 
 /* ------------------------------------------------------------------
  * 	ExecEndShareInputScan
  * ------------------------------------------------------------------
  */
-void ExecEndShareInputScan(ShareInputScanState *node)
+void
+ExecEndShareInputScan(ShareInputScanState *node)
 {
+	EState	   *estate = node->ss.ps.state;
+	ShareInputScan *sisc = (ShareInputScan *) node->ss.ps.plan;
+	shareinput_local_state *local_state = node->local_state;
 
 	/* clean up tuple table */
 	ExecClearTuple(node->ss.ss_ScanTupleSlot);
 	ExecClearTuple(node->ss.ps.ps_ResultTupleSlot);
 
-	ShareInputScan * sisc = (ShareInputScan *) node->ss.ps.plan;
-	if(node->share_lk_ctxt)
-		shareinput_reader_notifydone(node->share_lk_ctxt, sisc->share_id);
+	if (node->ref)
+	{
+		if (sisc->this_slice_id == currentSliceId || estate->es_plannedstmt->numSlices == 1)
+		{
+			/*
+			 * The producer needs to wait for all the consumers to finish.
+			 * Consumers signal the producer that they're done reading,
+			 * but are free to exit immediately after that.
+			 */
+			if (currentSliceId == sisc->producer_slice_id)
+			{
+				if (!local_state->ready)
+					init_tuplestore_state(node);
+				shareinput_writer_waitdone(node->ref, sisc->nconsumers);
+			}
+			else
+			{
+				if (!local_state->closed)
+				{
+					shareinput_reader_notifydone(node->ref, sisc->nconsumers);
+					local_state->closed = true;
+				}
+			}
+		}
+		release_shareinput_reference(node->ref);
+		node->ref = NULL;
+	}
 
-	ExecEagerFreeShareInputScan(node);
+	/* Don't free the accessors, they will go away with the NTupleStore instance. */
 
-	/* 
+	if (local_state && local_state->ts_state)
+	{
+		ntuplestore_destroy(local_state->ts_state);
+		local_state->ts_state = NULL;
+	}
+
+	/*
 	 * shutdown subplan.  First scanner of underlying share input will
 	 * do the shutdown, all other scanners are no-op because outerPlanState
 	 * is NULL
@@ -332,613 +502,30 @@ void ExecEndShareInputScan(ShareInputScanState *node)
 void
 ExecReScanShareInputScan(ShareInputScanState *node)
 {
-	/* if first time call, need to initialize the tuplestore state */
-	if(node->ts_state == NULL)
-	{
+	/* On first call, initialize the tuplestore state */
+	if (!node->isready)
 		init_tuplestore_state(node);
-	}
-
-	ShareInputScan *sisc = (ShareInputScan *) node->ss.ps.plan;
 
 	ExecClearTuple(node->ss.ps.ps_ResultTupleSlot);
 	Assert(NULL != node->ts_pos);
 
-	if(sisc->share_type == SHARE_MATERIAL || sisc->share_type == SHARE_MATERIAL_XSLICE)
-	{
-		Assert(NULL != node->ts_state->matstore);
-		ntuplestore_acc_seek_bof((NTupleStoreAccessor *) node->ts_pos);
-	}
-	else if (sisc->share_type == SHARE_SORT || sisc->share_type == SHARE_SORT_XSLICE)
-	{
-		Assert(NULL != node->ts_state->sortstore);
-		tuplesort_rescan_pos(node->ts_state->sortstore, (TuplesortPos *) node->ts_pos);
-	}
-	else
-	{
-		Assert(!"ExecShareInputScanReScan: invalid share type ");
-	}
-}
-
-/*************************************************************************
- * XXX 
- * we need some IPC mechanism for shareinput_read_wait/writer_notify.  Semaphore is
- * the first thing come to mind but it turns out postgres is very picky about
- * how to use semaphore and we do not want to mess up with it.
- *
- * Here we used FIFO (named pipe).  mkfifo is Posix.1 and should be available on any
- * reasonable Unix like system.
- *
- * When we open fifo, we open it with O_RDWR.  So the fifo has both reader and writer.
- * That also means, for write, it will not block, but reader will until writer writes
- * something.
- *
- * At first, I used postgres File to manage the FIFO.  It turns out this is not
- * correct because when postgres run out of file descriptors, it will try to close
- * some file descriptors using an LRU algorithm.  Later when the File is used again,
- * postgres will reopen it. The FIFO here is used for synchronization so it is simply 
- * wrong.  Here we use the file descriptor directly, and use a XCallBack to cleanup
- * the resource at the end of transaction (commit or abort).
- * 
- * XXX However, it is always better to have this kind of stuff abstracted out
- * by the system.  
- **************************************************************************/
-
-#include "fcntl.h"
-#include "unistd.h"
-#include "sys/types.h"
-#include "sys/stat.h"
-#include "storage/fd.h"
-#include "cdb/cdbselect.h"
-
-void shareinput_create_bufname_prefix(char* p, int size, int share_id)
-{
-	snprintf(p, size, "SIRW_%d_%d_%d",
-            gp_session_id, gp_command_count, share_id);
-}
-
-/* Here we use the absolute path name as the lock name.  See fd.c 
- * for how the name is created (GP_TEMP_FILE_DIR and make_database_relative).
- */
-static void
-sisc_lockname(char *p, int size, int share_id, const char* name)
-{
-	char		filename[MAXPGPATH];
-	char	   *path;
-
-	snprintf(filename, sizeof(filename),
-			 "gpcdb2.sisc_%d_%d_%d_%d_%s",
-			 GpIdentity.segindex, gp_session_id, gp_command_count, share_id, name);
-
-	path = GetTempFilePath(filename, true);
-	if (strlen(path) >= size)
-		elog(ERROR, "path to temporary file too long: %s", path);
-	strcpy(p, path);
-}
-
-static void shareinput_clean_lk_ctxt(ShareInput_Lk_Context *lk_ctxt)
-{
-	elog(DEBUG1, "shareinput_clean_lk_ctxt cleanup lk ctxt %p", lk_ctxt);
-
-	if (!lk_ctxt)
-		return;
-
-	if (lk_ctxt->readyfd >= 0)
-	{
-		if (gp_retry_close(lk_ctxt->readyfd))
-			ereport(WARNING,
-				(errcode(ERRCODE_IO_ERROR),
-				errmsg("shareinput_clean_lk_ctxt cannot close readyfd: %m")));
-	}
-
-	if (lk_ctxt->donefd >= 0)
-	{
-		if (gp_retry_close(lk_ctxt->donefd))
-			ereport(WARNING,
-				(errcode(ERRCODE_IO_ERROR),
-				errmsg("shareinput_clean_lk_ctxt cannot close donefd: %m")));
-	}
-
-	if (lk_ctxt->del_ready && lk_ctxt->lkname_ready[0])
-	{
-		if (unlink(lk_ctxt->lkname_ready))
-			ereport(WARNING,
-				(errcode(ERRCODE_IO_ERROR),
-				errmsg("shareinput_clean_lk_ctxt cannot unlink \"%s\": %m",
-					lk_ctxt->lkname_ready)));
-	}
-
-	if (lk_ctxt->del_done && lk_ctxt->lkname_done[0])
-	{
-		if (unlink(lk_ctxt->lkname_done))
-			ereport(WARNING,
-				(errcode(ERRCODE_IO_ERROR),
-				errmsg("shareinput_clean_lk_ctxt cannot unlink \"%s\": %m",
-					lk_ctxt->lkname_done)));
-	}
-
-	gp_free(lk_ctxt);
-}
-
-static void XCallBack_ShareInput_FIFO(XactEvent ev, void* vp)
-{
-	ShareInput_Lk_Context *lk_ctxt = (ShareInput_Lk_Context *) vp; 
-	shareinput_clean_lk_ctxt(lk_ctxt);
-}
-
-static void
-create_tmp_fifo(const char *fifoname)
-{
-#ifdef WIN32
-	elog(ERROR, "mkfifo not supported on win32");
-#else
-	int err = mkfifo(fifoname, 0600);
-	if (err < 0 && errno != EEXIST)
-		elog(ERROR, "could not create temporary fifo \"%s\": %m", fifoname);
-#endif
-}
-
-/* 
- * As all other read/write in postgres, we may be interrupted so retry is needed.
- */
-static int retry_read(int fd, char *buf, int rsize)
-{
-	int sz;
-	Assert(rsize > 0);
-
-read_retry:
-	sz = read(fd, buf, rsize);
-	if (sz > 0)
-		return sz;
-	else if(sz == 0 || errno == EINTR)
-		goto read_retry;
-	else
-		elog(ERROR, "could not read from fifo: %m");
-
-	Assert(!"Never be here");
-	return 0;
-}
-
-static int retry_write(int fd, char *buf, int wsize)
-{
-	int sz;
-	Assert(wsize > 0);
-
-write_retry:
-	sz = write(fd, buf, wsize);
-	if(sz > 0)
-		return sz;
-	else if(sz == 0 || errno == EINTR)
-		goto write_retry;
-	else
-		elog(ERROR, "could not write to fifo: %m");
-
-	Assert(!"Never be here");
-	return 0;
-}
-
-/* 
- * Readiness (a) synchronization.
- *
- * For readiness, the shared node will write xslice of 'a' into the pipe.
- * For each share, there is just one ready writer.  Once sharer starts write
- * it need to write all xslice copies of 'a', even if we are interrupted, that
- * is, we should not call CHECK_FOR_INTERRUPTS.
- *
- * For sharer, it need to check for ready to read (using select), because read 
- * is blocking.  Otherwise if shared is cancelled before write, then we will be
- * blocked here forever.  Once shared has write at least one 'a', it will write
- * all xslice of 'a', so once select succeed, read will eventually succeed.  Once
- * sharer got 'a', it write 'b' back to shared.
- *
- * Done (b and z) synchronization.
- * For done, the shared is the only reader.  sharer will not block for writing, 
- * but shared may block for read, therefore, we much call select before shared 
- * calling read.  Because there is only one shared, nobody can steal char from
- * the pipe, therefore, if select succeed, read will not block forever.
- *
- * One thing to note is that some 'z' may comeback before all 'b' come back.
- * So, need to handle this in notifyready.
- *
- * For optimizer-generated plans, we skip the 'b' synchronization. The writer
- * does not wait for readers to acknowledge the "ready" handshake anymore, as
- * that can cause deadlocks (OPT-2690).
- */
-
-/*
- * shareinput_reader_waitready
- *
- *  Called by the reader (consumer) to wait for the writer (producer) to produce
- *  all the tuples and write them to disk.
- *
- *  This is a blocking operation.
- */
-void *
-shareinput_reader_waitready(int share_id, PlanGenerator planGen)
-{
-	mpp_fd_set rset;
-	struct timeval tval;
-	int n;
-	char a;
-	ShareInput_Lk_Context *pctxt = gp_malloc(sizeof(ShareInput_Lk_Context));
-
-	if(!pctxt)
-		ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY),
-			errmsg("Share input reader failed: out of memory")));
-
-	pctxt->readyfd = -1;
-	pctxt->donefd = -1;
-	pctxt->zcnt = 0;
-	pctxt->del_ready = false;
-	pctxt->del_done = false;
-	pctxt->lkname_ready[0] = '\0';
-	pctxt->lkname_done[0] = '\0';
-
-	RegisterXactCallbackOnce(XCallBack_ShareInput_FIFO, pctxt);
-
-	sisc_lockname(pctxt->lkname_ready, MAXPGPATH, share_id, "ready");
-	create_tmp_fifo(pctxt->lkname_ready);
-	pctxt->readyfd = open(pctxt->lkname_ready, O_RDWR, 0600); 
-	if(pctxt->readyfd < 0)
-		elog(ERROR, "could not open fifo \"%s\": %m", pctxt->lkname_ready);
-	
-	sisc_lockname(pctxt->lkname_done, MAXPGPATH, share_id, "done");
-	create_tmp_fifo(pctxt->lkname_done);
-	pctxt->donefd = open(pctxt->lkname_done, O_RDWR, 0600);
-	if(pctxt->donefd < 0)
-		elog(ERROR, "could not open fifo \"%s\": %m", pctxt->lkname_done);
-
-	while(1)
-	{
-		CHECK_FOR_INTERRUPTS();
-
-		MPP_FD_ZERO(&rset);
-		MPP_FD_SET(pctxt->readyfd, &rset);
-
-		tval.tv_sec = 1;
-		tval.tv_usec = 0;
-
-		n = select(pctxt->readyfd+1, (fd_set *) &rset, NULL, NULL, &tval);
-
-		if(n==1)
-		{
-#if USE_ASSERT_CHECKING
-			int rwsize =
-#endif
-			retry_read(pctxt->readyfd, &a, 1);
-			Assert(rwsize == 1 && a == 'a');
-
-			elog(DEBUG1, "SISC READER (shareid=%d, slice=%d): Wait ready got writer's handshake",
-					share_id, currentSliceId);
-
-			if (planGen == PLANGEN_PLANNER)
-			{
-				/* For planner-generated plans, we send ack back after receiving the handshake */
-				elog(DEBUG1, "SISC READER (shareid=%d, slice=%d): Wait ready writing ack back to writer",
-						share_id, currentSliceId);
-
-#if USE_ASSERT_CHECKING
-				rwsize =
-#endif
-				retry_write(pctxt->donefd, "b", 1);
-				Assert(rwsize == 1);
-			}
-
-			break;
-		}
-		else if(n==0)
-		{
-			elog(DEBUG1, "SISC READER (shareid=%d, slice=%d): Wait ready time out once",
-					share_id, currentSliceId);
-		}
-		else
-		{
-			int save_errno = errno;
-			elog(LOG, "SISC READER (shareid=%d, slice=%d): Wait ready try again, errno %d ... ",
-					share_id, currentSliceId, save_errno);
-		}
-	}
-	return (void *) pctxt;
+	ntuplestore_acc_seek_bof(node->ts_pos);
 }
 
 /*
- * shareinput_writer_notifyready
- *
- *  Called by the writer (producer) once it is done producing all tuples and
- *  writing them to disk. It notifies all the readers (consumers) that tuples
- *  are ready to be read from disk.
- *
- *  For planner-generated plans we wait for acks from all the readers before
- *  proceedings. It is a blocking operation.
- *
- *	For optimizer-generated plans we don't wait for acks, we proceed immediately.
- *  It is a non-blocking operation.
+ * This is called when the node above us has finished and will not need any more
+ * rows from us.
  */
-void *
-shareinput_writer_notifyready(int share_id, int xslice, PlanGenerator planGen)
-{
-	int n;
-
-	ShareInput_Lk_Context *pctxt = gp_malloc(sizeof(ShareInput_Lk_Context));
-
-	if(!pctxt)
-		ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY),
-			errmsg("Shareinput Writer failed: out of memory")));
-
-	pctxt->readyfd = -1;
-	pctxt->donefd = -1;
-	pctxt->zcnt = 0;
-	pctxt->del_ready = false;
-	pctxt->del_done = false;
-	pctxt->lkname_ready[0] = '\0';
-	pctxt->lkname_done[0] = '\0';
-
-	RegisterXactCallbackOnce(XCallBack_ShareInput_FIFO, pctxt);
-
-	sisc_lockname(pctxt->lkname_ready, MAXPGPATH, share_id, "ready");
-	create_tmp_fifo(pctxt->lkname_ready);
-	pctxt->del_ready = true;
-	pctxt->readyfd = open(pctxt->lkname_ready, O_RDWR, 0600); 
-	if(pctxt->readyfd < 0)
-		elog(ERROR, "could not open fifo \"%s\": %m", pctxt->lkname_ready);
-
-	sisc_lockname(pctxt->lkname_done, MAXPGPATH, share_id, "done");
-	create_tmp_fifo(pctxt->lkname_done);
-	pctxt->del_done = true;
-	pctxt->donefd = open(pctxt->lkname_done, O_RDWR, 0600);
-	if(pctxt->donefd < 0)
-		elog(ERROR, "could not open fifo \"%s\": %m", pctxt->lkname_done);
-
-	for(n=0; n<xslice; ++n)
-	{
-#if USE_ASSERT_CHECKING
-		int rwsize =
-#endif
-		retry_write(pctxt->readyfd, "a", 1);
-		Assert(rwsize == 1);
-	}
-	elog(DEBUG1, "SISC WRITER (shareid=%d, slice=%d): wrote notify_ready to %d xslice readers",
-						share_id, currentSliceId, xslice);
-	
-	if (planGen == PLANGEN_PLANNER)
-	{
-		/* For planner-generated plans, we wait for acks from all the readers */
-		writer_wait_for_acks(pctxt, share_id, xslice);
-	}
-
-	return (void *) pctxt;
-}
-
-/*
- * writer_wait_for_acks
- *
- * After sending the handshake to all the reader, the writer waits for acks
- * from all the readers.
- *
- * This is a blocking operation.
- */
-static void
-writer_wait_for_acks(ShareInput_Lk_Context *pctxt, int share_id, int xslice)
-{
-	int ack_needed = xslice;
-	mpp_fd_set rset;
-	struct timeval tval;
-	char b;
-
-	while(ack_needed > 0)
-	{
-		CHECK_FOR_INTERRUPTS();
-
-		MPP_FD_ZERO(&rset);
-		MPP_FD_SET(pctxt->donefd, &rset);
-
-		tval.tv_sec = 1;
-		tval.tv_usec = 0;
-		int numReady = select(pctxt->donefd+1, (fd_set *) &rset, NULL, NULL, &tval);
-
-		if(numReady==1)
-		{
-#if USE_ASSERT_CHECKING
-			int rwsize =
-#endif
-			retry_read(pctxt->donefd, &b, 1);
-			Assert(rwsize == 1);
-
-			if(b == 'z')
-			{
-				++pctxt->zcnt;
-			}
-			else
-			{
-				Assert(b == 'b');
-				--ack_needed;
-				elog(DEBUG1, "SISC WRITER (shareid=%d, slice=%d): notify ready succeed 1, xslice remaining %d",
-						share_id, currentSliceId, ack_needed);
-			}
-		}
-		else if(numReady==0)
-		{
-			elog(DEBUG1, "SISC WRITER (shareid=%d, slice=%d): Notify ready time out once ... ",
-					share_id, currentSliceId);
-		}
-		else
-		{
-			int save_errno = errno;
-			elog(LOG, "SISC WRITER (shareid=%d, slice=%d): notify still wait for an answer, errno %d",
-					share_id, currentSliceId, save_errno);
-		}
-	}
-}
-
-/*
- * shareinput_reader_notifydone
- *
- *  Called by the reader (consumer) to notify the writer (producer) that
- *  it is done reading tuples from disk.
- *
- *  This is a non-blocking operation.
- */
-void
-shareinput_reader_notifydone(void *ctxt, int share_id)
-{
-	ShareInput_Lk_Context *pctxt = (ShareInput_Lk_Context *) ctxt;
-#if USE_ASSERT_CHECKING
-	int rwsize  =
-#endif
-	retry_write(pctxt->donefd, "z", 1);
-	Assert(rwsize == 1);
-
-	shareinput_clean_lk_ctxt(pctxt);
-	UnregisterXactCallbackOnce(XCallBack_ShareInput_FIFO, (void *) ctxt);
-}
-
-/*
- * shareinput_writer_waitdone
- *
- *  Called by the writer (producer) to wait for the "done" notification from
- *  all readers (consumers).
- *
- *  This is a blocking operation.
- */
-void
-shareinput_writer_waitdone(void *ctxt, int share_id, int nsharer_xslice)
-{
-	ShareInput_Lk_Context *pctxt = (ShareInput_Lk_Context *) ctxt;
-	mpp_fd_set rset;
-	struct timeval tval;
-	int numReady;
-	char z;
-	int ack_needed = nsharer_xslice - pctxt->zcnt;
-
-	elog(DEBUG1, "SISC WRITER (shareid=%d, slice=%d): waiting for DONE message from %d readers",
-							share_id, currentSliceId, ack_needed);
-
-	while(ack_needed > 0)
-	{
-		CHECK_FOR_INTERRUPTS();
-	
-		MPP_FD_ZERO(&rset);
-		MPP_FD_SET(pctxt->donefd, &rset);
-
-		tval.tv_sec = 1;
-		tval.tv_usec = 0;
-		numReady = select(pctxt->donefd+1, (fd_set *) &rset, NULL, NULL, &tval);
-	
-		if(numReady==1)
-		{
-#if USE_ASSERT_CHECKING
-			int rwsize =
-#endif
-			retry_read(pctxt->donefd, &z, 1);
-			Assert(rwsize == 1 && z == 'z');
-
-			elog(DEBUG1, "SISC WRITER (shareid=%d, slice=%d): wait done get 1 notification",
-					share_id, currentSliceId);
-			--ack_needed;
-		}
-		else if(numReady==0)
-		{
-			elog(DEBUG1, "SISC WRITER (shareid=%d, slice=%d): wait done timeout once",
-					share_id, currentSliceId);
-		}
-		else 
-		{
-			int save_errno = errno;
-			elog(LOG, "SISC WRITER (shareid=%d, slice=%d): wait done time out once, errno %d",
-					share_id, currentSliceId, save_errno);
-		}
-	}
-
-	elog(DEBUG1, "SISC WRITER (shareid=%d, slice=%d): Writer received all %d reader done notifications",
-			share_id, currentSliceId, nsharer_xslice - pctxt->zcnt);
-
-	shareinput_clean_lk_ctxt(ctxt);
-	UnregisterXactCallbackOnce(XCallBack_ShareInput_FIFO, (void *) ctxt);
-}
-
-/*
- * During EagerFree ShareInputScan decrements the
- * reference count in ShareNodeEntry when its intra-slice share node.
- * The reference count tells the underlying Material/Sort node not to free
- * too eagerly as this node still needs to read its tuples.  Once this node
- * is freed, the underlying node can free its content.
- * We consider this reference counter only in intra-slice cases, because
- * inter-slice share nodes have their own pointer to the buffer and
- * there is not way to tell this reference over Motions anyway.
- */
-static void
-ExecEagerFreeShareInputScan(ShareInputScanState *node)
-{
-	/* clean up tuple table */
-	ExecClearTuple(node->ss.ss_ScanTupleSlot);
-	ExecClearTuple(node->ss.ps.ps_ResultTupleSlot);
-
-	/*
-	 * no need to call tuplestore end.  Underlying ShareInput will take
-	 * care of releasing tuplestore resources
-	 */
-	/*
-	 * XXX Do we need to pfree the tuplestore_state and pos?
-	 * XXX nodeMaterial.c does not, need to find out why
-	 */
-
-	ShareInputScan * sisc = (ShareInputScan *) node->ss.ps.plan;
-	if(sisc->share_type == SHARE_MATERIAL || sisc->share_type == SHARE_MATERIAL_XSLICE)
-	{
-		if(node->ts_pos != NULL)
-			ntuplestore_destroy_accessor((NTupleStoreAccessor *) node->ts_pos);
-		if(node->ts_markpos != NULL)
-			pfree(node->ts_markpos);
-
-		if(NULL != node->ts_state && NULL != node->ts_state->matstore)
-		{
-			/* Check if shared X-SLICE. In that case, we can safely destroy our tuplestore */
-			if(ntuplestore_is_readerwriter_reader(node->ts_state->matstore))
-			{
-				ntuplestore_destroy(node->ts_state->matstore);
-			}
-		}
-	}
-	if (sisc->share_type == SHARE_SORT_XSLICE)
-	{
-		if (NULL != node->ts_state && NULL != node->ts_state->sortstore)
-		{
-			tuplesort_end(node->ts_state->sortstore);
-			node->ts_state->sortstore = NULL;
-		}
-	}
-
-	/* 
-	 * Reset our copy of the pointer to the ts_state. The tuplestore can still be accessed by
-	 * the other consumers, but we don't have a pointer to it anymore
-	 */ 
-	node->ts_state = NULL; 
-	node->ts_pos = NULL;
-	node->ts_markpos = NULL;
-
-	/* This can be called more than once */
-	if (!node->freed &&
-			(sisc->share_type == SHARE_MATERIAL || sisc->share_type == SHARE_SORT))
-	{
-		/*
-		 * Decrement reference count when it's intra-slice.  We don't need
-		 * two-pass tree descending because ShareInputScan should always appear
-		 * before the underlying Material/Sort node.
-		 */
-		EState *estate = node->ss.ps.state;
-		ShareNodeEntry *snEntry = ExecGetShareNodeEntry(estate, sisc->share_id, false);
-
-		Assert(snEntry && snEntry->refcount > 0);
-		snEntry->refcount--;
-	}
-	node->freed = true;
-}
-
 void
 ExecSquelchShareInputScan(ShareInputScanState *node)
 {
-	ShareType share_type = ((ShareInputScan *) node->ss.ps.plan)->share_type;
-	bool isWriter = outerPlanState(node) != NULL;
-	bool tuplestoreInitialized = node->ts_state != NULL;
+	EState	   *estate = node->ss.ps.state;
+	ShareInputScan *sisc = (ShareInputScan *) node->ss.ps.plan;
+	shareinput_local_state *local_state = node->local_state;
+
+	/* clean up tuple table */
+	ExecClearTuple(node->ss.ss_ScanTupleSlot);
+	ExecClearTuple(node->ss.ps.ps_ResultTupleSlot);
 
 	/*
 	 * If this SharedInputScan is shared within the same slice then its
@@ -952,23 +539,359 @@ ExecSquelchShareInputScan(ShareInputScanState *node)
 	 * Note that we emphatically can't "fake" an empty tuple store and just
 	 * go ahead waking up the readers because that can lead to wrong results.
 	 */
-	switch (share_type)
+	if (sisc->cross_slice && node->ref)
 	{
-		case SHARE_MATERIAL:
-		case SHARE_SORT:
-			/* don't recurse into child */
-			return;
+		if (currentSliceId == sisc->producer_slice_id || estate->es_plannedstmt->numSlices == 1)
+		{
+			/*
+			 * We are the producer. If we haven't materialized the tuplestore
+			 * yet, we need to do it now, even though we won't need the data
+			 * for anything. There might be other consumers that need it, and
+			 * they will hang waiting for us forever otherwise.
+			 */
+			if (!local_state->ready)
+			{
+				elog(DEBUG1, "SISC WRITER (shareid=%d, slice=%d): initializing because squelched",
+					 sisc->share_id, currentSliceId);
+				init_tuplestore_state(node);
+			}
+		}
+		else
+		{
+			/* We are a consumer. Let the producer know that we're done. */
+			Assert(!local_state->closed);
 
-		case SHARE_MATERIAL_XSLICE:
-		case SHARE_SORT_XSLICE:
-			if (isWriter && !tuplestoreInitialized)
-				ExecProcNode((PlanState *) node);
-			break;
-		case SHARE_NOTSHARED:
-			break;
+			local_state->ndone++;
+
+			if (local_state->ndone == local_state->nsharers)
+			{
+				shareinput_reader_notifydone(node->ref, sisc->nconsumers);
+				local_state->closed = true;
+			}
+			release_shareinput_reference(node->ref);
+			node->ref = NULL;
+		}
 	}
-	ExecSquelchNode(outerPlanState(node));
+}
 
-	/* Free any resources that we can. */
-	ExecEagerFreeShareInputScan(node);
+
+/*************************************************************************
+ * IPC, for cross-slice variants.
+ **************************************************************************/
+
+/*
+ * When creating a tuplestore file that will be accessed by
+ * multiple processes, shareinput_create_bufname_prefix() is used to
+ * construct the name for it.
+ */
+void
+shareinput_create_bufname_prefix(char* p, int size, int share_id)
+{
+	snprintf(p, size, "SIRW_%d_%d_%d",
+			 gp_session_id, gp_command_count, share_id);
+}
+
+/*
+ * Initialization of the shared hash table for cross-slice communication.
+ *
+ * XXX: Use MaxBackends to size it, on the assumption that max_connections
+ * will scale accordingly to query complexity. This is quite fuzzy, you could
+ * create a query with tons of cross-slice ShareInputScans but only a few
+ * slice, but that ought to be rare enough in practice. This isn't a hard
+ * limit anyway, the hash table will use up any "slop" in shared memory if
+ * needed.
+ */
+#define N_SHAREINPUT_SLOTS() (MaxBackends * 5)
+
+Size
+ShareInputShmemSize(void)
+{
+	Size		size;
+
+	size = hash_estimate_size(N_SHAREINPUT_SLOTS(), sizeof(shareinput_Xslice_state));
+
+	return size;
+}
+
+void
+ShareInputShmemInit(void)
+{
+	HASHCTL		info;
+
+	info.keysize = sizeof(shareinput_tag);
+	info.entrysize = sizeof(shareinput_Xslice_state);
+
+	shareinput_Xslice_hash = ShmemInitHash("ShareInputScan notifications",
+										   N_SHAREINPUT_SLOTS(),
+										   N_SHAREINPUT_SLOTS(),
+										   &info,
+										   HASH_ELEM | HASH_BLOBS);
+}
+
+/*
+ * Get a reference to slot in shared memory for this shared scan.
+ *
+ * If the slot doesn't exist yet, it is created and initialized into
+ * "not ready" state.
+ *
+ * The reference is tracked by the current ResourceOwner, and will be
+ * automatically released on abort.
+ */
+static shareinput_Xslice_reference *
+get_shareinput_reference(int share_id)
+{
+	shareinput_tag tag;
+	shareinput_Xslice_state *xslice_state;
+	bool		found;
+	shareinput_Xslice_reference *ref;
+
+	/* Register our resource owner callback to clean up on first call. */
+	if (!shareinput_resowner_callback_registered)
+	{
+		RegisterResourceReleaseCallback(shareinput_release_callback, NULL);
+		shareinput_resowner_callback_registered = true;
+	}
+
+	ref = MemoryContextAllocZero(TopMemoryContext,
+								 sizeof(shareinput_Xslice_reference));
+
+	LWLockAcquire(ShareInputScanLock, LW_EXCLUSIVE);
+
+	tag.session_id = gp_session_id;
+	tag.command_count = gp_command_count;
+	tag.share_id = share_id;
+	xslice_state = hash_search(shareinput_Xslice_hash,
+							   &tag,
+							   HASH_ENTER_NULL,
+							   &found);
+	if (!found)
+	{
+		if (xslice_state == NULL)
+		{
+			pfree(ref);
+			ereport(ERROR,
+					(errcode(ERRCODE_OUT_OF_MEMORY),
+					 errmsg("out of cross-slice ShareInputScan slots")));
+		}
+
+		xslice_state->refcount = 0;
+		xslice_state->ready = false;
+		xslice_state->ndone = 0;
+
+		ConditionVariableInit(&xslice_state->ready_done_cv);
+	}
+
+	xslice_state->refcount++;
+
+	ref->share_id = share_id;
+	ref->xslice_state = xslice_state;
+	ref->owner = CurrentResourceOwner;
+	dlist_push_head(&shareinput_Xslice_refs, &ref->node);
+
+	LWLockRelease(ShareInputScanLock);
+
+	return ref;
+}
+
+/*
+ * Release reference to a shared scan.
+ *
+ * The reference count in the shared memory slot is decreased, and if
+ * it reaches zero, it is destroyed.
+ */
+static void
+release_shareinput_reference(shareinput_Xslice_reference *ref)
+{
+	shareinput_Xslice_state *state = ref->xslice_state;
+
+	LWLockAcquire(ShareInputScanLock, LW_EXCLUSIVE);
+
+	if (state->refcount == 1)
+	{
+		bool		found;
+
+		(void) hash_search(shareinput_Xslice_hash,
+						   &state->tag,
+						   HASH_REMOVE,
+						   &found);
+		Assert(found);
+	}
+	else
+		state->refcount--;
+
+	dlist_delete(&ref->node);
+
+	LWLockRelease(ShareInputScanLock);
+
+	pfree(ref);
+}
+
+/*
+ * Callback to release references on transaction abort.
+ */
+static void
+shareinput_release_callback(ResourceReleasePhase phase,
+							bool isCommit,
+							bool isTopLevel,
+							void *arg)
+{
+	dlist_mutable_iter miter;
+
+	if (phase != RESOURCE_RELEASE_BEFORE_LOCKS)
+		return;
+
+	dlist_foreach_modify(miter, &shareinput_Xslice_refs)
+	{
+		shareinput_Xslice_reference *ref =
+			dlist_container(shareinput_Xslice_reference,
+							node,
+							miter.cur);
+
+		if (ref->owner == CurrentResourceOwner)
+		{
+			if (isCommit)
+				elog(WARNING, "shareinput lease reference leak: lease %p still referenced", ref);
+			release_shareinput_reference(ref);
+		}
+	}
+}
+
+/*
+ * shareinput_reader_waitready
+ *
+ *  Called by the reader (consumer) to wait for the writer (producer) to produce
+ *  all the tuples and write them to disk.
+ *
+ *  This is a blocking operation.
+ */
+static void
+shareinput_reader_waitready(shareinput_Xslice_reference *ref)
+{
+	shareinput_Xslice_state *state = ref->xslice_state;
+
+	elog(DEBUG1, "SISC READER (shareid=%d, slice=%d): Waiting for producer",
+		 ref->share_id, currentSliceId);
+
+	/*
+	 * Wait until the the producer sets 'ready' to true. The producer will
+	 * use the condition variable to wake us up.
+	 *
+	 * No need to hold ShareInputScanLock while we examine state->ready. It's
+	 * a boolean so it's either true or false.
+	 *
+	 * XXX: The ConditionVariablePrepareToSleep() is supposedly not needed, but
+	 * I saw mysterious hangs without it. Maybe we're missing a fix from
+	 * upstream? Or perhaps the condition variable machinery loses track of
+	 * which conditin variable we're prepared on, because the slots in shared
+	 * memory containing the condition variable are recycled. Not sure what
+	 * exactly is going on, but with the PrepareToSleep() and CancelSleep()
+	 * calls this works.
+	 * GPDB_12_MERGE_FIXME: check if that still happens after the v12 merge.
+	 */
+	ConditionVariablePrepareToSleep(&state->ready_done_cv);
+	while (!state->ready)
+	{
+		/* GPDB_12_MERGE_FIXME: Create a new WaitEventIPC member for this? */
+		ConditionVariableSleep(&state->ready_done_cv, 0);
+	}
+	ConditionVariableCancelSleep();
+
+	/* it's ready now */
+	elog(DEBUG1, "SISC READER (shareid=%d, slice=%d): Wait ready got writer's handshake",
+		 ref->share_id, currentSliceId);
+}
+
+/*
+ * shareinput_writer_notifyready
+ *
+ *  Called by the writer (producer) once it is done producing all tuples and
+ *  writing them to disk. It notifies all the readers (consumers) that tuples
+ *  are ready to be read from disk.
+ */
+static void
+shareinput_writer_notifyready(shareinput_Xslice_reference *ref)
+{
+	shareinput_Xslice_state *state = ref->xslice_state;
+
+	/* we're the only writer, so no need to acquire the lock. */
+	Assert(!state->ready);
+	state->ready = true;
+
+	ConditionVariableBroadcast(&state->ready_done_cv);
+
+	elog(DEBUG1, "SISC WRITER (shareid=%d, slice=%d): wrote notify_ready",
+		 ref->share_id, currentSliceId);
+}
+
+/*
+ * shareinput_reader_notifydone
+ *
+ *  Called by the reader (consumer) to notify the writer (producer) that
+ *  it is done reading tuples from disk.
+ *
+ *  This is a non-blocking operation.
+ */
+static void
+shareinput_reader_notifydone(shareinput_Xslice_reference *ref, int nconsumers)
+{
+	shareinput_Xslice_state *state = ref->xslice_state;
+	int		ndone;
+
+	LWLockAcquire(ShareInputScanLock, LW_EXCLUSIVE);
+	state->ndone++;
+	ndone = state->ndone;
+	LWLockRelease(ShareInputScanLock);
+
+	/* If we were the last consumer, wake up the producer. */
+	if (ndone >= nconsumers)
+		ConditionVariableBroadcast(&state->ready_done_cv);
+
+	elog(DEBUG1, "SISC READER (shareid=%d, slice=%d): wrote notify_done",
+		 ref->share_id, currentSliceId);
+}
+
+/*
+ * shareinput_writer_waitdone
+ *
+ *  Called by the writer (producer) to wait for the "done" notification from
+ *  all readers (consumers).
+ *
+ *  This is a blocking operation.
+ */
+static void
+shareinput_writer_waitdone(shareinput_Xslice_reference *ref, int nconsumers)
+{
+	shareinput_Xslice_state *state = ref->xslice_state;
+
+	if (!state->ready)
+		elog(ERROR, "shareinput_writer_waitdone() called without creating the tuplestore");
+
+	for (;;)
+	{
+		int			ndone;
+
+		LWLockAcquire(ShareInputScanLock, LW_SHARED);
+		ndone = state->ndone;
+		LWLockRelease(ShareInputScanLock);
+
+		if (ndone < nconsumers)
+		{
+			elog(DEBUG1, "SISC WRITER (shareid=%d, slice=%d): waiting for DONE message from %d / %d readers",
+				 ref->share_id, currentSliceId, nconsumers - ndone, nconsumers);
+
+			/* GPDB_12_MERGE_FIXME: Create a new WaitEventIPC member for this? */
+			ConditionVariableSleep(&state->ready_done_cv, 0);
+
+			continue;
+		}
+		if (ndone > nconsumers)
+			elog(WARNING, "%d sharers of ShareInputScan reported to be done, but only %d were expected",
+				 ndone, nconsumers);
+		break;
+	}
+
+	elog(DEBUG1, "SISC WRITER (shareid=%d, slice=%d): got DONE message from %d readers",
+		 ref->share_id, currentSliceId, nconsumers);
+
+	/* it's all done now */
 }

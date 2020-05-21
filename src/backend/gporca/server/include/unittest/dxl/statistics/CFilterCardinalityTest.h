@@ -140,6 +140,13 @@ namespace gpnaucrates
 			static
 			CStatsPred *PstatspredDisjOverConjMultipleIdenticalCols(CMemoryPool *mp);
 
+			static
+			CStatsPred *PstatspredArrayCmpAnySimple(CMemoryPool *mp);
+
+			static
+			CStatsPred *PstatspredArrayCmpAnyDuplicate(CMemoryPool *mp);
+
+
 			// conjunctive predicates
 			static
 			CStatsPred *PstatspredConj(CMemoryPool *mp);
@@ -192,6 +199,10 @@ namespace gpnaucrates
 			// testing select predicates
 			static
 			GPOS_RESULT EresUnittest_CStatisticsFilter();
+
+			// testing ArryCmpAny predicates
+			static
+			GPOS_RESULT EresUnittest_CStatisticsFilterArrayCmpAny();
 
 			// testing nested AND / OR predicates
 			static

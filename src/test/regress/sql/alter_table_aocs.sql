@@ -285,7 +285,7 @@ alter table addcol1_renamed rename to addcol1;
 -- try renaming columns and see if stuff still works
 alter table addcol1 rename column f to f_renamed;
 alter table addcol1 alter column f_renamed set default 10;
-select adsrc from pg_attrdef pdef, pg_attribute pattr
+select pg_get_expr(adbin, adrelid) from pg_attrdef pdef, pg_attribute pattr
     where pdef.adrelid='addcol1'::regclass and pdef.adrelid=pattr.attrelid and pdef.adnum=pattr.attnum and pattr.attname='f_renamed';
 insert into addcol1 values (999);
 select a, f_renamed from addcol1 where a = 999;

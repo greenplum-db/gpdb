@@ -6,14 +6,6 @@
 
 #include "cmockery.h"
 
-int			idle_session_timeout_action_calls = 0;
-
-void
-idle_session_timeout_action_spy()
-{
-	idle_session_timeout_action_calls++;
-}
-
 int
 returns1000_stub(void)
 {

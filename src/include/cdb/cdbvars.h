@@ -26,11 +26,7 @@
  * ----- Declarations of Greenplum-specific global variables ------
  */
 
-#ifdef sparc
-#define TUPLE_CHUNK_ALIGN	4
-#else
-#define TUPLE_CHUNK_ALIGN	1
-#endif
+#define WRITER_IS_MISSING_MSG "reader could not find writer proc entry"
 
 #ifndef PRIO_MAX
 #define PRIO_MAX 20
@@ -678,6 +674,9 @@ extern bool gp_dynamic_partition_pruning;
 extern bool gp_cte_sharing;
 /* Enable RECURSIVE clauses in common table expressions */
 extern bool gp_recursive_cte;
+
+/* Enable check for compatibility of encoding and locale in createdb */
+extern bool gp_encoding_check_locale_compatibility;
 
 /* Priority for the segworkers relative to the postmaster's priority */
 extern int gp_segworker_relative_priority;

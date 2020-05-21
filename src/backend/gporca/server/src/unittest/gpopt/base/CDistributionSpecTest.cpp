@@ -9,6 +9,8 @@
 //		Tests for distribution specification
 //---------------------------------------------------------------------------
 
+#include "gpos/error/CAutoTrace.h"
+
 #include "naucrates/md/IMDTypeInt4.h"
 #include "naucrates/md/CMDProviderMemory.h"
 

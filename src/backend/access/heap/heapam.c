@@ -3693,7 +3693,7 @@ l1:
 		Assert(!HeapTupleHasExternal(&tp));
 	}
 	else if (HeapTupleHasExternal(&tp))
-		toast_delete(relation, (GenericTuple) &tp, NULL);
+		toast_delete(relation, &tp, false);
 
 	/*
 	 * Mark tuple for invalidation from system caches at next command
@@ -6603,7 +6603,7 @@ heap_abort_speculative(Relation relation, HeapTuple tuple)
 	LockBuffer(buffer, BUFFER_LOCK_UNLOCK);
 
 	if (HeapTupleHasExternal(&tp))
-		toast_delete(relation, (GenericTuple) &tp, NULL);
+		toast_delete(relation, &tp, false);
 
 	/*
 	 * Never need to mark tuple for invalidation, since catalogs don't support

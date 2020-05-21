@@ -499,6 +499,9 @@ tuplestore_end(Tuplestorestate *state)
 			state->instrument->workmemwanted =
 				Max(state->instrument->workmemwanted, nbytes);
 		}
+
+		if (state->myfile)
+			state->instrument->workfileCreated = true;
 	}
 
 	if (state->myfile)

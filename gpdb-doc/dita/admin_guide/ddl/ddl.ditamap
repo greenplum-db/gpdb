@@ -11,7 +11,13 @@
     <topicref href="ddl-partition.xml"/>
     <topicref href="ddl-sequence.xml"/>
     <topicref href="ddl-index.xml"/>
-    <topicref href="ddl-view.dita"/>
+    <topicref href="ddl-view.dita" linking="targetonly">
+      <topicref href="ddl-view-best-practices.xml"/>
+      <topicref href="ddl-view-find-depend.xml">
+        <topicref href="ddl-view-find-depend.xml#topic_find_v_examples"/>
+      </topicref>
+      <topicref href="ddl-view-storage.xml"/>
+    </topicref>
     <topicref href="ddl-mat-view.xml"/>
   </topicref>
 </map>

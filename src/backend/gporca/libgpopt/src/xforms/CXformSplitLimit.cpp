@@ -12,7 +12,9 @@
 #include "gpos/base.h"
 
 #include "gpopt/base/CUtils.h"
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CLogicalLimit.h"
+#include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/xforms/CXformSplitLimit.h"
 
 using namespace gpmd;

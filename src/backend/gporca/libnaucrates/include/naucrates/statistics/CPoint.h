@@ -101,6 +101,8 @@ namespace gpnaucrates
 			CPoint *MaxPoint(CPoint *point1, CPoint *point2);
 	}; // class CPoint
 
+	// array of CPoints
+	typedef CDynamicPtrArray<CPoint, CleanupRelease> CPointArray;
 }
 
 #endif // !GPNAUCRATES_CPoint_H

@@ -13,7 +13,7 @@
 #include "gpopt/xforms/CXformInlineCTEConsumer.h"
 #include "gpopt/xforms/CXformUtils.h"
 
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalCTEConsumer.h"
 
 using namespace gpopt;
 

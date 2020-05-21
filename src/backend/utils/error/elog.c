@@ -969,7 +969,7 @@ errcode_for_socket_access(void)
  * Convert compact error code (ERRCODE_xxx) to 5-char SQLSTATE string,
  * and put it into a 6-char buffer provided by caller.
  */
-char *
+void
 errcode_to_sqlstate(int errcode, char outbuf[6])
 {
 	int	i;
@@ -980,7 +980,6 @@ errcode_to_sqlstate(int errcode, char outbuf[6])
 		errcode >>= 6;
 	}
 	outbuf[5] = '\0';
-	return &outbuf[5];
 }
 
 /*

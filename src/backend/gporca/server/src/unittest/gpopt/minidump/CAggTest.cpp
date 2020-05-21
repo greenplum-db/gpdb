@@ -28,6 +28,7 @@ ULONG CAggTest::m_ulAggTestCounter = 0;  // start from first test
 // minidump files
 const CHAR *rgszAggFileNames[] =
 {
+	"../data/dxl/minidump/AggWithVolatileFunc.mdp",
 	"../data/dxl/minidump/VolatileFunctionsBelowScalarAgg.mdp",
 	"../data/dxl/minidump/EagerAggMax.mdp",
 	"../data/dxl/minidump/EagerAggMaxWithNestedLoop.mdp",

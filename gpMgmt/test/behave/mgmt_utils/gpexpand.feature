@@ -4,8 +4,8 @@ Feature: expand the cluster by adding more segments
     @gpexpand_no_mirrors
     @gpexpand_timing
     Scenario: after resuming a duration interrupted redistribution, tables are restored
-	Given the database is not running
-	And a working directory of the test as '/data/gpdata/gpexpand'
+        Given the database is not running
+        And a working directory of the test as '/data/gpdata/gpexpand'
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
         And a cluster is created with no mirrors on "mdw" and "sdw1"
         And the master pid has been saved
@@ -30,7 +30,7 @@ Feature: expand the cluster by adding more segments
     @gpexpand_timing
     @gpexpand_standby
     Scenario: after a duration interrupted redistribution, state file on standby matches master
-    	Given the database is not running
+        Given the database is not running
         And a working directory of the test as '/data/gpdata/gpexpand'
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
         And a cluster is created with no mirrors on "mdw" and "sdw1"
@@ -87,7 +87,7 @@ Feature: expand the cluster by adding more segments
 
     @gpexpand_no_mirrors
     @gpexpand_host
-    Scenario: expand a cluster that has no mirrors with one new hosts
+    Scenario: expand a cluster that has no mirrors on one new host
         Given the database is not running
         And a working directory of the test as '/data/gpdata/gpexpand'
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
@@ -103,7 +103,7 @@ Feature: expand the cluster by adding more segments
 
     @gpexpand_no_mirrors
     @gpexpand_host_and_segment
-    Scenario: expand a cluster that has no mirrors with one new hosts
+    Scenario: expand a cluster that has no mirrors on both old and new hosts
         Given the database is not running
         And a working directory of the test as '/data/gpdata/gpexpand'
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
@@ -153,7 +153,7 @@ Feature: expand the cluster by adding more segments
 
     @gpexpand_mirrors
     @gpexpand_host
-    Scenario: expand a cluster that has mirrors with one new hosts
+    Scenario: expand a cluster that has mirrors on one new host
         Given the database is not running
         And a working directory of the test as '/data/gpdata/gpexpand'
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
@@ -170,7 +170,7 @@ Feature: expand the cluster by adding more segments
     @gpexpand_mirrors
     @gpexpand_host_and_segment
     @gpexpand_standby
-    Scenario: expand a cluster that has mirrors with one new host
+    Scenario: expand a cluster that has mirrors on both old and new hosts
         Given the database is not running
         And a working directory of the test as '/data/gpdata/gpexpand'
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
@@ -181,7 +181,7 @@ Feature: expand the cluster by adding more segments
         And the cluster is setup for an expansion on hosts "mdw,sdw1,sdw2,sdw3"
         And the new host "sdw2,sdw3" is ready to go
         When the user runs gpexpand interview to add 1 new segment and 2 new host "sdw2,sdw3"
-       Then the number of segments have been saved
+        Then the number of segments have been saved
         When the user runs gpexpand with the latest gpexpand_inputfile with additional parameters "--silent"
         Then verify that the cluster has 14 new segments
 
@@ -195,8 +195,8 @@ Feature: expand the cluster by adding more segments
         And a cluster is created with mirrors on "mdw" and "sdw1"
         And the user runs gpinitstandby with options " "
         And database "gptest" exists
-	And a tablespace is created with data
-	And another tablespace is created with data
+        And a tablespace is created with data
+        And another tablespace is created with data
         And there are no gpexpand_inputfiles
         And the cluster is setup for an expansion on hosts "mdw,sdw1,sdw2,sdw3"
         And the new host "sdw2,sdw3" is ready to go
@@ -204,8 +204,8 @@ Feature: expand the cluster by adding more segments
         Then the number of segments have been saved
         When the user runs gpexpand with the latest gpexpand_inputfile with additional parameters "--silent"
         Then verify that the cluster has 14 new segments
-	When the user runs gpexpand to redistribute
-	Then the tablespace is valid after gpexpand
+        When the user runs gpexpand to redistribute
+        Then the tablespace is valid after gpexpand
 
     @gpexpand_verify_redistribution
     Scenario: Verify data is correctly redistributed after expansion
@@ -289,7 +289,7 @@ Feature: expand the cluster by adding more segments
     @gpexpand_no_mirrors
     @gpexpand_no_restart
     @gpexpand_conf_copied
-    Scenario: expand a cluster without restarting db and conf has been copie
+    Scenario: expand a cluster without restarting db and conf has been copied
         Given the database is not running
         And a working directory of the test as '/data/gpdata/gpexpand'
         And the user runs command "rm -rf /data/gpdata/gpexpand/*"
@@ -402,6 +402,13 @@ Feature: expand the cluster by adding more segments
         And run rollback
         And verify the gp_segment_configuration has been restored
         And unset fault inject
+		# The rollback will remove the new segment's datadir, but this is not
+		# enough to let it quit, it might stop immediately, it might stop after
+		# tens of minutes.  If it does not quit in time, in later tests the new
+		# segments might fail to be launched due to port conflicts.  So we must
+		# force it to quit now.
+        And the database is not running
+        And the user runs remote command "pkill postgres || true" on host "sdw1"
 
     @gpexpand_no_mirrors
     @gpexpand_with_special_character
@@ -426,7 +433,7 @@ Feature: expand the cluster by adding more segments
     @gpexpand_mirrors
     @gpexpand_retry_failing_work_in_phase1_after_releasing_catalog_lock
     Scenario: inject a fail and test if retry is ok
-    	Given the database is not running
+        Given the database is not running
         And a working directory of the test as '/data/gpdata/gpexpand'
         And the user runs command "rm -rf /data/gpdata/gpexpand/*"
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into

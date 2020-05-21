@@ -93,18 +93,16 @@ NOTICE:  foreign table "t_ext_r" does not exist, skipping
 SELECT
 	c.relname,
 	c.relstorage,
-	e.urilocation,
-	e.execlocation,
-	e.fmtopts
+	f.ftoptions
 FROM
 	pg_catalog.pg_class c
-		LEFT OUTER JOIN pg_catalog.pg_exttable e ON (c.oid = e.reloid)
+		LEFT OUTER JOIN pg_catalog.pg_foreign_table f ON (c.oid = f.ftrelid)
 WHERE
 	c.relname LIKE 't_ext%';
- relname | relstorage |             urilocation              |  execlocation  |                  fmtopts                   
----------+------------+--------------------------------------+----------------+--------------------------------------------
- t_ext   | f          | {file://127.0.0.1/tmp/foo}           | {ALL_SEGMENTS} | delimiter '     ' null '\N' escape '\'
- t_ext_b | f          | {file://127.0.0.1/tmp/foo}           | {ALL_SEGMENTS} | delimiter '     ' null '\N' escape '\'
- t_ext_r | f          | {gpfdist://127.0.0.1:8080/tmp/dummy} | {ALL_SEGMENTS} | delimiter ' ' null '' escape '"' quote '"'
+ relname | relstorage |                                                                                        ftoptions                                                                                         
+---------+------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ t_ext   | f          | {format=text,"delimiter=        ","null=\\N","escape=\\",format_type=t,location_uris=file://127.0.0.1/tmp/foo,execute_on=ALL_SEGMENTS,log_errors=f,encoding=6,is_writable=false}
+ t_ext_b | f          | {format=text,"delimiter=        ","null=\\N","escape=\\",format_type=t,location_uris=file://127.0.0.1/tmp/foo,execute_on=ALL_SEGMENTS,log_errors=f,encoding=6,is_writable=false}
+ t_ext_r | f          | {format=csv,"delimiter= ",null=,"escape=\"","quote=\"",format_type=c,location_uris=gpfdist://127.0.0.1:8080/tmp/dummy,execute_on=ALL_SEGMENTS,log_errors=f,encoding=6,is_writable=false}
 (3 rows)
 

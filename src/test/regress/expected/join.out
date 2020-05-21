@@ -2348,7 +2348,6 @@ reset enable_hashjoin;
 -- a different check for handling of redundant sort keys in merge joins
 --
 set enable_mergejoin = true;
-set random_page_cost = 4;
 explain (costs off)
 select count(*) from
   (select * from tenk1 x order by x.thousand, x.twothousand, x.fivethous) x
@@ -2386,7 +2385,6 @@ select count(*) from
 (1 row)
 
 reset enable_mergejoin;
-reset random_page_cost;
 --
 -- Clean up
 --
@@ -3119,22 +3117,27 @@ select * from
   int4(sin(1)) q1,
   int4(sin(0)) q2
 where q1 = thousand or q2 = thousand;
-                                 QUERY PLAN                                  
------------------------------------------------------------------------------
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Nested Loop
-         Join Filter: ((q1.q1 = tenk1.thousand) OR (q2.q2 = tenk1.thousand))
+   ->  Hash Join
+         Hash Cond: (tenk1.twothousand = int4_tbl.f1)
          ->  Nested Loop
-               ->  Hash Join
-                     Hash Cond: (tenk1.twothousand = int4_tbl.f1)
-                     ->  Seq Scan on tenk1
-                     ->  Hash
-                           ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                                 ->  Seq Scan on int4_tbl
-               ->  Function Scan on q1
-         ->  Function Scan on q2
+               ->  Function Scan on q2
+               ->  Nested Loop
+                     ->  Function Scan on q1
+                     ->  Bitmap Heap Scan on tenk1
+                           Recheck Cond: ((q1.q1 = thousand) OR (q2.q2 = thousand))
+                           ->  BitmapOr
+                                 ->  Bitmap Index Scan on tenk1_thous_tenthous
+                                       Index Cond: (q1.q1 = thousand)
+                                 ->  Bitmap Index Scan on tenk1_thous_tenthous
+                                       Index Cond: (q2.q2 = thousand)
+         ->  Hash
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                     ->  Seq Scan on int4_tbl
  Optimizer: Postgres query optimizer
-(13 rows)
+(18 rows)
 
 explain (costs off)
 select * from
@@ -3164,7 +3167,6 @@ where thousand = (q1 + q2);
 -- test ability to generate a suitable plan for a star-schema query
 --
 set enable_nestloop to true;
-set random_page_cost to 4;
 explain (costs off)
 select * from
   tenk1, int8_tbl a, int8_tbl b
@@ -3188,7 +3190,6 @@ where thousand = a.q1 and tenthous = b.q1 and a.q2 = 1 and b.q2 = 2;
 (14 rows)
 
 reset enable_nestloop;
-reset random_page_cost;
 --
 -- test a corner case in which we shouldn't apply the star-schema optimization
 --
@@ -3275,14 +3276,24 @@ select * from tenk1 a join tenk1 b on
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop
          Join Filter: (((a.unique1 = 1) AND (b.unique1 = 2)) OR ((a.unique2 = 3) AND (b.hundred = 4)))
-         ->  Seq Scan on tenk1 b
-               Filter: ((unique1 = 2) OR (hundred = 4))
+         ->  Bitmap Heap Scan on tenk1 b
+               Recheck Cond: ((unique1 = 2) OR (hundred = 4))
+               ->  BitmapOr
+                     ->  Bitmap Index Scan on tenk1_unique1
+                           Index Cond: (unique1 = 2)
+                     ->  Bitmap Index Scan on tenk1_hundred
+                           Index Cond: (hundred = 4)
          ->  Materialize
                ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                     ->  Seq Scan on tenk1 a
-                           Filter: ((unique1 = 1) OR (unique2 = 3))
+                     ->  Bitmap Heap Scan on tenk1 a
+                           Recheck Cond: ((unique1 = 1) OR (unique2 = 3))
+                           ->  BitmapOr
+                                 ->  Bitmap Index Scan on tenk1_unique1
+                                       Index Cond: (unique1 = 1)
+                                 ->  Bitmap Index Scan on tenk1_unique2
+                                       Index Cond: (unique2 = 3)
  Optimizer: Postgres query optimizer
-(10 rows)
+(20 rows)
 
 explain (costs off)
 select * from tenk1 a join tenk1 b on
@@ -3296,10 +3307,15 @@ select * from tenk1 a join tenk1 b on
                Filter: ((unique1 = 2) OR (ten = 4))
          ->  Materialize
                ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                     ->  Seq Scan on tenk1 a
-                           Filter: ((unique1 = 1) OR (unique2 = 3))
+                     ->  Bitmap Heap Scan on tenk1 a
+                           Recheck Cond: ((unique1 = 1) OR (unique2 = 3))
+                           ->  BitmapOr
+                                 ->  Bitmap Index Scan on tenk1_unique1
+                                       Index Cond: (unique1 = 1)
+                                 ->  Bitmap Index Scan on tenk1_unique2
+                                       Index Cond: (unique2 = 3)
  Optimizer: Postgres query optimizer
-(10 rows)
+(15 rows)
 
 explain (costs off)
 select * from tenk1 a join tenk1 b on
@@ -3310,14 +3326,26 @@ select * from tenk1 a join tenk1 b on
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop
          Join Filter: (((a.unique1 = 1) AND (b.unique1 = 2)) OR (((a.unique2 = 3) OR (a.unique2 = 7)) AND (b.hundred = 4)))
-         ->  Seq Scan on tenk1 b
-               Filter: ((unique1 = 2) OR (hundred = 4))
+         ->  Bitmap Heap Scan on tenk1 b
+               Recheck Cond: ((unique1 = 2) OR (hundred = 4))
+               ->  BitmapOr
+                     ->  Bitmap Index Scan on tenk1_unique1
+                           Index Cond: (unique1 = 2)
+                     ->  Bitmap Index Scan on tenk1_hundred
+                           Index Cond: (hundred = 4)
          ->  Materialize
                ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                     ->  Seq Scan on tenk1 a
-                           Filter: ((unique1 = 1) OR (unique2 = 3) OR (unique2 = 7))
+                     ->  Bitmap Heap Scan on tenk1 a
+                           Recheck Cond: ((unique1 = 1) OR (unique2 = 3) OR (unique2 = 7))
+                           ->  BitmapOr
+                                 ->  Bitmap Index Scan on tenk1_unique1
+                                       Index Cond: (unique1 = 1)
+                                 ->  Bitmap Index Scan on tenk1_unique2
+                                       Index Cond: (unique2 = 3)
+                                 ->  Bitmap Index Scan on tenk1_unique2
+                                       Index Cond: (unique2 = 7)
  Optimizer: Postgres query optimizer
-(10 rows)
+(22 rows)
 
 --
 -- test placement of movable quals in a parameterized join tree
@@ -3615,14 +3643,16 @@ select a.unique1, b.unique1, c.unique1, coalesce(b.twothousand, a.twothousand)
                      Hash Key: b.thousand
                      ->  Seq Scan on tenk1 b
                ->  Hash
-                     ->  Seq Scan on tenk1 a
-                           Filter: (unique2 < 10)
+                     ->  Bitmap Heap Scan on tenk1 a
+                           Recheck Cond: (unique2 < 10)
+                           ->  Bitmap Index Scan on tenk1_unique2
+                                 Index Cond: (unique2 < 10)
          ->  Hash
                ->  Broadcast Motion 3:3  (slice3; segments: 3)
                      ->  Index Scan using tenk1_unique2 on tenk1 c
                            Index Cond: (unique2 = 44)
  Optimizer: Postgres query optimizer
-(17 rows)
+(19 rows)
 
 select a.unique1, b.unique1, c.unique1, coalesce(b.twothousand, a.twothousand)
   from tenk1 a left join tenk1 b on b.thousand = a.unique1                        left join tenk1 c on c.unique2 = coalesce(b.twothousand, a.twothousand)
@@ -5419,12 +5449,10 @@ select * from int4_tbl a,
 ------------------------------------------------------------------------
  Nested Loop
    Output: a.f1, b.f1, c.q1, c.q2
-   ->  Materialize
+   ->  Gather Motion 3:1  (slice1; segments: 3)
          Output: a.f1
-         ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on public.int4_tbl a
                Output: a.f1
-               ->  Seq Scan on public.int4_tbl a
-                     Output: a.f1
    ->  Materialize
          Output: b.f1, c.q1, c.q2
          ->  Hash Right Join
@@ -5448,8 +5476,7 @@ select * from int4_tbl a,
                                  ->  Seq Scan on public.int4_tbl b
                                        Output: b.f1
  Optimizer: Postgres query optimizer
- Settings: optimizer=off
-(32 rows)
+(29 rows)
 
 select * from int4_tbl a,
   lateral (
@@ -5494,13 +5521,13 @@ select * from
   (select b.q1 as bq1, c.q1 as cq1, least(a.q1,b.q1,c.q1) from
    int8_tbl b cross join int8_tbl c) ss
   on a.q2 = ss.bq1;
-ERROR:  could not devise a query plan for the given query (pathnode.c:469)
+ERROR:  could not devise a query plan for the given query (pathnode.c:472)
 select * from
   int8_tbl a left join lateral
   (select b.q1 as bq1, c.q1 as cq1, least(a.q1,b.q1,c.q1) from
    int8_tbl b cross join int8_tbl c) ss
   on a.q2 = ss.bq1;
-ERROR:  could not devise a query plan for the given query (pathnode.c:469)
+ERROR:  could not devise a query plan for the given query (pathnode.c:472)
 -- case requiring nested PlaceHolderVars
 explain (verbose, costs off)
 select * from

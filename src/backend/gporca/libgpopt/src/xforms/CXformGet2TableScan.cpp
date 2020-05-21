@@ -12,7 +12,9 @@
 #include "gpos/base.h"
 #include "gpopt/xforms/CXformGet2TableScan.h"
 
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CLogicalGet.h"
+#include "gpopt/operators/CPhysicalTableScan.h"
 #include "gpopt/metadata/CTableDescriptor.h"
 
 using namespace gpopt;

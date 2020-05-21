@@ -16,7 +16,16 @@
 #include "gpopt/operators/CNormalizer.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CScalarNAryJoinPredList.h"
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogical.h"
+#include "gpopt/operators/CLogicalInnerJoin.h"
+#include "gpopt/operators/CLogicalLeftOuterJoin.h"
+#include "gpopt/operators/CLogicalNAryJoin.h"
+#include "gpopt/operators/CLogicalProject.h"
+#include "gpopt/operators/CLogicalSequenceProject.h"
+#include "gpopt/operators/CLogicalSelect.h"
+#include "gpopt/operators/CLogicalSetOp.h"
+#include "gpopt/operators/CScalarProjectElement.h"
+#include "gpopt/operators/CScalarProjectList.h"
 
 using namespace gpopt;
 
@@ -140,6 +149,17 @@ CNormalizer::FPushable
 {
 	GPOS_ASSERT(NULL != pexprLogical);
 	GPOS_ASSERT(NULL != pexprPred);
+
+	// do not push through volatile functions below an aggregate
+	// volatile functions can potentially give different results when they
+	// are called so we don't want aggregate to use volatile function result
+	// while it processes each row
+	if (COperator::EopLogicalGbAgg == pexprLogical->Pop()->Eopid() &&
+		(CPredicateUtils::FContainsVolatileFunction(pexprPred)))
+	{
+		return false;
+	}
+
 
 	CColRefSet *pcrsUsed =
 		pexprPred->DeriveUsedColumns();
@@ -1154,6 +1174,7 @@ CNormalizer::PushThru
 	{
 		CExpression *pexprConj = (*pdrgpexprConjuncts)[ul];
 		pexprConj->AddRef();
+
 		if (FPushable(pexprLogical, pexprConj))
 		{
 			pdrgpexprPushable->Append(pexprConj);

@@ -1410,4 +1410,57 @@ HINT:  Drop the primary key first
 CREATE TABLE alter_table_with_unique_index (a int unique);
 ALTER TABLE alter_table_with_unique_index SET DISTRIBUTED RANDOMLY;
 ERROR:  cannot set to DISTRIBUTED RANDOMLY because relation has unique index
-HINT:  Drop the unique index first
+HINT:  Drop the unique index first.
+-- Enable reorg partition leaf table
+create table reorg_leaf (a int, b int, c int) distributed by (c)
+partition by range(a)
+subpartition by range (b)
+subpartition template
+(start(0) end (10) every (5))
+(partition p0 start (0) end (5),
+	partition p1 start (5) end (10));
+insert into reorg_leaf select i, i, i from generate_series(0, 9) i;
+select *, gp_segment_id from reorg_leaf_1_prt_p0;
+ a | b | c | gp_segment_id 
+---+---+---+---------------
+ 2 | 2 | 2 |             0
+ 3 | 3 | 3 |             0
+ 4 | 4 | 4 |             0
+ 0 | 0 | 0 |             1
+ 1 | 1 | 1 |             1
+(5 rows)
+
+alter table reorg_leaf_1_prt_p0 set with (reorganize=true) distributed by(b);
+ERROR:  can't set the distribution policy of "reorg_leaf_1_prt_p0"
+HINT:  Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.
+alter table reorg_leaf_1_prt_p0 set with (reorganize=true) distributed by(c);
+ERROR:  can't set the distribution policy of "reorg_leaf_1_prt_p0"
+HINT:  Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.
+alter table reorg_leaf_1_prt_p0 set with (reorganize=true);
+ERROR:  can't set the distribution policy of "reorg_leaf_1_prt_p0"
+HINT:  Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.
+alter table reorg_leaf_1_prt_p0_2_prt_1 set with (reorganize=true) distributed by(b);
+ERROR:  can't set the distribution policy of "reorg_leaf_1_prt_p0_2_prt_1"
+HINT:  Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.
+alter table reorg_leaf_1_prt_p0_2_prt_1 set with (reorganize=true) distributed by(c);
+select *, gp_segment_id from reorg_leaf_1_prt_p0;
+ a | b | c | gp_segment_id 
+---+---+---+---------------
+ 2 | 2 | 2 |             0
+ 3 | 3 | 3 |             0
+ 4 | 4 | 4 |             0
+ 0 | 0 | 0 |             1
+ 1 | 1 | 1 |             1
+(5 rows)
+
+alter table reorg_leaf_1_prt_p0_2_prt_1 set with (reorganize=true);
+select *, gp_segment_id from reorg_leaf_1_prt_p0;
+ a | b | c | gp_segment_id 
+---+---+---+---------------
+ 2 | 2 | 2 |             0
+ 3 | 3 | 3 |             0
+ 4 | 4 | 4 |             0
+ 0 | 0 | 0 |             1
+ 1 | 1 | 1 |             1
+(5 rows)
+

@@ -13,7 +13,9 @@
 #include "gpopt/xforms/CXformCTEAnchor2Sequence.h"
 #include "gpopt/xforms/CXformUtils.h"
 
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalCTEAnchor.h"
+#include "gpopt/operators/CLogicalSequence.h"
+#include "gpopt/operators/CPatternLeaf.h"
 
 using namespace gpopt;
 

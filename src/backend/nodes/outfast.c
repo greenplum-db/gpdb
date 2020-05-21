@@ -467,12 +467,6 @@ _outSort(StringInfo str, Sort *node)
 
     /* CDB */
     WRITE_BOOL_FIELD(noduplicates);
-
-	WRITE_ENUM_FIELD(share_type, ShareType);
-	WRITE_INT_FIELD(share_id);
-	WRITE_INT_FIELD(driver_slice);
-	WRITE_INT_FIELD(nsharer);
-	WRITE_INT_FIELD(nsharer_xslice);
 }
 
 static void
@@ -674,6 +668,7 @@ _outCreateStmt_common(StringInfo str, CreateStmt *node)
 	WRITE_OID_FIELD(ownerid);
 	WRITE_BOOL_FIELD(buildAoBlkdir);
 	WRITE_NODE_FIELD(attr_encodings);
+	WRITE_BOOL_FIELD(isCtas);
 }
 
 static void
@@ -693,6 +688,7 @@ _outCreateForeignTableStmt(StringInfo str, CreateForeignTableStmt *node)
 
 	WRITE_STRING_FIELD(servername);
 	WRITE_NODE_FIELD(options);
+	WRITE_NODE_FIELD(distributedBy);
 }
 
 static void
@@ -2154,6 +2150,9 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_RowIdExpr:
 				_outRowIdExpr(str, obj);
+				break;
+			case T_RestrictInfo:
+				_outRestrictInfo(str, obj);
 				break;
 
 			default:

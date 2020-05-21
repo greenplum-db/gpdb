@@ -179,6 +179,30 @@ typedef struct VacuumParams
 										 * activated, -1 to use default */
 } VacuumParams;
 
+typedef struct
+{
+	/* Table being sampled */
+	Relation	onerel;
+
+	/* Sampled rows and estimated total number of rows in the table. */
+	HeapTuple  *sample_rows;
+	int			num_sample_rows;
+	double		totalrows;
+	double		totaldeadrows;
+
+	/*
+	 * Result tuple descriptor. Each returned row consists of three "fixed"
+	 * columns, plus all the columns of the sampled table (excluding dropped
+	 * columns).
+	 */
+	TupleDesc	outDesc;
+#define NUM_SAMPLE_FIXED_COLS 3
+
+	/* SRF state, to track which rows have already been returned. */
+	int			index;
+	bool		summary_sent;
+} gp_acquire_sample_rows_context;
+
 /* GUC parameters */
 extern PGDLLIMPORT int default_statistics_target;		/* PGDLLIMPORT for
 														 * PostGIS */
@@ -240,7 +264,7 @@ extern void ao_vacuum_rel_post_cleanup(Relation onerel, int options, VacuumParam
 /* in commands/analyze.c */
 extern void analyze_rel(Oid relid, RangeVar *relation, int options,
 			VacuumParams *params, List *va_cols, bool in_outer_xact,
-			BufferAccessStrategy bstrategy);
+			BufferAccessStrategy bstrategy, gp_acquire_sample_rows_context *ctx);
 
 extern bool std_typanalyze(VacAttrStats *stats);
 

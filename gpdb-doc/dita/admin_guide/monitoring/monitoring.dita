@@ -372,11 +372,14 @@ FROM gp_master_mirroring;</codeblock></p>
                                     that cannot be recovered by a regular <codeph>VACUUM</codeph>
                                     command. <p>Recommended frequency: weekly or
                                         monthly</p><p>Severity: WARNING</p></entry>
-                                <entry>Check the <codeph>gp_bloat_diag</codeph> view in each database:
+                                <entry>Check the <codeph>gp_bloat_diag</codeph> view in each
+                                    database:
                                     <codeblock>SELECT * FROM gp_toolkit.gp_bloat_diag;</codeblock></entry>
-                                <entry>Execute a <codeph>VACUUM FULL</codeph> statement at a time
-                                    when users are not accessing the table to remove bloat and
-                                    compact the data.</entry>
+                                <entry><codeph>VACUUM FULL</codeph> acquires an <codeph>ACCESS
+                                        EXCLUSIVE</codeph> lock on tables. Run <codeph>VACUUM
+                                        FULL</codeph> during a time when users and applications do
+                                    not require access to the tables, such as during a time of low
+                                    activity, or during a maintenance window.</entry>
                             </row>
                         </tbody>
                     </tgroup>

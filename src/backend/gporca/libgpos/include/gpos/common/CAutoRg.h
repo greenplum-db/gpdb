@@ -35,12 +35,11 @@ namespace gpos
 
 			// actual element to point to
 			T *m_object_array;
-						
-			// hidden copy ctor
-			CAutoRg<T>(const CAutoRg&);
 
 		public:
-		
+
+			CAutoRg<T>(const CAutoRg&) = delete;
+
 			// ctor
 			explicit
 			CAutoRg<T>()

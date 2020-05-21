@@ -25,6 +25,4 @@ extern bool inject_partition_selectors_for_join(PlannerInfo *root,
 
 extern Plan *create_partition_selector_plan(PlannerInfo *root, PartitionSelectorPath *pspath);
 
-extern RestrictInfo *make_mergeclause(Node *outer, Node *inner);
-
 #endif /* PLANPARTITION_H */

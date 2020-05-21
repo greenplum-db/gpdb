@@ -69,13 +69,6 @@ static void addByteStringToChunkList(TupleChunkList tcList, char *data, int data
 	} while (0)
 
 
-static inline void
-addPadding(TupleChunkList tcList, TupleChunkListCache *cache, int size)
-{
-	while (size++ & (TUPLE_CHUNK_ALIGN - 1))
-		addCharToChunkList(tcList, 0, cache);
-}
-
 /* Look up all of the information that SerializeTuple() and DeserializeTuple()
  * need to perform their jobs quickly.	Also, scratchpad space is allocated
  * for serialization and desrialization of datum values, and for formation/
@@ -343,7 +336,6 @@ SerializeRecordCacheIntoChunks(SerTupInfo *pSerInfo,
 							 sizeof(TupSerHeader),
 							 &pSerInfo->chunkCache);
 	addByteStringToChunkList(tcList, buf, size, &pSerInfo->chunkCache);
-	addPadding(tcList, &pSerInfo->chunkCache, size);
 
 	/*
 	 * if we have more than 1 chunk we have to set the chunk types on our
@@ -428,7 +420,6 @@ SerializeTuple(TupleTableSlot *slot, SerTupInfo *pSerInfo, struct directTranspor
 		 */
 		MemTuple	tuple;
 		uint32		tupleSize;
-		int			paddedSize;
 		uint32		null_save_len = 0;
 		bool		has_nulls = false;
 
@@ -485,9 +476,8 @@ SerializeTuple(TupleTableSlot *slot, SerTupInfo *pSerInfo, struct directTranspor
 		 * Here we first try to in-line serialize the tuple directly into
 		 * buffer.
 		 */
-		paddedSize = TYPEALIGN(TUPLE_CHUNK_ALIGN, tupleSize);
 		if (CandidateForSerializeDirect(targetRoute, b) &&
-			paddedSize + TUPLE_CHUNK_HEADER_SIZE <= b->prilen)
+			tupleSize + TUPLE_CHUNK_HEADER_SIZE <= b->prilen)
 		{
 			/*
 			 * Will fit.
@@ -497,9 +487,8 @@ SerializeTuple(TupleTableSlot *slot, SerTupInfo *pSerInfo, struct directTranspor
 			 * memtuple_form_to() assumes that the target pointer is aligned.
 			 */
 			memcpy(b->pri + TUPLE_CHUNK_HEADER_SIZE, tuple, tupleSize);
-			memset(b->pri + TUPLE_CHUNK_HEADER_SIZE + tupleSize, 0, paddedSize - tupleSize);
 
-			dataSize += paddedSize;
+			dataSize += tupleSize;
 
 			SetChunkType(b->pri, TC_WHOLE);
 			SetChunkDataSize(b->pri, dataSize - TUPLE_CHUNK_HEADER_SIZE);
@@ -518,7 +507,6 @@ SerializeTuple(TupleTableSlot *slot, SerTupInfo *pSerInfo, struct directTranspor
 		AssertState(s_tupSerMemCtxt != NULL);
 
 		addByteStringToChunkList(tcList, (char *) tuple, tupleSize, &pSerInfo->chunkCache);
-		addPadding(tcList, &pSerInfo->chunkCache, tupleSize);
 
 		MemoryContextReset(s_tupSerMemCtxt);
 	}
@@ -538,7 +526,7 @@ SerializeTuple(TupleTableSlot *slot, SerTupInfo *pSerInfo, struct directTranspor
 		else
 			nullslen = 0;
 
-		tsh.tuplen = sizeof(TupSerHeader) + TYPEALIGN(TUPLE_CHUNK_ALIGN, nullslen) + datalen;
+		tsh.tuplen = sizeof(TupSerHeader) + nullslen + datalen;
 		tsh.natts = HeapTupleHeaderGetNatts(t_data);
 		tsh.infomask = t_data->t_infomask;
 
@@ -561,14 +549,10 @@ SerializeTuple(TupleTableSlot *slot, SerTupInfo *pSerInfo, struct directTranspor
 				{
 					memcpy(pos, (char *) t_data->t_bits, nullslen);
 					pos += nullslen;
-					memset(pos, 0, TYPEALIGN(TUPLE_CHUNK_ALIGN, nullslen) - nullslen);
-					pos += TYPEALIGN(TUPLE_CHUNK_ALIGN, nullslen) - nullslen;
 				}
 
 				memcpy(pos, (char *) t_data + t_data->t_hoff, datalen);
 				pos += datalen;
-				memset(pos, 0, TYPEALIGN(TUPLE_CHUNK_ALIGN, datalen) - datalen);
-				pos += TYPEALIGN(TUPLE_CHUNK_ALIGN, datalen) - datalen;
 
 				dataSize += tsh.tuplen;
 
@@ -592,13 +576,9 @@ SerializeTuple(TupleTableSlot *slot, SerTupInfo *pSerInfo, struct directTranspor
 		addByteStringToChunkList(tcList, (char *) &tsh, sizeof(TupSerHeader), &pSerInfo->chunkCache);
 
 		if (nullslen)
-		{
 			addByteStringToChunkList(tcList, (char *) t_data->t_bits, nullslen, &pSerInfo->chunkCache);
-			addPadding(tcList, &pSerInfo->chunkCache, nullslen);
-		}
 
 		addByteStringToChunkList(tcList, (char *) t_data + t_data->t_hoff, datalen, &pSerInfo->chunkCache);
-		addPadding(tcList, &pSerInfo->chunkCache, datalen);
 	}
 
 	/*
@@ -762,7 +742,7 @@ CvtChunksToTup(TupleChunkList tcList, SerTupInfo *pSerInfo, TupleRemapper *remap
 
 	/* We now have the reassembled data in 'serData'. Deserialize it back to a tuple. */
 	{
-		TupSerHeader *tshp;
+		TupSerHeader tsh;
 		unsigned int datalen;
 		unsigned int nullslen;
 		unsigned int hoff;
@@ -770,13 +750,14 @@ CvtChunksToTup(TupleChunkList tcList, SerTupInfo *pSerInfo, TupleRemapper *remap
 
 		char	   *pos = serData.data;
 
-		tshp = (TupSerHeader *) pos;
+		/* copy because the serialized buffer is not aligned */
+		memcpy(&tsh, pos, sizeof(TupSerHeader));
 
-		if (!(tshp->tuplen & MEMTUP_LEAD_BIT) &&
-			tshp->natts == RECORD_CACHE_MAGIC_NATTS &&
-			tshp->infomask == RECORD_CACHE_MAGIC_INFOMASK)
+		if (!(tsh.tuplen & MEMTUP_LEAD_BIT) &&
+			tsh.natts == RECORD_CACHE_MAGIC_NATTS &&
+			tsh.infomask == RECORD_CACHE_MAGIC_INFOMASK)
 		{
-			uint32		tuplen = tshp->tuplen & ~MEMTUP_LEAD_BIT;
+			uint32		tuplen = tsh.tuplen & ~MEMTUP_LEAD_BIT;
 
 			/* a special tuple with record type cache */
 			List	   *typelist = (List *) deserializeNode(pos + sizeof(TupSerHeader),
@@ -791,14 +772,14 @@ CvtChunksToTup(TupleChunkList tcList, SerTupInfo *pSerInfo, TupleRemapper *remap
 			return NULL;
 		}
 
-		if ((tshp->tuplen & MEMTUP_LEAD_BIT) != 0)
+		if ((tsh.tuplen & MEMTUP_LEAD_BIT) != 0)
 		{
-			uint32		tuplen = memtuple_size_from_uint32(tshp->tuplen);
+			uint32		tuplen = memtuple_size_from_uint32(tsh.tuplen);
 
 			tup = (GenericTuple) palloc(tuplen);
 			memcpy(tup, pos, tuplen);
 
-			pos += TYPEALIGN(TUPLE_CHUNK_ALIGN, tuplen);
+			pos += tuplen;
 		}
 		else
 		{
@@ -809,26 +790,26 @@ CvtChunksToTup(TupleChunkList tcList, SerTupInfo *pSerInfo, TupleRemapper *remap
 			/*
 			 * Tuples with toasted elements should've been converted to MemTuples.
 			 */
-			Assert((tshp->infomask & HEAP_HASEXTERNAL) == 0);
+			Assert((tsh.infomask & HEAP_HASEXTERNAL) == 0);
 
 			/* reconstruct lengths of null bitmap and data part */
-			if (tshp->infomask & HEAP_HASNULL)
-				nullslen = BITMAPLEN(tshp->natts);
+			if (tsh.infomask & HEAP_HASNULL)
+				nullslen = BITMAPLEN(tsh.natts);
 			else
 				nullslen = 0;
 
-			if (tshp->tuplen < sizeof(TupSerHeader) + nullslen)
+			if (tsh.tuplen < sizeof(TupSerHeader) + nullslen)
 				ereport(ERROR,
 						(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 						 errmsg("interconnect error: cannot convert chunks to a heap tuple"),
 						 errdetail("Tuple len %d < nullslen %d + headersize (%d)",
-								   tshp->tuplen, nullslen, (int) sizeof(TupSerHeader))));
+								   tsh.tuplen, nullslen, (int) sizeof(TupSerHeader))));
 
-			datalen = tshp->tuplen - sizeof(TupSerHeader) - TYPEALIGN(TUPLE_CHUNK_ALIGN, nullslen);
+			datalen = tsh.tuplen - sizeof(TupSerHeader) - nullslen;
 
 			/* determine overhead size of tuple (should match heap_form_tuple) */
-			hoff = offsetof(HeapTupleHeaderData, t_bits) + TYPEALIGN(TUPLE_CHUNK_ALIGN, nullslen);
-			if (tshp->infomask & HEAP_HASOID)
+			hoff = offsetof(HeapTupleHeaderData, t_bits) + nullslen;
+			if (tsh.infomask & HEAP_HASOID)
 				hoff += sizeof(Oid);
 			hoff = MAXALIGN(hoff);
 
@@ -848,15 +829,15 @@ CvtChunksToTup(TupleChunkList tcList, SerTupInfo *pSerInfo, TupleRemapper *remap
 
 			/* reconstruct the HeapTupleHeaderData fields */
 			ItemPointerSetInvalid(&(t_data->t_ctid));
-			HeapTupleHeaderSetNatts(t_data, tshp->natts);
-			t_data->t_infomask = tshp->infomask & ~HEAP_XACT_MASK;
+			HeapTupleHeaderSetNatts(t_data, tsh.natts);
+			t_data->t_infomask = tsh.infomask & ~HEAP_XACT_MASK;
 			t_data->t_infomask |= HEAP_XMIN_INVALID | HEAP_XMAX_INVALID;
 			t_data->t_hoff = hoff;
 
 			if (nullslen)
 			{
 				memcpy((void *) t_data->t_bits, pos, nullslen);
-				pos += TYPEALIGN(TUPLE_CHUNK_ALIGN, nullslen);
+				pos += nullslen;
 			}
 
 			/*

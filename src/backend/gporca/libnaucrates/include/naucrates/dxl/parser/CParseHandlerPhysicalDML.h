@@ -14,6 +14,7 @@
 
 #include "gpos/base.h"
 #include "naucrates/dxl/parser/CParseHandlerPhysicalOp.h"
+#include "naucrates/dxl/operators/CDXLPhysicalDML.h"
 
 
 namespace gpdxl

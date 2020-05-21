@@ -9,7 +9,6 @@
 //		Statistics helper routines for processing Inner Joins
 //---------------------------------------------------------------------------
 
-#include "gpopt/operators/ops.h"
 #include "naucrates/statistics/CInnerJoinStatsProcessor.h"
 
 using namespace gpmd;

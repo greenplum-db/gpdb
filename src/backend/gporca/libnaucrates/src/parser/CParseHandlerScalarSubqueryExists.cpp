@@ -15,6 +15,7 @@
 #include "naucrates/dxl/parser/CParseHandlerLogicalOp.h"
 
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/operators/CDXLScalarSubqueryNotExists.h"
 
 using namespace gpdxl;
 

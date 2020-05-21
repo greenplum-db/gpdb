@@ -6,11 +6,7 @@ set -eox pipefail
 
 CLUSTER_NAME=$(cat ./cluster_env_files/terraform/name)
 
-if [ "$TEST_OS" = centos6 ]; then
-    CGROUP_BASEDIR=/cgroup
-else
-    CGROUP_BASEDIR=/sys/fs/cgroup
-fi
+CGROUP_BASEDIR=/sys/fs/cgroup
 
 if [ "$TEST_OS" = centos7 ]; then
     CGROUP_AUTO_MOUNTED=1

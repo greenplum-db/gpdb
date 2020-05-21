@@ -28,6 +28,7 @@
 #include "storage/shmem.h"
 #include "storage/sinval.h"
 #include "tcop/tcopprot.h"
+#include "utils/resgroup.h"
 
 #include "cdb/cdbvars.h"
 
@@ -330,6 +331,9 @@ procsignal_sigusr1_handler(SIGNAL_ARGS)
 
 	if (CheckProcSignal(PROCSIG_RECOVERY_CONFLICT_BUFFERPIN))
 		RecoveryConflictInterrupt(PROCSIG_RECOVERY_CONFLICT_BUFFERPIN);
+
+	if (CheckProcSignal(PROCSIG_RESOURCE_GROUP_MOVE_QUERY))
+		HandleMoveResourceGroup();
 
 	SetLatch(MyLatch);
 

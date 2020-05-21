@@ -3,11 +3,10 @@ platform: linux
 image_resource:
   type: docker-image
   source:
-    repository: pivotaldata/gpdb6-centos6-build
+    repository: pivotaldata/gpdb7-centos7-build
 
 inputs:
 - name: gpdb_src
-- name: bin_gpdb_centos6
 - name: bin_gpdb_centos7
 - name: bin_gpdb_ubuntu18.04
 
@@ -23,6 +22,5 @@ run:
   - -ec
   - |
     server_version="$(./gpdb_src/getversion --short)"
-    cp bin_gpdb_centos6/bin_gpdb.tar.gz "output/server-build-${server_version}-rhel6_x86_64${RC_BUILD_TYPE_GCS}.tar.gz"
     cp bin_gpdb_centos7/bin_gpdb.tar.gz "output/server-build-${server_version}-rhel7_x86_64${RC_BUILD_TYPE_GCS}.tar.gz"
     cp bin_gpdb_ubuntu18.04/bin_gpdb.tar.gz "output/server-build-${server_version}-ubuntu18.04_x86_64${RC_BUILD_TYPE_GCS}.tar.gz"

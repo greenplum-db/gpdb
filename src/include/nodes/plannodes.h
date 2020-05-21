@@ -839,7 +839,6 @@ typedef struct ExternalScanInfo
 {
 	NodeTag		type;
 	List		*uriList;       /* data uri or null for each segment  */
-	char	   *fmtOptString;	/* data format options                */
 	char		fmtType;        /* data format type                   */
 	bool		isMasterOnly;   /* true for EXECUTE on master seg only */
 	int			rejLimit;       /* reject limit (-1 for no sreh)      */
@@ -1023,30 +1022,8 @@ typedef struct HashJoin
 	List	   *hashqualclauses;
 } HashJoin;
 
-/*
- * Share type of sharing a node.
- */
-typedef enum ShareType
-{
-	SHARE_NOTSHARED,
-	SHARE_MATERIAL,          	/* Sharing a material node */
-	SHARE_MATERIAL_XSLICE,		/* Sharing a material node, across slice */
-	SHARE_SORT,					/* Sharing a sort */
-	SHARE_SORT_XSLICE			/* Sharing a sort, across slice */
-	/* Other types maybe added later, like sharing a hash */
-} ShareType;
-
 #define SHARE_ID_NOT_SHARED (-1)
 #define SHARE_ID_NOT_ASSIGNED (-2)
-
-extern int get_plan_share_id(Plan *p);
-extern void set_plan_share_id(Plan *p, int share_id);
-extern ShareType get_plan_share_type (Plan *p);
-extern void set_plan_share_type(Plan *p, ShareType st);
-extern void set_plan_share_type_xslice(Plan *p);
-extern int get_plan_driver_slice(Plan *p);
-extern void set_plan_driver_slice(Plan *P, int slice);
-extern void incr_plan_nsharer_xslice(Plan *p);
 
 /* ----------------
  *		shareinputscan node
@@ -1054,11 +1031,32 @@ extern void incr_plan_nsharer_xslice(Plan *p);
  */
 typedef struct ShareInputScan
 {
-	Scan 		scan; /* The ShareInput */
+	Scan 		scan;
 
-	ShareType 	share_type;
+	bool		cross_slice;
 	int 		share_id;
-	int 		driver_slice;   	/* slice id that will execute the underlying material/sort */
+
+	/*
+	 * Slice that produces the tuplestore for this shared scan.
+	 *
+	 * As a special case, in a plan that has only one slice, this may be left
+	 * to -1. The executor node ignores this when there is only one slice.
+	 */
+	int			producer_slice_id;
+
+	/*
+	 * Slice id that this ShareInputScan node runs in. If it's
+	 * different from current slice ID, this ShareInputScan is "alien"
+	 * to the current slice and doesn't need to be executed at all (in
+	 * this slice). It is used to skip IPC in alien nodes.
+	 *
+	 * Like producer_slice_id, this can be left to -1 if there is only one
+	 * slice in the plan tree.
+	 */
+	int			this_slice_id;
+
+	/* Number of consumer slices participating, not including the producer. */
+	int			nconsumers;
 } ShareInputScan;
 
 /* ----------------
@@ -1070,13 +1068,6 @@ typedef struct Material
 	Plan		plan;
 	bool		cdb_strict;
 	bool		cdb_shield_child_from_rescans;
-
-	/* Material can be shared */
-	ShareType 	share_type;
-	int 		share_id;
-	int         driver_slice; 					/* slice id that will execute this material */
-	int         nsharer;						/* number of sharer */
-	int 		nsharer_xslice;					/* number of sharer cross slice */
 } Material;
 
 /* ----------------
@@ -1093,13 +1084,6 @@ typedef struct Sort
 	bool	   *nullsFirst;		/* NULLS FIRST/LAST directions */
     /* CDB */
 	bool		noduplicates;   /* TRUE if sort should discard duplicates */
-
-	/* Sort node can be shared */
-	ShareType 	share_type;
-	int 		share_id;
-	int 		driver_slice;   /* slice id that will execute this sort */
-	int         nsharer;        /* number of sharer */
-	int 		nsharer_xslice;					/* number of sharer cross slice */
 } Sort;
 
 /* ---------------

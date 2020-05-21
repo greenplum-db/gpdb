@@ -33,6 +33,7 @@ namespace gpnaucrates
 			enum EStatsPredType
 			{
 				EsptPoint, // filter with literals
+				EsptArrayCmp, // filter with = ANY/ALL(ARRAY[...])
 				EsptConj, // conjunctive filter
 				EsptDisj, // disjunctive filter
 				EsptLike, // LIKE filter

@@ -10,6 +10,9 @@
 #define GPOPT_CXformLeftOuterJoin2BitmapIndexGetApply_H
 
 #include "gpos/base.h"
+#include "gpopt/operators/CLogicalGet.h"
+#include "gpopt/operators/CLogicalIndexApply.h"
+#include "gpopt/operators/CLogicalLeftOuterJoin.h"
 #include "gpopt/xforms/CXformJoin2IndexApplyBase.h"
 
 namespace gpopt

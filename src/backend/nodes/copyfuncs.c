@@ -575,7 +575,6 @@ _copyExternalScanInfo(const ExternalScanInfo *from)
 	ExternalScanInfo *newnode = makeNode(ExternalScanInfo);
 
 	COPY_NODE_FIELD(uriList);
-	COPY_STRING_FIELD(fmtOptString);
 	COPY_SCALAR_FIELD(fmtType);
 	COPY_SCALAR_FIELD(isMasterOnly);
 	COPY_SCALAR_FIELD(rejLimit);
@@ -1091,9 +1090,11 @@ _copyShareInputScan(const ShareInputScan *from)
 
 	/* copy node superclass fields */
 	CopyPlanFields((Plan *) from, (Plan *) newnode);
-	COPY_SCALAR_FIELD(share_type);
+	COPY_SCALAR_FIELD(cross_slice);
 	COPY_SCALAR_FIELD(share_id);
-	COPY_SCALAR_FIELD(driver_slice);
+	COPY_SCALAR_FIELD(producer_slice_id);
+	COPY_SCALAR_FIELD(this_slice_id);
+	COPY_SCALAR_FIELD(nconsumers);
 
 	return newnode;
 }
@@ -1113,11 +1114,6 @@ _copyMaterial(const Material *from)
 	CopyPlanFields((const Plan *) from, (Plan *) newnode);
 	COPY_SCALAR_FIELD(cdb_strict);
 	COPY_SCALAR_FIELD(cdb_shield_child_from_rescans);
-	COPY_SCALAR_FIELD(share_type);
-	COPY_SCALAR_FIELD(share_id);
-	COPY_SCALAR_FIELD(driver_slice);
-	COPY_SCALAR_FIELD(nsharer);
-	COPY_SCALAR_FIELD(nsharer_xslice);
 
     return newnode;
 }
@@ -1145,11 +1141,6 @@ _copySort(const Sort *from)
     /* CDB */
 	COPY_SCALAR_FIELD(noduplicates);
 
-	COPY_SCALAR_FIELD(share_type);
-	COPY_SCALAR_FIELD(share_id);
-	COPY_SCALAR_FIELD(driver_slice);
-	COPY_SCALAR_FIELD(nsharer);
-	COPY_SCALAR_FIELD(nsharer_xslice);
 	return newnode;
 }
 
@@ -3759,6 +3750,7 @@ CopyCreateStmtFields(const CreateStmt *from, CreateStmt *newnode)
 	COPY_SCALAR_FIELD(ownerid);
 	COPY_SCALAR_FIELD(buildAoBlkdir);
 	COPY_NODE_FIELD(attr_encodings);
+	COPY_SCALAR_FIELD(isCtas);
 }
 
 static CreateStmt *
@@ -4778,6 +4770,7 @@ _copyCreateForeignTableStmt(const CreateForeignTableStmt *from)
 
 	COPY_STRING_FIELD(servername);
 	COPY_NODE_FIELD(options);
+	COPY_NODE_FIELD(distributedBy);
 
 	return newnode;
 }

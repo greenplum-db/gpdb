@@ -51,6 +51,7 @@
 #include "replication/origin.h"
 #include "replication/syncrep.h"
 #include "replication/walsender.h"
+#include "storage/condition_variable.h"
 #include "storage/fd.h"
 #include "storage/freespace.h"
 #include "storage/lmgr.h"
@@ -219,11 +220,12 @@ typedef struct TransactionStateData
 	bool		didLogXid;		/* has xid been included in WAL record? */
 	int			parallelModeLevel;		/* Enter/ExitParallelMode counter */
 	bool		executorSaysXactDoesWrites;	/* GP executor says xact does writes */
-	bool		executorDidWriteXLog;	/* QE has wrote xlog */
 	struct TransactionStateData *parent;		/* back link to parent */
 
 	struct TransactionStateData *fastLink;        /* back link to jump to parent for efficient search */
 } TransactionStateData;
+
+static bool	TopXactexecutorDidWriteXLog;	/* QE has wrote xlog */
 
 typedef TransactionStateData *TransactionState;
 
@@ -258,7 +260,6 @@ static TransactionStateData TopTransactionStateData = {
 	false,						/* didLogXid */
 	0,							/* parallelMode */
 	false,						/* executorSaysXactDoesWrites */
-	false,						/* executorDidWriteXLog */
 	NULL						/* link to parent state block */
 };
 
@@ -458,10 +459,9 @@ TransactionDidWriteXLog(void)
 }
 
 bool
-ExecutorDidWriteXLog(void)
+TopXactExecutorDidWriteXLog(void)
 {
-	TransactionState s = CurrentTransactionState;
-	return s->executorDidWriteXLog;
+	return TopXactexecutorDidWriteXLog;
 }
 
 void
@@ -547,9 +547,9 @@ MarkCurrentTransactionIdLoggedIfAny(void)
 }
 
 void
-MarkCurrentTransactionWriteXLogOnExecutor(void)
+MarkTopTransactionWriteXLogOnExecutor(void)
 {
-	CurrentTransactionState->executorDidWriteXLog = true;
+	TopXactexecutorDidWriteXLog = true;
 }
 
 /*
@@ -2315,7 +2315,7 @@ StartTransaction(void)
 	 */
 	nUnreportedXids = 0;
 	s->didLogXid = false;
-	s->executorDidWriteXLog = false;
+	TopXactexecutorDidWriteXLog = false;
 
 	/*
 	 * must initialize resource-management stuff first
@@ -2923,7 +2923,7 @@ CommitTransaction(void)
 
 	/* Release resource group slot at the end of a transaction */
 	if (ShouldUnassignResGroup())
-		UnassignResGroup();
+		UnassignResGroup(false);
 }
 
 /*
@@ -3238,7 +3238,7 @@ PrepareTransaction(void)
 
 	/* Release resource group slot at the end of prepare transaction on segment */
 	if (ShouldUnassignResGroup())
-		UnassignResGroup();
+		UnassignResGroup(false);
 }
 
 
@@ -3279,6 +3279,9 @@ AbortTransaction(void)
 
 	/* Reset WAL record construction state */
 	XLogResetInsertion();
+
+	/* Cancel condition variable sleep */
+	ConditionVariableCancelSleep();
 
 	/*
 	 * Also clean up any open wait for lock, since the lock manager will choke
@@ -3480,7 +3483,7 @@ AbortTransaction(void)
 
 	/* Release resource group slot at the end of a transaction */
 	if (ShouldUnassignResGroup())
-		UnassignResGroup();
+		UnassignResGroup(false);
 }
 
 /*
@@ -3535,7 +3538,7 @@ CleanupTransaction(void)
 
 	/* Release resource group slot at the end of a transaction */
 	if (ShouldUnassignResGroup())
-		UnassignResGroup();
+		UnassignResGroup(false);
 }
 
 /*

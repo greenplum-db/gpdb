@@ -243,8 +243,10 @@ PTHREAD_CFLAGS		= @PTHREAD_CFLAGS@
 PTHREAD_LIBS		= @PTHREAD_LIBS@
 
 have_yaml 		= @have_yaml@
+YAML_LIBS		= @YAML_LIBS@
 with_zstd 		= @with_zstd@
 with_quicklz		= @with_quicklz@
+EVENT_LIBS		= @EVENT_LIBS@
 
 
 ##########################################################################

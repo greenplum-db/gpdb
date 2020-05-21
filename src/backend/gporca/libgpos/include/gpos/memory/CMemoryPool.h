@@ -30,7 +30,6 @@
 #include "gpos/error/CException.h"
 #include "gpos/common/CLink.h"
 #include "gpos/common/CStackDescriptor.h"
-#include "gpos/memory/CMemoryPoolStatistics.h"
 
 
 // 8-byte alignment

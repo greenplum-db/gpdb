@@ -98,27 +98,27 @@ FunctionNext_guts(FunctionScanState *node)
 		/*
 		 * setup tuplestore reader for the firstly time
 		 */
-		if (!node->ts_state->matstore)
+		if (!node->ts_state)
 		{
 
 			char rwfile_prefix[100];
 			function_scan_create_bufname_prefix(rwfile_prefix, sizeof(rwfile_prefix));
 
-			node->ts_state->matstore = ntuplestore_create_readerwriter(rwfile_prefix, 0, false, false);
+			node->ts_state = ntuplestore_create_readerwriter(rwfile_prefix, 0, false, false);
 			/*
 			 * delete file when close tuplestore reader
 			 * tuplestore writer is created in initplan, so it needs to keep
 			 * the file even if initplan ended. 
 			 * we should let the reader to delete it when reader's job finished.
 			 */
-			ntuplestore_set_is_temp_file(node->ts_state->matstore, true);
+			ntuplestore_set_is_temp_file(node->ts_state, true);
 			
-			node->ts_pos = (NTupleStoreAccessor *) ntuplestore_create_accessor(node->ts_state->matstore, false);
-			ntuplestore_acc_seek_bof((NTupleStoreAccessor *) node->ts_pos);
+			node->ts_pos = ntuplestore_create_accessor(node->ts_state, false);
+			ntuplestore_acc_seek_bof(node->ts_pos);
 		}
 
-		ntuplestore_acc_advance((NTupleStoreAccessor *) node->ts_pos, forward ? 1 : -1);
-		gotOK = ntuplestore_acc_current_tupleslot((NTupleStoreAccessor *) node->ts_pos, scanslot);
+		ntuplestore_acc_advance(node->ts_pos, forward ? 1 : -1);
+		gotOK = ntuplestore_acc_current_tupleslot(node->ts_pos, scanslot);
 
 		if(!gotOK)
 		{
@@ -389,7 +389,7 @@ ExecInitFunctionScan(FunctionScan *node, EState *estate, int eflags)
 	scanstate->ss.ps.state = estate;
 	scanstate->eflags = eflags;
 	scanstate->resultInTupleStore = node->resultInTupleStore;
-	scanstate->ts_state = palloc0(sizeof(GenericTupStore));
+	scanstate->ts_state = NULL;
 	scanstate->ts_pos = NULL;
 	/*
 	 * are we adding an ordinality column?
@@ -682,10 +682,10 @@ ExecEndFunctionScan(FunctionScanState *node)
 	/*
 	 * destroy tuplestore reader if exists
 	 */
-	if (node->ts_state->matstore != NULL)
+	if (node->ts_state != NULL)
 	{
-		ntuplestore_destroy_accessor((NTupleStoreAccessor *) node->ts_pos);
-		ntuplestore_destroy(node->ts_state->matstore);
+		ntuplestore_destroy_accessor(node->ts_pos);
+		ntuplestore_destroy(node->ts_state);
 	}
 }
 

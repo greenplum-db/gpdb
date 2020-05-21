@@ -12,7 +12,9 @@
 #include "gpos/base.h"
 #include "gpopt/xforms/CXformImplementAssert.h"
 
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalAssert.h"
+#include "gpopt/operators/CPatternLeaf.h"
+#include "gpopt/operators/CPhysicalAssert.h"
 
 using namespace gpopt;
 

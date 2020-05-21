@@ -4,4 +4,4 @@ include $(top_builddir)/src/Makefile.global
 
 TARGETS=lock
 
-include $(top_builddir)/src/backend/mock.mk
+include $(top_srcdir)/src/backend/mock.mk

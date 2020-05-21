@@ -24,6 +24,8 @@
 #include "naucrates/dxl/operators/CDXLDirectDispatchInfo.h"
 
 #include "naucrates/md/IMDScalarOp.h"
+#include "naucrates/md/IMDTypeBool.h"
+#include "naucrates/md/IMDTypeInt4.h"
 #include "naucrates/md/IMDTypeOid.h"
 
 #include "naucrates/statistics/IStatistics.h"

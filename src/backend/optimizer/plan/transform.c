@@ -22,19 +22,14 @@
 #include "optimizer/var.h"
 #include "utils/lsyscache.h"
 #include "catalog/pg_proc.h"
-#include "catalog/pg_type.h"
-#include "catalog/namespace.h"
 #include "parser/parse_oper.h"
 #include "parser/parse_coerce.h"
 #include "parser/parse_relation.h"
-#include "catalog/pg_operator.h"
 #include "utils/fmgroids.h"
 
 /**
  * Static declarations
  */
-static Node* normalize_query_jointree(Node *node);
-static Node *normalize_query_jointree_mutator(Node *node, void *context);
 static Node *replace_sirv_functions_mutator(Node *node, void *context);
 static void replace_sirvf_tle(Query *query, int tleOffset);
 static RangeTblEntry *replace_sirvf_rte(Query *query, RangeTblEntry *rte);
@@ -71,14 +66,11 @@ preprocess_query_optimizer(PlannerInfo *root, Query *query, ParamListInfo boundP
 Query *
 normalize_query(Query *query)
 {
+	bool		copied = false;
+	Query	   *res = query;
 #ifdef USE_ASSERT_CHECKING
-	Query *qcopy = (Query *) copyObject(query);
+	Query	   *qcopy = (Query *) copyObject(query);
 #endif
-
-	/*
-	 * Normalize the jointree
-	 */
-	Query *res = (Query *) normalize_query_jointree_mutator((Node *) query, NULL);
 
 	/*
 	 * MPP-12635 Replace all instances of single row returning volatile (sirv)
@@ -93,6 +85,11 @@ normalize_query(Query *query)
 	{
 		if (safe_to_replace_sirvf_tle(res))
 		{
+			if (!copied)
+			{
+				res = (Query *) copyObject(query);
+				copied = true;
+			}
 			for (int tleOffset = 0; tleOffset < list_length(res->targetList); tleOffset++)
 			{
 				replace_sirvf_tle(res, tleOffset + 1);
@@ -105,7 +102,13 @@ normalize_query(Query *query)
 	 */
 	if (safe_to_replace_sirvf_rte(res))
 	{
-		ListCell *lc;
+		ListCell   *lc;
+
+		if (!copied)
+		{
+			res = (Query *) copyObject(query);
+			copied = true;
+		}
 
 		foreach(lc, res->rtable)
 		{
@@ -122,130 +125,6 @@ normalize_query(Query *query)
 #endif
 
 	return res;
-}
-
-/**
- * This method takes a join tree that contains from expr and translates them to
- * explicit join expressions.
- * For example:
- * select * from t1, t2, t3 where pred(t1.a,t2.b,t3.c);
- * is translated to
- * select * from t1 cross join t2 cross join t3 where pred(t1.a,t2.b,t3.c)
- *
- * Note that this does not use the generic expression mutator framework because
- * the recursion is highly specialized.
- */
-static Node* normalize_query_jointree(Node *node)
-{
-	Node *result = NULL;
-
-	if (!node)
-		return NULL;
-
-#ifdef USE_ASSERT_CHECKING
-	Node *exprCopy = copyObject(node);
-#endif
-
-	switch(nodeTag(node))
-	{
-		case T_FromExpr:
-			{
-				FromExpr *oldFrom = (FromExpr *) node;
-				FromExpr *from = (FromExpr *) copyObject(oldFrom);
-				if (oldFrom->fromlist)
-				{
-					Node *newFromExprEntry = (Node *) normalize_query_jointree((Node *) oldFrom->fromlist);
-					from->fromlist = list_make1(newFromExprEntry);
-				}
-				Assert(equal(from->quals, oldFrom->quals));
-				result = (Node *) from;
-				break;
-			}
-		case T_List:
-			{
-				List *crossJoinList = (List *) copyObject(node);
-				if (list_length(crossJoinList) == 1)
-				{
-					Node *entry = lfirst(list_head(crossJoinList));
-					result = normalize_query_jointree(entry);
-				}
-				else
-				{
-					Node *larg = lfirst(list_head(crossJoinList));
-					Assert(larg);
-					larg = normalize_query_jointree(larg);
-					List *rest = list_delete_first(crossJoinList);
-					Node *rarg = normalize_query_jointree((Node *) rest);
-					JoinExpr *join = makeNode(JoinExpr);
-					join->jointype = JOIN_INNER;
-					join->isNatural = false;
-					join->larg = larg;
-					join->rarg = rarg;
-					join->quals = NULL; /* Cross product */
-					join->rtindex = 0;
-					join->usingClause = NIL;
-					result = (Node *) join;
-				}
-				break;
-			}
-		case T_JoinExpr:
-			{
-				JoinExpr *join = (JoinExpr *) copyObject(node);
-				join->larg = normalize_query_jointree(join->larg);
-				join->rarg = normalize_query_jointree(join->rarg);
-				result = (Node *) join;
-				break;
-			}
-		case T_RangeTblRef:
-			{
-				result = (Node *) node;
-				break;
-			}
-		default:
-			Assert(false && "Unrecognized entry in jointree");
-			break;
-	}
-
-	Assert(result);
-
-	/* Assert that the input is unmodified */
-#ifdef USE_ASSERT_CHECKING
-	Assert(equal(node, exprCopy));
-#endif
-
-	return result;
-}
-
-/**
- * This method walks through a query tree, finds the join tree and normalizes them.
- * It also walks sublinks and subqueries and normalizes their jointrees as well.
- * E.g. a query of the form SELECT x, y FROM t1, t2, t3 where x = y and y = z is transformed to:
- * SELECT x,y FROM (t1 INNER JOIN (t2 INNER JOIN t3)) where x = y
- *
- */
-static Node *normalize_query_jointree_mutator(Node *node, void *context)
-{
-	Assert(context == NULL);
-
-	if (!node)
-	{
-		return NULL;
-	}
-
-	switch(nodeTag(node))
-	{
-		case T_Query:
-			{
-				Query *newQuery = (Query *) copyObject(node);
-				newQuery->jointree = (FromExpr*) normalize_query_jointree((Node *) newQuery->jointree);
-				newQuery = (Query *) query_tree_mutator(newQuery, normalize_query_jointree_mutator, context, 0);
-				return (Node *) newQuery;
-			}
-		default:
-			break;
-	}
-
-	return expression_tree_mutator(node, normalize_query_jointree_mutator, context);
 }
 
 /**

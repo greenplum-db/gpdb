@@ -628,22 +628,6 @@ GetResGroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *resgroupCaps)
 	}
 }
 
-
-/*
- * GetResGroupMemAuditorForId -- Return the resource group memory auditor
- * for a groupId
- */
-int32
-GetResGroupMemAuditorForId(Oid groupId, LOCKMODE lockmode)
-{
-	ResGroupCaps		caps;
-	Relation pg_resgroupcapability_rel = heap_open(
-			ResGroupCapabilityRelationId, lockmode);
-	GetResGroupCapabilities(pg_resgroupcapability_rel, groupId, &caps);
-	heap_close(pg_resgroupcapability_rel, lockmode);
-	return caps.memAuditor;
-}
-
 /*
  * Get resource group id for a role in pg_authid.
  *

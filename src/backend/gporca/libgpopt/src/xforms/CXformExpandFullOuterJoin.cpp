@@ -13,7 +13,11 @@
 #include "gpopt/xforms/CXformExpandFullOuterJoin.h"
 #include "gpopt/xforms/CXformUtils.h"
 
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalCTEAnchor.h"
+#include "gpopt/operators/CLogicalCTEConsumer.h"
+#include "gpopt/operators/CLogicalFullOuterJoin.h"
+#include "gpopt/operators/CLogicalUnionAll.h"
+#include "gpopt/operators/CPatternTree.h"
 
 using namespace gpopt;
 

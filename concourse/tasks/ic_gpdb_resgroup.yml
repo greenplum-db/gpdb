@@ -6,8 +6,6 @@ inputs:
   - name: gpdb_src
   - name: ccp_src
   - name: cluster_env_files
-  - name: binary_swap_gpdb
-    optional: true
 outputs:
 
 params:

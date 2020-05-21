@@ -1875,6 +1875,75 @@ select * from t_test_append_hash;
   4 |  5 |  6
 (11 rows)
 
+-- Test value scan union all with a distributed table that direct dispatch
+-- value scan's locus is general, so it will use Result plan node with
+-- resconstantqual to be gp_execution_segment() = <some segid> to turn
+-- general locus to partitioned locus to avoid gather partitioned locus
+-- table to singleQE. When the subplan of partitioned table's scan can
+-- use direct dispatch, previously, the result plan does not handle
+-- direct dispatch correctly. This case cannot test plan, this is because
+-- gp_execution_segment() = <some segid> the filter segid is randomly picked.
+-- So the result plan's direct dispatch info is also random. We print the plan
+-- and ignore it for better debugging info if error happens.
+-- See github issue https://github.com/greenplum-db/gpdb/issues/9874 for details.
+create table t_github_issue_9874 (a int) distributed by (a);
+-- start_ignore
+explain (costs off)
+select 1
+union all
+select * from t_github_issue_9874 where a = 1;
+                   QUERY PLAN                   
+------------------------------------------------
+ Append
+   ->  Result
+   ->  Gather Motion 1:1  (slice1; segments: 1)
+         ->  Seq Scan on t_github_issue_9874
+               Filter: (a = 1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
+
+-- end_ignore
+select 1
+union all
+select * from t_github_issue_9874 where a = 1;
+ ?column? 
+----------
+        1
+(1 row)
+
+-- Test mixing a SegmentGeneral with General locus scan.
+explain (costs off)
+select a from t_test_append_rep
+union all
+select * from generate_series(100, 105);
+                  QUERY PLAN                  
+----------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Append
+         ->  Seq Scan on t_test_append_rep
+         ->  Function Scan on generate_series
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+select a from t_test_append_rep
+union all
+select * from generate_series(100, 105);
+  a  
+-----
+   5
+   6
+   7
+   8
+   9
+  10
+ 100
+ 101
+ 102
+ 103
+ 104
+ 105
+(12 rows)
+
 --
 -- Test for creation of MergeAppend paths.
 --

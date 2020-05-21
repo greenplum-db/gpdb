@@ -91,7 +91,7 @@ static void checkExprIsVarFree(ParseState *pstate, Node *n,
 static TargetEntry *findTargetlistEntrySQL92(ParseState *pstate, Node *node,
 						 List **tlist, ParseExprKind exprKind);
 static TargetEntry *findTargetlistEntrySQL99(ParseState *pstate, Node *node,
-					List **tlist, ParseExprKind exprKind);
+						 List **tlist, ParseExprKind exprKind);
 static int get_matching_location(int sortgroupref,
 					  List *sortgrouprefs, List *exprs);
 static List *resolve_unique_index_expr(ParseState *pstate, InferClause *infer,
@@ -1048,8 +1048,6 @@ transformFromClauseItem(ParseState *pstate, Node *n,
 						RangeTblEntry **top_rte, int *top_rti,
 						List **namespace)
 {
-    Node                   *result;
-
 	if (IsA(n, RangeVar))
 	{
 		/* Plain relation reference, or perhaps a CTE reference */
@@ -1081,7 +1079,7 @@ transformFromClauseItem(ParseState *pstate, Node *n,
 		*namespace = list_make1(makeDefaultNSItem(rte));
 		rtr = makeNode(RangeTblRef);
 		rtr->rtindex = rtindex;
-		result = (Node *) rtr;
+		return (Node *) rtr;
 	}
 	else if (IsA(n, RangeSubselect))
 	{
@@ -1099,7 +1097,7 @@ transformFromClauseItem(ParseState *pstate, Node *n,
 		*namespace = list_make1(makeDefaultNSItem(rte));
 		rtr = makeNode(RangeTblRef);
 		rtr->rtindex = rtindex;
-		result = (Node *) rtr;
+		return (Node *) rtr;
 	}
 	else if (IsA(n, RangeFunction))
 	{
@@ -1117,7 +1115,7 @@ transformFromClauseItem(ParseState *pstate, Node *n,
 		*namespace = list_make1(makeDefaultNSItem(rte));
 		rtr = makeNode(RangeTblRef);
 		rtr->rtindex = rtindex;
-		result = (Node *) rtr;
+		return (Node *) rtr;
 	}
 	else if (IsA(n, RangeTableSample))
 	{
@@ -1465,15 +1463,11 @@ transformFromClauseItem(ParseState *pstate, Node *n,
 											   false,
 											   true));
 
-		result = (Node *) j;
+		return (Node *) j;
 	}
 	else
-    {
-        result = NULL;
 		elog(ERROR, "unrecognized node type: %d", (int) nodeTag(n));
-    }
-
-	return result;
+	return NULL;				/* can't get here, keep compiler quiet */
 }
 
 /*
@@ -2678,7 +2672,7 @@ transformWindowDefinitions(ParseState *pstate,
 	 */
 	foreach(lc, windowdefs)
 	{
-		WindowDef  *windef = lfirst(lc);
+		WindowDef  *windef = (WindowDef *) lfirst(lc);
 		WindowClause *refwc = NULL;
 		List	   *partitionClause;
 		List	   *orderClause;
@@ -2803,8 +2797,8 @@ transformWindowDefinitions(ParseState *pstate,
 			/* Else this clause is just OVER (foo), so say this: */
 			ereport(ERROR,
 					(errcode(ERRCODE_WINDOWING_ERROR),
-					 errmsg("cannot copy window \"%s\" because it has a frame clause",
-							windef->refname),
+			errmsg("cannot copy window \"%s\" because it has a frame clause",
+				   windef->refname),
 					 errhint("Omit the parentheses in this OVER clause."),
 					 parser_errposition(pstate, windef->location)));
 		}

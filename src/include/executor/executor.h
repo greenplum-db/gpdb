@@ -250,7 +250,6 @@ extern List *InitializePartsMetadata(Oid rootOid);
  * prototypes from functions in execProcnode.c
  */
 extern PlanState *ExecInitNode(Plan *node, EState *estate, int eflags);
-extern void ExecSliceDependencyNode(PlanState *node);
 extern TupleTableSlot *ExecProcNode(PlanState *node);
 extern Node *MultiExecProcNode(PlanState *node);
 extern void ExecEndNode(PlanState *node);
@@ -430,10 +429,6 @@ extern void check_exclusion_constraint(Relation heap, Relation index,
 						   ItemPointer tupleid,
 						   Datum *values, bool *isnull,
 						   EState *estate, bool newIndex);
-
-
-/* Share input utilities defined in execUtils.c */
-extern ShareNodeEntry * ExecGetShareNodeEntry(EState *estate, int shareid, bool fCreate);
 
 extern void fake_outer_params(JoinState *node);
 extern void ExecPrefetchJoinQual(JoinState *node);

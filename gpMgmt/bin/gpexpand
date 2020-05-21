@@ -1417,10 +1417,11 @@ class gpexpand:
                                                          , sqlCommandList=statements
                                                          )
                 self.pool.addCommand(execSQLCmd)
-                self.pool.join()
-                ### need to fix self.pool.check_results(). Call getCompletedItems to clear the queue for now.
-                self.pool.check_results()
-                self.pool.getCompletedItems()
+
+        self.pool.join()
+        ### need to fix self.pool.check_results(). Call getCompletedItems to clear the queue for now.
+        self.pool.check_results()
+        self.pool.getCompletedItems()
 
     # --------------------------------------------------------------------------
     def restore_master(self):

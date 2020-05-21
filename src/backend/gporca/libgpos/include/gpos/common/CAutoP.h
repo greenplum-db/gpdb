@@ -39,15 +39,14 @@ namespace gpos
 
 			// actual element to point to
 			T *m_object;
-						
-			// hidden copy ctor
+
+		public:
+
 			CAutoP<T>
 				(
 				const CAutoP&
-				);
+				) = delete;
 
-		public:
-		
 			// ctor
 			explicit
 			CAutoP<T>()

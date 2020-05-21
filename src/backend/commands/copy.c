@@ -30,6 +30,8 @@
 #include "access/sysattr.h"
 #include "access/xact.h"
 #include "access/xlog.h"
+#include "catalog/pg_extprotocol.h"
+#include "catalog/pg_exttable.h"
 #include "catalog/pg_type.h"
 #include "commands/copy.h"
 #include "commands/defrem.h"
@@ -71,6 +73,7 @@
 #include "postmaster/autostats.h"
 #include "utils/metrics_utils.h"
 #include "utils/resscheduler.h"
+#include "utils/string_utils.h"
 
 
 #define ISOCTAL(c) (((c) >= '0') && ((c) <= '7'))
@@ -237,6 +240,7 @@ static void cdbFlushInsertBatches(List *resultRels,
 					  int firstBufferedLineNo);
 CopyIntoClause*
 MakeCopyIntoClause(CopyStmt *stmt);
+static List *parse_joined_option_list(char *str, char *delimiter);
 
 /* ==========================================================================
  * The following macros aid in major refactoring of data processing code (in
@@ -1300,6 +1304,8 @@ ProcessCopyOptions(CopyState cstate,
 	bool		format_specified = false;
 	ListCell   *option;
 	bool		delim_off = false;
+	Oid			extprotocol_oid = InvalidOid;
+	ExtTableEntry *exttbl = NULL;
 
 	/* Support external use for option sanity checking */
 	if (cstate == NULL)
@@ -1307,6 +1313,21 @@ ProcessCopyOptions(CopyState cstate,
 
 	cstate->escape_off = false;
 	cstate->file_encoding = -1;
+
+	if (cstate->rel && rel_is_external_table(cstate->rel->rd_id))
+		exttbl = GetExtTableEntry(cstate->rel->rd_id);
+
+	if (exttbl && exttbl->urilocations)
+	{
+		char	   *location;
+		char	   *protocol;
+		Size		position;
+
+		location = strVal(linitial(exttbl->urilocations));
+		position = strchr(location, ':') - location;
+		protocol = pnstrdup(location, position);
+		extprotocol_oid = get_extprotocol_oid(protocol, true);
+	}
 
 	/* Extract options from the statement node tree */
 	foreach(option, options)
@@ -1411,6 +1432,16 @@ ProcessCopyOptions(CopyState cstate,
 				cstate->force_quote_all = true;
 			else if (defel->arg && IsA(defel->arg, List))
 				cstate->force_quote = (List *) defel->arg;
+			else if (defel->arg && IsA(defel->arg, String))
+			{
+				if (strcmp(strVal(defel->arg), "*") == 0)
+					cstate->force_quote_all = true;
+				else
+				{
+					/* OPTIONS (force_quote 'c1,c2') */
+					cstate->force_quote = parse_joined_option_list(strVal(defel->arg), ",");
+				}
+			}
 			else
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
@@ -1425,6 +1456,11 @@ ProcessCopyOptions(CopyState cstate,
 						 errmsg("conflicting or redundant options")));
 			if (defel->arg && IsA(defel->arg, List))
 				cstate->force_notnull = (List *) defel->arg;
+			else if (defel->arg && IsA(defel->arg, String))
+			{
+				/* OPTIONS (force_not_null 'c1,c2') */
+				cstate->force_notnull = parse_joined_option_list(strVal(defel->arg), ",");
+			}
 			else
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
@@ -1516,7 +1552,7 @@ ProcessCopyOptions(CopyState cstate,
 						 errmsg("conflicting or redundant options")));
 			cstate->on_segment = TRUE;
 		}
-		else
+		else if (!extprotocol_oid)
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
 					 errmsg("option \"%s\" not recognized", defel->defname)));
@@ -1849,6 +1885,10 @@ BeginCopy(bool is_from,
 		num_columns = rel->rd_att->natts;
 	}
 
+	/* Greenplum needs this to detect custom protocol */
+	if (rel)
+		cstate->rel = rel;
+
 	/* Extract options from the statement node tree */
 	ProcessCopyOptions(cstate, is_from, options,
 					   num_columns, /* pass correct value when COPY supports no delim */
@@ -1859,8 +1899,6 @@ BeginCopy(bool is_from,
 	if (rel)
 	{
 		Assert(!raw_query);
-
-		cstate->rel = rel;
 
 		tupDesc = RelationGetDescr(cstate->rel);
 
@@ -2624,16 +2662,17 @@ BeginCopyTo(Relation rel,
 }
 
 /*
- * Set up CopyState for writing to an external table.
+ * Set up CopyState for writing to a foreign or external table.
  */
 CopyState
-BeginCopyToForExternalTable(Relation extrel, List *options)
+BeginCopyToForeignTable(Relation forrel, List *options)
 {
 	CopyState	cstate;
 
-	Assert(rel_is_external_table(RelationGetRelid(extrel)));
+	Assert(rel_is_external_table(RelationGetRelid(forrel)) || RelationIsForeign(forrel));
 
-	cstate = BeginCopy(false, extrel, NULL, NULL, InvalidOid, NIL, options, NULL);
+	cstate = BeginCopy(false, forrel, NULL, NULL, InvalidOid, NIL, options, NULL);
+
 	cstate->dispatch_mode = COPY_DIRECT;
 
 	/*
@@ -5558,7 +5597,6 @@ retry:
 		MemoryContext oldcontext = MemoryContextSwitchTo(estate->es_query_cxt);
 
 		resultRelInfo = targetid_get_partition(frame.relid, estate, true);
-		estate->es_result_relation_info = resultRelInfo;
 		slot = reconstructPartitionTupleSlot(baseSlot, resultRelInfo);
 
 		MemoryContextSwitchTo(oldcontext);
@@ -5670,6 +5708,7 @@ retry:
 		goto retry;
 
 	ExecStoreVirtualTuple(slot);
+	estate->es_result_relation_info = resultRelInfo;
 
 	/*
 	 * Here we should compute defaults for any columns for which we didn't
@@ -7932,4 +7971,36 @@ close_program_pipes(CopyState cstate, bool ifThrow)
 				(errcode(ERRCODE_SQL_ROUTINE_EXCEPTION),
 				 errmsg("command error message: %s", sinfo.data)));
 	}
+}
+
+static List *
+parse_joined_option_list(char *str, char *delimiter)
+{
+	char	   *token;
+	char	   *comma;
+	const char *whitespace = " \t\n\r";
+	List	   *cols = NIL;
+	int			encoding = GetDatabaseEncoding();
+
+	token = strtokx2(str, whitespace, delimiter, "\"",
+					 0, false, false, encoding);
+
+	while (token)
+	{
+		if (token[0] == ',')
+			break;
+
+		cols = lappend(cols, makeString(pstrdup(token)));
+
+		/* consume the comma if any */
+		comma = strtokx2(NULL, whitespace, delimiter, "\"",
+						 0, false, false, encoding);
+		if (!comma || comma[0] != ',')
+			break;
+
+		token = strtokx2(NULL, whitespace, delimiter, "\"",
+						 0, false, false, encoding);
+	}
+
+	return cols;
 }

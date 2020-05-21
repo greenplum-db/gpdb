@@ -343,6 +343,7 @@ static void postgresGetForeignJoinPaths(PlannerInfo *root,
 							JoinPathExtraData *extra);
 static bool postgresRecheckForeignScan(ForeignScanState *node,
 						   TupleTableSlot *slot);
+static int greenplumCheckIsGreenplum(UserMapping *user);
 
 /*
  * Helper functions
@@ -2041,8 +2042,19 @@ postgresIsForeignRelUpdatable(Relation rel)
 	/*
 	 * Currently "updatable" means support for INSERT, UPDATE and DELETE.
 	 */
-	return updatable ?
-		(1 << CMD_INSERT) | (1 << CMD_UPDATE) | (1 << CMD_DELETE) : 0;
+	if (!updatable)
+		return 0;
+
+	/*
+	 * Greenplum only supports INSERT, because UPDATE/DELETE SELECT requires
+	 * the hidden column gp_segment_id and the other "ModifyTable mixes
+	 * distributed and entry-only tables" issue.
+	 */
+	UserMapping *user = GetUserMapping(rel->rd_rel->relowner, table->serverid);
+	if (greenplumCheckIsGreenplum(user))
+		return (1 << CMD_INSERT);
+	else
+		return (1 << CMD_INSERT) | (1 << CMD_UPDATE) | (1 << CMD_DELETE);
 }
 
 /*
@@ -4594,4 +4606,30 @@ find_em_expr_for_rel(EquivalenceClass *ec, RelOptInfo *rel)
 
 	/* We didn't find any suitable equivalence class expression */
 	return NULL;
+}
+
+static int
+greenplumCheckIsGreenplum(UserMapping *user)
+{
+	PGconn     *conn;
+	PGresult   *res;
+	int                     ret;
+
+	char *query =  "SELECT version()";
+
+	conn = GetConnection(user, false);
+
+	res = pgfdw_exec_query(conn, query);
+	if (PQresultStatus(res) != PGRES_TUPLES_OK)
+		pgfdw_report_error(ERROR, res, conn, true, query);
+
+	if (PQntuples(res) == 0)
+		pgfdw_report_error(ERROR, res, conn, true, query);
+
+	ret = strstr(PQgetvalue(res, 0, 0), "Greenplum Database") ? 1 : 0;
+
+	PQclear(res);
+	ReleaseConnection(conn);
+
+	return ret;
 }

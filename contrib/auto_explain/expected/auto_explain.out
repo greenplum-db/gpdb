@@ -29,10 +29,10 @@ SELECT relname FROM pg_class WHERE relname='pg_class';
 LOG:  statement: SELECT relname FROM pg_class WHERE relname='pg_class';
 LOG:  duration: 0.173 ms  plan:
 Query Text: SELECT relname FROM pg_class WHERE relname='pg_class';
-Seq Scan on pg_class  (cost=0.00..12.46 rows=1 width=64) (actual rows=1 loops=1)
-  Filter: (relname = 'pg_class'::name)
-  Rows Removed by Filter: 438
-  (slice0)    Executor memory: 32K bytes.
+Index Only Scan using pg_class_relname_nsp_index on pg_class  (cost=0.15..4.17 rows=1 width=64) (actual rows=1 loops=1)
+  Index Cond: (relname = 'pg_class'::name)
+  Heap Fetches: 0
+  (slice0)    Executor memory: 105K bytes.
 Memory used:  128000kB
  relname  
 ----------
@@ -89,6 +89,7 @@ Finalize Aggregate  (cost=35148.64..35148.65 rows=1 width=8) (actual rows=1 loop
                     ->  Seq Scan on auto_explain_test.t1  (cost=0.00..13.01 rows=334 width=0) (actual rows=340 loops=1)
                           Output: t1.a
                     ->  Materialize  (cost=0.00..68.06 rows=1001 width=0) (actual rows=1001 loops=340)
+                          work_mem: 142kB  Segments: 3  Max: 48kB (segment 0)  Workfile: (0 spilling)
                           ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..53.05 rows=1001 width=0) (actual rows=1001 loops=1)
                                 ->  Seq Scan on auto_explain_test.t2  (cost=0.00..13.01 rows=334 width=0) (actual rows=340 loops=1)
   (slice0)    Executor memory: 131K bytes.

@@ -17,7 +17,6 @@
 
 #include "gpos/types.h"
 
-#include "gpos/common/clibwrapper.h"
 #include "gpos/error/CException.h"
 #include "gpos/io/COstreamBasic.h"
 

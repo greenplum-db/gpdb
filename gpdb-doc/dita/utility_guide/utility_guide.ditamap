@@ -6,70 +6,73 @@
     <topicref href="../../7-0/homenav.html" scope="external"
         navtitle="Pivotal Greenplum® 7.0 Beta Documentation" format="html" otherprops="pivotal"/>
     <topicref href="utility_guide.xml" navtitle="Utility Guide">
-      <topicref href="about-utils.xml"/>
-      <topicref href="utility-programs.xml" linking="targetonly">
-        <topicref href="ref/analyzedb.xml"/>
-        <topicref href="ref/clusterdb.xml"/>
-        <topicref href="ref/createdb.xml"/>
-        <topicref href="ref/createlang.xml"/>
-        <topicref href="ref/createuser.xml"/>
-        <topicref href="ref/dropdb.xml"/>
-        <topicref href="ref/droplang.xml"/>
-        <topicref href="ref/dropuser.xml"/>
-        <topicref href="ref/gpactivatestandby.xml"/>
-        <topicref href="ref/gpaddmirrors.xml"/>
-        <topicref href="ref/gpbackup_manager.xml" otherprops="pivotal"/>
-        <topicref href="ref/gpbackup.xml"/>
-        <topicref href="ref/gpcheckcat.xml"/>
-        <topicref href="ref/gpcheckperf.xml"/>
-        <topicref href="ref/gpconfig.xml"/>
-        <topicref href="ref/gpcopy.xml" otherprops="pivotal"/>
-        <topicref href="ref/gpdeletesystem.xml"/>
-        <topicref href="ref/gpexpand.xml"/>
-        <topicref href="ref/gpfdist.xml"/>
-        <topicref href="ref/gpinitstandby.xml"/>
-        <topicref href="ref/gpinitsystem.xml"/>
-        <topicref href="https://greenplum.docs.pivotal.io/streaming-server/1-3-1/kafka/gpkafka-ref.html"
-            format="html" otherprops="pivotal" scope="external" navtitle="gpkafka"></topicref>
-        <topicref href="ref/gpload.xml"/>
-        <topicref href="ref/gplogfilter.xml"/>
-        <topicref href="ref/gpmapreduce.xml"/>
-        <topicref href="ref/gpmapreduce-yaml.xml"/>
-        <topicref href="ref/gpmovemirrors.xml"/>
-        <!-- hidden until testing is complete -msk
+        <topicref href="about-utils.xml"/>
+        <topicref href="utility-programs.xml" linking="targetonly">
+            <topicref href="ref/analyzedb.xml"/>
+            <topicref href="ref/clusterdb.xml"/>
+            <topicref href="ref/createdb.xml"/>
+            <topicref href="ref/createlang.xml"/>
+            <topicref href="ref/createuser.xml"/>
+            <topicref href="ref/dropdb.xml"/>
+            <topicref href="ref/droplang.xml"/>
+            <topicref href="ref/dropuser.xml"/>
+            <topicref href="ref/gpactivatestandby.xml"/>
+            <topicref href="ref/gpaddmirrors.xml"/>
+            <topicref href="ref/gpbackup_manager.xml" otherprops="pivotal"/>
+            <topicref href="ref/gpbackup.xml"/>
+            <topicref href="ref/gpcheckcat.xml"/>
+            <topicref href="ref/gpcheckperf.xml"/>
+            <topicref href="ref/gpconfig.xml"/>
+            <topicref href="ref/gpcopy.xml" otherprops="pivotal"/>
+            <topicref href="ref/gpdeletesystem.xml"/>
+            <topicref href="ref/gpexpand.xml"/>
+            <topicref href="ref/gpfdist.xml"/>
+            <topicref href="ref/gpinitstandby.xml"/>
+            <topicref href="ref/gpinitsystem.xml"/>
+            <topicref
+                href="https://greenplum.docs.pivotal.io/streaming-server/1-3-1/kafka/gpkafka-ref.html"
+                format="html" otherprops="pivotal" scope="external" navtitle="gpkafka"/>
+            <topicref href="ref/gpload.xml"/>
+            <topicref href="ref/gplogfilter.xml"/>
+            <topicref href="ref/gpmapreduce.xml"/>
+            <topicref href="ref/gpmapreduce-yaml.xml"/>
+            <topicref href="ref/gpmovemirrors.xml"/>
+            <!-- hidden until testing is complete -msk
         <topicref href="ref/gpmovemirrors.xml"/>
 -->
-        <topicref href="ref/gppkg.xml"/>
-        <topicref href="ref/gprecoverseg.xml"/>
-        <topicref href="ref/gpreload.xml"/>
-        <topicref href="ref/gprestore.xml"/>
-        <topicref href="ref/gpscp.xml"/>
-        <topicref href="https://greenplum.docs.pivotal.io/streaming-server/1-3-1/ref/gpss-ref.html"
-            format="html" otherprops="pivotal" scope="external" navtitle="gpss"></topicref>
-        <topicref href="ref/gpssh.xml"/>
-        <topicref href="ref/gpssh-exkeys.xml"/>
-        <topicref href="ref/gpstart.xml"/>
-        <topicref href="ref/gpstate.xml"/>
-        <topicref href="ref/gpstop.xml"/>
-        <topicref href="ref/gpsys.xml"/>
-        <topicref href="ref/pg_config.xml"/>
-        <topicref href="ref/pg_dump.xml"/>
-        <topicref href="ref/pg_dumpall.xml"/>
-        <topicref href="ref/pg_restore.xml"/>
-        <topicref href="ref/pgbouncer.xml"/>
-        <topicref href="ref/pgbouncer-ini.xml"/>
-        <topicref href="ref/pgbouncer-admin.xml"/>
+            <topicref href="ref/gppkg.xml"/>
+            <topicref href="ref/gprecoverseg.xml"/>
+            <topicref href="ref/gpreload.xml"/>
+            <topicref href="ref/gprestore.xml"/>
+            <topicref href="ref/gpscp.xml"/>
+            <topicref
+                href="https://greenplum.docs.pivotal.io/streaming-server/1-3-1/ref/gpss-ref.html"
+                format="html" otherprops="pivotal" scope="external" navtitle="gpss"/>
+            <topicref href="ref/gpssh.xml"/>
+            <topicref href="ref/gpssh-exkeys.xml"/>
+            <topicref href="ref/gpstart.xml"/>
+            <topicref href="ref/gpstate.xml"/>
+            <topicref href="ref/gpstop.xml"/>
+            <topicref href="ref/pg_config.xml"/>
+            <topicref href="ref/pg_dump.xml"/>
+            <topicref href="ref/pg_dumpall.xml"/>
+            <topicref href="ref/pg_restore.xml"/>
+            <topicref href="ref/pgbouncer.xml"/>
+            <topicref href="ref/pgbouncer-ini.xml"/>
+            <topicref href="ref/pgbouncer-admin.xml"/>
             <topicref href="ref/plcontainer.xml"/>
             <topicref href="ref/plcontainer-configuration.xml"/>
-        <topicref href="ref/psql.xml"/>
-        <topicref href="../pxf/ref/pxf.html" scope="peer" navtitle="pxf"/>
-        <topicref href="../pxf/ref/pxf-cluster.html" scope="peer" navtitle="pxf cluster"/>
-        <topicref href="ref/reindexdb.xml"/>
-        <topicref href="ref/vacuumdb.xml"/>
-      </topicref>
-      <topicref href="contrib-programs.xml">
-        <topicref href="https://www.postgresql.org/docs/9.4/pgupgrade.html" format="html" scope="external" navtitle="pg_upgrade" linking="none"/>
-        <topicref href="https://www.postgresql.org/docs/9.4/pgxlogdump.html" format="html" scope="external" navtitle="pg_xlogdump" linking="none"/>
-      </topicref>
+            <topicref href="ref/psql.xml"/>
+            <topicref href="../pxf/ref/pxf.html" scope="peer" navtitle="pxf"/>
+            <topicref href="../pxf/ref/pxf-cluster.html" scope="peer" navtitle="pxf cluster"/>
+            <topicref href="ref/reindexdb.xml"/>
+            <topicref href="ref/vacuumdb.xml"/>
+        </topicref>
+        <topicref href="contrib-programs.xml">
+            <topicref href="https://www.postgresql.org/docs/9.4/pgupgrade.html" format="html"
+                scope="external" navtitle="pg_upgrade" linking="none"/>
+            <topicref href="https://www.postgresql.org/docs/9.4/pgxlogdump.html" format="html"
+                scope="external" navtitle="pg_xlogdump" linking="none"/>
+        </topicref>
     </topicref>
 </map>

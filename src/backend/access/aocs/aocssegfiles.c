@@ -68,22 +68,6 @@ static AOCSFileSegInfo **GetAllAOCSFileSegInfo_pg_aocsseg_rel(
 									 Snapshot appendOnlyMetaDataSnapshot,
 									 int32 *totalseg);
 
-AOCSFileSegInfo *
-NewAOCSFileSegInfo(int32 segno, int32 nvp)
-{
-	AOCSFileSegInfo *seginfo;
-
-	seginfo = (AOCSFileSegInfo *) palloc0(aocsfileseginfo_size(nvp));
-	seginfo   ->segno = segno;
-	seginfo   ->vpinfo.nEntry = nvp;
-	seginfo   ->state = AOSEG_STATE_DEFAULT;
-
-	/* New segments are always created in the latest format */
-	seginfo   ->formatversion = AORelationVersion_GetLatest();
-
-	return seginfo;
-}
-
 void
 InsertInitialAOCSFileSegInfo(Relation prel, int32 segno, int32 nvp)
 {

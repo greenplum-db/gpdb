@@ -51,3 +51,4 @@
 /transient_types.out
 /trigger_sets_oid.out
 /workfile_mgr_test.out
+/external_table_persistent_error_log.out
