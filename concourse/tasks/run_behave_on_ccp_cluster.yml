@@ -3,6 +3,7 @@ inputs:
  - name: gpdb_src
  - name: ccp_src
  - name: cluster_env_files
+ - name: python_dependencies_cache
 outputs:
  - name: coverage
 run:
@@ -76,6 +77,10 @@ run:
         if [ -d \$MASTER_DATA_DIRECTORY ]; then gpstart -a; fi
     "
 
+    # If it exists, copy Python dependencies cache to 'mdw' host
+    if [ -d python_dependencies_cache ]; then
+        scp -r python_dependencies_cache mdw:
+    fi
 
     ssh -t mdw "
         source /home/gpadmin/gpdb_src/concourse/scripts/common.bash

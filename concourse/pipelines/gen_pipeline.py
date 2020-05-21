@@ -59,7 +59,7 @@ JOBS_THAT_ARE_GATES = [
     'gate_icw_end',
     'gate_replication_start',
     'gate_resource_groups_start',
-    'gate_cli_start',
+    'gate_cli_start_gen_python_dependencies_cache',
     'gate_ud_start',
     'gate_advanced_analytics_start',
     'gate_release_candidate_start'

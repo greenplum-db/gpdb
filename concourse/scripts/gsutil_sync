@@ -43,6 +43,9 @@ gs_service_key_file = $(pwd)/$keyfile
 EOF
 export BOTO_CONFIG=$(pwd)/boto.cfg
 
+source ./gpdb_src/concourse/scripts/common.bash
+extract_python_dependency_cache
+
 pip install -r ./gpdb_src/gpMgmt/requirements-dev.txt
 
 # Trim a trailing slash from the source directory if it has one

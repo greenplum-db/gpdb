@@ -4,6 +4,7 @@ image_resource:
 inputs:
   - name: gpdb_src
   - name: bin_gpdb
+  - name: python_dependencies_cache
 outputs:
   - name: coverage
 params:

@@ -55,11 +55,21 @@ function run_test() {
   su gpadmin -c "bash /opt/run_test.sh $(pwd)"
 }
 
+function extract_python_dependency_cache() {
+    # If Python dependencies cache file exists, extract contents
+    if [ -f python_dependencies_cache/python_dependencies_cache.tgz ] ; then
+        tar xf python_dependencies_cache/python_dependencies_cache.tgz -C $HOME .cache/pip
+    fi
+}
+
 function install_python_requirements_on_single_host() {
     # installing python requirements on single host only happens for demo cluster tests,
     # and is run by root user. Therefore, pip install as root user to make items globally
     # available
     local requirements_txt="$1"
+
+    extract_python_dependency_cache
+
     pip install -r ${requirements_txt}
 }
 
@@ -69,8 +79,15 @@ function install_python_requirements_on_multi_host() {
     # the user flag is required for centos 7
     local requirements_txt="$1"
 
+    extract_python_dependency_cache
+
     pip install --user -r ${requirements_txt}
     while read -r host; do
+       # if expanded Python dependencies cache exists, copy to other hosts
+       if [ -d $HOME .cache/pip ]; then
+           ssh "$host" mkdir -p .cache
+           scp -r .cache/pip "$host":/tmp/requirements.txt
+       fi
        scp ${requirements_txt} "$host":/tmp/requirements.txt
        ssh $host pip install --user -r /tmp/requirements.txt
     done < /tmp/hostfile_all

@@ -228,7 +228,7 @@ groups:
 {% endif %}
 {% if "CLI" in test_sections %}
   ## --------------------------------------------------------------------
-  - gate_cli_start
+  - gate_cli_start_gen_python_dependencies_cache
   - cli_cross_subnet
 {% for test in CLI_BEHAVE_TESTS %}
   - [[ test.name ]]
@@ -344,7 +344,7 @@ groups:
 
 - name: CLI
   jobs:
-  - gate_cli_start
+  - gate_cli_start_gen_python_dependencies_cache
 {% if "ubuntu18.04" in os_types %}
   - compile_gpdb_ubuntu18.04
 {% endif %}
@@ -638,12 +638,14 @@ resources:
     json_key: ((concourse-gcs-resources-service-account-key))
     versioned_file: ((pipeline-name))/bin_gpdb_clients_windows/greenplum-clients-x86_64.tar.gz
 
+{% if pipeline_configuration == "prod" %}
 - name: bin_gpdb_clients_windows_rc
   type: gcs
   source:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
     regexp: clients/published/master/clients-rc-*-windows_x86_64((rc-build-type-gcs)).msi
+{% endif %}
 {% endif %}
 {% if "AA" in test_sections %}
 - name: madlib_src
@@ -693,6 +695,16 @@ resources:
     bucket: ((pivotal-gp-internal-artifacts-gcs-bucket))
     json_key: ((gcs-key))
     versioned_file: madlib-snowflakes/boost_1_61_0.tar.gz
+{% endif %}
+
+{% if "CLI" in test_sections %}
+- name: python_dependencies_cache
+  type: gcs
+  icon: language-python
+  source:
+    bucket: ((gcs-bucket-intermediates))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    versioned_file: python_dependencies_cache/python_dependencies_cache.tgz
 {% endif %}
 
 - name: reduced-frequency-trigger
@@ -1136,29 +1148,62 @@ jobs:
 ##  \____|_____|___|
 ## ======================================================================
 
-- name: gate_cli_start
+- name: gate_cli_start_gen_python_dependencies_cache
   plan:
   - in_parallel:
       steps:
       - get: gpdb_src
         passed:
-        - compile_gpdb_centos7
+          - compile_gpdb_centos7
+{% if "ubuntu18.04" in os_types %}
+          - compile_gpdb_ubuntu18.04
+{% endif %}
         trigger: true
-      - get: bin_gpdb_centos7
-        passed:
-        - compile_gpdb_centos7
+      - get: bin_gpdb
+        passed: [compile_gpdb_centos7]
+        resource: bin_gpdb_centos7
+      - get: gpdb7-centos7-test
+{% if "ubuntu18.04" in os_types %}
+      - get: bin_gpdb_ubuntu18.04
+        passed: [compile_gpdb_ubuntu18.04]
+{% endif %}
+  - task: gen_python_dependencies_cache
+    image: gpdb7-centos7-test
+    attempts: 5
+    config:
+      platform: linux
+      inputs:
+        - name: gpdb_src
+        - name: bin_gpdb
+      outputs:
+          - name: python_dependencies_cache
+      run:
+        path: bash
+        args:
+          - -exc
+          - |
+            set -eox pipefail
+            source "gpdb_src/concourse/scripts/common.bash"
+            time install_gpdb
+            time install_python_requirements_on_single_host ./gpdb_src/gpMgmt/requirements-dev.txt
+            tar zcf python_dependencies_cache/python_dependencies_cache.tgz -C $HOME .cache
+  - put: python_dependencies_cache
+    params:
+      file: python_dependencies_cache/python_dependencies_cache.tgz
 
 - name: check_centos
   plan:
   - in_parallel:
       steps:
       - get: gpdb_src
-        passed: [gate_cli_start]
+        passed: [gate_cli_start_gen_python_dependencies_cache]
       - get: bin_gpdb
         resource: bin_gpdb_centos7
-        passed: [gate_cli_start]
+        passed: [gate_cli_start_gen_python_dependencies_cache]
         trigger: [[ test_trigger ]]
       - get: gpdb7-centos7-test
+      - get: python_dependencies_cache
+        passed: [gate_cli_start_gen_python_dependencies_cache]
   - task: check_centos
     file: gpdb_src/concourse/tasks/gpMgmt_check_gpdb.yml
     image: gpdb7-centos7-test
@@ -1172,6 +1217,7 @@ jobs:
       inputs:
         - name: gpdb_src
         - name: coverage
+        - name: python_dependencies_cache
       run:
         path: gpdb_src/concourse/scripts/gsutil_sync
         args: [ "./coverage/", "gs://((coverage-bucket-name))/((pipeline-name))/" ]
@@ -1187,15 +1233,17 @@ jobs:
           params:
             submodules:
               - gpMgmt/bin/pythonSrc/ext
-          passed: [gate_cli_start]
+          passed: [gate_cli_start_gen_python_dependencies_cache]
         - get: gpdb7-centos7-test
+        - get: python_dependencies_cache
+          passed: [gate_cli_start_gen_python_dependencies_cache]
     - in_parallel:
         steps:
         {% if test.use_concourse_cluster %}
         - do:
           - get: gpdb_binary
             resource: bin_gpdb_centos7
-            passed: [gate_cli_start]
+            passed: [gate_cli_start_gen_python_dependencies_cache]
             trigger: [[ test_trigger ]]
           - get: ccp_src
           - get: ccp-image
@@ -1233,6 +1281,7 @@ jobs:
               inputs:
                 - name: gpdb_src
                 - name: ccp-coverage
+                - name: python_dependencies_cache
               run:
                 path: gpdb_src/concourse/scripts/gsutil_sync
                 args: [ "./ccp-coverage/", "gs://((coverage-bucket-name))/((pipeline-name))/" ]
@@ -1242,7 +1291,7 @@ jobs:
         - do:
           - get: bin_gpdb
             resource: bin_gpdb_centos7
-            passed: [gate_cli_start]
+            passed: [gate_cli_start_gen_python_dependencies_cache]
             trigger: [[ test_trigger ]]
           - task: [[ test.name ]]_demo_cluster_tests
             file: gpdb_src/concourse/tasks/behave_gpdb.yml
@@ -1260,6 +1309,7 @@ jobs:
               inputs:
                 - name: gpdb_src
                 - name: demo-coverage
+                - name: python_dependencies_cache
               run:
                 path: gpdb_src/concourse/scripts/gsutil_sync
                 args: [ "./demo-coverage/", "gs://((coverage-bucket-name))/((pipeline-name))/" ]
@@ -1275,15 +1325,17 @@ jobs:
           params:
             submodules:
               - gpMgmt/bin/pythonSrc/ext
-          passed: [compile_gpdb_ubuntu18.04]
+          passed: [gate_cli_start_gen_python_dependencies_cache]
         - get: gpdb7-ubuntu18.04-test
+        - get: python_dependencies_cache
+          passed: [gate_cli_start_gen_python_dependencies_cache]
     - in_parallel:
         steps:
         {% if test.use_concourse_cluster %}
         - do:
           - get: gpdb_binary
             resource: bin_gpdb_ubuntu18.04
-            passed: [compile_gpdb_ubuntu18.04]
+            passed: [gate_cli_start_gen_python_dependencies_cache]
             trigger: [[ test_trigger ]]
           - get: ccp_src
           - put: terraform
@@ -1315,7 +1367,7 @@ jobs:
         - do:
           - get: bin_gpdb_ubuntu18.04
             resource: bin_gpdb_ubuntu18.04
-            passed: [compile_gpdb_ubuntu18.04]
+            passed: [gate_cli_start_gen_python_dependencies_cache]
             trigger: [[ test_trigger ]]
           - task: [[ test.name ]]_demo_cluster_tests
             file: gpdb_src/concourse/tasks/behave_gpdb.yml
@@ -1336,15 +1388,17 @@ jobs:
         params:
           submodules:
             - gpMgmt/bin/pythonSrc/ext
-        passed: [gate_cli_start]
+        passed: [gate_cli_start_gen_python_dependencies_cache]
       - get: gpdb7-centos7-test
       - get: gpdb_binary
         resource: bin_gpdb_centos7
-        passed: [gate_cli_start]
+        passed: [gate_cli_start_gen_python_dependencies_cache]
         trigger: [[ test_trigger ]]
       - get: ccp_src
       - get: ccp-image
       - get: alpine-docker
+      - get: python_dependencies_cache
+        passed: [gate_cli_start_gen_python_dependencies_cache]
     - task: generate-ssh-keys
       image: alpine-docker
       config:
@@ -1473,11 +1527,18 @@ jobs:
         - get: gpdb7-centos7-test
         - get: gpdb_src
           passed:
-            - compile_gpdb_centos7
+          {% for test in CLI_BEHAVE_TESTS %}
+            - [[ test.name ]]
+          {% endfor %}
         - get: bin_gpdb_centos7
           trigger: true
           passed:
             - check_centos
+          {% for test in CLI_BEHAVE_TESTS %}
+            - [[ test.name ]]
+          {% endfor %}
+        - get: python_dependencies_cache
+          passed:
           {% for test in CLI_BEHAVE_TESTS %}
             - [[ test.name ]]
           {% endfor %}
@@ -1490,6 +1551,7 @@ jobs:
         inputs:
           - name: gpdb_src
           - name: bin_gpdb
+          - name: python_dependencies_cache
         run:
           path: gpdb_src/concourse/scripts/combine_cli_coverage.bash
           args: [ "gs://((coverage-bucket-name))/((pipeline-name))/", "((coverage-bucket-name))/((pipeline-name))" ]
@@ -1558,6 +1620,8 @@ jobs:
       - get: ccp-image
       - get: icw_planner_centos7_dump
         passed: [icw_planner_centos7]
+      - get: python_dependencies_cache
+        passed: [gate_cli_start_gen_python_dependencies_cache]
   - put: terraform
     params:
       <<: *ccp_default_params
