@@ -64,8 +64,6 @@ struct ChunkTransportState;             /* #include "cdb/cdbinterconnect.h" */
 #define EXEC_FLAG_WITH_OIDS		0x0020	/* force OIDs in returned tuples */
 #define EXEC_FLAG_WITHOUT_OIDS	0x0040	/* force no OIDs in returned tuples */
 #define EXEC_FLAG_WITH_NO_DATA	0x0080	/* rel scannability doesn't matter */
-/* CDB: explain flag to check if it is safe to eliminate alien node on master */
-#define EXEC_FLAG_EXPLAIN		0x0100
 
 
 /*
@@ -252,7 +250,6 @@ extern List *InitializePartsMetadata(Oid rootOid);
  * prototypes from functions in execProcnode.c
  */
 extern PlanState *ExecInitNode(Plan *node, EState *estate, int eflags);
-extern void ExecSliceDependencyNode(PlanState *node);
 extern TupleTableSlot *ExecProcNode(PlanState *node);
 extern Node *MultiExecProcNode(PlanState *node);
 extern void ExecEndNode(PlanState *node);
@@ -432,10 +429,6 @@ extern void check_exclusion_constraint(Relation heap, Relation index,
 						   ItemPointer tupleid,
 						   Datum *values, bool *isnull,
 						   EState *estate, bool newIndex);
-
-
-/* Share input utilities defined in execUtils.c */
-extern ShareNodeEntry * ExecGetShareNodeEntry(EState *estate, int shareid, bool fCreate);
 
 extern void fake_outer_params(JoinState *node);
 extern void ExecPrefetchJoinQual(JoinState *node);

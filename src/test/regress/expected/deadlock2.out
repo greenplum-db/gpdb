@@ -92,6 +92,7 @@ set enable_nestloop to off;
 set Test_print_prefetch_joinqual = on;
 select count(*) from t_inner right join t_outer on t_inner.c2=t_outer.c2
    and not exists (select 0 from t_subplan where t_subplan.c2=t_outer.c1);
+NOTICE:  prefetch join qual in slice 0 of plannode 3
 NOTICE:  prefetch join qual in slice 1 of plannode 3  (seg0 slice1 127.0.1.1:7002 pid=25303)
 NOTICE:  prefetch join qual in slice 1 of plannode 3  (seg1 slice1 127.0.1.1:7003 pid=25304)
 NOTICE:  prefetch join qual in slice 1 of plannode 3  (seg2 slice1 127.0.1.1:7004 pid=25305)
@@ -109,6 +110,7 @@ NOTICE:  prefetch join qual in slice 1 of plannode 3  (seg2 slice1 127.0.1.1:700
 -- for details.
 select count(*) from t_inner right join t_outer on t_inner.c2=t_outer.c2
    and (t_inner.c1 is null or not exists (select 0 from t_subplan where t_subplan.c2=t_outer.c1));
+NOTICE:  prefetch join qual in slice 0 of plannode 3
 NOTICE:  prefetch join qual in slice 1 of plannode 3  (seg0 slice1 127.0.1.1:7002 pid=74425)
 NOTICE:  prefetch join qual in slice 1 of plannode 3  (seg1 slice1 127.0.1.1:7003 pid=74426)
 NOTICE:  prefetch join qual in slice 1 of plannode 3  (seg2 slice1 127.0.1.1:7004 pid=74427)
@@ -120,6 +122,7 @@ NOTICE:  prefetch join qual in slice 1 of plannode 3  (seg2 slice1 127.0.1.1:700
 select count(*) from t_inner right join t_outer on t_inner.c2=t_outer.c2
    and not exists (select 0 from t_subplan where t_subplan.c2=t_outer.c1)
    and not exists (select 1 from t_subplan where t_subplan.c2=t_outer.c1);
+NOTICE:  prefetch join qual in slice 0 of plannode 3
 NOTICE:  prefetch join qual in slice 1 of plannode 3  (seg0 slice1 127.0.1.1:7002 pid=74425)
 NOTICE:  prefetch join qual in slice 1 of plannode 3  (seg1 slice1 127.0.1.1:7003 pid=74426)
 NOTICE:  prefetch join qual in slice 1 of plannode 3  (seg2 slice1 127.0.1.1:7004 pid=74427)

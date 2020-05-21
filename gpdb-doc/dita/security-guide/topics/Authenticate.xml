@@ -532,7 +532,15 @@ Hostssl testdb all 192.168.0.0/16 cert map=gpuser
             <li><codeph>ssl_renegotiation_limit</codeph>
               <i>integer</i>. Specifies the data limit before key renegotiation.</li>
             <li><codeph>ssl_ciphers</codeph>
-              <i>string</i>. Lists SSL ciphers that are allowed.</li>
+              <i>string</i>. Configures the list SSL ciphers that are allowed.
+                <codeph>ssl_ciphers</codeph>
+              <i>overrides</i> any ciphers string specified in <codeph>/etc/openssl.cnf</codeph>.
+              The default value <codeph>ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH</codeph> enables all
+              ciphers except for ADH, LOW, EXP, and MD5 ciphers, and prioritizes ciphers by their
+                strength.<note>With TLS 1.2 some ciphers in MEDIUM and HIGH strength still use NULL
+                encryption (no encryption for transport), which the default
+                  <codeph>ssl_ciphers</codeph> string allows. To bypass NULL ciphers with TLS 1.2
+                use a string such as <codeph>TLSv1.2:!eNULL:!aNULL</codeph>.</note></li>
           </ul></p>
         <p>The following SSL server files can be found in the Master Data Directory: <ul
             id="ul_gzs_b22_jr">

@@ -15,7 +15,6 @@
 #define GPOPT_CMDAccessor_H
 
 #include "gpos/base.h"
-#include "gpos/string/CWStringBase.h"
 #include "gpos/memory/CCache.h"
 #include "gpos/memory/CCacheAccessor.h"
 

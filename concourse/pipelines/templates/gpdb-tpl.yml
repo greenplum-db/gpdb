@@ -190,13 +190,9 @@ groups:
   - concourse_unit_tests
 {% if "centos7" in os_types %}
   - compile_gpdb_centos7
-  - compile_gpdb_binary_swap_centos7
 {% endif %}
 {% if "ubuntu18.04" in os_types %}
   - compile_gpdb_ubuntu18.04
-{% endif %}
-{% if "sles12" in os_types %}
-  - compile_gpdb_sles12
 {% endif %}
 {% if "win" in os_types %}
   - compile_gpdb_clients_windows
@@ -216,10 +212,6 @@ groups:
 {% if "ubuntu18.04" in os_types %}
   - icw_gporca_ubuntu18.04
   - icw_planner_ubuntu18.04
-{% endif %}
-{% if "sles12" in os_types %}
-  - icw_gporca_sles12
-  - icw_planner_sles12
 {% endif %}
   - gate_icw_end
 {% endif %}
@@ -282,13 +274,9 @@ groups:
   jobs:
 {% if "centos7" in os_types %}
   - compile_gpdb_centos7
-  - compile_gpdb_binary_swap_centos7
 {% endif %}
 {% if "ubuntu18.04" in os_types %}
   - compile_gpdb_ubuntu18.04
-{% endif %}
-{% if "sles12" in os_types %}
-  - compile_gpdb_sles12
 {% endif %}
 {% if "win" in os_types %}
   - compile_gpdb_clients_windows
@@ -313,11 +301,6 @@ groups:
   - icw_gporca_ubuntu18.04
   - icw_planner_ubuntu18.04
   - compile_gpdb_ubuntu18.04
-{% endif %}
-{% if "sles12" in os_types %}
-  - icw_gporca_sles12
-  - icw_planner_sles12
-  - compile_gpdb_sles12
 {% endif %}
   - gate_icw_end
 
@@ -481,18 +464,6 @@ resources:
     tag_filter: v1.1.0
 
 {% if "centos7" in os_types %}
-- name: gpdb_src_binary_swap
-  type: git
-  source:
-    branch: {{gpdb-binary-swap-git-tag}}
-    uri: {{gpdb-binary-swap-git-remote}}
-    ignore_paths:
-    - gpdb-doc/*
-    - README*
-
-{% endif %}
-
-{% if "centos7" in os_types %}
 - name: libquicklz-centos7
   type: gcs
   source:
@@ -515,49 +486,6 @@ resources:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
     regexp: gp-internal-artifacts/ubuntu18.04/libquicklz-dev_(1\.5\.0-.*)-1_amd64.deb
-{% endif %}
-{% if "sles12" in os_types %}
-- name: libquicklz-sles12
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: gp-internal-artifacts/sles12/libquicklz-(1\.5\.0-.*)-1.x86_64.rpm
-
-- name: libquicklz-devel-sles12
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: gp-internal-artifacts/sles12/libquicklz-devel-(1\.5\.0-.*)-1.x86_64.rpm
-
-{% endif %}
-{% if "centos7" in os_types %}
-- name: python-centos7
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: gp-internal-artifacts/centos7/python-(2\.7\.12-.*).tar.gz
-
-{% endif %}
-{% if "ubuntu18.04" in os_types %}
-- name: python-ubuntu18.04
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: gp-internal-artifacts/ubuntu18.04/python-(2\.7\.12-.*).tar.gz
-
-{% endif %}
-{% if "sles12" in os_types %}
-- name: python-sles12
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: gp-internal-artifacts/sles12/python-(2\.7\.12-.*).tar.gz
-
 {% endif %}
 {% if "centos7" in os_types %}
 - name: gpdb7-centos7-build
@@ -588,25 +516,6 @@ resources:
   source:
     repository: pivotaldata/gpdb7-ubuntu18.04-test
     tag: latest
-
-{% endif %}
-
-- name: gpdb7-sles12-build
-  type: docker-image
-  source:
-    repository: pivotaldata/gpdb7-sles12-build
-    tag: latest
-    username: ((docker_username))
-    password: ((docker_password))
-
-{% if "sles12" in os_types %}
-- name: gpdb7-sles12-test
-  type: docker-image
-  source:
-    repository: pivotaldata/gpdb7-sles12-test
-    tag: latest
-    username: ((docker_username))
-    password: ((docker_password))
 
 {% endif %}
 
@@ -648,15 +557,6 @@ resources:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
     regexp: clients/published/master/clients-rc-(.*)-ubuntu18.04_x86_64((rc-build-type-gcs)).tar.gz
-
-{% endif %}
-{% if "centos7" in os_types %}
-- name: binary_swap_gpdb_centos7
-  type: gcs
-  source:
-    bucket: ((gcs-bucket-intermediates))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    versioned_file: ((pipeline-name))/binary_swap_gpdb_centos7/bin_gpdb.tar.gz
 
 {% endif %}
 {% if "centos7" in os_types %}
@@ -710,22 +610,6 @@ resources:
 
 {% endif %}
 
-{% if "sles12" in os_types %}
-- name: bin_gpdb_sles12
-  type: gcs
-  source:
-    bucket: ((gcs-bucket-intermediates))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    versioned_file: ((pipeline-name))/bin_gpdb_sles12/bin_gpdb.tar.gz
-
-- name: bin_gpdb_clients_sles12
-  type: gcs
-  source:
-    bucket: ((gcs-bucket-intermediates))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    versioned_file: ((pipeline-name))/bin_gpdb_clients_sles12/bin_gpdb_clients.tar.gz
-
-{% endif %}
 {% if "win" in os_types %}
 - name: terraform_windows
   type: terraform
@@ -892,8 +776,6 @@ jobs:
         resource: libquicklz-centos7
       - get: libquicklz-devel-installer
         resource: libquicklz-devel-centos7
-      - get: python-tarball
-        resource: python-centos7
   - task: compile_gpdb
     image: gpdb7-centos7-build
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
@@ -913,41 +795,6 @@ jobs:
           file: gpdb_artifacts/gpdb-clients-centos7.tar.gz
 
 {% endif %}
-{% if "centos7" in os_types %}
-- name: compile_gpdb_binary_swap_centos7
-  plan:
-  # This acts like a cache as this job will only be run once to get a
-  # binary to use for our binary swap compatibility tests. Setting a new
-  # tag or branch for the gpdb_src_binary_swap resource via set-pipeline
-  # will replace the cached binary.
-  - in_parallel:
-      steps:
-      - get: gpdb_src
-        resource: gpdb_src_binary_swap
-        trigger: true
-      - get: gpdb7-centos7-build
-      - get: libquicklz-installer
-        resource: libquicklz-centos7
-      - get: libquicklz-devel-installer
-        resource: libquicklz-devel-centos7
-      - get: python-tarball
-        resource: python-centos7
-  - task: compile_gpdb
-    file: gpdb_src/concourse/tasks/compile_gpdb.yml
-    image: gpdb7-centos7-build
-    params:
-      CONFIGURE_FLAGS: {{configure_flags_with_extensions}}
-      TARGET_OS: centos
-      TARGET_OS_VERSION: 7
-      BLD_TARGETS: "clients"
-      RC_BUILD_TYPE_GCS: ((rc-build-type-gcs))
-  - in_parallel:
-      steps:
-      - put: binary_swap_gpdb_centos7
-        params:
-          file: gpdb_artifacts/bin_gpdb.tar.gz
-
-{% endif %}
 {% if "ubuntu18.04" in os_types %}
 - name: compile_gpdb_ubuntu18.04
   plan:
@@ -960,8 +807,6 @@ jobs:
         - get: gpdb7-ubuntu18.04-build
         - get: libquicklz-installer
           resource: libquicklz-ubuntu18.04
-        - get: python-tarball
-          resource: python-ubuntu18.04
     - task: compile_gpdb
       image: gpdb7-ubuntu18.04-build
       file: gpdb_src/concourse/tasks/compile_gpdb.yml
@@ -980,40 +825,6 @@ jobs:
           params:
             file: gpdb_artifacts/gpdb-clients-ubuntu18.04.tar.gz
 
-{% endif %}
-{% if "sles12" in os_types %}
-- name: compile_gpdb_sles12
-  plan:
-    - in_parallel:
-        steps:
-        - get: reduced-frequency-trigger
-          trigger: ((reduced-frequency-trigger-flag))
-        - get: gpdb_src
-          trigger: ((gpdb_src-trigger-flag))
-        - get: gpdb7-sles12-build
-        - get: libquicklz-installer
-          resource: libquicklz-sles12
-        - get: libquicklz-devel-installer
-          resource: libquicklz-devel-sles12
-        - get: python-tarball
-          resource: python-sles12
-    - task: compile_gpdb
-      image: gpdb7-sles12-build
-      file: gpdb_src/concourse/tasks/compile_gpdb.yml
-      params:
-        CONFIGURE_FLAGS: {{configure_flags_with_extensions}}
-        TARGET_OS: sles
-        TARGET_OS_VERSION: "12"
-        BLD_TARGETS: "clients"
-        RC_BUILD_TYPE_GCS: ((rc-build-type-gcs))
-    - in_parallel:
-        steps:
-        - put: bin_gpdb_sles12
-          params:
-            file: gpdb_artifacts/bin_gpdb.tar.gz
-        - put: bin_gpdb_clients_sles12
-          params:
-            file: gpdb_artifacts/gpdb-clients-sles12.tar.gz
 {% endif %}
 {% if "win" in os_types %}
 - name: compile_gpdb_clients_windows
@@ -1185,46 +996,6 @@ jobs:
         CONFIGURE_FLAGS: {{configure_flags}}
 
 {% endif %}
-{% if "sles12" in os_types %}
-- name: icw_gporca_sles12
-  plan:
-    - in_parallel:
-        steps:
-        - get: gpdb_src
-          passed: [compile_gpdb_sles12]
-        - get: bin_gpdb
-          resource: bin_gpdb_sles12
-          passed: [compile_gpdb_sles12]
-          trigger: [[ test_trigger ]]
-        - get: gpdb7-sles12-test
-    - task: ic_gpdb
-      file: gpdb_src/concourse/tasks/ic_gpdb.yml
-      image: gpdb7-sles12-test
-      params:
-        MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
-        TEST_OS: sles
-        CONFIGURE_FLAGS: {{configure_flags}}
-
-- name: icw_planner_sles12
-  plan:
-    - in_parallel:
-        steps:
-        - get: gpdb_src
-          passed: [compile_gpdb_sles12]
-        - get: bin_gpdb
-          passed: [compile_gpdb_sles12]
-          resource: bin_gpdb_sles12
-          trigger: [[ test_trigger ]]
-        - get: gpdb7-sles12-test
-    - task: ic_gpdb
-      file: gpdb_src/concourse/tasks/ic_gpdb.yml
-      image: gpdb7-sles12-test
-      params:
-        MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
-        TEST_OS: sles
-        CONFIGURE_FLAGS: {{configure_flags}}
-
-{% endif %}
 - name: gate_icw_end
   plan:
   - in_parallel:
@@ -1312,10 +1083,6 @@ jobs:
       - get: bin_gpdb_centos7
         passed:
         - compile_gpdb_centos7
-      - get: binary_swap_gpdb
-        passed: [compile_gpdb_binary_swap_centos7]
-        resource: binary_swap_gpdb_centos7
-        trigger: [[ test_trigger ]]
 {% endif %}
 
 
@@ -1332,10 +1099,6 @@ jobs:
         trigger: [[ test_trigger ]]
       - get: ccp_src
       - get: ccp-image
-      - get: binary_swap_gpdb
-        passed: [gate_resource_groups_start]
-        resource: binary_swap_gpdb_centos7
-        trigger: [[ test_trigger ]]
   - put: terraform
     params:
       <<: *ccp_default_params

@@ -14,6 +14,8 @@
 
 #include "gpos/base.h"
 
+#include "naucrates/dxl/operators/CDXLScalarAssertConstraint.h"
+#include "naucrates/dxl/operators/CDXLScalarAssertConstraintList.h"
 #include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 namespace gpdxl

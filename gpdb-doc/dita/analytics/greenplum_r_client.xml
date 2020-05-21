@@ -2,7 +2,7 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1" xml:lang="en">
-  <title id="py212122">Greenplum Database R Client (Beta)</title>
+  <title id="py212122">Greenplum Database R Client</title>
   <body>
     <p>This chapter contains the following information:</p>
     <ul>
@@ -58,7 +58,7 @@
           </thead>
           <tbody>
             <row>
-              <entry colname="col1">1.0.0 (Beta)</entry>
+              <entry colname="col1">1.0.0</entry>
               <entry colname="col2">3.6+</entry>
               <entry colname="col3">6.1+</entry>
               <entry colname="col4">3.0.2+</entry>
@@ -115,18 +115,14 @@
         repository</ph> <ph otherprops="pivotal">Pivotal Network</ph> and install
         the package within the R console.</p>
       <ol>
-        <li>Download the package from
-          <ph otherprops="oss-only">the
-            <xref href="https://github.com/greenplum-db/GreenplumR/tarball/master"
-              scope="external" format="html">GreenplumR <codeph>github</codeph>
-            repository</xref></ph>
-          <ph otherprops="pivotal"> the <i>Greenplum Procedural Languages</i>
-            filegroup on 
-            <xref href="https://network.pivotal.io/products/pivotal-gpdb"
-              scope="external" format="html">Pivotal Network</xref></ph>.
-          The naming format of the downloaded file is
-          <codeph>greenplumR&#8209;&lt;version>&#8209;beta&#8209;gp6.tar.gz</codeph>.
-          <p>Note the file system location of the downloaded file.</p></li>
+        <li>Download the package from <ph otherprops="oss-only">the <xref
+              href="https://github.com/greenplum-db/GreenplumR/tarball/master" scope="external"
+              format="html">GreenplumR <codeph>github</codeph> repository</xref></ph>
+          <ph otherprops="pivotal"> the <i>Greenplum Procedural Languages</i> filegroup on <xref
+              href="https://network.pivotal.io/products/pivotal-gpdb" scope="external" format="html"
+              >Pivotal Network</xref></ph>. The naming format of the downloaded file is
+            <codeph>greenplumR&#8209;&lt;version>&#8209;gp6.tar.gz</codeph>. <p>Note the file system
+            location of the downloaded file.</p></li>
         <li>Install the dependent R packages: <codeph>ini</codeph>,
           <codeph>shiny</codeph>, and <codeph>RPostgreSQL</codeph>. For example,
           enter the R console and run the following, or equivalent, command:
@@ -137,7 +133,8 @@
             create a personal library.</p>
           <p>After downloading, R builds and installs these and dependent
             packages.</p></li>
-        <li>Install the GreenplumR R package:<codeblock>> install.packages("/path/to/greenplumR&#8209;&lt;version>&#8209;beta&#8209;gp6.tar.gz", repos = NULL, type = "source")</codeblock></li>
+        <li>Install the GreenplumR R
+          package:<codeblock>> install.packages("/path/to/greenplumR&#8209;&lt;version>&#8209;gp6.tar.gz", repos = NULL, type = "source")</codeblock></li>
         <li>Install the <codeph>Rdpack</codeph> documentation package:<codeblock>> install.packages("Rdpack")</codeblock></li>
       </ol>
       <p otherprops="oss-only">Alternatively, you can use the R

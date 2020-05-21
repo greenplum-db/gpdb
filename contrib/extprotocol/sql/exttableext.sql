@@ -24,10 +24,8 @@ SET search_path TO 'exttableext';
     FORMAT 'text'
     OPTIONS (database 'greenplum', foo 'bar');
 
-    -- Checking pg_exttable for new created RET and WET
-    select urilocation,fmttype,fmtopts,encoding,writable from pg_exttable 
-    where reloid='exttabtest_r'::regclass 
-       or reloid='exttabtest_w'::regclass;
+    \d exttabtest_r
+    \d exttabtest_w
 
     -- write to WET
     SELECT * FROM clean_exttabtest_files;
@@ -706,19 +704,6 @@ DROP FUNCTION formatter_import_todrop();
     \d format_w
     \d format_r
 
-    -- Checking pg_exttable 
-    select pg_class.relname, fmttype,
-       fmtopts, encoding, writable
-    from pg_class, pg_exttable
-    where pg_class.oid = pg_exttable.reloid
-    and (pg_class.relname='format_w'
-    or
-    pg_class.relname='format_r'
-    or
-    pg_class.relname='format_text'
-    or
-    pg_class.relname='format_csv');
-
     -- Write to WET
     SELECT * FROM clean_exttabtest_files;
     INSERT INTO format_w (SELECT * FROM formatsource);
@@ -751,14 +736,8 @@ select max(cnt) - min(cnt)  > 20 from t;
     WHERE proname='formatter_import_s' or proname='formatter_export_s' 
     ORDER BY proname;
 
-    -- Checking pg_exttable, should return 0
-    select pg_class.relname, fmttype,
-       fmtopts, encoding, writable
-    from pg_class, pg_exttable
-    where pg_class.oid = pg_exttable.reloid
-    and (pg_class.relname='format_w'
-    or
-    pg_class.relname='format_r');
+    \d format_w
+    \d format_r
 
     -- Write to WET, should fail
     SELECT * FROM clean_exttabtest_files;
@@ -825,14 +804,10 @@ select max(cnt) - min(cnt)  > 20 from t;
     LOCATION ('demoprot://exttabtest_test67_s2') 
     FORMAT 'CUSTOM' (FORMATTER='formatter_import_s');
 
-    -- Checking pg_exttable
-    select pg_class.relname, fmttype,
-       fmtopts, encoding, writable
-    from pg_class, pg_exttable
-    where pg_class.oid = pg_exttable.reloid
-    and (pg_class.relname like 'format_w_s%'
-        or
-        pg_class.relname like 'format_r_s%');
+    \d format_w_s1
+    \d format_w_s2
+    \d format_r_s1
+    \d format_r_s2
 
     -- Write to WET    
     INSERT INTO format_w_s1 (SELECT * FROM formatsource);

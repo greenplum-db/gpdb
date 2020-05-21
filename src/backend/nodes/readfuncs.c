@@ -3032,12 +3032,6 @@ _readMaterial(void)
 	READ_BOOL_FIELD(cdb_strict);
 	READ_BOOL_FIELD(cdb_shield_child_from_rescans);
 
-	READ_ENUM_FIELD(share_type, ShareType);
-	READ_INT_FIELD(share_id);
-	READ_INT_FIELD(driver_slice);
-	READ_INT_FIELD(nsharer);
-	READ_INT_FIELD(nsharer_xslice);
-
 	READ_DONE();
 }
 
@@ -3059,12 +3053,6 @@ _readSort(void)
 
     /* CDB */
 	READ_BOOL_FIELD(noduplicates);
-
-	READ_ENUM_FIELD(share_type, ShareType);
-	READ_INT_FIELD(share_id);
-	READ_INT_FIELD(driver_slice);
-	READ_INT_FIELD(nsharer);
-	READ_INT_FIELD(nsharer_xslice);
 
 	READ_DONE();
 }
@@ -3335,6 +3323,38 @@ _readAlternativeSubPlan(void)
 	READ_LOCALS(AlternativeSubPlan);
 
 	READ_NODE_FIELD(subplans);
+
+	READ_DONE();
+}
+
+static RestrictInfo *
+_readRestrictInfo(void)
+{
+	READ_LOCALS(RestrictInfo);
+
+	/* NB: this isn't a complete set of fields */
+	READ_NODE_FIELD(clause);
+	READ_BOOL_FIELD(is_pushed_down);
+	READ_BOOL_FIELD(outerjoin_delayed);
+	READ_BOOL_FIELD(can_join);
+	READ_BOOL_FIELD(pseudoconstant);
+	READ_BOOL_FIELD(contain_outer_query_references);
+	READ_BITMAPSET_FIELD(clause_relids);
+	READ_BITMAPSET_FIELD(required_relids);
+	READ_BITMAPSET_FIELD(outer_relids);
+	READ_BITMAPSET_FIELD(nullable_relids);
+	READ_BITMAPSET_FIELD(left_relids);
+	READ_BITMAPSET_FIELD(right_relids);
+	READ_NODE_FIELD(orclause);
+
+	READ_FLOAT_FIELD(norm_selec);
+	READ_FLOAT_FIELD(outer_selec);
+	READ_NODE_FIELD(mergeopfamilies);
+
+	READ_NODE_FIELD(left_em);
+	READ_NODE_FIELD(right_em);
+	READ_BOOL_FIELD(outer_is_left);
+	READ_OID_FIELD(hashjoinoperator);
 
 	READ_DONE();
 }
@@ -4263,6 +4283,8 @@ parseNodeString(void)
 		return_value = _readSubPlan();
 	else if (MATCH("ALTERNATIVESUBPLAN", 18))
 		return_value = _readAlternativeSubPlan();
+	else if (MATCH("RESTRICTINFO", 12))
+		return_value = _readRestrictInfo();
 	else if (MATCH("EXTENSIBLENODE", 14))
 		return_value = _readExtensibleNode();
 

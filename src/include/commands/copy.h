@@ -293,7 +293,7 @@ extern CopyState BeginCopy(bool is_from, Relation rel, Node *raw_query,
 extern CopyState
 BeginCopyToOnSegment(QueryDesc *queryDesc);
 extern void EndCopyToOnSegment(CopyState cstate);
-extern CopyState BeginCopyToForExternalTable(Relation extrel, List *options);
+extern CopyState BeginCopyToForeignTable(Relation forrel, List *options);
 extern void EndCopyFrom(CopyState cstate);
 extern bool NextCopyFrom(CopyState cstate, ExprContext *econtext,
 						 Datum *values, bool *nulls, Oid *tupleOid);

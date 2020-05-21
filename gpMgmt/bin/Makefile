@@ -16,7 +16,7 @@ PROGRAMS= analyzedb gpactivatestandby gpaddmirrors gpcheckcat gpcheckperf \
 	gpcheckresgroupimpl gpconfig gpdeletesystem gpexpand gpinitstandby \
 	gpinitsystem gpload gpload.py gplogfilter gpmovemirrors \
 	gppkg gprecoverseg gpreload gpscp gpsd gpssh gpssh-exkeys gpstart \
-	gpstate gpstop gpsys1 minirepro
+	gpstate gpstop minirepro
 
 installdirs:
 	$(MKDIR_P) '$(DESTDIR)$(bindir)/lib'
@@ -80,13 +80,13 @@ pygresql:
 		unset LIBPATH; \
 		./generate-greenplum-path.sh $(prefix) > $(DESTDIR)$(prefix)/greenplum_path.sh ; \
 	fi
-	. $(DESTDIR)$(prefix)/greenplum_path.sh && unset PYTHONHOME && \
+	. $(DESTDIR)$(prefix)/greenplum_path.sh && \
 	if [ "$(BLD_ARCH)" = 'aix7_ppc_64' ]; then \
 	    unset PYTHONPATH && cd $(PYLIB_SRC)/$(PYGRESQL_DIR) && DESTDIR="$(DESTDIR)" CC="$(CC)" python_64 setup.py build; \
 	elif [ `uname -s` = 'OpenBSD' ]; then \
 	    cd $(PYLIB_SRC)/$(PYGRESQL_DIR) && DESTDIR="$(DESTDIR)" CC=cc python setup.py build; \
 	else \
-	    cd $(PYLIB_SRC)/$(PYGRESQL_DIR) && DESTDIR="$(DESTDIR)" CC="$(CC)" python setup.py build; \
+	    cd $(PYLIB_SRC)/$(PYGRESQL_DIR) && DESTDIR="$(DESTDIR)" env -u CC python setup.py build; \
 	fi
 	mkdir -p $(PYLIB_DIR)/pygresql
 	if [ `uname -s` = 'Darwin' ]; then \
@@ -122,7 +122,7 @@ lockfile:
 subprocess32:
 	@echo "--- subprocess32, Linux only"
 	@if [ `uname -s` = 'Linux' ]; then \
-		  cd $(PYLIB_SRC)/subprocess32 && CC="$(CC)" python setup.py build; \
+		  cd $(PYLIB_SRC)/subprocess32 && env -u CC python setup.py build; \
 		  cp -f $(PYLIB_SRC)/subprocess32/build/lib.*/* $(PYLIB_DIR)/;  \
 		  cp -f $(PYLIB_SRC)/subprocess32/ChangeLog $(PYLIB_DIR)/subprocess32-ChangeLog;  \
 	  fi
@@ -137,7 +137,7 @@ psutil:
 	@echo "--- psutil"
 ifeq "$(findstring $(BLD_ARCH),aix7_ppc_64 )" ""
 	cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(PSUTIL_DIR).tar.gz
-	cd $(PYLIB_SRC_EXT)/$(PSUTIL_DIR)/ && CC="$(CC)" python setup.py build
+	cd $(PYLIB_SRC_EXT)/$(PSUTIL_DIR)/ && env -u CC python setup.py build
 	cp -r $(PYLIB_SRC_EXT)/$(PSUTIL_DIR)/build/lib.*/psutil $(PYLIB_DIR)
 endif
 
@@ -242,5 +242,5 @@ clean distclean:
 		  gpcheckperfc gpcheckresgroupimplc gpchecksubnetcfgc gpconfigc \
 		  gpdeletesystemc gpexpandc gpinitstandbyc gplogfilterc gpmovemirrorsc \
 		  gppkgc gprecoversegc gpreloadc gpscpc gpsdc gpssh-exkeysc gpsshc \
-		  gpstartc gpstatec gpstopc gpsys1c minireproc
+		  gpstartc gpstatec gpstopc minireproc
 	rm -f gpconfig_modules/gucs_disallowed_in_file.txt

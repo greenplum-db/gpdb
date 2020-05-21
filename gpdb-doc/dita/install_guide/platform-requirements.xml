@@ -154,13 +154,7 @@
         and software configuration. Greenplum also provides hardware build guides for its certified
         hardware platforms. It is recommended that you work with a Greenplum Systems Engineer to
         review your anticipated environment to ensure an appropriate hardware configuration for
-        Greenplum Database.
-        <note type="warning">Running Pivotal Greenplum Database on hyper-converged infrastructure
-          (HCI) has known issues with performance, scalability, and stability and is not recommended
-          as a scalable solution for Pivotal Greenplum and may not be supported by Pivotal if
-          stability problems appear related to the infrastructure. HCI virtualizes all of the
-          elements of conventional hardware systems and includes, at a minimum, virtualized
-          computing, a virtualised SAN, and virtualized networking.</note></p>
+        Greenplum Database. </p>
       <!--OSS only-->
       <p otherprops="oss-only">The following table lists minimum recommended specifications for
         hardware servers intended to support Greenplum Database on Linux systems. All host servers

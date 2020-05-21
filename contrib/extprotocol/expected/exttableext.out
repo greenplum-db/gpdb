@@ -24,15 +24,26 @@ NOTICE:  foreign table "exttabtest_r" does not exist, skipping
         LOCATION('demoprot://exttabtest.txt') 
     FORMAT 'text'
     OPTIONS (database 'greenplum', foo 'bar');
-    -- Checking pg_exttable for new created RET and WET
-    select urilocation,fmttype,fmtopts,encoding,writable from pg_exttable 
-    where reloid='exttabtest_r'::regclass 
-       or reloid='exttabtest_w'::regclass;
-         urilocation         | fmttype |                fmtopts                 | encoding | writable 
------------------------------+---------+----------------------------------------+----------+----------
- {demoprot://exttabtest.txt} | t       | delimiter '     ' null '\N' escape '\' |        6 | t
- {demoprot://exttabtest.txt} | t       | delimiter '     ' null '\N' escape '\' |        6 | f
-(2 rows)
+    \d exttabtest_r
+         Foreign table "exttableext.exttabtest_r"
+ Column |         Type          | Modifiers | FDW Options 
+--------+-----------------------+-----------+-------------
+ id     | integer               |           | 
+ name   | character varying(20) |           | 
+ value1 | integer               |           | 
+ value2 | integer               |           | 
+FDW Options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', database 'greenplum', foo 'bar', format_type 't', location_uris 'demoprot://exttabtest.txt', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
+
+    \d exttabtest_w
+         Foreign table "exttableext.exttabtest_w"
+ Column |         Type          | Modifiers | FDW Options 
+--------+-----------------------+-----------+-------------
+ id     | integer               |           | 
+ name   | character varying(20) |           | 
+ value1 | integer               |           | 
+ value2 | integer               |           | 
+FDW Options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', format_type 't', location_uris 'demoprot://exttabtest.txt', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'true')
+Distributed by: (id)
 
     -- write to WET
     SELECT * FROM clean_exttabtest_files;
@@ -685,13 +696,7 @@ NOTICE:  protocol "demoprot" does not exist, skipping
  name   | character varying(20) |           | 
  value1 | integer               |           | 
  value2 | integer               |           | 
-Type: readable
-Encoding: UTF8
-Format type: text
-Format options: delimiter '	' null '\N' escape '\'
-External options: {}
-External location: demoprot://exttabtest.txt
-Execute on: all segments
+FDW Options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', format_type 't', location_uris 'demoprot://exttabtest.txt', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
 
     select count(*) from pg_class where relname = 'exttabtest_r_newname';
  count 
@@ -859,13 +864,7 @@ NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution 
  id     | double precision      |           | 
  value1 | double precision      |           | 
  value2 | double precision      |           | 
-Type: writable
-Encoding: UTF8
-Format type: custom
-Format options: formatter 'formatter_export_s' 
-External options: {}
-External location: demoprot://exttabtest_test63
-Execute on: all segments
+FDW Options: (formatter 'formatter_export_s', format 'custom', format_type 'b', location_uris 'demoprot://exttabtest_test63', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'true')
 Distributed by: (id)
 
     \d format_r
@@ -876,31 +875,7 @@ Distributed by: (id)
  id     | double precision      |           | 
  value1 | double precision      |           | 
  value2 | double precision      |           | 
-Type: readable
-Encoding: UTF8
-Format type: custom
-Format options: formatter 'formatter_import_s' 
-External options: {}
-External location: demoprot://exttabtest_test63
-Execute on: all segments
-
-    -- Checking pg_exttable 
-    select pg_class.relname, fmttype,
-       fmtopts, encoding, writable
-    from pg_class, pg_exttable
-    where pg_class.oid = pg_exttable.reloid
-    and (pg_class.relname='format_w'
-    or
-    pg_class.relname='format_r'
-    or
-    pg_class.relname='format_text'
-    or
-    pg_class.relname='format_csv');
- relname  | fmttype |             fmtopts             | encoding | writable 
-----------+---------+---------------------------------+----------+----------
- format_w | b       | formatter 'formatter_export_s'  |        6 | t
- format_r | b       | formatter 'formatter_import_s'  |        6 | f
-(2 rows)
+FDW Options: (formatter 'formatter_import_s', format 'custom', format_type 'b', location_uris 'demoprot://exttabtest_test63', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
 
     -- Write to WET
     SELECT * FROM clean_exttabtest_files;
@@ -949,19 +924,26 @@ select max(cnt) - min(cnt)  > 20 from t;
 ---------+---------+-------------+-------------+----------+------------+--------+--------
 (0 rows)
 
-    -- Checking pg_exttable, should return 0
-    select pg_class.relname, fmttype,
-       fmtopts, encoding, writable
-    from pg_class, pg_exttable
-    where pg_class.oid = pg_exttable.reloid
-    and (pg_class.relname='format_w'
-    or
-    pg_class.relname='format_r');
- relname  | fmttype |             fmtopts             | encoding | writable 
-----------+---------+---------------------------------+----------+----------
- format_w | b       | formatter 'formatter_export_s'  |        6 | t
- format_r | b       | formatter 'formatter_import_s'  |        6 | f
-(2 rows)
+    \d format_w
+           Foreign table "exttableext.format_w"
+ Column |         Type          | Modifiers | FDW Options 
+--------+-----------------------+-----------+-------------
+ name   | character varying(40) |           | 
+ id     | double precision      |           | 
+ value1 | double precision      |           | 
+ value2 | double precision      |           | 
+FDW Options: (formatter 'formatter_export_s', format 'custom', format_type 'b', location_uris 'demoprot://exttabtest_test63', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'true')
+Distributed by: (id)
+
+    \d format_r
+           Foreign table "exttableext.format_r"
+ Column |         Type          | Modifiers | FDW Options 
+--------+-----------------------+-----------+-------------
+ name   | character varying(40) |           | 
+ id     | double precision      |           | 
+ value1 | double precision      |           | 
+ value2 | double precision      |           | 
+FDW Options: (formatter 'formatter_import_s', format 'custom', format_type 'b', location_uris 'demoprot://exttabtest_test63', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
 
     -- Write to WET, should fail
     SELECT * FROM clean_exttabtest_files;
@@ -1043,21 +1025,47 @@ NOTICE:  foreign table "format_r_s2" does not exist, skipping
     CREATE READABLE EXTERNAL TABLE format_r_s2(like formatsource) 
     LOCATION ('demoprot://exttabtest_test67_s2') 
     FORMAT 'CUSTOM' (FORMATTER='formatter_import_s');
-    -- Checking pg_exttable
-    select pg_class.relname, fmttype,
-       fmtopts, encoding, writable
-    from pg_class, pg_exttable
-    where pg_class.oid = pg_exttable.reloid
-    and (pg_class.relname like 'format_w_s%'
-        or
-        pg_class.relname like 'format_r_s%');
-   relname   | fmttype |             fmtopts             | encoding | writable 
--------------+---------+---------------------------------+----------+----------
- format_w_s1 | b       | formatter 'formatter_export_s'  |        6 | t
- format_r_s1 | b       | formatter 'formatter_import_s'  |        6 | f
- format_w_s2 | b       | formatter 'formatter_export_s'  |        6 | t
- format_r_s2 | b       | formatter 'formatter_import_s'  |        6 | f
-(4 rows)
+    \d format_w_s1
+         Foreign table "exttableext.format_w_s1"
+ Column |         Type          | Modifiers | FDW Options 
+--------+-----------------------+-----------+-------------
+ name   | character varying(40) |           | 
+ id     | double precision      |           | 
+ value1 | double precision      |           | 
+ value2 | double precision      |           | 
+FDW Options: (formatter 'formatter_export_s', format 'custom', format_type 'b', location_uris 'demoprot://exttabtest_test67_s1', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'true')
+Distributed by: (id)
+
+    \d format_w_s2
+         Foreign table "exttableext.format_w_s2"
+ Column |         Type          | Modifiers | FDW Options 
+--------+-----------------------+-----------+-------------
+ name   | character varying(40) |           | 
+ id     | double precision      |           | 
+ value1 | double precision      |           | 
+ value2 | double precision      |           | 
+FDW Options: (formatter 'formatter_export_s', format 'custom', format_type 'b', location_uris 'demoprot://exttabtest_test67_s2', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'true')
+Distributed by: (id)
+
+    \d format_r_s1
+         Foreign table "exttableext.format_r_s1"
+ Column |         Type          | Modifiers | FDW Options 
+--------+-----------------------+-----------+-------------
+ name   | character varying(40) |           | 
+ id     | double precision      |           | 
+ value1 | double precision      |           | 
+ value2 | double precision      |           | 
+FDW Options: (formatter 'formatter_import_s', format 'custom', format_type 'b', location_uris 'demoprot://exttabtest_test67_s1', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
+
+    \d format_r_s2
+         Foreign table "exttableext.format_r_s2"
+ Column |         Type          | Modifiers | FDW Options 
+--------+-----------------------+-----------+-------------
+ name   | character varying(40) |           | 
+ id     | double precision      |           | 
+ value1 | double precision      |           | 
+ value2 | double precision      |           | 
+FDW Options: (formatter 'formatter_import_s', format 'custom', format_type 'b', location_uris 'demoprot://exttabtest_test67_s2', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
 
     -- Write to WET    
     INSERT INTO format_w_s1 (SELECT * FROM formatsource);
@@ -1599,13 +1607,7 @@ NOTICE:  foreign table "exttabtest_r" does not exist, skipping
  name   | character varying(20) |           | 
  value1 | integer               |           | 
  value2 | integer               |           | 
-Type: readable
-Encoding: UTF8
-Format type: text
-Format options: delimiter '	' null '\N' escape '\'
-External options: {}
-External location: demoprot://exttabtest.txt
-Execute on: all segments
+FDW Options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', format_type 't', location_uris 'demoprot://exttabtest.txt', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
 
     -- Create a new ext table using the new protocol name
     DROP EXTERNAL TABLE IF EXISTS exttabtest_w_new;

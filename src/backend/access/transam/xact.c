@@ -51,6 +51,7 @@
 #include "replication/origin.h"
 #include "replication/syncrep.h"
 #include "replication/walsender.h"
+#include "storage/condition_variable.h"
 #include "storage/fd.h"
 #include "storage/freespace.h"
 #include "storage/lmgr.h"
@@ -2922,7 +2923,7 @@ CommitTransaction(void)
 
 	/* Release resource group slot at the end of a transaction */
 	if (ShouldUnassignResGroup())
-		UnassignResGroup();
+		UnassignResGroup(false);
 }
 
 /*
@@ -3237,7 +3238,7 @@ PrepareTransaction(void)
 
 	/* Release resource group slot at the end of prepare transaction on segment */
 	if (ShouldUnassignResGroup())
-		UnassignResGroup();
+		UnassignResGroup(false);
 }
 
 
@@ -3278,6 +3279,9 @@ AbortTransaction(void)
 
 	/* Reset WAL record construction state */
 	XLogResetInsertion();
+
+	/* Cancel condition variable sleep */
+	ConditionVariableCancelSleep();
 
 	/*
 	 * Also clean up any open wait for lock, since the lock manager will choke
@@ -3479,7 +3483,7 @@ AbortTransaction(void)
 
 	/* Release resource group slot at the end of a transaction */
 	if (ShouldUnassignResGroup())
-		UnassignResGroup();
+		UnassignResGroup(false);
 }
 
 /*
@@ -3534,7 +3538,7 @@ CleanupTransaction(void)
 
 	/* Release resource group slot at the end of a transaction */
 	if (ShouldUnassignResGroup())
-		UnassignResGroup();
+		UnassignResGroup(false);
 }
 
 /*

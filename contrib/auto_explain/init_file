@@ -14,4 +14,7 @@ s/Rows Removed by Filter: .*/Rows Removed by Filter: /
 m/Memory used:\s+[0-9]+kB.*/
 s/Memory used:\s+[0-9]+kB.*/Memory used:/
 
+m/work_mem: \d+kB  Segments: \d+  Max: \d+kB \(segment \d+\)/
+s/work_mem: \d+kB  Segments: \d+  Max: \d+kB \(segment \d+\)/work_mem: 99kB  Segments: 9  Max: 99kB/
+
 -- end_matchsubs

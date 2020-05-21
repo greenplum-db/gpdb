@@ -4,6 +4,6 @@ include $(top_builddir)/src/Makefile.global
 
 TARGETS=dfmgr
 
-include $(top_builddir)/src/backend/mock.mk
+include $(top_srcdir)/src/backend/mock.mk
 
 dfmgr.t: $(MOCK_DIR)/backend/utils/error/elog_mock.o

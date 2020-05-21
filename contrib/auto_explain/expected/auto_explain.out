@@ -89,6 +89,7 @@ Finalize Aggregate  (cost=35148.64..35148.65 rows=1 width=8) (actual rows=1 loop
                     ->  Seq Scan on auto_explain_test.t1  (cost=0.00..13.01 rows=334 width=0) (actual rows=340 loops=1)
                           Output: t1.a
                     ->  Materialize  (cost=0.00..68.06 rows=1001 width=0) (actual rows=1001 loops=340)
+                          work_mem: 142kB  Segments: 3  Max: 48kB (segment 0)  Workfile: (0 spilling)
                           ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..53.05 rows=1001 width=0) (actual rows=1001 loops=1)
                                 ->  Seq Scan on auto_explain_test.t2  (cost=0.00..13.01 rows=334 width=0) (actual rows=340 loops=1)
   (slice0)    Executor memory: 131K bytes.

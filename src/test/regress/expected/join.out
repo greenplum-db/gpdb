@@ -5449,12 +5449,10 @@ select * from int4_tbl a,
 ------------------------------------------------------------------------
  Nested Loop
    Output: a.f1, b.f1, c.q1, c.q2
-   ->  Materialize
+   ->  Gather Motion 3:1  (slice1; segments: 3)
          Output: a.f1
-         ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on public.int4_tbl a
                Output: a.f1
-               ->  Seq Scan on public.int4_tbl a
-                     Output: a.f1
    ->  Materialize
          Output: b.f1, c.q1, c.q2
          ->  Hash Right Join
@@ -5478,8 +5476,7 @@ select * from int4_tbl a,
                                  ->  Seq Scan on public.int4_tbl b
                                        Output: b.f1
  Optimizer: Postgres query optimizer
- Settings: optimizer=off
-(32 rows)
+(29 rows)
 
 select * from int4_tbl a,
   lateral (
@@ -5524,13 +5521,13 @@ select * from
   (select b.q1 as bq1, c.q1 as cq1, least(a.q1,b.q1,c.q1) from
    int8_tbl b cross join int8_tbl c) ss
   on a.q2 = ss.bq1;
-ERROR:  could not devise a query plan for the given query (pathnode.c:469)
+ERROR:  could not devise a query plan for the given query (pathnode.c:472)
 select * from
   int8_tbl a left join lateral
   (select b.q1 as bq1, c.q1 as cq1, least(a.q1,b.q1,c.q1) from
    int8_tbl b cross join int8_tbl c) ss
   on a.q2 = ss.bq1;
-ERROR:  could not devise a query plan for the given query (pathnode.c:469)
+ERROR:  could not devise a query plan for the given query (pathnode.c:472)
 -- case requiring nested PlaceHolderVars
 explain (verbose, costs off)
 select * from

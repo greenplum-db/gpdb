@@ -21,9 +21,7 @@ using namespace gpos;
 CLoggerSyslog CLoggerSyslog::m_alert_logger
 	(
 	NULL /*szName*/,
-#ifndef GPOS_SunOS
 	LOG_PERROR |
-#endif // GPOS_SunOS
 	LOG_CONS,
 	LOG_ALERT
 	)

@@ -1059,37 +1059,6 @@ ShutdownExprContext(ExprContext *econtext, bool isCommit)
 	MemoryContextSwitchTo(oldcontext);
 }
 
-
-/* ---------------------------------------------------------------
- * 		Share Input utilities
- * ---------------------------------------------------------------
- */
-ShareNodeEntry *
-ExecGetShareNodeEntry(EState* estate, int shareidx, bool fCreate)
-{
-	Assert(shareidx >= 0);
-	Assert(estate->es_sharenode != NULL);
-
-	if(!fCreate)
-	{
-		if(shareidx >= list_length(*estate->es_sharenode))
-			return NULL;
-	}
-	else
-	{
-		while(list_length(*estate->es_sharenode) <= shareidx)
-		{
-			ShareNodeEntry *n = makeNode(ShareNodeEntry);
-			n->sharePlan = NULL;
-			n->shareState = NULL;
-
-			*estate->es_sharenode = lappend(*estate->es_sharenode, n);
-		}
-	}
-
-	return (ShareNodeEntry *) list_nth(*estate->es_sharenode, shareidx);
-}
-
 /*
  * flatten_logic_exprs
  * This function is only used by ExecPrefetchJoinQual.

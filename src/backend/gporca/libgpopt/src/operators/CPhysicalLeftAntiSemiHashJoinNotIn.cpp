@@ -10,7 +10,6 @@
 //---------------------------------------------------------------------------
 
 #include "gpos/base.h"
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/CDistributionSpecReplicated.h"
 #include "gpopt/operators/CPhysicalLeftAntiSemiHashJoinNotIn.h"
 #include "gpopt/operators/CExpressionHandle.h"

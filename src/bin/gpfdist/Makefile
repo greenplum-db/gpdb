@@ -2,7 +2,7 @@ subdir = src/bin/gpfdist
 top_builddir = ../../..
 include $(top_builddir)/src/Makefile.global
 
-override CPPFLAGS := -I. $(CPPFLAGS) $(apr_includes) $(apr_cppflags)
+override CPPFLAGS := -I$(srcdir) $(CPPFLAGS) $(apr_includes) $(apr_cppflags)
 override CFLAGS := $(CFLAGS) $(apr_cflags)
 
 OBJS = gpfdist.o gpfdist_helper.o fstream.o gfile.o

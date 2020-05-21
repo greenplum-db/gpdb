@@ -20,6 +20,10 @@
 
 extern Datum exttable_fdw_handler(PG_FUNCTION_ARGS);
 
+extern Datum pg_exttable(PG_FUNCTION_ARGS);
+
+extern void gp_exttable_permission_check(PG_FUNCTION_ARGS);
+
 extern ForeignScan *create_foreignscan_for_external_table(Oid relid, Index scanrelid, List *qual, List *targetlist);
 
 #endif   /* EXTTABLE_FDW_SHIM_H */

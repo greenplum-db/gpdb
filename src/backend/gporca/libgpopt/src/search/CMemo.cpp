@@ -10,6 +10,7 @@
 //---------------------------------------------------------------------------
 
 #include "gpos/base.h"
+#include "gpos/error/CAutoTrace.h"
 #include "gpos/common/CAutoTimer.h"
 #include "gpos/common/CSyncHashtableAccessByIter.h"
 #include "gpos/common/CSyncHashtableAccessByKey.h"

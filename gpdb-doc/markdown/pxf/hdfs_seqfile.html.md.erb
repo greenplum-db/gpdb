@@ -63,7 +63,9 @@ SequenceFile format data can optionally employ record or block compression. The 
 
 When you use the `hdfs:SequenceFile` profile to write SequenceFile format data, you must provide the name of the Java class to use for serializing/deserializing the binary data. This class must provide read and write methods for each data type referenced in the data schema.
 
-You specify the compression codec and Java serialization class via custom options in the `CREATE EXTERNAL TABLE` `LOCATION` clause. The `hdfs:SequenceFile` profile supports the following custom options:
+You specify the compression codec and Java serialization class via custom options in the `CREATE EXTERNAL TABLE` `LOCATION` clause.
+
+The `hdfs:SequenceFile` profile supports the following custom options:
 
 | Option  | Value Description |
 |-------|-------------------------------------|
@@ -71,6 +73,7 @@ You specify the compression codec and Java serialization class via custom option
 | COMPRESSION_TYPE    | The compression type to employ; supported values are `RECORD` (the default) or `BLOCK`. |
 | DATA-SCHEMA    | The name of the writer serialization/deserialization class. The jar file in which this class resides must be in the PXF classpath. This option is required for the `hdfs:SequenceFile` profile and has no default value. |
 | THREAD-SAFE | Boolean value determining if a table query can run in multi-threaded mode. The default value is `TRUE`. Set this option to `FALSE` to handle all requests in a single thread for operations that are not thread-safe (for example, compression). |
+| IGNORE_MISSING_PATH | A Boolean value that specifies the action to take when \<path-to-hdfs-dir\> is missing or invalid. The default value is `false`, PXF returns an error in this situation. When the value is `true`, PXF ignores missing path errors and returns an empty fragment. |
 
 
 ## <a id="write_binary"></a>Reading and Writing Binary Data

@@ -2079,12 +2079,19 @@ cost_group(Path *path, PlannerInfo *root,
 
 /* 
  * cost_shareinputscan
- * 		compute the cost of shareinputscan.  Shareinput scan scans from 
- * 		a material or sort.  It may read disk, but should be costed
- *   	less than material node.
+ * 		compute the cost of shareinputscan.
+ *
+ * A ShareInputScan stores all the tuples in a tuplestore, like a Material
+ * node. However, the materialization is done only once among all the
+ * ShareInputScans that are part of the same share. It's not clear how to
+ * correctly represent that. Our approach is that the startup cost is equal
+ * to the total cost of the underlying node, and the total cost is a bit
+ * higher, to reflect the cost of re-scanning the already-materialized
+ * result.
  */
 void 
-cost_shareinputscan(Path *path, PlannerInfo *root, Cost sharecost, double tuples, int width)
+cost_shareinputscan(Path *path, PlannerInfo *root, Cost sharecost,
+					double tuples, int width)
 {
 	double nbytes = relation_byte_size(tuples, width);
 	double npages = ceil(nbytes/BLCKSZ);

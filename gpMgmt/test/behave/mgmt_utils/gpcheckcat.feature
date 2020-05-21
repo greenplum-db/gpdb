@@ -517,8 +517,8 @@ Feature: gpcheckcat tests
         Then gpcheckcat should print "Missing" to stdout
         And gpcheckcat should print "Table miss_attr_db3.public.part_external_1_prt_p_2.-1" to stdout
         Examples:
-            | attrname   | tablename     |
-            | reloid     | pg_exttable   |
+            | attrname   | tablename          |
+            | ftrelid    | pg_foreign_table   |
 
     @concourse_cluster
     Scenario Outline: gpcheckcat should discover missing attributes for external tables

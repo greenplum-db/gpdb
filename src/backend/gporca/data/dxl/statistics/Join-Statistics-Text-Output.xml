@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
-  <dxl:Statistics>
-    <dxl:DerivedRelationStats Rows="20.020020" EmptyRelation="false">
-      <dxl:DerivedColumnStats ColId="0" Width="3.000000" NullFreq="0.000000" NdvRemain="20.000008" FreqRemain="1.000000"/>
-      <dxl:DerivedColumnStats ColId="8" Width="4.000000" NullFreq="0.000000" NdvRemain="20.000008" FreqRemain="1.000000"/>
-    </dxl:DerivedRelationStats>
-  </dxl:Statistics>
-</dxl:DXLMessage>

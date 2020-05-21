@@ -359,41 +359,6 @@ ERROR:  ON clause may not be used with a writable external table
 select * from wet_pos4;
 ERROR:  cannot read from a WRITABLE external table
 HINT:  Create the table as READABLE instead.
--- Dropping an external table, both via DROP EXTERNAL TABLE and as a result
--- from a cascading deletion must result in the deletion of the relation
--- pg_exttable row.
-CREATE EXTERNAL WEB TABLE cascadetest (x text) EXECUTE 'echo "cascadetest";' FORMAT 'text';
-SELECT count(*) FROM pg_exttable WHERE command = 'echo "cascadetest";';
- count 
--------
-     1
-(1 row)
-
-DROP EXTERNAL TABLE cascadetest;
-SELECT count(*) FROM pg_exttable WHERE command = 'echo "cascadetest";';
- count 
--------
-     0
-(1 row)
-
-CREATE SCHEMA exttabletest;
-CREATE
-	EXTERNAL TABLE exttabletest.ext_nation (n_nationkey integer, n_name char(25), n_regionkey integer, n_comment varchar(152))
-	LOCATION ('file://@hostname@@abs_srcdir@/data/nation.tbl') FORMAT 'text' (delimiter '|');
-SELECT count(*) FROM pg_exttable WHERE urilocation @> '{file://@hostname@@abs_srcdir@/data/nation.tbl}';
- count 
--------
-     1
-(1 row)
-
-DROP SCHEMA exttabletest CASCADE;
-NOTICE:  drop cascades to foreign table exttabletest.ext_nation
-SELECT count(*) FROM pg_exttable WHERE urilocation @> '{file://@hostname@@abs_srcdir@/data/nation.tbl}';
- count 
--------
-     0
-(1 row)
-
 -- Test selecting the CTID system column on an external table. In the past,
 -- it was necessary that we generated artificial CTIDs for external table
 -- scans, because the planner generated plans that used the CTID attribute
@@ -575,6 +540,14 @@ create external table ret_too_many_uris(a text, b text) location(
   'gpfdist://foo.invalid:7070/ret.tbl17', 'gpfdist://foo.invalid:7070/ret.tbl18',
   'gpfdist://foo.invalid:7070/ret.tbl19', 'gpfdist://foo.invalid:7070/ret.tbl20'
 ) format 'text';
+\d ret_too_many_uris
+Foreign table "public.ret_too_many_uris"
+ Column | Type | Modifiers | FDW Options 
+--------+------+-----------+-------------
+ a      | text |           | 
+ b      | text |           | 
+FDW Options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', format_type 't', location_uris 'gpfdist://foo.invalid:7070/ret.tbl1|gpfdist://foo.invalid:7070/ret.tbl2|gpfdist://foo.invalid:7070/ret.tbl3|gpfdist://foo.invalid:7070/ret.tbl4|gpfdist://foo.invalid:7070/ret.tbl5|gpfdist://foo.invalid:7070/ret.tbl6|gpfdist://foo.invalid:7070/ret.tbl7|gpfdist://foo.invalid:7070/ret.tbl8|gpfdist://foo.invalid:7070/ret.tbl9|gpfdist://foo.invalid:7070/ret.tbl10|gpfdist://foo.invalid:7070/ret.tbl11|gpfdist://foo.invalid:7070/ret.tbl12|gpfdist://foo.invalid:7070/ret.tbl13|gpfdist://foo.invalid:7070/ret.tbl14|gpfdist://foo.invalid:7070/ret.tbl15|gpfdist://foo.invalid:7070/ret.tbl16|gpfdist://foo.invalid:7070/ret.tbl17|gpfdist://foo.invalid:7070/ret.tbl18|gpfdist://foo.invalid:7070/ret.tbl19|gpfdist://foo.invalid:7070/ret.tbl20', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
+
 select * from ret_too_many_uris;
 ERROR:  there are more external files (URLs) than primary segments that can read them
 DETAIL:  Found 20 URLs and 3 primary segments.
@@ -2644,11 +2617,11 @@ ERROR:  'ON MASTER' is not supported by this protocol yet
 DROP EXTERNAL TABLE IF EXISTS exttab_with_on_master;
 -- start_ignore
 DROP EXTERNAL TABLE IF EXISTS exttab_with_option_empty;
-NOTICE:  table "exttab_with_option_empty" does not exist, skipping
+NOTICE:  foreign table "exttab_with_option_empty" does not exist, skipping
 DROP EXTERNAL TABLE IF EXISTS exttab_with_option_1;
-NOTICE:  table "exttab_with_option_1" does not exist, skipping
+NOTICE:  foreign table "exttab_with_option_1" does not exist, skipping
 DROP EXTERNAL TABLE IF EXISTS exttab_with_options;
-NOTICE:  table "exttab_with_options" does not exist, skipping
+NOTICE:  foreign table "exttab_with_options" does not exist, skipping
 -- end_ignore
 -- Create external table with 'OPTIONS'
 CREATE EXTERNAL TABLE exttab_with_option_empty( i int, j text )
@@ -2666,13 +2639,7 @@ OPTIONS (hello 'world', bonjour 'again', nihao 'again and again' );
 --------+---------+-----------+-------------
  i      | integer |           | 
  j      | text    |           | 
-Type: readable
-Encoding: UTF8
-Format type: text
-Format options: delimiter '|' null '\N' escape '\'
-External options: {hello=world,bonjour=again,"nihao=again and again"}
-External location: file://@hostname@@abs_srcdir@/data/exttab_few_errors.data
-Execute on: all segments
+FDW Options: (format 'text', delimiter '|', "null" E'\\N', escape E'\\', hello 'world', bonjour 'again', nihao 'again and again', format_type 't', location_uris 'file://@hostname@@abs_srcdir@/data/exttab_few_errors.data', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
 
 \d exttab_with_option_empty
 Foreign table "public.exttab_with_option_empty"
@@ -2680,28 +2647,22 @@ Foreign table "public.exttab_with_option_empty"
 --------+---------+-----------+-------------
  i      | integer |           | 
  j      | text    |           | 
-Type: readable
-Encoding: UTF8
-Format type: text
-Format options: delimiter '|' null '\N' escape '\'
-External options: {}
-External location: file://@hostname@@abs_srcdir@/data/exttab_few_errors.data
-Execute on: all segments
+FDW Options: (format 'text', delimiter '|', "null" E'\\N', escape E'\\', format_type 't', location_uris 'file://@hostname@@abs_srcdir@/data/exttab_few_errors.data', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
 
 DROP EXTERNAL TABLE IF EXISTS exttab_with_option_empty;
 DROP EXTERNAL TABLE IF EXISTS exttab_with_option_1;
 DROP EXTERNAL TABLE IF EXISTS exttab_with_options;
 -- start_ignore
 DROP EXTERNAL TABLE IF EXISTS tbl_wet_csv1;
-NOTICE:  table "tbl_wet_csv1" does not exist, skipping
+NOTICE:  foreign table "tbl_wet_csv1" does not exist, skipping
 DROP EXTERNAL TABLE IF EXISTS tbl_wet_csv2;
-NOTICE:  table "tbl_wet_csv2" does not exist, skipping
+NOTICE:  foreign table "tbl_wet_csv2" does not exist, skipping
 DROP EXTERNAL TABLE IF EXISTS tbl_wet_csv3;
-NOTICE:  table "tbl_wet_csv3" does not exist, skipping
+NOTICE:  foreign table "tbl_wet_csv3" does not exist, skipping
 DROP EXTERNAL TABLE IF EXISTS tbl_wet_csv4;
-NOTICE:  table "tbl_wet_csv4" does not exist, skipping
+NOTICE:  foreign table "tbl_wet_csv4" does not exist, skipping
 DROP EXTERNAL TABLE IF EXISTS tbl_wet_csv5;
-NOTICE:  table "tbl_wet_csv5" does not exist, skipping
+NOTICE:  foreign table "tbl_wet_csv5" does not exist, skipping
 -- end_ignore
 -- Create writable external table with AS for DELIMITER , NULL, ESCAPE
 CREATE WRITABLE EXTERNAL WEB TABLE tbl_wet_csv1 (a int, b text) EXECUTE 'cat > @abs_srcdir@/data/wet_csv1.tbl' FORMAT 'CSV' (DELIMITER AS '|' NULL AS 'null' ESCAPE AS ' ');
@@ -2775,7 +2736,7 @@ DROP EXTERNAL TABLE IF EXISTS tbl_wet_syntax3;
 DROP TABLE IF EXISTS table_execute;
 NOTICE:  table "table_execute" does not exist, skipping
 DROP EXTERNAL TABLE IF EXISTS tbl_wet_execute;
-NOTICE:  table "tbl_wet_execute" does not exist, skipping
+NOTICE:  foreign table "tbl_wet_execute" does not exist, skipping
 -- end_ignore
 CREATE TABLE table_execute (id integer, name varchar(40)) DISTRIBUTED RANDOMLY;
 INSERT INTO table_execute VALUES (100, 'name_1');

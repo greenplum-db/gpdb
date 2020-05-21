@@ -68,8 +68,9 @@ namespace gpos
 				ELeakCheck leak_check_type = ElcExc
 				);
 
+			// FIXME: should mark this noexcept in non-assert builds
 			// dtor
-			~CAutoMemoryPool();
+			~CAutoMemoryPool() noexcept(false);
 
 			// accessor
 			CMemoryPool *Pmp() const

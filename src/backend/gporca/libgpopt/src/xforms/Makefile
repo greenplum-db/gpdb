@@ -4,11 +4,11 @@
 # src/backend/gporca/libgpopt/src/xforms/Makefile
 #
 
-subdir = src/backend/gporca/libgpopt/src/xforms/
+subdir = src/backend/gporca/libgpopt/src/xforms
 top_builddir = ../../../../../..
 include $(top_builddir)/src/Makefile.global
 
-include $(top_builddir)/src/backend/gporca/gporca.mk
+include $(top_srcdir)/src/backend/gporca/gporca.mk
 
 OBJS        = CDecorrelator.o \
               CJoinOrder.o \

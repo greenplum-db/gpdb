@@ -332,11 +332,10 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	glob->numSlices = 0;
 	glob->slices = NULL;
 	/* ApplyShareInputContext initialization. */
-	glob->share.producers = NULL;
-	glob->share.producer_count = 0;
-	glob->share.sliceMarks = NULL;
+	glob->share.shared_inputs = NULL;
+	glob->share.shared_input_count = 0;
 	glob->share.motStack = NIL;
-	glob->share.qdShares = NIL;
+	glob->share.qdShares = NULL;
 
 	if ((cursorOptions & CURSOR_OPT_UPDATABLE) != 0)
 		glob->simplyUpdatable = isSimplyUpdatableQuery(parse);
@@ -591,20 +590,11 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
 		/*
-		 * cdb_build_slice_table() can modify nodes, so the producer nodes we
-		 * memorized earlier are no longer valid. apply_shareinput_xslice()
-		 * will re-populate it, but clear it for now, just to make sure that
-		 * we don't access the obsolete copies of the nodes.
-		 */
-		if (glob->share.producer_count > 0)
-			memset(glob->share.producers, 0, glob->share.producer_count * sizeof(ShareInputScan *));
-
-		/*
 		 * cdb_build_slice_table() may create additional slices that may affect
 		 * share input. need to mark material nodes that are split acrossed
 		 * multi slices.
 		 */
-		top_plan = apply_shareinput_xslice(top_plan, root, glob->slices);
+		top_plan = apply_shareinput_xslice(top_plan, root);
 	}
 
 	/* build the PlannedStmt result */
@@ -1646,7 +1636,7 @@ inheritance_planner(PlannerInfo *root)
 				 */
 				ereport(ERROR,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 errmsg("incompatible loci in target inheritance set")));
+						 errmsg("ModifyTable mixes distributed and entry-only tables")));
 			}
 		}
 
@@ -1896,7 +1886,7 @@ grouping_planner(PlannerInfo *root, bool inheritance_update,
 		(root->config->honor_order_by || !root->parent_root) &&
 		parse->parentStmtType == PARENTSTMTTYPE_NONE &&
 		!parse->isTableValueSelect &&
-		!parse->limitCount && !parse->limitOffset)
+		!limit_needed(parse))
 	{
 		must_gather = true;
 	}

@@ -42,7 +42,7 @@ cdbmutate_warn_ctid_without_segid(struct PlannerInfo *root, struct RelOptInfo *r
 extern Plan *apply_shareinput_dag_to_tree(PlannerInfo *root, Plan *plan);
 extern void collect_shareinput_producers(PlannerInfo *root, Plan *plan);
 extern Plan *replace_shareinput_targetlists(PlannerInfo *root, Plan *plan);
-extern Plan *apply_shareinput_xslice(Plan *plan, PlannerInfo *root, PlanSlice *sliceTable);
+extern Plan *apply_shareinput_xslice(Plan *plan, PlannerInfo *root);
 
 extern List *getExprListFromTargetList(List *tlist, int numCols, AttrNumber *colIdx);
 extern void remove_unused_initplans(Plan *plan, PlannerInfo *root);

@@ -40,6 +40,8 @@ try:
 except Exception, e:
     errorMsg = "gpload was unable to import The PyGreSQL Python module (pg.py) - %s\n" % str(e)
     sys.stderr.write(str(errorMsg))
+    errorMsg = "Please check if you have the correct Visual Studio redistributable package installed.\n"
+    sys.stderr.write(str(errorMsg))
     sys.exit(2)
 
 import hashlib
@@ -2799,6 +2801,8 @@ class gpload:
         if self.error_table:
             self.log_errors = True
             self.reuse_tables = True
+            self.staging_table = self.getconfig('gpload:preload:staging_table', unicode, default=None)
+            self.fast_match = self.getconfig('gpload:preload:fast_match',bool,False)
         if truncate == True:
             if method=='insert':
                 self.do_truncate(self.schemaTable)

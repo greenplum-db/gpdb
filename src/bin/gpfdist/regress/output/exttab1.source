@@ -321,6 +321,7 @@ format 'csv' ( quote as '"' header);
 NOTICE:  HEADER means that each one of the data files has a header row
 -- "
 select count(*) from ext_whois;
+NOTICE:  HEADER means that each one of the data files has a header row
  count 
 -------
     23
@@ -330,30 +331,35 @@ create table v_w as select * from ext_whois;
 NOTICE:  HEADER means that each one of the data files has a header row
 -- sort distinct spill to disk/external sort
 select count(*) from (select * from v_w union select * from ext_whois) as foo;
+NOTICE:  HEADER means that each one of the data files has a header row
  count 
 -------
     23
 (1 row)
 
 select count(*) from (select * from v_w union all select * from ext_whois) as foo;
+NOTICE:  HEADER means that each one of the data files has a header row
  count 
 -------
     46
 (1 row)
 
 select count(*) from (select distinct * from ext_whois) as foo;
+NOTICE:  HEADER means that each one of the data files has a header row
  count 
 -------
     23
 (1 row)
 
 select count(*) from (select * from ext_whois order by 1 limit 300000 offset 30000) as foo;
+NOTICE:  HEADER means that each one of the data files has a header row
  count 
 -------
      0
 (1 row)
 
 select count(*) from (select * from ext_whois order by 1 limit 300000 offset 10) as foo;
+NOTICE:  HEADER means that each one of the data files has a header row
  count 
 -------
     13
@@ -448,6 +454,7 @@ admin_postal_code,
 admin_country,
 rec_path,
 raw_record limit 10 offset 10;
+NOTICE:  HEADER means that each one of the data files has a header row
  source_lineno |   domain_name   
 ---------------+-----------------
            596 | 007dy.net
@@ -635,8 +642,35 @@ drop external table bad_location2;
 --
 -- positive
 create writable external table wet_pos1(a text, b text) location('gpfdist://@hostname@:7070/wet.out') format 'text';
+\d wet_pos1
+     Foreign table "public.wet_pos1"
+ Column | Type | Modifiers | FDW Options 
+--------+------+-----------+-------------
+ a      | text |           | 
+ b      | text |           | 
+FDW Options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', format_type 't', location_uris 'gpfdist://@hostname@:7070/wet.out', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'true')
+Distributed randomly
+
 create writable external table wet_pos2(a text, b text) location('gpfdist://@hostname@:7070/wet.out') format 'text' distributed by(b);
+\d wet_pos2
+     Foreign table "public.wet_pos2"
+ Column | Type | Modifiers | FDW Options 
+--------+------+-----------+-------------
+ a      | text |           | 
+ b      | text |           | 
+FDW Options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', format_type 't', location_uris 'gpfdist://@hostname@:7070/wet.out', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'true')
+Distributed by: (b)
+
 create writable external table wet_pos3(like wet_pos2) location('gpfdist://@hostname@:7070/wet.out') format 'text' distributed by(a,b);
+\d wet_pos3
+     Foreign table "public.wet_pos3"
+ Column | Type | Modifiers | FDW Options 
+--------+------+-----------+-------------
+ a      | text |           | 
+ b      | text |           | 
+FDW Options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', format_type 't', location_uris 'gpfdist://@hostname@:7070/wet.out', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'true')
+Distributed by: (a, b)
+
 create writable external table wet_region(like reg_region) location('gpfdist://@hostname@:7070/wet_region.out') format 'text';
 NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 create readable external table ret_region(like wet_region) location('gpfdist://@hostname@:7070/wet_region.out') format 'text';
@@ -681,6 +715,7 @@ DROP EXTERNAL TABLE IF EXISTS ext_table_multi_locations;
 -- get an error for missing gpfdist
 --
 select count(*) from ext_whois;
+NOTICE:  HEADER means that each one of the data files has a header row
 ERROR:  connection with gpfdist failed for gpfdist://@hostname@:7070/whois.csv. effective url: http://127.0.0.1:7070/whois.csv. error code = 61 (Connection refused)  (seg1 slice1 @hostname@:50001 pid=64820)
 drop external table ext_whois;
 drop external table exttab1_gpfdist_start;

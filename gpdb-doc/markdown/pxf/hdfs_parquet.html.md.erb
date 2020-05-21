@@ -112,12 +112,18 @@ The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guid
 | \<path&#8209;to&#8209;hdfs&#8209;file\>    | The absolute path to the directory in the HDFS data store. |
 | PROFILE    | The `PROFILE` keyword must specify `hdfs:parquet`. |
 | SERVER=\<server_name\>    | The named server configuration that PXF uses to access the data. Optional; PXF uses the `default` server if not specified. |
-| \<custom&#8209;option\>=\<value\>  | \<custom-option\>s are described below.|
+| \<custom&#8209;option\>  | \<custom-option\>s are described below.|
 | FORMAT 'CUSTOM' | Use `FORMAT` '`CUSTOM`' with `(FORMATTER='pxfwritable_export')` (write) or `(FORMATTER='pxfwritable_import')` (read). |
 | DISTRIBUTED BY    | If you want to load data from an existing Greenplum Database table into the writable external table, consider specifying the same distribution policy or \<column_name\> on both tables. Doing so will avoid extra motion of data between segments on the load operation. |
 
 <a id="customopts"></a>
-The PXF `hdfs:parquet` profile supports encoding- and compression-related write options. You specify these write options in the `CREATE WRITABLE EXTERNAL TABLE` `LOCATION` clause. The `hdfs:parquet` profile supports the following custom options:
+The PXF `hdfs:parquet` profile supports the following read option. You specify this option in the `CREATE EXTERNAL TABLE` `LOCATION` clause:
+
+| Read Option  | Value Description |
+|-------|-------------------------------------|
+| IGNORE_MISSING_PATH | A Boolean value that specifies the action to take when \<path-to-hdfs-file\> is missing or invalid. The default value is `false`, PXF returns an error in this situation. When the value is `true`, PXF ignores missing path errors and returns an empty fragment. |
+
+The PXF `hdfs:parquet` profile supports encoding- and compression-related write options. You specify these write options in the `CREATE WRITABLE EXTERNAL TABLE` `LOCATION` clause. The `hdfs:parquet` profile supports the following custom write options:
 
 | Write Option  | Value Description |
 |-------|-------------------------------------|

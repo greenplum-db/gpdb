@@ -14,8 +14,10 @@
 
 #include "gpopt/base/CUtils.h"
 #include "gpopt/base/CKeyCollection.h"
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalGbAgg.h"
 #include "gpopt/operators/COperator.h"
+#include "gpopt/operators/CPatternLeaf.h"
+#include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/xforms/CXformSimplifyGbAgg.h"
 
 using namespace gpmd;

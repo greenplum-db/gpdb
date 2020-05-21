@@ -8,6 +8,7 @@
 //	@doc:
 //		Tests for datum classes
 //---------------------------------------------------------------------------
+#include "gpos/error/CAutoTrace.h"
 #include "gpos/io/COstreamString.h"
 #include "gpos/string/CWStringDynamic.h"
 

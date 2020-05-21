@@ -19,7 +19,6 @@
 
 #include "naucrates/statistics/IStatistics.h"
 
-#include "gpopt/operators/COperator.h"
 #include "naucrates/md/IMDRelation.h"
 #include "CCost.h"
 #include "ICostModelParams.h"

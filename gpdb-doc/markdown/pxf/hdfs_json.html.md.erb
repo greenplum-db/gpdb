@@ -193,11 +193,14 @@ The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guid
 | FORMAT 'CUSTOM' | Use `FORMAT` `'CUSTOM'` with  the `hdfs:json` profile. The `CUSTOM` `FORMAT` requires that you specify `(FORMATTER='pxfwritable_import')`. |
 
 <a id="customopts"></a>
-PXF supports single- and multi- line JSON records. When you want to read multi-line JSON records, you must provide an `IDENTIFIER` \<custom-option\> and value. Use this \<custom-option\> to identify the member name of the first field in the JSON record object:
+PXF supports single- and multi- line JSON records. When you want to read multi-line JSON records, you must provide an `IDENTIFIER` \<custom-option\> and value. Use this \<custom-option\> to identify the member name of the first field in the JSON record object.
+
+The `hdfs:json` profile supports the following \<custom-option\>s:
 
 | Option Keyword  | &nbsp;&nbsp;Syntax,&nbsp;&nbsp;Example(s)&nbsp;&nbsp; | Description |
 |-------|--------------|-----------------------|
 | IDENTIFIER  | `&IDENTIFIER=<value>`<br>`&IDENTIFIER=created_at`| You must include the `IDENTIFIER` keyword and \<value\> in the `LOCATION` string only when you are accessing JSON data comprised of multi-line records. Use the \<value\> to identify the member name of the first field in the JSON record object. | 
+| IGNORE_MISSING_PATH | `&IGNORE_MISSING_PATH=<boolean>` | Specify the action to take when \<path-to-hdfs-file\> is missing or invalid. The default value is `false`, PXF returns an error in this situation. When the value is `true`, PXF ignores missing path errors and returns an empty fragment. |
 
 
 ## <a id="jsonexample1"></a>Example: Reading a JSON File with Single Line Records

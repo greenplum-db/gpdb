@@ -194,7 +194,7 @@ $(GPPGDIR)/GNUmakefile : $(GPPGDIR)/configure  env.sh
 	rm -rf $(INSTLOC)
 	mkdir -p $(GPPGDIR)
 	echo "Running ./configure with CONFIGFLAGS=$(CONFIGFLAGS)\n"
-	cd $(GPPGDIR) && CC="$(strip $(BLD_CC) $(BLD_CFLAGS))"    \
+	cd $(GPPGDIR) && \
                      CFLAGS=$(INSTCFLAGS) $(BLD_CONFIG_SHELL) \
                      ./configure $(CONFIGFLAGS)               \
                          --prefix=$(INSTLOC)                  \
@@ -204,7 +204,7 @@ Debug/GNUmakefile : $(GPPGDIR)/configure  env.sh
 	rm -rf $(INSTLOC)
 	mkdir -p Debug
 	echo "Running ./configure with CONFIGFLAGS=$(CONFIGFLAGS)\n"
-	cd Debug && CC="$(strip $(BLD_CC) $(BLD_CFLAGS))"        \
+	cd Debug && \
                 CFLAGS=$(INSTCFLAGS) $(BLD_CONFIG_SHELL)     \
                 ./configure $(CONFIGFLAGS)                   \
                     --prefix=$(INSTLOC)                      \
@@ -214,7 +214,7 @@ Release/GNUmakefile : $(GPPGDIR)/configure  env.sh
 	rm -rf $(INSTLOC)
 	mkdir -p Release
 	echo "Running ./configure with CONFIGFLAGS=$(CONFIGFLAGS)\n"
-	cd Release && CC="$(strip $(BLD_CC) $(BLD_CFLAGS))"     \
+	cd Release && \
                   CFLAGS=$(INSTCFLAGS) $(BLD_CONFIG_SHELL)  \
                   ./configure $(CONFIGFLAGS)                \
                       --prefix=$(INSTLOC)                   \
@@ -318,7 +318,6 @@ endif
 env.sh:
 	echo "export BLD_ARCH=$(BLD_ARCH)" > env.sh
 	echo "export NO_M64=$(NO_M64)" >> env.sh
-	echo "export CC=\"$(strip $(BLD_CC) $(BLD_CFLAGS))\"" >> env.sh
 	echo "export PATH=$(PATH)" >> env.sh
 	echo "export $(BLD_WHERE_THE_LIBRARY_THINGS_ARE)=$($(BLD_WHERE_THE_LIBRARY_THINGS_ARE))" >> env.sh
 ifneq "$(PERL_DIR)" ""
@@ -576,7 +575,6 @@ SET_VERSION_SCRIPTS = \
 	bin/gpstart \
 	bin/gpstate \
 	bin/gpstop \
-	bin/gpsys1 \
 	bin/lib/gpcheckcat \
 	sbin/gpconfig_helper.py \
 	sbin/gpcleansegmentdir.py \
@@ -642,15 +640,6 @@ mgmtcopy :
 libcopy=(cd $(1) && $(TAR) cf - $(2)) | (cd $(3) && $(TAR) xvf -)$(check_pipe_for_errors)
 
 copylibs : thirdparty-dist
-	# Create the python directory to flag to build scripts that python has been handled
-	mkdir -p $(INSTLOC)/ext/python
-	@if [ ! -z "$(PYTHONHOME)" ]; then \
-	    echo "Copying python, $(BLD_PYTHON_FILESET), from $(PYTHONHOME) into $(INSTLOC)/ext/python..."; \
-	    (cd $(PYTHONHOME) && $(TAR) cf - $(BLD_PYTHON_FILESET)) | (cd $(INSTLOC)/ext/python/ && $(TAR) xpf -); \
-		echo "...DONE"; \
-	else \
-	    echo "INFO: Python not found on this platform, $(BLD_ARCH), not copying it into the GPDB package."; \
-	fi
 	mkdir -p $(INSTLOC)/etc
 	mkdir -p $(INSTLOC)/include
 

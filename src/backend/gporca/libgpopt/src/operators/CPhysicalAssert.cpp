@@ -11,7 +11,6 @@
 
 #include "gpos/base.h"
 #include "gpopt/base/CRewindabilitySpec.h"
-#include "gpopt/base/CUtils.h"
 
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CPhysicalAssert.h"

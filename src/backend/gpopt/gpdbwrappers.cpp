@@ -2487,7 +2487,6 @@ gpdb::GetExternalTableEntry
 {
 	GP_WRAP_START;
 	{
-		/* catalog tables: pg_exttable */
 		return GetExtTableEntry(rel_oid);
 	}
 	GP_WRAP_END;
@@ -2506,7 +2505,6 @@ gpdb::CreateForeignScanForExternalTable
 {
 	GP_WRAP_START;
 	{
-		/* catalog tables: pg_exttable */
 		return create_foreignscan_for_external_table(rel_oid, scanrelid,
 							     qual, targetlist);
 	}
@@ -3135,10 +3133,10 @@ register_mdcache_invalidation_callbacks(void)
 		/* pg_index */
 
 		/*
-		 * pg_exttable is only updated when a new external table is dropped/created,
+		 * pg_foreign_table is updated when a new external table is dropped/created,
 		 * which will trigger a relcache invalidation event.
 		 */
-		/* pg_exttable */
+		/* pg_foreign_table */
 
 		/*
 		 * XXX: no syscache on pg_inherits. Is that OK? For any partitioning

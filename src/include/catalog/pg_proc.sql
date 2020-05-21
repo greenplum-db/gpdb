@@ -64,6 +64,10 @@
 
  CREATE FUNCTION pg_terminate_backend(int4, text) RETURNS bool LANGUAGE internal VOLATILE STRICT PARALLEL SAFE AS 'pg_terminate_backend_msg' WITH (OID=7154, DESCRIPTION="terminate a server process");
 
+ CREATE FUNCTION pg_resgroup_check_move_query(IN session_id int4, IN group_id oid, OUT session_mem int4, OUT available_mem int4) RETURNS SETOF pg_catalog.record LANGUAGE INTERNAL VOLATILE PARALLEL RESTRICTED AS 'pg_resgroup_check_move_query' WITH (OID = 6053, DESCRIPTION="get the memory used by a session and the available memory of the destination group");
+
+ CREATE FUNCTION pg_resgroup_move_query(int4, text) RETURNS bool LANGUAGE INTERNAL VOLATILE PARALLEL RESTRICTED AS 'pg_resgroup_move_query' WITH (OID = 6064, DESCRIPTION="move query to a resource group");
+
  CREATE FUNCTION pg_resgroup_get_status_kv(IN prop_in text, OUT rsgid oid, OUT prop text, OUT value text) RETURNS SETOF pg_catalog.record LANGUAGE internal VOLATILE PARALLEL RESTRICTED AS 'pg_resgroup_get_status_kv' WITH (OID=6065, DESCRIPTION="statistics: information about resource groups in key-value style");
 
  CREATE FUNCTION pg_resgroup_get_status(IN groupid oid, OUT groupid oid, OUT num_running int4, OUT num_queueing int4, OUT num_queued int4, OUT num_executed int4, OUT total_queue_duration interval, OUT cpu_usage json, OUT memory_usage json) RETURNS SETOF pg_catalog.record LANGUAGE internal VOLATILE PARALLEL RESTRICTED AS 'pg_resgroup_get_status' WITH (OID=6066, DESCRIPTION="statistics: information about resource groups");
@@ -167,6 +171,11 @@
  CREATE FUNCTION gp_adjust_priority(int4, int4, text) RETURNS int4 LANGUAGE internal VOLATILE STRICT AS 'gp_adjust_priority_value' WITH (OID=5041, DESCRIPTION="change weight of all the backends for a given session id");
 
  CREATE FUNCTION gp_list_backend_priorities() RETURNS SETOF record LANGUAGE internal VOLATILE AS 'gp_list_backend_priorities' WITH (OID=5042, DESCRIPTION="list priorities of backends");
+
+-- Functions to extract external table info
+ CREATE FUNCTION pg_exttable(OUT reloid oid, OUT urilocation _text, OUT execlocation _text, OUT fmttype char, OUT fmtopts text, OUT options _text, OUT command text, OUT rejectlimit int4, OUT rejectlimittype char, OUT logerrors char, OUT encoding int4, OUT writable bool) RETURNS SETOF record LANGUAGE internal VOLATILE EXECUTE ON MASTER AS 'pg_exttable' WITH (OID=7061, DESCRIPTION="original pg_exttable catalog info");
+
+ CREATE FUNCTION gp_exttable_permission_check(text, oid) RETURNS void LANGUAGE internal VOLATILE NO SQL AS 'gp_exttable_permission_check' WITH (OID=7070, DESCRIPTION="validator for external tables");
 
 -- Functions to deal with SREH error logs
  CREATE FUNCTION gp_read_error_log(exttable text, OUT cmdtime timestamptz, OUT relname text, OUT filename text, OUT linenum int4, OUT bytenum int4, OUT errmsg text, OUT rawdata text, OUT rawbytes bytea) RETURNS SETOF record LANGUAGE INTERNAL STRICT VOLATILE PARALLEL SAFE EXECUTE ON ALL SEGMENTS AS 'gp_read_error_log' WITH (OID = 7076, DESCRIPTION="read the error log for the specified external table");

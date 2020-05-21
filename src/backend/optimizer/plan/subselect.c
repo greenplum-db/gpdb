@@ -702,6 +702,14 @@ make_subplan(PlannerInfo *root, Query *orig_subquery,
 	else
 		config->honor_order_by = false;
 
+	/*
+	 * Greenplum specific behavior:
+	 * config->may_rescan is used to guide if
+	 * we should add materialize path over motion
+	 * in the left tree of a join.
+	 */
+	config->may_rescan = true;
+
 	/* Generate Paths for the subquery */
 	subroot = subquery_planner(root->glob, subquery,
 							   root,

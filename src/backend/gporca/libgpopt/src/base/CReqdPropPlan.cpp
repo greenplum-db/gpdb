@@ -10,6 +10,7 @@
 //---------------------------------------------------------------------------
 
 #include "gpos/base.h"
+#include "gpos/error/CAutoTrace.h"
 #include "gpos/common/CPrintablePointer.h"
 
 #include "gpopt/base/CUtils.h"

@@ -9,6 +9,7 @@
 //		Test for installcheck-good bugs
 //---------------------------------------------------------------------------
 
+#include "gpos/error/CAutoTrace.h"
 #include "gpos/task/CAutoTraceFlag.h"
 
 #include "gpopt/base/CAutoOptCtxt.h"

@@ -9,7 +9,9 @@
 //		Statistics helper routines for processing all join types
 //---------------------------------------------------------------------------
 
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalIndexApply.h"
+#include "gpopt/operators/CLogicalNAryJoin.h"
+#include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CScalarNAryJoinPredList.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
 

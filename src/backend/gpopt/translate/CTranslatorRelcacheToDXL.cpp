@@ -49,6 +49,7 @@
 
 #include "gpos/base.h"
 #include "gpos/error/CException.h"
+#include "gpos/io/COstreamString.h"
 
 #include "naucrates/exception.h"
 
@@ -2847,7 +2848,7 @@ CTranslatorRelcacheToDXL::TransformStatsToDXLBucketArray
 						num_distinct,
 						hist_freq
 						);
-		if (0 == histogram->Buckets())
+		if (0 == histogram->GetNumBuckets())
 		{
 			has_hist = false;
 		}
@@ -3053,7 +3054,7 @@ CTranslatorRelcacheToDXL::TransformHistogramToDXLBucketArray
 	)
 {
 	CDXLBucketArray *dxl_stats_bucket_array = GPOS_NEW(mp) CDXLBucketArray(mp);
-	const CBucketArray *buckets = hist->ParseDXLToBucketsArray();
+	const CBucketArray *buckets = hist->GetBuckets();
 	ULONG num_buckets = buckets->Size();
 	for (ULONG ul = 0; ul < num_buckets; ul++)
 	{

@@ -1,6 +1,7 @@
 //	Greenplum Database
 //	Copyright (C) 2016 Pivotal Software, Inc.
 
+#include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CHashedDistributions.h"
 
 using namespace gpopt;

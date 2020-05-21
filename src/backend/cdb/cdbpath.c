@@ -1980,6 +1980,16 @@ cdbpath_motion_for_join(PlannerInfo *root,
 												outer.move_to);
 		if (!outer.path)		/* fail if outer motion not feasible */
 			goto fail;
+
+		if (IsA(outer.path, MaterialPath) && !root->config->may_rescan)
+		{
+			/*
+			 * If we are the outer path and can never be rescanned,
+			 * we could remove the materialize path.
+			 */
+			MaterialPath *mpath = (MaterialPath *) outer.path;
+			outer.path = mpath->subpath;
+		}
 	}
 
 	/*

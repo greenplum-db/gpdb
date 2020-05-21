@@ -48,7 +48,7 @@ pg_regress$(X): pg_regress.o pg_regress_main.o $(WIN32RES) | submake-libpgport s
 # dependencies ensure that path changes propagate
 pg_regress.o: pg_regress.c $(top_builddir)/src/port/pg_config_paths.h
 pg_regress.o: override CPPFLAGS += -I$(top_builddir)/src/port $(EXTRADEFS)
-regress_gp.o: override CFLAGS += -I$(top_builddir)/src/interfaces/libpq
+regress_gp.o: override CPPFLAGS += -I$(libpq_srcdir)
 regress_gp.o: override LDFLAGS += -L$(top_builddir)/src/interfaces/libpq
 
 .PHONY: scan_flaky_fault_injectors

@@ -754,7 +754,7 @@ ExecInitSubPlan(SubPlan *subplan, PlanState *parent)
 	sstate->tab_eq_funcs = NULL;
 	sstate->lhs_hash_funcs = NULL;
 	sstate->cur_eq_funcs = NULL;
-	sstate->ts_state = palloc0(sizeof(GenericTupStore));
+	sstate->ts_state = NULL;
 	sstate->ts_pos = NULL;
 
 	/*
@@ -1117,16 +1117,16 @@ PG_TRY();
 	 * closing file. This is due to the tuplestore reader is outside
 	 * initplan, and reader will delete the file when it finished.
 	 */
-	if (subLinkType == INITPLAN_FUNC_SUBLINK && !node->ts_state->matstore)
+	if (subLinkType == INITPLAN_FUNC_SUBLINK && node->ts_state == NULL)
 	{
 		char rwfile_prefix[100];
 
 		function_scan_create_bufname_prefix(rwfile_prefix, sizeof(rwfile_prefix));
 		
-		node->ts_state->matstore = ntuplestore_create_readerwriter(rwfile_prefix, PlanStateOperatorMemKB((PlanState *)(node->planstate)) * 1024, true, false);
-		ntuplestore_set_is_temp_file(node->ts_state->matstore, false);
+		node->ts_state = ntuplestore_create_readerwriter(rwfile_prefix, PlanStateOperatorMemKB((PlanState *)(node->planstate)) * 1024, true, false);
+		ntuplestore_set_is_temp_file(node->ts_state, false);
 		
-		node->ts_pos = (void *)ntuplestore_create_accessor(node->ts_state->matstore, true);
+		node->ts_pos = (void *)ntuplestore_create_accessor(node->ts_state, true);
 	}
 
 	/*
@@ -1219,13 +1219,13 @@ PG_TRY();
 	 * reader will delete the file when it finished.
 	 *
 	 */
-	if (subLinkType == INITPLAN_FUNC_SUBLINK && node->ts_state->matstore)
+	if (subLinkType == INITPLAN_FUNC_SUBLINK && node->ts_state)
 	{
-		ntuplestore_acc_seek_bof((NTupleStoreAccessor *) node->ts_pos);
-		ntuplestore_flush(node->ts_state->matstore);
+		ntuplestore_acc_seek_bof(node->ts_pos);
+		ntuplestore_flush(node->ts_state);
 		
-		ntuplestore_destroy_accessor((NTupleStoreAccessor *) node->ts_pos);
-		ntuplestore_destroy(node->ts_state->matstore);
+		ntuplestore_destroy_accessor(node->ts_pos);
+		ntuplestore_destroy(node->ts_state);
 	}
 
 	if (!found)

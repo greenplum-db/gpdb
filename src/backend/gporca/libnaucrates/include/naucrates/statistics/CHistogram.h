@@ -178,7 +178,7 @@ namespace gpnaucrates
 
 			// check if the cardinality estimation should be done only via NDVs
 			static
-			BOOL DoNDVBasedCardEstimation(const CHistogram *histogram);
+			BOOL NeedsNDVBasedCardEstimationForEq(const CHistogram *histogram);
 
 			BOOL IsHistogramForTextRelatedTypes() const;
 
@@ -348,13 +348,14 @@ namespace gpnaucrates
 					const;
 
 			// number of buckets
-			ULONG Buckets() const
+			ULONG GetNumBuckets() const
 			{
+				GPOS_ASSERT(m_histogram_buckets != NULL);
 				return m_histogram_buckets->Size();
 			}
 
 			// buckets accessor
-			const CBucketArray *ParseDXLToBucketsArray() const
+			const CBucketArray *GetBuckets() const
 			{
 				return m_histogram_buckets;
 			}
@@ -365,6 +366,8 @@ namespace gpnaucrates
 				return m_is_well_defined;
 			}
 
+			BOOL ContainsOnlySingletonBuckets() const;
+
 			// is the column statistics missing in the database
 			BOOL IsColStatsMissing() const
 			{
@@ -374,6 +377,10 @@ namespace gpnaucrates
 			// print function
 			virtual
 			IOstream &OsPrint(IOstream &os) const;
+
+#ifdef GPOS_DEBUG
+			void DbgPrint() const;
+#endif
 
 			// total frequency from buckets and null fraction
 			CDouble GetFrequency() const;

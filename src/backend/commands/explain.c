@@ -585,7 +585,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, IntoClause *into, ExplainState *es,
 
 	/* Select execution options */
 	if (es->analyze)
-		eflags = EXEC_FLAG_EXPLAIN;
+		eflags = 0;				/* default run-to-completion flags */
 	else
 		eflags = EXEC_FLAG_EXPLAIN_ONLY;
 	if (into)

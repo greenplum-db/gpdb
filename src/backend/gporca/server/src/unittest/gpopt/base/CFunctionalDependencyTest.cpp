@@ -8,6 +8,8 @@
 //	@doc:
 //		Tests for functional dependencies
 //---------------------------------------------------------------------------
+#include "gpos/error/CAutoTrace.h"
+
 #include "gpopt/base/CFunctionalDependency.h"
 #include "gpopt/eval/CConstExprEvaluatorDefault.h"
 

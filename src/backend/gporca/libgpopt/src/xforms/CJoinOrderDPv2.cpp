@@ -11,17 +11,17 @@
 
 #include "gpos/base.h"
 
-#include "gpos/io/COstreamString.h"
-#include "gpos/string/CWStringDynamic.h"
-
 #include "gpos/common/clibwrapper.h"
 #include "gpos/common/CBitSet.h"
 #include "gpos/common/CBitSetIter.h"
+#include "gpos/error/CAutoTrace.h"
 
 #include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/base/CUtils.h"
-#include "gpopt/operators/ops.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
+#include "gpopt/operators/CLogicalInnerJoin.h"
+#include "gpopt/operators/CLogicalLeftOuterJoin.h"
+#include "gpopt/operators/CLogicalSelect.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CNormalizer.h"
 #include "gpopt/operators/CScalarNAryJoinPredList.h"

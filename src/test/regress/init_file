@@ -120,4 +120,7 @@ s/ERROR:  infinite recursion detected.*/ERROR:  infinite recursion detected/
 m/ERROR:  could not find hash function for hash operator.*/
 s/ERROR:  could not find hash function for hash operator.*/ERROR:  could not find hash function for hash operator/
 
+m/nodename nor servname provided, or not known/
+s/nodename nor servname provided, or not known/Name or service not known/
+
 -- end_matchsubs

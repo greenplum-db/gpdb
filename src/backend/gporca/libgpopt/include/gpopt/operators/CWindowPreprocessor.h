@@ -12,7 +12,6 @@
 #define GPOPT_CWindowPreprocessor_H
 
 #include "gpos/base.h"
-#include "gpopt/base/CUtils.h"
 
 #include "gpopt/operators/CExpression.h"
 

@@ -15,7 +15,7 @@
 #include "gpos/common/CRefCount.h"
 #include "gpos/common/CDynamicPtrArray.h"
 
-#include "naucrates/statistics/CStatistics.h"
+#include "naucrates/statistics/IStatistics.h"
 #include "gpopt/cost/CCost.h"
 #include "gpopt/base/CColRef.h"
 #include "gpopt/base/CCostContext.h"

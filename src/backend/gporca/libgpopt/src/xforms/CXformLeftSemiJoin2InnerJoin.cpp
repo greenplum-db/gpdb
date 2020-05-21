@@ -15,7 +15,12 @@
 #include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CColRefTable.h"
 #include "gpopt/base/CKeyCollection.h"
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalGbAgg.h"
+#include "gpopt/operators/CLogicalInnerJoin.h"
+#include "gpopt/operators/CLogicalLeftSemiJoin.h"
+#include "gpopt/operators/CPatternLeaf.h"
+#include "gpopt/operators/CPredicateUtils.h"
+#include "gpopt/operators/CScalarProjectList.h"
 #include "gpopt/xforms/CXformLeftSemiJoin2InnerJoin.h"
 
 

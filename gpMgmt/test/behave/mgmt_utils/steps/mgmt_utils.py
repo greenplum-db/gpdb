@@ -401,6 +401,18 @@ def impl(context, command):
     if has_exception(context):
         raise context.exception
 
+@given('the user runs remote command "{command}" on host "{hostname}"')
+@when('the user runs remote command "{command}" on host "{hostname}"')
+@then('the user runs remote command "{command}" on host "{hostname}"')
+def impl(context, command, hostname):
+    run_command_remote(context,
+                       command,
+                       hostname,
+                       os.getenv("GPHOME") + '/greenplum_path.sh',
+                       'export MASTER_DATA_DIRECTORY=%s' % master_data_dir)
+    if has_exception(context):
+        raise context.exception
+
 @given('the user runs command "{command}" eok')
 @when('the user runs command "{command}" eok')
 @then('the user runs command "{command}" eok')

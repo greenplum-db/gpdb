@@ -2043,6 +2043,7 @@ _equalCreateForeignTableStmt(const CreateForeignTableStmt *a, const CreateForeig
 
 	COMPARE_STRING_FIELD(servername);
 	COMPARE_NODE_FIELD(options);
+	COMPARE_NODE_FIELD(distributedBy);
 
 	return true;
 }

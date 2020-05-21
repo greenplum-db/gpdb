@@ -358,3 +358,65 @@ WITH RECURSIVE r1 AS (
 	)
 )
 SELECT * FROM r1 LIMIT 1;
+
+
+-- This used to deadlock, before the IPC between ShareInputScans across
+-- slices was rewritten.
+set gp_cte_sharing=on;
+
+CREATE TEMP TABLE foo (i int, j int);
+INSERT INTO foo SELECT g, g FROM generate_series(1, 2) g;
+
+WITH a1 as (select * from foo),
+     a2 as (select * from foo)
+SELECT a1.i
+  FROM a1
+  INNER JOIN a2 ON a2.i = a1.i
+UNION ALL
+SELECT count(a1.i)
+  FROM a1
+  INNER JOIN a2 ON a2.i = a1.i;
+
+explain (costs off)
+WITH a1 as (select * from foo),
+     a2 as (select * from foo)
+SELECT a1.i
+  FROM a1
+  INNER JOIN a2 ON a2.i = a1.i
+UNION ALL
+SELECT count(a1.i)
+  FROM a1
+  INNER JOIN a2 ON a2.i = a1.i;
+
+-- Another cross-slice ShareInputScan test. There is one producing slice,
+-- and two consumers in second slice. Make sure the Share Input Scan
+-- consumer slice doesn't prematurely notify the producer that it's done,
+-- when one of the Scans in the consumer slice finishes, but there are still
+-- Scans left in the same slice.
+explain (costs off)
+WITH cte AS (SELECT * FROM foo)
+  -- This branch runs on different slice. It is the producer slice.
+  (SELECT DISTINCT 'a' as branch, j FROM cte)
+UNION ALL
+  -- This branch runs in the consumer slice. It contains a join. A join
+  -- causes the input to be squelched when it reaches the end.
+  (SELECT 'b', x.i FROM cte x, cte y WHERE x.i = y.i)
+UNION ALL
+  -- Sleep a bit between executing the previous slice and the next slice,
+  -- so that if the squelch from the join incorrectly sent a "done" message
+  -- to the producer slice, the producer has a chance to finish and remove
+  -- the tuplestore, before the next branch tries to open the shared
+  -- tuplestore again.
+  SELECT 'sleep', 1 where pg_sleep(1) is not null
+UNION ALL
+  -- Consumer, runs in same slice as the join above.
+  SELECT 'c', j FROM cte;
+
+WITH cte AS (SELECT * FROM foo)
+  (SELECT DISTINCT 'a' as branch, j FROM cte)
+UNION ALL
+  (SELECT 'b', x.i FROM cte x, cte y WHERE x.i = y.i)
+UNION ALL
+  SELECT 'sleep', 1 where pg_sleep(1) is not null
+UNION ALL
+  SELECT 'c', j FROM cte;

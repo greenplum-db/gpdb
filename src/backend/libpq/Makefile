@@ -11,7 +11,7 @@
 subdir = src/backend/libpq
 top_builddir = ../../..
 include $(top_builddir)/src/Makefile.global
-override CPPFLAGS += -I$(libpq_srcdir) -I$(top_srcdir)/src/port
+override CPPFLAGS += -I$(libpq_srcdir) -I$(top_builddir)/src/port
 
 # be-fsstubs is here for historical reasons, probably belongs elsewhere
 

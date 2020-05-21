@@ -2442,7 +2442,9 @@ create_modifytable_plan(PlannerInfo *root, ModifyTablePath *best_path)
 			else
 			{
 				if (policy->ptype != policyType)
-					elog(ERROR, "ModifyTable mixes distributed and entry-only tables");
+					ereport(ERROR,
+							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+							 errmsg("ModifyTable mixes distributed and entry-only tables")));
 			}
 
 			if (policyType != POLICYTYPE_ENTRY)
@@ -6090,12 +6092,6 @@ make_sort(Plan *lefttree, int numCols,
 
 	node->noduplicates = false; /* CDB */
 
-	node->share_type = SHARE_NOTSHARED;
-	node->share_id = SHARE_ID_NOT_SHARED;
-	node->driver_slice = -1;
-	node->nsharer = 0;
-	node->nsharer_xslice = 0;
-
 	return node;
 }
 
@@ -6654,11 +6650,6 @@ make_material(Plan *lefttree)
 	plan->righttree = NULL;
 
 	node->cdb_strict = false;
-	node->share_type = SHARE_NOTSHARED;
-	node->share_id = SHARE_ID_NOT_SHARED;
-	node->driver_slice = -1;
-	node->nsharer = 0;
-	node->nsharer_xslice = 0;
 
 	return node;
 }

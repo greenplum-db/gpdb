@@ -12,8 +12,15 @@
 #include "gpos/base.h"
 
 #include "gpopt/base/CUtils.h"
+#include "gpopt/operators/CLogicalCTEAnchor.h"
+#include "gpopt/operators/CLogicalCTEConsumer.h"
+#include "gpopt/operators/CLogicalGbAgg.h"
+#include "gpopt/operators/CLogicalInnerJoin.h"
+#include "gpopt/operators/CLogicalSequenceProject.h"
 #include "gpopt/operators/CPredicateUtils.h"
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CScalarProjectElement.h"
+#include "gpopt/operators/CScalarProjectList.h"
+#include "gpopt/operators/CScalarWindowFunc.h"
 #include "gpopt/operators/CWindowPreprocessor.h"
 #include "gpopt/xforms/CXformUtils.h"
 

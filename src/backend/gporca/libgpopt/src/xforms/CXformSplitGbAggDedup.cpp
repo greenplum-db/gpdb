@@ -14,7 +14,7 @@
 
 #include "gpopt/base/CUtils.h"
 #include "gpopt/base/CColRefComputed.h"
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalGbAggDeduplicate.h"
 #include "gpopt/operators/COperator.h"
 #include "gpopt/xforms/CXformSplitGbAggDedup.h"
 #include "gpopt/translate/CTranslatorDXLToExpr.h"

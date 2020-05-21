@@ -868,37 +868,7 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
 			break;
 
 		case T_ShareInputScan:
-			{
-				ShareInputScan *sisc = (ShareInputScan *) plan;
-				Plan *childPlan = plan->lefttree;
-
-				if (childPlan == NULL)
-				{
-					ShareInputScan *producer;
-
-					Assert(sisc->share_type != SHARE_NOTSHARED);
-					Assert(sisc->share_id >= 0 && sisc->share_id < root->glob->share.producer_count);
-					producer = root->glob->share.producers[sisc->share_id];
-					childPlan = producer->scan.plan.lefttree;
-				}
-
-#ifdef DEBUG
-				Assert(childPlan && IsA(childPlan,Material) || IsA(childPlan, Sort));
-				if (IsA(childPlan, Material))
-				{
-					Material *shared = (Material *) childPlan;
-					Assert(shared->share_type != SHARE_NOTSHARED
-						   && shared->share_id == sisc->share_id);
-				}
-				else
-				{
-					Sort *shared = (Sort *) childPlan;
-					Assert(shared->share_type != SHARE_NOTSHARED
-						   && shared->share_id == sisc->share_id);
-				}
-#endif
-				set_dummy_tlist_references(plan, rtoffset);
-			}
+			set_dummy_tlist_references(plan, rtoffset);
 			break;
 
 		case T_PartitionSelector:

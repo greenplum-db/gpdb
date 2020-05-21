@@ -1644,12 +1644,28 @@ connectDBStart(PGconn *conn)
 	conn->addrlist = addrs;
 	conn->addr_cur = addrs;
 	conn->addrlist_family = hint.ai_family;
-#ifndef FRONTEND
-	// GPDB uses the high bits of the major version to indicate special internal communications
-	conn->pversion = GPDB_INTERNAL_PROTOCOL(3, 0);
-#else
-	conn->pversion = PG_PROTOCOL(3, 0);
-#endif
+	if (conn->gpconntype &&
+		(strcmp(conn->gpconntype, GPCONN_TYPE_FTS) == 0 ||
+		 strcmp(conn->gpconntype, GPCONN_TYPE_FAULT) == 0 ||
+		 strcmp(conn->gpconntype, GPCONN_TYPE_INTERNAL) == 0))
+	{
+		/*
+		 * GPDB uses the high bits of the major version to indicate special
+		 * internal communications
+		 */
+		conn->pversion = GPDB_INTERNAL_PROTOCOL(3, 0);
+
+		/* hide the internal gpconntype option, let it only affect the pversion */
+		if (strcmp(conn->gpconntype, GPCONN_TYPE_INTERNAL) == 0)
+		{
+			free(conn->gpconntype);
+			conn->gpconntype = NULL;
+		}
+	}
+	else if (conn->pversion != GPDB_INTERNAL_PROTOCOL(3, 0)) // Don't reset this while reconnecting
+	{
+		conn->pversion = PG_PROTOCOL(3, 0);
+	}
 	conn->try_next_addr = false;
 	conn->is_new_addr = true;
 	conn->status = CONNECTION_NEEDED;
@@ -1881,12 +1897,7 @@ keep_going:						/* We will come back to here until there is
 		 * reset them when we start to consider a new address (since it might
 		 * not be the same server).
 		 */
-#ifndef FRONTEND
-		// GPDB uses the high bits of the major version to indicate special internal communications
-		conn->pversion = GPDB_INTERNAL_PROTOCOL(3, 0);
-#else
-		conn->pversion = PG_PROTOCOL(3, 0);
-#endif	
+		/* no need to reset the pversion */
 		conn->send_appname = true;
 #ifdef USE_SSL
 		/* initialize these values based on SSL mode */

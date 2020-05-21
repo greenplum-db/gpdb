@@ -12,7 +12,6 @@
 #include "gpos/base.h"
 
 #include "gpopt/base/CColRefSetIter.h"
-#include "gpopt/base/CUtils.h"
 #include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
 #include "gpopt/base/CDistributionSpecSingleton.h"

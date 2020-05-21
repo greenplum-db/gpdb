@@ -44,6 +44,7 @@
 #include "naucrates/dxl/operators/CDXLDatumInt8.h"
 #include "naucrates/dxl/xml/dxltokens.h"
 
+#include "naucrates/md/CMDTypeBoolGPDB.h"
 #include "naucrates/md/IMDScalarOp.h"
 #include "naucrates/md/IMDAggregate.h"
 #include "naucrates/md/IMDTypeBool.h"

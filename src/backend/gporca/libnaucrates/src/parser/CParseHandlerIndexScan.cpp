@@ -27,6 +27,8 @@
 #include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 #include "naucrates/dxl/parser/CParseHandlerUtils.h"
 
+#include "naucrates/dxl/operators/CDXLPhysicalDynamicIndexScan.h"
+#include "naucrates/dxl/operators/CDXLPhysicalIndexOnlyScan.h"
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 
 using namespace gpdxl;

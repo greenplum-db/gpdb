@@ -12,8 +12,9 @@
 #define GPOPT_CXformLeftSemiApply2LeftSemiJoin_H
 
 #include "gpos/base.h"
+#include "gpopt/operators/CLogicalLeftSemiApply.h"
+#include "gpopt/operators/CLogicalLeftSemiJoin.h"
 #include "gpopt/xforms/CXformApply2Join.h"
-#include "gpopt/operators/ops.h"
 
 
 namespace gpopt

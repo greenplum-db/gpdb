@@ -1287,7 +1287,7 @@ select * from (select * from p1 union all select * from p2) as p, tt where p.b=t
     <dxl:Plan Id="0" SpaceSize="20">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1297.088987" Rows="18148.820327" Width="16"/>
+          <dxl:Cost StartupCost="0" TotalCost="1296.285494" Rows="10101.010101" Width="16"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -1307,7 +1307,7 @@ select * from (select * from p1 union all select * from p2) as p, tt where p.b=t
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="Inner">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1295.785176" Rows="18148.820327" Width="16"/>
+            <dxl:Cost StartupCost="0" TotalCost="1295.559837" Rows="10101.010101" Width="16"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">

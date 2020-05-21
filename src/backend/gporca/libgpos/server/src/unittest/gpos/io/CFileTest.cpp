@@ -271,19 +271,18 @@ CFileTest::Unittest_MkTmpFile
 	GPOS_ASSERT(NULL != szTmpDir);
 	GPOS_ASSERT(NULL != szTmpFile);
 
-	CStringStatic strTmpDir(szTmpDir, GPOS_FILE_NAME_BUF_SIZE);
-	CStringStatic strTmpFile(szTmpFile, GPOS_FILE_NAME_BUF_SIZE);
-
-	const CHAR szDir[GPOS_FILE_NAME_BUF_SIZE] = "/tmp/CFileTest.XXXXXX";
-	const CHAR szFile[GPOS_FILE_NAME_BUF_SIZE] = "/CFileTest_file.txt";
+	CHAR szDir[] = "/tmp/CFileTest.XXXXXX";
+	const CHAR szFile[] = "/CFileTest_file.txt";
 
 	// create unique temporary directory name under /tmp
-	strTmpDir.AppendFormat(szDir);
-	ioutils::CreateTempDir(szTmpDir);
+	ioutils::CreateTempDir(szDir);
+
+	// copy the temporary directory name into szTmpDir
+	CStringStatic strTmpDir(szTmpDir, GPOS_FILE_NAME_BUF_SIZE, szDir);
+	CStringStatic strTmpFile(szTmpFile, GPOS_FILE_NAME_BUF_SIZE);
 
 	// unique temporary file name
-	strTmpFile.AppendFormat(szTmpDir);
-	strTmpFile.AppendFormat(szFile);
+	strTmpFile.AppendFormat("%s%s", szDir, szFile);
 
 }
 

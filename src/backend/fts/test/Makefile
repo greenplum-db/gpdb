@@ -4,7 +4,7 @@ include $(top_builddir)/src/Makefile.global
 
 TARGETS=ftsmessagehandler ftsprobe
 
-include $(top_builddir)/src/backend/mock.mk
+include $(top_srcdir)/src/backend/mock.mk
 
 ftsmessagehandler.t: \
     $(MOCK_DIR)/backend/utils/error/assert_mock.o \

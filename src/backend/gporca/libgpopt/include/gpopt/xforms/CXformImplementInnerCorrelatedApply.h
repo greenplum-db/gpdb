@@ -12,6 +12,8 @@
 #define GPOPT_CXformImplementInnerCorrelatedApply_H
 
 #include "gpos/base.h"
+#include "gpopt/operators/CLogicalInnerCorrelatedApply.h"
+#include "gpopt/operators/CPhysicalCorrelatedInnerNLJoin.h"
 #include "gpopt/xforms/CXformImplementCorrelatedApply.h"
 
 namespace gpopt

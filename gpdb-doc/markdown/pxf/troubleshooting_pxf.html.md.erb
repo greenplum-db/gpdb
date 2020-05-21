@@ -356,3 +356,22 @@ PXF fragment metadata caching is enabled by default. To turn off fragment metada
 
 5. Restart PXF on each Greenplum Database segment host as described in [Restarting PXF](cfginitstart_pxf.html#restart_pxf).
 
+
+## <a id="pxf-tblpart"></a>About PXF External Table Child Partitions
+
+Greenplum Database supports partitioned tables, and permits exchanging a leaf child partition with a PXF external table.
+
+When you read from a partitioned Greenplum table where one or more partitions is a PXF external table and there is no data backing the external table path, PXF returns an error and the query fails. This default PXF behavior is not optimal in the partitioned table case; an empty child partition is valid and should not cause a query on the parent table to fail.
+
+The `IGNORE_MISSING_PATH` PXF custom option is a boolean that specifies the action to take when the external table path is missing or invalid. The default value is `false`, PXF returns an error when it encounters a missing path. If the external table is a child partition of a Greenplum table, you want PXF to ignore a missing path error, so set this option to `true`.
+
+For example, PXF ignores missing path errors generated from the following external table:
+
+``` sql
+CREATE EXTERNAL TABLE ext_part_87 (id int, some_date date)
+  LOCATION ('pxf://bucket/path/?PROFILE=s3:parquet&SERVER=s3&IGNORE_MISSING_PATH=true')
+FORMAT 'CUSTOM' (formatter = 'pxfwritable_import');
+```
+
+The `IGNORE_MISSING_PATH` custom option applies only to file-based profiles, including `*:text`, `*:parquet`, `*:avro`, `*:json`, `*:AvroSequenceFile`, and `*:SequenceFile`. This option is *not available* when the external table specifies the `HBase`, `Hive*`, or `Jdbc` profiles, or when reading from S3 using S3-Select.
+

@@ -75,15 +75,8 @@
 #define tuplesort_restorepos tuplesort_restorepos_pg
 
 /* these are in tuplesort_gp.h */
-#define tuplesort_begin_heap_file_readerwriter tuplesort_begin_heap_file_readerwriter_pg
 #define cdb_tuplesort_init cdb_tuplesort_init_pg
-#define tuplesort_begin_pos tuplesort_begin_pos_pg
-#define tuplesort_gettupleslot_pos tuplesort_gettupleslot_pos_pg
-#define tuplesort_flush tuplesort_flush_pg
 #define tuplesort_finalize_stats tuplesort_finalize_stats_pg
-#define tuplesort_rescan_pos tuplesort_rescan_pos_pg
-#define tuplesort_markpos_pos tuplesort_markpos_pos_pg
-#define tuplesort_restorepos_pos tuplesort_restorepos_pos_pg
 #define tuplesort_set_instrument tuplesort_set_instrument_pg
 
 #include "access/itup.h"
@@ -220,15 +213,9 @@ extern void tuplesort_restorepos(Tuplesortstate *state);
 #undef tuplesort_rescan
 #undef tuplesort_markpos
 #undef tuplesort_restorepos
-#undef tuplesort_begin_heap_file_readerwriter
 #undef cdb_tuplesort_init
-#undef tuplesort_begin_pos
-#undef tuplesort_gettupleslot_pos
 #undef tuplesort_flush
 #undef tuplesort_finalize_stats
-#undef tuplesort_rescan_pos
-#undef tuplesort_markpos_pos
-#undef tuplesort_restorepos_pos
 #undef tuplesort_set_instrument
 
 #include "tuplesort_mk.h"
@@ -507,41 +494,6 @@ switcheroo_tuplesort_restorepos(switcheroo_Tuplesortstate *state)
 		tuplesort_restorepos_pg((Tuplesortstate_pg *) state);
 }
 
-static inline switcheroo_Tuplesortstate *
-switcheroo_tuplesort_begin_heap_file_readerwriter(
-		struct ScanState * ss,
-		const char* rwfile_prefix, bool isWriter,
-		TupleDesc tupDesc,
-		int nkeys, AttrNumber *attNums,
-		Oid *sortOperators,
-		Oid *sortCollations,
-		bool *nullsFirstFlags,
-		int workMem, bool randomAccess)
-{
-	switcheroo_Tuplesortstate *state;
-
-	if (gp_enable_mk_sort)
-	{
-		state = (switcheroo_Tuplesortstate *)
-			tuplesort_begin_heap_file_readerwriter_mk(ss, rwfile_prefix, isWriter,
-													  tupDesc, nkeys, attNums,
-													  sortOperators, sortCollations,
-													  nullsFirstFlags,
-													  workMem, randomAccess);
-	}
-	else
-	{
-		state = (switcheroo_Tuplesortstate *)
-			tuplesort_begin_heap_file_readerwriter_pg(ss, rwfile_prefix, isWriter,
-													  tupDesc, nkeys, attNums,
-													  sortOperators, sortCollations,
-													  nullsFirstFlags,
-													  workMem, randomAccess);
-	}
-	state->is_mk_tuplesortstate = gp_enable_mk_sort;
-	return state;
-}
-
 static inline void
 switcheroo_cdb_tuplesort_init(switcheroo_Tuplesortstate *state, int unique,
 							  int sort_flags,
@@ -554,67 +506,12 @@ switcheroo_cdb_tuplesort_init(switcheroo_Tuplesortstate *state, int unique,
 }
 
 static inline void
-switcheroo_tuplesort_begin_pos(switcheroo_Tuplesortstate *state, TuplesortPos **pos)
-{
-	if (state->is_mk_tuplesortstate)
-		tuplesort_begin_pos_mk((Tuplesortstate_mk *) state, (TuplesortPos_mk **) pos);
-	else
-		tuplesort_begin_pos_pg((Tuplesortstate_pg *) state, pos);
-}
-
-static inline bool
-switcheroo_tuplesort_gettupleslot_pos(switcheroo_Tuplesortstate *state, TuplesortPos *pos,
-                          bool forward, TupleTableSlot *slot, Datum *abbrev, MemoryContext mcontext)
-{
-	if (state->is_mk_tuplesortstate)
-		return tuplesort_gettupleslot_pos_mk((Tuplesortstate_mk *) state, (TuplesortPos_mk *) pos, forward, slot, abbrev, mcontext);
-	else
-		return tuplesort_gettupleslot_pos_pg((Tuplesortstate_pg *) state, pos, forward, slot, abbrev, mcontext);
-}
-
-static inline void
-switcheroo_tuplesort_flush(switcheroo_Tuplesortstate *state)
-{
-	if (state->is_mk_tuplesortstate)
-		tuplesort_flush_mk((Tuplesortstate_mk *) state);
-	else
-		tuplesort_flush_pg((Tuplesortstate_pg *) state);
-}
-
-static inline void
 switcheroo_tuplesort_finalize_stats(switcheroo_Tuplesortstate *state)
 {
 	if (state->is_mk_tuplesortstate)
 		tuplesort_finalize_stats_mk((Tuplesortstate_mk *) state);
 	else
 		tuplesort_finalize_stats_pg((Tuplesortstate_pg *) state);
-}
-
-static inline void
-switcheroo_tuplesort_rescan_pos(switcheroo_Tuplesortstate *state, TuplesortPos *pos)
-{
-	if (state->is_mk_tuplesortstate)
-		tuplesort_rescan_pos_mk((Tuplesortstate_mk *) state, (TuplesortPos_mk *) pos);
-	else
-		tuplesort_rescan_pos_pg((Tuplesortstate_pg *) state, pos);
-}
-
-static inline void
-switcheroo_tuplesort_markpos_pos(switcheroo_Tuplesortstate *state, TuplesortPos *pos)
-{
-	if (state->is_mk_tuplesortstate)
-		tuplesort_markpos_pos_mk((Tuplesortstate_mk *) state, (TuplesortPos_mk *) pos);
-	else
-		tuplesort_markpos_pos_pg((Tuplesortstate_pg *) state, pos);
-}
-
-static inline void
-switcheroo_tuplesort_restorepos_pos(switcheroo_Tuplesortstate *state, TuplesortPos *pos)
-{
-	if (state->is_mk_tuplesortstate)
-		tuplesort_restorepos_pos_mk((Tuplesortstate_mk *) state, (TuplesortPos_mk *) pos);
-	else
-		tuplesort_restorepos_pos_pg((Tuplesortstate_pg *) state, pos);
 }
 
 static inline void
@@ -654,15 +551,8 @@ switcheroo_tuplesort_set_instrument(switcheroo_Tuplesortstate *state,
 #define tuplesort_restorepos switcheroo_tuplesort_restorepos
 
 /* these are in tuplesort_gp.h */
-#define tuplesort_begin_heap_file_readerwriter switcheroo_tuplesort_begin_heap_file_readerwriter
 #define cdb_tuplesort_init switcheroo_cdb_tuplesort_init
-#define tuplesort_begin_pos switcheroo_tuplesort_begin_pos
-#define tuplesort_gettupleslot_pos switcheroo_tuplesort_gettupleslot_pos
-#define tuplesort_flush switcheroo_tuplesort_flush
 #define tuplesort_finalize_stats switcheroo_tuplesort_finalize_stats
-#define tuplesort_rescan_pos switcheroo_tuplesort_rescan_pos
-#define tuplesort_markpos_pos switcheroo_tuplesort_markpos_pos
-#define tuplesort_restorepos_pos switcheroo_tuplesort_restorepos_pos
 #define tuplesort_set_instrument switcheroo_tuplesort_set_instrument
 
 #endif

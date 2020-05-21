@@ -22,6 +22,7 @@
 #include "storage/lock.h"
 #include "storage/spin.h"
 #include "storage/pg_sema.h"
+#include "storage/proclist_types.h"
 #include "utils/timestamp.h"
 #include "access/xlog.h"
 
@@ -139,6 +140,9 @@ struct PGPROC
 	uint8		lwWaitMode;		/* lwlock mode being waited for */
 	dlist_node	lwWaitLink;		/* position in LW lock wait list */
 
+	/* Support for condition variables. */
+	proclist_node	cvWaitLink;	/* position in CV wait list */
+
 	/* Info about lock the process is currently waiting for, if any. */
 	/* waitLock and waitProcLock are NULL if not currently waiting. */
 	LOCK	   *waitLock;		/* Lock object we're sleeping on ... */
@@ -193,8 +197,10 @@ struct PGPROC
 	 * Information for resource group
 	 */
 	void		*resSlot;	/* the resource group slot granted.
-   							 * NULL indicates the resource group is
+							 * NULL indicates the resource group is
 							 * locked for drop. */
+	void		*movetoResSlot; /* the resource group slot move to, valid only on QD */
+	Oid			movetoGroupId;  /* the resource group id move to */
 
 	/* Support for group XID clearing. */
 	/* true, if member of ProcArray group waiting for XID clear */
@@ -308,6 +314,9 @@ typedef struct PROC_HDR
 extern PGDLLIMPORT PROC_HDR *ProcGlobal;
 
 extern PGPROC *PreparedXactProcs;
+
+/* Accessor for PGPROC given a pgprocno. */
+#define GetPGProcByNumber(n) (&ProcGlobal->allProcs[(n)])
 
 /*
  * We set aside some extra PGPROC structures for auxiliary processes,

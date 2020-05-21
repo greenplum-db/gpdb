@@ -20,66 +20,7 @@
 #include "nodes/pg_list.h"
 
 /*
- * pg_exttable definition.
- */
-
-/* ----------------
- *		pg_exttable definition.  cpp turns this into
- *		typedef struct FormData_pg_exttable
- * ----------------
- */
-#define ExtTableRelationId	6040
-
-CATALOG(pg_exttable,6040) BKI_WITHOUT_OIDS
-{
-	Oid		reloid;				/* refers to this relation's oid in pg_class  */
-#ifdef CATALOG_VARLEN
-	text	urilocation[1];		/* array of URI strings */
-	text	execlocation[1];	/* array of ON locations */
-	char	fmttype;			/* 't' (text) or 'c' (csv) */
-	text	fmtopts;			/* the data format options */
-	text	options[1];			/* the array of external table options */
-	text	command;			/* the command string to EXECUTE */
-	int32	rejectlimit;		/* error count reject limit per segment */
-	char	rejectlimittype;	/* 'r' (rows) or 'p' (percent) */
-	char	logerrors;			/* 't' to log errors into file, 'f' to disable log error, 'p' means log errors persistently */
-	int32	encoding;			/* character encoding of this external table */
-	bool	writable;			/* 't' if writable, 'f' if readable */
-#endif
-} FormData_pg_exttable;
-
-/* GPDB added foreign key definitions for gpcheckcat. */
-FOREIGN_KEY(reloid REFERENCES pg_class(oid));
-
-/* ----------------
- *		Form_pg_exttable corresponds to a pointer to a tuple with
- *		the format of pg_exttable relation.
- * ----------------
- */
-typedef FormData_pg_exttable *Form_pg_exttable;
-
-
-/* ----------------
- *		compiler constants for pg_exttable
- * ----------------
- */
-#define Natts_pg_exttable					12
-#define Anum_pg_exttable_reloid				1
-#define Anum_pg_exttable_urilocation			2
-#define Anum_pg_exttable_execlocation			3
-#define Anum_pg_exttable_fmttype			4
-#define Anum_pg_exttable_fmtopts			5
-#define Anum_pg_exttable_options			6
-#define Anum_pg_exttable_command			7
-#define Anum_pg_exttable_rejectlimit		8
-#define Anum_pg_exttable_rejectlimittype	9
-#define Anum_pg_exttable_logerrors			10
-#define Anum_pg_exttable_encoding			11
-#define Anum_pg_exttable_writable			12
-
-
-/*
- * Descriptor of a single AO relation.
+ * Descriptor of a single external relation.
  * For now very similar to the catalog row itself but may change in time.
  */
 typedef struct ExtTableEntry
@@ -87,7 +28,6 @@ typedef struct ExtTableEntry
 	List*	urilocations;
 	List*	execlocations;
 	char	fmtcode;
-	char*	fmtopts;
 	List*	options;
 	char*	command;
 	int		rejectlimit;
@@ -98,30 +38,13 @@ typedef struct ExtTableEntry
     bool	isweb;		/* extra state, not cataloged */
 } ExtTableEntry;
 
-/* No initial contents. */
-
-extern void ValidateExtTableOptions(List *options);
-
-extern bool ExtractErrorLogPersistent(List **options);
-
-extern void InsertExtTableEntry(Oid 	tbloid,
-					bool 	iswritable,
-					bool	issreh,
-					char	formattype,
-					char	rejectlimittype,
-					char*	commandString,
-					int		rejectlimit,
-					char	logerrors,
-					int		encoding,
-					Datum	formatOptStr,
-					Datum	optionsStr,
-					Datum	locationExec,
-					Datum	locationUris);
+extern List * tokenizeLocationUris(char *locations);
 
 extern ExtTableEntry *GetExtTableEntry(Oid relid);
+
 extern ExtTableEntry *GetExtTableEntryIfExists(Oid relid);
 
-extern void RemoveExtTableEntry(Oid relid);
+extern ExtTableEntry *GetExtFromForeignTableOptions(List *ftoptons, Oid relid);
 
 #define fmttype_is_custom(c) (c == 'b')
 #define fmttype_is_text(c)   (c == 't')

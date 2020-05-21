@@ -23,7 +23,6 @@
 #include "gpopt/base/COrderSpec.h"
 #include "gpopt/base/CRewindabilitySpec.h"
 #include "gpopt/base/CDistributionSpecSingleton.h"
-#include "gpopt/cost/CCost.h"
 
 // number of plan properties requested during optimization, currently, there are 4 properties:
 // order, distribution, rewindability and partition propagation
@@ -39,7 +38,6 @@ namespace gpopt
 	// forward declaration
 	class CPartIndexMap;
 	class CTableDescriptor;
-	class CCostContext;
 	class CCTEMap;
 	
 	//---------------------------------------------------------------------------

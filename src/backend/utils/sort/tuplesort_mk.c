@@ -628,32 +628,6 @@ cdb_tuplesort_init_mk(Tuplesortstate_mk *state, int unique, int sort_flags,
 		state->mkctxt.unique = true;
 }
 
-/* make a copy of current state pos */
-void
-tuplesort_begin_pos_mk(Tuplesortstate_mk *st, TuplesortPos_mk ** pos)
-{
-	TuplesortPos_mk *st_pos;
-
-	Assert(st);
-
-	st_pos = (TuplesortPos_mk *) palloc(sizeof(TuplesortPos_mk));
-	memcpy(st_pos, &(st->pos), sizeof(TuplesortPos_mk));
-
-	if (st->result_tape)
-	{
-		st_pos->cur_work_tape = LogicalTapeSetDuplicateTape(st->tapeset, st->result_tape);
-	}
-	else
-	{
-		/*
-		 * sort did not finish completely due to QueryFinishPending so pretend
-		 * that there are no tuples
-		 */
-		st_pos->eof_reached = true;
-	}
-	*pos = st_pos;
-}
-
 void
 create_mksort_context(MKContext *mkctxt,
 					  int nkeys, AttrNumber *attNums,
@@ -798,86 +772,6 @@ tuplesort_begin_heap_mk(ScanState *ss,
 	MemoryContextSwitchTo(oldcontext);
 
 	return state;
-}
-
-Tuplesortstate_mk *
-tuplesort_begin_heap_file_readerwriter_mk(ScanState *ss,
-									const char *rwfile_prefix, bool isWriter,
-										  TupleDesc tupDesc,
-										  int nkeys, AttrNumber *attNums,
-										  Oid *sortOperators, Oid *sortCollations, bool *nullsFirstFlags,
-										  int workMem, bool randomAccess)
-{
-	Tuplesortstate_mk *state;
-	char statedump[MAXPGPATH];
-
-	Assert(randomAccess);
-
-	int len = snprintf(statedump, sizeof(statedump), "%s_sortstate",
-						rwfile_prefix);
-
-	if (len >= MAXPGPATH)
-		elog(ERROR, "could not generate temporary file name");
-
-	if (isWriter)
-	{
-		/*
-		 * Writer is a ordinary tuplesort, except the underlying buf file are
-		 * named by rwfile_prefix.
-		 */
-		state = tuplesort_begin_heap_mk(ss, tupDesc, nkeys, attNums,
-										sortOperators, sortCollations, nullsFirstFlags,
-										workMem, randomAccess);
-
-		state->tapeset_file_prefix = MemoryContextStrdup(state->sortcontext, rwfile_prefix);
-
-		state->work_set = workfile_mgr_create_set("SharedSort", rwfile_prefix);
-		state->tapeset_state_file = BufFileCreateNamedTemp(statedump,
-														   false /* interXact */,
-														   state->work_set);
-		Assert(state->tapeset_state_file != NULL);
-
-		return state;
-	}
-	else
-	{
-		/*
-		 * For reader, we really don't know anything about sort op, attNums,
-		 * etc. All the readers cares are the data on the logical tape set.
-		 * The state of the logical tape set has been dumped, so we load it
-		 * back and that is it.
-		 */
-		MemoryContext oldctxt;
-
-		state = tuplesort_begin_common(ss, workMem, randomAccess, false);
-		state->status = TSS_SORTEDONTAPE;
-		state->randomAccess = true;
-
-		state->readtup = readtup_heap;
-
-		oldctxt = MemoryContextSwitchTo(state->sortcontext);
-
-		state->tapeset_file_prefix = MemoryContextStrdup(state->sortcontext, rwfile_prefix);
-
-		state->tapeset_state_file = BufFileOpenNamedTemp(statedump,
-														 false /* interXact */);
-		BufFile *tapefile = BufFileOpenNamedTemp(rwfile_prefix,
-												 false /* interXact */);
-
-		state->tapeset = LoadLogicalTapeSetState(state->tapeset_state_file, tapefile);
-		state->currentRun = 0;
-		state->result_tape = LogicalTapeSetGetTape(state->tapeset, 0);
-
-		state->pos.eof_reached = false;
-		state->pos.markpos.tapepos.blkNum = 0;
-		state->pos.markpos.tapepos.offset = 0;
-		state->pos.markpos.mempos = 0;
-		state->pos.markpos_eof = false;
-		state->pos.cur_work_tape = NULL;
-
-		MemoryContextSwitchTo(oldctxt);
-		return state;
-	}
 }
 
 Tuplesortstate_mk *
@@ -1663,14 +1557,8 @@ bool
 tuplesort_gettupleslot_mk(Tuplesortstate_mk *state, bool forward,
 						  TupleTableSlot *slot, Datum *abbrev)
 {
-	return tuplesort_gettupleslot_pos_mk(state, &state->pos, forward, slot, abbrev, state->sortcontext);
-}
-
-bool
-tuplesort_gettupleslot_pos_mk(Tuplesortstate_mk *state, TuplesortPos_mk *pos,
-				  bool forward, TupleTableSlot *slot, Datum *abbrev, MemoryContext mcontext)
-{
-	MemoryContext oldcontext = MemoryContextSwitchTo(mcontext);
+	TuplesortPos_mk *pos = &state->pos;
+	MemoryContext oldcontext = MemoryContextSwitchTo(state->sortcontext);
 	MKEntry		e;
 
 	bool		should_free = false;
@@ -2540,13 +2428,15 @@ dumptuples_mk(Tuplesortstate_mk *state, bool alltuples)
 	}
 }
 
+
 /*
- * Put pos at the beginning of the tuplesort.  Create pos->work_tape if
- * necessary.
+ * tuplesort_rescan		- rewind and replay the scan
  */
+
 void
-tuplesort_rescan_pos_mk(Tuplesortstate_mk *state, TuplesortPos_mk *pos)
+tuplesort_rescan_mk(Tuplesortstate_mk *state)
 {
+	TuplesortPos_mk *pos = &state->pos;
 	MemoryContext oldcontext = MemoryContextSwitchTo(state->sortcontext);
 
 	Assert(state->randomAccess);
@@ -2598,21 +2488,12 @@ tuplesort_rescan_pos_mk(Tuplesortstate_mk *state, TuplesortPos_mk *pos)
 }
 
 /*
- * tuplesort_rescan		- rewind and replay the scan
- */
-
-void
-tuplesort_rescan_mk(Tuplesortstate_mk *state)
-{
-	tuplesort_rescan_pos_mk(state, &state->pos);
-}
-
-/*
  * tuplesort_markpos	- saves current position in the merged sort file
  */
 void
-tuplesort_markpos_pos_mk(Tuplesortstate_mk *state, TuplesortPos_mk *pos)
+tuplesort_markpos_mk(Tuplesortstate_mk *state)
 {
+	TuplesortPos_mk *pos = &state->pos;
 	LogicalTape *work_tape = NULL;
 	MemoryContext oldcontext = MemoryContextSwitchTo(state->sortcontext);
 
@@ -2638,19 +2519,14 @@ tuplesort_markpos_pos_mk(Tuplesortstate_mk *state, TuplesortPos_mk *pos)
 	MemoryContextSwitchTo(oldcontext);
 }
 
-void
-tuplesort_markpos_mk(Tuplesortstate_mk *state)
-{
-	tuplesort_markpos_pos_mk(state, &state->pos);
-}
-
 /*
  * tuplesort_restorepos - restores current position in merged sort file to
  *						  last saved position
  */
 void
-tuplesort_restorepos_pos_mk(Tuplesortstate_mk *state, TuplesortPos_mk *pos)
+tuplesort_restorepos_mk(Tuplesortstate_mk *state)
 {
+	TuplesortPos_mk *pos = &state->pos;
 	MemoryContext oldcontext = MemoryContextSwitchTo(state->sortcontext);
 
 	Assert(state->randomAccess);
@@ -2678,12 +2554,6 @@ tuplesort_restorepos_pos_mk(Tuplesortstate_mk *state, TuplesortPos_mk *pos)
 	}
 
 	MemoryContextSwitchTo(oldcontext);
-}
-
-void
-tuplesort_restorepos_mk(Tuplesortstate_mk *state)
-{
-	tuplesort_restorepos_pos_mk(state, &state->pos);
 }
 
 

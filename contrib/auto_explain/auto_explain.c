@@ -245,12 +245,6 @@ explain_ExecutorStart(QueryDesc *queryDesc, int eflags)
 		}
 	}
 
-	/* set eflag auto explain */
-	if (auto_explain_enabled())
-	{
-		eflags |= EXEC_FLAG_EXPLAIN;
-	}
-
 	if (prev_ExecutorStart)
 		prev_ExecutorStart(queryDesc, eflags);
 	else

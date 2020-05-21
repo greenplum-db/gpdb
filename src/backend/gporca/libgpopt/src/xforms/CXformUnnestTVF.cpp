@@ -14,7 +14,13 @@
 #include "gpopt/xforms/CXformUnnestTVF.h"
 #include "gpopt/xforms/CXformUtils.h"
 
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CLogicalCTEAnchor.h"
+#include "gpopt/operators/CLogicalCTEConsumer.h"
+#include "gpopt/operators/CLogicalLeftOuterCorrelatedApply.h"
+#include "gpopt/operators/CLogicalTVF.h"
+#include "gpopt/operators/CPatternMultiTree.h"
+#include "gpopt/operators/CScalarProjectElement.h"
 
 using namespace gpopt;
 

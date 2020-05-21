@@ -99,11 +99,10 @@ optimize_query(Query *parse, ParamListInfo boundParams)
 	glob->rewindPlanIDs = NULL;
 	glob->transientPlan = false;
 	glob->oneoffPlan = false;
-	glob->share.producers = NULL;
-	glob->share.producer_count = 0;
-	glob->share.sliceMarks = NULL;
+	glob->share.shared_inputs = NULL;
+	glob->share.shared_input_count = 0;
 	glob->share.motStack = NIL;
-	glob->share.qdShares = NIL;
+	glob->share.qdShares = NULL;
 	/* these will be filled in below, in the pre- and post-processing steps */
 	glob->finalrtable = NIL;
 	glob->subplans = NIL;
@@ -156,6 +155,9 @@ optimize_query(Query *parse, ParamListInfo boundParams)
 	 */
 	glob->finalrtable = result->rtable;
 	glob->subplans = result->subplans;
+	glob->subplan_sliceIds = result->subplan_sliceIds;
+	glob->numSlices = result->numSlices;
+	glob->slices = result->slices;
 
 	/*
 	 * Fake a subroot for each subplan, so that postprocessing steps don't
@@ -185,7 +187,7 @@ optimize_query(Query *parse, ParamListInfo boundParams)
 	collect_shareinput_producers(root, result->planTree);
 
 	/* Post-process ShareInputScan nodes */
-	(void) apply_shareinput_xslice(result->planTree, root, result->slices);
+	(void) apply_shareinput_xslice(result->planTree, root);
 
 	/*
 	 * Fix ShareInputScans for EXPLAIN, like in standard_planner(). For all

@@ -98,7 +98,7 @@ d = mkpath('config')
 if not os.path.exists(d):
     os.mkdir(d)
 
-def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',portNum='8081',database='reuse_gptest',host='localhost',formatOpts='text',file='data/external_file_01.txt',table='texttable',format='text',delimiter="'|'",escape='',quote='',truncate='False',log_errors=None, error_limit='0',error_table=None,externalSchema=None,staging_table=None,fast_match='false', encoding=None):
+def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',portNum='8081',database='reuse_gptest',host='localhost',formatOpts='text',file='data/external_file_01.txt',table='texttable',format='text',delimiter="'|'",escape='',quote='',truncate='False',log_errors=None, error_limit='0',error_table=None,externalSchema=None,staging_table=None,fast_match='false', encoding=None, preload=True):
 
     f = open(mkpath('config/config_file'),'w')
     f.write("VERSION: 1.0.0.1")
@@ -180,11 +180,12 @@ def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',
     if externalSchema:
         f.write("\n   EXTERNAL:")
         f.write("\n    - SCHEMA: "+externalSchema)
-    f.write("\n   PRELOAD:")
-    f.write("\n    - REUSE_TABLES: "+reuse_flag)
-    f.write("\n    - FAST_MATCH: "+fast_match)
-    if staging_table:
-        f.write("\n    - STAGING_TABLE: "+staging_table)
+    if preload:
+        f.write("\n   PRELOAD:")
+        f.write("\n    - REUSE_TABLES: "+reuse_flag)
+        f.write("\n    - FAST_MATCH: "+fast_match)
+        if staging_table:
+            f.write("\n    - STAGING_TABLE: "+staging_table)
     f.write("\n")
     f.close()
 
@@ -442,7 +443,7 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
 
     def test_00_gpload_formatOpts_setup(self):
         "0  gpload setup"
-        for num in range(1,38):
+        for num in range(1,39):
            f = open(mkpath('query%d.sql' % num),'w')
            f.write("\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n"+"\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n")
            f.close()
@@ -743,6 +744,14 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
         copy_data('external_file_04.txt','data_file.txt')
         write_config_file(mode='merge',reuse_flag='true',fast_match='false',file='data_file.txt',encoding='xxxx')
         self.doTest(37)
+
+    def test_38_gpload_without_preload(self):
+        "38  gpload insert mode without preload"
+        file = mkpath('setup.sql')
+        runfile(file)
+        copy_data('external_file_04.txt','data_file.txt')
+        write_config_file(mode='insert',reuse_flag='true',fast_match='false',file='data_file.txt',error_table="err_table",error_limit='1000',preload=False)
+        self.doTest(38)
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(GPLoad_FormatOpts_TestCase)

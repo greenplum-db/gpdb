@@ -13,9 +13,11 @@
 
 #include "gpos/base.h"
 #include "gpos/types.h"
+#include "gpos/common/CDynamicPtrArray.h"
+#include "gpos/common/CHashMap.h"
 #include "gpos/common/CRefCount.h"
-
-#include "gpopt/base/CRange.h"
+#include "gpopt/base/CColRef.h"
+#include "gpopt/base/CColRefSet.h"
 
 namespace gpopt
 {
@@ -24,7 +26,6 @@ namespace gpopt
 	// fwd declaration
 	class CExpression;
 	class CConstraint;
-	class CRange;
 
 	// constraint array
 	typedef CDynamicPtrArray<CConstraint, CleanupRelease> CConstraintArray;

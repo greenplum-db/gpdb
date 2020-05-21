@@ -285,10 +285,12 @@ select * from partlockt where i = 1;
 
 -- Known_opt_diff: MPP-20936
 select * from locktest_master where coalesce not like 'gp_%' and coalesce not like 'pg_%';
- coalesce  |      mode       | locktype |  node  
------------+-----------------+----------+--------
- partlockt | AccessShareLock | relation | master
-(1 row)
+        coalesce         |      mode       | locktype |  node  
+-------------------------+-----------------+----------+--------
+ partlockt               | AccessShareLock | relation | master
+ partlockt_1_prt_1       | AccessShareLock | relation | master
+ partlockt_1_prt_1_i_idx | AccessShareLock | relation | master
+(3 rows)
 
 select * from locktest_segments where coalesce not like 'gp_%' and coalesce not like 'pg_%';
         coalesce         |      mode       | locktype |   node    

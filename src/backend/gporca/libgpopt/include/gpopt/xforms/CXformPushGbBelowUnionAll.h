@@ -13,7 +13,7 @@
 
 #include "gpos/base.h"
 
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalUnionAll.h"
 #include "gpopt/xforms/CXformPushGbBelowSetOp.h"
 
 namespace gpopt

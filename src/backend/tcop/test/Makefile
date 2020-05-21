@@ -9,7 +9,7 @@ TARGETS=postgres
 # conflict resolution. If those hooks are needed then bring it back and then
 # enable the tests or delete the tests.
 
-include $(top_builddir)/src/backend/mock.mk
+include $(top_srcdir)/src/backend/mock.mk
 
 postgres.t: \
 	$(MOCK_DIR)/backend/commands/async_mock.o \

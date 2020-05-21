@@ -343,6 +343,7 @@ FORMAT 'csv'
 ;
 NOTICE:  HEADER means that each one of the data files has a header row
 SELECT count(*) FROM ext_lineitem;
+NOTICE:  HEADER means that each one of the data files has a header row
  count 
 -------
    255
@@ -716,6 +717,7 @@ FORMAT 'csv'
 ;
 NOTICE:  HEADER means that each one of the data files has a header row
 SELECT count(*) FROM ext_lineitem;
+NOTICE:  HEADER means that each one of the data files has a header row
    255
 
 DROP EXTERNAL TABLE ext_lineitem;

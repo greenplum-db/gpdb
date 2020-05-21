@@ -20,7 +20,6 @@
 #include "gpopt/base/CReqdPropPlan.h"
 #include "gpopt/base/CReqdPropRelational.h"
 #include "gpopt/base/CFunctionProp.h"
-#include "naucrates/statistics/CStatistics.h"
 
 namespace gpopt
 {

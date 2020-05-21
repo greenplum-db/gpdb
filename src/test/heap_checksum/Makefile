@@ -4,7 +4,7 @@ PG_CONFIG=pg_config
 REGRESS = setup heap_checksum_corruption
 REGRESS_OPTS = --init-file=../regress/init_file --load-extension=gp_inject_fault
 
-subdir = src/test/heap_checksum/
+subdir = src/test/heap_checksum
 top_builddir = ../../..
 
 include $(top_builddir)/src/Makefile.global

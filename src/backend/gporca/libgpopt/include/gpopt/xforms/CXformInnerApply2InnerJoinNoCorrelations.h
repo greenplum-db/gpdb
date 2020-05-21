@@ -14,7 +14,8 @@
 
 #include "gpos/base.h"
 
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalInnerApply.h"
+#include "gpopt/operators/CLogicalInnerJoin.h"
 #include "gpopt/xforms/CXformApply2Join.h"
 
 namespace gpopt

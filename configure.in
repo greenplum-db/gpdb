@@ -435,15 +435,8 @@ AC_PROG_CC([$pgac_cc_list])
 #
 # C++ compiler
 #
-#
-# AC_PROG_CXX will add "-g -O2" to CXXFLAGS, if CXXFLAGS was not already set.
-# We don't want that, because we derive CXXFLAGS from CFLAGS later on. Set
-# CXXFLAGS to an empty string explicitly before invoking AC_PROG_CXX, to
-# avoid that.
-ac_save_CXXFLAGS=$CXXFLAGS
-CXXFLAGS=""
+
 AC_PROG_CXX
-CXXFLAGS=$ac_save_CXXFLAGS
 
 # Check if it's Intel's compiler, which (usually) pretends to be gcc,
 # but has idiosyncrasies of its own.  We assume icc will define
@@ -461,6 +454,7 @@ choke me
 AC_SUBST(SUN_STUDIO_CC)
 
 unset CFLAGS
+unset CXXFLAGS
 
 #
 # Read the template
@@ -486,6 +480,21 @@ else
   # if the user selected debug mode, don't use -O
   if test "$enable_debug" != yes; then
     CFLAGS="-O"
+  fi
+fi
+
+if test "$ac_env_CXXFLAGS_set" = set; then
+  CXXFLAGS=$ac_env_CXXFLAGS_value
+elif test "${CXXFLAGS+set}" = set; then
+  : # (keep what template set)
+elif test "$enable_coverage" = yes; then
+  : # no optimization by default
+elif test "$GCC" = yes; then
+  CXXFLAGS="-O3"
+else
+  # if the user selected debug mode, don't use -O
+  if test "$enable_debug" != yes; then
+    CXXFLAGS="-O"
   fi
 fi
 
@@ -592,6 +601,8 @@ AC_SUBST(PG_CRC32C_OBJS)
 # CFLAGS we determined above will be added back at the end
 user_CFLAGS=$CFLAGS
 CFLAGS=""
+user_CXXFLAGS=$CXXFLAGS
+CXXFLAGS=""
 
 # set CFLAGS_VECTOR from the environment, if available
 if test "$ac_env_CFLAGS_VECTOR_set" = set; then
@@ -605,19 +616,26 @@ fi
 
 if test "$GCC" = yes -a "$ICC" = no; then
   CFLAGS="-Wall -Wmissing-prototypes -Wpointer-arith"
+  CXXFLAGS="-Wall -Wpointer-arith"
   # These work in some but not all gcc versions
   # GPDB code is full of declarations after statement.
   #PGAC_PROG_CC_CFLAGS_OPT([-Wdeclaration-after-statement])
   PGAC_PROG_CC_CFLAGS_OPT([-Wendif-labels])
+  PGAC_PROG_CXX_CXXFLAGS_OPT([-Wendif-labels])
   PGAC_PROG_CC_CFLAGS_OPT([-Wmissing-format-attribute])
+  PGAC_PROG_CXX_CXXFLAGS_OPT([-Wmissing-format-attribute])
   # This was included in -Wall/-Wformat in older GCC versions
   PGAC_PROG_CC_CFLAGS_OPT([-Wformat-security])
+  PGAC_PROG_CXX_CXXFLAGS_OPT([-Wformat-security])
   # Disable strict-aliasing rules; needed for gcc 3.3+
   PGAC_PROG_CC_CFLAGS_OPT([-fno-strict-aliasing])
+  PGAC_PROG_CXX_CXXFLAGS_OPT([-fno-strict-aliasing])
   # Disable optimizations that assume no overflow; needed for gcc 4.3+
   PGAC_PROG_CC_CFLAGS_OPT([-fwrapv])
+  PGAC_PROG_CXX_CXXFLAGS_OPT([-fwrapv])
   # Disable FP optimizations that cause various errors on gcc 4.5+ or maybe 4.6+
   PGAC_PROG_CC_CFLAGS_OPT([-fexcess-precision=standard])
+  PGAC_PROG_CXX_CXXFLAGS_OPT([-fexcess-precision=standard])
 
   # Silence compiler warnings about variables that are set, but otherwise
   # unused. All of these warnings have been fixed in PostgreSQL, but there is
@@ -654,6 +672,18 @@ if test "$GCC" = yes -a "$ICC" = no; then
   PGAC_PROG_CC_VAR_OPT(NOT_THE_CFLAGS, [-Wstringop-truncation])
   if test -n "$NOT_THE_CFLAGS"; then
     CFLAGS="$CFLAGS -Wno-stringop-truncation"
+  fi
+  # GPDB_12_MERGE_FIXME: there's a chance we can rearrange our #include's to
+  # avoid the specific headers that use "register" once we merge with Postgres
+  # 12
+
+  # Greenplum's ORCA translator includes a lot of C headers, and Clang will
+  # warn us about the use of the "register" keyword in Postgres' inline
+  # functions which we can do nothing about. Silence it.
+  NOT_THE_CXXFLAGS=""
+  PGAC_PROG_CXX_VAR_OPT(NOT_THE_CXXFLAGS, [-Wdeprecated-register])
+  if test -n "$NOT_THE_CXXFLAGS"; then
+    CXXFLAGS="$CXXFLAGS -Wno-deprecated-register"
   fi
 elif test "$ICC" = yes; then
   # Intel's compiler has a bug/misoptimization in checking for
@@ -720,6 +750,7 @@ fi
 # user-specified flags (if any) at the end.  This lets users override
 # the automatic additions.
 CFLAGS="$CFLAGS $user_CFLAGS"
+CXXFLAGS="$CXXFLAGS $user_CXXFLAGS"
 
 # Check if the compiler still works with the final flag settings
 AC_MSG_CHECKING([whether the C compiler still works])
@@ -734,27 +765,6 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [@%:@ifdef __FAST_MATH__
 choke me
 @%:@endif])], [], [AC_MSG_ERROR([do not put -ffast-math in CFLAGS])])
 fi
-
-# Since PostgreSQL is written in pure C, all the tests in this file
-# add necessary flags to CFLAGS only. We have some C++ code in
-# src/backend/gpopt, so we must also configure CXXFLAGS in the same way.
-# However, some CFLAGS might not be applicable to C++, so we cannot just
-# use CFLAGS as is with the C++ compiler. Derive CXXFLAGS from CFLAGS,
-# by picking those CFLAGS that also work with the C++ compiler.
-#
-# This assumes that the C++ compiler is roughly compatible with the C
-# compiler, and accepts the same flags. While we test that each flag works
-# with the C++ compiler, we would miss any flags that we would need for
-# the C++ compiler, but not for the C compiler. For example, if you tried
-# to use CC=clang and CXX=g++, we would not know to apply flags that are
-# needed for g++, but not by clang. So don't mix and match compiler
-# families!
-
-# Loop over all options in CFLAGS, and check if they also work with CXX.
-# Add to CXXFLAGS those that do.
-for cflag in $CFLAGS; do
-  PGAC_PROG_CXX_CXXFLAGS_OPT($cflag)
-done
 
 # Defend against clang being used on x86-32 without SSE2 enabled.  As current
 # versions of clang do not understand -fexcess-precision=standard, the use of
@@ -2768,13 +2778,6 @@ if test "$GCC" = yes -a "$ICC" = no; then
   PGAC_PROG_CC_CFLAGS_OPT([-Werror=implicit-function-declaration])
 fi
 
-# Begin output steps
-
-AC_MSG_NOTICE([using CFLAGS=$CFLAGS])
-AC_MSG_NOTICE([using CPPFLAGS=$CPPFLAGS])
-AC_MSG_NOTICE([using LDFLAGS=$LDFLAGS])
-AC_MSG_NOTICE([using LIBS=$LIBS])
-
 [BLD_ARCH=`echo $BLD_ARCH`]
 AC_SUBST(BLD_ARCH)
 
@@ -2859,8 +2862,10 @@ AC_DEFINE_UNQUOTED(GP_VERSION_NUM, $GP_VERSION_NUM, [Greenplum version as a numb
 
 AC_MSG_NOTICE([using compiler=$cc_string])
 AC_MSG_NOTICE([using CFLAGS=$CFLAGS])
+AC_MSG_NOTICE([using CXXFLAGS=$CXXFLAGS])
 AC_MSG_NOTICE([using CPPFLAGS=$CPPFLAGS])
 AC_MSG_NOTICE([using LDFLAGS=$LDFLAGS])
+AC_MSG_NOTICE([using LIBS=$LIBS])
 
 # prepare build tree if outside source tree
 # Note 1: test -ef might not exist, but it's more reliable than `pwd`.

@@ -496,7 +496,7 @@ SELECT
     m.n_tup_hot_upd,
     m.n_live_tup,
     m.n_dead_tup,
-    s.n_mod_since_analyze,
+    m.n_mod_since_analyze,
     s.last_vacuum,
     s.last_autovacuum,
     s.last_analyze,
@@ -936,6 +936,8 @@ CREATE VIEW pg_resqueue_status AS
 			ON (s.queueid = q.oid);
 			
 -- External table views
+CREATE VIEW pg_exttable AS
+    SELECT * FROM pg_exttable();
 
 CREATE VIEW pg_max_external_files AS
     SELECT   address::name as hostname, count(*) as maxfiles

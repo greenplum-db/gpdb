@@ -23,25 +23,24 @@ class GPCatalogException(Exception):
 
 # Hard coded since "master only" is not defined in the catalog
 MASTER_ONLY_TABLES = [
-    'gp_segment_configuration',
     'gp_configuration_history',
     'gp_segment_configuration',
+    'pg_auth_time_constraint',
     'pg_description',
     'pg_partition',
+    'pg_partition_encoding',
     'pg_partition_rule',
     'pg_shdescription',
     'pg_stat_last_operation',
     'pg_stat_last_shoperation',
     'pg_statistic',
-    'pg_partition_encoding',
-    'pg_auth_time_constraint',
     ]
 
 # Hard coded tables that have different values on every segment
 SEGMENT_LOCAL_TABLES = [
+    'gp_fastsequence', # AO segment row id allocations
     'gp_id',
     'pg_shdepend', # (not if we fix oid inconsistencies)
-    'gp_fastsequence', # AO segment row id allocations
     'pg_statistic',
     ]
 

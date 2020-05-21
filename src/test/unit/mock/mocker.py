@@ -189,6 +189,10 @@ class FuncSignature(object):
         return argtype[-1] == '*'
 
     def is_variadic(self, arg):
+        # This returns true only for "...", not for va_list type arg.
+        # Otherwise, in format_args() the va_list type of arg would get
+        # generated as '...', so the function's definition would conflict with
+        # the function prototype which is declared using the 'va_list' type.
         return arg == FuncSignature.Variadic
 
     def parse_args(self, arg_string):
@@ -199,7 +203,8 @@ class FuncSignature(object):
 
         for (i, arg) in enumerate(arg_string.split(',')):
             arg = arg.strip()
-            # TODO: needs work
+            # TODO: needs work. Also, if arg is va_list, we don't treat it as
+            # variadic. Check comments in is_variadic().
             if arg == '...':
                 args.append(FuncSignature.Variadic)
                 continue
@@ -245,6 +250,10 @@ class FuncSignature(object):
             if self.is_variadic(arg):
                 continue
             argtype = arg[0]
+            # 'va_list' needs to be explicitly checked because is_variadic()
+            # returns true only for '...', not for va_list.
+            if argtype == 'va_list':
+                continue
             argname = arg[1]
             ref = '&' if special.ByValStructs.has(argtype) else ''
             argname = subscript.sub('', argname)

@@ -1995,6 +1995,14 @@ set_subquery_pathlist(PlannerInfo *root, RelOptInfo *rel,
 			(subquery->limitCount || subquery->limitOffset))
 			config->force_singleQE = true;
 
+		/*
+		 * Greenplum specific behavior:
+		 * config->may_rescan is used to guide if
+		 * we should add materialize path over motion
+		 * in the left tree of a join.
+		 */
+		config->may_rescan = config->may_rescan || !bms_is_empty(required_outer);
+
 		/* plan_params should not be in use in current query level */
 		Assert(root->plan_params == NIL);
 

@@ -12,7 +12,10 @@
 #include "gpos/base.h"
 
 #include "gpopt/base/CUtils.h"
-#include "gpopt/operators/ops.h"
+#include "gpopt/operators/CLogicalConstTableGet.h"
+#include "gpopt/operators/CLogicalLeftOuterJoin.h"
+#include "gpopt/operators/CPatternLeaf.h"
+#include "gpopt/operators/CPatternTree.h"
 #include "gpopt/xforms/CXformSimplifyLeftOuterJoin.h"
 
 using namespace gpmd;

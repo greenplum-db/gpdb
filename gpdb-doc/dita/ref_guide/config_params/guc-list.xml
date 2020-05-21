@@ -6181,7 +6181,7 @@
           </thead>
           <tbody>
             <row>
-              <entry colname="col1">10-<i>n</i></entry>
+              <entry colname="col1">10 - 262143</entry>
               <entry colname="col2">250 on master<p>750 on segments</p></entry>
               <entry colname="col3">local<p>system</p><p>restart</p></entry>
             </row>
@@ -8246,8 +8246,16 @@
   <topic id="ssl_ciphers">
     <title>ssl_ciphers</title>
     <body>
-      <p>Specifies a list of SSL ciphers that are allowed to be used on secure connections. See the
-        openssl manual page for a list of supported ciphers. </p>
+      <p>Specifies a list of SSL ciphers that are allowed to be used on secure connections.
+          <codeph>ssl_ciphers</codeph>
+        <i>overrides</i> any ciphers string specified in <codeph>/etc/openssl.cnf</codeph>. The
+        default value <codeph>ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH</codeph> enables all ciphers except
+        for ADH, LOW, EXP, and MD5 ciphers, and prioritizes ciphers by their strength. </p>
+      <note>With TLS 1.2 some ciphers in MEDIUM and HIGH strength still use NULL encryption (no
+        encryption for transport), which the default <codeph>ssl_ciphers</codeph> string allows. To
+        bypass NULL ciphers with TLS 1.2 use a string such as
+        <codeph>TLSv1.2:!eNULL:!aNULL</codeph>.</note>
+      <p>See the openssl manual page for a list of supported ciphers.</p>
       <table id="ssl_ciphers_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -8263,7 +8271,7 @@
           <tbody>
             <row>
               <entry colname="col1">string</entry>
-              <entry colname="col2">ALL</entry>
+              <entry colname="col2">ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH</entry>
               <entry colname="col3">master<p>system</p><p>restart</p></entry>
             </row>
           </tbody>

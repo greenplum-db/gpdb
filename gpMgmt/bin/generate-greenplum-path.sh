@@ -40,20 +40,9 @@ if [ -h \${GPHOME}/../greenplum-db ]; then
 fi
 EOF
 
-cat <<EOF
-#setup PYTHONHOME
-if [ -x \$GPHOME/ext/python/bin/python ]; then
-    PYTHONHOME="\$GPHOME/ext/python"
-    export PYTHONHOME
-fi
-EOF
 
 #setup PYTHONPATH
-if [ "x${PYTHONPATH}" == "x" ]; then
-    PYTHONPATH="\$GPHOME/lib/python"
-else
-    PYTHONPATH="\$GPHOME/lib/python:${PYTHONPATH}"
-fi
+PYTHONPATH="\$GPHOME/lib/python:${PYTHONPATH}"
 cat <<EOF
 PYTHONPATH=${PYTHONPATH}
 EOF
@@ -61,10 +50,6 @@ EOF
 GP_BIN_PATH=\$GPHOME/bin
 GP_LIB_PATH=\$GPHOME/lib
 
-if [ -n "$PYTHONHOME" ]; then
-    GP_BIN_PATH=${GP_BIN_PATH}:\$PYTHONHOME/bin
-    GP_LIB_PATH=${GP_LIB_PATH}:\$PYTHONHOME/lib
-fi
 cat <<EOF
 PATH=${GP_BIN_PATH}:\$PATH
 EOF

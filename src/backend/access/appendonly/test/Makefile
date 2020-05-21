@@ -5,7 +5,7 @@ include $(top_builddir)/src/Makefile.global
 TARGETS=aomd appendonly_visimap appendonly_visimap_entry \
 	aomd_filehandler aosegfiles
 
-include $(top_builddir)/src/backend/mock.mk
+include $(top_srcdir)/src/backend/mock.mk
 
 appendonly_visimap.t: \
 	$(MOCK_DIR)/backend/access/appendonly/appendonly_visimap_entry_mock.o \

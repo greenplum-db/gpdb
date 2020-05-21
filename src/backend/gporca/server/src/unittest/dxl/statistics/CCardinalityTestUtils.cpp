@@ -13,6 +13,8 @@
 #define __STDC_CONSTANT_MACROS
 #endif
 
+#include "gpos/io/COstreamString.h"
+
 #include "naucrates/statistics/CPoint.h"
 #include "naucrates/statistics/CBucket.h"
 #include "naucrates/statistics/CHistogram.h"

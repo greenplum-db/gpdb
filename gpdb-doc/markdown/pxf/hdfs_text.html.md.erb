@@ -34,7 +34,7 @@ Use the `hdfs:text` profile when you read plain text delimited or .csv data wher
 ``` sql
 CREATE EXTERNAL TABLE <table_name> 
     ( <column_name> <data_type> [, ...] | LIKE <other_table> )
-LOCATION ('pxf://<path-to-hdfs-file>?PROFILE=hdfs:text[&SERVER=<server_name>]')
+LOCATION ('pxf://<path-to-hdfs-file>?PROFILE=hdfs:text[&SERVER=<server_name>][&IGNORE_MISSING_PATH=<boolean>]')
 FORMAT '[TEXT|CSV]' (delimiter[=|<space>][E]'<delim_value>');
 ```
 
@@ -45,6 +45,7 @@ The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guid
 | \<path&#8209;to&#8209;hdfs&#8209;file\>    | The absolute path to the directory or file in the HDFS data store. |
 | PROFILE    | The `PROFILE` keyword must specify `hdfs:text`. |
 | SERVER=\<server_name\>    | The named server configuration that PXF uses to access the data. Optional; PXF uses the `default` server if not specified. |
+| IGNORE_MISSING_PATH=\<boolean\> | Specify the action to take when \<path-to-hdfs-file\> is missing or invalid. The default value is `false`, PXF returns an error in this situation. When the value is `true`, PXF ignores missing path errors and returns an empty fragment. |
 | FORMAT | Use `FORMAT` `'TEXT'` when \<path-to-hdfs-file\> references plain text delimited data.<br> Use `FORMAT` `'CSV'`  when \<path-to-hdfs-file\> references comma-separated value data.  |
 | delimiter    | The delimiter character in the data. For `FORMAT` `'CSV'`, the default \<delim_value\> is a comma `,`. Preface the \<delim_value\> with an `E` when the value is an escape sequence. Examples: `(delimiter=E'\t')`, `(delimiter ':')`. |
 
@@ -131,7 +132,7 @@ Use the `hdfs:text:multi` profile to read plain text data with delimited single-
 ``` sql
 CREATE EXTERNAL TABLE <table_name>
     ( <column_name> <data_type> [, ...] | LIKE <other_table> )
-LOCATION ('pxf://<path-to-hdfs-file>?PROFILE=hdfs:text:multi[&SERVER=<server_name>]')
+LOCATION ('pxf://<path-to-hdfs-file>?PROFILE=hdfs:text:multi[&SERVER=<server_name>][&IGNORE_MISSING_PATH=<boolean>]')
 FORMAT '[TEXT|CSV]' (delimiter[=|<space>][E]'<delim_value>');
 ```
 
@@ -142,6 +143,7 @@ The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guid
 | \<path&#8209;to&#8209;hdfs&#8209;file\>    | The absolute path to the directory or file in the HDFS data store. |
 | PROFILE    | The `PROFILE` keyword must specify `hdfs:text:multi`. |
 | SERVER=\<server_name\>    | The named server configuration that PXF uses to access the data. Optional; PXF uses the `default` server if not specified. |
+| IGNORE_MISSING_PATH=\<boolean\> | Specify the action to take when \<path-to-hdfs-file\> is missing or invalid. The default value is `false`, PXF returns an error in this situation. When the value is `true`, PXF ignores missing path errors and returns an empty fragment. |
 | FORMAT | Use `FORMAT` `'TEXT'` when \<path-to-hdfs-file\> references plain text delimited data.<br> Use `FORMAT` `'CSV'` when \<path-to-hdfs-file\> references comma-separated value data.  |
 | delimiter    | The delimiter character in the data. For `FORMAT` `'CSV'`, the default \<delim_value\> is a comma `,`. Preface the \<delim_value\> with an `E` when the value is an escape sequence. Examples: `(delimiter=E'\t')`, `(delimiter ':')`. |
 
