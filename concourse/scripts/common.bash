@@ -84,9 +84,9 @@ function install_python_requirements_on_multi_host() {
     pip install --user -r ${requirements_txt}
     while read -r host; do
        # if expanded Python dependencies cache exists, copy to other hosts
-       if [ -d $HOME .cache/pip ]; then
+       if [ -d $HOME/.cache/pip ]; then
            ssh "$host" mkdir -p .cache
-           scp -r .cache/pip "$host":/tmp/requirements.txt
+           scp -r .cache/pip "$host":.cache
        fi
        scp ${requirements_txt} "$host":/tmp/requirements.txt
        ssh $host pip install --user -r /tmp/requirements.txt
