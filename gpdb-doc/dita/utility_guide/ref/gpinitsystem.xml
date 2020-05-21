@@ -438,6 +438,13 @@ MIRROR_PORT_BASE = 7000</codeblock>
                         specify, use one of the following
                         formats:<codeblock><varname>hostname</varname>~<varname>address</varname>~<varname>port</varname>~<varname>data_directory</varname>/<varname>seg_prefix&lt;segment_id></varname>~<varname>dbid</varname>~<varname>content_id</varname></codeblock>or
                         <codeblock><varname>host</varname>~<varname>port</varname>~<varname>data_directory</varname>/<varname>seg_prefix&lt;segment_id></varname>~<varname>dbid</varname>~<varname>content_id</varname></codeblock></pd>
+                    <pd>The first format populates the <codeph>hostname</codeph> and
+                            <codeph>address</codeph> fields in
+                            <codeph>gp_segment_configuration</codeph> catalog with the
+                            <i>hostname</i> and <i>address</i> values provided in the input
+                        configuration file. The second format populates <codeph>hostname</codeph>
+                        and <codeph>address</codeph> with the same value, derived from
+                        <i>host</i>.</pd>
                     <pd>The Greenplum Database master always uses the value -1 for the segment ID
                         and content ID. For
                         example:<codeblock>QD_PRIMARY_ARRAY=127.0.0.1~5432~/gpmaster/gpsne-1~1~-1~0 
@@ -449,13 +456,6 @@ declare -a MIRROR_ARRAY=(
 localhost~127.0.0.1~50000~/gpmirror1/gpsne0~4~0~51000
 localhost~127.0.0.1~50001~/gpmirror2/gpsne1~5~1~51001 
 )</codeblock></pd>
-                    <pd>The first format populates the <codeph>hostname</codeph> and
-                            <codeph>address</codeph> fields in
-                            <codeph>gp_segment_configuration</codeph> catalog with the
-                            <i>hostname</i> and <i>address</i> values provided in the input
-                        configuration file. The second format populates <codeph>hostname</codeph>
-                        and <codeph>address</codeph> with the same value, derived from
-                        <i>host</i>.</pd>
                     <pd>You can use the <codeph>gpinitsystem</codeph>
                         <codeph>-O <varname>output_configuration_file</varname></codeph> to populate
                             <codeph>QD_PRIMARY_ARRAY</codeph>, <codeph>PRIMARY_ARRAY</codeph>,
