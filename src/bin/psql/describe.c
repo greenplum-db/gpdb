@@ -4026,7 +4026,7 @@ listTables(const char *tabtypes, const char *pattern, bool verbose, bool showSys
     if (isGPDB())   /* GPDB? */
     {
 	appendPQExpBuffer(&buf, "AND c.relstorage IN (");
-	if (showTables || showIndexes || showSeq || (showSystem && showTables))
+	if (showTables || showIndexes || showSeq || (showSystem && showTables) || showMatViews)
 		appendPQExpBuffer(&buf, "'h', 'a', 'c',");
 	if (showExternal)
 		appendPQExpBuffer(&buf, "'x',");
