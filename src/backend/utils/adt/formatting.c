@@ -1940,17 +1940,6 @@ asc_initcap(const char *buff, size_t nbytes)
 	return result;
 }
 
-char *
-linenumber_atoi(char *buffer, size_t bufsz, int64 linenumber)
-{
-	if (linenumber < 0)
-		snprintf(buffer, bufsz, "%s", "N/A");
-	else
-		snprintf(buffer, bufsz, INT64_FORMAT, linenumber);
-
-	return buffer;
-}
-
 /* convenience routines for when the input is null-terminated */
 
 static char *

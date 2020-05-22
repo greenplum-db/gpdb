@@ -52,7 +52,6 @@
 #include "nodes/makefuncs.h"
 #include "pgstat.h"
 #include "parser/parse_func.h"
-#include "utils/formatting.h"
 #include "utils/relcache.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
@@ -1404,6 +1403,17 @@ external_senddata(URL_FILE *extfile, CopyState pstate)
 					(errcode_for_file_access(),
 					 errmsg("could not write to external resource: %m")));
 	}
+}
+
+static char *
+linenumber_atoi(char *buffer, size_t bufsz, int64 linenumber)
+{
+	if (linenumber < 0)
+		snprintf(buffer, bufsz, "%s", "N/A");
+	else
+		snprintf(buffer, bufsz, INT64_FORMAT, linenumber);
+
+	return buffer;
 }
 
 /*
