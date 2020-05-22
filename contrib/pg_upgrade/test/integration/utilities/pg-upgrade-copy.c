@@ -1,3 +1,5 @@
+#include "postgres_fe.h"
+#include "greenplum/old_tablespace_file_contents.h"
 /*
  * Implements
  */
