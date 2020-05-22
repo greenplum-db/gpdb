@@ -426,6 +426,11 @@ bool		gp_enable_mk_sort = true;
 /* Enable GDD */
 bool		gp_enable_global_deadlock_detector = false;
 
+/* dxid wraparound */
+bool gp_enable_dxid_wraparound = true;
+int gp_dxid_warn_limit;
+int gp_dxid_stop_limit;
+
 static const struct config_enum_entry gp_log_format_options[] = {
 	{"text", 0},
 	{"csv", 1},
@@ -2878,6 +2883,18 @@ struct config_bool ConfigureNamesBool_gp[] =
 		false,
 		NULL, NULL, NULL
 	},
+
+	{
+		{"gp_enable_dxid_wraparound", PGC_POSTMASTER, RESOURCES,
+			gettext_noop("Enable DXID wraparound."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_enable_dxid_wraparound,
+		true,
+		NULL, NULL, NULL
+	},
+
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, false, NULL, NULL
@@ -4032,6 +4049,28 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&gp_max_slices,
 		0, 0, INT_MAX, NULL, NULL
+	},
+
+	{
+		{"gp_dxid_stop_limit", PGC_POSTMASTER, RESOURCES,
+			gettext_noop("Sets the number of DXIDs before DXID wraparound at which we will no longer allow the system to be started."),
+			NULL,
+			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
+		},
+		&gp_dxid_stop_limit,
+		10000, 0, 100000000,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_dxid_warn_limit", PGC_POSTMASTER, RESOURCES,
+			gettext_noop("Sets the number of DXIDs before gp_dxid_stop_limit at which we will begin emitting warnings regarding XID wraparound."),
+			NULL,
+			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
+		},
+		&gp_dxid_warn_limit,
+		10000000, 10000000, 100000000,
+		NULL, NULL, NULL
 	},
 
 	/* End-of-list marker */

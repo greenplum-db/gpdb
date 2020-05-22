@@ -425,7 +425,11 @@ ProcArrayEndGxact(TMGXACT *gxact)
 
 	if (InvalidDistributedTransactionId != gxid &&
 		TransactionIdPrecedes(ShmemVariableCache->latestCompletedDxid, gxid))
+	{
 		ShmemVariableCache->latestCompletedDxid = gxid;
+		if (gp_enable_dxid_wraparound)
+			ShmemVariableCache->latestCompletedDxidTs = gxact->distribTimeStamp;
+	}
 }
 
 /*
@@ -1964,7 +1968,7 @@ DistributedSnapshotMappedEntry_Compare(const void *p1, const void *p2)
 
 	if (distribXid1 == distribXid2)
 		return 0;
-	else if (distribXid1 > distribXid2)
+	else if (DistributedTransactionIdFollows(distribXid1, distribXid2))
 		return 1;
 	else
 		return -1;
@@ -2024,11 +2028,11 @@ CreateDistributedSnapshot(DistributedSnapshot *ds)
 		 * Include the current distributed transaction in the min/max
 		 * calculation.
 		 */
-		if (gxid < xmin)
+		if (DistributedTransactionIdPrecedes(gxid, xmin))
 		{
 			xmin = gxid;
 		}
-		if (gxid > xmax)
+		if (DistributedTransactionIdFollows(gxid, xmax))
 		{
 			xmax = gxid;
 		}
@@ -2050,14 +2054,20 @@ CreateDistributedSnapshot(DistributedSnapshot *ds)
 	 * dxid in all snapshots but update it to also include actual process
 	 * dxids.
 	 */
-	if (xmin < globalXminDistributedSnapshots)
+	if (DistributedTransactionIdPrecedes(xmin, globalXminDistributedSnapshots))
 		globalXminDistributedSnapshots = xmin;
+
+	if (gp_enable_dxid_wraparound)
+		pg_atomic_write_u32((pg_atomic_uint32 *) shmGlobalOldestDxmin, globalXminDistributedSnapshots);
 
 	/*
 	 * Copy the information we just captured under lock and then sorted into
 	 * the distributed snapshot.
 	 */
-	ds->distribTransactionTimeStamp = getDtmStartTime();
+	if (!gp_enable_dxid_wraparound)
+		ds->distribTransactionTimeStamp = getDtmStartTime();
+	else
+		ds->distribTransactionTimeStamp = getDxidTimestamp(xmax, ShmemVariableCache->latestCompletedDxid, ShmemVariableCache->latestCompletedDxidTs);
 	ds->xminAllDistributedSnapshots = globalXminDistributedSnapshots;
 	ds->distribSnapshotId = distribSnapshotId;
 	ds->xmin = xmin;
@@ -2460,9 +2470,21 @@ GetSnapshotData(Snapshot snapshot, DtxContext distributedTransactionContext)
 	if (!IS_QUERY_DISPATCHER())
 	{
 		if (snapshot->haveDistribSnapshot)
-			globalxmin = DistributedLog_AdvanceOldestXmin(globalxmin,
-														  ds->distribTransactionTimeStamp,
-														  ds->xminAllDistributedSnapshots);
+		{
+			if (!gp_enable_dxid_wraparound)
+				globalxmin = DistributedLog_AdvanceOldestXmin(globalxmin,
+															  ds->distribTransactionTimeStamp,
+															  ds->xminAllDistributedSnapshots);
+			else
+			{
+				DistributedTransactionTimeStamp oldestDxminTs = ds->distribTransactionTimeStamp;
+				if (ds->xminAllDistributedSnapshots > ds->xmax)
+					oldestDxminTs -= 1;
+				globalxmin = DistributedLog_AdvanceOldestXmin(globalxmin,
+															  oldestDxminTs,
+															  ds->xminAllDistributedSnapshots);
+			}
+		}
 		else if (!gp_maintenance_mode)
 			globalxmin = DistributedLog_GetOldestXmin(globalxmin);
 	}
@@ -4847,7 +4869,10 @@ LocalXidGetDistributedXid(TransactionId xid)
 	{
 		DistributedLog_GetDistributedXid(xid, &tstamp, &gxid);
 		AssertImply(gxid != InvalidDistributedTransactionId,
-					tstamp == MyTmGxact->distribTimeStamp);
+					(((!gp_enable_dxid_wraparound) && (tstamp == MyTmGxact->distribTimeStamp)) ||
+					 (gp_enable_dxid_wraparound && (tstamp == MyTmGxact->distribTimeStamp ||
+												tstamp == MyTmGxact->distribTimeStamp -1 ||
+												tstamp == MyTmGxact->distribTimeStamp + 1))));
 	}
 
 	return gxid;

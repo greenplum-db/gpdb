@@ -172,6 +172,8 @@ typedef struct LocalDistribXactCacheEntry
 
 	DistributedTransactionId distribXid;
 
+	DistributedTransactionTimeStamp distribTimeStamp;
+
 	int64		visits;
 
 	dlist_node	lruDoubleLinks;
@@ -198,6 +200,7 @@ static struct LocalDistribXactCache
 
 bool
 LocalDistribXactCache_CommittedFind(TransactionId localXid,
+									DistributedTransactionTimeStamp *distribTimeStamp,
 									DistributedTransactionId *distribXid)
 {
 	LocalDistribXactCacheEntry *entry;
@@ -251,6 +254,8 @@ LocalDistribXactCache_CommittedFind(TransactionId localXid,
 		dlist_push_head(&LocalDistribXactCache.lruDoublyLinkedHead, &entry->lruDoubleLinks);
 
 		*distribXid = entry->distribXid;
+		if (gp_enable_dxid_wraparound)
+			*distribTimeStamp = entry->distribTimeStamp;
 
 		entry->visits++;
 
@@ -264,6 +269,7 @@ LocalDistribXactCache_CommittedFind(TransactionId localXid,
 
 void
 LocalDistribXactCache_AddCommitted(TransactionId localXid,
+								   DistributedTransactionTimeStamp distribTimeStamp,
 								   DistributedTransactionId distribXid)
 {
 	LocalDistribXactCacheEntry *entry;
@@ -319,6 +325,8 @@ LocalDistribXactCache_AddCommitted(TransactionId localXid,
 
 	entry->localXid = localXid;
 	entry->distribXid = distribXid;
+	if (gp_enable_dxid_wraparound)
+		entry->distribTimeStamp = distribTimeStamp;
 	entry->visits = 1;
 
 	LocalDistribXactCache.count++;

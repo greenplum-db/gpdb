@@ -24,13 +24,13 @@
 #include "storage/procarray.h"
 
 /*
- * DistributedSnapshotWithLocalMapping_CommittedTest
- *		Is the given XID still-in-progress according to the
- *      distributed snapshot?  Or, is the transaction strictly local
- *      and needs to be tested with the local snapshot?
+ * DistributedSnapshotWithLocalMapping_CommittedTest_DxidWrap
+ * DistributedSnapshotWithLocalMapping_CommittedTest's dxid
+ * wrap around version.
  */
+static
 DistributedSnapshotCommitted
-DistributedSnapshotWithLocalMapping_CommittedTest(
+DistributedSnapshotWithLocalMapping_CommittedTest_DxidWrap(
 												  DistributedSnapshotWithLocalMapping *dslm,
 												  TransactionId localXid,
 												  bool isVacuumCheck)
@@ -38,6 +38,7 @@ DistributedSnapshotWithLocalMapping_CommittedTest(
 	DistributedSnapshot *ds = &dslm->ds;
 	uint32		i;
 	DistributedTransactionId distribXid = InvalidDistributedTransactionId;
+	DistributedTransactionTimeStamp checkDistribTimeStamp;
 
 	Assert(!IS_QUERY_DISPATCHER());
 
@@ -82,6 +83,7 @@ DistributedSnapshotWithLocalMapping_CommittedTest(
 	 * Is this local xid in a process-local cache we maintain?
 	 */
 	if (LocalDistribXactCache_CommittedFind(localXid,
+											&checkDistribTimeStamp,
 											&distribXid))
 	{
 		/*
@@ -98,8 +100,261 @@ DistributedSnapshotWithLocalMapping_CommittedTest(
 	}
 	else
 	{
-		DistributedTransactionTimeStamp checkDistribTimeStamp;
+		/*
+		 * Ok, now we must consult the distributed log.
+		 */
+		if (DistributedLog_CommittedCheck(localXid,
+										  &checkDistribTimeStamp,
+										  &distribXid))
+		{
+			/*
+			 * We found it in the distributed log.
+			 */
+			Assert(checkDistribTimeStamp != 0);
+			Assert(distribXid != InvalidDistributedTransactionId);
 
+			/*
+			 * We have a distributed committed xid that corresponds to the
+			 * local xid.
+			 */
+			Assert(distribXid != InvalidDistributedTransactionId);
+
+			/*
+			 * Since we did not find it in our process local cache, add it.
+			 */
+			LocalDistribXactCache_AddCommitted(localXid,
+											   checkDistribTimeStamp,
+											   distribXid);
+		}
+		else
+		{
+			/*
+			 * The distributedlog doesn't know of the transaction. It can be
+			 * local-only, or still in-progress. The caller will proceed to do
+			 * a local visibility check, which will determine which it is.
+			 */
+			return DISTRIBUTEDSNAPSHOT_COMMITTED_UNKNOWN;
+		}
+	}
+
+	Assert(ds->xminAllDistributedSnapshots != InvalidDistributedTransactionId);
+
+	Assert(DistributedTransactionIdFollowsOrEquals(ds->xmin, ds->xminAllDistributedSnapshots));
+
+	/*
+	 * If this distributed transaction is older than all the distributed
+	 * snapshots, then we can ignore it from now on.
+	 */
+	if (DistributedTransactionIdPrecedes(distribXid, ds->xminAllDistributedSnapshots))
+	{
+		return DISTRIBUTEDSNAPSHOT_COMMITTED_IGNORE;
+	}
+	/*
+	 * From now on, we only have to take care of the 0x7ffffff range starting from
+	 * ds->xminAllDistributedSnapshots.
+	 */
+	/* distribXid == ds->xmax */
+	else if (distribXid == ds->xmax)
+	{
+		if (checkDistribTimeStamp != ds->distribTransactionTimeStamp)
+		{
+			return DISTRIBUTEDSNAPSHOT_COMMITTED_IGNORE;
+		}
+	}
+	/* logically ds->xmax < distribXid */
+	else if (DistributedTransactionIdPrecedes(ds->xmax, distribXid))
+	{
+		/* logically ds->xmax <= last dxid < distribXid */
+		if (distribXid < ds->xmax)
+		{
+			if (checkDistribTimeStamp != ds->distribTransactionTimeStamp + 1)
+			{
+				return DISTRIBUTEDSNAPSHOT_COMMITTED_IGNORE;
+			}
+		}
+		/* ds->xmax < distribXid <= last dxid */
+		else
+		{
+			if (checkDistribTimeStamp != ds->distribTransactionTimeStamp)
+			{
+				return DISTRIBUTEDSNAPSHOT_COMMITTED_IGNORE;
+			}
+		}
+	}
+	/* logically distribXid < ds->xmax */
+	else
+	{
+		/* distribXid <= last dxid < ds->xmax  */
+		if (distribXid > ds->xmax)
+		{
+			if (checkDistribTimeStamp != ds->distribTransactionTimeStamp - 1)
+			{
+				return DISTRIBUTEDSNAPSHOT_COMMITTED_IGNORE;
+			}
+		}
+		/* distribXid < ds->xmax <= last dxid */
+		else
+		{
+			if (checkDistribTimeStamp != ds->distribTransactionTimeStamp)
+			{
+				return DISTRIBUTEDSNAPSHOT_COMMITTED_IGNORE;
+			}
+		}
+	}
+
+	/*
+	 * If called to check for purpose of vacuum, in-progress is not
+	 * interesting to check and hence just return.
+	 */
+	if (isVacuumCheck)
+		return DISTRIBUTEDSNAPSHOT_COMMITTED_INPROGRESS;
+
+	/* Any xid < xmin is not in-progress */
+	if (DistributedTransactionIdPrecedes(distribXid, ds->xmin))
+		return DISTRIBUTEDSNAPSHOT_COMMITTED_VISIBLE;
+
+	/*
+	 * Any xid >= xmax is in-progress, distributed xmax points to the
+	 * latestCompletedDxid + 1.
+	 */
+	if (DistributedTransactionIdFollowsOrEquals(distribXid, ds->xmax))
+	{
+		elog((Debug_print_snapshot_dtm ? LOG : DEBUG5),
+			 "distributedsnapshot committed but invisible: distribXid %d dxmax %d dxmin %d distribSnapshotId %d",
+			 distribXid, ds->xmax, ds->xmin, ds->distribSnapshotId);
+
+		return DISTRIBUTEDSNAPSHOT_COMMITTED_INPROGRESS;
+	}
+
+	for (i = 0; i < ds->count; i++)
+	{
+		if (distribXid == ds->inProgressXidArray[i])
+		{
+			/*
+			 * Save the relationship to the local xid so we may avoid checking
+			 * the distributed committed log in a subsequent check. We can
+			 * only record local xids till cache size permits.
+			 */
+			if (dslm->currentLocalXidsCount < ds->count)
+			{
+				Assert(dslm->inProgressMappedLocalXids != NULL);
+				dslm->inProgressMappedLocalXids[dslm->currentLocalXidsCount++] =
+					localXid;
+
+				if (!TransactionIdIsValid(dslm->minCachedLocalXid) ||
+					TransactionIdPrecedes(localXid, dslm->minCachedLocalXid))
+				{
+					dslm->minCachedLocalXid = localXid;
+				}
+
+				if (!TransactionIdIsValid(dslm->maxCachedLocalXid) ||
+					TransactionIdFollows(localXid, dslm->maxCachedLocalXid))
+				{
+					dslm->maxCachedLocalXid = localXid;
+				}
+			}
+
+			return DISTRIBUTEDSNAPSHOT_COMMITTED_INPROGRESS;
+		}
+
+		/*
+		 * Leverage the fact that ds->inProgressXidArray is sorted in
+		 * ascending order based on distribXid while creating the snapshot in
+		 * CreateDistributedSnapshot(). So, can fail fast once known are
+		 * lower than rest of them.
+		 */
+		if (DistributedTransactionIdPrecedes(distribXid, ds->inProgressXidArray[i]))
+			break;
+	}
+
+	/*
+	 * Not in-progress, therefore visible.
+	 */
+	return DISTRIBUTEDSNAPSHOT_COMMITTED_VISIBLE;
+}
+
+
+/*
+ * DistributedSnapshotWithLocalMapping_CommittedTest
+ *		Is the given XID still-in-progress according to the
+ *      distributed snapshot?  Or, is the transaction strictly local
+ *      and needs to be tested with the local snapshot?
+ */
+DistributedSnapshotCommitted
+DistributedSnapshotWithLocalMapping_CommittedTest(
+												  DistributedSnapshotWithLocalMapping *dslm,
+												  TransactionId localXid,
+												  bool isVacuumCheck)
+{
+	DistributedSnapshot *ds = &dslm->ds;
+	uint32		i;
+	DistributedTransactionId distribXid = InvalidDistributedTransactionId;
+	DistributedTransactionTimeStamp checkDistribTimeStamp;
+
+
+	Assert(!IS_QUERY_DISPATCHER());
+
+	if (gp_enable_dxid_wraparound)
+		return DistributedSnapshotWithLocalMapping_CommittedTest_DxidWrap(dslm, localXid, isVacuumCheck);
+
+	/*
+	 * Return early if local xid is not normal as it cannot have distributed
+	 * xid associated with it.
+	 */
+	if (!TransactionIdIsNormal(localXid))
+		return DISTRIBUTEDSNAPSHOT_COMMITTED_IGNORE;
+
+	/*
+	 * Checking the distributed committed log can be expensive, so make a scan
+	 * through our cache in distributed snapshot looking for a possible
+	 * corresponding local xid only if it has value in checking.
+	 */
+	if (dslm->currentLocalXidsCount > 0)
+	{
+		Assert(TransactionIdIsNormal(dslm->minCachedLocalXid));
+		Assert(TransactionIdIsNormal(dslm->maxCachedLocalXid));
+
+		if (TransactionIdEquals(localXid, dslm->minCachedLocalXid) ||
+			TransactionIdEquals(localXid, dslm->maxCachedLocalXid))
+		{
+			return DISTRIBUTEDSNAPSHOT_COMMITTED_INPROGRESS;
+		}
+
+		if (TransactionIdFollows(localXid, dslm->minCachedLocalXid) &&
+			TransactionIdPrecedes(localXid, dslm->maxCachedLocalXid))
+		{
+			for (i = 0; i < dslm->currentLocalXidsCount; i++)
+			{
+				Assert(dslm->inProgressMappedLocalXids != NULL);
+				Assert(TransactionIdIsValid(dslm->inProgressMappedLocalXids[i]));
+
+				if (TransactionIdEquals(localXid, dslm->inProgressMappedLocalXids[i]))
+					return DISTRIBUTEDSNAPSHOT_COMMITTED_INPROGRESS;
+			}
+		}
+	}
+
+	/*
+	 * Is this local xid in a process-local cache we maintain?
+	 */
+	if (LocalDistribXactCache_CommittedFind(localXid,
+											&checkDistribTimeStamp,
+											&distribXid))
+	{
+		/*
+		 * We cache local-only committed transactions for better performance,
+		 * too.
+		 */
+		if (distribXid == InvalidDistributedTransactionId)
+			return DISTRIBUTEDSNAPSHOT_COMMITTED_IGNORE;
+
+		/*
+		 * Fall below and evaluate the committed distributed transaction
+		 * against the distributed snapshot.
+		 */
+	}
+	else
+	{
 		/*
 		 * Ok, now we must consult the distributed log.
 		 */
@@ -130,6 +385,7 @@ DistributedSnapshotWithLocalMapping_CommittedTest(
 			 * Since we did not find it in our process local cache, add it.
 			 */
 			LocalDistribXactCache_AddCommitted(localXid,
+											   checkDistribTimeStamp,
 											   distribXid);
 		}
 		else

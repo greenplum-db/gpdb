@@ -116,8 +116,10 @@ typedef struct VariableCacheData
 	 */
 	TransactionId latestCompletedXid;	/* newest XID that has committed or
 										 * aborted */
-	TransactionId latestCompletedDxid;	/* newest distributed XID that has
-										   committed or aborted */
+	DistributedTransactionId latestCompletedDxid;	/* newest distributed XID that has
+													   committed or aborted */
+	DistributedTransactionTimeStamp latestCompletedDxidTs;	/* Timestamp of the newest distributed XID that has
+															   committed or aborted */
 } VariableCacheData;
 
 typedef VariableCacheData *VariableCache;

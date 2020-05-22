@@ -243,9 +243,20 @@ DistributedLog_AdvanceOldestXmin(TransactionId oldestLocalXmin,
 		 * have zeros in distribXid and distribTimeStamp; this test will also
 		 * skip over those.)
 		 */
-		if (ptr->distribTimeStamp == distribTransactionTimeStamp &&
-				!TransactionIdPrecedes(ptr->distribXid, xminAllDistributedSnapshots))
-			break;
+		if (!gp_enable_dxid_wraparound)
+		{
+			if (ptr->distribTimeStamp == distribTransactionTimeStamp &&
+					!TransactionIdPrecedes(ptr->distribXid, xminAllDistributedSnapshots))
+				break;
+		}
+		else
+		{
+			if ((ptr->distribTimeStamp == distribTransactionTimeStamp &&
+				 ptr->distribXid >= xminAllDistributedSnapshots)
+				|| (ptr->distribTimeStamp == distribTransactionTimeStamp + 1 &&
+					DistributedTransactionIdFollows(ptr->distribXid, xminAllDistributedSnapshots)))
+				break;
+		}
 
 		TransactionIdAdvance(oldestXmin);
 	}

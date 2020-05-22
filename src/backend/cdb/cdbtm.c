@@ -64,6 +64,7 @@ typedef struct TmControlBlock
 	uint32						NextSnapshotId;
 	int							num_committed_xacts;
 	slock_t						gxidGenLock;
+	DistributedTransactionId	globalXminDistributed;
 
 	/* Array [0..max_tm_gxacts-1] of TMGXACT_LOG ptrs is appended starting here */
 	TMGXACT_LOG  			    committed_gxact_array[1];
@@ -85,6 +86,7 @@ slock_t *shmGxidGenLock;
 
 int	max_tm_gxacts = 100;
 
+volatile uint32 *shmGlobalOldestDxmin;
 
 #define TM_ERRDETAIL (errdetail("gid=%u-%.10u, state=%s", \
 		getDistributedTransactionTimestamp(), getDistributedTransactionId(),\
@@ -233,6 +235,8 @@ isCurrentDtxActivated(void)
 static void
 currentDtxActivate(void)
 {
+	DistributedTransactionId globalOldestDxmin, stopLimit, warnLimit;
+
 	/*
 	 * Bump 'shmGIDSeq' and assign it to 'MyTmGxact->gxid', this needs to be atomic.
 	 * Otherwise, another transaction might start and commit in between, which will
@@ -255,14 +259,46 @@ currentDtxActivate(void)
 	 * 7. tx3 will see the change of tx1 on segment 0 but not on segment 1, that's
 	 * because tx1 is considered finished according to the snapshot.
 	 */
-	SpinLockAcquire(shmGxidGenLock);
-	MyTmGxact->gxid = ++(*shmGIDSeq);
-	SpinLockRelease(shmGxidGenLock);
+	if (!gp_enable_dxid_wraparound)
+	{
+		SpinLockAcquire(shmGxidGenLock);
+		MyTmGxact->gxid = ++(*shmGIDSeq);
+		SpinLockRelease(shmGxidGenLock);
 
-	if (MyTmGxact->gxid == LastDistributedTransactionId)
-		ereport(PANIC,
-				(errmsg("reached the limit of %u global transactions per start",
-						LastDistributedTransactionId)));
+		if (MyTmGxact->gxid == LastDistributedTransactionId)
+			ereport(PANIC,
+					(errmsg("reached the limit of %u global transactions per start",
+							LastDistributedTransactionId)));
+	}
+	else
+	{
+		SpinLockAcquire(shmGxidGenLock);
+		MyTmGxact->gxid = ++(*shmGIDSeq);
+		if (MyTmGxact->gxid == LastDistributedTransactionId)
+		{
+			MyTmGxact->gxid = *shmGIDSeq = FirstDistributedTransactionId;
+			++(*shmDistribTimeStamp);
+		}
+		SpinLockRelease(shmGxidGenLock);
+
+		/* it's okay to read global oldest dxmin after generating new dxid */
+		globalOldestDxmin = pg_atomic_read_u32((pg_atomic_uint32 *) shmGlobalOldestDxmin);
+		stopLimit = globalOldestDxmin + (LastDistributedTransactionId >> 1) - (uint32) gp_dxid_stop_limit;
+		warnLimit = stopLimit - (uint32) gp_dxid_warn_limit;
+
+		if (DistributedTransactionIdPrecedes(stopLimit, MyTmGxact->gxid))
+			ereport(PANIC,
+					(errmsg("Dxid is out of valid limit. New generated dxid %u is way "
+							"logically larger than global oldest dxmin %u",
+							MyTmGxact->gxid, globalOldestDxmin)));
+		else if (DistributedTransactionIdPrecedes(warnLimit, MyTmGxact->gxid))
+			ereport(WARNING,
+					(errmsg("Dxid is about to be out of valid limit. Please cancel old "
+							"long running queries. New generated dxid %u is way logically "
+							"larger than global oldest dxmin %u",
+							MyTmGxact->gxid, globalOldestDxmin)));
+
+	}
 
 	MyTmGxact->distribTimeStamp = getDtmStartTime();
 	MyTmGxact->sessionId = gp_session_id;
@@ -1020,6 +1056,7 @@ tmShmemInit(void)
 
 	shmDistribTimeStamp = &shared->distribTimeStamp;
 	shmGIDSeq = &shared->seqno;
+	shmGlobalOldestDxmin = &shared->globalXminDistributed;
 	/* Only initialize this if we are the creator of the shared memory */
 	if (!found)
 	{
@@ -1035,6 +1072,8 @@ tmShmemInit(void)
 
 		*shmGIDSeq = FirstDistributedTransactionId;
 		ShmemVariableCache->latestCompletedDxid = InvalidDistributedTransactionId;
+		ShmemVariableCache->latestCompletedDxidTs = (DistributedTransactionTimeStamp) t;
+		*shmGlobalOldestDxmin = InvalidDistributedTransactionId;
 		SpinLockInit(&shared->gxidGenLock);
 	}
 	shmDtmStarted = &shared->DtmStarted;
@@ -2369,4 +2408,221 @@ CurrentDtxIsRollingback(void)
 			MyTmGxactLocal->state == DTX_STATE_NOTIFYING_ABORT_SOME_PREPARED ||
 			MyTmGxactLocal->state == DTX_STATE_NOTIFYING_ABORT_PREPARED ||
 			MyTmGxactLocal->state == DTX_STATE_RETRY_ABORT_PREPARED);
+}
+
+/*
+ * DistributedTxnIdWithTsPrecedes --- is id1+ts1 logically < id2+ts2?
+ */
+bool
+DistributedTxnIdWithTsPrecedes
+(DistributedTransactionId id1, DistributedTransactionTimeStamp ts1,
+DistributedTransactionId id2, DistributedTransactionTimeStamp ts2)
+{
+	Assert(gp_enable_dxid_wraparound);
+
+	if (ts1 < ts2)
+		return true;
+	else if (ts1 == ts2)
+	{
+		if (id1 < id2)
+			return true;
+		else
+			return false;
+	}
+	else
+		return false;
+}
+
+/*
+ * DistributedTxnIdWithTsPrecedesOrEquals --- is id1+ts1 logically <= id2+ts2?
+ */
+bool
+DistributedTxnIdWithTsPrecedesOrEquals
+(DistributedTransactionId id1, DistributedTransactionTimeStamp ts1,
+DistributedTransactionId id2, DistributedTransactionTimeStamp ts2)
+{
+	Assert(gp_enable_dxid_wraparound);
+
+	if (ts1 < ts2)
+		return true;
+	else if (ts1 == ts2)
+	{
+		if (id1 <= id2)
+			return true;
+		else
+			return false;
+	}
+	else
+		return false;
+}
+
+/*
+ * DistributedTxnIdWithTsFollows --- is id1+ts1 logically > id2+ts2?
+ */
+bool
+DistributedTxnIdWithTsFollows
+(DistributedTransactionId id1, DistributedTransactionTimeStamp ts1,
+DistributedTransactionId id2, DistributedTransactionTimeStamp ts2)
+{
+	Assert(gp_enable_dxid_wraparound);
+
+	if (ts1 > ts2)
+		return true;
+	else if (ts1 == ts2)
+	{
+		if (id1 > id2)
+			return true;
+		else
+			return false;
+	}
+	else
+		return false;
+}
+
+/*
+ * DistributedTxnIdWithTsFollowsOrEquals --- is id1+ts1 logically >= id2+ts2?
+ */
+bool
+DistributedTxnIdWithTsFollowsOrEquals
+(DistributedTransactionId id1, DistributedTransactionTimeStamp ts1,
+DistributedTransactionId id2, DistributedTransactionTimeStamp ts2)
+{
+	Assert(gp_enable_dxid_wraparound);
+
+	if (ts1 > ts2)
+		return true;
+	else if (ts1 == ts2)
+	{
+		if (id1 >= id2)
+			return true;
+		else
+			return false;
+	}
+	else
+		return false;
+}
+
+/*
+ * DistributedTxnIdWithTsAdd --- increase a given timestamp and dxid
+ */
+void
+DistributedTxnIdWithTsAdd
+(DistributedTransactionId *id, DistributedTransactionTimeStamp *ts,
+DistributedTransactionId incre_id, DistributedTransactionTimeStamp incre_ts)
+{
+	Assert(gp_enable_dxid_wraparound);
+
+	DistributedTransactionId new_id = *id + incre_id;
+	if (new_id >= *id)
+		*ts = *ts + incre_ts;
+	else
+		*ts = *ts + incre_ts + 1;
+	*id = new_id;
+}
+
+/*
+ * DistributedTransactionIdPrecedes --- is id1 logically < id2?
+ */
+bool
+DistributedTransactionIdPrecedes(DistributedTransactionId id1, DistributedTransactionId id2)
+{
+	int32 diff;
+	if (gp_enable_dxid_wraparound)
+	{
+		diff = (int32) (id1 - id2);
+		return (diff < 0);
+	}
+	else
+		return (id1 < id2);
+}
+
+/*
+ * DistributedTransactionIdPrecedesOrEquals --- is id1 logically <= id2?
+ */
+bool
+DistributedTransactionIdPrecedesOrEquals(DistributedTransactionId id1, DistributedTransactionId id2)
+{
+	int32 diff;
+
+	if (gp_enable_dxid_wraparound)
+	{
+		diff = (int32) (id1 - id2);
+		return (diff <= 0);
+	}
+	else
+		return (id1 <= id2);
+}
+
+/*
+ * DistributedTransactionIdFollows --- is id1 logically > id2?
+  */
+bool
+DistributedTransactionIdFollows(DistributedTransactionId id1, DistributedTransactionId id2)
+{
+	int32 diff;
+
+	if (gp_enable_dxid_wraparound)
+	{
+		diff = (int32) (id1 - id2);
+		return (diff > 0);
+	}
+	else
+		return (id1 > id2);
+}
+
+/*
+ * DistributedTransactionIdFollowsOrEquals --- is id1 logically >= id2?
+ */
+bool
+DistributedTransactionIdFollowsOrEquals(DistributedTransactionId id1, DistributedTransactionId id2)
+{
+	int32 diff;
+
+	if (gp_enable_dxid_wraparound)
+	{
+		diff = (int32) (id1 - id2);
+		return (diff >= 0);
+	}
+	else
+		return (id1 >= id2);
+}
+
+/*
+ * This is used to compute the timestamp for a given dxid based on the pair of dxid and timestamp
+ * when dxid wraparound is enabled.
+ */
+DistributedTransactionTimeStamp
+getDxidTimestamp(DistributedTransactionId dxid, DistributedTransactionId refDxid,
+				 DistributedTransactionTimeStamp refTs)
+{
+	if (dxid == refDxid)
+		return refTs;
+	/* logically, dxid < refDxid */
+	else if (DistributedTransactionIdPrecedes(dxid, refDxid))
+	{
+		/*
+		 * logically, LastDXID < dxid < refDxid
+		 * logically, dxid < refDxid  < lastDXID
+		 */
+		if (DistributedTransactionIdPrecedes(LastDistributedTransactionId, dxid) ||
+			DistributedTransactionIdPrecedes(refDxid, LastDistributedTransactionId))
+			return refTs;
+		/* logically, dxid < lastDXID < refDxid */
+		else
+			return refTs - 1;
+	}
+	/* logically, refDxid < dxid */
+	else
+	{
+		/*
+		 * logically, LastDXID < refDxid < dxid
+		 * logically, refDxid < dxid < lastDXID
+		 */
+		if (DistributedTransactionIdPrecedes(LastDistributedTransactionId, refDxid) ||
+			DistributedTransactionIdPrecedes(dxid, LastDistributedTransactionId))
+			return refTs;
+		/* logically, refDxid < lastDXID < dxid */
+		else
+			return refTs + 1;
+	}
 }

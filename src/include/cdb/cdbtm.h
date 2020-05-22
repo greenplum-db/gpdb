@@ -269,6 +269,11 @@ extern uint32 *shmNextSnapshotId;
 extern TMGXACT_LOG *shmCommittedGxactArray;
 extern volatile int *shmNumCommittedGxacts;
 
+extern bool gp_enable_dxid_wraparound;
+extern int gp_dxid_warn_limit;
+extern int gp_dxid_stop_limit;
+extern volatile uint32 *shmGlobalOldestDxmin;
+
 extern char *DtxStateToString(DtxState state);
 extern char *DtxProtocolCommandToString(DtxProtocolCommand command);
 extern char *DtxContextToString(DtxContext context);
@@ -344,4 +349,14 @@ extern bool CurrentDtxIsRollingback(void);
 extern void DtxRecoveryMain(Datum main_arg);
 extern bool DtxRecoveryStartRule(Datum main_arg);
 
+extern bool DistributedTransactionIdPrecedes(DistributedTransactionId id1, DistributedTransactionId id2);
+extern bool DistributedTransactionIdPrecedesOrEquals(DistributedTransactionId id1, DistributedTransactionId id2);
+extern bool DistributedTransactionIdFollows(DistributedTransactionId id1, DistributedTransactionId id2);
+extern bool DistributedTransactionIdFollowsOrEquals(DistributedTransactionId id1, DistributedTransactionId id2);
+extern bool DistributedTxnIdWithTsPrecedes(DistributedTransactionId id1, DistributedTransactionTimeStamp ts1, DistributedTransactionId id2, DistributedTransactionTimeStamp ts2);
+extern bool DistributedTxnIdWithTsPrecedesOrEquals(DistributedTransactionId id1, DistributedTransactionTimeStamp ts1, DistributedTransactionId id2, DistributedTransactionTimeStamp ts2);
+extern bool DistributedTxnIdWithTsFollows(DistributedTransactionId id1, DistributedTransactionTimeStamp ts1, DistributedTransactionId id2, DistributedTransactionTimeStamp ts2);
+extern bool DistributedTxnIdWithTsFollowsOrEquals(DistributedTransactionId id1, DistributedTransactionTimeStamp ts1, DistributedTransactionId id2, DistributedTransactionTimeStamp ts2);
+extern void DistributedTxnIdWithTsAdd (DistributedTransactionId *id, DistributedTransactionTimeStamp *ts, DistributedTransactionId incre_id, DistributedTransactionTimeStamp incre_ts);
+extern DistributedTransactionTimeStamp getDxidTimestamp(DistributedTransactionId dxid, DistributedTransactionId refDxid, DistributedTransactionTimeStamp refTs);
 #endif   /* CDBTM_H */
