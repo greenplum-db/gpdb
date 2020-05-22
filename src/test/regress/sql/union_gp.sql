@@ -102,6 +102,23 @@ select a from base
 union all
 select a from base where a = 'foo';
 
+--
+-- Test union all two replicated tables with different numsegments
+--
+create table rep2(c1 int, c2 int) distributed replicated;
+create table rep3(c1 int, c2 int) distributed replicated;
+set allow_system_table_mods = on;
+update gp_distribution_policy set numsegments = 2
+  where localoid = 'rep2'::regclass;
+select localoid::regclass, policytype, numsegments
+  from gp_distribution_policy
+  where localoid::regclass in ('rep2', 'rep3');
+explain select * from rep2 union all select * from rep3;
+select * from rep2 union all select * from rep3;
+reset allow_system_table_mods;
+drop table rep2;
+drop table rep3;
+
 
 --
 -- Setup

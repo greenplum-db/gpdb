@@ -343,6 +343,11 @@ cdbpath_create_motion_path(PlannerInfo *root,
 				goto invalid_motion_request;
 
 		}
+		else if (CdbPathLocus_IsSegmentGeneral(locus))
+		{
+			subpath->locus.numsegments = Min(subpath->locus.numsegments, locus.numsegments);
+			return subpath;
+		}
 		else
 			goto invalid_motion_request;
 	}

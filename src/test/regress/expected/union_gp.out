@@ -279,6 +279,41 @@ select a from base where a = 'foo';
 (3 rows)
 
 --
+-- Test union all two replicated tables with different numsegments
+--
+create table rep2(c1 int, c2 int) distributed replicated;
+create table rep3(c1 int, c2 int) distributed replicated;
+set allow_system_table_mods = on;
+update gp_distribution_policy set numsegments = 2
+  where localoid = 'rep2'::regclass;
+select localoid::regclass, policytype, numsegments
+  from gp_distribution_policy
+  where localoid::regclass in ('rep2', 'rep3');
+ localoid | policytype | numsegments 
+----------+------------+-------------
+ rep3     | r          |           3
+ rep2     | r          |           2
+(2 rows)
+
+explain select * from rep2 union all select * from rep3;
+                                      QUERY PLAN                                       
+---------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=1922.00..1922.00 rows=172200 width=8)
+   ->  Append  (cost=0.00..1922.00 rows=172200 width=8)
+         ->  Seq Scan on rep2  (cost=0.00..961.00 rows=86100 width=8)
+         ->  Seq Scan on rep3  (cost=0.00..961.00 rows=86100 width=8)
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+select * from rep2 union all select * from rep3;
+ c1 | c2 
+----+----
+(0 rows)
+
+reset allow_system_table_mods;
+drop table rep2;
+drop table rep3;
+--
 -- Setup
 --
 --start_ignore
