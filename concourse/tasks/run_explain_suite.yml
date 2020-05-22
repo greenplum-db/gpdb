@@ -1,0 +1,35 @@
+platform: linux
+image_resource:
+  type: docker-image
+  source:
+    repository: pivotaldata/gpdb6-centos7-test
+inputs:
+  - name: bin_gpdb
+  - name: gpdb_src
+  - name: gp_workloads
+  - name: gporca-commits-to-test
+outputs:
+  - name: output
+params:
+  MODE:
+  CONFIGURE_OPTION:
+  WORKLOAD:
+  GUCS:
+run:
+  path: sh
+  args:
+  - -exc
+  - |
+    readarray -t workloads_to_run < gporca-commits-to-test/workload.txt
+    for i in "${workloads_to_run[@]}"
+    do
+      if [[ "${i}" = "all" || "${i}" = "${WORKLOAD}" ]]
+      then
+        echo "Running workload ${WORKLOAD}"
+        cp -r gp_workloads/${WORKLOAD}/sql sql
+        cp gp_workloads/${WORKLOAD}/schema_6X.sql schema.sql
+        cp gp_workloads/${WORKLOAD}/stats_6X.sql stats.sql
+        gpdb_src/concourse/scripts/build_gpdb.py --mode ${MODE} --action test_explain_suite
+        break
+      fi
+    done

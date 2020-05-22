@@ -257,6 +257,9 @@ function build_xerces()
 
 function test_orca()
 {
+    if [ -n "${SKIP_UNITTESTS}" ]; then
+        return
+    fi
     OUTPUT_DIR="../../../../gpAux/ext/${BLD_ARCH}"
     pushd ${GPDB_SRC_PATH}/src/backend/gporca
     concourse/build_and_test.py --build_type=RelWithDebInfo --output_dir=${OUTPUT_DIR}
@@ -300,7 +303,7 @@ function _main() {
   build_gpdb "${BLD_TARGET_OPTION[@]}"
   git_info
 
-  if [ "${TARGET_OS}" != "win32" ] ; then
+  if [[ "${TARGET_OS}" != "win32" ]] && [[ -z "${SKIP_UNITTESTS}" ]]; then
       # Don't unit test when cross compiling. Tests don't build because they
       # require `./configure --with-zlib`.
       unittest_check_gpdb
