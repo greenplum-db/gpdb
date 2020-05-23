@@ -914,7 +914,7 @@ CStatisticsUtils::PrintHistogramMap
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CStatisticsUtils::CreateHistHashMapAfterMergingDisjPreds
+//		CStatisticsUtils::MergeHistogramMapsForDisjPreds
 //
 //	@doc:
 //		Create a new hash map of histograms after merging
