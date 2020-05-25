@@ -1,3 +1,7 @@
+drop role if exists matview_ao_role;
+create role matview_ao_role;
+set role matview_ao_role;
+
 CREATE TABLE t_matview_ao (id int NOT NULL PRIMARY KEY, type text NOT NULL, amt numeric NOT NULL);
 INSERT INTO t_matview_ao VALUES
   (1, 'x', 2),
@@ -38,3 +42,8 @@ SELECT * FROM m_aocs;
 REFRESH MATERIALIZED VIEW m_aocs;
 SELECT * FROM m_aocs;
 
+\dm m_heap
+\dm m_ao
+\dm m_aocs
+
+RESET role;
