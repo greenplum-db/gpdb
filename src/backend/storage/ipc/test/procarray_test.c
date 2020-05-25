@@ -35,6 +35,8 @@ setup(void)
 	procArray->pgprocnos[4] = 4;
 
 	procArray->maxProcs = MAX_PROCS;
+
+	gp_enable_dxid_wraparound = false;
 }
 
 static void
