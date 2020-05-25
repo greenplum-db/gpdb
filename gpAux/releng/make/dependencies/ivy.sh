@@ -22,7 +22,7 @@ if [ ! -d "${EXT_DIRECTORY}" ]; then
 fi
 
 while read line; do
-    if [[ $line =~ .*"${BUILD_STAGE}->"* && $line =~ ${REVISION} && $line =~ ${MODULE} && $line =~ ${ORG} ]]; then
+    if [[ $line =~ .*"${BUILD_STAGE}->"* && $line =~ "${REVISION}" && $line =~ ${MODULE} && $line =~ ${ORG} ]]; then
         line=`echo $line | cut -f5 -d "="`
         IFS=';' read -ra dependency <<< "$line"
         for i in "${dependency[@]}"; do
