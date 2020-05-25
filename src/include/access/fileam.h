@@ -16,7 +16,6 @@
 #define FILEAM_H
 
 #include "access/formatter.h"
-#include "access/relscan.h"
 #include "access/sdir.h"
 #include "access/url.h"
 #include "utils/rel.h"
@@ -58,6 +57,45 @@ typedef struct ExternalSelectDescData
 	List *filter_quals;         /* Information for filter pushdown */
 
 } ExternalSelectDescData;
+
+/*
+ * used for scan of external relations with the file protocol
+ */
+typedef struct FileScanDescData
+{
+	/* scan parameters */
+	Relation	fs_rd;			/* target relation descriptor */
+	struct URL_FILE *fs_file;	/* the file pointer to our URI */
+	char	   *fs_uri;			/* the URI string */
+	bool		fs_noop;		/* no op. this segdb has no file to scan */
+	uint32      fs_scancounter;	/* copied from struct ExternalScan in plan */
+
+	/* current file parse state */
+	struct CopyStateData *fs_pstate;
+
+	Form_pg_attribute *attr;
+	AttrNumber	num_phys_attrs;
+	Datum	   *values;
+	bool	   *nulls;
+	FmgrInfo   *in_functions;
+	Oid		   *typioparams;
+	Oid			in_func_oid;
+
+	/* current file scan state */
+	TupleDesc	fs_tupDesc;
+	HeapTupleData fs_ctup;		/* current tuple in scan, if any */
+
+	/* custom data formatter */
+	FmgrInfo   *fs_custom_formatter_func; /* function to convert to custom format */
+	List	   *fs_custom_formatter_params; /* list of defelems that hold user's format parameters */
+	FormatterData *fs_formatter;
+
+	/* external partition */
+	bool		fs_hasConstraints;
+	List		**fs_constraintExprs;
+}	FileScanDescData;
+
+typedef FileScanDescData *FileScanDesc;
 
 typedef enum DataLineStatus
 {

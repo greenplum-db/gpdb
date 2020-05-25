@@ -35,12 +35,12 @@
 
 #include <fstream/gfile.h>
 
+#include "access/external.h"
 #include "access/fileam.h"
 #include "access/formatter.h"
 #include "access/heapam.h"
 #include "access/url.h"
 #include "access/valid.h"
-#include "catalog/pg_exttable.h"
 #include "catalog/pg_proc.h"
 #include "cdb/cdbsreh.h"
 #include "cdb/cdbutil.h"

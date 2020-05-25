@@ -31,7 +31,6 @@
 #include "access/xact.h"
 #include "access/xlog.h"
 #include "catalog/pg_extprotocol.h"
-#include "catalog/pg_exttable.h"
 #include "catalog/pg_type.h"
 #include "commands/copy.h"
 #include "commands/defrem.h"
@@ -57,6 +56,7 @@
 #include "utils/snapmgr.h"
 
 #include "access/appendonlywriter.h"
+#include "access/external.h"
 #include "access/url.h"
 #include "catalog/namespace.h"
 #include "cdb/cdbappendonlyam.h"

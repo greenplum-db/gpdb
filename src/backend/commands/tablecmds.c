@@ -45,7 +45,6 @@
 #include "catalog/pg_constraint.h"
 #include "catalog/pg_constraint_fn.h"
 #include "catalog/pg_depend.h"
-#include "catalog/pg_exttable.h"
 #include "catalog/pg_foreign_table.h"
 #include "catalog/pg_inherits.h"
 #include "catalog/pg_inherits_fn.h"
@@ -128,6 +127,7 @@
 #include "utils/typcache.h"
 
 #include "access/appendonly_compaction.h"
+#include "access/external.h"
 #include "catalog/aocatalog.h"
 #include "catalog/oid_dispatch.h"
 #include "cdb/cdbdisp.h"

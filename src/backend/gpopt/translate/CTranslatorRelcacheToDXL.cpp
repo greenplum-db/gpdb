@@ -26,7 +26,6 @@
 #include "cdb/cdbhash.h"
 #include "access/heapam.h"
 #include "catalog/pg_am.h"
-#include "catalog/pg_exttable.h"
 #include "catalog/pg_proc.h"
 
 #include "cdb/cdbpartition.h"

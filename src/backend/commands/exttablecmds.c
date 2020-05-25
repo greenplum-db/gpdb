@@ -16,15 +16,12 @@
  */
 #include "postgres.h"
 
+#include "access/external.h"
 #include "access/extprotocol.h"
-#include "access/reloptions.h"
-#include "catalog/indexing.h"
 #include "catalog/namespace.h"
 #include "catalog/oid_dispatch.h"
 #include "catalog/pg_extprotocol.h"
-#include "catalog/pg_exttable.h"
 #include "catalog/pg_foreign_server.h"
-#include "catalog/pg_foreign_table.h"
 #include "catalog/pg_authid.h"
 #include "commands/copy.h"
 #include "commands/defrem.h"
@@ -33,9 +30,7 @@
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
 #include "utils/builtins.h"
-#include "utils/fmgroids.h"
 #include "utils/inval.h"
-#include "utils/lsyscache.h"
 #include "utils/syscache.h"
 #include "utils/uri.h"
 
@@ -337,23 +332,6 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 
 	if (customProtName)
 		pfree(customProtName);
-}
-
-/* transform the locations string to a list */
-List*
-tokenizeLocationUris(char *uris)
-{
-	char *uri = NULL;
-	List *result = NIL;
-
-	Assert(uris != NULL);
-
-	while ((uri = strsep(&uris, "|")) != NULL)
-	{
-		result = lappend(result, makeString(uri));
-	}
-
-	return result;
 }
 
 /*
@@ -856,7 +834,7 @@ GenerateExtTableEntryOptions(Oid 	tbloid,
 	 */
 	if (locationUris)
 	{
-		List *locationUris_list = tokenizeLocationUris(locationUris);
+		List *locationUris_list = TokenizeLocationUris(locationUris);
 		ListCell *lc;
 
 		foreach(lc, locationUris_list)
@@ -888,217 +866,4 @@ GenerateExtTableEntryOptions(Oid 	tbloid,
 	}
 
 	return entryOptions;
-}
-
-/*
- * Get the entry for an exttable relation (from pg_foreign_table)
- */
-ExtTableEntry*
-GetExtTableEntry(Oid relid)
-{
-	ExtTableEntry *extentry;
-
-	extentry = GetExtTableEntryIfExists(relid);
-	if (!extentry)
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("missing pg_foreign_table entry for relation \"%s\"",
-						get_rel_name(relid))));
-	return extentry;
-}
-
-/*
- * Like GetExtTableEntry(Oid), but returns NULL instead of throwing
- * an error if no pg_foreign_table entry is found.
- */
-ExtTableEntry*
-GetExtTableEntryIfExists(Oid relid)
-{
-	Relation	pg_foreign_table_rel;
-	ScanKeyData ftkey;
-	SysScanDesc ftscan;
-	HeapTuple	fttuple;
-	ExtTableEntry *extentry;
-	bool		isNull;
-	List		*ftoptions_list = NIL;;
-
-	pg_foreign_table_rel = heap_open(ForeignTableRelationId, RowExclusiveLock);
-
-	ScanKeyInit(&ftkey,
-				Anum_pg_foreign_table_ftrelid,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(relid));
-
-	ftscan = systable_beginscan(pg_foreign_table_rel, ForeignTableRelidIndexId,
-								true, NULL, 1, &ftkey);
-	fttuple = systable_getnext(ftscan);
-
-	if (!HeapTupleIsValid(fttuple))
-	{
-		systable_endscan(ftscan);
-		heap_close(pg_foreign_table_rel, RowExclusiveLock);
-
-		return NULL;
-	}
-
-	/* get the foreign table options */
-	Datum ftoptions = heap_getattr(fttuple,
-						   Anum_pg_foreign_table_ftoptions,
-						   RelationGetDescr(pg_foreign_table_rel),
-						   &isNull);
-
-	if (isNull)
-	{
-		/* options array is always populated, {} if no options set */
-		elog(ERROR, "could not find options for external protocol");
-	}
-	else
-	{
-		ftoptions_list = untransformRelOptions(ftoptions);
-	}
-
-	extentry = GetExtFromForeignTableOptions(ftoptions_list, relid);
-
-	/* Finish up scan and close catalogs */
-	systable_endscan(ftscan);
-	heap_close(pg_foreign_table_rel, RowExclusiveLock);
-
-	return extentry;
-}
-
-ExtTableEntry *
-GetExtFromForeignTableOptions(List *ftoptons, Oid relid)
-{
-	ExtTableEntry	   *extentry;
-	ListCell		   *lc;
-	List			   *entryOptions = NIL;
-	char			   *arg;
-	bool				fmtcode_found = false;
-	bool				rejectlimit_found = false;
-	bool				rejectlimittype_found = false;
-	bool				logerrors_found = false;
-	bool				encoding_found = false;
-	bool				iswritable_found = false;
-	bool				locationuris_found = false;
-	bool				command_found = false;
-
-	extentry = (ExtTableEntry *) palloc0(sizeof(ExtTableEntry));
-
-	foreach(lc, ftoptons)
-	{
-		DefElem    *def = (DefElem *) lfirst(lc);
-
-		if (pg_strcasecmp(def->defname, "location_uris") == 0)
-		{
-			extentry->urilocations = tokenizeLocationUris(defGetString(def));
-			locationuris_found = true;
-			continue;
-		}
-
-		if (pg_strcasecmp(def->defname, "execute_on") == 0)
-		{
-			extentry->execlocations = list_make1(makeString(defGetString(def)));
-			continue;
-		}
-
-		if (pg_strcasecmp(def->defname, "command") == 0)
-		{
-			extentry->command = defGetString(def);
-			command_found = true;
-			continue;
-		}
-
-		if (pg_strcasecmp(def->defname, "format_type") == 0)
-		{
-			arg = defGetString(def);
-			extentry->fmtcode = arg[0];
-			fmtcode_found = true;
-			continue;
-		}
-
-		/* only CSV format needs this for ProcessCopyOptions(), will do it later */
-		if (pg_strcasecmp(def->defname, "format") == 0)
-		{
-			continue;
-		}
-
-		if (pg_strcasecmp(def->defname, "reject_limit") == 0)
-		{
-			extentry->rejectlimit = atoi(defGetString(def));
-			rejectlimit_found = true;
-			continue;
-		}
-
-		if (pg_strcasecmp(def->defname, "reject_limit_type") == 0)
-		{
-			arg = defGetString(def);
-			extentry->rejectlimittype = arg[0];
-			rejectlimittype_found = true;
-			continue;
-		}
-
-		if (pg_strcasecmp(def->defname, "log_errors") == 0)
-		{
-			arg = defGetString(def);
-			extentry->logerrors = arg[0];
-			logerrors_found = true;
-			continue;
-		}
-
-		if (pg_strcasecmp(def->defname, "encoding") == 0)
-		{
-			extentry->encoding = atoi(defGetString(def));
-			encoding_found = true;
-			continue;
-		}
-
-		if (pg_strcasecmp(def->defname, "is_writable") == 0)
-		{
-			extentry->iswritable = defGetBoolean(def);
-			iswritable_found = true;
-			continue;
-		}
-
-		entryOptions = lappend(entryOptions, makeDefElem(def->defname, (Node *)makeString(pstrdup(defGetString(def)))));
-	}
-
-	/* If CSV format was chosen, make it visible to ProcessCopyOptions. */
-	if (fmttype_is_csv(extentry->fmtcode))
-			entryOptions = lappend(entryOptions, makeDefElem("format", (Node *) makeString("csv")));
-
-	/*
-	 * external table syntax does have these for sure, but errors could happen
-	 * if using foreign table syntax
-	 */
-	if (!fmtcode_found || !logerrors_found || !encoding_found || !iswritable_found)
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("missing format, logerrors, encoding or iswritable options for relation \"%s\"",
-						get_rel_name(relid))));
-
-	if (locationuris_found && command_found)
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("locationuris and command options conflict with each other")));
-
-	Insist(fmttype_is_custom(extentry->fmtcode) ||
-		   fmttype_is_csv(extentry->fmtcode) ||
-		   fmttype_is_text(extentry->fmtcode));
-
-	if (!rejectlimit_found) {
-		/* mark that no SREH requested */
-		extentry->rejectlimit = -1;
-	}
-
-	if (rejectlimittype_found) {
-		Insist(extentry->rejectlimittype == 'r' || extentry->rejectlimittype == 'p');
-	} else {
-		extentry->rejectlimittype = -1;
-	}
-
-	Insist(PG_VALID_ENCODING(extentry->encoding));
-
-	extentry->options = entryOptions;
-
-	return extentry;
 }

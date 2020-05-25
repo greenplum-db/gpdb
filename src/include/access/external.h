@@ -1,23 +1,25 @@
 /*-------------------------------------------------------------------------
  *
- * pg_exttable.h
- *	  definitions for system wide external relations
+ * external.h
+ *	  routines for getting external info from external table foreign table.
  *
- * Portions Copyright (c) 2007-2010, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2020-Present Pivotal Software, Inc.
  *
  *
  * IDENTIFICATION
- *	    src/include/catalog/pg_exttable.h
- *
- *-------------------------------------------------------------------------
- */
+ *	    src/include/access/external.h
+*
+*-------------------------------------------------------------------------
+*/
+#ifndef EXTERNAL_H
+#define EXTERNAL_H
 
-#ifndef PG_EXTTABLE_H
-#define PG_EXTTABLE_H
-
-#include "catalog/genbki.h"
 #include "nodes/pg_list.h"
+#include "nodes/plannodes.h"
+
+#define fmttype_is_custom(c) (c == 'b')
+#define fmttype_is_text(c)   (c == 't')
+#define fmttype_is_csv(c)    (c == 'c')
 
 /*
  * Descriptor of a single external relation.
@@ -38,16 +40,14 @@ typedef struct ExtTableEntry
     bool	isweb;		/* extra state, not cataloged */
 } ExtTableEntry;
 
-extern List * tokenizeLocationUris(char *locations);
+extern List * TokenizeLocationUris(char *locations);
 
 extern ExtTableEntry *GetExtTableEntry(Oid relid);
-
 extern ExtTableEntry *GetExtTableEntryIfExists(Oid relid);
-
 extern ExtTableEntry *GetExtFromForeignTableOptions(List *ftoptons, Oid relid);
 
-#define fmttype_is_custom(c) (c == 'b')
-#define fmttype_is_text(c)   (c == 't')
-#define fmttype_is_csv(c)    (c == 'c')
+extern ExternalScanInfo *MakeExternalScanInfo(ExtTableEntry *extEntry);
+extern ForeignScan *BuildForeignScanForExternalTable(Oid relid, Index scanrelid, List *qual, List *targetlist);
 
-#endif /* PG_EXTTABLE_H */
+
+#endif   /* EXTERNAL_H */

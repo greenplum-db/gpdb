@@ -20,9 +20,9 @@
 #include "pxf_filter.h"
 #include "pxf_header.h"
 
+#include "access/external.h"
 #include "access/url.h"
 #include "utils/builtins.h"
-#include "catalog/pg_exttable.h"
 #include "commands/defrem.h"
 #include "utils/formatting.h"
 #include "utils/timestamp.h"

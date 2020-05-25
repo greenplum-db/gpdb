@@ -25,7 +25,6 @@
 #include "catalog/gp_policy.h"
 #include "catalog/namespace.h"
 #include "catalog/pg_attribute.h"
-#include "catalog/pg_exttable.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_type.h"
 #include "cdb/cdbdisp_query.h"

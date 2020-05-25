@@ -39,8 +39,6 @@
 #include "utils/lsyscache.h"
 #include "utils/rel.h"
 
-#include "catalog/pg_exttable.h"
-
 
 /* We use a list of these to detect recursion in RewriteQuery */
 typedef struct rewrite_event

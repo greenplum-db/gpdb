@@ -31,7 +31,7 @@
 #include "gpopt/gpdbwrappers.h"
 #include "catalog/pg_collation.h"
 extern "C" {
-	#include "access/exttable_fdw_shim.h"
+	#include "access/external.h"
 	#include "utils/memutils.h"
 	#include "parser/parse_agg.h"
 }
@@ -2545,8 +2545,8 @@ gpdb::CreateForeignScanForExternalTable
 {
 	GP_WRAP_START;
 	{
-		return create_foreignscan_for_external_table(rel_oid, scanrelid,
-							     qual, targetlist);
+		return BuildForeignScanForExternalTable(rel_oid, scanrelid,
+												qual, targetlist);
 	}
 	GP_WRAP_END;
 	return NULL;

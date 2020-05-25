@@ -2,14 +2,13 @@
 #include "fmgr.h"
 #include "funcapi.h"
 
+#include "access/external.h"
 #include "access/extprotocol.h"
 #include "catalog/pg_proc.h"
 #include "commands/defrem.h"
 #include "utils/array.h"
 #include "utils/builtins.h"
 #include "utils/memutils.h"
-
-#include "catalog/pg_exttable.h"
 
 
 typedef struct DemoUri

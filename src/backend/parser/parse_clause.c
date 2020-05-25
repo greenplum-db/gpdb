@@ -48,7 +48,6 @@
 #include "utils/lsyscache.h"
 #include "utils/rel.h"
 
-#include "catalog/pg_exttable.h"
 #include "catalog/pg_operator.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbpartition.h"

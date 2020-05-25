@@ -15,6 +15,7 @@
 
 #include "postgres.h"
 
+#include "access/external.h"
 #include "access/genam.h"
 #include "access/hash.h"
 #include "access/heapam.h"
@@ -25,7 +26,6 @@
 #include "catalog/namespace.h"
 #include "catalog/objectaddress.h"
 #include "catalog/pg_constraint.h"
-#include "catalog/pg_exttable.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_opclass.h"
 #include "catalog/pg_type.h"
