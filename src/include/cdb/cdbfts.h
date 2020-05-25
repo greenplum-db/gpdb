@@ -45,6 +45,7 @@ typedef struct FtsControlBlock
 {
 	LWLockId		ControlLock;
 	FtsProbeInfo	fts_probe_info;
+	pid_t			fts_probe_pid;
 }	FtsControlBlock;
 
 extern volatile FtsProbeInfo *ftsProbeInfo;

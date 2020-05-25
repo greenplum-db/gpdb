@@ -367,8 +367,7 @@ set_ps_display(const char *activity, bool force)
 		cp += snprintf(cp, ep - cp, "con%d ", gp_session_id);
 
 	/* Which segment is accessed by this qExec? */
-	if (Gp_role == GP_ROLE_EXECUTE && gp_session_id >= 0 &&
-		GpIdentity.segindex >= -1 && ep - cp > 0)
+	if (IS_QUERY_EXECUTOR_BACKEND() && GpIdentity.segindex >= -1 && ep - cp > 0)
 		cp += snprintf(cp, ep - cp, "seg%d ", GpIdentity.segindex);
 
 	/* Add count of commands received from client session. */

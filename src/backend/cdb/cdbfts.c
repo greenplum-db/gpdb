@@ -54,7 +54,7 @@ FtsShmemSize(void)
 {
 	RequestNamedLWLockTranche("ftsControlLock", 1);
 
-	return MAXALIGN(sizeof(FtsControlBlock) + sizeof(*shmFtsProbePID));
+	return MAXALIGN(sizeof(FtsControlBlock));
 }
 
 void
@@ -70,6 +70,8 @@ FtsShmemInit(void)
 	/* Initialize locks and shared memory area */
 	ftsControlLock = shared->ControlLock;
 	ftsProbeInfo = &shared->fts_probe_info;
+	shmFtsProbePID = &shared->fts_probe_pid;
+	*shmFtsProbePID = 0;
 
 	if (!IsUnderPostmaster)
 	{
@@ -78,9 +80,6 @@ FtsShmemInit(void)
 
 		shared->fts_probe_info.status_version = 0;
 	}
-
-	shmFtsProbePID = (volatile pid_t*) ShmemAlloc(sizeof(*shmFtsProbePID));
-	*shmFtsProbePID = 0;
 }
 
 void
