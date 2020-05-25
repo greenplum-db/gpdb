@@ -2695,7 +2695,9 @@ def checkPersistentTables():
       FROM   gp_persistent_relation_node_check() p
         LEFT OUTER JOIN pg_class c
           ON (p.relfilenode_oid = c.relfilenode)
-      WHERE (p.segment_file_num = 0 or c.relstorage != 'h')
+      WHERE (c.relstorage is not null and c.relstorage != 'h') or
+            (c.relstorage is not null and segment_file_num = 0) or
+            (c.relstorage is null)
     ) b ON (a.tablespace_oid   = b.tablespace_oid    and
             a.database_oid     = b.database_oid      and
             a.relfilenode_oid  = b.relfilenode_oid   and
