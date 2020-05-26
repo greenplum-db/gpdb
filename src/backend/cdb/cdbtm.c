@@ -880,7 +880,7 @@ prepareDtxTransaction(void)
 		 DtxStateToString(MyTmGxactLocal->state));
 
 	Assert(MyTmGxactLocal->state == DTX_STATE_ACTIVE_DISTRIBUTED);
-	Assert(MyTmGxact->gxid > FirstDistributedTransactionId);
+	Assert(MyTmGxact->gxid >= FirstDistributedTransactionId);
 
 	doPrepareTransaction();
 }
