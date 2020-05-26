@@ -2873,7 +2873,7 @@ describeOneTableDetails(const char *schemaname,
 				goto error_return;
 			}
 
-			if (strcmp(PQgetvalue(result, 0, 0), PG_EXTTABLE_SERVER_NAME) != 0)
+			if (strcmp(PQgetvalue(result, 0, 0), GP_EXTTABLE_SERVER_NAME) != 0)
 			{
 				/* Print server name */
 				printfPQExpBuffer(&buf, _("Server: %s"),

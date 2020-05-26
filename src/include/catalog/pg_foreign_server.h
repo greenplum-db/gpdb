@@ -61,9 +61,6 @@ typedef FormData_pg_foreign_server *Form_pg_foreign_server;
 #define Anum_pg_foreign_server_srvacl			6
 #define Anum_pg_foreign_server_srvoptions		7
 
-DATA(insert OID = 5105 ( pg_exttable_server	PGUID	5104	_null_ _null_ _null_ _null_ ));
-DESCR("special foreign server to mark external tables");
-#define PG_EXTTABLE_SERVER_OID 5105
-#define PG_EXTTABLE_SERVER_NAME "pg_exttable_server"
+#define GP_EXTTABLE_SERVER_NAME "gp_exttable_server"
 
 #endif   /* PG_FOREIGN_SERVER_H */

@@ -1,19 +1,19 @@
 /*-------------------------------------------------------------------------
 *
-* fileam.h
-*	  external file access method definitions.
+* extaccess.h
+*	  external table access method definitions.
 *
 * Portions Copyright (c) 2007-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  *
  *
  * IDENTIFICATION
- *	    src/include/access/fileam.h
+ *	    gpcontrib/gp_exttable_fdw/extaccess.h
 *
 *-------------------------------------------------------------------------
 */
-#ifndef FILEAM_H
-#define FILEAM_H
+#ifndef EXT_ACCESS_H
+#define EXT_ACCESS_H
 
 #include "access/formatter.h"
 #include "access/sdir.h"
@@ -125,4 +125,4 @@ extern void external_insert_finish(ExternalInsertDesc extInsertDesc);
 
 extern List *appendCopyEncodingOption(List *copyFmtOpts, int encoding);
 
-#endif   /* FILEAM_H */
+#endif   /* EXT_ACCESS_H */

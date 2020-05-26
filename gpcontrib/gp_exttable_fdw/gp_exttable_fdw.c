@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------
  *
- * exttable_fdw_shim.c
+ * gp_exttable_fdw.c
  *	  Shim layer between legacy GPDB external table API and the Foreign
  *	  Data Wrapper API
  *
@@ -15,16 +15,18 @@
  *
  *
  * IDENTIFICATION
- *	    src/backend/access/external/exttable_fdw_shim.c
+ *	    gpcontrib/gp_exttable_fdw/gp_exttable_fdw.c
  *
  *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"
 
+#include "extaccess.h"
+#include "fmgr.h"
+#include "nodes/plannodes.h"
+
 #include "access/external.h"
-#include "access/exttable_fdw_shim.h"
-#include "access/fileam.h"
 #include "access/reloptions.h"
 #include "access/relscan.h"
 #include "cdb/cdbvars.h"
@@ -48,7 +50,18 @@
 #include "utils/syscache.h"
 #include "utils/uri.h"
 
+PG_MODULE_MAGIC;
+
 #define GP_EXTTABLE_ATTRNUM 12
+
+extern Datum gp_exttable_fdw_handler(PG_FUNCTION_ARGS);
+extern Datum gp_exttable_validator(PG_FUNCTION_ARGS);
+
+extern Datum pg_exttable(PG_FUNCTION_ARGS);
+
+PG_FUNCTION_INFO_V1(gp_exttable_fdw_handler);
+PG_FUNCTION_INFO_V1(gp_exttable_validator);
+PG_FUNCTION_INFO_V1(pg_exttable);
 
 /*
  * PGExtTableEntry is used in pg_exttable(). It reflects each external
@@ -196,6 +209,7 @@ Datum pg_exttable(PG_FUNCTION_ARGS)
 		HeapTuple		fttuple;
 		Form_pg_foreign_table fttableform;
 		List		   *ftentries = NIL;
+		Oid				extserver;
 
 		funcctx = SRF_FIRSTCALL_INIT();
 		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
@@ -219,13 +233,15 @@ Datum pg_exttable(PG_FUNCTION_ARGS)
 
 		funcctx->tuple_desc = BlessTupleDesc(tupdesc);
 
+		extserver = get_foreign_server_oid(GP_EXTTABLE_SERVER_NAME, false);
+
 		/* Retrieve external table in foreign table catalog */
 		pg_foreign_table_rel = heap_open(ForeignTableRelationId, AccessShareLock);
 
 		ScanKeyInit(&ftkey,
 					Anum_pg_foreign_table_ftserver,
 					BTEqualStrategyNumber, F_OIDEQ,
-					ObjectIdGetDatum(PG_EXTTABLE_SERVER_OID));
+					ObjectIdGetDatum(extserver));
 
 		ftscan = systable_beginscan(pg_foreign_table_rel, InvalidOid,
 									false, NULL, 1, &ftkey);
@@ -341,8 +357,8 @@ Datum pg_exttable(PG_FUNCTION_ARGS)
 }
 
 /* FDW validator for external tables */
-void
-gp_exttable_permission_check(PG_FUNCTION_ARGS)
+Datum
+gp_exttable_validator(PG_FUNCTION_ARGS)
 {
 	List	   *options_list = untransformRelOptions(PG_GETARG_DATUM(0));
 
@@ -491,7 +507,7 @@ gp_exttable_permission_check(PG_FUNCTION_ARGS)
 		}
 	}
 
-	return;
+	PG_RETURN_VOID();
 }
 
 static void
@@ -870,7 +886,7 @@ static void exttable_EndForeignInsert(EState *estate,
 }
 
 Datum
-exttable_fdw_handler(PG_FUNCTION_ARGS)
+gp_exttable_fdw_handler(PG_FUNCTION_ARGS)
 {
 	FdwRoutine *routine = makeNode(FdwRoutine);
 

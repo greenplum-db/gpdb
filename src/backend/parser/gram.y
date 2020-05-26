@@ -6826,11 +6826,11 @@ CreateForeignTableStmt:
 					n->servername = $10;
 					n->options = $11;
 					n->distributedBy = (DistributedBy *) $12;
-					if (strcmp(n->servername, PG_EXTTABLE_SERVER_NAME) != 0 && n->distributedBy)
+					if (strcmp(n->servername, GP_EXTTABLE_SERVER_NAME) != 0 && n->distributedBy)
 					{
 						ereport(ERROR,
 								(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-								 errmsg("DISTRIBUTED BY clause is only supported by FOREIGN SERVER \"%s\"", PG_EXTTABLE_SERVER_NAME)));
+								 errmsg("DISTRIBUTED BY clause is only supported by FOREIGN SERVER \"%s\"", GP_EXTTABLE_SERVER_NAME)));
 					 }
 					$$ = (Node *) n;
 				}

@@ -302,7 +302,7 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 										   locationExec,
 										   locationUris);
 
-	createForeignTableStmt->servername = PG_EXTTABLE_SERVER_NAME;
+	createForeignTableStmt->servername = GP_EXTTABLE_SERVER_NAME;
 	createForeignTableStmt->options = list_concat(formatOpts, entryOptions);
 	CreateForeignTable(createForeignTableStmt, reloid,
 					   true /* skip permission checks, we checked them ourselves */);

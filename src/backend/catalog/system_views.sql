@@ -936,8 +936,6 @@ CREATE VIEW pg_resqueue_status AS
 			ON (s.queueid = q.oid);
 			
 -- External table views
-CREATE VIEW pg_exttable AS
-    SELECT * FROM pg_exttable();
 
 CREATE VIEW pg_max_external_files AS
     SELECT   address::name as hostname, count(*) as maxfiles

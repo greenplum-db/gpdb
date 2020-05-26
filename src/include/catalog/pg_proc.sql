@@ -172,11 +172,6 @@
 
  CREATE FUNCTION gp_list_backend_priorities() RETURNS SETOF record LANGUAGE internal VOLATILE AS 'gp_list_backend_priorities' WITH (OID=5042, DESCRIPTION="list priorities of backends");
 
--- Functions to extract external table info
- CREATE FUNCTION pg_exttable(OUT reloid oid, OUT urilocation _text, OUT execlocation _text, OUT fmttype char, OUT fmtopts text, OUT options _text, OUT command text, OUT rejectlimit int4, OUT rejectlimittype char, OUT logerrors char, OUT encoding int4, OUT writable bool) RETURNS SETOF record LANGUAGE internal VOLATILE EXECUTE ON MASTER AS 'pg_exttable' WITH (OID=7061, DESCRIPTION="original pg_exttable catalog info");
-
- CREATE FUNCTION gp_exttable_permission_check(text, oid) RETURNS void LANGUAGE internal VOLATILE NO SQL AS 'gp_exttable_permission_check' WITH (OID=7070, DESCRIPTION="validator for external tables");
-
 -- Functions to deal with SREH error logs
  CREATE FUNCTION gp_read_error_log(exttable text, OUT cmdtime timestamptz, OUT relname text, OUT filename text, OUT linenum int4, OUT bytenum int4, OUT errmsg text, OUT rawdata text, OUT rawbytes bytea) RETURNS SETOF record LANGUAGE INTERNAL STRICT VOLATILE PARALLEL SAFE EXECUTE ON ALL SEGMENTS AS 'gp_read_error_log' WITH (OID = 7076, DESCRIPTION="read the error log for the specified external table");
 
@@ -439,6 +434,3 @@ CREATE FUNCTION cdblegacyhash_uuid(uuid) RETURNS int4 LANGUAGE internal IMMUTABL
 CREATE FUNCTION cdblegacyhash_anyenum(anyenum) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT PARALLEL SAFE AS 'cdblegacyhash_anyenum' WITH (OID=6171, DESCRIPTION="Legacy cdbhash function");
 
 CREATE FUNCTION gp_create_restore_point(text) RETURNS SETOF record LANGUAGE internal VOLATILE STRICT AS 'gp_create_restore_point' WITH (OID=6998,  DESCRIPTION="Create a named restore point on all segments");
-
-
-CREATE FUNCTION gp_exttable_fdw_handler(internal) RETURNS internal LANGUAGE internal IMMUTABLE STRICT AS 'exttable_fdw_handler' WITH (OID=5107, DESCRIPTION="handler for internal external table FDW");

@@ -323,7 +323,7 @@ rel_is_external_table(Oid relid)
 		return false;
 	tableform = (Form_pg_foreign_table) GETSTRUCT(tp);
 
-	result = (tableform->ftserver == PG_EXTTABLE_SERVER_OID);
+	result = (tableform->ftserver == get_foreign_server_oid(GP_EXTTABLE_SERVER_NAME, false));
 
 	ReleaseSysCache(tp);
 

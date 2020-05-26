@@ -180,6 +180,8 @@ AS
 GRANT SELECT ON TABLE gp_toolkit.__gp_number_of_segments TO public;
 
 
+CREATE EXTENSION gp_exttable_fdw;
+
 --------------------------------------------------------------------------------
 -- log-reading external tables and views
 --------------------------------------------------------------------------------

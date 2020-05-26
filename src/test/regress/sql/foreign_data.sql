@@ -4,7 +4,7 @@
 
 -- In GPDB, there are a couple of special built-in objects, to handle
 -- backwards-compatibility with external tables. They are the FDW called
--- 'pg_exttable_fdw', foreign server 'pg_exttable_server'. We don't want those
+-- 'gp_exttable_fdw', foreign server 'gp_exttable_server'. We don't want those
 -- to appear in the test output, to keep the expected output unchanged from
 -- upstream, as much as possible. The queries on the pg_foreign_* catalog
 -- tables, and the \dew and \des commands, have been modified to exclude them.
@@ -15,7 +15,7 @@
 -- also including everything that begins with 'p' followed by any other letter
 -- but 'g' (the 2nd rule is needed to include the 'postgresql' FDW used in the
 -- test).
-\set NO_BUILTINS ([a-oq-z]?*)|(p[a-fh-z]?*)
+\set NO_BUILTINS ([a-fh-z]?*)|(g[a-oq-z]?*)
 -- Clean up in case a prior regression run failed
 
 -- Suppress NOTICE messages when roles don't exist
@@ -39,8 +39,8 @@ COMMENT ON FOREIGN DATA WRAPPER dummy IS 'useless';
 CREATE FOREIGN DATA WRAPPER postgresql VALIDATOR postgresql_fdw_validator;
 
 -- At this point we should have 2 built-in wrappers and no servers.
-SELECT fdwname, fdwhandler::regproc, fdwvalidator::regproc, fdwoptions FROM pg_foreign_data_wrapper WHERE fdwname <> 'pg_exttable_fdw' ORDER BY 1, 2, 3;
-SELECT srvname, srvoptions FROM pg_foreign_server WHERE srvname <> 'pg_exttable_server';
+SELECT fdwname, fdwhandler::regproc, fdwvalidator::regproc, fdwoptions FROM pg_foreign_data_wrapper WHERE fdwname <> 'gp_exttable_fdw' ORDER BY 1, 2, 3;
+SELECT srvname, srvoptions FROM pg_foreign_server WHERE srvname <> 'gp_exttable_server';
 SELECT * FROM pg_user_mapping;
 
 -- CREATE FOREIGN DATA WRAPPER
@@ -394,9 +394,9 @@ ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 RENAME TO foreign_table_1;
 
 -- Information schema
 
-SELECT * FROM information_schema.foreign_data_wrappers WHERE foreign_data_wrapper_name <> 'pg_exttable_fdw' ORDER BY 1, 2;
+SELECT * FROM information_schema.foreign_data_wrappers WHERE foreign_data_wrapper_name <> 'gp_exttable_fdw' ORDER BY 1, 2;
 SELECT * FROM information_schema.foreign_data_wrapper_options ORDER BY 1, 2, 3;
-SELECT * FROM information_schema.foreign_servers WHERE foreign_server_name <> 'pg_exttable_server'  ORDER BY 1, 2;
+SELECT * FROM information_schema.foreign_servers WHERE foreign_server_name <> 'gp_exttable_server'  ORDER BY 1, 2;
 SELECT * FROM information_schema.foreign_server_options ORDER BY 1, 2, 3;
 SELECT * FROM information_schema.user_mappings ORDER BY lower(authorization_identifier), 2, 3;
 SELECT * FROM information_schema.user_mapping_options ORDER BY lower(authorization_identifier), 2, 3, 4;
@@ -747,6 +747,6 @@ DROP FOREIGN DATA WRAPPER dummy CASCADE;
 DROP ROLE regress_foreign_data_user;
 
 -- At this point we should have no wrappers, no servers, and no mappings.
-SELECT fdwname, fdwhandler, fdwvalidator, fdwoptions FROM pg_foreign_data_wrapper WHERE fdwname <> 'pg_exttable_fdw';
-SELECT srvname, srvoptions FROM pg_foreign_server WHERE srvname <> 'pg_exttable_server';
+SELECT fdwname, fdwhandler, fdwvalidator, fdwoptions FROM pg_foreign_data_wrapper WHERE fdwname <> 'gp_exttable_fdw';
+SELECT srvname, srvoptions FROM pg_foreign_server WHERE srvname <> 'gp_exttable_server';
 SELECT * FROM pg_user_mapping;

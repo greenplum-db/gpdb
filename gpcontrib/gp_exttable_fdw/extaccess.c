@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------
  *
- * fileam.c
- *	  file access method routines
+ * extaccess.c
+ *	  external table access method routines
  *
  * This access layer mimics the heap access API with respect to how it
  * communicates with its respective scan node (external scan node) but
@@ -26,17 +26,16 @@
  *
  *
  * IDENTIFICATION
- *	    src/backend/access/external/fileam.c
+ *	    gpcontrib/gp_exttable_fdw/extaccess.c
  *
  *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"
 
-#include <fstream/gfile.h>
+#include "extaccess.h"
 
 #include "access/external.h"
-#include "access/fileam.h"
 #include "access/formatter.h"
 #include "access/heapam.h"
 #include "access/url.h"
@@ -1487,43 +1486,6 @@ external_scan_error_callback(void *arg)
 						   cstate->cur_relname, scan->fs_uri);
 		}
 	}
-}
-
-void
-gfile_printf_then_putc_newline(const char *format,...)
-{
-	char	   *a;
-	va_list		va;
-	int			i;
-
-	va_start(va, format);
-	i = vsnprintf(0, 0, format, va);
-	va_end(va);
-
-	if (i < 0)
-		elog(NOTICE, "gfile_printf_then_putc_newline vsnprintf failed.");
-	else if (!(a = palloc(i + 1)))
-		elog(NOTICE, "gfile_printf_then_putc_newline palloc failed.");
-	else
-	{
-		va_start(va, format);
-		vsnprintf(a, i + 1, format, va);
-		va_end(va);
-		elog(NOTICE, "%s", a);
-		pfree(a);
-	}
-}
-
-void *
-gfile_malloc(size_t size)
-{
-	return palloc(size);
-}
-
-void
-gfile_free(void *a)
-{
-	pfree(a);
 }
 
 /*

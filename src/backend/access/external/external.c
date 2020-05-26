@@ -13,6 +13,8 @@
 
 #include "postgres.h"
 
+#include <fstream/gfile.h>
+
 #include "access/external.h"
 #include "access/reloptions.h"
 #include "catalog/indexing.h"
@@ -29,6 +31,43 @@
 #include "utils/uri.h"
 
 static List *create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly);
+
+void
+gfile_printf_then_putc_newline(const char *format,...)
+{
+	char	   *a;
+	va_list		va;
+	int			i;
+
+	va_start(va, format);
+	i = vsnprintf(0, 0, format, va);
+	va_end(va);
+
+	if (i < 0)
+		elog(NOTICE, "gfile_printf_then_putc_newline vsnprintf failed.");
+	else if (!(a = palloc(i + 1)))
+		elog(NOTICE, "gfile_printf_then_putc_newline palloc failed.");
+	else
+	{
+		va_start(va, format);
+		vsnprintf(a, i + 1, format, va);
+		va_end(va);
+		elog(NOTICE, "%s", a);
+		pfree(a);
+	}
+}
+
+void *
+gfile_malloc(size_t size)
+{
+	return palloc(size);
+}
+
+void
+gfile_free(void *a)
+{
+	pfree(a);
+}
 
 /* transform the locations string to a list */
 List*
@@ -332,7 +371,7 @@ BuildForeignScanForExternalTable(Oid relid, Index scanrelid,
 	/* cost will be filled in by create_foreignscan_plan */
 	fscan->operation = CMD_SELECT;
 	/* fs_server will be filled in by create_foreignscan_plan */
-	fscan->fs_server = PG_EXTTABLE_SERVER_OID;
+	fscan->fs_server = get_foreign_server_oid(GP_EXTTABLE_SERVER_NAME, false);
 	fscan->fdw_exprs = NIL;
 	fscan->fdw_private = list_make1(externalscan_info);
 	fscan->fdw_scan_tlist = NIL;

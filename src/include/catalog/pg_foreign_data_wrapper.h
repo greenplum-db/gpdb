@@ -61,7 +61,4 @@ typedef FormData_pg_foreign_data_wrapper *Form_pg_foreign_data_wrapper;
 #define Anum_pg_foreign_data_wrapper_fdwacl			5
 #define Anum_pg_foreign_data_wrapper_fdwoptions		6
 
-DATA(insert OID = 5104 ( pg_exttable_fdw	PGUID	5107	7070	_null_ _null_ ));
-DESCR("special FDW to mark external tables");
-
 #endif   /* PG_FOREIGN_DATA_WRAPPER_H */

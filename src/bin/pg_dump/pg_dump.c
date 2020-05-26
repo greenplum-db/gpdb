@@ -9182,7 +9182,7 @@ getForeignDataWrappers(Archive *fout, int *numForeignDataWrappers)
 		/* Decide whether we want to dump it */
 		selectDumpableObject(&(fdwinfo[i].dobj), fout);
 
-		/* Leave out the built-in pg_exttable_fdw */
+		/* Leave out the built-in gp_exttable_fdw */
 		if (fdwinfo[i].dobj.catId.oid < (Oid) FirstNormalObjectId)
 			fdwinfo[i].dobj.dump = DUMP_COMPONENT_NONE;
 
@@ -9336,7 +9336,7 @@ getForeignServers(Archive *fout, int *numForeignServers)
 		/* Decide whether we want to dump it */
 		selectDumpableObject(&(srvinfo[i].dobj), fout);
 
-		/* Leave out the built-in pg_exttable_server */
+		/* Leave out the built-in gp_exttable_server */
 		if (srvinfo[i].dobj.catId.oid < (Oid) FirstNormalObjectId)
 			srvinfo[i].dobj.dump = DUMP_COMPONENT_NONE;
 
@@ -16669,7 +16669,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 		if (ftoptions && ftoptions[0])
 			appendPQExpBuffer(q, "\nOPTIONS (\n    %s\n)", ftoptions);
 
-		if (dumpGpPolicy && tbinfo->relkind == RELKIND_FOREIGN_TABLE && strcmp(srvname, PG_EXTTABLE_SERVER_NAME) == 0)
+		if (dumpGpPolicy && tbinfo->relkind == RELKIND_FOREIGN_TABLE && strcmp(srvname, GP_EXTTABLE_SERVER_NAME) == 0)
 			addDistributedBy(fout, q, tbinfo, actual_atts);
 
 		appendPQExpBufferStr(q, ";\n");
