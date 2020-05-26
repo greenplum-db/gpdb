@@ -38,6 +38,7 @@ DROP TABLE IF EXISTS bfv_tab2_dimdate;
 DROP TABLE IF EXISTS bfv_tab2_dimtabl1;
 --end_ignore
 
+-- Bug-fix verification for MPP-25537: PANIC when bitmap index used in ORCA select
 CREATE TABLE bfv_tab2_facttable1 (
 col1 integer,
 wk_id smallint,
