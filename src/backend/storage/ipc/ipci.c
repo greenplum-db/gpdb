@@ -270,10 +270,8 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 	SUBTRANSShmemInit();
 	MultiXactShmemInit();
 	if (Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_UTILITY)
-	{
 		FtsShmemInit();
-		tmShmemInit();
-	}
+	tmShmemInit();
 	InitBufferPool();
 
 	/*
