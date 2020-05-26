@@ -2056,14 +2056,15 @@ explain
    ->  Append  (cost=1.23..965.10 rows=28704 width=8)
          ->  Hash Join  (cost=1.23..4.00 rows=4 width=8)
                Hash Cond: (t2.b = t1.a)
-               ->  Redistribute Motion 2:1  (slice2; segments: 2)  (cost=0.00..2.60 rows=10 width=4)
+               ->  Redistribute Motion 2:3  (slice2; segments: 2)  (cost=0.00..2.60 rows=10 width=4)
                      Hash Key: t2.b
+                     Hash Module: 1
                      ->  Seq Scan on t2  (cost=0.00..2.20 rows=10 width=4)
                ->  Hash  (cost=1.10..1.10 rows=4 width=4)
                      ->  Seq Scan on t1  (cost=0.00..1.10 rows=4 width=4)
          ->  Seq Scan on t3  (cost=0.00..961.00 rows=28700 width=8)
  Optimizer: Postgres query optimizer
-(11 rows)
+(12 rows)
 
 select * from union_schema.t1 join union_schema.t2
   on union_schema.t1.a = union_schema.t2.b;
@@ -2135,12 +2136,13 @@ explain
                Hash Cond: (t1.a = t2.b)
                ->  Seq Scan on t1  (cost=0.00..1.20 rows=7 width=4)
                ->  Hash  (cost=2.30..2.30 rows=4 width=4)
-                     ->  Redistribute Motion 2:1  (slice2; segments: 2)  (cost=0.00..2.30 rows=5 width=4)
+                     ->  Redistribute Motion 2:3  (slice2; segments: 2)  (cost=0.00..2.30 rows=5 width=4)
                            Hash Key: t2.b
+                           Hash Module: 1
                            ->  Seq Scan on t2  (cost=0.00..2.10 rows=5 width=4)
          ->  Seq Scan on t3  (cost=0.00..961.00 rows=28700 width=8)
  Optimizer: Postgres query optimizer
-(11 rows)
+(12 rows)
 
 select * from union_schema.t1 join union_schema.t2
   on union_schema.t1.a = union_schema.t2.b;

@@ -1441,7 +1441,6 @@ ExplainNode(PlanState *planstate, List *ancestors,
 						break;
 					case MOTIONTYPE_HASH:
 						sname = "Redistribute Motion";
-						motion_recv = pMotion->numHashSegments;
 						break;
 					case MOTIONTYPE_BROADCAST:
 						sname = "Broadcast Motion";
@@ -2103,6 +2102,15 @@ ExplainNode(PlanState *planstate, List *ancestors,
 									 pMotion->sortColIdx,
 									 "Merge Key",
 									 ancestors, es);
+				if (pMotion->motionType == MOTIONTYPE_HASH &&
+					pMotion->numHashSegments != motion_recv)
+				{
+					Assert(pMotion->numHashSegments < motion_recv);
+					appendStringInfoSpaces(es->str, es->indent * 2);
+					appendStringInfo(es->str,
+									 "Hash Module: %d\n",
+									 pMotion->numHashSegments);
+				}
 			}
 			break;
 		case T_AssertOp:
