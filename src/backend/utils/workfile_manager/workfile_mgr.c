@@ -94,6 +94,8 @@ typedef struct
 static WorkFileLocalEntry *localEntries = NULL;
 static int sizeLocalEntries = 0;
 
+static workfile_set *localInitSet = NULL;	/* pointer into the none-file-associated workset */
+
 static workfile_set *workfile_mgr_create_set_internal(const char *operator_name, const char *prefix);
 
 static void AtProcExit_WorkFile(int code, Datum arg);
@@ -179,6 +181,15 @@ AtProcExit_WorkFile(int code, Datum arg)
 {
 	int			i;
 
+	if (localInitSet)
+	{
+		/*
+		 * 0 1 2 always for stdin stdout stderr, therfore if localInitSet still there 
+		 * we register file(1) to it ,so that it can be removed automatically 
+		 */
+		RegisterFileWithSet(1, localInitSet);
+	}
+
 	for (i = 0; i < sizeLocalEntries; i++)
 		WorkFileDeleted(i);
 }
@@ -241,6 +252,10 @@ RegisterFileWithSet(File file, workfile_set *work_set)
 	work_set->num_files++;
 	work_set->perquery->num_files++;
 
+	/* set localInitSet point into NULL when there is a file register to it */
+	if (localInitSet == work_set)
+		localInitSet = NULL;
+
 	/* Enforce the limit on number of files */
 	if (gp_workfile_limit_files_per_query > 0 &&
 		work_set->perquery->num_files > gp_workfile_limit_files_per_query)
@@ -299,6 +314,9 @@ UpdateWorkFileSize(File file, uint64 newsize)
 		work_set = workfile_mgr_create_set_internal(NULL, NULL);
 		localEntry->work_set = work_set;
 		work_set->num_files++;
+
+		/* set localInitSet point into NULL when there is a file register to it */
+		localInitSet = NULL;
 
 		perquery = work_set->perquery;
 		perquery->num_files++;
@@ -516,14 +534,26 @@ workfile_mgr_create_set_internal(const char *operator_name, const char *prefix)
 	perquery->refcount++;
 	Assert(perquery->active);
 
-	/*
-	 * Allocate a workfile_set entry, and initialize it.
+	/* 
+	 * if there is a work set with no file associated, we should return it rather than active new one
 	 */
-	work_set = dlist_container(WorkFileSetSharedEntry, node,
+	if (!localInitSet)
+	{
+		/*
+		 * Allocate a workfile_set entry, and initialize it.
+		 */
+		work_set = dlist_container(WorkFileSetSharedEntry, node,
 							   dlist_pop_head_node(&workfile_shared->freeList));
-	Assert(!work_set->active);
-	dlist_push_head(&workfile_shared->activeList, &work_set->node);
-	workfile_shared->num_active++;
+		Assert(!work_set->active);
+		dlist_push_head(&workfile_shared->activeList, &work_set->node);
+		workfile_shared->num_active++;
+
+		localInitSet = work_set;
+	}
+	else
+	{
+		work_set = localInitSet;
+	}
 
 	work_set->session_id = gp_session_id;
 	work_set->command_count = gp_command_count;
