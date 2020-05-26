@@ -50,6 +50,7 @@ static bool workfile_fill_sharedcache(void);
 static bool workfile_create_and_set_cleanup(void);
 static bool workfile_create_and_individual_cleanup(void);
 static bool workfile_made_in_temp_tablespace(void);
+static bool workfile_set_reuse_test(void);
 
 static bool atomic_test(void);
 
@@ -83,6 +84,7 @@ static test_def test_defns[] = {
 		{"workfile_create_and_set_cleanup", workfile_create_and_set_cleanup},
 		{"workfile_create_and_individual_cleanup", workfile_create_and_individual_cleanup},
 		{"workfile_made_in_temp_tablespace", workfile_made_in_temp_tablespace},
+		{"workfile_set_reuse_test", workfile_set_reuse_test},
 		{NULL, NULL}, /* This has to be the last element of the array */
 };
 
@@ -751,6 +753,18 @@ workfile_fill_sharedcache(void)
 			success = false;
 			break;
 		}
+
+		/*  
+		 * register at least one file in set, so we can really full fill the max_entries in sharedcache 
+		 * and this will ensure our set will be removed automatically when we exit proc.
+		 */
+		BufFile *ewfile = BufFileCreateTempInSet(work_set, false /* interXact */);
+		if (ewfile == NULL)
+		{
+			success = false;
+			break;
+		}
+
 		if (crt_entry >= gp_workfile_max_entries - 2)
 		{
 			/* Pause between adding extra ones so we can test from other sessions */
@@ -911,6 +925,35 @@ workfile_create_and_individual_cleanup(void)
 	workfile_mgr_close_set(work_set);
 
 	unit_test_result(true);
+
+	return unit_test_summary();
+}
+
+static bool
+workfile_set_reuse_test(void)
+{
+	bool success = true;
+
+	unit_test_reset();
+	elog(LOG, "Running test: workfile_set_reuse_test");
+
+	/* 
+	 * diff with workfile_fill_sharedcache, there is no file assoiated with the set 
+	 * and the workfile_mgr_create_set will reuse the empty set now, so we can try CREATE
+	 * more than gp_workfile_max_entries times, actually its the same local set.
+	 */
+	int n_entries = gp_workfile_max_entries + 1;
+	for (int crt_entry = 0; crt_entry < n_entries; crt_entry++)
+	{
+		workfile_set *work_set = workfile_mgr_create_set("workfile_test", NULL);
+		if (NULL == work_set)
+		{
+			success = false;
+			break;
+		}
+	}
+
+	unit_test_result(success);
 
 	return unit_test_summary();
 }
