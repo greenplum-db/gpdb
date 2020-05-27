@@ -1079,23 +1079,12 @@ cdb_setup(void)
 		Gp_role == GP_ROLE_DISPATCH &&
 		!*shmDtmStarted)
 	{
-		while (true)
-		{
-			int rc;
-			if (*shmDtmStarted)
-				break;
-			CHECK_FOR_INTERRUPTS();
-			/* wait for 100ms or postmaster dies */
-			rc = WaitLatch(&MyProc->procLatch,
-				   WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH, 100);
-
-			ResetLatch(&MyProc->procLatch);
-			if (rc & WL_POSTMASTER_DEATH)
-				proc_exit(1);
-		}
+		ereport(FATAL,
+				(errcode(ERRCODE_CANNOT_CONNECT_NOW),
+				 errmsg(POSTMASTER_IN_RECOVERY_MSG),
+				 errdetail("waiting for distributed transaction recovery to complete")));
 	}
 }
-
 
 /*
  * performs all necessary cleanup required when leaving Greenplum
