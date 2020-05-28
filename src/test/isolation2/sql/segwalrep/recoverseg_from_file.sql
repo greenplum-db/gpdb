@@ -9,7 +9,24 @@
 
 include: helpers/server_helpers.sql;
 
-SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
+--
+-- generate_recover_config_file:
+--   generate config file used by recoverseg -i
+--
+create or replace function generate_recover_config_file(datadir text, port text)
+returns void as $$
+    import io
+    import os
+    myhost = os.uname()[1]
+    inplaceConfig = myhost + '|' + port + '|' + datadir
+    configStr = inplaceConfig + ' ' + inplaceConfig
+	
+    f = open("/tmp/recover_config_file", "w")
+    f.write(configStr)
+    f.close()
+$$ language plpythonu;
+
+SELECT dbid, role, preferred_role, content, mode, status FROM gp_segment_configuration order by dbid;
 -- stop a primary in order to trigger a mirror promotion
 select pg_ctl((select datadir from gp_segment_configuration c
 where c.role='p' and c.content=1), 'stop');
@@ -34,15 +51,24 @@ select generate_recover_config_file(
 -- recover from config file
 !\retcode gprecoverseg -a -i /tmp/recover_config_file;
 
+-- after gprecoverseg -i, the down segemnt should be up
+-- in mirror mode
+select status from gp_segment_configuration
+where role='m' and content=1;
+
 -- recover should reuse the old dbid and not occupy dbid=2
 select dbid from gp_segment_configuration where dbid=2;
 
 update gp_segment_configuration set dbid=2 where dbid=9;
 set allow_system_table_mods to false;
 
--- fully recover the cluster
+-- we manually change dbid from 2 to 9, which casue the
+-- corresponding segment down as well, so recovery full
+-- at here
 !\retcode gprecoverseg -aF;
 
 -- rebalance the cluster
 !\retcode gprecoverseg -ar;
 
+-- remove the config file
+!\retcode rm /tmp/recover_config_file
