@@ -1299,7 +1299,7 @@ _outMotion(StringInfo str, const Motion *node)
 
 	WRITE_NODE_FIELD(hashExprs);
 	appendStringInfoLiteral(str, " :hashFuncs");
-	for (i = 0; i < list_length(node->hashExprs); i++)
+	for (i = 0; i < list_length(node->hashFuncs); i++)
 		appendStringInfo(str, " %u", node->hashFuncs[i]);
 
 	WRITE_INT_FIELD(numSortCols);
