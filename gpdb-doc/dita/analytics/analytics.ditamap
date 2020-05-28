@@ -11,14 +11,7 @@
       <topicref href="madlib.xml#topic9" navtitle="Examples" linking="none"/>
       <topicref href="madlib.xml#topic10" navtitle="References" linking="none"/>
       </topicref>
-    <topicref href="graph.xml" navtitle="Graph Analytics" linking="none">
-      <topicref href="graph.xml#topic_overview" navtitle="Overview" linking="none"/>
-      <topicref href="graph.xml#topic_graph"  linking="none"/>
-      <topicref href="graph.xml#graph_on_greenplum"  linking="none"/>
-      <topicref href="graph.xml#topic_using_graph"  linking="none"/>
-      <topicref href="graph.xml#topic_graph_modules"  linking="none"/>
-      <topicref href="graph.xml#topic_references" navtitle="References" linking="none"/>
-      </topicref>
+    <topicref href="graph.xml" navtitle="Graph Analytics" linking="none"/>    
     <topicref href="postGIS.xml" navtitle="Geospatial Analytics" otherprops="pivotal" linking="none"/>
     <topicref href="text.xml" navtitle="Text Analytics and Search" otherprops="pivotal" linking="none"/>
     <topicref href="intro.xml" navtitle="Procedural Languages" linking="none">

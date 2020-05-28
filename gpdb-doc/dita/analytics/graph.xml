@@ -3,9 +3,25 @@
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1" xml:lang="en">
   <title id="pz212122">Graph Analytics</title>
-  <body/>
+  <body>
+    <p>This chapter contains the following information:</p>
+    <ul id="ul_ond_45l_vlb">
+      <li id="ij166737">
+        <xref href="#topic_overview" format="dita"/>
+      </li>
+      <li><xref href="#topic_graph" format="dita">What is a Graph</xref></li>
+      <li>
+        <xref href="#graph_on_greenplum" format="dita"/></li>
+      <li id="ij168827"><xref href="#topic_using_graph" format="dita"/>
+      </li>
+      <li><xref href="#topic_graph_modules" format="dita"/>
+      </li>
+      <li id="ij168816"><xref href="#topic_graph_references" format="dita"/>
+      </li>
+    </ul>
+  </body>
   <topic id="topic_overview">
-    <title>Overview</title>
+    <title>About Graph Analytics</title>
     <body>
       <p dir="ltr">Many modern business problems involve connections and relationships between
         entities, and are not solely based on discrete data. Graphs are powerful at representing
@@ -44,11 +60,11 @@
         <li>Specialized graph databases frequently use purpose-built languages. With Greenplum, you
           can invoke graph functions using the familiar SQL interface. For example, for
           PageRank:<codeblock>SELECT madlib.pagerank('vertex',     -- Vertex table
-                        'id',                 -- Vertix id column
-                        'edge',               -- Edge table
-                        'src=src, dest=dest', -- Comma delimted string of edge arguments
-                        'pagerank_out',       -- Output table of PageRank
-                         0.5);                -- Damping factor
+               'id',                 -- Vertex id column
+               'edge',               -- Edge table
+               'src=src, dest=dest', -- Comma delimited string of edge arguments
+               'pagerank_out',       -- Output table of PageRank
+                0.5);                -- Damping factor
 SELECT * FROM pagerank_out ORDER BY pagerank DESC;</codeblock></li>
         <li> A lot of data science problems are solved using a combination of models, with graphs
           being just one. Regression, clustering, and other methods available in Greenplum, make for
@@ -126,7 +142,7 @@ testdb#=> INSERT INTO edge VALUES
     <body>
       <p>This section lists the graph functions supported in MADlib. Using the example
           <codeph>edge</codeph> and <codeph>vertex</codeph> tables already created, you can explore
-        each algorithm.  </p>
+        each algorithm. </p>
       <section><b>All Pairs Shortest Path (APSP)</b><p>The all pairs shortest paths (APSP) algorithm
           finds the length (summed weights) of the shortest paths between all pairs of vertices,
           such that the sum of the weights of the path edges is minimized. </p><p>The function
@@ -146,15 +162,15 @@ grouping_cols
           finds all nodes reachable from the source vertex by searching / traversing the graph in a
           breadth-first manner. </p><p>The function
           is:</p><codeblock>graph_bfs( vertex_table,
-                vertex_id,           
-                edge_table,           
-                edge_args,           
-                source_vertex,           
-                out_table,           
-                max_distance,           
-                directed,
-                grouping_cols
-                )</codeblock><p
+          vertex_id,           
+          edge_table,           
+          edge_args,           
+          source_vertex,           
+          out_table,           
+          max_distance,           
+          directed,
+          grouping_cols
+          )</codeblock><p
           dir="ltr">For details on the parameters, with examples, visit the <xref
             href="http://madlib.apache.org/docs/latest/group__grp__bfs.html" format="html"
             scope="external">Breadth-First Search</xref> page in the Apache MADlib user
@@ -167,12 +183,12 @@ grouping_cols
           edges is minimized. </p>
         <p>The function is:</p>
         <codeblock>graph_apsp( vertex_table,
-              vertex_id,
-              edge_table,            
-              edge_args,            
-              out_table,            
-              grouping_cols          
-              )</codeblock>
+           vertex_id,
+           edge_table,            
+           edge_args,            
+           out_table,            
+           grouping_cols          
+           )</codeblock>
         <p dir="ltr">For details on the parameters, with examples, visit the <xref
             href="http://madlib.apache.org/docs/latest/group__grp__hits.html" format="html"
             scope="external">Hyperlink-Induced Topic Search </xref> page in the Apache MADlib user
@@ -186,16 +202,16 @@ grouping_cols
           scores can be biased according to a specified set of graph vertices that are of interest
           or special in some way. </p><p>The function
           is:</p><codeblock>pagerank( vertex_table,
-            vertex_id,          
-            edge_table,          
-            edge_args,          
-            out_table,          
-            damping_factor,          
-            max_iter,          
-            threshold,          
-            grouping_cols,          
-            personalization_vertices         
-            )</codeblock><p>For
+          vertex_id,          
+          edge_table,          
+          edge_args,          
+          out_table,          
+          damping_factor,          
+          max_iter,          
+          threshold,          
+          grouping_cols,          
+          personalization_vertices         
+          )</codeblock><p>For
           details on the parameters, with examples, visit the <xref
             href="http://madlib.apache.org/docs/latest/group__grp__pagerank.html" format="html"
             scope="external">PageRank</xref> page in the Apache MADlib user
@@ -203,22 +219,20 @@ grouping_cols
       <section><b id="docs-internal-guid-d0461f4b-7fff-4782-8422-f713f0c0b7dc">Single Source
           Shortest Path (SSSP)</b><p>Given a graph and a source vertex, the single source shortest
           path (SSSP) algorithm finds a path from the source vertex to every other vertex in the
-          graph, such that the sum of the weights of the path edges is minimized. </p>
-        <p>The function is:</p>
-<codeblock>graph_sssp ( vertex_table, 
+          graph, such that the sum of the weights of the path edges is minimized. </p><p>The
+          function
+          is:</p><codeblock>graph_sssp ( vertex_table, 
 vertex_id, 
 edge_table, 
 edge_args, 
 source_vertex, 
 out_table, 
 grouping_cols 
-)</codeblock>
-            <p>For details on the parameters, with examples, visit the <xref
-              href="http://madlib.apache.org/docs/latest/group__grp__sssp.html" format="html"
-              scope="external">Single Source Shortest Path</xref> page in the Apache MADlib user
-            documentation.</p>
-      
-      </section>
+)</codeblock><p>For
+          details on the parameters, with examples, visit the <xref
+            href="http://madlib.apache.org/docs/latest/group__grp__sssp.html" format="html"
+            scope="external">Single Source Shortest Path</xref> page in the Apache MADlib user
+          documentation.</p></section>
       <section><b>Weakly Connected Components</b><p dir="ltr">Given a directed graph, a weakly
           connected component (WCC) is a subgraph of the original graph where all vertices are
           connected to each other by some path, ignoring the direction of edges.</p><p dir="ltr">The
