@@ -186,6 +186,7 @@ test: segwalrep/die_commit_pending_replication
 test: fts_errors
 test: segwalrep/commit_blocking
 test: segwalrep/fts_unblock_primary
+test: segwalrep/recoverseg_from_file
 test: segwalrep/mirror_promotion
 test: segwalrep/cancel_commit_pending_replication
 test: segwalrep/twophase_tolerance_with_mirror_promotion
