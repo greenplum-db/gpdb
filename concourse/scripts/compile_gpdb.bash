@@ -182,6 +182,9 @@ function export_gpdb_clients() {
     mkdir -p bin/ext/gppylib
     cp ${GREENPLUM_INSTALL_DIR}/lib/python/gppylib/__init__.py ./bin/ext/gppylib
     cp  ${GREENPLUM_INSTALL_DIR}/lib/python/gppylib/gpversion.py ./bin/ext/gppylib
+    # GPHOME_LOADERS and greenplum_loaders_path.sh are still requried by some users
+    # So link greenplum_loaders_path.sh to greenplum_clients_path.sh for compatible
+    ln -sf greenplum_clients_path.sh greenplum_loaders_path.sh
     chmod -R 755 .
     tar -czf "${TARBALL}" ./*
   popd

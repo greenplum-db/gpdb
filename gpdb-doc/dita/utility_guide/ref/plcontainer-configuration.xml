@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
-<topic id="topic_sk1_gdq_dw">
+<topic id="topic1">
       <title>plcontainer Configuration File</title>
       <body>
                 <p>The Greenplum Database utility <codeph>plcontainer</codeph> manages the

@@ -73,6 +73,12 @@ typedef struct extvar_t
 /* an EXECUTE string will always be prefixed like this */
 #define EXEC_URL_PREFIX "execute:"
 
+extern void external_set_env_vars(extvar_t *extvar, char *uri, bool csv, char *escape,
+								  char *quote, bool header, uint32 scancounter);
+extern void external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape,
+									  char *quote, int eol_type, bool header,
+									  uint32 scancounter, List *params);
+
 /* exported functions */
 extern URL_FILE *url_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate, ExternalSelectDesc desc);
 extern void url_fclose(URL_FILE *file, bool failOnError, const char *relname);
@@ -81,6 +87,11 @@ extern bool url_ferror(URL_FILE *file, int bytesread, char *ebuf, int ebuflen);
 extern size_t url_fread(void *ptr, size_t size, URL_FILE *file, CopyState pstate);
 extern size_t url_fwrite(void *ptr, size_t size, URL_FILE *file, CopyState pstate);
 extern void url_fflush(URL_FILE *file, CopyState pstate);
+
+/* prototypes for functions in url_execute.c */
+extern int popen_with_stderr(int *rwepipe, const char *exe, bool forwrite);
+extern int pclose_with_stderr(int pid, int *rwepipe, StringInfo sinfo);
+extern char *make_command(const char *cmd, extvar_t *ev);
 
 /* implementation-specific functions. */
 extern URL_FILE *url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate);

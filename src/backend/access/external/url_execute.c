@@ -18,7 +18,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include "access/fileam.h"
+#include "access/url.h"
 #include "cdb/cdbtimer.h"
 #include "cdb/cdbvars.h"
 #include "libpq/pqsignal.h"

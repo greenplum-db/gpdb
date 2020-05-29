@@ -43,6 +43,27 @@
  * before switching to the other state or activating a different read pointer.
  *
  *
+ * Greenplum changes
+ * -----------------
+ *
+ * In Greenplum, tuplestores have one extra capability: a tuplestore can
+ * be created and filled in one process, and opened for reading in another
+ * process. To do this, call tuplestore_make_shared() immediately
+ * after creating the tuplestore, in the writer process. Then populate the
+ * tuplestore as usual, by calling tuplestore_puttupleslot(). When you're
+ * finished writing to it, call tuplestore_freeze(). tuplestore_freeze()
+ * flushes all the tuples to the file. No new rows may be added after
+ * freezing it.
+ *
+ * After freezing, you can open the tupletore for reading in the other
+ * process by calling tuplestore_open_shared(). It may be opened for reading
+ * as many times as you want, in different processes, until it is destroyed
+ * by the original writer process by calling tuplestore_end().
+ *
+ * Note that tuplestore doesn't do any synchronization across processes!
+ * It is up to the calling code to do the freezing, opening for reading, and
+ * destroying the tuplestore in the right order!
+ *
  * Portions Copyright (c) 2007-2010, Greenplum Inc.
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
@@ -65,10 +86,11 @@
 #include "storage/buffile.h"
 #include "utils/memutils.h"
 #include "utils/resowner.h"
-#include "utils/tuplestore.h"
+
 #include "cdb/cdbvars.h"
 #include "access/memtup.h"
 #include "executor/instrument.h"        /* struct Instrumentation */
+#include "utils/workfile_mgr.h"
 
 /*
  * Possible states of a Tuplestore object.  These denote the states that
@@ -117,6 +139,10 @@ struct Tuplestorestate
 	BufFile    *myfile;			/* underlying file, or NULL if none */
 	MemoryContext context;		/* memory context for holding tuples */
 	ResourceOwner resowner;		/* resowner for holding temp files */
+
+	bool		frozen;
+	bool		shared;
+	workfile_set *work_set; /* workfile set to use when using workfile manager */
 
 	/*
 	 * These function pointers decouple the routines that must know what kind
@@ -506,6 +532,8 @@ tuplestore_end(Tuplestorestate *state)
 
 	if (state->myfile)
 		BufFileClose(state->myfile);
+	if (state->work_set)
+		workfile_mgr_close_set(state->work_set);
 	if (state->memtuples)
 	{
 		for (i = state->memtupdeleted; i < state->memtupcount; i++)
@@ -813,6 +841,9 @@ tuplestore_puttuple_common(Tuplestorestate *state, void *tuple)
 	TSReadPointer *readptr;
 	int			i;
 	ResourceOwner oldowner;
+
+	if (state->frozen)
+		elog(ERROR, "cannot write new tuples to frozen tuplestore");
 
 	switch (state->status)
 	{
@@ -1432,6 +1463,10 @@ tuplestore_trim(Tuplestorestate *state)
 	if (state->eflags & EXEC_FLAG_REWIND)
 		return;
 
+	/* Cannot trim tuplestore if another process might be reading it */
+	if (state->frozen)
+		return;
+
 	/*
 	 * We don't bother trimming temp files since it usually would mean more
 	 * work than just letting them sit in kernel buffers until they age out.
@@ -1687,3 +1722,102 @@ tuplestore_set_instrument(Tuplestorestate          *state,
     state->instrument = instrument;
 }                               /* tuplestore_set_instrument */
 
+
+
+/* Extra GPDB functions for sharing tuplestores across processes */
+
+/*
+ * tuplestore_make_shared
+ *
+ * Make a tuplestore available for sharing later. This must be called
+ * immediately after tuplestore_begin_heap().
+ */
+void
+tuplestore_make_shared(Tuplestorestate *state, const char *filename)
+{
+	ResourceOwner oldowner;
+
+	state->work_set = workfile_mgr_create_set("SharedTupleStore", filename);
+
+	state->shared = true;
+
+	/*
+	 * Switch to tape-based operation, like in tuplestore_puttuple_common().
+	 * We could delay this until tuplestore_freeze(), but we know we'll have
+	 * to write everything to the file anyway, so let's not waste memory
+	 * buffering the tuples in the meanwhile.
+	 */
+	PrepareTempTablespaces();
+
+	/* associate the file with the store's resource owner */
+	oldowner = CurrentResourceOwner;
+	CurrentResourceOwner = state->resowner;
+
+	state->myfile = BufFileCreateNamedTemp(filename,
+										   state->interXact,
+										   state->work_set);
+
+	CurrentResourceOwner = oldowner;
+
+	/*
+	 * For now, be conservative and always use trailing length words for
+	 * cross-process tuplestores. It's important that the writer and the
+	 * reader processes agree on this, and forcing it to true is the
+	 * simplest way to achieve that.
+	 */
+	state->backward = true;
+	state->status = TSS_WRITEFILE;
+}
+
+static void
+writetup_forbidden(Tuplestorestate *state, void *tup)
+{
+	elog(ERROR, "cannot write to tuplestore, it is already frozen");
+}
+
+/*
+ * tuplestore_freeze
+ *
+ * Flush the current buffer to disk, and forbid further inserts. This
+ * prepares the tuplestore for reading from a different process.
+ */
+void
+tuplestore_freeze(Tuplestorestate *state)
+{
+	Assert(state->shared);
+	dumptuples(state);
+	BufFileFlush(state->myfile);
+	state->frozen = true;
+}
+
+/*
+ * tuplestore_open_shared
+ *
+ * Open a shared tuplestore that has been populated in another process
+ * for reading.
+ */
+Tuplestorestate *
+tuplestore_open_shared(const char *filename, bool interXact)
+{
+	Tuplestorestate *state;
+	int			eflags;
+
+	eflags = EXEC_FLAG_BACKWARD | EXEC_FLAG_REWIND;
+
+	state = tuplestore_begin_common(eflags, interXact,
+									10 /* no need for memory buffers */);
+
+	state->backward = true;
+
+	state->copytup = copytup_heap;
+	state->writetup = writetup_forbidden;
+	state->readtup = readtup_heap;
+	state->mt_bind = NULL;
+
+	state->myfile = BufFileOpenNamedTemp(filename, interXact);
+	state->readptrs[0].file = 0;
+	state->readptrs[0].offset = 0L;
+	state->status = TSS_READFILE;
+
+	return state;
+}

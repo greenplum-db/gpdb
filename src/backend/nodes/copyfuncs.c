@@ -575,7 +575,6 @@ _copyExternalScanInfo(const ExternalScanInfo *from)
 	ExternalScanInfo *newnode = makeNode(ExternalScanInfo);
 
 	COPY_NODE_FIELD(uriList);
-	COPY_STRING_FIELD(fmtOptString);
 	COPY_SCALAR_FIELD(fmtType);
 	COPY_SCALAR_FIELD(isMasterOnly);
 	COPY_SCALAR_FIELD(rejLimit);
@@ -4771,6 +4770,7 @@ _copyCreateForeignTableStmt(const CreateForeignTableStmt *from)
 
 	COPY_STRING_FIELD(servername);
 	COPY_NODE_FIELD(options);
+	COPY_NODE_FIELD(distributedBy);
 
 	return newnode;
 }

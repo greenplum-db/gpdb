@@ -316,71 +316,91 @@
         <p>This table lists the versions of the Pivotal Greenplum Extensions that are compatible
           with this release of Greenplum Database 6.</p>
         <table class="- topic/table " id="table_b1q_m2h_zz">
-          <title class="- topic/title ">Pivotal Greenplum 6 Extensions Compatibility</title>
-          <tgroup cols="2" class="- topic/tgroup ">
-            <colspec colnum="1" colname="col1" colwidth="297pt" class="- topic/colspec "/>
-            <colspec colnum="2" colname="col3" colwidth="117.58pt" class="- topic/colspec "/>
+          <title class="- topic/title ">Pivotal Greenplum 6 Extensions Compatibility </title>
+          <tgroup cols="3" class="- topic/tgroup ">
+            <colspec colnum="1" colname="col1" class="- topic/colspec "/>
+            <colspec colnum="2" colname="col2" class="- topic/colspec "/>
+            <colspec colnum="3" colname="col3" class="- topic/colspec "/>
             <thead class="- topic/thead ">
               <row class="- topic/row ">
-                <entry colname="col1" class="- topic/entry ">Pivotal Greenplum Extension</entry>
-                <entry colname="col3" class="- topic/entry ">Versions</entry>
+                <entry colname="col1" class="- topic/entry ">Component</entry>
+                <entry colname="col2" class="- topic/entry ">Package Version</entry>
+                <entry colname="col3" class="- topic/entry ">Additional Information</entry>
               </row>
             </thead>
             <tbody class="- topic/tbody ">
-              <row class="- topic/row ">
-                <entry colname="col1" class="- topic/entry ">MADlib machine
-                  learning<sup>1</sup></entry>
-                <entry colname="col3" class="- topic/entry ">MADlib 1.17, 1.16</entry>
-              </row>
               <row>
-                <entry>PL/Java</entry>
+                <entry><xref href="../analytics/pl_java.xml" format="dita" scope="peer">PL/Java</xref></entry>
                 <entry>2.0.2</entry>
+                <entry>Supports Java 8 and 11.</entry>
               </row>
               <row>
-                <entry>PL/R<sup>2</sup></entry>
+                <entry><xref href="../install_guide/install_python_dsmod.xml"
+                  format="dita" scope="peer">Python Data Science Module Package</xref></entry>
+                <entry>2.0.2</entry>
+                <entry></entry>
+              </row>
+              <row>
+                <entry><xref href="../analytics/pl_r.xml" format="dita" scope="peer">PL/R</xref></entry>
                 <entry>3.0.3</entry>
+                <entry>(CentOS) R 3.3.3<p>
+(Ubuntu) You install R 3.5.1+.</p></entry>
               </row>
               <row>
-                <entry>Python Data Science Module Package<sup>3</sup></entry>
+                <entry><xref href="../install_guide/install_r_dslib.xml" format="dita"
+                  scope="peer">R Data Science Library Package</xref></entry>
                 <entry>2.0.2</entry>
+                <entry></entry>
               </row>
               <row>
-                <entry>R Data Science Library Package<sup>4</sup></entry>
-                <entry>2.0.2</entry>
+                <entry><xref href="../analytics/pl_container.xml" format="dita" scope="peer">PL/Container</xref></entry>
+                <entry>2.1.2</entry>
+                <entry></entry>
               </row>
               <row>
-                <entry>PL/Container and PL/Container images for Python, R </entry>
-                <entry>2.1.1</entry>
+                <entry>PL/Container Image for R </entry>
+                <entry>2.1.2</entry>
+                <entry>R 3.6.3</entry>
               </row>
               <row>
-                <entry>PL/Container and image for R </entry>
-                <entry>3.0.0 Beta</entry>
+                <entry>PL/Container Images for Python </entry>
+                <entry>2.1.2</entry>
+                <entry>Python 2.7.12<p>Python 3.7</p></entry>
               </row>
               <row>
-                <entry>GreenplumR</entry>
-                <entry>1.0.0 Beta</entry>
+                <entry>PL/Container Beta</entry>
+                <entry>3.0.0-beta</entry>
+                <entry></entry>
+              </row>
+              <row>
+                <entry>PL/Container Beta Image for R </entry>
+                <entry>3.0.0-beta</entry>
+                <entry>R 3.4.4</entry>
+              </row>
+              <row>
+                <entry><xref href="../analytics/greenplum_r_client.xml" format="dita"
+                    scope="peer">GreenplumR Beta</xref></entry>
+                <entry>1.0.0-beta</entry>
+                <entry>Supports R 3.6+.</entry>
               </row>
               <row class="- topic/row ">
-                <entry colname="col1" class="- topic/entry ">PostGIS Spatial and Geographic Objects
-                  for Greenplum Database 6.0.x</entry>
-                <entry colname="col3" class="- topic/entry ">2.5.4+pivotal.1,
-                  2.1.5+pivotal.2-2</entry>
+                <entry colname="col1" class="- topic/entry "><xref href="../analytics/madlib.xml"
+                    format="dita" scope="peer">MADlib Machine Learning</xref></entry>
+                <entry colname="col3" class="- topic/entry ">1.17, 1.16</entry>
+                <entry>Support matrix at <xref
+                    href="https://cwiki.apache.org/confluence/display/MADLIB/FAQ#FAQ-Q1-2WhatdatabaseplatformsdoesMADlibsupportandwhatistheupgradematrix?"
+                    format="html" scope="external">MADlib FAQ</xref>.</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry "><xref href="../analytics/postGIS.xml"
+                    format="dita" scope="peer">PostGIS Spatial and Geographic Objects</xref></entry>
+                <entry colname="col3" class="- topic/entry ">2.5.4+pivotal.1,<p>2.1.5+pivotal.2-2</p></entry>
+                <entry></entry>
               </row>
             </tbody>
           </tgroup>
         </table>
-        <note>
-          <sup>1</sup>For information about MADlib support and upgrade information, see the <xref
-            href="https://cwiki.apache.org/confluence/display/MADLIB/FAQ#FAQ-Q1-2WhatdatabaseplatformsdoesMADlibsupportandwhatistheupgradematrix?"
-            format="html" scope="external">MADlib FAQ</xref>. <p><sup>2</sup>PL/R supports R 3.5.1.
-            On RHEL and CenOS the PL/R package installs R 3.3.3. See <xref
-              href="../analytics/pl_r.xml" format="dita" scope="peer">PL/R
-              Language</xref>.</p><p><sup>3</sup>For information about the Python package, including
-            the modules provided, see the <xref href="../install_guide/install_python_dsmod.xml"
-              format="dita" scope="peer">Python Data Science Module Package</xref>.
-              </p><p><sup>4</sup>For information about the R package, including the libraries
-            provided, see the <xref href="../install_guide/install_r_dslib.xml" format="dita"
-              scope="peer">R Data Science Library Package</xref>. </p></note>
+
         <p>For information about the Oracle Compatibility Functions, see <xref
             href="../ref_guide/modules/orafce_ref.xml" format="dita" scope="peer">Oracle
             Compatibility Functions</xref>.</p>

@@ -430,24 +430,31 @@ MIRROR_PORT_BASE = 7000</codeblock>
                 </plentry>
                 <plentry>
                     <pt>QD_PRIMARY_ARRAY, PRIMARY_ARRAY, MIRROR_ARRAY</pt>
-                    <pd>These parameters can only be provided using an input configuration file,
-                        with the <codeph>gpinitsystem</codeph>
-                        <codeph>-I <varname>input_configuration_file</varname></codeph> option.
-                            <codeph>QD_PRIMARY_ARRAY</codeph>, <codeph>PRIMARY_ARRAY</codeph>, and
-                            <codeph>MIRROR_ARRAY</codeph> define the Greenplum Database master host
-                        and the primary and mirror instances on the segment hosts, respectively,
-                        using the format:
-                        <codeblock><varname>host</varname>~<varname>port</varname>~<varname>data_directory</varname>/<varname>seg_prefix&lt;segment_id></varname>~<varname>dbid</varname>~<varname>content_id</varname></codeblock>The
-                        Greenplum Database master always uses the value -1 for the segment ID and
-                        content ID. For
-                        example:<codeblock>QD_PRIMARY_ARRAY=127.0.0.1~5432~/gpmaster/gpsne-1~1~-1~0
+                    <pd>These parameters specify the Greenplum Database master host, the primary
+                        segment, and the mirror segment hosts respectively. They can only be
+                        specified in an input configuration file using the
+                            <codeph>gpinitsystem</codeph>
+                        <codeph>-I <varname>input_configuration_file</varname></codeph> option. Use
+                        one of the following formats to specify the host
+                        information:<codeblock><varname>hostname</varname>~<varname>address</varname>~<varname>port</varname>~<varname>data_directory</varname>/<varname>seg_prefix&lt;segment_id></varname>~<varname>dbid</varname>~<varname>content_id</varname></codeblock>or
+                        <codeblock><varname>host</varname>~<varname>port</varname>~<varname>data_directory</varname>/<varname>seg_prefix&lt;segment_id></varname>~<varname>dbid</varname>~<varname>content_id</varname></codeblock></pd>
+                    <pd>The first format populates the <codeph>hostname</codeph> and
+                            <codeph>address</codeph> fields in the
+                            <codeph>gp_segment_configuration</codeph> catalog with the
+                            <i>hostname</i> and <i>address</i> values provided in the input
+                        configuration file. The second format populates <codeph>hostname</codeph>
+                        and <codeph>address</codeph> with the same value, derived from
+                        <i>host</i>.</pd>
+                    <pd>The Greenplum Database master always uses the value -1 for the segment ID
+                        and content ID. For
+                        example:<codeblock>QD_PRIMARY_ARRAY=127.0.0.1~5432~/gpmaster/gpsne-1~1~-1~0 
 declare -a PRIMARY_ARRAY=(
-127.0.0.1~40000~/gpdata1/gpsne0~2~0
-127.0.0.1~40001~/gpdata2/gpsne1~3~1
-)
+localhost~127.0.0.1~40000~/gpdata1/gpsne0~2~0~6000
+localhost~127.0.0.1~40001~/gpdata2/gpsne1~3~1~6001 
+) 
 declare -a MIRROR_ARRAY=(
-127.0.0.1~50000~/gpmirror1/gpsne0~4~0
-127.0.0.1~50001~/gpmirror2/gpsne1~5~1
+localhost~127.0.0.1~50000~/gpmirror1/gpsne0~4~0~51000
+localhost~127.0.0.1~50001~/gpmirror2/gpsne1~5~1~51001 
 )</codeblock></pd>
                     <pd>You can use the <codeph>gpinitsystem</codeph>
                         <codeph>-O <varname>output_configuration_file</varname></codeph> to populate

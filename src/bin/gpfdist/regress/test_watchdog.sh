@@ -2,10 +2,17 @@
 
 GPFDIST_PID=gpfdist.pid
 
-export GPFDIST_WATCHDOG_TIMER=3
+export GPFDIST_WATCHDOG_TIMER=5
 gpfdist &
 PID=$!
 
+sleep 3
+ps -p $PID
+if [ $? -ne 0 ]; then
+wait $PID
+echo "gpfdist should be running, failed"
+exit 1
+fi
 sleep 5
 ps -p $PID
 if [ $? -eq 0 ]; then

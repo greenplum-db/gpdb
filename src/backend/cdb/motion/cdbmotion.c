@@ -52,12 +52,14 @@ static MotionNodeEntry *getMotionNodeEntry(MotionLayerState *mlStates, int16 mot
 static ChunkSorterEntry *getChunkSorterEntry(MotionLayerState *mlStates,
 					MotionNodeEntry *motNodeEntry,
 					int16 srcRoute);
-static void addChunkToSorter(MotionLayerState *mlStates,
-				 ChunkTransportState *transportStates,
-				 MotionNodeEntry *pMNEntry,
-				 TupleChunkListItem tcItem,
-				 int16 motNodeID,
-				 int16 srcRoute);
+static void addChunkToSorter(ChunkTransportState *transportStates,
+							 MotionNodeEntry *pMNEntry,
+							 TupleChunkListItem tcItem,
+							 int16 motNodeID,
+							 ChunkSorterEntry *chunkSorterEntry,
+							 ChunkTransportStateEntry *pEntry,
+							 MotionConn *conn,
+							 int16 srcRoute);
 
 static void processIncomingChunks(MotionLayerState *mlStates,
 					  ChunkTransportState *transportStates,
@@ -643,6 +645,9 @@ processIncomingChunks(MotionLayerState *mlStates,
 	TupleChunkListItem tcItem,
 				tcNext;
 	MemoryContext oldCtxt;
+	ChunkSorterEntry *chunkSorterEntry;
+	ChunkTransportStateEntry *pEntry = NULL;
+	MotionConn *conn;
 
 	/* Keep track of processed chunk stats. */
 	int			numChunks,
@@ -659,6 +664,11 @@ processIncomingChunks(MotionLayerState *mlStates,
 		tcItem = transportStates->RecvTupleChunkFromAny(transportStates, motNodeID, &srcRoute);
 	else
 		tcItem = transportStates->RecvTupleChunkFrom(transportStates, motNodeID, srcRoute);
+
+	/* Look up various things related to the sender that we received chunks from. */
+	chunkSorterEntry = getChunkSorterEntry(mlStates, pMNEntry, srcRoute);
+	getChunkTransportState(transportStates, motNodeID, &pEntry);
+	conn = pEntry->conns + srcRoute;
 
 	numChunks = 0;
 	chunkBytes = 0;
@@ -686,7 +696,14 @@ processIncomingChunks(MotionLayerState *mlStates,
 		}
 
 		/* Stick the chunk into the sorter. */
-		addChunkToSorter(mlStates, transportStates, pMNEntry, tcItem, motNodeID, srcRoute);
+		addChunkToSorter(transportStates,
+						 pMNEntry,
+						 tcItem,
+						 motNodeID,
+						 chunkSorterEntry,
+						 pEntry,
+						 conn,
+						 srcRoute);
 
 		tcItem = tcNext;
 	}
@@ -970,38 +987,24 @@ materializeChunk(TupleChunkListItem *tcItem)
 /*
  * Add another tuple-chunk to the chunk sorter.  If the new chunk
  * completes another HeapTuple, that tuple will be deserialized and
- * stored into a tuple-store.  If not, the chunk is added to the
+ * stored into a htfifo.  If not, the chunk is added to the
  * appropriate list of chunks.
- *
- * Return Values:
- *	 true  - if another HeapTuple is completed by this chunk.
- *	 false - if the chunk does not complete a HeapTuple.
  */
 static void
-addChunkToSorter(MotionLayerState *mlStates,
-				 ChunkTransportState *transportStates,
+addChunkToSorter(ChunkTransportState *transportStates,
 				 MotionNodeEntry *pMNEntry,
 				 TupleChunkListItem tcItem,
 				 int16 motNodeID,
+				 ChunkSorterEntry *chunkSorterEntry,
+				 ChunkTransportStateEntry *pEntry,
+				 MotionConn *conn,
 				 int16 srcRoute)
 {
-	MemoryContext oldCtxt;
-	ChunkSorterEntry *chunkSorterEntry;
 	TupleChunkType tcType;
-	ChunkTransportStateEntry *pEntry = NULL;
-	MotionConn *conn = NULL;
 
 	AssertArg(tcItem != NULL);
 
-	oldCtxt = MemoryContextSwitchTo(mlStates->motion_layer_mctx);
-
-	chunkSorterEntry = getChunkSorterEntry(mlStates, pMNEntry, srcRoute);
-
-	getChunkTransportState(transportStates, motNodeID, &pEntry);
-	conn = pEntry->conns + srcRoute;
-
 	/* Look at the chunk's type, to figure out what to do with it. */
-
 	GetChunkType(tcItem, &tcType);
 
 	switch (tcType)
@@ -1128,8 +1131,6 @@ addChunkToSorter(MotionLayerState *mlStates,
 					 errmsg("received tuple chunk of unrecognized type %d (len %d) from [src=%d,mn=%d]",
 							tcType, tcItem->chunk_length, srcRoute, motNodeID)));
 	}
-
-	MemoryContextSwitchTo(oldCtxt);
 }
 
 

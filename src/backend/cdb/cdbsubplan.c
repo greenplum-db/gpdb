@@ -22,6 +22,7 @@
 #include "cdb/cdbllize.h"
 #include "cdb/cdbsubplan.h"
 #include "cdb/cdbvars.h"		/* currentSliceId */
+#include "utils/tuplestore.h"
 
 static bool isParamExecutableNow(SubPlanState *spstate, ParamExecData *prmList);
 
@@ -134,17 +135,44 @@ preprocess_initplans(QueryDesc *queryDesc)
 				 * later Init plans can depend on previous ones.
 				 */
 				ExecSetParamPlan(sps, sps->planstate->ps_ExprContext, queryDesc);
-
-				/*
-				 * We dispatched, and have returned. We may have used the
-				 * interconnect; so let's bump the interconnect-id.
-				 */
-				queryDesc->estate->es_sliceTable->ic_instance_id = ++gp_interconnect_id;
 			}
 		}
 
 		queryDesc->estate->es_sliceTable->localSlice = originalSlice;
 		currentSliceId = originalSlice;
+	}
+}
+
+/*
+ * CDB: Post processing INITPLAN to clean up resource with long life cycle
+ * 
+ * INITPLAN usually communicate with main plan through scalar PARAM, but in some case,
+ * the main plan need to get more data from INITPLAN which long life cycle resource like
+ * temp file will be used.
+ * Take INITPLAN function case as an example, INITPLAN will store its result into
+ * tuplestore, which will be read by entryDB in main plan. Tuplestore and corresponding
+ * files should not be cleaned before the main plan finished.
+ *
+ * postprocess_initplans is used to clean these resources in ExecutorEnd of main plan.
+ */
+void
+postprocess_initplans(QueryDesc *queryDesc)
+{
+	EState *estate = queryDesc->estate;
+	ParamExecData *prm;
+	SubPlanState *sps;
+	int	i;
+
+	/* clean ntuplestore used by INITPLAN function */
+	for (i = 0; i < queryDesc->plannedstmt->nParamExec; i++)
+	{
+		prm = &estate->es_param_exec_vals[i];
+		sps = (SubPlanState *) prm->execPlan;
+		if (sps && sps->ts_state)
+		{
+			tuplestore_end(sps->ts_state);
+			sps->ts_state = NULL;
+		}
 	}
 }
 

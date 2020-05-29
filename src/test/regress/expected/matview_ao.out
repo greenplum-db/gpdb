@@ -104,3 +104,24 @@ SELECT * FROM m_aocs;
  x    |      5
 (3 rows)
 
+\dm m_heap
+               List of relations
+ Schema |  Name  |       Type        |  Owner  
+--------+--------+-------------------+---------
+ public | m_heap | materialized view | gpadmin
+(1 row)
+
+\dm m_ao
+              List of relations
+ Schema | Name |       Type        |  Owner  
+--------+------+-------------------+---------
+ public | m_ao | materialized view | gpadmin
+(1 row)
+
+\dm m_aocs
+               List of relations
+ Schema |  Name  |       Type        |  Owner  
+--------+--------+-------------------+---------
+ public | m_aocs | materialized view | gpadmin
+(1 row)
+

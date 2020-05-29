@@ -53,7 +53,6 @@
 #include "utils/rel.h"
 #include "utils/tqual.h"
 
-#include "access/fileam.h"
 #include "access/transam.h"
 #include "cdb/cdbaocsam.h"
 #include "cdb/cdbappendonlyam.h"
@@ -2311,6 +2310,7 @@ ExecInitModifyTable(ModifyTable *node, EState *estate, int eflags)
 			List	   *rlist = (List *) lfirst(l);
 			List	   *rliststate;
 
+			resultRelInfo->ri_returningList = rlist;
 			rliststate = (List *) ExecInitExpr((Expr *) rlist, &mtstate->ps);
 			resultRelInfo->ri_projectReturning =
 				ExecBuildProjectionInfo(rliststate, econtext, slot,

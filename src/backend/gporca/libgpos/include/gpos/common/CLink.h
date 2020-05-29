@@ -19,8 +19,7 @@ namespace gpos
 
 		private:
 
-			// no copy constructor
-			SLink(const SLink&);
+			SLink(const SLink&) = delete;
 
 		public:
 

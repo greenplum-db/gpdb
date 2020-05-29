@@ -190,7 +190,7 @@ gpconfig -c shared_preload_libraries -v 'diskquota,plc_coordinator'</codeblock><
     
     <section id="install_docker_images">
         <title>Install PL/Container Docker Images</title>
-        <p>Install the Docker images that PL/Container will use to create language specific
+        <p>Install the Docker images that PL/Container will use to create language-specific
           containers to run the UDFs.</p>
         <!--oss only content-->
         <p otherprops="oss-only">The PL/Container open source module contains dockerfiles to build
@@ -212,9 +212,9 @@ gpconfig -c shared_preload_libraries -v 'diskquota,plc_coordinator'</codeblock><
             with the associated <filepath>plcontainer-r-image-3.0.0-beta-gp6.tar.gz</filepath>
             image.</li>
           <li>
-            <p>Use the <codeph>plcontainer </codeph> utility command <codeph>image-add</codeph> to
-              install the images on all Greenplum Database hosts where  <codeph>-f
-              </codeph>indicates the location of the downloaded files: </p>
+            <p>Use the <codeph>plcontainer image-add</codeph> command to install an image on
+              all Greenplum Database hosts. Provide the <codeph>-f</codeph> option to specify
+              the file system location of a downloaded image file. For example: </p>
             <codeblock># Install a Python 2 based Docker image
 plcontainer image-add -f /home/gpadmin/plcontainer-python-image-2.1.1-gp6.tar.gz
             
@@ -231,6 +231,11 @@ plcontainer image-add -f /home/gpadmin/plcontainer-r-image-3.0.0-beta-gp6.tar.gz
 20200127:21:54:43:004607 plcontainer:mdw:gpadmin-[INFO]:-Distributing image file /home/gpadmin/plcontainer-python-images-1.5.0.tar to all hosts...
 20200127:21:54:55:004607 plcontainer:mdw:gpadmin-[INFO]:-Loading image on all hosts...
 20200127:21:55:37:004607 plcontainer:mdw:gpadmin-[INFO]:-Removing temporary image files on all hosts...</codeblock>
+            <p>By default, the <codeph>image-add</codeph> command copies the image to each Greenplum
+              Database segment and standby master host, and installs the image. When you specify
+              the <codeph>[-ulc | --use_local_copy]</codeph> option, <codeph>plcontainer</codeph>
+              installs the image only on the host on which you execute the command. Use this option
+              when the PL/Container image already resides on disk on a host.</p>
             <p>For more information on <codeph>image-add</codeph> options, visit the <xref
                 href="../utility_guide/ref/plcontainer.xml#topic_rw3_52s_dw">plcontainer </xref> reference page. </p>
           </li>

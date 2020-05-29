@@ -44,7 +44,7 @@ clean distclean maintainer-clean:
 		   hostfile regression.diffs aomd_filehandler.c
 
 greenplum/aomd_filehandler.c: $(top_srcdir)/src/backend/access/appendonly/aomd_filehandler.c
-	rm -f $@ && $(LN_S) ../$< $@
+	rm -f $@ && cd greenplum && $(LN_S) ../$< aomd_filehandler.c
 
 check: test_gpdb.sh all
 	bash $< -C -r -s -o $(top_builddir)/gpAux/gpdemo/datadirs/ -b $(DESTDIR)$(bindir)

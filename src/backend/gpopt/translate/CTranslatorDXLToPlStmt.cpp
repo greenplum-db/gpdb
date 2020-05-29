@@ -20,8 +20,8 @@
 #include "nodes/plannodes.h"
 #include "nodes/primnodes.h"
 #include "catalog/gp_policy.h"
-#include "catalog/pg_exttable.h"
 #include "catalog/pg_collation.h"
+#include "catalog/pg_exttable.h"
 #include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"
 #include "cdb/partitionselection.h"
@@ -3103,6 +3103,8 @@ CTranslatorDXLToPlStmt::TranslateDXLMaterialize
 	CDXLPhysicalMaterialize *materialize_dxlop = CDXLPhysicalMaterialize::Cast(materialize_dxlnode->GetOperator());
 
 	materialize->cdb_strict = materialize_dxlop->IsEager();
+	// ensure that executor actually materializes results
+	materialize->cdb_shield_child_from_rescans = true;
 
 	// translate operator costs
 	TranslatePlanCosts

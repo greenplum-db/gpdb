@@ -47,7 +47,7 @@ run:
             #sysctl -w net.ipv4.ip_local_port_range=\"10000 65535\"
 
             # additional settings
-            sysctl -w kernel.sem=\"500 2048000 200 40960\"
+            sysctl -w kernel.sem=\"500 2048000 200 4096\"
             sysctl -w kernel.sysrq=1
             sysctl -w kernel.core_uses_pid=1
             sysctl -w kernel.msgmnb=65536
@@ -64,10 +64,8 @@ run:
             sysctl -w vm.zone_reclaim_mode=0
             sysctl -w vm.dirty_expire_centisecs=500
             sysctl -w vm.dirty_writeback_centisecs=100
-            sysctl -w vm.dirty_background_ratio=0
-            sysctl -w vm.dirty_ratio=0
-            sysctl -w vm.dirty_background_bytes=1610612736
-            sysctl -w vm.dirty_bytes=4294967296
+            sysctl -w vm.dirty_background_ratio=3
+            sysctl -w vm.dirty_ratio=10
         '"
     done <cluster_env_files/etc_hostfile
 

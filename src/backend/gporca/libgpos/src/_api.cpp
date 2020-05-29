@@ -30,22 +30,42 @@
 
 using namespace gpos;
 
+
+// refer gpopt/exception.cpp for explanation of errors
 const ULONG expected_opt_fallback[] =
 {
 	gpopt::ExmiInvalidPlanAlternative,		// chosen plan id is outside range of possible plans
 	gpopt::ExmiUnsupportedOp,				// unsupported operator
 	gpopt::ExmiUnsupportedPred,				// unsupported predicate
 	gpopt::ExmiUnsupportedCompositePartKey,	// composite partitioning keys
-	gpopt::ExmiUnsupportedNonDeterministicUpdate // non deterministic update
+	gpopt::ExmiUnsupportedNonDeterministicUpdate, // non deterministic update
+	gpopt::ExmiNoPlanFound,
+	gpopt::ExmiUnsupportedOp,
+	gpopt::ExmiUnexpectedOp,
+	gpopt::ExmiUnsatisfiedRequiredProperties,
+	gpopt::ExmiEvalUnsupportedScalarExpr,
+	gpopt::ExmiCTEProducerConsumerMisAligned
 };
 
 // array of DXL minor exception types that trigger expected fallback to the planner
+// refer naucrates/exception.cpp for explanation of errors
 const ULONG expected_dxl_fallback[] =
 {
 	gpdxl::ExmiMDObjUnsupported,			// unsupported metadata object
 	gpdxl::ExmiQuery2DXLUnsupportedFeature,	// unsupported feature during algebrization
 	gpdxl::ExmiPlStmt2DXLConversion,		// unsupported feature during plan freezing
-	gpdxl::ExmiDXL2PlStmtConversion			// unsupported feature during planned statement translation
+	gpdxl::ExmiDXL2PlStmtConversion,			// unsupported feature during planned statement translation
+	gpdxl::ExmiDXL2ExprAttributeNotFound,
+	gpdxl::ExmiOptimizerError,
+	gpdxl::ExmiDXLMissingAttribute,
+	gpdxl::ExmiDXLUnrecognizedOperator,
+	gpdxl::ExmiDXLUnrecognizedCompOperator,
+	gpdxl::ExmiDXLIncorrectNumberOfChildren,
+	gpdxl::ExmiQuery2DXLMissingValue,
+	gpdxl::ExmiQuery2DXLDuplicateRTE,
+	gpdxl::ExmiMDCacheEntryNotFound,
+	gpdxl::ExmiQuery2DXLError,
+	gpdxl::ExmiInvalidComparisonTypeCode
 };
 
 // array of DXL minor exception types that error out and NOT fallback to the planner
@@ -86,7 +106,7 @@ FoundException
 	return found;
 }
 
-gpos::BOOL IsUnexpectedFailure
+gpos::BOOL IsLoggableFailure
 (
 	gpos::CException &exc
 )
@@ -249,17 +269,6 @@ int gpos_exec
 	}
 	catch(CException ex)
 	{
-		if (IsUnexpectedFailure(ex))
-		{
-			std::cerr
-				<< "Unexpected exception reached top of execution stack:"
-				<< " major=" << ex.Major()
-				<< " minor=" << ex.Minor()
-				<< " file=" << ex.Filename()
-				<< " line=" << ex.Line()
-				<< std::endl;
-			// unexpected failure
-		}
 		throw ex;
 	}
 	catch (...)

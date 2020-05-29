@@ -242,9 +242,12 @@ DistributedLog_AdvanceOldestXmin(TransactionId oldestLocalXmin,
 		 * advance past it. Otherwise stop here. (Local-only transactions will
 		 * have zeros in distribXid and distribTimeStamp; this test will also
 		 * skip over those.)
+		 *
+		 * And the distributed xid is just a plain counter, so we just use the `>=` for
+		 * the comparison of gxid
 		 */
 		if (ptr->distribTimeStamp == distribTransactionTimeStamp &&
-				!TransactionIdPrecedes(ptr->distribXid, xminAllDistributedSnapshots))
+				ptr->distribXid >= xminAllDistributedSnapshots)
 			break;
 
 		TransactionIdAdvance(oldestXmin);

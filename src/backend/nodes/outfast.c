@@ -688,6 +688,7 @@ _outCreateForeignTableStmt(StringInfo str, CreateForeignTableStmt *node)
 
 	WRITE_STRING_FIELD(servername);
 	WRITE_NODE_FIELD(options);
+	WRITE_NODE_FIELD(distributedBy);
 }
 
 static void

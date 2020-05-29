@@ -914,14 +914,14 @@ ExecEndBitmapHeapScan(BitmapHeapScanState *node)
 	ExecClearTuple(node->ss.ss_ScanTupleSlot);
 
 	/*
+	 * release bitmap iterator if any
+	 */
+	ExecEagerFreeBitmapHeapScan(node);
+
+	/*
 	 * close down subplans
 	 */
 	ExecEndNode(outerPlanState(node));
-
-	/*
-	 * release bitmap if any
-	 */
-	ExecEagerFreeBitmapHeapScan(node);
 
 	/*
 	 * close heap scan

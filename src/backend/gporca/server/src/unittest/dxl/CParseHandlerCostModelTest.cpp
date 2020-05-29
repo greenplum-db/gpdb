@@ -45,7 +45,7 @@ namespace
 		private:
 			CAutoMemoryPool m_amp;
 			gpos::CAutoP<CDXLMemoryManager> m_apmm;
-			std::auto_ptr<SAX2XMLReader> m_apxmlreader;
+			std::unique_ptr<SAX2XMLReader> m_apxmlreader;
 			gpos::CAutoP<CParseHandlerManager> m_apphm;
 			gpos::CAutoP<CParseHandlerCostModel> m_apphCostModel;
 

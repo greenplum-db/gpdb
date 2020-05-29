@@ -3,6 +3,8 @@
 -- Expect: success
 -----------------------------------------------------------------------
 
+-- These tests ALTER the default encoding options of some built-in types.
+-- Run them in a separate database to avoid messing with other tests.
 create database column_compression;
 \c column_compression
 

@@ -972,7 +972,7 @@ SELECT * FROM information_schema.foreign_tables WHERE foreign_table_schema <> 'g
  regression            | foreign_schema       | foreign_table_1    | regression             | s0
 (1 row)
 
-SELECT * FROM information_schema.foreign_table_options ORDER BY 1, 2, 3, 4;
+SELECT * FROM information_schema.foreign_table_options WHERE foreign_table_schema <> 'gp_toolkit' ORDER BY 1, 2, 3, 4;
  foreign_table_catalog | foreign_table_schema | foreign_table_name | option_name | option_value 
 -----------------------+----------------------+--------------------+-------------+--------------
  regression            | foreign_schema       | foreign_table_1    | be quoted   | value

@@ -279,23 +279,6 @@ create writable external web table wet_pos5(a text, b text) execute 'some comman
 -- cannot read from a WRITABLE external table.
 select * from wet_pos4;
 
--- Dropping an external table, both via DROP EXTERNAL TABLE and as a result
--- from a cascading deletion must result in the deletion of the relation
--- pg_exttable row.
-
-CREATE EXTERNAL WEB TABLE cascadetest (x text) EXECUTE 'echo "cascadetest";' FORMAT 'text';
-SELECT count(*) FROM pg_exttable WHERE command = 'echo "cascadetest";';
-DROP EXTERNAL TABLE cascadetest;
-SELECT count(*) FROM pg_exttable WHERE command = 'echo "cascadetest";';
-
-CREATE SCHEMA exttabletest;
-CREATE
-	EXTERNAL TABLE exttabletest.ext_nation (n_nationkey integer, n_name char(25), n_regionkey integer, n_comment varchar(152))
-	LOCATION ('file://@hostname@@abs_srcdir@/data/nation.tbl') FORMAT 'text' (delimiter '|');
-SELECT count(*) FROM pg_exttable WHERE urilocation @> '{file://@hostname@@abs_srcdir@/data/nation.tbl}';
-DROP SCHEMA exttabletest CASCADE;
-SELECT count(*) FROM pg_exttable WHERE urilocation @> '{file://@hostname@@abs_srcdir@/data/nation.tbl}';
-
 -- Test selecting the CTID system column on an external table. In the past,
 -- it was necessary that we generated artificial CTIDs for external table
 -- scans, because the planner generated plans that used the CTID attribute
@@ -367,6 +350,7 @@ create external table ret_too_many_uris(a text, b text) location(
   'gpfdist://foo.invalid:7070/ret.tbl17', 'gpfdist://foo.invalid:7070/ret.tbl18',
   'gpfdist://foo.invalid:7070/ret.tbl19', 'gpfdist://foo.invalid:7070/ret.tbl20'
 ) format 'text';
+\d ret_too_many_uris
 select * from ret_too_many_uris;
 
 create writable external table wet_too_many_uris(a text, b text) location(

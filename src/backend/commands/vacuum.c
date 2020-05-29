@@ -417,7 +417,7 @@ vacuum(int options, RangeVar *relation, Oid relid, VacuumParams *params,
 				}
 
 				analyze_rel(relid, relation, options, params,
-							va_cols, in_outer_xact, vac_strategy);
+							va_cols, in_outer_xact, vac_strategy, NULL);
 
 				if (use_own_xacts)
 				{

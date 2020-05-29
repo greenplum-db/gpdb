@@ -72,7 +72,7 @@ static void destroy_interconnect_handle(interconnect_handle_t *h);
 static interconnect_handle_t *find_interconnect_handle(ChunkTransportState *icContext);
 
 static void
-logChunkParseDetails(MotionConn *conn)
+logChunkParseDetails(MotionConn *conn, uint32 ic_instance_id)
 {
 	struct icpkthdr *pkt;
 
@@ -82,7 +82,7 @@ logChunkParseDetails(MotionConn *conn)
 	pkt = (struct icpkthdr *) conn->pBuff;
 
 	elog(LOG, "Interconnect parse details: pkt->len %d pkt->seq %d pkt->flags 0x%x conn->active %d conn->stopRequest %d pkt->icId %d my_icId %d",
-		 pkt->len, pkt->seq, pkt->flags, conn->stillActive, conn->stopRequested, pkt->icId, gp_interconnect_id);
+		 pkt->len, pkt->seq, pkt->flags, conn->stillActive, conn->stopRequested, pkt->icId, ic_instance_id);
 
 	elog(LOG, "Interconnect parse details continued: peer: srcpid %d dstpid %d recvslice %d sendslice %d srccontent %d dstcontent %d",
 		 pkt->srcPid, pkt->dstPid, pkt->recvSliceIndex, pkt->sendSliceIndex, pkt->srcContentId, pkt->dstContentId);
@@ -120,7 +120,7 @@ RecvTupleChunk(MotionConn *conn, ChunkTransportState *transportStates)
 	{
 		if (conn->msgSize - bytesProcessed < TUPLE_CHUNK_HEADER_SIZE)
 		{
-			logChunkParseDetails(conn);
+			logChunkParseDetails(conn, transportStates->sliceTable->ic_instance_id);
 
 			ereport(ERROR,
 					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
@@ -148,7 +148,7 @@ RecvTupleChunk(MotionConn *conn, ChunkTransportState *transportStates)
 			else
 				elog(LOG, "Interconnect error parsing message: no last item");
 
-			logChunkParseDetails(conn);
+			logChunkParseDetails(conn, transportStates->sliceTable->ic_instance_id);
 
 			ereport(ERROR,
 					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
@@ -174,7 +174,7 @@ RecvTupleChunk(MotionConn *conn, ChunkTransportState *transportStates)
 				 */
 				ML_CHECK_FOR_INTERRUPTS(transportStates->teardownActive);
 
-				logChunkParseDetails(conn);
+				logChunkParseDetails(conn, transportStates->sliceTable->ic_instance_id);
 
 				ereport(ERROR,
 						(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),

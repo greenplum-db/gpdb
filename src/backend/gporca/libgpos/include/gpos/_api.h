@@ -29,7 +29,7 @@ gpos::BOOL FoundException(gpos::CException &exc, const gpos::ULONG *exceptions, 
 
 // Check if given exception is an unexpected reason for failing to
 // produce a plan
-gpos::BOOL IsUnexpectedFailure(gpos::CException &exc);
+gpos::BOOL IsLoggableFailure(gpos::CException &exc);
 
 // check if given exception should error out
 gpos::BOOL ShouldErrorOut(gpos::CException &exc);

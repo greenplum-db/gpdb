@@ -108,11 +108,6 @@ class GpConfigurationProviderUsingGpdbCatalog(GpConfigurationProvider) :
         for seg in update.mirror_to_add:
             mirror_map[ seg.getSegmentContentId() ] = seg
 
-        # reset dbId of new mirror segments to -1
-        # before invoking the operations which will assign them new ids
-        for seg in update.mirror_to_add:
-            seg.setSegmentDbId(-1)
-
         # remove mirror segments (e.g. for gpexpand rollback)
         for seg in update.mirror_to_remove:
             self.__updateSystemConfigRemoveMirror(conn, seg, textForConfigTable)
@@ -280,17 +275,20 @@ class GpConfigurationProviderUsingGpdbCatalog(GpConfigurationProvider) :
 
     def __callSegmentAddMirror(self, conn, gpArray, seg):
         """
-        Call gp_add_segment_mirror() to add the mirror.
-        Return the new segment's dbid.
+        Similar to __callSegmentAdd, ideally we should call gp_add_segment_mirror() to add the mirror.
+        But chicken-egg problem also exists in mirror case. If we use gp_add_segment_mirror(),
+        new dbid will be chosen by `get_availableDbId()`, which cannot ensure to be same as dbid
+        in internal.auto.conf(see issue-9837). Refer to __callSegmentAdd for details.
         """
         logger.debug('callSegmentAddMirror %s' % repr(seg))
 
-        sql = "SELECT gp_add_segment_mirror(%s::int2, %s, %s, %s, %s)" \
+        sql = "SELECT gp_add_segment(%s::int2, %s::int2, 'm', 'm', 'n', 'd', %s, %s, %s, %s)" \
             % (
+                self.__toSqlIntValue(seg.getSegmentDbId()),
                 self.__toSqlIntValue(seg.getSegmentContentId()),
+                self.__toSqlIntValue(seg.getSegmentPort()),
                 self.__toSqlTextValue(seg.getSegmentHostName()),
                 self.__toSqlTextValue(seg.getSegmentAddress()),
-                self.__toSqlIntValue(seg.getSegmentPort()),
                 self.__toSqlTextValue(seg.getSegmentDataDirectory()),
               )
 

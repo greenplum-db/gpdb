@@ -63,7 +63,14 @@ log_optimizer(PlannedStmt *plan, bool fUnexpectedFailure)
 		(fUnexpectedFailure && OPTIMIZER_UNEXPECTED_FAIL == optimizer_log_failure) || 		/* unexpected fall back */
 		(!fUnexpectedFailure && OPTIMIZER_EXPECTED_FAIL == optimizer_log_failure))			/* expected fall back */
 	{
-		elog(LOG, "Pivotal Optimizer (GPORCA) failed to produce plan");
+		if (fUnexpectedFailure)
+		{
+			elog(LOG, "Pivotal Optimizer (GPORCA) failed to produce plan (unexpected)");
+		}
+		else
+		{
+			elog(LOG, "Pivotal Optimizer (GPORCA) failed to produce plan");
+		}
 		return;
 	}
 }

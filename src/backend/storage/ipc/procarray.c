@@ -383,9 +383,13 @@ ProcArrayRemove(PGPROC *proc, TransactionId latestXid)
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
+		/*
+		 * Remeber that the distributed xid is just a plain counter, so we just use the `<` for
+		 * the comparison of gxid
+		 */
 		DistributedTransactionId gxid = allTmGxact[proc->pgprocno].gxid;
 		if (InvalidDistributedTransactionId != gxid &&
-			TransactionIdPrecedes(ShmemVariableCache->latestCompletedDxid, gxid))
+			ShmemVariableCache->latestCompletedDxid < gxid)
 			ShmemVariableCache->latestCompletedDxid = gxid;
 	}
 
@@ -423,8 +427,12 @@ ProcArrayEndGxact(TMGXACT *gxact)
 	gxact->includeInCkpt = false;
 	gxact->sessionId = 0;
 
+	/*
+	 * Remeber that the distributed xid is just a plain counter, so we just use the `<` for
+	 * the comparison of gxid
+	 */
 	if (InvalidDistributedTransactionId != gxid &&
-		TransactionIdPrecedes(ShmemVariableCache->latestCompletedDxid, gxid))
+		ShmemVariableCache->latestCompletedDxid < gxid)
 		ShmemVariableCache->latestCompletedDxid = gxid;
 }
 

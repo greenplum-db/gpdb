@@ -1304,9 +1304,6 @@ InitSliceTable(EState *estate, PlannedStmt *plannedstmt)
 	table->instrument_options = INSTRUMENT_NONE;
 	table->hasMotions = false;
 
-	/* Each slice table has a unique-id. */
-	table->ic_instance_id = ++gp_interconnect_id;
-
 	/*
 	 * Initialize the executor slice table.
 	 *

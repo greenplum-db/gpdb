@@ -24,12 +24,18 @@
 
 #include "access/exttable_fdw_shim.h"
 #include "access/fileam.h"
+#include "access/reloptions.h"
 #include "access/relscan.h"
 #include "cdb/cdbsreh.h"
 #include "cdb/cdbvars.h"
+#include "catalog/pg_authid.h"
+#include "catalog/pg_extprotocol.h"
 #include "catalog/pg_exttable.h"
 #include "catalog/pg_foreign_server.h"
+#include "catalog/pg_foreign_table.h"
+#include "commands/defrem.h"
 #include "foreign/fdwapi.h"
+#include "funcapi.h"
 #include "nodes/execnodes.h"
 #include "nodes/relation.h"
 #include "optimizer/clauses.h"
@@ -38,8 +44,33 @@
 #include "optimizer/planmain.h"
 #include "optimizer/restrictinfo.h"
 #include "optimizer/var.h"
+#include "utils/builtins.h"
+#include "utils/fmgroids.h"
 #include "utils/guc.h"
+#include "utils/syscache.h"
 #include "utils/uri.h"
+
+#define GP_EXTTABLE_ATTRNUM 12
+
+/*
+ * PGExtTableEntry is used in pg_exttable(). It reflects each external
+ * table entry in the foreign table catalog.
+ */
+typedef struct PGExtTableEntry
+{
+	Oid			reloid;
+	Oid			serveroid;
+	List	   *ftoptions;
+} PGExtTableEntry;
+
+/*
+ * PGExtTableEntriesContext is used in pg_exttable() as user_fctx.
+ */
+typedef struct PGExtTableEntriesContext
+{
+	int			entryIdx;
+	List	   *ftentries;
+} PGExtTableEntriesContext;
 
 typedef struct
 {
@@ -53,6 +84,419 @@ static ExternalScanInfo *make_externalscan_info(ExtTableEntry *extEntry);
 static List *create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly);
 static void cost_externalscan(ForeignPath *path, PlannerInfo *root,
 							  RelOptInfo *baserel, ParamPathInfo *param_info);
+
+/*
+ * strListToArray - String Value to Text array datum
+ */
+static Datum
+strListToArray(List *stringlist)
+{
+	ArrayBuildState *astate = NULL;
+	ListCell   *cell;
+
+	foreach(cell, stringlist)
+	{
+		Value	   *val = lfirst(cell);
+		astate = accumArrayResult(astate, CStringGetTextDatum(strVal(val)),
+								  false, TEXTOID,
+								  CurrentMemoryContext);
+	}
+
+	if (astate)
+		return makeArrayResult(astate, CurrentMemoryContext);
+
+	return PointerGetDatum(NULL);
+}
+
+/*
+ * formatOptionsToTextDatum
+ * Convert format options to text datum. The text datum format is same with
+ * the original pg_exttable catalog's fmtopt field.
+ */
+static Datum
+formatOptionsToTextDatum(List *options, char formattype)
+{
+	ListCell   *option;
+	Datum		result;
+	StringInfoData cfbuf;
+
+	initStringInfo(&cfbuf);
+	if (fmttype_is_text(formattype) || fmttype_is_csv(formattype))
+	{
+		bool isfirst = true;
+
+		/*
+		 * Note: the order of the options should be same with the original
+		 * pg_exttable catalog's fmtopt field.
+		 */
+		foreach(option, options)
+		{
+			DefElem    *defel = (DefElem *) lfirst(option);
+			char	   *key = defel->defname;
+			char	   *val = (char *) defGetString(defel);
+
+			if (strcmp(defel->defname, "format") == 0)
+				continue;
+
+			if (isfirst)
+				isfirst = false;
+			else
+				appendStringInfo(&cfbuf, " ");
+
+			if (strcmp(defel->defname, "header") == 0)
+				appendStringInfo(&cfbuf, "header");
+			else if (strcmp(defel->defname, "fill_missing_fields") == 0)
+				appendStringInfo(&cfbuf, "fill missing fields");
+			else if (strcmp(defel->defname, "force_not_null") == 0)
+				appendStringInfo(&cfbuf, "force not null %s", val);
+			else if (strcmp(defel->defname, "force_quote") == 0)
+				appendStringInfo(&cfbuf, "force quote %s", val);
+			else
+				appendStringInfo(&cfbuf, "%s '%s'", key, val);
+		}
+	}
+	else
+	{
+		foreach(option, options)
+		{
+			DefElem    *defel = (DefElem *) lfirst(option);
+			char	   *key = defel->defname;
+			char	   *val = (char *) defGetString(defel);
+
+			appendStringInfo(&cfbuf, "%s '%s'", key, val);
+		}
+	}
+	result = CStringGetTextDatum(cfbuf.data);
+	pfree(cfbuf.data);
+
+	return result;
+}
+
+/*
+ * Use the pg_exttable UDF to extract pg_exttable catalog info for
+ * extension compatibility.
+ *
+ * pg_exttable catalog was removed because we use the FDW to implement
+ * external table now. But other extensions may still rely on the pg_exttable
+ * catalog. So we create a view base on this UDF to extract pg_exttable catalog
+ * info.
+ */
+Datum pg_exttable(PG_FUNCTION_ARGS)
+{
+	FuncCallContext			   *funcctx;
+	PGExtTableEntriesContext   *context;
+	Datum						values[GP_EXTTABLE_ATTRNUM];
+	bool						nulls[GP_EXTTABLE_ATTRNUM] = {false};
+
+	/*
+	 * First call setup
+	 */
+	if (SRF_IS_FIRSTCALL())
+	{
+		MemoryContext	oldcontext;
+		Relation		pg_foreign_table_rel;
+		ScanKeyData		ftkey;
+		SysScanDesc		ftscan;
+		HeapTuple		fttuple;
+		Form_pg_foreign_table fttableform;
+		List		   *ftentries = NIL;
+
+		funcctx = SRF_FIRSTCALL_INIT();
+		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
+
+		/* Build tuple descriptor */
+		TupleDesc	tupdesc =
+		CreateTemplateTupleDesc(GP_EXTTABLE_ATTRNUM, false);
+
+		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "reloid", OIDOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "urilocation", TEXTARRAYOID, -1, 1);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 3, "execlocation", TEXTARRAYOID, -1, 1);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 4, "fmttype", CHAROID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 5, "fmtopts", TEXTOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 6, "options", TEXTARRAYOID, -1, 1);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 7, "command", TEXTOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 8, "rejectlimit", INT4OID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 9, "rejectlimittype", CHAROID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 10, "logerrors", CHAROID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 11, "encoding", INT4OID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 12, "writable", BOOLOID, -1, 0);
+
+		funcctx->tuple_desc = BlessTupleDesc(tupdesc);
+
+		/* Retrieve external table in foreign table catalog */
+		pg_foreign_table_rel = heap_open(ForeignTableRelationId, AccessShareLock);
+
+		ScanKeyInit(&ftkey,
+					Anum_pg_foreign_table_ftserver,
+					BTEqualStrategyNumber, F_OIDEQ,
+					ObjectIdGetDatum(PG_EXTTABLE_SERVER_OID));
+
+		ftscan = systable_beginscan(pg_foreign_table_rel, InvalidOid,
+									false, NULL, 1, &ftkey);
+
+		while (HeapTupleIsValid(fttuple = systable_getnext(ftscan)))
+		{
+			Datum	ftoptions;
+			bool	isNull;
+			PGExtTableEntry *entry= (PGExtTableEntry *) palloc0(sizeof(PGExtTableEntry));
+			fttableform = (Form_pg_foreign_table) GETSTRUCT(fttuple);
+			entry->reloid = fttableform->ftrelid;
+			entry->serveroid = fttableform->ftserver;
+			/* get the foreign table options */
+			ftoptions = heap_getattr(fttuple,
+									 Anum_pg_foreign_table_ftoptions,
+									 RelationGetDescr(pg_foreign_table_rel),
+									 &isNull);
+			if (!isNull)
+				entry->ftoptions = untransformRelOptions(ftoptions);
+			ftentries = lappend(ftentries, entry);
+		}
+		systable_endscan(ftscan);
+		heap_close(pg_foreign_table_rel, AccessShareLock);
+
+		context = (PGExtTableEntriesContext *)palloc0(sizeof(PGExtTableEntriesContext));
+		context->entryIdx = 0;
+		context->ftentries = ftentries;
+		funcctx->user_fctx = (void *) context;
+		MemoryContextSwitchTo(oldcontext);
+	}
+
+	funcctx = SRF_PERCALL_SETUP();
+	context = (PGExtTableEntriesContext *) funcctx->user_fctx;
+	while (context->entryIdx < list_length(context->ftentries))
+	{
+		PGExtTableEntry	   *entry;
+		ExtTableEntry	   *extentry;
+		Datum				datum;
+		HeapTuple			tuple;
+		Datum				result;
+
+		entry = (PGExtTableEntry *)list_nth(context->ftentries, context->entryIdx);
+		context->entryIdx++;
+		extentry = GetExtFromForeignTableOptions(entry->ftoptions, entry->reloid);
+
+		memset(values, 0, sizeof(values));
+		memset(nulls, 0, sizeof(nulls));
+
+		/* reloid */
+		values[0] = ObjectIdGetDatum(entry->reloid);
+
+		/* urilocations */
+		datum = strListToArray(extentry->urilocations);
+		if (DatumGetPointer(datum) != NULL)
+			values[1] = datum;
+		else
+			nulls[1] = true;
+
+		/* execlocations */
+		datum = strListToArray(extentry->execlocations);
+		if (DatumGetPointer(datum) != NULL)
+			values[2] = datum;
+		else
+			nulls[2] = true;
+
+		/* fmtcode */
+		values[3] = CharGetDatum(extentry->fmtcode);
+
+		/* fmtopts */
+		if (extentry->options)
+			values[4] = formatOptionsToTextDatum(extentry->options, extentry->fmtcode);
+		else
+			nulls[4] = true;
+
+		/*
+		 * options. Since our document not contains the OPTION caluse, so we
+		 * assume no external table options in used for now.  Except
+		 * gpextprotocol.c.
+		 */
+		nulls[5] = true;
+
+		/* command */
+		if (extentry->command)
+			values[6] = CStringGetTextDatum(extentry->command);
+		else
+			nulls[6] = true;
+
+		/* rejectlimit */
+		values[7] = Int32GetDatum(extentry->rejectlimit);
+		if (values[7] == -1)
+			nulls[7] = true;
+
+		/* rejectlimittype */
+		values[8] = CharGetDatum(extentry->rejectlimittype);
+		if (values[8] == -1)
+			nulls[8] = true;
+
+		/* logerrors */
+		values[9] = CharGetDatum(extentry->logerrors);
+
+		/* encoding */
+		values[10] = Int32GetDatum(extentry->encoding);
+
+		/* iswritable */
+		values[11] = BoolGetDatum(extentry->iswritable);
+
+		tuple = heap_form_tuple(funcctx->tuple_desc, values, nulls);
+		result = HeapTupleGetDatum(tuple);
+		SRF_RETURN_NEXT(funcctx, result);
+	}
+
+	SRF_RETURN_DONE(funcctx);
+}
+
+/* FDW validator for external tables */
+void
+gp_exttable_permission_check(PG_FUNCTION_ARGS)
+{
+	List	   *options_list = untransformRelOptions(PG_GETARG_DATUM(0));
+
+	if (!superuser() && Gp_role == GP_ROLE_DISPATCH)
+	{
+		/*----------
+		 * check permissions to create this external table.
+		 *
+		 * - Always allow if superuser.
+		 * - Never allow EXECUTE or 'file' exttables if not superuser.
+		 * - Allow http, gpfdist or gpfdists tables if pg_auth has the right
+		 *	 permissions for this role and for this type of table
+		 *----------
+		 */
+		ListCell *lc;
+		bool iswritable = false;
+		foreach(lc, options_list)
+		{
+			DefElem    *def = (DefElem *) lfirst(lc);
+
+			if (pg_strcasecmp(def->defname, "command") == 0)
+			{
+				ereport(ERROR,
+						(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+						 errmsg("must be superuser to create an EXECUTE external web table")));
+			}
+			else if (pg_strcasecmp(def->defname, "is_writable") == 0)
+			{
+				iswritable = defGetBoolean(def);
+			}
+		}
+
+		foreach(lc, options_list)
+		{
+			DefElem    *def = (DefElem *) lfirst(lc);
+
+			if (pg_strcasecmp(def->defname, "location_uris") == 0)
+			{
+				List *location_list = tokenizeLocationUris(defGetString(def));
+				ListCell   *first_uri = list_head(location_list);
+				Value	   *v = lfirst(first_uri);
+				char	   *uri_str = pstrdup(v->val.str);
+				Uri		   *uri = ParseExternalTableUri(uri_str);
+
+				/* Assert(exttypeDesc->exttabletype == EXTTBL_TYPE_LOCATION); */
+
+				if (uri->protocol == URI_FILE)
+				{
+					ereport(ERROR,
+							(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+							 errmsg("must be superuser to create an external table with a file protocol")));
+				}
+				else
+				{
+					/*
+					 * Check if this role has the proper 'gpfdist', 'gpfdists' or
+					 * 'http' permissions in pg_auth for creating this table.
+					 */
+
+					bool		isnull;
+					HeapTuple	tuple;
+
+					tuple = SearchSysCache1(AUTHOID, ObjectIdGetDatum(GetUserId()));
+					if (!HeapTupleIsValid(tuple))
+						ereport(ERROR,
+								(errcode(ERRCODE_UNDEFINED_OBJECT),
+								 errmsg("role \"%s\" does not exist (in DefineExternalRelation)",
+										GetUserNameFromId(GetUserId(), false))));
+
+					if ((uri->protocol == URI_GPFDIST || uri->protocol == URI_GPFDISTS) && iswritable)
+					{
+						Datum	 	d_wextgpfd;
+						bool		createwextgpfd;
+
+						d_wextgpfd = SysCacheGetAttr(AUTHOID, tuple,
+													 Anum_pg_authid_rolcreatewextgpfd,
+													 &isnull);
+						createwextgpfd = (isnull ? false : DatumGetBool(d_wextgpfd));
+
+						if (!createwextgpfd)
+							ereport(ERROR,
+									(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+									 errmsg("permission denied: no privilege to create a writable gpfdist(s) external table")));
+					}
+					else if ((uri->protocol == URI_GPFDIST || uri->protocol == URI_GPFDISTS) && !iswritable)
+					{
+						Datum		d_rextgpfd;
+						bool		createrextgpfd;
+
+						d_rextgpfd = SysCacheGetAttr(AUTHOID, tuple,
+													 Anum_pg_authid_rolcreaterextgpfd,
+													 &isnull);
+						createrextgpfd = (isnull ? false : DatumGetBool(d_rextgpfd));
+
+						if (!createrextgpfd)
+							ereport(ERROR,
+									(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+									 errmsg("permission denied: no privilege to create a readable gpfdist(s) external table")));
+					}
+					else if (uri->protocol == URI_HTTP && !iswritable)
+					{
+						Datum		d_exthttp;
+						bool		createrexthttp;
+
+						d_exthttp = SysCacheGetAttr(AUTHOID, tuple,
+													Anum_pg_authid_rolcreaterexthttp,
+													&isnull);
+						createrexthttp = (isnull ? false : DatumGetBool(d_exthttp));
+
+						if (!createrexthttp)
+							ereport(ERROR,
+									(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+									 errmsg("permission denied: no privilege to create an http external table")));
+					}
+					else if (uri->protocol == URI_CUSTOM)
+					{
+						Oid			ownerId = GetUserId();
+						char	   *protname = uri->customprotocol;
+						Oid			ptcId = get_extprotocol_oid(protname, false);
+						AclResult	aclresult;
+
+						/* Check we have the right permissions on this protocol */
+						if (!pg_extprotocol_ownercheck(ptcId, ownerId))
+						{
+							AclMode		mode = (iswritable ? ACL_INSERT : ACL_SELECT);
+
+							aclresult = pg_extprotocol_aclcheck(ptcId, ownerId, mode);
+
+							if (aclresult != ACLCHECK_OK)
+								aclcheck_error(aclresult, ACL_KIND_EXTPROTOCOL, protname);
+						}
+					}
+					else
+						ereport(ERROR,
+								(errcode(ERRCODE_INTERNAL_ERROR),
+								 errmsg("internal error in DefineExternalRelation"),
+								 errdetail("Protocol is %d, writable is %d.",
+										   uri->protocol, iswritable)));
+
+					ReleaseSysCache(tuple);
+				}
+				FreeExternalTableUri(uri);
+				pfree(uri_str);
+				break;
+			}
+		}
+	}
+
+	return;
+}
 
 static void
 exttable_GetForeignRelSize(PlannerInfo *root,
@@ -132,9 +576,6 @@ make_externalscan_info(ExtTableEntry *extEntry)
 	/* assign Uris to segments. */
 	urilist = create_external_scan_uri_list(extEntry, &ismasteronly);
 
-	/* data format description */
-	Assert(extEntry->fmtopts);
-
 	/* single row error handling */
 	if (extEntry->rejectlimit != -1)
 	{
@@ -144,7 +585,6 @@ make_externalscan_info(ExtTableEntry *extEntry)
 	}
 
 	node->uriList = urilist;
-	node->fmtOptString = extEntry->fmtopts;
 	node->fmtType = extEntry->fmtcode;
 	node->isMasterOnly = ismasteronly;
 	node->rejLimit = rejectlimit;
@@ -194,12 +634,9 @@ exttable_GetForeignPlan(PlannerInfo *root,
 						Plan *outer_plan)
 {
 	Index		scan_relid = best_path->path.parent->relid;
-	ExternalScanInfo *externalscan_info;
 	ForeignScan *scan_plan;
 
 	Assert(scan_relid > 0);
-
-	externalscan_info = (ExternalScanInfo *) linitial(best_path->fdw_private);
 
 	/* Reduce RestrictInfo list to bare expressions; ignore pseudoconstants */
 	scan_clauses = extract_actual_clauses(scan_clauses, false);
@@ -305,7 +742,6 @@ exttable_BeginForeignScan(ForeignScanState *node,
 	currentScanDesc = external_beginscan(currentRelation,
 										 externalscan_info->scancounter,
 										 externalscan_info->uriList,
-										 externalscan_info->fmtOptString,
 										 externalscan_info->fmtType,
 										 externalscan_info->isMasterOnly,
 										 externalscan_info->rejLimit,
@@ -527,6 +963,30 @@ exttable_EndForeignModify(EState *estate, ResultRelInfo *rinfo)
 	external_insert_finish(extInsertDesc);
 }
 
+static void exttable_BeginForeignInsert(ModifyTableState *mtstate,
+										ResultRelInfo *resultRelInfo)
+{
+	/*
+	 * This would be the natural place to call external_insert_init(), but we
+	 * delay that until the first actual insert. That's because we don't want
+	 * to open the external resource if we don't end up actually inserting any
+	 * rows in this segment. In particular, we don't want to initialize the
+	 * external resource in the QD node, when all the actual insertions happen
+	 * in the segments.
+	 */
+}
+
+static void exttable_EndForeignInsert(EState *estate,
+									  ResultRelInfo *resultRelInfo)
+{
+	ExternalInsertDescData *extInsertDesc = (ExternalInsertDescData *) resultRelInfo->ri_FdwState;
+
+	if (extInsertDesc == NULL)
+		return;
+
+	external_insert_finish(extInsertDesc);
+}
+
 Datum
 exttable_fdw_handler(PG_FUNCTION_ARGS)
 {
@@ -544,6 +1004,8 @@ exttable_fdw_handler(PG_FUNCTION_ARGS)
 	routine->BeginForeignModify = exttable_BeginForeignModify;
 	routine->ExecForeignInsert = exttable_ExecForeignInsert;
 	routine->EndForeignModify = exttable_EndForeignModify;
+	routine->BeginForeignInsert = exttable_BeginForeignInsert;
+	routine->EndForeignInsert = exttable_EndForeignInsert;
 
 	PG_RETURN_POINTER(routine);
 };

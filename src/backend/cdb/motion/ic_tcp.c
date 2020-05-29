@@ -762,6 +762,7 @@ sendRegisterMessage(ChunkTransportState *transportStates, ChunkTransportStateEnt
 {
 	int			bytesToSend;
 	int			bytesSent;
+	SliceTable	*sliceTbl = transportStates->sliceTable;
 
 	if (conn->state != mcsSendRegMsg)
 	{
@@ -806,7 +807,7 @@ sendRegisterMessage(ChunkTransportState *transportStates, ChunkTransportStateEnt
 		regMsg->srcListenerPort = Gp_listener_port & 0x0ffff;
 		regMsg->srcPid = MyProcPid;
 		regMsg->srcSessionId = gp_session_id;
-		regMsg->srcCommandCount = gp_interconnect_id;
+		regMsg->srcCommandCount = sliceTbl->ic_instance_id;
 
 
 		conn->state = mcsSendRegMsg;
@@ -873,6 +874,7 @@ readRegisterMessage(ChunkTransportState *transportStates,
 	ChunkTransportStateEntry *pEntry = NULL;
 	CdbProcess *cdbproc = NULL;
 	ListCell	*lc;
+	SliceTable	*sliceTbl = transportStates->sliceTable;
 
 	/* Get ready to receive the Register message. */
 	if (conn->state != mcsRecvRegMsg)
@@ -946,7 +948,7 @@ readRegisterMessage(ChunkTransportState *transportStates,
 
 	/* get rid of old connections first */
 	if (msg.srcSessionId != gp_session_id ||
-		msg.srcCommandCount < gp_interconnect_id)
+		msg.srcCommandCount < sliceTbl->ic_instance_id)
 	{
 		/*
 		 * This is an old connection, which can be safely ignored. We get this
@@ -957,7 +959,7 @@ readRegisterMessage(ChunkTransportState *transportStates,
 		elog(LOG, "Received invalid, old registration message: "
 			 "will ignore ('expected:received' session %d:%d ic-id %d:%d)",
 			 gp_session_id, msg.srcSessionId,
-			 gp_interconnect_id, msg.srcCommandCount);
+			 sliceTbl->ic_instance_id, msg.srcCommandCount);
 
 		goto old_conn;
 	}
@@ -1262,8 +1264,6 @@ SetupTCPInterconnect(EState *estate)
 
 	Assert(sliceTable &&
 		   mySlice->sliceIndex == sliceTable->localSlice);
-
-	gp_interconnect_id = interconnect_context->sliceTable->ic_instance_id;
 
 	gp_set_monotonic_begin_time(&startTime);
 
@@ -2428,8 +2428,7 @@ RecvTupleChunkFromAnyTCP(ChunkTransportState *transportStates,
 				i,
 				index;
 	bool		skipSelect = false;
-
-
+	int			waitFd = PGINVALID_SOCKET;
 
 #ifdef AMS_VERBOSE_LOGGING
 	elog(DEBUG5, "RecvTupleChunkFromAny(motNodeId=%d)", motNodeID);
@@ -2442,16 +2441,16 @@ RecvTupleChunkFromAnyTCP(ChunkTransportState *transportStates,
 	do
 	{
 		/* Every 2 seconds */
-		if (retry++ > 4)
+		if (Gp_role == GP_ROLE_DISPATCH && retry++ > 4)
 		{
 			retry = 0;
 			/* check to see if the dispatcher should cancel */
-			if (Gp_role == GP_ROLE_DISPATCH)
-				checkForCancelFromQD(transportStates);
+			checkForCancelFromQD(transportStates);
 		}
 
 		struct timeval timeout = tval;
-
+		int	nfds = pEntry->highReadSock;
+		
 		/* make sure we check for these. */
 		ML_CHECK_FOR_INTERRUPTS(transportStates->teardownActive);
 
@@ -2480,7 +2479,22 @@ RecvTupleChunkFromAnyTCP(ChunkTransportState *transportStates,
 		if (skipSelect)
 			break;
 
-		n = select(pEntry->highReadSock + 1, (fd_set *) &rset, NULL, NULL, &timeout);
+		/* 
+		 * Also monitor the events on dispatch fds, eg, errors or sequence
+		 * request from QEs.
+		 */
+		if (Gp_role == GP_ROLE_DISPATCH)
+		{
+			waitFd = cdbdisp_getWaitSocketFd(transportStates->estate->dispatcherState);
+			if (waitFd != PGINVALID_SOCKET)
+			{
+				MPP_FD_SET(waitFd, &rset);
+				if (waitFd > nfds)
+					nfds = waitFd;
+			}
+		}
+
+		n = select(nfds + 1, (fd_set *) &rset, NULL, NULL, &timeout);
 		if (n < 0)
 		{
 			if (errno == EINTR)
@@ -2490,6 +2504,13 @@ RecvTupleChunkFromAnyTCP(ChunkTransportState *transportStates,
 					 errmsg("interconnect error receiving an incoming packet"),
 					 errdetail("%s: %m", "select")));
 		}
+		else if (n > 0 && waitFd != PGINVALID_SOCKET && MPP_FD_ISSET(waitFd, &rset))
+		{
+			/* handle events on dispatch connection */
+			checkForCancelFromQD(transportStates);
+			n--;
+		}
+
 #ifdef AMS_VERBOSE_LOGGING
 		elog(DEBUG5, "RecvTupleChunkFromAny() select() returned %d ready sockets", n);
 #endif

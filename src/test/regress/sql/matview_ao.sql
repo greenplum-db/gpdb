@@ -40,3 +40,6 @@ SELECT * FROM m_aocs;
 REFRESH MATERIALIZED VIEW m_aocs;
 SELECT * FROM m_aocs;
 
+\dm m_heap
+\dm m_ao
+\dm m_aocs

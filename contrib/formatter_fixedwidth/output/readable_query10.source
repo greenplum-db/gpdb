@@ -51,13 +51,7 @@ FORMAT 'CUSTOM' (formatter='fixedwidth_in',
  s3        | text                  |           | 
  col_empty | character(5)          |           | 
  col_null  | character varying(5)  |           | 
-Type: readable
-Encoding: UTF8
-Format type: custom
-Format options: formatter 'fixedwidth_in' s1 '10' s2 '10' s3 '10' col_empty '5' 
-External options: {}
-External location: file://@hostname@@abs_srcdir@/data/fixedwidth_miss_col_null.tbl
-Execute on: all segments
+FDW Options: (formatter 'fixedwidth_in', s1 '10', s2 '10', s3 '10', col_empty '5', format 'custom', format_type 'b', location_uris 'file://@hostname@@abs_srcdir@/data/fixedwidth_miss_col_null.tbl', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
 
 -- Note field "col_null" is loaded with null value
 select * from tbl_ext_fixedwidth where col_null is null order by s1;

@@ -311,3 +311,14 @@ EXPLAIN SELECT * FROM test_join_card1 t1, test_join_card2 t2, test_join_card3 t3
 DROP TABLE IF EXISTS test_join_card1;
 DROP TABLE IF EXISTS test_join_card2;
 -- end_ignore
+
+-- Test if the table pg_statistic has data in segments
+
+DROP TABLE IF EXISTS test_statistic_1;
+CREATE TABLE test_statistic_1(a int, b int);
+INSERT INTO test_statistic_1 SELECT i, i FROM generate_series(1, 1000)i;
+
+select count(*) from pg_class c, pg_statistic s where c.oid = s.starelid and relname = 'test_statistic_1';
+select count(*) from pg_class c, gp_dist_random('pg_statistic') s where c.oid = s.starelid and relname = 'test_statistic_1';
+
+DROP TABLE test_statistic_1;

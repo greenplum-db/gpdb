@@ -41,8 +41,6 @@ struct MemTupleData;
 struct HeapScanDescData;
 struct FileScanDescData;
 struct SliceTable;
-struct NTupleStore;
-struct NTupleStoreAccessor;
 
 /* ----------------
  *	  IndexInfo information
@@ -383,6 +381,9 @@ typedef struct ResultRelInfo
 	AttrNumber	ri_action_attno;	/* is this an INSERT or DELETE ? */
 	AttrNumber	ri_tupleoid_attno;	/* old OID, when updating table with OIDs */
 
+	/* list of RETURNING expressions */
+	List	   *ri_returningList;
+
 	ProjectionInfo *ri_projectReturning;
 	ProjectionInfo *ri_onConflictSetProj;
 	List	   *ri_onConflictSetWhere;
@@ -390,7 +391,6 @@ typedef struct ResultRelInfo
 
 	struct AppendOnlyInsertDescData *ri_aoInsertDesc;
 	struct AOCSInsertDescData *ri_aocsInsertDesc;
-	struct ExternalInsertDescData *ri_extInsertDesc;
 
 	RelationDeleteDesc ri_deleteDesc;
 	RelationUpdateDesc ri_updateDesc;
@@ -1143,8 +1143,7 @@ typedef struct SubPlanState
 	FmgrInfo   *lhs_hash_funcs; /* hash functions for lefthand datatype(s) */
 	FmgrInfo   *cur_eq_funcs;	/* equality functions for LHS vs. table */
 
-	struct NTupleStoreAccessor *ts_pos;
-	struct NTupleStore *ts_state;
+	Tuplestorestate *ts_state;
 } SubPlanState;
 
 /* ----------------
@@ -2086,8 +2085,7 @@ typedef struct FunctionScanState
 
 	/* tuplestore info when function scan run as initplan */
 	bool		resultInTupleStore; /* function result stored in tuplestore */
-	struct NTupleStoreAccessor *ts_pos; /* accessor to the tuplestore */
-	struct NTupleStore *ts_state;		/* tuple store state */
+	struct Tuplestorestate *ts_state;	/* tuple store state */
 } FunctionScanState;
 
 extern void function_scan_create_bufname_prefix(char *p, int size);
@@ -2478,8 +2476,8 @@ typedef struct ShareInputScanState
 {
 	ScanState	ss;
 
-	struct NTupleStore *ts_state;
-	struct NTupleStoreAccessor *ts_pos;
+	Tuplestorestate *ts_state;
+	int			ts_pos;
 
 	struct shareinput_local_state *local_state;
 	struct shareinput_Xslice_reference *ref;

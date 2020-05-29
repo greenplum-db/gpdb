@@ -848,13 +848,7 @@ create external table ext_t1 (a int, b int)
 --------+---------+-----------+-------------+---------+--------------+-------------
  a      | integer |           |             | plain   |              | 
  b      | integer |           |             | plain   |              | 
-Type: readable
-Encoding: UTF8
-Format type: text
-Format options: delimiter '	' null '\N' escape '\'
-External options: {}
-External location: file:///tmp/test.txt
-Execute on: all segments
+FDW Options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', format_type 't', location_uris 'file:///tmp/test.txt', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
 
 create external table ext_error_logging_off (a int, b int)
     location ('file:///tmp/test.txt') format 'text'
@@ -865,14 +859,7 @@ create external table ext_error_logging_off (a int, b int)
 --------+---------+-----------+-------------+---------+--------------+-------------
  a      | integer |           |             | plain   |              | 
  b      | integer |           |             | plain   |              | 
-Type: readable
-Encoding: UTF8
-Format type: text
-Format options: delimiter '	' null '\N' escape '\'
-External options: {}
-External location: file:///tmp/test.txt
-Execute on: all segments
-Segment reject limit: 100 rows
+FDW Options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', format_type 't', location_uris 'file:///tmp/test.txt', execute_on 'ALL_SEGMENTS', reject_limit '100', reject_limit_type 'r', log_errors 'f', encoding '6', is_writable 'false')
 
 create external table ext_t2 (a int, b int)
     location ('file:///tmp/test.txt') format 'text'
@@ -883,15 +870,7 @@ create external table ext_t2 (a int, b int)
 --------+---------+-----------+-------------+---------+--------------+-------------
  a      | integer |           |             | plain   |              | 
  b      | integer |           |             | plain   |              | 
-Type: readable
-Encoding: UTF8
-Format type: text
-Format options: delimiter '	' null '\N' escape '\'
-External options: {}
-External location: file:///tmp/test.txt
-Execute on: all segments
-Segment reject limit: 100 rows
-Error Log in File
+FDW Options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', format_type 't', location_uris 'file:///tmp/test.txt', execute_on 'ALL_SEGMENTS', reject_limit '100', reject_limit_type 'r', log_errors 't', encoding '6', is_writable 'false')
 
 create external table ext_t3 (a int, b int)
     location ('file:///tmp/test.txt') format 'text'
@@ -902,15 +881,7 @@ create external table ext_t3 (a int, b int)
 --------+---------+-----------+-------------+---------+--------------+-------------
  a      | integer |           |             | plain   |              | 
  b      | integer |           |             | plain   |              | 
-Type: readable
-Encoding: UTF8
-Format type: text
-Format options: delimiter '	' null '\N' escape '\'
-External options: {}
-External location: file:///tmp/test.txt
-Execute on: all segments
-Segment reject limit: 100 rows
-Error Log in Persistent File
+FDW Options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', format_type 't', location_uris 'file:///tmp/test.txt', execute_on 'ALL_SEGMENTS', reject_limit '100', reject_limit_type 'r', log_errors 'p', encoding '6', is_writable 'false')
 
 -- Make sure gp_default_storage_options GUC value is set in newly created cdbgangs
 -- after previous idle cdbgang is stopped

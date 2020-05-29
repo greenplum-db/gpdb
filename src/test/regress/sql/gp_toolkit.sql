@@ -159,9 +159,37 @@ select count(*) from gp_toolkit.gp_bloat_expected_pages where btdrelid = 'do_not
 -- Check that gp_bloat_diag can deal with big numbers. (This used to provoke an
 -- integer overflow error, before the view was fixed to use numerics for all the
 -- calculations.)
-create table wide_width_test as select * from pg_attribute;
-set allow_system_table_mods=true ;
-update pg_statistic set stawidth=2034567890 where starelid = (select oid from pg_class where relname='test');
+create table wide_width_test(
+  c01 text, c02 text, c03 text, c04 text, c05 text,
+  c06 text, c07 text, c08 text, c09 text, c10 text,
+  c11 text, c12 text, c13 text, c14 text, c15 text,
+  c16 text, c17 text, c18 text, c19 text, c20 text,
+  c21 text, c22 text, c23 text, c24 text, c25 text,
+  c26 text, c27 text, c28 text, c29 text, c30 text,
+  c31 text, c32 text, c33 text, c34 text, c35 text,
+  c36 text, c37 text, c38 text, c39 text, c40 text,
+  c41 text, c42 text, c43 text, c44 text, c45 text,
+  c46 text, c47 text, c48 text, c49 text, c50 text);
+
+insert into wide_width_test
+select 'foo01', 'foo02', 'foo03', 'foo04', 'foo05',
+       'foo06', 'foo07', 'foo08', 'foo09', 'foo10',
+       'foo11', 'foo12', 'foo13', 'foo14', 'foo15',
+       'foo16', 'foo17', 'foo18', 'foo19', 'foo20',
+       'foo21', 'foo22', 'foo23', 'foo24', 'foo25',
+       'foo26', 'foo27', 'foo28', 'foo29', 'foo30',
+       'foo31', 'foo32', 'foo33', 'foo34', 'foo35',
+       'foo36', 'foo37', 'foo38', 'foo39', 'foo40',
+       'foo41', 'foo42', 'foo43', 'foo44', 'foo45',
+       'foo46', 'foo47', 'foo48', 'foo49', 'foo50'
+from generate_series(1, 1000);
+
+analyze wide_width_test;
+
+set allow_system_table_mods=true;
+update pg_statistic set stawidth=2034567890 where starelid = 'wide_width_test'::regclass;
+
+select btdrelpages, btdexppages from gp_toolkit.gp_bloat_expected_pages where btdrelid='wide_width_test'::regclass;
 
 select * from gp_toolkit.gp_bloat_diag WHERE bdinspname <> 'pg_catalog';
 

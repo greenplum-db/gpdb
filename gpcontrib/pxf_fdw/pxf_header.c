@@ -20,7 +20,7 @@
 #include "pxf_filter.h"
 #include "pxf_header.h"
 
-#include "access/fileam.h"
+#include "access/url.h"
 #include "utils/builtins.h"
 #include "catalog/pg_exttable.h"
 #include "commands/defrem.h"

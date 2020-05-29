@@ -50,3 +50,4 @@
 /upg2.sql
 /upgrade.sql
 /workfile_mgr_test.sql
+/external_table_persistent_error_log.sql

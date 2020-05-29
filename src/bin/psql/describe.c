@@ -50,6 +50,7 @@ static bool isGPDB(void);
 static bool isGPDB4200OrLater(void);
 static bool isGPDB5000OrLater(void);
 static bool isGPDB6000OrLater(void);
+static bool isGPDB7000OrLater(void);
 
 static bool isGPDB(void)
 {
@@ -161,8 +162,18 @@ isGPDB6000OrLater(void)
 	if (!isGPDB())
 		return false;		/* Not Greenplum at all. */
 
-	/* GPDB 6 is based on PostgreSQL 8.4 */
-	return pset.sversion >= 80400;
+	/* GPDB 6 is based on PostgreSQL 9.4 */
+	return pset.sversion >= 90400;
+}
+
+static bool
+isGPDB7000OrLater(void)
+{
+	if (!isGPDB())
+		return false;
+
+	/* GPDB 7 consists of PostgreSQL 9.5- */
+	return pset.sversion >= 90500;
 }
 
 /*----------------
@@ -2862,11 +2873,7 @@ describeOneTableDetails(const char *schemaname,
 				goto error_return;
 			}
 
-			if (strcmp(PQgetvalue(result, 0, 0), PG_EXTTABLE_SERVER_NAME) == 0)
-			{
-				add_external_table_footer(&cont, oid);
-			}
-			else
+			if (strcmp(PQgetvalue(result, 0, 0), PG_EXTTABLE_SERVER_NAME) != 0)
 			{
 				/* Print server name */
 				printfPQExpBuffer(&buf, _("Server: %s"),
@@ -3065,22 +3072,24 @@ add_external_table_footer(printTableContent *const cont, const char *oid)
 	PGresult   *result = NULL;
 	bool	    gpdb5OrLater = isGPDB5000OrLater();
 	bool	    gpdb6OrLater = isGPDB6000OrLater();
+	bool		gpdb7OrLater = isGPDB7000OrLater();
 	char	   *optionsName = gpdb5OrLater ? ", x.options " : "";
 	char	   *execLocations = gpdb5OrLater ? "x.urilocation, x.execlocation" : "x.location";
-	char	   *urislocation;
-	char	   *execlocation;
-	char	   *fmttype;
-	char	   *fmtopts;
-	char	   *command;
-	char	   *rejlim;
-	char	   *rejlimtype;
-	char	   *writable;
+	char	   *urislocation = NULL;
+	char	   *execlocation = NULL;
+	char	   *fmttype = NULL;
+	char	   *fmtopts = NULL;
+	char	   *command = NULL;
+	char	   *rejlim = NULL;
+	char	   *rejlimtype = NULL;
+	char	   *writable = NULL;
 	char	   *errtblname = NULL;
-	char	   *extencoding;
+	char	   *extencoding = NULL;
 	char	   *errortofile = NULL;
 	char	   *logerrors = NULL;
-	char       *format;
-	char	   *options;
+	char       *format = NULL;
+	char	   *exttaboptions = NULL;
+	char	   *options = NULL;
 
 	initPQExpBuffer(&buf);
 	initPQExpBuffer(&tmpbuf);
@@ -3116,7 +3125,11 @@ add_external_table_footer(printTableContent *const cont, const char *oid)
 	if (PQntuples(result) != 1)
 		goto error_return;
 
-	if (gpdb6OrLater)
+	if (gpdb7OrLater)
+	{
+		exttaboptions = PQgetvalue(result, 0, 0);
+	}
+	else if (gpdb6OrLater)
 	{
 		urislocation = PQgetvalue(result, 0, 0);
 		execlocation = PQgetvalue(result, 0, 1);
@@ -3162,16 +3175,24 @@ add_external_table_footer(printTableContent *const cont, const char *oid)
 	}
 
 	/* Writable/Readable */
-	printfPQExpBuffer(&tmpbuf, _("Type: %s"), writable[0] == 't' ? "writable" : "readable");
-	printTableAddFooter(cont, tmpbuf.data);
+	if (writable)
+	{
+		printfPQExpBuffer(&tmpbuf, _("Type: %s"), writable[0] == 't' ? "writable" : "readable");
+		printTableAddFooter(cont, tmpbuf.data);
+	}
 
 	/* encoding */
-	printfPQExpBuffer(&tmpbuf, _("Encoding: %s"), extencoding);
-	printTableAddFooter(cont, tmpbuf.data);
-
-	/* format type */
-	switch ( fmttype[0] )
+	if (extencoding)
 	{
+		printfPQExpBuffer(&tmpbuf, _("Encoding: %s"), extencoding);
+		printTableAddFooter(cont, tmpbuf.data);
+	}
+
+	if (fmttype)
+	{
+		/* format type */
+		switch ( fmttype[0] )
+		{
 		case 't':
 			{
 				format = "text";
@@ -3193,22 +3214,32 @@ add_external_table_footer(printTableContent *const cont, const char *oid)
 				fprintf(stderr, _("Unknown fmttype value: %c\n"), fmttype[0]);
 			}
 			break;
-	};
-	printfPQExpBuffer(&tmpbuf, _("Format type: %s"), format);
-	printTableAddFooter(cont, tmpbuf.data);
+		};
+		printfPQExpBuffer(&tmpbuf, _("Format type: %s"), format);
+		printTableAddFooter(cont, tmpbuf.data);
+	}
 
 	/* format options */
-	printfPQExpBuffer(&tmpbuf, _("Format options: %s"), fmtopts);
-	printTableAddFooter(cont, tmpbuf.data);
+	if (fmtopts)
+	{
+		printfPQExpBuffer(&tmpbuf, _("Format options: %s"), fmtopts);
+		printTableAddFooter(cont, tmpbuf.data);
+	}
 
-	if (gpdb5OrLater)
+	if (gpdb7OrLater)
+	{
+		/* external table options */
+		printfPQExpBuffer(&tmpbuf, _("External options: %s"), exttaboptions);
+		printTableAddFooter(cont, tmpbuf.data);
+	}
+	else if (gpdb5OrLater)
 	{
 		/* external table options */
 		printfPQExpBuffer(&tmpbuf, _("External options: %s"), options);
 		printTableAddFooter(cont, tmpbuf.data);
 	}
 
-	if(command && strlen(command) > 0)
+	if (command && strlen(command) > 0)
 	{
 		/* EXECUTE type table - show command and command location */
 
@@ -3237,7 +3268,7 @@ add_external_table_footer(printTableContent *const cont, const char *oid)
 		printTableAddFooter(cont, tmpbuf.data);
 
 	}
-	else
+	else if (urislocation)
 	{
 		/* LOCATION type table - show external location */
 
@@ -3271,7 +3302,7 @@ add_external_table_footer(printTableContent *const cont, const char *oid)
 	}
 
 	/* Single row error handling */
-	if(rejlim && strlen(rejlim) > 0)
+	if (rejlim && strlen(rejlim) > 0)
 	{
 		/* reject limit and type */
 		printfPQExpBuffer(&tmpbuf, _("Segment reject limit: %s %s"),
@@ -3995,7 +4026,7 @@ listTables(const char *tabtypes, const char *pattern, bool verbose, bool showSys
     if (isGPDB())   /* GPDB? */
     {
 	appendPQExpBuffer(&buf, "AND c.relstorage IN (");
-	if (showTables || showIndexes || showSeq || (showSystem && showTables))
+	if (showTables || showIndexes || showSeq || (showSystem && showTables) || showMatViews)
 		appendPQExpBuffer(&buf, "'h', 'a', 'c',");
 	if (showExternal)
 		appendPQExpBuffer(&buf, "'x',");

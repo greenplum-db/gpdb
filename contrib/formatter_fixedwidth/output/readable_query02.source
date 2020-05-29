@@ -26,13 +26,7 @@ FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10',
  n5     | numeric                     |           | 
  n6     | real                        |           | 
  n7     | double precision            |           | 
-Type: readable
-Encoding: UTF8
-Format type: custom
-Format options: formatter 'fixedwidth_in' s1 '10' s2 '10' s3 '10' dt '20' n1 '5' n2 '10' n3 '10' n4 '10' n5 '10' n6 '10' n7 '15' 
-External options: {}
-External location: file://@hostname@@abs_srcdir@/data/fixedwidth_small_correct.tbl
-Execute on: all segments
+FDW Options: (formatter 'fixedwidth_in', s1 '10', s2 '10', s3 '10', dt '20', n1 '5', n2 '10', n3 '10', n4 '10', n5 '10', n6 '10', n7 '15', format 'custom', format_type 'b', location_uris 'file://@hostname@@abs_srcdir@/data/fixedwidth_small_correct.tbl', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
 
 SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
      s1     |  s2  |   s3   |         dt          | n1 | n2  |   n3   |  n4   |   n5    |   n6    |     n7     

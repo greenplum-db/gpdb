@@ -18,6 +18,7 @@ addons:
             - gcc-8
             - libxml2
             - libxml2-dev
+            - libxerces-c-dev
             - libevent-dev
             - libperl-dev
             - g++-8
@@ -69,6 +70,7 @@ matrix:
             homebrew:
               packages:
                 - ccache
+                - xerces-c
         #
         # Configuration variations
         # ----------------------------------------------------------------
@@ -146,7 +148,7 @@ script:
             --enable-debug-extensions \
             --with-perl \
             --with-python \
-            --disable-orca \
+            --enable-orca \
             --with-openssl \
             --with-ldap \
             --with-libcurl \
@@ -154,7 +156,7 @@ script:
             --enable-mapreduce \
             --enable-orafce \
             $C
-        make -s install
+        travis_wait 40 make -s install
         source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
         make -s unittest-check
         make -C gpAux/gpdemo cluster
@@ -168,7 +170,7 @@ script:
             --prefix=${TRAVIS_BUILD_DIR}/gpsql \
             --with-perl \
             --with-python \
-            --disable-orca \
+            --enable-orca \
             --with-openssl \
             --with-ldap \
             --with-libcurl \
@@ -196,6 +198,8 @@ script:
             --disable-pxf \
             --disable-gpcloud \
             --without-zstd \
+            --with-includes=$(brew --prefix xerces-c)/include \
+            --with-libs=$(brew --prefix xerces-c)/lib \
             $C
         make -s install
         source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh

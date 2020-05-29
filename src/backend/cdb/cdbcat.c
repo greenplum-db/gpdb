@@ -284,18 +284,18 @@ GpPolicyFetch(Oid tbloid)
 	HeapTuple	gp_policy_tuple = NULL;
 
 	/*
-	 * EXECUTE-type external tables have an "ON ..." specification, stored in
-	 * pg_exttable.location. See if it's "MASTER_ONLY". Other types of
-	 * external tables have a gp_distribution_policy row, like normal tables.
+	 * EXECUTE-type external tables have an "ON ..." specification.
+	 * See if it's "MASTER_ONLY". Other types of external tables have a
+	 * gp_distribution_policy row, like normal tables.
 	 */
 	if (rel_is_external_table(tbloid))
 	{
 		/*
-		 * An external table really should have a pg_exttable entry, but
+		 * An external table really should have a catalog entry, but
 		 * there's currently a transient state during creation of an external
 		 * table, where the pg_class entry has been created, and its loaded
-		 * into the relcache, before the pg_exttable entry has been created.
-		 * Silently ignore missing pg_exttable rows to cope with that.
+		 * into the relcache, before the catalog entry has been created.
+		 * Silently ignore missing catalog rows to cope with that.
 		 */
 		ExtTableEntry *e = GetExtTableEntryIfExists(tbloid);
 

@@ -66,7 +66,7 @@
 #include "utils/faultinjector.h"
 #include "utils/memutils.h"
 #include "utils/resowner.h"
-#include "utils/tuplestorenew.h"
+#include "utils/tuplestore.h"
 
 /*
  * In a cross-slice ShareinputScan, the producer and consumer processes
@@ -156,7 +156,7 @@ typedef struct shareinput_local_state
 	PlanState  *childState;
 
 	/* Tuplestore that holds the result */
-	NTupleStore *ts_state;
+	Tuplestorestate *ts_state;
 } shareinput_local_state;
 
 static shareinput_Xslice_reference *get_shareinput_reference(int share_id);
@@ -171,6 +171,8 @@ static void shareinput_reader_waitready(shareinput_Xslice_reference *ref);
 static void shareinput_reader_notifydone(shareinput_Xslice_reference *ref, int nconsumers);
 static void shareinput_writer_waitdone(shareinput_Xslice_reference *ref, int nconsumers);
 
+static void ExecShareInputScanExplainEnd(PlanState *planstate, struct StringInfoData *buf);
+
 
 /*
  * init_tuplestore_state
@@ -183,13 +185,13 @@ init_tuplestore_state(ShareInputScanState *node)
 	EState	   *estate = node->ss.ps.state;
 	ShareInputScan *sisc = (ShareInputScan *) node->ss.ps.plan;
 	shareinput_local_state *local_state = node->local_state;
-	NTupleStore *ts;
-	NTupleStoreAccessor *tsa;
+	Tuplestorestate *ts;
+	int			tsptrno;
 	TupleTableSlot *outerslot;
 
 	Assert(!node->isready);
 	Assert(node->ts_state == NULL);
-	Assert(node->ts_pos == NULL);
+	Assert(node->ts_pos == -1);
 
 	if (sisc->cross_slice)
 	{
@@ -208,15 +210,41 @@ init_tuplestore_state(ShareInputScanState *node)
 
 				elog(DEBUG1, "SISC writer (shareid=%d, slice=%d): No tuplestore yet, creating tuplestore",
 					 sisc->share_id, currentSliceId);
+
+				ts = tuplestore_begin_heap(true, /* randomAccess */
+										   false, /* interXact */
+										   10); /* maxKBytes FIXME */
+
 				shareinput_create_bufname_prefix(rwfile_prefix, sizeof(rwfile_prefix), sisc->share_id);
-				ts = ntuplestore_create_readerwriter(rwfile_prefix, PlanStateOperatorMemKB((PlanState *)node) * 1024, true, true);
-				tsa = ntuplestore_create_accessor(ts, true);
+				tuplestore_make_shared(ts, rwfile_prefix);
 			}
 			else
 			{
 				/* intra-slice */
-				ts = ntuplestore_create(PlanStateOperatorMemKB((PlanState *) node) * 1024, "Materialize");
-				tsa = ntuplestore_create_accessor(ts, true /* isWriter */);
+				ts = tuplestore_begin_heap(true, /* randomAccess */
+										   false, /* interXact */
+										   PlanStateOperatorMemKB((PlanState *) node));
+
+				/*
+				 * Offer extra memory usage info for EXPLAIN ANALYZE.
+				 *
+				 * If this is a cross-slice share, the tuplestore uses very
+				 * little memory, because it has to materialize the result on
+				 * a file anyway, so that it can be shared across processes.
+				 * In that case, reporting memory usage doesn't make much
+				 * sense. The "work_mem wanted" value would particularly
+				 * non-sensical, as we we would write to a file regardless of
+				 * work_mem. So only track memory usage in the non-cross-slice
+				 * case.
+				 */
+				if (node->ss.ps.instrument && node->ss.ps.instrument->need_cdb)
+				{
+					/* Let the tuplestore share our Instrumentation object. */
+					tuplestore_set_instrument(ts, node->ss.ps.instrument);
+
+					/* Request a callback at end of query. */
+					node->ss.ps.cdbexplainfun = ExecShareInputScanExplainEnd;
+				}
 			}
 
 			for (;;)
@@ -224,14 +252,16 @@ init_tuplestore_state(ShareInputScanState *node)
 				outerslot = ExecProcNode(local_state->childState);
 				if (TupIsNull(outerslot))
 					break;
-				ntuplestore_acc_put_tupleslot(tsa, outerslot);
+				tuplestore_puttupleslot(ts, outerslot);
 			}
 
 			if (sisc->cross_slice)
 			{
-				ntuplestore_flush(ts);
+				tuplestore_freeze(ts);
 				shareinput_writer_notifyready(node->ref);
 			}
+
+			tuplestore_rescan(ts);
 		}
 		else
 		{
@@ -246,29 +276,24 @@ init_tuplestore_state(ShareInputScanState *node)
 			shareinput_reader_waitready(node->ref);
 
 			shareinput_create_bufname_prefix(rwfile_prefix, sizeof(rwfile_prefix), sisc->share_id);
-			ts = ntuplestore_create_readerwriter(rwfile_prefix, 0, false, false);
-			tsa = ntuplestore_create_accessor(ts, false);
+			ts = tuplestore_open_shared(rwfile_prefix, false /* interXact */);
 		}
 		local_state->ts_state = ts;
 		local_state->ready = true;
+		tsptrno = 0;
 	}
 	else
 	{
+		/* Another local reader */
 		ts = local_state->ts_state;
-		tsa = (void *) ntuplestore_create_accessor(ts, false);
-	}
+		tsptrno = tuplestore_alloc_read_pointer(ts, (EXEC_FLAG_BACKWARD | EXEC_FLAG_REWIND));
 
-	/* Offer extra info for EXPLAIN ANALYZE. */
-	if (node->ss.ps.instrument && node->ss.ps.instrument->need_cdb)
-	{
-		/* Let the tuplestore share our Instrumentation object. */
-		ntuplestore_setinstrument(ts, node->ss.ps.instrument);
+		tuplestore_select_read_pointer(ts, tsptrno);
+		tuplestore_rescan(ts);
 	}
-
-	ntuplestore_acc_seek_bof(tsa);
 
 	node->ts_state = ts;
-	node->ts_pos = tsa;
+	node->ts_pos = tsptrno;
 
 	node->isready = true;
 }
@@ -306,12 +331,12 @@ ExecShareInputScan(ShareInputScanState *node)
 
 	Assert(!node->local_state->closed);
 
+	tuplestore_select_read_pointer(node->ts_state, node->ts_pos);
 	while(1)
 	{
 		bool		gotOK;
 
-		ntuplestore_acc_advance(node->ts_pos, forward ? 1 : -1);
-		gotOK = ntuplestore_acc_current_tupleslot(node->ts_pos, slot);
+		gotOK = tuplestore_gettupleslot(node->ts_state, forward, false, slot);
 
 		if (!gotOK)
 			return NULL;
@@ -345,7 +370,7 @@ ExecInitShareInputScan(ShareInputScan *node, EState *estate, int eflags)
 	sisstate->ss.ps.state = estate;
 
 	sisstate->ts_state = NULL;
-	sisstate->ts_pos = NULL;
+	sisstate->ts_pos = -1;
 
 	/*
 	 * init child node.
@@ -436,6 +461,30 @@ ExecInitShareInputScan(ShareInputScan *node, EState *estate, int eflags)
 	return sisstate;
 }
 
+/*
+ * ExecShareInputScanExplainEnd
+ *      Called before ExecutorEnd to finish EXPLAIN ANALYZE reporting.
+ *
+ * Some of the cleanup that ordinarily would occur during ExecEndShareInputScan()
+ * needs to be done earlier in order to report statistics to EXPLAIN ANALYZE.
+ * Note that ExecEndShareInputScan() will still be during ExecutorEnd().
+ */
+static void
+ExecShareInputScanExplainEnd(PlanState *planstate, struct StringInfoData *buf)
+{
+	ShareInputScan *sisc = (ShareInputScan *) planstate->plan;
+	shareinput_local_state *local_state = ((ShareInputScanState *) planstate)->local_state;
+
+	/*
+	 * Release tuplestore resources
+	 */
+	if (!sisc->cross_slice && local_state && local_state->ts_state)
+	{
+		tuplestore_end(local_state->ts_state);
+		local_state->ts_state = NULL;
+	}
+}
+
 /* ------------------------------------------------------------------
  * 	ExecEndShareInputScan
  * ------------------------------------------------------------------
@@ -479,11 +528,9 @@ ExecEndShareInputScan(ShareInputScanState *node)
 		node->ref = NULL;
 	}
 
-	/* Don't free the accessors, they will go away with the NTupleStore instance. */
-
 	if (local_state && local_state->ts_state)
 	{
-		ntuplestore_destroy(local_state->ts_state);
+		tuplestore_end(local_state->ts_state);
 		local_state->ts_state = NULL;
 	}
 
@@ -507,9 +554,10 @@ ExecReScanShareInputScan(ShareInputScanState *node)
 		init_tuplestore_state(node);
 
 	ExecClearTuple(node->ss.ps.ps_ResultTupleSlot);
-	Assert(NULL != node->ts_pos);
+	Assert(node->ts_pos != -1);
 
-	ntuplestore_acc_seek_bof(node->ts_pos);
+	tuplestore_select_read_pointer(node->ts_state, node->ts_pos);
+	tuplestore_rescan(node->ts_state);
 }
 
 /*

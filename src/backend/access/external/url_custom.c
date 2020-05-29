@@ -15,7 +15,7 @@
 #include "postgres.h"
 
 #include "access/extprotocol.h"
-#include "access/fileam.h"
+#include "access/url.h"
 #include "catalog/pg_extprotocol.h"
 #include "commands/copy.h"
 #include "utils/memutils.h"
