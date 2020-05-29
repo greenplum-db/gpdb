@@ -1210,6 +1210,72 @@ select * from t1_lateral_limit as t1 cross join lateral
  1 | 2 | (2,2) | 4
 (2 rows)
 
+-- Continue with the above cases, if the lateral subquery contains union all
+-- and in some of its appendquerys contain limit, it may also lead to bad plan.
+-- The best solution may be to walk the query to and do some static analysis
+-- to find out which rel has to be gathered and materialized. But it is complicated
+-- to do so and this seems less efficient. I believe in future we should do big
+-- refactor to make greenplum support lateral well so now, let's just make sure
+-- we will not panic.
+explain (costs off) select * from t1_lateral_limit as t1 cross join lateral
+((select ((c).x+t2.b) as n  from t2_lateral_limit as t2 order by n limit 1) union all select 1)s;
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Nested Loop
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on t1_lateral_limit t1
+   ->  Materialize
+         ->  Append
+               ->  Limit
+                     ->  Sort
+                           Sort Key: (((t1.c).x + t2.b))
+                           ->  Result
+                                 ->  Materialize
+                                       ->  Gather Motion 3:1  (slice2; segments: 3)
+                                             ->  Seq Scan on t2_lateral_limit t2
+               ->  Result
+ Optimizer: Postgres query optimizer
+(14 rows)
+
+select * from t1_lateral_limit as t1 cross join lateral
+((select ((c).x+t2.b) as n  from t2_lateral_limit as t2 order by n limit 1) union all select 1)s;
+ a | b |   c   | n 
+---+---+-------+---
+ 1 | 1 | (1,1) | 3
+ 1 | 1 | (1,1) | 1
+ 1 | 2 | (2,2) | 4
+ 1 | 2 | (2,2) | 1
+(4 rows)
+
+-- test lateral subquery contains group by (group-by is another place that
+-- may add motions in the subquery's plan).
+explain select * from t1_lateral_limit t1 cross join lateral
+(select (c).x+t2.a, sum(t2.a+t2.b) from t2_lateral_limit t2 group by (c).x+t2.a)x;
+                                                QUERY PLAN                                                
+----------------------------------------------------------------------------------------------------------
+ Nested Loop  (cost=10000000001.06..10000000002.12 rows=4 width=49)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.03 rows=1 width=37)
+         ->  Seq Scan on t1_lateral_limit t1  (cost=0.00..1.01 rows=1 width=37)
+   ->  Materialize  (cost=1.05..1.08 rows=1 width=12)
+         ->  HashAggregate  (cost=1.05..1.07 rows=1 width=12)
+               Group Key: ((t1.c).x + t2.a)
+               ->  Result  (cost=0.00..1.05 rows=1 width=12)
+                     ->  Materialize  (cost=0.00..1.03 rows=1 width=8)
+                           ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1.03 rows=1 width=8)
+                                 ->  Seq Scan on t2_lateral_limit t2  (cost=0.00..1.01 rows=1 width=8)
+ Optimizer: Postgres query optimizer
+(11 rows)
+
+select * from t1_lateral_limit t1 cross join lateral
+(select (c).x+t2.a, sum(t2.a+t2.b) from t2_lateral_limit t2 group by (c).x+t2.a)x;
+ a | b |   c   | ?column? | sum 
+---+---+-------+----------+-----
+ 1 | 1 | (1,1) |        4 |   6
+ 1 | 1 | (1,1) |        3 |   4
+ 1 | 2 | (2,2) |        5 |   6
+ 1 | 2 | (2,2) |        4 |   4
+(4 rows)
+
 -- The following case is from Github Issue
 -- https://github.com/greenplum-db/gpdb/issues/8860
 -- It is the same issue as the above test suite.
