@@ -34,21 +34,30 @@ where c.role='p' and c.content=1), 'stop');
 -- trigger failover
 select gp_request_fts_probe_scan();
 
+-- wait for content 1 (earlier mirror, now primary) to finish the promotion
+1U: select 1;
+-- Quit this utility mode session, as need to start fresh one below
+1Uq:
+
+-- make the dbid in gp_segment_configuration not continuous
+-- dbid=2 corresponds to content id =0
+set allow_system_table_mods to true;
+update gp_segment_configuration set dbid=9 where dbid=2;
+
+-- trigger failover
+select gp_request_fts_probe_scan();
+
 -- wait for content 0 (earlier mirror, now primary) to finish the promotion
 0U: select 1;
 -- Quit this utility mode session, as need to start fresh one below
 0Uq:
-
--- make the dbid in gp_segment_configuration not continuous
-set allow_system_table_mods to true;
-update gp_segment_configuration set dbid=9 where dbid=2;
 
 -- generate recover config file
 select generate_recover_config_file(
 	(select datadir from gp_segment_configuration c where c.role='m' and c.content=1),
 	(select port from gp_segment_configuration c where c.role='m' and c.content=1)::text);
 
--- recover from config file
+-- recover from config file, only seg with content=1 will be recovered
 !\retcode gprecoverseg -a -i /tmp/recover_config_file;
 
 -- after gprecoverseg -i, the down segemnt should be up
