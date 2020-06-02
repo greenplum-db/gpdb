@@ -112,6 +112,7 @@ valid_tokens = {
     "quote": {'parse_children': True, 'parent': "input"},
     "encoding": {'parse_children': True, 'parent': "input"},
     "force_not_null": {'parse_children': False, 'parent': "input"},
+    "fill_missing_fields": {'parse_children': False, 'parent': "input"},
     "error_limit": {'parse_children': True, 'parent': "input"},
     "error_percent": {'parse_children': True, 'parent': "input"},
     "error_table": {'parse_children': True, 'parent': "input"},
@@ -2363,6 +2364,10 @@ class gpload:
                                self.from_columns)
         else:
             from_cols = self.from_columns
+
+        if formatType == 'csv' or formatType == 'text':
+            if self.getconfig('gpload:input:fill_missing_fields', bool, False):
+                self.formatOpts += 'fill missing fields'
 
         # If the 'reuse tables' option was specified we now try to find an
         # already existing external table in the catalog which will match

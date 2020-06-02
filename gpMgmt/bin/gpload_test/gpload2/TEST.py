@@ -98,7 +98,7 @@ d = mkpath('config')
 if not os.path.exists(d):
     os.mkdir(d)
 
-def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',portNum='8081',database='reuse_gptest',host='localhost',formatOpts='text',file='data/external_file_01.txt',table='texttable',format='text',delimiter="'|'",escape='',quote='',truncate='False',log_errors=None, error_limit='0',error_table=None,externalSchema=None,staging_table=None,fast_match='false', encoding=None, preload=True):
+def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',portNum='8081',database='reuse_gptest',host='localhost',formatOpts='text',file='data/external_file_01.txt',table='texttable',format='text',delimiter="'|'",escape='',quote='',truncate='False',log_errors=None, error_limit='0',error_table=None,externalSchema=None,staging_table=None,fast_match='false', encoding=None, preload=True, fill=False):
 
     f = open(mkpath('config/config_file'),'w')
     f.write("VERSION: 1.0.0.1")
@@ -147,6 +147,8 @@ def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',
         f.write("\n    - ESCAPE: "+escape)
     if quote:
         f.write("\n    - QUOTE: "+quote)
+    if fill:
+        f.write("\n    - FILL_MISSING_FIELDS: true")
     f.write("\n   OUTPUT:")
     f.write("\n    - TABLE: "+table)
     if mode:
@@ -443,7 +445,7 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
 
     def test_00_gpload_formatOpts_setup(self):
         "0  gpload setup"
-        for num in range(1,39):
+        for num in range(1,40):
            f = open(mkpath('query%d.sql' % num),'w')
            f.write("\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n"+"\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n")
            f.close()
@@ -752,6 +754,14 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
         copy_data('external_file_04.txt','data_file.txt')
         write_config_file(mode='insert',reuse_flag='true',fast_match='false',file='data_file.txt',error_table="err_table",error_limit='1000',preload=False)
         self.doTest(38)
+
+    def test_39_gpload_fill_missing_fields(self):
+        "39  gpload fill missing fields"
+        file = mkpath('setup.sql')
+        runfile(file)
+        copy_data('external_file_04.txt','data_file.txt')
+        write_config_file(mode='insert',reuse_flag='false',fast_match='false',file='data_file.txt',table='texttable1', error_limit='1000', fill=True)
+        self.doTest(39)
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(GPLoad_FormatOpts_TestCase)
