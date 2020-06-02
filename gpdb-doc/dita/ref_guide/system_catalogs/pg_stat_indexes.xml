@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1" xml:lang="en">
+  <title id="gi143896">pg_stat_all_indexes</title>
+  <body>
+    <p>The <codeph>pg_stat_all_indexes</codeph> view shows one row for each index in the current
+      database that displays statistics about accesses to that specific index. </p>
+    <p>The <codeph>pg_stat_user_indexes</codeph> and <codeph>pg_stat_sys_indexes</codeph> views
+      contain the same information, but filtered to only show user and system indexes
+      respectively.</p>
+    <p>In Greenplum Database 6, the <codeph>pg_stat_*_indexes</codeph> views display access
+      statistics for indexes only from the master instance. Access statistics from segment instances
+      are ignored. You can create views that display usage statistics that combine statistics from
+      the master and the segment instances, see <xref href="#topic1/index_stats_all_6x"
+        format="dita"/>.</p>
+    <table id="table_vdd_xjf_vlb">
+      <title>pg_catalog.pg_stat_all_indexes View</title>
+      <tgroup cols="3">
+        <colspec colnum="1" colname="col1" colwidth="131pt"/>
+        <colspec colnum="2" colname="col2" colwidth="110pt"/>
+        <colspec colnum="3" colname="col3" colwidth="210pt"/>
+        <thead>
+          <row>
+            <entry>Column</entry>
+            <entry>Type</entry>
+            <entry>Description</entry>
+          </row>
+        </thead>
+        <tbody>
+          <row>
+            <entry><codeph>relid</codeph></entry>
+            <entry>oid</entry>
+            <entry>OID of the table for this index</entry>
+          </row>
+          <row>
+            <entry><codeph>indexrelid</codeph></entry>
+            <entry>oid</entry>
+            <entry>OID of this index</entry>
+          </row>
+          <row>
+            <entry><codeph>schemaname</codeph></entry>
+            <entry>name</entry>
+            <entry>Name of the schema this index is in</entry>
+          </row>
+          <row>
+            <entry><codeph>relname</codeph></entry>
+            <entry>name</entry>
+            <entry>Name of the table for this index</entry>
+          </row>
+          <row>
+            <entry><codeph>indexrelname</codeph></entry>
+            <entry>name</entry>
+            <entry>Name of this index</entry>
+          </row>
+          <row>
+            <entry><codeph>idx_scan</codeph></entry>
+            <entry>bigint</entry>
+            <entry>Number of index scans initiated on this index</entry>
+          </row>
+          <row>
+            <entry><codeph>idx_tup_read</codeph></entry>
+            <entry>bigint</entry>
+            <entry>Number of index entries returned by scans on this index</entry>
+          </row>
+          <row>
+            <entry><codeph>idx_tup_fetch</codeph></entry>
+            <entry>bigint</entry>
+            <entry>Number of live table rows fetched by simple index scans using this index</entry>
+          </row>
+        </tbody>
+      </tgroup>
+    </table>
+    <section id="index_stats_all_6x">
+      <title>Index Access Statistics From the Master and Segment Instances</title>
+      <p>To display index access statistics that combine statistics from the master and the segment
+        instances you can create these views. A user requires <codeph>SELECT</codeph> privilege on
+        the views to use the views.</p>
+      <codeblock>-- Create these index access statistics views
+--   pg_stat_all_indexes_gpdb6
+--   pg_stat_sys_indexes_gpdb6
+--   pg_stat_user_indexes_gpdb6
+
+CREATE VIEW pg_stat_all_indexes_gpdb6 AS
+SELECT
+    s.relid,
+    s.indexrelid,
+    s.schemaname,
+    s.relname,
+    s.indexrelname,
+    m.idx_scan,
+    m.idx_tup_read,
+    m.idx_tup_fetch
+FROM
+    (SELECT
+         relid,
+         indexrelid,
+         schemaname,
+         relname,
+         indexrelname,
+         sum(idx_scan) as idx_scan,
+         sum(idx_tup_read) as idx_tup_read,
+         sum(idx_tup_fetch) as idx_tup_fetch
+     FROM gp_dist_random('pg_stat_all_indexes')
+     WHERE relid >= 16384
+     GROUP BY relid, indexrelid, schemaname, relname, indexrelname
+     UNION ALL
+     SELECT *
+     FROM pg_stat_all_indexes
+     WHERE relid &lt; 16384) m, pg_stat_all_indexes s
+WHERE m.relid = s.relid;
+
+
+CREATE VIEW pg_stat_sys_indexes_gpdb6 AS 
+    SELECT * FROM pg_stat_all_indexes_gpdb6
+    WHERE schemaname IN ('pg_catalog', 'information_schema') OR
+          schemaname ~ '^pg_toast';
+
+
+CREATE VIEW pg_stat_user_indexes_gpdb6 AS 
+    SELECT * FROM pg_stat_all_indexes_gpdb6
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema') AND
+          schemaname !~ '^pg_toast';
+</codeblock>
+    </section>
+  </body>
+</topic>

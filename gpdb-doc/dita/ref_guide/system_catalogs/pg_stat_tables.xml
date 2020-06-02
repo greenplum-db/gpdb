@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1" xml:lang="en">
+  <title id="gi143896">pg_stat_all_tables</title>
+  <body id="table_stats_all">
+    <p>The <codeph>pg_stat_all_tables</codeph> view shows one row for each table in the current
+      database (including TOAST tables) that displays statistics about accesses to that specific
+      table. </p>
+    <p>The <codeph>pg_stat_user_tables</codeph> and <codeph>pg_stat_sys_table</codeph>s views
+      contain the same information, but filtered to only show user and system tables
+      respectively.</p>
+    <p>In Greenplum Database 6, the <codeph>pg_stat_*_tables</codeph> views display access
+      statistics for tables only from the master instance. Access statistics from segment instances
+      are ignored. You can create views that display usage statistics, see <xref
+        href="#topic1/tbl_stats_all_6x" format="dita"/>.</p>
+    <table id="table_rxm_tjf_vlb">
+      <title>pg_catalog.pg_stat_all_table View</title>
+      <tgroup cols="3">
+        <colspec colnum="1" colname="col1" colwidth="131pt"/>
+        <colspec colnum="2" colname="col2" colwidth="110pt"/>
+        <colspec colnum="3" colname="col3" colwidth="210pt"/>
+        <thead>
+          <row>
+            <entry>Column</entry>
+            <entry>Type</entry>
+            <entry>Description</entry>
+          </row>
+        </thead>
+        <tbody>
+          <row>
+            <entry><codeph>relid</codeph></entry>
+            <entry>oid</entry>
+            <entry>OID of a table</entry>
+          </row>
+          <row>
+            <entry><codeph>schemaname</codeph></entry>
+            <entry>name</entry>
+            <entry>Name of the schema that this table is in</entry>
+          </row>
+          <row>
+            <entry><codeph>relname</codeph></entry>
+            <entry>name</entry>
+            <entry>Name of this table</entry>
+          </row>
+          <row>
+            <entry><codeph>seq_scan</codeph></entry>
+            <entry>bigint</entry>
+            <entry>Number of sequential scans initiated on this table</entry>
+          </row>
+          <row>
+            <entry><codeph>seq_tup_read</codeph></entry>
+            <entry>bigint</entry>
+            <entry>Number of live rows fetched by sequential scans</entry>
+          </row>
+          <row>
+            <entry><codeph>idx_scan</codeph></entry>
+            <entry>bigint</entry>
+            <entry>Number of index scans initiated on this table</entry>
+          </row>
+          <row>
+            <entry><codeph>idx_tup_fetch</codeph></entry>
+            <entry>bigint</entry>
+            <entry>Number of live rows fetched by index scans</entry>
+          </row>
+          <row>
+            <entry><codeph>n_tup_ins</codeph></entry>
+            <entry>bigint</entry>
+            <entry>Number of rows inserted</entry>
+          </row>
+          <row>
+            <entry><codeph>n_tup_upd</codeph></entry>
+            <entry>bigint</entry>
+            <entry>Number of rows updated (includes HOT updated rows)</entry>
+          </row>
+          <row>
+            <entry><codeph>n_tup_del</codeph></entry>
+            <entry>bigint</entry>
+            <entry>Number of rows deleted</entry>
+          </row>
+          <row>
+            <entry><codeph>n_tup_hot_upd</codeph></entry>
+            <entry>bigint</entry>
+            <entry>Number of rows HOT updated (i.e., with no separate index update required)</entry>
+          </row>
+          <row>
+            <entry><codeph>n_live_tup</codeph></entry>
+            <entry>bigint</entry>
+            <entry>Estimated number of live rows</entry>
+          </row>
+          <row>
+            <entry><codeph>n_dead_tup</codeph></entry>
+            <entry>bigint</entry>
+            <entry>Estimated number of dead rows</entry>
+          </row>
+          <row>
+            <entry><codeph>n_mod_since_analyze</codeph></entry>
+            <entry>bigint</entry>
+            <entry>Estimated number of rows modified since this table was last analyzed</entry>
+          </row>
+          <row>
+            <entry><codeph>last_vacuum</codeph></entry>
+            <entry>timestamp with time zone</entry>
+            <entry>Last time at which this table was manually vacuumed (not counting <codeph>VACUUM
+                FULL</codeph>)</entry>
+          </row>
+          <row>
+            <entry><codeph>last_autovacuum</codeph></entry>
+            <entry>timestamp with time zone</entry>
+            <entry>Last time at which this table was vacuumed by the autovacuum
+              daemon<sup>1</sup></entry>
+          </row>
+          <row>
+            <entry><codeph>last_analyze</codeph></entry>
+            <entry>timestamp with time zone</entry>
+            <entry>Last time at which this table was manually analyzed</entry>
+          </row>
+          <row>
+            <entry><codeph>last_autoanalyze</codeph></entry>
+            <entry>timestamp with time zone</entry>
+            <entry>Last time at which this table was analyzed by the autovacuum
+              daemon<sup>1</sup></entry>
+          </row>
+          <row>
+            <entry><codeph>vacuum_count</codeph></entry>
+            <entry>bigint</entry>
+            <entry>Number of times this table has been manually vacuumed (not counting
+                <codeph>VACUUM FULL</codeph>)</entry>
+          </row>
+          <row>
+            <entry><codeph>autovacuum_count</codeph></entry>
+            <entry>bigint</entry>
+            <entry>Number of times this table has been vacuumed by the autovacuum
+              daemon<sup>1</sup></entry>
+          </row>
+          <row>
+            <entry><codeph>analyze_count</codeph></entry>
+            <entry>bigint</entry>
+            <entry>Number of times this table has been manually analyzed</entry>
+          </row>
+          <row>
+            <entry><codeph>autoanalyze_count</codeph></entry>
+            <entry>bigint</entry>
+            <entry>Number of times this table has been analyzed by the autovacuum daemon
+                <sup>1</sup></entry>
+          </row>
+        </tbody>
+      </tgroup>
+    </table>
+    <p>
+      <note><sup>1</sup> In Greenplum Database, the autovacuum daemon is disabled and not supported
+        for user defined databases.</note>
+    </p>
+    <section id="tbl_stats_all_6x">
+      <title>Table Access Statistics From the Master and Segment Instances</title>
+      <p>To display table access statistics that combine statistics from the master and the segment
+        instances you can create these views. A user requires <codeph>SELECT</codeph> privilege on
+        the views to use the views.</p>
+      <codeblock>-- Create these table access statistics views
+--   pg_stat_all_tables_gpdb6
+--   pg_stat_sys_tables_gpdb6
+--   pg_stat_user_tables_gpdb6
+
+CREATE VIEW pg_stat_all_tables_gpdb6 AS
+SELECT
+    s.relid,
+    s.schemaname,
+    s.relname,
+    m.seq_scan,
+    m.seq_tup_read,
+    m.idx_scan,
+    m.idx_tup_fetch,
+    m.n_tup_ins,
+    m.n_tup_upd,
+    m.n_tup_del,
+    m.n_tup_hot_upd,
+    m.n_live_tup,
+    m.n_dead_tup,
+    s.n_mod_since_analyze,
+    s.last_vacuum,
+    s.last_autovacuum,
+    s.last_analyze,
+    s.last_autoanalyze,
+    s.vacuum_count,
+    s.autovacuum_count,
+    s.analyze_count,
+    s.autoanalyze_count
+FROM
+    (SELECT
+         relid,
+         schemaname,
+         relname,
+         sum(seq_scan) as seq_scan,
+         sum(seq_tup_read) as seq_tup_read,
+         sum(idx_scan) as idx_scan,
+         sum(idx_tup_fetch) as idx_tup_fetch,
+         sum(n_tup_ins) as n_tup_ins,
+         sum(n_tup_upd) as n_tup_upd,
+         sum(n_tup_del) as n_tup_del,
+         sum(n_tup_hot_upd) as n_tup_hot_upd,
+         sum(n_live_tup) as n_live_tup,
+         sum(n_dead_tup) as n_dead_tup,
+         max(n_mod_since_analyze) as n_mod_since_analyze,
+         max(last_vacuum) as last_vacuum,
+         max(last_autovacuum) as last_autovacuum,
+         max(last_analyze) as last_analyze,
+         max(last_autoanalyze) as last_autoanalyze,
+         max(vacuum_count) as vacuum_count,
+         max(autovacuum_count) as autovacuum_count,
+         max(analyze_count) as analyze_count,
+         max(autoanalyze_count) as autoanalyze_count
+     FROM gp_dist_random('pg_stat_all_tables')
+     WHERE relid >= 16384
+     GROUP BY relid, schemaname, relname
+     UNION ALL
+     SELECT *
+     FROM pg_stat_all_tables
+     WHERE relid &lt; 16384) m, pg_stat_all_tables s
+ WHERE m.relid = s.relid;
+
+
+CREATE VIEW pg_stat_sys_tables_gpdb6 AS 
+    SELECT * FROM pg_stat_all_tables_gpdb6
+    WHERE schemaname IN ('pg_catalog', 'information_schema') OR
+          schemaname ~ '^pg_toast';
+
+
+CREATE VIEW pg_stat_user_tables_gpdb6 AS 
+    SELECT * FROM pg_stat_all_tables_gpdb6
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema') AND
+          schemaname !~ '^pg_toast';
+</codeblock>
+    </section>
+  </body>
+</topic>
