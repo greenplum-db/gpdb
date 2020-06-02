@@ -1558,6 +1558,15 @@ SetupTCPInterconnect(EState *estate)
 
 		ML_CHECK_FOR_INTERRUPTS(interconnect_context->teardownActive);
 		n = select(highsock + 1, (fd_set *) &rset, (fd_set *) &wset, (fd_set *) &eset, &timeout);
+		if (n < 0)
+		{
+			if (errno == EINTR)
+				continue;
+			ereport(ERROR,
+					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+					 errmsg("interconnect error in select: %m")));
+		}
+
 		ML_CHECK_FOR_INTERRUPTS(interconnect_context->teardownActive);
 		if (Gp_role == GP_ROLE_DISPATCH)
 			checkForCancelFromQD(interconnect_context);
@@ -1592,15 +1601,6 @@ SetupTCPInterconnect(EState *estate)
 				MemSet(&logbuf, 0, sizeof(logbuf));
 				errno = errnoSave;
 			}
-		}
-
-		if (n < 0)
-		{
-			if (errno == EINTR)
-				continue;
-			ereport(ERROR,
-					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-					 errmsg("interconnect error: %s: %m", "select")));
 		}
 
 		/*
