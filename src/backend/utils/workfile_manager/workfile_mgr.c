@@ -93,6 +93,9 @@ typedef struct
 
 static WorkFileLocalEntry *localEntries = NULL;
 static int sizeLocalEntries = 0;
+static workfile_set **localWorkSets = NULL;
+static int sizeLocalWorkSets = 0;
+static int capLocalWorkSets = 0;
 
 static workfile_set *workfile_mgr_create_set_internal(const char *operator_name, const char *prefix);
 
@@ -103,6 +106,45 @@ static bool proc_exit_hook_registered = false;
 Datum gp_workfile_mgr_cache_entries(PG_FUNCTION_ARGS);
 Datum gp_workfile_mgr_used_diskspace(PG_FUNCTION_ARGS);
 
+static void recycleWorkFileSet(workfile_set *work_set);
+static void ensureLocalWorkFileSet(void);
+static void forgetWorkFileSet(workfile_set *work_set);
+static void
+ensureLocalWorkFileSet(void)
+{
+	if (sizeLocalWorkSets < capLocalWorkSets)
+		return;
+	MemoryContext old = MemoryContextSwitchTo(TopMemoryContext);
+	Size cap = sizeLocalWorkSets + 4;
+	Size new_cap = cap * sizeof(*localWorkSets);
+	if (localWorkSets)
+		localWorkSets = repalloc(localWorkSets, new_cap);
+	else
+		localWorkSets = palloc(new_cap);
+	MemoryContextSwitchTo(old);
+	capLocalWorkSets = cap;
+}
+
+static void
+forgetWorkFileSet(workfile_set *work_set)
+{
+	int i;
+	for (i = sizeLocalWorkSets - 1; i >= 0; i--)
+	{
+		if (localWorkSets[i] == work_set)
+			break;
+	}
+	if (i >= 0)
+	{
+		sizeLocalWorkSets--;
+		localWorkSets[i] = localWorkSets[sizeLocalWorkSets];
+	}
+	else
+	{
+		ereport(PANIC,
+				(errmsg("not found workfile_set in list")));
+	}
+}
 /*
  * Shared memory initialization
  */
@@ -181,6 +223,26 @@ AtProcExit_WorkFile(int code, Datum arg)
 
 	for (i = 0; i < sizeLocalEntries; i++)
 		WorkFileDeleted(i);
+
+	/* release leaked workfile_set and perquery */
+	LWLockAcquire(WorkFileManagerLock, LW_EXCLUSIVE);
+	for (i = 0; i < sizeLocalWorkSets; i++)
+	{
+		workfile_set *work_set = localWorkSets[i];
+		WorkFileUsagePerQuery *perquery;
+		ereport(WARNING,
+				(errmsg("leak workfile_set %p", work_set)));
+		perquery = work_set->perquery;
+
+		Assert(work_set->active);
+		Assert(work_set->num_files == 0);
+		Assert(perquery);
+		Assert(perquery->refcount > 0);
+
+		recycleWorkFileSet(work_set);
+	}
+	sizeLocalWorkSets = 0;
+	LWLockRelease(WorkFileManagerLock);
 }
 
 /*
@@ -363,6 +425,41 @@ UpdateWorkFileSize(File file, uint64 newsize)
 	LWLockRelease(WorkFileManagerLock);
 }
 
+static void
+recycleWorkFileSet(workfile_set *work_set)
+{
+	WorkFileUsagePerQuery *perquery;
+	perquery = work_set->perquery;
+
+	perquery->refcount--;
+
+	Assert(work_set->total_bytes == 0);
+	/* Unlink from the active list */
+	dlist_delete(&work_set->node);
+	workfile_shared->num_active--;
+
+	/* and add to the free list */
+	dlist_push_head(&workfile_shared->freeList, &work_set->node);
+	work_set->active = false;
+	forgetWorkFileSet(work_set);
+
+	/*
+	 * Similarly, update / remove the per-query entry.
+	 */
+	if (perquery->refcount == 0)
+	{
+		bool		found;
+
+		Assert(perquery->total_bytes == 0);
+
+		perquery->active = false;
+		(void) hash_search(workfile_shared->per_query_hash,
+						   perquery,
+						   HASH_REMOVE, &found);
+		if (!found)
+			elog(PANIC, "per-query hash table is corrupt");
+	}
+}
 void
 WorkFileDeleted(File file)
 {
@@ -407,35 +504,7 @@ WorkFileDeleted(File file)
 	 * set, remove it.
 	 */
 	if (work_set->num_files == 0)
-	{
-		perquery->refcount--;
-
-		Assert(work_set->total_bytes == 0);
-		/* Unlink from the active list */
-		dlist_delete(&work_set->node);
-		workfile_shared->num_active--;
-
-		/* and add to the free list */
-		dlist_push_head(&workfile_shared->freeList, &work_set->node);
-		work_set->active = false;
-
-		/*
-		 * Similarly, update / remove the per-query entry.
-		 */
-		if (perquery->refcount == 0)
-		{
-			bool		found;
-
-			Assert(perquery->total_bytes == 0);
-
-			perquery->active = false;
-			(void) hash_search(workfile_shared->per_query_hash,
-							   perquery,
-							   HASH_REMOVE, &found);
-			if (!found)
-				elog(PANIC, "per-query hash table is corrupt");
-		}
-	}
+		recycleWorkFileSet(work_set);
 
 	localEntry->size = 0;
 	localEntry->work_set = NULL;
@@ -489,6 +558,7 @@ workfile_mgr_create_set_internal(const char *operator_name, const char *prefix)
 				 errmsg("could not create workfile manager entry: exceeded number of concurrent spilling queries")));
 	}
 
+	ensureLocalWorkFileSet();
 	/*
 	 * Find our per-query entry (or allocate, on first use)
 	 */
@@ -524,6 +594,9 @@ workfile_mgr_create_set_internal(const char *operator_name, const char *prefix)
 	Assert(!work_set->active);
 	dlist_push_head(&workfile_shared->activeList, &work_set->node);
 	workfile_shared->num_active++;
+
+	localWorkSets[sizeLocalWorkSets] = work_set;
+	sizeLocalWorkSets++;
 
 	work_set->session_id = gp_session_id;
 	work_set->command_count = gp_command_count;
