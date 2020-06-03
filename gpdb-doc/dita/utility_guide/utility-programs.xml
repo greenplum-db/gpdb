@@ -20,11 +20,11 @@
                         href="https://gpdb.docs.pivotal.io/gpcopy/latest/index.html"
                         scope="external" format="html">Pivotal Greenplum gpcopy</xref> utility.</li>
                 <li otherprops="pivotal">The <xref
-                        href="http://greenplum.docs.pivotal.io/streaming-server/1-3-1/kafka/gpkafka-ref.html"
+                        href="http://greenplum.docs.pivotal.io/streaming-server/1-3-6/kafka/gpkafka-ref.html"
                         scope="external" format="html">Pivotal Greenplum-Kafka Integration</xref>
                     utilities.</li>
                 <li otherprops="pivotal">The <xref
-                        href="http://greenplum.docs.pivotal.io/streaming-server/1-3-1/ref/gpss-ref.html"
+                        href="http://greenplum.docs.pivotal.io/streaming-server/1-3-6/ref/gpss-ref.html"
                         scope="external" format="html">Pivotal Greenplum Streaming Server</xref>
                     utilities.</li>
             </ul>
@@ -80,7 +80,7 @@
                         <p><xref href="ref/gpinitsystem.xml#topic1" type="topic" format="dita"/></p>
                         <p otherprops="pivotal">
                             <xref
-                                href="https://greenplum.docs.pivotal.io/streaming-server/1-3-1/kafka/gpkafka-ref.html"
+                                href="https://greenplum.docs.pivotal.io/streaming-server/1-3-6/kafka/gpkafka-ref.html"
                                 format="html" scope="external">gpkafka</xref><sup>4</sup></p>
                         <p><xref href="ref/gpload.xml#topic1" type="topic" format="dita"/><sup
                                 otherprops="pivotal">3</sup></p>
@@ -96,7 +96,7 @@
                                 format="dita"/><sup>1</sup></p>
                         <p><xref href="ref/gpscp.xml#topic1" type="topic" format="dita"/></p>
                         <p otherprops="pivotal"><xref
-                                href="https://greenplum.docs.pivotal.io/streaming-server/1-3-1/ref/gpss-ref.html"
+                                href="https://greenplum.docs.pivotal.io/streaming-server/1-3-6/ref/gpss-ref.html"
                                 format="html" scope="external">gpss</xref><sup>4</sup></p>
                         <p><xref href="ref/gpssh.xml#topic1" type="topic" format="dita"/></p>
                         <p><xref href="ref/gpssh-exkeys.xml#topic1" type="topic" format="dita"/></p>
