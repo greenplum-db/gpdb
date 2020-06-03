@@ -195,7 +195,7 @@ ShmemAlloc(Size size)
 	void	   *newSpace;
 
 	/*
-	 * Beter to return NULL for this else caller could still use memory that
+	 * Better to return NULL for this else caller could still use memory that
 	 * does not belong to it.
 	 */
 	if (size == 0)

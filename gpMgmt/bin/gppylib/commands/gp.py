@@ -192,16 +192,10 @@ class PgCtlBackendOptions(CmdArgs):
         return self
 
     def set_utility(self):
-        """
-        @param utility: true if starting in utility mode
-        """
         self.append("-c gp_role=utility")
         return self
 
     def set_execute(self):
-        """
-        @param utility: true if starting in utility mode
-        """
         self.append("-c gp_role=execute")
         return self
 
