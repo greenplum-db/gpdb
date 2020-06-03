@@ -71,13 +71,16 @@ select dbid from gp_segment_configuration where dbid=2;
 update gp_segment_configuration set dbid=2 where dbid=9;
 set allow_system_table_mods to false;
 
--- we manually change dbid from 2 to 9, which casue the
+-- we manually change dbid from 2 to 9, which causes the
 -- corresponding segment down as well, so recovery full
 -- at here
 !\retcode gprecoverseg -aF;
 
 -- rebalance the cluster
 !\retcode gprecoverseg -ar;
+
+-- recheck gp_segment_configuration after rebalance
+SELECT dbid, role, preferred_role, content, mode, status FROM gp_segment_configuration order by dbid;
 
 -- remove the config file
 !\retcode rm /tmp/recover_config_file
