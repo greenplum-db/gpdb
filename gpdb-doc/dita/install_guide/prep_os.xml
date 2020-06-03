@@ -42,12 +42,13 @@
       Greenplum master and segment mirroring is recommended. If mirroring is not enabled then
       Greenplum stores only one copy of the data, so the underlying storage media provides the only
       guarantee for data availability and correctness in the event of a hardware failure.<p
-        otherprops="pivotal">With Greenplum for Kubernetes the downtime incurred for replacing a
-        failed segment is significantly minimized, and mirrorless deployments are recommended to
-        ensure maximum availability for the Greenplum cluster. VMware supports production,
-        mirrorless deployments of Greenplum for Kubernetes for this reason. Other deployment
-        environments are generally not supported for production use unless both Greenplum master and
-        segment mirroring are enabled.</p></note>
+        otherprops="pivotal">Kubernetes enables quick recovery from both pod and host failures, and
+        Kubernetes storage services provide a high level of availability for the underlying data.
+        Furthermore, virtualized environments make it difficult to ensure the anti-affinity
+        guarantees required for Greenplum mirroring solutions. For these reasons, mirrorless
+        deployments are fully supported with Greenplum for Kubernetes. Other deployment environments
+        are generally not supported for production use unless both Greenplum master and segment
+        mirroring are enabled.</p></note>
     <!--Pivotal-->
     <note type="note" otherprops="pivotal">For information about upgrading Pivotal Greenplum
       Database from a previous version, see the <cite>Greenplum Database Release Notes</cite> for
