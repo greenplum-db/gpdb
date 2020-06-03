@@ -107,7 +107,7 @@ UPDATE 1
 set allow_system_table_mods to false;
 SET
 
--- we manually change dbid from 2 to 9, which casue the
+-- we manually change dbid from 2 to 9, which causes the
 -- corresponding segment down as well, so recovery full
 -- at here
 !\retcode gprecoverseg -aF;
@@ -120,6 +120,20 @@ SET
 -- start_ignore
 -- end_ignore
 (exited with code 0)
+
+-- recheck gp_segment_configuration after rebalance
+SELECT dbid, role, preferred_role, content, mode, status FROM gp_segment_configuration order by dbid;
+ dbid | role | preferred_role | content | mode | status 
+------+------+----------------+---------+------+--------
+ 1    | p    | p              | -1      | n    | u      
+ 2    | p    | p              | 0       | s    | u      
+ 3    | p    | p              | 1       | s    | u      
+ 4    | p    | p              | 2       | s    | u      
+ 5    | m    | m              | 0       | s    | u      
+ 6    | m    | m              | 1       | s    | u      
+ 7    | m    | m              | 2       | s    | u      
+ 8    | m    | m              | -1      | s    | u      
+(8 rows)
 
 -- remove the config file
 !\retcode rm /tmp/recover_config_file
