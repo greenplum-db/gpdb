@@ -2120,6 +2120,18 @@ _readColumnDef(void)
 	READ_DONE();
 }
 
+static DistributionKeyElem *
+_readDistributionKeyElem(void)
+{
+	READ_LOCALS(DistributionKeyElem);
+
+	READ_STRING_FIELD(name);
+	READ_NODE_FIELD(opclass);
+	READ_LOCATION_FIELD(location);
+
+	READ_DONE();
+}
+
 static ColumnRef *
 _readColumnRef(void)
 {
@@ -2826,6 +2838,7 @@ _readFunctionScan(void)
 	READ_BOOL_FIELD(funcordinality);
 	READ_NODE_FIELD(param);
 	READ_BOOL_FIELD(resultInTupleStore);
+	READ_INT_FIELD(initplanId);
 
 	READ_DONE();
 }
@@ -4389,6 +4402,8 @@ parseNodeString(void)
 		return_value = _readDropRoleStmt();
 	else if (MATCHX("DROPSTMT"))
 		return_value = _readDropStmt();
+	else if (MATCHX("DISTRIBUTIONKEYELEM"))
+		return_value = _readDistributionKeyElem();
 	else if (MATCHX("EXTTABLETYPEDESC"))
 		return_value = _readExtTableTypeDesc();
 	else if (MATCHX("FUNCCALL"))

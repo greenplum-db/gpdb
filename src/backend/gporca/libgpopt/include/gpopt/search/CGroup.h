@@ -332,13 +332,13 @@ namespace gpopt
 				);
 
 			// print scalar group properties
-			IOstream &OsPrintGrpScalarProps(IOstream &os, const CHAR *szPrefix);
+			IOstream &OsPrintGrpScalarProps(IOstream &os, const CHAR *szPrefix) const;
 
 			// print group properties
-			IOstream &OsPrintGrpProps(IOstream &os, const CHAR *szPrefix);
+			IOstream &OsPrintGrpProps(IOstream &os, const CHAR *szPrefix) const;
 
 			// print group optimization contexts
-			IOstream &OsPrintGrpOptCtxts(IOstream &os, const CHAR *szPrefix);
+			IOstream &OsPrintGrpOptCtxts(IOstream &os, const CHAR *szPrefix) const;
 
 			// initialize and return empty stats for this group
 			IStatistics *PstatsInitEmpty(CMemoryPool *pmpGlobal);
@@ -522,6 +522,9 @@ namespace gpopt
 			// lookup the best context across all stages for the given required properties
 			COptimizationContext *PocLookupBest(CMemoryPool *mp, ULONG ulSearchStages, CReqdPropPlan *prpp);
 
+			// find a context by id
+			COptimizationContext *Ppoc(ULONG id) const;
+
 			// insert given context into contexts hash table
 			COptimizationContext *PocInsert(COptimizationContext *poc);
 
@@ -614,14 +617,15 @@ namespace gpopt
 				);
 
 			// print function
-			IOstream &OsPrint(IOstream &os);
+			virtual
+			IOstream &OsPrint(IOstream &os) const;
 
 			// slink for group list in memo
 			SLink m_link;
 
 #ifdef GPOS_DEBUG
 			// debug print; for interactive debugging sessions only
-			void DbgPrint();
+			void DbgPrintWithProperties();
 #endif
 
 	}; // class CGroup

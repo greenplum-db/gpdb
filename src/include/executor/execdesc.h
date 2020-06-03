@@ -223,7 +223,7 @@ typedef struct QueryDispatchDesc
 	 * For a SELECT INTO statement, this stores the tablespace to use for the
 	 * new table and related auxiliary tables.
 	 */
-	char		*intoTableSpaceName;
+	CreateStmt *intoCreateStmt;
 
 	/*
 	 * Oids to use, for new objects created in a CREATE command.

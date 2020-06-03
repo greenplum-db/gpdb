@@ -71,6 +71,12 @@ namespace gpos
 		// print MEMO during property enforcement process
 		EopttracePrintMemoEnforcement = 101015,
 
+		// print required columns
+		EopttracePrintRequiredColumns = 101016,
+
+		// print equivalent distribution specs
+		EopttracePrintEquivDistrSpecs = 101017,
+
 		///////////////////////////////////////////////////////
 		////////////////// transformations flags //////////////
 		///////////////////////////////////////////////////////

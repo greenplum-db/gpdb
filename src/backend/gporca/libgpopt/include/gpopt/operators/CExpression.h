@@ -271,7 +271,11 @@ namespace gpopt
 			BOOL HasOuterRefs();
 
 			// print driver
-			IOstream &OsPrint
+			virtual
+			IOstream &OsPrint(IOstream &os) const;
+
+			// print driver, customized for expressions
+			IOstream &OsPrintExpression
 						(
 						IOstream &os,
 						const CPrintPrefix * = NULL,
@@ -297,9 +301,6 @@ namespace gpopt
 			
 			// compare entire expression rooted here
 			BOOL FMatchDebug(CExpression *pexpr) const;
-
-			// debug print; for interactive debugging sessions only
-			void DbgPrint() const;
 
 			// debug print; for interactive debugging sessions only
 			// prints expression properties as well

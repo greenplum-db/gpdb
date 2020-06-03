@@ -137,10 +137,6 @@ namespace gpopt
 			virtual
 			void SetParam(const CHAR *szName, CDouble dVal, CDouble dLowerBound, CDouble dUpperBound) = 0;
 
-			// print function
-			virtual
-			IOstream &OsPrint(IOstream &os) const = 0;
-
 			virtual BOOL
 			Equals(ICostModelParams *pcm) const = 0;
 

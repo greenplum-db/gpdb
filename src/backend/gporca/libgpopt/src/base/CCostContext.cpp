@@ -769,14 +769,5 @@ CCostContext::OsPrint
 	return os << std::endl;
 }
 
-#ifdef GPOS_DEBUG
-void
-CCostContext::DbgPrint() const
-{
-	CAutoTrace at(m_mp);
-	(void) this->OsPrint(at.Os());
-}
-#endif // GPOS_DEBUG
-
 // EOF
 

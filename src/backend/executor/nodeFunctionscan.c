@@ -89,7 +89,7 @@ FunctionNext_guts(FunctionScanState *node)
 	 * of executing the real function.
 	 * Tuplestore is filled by the FunctionScan's initplan.
 	 */
-	if(node->resultInTupleStore && Gp_role != GP_ROLE_DISPATCH)
+	if(node->resultInTupleStore)
 	{
 		bool gotOK = false;
 		bool forward = true;
@@ -103,7 +103,7 @@ FunctionNext_guts(FunctionScanState *node)
 		if (!node->ts_state)
 		{
 			char rwfile_prefix[100];
-			function_scan_create_bufname_prefix(rwfile_prefix, sizeof(rwfile_prefix));
+			function_scan_create_bufname_prefix(rwfile_prefix, sizeof(rwfile_prefix), node->initplanId);
 
 			node->ts_state = tuplestore_open_shared(rwfile_prefix,
 													false /* interXact */);
@@ -381,6 +381,7 @@ ExecInitFunctionScan(FunctionScan *node, EState *estate, int eflags)
 	scanstate->ss.ps.state = estate;
 	scanstate->eflags = eflags;
 	scanstate->resultInTupleStore = node->resultInTupleStore;
+	scanstate->initplanId = node->initplanId;
 	scanstate->ts_state = NULL;
 
 	/*
@@ -700,6 +701,18 @@ ExecReScanFunctionScan(FunctionScanState *node)
 			ExecClearTuple(fs->func_slot);
 	}
 
+	/*
+	 * For function execute on INITPLAN, tuplestore accessor needs to
+	 * seek to the begin of file for rescan.
+	 *
+	 * Note that we've already stored the function result in tuplestore by
+	 * INITPLAN node, so there is no need to re-use the tuplestore in
+	 * function scan, which is used to avoid re-executing the
+	 * function again when rescan a FunctionScan
+	 */
+	if(node->resultInTupleStore && node->ts_state)
+		tuplestore_rescan(node->ts_state);
+
 	ExecScanReScan(&node->ss);
 
 	/*
@@ -773,8 +786,8 @@ ExecSquelchFunctionScan(FunctionScanState *node)
 }
 
 void
-function_scan_create_bufname_prefix(char* p, int size)
+function_scan_create_bufname_prefix(char* p, int size, int initplan_id)
 {
-	snprintf(p, size, "FUNCTION_SCAN_%d",
-			 gp_session_id);
+	snprintf(p, size, "FUNCTION_SCAN_%d_%d",
+			 gp_session_id, initplan_id);
 }

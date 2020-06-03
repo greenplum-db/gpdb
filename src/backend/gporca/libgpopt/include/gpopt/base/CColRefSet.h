@@ -125,8 +125,9 @@ namespace gpopt
 			ULONG HashValue();	
 
 			// debug print
-			IOstream &
-			OsPrint(IOstream &os, ULONG ulLenMax = gpos::ulong_max) const;
+			virtual
+			IOstream &OsPrint(IOstream &os) const;
+			IOstream &OsPrint(IOstream &os, ULONG ulLenMax) const;
 
 			// extract all column ids
 			void ExtractColIds(CMemoryPool *mp, ULongPtrArray *colids) const;

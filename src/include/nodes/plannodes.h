@@ -775,6 +775,7 @@ typedef struct FunctionScan
 	bool		funcordinality; /* WITH ORDINALITY */
 	Param      *param;			/* used when funtionscan run as initplan */
 	bool		resultInTupleStore; /* function result stored in tuplestore */
+	int			initplanId;			/* initplan id for function execute on initplan */
 } FunctionScan;
 
 /* ----------------
@@ -1321,6 +1322,7 @@ typedef struct Motion
 	/* For Hash */
 	List		*hashExprs;			/* list of hash expressions */
 	Oid			*hashFuncs;			/* corresponding hash functions */
+	int         numHashSegments;	/* the module number of the hash function */
 
 	/* For Explicit */
 	AttrNumber segidColIdx;			/* index of the segid column in the target list */

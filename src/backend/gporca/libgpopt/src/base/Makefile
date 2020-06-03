@@ -68,7 +68,6 @@ OBJS        = CAutoOptCtxt.o \
               CPartitionPropagationSpec.o \
               CPrintPrefix.o \
               CPropConstraint.o \
-              CPropSpec.o \
               CQueryContext.o \
               CRange.o \
               CReqdProp.o \

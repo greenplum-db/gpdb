@@ -187,6 +187,7 @@ namespace gpopt
 			// print
 			virtual
 			IOstream &OsPrint(IOstream &os) const;
+			IOstream &OsPrintWithPrefix(IOstream &os, const char *prefix) const;
 
 			// return a hashed distribution on the maximal hashable subset of given columns
 			static

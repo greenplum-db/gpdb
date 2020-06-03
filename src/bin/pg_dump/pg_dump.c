@@ -16421,11 +16421,6 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 
 					if (has_notnull)
 						appendPQExpBufferStr(q, " NOT NULL");
-
-					/* Column Storage attributes */
-					if (tbinfo->attencoding[j] != NULL)
-						appendPQExpBuffer(q, " ENCODING (%s)",
-										  tbinfo->attencoding[j]);
 				}
 			}
 
@@ -16449,6 +16444,33 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 				appendPQExpBufferStr(q, constr->condef);
 
 				actual_atts++;
+			}
+
+			/*
+			 * Add AOCO ENCODING directives, if any.
+			 *
+			 * We dump these as separate "COLUMN <col> ENCODING ..." clauses,
+			 * instead of tacking the ENCODING at the column definition, so
+			 * that this works for inherited columns, too. Inherited columns
+			 * are not listed in the column list.
+			 */
+			for (j = 0; j < tbinfo->numatts; j++)
+			{
+				if (tbinfo->attisdropped[j])
+					continue;
+
+				if (tbinfo->attencoding[j] != NULL)
+				{
+					if (actual_atts == 0)
+						appendPQExpBufferStr(q, " (\n    ");
+					else
+						appendPQExpBufferStr(q, ",\n    ");
+
+					appendPQExpBuffer(q, "COLUMN %s ENCODING (%s)",
+									  fmtId(tbinfo->attnames[j]),
+									  tbinfo->attencoding[j]);
+					actual_atts++;
+				}
 			}
 
 			if (actual_atts)

@@ -25,12 +25,12 @@ set gp_select_invisible = true;
 select * from sto_alt_uao3_idx where bigint_col = 11;
 set gp_select_invisible = false;
 
--- Verify that alter table cluster on indexname is not allowed
+-- Verify that alter table cluster on indexname is allowed
 Alter table sto_alt_uao3_idx cluster on sto_alt_uao3_idx_idx;
 select indisclustered from pg_index where indexrelid='sto_alt_uao3_idx_idx'::regclass;
 Alter table sto_alt_uao3_idx set without cluster;
 select indisclustered from pg_index where indexrelid='sto_alt_uao3_idx_idx'::regclass;
--- Verify that cluster is not allowed
+-- Verify that cluster is allowed
 CLUSTER sto_alt_uao3_idx using sto_alt_uao3_idx_idx;
 select indisclustered from pg_index where indexrelid='sto_alt_uao3_idx_idx'::regclass;
 -- Verify that unique index is not allowed

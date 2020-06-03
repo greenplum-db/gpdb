@@ -144,6 +144,8 @@ namespace gpopt
 
 			// optimize group under a given context
 			CGroupExpression * PgexprOptimize(CGroup *pgroup, COptimizationContext *poc, CGroupExpression *pgexprOrigin);
+
+			void DbgPrintExpr(int group_no, int context_no);
 #endif // GPOS_DEBUG
 
 			// initialize query logical expression

@@ -381,6 +381,16 @@ CColRefSet::HashValue()
 IOstream &
 CColRefSet::OsPrint
 	(
+	IOstream &os
+	)
+	const
+{
+	return OsPrint(os, gpos::ulong_max);
+}
+
+IOstream &
+CColRefSet::OsPrint
+	(
 	IOstream &os,
 	ULONG ulLenMax
 	)

@@ -65,6 +65,5 @@ extern void AddRelationAttributeEncodings(Relation rel, List *attr_encodings);
 extern void RemoveAttributeEncodingsByRelid(Oid relid);
 extern void cloneAttributeEncoding(Oid oldrelid, Oid newrelid, AttrNumber max_attno);
 extern Datum *get_rel_attoptions(Oid relid, AttrNumber max_attno);
-extern void AddDefaultRelationAttributeOptions(Relation rel, List *options);
 
 #endif   /* PG_ATTRIBUTE_ENCODING_H */

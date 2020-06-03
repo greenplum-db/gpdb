@@ -118,7 +118,7 @@ select distkey, distclass from gp_distribution_policy where localoid='bar'::regc
 drop table if exists foo;
 drop table if exists bar;
 
--- check for duplicate columns in DISTRIBUTED BY clause
+-- check for duplicate and non-existent columns in DISTRIBUTED BY clause
 create table foo (a int, b text) distributed by (b,B);
 create table foo (a int, b int) distributed by (a,aA,A);
 create table foo (a int, b int) distributed by (a,aA);
@@ -129,6 +129,7 @@ create table foo (a int, b int, c int) distributed by (c, c, b);
 create table foo ("I" int, i int) distributed by ("I",I);
 select distkey, distclass from gp_distribution_policy where localoid='foo'::regclass;
 create table fooctas as select * from foo distributed by (i,i);
+create table fooctas as select * from foo distributed by (i,nope);
 drop table foo;
 
 -- check if number of DISTRIBUTED BY clause exceed the limitation (1600)

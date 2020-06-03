@@ -724,12 +724,4 @@ CBitSet::OsPrint
 	return os;
 }
 
-#ifdef GPOS_DEBUG
-void
-CBitSet::DbgPrint() const
-{
-	CAutoTrace at(m_mp);
-	(void) this->OsPrint(at.Os());
-}
-#endif // GPOS_DEBUG
 // EOF

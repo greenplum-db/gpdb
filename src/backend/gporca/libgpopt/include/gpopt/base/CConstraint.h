@@ -243,14 +243,6 @@ namespace gpopt
 			virtual
 			CConstraint *PcnstrRemapForColumn(CMemoryPool *mp, CColRef *colref) const = 0;
 
-			// print
-			virtual
-			IOstream &OsPrint
-						(
-						IOstream &os
-						)
-						const = 0;
-
 			// create constraint from scalar expression and pass back any discovered
 			// equivalence classes
 			static
@@ -277,9 +269,6 @@ namespace gpopt
 			// subset of the given constraints, which reference the given column
 			static
 			CConstraintArray *PdrgpcnstrOnColumn(CMemoryPool *mp, CConstraintArray *pdrgpcnstr, CColRef *colref, BOOL fExclusive);
-#ifdef GPOS_DEBUG
-			void DbgPrint() const;
-#endif  // GPOS_DEBUG
 
 	}; // class CConstraint
 

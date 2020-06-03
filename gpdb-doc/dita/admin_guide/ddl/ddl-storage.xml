@@ -81,8 +81,9 @@
           listing storage options for append-optimized tables.</note>
         <p><codeph>UPDATE</codeph> and <codeph>DELETE</codeph> are not allowed on append-optimized
           tables in a repeatable read  or serizalizable transaction and will cause the transaction
-          to abort. <codeph>CLUSTER</codeph>, <codeph>DECLARE...FOR UPDATE</codeph>, and triggers
-          are not supported with append-optimized tables.</p>
+          to abort. <codeph>DECLARE...FOR UPDATE</codeph> and triggers
+          are not supported with append-optimized tables. <codeph>CLUSTER</codeph> on
+          append-optimized tables is only supported over B-tree indexes.</p>
       </section>
     </body>
   </topic>

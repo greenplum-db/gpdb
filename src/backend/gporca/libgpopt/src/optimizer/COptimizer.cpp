@@ -322,8 +322,6 @@ COptimizer::PdxlnOptimize
 			CExpression *pexprPlan = PexprOptimize(mp, pqc, search_stage_array);
 			GPOS_CHECK_ABORT;
 
-			PrintQueryOrPlan(mp, pexprPlan);
-
 			// translate plan into DXL
 			pdxlnPlan = CreateDXLNode(mp, md_accessor, pexprPlan, pqc->PdrgPcr(), pdrgpmdname, ulHosts);
 			GPOS_CHECK_ABORT;
@@ -443,6 +441,12 @@ COptimizer::PexprOptimize
 	(void) pexprPlan->PrppCompute(mp, pqc->Prpp());
 
 	CheckCTEConsistency(mp, pexprPlan);
+
+	PrintQueryOrPlan(mp, pexprPlan);
+
+	// you can also print alternative plans by calling
+	// p eng.DbgPrintExpr(<group #>, <opt context #>)
+	// in the debugger, giving parameters based on the memo printout
 
 	GPOS_CHECK_ABORT;
 

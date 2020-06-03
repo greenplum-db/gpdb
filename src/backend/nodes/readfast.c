@@ -1395,7 +1395,7 @@ _readQueryDispatchDesc(void)
 {
 	READ_LOCALS(QueryDispatchDesc);
 
-	READ_STRING_FIELD(intoTableSpaceName);
+	READ_NODE_FIELD(intoCreateStmt);
 	READ_NODE_FIELD(paramInfo);
 	READ_NODE_FIELD(oidAssignments);
 	READ_NODE_FIELD(sliceTable);
@@ -1570,6 +1570,7 @@ _readMotion(void)
 	READ_BOOL_ARRAY(nullsFirst, local_node->numSortCols);
 
 	READ_INT_FIELD(segidColIdx);
+	READ_INT_FIELD(numHashSegments);
 
 	ReadCommonPlan(&local_node->plan);
 
@@ -2580,6 +2581,9 @@ readNodeBinary(void)
 				break;
 			case T_CreateForeignTableStmt:
 				return_value = _readCreateForeignTableStmt();
+				break;
+			case T_DistributionKeyElem:
+				return_value = _readDistributionKeyElem();
 				break;
 			case T_ColumnReferenceStorageDirective:
 				return_value = _readColumnReferenceStorageDirective();

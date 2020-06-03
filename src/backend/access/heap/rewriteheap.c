@@ -270,7 +270,7 @@ begin_heap_rewrite(Relation old_heap, Relation new_heap, TransactionId oldest_xm
 	state->rs_new_rel = new_heap;
 	state->rs_buffer = (Page) palloc(BLCKSZ);
 	/* new_heap needn't be empty, just locked */
-	state->rs_blockno = RelationGetNumberOfBlocks(new_heap);
+	state->rs_blockno = AcquireNumberOfBlocks(new_heap);
 	state->rs_buffer_valid = false;
 	state->rs_use_wal = use_wal;
 	state->rs_oldest_xmin = oldest_xmin;

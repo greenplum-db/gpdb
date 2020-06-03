@@ -314,10 +314,6 @@ namespace gpopt
 				BOOL infer_nulls_as=false
 				);
 
-
-#ifdef GPOS_DEBUG
-			void DbgPrint() const;
-#endif  // GPOS_DEBUG
 	}; // class CConstraintInterval
 
 	// shorthand for printing, reference

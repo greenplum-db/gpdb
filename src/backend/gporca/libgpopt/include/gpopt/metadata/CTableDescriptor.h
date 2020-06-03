@@ -213,10 +213,9 @@ namespace gpopt
 			// helper function for finding the index of a column descriptor in
 			// an array of column descriptors
 			ULONG UlPos(const CColumnDescriptor *, const CColumnDescriptorArray *) const;
-			
-#ifdef GPOS_DEBUG
-			IOstream &OsPrint(IOstream &) const;
-#endif // GPOS_DEBUG
+
+			virtual
+			IOstream &OsPrint(IOstream &os) const;
 
 			// returns number of indices
 			ULONG IndexCount();

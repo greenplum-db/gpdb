@@ -67,7 +67,7 @@ CREATE TABLE tenk_ao13 (like tenk_heap) with (appendoptimized=true);
 CREATE TABLE tenk_ao14 (like tenk_heap) with (appendonly=true, appendoptimized=false);
 ERROR:  parameter "appendonly" specified more than once
 CREATE TABLE tenk_ao14 (like tenk_heap) with (appendoptimized=maybe);
-ERROR:  invalid value for option "appendonly"
+ERROR:  invalid value for boolean option "appendonly": maybe
 CREATE TABLE tenk_ao14 (like tenk_heap) with (appendoptimized=true, appendoptimized=true);
 ERROR:  parameter "appendonly" specified more than once
 CREATE TABLE tenk_ao15 (like tenk_heap) with (appendoptimized=true) 

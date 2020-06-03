@@ -1205,14 +1205,6 @@ ProcessUtilitySlow(Node *parsetree,
 							 */
 							CommandCounterIncrement();
 
-							/* Add column encoding entries based on the WITH clauses */
-							if (cstmt->isCtas && cstmt->options)
-							{
-								Relation rel = heap_open(address.objectId, AccessExclusiveLock);
-								AddDefaultRelationAttributeOptions(rel, cstmt->options);
-								heap_close(rel, NoLock);
-							}
-
 							if (relKind != RELKIND_COMPOSITE_TYPE)
 							{
 								/*

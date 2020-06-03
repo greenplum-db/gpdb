@@ -211,17 +211,6 @@ CPartIndexMap::CPartTableInfo::OsPrint
 	return os;
 }
 
-#ifdef GPOS_DEBUG
-void
-CPartIndexMap::CPartTableInfo::DbgPrint() const
-{
-
-	CMemoryPool *mp = COptCtxt::PoctxtFromTLS()->Pmp();
-	CAutoTrace at(mp);
-	(void) this->OsPrint(at.Os());
-}
-#endif
-
 //---------------------------------------------------------------------------
 //	@function:
 //		CPartIndexMap::CPartIndexMap
@@ -1081,15 +1070,6 @@ CPartIndexMap::OsPrintPartCnstrMap
 
 	return os;
 }
-
-#ifdef GPOS_DEBUG
-void
-CPartIndexMap::DbgPrint() const
-{
-	CAutoTrace at(m_mp);
-	(void) this->OsPrint(at.Os());
-}
-#endif // GPOS_DEBUG
 
 namespace gpopt {
 

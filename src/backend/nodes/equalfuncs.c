@@ -1312,6 +1312,16 @@ _equalCreateStmt(const CreateStmt *a, const CreateStmt *b)
 }
 
 static bool
+_equalDistributionKeyElem(const DistributionKeyElem *a, const DistributionKeyElem *b)
+{
+	COMPARE_STRING_FIELD(name);
+	COMPARE_NODE_FIELD(opclass);
+	COMPARE_LOCATION_FIELD(location);
+
+	return true;
+}
+
+static bool
 _equalColumnReferenceStorageDirective(const ColumnReferenceStorageDirective *a,
 									   const ColumnReferenceStorageDirective *b)
 {
@@ -3764,6 +3774,9 @@ equal(const void *a, const void *b)
 			break;
 		case T_RowIdExpr:
 			retval = _equalRowIdExpr(a, b);
+			break;
+		case T_DistributionKeyElem:
+			retval = _equalDistributionKeyElem(a, b);
 			break;
 
 		default:

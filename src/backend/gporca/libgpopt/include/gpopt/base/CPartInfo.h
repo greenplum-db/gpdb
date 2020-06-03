@@ -110,15 +110,11 @@ namespace gpopt
 					}
 
 					// print function
+					virtual
 					IOstream &OsPrint(IOstream &os) const;
 
 					// copy part info entry into given memory pool
 					CPartInfoEntry *PpartinfoentryCopy(CMemoryPool *mp);
-
-#ifdef GPOS_DEBUG
-					// debug print for interactive debugging sessions only
-					void DbgPrint() const;
-#endif // GPOS_DEBUG
 
 			}; // CPartInfoEntry
 
@@ -188,6 +184,7 @@ namespace gpopt
 				const;
 
 			// print
+			virtual
 			IOstream &OsPrint(IOstream &) const;
 
 			// combine two part info objects
@@ -198,11 +195,6 @@ namespace gpopt
 				CPartInfo *ppartinfoFst,
 				CPartInfo *ppartinfoSnd
 				);
-
-#ifdef GPOS_DEBUG
-			// debug print for interactive debugging sessions only
-			void DbgPrint() const;
-#endif // GPOS_DEBUG
 
 	}; // CPartInfo
 

@@ -1401,6 +1401,50 @@ CEngine::RecursiveOptimize()
 	}
 }
 
+void CEngine::DbgPrintExpr
+	(
+	 int group_no,
+	 int context_no
+	)
+{
+	CAutoTrace at(m_mp);
+
+	GPOS_TRY
+	{
+		CGroup *top_group = m_pmemo->Pgroup(group_no);
+		if (NULL != top_group)
+		{
+			COptimizationContext *poc = top_group->Ppoc(context_no);
+
+			if (NULL != poc)
+			{
+				CExpression *extracted_expr = m_pmemo->PexprExtractPlan
+															(
+															 m_mp,
+															 top_group,
+															 poc->Prpp(),
+															 m_search_stage_array->Size()
+															);
+				extracted_expr->OsPrint(at.Os());
+				extracted_expr->Release();
+			}
+			else
+			{
+				at.Os() << "error: invalid context number";
+			}
+		}
+		else
+		{
+			at.Os() << "error: invalid group number";
+		}
+	}
+	GPOS_CATCH_EX(ex)
+	{
+		at.Os() << "error, couldn't complete the request";
+	}
+	GPOS_CATCH_END;
+}
+
 #endif // GPOS_DEBUG
 
 
@@ -2439,7 +2483,7 @@ CEngine::PrintOptCtxts()
 	GPOS_ASSERT(NULL != poc);
 
 	at.Os() << std::endl << "Main Opt Ctxt:" << std::endl;
-	(void) poc->OsPrint(at.Os(), " ");
+	(void) poc->OsPrintWithPrefix(at.Os(), " ");
 	at.Os() << std::endl;
 	at.Os() << "Optimal Cost Ctxt:" << std::endl;
 	(void) poc->PccBest()->OsPrint(at.Os());

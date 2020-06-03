@@ -1387,3 +1387,86 @@ cross join lateral
 (6 rows)
 
 reset enable_bitmapscan;
+---
+--- Test that GUC enable_hashagg takes effect for SEMI join
+---
+drop table if exists foo;
+drop table if exists bar;
+create table foo(a int) distributed by (a);
+create table bar(b int) distributed by (b);
+insert into foo select i from generate_series(1,10)i;
+insert into bar select i from generate_series(1,1000)i;
+analyze foo;
+analyze bar;
+set enable_hashagg to on;
+explain (costs off)
+select * from foo where exists (select 1 from bar where foo.a = bar.b);
+                         QUERY PLAN                         
+------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  HashAggregate
+         Group Key: (RowIdExpr)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)
+               Hash Key: (RowIdExpr)
+               ->  Hash Join
+                     Hash Cond: (bar.b = foo.a)
+                     ->  Seq Scan on bar
+                     ->  Hash
+                           ->  Seq Scan on foo
+ Optimizer: Postgres query optimizer
+(11 rows)
+
+select * from foo where exists (select 1 from bar where foo.a = bar.b);
+ a  
+----
+ 10
+  9
+  3
+  7
+  4
+  5
+  8
+  1
+  2
+  6
+(10 rows)
+
+set enable_hashagg to off;
+explain (costs off)
+select * from foo where exists (select 1 from bar where foo.a = bar.b);
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Result
+         ->  Unique
+               Group Key: (RowIdExpr)
+               ->  Sort
+                     Sort Key (Distinct): (RowIdExpr)
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Hash Key: (RowIdExpr)
+                           ->  Hash Join
+                                 Hash Cond: (bar.b = foo.a)
+                                 ->  Seq Scan on bar
+                                 ->  Hash
+                                       ->  Seq Scan on foo
+ Optimizer: Postgres query optimizer
+(14 rows)
+
+select * from foo where exists (select 1 from bar where foo.a = bar.b);
+ a  
+----
+  1
+  2
+  3
+  4
+  5
+  6
+  7
+  8
+  9
+ 10
+(10 rows)
+
+reset enable_hashagg;
+drop table foo;
+drop table bar;

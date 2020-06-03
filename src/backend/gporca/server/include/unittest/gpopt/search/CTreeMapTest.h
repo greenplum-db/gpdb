@@ -56,7 +56,7 @@ namespace gpopt
 				~CNode();
 				
 				// debug print
-				IOstream &OsPrint(IOstream &os, ULONG ulIndent = 0) const;
+				IOstream &OsPrintWithIndent(IOstream &os, ULONG ulIndent = 0) const;
 		};
 
 				

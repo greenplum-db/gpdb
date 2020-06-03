@@ -45,14 +45,4 @@ CReqdProp::~CReqdProp()
 {}
 
 
-#ifdef GPOS_DEBUG
-void
-CReqdProp::DbgPrint() const
-{
-	CMemoryPool *mp = COptCtxt::PoctxtFromTLS()->Pmp();
-	CAutoTrace at(mp);
-	at.Os() << *this;
-}
-#endif // GPOS_DEBUG
-
 // EOF

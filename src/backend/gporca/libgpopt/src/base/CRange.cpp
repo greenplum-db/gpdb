@@ -816,12 +816,4 @@ CRange::OsPrintBound
 	return os;
 }
 
-void
-CRange::DbgPrint() const
-{
-	CMemoryPool *mp = COptCtxt::PoctxtFromTLS()->Pmp();
-	CAutoTrace at(mp);
-	(void) this->OsPrint(at.Os());
-}
-
 // EOF

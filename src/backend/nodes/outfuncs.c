@@ -372,7 +372,7 @@ _outQueryDispatchDesc(StringInfo str, const QueryDispatchDesc *node)
 {
 	WRITE_NODE_TYPE("QUERYDISPATCHDESC");
 
-	WRITE_STRING_FIELD(intoTableSpaceName);
+	WRITE_NODE_FIELD(intoCreateStmt);
 	WRITE_NODE_FIELD(paramInfo);
 	WRITE_NODE_FIELD(oidAssignments);
 	WRITE_NODE_FIELD(sliceTable);
@@ -862,6 +862,7 @@ _outFunctionScan(StringInfo str, const FunctionScan *node)
 	WRITE_BOOL_FIELD(funcordinality);
 	WRITE_NODE_FIELD(param);
 	WRITE_BOOL_FIELD(resultInTupleStore);
+	WRITE_INT_FIELD(initplanId);
 }
 
 static void
@@ -1316,6 +1317,8 @@ _outMotion(StringInfo str, const Motion *node)
 		appendStringInfo(str, " %u", node->collations[i]);
 
 	WRITE_INT_FIELD(segidColIdx);
+
+	WRITE_INT_FIELD(numHashSegments);
 
 	/* senderSliceInfo is intentionally omitted. It's only used during planning */
 
@@ -3067,6 +3070,16 @@ _outCreateForeignTableStmt(StringInfo str, const CreateForeignTableStmt *node)
 }
 
 #endif /* COMPILING_BINARY_FUNCS */
+
+static void
+_outDistributionKeyElem(StringInfo str, const DistributionKeyElem *node)
+{
+	WRITE_NODE_TYPE("DISTRIBUTIONKEYELEM");
+
+	WRITE_STRING_FIELD(name);
+	WRITE_NODE_FIELD(opclass);
+	WRITE_LOCATION_FIELD(location);
+}
 
 static void
 _outColumnReferenceStorageDirective(StringInfo str, const ColumnReferenceStorageDirective *node)
@@ -5762,6 +5775,9 @@ outNode(StringInfo str, const void *obj)
 				break;
 			case T_CreateForeignTableStmt:
 				_outCreateForeignTableStmt(str, obj);
+				break;
+			case T_DistributionKeyElem:
+				_outDistributionKeyElem(str, obj);
 				break;
 			case T_ColumnReferenceStorageDirective:
 				_outColumnReferenceStorageDirective(str, obj);

@@ -161,6 +161,7 @@ namespace gpopt
 			}
 
 			// print
+			virtual
 			IOstream &OsPrint(IOstream &os) const;
 
 			ERewindabilityType Ert() const

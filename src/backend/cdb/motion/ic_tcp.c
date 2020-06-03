@@ -1331,6 +1331,7 @@ SetupTCPInterconnect(EState *estate)
 		int			highsock = -1;
 		uint64		timeout_ms = 20 * 60 * 1000;
 		int			outgoing_fail_count = 0;
+		bool		select_errno;
 
 		iteration++;
 
@@ -1558,6 +1559,8 @@ SetupTCPInterconnect(EState *estate)
 
 		ML_CHECK_FOR_INTERRUPTS(interconnect_context->teardownActive);
 		n = select(highsock + 1, (fd_set *) &rset, (fd_set *) &wset, (fd_set *) &eset, &timeout);
+		select_errno = errno;
+
 		ML_CHECK_FOR_INTERRUPTS(interconnect_context->teardownActive);
 		if (Gp_role == GP_ROLE_DISPATCH)
 			checkForCancelFromQD(interconnect_context);
@@ -1574,7 +1577,6 @@ SetupTCPInterconnect(EState *estate)
 			{
 				int			elevel = (n == expectedTotalIncoming + expectedTotalOutgoing)
 				? DEBUG1 : LOG;
-				int			errnoSave = errno;
 
 				initStringInfo(&logbuf);
 				if (n > 0)
@@ -1590,17 +1592,18 @@ SetupTCPInterconnect(EState *estate)
 										elapsed_ms, logbuf.data)));
 				pfree(logbuf.data);
 				MemSet(&logbuf, 0, sizeof(logbuf));
-				errno = errnoSave;
 			}
 		}
 
+		/* An error other than EINTR is not acceptable */
 		if (n < 0)
 		{
-			if (errno == EINTR)
+			if (select_errno == EINTR)
 				continue;
 			ereport(ERROR,
 					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-					 errmsg("interconnect error: %s: %m", "select")));
+					 errmsg("interconnect error in select: %s",
+							strerror(select_errno))));
 		}
 
 		/*

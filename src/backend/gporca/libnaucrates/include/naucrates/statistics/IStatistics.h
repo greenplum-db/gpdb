@@ -217,11 +217,6 @@ namespace gpnaucrates
 			virtual
 			IOstream &OsPrint(IOstream &os) const = 0;
 
-#ifdef GPOS_DEBUG
-			virtual void
-			DbgPrint() const = 0;
-#endif
-
 			// generate the DXL representation of the statistics object
 			virtual
 			CDXLStatsDerivedRelation *GetDxlStatsDrvdRelation(CMemoryPool *mp, CMDAccessor *md_accessor) const = 0;

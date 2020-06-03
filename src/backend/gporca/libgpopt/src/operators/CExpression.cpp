@@ -1205,14 +1205,6 @@ CExpression::PrintProperties
 //	always prints to stderr.
 // ----------------------------------------------------------------
 
-// prints expression only
-void
-CExpression::DbgPrint() const
-{
-	CAutoTrace at(m_mp);
-	(void) this->OsPrint(at.Os());
-}
-
 // Prints expression along with it's properties
 void
 CExpression::DbgPrintWithProperties() const
@@ -1234,6 +1226,26 @@ CExpression::DbgPrintWithProperties() const
 //---------------------------------------------------------------------------
 IOstream &
 CExpression::OsPrint
+	(
+	IOstream &os
+	)
+	const
+{
+	CPrintPrefix ppref(NULL, "");
+
+	return OsPrintExpression(os, &ppref);
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CExpression::OsPrintExpression
+//
+//	@doc:
+//		Print driving function, customized for CExpression
+//
+//---------------------------------------------------------------------------
+IOstream &
+CExpression::OsPrintExpression
 	(
 	IOstream &os,
 	const CPrintPrefix *ppfx,
@@ -1295,7 +1307,7 @@ CExpression::OsPrint
 	const ULONG ulChildren = this->Arity();
 	for (ULONG i = 0; i < ulChildren; i++)
 	{
-		(*this)[i]->OsPrint
+		(*this)[i]->OsPrintExpression
 					(
 					os,
 					&pfx,

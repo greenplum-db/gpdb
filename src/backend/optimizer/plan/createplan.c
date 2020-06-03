@@ -7369,13 +7369,14 @@ cdbpathtoplan_create_motion_plan(PlannerInfo *root,
 {
 	Motion	   *motion = NULL;
 	Path	   *subpath = path->subpath;
-	int			numsegments;
-
-	if (CdbPathLocus_IsOuterQuery(path->path.locus) ||
-		CdbPathLocus_IsEntry(path->path.locus))
-		numsegments = 1;  /* dummy numsegments */
-	else
-		numsegments = CdbPathLocus_NumSegments(path->path.locus);
+	/*
+	 * numHashSegments is only used for hash motion.
+	 * It's the module number of the cdb hash, its value
+	 * is not necessarily the same as the number of segments
+	 * in the parent slice.
+	 */
+	int			numHashSegments;
+	numHashSegments = CdbPathLocus_NumSegments(path->path.locus);
 
 	if (path->is_explicit_motion)
 	{
@@ -7398,8 +7399,7 @@ cdbpathtoplan_create_motion_plan(PlannerInfo *root,
 		segmentid_tle = find_junk_tle(subplan->targetlist, "gp_segment_id");
 		if (!segmentid_tle)
 			elog(ERROR, "could not find gp_segment_id in subplan's targetlist");
-		motion = (Motion *) make_explicit_motion(root, subplan, segmentid_tle->resno,
-												 numsegments);
+		motion = (Motion *) make_explicit_motion(root, subplan, segmentid_tle->resno);
 	}
 	else if (path->policy)
 	{
@@ -7421,11 +7421,11 @@ cdbpathtoplan_create_motion_plan(PlannerInfo *root,
 		motion = make_hashed_motion(subplan,
 									hashExprs,
 									hashOpfamilies,
-									numsegments);
+									numHashSegments);
 	}
 	else if (CdbPathLocus_IsOuterQuery(path->path.locus))
 	{
-		motion = make_union_motion(subplan, numsegments);
+		motion = make_union_motion(subplan);
 		motion->motionType = MOTIONTYPE_OUTER_QUERY;
 	}
 	/* Send all tuples to a single process? */
@@ -7470,25 +7470,25 @@ cdbpathtoplan_create_motion_plan(PlannerInfo *root,
 				 */
 				subplan = prep;
 				motion = make_sorted_union_motion(root, subplan, numSortCols, sortColIdx, sortOperators, collations,
-												  nullsFirst, numsegments);
+												  nullsFirst);
 			}
 			else
 			{
 				/* Degenerate ordering... build unordered Union Receive */
-				motion = make_union_motion(subplan, numsegments);
+				motion = make_union_motion(subplan);
 			}
 		}
 
 		/* Unordered Union Receive */
 		else
 		{
-			motion = make_union_motion(subplan, numsegments);
+			motion = make_union_motion(subplan);
 		}
 	}
 
 	/* Send all of the tuples to all of the QEs in gang above... */
 	else if (CdbPathLocus_IsReplicated(path->path.locus))
-		motion = make_broadcast_motion(subplan, numsegments);
+		motion = make_broadcast_motion(subplan);
 
 	/* Hashed redistribution to all QEs in gang above... */
 	else if (CdbPathLocus_IsHashed(path->path.locus) ||
@@ -7507,7 +7507,7 @@ cdbpathtoplan_create_motion_plan(PlannerInfo *root,
         motion = make_hashed_motion(subplan,
 									hashExprs,
 									hashOpfamilies,
-									numsegments);
+									numHashSegments);
     }
 	/* Hashed redistribution to all QEs in gang above... */
 	else if (CdbPathLocus_IsStrewn(path->path.locus))
@@ -7515,7 +7515,7 @@ cdbpathtoplan_create_motion_plan(PlannerInfo *root,
 		motion = make_hashed_motion(subplan,
 									NIL,
 									NIL,
-									numsegments);
+									numHashSegments);
 	}
 	else
 		elog(ERROR, "unexpected target locus type %d for Motion node", path->path.locus.locustype);
@@ -7556,6 +7556,15 @@ append_initplan_for_function_scan(PlannerInfo *root, Path *best_path, Plan *plan
 	 * ON markings and run the function the normal way.
 	 */
 	if (Gp_role != GP_ROLE_DISPATCH)
+		return;
+
+	/*
+	 * If INITPLAN function is executed on QD, there is no 
+	 * need to add additional initplan to run this function.
+	 * Recall that the reason to introduce INITPLAN function
+	 * is that function runing on QE can not do dispatch.
+	 */
+	if (root->curSlice->parentIndex == -1)
 		return;
 
 	/* Currently we limit function number to one */
@@ -7621,10 +7630,12 @@ append_initplan_for_function_scan(PlannerInfo *root, Path *best_path, Plan *plan
 
 	/* create initplan for this FunctionScan plan */
 	FunctionScan* initplan =(FunctionScan*) copyObject(plan);
+	initplan->resultInTupleStore = false;
 	
 	SS_make_initplan_from_plan(root, subroot, (Plan *)initplan, root->curSlice, prm, true);
-	SS_attach_initplans(root, plan);
-	root->init_plans = NIL;
+
+	/* record the initplan id which is used to find the right tuplestore */
+	fsplan->initplanId = list_length(root->glob->subplans);
 
 	/* Decorate the top node of the plan with a Flow node. */
 	initplan->scan.plan.flow = cdbpathtoplan_create_flow(root, best_path->locus);

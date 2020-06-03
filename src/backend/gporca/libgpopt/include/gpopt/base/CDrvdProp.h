@@ -104,17 +104,8 @@ namespace gpopt
 			virtual
 			BOOL FSatisfies(const CReqdPropPlan *prpp) const = 0;
 
-			// print
-			virtual
-			IOstream &OsPrint(IOstream &os) const = 0;
-
 			virtual
 			BOOL IsComplete() const { return true; }
-
-#ifdef GPOS_DEBUG
-			// debug print for interactive debugging sessions only
-			void DbgPrint() const;
-#endif // GPOS_DEBUG
 
 	}; // class CDrvdProp
 

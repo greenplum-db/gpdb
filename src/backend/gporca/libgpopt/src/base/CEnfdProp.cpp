@@ -25,16 +25,6 @@ namespace gpopt {
 		return efdprop.OsPrint(os);
 	}
 
-#ifdef GPOS_DEBUG
-	void
-	CEnfdProp::DbgPrint() const
-	{
-		CMemoryPool *mp = COptCtxt::PoctxtFromTLS()->Pmp();
-		CAutoTrace at(mp);
-		(void) this->OsPrint(at.Os());
-	}
-#endif // GPOS_DEBUG
-
 }
 
 // EOF

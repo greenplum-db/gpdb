@@ -390,32 +390,6 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 			/* set our global sliceid variable for elog. */
 			currentSliceId = LocallyExecutingSliceIndex(estate);
 
-			/* Determine OIDs for into relation, if any */
-			if (queryDesc->plannedstmt->intoClause != NULL)
-			{
-				IntoClause *intoClause = queryDesc->plannedstmt->intoClause;
-				Oid         reltablespace;
-
-				cdb_sync_oid_to_segments();
-
-				/* MPP-10329 - must always dispatch the tablespace */
-				if (intoClause->tableSpaceName)
-				{
-					reltablespace = get_tablespace_oid(intoClause->tableSpaceName, false);
-					queryDesc->ddesc->intoTableSpaceName = intoClause->tableSpaceName;
-				}
-				else
-				{
-					reltablespace = GetDefaultTablespace(intoClause->rel->relpersistence);
-
-					/* Need the real tablespace id for dispatch */
-					if (!OidIsValid(reltablespace))
-						reltablespace = MyDatabaseTableSpace;
-
-					queryDesc->ddesc->intoTableSpaceName = get_tablespace_name(reltablespace);
-				}
-			}
-
 			/* InitPlan() will acquire locks by walking the entire plan
 			 * tree -- we'd like to avoid acquiring the locks until
 			 * *after* we've set up the interconnect */

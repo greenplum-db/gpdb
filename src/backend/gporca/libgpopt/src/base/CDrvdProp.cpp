@@ -29,15 +29,6 @@ namespace gpopt {
 		return drvdprop.OsPrint(os);
 	}
 
-#ifdef GPOS_DEBUG
-	void
-	CDrvdProp::DbgPrint() const
-	{
-		CMemoryPool *mp = COptCtxt::PoctxtFromTLS()->Pmp();
-		CAutoTrace at(mp);
-		at.Os() << *this;
-	}
-#endif // GPOS_DEBUG
 }
 
 // EOF

@@ -116,9 +116,8 @@ namespace gpopt
 				return m_width;
 			}
 
-#ifdef GPOS_DEBUG
-			IOstream &OsPrint(IOstream &) const;
-#endif // GPOS_DEBUG
+			virtual
+			IOstream &OsPrint(IOstream &os) const;
 
 	}; // class CColumnDescriptor
 }

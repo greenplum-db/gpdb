@@ -154,7 +154,6 @@ CIndexDescriptor::Pindexdesc
 	return pindexdesc;
 }
 
-#ifdef GPOS_DEBUG
 //---------------------------------------------------------------------------
 //	@function:
 //		CIndexDescriptor::OsPrint
@@ -191,8 +190,6 @@ CIndexDescriptor::OsPrint
 	os << " ]";
 	return os;
 }
-
-#endif // GPOS_DEBUG
 
 // EOF
 

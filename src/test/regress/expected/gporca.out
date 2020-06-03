@@ -12048,3 +12048,54 @@ select enable_xform('CXformInnerJoin2HashJoin');
  CXformInnerJoin2HashJoin is enabled
 (1 row)
 
+drop table if exists t55;
+NOTICE:  table "t55" does not exist, skipping
+drop table if exists tp;
+NOTICE:  table "tp" does not exist, skipping
+create table t55 (c int, lid int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into t55 select i, i from generate_series(1, 1000) i;
+set optimizer_join_order = query;
+explain verbose
+CREATE TABLE TP AS
+WITH META AS (SELECT '2020-01-01' AS VALID_DT, '99' AS LOAD_ID)
+SELECT DISTINCT L1.c, L1.lid
+FROM t55 L1 CROSS JOIN META
+WHERE L1.lid = int4in(unknownout(meta.load_id));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
+ HashAggregate  (cost=15.68..15.78 rows=4 width=8)
+   Output: l1.c, l1.lid
+   Group Key: l1.c, l1.lid
+   ->  Hash Join  (cost=0.02..15.63 rows=4 width=8)
+         Output: l1.c, l1.lid
+         Hash Cond: (l1.lid = int4in(unknownout(meta.load_id)))
+         ->  Seq Scan on orca.t55 l1  (cost=0.00..13.00 rows=334 width=8)
+               Output: l1.c, l1.lid
+         ->  Hash  (cost=0.01..0.01 rows=1 width=32)
+               Output: meta.load_id
+               ->  Subquery Scan on meta  (cost=0.00..0.01 rows=1 width=32)
+                     Output: meta.load_id
+                     ->  Result  (cost=0.00..0.01 rows=1 width=64)
+                           Output: '2020-01-01', '99'
+ Optimizer: Postgres query optimizer
+ Settings: optimizer=off, optimizer_cte_inlining_bound=1000, optimizer_join_order=query, optimizer_metadata_caching=on
+(16 rows)
+
+CREATE TABLE TP AS
+WITH META AS (SELECT '2020-01-01' AS VALID_DT, '99' AS LOAD_ID)
+SELECT DISTINCT L1.c, L1.lid
+FROM t55 L1 CROSS JOIN META
+WHERE L1.lid = int4in(unknownout(meta.load_id));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+reset optimizer_join_order;
+SELECT * from tp;
+ c  | lid 
+----+-----
+ 99 |  99
+(1 row)
+

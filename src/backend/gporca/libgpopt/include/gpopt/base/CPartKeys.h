@@ -81,16 +81,13 @@ namespace gpopt
 			CPartKeys *PpartkeysRemap(CMemoryPool *mp, UlongToColRefMap *colref_mapping) const;
 
 			// print
-			IOstream &OsPrint(IOstream &) const;
+			virtual
+			IOstream &OsPrint(IOstream &os) const;
 
 			// copy array of part keys into given memory pool
 			static
 			CPartKeysArray *PdrgppartkeysCopy(CMemoryPool *mp, const CPartKeysArray *pdrgppartkeys);
 
-#ifdef GPOS_DEBUG
-			// debug print for interactive debugging sessions only
-			void DbgPrint() const;
-#endif // GPOS_DEBUG
 	}; // CPartKeys
 
 	// shorthand for printing

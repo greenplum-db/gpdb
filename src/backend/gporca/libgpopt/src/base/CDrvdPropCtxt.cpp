@@ -24,15 +24,6 @@ namespace gpopt {
 		return drvdpropctxt.OsPrint(os);
 	}
 
-#ifdef GPOS_DEBUG
-	void
-	CDrvdPropCtxt::DbgPrint() const
-	{
-		CAutoTrace at(m_mp);
-		(void) this->OsPrint(at.Os());
-	}
-#endif // GPOS_DEBUG
-
 }
 
 // EOF

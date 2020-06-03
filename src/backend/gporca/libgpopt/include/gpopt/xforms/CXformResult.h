@@ -63,7 +63,8 @@ namespace gpopt
 			CExpression *PexprNext();
 
 			// print function
-			IOstream &OsPrint(IOstream &) const;
+			virtual
+			IOstream &OsPrint(IOstream &os) const;
 
 	}; // class CXformResult
 

@@ -20,6 +20,7 @@
 #include "postgres.h"
 
 #include "access/amapi.h"
+#include "access/appendonlywriter.h"
 #include "access/multixact.h"
 #include "access/relscan.h"
 #include "access/rewriteheap.h"
@@ -65,10 +66,14 @@
 #include "catalog/aoblkdir.h"
 #include "catalog/aovisimap.h"
 #include "catalog/oid_dispatch.h"
+#include "cdb/cdbappendonlyam.h"
+#include "cdb/cdbaocsam.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdboidsync.h"
 #include "libpq/pqformat.h"
+
+#define IS_BTREE(r) ((r)->rd_rel->relam == BTREE_AM_OID)
 
 /*
  * This struct is used to pass around the information on tables to be
@@ -84,6 +89,9 @@ typedef struct
 
 static void rebuild_relation(Relation OldHeap, Oid indexOid, bool verbose);
 static void copy_heap_data(Oid OIDNewHeap, Oid OIDOldHeap, Oid OIDOldIndex,
+			   bool verbose, bool *pSwapToastByContent,
+			   TransactionId *pFreezeXid, MultiXactId *pCutoffMulti);
+static void copy_ao_data(Oid OIDNewHeap, Oid OIDOldHeap, Oid OIDOldIndex,
 			   bool verbose, bool *pSwapToastByContent,
 			   TransactionId *pFreezeXid, MultiXactId *pCutoffMulti);
 static List *get_tables_to_cluster(MemoryContext cluster_context);
@@ -323,18 +331,27 @@ cluster_rel(Oid tableOid, Oid indexOid, bool recheck, bool verbose, bool printEr
 		return false;
 
 	/*
-	 * We don't support cluster on an AO table. We print out a warning/error to
-	 * the user, and simply return.
+	 * We don't support cluster on an AO table that cannot be sorted.
+	 * We print out a warning/error to the user, and simply return.
 	 */
 	if (RelationIsAppendOptimized(OldHeap))
 	{
-		ereport((printError ? ERROR : WARNING),
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("cannot cluster append-only table \"%s\": not supported",
-						RelationGetRelationName(OldHeap))));
-		
-		relation_close(OldHeap, AccessExclusiveLock);
-		return false;
+		bool isBtree = false;
+		Assert(indexOid != InvalidOid);
+		Relation oldIndex = index_open(indexOid, AccessExclusiveLock);
+		isBtree = IS_BTREE(oldIndex);
+		index_close(oldIndex, NoLock);
+
+		if (!isBtree)
+		{
+			ereport((printError ? ERROR : WARNING),
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					errmsg("cannot cluster append-optimized table \"%s\"", RelationGetRelationName(OldHeap)),
+					errdetail("Append-optimized tables can only be clustered against a B-tree index")));
+
+			relation_close(OldHeap, AccessExclusiveLock);
+			return false;
+		}
 	}
 	
 	/*
@@ -626,6 +643,7 @@ rebuild_relation(Relation OldHeap, Oid indexOid, bool verbose)
 	bool		swap_toast_by_content;
 	TransactionId frozenXid;
 	MultiXactId cutoffMulti;
+	bool		is_ao = RelationIsAppendOptimized(OldHeap);
 
 	/* Mark the correct index as clustered */
 	if (OidIsValid(indexOid))
@@ -645,9 +663,13 @@ rebuild_relation(Relation OldHeap, Oid indexOid, bool verbose)
 							   true /* createAoBlockDirectory */,
 							   false);
 
-	/* Copy the heap data into the new table in the desired order */
-	copy_heap_data(OIDNewHeap, tableOid, indexOid, verbose,
-				   &swap_toast_by_content, &frozenXid, &cutoffMulti);
+	if (is_ao)
+		copy_ao_data(OIDNewHeap, tableOid, indexOid, verbose,
+					&swap_toast_by_content, &frozenXid, &cutoffMulti);
+	else
+		/* Copy the heap data into the new table in the desired order */
+		copy_heap_data(OIDNewHeap, tableOid, indexOid, verbose,
+					   &swap_toast_by_content, &frozenXid, &cutoffMulti);
 
 	/*
 	 * Swap the physical files of the target and transient tables, then
@@ -655,7 +677,7 @@ rebuild_relation(Relation OldHeap, Oid indexOid, bool verbose)
 	 */
 	finish_heap_swap(tableOid, OIDNewHeap, is_system_catalog,
 					 swap_toast_by_content,
-					 true /* swap_stats */,
+					 !is_ao /* swap_stats */,
 					 false, true,
 					 frozenXid, cutoffMulti,
 					 relpersistence);
@@ -878,6 +900,9 @@ copy_heap_data(Oid OIDNewHeap, Oid OIDOldHeap, Oid OIDOldIndex, bool verbose,
 		OldIndex = index_open(OIDOldIndex, AccessExclusiveLock);
 	else
 		OldIndex = NULL;
+
+	/* AO storges should use ao_copy_data() instead */
+	Assert(!RelationIsAppendOptimized(OldHeap));
 
 	/*
 	 * Their tuple descriptors should be exactly alike, but here we only need
@@ -1244,6 +1269,364 @@ copy_heap_data(Oid OIDNewHeap, Oid OIDOldHeap, Oid OIDOldIndex, bool verbose,
 }
 
 /*
+ * Do the physical copying of AO-table data.
+ *
+ * This function is similar to copy_heap_data(), shares some code with
+ * copy_heap_data() and was designed in a way to reduce complexity of
+ * compatilibity with PG.  Probably, we could further split it into AO and
+ * AOCS, if storges will have different clusterisation logic.
+ *
+ * Curently AO storage lacks cost model for IndexScan, thus IndexScan is not
+ * functional. In future, probably, this will be fixed and CLUSTER command
+ * will support this. Though, random IO over AO on TID stream can be
+ * impractical anyway.  Here we are sorting data on on the lines of heap
+ * tables, build a tuple sort state and sort the entire AO table using the
+ * index key, rewrite the table, one tuple at a time, in order as returned by
+ * tuple sort state.
+ */
+static void
+copy_ao_data(Oid OIDNewRel, Oid OIDOldRel, Oid OIDOldIndex, bool verbose,
+			   bool *pSwapToastByContent, TransactionId *pFreezeXid,
+			   MultiXactId *pCutoffMulti)
+{
+	Relation	NewRel,
+				OldRel,
+				OldIndex;
+	Relation	relRelation;
+	HeapTuple	reltup;
+	Form_pg_class	relform;
+	TupleDesc	oldTupDesc;
+	TupleDesc	newTupDesc;
+	int			natts;
+	Datum	   *values;
+	bool	   *isnull;
+	Tuplesortstate *tuplesort;
+	double		num_tuples = 0;
+	BlockNumber num_pages;
+	int			elevel = verbose ? INFO : DEBUG2;
+	PGRUsage	ru0;
+
+	bool					is_ao_rows;
+	bool					is_ao_cols;
+	AOTupleId				aoTupleId;
+	AppendOnlyInsertDesc	aoInsertDesc = NULL;
+	MemTupleBinding			*mt_bind = NULL;
+	AOCSInsertDesc			idesc = NULL;
+	bool				   *proj = NULL;
+	int						write_seg_no;
+	MemTuple				mtuple = NULL;
+
+	pg_rusage_init(&ru0);
+
+	/*
+	 * Open the relations we need.
+	 */
+	NewRel = heap_open(OIDNewRel, AccessExclusiveLock);
+	OldRel = heap_open(OIDOldRel, AccessExclusiveLock);
+	is_ao_rows = RelationIsAoRows(OldRel);
+	is_ao_cols = RelationIsAoCols(OldRel);
+	Assert(is_ao_cols || is_ao_rows);
+	/*
+	 * Cluster is supported on append-optimized tables only when a btree index
+	 * is defined.
+	 */
+	Assert (OidIsValid(OIDOldIndex));
+	OldIndex = index_open(OIDOldIndex, AccessExclusiveLock);
+
+	/*
+	 * Their tuple descriptors should be exactly alike, but here we only need
+	 * assume that they have the same number of columns.
+	 */
+	oldTupDesc = RelationGetDescr(OldRel);
+	newTupDesc = RelationGetDescr(NewRel);
+	Assert(newTupDesc->natts == oldTupDesc->natts);
+
+	/* Preallocate values/isnull arrays to deform heap tuples after sort */
+	natts = newTupDesc->natts;
+	values = (Datum *) palloc(natts * sizeof(Datum));
+	isnull = (bool *) palloc(natts * sizeof(bool));
+
+	/*
+	 * If the OldRel has a toast table, get lock on the toast table to keep
+	 * it from being vacuumed.  This is needed because autovacuum processes
+	 * toast tables independently of their main tables, with no lock on the
+	 * latter.  If an autovacuum were to start on the toast table after we
+	 * compute our OldestXmin below, it would use a later OldestXmin, and then
+	 * possibly remove as DEAD toast tuples belonging to main tuples we think
+	 * are only RECENTLY_DEAD.  Then we'd fail while trying to copy those
+	 * tuples.
+	 *
+	 * We don't need to open the toast relation here, just lock it.  The lock
+	 * will be held till end of transaction.
+	 */
+	if (OldRel->rd_rel->reltoastrelid)
+		LockRelationOid(OldRel->rd_rel->reltoastrelid, AccessExclusiveLock);
+
+	/* use_wal off requires smgr_targblock be initially invalid */
+	Assert(RelationGetTargetBlock(NewRel) == InvalidBlockNumber);
+
+	/*
+	 * If both tables have TOAST tables, perform toast swap by content.  It is
+	 * possible that the old table has a toast table but the new one doesn't,
+	 * if toastable columns have been dropped.  In that case we have to do
+	 * swap by links.  This is okay because swap by content is only essential
+	 * for system catalogs, and we don't support schema changes for them.
+	 */
+	if (OldRel->rd_rel->reltoastrelid && NewRel->rd_rel->reltoastrelid)
+	{
+		*pSwapToastByContent = true;
+
+		/*
+		 * When doing swap by content, any toast pointers written into NewRel
+		 * must use the old toast table's OID, because that's where the toast
+		 * data will eventually be found.  Set this up by setting rd_toastoid.
+		 * This also tells toast_save_datum() to preserve the toast value
+		 * OIDs, which we want so as not to invalidate toast pointers in
+		 * system catalog caches, and to avoid making multiple copies of a
+		 * single toast value.
+		 *
+		 * Note that we must hold NewRel open until we are done writing data,
+		 * since the relcache will not guarantee to remember this setting once
+		 * the relation is closed.  Also, this technique depends on the fact
+		 * that no one will try to read from the NewRel until after we've
+		 * finished writing it and swapping the rels --- otherwise they could
+		 * follow the toast pointers to the wrong place.  (It would actually
+		 * work for values copied over from the old toast table, but not for
+		 * any values that we toast which were previously not toasted.)
+		 */
+		NewRel->rd_toastoid = OldRel->rd_rel->reltoastrelid;
+	}
+	else
+		*pSwapToastByContent = false;
+
+	/*
+	 * Append-optimized tables do not have MVCC information in tuples,
+	 * relfrozenxid must be invalid.  See should_have_valid_relfrozenxid.
+	 */
+	Assert(OldRel->rd_rel->relfrozenxid == InvalidTransactionId);
+	Assert(OldRel->rd_rel->relminmxid == InvalidTransactionId);
+
+	/* return selected values to caller */
+	*pFreezeXid = InvalidTransactionId;
+	*pCutoffMulti = InvalidTransactionId;
+
+	tuplesort = tuplesort_begin_cluster(oldTupDesc, OldIndex,
+										maintenance_work_mem, false);
+
+
+	/* Log what we're doing */
+	ereport(elevel,
+			(errmsg("clustering \"%s.%s\" using sequential scan and sort",
+					get_namespace_name(RelationGetNamespace(OldRel)),
+					RelationGetRelationName(OldRel))));
+
+	/* Scan through old table to convert data into heap tuples for sorting */
+	if (is_ao_rows)
+	{
+		TupleTableSlot	*slot = MakeSingleTupleTableSlot(oldTupDesc);
+		AppendOnlyScanDesc aoscandesc = appendonly_beginscan(OldRel, GetActiveSnapshot(),
+											GetActiveSnapshot(), 0, NULL);
+		mt_bind = create_memtuple_binding(oldTupDesc);
+
+		while (appendonly_getnext(aoscandesc, ForwardScanDirection, slot))
+		{
+			Oid			tupleOid = InvalidOid;
+			Datum	   *slot_values;
+			bool	   *slot_isnull;
+			HeapTuple   tuple;
+
+			CHECK_FOR_INTERRUPTS();
+
+			/* Extract all the values of the tuple */
+			slot_getallattrs(slot);
+			slot_values = slot_get_values(slot);
+			slot_isnull = slot_get_isnull(slot);
+			tuple = heap_form_tuple(oldTupDesc, slot_values, slot_isnull);
+
+			if (mtbind_has_oid(mt_bind))
+			{
+				/* Copy OID */
+				tupleOid = MemTupleGetOid(TupGetMemTuple(slot), mt_bind);
+				HeapTupleSetOid(tuple, tupleOid);
+			}
+
+			num_tuples += 1;
+			tuplesort_putheaptuple(tuplesort, tuple);
+			heap_freetuple(tuple);
+		}
+
+		ExecDropSingleTupleTableSlot(slot);
+
+		appendonly_endscan(aoscandesc);
+	}
+	else
+	{
+		AOCSScanDesc scan = NULL;
+		TupleTableSlot *slot = MakeSingleTupleTableSlot(oldTupDesc);
+
+		proj = palloc(sizeof(bool) * natts);
+		memset(proj, true, natts);
+
+		scan = aocs_beginscan(OldRel, GetActiveSnapshot(),
+								GetActiveSnapshot(),
+								NULL /* relationTupleDesc */, proj);
+
+		while (aocs_getnext(scan, ForwardScanDirection, slot))
+		{
+			Datum	   *slot_values;
+			bool	   *slot_isnull;
+			HeapTuple   tuple;
+			CHECK_FOR_INTERRUPTS();
+
+			slot_getallattrs(slot);
+			slot_values = slot_get_values(slot);
+			slot_isnull = slot_get_isnull(slot);
+
+			tuple = heap_form_tuple(oldTupDesc, slot_values, slot_isnull);
+
+			num_tuples += 1;
+			tuplesort_putheaptuple(tuplesort, tuple);
+			heap_freetuple(tuple);
+		}
+
+		ExecDropSingleTupleTableSlot(slot);
+		aocs_endscan(scan);
+	}
+
+
+	/*
+	 * Сomplete the sort, then read out all tuples
+	 * from the tuplestore and write them to the new relation.
+	 */
+
+	tuplesort_performsort(tuplesort);
+
+	write_seg_no = ChooseSegnoForWrite(NewRel);
+
+	if (is_ao_rows)
+	{
+		aoInsertDesc = appendonly_insert_init(NewRel, write_seg_no, false);
+	}
+	else
+	{
+		memset(proj, true, natts);
+		idesc = aocs_insert_init(NewRel, write_seg_no, false);
+	}
+
+	/* Insert sorted heap tuples into new storage */
+	for (;;)
+	{
+		HeapTuple	tuple;
+		uint32		prev_memtuple_len = 0;
+		bool		shouldfree;
+
+		CHECK_FOR_INTERRUPTS();
+
+		tuple = tuplesort_getheaptuple(tuplesort, true, &shouldfree);
+		if (tuple == NULL)
+			break;
+
+		if (is_ao_rows)
+		{
+			uint32		len;
+			uint32		null_save_len;
+			bool		has_nulls;
+			heap_deform_tuple(tuple, oldTupDesc, values, isnull);
+
+			len = compute_memtuple_size(mt_bind, values, isnull, &null_save_len, &has_nulls);
+			if (len > prev_memtuple_len)
+			{
+				/* Here we are trying to avoid reallocation of temp mtuple */
+				if (mtuple != NULL)
+					pfree(mtuple);
+				mtuple = palloc(len);
+				prev_memtuple_len = len;
+			}
+
+			memtuple_form_to(mt_bind, values, isnull, len, null_save_len, has_nulls,
+					 mtuple);
+
+			appendonly_insert(aoInsertDesc, mtuple, HeapTupleGetOid(tuple), &aoTupleId);
+		}
+		else
+		{
+			heap_deform_tuple(tuple, oldTupDesc, values, isnull);
+			aocs_insert_values(idesc, values, isnull, &aoTupleId);
+		}
+
+		if (shouldfree)
+			heap_freetuple(tuple);
+	}
+
+	tuplesort_end(tuplesort);
+
+	/* Finish and deallocate insertion */
+	if (is_ao_rows)
+	{
+		appendonly_insert_finish(aoInsertDesc);
+	}
+	else if (is_ao_cols)
+	{
+		aocs_insert_finish(idesc);
+		pfree(proj);
+	}
+
+	/* Reset rd_toastoid just to be tidy --- it shouldn't be looked at again */
+	NewRel->rd_toastoid = InvalidOid;
+
+	num_pages = AcquireNumberOfBlocks(NewRel);
+
+	/* Log what we did */
+	ereport(elevel,
+			(errmsg("\"%s\": found %.0f row versions in %u pages",
+					RelationGetRelationName(OldRel),
+					num_tuples,
+					AcquireNumberOfBlocks(OldRel)),
+			 errdetail("%s.",
+					   pg_rusage_show(&ru0))));
+
+	/* Clean up */
+	pfree(values);
+	pfree(isnull);
+
+	if (mtuple != NULL)
+		pfree(mtuple);
+
+	index_close(OldIndex, NoLock);
+	heap_close(OldRel, NoLock);
+	heap_close(NewRel, NoLock);
+
+	/* Update pg_class to reflect the correct values of pages and tuples. */
+	relRelation = heap_open(RelationRelationId, RowExclusiveLock);
+
+	reltup = SearchSysCacheCopy1(RELOID, ObjectIdGetDatum(OIDNewRel));
+	if (!HeapTupleIsValid(reltup))
+		elog(ERROR, "cache lookup failed for relation %u", OIDNewRel);
+	relform = (Form_pg_class) GETSTRUCT(reltup);
+
+	relform->relpages = num_pages;
+	relform->reltuples = num_tuples;
+
+	/* Don't update the stats for pg_class.  See swap_relation_files. */
+	if (OIDOldRel != RelationRelationId)
+	{
+		simple_heap_update(relRelation, &reltup->t_self, reltup);
+
+		/* keep the catalog indexes up to date */
+		CatalogUpdateIndexes(relRelation, reltup);
+	}
+	else
+		CacheInvalidateRelcacheByTuple(reltup);
+
+	/* Clean up. */
+	heap_freetuple(reltup);
+	heap_close(relRelation, RowExclusiveLock);
+
+	/* Make the update visible */
+	CommandCounterIncrement();
+}
+
+/*
  * Change dependency links for objects that are being swapped.
  *
  * 'tabletype' can be "TOAST table", "aoseg", "aoblkdir".
@@ -1504,10 +1887,28 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 	 */
 	if (TransactionIdIsValid(relform1->relfrozenxid))
 	{
-		Assert(TransactionIdIsNormal(frozenXid));
-		relform1->relfrozenxid = frozenXid;
-		Assert(MultiXactIdIsValid(cutoffMulti));
-		relform1->relminmxid = cutoffMulti;
+		/*
+		 * The frozenXid can be InvalidTransactionId.  In which case, leave
+		 * the original relfrozenxid unchanged.  This happens for cluster
+		 * operation on append-optimized tables.
+		 *
+		 * This function is called recursively.  First call is to swap
+		 * relfiles of the append-optimized tables, with frozenXid as
+		 * InvalidTransactionId.  And then another call for the toast tables,
+		 * if any.  Append-optimized tables do not have a valid relfrozenxid
+		 * in pg_class, however, their toast tables do.  As frozenXid is not
+		 * valid, we leave the toast table's relfrozenxid unchanged.
+		 * Alternatively, we can compute new relfrozenxid here by invoking
+		 * vacuum_set_xid_limits() but there is no harm in keeping things
+		 * simple.
+		 */
+		if (TransactionIdIsNormal(frozenXid))
+		{
+			relform1->relfrozenxid = frozenXid;
+			Assert(MultiXactIdIsValid(cutoffMulti));
+			relform1->relminmxid = cutoffMulti;
+		}
+
 		/*
 		 * Don't know partition parent or not here but passing false is perfect
 		 * for assertion, as valid relfrozenxid means it shouldn't be parent.
@@ -1563,6 +1964,16 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 			if (relform1->reltoastrelid && relform2->reltoastrelid)
 			{
 				/* Recursively swap the contents of the toast tables */
+#ifdef USE_ASSERT_CHECKING
+				/*
+				 * CLUSTER operation on append-optimized tables does not
+				 * compute freeze limit (frozenXid) because AO tables do not
+				 * have relfrozenxid.  The toast tables need to keep existing
+				 * relfrozenxid value unchanged in this case.
+				 */
+				if (!TransactionIdIsNormal(frozenXid))
+					Assert(isAO1 && isAO2);
+#endif
 				swap_relation_files(relform1->reltoastrelid,
 									relform2->reltoastrelid,
 									target_is_pg_class,

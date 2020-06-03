@@ -7568,19 +7568,19 @@ can_implement_dist_on_part(Relation rel, DistributedBy *dist)
 	i = 0;
 	foreach(lc, dist->keyCols)
 	{
-		IndexElem  *ielem = (IndexElem *) lfirst(lc);
+		DistributionKeyElem *dkelem = (DistributionKeyElem *) lfirst(lc);
 		AttrNumber	attnum;
 		HeapTuple	tuple;
 		bool		ok = false;
 
-		Assert(IsA(ielem, IndexElem));
+		Assert(IsA(dkelem, DistributionKeyElem));
 
-		tuple = SearchSysCacheAttName(RelationGetRelid(rel), ielem->name);
+		tuple = SearchSysCacheAttName(RelationGetRelid(rel), dkelem->name);
 		if (!HeapTupleIsValid(tuple))
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_COLUMN),
 					 errmsg("column \"%s\" of relation \"%s\" does not exist",
-							ielem->name,
+							dkelem->name,
 							RelationGetRelationName(rel))));
 
 		attnum = ((Form_pg_attribute) GETSTRUCT(tuple))->attnum;

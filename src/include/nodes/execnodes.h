@@ -2086,9 +2086,10 @@ typedef struct FunctionScanState
 	/* tuplestore info when function scan run as initplan */
 	bool		resultInTupleStore; /* function result stored in tuplestore */
 	struct Tuplestorestate *ts_state;	/* tuple store state */
+	int			initplanId;			/* initplan is for function execute on initplan */
 } FunctionScanState;
 
-extern void function_scan_create_bufname_prefix(char *p, int size);
+extern void function_scan_create_bufname_prefix(char *p, int size, int initplan_id);
 
 /* ----------------
  * TableFunctionState information

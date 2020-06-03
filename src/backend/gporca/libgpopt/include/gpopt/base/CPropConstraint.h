@@ -95,10 +95,8 @@ namespace gpopt
 			CExpression *PexprScalarMappedFromEquivCols(CMemoryPool *mp, CColRef *colref) const;
 
 			// print
-			IOstream &OsPrint(IOstream &) const;
-
-			// debug print
-			void DbgPrint() const;
+			virtual
+			IOstream &OsPrint(IOstream &os) const;
 
 	}; // class CPropConstraint
 

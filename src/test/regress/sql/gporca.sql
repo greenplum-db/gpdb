@@ -2426,6 +2426,31 @@ SELECT 1 FROM foo1, foo2 WHERE foo1.a = foo2.a AND foo2.c = 3 AND foo2.b IN (SEL
 
 reset optimizer_join_order;
 select enable_xform('CXformInnerJoin2HashJoin');
+
+drop table if exists t55;
+drop table if exists tp;
+
+create table t55 (c int, lid int);
+insert into t55 select i, i from generate_series(1, 1000) i;
+
+set optimizer_join_order = query;
+
+explain verbose
+CREATE TABLE TP AS
+WITH META AS (SELECT '2020-01-01' AS VALID_DT, '99' AS LOAD_ID)
+SELECT DISTINCT L1.c, L1.lid
+FROM t55 L1 CROSS JOIN META
+WHERE L1.lid = int4in(unknownout(meta.load_id));
+
+CREATE TABLE TP AS
+WITH META AS (SELECT '2020-01-01' AS VALID_DT, '99' AS LOAD_ID)
+SELECT DISTINCT L1.c, L1.lid
+FROM t55 L1 CROSS JOIN META
+WHERE L1.lid = int4in(unknownout(meta.load_id));
+
+reset optimizer_join_order;
+SELECT * from tp;
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore

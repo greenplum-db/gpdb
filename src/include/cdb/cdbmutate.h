@@ -20,21 +20,19 @@
 #include "nodes/relation.h"
 #include "optimizer/walkers.h"
 
-extern Motion *make_union_motion(Plan *lefttree, int numsegments);
+extern Motion *make_union_motion(Plan *lefttree);
 extern Motion *make_sorted_union_motion(PlannerInfo *root, Plan *lefttree, int numSortCols, AttrNumber *sortColIdx, Oid *sortOperators,
-										Oid *collations, bool *nullsFirst, int numsegments);
+										Oid *collations, bool *nullsFirst);
 extern Motion *make_hashed_motion(Plan *lefttree,
 								  List *hashExpr,
 								  List *hashOpfamilies,
-								  int numsegments);
+								  int numHashSegments);
 
-extern Motion *make_broadcast_motion(Plan *lefttree,
-									 int numsegments);
+extern Motion *make_broadcast_motion(Plan *lefttree);
 
 extern Plan *make_explicit_motion(PlannerInfo *root,
 								  Plan *lefttree,
-								  AttrNumber segidColIdx,
-								  int numsegments);
+								  AttrNumber segidColIdx);
 
 void 
 cdbmutate_warn_ctid_without_segid(struct PlannerInfo *root, struct RelOptInfo *rel);

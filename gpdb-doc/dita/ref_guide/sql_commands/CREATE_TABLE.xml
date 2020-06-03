@@ -764,8 +764,9 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE [IF NOT EXISTS]
             implementation.</p></li>
         <li>For append-optimized tables, <codeph>UPDATE</codeph> and <codeph>DELETE</codeph> are not
           allowed in a repeatable read or serializable transaction and will cause the transaction to
-          abort. <codeph>CLUSTER</codeph>, <codeph>DECLARE...FOR UPDATE</codeph>, and triggers are
-          not supported with append-optimized tables.</li>
+          abort. <codeph>DECLARE...FOR UPDATE</codeph>, and triggers are
+          not supported with append-optimized tables. <codeph>CLUSTER</codeph> on
+          append-optimized tables is only supported over B-tree indexes.</li>
         <li>To insert data into a partitioned table, you specify the root partitioned table, the
           table created with the <codeph>CREATE TABLE</codeph> command. You also can specify a leaf
           child table of the partitioned table in an <codeph>INSERT</codeph> command. An error is

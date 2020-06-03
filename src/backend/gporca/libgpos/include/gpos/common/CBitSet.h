@@ -148,7 +148,7 @@ namespace gpos
 			// disjoint
 			BOOL IsDisjoint(const CBitSet *) const;
 			
-		// hash value for set
+			// hash value for set
 			ULONG HashValue() const;
 			
 			// number of elements
@@ -158,6 +158,7 @@ namespace gpos
 			}
 			
 			// print function
+			virtual
 			IOstream &OsPrint(IOstream &os) const;
 
 #ifdef GPOS_DEBUG

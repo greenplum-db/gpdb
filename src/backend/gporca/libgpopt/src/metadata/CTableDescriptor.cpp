@@ -295,7 +295,6 @@ CTableDescriptor::Pcoldesc
 }
 
 
-#ifdef GPOS_DEBUG
 //---------------------------------------------------------------------------
 //	@function:
 //		CTableDescriptor::OsPrint
@@ -318,7 +317,6 @@ CTableDescriptor::OsPrint
 	return os;
 }
 
-#endif // GPOS_DEBUG
 
 //---------------------------------------------------------------------------
 //	@function:

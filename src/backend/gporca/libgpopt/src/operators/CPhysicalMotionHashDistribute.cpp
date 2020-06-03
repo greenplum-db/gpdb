@@ -218,7 +218,9 @@ CPhysicalMotionHashDistribute::OsPrint
 {
 	os << SzId() << " ";
 
-	return m_pdsHashed->OsPrint(os);
+	// choose a prefix big enough to avoid overlapping at least the simpler
+	// expression trees
+	return m_pdsHashed->OsPrintWithPrefix(os, "                                        ");
 }
 
 

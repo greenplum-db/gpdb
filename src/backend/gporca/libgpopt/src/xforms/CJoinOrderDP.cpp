@@ -1041,7 +1041,7 @@ CJoinOrderDP::OsPrint
 			os << "Cost: None" << std::endl;
 		}
 		os << "Best expression: " << std::endl;
-		bitset_to_expr_map_iterator.Value()->OsPrint(os, &pref);
+		bitset_to_expr_map_iterator.Value()->OsPrintExpression(os, &pref);
 	}
 
 	for (ULONG k=0; k<m_pdrgpexprTopKOrders->Size(); k++)
@@ -1057,7 +1057,7 @@ CJoinOrderDP::OsPrint
 		{
 			os << "Cost: None" << std::endl;
 		}
-		(*m_pdrgpexprTopKOrders)[k]->OsPrint(os, &pref);
+		(*m_pdrgpexprTopKOrders)[k]->OsPrintExpression(os, &pref);
 	}
 	os << std::endl;
 

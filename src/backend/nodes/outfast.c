@@ -537,6 +537,7 @@ _outMotion(StringInfo str, Motion *node)
 	WRITE_BOOL_ARRAY(nullsFirst, node->numSortCols);
 
 	WRITE_INT_FIELD(segidColIdx);
+	WRITE_INT_FIELD(numHashSegments);
 
 	_outPlanInfo(str, (Plan *) node);
 }
@@ -1633,6 +1634,9 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_CreateForeignTableStmt:
 				_outCreateForeignTableStmt(str, obj);
+				break;
+			case T_DistributionKeyElem:
+				_outDistributionKeyElem(str, obj);
 				break;
 			case T_ColumnReferenceStorageDirective:
 				_outColumnReferenceStorageDirective(str, obj);

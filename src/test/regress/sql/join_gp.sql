@@ -669,3 +669,32 @@ cross join lateral
   (select p from gist_tbl_github9733 where p <@ bb order by p <-> bb[0] limit 2) ss;
 
 reset enable_bitmapscan;
+
+---
+--- Test that GUC enable_hashagg takes effect for SEMI join
+---
+drop table if exists foo;
+drop table if exists bar;
+
+create table foo(a int) distributed by (a);
+create table bar(b int) distributed by (b);
+
+insert into foo select i from generate_series(1,10)i;
+insert into bar select i from generate_series(1,1000)i;
+
+analyze foo;
+analyze bar;
+
+set enable_hashagg to on;
+explain (costs off)
+select * from foo where exists (select 1 from bar where foo.a = bar.b);
+select * from foo where exists (select 1 from bar where foo.a = bar.b);
+
+set enable_hashagg to off;
+explain (costs off)
+select * from foo where exists (select 1 from bar where foo.a = bar.b);
+select * from foo where exists (select 1 from bar where foo.a = bar.b);
+
+reset enable_hashagg;
+drop table foo;
+drop table bar;

@@ -169,10 +169,6 @@ namespace gpmd
 			virtual
 			void Serialize(CXMLSerializer *xml_serializer, const CWStringConst *pstrAttribute) const = 0;
 
-			// debug print of the metadata id
-			virtual
-			IOstream &OsPrint(IOstream &os) const = 0;
-			
 			// safe validity function
 			static
 			BOOL IsValid(const IMDId *mdid)

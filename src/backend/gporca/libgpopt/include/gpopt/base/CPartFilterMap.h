@@ -185,12 +185,8 @@ namespace gpopt
 			void CopyPartFilterMap(CMemoryPool *mp, CPartFilterMap *ppfmSource);
 
 			// print function
+			virtual
 			IOstream &OsPrint(IOstream &os) const;
-
-#ifdef GPOS_DEBUG
-			// debug print for interactive debugging sessions only
-			void DbgPrint() const;
-#endif // GPOS_DEBUG
 
 	}; // class CPartFilterMap
 

@@ -834,7 +834,7 @@ CJobGroupExpressionOptimization::OsPrint
 	)
 {
 	os << "Group expr: ";
-	m_pgexpr->OsPrint(os, "");
+	m_pgexpr->OsPrint(os);
 	os << std::endl;
 
 	return m_jsm.OsHistory(os);

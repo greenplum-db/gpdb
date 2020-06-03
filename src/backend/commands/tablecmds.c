@@ -605,11 +605,13 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 		Node	   *node = lfirst(listptr);
 
 		if (IsA(node, CookedConstraint))
+		{
+			Assert(Gp_role == GP_ROLE_EXECUTE);
 			cooked_constraints = lappend(cooked_constraints, node);
+		}
 		else
 			schema = lappend(schema, node);
 	}
-	Assert(cooked_constraints == NIL || Gp_role == GP_ROLE_EXECUTE);
 	static char *validnsps[] = HEAP_RELOPT_NAMESPACES;
 	Oid			ofTypeId;
 	ObjectAddress address;
@@ -694,8 +696,7 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 		/* 
 		 * MPP-8238 : inconsistent tablespaces between segments and master 
 		 */
-		if (shouldDispatch)
-			stmt->tablespacename = get_tablespace_name(tablespaceId);
+		stmt->tablespacename = get_tablespace_name(tablespaceId);
 	}
 
 	/* Check permissions except when using database's default */
@@ -852,6 +853,44 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 	}
 
 	/*
+	 * Analyze AOCS attribute encoding clauses.
+	 *
+	 * This is done in dispatcher (and in utility mode). In QE, we receive
+	 * the already-processed options from the QD.
+	 */
+	if ((relkind == RELKIND_RELATION || relkind == RELKIND_MATVIEW) &&
+		Gp_role != GP_ROLE_EXECUTE)
+	{
+		bool		found_enc;
+
+		stmt->attr_encodings = transformAttributeEncoding(schema,
+														  stmt->attr_encodings,
+														  stmt->options,
+														  &found_enc);
+		if (!is_aocs(stmt->options))
+		{
+			/*
+			 * ENCODING options were specified, but the table is not
+			 * column-oriented.
+			 *
+			 * That's normally an error. But if we're creating a partition as
+			 * part of a CREATE TABLE ... PARTITION BY ... command, ignore the
+			 * ENCODING options instead. The parent table might be AOCS, while
+			 * some of the partitions are not, or vice versa, so options can
+			 * make sense for some parts of the partition hierarchy, even if
+			 * it doesn't for this partition.
+			 */
+			if (found_enc && !stmt->is_part_child && !stmt->is_part_parent)
+			{
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("ENCODING clause only supported with column oriented tables")));
+			}
+			stmt->attr_encodings = NIL;
+		}
+	}
+
+	/*
 	 * In executor mode, we received all the defaults and constraints
 	 * in pre-cooked form from the QD, so forget about the lists we
 	 * constructed just above, and use the old_constraints we received
@@ -860,7 +899,14 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 	if (Gp_role != GP_ROLE_EXECUTE)
 		cooked_constraints = list_concat(cookedDefaults, old_constraints);
 
-	if (shouldDispatch)
+	/*
+	 * Store the deduced options back in the CreateStmt, for later dispatch.
+	 *
+	 * NOTE: We do this even if !shouldDispatch, because it means that the
+	 * caller will dispatch the statement later, not that we won't need to
+	 * dispatch at all.
+	 */
+	if (Gp_role == GP_ROLE_DISPATCH)
 	{
 		Relation		pg_class_desc;
 		Relation		pg_type_desc;
@@ -874,8 +920,6 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 		pg_type_desc = heap_open(TypeRelationId, RowExclusiveLock);
 
 		LockRelationOid(DependRelationId, RowExclusiveLock);
-
-		cdb_sync_oid_to_segments();
 
 		heap_close(pg_class_desc, NoLock);  /* gonna update, so don't unlock */
 
@@ -895,11 +939,9 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 	{
 		Assert(stmt->ownerid != InvalidOid);
 	}
-	else
-	{
-		if (!OidIsValid(stmt->ownerid))
-			stmt->ownerid = ownerId;
-	}
+
+	if (shouldDispatch)
+		cdb_sync_oid_to_segments();
 
 	/* MPP-8405: disallow OIDS on partitioned tables */
 	if (descriptor->tdhasoid && IsNormalProcessingMode() && Gp_role == GP_ROLE_DISPATCH)
@@ -2093,13 +2135,6 @@ MergeAttributes(List *schema, List *supers, char relpersistence,
 			ereport(ERROR,
 					(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 					 errmsg("cannot inherit from temporary relation \"%s\"",
-							parent->relname)));
-
-		/* Reject if parent is CO for non-partitioned table */
-		if (RelationIsAoCols(relation) && !is_partition)
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("cannot inherit relation \"%s\" as it is column oriented",
 							parent->relname)));
 
 		/* If existing rel is temp, it must belong to this session */
@@ -12744,14 +12779,6 @@ ATExecClusterOn(Relation rel, const char *indexName, LOCKMODE lockmode)
 	Oid			indexOid;
 	ObjectAddress address;
 
-	if (RelationIsAppendOptimized(rel))
-	{
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("cannot cluster append-only table \"%s\": not supported",
-						RelationGetRelationName(rel))));
-	}
-
 	indexOid = get_relname_relid(indexName, rel->rd_rel->relnamespace);
 
 	if (!OidIsValid(indexOid))
@@ -12759,6 +12786,21 @@ ATExecClusterOn(Relation rel, const char *indexName, LOCKMODE lockmode)
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
 				 errmsg("index \"%s\" for table \"%s\" does not exist",
 						indexName, RelationGetRelationName(rel))));
+
+	if (RelationIsAppendOptimized(rel))
+	{
+		bool isBtree = false;
+		Relation oldIndex = index_open(indexOid, AccessExclusiveLock);
+		isBtree = oldIndex->rd_rel->relam == BTREE_AM_OID;
+		index_close(oldIndex, NoLock);
+
+		if (!isBtree)
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					errmsg("cannot cluster append-optimized table \"%s\"", RelationGetRelationName(rel)),
+					errdetail("Append-optimized tables can only be clustered against a B-tree index")));
+	}
+
 
 	/* Check index is valid to cluster on */
 	check_index_is_clusterable(rel, indexOid, false, lockmode);
@@ -15646,8 +15688,8 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 			{
 				foreach(lc, ldistro->keyCols)
 				{
-					IndexElem  *ielem = (IndexElem *) lfirst(lc);
-					char	   *colName = ielem->name;
+					DistributionKeyElem *dkelem = (DistributionKeyElem *) lfirst(lc);
+					char	   *colName = dkelem->name;
 					HeapTuple	tuple;
 					AttrNumber	attnum;
 					Form_pg_attribute attform;
@@ -15674,7 +15716,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 					/*
 					 * Look up the opclass, like we do in for CREATE TABLE.
 					 */
-					opclass = cdb_get_opclass_for_column_def(ielem->opclass, attform->atttypid);
+					opclass = cdb_get_opclass_for_column_def(dkelem->opclass, attform->atttypid);
 					policykeys = lappend_int(policykeys, attnum);
 					policyopclasses = lappend_oid(policyopclasses, opclass);
 
@@ -15718,11 +15760,11 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 						initStringInfo(&buf);
 						foreach(lc, ldistro->keyCols)
 						{
-							IndexElem *ielem = (IndexElem *) lfirst(lc);
+							DistributionKeyElem *dkelem = (DistributionKeyElem *) lfirst(lc);
 
 							if (buf.len > 0)
 								appendStringInfo(&buf, ", ");
-							appendStringInfoString(&buf, ielem->name);
+							appendStringInfoString(&buf, dkelem->name);
 						}
 						ereport(WARNING,
 							(errcode(ERRCODE_DUPLICATE_OBJECT),
@@ -17917,7 +17959,7 @@ make_distributedby_for_rel(Relation rel)
 			int			attno = policy->attrs[i];
 			Oid			opclassoid = policy->opclasses[i];
 			char	   *attname = pstrdup(NameStr(tupdesc->attrs[attno - 1]->attname));
-			IndexElem  *ielem;
+			DistributionKeyElem *dkelem;
 			HeapTuple	ht_opc;
 			Form_pg_opclass opcrec;
 			char	   *opcname;
@@ -17930,11 +17972,12 @@ make_distributedby_for_rel(Relation rel)
 			nspname = get_namespace_name(opcrec->opcnamespace);
 			opcname = pstrdup(NameStr(opcrec->opcname));
 
-			ielem = makeNode(IndexElem);
-			ielem->name = attname;
-			ielem->opclass = list_make2(makeString(nspname), makeString(opcname));
+			dkelem = makeNode(DistributionKeyElem);
+			dkelem->name = attname;
+			dkelem->opclass = list_make2(makeString(nspname), makeString(opcname));
+			dkelem->location = -1;
 
-			keys = lappend(keys, ielem);
+			keys = lappend(keys, dkelem);
 
 			ReleaseSysCache(ht_opc);
 		}

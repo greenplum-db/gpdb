@@ -479,16 +479,79 @@ ERROR:  compresslevel=19 is out of range for zlib (should be in the range 1 to 9
 create table t1 (i int encoding (compresstype=zlib, ahhhh=boooooo))
 with (appendonly=true, orientation=column);
 ERROR:  unrecognized parameter "ahhhh"
--- Inheritance: check that we don't support inheritance on tables using
--- column compression
-create table ccddlparent (i int encoding (compresstype=zlib))
+-- Invalid column references in COLUMN ENCODING clause
+create table t1 (i text,
+                 column non_existent encoding (compresstype=zlib))
+with (appendonly=true, orientation=column);
+ERROR:  column "non_existent" does not exist
+-- Conflicting column references for the same column
+create table t1 (dupe text,
+                 column dupe encoding (compresstype=zlib),
+		 column dupe encoding (compresstype=zlib))
+with (appendonly=true, orientation=column);
+ERROR:  column "dupe" referenced in more than one COLUMN ENCODING clause
+-- Inheritance. The ENCODING options are not inherited from the parent.
+create table ccddlparent (parentcol int encoding (compresstype=zlib))
 with (appendonly = true, orientation = column);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'parentcol' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-create table ccddlchild (j int encoding (compresstype=zlib))
+create table ccddlchild (childcol int encoding (compresstype=zlib))
 inherits(ccddlparent) with (appendonly = true, orientation = column);
-ERROR:  INHERITS clause cannot be used with column oriented tables
+NOTICE:  table has parent, setting distribution columns to match parent table
+-- but you can specify it explicitly
+create table ccddlchild2 (childcol int,
+			  parentcol int encoding (compresstype=zlib))
+inherits(ccddlparent) with (appendonly = true, orientation = column);
+NOTICE:  table has parent, setting distribution columns to match parent table
+NOTICE:  moving and merging column "parentcol" with inherited definition
+DETAIL:  User-specified column moved to the position of the inherited column.
+execute ccddlcheck;
+   relname   | attnum |                     attoptions                      
+-------------+--------+-----------------------------------------------------
+ ccddlparent |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddlchild  |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddlchild  |      2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddlchild2 |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddlchild2 |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
+(5 rows)
+
 drop table ccddlparent cascade;
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to append only columnar table ccddlchild
+drop cascades to append only columnar table ccddlchild2
+-- Multiple inheritance. Not particularly interesting because the
+-- encoding options are not copied from any parent, but let's test
+-- it anyway.
+create table ccddlparent1 (parentcol1 int encoding (compresstype=zlib),
+                           parentcol2 int)
+with (appendonly = true, orientation = column);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'parentcol1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table ccddlparent2 (parentcol1 int,
+                           parentcol2 int encoding (compresstype=zlib))
+with (appendonly = true, orientation = column);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'parentcol1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table ccddlchild (childcol int)
+inherits(ccddlparent1, ccddlparent2) with (appendonly = true, orientation = column);
+NOTICE:  table has parent, setting distribution columns to match parent table
+NOTICE:  merging multiple inherited definitions of column "parentcol1"
+NOTICE:  merging multiple inherited definitions of column "parentcol2"
+execute ccddlcheck;
+   relname    | attnum |                     attoptions                      
+--------------+--------+-----------------------------------------------------
+ ccddlparent1 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddlparent1 |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddlparent2 |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddlparent2 |      2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddlchild   |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddlchild   |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddlchild   |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
+(7 rows)
+
+drop table ccddlparent1 cascade;
+NOTICE:  drop cascades to append only columnar table ccddlchild
+drop table ccddlparent2 cascade;
 -- Conflict between default and with, in the LIKE case
 create table ccddl (i int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
@@ -1680,7 +1743,9 @@ NOTICE:  CREATE TABLE will create partition "a_1_prt_p1" for table "a"
 ERROR:  partition specific ENCODING clause not supported in SUBPARTITION TEMPLATE
 LINE 3:       subpartition template(start(1) end(10) default column ...
                                     ^
--- partition level mention of column encoding but the table isn't heap oriented
+-- Partition level mention of column encoding but the table is not column
+-- oriented. This used to throw an error, but we're more lenient now. The
+-- ENCODING clause is simply ignored.
 CREATE TABLE ccddl
 (a1 int,a2 char(5),a3 text,a4 timestamp ,a5 date) 
 partition by range(a1) 
@@ -1692,7 +1757,12 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a1' a
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 NOTICE:  CREATE TABLE will create partition "ccddl_1_prt_1" for table "ccddl"
 NOTICE:  CREATE TABLE will create partition "ccddl_1_prt_2" for table "ccddl"
-ERROR:  ENCODING clause only supported with column oriented partitioned tables
+execute ccddlcheck;
+ relname | attnum | attoptions 
+---------+--------+------------
+(0 rows)
+
+drop table ccddl;
 -----------------------------------------------------------------------
 -- Type support
 -- Expect: success

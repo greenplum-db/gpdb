@@ -182,7 +182,7 @@ select distkey, distclass from gp_distribution_policy where localoid='bar'::regc
 
 drop table if exists foo;
 drop table if exists bar;
--- check for duplicate columns in DISTRIBUTED BY clause
+-- check for duplicate and non-existent columns in DISTRIBUTED BY clause
 create table foo (a int, b text) distributed by (b,B);
 ERROR:  duplicate column in DISTRIBUTED BY clause
 LINE 1: create table foo (a int, b text) distributed by (b,B);
@@ -192,9 +192,13 @@ ERROR:  duplicate column in DISTRIBUTED BY clause
 LINE 1: create table foo (a int, b int) distributed by (a,aA,A);
                                                              ^
 create table foo (a int, b int) distributed by (a,aA);
-ERROR:  column "aa" named in 'DISTRIBUTED BY' clause does not exist
+ERROR:  column "aa" named in DISTRIBUTED BY clause does not exist
+LINE 1: create table foo (a int, b int) distributed by (a,aA);
+                                                          ^
 create table foo (a int, b int) distributed by (b,a,aabb);
-ERROR:  column "aabb" named in 'DISTRIBUTED BY' clause does not exist
+ERROR:  column "aabb" named in DISTRIBUTED BY clause does not exist
+LINE 1: create table foo (a int, b int) distributed by (b,a,aabb);
+                                                            ^
 create table foo (a int, b int) distributed by (c,C);
 ERROR:  duplicate column in DISTRIBUTED BY clause
 LINE 1: create table foo (a int, b int) distributed by (c,C);
@@ -218,6 +222,10 @@ create table fooctas as select * from foo distributed by (i,i);
 ERROR:  duplicate column in DISTRIBUTED BY clause
 LINE 1: ...ate table fooctas as select * from foo distributed by (i,i);
                                                                     ^
+create table fooctas as select * from foo distributed by (i,nope);
+ERROR:  column "nope" named in DISTRIBUTED BY clause does not exist
+LINE 1: ... table fooctas as select * from foo distributed by (i,nope);
+                                                                 ^
 drop table foo;
 -- check if number of DISTRIBUTED BY clause exceed the limitation (1600)
 create table foo (

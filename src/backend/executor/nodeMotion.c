@@ -242,7 +242,7 @@ execMotionSender(MotionState *node)
 			done = true;
 		}
 		else if (motion->motionType == MOTIONTYPE_GATHER_SINGLE &&
-				 GpIdentity.segindex != (gp_session_id % node->numHashSegments))
+				 GpIdentity.segindex != (gp_session_id % node->numInputSegs))
 		{
 			/*
 			 * For explicit gather motion, receiver gets data from one
@@ -621,6 +621,7 @@ ExecInitMotion(Motion *node, EState *estate, int eflags)
 
 	Assert(node->motionID > 0);
 	Assert(node->motionID < sliceTable->numSlices);
+	AssertImply(node->motionType == MOTIONTYPE_HASH, node->numHashSegments > 0);
 
 	parentIndex = estate->currentSliceId;
 	estate->currentSliceId = node->motionID;
@@ -759,13 +760,15 @@ ExecInitMotion(Motion *node, EState *estate, int eflags)
 	}
 
 	motionstate->ps.ps_ProjInfo = NULL;
+	motionstate->numHashSegments = node->numHashSegments;
 
 	/* Set up motion send data structures */
-	motionstate->numHashSegments = recvSlice->planNumSegments;
 	if (motionstate->mstype == MOTIONSTATE_SEND && node->motionType == MOTIONTYPE_HASH)
 	{
 		int			nkeys;
 
+		Assert(node->numHashSegments > 0);
+		Assert(node->numHashSegments <= recvSlice->planNumSegments);
 		nkeys = list_length(node->hashExprs);
 
 		if (nkeys > 0)

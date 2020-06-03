@@ -118,15 +118,6 @@ namespace gpopt
 				ULONG ulOptReq
 				) = 0;
 
-			// print function
-			virtual
-			IOstream &OsPrint(IOstream &os) const = 0;
-
-#ifdef GPOS_DEBUG
-			// debug print for interactive debugging sessions only
-			void DbgPrint() const;
-#endif // GPOS_DEBUG
-
 	}; // class CReqdProp
 
 	// shorthand for printing

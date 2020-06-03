@@ -1422,7 +1422,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 				Assert(plan->lefttree);
 
 				motion_snd = list_length(es->currentSlice->segments);
-				motion_recv = (parentSlice == NULL ? 1 : list_length(parentSlice->segments));
+				motion_recv = parentSlice == NULL ? 1 : list_length(parentSlice->segments);
 
 				/* scale the number of rows by the number of segments sending data */
 				scaleFactor = motion_snd;
@@ -1450,6 +1450,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 						break;
 					default:
 						sname = "???";
+						motion_recv = -1;
 						break;
 				}
 
@@ -2101,6 +2102,15 @@ ExplainNode(PlanState *planstate, List *ancestors,
 									 pMotion->sortColIdx,
 									 "Merge Key",
 									 ancestors, es);
+				if (pMotion->motionType == MOTIONTYPE_HASH &&
+					pMotion->numHashSegments != motion_recv)
+				{
+					Assert(pMotion->numHashSegments < motion_recv);
+					appendStringInfoSpaces(es->str, es->indent * 2);
+					appendStringInfo(es->str,
+									 "Hash Module: %d\n",
+									 pMotion->numHashSegments);
+				}
 			}
 			break;
 		case T_AssertOp:

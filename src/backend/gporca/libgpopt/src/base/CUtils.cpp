@@ -129,6 +129,8 @@ CUtils::PrintMemo
 	str.Reset();
 }
 
+#endif // GPOS_DEBUG
+
 // helper function to print a column descriptor array
 IOstream &
 CUtils::OsPrintDrgPcoldesc
@@ -151,7 +153,6 @@ CUtils::OsPrintDrgPcoldesc
 	return os;
 }
 
-#endif // GPOS_DEBUG
 
 // generate a ScalarIdent expression
 CExpression *

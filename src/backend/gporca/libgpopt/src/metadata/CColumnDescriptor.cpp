@@ -62,7 +62,6 @@ CColumnDescriptor::CColumnDescriptor
 CColumnDescriptor::~CColumnDescriptor()
 {}
 
-#ifdef GPOS_DEBUG
 //---------------------------------------------------------------------------
 //	@function:
 //		CColumnDescriptor::OsPrint
@@ -81,7 +80,6 @@ CColumnDescriptor::OsPrint
 	return m_name.OsPrint(os);
 }
 
-#endif // GPOS_DEBUG
 
 // EOF
 

@@ -142,7 +142,7 @@ static bool test_raw_expression_coverage(Node *node, void *context);
 
 /* GPDB definitions follow */
 static int get_distkey_by_name(char *key, IntoClause *into, Query *qry, bool *found);
-static void setQryDistributionPolicy(IntoClause *into, Query *qry);
+static void setQryDistributionPolicy(ParseState *pstate, IntoClause *into, Query *qry);
 
 static Query *transformGroupedWindows(ParseState *pstate, Query *qry);
 static void init_grouped_window_context(grouped_window_ctx *ctx, Query *qry);
@@ -3680,7 +3680,7 @@ transformCreateTableAsStmt(ParseState *pstate, CreateTableAsStmt *stmt)
 	 * should enable the setQryDistributionPolicy function in binary upgrade mode.
 	 */
 	if (stmt->into->distributedBy && (Gp_role == GP_ROLE_DISPATCH || IsBinaryUpgrade))
-		setQryDistributionPolicy(stmt->into, (Query *)stmt->query);
+		setQryDistributionPolicy(pstate, stmt->into, (Query *) stmt->query);
 
 	return result;
 }
@@ -4079,7 +4079,7 @@ get_distkey_by_name(char *key, IntoClause *into, Query *qry, bool *found)
  * information available at that point (see cdbllize_adjust_top_path()).
  */
 static void
-setQryDistributionPolicy(IntoClause *into, Query *qry)
+setQryDistributionPolicy(ParseState *pstate, IntoClause *into, Query *qry)
 {
 	ListCell   *lc;
 	DistributedBy *dist;
@@ -4116,25 +4116,25 @@ setQryDistributionPolicy(IntoClause *into, Query *qry)
 
 		foreach(lc, dist->keyCols)
 		{
-			IndexElem  *ielem = (IndexElem *) lfirst(lc);
+			DistributionKeyElem  *dkelem = (DistributionKeyElem *) lfirst(lc);
 			bool		found = false;
 			int			keyindex;
 			Oid			keytype;
 			Oid			keyopclass;
 			TargetEntry *tle;
 
-			keyindex = get_distkey_by_name(ielem->name, into, qry, &found);
+			keyindex = get_distkey_by_name(dkelem->name, into, qry, &found);
 			if (!found)
 				ereport(ERROR,
 						(errcode(ERRCODE_UNDEFINED_COLUMN),
-						 errmsg("column \"%s\" named in DISTRIBUTED BY "
-								"clause does not exist",
-								ielem->name)));
+						 errmsg("column \"%s\" named in DISTRIBUTED BY clause does not exist",
+								dkelem->name),
+						 parser_errposition(pstate, dkelem->location)));
 
 			tle = list_nth(qry->targetList, keyindex - 1);
 
 			keytype = exprType((Node *) tle->expr);
-			keyopclass = cdb_get_opclass_for_column_def(ielem->opclass,
+			keyopclass = cdb_get_opclass_for_column_def(dkelem->opclass,
 														keytype);
 
 			policykeys = lappend_int(policykeys, keyindex);

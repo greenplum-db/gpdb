@@ -2421,7 +2421,7 @@ create_unique_rowid_path(PlannerInfo *root,
 	 * create_unique_path().
 	 */
 	all_btree = true;
-	all_hash = true;
+	all_hash = enable_hashagg;	/* don't consider hash if not enabled */
 
 	RowIdExpr *rowidexpr = makeNode(RowIdExpr);
 	rowidexpr->rowidexpr_id = rowidexpr_id;

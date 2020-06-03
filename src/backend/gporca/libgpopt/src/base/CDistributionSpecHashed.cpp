@@ -804,11 +804,36 @@ CDistributionSpecHashed::OsPrint
 	)
 	const
 {
+	return OsPrintWithPrefix(os, "");
+}
+
+IOstream &
+CDistributionSpecHashed::OsPrintWithPrefix
+	(
+	IOstream &os,
+	const char *prefix
+	)
+	const
+{
 	os << this->SzId() << ": [ ";
 	const ULONG length = m_pdrgpexpr->Size();
 	for (ULONG ul = 0; ul < length; ul++)
 	{
-		os << *((*m_pdrgpexpr)[ul]) << " ";
+		CExpression *hash_expr = (*m_pdrgpexpr)[ul];
+
+		if (!GPOS_FTRACE(EopttracePrintEquivDistrSpecs) &&
+			1 == length &&
+			COperator::EopScalarIdent == hash_expr->Pop()->Eopid())
+		{
+			// just print the scalar ident, without surrounding decoration
+			hash_expr->Pop()->OsPrint(os);
+		}
+		else
+		{
+			os << *(hash_expr);
+			// the expression added a newline, indent the following with the prefix
+			os << prefix;
+		}
 	}
 	if (m_fNullsColocated)
 	{
@@ -823,7 +848,7 @@ CDistributionSpecHashed::OsPrint
 	{
 		os <<  ", duplicate sensitive";
 	}
-	
+
 	if (!m_fSatisfiedBySingleton)
 	{
 		os << ", across-segments";
@@ -831,13 +856,15 @@ CDistributionSpecHashed::OsPrint
 
 	os <<  " ]";
 
-	if (NULL != m_pdshashedEquiv)
+	if (NULL != m_pdshashedEquiv  && GPOS_FTRACE(EopttracePrintEquivDistrSpecs))
 	{
 		os << ", equiv. dist: ";
 		m_pdshashedEquiv->OsPrint(os);
 	}
-	
-	if (NULL != m_equiv_hash_exprs && m_equiv_hash_exprs->Size() > 0)
+
+	if (NULL != m_equiv_hash_exprs &&
+		m_equiv_hash_exprs->Size() > 0 &&
+		GPOS_FTRACE(EopttracePrintEquivDistrSpecs))
 	{
 		os << "," << std::endl;
 		for (ULONG ul = 0; ul < m_equiv_hash_exprs->Size(); ul++)

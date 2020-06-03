@@ -94,10 +94,6 @@ namespace gpnaucrates
 			virtual
 			IDatum *MakeCopy(CMemoryPool *mp) const = 0;
 
-			// print function
-			virtual
-			IOstream &OsPrint(IOstream &os) const = 0;
-
 			// stats greater than
 			virtual
 			BOOL StatsAreGreaterThan

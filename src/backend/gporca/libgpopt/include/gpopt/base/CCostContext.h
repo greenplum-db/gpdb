@@ -313,12 +313,6 @@ namespace gpopt
 			virtual
 			IOstream &OsPrint(IOstream &os) const;
 
-#ifdef GPOS_DEBUG
-			// debug print; for interactive debugging sessions only
-			void DbgPrint() const;
-#endif
-
-
 	}; // class CCostContext
 
 }

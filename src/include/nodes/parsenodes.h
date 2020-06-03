@@ -758,6 +758,17 @@ typedef struct XmlSerialize
 	int			location;		/* token location, or -1 if unknown */
 } XmlSerialize;
 
+/*
+ * DISTRIBUTED BY (<col> [opcass] [, ...])
+ */
+typedef struct DistributionKeyElem
+{
+	NodeTag		type;
+	char	   *name;			/* name of attribute to index, or NULL */
+	List	   *opclass;		/* name of desired opclass; NIL = default */
+	int			location;		/* token location, or -1 if unknown */
+} DistributionKeyElem;
+
 
 /****************************************************************************
  *	Nodes for a Query tree

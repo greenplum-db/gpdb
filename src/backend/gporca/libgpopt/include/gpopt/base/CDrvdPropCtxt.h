@@ -96,14 +96,7 @@ namespace gpopt
 				return false;
 			}
 
-			// debug print for interactive debugging sessions only
-			void DbgPrint() const;
-
 #endif // GPOS_DEBUG
-
-			// print
-			virtual
-			IOstream &OsPrint(IOstream &os) const = 0;
 
 			// copy function
 			static
