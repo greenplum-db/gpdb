@@ -1063,7 +1063,7 @@ gpstart
   <topic id="moverg" xml:lang="en">
     <title>Moving a Query to a Different Resource Group</title>
     <body>
-      <p>A Greenplum Database user with the correct privileges can use the
+      <p>A user with Greenplum Database superuser privileges can run the
         <codeph>gp_toolkit.pg_resgroup_move_query()</codeph> function to move a
         running query from one resource group to another, without stopping the
         query. Use this function to expedite a long-running query by moving it to
