@@ -92,7 +92,7 @@ uninstall:
 NAME = regress
 OBJS = $(WIN32RES) regress.o
 
-OBJS += regress_gp.o partindex.o workfile_mgr_test.o
+OBJS += regress_gp.o partindex.o
 
 include $(top_srcdir)/src/Makefile.shlib
 

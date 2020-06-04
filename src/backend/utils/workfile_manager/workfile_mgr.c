@@ -109,6 +109,23 @@ Datum gp_workfile_mgr_used_diskspace(PG_FUNCTION_ARGS);
 static void recycleWorkFileSet(workfile_set *work_set);
 static void ensureLocalWorkFileSet(void);
 static void forgetWorkFileSet(workfile_set *work_set);
+
+/* cleanup dangling workfile set in error recovery */
+void
+workfileCleanup(void)
+{
+	int i;
+	LWLockAcquire(WorkFileManagerLock, LW_EXCLUSIVE);
+	for (i = sizeLocalWorkSets - 1; i >= 0; i--)
+	{
+		workfile_set *work_set = localWorkSets[i];
+		Assert(work_set && work_set->active);
+		if (work_set->num_files == 0)
+			recycleWorkFileSet(work_set);
+	}
+	LWLockRelease(WorkFileManagerLock);
+}
+
 static void
 ensureLocalWorkFileSet(void)
 {
@@ -226,7 +243,7 @@ AtProcExit_WorkFile(int code, Datum arg)
 
 	/* release leaked workfile_set and perquery */
 	LWLockAcquire(WorkFileManagerLock, LW_EXCLUSIVE);
-	for (i = 0; i < sizeLocalWorkSets; i++)
+	for (i = sizeLocalWorkSets - 1; i >= 0; i--)
 	{
 		workfile_set *work_set = localWorkSets[i];
 		WorkFileUsagePerQuery *perquery;
@@ -241,7 +258,7 @@ AtProcExit_WorkFile(int code, Datum arg)
 
 		recycleWorkFileSet(work_set);
 	}
-	sizeLocalWorkSets = 0;
+	Assert(sizeLocalWorkSets == 0);
 	LWLockRelease(WorkFileManagerLock);
 }
 
@@ -428,6 +445,11 @@ UpdateWorkFileSize(File file, uint64 newsize)
 static void
 recycleWorkFileSet(workfile_set *work_set)
 {
+	Assert(work_set);
+	Assert(work_set->active);
+	Assert(work_set->num_files == 0);
+	Assert(LWLockHeldExclusiveByMe(WorkFileManagerLock));
+
 	WorkFileUsagePerQuery *perquery;
 	perquery = work_set->perquery;
 

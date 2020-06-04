@@ -49,6 +49,7 @@ static bool execworkfile_create_one_MB_file(void);
 static bool workfile_fill_sharedcache(void);
 static bool workfile_create_and_set_cleanup(void);
 static bool workfile_create_and_individual_cleanup(void);
+static bool workfile_leakage(void);
 static bool workfile_made_in_temp_tablespace(void);
 
 static bool atomic_test(void);
@@ -82,6 +83,7 @@ static test_def test_defns[] = {
 		{"workfile_fill_sharedcache", workfile_fill_sharedcache},
 		{"workfile_create_and_set_cleanup", workfile_create_and_set_cleanup},
 		{"workfile_create_and_individual_cleanup", workfile_create_and_individual_cleanup},
+		{"workfile_leakage", workfile_leakage},
 		{"workfile_made_in_temp_tablespace", workfile_made_in_temp_tablespace},
 		{NULL, NULL}, /* This has to be the last element of the array */
 };
@@ -808,6 +810,41 @@ workfile_create_and_set_cleanup(void)
 	workfile_mgr_close_set(work_set);
 
 	unit_test_result(true);
+
+	return unit_test_summary();
+}
+
+static bool
+workfile_leakage(void)
+{
+	workfile_set *work_set;
+	char name[64];
+	int i;
+	int N = 4;
+	bool success = true;
+	for (i = 0; i < N; i++)
+	{
+		snprintf(name, sizeof(name), "ws_name_%d", i);
+		work_set = workfile_mgr_create_set(name, NULL);
+		if (!work_set)
+			success = false;
+	}
+	snprintf(name, sizeof(name), "ws_name_%d", i);
+	work_set = workfile_mgr_create_set(name, NULL);
+	if (!work_set)
+	{
+		success = false;
+		goto end;
+	}
+
+	for (i = 0; i < 2; i++)
+	{
+		BufFileCreateTempInSet(work_set, false);
+	}
+
+end:
+	unit_test_result(success);
+	elog(LOG, "workfile_set: %d workfile_sets are leaked", N);
 
 	return unit_test_summary();
 }
