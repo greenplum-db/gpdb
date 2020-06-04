@@ -97,11 +97,14 @@ CLeftOuterJoinStatsProcessor::MakeLOJHistogram
 	GPOS_ASSERT(NULL != inner_join_stats);
 
 	// build a bitset with all outer child columns contributing to the join
-	CBitSet *outer_side_cols = GPOS_NEW(mp) CBitSet(mp);
+	CBitSet *outer_side_join_cols = GPOS_NEW(mp) CBitSet(mp);
 	for (ULONG j = 0; j < join_preds_stats->Size(); j++)
 	{
 		CStatsPredJoin *join_stats = (*join_preds_stats)[j];
-		(void) outer_side_cols->ExchangeSet(join_stats->ColIdOuter());
+		if (join_stats->HasValidColIdOuter())
+		{
+			(void) outer_side_join_cols->ExchangeSet(join_stats->ColIdOuter());
+		}
 	}
 
 	// for the columns in the outer child, compute the buckets that do not contribute to the inner join
@@ -129,7 +132,7 @@ CLeftOuterJoinStatsProcessor::MakeLOJHistogram
 		const CHistogram *inner_join_histogram = inner_join_stats->GetHistogram(colid);
 		GPOS_ASSERT(NULL != inner_join_histogram);
 
-		if (outer_side_cols->Get(colid))
+		if (outer_side_join_cols->Get(colid))
 		{
 			// add buckets from the outer histogram that do not contribute to the inner join
 			const CHistogram *LASJ_histogram = LASJ_stats->GetHistogram(colid);
@@ -167,7 +170,7 @@ CLeftOuterJoinStatsProcessor::MakeLOJHistogram
 	// clean up
 	inner_colids_with_stats->Release();
 	outer_colids_with_stats->Release();
-	outer_side_cols->Release();
+	outer_side_join_cols->Release();
 
 	return LOJ_histograms;
 }

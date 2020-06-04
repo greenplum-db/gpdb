@@ -536,6 +536,7 @@ DATA(insert OID = 643 (  "<>"	   PGNSP PGUID b f f	19	19	16 643 93 namene neqsel
 DESCR("not equal");
 DATA(insert OID = 654 (  "||"	   PGNSP PGUID b f f	25	25	25	 0 0 textcat - - ));
 DESCR("concatenate");
+#define OIDTextConcatenateOperator 654
 
 DATA(insert OID = 660 (  "<"	   PGNSP PGUID b f f	19	19	16 662 663 namelt scalarltsel scalarltjoinsel ));
 DESCR("less than");

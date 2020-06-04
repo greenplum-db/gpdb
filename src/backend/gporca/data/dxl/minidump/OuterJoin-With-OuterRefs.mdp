@@ -1,5 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
+  <dxl:Comment><![CDATA[
+    Test case: Left outer join with outer refs in join predicate
+
+    drop table if exists x,y,z;
+    create table x(i int, j int);
+    create table y(i int, j int);
+    create table z(i int, j int);
+
+    insert into x select i, i%2 from generate_series(1, 10) i;
+    insert into y select i, i%2 from generate_series(1, 10) i;
+    insert into z select i, i%2 from generate_series(1, 1000) i;
+
+    analyze x;
+    analyze y;
+    analyze z;
+
+    set optimizer_enumerate_plans = on;
+    set optimizer_segments = 2;
+    explain select (select x.i from x left outer join y on x.i+y.i = z.i) from z;
+  ]]>
+  </dxl:Comment>
   <dxl:Thread Id="0">
     <dxl:OptimizerConfig>
       <dxl:EnumeratorConfig Id="0" PlanSamples="0" CostThreshold="0"/>

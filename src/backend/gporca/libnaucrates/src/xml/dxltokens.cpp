@@ -613,6 +613,7 @@ CDXLTokens::Init
 			{EdxltokenCmpOther, GPOS_WSZ_LIT("Other")},
 			
 			{EdxltokenReturnsNullOnNullInput, GPOS_WSZ_LIT("ReturnsNullOnNullInput")},
+			{EdxltokenIsNDVPreserving, GPOS_WSZ_LIT("IsNDVPreserving")},
 
 			{EdxltokenTriggers, GPOS_WSZ_LIT("Triggers")},
 			{EdxltokenTrigger, GPOS_WSZ_LIT("Trigger")},
@@ -638,7 +639,8 @@ CDXLTokens::Init
 			{EdxltokenGPDBFuncResultTypeId, GPOS_WSZ_LIT("ResultType")},
 			{EdxltokenGPDBFuncReturnsSet, GPOS_WSZ_LIT("ReturnsSet")},
 			{EdxltokenGPDBFuncStrict, GPOS_WSZ_LIT("IsStrict")},
-			
+			{EdxltokenGPDBFuncNDVPreserving, GPOS_WSZ_LIT("IsNDVPreserving")},
+
 			{EdxltokenGPDBAgg, GPOS_WSZ_LIT("GPDBAgg")},
 			{EdxltokenGPDBIsAggOrdered, GPOS_WSZ_LIT("IsOrdered")},
 			{EdxltokenGPDBAggResultTypeId, GPOS_WSZ_LIT("ResultType")},

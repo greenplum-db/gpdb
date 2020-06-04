@@ -105,6 +105,17 @@ CParseHandlerMDGPDBFunc::StartElement
 											EdxltokenGPDBFunc
 											);
 		
+		// parse whether func is NDV-preserving
+		m_is_ndv_preserving = CDXLOperatorFactory::ExtractConvertAttrValueToBool
+											(
+											m_parse_handler_mgr->GetDXLMemoryManager(),
+											attrs,
+											EdxltokenGPDBFuncNDVPreserving,
+											EdxltokenGPDBFunc,
+											true, // optional
+											false // default is false
+											);
+
 		// parse func stability property
 		const XMLCh *xmlszStbl = CDXLOperatorFactory::ExtractAttrValue
 														(
@@ -190,7 +201,8 @@ CParseHandlerMDGPDBFunc::EndElement
 												m_returns_set,
 												m_func_stability,
 												m_func_data_access,
-												m_is_strict);
+												m_is_strict,
+												m_is_ndv_preserving);
 		
 		// deactivate handler
 		m_parse_handler_mgr->DeactivateHandler();

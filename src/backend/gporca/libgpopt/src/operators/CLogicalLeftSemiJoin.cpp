@@ -171,7 +171,7 @@ CLogicalLeftSemiJoin::PstatsDerive
 	GPOS_ASSERT(Esp(exprhdl) > EspNone);
 	IStatistics *outer_stats = exprhdl.Pstats(0);
 	IStatistics *inner_side_stats = exprhdl.Pstats(1);
-	CStatsPredJoinArray *join_preds_stats = CStatsPredUtils::ExtractJoinStatsFromExprHandle(mp, exprhdl);
+	CStatsPredJoinArray *join_preds_stats = CStatsPredUtils::ExtractJoinStatsFromExprHandle(mp, exprhdl, true/*semi-join*/);
 	IStatistics *pstatsSemiJoin = PstatsDerive(mp, join_preds_stats, outer_stats, inner_side_stats);
 
 	join_preds_stats->Release();

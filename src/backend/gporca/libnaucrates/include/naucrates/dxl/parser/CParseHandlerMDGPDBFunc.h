@@ -60,6 +60,8 @@ namespace gpdxl
 
 			// function strictness (i.e. whether func returns NULL on NULL input)
 			BOOL m_is_strict;
+
+			BOOL m_is_ndv_preserving;
 			
 			// private copy ctor
 			CParseHandlerMDGPDBFunc(const CParseHandlerMDGPDBFunc &);

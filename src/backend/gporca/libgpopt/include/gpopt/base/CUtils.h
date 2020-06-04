@@ -1077,11 +1077,9 @@ namespace gpopt
 			static
 			BOOL FCrossJoin(CExpression *pexpr);
 
-			// extract scalar ident column reference from scalar expression containing
-			// only one scalar ident in the tree
-			const static
-			CColRef *PcrExtractFromScExpression(CExpression *pexpr);
-
+			// is this scalar expression an NDV-preserving function (used for join stats derivation)
+			static
+			BOOL IsExprNDVPreserving(CExpression *pexpr, const CColRef **underlying_colref);
 
 			// search the given array of predicates for predicates with equality or IS NOT
 			// DISTINCT FROM operators that has one side equal to the given expression

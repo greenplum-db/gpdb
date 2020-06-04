@@ -216,6 +216,7 @@ CJoinStatsProcessor::CalcAllJoinStats
 			 join_preds_available,
 			 output_colrefsets,
 			 outer_refs,
+			 is_a_left_join, // left joins use an anti-semijoin internally
 			 &unsupported_pred_stats
 			);
 
@@ -307,8 +308,11 @@ CJoinStatsProcessor::SetResultingJoinStats
 	{
 		CStatsPredJoin *join_stats = (*join_pred_stats_info)[i];
 
-		(void) join_colids->ExchangeSet(join_stats->ColIdOuter());
-		if (!semi_join)
+		if (join_stats->HasValidColIdOuter())
+		{
+			(void) join_colids->ExchangeSet(join_stats->ColIdOuter());
+		}
+		if (!semi_join && join_stats->HasValidColIdInner())
 		{
 			(void) join_colids->ExchangeSet(join_stats->ColIdInner());
 		}
@@ -331,30 +335,43 @@ CJoinStatsProcessor::SetResultingJoinStats
 	for (ULONG i = 0; i < num_join_conds; i++)
 	{
 		CStatsPredJoin *pred_info = (*join_pred_stats_info)[i];
-		CStatsPred::EStatsCmpType stats_cmp_type = pred_info->GetCmpType();
 		ULONG colid1 = pred_info->ColIdOuter();
 		ULONG colid2 = pred_info->ColIdInner();
 		GPOS_ASSERT(colid1 != colid2);
-		// find the histograms corresponding to the two columns
-		const CHistogram *outer_histogram = outer_stats->GetHistogram(colid1);
-		// are column id1 and 2 always in the order of outer inner?
-		const CHistogram *inner_histogram = inner_side_stats->GetHistogram(colid2);
-		GPOS_ASSERT(NULL != outer_histogram);
-		GPOS_ASSERT(NULL != inner_histogram);
+		const CHistogram *outer_histogram = NULL;
+		const CHistogram *inner_histogram = NULL;
 		BOOL is_input_empty = CStatistics::IsEmptyJoin(outer_stats, inner_side_stats, IsLASJ);
 		CDouble local_scale_factor(1.0);
 		CHistogram *outer_histogram_after = NULL;
 		CHistogram *inner_histogram_after = NULL;
 
+
+		// find the histograms corresponding to the two columns
+		// are column id1 and 2 always in the order of outer inner?
+		if (pred_info->HasValidColIdOuter())
+		{
+			outer_histogram = outer_stats->GetHistogram(colid1);
+			GPOS_ASSERT(NULL != outer_histogram);
+		}
+		if (pred_info->HasValidColIdInner())
+		{
+			inner_histogram = inner_side_stats->GetHistogram(colid2);
+			GPOS_ASSERT(NULL != inner_histogram);
+		}
+
 		// When we have any form of equi join with join condition of type f(a)=b,
 		// we calculate the NDV of such a join as NDV(b) ( from Selinger et al.)
-		if (CStatsPred::EstatscmptEqNDVOuter == stats_cmp_type)
+		if (NULL == outer_histogram)
 		{
-			inner_histogram = outer_histogram;
-		}
-		else if (CStatsPred::EstatscmptEqNDVInner == stats_cmp_type)
-		{
+			GPOS_ASSERT(CStatsPred::EstatscmptEqNDV == pred_info->GetCmpType());
 			outer_histogram = inner_histogram;
+			colid1 = colid2;
+		}
+		else if (NULL == inner_histogram)
+		{
+			GPOS_ASSERT(CStatsPred::EstatscmptEqNDV == pred_info->GetCmpType());
+			inner_histogram = outer_histogram;
+			colid2 = colid1;
 		}
 
 		JoinHistograms
@@ -377,7 +394,7 @@ CJoinStatsProcessor::SetResultingJoinStats
 		output_is_empty = JoinStatsAreEmpty(outer_stats->IsEmpty(), output_is_empty, outer_histogram, inner_histogram, outer_histogram_after, join_type);
 		
 		CStatisticsUtils::AddHistogram(mp, colid1, outer_histogram_after, result_col_hist_mapping);
-		if (!semi_join)
+		if (!semi_join && colid1 != colid2)
 		{
 			CStatisticsUtils::AddHistogram(mp, colid2, inner_histogram_after, result_col_hist_mapping);
 		}
@@ -385,6 +402,7 @@ CJoinStatsProcessor::SetResultingJoinStats
 		GPOS_DELETE(outer_histogram_after);
 		GPOS_DELETE(inner_histogram_after);
 
+		// remember which tables the columns came from, this info is used to combine scale factors
 		CColumnFactory *col_factory = COptCtxt::PoctxtFromTLS()->Pcf();
 
 		CColRef *colref_outer = col_factory->LookupColRef(colid1);
@@ -401,6 +419,9 @@ CJoinStatsProcessor::SetResultingJoinStats
 			// there should only be two tables involved in a join condition
 			// if the predicate is more complex (i.e. more than 2 tables involved in the predicate such as t1.a=t2.a+t3.a),
 			// the mdid of the base table will be NULL:
+			// Note that we hash on the pointer to the Mdid, not the value of the Mdid,
+			// but we know that CColRef::GetMdidTable() will always return the same
+			// pointer for a given table.
 			mdid_pair = GPOS_NEW(mp) IMdIdArray(mp, 2);
 			mdid_outer->AddRef();
 			mdid_inner->AddRef();

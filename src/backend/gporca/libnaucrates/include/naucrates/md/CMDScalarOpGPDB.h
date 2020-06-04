@@ -71,7 +71,7 @@ namespace gpmd
 			
 			// does operator return NULL when all inputs are NULL?
 			BOOL m_returns_null_on_null_input;
-			
+
 			// operator classes this operator belongs to
 			IMdIdArray *m_mdid_opfamilies_array;
 
@@ -80,6 +80,10 @@ namespace gpmd
 
 			// compatible legacy hash op family using legacy (cdbhash) opclass
 			IMDId *m_mdid_legacy_hash_opfamily;
+
+			// does operator preserve the NDV of its input(s)
+			// (used for cardinality estimation)
+			BOOL m_is_ndv_preserving;
 
 			CMDScalarOpGPDB(const CMDScalarOpGPDB &);
 			
@@ -101,7 +105,8 @@ namespace gpmd
 				BOOL returns_null_on_null_input,
 				IMdIdArray *mdid_opfamilies_array,
 				IMDId *m_mdid_hash_opfamily,
-				IMDId *mdid_legacy_hash_opfamily
+				IMDId *mdid_legacy_hash_opfamily,
+				BOOL is_ndv_preserving
 				);
 			
 			~CMDScalarOpGPDB();
@@ -154,6 +159,10 @@ namespace gpmd
 			// the implementation in GPDB returns what STRICT property states
 			virtual
 			BOOL ReturnsNullOnNullInput() const;
+
+			// preserves NDVs of its inputs?
+			virtual
+			BOOL IsNDVPreserving() const;
 
 			// comparison type
 			virtual

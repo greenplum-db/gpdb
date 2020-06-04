@@ -50,7 +50,7 @@ namespace gpmd
 			IMDId *m_mdid_type_result;
 			
 			// output argument types
-		IMdIdArray *m_mdid_types_array;
+			IMdIdArray *m_mdid_types_array;
 
 			// whether function returns a set of values
 			BOOL m_returns_set;
@@ -63,6 +63,10 @@ namespace gpmd
 
 			// function strictness (i.e. whether func returns NULL on NULL input)
 			BOOL m_is_strict;
+
+			// function result has very similar number of distinct values as the
+			// single function argument (used for cardinality estimation)
+			BOOL m_is_ndv_preserving;
 
 			// dxl token array for stability
 			Edxltoken m_dxl_func_stability_array[EfsSentinel];
@@ -97,7 +101,8 @@ namespace gpmd
 				BOOL ReturnsSet,
 				EFuncStbl func_stability,
 				EFuncDataAcc func_data_access,
-				BOOL is_strict
+				BOOL is_strict,
+				BOOL is_ndv_preserving
 				);
 			
 			virtual
@@ -133,6 +138,12 @@ namespace gpmd
 				return m_is_strict;
 			}
 			
+			virtual
+			BOOL IsNDVPreserving() const
+			{
+				return m_is_ndv_preserving;
+			}
+
 			// function stability
 			virtual
 			EFuncStbl GetFuncStability() const

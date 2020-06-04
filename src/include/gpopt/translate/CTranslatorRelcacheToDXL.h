@@ -165,6 +165,7 @@ namespace gpdxl
 				IMDFunction::EFuncStbl *stability, // output: function stability
 				IMDFunction::EFuncDataAcc *access, // output: function data access
 				BOOL *is_strict, // output: is function strict?
+				BOOL *is_ndv_preserving, // output: preserves NDVs of inputs
 				BOOL *ReturnsSet // output: does function return set?
 				);
 

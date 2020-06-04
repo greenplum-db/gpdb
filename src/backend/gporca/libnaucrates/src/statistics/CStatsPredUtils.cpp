@@ -59,34 +59,29 @@ CStatsPredUtils::StatsCmpType
 
 	CStatsPred::EStatsCmpType stats_cmp_type = CStatsPred::EstatscmptOther;
 
+	CWStringConst str_eq(GPOS_WSZ_LIT("="));
 	CWStringConst str_lt(GPOS_WSZ_LIT("<"));
 	CWStringConst str_leq(GPOS_WSZ_LIT("<="));
-	CWStringConst str_eq(GPOS_WSZ_LIT("="));
 	CWStringConst str_geq(GPOS_WSZ_LIT(">="));
 	CWStringConst str_gt(GPOS_WSZ_LIT(">"));
 	CWStringConst str_neq(GPOS_WSZ_LIT("<>"));
 
-	if (str_opname->Equals(&str_lt))
-	{
-		stats_cmp_type = CStatsPred::EstatscmptL;
-	}
-	if (str_opname->Equals(&str_leq))
-	{
-		stats_cmp_type = CStatsPred::EstatscmptLEq;
-	}
 	if (str_opname->Equals(&str_eq))
 	{
 		stats_cmp_type = CStatsPred::EstatscmptEq;
-	}
-	if (str_opname->Equals(&str_geq))
+	} else if (str_opname->Equals(&str_lt))
+	{
+		stats_cmp_type = CStatsPred::EstatscmptL;
+	} else if (str_opname->Equals(&str_leq))
+	{
+		stats_cmp_type = CStatsPred::EstatscmptLEq;
+	} else if (str_opname->Equals(&str_geq))
 	{
 		stats_cmp_type = CStatsPred::EstatscmptGEq;
-	}
-	if (str_opname->Equals(&str_gt))
+	} else if (str_opname->Equals(&str_gt))
 	{
 		stats_cmp_type = CStatsPred::EstatscmptG;
-	}
-	if (str_opname->Equals(&str_neq))
+	} else if (str_opname->Equals(&str_neq))
 	{
 		stats_cmp_type = CStatsPred::EstatscmptNEq;
 	}
@@ -323,39 +318,68 @@ CStatsPredUtils::GetPredStats
 
 
 //---------------------------------------------------------------------------
-//	@function:
-//		CStatsPredUtils::IsPredCmpColsOrIgnoreCast
+//		CStatsPredUtils::IsJoinPredSupportedForStatsEstimation
 //
-//	@doc:
-// 		Is the expression a comparison of scalar ident or cast of a scalar ident?
-//		Extract relevant info.
+//		Given a join predicate <expr>, return whether this is a supported
+//		join predicate for cardinality estimation, and what method to use
+//		to build the join statistics.
 //
+//		Also return ColRefs for those sides of the comparison predicate that
+//		can be used (either the entire histogram or just the NDV).
+//
+//		Supported predicates:
+//
+//		All of these must reference the outer table only on one side
+//		and the inner table only on the other side.
+//
+//		col1 <op> col2          (op could be INDF, IDF, =, <, <=, >, >=, <>)
+//		col1 = p(col2)          (p is an NDV-preserving function)
+//		p(col1) = p(col2)
+//		col1 = expr(col2...coln)
+//		p(col1) = expr(col2...coln)
+//
+//		plus variations of the above, flipping sides and adding casts.
+//		Non-NDV-preserving expressions are not allowed on the inner side
+//		of semi and anti-semijoins because we need the NDV of the join column
+//		for those (LOJ stats are calculated using a semi-join, so the
+//		restriction affects those as well).
+//
+//		For all but the first line above, we use an NDV-based stats method.
 //---------------------------------------------------------------------------
 BOOL
-CStatsPredUtils::IsPredCmpColsOrIgnoreCast
+CStatsPredUtils::IsJoinPredSupportedForStatsEstimation
 	(
 	CExpression *expr,
-	const CColRef **col_ref_left,
+	CColRefSetArray *output_col_refsets,  // array of output columns of join's relational inputs
+	BOOL is_semi_or_anti_join,
 	CStatsPred::EStatsCmpType *stats_pred_cmp_type,
-	const CColRef **col_ref_right,
-	BOOL &left_is_null,
-	BOOL &right_is_null
+	const CColRef **col_ref_outer,
+	const CColRef **col_ref_inner
 	)
 {
-	GPOS_ASSERT(NULL != col_ref_left);
-	GPOS_ASSERT(NULL != col_ref_right);
+	GPOS_ASSERT(NULL != col_ref_outer);
+	GPOS_ASSERT(NULL != col_ref_inner);
+	GPOS_ASSERT(NULL == *col_ref_outer);
+	GPOS_ASSERT(NULL == *col_ref_inner);
 	COperator *expr_op = expr->Pop();
 
 	BOOL is_INDF = CPredicateUtils::FINDF(expr);
 	BOOL is_IDF = CPredicateUtils::FIDF(expr);
 	BOOL is_scalar_cmp = (COperator::EopScalarCmp == expr_op->Eopid());
-	if (!is_scalar_cmp && !is_INDF && !is_IDF)
-	{
-		return false;
-	}
-
+	// left and right children of our join pred operator
 	CExpression *expr_left = NULL;
 	CExpression *expr_right = NULL;
+
+	// initialize output parameters
+	*col_ref_inner = NULL;
+	*col_ref_outer = NULL;
+
+	if (!is_scalar_cmp && !is_INDF && !is_IDF)
+	{
+		// an unsupported expression
+		*stats_pred_cmp_type = CStatsPred::EstatscmptOther;
+		return false;
+	}
 
 	if (is_INDF)
 	{
@@ -384,52 +408,134 @@ CStatsPredUtils::IsPredCmpColsOrIgnoreCast
 		expr_right = (*expr)[1];
 	}
 
-	(*col_ref_left) = CCastUtils::PcrExtractFromScIdOrCastScId(expr_left);
-	(*col_ref_right) = CCastUtils::PcrExtractFromScIdOrCastScId(expr_right);
+	// expr_left and expr_right associated with the outer and inner tables
+	CExpression *assigned_expr_outer = NULL;
+	CExpression *assigned_expr_inner = NULL;
 
-	// if the equi join is of type f(a) = f(b) then it is unsupported stats comparison
-	// So, we fall back to default stats.(from Selinger et al.)
-	if (NULL == *col_ref_left && NULL == *col_ref_right)
-		return false;
-
-	if (NULL == *col_ref_left || NULL == *col_ref_right)
+	if (!AssignExprsToOuterAndInner(output_col_refsets, expr_left, expr_right, &assigned_expr_outer, &assigned_expr_inner))
 	{
-		if (NULL == *col_ref_left)
-		{
-			left_is_null = true;
-		}
-
-		if (NULL == *col_ref_right)
-		{
-			right_is_null = true;
-		}
-
-		// if the scalar cmp is of equality type, we may not have been able to extract
-		// the column referenes of scalar ident if they had any other expression than cast
-		// on top of them.
-		// in such cases, check if there is still a possibility to extract scalar ident,
-		// if there is more than one column reference on either side, this is unsupported
-		// If supported, mark the comparison as NDV-based
-
-		if (*stats_pred_cmp_type == CStatsPred::EstatscmptEq)
-		{
-			(*col_ref_left) = CUtils::PcrExtractFromScExpression(expr_left);
-			(*col_ref_right) = CUtils::PcrExtractFromScExpression(expr_right);
-			
-			if (NULL == *col_ref_left || NULL == *col_ref_right)
-			{
-				return false;
-			}
-
-			return true;
-		}
-		// failed to extract a scalar ident
+		// we are not dealing with a join predicate where one side of the operator
+		// refers to the outer table and the other side refers to the inner
 		return false;
+	}
+
+	// check whether left or right expressions are simple columns or casts
+	// of simple columns
+	(*col_ref_outer) = CCastUtils::PcrExtractFromScIdOrCastScId(assigned_expr_outer);
+	(*col_ref_inner) = CCastUtils::PcrExtractFromScIdOrCastScId(assigned_expr_inner);
+
+	if (NULL != *col_ref_outer && NULL != *col_ref_inner)
+	{
+		// a simple predicate of the form col1 <op> col2 (casts are allowed)
+		return true;
+	}
+
+	// if the scalar cmp is of equality type, we may not have been able to extract
+	// the column references of scalar ident if they had any other expression than cast
+	// on top of them.
+	// in such cases, check if there is still a possibility to extract scalar ident,
+	// if there is more than one column reference on either side, this is unsupported
+	// If supported, mark the comparison as NDV-based
+
+	if (*stats_pred_cmp_type == CStatsPred::EstatscmptEq)
+	{
+		BOOL outer_is_ndv_preserving =
+			(NULL != *col_ref_outer || CUtils::IsExprNDVPreserving(assigned_expr_outer, col_ref_outer));
+		BOOL inner_is_ndv_preserving =
+			(NULL != *col_ref_inner || CUtils::IsExprNDVPreserving(assigned_expr_inner, col_ref_inner));
+
+		if (!outer_is_ndv_preserving && !inner_is_ndv_preserving)
+		{
+			// join pred of the form f(a) = f(b) with neither side NDV-preserving, this is not supported
+			return false;
+		}
+
+		if (is_semi_or_anti_join && !inner_is_ndv_preserving)
+		{
+			// non-NDV-preserving functions on the inner of a semi-join or anti-semijoin
+			// are not supported, we need the NDV of the inner join columns to calculate
+			// the stats
+			return false;
+		}
+
+		// a join predicate that involves an NDV-preserving function on at least one side, one of
+		// *col_ref_inner and *col_ref_outer may be NULL. If expr(...) is a non-NDV-preserving
+		// expression and p is an NDV-preserving function, then we can have one of the following
+		// (including variations with flipped sides and casts added):
+		// col1 = p(col2)                (use max of both NDVs)
+		// p(col1) = p(col2)             (use max of both NDVs)
+		// col1 = expr(col2...coln)      (use NDV of col1)
+		// p(col1) = expr(col2...coln)   (use NDV of col1)
+		*stats_pred_cmp_type = CStatsPred::EstatscmptEqNDV;
+		return true;
+	}
+
+	// failed to extract a scalar ident
+	return false;
+}
+
+
+BOOL
+CStatsPredUtils::AssignExprsToOuterAndInner
+	(
+	CColRefSetArray *output_col_refsets,  // array of output columns of join's relational inputs
+	CExpression *expr_1,
+	CExpression *expr_2,
+	CExpression **outer_expr,
+	CExpression **inner_expr
+	)
+{
+	// see also CPhysicalJoin::FPredKeysSeparated(), which returns similar info
+	CColRefSet *used_cols_1 = expr_1->DeriveUsedColumns();
+	CColRefSet *used_cols_2 = expr_2->DeriveUsedColumns();
+	ULONG child_index_1 = 0;
+	ULONG child_index_2 = 0;
+
+	if (0 == used_cols_1->Size() || 0 == used_cols_2->Size())
+	{
+		// one of the sides is a constant
+		return false;
+	}
+
+	// try just one ColRef from each side and find the associated input table
+	child_index_1 = CUtils::UlPcrIndexContainingSet(output_col_refsets, used_cols_1->PcrAny());
+	child_index_2 = CUtils::UlPcrIndexContainingSet(output_col_refsets, used_cols_2->PcrAny());
+
+	if (gpos::ulong_max == child_index_1 || gpos::ulong_max == child_index_2)
+	{
+		// the predicate refers to columns that are not available
+		// (predicate from NAry join that refers to tables not yet being processed)
+		return false;
+	}
+	if (child_index_1 == child_index_2)
+	{
+		// both sides refer to the same input table
+		return false;
+	}
+
+	// we tried one ColRef above, now try all of them, if there are multiple
+	if ((1 < used_cols_1->Size() && !(*output_col_refsets)[child_index_1]->ContainsAll(used_cols_1)) ||
+		(1 < used_cols_2->Size() && !(*output_col_refsets)[child_index_2]->ContainsAll(used_cols_2)))
+	{
+		// at least one of the sides refers to more than one input table
+		return false;
+	}
+
+	if (child_index_1 < child_index_2)
+	{
+		GPOS_ASSERT(0 == child_index_1 && 1 == child_index_2);
+		*outer_expr = expr_1;
+		*inner_expr = expr_2;
+	}
+	else
+	{
+		GPOS_ASSERT(0 == child_index_2 && 1 == child_index_1);
+		*outer_expr = expr_2;
+		*inner_expr = expr_1;
 	}
 
 	return true;
 }
-
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -1133,28 +1239,6 @@ CStatsPredUtils::GetStatsPredFromBoolExpr
 	return GPOS_NEW(mp) CStatsPredPoint(colid, CStatsPred::EstatscmptEq, GPOS_NEW(mp) CPoint(datum));
 }
 
-CStatsPred::EStatsCmpType
-CStatsPredUtils::DeriveStatCmpEqNDVType
-		(
-		 ULONG left_index,
-		 ULONG right_index,
-		 BOOL left_is_null,
-		 BOOL right_is_null
-		 )
-{
-	GPOS_ASSERT(left_is_null || right_is_null);
-
-	// given an equi join condition f(a) = b, if the func is on
-	// outer side, consider the NDV stats on inner
-	if ((left_is_null && (left_index < right_index)) ||
-		(right_is_null && (right_index < left_index)))
-	{
-		return CStatsPred::EstatscmptEqNDVInner;
-	}
-
-	// otherwise consider NDV stats on outer
-	return CStatsPred::EstatscmptEqNDVOuter;
-}
 //---------------------------------------------------------------------------
 //	@function:
 //		CStatsPredUtils::ExtractJoinStatsFromJoinPred
@@ -1170,6 +1254,7 @@ CStatsPredUtils::ExtractJoinStatsFromJoinPred
 	CExpression *join_pred_expr,
 	CColRefSetArray *output_col_refsets,  // array of output columns of join's relational inputs
 	CColRefSet *outer_refs,
+	BOOL is_semi_or_anti_join,
 	CExpressionArray *unsupported_expr_array
 	)
 {
@@ -1184,16 +1269,23 @@ CStatsPredUtils::ExtractJoinStatsFromJoinPred
 		return NULL;
 	}
 
-	const CColRef *col_ref_left = NULL;
-	const CColRef *col_ref_right = NULL;
-	BOOL left_is_from_expr = false;
-	BOOL right_is_from_expr = false;
+	const CColRef *col_ref_outer = NULL;
+	const CColRef *col_ref_inner = NULL;
 	CStatsPred::EStatsCmpType stats_cmp_type = CStatsPred::EstatscmptOther;
 
-	BOOL fSupportedScIdentComparison = IsPredCmpColsOrIgnoreCast(join_pred_expr, &col_ref_left, &stats_cmp_type, &col_ref_right, left_is_from_expr, right_is_from_expr);
+	BOOL fSupportedScIdentComparison = IsJoinPredSupportedForStatsEstimation
+										(
+										 join_pred_expr,
+										 output_col_refsets,
+										 is_semi_or_anti_join,
+										 &stats_cmp_type,
+										 &col_ref_outer,
+										 &col_ref_inner
+										);
 	if (fSupportedScIdentComparison && CStatsPred::EstatscmptOther != stats_cmp_type)
 	{
-		if (!IMDType::StatsAreComparable(col_ref_left->RetrieveType(), col_ref_right->RetrieveType()))
+		if (NULL != col_ref_outer && NULL != col_ref_inner &&
+			!IMDType::StatsAreComparable(col_ref_outer->RetrieveType(), col_ref_inner->RetrieveType()))
 		{
 			// unsupported statistics comparison between the histogram boundaries of the columns
 			join_pred_expr->AddRef();
@@ -1201,24 +1293,10 @@ CStatsPredUtils::ExtractJoinStatsFromJoinPred
 			return NULL;
 		}
 
-		ULONG index_left = CUtils::UlPcrIndexContainingSet(output_col_refsets, col_ref_left);
-		ULONG index_right = CUtils::UlPcrIndexContainingSet(output_col_refsets, col_ref_right);
+		ULONG outer_id = (NULL != col_ref_outer ? col_ref_outer->Id() : gpos::ulong_max);
+		ULONG inner_id = (NULL != col_ref_inner ? col_ref_inner->Id() : gpos::ulong_max);
 
-		if (left_is_from_expr || right_is_from_expr)
-		{
-			stats_cmp_type = DeriveStatCmpEqNDVType(index_left, index_right, left_is_from_expr, right_is_from_expr);
-		}
-
-		if (gpos::ulong_max != index_left && gpos::ulong_max != index_right &&
-			index_left != index_right)
-		{
-			if (index_left < index_right)
-			{
-				return GPOS_NEW(mp) CStatsPredJoin(col_ref_left->Id(), stats_cmp_type, col_ref_right->Id());
-			}
-
-			return GPOS_NEW(mp) CStatsPredJoin(col_ref_right->Id(), stats_cmp_type, col_ref_left->Id());
-		}
+		return GPOS_NEW(mp) CStatsPredJoin(outer_id, stats_cmp_type, inner_id);
 	}
 
 	if (CColRefSet::FCovered(output_col_refsets, col_refset_used))
@@ -1248,6 +1326,7 @@ CStatsPredUtils::ExtractJoinStatsFromJoinPredArray
 	CExpression *scalar_expr,
 	CColRefSetArray *output_col_refsets,  // array of output columns of join's relational inputs
 	CColRefSet *outer_refs,
+	BOOL is_semi_or_antijoin,
 	CStatsPred **unsupported_stats_pred_array
 	)
 {
@@ -1270,6 +1349,7 @@ CStatsPredUtils::ExtractJoinStatsFromJoinPredArray
 										predicate_expr,
 										output_col_refsets,
 										outer_refs,
+										is_semi_or_antijoin,
 										unsupported_expr_array
 										);
 		if (NULL != join_stats)
@@ -1314,7 +1394,8 @@ CStatsPredUtils::ExtractJoinStatsFromExpr
 	CExpressionHandle &expr_handle,
 	CExpression *pexprScalarInput,
 	CColRefSetArray *output_col_refsets, // array of output columns of join's relational inputs
-	CColRefSet *outer_refs
+	CColRefSet *outer_refs,
+	BOOL is_semi_or_anti_join
 	)
 {
 	GPOS_ASSERT(NULL != output_col_refsets);
@@ -1330,6 +1411,7 @@ CStatsPredUtils::ExtractJoinStatsFromExpr
 										scalar_expr,
 										output_col_refsets,
 										outer_refs,
+										is_semi_or_anti_join,
 										&unsupported_pred_stats
 										);
 
@@ -1353,8 +1435,9 @@ CStatsPredUtils::ExtractJoinStatsFromExpr
 CStatsPredJoinArray *
 CStatsPredUtils::ExtractJoinStatsFromExprHandle
 	(
-	CMemoryPool *mp,
-	CExpressionHandle &expr_handle
+	 CMemoryPool *mp,
+	 CExpressionHandle &expr_handle,
+	 BOOL is_semi_or_anti_join
 	)
 {
 	// in case of subquery in join predicate, we return empty stats
@@ -1376,7 +1459,15 @@ CStatsPredUtils::ExtractJoinStatsFromExprHandle
 	CExpression *scalar_expr = expr_handle.PexprScalarChild(expr_handle.Arity() - 1);
 	CColRefSet *outer_refs = expr_handle.DeriveOuterReferences();
 
-	CStatsPredJoinArray *join_pred_stats = ExtractJoinStatsFromExpr(mp, expr_handle, scalar_expr, output_col_refsets, outer_refs);
+	CStatsPredJoinArray *join_pred_stats = ExtractJoinStatsFromExpr
+											(
+											 mp,
+											 expr_handle,
+											 scalar_expr,
+											 output_col_refsets,
+											 outer_refs,
+											 is_semi_or_anti_join
+											);
 
 	// clean up
 	output_col_refsets->Release();

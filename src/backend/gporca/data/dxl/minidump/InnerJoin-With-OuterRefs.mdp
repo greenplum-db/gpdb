@@ -530,7 +530,7 @@
     <dxl:Plan Id="0" SpaceSize="21">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="641930.734375" Rows="1000.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="3219.015625" Rows="1000.000000" Width="4"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="27" Alias="?column?">
@@ -541,7 +541,7 @@
         <dxl:SortingColumnList/>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="641927.781250" Rows="1000.000000" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="3216.062500" Rows="1000.000000" Width="4"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="27" Alias="?column?">
@@ -552,7 +552,7 @@
                 </dxl:ParamList>
                 <dxl:Result>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="1919.921875" Rows="80.000000" Width="4"/>
+                    <dxl:Cost StartupCost="0" TotalCost="1608.203125" Rows="0.200000" Width="4"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="9" Alias="i">
@@ -681,7 +681,7 @@
           <dxl:OneTimeFilter/>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="641922.875000" Rows="1000.000000" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="3211.156250" Rows="1000.000000" Width="4"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="i">

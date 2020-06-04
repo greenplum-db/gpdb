@@ -65,6 +65,9 @@ namespace gpdxl
 			IMDId *m_mdid_hash_opfamily;
 			IMDId *m_mdid_legacy_hash_opfamily;
 
+			// preserves NDVs of inputs
+			BOOL m_is_ndv_preserving;
+
 			// private copy ctor
 			CParseHandlerMDGPDBScalarOp(const CParseHandlerMDGPDBScalarOp &);
 			

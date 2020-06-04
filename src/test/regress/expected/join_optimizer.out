@@ -4246,23 +4246,26 @@ select * from
     (tenk1 as a1 full join (select 1 as id) as yy on (a1.unique1 = yy.id))
   on (xx.id = coalesce(yy.id));
                       QUERY PLAN                      
-------------------------------------------------------
- Hash Left Join
-   Hash Cond: ((1) = COALESCE((1)))
-   ->  Result
-   ->  Hash
-         ->  Gather Motion 3:1  (slice1; segments: 3)
-               ->  Merge Full Join
-                     Merge Cond: (unique1 = (1))
-                     ->  Sort
-                           Sort Key: unique1
-                           ->  Seq Scan on tenk1
-                     ->  Sort
-                           Sort Key: (1)
-                           ->  Result
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Left Join
+         Hash Cond: ((1) = COALESCE((1)))
+         ->  Result
+               ->  Result
+         ->  Hash
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: COALESCE((1))
+                     ->  Merge Full Join
+                           Merge Cond: (unique1 = (1))
+                           ->  Sort
+                                 Sort Key: unique1
+                                 ->  Seq Scan on tenk1
+                           ->  Sort
+                                 Sort Key: (1)
                                  ->  Result
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
-(15 rows)
+                                       ->  Result
+ Optimizer: Pivotal Optimizer (GPORCA)
+(18 rows)
 
 select * from
   (select 1 as id) as xx

@@ -5116,18 +5116,112 @@ CUtils::FCrossJoin
 	return fCrossJoin;
 }
 
-// extract scalar ident column reference from scalar expression containing
-// only one scalar ident in the tree
-const CColRef *
-CUtils::PcrExtractFromScExpression
+// Determine whether a scalar expression consists only of a scalar id and NDV-preserving
+// functions plus casts. If so, return the corresponding CColRef.
+BOOL
+CUtils::IsExprNDVPreserving
 	(
- 	CExpression *pexpr
+	 CExpression *pexpr,
+	 const CColRef **underlying_colref
 	)
 {
-	if (pexpr->DeriveUsedColumns()->Size() == 1)
-		return pexpr->DeriveUsedColumns()->PcrFirst();
+	CExpression *curr_expr = pexpr;
 
-	return NULL;
+	*underlying_colref = NULL;
+
+	// go down the expression tree, visiting the child containing a scalar ident until
+	// we found the ident or until we found a non-NDV-preserving function (at which point there
+	// is no more need to check)
+	while (1)
+	{
+		COperator *pop = curr_expr->Pop();
+		ULONG child_with_scalar_ident = 0;
+
+		switch (pop->Eopid())
+		{
+			case COperator::EopScalarIdent:
+			{
+				// we reached the bottom of the expression, return the ColRef
+				CScalarIdent *cr = CScalarIdent::PopConvert(pop);
+
+				*underlying_colref = cr->Pcr();
+				GPOS_ASSERT(1 == pexpr->DeriveUsedColumns()->Size());
+				return true;
+			}
+
+			case COperator::EopScalarCast:
+				// skip over casts
+				// Note: We might in the future investigate whether there are some casts
+				// that reduce NDVs by too much. Most, if not all, casts that have that potential are
+				// converted to functions, though. Examples: timestamp -> date, double precision -> int.
+				break;
+
+			case COperator::EopScalarCoalesce:
+			{
+				// coalesce(col, const1, ... constn) is treated as an NDV-preserving function
+				for (ULONG c=1; c<curr_expr->Arity(); c++)
+				{
+					if (0 < (*curr_expr)[c]->DeriveUsedColumns()->Size())
+					{
+						// this coalesce has a ColRef in the second or later arguments, assume for
+						// now that this doesn't preserve NDVs (we could add logic to support this case later)
+						return false;
+					}
+				}
+				break;
+			}
+			case COperator::EopScalarFunc:
+			{
+				// check whether the function is NDV-preserving
+				CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
+				CScalarFunc *sf = CScalarFunc::PopConvert(pop);
+				const IMDFunction *pmdfunc = md_accessor->RetrieveFunc(sf->FuncMdId());
+
+				if (!pmdfunc->IsNDVPreserving() || 1 != curr_expr->Arity())
+				{
+					return false;
+				}
+				break;
+			}
+
+			case COperator::EopScalarOp:
+			{
+				CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
+				CScalarOp *so = CScalarOp::PopConvert(pop);
+				const IMDScalarOp *pmdscop = md_accessor->RetrieveScOp(so->MdIdOp());
+
+				if (!pmdscop->IsNDVPreserving() || 2 != curr_expr->Arity())
+				{
+					return false;
+				}
+
+				// col <op> const is NDV-preserving, and so is const <op> col
+				if (0 ==(*curr_expr)[1]->DeriveUsedColumns()->Size())
+				{
+					// col <op> const
+					child_with_scalar_ident = 0;
+				}
+				else if (0 ==(*curr_expr)[0]->DeriveUsedColumns()->Size())
+				{
+					// const <op> col
+					child_with_scalar_ident = 1;
+				}
+				else
+				{
+					// give up for now, both children reference a column,
+					// e.g. col1 <op> col2
+					return false;
+				}
+				break;
+			}
+
+			default:
+				// anything else we see is considered non-NDV-preserving
+				return false;
+		}
+
+		curr_expr = (*curr_expr)[child_with_scalar_ident];
+	}
 }
 
 

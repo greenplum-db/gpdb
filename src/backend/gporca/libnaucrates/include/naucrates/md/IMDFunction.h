@@ -65,6 +65,10 @@ namespace gpmd
 			virtual 
 			BOOL IsStrict() const = 0;
 			
+			// does function preserve NDVs of input (for cardinality estimation)
+			virtual
+			BOOL IsNDVPreserving() const = 0;
+
 			// does function return a set of values
 			virtual 
 			BOOL ReturnsSet() const = 0;

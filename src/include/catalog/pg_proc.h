@@ -1912,8 +1912,10 @@ DATA(insert OID =  868 (  strpos	   PGNSP PGUID 12 1 0 0 0 f f f f t f i s 2 0 2
 DESCR("position of substring");
 DATA(insert OID =  870 (  lower		   PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1 0 25 "25" _null_ _null_ _null_ _null_ _null_ lower _null_ _null_ _null_ ));
 DESCR("lowercase");
+#define LOWER_OID 870
 DATA(insert OID =  871 (  upper		   PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1 0 25 "25" _null_ _null_ _null_ _null_ _null_ upper _null_ _null_ _null_ ));
 DESCR("uppercase");
+#define UPPER_OID 871
 DATA(insert OID =  872 (  initcap	   PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1 0 25 "25" _null_ _null_ _null_ _null_ _null_ initcap _null_ _null_ _null_ ));
 DESCR("capitalize each word");
 DATA(insert OID =  873 (  lpad		   PGNSP PGUID 12 1 0 0 0 f f f f t f i s 3 0 25 "25 23 25" _null_ _null_ _null_ _null_ _null_	lpad _null_ _null_ _null_ ));
@@ -1936,14 +1938,17 @@ DATA(insert OID =  880 (  rpad		   PGNSP PGUID 14 1 0 0 0 f f f f t f i s 2 0 25
 DESCR("right-pad string to length");
 DATA(insert OID =  881 (  ltrim		   PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1 0 25 "25" _null_ _null_ _null_ _null_ _null_ ltrim1 _null_ _null_ _null_ ));
 DESCR("trim spaces from left end of string");
+#define LTRIM_SPACE_OID 881
 DATA(insert OID =  882 (  rtrim		   PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1 0 25 "25" _null_ _null_ _null_ _null_ _null_ rtrim1 _null_ _null_ _null_ ));
 DESCR("trim spaces from right end of string");
+#define RTRIM_SPACE_OID 882
 DATA(insert OID =  883 (  substr	   PGNSP PGUID 12 1 0 0 0 f f f f t f i s 2 0 25 "25 23" _null_ _null_ _null_ _null_ _null_ text_substr_no_len _null_ _null_ _null_ ));
 DESCR("extract portion of string");
 DATA(insert OID =  884 (  btrim		   PGNSP PGUID 12 1 0 0 0 f f f f t f i s 2 0 25 "25 25" _null_ _null_ _null_ _null_ _null_ btrim _null_ _null_ _null_ ));
 DESCR("trim selected characters from both ends of string");
 DATA(insert OID =  885 (  btrim		   PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1 0 25 "25" _null_ _null_ _null_ _null_ _null_ btrim1 _null_ _null_ _null_ ));
 DESCR("trim spaces from both ends of string");
+#define BTRIM_SPACE_OID 885
 
 DATA(insert OID =  936 (  substring    PGNSP PGUID 12 1 0 0 0 f f f f t f i s 3 0 25 "25 23 23" _null_ _null_ _null_ _null_ _null_	text_substr _null_ _null_ _null_ ));
 DESCR("extract portion of string");

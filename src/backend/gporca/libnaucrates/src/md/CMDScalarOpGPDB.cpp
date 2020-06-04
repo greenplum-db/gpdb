@@ -43,7 +43,8 @@ CMDScalarOpGPDB::CMDScalarOpGPDB
 	BOOL returns_null_on_null_input,
 	IMdIdArray *mdid_opfamilies_array,
 	IMDId *mdid_hash_opfamily,
-	IMDId *mdid_legacy_hash_opfamily
+	IMDId *mdid_legacy_hash_opfamily,
+	BOOL is_ndv_preserving
 	)
 	:
 	m_mp(mp),
@@ -59,7 +60,8 @@ CMDScalarOpGPDB::CMDScalarOpGPDB
 	m_returns_null_on_null_input(returns_null_on_null_input),
 	m_mdid_opfamilies_array(mdid_opfamilies_array),
 	m_mdid_hash_opfamily(mdid_hash_opfamily),
-	m_mdid_legacy_hash_opfamily(mdid_legacy_hash_opfamily)
+	m_mdid_legacy_hash_opfamily(mdid_legacy_hash_opfamily),
+	m_is_ndv_preserving(is_ndv_preserving)
 {
 	GPOS_ASSERT(NULL != mdid_opfamilies_array);
 	m_dxl_str = CDXLUtils::SerializeMDObj(m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
@@ -236,6 +238,12 @@ CMDScalarOpGPDB::ReturnsNullOnNullInput() const
 }
 
 
+BOOL
+CMDScalarOpGPDB::IsNDVPreserving() const
+{
+	return m_is_ndv_preserving;
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CMDScalarOpGPDB::ParseCmpType
@@ -272,6 +280,7 @@ CMDScalarOpGPDB::Serialize
 	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenName), m_mdname->GetMDName());
 	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenGPDBScalarOpCmpType), IMDType::GetCmpTypeStr(m_comparision_type));
 	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenReturnsNullOnNullInput), m_returns_null_on_null_input);
+	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenIsNDVPreserving), m_is_ndv_preserving);
 
 	Edxltoken dxl_token_array[8] = {
 							EdxltokenGPDBScalarOpLeftTypeId, EdxltokenGPDBScalarOpRightTypeId, 

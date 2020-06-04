@@ -53,7 +53,8 @@ CParseHandlerMDGPDBScalarOp::CParseHandlerMDGPDBScalarOp
 	m_comparision_type(IMDType::EcmptOther),
 	m_returns_null_on_null_input(false),
 	m_mdid_hash_opfamily(NULL),
-	m_mdid_legacy_hash_opfamily(NULL)
+	m_mdid_legacy_hash_opfamily(NULL),
+	m_is_ndv_preserving(false)
 {
 }
 
@@ -121,6 +122,17 @@ CParseHandlerMDGPDBScalarOp::StartElement
 								EdxltokenGPDBScalarOp
 								);
 		}
+
+		// ndv-preserving property is optional
+		m_is_ndv_preserving = CDXLOperatorFactory::ExtractConvertAttrValueToBool
+							(
+							m_parse_handler_mgr->GetDXLMemoryManager(),
+							attrs,
+							EdxltokenIsNDVPreserving,
+							EdxltokenGPDBScalarOp,
+							true, // is optional
+							false // default value
+							);
 
 	}
 	else if (0 == XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenGPDBScalarOpLeftTypeId), element_local_name))
@@ -292,7 +304,8 @@ CParseHandlerMDGPDBScalarOp::EndElement
 				m_returns_null_on_null_input,
 				mdid_opfamilies_array,
 				m_mdid_hash_opfamily,
-				m_mdid_legacy_hash_opfamily
+				m_mdid_legacy_hash_opfamily,
+				m_is_ndv_preserving
 				)
 				;
 		
