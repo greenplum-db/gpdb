@@ -1,3 +1,5 @@
+CREATE ROLE matview_ao_role;
+SET ROLE matview_ao_role;
 CREATE TABLE t_matview_ao (id int NOT NULL PRIMARY KEY, type text NOT NULL, amt numeric NOT NULL);
 INSERT INTO t_matview_ao VALUES
   (1, 'x', 2),
@@ -105,23 +107,23 @@ SELECT * FROM m_aocs;
 (3 rows)
 
 \dm m_heap
-               List of relations
- Schema |  Name  |       Type        |  Owner  
---------+--------+-------------------+---------
- public | m_heap | materialized view | gpadmin
+                   List of relations
+ Schema |  Name  |       Type        |      Owner      
+--------+--------+-------------------+-----------------
+ public | m_heap | materialized view | matview_ao_role
 (1 row)
 
 \dm m_ao
-              List of relations
- Schema | Name |       Type        |  Owner  
---------+------+-------------------+---------
- public | m_ao | materialized view | gpadmin
+                  List of relations
+ Schema | Name |       Type        |      Owner      
+--------+------+-------------------+-----------------
+ public | m_ao | materialized view | matview_ao_role
 (1 row)
 
 \dm m_aocs
-               List of relations
- Schema |  Name  |       Type        |  Owner  
---------+--------+-------------------+---------
- public | m_aocs | materialized view | gpadmin
+                   List of relations
+ Schema |  Name  |       Type        |      Owner      
+--------+--------+-------------------+-----------------
+ public | m_aocs | materialized view | matview_ao_role
 (1 row)
 
