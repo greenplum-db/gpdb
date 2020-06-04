@@ -65,7 +65,7 @@ typedef enum
 	/**
 	 * Transaction rollback has been requested and QD is notifying all QD processes.
 	 *
-	 * _SOME_PREPARED means that at least one QE has done the first phase of two-phase commit.
+	 * _SOME_PREPARED means that some QEs may have done the first phase of two-phase commit.
 	 */
 	DTX_STATE_NOTIFYING_ABORT_SOME_PREPARED,
 

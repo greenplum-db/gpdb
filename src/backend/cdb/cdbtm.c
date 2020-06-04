@@ -888,17 +888,7 @@ rollbackDtxTransaction(void)
 			break;
 
 		case DTX_STATE_PREPARING:
-			/*
-			 * The writer gang is detected broken during preparing, then it has been destroyed
-			 * in AtAbort_DispatcherState(). In this way, we will create a new writer gang to
-			 * do the rollback. As this new writer gang is in DTX_CONTEXT_LOCAL_ONLY context,
-			 * we need to dispatch DTX_STATE_RETRY_ABORT_PREPARED command instead of
-			 * DTX_STATE_NOTIFYING_ABORT_SOME_PREPARED.
-			 */
-			if (currentGxactWriterGangLost())
-				setCurrentDtxState(DTX_STATE_RETRY_ABORT_PREPARED);
-			else
-				setCurrentDtxState(DTX_STATE_NOTIFYING_ABORT_SOME_PREPARED);
+			setCurrentDtxState(DTX_STATE_NOTIFYING_ABORT_SOME_PREPARED);
 			break;
 
 		case DTX_STATE_PREPARED:
@@ -2168,16 +2158,18 @@ performDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 			switch (DistributedTransactionContext)
 			{
 				case DTX_CONTEXT_LOCAL_ONLY:
-
 					/*
-					 * Spontaneously aborted while we were back at the QD?
-					 *
-					 * It's normal if the transaction doesn't exist. The QD will
-					 * call abort on us, even if we didn't finish the prepare yet,
-					 * if some other QE reported failure already.
+					 * There are a lot of scenarios that could jump into the
+					 * code branch, e.g. writer gang reset after preparing;
+					 * elog(ERROR) during/after preparing.
+					 * For these cases we need to either abort the transaction
+					 * or abort the prepared transaction. Since we have no way
+					 * to simply differ so just do them both and this is ok
+					 * since the code could handle the false alarm case.
 					 */
-					elog(DTM_DEBUG3, "Distributed transaction %s not found during abort", gid);
 					AbortOutOfAnyTransaction();
+					setDistributedTransactionContext(DTX_CONTEXT_QE_FINISH_PREPARED);
+					performDtxProtocolAbortPrepared(gid, /* raiseErrorIfNotFound */ false);
 					break;
 
 				case DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER:
@@ -2190,17 +2182,9 @@ performDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 					performDtxProtocolAbortPrepared(gid, /* raiseErrorIfNotFound */ true);
 					break;
 
-				case DTX_CONTEXT_QD_DISTRIBUTED_CAPABLE:
-				case DTX_CONTEXT_QD_RETRY_PHASE_2:
-				case DTX_CONTEXT_QE_ENTRY_DB_SINGLETON:
-				case DTX_CONTEXT_QE_READER:
+				default:
 					elog(PANIC, "Unexpected segment distribute transaction context: '%s'",
 						 DtxContextToString(DistributedTransactionContext));
-					break;
-
-				default:
-					elog(PANIC, "Unexpected segment distribute transaction context value: %d",
-						 (int) DistributedTransactionContext);
 					break;
 			}
 			break;
