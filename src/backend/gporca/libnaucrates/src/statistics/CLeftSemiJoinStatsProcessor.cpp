@@ -34,11 +34,8 @@ CLeftSemiJoinStatsProcessor::CalcLSJoinStatsStatic
 	ULongPtrArray *inner_colids = GPOS_NEW(mp) ULongPtrArray(mp);
 	for (ULONG ul = 0; ul < length; ul++)
 	{
-		if ((*join_preds_stats)[ul]->HasValidColIdInner())
-		{
-			ULONG colid = ((*join_preds_stats)[ul])->ColIdInner();
-			inner_colids->Append(GPOS_NEW(mp) ULONG(colid));
-		}
+		ULONG colid = ((*join_preds_stats)[ul])->ColIdInner();
+		inner_colids->Append(GPOS_NEW(mp) ULONG(colid));
 	}
 
 	// dummy agg columns required for group by derivation

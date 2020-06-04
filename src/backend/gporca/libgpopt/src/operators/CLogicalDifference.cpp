@@ -182,8 +182,7 @@ CLogicalDifference::PstatsDerive
 														exprhdl, 
 														pexprScCond, 
 														output_colrefsets, 
-														outer_refs,
-														true // is an LASJ
+														outer_refs
 														);
 	IStatistics *LASJ_stats = outer_stats->CalcLASJoinStats
 											(

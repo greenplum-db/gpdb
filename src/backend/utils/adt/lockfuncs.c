@@ -59,8 +59,8 @@ typedef struct
 
 	int			numSegLocks;	/* Total number of locks being reported back to client */
 	int			numsegresults;	/* If we dispatch to segDBs, the number of segresults */
-	int			whichResultset; /* which result set is being processed */
-	int			whichRow;	/* which row in current result set is being processed */
+	int			nextResultset;	/* which result set is being processed */
+	int			nextRow;		/* which row in current result set will be processed next */
 	struct pg_result **segresults;	/* pg_result for each segDB */
 } PG_Lock_Status;
 
@@ -170,8 +170,8 @@ pg_lock_status(PG_FUNCTION_ARGS)
 
 		mystatus->numSegLocks = 0;
 		mystatus->numsegresults = 0;
-		mystatus->whichResultset = 0;
-		mystatus->whichRow = 0;
+		mystatus->nextResultset = 0;
+		mystatus->nextRow = 0;
 		mystatus->segresults = NULL;
 
 		/*
@@ -484,48 +484,45 @@ pg_lock_status(PG_FUNCTION_ARGS)
 	}
 
 	/*
-	 * This loop only executes on the masterDB and only in dispatch mode, because that
-	 * is the only time we dispatched to the segDBs.
+	 * This loop only executes on the masterDB and only in dispatch mode,
+	 * because that is the only time we dispatched to the segDBs.
 	 */
-
 	while (mystatus->currIdx >= lockData->nelements && mystatus->currIdx < lockData->nelements + mystatus->numSegLocks)
 	{
 		HeapTuple	tuple;
 		Datum		result;
 		Datum		values[NUM_LOCK_STATUS_COLUMNS];
 		bool		nulls[NUM_LOCK_STATUS_COLUMNS];
-		int i;
-		int whichresultset = mystatus->whichResultset;
-		int whichrow = mystatus->whichRow;
+		int			i;
+		int			whichresultset;
+		int			whichrow;
 
 		Assert(Gp_role == GP_ROLE_DISPATCH);
 
 		/*
-		 * Because we have one result set per segDB (rather than one big result set with everything),
-		 * we use mystatus->whichResultset and mystatus->whichRow to track which result set we are on,
-		 * and which row within that result set we are returning, respectively.
+		 * Because we have one result set per segDB (rather than one big result
+		 * set with everything), we use mystatus->nextResultset and
+		 * mystatus->nextRow to track which result set we are on, and which row
+		 * within that result set we are returning, respectively.
 		 */
-		if (whichrow < PQntuples(mystatus->segresults[whichresultset]))
+		whichresultset = mystatus->nextResultset;
+		whichrow = mystatus->nextRow;
+		Assert(whichresultset < mystatus->numsegresults);
+		Assert(whichrow < PQntuples(mystatus->segresults[whichresultset]));
+
+		/*
+		 * Advance to next row. If we're out of rows in this result set,
+		 * advance to next one.
+		 */
+		if (mystatus->nextRow + 1 < PQntuples(mystatus->segresults[mystatus->nextResultset]))
 		{
-			/* Advance to next row in current result set. */
-			mystatus->whichRow++;
+			mystatus->nextRow++;
 		}
 		else
 		{
-			/* Advance to next result set. */
-			mystatus->whichResultset++;
-			mystatus->whichRow = 0;
-			whichresultset++;
-			whichrow = 0;
-
-			/*
-			 * If this condition is true, we have already sent everything back,
-			 * and we just want to do the SRF_RETURN_DONE
-			 */
-			if (whichresultset >= mystatus->numsegresults)
-				break;
+			mystatus->nextResultset++;
+			mystatus->nextRow = 0;
 		}
-
 		mystatus->currIdx++;
 
 		/*

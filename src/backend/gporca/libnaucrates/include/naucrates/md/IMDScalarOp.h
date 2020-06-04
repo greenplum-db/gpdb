@@ -75,10 +75,6 @@ namespace gpmd
 			virtual
 			BOOL ReturnsNullOnNullInput() const = 0;
 
-			// preserves NDVs of its inputs?
-			virtual
-			BOOL IsNDVPreserving() const = 0;
-
 			virtual
 			IMDType::ECmpType ParseCmpType() const = 0;
 

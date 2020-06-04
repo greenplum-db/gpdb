@@ -204,9 +204,6 @@ namespace gpdb {
 	// is the given function strict
 	bool FuncStrict(Oid funcid);
 
-	// does this preserve the NDVs of its inputs?
-	bool IsFuncNDVPreserving(Oid funcid);
-
 	// stability property of given function
 	char FuncStability(Oid funcid);
 
@@ -482,9 +479,6 @@ namespace gpdb {
 
 	// is the given operator strict
 	bool IsOpStrict(Oid opno);
-
-	// does it preserve the NDVs of its inputs
-	bool IsOpNDVPreserving(Oid opno);
 
 	// get input types for a given operator
 	void GetOpInputTypes(Oid opno, Oid *lefttype, Oid *righttype);
