@@ -573,7 +573,6 @@ namespace gpdxl
 		EdxltokenCmpOther,
 		
 		EdxltokenReturnsNullOnNullInput,
-		EdxltokenIsNDVPreserving,
 
 		EdxltokenTriggers,
 		EdxltokenTrigger,
@@ -599,7 +598,6 @@ namespace gpdxl
 		EdxltokenGPDBFuncResultTypeId,
 		EdxltokenGPDBFuncReturnsSet,
 		EdxltokenGPDBFuncStrict,
-		EdxltokenGPDBFuncNDVPreserving,
 		
 		EdxltokenGPDBCast,
 		EdxltokenGPDBCastBinaryCoercible,

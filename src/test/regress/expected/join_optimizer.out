@@ -2241,7 +2241,7 @@ where b.f1 = t.thousand and a.f1 = b.f1 and (a.f1+b.f1+999) = t.tenthous;
                            ->  Gather Motion 3:1  (slice3; segments: 3)
                                  ->  Aggregate
                                        ->  Seq Scan on int4_tbl int4_tbl_1
- Optimizer: Pivotal Optimizer (GPORCA)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (21 rows)
 
 select a.f1, b.f1, t.thousand, t.tenthous from
@@ -2927,7 +2927,7 @@ where nt3.id = 1 and ss2.b3;
                                  ->  Result
                                        ->  Gather Motion 3:1  (slice3; segments: 3)
                                              ->  Seq Scan on nt1
- Optimizer: Pivotal Optimizer (GPORCA)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.64.0
 (18 rows)
 
 select nt3.id
@@ -2982,7 +2982,7 @@ order by 1,2;
                                          ->  Materialize
                                                ->  Gather Motion 3:1  (slice3; segments: 3)
                                                      ->  Seq Scan on int8_tbl int8_tbl_2
- Optimizer: Pivotal Optimizer (GPORCA)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.64.0
 (24 rows)
 
 --
@@ -3145,7 +3145,7 @@ select * from
   tenk1, int8_tbl a, int8_tbl b
 where thousand = a.q1 and tenthous = b.q1 and a.q2 = 1 and b.q2 = 2;
                                QUERY PLAN                               
-------------------------------------------------------------------
+------------------------------------------------------------------------
  Gather Motion 3:1  (slice3; segments: 3)
    ->  Hash Join
          Hash Cond: ((tenk1.thousand)::bigint = int8_tbl_1.q1)
@@ -3160,7 +3160,7 @@ where thousand = a.q1 and tenthous = b.q1 and a.q2 = 1 and b.q2 = 2;
                ->  Broadcast Motion 3:3  (slice2; segments: 3)
                      ->  Seq Scan on int8_tbl int8_tbl_1
                            Filter: (q2 = 1)
- Optimizer: Pivotal Optimizer (GPORCA)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.64.0
 (15 rows)
 
 reset enable_nestloop;
@@ -4211,28 +4211,25 @@ select * from
     (tenk1 as a1 full join (select 1 as id) as yy on (a1.unique1 = yy.id))
   on (xx.id = coalesce(yy.id));
                       QUERY PLAN                      
-------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)
-   ->  Hash Left Join
-         Hash Cond: (id = COALESCE(id))
+------------------------------------------------------
+ Hash Left Join
+   Hash Cond: (id = COALESCE(id))
+   ->  Result
          ->  Result
-               ->  Result
-                     ->  Result
-         ->  Hash
-               ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                     Hash Key: COALESCE(id)
-                     ->  Merge Full Join
-                           Merge Cond: (unique1 = id)
-                           ->  Sort
-                                 Sort Key: unique1
-                                 ->  Seq Scan on tenk1
-                           ->  Sort
-                                 Sort Key: id
+   ->  Hash
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               ->  Merge Full Join
+                     Merge Cond: (unique1 = id)
+                     ->  Sort
+                           Sort Key: unique1
+                           ->  Seq Scan on tenk1
+                     ->  Sort
+                           Sort Key: id
+                           ->  Result
                                  ->  Result
                                        ->  Result
-                                             ->  Result
- Optimizer: Pivotal Optimizer (GPORCA)
-(20 rows)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.64.0
+(17 rows)
 
 select * from
   (select 1 as id) as xx

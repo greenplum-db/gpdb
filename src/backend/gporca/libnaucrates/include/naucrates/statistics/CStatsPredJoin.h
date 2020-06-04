@@ -64,11 +64,6 @@ namespace gpnaucrates
 			{}
 
 			// accessors
-			BOOL HasValidColIdOuter() const
-			{
-				return gpos::ulong_max != m_colidOuter;
-			}
-
 			ULONG ColIdOuter() const
 			{
 				return m_colidOuter;
@@ -78,11 +73,6 @@ namespace gpnaucrates
 			CStatsPred::EStatsCmpType GetCmpType() const
 			{
 				return m_stats_cmp_type;
-			}
-
-			BOOL HasValidColIdInner() const
-			{
-				return gpos::ulong_max != m_colidInner;
 			}
 
 			ULONG ColIdInner() const

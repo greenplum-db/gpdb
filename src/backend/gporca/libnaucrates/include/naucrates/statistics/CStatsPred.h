@@ -55,8 +55,9 @@ namespace gpnaucrates
 				EstatscmptINDF,	// is not distinct from
 				EstatscmptLike,	// LIKE predicate comparison
 				EstatscmptNotLike,	// NOT LIKE predicate comparison
-				// NDV comparison for equality predicate on columns with functions, ex f(a) = b or a = f(b)
-				EstatscmptEqNDV,
+				// NDV comparision for equality predicate on columns with functions, ex f(a) = b or a = f(b)
+				EstatscmptEqNDVOuter, // use Outer NDV on inner side also
+				EstatscmptEqNDVInner, // use Inner NDV on outer side also
 				EstatscmptOther
 			};
 

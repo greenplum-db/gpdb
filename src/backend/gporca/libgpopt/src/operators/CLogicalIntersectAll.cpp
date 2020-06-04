@@ -200,8 +200,7 @@ CLogicalIntersectAll::PstatsDerive
 														exprhdl, 
 														pexprScCond, 
 														output_colrefsets, 
-														outer_refs,
-														true // is a semi-join
+														outer_refs
 														);
 	IStatistics *pstatsSemiJoin = CLogicalLeftSemiJoin::PstatsDerive(mp, join_preds_stats, outer_stats, inner_side_stats);
 
