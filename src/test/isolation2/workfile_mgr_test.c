@@ -822,6 +822,8 @@ workfile_leakage(void)
 	int i;
 	int N = 4;
 	bool success = true;
+
+	unit_test_reset();
 	for (i = 0; i < N; i++)
 	{
 		snprintf(name, sizeof(name), "ws_name_%d", i);
