@@ -289,7 +289,8 @@ export MASTER_DATA_DIRECTORY=/data/master/gpseg-1</codeblock></li>
             variables such as <codeph>PGPORT</codeph>, <codeph>PGUSER</codeph> and
               <codeph>PGDATABASE</codeph> for convenience. For
             example:<codeblock>export PGPORT=5432
-export PGUSER=gpadmin export PGDATABASE=<varname>default_login_database_name</varname></codeblock></li>
+export PGUSER=gpadmin
+export PGDATABASE=<varname>default_login_database_name</varname></codeblock></li>
           <li>(Optional) If you use RHEL 7 or CentOS 7, add the following line to the end of the
               <codeph>.bashrc</codeph> file to enable using the <codeph>ps</codeph> command in the
               <codeph>greenplum_path.sh</codeph>
@@ -304,7 +305,7 @@ export PGUSER=gpadmin export PGDATABASE=<varname>default_login_database_name</va
 $ scp .bashrc <varname>standby_hostname</varname>:`pwd`</codeblock></li>
         </ol>
         <note type="note">The <codeph>.bashrc</codeph> file should not produce any output. If you
-          wish to have a message display to users upon logging in, use the <codeph>.profile</codeph>
+          wish to have a message display to users upon logging in, use the <codeph>.bash_profile</codeph>
           file instead. </note>
       </section>
     </body>
