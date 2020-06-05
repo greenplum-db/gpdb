@@ -1316,7 +1316,11 @@ ProcessCopyOptions(CopyState cstate,
 	cstate->file_encoding = -1;
 
 	if (cstate->rel && rel_is_external_table(cstate->rel->rd_id))
+	{
+		is_copy = false;
+		num_columns = cstate->rel->rd_att->natts;
 		exttbl = GetExtTableEntry(cstate->rel->rd_id);
+	}
 
 	if (exttbl && exttbl->urilocations)
 	{
@@ -1856,7 +1860,6 @@ BeginCopy(bool is_from,
 	CopyState	cstate;
 	int			num_phys_attrs;
 	MemoryContext oldcontext;
-	bool is_copy = true;
 	int num_columns = 0;
 
 	/* Allocate workspace and zero all fields */
@@ -1876,16 +1879,6 @@ BeginCopy(bool is_from,
 
 	oldcontext = MemoryContextSwitchTo(cstate->copycontext);
 
-	/*
-	 * Since external scan calls BeginCopyFrom to init CopyStateData.
-	 * Current relation may be an external relation.
-	 */
-	if (rel != NULL && rel_is_external_table(RelationGetRelid(rel)))
-	{
-		is_copy = false;
-		num_columns = rel->rd_att->natts;
-	}
-
 	/* Greenplum needs this to detect custom protocol */
 	if (rel)
 		cstate->rel = rel;
@@ -1893,7 +1886,7 @@ BeginCopy(bool is_from,
 	/* Extract options from the statement node tree */
 	ProcessCopyOptions(cstate, is_from, options,
 					   num_columns, /* pass correct value when COPY supports no delim */
-					   is_copy);
+					   true);
 
 
 	/* Process the source/target relation or query */
@@ -2670,7 +2663,7 @@ BeginCopyToForeignTable(Relation forrel, List *options)
 {
 	CopyState	cstate;
 
-	Assert(rel_is_external_table(RelationGetRelid(forrel)) || RelationIsForeign(forrel));
+	Assert(RelationIsForeign(forrel));
 
 	cstate = BeginCopy(false, forrel, NULL, NULL, InvalidOid, NIL, options, NULL);
 

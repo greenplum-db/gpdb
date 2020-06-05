@@ -2347,7 +2347,6 @@ heap_drop_with_catalog(Oid relid)
 	Relation	rel;
 	bool		is_part_child = false;
 	bool		is_appendonly_rel;
-	bool		is_external_rel;
 	char		relkind;
 
 	/*
@@ -2358,7 +2357,6 @@ heap_drop_with_catalog(Oid relid)
 	relkind = rel->rd_rel->relkind;
 
 	is_appendonly_rel = RelationIsAppendOptimized(rel);
-	is_external_rel = rel_is_external_table(relid);
 
 	/*
 	 * There can no longer be anyone *else* touching the relation, but we

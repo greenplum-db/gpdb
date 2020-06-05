@@ -4020,7 +4020,6 @@ ATController(AlterTableStmt *parsetree,
 	List	   *wqueue = NIL;
 	ListCell   *lcmd;
 	bool is_partition = false;
-	bool is_external = rel_is_external_table(RelationGetRelid(rel));
 
 	cdb_sync_oid_to_segments();
 
@@ -4119,20 +4118,9 @@ ATController(AlterTableStmt *parsetree,
 		}
 	}
 
-	/* 
-	 * Phase 3: scan/rewrite tables as needed. If the data is in an external
-	 * table, no need to rewrite it or to add toast.
-	 *
-	 * We should skip this for foreign table as well, but it's handled inside of
-	 * ATRewriteTables() and ATAddToastIfNeeded(), we keep it that way to align
-	 * with upstream.
-	 */
-	if (!is_external)
-	{
-		ATRewriteTables(parsetree, &wqueue, lockmode);
-
-		ATAddToastIfNeeded(&wqueue, lockmode);
-	}
+	/* Phase 3: scan/rewrite tables as needed */
+	ATRewriteTables(parsetree, &wqueue, lockmode);
+	ATAddToastIfNeeded(&wqueue, lockmode);
 }
 
 /*
