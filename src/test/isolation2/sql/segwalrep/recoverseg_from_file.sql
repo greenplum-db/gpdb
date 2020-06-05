@@ -40,9 +40,9 @@ select gp_request_fts_probe_scan();
 1Uq:
 
 -- make the dbid in gp_segment_configuration not continuous
--- dbid=2 corresponds to content id =0
+-- dbid=2 corresponds to content 0 and role p, change it to dbid=9
 set allow_system_table_mods to true;
-update gp_segment_configuration set dbid=9 where dbid=2;
+update gp_segment_configuration set dbid=9 where content=0 and role='p';
 
 -- trigger failover
 select gp_request_fts_probe_scan();
@@ -74,7 +74,7 @@ set allow_system_table_mods to false;
 -- we manually change dbid from 2 to 9, which causes the
 -- corresponding segment down as well, so recovery full
 -- at here
-!\retcode gprecoverseg -aF;
+!\retcode gprecoverseg -a;
 
 -- rebalance the cluster
 !\retcode gprecoverseg -ar;
