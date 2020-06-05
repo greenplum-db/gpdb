@@ -22,7 +22,6 @@ apt-get install -y \
   libperl-dev \
   libreadline-dev \
   libssl-dev \
-  libxerces-c-dev \
   libxml2-dev \
   libyaml-dev \
   libzstd-dev \
