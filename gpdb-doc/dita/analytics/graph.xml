@@ -134,21 +134,16 @@ testdb#=> INSERT INTO edge VALUES
   <topic id="topic_graph_modules">
     <title>Graph Modules </title>
     <body>
-      <p>This section lists the graph functions supported in MADlib. They include: <xref
-          href="#topic_graph_modules/apsp" format="dita">All Pairs Shortest Path (APSP)</xref>,
-          <xref href="#topic_graph_modules/docs-internal-guid-d1a3bb85-7fff-dad0-327a-a69734d66e43"
-          format="dita">Breadth-First Search</xref>,  <xref
-          href="#topic_graph_modules/docs-internal-guid-1a912a72-7fff-d208-7c66-b806fe5866fd"
-          format="dita">Hyperlink-Induced Topic Search (HITS)</xref>, <xref
-          href="#topic_graph_modules/docs-internal-guid-77499093-7fff-b462-3e18-fdb15384bc34"
-          format="dita">PageRank and Personalized PageRank</xref>, <xref
-          href="#topic_graph_modules/docs-internal-guid-d0461f4b-7fff-4782-8422-f713f0c0b7dc"
-          format="dita">Single Source Shortest Path (SSSP)</xref>, <xref
-          href="#topic_graph_modules/weakly_connected_components" format="dita">Weakly Connected
-          Components</xref>, and <xref href="#topic_graph_modules/measures" format="dita"
-          >Measures</xref>. Explore each algorithm using the example <codeph>edge</codeph> and
-          <codeph>vertex</codeph> tables already created. </p>
-      <section id="apsp">
+      <p>This section lists the graph functions supported in MADlib. They include:  <xref
+          href="#topic_graph_modules/section_m2x_rkr_xlb" format="dita"/>, <xref
+          href="#topic_graph_modules/section_ykg_53s_xlb" format="dita"/>, <xref
+          href="#topic_graph_modules/section_evh_t3s_xlb" format="dita"/>, <xref
+          href="#topic_graph_modules/section_e3f_s3s_xlb" format="dita"/>, <xref
+          href="#topic_graph_modules/section_rxc_r3s_xlb" format="dita"/>, <xref
+          href="#topic_graph_modules/section_zmd_q3s_xlb" format="dita"/>, and <xref
+          href="#topic_graph_modules/section_wcn_w3s_xlb" format="dita"/>. Explore each algorithm
+        using the example <codeph>edge</codeph> and <codeph>vertex</codeph> tables already created. </p>
+      <section id="section_m2x_rkr_xlb">
         <title>All Pairs Shortest Path (APSP)</title>
         <p>The all pairs shortest paths (APSP) algorithm finds the length (summed weights) of the
           shortest paths between all pairs of vertices, such that the sum of the weights of the path
@@ -165,7 +160,7 @@ grouping_cols
             href="http://madlib.apache.org/docs/latest/group__grp__apsp.html" format="html"
             scope="external">All Pairs Shortest Path</xref> in the Apache MADlib documentation.</p>
       </section>
-      <section>
+      <section id="section_ykg_53s_xlb">
         <title>Breadth-First Search</title>
         <p>Given a graph and a source vertex, the breadth-first search (BFS) algorithm finds all
           nodes reachable from the source vertex by searching / traversing the graph in a
@@ -185,7 +180,7 @@ grouping_cols
             href="http://madlib.apache.org/docs/latest/group__grp__bfs.html" format="html"
             scope="external">Breadth-First Search</xref> in the Apache MADlib documentation.</p>
       </section>
-      <section>
+      <section id="section_evh_t3s_xlb">
         <title>Hyperlink-Induced Topic Search (HITS)</title>
         <p>The all pairs shortest paths (APSP) algorithm finds the length (summed weights) of the
           shortest paths between all pairs of vertices, such that the sum of the weights of the path
@@ -203,7 +198,7 @@ grouping_cols
             scope="external">Hyperlink-Induced Topic Search </xref> in the Apache MADlib
           documentation.</p>
       </section>
-      <section>
+      <section id="section_e3f_s3s_xlb">
         <title>PageRank and Personalized PageRank</title>
         <p>Given a graph, the PageRank algorithm outputs a probability distribution representing a
           person’s likelihood to arrive at any particular vertex while randomly traversing the
@@ -227,7 +222,7 @@ grouping_cols
             href="http://madlib.apache.org/docs/latest/group__grp__pagerank.html" format="html"
             scope="external">PageRank</xref> in the Apache MADlib documentation.</p>
       </section>
-      <section>
+      <section id="section_rxc_r3s_xlb">
         <title>Single Source Shortest Path (SSSP)</title>
         <p>Given a graph and a source vertex, the single source shortest path (SSSP) algorithm finds
           a path from the source vertex to every other vertex in the graph, such that the sum of the
@@ -246,7 +241,7 @@ grouping_cols
             scope="external">Single Source Shortest Path</xref> in the Apache MADlib
           documentation.</p>
       </section>
-      <section id="weakly_connected_components">
+      <section id="section_zmd_q3s_xlb">
         <title>Weakly Connected Components</title>
         <p dir="ltr">Given a directed graph, a weakly connected component (WCC) is a subgraph of the
           original graph where all vertices are connected to each other by some path, ignoring the
@@ -265,19 +260,15 @@ grouping_cols
             scope="external">Weakly Connected Components</xref> in the Apache MADlib
           documentation.</p>
       </section>
-      <section id="measures">
+      <section id="section_wcn_w3s_xlb">
         <title><i>Measures</i></title>
         <p>These algorithms relate to metrics computed on a graph and include: <xref
-            href="#topic_graph_modules/docs-internal-guid-37c72c97-7fff-7b68-47db-4b01f4e89301"
-            format="dita">Average Path Length</xref>, <xref
-            href="#topic_graph_modules/docs-internal-guid-aa571412-7fff-ce53-3f42-0ae9d6fd2711"
-            format="dita">Closeness Centrality</xref>, <xref
-            href="#topic_graph_modules/docs-internal-guid-c89c8daf-7fff-52f7-491a-a621ba354ee5"
-            format="dita">Graph Diameter</xref>, and <xref
-            href="#topic_graph_modules/docs-internal-guid-e3ea7d4e-7fff-88ce-6218-f4f55005540f"
-            format="dita">In-Out Degree</xref>.</p>
+            href="#topic_graph_modules/section_k4q_x3s_xlb" format="dita"/>, <xref
+            href="#topic_graph_modules/section_a2q_y3s_xlb" format="dita"/> , <xref
+            href="#topic_graph_modules/section_pft_k4s_xlb" format="dita"/>, and <xref
+            href="#topic_graph_modules/section_srk_j4s_xlb" format="dita"/>.</p>
       </section>
-      <section id="average_path_length">
+      <section id="section_k4q_x3s_xlb">
         <title>Average Path Length</title>
         <p dir="ltr">This function computes the shortest path average between pairs of vertices.
           Average path length is based on "reachable target vertices", so it averages the path
@@ -294,7 +285,7 @@ grouping_cols
             format="html" scope="external">Average Path Length</xref> in the Apache MADlib
           documentation.</p>
       </section>
-      <section>
+      <section id="section_a2q_y3s_xlb">
         <title>Closeness Centrality</title>
         <p>The closeness centrality algorithm helps quantify how much information passes through a
           given vertex. The function returns various closeness centrality measures and the k-degree
@@ -309,7 +300,7 @@ vertex_filter_expr
             href="http://madlib.apache.org/docs/latest/group__grp__graph__closeness.html"
             format="html" scope="external">Closeness</xref> in the Apache MADlib documentation.</p>
       </section>
-      <section>
+      <section id="section_pft_k4s_xlb">
         <title>Graph Diameter</title>
         <p dir="ltr">Graph diameter is defined as the longest of all shortest paths in a graph. The
           function is:</p>
@@ -322,7 +313,7 @@ output_table
             format="html" scope="external">Graph Diameter</xref> in the Apache MADlib
           documentation.</p>
       </section>
-      <section>
+      <section id="section_srk_j4s_xlb">
         <title>In-Out Degree</title>
         <p dir="ltr">This function computes the degree of each node. The node degree is the number
           of edges adjacent to that node. The node in-degree is the number of edges pointing in to
