@@ -188,9 +188,9 @@ $ gpinitsystem -c gpconfigs/gpinitsystem_config -h gpconfigs/hostfile_gpinitsyst
                 configuration) include the <codeph>-s</codeph> and <codeph>-S</codeph> options. For
                 example:</p><codeblock>$ gpinitsystem -c gpconfigs/gpinitsystem_config -h gpconfigs/hostfile_gpinitsystem \
   -s <varname>standby_master_hostname</varname> -S</codeblock><p>During
-                a new cluster creation, you may use the <codeph>-O
-                  output_configutation_file</codeph> option to save the cluster configuration
-                details in a file. For
+                a new cluster creation, you may use the <codeph><varname>-O
+                    output_configuration_file</varname></codeph> option to save the cluster
+                configuration details in a file. For
                 example:</p><codeblock>$ gpinitsystem -c gpconfigs/gpinitsystem_config -O gpconfigs/config_template </codeblock><p>This
                 output file can be edited and used at a later stage as the input file of the
                   <codeph>-I</codeph> option, to create a new cluster or to recover from a backup.

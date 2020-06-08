@@ -38,17 +38,17 @@
                     href="#topic1/section5" type="section" format="dita"/> for more information
                 about the configuration file. Before running this utility, make sure that you have
                 installed the Greenplum Database software on all the hosts in the array.</p>
-            <p>With the <systemoutput>-O output_configuration_file</systemoutput> option,
-                    <systemoutput>gpinitsystem</systemoutput> writes all provided configuration
-                information to the specified output file.  This file can be used with the
-                    <codeph>-I</codeph> option to create a new cluster or to recover from a backup.
-                See <xref href="#topic1/section5" type="section" format="dita"/> for more
+            <p>With the <codeph><varname>-O output_configuration_file</varname></codeph> option,
+                    <codeph>gpinitsystem</codeph> writes all provided configuration information to
+                the specified output file. This file can be used with the <codeph>-I</codeph> option
+                to create a new cluster or re-create a cluster from a backed up configuration. See
+                    <xref href="#topic1/section5" type="section" format="dita"/> for more
                 information. </p>
-            <p>In a Greenplum Database DBMS, each database instance (the master and all segments)
-                must be initialized across all of the hosts in the system in such a way that they
-                can all work together as a unified DBMS. The <codeph>gpinitsystem</codeph> utility
-                takes care of initializing the Greenplum master and each segment instance, and
-                configuring the system as a whole.</p>
+            <p>In a Greenplum Database DBMS, each database instance (the master instance and all
+                segment instances) must be initialized across all of the hosts in the system in such
+                a way that they can all work together as a unified DBMS. The
+                    <codeph>gpinitsystem</codeph> utility takes care of initializing the Greenplum
+                master and each segment instance, and configuring the system as a whole.</p>
             <p>Before running <codeph>gpinitsystem</codeph>, you must set the
                     <codeph>$GPHOME</codeph> environment variable to point to the location of your
                 Greenplum Database installation on the master host and exchange SSH keys between all
@@ -115,13 +115,14 @@
                 <plentry>
                     <pt>-I <varname>input_configuration_file</varname></pt>
                     <pd>The full path and filename of an input configuration file, which defines the
-                        Greenplum Database members and segments using the
-                            <codeph>QD_PRIMARY_ARRAY</codeph>,  <codeph>PRIMARY_ARRAY</codeph>, and
-                            <codeph>MIRROR_ARRAY</codeph> parameters. The input configuration file
-                        is typically created by using <codeph>gpinitsystem</codeph> with the
-                            <codeph>-O <varname>output_configuration_file</varname></codeph> option.
-                        Edit those parameters in order to initialize a new cluster or to recover
-                        from a backup. You must provide either the <codeph>-c
+                        Greenplum Database host systems, the master instance and segment instances
+                        on the hosts, using the <codeph>QD_PRIMARY_ARRAY</codeph>,
+                            <codeph>PRIMARY_ARRAY</codeph>, and <codeph>MIRROR_ARRAY</codeph>
+                        parameters. The input configuration file is typically created by using
+                            <codeph>gpinitsystem</codeph> with the <codeph>-O
+                                <varname>output_configuration_file</varname></codeph> option. Edit
+                        those parameters in order to initialize a new cluster or re-create a cluster
+                        from a backed up configuration. You must provide either the <codeph>-c
                                 <varname>cluster_configuration_file</varname></codeph> option or the
                             <codeph>-I <varname>input_configuration_file</varname></codeph> option
                         to <codeph>gpinitsystem</codeph>. </pd>
@@ -424,17 +425,17 @@ MIRROR_PORT_BASE = 7000</codeblock>
                 </plentry>
                 <plentry>
                     <pt>QD_PRIMARY_ARRAY, PRIMARY_ARRAY, MIRROR_ARRAY</pt>
-                    <pd><b>Required</b> only for <codeph>output_configuration_file</codeph> with
-                            <codeph>-O</codeph> option or <codeph>input_configuration file</codeph>
-                        with <codeph>-I</codeph> option. These parameters specify the Greenplum
+                    <pd><b>Required</b> when using <codeph>input_configuration file</codeph> with
+                            <codeph>-I</codeph> option. These parameters specify the Greenplum
                         Database master host, the primary segment, and the mirror segment hosts
                         respectively. During new cluster initialization, use the
                             <codeph>gpinitsystem</codeph>
-                        <codeph>-O <varname>output_configuration_file</varname></codeph>  to
-                        populate <codeph>QD_PRIMARY_ARRAY</codeph>, <codeph>PRIMARY_ARRAY</codeph>,
+                        <codeph>-O <varname>output_configuration_file</varname></codeph> to populate
+                            <codeph>QD_PRIMARY_ARRAY</codeph>, <codeph>PRIMARY_ARRAY</codeph>,
                             <codeph>MIRROR_ARRAY</codeph>. </pd>
-                    <pd>To initialize a new cluster or recover from backup, edit these values in the
-                        input configuration file used with the <codeph>gpinitsystem</codeph>
+                    <pd>To initialize a new cluster or re-create a cluster from a backed up
+                        configuration, edit these values in the input configuration file used with
+                        the <codeph>gpinitsystem</codeph>
                         <codeph>-I <varname>input_configuration_file</varname></codeph> option. Use
                         one of the following formats to specify the host
                         information:<codeblock><varname>hostname</varname>~<varname>address</varname>~<varname>port</varname>~<varname>data_directory</varname>/<varname>seg_prefix&lt;segment_id></varname>~<varname>dbid</varname>~<varname>content_id</varname></codeblock>or
