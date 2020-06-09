@@ -110,6 +110,9 @@ SELECT gp_wait_until_triggered_fault('fts_probe', 1, dbid) FROM gp_segment_confi
 CHECKPOINT;
 CHECKPOINT
 
+-- not recycle idle QEs to avoid the flaky test where restarting primary takes a long time.
+11: SET gp_vmem_idle_resource_timeout TO 0;
+SET
 11: CREATE TABLE foo (c1 int, c2 int) DISTRIBUTED BY (c1);
 CREATE
 -- ORCA optimizes value scan so there is no additional reader gang in below INSERT.
@@ -132,6 +135,8 @@ DETAIL:  lock [0,1260] AccessShareLock 0. Probably because writer gang is gone s
 INSERT 2
 11: DROP TABLE foo;
 DROP
+11: RESET gp_vmem_idle_resource_timeout;
+RESET
 
 SELECT gp_inject_fault('fts_probe', 'reset', dbid) FROM gp_segment_configuration WHERE role='p' AND content=-1;
  gp_inject_fault 

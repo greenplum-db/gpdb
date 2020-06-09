@@ -71,6 +71,8 @@ SELECT gp_wait_until_triggered_fault('fts_probe', 1, dbid)
 -- Prevent below pg_ctl restart timeout although the timeout should be enough.
 CHECKPOINT;
 
+-- not recycle idle QEs to avoid the flaky test where restarting primary takes a long time.
+11: SET gp_vmem_idle_resource_timeout TO 0;
 11: CREATE TABLE foo (c1 int, c2 int) DISTRIBUTED BY (c1);
 -- ORCA optimizes value scan so there is no additional reader gang in below INSERT.
 11: SET optimizer = off;
@@ -80,6 +82,7 @@ SELECT pg_ctl(datadir, 'restart', 'immediate')
 11: INSERT INTO foo values(2),(1);
 11: INSERT INTO foo values(2),(1);
 11: DROP TABLE foo;
+11: RESET gp_vmem_idle_resource_timeout;
 
 SELECT gp_inject_fault('fts_probe', 'reset', dbid)
 FROM gp_segment_configuration WHERE role='p' AND content=-1;
