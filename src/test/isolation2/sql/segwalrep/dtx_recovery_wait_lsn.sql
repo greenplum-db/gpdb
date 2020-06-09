@@ -40,6 +40,12 @@ $$ language plpgsql;
 3: SELECT pg_ctl(datadir, 'stop', 'immediate') FROM gp_segment_configuration WHERE content=0 AND role = 'm';
 -- trigger master reset
 3: select gp_inject_fault('before_read_command', 'panic', 1);
+-- verify master panic happens. The PANIC message does not emit sometimes so
+-- mask it.
+-- start_matchsubs
+-- m/PANIC:  fault triggered, fault name:'before_read_command' fault type:'panic'\n/
+-- s/PANIC:  fault triggered, fault name:'before_read_command' fault type:'panic'\n//
+-- end_matchsubs
 3: select 1;
 
 -- wait for master finish crash recovery

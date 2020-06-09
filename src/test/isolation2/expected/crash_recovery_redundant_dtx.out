@@ -57,15 +57,16 @@ CHECKPOINT
 -----------------
  Success:        
 (1 row)
--- start_ignore
--- We ignore the output here because PANIC output is intermittent and is
--- unrelated to this test. Test simply cares to trigger fault.
+-- verify master panic happens. The PANIC message does not emit sometimes so
+-- mask it.
+-- start_matchsubs
+-- m/PANIC:  fault triggered, fault name:'before_read_command' fault type:'panic'\n/
+-- s/PANIC:  fault triggered, fault name:'before_read_command' fault type:'panic'\n//
+-- end_matchsubs
 1:select 1;
-PANIC:  fault triggered, fault name:'before_read_command' fault type:'panic'
 server closed the connection unexpectedly
 	This probably means the server terminated abnormally
 	before or while processing the request.
--- end_ignore
 
 2<:  <... completed>
 server closed the connection unexpectedly
