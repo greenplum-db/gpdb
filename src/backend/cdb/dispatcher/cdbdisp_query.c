@@ -318,8 +318,17 @@ CdbDispatchSetCommand(const char *strCommand, bool cancelOnError)
 
 	primaryGang = AllocateGang(ds, GANGTYPE_PRIMARY_WRITER, cdbcomponent_getCdbComponentsList());
 
-	/* put all idle segment to a gang so QD can send SET command to them */
-	AllocateGang(ds, GANGTYPE_PRIMARY_READER, formIdleSegmentIdList());
+	/*
+	 * Put all idle segments to a gang so QD can send SET command to them
+	 *
+	 * Don't do this if we are inside a valid transaction, in which case the
+	 * SET may fail because it requires some updates committed.
+	 *
+	 * It will be set after transaction or subtransaction commit if it needs to
+	 * be synced, checkout AtEOXact_GUC() and gp_guc_restore_list.
+	 */
+	if (!IsTransactionState())
+		AllocateGang(ds, GANGTYPE_PRIMARY_READER, formIdleSegmentIdList());
 	
 	cdbdisp_makeDispatchResults(ds, list_length(ds->allocatedGangs), cancelOnError);
 	cdbdisp_makeDispatchParams (ds, list_length(ds->allocatedGangs), queryText, queryTextLength);

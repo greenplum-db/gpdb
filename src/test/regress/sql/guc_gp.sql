@@ -219,3 +219,21 @@ $$
 $$ language plpythonu;
 
 select run_all_in_one();
+
+-- test for not dispatching GUCs, which may need updates committed, to idle segments
+BEGIN ISOLATION LEVEL REPEATABLE READ;
+
+CREATE TABLE guc_gp_test_table (
+        stringu1        name
+);
+SELECT length(stringu1) FROM guc_gp_test_table GROUP BY length(stringu1);
+
+DROP ROLE IF EXISTS guc_gp_test_role;
+CREATE ROLE guc_gp_test_role;
+SET ROLE guc_gp_test_role;   -- it reported role doesn't exist here
+RESET SESSION AUTHORIZATION;
+DROP ROLE guc_gp_test_role;
+RESET ROLE;
+DROP TABLE guc_gp_test_table;
+
+END;

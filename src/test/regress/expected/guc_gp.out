@@ -336,3 +336,25 @@ INFO:  iteration:3 unsafe truncate performed
  
 (1 row)
 
+-- test for not dispatching GUCs, which may need updates committed, to idle segments
+BEGIN ISOLATION LEVEL REPEATABLE READ;
+CREATE TABLE guc_gp_test_table (
+        stringu1        name
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'stringu1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT length(stringu1) FROM guc_gp_test_table GROUP BY length(stringu1);
+ length 
+--------
+(0 rows)
+
+DROP ROLE IF EXISTS guc_gp_test_role;
+NOTICE:  role "guc_gp_test_role" does not exist, skipping
+CREATE ROLE guc_gp_test_role;
+NOTICE:  resource queue required -- using default resource queue "pg_default"
+SET ROLE guc_gp_test_role;   -- it reported role doesn't exist here
+RESET SESSION AUTHORIZATION;
+DROP ROLE guc_gp_test_role;
+RESET ROLE;
+DROP TABLE guc_gp_test_table;
+END;
