@@ -1436,7 +1436,7 @@ CREATE_SEGMENT () {
 
 REGISTER_MIRRORS () {
 		LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-		for I in "${QE_MIRROR_ARRAY[@]}"
+		for I in "${QE_MIRROR_ARRAY_SORTED_ON_CONTENT_ID[@]}"
 		do
 			SET_VAR $I
 			dbid=`env PGOPTIONS="-c gp_role=utility" $PSQL -p $MASTER_PORT -d "${DEFAULTDB}" -X -A -t -c "select pg_catalog.gp_add_segment_mirror(${GP_CONTENT}::int2, '${GP_HOSTNAME}', '${GP_HOSTADDRESS}', ${GP_PORT}, '${GP_DIR}');" 2>/dev/null` >> $LOG_FILE 2>&1
@@ -1444,7 +1444,7 @@ REGISTER_MIRRORS () {
 			MIRRORS_UPDATED_DBID=(${MIRRORS_UPDATED_DBID[@]} ${GP_HOSTADDRESS}~${GP_PORT}~${GP_DIR}~${dbid}~${GP_CONTENT})
 		done
 
-		QE_MIRROR_ARRAY=(${MIRRORS_UPDATED_DBID[@]})
+		QE_MIRROR_ARRAY_SORTED_ON_CONTENT_ID=(${MIRRORS_UPDATED_DBID[@]})
 		LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
 
