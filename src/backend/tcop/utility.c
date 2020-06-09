@@ -70,6 +70,7 @@
 #include "tcop/utility.h"
 #include "utils/acl.h"
 #include "utils/guc.h"
+#include "utils/snapmgr.h"
 #include "utils/syscache.h"
 
 #include "catalog/oid_dispatch.h"
@@ -1326,6 +1327,38 @@ ProcessUtilitySlow(Node *parsetree,
 					lockmode = AlterTableGetLockLevel(atstmt->cmds);
 					relid = AlterTableLookupRelation(atstmt, lockmode);
 
+					/*
+					 * Greenplum specific behavior:
+					 * The above code is to hold locks on target table and
+					 * may be blocked by others. And when code reaches this
+					 * line, it means others that just now blocks self transaction
+					 * have been over. We will dispatch the utility statement
+					 * later, before this, we need to update distributed snapshot
+					 * because the world has been changed and distributed snapshot
+					 * can only be generated on QD then dispatched to QEs.
+					 * CdbDispatch fetches ActiveSnapshot to dispatch.
+					 *
+					 * Subtle cases are: Alter Table or Alter Domain statements on QD
+					 * get snapshot in Portal Run and then try to hold locks on the
+					 * target table in ProcessUtilitySlow. Here is the key point:
+					 *   1. try to hold lock ==> it might be blocked by other transcations
+					 *   2. then it will be waked up to continue
+					 *   3. when it can continue, the world has changed because other transcations
+					 *      then blocks it have been over
+					 *
+					 * Previously, on QD we do not getsnapshot before we dispatch utility
+					 * statement to QEs which leads to the distributed snapshot does not
+					 * reflect the "world change". This will lead to some bugs. For example,
+					 * if the first transaction is to rewrite the whole heap, and then
+					 * the second Alter Table or Alter Domain statements continues with
+					 * the distributed snapshot that txn1 does not commit yet, it will
+					 * see no tuples in the new heap!
+					 *
+					 * See Github Issue: https://github.com/greenplum-db/gpdb/issues/10216
+					 */
+					if (Gp_role == GP_ROLE_DISPATCH)
+						PushActiveSnapshot(GetTransactionSnapshot());
+
 					if (OidIsValid(relid))
 					{
 						/* Run parse analysis ... */
@@ -1391,6 +1424,10 @@ ProcessUtilitySlow(Node *parsetree,
 
 				/* ALTER TABLE stashes commands internally */
 				commandCollected = true;
+
+				if (Gp_role == GP_ROLE_DISPATCH)
+					PopActiveSnapshot();
+
 				break;
 
 			case T_AlterDomainStmt:
@@ -1446,8 +1483,16 @@ ProcessUtilitySlow(Node *parsetree,
 								 (int) stmt->subtype);
 							break;
 					}
+
 					if (Gp_role == GP_ROLE_DISPATCH)
 					{
+						/*
+						 * Greenplum specific behavior
+						 * Please see the detailed comments on case T_AlterTableStmt.
+						 * The reason we get, push and pop snapshot here is the same
+						 * as above.
+						 */
+						PushActiveSnapshot(GetTransactionSnapshot());
 						/* ADD CONSTRAINT will assign a new OID for the constraint */
 						CdbDispatchUtilityStatement((Node *) stmt,
 													DF_CANCEL_ON_ERROR|
@@ -1455,6 +1500,7 @@ ProcessUtilitySlow(Node *parsetree,
 													DF_NEED_TWO_PHASE,
 													GetAssignedOidsForDispatch(),
 													NULL);
+						PopActiveSnapshot();
 					}
 				}
 				break;

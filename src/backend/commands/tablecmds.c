@@ -15328,13 +15328,6 @@ ATExecExpandTableCTAS(AlterTableCmd *rootCmd, Relation rel, AlterTableCmd *cmd)
 						&tmprv,
 						true);
 
-		/*
-		 * We need to update our snapshot here to make sure we see all
-		 * committed work. We have an exclusive lock on the table so no one
-		 * will be able to access the table now.
-		 */
-		PushActiveSnapshot(GetLatestSnapshot());
-
 		/* Step (c) - run on all nodes */
 		queryDesc->ddesc = makeNode(QueryDispatchDesc);
 		queryDesc->ddesc->useChangedAOOpts = false;
@@ -15355,8 +15348,6 @@ ATExecExpandTableCTAS(AlterTableCmd *rootCmd, Relation rel, AlterTableCmd *cmd)
 
 		FreeQueryDesc(queryDesc);
 
-		/* Restore the old snapshot */
-		PopActiveSnapshot();
 		optimizer = saveOptimizerGucValue;
 
 		CommandCounterIncrement(); /* see the effects of the command */
@@ -15852,13 +15843,6 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 						&tmprv,
 						true);
 
-		/* 
-		 * We need to update our snapshot here to make sure we see all
-		 * committed work. We have an exclusive lock on the table so no one
-		 * will be able to access the table now.
-		 */
-		PushActiveSnapshot(GetLatestSnapshot());
-
 		/* Step (c) - run on all nodes */
 		queryDesc->ddesc = makeNode(QueryDispatchDesc);
 		queryDesc->ddesc->useChangedAOOpts = false;
@@ -15888,8 +15872,6 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 
 		FreeQueryDesc(queryDesc);
 
-		/* Restore the old snapshot */
-		PopActiveSnapshot();
 		optimizer = saveOptimizerGucValue;
 		optimizer_replicated_table_insert = save_optimizer_replicated_table_insert;
 
