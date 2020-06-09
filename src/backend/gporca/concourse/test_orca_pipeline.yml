@@ -15,15 +15,15 @@ resources:
     branch: test-gpdb
     uri: https://github.com/greenplum-db/gporca-pipeline-misc
 
-- name: gpdb6-centos7-build
+- name: gpdb7-centos7-build
   type: docker-image
   source:
-    repository: pivotaldata/gpdb6-centos7-build
+    repository: pivotaldata/gpdb7-centos7-build
 
-- name: gpdb6-centos7-test
+- name: gpdb7-centos7-test
   type: docker-image
   source:
-    repository: pivotaldata/gpdb6-centos7-test
+    repository: pivotaldata/gpdb7-centos7-test
 
 - name: libquicklz-centos7
   type: gcs
@@ -38,13 +38,6 @@ resources:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
     regexp: gp-internal-artifacts/centos7/libquicklz-devel-(1\.5\.0-.*)-1.el7.x86_64.rpm
-
-- name: libsigar-centos7
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: gp-internal-artifacts/centos7/sigar-rhel7_x86_64-(1\.6\.5-.*).targz
 
 - name: python-centos7
   type: gcs
@@ -62,20 +55,18 @@ jobs:
     - get: gporca-commits-to-test
       trigger: true
       version: every
-    - get: gpdb6-centos7-build
-    - get: gpdb6-centos7-test
+    - get: gpdb7-centos7-build
+    - get: gpdb7-centos7-test
     - get: libquicklz-installer
       resource: libquicklz-centos7
     - get: libquicklz-devel-installer
       resource: libquicklz-devel-centos7
-    - get: libsigar-installer
-      resource: libsigar-centos7
     - get: python-tarball
       resource: python-centos7
 
   - do:
     - task: init gpdb_src
-      image: gpdb6-centos7-build
+      image: gpdb7-centos7-build
       config:
         platform: linux
         run:
@@ -93,7 +84,7 @@ jobs:
         outputs: [{ name: gpdb_src }]
     - task: compile_gpdb_centos7
       file: gpdb_src/concourse/tasks/compile_gpdb.yml
-      image: gpdb6-centos7-build
+      image: gpdb7-centos7-build
       params:
         CONFIGURE_FLAGS: {{configure_flags_with_extensions}}
         TARGET_OS: centos
@@ -105,7 +96,7 @@ jobs:
     - in_parallel:
       - task: icw_planner_centos7
         file: gpdb_src/concourse/tasks/ic_gpdb.yml
-        image: gpdb6-centos7-test
+        image: gpdb7-centos7-test
         input_mapping:
           bin_gpdb: gpdb_artifacts
         params:
@@ -116,7 +107,7 @@ jobs:
 
       - task: icw_gporca_centos7
         file: gpdb_src/concourse/tasks/ic_gpdb.yml
-        image: gpdb6-centos7-test
+        image: gpdb7-centos7-test
         input_mapping:
           bin_gpdb: gpdb_artifacts
         params:
