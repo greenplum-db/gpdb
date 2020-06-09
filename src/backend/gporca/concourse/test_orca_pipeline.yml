@@ -12,7 +12,7 @@ resources:
 - name: gporca-commits-to-test
   type: git
   source:
-    branch: test-gpdb
+    branch: test-gpdb-6X
     uri: https://github.com/greenplum-db/gporca-pipeline-misc
 
 - name: gpdb6-centos7-build
