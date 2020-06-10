@@ -634,9 +634,6 @@ static void ShmemBackendArrayRemove(Backend *bn);
 #define EXIT_STATUS_1(st)  (WIFEXITED(st) && WEXITSTATUS(st) == 1)
 #define EXIT_STATUS_3(st)  (WIFEXITED(st) && WEXITSTATUS(st) == 3)
 
-/* if we are a QD postmaster or not */
-bool Gp_entry_postmaster = false;
-
 #ifndef WIN32
 /*
  * File descriptors for pipe used to monitor if postmaster is alive.
@@ -771,19 +768,8 @@ PostmasterMain(int argc, char *argv[])
 				set_debug_options(atoi(optarg), PGC_POSTMASTER, PGC_S_ARGV);
 				break;
 
-			/*
-			 * Normal PostgreSQL used 'E' flag to mean "log_statement='all'",
-			 * but we co-opted this letter for this... I'm afraid to change it,
-			 * because I don't know where this is used.
-             * ... it's used only here in postmaster.c; it causes the postmaster to
-			 * fork a QD specific process. For example, FTS, global
-			 * deadlock detector.
-			 */
 			case 'E':
-				Gp_entry_postmaster = true;
-				/*
-				 * 	SetConfigOption("log_statement", "all", PGC_POSTMASTER, PGC_S_ARGV);
-				 */
+				 SetConfigOption("log_statement", "all", PGC_POSTMASTER, PGC_S_ARGV);
 				break;
 
 			case 'e':
@@ -962,6 +948,10 @@ PostmasterMain(int argc, char *argv[])
 					 progname);
 		ExitPostmaster(1);
 	}
+
+	/* If gp_role is not set, use utility role instead.*/
+	if (Gp_role == GP_ROLE_UNDEFINED)
+		SetConfigOption("gp_role", "utility", PGC_POSTMASTER, PGC_S_OVERRIDE);
 
 	/*
 	 * Locate the proper configuration files and data directory, and read
@@ -2329,7 +2319,15 @@ retry1:
 			else if (strcmp(nameptr, "options") == 0)
 				port->cmdline_options = pstrdup(valptr);
 			else if (strcmp(nameptr, "gpqeid") == 0)
+			{
 				gpqeid = valptr;
+				/*
+				 * Normally we do not need set this on QE nodes since QE
+				 * postmaster should be launched with GP_ROLE_EXECUTE, but in
+				 * the entrydb and the gpexpand case, still need to set this.
+				 */
+				Gp_role = GP_ROLE_EXECUTE;
+			}
 			else if (strcmp(nameptr, "replication") == 0)
 			{
 				/*
@@ -6193,7 +6191,7 @@ bgworker_should_start_mpp(BackgroundWorker *worker)
 	 * or BgWorkerStart_ConsistentState because it's not safe to do a read
 	 * or write if DTX is not recovered.
 	 */
-	if (IsUnderMasterDispatchMode())
+	if (Gp_role == GP_ROLE_DISPATCH)
 	{
 		if (!*shmDtmStarted &&
 			(start_time == BgWorkerStart_ConsistentState ||
@@ -6920,21 +6918,6 @@ setProcAffinity(int id)
 	elog(LOG, "gp_set_proc_affinity setting ignored; feature not configured");
 }
 #endif
-
-/*
- * Master is started once in utility mode by gpstart to fetch segment info,
- * then it is restarted again to production/dispatch mode with "-E" specified.
- *
- * This function checks 1) is master, 2) is under dispatch mode
- */
-bool
-IsUnderMasterDispatchMode(void)
-{
-	if (Gp_entry_postmaster && Gp_role == GP_ROLE_DISPATCH)
-		return true;
-
-	return false;
-}
 
 void
 load_auxiliary_libraries(void)

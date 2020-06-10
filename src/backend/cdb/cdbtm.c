@@ -985,11 +985,7 @@ rollbackDtxTransaction(void)
 int
 tmShmemSize(void)
 {
-	if ((Gp_role != GP_ROLE_DISPATCH) && (Gp_role != GP_ROLE_UTILITY))
-		return 0;
-
-	return
-		MAXALIGN(TMCONTROLBLOCK_BYTES(max_tm_gxacts));
+	return MAXALIGN(TMCONTROLBLOCK_BYTES(max_tm_gxacts));
 }
 
 
@@ -1010,9 +1006,6 @@ tmShmemInit(void)
 	 * to the number of prepared.
 	 */
 	max_tm_gxacts = max_prepared_xacts;
-
-	if ((Gp_role != GP_ROLE_DISPATCH) && (Gp_role != GP_ROLE_UTILITY))
-		return;
 
 	shared = (TmControlBlock *) ShmemInitStruct("Transaction manager", tmShmemSize(), &found);
 	if (!shared)

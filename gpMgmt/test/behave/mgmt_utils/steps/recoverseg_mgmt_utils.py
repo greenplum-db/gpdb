@@ -71,7 +71,7 @@ def impl(context, seg):
 
 @then('the saved primary segment reports the same value for sql "{sql_cmd}" db "{dbname}" as was saved')
 def impl(context, sql_cmd, dbname):
-    psql_cmd = "PGDATABASE=\'%s\' PGOPTIONS=\'-c gp_session_role=utility\' psql -t -h %s -p %s -c \"%s\"; " % (
+    psql_cmd = "PGDATABASE=\'%s\' PGOPTIONS=\'-c gp_role=utility\' psql -t -h %s -p %s -c \"%s\"; " % (
         dbname, context.remote_pair_primary_host, context.remote_pair_primary_port, sql_cmd)
     cmd = Command(name='Running Remote command: %s' % psql_cmd, cmdStr = psql_cmd)
     cmd.run(validateAfter=True)
@@ -103,7 +103,7 @@ def runCommandOnRemoteSegment(context, cid, sql_cmd):
     port, host = context.stdout_message.split("|")
     port = port.strip()
     host = host.strip()
-    psql_cmd = "PGDATABASE=\'template1\' PGOPTIONS=\'-c gp_session_role=utility\' psql -h %s -p %s -c \"%s\"; " % (host, port, sql_cmd)
+    psql_cmd = "PGDATABASE=\'template1\' PGOPTIONS=\'-c gp_role=utility\' psql -h %s -p %s -c \"%s\"; " % (host, port, sql_cmd)
     Command(name='Running Remote command: %s' % psql_cmd, cmdStr = psql_cmd).run(validateAfter=True)
 
 @then('gprecoverseg should print "{output}" to stdout for each mirror')

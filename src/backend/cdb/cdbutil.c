@@ -1060,7 +1060,6 @@ cdb_setup(void)
 {
 	elog(DEBUG1, "Initializing Greenplum components...");
 
-	/* If gp_role is UTILITY, skip this call. */
 	if (Gp_role != GP_ROLE_UTILITY)
 	{
 		ensureInterconnectAddress();

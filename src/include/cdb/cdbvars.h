@@ -32,10 +32,10 @@
 #define PRIO_MAX 20
 #endif
 /*
- * Parameters gp_session_role and gp_role
+ * Parameters gp_role
  *
- * The run-time parameters (GUC variables) gp_session_role and
- * gp_role report and provide control over the role assumed by a
+ * The run-time parameters (GUC variables) gp_role
+ * reports and provides control over the role assumed by a
  * postgres process.
  *
  * Valid  roles are the following:
@@ -44,81 +44,26 @@
  *	execute		The process acts as a parallel SQL executor.
  *	utility		The process acts as a simple SQL engine.
  *
- * Both parameters are initialized to the same value at connection
- * time and are local to the backend process resulting from the
- * connection.	The default is dispatch which is the normal setting
- * for a user of Greenplum connecting to a node of  the Greenplum cluster.
- * Neither parameter appears in the configuration file.
+ * For postmaster, the parameter is initialized by '-c' (required).
  *
- * gp_session_role
+ * For normal connections to cluster, you can connect to QD directly,
+ * but can not connect to QE directly unless specifying the utility role.
  *
- * - does not affect the operation of the backend, and
- * - does not change during the lifetime of PostgreSQL session.
- *
- * gp_role
- *
- * - determines the operating role of the backend, and
- * - may be changed by a superuser via the SET command.
- *
- * The connection time value of gp_session_role used by a
- * libpq-based client application can be specified using the
- * environment variable PGOPTIONS.	For example, this is how to
- * invoke psql on database test as a utility:
- *
- *	PGOPTIONS='-c gp_session_role=utility' psql test
- *
+ * For utility role connection to either QD or QE, PGOPTIONS could be used.
  * Alternatively, libpq-based applications can be modified to set
  * the value directly via an argument to one of the libpq functions
  * PQconnectdb, PQsetdbLogin or PQconnectStart.
  *
- * Don't try to set gp_role this way.  At the time options are
- * processed it is unknown whether the user is a superuser, so
- * the attempt will be rejected.
- *
- * ----------
- *
- * Greenplum Developers can access the values of these parameters via the
- * global variables Gp_session_role and Gp_role of type
- * GpRoleValue. For example
- *
- *	#include "cdb/cdbvars.h"
- *
- *	switch ( Gp_role  )
- *	{
- *		case GP_ROLE_DISPATCH:
- *			... Act like a query dispatcher ...
- *			break;
- *		case GP_ROLE_EXECUTE:
- *			... Act like a query executor ...
- *			break;
- *		case GP_ROLE_UTILITY:
- *			... Act like an unmodified PostgreSQL backend. ...
- *			break;
- *		default:
- *			... Won't happen ..
- *			break;
- *	}
- *
- * You can also modify Gp_role (even if the session doesn't have
- * superuser privileges) by setting it to one of the three valid
- * values, however this must be well documented to avoid
- * disagreements between modules.  Don't modify the value  of
- * Gp_session_role.
- *
+ * For single backend connection, utility role is enforced in code.
  */
 
 typedef enum
 {
-	GP_ROLE_UTILITY = 0,		/* Operating as a simple database engine */
+	GP_ROLE_UNDEFINED = 0,		/* Should never see this role in use */
+	GP_ROLE_UTILITY,			/* Operating as a simple database engine */
 	GP_ROLE_DISPATCH,			/* Operating as the parallel query dispatcher */
 	GP_ROLE_EXECUTE,			/* Operating as a parallel query executor */
-	GP_ROLE_UNDEFINED			/* Should never see this role in use */
 } GpRoleValue;
-
-
-extern GpRoleValue Gp_session_role;	/* GUC var - server startup mode.  */
-extern char *gp_session_role_string;	/* Use by guc.c as staging area for
-										 * value. */
 
 extern GpRoleValue Gp_role;	/* GUC var - server operating mode.  */
 extern char *gp_role_string;	/* Use by guc.c as staging area for value. */
@@ -778,6 +723,8 @@ extern GpId GpIdentity;
 extern int get_dbid_string_length(void);
 #define UNINITIALIZED_GP_IDENTITY_VALUE (-10000)
 #define IS_QUERY_DISPATCHER() (GpIdentity.segindex == MASTER_CONTENT_ID)
+
+#define IS_QUERY_EXECUTOR_BACKEND() (Gp_role == GP_ROLE_EXECUTE && gp_session_id > 0)
 
 /* Stores the listener port that this process uses to listen for incoming
  * Interconnect connections from other Motion nodes.

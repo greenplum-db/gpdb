@@ -144,7 +144,7 @@ done
 # Reconfigure the segment configuration on the replica master so that
 # the other replicas are recognized as primary segments.
 echo "Configuring replica master's gp_segment_configuration..."
-PGOPTIONS="-c gp_session_role=utility" psql postgres -c "
+PGOPTIONS="-c gp_role=utility" psql postgres -c "
 SET allow_system_table_mods=true;
 DELETE FROM gp_segment_configuration WHERE preferred_role='m';
 UPDATE gp_segment_configuration SET dbid=${REPLICA_MASTER_DBID}, datadir='${REPLICA_MASTER}' WHERE content = -1;

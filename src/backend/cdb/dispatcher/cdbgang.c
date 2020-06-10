@@ -445,9 +445,6 @@ cdbgang_parse_gpqeid_params(struct Port *port pg_attribute_unused(),
 	char	   *cp;
 	char	   *np = gpqeid;
 
-	/* The presence of an gpqeid string means this backend is a qExec. */
-	SetConfigOption("gp_session_role", "execute", PGC_POSTMASTER, PGC_S_OVERRIDE);
-
 	/* gp_session_id */
 	if (gpqeid_next_param(&cp, &np))
 		SetConfigOption("gp_session_id", cp, PGC_POSTMASTER, PGC_S_OVERRIDE);

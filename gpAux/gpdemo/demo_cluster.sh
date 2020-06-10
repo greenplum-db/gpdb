@@ -116,7 +116,7 @@ cleanDemo(){
 
     (export MASTER_DATA_DIRECTORY=$QDDIR/${SEG_PREFIX}-1;
      source ${GPHOME}/greenplum_path.sh;
-     gpstop -a)
+     gpstop -ai)
 
     ##
     ## Remove the files and directories created; allow test harnesses

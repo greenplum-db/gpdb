@@ -147,7 +147,7 @@ check_vacuum_worked()
 
 	# Query for the xmin ages.
 	local xmin_ages=$( \
-		PGOPTIONS='-c gp_session_role=utility' \
+		PGOPTIONS='-c gp_role=utility' \
 		"${NEW_BINDIR}/psql" -c 'SELECT age(xmin) FROM pg_catalog.gp_segment_configuration GROUP BY age(xmin);' \
 			 -p 18432 -t -A template1 \
 	)
@@ -255,7 +255,7 @@ diff_and_exit() {
 	if (( $smoketest )) ; then
 		# After a smoke test, we only have the master available to query.
 		args='-m'
-		pgopts='-c gp_session_role=utility'
+		pgopts='-c gp_role=utility'
 	fi
 
 	# Start the new cluster, dump it and stop it again when done. We need to bump

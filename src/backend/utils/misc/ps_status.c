@@ -364,12 +364,13 @@ set_ps_display(const char *activity, bool force)
 
 	/* Add client session's global id. */
 	if (gp_session_id > 0 && ep - cp > 0)
+	{
 		cp += snprintf(cp, ep - cp, "con%d ", gp_session_id);
 
-	/* Which segment is accessed by this qExec? */
-	if (Gp_role == GP_ROLE_EXECUTE &&
-		GpIdentity.segindex >= -1 && ep - cp > 0)
-		cp += snprintf(cp, ep - cp, "seg%d ", GpIdentity.segindex);
+		/* Which segment is accessed by this qExec? */
+		if (Gp_role == GP_ROLE_EXECUTE && GpIdentity.segindex >= -1)
+			cp += snprintf(cp, ep - cp, "seg%d ", GpIdentity.segindex);
+	}
 
 	/* Add count of commands received from client session. */
 	if (gp_command_count > 0 && ep - cp > 0)

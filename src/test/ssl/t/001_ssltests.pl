@@ -35,7 +35,7 @@ sub run_test_psql
 	my $connstr   = $_[0];
 	my $logstring = $_[1];
 
-	local $ENV{PGOPTIONS} = '-c gp_session_role=utility';
+	local $ENV{PGOPTIONS} = '-c gp_role=utility';
 
 	my $cmd = [
 		'psql', '-X', '-A', '-t', '-c', "SELECT 'connected with $connstr'",

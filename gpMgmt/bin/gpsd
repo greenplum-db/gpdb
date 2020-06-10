@@ -18,7 +18,7 @@ gpsd_version = '%prog 1.0'
 sysnslist = "('pg_toast', 'pg_bitmapindex', 'pg_temp_1', 'pg_catalog', 'information_schema')"
 orca = False
 # unset search path due to CVE-2018-1058
-pgoptions = '-c gp_session_role=utility -c search_path='
+pgoptions = '-c gp_role=utility -c search_path='
 
 
 def ResultIter(cursor, arraysize=1000):

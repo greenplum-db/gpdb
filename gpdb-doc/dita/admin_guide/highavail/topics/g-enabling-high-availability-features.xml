@@ -8,13 +8,17 @@
          configured.</shortdesc>
    </abstract>
    <body>
-      <note type="important"> When data loss is not acceptable for a <ph otherprops="pivotal"
-            >Pivotal </ph>Greenplum Database cluster, master and segment mirroring must be
-            enabled<ph otherprops="pivotal"> in order for the cluster to be supported by
-            Pivotal</ph>. Without mirroring, system and data availability is not guaranteed<ph
-            otherprops="pivotal">, Pivotal will make best efforts to restore a cluster in this
-            case</ph>. For information about master and segment mirroring, see <xref
-            href="../../intro/about_ha.xml#about_ha">About Redundancy and Failover</xref>.</note>
+      <note type="important">When data loss is not acceptable for a Greenplum Database cluster,
+         Greenplum master and segment mirroring is recommended. If mirroring is not enabled then
+         Greenplum stores only one copy of the data, so the underlying storage media provides the
+         only guarantee for data availability and correctness in the event of a hardware failure.<p
+            otherprops="pivotal">Kubernetes enables quick recovery from both pod and host failures,
+            and Kubernetes storage services provide a high level of availability for the underlying
+            data. Furthermore, virtualized environments make it difficult to ensure the
+            anti-affinity guarantees required for Greenplum mirroring solutions. For these reasons,
+            mirrorless deployments are fully supported with Greenplum for Kubernetes. Other
+            deployment environments are generally not supported for production use unless both
+            Greenplum master and segment mirroring are enabled.</p></note>
       <p>For information about the utilities that are used to enable high availability, see the
             <i>Greenplum Database Utility Guide</i>. </p>
    </body>

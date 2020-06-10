@@ -74,7 +74,6 @@ extern void ShmemBackendArrayAllocation(void);
 
 extern void load_auxiliary_libraries(void);
 extern bool amAuxiliaryBgWorker(void);
-extern bool IsUnderMasterDispatchMode(void);
 
 /*
  * Note: MAX_BACKENDS is limited to 2^18-1 because that's the width reserved

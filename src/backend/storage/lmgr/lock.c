@@ -848,9 +848,9 @@ LockAcquireExtended(const LOCKTAG *locktag,
 	
 	if (lockmethodid == DEFAULT_LOCKMETHOD && locktag->locktag_type != LOCKTAG_TRANSACTION)
 	{
-		if (Gp_role == GP_ROLE_EXECUTE && !Gp_is_writer)
+		if (IS_QUERY_EXECUTOR_BACKEND() && !Gp_is_writer)
 		{	
-			if (lockHolderProcPtr == NULL || lockHolderProcPtr == MyProc)
+			if (lockHolderProcPtr == MyProc)
 			{
 				/* Find the guy who should manage our locks */
 				PGPROC * proc = FindProcByGpSessionId(gp_session_id);
@@ -1135,7 +1135,7 @@ LockAcquireExtended(const LOCKTAG *locktag,
 			return LOCKACQUIRE_NOT_AVAIL;
 		}
 
-		if (Gp_role == GP_ROLE_EXECUTE)
+		if (IS_QUERY_EXECUTOR_BACKEND())
 		{
 			if (!Gp_is_writer)
 				elog(LOG,"Reader gang member waiting on a lock [%u,%u] %s",

@@ -144,20 +144,16 @@ class PgCtlBackendOptions(CmdArgs):
 
     >>> str(PgCtlBackendOptions(5432, 1, 2))
     '-p 5432 --silent-mode=true'
-    >>> str(PgCtlBackendOptions(5432, 1, 2).set_master(True))
-    '-p 5432 --silent-mode=true -i'
-    >>> str(PgCtlBackendOptions(5432, 1, 2).set_master(False))
-    '-p 5432 --silent-mode=true -i -E'
-    >>> str(PgCtlBackendOptions(5432, 1, 2).set_segment(1))
-    '-p 5432 --silent-mode=true -i'
+    >>> str(PgCtlBackendOptions(5432, 1, 2).set_master())
+    '-p 5432 --silent-mode=true -i -c gp_role=dispatch'
+    >>> str(PgCtlBackendOptions(5432, 1, 2).set_execute())
+    '-p 5432 --silent-mode=true -i -c gp_role=execute'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_special('upgrade'))
     '-p 5432 --silent-mode=true -U'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_special('maintenance'))
     '-p 5432 --silent-mode=true -m'
-    >>> str(PgCtlBackendOptions(5432, 1, 2).set_utility(True))
+    >>> str(PgCtlBackendOptions(5432, 1, 2).set_utility())
     '-p 5432 --silent-mode=true -c gp_role=utility'
-    >>> str(PgCtlBackendOptions(5432, 1, 2).set_utility(False))
-    '-p 5432 --silent-mode=true'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_restricted(True,1))
     '-p 5432 --silent-mode=true -c superuser_reserved_connections=1'
     >>>
@@ -176,11 +172,11 @@ class PgCtlBackendOptions(CmdArgs):
     # master/segment-specific options
     #
 
-    def set_master(self, is_utility_mode):
+    def set_master(self):
         """
         @param is_utility_mode: start with is_utility_mode?
         """
-        if not is_utility_mode: self.append("-E")
+        self.append("-c gp_role=dispatch")
         return self
 
     #
@@ -195,11 +191,12 @@ class PgCtlBackendOptions(CmdArgs):
         if opt: self.append(opt)
         return self
 
-    def set_utility(self, utility):
-        """
-        @param utility: true if starting in utility mode
-        """
-        if utility: self.append("-c gp_role=utility")
+    def set_utility(self):
+        self.append("-c gp_role=utility")
+        return self
+
+    def set_execute(self):
+        self.append("-c gp_role=execute")
         return self
 
     def set_restricted(self, restricted, max_connections):
@@ -293,13 +290,16 @@ class MasterStart(Command):
 
         # build backend options
         b = PgCtlBackendOptions(port)
-        b.set_master(is_utility_mode=utilityMode)
-        b.set_utility(utilityMode)
+        if utilityMode:
+            b.set_utility()
+        else:
+            b.set_master()
         b.set_special(specialMode)
         b.set_restricted(restrictedMode, max_connections)
 
         # build pg_ctl command
         c = PgCtlStartArgs(dataDir, b, era, wrapper, wrapper_args, wait, timeout)
+        logger.info("MasterStart pg_ctl cmd is %s", c);
         self.cmdStr = str(c)
 
         Command.__init__(self, name, self.cmdStr, ctxt, remoteHost)
@@ -348,11 +348,15 @@ class SegmentStart(Command):
 
         # build backend options
         b = PgCtlBackendOptions(port)
-        b.set_utility(utilityMode)
+        if utilityMode:
+            b.set_utility()
+        else:
+            b.set_execute()
         b.set_special(specialMode)
 
         # build pg_ctl command
         c = PgCtlStartArgs(datadir, b, era, wrapper, wrapper_args, pg_ctl_wait, timeout)
+        logger.info("SegmentStart pg_ctl cmd is %s", c);
         self.cmdStr = str(c) + ' 2>&1'
 
         Command.__init__(self, name, self.cmdStr, ctxt, remoteHost)
@@ -427,7 +431,7 @@ class SegmentRewind(Command):
         # Build the pg_rewind command. Do not run pg_rewind if recovery.conf
         # file exists in target data directory because the target instance can
         # be started up normally as a mirror for WAL replication catch up.
-        rewind_cmd = '[ -f %s/recovery.conf ] || PGOPTIONS="-c gp_session_role=utility" $GPHOME/bin/pg_rewind --write-recovery-conf --slot="internal_wal_replication_slot" --source-server="%s" --target-pgdata=%s' % (target_datadir, source_server, target_datadir)
+        rewind_cmd = '[ -f %s/recovery.conf ] || PGOPTIONS="-c gp_role=utility" $GPHOME/bin/pg_rewind --write-recovery-conf --slot="internal_wal_replication_slot" --source-server="%s" --target-pgdata=%s' % (target_datadir, source_server, target_datadir)
 
         if verbose:
             rewind_cmd = rewind_cmd + ' --progress'

@@ -76,8 +76,32 @@ set allow_system_table_mods to false;
 -- at here
 !\retcode gprecoverseg -a;
 
+-- loop while segments come in sync
+do $$
+ begin /* in func */
+    for i in 1..120 loop /* in func */
+      if (select count(*) = 0 from gp_segment_configuration where content != -1 and mode != 's') then /* in func */
+        return; /* in func */
+      end if; /* in func */
+      perform gp_request_fts_probe_scan(); /* in func */
+    end loop; /* in func */
+  end; /* in func */
+$$;
+
 -- rebalance the cluster
 !\retcode gprecoverseg -ar;
+
+-- loop while segments come in sync
+do $$
+ begin /* in func */
+    for i in 1..120 loop /* in func */
+      if (select count(*) = 0 from gp_segment_configuration where content != -1 and mode != 's') then /* in func */
+        return; /* in func */
+      end if; /* in func */
+      perform gp_request_fts_probe_scan(); /* in func */
+    end loop; /* in func */
+  end; /* in func */
+$$;
 
 -- recheck gp_segment_configuration after rebalance
 SELECT dbid, role, preferred_role, content, mode, status FROM gp_segment_configuration order by dbid;

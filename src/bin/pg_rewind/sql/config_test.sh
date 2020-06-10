@@ -83,7 +83,7 @@ PORT_STANDBY=`expr $PORT_MASTER + 1`
 MASTER_DBID=2
 STANDBY_DBID=5
 
-PGOPTIONS_UTILITY='-c gp_session_role=utility'
+PGOPTIONS_UTILITY='-c gp_role=utility'
 MASTER_PSQL="psql -a --no-psqlrc -p $PORT_MASTER"
 STANDBY_PSQL="psql -a --no-psqlrc -p $PORT_STANDBY"
 STANDBY_PSQL_TUPLES_ONLY="psql -t --no-psqlrc -p $PORT_STANDBY"

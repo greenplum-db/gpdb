@@ -107,7 +107,7 @@ class InitMirrors():
         if self.init:
             # 2. update catalog
             catalog_update_query = "select pg_catalog.gp_add_segment_mirror(%d::int2, '%s', '%s', %d, '%s')" % (mirror_contentid, self.hostname, self.hostname, mirror_port, mirror_dir)
-            commands.append("PGOPTIONS=\"-c gp_session_role=utility\" psql postgres -c \"%s\"" % catalog_update_query)
+            commands.append("PGOPTIONS=\"-c gp_role=utility\" psql postgres -c \"%s\"" % catalog_update_query)
 
         thread_name = 'Mirror content %d' % mirror_contentid
         command_finish = 'Initialized mirror at %s' % mirror_dir
@@ -158,16 +158,15 @@ class StartInstances():
 
         # Arguments for the master.
         #
-        # -E in GPDB will set Gp_entry_postmaster = true;
-        # to start master in utility mode, need to remove -E and add -c gp_role=utility
-        #
         # we automatically assume people want to start in master only utility mode
         # if the self.clusterconfig.get_num_contents() is 0
         if contentid == GpSegmentConfiguration.MASTER_CONTENT_ID:
             if self.clusterconfig.get_num_contents() == 0:
                 opts += " -c gp_role=utility"
             else:
-                opts += " -E"
+                opts += " -c gp_role=dispatch"
+        else:
+            opts += " -c gp_role=execute"
 
         if self.wait:
             waitstring = "-w -t 180"
@@ -279,7 +278,7 @@ class DestroyMirrors():
 
         commands = []
         catalog_update_query = "select pg_catalog.gp_remove_segment_mirror(%d::int2)" % (mirror_contentid)
-        commands.append("PGOPTIONS=\"-c gp_session_role=utility\" psql postgres -c \"%s\"" % catalog_update_query)
+        commands.append("PGOPTIONS=\"-c gp_role=utility\" psql postgres -c \"%s\"" % catalog_update_query)
 
         command_finish = 'Removed mirror %s from catalog' % mirror_dir
         runcommands(commands, thread_name, command_finish, False)

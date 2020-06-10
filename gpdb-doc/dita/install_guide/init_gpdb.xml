@@ -187,7 +187,15 @@ $ gpinitsystem -c gpconfigs/gpinitsystem_config -h gpconfigs/hostfile_gpinitsyst
                 a fully redundant system (with a standby master and a <i>spread</i> mirror
                 configuration) include the <codeph>-s</codeph> and <codeph>-S</codeph> options. For
                 example:</p><codeblock>$ gpinitsystem -c gpconfigs/gpinitsystem_config -h gpconfigs/hostfile_gpinitsystem \
-  -s <varname>standby_master_hostname</varname> -S</codeblock></li>
+  -s <varname>standby_master_hostname</varname> -S</codeblock><p>During
+                a new cluster creation, you may use the <codeph><varname>-O
+                    output_configuration_file</varname></codeph> option to save the cluster
+                configuration details in a file. For
+                example:</p><codeblock>$ gpinitsystem -c gpconfigs/gpinitsystem_config -O gpconfigs/config_template </codeblock><p>This
+                output file can be edited and used at a later stage as the input file of the
+                  <codeph>-I</codeph> option, to create a new cluster or to recover from a backup.
+                See <xref href="../utility_guide/ref/gpinitsystem.xml" format="xml"
+                  >gpinitsystem</xref> for further details.</p></li>
             <li id="jm138853">The utility will verify your setup information and make sure it can
               connect to each host and access the data directories specified in your configuration.
               If all of the pre-checks are successful, the utility will prompt you to confirm your

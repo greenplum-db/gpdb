@@ -581,6 +581,27 @@ explain select * from t1_lateral_limit as t1 cross join lateral
 select * from t1_lateral_limit as t1 cross join lateral
 (select ((c).x+t2.b) as n  from t2_lateral_limit as t2 order by n limit 1)s;
 
+-- Continue with the above cases, if the lateral subquery contains union all
+-- and in some of its appendquerys contain limit, it may also lead to bad plan.
+-- The best solution may be to walk the query to and do some static analysis
+-- to find out which rel has to be gathered and materialized. But it is complicated
+-- to do so and this seems less efficient. I believe in future we should do big
+-- refactor to make greenplum support lateral well so now, let's just make sure
+-- we will not panic.
+explain (costs off) select * from t1_lateral_limit as t1 cross join lateral
+((select ((c).x+t2.b) as n  from t2_lateral_limit as t2 order by n limit 1) union all select 1)s;
+
+select * from t1_lateral_limit as t1 cross join lateral
+((select ((c).x+t2.b) as n  from t2_lateral_limit as t2 order by n limit 1) union all select 1)s;
+
+-- test lateral subquery contains group by (group-by is another place that
+-- may add motions in the subquery's plan).
+explain select * from t1_lateral_limit t1 cross join lateral
+(select (c).x+t2.a, sum(t2.a+t2.b) from t2_lateral_limit t2 group by (c).x+t2.a)x;
+
+select * from t1_lateral_limit t1 cross join lateral
+(select (c).x+t2.a, sum(t2.a+t2.b) from t2_lateral_limit t2 group by (c).x+t2.a)x;
+
 -- The following case is from Github Issue
 -- https://github.com/greenplum-db/gpdb/issues/8860
 -- It is the same issue as the above test suite.

@@ -711,6 +711,16 @@ DROP TABLE IF EXISTS table_multi_locations;
 DROP EXTERNAL TABLE IF EXISTS ext_table_multi_locations;
 -- start_ignore
 -- end_ignore
+-- Test GUC write_to_gpfdist_timeout. gpfdist is stopped, insert will retry until timeout
+CREATE TABLE test_guc (a int, b text) DISTRIBUTED BY (a);
+INSERT INTO  test_guc VALUES (generate_series(1,256), 'test_guc');
+CREATE WRITABLE EXTERNAL TABLE wext_test_guc (a int, b text) LOCATION ('gpfdist://127.0.0.1:7070/test_guc.tbl') FORMAT 'TEXT' (DELIMITER AS '|' NULL AS 'null');
+-- retry interval 1, 2, 4, 8, 16, then timeout. total 6 tries
+set write_to_gpfdist_timeout = 20;
+INSERT INTO wext_test_guc SELECT * FROM test_guc;
+ERROR:  error when writing data to gpfdist http://127.0.0.1:7070/test_guc.tbl, quit after 6 tries  (seg0 10.152.8.113:6005 pid=17374)
+DROP TABLE IF EXISTS test_guc;
+DROP EXTERNAL TABLE IF EXISTS wext_test_guc;
 --
 -- get an error for missing gpfdist
 --

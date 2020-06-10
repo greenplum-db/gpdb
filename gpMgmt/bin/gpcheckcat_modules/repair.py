@@ -126,7 +126,7 @@ class Repair:
         psql_cmd = ""
 
         if segment['content'] != -1:
-            psql_cmd += 'PGOPTIONS=\'-c gp_session_role=utility\' '
+            psql_cmd += 'PGOPTIONS=\'-c gp_role=utility\' '
 
         psql_cmd += 'psql -X -v ON_ERROR_STOP=1 -a -h {hostname} -p {port} '.format(hostname=segment['hostname'], port=segment['port'])
 

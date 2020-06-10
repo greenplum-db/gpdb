@@ -2898,6 +2898,17 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
+		{"write_to_gpfdist_timeout", PGC_USERSET, EXTERNAL_TABLES,
+			gettext_noop("Timeout (in seconds) for writing data to gpfdist server."),
+			gettext_noop("Default value is 300."),
+			GUC_UNIT_S | GUC_NOT_IN_SAMPLE
+		},
+		&write_to_gpfdist_timeout,
+		300, 1, 7200,
+		NULL, NULL, NULL
+	},
+
+	{
 		{"writable_external_table_bufsize", PGC_USERSET, EXTERNAL_TABLES,
 			gettext_noop("Buffer size in kilobytes for writable external table before writing data to gpfdist."),
 			gettext_noop("Valid value is between 32K and 128M: [32, 131072]."),
@@ -4213,25 +4224,14 @@ struct config_string ConfigureNamesString_gp[] =
 	},
 
 	{
-		{"gp_session_role", PGC_BACKEND, GP_WORKER_IDENTITY,
-			gettext_noop("Reports the default role for the session."),
-			gettext_noop("Valid values are DISPATCH, EXECUTE, and UTILITY."),
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE
-		},
-		&gp_session_role_string,
-		"dispatch",
-		check_gp_session_role, assign_gp_session_role, show_gp_session_role
-	},
-
-	{
-		{"gp_role", PGC_SUSET, CLIENT_CONN_OTHER,
+		{"gp_role", PGC_BACKEND, GP_WORKER_IDENTITY,
 			gettext_noop("Sets the role for the session."),
 			gettext_noop("Valid values are DISPATCH, EXECUTE, and UTILITY."),
 			GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE
 		},
 		&gp_role_string,
-		"dispatch",
-		NULL, assign_gp_role, show_gp_role
+		"undefined",
+		check_gp_role, assign_gp_role, show_gp_role
 	},
 
 	{

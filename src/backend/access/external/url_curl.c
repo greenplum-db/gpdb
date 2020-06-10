@@ -21,6 +21,7 @@
 #include <arpa/inet.h>
 
 #include <curl/curl.h>
+#include <time.h>
 
 #include "cdb/cdbsreh.h"
 #include "cdb/cdbutil.h"
@@ -554,8 +555,10 @@ gp_curl_easy_perform_backoff_and_check_response(URL_CURL_FILE *file)
 	/* retry in case server return timeout error */
 	unsigned int wait_time = 1;
 	unsigned int retry_count = 0;
-	/* retry at most twice(300 seconds * 2) when CURLE_OPERATION_TIMEDOUT happens */
-	unsigned int timeout_count = 0;
+	/* retry at most 600s by default when any error happens */
+	time_t start_time = time(NULL);
+	time_t now;
+	time_t end_time = start_time + write_to_gpfdist_timeout;
 
 	while (true)
 	{
@@ -564,30 +567,12 @@ gp_curl_easy_perform_backoff_and_check_response(URL_CURL_FILE *file)
 		 * when work load is high:
 		 *	- 'could not connect to server'
 		 *	- gpfdist return timeout (HTTP 408)
-		 * By default it will wait at most 127 seconds before abort.
-		 * 1 + 2 + 4 + 8 + 16 + 32 + 64 = 127
+		 * By default it will wait at least write_to_gpfdist_timeout seconds before abort.
 		 */
 		CURLcode e = curl_easy_perform(file->curl->handle);
 		if (CURLE_OK != e)
 		{
-			/* For curl timeout, retry 2 times before reporting error */
-			if (CURLE_OPERATION_TIMEDOUT == e)
-			{
-				timeout_count++;
-				elog(LOG, "curl operation timeout, timeout_count = %d", timeout_count);
-				if (timeout_count >= 2)
-				{
-					ereport(ERROR,
-					(errcode(ERRCODE_CONNECTION_FAILURE),
-					errmsg("error when writing data to gpfdist %s, quit after %d timeout_count",
-							file->curl_url, timeout_count)));
-				}
-				continue;
-			}
-			else
-			{
-				elog(LOG, "%s error (%d - %s)", file->curl_url, e, curl_easy_strerror(e));
-			}
+			elog(LOG, "%s response (%d - %s)", file->curl_url, e, curl_easy_strerror(e));
 		}
 		else
 		{
@@ -615,20 +600,25 @@ gp_curl_easy_perform_backoff_and_check_response(URL_CURL_FILE *file)
 		}
 
 		/*
-		 * For FDIST_TIMEOUT and curl errors except CURLE_OPERATION_TIMEDOUT
-		 * Retry until MAX_TRY_WAIT_TIME
+		 * Retry until end_time is reached
 		 */
-		if (wait_time > MAX_TRY_WAIT_TIME)
+		now = time(NULL);
+		if (now >= end_time)
 		{
+			elog(LOG, "abort writing data to gpfdist, wait_time = %d, duration = %ld, write_to_gpfdist_timeout = %d",
+				wait_time, now - start_time, write_to_gpfdist_timeout);
 			ereport(ERROR,
 					(errcode(ERRCODE_CONNECTION_FAILURE),
 					 errmsg("error when writing data to gpfdist %s, quit after %d tries",
-							file->curl_url, retry_count+1)));
+							file->curl_url, retry_count + 1)));
 		}
 		else
 		{
-			elog(LOG, "failed to send request to gpfdist (%s), will retry after %d seconds", file->curl_url, wait_time);
 			unsigned int for_wait = 0;
+			wait_time = wait_time > MAX_TRY_WAIT_TIME ? MAX_TRY_WAIT_TIME : wait_time;
+			/* For last retry before end_time */
+			wait_time = wait_time > end_time - now ? end_time - now : wait_time;
+			elog(LOG, "failed to send request to gpfdist (%s), will retry after %d seconds", file->curl_url, wait_time);
 			while (for_wait++ < wait_time)
 			{
 				pg_usleep(1000000);
@@ -1141,7 +1131,8 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 	{
 		// TIMEOUT for POST only, GET is single HTTP request,
 		// probablity take long time.
-		CURL_EASY_SETOPT(file->curl->handle, CURLOPT_TIMEOUT, 300L);
+		elog(LOG, "write_to_gpfdist_timeout = %d", write_to_gpfdist_timeout);
+		CURL_EASY_SETOPT(file->curl->handle, CURLOPT_TIMEOUT, (long)write_to_gpfdist_timeout);
 
 		/*init sequence number*/
 		file->seq_number = 1;

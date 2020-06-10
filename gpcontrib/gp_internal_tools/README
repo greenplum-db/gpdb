@@ -171,7 +171,7 @@ The "gp_ao_co_diagnostics" shared library contains nine functions.
 
   3. Connect to the segment you wish to evaluate.
 
-       PGOPTIONS=' -c gp_session_role=utility ' psql
+       PGOPTIONS=' -c gp_role=utility ' psql
 
 
   4. Get the Oid of the table you are interested in.

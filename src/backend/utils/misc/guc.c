@@ -6264,7 +6264,7 @@ set_config_option(const char *name, const char *value,
 			{
 				ereport(elevel,
 						(errcode(ERRCODE_CANT_CHANGE_RUNTIME_PARAM),
-						 errmsg("parameter \"%s\" cannot be set after connection start",
+						 errmsg("parameter \"%s\" cannot be set after connection starts",
 								name)));
 				return 0;
 			}

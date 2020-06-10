@@ -325,13 +325,8 @@ rel_partition_key_attrs(Oid relid)
 	HeapTuple	tuple;
 	List	   *pkeys = NIL;
 
-	/*
-	 * Table pg_partition is only populated on the entry database, however, we
-	 * disable calls from outside dispatch to foil use of utility mode.  (Full
-	 * UCS may may this test obsolete.)
-	 */
-	if (Gp_session_role != GP_ROLE_DISPATCH)
-		elog(ERROR, "mode not dispatch");
+	if (!IS_QUERY_DISPATCHER())
+		elog(ERROR, "pg_partition is only accessible on entry database");
 
 	rel = heap_open(PartitionRelationId, AccessShareLock);
 

@@ -71,7 +71,7 @@ for ((i=PORT_MIN; i<PORT_MAX+1; i++)); do
             echo "----------------------------------------"
             echo "Table: gp_$table"
             echo "----------------------------------------"
-            PGOPTIONS="-c gp_session_role=utility" $GPPATH/psql --pset pager=off -p ${PORTS[$i]} -d template1 -c  "select * from gp_"$table
+            PGOPTIONS="-c gp_role=utility" $GPPATH/psql --pset pager=off -p ${PORTS[$i]} -d template1 -c  "select * from gp_"$table
             RETVAL=$?
             if [ $RETVAL -ne 0 ]; then
                 echo "$0 failed."
@@ -84,7 +84,7 @@ for ((i=PORT_MIN; i<PORT_MAX+1; i++)); do
             echo "----------------------------------------"
             echo "Table: gp_$table"
             echo "----------------------------------------"
-            PGOPTIONS="-c gp_session_role=utility" $GPPATH/psql --pset pager=off -p ${PORTS[$i]} -d template1 -c \
+            PGOPTIONS="-c gp_role=utility" $GPPATH/psql --pset pager=off -p ${PORTS[$i]} -d template1 -c \
                 "select * from gp_"$table
             RETVAL=$?
             if [ $RETVAL -ne 0 ]; then

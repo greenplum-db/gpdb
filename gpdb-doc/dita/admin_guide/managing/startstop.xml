@@ -101,7 +101,7 @@
           <cmd>Connect to the master in maintenance mode to do catalog maintenance. For
             example:</cmd>
           <stepxmp>
-            <codeblock id="kg155401">$ PGOPTIONS='-c gp_session_role=utility' psql postgres</codeblock>
+            <codeblock id="kg155401">$ PGOPTIONS='-c gp_role=utility' psql postgres</codeblock>
           </stepxmp>
         </step>
         <step>

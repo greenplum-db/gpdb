@@ -82,7 +82,7 @@ get_db_conn(ClusterInfo *cluster, const char *db_name)
 	}
 
 	appendPQExpBuffer(&conn_opts, " options=");
-	appendConnStrVal(&conn_opts, "-c gp_session_role=utility");
+	appendConnStrVal(&conn_opts, "-c gp_role=utility");
 
 	conn = PQconnectdb(conn_opts.data);
 	termPQExpBuffer(&conn_opts);

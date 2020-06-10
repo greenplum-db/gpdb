@@ -1331,7 +1331,7 @@ SetupTCPInterconnect(EState *estate)
 		int			highsock = -1;
 		uint64		timeout_ms = 20 * 60 * 1000;
 		int			outgoing_fail_count = 0;
-		bool		select_errno;
+		int			select_errno;
 
 		iteration++;
 

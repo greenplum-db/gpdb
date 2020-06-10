@@ -54,10 +54,6 @@ GpRoleValue Gp_role;			/* Role paid by this Greenplum Database
 								 * backend */
 char	   *gp_role_string;		/* Staging area for guc.c */
 
-GpRoleValue Gp_session_role;	/* Role paid by this Greenplum Database
-								 * backend */
-char	   *gp_session_role_string; /* Staging area for guc.c */
-
 bool		Gp_is_writer;		/* is this qExec a "writer" process. */
 
 int			gp_session_id;		/* global unique id for session. */
@@ -346,7 +342,7 @@ static GpRoleValue string_to_role(const char *string);
 
 
 /*
- * Convert a Greenplum Database role string (as for gp_session_role or gp_role) to an
+ * Convert a Greenplum Database role string (as for gp_role) to an
  * enum value of type GpRoleValue. Return GP_ROLE_UNDEFINED in case the
  * string is unrecognized.
  */
@@ -355,26 +351,19 @@ string_to_role(const char *string)
 {
 	GpRoleValue role = GP_ROLE_UNDEFINED;
 
-	if (pg_strcasecmp(string, "dispatch") == 0 || pg_strcasecmp(string, "") == 0)
-	{
+	if (pg_strcasecmp(string, "dispatch") == 0)
 		role = GP_ROLE_DISPATCH;
-	}
 	else if (pg_strcasecmp(string, "execute") == 0)
-	{
 		role = GP_ROLE_EXECUTE;
-	}
 	else if (pg_strcasecmp(string, "utility") == 0)
-	{
 		role = GP_ROLE_UTILITY;
-	}
 
 	return role;
 }
 
 /*
- * Convert a GpRoleValue to a role string (as for gp_session_role or
- * gp_role).  Return eyecatcher in the unexpected event that the value
- * is unknown or undefined.
+ * Convert a GpRoleValue to a role string (as for gp_role).  Return eyecatcher
+ * in the unexpected event that the value is unknown or undefined.
  */
 const char *
 role_to_string(GpRoleValue role)
@@ -389,156 +378,39 @@ role_to_string(GpRoleValue role)
 			return "utility";
 		case GP_ROLE_UNDEFINED:
 		default:
-			return "*undefined*";
+			return "undefined";
 	}
 }
 
-
-/*
- * Check and Assign routines for "gp_session_role" option.  Because this variable
- * has context PGC_BACKEND, we expect this assigment to happen only during
- * setup of a BACKEND, e.g., based on the role value specified on the connect
- * request.
- *
- * See src/backend/util/misc/guc.c for option definition.
- */
-bool
-check_gp_session_role(char **newval, void **extra, GucSource source)
-{
-	GpRoleValue newrole = string_to_role(*newval);
-
-	if (newrole == GP_ROLE_UNDEFINED)
-	{
-		return false;
-	}
-
-	/* Force utility mode in a stand-alone backend. */
-	if (!IsPostmasterEnvironment && newrole != GP_ROLE_UTILITY)
-	{
-		if (source != PGC_S_DEFAULT)
-			elog(WARNING, "gp_session_role forced to 'utility' in single-user mode");
-
-		*newval = strdup("utility");
-	}
-	return true;
-}
-
-void
-assign_gp_session_role(const char *newval, void *extra)
-{
-#if FALSE
-	elog(DEBUG1, "assign_gp_session_role: gp_session_role=%s, newval=%s",
-		 show_gp_session_role(), newval);
-#endif
-
-	GpRoleValue newrole = string_to_role(newval);
-
-	Assert(newrole != GP_ROLE_UNDEFINED);
-
-	Gp_session_role = newrole;
-	Gp_role = Gp_session_role;
-
-	if (Gp_role == GP_ROLE_UTILITY && MyProc != NULL)
-		MyProc->mppIsWriter = false;
-}
-
-
-
-/*
- * Check and Assign routines for "gp_role" option.  This variable has context
- * PGC_SUSET so that is can only be set by a superuser via the SET command.
- * (It can also be set using an option on postmaster start, but this isn't
- * interesting beccause the derived global CdbRole is always set (along with
- * CdbSessionRole) on backend startup for a new connection.
- *
- * See src/backend/util/misc/guc.c for option definition.
- */
 bool
 check_gp_role(char **newval, void **extra, GucSource source)
 {
 	GpRoleValue newrole = string_to_role(*newval);
 
-	if (newrole == GP_ROLE_UNDEFINED)
+	/* Force utility mode in a stand-alone backend. */
+	if (!IsPostmasterEnvironment && newrole != GP_ROLE_UTILITY)
 	{
-		return false;
+		elog(LOG, "gp_role forced to 'utility' in single-user mode");
+		*newval = strdup("utility");
+		return true;
 	}
-	return true;
+
+	if (source == PGC_S_DEFAULT)
+		return true;
+	else if (Gp_role == GP_ROLE_UNDEFINED)
+		return (newrole != GP_ROLE_UNDEFINED);
+	else /* can only downgrade to utility. */
+		return (newrole == GP_ROLE_UTILITY);
 }
 
 void
 assign_gp_role(const char *newval, void *extra)
 {
-#if FALSE
-	elog(DEBUG1, "assign_gp_role: gp_role=%s, newval=%s, doit=%s",
-		 show_gp_role(), newval, (doit ? "true" : "false"));
-#endif
+	Gp_role = string_to_role(newval);
 
-	GpRoleValue newrole = string_to_role(newval);
-	GpRoleValue oldrole = Gp_role;
-
-	Assert(newrole != GP_ROLE_UNDEFINED);
-
-	/*
-	 * When changing between roles, we must call cdb_cleanup and then
-	 * cdb_setup to get setup and connections appropriate to the new role.
-	 */
-	bool		do_disconnect = false;
-	bool		do_connect = false;
-
-	if (Gp_role != newrole && IsUnderPostmaster && !IsInitProcessingMode())
-	{
-		if (Gp_role != GP_ROLE_UTILITY)
-			do_disconnect = true;
-
-		if (newrole != GP_ROLE_UTILITY)
-			do_connect = true;
-	}
-
-	if (do_disconnect)
-		cdb_cleanup(0, 0);
-
-	Gp_role = newrole;
-
-	if (do_connect)
-	{
-		/* Only backend process will get here */
-		Assert(IsBackendPid(MyProcPid));
-
-		/*
-		 * In case there are problems with the Greenplum Database
-		 * tables or data, we catch any error coming out of
-		 * cdblink_setup so we can set the gp_role back to what it
-		 * was.  Otherwise we may be left with inappropriate
-		 * connections for the new role.
-		 */
-		PG_TRY();
-		{
-			cdb_setup();
-		}
-		PG_CATCH();
-		{
-			cdb_cleanup(0, 0);
-			Gp_role = oldrole;
-			if (Gp_role != GP_ROLE_UTILITY)
-				cdb_setup();
-			PG_RE_THROW();
-		}
-		PG_END_TRY();
-	}
+	if (Gp_role == GP_ROLE_UTILITY && MyProc != NULL)
+		MyProc->mppIsWriter = false;
 }
-
-
-/*
- * Show hook routine for "gp_session_role" option.
- *
- * See src/backend/util/misc/guc.c for option definition.
- */
-const char *
-show_gp_session_role(void)
-{
-	return role_to_string(Gp_session_role);
-}
-
 
 /*
  * Show hook routine for "gp_role" option.

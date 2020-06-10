@@ -195,6 +195,13 @@ ShmemAlloc(Size size)
 	void	   *newSpace;
 
 	/*
+	 * Better to return NULL for this else caller could still use memory that
+	 * does not belong to it.
+	 */
+	if (size == 0)
+		return NULL;
+
+	/*
 	 * Ensure all space is adequately aligned.  We used to only MAXALIGN this
 	 * space but experience has proved that on modern systems that is not good
 	 * enough.  Many parts of the system are very sensitive to critical data

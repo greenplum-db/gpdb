@@ -57,6 +57,7 @@ returns text as $$
     import subprocess
     cmd = 'pg_ctl -l postmaster.log -D %s ' % datadir
     opts = '-p %d' % (port)
+    opts = opts + ' -c gp_role=execute'
     cmd = cmd + '-o "%s" start' % opts
     return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace('.', '')
 $$ language plpythonu;

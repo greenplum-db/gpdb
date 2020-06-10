@@ -1,3 +1,5 @@
+CREATE ROLE matview_ao_role;
+SET ROLE matview_ao_role;
 CREATE TABLE t_matview_ao (id int NOT NULL PRIMARY KEY, type text NOT NULL, amt numeric NOT NULL);
 INSERT INTO t_matview_ao VALUES
   (1, 'x', 2),

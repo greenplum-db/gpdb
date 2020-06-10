@@ -13,7 +13,7 @@ my $node = get_new_node('main');
 $node->init;
 $node->start;
 
-$ENV{PGOPTIONS} = '-c gp_session_role=utility --client-min-messages=WARNING';
+$ENV{PGOPTIONS} = '-c gp_role=utility --client-min-messages=WARNING';
 
 $node->issues_sql_like(
 	[ 'reindexdb', 'postgres' ],
