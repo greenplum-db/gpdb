@@ -1,5 +1,7 @@
 -- Tests FTS can handle DNS error.
 
+include: helpers/server_helpers.sql;
+
 -- to make test deterministic and fast
 !\retcode gpconfig -c gp_fts_probe_retries -v 2 --masteronly;
 
@@ -31,30 +33,12 @@ select count(*) from gp_segment_configuration where status = 'd';
 !\retcode gprecoverseg -aF --no-progress;
 
 -- loop while segments come in sync
-do $$
-begin /* in func */
-  for i in 1..120 loop /* in func */
-    if (select mode = 's' from gp_segment_configuration where content = 0 limit 1) then /* in func */
-      return; /* in func */
-    end if; /* in func */
-    perform gp_request_fts_probe_scan(); /* in func */
-  end loop; /* in func */
-end; /* in func */
-$$;
+select wait_until_all_segments_synchronized()
 
 !\retcode gprecoverseg -ar;
 
 -- loop while segments come in sync
-do $$
-begin /* in func */
-  for i in 1..120 loop /* in func */
-    if (select mode = 's' from gp_segment_configuration where content = 0 limit 1) then /* in func */
-      return; /* in func */
-    end if; /* in func */
-    perform gp_request_fts_probe_scan(); /* in func */
-  end loop; /* in func */
-end; /* in func */
-$$;
+select wait_until_all_segments_synchronized()
 
 -- verify no segment is down after recovery
 select count(*) from gp_segment_configuration where status = 'd';

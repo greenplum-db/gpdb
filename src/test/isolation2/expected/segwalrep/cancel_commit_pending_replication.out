@@ -58,7 +58,7 @@ select gp_inject_fault('finish_prepared_start_of_function', 'reset', 2);
  Success:        
 (1 row)
 -- loop to reach wait_event_type=Replication
-0U: select wait_for_replication(200);
+0U: select wait_for_replication(1200);
  wait_for_replication 
 ----------------------
  t                    

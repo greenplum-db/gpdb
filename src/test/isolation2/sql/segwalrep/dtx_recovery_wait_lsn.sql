@@ -50,16 +50,7 @@ $$ language plpgsql;
 
 !\retcode gprecoverseg -a;
 -- loop while segments come in sync
-4: do $$
-begin /* in func */
-  for i in 1..120 loop /* in func */
-    if (select count(*) = 2 from gp_segment_configuration where content in (0, 1) and mode = 's' and role = 'p') then /* in func */ 
-      return; /* in func */
-    end if; /* in func */
-    perform gp_request_fts_probe_scan(); /* in func */
-  end loop; /* in func */
-end; /* in func */
-$$;
+4: select wait_until_all_segments_synchronized();
 
 !\retcode gpconfig -c gp_fts_probe_retries -v 2 --masteronly;
 

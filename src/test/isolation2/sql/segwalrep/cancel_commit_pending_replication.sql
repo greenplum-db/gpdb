@@ -32,7 +32,7 @@ select gp_inject_fault_infinite('wal_sender_loop', 'suspend', 2);
 -- let the transaction move forward with the commit
 select gp_inject_fault('finish_prepared_start_of_function', 'reset', 2);
 -- loop to reach wait_event_type=Replication
-0U: select wait_for_replication(200);
+0U: select wait_for_replication(1200);
 -- hitting this fault, is checked for test validation
 select gp_inject_fault_infinite('sync_rep_query_cancel', 'skip', 2);
 0U: select pg_cancel_backend(pid) from pg_stat_activity where wait_event_type='Replication' and sess_id in (select sess_id from store_session_id);

@@ -128,3 +128,41 @@ $$ language plpgsql;
 create or replace function master() returns setof gp_segment_configuration as $$
 	select * from gp_segment_configuration where role='p' and content=-1;
 $$ language sql;
+
+create or replace function wait_until_segment_synchronized(segment_number int) returns text as $$
+begin
+	for i in 1..600 loop
+		if (select count(*) = 0 from gp_segment_configuration where content = segment_number and mode != 's') then
+			return 'OK';
+		end if;
+		perform pg_sleep(0.1);
+		perform gp_request_fts_probe_scan();
+	end loop;
+	return 'Fail';
+end;
+$$ language plpgsql;
+
+create or replace function wait_until_all_segments_synchronized() returns text as $$
+begin
+	for i in 1..600 loop
+		if (select count(*) = 0 from gp_segment_configuration where content != -1 and mode != 's') then
+			return 'OK';
+		end if;
+		perform pg_sleep(0.1);
+		perform gp_request_fts_probe_scan();
+	end loop;
+	return 'Fail';
+end;
+$$ language plpgsql;
+
+create or replace function wait_until_master_standby_insync() returns text as $$
+begin
+	for i in 1..1200 loop
+		if (select count(*) = 1 from pg_stat_replication) then
+			return 'OK';
+		end if;
+		perform pg_sleep(0.1);
+	end loop;
+	return 'Fail';
+end;
+$$ language plpgsql;
