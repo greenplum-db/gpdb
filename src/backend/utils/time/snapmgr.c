@@ -398,6 +398,7 @@ GetTransactionSnapshot(void)
 Snapshot
 GetLatestSnapshot(void)
 {
+	DtxContext               dtxctx;
 	/*
 	 * We might be able to relax this, but nothing that could otherwise work
 	 * needs it.
@@ -416,7 +417,27 @@ GetLatestSnapshot(void)
 	if (!FirstSnapshotSet)
 		return GetTransactionSnapshot();
 
-	SecondarySnapshot = GetSnapshotData(&SecondarySnapshotData, DistributedTransactionContext);
+	/*
+	 * Greenplum specific behavior
+	 * On QEs, we cannot create a latest global snapshot. However, this function
+	 * is called mainly in executor, for example some alter table statements that
+	 * need to rewrite a new heap will invoke this and scan the old heap via the
+	 * latest snapshot. But distributed snapshot can only be created in QD, and
+	 * QEs can only set the distributed snapshot from QD through Dispatch. So
+	 * we always return the latest local snapshot in this function when in QD.
+	 * Sometimes in QD we have to get latest snapshot with distributed snapshot
+	 * and then dispatch it to QEs, a typical example is ATExecExpandTableCTAS.
+	 * ATExecExpandTableCTAS and ATExecSetDistributedBy functions are implemented
+	 * as:nn
+	 *   1. build a query CTAS that scan the old table into a new table in QD
+	 *   2. ExecutorStart, ExecutorRun, ExecutorEnd the above query
+	 * So they have to use the latest snapshot to scan the old table no matter
+	 * what is the isolation level of the transaction.
+	 *
+	 * See github issue: https://github.com/greenplum-db/gpdb/issues/10216
+	 */
+	dtxctx = Gp_role == GP_ROLE_DISPATCH ? DistributedTransactionContext : DTX_CONTEXT_LOCAL_ONLY;
+	SecondarySnapshot = GetSnapshotData(&SecondarySnapshotData, dtxctx);
 
 	return SecondarySnapshot;
 }
