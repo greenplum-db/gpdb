@@ -105,6 +105,9 @@ test_HandleFtsWalRepSyncRepOff(void **state)
 
 	will_be_called(UnsetSyncStandbysDefined);
 
+	expect_value(ReplicationSlotClearAttemptCount, name, INTERNAL_WAL_REPLICATION_SLOT_NAME);
+	will_be_called(ReplicationSlotClearAttemptCount);
+
 	/* since this function doesn't have any logic, the test just verified the message type */
 	expectSendFtsResponse(FTS_MSG_SYNCREP_OFF, &mockresponse);
 	

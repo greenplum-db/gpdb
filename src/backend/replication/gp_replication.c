@@ -15,6 +15,7 @@
 #include "pgtime.h"
 #include "cdb/cdbvars.h"
 #include "replication/gp_replication.h"
+#include "replication/slot.h"
 #include "replication/walreceiver.h"
 #include "replication/walsender.h"
 #include "replication/walsender_private.h"
@@ -49,7 +50,8 @@ is_mirror_up(WalSnd *walsender)
 void
 GetMirrorStatus(FtsResponse *response)
 {
-	pg_time_t walsender_replica_disconnected_at = 0;
+	pg_time_t	walsender_replica_disconnected_at = 0;
+	uint32		attempt_replication_times = 0;
 
 	response->IsMirrorUp = false;
 	response->IsInSync = false;
@@ -70,7 +72,24 @@ GetMirrorStatus(FtsResponse *response)
 			continue;
 		}
 
-		walsender_replica_disconnected_at = walsender->replica_disconnected_at;
+		/*
+		 * Detect the primary-mirror replication attempt count.
+		 * If the replication keeps crash, we should consider mark
+		 * mirror down directly. Since the walsender keeps resarting,
+		 * walsender->replica_disconnected_at keeps updated.
+		 * So ignore it.
+		 */
+		attempt_replication_times = ReplicationSlotRetrieveAttemptCount(INTERNAL_WAL_REPLICATION_SLOT_NAME);
+		if (attempt_replication_times <= gp_fts_replication_attempt_count)
+			walsender_replica_disconnected_at = walsender->replica_disconnected_at;
+		else
+		{
+			ereport(LOG,
+					(errmsg("Primary-mirror replication streaming already attempted %d times exceed"
+					" limit gp_fts_replication_attempt_count %d",
+					attempt_replication_times, gp_fts_replication_attempt_count)));
+		}
+
 		is_up = is_mirror_up(walsender);
 		is_streaming = (walsender->state == WALSNDSTATE_STREAMING);
 
@@ -88,6 +107,9 @@ GetMirrorStatus(FtsResponse *response)
 		 * process. This works because the timestamp is set only once by
 		 * postmaster, and is guaranteed to be set before FTS handler child
 		 * processes can be spawned.
+		 *
+		 * walsender_replica_disconnected_at could be set to 0 in case primary-mirror
+		 * tries too may times during establishing replication connection.
 		 */
 		Assert(PMAcceptingConnectionsStartTime);
 		pg_time_t delta = ((pg_time_t) time(NULL)) -

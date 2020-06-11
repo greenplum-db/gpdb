@@ -566,6 +566,18 @@ StartReplication(StartReplicationCmd *cmd)
 	if (cmd->slotname)
 	{
 		ReplicationSlotAcquire(cmd->slotname);
+		/*
+		 * For FTS purpose, increase the replication connection attempt count
+		 * for this primary-mirror.
+		 */
+		if (strcmp(cmd->slotname, INTERNAL_WAL_REPLICATION_SLOT_NAME) == 0)
+		{
+			uint32 count = 0;
+			count = pg_atomic_add_fetch_u32(&MyReplicationSlot->con_attempt_count, 1);
+			elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
+				   "FTS: Continuously strat replication %d times, for slot %s", count, cmd->slotname);
+		}
+
 		if (SlotIsLogical(MyReplicationSlot))
 			ereport(ERROR,
 					(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
@@ -1002,6 +1014,18 @@ StartLogicalReplication(StartReplicationCmd *cmd)
 	Assert(!MyReplicationSlot);
 
 	ReplicationSlotAcquire(cmd->slotname);
+
+	/*
+	 * For FTS purpose, increase the replication connection attempt count
+	 * for this primary-mirror.
+	 */
+	if (strcmp(cmd->slotname, INTERNAL_WAL_REPLICATION_SLOT_NAME) == 0)
+	{
+		uint32 count = 0;
+		count = pg_atomic_add_fetch_u32(&MyReplicationSlot->con_attempt_count, 1);
+		elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
+			   "FTS: Continuously strat replication %d times, for slot %s", count, cmd->slotname);
+	}
 
 	/*
 	 * Force a disconnect, so that the decoding code doesn't need to care
@@ -2997,6 +3021,22 @@ WalSndSetState(WalSndState state)
 
 	SpinLockAcquire(&walsnd->mutex);
 	walsnd->state = state;
+	if (state == WALSNDSTATE_STREAMING)
+	{
+		/*
+		 * For FTS, if the current primary-mirror replication established.
+		 * Clear the attempt count.
+		 */
+		if (MyReplicationSlot != NULL &&
+			strcmp(NameStr(MyReplicationSlot->data.name), INTERNAL_WAL_REPLICATION_SLOT_NAME) == 0)
+		{
+			pg_atomic_write_u32(&MyReplicationSlot->con_attempt_count, 0);
+			elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
+					"FTS: Reset replication attempt count to 0 since start streaming data, for slot %s",
+					INTERNAL_WAL_REPLICATION_SLOT_NAME);
+		}
+	}
+
 	if (state == WALSNDSTATE_CATCHUP || state == WALSNDSTATE_STREAMING)
 		walsnd->replica_disconnected_at = 0;
 	else if (walsnd->replica_disconnected_at == 0)

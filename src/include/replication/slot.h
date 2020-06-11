@@ -97,6 +97,14 @@ typedef struct ReplicationSlot
 	bool		dirty;
 
 	/*
+	 * For GPDB FTS purpose, if the the primary, mirror replication keeps crash
+	 * continuously and attempt to crate replication connection too many times,
+	 * FTS should mark the mirror down.
+	 * If the connection established, clear the attempt count to 0.
+	 */
+	pg_atomic_uint32	con_attempt_count;
+
+	/*
 	 * For logical decoding, it's extremely important that we never remove any
 	 * data that's still needed for decoding purposes, even after a crash;
 	 * otherwise, decoding will produce wrong answers.  Ordinary streaming
@@ -169,6 +177,9 @@ extern void ReplicationSlotAcquire(const char *name);
 extern void ReplicationSlotRelease(void);
 extern void ReplicationSlotSave(void);
 extern void ReplicationSlotMarkDirty(void);
+
+extern uint32 ReplicationSlotRetrieveAttemptCount(const char *name);
+extern void ReplicationSlotClearAttemptCount(const char *name);
 
 /* misc stuff */
 extern bool ReplicationSlotValidateName(const char *name, int elevel);

@@ -1,0 +1,87 @@
+-- Tests mark mirror down if replication walsender walreceiver keep
+-- crash continuously.
+--
+-- Primary and mirror both alive, but wal replication crash happens
+-- before start streaming data. And walsender, walreceiver keeps
+-- re-connect continuously, this may block other processes.
+-- Mark the mirror down to resolve it.
+
+include: helpers/server_helpers.sql;
+CREATE
+
+SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
+ role | preferred_role | content | mode | status 
+------+----------------+---------+------+--------
+ m    | m              | -1      | s    | u      
+ m    | m              | 0       | s    | u      
+ m    | m              | 1       | s    | u      
+ m    | m              | 2       | s    | u      
+ p    | p              | -1      | n    | u      
+ p    | p              | 0       | s    | u      
+ p    | p              | 1       | s    | u      
+ p    | p              | 2       | s    | u      
+(8 rows)
+
+-- Error out before walsender streaming data
+select gp_inject_fault_infinite('wal_sender_loop', 'error', dbid) from gp_segment_configuration where content=0 and role='p';
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+
+-- Should block in commit (SyncrepWaitForLSN()), waiting for commit
+-- LSN to be flushed on mirror.
+1&: create table mirror_block_t1 (a int) distributed by (a);  <waiting ...>
+
+-- trigger failover
+select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+
+1<:  <... completed>
+CREATE
+
+-- expect: to see the content 0, mirror is mark down
+select content, preferred_role, role, status, mode from gp_segment_configuration where content = 0;
+ content | preferred_role | role | status | mode 
+---------+----------------+------+--------+------
+ 0       | p              | p    | u      | n    
+ 0       | m              | m    | d      | n    
+(2 rows)
+
+select gp_inject_fault('wal_sender_loop', 'reset', dbid) from gp_segment_configuration where content=0 and role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- -- now, let's fully recover the mirror
+!\retcode gprecoverseg -aF  --no-progress;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+
+-- loop while segments come in sync
+select wait_until_all_segments_synchronized();
+ wait_until_all_segments_synchronized 
+--------------------------------------
+ OK                                   
+(1 row)
+
+SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
+ role | preferred_role | content | mode | status 
+------+----------------+---------+------+--------
+ m    | m              | -1      | s    | u      
+ m    | m              | 0       | s    | u      
+ m    | m              | 1       | s    | u      
+ m    | m              | 2       | s    | u      
+ p    | p              | -1      | n    | u      
+ p    | p              | 0       | s    | u      
+ p    | p              | 1       | s    | u      
+ p    | p              | 2       | s    | u      
+(8 rows)
+
+drop table mirror_block_t1;
+DROP

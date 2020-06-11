@@ -282,6 +282,7 @@ ReplicationSlotCreate(const char *name, bool db_specific,
 	/* and then data only present in shared memory */
 	slot->just_dirtied = false;
 	slot->dirty = false;
+	pg_atomic_init_u32(&slot->con_attempt_count, 0);
 	slot->effective_xmin = InvalidTransactionId;
 	slot->effective_catalog_xmin = InvalidTransactionId;
 	slot->candidate_catalog_xmin = InvalidTransactionId;
@@ -566,6 +567,58 @@ ReplicationSlotMarkDirty(void)
 	MyReplicationSlot->just_dirtied = true;
 	MyReplicationSlot->dirty = true;
 	SpinLockRelease(&slot->mutex);
+}
+
+/*
+ * For GPDB FTS purpose, retrieve how many replication connection attempts
+ * to crate replication connection.
+ */
+uint32
+ReplicationSlotRetrieveAttemptCount(const char *name)
+{
+	int			i;
+	uint32		result = 0;
+
+	ReplicationSlotValidateName(name, ERROR);
+
+	LWLockAcquire(ReplicationSlotControlLock, LW_SHARED);
+	for (i = 0; i < max_replication_slots; i++)
+	{
+		ReplicationSlot *s = &ReplicationSlotCtl->replication_slots[i];
+
+		if (strcmp(name, NameStr(s->data.name)) == 0)
+		{
+			result = pg_atomic_read_u32(&s->con_attempt_count);
+			break;
+		}
+	}
+	LWLockRelease(ReplicationSlotControlLock);
+	return result;
+}
+
+/*
+ * For GPDB FTS purpose, reset the replication connection attempt count.
+ * New enable replication should count from 0.
+ */
+void
+ReplicationSlotClearAttemptCount(const char *name)
+{
+	int			i;
+
+	ReplicationSlotValidateName(name, ERROR);
+
+	LWLockAcquire(ReplicationSlotControlLock, LW_SHARED);
+	for (i = 0; i < max_replication_slots; i++)
+	{
+		ReplicationSlot *s = &ReplicationSlotCtl->replication_slots[i];
+
+		if (strcmp(name, NameStr(s->data.name)) == 0)
+		{
+			pg_atomic_write_u32(&s->con_attempt_count, 0);
+			break;
+		}
+	}
+	LWLockRelease(ReplicationSlotControlLock);
 }
 
 /*
@@ -1341,6 +1394,7 @@ RestoreSlotFromDisk(const char *name)
 
 		slot->in_use = true;
 		slot->active_pid = 0;
+		pg_atomic_init_u32(&slot->con_attempt_count, 0);
 
 		restored = true;
 		break;

@@ -300,6 +300,7 @@ HandleFtsWalRepSyncRepOff(void)
 	ereport(LOG,
 			(errmsg("turning off synchronous wal replication due to FTS request")));
 	UnsetSyncStandbysDefined();
+	ReplicationSlotClearAttemptCount(INTERNAL_WAL_REPLICATION_SLOT_NAME);
 	GetMirrorStatus(&response);
 
 	SendFtsResponse(&response, FTS_MSG_SYNCREP_OFF);
@@ -333,7 +334,10 @@ CreateReplicationSlotOnPromote(const char *name)
 		ReplicationSlotCreate(name, false, RS_PERSISTENT);
 	}
 	else
+	{
 		ereport(LOG, (errmsg("replication slot %s exists", name)));
+		ReplicationSlotClearAttemptCount(name);
+	}
 
 	/*
 	 * Only on promote signal replication slot is created on mirror. If
