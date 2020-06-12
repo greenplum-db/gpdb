@@ -11,6 +11,7 @@
       <topicref href="madlib.xml#topic9" navtitle="Examples" linking="none"/>
       <topicref href="madlib.xml#topic10" navtitle="References" linking="none"/>
       </topicref>
+    <topicref href="graph.xml" navtitle="Graph Analytics" linking="none"/>    
     <topicref href="postGIS.xml" navtitle="Geospatial Analytics" otherprops="pivotal" linking="none"/>
     <topicref href="text.xml" navtitle="Text Analytics and Search" otherprops="pivotal" linking="none"/>
     <topicref href="intro.xml" navtitle="Procedural Languages" linking="none">

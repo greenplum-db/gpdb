@@ -530,7 +530,7 @@ mwd~mwd.local~7001~/data/mirror1/gpseg0~3~0
         <section id="section7"><title>See Also</title><codeph><xref href="./gpssh-exkeys.xml#topic1"
                     type="topic" format="dita"/></codeph>, <codeph><xref
                     href="gpdeletesystem.xml#topic1" type="topic" format="dita"/></codeph>, <xref
-                href="../../install_guide/init_gpdb.xml" format="xml">Initializing Greenplum
+                href="../../install_guide/init_gpdb.xml" type="topic" scope="peer">Initializing Greenplum
                 Database</xref>.</section>
     </body>
 </topic>
