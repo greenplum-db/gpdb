@@ -12,7 +12,7 @@ use RewindTest;
 # timeline runs successfully.
 
 RewindTest::setup_cluster();
-RewindTest::start_master();
+RewindTest::start_primary();
 RewindTest::create_standby();
 
 local $ENV{"SUSPEND_PG_REWIND"} = '10';

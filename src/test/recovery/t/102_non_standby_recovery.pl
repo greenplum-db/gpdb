@@ -4,7 +4,7 @@ use PostgresNode;
 use TestLib;
 use Test::More tests => 3;
 
-my $node = get_new_node('master');
+my $node = get_new_node('primary');
 
 # Create a data directory with initdb
 $node->init(has_archiving    => 1);

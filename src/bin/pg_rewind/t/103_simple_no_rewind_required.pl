@@ -13,11 +13,11 @@ sub run_test
 	my $test_mode = shift;
 
 	RewindTest::setup_cluster($test_mode);
-	RewindTest::start_master();
+	RewindTest::start_primary();
 	RewindTest::create_standby($test_mode);
 
-	master_psql("CHECKPOINT");
-	# ask to stop master before promoting standby, to make sure no wal
+	primary_psql("CHECKPOINT");
+	# ask to stop primary before promoting standby, to make sure no wal
 	# is written
 	RewindTest::promote_standby(1);
 	RewindTest::run_pg_rewind($test_mode);

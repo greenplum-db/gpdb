@@ -563,9 +563,9 @@ sub init
 	$self->set_replication_conf if $params{allows_streaming};
 	$self->enable_archiving     if $params{has_archiving};
 
-	# We have to specify the master's dbid explicitly because initdb
+	# We have to specify the primary's dbid explicitly because initdb
 	# only creates an empty file. gpconfigurenewseg is tasked with
-	# populating the master's dbid.
+	# populating the primary's dbid.
 	open $conf, '>>', "$pgdata/internal.auto.conf";
 	print $conf "\n# Added by PostgresNode.pm\n";
 	print $conf "gp_dbid=$dbid\n";
@@ -2034,11 +2034,11 @@ sub run_log
 
 Look up WAL locations on the server:
 
- * insert location (master only, error on replica)
- * write location (master only, error on replica)
- * flush location (master only, error on replica)
- * receive location (always undef on master)
- * replay location (always undef on master)
+ * insert location (primary only, error on replica)
+ * write location (primary only, error on replica)
+ * flush location (primary only, error on replica)
+ * receive location (always undef on primary)
+ * replay location (always undef on primary)
 
 mode must be specified.
 
@@ -2088,7 +2088,7 @@ poll_query_until timeout.
 
 Requires that the 'postgres' db exists and is accessible.
 
-target_lsn may be any arbitrary lsn, but is typically $master_node->lsn('insert').
+target_lsn may be any arbitrary lsn, but is typically $primary_node->lsn('insert').
 If omitted, pg_current_wal_lsn() is used.
 
 This is not a test. It die()s on failure.
@@ -2147,7 +2147,7 @@ This is not a test. It die()s on failure.
 
 If the slot is not active, will time out after poll_query_until's timeout.
 
-target_lsn may be any arbitrary lsn, but is typically $master_node->lsn('insert').
+target_lsn may be any arbitrary lsn, but is typically $primary_node->lsn('insert').
 
 Note that for logical slots, restart_lsn is held down by the oldest in-progress tx.
 
