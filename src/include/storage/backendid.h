@@ -45,7 +45,7 @@ typedef int BackendId;			/* unique currently active backend identifier */
 extern PGDLLIMPORT BackendId MyBackendId;	/* backend id of this backend */
 
 /* backend id of our parallel session leader, or InvalidBackendId if none */
-extern PGDLLIMPORT BackendId ParallelMasterBackendId;
+extern PGDLLIMPORT BackendId ParallelLeaderBackendId;
 
 /*
  * The BackendId to use for our session's temp relations is normally our own,
