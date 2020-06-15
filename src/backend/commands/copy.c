@@ -1417,7 +1417,7 @@ ProcessCopyOptions(CopyState cstate,
 				ereport(ERROR,
 						(errcode(ERRCODE_SYNTAX_ERROR),
 						 errmsg("conflicting or redundant options")));
-			cstate->fill_missing = intVal(defel->arg);
+			cstate->fill_missing = defGetBoolean(defel);
 		}
 		else if (strcmp(defel->defname, "newline") == 0)
 		{
