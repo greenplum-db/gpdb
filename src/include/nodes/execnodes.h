@@ -524,7 +524,7 @@ typedef struct ResultRelInfo
 /* ----------------
  *	  EState information
  *
- * Master working state for an Executor invocation
+ * Working state for an Executor invocation
  * ----------------
  */
 typedef struct EState
