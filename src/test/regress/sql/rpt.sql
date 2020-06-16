@@ -347,6 +347,7 @@ select min(x) from minmaxtest;
 create table t_rep_upd_volatile(a int, b int) distributed replicated;
 update t_rep_upd_volatile set a = random();
 update t_rep_upd_volatile set a = 1 where b < random();
+delete from t_rep_upd_volatile where a < random()*10;
 
 -- start_ignore
 drop schema rpt cascade;
