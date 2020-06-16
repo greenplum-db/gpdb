@@ -4563,7 +4563,13 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 					switch (ps)
 					{
 						case PART_STATUS_NONE:
+							break;
 						case PART_STATUS_ROOT:
+							ldistro = (DistributedBy *)lsecond((List *)cmd->def);
+							if (ldistro && ldistro->ptype == POLICYTYPE_REPLICATED)
+								ereport(ERROR,
+										(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+										 errmsg("can't set the distribution policy of a partition table to REPLICATED")));
 							break;
 						case PART_STATUS_LEAF:
 							Assert(PointerIsValid(cmd->def));
