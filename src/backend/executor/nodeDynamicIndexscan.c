@@ -298,6 +298,18 @@ ExecDynamicIndexScan(DynamicIndexScanState *node)
 
 			node->scan_state = SCAN_INIT;
 		}
+		else
+		{
+			/*
+			 * Tuples should use dynamic index scan descriptor rather than
+			 * an auxiliary index scan one to avoid free memory context
+			 * problems in parent plan nodes (indexScanState is cleaned at
+			 * the end of partition index scan).
+			 */
+			ReleaseTupleDesc(slot->tts_tupleDescriptor);
+			slot->tts_tupleDescriptor = node->ss.ps.ps_ResultTupleSlot->tts_tupleDescriptor;
+			PinTupleDesc(slot->tts_tupleDescriptor);
+		}
 	}
 	return slot;
 }
