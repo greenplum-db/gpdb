@@ -46,7 +46,8 @@
           <row>
             <entry><codeph>seq_scan</codeph></entry>
             <entry>bigint</entry>
-            <entry>Number of sequential scans initiated on this table</entry>
+            <entry>Total number of sequential scans initiated on this table from all segment
+              instances</entry>
           </row>
           <row>
             <entry><codeph>seq_tup_read</codeph></entry>
@@ -56,7 +57,8 @@
           <row>
             <entry><codeph>idx_scan</codeph></entry>
             <entry>bigint</entry>
-            <entry>Number of index scans initiated on this table</entry>
+            <entry>Total number of index scans initiated on this index from all segment
+              instances</entry>
           </row>
           <row>
             <entry><codeph>idx_tup_fetch</codeph></entry>

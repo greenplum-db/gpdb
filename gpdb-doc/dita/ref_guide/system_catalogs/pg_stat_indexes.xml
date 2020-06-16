@@ -56,7 +56,8 @@
           <row>
             <entry><codeph>idx_scan</codeph></entry>
             <entry>bigint</entry>
-            <entry>Number of index scans initiated on this index</entry>
+            <entry>Total number of index scans initiated on this index from all segment
+              instances</entry>
           </row>
           <row>
             <entry><codeph>idx_tup_read</codeph></entry>
