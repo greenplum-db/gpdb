@@ -1,8 +1,8 @@
 ---
-title: Upgrading PXF in Greenplum 6.x
+title: Upgrading PXF When You Upgrade Greenplum 6
 ---
 
-If you are using PXF in your current Greenplum Database 6.x installation, you must upgrade the PXF service when you upgrade to a newer version of Greenplum Database 6.x.
+If you are using PXF in your current Greenplum Database 6.x installation, you must perform some PXF upgrade actions when you upgrade to a newer version of Greenplum Database 6.x.
 
 The PXF upgrade procedure describes how to upgrade PXF in your Greenplum Database installation. This procedure uses *PXF.from* to refer to your currently-installed PXF version and *PXF.to* to refer to the PXF version installed when you upgrade to the new version of Greenplum Database.
 
@@ -23,6 +23,12 @@ Perform this procedure before you upgrade to a new version of Greenplum Database
     $ ssh gpadmin@<gpmaster>
     ```
 
+2. Identify and note the *PXF.from* version number. For example:
+
+    ``` shell
+    gpadmin@gpmaster$ pxf version
+    ```
+
 2. Stop PXF on each segment host as described in [Stopping PXF](cfginitstart_pxf.html#stop_pxf).
 
 3. Upgrade to the new version of Greenplum Database and then continue your PXF upgrade with [Step 2: Upgrading PXF](#pxfup).
@@ -37,6 +43,20 @@ After you upgrade to the new version of Greenplum Database, perform the followin
     ``` shell
     $ ssh gpadmin@<gpmaster>
     ```
+
+2. If *PXF.from* is version 5.13 or newer, you installed the PXF `rpm` on your Greenplum 6 hosts:
+   
+    1. Copy the PXF extension files from the PXF installation directory to the new Greenplum 6 install directory:
+
+        ``` shell
+        gpadmin@gpmaster pxf cluster register
+        ```
+
+    2. Start PXF on each segment host as described in [Starting PXF](cfginitstart_pxf.html#start_pxf).
+
+    3. Exit this procedure.
+
+3. **If your Greenplum 6 installation is version 6.9 or newer**, install the PXF distribution on your Greenplum 6 hosts as described in [Installing PXF](../pxf/latest/release/installing_pxf.html).
 
 2. Initialize PXF on each segment host as described in [Initializing PXF](init_pxf.html). You may choose to use your existing `$PXF_CONF` for the initialization.
 
