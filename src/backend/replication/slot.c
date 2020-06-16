@@ -571,7 +571,7 @@ ReplicationSlotMarkDirty(void)
 
 /*
  * For GPDB FTS purpose, retrieve how many replication connection attempts
- * to crate replication connection.
+ * to create replication connection.
  */
 uint32
 ReplicationSlotRetrieveAttemptCount(const char *name)

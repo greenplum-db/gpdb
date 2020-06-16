@@ -98,7 +98,7 @@ typedef struct ReplicationSlot
 
 	/*
 	 * For GPDB FTS purpose, if the the primary, mirror replication keeps crash
-	 * continuously and attempt to crate replication connection too many times,
+	 * continuously and attempt to create replication connection too many times,
 	 * FTS should mark the mirror down.
 	 * If the connection established, clear the attempt count to 0.
 	 */

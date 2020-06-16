@@ -137,7 +137,7 @@ int gp_fts_mark_mirror_down_grace_period = 30;
 
 /*
  * If primary-mirror replication attempts to connect continuously and exceed
- * this count, mark the mirror down dirextly.
+ * this count, mark the mirror down.
  */
 int			gp_fts_replication_attempt_count = 10;
 
