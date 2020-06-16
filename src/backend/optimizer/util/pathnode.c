@@ -4923,6 +4923,22 @@ create_limit_path(PlannerInfo *root, RelOptInfo *rel,
 {
 	LimitPath  *pathnode = makeNode(LimitPath);
 
+	/*
+	 * If the locus type of the subpath is SegmentGeneral/General without order,
+	 * e.g. for replicated table, applying Limit will change the locus type.
+	 * Because the output of the subquery may be different, even for
+	 * replicated table, the result should be produced by one and only one
+	 * instance.
+	 */
+	if ((CdbPathLocus_IsGeneral(subpath->locus) ||
+		 CdbPathLocus_IsSegmentGeneral(subpath->locus))
+		&& !subpath->pathkeys)
+	{
+		CdbPathLocus locus;
+		CdbPathLocus_MakeSingleQE(&locus, subpath->locus.numsegments);
+		subpath = cdbpath_create_motion_path(root, subpath, NIL, false, locus);
+	}
+
 	pathnode->path.pathtype = T_Limit;
 	pathnode->path.parent = rel;
 	/* Limit doesn't project, so use source path's pathtarget */
