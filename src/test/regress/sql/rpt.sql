@@ -342,6 +342,12 @@ insert into minmaxtest select generate_series(1, 10);
 set enable_seqscan=off;
 select min(x) from minmaxtest;
 
+-- Test update on replicate table cannot contain volatile function
+-- See github issue: https://github.com/greenplum-db/gpdb/issues/10226
+create table t_rep_upd_volatile(a int, b int) distributed replicated;
+update t_rep_upd_volatile set a = random();
+update t_rep_upd_volatile set a = 1 where b < random();
+
 -- start_ignore
 drop schema rpt cascade;
 -- end_ignore

@@ -156,6 +156,7 @@ static List*generate_alternate_vars(Var *var, grouped_window_ctx *ctx);
 static bool checkCanOptSelectLockingClause(SelectStmt *stmt);
 static bool queryNodeSearch(Node *node, void *context);
 static void sanity_check_on_conflict_update_set_distkey(Oid relid, List *onconflict_set);
+static void replicated_table_check_volatile(Query *query);
 
 /*
  * parse_analyze
@@ -545,6 +546,13 @@ transformDeleteStmt(ParseState *pstate, DeleteStmt *stmt)
 	/* this must be done after collations, for reliable comparison of exprs */
 	if (pstate->p_hasAggs)
 		parseCheckAggregates(pstate, qry);
+
+	if (list_length(qry->rtable) == 1 &&
+		IsReplicatedTable(((RangeTblEntry *) linitial(qry->rtable))->relid))
+	{
+		/* Don't allow the DELETE statement contains volatile function */
+		replicated_table_check_volatile(qry);
+	}
 
 	return qry;
 }
@@ -3359,6 +3367,22 @@ transformUpdateStmt(ParseState *pstate, UpdateStmt *stmt)
 
 	assign_query_collations(pstate, qry);
 
+	if (list_length(qry->rtable) == 1 &&
+		IsReplicatedTable(((RangeTblEntry *) linitial(qry->rtable))->relid))
+	{
+		/*
+		 * Greenplum specific behavior:
+		 * Greenplum support replicated table and partition table cannot distribute
+		 * replicated. So first do a quick check for the length of rtable.
+		 * Plan of Update statement for replicated table has to be dispatched to each
+		 * segment and it is just like a procedure(now is the plan) is invoked many times
+		 * and it has to produce the same results each time. So the update statement
+		 * contains volatile functions, we should reject them for replicated tables.
+		 * See github issue: https://github.com/greenplum-db/gpdb/issues/10226 for details.
+		 */
+		replicated_table_check_volatile(qry);
+	}
+
 	return qry;
 }
 
@@ -4235,5 +4259,25 @@ sanity_check_on_conflict_update_set_distkey(Oid relid, List *onconflict_set)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				 errmsg("modification of distribution columns in OnConflictUpdate is not supported")));
+	}
+}
+
+/*
+ * replicated_table_check_volatile
+ * it is only assumed to invoke for update/delete on replicate table.
+ */ 
+static void
+replicated_table_check_volatile(Query *query)
+{
+	Assert(query->commandType == CMD_UPDATE ||
+		   query->commandType == CMD_DELETE);
+
+	if (contain_volatile_functions((Node *) (query->jointree)) ||
+		contain_volatile_functions((Node *) (query->targetList)))
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("update/delete statement on replicated table"
+					 	" cannot contain volatile functions")));
 	}
 }

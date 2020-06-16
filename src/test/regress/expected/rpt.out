@@ -679,6 +679,13 @@ select min(x) from minmaxtest;
    1
 (1 row)
 
+-- Test update on replicate table cannot contain volatile function
+-- See github issue: https://github.com/greenplum-db/gpdb/issues/10226
+create table t_rep_upd_volatile(a int, b int) distributed replicated;
+update t_rep_upd_volatile set a = random();
+ERROR:  update statement on replicate table cannot contain volatile functions
+update t_rep_upd_volatile set a = 1 where b < random();
+ERROR:  update statement on replicate table cannot contain volatile functions
 -- start_ignore
 drop schema rpt cascade;
 NOTICE:  drop cascades to 4 other objects
