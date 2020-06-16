@@ -786,7 +786,8 @@ CTE1(e,f) AS
 ( SELECT f1.a, rank() OVER (PARTITION BY f1.b ORDER BY CTE.a) FROM orca.twf1 f1, CTE )
 SELECT * FROM CTE1,CTE WHERE CTE.a = CTE1.f and CTE.a = 2 ORDER BY 1;
 
-SET optimizer_cte_inlining = off;
+RESET optimizer_cte_inlining;
+RESET optimizer_cte_inlining_bound;
 
 -- catalog queries
 select 1 from pg_class c group by c.oid limit 1;
@@ -1721,7 +1722,6 @@ drop table idxscan_outer;
 drop table idxscan_inner;
 
 drop table if exists ggg;
-set optimizer_metadata_caching=on;
 
 create table ggg (a char(1), b char(2), d char(3));
 insert into ggg values ('x', 'a', 'c');
@@ -2419,14 +2419,19 @@ INSERT INTO foo2 values (1,1,1), (2,2,2);
 INSERT INTO foo3 values (1,1), (2,2);
 
 set optimizer_join_order=query;
+-- we ignore enable/disable_xform statements as their output will differ if the server is compiled without Orca (the xform won't exist)
+-- start_ignore
 select disable_xform('CXformInnerJoin2HashJoin');
+-- end_ignore
 
 EXPLAIN SELECT 1 FROM foo1, foo2 WHERE foo1.a = foo2.a AND foo2.c = 3 AND foo2.b IN (SELECT b FROM foo3);
 SELECT 1 FROM foo1, foo2 WHERE foo1.a = foo2.a AND foo2.c = 3 AND foo2.b IN (SELECT b FROM foo3);
 
 reset optimizer_join_order;
+-- start_ignore
 select enable_xform('CXformInnerJoin2HashJoin');
-
+-- end_ignore
+-- Test that duplicate sensitive redistributes don't have invalid projection (eg: element that can't be hashed)
 drop table if exists t55;
 drop table if exists tp;
 

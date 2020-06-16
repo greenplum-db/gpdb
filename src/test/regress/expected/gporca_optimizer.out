@@ -9024,7 +9024,8 @@ SELECT * FROM CTE1,CTE WHERE CTE.a = CTE1.f and CTE.a = 2 ORDER BY 1;
  10 | 2 | 2 | 2
 (10 rows)
 
-SET optimizer_cte_inlining = off;
+RESET optimizer_cte_inlining;
+RESET optimizer_cte_inlining_bound;
 -- catalog queries
 select 1 from pg_class c group by c.oid limit 1;
  ?column? 
@@ -10533,7 +10534,6 @@ drop table idxscan_outer;
 drop table idxscan_inner;
 drop table if exists ggg;
 NOTICE:  table "ggg" does not exist, skipping
-set optimizer_metadata_caching=on;
 create table ggg (a char(1), b char(2), d char(3));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
@@ -10777,7 +10777,6 @@ EXPLAIN SELECT * FROM bitmap_test WHERE a in (1);
          Recheck Cond: a = 1
          ->  Bitmap Index Scan on bitmap_index  (cost=0.00..0.00 rows=0 width=0)
                Index Cond: a = 1
- Settings:  optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
  Optimizer status: Pivotal Optimizer (GPORCA) version 2.48.9
 (7 rows)
 
@@ -10789,7 +10788,7 @@ EXPLAIN SELECT * FROM bitmap_test WHERE a in (1, 47);
          Recheck Cond: a = ANY ('{1,47}'::integer[])
          ->  Bitmap Index Scan on bitmap_index  (cost=0.00..0.00 rows=0 width=0)
                Index Cond: a = ANY ('{1,47}'::integer[])
- Settings:  optimizer=on; optimizer_metadata_caching=on
+ Settings:  optimizer=on
  Optimizer status: Pivotal Optimizer (GPORCA) version 1.647
 (7 rows)
 
@@ -10801,7 +10800,7 @@ EXPLAIN SELECT * FROM bitmap_test WHERE a in ('2', 47);
          Recheck Cond: a = ANY ('{2,47}'::integer[])
          ->  Bitmap Index Scan on bitmap_index  (cost=0.00..0.00 rows=0 width=0)
                Index Cond: a = ANY ('{2,47}'::integer[])
- Settings:  optimizer=on; optimizer_metadata_caching=on
+ Settings:  optimizer=on
  Optimizer status: Pivotal Optimizer (GPORCA) version 1.647
 (7 rows)
 
@@ -10813,7 +10812,7 @@ EXPLAIN SELECT * FROM bitmap_test WHERE a in ('1', '2');
          Recheck Cond: a = ANY ('{1,2}'::integer[])
          ->  Bitmap Index Scan on bitmap_index  (cost=0.00..0.00 rows=0 width=0)
                Index Cond: a = ANY ('{1,2}'::integer[])
- Settings:  optimizer=on; optimizer_metadata_caching=on
+ Settings:  optimizer=on
  Optimizer status: Pivotal Optimizer (GPORCA) version 1.647
 (7 rows)
 
@@ -10823,7 +10822,7 @@ EXPLAIN SELECT * FROM bitmap_test WHERE a in ('1', '2', 47);
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=4 width=4)
    ->  Seq Scan on bitmap_test  (cost=0.00..431.00 rows=2 width=4)
          Filter: a = ANY ('{1,2,47}'::integer[])
- Settings:  optimizer=on; optimizer_metadata_caching=on
+ Settings:  optimizer=on
  Optimizer status: Pivotal Optimizer (GPORCA) version 1.647
 (5 rows)
 
@@ -12205,12 +12204,15 @@ INSERT INTO foo1 values (1), (2);
 INSERT INTO foo2 values (1,1,1), (2,2,2);
 INSERT INTO foo3 values (1,1), (2,2);
 set optimizer_join_order=query;
+-- we ignore enable/disable_xform statements as their output will differ if the server is compiled without Orca (the xform won't exist)
+-- start_ignore
 select disable_xform('CXformInnerJoin2HashJoin');
             disable_xform             
 --------------------------------------
  CXformInnerJoin2HashJoin is disabled
 (1 row)
 
+-- end_ignore
 EXPLAIN SELECT 1 FROM foo1, foo2 WHERE foo1.a = foo2.a AND foo2.c = 3 AND foo2.b IN (SELECT b FROM foo3);
                                                  QUERY PLAN                                                 
 ------------------------------------------------------------------------------------------------------------
@@ -12240,12 +12242,15 @@ SELECT 1 FROM foo1, foo2 WHERE foo1.a = foo2.a AND foo2.c = 3 AND foo2.b IN (SEL
 (0 rows)
 
 reset optimizer_join_order;
+-- start_ignore
 select enable_xform('CXformInnerJoin2HashJoin');
             enable_xform             
 -------------------------------------
  CXformInnerJoin2HashJoin is enabled
 (1 row)
 
+-- end_ignore
+-- Test that duplicate sensitive redistributes don't have invalid projection (eg: element that can't be hashed)
 drop table if exists t55;
 NOTICE:  table "t55" does not exist, skipping
 drop table if exists tp;
@@ -12262,8 +12267,8 @@ SELECT DISTINCT L1.c, L1.lid
 FROM t55 L1 CROSS JOIN META
 WHERE L1.lid = int4in(unknownout(meta.load_id));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
-                                                      QUERY PLAN                                                      
-----------------------------------------------------------------------------------------------------------------------
+                                                     QUERY PLAN                                                     
+--------------------------------------------------------------------------------------------------------------------
  Result  (cost=0.00..431.10 rows=1 width=8)
    Output: c, lid
    ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.08 rows=1 width=8)
@@ -12291,7 +12296,7 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entr
                                              ->  Result  (cost=0.00..0.00 rows=1 width=1)
                                                    Output: '99'
  Optimizer: Pivotal Optimizer (GPORCA)
- Settings: optimizer=on, optimizer_cte_inlining_bound=1000, optimizer_join_order=query, optimizer_metadata_caching=on
+ Settings: optimizer=on, optimizer_join_order=query
 (28 rows)
 
 CREATE TABLE TP AS

@@ -8955,7 +8955,8 @@ SELECT * FROM CTE1,CTE WHERE CTE.a = CTE1.f and CTE.a = 2 ORDER BY 1;
  10 | 2 | 2 | 2
 (10 rows)
 
-SET optimizer_cte_inlining = off;
+RESET optimizer_cte_inlining;
+RESET optimizer_cte_inlining_bound;
 -- catalog queries
 select 1 from pg_class c group by c.oid limit 1;
  ?column? 
@@ -9778,7 +9779,7 @@ explain select * from orca.bm_test where i=2 and t='2';
  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..4.50 rows=4 width=6)
    ->  Seq Scan on bm_test  (cost=0.00..4.50 rows=2 width=6)
          Filter: i = 2 AND t = '2'::text
- Settings:  optimizer=off; optimizer_cte_inlining_bound=1000
+ Settings:  optimizer=off
  Optimizer status: Postgres query optimizer
 (5 rows)
 
@@ -10413,7 +10414,7 @@ where ordernum between 10 and 20;
                      Hash Key: i.productid
                      ->  Seq Scan on idxscan_inner i  (cost=0.00..2.04 rows=1 width=9)
                            Filter: ordernum >= 10 AND ordernum <= 20
- Settings:  optimizer=off; optimizer_cte_inlining_bound=1000
+ Settings:  optimizer=off
  Optimizer status: Postgres query optimizer
 (11 rows)
 
@@ -10430,7 +10431,6 @@ drop table idxscan_outer;
 drop table idxscan_inner;
 drop table if exists ggg;
 NOTICE:  table "ggg" does not exist, skipping
-set optimizer_metadata_caching=on;
 create table ggg (a char(1), b char(2), d char(3));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
@@ -10466,7 +10466,7 @@ explain select * from orca.index_test where a = 5;
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..4.25 rows=1 width=20)
    ->  Seq Scan on index_test  (cost=0.00..4.25 rows=1 width=20)
          Filter: a = 5
- Settings:  optimizer=off; optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
+ Settings:  optimizer=off
  Optimizer status: Postgres query optimizer
 (5 rows)
 
@@ -10477,7 +10477,7 @@ explain select * from orca.index_test where c = 5;
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..4.25 rows=1 width=20)
    ->  Seq Scan on index_test  (cost=0.00..4.25 rows=1 width=20)
          Filter: c = 5
- Settings:  optimizer=off; optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
+ Settings:  optimizer=off
  Optimizer status: Postgres query optimizer
 (5 rows)
 
@@ -10488,7 +10488,7 @@ explain select * from orca.index_test where a = 5 and c = 5;
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..4.50 rows=1 width=20)
    ->  Seq Scan on index_test  (cost=0.00..4.50 rows=1 width=20)
          Filter: a = 5 AND c = 5
- Settings:  optimizer=off; optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
+ Settings:  optimizer=off
  Optimizer status: Postgres query optimizer
 (5 rows)
 
@@ -10662,7 +10662,7 @@ EXPLAIN SELECT * FROM bitmap_test WHERE a in (1);
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..4.25 rows=1 width=4)
    ->  Seq Scan on bitmap_test  (cost=0.00..4.25 rows=1 width=4)
          Filter: a = 1
- Settings:  optimizer=off; optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
+ Settings:  optimizer=off
  Optimizer status: Postgres query optimizer
 (5 rows)
 
@@ -10672,7 +10672,7 @@ EXPLAIN SELECT * FROM bitmap_test WHERE a in (1, 47);
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..4.25 rows=2 width=4)
    ->  Seq Scan on bitmap_test  (cost=0.00..4.25 rows=1 width=4)
          Filter: a = ANY ('{1,47}'::integer[])
- Settings:  optimizer=off; optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
+ Settings:  optimizer=off
  Optimizer status: Postgres query optimizer
 (5 rows)
 
@@ -10682,7 +10682,7 @@ EXPLAIN SELECT * FROM bitmap_test WHERE a in ('2', 47);
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..4.25 rows=2 width=4)
    ->  Seq Scan on bitmap_test  (cost=0.00..4.25 rows=1 width=4)
          Filter: a = ANY ('{2,47}'::integer[])
- Settings:  optimizer=off; optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
+ Settings:  optimizer=off
  Optimizer status: Postgres query optimizer
 (5 rows)
 
@@ -10692,7 +10692,7 @@ EXPLAIN SELECT * FROM bitmap_test WHERE a in ('1', '2');
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..4.25 rows=2 width=4)
    ->  Seq Scan on bitmap_test  (cost=0.00..4.25 rows=1 width=4)
          Filter: a = ANY ('{1,2}'::integer[])
- Settings:  optimizer=off; optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
+ Settings:  optimizer=off
  Optimizer status: Postgres query optimizer
 (5 rows)
 
@@ -10702,7 +10702,7 @@ EXPLAIN SELECT * FROM bitmap_test WHERE a in ('1', '2', 47);
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..4.38 rows=3 width=4)
    ->  Seq Scan on bitmap_test  (cost=0.00..4.38 rows=1 width=4)
          Filter: a = ANY ('{1,2,47}'::integer[])
- Settings:  optimizer=off; optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
+ Settings:  optimizer=off
  Optimizer status: Postgres query optimizer
 (5 rows)
 
@@ -10835,7 +10835,7 @@ explain select * from foo where b in ('1', '2');
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..667.50 rows=91 width=42)
    ->  Seq Scan on foo  (cost=0.00..667.50 rows=31 width=42)
          Filter: b::text = ANY ('{1,2}'::text[])
- Settings:  optimizer=off; optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
+ Settings:  optimizer=off
  Optimizer status: Postgres query optimizer
 (5 rows)
 
@@ -11175,7 +11175,7 @@ EXPLAIN SELECT a FROM csq_cast_param_outer WHERE b in (SELECT CASE WHEN a > 1 TH
          ->  Materialize  (cost=1.11..1.17 rows=2 width=4)
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.10 rows=2 width=4)
                      ->  Seq Scan on csq_cast_param_inner  (cost=0.00..1.02 rows=1 width=4)
- Settings:  optimizer=off; optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
+ Settings:  optimizer=off
  Optimizer status: Postgres query optimizer
 (9 rows)
 
@@ -11199,7 +11199,7 @@ EXPLAIN SELECT a FROM csq_cast_param_outer WHERE b in (SELECT CASE WHEN a > 1 TH
          ->  Materialize  (cost=1.11..1.17 rows=2 width=4)
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.10 rows=2 width=4)
                      ->  Seq Scan on csq_cast_param_inner  (cost=0.00..1.02 rows=1 width=4)
- Settings:  optimizer=off; optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
+ Settings:  optimizer=off
  Optimizer status: Postgres query optimizer
 (9 rows)
 
@@ -12009,12 +12009,15 @@ INSERT INTO foo1 values (1), (2);
 INSERT INTO foo2 values (1,1,1), (2,2,2);
 INSERT INTO foo3 values (1,1), (2,2);
 set optimizer_join_order=query;
+-- we ignore enable/disable_xform statements as their output will differ if the server is compiled without Orca (the xform won't exist)
+-- start_ignore
 select disable_xform('CXformInnerJoin2HashJoin');
             disable_xform             
 --------------------------------------
  CXformInnerJoin2HashJoin is disabled
 (1 row)
 
+-- end_ignore
 EXPLAIN SELECT 1 FROM foo1, foo2 WHERE foo1.a = foo2.a AND foo2.c = 3 AND foo2.b IN (SELECT b FROM foo3);
                                              QUERY PLAN                                             
 ----------------------------------------------------------------------------------------------------
@@ -12042,12 +12045,15 @@ SELECT 1 FROM foo1, foo2 WHERE foo1.a = foo2.a AND foo2.c = 3 AND foo2.b IN (SEL
 (0 rows)
 
 reset optimizer_join_order;
+-- start_ignore
 select enable_xform('CXformInnerJoin2HashJoin');
             enable_xform             
 -------------------------------------
  CXformInnerJoin2HashJoin is enabled
 (1 row)
 
+-- end_ignore
+-- Test that duplicate sensitive redistributes don't have invalid projection (eg: element that can't be hashed)
 drop table if exists t55;
 NOTICE:  table "t55" does not exist, skipping
 drop table if exists tp;
@@ -12065,8 +12071,8 @@ FROM t55 L1 CROSS JOIN META
 WHERE L1.lid = int4in(unknownout(meta.load_id));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'c' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-                                                      QUERY PLAN                                                       
------------------------------------------------------------------------------------------------------------------------
+                                 QUERY PLAN                                 
+----------------------------------------------------------------------------
  HashAggregate  (cost=15.68..15.78 rows=4 width=8)
    Output: l1.c, l1.lid
    Group Key: l1.c, l1.lid
@@ -12082,7 +12088,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
                      ->  Result  (cost=0.00..0.01 rows=1 width=64)
                            Output: '2020-01-01', '99'
  Optimizer: Postgres query optimizer
- Settings: optimizer=off, optimizer_cte_inlining_bound=1000, optimizer_join_order=query, optimizer_metadata_caching=on
+ Settings: optimizer=off, optimizer_join_order=query
 (16 rows)
 
 CREATE TABLE TP AS
