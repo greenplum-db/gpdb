@@ -672,7 +672,8 @@ dumpSharedLocalSnapshot_forCursor(void)
 	pDump->segment = segment;
 	pDump->handle = dsm_segment_handle(segment);
 	pDump->segmateSync = src->segmateSync;
-	pDump->xid = src->QDxid;
+	pDump->QDxid = src->QDxid;
+	pDump->localXid = src->xid;
 
 	elog(LOG, "Dump syncmate : %u snapshot to slot %d", src->segmateSync, id);
 
@@ -725,7 +726,7 @@ readSharedLocalSnapshot_forCursor(Snapshot snapshot, DtxContext distributedTrans
 				search_iter = SNAPSHOTDUMPARRAYSZ - 1;
 
 			if(src->dump[search_iter].segmateSync == QEDtxContextInfo.segmateSync &&
-				src->dump[search_iter].xid == QEDtxContextInfo.distributedXid)
+				src->dump[search_iter].QDxid == QEDtxContextInfo.distributedXid)
 			{
 				pDump = &src->dump[search_iter];
 				found = true;
@@ -751,7 +752,7 @@ readSharedLocalSnapshot_forCursor(Snapshot snapshot, DtxContext distributedTrans
 		char *ptr = dsm_segment_address(segment);
 
 		entry->snapshot = RestoreSnapshot(ptr);
-		entry->localXid = pDump->xid;
+		entry->localXid = pDump->localXid;
 
 
 		dsm_detach(segment);

@@ -20,7 +20,8 @@
 typedef struct SnapshotDump
 {
 	uint32 segmateSync;
-	TransactionId xid;
+	TransactionId QDxid;
+	TransactionId localXid;
 	dsm_handle  handle;
 	dsm_segment *segment;
 } SnapshotDump;
