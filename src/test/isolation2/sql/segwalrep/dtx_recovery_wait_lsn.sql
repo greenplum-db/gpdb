@@ -61,5 +61,9 @@ $$ language plpgsql;
 !\retcode gpconfig -c gp_fts_probe_retries -v 2 --masteronly;
 
 4: select count(*) from t_wait_lsn;
+-- start_matchsubs
+-- m/File \"\.\/sql_isolation_testcase\.py\", line \d+/
+-- s/File \"\.\/sql_isolation_testcase\.py\", line \d+/File \"\.\/sql_isolation_testcase\.py\", line xxx/
+-- end_matchsubs
 4: drop table t_wait_lsn;
 4q:

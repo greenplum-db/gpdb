@@ -194,8 +194,7 @@ test: segwalrep/twophase_tolerance_with_mirror_promotion
 test: segwalrep/failover_with_many_records
 test: segwalrep/dtm_recovery_on_standby
 test: segwalrep/commit_blocking_on_standby
-# Removed due to test failures during isolation2 refactor. Needs to be re-written to not rely on python exception in isolation2
-# test: segwalrep/dtx_recovery_wait_lsn
+test: segwalrep/dtx_recovery_wait_lsn
 test: pg_basebackup
 test: pg_basebackup_with_tablespaces
 test: fts_manual_probe

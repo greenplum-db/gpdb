@@ -152,14 +152,18 @@ server closed the connection unexpectedly
 -------
  12    
 (1 row)
+-- start_matchsubs
+-- m/File \"\.\/sql_isolation_testcase\.py\", line \d+/
+-- s/File \"\.\/sql_isolation_testcase\.py\", line \d+/File \"\.\/sql_isolation_testcase\.py\", line xxx/
+-- end_matchsubs
 4: drop table t_wait_lsn;
 DROP
 4q: ... <quitting>
 Traceback (most recent call last):
-  File "./sql_isolation_testcase.py", line 718, in <module>
+  File "./sql_isolation_testcase.py", line 123, in <module>
     executor.process_isolation_file(sys.stdin, sys.stdout)
-  File "./sql_isolation_testcase.py", line 510, in process_isolation_file
+  File "./sql_isolation_testcase.py", line 123, in process_isolation_file
     process.stop()
-  File "./sql_isolation_testcase.py", line 138, in stop
+  File "./sql_isolation_testcase.py", line 123, in stop
     raise Exception("Should not finish test case while waiting for results")
 Exception: Should not finish test case while waiting for results
