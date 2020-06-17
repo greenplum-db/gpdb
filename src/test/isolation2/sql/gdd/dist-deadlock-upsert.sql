@@ -29,8 +29,6 @@ select gp_wait_until_triggered_fault('gdd_probe', 1, dbid)
 -- seg 1: con10 ~~> con20, tuple lock
 10&: INSERT INTO t_upsert VALUES (segid(1,1), segid(1,1)) on conflict (id, val) do update set val = 777;
 
--- isolation2 framework requires at least 0.5 second to infer whether a transaction is blocked.
-select pg_sleep(0.6);
 select gp_inject_fault('gdd_probe', 'reset', dbid)
   from gp_segment_configuration where content=-1 and role='p';
 -- con20 will be cancelled by gdd
