@@ -931,6 +931,7 @@ agg_hash_initial_pass(AggState *aggstate)
 		HashKey hashkey;
 		bool isNew;
 		HashAggEntry *entry;
+		TupleDesc slot_desc;
 
 		/* no more tuple. Done */
 		if (TupIsNull(outerslot))
@@ -943,8 +944,16 @@ agg_hash_initial_pass(AggState *aggstate)
 		{
 			int size;
 							
-			/* Initialize hashslot by cloning input slot. */
-			ExecSetSlotDescriptor(aggstate->hashslot, outerslot->tts_tupleDescriptor); 
+			/*
+			 * Initialize hashslot with a copy of an input slot.
+			 * We should not use slot's tuple descriptor reference
+			 * because DynamicXXX scan memory contexts are resetted
+			 * at the end of every partition scan (that can cause
+			 * dangling pointers).
+			 */
+			slot_desc = CreateTupleDescCopy(outerslot->tts_tupleDescriptor);
+
+			ExecSetSlotDescriptor(aggstate->hashslot, slot_desc);
 			ExecStoreAllNullTuple(aggstate->hashslot);
 
 			size = ((Agg *)aggstate->ss.ps.plan)->numCols * sizeof(HashKey);
