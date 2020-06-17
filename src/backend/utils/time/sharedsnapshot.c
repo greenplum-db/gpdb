@@ -350,7 +350,7 @@ SharedSnapshotDump(void)
 		if (testSlot->slotid != -1)
 		{
 			appendStringInfo(&str, "(SLOT index: %d slotid: %d QDxid: %u pid: %u)",
-							 testSlot->slotindex, testSlot->slotid, testSlot->QDxid,
+							 testSlot->slotindex, testSlot->slotid, testSlot->distributedXid,
 							 testSlot->writer_proc ? testSlot->writer_proc->pid : 0);
 		}
 
@@ -462,7 +462,7 @@ retry:
 	slot->slotid = slotId;
 	slot->xid = 0;
 	slot->startTimestamp = 0;
-	slot->QDxid = 0;
+	slot->distributedXid = 0;
 	slot->segmateSync = 0;
 	/* Remember the writer proc for IsCurrentTransactionIdForReader */
 	slot->writer_proc = MyProc;
@@ -573,7 +573,7 @@ SharedSnapshotRemove(volatile SharedSnapshotSlot *slot, char *creatorDescription
 	slot->slotid = -1;
 	slot->xid = 0;
 	slot->startTimestamp = 0;
-	slot->QDxid = 0;
+	slot->distributedXid = 0;
 	slot->segmateSync = 0;
 
 	sharedSnapshotArray->numSlots -= 1;
@@ -672,7 +672,7 @@ dumpSharedLocalSnapshot_forCursor(void)
 	pDump->segment = segment;
 	pDump->handle = dsm_segment_handle(segment);
 	pDump->segmateSync = src->segmateSync;
-	pDump->QDxid = src->QDxid;
+	pDump->distributedXid = src->distributedXid;
 	pDump->localXid = src->xid;
 
 	elog(LOG, "Dump syncmate : %u snapshot to slot %d", src->segmateSync, id);
@@ -726,7 +726,7 @@ readSharedLocalSnapshot_forCursor(Snapshot snapshot, DtxContext distributedTrans
 				search_iter = SNAPSHOTDUMPARRAYSZ - 1;
 
 			if(src->dump[search_iter].segmateSync == QEDtxContextInfo.segmateSync &&
-				src->dump[search_iter].QDxid == QEDtxContextInfo.distributedXid)
+				src->dump[search_iter].distributedXid == QEDtxContextInfo.distributedXid)
 			{
 				pDump = &src->dump[search_iter];
 				found = true;

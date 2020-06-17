@@ -20,7 +20,7 @@
 typedef struct SnapshotDump
 {
 	uint32 segmateSync;
-	TransactionId QDxid;
+	DistributedTransactionId distributedXid;
 	TransactionId localXid;
 	dsm_handle  handle;
 	dsm_segment *segment;
@@ -35,7 +35,7 @@ typedef struct SharedSnapshotSlot
 	int32	 		slotid;
 	PGPROC			*writer_proc;
 	PGXACT			*writer_xact;
-	volatile TransactionId   QDxid;
+	volatile DistributedTransactionId distributedXid;
 	volatile bool			ready;
 	volatile uint32			segmateSync;
 	SnapshotData	snapshot;
