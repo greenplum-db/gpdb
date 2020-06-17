@@ -565,8 +565,10 @@ redoDistributedCommitRecord(TMGXACT_LOG *gxact_log)
 			ereport(FATAL,
 					(errmsg("the limit of %d distributed transactions has been reached",
 							max_tm_gxacts),
-					 errdetail("The global user configuration (GUC) server "
-							   "parameter max_prepared_transactions controls this limit.")));
+					 errdetail("It should not happen. Temporarily increase "
+							   "max_connections (need postmaster reboot) on "
+							   "the postgres (master or standby) to work "
+							   "around this issue and then report a bug")));
 
 		shmCommittedGxactArray[(*shmNumCommittedGxacts)++] = *gxact_log;
 		elog((Debug_print_full_dtm ? LOG : DEBUG5),

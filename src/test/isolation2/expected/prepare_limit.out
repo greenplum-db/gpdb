@@ -1,0 +1,120 @@
+-- test to verify a bug that causes standby startup fatal with message like
+-- "the limit of xxx distributed transactions has been reached".
+-- Refer comment in https://github.com/greenplum-db/gpdb/issues/9207 for the
+-- context.
+include: helpers/server_helpers.sql;
+CREATE
+
+-- We will reset the value to 250 finally so sanity check the current value here.
+6: show max_prepared_transactions;
+ max_prepared_transactions 
+---------------------------
+ 250                       
+(1 row)
+!\retcode gpconfig -c max_prepared_transactions -v 3 --skipvalidation;
+(exited with code 0)
+!\retcode gpstop -ari;
+(exited with code 0)
+
+5: create table prepare_limit1 (a int);
+CREATE
+5: create table prepare_limit2 (a int);
+CREATE
+5: create table prepare_limit3 (a int);
+CREATE
+5: create table prepare_limit4 (a int);
+CREATE
+
+5: select gp_inject_fault_infinite('dtm_before_insert_forget_comitted', 'suspend', 1);
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+
+-- Note first insert after table create triggers auto_stats and leads to 2pc
+-- transaction.
+
+-- (2) is on seg0
+1&: insert into prepare_limit1 values(2);  <waiting ...>
+2&: insert into prepare_limit2 values(2);  <waiting ...>
+
+-- (1) is on seg1
+3&: insert into prepare_limit3 values(1);  <waiting ...>
+4&: insert into prepare_limit4 values(1);  <waiting ...>
+
+-- wait until these 2pc reach before inserting forget commit.
+5: SELECT gp_wait_until_triggered_fault('dtm_before_insert_forget_comitted', 4, 1);
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+
+-- wait until standby catches up and replays all xlogs.
+5: select wait_for_replication_replay (-1, 5000);
+ wait_for_replication_replay 
+-----------------------------
+ t                           
+(1 row)
+
+-- reset to make testing continue
+5: select gp_inject_fault('dtm_before_insert_forget_comitted', 'reset', 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1<:  <... completed>
+INSERT 1
+2<:  <... completed>
+INSERT 1
+3<:  <... completed>
+INSERT 1
+4<:  <... completed>
+INSERT 1
+
+-- verify that standby is correctly wal streaming.
+5: select state from pg_stat_replication;
+ state     
+-----------
+ streaming 
+(1 row)
+
+-- verify the tuples are on correct segments so the test assumption is
+-- correct. (i.e. tuple 2, 1 are on different segments).
+5: select gp_segment_id, * from prepare_limit1;
+ gp_segment_id | a 
+---------------+---
+ 0             | 2 
+(1 row)
+5: select gp_segment_id, * from prepare_limit2;
+ gp_segment_id | a 
+---------------+---
+ 0             | 2 
+(1 row)
+5: select gp_segment_id, * from prepare_limit3;
+ gp_segment_id | a 
+---------------+---
+ 1             | 1 
+(1 row)
+5: select gp_segment_id, * from prepare_limit4;
+ gp_segment_id | a 
+---------------+---
+ 1             | 1 
+(1 row)
+
+-- cleanup
+5: drop table prepare_limit1;
+DROP
+5: drop table prepare_limit2;
+DROP
+5: drop table prepare_limit3;
+DROP
+5: drop table prepare_limit4;
+DROP
+
+-- Not using gpconfig -r, else it makes max_prepared_transactions be default
+-- (50) and some isolation2 tests will fail due to "too many clients". Hardcode
+-- to 250 which is the default value when demo cluster is created.
+!\retcode gpconfig -c max_prepared_transactions -v 250 --skipvalidation;
+(exited with code 0)
+!\retcode gpstop -ari;
+(exited with code 0)
