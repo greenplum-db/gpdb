@@ -335,6 +335,22 @@ declare c1 cursor for select * from cursor_update order by c2 for update;
 fetch next from c1;
 end;
 
+-- Test MinMax path on replicated table
+create table minmaxtest (x int, y int) distributed replicated;
+create index on minmaxtest (x);
+insert into minmaxtest select generate_series(1, 10);
+set enable_seqscan=off;
+select min(x) from minmaxtest;
+
+-- Test replicated on partition table
+-- should fail
+CREATE TABLE foopart (a int4, b int4) DISTRIBUTED REPLICATED PARTITION BY RANGE (a) (START (1) END (10));
+CREATE TABLE foopart (a int4, b int4) PARTITION BY RANGE (a) (START (1) END (10)) ;
+-- should fail
+ALTER TABLE foopart SET DISTRIBUTED REPLICATED;
+ALTER TABLE foopart_1_prt_1 SET DISTRIBUTED REPLICATED;
+DROP TABLE foopart;
+
 -- start_ignore
 drop schema rpt cascade;
 -- end_ignore
