@@ -131,9 +131,9 @@ $ ln -s /usr/local/greenplum-db-&lt;new_version> /usr/local/greenplum-db</codebl
 $ gpstart</codeblock></li>
         <li>If you configured PXF in your previous Greenplum Database installation, you may
           need to install PXF in your new Greenplum installation, and you may be required to
-          re-initialize the PXF service after you upgrade Greenplum Database. Refer to <xref
-            href="../pxf/upgrade_pxf_6x.html#pxfup" type="topic" format="html">Upgrading PXF</xref>
-          for instructions.</li>
+          re-initialize the PXF service after you upgrade Greenplum Database. Refer to the <xref
+            href="../pxf/upgrade_pxf_6x.html#pxfup" type="topic" format="html">Step 2</xref>
+          PXF upgrade procedure for instructions.</li>
         <li otherprops="pivotal">If you configured GPSS in your previous Greenplum Database
           installation, you may be required to perform some upgrade actions, and you must
           re-restart the GPSS service instances and jobs. Refer to
