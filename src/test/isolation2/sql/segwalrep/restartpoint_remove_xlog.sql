@@ -14,31 +14,6 @@ include: helpers/server_helpers.sql;
 !\retcode gpstop -u;
 
 create extension if not exists gp_inject_fault;
-
-create or replace function wait_for_replication_replay (retries int) returns bool as
-$$
-declare
-	i int; /* in func */
-	result bool; /* in func */
-begin /* in func */
-	i := 0; /* in func */
-	-- Wait until the mirror (content 0) has replayed up to flush location
-	loop /* in func */
-		SELECT flush_location = replay_location INTO result from gp_stat_replication where gp_segment_id = 0; /* in func */
-		if result then /* in func */
-			return true; /* in func */
-		end if; /* in func */
-
-		if i >= retries then /* in func */
-		   return false; /* in func */
-		end if; /* in func */
-		perform pg_sleep(0.1); /* in func */
-		i := i + 1; /* in func */
-	end loop; /* in func */
-end; /* in func */
-$$ language plpgsql;
-
-
 create table t_restart (a int);
 
 -- generate an orphaned prepare transaction.
@@ -65,7 +40,7 @@ checkpoint;
 -- and then if the mirror is promoted it will panic like this:
 -- FATAL","58P01","requested WAL segment pg_xlog/000000010000000000000003 has already been removed
 -- The call stack is: StartupXLOG()->PrescanPreparedTransactions()...
-select * from wait_for_replication_replay(5000);
+select * from wait_for_replication_replay(0, 5000);
 
 -- shutdown primary and make sure the segment is down
 -1U: select pg_ctl((SELECT datadir from gp_segment_configuration c

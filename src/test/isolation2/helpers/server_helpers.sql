@@ -165,3 +165,26 @@ begin
 	return 'Fail';
 end;
 $$ language plpgsql;
+
+create or replace function wait_for_replication_replay (segid int, retries int) returns bool as
+$$
+declare
+	i int;
+	result bool;
+begin
+	i := 0;
+	-- Wait until the mirror/standby has replayed up to flush location
+	loop
+		SELECT flush_location = replay_location INTO result from gp_stat_replication where gp_segment_id = segid;
+		if result then
+			return true;
+		end if;
+
+		if i >= retries then
+		   return false;
+		end if;
+		perform pg_sleep(0.1);
+		i := i + 1;
+	end loop;
+end;
+$$ language plpgsql;
