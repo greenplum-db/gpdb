@@ -17,6 +17,25 @@ INSERT INTO mytable values (1,2,'t'),
   (8,7,'t'),
   (9,8,'a');
 
+DROP VIEW IF EXISTS notdisview;
+CREATE OR REPLACE VIEW notdisview AS
+SELECT
+    CASE
+        WHEN 'test' IS NOT DISTINCT FROM ''::text THEN 'A'::text
+        ELSE 'B'::text
+        END AS t;
+select pg_get_viewdef('notdisview',true);
+
+DROP VIEW IF EXISTS notdisview2;
+CREATE OR REPLACE VIEW notdisview2 AS
+SELECT
+    CASE
+        WHEN c::text IS NOT DISTINCT FROM ''::text THEN 'A'::text
+        ELSE 'B'::text
+        END AS t
+    FROM mytable;
+select pg_get_viewdef('notdisview2',true);
+
 CREATE OR REPLACE FUNCTION negate(int) RETURNS int 
 AS 'SELECT $1 * (-1)'
 LANGUAGE sql CONTAINS SQL
