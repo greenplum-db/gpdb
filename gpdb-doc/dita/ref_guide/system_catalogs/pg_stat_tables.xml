@@ -5,8 +5,7 @@
   <title id="gi143896">pg_stat_all_tables</title>
   <body id="table_stats_all">
     <p>The <codeph>pg_stat_all_tables</codeph> view shows one row for each table in the current
-      database (including TOAST tables) that displays statistics about accesses to that specific
-      table. </p>
+      database (including TOAST tables) to display statistics about accesses to that specific table. </p>
     <p>The <codeph>pg_stat_user_tables</codeph> and <codeph>pg_stat_sys_table</codeph>s views
       contain the same information, but filtered to only show user and system tables
       respectively.</p>
@@ -103,25 +102,23 @@
           <row>
             <entry><codeph>last_vacuum</codeph></entry>
             <entry>timestamp with time zone</entry>
-            <entry>Last time at which this table was manually vacuumed (not counting <codeph>VACUUM
+            <entry>Last time this table was manually vacuumed (not counting <codeph>VACUUM
                 FULL</codeph>)</entry>
           </row>
           <row>
             <entry><codeph>last_autovacuum</codeph></entry>
             <entry>timestamp with time zone</entry>
-            <entry>Last time at which this table was vacuumed by the autovacuum
-              daemon<sup>1</sup></entry>
+            <entry>Last time this table was vacuumed by the autovacuum daemon<sup>1</sup></entry>
           </row>
           <row>
             <entry><codeph>last_analyze</codeph></entry>
             <entry>timestamp with time zone</entry>
-            <entry>Last time at which this table was manually analyzed</entry>
+            <entry>Last time this table was manually analyzed</entry>
           </row>
           <row>
             <entry><codeph>last_autoanalyze</codeph></entry>
             <entry>timestamp with time zone</entry>
-            <entry>Last time at which this table was analyzed by the autovacuum
-              daemon<sup>1</sup></entry>
+            <entry>Last time this table was analyzed by the autovacuum daemon<sup>1</sup></entry>
           </row>
           <row>
             <entry><codeph>vacuum_count</codeph></entry>
@@ -154,10 +151,10 @@
         for user defined databases.</note>
     </p>
     <section id="tbl_stats_all_6x">
-      <title>Table Access Statistics From the Master and Segment Instances</title>
+      <title>Table Access Statistics from the Master and Segment Instances</title>
       <p>To display table access statistics that combine statistics from the master and the segment
         instances you can create these views. A user requires <codeph>SELECT</codeph> privilege on
-        the views to use the views.</p>
+        the views to use them.</p>
       <codeblock>-- Create these table access statistics views
 --   pg_stat_all_tables_gpdb6
 --   pg_stat_sys_tables_gpdb6

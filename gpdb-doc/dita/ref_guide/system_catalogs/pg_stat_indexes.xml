@@ -73,10 +73,10 @@
       </tgroup>
     </table>
     <section id="index_stats_all_6x">
-      <title>Index Access Statistics From the Master and Segment Instances</title>
+      <title>Index Access Statistics from the Master and Segment Instances</title>
       <p>To display index access statistics that combine statistics from the master and the segment
         instances you can create these views. A user requires <codeph>SELECT</codeph> privilege on
-        the views to use the views.</p>
+        the views to use them.</p>
       <codeblock>-- Create these index access statistics views
 --   pg_stat_all_indexes_gpdb6
 --   pg_stat_sys_indexes_gpdb6

@@ -8881,7 +8881,8 @@ statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
       <p>Enables the collection of information on the currently executing command of each session,
         along with the time when that command began execution. The default value is
           <codeph>true</codeph>. Only superusers can change this setting. See the <codeph><xref
-            href="../system_catalogs/pg_stat_activity.xml">pg_stat_activity</xref></codeph> view</p>
+            href="../system_catalogs/pg_stat_activity.xml">pg_stat_activity</xref></codeph>
+        view.</p>
       <note>Even when enabled, this information is not visible to all users, only to superusers and
         the user owning the session being reported on, so it should not represent a security risk. </note>
       <table id="table_f1l_fwm_vlb">
