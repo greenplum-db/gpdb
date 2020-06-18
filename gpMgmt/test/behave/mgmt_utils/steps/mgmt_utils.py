@@ -185,6 +185,19 @@ def impl(conetxt, tabname):
         dbconn.execSQL(conn, sql)
     conn.close()
 
+@given('the user create an external table with name "{tabname}" in partition table t')
+def impl(conetxt, tabname):
+    dbname = 'gptest'
+    with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
+        sql = ("create external table {tabname}(i int, j int) location "
+               "('gpfdist://host.invalid:8000/file') format 'text'").format(tabname=tabname)
+        dbconn.execSQL(conn, sql)
+        sql = "create table t(i int, j int) partition by list(i) (values(2018), values(1218))"
+        dbconn.execSQL(conn, sql)
+        sql = ("alter table t exchange partition for (2018) with table {tabname} without validation").format(tabname=tabname)
+        dbconn.execSQL(conn, sql)
+        conn.commit()
+
 @given('the user executes "{sql}" with named connection "{cname}"')
 def impl(context, cname, sql):
     conn = context.named_conns[cname]

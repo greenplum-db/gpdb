@@ -4624,14 +4624,11 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 			pass = AT_PASS_MISC;
 			break;
 		case AT_ExpandTable:
-			/* External tables can be expanded */
 			ATSimplePermissions(rel, ATT_TABLE | ATT_FOREIGN_TABLE);
 			if (!recursing)
 			{
 				Oid relid = RelationGetRelid(rel);
 				PartStatus ps = rel_part_status(relid);
-
-				ATExternalPartitionCheck(cmd->subtype, rel, recursing);
 
 				if (Gp_role == GP_ROLE_DISPATCH &&
 					rel->rd_cdbpolicy->numsegments == getgpsegmentCount())
@@ -15249,14 +15246,21 @@ ATExecExpandTable(List **wqueue, Relation rel, AlterTableCmd *cmd)
 			ExtTableEntry *ext = GetExtTableEntry(relid);
 
 			if (!ext->iswritable)
-				ereport(ERROR,
-						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 errmsg("unsupported ALTER command for external table")));
+			{
+				/* 
+				 * Skip expanding readable external table, since data is not
+				 * located inside gpdb
+				 */
+				relation_close(rel, NoLock);
+				return;
+			}
 		}
 		else
-				ereport(ERROR,
-						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 errmsg("unsupported ALTER command for foreign table")));
+		{
+			/* Skip expanding foreign table, since data is not located inside gpdb */
+			relation_close(rel, NoLock);
+			return;
+		}
 
 		relation_close(rel, NoLock);
 	}
