@@ -92,7 +92,9 @@
 #include "utils/timeout.h"
 #include "utils/timestamp.h"
 #include "utils/faultinjector.h"
+
 #include "cdb/cdbvars.h"
+#include "replication/gp_replication.h"
 
 /*
  * Maximum data payload in a WAL data message.  Must be >= XLOG_BLCKSZ.
@@ -252,6 +254,9 @@ InitWalSender(void)
 
 	/* Create a per-walsender data structure in shared memory */
 	InitWalSenderSlot();
+
+	/* Create GPReplication for current application if not created before */
+	GPReplicationCreateIfNotExist();
 
 	/* Set up resource owner */
 	CurrentResourceOwner = ResourceOwnerCreate(NULL, "walsender top-level resource owner");
@@ -1433,6 +1438,8 @@ exec_replication_command(const char *cmd_string)
 			{
 				StartReplicationCmd *cmd = (StartReplicationCmd *) cmd_node;
 
+				GPReplicationIncreaseAttempts();
+
 				if (cmd->kind == REPLICATION_KIND_PHYSICAL)
 					StartReplication(cmd);
 				else
@@ -2114,6 +2121,8 @@ WalSndKill(int code, Datum arg)
 
 	Assert(walsnd != NULL);
 
+	GPReplicationSetDisconnectTime((pg_time_t) time(NULL));
+
 	if (IS_QUERY_DISPATCHER())
 	{
 		/*
@@ -2135,7 +2144,6 @@ WalSndKill(int code, Datum arg)
 			MyWalSnd->xlogCleanUpTo = InvalidXLogRecPtr;
 
 			/* Mark WalSnd struct no longer in use. */
-			MyWalSnd->replica_disconnected_at = (pg_time_t) time(NULL);
 			MyWalSnd->pid = 0;
 			walsnd->latch = NULL;
 
@@ -2153,7 +2161,6 @@ WalSndKill(int code, Datum arg)
 	/* clear latch while holding the spinlock, so it can safely be read */
 	walsnd->latch = NULL;
 	/* Mark WalSnd struct as no longer being in use. */
-	walsnd->replica_disconnected_at = (pg_time_t) time(NULL);
 	walsnd->pid = 0;
 	SpinLockRelease(&walsnd->mutex);
 }
@@ -2875,7 +2882,6 @@ WalSndShmemInit(void)
 			WalSnd	   *walsnd = &WalSndCtl->walsnds[i];
 
 			SpinLockInit(&walsnd->mutex);
-			walsnd->replica_disconnected_at = (pg_time_t) time(NULL);
 		}
 	}
 }
@@ -2997,11 +3003,16 @@ WalSndSetState(WalSndState state)
 
 	SpinLockAcquire(&walsnd->mutex);
 	walsnd->state = state;
-	if (state == WALSNDSTATE_CATCHUP || state == WALSNDSTATE_STREAMING)
-		walsnd->replica_disconnected_at = 0;
-	else if (walsnd->replica_disconnected_at == 0)
-		walsnd->replica_disconnected_at = (pg_time_t) time(NULL);
 	SpinLockRelease(&walsnd->mutex);
+
+	/* If current replication start streaming, clear the failure attempt count */
+	if (state == WALSNDSTATE_STREAMING)
+		GPReplicationClearAttempts();
+
+	if (state == WALSNDSTATE_CATCHUP || state == WALSNDSTATE_STREAMING)
+		GPReplicationSetDisconnectTime((pg_time_t) 0);
+	else if (GPReplicationRetrieveDisconnectTime(application_name) == 0)
+		GPReplicationSetDisconnectTime((pg_time_t) time(NULL));
 }
 
 /*
