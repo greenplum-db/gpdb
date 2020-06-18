@@ -1,0 +1,24 @@
+SELECT * FROM mfk;
+ a 
+---
+ 1 
+ 2 
+(2 rows)
+SELECT * FROM pt;
+ a 
+---
+ 1 
+ 2 
+(2 rows)
+SELECT * FROM pt_another;
+ a 
+---
+ 1 
+ 2 
+(2 rows)
+SELECT * FROM non_pt;
+ a 
+---
+ 1 
+ 2 
+(2 rows)

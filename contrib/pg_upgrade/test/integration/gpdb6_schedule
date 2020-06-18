@@ -5,3 +5,4 @@ test: upgraded_partitioned_heap_table_with_differently_aligned_dropped_columns
 test: upgraded_partitioned_heap_table_with_differently_aligned_varlen_dropped_columns
 test: upgraded_vacuum_freeze_tables
 test: upgraded_indexes
+test: upgraded_foreign_key_constraint

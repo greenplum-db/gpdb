@@ -31,6 +31,7 @@ static void check_for_array_of_partition_table_types(ClusterInfo *cluster);
 static void check_partition_schemas(void);
 static void check_large_objects(void);
 static void check_invalid_indexes(void);
+static void check_foreign_key_constraints_on_root_partition(void);
 
 
 /*
@@ -49,6 +50,7 @@ check_greenplum(void)
 	check_covering_aoindex();
 	check_heterogeneous_partition();
 	check_partition_indexes();
+	check_foreign_key_constraints_on_root_partition();
 	check_orphaned_toastrels();
 	check_gphdfs_external_tables();
 	check_gphdfs_user_roles();
@@ -1109,6 +1111,76 @@ check_invalid_indexes(void)
 			     "need to be dropped or reindexed before proceeding to upgrade.\n"
 			     "A list of invalid indexes is provided in the file:\n"
 		         "\t%s\n\n", output_path);
+	}
+	else
+		check_ok();
+}
+
+static void
+check_foreign_key_constraints_on_root_partition(void)
+{
+	char		output_path[MAXPGPATH];
+	FILE	   *script = NULL;
+	bool		found = false;
+	int			dbnum;
+	int			i_relname;
+	int			i_constraintname;
+
+	prep_status("Checking for foreign key constraints on root partitions");
+
+	snprintf(output_path, sizeof(output_path), "foreign_key_constraints.txt");
+
+	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
+	{
+		PGresult   *res;
+		int			ntups;
+		int			rowno;
+		DbInfo	   *active_db = &old_cluster.dbarr.dbs[dbnum];
+		PGconn	   *conn;
+		bool		db_used = false;
+
+		conn = connectToServer(&old_cluster, active_db->db_name);
+		res = executeQueryOrDie(conn,
+								"SELECT oid::regclass as relname, conname  "
+								"FROM pg_constraint cc "
+								"JOIN "
+								"(SELECT DISTINCT c.oid, c.relname "
+									"FROM pg_catalog.pg_partition p "
+									"JOIN pg_catalog.pg_class c ON (p.parrelid = c.oid)) as sub ON sub.oid=cc.conrelid "
+         						"WHERE cc.contype IN ('f');");
+
+		ntups = PQntuples(res);
+
+		i_relname = PQfnumber(res, "relname");
+		i_constraintname = PQfnumber(res, "conname");
+		for (rowno = 0; rowno < ntups; rowno++)
+		{
+			found = true;
+			if (script == NULL && (script = fopen(output_path, "w")) == NULL)
+				pg_fatal("Could not create necessary file:  %s\n", output_path);
+			if (!db_used)
+			{
+				fprintf(script, "Database: %s\n", active_db->db_name);
+				db_used = true;
+			}
+			fprintf(script, "  %s on relation %s\n",
+					PQgetvalue(res, rowno, i_constraintname),
+					PQgetvalue(res, rowno, i_relname));
+		}
+
+		PQclear(res);
+		PQfinish(conn);
+	}
+
+	if (found)
+	{
+		fclose(script);
+		pg_log(PG_REPORT, "fatal\n");
+		pg_fatal("Your installation contains foreign key constraint on root \n"
+				 "partition tables. These constraints need to be dropped before \n"
+				 "proceeding to upgrade. A list of foreign key constraints is \n"
+				 "in the file:\n"
+				 "\t%s\n\n", output_path);
 	}
 	else
 		check_ok();
