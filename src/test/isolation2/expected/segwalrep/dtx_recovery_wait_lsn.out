@@ -26,9 +26,8 @@ CREATE
 --------------------------
  Success:                 
 (1 row)
-2&: select gp_wait_until_triggered_fault('finish_prepared_start_of_function', 1, dbid) from gp_segment_configuration where content=0 and role='p';  <waiting ...>
 1&: insert into t_wait_lsn select generate_series(1,12);  <waiting ...>
-2<:  <... completed>
+2: select gp_wait_until_triggered_fault('finish_prepared_start_of_function', 1, dbid) from gp_segment_configuration where content=0 and role='p';
  gp_wait_until_triggered_fault 
 -------------------------------
  Success:                      
@@ -72,6 +71,7 @@ CREATE
 -- s/PANIC:  fault triggered, fault name:'before_read_command' fault type:'panic'\n//
 -- end_matchsubs
 3: select 1;
+PANIC:  fault triggered, fault name:'before_read_command' fault type:'panic'
 server closed the connection unexpectedly
 	This probably means the server terminated abnormally
 	before or while processing the request.
@@ -152,18 +152,9 @@ server closed the connection unexpectedly
 -------
  12    
 (1 row)
--- start_matchsubs
--- m/File \"\.\/sql_isolation_testcase\.py\", line \d+/
--- s/File \"\.\/sql_isolation_testcase\.py\", line \d+/File \"\.\/sql_isolation_testcase\.py\", line xxx/
--- end_matchsubs
 4: drop table t_wait_lsn;
 DROP
-4q: ... <quitting>
-Traceback (most recent call last):
-  File "./sql_isolation_testcase.py", line 123, in <module>
-    executor.process_isolation_file(sys.stdin, sys.stdout)
-  File "./sql_isolation_testcase.py", line 123, in process_isolation_file
-    process.stop()
-  File "./sql_isolation_testcase.py", line 123, in stop
-    raise Exception("Should not finish test case while waiting for results")
-Exception: Should not finish test case while waiting for results
+1<:  <... completed>
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.

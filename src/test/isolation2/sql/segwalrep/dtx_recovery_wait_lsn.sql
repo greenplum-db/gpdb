@@ -25,9 +25,8 @@ $$ language plpgsql;
 
 -- suspend segment 0 before performing 'COMMIT PREPARED'
 2: select gp_inject_fault_infinite('finish_prepared_start_of_function', 'suspend', dbid) from gp_segment_configuration where content=0 and role='p';
-2&: select gp_wait_until_triggered_fault('finish_prepared_start_of_function', 1, dbid) from gp_segment_configuration where content=0 and role='p';
 1&: insert into t_wait_lsn select generate_series(1,12);
-2<:
+2: select gp_wait_until_triggered_fault('finish_prepared_start_of_function', 1, dbid) from gp_segment_configuration where content=0 and role='p';
 
 -- let walreceiver on mirror 0 skip WAL flush
 2: select gp_inject_fault_infinite('walrecv_skip_flush', 'skip', dbid) from gp_segment_configuration where content=0 and role='m';
@@ -61,9 +60,5 @@ $$ language plpgsql;
 !\retcode gpconfig -c gp_fts_probe_retries -v 2 --masteronly;
 
 4: select count(*) from t_wait_lsn;
--- start_matchsubs
--- m/File \"\.\/sql_isolation_testcase\.py\", line \d+/
--- s/File \"\.\/sql_isolation_testcase\.py\", line \d+/File \"\.\/sql_isolation_testcase\.py\", line xxx/
--- end_matchsubs
 4: drop table t_wait_lsn;
-4q:
+1<:
