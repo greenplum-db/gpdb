@@ -347,7 +347,6 @@ static void AllocSetStats(MemoryContext context, int level, bool print,
 
 static void AllocSetDeclareAccountingRoot(MemoryContext context);
 static Size AllocSetGetCurrentUsage(MemoryContext context);
-static Size AllocSetGetLocalUsage(MemoryContext context);
 static Size AllocSetGetPeakUsage(MemoryContext context);
 static Size AllocSetSetPeakUsage(MemoryContext context, Size nbytes);
 
@@ -372,7 +371,6 @@ static MemoryContextMethods AllocSetMethods = {
 	/* GPDB additions */
 	AllocSetDeclareAccountingRoot,
 	AllocSetGetCurrentUsage,
-	AllocSetGetLocalUsage,
 	AllocSetGetPeakUsage,
 	AllocSetSetPeakUsage
 #ifdef MEMORY_CONTEXT_CHECKING
@@ -1517,13 +1515,6 @@ AllocSetGetCurrentUsage(MemoryContext context)
 }
 
 static Size
-AllocSetGetLocalUsage(MemoryContext context)
-{
-	AllocSet	set = (AllocSet) context;
-	return set->localAllocated;
-}
-
-static Size
 AllocSetGetPeakUsage_recurse(MemoryContext parent, MemoryContext context)
 {
 	MemoryContext child;
@@ -1603,7 +1594,7 @@ AllocSetTransferAccounting(MemoryContext context, MemoryContext new_parent)
 		set->currentAllocated = set->localAllocated;
 		set->peakAllocated = set->localAllocated;
 	}
-	
+
 }
 
 #ifdef MEMORY_CONTEXT_CHECKING

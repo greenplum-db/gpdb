@@ -601,24 +601,6 @@ MemoryContextGetCurrentSpace(MemoryContext context)
 }                               /* MemoryContextGetCurrentSpace */
 
 /*
- * MemoryContextGetLocalSpace
- *		Returns the number of bytes currently used in the memory context.
- *
- * This is the amount of space used by the callers which contains the chunk header,
- * the user memory and the padding/fraction. When the memory context is reset, all
- * memory objects in this memory context are logically freed and of course its local
- * memory usage is 0. It's helpful to check if a long-live memory context has leaked
- * the memory.
- */
-Size
-MemoryContextGetLocalSpace(MemoryContext context)
-{
-	AssertArg(MemoryContextIsValid(context));
-
-	return (*context->methods->get_local_usage) (context);
-}                               /* MemoryContextGetLocalSpace */
-
-/*
  * MemoryContextGetPeakSpace
  *		Return the peak number of bytes occupied by the memory context.
  *
