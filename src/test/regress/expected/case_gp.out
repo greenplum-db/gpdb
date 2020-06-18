@@ -17,6 +17,44 @@ INSERT INTO mytable values (1,2,'t'),
   (7,6,'a'),
   (8,7,'t'),
   (9,8,'a');
+DROP VIEW IF EXISTS notdisview;
+NOTICE:  view "notdisview" does not exist, skipping
+CREATE OR REPLACE VIEW notdisview AS
+SELECT
+    CASE
+        WHEN 'test' IS NOT DISTINCT FROM ''::text THEN 'A'::text
+        ELSE 'B'::text
+        END AS t;
+select pg_get_viewdef('notdisview',true);
+                               pg_get_viewdef                               
+----------------------------------------------------------------------------
+  SELECT                                                                   +
+         CASE                                                              +
+             WHEN 'test'::text IS NOT DISTINCT FROM ''::text THEN 'A'::text+
+             ELSE 'B'::text                                                +
+         END AS t;
+(1 row)
+
+DROP VIEW IF EXISTS notdisview2;
+NOTICE:  view "notdisview2" does not exist, skipping
+CREATE OR REPLACE VIEW notdisview2 AS
+SELECT
+    CASE
+        WHEN c::text IS NOT DISTINCT FROM ''::text THEN 'A'::text
+        ELSE 'B'::text
+        END AS t
+    FROM mytable;
+select pg_get_viewdef('notdisview2',true);
+                                pg_get_viewdef                                 
+-------------------------------------------------------------------------------
+  SELECT                                                                      +
+         CASE                                                                 +
+             WHEN mytable.c::text IS NOT DISTINCT FROM ''::text THEN 'A'::text+
+             ELSE 'B'::text                                                   +
+         END AS t                                                             +
+    FROM mytable;
+(1 row)
+
 CREATE OR REPLACE FUNCTION negate(int) RETURNS int 
 AS 'SELECT $1 * (-1)'
 LANGUAGE sql CONTAINS SQL
@@ -340,6 +378,7 @@ LINE 1: SELECT b,c,decode(c,'a',ARRAY[1,2],'e',ARRAY[3,4],'o',ARRAY[...
 -- Clean up
 --
 DROP TABLE mytable CASCADE;
+NOTICE:  drop cascades to view notdisview2
 DROP TABLE products CASCADE;
 NOTICE:  drop cascades to view myview
 DROP TABLE calls_to_blip;
