@@ -178,8 +178,6 @@ if [ -z "${GPHOME}" ]; then
     echo "  file in your Greenplum installation directory."
     echo ""
     exit 1
-else
-    GPSEARCH=$GPHOME
 fi
 
 cat <<-EOF
@@ -210,16 +208,16 @@ cat <<-EOF
 
 EOF
 
-GPPATH=`find $GPSEARCH -name gpstart| tail -1`
+GPPATH=`find -H $GPHOME -name gpstart| tail -1`
 RETVAL=$?
 
 if [ "$RETVAL" -ne 0 ]; then
-    echo "Error attempting to find Greenplum executables in $GPSEARCH"
+    echo "Error attempting to find Greenplum executables in $GPHOME"
     exit 1
 fi
 
 if [ ! -x "$GPPATH" ]; then
-    echo "No executables found for Greenplum installation in $GPSEARCH"
+    echo "No executables found for Greenplum installation in $GPHOME"
     exit 1
 fi
 GPPATH=`dirname $GPPATH`
