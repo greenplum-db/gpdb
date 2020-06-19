@@ -60,6 +60,8 @@ $$ language plpgsql;
 -- this's what we want to test.
 4: select count(*) from t_wait_lsn;
 
+1<:
+
 !\retcode gprecoverseg -a;
 -- loop while segments come in sync
 4: select wait_until_all_segments_synchronized();
@@ -70,5 +72,3 @@ $$ language plpgsql;
 4: alter system reset gp_fts_probe_interval;
 4: alter system reset gp_fts_probe_retries;
 4: select pg_reload_conf();
-
-1<:

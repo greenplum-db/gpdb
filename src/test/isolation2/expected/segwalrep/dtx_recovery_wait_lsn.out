@@ -98,6 +98,11 @@ server closed the connection unexpectedly
  2     
 (1 row)
 
+1<:  <... completed>
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+
 !\retcode gprecoverseg -a;
 -- start_ignore
 20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Starting gprecoverseg with args: -a
@@ -165,8 +170,3 @@ ALTER
 ----------------
  t              
 (1 row)
-
-1<:  <... completed>
-server closed the connection unexpectedly
-	This probably means the server terminated abnormally
-	before or while processing the request.
