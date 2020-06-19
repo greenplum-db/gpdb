@@ -29,12 +29,27 @@ INSERT 1
 20: INSERT INTO t_upsert VALUES (segid(1,1), segid(1,1)) on conflict (id, val) do update set val = 888;
 INSERT 1
 
+select gp_inject_fault('gdd_probe', 'suspend', dbid) from gp_segment_configuration where content=-1 and role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+select gp_wait_until_triggered_fault('gdd_probe', 1, dbid) from gp_segment_configuration where content=-1 and role='p';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
 -- seg 0: con20 ==> con10, xid lock
 20&: INSERT INTO t_upsert VALUES (segid(0,1), segid(0,1)) on conflict (id, val) do update set val = 666;  <waiting ...>
 
 -- seg 1: con10 ~~> con20, tuple lock
 10&: INSERT INTO t_upsert VALUES (segid(1,1), segid(1,1)) on conflict (id, val) do update set val = 777;  <waiting ...>
 
+select gp_inject_fault('gdd_probe', 'reset', dbid) from gp_segment_configuration where content=-1 and role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
 -- con20 will be cancelled by gdd
 20<:  <... completed>
 ERROR:  canceling statement due to user request: "cancelled by global deadlock detector"

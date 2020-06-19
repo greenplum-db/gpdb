@@ -46,24 +46,24 @@ $ gpstop -ar</codeblock></li>
         quota sets a limit on disk space used by all tables that belong to a schema. A role quota
         sets a limit on disk space used by all tables that are owned by a role.</p>
       <p>Diskquota processes running on the master and segment hosts check disk usage periodically
-        and place schemas or roles on a blacklist when they reach their quota. </p>
+        and place schemas or roles on a denylist when they reach their quota. </p>
       <p>When a query plan has been generated for a query that would add data, and the schema or
-        role is on the blacklist, the query is cancelled before it can start. An error message
+        role is on the denylist, the query is cancelled before it can start. An error message
         reports the quota that has been exceeded. A query that does not add data, such as a simple
           <codeph>SELECT</codeph> query, is allowed to run even when the role or schema is on the
-        blacklist.</p>
+        denylist.</p>
       <p>Diskquota enforces <i>soft limits</i> for disk usage. Quotas are only checked before a
         query executes. If the quota is not exceeded when the query is about to run, the query is
         allowed to run, even if it causes the quota to be exceeded. </p>
       <p>There is some delay after a quota has been reached before the schema or role is added to
-        the blacklist. Other queries could add more data during the delay. The delay occurs because
+        the denylist. Other queries could add more data during the delay. The delay occurs because
           <codeph>diskquota</codeph> processes that calculate the disk space used by each table
         execute periodically with a pause between executions (two seconds by default). The delay
         also occurs when disk usage falls beneath a quota, due to operations such as
           <codeph>DROP</codeph>, <codeph>TRUNCATE</codeph>, or <codeph>VACUUM FULL</codeph> that
         remove data. Administrators can change the amount of time between disk space checks by
         setting the <codeph>diskquota.naptime</codeph> server configuration parameter.</p>
-      <p>If a query is unable to run because the schema or role has been blacklisted, an
+      <p>If a query is unable to run because the schema or role has been denylisted, an
         administrator can increase the exceeded quota to allow the query to execute. The
           <codeph>show_fast_schema_quota_view</codeph> and
           <codeph>show_fast_role_quota_view</codeph> views can be used to find the schemas or roles
@@ -119,10 +119,10 @@ $ gpstop -ar</codeblock></li>
         <codeblock>$ gpconfig -c diskquota.naptime -v 10</codeblock></section>
       <section>
         <title>Configuring diskquota Shared Memory</title>
-        <p>The <codeph>diskquota</codeph> module uses shared memory to save the blacklist and to
-          save the active table list.</p>
-        <p>The blacklist shared memory can hold up to 1MiB of database objects that exceed the quota
-          limit. If the blacklist shared memory fills, data may be loaded into some schemas or roles
+        <p>The <codeph>diskquota</codeph> module uses shared memory to save the denylist and to save
+          the active table list.</p>
+        <p>The denylist shared memory can hold up to 1MiB of database objects that exceed the quota
+          limit. If the denylist shared memory fills, data may be loaded into some schemas or roles
           after they have reached their quota limit. </p>
         <p>Active table shared memory holds up to 1MiB of active tables by default. Active tables
           are tables that may have changed sizes since <codeph>diskquota</codeph> last recalculated
@@ -162,7 +162,7 @@ $ gpstop -ar</codeblock></li>
         included in disk usage statistics until the command has completed.</p>
       <p>Deleting rows or running <codeph>VACUUM</codeph> on a table does not release disk space, so
         these operations cannot alone remove a schema or role from the <codeph>diskquota</codeph>
-        blacklist. The disk space used by a table can be reduced by running <codeph>VACUUM
+        denylist. The disk space used by a table can be reduced by running <codeph>VACUUM
           FULL</codeph> or <codeph>TRUNCATE TABLE</codeph>.</p>
       <p>The <codeph>diskquota</codeph> module supports high availability features provided by the
         background worker framework. The <codeph>diskquota</codeph> launcher process only runs on
@@ -199,7 +199,7 @@ CREATE SCHEMA</codeblock></li>
 
 (1 row)</codeblock></li>
         <li>The following commands create a table in the <codeph>s1</codeph> schema and insert a
-          small amount of data into it. The schema has no data yet, so it is not on the blacklist.
+          small amount of data into it. The schema has no data yet, so it is not on the denylist.
           <codeblock>=# <b>SET search_path TO s1;
 SET
 </b>=# <b>CREATE TABLE a(i int);</b>
@@ -209,13 +209,13 @@ INSERT 0 100
 </codeblock></li>
         <li>This command inserts a large amount of data, enough to exceed the 1MB quota that was set
           for the schema. Before the <codeph>INSERT</codeph> command, the <codeph>s1</codeph> schema
-          is still not on the blacklist, so this command should be allowed to run, even though it
+          is still not on the denylist, so this command should be allowed to run, even though it
           will exceed the limit set for the
           schema.<codeblock>=# <b>INSERT INTO a SELECT generate_series(1,10000000);</b>
 INSERT 0 10000000
 </codeblock></li>
         <li>This command attempts to insert a small amount of data. Because the previous command
-          exceeded the schema's disk quota limit, the schema should be blacklisted and any data
+          exceeded the schema's disk quota limit, the schema should be denylisted and any data
           loading command should be cancelled.
           <codeblock>=# <b>INSERT INTO a SELECT generate_series(1,100);</b>
 ERROR:  schema's disk space quota exceeded with name:s1
@@ -229,7 +229,7 @@ ERROR:  schema's disk space quota exceeded with name:s1
 ------------------
 
 (1 row)
-# Wait for 5 seconds to ensure the blacklist is updated
+# Wait for 5 seconds to ensure the denylist is updated
 #= <b>SELECT pg_sleep(5);</b>
 #= <b>INSERT INTO a SELECT generate_series(1,100);</b>
 INSERT 0 100

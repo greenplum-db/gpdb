@@ -55,11 +55,11 @@ SERVER_SBIN=$(SERVER_SRC)/../sbin
 LIB_DIR=$(SRC)/lib
 PYLIB_DIR=$(SRC)/ext
 
-core: pygresql subprocess32
+core: subprocess32
 	python gpconfig_modules/parse_guc_metadata.py $(DESTDIR)$(prefix)
 
 ifneq "$(wildcard $(CURDIR)/pythonSrc/ext/*.tar.gz)" ""
-install: installdirs installprograms core lockfile psutil
+install: installdirs installprograms core lockfile psutil pygresql
 else
 install: installdirs installprograms core
 endif

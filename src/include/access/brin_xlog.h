@@ -34,7 +34,8 @@
 #define XLOG_BRIN_SAMEPAGE_UPDATE	0x30
 #define XLOG_BRIN_REVMAP_EXTEND		0x40
 #define XLOG_BRIN_REVMAP_VACUUM		0x50
-
+#define XLOG_BRIN_REVMAP_INIT_UPPER_BLK	0x60
+#define XLOG_BRIN_REVMAP_EXTEND_UPPER	0x70
 #define XLOG_BRIN_OPMASK			0x70
 /*
  * When we insert the first item on a new page, we restore the entire page in
@@ -51,8 +52,17 @@ typedef struct xl_brin_createidx
 {
 	BlockNumber pagesPerRange;
 	uint16		version;
+	bool 		isAo;
 } xl_brin_createidx;
-#define SizeOfBrinCreateIdx (offsetof(xl_brin_createidx, version) + sizeof(uint16))
+#define SizeOfBrinCreateIdx (offsetof(xl_brin_createidx, isAo) + sizeof(bool))
+
+
+typedef struct xl_brin_createupperblk
+{
+	BlockNumber targetBlk;
+} xl_brin_createupperblk;
+#define SizeOfBrinCreateUpperBlk (offsetof(xl_brin_createupperblk, targetBlk) \
+								  + sizeof(BlockNumber))
 
 /*
  * This is what we need to know about a BRIN tuple insert
@@ -120,9 +130,21 @@ typedef struct xl_brin_revmap_extend
 	 */
 	BlockNumber targetBlk;
 } xl_brin_revmap_extend;
-
 #define SizeOfBrinRevmapExtend	(offsetof(xl_brin_revmap_extend, targetBlk) + \
 								 sizeof(BlockNumber))
+
+
+typedef struct xl_brin_revmap_extend_upper
+{
+	BlockNumber heapBlk;
+
+	/* extra information needed to update the revmap */
+	BlockNumber pagesPerRange;
+	BlockNumber revmapBlk;
+} xl_brin_revmap_extend_upper;
+#define SizeOfBrinRevmapExtendUpper	(offsetof(xl_brin_revmap_extend_upper, pagesPerRange) + \
+									 sizeof(BlockNumber))
+
 
 
 extern void brin_redo(XLogReaderState *record);

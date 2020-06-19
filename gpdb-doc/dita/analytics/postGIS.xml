@@ -20,23 +20,20 @@
       <li>
         <xref href="#postgis_support" format="dita"/>
       </li>
-      <li id="ij168816">
-        <xref href="#topic5" type="topic" format="dita"/>
-      </li>
     </ul>
   </body>
   <topic id="topic2" xml:lang="en">
     <title id="ij166739">About PostGIS</title>
     <body>
       <p>PostGIS is a spatial database extension for PostgreSQL that allows GIS (Geographic
-        Information Systems) objects to be stored in the database. The Greenplum Database PostGIS
-        extension includes support for GiST-based R-Tree spatial indexes and functions for analysis
-        and processing of GIS objects. </p>
-      <p>The Greenplum Database PostGIS extension supports the optional PostGIS
-          <codeph>raster</codeph> data type and most PostGIS Raster functions. With the PostGIS
-        Raster objects, PostGIS <codeph>geometry</codeph> data type offers a single set of overlay
-        SQL functions (such as <codeph>ST_Intersects</codeph>) operating seamlessly on vector and
-        raster geospatial data. PostGIS Raster uses the GDAL (Geospatial Data Abstraction Library)
+        Information Systems) objects to be stored in the database. The Greenplum PostGIS extension
+        includes support for GiST-based R-Tree spatial indexes and functions for analysis and
+        processing of GIS objects. </p>
+      <p>The Greenplum PostGIS extension supports some PostGIS optional extensions and includes
+        support for the PostGIS <codeph>raster</codeph> data type. With the PostGIS Raster objects,
+        PostGIS <codeph>geometry</codeph> data type offers a single set of overlay SQL functions
+        (such as <codeph>ST_Intersects</codeph>) operating seamlessly on vector and raster
+        geospatial data. PostGIS Raster uses the GDAL (Geospatial Data Abstraction Library)
         translator library for raster geospatial data formats that presents a <xref
           href="https://gdal.org/user/raster_data_model.html" format="html" scope="external">single
           raster abstract data model</xref> to a calling application. </p>
@@ -52,11 +49,11 @@
   <topic id="topic3" xml:lang="en">
     <title id="ij168742">Greenplum PostGIS Extension</title>
     <body>
-      <p><ph otherprops="pivotal">The Greenplum Database PostGIS extension package is available from
-            <xref href="https://network.pivotal.io/products/pivotal-gpdb" scope="external"
-            format="html">VMware Tanzu Network</xref>. </ph>You can install the package using the
-        Greenplum Package Manager (<codeph>gppkg</codeph>). For details, see <codeph>gppkg</codeph>
-        in the <cite>Greenplum Database Utility Guide</cite>.</p>
+      <p><ph otherprops="pivotal">The Greenplum PostGIS extension package is available from <xref
+            href="https://network.pivotal.io/products/pivotal-gpdb" scope="external" format="html"
+            >VMware Tanzu Network</xref>. </ph>You can install the package using the Greenplum
+        Package Manager (<codeph>gppkg</codeph>). For details, see <codeph>gppkg</codeph> in the
+          <cite>Greenplum Database Utility Guide</cite>.</p>
       <p>Greenplum Database supports the PostGIS extension with these component versions.<ul
           id="ul_csh_q3z_d1b">
           <li>PostGIS 2.5.4</li>
@@ -66,8 +63,8 @@
           <li>Json 0.12</li>
           <li>Expat 2.1.0</li>
         </ul></p>
-      <p otherprops="pivotal">For the information about supported extension packages and software
-        versions, see the <cite>Greenplum Database Release Notes</cite>.</p>
+      <p otherprops="pivotal">For the information about supported Greenplum extension packages and
+        software versions, see <xref href="../install_guide/platform-requirements.xml"/>. </p>
       <p>There have been significant changes in PostGIS 2.5.4 compared with the previously supported
         version of 2.1.5. For a list of new and enhanced functions in PostGIS 2.5, see the PostGIS
         documentation <xref
@@ -76,53 +73,130 @@
       <p>For a comprehensive list of PostGIS changes in PostGIS 2.5.4 and earlier, see PostGIS 2.5
         Appendix A <xref href="https://postgis.net/docs/manual-2.5/release_notes.html" format="html"
           scope="external">Release 2.5.4</xref>.</p>
+      <note>If you installed Greenplum PostGIS 2.1.5, you cannot upgrade from PostGIS 2.1.5 to
+        2.5.4. You must uninstall PostGIS 2.1.5 and install PostGIS 2.5.4.</note>
+      <p>This table lists the PostGIS extensions support by Greenplum PostGIS. </p>
+      <table frame="all" rowsep="1" colsep="1" id="table_owt_4ml_xlb">
+        <title>Greenplum PostGIS Extensions</title>
+        <tgroup cols="2">
+          <colspec colname="c1" colnum="1" colwidth="1*"/>
+          <colspec colname="c2" colnum="2" colwidth="2.05*"/>
+          <thead>
+            <row>
+              <entry>PostGIS Extension</entry>
+              <entry>Greenplum PostGIS Notes</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry><codeph>postgis</codeph><p dir="ltr">PostGIS and PostGIS Raster
+                support</p></entry>
+              <entry>Supported. Both PostGIS and PostGIS Raster are enabled when the Greenplum
+                  <codeph>postgis</codeph> extension is enabled.</entry>
+            </row>
+            <row>
+              <entry><codeph>postgis_tiger_geocoder</codeph><p>The US TIGER geocoder</p></entry>
+              <entry>Supported. Installed with Greenplum PostGIS. <p>Requires the
+                    <codeph>postgis</codeph> and <codeph>fuzzystrmatch</codeph>
+                  extensions.</p><p>The US TIGER geocoder converts addresses (like a street address)
+                  to geographic coordinates.</p></entry>
+            </row>
+            <row>
+              <entry><codeph>address_standardizer</codeph><p>Rule-based address
+                standardizer</p></entry>
+              <entry>Supported. Installed but not enabled with Greenplum PostGIS. <p>Can be used
+                  with TIGER geocoder.</p><p>A single line address parser that takes an input
+                  address and normalizes it based on a set of rules stored in a table and helper
+                    <codeph>lex</codeph> and <codeph>gaz</codeph> tables.</p></entry>
+            </row>
+            <row>
+              <entry><codeph>address_standardizer_data_us</codeph><p>Sample rules tables for US
+                  address data</p></entry>
+              <entry>Supported. Installed but not enabled with Greenplum PostGIS.<p>Can be used with
+                  the address standardizer.</p><p>The extension contains <codeph>gaz</codeph>,
+                    <codeph>lex</codeph>, and <codeph>rules</codeph> tables for US address data. If
+                  you are using other types of tables, see <xref href="#topic_wy2_rkb_3p"
+                    format="dita"/>.</p></entry>
+            </row>
+            <row>
+              <entry><codeph>fuzzystrmatch</codeph><p>Fuzzy string matching</p></entry>
+              <entry>Supported. This extension is bundled but not enabled with Greenplum
+                  Database.<p>Required for the PostGIS TIGER geocoder.</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+      <note>The PostGIS topology extension <codeph>postgis_topology</codeph> and the PostGIS 3D and
+        geoprocessing extension <codeph>postgis_sfcgal</codeph> are not supported by Greenplum
+        PostGIS and are not included in the Greenplum PostGIS extension package.</note>
+      <p>For information about the PostGIS extensions, see the <xref
+          href="https://postgis.net/documentation/" format="html" scope="external">PostGIS 2.5
+          documentation</xref>.</p>
+      <p>For information about Greenplum PostGIS feature support, see <xref href="#postgis_support"
+          format="dita"/>.</p>
     </body>
-    <topic id="topic4" xml:lang="en">
-      <title>Greenplum Database PostGIS Limitations</title>
-      <body>
-        <p>The Greenplum Database PostGIS extension does not support the following features:</p>
-        <ul id="ul_mm2_p42_4p">
-          <li id="ij169095">Topology</li>
-          <li id="ij166819">A small number of user defined functions and aggregates</li>
-          <li id="ij166822">PostGIS long transaction support</li>
-        </ul>
-        <p>For information about Greenplum Database PostGIS support, see <xref
-            href="#postgis_support" format="dita"/>.</p>
-      </body>
-    </topic>
   </topic>
   <topic id="topic_b2l_hzw_q1b">
     <title>Enabling and Removing PostGIS Support</title>
     <body>
-      <p>The Greenplum Database PostGIS extension contains the <codeph>postgis_manager.sh</codeph>
-        script that installs or removes both the PostGIS and PostGIS Raster features in a database.
-        After the PostGIS extension package is installed, the script is in
-          <codeph>$GPHOME/share/postgresql/contrib/postgis-2.5/</codeph>. The
-          <codeph>postgis_manager.sh</codeph> script runs SQL scripts that install or remove PostGIS
-        and PostGIS Raster from a database.</p>
-      <p>For information about the PostGIS and PostGIS Raster SQL scripts, and required PostGIS
-        Raster environment variables, see <xref href="#topic5" type="topic" format="dita"/>.</p>
+      <p>This section describes how to enable and remove PostGIS and the supported PostGIS
+        extensions, and how to configure PostGIS Raster.<ul id="ul_dnm_lzm_1mb">
+          <li><xref href="#topic_ln5_xcl_r1b" format="dita"/></li>
+          <li><xref href="#topic_ydr_q5l_ybb" format="dita"/></li>
+          <li><xref href="#topic_fx2_fpx_llb" format="dita"/></li>
+          <li><xref href="#topic_bgz_vcl_r1b" format="dita"/></li>
+        </ul></p>
     </body>
     <topic id="topic_ln5_xcl_r1b">
       <title>Enabling PostGIS Support</title>
       <body>
-        <p>Run the <codeph>postgis_manager.sh</codeph> script specifying the database, an optional
-          schema, and the <codeph>install</codeph> option to install PostGIS and PostGIS Raster. If
-          you do not specify a schema, the script installs PostGIS in the default
-          schema.<codeblock>postgis_manager.sh &lt;dbname> [&lt;schema_name>] install </codeblock></p>
-        <p>This example installs PostGIS and PostGIS Raster objects in the database
-            <codeph>mydatabase</codeph> in the default
-          schema.<codeblock>postgis_manager.sh mydatabase install</codeblock></p>
-        <p>The script runs all the PostGIS SQL scripts that enable PostGIS in a database:
-            <codeph>install/postgis.sql</codeph>, <codeph>install/rtpostgis.sql</codeph>
-          <codeph>install/spatial_ref_sys.sql</codeph>,
-            <codeph>install/postgis_comments.sql</codeph>, and
-            <codeph>install/raster_comments.sql</codeph>.</p>
-        <p>The postGIS package installation adds these lines to the
-            <codeph>greenplum_path.sh</codeph> file for PostGIS Raster support. </p>
-        <codeblock>export GDAL_DATA=$GPHOME/share/gdal
+        <p>To enable PostGIS support, install the Greenplum PostGIS extension package into the
+          Greenplum Database system, and then use the <codeph>CREATE EXTENSION</codeph> command to
+          enable PostGIS support for an individual database.</p>
+        <section>
+          <title>Installing the Greenplum PostGIS Extension Package</title>
+          <p>Install Greenplum PostGIS extension package with the <codeph>gppkg</codeph> utility.
+            For example, this command installs the package for RHEL 7.
+            <codeblock>gppkg -i postgis-2.5.4+pivotal.2.build.1-gp6-rhel7-x86_64.gppkg</codeblock></p>
+          <p>After installing the package, source the <codeph>greenplum_path.sh</codeph> file and
+            restart Greenplum Database. This command restarts Greenplum Database.</p>
+          <codeblock>gpstop -ra</codeblock>
+          <p dir="ltr">Installing the Greenplum PostGIS extension package updates the Greenplum
+            Database system, including installing the supported PostGIS extensions to the system and
+            updating <codeph>greenplum_path.sh</codeph> file with these lines for PostGIS Raster
+            support.</p>
+          <codeblock>export GDAL_DATA=$GPHOME/share/gdal
 export POSTGIS_ENABLE_OUTDB_RASTERS=0
 export POSTGIS_GDAL_ENABLED_DRIVERS=DISABLE_ALL</codeblock>
+        </section>
+        <section id="enable_postgis_cmd">
+          <title>Using the CREATE EXTENSION Command</title>
+          <p dir="ltr">These steps enable the PostGIS extension and the extensions that are used
+            with PostGIS.</p>
+          <ol id="ol_mdh_z1k_zlb">
+            <li>To enable PostGIS and PostGIS Raster in a database, run this command after logging
+              into the database.<codeblock dir="ltr">CREATE EXTENSION postgis ;</codeblock><p>To
+                enable PostGIS and PostGIS Raster in a specific schema, create the schema, set the
+                  <codeph>search_path</codeph> to the PostGIS schema, and then enable the
+                  <codeph>postgis</codeph> extension with the <codeph>WITH SCHEMA</codeph> clause.
+                </p><codeblock>SHOW search_path ; -- display the current search_path
+CREATE SCHEMA &lt;schema_name> ;
+SET search_path TO &lt;schema_name> ;
+CREATE EXTENSION postgis WITH SCHEMA &lt;schema_name> ;</codeblock><p>After
+                enabling the extension, reset the <codeph>search_path</codeph> and include the
+                PostGIS schema in the <codeph>search_path</codeph> if needed.</p></li>
+            <li>If needed, enable the PostGIS TIGER geocoder after enabling the
+                <codeph>postgis</codeph> extension. <p>To enable the PostGIS TIGER geocoder, you
+                must enable the <codeph>fuzzystrmatch</codeph> extension before enabling
+                  <codeph>postgis_tiger_geocoder</codeph>. These two commands enable the
+                extensions.</p><codeblock dir="ltr">CREATE EXTENSION fuzzystrmatch ;
+CREATE EXTENSION postgis_tiger_geocoder ;</codeblock></li>
+            <li>If needed, enable the rules-based address standardizer and add rules tables for the
+              standardizer. These commands enable the
+              extensions.<codeblock dir="ltr">CREATE EXTENSION address_standardizer ;
+CREATE EXTENSION address_standardizer_data_us ;</codeblock></li>
+          </ol>
+        </section>
       </body>
     </topic>
     <topic id="topic_ydr_q5l_ybb">
@@ -181,22 +255,48 @@ export POSTGIS_GDAL_ENABLED_DRIVERS=DISABLE_ALL</codeblock>
     <topic id="topic_bgz_vcl_r1b">
       <title>Removing PostGIS Support</title>
       <body>
-        <p>Run the <codeph>postgis_manager.sh</codeph> script specifying the database, a schema name
-          (if necessary), and with the <codeph>uninstall</codeph> option to remove PostGIS and
-          PostGIS Raster. You specify the schema if you specified a schema when you installed
-          PostGIS.<codeblock>postgis_manager.sh &lt;dbname> [&lt;schema_name>] uninstall</codeblock></p>
-        <p>This example removes PostGIS and PostGIS Raster support from the database
-            <codeph>mydatabase</codeph> that was installed in the default
-          schema.<codeblock>postgis_manager.sh mydatabase uninstall</codeblock></p>
-        <p>The script runs both the PostGIS SQL scripts that remove PostGIS and PostGIS Raster from
-          a database: <codeph>uninstall_rtpostgis.sql</codeph> and
-            <codeph>uninstall_postgis.sql</codeph>.</p>
-        <p>The <codeph>postgis_manager.sh</codeph> script does not remove these PostGIS Raster
-          environment variables the <codeph>greenplum_path.sh</codeph> file:
-            <codeph>GDAL_DATA</codeph>, <codeph>POSTGIS_ENABLE_OUTDB_RASTERS</codeph>,
+        <p dir="ltr">You use the <codeph>DROP EXTENSION</codeph> command to remove support for the
+          PostGIS extension and the extensions that are used with PostGIS.</p>
+        <p>Removing PostGIS support from a database does not remove these PostGIS Raster environment
+          variables from the <codeph>greenplum_path.sh</codeph> file: <codeph>GDAL_DATA</codeph>,
+            <codeph>POSTGIS_ENABLE_OUTDB_RASTERS</codeph>,
             <codeph>POSTGIS_GDAL_ENABLED_DRIVERS</codeph>. The environment variables are removed
-          when you uninstall the PostGIS extension package with the <codeph>gppkg</codeph> utility.
-        </p>
+          when you uninstall the PostGIS extension package.</p>
+        <section id="drop_postgis_cmd">
+          <title>Using the DROP EXTENSION Command</title>
+          <p>Depending on the extensions you enabled for PostGIS, drop support for the extensions in
+            the database.</p>
+          <ol id="ol_ylb_cgk_zlb">
+            <li>If you enabled the address standardizer and sample rules tables, these commands drop
+              support for those extensions from the current
+              database.<codeblock dir="ltr">DROP EXTENSION address_standardizer_data_us IF EXISTS;
+DROP EXTENSION address_standardizer IF EXISTS ;</codeblock></li>
+            <li>If you enabled the TIGER geocoder and the <codeph>fuzzystrmatch</codeph> extension
+              to use the TIGER geocoder, these commands drop support for those
+              extensions.<codeblock dir="ltr">DROP EXTENSION postgis_tiger_geocoder IF EXISTS ;
+DROP EXTENSION fuzzystrmatch IF EXISTS ;</codeblock></li>
+            <li>Drop support for PostGIS and PostGIS Raster. This command drops support for those
+                extensions.<codeblock>DROP EXTENSION postgis IF EXISTS ;</codeblock><p>If you
+                enabled support for PostGIS and specified a specific schema with the <codeph>CREATE
+                  EXTENSION</codeph> command, you can update the <codeph>search_path</codeph> and
+                drop the PostGIS schema if required.</p></li>
+          </ol>
+        </section>
+        <section>
+          <title>Uninstalling the Greenplum PostGIS Extension Package</title>
+          <p>After PostGIS support has been removed from all databases in the Greenplum Database
+            system, you can remove the PostGIS extension package. For example, this
+              <codeph>gppkg</codeph> command removes the PostGIS extension package.
+            <codeblock>gppkg -r postgis-2.5.4+pivotal.2</codeblock></p>
+          <p dir="ltr">After removing the package, ensure that these lines for PostGIS Raster
+            support are removed from the <codeph>greenplum_path.sh</codeph> file.</p>
+          <codeblock>export GDAL_DATA=$GPHOME/share/gdal
+export POSTGIS_ENABLE_OUTDB_RASTERS=0
+export POSTGIS_GDAL_ENABLED_DRIVERS=DISABLE_ALL</codeblock>
+          <p>Source the <codeph>greenplum_path.sh</codeph> file and restart Greenplum Database. This
+            command restarts Greenplum Database.</p>
+          <codeblock>gpstop -ra</codeblock>
+        </section>
       </body>
     </topic>
   </topic>
@@ -207,24 +307,28 @@ export POSTGIS_GDAL_ENABLED_DRIVERS=DISABLE_ALL</codeblock>
         <ph>The following example SQL statements create non-OpenGIS tables and geometries.</ph>
       </p>
       <codeblock>CREATE TABLE geom_test ( gid int4, geom geometry, 
-  name varchar(25) );
+  name varchar(25) );
+
 INSERT INTO geom_test ( gid, geom, name )
-  VALUES ( 1, 'POLYGON((0 0 0,0 5 0,5 5 0,5 0 0,0 0 0))', '3D Square');
+  VALUES ( 1, 'POLYGON((0 0 0,0 5 0,5 5 0,5 0 0,0 0 0))', '3D Square');
 INSERT INTO geom_test ( gid, geom, name ) 
-  VALUES ( 2, 'LINESTRING(1 1 1,5 5 5,7 7 5)', '3D Line' );
+  VALUES ( 2, 'LINESTRING(1 1 1,5 5 5,7 7 5)', '3D Line' );
 INSERT INTO geom_test ( gid, geom, name )
-  VALUES ( 3, 'MULTIPOINT(3 4,8 9)', '2D Aggregate Point' );
+  VALUES ( 3, 'MULTIPOINT(3 4,8 9)', '2D Aggregate Point' );
+
 SELECT * from geom_test WHERE geom &amp;&amp;
-  Box3D(ST_GeomFromEWKT('LINESTRING(2 2 0, 3 3 0)'));</codeblock>
+  Box3D(ST_GeomFromEWKT('LINESTRING(2 2 0, 3 3 0)'));</codeblock>
       <p>The following example SQL statements create a table and add a geometry column to the table
         with a SRID integer value that references an entry in the <codeph>SPATIAL_REF_SYS</codeph>
         table. The <codeph>INSERT</codeph> statements add two geopoints to the table.</p>
       <codeblock>CREATE TABLE geotest (id INT4, name VARCHAR(32) );
 SELECT AddGeometryColumn('geotest','geopoint', 4326,'POINT',2);
+
 INSERT INTO geotest (id, name, geopoint)
-  VALUES (1, 'Olympia', ST_GeometryFromText('POINT(-122.90 46.97)', 4326));
-INSERT INTO geotest (id, name, geopoint)|
-  VALUES (2, 'Renton', ST_GeometryFromText('POINT(-122.22 47.50)', 4326));
+  VALUES (1, 'Olympia', ST_GeometryFromText('POINT(-122.90 46.97)', 4326));
+INSERT INTO geotest (id, name, geopoint)
+  VALUES (2, 'Renton', ST_GeometryFromText('POINT(-122.22 47.50)', 4326));
+
 SELECT name,ST_AsText(geopoint) FROM geotest;</codeblock>
     </body>
     <topic id="topic8" xml:lang="en">
@@ -263,16 +367,20 @@ SELECT name,ST_AsText(geopoint) FROM geotest;</codeblock>
           <xref href="#topic_wy2_rkb_3p" format="dita"/>
         </li>
       </ul>
-      <p>The Greenplum Database PostGIS extension does not support the following features:</p>
-      <ul id="ul_xpr_21h_kp">
-        <li>Topology</li>
-        <li>Some Raster Functions</li>
+      <p>In general, the Greenplum PostGIS extension does not support the following features:</p>
+      <ul id="ul_kjr_tpl_1mb">
+        <li>The PostGIS topology extension <codeph>postgis_topology</codeph></li>
+        <li>The PostGIS 3D and geoprocessing extension <codeph>postgis_sfcgal</codeph></li>
+        <li>A small number of user defined functions and aggregates</li>
+        <li>PostGIS long transactions</li>
       </ul>
+      <p>For the PostGIS extensions supported by Greenplum PostGIS, see <xref href="#topic3"
+          format="dita"/>.</p>
     </body>
     <topic id="topic_g2d_hkb_3p">
       <title>Supported PostGIS Data Types</title>
       <body>
-        <p>Greenplum Database PostGIS extension supports these PostGIS data types:</p>
+        <p>Greenplum PostGIS extension supports these PostGIS data types:</p>
         <ul id="ul_bdm_qnp_fp">
           <li dir="ltr">box2d</li>
           <li dir="ltr">box3d</li>
@@ -287,7 +395,7 @@ SELECT name,ST_AsText(geopoint) FROM geotest;</codeblock>
     <topic id="topic_bl3_4vy_d1b">
       <title>Supported PostGIS Raster Data Types</title>
       <body>
-        <p dir="ltr">Greenplum Database PostGIS supports these PostGIS Raster data types. </p>
+        <p dir="ltr">Greenplum PostGIS supports these PostGIS Raster data types. </p>
         <ul id="ul_obf_z2m_d1b">
           <li dir="ltr">geomval</li>
           <li dir="ltr">addbandarg</li>
@@ -309,15 +417,14 @@ SELECT name,ST_AsText(geopoint) FROM geotest;</codeblock>
     <topic id="topic_y5z_nkb_3p">
       <title>Supported PostGIS Index</title>
       <body>
-        <p>Greenplum Database PostGIS extension supports the GiST (Generalized Search Tree)
-          index.</p>
+        <p>Greenplum PostGIS extension supports the GiST (Generalized Search Tree) index.</p>
       </body>
     </topic>
     <topic id="topic_wy2_rkb_3p">
       <title>PostGIS Extension Limitations</title>
       <body>
-        <p>This section lists the Greenplum Database PostGIS extension limitations for user-defined
-          functions (UDFs), data types, and aggregates. </p>
+        <p>This section lists the Greenplum PostGIS extension limitations for user-defined functions
+          (UDFs), data types, and aggregates. </p>
         <ul id="ul_vzc_bpb_3p">
           <li>Data types and functions related to PostGIS topology functionality, such as
               <apiname>TopoGeometry</apiname>, are not supported by Greenplum Database.</li>
@@ -349,115 +456,21 @@ SELECT AddGeometryColumn('public', 'geometries', 'geom', 0, 'LINESTRING', 2);</c
           <li>The <codeph>&lt;-></codeph> operator (<codeph><varname>geometry</varname> &lt;->
                 <varname>geometry</varname></codeph>) returns the centroid/centroid distance for
             Greenplum Database 6.</li>
+          <li>The following PostGIS functions are not currently supported because Greenplum PostGIS
+            is compiled with Geos 3.4.2:<ul id="ul_hdm_j4l_xlb">
+              <li dir="ltr">ST_Subdivide</li>
+              <li dir="ltr">​ST_ClipByBox2D</li>
+              <li dir="ltr">ST_VoronoiLines</li>
+              <li dir="ltr">ST_VoronoiPolygons</li>
+            </ul></li>
+          <li>The TIGER geocoder extension is supported. However, upgrading the TIGER geocoder
+            extension is not supported.</li>
+          <li>The <codeph>standardize_address()</codeph> function uses <codeph>lex</codeph>,
+              <codeph>gaz</codeph> or <codeph>rules</codeph> tables as parameters. If you are using
+            tables apart from <codeph>us_lex</codeph>, <codeph>us_gaz</codeph> or
+              <codeph>us_rules</codeph>, you should create them with the distribution policy
+              <codeph>DISTRIBUTED REPLICATED</codeph> to work for Greenplum. </li>
         </ul>
-      </body>
-    </topic>
-  </topic>
-  <topic id="topic5" xml:lang="en">
-    <title id="ij169610">PostGIS Support Scripts</title>
-    <body>
-      <p>After installing the PostGIS extension package, you enable PostGIS support for each
-        database that requires its use. To enable or remove PostGIS support in your database, you
-        can run SQL scripts that are supplied with the PostGIS package in
-          <codeph>$GPHOME/share/postgresql/contrib/postgis-2.5/</codeph>.<ul id="ul_xmd_xpz_r1b">
-          <li><xref href="#topic_ulm_4gl_r1b" format="dita"/></li>
-          <li><xref href="#topic_xp2_lgl_r1b" format="dita"/></li>
-        </ul></p>
-      <p>Instead of running the scripts individually, you can use the
-          <codeph>postgis_manager.sh</codeph> script to run SQL scripts that enable or remove
-        PostGIS support. See <xref href="#topic_b2l_hzw_q1b" format="dita"/>.</p>
-      <p>You can run the PostGIS SQL scripts individually to enable or remove PostGIS support. For
-        example, these commands run the SQL scripts <codeph>postgis.sql</codeph>,
-          <codeph>rtpostgis.sql</codeph>, and <codeph>spatial_ref_sys.sql</codeph> in the database
-          <codeph>mydatabase</codeph>.</p>
-      <codeblock>psql -d mydatabase -f 
-  $GPHOME/share/postgresql/contrib/postgis-2.5/install/postgis.sql
-psql -d mydatabase -f 
-  $GPHOME/share/postgresql/contrib/postgis-2.5/install/rtpostgis.sql
-psql -d mydatabase -f 
-  $GPHOME/share/postgresql/contrib/postgis-2.5/install/spatial_ref_sys.sql</codeblock>
-      <p>After running the scripts, the database is enabled with both PostGIS and PostGIS
-        Raster.</p>
-    </body>
-    <topic id="topic_ulm_4gl_r1b">
-      <title>Scripts that Enable PostGIS and PostGIS Raster Support</title>
-      <body>
-        <p>These scripts enable PostGIS, and the optional PostGIS Raster in a database.<ul
-            id="ul_iph_ddm_d1b">
-            <li><codeph>install/postgis.sql</codeph> - Load the PostGIS objects and function
-              definitions.</li>
-            <li><codeph>install/rtpostgis.sql</codeph> - Load the PostGIS <codeph>raster</codeph>
-              object and function definitions.</li>
-          </ul></p>
-        <note>If you are installing PostGIS Raster, PostGIS objects must be installed before PostGIS
-          Raster. PostGIS Raster depends on PostGIS objects. Greenplum Database returns an error if
-            <codeph>rtpostgis.sql</codeph> is run before <codeph>postgis.sql</codeph>.</note>
-        <p>These SQL scripts add data and comments to a PostGIS enabled database.<ul
-            id="ul_l3c_zbz_d1b">
-            <li><codeph>install/spatial_ref_sys.sql</codeph> - Populate the
-                <codeph>spatial_ref_sys</codeph> table with a complete set of EPSG coordinate system
-              definition identifiers. With the definition identifiers you can perform
-                <codeph>ST_Transform()</codeph> operations on geometries.
-              <note type="note">If you have overridden standard entries and want to use those
-                overrides, do not load the <codeph>spatial_ref_sys.sql</codeph> file when creating
-                the new database.</note></li>
-            <li><codeph>install/postgis_comments.sql</codeph> - Add comments to the PostGIS
-              functions.</li>
-            <li><codeph>install/raster_comments.sql</codeph> - Add comments to the PostGIS Raster
-              functions.</li>
-          </ul></p>
-        <p>You can view comments with the <codeph>pslq</codeph> meta-command <codeph>\dd
-              <varname>function_name</varname></codeph> or from any tool that can show Greenplum
-          Database function comments.</p>
-      </body>
-      <topic id="topic_l4l_gg1_21b">
-        <title>PostGIS Raster Environment Variables</title>
-        <body>
-          <p dir="ltr">The postGIS package installation adds these lines to the
-              <codeph>greenplum_path.sh</codeph> file for PostGIS Raster support.</p>
-          <codeblock>export GDAL_DATA=$GPHOME/share/gdal
-export POSTGIS_ENABLE_OUTDB_RASTERS=0
-export POSTGIS_GDAL_ENABLED_DRIVERS=DISABLE_ALL</codeblock>
-          <p><codeph>GDAL_DATA</codeph> specifies the location of GDAL utilities and support files
-            used by the GDAL library. For example, the directory contains EPSG support files such as
-              <codeph>gcs.csv​</codeph> and <codeph>pcs.csv</codeph> (so called dictionaries, mostly
-            in ​CSV format). The GDAL library requires the support files to properly evaluate EPSG
-            codes.</p>
-          <p><codeph>POSTGIS_GDAL_ENABLED_DRIVERS</codeph> sets the enabled GDAL drivers in the
-            PostGIS environment.</p>
-          <p><codeph>POSTGIS_ENABLE_OUTDB_RASTERS</codeph> is a boolean configuration option to
-            enable access to out of database raster bands. </p>
-        </body>
-      </topic>
-    </topic>
-    <topic id="topic_xp2_lgl_r1b">
-      <title>Scripts that Remove PostGIS and PostGIS Raster Support</title>
-      <body>
-        <p>To remove PostGIS support from a database, run SQL scripts that are supplied with the
-          PostGIS extension package in
-            <codeph>$GPHOME/share/postgresql/contrib/postgis-2.5/</codeph>
-        </p>
-        <note>If you installed PostGIS Raster, you must uninstall PostGIS Raster before you
-          uninstall the PostGIS objects. PostGIS Raster depends on PostGIS objects. Greenplum
-          Database returns an error if PostGIS objects are removed before PostGIS Raster.</note>
-        <p>These scripts remove PostGIS and PostGIS Raster objects from a database.<ul
-            id="ul_yp2_lgl_r1b">
-            <li><codeph>uninstall/uninstall_rtpostgis.sql</codeph> - Removes the PostGIS Raster
-              object and function definitions.</li>
-            <li><codeph>uninstall/uninstall_postgis.sql</codeph> - Removes the PostGIS objects and
-              function definitions.</li>
-          </ul></p>
-        <p>After PostGIS support has been removed from all databases in the Greenplum Database
-          system, you can remove the PostGIS extension package. For example this
-            <codeph>gppkg</codeph> command removes the PostGIS extension package.
-          <codeblock>gppkg -r postgis-2.5.4+pivotal.1</codeblock></p>
-        <p>Restart Greenplum Database after removing the package.</p>
-        <codeblock>gpstop -r</codeblock>
-        <p dir="ltr">Ensure that these lines for PostGIS Raster support are removed from the
-            <codeph>greenplum_path.sh</codeph> file.</p>
-        <codeblock>export GDAL_DATA=$GPHOME/share/gdal
-export POSTGIS_ENABLE_OUTDB_RASTERS=0
-export POSTGIS_GDAL_ENABLED_DRIVERS=DISABLE_ALL</codeblock>
       </body>
     </topic>
   </topic>

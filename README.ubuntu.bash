@@ -36,6 +36,7 @@ apt-get install -y \
   python-lockfile \
   python-pip \
   python-psutil \
+  python-pygresql \
   python-yaml \
   zlib1g-dev
 

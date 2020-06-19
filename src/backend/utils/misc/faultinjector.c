@@ -22,9 +22,6 @@
 #include "postgres.h"
 
 #include <signal.h>
-#ifdef HAVE_SYS_RESOURCE_H
-#include <sys/resource.h>
-#endif
 #include "access/xact.h"
 #include "cdb/cdbutil.h"
 #include "libpq/libpq.h"
@@ -357,6 +354,15 @@ FaultInjector_InjectFaultIfSet(
 			break;
 
 		case FaultInjectorTypeFatal:
+			/*
+			 * Sometimes Fatal is upgraded to Panic (e.g. when it is called in
+			 * critical section or when it is called during QD prepare
+			 * handling).  We should avoid core file generation for this
+			 * scenario, just like what we do for the FaultInjectorTypePanic
+			 * case.  Even FATAL is not upgraded to PANIC the process will quit
+			 * soon, it does not affect subsequent code.
+			 */
+			AvoidCorefileGeneration();
 			ereport(FATAL, 
 					(errcode(ERRCODE_FAULT_INJECT),
 					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
@@ -365,19 +371,7 @@ FaultInjector_InjectFaultIfSet(
 			break;
 
 		case FaultInjectorTypePanic:
-			/*
-			 * Avoid core file generation for this PANIC. It helps to avoid
-			 * filling up disks during tests and also saves time.
-			 */
-#if defined(HAVE_GETRLIMIT) && defined(RLIMIT_CORE)
-			;struct rlimit lim;
-			getrlimit(RLIMIT_CORE, &lim);
-			lim.rlim_cur = 0;
-			if (setrlimit(RLIMIT_CORE, &lim) != 0)
-				elog(NOTICE,
-					 "setrlimit failed for RLIMIT_CORE soft limit to zero. errno: %d (%m).",
-					 errno);
-#endif
+			AvoidCorefileGeneration();
 			ereport(PANIC, 
 					(errcode(ERRCODE_FAULT_INJECT),
 					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
@@ -465,20 +459,7 @@ FaultInjector_InjectFaultIfSet(
 			
 		case FaultInjectorTypeSegv:
 		{
-			/*
-			 * Avoid core file generation for this PANIC. It helps to avoid
-			 * filling up disks during tests and also saves time.
-			 */
-#if defined(HAVE_GETRLIMIT) && defined(RLIMIT_CORE)
-			struct rlimit lim;
-			getrlimit(RLIMIT_CORE, &lim);
-			lim.rlim_cur = 0;
-			if (setrlimit(RLIMIT_CORE, &lim) != 0)
-				elog(NOTICE,
-					 "setrlimit failed for RLIMIT_CORE soft limit to zero. errno: %d (%m).",
-					 errno);
-#endif
-
+			AvoidCorefileGeneration();
 			*(volatile int *) 0 = 1234;
 			break;
 		}

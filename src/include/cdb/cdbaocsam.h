@@ -151,6 +151,17 @@ typedef struct AOCSFetchDescData
 	int				totalSegfiles;
 	struct AOCSFileSegInfo **segmentFileInfo;
 
+	/*
+	 * The largest row number of this aoseg. Maximum row number is required in
+	 * function "aocs_fetch". If we have no updates and deletes, the
+	 * total_tupcount is equal to the maximum row number. But after some updates
+	 * and deletes, the maximum row number always much bigger than
+	 * total_tupcount. The appendonly_insert function will get fast sequence and
+	 * use it as the row number. So the last sequence will be the correct
+	 * maximum row number.
+	 */
+	int64			lastSequence[AOTupleId_MultiplierSegmentFileNum];
+
 	char			*segmentFileName;
 	int				segmentFileNameMaxLen;
 	char            *basepath;

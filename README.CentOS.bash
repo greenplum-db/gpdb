@@ -25,6 +25,12 @@ sudo yum install -y \
     xerces-c-devel \
     zlib-devel
 
+# Needed for pygresql, or you can source greenplum_path.sh after compiling database and pip install python-dependencies then
+sudo yum install -y \
+    postgresql \
+    postgresql-devel
+
+
 sudo pip install conan
 sudo pip install -r python-dependencies.txt
 sudo pip install -r python-developer-dependencies.txt

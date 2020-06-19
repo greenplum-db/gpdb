@@ -22,6 +22,11 @@
 
 #include "postgres.h"
 
+#ifdef HAVE_SYS_RESOURCE_H
+#include <sys/time.h>
+#include <sys/resource.h>
+#endif
+
 #include <sys/param.h>			/* for MAXHOSTNAMELEN */
 #include "access/genam.h"
 #include "catalog/gp_segment_config.h"
@@ -1767,4 +1772,22 @@ IsOnConflictUpdate(PlannedStmt *ps)
 		return false;
 
 	return ((ModifyTable *)plan)->onConflictAction == ONCONFLICT_UPDATE;
+}
+
+/*
+ * Avoid core file generation for this PANIC. It helps to avoid
+ * filling up disks during tests and also saves time.
+ */
+void
+AvoidCorefileGeneration()
+{
+#if defined(HAVE_GETRLIMIT) && defined(RLIMIT_CORE)
+	struct rlimit lim;
+	getrlimit(RLIMIT_CORE, &lim);
+	lim.rlim_cur = 0;
+	if (setrlimit(RLIMIT_CORE, &lim) != 0)
+		elog(NOTICE,
+			 "setrlimit failed for RLIMIT_CORE soft limit to zero. errno: %d (%m).",
+			 errno);
+#endif
 }

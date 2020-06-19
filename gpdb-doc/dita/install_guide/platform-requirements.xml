@@ -378,9 +378,9 @@
                 <entry>R 3.4.4</entry>
               </row>
               <row>
-                <entry><xref href="../analytics/greenplum_r_client.xml" format="dita"
-                    scope="peer">GreenplumR Beta</xref></entry>
-                <entry>1.0.0-beta</entry>
+                <entry><xref href="../analytics/greenplum_r_client.xml" format="dita" scope="peer"
+                    >GreenplumR</xref></entry>
+                <entry>1.0.0</entry>
                 <entry>Supports R 3.6+.</entry>
               </row>
               <row class="- topic/row ">
@@ -394,13 +394,13 @@
               <row class="- topic/row ">
                 <entry colname="col1" class="- topic/entry "><xref href="../analytics/postGIS.xml"
                     format="dita" scope="peer">PostGIS Spatial and Geographic Objects</xref></entry>
-                <entry colname="col3" class="- topic/entry ">2.5.4+pivotal.1,<p>2.1.5+pivotal.2-2</p></entry>
-                <entry></entry>
+                <entry colname="col3" class="- topic/entry ">2.5.4+pivotal.2,
+                    2.5.4+pivotal.1,<p>2.1.5+pivotal.2-2</p></entry>
+                <entry/>
               </row>
             </tbody>
           </tgroup>
         </table>
-
         <p>For information about the Oracle Compatibility Functions, see <xref
             href="../ref_guide/modules/orafce_ref.xml" format="dita" scope="peer">Oracle
             Compatibility Functions</xref>.</p>

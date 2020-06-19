@@ -107,6 +107,7 @@ test: index_constraint_naming index_constraint_naming_partition index_constraint
 # hold locks.
 test: partition_locking
 test: vacuum_gp
+test: brin_ao brin_aocs
 
 test: sreh
 

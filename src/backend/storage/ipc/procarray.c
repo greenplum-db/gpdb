@@ -1625,7 +1625,7 @@ updateSharedLocalSnapshot(DtxContextInfo *dtxContextInfo,
 
 	SetSharedTransactionId_writer(distributedTransactionContext);
 	
-	SharedLocalSnapshotSlot->QDxid = dtxContextInfo->distributedXid;
+	SharedLocalSnapshotSlot->distributedXid = dtxContextInfo->distributedXid;
 	SharedLocalSnapshotSlot->segmateSync = dtxContextInfo->segmateSync;
 	SharedLocalSnapshotSlot->ready = true;
 
@@ -1637,12 +1637,12 @@ updateSharedLocalSnapshot(DtxContextInfo *dtxContextInfo,
 					SharedLocalSnapshotSlot->snapshot.xmax,
 					SharedLocalSnapshotSlot->snapshot.xcnt,
 					SharedLocalSnapshotSlot->snapshot.curcid,
-					SharedLocalSnapshotSlot->QDxid)));
+					SharedLocalSnapshotSlot->distributedXid)));
 
 	ereport((Debug_print_snapshot_dtm ? LOG : DEBUG5),
 			(errmsg("[Distributed Snapshot #%u] *Writer Set Shared* gxid %u, (gxid = %u, slot #%d, '%s', '%s')",
 					QEDtxContextInfo.distributedSnapshot.distribSnapshotId,
-					SharedLocalSnapshotSlot->QDxid,
+					SharedLocalSnapshotSlot->distributedXid,
 					getDistributedTransactionId(),
 					SharedLocalSnapshotSlot->slotid,
 					debugCaller,
@@ -1758,10 +1758,10 @@ readerFillLocalSnapshot(Snapshot snapshot, DtxContext distributedTransactionCont
 		if (QEDtxContextInfo.segmateSync == SharedLocalSnapshotSlot->segmateSync &&
 			SharedLocalSnapshotSlot->ready)
 		{
-			if (QEDtxContextInfo.distributedXid != SharedLocalSnapshotSlot->QDxid)
+			if (QEDtxContextInfo.distributedXid != SharedLocalSnapshotSlot->distributedXid)
 				elog(ERROR, "transaction ID doesn't match between the reader gang "
 							"and the writer gang, expect %d but having %d",
-							QEDtxContextInfo.distributedXid, SharedLocalSnapshotSlot->QDxid);
+							QEDtxContextInfo.distributedXid, SharedLocalSnapshotSlot->distributedXid);
 			copyLocalSnapshot(snapshot);
 			SetSharedTransactionId_reader(SharedLocalSnapshotSlot->xid, snapshot->curcid, distributedTransactionContext);
 			LWLockRelease(SharedLocalSnapshotSlot->slotLock);
@@ -1780,7 +1780,7 @@ readerFillLocalSnapshot(Snapshot snapshot, DtxContext distributedTransactionCont
 							   "DistributedTransactionContext = %s. "
 							   " Our slotindex is: %d \n"
 							   "Dump of all sharedsnapshots in shmem: %s",
-							   QEDtxContextInfo.distributedXid, SharedLocalSnapshotSlot->QDxid,
+							   QEDtxContextInfo.distributedXid, SharedLocalSnapshotSlot->distributedXid,
 							   QEDtxContextInfo.segmateSync,
 							   SharedLocalSnapshotSlot->segmateSync, SharedLocalSnapshotSlot->ready,
 							   DtxContextToString(distributedTransactionContext),
@@ -1796,7 +1796,7 @@ readerFillLocalSnapshot(Snapshot snapshot, DtxContext distributedTransactionCont
 					(errmsg("[Distributed Snapshot #%u] *No Match* gxid %u = %u and segmateSync %d = %d (%s)",
 							QEDtxContextInfo.distributedSnapshot.distribSnapshotId,
 							QEDtxContextInfo.distributedXid,
-							SharedLocalSnapshotSlot->QDxid,
+							SharedLocalSnapshotSlot->distributedXid,
 							QEDtxContextInfo.segmateSync,
 							SharedLocalSnapshotSlot->segmateSync,
 							DtxContextToString(distributedTransactionContext))));
@@ -1808,7 +1808,7 @@ readerFillLocalSnapshot(Snapshot snapshot, DtxContext distributedTransactionCont
 							" Our slotindex is: %d \n"
 							"DistributedTransactionContext = %s.",
 							QEDtxContextInfo.distributedXid, QEDtxContextInfo.segmateSync,
-							SharedLocalSnapshotSlot->QDxid, SharedLocalSnapshotSlot->segmateSync,
+							SharedLocalSnapshotSlot->distributedXid, SharedLocalSnapshotSlot->segmateSync,
 							SharedLocalSnapshotSlot->ready,
 							SharedLocalSnapshotSlot->slotindex,
 							DtxContextToString(distributedTransactionContext))));
@@ -3140,12 +3140,12 @@ UpdateSerializableCommandId(CommandId curcid)
 	{
 		LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_EXCLUSIVE);
 
-		if (SharedLocalSnapshotSlot->QDxid != QEDtxContextInfo.distributedXid)
+		if (SharedLocalSnapshotSlot->distributedXid != QEDtxContextInfo.distributedXid)
 		{
 			ereport((Debug_print_snapshot_dtm ? LOG : DEBUG5),
 					(errmsg("[Distributed Snapshot #%u] *Can't Update Serializable Command Id* QDxid = %u (gxid = %u, '%s')",
 							QEDtxContextInfo.distributedSnapshot.distribSnapshotId,
-							SharedLocalSnapshotSlot->QDxid,
+							SharedLocalSnapshotSlot->distributedXid,
 							getDistributedTransactionId(),
 							DtxContextToString(DistributedTransactionContext))));
 			LWLockRelease(SharedLocalSnapshotSlot->slotLock);

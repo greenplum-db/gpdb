@@ -132,6 +132,24 @@ extern double IndexBuildHeapRangeScan(Relation heapRelation,
 						EState *estate,
 						Snapshot snapshot,
 						TransactionId OldestXmin);
+double IndexBuildAppendOnlyRowRangeScan(Relation parentRelation,
+										Relation indexRelation,
+										struct IndexInfo *indexInfo,
+										BlockNumber start_blockno,
+										BlockNumber numblocks,
+										EState *estate,
+										Snapshot snapshot,
+										IndexBuildCallback callback,
+										void *callback_state);
+double IndexBuildAppendOnlyColRangeScan(Relation parentRelation,
+										Relation indexRelation,
+										struct IndexInfo *indexInfo,
+										BlockNumber start_blockno,
+										BlockNumber numblocks,
+										EState *estate,
+										Snapshot snapshot,
+										IndexBuildCallback callback,
+										void *callback_state);
 
 extern void validate_index(Oid heapId, Oid indexId, Snapshot snapshot);
 
