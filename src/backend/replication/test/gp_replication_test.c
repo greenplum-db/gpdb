@@ -19,12 +19,20 @@ expect_lwlock(LWLockMode lockmode, int count)
 	expect_value(LWLockRelease, lock, SyncRepLock);
 	will_be_called(LWLockRelease);
 
-	expect_value_count(LWLockAcquire, lock, GPReplicationControlLock, count);
-	expect_value_count(LWLockAcquire, mode, lockmode, count);
-	will_return_count(LWLockAcquire, true, count);
+	if (count > 0)
+	{
+		expect_value(LWLockAcquire, lock, GPReplicationControlLock);
+		expect_value(LWLockAcquire, mode, lockmode);
+		will_return(LWLockAcquire, true);
 
-	expect_value_count(LWLockRelease, lock, GPReplicationControlLock, count);
-	will_be_called_count(LWLockRelease, count);
+#ifdef USE_ASSERT_CHECKING
+		expect_value_count(LWLockHeldByMe, l, GPReplicationControlLock, count);
+		will_return_count(LWLockHeldByMe, true, count);
+#endif
+
+		expect_value(LWLockRelease, lock, GPReplicationControlLock);
+		will_be_called(LWLockRelease);
+	}
 }
 
 static void
@@ -67,7 +75,7 @@ test_GetMirrorStatus_Pid_Zero(void **state)
 {
 	FtsResponse response = { .IsMirrorUp = false };
 	GPReplicationCtlData *data;
-	data = test_setup(0, WALSNDSTATE_STARTUP, 2);
+	data = test_setup(0, WALSNDSTATE_STARTUP, 3);
 
 	/*
 	 * This would make sure Mirror is reported as DOWN, as grace period
@@ -94,7 +102,7 @@ test_GetMirrorStatus_RequestRetry(void **state)
 	FtsResponse response = { .IsMirrorUp = false };
 	GPReplicationCtlData *data;
 
-	data = test_setup(0, WALSNDSTATE_STARTUP, 2);
+	data = test_setup(0, WALSNDSTATE_STARTUP, 3);
 
 	/*
 	 * Make the pid zero time within the grace period.
@@ -124,7 +132,7 @@ test_GetMirrorStatus_Exceed_ContinuouslyReplicationAttempt(void **state)
 	FtsResponse response = { .IsMirrorUp = false };
 	GPReplicationCtlData *data;
 
-	data = test_setup(0, WALSNDSTATE_STARTUP, 1);
+	data = test_setup(0, WALSNDSTATE_STARTUP, 2);
 
 	/*
 	 * Make the current replication attempt count exceeds the max attempt count.
@@ -157,7 +165,7 @@ test_GetMirrorStatus_Delayed_AcceptingConnectionsStartTime(void **state)
 	FtsResponse response = { .IsMirrorUp = false };
 	GPReplicationCtlData *data;
 
-	data = test_setup(0, WALSNDSTATE_STARTUP, 2);
+	data = test_setup(0, WALSNDSTATE_STARTUP, 3);
 
 	/*
 	 * wal sender pid zero time over the grace period
@@ -185,7 +193,7 @@ test_GetMirrorStatus_Overflow(void **state)
 	FtsResponse response = { .IsMirrorUp = false };
 	GPReplicationCtlData *data;
 
-	data = test_setup(0, WALSNDSTATE_STARTUP, 2);
+	data = test_setup(0, WALSNDSTATE_STARTUP, 3);
 
 	/*
 	 * This would make sure Mirror is reported as DOWN, as grace period
@@ -207,7 +215,7 @@ test_GetMirrorStatus_WALSNDSTATE_STARTUP(void **state)
 	FtsResponse response = { .IsMirrorUp = false };
 	GPReplicationCtlData *data;
 
-	data = test_setup(1, WALSNDSTATE_STARTUP, 2);
+	data = test_setup(1, WALSNDSTATE_STARTUP, 3);
 
 	/*
 	 * This would make sure Mirror is not reported as DOWN, as still in grace
@@ -230,7 +238,7 @@ test_GetMirrorStatus_WALSNDSTATE_BACKUP(void **state)
 	FtsResponse response = { .IsMirrorUp = false };
 	GPReplicationCtlData *data;
 
-	data = test_setup(1, WALSNDSTATE_BACKUP, 2);
+	data = test_setup(1, WALSNDSTATE_BACKUP, 3);
 
 	/*
 	 * This would make sure Mirror is reported as DOWN, as grace period
@@ -257,7 +265,7 @@ test_GetMirrorStatus_WALSNDSTATE_CATCHUP(void **state)
 	FtsResponse response = { .IsMirrorUp = false };
 	GPReplicationCtlData *data;
 
-	data = test_setup(1, WALSNDSTATE_CATCHUP, 2);
+	data = test_setup(1, WALSNDSTATE_CATCHUP, 0);
 
 	GetMirrorStatus(&response);
 
@@ -271,7 +279,7 @@ test_GetMirrorStatus_WALSNDSTATE_STREAMING(void **state)
 	FtsResponse response = { .IsMirrorUp = false };
 	GPReplicationCtlData *data;
 
-	data = test_setup(1, WALSNDSTATE_STREAMING, 2);
+	data = test_setup(1, WALSNDSTATE_STREAMING, 0);
 
 	GetMirrorStatus(&response);
 

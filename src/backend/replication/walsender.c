@@ -256,7 +256,7 @@ InitWalSender(void)
 	InitWalSenderSlot();
 
 	/* Create GPReplication for current application if not created before */
-	GPReplicationCreateIfNotExist();
+	GPReplicationCreateIfNotExist(application_name);
 
 	/* Set up resource owner */
 	CurrentResourceOwner = ResourceOwnerCreate(NULL, "walsender top-level resource owner");
@@ -1438,8 +1438,6 @@ exec_replication_command(const char *cmd_string)
 			{
 				StartReplicationCmd *cmd = (StartReplicationCmd *) cmd_node;
 
-				GPReplicationIncreaseAttempts();
-
 				if (cmd->kind == REPLICATION_KIND_PHYSICAL)
 					StartReplication(cmd);
 				else
@@ -2118,10 +2116,14 @@ static void
 WalSndKill(int code, Datum arg)
 {
 	WalSnd	   *walsnd = MyWalSnd;
+	GPReplication *gp_replication = NULL;
 
 	Assert(walsnd != NULL);
 
-	GPReplicationSetDisconnectTime((pg_time_t) time(NULL));
+	LWLockAcquire(GPReplicationControlLock, LW_SHARED);
+	gp_replication = RetrieveGPReplication(application_name, false);
+	GPReplicationMarkDisconnect(gp_replication);
+	LWLockRelease(GPReplicationControlLock);
 
 	if (IS_QUERY_DISPATCHER())
 	{
@@ -2991,6 +2993,7 @@ void
 WalSndSetState(WalSndState state)
 {
 	WalSnd	   *walsnd = MyWalSnd;
+	GPReplication *gp_replication = NULL;
 
 	Assert(am_walsender);
 
@@ -3005,14 +3008,22 @@ WalSndSetState(WalSndState state)
 	walsnd->state = state;
 	SpinLockRelease(&walsnd->mutex);
 
-	/* If current replication start streaming, clear the failure attempt count */
-	if (state == WALSNDSTATE_STREAMING)
-		GPReplicationClearAttempts();
+
+	LWLockAcquire(GPReplicationControlLock, LW_SHARED);
+
+	gp_replication = RetrieveGPReplication(application_name, false);
 
 	if (state == WALSNDSTATE_CATCHUP || state == WALSNDSTATE_STREAMING)
-		GPReplicationSetDisconnectTime((pg_time_t) 0);
-	else if (GPReplicationRetrieveDisconnectTime(application_name) == 0)
-		GPReplicationSetDisconnectTime((pg_time_t) time(NULL));
+	{
+		GPReplicationClearDisconnectTime(gp_replication);
+		/* If current replication start streaming, clear the failure attempt count */
+		if (state == WALSNDSTATE_STREAMING)
+			GPReplicationClearAttempts(gp_replication);
+	}
+	else if (GPReplicationRetrieveDisconnectTime(gp_replication) == 0)
+		GPReplicationMarkDisconnect(gp_replication);
+
+	LWLockRelease(GPReplicationControlLock);
 }
 
 /*

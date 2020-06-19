@@ -66,8 +66,5 @@ install: all gpdiff.pl gpstringsubs.pl
 installcheck: install
 	./pg_isolation2_regress $(EXTRA_REGRESS_OPTS) --init-file=$(top_builddir)/src/test/regress/init_file --init-file=./init_file_isolation2 --bindir='$(bindir)' --inputdir=$(srcdir) --load-extension=gp_inject_fault --schedule=$(srcdir)/isolation2_schedule
 
-installcheck-temp: install
-	./pg_isolation2_regress $(EXTRA_REGRESS_OPTS) --init-file=$(top_builddir)/src/test/regress/init_file --init-file=./init_file_isolation2 --bindir='$(bindir)' --inputdir=$(srcdir) --load-extension=gp_inject_fault --schedule=$(srcdir)/temp_schedule
-
 installcheck-resgroup: install
 	./pg_isolation2_regress $(EXTRA_REGRESS_OPTS) --init-file=$(top_builddir)/src/test/regress/init_file --init-file=./init_file_resgroup --bindir='$(bindir)' --inputdir=$(srcdir) --dbname=isolation2resgrouptest --load-extension=gp_inject_fault --schedule=$(srcdir)/isolation2_resgroup_schedule

@@ -191,9 +191,6 @@ installcheck: installcheck-good
 installcheck-small: all
 	$(pg_regress_installcheck) $(REGRESS_OPTS) --schedule=$(srcdir)/parallel_schedule $(EXTRA_TESTS)
 
-installcheck-temp: all
-	$(pg_regress_installcheck) $(REGRESS_OPTS) --schedule=$(srcdir)/temp_schedule $(EXTRA_TESTS)
-
 installcheck-good: all twophase_pqexecparams hooktest query_info_hook_test
 	$(pg_regress_installcheck) $(REGRESS_OPTS) --schedule=$(srcdir)/parallel_schedule --schedule=$(srcdir)/greenplum_schedule $(EXTRA_TESTS)
 

@@ -67,14 +67,14 @@ extern GPReplicationCtlData *GPRepCtl;
 
 extern Size GPReplicationShmemSize(void);
 extern void GPReplicationShmemInit(void);
-extern void GPReplicationCreateIfNotExist(void);
+extern void GPReplicationCreateIfNotExist(const char *app_name);
 extern void GPReplicationDrop(const char* app_name);
 
-extern void GPReplicationIncreaseAttempts(void);
-extern void GPReplicationClearAttempts(void);
-extern uint32 GPReplicationRetrieveAttempts(const char* app_name);
-extern void GPReplicationSetDisconnectTime(pg_time_t disconn_time);
-extern pg_time_t GPReplicationRetrieveDisconnectTime(const char* app_name);
+extern GPReplication *RetrieveGPReplication(const char *app_name, bool skip_error);
+extern void GPReplicationMarkDisconnect(GPReplication *gp_replication);
+extern void GPReplicationClearAttempts(GPReplication *gp_replication);
+extern void GPReplicationClearDisconnectTime(GPReplication *gp_replication);
+extern pg_time_t GPReplicationRetrieveDisconnectTime(GPReplication *gp_replication);
 
 extern void GetMirrorStatus(FtsResponse *response);
 extern void SetSyncStandbysDefined(void);

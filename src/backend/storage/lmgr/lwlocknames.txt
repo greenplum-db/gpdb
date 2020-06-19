@@ -59,6 +59,6 @@ SessionStateLock					49
 RelfilenodeGenLock					50
 WorkFileManagerLock					51
 DistributedLogTruncateLock			52
-TwophaseCommitLock                  53
-ShareInputScanLock                  54
-GPReplicationControlLock            55
+TwophaseCommitLock					53
+ShareInputScanLock					54
+GPReplicationControlLock			55

@@ -50,6 +50,9 @@ GPReplicationShmemInit(void)
 {
 	bool		found;
 
+	if (GPReplicationShmemSize() == 0)
+		return;
+
 	GPRepCtl = (GPReplicationCtlData *)
 		ShmemInitStruct("GPReplication Ctl", GPReplicationShmemSize(), &found);
 
@@ -76,10 +79,10 @@ GPReplicationShmemInit(void)
  * If GPReplication for current application_name is already exist, skip
  * create.
  *
- * This function is called under walsender, walsender's application is used.
+ * This function is called under walsender, walsender's application_name is used.
  */
 void
-GPReplicationCreateIfNotExist(void)
+GPReplicationCreateIfNotExist(const char *app_name)
 {
 	int		i;
 	GPReplication *gp_replication = NULL;
@@ -96,7 +99,7 @@ GPReplicationCreateIfNotExist(void)
 
 		if (slot->in_use)
 		{
-			if (strcmp(application_name, NameStr(slot->name)) == 0)
+			if (strcmp(app_name, NameStr(slot->name)) == 0)
 			{
 				/* GPReplication for current application already exists */
 				LWLockRelease(GPReplicationControlLock);
@@ -155,6 +158,7 @@ GPReplicationDrop(const char* app_name)
 			strcmp(app_name, NameStr(slot->name)) == 0)
 		{
 			slot->in_use = false;
+			MemSet(NameStr(slot->name), 0, NAMEDATALEN);
 		}
 	}
 	LWLockRelease(GPReplicationControlLock);
@@ -163,9 +167,9 @@ GPReplicationDrop(const char* app_name)
 /*
  * RetrieveGPReplication - Get the GPReplication from GPRepCtl.
  *
- * GPReplicationControlLock should be take before call this function.
+ * GPReplicationControlLock should be held before call this function.
  */
-static GPReplication *
+GPReplication *
 RetrieveGPReplication(const char *app_name, bool skip_error)
 {
 	int		i;
@@ -173,6 +177,7 @@ RetrieveGPReplication(const char *app_name, bool skip_error)
 
 	/* GPRepCtl should be set already. */
 	Assert(GPRepCtl != NULL);
+	Assert(LWLockHeldByMe(GPReplicationControlLock));
 
 	for (i =0; i < max_wal_senders; i++)
 	{
@@ -194,71 +199,64 @@ RetrieveGPReplication(const char *app_name, bool skip_error)
 }
 
 /*
- * GPReplicationIncreaseAttempts - Increase current replication's continuously
- * connection attempts.
+ * GPReplicationMarkDisconnect - Mark current replication's disconnect by
+ * increase the con_attempt_count and set current time as disconnect time.
  *
- * This function is called under walsender to mark a start of replicaton attempt.
- * So the walsender's application_name is used to identify the GPReplication.
+ * This function is called under walsender to mark wal replication disconnected.
+ *
+ * GPReplicationControlLock should be held before call this function.
  */
 void
-GPReplicationIncreaseAttempts(void)
+GPReplicationMarkDisconnect(GPReplication *gp_replication)
 {
-	GPReplication *slot;
-
 	/* GPRepCtl should be set already. */
 	Assert(GPRepCtl != NULL);
 
 	/* Use GPReplicationControlLock to prevent concurrent create/drop */
-	LWLockAcquire(GPReplicationControlLock, LW_SHARED);
-
-	slot = RetrieveGPReplication(application_name, false);
+	Assert(LWLockHeldByMe(GPReplicationControlLock));
 
 	/* Since we need to modify the slot's value, lock the mutex. */
-	SpinLockAcquire(&slot->mutex);
+	SpinLockAcquire(&gp_replication->mutex);
 
-	slot->con_attempt_count += 1;
-
+	gp_replication->con_attempt_count += 1;
+	gp_replication->replica_disconnected_at = (pg_time_t) time(NULL);
 	elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
-		   "GPReplication: Continuously start replication %d times, for application %s",
-		   slot->con_attempt_count, application_name);
+		   "GPReplication: Mark replication disconnected. "
+		   "Current attempt count: %d, disconnect at %ld, for application %s",
+		   gp_replication->con_attempt_count,
+		   gp_replication->replica_disconnected_at,
+		   NameStr(gp_replication->name));
 
-	SpinLockRelease(&slot->mutex);
-
-	LWLockRelease(GPReplicationControlLock);
+	SpinLockRelease(&gp_replication->mutex);
 }
-
 
 /*
  * GPReplicationClearAttempts - Clear current replication's continuously
  * connection attempts since the replication start steaming data.
  *
  * This function is called under walsender to mark the replication start
- * steaming. So the walsender's application_name is used.
+ * steaming.
+ *
+ * GPReplicationControlLock should be held before call this function.
  */
 void
-GPReplicationClearAttempts(void)
+GPReplicationClearAttempts(GPReplication *gp_replication)
 {
-	GPReplication *slot;
-
 	/* GPRepCtl should be set already. */
 	Assert(GPRepCtl != NULL);
 
 	/* Use GPReplicationControlLock to prevent concurrent create/drop */
-	LWLockAcquire(GPReplicationControlLock, LW_SHARED);
-
-	slot = RetrieveGPReplication(application_name, false);
+	Assert(LWLockHeldByMe(GPReplicationControlLock));
 
 	/* Since we need to modify the slot's value, lock the mutex. */
-	SpinLockAcquire(&slot->mutex);
+	SpinLockAcquire(&gp_replication->mutex);
 
-	slot->con_attempt_count = 0;
+	gp_replication->con_attempt_count = 0;
 	elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
 		   "GPReplication: Clear replication connection attempts, for application %s",
-		   application_name);
+		   NameStr(gp_replication->name));
 
-	SpinLockRelease(&slot->mutex);
-
-	LWLockRelease(GPReplicationControlLock);
+	SpinLockRelease(&gp_replication->mutex);
 }
 
 /*
@@ -266,118 +264,83 @@ GPReplicationClearAttempts(void)
  * for a replication application.
  *
  * This function is called under FTS probe process.
- * So app_name is used to specify which GPReplication to retrieve.
+ *
+ * GPReplicationControlLock should be held before call this function.
  */
-uint32
-GPReplicationRetrieveAttempts(const char* app_name)
+static uint32
+GPReplicationRetrieveAttempts(GPReplication *gp_replication)
 {
-	GPReplication	   *slot;
 	uint32			 	result;
 
 	/* GPRepCtl should be set already. */
 	Assert(GPRepCtl != NULL);
 
 	/* Use GPReplicationControlLock to prevent concurrent create/drop */
-	LWLockAcquire(GPReplicationControlLock, LW_SHARED);
-
-	slot = RetrieveGPReplication(app_name, false);
+	Assert(LWLockHeldByMe(GPReplicationControlLock));
 
 	/* To prevent partial read, lock the mutex. */
-	SpinLockAcquire(&slot->mutex);
+	SpinLockAcquire(&gp_replication->mutex);
 
-	result = slot->con_attempt_count;
+	result = gp_replication->con_attempt_count;
 
-	SpinLockRelease(&slot->mutex);
-
-	LWLockRelease(GPReplicationControlLock);
+	SpinLockRelease(&gp_replication->mutex);
 
 	return result;
 }
 
 /*
- * GPReplicationSetDisconnectTime - Set replication disconnect time.
+ * GPReplicationClearDisconnectTime - Clear replication disconnect time.
  *
- * This function is called under walsender to update replication disconnect time.
- * So the walsender's application_name is used.
+ * This function is called under walsender to clear replication disconnect time.
+ *
+ * GPReplicationControlLock should be held before call this function.
  */
 void
-GPReplicationSetDisconnectTime(pg_time_t disconn_time)
+GPReplicationClearDisconnectTime(GPReplication *gp_replication)
 {
-	GPReplication *slot;
-
 	/* GPRepCtl should be set already. */
 	Assert(GPRepCtl != NULL);
 
 	/* Use GPReplicationControlLock to prevent concurrent create/drop */
-	LWLockAcquire(GPReplicationControlLock, LW_SHARED);
-
-	slot = RetrieveGPReplication(application_name, false);
+	Assert(LWLockHeldByMe(GPReplicationControlLock));
 
 	/* Since we need to modify the slot's value, lock the mutex. */
-	SpinLockAcquire(&slot->mutex);
+	SpinLockAcquire(&gp_replication->mutex);
 
-	slot->replica_disconnected_at = disconn_time;
+	gp_replication->replica_disconnected_at = (pg_time_t) 0;
 	elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
-		   "GPReplication: Set replication disconnect time %ld, for application %s",
-		   slot->replica_disconnected_at, application_name);
+		   "GPReplication: Clear replication disconnect time, for application %s",
+		   NameStr(gp_replication->name));
 
-	SpinLockRelease(&slot->mutex);
-
-	LWLockRelease(GPReplicationControlLock);
+	SpinLockRelease(&gp_replication->mutex);
 }
 
 /*
  * GPReplicationRetrieveDisconnectTime - Retrieve replication disconnect time.
  *
  * This function is called under FTS probe process to retrieve replication disconnect time.
- * So app_name is used to specify which GPReplication to retrieve.
+ *
+ * GPReplicationControlLock should be held before call this function.
  */
 pg_time_t
-GPReplicationRetrieveDisconnectTime(const char* app_name)
+GPReplicationRetrieveDisconnectTime(GPReplication *gp_replication)
 {
-	GPReplication	   *slot;
 	pg_time_t			disconn_time;
 
 	/* GPRepCtl should be set already. */
 	Assert(GPRepCtl != NULL);
 
 	/* Use GPReplicationControlLock to prevent concurrent create/drop */
-	LWLockAcquire(GPReplicationControlLock, LW_SHARED);
-
-	slot = RetrieveGPReplication(app_name, false);
+	Assert(LWLockHeldByMe(GPReplicationControlLock));
 
 	/* Since we need to modify the slot's value, lock the mutex. */
-	SpinLockAcquire(&slot->mutex);
+	SpinLockAcquire(&gp_replication->mutex);
 
-	disconn_time = slot->replica_disconnected_at;
+	disconn_time = gp_replication->replica_disconnected_at;
 
-	SpinLockRelease(&slot->mutex);
-
-	LWLockRelease(GPReplicationControlLock);
+	SpinLockRelease(&gp_replication->mutex);
 
 	return disconn_time;
-}
-
-/*
- * IsGPReplicationExists - Check whether GPReplication exist for
- * the app_name;
- */
-static bool
-IsGPReplicationExists(const char *app_name)
-{
-	GPReplication	   *slot;
-	bool				result = false;
-
-	/* GPRepCtl should be set already. */
-	Assert(GPRepCtl != NULL);
-
-	/* Use GPReplicationControlLock to prevent concurrent create/drop */
-	LWLockAcquire(GPReplicationControlLock, LW_SHARED);
-	slot = RetrieveGPReplication(app_name, true);
-	result = slot != NULL;
-	LWLockRelease(GPReplicationControlLock);
-
-	return result;
 }
 
 static bool
@@ -398,6 +361,72 @@ is_mirror_up(WalSnd *walsender)
 	return walsender_has_pid && is_communicating_with_mirror;
 }
 
+static bool
+is_probe_need_retry()
+{
+	pg_time_t			walsender_replica_disconnected_at = 0;
+	uint32				attempt_replication_times = 0;
+	GPReplication	   *gp_replication = NULL;
+	/*
+	 * Detect the primary-mirror replication attempt count.
+	 * If the replication keeps crash, we should consider mark
+	 * mirror down directly. Since the walsender keeps resarting,
+	 * walsender->replica_disconnected_at keeps updated.
+	 * So ignore it.
+	 *
+	 * If the GPReplication for GP_WALRECEIVER_APPNAME is not exist,
+	 * it means the replication has already been stopped.
+	 */
+	LWLockAcquire(GPReplicationControlLock, LW_SHARED);
+	gp_replication = RetrieveGPReplication(GP_WALRECEIVER_APPNAME, true);
+	if (gp_replication)
+	{
+		attempt_replication_times = GPReplicationRetrieveAttempts(gp_replication);
+		if (attempt_replication_times <= gp_fts_replication_attempt_count)
+			walsender_replica_disconnected_at = GPReplicationRetrieveDisconnectTime(gp_replication);
+		else
+		{
+			ereport(LOG,
+					(errmsg("Primary-mirror replication streaming already attempted %d times exceed"
+					" limit gp_fts_replication_attempt_count %d",
+					attempt_replication_times, gp_fts_replication_attempt_count)));
+		}
+	}
+	LWLockRelease(GPReplicationControlLock);
+
+	/*
+	 * PMAcceptingConnectionStartTime is process-local variable, set in
+	 * postmaster process and inherited by the FTS handler child
+	 * process. This works because the timestamp is set only once by
+	 * postmaster, and is guaranteed to be set before FTS handler child
+	 * processes can be spawned.
+	 */
+	Assert(PMAcceptingConnectionsStartTime);
+	pg_time_t delta = ((pg_time_t) time(NULL)) -
+		Max(walsender_replica_disconnected_at, PMAcceptingConnectionsStartTime);
+
+	/*
+	 * Report mirror as down, only if it didn't connect for below
+	 * grace period to primary. This helps to avoid marking mirror
+	 * down unnecessarily when restarting primary or due to small n/w
+	 * glitch. During this period, request FTS to probe again.
+	 *
+	 * If the delta is negative, then it's overflowed, meaning it's
+	 * over gp_fts_mark_mirror_down_grace_period since either last
+	 * database accepting connections or last time wal sender
+	 * died. Then, we can safely mark the mirror is down.
+	 */
+	if (delta < gp_fts_mark_mirror_down_grace_period && delta >= 0)
+	{
+		ereport(LOG,
+				(errmsg("requesting fts retry as mirror didn't connect yet but in grace period: " INT64_FORMAT, delta),
+					errdetail("pid zero at time: " INT64_FORMAT " accept connections start time: " INT64_FORMAT,
+							walsender_replica_disconnected_at, PMAcceptingConnectionsStartTime)));
+		return true;
+	}
+	return false;
+}
+
 /*
  * Check the WalSndCtl to obtain if mirror is up or down, if the wal sender is
  * in streaming, and if synchronous replication is enabled or not.
@@ -405,9 +434,6 @@ is_mirror_up(WalSnd *walsender)
 void
 GetMirrorStatus(FtsResponse *response)
 {
-	pg_time_t	walsender_replica_disconnected_at = 0;
-	uint32		attempt_replication_times = 0;
-
 	response->IsMirrorUp = false;
 	response->IsInSync = false;
 	response->RequestRetry = false;
@@ -436,67 +462,12 @@ GetMirrorStatus(FtsResponse *response)
 		break;
 	}
 
+	response->IsSyncRepEnabled = WalSndCtl->sync_standbys_defined;
+
 	LWLockRelease(SyncRepLock);
 
-	/*
-	 * Detect the primary-mirror replication attempt count.
-	 * If the replication keeps crash, we should consider mark
-	 * mirror down directly. Since the walsender keeps resarting,
-	 * walsender->replica_disconnected_at keeps updated.
-	 * So ignore it.
-	 *
-	 * If the GPReplication for GP_WALRECEIVER_APPNAME is not exist,
-	 * it means the replication has already been stopped.
-	 */
-	if (IsGPReplicationExists(GP_WALRECEIVER_APPNAME))
-	{
-		attempt_replication_times = GPReplicationRetrieveAttempts(GP_WALRECEIVER_APPNAME);
-		if (attempt_replication_times <= gp_fts_replication_attempt_count)
-			walsender_replica_disconnected_at = GPReplicationRetrieveDisconnectTime(GP_WALRECEIVER_APPNAME);
-		else
-		{
-			ereport(LOG,
-					(errmsg("Primary-mirror replication streaming already attempted %d times exceed"
-					" limit gp_fts_replication_attempt_count %d",
-					attempt_replication_times, gp_fts_replication_attempt_count)));
-		}
-	}
-
 	if (!response->IsMirrorUp)
-	{
-		/*
-		 * PMAcceptingConnectionStartTime is process-local variable, set in
-		 * postmaster process and inherited by the FTS handler child
-		 * process. This works because the timestamp is set only once by
-		 * postmaster, and is guaranteed to be set before FTS handler child
-		 * processes can be spawned.
-		 */
-		Assert(PMAcceptingConnectionsStartTime);
-		pg_time_t delta = ((pg_time_t) time(NULL)) -
-			Max(walsender_replica_disconnected_at, PMAcceptingConnectionsStartTime);
-
-		/*
-		 * Report mirror as down, only if it didn't connect for below
-		 * grace period to primary. This helps to avoid marking mirror
-		 * down unnecessarily when restarting primary or due to small n/w
-		 * glitch. During this period, request FTS to probe again.
-		 *
-		 * If the delta is negative, then it's overflowed, meaning it's
-		 * over gp_fts_mark_mirror_down_grace_period since either last
-		 * database accepting connections or last time wal sender
-		 * died. Then, we can safely mark the mirror is down.
-		 */
-		if (delta < gp_fts_mark_mirror_down_grace_period && delta >= 0)
-		{
-			ereport(LOG,
-					(errmsg("requesting fts retry as mirror didn't connect yet but in grace period: " INT64_FORMAT, delta),
-					 errdetail("pid zero at time: " INT64_FORMAT " accept connections start time: " INT64_FORMAT,
-							   walsender_replica_disconnected_at, PMAcceptingConnectionsStartTime)));
-			response->RequestRetry = true;
-		}
-	}
-
-	response->IsSyncRepEnabled = WalSndCtl->sync_standbys_defined;
+		response->RequestRetry = is_probe_need_retry();
 }
 
 /*
