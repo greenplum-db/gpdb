@@ -511,15 +511,7 @@ CStatisticsUtils::IsValidBucket
 	if (datum->IsDatumMappableToLINT())
 	{
 		// test if this integer bucket is well-defined
-		CDouble bound_diff = bucket_upper_bound->Distance(bucket_lower_bound);
-		if (!is_lower_closed)
-		{
-			bound_diff = bound_diff + CDouble(-1.0);
-		}
-		if (!is_upper_closed)
-		{
-			bound_diff = bound_diff + CDouble(-1.0);
-		}
+		CDouble bound_diff = bucket_upper_bound->Width(bucket_lower_bound, is_lower_closed, is_upper_closed);
 		if (CDouble(0) > bound_diff)
 		{
 			return false;
@@ -914,7 +906,7 @@ CStatisticsUtils::PrintHistogramMap
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CStatisticsUtils::CreateHistHashMapAfterMergingDisjPreds
+//		CStatisticsUtils::MergeHistogramMapsForDisjPreds
 //
 //	@doc:
 //		Create a new hash map of histograms after merging

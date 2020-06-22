@@ -70,23 +70,23 @@
       </dxl:StatsBucket>
     </dxl:ColumnStatistics>
     <dxl:ColumnStatistics Mdid="1.1234.1.1.1" Name="T.B" Width="1.000000">
-      <dxl:StatsBucket Frequency="0.200000" DistinctValues="1.000000">
-        <dxl:LowerBound Closed="true" TypeMdid="0.16.1.0" Value="true"/>
-        <dxl:UpperBound Closed="true" TypeMdid="0.16.1.0" Value="true"/>
-      </dxl:StatsBucket>
       <dxl:StatsBucket Frequency="0.800000" DistinctValues="1.000000">
         <dxl:LowerBound Closed="true" TypeMdid="0.16.1.0" Value="false"/>
         <dxl:UpperBound Closed="true" TypeMdid="0.16.1.0" Value="false"/>
+      </dxl:StatsBucket>
+      <dxl:StatsBucket Frequency="0.200000" DistinctValues="1.000000">
+        <dxl:LowerBound Closed="true" TypeMdid="0.16.1.0" Value="true"/>
+        <dxl:UpperBound Closed="true" TypeMdid="0.16.1.0" Value="true"/>
       </dxl:StatsBucket>
     </dxl:ColumnStatistics>
     <dxl:ColumnStatistics Mdid="1.1234.1.1.3" Name="T.C" Width="1.000000">
-      <dxl:StatsBucket Frequency="0.200000" DistinctValues="1.000000">
-        <dxl:LowerBound Closed="true" TypeMdid="0.16.1.0" Value="true"/>
-        <dxl:UpperBound Closed="true" TypeMdid="0.16.1.0" Value="true"/>
-      </dxl:StatsBucket>
       <dxl:StatsBucket Frequency="0.800000" DistinctValues="1.000000">
         <dxl:LowerBound Closed="true" TypeMdid="0.16.1.0" Value="false"/>
         <dxl:UpperBound Closed="true" TypeMdid="0.16.1.0" Value="false"/>
+      </dxl:StatsBucket>
+      <dxl:StatsBucket Frequency="0.200000" DistinctValues="1.000000">
+        <dxl:LowerBound Closed="true" TypeMdid="0.16.1.0" Value="true"/>
+        <dxl:UpperBound Closed="true" TypeMdid="0.16.1.0" Value="true"/>
       </dxl:StatsBucket>
     </dxl:ColumnStatistics>
     <dxl:Relation Mdid="0.1234.1.1" Name="T" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">

@@ -430,7 +430,7 @@ COptTasks::CreateOptimizerConfig
 	return GPOS_NEW(mp) COptimizerConfig
 						(
 						GPOS_NEW(mp) CEnumeratorConfig(mp, plan_id, num_samples, cost_threshold),
-						GPOS_NEW(mp) CStatisticsConfig(mp, damping_factor_filter, damping_factor_join, damping_factor_groupby),
+						GPOS_NEW(mp) CStatisticsConfig(mp, damping_factor_filter, damping_factor_join, damping_factor_groupby, MAX_STATS_BUCKETS),
 						GPOS_NEW(mp) CCTEConfig(cte_inlining_cutoff),
 						cost_model,
 						GPOS_NEW(mp) CHint

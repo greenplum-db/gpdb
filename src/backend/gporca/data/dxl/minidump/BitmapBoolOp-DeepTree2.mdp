@@ -16,7 +16,7 @@ explain select * from t where c1 = 10 or (c2 = '4' and c5> 100);
   <dxl:Thread Id="0">
     <dxl:OptimizerConfig>
       <dxl:EnumeratorConfig Id="0" PlanSamples="0" CostThreshold="0"/>
-      <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.010000" DampingFactorGroupBy="0.750000"/>
+      <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.010000" DampingFactorGroupBy="0.750000" MaxStatsBuckets="100"/>
       <dxl:CTEConfig CTEInliningCutoff="0"/> 
       <dxl:WindowOids RowNumber="7000" Rank="7001"/>
       <dxl:CostModelConfig CostModelType="1" SegmentsForCosting="2">
@@ -917,7 +917,7 @@ explain select * from t where c1 = 10 or (c2 = '4' and c5> 100);
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.112122" Rows="14.195200" Width="27"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.112122" Rows="14.195176" Width="27"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="c1">
@@ -946,7 +946,7 @@ explain select * from t where c1 = 10 or (c2 = '4' and c5> 100);
         <dxl:SortingColumnList/>
         <dxl:BitmapTableScan>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.110402" Rows="14.195200" Width="27"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.110402" Rows="14.195176" Width="27"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="c1">

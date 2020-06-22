@@ -85,8 +85,9 @@ CParseHandlerStatisticsConfig::StartElement
 	CDouble damping_factor_filter = CDXLOperatorFactory::ExtractConvertAttrValueToDouble(m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenDampingFactorFilter, EdxltokenStatisticsConfig);
 	CDouble damping_factor_join = CDXLOperatorFactory::ExtractConvertAttrValueToDouble(m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenDampingFactorJoin, EdxltokenStatisticsConfig);
 	CDouble damping_factor_groupby = CDXLOperatorFactory::ExtractConvertAttrValueToDouble(m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenDampingFactorGroupBy, EdxltokenStatisticsConfig);
+	ULONG max_stats_buckets = CDXLOperatorFactory::ExtractConvertAttrValueToUlong(m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenMaxStatsBuckets, EdxltokenStatisticsConfig);
 
-	m_stats_conf = GPOS_NEW(m_mp) CStatisticsConfig(m_mp, damping_factor_filter, damping_factor_join, damping_factor_groupby);
+	m_stats_conf = GPOS_NEW(m_mp) CStatisticsConfig(m_mp, damping_factor_filter, damping_factor_join, damping_factor_groupby, max_stats_buckets);
 }
 
 //---------------------------------------------------------------------------

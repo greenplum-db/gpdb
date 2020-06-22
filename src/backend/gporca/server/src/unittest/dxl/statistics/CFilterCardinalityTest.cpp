@@ -300,6 +300,7 @@ CFilterCardinalityTest::EresUnittest_CStatisticsFilterDisj()
 		{"../data/dxl/statistics/Disj-Input-2.xml", "../data/dxl/statistics/Disj-Output-2-3.xml", PstatspredDisj6},
 		{"../data/dxl/statistics/Disj-Input-2.xml", "../data/dxl/statistics/Disj-Output-2-4.xml", PstatspredDisj7},
 		{"../data/dxl/statistics/NestedPred-Input-10.xml", "../data/dxl/statistics/Disj-Output-8.xml", PstatspredDisj8},
+		{"../data/dxl/statistics/Disj-Input-2.xml", "../data/dxl/statistics/Disj-Output-2-5.xml", PstatspredDisj9},
 	};
 
 	const ULONG ulTestCases = GPOS_ARRAY_SIZE(rgstatsdisjtc);
@@ -426,6 +427,21 @@ CFilterCardinalityTest::PstatspredDisj8
 	INT rgiVal[] = {2001, 2002};
 	const ULONG ulVals = GPOS_ARRAY_SIZE(rgiVal);
 	CStatsPredPtrArry *pdrgpstatspredDisj = PdrgpstatspredInteger(mp, 61, CStatsPred::EstatscmptEq, rgiVal, ulVals);
+
+	return GPOS_NEW(mp) CStatsPredDisj(pdrgpstatspredDisj);
+}
+
+//	create an or filter (multiple LEQ)
+CStatsPred *
+CFilterCardinalityTest::PstatspredDisj9
+(
+ CMemoryPool *mp
+ )
+{
+	// the predicate is (x <= 3 or x <= 10) (domain [0 -- 20])
+	INT rgiVal[] = {3, 10};
+	const ULONG ulVals = GPOS_ARRAY_SIZE(rgiVal);
+	CStatsPredPtrArry *pdrgpstatspredDisj = PdrgpstatspredInteger(mp, 1, CStatsPred::EstatscmptLEq, rgiVal, ulVals);
 
 	return GPOS_NEW(mp) CStatsPredDisj(pdrgpstatspredDisj);
 }

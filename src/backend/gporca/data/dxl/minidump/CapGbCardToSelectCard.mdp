@@ -10,7 +10,7 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
   <dxl:Thread Id="0">
     <dxl:OptimizerConfig>
       <dxl:EnumeratorConfig Id="0" PlanSamples="0" CostThreshold="0"/>
-      <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.010000" DampingFactorGroupBy="0.750000"/>
+      <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.010000" DampingFactorGroupBy="0.750000" MaxStatsBuckets="100"/>
       <dxl:CTEConfig CTEInliningCutoff="0"/> 
       <dxl:WindowOids RowNumber="7000" Rank="7001"/>
       <dxl:TraceFlags Value="103027,102024,102025,102115,102116,102117,102119,102121,103001,103026"/>
@@ -10891,7 +10891,7 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
     <dxl:Plan Id="0" SpaceSize="188">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="4370028.691641" Rows="13.696861" Width="127"/>
+          <dxl:Cost StartupCost="0" TotalCost="4370028.843255" Rows="13.696907" Width="127"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="1" Alias="i_item_id">
@@ -10908,7 +10908,7 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
         <dxl:SortingColumnList/>
         <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="4370026.842275" Rows="13.696861" Width="127"/>
+            <dxl:Cost StartupCost="0" TotalCost="4370026.993886" Rows="13.696907" Width="127"/>
           </dxl:Properties>
           <dxl:GroupingColumns>
             <dxl:GroupingColumn ColId="1"/>
@@ -10929,7 +10929,7 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
           <dxl:Filter/>
           <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="4370020.746080" Rows="13.696861" Width="127"/>
+              <dxl:Cost StartupCost="0" TotalCost="4370020.897674" Rows="13.696907" Width="127"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="1" Alias="i_item_id">
@@ -10957,7 +10957,7 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
             </dxl:HashExprList>
             <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="true">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="4370018.896714" Rows="13.696861" Width="127"/>
+                <dxl:Cost StartupCost="0" TotalCost="4370019.048305" Rows="13.696907" Width="127"/>
               </dxl:Properties>
               <dxl:GroupingColumns>
                 <dxl:GroupingColumn ColId="1"/>
@@ -10978,7 +10978,7 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
               <dxl:Filter/>
               <dxl:HashJoin JoinType="Inner">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="4324539.959928" Rows="183337.274675" Width="127"/>
+                  <dxl:Cost StartupCost="0" TotalCost="4324539.959998" Rows="183337.885509" Width="127"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="1" Alias="i_item_id">
@@ -11025,7 +11025,7 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
                 </dxl:TableScan>
                 <dxl:BroadcastMotion InputSegments="0,1" OutputSegments="0,1">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="4216.937576" Rows="27.393723" Width="131"/>
+                    <dxl:Cost StartupCost="0" TotalCost="4216.937588" Rows="27.393814" Width="131"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="0" Alias="i_item_sk">
@@ -11045,7 +11045,7 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
                   <dxl:SortingColumnList/>
                   <dxl:TableScan>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="4214.185341" Rows="13.696861" Width="131"/>
+                      <dxl:Cost StartupCost="0" TotalCost="4214.185347" Rows="13.696907" Width="131"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="0" Alias="i_item_sk">

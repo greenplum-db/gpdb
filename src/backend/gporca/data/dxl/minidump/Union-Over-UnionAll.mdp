@@ -9,7 +9,7 @@ select a from foo_hashed union all select b from foo_hashed union select 1 from 
   <dxl:Thread Id="0">
     <dxl:OptimizerConfig>
       <dxl:EnumeratorConfig Id="0" PlanSamples="0" CostThreshold="0"/>
-      <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.010000" DampingFactorGroupBy="0.750000"/>
+      <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.010000" DampingFactorGroupBy="0.750000" MaxStatsBuckets="100"/>
       <dxl:CTEConfig CTEInliningCutoff="0"/> 
       <dxl:WindowOids RowNumber="7000" Rank="7001"/>
       <dxl:CostModelConfig CostModelType="1" SegmentsForCosting="3">
@@ -305,7 +305,7 @@ select a from foo_hashed union all select b from foo_hashed union select 1 from 
     <dxl:Plan Id="0" SpaceSize="16">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1293.001680" Rows="14.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="1293.001535" Rows="11.000000" Width="4"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -316,7 +316,7 @@ select a from foo_hashed union all select b from foo_hashed union select 1 from 
         <dxl:SortingColumnList/>
         <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1293.001471" Rows="14.000000" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="1293.001371" Rows="11.000000" Width="4"/>
           </dxl:Properties>
           <dxl:GroupingColumns>
             <dxl:GroupingColumn ColId="0"/>
@@ -329,7 +329,7 @@ select a from foo_hashed union all select b from foo_hashed union select 1 from 
           <dxl:Filter/>
           <dxl:Sort SortDiscardDuplicates="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1293.001442" Rows="14.000000" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="1293.001348" Rows="11.000000" Width="4"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -344,7 +344,7 @@ select a from foo_hashed union all select b from foo_hashed union select 1 from 
             <dxl:LimitOffset/>
             <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1293.001207" Rows="14.000000" Width="4"/>
+                <dxl:Cost StartupCost="0" TotalCost="1293.001192" Rows="11.000000" Width="4"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="a">
@@ -360,7 +360,7 @@ select a from foo_hashed union all select b from foo_hashed union select 1 from 
               </dxl:HashExprList>
               <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="1293.001149" Rows="14.000000" Width="4"/>
+                  <dxl:Cost StartupCost="0" TotalCost="1293.001146" Rows="11.000000" Width="4"/>
                 </dxl:Properties>
                 <dxl:GroupingColumns>
                   <dxl:GroupingColumn ColId="0"/>
