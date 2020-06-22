@@ -21,6 +21,12 @@
 #include "storage/lwlock.h"
 #include "utils/builtins.h"
 
+/*
+ * GPRepCtl is only used for GPDB primary-mirror replication,
+ * so set to a small value for now.
+ */
+static uint32 max_gp_replication = 1;
+
 /* Set at database system is ready to accept connections */
 extern pg_time_t PMAcceptingConnectionsStartTime;
 
@@ -34,12 +40,7 @@ GPReplicationShmemSize(void)
 	Size		size = 0;
 
 	size = offsetof(GPReplicationCtlData, gp_replications);
-
-	/*
-	 * Since we only allow max_wal_senders walsender, a primiray's
-	 * replication mirrors can not be more than this value.
-	 */
-	size = add_size(size, mul_size(max_wal_senders, sizeof(GPReplication)));
+	size = add_size(size, mul_size(max_gp_replication, sizeof(GPReplication)));
 
 	return size;
 }
@@ -50,8 +51,7 @@ GPReplicationShmemInit(void)
 {
 	bool		found;
 
-	if (GPReplicationShmemSize() == 0)
-		return;
+	Assert(GPReplicationShmemSize() > 0);
 
 	GPRepCtl = (GPReplicationCtlData *)
 		ShmemInitStruct("GPReplication Ctl", GPReplicationShmemSize(), &found);
@@ -170,7 +170,7 @@ GPReplicationDrop(const char* app_name)
  * GPReplicationControlLock should be held before call this function.
  */
 GPReplication *
-RetrieveGPReplication(const char *app_name, bool skip_error)
+RetrieveGPReplication(const char *app_name, bool skip_warn)
 {
 	int		i;
 	GPReplication *gp_replication = NULL;
@@ -191,8 +191,8 @@ RetrieveGPReplication(const char *app_name, bool skip_error)
 		}
 	}
 
-	if (!gp_replication && !skip_error)
-		ereport(ERROR,
+	if (!gp_replication && !skip_warn)
+		ereport(WARNING,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
 				 errmsg("GPReplication \"%s\" does not exist", app_name)));
 	return gp_replication;
@@ -209,6 +209,9 @@ RetrieveGPReplication(const char *app_name, bool skip_error)
 void
 GPReplicationMarkDisconnect(GPReplication *gp_replication)
 {
+	if (gp_replication == NULL)
+		return;
+
 	/* GPRepCtl should be set already. */
 	Assert(GPRepCtl != NULL);
 
@@ -231,6 +234,28 @@ GPReplicationMarkDisconnect(GPReplication *gp_replication)
 }
 
 /*
+ * GPReplicationMarkDisconnectForReplication - Mark a replication disconnected
+ * base on replication's application name.
+ *
+ * This function is called under walsender to mark wal replication disconnected.
+ */
+void
+GPReplicationMarkDisconnectForReplication(const char *app_name)
+{
+	GPReplication *gp_replication;
+
+	LWLockAcquire(GPReplicationControlLock, LW_SHARED);
+
+	gp_replication = RetrieveGPReplication(app_name, false);
+
+	/* gp_replication must exist  */
+	Assert(gp_replication);
+	GPReplicationMarkDisconnect(gp_replication);
+
+	LWLockRelease(GPReplicationControlLock);
+}
+
+/*
  * GPReplicationClearAttempts - Clear current replication's continuously
  * connection attempts since the replication start steaming data.
  *
@@ -242,6 +267,8 @@ GPReplicationMarkDisconnect(GPReplication *gp_replication)
 void
 GPReplicationClearAttempts(GPReplication *gp_replication)
 {
+	if (gp_replication == NULL)
+		return;
 	/* GPRepCtl should be set already. */
 	Assert(GPRepCtl != NULL);
 
@@ -272,6 +299,9 @@ GPReplicationRetrieveAttempts(GPReplication *gp_replication)
 {
 	uint32			 	result;
 
+	if (gp_replication == NULL)
+		return 0;
+
 	/* GPRepCtl should be set already. */
 	Assert(GPRepCtl != NULL);
 
@@ -298,6 +328,9 @@ GPReplicationRetrieveAttempts(GPReplication *gp_replication)
 void
 GPReplicationClearDisconnectTime(GPReplication *gp_replication)
 {
+	if (gp_replication == NULL)
+		return;
+
 	/* GPRepCtl should be set already. */
 	Assert(GPRepCtl != NULL);
 
@@ -327,6 +360,9 @@ GPReplicationRetrieveDisconnectTime(GPReplication *gp_replication)
 {
 	pg_time_t			disconn_time;
 
+	if (gp_replication == NULL)
+		return 0;
+
 	/* GPRepCtl should be set already. */
 	Assert(GPRepCtl != NULL);
 
@@ -341,6 +377,44 @@ GPReplicationRetrieveDisconnectTime(GPReplication *gp_replication)
 	SpinLockRelease(&gp_replication->mutex);
 
 	return disconn_time;
+}
+
+/* GPReplicationFTSGetDisconnectTime - used in FTS probe process.
+ *
+ * Detect the primary-mirror replication attempt count.
+ * If the replication keeps crash, we should consider mark
+ * mirror down directly. Since the walsender keeps resarting,
+ * walsender->replica_disconnected_at keeps updated.
+ * So ignore it.
+ *
+ * If the GPReplication for GP_WALRECEIVER_APPNAME is not exist,
+ * it means the replication has already been stopped.
+ */
+pg_time_t
+GPReplicationFTSGetDisconnectTime(const char *app_name)
+{
+	pg_time_t			walsender_replica_disconnected_at = 0;
+	uint32				attempt_replication_times = 0;
+	GPReplication	   *gp_replication = NULL;
+
+	LWLockAcquire(GPReplicationControlLock, LW_SHARED);
+	gp_replication = RetrieveGPReplication(app_name, true);
+	if (gp_replication)
+	{
+		attempt_replication_times = GPReplicationRetrieveAttempts(gp_replication);
+		if (attempt_replication_times <= gp_fts_replication_attempt_count)
+			walsender_replica_disconnected_at = GPReplicationRetrieveDisconnectTime(gp_replication);
+		else
+		{
+			ereport(LOG,
+					(errmsg("Primary-mirror replication streaming already attempted %d times exceed"
+					" limit gp_fts_replication_attempt_count %d",
+					attempt_replication_times, gp_fts_replication_attempt_count)));
+		}
+	}
+	LWLockRelease(GPReplicationControlLock);
+
+	return walsender_replica_disconnected_at;
 }
 
 static bool
@@ -365,34 +439,13 @@ static bool
 is_probe_need_retry()
 {
 	pg_time_t			walsender_replica_disconnected_at = 0;
-	uint32				attempt_replication_times = 0;
-	GPReplication	   *gp_replication = NULL;
+
 	/*
-	 * Detect the primary-mirror replication attempt count.
-	 * If the replication keeps crash, we should consider mark
-	 * mirror down directly. Since the walsender keeps resarting,
-	 * walsender->replica_disconnected_at keeps updated.
-	 * So ignore it.
-	 *
-	 * If the GPReplication for GP_WALRECEIVER_APPNAME is not exist,
-	 * it means the replication has already been stopped.
+	 * Get the walsender disconnect time, if current replication failed too
+	 * many times continuously, the walsender_replica_disconnected_at should
+	 * not take into consider. See more details in GPReplicationFTSGetDisconnectTime.
 	 */
-	LWLockAcquire(GPReplicationControlLock, LW_SHARED);
-	gp_replication = RetrieveGPReplication(GP_WALRECEIVER_APPNAME, true);
-	if (gp_replication)
-	{
-		attempt_replication_times = GPReplicationRetrieveAttempts(gp_replication);
-		if (attempt_replication_times <= gp_fts_replication_attempt_count)
-			walsender_replica_disconnected_at = GPReplicationRetrieveDisconnectTime(gp_replication);
-		else
-		{
-			ereport(LOG,
-					(errmsg("Primary-mirror replication streaming already attempted %d times exceed"
-					" limit gp_fts_replication_attempt_count %d",
-					attempt_replication_times, gp_fts_replication_attempt_count)));
-		}
-	}
-	LWLockRelease(GPReplicationControlLock);
+	walsender_replica_disconnected_at = GPReplicationFTSGetDisconnectTime(GP_WALRECEIVER_APPNAME);
 
 	/*
 	 * PMAcceptingConnectionStartTime is process-local variable, set in

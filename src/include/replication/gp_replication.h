@@ -70,11 +70,13 @@ extern void GPReplicationShmemInit(void);
 extern void GPReplicationCreateIfNotExist(const char *app_name);
 extern void GPReplicationDrop(const char* app_name);
 
-extern GPReplication *RetrieveGPReplication(const char *app_name, bool skip_error);
+extern GPReplication *RetrieveGPReplication(const char *app_name, bool skip_warn);
 extern void GPReplicationMarkDisconnect(GPReplication *gp_replication);
+extern void GPReplicationMarkDisconnectForReplication(const char *app_name);
 extern void GPReplicationClearAttempts(GPReplication *gp_replication);
 extern void GPReplicationClearDisconnectTime(GPReplication *gp_replication);
 extern pg_time_t GPReplicationRetrieveDisconnectTime(GPReplication *gp_replication);
+extern pg_time_t GPReplicationFTSGetDisconnectTime(const char *app_name);
 
 extern void GetMirrorStatus(FtsResponse *response);
 extern void SetSyncStandbysDefined(void);

@@ -255,9 +255,6 @@ InitWalSender(void)
 	/* Create a per-walsender data structure in shared memory */
 	InitWalSenderSlot();
 
-	/* Create GPReplication for current application if not created before */
-	GPReplicationCreateIfNotExist(application_name);
-
 	/* Set up resource owner */
 	CurrentResourceOwner = ResourceOwnerCreate(NULL, "walsender top-level resource owner");
 
@@ -558,6 +555,13 @@ StartReplication(StartReplicationCmd *cmd)
 {
 	StringInfoData buf;
 	XLogRecPtr	FlushPtr;
+
+	/*
+	 * Create GPReplication for current application if not created before.
+	 * This is only called for GPDB primary-mirror replication.
+	 */
+	if (MyWalSnd->is_for_gp_walreceiver)
+		GPReplicationCreateIfNotExist(application_name);
 
 	/*
 	 * We assume here that we're logging enough information in the WAL for
@@ -2116,14 +2120,12 @@ static void
 WalSndKill(int code, Datum arg)
 {
 	WalSnd	   *walsnd = MyWalSnd;
-	GPReplication *gp_replication = NULL;
 
 	Assert(walsnd != NULL);
 
-	LWLockAcquire(GPReplicationControlLock, LW_SHARED);
-	gp_replication = RetrieveGPReplication(application_name, false);
-	GPReplicationMarkDisconnect(gp_replication);
-	LWLockRelease(GPReplicationControlLock);
+	/* Only track failure for GPDB primary-mirror replication */
+	if (MyWalSnd->is_for_gp_walreceiver)
+		GPReplicationMarkDisconnectForReplication(application_name);
 
 	if (IS_QUERY_DISPATCHER())
 	{
@@ -3008,20 +3010,43 @@ WalSndSetState(WalSndState state)
 	walsnd->state = state;
 	SpinLockRelease(&walsnd->mutex);
 
+	/*
+	 * If the walsender is not for GPDB primary-mirror replication,
+	 * skip failure stats.
+	 */
+	if (!walsnd->is_for_gp_walreceiver)
+		return;
 
 	LWLockAcquire(GPReplicationControlLock, LW_SHARED);
 
 	gp_replication = RetrieveGPReplication(application_name, false);
 
+	/* gp_replication must exist */
+	Assert(gp_replication);
+
 	if (state == WALSNDSTATE_CATCHUP || state == WALSNDSTATE_STREAMING)
 	{
+		/*
+		 * We can clear the disconnect time once the connection established.
+		 * We only clean the failure count when the wal start streaming, since
+		 * although the connection established, and start to send wal, but there
+		 * still chance to fail. Since the blocked transaction will get released
+		 * only when wal start sreaming. More details, see SyncRepReleaseWaiters.
+		 */
 		GPReplicationClearDisconnectTime(gp_replication);
 		/* If current replication start streaming, clear the failure attempt count */
 		if (state == WALSNDSTATE_STREAMING)
 			GPReplicationClearAttempts(gp_replication);
 	}
 	else if (GPReplicationRetrieveDisconnectTime(gp_replication) == 0)
+	{
+		/*
+		 * Mark the replication failure if's it the first time set the failure
+		 * WalSndState. Since if the disconnect time is not 0, we already mark
+		 * the replication failure.
+		 */
 		GPReplicationMarkDisconnect(gp_replication);
+	}
 
 	LWLockRelease(GPReplicationControlLock);
 }
