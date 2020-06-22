@@ -80,7 +80,7 @@ CJoinOrderDPv2::CJoinOrderDPv2
 
 	m_bitset_to_group_info_map = GPOS_NEW(mp) BitSetToGroupInfoMap(mp);
 
-	m_top_k_expressions = GPOS_NEW(mp) KHeap<SExpressionInfoArray, SExpressionInfo>
+	m_top_k_expressions = GPOS_NEW(mp) CKHeap<SExpressionInfoArray, SExpressionInfo>
 										(
 										 mp,
 										 GPOPT_DPV2_JOIN_ORDERING_TOPK
@@ -1271,7 +1271,7 @@ CJoinOrderDPv2::EnumerateDP()
 
 			// add a KHeap to this level, so that we can collect the k best expressions
 			// while we are building the level
-			Level(l)->m_top_k_groups = GPOS_NEW(m_mp) KHeap<SGroupInfoArray, SGroupInfo>
+			Level(l)->m_top_k_groups = GPOS_NEW(m_mp) CKHeap<SGroupInfoArray, SGroupInfo>
 																	 (
 																	  m_mp,
 																	  number_of_allowed_groups
