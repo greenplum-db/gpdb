@@ -476,7 +476,11 @@ cdbpullup_missingVarWalker(Node *node, void *targetlist)
 	if (!node)
 		return false;
 
-	if (IsA(node, Var))
+	/*
+	 * Should also consider PlaceHolderVar in the targetlist.
+	 * See github issue: https://github.com/greenplum-db/gpdb/issues/10315
+	 */
+	if (IsA(node, Var) || IsA(node, PlaceHolderVar))
 	{
 		if (!targetlist)
 			return true;
