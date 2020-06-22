@@ -22,7 +22,7 @@ install_gpdb6() {
 
 	pushd "$gpdb6_source_path"
 
-	./configure --disable-orca --prefix="$gpdb6_installation_path" --without-zstd --with-python &&
+	./configure --disable-orca --prefix="$gpdb6_installation_path" --without-zstd --with-python --disable-gpcloud &&
 		make -j 4 -l 4 &&
 		make install
 

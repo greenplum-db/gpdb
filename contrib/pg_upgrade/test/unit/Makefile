@@ -27,7 +27,7 @@ override CPPFLAGS += -I$(pg_upgrade_directory) \
 
 test_dependencies = $(CMOCKERY_OBJS)
 
-debugging_flags = -Og -g -fsanitize=address -Wextra -pedantic-errors -Werror
+debugging_flags = -Og -g -Wextra -pedantic-errors -Werror
 
 compile_test = $(CC) $(CFLAGS) $(debugging_flags) $^ $(libpq_pgport) $(LDFLAGS) -o $@ 
 
