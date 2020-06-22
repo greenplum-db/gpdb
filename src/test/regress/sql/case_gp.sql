@@ -20,7 +20,7 @@ INSERT INTO mytable values (1,2,'t'),
 DROP VIEW IF EXISTS notdisview;
 CREATE OR REPLACE VIEW notdisview AS
 SELECT
-    CASE
+    CASE 'a'::text = 'test'::text
         WHEN 'test' IS NOT DISTINCT FROM ''::text THEN 'A'::text
         ELSE 'B'::text
         END AS t;
@@ -35,6 +35,21 @@ SELECT
         END AS t
     FROM mytable;
 select pg_get_viewdef('notdisview2',true);
+
+CREATE TABLE mytable2 (
+    key character varying(20) NOT NULL,
+    key_value character varying(50)
+) DISTRIBUTED BY (key);
+
+DROP VIEW IF EXISTS notdisview3;
+CREATE OR REPLACE VIEW notdisview3 AS
+SELECT
+    CASE mytable2.key_value
+        WHEN IS NOT DISTINCT FROM 'NULL'::text THEN 'now'::text::date
+        ELSE to_date(mytable2.key_value::text, 'YYYYMM'::text)
+        END AS t
+    FROM mytable2;
+select pg_get_viewdef('notdisview3',false);
 
 CREATE OR REPLACE FUNCTION negate(int) RETURNS int 
 AS 'SELECT $1 * (-1)'

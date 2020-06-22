@@ -21,7 +21,7 @@ DROP VIEW IF EXISTS notdisview;
 NOTICE:  view "notdisview" does not exist, skipping
 CREATE OR REPLACE VIEW notdisview AS
 SELECT
-    CASE
+    CASE 'a'::text = 'test'::text
         WHEN 'test' IS NOT DISTINCT FROM ''::text THEN 'A'::text
         ELSE 'B'::text
         END AS t;
@@ -29,7 +29,7 @@ select pg_get_viewdef('notdisview',true);
                                pg_get_viewdef                               
 ----------------------------------------------------------------------------
   SELECT                                                                   +
-         CASE                                                              +
+         CASE 'a'::text = 'test'::text                                     +
              WHEN 'test'::text IS NOT DISTINCT FROM ''::text THEN 'A'::text+
              ELSE 'B'::text                                                +
          END AS t;
@@ -53,6 +53,30 @@ select pg_get_viewdef('notdisview2',true);
              ELSE 'B'::text                                                   +
          END AS t                                                             +
     FROM mytable;
+(1 row)
+
+CREATE TABLE mytable2 (
+    key character varying(20) NOT NULL,
+    key_value character varying(50)
+) DISTRIBUTED BY (key);
+DROP VIEW IF EXISTS notdisview3;
+NOTICE:  view "notdisview3" does not exist, skipping
+CREATE OR REPLACE VIEW notdisview3 AS
+SELECT
+    CASE mytable2.key_value
+        WHEN IS NOT DISTINCT FROM 'NULL'::text THEN 'now'::text::date
+        ELSE to_date(mytable2.key_value::text, 'YYYYMM'::text)
+        END AS t
+    FROM mytable2;
+select pg_get_viewdef('notdisview3',false);
+                               pg_get_viewdef                                
+-----------------------------------------------------------------------------
+  SELECT                                                                    +
+         CASE mytable2.key_value                                            +
+             WHEN IS NOT DISTINCT FROM 'NULL'::text THEN ('now'::text)::date+
+             ELSE to_date((mytable2.key_value)::text, 'YYYYMM'::text)       +
+         END AS t                                                           +
+    FROM mytable2;
 (1 row)
 
 CREATE OR REPLACE FUNCTION negate(int) RETURNS int 
