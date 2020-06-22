@@ -818,22 +818,23 @@ select c1 from t1 where c1 not in (select c2 from t2 order by c2 limit 3) order 
 --q32
 --
 explain select c1 from t1 where c1 =all (select c2 from t2 where c2 > -1 and c2 <= 1);
-                                                                                                                                                                        QUERY PLAN                                                                                                                                                                         
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.79 rows=4 width=4)
-   ->  Seq Scan on t1  (cost=0.00..1324032.79 rows=2 width=4)
-         Filter: (SubPlan 1)
-         SubPlan 1
-           ->  Result  (cost=0.00..431.00 rows=1 width=1)
-                 Filter: ((CASE WHEN (sum((CASE WHEN (t1.c1 <> t2.c2) THEN 1 ELSE 0 END)) IS NULL) THEN true WHEN (sum((CASE WHEN (t2.c2 IS NULL) THEN 1 ELSE 0 END)) > '0'::bigint) THEN NULL::boolean WHEN (t1.c1 IS NULL) THEN NULL::boolean WHEN (sum((CASE WHEN (t1.c1 <> t2.c2) THEN 1 ELSE 0 END)) = '0'::bigint) THEN true ELSE false END) = true)
-                 ->  Aggregate  (cost=0.00..431.00 rows=1 width=16)
-                       ->  Result  (cost=0.00..431.00 rows=1 width=8)
-                             ->  Materialize  (cost=0.00..431.00 rows=1 width=4)
-                                   ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-                                         ->  Seq Scan on t2  (cost=0.00..431.00 rows=1 width=4)
-                                               Filter: ((c2 > '-1'::integer) AND (c2 <= 1))
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
-(13 rows)
+                                                                                                                                                                     QUERY PLAN                                                                                                                                                                      
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Result  (cost=0.00..1324032.85 rows=4 width=4)
+   Filter: (SubPlan 1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=10 width=4)
+         ->  Seq Scan on t1  (cost=0.00..431.00 rows=4 width=4)
+   SubPlan 1
+     ->  Result  (cost=0.00..431.00 rows=1 width=1)
+           Filter: ((CASE WHEN (sum((CASE WHEN (t1.c1 <> t2.c2) THEN 1 ELSE 0 END)) IS NULL) THEN true WHEN (sum((CASE WHEN (t2.c2 IS NULL) THEN 1 ELSE 0 END)) > '0'::bigint) THEN NULL::boolean WHEN (t1.c1 IS NULL) THEN NULL::boolean WHEN (sum((CASE WHEN (t1.c1 <> t2.c2) THEN 1 ELSE 0 END)) = '0'::bigint) THEN true ELSE false END) = true)
+           ->  Aggregate  (cost=0.00..431.00 rows=1 width=16)
+                 ->  Result  (cost=0.00..431.00 rows=2 width=8)
+                       ->  Materialize  (cost=0.00..431.00 rows=2 width=4)
+                             ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=2 width=4)
+                                   ->  Seq Scan on t2  (cost=0.00..431.00 rows=1 width=4)
+                                         Filter: ((c2 > '-1'::integer) AND (c2 <= 1))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(14 rows)
 
 select c1 from t1 where c1 =all (select c2 from t2 where c2 > -1 and c2 <= 1);
  c1 

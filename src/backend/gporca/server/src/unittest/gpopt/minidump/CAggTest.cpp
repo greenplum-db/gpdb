@@ -77,7 +77,6 @@ const CHAR *rgszAggFileNames[] =
 	"../data/dxl/minidump/MDQAs-Union.mdp",
 	"../data/dxl/minidump/DistinctAgg-NonSplittable.mdp",
 	"../data/dxl/minidump/RollupNoAgg.mdp",
-	"../data/dxl/minidump/Rollup.mdp",
 	"../data/dxl/minidump/GroupingSets.mdp",
 #ifndef GPOS_DEBUG
 	"../data/dxl/minidump/CapGbCardToSelectCard.mdp",

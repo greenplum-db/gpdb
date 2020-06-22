@@ -36,7 +36,7 @@ explain select *  from oip oip  join ria a on ip=cidr and oip.oid=194073;
   <dxl:Thread Id="0">
     <dxl:OptimizerConfig>
       <dxl:EnumeratorConfig Id="0" PlanSamples="0" CostThreshold="0"/>
-      <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.010000" DampingFactorGroupBy="0.750000"/>
+      <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.010000" DampingFactorGroupBy="0.750000" MaxStatsBuckets="100"/>
       <dxl:CTEConfig CTEInliningCutoff="0"/>
       <dxl:WindowOids RowNumber="7000" Rank="7001"/>
       <dxl:CostModelConfig CostModelType="1" SegmentsForCosting="3">
@@ -4175,7 +4175,7 @@ explain select *  from oip oip  join ria a on ip=cidr and oip.oid=194073;
     <dxl:Plan Id="0" SpaceSize="16">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="4402.991811" Rows="2284199.908555" Width="156"/>
+          <dxl:Cost StartupCost="0" TotalCost="556.843582" Rows="12606.449785" Width="156"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="id">
@@ -4250,9 +4250,9 @@ explain select *  from oip oip  join ria a on ip=cidr and oip.oid=194073;
         </dxl:ProjList>
         <dxl:Filter/>
         <dxl:SortingColumnList/>
-        <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true">
+        <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true" OuterRefAsParam="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="3075.049352" Rows="2284199.908555" Width="156"/>
+            <dxl:Cost StartupCost="0" TotalCost="549.514696" Rows="12606.449785" Width="156"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="id">
@@ -4331,7 +4331,7 @@ explain select *  from oip oip  join ria a on ip=cidr and oip.oid=194073;
           </dxl:JoinFilter>
           <dxl:BroadcastMotion InputSegments="0,1,2" OutputSegments="0,1,2">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="535.708176" Rows="691.597064" Width="49"/>
+              <dxl:Cost StartupCost="0" TotalCost="535.500127" Rows="3.816909" Width="49"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="id">
@@ -4366,7 +4366,7 @@ explain select *  from oip oip  join ria a on ip=cidr and oip.oid=194073;
             <dxl:SortingColumnList/>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="535.505976" Rows="230.532355" Width="49"/>
+                <dxl:Cost StartupCost="0" TotalCost="535.499011" Rows="1.272303" Width="49"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="id">
@@ -4427,7 +4427,7 @@ explain select *  from oip oip  join ria a on ip=cidr and oip.oid=194073;
           </dxl:BroadcastMotion>
           <dxl:Sequence>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1890.606295" Rows="9908.370184" Width="107"/>
+              <dxl:Cost StartupCost="0" TotalCost="10.434215" Rows="9908.370184" Width="107"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="16" Alias="id">
@@ -4496,7 +4496,7 @@ explain select *  from oip oip  join ria a on ip=cidr and oip.oid=194073;
             </dxl:PartitionSelector>
             <dxl:DynamicIndexScan IndexScanDirection="Forward" PartIndexId="1">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1890.606295" Rows="9908.370184" Width="107"/>
+                <dxl:Cost StartupCost="0" TotalCost="10.434215" Rows="9908.370184" Width="107"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="16" Alias="id">

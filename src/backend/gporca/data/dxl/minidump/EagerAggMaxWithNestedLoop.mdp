@@ -52,7 +52,7 @@
     <dxl:Thread Id="0">
         <dxl:OptimizerConfig>
             <dxl:EnumeratorConfig CostThreshold="0" Id="0" PlanSamples="0"/>
-            <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorGroupBy="0.750000" DampingFactorJoin="0.010000"/>
+            <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorGroupBy="0.750000" DampingFactorJoin="0.010000" MaxStatsBuckets="100"/>
             <dxl:CTEConfig CTEInliningCutoff="0"/>
             <dxl:WindowOids Rank="3101" RowNumber="3100"/>
             <dxl:CostModelConfig CostModelType="1" SegmentsForCosting="3">

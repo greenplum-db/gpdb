@@ -49,7 +49,7 @@
   <dxl:Thread Id="0">
     <dxl:OptimizerConfig>
       <dxl:EnumeratorConfig Id="0" PlanSamples="0" CostThreshold="0"/>
-      <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.010000" DampingFactorGroupBy="0.750000"/>
+      <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.010000" DampingFactorGroupBy="0.750000" MaxStatsBuckets="100"/>
       <dxl:CTEConfig CTEInliningCutoff="0"/>
       <dxl:WindowOids RowNumber="3100" Rank="3101"/>
       <dxl:CostModelConfig CostModelType="1" SegmentsForCosting="3">
@@ -578,7 +578,7 @@
                           <dxl:Ident ColId="34" ColName="ColRef_0034" TypeMdid="0.20.1.0"/>
                           <dxl:Ident ColId="32" ColName="ColRef_0032" TypeMdid="0.20.1.0"/>
                         </dxl:Comparison>
-                        <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="true" IsByValue="true"/>
+                        <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="true"/>
                         <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
                       </dxl:If>
                       <dxl:ConstValue TypeMdid="0.16.1.0" Value="false"/>

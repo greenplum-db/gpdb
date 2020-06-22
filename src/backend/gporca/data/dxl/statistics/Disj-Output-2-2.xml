@@ -7,8 +7,12 @@
           <dxl:LowerBound Closed="true" TypeMdid="0.23.1.0" Value="5"/>
           <dxl:UpperBound Closed="false" TypeMdid="0.23.1.0" Value="10"/>
         </dxl:StatsBucket>
-        <dxl:StatsBucket Frequency="0.333333" DistinctValues="5.000000">
+        <dxl:StatsBucket Frequency="0.200000" DistinctValues="3.000000">
           <dxl:LowerBound Closed="true" TypeMdid="0.23.1.0" Value="10"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.23.1.0" Value="13"/>
+        </dxl:StatsBucket>
+        <dxl:StatsBucket Frequency="0.133333" DistinctValues="2.000000">
+          <dxl:LowerBound Closed="true" TypeMdid="0.23.1.0" Value="13"/>
           <dxl:UpperBound Closed="false" TypeMdid="0.23.1.0" Value="15"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.333333" DistinctValues="5.000000">

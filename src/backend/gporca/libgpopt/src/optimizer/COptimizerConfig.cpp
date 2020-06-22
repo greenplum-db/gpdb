@@ -151,6 +151,7 @@ COptimizerConfig::Serialize(CMemoryPool *mp, CXMLSerializer *xml_serializer, CBi
 	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenDampingFactorFilter), m_stats_conf->DDampingFactorFilter());
 	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenDampingFactorJoin), m_stats_conf->DDampingFactorJoin());
 	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenDampingFactorGroupBy), m_stats_conf->DDampingFactorGroupBy());
+	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenMaxStatsBuckets), m_stats_conf->UlMaxStatsBuckets());
 	xml_serializer->CloseElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), CDXLTokens::GetDXLTokenStr(EdxltokenStatisticsConfig));
 
 	xml_serializer->OpenElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), CDXLTokens::GetDXLTokenStr(EdxltokenCTEConfig));

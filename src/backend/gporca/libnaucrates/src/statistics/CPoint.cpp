@@ -12,6 +12,7 @@
 #include "gpos/base.h"
 #include "naucrates/statistics/CPoint.h"
 #include "gpopt/mdcache/CMDAccessor.h"
+#include "naucrates/statistics/CStatistics.h"
 
 using namespace gpnaucrates;
 using namespace gpopt;
@@ -144,14 +145,7 @@ CPoint::IsGreaterThanOrEqual
 	return (this->IsGreaterThan(point) || this->Equals(point));
 }
 
-//---------------------------------------------------------------------------
-//	@function:
-//		CPoint::Distance
-//
-//	@doc:
-//		Distance between two points
-//
-//---------------------------------------------------------------------------
+// Distance between two points, assuming closed lower bound and open upper bound
 CDouble
 CPoint::Distance
 	(
@@ -159,17 +153,57 @@ CPoint::Distance
 	)
 	const
 {
+	return Width(point, true /*include_lower*/, false /*include_upper*/);
+}
+
+// Distance between two points, taking bounds into account
+// this" is usually the higher value and "point" is the lower value
+// [0,5) would return 5, [0,5] would return 6 and (0,5) would return 4
+CDouble
+CPoint::Width
+	(
+	const CPoint *point,
+	BOOL include_lower,
+	BOOL include_upper
+	)
+	const
+{
+	// default to a non zero constant for overlap computation
+	CDouble width = CDouble(1.0);
+	CDouble adjust = CDouble(0.0);
 	GPOS_ASSERT(NULL != point);
 	if (m_datum->StatsAreComparable(point->m_datum))
 	{
-		return CDouble(m_datum->GetStatsDistanceFrom(point->m_datum));
+		// default case [this, point) or (this, point]
+		width = CDouble(m_datum->GetStatsDistanceFrom(point->m_datum));
+		if (m_datum->IsDatumMappableToLINT())
+		{
+			adjust = CDouble(1.0);
+		}
+		else
+		{
+			// for the case of doubles, the distance could be any point along
+			// between the int values, so make a small adjust by a factor of
+			// 10 * Epsilon (as anything smaller than Epsilon is treated as 0)
+			GPOS_ASSERT(m_datum->IsDatumMappableToDouble());
+			adjust = CStatistics::Epsilon * 10;
+		}
 	}
 
-	// default to a non zero constant for overlap
-	// computation
-	return CDouble(1.0);
+	GPOS_ASSERT(width >= CDouble(0.0));
+	// case [this, point]
+	if (include_upper && include_lower)
+	{
+		width = width + adjust;
+	}
+	// case (this, point)
+	else if (!include_upper && !include_lower)
+	{
+		width = std::max(CDouble(0.0), width - adjust);
+	}
+	// if [this, point) or (this, point] no adjustment needed
+	return width;
 }
-
 //---------------------------------------------------------------------------
 //	@function:
 //		CPoint::OsPrint

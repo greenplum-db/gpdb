@@ -35,7 +35,7 @@
   <dxl:Thread Id="0">
     <dxl:OptimizerConfig>
       <dxl:EnumeratorConfig Id="0" PlanSamples="0" CostThreshold="0"/>
-      <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.010000" DampingFactorGroupBy="0.750000"/>
+      <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.010000" DampingFactorGroupBy="0.750000" MaxStatsBuckets="100"/>
       <dxl:CTEConfig CTEInliningCutoff="0"/>
       <dxl:WindowOids RowNumber="7000" Rank="7001"/>
       <dxl:CostModelConfig CostModelType="1" SegmentsForCosting="3">
@@ -610,7 +610,7 @@
     <dxl:Plan Id="0" SpaceSize="2">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="68.127616" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="76.842297" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="hi_ndv">
@@ -624,7 +624,7 @@
         <dxl:SortingColumnList/>
         <dxl:BitmapTableScan>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="68.127586" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="76.842267" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="hi_ndv">
@@ -637,20 +637,20 @@
           <dxl:Filter>
             <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
               <dxl:Ident ColId="1" ColName="lo_ndv_btree" TypeMdid="0.23.1.0"/>
-              <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="false" IsByValue="true" Value="1"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
             </dxl:Comparison>
           </dxl:Filter>
           <dxl:RecheckCond>
             <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
               <dxl:Ident ColId="0" ColName="hi_ndv" TypeMdid="0.23.1.0"/>
-              <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="false" IsByValue="true" Value="333"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="333"/>
             </dxl:Comparison>
           </dxl:RecheckCond>
           <dxl:BitmapIndexProbe>
             <dxl:IndexCondList>
               <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
                 <dxl:Ident ColId="0" ColName="hi_ndv" TypeMdid="0.23.1.0"/>
-                <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="false" IsByValue="true" Value="333"/>
+                <dxl:ConstValue TypeMdid="0.23.1.0" Value="333"/>
               </dxl:Comparison>
             </dxl:IndexCondList>
             <dxl:IndexDescriptor Mdid="0.49554.1.0" IndexName="jazz_hi"/>
@@ -668,7 +668,7 @@
       </dxl:GatherMotion>
       <dxl:DirectDispatchInfo>
         <dxl:KeyValue>
-          <dxl:Datum TypeMdid="0.23.1.0" IsNull="false" IsByValue="true" Value="333"/>
+          <dxl:Datum TypeMdid="0.23.1.0" Value="333"/>
         </dxl:KeyValue>
       </dxl:DirectDispatchInfo>
     </dxl:Plan>
