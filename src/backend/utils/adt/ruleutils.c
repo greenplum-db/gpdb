@@ -4597,7 +4597,11 @@ get_rule_expr(Node *node, deparse_context *context,
 							Node			*lhs = (Node *) linitial(dexpr->args);
 							Node			*rhs = (Node *) lsecond(dexpr->args);
 
-							if (!IsA(lhs, CaseTestExpr))
+							/*
+							 * If lhs contains CaseTestExpr node as placeholder, we should
+							 * omit the lhs for dump
+							 */
+							if (!IsA(strip_implicit_coercions(lhs), CaseTestExpr))
 							{
 								get_rule_expr(lhs, context, false);
 								appendStringInfoChar(buf, ' ');

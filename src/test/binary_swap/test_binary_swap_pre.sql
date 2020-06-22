@@ -7,6 +7,7 @@
 -- test suite. Ignore by removing the view.
 \c regression;
 DROP VIEW IF EXISTS locktest_segments;
+DROP VIEW IF EXISTS notdisview;
 
 \c isolation2test;
 DROP VIEW IF EXISTS locktest_segments;
