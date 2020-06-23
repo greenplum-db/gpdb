@@ -711,7 +711,8 @@ cdbcomponent_getCdbComponents()
 	}
 	PG_CATCH();
 	{
-		FtsNotifyProber();
+		if (Gp_role == GP_ROLE_DISPATCH)
+			FtsNotifyProber();
 
 		PG_RE_THROW();
 	}
