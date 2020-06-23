@@ -93,7 +93,7 @@ After you install and configure Greenplum Database 6 and migrate table definitio
 5. Synchronize the PXF configuration from the Greenplum Database 6 master host to the standby master and each segment host in the cluster. For example:
 
     ``` shell
-    gpadmin@gp6master$ $GPHOME/pxf/bin/pxf cluster sync
+    gpadmin@gp6master$ pxf cluster sync
     ```
  
 6. Start PXF on each Greenplum Database 6 segment host as described in [Starting PXF](../../pxf/5-13/cfginitstart_pxf.html#start_pxf).
