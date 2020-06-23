@@ -72,17 +72,13 @@ After you install and configure Greenplum Database 6 and migrate table definitio
 
 2. Identify and note the version number of your Greenplum Database 6 installation.
 
-2. Identify the version of PXF (that may or may not be) installed on your Greenplum 6 hosts:
+2. Identify the version of PXF installed on your Greenplum 6 hosts:
 
-    1.  If your Greenplum 6 installation is version 6.8 or older:
+    ``` shell
+    gpadmin@gp6master$ pxf version
+    ```
 
-        ``` shell
-        gpadmin@gp6master$ $GPHOME/pxf/bin/pxf version
-        ```
-
-    2. If your Greenplum 6 installation is version 6.9 or newer, *PXF may not be installed on your Greenplum 6 hosts*.
-
-3. If PXF is not installed on your Greenplum 6 hosts **or** the version of PXF installed in your Greenplum 5 installation is newer than the version of PXF installed in your Greenplum 6 cluster, install the PXF distribution on your Greenplum 6 hosts as described in [Installing PXF](../../pxf/5-13/installing_pxf.html). Be sure to install a version of PXF that is the same, or newer, than the version of PXF installed in your Greenplum 5 cluster.
+3. If the version of PXF installed in your Greenplum 5 installation is newer than the version of PXF installed in your Greenplum 6 cluster, install the PXF distribution on your Greenplum 6 hosts as described in [Installing PXF](../../pxf/5-13/installing_pxf.html). Be sure to install a version of PXF that is the same, or newer, than the version of PXF installed in your Greenplum 5 cluster.
 
 2. If you installed Greenplum Database 6 on a new set of hosts, copy the `$PXF_CONF` directory from your Greenplum 5 installation to the master node. Consider copying the directory to the same file system location at which it resided in the 5 cluster. For example, if `PXF_CONF=/usr/local/greenplum-pxf`:
 
