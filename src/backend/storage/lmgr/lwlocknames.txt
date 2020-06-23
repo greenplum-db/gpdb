@@ -61,4 +61,4 @@ WorkFileManagerLock					51
 DistributedLogTruncateLock			52
 TwophaseCommitLock					53
 ShareInputScanLock					54
-GPReplicationControlLock			55
+FTSReplicationStatusLock			55

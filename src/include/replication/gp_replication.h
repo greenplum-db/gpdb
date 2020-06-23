@@ -21,14 +21,14 @@
 #include "storage/spin.h"
 
 /*
- * Each GPDB primary-mirror pair has a GPReplication in shared memory.
+ * Each GPDB primary-mirror pair has a FTSReplicationStatus in shared memory.
  *
  * Mainly used to track replication process for FTS purpose.
  *
  * This struct is protected by its 'mutex' spinlock field. The walsender
  * and FTS probe process will access this struct.
  */
-typedef struct GPReplication
+typedef struct FTSReplicationStatus
 {
 	/* The slot's identifier, ie. the replicaton application name */
 	NameData    name;
@@ -44,6 +44,7 @@ typedef struct GPReplication
 	 * continuously and attempt to create replication connection too many times,
 	 * FTS should mark the mirror down.
 	 * If the connection established, clear the attempt count to 0.
+	 * See more details in FTSGetReplicationDisconnectTime.
 	 */
 	uint32      con_attempt_count;
 
@@ -52,31 +53,31 @@ typedef struct GPReplication
 	 * This helps to detect time passed since mirror didn't connect.
 	 */
 	pg_time_t   replica_disconnected_at;
-} GPReplication;
+} FTSReplicationStatus;
 
-typedef struct GPReplicationCtlData
+typedef struct FTSReplicationStatusCtlData
 {
 	/*
 	 * This array should be declared [FLEXIBLE_ARRAY_MEMBER], but for some
 	 * reason you can't do that in an otherwise-empty struct.
 	 */
-	GPReplication   gp_replications[1];
-} GPReplicationCtlData;
+	FTSReplicationStatus   replications[1];
+} FTSReplicationStatusCtlData;
 
-extern GPReplicationCtlData *GPRepCtl;
+extern FTSReplicationStatusCtlData *FTSRepStatusCtl;
 
-extern Size GPReplicationShmemSize(void);
-extern void GPReplicationShmemInit(void);
-extern void GPReplicationCreateIfNotExist(const char *app_name);
-extern void GPReplicationDrop(const char* app_name);
+extern Size FTSReplicationStatusShmemSize(void);
+extern void FTSReplicationStatusShmemInit(void);
+extern void FTSReplicationStatusCreateIfNotExist(const char *app_name);
+extern void FTSReplicationStatusDrop(const char* app_name);
 
-extern GPReplication *RetrieveGPReplication(const char *app_name, bool skip_warn);
-extern void GPReplicationMarkDisconnect(GPReplication *gp_replication);
-extern void GPReplicationMarkDisconnectForReplication(const char *app_name);
-extern void GPReplicationClearAttempts(GPReplication *gp_replication);
-extern void GPReplicationClearDisconnectTime(GPReplication *gp_replication);
-extern pg_time_t GPReplicationRetrieveDisconnectTime(GPReplication *gp_replication);
-extern pg_time_t GPReplicationFTSGetDisconnectTime(const char *app_name);
+extern FTSReplicationStatus *RetrieveFTSReplicationStatus(const char *app_name, bool skip_warn);
+extern void FTSReplicationStatusMarkDisconnect(FTSReplicationStatus *replication_status);
+extern void FTSReplicationStatusMarkDisconnectForReplication(const char *app_name);
+extern void FTSReplicationStatusClearAttempts(FTSReplicationStatus *replication_status);
+extern void FTSReplicationStatusClearDisconnectTime(FTSReplicationStatus *replication_status);
+extern pg_time_t FTSReplicationStatusRetrieveDisconnectTime(FTSReplicationStatus *replication_status);
+extern pg_time_t FTSGetReplicationDisconnectTime(const char *app_name);
 
 extern void GetMirrorStatus(FtsResponse *response);
 extern void SetSyncStandbysDefined(void);

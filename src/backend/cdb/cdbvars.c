@@ -137,7 +137,8 @@ int gp_fts_mark_mirror_down_grace_period = 30;
 
 /*
  * If primary-mirror replication attempts to connect continuously and exceed
- * this count, mark the mirror down.
+ * this count, mark the mirror down to prevent wal sync block.
+ * More details please refer to FTSGetReplicationDisconnectTime.
  */
 int			gp_fts_replication_attempt_count = 10;
 

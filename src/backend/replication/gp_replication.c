@@ -21,51 +21,55 @@
 #include "storage/lwlock.h"
 #include "utils/builtins.h"
 
-/*
- * GPRepCtl is only used for GPDB primary-mirror replication,
- * so set to a small value for now.
- */
-static uint32 max_gp_replication = 1;
-
 /* Set at database system is ready to accept connections */
 extern pg_time_t PMAcceptingConnectionsStartTime;
 
-/* Control array for gp_replication management */
-GPReplicationCtlData *GPRepCtl = NULL;
+/*
+ * Control array for replication status management which used in FTS.
+ * The reason for not using WalSndCtl to track replication status is
+ * the WalSnd is used to track walsender status. And when FTS probe
+ * happens, the WalSnd fot a replication may already get freed.
+ */
+FTSReplicationStatusCtlData *FTSRepStatusCtl = NULL;
 
-/* Report shared-memory space needed by GPReplicationShmemInit */
+/* Report shared-memory space needed by FTSReplicationStatusShmemInit */
 Size
-GPReplicationShmemSize(void)
+FTSReplicationStatusShmemSize(void)
 {
 	Size		size = 0;
+	/*
+	 * FTSRepStatusCtl is only used for GPDB primary-mirror replication,
+	 * so set to a small value for now.
+	 */
+	uint32 max_replication_status = 1;
 
-	size = offsetof(GPReplicationCtlData, gp_replications);
-	size = add_size(size, mul_size(max_gp_replication, sizeof(GPReplication)));
+	size = offsetof(FTSReplicationStatusCtlData, replications);
+	size = add_size(size, mul_size(max_replication_status, sizeof(FTSReplicationStatus)));
 
 	return size;
 }
 
-/* Allocate and initialize GPReplication related shared memory */
+/* Allocate and initialize FTSReplicationStatus related shared memory */
 void
-GPReplicationShmemInit(void)
+FTSReplicationStatusShmemInit(void)
 {
 	bool		found;
 
-	Assert(GPReplicationShmemSize() > 0);
+	Assert(FTSReplicationStatusShmemSize() > 0);
 
-	GPRepCtl = (GPReplicationCtlData *)
-		ShmemInitStruct("GPReplication Ctl", GPReplicationShmemSize(), &found);
+	FTSRepStatusCtl = (FTSReplicationStatusCtlData *)
+		ShmemInitStruct("FTSReplicationStatus Ctl", FTSReplicationStatusShmemSize(), &found);
 
 	if (!found)
 	{
 		int			i;
 
 		/* First time through, so initialize */
-		MemSet(GPRepCtl, 0, GPReplicationShmemSize());
+		MemSet(FTSRepStatusCtl, 0, FTSReplicationStatusShmemSize());
 
 		for (i = 0; i < max_wal_senders; i++)
 		{
-			GPReplication *slot = &GPRepCtl->gp_replications[i];
+			FTSReplicationStatus *slot = &FTSRepStatusCtl->replications[i];
 
 			/* everything else is zeroed by the memset above */
 			SpinLockInit(&slot->mutex);
@@ -74,55 +78,55 @@ GPReplicationShmemInit(void)
 }
 
 /*
- * GPReplicationCreateIfNotExist - Init a GPReplication for current replication
- * application. Use application_name to identify the primary-mirror pair.
- * If GPReplication for current application_name is already exist, skip
+ * FTSReplicationStatusCreateIfNotExist - Init a FTSReplicationStatus for current
+ * replication application. Use application_name to identify the primary-mirror pair.
+ * If FTSReplicationStatus for current application_name already exist, skip
  * create.
  *
  * This function is called under walsender, walsender's application_name is used.
  */
 void
-GPReplicationCreateIfNotExist(const char *app_name)
+FTSReplicationStatusCreateIfNotExist(const char *app_name)
 {
 	int		i;
-	GPReplication *gp_replication = NULL;
+	FTSReplicationStatus *replication_status = NULL;
 
-	/* GPRepCtl should be set already. */
-	Assert(GPRepCtl != NULL);
+	/* FTSRepStatusCtl should be set already. */
+	Assert(FTSRepStatusCtl != NULL);
 
-	/* Use GPReplicationControlLock to protect concurrent create/drop */
-	LWLockAcquire(GPReplicationControlLock, LW_EXCLUSIVE);
+	/* Use FTSReplicationStatusLock to protect concurrent create/drop */
+	LWLockAcquire(FTSReplicationStatusLock, LW_EXCLUSIVE);
 
 	for (i =0; i < max_wal_senders; i++)
 	{
-		GPReplication *slot = &GPRepCtl->gp_replications[i];
+		FTSReplicationStatus *slot = &FTSRepStatusCtl->replications[i];
 
 		if (slot->in_use)
 		{
 			if (strcmp(app_name, NameStr(slot->name)) == 0)
 			{
-				/* GPReplication for current application already exists */
-				LWLockRelease(GPReplicationControlLock);
+				/* FTSReplicationStatus for current application already exists */
+				LWLockRelease(FTSReplicationStatusLock);
 				return;
 			}
 		}
 		else
 		{
 			/* Find a free slot */
-			if (gp_replication == NULL)
-				gp_replication = slot;
+			if (replication_status == NULL)
+				replication_status = slot;
 		}
 	}
 
-	/* If find a free slot, create a new GPReplication */
-	if (gp_replication != NULL)
+	/* If find a free slot, create a new FTSReplicationStatus */
+	if (replication_status != NULL)
 	{
-		gp_replication->in_use = true;
-		StrNCpy(NameStr(gp_replication->name), application_name, NAMEDATALEN);
-		gp_replication->con_attempt_count = 0;
-		gp_replication->replica_disconnected_at = 0;
+		replication_status->in_use = true;
+		StrNCpy(NameStr(replication_status->name), application_name, NAMEDATALEN);
+		replication_status->con_attempt_count = 0;
+		replication_status->replica_disconnected_at = 0;
 
-		LWLockRelease(GPReplicationControlLock);
+		LWLockRelease(FTSReplicationStatusLock);
 		return;
 	}
 
@@ -135,24 +139,24 @@ GPReplicationCreateIfNotExist(const char *app_name)
 }
 
 /*
- * GPReplicationDrop - Drop a GPReplication.
+ * FTSReplicationStatusDrop - Drop a FTSReplicationStatus.
  *
  * This function is called in FTS probe process, so an app_name is used
- * to specify which GPReplication should be dropped.
+ * to specify which FTSReplicationStatus should be dropped.
  */
 void
-GPReplicationDrop(const char* app_name)
+FTSReplicationStatusDrop(const char* app_name)
 {
 	int		i;
 
-	/* GPRepCtl should be set already. */
-	Assert(GPRepCtl != NULL);
+	/* FTSRepStatusCtl should be set already. */
+	Assert(FTSRepStatusCtl != NULL);
 
-	/* Use GPReplicationControlLock to protect concurrent create/drop */
-	LWLockAcquire(GPReplicationControlLock, LW_EXCLUSIVE);
+	/* Use FTSReplicationStatusLock to protect concurrent create/drop */
+	LWLockAcquire(FTSReplicationStatusLock, LW_EXCLUSIVE);
 	for (i =0; i < max_wal_senders; i++)
 	{
-		GPReplication *slot = &GPRepCtl->gp_replications[i];
+		FTSReplicationStatus *slot = &FTSRepStatusCtl->replications[i];
 
 		if (slot->in_use &&
 			strcmp(app_name, NameStr(slot->name)) == 0)
@@ -161,225 +165,225 @@ GPReplicationDrop(const char* app_name)
 			MemSet(NameStr(slot->name), 0, NAMEDATALEN);
 		}
 	}
-	LWLockRelease(GPReplicationControlLock);
+	LWLockRelease(FTSReplicationStatusLock);
 }
 
 /*
- * RetrieveGPReplication - Get the GPReplication from GPRepCtl.
+ * RetrieveFTSReplicationStatus - Get the FTSReplicationStatus from FTSRepStatusCtl.
  *
- * GPReplicationControlLock should be held before call this function.
+ * FTSReplicationStatusLock should be held before call this function.
  */
-GPReplication *
-RetrieveGPReplication(const char *app_name, bool skip_warn)
+FTSReplicationStatus *
+RetrieveFTSReplicationStatus(const char *app_name, bool skip_warn)
 {
 	int		i;
-	GPReplication *gp_replication = NULL;
+	FTSReplicationStatus *replication_status = NULL;
 
-	/* GPRepCtl should be set already. */
-	Assert(GPRepCtl != NULL);
-	Assert(LWLockHeldByMe(GPReplicationControlLock));
+	/* FTSRepStatusCtl should be set already. */
+	Assert(FTSRepStatusCtl != NULL);
+	Assert(LWLockHeldByMe(FTSReplicationStatusLock));
 
 	for (i =0; i < max_wal_senders; i++)
 	{
-		GPReplication *slot = &GPRepCtl->gp_replications[i];
+		FTSReplicationStatus *slot = &FTSRepStatusCtl->replications[i];
 
 		if (slot->in_use &&
 			strcmp(app_name, NameStr(slot->name)) == 0)
 		{
-			gp_replication = slot;
+			replication_status = slot;
 			break;
 		}
 	}
 
-	if (!gp_replication && !skip_warn)
+	if (!replication_status && !skip_warn)
 		ereport(WARNING,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("GPReplication \"%s\" does not exist", app_name)));
-	return gp_replication;
+				 errmsg("FTSReplicationStatus \"%s\" does not exist", app_name)));
+	return replication_status;
 }
 
 /*
- * GPReplicationMarkDisconnect - Mark current replication's disconnect by
+ * FTSReplicationStatusMarkDisconnect - Mark current replication's disconnect by
  * increase the con_attempt_count and set current time as disconnect time.
  *
  * This function is called under walsender to mark wal replication disconnected.
  *
- * GPReplicationControlLock should be held before call this function.
+ * FTSReplicationStatusLock should be held before call this function.
  */
 void
-GPReplicationMarkDisconnect(GPReplication *gp_replication)
+FTSReplicationStatusMarkDisconnect(FTSReplicationStatus *replication_status)
 {
-	if (gp_replication == NULL)
+	if (replication_status == NULL)
 		return;
 
-	/* GPRepCtl should be set already. */
-	Assert(GPRepCtl != NULL);
+	/* FTSRepStatusCtl should be set already. */
+	Assert(FTSRepStatusCtl != NULL);
 
-	/* Use GPReplicationControlLock to prevent concurrent create/drop */
-	Assert(LWLockHeldByMe(GPReplicationControlLock));
+	/* Use FTSReplicationStatusLock to prevent concurrent create/drop */
+	Assert(LWLockHeldByMe(FTSReplicationStatusLock));
 
 	/* Since we need to modify the slot's value, lock the mutex. */
-	SpinLockAcquire(&gp_replication->mutex);
+	SpinLockAcquire(&replication_status->mutex);
 
-	gp_replication->con_attempt_count += 1;
-	gp_replication->replica_disconnected_at = (pg_time_t) time(NULL);
+	replication_status->con_attempt_count += 1;
+	replication_status->replica_disconnected_at = (pg_time_t) time(NULL);
 	elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
-		   "GPReplication: Mark replication disconnected. "
+		   "FTSReplicationStatus: Mark replication disconnected. "
 		   "Current attempt count: %d, disconnect at %ld, for application %s",
-		   gp_replication->con_attempt_count,
-		   gp_replication->replica_disconnected_at,
-		   NameStr(gp_replication->name));
+		   replication_status->con_attempt_count,
+		   replication_status->replica_disconnected_at,
+		   NameStr(replication_status->name));
 
-	SpinLockRelease(&gp_replication->mutex);
+	SpinLockRelease(&replication_status->mutex);
 }
 
 /*
- * GPReplicationMarkDisconnectForReplication - Mark a replication disconnected
+ * FTSReplicationStatusMarkDisconnectForReplication - Mark a replication disconnected
  * base on replication's application name.
  *
  * This function is called under walsender to mark wal replication disconnected.
  */
 void
-GPReplicationMarkDisconnectForReplication(const char *app_name)
+FTSReplicationStatusMarkDisconnectForReplication(const char *app_name)
 {
-	GPReplication *gp_replication;
+	FTSReplicationStatus *replication_status;
 
-	LWLockAcquire(GPReplicationControlLock, LW_SHARED);
+	LWLockAcquire(FTSReplicationStatusLock, LW_SHARED);
 
-	gp_replication = RetrieveGPReplication(app_name, false);
+	replication_status = RetrieveFTSReplicationStatus(app_name, false);
 
-	/* gp_replication must exist  */
-	Assert(gp_replication);
-	GPReplicationMarkDisconnect(gp_replication);
+	/* replication_status must exist  */
+	Assert(replication_status);
+	FTSReplicationStatusMarkDisconnect(replication_status);
 
-	LWLockRelease(GPReplicationControlLock);
+	LWLockRelease(FTSReplicationStatusLock);
 }
 
 /*
- * GPReplicationClearAttempts - Clear current replication's continuously
+ * FTSReplicationStatusClearAttempts - Clear current replication's continuously
  * connection attempts since the replication start steaming data.
  *
  * This function is called under walsender to mark the replication start
  * steaming.
  *
- * GPReplicationControlLock should be held before call this function.
+ * FTSReplicationStatusLock should be held before call this function.
  */
 void
-GPReplicationClearAttempts(GPReplication *gp_replication)
+FTSReplicationStatusClearAttempts(FTSReplicationStatus *replication_status)
 {
-	if (gp_replication == NULL)
+	if (replication_status == NULL)
 		return;
-	/* GPRepCtl should be set already. */
-	Assert(GPRepCtl != NULL);
+	/* FTSRepStatusCtl should be set already. */
+	Assert(FTSRepStatusCtl != NULL);
 
-	/* Use GPReplicationControlLock to prevent concurrent create/drop */
-	Assert(LWLockHeldByMe(GPReplicationControlLock));
+	/* Use FTSReplicationStatusLock to prevent concurrent create/drop */
+	Assert(LWLockHeldByMe(FTSReplicationStatusLock));
 
 	/* Since we need to modify the slot's value, lock the mutex. */
-	SpinLockAcquire(&gp_replication->mutex);
+	SpinLockAcquire(&replication_status->mutex);
 
-	gp_replication->con_attempt_count = 0;
+	replication_status->con_attempt_count = 0;
 	elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
-		   "GPReplication: Clear replication connection attempts, for application %s",
-		   NameStr(gp_replication->name));
+		   "FTSReplicationStatus: Clear replication connection attempts, for application %s",
+		   NameStr(replication_status->name));
 
-	SpinLockRelease(&gp_replication->mutex);
+	SpinLockRelease(&replication_status->mutex);
 }
 
 /*
- * GPReplicationRetrieveAttempts - Retrieve the replication connection attempts
+ * FTSReplicationStatusRetrieveAttempts - Retrieve the replication connection attempts
  * for a replication application.
  *
  * This function is called under FTS probe process.
  *
- * GPReplicationControlLock should be held before call this function.
+ * FTSReplicationStatusLock should be held before call this function.
  */
 static uint32
-GPReplicationRetrieveAttempts(GPReplication *gp_replication)
+FTSReplicationStatusRetrieveAttempts(FTSReplicationStatus *replication_status)
 {
 	uint32			 	result;
 
-	if (gp_replication == NULL)
+	if (replication_status == NULL)
 		return 0;
 
-	/* GPRepCtl should be set already. */
-	Assert(GPRepCtl != NULL);
+	/* FTSRepStatusCtl should be set already. */
+	Assert(FTSRepStatusCtl != NULL);
 
-	/* Use GPReplicationControlLock to prevent concurrent create/drop */
-	Assert(LWLockHeldByMe(GPReplicationControlLock));
+	/* Use FTSReplicationStatusLock to prevent concurrent create/drop */
+	Assert(LWLockHeldByMe(FTSReplicationStatusLock));
 
 	/* To prevent partial read, lock the mutex. */
-	SpinLockAcquire(&gp_replication->mutex);
+	SpinLockAcquire(&replication_status->mutex);
 
-	result = gp_replication->con_attempt_count;
+	result = replication_status->con_attempt_count;
 
-	SpinLockRelease(&gp_replication->mutex);
+	SpinLockRelease(&replication_status->mutex);
 
 	return result;
 }
 
 /*
- * GPReplicationClearDisconnectTime - Clear replication disconnect time.
+ * FTSReplicationStatusClearDisconnectTime - Clear replication disconnect time.
  *
  * This function is called under walsender to clear replication disconnect time.
  *
- * GPReplicationControlLock should be held before call this function.
+ * FTSReplicationStatusLock should be held before call this function.
  */
 void
-GPReplicationClearDisconnectTime(GPReplication *gp_replication)
+FTSReplicationStatusClearDisconnectTime(FTSReplicationStatus *replication_status)
 {
-	if (gp_replication == NULL)
+	if (replication_status == NULL)
 		return;
 
-	/* GPRepCtl should be set already. */
-	Assert(GPRepCtl != NULL);
+	/* FTSRepStatusCtl should be set already. */
+	Assert(FTSRepStatusCtl != NULL);
 
-	/* Use GPReplicationControlLock to prevent concurrent create/drop */
-	Assert(LWLockHeldByMe(GPReplicationControlLock));
+	/* Use FTSReplicationStatusLock to prevent concurrent create/drop */
+	Assert(LWLockHeldByMe(FTSReplicationStatusLock));
 
 	/* Since we need to modify the slot's value, lock the mutex. */
-	SpinLockAcquire(&gp_replication->mutex);
+	SpinLockAcquire(&replication_status->mutex);
 
-	gp_replication->replica_disconnected_at = (pg_time_t) 0;
+	replication_status->replica_disconnected_at = (pg_time_t) 0;
 	elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
-		   "GPReplication: Clear replication disconnect time, for application %s",
-		   NameStr(gp_replication->name));
+		   "FTSReplicationStatus: Clear replication disconnect time, for application %s",
+		   NameStr(replication_status->name));
 
-	SpinLockRelease(&gp_replication->mutex);
+	SpinLockRelease(&replication_status->mutex);
 }
 
 /*
- * GPReplicationRetrieveDisconnectTime - Retrieve replication disconnect time.
+ * FTSReplicationStatusRetrieveDisconnectTime - Retrieve replication disconnect time.
  *
  * This function is called under FTS probe process to retrieve replication disconnect time.
  *
- * GPReplicationControlLock should be held before call this function.
+ * FTSReplicationStatusLock should be held before call this function.
  */
 pg_time_t
-GPReplicationRetrieveDisconnectTime(GPReplication *gp_replication)
+FTSReplicationStatusRetrieveDisconnectTime(FTSReplicationStatus *replication_status)
 {
 	pg_time_t			disconn_time;
 
-	if (gp_replication == NULL)
+	if (replication_status == NULL)
 		return 0;
 
-	/* GPRepCtl should be set already. */
-	Assert(GPRepCtl != NULL);
+	/* FTSRepStatusCtl should be set already. */
+	Assert(FTSRepStatusCtl != NULL);
 
-	/* Use GPReplicationControlLock to prevent concurrent create/drop */
-	Assert(LWLockHeldByMe(GPReplicationControlLock));
+	/* Use FTSReplicationStatusLock to prevent concurrent create/drop */
+	Assert(LWLockHeldByMe(FTSReplicationStatusLock));
 
 	/* Since we need to modify the slot's value, lock the mutex. */
-	SpinLockAcquire(&gp_replication->mutex);
+	SpinLockAcquire(&replication_status->mutex);
 
-	disconn_time = gp_replication->replica_disconnected_at;
+	disconn_time = replication_status->replica_disconnected_at;
 
-	SpinLockRelease(&gp_replication->mutex);
+	SpinLockRelease(&replication_status->mutex);
 
 	return disconn_time;
 }
 
-/* GPReplicationFTSGetDisconnectTime - used in FTS probe process.
+/* FTSGetReplicationDisconnectTime - used in FTS probe process.
  *
  * Detect the primary-mirror replication attempt count.
  * If the replication keeps crash, we should consider mark
@@ -387,23 +391,29 @@ GPReplicationRetrieveDisconnectTime(GPReplication *gp_replication)
  * walsender->replica_disconnected_at keeps updated.
  * So ignore it.
  *
- * If the GPReplication for GP_WALRECEIVER_APPNAME is not exist,
+ * The reason why we want mark mirror down for this case is because,
+ * when current situation happens, and a transaction try to sync wal
+ * to mirror at the same time, the transaction will block. If walsender
+ * keeps fail, the transaction will block forever.
+ * Please see more details in SyncRepWaitForLSN and SyncRepReleaseWaiters.
+ *
+ * If the FTSReplicationStatus for GP_WALRECEIVER_APPNAME is not exist,
  * it means the replication has already been stopped.
  */
 pg_time_t
-GPReplicationFTSGetDisconnectTime(const char *app_name)
+FTSGetReplicationDisconnectTime(const char *app_name)
 {
 	pg_time_t			walsender_replica_disconnected_at = 0;
 	uint32				attempt_replication_times = 0;
-	GPReplication	   *gp_replication = NULL;
+	FTSReplicationStatus	   *replication_status = NULL;
 
-	LWLockAcquire(GPReplicationControlLock, LW_SHARED);
-	gp_replication = RetrieveGPReplication(app_name, true);
-	if (gp_replication)
+	LWLockAcquire(FTSReplicationStatusLock, LW_SHARED);
+	replication_status = RetrieveFTSReplicationStatus(app_name, true);
+	if (replication_status)
 	{
-		attempt_replication_times = GPReplicationRetrieveAttempts(gp_replication);
+		attempt_replication_times = FTSReplicationStatusRetrieveAttempts(replication_status);
 		if (attempt_replication_times <= gp_fts_replication_attempt_count)
-			walsender_replica_disconnected_at = GPReplicationRetrieveDisconnectTime(gp_replication);
+			walsender_replica_disconnected_at = FTSReplicationStatusRetrieveDisconnectTime(replication_status);
 		else
 		{
 			ereport(LOG,
@@ -412,7 +422,7 @@ GPReplicationFTSGetDisconnectTime(const char *app_name)
 					attempt_replication_times, gp_fts_replication_attempt_count)));
 		}
 	}
-	LWLockRelease(GPReplicationControlLock);
+	LWLockRelease(FTSReplicationStatusLock);
 
 	return walsender_replica_disconnected_at;
 }
@@ -436,16 +446,16 @@ is_mirror_up(WalSnd *walsender)
 }
 
 static bool
-is_probe_need_retry()
+is_probe_retry_needed()
 {
 	pg_time_t			walsender_replica_disconnected_at = 0;
 
 	/*
 	 * Get the walsender disconnect time, if current replication failed too
 	 * many times continuously, the walsender_replica_disconnected_at should
-	 * not take into consider. See more details in GPReplicationFTSGetDisconnectTime.
+	 * not take into consider. See more details in FTSGetReplicationDisconnectTime.
 	 */
-	walsender_replica_disconnected_at = GPReplicationFTSGetDisconnectTime(GP_WALRECEIVER_APPNAME);
+	walsender_replica_disconnected_at = FTSGetReplicationDisconnectTime(GP_WALRECEIVER_APPNAME);
 
 	/*
 	 * PMAcceptingConnectionStartTime is process-local variable, set in
@@ -520,7 +530,7 @@ GetMirrorStatus(FtsResponse *response)
 	LWLockRelease(SyncRepLock);
 
 	if (!response->IsMirrorUp)
-		response->RequestRetry = is_probe_need_retry();
+		response->RequestRetry = is_probe_retry_needed();
 }
 
 /*
@@ -553,7 +563,7 @@ UnsetSyncStandbysDefined(void)
 		DirectFunctionCall1(pg_reload_conf, PointerGetDatum(NULL) /* unused */);
 	}
 
-	GPReplicationDrop(GP_WALRECEIVER_APPNAME);
+	FTSReplicationStatusDrop(GP_WALRECEIVER_APPNAME);
 }
 
 Datum

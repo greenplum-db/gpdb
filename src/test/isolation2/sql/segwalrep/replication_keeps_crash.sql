@@ -31,8 +31,8 @@ where content = 0;
 select gp_inject_fault('wal_sender_loop', 'reset', dbid)
        from gp_segment_configuration where content=0 and role='p';
 
--- -- now, let's fully recover the mirror
-!\retcode gprecoverseg -aF  --no-progress;
+-- -- now, let's recover the mirror
+!\retcode gprecoverseg -a  --no-progress;
 
 -- loop while segments come in sync
 select wait_until_all_segments_synchronized();

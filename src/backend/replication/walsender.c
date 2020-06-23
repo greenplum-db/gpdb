@@ -557,11 +557,11 @@ StartReplication(StartReplicationCmd *cmd)
 	XLogRecPtr	FlushPtr;
 
 	/*
-	 * Create GPReplication for current application if not created before.
+	 * Create FTSReplicationStatus for current application if not created before.
 	 * This is only called for GPDB primary-mirror replication.
 	 */
 	if (MyWalSnd->is_for_gp_walreceiver)
-		GPReplicationCreateIfNotExist(application_name);
+		FTSReplicationStatusCreateIfNotExist(application_name);
 
 	/*
 	 * We assume here that we're logging enough information in the WAL for
@@ -2125,7 +2125,7 @@ WalSndKill(int code, Datum arg)
 
 	/* Only track failure for GPDB primary-mirror replication */
 	if (MyWalSnd->is_for_gp_walreceiver)
-		GPReplicationMarkDisconnectForReplication(application_name);
+		FTSReplicationStatusMarkDisconnectForReplication(application_name);
 
 	if (IS_QUERY_DISPATCHER())
 	{
@@ -2995,7 +2995,7 @@ void
 WalSndSetState(WalSndState state)
 {
 	WalSnd	   *walsnd = MyWalSnd;
-	GPReplication *gp_replication = NULL;
+	FTSReplicationStatus *replication_status = NULL;
 
 	Assert(am_walsender);
 
@@ -3017,12 +3017,12 @@ WalSndSetState(WalSndState state)
 	if (!walsnd->is_for_gp_walreceiver)
 		return;
 
-	LWLockAcquire(GPReplicationControlLock, LW_SHARED);
+	LWLockAcquire(FTSReplicationStatusLock, LW_SHARED);
 
-	gp_replication = RetrieveGPReplication(application_name, false);
+	replication_status = RetrieveFTSReplicationStatus(application_name, false);
 
-	/* gp_replication must exist */
-	Assert(gp_replication);
+	/* replication_status must exist */
+	Assert(replication_status);
 
 	if (state == WALSNDSTATE_CATCHUP || state == WALSNDSTATE_STREAMING)
 	{
@@ -3033,22 +3033,22 @@ WalSndSetState(WalSndState state)
 		 * still chance to fail. Since the blocked transaction will get released
 		 * only when wal start sreaming. More details, see SyncRepReleaseWaiters.
 		 */
-		GPReplicationClearDisconnectTime(gp_replication);
+		FTSReplicationStatusClearDisconnectTime(replication_status);
 		/* If current replication start streaming, clear the failure attempt count */
 		if (state == WALSNDSTATE_STREAMING)
-			GPReplicationClearAttempts(gp_replication);
+			FTSReplicationStatusClearAttempts(replication_status);
 	}
-	else if (GPReplicationRetrieveDisconnectTime(gp_replication) == 0)
+	else if (FTSReplicationStatusRetrieveDisconnectTime(replication_status) == 0)
 	{
 		/*
 		 * Mark the replication failure if's it the first time set the failure
 		 * WalSndState. Since if the disconnect time is not 0, we already mark
 		 * the replication failure.
 		 */
-		GPReplicationMarkDisconnect(gp_replication);
+		FTSReplicationStatusMarkDisconnect(replication_status);
 	}
 
-	LWLockRelease(GPReplicationControlLock);
+	LWLockRelease(FTSReplicationStatusLock);
 }
 
 /*
