@@ -227,14 +227,15 @@ FTSReplicationStatusMarkDisconnect(FTSReplicationStatus *replication_status)
 
 	replication_status->con_attempt_count += 1;
 	replication_status->replica_disconnected_at = (pg_time_t) time(NULL);
+
+	SpinLockRelease(&replication_status->mutex);
+
 	elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
 		   "FTSReplicationStatus: Mark replication disconnected. "
 		   "Current attempt count: %d, disconnect at %ld, for application %s",
 		   replication_status->con_attempt_count,
 		   replication_status->replica_disconnected_at,
 		   NameStr(replication_status->name));
-
-	SpinLockRelease(&replication_status->mutex);
 }
 
 /*
@@ -283,11 +284,12 @@ FTSReplicationStatusClearAttempts(FTSReplicationStatus *replication_status)
 	SpinLockAcquire(&replication_status->mutex);
 
 	replication_status->con_attempt_count = 0;
+
+	SpinLockRelease(&replication_status->mutex);
+
 	elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
 		   "FTSReplicationStatus: Clear replication connection attempts, for application %s",
 		   NameStr(replication_status->name));
-
-	SpinLockRelease(&replication_status->mutex);
 }
 
 /*
@@ -345,11 +347,12 @@ FTSReplicationStatusClearDisconnectTime(FTSReplicationStatus *replication_status
 	SpinLockAcquire(&replication_status->mutex);
 
 	replication_status->replica_disconnected_at = (pg_time_t) 0;
+
+	SpinLockRelease(&replication_status->mutex);
+
 	elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
 		   "FTSReplicationStatus: Clear replication disconnect time, for application %s",
 		   NameStr(replication_status->name));
-
-	SpinLockRelease(&replication_status->mutex);
 }
 
 /*
