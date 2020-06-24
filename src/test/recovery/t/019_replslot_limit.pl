@@ -159,7 +159,7 @@ ok(find_in_log($node_master,
 
 # This slot should be broken
 $result = $node_master->safe_psql('postgres', "SELECT slot_name, active, restart_lsn IS NULL, wal_status, min_safe_lsn FROM pg_replication_slots WHERE slot_name = 'rep1'");
-is($result, "rep1|f|t||", 'check that the slot became inactive');
+is($result, "rep1|f|t|lost|", 'check that the slot became inactive');
 
 # The standby no longer can connect to the master
 $logstart = get_log_size($node_standby);
