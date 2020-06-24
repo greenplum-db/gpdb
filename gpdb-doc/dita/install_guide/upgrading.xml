@@ -79,12 +79,21 @@
           host to upgrade to the new software release. <p>For RHEL/CentOS
             systems:<codeblock>$ sudo yum upgrade ./greenplum-db-&lt;version>-&lt;platform>.rpm</codeblock></p><p>For
             Ubuntu
-            systems:<codeblock># apt install ./greenplum-db-&lt;version>-&lt;platform>.deb</codeblock></p></li>
+            systems:<codeblock># apt install ./greenplum-db-&lt;version>-&lt;platform>.deb</codeblock></p><p>The
+              <codeph>yum</codeph> or <codeph>apt</codeph> command installs the new Greenplum
+            Database software files into a version-specific directory under
+              <codeph>/usr/local</codeph> and updates the symbolic link
+              <codeph>/usr/local/greenplum-db</codeph> to point to the new installation
+            directory.</p></li>
         <li><i>If you used <codeph>rpm</codeph> to install Greenplum Database to a non-default
             location on RHEL/CentOS systems</i>, execute <codeph>rpm</codeph> on each host to
           upgrade to the new software release and specify the same custom installation directory
           with the <codeph>--prefix</codeph> option. For
-          example:<codeblock>$ sudo rpm -U ./greenplum-db-&lt;version>-&lt;platform>.rpm --prefix=&lt;directory></codeblock></li>
+            example:<codeblock>$ sudo rpm -U ./greenplum-db-&lt;version>-&lt;platform>.rpm --prefix=&lt;directory></codeblock><p>The
+              <codeph>rpm</codeph> command installs the new Greenplum Database software files into a
+            version-specific directory under the <codeph>&lt;directory></codeph> you specify, and
+            updates the symbolic link <codeph>&lt;directory>/greenplum-db</codeph> to point to the
+            new installation directory.</p></li>
         <li>Update the permissions for the new installation. For example, run this command as
             <codeph>root</codeph> to change the user and group of the installed files to
             <codeph>gpadmin</codeph>.<codeblock>$ sudo chown -R gpadmin:gpadmin /usr/local/greenplum*</codeblock></li>

@@ -67,7 +67,8 @@
               <codeph>/usr/local/greenplum-db-&lt;version></codeph>, and creates the symbolic link
               <codeph>/usr/local/greenplum-db</codeph> to the installation directory.</p></li>
         <li>Change the owner and group of the installed files to
-          <codeph>gpadmin</codeph>:<codeblock>$ sudo chown -R gpadmin:gpadmin /usr/local/greenplum*</codeblock></li>
+          <codeph>gpadmin</codeph>:<codeblock>$ sudo chown -R gpadmin:gpadmin /usr/local/greenplum*
+$ sudo chgrp -R gpadmin /usr/local/greenplum*</codeblock></li>
       </ol>
     </body>
   </topic>
