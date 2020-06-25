@@ -301,8 +301,10 @@ BpCharMCVCardinalityEquals BpCharMCVCardinalityGreaterThan TextMCVCardinalityEqu
 COpfamiliesTest:
 JoinCitextVarchar JoinDefaultOpfamiliesUsingNonDefaultOpfamilyOp
 MultiColumnAggWithDefaultOpfamilies JoinTinterval FullJoin-NonDefaultOpfamily
-JoinAbsEqWithoutOpfamilies 3WayJoinUsingOperatorsOfNonDefaultOpfamily
+JoinAbsEqWithoutOpfamilies 3WayJoinUsingOperatorsOfNonDefaultOpfamily;
 
+CLimitTest:
+LimitSingletonRequest LimitWithOrderBySingletonRequest
 ")
 
 set(mdp_dir "../data/dxl/minidump/")

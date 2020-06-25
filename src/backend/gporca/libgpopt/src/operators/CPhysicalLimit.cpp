@@ -34,6 +34,7 @@ CPhysicalLimit::CPhysicalLimit
 	COrderSpec *pos,
 	BOOL fGlobal,
 	BOOL fHasCount,
+	BOOL fHasOffsetZero,
 	BOOL fTopLimitUnderDML
 	)
 	:
@@ -41,6 +42,7 @@ CPhysicalLimit::CPhysicalLimit
 	m_pos(pos),
 	m_fGlobal(fGlobal),
 	m_fHasCount(fHasCount),
+	m_fHasOffsetZero(fHasOffsetZero),
 	m_top_limit_under_dml(fTopLimitUnderDML),
 	m_pcrsSort(NULL)
 {
@@ -86,7 +88,8 @@ CPhysicalLimit::Matches
 		CPhysicalLimit *popLimit = CPhysicalLimit::PopConvert(pop);
 		
 		if (popLimit->FGlobal() == m_fGlobal &&
-			popLimit->FHasCount() == m_fHasCount)
+			popLimit->FHasCount() == m_fHasCount &&
+			popLimit->FHasOffsetZero())
 		{
 			// match if order specs match
 			return m_pos->Matches(popLimit->m_pos);
@@ -194,8 +197,7 @@ CPhysicalLimit::PdsRequired
 			return PdsPassThru(mp, exprhdl, pdsInput, child_index);
 		}
 
-		CExpression *pexprOffset = exprhdl.PexprScalarChild(1 /*child_index*/);
-		if (!m_fHasCount && CUtils::FScalarConstIntZero(pexprOffset))
+		if (!FHasCount() && FHasOffsetZero())
 		{
 			// pass through input distribution if it has no count nor offset and is not
 			// a singleton
@@ -231,6 +233,26 @@ CPhysicalLimit::PdsRequired
 	return GPOS_NEW(mp) CDistributionSpecAny(this->Eopid());
 }
 
+CEnfdDistribution::EDistributionMatching
+CPhysicalLimit::Edm
+(
+ CReqdPropPlan *,// prppInput,
+ ULONG,//  child_index,
+ CDrvdPropArray *,// pdrgpdpCtxt,
+ ULONG //ulOptReq
+)
+{
+	if (FGlobal())
+	{
+		if (!FHasCount() && FHasOffsetZero())
+		{
+			return CEnfdDistribution::EdmSatisfy;
+		}
+		return CEnfdDistribution::EdmExact;
+	}
+
+	return CEnfdDistribution::EdmSatisfy;
+}
 
 //---------------------------------------------------------------------------
 //	@function:

@@ -40,6 +40,9 @@ namespace gpopt
 			// does limit specify a number of rows?
 			BOOL m_fHasCount;
 
+			// does limit have offset of 0
+			BOOL m_fHasOffsetZero;
+
 			// this is a top limit right under a DML or CTAS operation
 			BOOL m_top_limit_under_dml;
 
@@ -58,6 +61,7 @@ namespace gpopt
 				COrderSpec *pos,
 				BOOL fGlobal,
 				BOOL fHasCount,
+				BOOL fHasOffsetZero,
 				BOOL fTopLimitUnderDML
 				);
 
@@ -85,7 +89,10 @@ namespace gpopt
 				return gpos::CombineHashes
 						(
 						gpos::CombineHashes(COperator::HashValue(), m_pos->HashValue()),
-						gpos::CombineHashes(gpos::HashValue<BOOL>(&m_fGlobal), gpos::HashValue<BOOL>(&m_fHasCount))
+						gpos::CombineHashes(gpos::CombineHashes(gpos::HashValue<BOOL>(&m_fGlobal),
+																gpos::HashValue<BOOL>(&m_fHasCount)),
+											gpos::HashValue<BOOL>(&m_fHasOffsetZero)
+											)
 						);
 			}
 
@@ -105,6 +112,12 @@ namespace gpopt
 			BOOL FHasCount() const
 			{
 				return m_fHasCount;
+			}
+
+			// does limit have offset of 0
+			BOOL FHasOffsetZero() const
+			{
+				return m_fHasOffsetZero;
 			}
 
 			// must the limit be always kept
@@ -203,7 +216,16 @@ namespace gpopt
 				CDrvdPropArray *pdrgpdpCtxt,
 				ULONG ulOptReq
 				);
-			
+
+			virtual
+			CEnfdDistribution::EDistributionMatching Edm
+			(
+			 CReqdPropPlan * prppInput,
+			 ULONG child_index,
+			 CDrvdPropArray * pdrgpdpCtxt,
+			 ULONG ulOptReq
+			);
+
 			// check if required columns are included in output columns
 			virtual
 			BOOL FProvidesReqdCols(CExpressionHandle &exprhdl, CColRefSet *pcrsRequired, ULONG ulOptReq) const;

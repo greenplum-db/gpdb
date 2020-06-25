@@ -95,6 +95,7 @@ CXformImplementLimit::Transform
 						pos,
 						popLimit->FGlobal(),
 						popLimit->FHasCount(),
+						CUtils::FScalarConstIntZero(pexprScalarStart),
 						popLimit->IsTopLimitUnderDMLorCTAS()
 						),
 					pexprRelational,
