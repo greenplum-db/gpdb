@@ -1713,7 +1713,7 @@ CEngine::ProcessTraceFlags()
 
 		at.Os()
 			<< std::endl << "[OPT]: stage "<< m_ulCurrSearchStage << " completed in "
-			<< PssCurrent()->UlElapsedTime() << " msec, ";
+			<< PssCurrent()->UlElapsedTime() << "ms, ";
 			if (NULL == PssCurrent()->PexprBest())
 			{
 				at.Os() << " no plan was found";

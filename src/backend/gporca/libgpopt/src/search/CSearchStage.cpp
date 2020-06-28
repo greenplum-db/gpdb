@@ -41,6 +41,11 @@ CSearchStage::CSearchStage
 
 	// include all implementation rules in any search strategy
 	m_xforms->Union(CXformFactory::Pxff()->PxfsImplementation());
+
+	if (GPOS_FTRACE(EopttracePrintOptimizationStatistics))
+	{
+		m_timer.Restart();
+	}
 }
 
 
