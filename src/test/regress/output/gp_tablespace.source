@@ -380,12 +380,3 @@ SELECT COUNT(*) FROM tblspc_otherloc_heap;
 
 DROP TABLE tblspc_otherloc_heap;
 DROP TABLESPACE testspace_otherloc;
-CREATE TABLESPACE testspace_dir_empty LOCATION '@testtablespace@';
-CREATE TABLE t_dir_empty(a int);
-\! rm -rf @testtablespace@/*;
-DROP TABLE IF EXISTS t_dir_empty;
-DROP TABLESPACE testspace_dir_empty;
-WARNING:  could not open directory "@testtablespace@/2": No such file or directory  (seg0 127.0.0.1:7002 pid=3000)
-WARNING:  could not open directory "@testtablespace@/3": No such file or directory  (seg1 127.0.0.1:7003 pid=3001)
-WARNING:  could not open directory "@testtablespace@/4": No such file or directory  (seg2 127.0.0.1:7004 pid=3002)
-WARNING:  could not open directory "@testtablespace@/1": No such file or directory
