@@ -6289,7 +6289,11 @@ StartupXLOG(void)
 	 */
 	if (ControlFile->state != DB_SHUTDOWNED &&
 		ControlFile->state != DB_SHUTDOWNED_IN_RECOVERY)
+	{
 		SyncDataDirectory();
+		if (Gp_role == GP_ROLE_DISPATCH)
+			*shmCleanupBackends = true;
+	}
 
 	/*
 	 * Initialize on the assumption we want to recover to the latest timeline
@@ -7839,6 +7843,9 @@ StartupXLOG(void)
 	 */
 	if (fast_promoted)
 		RequestCheckpoint(CHECKPOINT_FORCE);
+
+	if (Gp_role == GP_ROLE_DISPATCH)
+		*shmCleanupBackends = true;
 }
 
 /*

@@ -3664,6 +3664,50 @@ CountUserBackends(Oid roleid)
 }
 
 /*
+ * SignalMppBackends --- Signal all mpp backends on segments except itself.
+ */
+int
+SignalMppBackends(int sig)
+{
+	ProcArrayStruct *arrayP = procArray;
+	int				 count;
+	int				 index;
+
+	LWLockAcquire(ProcArrayLock, LW_SHARED);
+
+	count = 0;
+	for (index = 0; index < arrayP->numProcs; index++)
+	{
+		int			pgprocno = arrayP->pgprocnos[index];
+		volatile PGPROC *proc = &allProcs[pgprocno];
+
+		if (MyProc == proc)
+			continue;
+
+		if (proc->mppSessionId > 0)
+		{
+			count++;
+
+			/* If we have setsid(), signal the backend's whole process group */
+#ifdef HAVE_SETSID
+			if (kill(-proc->pid, sig))
+#else
+			if (kill(proc->pid, sig))
+#endif
+			{
+				ereport(WARNING,
+						(errmsg("could not send signal to process %d: %m", proc->pid)));
+			}
+		}
+	}
+
+	LWLockRelease(ProcArrayLock);
+
+	return count;
+}
+
+
+/*
  * CountOtherDBBackends -- check for other backends running in the given DB
  *
  * If there are other backends in the DB, we will wait a maximum of 5 seconds

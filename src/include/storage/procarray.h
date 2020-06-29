@@ -80,6 +80,7 @@ extern pid_t CancelVirtualTransaction(VirtualTransactionId vxid, ProcSignalReaso
 extern bool MinimumActiveBackends(int min);
 extern int	CountDBBackends(Oid databaseid);
 extern void CancelDBBackends(Oid databaseid, ProcSignalReason sigmode, bool conflictPending);
+extern int	SignalMppBackends(int sig);
 extern int	CountUserBackends(Oid roleid);
 extern bool CountOtherDBBackends(Oid databaseId,
 					 int *nbackends, int *nprepared);

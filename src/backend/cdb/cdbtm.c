@@ -61,6 +61,7 @@ typedef struct TmControlBlock
 	DistributedTransactionTimeStamp	distribTimeStamp;
 	DistributedTransactionId	seqno;
 	bool						DtmStarted;
+	bool						CleanupBackends;
 	uint32						NextSnapshotId;
 	int							num_committed_xacts;
 	slock_t						gxidGenLock;
@@ -1056,6 +1057,7 @@ tmShmemInit(void)
 		SpinLockInit(&shared->gxidGenLock);
 	}
 	shmDtmStarted = &shared->DtmStarted;
+	shmCleanupBackends = &shared->CleanupBackends;
 	shmNextSnapshotId = &shared->NextSnapshotId;
 	shmNumCommittedGxacts = &shared->num_committed_xacts;
 	shmGxidGenLock = &shared->gxidGenLock;
@@ -1066,6 +1068,7 @@ tmShmemInit(void)
 	{
 		*shmNextSnapshotId = 0;
 		*shmDtmStarted = false;
+		*shmCleanupBackends = false;
 		*shmNumCommittedGxacts = 0;
 	}
 }

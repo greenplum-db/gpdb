@@ -534,6 +534,7 @@ extern Datum pg_cancel_backend(PG_FUNCTION_ARGS);
 extern Datum pg_terminate_backend(PG_FUNCTION_ARGS);
 extern Datum pg_cancel_backend_msg(PG_FUNCTION_ARGS);
 extern Datum pg_terminate_backend_msg(PG_FUNCTION_ARGS);
+extern Datum gp_terminate_mpp_backends(PG_FUNCTION_ARGS);
 extern Datum pg_reload_conf(PG_FUNCTION_ARGS);
 extern Datum pg_tablespace_databases(PG_FUNCTION_ARGS);
 extern Datum pg_tablespace_location(PG_FUNCTION_ARGS);

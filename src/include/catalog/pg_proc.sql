@@ -434,3 +434,5 @@ CREATE FUNCTION cdblegacyhash_uuid(uuid) RETURNS int4 LANGUAGE internal IMMUTABL
 CREATE FUNCTION cdblegacyhash_anyenum(anyenum) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT PARALLEL SAFE AS 'cdblegacyhash_anyenum' WITH (OID=6171, DESCRIPTION="Legacy cdbhash function");
 
 CREATE FUNCTION gp_create_restore_point(text) RETURNS SETOF record LANGUAGE internal VOLATILE STRICT AS 'gp_create_restore_point' WITH (OID=6998,  DESCRIPTION="Create a named restore point on all segments");
+
+CREATE FUNCTION gp_terminate_mpp_backends() RETURNS void LANGUAGE INTERNAL VOLATILE PARALLEL RESTRICTED AS 'gp_terminate_mpp_backends' WITH (OID = 6999, DESCRIPTION="terminate all mpp backends on the segment");

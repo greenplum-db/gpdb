@@ -44,6 +44,7 @@
 #include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/timestamp.h"
+#include "cdb/cdbvars.h"
 
 #define atooid(x)  ((Oid) strtoul((x), NULL, 10))
 
@@ -366,6 +367,23 @@ pg_terminate_backend_msg(PG_FUNCTION_ARGS)
 				 (errmsg("must be a member of the role whose process is being terminated or member of pg_signal_backend"))));
 
 	PG_RETURN_BOOL(r == SIGNAL_BACKEND_SUCCESS);
+}
+
+Datum
+gp_terminate_mpp_backends(PG_FUNCTION_ARGS)
+{
+	if (Gp_role != GP_ROLE_EXECUTE)
+		ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+						(errmsg("terminate mpp backends on segments only"))));
+
+	if (!superuser())
+		ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+						(errmsg("Superuser only to execute it"))));
+
+	elog(LOG, "tried to terminate all (%d) mpp backends except self",
+		 SignalMppBackends(SIGTERM));
+
+	PG_RETURN_NULL();
 }
 
 /*
