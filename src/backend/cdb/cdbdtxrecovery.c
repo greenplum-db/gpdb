@@ -15,10 +15,13 @@
 
 /* These are always necessary for a bgworker */
 #include "miscadmin.h"
+#include "utils/guc.h"
+#include "utils/ps_status.h"
 #include "postmaster/bgworker.h"
 #include "storage/ipc.h"
 #include "storage/latch.h"
 #include "storage/lwlock.h"
+#include "storage/pmsignal.h"
 #include "storage/proc.h"
 #include "storage/shmem.h"
 #include "storage/procarray.h"
@@ -43,6 +46,8 @@ volatile int *shmNumCommittedGxacts;
 static int	redoFileFD = -1;
 static int	redoFileOffset;
 
+static volatile sig_atomic_t got_SIGHUP = false;
+
 typedef struct InDoubtDtx
 {
 	char		gid[TMGIDSIZE];
@@ -60,15 +65,15 @@ typedef struct InDoubtDtx
 
 static void recoverTM(void);
 static bool recoverInDoubtTransactions(void);
-static HTAB *gatherRMInDoubtTransactions(void);
 static void TerminateMppBackends(void);
+static HTAB *gatherRMInDoubtTransactions(int prepared_seconds, bool raiseError);
 static void abortRMInDoubtTransactions(HTAB *htab);
 static void doAbortInDoubt(char *gid);
 static bool doNotifyCommittedInDoubt(char *gid);
 static void UtilityModeSaveRedo(bool committed, TMGXACT_LOG *gxact_log);
 static void ReplayRedoFromUtilityMode(void);
 static void RemoveRedoUtilityModeFile(void);
-static void dumpRMOnlyDtx(HTAB *htab, StringInfoData *buff);
+static void AbortOrphanedPreparedTransactions(void);
 
 static bool
 doNotifyCommittedInDoubt(char *gid)
@@ -101,9 +106,12 @@ doAbortInDoubt(char *gid)
 											 /* raiseError */ false,
 											 cdbcomponent_getCdbComponentsList(), NULL, 0);
 	if (!succeeded)
-		elog(FATAL, "Crash recovery retry of the distributed transaction "
+	{
+		ResetAllGangs();
+		elog(LOG, "Crash recovery retry of the distributed transaction "
 			 		"'Abort Prepared' broadcast failed to one or more segments "
 					"for gid = %s.  System will retry again later", gid);
+	}
 	else
 		elog(LOG, "Crash recovery broadcast of the distributed transaction "
 			 	  "'Abort Prepared' broadcast succeeded for gid = %s", gid);
@@ -161,6 +169,12 @@ recoverTM(void)
 	/* finished recovery successfully. */
 	*shmDtmStarted = true;
 	elog(LOG, "DTM Started");
+
+	/*
+	 * dtx recovery process won't exit, so signal postmaster to launch
+	 * bg workers that depend on dtx recovery.
+	 */
+	SendPostmasterSignal(PMSIGNAL_BACKGROUND_WORKER_CHANGE);
 }
 
 /* 
@@ -206,9 +220,9 @@ recoverInDoubtTransactions(void)
 
 	/*
 	 * Any in-doubt transctions found will be for aborted
-	 * transactions. Gather in-boubt transactions and issue aborts.
+	 * transactions. Gather in-doubt transactions and issue aborts.
 	 */
-	htab = gatherRMInDoubtTransactions();
+	htab = gatherRMInDoubtTransactions(0, true);
 
 	/*
 	 * go through and resolve any remaining in-doubt transactions that the
@@ -221,38 +235,6 @@ recoverInDoubtTransactions(void)
 
 	/* get rid of the hashtable */
 	hash_destroy(htab);
-
-	/* yes... we are paranoid and will double check */
-	htab = gatherRMInDoubtTransactions();
-
-	/*
-	 * Hmm.  we still have some remaining indoubt transactions.  For now we
-	 * dont have an automated way to clean this mess up.  So we'll have to
-	 * rely on smart Admins to do the job manually.  We'll error out of here
-	 * and try and provide as much info as possible.
-	 *
-	 * TODO: We really want to be able to say this particular segdb has these
-	 * remaining in-doubt transactions.
-	 */
-	if (htab != NULL)
-	{
-		StringInfoData indoubtBuff;
-
-		initStringInfo(&indoubtBuff);
-
-		dumpRMOnlyDtx(htab, &indoubtBuff);
-
-		ereport(FATAL,
-				(errcode(ERRCODE_INTERNAL_ERROR),
-				 errmsg("DTM Log recovery failed, There are still unresolved "
-						"in-doubt transactions on some of the segment databases "
-						"that were not able to be resolved for an unknown reason"),
-				 errdetail("Here is a list of in-doubt transactions in the system: %s",
-						   indoubtBuff.data),
-				 errhint("Try restarting the Greenplum Database array.  If the problem persists "
-						 "an Administrator will need to resolve these transactions  manually.")));
-
-	}
 
 	RemoveRedoUtilityModeFile();
 
@@ -290,14 +272,17 @@ TerminateMppBackends()
  * without duplicates of all the in-doubt transactions.  It does not keep track
  * of which seg db's have which transactions in-doubt.  It currently doesn't
  * need to due to the way we handle this information later.
+ *
+ * Parameter prepared_seconds: Gather prepared transactions which have
+ * existed for at least prepared_seconds seconds.
+ * Parameter raiseError: if true, rethrow the error else ignore it.
  */
 static HTAB *
-gatherRMInDoubtTransactions(void)
+gatherRMInDoubtTransactions(int prepared_seconds, bool raiseError)
 {
 	CdbPgResults cdb_pgresults = {NULL, 0};
-	const char *cmdbuf = "select gid from pg_prepared_xacts";
 	PGresult   *rs;
-
+	char		cmdbuf[256];
 	InDoubtDtx *lastDtx = NULL;
 
 	HASHCTL		hctl;
@@ -307,8 +292,34 @@ gatherRMInDoubtTransactions(void)
 				rows;
 	bool		found;
 
-	/* call to all QE to get in-doubt transactions */
-	CdbDispatchCommand(cmdbuf, DF_NONE, &cdb_pgresults);
+	snprintf(cmdbuf, sizeof(cmdbuf), "select gid from pg_prepared_xacts where "
+			 "prepared < now() - interval'%d seconds'",
+			 prepared_seconds);
+
+	PG_TRY();
+	{
+		CdbDispatchCommand(cmdbuf, DF_NONE, &cdb_pgresults);
+	}
+	PG_CATCH();
+	{
+		cdbdisp_clearCdbPgResults(&cdb_pgresults);
+
+		if (raiseError)
+			PG_RE_THROW();
+		else
+		{
+			if (!elog_demote(WARNING))
+			{
+				elog(LOG, "unable to demote an error");
+				PG_RE_THROW();
+			}
+
+			EmitErrorReport();
+			FlushErrorState();
+			DisconnectAndDestroyAllGangs(true);
+		}
+	}
+	PG_END_TRY();
 
 	/* if any result set is nonempty, there are in-doubt transactions. */
 	for (i = 0; i < cdb_pgresults.numResults; i++)
@@ -356,8 +367,6 @@ gatherRMInDoubtTransactions(void)
 		}
 	}
 
-	cdbdisp_clearCdbPgResults(&cdb_pgresults);
-
 	return htab;
 }
 
@@ -394,23 +403,36 @@ abortRMInDoubtTransactions(HTAB *htab)
 	}
 }
 
+/*
+ * abortOrphanedTransactions:
+ * Goes through all the InDoubtDtx's in the provided htab and find orphaned
+ * ones and then abort them.
+ */
 static void
-dumpRMOnlyDtx(HTAB *htab, StringInfoData *buff)
+abortOrphanedTransactions(HTAB *htab)
 {
 	HASH_SEQ_STATUS status;
 	InDoubtDtx *entry = NULL;
+	DistributedTransactionTimeStamp	distribTimeStamp;
+	DistributedTransactionId	gxid;
 
 	if (htab == NULL)
 		return;
 
 	hash_seq_init(&status, htab);
 
-	appendStringInfo(buff, "List of In-doubt transactions remaining across the segdbs: (");
-
 	while ((entry = (InDoubtDtx *) hash_seq_search(&status)) != NULL)
-		appendStringInfo(buff, "\"%s\" , ", entry->gid);
+	{
+		elog(DTM_DEBUG3, "Finding orphaned transactions with gid = %s", entry->gid);
 
-	appendStringInfo(buff, ")");
+		dtxCrackOpenGid(entry->gid, &distribTimeStamp, &gxid);
+
+		if (!IsDtxInProgress(distribTimeStamp, gxid))
+		{
+			elog(LOG, "Aborting orphaned transactions with gid = %s", entry->gid);
+			doAbortInDoubt(entry->gid);
+		}
+	}
 }
 
 static void
@@ -662,22 +684,114 @@ DtxRecoveryStartRule(Datum main_arg)
 	return (Gp_role == GP_ROLE_DISPATCH);
 }
 
+static void
+AbortOrphanedPreparedTransactions()
+{
+	HTAB	   *htab;
+
+	htab = gatherRMInDoubtTransactions(gp_dtx_recovery_prepared_period, false);
+
+	/* in case an error happens somehow. */
+	if (htab == NULL)
+		return;
+
+	abortOrphanedTransactions(htab);
+
+	/* get rid of the hashtable */
+	hash_destroy(htab);
+}
+
+static void
+sigHupHandler(SIGNAL_ARGS)
+{
+	got_SIGHUP = true;
+
+	if (MyProc)
+		SetLatch(MyLatch);
+}
+
 /*
  * DtxRecoveryMain
  */
 void
 DtxRecoveryMain(Datum main_arg)
 {
+	int frequent_check_times;
+
+	/*
+	 * reread postgresql.conf if requested
+	 */
+	pqsignal(SIGHUP, sigHupHandler);
+
 	/* We're now ready to receive signals */
 	BackgroundWorkerUnblockSignals();
 
 	/* Connect to postgres */
 	BackgroundWorkerInitializeConnection(DB_FOR_COMMON_ACCESS, NULL);
 
-	/* do the real job of dtx recovery process */
-	StartTransactionCommand();
-	recoverTM();
-	CommitTransactionCommand();
+	/*
+	 * Do dtx recovery process.  It is possible that *shmDtmStarted is true
+	 * here if we terminate after this code block, e.g. due to error and then
+	 * postmaster restarts dtx recovery.
+	 */
+	if (!*shmDtmStarted)
+	{
+		set_ps_display("recovering", false);
+
+		StartTransactionCommand();
+		recoverTM();
+		CommitTransactionCommand();
+		DisconnectAndDestroyAllGangs(true);
+
+		set_ps_display("", false);
+	}
+
+	/*
+	 * Normally we check with interval gp_dtx_recovery_interval, but sometimes
+	 * we want to be more frequent in a period, e.g. just after master panic.
+	 * We do not use a guc to control the period, instead hardcode 12 times
+	 * with inteval 5 seconds simply.
+	 */
+	if (*shmCleanupBackends)
+		frequent_check_times = 12;
+	else
+		frequent_check_times = 0;
+
+	while (true)
+	{
+		int rc;
+
+		CHECK_FOR_INTERRUPTS();
+
+		if (got_SIGHUP)
+		{
+			got_SIGHUP = false;
+			ProcessConfigFile(PGC_SIGHUP);
+		}
+		else
+		{
+			SIMPLE_FAULT_INJECTOR("before_orphaned_check");
+
+			/* Find orphaned prepared transactions and abort them. */
+			StartTransactionCommand();
+			AbortOrphanedPreparedTransactions();
+			CommitTransactionCommand();
+			DisconnectAndDestroyAllGangs(true);
+		}
+
+		rc = WaitLatch(&MyProc->procLatch,
+					   WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH,
+					   frequent_check_times > 0 ?
+					   5 * 1000L : gp_dtx_recovery_interval * 1000L);
+		ResetLatch(&MyProc->procLatch);
+
+		/* emergency bailout if postmaster has died */
+		if (rc & WL_POSTMASTER_DEATH)
+			proc_exit(1);
+
+		if (frequent_check_times > 0)
+			frequent_check_times--;
+	}
 
 	/* One iteration done, go away */
 	proc_exit(0);
