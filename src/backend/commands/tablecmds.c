@@ -4677,8 +4677,6 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 				Oid relid = RelationGetRelid(rel);
 				PartStatus ps = rel_part_status(relid);
 
-				ATExternalPartitionCheck(cmd->subtype, rel, recursing);
-
 				if (Gp_role == GP_ROLE_DISPATCH &&
 					rel->rd_cdbpolicy->numsegments == getgpsegmentCount())
 					ereport(ERROR,
@@ -14947,10 +14945,12 @@ ATExecExpandTable(List **wqueue, Relation rel, AlterTableCmd *cmd)
 		bool           iswritable = ext->iswritable;
 
 		relation_close(rel, NoLock);
+		/*
+		 * Skip expanding readable external table, since data is not
+		 * located inside gpdb
+		 */
 		if (!iswritable)
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-							errmsg("unsupported ALTER command for external table")));
+			return;
 	}
 	else
 	{
