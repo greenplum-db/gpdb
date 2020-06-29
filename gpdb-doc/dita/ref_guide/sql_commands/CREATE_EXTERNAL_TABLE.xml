@@ -212,9 +212,8 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varna
         <plentry>
           <pt>LOCATION <varname>('protocol://[host[:port]]/path/file' [, ...])</varname></pt>
           <pd>If you use the <codeph>pxf</codeph> protocol to access an external data source,
-          refer to the PXF <xref href="../../pxf/intro_pxf.html#create_external_table" format="html">Creating an External Table</xref>
-          documentation for detailed information about
-          the <codeph>pxf</codeph> protocol <codeph>LOCATION</codeph> clause syntax.</pd>
+          refer to <xref href="../../admin_guide/external/g-pxf-protocol.xml"></xref> for
+          information about the <codeph>pxf</codeph> protocol.</pd>
           <pd>If you use the <codeph>s3</codeph> protocol to read or write to S3, refer to <xref
               href="../../admin_guide/external/g-s3-protocol.xml#amazon-emr/section_stk_c2r_kx"/>
             for additional information about the <codeph>s3</codeph> protocol
@@ -322,9 +321,8 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varna
         using a custom format, see "Loading and Unloading Data" in the <cite>Greenplum Database
           Administrator Guide</cite>.</pd>
           <pd>If you use the <codeph>pxf</codeph> protocol to access an external data source,
-          refer to the PXF <xref href="../../pxf/intro_pxf.html#create_external_table" format="html">Creating an External Table</xref>
-          documentation for detailed information about
-          the <codeph>pxf</codeph> protocol <codeph>FORMAT</codeph> clause syntax.</pd>
+          refer to <xref href="../../admin_guide/external/pxf-overview.xml"></xref>
+          for information about using PXF.</pd>
         </plentry>
         <plentry>
           <pt>FORMAT 'CUSTOM' (formatter=<varname>formatter_specification</varname>)</pt>
@@ -333,9 +331,8 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varna
             to the formatter function. The length of the formatter specification, the string
             including <codeph>Formatter=</codeph>, can be up to approximately 50K bytes.</pd>
           <pd>If you use the <codeph>pxf</codeph> protocol to access an external data source,
-          refer to the PXF <xref href="../../pxf/intro_pxf.html#create_external_table" format="html">Creating an External Table</xref>
-          documentation for detailed information about
-          the <codeph>pxf</codeph> protocol <codeph>FORMAT</codeph> clause syntax.</pd>
+          refer to <xref href="../../admin_guide/external/pxf-overview.xml"></xref>
+          for information about using PXF.</pd>
           <pd>For general information about using a custom format, see "Loading and Unloading Data" in the
               <cite>Greenplum Database Administrator Guide</cite>.</pd>
         </plentry>

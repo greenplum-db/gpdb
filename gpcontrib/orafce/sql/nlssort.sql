@@ -1,8 +1,5 @@
 -- Tests for nlssort
--- start_matchsubs
--- m/ERROR:  failed to set the requested LC_COLLATE value \[invalid\]/
--- s/ERROR:  failed to set the requested LC_COLLATE value \[invalid\].*/ERROR:  failed to set the requested LC_COLLATE value \[invalid\]/
--- end_matchsubs
+\set ECHO none
 SET client_min_messages = error;
 DROP DATABASE IF EXISTS regression_sort;
 CREATE DATABASE regression_sort WITH TEMPLATE = template0 ENCODING='UTF-8' LC_COLLATE='C' LC_CTYPE='C';

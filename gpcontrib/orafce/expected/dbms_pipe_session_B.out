@@ -4,15 +4,6 @@
                0
 (1 row)
 
--- The subsequent receiveFrom() has a race condition with
--- dbms_pipe_session_A::createImplicitPipe(). So, sleep an extra 2 seconds to
--- give session_A a chance to execute first.
-SELECT pg_sleep(2) AS wait_for_session_A;
- wait_for_session_a 
---------------------
- 
-(1 row)
-
 -- Receives messages sent via an implicit pipe
 SELECT receiveFrom('named_pipe');
 NOTICE:  RECEIVE 11: Message From Session A
@@ -72,7 +63,6 @@ NOTICE:  RECEIVE 24: (2,rob)
 DROP USER IF EXISTS pipe_test_other;
 NOTICE:  role "pipe_test_other" does not exist, skipping
 CREATE USER pipe_test_other;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 SET SESSION AUTHORIZATION pipe_test_other;
 -- Try to receive messages sent via an explicit private pipe under the user
 -- 'pipe_test_other' who is not the owner of pipe.

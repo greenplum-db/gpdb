@@ -392,6 +392,64 @@ select cn, sum(qty) from sale group by rollup(cn,vn) having sum(qty)=1;
 select cn, sum(qty) from sale group by rollup(cn,vn) having sum(qty)=1144;
 
 
+--
+-- Test a query with window function over an aggregate, and a subquery.
+--
+-- Github Issue https://github.com/greenplum-db/gpdb/issues/10143
+create table t1_github_issue_10143(
+  base_ym varchar(6),
+  code varchar(5),
+  name varchar(60)
+);
+
+create table t2_github_issue_10143(
+  base_ym varchar(6),
+  dong varchar(8),
+  code varchar(6),
+  salary numeric(18)
+);
+
+insert into t1_github_issue_10143 values ('a', 'acode', 'aname');
+insert into t2_github_issue_10143 values ('a', 'adong', 'acode', 1000);
+insert into t2_github_issue_10143 values ('b', 'bdong', 'bcode', 1100);
+
+set optimizer_trace_fallback = on;
+
+explain select (select name from t1_github_issue_10143 where code = a.code limit 1) as dongnm
+,sum(sum(a.salary)) over()
+from t2_github_issue_10143 a
+group by a.code;
+
+select (select name from t1_github_issue_10143 where code = a.code limit 1) as dongnm
+,sum(sum(a.salary)) over()
+from t2_github_issue_10143 a
+group by a.code;
+
+select * from (select sum(a.salary) over(), count(*)
+               from t2_github_issue_10143 a
+               group by a.salary) T;
+
+-- this query currently falls back, needs to be fixed
+select (select rn from (select row_number() over () as rn, name
+                        from t1_github_issue_10143
+                        where code = a.code
+                        group by name) T
+       ) as dongnm
+,sum(sum(a.salary)) over()
+from t2_github_issue_10143 a
+group by a.code;
+
+with cte as (select row_number() over (order by code) as rn1, code
+             from t2_github_issue_10143
+             group by code)
+select row_number() over (order by name) as rn2, name
+from t1_github_issue_10143
+group by name
+union all
+select * from cte;
+
+reset optimizer_trace_fallback;
+
 -- CLEANUP
 -- start_ignore
 drop schema bfv_olap cascade;

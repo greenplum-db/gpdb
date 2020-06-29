@@ -37,7 +37,13 @@
         <topicref href="localization.xml" navtitle="Configuring Localization Settings"/>
         <topicref href="upgrade_intro.xml" navtitle="Upgrading to Greenplum 6.x">
           <topicref href="upgrading.xml"/>
+          <topicref href="../pxf/upgrade_pxf_6x.html"
+                format="html" scope="peer" navtitle="Upgrading PXF When You Upgrade Greenplum 6"/>
           <topicref href="migrate.xml"/>
+          <topicref href="../pxf/gphdfs-pxf-migrate.html"
+                format="html" otherprops="pivotal" scope="peer" navtitle="Migrating gphdfs External Tables to PXF"/>
+          <topicref href="../pxf/migrate_5to6.html"
+                format="html" scope="peer" navtitle="Migrating PXF from Greenplum 5"/>
         </topicref>
         <topicref href="enable_iptables.xml" navtitle="Enabling iptables"/>
         <topicref href="apx_mgmt_utils.xml" navtitle="Installation Management Utilities"/>

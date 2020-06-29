@@ -21,6 +21,4 @@
 
 extern Query *normalize_query(Query *query);
 
-/* preprocess the query for the optimizer */
-extern Query *preprocess_query_optimizer(PlannerInfo *root, Query *query, ParamListInfo boundParams);
 #endif /* TRANSFORM_H */

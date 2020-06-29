@@ -1674,7 +1674,7 @@ CTranslatorUtils::GetWindowSpecTargetEntry
 	ForEach (target_entry_cell, target_list_subset)
 	{
 		TargetEntry *cur_target_entry = (TargetEntry*) lfirst(target_entry_cell);
-		if (IsWindowSpec(cur_target_entry, window_clause_list))
+		if (IsReferencedInWindowSpec(cur_target_entry, window_clause_list))
 		{
 			gpdb::GPDBFree(target_list_subset);
 			return cur_target_entry;
@@ -1690,37 +1690,11 @@ CTranslatorUtils::GetWindowSpecTargetEntry
 
 
 //---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorUtils::IsWindowSpec
-//
-//	@doc:
-//		Check if the expression has a matching target entry that is a window spec
+// CTranslatorUtils::IsReferencedInWindowSpec
+// Check if the TargetEntry is a used in a window specification
 //---------------------------------------------------------------------------
 BOOL
-CTranslatorUtils::IsWindowSpec
-	(
-	Node *node,
-	List *window_clause_list,
-	List *target_list
-	)
-{
-	GPOS_ASSERT(NULL != node);
-	
-	TargetEntry *window_spec = GetWindowSpecTargetEntry(node, window_clause_list, target_list);
-
-	return (NULL != window_spec);
-}
-
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorUtils::IsWindowSpec
-//
-//	@doc:
-//		Check if the TargetEntry is a used in the window specification
-//---------------------------------------------------------------------------
-BOOL
-CTranslatorUtils::IsWindowSpec
+CTranslatorUtils::IsReferencedInWindowSpec
 	(
 	const TargetEntry *target_entry,
 	List *window_clause_list

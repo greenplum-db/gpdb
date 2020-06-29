@@ -1,14 +1,10 @@
 /*
- * This functionality doesn't work on Microsoft Windows. Probably, there are more
- * than one issue:
- *
- *  functions fwrite, fclose, .. fails on segfault when file is locked. Probably
- *  PostgreSQL process and extension is not fully initialized and these "safe"
- *  functions crashes. Possible solution is nolock thread unsafe functions like
- *  _fwrite_nolock, It doesn't crash, but doesn't work. Returned file - file handler
- *  is not valid (although fileptr is not NULL).
- *
- *  From these reasons, this functionality is blocked on MS Windows.
+ * Attention - this functionality doesn't work when Orace is not linked with
+ * correct runtime library. The combination "vcruntime140.dll" is working for
+ * PostgreSQL 12 (vcruntime140d.dll doesn't work). Probably this runtime should
+ * be same like Postgres server runtime (what is used can be detected by
+ * dependency walker). Without correct linking the server crash when IO related
+ * functionality is used.
  */
 
 #ifdef _MSC_VER
@@ -17,14 +13,13 @@
 
 #include "postgres.h"
 
+#include <errno.h>
 #include <unistd.h>
 #include <sys/stat.h>
 
 #include "executor/spi.h"
 
-#if PG_VERSION_NUM >= 90300
 #include "access/htup_details.h"
-#endif
 #include "catalog/pg_type.h"
 #include "fmgr.h"
 #include "funcapi.h"
@@ -72,6 +67,9 @@ PG_FUNCTION_INFO_V1(utl_file_tmpdir);
 		(errcode(ERRCODE_RAISE_EXCEPTION), \
 		 errmsg("%s", msg), \
 		 errdetail("%s", detail)))
+
+#define STRERROR_EXCEPTION(msg) \
+	do { char *strerr = strerror(errno); CUSTOM_EXCEPTION(msg, strerr); } while(0);
 
 #define INVALID_FILEHANDLE_EXCEPTION()	CUSTOM_EXCEPTION(INVALID_FILEHANDLE, "Used file handle isn't valid.")
 
@@ -149,7 +147,7 @@ get_descriptor(FILE *file, int max_linesize, int encoding)
 
 /* return stored pointer to FILE */
 static FILE *
-get_stream(int d, int *max_linesize, int *encoding)
+get_stream(int d, size_t *max_linesize, int *encoding)
 {
 	int i;
 
@@ -181,11 +179,11 @@ IO_EXCEPTION(void)
 		case ENAMETOOLONG:
 		case ENOENT:
 		case ENOTDIR:
-			CUSTOM_EXCEPTION(INVALID_PATH, strerror(errno));
+			STRERROR_EXCEPTION(INVALID_PATH);
 			break;
 
 		default:
-			CUSTOM_EXCEPTION(INVALID_OPERATION, strerror(errno));
+			STRERROR_EXCEPTION(INVALID_OPERATION);
 	}
 }
 
@@ -316,12 +314,12 @@ utl_file_is_open(PG_FUNCTION_ARGS)
 /* read line from file. set eof if is EOF */
 
 static text *
-get_line(FILE *f, int max_linesize, int encoding, bool *iseof)
+get_line(FILE *f, size_t max_linesize, int encoding, bool *iseof)
 {
 	int c;
 	char *buffer = NULL;
 	char *bpt;
-	int csize = 0;
+	size_t csize = 0;
 	text *result = NULL;
 	bool eof = true;
 
@@ -357,9 +355,9 @@ get_line(FILE *f, int max_linesize, int encoding, bool *iseof)
 		char   *decoded;
 		size_t		len;
 
-		pg_verify_mbstr(encoding, buffer, csize, false);
+		pg_verify_mbstr(encoding, buffer, size2int(csize), false);
 		decoded = (char *) pg_do_encoding_conversion((unsigned char *) buffer,
-									 csize, encoding, GetDatabaseEncoding());
+									 size2int(csize), encoding, GetDatabaseEncoding());
 		len = (decoded == buffer ? csize : strlen(decoded));
 		result = palloc(len + VARHDRSZ);
 		memcpy(VARDATA(result), decoded, len);
@@ -380,7 +378,7 @@ get_line(FILE *f, int max_linesize, int encoding, bool *iseof)
 				break;
 
 			default:
-				CUSTOM_EXCEPTION(READ_ERROR, strerror(errno));
+				STRERROR_EXCEPTION(READ_ERROR);
 				break;
 		}
 
@@ -404,7 +402,7 @@ get_line(FILE *f, int max_linesize, int encoding, bool *iseof)
 Datum
 utl_file_get_line(PG_FUNCTION_ARGS)
 {
-	int		max_linesize = 0;	/* keep compiler quiet */
+	size_t	max_linesize = 0;	/* keep compiler quiet */
 	int		encoding = 0;		/* keep compiler quiet */
 	FILE   *f;
 	text   *result;
@@ -416,7 +414,7 @@ utl_file_get_line(PG_FUNCTION_ARGS)
 	/* 'len' overwrites max_linesize, but must be smaller than max_linesize */
 	if (PG_NARGS() > 1 && !PG_ARGISNULL(1))
 	{
-		int	len = PG_GETARG_INT32(1);
+		size_t	len = (size_t) PG_GETARG_INT32(1);
 		CHECK_LINESIZE(len);
 		if (max_linesize > len)
 			max_linesize = len;
@@ -446,7 +444,7 @@ utl_file_get_line(PG_FUNCTION_ARGS)
 Datum
 utl_file_get_nextline(PG_FUNCTION_ARGS)
 {
-	int		max_linesize = 0;		/* keep compiler quiet */
+	size_t	max_linesize = 0;		/* keep compiler quiet */
 	int		encoding = 0;			/* keep compiler quiet */
 	FILE   *f;
 	text   *result;
@@ -471,7 +469,7 @@ do_flush(FILE *f)
 		if (errno == EBADF)
 			CUSTOM_EXCEPTION(INVALID_OPERATION, "File is not an opened, or is not open for writing");
 		else
-			CUSTOM_EXCEPTION(WRITE_ERROR, strerror(errno));
+			STRERROR_EXCEPTION(WRITE_ERROR);
 	}
 }
 
@@ -495,7 +493,7 @@ do_flush(FILE *f)
 			CUSTOM_EXCEPTION(INVALID_OPERATION, "file descriptor isn't valid for writing"); \
 			break; \
 		default: \
-			CUSTOM_EXCEPTION(WRITE_ERROR, strerror(errno)); \
+			STRERROR_EXCEPTION(WRITE_ERROR); \
 	}
 
 /* encode(t, encoding) */
@@ -537,7 +535,7 @@ static FILE *
 do_put(PG_FUNCTION_ARGS)
 {
 	FILE   *f;
-	int		max_linesize = 0;		/* keep compiler quiet */
+	size_t	max_linesize = 0;		/* keep compiler quiet */
 	int		encoding = 0;			/* keep compiler quiet */
 
 	CHECK_FILE_HANDLE();
@@ -624,12 +622,12 @@ utl_file_putf(PG_FUNCTION_ARGS)
 {
 	FILE   *f;
 	char   *format;
-	int		max_linesize = 0;
-	int		encoding = 0;
-	size_t		format_length;
+	size_t	max_linesize;
+	int		encoding;
+	size_t	format_length;
 	char   *fpt;
 	int		cur_par = 0;
-	size_t		cur_len = 0;
+	size_t	cur_len = 0;
 
 	CHECK_FILE_HANDLE();
 	f = get_stream(PG_GETARG_INT32(0), &max_linesize, &encoding);
@@ -730,7 +728,7 @@ utl_file_fclose(PG_FUNCTION_ARGS)
 				if (errno == EBADF)
 					CUSTOM_EXCEPTION(INVALID_FILEHANDLE, "File is not an opened");
 				else
-					CUSTOM_EXCEPTION(WRITE_ERROR, strerror(errno));
+					STRERROR_EXCEPTION(WRITE_ERROR);
 			}
 			slots[i].file = NULL;
 			slots[i].id = INVALID_SLOTID;
@@ -765,7 +763,7 @@ utl_file_fclose_all(PG_FUNCTION_ARGS)
 				if (errno == EBADF)
 					CUSTOM_EXCEPTION(INVALID_FILEHANDLE, "File is not an opened");
 				else
-					CUSTOM_EXCEPTION(WRITE_ERROR, strerror(errno));
+					STRERROR_EXCEPTION(WRITE_ERROR);
 			}
 			slots[i].file = NULL;
 			slots[i].id = INVALID_SLOTID;
@@ -838,31 +836,112 @@ check_secure_locality(const char *path)
 	SPI_finish();
 }
 
+static char *
+safe_named_location(text *location)
+{
+	static SPIPlanPtr	plan = NULL;
+	MemoryContext		old_cxt;
+
+	Oid		argtypes[] = {TEXTOID};
+	Datum	values[1];
+	char	nulls[1] = {' '};
+	char   *result;
+
+	old_cxt = CurrentMemoryContext;
+
+	values[0] = PointerGetDatum(location);
+
+	if (SPI_connect() < 0)
+		ereport(ERROR,
+			(errcode(ERRCODE_INTERNAL_ERROR),
+			 errmsg("SPI_connect failed")));
+
+	if (!plan)
+	{
+		/* Don't use LIKE not to escape '_' and '%' */
+		SPIPlanPtr p = SPI_prepare(
+		    "SELECT dir FROM utl_file.utl_file_dir WHERE dirname = $1",
+		    1, argtypes);
+
+		if (p == NULL || (plan = SPI_saveplan(p)) == NULL)
+			ereport(ERROR,
+				(errcode(ERRCODE_INTERNAL_ERROR),
+				errmsg("SPI_prepare_failed")));
+	}
+
+	if (SPI_OK_SELECT != SPI_execute_plan(plan, values, nulls, false, 1))
+		ereport(ERROR,
+			(errcode(ERRCODE_INTERNAL_ERROR),
+			 errmsg("can't execute sql")));
+
+	if (SPI_processed > 0)
+	{
+		char	   *loc = SPI_getvalue(SPI_tuptable->vals[0],
+									   SPI_tuptable->tupdesc, 1);
+		if (loc)
+			result = MemoryContextStrdup(old_cxt, loc);
+		else
+			result = NULL;
+	}
+	else
+		result = NULL;
+
+	SPI_finish();
+
+	MemoryContextSwitchTo(old_cxt);
+
+	return result;
+}
+
+
 /*
  * get_safe_path - make a fullpath and check security.
  */
 static char *
-get_safe_path(text *location, text *filename)
+get_safe_path(text *location_or_dirname, text *filename)
 {
-	char   *fullname;
-	int		aux_pos;
-	int		aux_len;
+	char	   *fullname;
+	char	   *location;
+	bool		check_locality;
 
-	NON_EMPTY_TEXT(location);
+	NON_EMPTY_TEXT(location_or_dirname);
 	NON_EMPTY_TEXT(filename);
 
-	aux_pos = VARSIZE_ANY_EXHDR(location);
-	aux_len = VARSIZE_ANY_EXHDR(filename);
+	location = safe_named_location(location_or_dirname);
+	if (location)
+	{
+		int		aux_pos = size2int(strlen(location));
+		int		aux_len = VARSIZE_ANY_EXHDR(filename);
 
-	fullname = palloc(aux_pos + 1 + aux_len + 1);
-	memcpy(fullname, VARDATA(location), aux_pos);
-	fullname[aux_pos] = '/';
-	memcpy(fullname + aux_pos + 1, VARDATA(filename), aux_len);
-	fullname[aux_pos + aux_len + 1] = '\0';
+		fullname = palloc(aux_pos + 1 + aux_len + 1);
+		strcpy(fullname, location);
+		fullname[aux_pos] = '/';
+		memcpy(fullname + aux_pos + 1, VARDATA(filename), aux_len);
+		fullname[aux_pos + aux_len + 1] = '\0';
+
+		/* location is safe (ensured by dirname) */
+		check_locality = false;
+		pfree(location);
+	}
+	else
+	{
+		int aux_pos = VARSIZE_ANY_EXHDR(location_or_dirname);
+		int aux_len = VARSIZE_ANY_EXHDR(filename);
+
+		fullname = palloc(aux_pos + 1 + aux_len + 1);
+		memcpy(fullname, VARDATA(location_or_dirname), aux_pos);
+		fullname[aux_pos] = '/';
+		memcpy(fullname + aux_pos + 1, VARDATA(filename), aux_len);
+		fullname[aux_pos + aux_len + 1] = '\0';
+
+		check_locality = true;
+	}
 
 	/* check locality in canonizalized form of path */
 	canonicalize_path(fullname);
-	check_secure_locality(fullname);
+
+	if (check_locality)
+		check_secure_locality(fullname);
 
 	return fullname;
 }
@@ -997,18 +1076,21 @@ utl_file_fcopy(PG_FUNCTION_ARGS)
 static int
 copy_text_file(FILE *srcfile, FILE *dstfile, int start_line, int end_line)
 {
-	char	buffer[MAX_LINESIZE];
-	size_t	len;
-	int		i;
+	char	   *buffer;
+	size_t		len;
+	int			i;
+
+	buffer = palloc(MAX_LINESIZE);
 
 	errno = 0;
+
 	/* skip first start_line. */
 	for (i = 1; i < start_line; i++)
 	{
 		CHECK_FOR_INTERRUPTS();
 		do
 		{
-			if (fgets(buffer, lengthof(buffer), srcfile) == NULL)
+			if (fgets(buffer, MAX_LINESIZE, srcfile) == NULL)
 				return errno;
 			len = strlen(buffer);
 		} while(buffer[len - 1] != '\n');
@@ -1020,13 +1102,15 @@ copy_text_file(FILE *srcfile, FILE *dstfile, int start_line, int end_line)
 		CHECK_FOR_INTERRUPTS();
 		do
 		{
-			if (fgets(buffer, lengthof(buffer), srcfile) == NULL)
+			if (fgets(buffer, MAX_LINESIZE, srcfile) == NULL)
 				return errno;
 			len = strlen(buffer);
 			if (fwrite(buffer, 1, len, dstfile) != len)
 				return errno;
 		} while(buffer[len - 1] != '\n');
 	}
+
+	pfree(buffer);
 
 	return 0;
 }

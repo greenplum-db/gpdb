@@ -16,6 +16,12 @@ else
   include $(top_srcdir)/contrib/contrib-global.mk
 endif
 
+# when libquicklz is vendored, it is copied in to GPHOME/lib
+# the quicklz_compressor extension is located in GPHOME/lib/postgresql/
+ifdef QUICKLZ_LDFLAGS
+  LDFLAGS += $(QUICKLZ_LDFLAGS)
+endif
+
 # Install into cdb_init.d, so that the catalog changes performed by initdb,
 # and the compressor is available in all databases.
 .PHONY: install-data

@@ -82,11 +82,6 @@ END; $$ LANGUAGE plpgsql;
 
 \set ECHO all
 
--- The subsequent receiveFrom() has a race condition with
--- dbms_pipe_session_A::createImplicitPipe(). So, sleep an extra 2 seconds to
--- give session_A a chance to execute first.
-SELECT pg_sleep(2) AS wait_for_session_A;
-
 -- Receives messages sent via an implicit pipe
 SELECT receiveFrom('named_pipe');
 

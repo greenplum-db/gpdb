@@ -35,6 +35,7 @@ typedef struct MCVFreqPair
 /* extern functions called by commands/analyze.c */
 extern MCVFreqPair **aggregate_leaf_partition_MCVs(Oid relationOid,
 												   AttrNumber attnum,
+												   int numPartitions,
 												   HeapTuple *heaptupleStats,
 												   float4 *relTuples,
 												   unsigned int nEntries,
@@ -47,6 +48,7 @@ extern float4 get_rel_reltuples(Oid relid);
 extern int32 get_rel_relpages(Oid relid);
 extern int aggregate_leaf_partition_histograms(Oid relationOid,
 											   AttrNumber attnum,
+											   int nParts,
 											   HeapTuple *heaptupleStats,
 											   float4 *relTuples,
 											   unsigned int nEntries,

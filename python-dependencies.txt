@@ -1,7 +1,6 @@
 argparse==1.2.1
 behave==1.2.4
 epydoc==3.0.1
-lockfile==0.9.1
 logilab-astng==0.20.1
 logilab-common==0.50.1
 MarkupSafe==1.0

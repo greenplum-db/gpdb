@@ -68,10 +68,9 @@
                     <codeph>gpfdist</codeph>, and <codeph>gpfdists</codeph> internally. 
                 See
                     <xref href="../../admin_guide/external/g-s3-protocol.xml#amazon-emr/s3_prereq"/>
-                for information about enabling the <codeph>S3</codeph> protocol. See the <xref
-                    href="../../pxf/overview_pxf.html" type="topic" format="html">Greenplum Platform
-                    Extension Framework (PXF)</xref> documentation for information about configuring
-                the PXF extension and using the <codeph>pxf</codeph> protocol.</p>
+                for information about enabling the <codeph>S3</codeph> protocol. Refer to <xref
+                    href="../../admin_guide/external/g-pxf-protocol.xml" type="topic"></xref> for
+                information about using the <codeph>pxf</codeph> protocol.</p>
             <p>Any shared library that implements a data access protocol must be located in the same
                 location on all Greenplum Database segment hosts. For example, the shared library
                 can be in a location specified by the operating system environment variable

@@ -18,9 +18,6 @@ install: generate_greenplum_path_file
 	if [ -e bin/ext/__init__.py ]; then \
 	    cp -rp bin/ext/__init__.py $(DESTDIR)$(prefix)/lib/python ; \
 	fi
-	if [ -e bin/ext/lockfile ]; then \
-	    cp -rp bin/ext/lockfile $(DESTDIR)$(prefix)/lib/python ; \
-	fi
 	if [ -e bin/ext/psutil ]; then \
 	    cp -rp bin/ext/psutil $(DESTDIR)$(prefix)/lib/python ; \
 	fi

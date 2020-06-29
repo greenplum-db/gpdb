@@ -29,7 +29,7 @@
         is secured with Kerberos ("Kerberized"), you must configure Greenplum Database
         and PXF to allow users accessing external tables to authenticate with Kerberos.
         Refer to <xref
-          href="../../pxf/pxf_kerbhdfs.html" scope="peer" format="html">Configuring PXF for Secure HDFS</xref> for the procedure to perform this setup. </p>
+          href="../../../pxf/5-13/pxf_kerbhdfs.html" scope="external" format="html">Configuring PXF for Secure HDFS</xref> for the procedure to perform this setup. </p>
     </section>
     <section>
       <title>Platform Hardening</title>

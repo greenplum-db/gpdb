@@ -2606,7 +2606,7 @@ def inconsistentEntryQuery(max_content, catname, pkey, columns, castcols):
 
               -- distribute catalog table from master, so that we can avoid to gather
               CREATE TEMPORARY TABLE _tmp_master ON COMMIT DROP AS
-                  SELECT gp_segment_id segid, {columns} FROM {catalog};
+                  SELECT gp_segment_id AS segid, {columns} FROM {catalog} DISTRIBUTED BY (segid);
               SELECT {columns}, array_agg(gp_segment_id order by gp_segment_id) as segids
               FROM
               (
@@ -2727,7 +2727,7 @@ def duplicateEntryQuery(catname, pkey):
 
           -- distribute catalog table from master, so that we can avoid to gather
           CREATE TEMPORARY TABLE _tmp_master ON COMMIT DROP AS
-              SELECT gp_segment_id segid, {pkey} FROM {catalog};
+              SELECT gp_segment_id AS segid, {pkey} FROM {catalog} DISTRIBUTED BY (segid);
           SELECT {pkey}, total, array_agg(segid order by segid) as segids
           FROM (
               SELECT segid, {pkey}, count(*) as total

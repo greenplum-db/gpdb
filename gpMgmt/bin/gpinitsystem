@@ -1006,10 +1006,10 @@ ARRAY_REORDER() {
             ;;
     esac
 
-    QE_REORDER_ARRAY=(`$ECHO ${QE_PRIMARY_ARRAY[@]}|$TR ' ' '\n'|$SORT -t$S -n -k2,2|$TR '\n' ' '`)
+    QE_REORDER_ARRAY=(`$ECHO ${QE_PRIMARY_ARRAY[@]}|$TR ' ' '\n'|$SORT -t$S -n -k3,3|$TR '\n' ' '`)
     QE_PRIMARY_ARRAY=(${QE_REORDER_ARRAY[@]})
     if [ $MIRROR_TYPE -eq 1 ];then
-	QE_REORDER_ARRAY=(`$ECHO ${QE_MIRROR_ARRAY[@]}|$TR ' ' '\n'|$SORT -t$S -n -k2,2|$TR '\n' ' '`)
+	QE_REORDER_ARRAY=(`$ECHO ${QE_MIRROR_ARRAY[@]}|$TR ' ' '\n'|$SORT -t$S -n -k3,3|$TR '\n' ' '`)
 	QE_MIRROR_ARRAY=(${QE_REORDER_ARRAY[@]})
     fi
     LOG_MSG "[INFO]:-End Function $FUNCNAME"
@@ -1021,10 +1021,10 @@ CREATE_ARRAY_SORTED_ON_CONTENT_ID() {
 
     local REORDERING_ON_CONTENT
 
-    REORDERING_ON_CONTENT=(`$ECHO ${QE_PRIMARY_ARRAY[@]}|$TR ' ' '\n'|$SORT -t$S -n -k5,5|$TR '\n' ' '`)
+    REORDERING_ON_CONTENT=(`$ECHO ${QE_PRIMARY_ARRAY[@]}|$TR ' ' '\n'|$SORT -t$S -n -k6,6|$TR '\n' ' '`)
     QE_PRIMARY_ARRAY_SORTED_ON_CONTENT_ID=(${REORDERING_ON_CONTENT[@]})
     if [ $MIRRORING -ne 0 ] ; then
-      REORDERING_ON_CONTENT=(`$ECHO ${QE_MIRROR_ARRAY[@]}|$TR ' ' '\n'|$SORT -t$S -n -k5,5|$TR '\n' ' '`)
+      REORDERING_ON_CONTENT=(`$ECHO ${QE_MIRROR_ARRAY[@]}|$TR ' ' '\n'|$SORT -t$S -n -k6,6|$TR '\n' ' '`)
       QE_MIRROR_ARRAY_SORTED_ON_CONTENT_ID=(${REORDERING_ON_CONTENT[@]})
     fi
     LOG_MSG "[INFO]:-End Function $FUNCNAME"
@@ -1436,15 +1436,15 @@ CREATE_SEGMENT () {
 
 REGISTER_MIRRORS () {
 		LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-		for I in "${QE_MIRROR_ARRAY[@]}"
+		for I in "${QE_MIRROR_ARRAY_SORTED_ON_CONTENT_ID[@]}"
 		do
 			SET_VAR $I
 			dbid=`env PGOPTIONS="-c gp_role=utility" $PSQL -p $MASTER_PORT -d "${DEFAULTDB}" -X -A -t -c "select pg_catalog.gp_add_segment_mirror(${GP_CONTENT}::int2, '${GP_HOSTNAME}', '${GP_HOSTADDRESS}', ${GP_PORT}, '${GP_DIR}');" 2>/dev/null` >> $LOG_FILE 2>&1
 			ERROR_CHK $? "failed to register mirror for contentid=${GP_CONTENT}" 2
-			MIRRORS_UPDATED_DBID=(${MIRRORS_UPDATED_DBID[@]} ${GP_HOSTADDRESS}~${GP_PORT}~${GP_DIR}~${dbid}~${GP_CONTENT})
+			MIRRORS_UPDATED_DBID=(${MIRRORS_UPDATED_DBID[@]} ${GP_HOSTNAME}~${GP_HOSTADDRESS}~${GP_PORT}~${GP_DIR}~${dbid}~${GP_CONTENT})
 		done
 
-		QE_MIRROR_ARRAY=(${MIRRORS_UPDATED_DBID[@]})
+		QE_MIRROR_ARRAY_SORTED_ON_CONTENT_ID=(${MIRRORS_UPDATED_DBID[@]})
 		LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
 

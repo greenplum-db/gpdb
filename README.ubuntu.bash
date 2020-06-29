@@ -33,7 +33,6 @@ apt-get install -y \
   openssh-server \
   openssl \
   python-dev \
-  python-lockfile \
   python-pip \
   python-psutil \
   python-pygresql \

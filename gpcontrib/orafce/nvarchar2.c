@@ -8,7 +8,6 @@
 
 #include "postgres.h"
 #include "access/hash.h"
-#include "access/tuptoaster.h"
 #include "libpq/pqformat.h"
 #include "nodes/nodeFuncs.h"
 #include "utils/array.h"
@@ -62,7 +61,7 @@ nvarchar2_input(const char *s, size_t len, int32 atttypmod)
 						errmsg("input value length is %zd; too long for type nvarchar2(%zd)", mbmaxlen , maxlen)));
 	}
 
-	result = (VarChar *) cstring_to_text_with_len(s, len);
+	result = (VarChar *) cstring_to_text_with_len(s, size2int(len));
 	return  result;
 }
 
@@ -183,7 +182,7 @@ nvarchar2(PG_FUNCTION_ARGS)
 						errmsg("input value too long for type nvarchar2(%d)", maxlen)));
 	}
 
-	PG_RETURN_VARCHAR_P((VarChar *) cstring_to_text_with_len(s_data, maxmblen));
+	PG_RETURN_VARCHAR_P((VarChar *) cstring_to_text_with_len(s_data, size2int(maxmblen)));
 }
 
 

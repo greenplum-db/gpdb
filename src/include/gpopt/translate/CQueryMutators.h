@@ -53,7 +53,7 @@ namespace gpdxl
 	class CQueryMutators
 	{
 		typedef Node *(*MutatorWalkerFn) ();
-		typedef BOOL (*FallbackWalkerFn) ();
+		typedef BOOL (*ExprWalkerFn) ();
 
 		typedef struct SContextGrpbyPlMutator
 		{
@@ -68,8 +68,8 @@ namespace gpdxl
 				// original query
 				Query *m_query;
 
-				// the new target list of the group by (derived) query
-				List *m_derived_table_tlist;
+				// the new target list of the group by or window (lower) query
+				List *m_lower_table_tlist;
 
 				// the current query level
 				ULONG m_current_query_level;
@@ -79,9 +79,6 @@ namespace gpdxl
 
 				// indicate whether we are mutating the argument of an aggregate
 				BOOL m_is_mutating_agg_arg;
-
-				// indicate whether we are mutating the argument of a window function
-				BOOL m_is_mutating_window_arg;
 
 				// ctor
 				SContextGrpbyPlMutator
@@ -95,11 +92,10 @@ namespace gpdxl
 					m_mp(mp),
 					m_mda(mda),
 					m_query(query),
-					m_derived_table_tlist(derived_table_tlist),
+					m_lower_table_tlist(derived_table_tlist),
 					m_current_query_level(0),
 					m_agg_levels_up(gpos::ulong_max),
-					m_is_mutating_agg_arg(false),
-					m_is_mutating_window_arg(false)
+					m_is_mutating_agg_arg(false)
 				{
 				}
 
@@ -166,12 +162,6 @@ namespace gpdxl
 
 				} CContextTLWalker;
 
-		private:
-
-			// check if the cte levels up needs to be corrected
-			static
-			BOOL NeedsLevelsUpCorrection(SContextIncLevelsupMutator *context, Index cte_levels_up);
-
 		public:
 
 			// fall back during since the target list refers to a attribute which algebrizer at this point cannot resolve
@@ -192,7 +182,7 @@ namespace gpdxl
 
 			// flatten expressions in window operation project list
 			static
-			Query *NormalizeWindowProjList(CMemoryPool *mp, CMDAccessor *md_accessor, const Query *query);
+			Query *NormalizeWindowProjList(CMemoryPool *mp, CMDAccessor *md_accessor, const Query *original_query);
 
 			// traverse the project list to extract all window functions in an arbitrarily complex project element
 			static
@@ -205,10 +195,6 @@ namespace gpdxl
 			// make a copy of the aggref (minus the arguments)
 			static
 			Aggref *FlatCopyAggref(Aggref *aggref);
-
-			// make a copy of the window function (minus the arguments)
-			static
-			WindowFunc *FlatCopyWindowFunc (WindowFunc *old_windowfunc);
 
 			// create a new entry in the derived table and return its corresponding var
 			static
@@ -232,7 +218,7 @@ namespace gpdxl
 
 			// traverse the expression and fix the levels up of any CTE
 			static
-			Node *RunFixCTELevelsUpMutator(Node *node, SContextIncLevelsupMutator *context);
+			BOOL RunFixCTELevelsUpWalker(Node *node, SContextIncLevelsupMutator *context);
 
 			// mutate the grouping columns, fix levels up when necessary
 			static
@@ -261,7 +247,7 @@ namespace gpdxl
 
 			// make the input query into a derived table and return a new root query
 			static
-			Query *ConvertToDerivedTable(const Query *query, BOOL should_fix_target_list, BOOL should_fix_having_qual);
+			Query *ConvertToDerivedTable(const Query *original_query, BOOL should_fix_target_list, BOOL should_fix_having_qual);
 
 			// eliminate distinct clause
 			static

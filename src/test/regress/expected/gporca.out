@@ -6613,6 +6613,34 @@ select (select rank() over(partition by orca_w2.a) from orca_w3 where a = orca_w
    1 |   3
 (9 rows)
 
+-- correlated subquery in target list
+select (select a+1 from (select a from orca_w2 where orca_w1.a=orca_w2.a) sq(a)) as one, row_number() over(partition by orca_w1.a) as two from orca_w1;
+ one | two 
+-----+-----
+     |   1
+   3 |   1
+   4 |   1
+(3 rows)
+
+-- correlated subquery in target list, mismatching varattnos
+select (select a+1 from (select a from orca_w2 where sq2.a=orca_w2.a) sq1(a)) as one, row_number() over(partition by sq2.a) as two from (select 1,1,1,a from orca_w1) sq2(x,y,z,a);
+ one | two 
+-----+-----
+   3 |   1
+   4 |   1
+     |   1
+(3 rows)
+
+-- cte in scalar subquery
+with x as (select a, b from orca_w1)
+select (select count(*) from x) as one, rank() over(partition by a) as rank_within_parent from x order by a desc;
+ one | rank_within_parent 
+-----+--------------------
+   3 |                  1
+   3 |                  1
+   3 |                  1
+(3 rows)
+
 -- window function in subquery inside target list with outer ref in order clause
 select (select rank() over(order by orca_w2.a) from orca_w3 where a = orca_w1.a) as one, row_number() over(partition by orca_w1.a) as two from orca_w1, orca_w2 order by orca_w1.a;
  one | two 

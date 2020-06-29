@@ -219,7 +219,6 @@ static char *ChooseConstraintNameForPartitionCreate(const char *rname,
 static Bitmapset *get_partition_key_bitmapset(Oid relid);
 
 static List *get_deparsed_partition_encodings(Oid relid, Oid paroid);
-static List *rel_get_leaf_relids_from_rule(Oid ruleOid);
 
 /*
  * Is the given relation the default partition of a partition table.
@@ -3151,128 +3150,6 @@ all_leaf_partition_relids(PartitionNode *pn)
 			leaf_relids = lappend_oid(leaf_relids, pn->default_part->parchildrelid);
 		}
 	}
-	return leaf_relids;
-}
-
-/*
- * Given an Oid of a partition rule, return all leaf-level table Oids that are
- * descendants of the given rule.
- * Input:
- *	ruleOid - the oid of an entry in pg_partition_rule
- * Output:
- *	a list of Oids of all leaf-level partition tables under the given rule in
- *	the partitioning hierarchy.
- */
-static List *
-rel_get_leaf_relids_from_rule(Oid ruleOid)
-{
-	ScanKeyData scankey;
-	Relation	part_rule_rel;
-	SysScanDesc sscan;
-	bool		hasChildren = false;
-	List	   *lChildrenOid = NIL;
-	HeapTuple	tuple;
-
-	if (!OidIsValid(ruleOid))
-	{
-		return NIL;
-	}
-
-	part_rule_rel = heap_open(PartitionRuleRelationId, AccessShareLock);
-
-	ScanKeyInit(&scankey, Anum_pg_partition_rule_parparentrule,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(ruleOid));
-
-	/* No suitable index */
-	sscan = systable_beginscan(part_rule_rel, InvalidOid, false,
-							   NULL, 1, &scankey);
-
-	/*
-	 * If we are still in mid-level, recursively call this function on
-	 * children rules of the given rule.
-	 */
-	while ((tuple = systable_getnext(sscan)) != NULL)
-	{
-		hasChildren = true;
-		lChildrenOid = list_concat(lChildrenOid, rel_get_leaf_relids_from_rule(HeapTupleGetOid(tuple)));
-	}
-
-	/*
-	 * if ruleOid is not parent of any rule, we have reached the leaf level
-	 * and we need to append parchildrelid of this entry to the output
-	 */
-	if (!hasChildren)
-	{
-		HeapTuple	tuple;
-		Form_pg_partition_rule rule_desc;
-
-		tuple = SearchSysCache1(PARTRULEOID, ObjectIdGetDatum(ruleOid));
-		if (!tuple)
-			elog(ERROR, "cache lookup failed for partition rule with OID %u", ruleOid);
-		rule_desc = (Form_pg_partition_rule) GETSTRUCT(tuple);
-
-		lChildrenOid = lcons_oid(rule_desc->parchildrelid, lChildrenOid);
-
-		ReleaseSysCache(tuple);
-	}
-
-	systable_endscan(sscan);
-
-	heap_close(part_rule_rel, AccessShareLock);
-
-	return lChildrenOid;
-}
-
-/* Given a partition table Oid (root or interior), return the Oids of all leaf-level
- * children below it. Similar to all_leaf_partition_relids() but takes Oid as input.
- */
-List *
-rel_get_leaf_children_relids(Oid relid)
-{
-	PartStatus	ps = rel_part_status(relid);
-	List	   *leaf_relids = NIL;
-
-	Assert(PART_STATUS_INTERIOR == ps || PART_STATUS_ROOT == ps);
-
-	if (PART_STATUS_ROOT == ps)
-	{
-		PartitionNode *pn;
-
-		pn = get_parts(relid, 0 /* level */ , 0 /* parent */ , false /* inctemplate */ ,
-					   true /* includesubparts */ );
-		leaf_relids = all_leaf_partition_relids(pn);
-		pfree(pn);
-	}
-	else if (PART_STATUS_INTERIOR == ps)
-	{
-		Relation	partrulerel;
-		ScanKeyData scankey;
-		SysScanDesc sscan;
-		HeapTuple	tuple;
-
-		/* SELECT * FROM pg_partition_rule WHERE parchildrelid = :1 */
-		partrulerel = heap_open(PartitionRuleRelationId, AccessShareLock);
-
-		ScanKeyInit(&scankey, Anum_pg_partition_rule_parchildrelid,
-					BTEqualStrategyNumber, F_OIDEQ,
-					ObjectIdGetDatum(relid));
-
-		sscan = systable_beginscan(partrulerel, PartitionRuleParchildrelidIndexId, true,
-								   NULL, 1, &scankey);
-		tuple = systable_getnext(sscan);
-		if (HeapTupleIsValid(tuple))
-		{
-			leaf_relids = rel_get_leaf_relids_from_rule(HeapTupleGetOid(tuple));
-		}
-		systable_endscan(sscan);
-		heap_close(partrulerel, AccessShareLock);
-	}
-	else if (PART_STATUS_LEAF == ps)
-	{
-		leaf_relids = list_make1_oid(relid);
-	}
-
 	return leaf_relids;
 }
 

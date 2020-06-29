@@ -1,6 +1,3 @@
-sqlparse.c
-sqlparse.h
-sqlscan.c
 *.o
 *.a
 *.so

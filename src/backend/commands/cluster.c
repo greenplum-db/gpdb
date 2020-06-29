@@ -2049,16 +2049,23 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 							mapped_tables);
 	}
 
-	/* swap size statistics too, since new rel has freshly-updated stats */
+	/* Send statistics from QE to QD */
 	if (swap_stats)
 	{
 		rel = relation_open(r1, AccessShareLock);
 
+		/*
+		 * We use non-transactional vac_update_relstats() here, because it
+		 * shares code for distribution of statistics. We pass invalid values
+		 * of frozen xid and min mxid to avoid messing critical pg_class values
+		 * in case of transaction abortion. Changes made by
+		 * vac_update_relstats() cannot be rolled back.
+		 */
 		vac_update_relstats(rel, relform1->relpages, relform1->reltuples,
 							relform1->relallvisible,
 							relform1->relhaspkey,
-							relform1->relfrozenxid,
-							relform1->relminmxid,
+							InvalidTransactionId,
+							InvalidTransactionId,
 							false,
 							true /* isvacuum */);
 		relation_close(rel, AccessShareLock);

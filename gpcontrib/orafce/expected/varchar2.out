@@ -11,12 +11,10 @@ CREATE TABLE foo (a VARCHAR2(10, 1));
 ERROR:  invalid type modifier at character 21
 -- OK
 CREATE TABLE foo (a VARCHAR(5000));
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 -- cleanup
 DROP TABLE foo;
 -- OK
 CREATE TABLE foo (a VARCHAR2(5));
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 CREATE INDEX ON foo(a);
 --
 -- test that no value longer than maxlen is allowed
@@ -133,5 +131,19 @@ SELECT lengthb(NULL) IS NULL;
  ?column? 
 ----------
  t
+(1 row)
+
+-- null safe concat (disabled by default)
+SELECT NULL || 'hello'::varchar2 || NULL;
+ ?column? 
+----------
+ 
+(1 row)
+
+SET orafce.varchar2_null_safe_concat TO true;
+SELECT NULL || 'hello'::varchar2 || NULL;
+ ?column? 
+----------
+ hello
 (1 row)
 

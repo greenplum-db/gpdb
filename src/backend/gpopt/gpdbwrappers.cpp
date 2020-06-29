@@ -2279,23 +2279,6 @@ gpdb::MutateQueryTree
 	return NULL;
 }
 
-List *
-gpdb::MutateRangeTable
-	(
-	List *rtable,
-	Node *(*mutator) (),
-	void *context,
-	int flags
-	)
-{
-	GP_WRAP_START;
-	{
-		return range_table_mutator(rtable, mutator, context, flags);
-	}
-	GP_WRAP_END;
-	return NIL;
-}
-
 bool
 gpdb::RelPartIsRoot
 	(
@@ -3073,6 +3056,7 @@ gpdb::RunStaticPartitionSelection
 	return NULL;
 }
 
+#ifdef FAULT_INJECTOR
 FaultInjectorType_e
 gpdb::InjectFaultInOptTasks
 	(
@@ -3086,6 +3070,7 @@ gpdb::InjectFaultInOptTasks
 	GP_WRAP_END;
 	return FaultInjectorTypeNotSpecified;
 }
+#endif
 
 gpos::ULONG
 gpdb::CountLeafPartTables

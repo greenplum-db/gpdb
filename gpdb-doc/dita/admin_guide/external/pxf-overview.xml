@@ -2,15 +2,28 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_u14_wtd_dbb">
   <title>Accessing External Data with PXF</title>
-  <shortdesc>Data managed by your organization may already reside in external sources such as Hadoop, object stores, and other SQL databases. The Greenplum Platform Extension Framework (PXF) provides access to this external data via built-in connectors that map an external data source to a Greenplum Database table definition.</shortdesc>
+  <shortdesc>Data managed by your organization may already reside in external
+    sources such as Hadoop, object stores, and other SQL databases. The
+    Greenplum Platform Extension Framework (PXF) provides access to this
+    external data via built-in connectors that map an external data source to
+    a Greenplum Database table definition.</shortdesc>
   <body>
-    <p>PXF is installed with Hadoop and Object Storage connectors. These connectors enable you to read external data stored in text, Avro, JSON, RCFile, Parquet, SequenceFile, and ORC formats. You can use the JDBC connector to access an external SQL database.</p>
+    <p>PXF is installed with Hadoop and Object Storage connectors. These
+      connectors enable you to read external data stored in text, Avro, JSON,
+      RCFile, Parquet, SequenceFile, and ORC formats. You can use the JDBC
+      connector to access an external SQL database.</p>
     <note>In previous versions of Greenplum Database, you may have used the
       <codeph>gphdfs</codeph> external table protocol to access data stored in Hadoop.
       Greenplum Database version 6.0.0 removes the <codeph>gphdfs</codeph> protocol.
       Use PXF and the <codeph>pxf</codeph> external table protocol to access
       Hadoop in Greenplum Database version 6.x.</note>
-    <p>The Greenplum Platform Extension Framework includes a protocol C library and a Java service. After you configure and initialize PXF, you start a single PXF JVM process on each Greenplum Database segment host. This long-running process concurrently serves multiple query requests.</p>
-    <p>For detailed information about the architecture of and using PXF, refer to the <xref href="../../pxf/overview_pxf.html" type="topic" format="html">Greenplum Platform Extension Framework (PXF)</xref> documentation.</p>
+    <p>The Greenplum Platform Extension Framework includes a C-language extension
+      and a Java service. After you configure and initialize PXF, you start a
+      single PXF JVM process on each Greenplum Database segment host. This long-
+      running process concurrently serves multiple query requests.</p>
+    <p>For detailed information about the architecture of and using PXF, refer
+      to the <xref href="../../../pxf/5-13/overview_pxf.html" type="topic"
+        format="html" scope="external">Greenplum Platform Extension Framework (PXF)</xref>
+      documentation.</p>
   </body>
 </topic>

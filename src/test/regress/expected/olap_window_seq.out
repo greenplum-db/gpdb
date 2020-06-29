@@ -7853,8 +7853,11 @@ from
 group by 
     2*b.g,
     lower(f);
-ERROR:  unresolved grouping key in window query
-HINT:  You might need to use explicit aliases and/or to refer to grouping keys in the same way throughout the query.
+ ?column? | lower | sum 
+----------+-------+-----
+        2 | b     |   2
+(1 row)
+
 -- End MPP-12082
 -- MPP-12913
 select count(*) over (partition by 1 order by cn rows between 1 preceding and 1 preceding) from sale;

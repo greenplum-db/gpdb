@@ -1,3 +1,5 @@
+#include <float.h>
+
 #include "postgres.h"
 #include "fmgr.h"
 #include "lib/stringinfo.h"
@@ -47,35 +49,33 @@ orafce_to_char_int8(PG_FUNCTION_ARGS)
 Datum
 orafce_to_char_float4(PG_FUNCTION_ARGS)
 {
-	float4		arg0 = PG_GETARG_FLOAT4(0);
-	StringInfo	buf = makeStringInfo();
-	struct lconv *lconv = PGLC_localeconv();
 	char	   *p;
+	char	   *result;
+	struct lconv *lconv = PGLC_localeconv();
 
-	appendStringInfo(buf, "%f", arg0);
+	result = DatumGetCString(DirectFunctionCall1(float4out, PG_GETARG_DATUM(0)));
 
-	for (p = buf->data; *p; p++)
+	for (p = result; *p; p++)
 		if (*p == '.')
 			*p = lconv->decimal_point[0];
 
-	PG_RETURN_TEXT_P(cstring_to_text(buf->data));
+	PG_RETURN_TEXT_P(cstring_to_text(result));
 }
 
 Datum
 orafce_to_char_float8(PG_FUNCTION_ARGS)
 {
-	float8		arg0 = PG_GETARG_FLOAT8(0);
-	StringInfo	buf = makeStringInfo();
-	struct lconv *lconv = PGLC_localeconv();
 	char	   *p;
+	char	   *result;
+	struct lconv *lconv = PGLC_localeconv();
 
-	appendStringInfo(buf, "%f", arg0);
+	result = DatumGetCString(DirectFunctionCall1(float8out, PG_GETARG_DATUM(0)));
 
-	for (p = buf->data; *p; p++)
+	for (p = result; *p; p++)
 		if (*p == '.')
 			*p = lconv->decimal_point[0];
 
-	PG_RETURN_TEXT_P(cstring_to_text(buf->data));
+	PG_RETURN_TEXT_P(cstring_to_text(result));
 }
 
 Datum
@@ -136,7 +136,7 @@ orafce_to_char_timestamp(PG_FUNCTION_ARGS)
 		/* it will return the DATE in nls_date_format*/
 		result = DatumGetTextP(DirectFunctionCall2(timestamp_to_char,
 							TimestampGetDatum(ts),
-								PointerGetDatum(cstring_to_text(nls_date_format))));
+								CStringGetDatum(cstring_to_text(nls_date_format))));
 	}
 	else
 	{
@@ -178,6 +178,10 @@ orafce_to_number(PG_FUNCTION_ARGS)
  * Convert a tilde (~) to ...
  *	1: a full width tilde. (same as JA16EUCTILDE in oracle)
  *	0: a full width overline. (same as JA16EUC in oracle)
+ *
+ * Note - there is a difference with Oracle - it returns \342\210\274
+ * what is a tilde char. Orafce returns fullwidth tilde. If it is a
+ * problem, fix it for sef in code.
  */
 #define JA_TO_FULL_WIDTH_TILDE	1
 
@@ -244,7 +248,7 @@ TO_MULTI_BYTE_UTF8[95] =
 	"\357\274\271",
 	"\357\274\272",
 	"\357\274\273",
-	"\357\277\245",
+	"\357\274\274",
 	"\357\274\275",
 	"\357\274\276",
 	"\357\274\277",
@@ -352,7 +356,7 @@ TO_MULTI_BYTE_EUCJP[95] =
 	"\241\317",
 	"\241\260",
 	"\241\262",
-	"\241\306",
+	"\241\306",		/* Oracle returns different value \241\307 */
 	"\243\341",
 	"\243\342",
 	"\243\343",

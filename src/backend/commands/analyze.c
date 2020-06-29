@@ -4423,8 +4423,9 @@ merge_leaf_stats(VacAttrStatsP stats,
 		void *resultMCV[2];
 
 		mcvpairArray = aggregate_leaf_partition_MCVs(
-			stats->attr->attrelid, stats->attr->attnum, heaptupleStats,
-			relTuples, default_statistics_target, ndistinct, &num_mcv, &rem_mcv,
+			stats->attr->attrelid, stats->attr->attnum,
+			numPartitions, heaptupleStats, relTuples,
+			default_statistics_target, ndistinct, &num_mcv, &rem_mcv,
 			resultMCV);
 		MemoryContextSwitchTo(old_context);
 
@@ -4447,8 +4448,9 @@ merge_leaf_stats(VacAttrStatsP stats,
 
 		void *resultHistogram[1];
 		int num_hist = aggregate_leaf_partition_histograms(
-			stats->attr->attrelid, stats->attr->attnum, heaptupleStats,
-			relTuples, default_statistics_target, mcvpairArray + num_mcv,
+			stats->attr->attrelid, stats->attr->attnum,
+			numPartitions, heaptupleStats, relTuples,
+			default_statistics_target, mcvpairArray + num_mcv,
 			rem_mcv, resultHistogram);
 		MemoryContextSwitchTo(old_context);
 		if (num_hist > 0)

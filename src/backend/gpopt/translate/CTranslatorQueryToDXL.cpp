@@ -1688,7 +1688,7 @@ CTranslatorQueryToDXL::TranslateWindowToDXL
 
 				StoreAttnoColIdMapping(output_attno_to_colid_mapping, resno, colid);
 			}
-			else if (CTranslatorUtils::IsWindowSpec(target_entry, window_clause))
+			else if (CTranslatorUtils::IsReferencedInWindowSpec(target_entry, window_clause))
 			{
 				// add computed column used in window specification needed in the output columns
 				// to the child's project list
@@ -1743,7 +1743,7 @@ CTranslatorQueryToDXL::TranslateWindowToDXL
 		}
 		else if (!IsA(target_entry->expr, Var))
 		{
-			GPOS_ASSERT(CTranslatorUtils::IsWindowSpec(target_entry, window_clause));
+			GPOS_ASSERT(CTranslatorUtils::IsReferencedInWindowSpec(target_entry, window_clause));
 			// computed columns used in the window specification
 			new_child_project_list_dxlnode->AddChild(project_elem_dxlnode);
 		}

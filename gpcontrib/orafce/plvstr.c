@@ -3,7 +3,7 @@
   free available library PL/Vision. Please look www.quest.com
 
   Original author: Steven Feuerstein, 1996 - 2002
-  PostgreSQL implementation author: Pavel Stehule, 2006
+  PostgreSQL implementation author: Pavel Stehule, 2006-2018
 
   This module is under BSD Licence
 
@@ -73,7 +73,7 @@ if (VARSIZE_ANY_EXHDR(str) == 0) \
 	ereport(ERROR, \
 			(errcode(ERRCODE_INVALID_PARAMETER_VALUE), \
 			 errmsg("invalid parameter"), \
-		 errdetail("Empty string is not allowed.")));
+		 errdetail("Not allowed empty string.")));
 
 #define PARAMETER_ERROR(detail) \
 	ereport(ERROR, \
@@ -186,12 +186,8 @@ ora_substr(Datum str, int start, int len)
 			str, Int32GetDatum(start), Int32GetDatum(len)));
 }
 
-/* 
- * Simply search algorithm. Could be greatly improved if we
- * used KMP. Morris-Boyer would be more efficient but it might
- * give us head aches in the presence of multibyte. For example, see
- * `CHINESE STRING SEARCHING USING THE KMP ALGORITHM' by R. Luk.
- */
+/* simply search algorhitm - can be better */
+
 static int
 ora_instr_mb(text *txt, text *pattern, int start, int nth)
 {
@@ -245,7 +241,7 @@ ora_instr(text *txt, text *pattern, int start, int nth)
 	int			beg, end, i, dx;
 
 	if (nth <= 0)
-		PARAMETER_ERROR("Fourth parameter must be a positive integer.");
+		PARAMETER_ERROR("Four parameter isn't positive.");
 
 	/* Forward for multibyte strings */
 	if (pg_database_encoding_max_length() > 1)
@@ -293,7 +289,7 @@ ora_instr(text *txt, text *pattern, int start, int nth)
  *   FUNCTION plvstr.normalize (string_in IN VARCHAR)
  *  	RETURN VARCHAR;
  *
- * Purpose:
+ * Purpouse:
  *   Normalize string - replace white chars by space, replace
  * spaces by space
  *
@@ -404,7 +400,7 @@ plvstr_normalize(PG_FUNCTION_ARGS)
  *            start_in INTEGER, nth INTEGER)
  *            RETURN INT;
  *
- * Purpose:
+ * Purpouse:
  *   Search pattern in string.
  *
  ****************************************************************/
@@ -453,7 +449,7 @@ plvstr_instr4 (PG_FUNCTION_ARGS)
  *   FUNCTION plvstr.is_prefix (int_in IN INT,
  *                    prefix_in INT)  RETURN bool;
  *
- * Purpose:
+ * Purpouse:
  *   Returns true, if prefix_in is prefix of string_in
  *
  ****************************************************************/
@@ -556,7 +552,7 @@ plvstr_is_prefix_int64 (PG_FUNCTION_ARGS)
  *					  end_in IN INTEGER := NULL)
  *  	RETURN VARCHAR2;
  *
- * Purpose:
+ * Purpouse:
  *   Reverse string or part of string
  *
  ****************************************************************/
@@ -592,7 +588,7 @@ plvstr_rvrs(PG_FUNCTION_ARGS)
 	end = PG_ARGISNULL(2) ? (start < 0 ? -len : len) : PG_GETARG_INT32(2);
 
 	if ((start > end && start > 0) || (start < end && start < 0))
-		PARAMETER_ERROR("Third parameter must be greater than second.");
+		PARAMETER_ERROR("Second parameter is bigger than third.");
 
 	if (start < 0)
 	{
@@ -663,7 +659,7 @@ plvstr_rvrs(PG_FUNCTION_ARGS)
  *					   all_if_notfound_in IN BOOLEAN := FALSE)
  *	RETURN VARCHAR2;
  *
- * Purpose:
+ * Purpouse:
  *   Call this function to return the left part of a string.
  *
  ****************************************************************/
@@ -702,7 +698,7 @@ plvstr_lpart (PG_FUNCTION_ARGS)
  *					   all_if_notfound_in IN BOOLEAN := FALSE)
  *	RETURN VARCHAR2;
  *
- * Purpose:
+ * Purpouse:
  *   Call this function to return the right part of a string.
  *
  ****************************************************************/
@@ -739,7 +735,7 @@ plvstr_rpart (PG_FUNCTION_ARGS)
  *							num_in IN INTEGER := 1)
  *  	RETURN VARCHAR;
  *
- * Purpose:
+ * Purpouse:
  *   Call this function to remove characters from the beginning
  * (left) of a string.
  *
@@ -795,7 +791,7 @@ plvstr_lstrip (PG_FUNCTION_ARGS)
  *							num_in IN INTEGER := 1)
  *  	RETURN VARCHAR;
  *
- * Purpose:
+ * Purpouse:
  *   Call this function to remove characters from the end
  * (right) of a string.
  *
@@ -851,7 +847,7 @@ plvstr_rstrip (PG_FUNCTION_ARGS)
  *							num_in INTEGER)
  *  	RETURN VARCHAR;
  *
- * Purpose:
+ * Purpouse:
  *   Returns firs num_in charaters. You can use negative num_in
  *   left('abcde', -2) -> abc
  *
@@ -879,7 +875,7 @@ plvstr_left (PG_FUNCTION_ARGS)
  *							num_in INTEGER)
  *  	RETURN VARCHAR;
  *
- * Purpose:
+ * Purpouse:
  *   Returns last (right) num_in characters.
  *
  ****************************************************************/
@@ -904,7 +900,7 @@ plvstr_right (PG_FUNCTION_ARGS)
  *							start INTEGER)
  *  	RETURN VARCHAR;
  *
- * Purpose:
+ * Purpouse:
  *   Returns substring started on start_in to end
  *
  ****************************************************************/
@@ -924,7 +920,7 @@ plvstr_substr2 (PG_FUNCTION_ARGS)
  *							start INTEGER, len INTEGER)
  *  	RETURN VARCHAR;
  *
- * Purpose:
+ * Purpouse:
  *   Returns len chars from start_in position
  *
  ****************************************************************/
@@ -944,7 +940,7 @@ plvstr_substr3 (PG_FUNCTION_ARGS)
  * 					 nth_in IN INTEGER)
  *  	RETURN VARCHAR;
  *
- * Purpose:
+ * Purpouse:
  *   Call this function to return the Nth character in a string.
  *
  ****************************************************************/
@@ -963,7 +959,7 @@ plvchr_nth (PG_FUNCTION_ARGS)
  *   FUNCTION plvchr.first (string_in IN VARCHAR,
  *  	RETURN VARCHAR;
  *
- * Purpose:
+ * Purpouse:
  *   Call this function to return the first character in a string.
  *
  ****************************************************************/
@@ -982,7 +978,7 @@ plvchr_first (PG_FUNCTION_ARGS)
  *   FUNCTION plvchr.last (string_in IN VARCHAR,
  *  	RETURN VARCHAR;
  *
- * Purpose:
+ * Purpouse:
  *   Call this function to return the last character in a string.
  *
  ****************************************************************/
@@ -1002,7 +998,7 @@ plvchr_last (PG_FUNCTION_ARGS)
  *      kind INT)
  *          RETURN VARCHAR;
  *
- * Purpose:
+ * Purpouse:
  *   Call this function to see if a character is blank, ...
  *   1 blank, 2 digit, 3 quote, 4 other, 5 letter
  *
@@ -1027,7 +1023,7 @@ is_kind(char c, int kind)
 		case 5:
 			return ('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z');
 		default:
-			PARAMETER_ERROR("Second parameter isn't in enum {1,2,3,4,5}");
+			PARAMETER_ERROR("Second parametr isn't in enum {1,2,3,4,5}");
 			return false;
 	}
 }
@@ -1067,7 +1063,7 @@ plvchr_is_kind_a (PG_FUNCTION_ARGS)
  *   FUNCTION plvchr.char_name (letter_in IN VARCHAR)
  *   	RETURN VARCHAR;
  *
- * Purpose:
+ * Purpouse:
  *   Returns the name of the character to ascii code as a VARCHAR.
  *
  ****************************************************************/
@@ -1098,7 +1094,7 @@ plvchr_char_name(PG_FUNCTION_ARGS)
  *   FUNCTION substr (string, start_position, [length])
  *   	RETURN VARCHAR;
  *
- * Purpose:
+ * Purpouse:
  *   Returns len chars from start_in position, compatible with Oracle
  *
  ****************************************************************/
@@ -1171,7 +1167,7 @@ ora_concat3(text *str1, text *str2, text *str3)
  *       oldlen_in IN INTEGER := NULL)
  *  RETURN VARCHAR2
  *
- * Purpose:
+ * Purpouse:
  *   Replace a substring in a string with a specified string.
  *
  ****************************************************************/
@@ -1240,7 +1236,7 @@ plvstr_swap(PG_FUNCTION_ARGS)
  *       gotoend IN BOOLEAN := FALSE)
  *      RETURN VARCHAR2;
  *
- * Purpose:
+ * Purpouse:
  *   Call this function to extract a sub-string from a string. This
  * function is overloaded. You can either provide the start and end
  * locations or you can provide start and end substrings.
