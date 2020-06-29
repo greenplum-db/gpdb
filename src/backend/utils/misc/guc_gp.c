@@ -3782,6 +3782,28 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
+		{"gp_dtx_recovery_interval", PGC_SIGHUP, GP_ARRAY_TUNING,
+			gettext_noop("A complete checking in dtx recovery process starts each time a timer with this period expires."),
+			gettext_noop("Used by the dtx recovery process. "),
+			GUC_UNIT_S
+		},
+		&gp_dtx_recovery_interval,
+		60, 5, 3600,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_dtx_recovery_prepared_period", PGC_SIGHUP, GP_ARRAY_TUNING,
+			gettext_noop("Gather prepared transactions before the time (in seconds) to find potential orphaned ones."),
+			gettext_noop("Used by the dtx recovery process. "),
+			GUC_UNIT_S
+		},
+		&gp_dtx_recovery_prepared_period,
+		120, 0, 3600,
+		NULL, NULL, NULL
+	},
+
+	{
 		{"gp_gang_creation_retry_count", PGC_USERSET, GP_ARRAY_TUNING,
 			gettext_noop("After a gang-creation fails, retry the number of times if failure is retryable."),
 			gettext_noop("A value of zero disables retries."),

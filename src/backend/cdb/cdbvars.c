@@ -142,6 +142,18 @@ int gp_fts_mark_mirror_down_grace_period = 30;
 int			gp_fts_replication_attempt_count = 10;
 
 /*
+ * Polling interval for the dtx recovery. Checking in dtx recovery starts every
+ * time this expires.
+ */
+int			gp_dtx_recovery_interval = 60;
+
+/*
+ * Gather prepared transactions that live longer than the time to find possible
+ * orphaned prepared transactions.
+ */
+int			gp_dtx_recovery_prepared_period = 300;
+
+/*
  * When we have certain types of failures during gang creation which indicate
  * that a segment is in recovery mode we may be able to retry.
  */

@@ -97,6 +97,7 @@ extern void getDtxCheckPointInfo(char **result, int *result_size);
 
 extern List *ListAllGxid(void);
 extern int GetPidByGxid(DistributedTransactionId gxid);
+extern bool IsDtxInProgress(DistributedTransactionTimeStamp distribTimeStamp, DistributedTransactionId gxid);
 
 extern void ProcArraySetReplicationSlotXmin(TransactionId xmin,
 							TransactionId catalog_xmin, bool already_locked);

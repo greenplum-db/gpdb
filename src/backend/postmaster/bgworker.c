@@ -501,7 +501,7 @@ SanityCheckBackgroundWorker(BackgroundWorker *worker, int elevel)
 		 * it's unsafe to allow custom workers to accessing database if distributed
 		 * transactions are not recovered yet.
 		 *
-		 * Built-in auxiliary workers like FTS, GDD are fine because we know what
+		 * Built-in auxiliary workers like FTS are fine because we know what
 		 * they do and they can work even dtx are not recovered.
 		 */
 		if (worker->bgw_start_time == BgWorkerStart_DtxRecovering &&

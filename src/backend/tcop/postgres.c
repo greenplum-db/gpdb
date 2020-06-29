@@ -1307,9 +1307,6 @@ exec_mpp_query(const char *query_string,
 		/* Make sure we are in a transaction command */
 		start_xact_command();
 
-		/* If we got a cancel signal in parsing or prior command, quit */
-		CHECK_FOR_INTERRUPTS();
-
 		/*
 		 * OK to analyze, rewrite, and plan this query.
 		 *
@@ -1318,7 +1315,6 @@ exec_mpp_query(const char *query_string,
 		 */
 		oldcontext = MemoryContextSwitchTo(MessageContext);
 
-		/* If we got a cancel signal in analysis or planning, quit */
 		CHECK_FOR_INTERRUPTS();
 
 		/*

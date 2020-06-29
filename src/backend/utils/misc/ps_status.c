@@ -353,7 +353,8 @@ set_ps_display(const char *activity, bool force)
 	Assert(cp >= ps_buffer);
 
 	/* Add client session's global id. */
-	if (gp_session_id > 0 && ep - cp > 0)
+	if (gp_session_id > 0 && ep - cp > 0 &&
+		strstr(ps_buffer, "bgworker") == NULL) /* ugly hack for fts, dtx cleaner */
 		cp += snprintf(cp, ep - cp, "con%d ", gp_session_id);
 
 	/* Which segment is accessed by this qExec? */

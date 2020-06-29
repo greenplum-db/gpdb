@@ -4794,6 +4794,38 @@ ListAllGxid(void)
 }
 
 /*
+ * This function returns true if the gid is an ongoing dtx transaction.
+ */
+bool
+IsDtxInProgress(DistributedTransactionTimeStamp distribTimeStamp, DistributedTransactionId gxid)
+{
+	int i;
+	bool retval;
+	ProcArrayStruct *arrayP = procArray;
+
+	if (*shmDistribTimeStamp != distribTimeStamp)
+		return false;
+
+	retval = false;
+	LWLockAcquire(ProcArrayLock, LW_SHARED);
+
+	for (i = 0; i < arrayP->numProcs; i++)
+	{
+		volatile TMGXACT *gxact = &allTmGxact[arrayP->pgprocnos[i]];
+
+		if (gxact->gxid == gxid)
+		{
+			retval = true;
+			break;
+		}
+	}
+
+	LWLockRelease(ProcArrayLock);
+
+	return retval;
+}
+
+/*
  * This function returns the corresponding process id given by a
  * DistributedTransaction Id.
  */

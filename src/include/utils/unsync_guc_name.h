@@ -157,6 +157,8 @@
 		"gp_debug_pgproc",
 		"gp_debug_resqueue_priority",
 		"gp_distinct_grouping_sets_threshold",
+		"gp_dtx_recovery_interval",
+		"gp_dtx_recovery_prepared_period",
 		"gp_dynamic_partition_pruning",
 		"gp_eager_agg_distinct_pruning",
 		"gp_eager_one_phase_agg",
