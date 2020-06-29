@@ -5637,7 +5637,8 @@ getRecordTimestamp(XLogReaderState *record, TimestampTz *recordXtime)
 		return true;
 	}
 	if (rmid == RM_XACT_ID && (xact_info == XLOG_XACT_COMMIT ||
-							   xact_info == XLOG_XACT_COMMIT_PREPARED))
+							   xact_info == XLOG_XACT_COMMIT_PREPARED ||
+							   xact_info == XLOG_XACT_DISTRIBUTED_COMMIT))
 	{
 		*recordXtime = ((xl_xact_commit *) XLogRecGetData(record))->xact_time;
 		return true;
@@ -5705,7 +5706,8 @@ recoveryStopsBefore(XLogReaderState *record)
 
 	xact_info = XLogRecGetInfo(record) & XLOG_XACT_OPMASK;
 
-	if (xact_info == XLOG_XACT_COMMIT)
+	if (xact_info == XLOG_XACT_COMMIT ||
+		xact_info == XLOG_XACT_DISTRIBUTED_COMMIT)
 	{
 		isCommit = true;
 		recordXid = XLogRecGetXid(record);
@@ -5864,7 +5866,8 @@ recoveryStopsAfter(XLogReaderState *record)
 	if (xact_info == XLOG_XACT_COMMIT ||
 		xact_info == XLOG_XACT_COMMIT_PREPARED ||
 		xact_info == XLOG_XACT_ABORT ||
-		xact_info == XLOG_XACT_ABORT_PREPARED)
+		xact_info == XLOG_XACT_ABORT_PREPARED ||
+		xact_info == XLOG_XACT_DISTRIBUTED_COMMIT)
 	{
 		TransactionId recordXid;
 
@@ -5915,7 +5918,8 @@ recoveryStopsAfter(XLogReaderState *record)
 			recoveryStopName[0] = '\0';
 
 			if (xact_info == XLOG_XACT_COMMIT ||
-				xact_info == XLOG_XACT_COMMIT_PREPARED)
+				xact_info == XLOG_XACT_COMMIT_PREPARED ||
+				xact_info == XLOG_XACT_DISTRIBUTED_COMMIT)
 			{
 				ereport(LOG,
 						(errmsg("recovery stopping after commit of transaction %u, time %s",
@@ -6039,7 +6043,8 @@ recoveryApplyDelay(XLogReaderState *record)
 	xact_info = XLogRecGetInfo(record) & XLOG_XACT_OPMASK;
 
 	if (xact_info != XLOG_XACT_COMMIT &&
-		xact_info != XLOG_XACT_COMMIT_PREPARED)
+		xact_info != XLOG_XACT_COMMIT_PREPARED &&
+		xact_info != XLOG_XACT_DISTRIBUTED_COMMIT)
 		return false;
 
 	if (!getRecordTimestamp(record, &xtime))
