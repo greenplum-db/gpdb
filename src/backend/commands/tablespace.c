@@ -1119,11 +1119,21 @@ remove_symlink:
 	else
 	{
 		link_target_dir[rllen] = '\0';
-		if(directory_is_empty(link_target_dir) && rmdir(link_target_dir) < 0)
-			ereport(redo ? LOG : ERROR,
-				(errcode_for_file_access(),
-					errmsg("could not remove directory \"%s\": %m",
-						link_target_dir)));
+		if (access(link_target_dir, F_OK) != 0)
+		{
+			ereport(redo? LOG : ERROR,
+					(errcode_for_file_access(),
+							errmsg("could not open directory \"%s\": %m",
+								   link_target_dir)));
+		}
+		else
+		{
+			if(directory_is_empty(link_target_dir) && rmdir(link_target_dir) < 0)
+				ereport(redo ? LOG : ERROR,
+						(errcode_for_file_access(),
+								errmsg("could not remove directory \"%s\": %m",
+									   link_target_dir)));
+		}
 	}
 
 
