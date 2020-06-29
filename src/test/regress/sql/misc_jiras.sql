@@ -34,3 +34,6 @@ select sum(cc) from (
 ) tt;
 
 reset work_mem;
+
+-- non-ASCII multibyte character should show up correctly in error messages.
+select '溋' || (B'1');
