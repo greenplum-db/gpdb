@@ -2995,7 +2995,6 @@ void
 WalSndSetState(WalSndState state)
 {
 	WalSnd	   *walsnd = MyWalSnd;
-	FTSReplicationStatus *replication_status = NULL;
 
 	Assert(am_walsender);
 
@@ -3017,38 +3016,8 @@ WalSndSetState(WalSndState state)
 	if (!walsnd->is_for_gp_walreceiver)
 		return;
 
-	LWLockAcquire(FTSReplicationStatusLock, LW_SHARED);
-
-	replication_status = RetrieveFTSReplicationStatus(application_name, false);
-
-	/* replication_status must exist */
-	Assert(replication_status);
-
-	if (state == WALSNDSTATE_CATCHUP || state == WALSNDSTATE_STREAMING)
-	{
-		/*
-		 * We can clear the disconnect time once the connection established.
-		 * We only clean the failure count when the wal start streaming, since
-		 * although the connection established, and start to send wal, but there
-		 * still chance to fail. Since the blocked transaction will get released
-		 * only when wal start sreaming. More details, see SyncRepReleaseWaiters.
-		 */
-		FTSReplicationStatusClearDisconnectTime(replication_status);
-		/* If current replication start streaming, clear the failure attempt count */
-		if (state == WALSNDSTATE_STREAMING)
-			FTSReplicationStatusClearAttempts(replication_status);
-	}
-	else if (FTSReplicationStatusRetrieveDisconnectTime(replication_status) == 0)
-	{
-		/*
-		 * Mark the replication failure if's it the first time set the failure
-		 * WalSndState. Since if the disconnect time is not 0, we already mark
-		 * the replication failure.
-		 */
-		FTSReplicationStatusMarkDisconnect(replication_status);
-	}
-
-	LWLockRelease(FTSReplicationStatusLock);
+	/* Update WAL replication status. */
+	FTSReplicationStatusUpdateForWalState(application_name, state);
 }
 
 /*

@@ -17,8 +17,10 @@
 #include "fmgr.h"
 
 #include "postmaster/fts.h"
+#include "replication/walsender_private.h"
 #include "storage/shmem.h"
 #include "storage/spin.h"
+
 
 /*
  * Each GPDB primary-mirror pair has a FTSReplicationStatus in shared memory.
@@ -30,14 +32,9 @@
  */
 typedef struct FTSReplicationStatus
 {
-	/* The slot's identifier, ie. the replicaton application name */
-	NameData    name;
-
-	/* lock, on same cacheline as effective_xmin */
-	slock_t		mutex;
-
-	/* is this slot defined */
-	bool		in_use;
+	NameData    name;			/* The slot's identifier, ie. the replicaton application name */
+	slock_t		mutex;			/* lock, on same cacheline as effective_xmin */
+	bool		in_use;			/* is this slot defined */
 
 	/*
 	 * For GPDB FTS purpose, if the the primary, mirror replication keeps crash
@@ -72,11 +69,8 @@ extern void FTSReplicationStatusCreateIfNotExist(const char *app_name);
 extern void FTSReplicationStatusDrop(const char* app_name);
 
 extern FTSReplicationStatus *RetrieveFTSReplicationStatus(const char *app_name, bool skip_warn);
-extern void FTSReplicationStatusMarkDisconnect(FTSReplicationStatus *replication_status);
+extern void FTSReplicationStatusUpdateForWalState(const char *app_name, WalSndState state);
 extern void FTSReplicationStatusMarkDisconnectForReplication(const char *app_name);
-extern void FTSReplicationStatusClearAttempts(FTSReplicationStatus *replication_status);
-extern void FTSReplicationStatusClearDisconnectTime(FTSReplicationStatus *replication_status);
-extern pg_time_t FTSReplicationStatusRetrieveDisconnectTime(FTSReplicationStatus *replication_status);
 extern pg_time_t FTSGetReplicationDisconnectTime(const char *app_name);
 
 extern void GetMirrorStatus(FtsResponse *response);

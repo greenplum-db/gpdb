@@ -4,9 +4,18 @@
 -- Primary and mirror both alive, but wal replication crash happens
 -- before start streaming data. And walsender, walreceiver keeps
 -- re-connect continuously, this may block other processes.
--- Mark the mirror down to resolve it.
+-- GPDB will track the continuously failures for the replication.
+-- If the failure times exceed a limitation, FTS will mart the mirror dow
+-- to avoid blocking other queries.
+-- More details please refer to FTSGetReplicationDisconnectTime.
 
 include: helpers/server_helpers.sql;
+
+-- modify fts gucs to speed up the test.
+1: alter system set gp_fts_probe_interval to 10;
+1: alter system set gp_fts_probe_retries to 1;
+1: alter system set gp_fts_replication_attempt_count to 3;
+1: select pg_reload_conf();
 
 SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
 
@@ -40,3 +49,8 @@ select wait_until_all_segments_synchronized();
 SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
 
 drop table mirror_block_t1;
+
+1: alter system reset gp_fts_probe_interval;
+1: alter system reset gp_fts_probe_retries;
+1: alter system reset gp_fts_replication_attempt_count;
+1: select pg_reload_conf();

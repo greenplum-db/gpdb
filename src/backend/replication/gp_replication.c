@@ -17,7 +17,6 @@
 #include "replication/gp_replication.h"
 #include "replication/walreceiver.h"
 #include "replication/walsender.h"
-#include "replication/walsender_private.h"
 #include "storage/lwlock.h"
 #include "utils/builtins.h"
 
@@ -25,23 +24,30 @@
 extern pg_time_t PMAcceptingConnectionsStartTime;
 
 /*
+ * FTSRepStatusCtl is only used for GPDB primary-mirror replication,
+ * so set to a small value for now.
+ */
+uint32 max_replication_status = 1;
+
+/*
  * Control array for replication status management which used in FTS.
  * The reason for not using WalSndCtl to track replication status is
  * the WalSnd is used to track walsender status. And when FTS probe
- * happens, the WalSnd fot a replication may already get freed.
+ * happens, the WalSnd for a replication may already get freed.
  */
 FTSReplicationStatusCtlData *FTSRepStatusCtl = NULL;
+
+static void FTSReplicationStatusClearDisconnectTime(FTSReplicationStatus *replication_status);
+static void FTSReplicationStatusClearAttempts(FTSReplicationStatus *replication_status);
+static uint32 FTSReplicationStatusRetrieveAttempts(FTSReplicationStatus *replication_status);
+static pg_time_t FTSReplicationStatusRetrieveDisconnectTime(FTSReplicationStatus *replication_status);
+static void FTSReplicationStatusMarkDisconnect(FTSReplicationStatus *replication_status);
 
 /* Report shared-memory space needed by FTSReplicationStatusShmemInit */
 Size
 FTSReplicationStatusShmemSize(void)
 {
 	Size		size = 0;
-	/*
-	 * FTSRepStatusCtl is only used for GPDB primary-mirror replication,
-	 * so set to a small value for now.
-	 */
-	uint32 max_replication_status = 1;
 
 	size = offsetof(FTSReplicationStatusCtlData, replications);
 	size = add_size(size, mul_size(max_replication_status, sizeof(FTSReplicationStatus)));
@@ -67,7 +73,7 @@ FTSReplicationStatusShmemInit(void)
 		/* First time through, so initialize */
 		MemSet(FTSRepStatusCtl, 0, FTSReplicationStatusShmemSize());
 
-		for (i = 0; i < max_wal_senders; i++)
+		for (i = 0; i < max_replication_status; i++)
 		{
 			FTSReplicationStatus *slot = &FTSRepStatusCtl->replications[i];
 
@@ -88,7 +94,6 @@ FTSReplicationStatusShmemInit(void)
 void
 FTSReplicationStatusCreateIfNotExist(const char *app_name)
 {
-	int		i;
 	FTSReplicationStatus *replication_status = NULL;
 
 	/* FTSRepStatusCtl should be set already. */
@@ -97,13 +102,13 @@ FTSReplicationStatusCreateIfNotExist(const char *app_name)
 	/* Use FTSReplicationStatusLock to protect concurrent create/drop */
 	LWLockAcquire(FTSReplicationStatusLock, LW_EXCLUSIVE);
 
-	for (i =0; i < max_wal_senders; i++)
+	for (int i = 0; i < max_replication_status; i++)
 	{
 		FTSReplicationStatus *slot = &FTSRepStatusCtl->replications[i];
 
 		if (slot->in_use)
 		{
-			if (strcmp(app_name, NameStr(slot->name)) == 0)
+			if (strncmp(app_name, NameStr(slot->name), NAMEDATALEN) == 0)
 			{
 				/* FTSReplicationStatus for current application already exists */
 				LWLockRelease(FTSReplicationStatusLock);
@@ -134,8 +139,8 @@ FTSReplicationStatusCreateIfNotExist(const char *app_name)
 	ereport(FATAL,
 			(errcode(ERRCODE_TOO_MANY_CONNECTIONS),
 				errmsg("number of requested standby connections "
-					   "exceeds max_wal_senders (currently %d)",
-					   max_wal_senders)));
+					   "exceeds max_replication_status (currently %d)",
+					   max_replication_status)));
 }
 
 /*
@@ -154,7 +159,7 @@ FTSReplicationStatusDrop(const char* app_name)
 
 	/* Use FTSReplicationStatusLock to protect concurrent create/drop */
 	LWLockAcquire(FTSReplicationStatusLock, LW_EXCLUSIVE);
-	for (i =0; i < max_wal_senders; i++)
+	for (i =0; i < max_replication_status; i++)
 	{
 		FTSReplicationStatus *slot = &FTSRepStatusCtl->replications[i];
 
@@ -177,29 +182,27 @@ FTSReplicationStatus *
 RetrieveFTSReplicationStatus(const char *app_name, bool skip_warn)
 {
 	int		i;
-	FTSReplicationStatus *replication_status = NULL;
 
 	/* FTSRepStatusCtl should be set already. */
 	Assert(FTSRepStatusCtl != NULL);
 	Assert(LWLockHeldByMe(FTSReplicationStatusLock));
 
-	for (i =0; i < max_wal_senders; i++)
+	for (i =0; i < max_replication_status; i++)
 	{
 		FTSReplicationStatus *slot = &FTSRepStatusCtl->replications[i];
 
 		if (slot->in_use &&
 			strcmp(app_name, NameStr(slot->name)) == 0)
 		{
-			replication_status = slot;
-			break;
+			return slot;
 		}
 	}
 
-	if (!replication_status && !skip_warn)
+	if (!skip_warn)
 		ereport(WARNING,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
 				 errmsg("FTSReplicationStatus \"%s\" does not exist", app_name)));
-	return replication_status;
+	return NULL;
 }
 
 /*
@@ -210,7 +213,7 @@ RetrieveFTSReplicationStatus(const char *app_name, bool skip_warn)
  *
  * FTSReplicationStatusLock should be held before call this function.
  */
-void
+static void
 FTSReplicationStatusMarkDisconnect(FTSReplicationStatus *replication_status)
 {
 	if (replication_status == NULL)
@@ -224,18 +227,59 @@ FTSReplicationStatusMarkDisconnect(FTSReplicationStatus *replication_status)
 
 	/* Since we need to modify the slot's value, lock the mutex. */
 	SpinLockAcquire(&replication_status->mutex);
-
 	replication_status->con_attempt_count += 1;
 	replication_status->replica_disconnected_at = (pg_time_t) time(NULL);
-
 	SpinLockRelease(&replication_status->mutex);
-
 	elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
 		   "FTSReplicationStatus: Mark replication disconnected. "
 		   "Current attempt count: %d, disconnect at %ld, for application %s",
 		   replication_status->con_attempt_count,
 		   replication_status->replica_disconnected_at,
 		   NameStr(replication_status->name));
+}
+
+/*
+ * FTSReplicationStatusUpdateForWalState - Update replication status for an replication
+ * application and it's WalSndState.
+ *
+ * This function is called under walsender to update replication status.
+ */
+void
+FTSReplicationStatusUpdateForWalState(const char *app_name, WalSndState state)
+{
+	FTSReplicationStatus *replication_status;
+
+	LWLockAcquire(FTSReplicationStatusLock, LW_SHARED);
+
+	replication_status = RetrieveFTSReplicationStatus(app_name, false /*skip_warn*/);
+	/* replication_status must exist */
+	Assert(replication_status);
+
+	if (state == WALSNDSTATE_CATCHUP || state == WALSNDSTATE_STREAMING)
+	{
+		/*
+		 * We can clear the disconnect time once the connection established.
+		 * We only clean the failure count when the wal start streaming, since
+		 * although the connection established, and start to send wal, but there
+		 * still chance to fail. Since the blocked transaction will get released
+		 * only when wal start streaming. More details, see SyncRepReleaseWaiters.
+		 */
+		FTSReplicationStatusClearDisconnectTime(replication_status);
+		/* If current replication start streaming, clear the failure attempt count */
+		if (state == WALSNDSTATE_STREAMING)
+			FTSReplicationStatusClearAttempts(replication_status);
+	}
+	else if (FTSReplicationStatusRetrieveDisconnectTime(replication_status) == 0)
+	{
+		/*
+		 * Mark the replication failure if's it the first time set the failure
+		 * WalSndState. Since if the disconnect time is not 0, we already mark
+		 * the replication failure.
+		 */
+		FTSReplicationStatusMarkDisconnect(replication_status);
+	}
+
+	LWLockRelease(FTSReplicationStatusLock);
 }
 
 /*
@@ -251,7 +295,7 @@ FTSReplicationStatusMarkDisconnectForReplication(const char *app_name)
 
 	LWLockAcquire(FTSReplicationStatusLock, LW_SHARED);
 
-	replication_status = RetrieveFTSReplicationStatus(app_name, false);
+	replication_status = RetrieveFTSReplicationStatus(app_name, false /* skip_warn */);
 
 	/* replication_status must exist  */
 	Assert(replication_status);
@@ -269,7 +313,7 @@ FTSReplicationStatusMarkDisconnectForReplication(const char *app_name)
  *
  * FTSReplicationStatusLock should be held before call this function.
  */
-void
+static void
 FTSReplicationStatusClearAttempts(FTSReplicationStatus *replication_status)
 {
 	if (replication_status == NULL)
@@ -282,11 +326,8 @@ FTSReplicationStatusClearAttempts(FTSReplicationStatus *replication_status)
 
 	/* Since we need to modify the slot's value, lock the mutex. */
 	SpinLockAcquire(&replication_status->mutex);
-
 	replication_status->con_attempt_count = 0;
-
 	SpinLockRelease(&replication_status->mutex);
-
 	elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
 		   "FTSReplicationStatus: Clear replication connection attempts, for application %s",
 		   NameStr(replication_status->name));
@@ -316,9 +357,7 @@ FTSReplicationStatusRetrieveAttempts(FTSReplicationStatus *replication_status)
 
 	/* To prevent partial read, lock the mutex. */
 	SpinLockAcquire(&replication_status->mutex);
-
 	result = replication_status->con_attempt_count;
-
 	SpinLockRelease(&replication_status->mutex);
 
 	return result;
@@ -331,7 +370,7 @@ FTSReplicationStatusRetrieveAttempts(FTSReplicationStatus *replication_status)
  *
  * FTSReplicationStatusLock should be held before call this function.
  */
-void
+static void
 FTSReplicationStatusClearDisconnectTime(FTSReplicationStatus *replication_status)
 {
 	if (replication_status == NULL)
@@ -362,7 +401,7 @@ FTSReplicationStatusClearDisconnectTime(FTSReplicationStatus *replication_status
  *
  * FTSReplicationStatusLock should be held before call this function.
  */
-pg_time_t
+static pg_time_t
 FTSReplicationStatusRetrieveDisconnectTime(FTSReplicationStatus *replication_status)
 {
 	pg_time_t			disconn_time;
@@ -411,7 +450,7 @@ FTSGetReplicationDisconnectTime(const char *app_name)
 	FTSReplicationStatus	   *replication_status = NULL;
 
 	LWLockAcquire(FTSReplicationStatusLock, LW_SHARED);
-	replication_status = RetrieveFTSReplicationStatus(app_name, true);
+	replication_status = RetrieveFTSReplicationStatus(app_name, true /* skip_warn */);
 	if (replication_status)
 	{
 		attempt_replication_times = FTSReplicationStatusRetrieveAttempts(replication_status);
