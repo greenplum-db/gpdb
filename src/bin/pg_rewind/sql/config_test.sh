@@ -109,6 +109,10 @@ function wait_for_promotion {
    exit 1
 }
 
+function standby_checkpoint {
+   PGOPTIONS=${PGOPTIONS_UTILITY} ${STANDBY_PSQL} -c "checkpoint;"
+}
+
 function wait_until_standby_is_promoted {
     wait_for_promotion "${STANDBY_PSQL}"
 }

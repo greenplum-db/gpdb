@@ -115,6 +115,11 @@ fi
 # For a local test, source node need to be stopped as well.
 if [ $TEST_SUITE == "local" ]; then
 	pg_ctl -w -D $TEST_STANDBY stop -m fast >>$log_path 2>&1
+else
+	# Force a checkpoint to update the source timline id in pg_control data,
+	# else pg_rewind will quit without recovery if the timline is is not
+	# updated because it is same as the one on the target.
+	standby_checkpoint >>$log_path 2>&1
 fi
 
 # At this point, the rewind processing is ready to run.
