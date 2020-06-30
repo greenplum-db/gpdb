@@ -11,7 +11,7 @@ GPHOME="${GPHOME_PATH}"
 
 EOF
 
-if [ -x "${PYTHONHOME}/bin/python" ]; then
+if [ -n "${PYTHONHOME}" ] && [ -x "${PYTHONHOME}/bin/python" ]; then
 	cat <<-"EOF"
 	PYTHONHOME="${GPHOME}/ext/python"
 	export PYTHONHOME
