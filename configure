@@ -770,7 +770,6 @@ enable_profiling
 enable_debug
 enable_gpperfmon
 enable_gphdfs
-enable_pxf
 enable_gpfdist
 enable_rpath
 enable_shared
@@ -841,7 +840,6 @@ enable_rpath
 enable_spinlocks
 enable_atomics
 enable_gpfdist
-enable_pxf
 enable_gphdfs
 enable_gpperfmon
 enable_debug
@@ -1524,7 +1522,6 @@ Optional Features:
   --disable-spinlocks     do not use spinlocks
   --disable-atomics       do not use atomic operations
   --disable-gpfdist       do not use gpfdist
-  --enable-pxf            build with pxf
   --enable-gphdfs         build with gphdfs
   --enable-gpperfmon      build with gpperfmon
   --enable-debug          build with debugging symbols (-g)
@@ -3574,35 +3571,6 @@ if test "${enable_gpfdist+set}" = set; then :
 
 else
   enable_gpfdist=yes
-
-fi
-
-
-
-
-#
-# pxf
-#
-
-pgac_args="$pgac_args enable_pxf"
-
-# Check whether --enable-pxf was given.
-if test "${enable_pxf+set}" = set; then :
-  enableval=$enable_pxf;
-  case $enableval in
-    yes)
-      :
-      ;;
-    no)
-      :
-      ;;
-    *)
-      as_fn_error $? "no argument expected for --enable-pxf option" "$LINENO" 5
-      ;;
-  esac
-
-else
-  enable_pxf=yes
 
 fi
 
@@ -7905,7 +7873,7 @@ fi
 
 
 #
-# libcurl. Used for external table support and the PXF extension
+# libcurl. Used for external table support
 #
 
 pgac_args="$pgac_args with_libcurl"
@@ -7933,10 +7901,6 @@ fi
 
 
 
-
-if test "$with_libcurl" = "no" && test "$enable_pxf" = "yes"; then
-  as_fn_error $? "libcurl is required by PXF" "$LINENO" 5
-fi
 
 #
 # libapr. Used for gpfdist and gpperfmon
