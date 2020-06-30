@@ -1,3 +1,9 @@
+include: helpers/server_helpers.sql;
+
+-- table to just store the master's data directory path on segment.
+CREATE TABLE lockmodes_datadir(a int, dir text);
+INSERT INTO lockmodes_datadir select 1,datadir from gp_segment_configuration where role='p' and content=-1;
+
 1: set optimizer = off;
 
 create or replace view show_locks_lockmodes as
@@ -306,10 +312,14 @@ create table t_lockmods_ao1 (c int) with (appendonly=true) distributed randomly;
 1q:
 2q:
 
--- start_ignore
-! gpconfig -c gp_enable_global_deadlock_detector -v on;
-! gpstop -rai;
--- end_ignore
+-- enable gdd
+ALTER SYSTEM SET gp_enable_global_deadlock_detector TO on;
+-- Use utility session on seg 0 to restart master. This way avoids the
+-- situation where session issuing the restart doesn't disappear
+-- itself.
+1U:SELECT pg_ctl(dir, 'restart') from lockmodes_datadir;
+
+1: show gp_enable_global_deadlock_detector;
 
 1: set optimizer = off;
 
@@ -594,10 +604,10 @@ create table t_lockmods_ao1 (c int) with (appendonly=true) distributed randomly;
 1q:
 2q:
 
--- start_ignore
-! gpconfig -c gp_enable_global_deadlock_detector -v off;
-! gpstop -rai;
--- end_ignore
+2: ALTER SYSTEM RESET gp_enable_global_deadlock_detector;
+1U:SELECT pg_ctl(dir, 'restart') from lockmodes_datadir;
 
 1: show gp_enable_global_deadlock_detector;
+
+1: drop table lockmodes_datadir;
 1q:
