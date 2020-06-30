@@ -125,9 +125,6 @@ extern PartitionNode *RelationBuildPartitionDesc(Relation rel,
 extern PartitionNode *RelationBuildPartitionDescByOid(Oid relid,
 												 bool inctemplate);
 
-extern List *
-rel_get_leaf_children_relids(Oid relid);
-
 extern Oid 
 rel_partition_get_root(Oid relid);
 

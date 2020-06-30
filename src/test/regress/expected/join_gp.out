@@ -1536,3 +1536,109 @@ select * from foo where exists (select 1 from bar where foo.a = bar.b);
 reset enable_hashagg;
 drop table foo;
 drop table bar;
+-- Fix github issue 10012
+create table fix_param_a (i int, j int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table fix_param_b (i int UNIQUE, j int);
+create table fix_param_c (i int, j int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into fix_param_a select i, i from generate_series(1,20)i;
+insert into fix_param_b select i, i from generate_series(1,2000)i;
+insert into fix_param_c select i, i from generate_series(1,2000)i;
+analyze fix_param_a;
+analyze fix_param_b;
+analyze fix_param_c;
+explain (costs off)
+select * from fix_param_a left join fix_param_b on
+	fix_param_a.i = fix_param_b.i and fix_param_b.j in
+		(select j from fix_param_c where fix_param_b.i = fix_param_c.i)
+	order by 1;
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: fix_param_a.i
+   ->  Sort
+         Sort Key: fix_param_a.i
+         ->  Hash Right Join
+               Hash Cond: (fix_param_b.i = fix_param_a.i)
+               ->  Hash Semi Join
+                     Hash Cond: ((fix_param_b.i = fix_param_c.i) AND (fix_param_b.j = fix_param_c.j))
+                     ->  Seq Scan on fix_param_b
+                     ->  Hash
+                           ->  Seq Scan on fix_param_c
+               ->  Hash
+                     ->  Seq Scan on fix_param_a
+ Optimizer: Postgres query optimizer
+(14 rows)
+
+select * from fix_param_a left join fix_param_b on
+	fix_param_a.i = fix_param_b.i and fix_param_b.j in
+		(select j from fix_param_c where fix_param_b.i = fix_param_c.i)
+	order by 1;
+ i  | j  | i  | j  
+----+----+----+----
+  1 |  1 |  1 |  1
+  2 |  2 |  2 |  2
+  3 |  3 |  3 |  3
+  4 |  4 |  4 |  4
+  5 |  5 |  5 |  5
+  6 |  6 |  6 |  6
+  7 |  7 |  7 |  7
+  8 |  8 |  8 |  8
+  9 |  9 |  9 |  9
+ 10 | 10 | 10 | 10
+ 11 | 11 | 11 | 11
+ 12 | 12 | 12 | 12
+ 13 | 13 | 13 | 13
+ 14 | 14 | 14 | 14
+ 15 | 15 | 15 | 15
+ 16 | 16 | 16 | 16
+ 17 | 17 | 17 | 17
+ 18 | 18 | 18 | 18
+ 19 | 19 | 19 | 19
+ 20 | 20 | 20 | 20
+(20 rows)
+
+-- Test targetlist contains placeholder var
+-- When creating a redistributed motion with hash keys,
+-- Greenplum planner will invoke `cdbpullup_findEclassInTargetList`.
+-- The following test case contains non-strict function `coalesce`
+-- in the subquery at nullable-side of outerjoin and thus will
+-- have PlaceHolderVar in targetlist. The case is to test if
+-- function `cdbpullup_findEclassInTargetList` handles PlaceHolderVar
+-- correct.
+-- See github issue: https://github.com/greenplum-db/gpdb/issues/10315
+create table t_issue_10315 ( id1 int, id2 int );
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into t_issue_10315 select i,i from generate_series(1, 2)i;
+insert into t_issue_10315 select i,null from generate_series(1, 2)i;
+insert into t_issue_10315 select null,i from generate_series(1, 2)i;
+select *  from
+( select coalesce( bq.id1 ) id1, coalesce ( bq.id2 ) id2
+        from ( select r.id1, r.id2 from t_issue_10315 r group by r.id1, r.id2 ) bq  ) t
+full join ( select r.id1, r.id2 from t_issue_10315 r group by r.id1, r.id2 ) bq_all
+on t.id1 = bq_all.id1  and t.id2 = bq_all.id2
+full join ( select r.id1, r.id2 from t_issue_10315 r group by r.id1, r.id2 ) tq_all
+on (coalesce(t.id1) = tq_all.id1  and t.id2 = tq_all.id2) ;
+ id1 | id2 | id1 | id2 | id1 | id2 
+-----+-----+-----+-----+-----+-----
+   2 |   2 |   2 |   2 |   2 |   2
+   2 |     |     |     |     |    
+     |   1 |     |     |     |    
+     |   2 |     |     |     |    
+     |     |     |   2 |     |    
+     |     |     |   1 |     |    
+     |     |   2 |     |     |    
+     |     |   1 |     |     |    
+     |     |     |     |     |   2
+     |     |     |     |     |   1
+     |     |     |     |   2 |    
+   1 |   1 |   1 |   1 |   1 |   1
+   1 |     |     |     |     |    
+     |     |     |     |   1 |    
+(14 rows)
+
+drop table t_issue_10315;

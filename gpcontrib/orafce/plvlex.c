@@ -3,7 +3,7 @@
   free available library PL/Vision. Please look www.quest.com
 
   Original author: Steven Feuerstein, 1996 - 2002
-  PostgreSQL implementation author: Pavel Stehule, 2006
+  PostgreSQL implementation author: Pavel Stehule, 2006-2018
 
   This module is under BSD Licence
 
@@ -20,7 +20,6 @@
 #include "nodes/pg_list.h"
 #include "utils/date.h"
 #include "utils/builtins.h"
-#include "utils/nabstime.h"
 #include "plvlex.h"
 #include "sqlparse.h"
 #include "funcapi.h"
@@ -184,15 +183,8 @@ filterList(List *list, bool skip_spaces, bool qnames)
 Datum
 plvlex_tokens(PG_FUNCTION_ARGS)
 {
-#ifdef _MSC_VER
-	ereport(ERROR,
-			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-			 errmsg("plvlex.tokens is not available in the built")));
-	PG_RETURN_VOID();
-#else
 	FuncCallContext	   *funcctx;
 	TupleDesc			tupdesc;
-	TupleTableSlot	   *slot;
 	AttInMetadata	   *attinmeta;
 	tokensFctx		   *fctx;
 
@@ -229,7 +221,15 @@ plvlex_tokens(PG_FUNCTION_ARGS)
 		fctx->values  [4] = (char*) palloc (255 * sizeof (char));
 		fctx->values  [5] = (char*) palloc (255 * sizeof (char));
 
-		tupdesc = CreateTemplateTupleDesc (6 , false);
+#if PG_VERSION_NUM >= 120000
+
+		tupdesc = CreateTemplateTupleDesc (6);
+
+#else
+
+		tupdesc = CreateTemplateTupleDesc (6, false);
+
+#endif
 
 		TupleDescInitEntry (tupdesc,  1, "start_pos", INT4OID, -1, 0);
 		TupleDescInitEntry (tupdesc,  2, "token",     TEXTOID, -1, 0);
@@ -237,9 +237,6 @@ plvlex_tokens(PG_FUNCTION_ARGS)
 		TupleDescInitEntry (tupdesc,  4, "class",     TEXTOID, -1, 0);
 		TupleDescInitEntry (tupdesc,  5, "separator", TEXTOID, -1, 0);
 		TupleDescInitEntry (tupdesc,  6, "mod",       TEXTOID, -1, 0);
-
-		slot = TupleDescGetSlot (tupdesc);
-		funcctx -> slot = slot;
 
 		attinmeta = TupleDescGetAttInMetadata (tupdesc);
 		funcctx -> attinmeta = attinmeta;
@@ -281,9 +278,8 @@ plvlex_tokens(PG_FUNCTION_ARGS)
 		if (!nd->modificator)
 			values[5] = NULL;
 
-		tuple = BuildTupleFromCStrings (funcctx -> attinmeta,
-							fctx -> values);
-		result = TupleGetDatum (funcctx -> slot, tuple);
+		tuple = BuildTupleFromCStrings(funcctx->attinmeta, fctx->values);
+		result = HeapTupleGetDatum(tuple);
 
 		values[2] = back_vals[2];
 		values[4] = back_vals[4];
@@ -293,5 +289,4 @@ plvlex_tokens(PG_FUNCTION_ARGS)
 	}
 
 	SRF_RETURN_DONE (funcctx);
-#endif
 }

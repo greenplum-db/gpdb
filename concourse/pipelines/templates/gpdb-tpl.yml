@@ -1177,6 +1177,8 @@ jobs:
         args: [ "./coverage/", "gs://((coverage-bucket-name))/((pipeline-name))/" ]
       params:
         JSON_KEY: ((concourse-gcs-resources-service-account-key))
+      caches:
+        - path: pip-cache-dir
 
 {% for test in CLI_BEHAVE_TESTS %}
 - name: [[ test.name ]]
@@ -1238,6 +1240,8 @@ jobs:
                 args: [ "./ccp-coverage/", "gs://((coverage-bucket-name))/((pipeline-name))/" ]
               params:
                 JSON_KEY: ((concourse-gcs-resources-service-account-key))
+              caches:
+                - path: pip-cache-dir
         {% endif %}
         - do:
           - get: bin_gpdb
@@ -1265,6 +1269,8 @@ jobs:
                 args: [ "./demo-coverage/", "gs://((coverage-bucket-name))/((pipeline-name))/" ]
               params:
                 JSON_KEY: ((concourse-gcs-resources-service-account-key))
+              caches:
+                - path: pip-cache-dir
 
 {% if "ubuntu18.04" in os_types %}
 - name: [[ test.name ]]_ubuntu18
@@ -1495,6 +1501,8 @@ jobs:
           args: [ "gs://((coverage-bucket-name))/((pipeline-name))/", "((coverage-bucket-name))/((pipeline-name))" ]
         params:
           JSON_KEY: ((concourse-gcs-resources-service-account-key))
+        caches:
+          - path: pip-cache-dir
 
 {% if "centos7" in os_types and "ICW" in test_sections %}
 - name: pg_upgrade

@@ -192,6 +192,12 @@ cdbpath_create_motion_path(PlannerInfo *root,
 		if (CdbPathLocus_IsSingleQE(subpath->locus))
 		{
 			/*
+			 * If the subpath requires parameters, we cannot generate Motion atop of it.
+			 */
+			if (!bms_is_empty(PATH_REQ_OUTER(subpath)))
+				return NULL;
+
+			/*
 			 * Create CdbMotionPath node to indicate that the slice must be
 			 * dispatched to a singleton gang running on the entry db.  We
 			 * merely use this node to note that the path has 'Entry' locus;
@@ -233,6 +239,12 @@ cdbpath_create_motion_path(PlannerInfo *root,
 		if (CdbPathLocus_IsSegmentGeneral(subpath->locus) ||
 			CdbPathLocus_IsReplicated(subpath->locus))
 		{
+			/*
+			 * If the subpath requires parameters, we cannot generate Motion atop of it.
+			 */
+			if (!bms_is_empty(PATH_REQ_OUTER(subpath)))
+				return NULL;
+
 			/*
 			 * Data is only available on segments, to distingush it with
 			 * CdbLocusType_General, adding a motion to indicated this
@@ -482,6 +494,12 @@ cdbpath_create_motion_path(PlannerInfo *root,
 
         return (Path *) newSubqueryScanPath;
     }
+
+	/*
+	 * If the subpath requires parameters, we cannot generate Motion atop of it.
+	 */
+	if (!bms_is_empty(PATH_REQ_OUTER(subpath)))
+		return NULL;
 
 	/* Create CdbMotionPath node. */
 	pathnode = makeNode(CdbMotionPath);
@@ -1166,7 +1184,9 @@ add_rowid_to_path(PlannerInfo *root, Path *path, int *rowidexpr_id)
 	newpathtarget = copy_pathtarget(path->pathtarget);
 	add_column_to_pathtarget(newpathtarget, (Expr *) rowidexpr, 0);
 
-	return (Path *) create_projection_path(root, path->parent, path, newpathtarget);
+	return (Path *) create_projection_path_with_quals(root, path->parent,
+													  path, newpathtarget,
+													  NIL, true);
 }
 
 /*

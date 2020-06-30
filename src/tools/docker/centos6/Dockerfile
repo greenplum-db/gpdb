@@ -34,7 +34,7 @@ RUN ssh-keygen -t rsa -N "" -f /root/.ssh/id_rsa && \
 # newer version of gcc and run environment for gpdb
 RUN yum -y install centos-release-scl && \
     yum -y install --nogpgcheck devtoolset-7-gcc devtoolset-7-gcc-c++ && yum clean all && \
-    pip --no-cache-dir install psi lockfile && \
+    pip --no-cache-dir install psi && \
     ln -s /usr/bin/cmake3 /usr/bin/cmake && \
     echo -e 'source /opt/rh/devtoolset-7/enable' >> /opt/gcc_env.sh && \
     echo -e 'source /opt/gcc_env.sh' >> /root/.bashrc && \

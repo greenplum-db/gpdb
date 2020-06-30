@@ -449,3 +449,20 @@ Feature: expand the cluster by adding more segments
         And unset fault inject
         When the user runs gpexpand with a static inputfile for a single-node cluster with mirrors without ret code check
         Then gpexpand should return a return code of 0
+
+    @gpexpand_verify_partition_external_table
+    Scenario: Gpexpand should succeed when partition table contain an external table as child partition
+        Given the database is not running
+        And a working directory of the test as '/data/gpdata/gpexpand'
+        And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
+        And the cluster is generated with "1" primaries only
+		And database "gptest" exists
+		And the user create an external table with name "ext_test" in partition table t
+        And there are no gpexpand_inputfiles
+        And the cluster is setup for an expansion on hosts "localhost"
+        When the user runs gpexpand interview to add 3 new segment and 0 new host "ignored.host"
+        Then the number of segments have been saved
+        When the user runs gpexpand with the latest gpexpand_inputfile with additional parameters "--silent"
+        Then verify that the cluster has 3 new segments
+        When the user runs gpexpand to redistribute
+        Then the numsegments of table "ext_test" is 4

@@ -1,9 +1,7 @@
 #include "postgres.h"
 #include "funcapi.h"
 #include "access/heapam.h"
-#if PG_VERSION_NUM >= 90300
 #include "access/htup_details.h"
-#endif
 #include "catalog/pg_type.h"
 #include "lib/stringinfo.h"
 
@@ -19,7 +17,9 @@
 #include "orafce.h"
 #include "builtins.h"
 
-extern PGDLLIMPORT ProtocolVersion FrontendProtocol;
+#if defined(WIN32) && !defined(_MSC_VER)
+extern PGDLLIMPORT ProtocolVersion FrontendProtocol;	/* for mingw */
+#endif
 
 /*
  * TODO: BUFSIZE_UNLIMITED to be truely unlimited (or INT_MAX),
@@ -104,18 +104,33 @@ send_buffer()
 
 		pq_beginmessage(&msgbuf, 'N');
 
-	if (PG_PROTOCOL_MAJOR(FrontendProtocol) >= 3)
-	{
-		pq_sendbyte(&msgbuf, PG_DIAG_MESSAGE_PRIMARY);
-		pq_sendstring(&msgbuf, buffer);
-		pq_sendbyte(&msgbuf, '\0');
-	}
-	else
-	{
-		*cursor++ = '\n';
-		*cursor = '\0';
-		pq_sendstring(&msgbuf, buffer);
-	}
+		/*
+		 * FrontendProtocol is not avalilable in MSVC because it is not
+		 * PGDLLEXPORT'ed. So, we assume always the protocol >= 3.
+		 */
+
+#ifndef _MSC_VER
+
+		if (PG_PROTOCOL_MAJOR(FrontendProtocol) >= 3)
+		{
+
+#endif
+
+			pq_sendbyte(&msgbuf, PG_DIAG_MESSAGE_PRIMARY);
+			pq_sendstring(&msgbuf, buffer);
+			pq_sendbyte(&msgbuf, '\0');
+
+#ifndef _MSC_VER
+
+		}
+		else
+		{
+			*cursor++ = '\n';
+			*cursor = '\0';
+			pq_sendstring(&msgbuf, buffer);
+		}
+
+#endif
 
 		pq_endmessage(&msgbuf);
 		pq_flush();

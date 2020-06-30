@@ -591,6 +591,101 @@ select cn, sum(qty) from sale group by rollup(cn,vn) having sum(qty)=1144;
     | 1144
 (1 row)
 
+--
+-- Test a query with window function over an aggregate, and a subquery.
+--
+-- Github Issue https://github.com/greenplum-db/gpdb/issues/10143
+create table t1_github_issue_10143(
+  base_ym varchar(6),
+  code varchar(5),
+  name varchar(60)
+);
+create table t2_github_issue_10143(
+  base_ym varchar(6),
+  dong varchar(8),
+  code varchar(6),
+  salary numeric(18)
+);
+insert into t1_github_issue_10143 values ('a', 'acode', 'aname');
+insert into t2_github_issue_10143 values ('a', 'adong', 'acode', 1000);
+insert into t2_github_issue_10143 values ('b', 'bdong', 'bcode', 1100);
+set optimizer_trace_fallback = on;
+explain select (select name from t1_github_issue_10143 where code = a.code limit 1) as dongnm
+,sum(sum(a.salary)) over()
+from t2_github_issue_10143 a
+group by a.code;
+                                                QUERY PLAN                                                
+----------------------------------------------------------------------------------------------------------
+ WindowAgg  (cost=1.02..2002.10 rows=1 width=176)
+   ->  Finalize GroupAggregate  (cost=1.02..1001.06 rows=1 width=38)
+         Group Key: a.code
+         ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=1.02..1001.04 rows=1 width=38)
+               Merge Key: a.code
+               ->  Partial GroupAggregate  (cost=1.02..1.04 rows=1 width=38)
+                     Group Key: a.code
+                     ->  Sort  (cost=1.02..1.02 rows=1 width=11)
+                           Sort Key: a.code
+                           ->  Seq Scan on t2_github_issue_10143 a  (cost=0.00..1.01 rows=1 width=11)
+   SubPlan 1
+     ->  Limit  (cost=0.00..1001.02 rows=1 width=6)
+           ->  Result  (cost=0.00..1001.02 rows=1 width=6)
+                 Filter: ((t1_github_issue_10143.code)::text = (a.code)::text)
+                 ->  Materialize  (cost=0.00..1001.01 rows=1 width=12)
+                       ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1001.01 rows=1 width=12)
+                             ->  Seq Scan on t1_github_issue_10143  (cost=0.00..1.01 rows=1 width=12)
+ Optimizer: Postgres query optimizer
+(18 rows)
+
+select (select name from t1_github_issue_10143 where code = a.code limit 1) as dongnm
+,sum(sum(a.salary)) over()
+from t2_github_issue_10143 a
+group by a.code;
+ dongnm | sum  
+--------+------
+ aname  | 2100
+        | 2100
+(2 rows)
+
+select * from (select sum(a.salary) over(), count(*)
+               from t2_github_issue_10143 a
+               group by a.salary) T;
+ sum  | count 
+------+-------
+ 2100 |     1
+ 2100 |     1
+(2 rows)
+
+-- this query currently falls back, needs to be fixed
+select (select rn from (select row_number() over () as rn, name
+                        from t1_github_issue_10143
+                        where code = a.code
+                        group by name) T
+       ) as dongnm
+,sum(sum(a.salary)) over()
+from t2_github_issue_10143 a
+group by a.code;
+ dongnm | sum  
+--------+------
+      1 | 2100
+        | 2100
+(2 rows)
+
+with cte as (select row_number() over (order by code) as rn1, code
+             from t2_github_issue_10143
+             group by code)
+select row_number() over (order by name) as rn2, name
+from t1_github_issue_10143
+group by name
+union all
+select * from cte;
+ rn2 | name  
+-----+-------
+   1 | aname
+   1 | acode
+   2 | bcode
+(3 rows)
+
+reset optimizer_trace_fallback;
 -- CLEANUP
 -- start_ignore
 drop schema bfv_olap cascade;

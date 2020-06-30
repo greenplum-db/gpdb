@@ -43,7 +43,10 @@ gs_service_key_file = $(pwd)/$keyfile
 EOF
 export BOTO_CONFIG=$(pwd)/boto.cfg
 
-pip install -r ./gpdb_src/gpMgmt/requirements-dev.txt
+# Set PIP Download cache directory
+export PIP_CACHE_DIR="${PWD}/pip-cache-dir"
+
+pip --retries 10 install -r ./gpdb_src/gpMgmt/requirements-dev.txt
 
 # Trim a trailing slash from the source directory if it has one
 SOURCE_DIRECTORY="${1%/}"

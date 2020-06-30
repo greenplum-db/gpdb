@@ -380,3 +380,8 @@ SELECT COUNT(*) FROM tblspc_otherloc_heap;
 
 DROP TABLE tblspc_otherloc_heap;
 DROP TABLESPACE testspace_otherloc;
+CREATE TABLESPACE testspace_dir_empty LOCATION '@testtablespace@';
+CREATE TABLE t_dir_empty(a int);
+\! rm -rf @testtablespace@/*;
+DROP TABLE IF EXISTS t_dir_empty;
+DROP TABLESPACE testspace_dir_empty;

@@ -25,7 +25,8 @@ test: packcore
 # Tests on global deadlock detector
 test: gdd/prepare
 test: gdd/concurrent_update
-test: gdd/dist-deadlock-01 gdd/dist-deadlock-04 gdd/dist-deadlock-05 gdd/dist-deadlock-06 gdd/dist-deadlock-07 gdd/dist-deadlock-102 gdd/dist-deadlock-103 gdd/dist-deadlock-104 gdd/dist-deadlock-106 gdd/dist-deadlock-upsert gdd/non-lock-105
+test: gdd/dist-deadlock-01 gdd/dist-deadlock-04 gdd/dist-deadlock-05 gdd/dist-deadlock-06 gdd/dist-deadlock-07 gdd/dist-deadlock-102 gdd/dist-deadlock-103 gdd/dist-deadlock-104 gdd/dist-deadlock-106 gdd/non-lock-105
+test: gdd/dist-deadlock-upsert
 # until we can improve below flaky case please keep it disabled
 ignore: gdd/non-lock-107
 # keep this in a separate group
@@ -194,8 +195,7 @@ test: segwalrep/twophase_tolerance_with_mirror_promotion
 test: segwalrep/failover_with_many_records
 test: segwalrep/dtm_recovery_on_standby
 test: segwalrep/commit_blocking_on_standby
-# Removed due to test failures during isolation2 refactor. Needs to be re-written to not rely on python exception in isolation2
-# test: segwalrep/dtx_recovery_wait_lsn
+test: segwalrep/dtx_recovery_wait_lsn
 test: pg_basebackup
 test: pg_basebackup_with_tablespaces
 test: fts_manual_probe

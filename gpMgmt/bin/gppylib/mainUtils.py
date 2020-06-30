@@ -16,7 +16,7 @@ extend common functions of our gp utilities.  Please keep this in mind
 and try to avoid placing logic for a specific utility here.
 """
 
-import os, sys, signal, errno, yaml
+import errno, os, sys, shutil, yaml
 
 gProgramName = os.path.split(sys.argv[0])[-1]
 if sys.version_info < (2, 5, 0):
@@ -30,7 +30,6 @@ from gppylib.commands.base import ExecutionError
 from gppylib.system import configurationInterface, configurationImplGpdb, fileSystemInterface, \
     fileSystemImplOs, osInterface, osImplNative, faultProberInterface, faultProberImplGpdb
 from optparse import OptionGroup, OptionParser, SUPPRESS_HELP
-from lockfile.pidlockfile import PIDLockFile, LockTimeout
 
 
 def getProgramName():
@@ -40,6 +39,86 @@ def getProgramName():
     """
     global gProgramName
     return gProgramName
+
+class PIDLockHeld(Exception):
+    def __init__(self, message, path):
+        self.message = message
+        self.path = path
+
+class PIDLockFile:
+    """
+    Create a lock, utilizing the atomic nature of mkdir on Unix
+    Inside of this directory, a file named PID contains exactly the PID, with
+    no newline or space, of the process which created the lock.
+
+    The process which created the lock can release the lock. The lock will
+    be released by the process which created it on object deletion
+    """
+
+    def __init__(self, path):
+        self.path = path
+        self.PIDfile = os.path.join(path, "PID")
+        self.PID = os.getpid()
+
+    def acquire(self):
+        try:
+            os.makedirs(self.path)
+            with open(self.PIDfile, mode='w') as p:
+                p.write(str(self.PID))
+        except EnvironmentError as e:
+            if e.errno == errno.EEXIST:
+                raise PIDLockHeld("PIDLock already held at %s" % self.path, self.path)
+            else:
+                raise
+        except:
+            raise
+
+    def release(self):
+        """
+        If the PIDfile or directory have been removed, the lock no longer
+        exists, so pass
+        """
+        try:
+            # only delete the lock if we created the lock
+            if self.PID == self.read_pid():
+                # remove the dir and PID file inside of it
+                shutil.rmtree(self.path)
+        except EnvironmentError as e:
+            if e.errno == errno.ENOENT:
+                pass
+            else:
+                raise
+        except:
+            raise
+
+    def read_pid(self):
+        """
+        Return the PID of the process owning the lock as an int
+        Return None if there is no lock
+        """
+        owner = ""
+        try:
+            with open(self.PIDfile) as p:
+                owner = int(p.read())
+        except EnvironmentError as e:
+            if e.errno == errno.ENOENT:
+                return None
+            else:
+                raise
+        except:
+            raise
+        return owner
+
+    def __enter__(self):
+        self.acquire()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.release()
+        return None
+
+    def __del__(self):
+        self.release()
 
 
 class SimpleMainLock:
@@ -56,7 +135,7 @@ class SimpleMainLock:
     """
 
     def __init__(self, mainOptions):
-        self.pidfilename = mainOptions.get('pidfilename', None)  # the file we're using for locking
+        self.pidlockpath = mainOptions.get('pidlockpath', None)  # the directory we're using for locking
         self.parentpidvar = mainOptions.get('parentpidvar', None)  # environment variable holding parent pid
         self.parentpid = None  # parent pid which already has the lock
         self.ppath = None  # complete path to the lock file
@@ -67,8 +146,8 @@ class SimpleMainLock:
         if self.parentpidvar is not None and self.parentpidvar in os.environ:
             self.parentpid = int(os.environ[self.parentpidvar])
 
-        if self.pidfilename is not None:
-            self.ppath = os.path.join(gp.get_masterdatadir(), self.pidfilename)
+        if self.pidlockpath is not None:
+            self.ppath = os.path.join(gp.get_masterdatadir(), self.pidlockpath)
             self.pidlockfile = PIDLockFile(self.ppath)
 
     def acquire(self):
@@ -91,19 +170,11 @@ class SimpleMainLock:
             if self.pidfilepid == self.parentpid:
                 return None
 
-            # cleanup stale locks
-            try:
-                os.kill(self.pidfilepid, signal.SIG_DFL)
-            except OSError, exc:
-                if exc.errno == errno.ESRCH:
-                    self.pidlockfile.break_lock()
-                    self.pidfilepid = None
-
         # try and acquire the lock
         try:
-            self.pidlockfile.acquire(1)
+            self.pidlockfile.acquire()
 
-        except LockTimeout:
+        except PIDLockHeld:
             self.pidfilepid = self.pidlockfile.read_pid()
             return self.pidfilepid
 
@@ -180,7 +251,7 @@ def simple_main(createOptionParserFn, createCommandFn, mainOptions=None):
                               suppressStartupLogMessage (map to bool)
                               useHelperToolLogging (map to bool)
                               setNonuserOnToolLogger (map to bool, defaults to false)
-                              pidfilename (string)
+                              pidlockpath (string)
                               parentpidvar (string)
 
     """
@@ -189,18 +260,19 @@ def simple_main(createOptionParserFn, createCommandFn, mainOptions=None):
 
 def simple_main_internal(createOptionParserFn, createCommandFn, mainOptions):
     """
-    If caller specifies 'pidfilename' in mainOptions then we manage the
+    If caller specifies 'pidlockpath' in mainOptions then we manage the
     specified pid file within the MASTER_DATA_DIRECTORY before proceeding
     to execute the specified program and we clean up the pid file when
     we're done.
     """
     sml = None
-    if mainOptions is not None and 'pidfilename' in mainOptions:
+    if mainOptions is not None and 'pidlockpath' in mainOptions:
         sml = SimpleMainLock(mainOptions)
         otherpid = sml.acquire()
         if otherpid is not None:
             logger = gplog.get_default_logger()
-            logger.error("An instance of %s is already running (pid %s)" % (getProgramName(), otherpid))
+            logger.error("Lockfile %s indicates that an instance of %s is already running with PID %s" % (sml.ppath, getProgramName(), otherpid))
+            logger.error("If this is not the case, remove the lockfile directory at %s" % (sml.ppath))
             return
 
     # at this point we have whatever lock we require

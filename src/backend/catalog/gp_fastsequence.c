@@ -296,6 +296,68 @@ int64 GetFastSequences(Oid objid, int64 objmod,
 	return firstSequence;
 }
 
+
+/*
+ * ReadLastSequence
+ *
+ * Read the last_sequence attribute from gp_fastsequence by obiid and objmod.
+ * If there is not such an entry for objid in the table, return 0.
+ */
+int64 ReadLastSequence(Oid objid, int64 objmod)
+{
+	Relation gp_fastsequence_rel;
+	ScanKeyData scankey[2];
+	SysScanDesc scan;
+	TupleDesc tupleDesc;
+	HeapTuple tuple;
+	int64 lastSequence;
+
+	gp_fastsequence_rel = heap_open(FastSequenceRelationId, AccessShareLock);
+	tupleDesc = RelationGetDescr(gp_fastsequence_rel);
+
+	/*
+	 * SELECT * FROM gp_fastsequence
+	 * WHERE objid = :1 AND objmod = :2
+	 */
+	ScanKeyInit(&scankey[0],
+				Anum_gp_fastsequence_objid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(objid));
+	ScanKeyInit(&scankey[1],
+				Anum_gp_fastsequence_objmod,
+				BTEqualStrategyNumber, F_INT8EQ,
+				Int64GetDatum(objmod));
+	scan = systable_beginscan(gp_fastsequence_rel, FastSequenceObjidObjmodIndexId, true,
+							  NULL, 2, scankey);
+
+	tuple = systable_getnext(scan);
+
+	if (!HeapTupleIsValid(tuple))
+	{
+		lastSequence = 0;
+	}
+	else
+	{
+		bool isNull;
+
+		lastSequence = heap_getattr(tuple, Anum_gp_fastsequence_last_sequence,
+									tupleDesc, &isNull);
+
+		if (isNull)
+			ereport(ERROR,
+					(errcode(ERRCODE_UNDEFINED_OBJECT),
+							errmsg("got an invalid lastsequence number: NULL")));
+	}
+
+	systable_endscan(scan);
+
+	/* Refer to the comment at the end of InsertFastSequenceEntry. */
+	heap_close(gp_fastsequence_rel, AccessShareLock);
+
+	return lastSequence;
+}
+
+
 /*
  * RemoveFastSequenceEntry
  *

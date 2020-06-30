@@ -7885,10 +7885,15 @@ get_rule_expr(Node *node, deparse_context *context,
 						if (IsA(arg, DistinctExpr))
 						{
 							DistinctExpr 	*dexpr = (DistinctExpr *) arg;
-							Node			*rhs;
+							Node			*lhs = (Node *) linitial(dexpr->args);
+							Node			*rhs = (Node *) lsecond(dexpr->args);
 
+							if (!IsA(lhs, CaseTestExpr))
+							{
+								get_rule_expr(lhs, context, false);
+								appendStringInfoChar(buf, ' ');
+							}
 							appendStringInfoString(buf, "IS NOT DISTINCT FROM ");
-							rhs = (Node *) lsecond(dexpr->args);
 							get_rule_expr(rhs, context, false);
 						}
 						else

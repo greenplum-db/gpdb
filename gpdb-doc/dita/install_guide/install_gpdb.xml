@@ -45,8 +45,8 @@
         Database.</p>
       <p>Follow these instructions to install Greenplum Database<ph otherprops="oss-only"> from a
           pre-built binary</ph>.</p>
-      <note type="important">You will need sudo or root user access to install from a pre-built
-        binary. </note>
+      <note type="important">You require sudo or root user access to install from a pre-built RPM or
+        DEB file. </note>
       <ol id="ol_mm5_v1n_1jb">
         <li>Download and copy the Greenplum Database package to the <codeph>gpadmin</codeph> user's
           home directory on the master, standby master, and every segment host machine. The
@@ -61,14 +61,56 @@
               <codeblock>$ sudo yum install ./greenplum-db-&lt;version>-&lt;platform>.rpm</codeblock></li>
             <li>For Ubuntu systems, execute the <codeph>apt</codeph>
               command:<codeblock>$ sudo apt install ./greenplum-db-&lt;version>-&lt;platform>.deb</codeblock></li>
-          </ul><p>The <codeph>yum</codeph> or <codeph>apt</codeph> command installs software
-            dependencies, copies the Greenplum Database software files into a version-specific
-            directory, <codeph>/usr/local/greenplum-db-&lt;version></codeph>, and creates the
-            symbolic link <codeph>/usr/local/greenplum-db</codeph> to the installation
-            directory.</p></li>
+          </ul><p>The <codeph>yum</codeph> or <codeph>apt</codeph> command automatically installs
+            software dependencies, copies the Greenplum Database software files into a
+            version-specific directory under <codeph>/usr/local</codeph>,
+              <codeph>/usr/local/greenplum-db-&lt;version></codeph>, and creates the symbolic link
+              <codeph>/usr/local/greenplum-db</codeph> to the installation directory.</p></li>
         <li>Change the owner and group of the installed files to
-          <codeph>gpadmin</codeph>:<codeblock>$ sudo chown -R gpadmin:gpadmin /usr/local/greenplum*</codeblock></li>
+          <codeph>gpadmin</codeph>:<codeblock>$ sudo chown -R gpadmin:gpadmin /usr/local/greenplum*
+$ sudo chgrp -R gpadmin /usr/local/greenplum*</codeblock></li>
       </ol>
+    </body>
+  </topic>
+  <topic id="topic_dj4_ssr_cmb">
+    <title>(Optional) Installing to a Non-Default Directory</title>
+    <body>
+      <p>On RHEL/CentOS systems, you can use the <codeph>rpm</codeph> command with the
+          <codeph>--prefix</codeph> option to install Greenplum Database to a non-default directory
+        (instead of under <codeph>/usr/local</codeph>). Note, however, that using
+          <codeph>rpm</codeph> does not automatically install Greenplum Database dependencies; you
+        must manually install dependencies to each host system. </p>
+      <p>Follow these instructions to install Greenplum Database to a specific directory.</p>
+      <note type="important">You require sudo or root user access to install from a pre-built RPM
+        file. </note>
+      <ol id="ol_ic2_htr_cmb">
+        <li>Download and copy the Greenplum Database package to the <codeph>gpadmin</codeph> user's
+          home directory on the master, standby master, and every segment host machine. The
+          distribution file name has the format
+            <codeph>greenplum-db-&lt;version>-&lt;platform>.rpm</codeph> for RHEL and CentOS
+          systems, or <codeph>greenplum-db-&lt;version>-&lt;platform>.deb</codeph> for Ubuntu
+          systems, where <codeph>&lt;platform></codeph> is similar to <codeph>rhel7-x86_64</codeph>
+          (Red Hat 7 64-bit).</li>
+        <li>Manually install the Greenplum Database dependencies to each host
+          system:<codeblock>$ sudo yum install apr apr-util bash bzip2 curl krb5 libcurl libevent \
+libxml2 libyaml zlib openldap openssh openssl openssl-libs perl readline rsync R sed tar zip</codeblock>
+        </li>
+        <li>Use <codeph>rpm</codeph> with the <codeph>--prefix</codeph> option to install the
+          Greenplum Database package to your chosen installation directory on each host machine:
+            <codeblock>$ sudo rpm --install ./greenplum-db-&lt;version>-&lt;platform>.rpm --prefix=&lt;directory></codeblock><p>The
+              <codeph>rpm</codeph> command copies the Greenplum Database software files into a
+            version-specific directory under your chosen <codeph>&lt;directory></codeph>,
+              <codeph>&lt;directory>/greenplum-db-&lt;version></codeph>, and creates the symbolic
+            link <codeph>&lt;directory>/greenplum-db</codeph> to the versioned directory.</p></li>
+        <li>Change the owner and group of the installed files to
+          <codeph>gpadmin</codeph>:<codeblock>$ sudo chown -R gpadmin:gpadmin &lt;directory>/greenplum*</codeblock></li>
+      </ol>
+      <note>All example procedures in the Greenplum Database documentation assume that you installed
+        to the default directory, <codeph>/usr/local</codeph>. If you install to a non-default
+        directory, substitute that directory for <codeph>/usr/local</codeph>.<p>If you install to a
+          non-default directory using <codeph>rpm</codeph>, you will need to continue using
+            <codeph>rpm</codeph> (and of <codeph>yum</codeph>) to perform minor version upgrades;
+          these changes are covered in the upgrade documentation.</p></note>
     </body>
   </topic>
   <topic id="topic_xmb_gb5_vhb">

@@ -11,5 +11,7 @@ params:
   BEHAVE_FLAGS: ""
   BLDWRAP_POSTGRES_CONF_ADDONS: ""
   TEST_NAME: ""
+caches:
+  - path: pip-cache-dir
 run:
   path: gpdb_src/concourse/scripts/behave_gpdb.bash

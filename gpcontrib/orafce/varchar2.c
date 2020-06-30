@@ -8,7 +8,6 @@
 
 #include "postgres.h"
 #include "access/hash.h"
-#include "access/tuptoaster.h"
 #include "libpq/pqformat.h"
 #include "nodes/nodeFuncs.h"
 #include "utils/array.h"
@@ -23,6 +22,11 @@ PG_FUNCTION_INFO_V1(varchar2in);
 PG_FUNCTION_INFO_V1(varchar2out);
 PG_FUNCTION_INFO_V1(varchar2);
 PG_FUNCTION_INFO_V1(varchar2recv);
+PG_FUNCTION_INFO_V1(orafce_concat2);
+PG_FUNCTION_INFO_V1(orafce_varchar_transform);
+
+bool orafce_varchar2_null_safe_concat = false;
+
 
 /*
  * varchar2_input -- common guts of varchar2in and varchar2recv
@@ -48,12 +52,11 @@ varchar2_input(const char *s, size_t len, int32 atttypmod)
 	 * Perform the typmod check; error out if value too long for VARCHAR2
 	 */
 	if (atttypmod >= (int32) VARHDRSZ && len > maxlen)
-		if (len > maxlen)
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						errmsg("input value length is %zd; too long for type varchar2(%zd)", len , maxlen)));
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					errmsg("input value length is %zd; too long for type varchar2(%zd)", len , maxlen)));
 
-	result = (VarChar *) cstring_to_text_with_len(s, len);
+	result = (VarChar *) cstring_to_text_with_len(s, size2int(len));
 	return  result;
 }
 
@@ -128,6 +131,21 @@ varchar2recv(PG_FUNCTION_ARGS)
  * just use varchar_transform()
  */
 
+Datum
+orafce_varchar_transform(PG_FUNCTION_ARGS)
+{
+#if PG_VERSION_NUM < 120000
+
+	return varchar_transform(fcinfo);
+
+#else
+
+	return varchar_support(fcinfo);
+
+#endif
+}
+
+
 /*
  * Converts a VARCHAR2 type to the specified size.
  *
@@ -179,3 +197,59 @@ varchar2(PG_FUNCTION_ARGS)
  *
  * just use varchartypmodout()
  */
+
+
+/*
+ * orafce_concat2 - null safe concat
+ *
+ * returns NULL instead empty string
+ */
+Datum
+orafce_concat2(PG_FUNCTION_ARGS)
+{
+	text	   *arg1 = NULL,
+			   *arg2 = NULL,
+			   *result;
+	int32		len1 = 0,
+				len2 = 0,
+				len;
+	char	   *ptr;
+
+	if (!PG_ARGISNULL(0))
+	{
+		arg1 = PG_GETARG_TEXT_PP(0);
+		len1 = VARSIZE_ANY_EXHDR(arg1);
+	}
+	if (!PG_ARGISNULL(1))
+	{
+		arg2 = PG_GETARG_TEXT_PP(1);
+		len2 = VARSIZE_ANY_EXHDR(arg2);
+	}
+
+	/* default behave should be compatible with Postgres */
+	if (!orafce_varchar2_null_safe_concat)
+	{
+		if (PG_ARGISNULL(0) || PG_ARGISNULL(1))
+			PG_RETURN_NULL();
+	}
+	else
+	{
+		if (len1 == 0 && len2 == 0)
+			PG_RETURN_NULL();
+	}
+
+	/* hard work, we should to concat strings */
+	len = len1 + len2 + VARHDRSZ;
+
+	result = (text *) palloc(len);
+	SET_VARSIZE(result, len);
+
+	ptr = VARDATA(result);
+
+	if (len1 > 0)
+		memcpy(ptr, VARDATA_ANY(arg1), len1);
+	if (len2 > 0)
+		memcpy(ptr + len1, VARDATA_ANY(arg2), len2);
+
+	PG_RETURN_TEXT_P(result);
+}

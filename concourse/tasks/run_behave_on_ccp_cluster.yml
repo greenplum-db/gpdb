@@ -5,6 +5,8 @@ inputs:
  - name: cluster_env_files
 outputs:
  - name: coverage
+caches:
+  - path: pip-cache-dir
 run:
   path: bash
   args:
@@ -76,6 +78,9 @@ run:
         if [ -d \$MASTER_DATA_DIRECTORY ]; then gpstart -a; fi
     "
 
+    while read -r host; do
+        scp -qr "pip-cache-dir" $host:pip-cache-dir
+    done < cluster_env_files/hostfile_all
 
     ssh -t mdw "
         source /home/gpadmin/gpdb_src/concourse/scripts/common.bash
@@ -87,6 +92,12 @@ run:
 
         $CUSTOM_ENV bash /home/gpadmin/gpdb_src/concourse/scripts/run_behave_test.sh \"$BEHAVE_FLAGS\"
     "
+
+    # Refresh the Concourse container cache with the updated contents
+    # from the CCP mdw node.
+
+    rm -rf "pip-cache-dir/http"
+    scp -qr mdw:pip-cache-dir/http "pip-cache-dir"
 
     # collect coverage
     while read -r host; do

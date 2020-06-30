@@ -252,6 +252,9 @@ FROM generate_series(1, 10000) AS i;
 
 CREATE INDEX ON ao_table (id);
 
+BEGIN;
+CLUSTER ao_table USING ao_table_id_idx;
+ABORT;
 CLUSTER ao_table USING ao_table_id_idx;
 
 SELECT * FROM ao_table WHERE id = 10;
@@ -277,6 +280,9 @@ FROM generate_series(1, 10000) AS i;
 
 CREATE INDEX ON ao_table (id);
 
+BEGIN;
+CLUSTER ao_table USING ao_table_id_idx;
+ABORT;
 CLUSTER ao_table USING ao_table_id_idx;
 
 SELECT * FROM ao_table WHERE id = 10;
@@ -290,3 +296,15 @@ DROP TABLE clstr_2;
 DROP TABLE clstr_3;
 DROP TABLE clstr_4;
 DROP USER regress_clstr_user;
+
+-- Test transactional safety of CLUSTER against heap
+CREATE TABLE foo (a int, b varchar, c int) DISTRIBUTED BY (a);
+INSERT INTO foo SELECT i, 'initial insert' || i, i FROM generate_series(1,10000)i;
+CREATE index ifoo on foo using btree (b);
+-- execute cluster in a transaction but don't commit the transaction
+BEGIN;
+CLUSTER foo USING ifoo;
+ABORT;
+-- try cluster again
+CLUSTER foo USING ifoo;
+DROP TABLE foo;

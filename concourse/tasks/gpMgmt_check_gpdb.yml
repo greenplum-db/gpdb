@@ -10,3 +10,5 @@ params:
   TEST_OS: ""
 run:
   path: gpdb_src/concourse/scripts/gpMgmt_check_gpdb.bash
+caches:
+  - path: pip-cache-dir

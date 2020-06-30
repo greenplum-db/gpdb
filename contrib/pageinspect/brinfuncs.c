@@ -30,6 +30,7 @@ PG_FUNCTION_INFO_V1(brin_page_type);
 PG_FUNCTION_INFO_V1(brin_page_items);
 PG_FUNCTION_INFO_V1(brin_metapage_info);
 PG_FUNCTION_INFO_V1(brin_revmap_data);
+PG_FUNCTION_INFO_V1(brin_upper_data);
 
 typedef struct brin_column_state
 {
@@ -73,6 +74,9 @@ brin_page_type(PG_FUNCTION_ARGS)
 			break;
 		case BRIN_PAGETYPE_REGULAR:
 			type = "regular";
+			break;
+		case BRIN_PAGETYPE_UPPER:
+			type = "upper";
 			break;
 		default:
 			type = psprintf("unknown (%02x)", BrinPageType(page));
@@ -407,3 +411,63 @@ brin_revmap_data(PG_FUNCTION_ARGS)
 
 	SRF_RETURN_DONE(fctx);
 }
+
+
+/*
+ * Return the BlockNumber array stored in a BRIN upper page
+ */
+Datum
+brin_upper_data(PG_FUNCTION_ARGS)
+{
+	struct
+	{
+		BlockNumber *blks;
+		int			idx;
+	}		   *state;
+	FuncCallContext *fctx;
+	ItemPointerData *tid;
+
+	if (!superuser())
+		ereport(ERROR,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+						(errmsg("must be superuser to use raw page functions"))));
+
+	if (SRF_IS_FIRSTCALL())
+	{
+		bytea	   *raw_page = PG_GETARG_BYTEA_P(0);
+		MemoryContext mctx;
+		Page		page;
+
+		/* minimally verify the page we got */
+		page = verify_brin_page(raw_page, BRIN_PAGETYPE_UPPER, "upper");
+
+		/* create a function context for cross-call persistence */
+		fctx = SRF_FIRSTCALL_INIT();
+
+		/* switch to memory context appropriate for multiple function calls */
+		mctx = MemoryContextSwitchTo(fctx->multi_call_memory_ctx);
+
+		state = palloc(sizeof(*state));
+		state->blks = ((RevmapUpperBlockContents *) PageGetContents(page))->rm_blocks;
+		state->idx = 0;
+
+		fctx->user_fctx = state;
+
+		MemoryContextSwitchTo(mctx);
+	}
+
+	fctx = SRF_PERCALL_SETUP();
+	state = fctx->user_fctx;
+
+
+	if (state->idx < REVMAP_UPPER_PAGE_MAXITEMS)
+	{
+		tid = (ItemPointerData*) palloc(sizeof(ItemPointerData));
+		ItemPointerSetBlockNumber(tid, (BlockNumber) state->blks[state->idx++]);
+		ItemPointerSetOffsetNumber(tid, (OffsetNumber) 0);
+		SRF_RETURN_NEXT(fctx, PointerGetDatum(tid));
+	}
+
+	SRF_RETURN_DONE(fctx);
+}
+

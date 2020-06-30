@@ -27,7 +27,10 @@ read -r COMMIT_SHA < gpdb_src/.git/HEAD
 source ./gpdb_src/concourse/scripts/common.bash
 time install_gpdb
 
-pip install -r ./gpdb_src/gpMgmt/requirements-dev.txt
+# Set PIP Download cache directory
+export PIP_CACHE_DIR=${PWD}/pip-cache-dir
+
+pip --retries 10 install -r ./gpdb_src/gpMgmt/requirements-dev.txt
 
 # Save the JSON_KEY to a file, for later use by gsutil.
 keyfile=secret-key.json
@@ -83,7 +86,6 @@ omit =
     */python/pygresql/*
     */python/subprocess32.py
     */python/yaml/*
-    */python/lockfile/*
     */gppkg_migrate/*
     */bin/pythonSrc/ext/*
 EOF

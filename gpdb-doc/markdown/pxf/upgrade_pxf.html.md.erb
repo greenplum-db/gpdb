@@ -1,8 +1,8 @@
 ---
-title: Upgrading PXF
+title: Upgrading PXF When you Upgrade Greenplum 5
 ---
 
-If you are using PXF in your current Greenplum Database installation, you must upgrade the PXF service when you upgrade to a new version of Greenplum Database.
+If you are using PXF in your current Greenplum Database 5.x installation, you must perform some PXF upgrade actions when you upgrade to a new version of Greenplum Database 5.x.
 
 The PXF upgrade procedure describes how to upgrade PXF in your Greenplum Database installation. This procedure uses *PXF.from* to refer to your currently-installed PXF version and *PXF.to* to refer to the PXF version installed when you upgrade to the new version of Greenplum Database.
 
@@ -27,7 +27,13 @@ Perform this procedure before you upgrade to a new version of Greenplum Database
     $ ssh gpadmin@<gpmaster>
     ```
 
-3. Stop PXF on each segment host as described in [Stopping PXF](cfginitstart_pxf.html#stop_pxf).
+2. Identify and note the *PXF.from* version number. For example:
+
+    ``` shell
+    gpadmin@gpmaster$ pxf version
+    ```
+
+3. Stop PXF on each segment host as described in [Stopping PXF](../../pxf/5-13/cfginitstart_pxf.html#stop_pxf).
 
 4. **If you are upgrading from Greenplum Database version 5.14 or earlier**:
 
@@ -53,9 +59,21 @@ After you upgrade to the new version of Greenplum Database, perform the followin
     $ ssh gpadmin@<gpmaster>
     ```
 
-2. Initialize PXF on each segment host as described in [Initializing PXF](init_pxf.html).
+2. If you installed the PXF `rpm` on your Greenplum 6 hosts:
 
-3. PXF user impersonation is on by default in Greenplum Database version 5.5.0 and later. If you are upgrading from an older *PXF.from* version, you must configure user impersonation for the underlying Hadoop services. Refer to [Configuring User Impersonation and Proxying](pxfuserimpers.html) for instructions, including the configuration procedure to turn off PXF user impersonation.
+    1. Copy the PXF extension files from the PXF installation directory to the new Greenplum 6 install directory:
+
+        ``` shell
+        gpadmin@gpmaster pxf cluster register
+        ```
+
+    2. Start PXF on each segment host as described in [Starting PXF](../../pxf/5-13/cfginitstart_pxf.html#start_pxf).
+
+    3. Exit this procedure.
+
+2. Initialize PXF on each segment host as described in [Initializing PXF](../../pxf/5-13/init_pxf.html).
+
+3. PXF user impersonation is on by default in Greenplum Database version 5.5.0 and later. If you are upgrading from an older *PXF.from* version, you must configure user impersonation for the underlying Hadoop services. Refer to [Configuring User Impersonation and Proxying](../../pxf/5-13/pxfuserimpers.html) for instructions, including the configuration procedure to turn off PXF user impersonation.
 
 4. **If you are upgrading from Greenplum Database version 5.14 or earlier**:
 
@@ -78,13 +96,50 @@ After you upgrade to the new version of Greenplum Database, perform the followin
 
     1. PXF now bundles Hadoop version 2.9.2 dependent JAR files. If you registered additional Hadoop-related JAR files in `$PXF_CONF/lib`, ensure that these libraries are compatible with Hadoop version 2.9.2.
 
-    2. The PXF JDBC connector now supports file-based server configuration. If you choose to utilize this new feature with existing external tables that reference an external SQL database, refer to the configuration instructions in [Configuring the JDBC Connector](jdbc_cfg.html) for additional information.
+    2. The PXF JDBC connector now supports file-based server configuration. If you choose to utilize this new feature with existing external tables that reference an external SQL database, refer to the configuration instructions in [Configuring the JDBC Connector](../../pxf/5-13/jdbc_cfg.html) for additional information.
 
-    2. The PXF JDBC connector now supports statement query timeouts. This feature requires explicit support from the JDBC driver. The default query timeout is `0`, wait forever. Some JDBC drivers support a `0` timeout value without fully supporting the statement query timeout feature. Ensure that any JDBC driver that you have registered supports the default timeout, or better yet, fully supports this feature. You may need to update your JDBC driver version to obtain this support. Refer to the configuration instructions in [JDBC Driver JAR Registration](jdbc_cfg.html#cfg_jar) for information about registering JAR files with PXF.
+    2. The PXF JDBC connector now supports statement query timeouts. This feature requires explicit support from the JDBC driver. The default query timeout is `0`, wait forever. Some JDBC drivers support a `0` timeout value without fully supporting the statement query timeout feature. Ensure that any JDBC driver that you have registered supports the default timeout, or better yet, fully supports this feature. You may need to update your JDBC driver version to obtain this support. Refer to the configuration instructions in [JDBC Driver JAR Registration](../../pxf/5-13/jdbc_cfg.html#cfg_jar) for information about registering JAR files with PXF.
 
-    3. If you plan to use Hive partition filtering with integral types, you must set the `hive.metastore.integral.jdo.pushdown` Hive property in your Hadoop cluster's `hive-site.xml` and in your PXF user configuration `$PXF_CONF/servers/default/hive-site.xml` file. See [Updating Hadoop Configuration](client_instcfg.html#client-cfg-update).
+    3. If you plan to use Hive partition filtering with integral types, you must set the `hive.metastore.integral.jdo.pushdown` Hive property in your Hadoop cluster's `hive-site.xml` and in your PXF user configuration `$PXF_CONF/servers/default/hive-site.xml` file. See [Updating Hadoop Configuration](../../pxf/5-13/client_instcfg.html#client-cfg-update).
 
 5. **If you are upgrading from Greenplum Database version 5.21.1 or earlier**: The PXF Hive connector no longer supports providing a `DELIMITER=<delim>` option in the `LOCATION` URI when you create an external table that specifies the `HiveText` or `HiveRC` profiles. If you have previously created an external table that specified a `DELIMITER` in the `LOCATION` URI, you must drop the table, and recreate it omitting the `DELIMITER` from the `LOCATION`. You are still required to provide a non-default delimiter in the external table formatting options.
+
+5. **If you are upgrading from Greenplum Database version 5.23 or earlier** and you have configured any JDBC servers that access Kerberos-secured Hive, you must now set the `hadoop.security.authentication` property in the `jdbc-site.xml` file to explicitly identify use of the Kerberos authentication method. Perform the following for each of these server configs:
+
+    1. Navigate to the server configuration directory.
+    2. Open the `jdbc-site.xml` file in the editor of your choice and uncomment or add the following property block to the file:
+
+        ```xml
+        <property>
+            <name>hadoop.security.authentication</name>
+            <value>kerberos</value>
+        </property>
+        ```
+    3. Save the file and exit the editor.
+
+
+5. **If you are upgrading from Greenplum Database version 5.26 or earlier**: The PXF `Hive` and `HiveRC` profiles now support column projection using column name-based mapping. If you have any existing PXF external tables that specify one of these profiles, and the external table relied on column index-based mapping, you may be required to drop and recreate the tables:
+
+    1. Identify all PXF external tables that you created that specify a `Hive` or `HiveRC` profile.
+
+    2. For *each* external table that you identify in step 1, examine the definitions of both the PXF external table and the referenced Hive table. If the column names of the PXF external table *do not* match the column names of the Hive table:
+
+        1. Drop the existing PXF external table. For example:
+
+            ``` sql
+            DROP EXTERNAL TABLE pxf_hive_table1;
+            ```
+
+        2. Recreate the PXF external table using the Hive column names. For example:
+
+            ``` sql
+            CREATE EXTERNAL TABLE pxf_hive_table1( hivecolname int, hivecolname2 text )
+              LOCATION( 'pxf://default.hive_table_name?PROFILE=Hive')
+            FORMAT 'custom' (FORMATTER='pxfwritable_import');
+            ```
+
+        3. Review any SQL scripts that you may have created that reference the PXF external table, and update column names if required.
+
 
 5. Synchronize the PXF configuration from the master host to the standby master and each Greenplum Database segment host. For example:
 
@@ -92,5 +147,5 @@ After you upgrade to the new version of Greenplum Database, perform the followin
     gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster sync
     ```
  
-6. Start PXF on each segment host as described in [Starting PXF](cfginitstart_pxf.html#start_pxf).
+6. Start PXF on each segment host as described in [Starting PXF](../../pxf/5-13/cfginitstart_pxf.html#start_pxf).
 

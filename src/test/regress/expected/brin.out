@@ -1,3 +1,4 @@
+set optimizer to off;
 CREATE TABLE brintest (byteacol bytea,
 	charcol "char",
 	namecol name,
@@ -418,3 +419,4 @@ SELECT brin_summarize_new_values('brinidx'); -- ok, no change expected
                          0
 (1 row)
 
+reset optimizer;

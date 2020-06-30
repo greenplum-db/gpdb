@@ -38,7 +38,7 @@ cat /sys/kernel/mm/transparent_hugepage/enabled
 
 # pip packages
 curl https://bootstrap.pypa.io/get-pip.py | sudo python
-sudo pip install --upgrade setuptools wheel pip lockfile psutil
+sudo pip install --upgrade setuptools wheel pip psutil
 
 # configure and build
 git clone https://github.com/greenplum-db/gpdb.git

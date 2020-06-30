@@ -719,3 +719,51 @@ select * from foo where exists (select 1 from bar where foo.a = bar.b);
 reset enable_hashagg;
 drop table foo;
 drop table bar;
+
+-- Fix github issue 10012
+create table fix_param_a (i int, j int);
+create table fix_param_b (i int UNIQUE, j int);
+create table fix_param_c (i int, j int);
+
+insert into fix_param_a select i, i from generate_series(1,20)i;
+insert into fix_param_b select i, i from generate_series(1,2000)i;
+insert into fix_param_c select i, i from generate_series(1,2000)i;
+
+analyze fix_param_a;
+analyze fix_param_b;
+analyze fix_param_c;
+
+explain (costs off)
+select * from fix_param_a left join fix_param_b on
+	fix_param_a.i = fix_param_b.i and fix_param_b.j in
+		(select j from fix_param_c where fix_param_b.i = fix_param_c.i)
+	order by 1;
+select * from fix_param_a left join fix_param_b on
+	fix_param_a.i = fix_param_b.i and fix_param_b.j in
+		(select j from fix_param_c where fix_param_b.i = fix_param_c.i)
+	order by 1;
+
+-- Test targetlist contains placeholder var
+-- When creating a redistributed motion with hash keys,
+-- Greenplum planner will invoke `cdbpullup_findEclassInTargetList`.
+-- The following test case contains non-strict function `coalesce`
+-- in the subquery at nullable-side of outerjoin and thus will
+-- have PlaceHolderVar in targetlist. The case is to test if
+-- function `cdbpullup_findEclassInTargetList` handles PlaceHolderVar
+-- correct.
+-- See github issue: https://github.com/greenplum-db/gpdb/issues/10315
+create table t_issue_10315 ( id1 int, id2 int );
+
+insert into t_issue_10315 select i,i from generate_series(1, 2)i;
+insert into t_issue_10315 select i,null from generate_series(1, 2)i;
+insert into t_issue_10315 select null,i from generate_series(1, 2)i;
+
+select *  from
+( select coalesce( bq.id1 ) id1, coalesce ( bq.id2 ) id2
+        from ( select r.id1, r.id2 from t_issue_10315 r group by r.id1, r.id2 ) bq  ) t
+full join ( select r.id1, r.id2 from t_issue_10315 r group by r.id1, r.id2 ) bq_all
+on t.id1 = bq_all.id1  and t.id2 = bq_all.id2
+full join ( select r.id1, r.id2 from t_issue_10315 r group by r.id1, r.id2 ) tq_all
+on (coalesce(t.id1) = tq_all.id1  and t.id2 = tq_all.id2) ;
+
+drop table t_issue_10315;

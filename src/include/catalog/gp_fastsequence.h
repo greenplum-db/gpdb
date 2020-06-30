@@ -76,6 +76,8 @@ extern void InsertInitialFastSequenceEntries(Oid objid);
 extern int64 GetFastSequences(Oid objid, int64 objmod,
 							  int64 minSequence, int64 numSequences);
 
+extern int64 ReadLastSequence(Oid objid, int64 objmod);
+
 /*
  * RemoveFastSequenceEntry
  *

@@ -1671,7 +1671,7 @@ setupQEDtxContext(DtxContextInfo *dtxContextInfo)
 					 SharedLocalSnapshotSlot->snapshot.xmax,
 					 SharedLocalSnapshotSlot->snapshot.xcnt,
 					 SharedLocalSnapshotSlot->snapshot.curcid,
-					 SharedLocalSnapshotSlot->QDxid,
+					 SharedLocalSnapshotSlot->distributedXid,
 					 SharedLocalSnapshotSlot->segmateSync);
 				LWLockRelease(SharedLocalSnapshotSlot->slotLock);
 			}

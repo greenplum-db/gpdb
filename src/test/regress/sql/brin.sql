@@ -1,3 +1,5 @@
+set optimizer to off;
+
 CREATE TABLE brintest (byteacol bytea,
 	charcol "char",
 	namecol name,
@@ -421,3 +423,5 @@ UPDATE brintest SET textcol = '' WHERE textcol IS NOT NULL;
 SELECT brin_summarize_new_values('brintest'); -- error, not an index
 SELECT brin_summarize_new_values('tenk1_unique1'); -- error, not a BRIN index
 SELECT brin_summarize_new_values('brinidx'); -- ok, no change expected
+
+reset optimizer;

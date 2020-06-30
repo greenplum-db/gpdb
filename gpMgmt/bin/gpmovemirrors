@@ -37,7 +37,7 @@ GPDB_STOPPED = 1
 GPDB_STARTED = 2
 GPDB_UTILITY = 3
 
-GP_MOVEMIRROS_PID_FILE = "gpmovemirrors.pid"
+GP_MOVEMIRRORS_LOCK_PATH = "gpmovemirrors.lock"
 
 description = ("""
 Moves mirror segments in a pre-existing GPDB Array.
@@ -311,11 +311,12 @@ try:
 
     enable_verbose_logging()
 
-    mainOptions = {"pidfilename": GP_MOVEMIRROS_PID_FILE}
+    mainOptions = {"pidlockpath": GP_MOVEMIRRORS_LOCK_PATH}
     sml = SimpleMainLock(mainOptions)
     otherpid = sml.acquire()
     if otherpid is not None:
-        logger.error("An instance of %s is already running (pid %s)" % ("gpmovemirrors", otherpid))
+        logger.error("Lockfile %s indicates that an instance of %s is already running with PID %s" % (sml.ppath, "gpmovemirrors", otherpid))
+        logger.error("If this is not the case, remove the lockfile directory at %s" % (sml.ppath))
         sys.exit(1)
 
     logger.info("Invocation of gpmovemirrors mirrors")

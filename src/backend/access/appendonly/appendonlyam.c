@@ -2067,6 +2067,8 @@ appendonly_fetch_init(Relation relation,
 
 	StringInfoData titleBuf;
 
+	int segno;
+
 	/*
 	 * increment relation ref count while scanning relation
 	 *
@@ -2129,6 +2131,11 @@ appendonly_fetch_init(Relation relation,
 						  relation,
 						  appendOnlyMetaDataSnapshot,
 						  &aoFetchDesc->totalSegfiles);
+	for (segno = 0; segno < AOTupleId_MultiplierSegmentFileNum; ++segno)
+	{
+		aoFetchDesc->lastSequence[segno] = ReadLastSequence(
+				aoFetchDesc->relation->rd_appendonly->segrelid, segno);
+	}
 
 	AppendOnlyStorageRead_Init(
 							   &aoFetchDesc->storageRead,
@@ -2201,6 +2208,25 @@ appendonly_fetch(AppendOnlyFetchDesc aoFetchDesc,
 	int			segmentFileNum = AOTupleIdGet_segmentFileNum(aoTupleId);
 	int64		rowNum = AOTupleIdGet_rowNum(aoTupleId);
 	bool		isSnapshotAny = (aoFetchDesc->snapshot == SnapshotAny);
+
+	/*
+	 * This is an improvement for brin. BRIN index stores ranges of TIDs in
+	 * terms of block numbers and not specific TIDs, so it's possible that the
+	 * fetch function is called with a non-existent TID. The function
+	 * appendonly_fetch will access the block directory table first and cache
+	 * some MinipageEntrys. If we try to access the non-existent tid, a cache
+	 * miss will occur. And we need to search the btree on block directory
+	 * table. This is a vary slow operation. So a fast return path was added
+	 * here. If the rowNum is bigger than lastsequence, skip it.
+	 */
+	if (rowNum > aoFetchDesc->lastSequence[segmentFileNum])
+	{
+		if (slot != NULL)
+		{
+			ExecClearTuple(slot);
+		}
+		return false;	/* row has been deleted or updated. */
+	}
 
 	/*
 	 * Do we have a current block?  If it has the requested tuple, that would

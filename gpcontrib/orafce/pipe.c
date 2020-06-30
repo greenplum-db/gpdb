@@ -1,9 +1,7 @@
 #include "postgres.h"
 #include "funcapi.h"
 #include "fmgr.h"
-#if PG_VERSION_NUM >= 90300
 #include "access/htup_details.h"
-#endif
 #include "storage/shmem.h"
 #include "utils/memutils.h"
 #include "utils/timestamp.h"
@@ -22,7 +20,7 @@
 #include "builtins.h"
 
 /*
- * @ Pavel Stehule 2006
+ * @ Pavel Stehule 2006-2018
  */
 
 #ifndef _GetCurrentTimestamp
@@ -136,7 +134,7 @@ typedef struct
 	alert_event *events;
 	alert_lock *locks;
 	size_t size;
-	unsigned int sid;
+	int sid;
 	vardata data[1]; /* flexible array member */
 } sh_memory;
 
@@ -147,22 +145,14 @@ message_buffer *input_buffer = NULL;
 
 pipe* pipes = NULL;
 
-#if PG_VERSION_NUM >= 90400
-
 #define NOT_INITIALIZED		NULL
-
-#else
-
-#define NOT_INITIALIZED		-1
-
-#endif
 
 LWLockId shmem_lockid = NOT_INITIALIZED;;
 
-unsigned int sid;                                 /* session id */
+int sid;                                 /* session id */
 
-alert_event *events;
-alert_lock  *locks;
+extern alert_event *events;
+extern alert_lock  *locks;
 
 /*
  * write on writer size bytes from ptr
@@ -692,6 +682,30 @@ dbms_pipe_pack_message_bytea(PG_FUNCTION_ARGS)
 	PG_RETURN_VOID();
 }
 
+static void
+init_args_3(FunctionCallInfo info, Datum arg0, Datum arg1, Datum arg2)
+{
+#if PG_VERSION_NUM >= 120000
+
+	info->args[0].value = arg0;
+	info->args[1].value = arg1;
+	info->args[2].value = arg2;
+	info->args[0].isnull = false;
+	info->args[1].isnull = false;
+	info->args[2].isnull = false;
+
+#else
+
+	info->arg[0] = arg0;
+	info->arg[1] = arg1;
+	info->arg[2] = arg2;
+	info->argnull[0] = false;
+	info->argnull[1] = false;
+	info->argnull[2] = false;
+
+#endif
+}
+
 
 /*
  *  We can serialize only typed record
@@ -703,7 +717,18 @@ dbms_pipe_pack_message_record(PG_FUNCTION_ARGS)
 	HeapTupleHeader rec = PG_GETARG_HEAPTUPLEHEADER(0);
 	Oid tupType;
 	bytea *data;
-	FunctionCallInfoData info;
+
+#if PG_VERSION_NUM >= 120000
+
+	LOCAL_FCINFO(info, 3);
+
+#else
+
+	FunctionCallInfoData info_data;
+	FunctionCallInfo info = &info_data;
+
+#endif
+
 
 	tupType = HeapTupleHeaderGetTypeId(rec);
 
@@ -713,16 +738,10 @@ dbms_pipe_pack_message_record(PG_FUNCTION_ARGS)
 	 * using fcinfo->flinfo->fn_extra.  So we need to pass it our own
 	 * flinfo parameter.
 	 */
-	InitFunctionCallInfoData(info, fcinfo->flinfo, 3, InvalidOid, NULL, NULL);
+	InitFunctionCallInfoData(*info, fcinfo->flinfo, 3, InvalidOid, NULL, NULL);
+	init_args_3(info, PointerGetDatum(rec), ObjectIdGetDatum(tupType), Int32GetDatum(-1));
 
-	info.arg[0] = PointerGetDatum(rec);
-	info.arg[1] = ObjectIdGetDatum(tupType);
-	info.arg[2] = Int32GetDatum(-1);
-	info.argnull[0] = false;
-	info.argnull[1] = false;
-	info.argnull[2] = false;
-
-	data = (bytea*) DatumGetPointer(record_send(&info));
+	data = (bytea*) DatumGetPointer(record_send(info));
 
 	output_buffer = check_buffer(output_buffer, LOCALMSGSZ);
 	pack_field(output_buffer, IT_RECORD,
@@ -773,7 +792,17 @@ dbms_pipe_unpack_message(PG_FUNCTION_ARGS, message_data_type dtype)
 			break;
 		case IT_RECORD:
 		{
-			FunctionCallInfoData	info;
+#if PG_VERSION_NUM >= 120000
+
+			LOCAL_FCINFO(info, 3);
+
+#else
+
+			FunctionCallInfoData info_data;
+			FunctionCallInfo info = &info_data;
+
+#endif
+
 			StringInfoData	buf;
 			text		   *data = cstring_to_text_with_len(ptr, size);
 
@@ -788,16 +817,10 @@ dbms_pipe_unpack_message(PG_FUNCTION_ARGS, message_data_type dtype)
 			 * using fcinfo->flinfo->fn_extra.  So we need to pass it our own
 			 * flinfo parameter.
 			 */
-			InitFunctionCallInfoData(info, fcinfo->flinfo, 3, InvalidOid, NULL, NULL);
+			InitFunctionCallInfoData(*info, fcinfo->flinfo, 3, InvalidOid, NULL, NULL);
+			init_args_3(info, PointerGetDatum(&buf), ObjectIdGetDatum(tupType), Int32GetDatum(-1));
 
-			info.arg[0] = PointerGetDatum(&buf);
-			info.arg[1] = ObjectIdGetDatum(tupType);
-			info.arg[2] = Int32GetDatum(-1);
-			info.argnull[0] = false;
-			info.argnull[1] = false;
-			info.argnull[2] = false;
-
-			result = record_recv(&info);
+			result = record_recv(info);
 			break;
 		}
 		default:
@@ -996,7 +1019,6 @@ dbms_pipe_list_pipes(PG_FUNCTION_ARGS)
 {
 	FuncCallContext *funcctx;
 	TupleDesc        tupdesc;
-	TupleTableSlot  *slot;
 	AttInMetadata   *attinmeta;
 	PipesFctx       *fctx;
 
@@ -1027,7 +1049,16 @@ dbms_pipe_list_pipes(PG_FUNCTION_ARGS)
 		funcctx->user_fctx = fctx;
 		fctx->pipe_nth = 0;
 
-		tupdesc = CreateTemplateTupleDesc(DB_PIPES_COLS , false);
+#if PG_VERSION_NUM >= 120000
+
+		tupdesc = CreateTemplateTupleDesc(DB_PIPES_COLS);
+
+#else
+
+		tupdesc = CreateTemplateTupleDesc(DB_PIPES_COLS, false);
+
+#endif
+
 		i = 0;
 		TupleDescInitEntry(tupdesc, ++i, "name",    VARCHAROID, -1, 0);
 		TupleDescInitEntry(tupdesc, ++i, "items",   INT4OID,    -1, 0);
@@ -1036,9 +1067,6 @@ dbms_pipe_list_pipes(PG_FUNCTION_ARGS)
 		TupleDescInitEntry(tupdesc, ++i, "private", BOOLOID,    -1, 0);
 		TupleDescInitEntry(tupdesc, ++i, "owner",   VARCHAROID, -1, 0);
 		Assert(i == DB_PIPES_COLS);
-
-		slot = TupleDescGetSlot(tupdesc);
-		funcctx->slot = slot;
 
 		attinmeta = TupleDescGetAttInMetadata(tupdesc);
 		funcctx->attinmeta = attinmeta;
@@ -1082,7 +1110,7 @@ dbms_pipe_list_pipes(PG_FUNCTION_ARGS)
 			values[5] = pipes[fctx->pipe_nth].creator;
 
 			tuple = BuildTupleFromCStrings(funcctx->attinmeta, values);
-			result = TupleGetDatum(funcctx->slot, tuple);
+			result = HeapTupleGetDatum(tuple);
 
 			fctx->pipe_nth += 1;
 			SRF_RETURN_NEXT(funcctx, result);
@@ -1150,16 +1178,10 @@ dbms_pipe_create_pipe (PG_FUNCTION_ARGS)
 				char *user;
 
 				p->uid = GetUserId();
-#ifdef GP_VERSION_NUM
-				user = (GetUserNameFromId(p->uid, false));
-#elif PG_VERSION_NUM >= 90500
 
 				user = (char*)DirectFunctionCall1(namein,
 					    CStringGetDatum(GetUserNameFromId(p->uid, false)));
 
-#else
-				user = (char*)DirectFunctionCall1(namein, CStringGetDatum(GetUserNameFromId(p->uid)));
-#endif
 				p->creator = ora_sstrcpy(user);
 				pfree(user);
 			}

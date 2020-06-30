@@ -3,7 +3,7 @@
  * so I am using obsolete but still working option.
  */
 
-%name-prefix = "orafce_sql_yy"
+%name-prefix "orafce_sql_yy"
 
 %{
 

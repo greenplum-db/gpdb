@@ -2435,7 +2435,7 @@ StartTransaction(void)
 				SharedLocalSnapshotSlot->ready = false;
 				SharedLocalSnapshotSlot->xid = s->transactionId;
 				SharedLocalSnapshotSlot->startTimestamp = stmtStartTimestamp;
-				SharedLocalSnapshotSlot->QDxid = QEDtxContextInfo.distributedXid;
+				SharedLocalSnapshotSlot->distributedXid = QEDtxContextInfo.distributedXid;
 				SharedLocalSnapshotSlot->writer_proc = MyProc;
 				SharedLocalSnapshotSlot->writer_xact = MyPgXact;
 
@@ -2446,7 +2446,7 @@ StartTransaction(void)
 							  " (shared timeStamp = " INT64_FORMAT " -> "
 							  INT64_FORMAT ")",
 							  QEDtxContextInfo.distributedXid,
-							  SharedLocalSnapshotSlot->QDxid,
+							  SharedLocalSnapshotSlot->distributedXid,
 							  SharedLocalSnapshotSlot->xid,
 							  s->transactionId,
 							  SharedLocalSnapshotSlot->ready ? "true" : "false",
@@ -3620,7 +3620,7 @@ StartTransactionCommand(void)
 				}
 
 				SharedLocalSnapshotSlot->startTimestamp = xactStartTimestamp;
-				SharedLocalSnapshotSlot->QDxid = QEDtxContextInfo.distributedXid;
+				SharedLocalSnapshotSlot->distributedXid = QEDtxContextInfo.distributedXid;
 
 				LWLockRelease(SharedLocalSnapshotSlot->slotLock);
 

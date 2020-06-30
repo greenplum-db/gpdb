@@ -7,12 +7,17 @@ CREATE
 -- in-progress two-phase transactions.
 -- The FTS process should be able to continue probe and 'sync off' the mirror
 -- while the 'dtx recovery' process is hanging recovering distributed transactions.
-!\retcode gpconfig -c gp_fts_probe_retries -v 2 --masteronly;
--- start_ignore
-20200123:08:10:59:395805 gpconfig:09c5497cf854:gpadmin-[INFO]:-completed successfully with parameters '-c gp_fts_probe_retries -v 2 --masteronly'
 
--- end_ignore
-(exited with code 0)
+-- modify fts gucs to speed up the test.
+1: alter system set gp_fts_probe_interval to 10;
+ALTER
+1: alter system set gp_fts_probe_retries to 1;
+ALTER
+1: select pg_reload_conf();
+ pg_reload_conf 
+----------------
+ t              
+(1 row)
 
 1: create or replace function wait_until_standby_in_state(targetstate text) returns void as $$ declare replstate text; /* in func */ begin loop select state into replstate from pg_stat_replication; /* in func */ exit when replstate = targetstate; /* in func */ perform pg_sleep(0.1); /* in func */ end loop; /* in func */ end; /* in func */ $$ language plpgsql;
 CREATE
@@ -26,9 +31,8 @@ CREATE
 --------------------------
  Success:                 
 (1 row)
-2&: select gp_wait_until_triggered_fault('finish_prepared_start_of_function', 1, dbid) from gp_segment_configuration where content=0 and role='p';  <waiting ...>
-1&: insert into t_wait_lsn select generate_series(1,12);  <waiting ...>
-2<:  <... completed>
+1&: insert into t_wait_lsn values(2),(1);  <waiting ...>
+2: select gp_wait_until_triggered_fault('finish_prepared_start_of_function', 1, dbid) from gp_segment_configuration where content=0 and role='p';
  gp_wait_until_triggered_fault 
 -------------------------------
  Success:                      
@@ -72,6 +76,7 @@ CREATE
 -- s/PANIC:  fault triggered, fault name:'before_read_command' fault type:'panic'\n//
 -- end_matchsubs
 3: select 1;
+PANIC:  fault triggered, fault name:'before_read_command' fault type:'panic'
 server closed the connection unexpectedly
 	This probably means the server terminated abnormally
 	before or while processing the request.
@@ -83,12 +88,20 @@ server closed the connection unexpectedly
                              
 (1 row)
 
--- wait for FTS to 'sync off' the mirror, meanwhile, dtx recovery process will restart repeatedly
+-- wait for FTS to 'sync off' the mirror, meanwhile, dtx recovery process will
+-- restart repeatedly.
+-- the query should succeed finally since dtx recovery process is able to quit.
+-- this's what we want to test.
 4: select count(*) from t_wait_lsn;
  count 
 -------
- 12    
+ 2     
 (1 row)
+
+1<:  <... completed>
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
 
 !\retcode gprecoverseg -a;
 -- start_ignore
@@ -140,26 +153,20 @@ server closed the connection unexpectedly
  OK                                   
 (1 row)
 
-!\retcode gpconfig -c gp_fts_probe_retries -v 2 --masteronly;
--- start_ignore
-20200123:08:12:04:396100 gpconfig:09c5497cf854:gpadmin-[INFO]:-completed successfully with parameters '-c gp_fts_probe_retries -v 2 --masteronly'
-
--- end_ignore
-(exited with code 0)
-
 4: select count(*) from t_wait_lsn;
  count 
 -------
- 12    
+ 2     
 (1 row)
 4: drop table t_wait_lsn;
 DROP
-4q: ... <quitting>
-Traceback (most recent call last):
-  File "./sql_isolation_testcase.py", line 718, in <module>
-    executor.process_isolation_file(sys.stdin, sys.stdout)
-  File "./sql_isolation_testcase.py", line 510, in process_isolation_file
-    process.stop()
-  File "./sql_isolation_testcase.py", line 138, in stop
-    raise Exception("Should not finish test case while waiting for results")
-Exception: Should not finish test case while waiting for results
+
+4: alter system reset gp_fts_probe_interval;
+ALTER
+4: alter system reset gp_fts_probe_retries;
+ALTER
+4: select pg_reload_conf();
+ pg_reload_conf 
+----------------
+ t              
+(1 row)

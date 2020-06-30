@@ -60,7 +60,9 @@ function install_python_requirements_on_single_host() {
     # and is run by root user. Therefore, pip install as root user to make items globally
     # available
     local requirements_txt="$1"
-    pip install -r ${requirements_txt}
+
+    export PIP_CACHE_DIR=${PWD}/pip-cache-dir
+    pip --retries 10 install -r ${requirements_txt}
 }
 
 function install_python_requirements_on_multi_host() {
@@ -69,10 +71,13 @@ function install_python_requirements_on_multi_host() {
     # the user flag is required for centos 7
     local requirements_txt="$1"
 
-    pip install --user -r ${requirements_txt}
+    # Set PIP Download cache directory
+    export PIP_CACHE_DIR=/home/gpadmin/pip-cache-dir
+
+    pip --retries 10 install --user -r ${requirements_txt}
     while read -r host; do
        scp ${requirements_txt} "$host":/tmp/requirements.txt
-       ssh $host pip install --user -r /tmp/requirements.txt
+       ssh $host PIP_CACHE_DIR=${PIP_CACHE_DIR} pip --retries 10 install --user -r /tmp/requirements.txt
     done < /tmp/hostfile_all
 }
 

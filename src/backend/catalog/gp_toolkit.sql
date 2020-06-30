@@ -1845,7 +1845,7 @@ CREATE VIEW gp_toolkit.gp_resgroup_status_per_host AS
         s.rsgname
       , s.groupid
       , c.hostname
-      , sum((s.cpu                       )::text::numeric) AS cpu
+      , round(avg((s.cpu)::text::numeric), 2) AS cpu
       , sum((s.memory->'used'            )::text::integer) AS memory_used
       , sum((s.memory->'available'       )::text::integer) AS memory_available
       , sum((s.memory->'quota_used'      )::text::integer) AS memory_quota_used

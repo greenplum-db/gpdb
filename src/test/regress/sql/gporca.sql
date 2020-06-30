@@ -308,6 +308,16 @@ select (select a from orca_w3 where a = orca_w1.a) as one from orca_w1 where orc
 -- window function in subquery inside target list with outer ref in partition clause
 select (select rank() over(partition by orca_w2.a) from orca_w3 where a = orca_w1.a) as one, row_number() over(partition by orca_w1.a) as two from orca_w1, orca_w2 order by orca_w1.a;
 
+-- correlated subquery in target list
+select (select a+1 from (select a from orca_w2 where orca_w1.a=orca_w2.a) sq(a)) as one, row_number() over(partition by orca_w1.a) as two from orca_w1;
+
+-- correlated subquery in target list, mismatching varattnos
+select (select a+1 from (select a from orca_w2 where sq2.a=orca_w2.a) sq1(a)) as one, row_number() over(partition by sq2.a) as two from (select 1,1,1,a from orca_w1) sq2(x,y,z,a);
+
+-- cte in scalar subquery
+with x as (select a, b from orca_w1)
+select (select count(*) from x) as one, rank() over(partition by a) as rank_within_parent from x order by a desc;
+
 -- window function in subquery inside target list with outer ref in order clause
 select (select rank() over(order by orca_w2.a) from orca_w3 where a = orca_w1.a) as one, row_number() over(partition by orca_w1.a) as two from orca_w1, orca_w2 order by orca_w1.a;
 

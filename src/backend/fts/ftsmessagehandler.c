@@ -416,7 +416,7 @@ HandleFtsMessage(const char* query_string)
 	}
 
 #ifdef USE_ASSERT_CHECKING
-	error_level = PANIC;
+	error_level = FATAL;
 #else
 	error_level = WARNING;
 #endif
