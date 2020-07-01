@@ -676,7 +676,19 @@ BitmapAppendOnlyNext(BitmapHeapScanState *node)
 		if (QueryFinishPending)
 			return NULL;
 
-		if (!node->baos_gotpage)
+		/*
+		* When ExecReScanBitmapHeapScan get executed, bitmap state (tbmiterator and 
+		* tbmres) gets freed in freeBitmapState. So the tbmres is NULL, and we need
+		* to reinit bitmap state to start scan from begining and reset AO/AOCS bitmap
+		* pages' flags(baos_gotpage, baos_lossy, baos_cindex and baos_ntuples). 
+		*
+		* Especially when ExecReScan happens on the bitmap append only scan and not all the
+		* matched tuples in bitmap are consumed, for example, Bitmap Heap Scan as inner plan
+		* of the Nest Loop Semi Join. If tbmres not get init, and not read all tuples
+		* in last bitmap, BitmapAppendOnlyNext will assume the current bitmap page still
+		* has data to return. but bitmap state already freed.
+		*/
+		if (!node->baos_gotpage || tbmres == NULL)
 		{
 			/*
 			 * Obtain the next psuedo-heap-page-info with item bit-map.  Later, we'll
@@ -732,6 +744,9 @@ BitmapAppendOnlyNext(BitmapHeapScanState *node)
 			node->baos_gotpage = false;
 			continue;
 		}
+
+		/* Make sure the bitmap state get initalized */
+		Assert(tbmres);
 
 		if (node->baos_lossy || tbmres->recheck)
 			need_recheck = true;
