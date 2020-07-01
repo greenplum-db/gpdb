@@ -5368,7 +5368,10 @@ make_parallel_or_sequential_agg(PlannerInfo *root, AggClauseCounts *agg_counts,
 										agg_counts->numAggs,
 										agg_counts->transitionSpace,
 										result_plan);
-		mark_passthru_locus(result_plan, true, current_pathkeys != NIL);
+		result_plan->flow = pull_up_Flow(result_plan,
+										 result_plan->lefttree,
+										 (current_pathkeys != NIL)
+										 && aggstrategy != AGG_HASHED );
 	}
 	else
 		current_pathkeys = *group_context->pcurrent_pathkeys;

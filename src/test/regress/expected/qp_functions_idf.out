@@ -916,8 +916,34 @@ select distinct on (median(a)) median(a) ,b from perct group by b order by media
     100 | 10
 (11 rows)
 
+-- Test the with group with gather motion
+CREATE TABLE within_group_gather (
+	date1 timestamp without time zone,
+	date2 timestamp without time zone,
+	num bpchar
+			) DISTRIBUTED BY (date1);
+WITH detail_serials AS (select
+                                num,
+                                date1,
+                                extract(epoch FROM (date1::timestamp
+                                        -((CASE WHEN (num IS DISTINCT FROM lag(num) OVER (ORDER BY num,date1))
+												THEN date2 ELSE lag(date1,1) over (ORDER BY num, date1)
+														END)
+                                                  )))/3600 hours_at_op,
+                                date2
+                        FROM within_group_gather)
+                select  to_char(date1,'IYYYIW') fiscal_week,
+                        count(distinct num) sn_qty,
+                                percentile_disc(0.25) WITHIN GROUP (ORDER BY hours_at_op) p25_lt_hours
+                FROM detail_serials
+                GROUP BY 1;
+ fiscal_week | sn_qty | p25_lt_hours 
+-------------+--------+--------------
+(0 rows)
+
 -- start_ignore
 drop schema qp_idf cascade;
+NOTICE:  drop cascades to table within_group_gather
 NOTICE:  drop cascades to view idf_v4
 NOTICE:  drop cascades to rule _RETURN on view idf_v4
 NOTICE:  drop cascades to view idf_v1
