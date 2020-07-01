@@ -210,10 +210,10 @@ namespace gpopt
 				m_used = EUnknown;
 			}
 
-			EUsedStatus GetUsage() const
+			EUsedStatus GetUsage(BOOL check_system_col=false) const
 			{
 
-				if (GPOS_FTRACE(EopttraceTranslateUnusedColrefs) || FSystemCol())
+				if (GPOS_FTRACE(EopttraceTranslateUnusedColrefs) || (!check_system_col && FSystemCol()))
 				{
 					return EUsed;
 				}

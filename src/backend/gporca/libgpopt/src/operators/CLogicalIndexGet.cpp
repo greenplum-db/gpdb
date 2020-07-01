@@ -259,6 +259,7 @@ const
 	CXformSet *xform_set = GPOS_NEW(mp) CXformSet(mp);
 
 	(void) xform_set->ExchangeSet(CXform::ExfIndexGet2IndexScan);
+	(void) xform_set->ExchangeSet(CXform::ExfIndexGet2IndexOnlyScan);
 
 	return xform_set;
 }

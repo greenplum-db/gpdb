@@ -350,6 +350,7 @@ bool		optimizer_enable_master_only_queries;
 bool		optimizer_enable_hashjoin;
 bool		optimizer_enable_dynamictablescan;
 bool		optimizer_enable_indexscan;
+bool		optimizer_enable_indexonlyscan;
 bool		optimizer_enable_tablescan;
 bool		optimizer_enable_hashagg;
 bool		optimizer_enable_groupagg;
@@ -2403,6 +2404,17 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&optimizer_enable_indexscan,
 		true,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"optimizer_enable_indexonlyscan", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Enables the optimizer's use of plans with index only scan."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_enable_indexonlyscan,
+		false,
 		NULL, NULL, NULL
 	},
 

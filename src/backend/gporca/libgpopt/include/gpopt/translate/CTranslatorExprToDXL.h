@@ -183,6 +183,23 @@ namespace gpopt
 				BOOL *pfDML
 				);
 
+			CDXLNode *PdxlnIndexOnlyScan
+				(
+				CExpression *pexprIndexScan,
+				CColRefArray *colref_array,
+				CDistributionSpecArray *pdrgpdsBaseTables,
+				ULONG *pulNonGatherMotions,
+				BOOL *pfDML
+				);
+
+			CDXLNode *PdxlnIndexOnlyScan
+				(
+				CExpression *pexprIndexScan,
+				CColRefArray *colref_array,
+				CDXLPhysicalProperties *dxl_properties,
+				CReqdPropPlan *prpp
+				);
+
 			// translate a bitmap index probe expression to DXL
 			CDXLNode *PdxlnBitmapIndexProbe(CExpression *pexprBitmapIndexProbe);
 
