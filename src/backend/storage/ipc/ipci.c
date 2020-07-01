@@ -65,6 +65,7 @@
 #include "executor/spi.h"
 #include "utils/workfile_mgr.h"
 #include "utils/session_state.h"
+#include "replication/gp_replication.h"
 
 shmem_startup_hook_type shmem_startup_hook = NULL;
 
@@ -164,6 +165,7 @@ CreateSharedMemoryAndSemaphores(int port)
 		size = add_size(size, ReplicationSlotsShmemSize());
 		size = add_size(size, WalSndShmemSize());
 		size = add_size(size, WalRcvShmemSize());
+		size = add_size(size, FTSReplicationStatusShmemSize());
 		size = add_size(size, BTreeShmemSize());
 		size = add_size(size, SyncScanShmemSize());
 		size = add_size(size, AsyncShmemSize());
@@ -322,6 +324,7 @@ CreateSharedMemoryAndSemaphores(int port)
 	ReplicationSlotsShmemInit();
 	WalSndShmemInit();
 	WalRcvShmemInit();
+	FTSReplicationStatusShmemInit();
 
 #ifdef FAULT_INJECTOR
 	FaultInjector_ShmemInit();

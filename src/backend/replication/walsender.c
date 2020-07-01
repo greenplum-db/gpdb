@@ -90,7 +90,9 @@
 #include "utils/timeout.h"
 #include "utils/timestamp.h"
 #include "utils/faultinjector.h"
+
 #include "cdb/cdbvars.h"
+#include "replication/gp_replication.h"
 
 /*
  * Maximum data payload in a WAL data message.  Must be >= XLOG_BLCKSZ.
@@ -548,6 +550,13 @@ StartReplication(StartReplicationCmd *cmd)
 {
 	StringInfoData buf;
 	XLogRecPtr	FlushPtr;
+
+	/*
+	 * Create FTSReplicationStatus for current application if not created before.
+	 * This is only called for GPDB primary-mirror replication.
+	 */
+	if (MyWalSnd->is_for_gp_walreceiver)
+		FTSReplicationStatusCreateIfNotExist(application_name);
 
 	/*
 	 * We assume here that we're logging enough information in the WAL for
@@ -2102,6 +2111,10 @@ WalSndKill(int code, Datum arg)
 
 	Assert(walsnd != NULL);
 
+	/* Only track failure for GPDB primary-mirror replication */
+	if (MyWalSnd->is_for_gp_walreceiver)
+		FTSReplicationStatusMarkDisconnectForReplication(application_name);
+
 	if (IS_QUERY_DISPATCHER())
 	{
 		/*
@@ -2123,7 +2136,6 @@ WalSndKill(int code, Datum arg)
 			MyWalSnd->xlogCleanUpTo = InvalidXLogRecPtr;
 
 			/* Mark WalSnd struct no longer in use. */
-			MyWalSnd->replica_disconnected_at = (pg_time_t) time(NULL);
 			MyWalSnd->pid = 0;
 
 			SpinLockRelease(&MyWalSnd->mutex);
@@ -2146,7 +2158,6 @@ WalSndKill(int code, Datum arg)
 
 	SpinLockAcquire(&walsnd->mutex);
 	/* Mark WalSnd struct as no longer being in use. */
-	walsnd->replica_disconnected_at = (pg_time_t) time(NULL);
 	walsnd->pid = 0;
 	SpinLockRelease(&walsnd->mutex);
 }
@@ -2874,7 +2885,6 @@ WalSndShmemInit(void)
 
 			SpinLockInit(&walsnd->mutex);
 			InitSharedLatch(&walsnd->latch);
-			walsnd->replica_disconnected_at = (pg_time_t) time(NULL);
 		}
 	}
 }
@@ -2983,11 +2993,17 @@ WalSndSetState(WalSndState state)
 
 	SpinLockAcquire(&walsnd->mutex);
 	walsnd->state = state;
-	if (state == WALSNDSTATE_CATCHUP || state == WALSNDSTATE_STREAMING)
-		walsnd->replica_disconnected_at = 0;
-	else if (walsnd->replica_disconnected_at == 0)
-		walsnd->replica_disconnected_at = (pg_time_t) time(NULL);
 	SpinLockRelease(&walsnd->mutex);
+
+	/*
+	 * If the walsender is not for GPDB primary-mirror replication,
+	 * skip failure stats.
+	 */
+	if (!walsnd->is_for_gp_walreceiver)
+		return;
+
+	/* Update WAL replication status. */
+	FTSReplicationStatusUpdateForWalState(application_name, state);
 }
 
 /*
