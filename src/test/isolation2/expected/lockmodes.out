@@ -1,0 +1,420 @@
+include: helpers/server_helpers.sql;
+CREATE
+
+-- table to just store the master's data directory path on segment.
+CREATE TABLE lockmodes_datadir(a int, dir text);
+CREATE
+INSERT INTO lockmodes_datadir select 1,datadir from gp_segment_configuration where role='p' and content=-1;
+INSERT 1
+
+1: set optimizer = off;
+SET
+
+create or replace view show_locks_lockmodes as select locktype, mode, granted, relation::regclass from pg_locks where gp_segment_id = -1 and locktype = 'relation' and relation::regclass::text like 't_lockmods%';
+CREATE
+
+show gp_enable_global_deadlock_detector;
+ gp_enable_global_deadlock_detector 
+------------------------------------
+ off                                
+(1 row)
+
+
+-- 1. The firs part of test is with
+--    gp_enable_global_deadlock_detector off
+
+-- 1.1 test for heap tables
+create table t_lockmods (c int) distributed randomly;
+CREATE
+insert into t_lockmods select * from generate_series(1, 5);
+INSERT 5
+
+create table t_lockmods1 (c int) distributed randomly;
+CREATE
+
+create table t_lockmods_rep(c int) distributed replicated;
+CREATE
+
+-- 1.1.2 update | delete should hold ExclusiveLock on result relations
+1: begin;
+BEGIN
+1: update t_lockmods set c = c + 0;
+UPDATE 5
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation   
+----------+---------------+---------+------------
+ relation | ExclusiveLock | t       | t_lockmods 
+(1 row)
+1: abort;
+ABORT
+
+1: begin;
+BEGIN
+1: delete from t_lockmods;
+DELETE 5
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation   
+----------+---------------+---------+------------
+ relation | ExclusiveLock | t       | t_lockmods 
+(1 row)
+1: abort;
+ABORT
+
+-- 1.1.3 insert should hold RowExclusiveLock on result relations
+1: begin;
+BEGIN
+1: insert into t_lockmods select * from generate_series(1, 5);
+INSERT 5
+2: select * from show_locks_lockmodes;
+ locktype | mode             | granted | relation   
+----------+------------------+---------+------------
+ relation | RowExclusiveLock | t       | t_lockmods 
+(1 row)
+1: abort;
+ABORT
+
+-- 1.1.5 use cached plan should be consistent with no cached plan
+1: prepare update_tlockmods as update t_lockmods set c = c + 0;
+PREPARE
+1: prepare delete_tlockmods as delete from t_lockmods;
+PREPARE
+1: prepare insert_tlockmods as insert into t_lockmods select * from generate_series(1, 5);
+PREPARE
+
+1: begin;
+BEGIN
+1: execute update_tlockmods;
+EXECUTE 5
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation   
+----------+---------------+---------+------------
+ relation | ExclusiveLock | t       | t_lockmods 
+(1 row)
+1: abort;
+ABORT
+
+1: begin;
+BEGIN
+1: execute delete_tlockmods;
+EXECUTE 5
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation   
+----------+---------------+---------+------------
+ relation | ExclusiveLock | t       | t_lockmods 
+(1 row)
+1: abort;
+ABORT
+
+1: begin;
+BEGIN
+1: execute insert_tlockmods;
+EXECUTE 5
+2: select * from show_locks_lockmodes;
+ locktype | mode             | granted | relation   
+----------+------------------+---------+------------
+ relation | RowExclusiveLock | t       | t_lockmods 
+(1 row)
+1: abort;
+ABORT
+
+-- 1.2 test for AO table
+create table t_lockmods_ao (c int) with (appendonly=true) distributed randomly;
+CREATE
+insert into t_lockmods_ao select * from generate_series(1, 8);
+INSERT 8
+create table t_lockmods_ao1 (c int) with (appendonly=true) distributed randomly;
+CREATE
+
+-- 1.2.2 update | delete should hold ExclusiveLock on result relations
+1: begin;
+BEGIN
+1: update t_lockmods_ao set c = c + 0;
+UPDATE 8
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation      
+----------+---------------+---------+---------------
+ relation | ExclusiveLock | t       | t_lockmods_ao 
+(1 row)
+1: abort;
+ABORT
+
+1: begin;
+BEGIN
+1: delete from t_lockmods_ao;
+DELETE 8
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation      
+----------+---------------+---------+---------------
+ relation | ExclusiveLock | t       | t_lockmods_ao 
+(1 row)
+1: abort;
+ABORT
+
+-- 1.2.3 insert should hold RowExclusiveLock on result relations
+1: begin;
+BEGIN
+1: insert into t_lockmods_ao select * from generate_series(1, 5);
+INSERT 5
+2: select * from show_locks_lockmodes;
+ locktype | mode             | granted | relation      
+----------+------------------+---------+---------------
+ relation | RowExclusiveLock | t       | t_lockmods_ao 
+(1 row)
+1: abort;
+ABORT
+
+-- 1.2.4 use cached plan should be consistent with no cached plan
+1: prepare update_tlockmods_ao as update t_lockmods_ao set c = c + 0;
+PREPARE
+1: prepare delete_tlockmods_ao as delete from t_lockmods_ao;
+PREPARE
+1: prepare insert_tlockmods_ao as insert into t_lockmods_ao select * from generate_series(1, 5);
+PREPARE
+
+1: begin;
+BEGIN
+1: execute update_tlockmods_ao;
+EXECUTE 8
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation      
+----------+---------------+---------+---------------
+ relation | ExclusiveLock | t       | t_lockmods_ao 
+(1 row)
+1: abort;
+ABORT
+
+1: begin;
+BEGIN
+1: execute delete_tlockmods_ao;
+EXECUTE 8
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation      
+----------+---------------+---------+---------------
+ relation | ExclusiveLock | t       | t_lockmods_ao 
+(1 row)
+1: abort;
+ABORT
+
+1: begin;
+BEGIN
+1: execute insert_tlockmods_ao;
+EXECUTE 5
+2: select * from show_locks_lockmodes;
+ locktype | mode             | granted | relation      
+----------+------------------+---------+---------------
+ relation | RowExclusiveLock | t       | t_lockmods_ao 
+(1 row)
+1: abort;
+ABORT
+
+1q: ... <quitting>
+2q: ... <quitting>
+
+-- enable gdd
+7: ALTER SYSTEM SET gp_enable_global_deadlock_detector TO on;
+ALTER
+-- Use utility session on seg 0 to restart master. This way avoids the
+-- situation where session issuing the restart doesn't disappear
+-- itself.
+1U:SELECT pg_ctl(dir, 'restart') from lockmodes_datadir;
+ pg_ctl 
+--------
+ OK     
+(1 row)
+
+1: show gp_enable_global_deadlock_detector;
+ gp_enable_global_deadlock_detector 
+------------------------------------
+ on                                 
+(1 row)
+
+1: set optimizer = off;
+SET
+
+-- 2. The firs part of test is with
+--    gp_enable_global_deadlock_detector on
+
+-- 2.1.2 update | delete should hold RowExclusiveLock on result relations
+1: begin;
+BEGIN
+1: update t_lockmods set c = c + 0;
+UPDATE 5
+2: select * from show_locks_lockmodes;
+ locktype | mode             | granted | relation   
+----------+------------------+---------+------------
+ relation | RowExclusiveLock | t       | t_lockmods 
+(1 row)
+1: abort;
+ABORT
+
+1: begin;
+BEGIN
+1: delete from t_lockmods;
+DELETE 5
+2: select * from show_locks_lockmodes;
+ locktype | mode             | granted | relation   
+----------+------------------+---------+------------
+ relation | RowExclusiveLock | t       | t_lockmods 
+(1 row)
+1: abort;
+ABORT
+
+-- 2.1.3 insert should hold RowExclusiveLock on result relations
+1: begin;
+BEGIN
+1: insert into t_lockmods select * from generate_series(1, 5);
+INSERT 5
+2: select * from show_locks_lockmodes;
+ locktype | mode             | granted | relation   
+----------+------------------+---------+------------
+ relation | RowExclusiveLock | t       | t_lockmods 
+(1 row)
+1: abort;
+ABORT
+
+-- 2.1.5 use cached plan should be consistent with no cached plan
+1: prepare update_tlockmods as update t_lockmods set c = c + 0;
+PREPARE
+1: prepare delete_tlockmods as delete from t_lockmods;
+PREPARE
+1: prepare insert_tlockmods as insert into t_lockmods select * from generate_series(1, 5);
+PREPARE
+
+1: begin;
+BEGIN
+1: execute update_tlockmods;
+EXECUTE 5
+2: select * from show_locks_lockmodes;
+ locktype | mode             | granted | relation   
+----------+------------------+---------+------------
+ relation | RowExclusiveLock | t       | t_lockmods 
+(1 row)
+1: abort;
+ABORT
+
+1: begin;
+BEGIN
+1: execute delete_tlockmods;
+EXECUTE 5
+2: select * from show_locks_lockmodes;
+ locktype | mode             | granted | relation   
+----------+------------------+---------+------------
+ relation | RowExclusiveLock | t       | t_lockmods 
+(1 row)
+1: abort;
+ABORT
+
+1: begin;
+BEGIN
+1: execute insert_tlockmods;
+EXECUTE 5
+2: select * from show_locks_lockmodes;
+ locktype | mode             | granted | relation   
+----------+------------------+---------+------------
+ relation | RowExclusiveLock | t       | t_lockmods 
+(1 row)
+1: abort;
+ABORT
+
+-- 2.2.2 update | delete should hold ExclusiveLock on result relations
+1: begin;
+BEGIN
+1: update t_lockmods_ao set c = c + 0;
+UPDATE 8
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation      
+----------+---------------+---------+---------------
+ relation | ExclusiveLock | t       | t_lockmods_ao 
+(1 row)
+1: abort;
+ABORT
+
+1: begin;
+BEGIN
+1: delete from t_lockmods_ao;
+DELETE 8
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation      
+----------+---------------+---------+---------------
+ relation | ExclusiveLock | t       | t_lockmods_ao 
+(1 row)
+1: abort;
+ABORT
+
+-- 2.2.3 insert should hold RowExclusiveLock on result relations
+1: begin;
+BEGIN
+1: insert into t_lockmods_ao select * from generate_series(1, 5);
+INSERT 5
+2: select * from show_locks_lockmodes;
+ locktype | mode             | granted | relation      
+----------+------------------+---------+---------------
+ relation | RowExclusiveLock | t       | t_lockmods_ao 
+(1 row)
+1: abort;
+ABORT
+
+-- 2.2.4 use cached plan should be consistent with no cached plan
+1: prepare update_tlockmods_ao as update t_lockmods_ao set c = c + 0;
+PREPARE
+1: prepare delete_tlockmods_ao as delete from t_lockmods_ao;
+PREPARE
+1: prepare insert_tlockmods_ao as insert into t_lockmods_ao select * from generate_series(1, 5);
+PREPARE
+
+1: begin;
+BEGIN
+1: execute update_tlockmods_ao;
+EXECUTE 8
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation      
+----------+---------------+---------+---------------
+ relation | ExclusiveLock | t       | t_lockmods_ao 
+(1 row)
+1: abort;
+ABORT
+
+1: begin;
+BEGIN
+1: execute delete_tlockmods_ao;
+EXECUTE 8
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation      
+----------+---------------+---------+---------------
+ relation | ExclusiveLock | t       | t_lockmods_ao 
+(1 row)
+1: abort;
+ABORT
+
+1: begin;
+BEGIN
+1: execute insert_tlockmods_ao;
+EXECUTE 5
+2: select * from show_locks_lockmodes;
+ locktype | mode             | granted | relation      
+----------+------------------+---------+---------------
+ relation | RowExclusiveLock | t       | t_lockmods_ao 
+(1 row)
+1: abort;
+ABORT
+
+1q: ... <quitting>
+2q: ... <quitting>
+
+11: ALTER SYSTEM RESET gp_enable_global_deadlock_detector;
+ALTER
+1U:SELECT pg_ctl(dir, 'restart') from lockmodes_datadir;
+ pg_ctl 
+--------
+ OK     
+(1 row)
+
+1: show gp_enable_global_deadlock_detector;
+ gp_enable_global_deadlock_detector 
+------------------------------------
+ off                                
+(1 row)
+
+1: drop table lockmodes_datadir;
+DROP
+1q: ... <quitting>

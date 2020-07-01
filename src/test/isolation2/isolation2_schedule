@@ -1,5 +1,7 @@
 test: setup
 
+test: lockmodes
+
 test: ao_partition_lock
 test: dml_on_root_locks_all_parts
 
@@ -25,6 +27,7 @@ test: packcore
 # Tests on global deadlock detector
 test: select_for_update
 test: gdd/prepare
+test: gdd/concurrent_update
 test: gdd/dist-deadlock-01 gdd/dist-deadlock-04 gdd/dist-deadlock-05 gdd/dist-deadlock-06 gdd/dist-deadlock-07 gdd/dist-deadlock-102 gdd/dist-deadlock-103 gdd/dist-deadlock-104 gdd/dist-deadlock-106 gdd/non-lock-105
 # until we can improve below flaky case please keep it disabled
 ignore: gdd/non-lock-107
@@ -221,11 +224,6 @@ test: reindex/vacuum_while_reindex_ao_bitmap reindex/vacuum_while_reindex_heap_b
 
 # Cancel test
 test: cancel_plpython
-
-# Test concurrent UPDATE
-test: concurrent_update
-test: concurrent_update_distkeys
-test: concurrent_update_epq
 
 # Tests for getting numsegments in utility mode
 test: upgrade_numsegments

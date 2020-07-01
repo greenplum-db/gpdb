@@ -3531,28 +3531,24 @@ EvalPlanQual(EState *estate, EPQState *epqstate,
 {
 	TupleTableSlot *slot;
 	HeapTuple	copyTuple;
+	Plan *subPlan = epqstate->plan;
 
 	Assert(rti > 0);
 
 	/*
-	 * If GDD is enabled, the lock of table may downgrade to RowExclusiveLock,
-	 * (see CdbTryOpenRelation function), then EPQ would be triggered, EPQ will
-	 * execute the subplan in the executor, so it will create a new EState,
-	 * but there are no slice tables in the new EState and we can not AssignGangs
-	 * on the QE. In this case, we raise an error.
+	 * Greenplum cannot create gang in QEs so it does not support
+	 * EvalPlanQual that subplan contain motions. This can happen
+	 * in two cases:
+	 *   1. GDD is enabled, so update|delete can be concurrently executing
+	 *   2. Utility mode connect to a segment and other global transaction
+	 *      do UpdateStatement.
 	 */
-	if (gp_enable_global_deadlock_detector)
+	Assert(subPlan != NULL);
+	if (subPlan->nMotionNodes > 0)
 	{
-		Plan *subPlan = epqstate->plan;
-
-		Assert(subPlan != NULL);
-
-		if (subPlan->nMotionNodes > 0)
-		{
-			ereport(ERROR,
-					(errcode(ERRCODE_T_R_SERIALIZATION_FAILURE),
-					 errmsg("EvalPlanQual can not handle subPlan with Motion node")));
-		}
+		ereport(ERROR,
+				(errcode(ERRCODE_T_R_SERIALIZATION_FAILURE),
+				 errmsg("EvalPlanQual can not handle subPlan with Motion node")));
 	}
 
 	/*
