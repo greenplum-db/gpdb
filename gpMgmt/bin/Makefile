@@ -223,6 +223,7 @@ unitdevel:
 
 .PHONY: installcheck-bash
 installcheck-bash:
+	./test-generate-greenplum-path.bash
 	./test/suite.bash
 
 .PHONY: installcheck
