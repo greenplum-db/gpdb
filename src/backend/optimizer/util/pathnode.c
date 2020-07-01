@@ -4924,18 +4924,23 @@ create_limit_path(PlannerInfo *root, RelOptInfo *rel,
 	LimitPath  *pathnode = makeNode(LimitPath);
 
 	/*
-	 * If the locus type of the subpath is SegmentGeneral/General without order,
+	 * If the locus type of the subpath is SegmentGeneral/General,
 	 * e.g. for replicated table, applying Limit will change the locus type.
 	 * Because the output of the subquery may be different, even for
 	 * replicated table, the result should be produced by one and only one
 	 * instance.
+	 * If the subquery is ordered and well defined the output, which means
+	 * the output tuples are determined wherever the subquery runs,
+	 * it could elide the motion. However, let's skip this optimization now.
 	 */
 	if ((CdbPathLocus_IsGeneral(subpath->locus) ||
-		 CdbPathLocus_IsSegmentGeneral(subpath->locus))
-		&& !subpath->pathkeys)
+		 CdbPathLocus_IsSegmentGeneral(subpath->locus)))
 	{
 		CdbPathLocus locus;
 		CdbPathLocus_MakeSingleQE(&locus, subpath->locus.numsegments);
+		if (CdbPathLocus_IsGeneral(subpath->locus))
+			locus.numsegments = getgpsegmentCount();
+		Assert(locus.numsegments > 0);
 		subpath = cdbpath_create_motion_path(root, subpath, NIL, false, locus);
 	}
 

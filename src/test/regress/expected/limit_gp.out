@@ -189,3 +189,119 @@ select array(select b from t_limit_all order by b asc limit all) t;
 (1 row)
 
 drop table t_limit_all;
+-- Check LIMIT on a subquery with General/SegmentGeneral locus
+create table t_rpt(i int) distributed replicated;
+create table t_rpt2(i int) distributed replicated;
+create table t_prt(i int) distributed by(i);
+create table t_prt2(i int) distributed by(i);
+-- This PR only fixes the issue for Postgres optimizer
+-- The fix for ORCA should remove the comment and lines changing the optimizer
+set optimizer = off;
+explain insert into t_rpt select i from t_rpt2;
+                            QUERY PLAN                             
+-------------------------------------------------------------------
+ Insert on t_rpt  (cost=0.00..1063.00 rows=32100 width=4)
+   ->  Seq Scan on t_rpt2  (cost=0.00..1063.00 rows=32100 width=4)
+ Optimizer: Postgres query optimizer
+(3 rows)
+
+explain insert into t_rpt select i from t_rpt2 limit 2;
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Insert on t_rpt  (cost=1063.00..1063.10 rows=2 width=4)
+   ->  Broadcast Motion 1:3  (slice1; segments: 1)  (cost=1063.00..1063.10 rows=6 width=4)
+         ->  Limit  (cost=1063.00..1063.00 rows=2 width=4)
+               ->  Seq Scan on t_rpt2  (cost=0.00..1063.00 rows=96300 width=4)
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+explain insert into t_rpt select i from t_rpt2 order by i limit 2;
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Insert on t_rpt  (cost=2266.75..2266.85 rows=2 width=4)
+   ->  Broadcast Motion 1:3  (slice1; segments: 1)  (cost=2266.75..2266.85 rows=6 width=4)
+         ->  Limit  (cost=2266.75..2266.75 rows=2 width=4)
+               ->  Sort  (cost=2026.00..2266.75 rows=96300 width=4)
+                     Sort Key: t_rpt2.i
+                     ->  Seq Scan on t_rpt2  (cost=0.00..1063.00 rows=96300 width=4)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain insert into t_rpt select i from t_prt;
+                                         QUERY PLAN                                         
+--------------------------------------------------------------------------------------------
+ Insert on t_rpt  (cost=0.00..4915.00 rows=96300 width=4)
+   ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..4915.00 rows=96300 width=4)
+         ->  Seq Scan on t_prt  (cost=0.00..1063.00 rows=32100 width=4)
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+explain insert into t_rpt select i from t_prt limit 2;
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Insert on t_rpt  (cost=106.30..106.46 rows=2 width=4)
+   ->  Broadcast Motion 1:3  (slice1; segments: 1)  (cost=106.30..106.46 rows=6 width=4)
+         ->  Limit  (cost=106.30..106.36 rows=2 width=4)
+               ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=106.30..106.36 rows=2 width=4)
+                     ->  Limit  (cost=106.30..106.32 rows=1 width=4)
+                           ->  Seq Scan on t_prt  (cost=0.00..1063.00 rows=32100 width=4)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain insert into t_prt select i from t_prt2;
+                            QUERY PLAN                             
+-------------------------------------------------------------------
+ Insert on t_prt  (cost=0.00..1063.00 rows=32100 width=4)
+   ->  Seq Scan on t_prt2  (cost=0.00..1063.00 rows=32100 width=4)
+ Optimizer: Postgres query optimizer
+(3 rows)
+
+explain insert into t_prt select i from t_prt2 limit 2;
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Insert on t_prt  (cost=106.30..106.42 rows=1 width=4)
+   ->  Redistribute Motion 1:3  (slice1; segments: 1)  (cost=106.30..106.42 rows=2 width=4)
+         Hash Key: t_prt2.i
+         ->  Limit  (cost=106.30..106.36 rows=2 width=4)
+               ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=106.30..106.36 rows=2 width=4)
+                     ->  Limit  (cost=106.30..106.32 rows=1 width=4)
+                           ->  Seq Scan on t_prt2  (cost=0.00..1063.00 rows=32100 width=4)
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+explain insert into t_prt select i from t_rpt2;
+                                          QUERY PLAN                                           
+-----------------------------------------------------------------------------------------------
+ Insert on t_prt  (cost=0.00..2989.00 rows=32100 width=4)
+   ->  Redistribute Motion 1:3  (slice1; segments: 1)  (cost=0.00..2989.00 rows=96300 width=4)
+         Hash Key: t_rpt2.i
+         ->  Seq Scan on t_rpt2  (cost=0.00..1063.00 rows=96300 width=4)
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+explain insert into t_prt select i from t_rpt2 limit 2;
+                                          QUERY PLAN                                          
+----------------------------------------------------------------------------------------------
+ Insert on t_prt  (cost=1063.00..1063.06 rows=1 width=4)
+   ->  Redistribute Motion 1:3  (slice1; segments: 1)  (cost=1063.00..1063.06 rows=2 width=4)
+         Hash Key: t_rpt2.i
+         ->  Limit  (cost=1063.00..1063.00 rows=2 width=4)
+               ->  Seq Scan on t_rpt2  (cost=0.00..1063.00 rows=96300 width=4)
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+explain insert into t_prt select i from t_rpt2 order by i limit 2;
+                                          QUERY PLAN                                          
+----------------------------------------------------------------------------------------------
+ Insert on t_prt  (cost=2026.00..2026.07 rows=1 width=4)
+   ->  Redistribute Motion 1:3  (slice1; segments: 1)  (cost=2026.00..2026.07 rows=2 width=4)
+         Hash Key: t_rpt2.i
+         ->  Limit  (cost=2026.00..2026.01 rows=2 width=4)
+               ->  Sort  (cost=2026.00..2266.75 rows=96300 width=4)
+                     Sort Key: t_rpt2.i
+                     ->  Seq Scan on t_rpt2  (cost=0.00..1063.00 rows=96300 width=4)
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+reset optimizer;
+drop table t_rpt, t_rpt2, t_prt, t_prt2;

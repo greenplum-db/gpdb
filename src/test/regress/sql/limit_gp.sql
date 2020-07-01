@@ -66,3 +66,28 @@ select array(select b from t_limit_all order by b asc limit all) t;
 select array(select b from t_limit_all order by b asc limit all) t;
 
 drop table t_limit_all;
+
+-- Check LIMIT on a subquery with General/SegmentGeneral locus
+create table t_rpt(i int) distributed replicated;
+create table t_rpt2(i int) distributed replicated;
+create table t_prt(i int) distributed by(i);
+create table t_prt2(i int) distributed by(i);
+
+-- This PR only fixes the issue for Postgres optimizer
+-- The fix for ORCA should remove the comment and lines changing the optimizer
+set optimizer = off;
+explain insert into t_rpt select i from t_rpt2;
+explain insert into t_rpt select i from t_rpt2 limit 2;
+explain insert into t_rpt select i from t_rpt2 order by i limit 2;
+explain insert into t_rpt select i from t_prt;
+explain insert into t_rpt select i from t_prt limit 2;
+
+explain insert into t_prt select i from t_prt2;
+explain insert into t_prt select i from t_prt2 limit 2;
+explain insert into t_prt select i from t_rpt2;
+explain insert into t_prt select i from t_rpt2 limit 2;
+explain insert into t_prt select i from t_rpt2 order by i limit 2;
+
+reset optimizer;
+drop table t_rpt, t_rpt2, t_prt, t_prt2;
+
