@@ -154,6 +154,12 @@ CIndexDescriptor::Pindexdesc
 	return pindexdesc;
 }
 
+BOOL
+CIndexDescriptor::SupportsIndexOnlyScan() const
+{
+	return m_index_type == IMDIndex::EmdindBtree;
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CIndexDescriptor::OsPrint

@@ -64,6 +64,7 @@ OBJS        = CDecorrelator.o \
               CXformImplementUnionAll.o \
               CXformImplementation.o \
               CXformIndexGet2IndexScan.o \
+              CXformIndexGet2IndexOnlyScan.o \
               CXformInlineCTEConsumer.o \
               CXformInlineCTEConsumerUnderSelect.o \
               CXformInnerApply2InnerJoin.o \

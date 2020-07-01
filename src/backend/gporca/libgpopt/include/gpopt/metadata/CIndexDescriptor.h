@@ -118,6 +118,8 @@ namespace gpopt
 				return m_index_type;
 			}
 
+			BOOL SupportsIndexOnlyScan() const;
+
 			// create an index descriptor
 			static CIndexDescriptor *Pindexdesc
 				(

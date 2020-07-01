@@ -355,6 +355,7 @@
 		"optimizer_enable_hashjoin_redistribute_broadcast_children",
 		"optimizer_enable_indexjoin",
 		"optimizer_enable_indexscan",
+		"optimizer_enable_indexonlyscan",
 		"optimizer_enable_master_only_queries",
 		"optimizer_enable_materialize",
 		"optimizer_enable_mergejoin",

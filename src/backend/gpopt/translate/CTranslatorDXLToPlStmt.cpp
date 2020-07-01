@@ -124,6 +124,7 @@ CTranslatorDXLToPlStmt::InitTranslators()
 			{EdxlopPhysicalTableScan,				&gpopt::CTranslatorDXLToPlStmt::TranslateDXLTblScan},
 			{EdxlopPhysicalExternalScan,			&gpopt::CTranslatorDXLToPlStmt::TranslateDXLTblScan},
 			{EdxlopPhysicalIndexScan,				&gpopt::CTranslatorDXLToPlStmt::TranslateDXLIndexScan},
+			{EdxlopPhysicalIndexOnlyScan,           &gpopt::CTranslatorDXLToPlStmt::TranslateDXLIndexOnlyScan},
 			{EdxlopPhysicalHashJoin, 				&gpopt::CTranslatorDXLToPlStmt::TranslateDXLHashJoin},
 			{EdxlopPhysicalNLJoin, 					&gpopt::CTranslatorDXLToPlStmt::TranslateDXLNLJoin},
 			{EdxlopPhysicalMergeJoin,				&gpopt::CTranslatorDXLToPlStmt::TranslateDXLMergeJoin},
@@ -383,7 +384,7 @@ CTranslatorDXLToPlStmt::TranslateDXLTblScan
 
 	const CDXLTableDescr *dxl_table_descr = phy_tbl_scan_dxlop->GetDXLTableDescr();
 	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(dxl_table_descr->MDId());
-	RangeTblEntry *rte = TranslateDXLTblDescrToRangeTblEntry(dxl_table_descr, NULL /*index_descr_dxl*/, index, &base_table_context);
+	RangeTblEntry *rte = TranslateDXLTblDescrToRangeTblEntry(dxl_table_descr, index, &base_table_context);
 	GPOS_ASSERT(NULL != rte);
 	rte->requiredPerms |= ACL_SELECT;
 	m_dxl_to_plstmt_context->AddRTE(rte);
@@ -527,7 +528,7 @@ CTranslatorDXLToPlStmt::TranslateDXLIndexScan
 	// translate table descriptor into a range table entry
 	CDXLPhysicalIndexScan *physical_idx_scan_dxlop = CDXLPhysicalIndexScan::Cast(index_scan_dxlnode->GetOperator());
 
-	return TranslateDXLIndexScan(index_scan_dxlnode, physical_idx_scan_dxlop, output_context, false /*is_index_only_scan*/, ctxt_translation_prev_siblings);
+	return TranslateDXLIndexScan(index_scan_dxlnode, physical_idx_scan_dxlop, output_context, ctxt_translation_prev_siblings);
 }
 
 //---------------------------------------------------------------------------
@@ -544,7 +545,6 @@ CTranslatorDXLToPlStmt::TranslateDXLIndexScan
 	const CDXLNode *index_scan_dxlnode,
 	CDXLPhysicalIndexScan *physical_idx_scan_dxlop,
 	CDXLTranslateContext *output_context,
-	BOOL is_index_only_scan,
 	CDXLTranslationContextArray *ctxt_translation_prev_siblings
 	)
 {
@@ -553,21 +553,14 @@ CTranslatorDXLToPlStmt::TranslateDXLIndexScan
 
 	Index index = gpdb::ListLength(m_dxl_to_plstmt_context->GetRTableEntriesList()) + 1;
 
-	const CDXLIndexDescr *index_descr_dxl = NULL;
-	if (is_index_only_scan)
-	{
-		index_descr_dxl = physical_idx_scan_dxlop->GetDXLIndexDescr();
-	}
-
 	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(physical_idx_scan_dxlop->GetDXLTableDescr()->MDId());
 
-	RangeTblEntry *rte = TranslateDXLTblDescrToRangeTblEntry(physical_idx_scan_dxlop->GetDXLTableDescr(), index_descr_dxl, index, &base_table_context);
+	RangeTblEntry *rte = TranslateDXLTblDescrToRangeTblEntry(physical_idx_scan_dxlop->GetDXLTableDescr(), index, &base_table_context);
 	GPOS_ASSERT(NULL != rte);
 	rte->requiredPerms |= ACL_SELECT;
 	m_dxl_to_plstmt_context->AddRTE(rte);
 
 	IndexScan *index_scan = NULL;
-	GPOS_ASSERT(!is_index_only_scan);
 	index_scan = MakeNode(IndexScan);
 	index_scan->scan.scanrelid = index;
 
@@ -623,7 +616,6 @@ CTranslatorDXLToPlStmt::TranslateDXLIndexScan
 		(
 		index_cond_list_dxlnode,
 		physical_idx_scan_dxlop->GetDXLTableDescr(),
-		is_index_only_scan,
 		false, // is_bitmap_index_probe
 		md_index,
 		md_rel,
@@ -642,6 +634,159 @@ CTranslatorDXLToPlStmt::TranslateDXLIndexScan
 	 * As of 8.4, the indexstrategy and indexsubtype fields are no longer
 	 * available or needed in IndexScan. Ignore them.
 	 */
+	SetParamIds(plan);
+
+	return (Plan *) index_scan;
+}
+
+static List *
+TranslateDXLIndexTList
+	(
+	const IMDRelation *md_rel,
+	const IMDIndex *md_index,
+	Index new_varno,
+	const CDXLTableDescr *table_descr,
+	CDXLTranslateContextBaseTable *index_context
+	)
+{
+	List *target_list = NIL;
+
+	index_context->SetRelIndex(INDEX_VAR);
+
+	for (ULONG ul = 0; ul < md_index->Keys(); ul++)
+	{
+		ULONG key = md_index->KeyAt(ul);
+
+		const IMDColumn *col = md_rel->GetMdCol(key);
+
+		TargetEntry *target_entry = MakeNode(TargetEntry);
+		target_entry->resno = (AttrNumber) ul + 1;
+
+		Expr *indexvar = (Expr *) gpdb::MakeVar(new_varno,
+									col->AttrNum(),
+									CMDIdGPDB::CastMdid(col->MdidType())->Oid(),
+									col->TypeModifier() /*vartypmod*/,
+									0/*varlevelsup*/);
+		target_entry->expr = indexvar;
+
+		// Fix up proj list. Since index only scan does not read full tuples,
+		// the var->varattno must be updated as it should no longer point to
+		// column in the table, but rather a column in the index. We achieve
+		// this by mapping col id to a new varattno based on index columns.
+		for (ULONG j = 0; j < table_descr->Arity(); j++)
+		{
+			const CDXLColDescr *dxl_col_descr = table_descr->GetColumnDescrAt(j);
+			if (dxl_col_descr->AttrNum() == ((Var *)indexvar)->varattno)
+			{
+				(void) index_context->InsertMapping(dxl_col_descr->Id(), ul + 1);
+				break;
+			}
+		}
+
+		target_list = gpdb::LAppend(target_list, target_entry);
+	}
+
+	return target_list;
+}
+
+Plan *
+CTranslatorDXLToPlStmt::TranslateDXLIndexOnlyScan
+	(
+	const CDXLNode *index_scan_dxlnode,
+	CDXLTranslateContext *output_context,
+	CDXLTranslationContextArray *ctxt_translation_prev_siblings
+	)
+{
+	// translate table descriptor into a range table entry
+	CDXLPhysicalIndexOnlyScan *physical_idx_scan_dxlop = CDXLPhysicalIndexOnlyScan::Cast(index_scan_dxlnode->GetOperator());
+	const CDXLTableDescr *table_desc = physical_idx_scan_dxlop->GetDXLTableDescr();
+
+	// translation context for column mappings in the base relation
+	CDXLTranslateContextBaseTable base_table_context(m_mp);
+
+	Index index = gpdb::ListLength(m_dxl_to_plstmt_context->GetRTableEntriesList()) + 1;
+
+	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(physical_idx_scan_dxlop->GetDXLTableDescr()->MDId());
+
+	RangeTblEntry *rte = TranslateDXLTblDescrToRangeTblEntry(physical_idx_scan_dxlop->GetDXLTableDescr(), index, &base_table_context);
+	GPOS_ASSERT(NULL != rte);
+	rte->requiredPerms |= ACL_SELECT;
+	m_dxl_to_plstmt_context->AddRTE(rte);
+
+	IndexOnlyScan *index_scan = MakeNode(IndexOnlyScan);
+	index_scan->scan.scanrelid = index;
+
+	CMDIdGPDB *mdid_index = CMDIdGPDB::CastMdid(physical_idx_scan_dxlop->GetDXLIndexDescr()->MDId());
+	const IMDIndex *md_index = m_md_accessor->RetrieveIndex(mdid_index);
+	Oid index_oid = mdid_index->Oid();
+
+	GPOS_ASSERT(InvalidOid != index_oid);
+	index_scan->indexid = index_oid;
+
+	Plan *plan = &(index_scan->scan.plan);
+	plan->plan_node_id = m_dxl_to_plstmt_context->GetNextPlanId();
+
+	// translate operator costs
+	TranslatePlanCosts
+		(
+		 CDXLPhysicalProperties::PdxlpropConvert(index_scan_dxlnode->GetProperties())->GetDXLOperatorCost(),
+		 &(plan->startup_cost),
+		 &(plan->total_cost),
+		 &(plan->plan_rows),
+		 &(plan->plan_width)
+		);
+
+	// an index scan node must have 3 children: projection list, filter and index condition list
+	GPOS_ASSERT(3 == index_scan_dxlnode->Arity());
+
+	// translate proj list and filter
+	CDXLNode *project_list_dxlnode = (*index_scan_dxlnode)[EdxlisIndexProjList];
+	CDXLNode *filter_dxlnode = (*index_scan_dxlnode)[EdxlisIndexFilter];
+	CDXLNode *index_cond_list_dxlnode = (*index_scan_dxlnode)[EdxlisIndexCondition];
+
+	CDXLTranslateContextBaseTable index_context(m_mp);
+
+	// translate index targetlist
+	index_scan->indextlist = TranslateDXLIndexTList(md_rel, md_index, index, table_desc, &index_context);
+
+	// translate target list
+	plan->targetlist = TranslateDXLProjList(project_list_dxlnode, &index_context, NULL /*child_contexts*/, output_context);
+
+	// translate index filter
+	plan->qual = TranslateDXLIndexFilter
+		(
+		 filter_dxlnode,
+		 output_context,
+		 &index_context,
+		 ctxt_translation_prev_siblings
+		);
+
+	index_scan->indexorderdir = CTranslatorUtils::GetScanDirection(physical_idx_scan_dxlop->GetIndexScanDir());
+
+	// translate index condition list
+	List *index_cond = NIL;
+	List *index_orig_cond = NIL;
+	List *index_strategy_list = NIL;
+	List *index_subtype_list = NIL;
+
+	TranslateIndexConditions
+		(
+		 index_cond_list_dxlnode,
+		 physical_idx_scan_dxlop->GetDXLTableDescr(),
+		 false, // is_bitmap_index_probe
+		 md_index,
+		 md_rel,
+		 output_context,
+		 &base_table_context,
+		 ctxt_translation_prev_siblings,
+		 &index_cond,
+		 &index_orig_cond,
+		 &index_strategy_list,
+		 &index_subtype_list
+		);
+
+	index_scan->indexqual = index_cond;
+	index_scan->indexqualorig = index_orig_cond;
 	SetParamIds(plan);
 
 	return (Plan *) index_scan;
@@ -694,7 +839,6 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions
 	(
 	CDXLNode *index_cond_list_dxlnode,
 	const CDXLTableDescr *dxl_tbl_descr,
-	BOOL is_index_only_scan,
 	BOOL is_bitmap_index_probe,
 	const IMDIndex *index,
 	const IMDRelation *md_rel,
@@ -730,13 +874,9 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions
 			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtConversion, GPOS_WSZ_LIT("ScalarArrayOpExpr condition on index scan"));
 		}
 
-		// for indexonlyscan, we already have the attno referring to the index
-		if (!is_index_only_scan)
-		{
-			// Otherwise, we need to perform mapping of Varattnos relative to column positions in index keys
-			SContextIndexVarAttno index_varattno_ctxt(md_rel, index);
-			SetIndexVarAttnoWalker((Node *) index_cond_expr, &index_varattno_ctxt);
-		}
+		// We need to perform mapping of Varattnos relative to column positions in index keys
+		SContextIndexVarAttno index_varattno_ctxt(md_rel, index);
+		SetIndexVarAttnoWalker((Node *) index_cond_expr, &index_varattno_ctxt);
 		
 		// find index key's attno
 		List *args_list = NULL;
@@ -3458,7 +3598,7 @@ CTranslatorDXLToPlStmt::TranslateDXLDynTblScan
 	// add the new range table entry as the last element of the range table
 	Index index = gpdb::ListLength(m_dxl_to_plstmt_context->GetRTableEntriesList()) + 1;
 
-	RangeTblEntry *rte = TranslateDXLTblDescrToRangeTblEntry(dyn_tbl_scan_dxlop->GetDXLTableDescr(), NULL /*index_descr_dxl*/, index, &base_table_context);
+	RangeTblEntry *rte = TranslateDXLTblDescrToRangeTblEntry(dyn_tbl_scan_dxlop->GetDXLTableDescr(), index, &base_table_context);
 	GPOS_ASSERT(NULL != rte);
 	rte->requiredPerms |= ACL_SELECT;
 
@@ -3530,7 +3670,7 @@ CTranslatorDXLToPlStmt::TranslateDXLDynIdxScan
 	Index index = gpdb::ListLength(m_dxl_to_plstmt_context->GetRTableEntriesList()) + 1;
 
 	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(dyn_index_scan_dxlop->GetDXLTableDescr()->MDId());
-	RangeTblEntry *rte = TranslateDXLTblDescrToRangeTblEntry(dyn_index_scan_dxlop->GetDXLTableDescr(), NULL /*index_descr_dxl*/, index, &base_table_context);
+	RangeTblEntry *rte = TranslateDXLTblDescrToRangeTblEntry(dyn_index_scan_dxlop->GetDXLTableDescr(), index, &base_table_context);
 	GPOS_ASSERT(NULL != rte);
 	rte->requiredPerms |= ACL_SELECT;
 	m_dxl_to_plstmt_context->AddRTE(rte);
@@ -3594,7 +3734,6 @@ CTranslatorDXLToPlStmt::TranslateDXLDynIdxScan
 		(
 		index_cond_list_dxlnode,
 		dyn_index_scan_dxlop->GetDXLTableDescr(),
-		false, // is_index_only_scan
 		false, // is_bitmap_index_probe
 		md_index,
 		md_rel,
@@ -3696,7 +3835,7 @@ CTranslatorDXLToPlStmt::TranslateDXLDml
 	m_result_rel_list = gpdb::LAppendInt(m_result_rel_list, index);
 
 	CDXLTableDescr *table_descr = phy_dml_dxlop->GetDXLTableDescr();
-	RangeTblEntry *rte = TranslateDXLTblDescrToRangeTblEntry(table_descr, NULL /*index_descr_dxl*/, index, &base_table_context);
+	RangeTblEntry *rte = TranslateDXLTblDescrToRangeTblEntry(table_descr, index, &base_table_context);
 	GPOS_ASSERT(NULL != rte);
 	rte->requiredPerms |= acl_mode;
 	m_dxl_to_plstmt_context->AddRTE(rte);
@@ -4070,7 +4209,6 @@ RangeTblEntry *
 CTranslatorDXLToPlStmt::TranslateDXLTblDescrToRangeTblEntry
 	(
 	const CDXLTableDescr *table_descr,
-	const CDXLIndexDescr *index_descr_dxl, // should be NULL unless we have an index-only scan
 	Index index,
 	CDXLTranslateContextBaseTable *base_table_context
 	)
@@ -4082,13 +4220,6 @@ CTranslatorDXLToPlStmt::TranslateDXLTblDescrToRangeTblEntry
 
 	RangeTblEntry *rte = MakeNode(RangeTblEntry);
 	rte->rtekind = RTE_RELATION;
-
-	// get the index if given
-	const IMDIndex *md_index = NULL;
-	if (NULL != index_descr_dxl)
-	{
-		md_index = m_md_accessor->RetrieveIndex(index_descr_dxl->MDId());
-	}
 
 	// get oid for table
 	Oid oid = CMDIdGPDB::CastMdid(table_descr->MDId())->Oid();
@@ -4138,12 +4269,6 @@ CTranslatorDXLToPlStmt::TranslateDXLTblDescrToRangeTblEntry
 
 			alias->colnames = gpdb::LAppend(alias->colnames, val_colname);
 			last_attno = attno;
-		}
-
-		// get the attno from the index, in case of indexonlyscan
-		if (NULL != md_index)
-		{
-			attno = 1 + md_index->GetKeyPos((ULONG) attno - 1);
 		}
 
 		// save mapping col id -> index in translate context
@@ -5138,7 +5263,7 @@ CTranslatorDXLToPlStmt::TranslateDXLBitmapTblScan
 
 	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(table_descr->MDId());
 
-	RangeTblEntry *rte = TranslateDXLTblDescrToRangeTblEntry(table_descr, NULL /*index_descr_dxl*/, index, &base_table_context);
+	RangeTblEntry *rte = TranslateDXLTblDescrToRangeTblEntry(table_descr, index, &base_table_context);
 	GPOS_ASSERT(NULL != rte);
 	rte->requiredPerms |= ACL_SELECT;
 
@@ -5406,7 +5531,6 @@ CTranslatorDXLToPlStmt::TranslateDXLBitmapIndexProbe
 		(
 		index_cond_list_dxlnode,
 		table_descr,
-		false /*is_index_only_scan*/,
 		true  /*is_bitmap_index_probe*/,
 		index,
 		md_rel,

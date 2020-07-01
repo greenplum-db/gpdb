@@ -9,6 +9,8 @@
 //		Implementation of GPDB cost model
 //---------------------------------------------------------------------------
 
+#include <limits>
+
 #include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/COrderSpec.h"
 #include "gpopt/base/CWindowFrame.h"
@@ -17,6 +19,7 @@
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CPhysicalSequenceProject.h"
 #include "gpopt/operators/CPhysicalIndexScan.h"
+#include "gpopt/operators/CPhysicalIndexOnlyScan.h"
 #include "gpopt/operators/CPhysicalDynamicIndexScan.h"
 #include "gpopt/operators/CPhysicalHashAgg.h"
 #include "gpopt/operators/CPhysicalUnionAll.h"
@@ -42,6 +45,7 @@ const CCostModelGPDB::SCostMapping CCostModelGPDB::m_rgcm[] =
 
 	{COperator::EopPhysicalFilter, CostFilter},
 
+	{COperator::EopPhysicalIndexOnlyScan, CostIndexOnlyScan},
 	{COperator::EopPhysicalIndexScan, CostIndexScan},
 	{COperator::EopPhysicalDynamicIndexScan, CostIndexScan},
 	{COperator::EopPhysicalBitmapTableScan, CostBitmapTableScan},
@@ -1478,6 +1482,25 @@ CCostModelGPDB::CostIndexScan
 	return CCost(pci->NumRebinds() * (dRowsIndex * dCostPerIndexRow + dIndexScanTupRandomFactor));
 }
 
+
+CCost
+CCostModelGPDB::CostIndexOnlyScan
+(
+	CMemoryPool *, // mp
+	CExpressionHandle &, //exprhdl
+	const CCostModelGPDB *, // pcmgpdb
+	const SCostingInfo *pci //pci
+	)
+{
+	// FIXME: Gather relation's visibility map statistics and use that info to
+	// create a cost model. When a block is visible then the scan can rely
+	// solely on the values stored in the index and does not have to open the
+	// corresponding heap page of the relation. If the blocks are not visible
+	// then there is no benefit over an index scan and you pay overhead of
+	// looking at visibility map.
+	pci->NumRebinds();
+	return CCost(std::numeric_limits<double>::max());
+}
 
 CCost
 CCostModelGPDB::CostBitmapTableScan

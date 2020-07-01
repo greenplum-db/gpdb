@@ -144,6 +144,7 @@ CXformFactory::Add
 void
 CXformFactory::Instantiate()
 {
+	// Order here needs to correspond to the order defined in CXform::EXformId
 	Add(GPOS_NEW(m_mp) CXformProject2ComputeScalar(m_mp));
 	Add(GPOS_NEW(m_mp) CXformExpandNAryJoin(m_mp));
 	Add(GPOS_NEW(m_mp) CXformExpandNAryJoinMinCard(m_mp));
@@ -296,6 +297,7 @@ CXformFactory::Instantiate()
 	Add(GPOS_NEW(m_mp) CXformLeftOuterJoin2DynamicIndexGetApply(m_mp));
 	Add(GPOS_NEW(m_mp) CXformLeftOuterJoinWithInnerSelect2DynamicBitmapIndexGetApply(m_mp));
 	Add(GPOS_NEW(m_mp) CXformLeftOuterJoinWithInnerSelect2DynamicIndexGetApply(m_mp));
+	Add(GPOS_NEW(m_mp) CXformIndexGet2IndexOnlyScan(m_mp));
 
 	GPOS_ASSERT(NULL != m_rgpxf[CXform::ExfSentinel - 1] &&
 				"Not all xforms have been instantiated");

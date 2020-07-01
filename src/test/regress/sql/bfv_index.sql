@@ -316,3 +316,30 @@ select * from shape_aocs where c && '<(5,5), 2>'::circle;
 select * from shape_heap where c && '<(5,5), 3>'::circle;
 select * from shape_ao   where c && '<(5,5), 3>'::circle;
 select * from shape_aocs where c && '<(5,5), 3>'::circle;
+
+--
+-- Given a table with different column types
+--
+CREATE TABLE table_with_reversed_index(a int, b bool, c text);
+
+--
+-- And it has an index that is ordered differently than columns on the table.
+--
+CREATE INDEX ON table_with_reversed_index(c, a);
+INSERT INTO table_with_reversed_index VALUES (10, true, 'ab');
+
+--
+-- Then an index only scan should succeed. (i.e. varattno is set up correctly)
+--
+SET enable_seqscan=off;
+SET enable_bitmapscan=off;
+SET optimizer_enable_tablescan=off;
+SET optimizer_enable_indexscan=off;
+SET optimizer_enable_indexonlyscan=on;
+EXPLAIN SELECT c, a FROM table_with_reversed_index WHERE a > 5;
+SELECT c, a FROM table_with_reversed_index WHERE a > 5;
+RESET enable_seqscan;
+RESET enable_bitmapscan;
+RESET optimizer_enable_tablescan;
+RESET optimizer_enable_indexscan;
+RESET optimizer_enable_indexonlyscan;

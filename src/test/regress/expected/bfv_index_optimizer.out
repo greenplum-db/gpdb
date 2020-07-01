@@ -693,3 +693,42 @@ select * from shape_aocs where c && '<(5,5), 3>'::circle;
  <(0,0),5>
 (1 row)
 
+--
+-- Given a table with different column types
+--
+CREATE TABLE table_with_reversed_index(a int, b bool, c text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+--
+-- And it has an index that is ordered differently than columns on the table.
+--
+CREATE INDEX ON table_with_reversed_index(c, a);
+INSERT INTO table_with_reversed_index VALUES (10, true, 'ab');
+--
+-- Then an index only scan should succeed. (i.e. varattno is set up correctly)
+--
+SET enable_seqscan=off;
+SET enable_bitmapscan=off;
+SET optimizer_enable_tablescan=off;
+SET optimizer_enable_indexscan=off;
+SET optimizer_enable_indexonlyscan=on;
+EXPLAIN SELECT c, a FROM table_with_reversed_index WHERE a > 5;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..0.10 rows=1 width=7)
+   ->  Index Only Scan using table_with_reversed_index_c_a_idx on table_with_reversed_index  (cost=0.00..0.10 rows=1 width=7)
+         Index Cond: (a > 5)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
+
+SELECT c, a FROM table_with_reversed_index WHERE a > 5;
+ c  | a  
+----+----
+ ab | 10
+(1 row)
+
+RESET enable_seqscan;
+RESET enable_bitmapscan;
+RESET optimizer_enable_tablescan;
+RESET optimizer_enable_indexscan;
+RESET optimizer_enable_indexonlyscan;

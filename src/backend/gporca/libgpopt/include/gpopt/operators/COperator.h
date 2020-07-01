@@ -208,6 +208,7 @@ namespace gpopt
 				EopPhysicalTableScan,
 				EopPhysicalExternalScan,
 				EopPhysicalIndexScan,
+				EopPhysicalIndexOnlyScan,
 				EopPhysicalBitmapTableScan,
 				EopPhysicalFilter,
 				EopPhysicalInnerNLJoin,

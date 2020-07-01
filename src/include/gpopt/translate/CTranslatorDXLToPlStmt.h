@@ -211,8 +211,15 @@ namespace gpdxl
 				const CDXLNode *index_scan_dxlnode,
 				CDXLPhysicalIndexScan *dxl_physical_idx_scan_op,
 				CDXLTranslateContext *output_context,
-				BOOL is_index_only_scan,
 				CDXLTranslationContextArray *ctxt_translation_prev_siblings // translation contexts of previous siblings
+				);
+
+			// translate DXL index scan node into a IndexOnlyScan node
+			Plan *TranslateDXLIndexOnlyScan
+				(
+				 const CDXLNode *index_scan_dxlnode,
+				 CDXLTranslateContext *output_context,
+				 CDXLTranslationContextArray *ctxt_translation_prev_siblings // translation contexts of previous siblings
 				);
 
 			// translate DXL hash join into a HashJoin node
@@ -464,7 +471,6 @@ namespace gpdxl
 			RangeTblEntry *TranslateDXLTblDescrToRangeTblEntry
 				(
 				const CDXLTableDescr *table_descr,
-				const CDXLIndexDescr *index_descr_dxl,
 				Index index,
 				CDXLTranslateContextBaseTable *base_table_context
 				);
@@ -607,7 +613,6 @@ namespace gpdxl
 				(
 				CDXLNode *index_cond_list_dxlnode,
 				const CDXLTableDescr *dxl_tbl_descr,
-				BOOL is_index_only_scan,
 				BOOL is_bitmap_index_probe,
 				const IMDIndex *index,
 				const IMDRelation *md_rel,
