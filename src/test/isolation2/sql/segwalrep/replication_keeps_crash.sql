@@ -5,7 +5,7 @@
 -- before start streaming data. And walsender, walreceiver keeps
 -- re-connect continuously, this may block other processes.
 -- GPDB will track the continuously failures for the replication.
--- If the failure times exceed a limitation, FTS will mart the mirror dow
+-- If the failure times exceed a limitation, FTS will mark the mirror down
 -- to avoid blocking other queries.
 -- More details please refer to FTSGetReplicationDisconnectTime.
 
@@ -27,9 +27,13 @@ select gp_inject_fault_infinite('wal_sender_loop', 'error', dbid)
 -- LSN to be flushed on mirror.
 1&: create table mirror_block_t1 (a int) distributed by (a);
 
--- trigger failover
+-- trigger fts to mark mirror down.
 select gp_request_fts_probe_scan();
 
+-- After gp_fts_replication_attempt_count attempts mirror will be marked down, and syncrep will
+-- be marked off and hence the commit should get unblocked.
+-- Without gp_fts_replication_attempt_count mirror will continuously connect and re-connect and
+-- be in grace period to not be marked down.
 1<:
 
 -- expect: to see the content 0, mirror is mark down

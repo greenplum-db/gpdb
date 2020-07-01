@@ -68,12 +68,10 @@ FTSReplicationStatusShmemInit(void)
 
 	if (!found)
 	{
-		int			i;
-
 		/* First time through, so initialize */
 		MemSet(FTSRepStatusCtl, 0, FTSReplicationStatusShmemSize());
 
-		for (i = 0; i < max_replication_status; i++)
+		for (int i = 0; i < max_replication_status; i++)
 		{
 			FTSReplicationStatus *slot = &FTSRepStatusCtl->replications[i];
 
@@ -117,7 +115,10 @@ FTSReplicationStatusCreateIfNotExist(const char *app_name)
 		}
 		else
 		{
-			/* Find a free slot */
+			/*
+			 * Find a free slot, but this does not mean the slot for app_name is not exist.
+			 * Cause the slot may get freed and reused.
+			 */
 			if (replication_status == NULL)
 				replication_status = slot;
 		}
@@ -152,14 +153,13 @@ FTSReplicationStatusCreateIfNotExist(const char *app_name)
 void
 FTSReplicationStatusDrop(const char* app_name)
 {
-	int		i;
 
 	/* FTSRepStatusCtl should be set already. */
 	Assert(FTSRepStatusCtl != NULL);
 
 	/* Use FTSReplicationStatusLock to protect concurrent create/drop */
 	LWLockAcquire(FTSReplicationStatusLock, LW_EXCLUSIVE);
-	for (i =0; i < max_replication_status; i++)
+	for (int i = 0; i < max_replication_status; i++)
 	{
 		FTSReplicationStatus *slot = &FTSRepStatusCtl->replications[i];
 
@@ -181,21 +181,17 @@ FTSReplicationStatusDrop(const char* app_name)
 FTSReplicationStatus *
 RetrieveFTSReplicationStatus(const char *app_name, bool skip_warn)
 {
-	int		i;
-
 	/* FTSRepStatusCtl should be set already. */
 	Assert(FTSRepStatusCtl != NULL);
 	Assert(LWLockHeldByMe(FTSReplicationStatusLock));
 
-	for (i =0; i < max_replication_status; i++)
+	for (int i = 0; i < max_replication_status; i++)
 	{
 		FTSReplicationStatus *slot = &FTSRepStatusCtl->replications[i];
 
 		if (slot->in_use &&
 			strcmp(app_name, NameStr(slot->name)) == 0)
-		{
 			return slot;
-		}
 	}
 
 	if (!skip_warn)
@@ -384,11 +380,8 @@ FTSReplicationStatusClearDisconnectTime(FTSReplicationStatus *replication_status
 
 	/* Since we need to modify the slot's value, lock the mutex. */
 	SpinLockAcquire(&replication_status->mutex);
-
 	replication_status->replica_disconnected_at = (pg_time_t) 0;
-
 	SpinLockRelease(&replication_status->mutex);
-
 	elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
 		   "FTSReplicationStatus: Clear replication disconnect time, for application %s",
 		   NameStr(replication_status->name));
