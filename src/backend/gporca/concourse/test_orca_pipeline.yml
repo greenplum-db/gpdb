@@ -13,7 +13,8 @@ resources:
   type: git
   source:
     branch: test-gpdb
-    uri: https://github.com/greenplum-db/gporca-pipeline-misc
+    private_key: {{slack-trigger-git-key}}
+    uri: {{slack-trigger-git-remote}}
 
 - name: gpdb7-centos7-build
   type: docker-image
