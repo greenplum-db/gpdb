@@ -350,7 +350,6 @@ define BUILD_STEPS
 	else \
 	  cd $(BUILDDIR) && $(MAKE) $(PARALLEL_MAKE_OPTS) install; \
 	fi \
-	#@$(MAKE) greenplum_path INSTLOC=$(INSTLOC)
 	#@$(MAKE) mgmtcopy INSTLOC=$(INSTLOC)
 	@$(MAKE) mkpgbouncer INSTLOC=$(INSTLOC) BUILDDIR=$(BUILDDIR)
 	@$(MAKE) mkpgbench INSTLOC=$(INSTLOC) BUILDDIR=$(BUILDDIR)
@@ -360,6 +359,7 @@ define BUILD_STEPS
 	fi
 	@$(MAKE) copydocs INSTLOC=$(INSTLOC)
 	@$(MAKE) copylibs INSTLOC=$(INSTLOC)
+	@$(MAKE) greenplum_path INSTLOC=$(INSTLOC)
 	@$(MAKE) clients INSTLOC=$(INSTLOC) CLIENTINSTLOC=$(CLIENTINSTLOC)
 	@$(MAKE) set_scripts_version INSTLOC=$(CLIENTINSTLOC)
 	@$(MAKE) loaders INSTLOC=$(INSTLOC) LOADERSINSTLOC=$(LOADERSINSTLOC)
@@ -1057,8 +1057,7 @@ endif
 
 greenplum_path:
 	mkdir -p $(INSTLOC)
-	unset LIBPATH; \
-	  releng/generate-greenplum-path.sh $(INSTLOC) > $(INSTLOC)/greenplum_path.sh
+	$(BUILDDIR)/gpMgmt/bin/generate-greenplum-path.sh $(INSTLOC) yes > $(INSTLOC)/greenplum_path.sh
 
 copylicense:
 	for proddir in $(INSTLOC) $(CLIENTINSTLOC) $(LOADERSINSTLOC); do \

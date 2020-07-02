@@ -5,13 +5,15 @@ if [ -z "$1" ]; then
   exit 1
 fi
 
+SET_PYTHONHOME="${2:-no}"
+
 GPHOME_PATH="$1"
 cat <<EOF
 GPHOME="${GPHOME_PATH}"
 
 EOF
 
-if [ -x "${PYTHONHOME}/bin/python" ]; then
+if [ "${SET_PYTHONHOME}" = "yes" ]; then
 	cat <<-"EOF"
 	PYTHONHOME="${GPHOME}/ext/python"
 	export PYTHONHOME
