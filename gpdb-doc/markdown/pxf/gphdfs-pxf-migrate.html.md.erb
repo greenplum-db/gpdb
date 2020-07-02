@@ -30,13 +30,6 @@ To migrate your `gphdfs` external tables to use the `pxf` external table protoco
 <li>Migrate Greenplum 4 data to Greenplum 6.</li></ol></div>
 
 
-## <a id="limits"></a>Limitations
-
-Keep the following in mind as you plan for the migration:
-
-- PXF does not support reading or writing compressed Avro files on HDFS.
-
-
 ## <a id="prepare"></a>Preparing for the Migration
 
 As you prepare for migrating from `gphdfs` to PXF:
@@ -156,7 +149,9 @@ Should you need to migrate a `gphdfs` writable external table that references an
 | Use of Compression | compress | Not applicable; depends on the profile - may be uncompressed by default or specified via COMPRESSION_CODEC | 
 | Type of compression | compression_type | COMPRESSION_TYPE | 
 | Compression codec | codec | COMPRESSION_CODEC | 
-| Level of Compression | codec_level (Avro format `deflate` codec only) | Not applicable | 
+| Level of Compression<sup>1</sup> | codec_level | CODEC_LEVEL (supported in PXF 5.14.0 and newer version) | 
+
+</br><sup>1</sup>&nbsp;Avro format `deflate` codec only.
 
 If the HDFS file is a Parquet-format file, map these additional parquet options as follows:
 
