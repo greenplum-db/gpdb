@@ -41,7 +41,7 @@ namespace gpopt
 			BOOL m_fHasCount;
 
 			// does limit have offset of 0
-			BOOL m_fHasOffsetZero;
+			BOOL m_fHasZeroOffset;
 
 			// this is a top limit right under a DML or CTAS operation
 			BOOL m_top_limit_under_dml;
@@ -61,7 +61,7 @@ namespace gpopt
 				COrderSpec *pos,
 				BOOL fGlobal,
 				BOOL fHasCount,
-				BOOL fHasOffsetZero,
+				BOOL fHasZeroOffset,
 				BOOL fTopLimitUnderDML
 				);
 
@@ -91,7 +91,7 @@ namespace gpopt
 						gpos::CombineHashes(COperator::HashValue(), m_pos->HashValue()),
 						gpos::CombineHashes(gpos::CombineHashes(gpos::HashValue<BOOL>(&m_fGlobal),
 																gpos::HashValue<BOOL>(&m_fHasCount)),
-											gpos::HashValue<BOOL>(&m_fHasOffsetZero)
+											gpos::HashValue<BOOL>(&m_fHasZeroOffset)
 											)
 						);
 			}
@@ -115,9 +115,9 @@ namespace gpopt
 			}
 
 			// does limit have offset of 0
-			BOOL FHasOffsetZero() const
+			BOOL FHasZeroOffset() const
 			{
-				return m_fHasOffsetZero;
+				return m_fHasZeroOffset;
 			}
 
 			// must the limit be always kept

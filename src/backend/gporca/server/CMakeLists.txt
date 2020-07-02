@@ -304,7 +304,7 @@ MultiColumnAggWithDefaultOpfamilies JoinTinterval FullJoin-NonDefaultOpfamily
 JoinAbsEqWithoutOpfamilies 3WayJoinUsingOperatorsOfNonDefaultOpfamily;
 
 CLimitTest:
-LimitSingletonRequest LimitWithOrderBySingletonRequest
+LimitSingletonRequest LimitWithOrderBySingletonRequest LimitOffsetSingletonRequest OffsetSingletonRequest
 ")
 
 set(mdp_dir "../data/dxl/minidump/")

@@ -34,7 +34,7 @@ CPhysicalLimit::CPhysicalLimit
 	COrderSpec *pos,
 	BOOL fGlobal,
 	BOOL fHasCount,
-	BOOL fHasOffsetZero,
+	BOOL fHasZeroOffset,
 	BOOL fTopLimitUnderDML
 	)
 	:
@@ -42,7 +42,7 @@ CPhysicalLimit::CPhysicalLimit
 	m_pos(pos),
 	m_fGlobal(fGlobal),
 	m_fHasCount(fHasCount),
-	m_fHasOffsetZero(fHasOffsetZero),
+	m_fHasZeroOffset(fHasZeroOffset),
 	m_top_limit_under_dml(fTopLimitUnderDML),
 	m_pcrsSort(NULL)
 {
@@ -89,7 +89,7 @@ CPhysicalLimit::Matches
 		
 		if (popLimit->FGlobal() == m_fGlobal &&
 			popLimit->FHasCount() == m_fHasCount &&
-			popLimit->FHasOffsetZero())
+			popLimit->FHasZeroOffset() == m_fHasZeroOffset)
 		{
 			// match if order specs match
 			return m_pos->Matches(popLimit->m_pos);
@@ -197,7 +197,7 @@ CPhysicalLimit::PdsRequired
 			return PdsPassThru(mp, exprhdl, pdsInput, child_index);
 		}
 
-		if (!FHasCount() && FHasOffsetZero())
+		if (!FHasCount() && FHasZeroOffset())
 		{
 			// pass through input distribution if it has no count nor offset and is not
 			// a singleton
@@ -242,13 +242,21 @@ CPhysicalLimit::Edm
  ULONG //ulOptReq
 )
 {
+	/*
+	 * When a global limit requests a Singleton distribution from its
+	 * child and if the distribution of the child Satisfies this request
+	 * it will lead to non deterministic results. For e.g a child
+	 * having Replicated distribution will satisfy Singleton request.
+	 * In certain cases this might cause problems, such as while inserting
+	 * into a replicated table using a query with a Limit.
+	 * So request an exact match for Singleton to make it more deterministic.
+	 */
 	if (FGlobal())
 	{
-		if (!FHasCount() && FHasOffsetZero())
+		if (FHasCount() || !FHasZeroOffset())
 		{
-			return CEnfdDistribution::EdmSatisfy;
+			return CEnfdDistribution::EdmExact;
 		}
-		return CEnfdDistribution::EdmExact;
 	}
 
 	return CEnfdDistribution::EdmSatisfy;

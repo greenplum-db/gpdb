@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
   <dxl:Comment><![CDATA[
+    The plan should have a gather on top of the seq scan on t_rpt2 and then a broadcast
+    on top of the Limit operator to ensure that data inserted into t_rpt is same
+    across all segments.
+
     create table t_rpt(i int) distributed replicated;
     create table t_rpt2(i int) distributed replicated;
     explain insert into t_rpt select i from t_rpt2 order by i limit 2;

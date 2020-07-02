@@ -7,7 +7,7 @@
 
     create table t_rpt(i int) distributed replicated;
     create table t_rpt2(i int) distributed replicated;
-    explain insert into t_rpt select i from t_rpt2 limit 2;
+    explain insert into t_rpt select i from t_rpt2 limit 2 offset 3;
                                                   QUERY PLAN
     ------------------------------------------------------------------------------------------------------
      Insert on t_rpt  (cost=0.00..431.03 rows=1 width=4)
@@ -238,7 +238,9 @@
           <dxl:LimitCount>
             <dxl:ConstValue TypeMdid="0.20.1.0" Value="2"/>
           </dxl:LimitCount>
-          <dxl:LimitOffset/>
+          <dxl:LimitOffset>
+            <dxl:ConstValue TypeMdid="0.20.1.0" Value="3"/>
+          </dxl:LimitOffset>
           <dxl:LogicalGet>
             <dxl:TableDescriptor Mdid="0.16388.1.0" TableName="t_rpt2">
               <dxl:Columns>
@@ -256,7 +258,7 @@
         </dxl:LogicalLimit>
       </dxl:LogicalInsert>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="4">
+    <dxl:Plan Id="0" SpaceSize="2">
       <dxl:DMLInsert Columns="0" ActionCol="8" OidCol="0" CtidCol="0" SegmentIdCol="0" InputSorted="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="431.031548" Rows="3.000000" Width="4"/>
@@ -352,7 +354,7 @@
                 <dxl:ConstValue TypeMdid="0.20.1.0" Value="2"/>
               </dxl:LimitCount>
               <dxl:LimitOffset>
-                <dxl:ConstValue TypeMdid="0.20.1.0" Value="0"/>
+                <dxl:ConstValue TypeMdid="0.20.1.0" Value="3"/>
               </dxl:LimitOffset>
             </dxl:Limit>
           </dxl:BroadcastMotion>
