@@ -351,6 +351,56 @@ ALTER TABLE foopart SET DISTRIBUTED REPLICATED;
 ALTER TABLE foopart_1_prt_1 SET DISTRIBUTED REPLICATED;
 DROP TABLE foopart;
 
+-- volatile replicated
+-- General and segmentGeneral locus imply that if the corresponding
+-- slice is executed in many different segments should provide the
+-- same result data set. Thus, in some cases, General and segmentGeneral
+-- can be treated like broadcast. But if the segmentGeneral and general
+-- locus path contain volatile functions, they lose the property and
+-- can only be treated as singleQE. The following cases are to check that
+-- we correctly handle all these cases.
+
+-- FIXME: ORCA does not consider this, we need to fix the cases when ORCA
+-- consider this.
+create table t_hashdist(a int, b int, c int) distributed by (a);
+create table t_replicate_volatile(a int, b int, c int) distributed replicated;
+
+---- pushed down filter
+explain (costs off) select * from t_replicate_volatile, t_hashdist where t_replicate_volatile.a > random();
+
+-- join qual
+explain (costs off) select * from t_hashdist, t_replicate_volatile x, t_replicate_volatile y where x.a + y.a > random();
+
+-- sublink & subquery
+explain (costs off) select * from t_hashdist where a > All (select random() from t_replicate_volatile);
+explain (costs off) select * from t_hashdist where a in (select random()::int from t_replicate_volatile);
+
+-- subplan
+explain (costs off, verbose) select * from t_hashdist left join t_replicate_volatile on t_hashdist.a > any (select random() from t_replicate_volatile);
+
+-- targetlist
+explain (costs off) select * from t_hashdist cross join (select random () from t_replicate_volatile)x;
+explain (costs off) select * from t_hashdist cross join (select a, sum(random()) from t_replicate_volatile group by a) x;
+explain (costs off) select * from t_hashdist cross join (select random() as k, sum(a) from t_replicate_volatile group by k) x;
+explain (costs off) select * from t_hashdist cross join (select a, sum(b) as s from t_replicate_volatile group by a having sum(b) > random() order by a) x ;
+
+-- insert
+explain (costs off) insert into t_replicate_volatile select random() from t_replicate_volatile;
+explain (costs off) insert into t_replicate_volatile select random(), a, a from generate_series(1, 10) a;
+create sequence seq_for_insert_replicated_table;
+explain (costs off) insert into t_replicate_volatile select nextval('seq_for_insert_replicated_table');
+-- update & delete
+explain (costs off) update t_replicate_volatile set a = 1 where b > random();
+explain (costs off) update t_replicate_volatile set a = 1 from t_replicate_volatile x where x.a + random() = t_replicate_volatile.b;
+explain (costs off) update t_replicate_volatile set a = 1 from t_hashdist x where x.a + random() = t_replicate_volatile.b;
+explain (costs off) delete from t_replicate_volatile where a < random();
+explain (costs off) delete from t_replicate_volatile using t_replicate_volatile x where t_replicate_volatile.a + x.b < random();
+explain (costs off) update t_replicate_volatile set a = random();
+
+-- limit
+explain (costs off) insert into t_replicate_volatile select * from t_replicate_volatile limit 1;
+explain (costs off) select * from t_hashdist cross join (select * from t_replicate_volatile limit 1) x;
+
 -- start_ignore
 drop schema rpt cascade;
 -- end_ignore

@@ -272,6 +272,48 @@ select first_value(a) over w, a
 from (select * from bfv_planner_t3 order by a, b) as x
 WINDOW w AS (order by a);
 
+-- volatile general
+-- General and segmentGeneral locus imply that if the corresponding
+-- slice is executed in many different segments should provide the
+-- same result data set. Thus, in some cases, General and segmentGeneral
+-- can be treated like broadcast. But if the segmentGeneral and general
+-- locus path contain volatile functions, they lose the property and
+-- can only be treated as singleQE. The following cases are to check that
+-- we correctly handle all these cases.
+
+-- FIXME: for ORCA the following SQL does not consider this. We should
+-- fix them when ORCA changes.
+create table t_hashdist(a int, b int, c int) distributed by (a);
+
+---- pushed down filter
+explain (costs off)
+select * from
+(select a from generate_series(1, 10)a) x, t_hashdist
+where x.a > random();
+
+---- join qual
+explain (costs off) select * from
+t_hashdist,
+(select a from generate_series(1, 10) a) x,
+(select a from generate_series(1, 10) a) y
+where x.a + y.a > random();
+
+---- sublink & subquery
+explain (costs off) select * from t_hashdist where a > All (select random() from generate_series(1, 10));
+explain (costs off) select * from t_hashdist where a in (select random()::int from generate_series(1, 10));
+
+-- subplan
+explain (costs off, verbose) select * from
+t_hashdist left join (select a from generate_series(1, 10) a) x on t_hashdist.a > any (select random() from generate_series(1, 10));
+
+-- targetlist
+explain (costs off) select * from t_hashdist cross join (select random () from generate_series(1, 10))x;
+explain (costs off) select * from t_hashdist cross join (select a, sum(random()) from generate_series(1, 10) a group by a) x;
+explain (costs off) select * from t_hashdist cross join (select random() as k, sum(a) from generate_series(1, 10) a group by k) x;
+explain (costs off) select * from t_hashdist cross join (select a, count(1) as s from generate_series(1, 10) a group by a having count(1) > random() order by a) x ;
+
+-- limit
+explain (costs off) select * from t_hashdist cross join (select * from generate_series(1, 10) limit 1) x;
 
 -- start_ignore
 drop table if exists bfv_planner_x;

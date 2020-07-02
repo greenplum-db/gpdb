@@ -690,14 +690,36 @@ cdbpathlocus_join(JoinType jointype, CdbPathLocus a, CdbPathLocus b)
 	 * If one rel is replicated, result stays with the other rel,
 	 * but need to ensure the result is on the common segments.
 	 */
-	if (CdbPathLocus_IsSegmentGeneral(a) ||
-		CdbPathLocus_IsReplicated(a))
+	if (CdbPathLocus_IsReplicated(a))
 	{
 		b.numsegments = CdbPathLocus_CommonSegments(a, b);
 		return b;
 	}
-	if (CdbPathLocus_IsSegmentGeneral(b) ||
-		CdbPathLocus_IsReplicated(b))
+	if (CdbPathLocus_IsReplicated(b))
+	{
+		a.numsegments = CdbPathLocus_CommonSegments(a, b);
+		return a;
+	}
+
+	/*
+	 * If one rel is segmentgeneral, result stays with the other rel,
+	 * but need to ensure the result is on the common segments.
+	 *
+	 * NB: the code check SegmentGeneral and replicated is quite similar,
+	 * but we have to put check-segmentgeneral below. Consider one
+	 * is segmentgeneral and the other is replicated, only by this order
+	 * we can be sure that this function never return a locus of
+	 * Replicated.
+	 * update a replicated table join with a partitioned locus table will
+	 * reach here.
+	 */
+
+	if (CdbPathLocus_IsSegmentGeneral(a))
+	{
+		b.numsegments = CdbPathLocus_CommonSegments(a, b);
+		return b;
+	}
+	if (CdbPathLocus_IsSegmentGeneral(b))
 	{
 		a.numsegments = CdbPathLocus_CommonSegments(a, b);
 		return a;

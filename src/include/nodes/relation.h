@@ -1622,6 +1622,12 @@ typedef struct ProjectionPath
 	Path	   *subpath;		/* path representing input source */
 	bool		dummypp;		/* true if no separate Result is needed */
 
+	/*
+	 * Greenplum specific field:
+	 * If force is true, we always create a Result plannode.
+	 */
+	bool        force;
+
 	List	   *cdb_restrict_clauses;
 
 	/*

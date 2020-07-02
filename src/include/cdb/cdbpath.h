@@ -59,5 +59,6 @@ cdbpath_motion_for_join(PlannerInfo    *root,
                         bool            inner_require_existing_order);
 
 extern bool cdbpath_contains_wts(Path *path);
+extern Path * turn_volatile_seggen_to_singleqe(PlannerInfo *root, Path *path, Node *node);
 
 #endif   /* CDBPATH_H */

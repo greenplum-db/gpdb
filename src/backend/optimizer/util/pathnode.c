@@ -3389,7 +3389,26 @@ create_nestloop_path(PlannerInfo *root,
 												 rowidexpr_id);
 	}
 
-	return (Path *) pathnode;
+	/*
+	 * Greenplum specific behavior:
+	 * If we find the join locus is general or segmentgeneral,
+	 * we should check the joinqual, if it contains volatile functions
+	 * we have to turn the join path to singleQE.
+	 *
+	 * NB: we do not add this logic in the above create_unique_rowid_path
+	 * code block, the reason is:
+	 *   create_unique_rowid_path is a technique to implement semi join
+	 *   using normal join, it can only happens for sublink query:
+	 *   1. if the sublink query contains volatile target list or havingQual
+	 *      it cannot be pulled up in pull_up_subquery, so it will be a
+	 *      subselect and be handled in the function set_subquery_pathlist
+	 *   2. if the sublink query contains volatile functions in joinqual
+	 *      or where clause, it will be handled in set_rel_pathlist and
+	 *      here.
+	 */
+	return turn_volatile_seggen_to_singleqe(root,
+											(Path *) pathnode,
+											(Node *) (pathnode->joinrestrictinfo));
 }
 
 /*
@@ -3561,8 +3580,13 @@ create_mergejoin_path(PlannerInfo *root,
 												 pathnode->jpath.innerjoinpath->parent->relids,
 												 rowidexpr_id);
 	}
-	else
-		return (Path *) pathnode;
+
+	/*
+	 * See the comments at the end of create_nestloop_path.
+	 */
+	return turn_volatile_seggen_to_singleqe(root,
+											(Path *) pathnode,
+											(Node *) (pathnode->jpath.joinrestrictinfo));
 }
 
 /*
@@ -3713,8 +3737,13 @@ create_hashjoin_path(PlannerInfo *root,
 												 pathnode->jpath.innerjoinpath->parent->relids,
 												 rowidexpr_id);
 	}
-	else
-		return (Path *) pathnode;
+
+	/*
+	 * See the comments at the end of create_nestloop_path.
+	 */
+	return turn_volatile_seggen_to_singleqe(root,
+											(Path *) pathnode,
+											(Node *) (pathnode->jpath.joinrestrictinfo));
 }
 
 /*
@@ -4914,8 +4943,12 @@ adjust_modifytable_subpaths(PlannerInfo *root, CmdType operation,
  * 'limitCount' is the actual LIMIT expression, or NULL
  * 'offset_est' is the estimated value of the OFFSET expression
  * 'count_est' is the estimated value of the LIMIT expression
+ *
+ * Greenplum specific change: the return type is changed to Path
+ * because at the end of function, we need to check if it is
+ * segment general locus and may create other kind of path.
  */
-LimitPath *
+Path *
 create_limit_path(PlannerInfo *root, RelOptInfo *rel,
 				  Path *subpath,
 				  Node *limitOffset, Node *limitCount,
@@ -4993,7 +5026,12 @@ create_limit_path(PlannerInfo *root, RelOptInfo *rel,
 			pathnode->path.rows = 1;
 	}
 
-	return pathnode;
+	/*
+	 * Greenplum specific behavior:
+	 * If the limit path's locus is general or segmentgeneral
+	 * we have to make it singleQE.
+	 */
+	return turn_volatile_seggen_to_singleqe(root, (Path *) pathnode, NULL);
 }
 
 

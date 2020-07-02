@@ -1124,6 +1124,18 @@ contain_volatile_functions_walker(Node *node, void *context)
 {
 	if (node == NULL)
 		return false;
+
+	/*
+	 * We need to handle RestrictInfo, a case that uses this
+	 * is that replicated table with a volatile restriction.
+	 * We have to find the pattern and turn it into singleQE.
+	 */
+	if (IsA(node, RestrictInfo))
+	{
+		RestrictInfo * info = (RestrictInfo *) node;
+		return contain_volatile_functions_walker((Node*)info->clause, context);
+	}
+
 	/* Check for volatile functions in node itself */
 	if (check_functions_in_node(node, contain_volatile_functions_checker,
 								context))

@@ -1533,6 +1533,7 @@ create_projection_plan(PlannerInfo *root, ProjectionPath *best_path)
 	 * not using.)
 	 */
 	if (!best_path->cdb_restrict_clauses &&
+		!best_path->force &&
 		(is_projection_capable_path(best_path->subpath) ||
 		 tlist_same_exprs(tlist, subplan->targetlist)))
 	{

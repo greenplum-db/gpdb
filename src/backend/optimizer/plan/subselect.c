@@ -45,6 +45,7 @@
 #include "cdb/cdbmutate.h"
 #include "cdb/cdbsubselect.h"
 #include "cdb/cdbvars.h"
+#include "cdb/cdbutil.h"
 
 typedef struct convert_testexpr_context
 {
@@ -727,6 +728,19 @@ make_subplan(PlannerInfo *root, Query *orig_subquery,
 	 */
 	final_rel = fetch_upper_rel(subroot, UPPERREL_FINAL, NULL);
 	best_path = get_cheapest_fractional_path(final_rel, tuple_fraction);
+
+	/*
+	 * Greenplum specific behavior:
+	 * Here we only need to handle general locus path,
+	 * segmentgeneral is correct because of later processing.
+	 * If we find that it is a general locus path that
+	 * contains volatile target list or havingQual, we should
+	 * turn it into singleQE.
+	 */
+	if (CdbPathLocus_IsGeneral(best_path->locus) &&
+		(contain_volatile_functions((Node *) subroot->parse->havingQual) ||
+		 contain_volatile_functions((Node *) best_path->pathtarget->exprs)))
+		CdbPathLocus_MakeSingleQE(&(best_path->locus), getgpsegmentCount());
 
 	best_path = cdbllize_adjust_init_plan_path(root, best_path);
 
