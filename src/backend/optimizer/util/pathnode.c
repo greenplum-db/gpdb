@@ -4941,7 +4941,7 @@ create_limit_path(PlannerInfo *root, RelOptInfo *rel,
 		if (CdbPathLocus_IsGeneral(subpath->locus))
 			locus.numsegments = getgpsegmentCount();
 		Assert(locus.numsegments > 0);
-		subpath = cdbpath_create_motion_path(root, subpath, NIL, false, locus);
+		subpath = cdbpath_create_motion_path(root, subpath, subpath->pathkeys, false, locus);
 	}
 
 	pathnode->path.pathtype = T_Limit;
