@@ -1342,7 +1342,6 @@ PortalRunUtility(Portal portal, Node *utilityStmt,
 	 */
 	if (!(IsA(utilityStmt, TransactionStmt) ||
 		  IsA(utilityStmt, LockStmt) ||
-		  IsA(utilityStmt, VariableSetStmt) ||
 		  IsA(utilityStmt, VariableShowStmt) ||
 		  IsA(utilityStmt, ConstraintsSetStmt) ||
 	/* efficiency hacks from here down */
@@ -1350,7 +1349,19 @@ PortalRunUtility(Portal portal, Node *utilityStmt,
 		  IsA(utilityStmt, ListenStmt) ||
 		  IsA(utilityStmt, NotifyStmt) ||
 		  IsA(utilityStmt, UnlistenStmt) ||
-		  IsA(utilityStmt, CheckPointStmt)))
+		  IsA(utilityStmt, CheckPointStmt) ||
+		  /* 
+		   * Greenplum specific:
+		   * VariableSetStmt need transaction snapshot except SET TRANSACTION ISOLATION
+		   * This is due to VariableSetStmt may contain hook function which read catalog
+		   * table, but Greenplum use DTXCONTET_LOCAL_ONLY to access catalog table, which
+		   * cannot sync the sharedsnapshot on reader gang and cannot bump currentCommandId.
+		   * As a result, we should fetch tranaction snapshot to sync currentCommandId for
+		   * reader gang.
+		   */
+		  (IsA(utilityStmt, VariableSetStmt) &&
+		   ((((VariableSetStmt *)utilityStmt)->kind == VAR_SET_MULTI) ||
+		   strcmp(((VariableSetStmt *)utilityStmt)->name, "transaction_isolation") == 0))))
 	{
 		snapshot = GetTransactionSnapshot();
 		/* If told to, register the snapshot we're using and save in portal */

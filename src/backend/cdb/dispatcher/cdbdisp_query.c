@@ -306,21 +306,14 @@ CdbDispatchSetCommand(const char *strCommand, bool cancelOnError)
 	int		queryTextLength;
 	ListCell   *le;
 	ErrorData *qeError = NULL;
-	int			flags = DF_NONE;
 
 	elog((Debug_print_full_dtm ? LOG : DEBUG5),
 		 "CdbDispatchSetCommand for command = '%s'",
 		 strCommand);
 
-	if (IsolationUsesXactSnapshot())
-	{
-		flags |= DF_WITH_SNAPSHOT;
+	PushActiveSnapshot(GetTransactionSnapshot());
 
-		if (!ActiveSnapshotSet())
-			PushActiveSnapshot(GetTransactionSnapshot());
-	}
-
-	pQueryParms = cdbdisp_buildCommandQueryParms(strCommand, flags);
+	pQueryParms = cdbdisp_buildCommandQueryParms(strCommand, DF_WITH_SNAPSHOT);
 
 	ds = cdbdisp_makeDispatcherState(false);
 
@@ -363,12 +356,12 @@ CdbDispatchSetCommand(const char *strCommand, bool cancelOnError)
 	if (qeError)
 	{
 
+		PopActiveSnapshot();
 		FlushErrorState();
 		ReThrowError(qeError);
 	}
 
-	if (IsolationUsesXactSnapshot())
-		PopActiveSnapshot();
+	PopActiveSnapshot();
 	cdbdisp_destroyDispatcherState(ds);
 }
 
