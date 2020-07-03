@@ -1142,14 +1142,12 @@ If you want to review or change any of your installation settings, click Back. C
             </Directory>
             <Directory Id="TOPLEVELlib" Name="lib">
               <Directory Id="PYTHONlib" Name="python">
-                <Directory Id="PYGRESQLlib" Name="pygresql">
-                  <Component Id="PYGRESQLlib" DiskId="1" Guid="CDFE5977-8F11-43AF-95B7-374510FA872D">
-                    <File Id="__init__.py.pygresql" Name="__init__.py" Source="$(var.SRCDIR)\lib\python\pygresql\__init__.py" />
-                    <File Id="_pg.pyd" Name="_pg.pyd" Source="$(var.SRCDIR)\lib\python\pygresql\_pg.pyd" />
-                    <File Id="pg.py" Name="pg.py" Source="$(var.SRCDIR)\lib\python\pygresql\pg.py" />
-                    <File Id="pgdb.py" Name="pgdb.py" Source="$(var.SRCDIR)\lib\python\pygresql\pgdb.py" />
-                  </Component>
-                </Directory>
+                <Component Id="PYGRESQLlib" DiskId="1" Guid="CDFE5977-8F11-43AF-95B7-374510FA872D">
+                  <File Id="__init__.py" Name="__init__.py" Source="$(var.SRCDIR)\lib\python\__init__.py" />
+                  <File Id="_pg.pyd" Name="_pg.pyd" Source="$(var.SRCDIR)\lib\python\_pg.pyd" />
+                  <File Id="pg.py" Name="pg.py" Source="$(var.SRCDIR)\lib\python\pg.py" />
+                  <File Id="pgdb.py" Name="pgdb.py" Source="$(var.SRCDIR)\lib\python\pgdb.py" />
+                </Component>
                 <Directory Id="YAMLlib" Name="yaml">
                   <Component Id="YAMLlib" DiskId="1" Guid="77EAA4D5-888B-4633-BE68-8C81186EAA83">
                     <File Id="composer.py" Name="composer.py" Source="$(var.SRCDIR)\lib\python\yaml\composer.py" />

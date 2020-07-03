@@ -113,7 +113,9 @@ nmake install NODEBUG=1
 
 # Build steps
 
-Replace <path\to\gpdb> with real location of your gpdb source code.
+Replace <path\to\gpdb> with real location of your gpdb source code. Make sure you have
+also cloned the submodule at gpMgmt\bin\pythonSrc\ext.
+
 We will install client package to C:\greenplum-db-devel. If you want another location,
 make sure you've replaced C:\greenplum-db-devel in the following scripts.
 
@@ -142,7 +144,7 @@ cmake --build . --config Release --target INSTALL
 
 4. Build pygresql, needed by gpload
 ```
-cd <path\to\gpdb>\gpMgmt\bin\pythonSrc\PyGreSQL-4.0
+cd <path\to\gpdb>\gpMgmt\bin\pythonSrc\PyGreSQL
 mkdir build
 cd build
 cmake -DCMAKE_PREFIX_PATH=C:\greenplum-db-devel -DCMAKE_INSTALL_PREFIX:PATH=C:\greenplum-db-devel -G "Visual Studio 15 2017 Win64" ..
