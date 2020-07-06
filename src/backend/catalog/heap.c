@@ -1600,10 +1600,9 @@ heap_create_with_catalog(const char *relname,
 	new_rel_desc->rd_rel->relrewrite = relrewrite;
 
 	/*
-	 * Decide whether to create an array type over the relation's rowtype. We
-	 * do not create any array types for system catalogs (ie, those made
-	 * during initdb). We do not create them where the use of a relation as
-	 * such is an implementation detail: toast tables, sequences and indexes.
+	 * Decide whether to create an array type over the relation's rowtype.
+	 * Array types are made except where the use of a relation as such is an
+	 * implementation detail: toast tables, sequences and indexes.
 	 *
 	 * Also not for the auxiliary heaps created for bitmap indexes or append-
 	 * only tables.
@@ -1619,12 +1618,10 @@ heap_create_with_catalog(const char *relname,
 	 * OID first on QD and use the name as key to retrieve the pre-assigned
 	 * OID from QE.
 	 */
-	if (IsUnderPostmaster && ((relkind == RELKIND_RELATION  && !RelationIsAppendOptimized(new_rel_desc)) ||
-							  relkind == RELKIND_VIEW ||
-							  relkind == RELKIND_MATVIEW ||
-							  relkind == RELKIND_FOREIGN_TABLE ||
-							  relkind == RELKIND_COMPOSITE_TYPE ||
-							  relkind == RELKIND_PARTITIONED_TABLE) &&
+	if (!(relkind == RELKIND_SEQUENCE ||
+		  relkind == RELKIND_TOASTVALUE ||
+		  relkind == RELKIND_INDEX ||
+		  relkind == RELKIND_PARTITIONED_INDEX) &&
 		relnamespace != PG_BITMAPINDEX_NAMESPACE)
 	{
 		/* OK, so pre-assign a type OID for the array type */
