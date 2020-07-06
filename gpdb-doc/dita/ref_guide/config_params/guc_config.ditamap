@@ -294,6 +294,7 @@
             <topicref href="guc-list.xml#wal_keep_segments"/>
             <topicref href="guc-list.xml#wal_receiver_status_interval"/>
             <topicref href="guc-list.xml#writable_external_table_bufsize"/>
+            <topicref href="guc-list.xml#write_to_gpfdist_timeout"/>
             <topicref href="guc-list.xml#xid_stop_limit"/>
             <topicref href="guc-list.xml#xid_warn_limit"/>
         </topicref>

@@ -213,6 +213,11 @@
         </ul>
         <note type="warning">Disabling SSL certificate authentication exposes a security risk by not
           validating the <codeph>gpfdists</codeph> SSL certificate. </note></p>
+      <p>You can set the server configuration parameter <codeph><xref
+            href="../../ref_guide/config_params/guc-list.xml#write_to_gpfdist_timeout"/></codeph> to
+        control the time that Greenplum Database waits before returning an error when a
+          <codeph>gpfdist</codeph> server does not respond while Greenplum Database is attempting to
+        write data to <codeph>gpfdist</codeph>. The default is 300 seconds (5 minutes).</p>
       <p>If the <codeph>gpfdist</codeph> utility hangs with no read or write activity occurring, you
         can generate a core dump the next time a hang occurs to help debug the issue. Set the
         environment variable <codeph>GPFDIST_WATCHDOG_TIMER</codeph> to the number of seconds of no

@@ -1,41 +1,28 @@
--- disable GDD
+include: helpers/server_helpers.sql;
+CREATE
 
--- start_ignore
-! gpconfig -c gp_enable_global_deadlock_detector -v off;
-20200424:15:51:08:052278 gpconfig:zlv:gpadmin-[INFO]:-completed successfully with parameters '-c gp_enable_global_deadlock_detector -v off'
+ALTER SYSTEM RESET gp_enable_global_deadlock_detector;
+ALTER
+ALTER SYSTEM RESET gp_global_deadlock_detector_period;
+ALTER
 
-! gpstop -rai;
-20200424:15:51:08:052977 gpstop:zlv:gpadmin-[INFO]:-Starting gpstop with args: -rai
-20200424:15:51:08:052977 gpstop:zlv:gpadmin-[INFO]:-Gathering information and validating the environment...
-20200424:15:51:08:052977 gpstop:zlv:gpadmin-[INFO]:-Obtaining Greenplum Master catalog information
-20200424:15:51:08:052977 gpstop:zlv:gpadmin-[INFO]:-Obtaining Segment details from master...
-20200424:15:51:08:052977 gpstop:zlv:gpadmin-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.6778.g000faed10b build dev'
-20200424:15:51:08:052977 gpstop:zlv:gpadmin-[INFO]:-Commencing Master instance shutdown with mode='immediate'
-20200424:15:51:08:052977 gpstop:zlv:gpadmin-[INFO]:-Master segment instance directory=/home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
-20200424:15:51:09:052977 gpstop:zlv:gpadmin-[INFO]:-Attempting forceful termination of any leftover master process
-20200424:15:51:09:052977 gpstop:zlv:gpadmin-[INFO]:-Terminating processes for segment /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
-20200424:15:51:09:052977 gpstop:zlv:gpadmin-[INFO]:-Stopping master standby host zlv mode=immediate
-20200424:15:51:10:052977 gpstop:zlv:gpadmin-[INFO]:-Successfully shutdown standby process on zlv
-20200424:15:51:10:052977 gpstop:zlv:gpadmin-[INFO]:-Targeting dbid [2, 5, 3, 6, 4, 7] for shutdown
-20200424:15:51:10:052977 gpstop:zlv:gpadmin-[INFO]:-Commencing parallel primary segment instance shutdown, please wait...
-20200424:15:51:10:052977 gpstop:zlv:gpadmin-[INFO]:-0.00% of jobs completed
-20200424:15:51:11:052977 gpstop:zlv:gpadmin-[INFO]:-100.00% of jobs completed
-20200424:15:51:11:052977 gpstop:zlv:gpadmin-[INFO]:-Commencing parallel mirror segment instance shutdown, please wait...
-20200424:15:51:11:052977 gpstop:zlv:gpadmin-[INFO]:-0.00% of jobs completed
-20200424:15:51:12:052977 gpstop:zlv:gpadmin-[INFO]:-100.00% of jobs completed
-20200424:15:51:12:052977 gpstop:zlv:gpadmin-[INFO]:-----------------------------------------------------
-20200424:15:51:12:052977 gpstop:zlv:gpadmin-[INFO]:-   Segments stopped successfully      = 6
-20200424:15:51:12:052977 gpstop:zlv:gpadmin-[INFO]:-   Segments with errors during stop   = 0
-20200424:15:51:12:052977 gpstop:zlv:gpadmin-[INFO]:-----------------------------------------------------
-20200424:15:51:12:052977 gpstop:zlv:gpadmin-[INFO]:-Successfully shutdown 6 of 6 segment instances 
-20200424:15:51:12:052977 gpstop:zlv:gpadmin-[INFO]:-Database successfully shutdown with no errors reported
-20200424:15:51:12:052977 gpstop:zlv:gpadmin-[INFO]:-Cleaning up leftover shared memory
-20200424:15:51:13:052977 gpstop:zlv:gpadmin-[INFO]:-Restarting System...
-
--- end_ignore
-
+-- Use utility session on seg 0 to restart master. This way avoids the
+-- situation where session issuing the restart doesn't disappear
+-- itself.
+1U:SELECT pg_ctl(dir, 'restart') from datadir;
+ pg_ctl 
+--------
+ OK     
+(1 row)
+-- Start new session on master to make sure it has fully completed
+-- recovery and up and running again.
 1: SHOW gp_enable_global_deadlock_detector;
  gp_enable_global_deadlock_detector 
 ------------------------------------
  off                                
+(1 row)
+1: SHOW gp_global_deadlock_detector_period;
+ gp_global_deadlock_detector_period 
+------------------------------------
+ 2min                               
 (1 row)

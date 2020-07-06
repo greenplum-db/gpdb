@@ -3560,6 +3560,16 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
+		{"gp_fts_replication_attempt_count", PGC_SIGHUP, GP_ARRAY_TUNING,
+			gettext_noop("Primary-mirror replication connection max continuously attempt count for FTS"),
+			gettext_noop("Used by the fts-probe process.")
+		},
+		&gp_fts_replication_attempt_count,
+		10, 0, 100,
+		NULL, NULL, NULL
+	},
+
+	{
 		{"gp_gang_creation_retry_count", PGC_USERSET, GP_ARRAY_TUNING,
 			gettext_noop("After a gang-creation fails, retry the number of times if failure is retryable."),
 			gettext_noop("A value of zero disables retries."),

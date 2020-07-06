@@ -191,6 +191,7 @@
 		"gp_fts_probe_interval",
 		"gp_fts_probe_retries",
 		"gp_fts_probe_timeout",
+		"gp_fts_replication_attempt_count",
 		"gp_gang_creation_retry_count",
 		"gp_gang_creation_retry_timer",
 		"gp_global_deadlock_detector_period",

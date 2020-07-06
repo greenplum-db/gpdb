@@ -136,6 +136,13 @@ int			gp_fts_probe_interval = 60;
 int gp_fts_mark_mirror_down_grace_period = 30;
 
 /*
+ * If primary-mirror replication attempts to connect continuously and exceed
+ * this count, mark the mirror down to prevent wal sync block.
+ * More details please refer to FTSGetReplicationDisconnectTime.
+ */
+int			gp_fts_replication_attempt_count = 10;
+
+/*
  * When we have certain types of failures during gang creation which indicate
  * that a segment is in recovery mode we may be able to retry.
  */
