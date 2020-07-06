@@ -291,10 +291,13 @@ FTSReplicationStatusMarkDisconnectForReplication(const char *app_name)
 
 	LWLockAcquire(FTSReplicationStatusLock, LW_SHARED);
 
-	replication_status = RetrieveFTSReplicationStatus(app_name, false /* skip_warn */);
+	/*
+	 * FTS may already mark the mirror down and free the replication status.
+	 * For this case, a NULL pointer will return.
+	 */
+	replication_status = RetrieveFTSReplicationStatus(app_name, true /* skip_warn */);
 
-	/* replication_status must exist  */
-	Assert(replication_status);
+	/* if replication_status is NULL, do nothing */
 	FTSReplicationStatusMarkDisconnect(replication_status);
 
 	LWLockRelease(FTSReplicationStatusLock);
