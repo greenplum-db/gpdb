@@ -434,3 +434,19 @@ insert into twoconstraints values(2, '((0,0),(1,2))')
 select * from twoconstraints;
 drop table twoconstraints;
 -- end_ignore
+
+-- check that modification of replicated tables containing mutable functions is not supported.
+create table rpt_mutable(i int unique) distributed replicated;
+insert into rpt_mutable select i from generate_series(10,20)i;
+-- this should fail
+insert into rpt_mutable as m select x from generate_series(5, 15)x
+  on conflict (i) do update
+  set i = m.i*20 + 5 * random();
+insert into rpt_mutable as m select x from generate_series(5, 15)x
+  on conflict (i) do update
+  set i = m.i + 20 where m.i > 12 * random();
+-- this should work
+insert into rpt_mutable as m select x from generate_series(5, 15)x
+  on conflict (i) do update
+  set i = m.i + 20;
+drop table rpt_mutable;
