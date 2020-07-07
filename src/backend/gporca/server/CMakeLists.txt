@@ -220,7 +220,7 @@ CSetop3Test:
 UnionWithOuterRefs UnionAll
 Union-Distributed-Table-With-Const-Table ExceptAllCompatibleDataType
 UnionAllCompatibleDataType UnionOfDQAQueries Union-Volatile-Func
-Intersect-Volatile-Func Except-Volatile-Func;
+Intersect-Volatile-Func Except-Volatile-Func UnionWithCTE;
 
 CSetop4Test:
 PushSelectDownUnionAllOfCTG Push-Subplan-Below-Union Intersect-OuterRefs
