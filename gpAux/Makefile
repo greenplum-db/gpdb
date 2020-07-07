@@ -1059,9 +1059,9 @@ greenplum_path:
 	mkdir -p $(INSTLOC)
 ifeq ($(BLD_ARCH),$(filter $(BLD_ARCH),ubuntu1604_amd64))
 	# python is not vendored in the enterpise builds of Ubuntu 16.04
-	$(BUILDDIR)/gpMgmt/bin/generate-greenplum-path.sh $(INSTLOC) no > $(INSTLOC)/greenplum_path.sh
+	$(BUILDDIR)/gpMgmt/bin/generate-greenplum-path.sh no > $(INSTLOC)/greenplum_path.sh
 else
-	$(BUILDDIR)/gpMgmt/bin/generate-greenplum-path.sh $(INSTLOC) yes > $(INSTLOC)/greenplum_path.sh
+	$(BUILDDIR)/gpMgmt/bin/generate-greenplum-path.sh yes > $(INSTLOC)/greenplum_path.sh
 endif
 
 copylicense:

@@ -1,16 +1,15 @@
 #!/usr/bin/env bash
 
-if [ -z "$1" ]; then
-  printf "Must specify a value for GPHOME"
-  exit 1
+SET_PYTHONHOME="${1:-no}"
+
+cat <<"EOF"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+if [ ! -L "${SCRIPT_DIR}" ]; then
+	GPDB_DIR=$(basename "${SCRIPT_DIR}")
+else
+	GPDB_DIR=$(basename "$(readlink "${SCRIPT_DIR}")")
 fi
-
-SET_PYTHONHOME="${2:-no}"
-
-GPHOME_PATH="$1"
-cat <<EOF
-GPHOME="${GPHOME_PATH}"
-
+GPHOME=$(dirname "${SCRIPT_DIR}")/"${GPDB_DIR}"
 EOF
 
 if [ "${SET_PYTHONHOME}" = "yes" ]; then
