@@ -4976,14 +4976,6 @@ binary_upgrade_set_toast_oids_by_rel(Archive *fout, PQExpBuffer upgrade_buffer, 
 						"'%u'::pg_catalog.oid, 'pg_toast_%u'::text);\n",
 						tblinfo->toast_oid, PG_TOAST_NAMESPACE, tblinfo->dobj.catId.oid);
 
-	/* pg_toast composite type */
-	simple_oid_list_append(&preassigned_oids, tblinfo->toast_type);
-	appendPQExpBufferStr(upgrade_buffer, "\n-- For binary upgrade, must preserve pg_type oid\n");
-	appendPQExpBuffer(upgrade_buffer,
-						"SELECT pg_catalog.binary_upgrade_set_next_toast_pg_type_oid('%u'::pg_catalog.oid, "
-						"'%u'::pg_catalog.oid, 'pg_toast_%u'::text);\n\n",
-					  tblinfo->toast_type, PG_TOAST_NAMESPACE, tblinfo->dobj.catId.oid);
-
 	/* every toast table has an index */
 	simple_oid_list_append(&preassigned_oids, tblinfo->toast_index);
 	appendPQExpBuffer(upgrade_buffer,
@@ -6423,7 +6415,6 @@ getTables(Archive *fout, int *numTables)
 	int			i_relstorage;
 	int			i_parrelid;
 	int			i_parlevel;
-	int			i_toast_type_oid;
 	int			i_toast_index_oid;
 	int			i_distclause;
 	int			i_partclause;
@@ -6580,7 +6571,6 @@ getTables(Archive *fout, int *numTables)
 
 	if (dopt->binary_upgrade)
 		appendPQExpBufferStr(query,
-							"tc.reltype AS toast_type_oid, "
 							"i.indexrelid as toast_index_oid, ");
 
 	/* GPDB5: We expect either an empty policy entry, or exactly
@@ -6745,7 +6735,6 @@ getTables(Archive *fout, int *numTables)
 	i_relstorage = PQfnumber(res, "relstorage");
 	i_parrelid = PQfnumber(res, "parrelid");
 	i_parlevel = PQfnumber(res, "parlevel");
-	i_toast_type_oid = PQfnumber(res, "toast_type_oid");
 	i_toast_index_oid = PQfnumber(res, "toast_index_oid");
 	i_distclause = PQfnumber(res, "distclause");
 	i_partclause = PQfnumber(res, "partclause");
@@ -6860,7 +6849,6 @@ getTables(Archive *fout, int *numTables)
 			/* AO table metadata will be set in getAOTableInfo() */
 			tblinfo[i].aotbl = NULL;
 			tblinfo[i].toast_index = atooid(PQgetvalue(res, i, i_toast_index_oid));
-			tblinfo[i].toast_type = atooid(PQgetvalue(res, i, i_toast_type_oid));
 		}
 
 		/* other fields were zeroed above */
@@ -18450,8 +18438,11 @@ dumpSequence(Archive *fout, const TableInfo *tbinfo)
 	{
 		binary_upgrade_set_pg_class_oids(fout, query,
 										 tbinfo->dobj.catId.oid, false);
-		binary_upgrade_set_type_oids_by_rel(fout, query,
-												tbinfo);
+
+		/*
+		 * In older GPDB versions a sequence will have a pg_type entry, but GPDB7
+		 * doesn't use that, so don't attempt to preserve the type OID.
+		 */
 	}
 
 	if (tbinfo->is_identity_sequence)
