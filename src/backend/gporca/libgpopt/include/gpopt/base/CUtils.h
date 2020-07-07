@@ -521,7 +521,7 @@ namespace gpopt
 			// add an equivalence class (col ref set) to the array. If the new equiv
 			// class contains columns from existing equiv classes, then these are merged
 			static
-			CColRefSetArray *PdrgpcrsAddEquivClass(CMemoryPool *mp, CColRefSet *pcrsNew, CColRefSetArray *pdrgpcrs);
+			CColRefSetArray *AddEquivClassToArray(CMemoryPool *mp, const CColRefSet *pcrsNew, const CColRefSetArray *pdrgpcrs);
 
 			// merge 2 arrays of equivalence classes
 			static
