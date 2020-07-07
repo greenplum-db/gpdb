@@ -13555,6 +13555,13 @@ ATExecAddInherit(Relation child_rel, Node *node, LOCKMODE lockmode)
 
 	Assert(PointerIsValid(node));
 
+	/* 1. Replicated table cannot inherit a parent */
+	if (child_rel->rd_cdbpolicy &&
+		child_rel->rd_cdbpolicy->ptype == POLICYTYPE_REPLICATED)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("Replicated table cannot inherit a parent")));
+
 	if (IsA(node, InheritPartitionCmd))
 	{
 		parent = ((InheritPartitionCmd *) node)->parent;
@@ -13572,6 +13579,12 @@ ATExecAddInherit(Relation child_rel, Node *node, LOCKMODE lockmode)
 	 */
 	parent_rel = heap_openrv(parent, ShareUpdateExclusiveLock);
 
+	/* 2. Replicated table cannot be inherited */
+	if (parent_rel->rd_cdbpolicy &&
+		parent_rel->rd_cdbpolicy->ptype == POLICYTYPE_REPLICATED)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("Replicated table cannot be inherited")));
 	/*
 	 * Must be owner of both parent and child -- child was checked by
 	 * ATSimplePermissions call in ATPrepCmd
