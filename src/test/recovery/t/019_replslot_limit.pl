@@ -25,7 +25,7 @@ $node_master->start;
 $node_master->safe_psql('postgres', "SELECT pg_create_physical_replication_slot('rep1')");
 
 # The slot state and remain should be null before the first connection
-my $result = $node_master->safe_psql('postgres', "SELECT restart_lsn IS NULL, wal_status is NULL, min_safe_lsn is NULL FROM pg_replication_slots WHERE slot_name = 'rep1'");
+my $result = $node_master->safe_psql('postgres', "SELECT restart_lsn IS NULL, wal_status is NULL, safe_wal_size is NULL FROM pg_replication_slots WHERE slot_name = 'rep1'");
 is($result, "t|t|t", 'check the state of non-reserved slot is "unknown"');
 
 
@@ -52,8 +52,8 @@ $node_master->wait_for_catchup($node_standby, 'replay', $start_lsn);
 # Stop standby
 $node_standby->stop;
 
-# Preparation done, the slot is the state "normal" now
-$result = $node_master->safe_psql('postgres', "SELECT wal_status, min_safe_lsn is NULL FROM pg_replication_slots WHERE slot_name = 'rep1'");
+# Preparation done, the slot is the state "reserved" now
+$result = $node_master->safe_psql('postgres', "SELECT wal_status, safe_wal_size IS NULL FROM pg_replication_slots WHERE slot_name = 'rep1'");
 is($result, "reserved|t", 'check the catching-up state');
 
 # Advance WAL by five segments (= 5MB) on master
@@ -61,7 +61,7 @@ advance_wal($node_master, 1);
 $node_master->safe_psql('postgres', "CHECKPOINT;");
 
 # The slot is always "safe" when fitting max_wal_size
-$result = $node_master->safe_psql('postgres', "SELECT wal_status, min_safe_lsn is NULL FROM pg_replication_slots WHERE slot_name = 'rep1'");
+$result = $node_master->safe_psql('postgres', "SELECT wal_status, safe_wal_size IS NULL FROM pg_replication_slots WHERE slot_name = 'rep1'");
 is($result, "reserved|t",
 	'check that it is safe if WAL fits in max_wal_size');
 
@@ -69,7 +69,7 @@ advance_wal($node_master, 4);
 $node_master->safe_psql('postgres', "CHECKPOINT;");
 
 # The slot is always "safe" when max_slot_wal_keep_size is not set
-$result = $node_master->safe_psql('postgres', "SELECT wal_status, min_safe_lsn is NULL FROM pg_replication_slots WHERE slot_name = 'rep1'");
+$result = $node_master->safe_psql('postgres', "SELECT wal_status, safe_wal_size IS NULL FROM pg_replication_slots WHERE slot_name = 'rep1'");
 is($result, "reserved|t", 'check that slot is working');
 
 # The standby can reconnect to master
@@ -87,9 +87,7 @@ max_slot_wal_keep_size = ${max_slot_wal_keep_size_mb}MB
 ));
 $node_master->reload;
 
-# The slot is in safe state. The distance from the min_safe_lsn should
-# be as almost (max_slot_wal_keep_size - 1) times large as the segment
-# size
+# The slot is in safe state.
 
 $result = $node_master->safe_psql('postgres', "SELECT wal_status FROM pg_replication_slots WHERE slot_name = 'rep1'");
 is($result, "reserved", 'check that max_slot_wal_keep_size is working');
@@ -100,7 +98,7 @@ $node_master->safe_psql('postgres', "CHECKPOINT;");
 
 # The slot is still working
 $result = $node_master->safe_psql('postgres', "SELECT wal_status FROM pg_replication_slots WHERE slot_name = 'rep1'");
-is($result, "reserved", 'check that min_safe_lsn gets close to the current LSN');
+is($result, "reserved", 'check that safe_wal_size gets close to the current LSN');
 
 # The standby can reconnect to master
 $node_standby->start;
@@ -136,8 +134,8 @@ $node_master->safe_psql('postgres', "CHECKPOINT;");
 # Advance WAL again without checkpoint; remain goes to 0.
 advance_wal($node_master, 1);
 
-# Slot gets into 'unreserved' state
-$result = $node_master->safe_psql('postgres', "SELECT wal_status, min_safe_lsn is NULL FROM pg_replication_slots WHERE slot_name = 'rep1'");
+# Slot gets into 'unreserved' state and safe_wal_size is negative
+$result = $node_master->safe_psql('postgres', "SELECT wal_status, safe_wal_size <= 0 FROM pg_replication_slots WHERE slot_name = 'rep1'");
 is($result, "unreserved|t",
 	'check that the slot state changes to "unreserved"');
 
@@ -165,7 +163,7 @@ ok(find_in_log($node_master,
    'check that the warning is logged');
 
 # This slot should be broken
-$result = $node_master->safe_psql('postgres', "SELECT slot_name, active, restart_lsn IS NULL, wal_status, min_safe_lsn FROM pg_replication_slots WHERE slot_name = 'rep1'");
+$result = $node_master->safe_psql('postgres', "SELECT slot_name, active, restart_lsn IS NULL, wal_status, safe_wal_size FROM pg_replication_slots WHERE slot_name = 'rep1'");
 is($result, "rep1|f|t|lost|",
 	'check that the slot became inactive and the state "lost" persists');
 
