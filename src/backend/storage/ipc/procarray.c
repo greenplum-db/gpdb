@@ -1771,6 +1771,7 @@ readerFillLocalSnapshot(Snapshot snapshot, DtxContext distributedTransactionCont
 		if (total_sleep_time_us >= segmate_timeout_us)
 		{
 			LWLockRelease(SharedLocalSnapshotSlot->slotLock);
+			LWLockAcquire(SharedSnapshotLock, LW_SHARED); /* For SharedSnapshotDump() */
 			ereport(ERROR,
 					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 					 errmsg("GetSnapshotData timed out waiting for Writer to set the shared snapshot."),

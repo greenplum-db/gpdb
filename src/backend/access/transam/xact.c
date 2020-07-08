@@ -2479,14 +2479,18 @@ StartTransaction(void)
 			XactReadOnly = isMppTxOptions_ReadOnly(
 				QEDtxContextInfo.distributedTxnOptions);
 
-			ereportif(Debug_print_full_dtm, LOG,
-					  (errmsg("qExec reader: distributedXid %d currcid %d "
-							  "gxid = %u DtxContext '%s' sharedsnapshots: %s",
-							  QEDtxContextInfo.distributedXid,
-							  QEDtxContextInfo.curcid,
-							  getDistributedTransactionId(),
-							  DtxContextToString(DistributedTransactionContext),
-							  SharedSnapshotDump())));
+			if (unlikely(Debug_print_full_dtm))
+			{
+				LWLockAcquire(SharedSnapshotLock, LW_SHARED); /* For SharedSnapshotDump() */
+				ereport(LOG, (errmsg("qExec reader: distributedXid %d currcid %d "
+									   "gxid = %u DtxContext '%s' sharedsnapshots: %s",
+									   QEDtxContextInfo.distributedXid,
+									   QEDtxContextInfo.curcid,
+									   getDistributedTransactionId(),
+									   DtxContextToString(DistributedTransactionContext),
+									   SharedSnapshotDump())));
+				LWLockRelease(SharedSnapshotLock);
+			}
 		}
 		break;
 	
