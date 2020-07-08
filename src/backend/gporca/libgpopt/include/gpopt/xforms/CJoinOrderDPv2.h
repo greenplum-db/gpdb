@@ -242,7 +242,6 @@ namespace gpopt
 				~SExpressionInfo()
 				{
 					m_expr->Release();
-					CRefCount::SafeRelease(m_part_keys_array);
 					CRefCount::SafeRelease(m_contain_PS);
 				}
 

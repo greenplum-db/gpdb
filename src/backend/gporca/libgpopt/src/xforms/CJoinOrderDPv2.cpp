@@ -961,6 +961,10 @@ CJoinOrderDPv2::SearchJoinOrders
 				SGroupInfo *group_info = LookupOrCreateGroupInfo(current_level_info, join_bitset, join_expr_info);
 				AddExprToGroupIfNecessary(group_info, join_expr_info);
 
+				// We only want to consider linear trees when enumerating partition selector alternatives
+				if (right_level != 1){
+					continue;
+				}
 
 				// For PS alternatives, get the best join expression for any properties
 				SExpressionProperties join_props(EJoinOrderAny);
@@ -968,10 +972,7 @@ CJoinOrderDPv2::SearchJoinOrders
 				// Now search for new PS alternatives
 				join_expr_info = GetJoinExprForProperties(left_group_info, right_group_info, join_props );
 
-				// We only want to consider linear trees when enumerating partition selector alternatives
-				if (right_level != 1){
-					continue;
-				}
+
 
 				// TODO: Reduce non-mandatory cross products
 
@@ -986,6 +987,10 @@ CJoinOrderDPv2::SearchJoinOrders
 				{
 					AddNewPropertyToExpr(join_expr_info, SExpressionProperties(EJoinOrderHasPS));
 					AddExprToGroupIfNecessary(group_info, join_expr_info);
+				}
+				else
+				{
+					join_expr_info->Release();
 				}
 			}
 		}
@@ -1341,8 +1346,11 @@ CJoinOrderDPv2::PexprExpand()
 
 		if (table_desc != NULL)
 		{
-			CMDIdRelStats *rel_stats_mdid = GPOS_NEW(m_mp) CMDIdRelStats(CMDIdGPDB::CastMdid(table_desc->MDId()));
+			IMDId *rel_mdid = table_desc->MDId();
+			rel_mdid->AddRef();
+			CMDIdRelStats *rel_stats_mdid = GPOS_NEW(m_mp) CMDIdRelStats(CMDIdGPDB::CastMdid(rel_mdid));
 			const IMDRelStats *pmdRelStats = md_accessor->Pmdrelstats(rel_stats_mdid);
+			rel_stats_mdid->Release();
 
 			atom_expr_info->m_atom_base_table_rows = std::max(DOUBLE(1.0), pmdRelStats->Rows().Get());
 		}

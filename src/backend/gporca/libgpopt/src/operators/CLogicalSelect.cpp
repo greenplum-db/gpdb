@@ -63,8 +63,6 @@ CLogicalSelect::CLogicalSelect
 CLogicalSelect::~CLogicalSelect()
 {
 	m_phmPexprPartPred->Release();
-	CRefCount::SafeRelease(m_ptabdesc);
-	CRefCount::SafeRelease(m_pdrgpcrOutput);
 }
 //---------------------------------------------------------------------------
 //	@function:

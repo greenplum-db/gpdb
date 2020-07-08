@@ -2269,16 +2269,8 @@ CUtils::PexprLogicalSelect
 	if (pexpr->Pop()->Eopid() == CLogical::EopLogicalSelect || pexpr->Pop()->Eopid() == CLogical::EopLogicalGet || pexpr->Pop()->Eopid() == CLogical::EopLogicalDynamicGet)
 	{
 		ptabdesc = CLogical::PtabdescFromTableGet(pexpr->Pop());
-		GPOS_ASSERT(NULL != ptabdesc);
-		if (ptabdesc)
-		{
-			ptabdesc->AddRef();
-		}
+		// ptabdesc can be NULL here
 		output_cols = CLogical::PoutputColsFromTableGet(pexpr->Pop());
-		if (output_cols)
-		{
-			output_cols->AddRef();
-		}
 	}
 	return GPOS_NEW(mp) CExpression
 						(
