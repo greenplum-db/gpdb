@@ -2440,14 +2440,18 @@ StartTransaction(void)
 			 */
 			Assert (SharedLocalSnapshotSlot != NULL);
 			s->distribXid = QEDtxContextInfo.distributedXid;
+			if (Debug_print_full_dtm)
+			{
+				LWLockAcquire(SharedSnapshotLock, LW_SHARED); /* For SharedSnapshotDump() */
 
-			ereport((Debug_print_full_dtm ? LOG : DEBUG5),
-					(errmsg("qExec reader: distributedXid %d currcid %d gxid = %u DtxContext '%s' sharedsnapshots: %s",
-							QEDtxContextInfo.distributedXid,
-							QEDtxContextInfo.curcid,
-							getDistributedTransactionId(),
-							DtxContextToString(DistributedTransactionContext),
-							SharedSnapshotDump())));
+				ereport(LOG, (errmsg("qExec reader: distributedXid %d currcid %d gxid = %u DtxContext '%s' sharedsnapshots: %s",
+						 QEDtxContextInfo.distributedXid,
+						 QEDtxContextInfo.curcid,
+						 getDistributedTransactionId(),
+						 DtxContextToString(DistributedTransactionContext),
+						 SharedSnapshotDump())));
+				LWLockRelease(SharedSnapshotLock);
+			}
 		}
 		break;
 	
