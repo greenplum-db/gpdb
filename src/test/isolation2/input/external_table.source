@@ -124,3 +124,23 @@ CREATE EXTERNAL WEB TABLE ext_delim_off ( junk text) execute 'echo hi' on master
 
 -- Query the ext_delim_off table
 SELECT * FROM ext_delim_off;
+
+-- start_ignore
+DROP EXTERNAL TABLE IF EXISTS ext_delimiter_off_text;
+-- end_ignore
+
+-- Create external table(format text) with delimiter off, and a row with 'O'
+CREATE EXTERNAL WEB TABLE ext_delimiter_off_text
+(a text) EXECUTE E'echo O' ON MASTER FORMAT 'text' (delimiter 'OFF') ENCODING 'UTF8';
+
+SELECT * FROM ext_delimiter_off_text;
+
+-- start_ignore
+DROP EXTERNAL TABLE IF EXISTS ext_delimiter_off_csv;
+-- end_ignore
+
+-- Create external table(format csv) with delimiter off, and a row with 'O'
+CREATE EXTERNAL WEB TABLE ext_delimiter_off_csv
+(a text) EXECUTE E'echo O' ON MASTER FORMAT 'csv' (delimiter 'OFF') ENCODING 'UTF8';
+
+SELECT * FROM ext_delimiter_off_csv;
