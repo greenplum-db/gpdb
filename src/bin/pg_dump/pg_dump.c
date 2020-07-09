@@ -6509,36 +6509,15 @@ getCasts(Archive *fout, int *numCasts)
 void
 getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
 {
-	int			i,
-				j;
 	PQExpBuffer q = createPQExpBuffer();
-	int			i_attnum;
-	int			i_attname;
-	int			i_atttypname;
-	int			i_atttypmod;
-	int			i_attstattarget;
-	int			i_attstorage;
-	int			i_typstorage;
-	int			i_attnotnull;
-	int			i_atthasdef;
-	int			i_attisdropped;
-	int			i_attlen;
-	int			i_attalign;
-	int			i_attislocal;
-	int			i_attoptions;
-	int			i_attcollation;
-	int			i_attfdwoptions;
-	int			i_attndims;
-	int			i_attbyval;
-	int			i_attencoding;
-	PGresult   *res;
-	int			ntups;
-	bool		hasdefaults;
 
-	for (i = 0; i < numTables; i++)
+	for (int i = 0; i < numTables; i++)
 	{
 		TableInfo  *tbinfo = &tblinfo[i];
-		bool rootPartHasDroppedAttr = false;
+		PGresult   *res;
+		int			ntups;
+		bool		hasdefaults;
+		bool		rootPartHasDroppedAttr = false;
 
 		/* Don't bother to collect info for sequences */
 		if (tbinfo->relkind == RELKIND_SEQUENCE)
@@ -6580,6 +6559,28 @@ getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
 						  "pg_catalog.format_type(t.oid, a.atttypmod) AS atttypname,\n"
 						  "pg_catalog.array_to_string(e.attoptions, ',') AS attencoding,\n");
 
+		if (fout->remoteVersion >= 90000)
+			appendPQExpBufferStr(q,
+								 "array_to_string(a.attoptions, ', ') AS attoptions,\n");
+		else
+			appendPQExpBufferStr(q,
+								 "'' AS attoptions,\n");
+
+		if (fout->remoteVersion >= 90100)
+		{
+			/*
+			 * Since we only want to dump COLLATE clauses for attributes whose
+			 * collation is different from their type's default, we use a CASE
+			 * here to suppress uninteresting attcollations cheaply.
+			 */
+			appendPQExpBufferStr(q,
+								 "CASE WHEN a.attcollation <> t.typcollation "
+								 "THEN a.attcollation ELSE 0 END AS attcollation,\n");
+		}
+		else
+			appendPQExpBufferStr(q,
+								 "0 AS attcollation,\n");
+
 		if (fout->remoteVersion >= 90200)
 			appendPQExpBuffer(q,
 							  "pg_catalog.array_to_string(ARRAY("
@@ -6587,30 +6588,10 @@ getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
 							  "' ' || pg_catalog.quote_literal(option_value) "
 							  "FROM pg_catalog.pg_options_to_table(attfdwoptions) "
 							  "ORDER BY option_name"
-							  "), E',\n    ') AS attfdwoptions,\n");
+							  "), E',\n    ') AS attfdwoptions\n");
 		else
 			appendPQExpBuffer(q,
-							  "'' AS attfdwoptions,\n");
-
-		if (fout->remoteVersion >= 90100)
-			/*
-			 * Since we only want to dump COLLATE clauses for attributes whose
-			 * collation is different from their type's default, we use a CASE
-			 * here to suppress uninteresting attcollations cheaply.
-			 */
-			appendPQExpBuffer(q,
-							  "CASE WHEN a.attcollation <> t.typcollation "
-							  "THEN a.attcollation ELSE 0 END AS attcollation,\n");
-		else
-			appendPQExpBuffer(q,
-							  "0 AS attcollation,\n");
-
-		if (fout->remoteVersion >= 90000)
-			appendPQExpBuffer(q,
-							  "array_to_string(a.attoptions, ', ') AS attoptions\n");
-		else
-			appendPQExpBuffer(q,
-							  "'' AS attoptions\n");
+							  "'' AS attfdwoptions\n");
 
 		appendPQExpBuffer(q,
 						  /* need left join here to not fail on dropped columns ... */
@@ -6627,38 +6608,6 @@ getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
 		res = ExecuteSqlQuery(fout, q->data, PGRES_TUPLES_OK);
 
 		ntups = PQntuples(res);
-
-		i_attnum = PQfnumber(res, "attnum");
-		i_attname = PQfnumber(res, "attname");
-		i_atttypname = PQfnumber(res, "atttypname");
-		i_atttypmod = PQfnumber(res, "atttypmod");
-		i_attstattarget = PQfnumber(res, "attstattarget");
-		i_attstorage = PQfnumber(res, "attstorage");
-		i_typstorage = PQfnumber(res, "typstorage");
-		i_attnotnull = PQfnumber(res, "attnotnull");
-		i_atthasdef = PQfnumber(res, "atthasdef");
-		i_attisdropped = PQfnumber(res, "attisdropped");
-		i_attlen = PQfnumber(res, "attlen");
-		i_attalign = PQfnumber(res, "attalign");
-		i_attislocal = PQfnumber(res, "attislocal");
-		i_attoptions = PQfnumber(res, "attoptions");
-		i_attcollation = PQfnumber(res, "attcollation");
-		i_attfdwoptions = PQfnumber(res, "attfdwoptions");
-		i_attndims = PQfnumber(res, "attndims");
-		i_attbyval = PQfnumber(res, "attbyval");
-		i_attalign = PQfnumber(res, "attalign");
-		i_attencoding = PQfnumber(res, "attencoding");
-
-		/*
-		 * attencoding is a Greenplum specific column in the query, make sure
-		 * it wasn't missed in a merge with PostgreSQL.
-		 */
-		if (i_attencoding < 0)
-		{
-			write_msg(NULL, "attencoding column required in table attributes query");
-			exit_nicely(1);
-		}
-
 
 		tbinfo->numatts = ntups;
 		tbinfo->attnames = (char **) pg_malloc(ntups * sizeof(char *));
@@ -6680,36 +6629,35 @@ getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
 		tbinfo->attrdefs = (AttrDefInfo **) pg_malloc(ntups * sizeof(AttrDefInfo *));
 		hasdefaults = false;
 
-		for (j = 0; j < ntups; j++)
+		for (int j = 0; j < ntups; j++)
 		{
-			if (j + 1 != atoi(PQgetvalue(res, j, i_attnum)))
-				exit_horribly(NULL,
-							  "invalid column numbering in table \"%s\"\n",
-							  tbinfo->dobj.name);
-			tbinfo->attnames[j] = pg_strdup(PQgetvalue(res, j, i_attname));
-			tbinfo->atttypnames[j] = pg_strdup(PQgetvalue(res, j, i_atttypname));
-			tbinfo->atttypmod[j] = atoi(PQgetvalue(res, j, i_atttypmod));
-			tbinfo->attstattarget[j] = atoi(PQgetvalue(res, j, i_attstattarget));
-			tbinfo->attstorage[j] = *(PQgetvalue(res, j, i_attstorage));
-			tbinfo->typstorage[j] = *(PQgetvalue(res, j, i_typstorage));
-			tbinfo->attisdropped[j] = (PQgetvalue(res, j, i_attisdropped)[0] == 't');
-			tbinfo->attlen[j] = atoi(PQgetvalue(res, j, i_attlen));
-			tbinfo->attalign[j] = *(PQgetvalue(res, j, i_attalign));
-			tbinfo->attislocal[j] = (PQgetvalue(res, j, i_attislocal)[0] == 't');
-			tbinfo->notnull[j] = (PQgetvalue(res, j, i_attnotnull)[0] == 't');
-			tbinfo->attoptions[j] = pg_strdup(PQgetvalue(res, j, i_attoptions));
-			tbinfo->attcollation[j] = atooid(PQgetvalue(res, j, i_attcollation));
-			tbinfo->attfdwoptions[j] = pg_strdup(PQgetvalue(res, j, i_attfdwoptions));
+			if (j + 1 != atoi(PQgetvalue(res, j, PQfnumber(res, "attnum"))))
+				exit_horribly(NULL, "invalid column numbering in table \"%s\"\n",
+					  tbinfo->dobj.name);
+			tbinfo->attnames[j] = pg_strdup(PQgetvalue(res, j, PQfnumber(res, "attname")));
+			tbinfo->atttypnames[j] = pg_strdup(PQgetvalue(res, j, PQfnumber(res, "atttypname")));
+			tbinfo->atttypmod[j] = atoi(PQgetvalue(res, j, PQfnumber(res, "atttypmod")));
+			tbinfo->attstattarget[j] = atoi(PQgetvalue(res, j, PQfnumber(res, "attstattarget")));
+			tbinfo->attstorage[j] = *(PQgetvalue(res, j, PQfnumber(res, "attstorage")));
+			tbinfo->typstorage[j] = *(PQgetvalue(res, j, PQfnumber(res, "typstorage")));
+			tbinfo->attisdropped[j] = (PQgetvalue(res, j, PQfnumber(res, "attisdropped"))[0] == 't');
+			tbinfo->attlen[j] = atoi(PQgetvalue(res, j, PQfnumber(res, "attlen")));
+			tbinfo->attalign[j] = *(PQgetvalue(res, j, PQfnumber(res, "attalign")));
+			tbinfo->attislocal[j] = (PQgetvalue(res, j, PQfnumber(res, "attislocal"))[0] == 't');
+			tbinfo->notnull[j] = (PQgetvalue(res, j, PQfnumber(res, "attnotnull"))[0] == 't');
+			tbinfo->attoptions[j] = pg_strdup(PQgetvalue(res, j, PQfnumber(res, "attoptions")));
+			tbinfo->attcollation[j] = atooid(PQgetvalue(res, j, PQfnumber(res, "attcollation")));
+			tbinfo->attfdwoptions[j] = pg_strdup(PQgetvalue(res, j, PQfnumber(res, "attfdwoptions")));
 			tbinfo->attrdefs[j] = NULL; /* fix below */
-			if (PQgetvalue(res, j, i_atthasdef)[0] == 't')
+			if (PQgetvalue(res, j, PQfnumber(res, "atthasdef"))[0] == 't')
 				hasdefaults = true;
 
 			/* these flags will be set in flagInhAttrs() */
 			tbinfo->inhNotNull[j] = false;
 
 			/* column storage attributes */
-			if (!PQgetisnull(res, j, i_attencoding))
-				tbinfo->attencoding[j] = pg_strdup(PQgetvalue(res, j, i_attencoding));
+			if (!PQgetisnull(res, j, PQfnumber(res, "attencoding")))
+				tbinfo->attencoding[j] = pg_strdup(PQgetvalue(res, j, PQfnumber(res, "attencoding")));
 			else
 				tbinfo->attencoding[j] = NULL;
 
@@ -6755,7 +6703,7 @@ getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
 			numDefaults = PQntuples(res);
 			attrdefs = (AttrDefInfo *) pg_malloc(numDefaults * sizeof(AttrDefInfo));
 
-			for (j = 0; j < numDefaults; j++)
+			for (int j = 0; j < numDefaults; j++)
 			{
 				int			adnum;
 
@@ -6894,7 +6842,7 @@ getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
 			constrs = (ConstraintInfo *) pg_malloc(numConstrs * sizeof(ConstraintInfo));
 			tbinfo->checkexprs = constrs;
 
-			for (j = 0; j < numConstrs; j++)
+			for (int j = 0; j < numConstrs; j++)
 			{
 				bool		validated = PQgetvalue(res, j, 5)[0] == 't';
 
