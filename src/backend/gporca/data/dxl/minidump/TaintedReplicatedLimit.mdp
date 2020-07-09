@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
   <dxl:Comment><![CDATA[
+  Objective: The plan should contain a single broadcast motion above the Limit.
+  It should broadcast the tuples from a single segment to the others since the
+  Limit taints the replicated distribution of hosttoast.
+
   CREATE TABLE snackbox (a int) DISTRIBUTED REPLICATED;
   CREATE TABLE hottoast (c int) DISTRIBUTED REPLICATED;
 
@@ -301,7 +305,7 @@
             <dxl:SortingColumnList/>
             <dxl:Limit>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000030" Rows="1.000000" Width="4"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000030" Rows="3.000000" Width="4"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="c">

@@ -59,6 +59,11 @@ public:
 										   CDrvdPropArray *pdrgpdpCtxt,
 										   ULONG ulOptReq) const;
 
+	virtual CEnfdDistribution *Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
+								   CReqdPropPlan *prppInput, ULONG child_index,
+								   CDrvdPropArray *pdrgpdpCtxt,
+								   ULONG ulDistrReq);
+
 	virtual COrderSpec *PosRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 									COrderSpec *posInput, ULONG child_index,
 									CDrvdPropArray *pdrgpdpCtxt,

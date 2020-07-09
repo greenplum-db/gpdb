@@ -4,6 +4,7 @@
 #include "gpopt/operators/CPhysicalUnionAll.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CHashedDistributions.h"
+#include "gpopt/base/CDistributionSpecReplicated.h"
 #include "gpopt/base/CDistributionSpecStrictRandom.h"
 #include "gpopt/operators/CScalarIdent.h"
 #include "gpopt/base/CColRefSetIter.h"
@@ -879,6 +880,23 @@ CPhysicalUnionAll::PdsDeriveFromChildren(CMemoryPool *
 	{
 		// failed to derive distribution from children
 		pds = NULL;
+	}
+
+	// even if a single child is tainted, the result should be tainted
+	if (fReplicatedChild)
+	{
+		for (ULONG ul = 0; ul < arity; ul++)
+		{
+			CDistributionSpec *pdsChild =
+				exprhdl.Pdpplan(ul /*child_index*/)->Pds();
+			CDistributionSpec::EDistributionType edtChild = pdsChild->Edt();
+
+			if (CDistributionSpec::EdtTaintedReplicated == edtChild)
+			{
+				pds = pdsChild;
+				break;
+			}
+		}
 	}
 
 	return pds;

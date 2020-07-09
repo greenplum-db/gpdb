@@ -146,30 +146,38 @@ CPhysicalLimit::PosRequired(CMemoryPool *,		  // mp
 	return m_pos;
 }
 
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CPhysicalLimit::PdsRequired
-//
-//	@doc:
-//		Compute required distribution of the n-th child
-//
-//---------------------------------------------------------------------------
 CDistributionSpec *
-CPhysicalLimit::PdsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
-							CDistributionSpec *pdsInput, ULONG child_index,
-							CDrvdPropArray *,  // pdrgpdpCtxt
-							ULONG			   // ulOptReq
-) const
+CPhysicalLimit::PdsRequired(CMemoryPool *, CExpressionHandle &,
+							CDistributionSpec *, ULONG, CDrvdPropArray *,
+							ULONG) const
+{
+	// FIXME: this method will (and should) _never_ be called
+	// sweep through all 38 overrides of PdsRequired and switch to Ped()
+	GPOS_RAISE(
+		CException::ExmaInvalid, CException::ExmiInvalid,
+		GPOS_WSZ_LIT("PdsRequired should not be called for CPhysicalLimit"));
+	return NULL;
+}
+
+CEnfdDistribution *
+CPhysicalLimit::Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
+					CReqdPropPlan *prppInput, ULONG child_index,
+					CDrvdPropArray *,  // pdrgpdpCtxt
+					ULONG			   // ulDistrReq
+)
 {
 	GPOS_ASSERT(0 == child_index);
+
+	CDistributionSpec *const pdsInput = prppInput->Ped()->PdsRequired();
 
 	if (FGlobal())
 	{
 		// TODO:  - Mar 19, 2012; Cleanup: move this check to the caller
 		if (exprhdl.HasOuterRefs())
 		{
-			return PdsPassThru(mp, exprhdl, pdsInput, child_index);
+			return GPOS_NEW(mp) CEnfdDistribution(
+				PdsPassThru(mp, exprhdl, pdsInput, child_index),
+				CEnfdDistribution::EdmSatisfy);
 		}
 
 		CExpression *pexprOffset =
@@ -181,25 +189,35 @@ CPhysicalLimit::PdsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 			if (CDistributionSpec::EdtSingleton != pdsInput->Edt() &&
 				CDistributionSpec::EdtStrictSingleton != pdsInput->Edt())
 			{
-				return PdsPassThru(mp, exprhdl, pdsInput, child_index);
+				return GPOS_NEW(mp) CEnfdDistribution(
+					PdsPassThru(mp, exprhdl, pdsInput, child_index),
+					CEnfdDistribution::EdmSatisfy);
 			}
 
-			return GPOS_NEW(mp) CDistributionSpecAny(this->Eopid());
+			return GPOS_NEW(mp) CEnfdDistribution(
+				GPOS_NEW(mp) CDistributionSpecAny(this->Eopid()),
+				CEnfdDistribution::EdmSatisfy);
 		}
 		if (CDistributionSpec::EdtSingleton == pdsInput->Edt())
 		{
 			// pass through input distribution if it is a singleton (and it has count or offset)
-			return PdsPassThru(mp, exprhdl, pdsInput, child_index);
+			return GPOS_NEW(mp) CEnfdDistribution(
+				PdsPassThru(mp, exprhdl, pdsInput, child_index),
+				CEnfdDistribution::EdmSatisfy);
 		}
 
 		// otherwise, require a singleton explicitly
-		return GPOS_NEW(mp) CDistributionSpecSingleton();
+		return GPOS_NEW(mp)
+			CEnfdDistribution(GPOS_NEW(mp) CDistributionSpecSingleton(),
+							  CEnfdDistribution::EdmSatisfy);
 	}
 
 	// if expression has to execute on a single host then we need a gather
 	if (exprhdl.NeedsSingletonExecution())
 	{
-		return PdsRequireSingleton(mp, exprhdl, pdsInput, child_index);
+		return GPOS_NEW(mp) CEnfdDistribution(
+			PdsRequireSingleton(mp, exprhdl, pdsInput, child_index),
+			CEnfdDistribution::EdmSatisfy);
 	}
 
 	// no local limits are generated if there are outer references, so if this
@@ -207,7 +225,9 @@ CPhysicalLimit::PdsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	GPOS_ASSERT(0 == exprhdl.DeriveOuterReferences()->Size());
 
 	// for local limit, we impose no distribution requirements
-	return GPOS_NEW(mp) CDistributionSpecAny(this->Eopid());
+	return GPOS_NEW(mp)
+		CEnfdDistribution(GPOS_NEW(mp) CDistributionSpecAny(this->Eopid()),
+						  CEnfdDistribution::EdmSatisfy);
 }
 
 
@@ -359,7 +379,7 @@ CPhysicalLimit::PdsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl) const
 		//   SELECT * FROM foo WHERE a<>1 LIMIT 1;
 		//
 		// In this case, if the child was replicated, we can no longer
-		// guarantee that property and must now dervive tainted replicated.
+		// guarantee that property and must now derive tainted replicated.
 		return GPOS_NEW(mp) CDistributionSpecReplicated(
 			CDistributionSpec::EdtTaintedReplicated);
 	}

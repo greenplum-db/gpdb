@@ -10,14 +10,32 @@
 using namespace gpopt;
 
 
-//---------------------------------------------------------------------------
-//	@function:
-//		CDistributionSpecReplicated::FSatisfies
+//	Check if this distribution spec satisfies the given one
+//	based on following satisfiability rules:
 //
-//	@doc:
-//		Check if this distribution satisfy the given one
+//	pds = requested distribution
+//	this = derived distribution
 //
-//---------------------------------------------------------------------------
+//	Table - Distribution satisfiability matrix:
+//	  T - Satisfied
+//	  F - Not satisfied; enforcer required
+//
+//	  Note that when checking for satisfiability for TaintedReplicated,
+//	  we don't call the Match() function, since TaintedReplicated is a
+//	  derived only property. Hence if FSatisfies is being called on
+//	  TaintedReplicated, pds can never be TaintedReplicated.
+//	+-------------------------+------------------+-------------------+
+//	|                         | StrictReplicated | TaintedReplicated |
+//	+-------------------------+------------------+-------------------+
+//	| Matches                 | T                | (default) F       |
+//	| NonSingleton            | FAllowReplicated | FAllowReplicated  |
+//	| Replicated              | T                | T                 |
+//	| StrictReplicated        | T                | F                 |
+//	| singleton & master      | F                | F                 |
+//	| singleton & segment     | T                | T                 |
+//	| ANY                     | T                | T                 |
+//	| others not Singleton    | T                |(default) F        |
+//	+-------------------------+------------------+-------------------+
 BOOL
 CDistributionSpecReplicated::FSatisfies(const CDistributionSpec *pdss) const
 {

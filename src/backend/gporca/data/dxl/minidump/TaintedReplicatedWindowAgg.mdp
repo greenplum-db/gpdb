@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
   <dxl:Comment><![CDATA[
+  Objective: The plan should contain a single broadcast motion on top of the
+  windowagg. It should broadcast froma single segment to other segments since
+  the windowagg taints the replicated distribution of the hosttoast table.
+
   CREATE TABLE snackbox (a float4) DISTRIBUTED REPLICATED;
   CREATE TABLE hottoast (c float4) DISTRIBUTED REPLICATED;
 
@@ -316,7 +320,7 @@
             <dxl:SortingColumnList/>
             <dxl:Window PartitionColumns="">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000026" Rows="1.000000" Width="4"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000026" Rows="3.000000" Width="4"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="8" Alias="sum">

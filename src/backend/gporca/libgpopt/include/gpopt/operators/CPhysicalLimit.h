@@ -240,6 +240,11 @@ public:
 		return dynamic_cast<CPhysicalLimit *>(pop);
 	}
 
+	virtual CEnfdDistribution *Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
+								   CReqdPropPlan *prppInput, ULONG child_index,
+								   CDrvdPropArray *pdrgpdpCtxt,
+								   ULONG ulDistrReq);
+
 };	// class CPhysicalLimit
 
 }  // namespace gpopt

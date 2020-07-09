@@ -69,12 +69,10 @@ private:
 											   ULONG ulOptReq) const;
 
 	// create (non-singleton, replicate) optimization request
-	CDistributionSpec *PdsRequiredReplicate(CMemoryPool *mp,
-											CExpressionHandle &exprhdl,
-											CDistributionSpec *pdsInput,
-											ULONG child_index,
-											CDrvdPropArray *pdrgpdpCtxt,
-											ULONG ulOptReq) const;
+	CDistributionSpec *PdsRequiredReplicate(
+		CMemoryPool *mp, CExpressionHandle &exprhdl,
+		CDistributionSpec *pdsInput, ULONG child_index,
+		CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq, CReqdPropPlan *prppInput);
 
 	// create (singleton, singleton) optimization request
 	CDistributionSpec *PdsRequiredSingleton(CMemoryPool *mp,
@@ -151,6 +149,11 @@ public:
 										   ULONG child_index,
 										   CDrvdPropArray *pdrgpdpCtxt,
 										   ULONG ulOptReq) const;
+
+	virtual CEnfdDistribution *Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
+								   CReqdPropPlan *prppInput, ULONG child_index,
+								   CDrvdPropArray *pdrgpdpCtxt,
+								   ULONG ulDistrReq);
 
 	//-------------------------------------------------------------------------------------
 	// Derived Plan Properties

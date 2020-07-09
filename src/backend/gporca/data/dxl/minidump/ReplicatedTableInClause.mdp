@@ -1213,7 +1213,7 @@
                 </dxl:HashExprList>
                 <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="431.006161" Rows="9.090900" Width="4"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.006161" Rows="27.272700" Width="4"/>
                   </dxl:Properties>
                   <dxl:GroupingColumns>
                     <dxl:GroupingColumn ColId="9"/>

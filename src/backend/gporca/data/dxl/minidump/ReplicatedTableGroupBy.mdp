@@ -1050,7 +1050,7 @@
             </dxl:HashExprList>
             <dxl:Result>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.016386" Rows="99.999999" Width="12"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.016386" Rows="299.999997" Width="12"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="1" Alias="b">
@@ -1064,7 +1064,7 @@
               <dxl:OneTimeFilter/>
               <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="true">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.016386" Rows="99.999999" Width="12"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.016386" Rows="299.999997" Width="12"/>
                 </dxl:Properties>
                 <dxl:GroupingColumns>
                   <dxl:GroupingColumn ColId="1"/>

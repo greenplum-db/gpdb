@@ -1271,5 +1271,16 @@ CPhysical::Erm(CReqdPropPlan *, ULONG, CDrvdPropArray *, ULONG)
 	return CEnfdRewindability::ErmSatisfy;
 }
 
+CEnfdDistribution *
+CPhysical::Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
+			   CReqdPropPlan *prppInput, ULONG child_index,
+			   CDrvdPropArray *pdrgpdpCtxt, ULONG ulDistrReq)
+{
+	return GPOS_NEW(mp) CEnfdDistribution(
+		PdsRequired(mp, exprhdl, prppInput->Ped()->PdsRequired(), child_index,
+					pdrgpdpCtxt, ulDistrReq),
+		Edm(prppInput, child_index, pdrgpdpCtxt, ulDistrReq));
+	;
+}
 
 // EOF

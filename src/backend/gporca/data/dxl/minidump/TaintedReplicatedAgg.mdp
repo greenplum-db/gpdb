@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
   <dxl:Comment><![CDATA[
+  Objective: The plan should contain a single broadcast motion on top of the
+  Aggregate node. It should broadcast the contents of one segment to the others
+  since the Aggregate taints the replication of the hosttoast table below it.
+
   CREATE TABLE snackbox (a float4) DISTRIBUTED REPLICATED;
   CREATE TABLE hottoast (c float4) DISTRIBUTED REPLICATED;
 
@@ -308,7 +312,7 @@
             <dxl:SortingColumnList/>
             <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000027" Rows="1.000000" Width="4"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000027" Rows="3.000000" Width="4"/>
               </dxl:Properties>
               <dxl:GroupingColumns/>
               <dxl:ProjList>

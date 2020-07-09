@@ -23,7 +23,7 @@ using namespace gpos;
 class CDistributionSpecReplicated : public CDistributionSpec
 {
 private:
-	CDistributionSpecReplicated(const CDistributionSpecReplicated &) {};
+	CDistributionSpecReplicated(const CDistributionSpecReplicated &);
 
 	// replicated support
 	CDistributionSpec::EDistributionType m_replicated;
@@ -34,6 +34,10 @@ public:
 		CDistributionSpec::EDistributionType replicated_type)
 		: m_replicated(replicated_type)
 	{
+		GPOS_ASSERT(replicated_type == CDistributionSpec::EdtReplicated ||
+					replicated_type ==
+						CDistributionSpec::EdtTaintedReplicated ||
+					replicated_type == CDistributionSpec::EdtStrictReplicated);
 	}
 
 	// accessor
@@ -51,7 +55,6 @@ public:
 								 CReqdPropPlan *prpp,
 								 CExpressionArray *pdrgpexpr,
 								 CExpression *pexpr);
-
 
 	// return distribution partitioning type
 	virtual EDistributionPartitioningType
