@@ -188,13 +188,14 @@ namespace gpopt
 				// in the future, we may add more properties relevant to the cost here,
 				// like distribution spec, partition selectors
 
-				// stores part keys for the atoms. NULL if not a part table or if not an atom
-				CPartKeysArray *m_part_keys_array;
+				// Stores part keys for atoms that are partitioned tables. NULL otherwise.
+				CPartKeysArray *m_atom_part_keys_array;
 
 				// cost of the expression
 				CDouble m_cost;
 
-				CDouble m_cost_PS;
+				//cost adjustment for the effect of partition selectors, this is always <= 0.0
+				CDouble m_cost_adj_PS;
 
 				// base table rows, -1 if not atom or get/select
 				CDouble m_atom_base_table_rows;
@@ -212,9 +213,9 @@ namespace gpopt
 								   m_left_child_expr(left_child_expr_info),
 								   m_right_child_expr(right_child_expr_info),
 								   m_properties(properties),
-								   m_part_keys_array(NULL),
+								   m_atom_part_keys_array(NULL),
 								   m_cost(0.0),
-								   m_cost_PS(0.0),
+								   m_cost_adj_PS(0.0),
 								   m_atom_base_table_rows(-1.0),
 								   m_contain_PS(NULL)
 
@@ -230,9 +231,9 @@ namespace gpopt
 								SExpressionProperties &properties
 								) : m_expr(expr),
 									m_properties(properties),
-									m_part_keys_array(NULL),
+									m_atom_part_keys_array(NULL),
 									m_cost(0.0),
-									m_cost_PS(0.0),
+									m_cost_adj_PS(0.0),
 									m_atom_base_table_rows(-1.0),
 									m_contain_PS(NULL)
 				{
@@ -248,7 +249,7 @@ namespace gpopt
 				// cost (use -1 for greedy solutions to ensure we keep all of them)
 				CDouble GetCostForHeap() { return m_properties.IsGreedy() ? -1.0 : GetCost(); }
 
-				CDouble GetCost() { return m_cost + m_cost_PS; }
+				CDouble GetCost() { return m_cost + m_cost_adj_PS; }
 
 				void UnionPSProperties(SExpressionInfo *other) {m_contain_PS->Union(other->m_contain_PS); }
 				BOOL ChildrenAreEqual(const SExpressionInfo &other) const
@@ -383,6 +384,10 @@ namespace gpopt
 			// top K expressions at the top level
 			CKHeap<SExpressionInfoArray, SExpressionInfo> *m_top_k_expressions;
 
+			// top K expressions at top level that contain promising dynamic partiion selectors
+			// if there are no promising dynamic partition selectors, this will be empty
+			CKHeap<SExpressionInfoArray, SExpressionInfo> *m_top_k_part_expressions;
+
 			// current penalty for cross products (depends on enumeration algorithm)
 			CDouble m_cross_prod_penalty;
 
@@ -491,14 +496,7 @@ namespace gpopt
 			virtual
 			void PexprExpand();
 
-			CExpression *GetNextOfTopK(KHeap<SExpressionInfoArray, SExpressionInfo> *heap);
-
-			// top K expressions at the top level
-			KHeap<SExpressionInfoArray, SExpressionInfo> *m_top_k_expressions;
-
-			// top K expressions at top level that contain promising dynamic partiion selectors
-			// if there are no promising dynamic partition selectors, this will be empty
-			KHeap<SExpressionInfoArray, SExpressionInfo> *m_top_k_part_expressions;
+			CExpression *GetNextOfTopK();
 
 			// check for NIJs
 			BOOL

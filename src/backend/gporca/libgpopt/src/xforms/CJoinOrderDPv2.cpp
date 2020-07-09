@@ -82,13 +82,15 @@ CJoinOrderDPv2::CJoinOrderDPv2
 
 	m_bitset_to_group_info_map = GPOS_NEW(mp) BitSetToGroupInfoMap(mp);
 
+	// Contains top k expressions for a general DP algorithm, without considering cost of motitions/PS
 	m_top_k_expressions = GPOS_NEW(mp) CKHeap<SExpressionInfoArray, SExpressionInfo>
 										(
 										 mp,
 										 GPOPT_DPV2_JOIN_ORDERING_TOPK
 										);
-
-	m_top_k_part_expressions = GPOS_NEW(mp) KHeap<SExpressionInfoArray, SExpressionInfo>
+	// We use a separate heap to ensure we produce an alternative expression that contains a dynamic PS
+	// If no dynamic PS is valid, this will be empty.
+	m_top_k_part_expressions = GPOS_NEW(mp) CKHeap<SExpressionInfoArray, SExpressionInfo>
 										(
 										 mp,
 										 1
@@ -193,8 +195,8 @@ CJoinOrderDPv2::ComputeCost
 			// penalize cross joins, similar to what we do in the optimization phase
 			dCost = dCost * m_cross_prod_penalty;
 		}
-		expr_info->m_cost_PS = expr_info->m_cost_PS + expr_info->m_left_child_expr.GetExprInfo()->m_cost_PS;
-		expr_info->m_cost_PS = expr_info->m_cost_PS + expr_info->m_right_child_expr.GetExprInfo()->m_cost_PS;
+		expr_info->m_cost_adj_PS = expr_info->m_left_child_expr.GetExprInfo()->m_cost_adj_PS;
+		expr_info->m_cost_adj_PS = expr_info->m_cost_adj_PS + expr_info->m_right_child_expr.GetExprInfo()->m_cost_adj_PS;
 	}
 
 	expr_info->m_cost = dCost;
@@ -849,7 +851,7 @@ CJoinOrderDPv2::PopulateDPEInfo
 	CBitSetIter iter_pt(*part_table_group_info->m_atoms);
 	iter_pt.Advance();
 	SGroupInfo *pt_atom = (*atom_groups)[iter_pt.Bit()];
-	CPartKeysArray *partition_keys = (*pt_atom->m_best_expr_info_array)[0]->m_part_keys_array;
+	CPartKeysArray *partition_keys = (*pt_atom->m_best_expr_info_array)[0]->m_atom_part_keys_array;
 	if (partition_keys != NULL && partition_keys->Size() > 0)
 	{
 		CExpression *join_expr = join_expr_info->m_expr;
@@ -870,11 +872,15 @@ CJoinOrderDPv2::PopulateDPEInfo
 					{
 						SExpressionInfo *atom_ps = (*(*atom_groups)[iter_ps.Bit()]->m_best_expr_info_array)[0];
 						// This is a bit simplistic. We calculate how much we are reducing the cardinality of the atom, but also take into account the cost of broadcasting the inner rows. If the number of rows broadcasted is much larger than the savings, then PS will likely not benefit in this case
-						// The below numbers are from the cost model
+						// The below numbers are from the cost model used during optimization
 						// broadcast send = 4.965e-05
 						// bcast receive = 1.35e-06
 						// table scan = 5.50e-07
 						// Therefore, 1 bcast receive == 2.45 scans, 1 bcast send = 90.27 scans
+
+						// for a select(some_non_get_node()) ==> 0.9
+						// for a non-select node (won't even come here) ==> 0.0, in effect
+						// for a select(get) ==> 1 - (row count of select / row count of get)
 
 						CDouble percent_reduction = .9; // an arbitary default
 						CDouble num_segments = COptCtxt::PoctxtFromTLS()->GetCostModel()->UlHosts();
@@ -882,7 +888,9 @@ CJoinOrderDPv2::PopulateDPEInfo
 						if (atom_ps->m_atom_base_table_rows.Get() > 0){
 							percent_reduction = (1 - (atom_ps->m_cost.Get() / atom_ps->m_atom_base_table_rows.Get()));
 						}
-						join_expr_info->m_cost_PS = std::min(join_expr_info->m_cost_PS, -(percent_reduction * pt_atom->m_cardinality) + broadcast_penalty);
+
+						// Adjust the cost of the expression for each partition selector
+						join_expr_info->m_cost_adj_PS = join_expr_info->m_cost_adj_PS - ((percent_reduction * pt_atom->m_cardinality) + broadcast_penalty);
 					}
 				}
 				break;
@@ -1333,7 +1341,7 @@ CJoinOrderDPv2::PexprExpand()
 		CPartInfo *part_info = pexpr_atom->DerivePartitionInfo();
 		if (part_info->UlConsumers() > 0)
 		{
-			atom_expr_info->m_part_keys_array = part_info->Pdrgppartkeys(0);
+			atom_expr_info->m_atom_part_keys_array = part_info->Pdrgppartkeys(0);
 			// mark this atom as containing a PS
 			AddNewPropertyToExpr(atom_expr_info, SExpressionProperties(EJoinOrderHasPS));
 		}
@@ -1600,11 +1608,13 @@ CJoinOrderDPv2::EnumerateGreedyAvoidXProd()
 //
 //---------------------------------------------------------------------------
 CExpression*
-CJoinOrderDPv2::GetNextOfTopK(
-	KHeap<SExpressionInfoArray, SExpressionInfo> *heap
-							  )
+CJoinOrderDPv2::GetNextOfTopK()
 {
-	SExpressionInfo *join_result_info = heap->RemoveBestElement();
+	SExpressionInfo *join_result_info = m_top_k_expressions->RemoveBestElement();
+	if (NULL == join_result_info)
+	{
+		join_result_info = m_top_k_part_expressions->RemoveBestElement();
+	}
 
 	if (NULL == join_result_info)
 	{
@@ -1821,9 +1831,9 @@ CJoinOrderDPv2::OsPrint
 				}
 				os << "   Cost: ";
 				expr_info->m_cost.OsPrint(os);
-				os << "   Penalty Cost: ";
-				expr_info->m_cost_PS.OsPrint(os);
-				os << "   Total Cost with Penalty: ";
+				os << "   Partition Selector Penalty Cost: ";
+				expr_info->m_cost_adj_PS.OsPrint(os);
+				os << "   Total Cost with Partition Selector Penalty: ";
 				expr_info->GetCost().OsPrint(os);
 				os << std::endl;
 
