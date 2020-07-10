@@ -330,9 +330,16 @@ def main():
 
     # setup the connection info tuple with options
     connectionInfo = (host, port, user, db)
-    connectionString = ':'.join([host, port, db, user, '', pgoptions, ''])
+    connectionDict = {
+            'host': host,
+            'port': port,
+            'database': db,
+            'user': user,
+            'options': pgoptions,
+            }
+
     print "Connecting to database: host=%s, port=%s, user=%s, db=%s ..." % connectionInfo
-    conn = pgdb.connect(connectionString)
+    conn = pgdb.connect(**connectionDict)
     cursor = conn.cursor()
 
     # get server version, which is dumped to minirepro output file
