@@ -24,10 +24,6 @@
  * prototypes for pathnode.c
  */
 
-extern CdbVisitOpt pathnode_walk_node(Path *path,
-			       CdbVisitOpt (*walker)(Path *path, void *context),
-			       void *context);
-
 extern int compare_path_costs(Path *path1, Path *path2,
 				   CostSelector criterion);
 extern int compare_fractional_path_costs(Path *path1, Path *path2,

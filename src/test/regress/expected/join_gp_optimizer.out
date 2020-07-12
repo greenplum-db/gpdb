@@ -1408,7 +1408,7 @@ select p from
           (box(point(0.8,0.8), point(1.0,1.0)))) as v(bb)
 cross join lateral
   (select p from gist_tbl_github9733 where p <@ bb order by p <-> bb[0] limit 2) ss;
-ERROR:  could not devise a query plan for the given query (pathnode.c:472)
+ERROR:  could not devise a query plan for the given query (pathnode.c:265)
 reset enable_seqscan;
 explain (costs off)
 select p from
