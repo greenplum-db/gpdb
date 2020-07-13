@@ -2267,7 +2267,7 @@ CUtils::PexprLogicalSelect
 	CTableDescriptor *ptabdesc = NULL;
 	if (pexpr->Pop()->Eopid() == CLogical::EopLogicalSelect || pexpr->Pop()->Eopid() == CLogical::EopLogicalGet || pexpr->Pop()->Eopid() == CLogical::EopLogicalDynamicGet)
 	{
-		ptabdesc = CLogical::PtabdescFromTableGet(pexpr->Pop());
+		ptabdesc = pexpr->DeriveTableDescriptor();
 		// there are some cases where we don't populate LogicalSelect currently
 		GPOS_ASSERT_IMP(pexpr->Pop()->Eopid() != CLogical::EopLogicalSelect,NULL != ptabdesc);
 	}

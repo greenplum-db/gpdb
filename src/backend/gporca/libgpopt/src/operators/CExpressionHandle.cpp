@@ -2041,6 +2041,16 @@ CExpressionHandle::DeriveTableDescriptor()
 	return GetRelationalProperties()->GetTableDescriptor();
 }
 
+CTableDescriptor *
+CExpressionHandle::DeriveTableDescriptor(ULONG child_index)
+{
+	if (NULL != Pexpr())
+	{
+		return (*Pexpr())[child_index]->DeriveTableDescriptor();
+	}
+
+	return GetRelationalProperties(child_index)->GetTableDescriptor();
+}
 // Scalar property accessors
 
 CColRefSet *

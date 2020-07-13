@@ -256,6 +256,19 @@ CLogicalCTEConsumer::DeriveJoinDepth
 	return pexpr->DeriveJoinDepth();
 }
 
+// derive table descriptor
+CTableDescriptor *
+CLogicalCTEConsumer::DeriveTableDescriptor
+	(
+	CMemoryPool *, //mp
+	CExpressionHandle & //exprhdl
+	)
+	const
+{
+	CExpression *pexpr = COptCtxt::PoctxtFromTLS()->Pcteinfo()->PexprCTEProducer(m_id);
+	GPOS_ASSERT(NULL != pexpr);
+	return pexpr->DeriveTableDescriptor();
+}
 
 //---------------------------------------------------------------------------
 //	@function:

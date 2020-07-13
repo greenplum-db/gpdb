@@ -149,6 +149,8 @@ namespace gpopt
 				return PpartinfoPassThruOuter(exprhdl);
 			}
 
+			virtual
+			CTableDescriptor *DeriveTableDescriptor(CMemoryPool *mp,	CExpressionHandle &exprhdl)	const;
 			// compute required stats columns of the n-th child
 			virtual
 			CColRefSet *PcrsStat

@@ -115,6 +115,18 @@ namespace gpopt
 				return 1;
 			}
 
+			// derive table descriptor
+			virtual
+			CTableDescriptor *DeriveTableDescriptor
+				(
+				CMemoryPool *, // mp
+				CExpressionHandle & // exprhdl
+				)
+				const
+			{
+				return m_ptabdesc;
+			}
+
 			//-------------------------------------------------------------------------------------
 			// Required Relational Properties
 			//-------------------------------------------------------------------------------------

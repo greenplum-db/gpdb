@@ -102,6 +102,18 @@ namespace gpopt
 				return PpcDeriveConstraintFromPredicates(mp, exprhdl);
 			}
 
+			// derive table descriptor
+			virtual
+			CTableDescriptor *DeriveTableDescriptor
+				(
+				CMemoryPool *, // mp
+				CExpressionHandle &exprhdl
+				)
+				const
+			{
+				return exprhdl.DeriveTableDescriptor(0);
+			}
+
 			// compute partition predicate to pass down to n-th child
 			virtual
 			CExpression *PexprPartPred
