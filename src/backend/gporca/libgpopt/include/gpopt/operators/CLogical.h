@@ -281,6 +281,9 @@ namespace gpopt
 			virtual
 			CFunctionProp *DeriveFunctionProperties(CMemoryPool *mp, CExpressionHandle &exprhdl) const;
 
+			virtual
+			CTableDescriptor *DeriveTableDescriptor(CMemoryPool *mp, CExpressionHandle &exprhdl) const;
+
 			//-------------------------------------------------------------------------------------
 			// Derived Stats
 			//-------------------------------------------------------------------------------------

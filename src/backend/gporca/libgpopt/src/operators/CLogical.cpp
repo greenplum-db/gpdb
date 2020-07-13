@@ -1003,6 +1003,26 @@ CLogical::DeriveFunctionProperties
 
 //---------------------------------------------------------------------------
 //	@function:
+//		CLogical::DeriveTableDescriptor
+//
+//	@doc:
+//		Derive table descriptor for tables used by operator
+//
+//---------------------------------------------------------------------------
+CTableDescriptor *
+CLogical::DeriveTableDescriptor
+	(
+	CMemoryPool *,
+	CExpressionHandle &
+	)
+	const
+{
+	//currently return null unless there is a single table being used. Later we may want
+	//to make this return a set of table descriptors and pass them up all operators
+	return NULL;
+}
+//---------------------------------------------------------------------------
+//	@function:
 //		CLogical::PfpDeriveFromScalar
 //
 //	@doc:

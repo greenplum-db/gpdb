@@ -2030,6 +2030,17 @@ CExpressionHandle::DeriveHasPartialIndexes()
 	return GetRelationalProperties()->HasPartialIndexes();
 }
 
+CTableDescriptor *
+CExpressionHandle::DeriveTableDescriptor()
+{
+	if (NULL != Pexpr())
+	{
+		return Pexpr()->DeriveTableDescriptor();
+	}
+
+	return GetRelationalProperties()->GetTableDescriptor();
+}
+
 // Scalar property accessors
 
 CColRefSet *
