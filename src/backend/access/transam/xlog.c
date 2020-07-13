@@ -10108,13 +10108,13 @@ GetWALAvailability(XLogRecPtr targetLSN)
 	if (XLogRecPtrIsInvalid(targetLSN))
 		return WALAVAIL_INVALID_LSN;
 
-	currpos = GetXLogWriteRecPtr();
-
 	/*
-	 * calculate the oldest segment currently reserved by all slots,
-	 * considering wal_keep_segments and max_slot_wal_keep_size
+	 * Calculate the oldest segment currently reserved by all slots,
+	 * considering wal_keep_segments and max_slot_wal_keep_size.  Initialize
+	 * oldestSlotSeg to the current segment.
 	 */
-	XLByteToSeg(targetLSN, targetSeg, wal_segment_size);
+	currpos = GetXLogWriteRecPtr();
+	XLByteToSeg(currpos, oldestSlotSeg, wal_segment_size);
 	KeepLogSeg(currpos, &oldestSlotSeg);
 
 	/*
@@ -10132,6 +10132,9 @@ GetWALAvailability(XLogRecPtr targetLSN)
 		oldestSegMaxWalSize = currSeg - keepSegs;
 	else
 		oldestSegMaxWalSize = 1;
+
+	/* the segment we care about */
+	XLByteToSeg(targetLSN, targetSeg, wal_segment_size);
 
 	/*
 	 * No point in returning reserved or extended status values if the
@@ -10222,7 +10225,7 @@ KeepLogSeg(XLogRecPtr recptr, XLogSegNo *logSegNo)
 	}
 
 	/* don't delete WAL segments newer than the calculated segment */
-	if (setvalue && (XLogRecPtrIsInvalid(*logSegNo) || segno < *logSegNo))
+	if (setvalue && segno < *logSegNo)
 		*logSegNo = segno;
 }
 
