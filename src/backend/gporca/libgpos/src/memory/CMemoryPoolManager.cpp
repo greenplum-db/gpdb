@@ -283,7 +283,7 @@ CMemoryPoolManager::Shutdown()
 	// save off pointers for explicit deletion
 	CMemoryPool *internal = m_internal_memory_pool;
 
-	GPOS_DELETE(CMemoryPoolManager::m_memory_pool_mgr);
+	::delete CMemoryPoolManager::m_memory_pool_mgr;
 	CMemoryPoolManager::m_memory_pool_mgr = NULL;
 
 #ifdef GPOS_DEBUG

@@ -112,12 +112,12 @@ namespace gpos
 				void *alloc_internal = gpos::clib::Malloc(sizeof(PoolType));
 
 				// create internal memory pool
-				CMemoryPool *internal = new(alloc_internal) PoolType();
+				CMemoryPool *internal = ::new(alloc_internal) PoolType();
 
 				// instantiate manager
 				GPOS_TRY
 				{
-					m_memory_pool_mgr = GPOS_NEW(internal) ManagerType(internal, EMemoryPoolTracker);
+					m_memory_pool_mgr = ::new ManagerType(internal, EMemoryPoolTracker);
 					m_memory_pool_mgr->Setup();
 				}
 				GPOS_CATCH_EX(ex)
