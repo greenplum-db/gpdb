@@ -1411,31 +1411,6 @@ CLogical::PtabdescFromTableGet
 	}
 }
 
-CColRefArray *
-CLogical::PoutputColsFromTableGet
-	(
-	COperator *pop
-	)
-{
-	GPOS_ASSERT(NULL != pop);
-	switch (pop->Eopid())
-	{
-		case CLogical::EopLogicalGet:
-			return CLogicalGet::PopConvert(pop)->PdrgpcrOutput();
-		case CLogical::EopLogicalDynamicGet:
-			return CLogicalDynamicGet::PopConvert(pop)->PdrgpcrOutput();
-		case CLogical::EopLogicalBitmapTableGet:
-			return CLogicalBitmapTableGet::PopConvert(pop)->PdrgpcrOutput();
-		case CLogical::EopLogicalDynamicBitmapTableGet:
-			return CLogicalDynamicBitmapTableGet::PopConvert(pop)->PdrgpcrOutput();
-		case CLogical::EopLogicalSelect:
-			return CLogicalSelect::PopConvert(pop)->PdrgpcrOutput();
-		default:
-			GPOS_ASSERT(false && "Unsupported operator in CLogical::PoutputColsFromTableGet");
-			return NULL;
-	}
-}
-
 //---------------------------------------------------------------------------
 //	@function:
 //		CLogical::PdrgpcrOutputFromLogicalGet

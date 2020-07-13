@@ -42,9 +42,6 @@ namespace gpopt
 			// table descriptor
 			CTableDescriptor *m_ptabdesc;
 
-			// output columns
-			CColRefArray *m_pdrgpcrOutput;
-
 		public:
 
 			// ctor
@@ -52,7 +49,7 @@ namespace gpopt
 			CLogicalSelect(CMemoryPool *mp);
 
 			// ctor
-			CLogicalSelect(CMemoryPool *mp, CTableDescriptor *ptabdesc, CColRefArray *output_cols);
+			CLogicalSelect(CMemoryPool *mp, CTableDescriptor *ptabdesc);
 
 			// dtor
 			virtual
@@ -76,14 +73,6 @@ namespace gpopt
 			{
 				return m_ptabdesc;
 			}
-
-			// accessors
-			CColRefArray *PdrgpcrOutput() const
-			{
-				return m_pdrgpcrOutput;
-			}
-
-
 
 			//-------------------------------------------------------------------------------------
 			// Derived Relational Properties

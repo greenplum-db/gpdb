@@ -2265,17 +2265,16 @@ CUtils::PexprLogicalSelect
 	GPOS_ASSERT(NULL != pexprPredicate);
 
 	CTableDescriptor *ptabdesc = NULL;
-	CColRefArray *output_cols = NULL;
 	if (pexpr->Pop()->Eopid() == CLogical::EopLogicalSelect || pexpr->Pop()->Eopid() == CLogical::EopLogicalGet || pexpr->Pop()->Eopid() == CLogical::EopLogicalDynamicGet)
 	{
 		ptabdesc = CLogical::PtabdescFromTableGet(pexpr->Pop());
-		// ptabdesc can be NULL here
-		output_cols = CLogical::PoutputColsFromTableGet(pexpr->Pop());
+		// there are some cases where we don't populate LogicalSelect currently
+		GPOS_ASSERT_IMP(pexpr->Pop()->Eopid() != CLogical::EopLogicalSelect,NULL != ptabdesc);
 	}
 	return GPOS_NEW(mp) CExpression
 						(
 						mp,
-						GPOS_NEW(mp) CLogicalSelect(mp, ptabdesc, output_cols),
+						GPOS_NEW(mp) CLogicalSelect(mp, ptabdesc),
 						pexpr,
 						pexprPredicate
 						);
