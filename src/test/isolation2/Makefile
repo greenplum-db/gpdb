@@ -14,6 +14,10 @@ ifeq ($(PORTNAME), win32)
 LDLIBS += -lws2_32
 endif
 
+ifeq ($(POSTHOOK),yes)
+EXTRA_REGRESS_OPTS += --hook-file=posthook.txt
+endif
+
 override CPPFLAGS := -I$(srcdir) -I$(libpq_srcdir) -I$(srcdir)/../regress $(CPPFLAGS)
 override LDLIBS := $(libpq_pgport) $(LDLIBS)
 

@@ -1206,6 +1206,8 @@ static void parse_hook_file(const char *filename, char ***hook_array, int *n_hoo
 	parse_hook_content(pfile, buffer, buflen, hook_array, n_hook_array);
 
 	fclose(pfile);
+	if (hook_test)
+		printf("Init post hook '%s', run hook test '%s'\n", hook_file, hook_test);
 }
 
 /*
@@ -2132,9 +2134,9 @@ match_hook_point(const char **hook_points_array, int n_array, const char **tests
 static void
 run_post_hook(const char *testname, test_function tfunc, const char **hook_points_array, int n_array, const char **tests, int n_tests)
 {
+	const char *matched_test;
 	if (testname == NULL)
 		return;
-	const char *matched_test;
 	if (n_array > 0)
 	{
 		matched_test = match_hook_point(hook_points_array, n_array, tests, n_tests);

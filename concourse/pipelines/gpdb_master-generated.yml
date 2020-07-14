@@ -784,7 +784,7 @@ jobs:
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb7-centos7-test
     params:
-      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
+      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' POSTHOOK=yes installcheck-world
       TEST_OS: centos
       CONFIGURE_FLAGS: {{configure_flags}}
 
@@ -803,7 +803,7 @@ jobs:
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb7-centos7-test
     params:
-      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
+      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' POSTHOOK=yes installcheck-world
       TEST_OS: centos
       TEST_BINARY_SWAP: {{test-binary-swap}}
       CONFIGURE_FLAGS: {{configure_flags}}
@@ -865,7 +865,7 @@ jobs:
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb7-centos7-test
     params:
-      MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=tcp -c optimizer=on' installcheck-world
+      MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=tcp -c optimizer=on' POSTHOOK=yes installcheck-world
       TEST_OS: centos
 
 - name: icw_gporca_ubuntu18.04
@@ -883,7 +883,7 @@ jobs:
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
       image: gpdb7-ubuntu18.04-test
       params:
-        MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
+        MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' POSTHOOK=yes installcheck-world
         TEST_OS: ubuntu
         CONFIGURE_FLAGS: {{configure_flags}}
 
@@ -902,7 +902,7 @@ jobs:
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
       image: gpdb7-ubuntu18.04-test
       params:
-        MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
+        MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' POSTHOOK=yes installcheck-world
         TEST_OS: ubuntu
         CONFIGURE_FLAGS: {{configure_flags}}
 
@@ -994,7 +994,7 @@ jobs:
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb7-centos7-test
     params:
-      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off'
+      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' POSTHOOK=yes
         BUILD_TYPE=((rc-build-type)) -C src/test/regress installcheck-icudp
       TEST_OS: centos
 

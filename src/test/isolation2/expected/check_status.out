@@ -2,17 +2,15 @@ select dbid, content, status, role, preferred_role, mode from gp_segment_configu
  dbid | content | status | role | preferred_role | mode 
 ------+---------+--------+------+----------------+------
 (0 rows)
-
 select gp_inject_fault('all', 'reset', dbid) from gp_segment_configuration where status='u';
  gp_inject_fault 
 -----------------
- Success:
- Success:
- Success:
- Success:
- Success:
- Success:
- Success:
- Success:
+ Success:        
+ Success:        
+ Success:        
+ Success:        
+ Success:        
+ Success:        
+ Success:        
+ Success:        
 (8 rows)
-

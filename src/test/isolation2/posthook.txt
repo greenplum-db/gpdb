@@ -1,0 +1,18 @@
+# The format of posthook configuration file
+# ( hook_name test_case * )?
+
+# The empty or incorruption file has no effect, we simply ignore the posthook.
+# The hook name is the first non-empty name in the file. The remainings are
+# a set of test cases we want to run the hook.
+# If we only provide the hook name, we run the hook after every test case/group.
+
+
+# posthook script
+# We use this one as the posthook script
+ check_status
+
+# If we want to run the hook after a set of test cases, we put the set of
+# test cases below. One test case per line.
+
+# test1
+# test2
