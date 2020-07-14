@@ -408,7 +408,8 @@ CStatisticsTest::EresUnittest_CStatisticsBasic()
 				false /*IsNullable*/,
 				1 /* id */,
 				CName(&strColA),
-				pexprGet->Pop()->UlOpId()
+				pexprGet->Pop()->UlOpId(),
+				false /*IsDistCol*/
 				);
 	}
 
@@ -423,7 +424,8 @@ CStatisticsTest::EresUnittest_CStatisticsBasic()
 				false /*IsNullable*/,
 				2 /* id */,
 				CName(&strColB),
-				pexprGet->Pop()->UlOpId()
+				pexprGet->Pop()->UlOpId(),
+				false /*IsDistCol*/
 				);
 	}
 
@@ -438,7 +440,8 @@ CStatisticsTest::EresUnittest_CStatisticsBasic()
 		 false /*IsNullable*/,
 		 10 /* id */,
 		 CName(&strColC),
-		 pexprGet->Pop()->UlOpId()
+		 pexprGet->Pop()->UlOpId(),
+		 false /*IsDistCol*/
 		 );
 	}
 

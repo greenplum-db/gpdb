@@ -85,8 +85,8 @@ CMDRelationExternalGPDB::CMDRelationExternalGPDB
 	{
 		IMDColumn *pmdcol = (*mdcol_array)[ul];
 
-		BOOL fSystemCol = pmdcol->IsSystemColumn();
-		if (fSystemCol)
+		BOOL isSystemCol = pmdcol->IsSystemColumn();
+		if (isSystemCol)
 		{
 			m_system_columns++;
 		}
@@ -97,7 +97,7 @@ CMDRelationExternalGPDB::CMDRelationExternalGPDB
 		}
 		else		
 		{
-			if (!fSystemCol)
+			if (!isSystemCol)
 			{
 				m_nondrop_col_pos_array->Append(GPOS_NEW(m_mp) ULONG(ul));
 			}

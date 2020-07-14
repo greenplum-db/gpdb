@@ -40,7 +40,8 @@ CColumnDescriptor::CColumnDescriptor
 	m_name(mp, name),
 	m_iAttno(attno),
 	m_is_nullable(is_nullable),
-	m_width(ulWidth)
+	m_width(ulWidth),
+	m_is_dist_col(false)
 {
 	GPOS_ASSERT(NULL != pmdtype);
 	GPOS_ASSERT(pmdtype->MDId()->IsValid());

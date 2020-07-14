@@ -262,8 +262,8 @@ namespace gpopt
 					IMDId *rel_mdid,
 					ULONG colid,
 					ULONG ulPos,
-					BOOL fSystemCol,
-					BOOL fEmptyTable,
+					BOOL isSystemCol,
+					BOOL isEmptyTable,
 					UlongToHistogramMap *col_histogram_mapping,
 					UlongToDoubleMap *colid_width_mapping,
 					CStatisticsConfig *stats_config

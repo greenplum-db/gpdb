@@ -229,6 +229,7 @@ CJoinCardinalityTest::EresUnittest_Join()
 			 false /*IsNullable*/,
 			 id,
 			 CName(&str),
+			 false /*IsDistCol*/,
 			 0
 			 );
 		}

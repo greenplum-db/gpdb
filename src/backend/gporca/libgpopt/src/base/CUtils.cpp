@@ -2696,7 +2696,7 @@ CUtils::PdrgpcrGroupingKey
 	{
 		CColRef *pcr = it.Pcr();
 
-		if (CColRef::EUsed == pcr->GetUsage() && !pcr->FSystemCol())
+		if (CColRef::EUsed == pcr->GetUsage() && !pcr->IsSystemCol())
 		{
 			pcrsUsedOuter->Include(pcr);
 		}

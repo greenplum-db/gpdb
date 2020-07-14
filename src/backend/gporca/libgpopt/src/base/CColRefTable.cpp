@@ -43,6 +43,7 @@ CColRefTable::CColRefTable
 
 	m_iAttno = pcoldesc->AttrNum();
 	m_is_nullable = pcoldesc->IsNullable();
+	m_is_dist_col = pcoldesc->IsDistCol();
 }
 
 //---------------------------------------------------------------------------
@@ -63,6 +64,7 @@ CColRefTable::CColRefTable
 	ULONG id,
 	const CName *pname,
 	ULONG ulOpSource,
+	BOOL is_dist_col,
 	ULONG ulWidth
 	)
 	:
@@ -70,6 +72,7 @@ CColRefTable::CColRefTable
 	m_iAttno(attno),
 	m_is_nullable(is_nullable),
 	m_ulSourceOpId(ulOpSource),
+	m_is_dist_col(is_dist_col),
 	m_width(ulWidth)
 {
 	GPOS_ASSERT(NULL != pname);

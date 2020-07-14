@@ -179,7 +179,11 @@ namespace gpopt
 
 			// is column a system column?
 			virtual
-			BOOL FSystemCol() const = 0;
+			BOOL IsSystemCol() const = 0;
+
+			// is column a distribution column?
+			virtual
+			BOOL IsDistCol() const = 0;
 
 			// print
 			IOstream &OsPrint(IOstream &) const;
@@ -213,7 +217,7 @@ namespace gpopt
 			EUsedStatus GetUsage(BOOL check_system_col=false) const
 			{
 
-				if (GPOS_FTRACE(EopttraceTranslateUnusedColrefs) || (!check_system_col && FSystemCol()))
+				if (GPOS_FTRACE(EopttraceTranslateUnusedColrefs) || (!check_system_col && IsSystemCol()))
 				{
 					return EUsed;
 				}

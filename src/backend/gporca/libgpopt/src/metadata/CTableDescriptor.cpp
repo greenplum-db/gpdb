@@ -212,6 +212,7 @@ CTableDescriptor::AddDistributionColumn
 	CColumnDescriptor *pcoldesc = (*m_pdrgpcoldesc)[ulPos];
 	pcoldesc->AddRef();
 	m_pdrgpcoldescDist->Append(pcoldesc);
+	pcoldesc->SetAsDistCol();
 
 	if (GPOS_FTRACE(EopttraceConsiderOpfamiliesForDistribution))
 	{

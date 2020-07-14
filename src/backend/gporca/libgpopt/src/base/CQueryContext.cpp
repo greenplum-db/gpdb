@@ -155,7 +155,7 @@ CQueryContext::SetSystemCols
 	for (ULONG ul = 0; ul < ulReqdCols; ul++)
 	{
 		CColRef *colref = (*m_pdrgpcr)[ul];
-		if (colref->FSystemCol())
+		if (colref->IsSystemCol())
 		{
 			m_pdrgpcrSystemCols->Append(colref);
 		}

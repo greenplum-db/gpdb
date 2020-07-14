@@ -244,6 +244,7 @@ CColumnFactory::PcrCreate
 	ULONG id,
 	const CName &name,
 	ULONG ulOpSource,
+	BOOL isDistCol,
 	ULONG ulWidth
 	)
 {
@@ -251,7 +252,7 @@ CColumnFactory::PcrCreate
 	CAutoP<CName> a_pnameCopy(pnameCopy);
 
 	CColRef *colref =
-			GPOS_NEW(m_mp) CColRefTable(pmdtype, type_modifier, attno, is_nullable, id, pnameCopy, ulOpSource, ulWidth);
+			GPOS_NEW(m_mp) CColRefTable(pmdtype, type_modifier, attno, is_nullable, id, pnameCopy, ulOpSource, isDistCol, ulWidth);
 	(void) a_pnameCopy.Reset();
 	CAutoP<CColRef> a_pcr(colref);
 
@@ -321,6 +322,7 @@ CColumnFactory::PcrCopy
 			id,
 			name,
 			pcrTable->UlSourceOpId(),
+			colref->IsDistCol(),
 			pcrTable->Width()
 			);
 }
