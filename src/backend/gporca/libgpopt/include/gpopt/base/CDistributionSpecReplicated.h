@@ -15,7 +15,6 @@
 #include "gpos/base.h"
 
 #include "gpopt/base/CDistributionSpec.h"
-#include "gpopt/base/CDistributionSpecSingleton.h"
 
 namespace gpopt
 {
