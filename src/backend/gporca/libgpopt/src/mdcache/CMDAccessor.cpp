@@ -1106,8 +1106,8 @@ CMDAccessor::RecordColumnStats
 	IMDId *rel_mdid,
 	ULONG colid,
 	ULONG ulPos,
-	BOOL fSystemCol,
-	BOOL fEmptyTable,
+	BOOL isSystemCol,
+	BOOL isEmptyTable,
 	UlongToHistogramMap *col_histogram_mapping,
 	UlongToDoubleMap *colid_width_mapping,
 	CStatisticsConfig *stats_config
@@ -1133,7 +1133,7 @@ CMDAccessor::RecordColumnStats
 	col_histogram_mapping->Insert(GPOS_NEW(mp) ULONG(colid), histogram);
 
 	BOOL fGuc = GPOS_FTRACE(EopttracePrintColsWithMissingStats);
-	BOOL fRecordMissingStats = !fEmptyTable && fGuc && !fSystemCol
+	BOOL fRecordMissingStats = !isEmptyTable && fGuc && !isSystemCol
 								&& (NULL != stats_config) && histogram->IsColStatsMissing();
 	if (fRecordMissingStats)
 	{
@@ -1220,7 +1220,7 @@ CMDAccessor::Pstats
 			rel_mdid,
 			colid,
 			ulPos,
-			pcrtable->FSystemCol(),
+			pcrtable->IsSystemCol(),
 			fEmptyTable,
 			col_histogram_mapping,
 			colid_width_mapping,

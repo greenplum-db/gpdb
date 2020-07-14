@@ -414,6 +414,7 @@ CJoinStatsProcessor::SetResultingJoinStats
 		IMDId *mdid_outer = colref_outer->GetMdidTable();
 		IMDId *mdid_inner = colref_inner->GetMdidTable();
 		IMdIdArray *mdid_pair = NULL;
+		BOOL both_dist_keys = false;
 		if ((mdid_outer != NULL) && (mdid_inner != NULL))
 		{
 			// there should only be two tables involved in a join condition
@@ -428,9 +429,14 @@ CJoinStatsProcessor::SetResultingJoinStats
 			mdid_pair->Append(mdid_outer);
 			mdid_pair->Append(mdid_inner);
 			mdid_pair->Sort();
+
+			if (colref_outer->IsDistCol() && colref_inner->IsDistCol())
+			{
+				both_dist_keys = true;
+			}
 		}
 
-		join_conds_scale_factors->Append(GPOS_NEW(mp) CScaleFactorUtils::SJoinCondition(local_scale_factor, mdid_pair));
+		join_conds_scale_factors->Append(GPOS_NEW(mp) CScaleFactorUtils::SJoinCondition(local_scale_factor, mdid_pair, both_dist_keys));
 	}
 
 

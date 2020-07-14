@@ -50,7 +50,7 @@ GenerateScaleFactorMap
 	(
 	 CMemoryPool *mp,
 	 SJoinConditionArray *join_conds_scale_factors,
-	 CDoubleArray* complex_join_preds
+	 CDoubleArray* independent_join_preds
 	)
 {
 	GPOS_ASSERT(join_conds_scale_factors != NULL);
@@ -64,27 +64,36 @@ GenerateScaleFactorMap
 	{
 		CDouble local_scale_factor = (*(*join_conds_scale_factors)[ul]).m_scale_factor;
 		IMdIdArray *oid_pair = (*(*join_conds_scale_factors)[ul]).m_oid_pair;
+		BOOL both_dist_keys = (*(*join_conds_scale_factors)[ul]).m_dist_keys;
 
 		if (oid_pair != NULL && oid_pair->Size() == 2)
 		{
-			CDoubleArray *scale_factor_array = scale_factor_hashmap->Find(oid_pair);
-			if (scale_factor_array)
+			// if both of sides of the predicate are dist keys, we assume independence as
+			// distribution keys should be unique, so add to independent_join_preds
+			if (both_dist_keys)
 			{
-				// append to the existing array
-				scale_factor_array->Append(GPOS_NEW(mp) CDouble(local_scale_factor));
+				independent_join_preds->Append(GPOS_NEW(mp) CDouble(local_scale_factor));
 			}
 			else
 			{
-				//instantiate the array
-				scale_factor_array = GPOS_NEW(mp) CDoubleArray(mp);
-				scale_factor_array->Append(GPOS_NEW(mp) CDouble(local_scale_factor));
-				oid_pair->AddRef();
-				scale_factor_hashmap->Insert(oid_pair, scale_factor_array);
+				// otherwise add to scale factor array so that the predicate gets damped accordingly
+				CDoubleArray *scale_factor_array = scale_factor_hashmap->Find(oid_pair);
+				if (scale_factor_array)
+				{
+					scale_factor_array->Append(GPOS_NEW(mp) CDouble(local_scale_factor));
+				}
+				else
+				{
+					scale_factor_array = GPOS_NEW(mp) CDoubleArray(mp);
+					scale_factor_array->Append(GPOS_NEW(mp) CDouble(local_scale_factor));
+					oid_pair->AddRef();
+					scale_factor_hashmap->Insert(oid_pair, scale_factor_array);
+				}
 			}
 		}
 		else
 		{
-			complex_join_preds->Append(GPOS_NEW(mp) CDouble(local_scale_factor));
+			independent_join_preds->Append(GPOS_NEW(mp) CDouble(local_scale_factor));
 		}
 	}
 
@@ -106,7 +115,7 @@ CScaleFactorUtils::
 CalcCumulativeScaleFactorSqrtAlg
 	(
 	OIDPairToScaleFactorArrayMap *scale_factor_hashmap,
-	CDoubleArray* complex_join_preds
+	CDoubleArray* independent_join_preds
 	)
 {
 	CDouble cumulative_scale_factor(1.0);
@@ -127,10 +136,11 @@ CalcCumulativeScaleFactorSqrtAlg
 		}
 	}
 
-	// assume independence if the preds are more complex
-	for (ULONG ul = 0; ul < complex_join_preds->Size(); ul++)
+	// independent_join_preds are either dist_key = dist_key preds or
+	// more complex predicates, such as t1.a = t2.a + t3.a;
+	for (ULONG ul = 0; ul < independent_join_preds->Size(); ul++)
 	{
-		CDouble local_scale_factor =  *(*complex_join_preds)[ul];
+		CDouble local_scale_factor =  *(*independent_join_preds)[ul];
 		cumulative_scale_factor = cumulative_scale_factor * local_scale_factor;
 	}
 
@@ -168,7 +178,10 @@ CumulativeJoinScaleFactor
 	// 1. When optimizer_damping_factor_join is greater than 0, use the legacy damping method
 	//    Note: The default value (.01) severely overestimates cardinalities for non-correlated columns
 	//
-	// 2. Otherwise, use a damping method to moderately decrease the impact of subsequent predicates to account for correlated columns. This damping only occurs on sorted predicates of the same table, otherwise we assume independence.
+	// 2. Otherwise, use a damping method to moderately decrease the impact of subsequent predicates to
+	//    account for correlated columns. This damping only occurs on sorted predicates of the same table,
+	//    otherwise we assume independence.
+	//
 	//    For example, given ANDed predicates (t1.a = t2.a AND t1.b = t2.b AND t2.b = t3.a) with the given selectivities:
 	//			(S1) t1.a = t2.a has selectivity .3
 	//			(S2) t1.b = t2.b has selectivity .5
@@ -179,9 +192,15 @@ CumulativeJoinScaleFactor
 	//      S = ( S2 * sqrt(S1) ) * S3
 	//    .03 = .5 * sqrt(.3) * .1
 	//    For scale factors, this is equivalent to ( SF2 * sqrt(SF1) ) * SF3
+	//
 	//    Note: This will underestimate the cardinality of highly correlated columns and overestimate the
 	//    cardinality of highly independent columns, but seems to be a good middle ground in the absence
 	//    of correlated column statistics
+	//
+	//    However, if both sides of the predicate are distribution columns, we assume that this predicate
+	//    is not correlated with any other predicate. This assumption comes from the idea that distribution
+	//    cols are ideally unique for each record to gain the best possible performance. This is a best
+	//    guess since we do not have a way to support correlated columns at this time.
 	CDouble cumulative_scale_factor(1.0);
 	if (stats_config->DDampingFactorJoin() > 0)
 	{
@@ -195,13 +214,13 @@ CumulativeJoinScaleFactor
 	else
 	{
 		// save the join preds that are not simple equalities in a different array
-		CDoubleArray *complex_join_preds = GPOS_NEW(mp) CDoubleArray(mp);
+		CDoubleArray *independent_join_preds = GPOS_NEW(mp) CDoubleArray(mp);
 		// create the map of sorted join preds
-		CScaleFactorUtils::OIDPairToScaleFactorArrayMap *scale_factor_hashmap = CScaleFactorUtils::GenerateScaleFactorMap(mp, join_conds_scale_factors, complex_join_preds);
+		CScaleFactorUtils::OIDPairToScaleFactorArrayMap *scale_factor_hashmap = CScaleFactorUtils::GenerateScaleFactorMap(mp, join_conds_scale_factors, independent_join_preds);
 
-		cumulative_scale_factor = CScaleFactorUtils::CalcCumulativeScaleFactorSqrtAlg(scale_factor_hashmap, complex_join_preds);
+		cumulative_scale_factor = CScaleFactorUtils::CalcCumulativeScaleFactorSqrtAlg(scale_factor_hashmap, independent_join_preds);
 
-		complex_join_preds->Release();
+		independent_join_preds->Release();
 		scale_factor_hashmap->Release();
 	}
 

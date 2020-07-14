@@ -44,6 +44,7 @@ CColumnDescriptor::CColumnDescriptor
 {
 	GPOS_ASSERT(NULL != pmdtype);
 	GPOS_ASSERT(pmdtype->MDId()->IsValid());
+	m_is_dist_col = false;
 
 	if (m_pmdtype->IsFixedLength())
 	{

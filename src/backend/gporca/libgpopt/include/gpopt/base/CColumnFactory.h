@@ -114,6 +114,7 @@ namespace gpopt
 				ULONG id,
 				const CName &name,
 				ULONG ulOpSource,
+				BOOL isDistCol,
 				ULONG ulWidth = gpos::ulong_max
 				);
 
