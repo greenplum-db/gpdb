@@ -214,6 +214,10 @@ groups:
   - icw_gporca_centos7
   - icw_planner_centos7
 {% endif %}
+{% if "oracle7" in os_types %}
+  - icw_gporca_oracle7
+  - icw_planner_oracle7
+{% endif %}
 {% if "ubuntu18.04" in os_types %}
   - icw_gporca_ubuntu18.04
   - icw_planner_ubuntu18.04
@@ -321,6 +325,10 @@ groups:
   - icw_gporca_centos7
   - icw_planner_centos7
   - compile_gpdb_centos7
+{% endif %}
+{% if "oracle7" in os_types %}
+  - icw_gporca_oracle7
+  - icw_planner_oracle7
 {% endif %}
 {% if "ubuntu18.04" in os_types %}
   - icw_gporca_ubuntu18.04
@@ -622,6 +630,14 @@ resources:
   type: docker-image
   source:
     repository: pivotaldata/gpdb6-centos7-test
+    tag: latest
+
+{% endif %}
+{% if "oracle7" in os_types %}
+- name: gpdb6-oracle7-test
+  type: docker-image
+  source:
+    repository: pivotaldata/gpdb6-oel7-test
     tag: latest
 
 {% endif %}
@@ -1230,6 +1246,46 @@ jobs:
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-centos7-test
+    params:
+      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
+      TEST_OS: centos
+      CONFIGURE_FLAGS: {{configure_flags}}
+
+{% endif %}
+{% if "oracle7" in os_types %}
+- name: icw_gporca_oracle7
+  plan:
+  - in_parallel:
+      steps:
+      - get: gpdb_src
+        passed: [compile_gpdb_centos7]
+      - get: bin_gpdb
+        resource: bin_gpdb_centos7
+        passed: [compile_gpdb_centos7]
+        trigger: [[ test_trigger ]]
+      - get: gpdb6-oracle7-test
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: gpdb6-oracle7-test
+    params:
+      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
+      TEST_OS: centos
+      CONFIGURE_FLAGS: {{configure_flags}}
+
+- name: icw_planner_oracle7
+  plan:
+  - in_parallel:
+      steps:
+      - get: gpdb_src
+        passed: [compile_gpdb_centos7]
+      - get: bin_gpdb
+        passed: [compile_gpdb_centos7]
+        resource: bin_gpdb_centos7
+        trigger: [[ test_trigger ]]
+      - get: gpdb6-oracle7-test
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: gpdb6-oracle7-test
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
       TEST_OS: centos
@@ -2177,6 +2233,8 @@ jobs:
         - icw_gporca_centos6
         - icw_gporca_centos7
         - icw_planner_centos7
+        - icw_gporca_oracle7
+        - icw_planner_oracle7
         - icw_gporca_ubuntu18.04
         - icw_planner_ubuntu18.04
         - icw_planner_ictcp_centos6
@@ -2225,6 +2283,8 @@ jobs:
         - compile_gpdb_centos7
         - icw_gporca_centos7
         - icw_planner_centos7
+        - icw_gporca_oracle7
+        - icw_planner_oracle7
         - resource_group_centos7
         - MADlib_Test_orca_centos7
         - MADlib_Test_planner_centos7
