@@ -4260,30 +4260,46 @@ get_join_variables(PlannerInfo *root, List *args, SpecialJoinInfo *sjinfo,
  * Output: largest child partition. If there are no child partition because all of them have been eliminated, then
  *         returns NULL.
  */
-static RelOptInfo* largest_child_relation(PlannerInfo *root, RelOptInfo *rel)
+static RelOptInfo*
+largest_child_relation(PlannerInfo *root, Path *path, bool recursing)
 {
-	AppendPath *append_path = NULL;
-	ListCell *subpath_lc = NULL;
+	List	   *subpaths;
+	ListCell   *subpath_lc;
 	RelOptInfo *largest_child_in_subpath = NULL;
-	double max_rows = -1.0;
+	double		max_rows = -1.0;
 
-	Assert(IsA(rel->cheapest_total_path, AppendPath));
+	/* Guard against stack overflow due to overly complex inheritance trees */
+	check_stack_depth();
 
-	append_path = (AppendPath *) rel->cheapest_total_path;
+	while (IsA(path, ProjectionPath))
+		path = ((ProjectionPath *) path)->subpath;
 
-	foreach(subpath_lc, append_path->subpaths)
+	/*
+	 * Add the children of an Append or MergeAppend path to the list
+	 * of paths to process.
+	 */
+	if (IsA(path, AppendPath))
 	{
-		RelOptInfo *candidate_child = NULL;
-		Path *subpath = lfirst(subpath_lc);
-
-		if (IsA(subpath, AppendPath))
-		{
-			candidate_child = largest_child_relation(root, subpath->parent);
-		}
+		subpaths = ((AppendPath *) path)->subpaths;
+	}
+	else if (IsA(path, MergeAppendPath))
+	{
+		subpaths = ((MergeAppendPath *) path)->subpaths;
+	}
+	else
+	{
+		if (recursing)
+			return path->parent;
 		else
-		{
-			candidate_child = subpath->parent;
-		}
+			return NULL;
+	}
+
+	foreach(subpath_lc, subpaths)
+	{
+		Path	   *subpath = lfirst(subpath_lc);
+		RelOptInfo *candidate_child;
+
+		candidate_child = largest_child_relation(root, subpath, true);
 
 		if (candidate_child && candidate_child->rows > max_rows)
 		{
@@ -4667,7 +4683,7 @@ examine_simple_variable(PlannerInfo *root, Var *var,
 		if (gp_statistics_pullup_from_child_partition  &&
 			rel->cheapest_total_path != NULL)
 		{
-			RelOptInfo *childrel = largest_child_relation(root, rel);
+			RelOptInfo *childrel = largest_child_relation(root, rel->cheapest_total_path, false);
 			vardata->statsTuple = NULL;
 
 			if (childrel)

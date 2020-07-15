@@ -370,6 +370,37 @@ EXPLAIN SELECT a, b FROM gp_float1 JOIN gp_float2 ON a = c AND b = float8 '3.0';
 -- redistribute based on the compatible constant.
 EXPLAIN SELECT a, b FROM gp_float1 JOIN gp_float2 ON a = c AND b = float8 '3.0' AND b = float4 '3.0';
 
+-- The following case is to test Greenplum specific plan
+-- unique row id plan works correctly  with merge append path.
+-- See Github issue: https://github.com/greenplum-db/gpdb/issues/9427
+set optimizer = off;
+
+create table t_9427(a int, b int, c int)
+partition by range (a)
+(
+        PARTITION p1 START (1) END (10) exclusive,
+        PARTITION p2 START (21) END (30) exclusive,
+        DEFAULT PARTITION default_part
+)
+;
+
+create index idx_c_9427 on t_9427(c);
+create index idx_a_9427 on t_9427(a);
+
+insert into t_9427 select i%30, i%30, i from generate_series(1, 100000)i;
+
+set enable_hashjoin = off;
+set enable_mergejoin = on;
+set enable_nestloop = off;
+set enable_seqscan = off;
+set enable_bitmapscan = off;
+
+analyze t_9427;
+explain (costs off) select * from t_9427 where a in (select a from t_9427 where c < 100 ) and a < 200;
+
+drop table t_9427;
+reset optimizer;
+
 -- Clean up. None of the objects we create are very interesting to keep around.
 reset search_path;
 set client_min_messages='warning';

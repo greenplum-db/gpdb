@@ -202,6 +202,9 @@ pathnode_walk_kids(Path            *path,
 		case T_Append:
 			v = pathnode_walk_list(((AppendPath *)path)->subpaths, walker, context);
 			break;
+		case T_MergeAppend:
+			v = pathnode_walk_list(((MergeAppendPath *)path)->subpaths, walker, context);
+			break;
 		case T_Material:
 			v = pathnode_walk_node(((MaterialPath *)path)->subpath, walker, context);
 			break;
