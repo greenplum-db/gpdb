@@ -139,6 +139,13 @@ namespace gpopt
 			static
 			BOOL FCastedScId(CExpression *pexpr, CColRef *colref);
 
+			// is the given expression a scalar func allowed for Partition selection of given scalar identifier
+			static
+			BOOL FAllowedFuncScId(CExpression *pexpr);
+
+			// is the given expression a scalar func allowed for Partition selection of given scalar identifier
+			static
+			BOOL FAllowedFuncScId(CExpression *pexpr, CColRef *colref);
 
 	}; // class CScalarIdent
 

@@ -154,13 +154,15 @@ CPredicateUtils::FComparison
 	CExpression *pexprRight = (*pexpr)[1];
 
 	if (CUtils::FScalarIdent(pexprLeft, colref) ||
-		CScalarIdent::FCastedScId(pexprLeft, colref))
+		CScalarIdent::FCastedScId(pexprLeft, colref) ||
+		CScalarIdent::FAllowedFuncScId(pexprLeft, colref))
 	{
 		return FValidRefsOnly(pexprRight, pcrsAllowedRefs);
 	}
 
 	if (CUtils::FScalarIdent(pexprRight, colref) ||
-		CScalarIdent::FCastedScId(pexprRight, colref))
+		CScalarIdent::FCastedScId(pexprRight, colref) ||
+		CScalarIdent::FAllowedFuncScId(pexprRight, colref))
 	{
 		return FValidRefsOnly(pexprLeft, pcrsAllowedRefs);
 	}
@@ -682,14 +684,16 @@ CPredicateUtils::ExtractComponents
 			CScalarCmp::PopConvert(pexprScCmp->Pop())->ParseCmpType();
 
 	if (CUtils::FScalarIdent(pexprLeft, pcrKey) ||
-		CScalarIdent::FCastedScId(pexprLeft, pcrKey))
+		CScalarIdent::FCastedScId(pexprLeft, pcrKey) ||
+		CScalarIdent::FAllowedFuncScId(pexprLeft, pcrKey))
 	{
 		*ppexprKey = pexprLeft;
 		*ppexprOther = pexprRight;
 		*pecmpt = cmp_type;
 	}
 	else if (CUtils::FScalarIdent(pexprRight, pcrKey) ||
-			 CScalarIdent::FCastedScId(pexprRight, pcrKey))
+			 CScalarIdent::FCastedScId(pexprRight, pcrKey) ||
+			 CScalarIdent::FAllowedFuncScId(pexprRight, pcrKey))
 	{
 		*ppexprKey = pexprRight;
 		*ppexprOther = pexprLeft;

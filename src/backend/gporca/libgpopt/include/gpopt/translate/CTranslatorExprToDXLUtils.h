@@ -541,9 +541,9 @@ namespace gpopt
 			static
 			BOOL FLocalHashAggStreamSafe(CExpression *pexprAgg);
 			
-			// if operator is a scalar cast, extract cast type and function
+			// if operator is a scalar cast or func allowed for Partition selection, extract type and function
 			static 
-			void ExtractCastMdids(COperator *pop, IMDId **ppmdidType, IMDId **ppmdidCastFunc);
+			void ExtractCastFuncMdids(COperator *pop, IMDId **ppmdidType, IMDId **ppmdidCastFunc);
 
 			// produce DXL representation of a datum
 			static

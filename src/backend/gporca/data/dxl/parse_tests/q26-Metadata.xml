@@ -185,14 +185,14 @@
         <dxl:Opfamily Mdid="0.3027.1.0"/>
       </dxl:Opfamilies>
     </dxl:GPDBScalarOp>
-    <dxl:GPDBFunc Mdid="0.274.1.0" Name="timeofday" ReturnsSet="false" Stability="Volatile" DataAccess="NoSQL" IsStrict="true" IsNDVPreserving="false">
+    <dxl:GPDBFunc Mdid="0.274.1.0" Name="timeofday" ReturnsSet="false" Stability="Volatile" DataAccess="NoSQL" IsStrict="true" IsNDVPreserving="false" IsAllowedForPS="false">
       <dxl:ResultType Mdid="0.25.1.0"/>
     </dxl:GPDBFunc>
     <dxl:GPDBAgg Mdid="0.2101.1.0" Name="avg" IsSplittable="true" HashAggCapable="true">
       <dxl:ResultType Mdid="0.1700.1.0"/>
       <dxl:IntermediateResultType Mdid="0.17.1.0"/>
     </dxl:GPDBAgg>
-    <dxl:GPDBFunc Mdid="0.17135.1.0" Name="fooro" ReturnsSet="true" Stability="Volatile" DataAccess="ReadsSQLData" IsStrict="false" IsNDVPreserving="false">
+    <dxl:GPDBFunc Mdid="0.17135.1.0" Name="fooro" ReturnsSet="true" Stability="Volatile" DataAccess="ReadsSQLData" IsStrict="false" IsNDVPreserving="false" IsAllowedForPS="false">
       <dxl:ResultType Mdid="0.2249.1.0"/>
       <dxl:OutputColumns TypeMdids="0.23.1.0,0.23.1.0"/>
     </dxl:GPDBFunc>

@@ -826,25 +826,16 @@ CTranslatorExprToDXLUtils::PdxlnListFilterPartKey
 								)
 						);
 	}
-	else if (CScalarIdent::FCastedScId(pexprPartKey))
+	else if (CScalarIdent::FCastedScId(pexprPartKey) || CScalarIdent::FAllowedFuncScId(pexprPartKey))
 	{
-		// ScalarCast(ScalarIdent) - create an ArrayCoerceExpr over a ScalarPartListValues
-		CScalarCast *pexprScalarCast = CScalarCast::PopConvert(pexprPartKey->Pop());
-		IMDId *pmdidDestElem = pexprScalarCast->MdidType();
+		IMDId *pmdidDestElem;
+		IMDId *pmdidArrayCastFunc;
+		ExtractCastFuncMdids(pexprPartKey->Pop(),&pmdidDestElem, &pmdidArrayCastFunc);
 		IMDId *pmdidDestArray = md_accessor->RetrieveType(pmdidDestElem)->GetArrayTypeMdid();
 
 		CScalarIdent *pexprScalarIdent = CScalarIdent::PopConvert((*pexprPartKey)[0]->Pop());
 		IMDId *pmdidSrcElem = pexprScalarIdent->MdidType();
 		IMDId *pmdidSrcArray = md_accessor->RetrieveType(pmdidSrcElem)->GetArrayTypeMdid();
-
-		IMDId *pmdidArrayCastFunc = NULL;
-
-		if (CMDAccessorUtils::FCastExists(md_accessor, pmdidSrcElem, pmdidDestElem))
-		{
-			const IMDCast *pmdcast = md_accessor->Pmdcast(pmdidSrcElem, pmdidDestElem);
-			pmdidArrayCastFunc = pmdcast->GetCastFuncMdId();
-		}
-
 		pmdidSrcArray->AddRef();
 		pmdidSrcElem->AddRef();
 		CDXLNode *pdxlnPartKeyIdent = GPOS_NEW(mp) CDXLNode
@@ -996,17 +987,31 @@ CTranslatorExprToDXLUtils::PdxlnRangeFilterScCmp
 		// partkey >/>= other: construct condition max > other
 		ecmptScCmp = IMDType::EcmptG;
 	}
-	
-	CDXLNode *pdxlnPredicateExclusive = PdxlnCmp(mp, md_accessor, ulPartLevel, fLowerBound, pdxlnScalar, ecmptScCmp, pmdidTypePartKey, pmdidTypeOther, pmdidTypeCastExpr, mdid_cast_func);
-	
+
 	if (IMDType::EcmptLEq != cmp_type && IMDType::EcmptGEq != cmp_type)
 	{
 		// scalar comparison does not include equality: no need to consider part constraint boundaries
+		CDXLNode *pdxlnPredicateExclusive = PdxlnCmp(mp, md_accessor, ulPartLevel, fLowerBound, pdxlnScalar, ecmptScCmp, pmdidTypePartKey, pmdidTypeOther, pmdidTypeCastExpr, mdid_cast_func);
 		return pdxlnPredicateExclusive;
+		// This is also correct for lossy casts. when we have predicate such as
+		// float::int < 2, we dont want to select values such as 1.7 which cast to 2.
+		// So, in this case, we should check lower bound::int < 2
 	}
-	
-	pdxlnScalar->AddRef();
+
 	CDXLNode *pdxlnInclusiveCmp = PdxlnCmp(mp, md_accessor, ulPartLevel, fLowerBound, pdxlnScalar, cmp_type, pmdidTypePartKey, pmdidTypeOther, pmdidTypeCastExpr, mdid_cast_func);
+
+	if (NULL != mdid_cast_func && md_accessor->RetrieveFunc(mdid_cast_func)->IsAllowedForPS()) // is a lossy cast
+	{
+		// In case of lossy casts, we don't want to eliminate partitions with
+		// exclusive ends when the predicate is on that end
+		// A partition such as [1,2) should be selected for float::int = 2,
+		// but shouldn't be selected for float = 2.0
+		return pdxlnInclusiveCmp;
+	}
+
+	pdxlnScalar->AddRef();
+	CDXLNode *pdxlnPredicateExclusive = PdxlnCmp(mp, md_accessor, ulPartLevel, fLowerBound, pdxlnScalar, ecmptScCmp, pmdidTypePartKey, pmdidTypeOther, pmdidTypeCastExpr, mdid_cast_func);
+
 	CDXLNode *pdxlnInclusiveBoolPredicate = GPOS_NEW(mp) CDXLNode(mp, GPOS_NEW(mp) CDXLScalarPartBoundInclusion(mp, ulPartLevel, fLowerBound));
 
 	CDXLNode *pdxlnPredicateInclusive = GPOS_NEW(mp) CDXLNode(mp, GPOS_NEW(mp) CDXLScalarBoolExpr(mp, Edxland), pdxlnInclusiveCmp, pdxlnInclusiveBoolPredicate);
@@ -1077,15 +1082,25 @@ CTranslatorExprToDXLUtils::PdxlnRangeFilterPartBound
 		ecmptInc = IMDType::EcmptGEq;
 	}
 
-	CDXLNode *pdxlnPredicateExclusive = PdxlnCmp(mp, md_accessor, ulPartLevel, fLowerBound, pdxlnScalar, cmp_type, pmdidTypePartKey, pmdidTypeOther, pmdidTypeCastExpr, mdid_cast_func);
+	CDXLNode *pdxlnInclusiveCmp = PdxlnCmp(mp, md_accessor, ulPartLevel, fLowerBound, pdxlnScalar, ecmptInc, pmdidTypePartKey, pmdidTypeOther, pmdidTypeCastExpr, mdid_cast_func);
+
+	if (NULL != mdid_cast_func && md_accessor->RetrieveFunc(mdid_cast_func)->IsAllowedForPS()) // is a lossy cast
+	{
+		// In case of lossy casts, we don't want to eliminate partitions with
+		// exclusive ends when the predicate is on that end
+		// A partition such as [1,2) should be selected for float::int = 2
+		// but shouldn't be selected for float = 2.0
+		return pdxlnInclusiveCmp;
+	}
 
 	pdxlnScalar->AddRef();
-	CDXLNode *pdxlnInclusiveCmp = PdxlnCmp(mp, md_accessor, ulPartLevel, fLowerBound, pdxlnScalar, ecmptInc, pmdidTypePartKey, pmdidTypeOther, pmdidTypeCastExpr, mdid_cast_func);
-	
+
+	CDXLNode *pdxlnPredicateExclusive = PdxlnCmp(mp, md_accessor, ulPartLevel, fLowerBound, pdxlnScalar, cmp_type, pmdidTypePartKey, pmdidTypeOther, pmdidTypeCastExpr, mdid_cast_func);
+
 	CDXLNode *pdxlnInclusiveBoolPredicate = GPOS_NEW(mp) CDXLNode(mp, GPOS_NEW(mp) CDXLScalarPartBoundInclusion(mp, ulPartLevel, fLowerBound));
-	
+
 	CDXLNode *pdxlnPredicateInclusive = GPOS_NEW(mp) CDXLNode(mp, GPOS_NEW(mp) CDXLScalarBoolExpr(mp, Edxland), pdxlnInclusiveCmp, pdxlnInclusiveBoolPredicate);
-	
+
 	// return the final predicate in the form "(point <= col and colIncluded) or point < col" / "(point >= col and colIncluded) or point > col"
 	return GPOS_NEW(mp) CDXLNode(mp, GPOS_NEW(mp) CDXLScalarBoolExpr(mp, Edxlor), pdxlnPredicateInclusive, pdxlnPredicateExclusive);
 }
@@ -2433,14 +2448,14 @@ CTranslatorExprToDXLUtils::FLocalHashAggStreamSafe
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CTranslatorExprToDXLUtils::ExtractCastMdids
+//		CTranslatorExprToDXLUtils::ExtractCastFuncMdids
 //
 //	@doc:
-//		If operator is a scalar cast, extract cast type and function
+//		If operator is a scalar cast/scalar func extract type and function
 //
 //---------------------------------------------------------------------------
 void
-CTranslatorExprToDXLUtils::ExtractCastMdids
+CTranslatorExprToDXLUtils::ExtractCastFuncMdids
 	(
 	COperator *pop, 
 	IMDId **ppmdidType, 
@@ -2451,15 +2466,25 @@ CTranslatorExprToDXLUtils::ExtractCastMdids
 	GPOS_ASSERT(NULL != ppmdidType);
 	GPOS_ASSERT(NULL != ppmdidCastFunc);
 
-	if (COperator::EopScalarCast != pop->Eopid())
+	if (COperator::EopScalarCast != pop->Eopid() &&
+		COperator::EopScalarFunc != pop->Eopid())
 	{
-		// not a cast
+		// not a cast or allowed func
 		return;
 	}
-
-	CScalarCast *popCast = CScalarCast::PopConvert(pop);
-	*ppmdidType = popCast->MdidType();
-	*ppmdidCastFunc = popCast->FuncMdId();
+	if (COperator::EopScalarCast == pop->Eopid())
+	{
+		CScalarCast *popCast = CScalarCast::PopConvert(pop);
+		*ppmdidType = popCast->MdidType();
+		*ppmdidCastFunc = popCast->FuncMdId();
+	}
+	else
+	{
+		GPOS_ASSERT(COperator::EopScalarFunc == pop->Eopid());
+		CScalarFunc *popFunc = CScalarFunc::PopConvert(pop);
+		*ppmdidType = popFunc->MdidType();
+		*ppmdidCastFunc = popFunc->FuncMdId();
+	}
 }
 
 BOOL
