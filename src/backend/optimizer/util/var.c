@@ -333,46 +333,6 @@ pull_varattnos_walker(Node *node, pull_varattnos_context *context)
 								  (void *) context);
 }
 
-static bool
-contain_ctid_var_reference_walker(Node *node, void *context)
-{
-	if (node == NULL)
-		return false;
-	if (IsA(node, Var))
-	{
-		Var		   *var = (Var *) node;
-		Index		scanrelid = *((Index *) context);
-
-		if (var->varno == scanrelid &&
-			var->varattno == SelfItemPointerAttributeNumber &&
-			(int)var->varlevelsup == 0)
-		{
-			return true;		/* abort the tree traversal and return true */
-		}
-	}
-	return expression_tree_walker(node, contain_ctid_var_reference_walker, context);
-}
-
-bool
-contain_ctid_var_reference(Scan *scan)
-{
-	Index	   scanrelid = scan->scanrelid;
-
-	/* Check if targetlist contains a var node referencing the ctid column */
-	if (expression_tree_walker((Node *) scan->plan.targetlist,
-							   contain_ctid_var_reference_walker,
-							   &scanrelid))
-		return true;
-
-	/* Check if qual contains a var node referencing the ctid column */
-	if (expression_tree_walker((Node *) scan->plan.qual,
-							   contain_ctid_var_reference_walker,
-							   &scanrelid))
-		return true;
-
-	return false;
-}
-
 /*
  * pull_vars_of_level
  *		Create a list of all Vars (and PlaceHolderVars) referencing the
