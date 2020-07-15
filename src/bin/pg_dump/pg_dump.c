@@ -258,12 +258,7 @@ static void makeTableDataInfo(TableInfo *tbinfo, bool oids);
 static void buildMatViewRefreshDependencies(Archive *fout);
 static void getTableDataFKConstraints(void);
 static char *format_function_arguments(FuncInfo *finfo, char *funcargs,
-						  bool is_agg);
-static char *format_function_arguments_old(Archive *fout,
-							  FuncInfo *finfo, int nallargs,
-							  char **allargtypes,
-							  char **argmodes,
-							  char **argnames);
+									   bool is_agg);
 static char *format_function_signature(Archive *fout,
 						  FuncInfo *finfo, bool honor_quotes);
 static char *convertRegProcReference(Archive *fout,
@@ -9506,86 +9501,6 @@ format_function_arguments(FuncInfo *finfo, char *funcargs, bool is_agg)
 }
 
 /*
- * format_function_arguments_old: generate function name and argument list
- *
- * The argument type names are qualified if needed.  The function name
- * is never qualified.
- *
- * This is used only with pre-GPDB 5.0 servers, so we aren't expecting to see
- * DEFAULT arguments.
- *
- * Any or all of allargtypes, argmodes, argnames may be NULL.
- */
-static char *
-format_function_arguments_old(Archive *fout,
-							  FuncInfo *finfo, int nallargs,
-							  char **allargtypes,
-							  char **argmodes,
-							  char **argnames)
-{
-	PQExpBufferData fn;
-	int			j;
-
-	initPQExpBuffer(&fn);
-	appendPQExpBuffer(&fn, "%s(", fmtId(finfo->dobj.name));
-	for (j = 0; j < nallargs; j++)
-	{
-		Oid			typid;
-		char	   *typname;
-		const char *argmode;
-		const char *argname;
-
-		typid = allargtypes ? atooid(allargtypes[j]) : finfo->argtypes[j];
-		typname = getFormattedTypeName(fout, typid, zeroAsOpaque);
-
-		if (argmodes)
-		{
-			switch (argmodes[j][0])
-			{
-				case PROARGMODE_IN:
-					argmode = "";
-					break;
-				case PROARGMODE_OUT:
-					argmode = "OUT ";
-					break;
-				case PROARGMODE_INOUT:
-					argmode = "INOUT ";
-					break;
-				case PROARGMODE_VARIADIC:
-					argmode = "VARIADIC ";
-					break;
-				case PROARGMODE_TABLE:
-					/* skip table column's names */
-					free(typname);
-					continue;
-				default:
-					write_msg(NULL, "WARNING: bogus value in proargmodes array\n");
-					argmode = "";
-					break;
-			}
-		}
-		else
-		{
-			argmode = "";
-		}
-
-		argname = argnames ? argnames[j] : (char *) NULL;
-		if (argname && argname[0] == '\0')
-			argname = NULL;
-
-		appendPQExpBuffer(&fn, "%s%s%s%s%s",
-						  (j > 0) ? ", " : "",
-						  argmode,
-						  argname ? fmtId(argname) : "",
-						  argname ? " " : "",
-						  typname);
-		free(typname);
-	}
-	appendPQExpBufferChar(&fn, ')');
-	return fn.data;
-}
-
-/*
  *	is_returns_table_function: returns true if function id declared as
  *	RETURNS TABLE, i.e. at least one argument is PROARGMODE_TABLE
  */
@@ -9652,8 +9567,7 @@ format_table_function_columns(Archive *fout, FuncInfo *finfo, int nallargs,
 /*
  * format_function_signature: generate function name and argument list
  *
- * This is like format_function_arguments_old except that only a minimal
- * list of input argument types is generated; this is sufficient to
+ * Generates a minimal list of input argument types; this is sufficient to
  * reference the function, but not to define it.
  *
  * If honor_quotes is false then the function name is never quoted.
@@ -9708,9 +9622,6 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 	char	   *funcargs;
 	char	   *funciargs;
 	char	   *funcresult;
-	char	   *proallargtypes;
-	char	   *proargmodes;
-	char	   *proargnames;
 	char	   *proiswindow;
 	char	   *provolatile;
 	char	   *proisstrict;
@@ -9728,7 +9639,6 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 	char	  **allargtypes = NULL;
 	char	  **argmodes = NULL;
 	char	  **argnames = NULL;
-	bool		isGE60 = isGPDB6000OrLater(fout);
 	char	  **configitems = NULL;
 	int			nconfigitems = 0;
 	int			i;
@@ -9743,47 +9653,50 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 	asPart = createPQExpBuffer();
 
 	/* Fetch function-specific details */
+	appendPQExpBuffer(query,
+					  "SELECT\n"
+					  "proretset,\n"
+					  "prosrc,\n"
+					  "probin,\n"
+					  "provolatile,\n"
+					  "proisstrict,\n"
+					  "prosecdef,\n"
+					  "(SELECT lanname FROM pg_catalog.pg_language WHERE oid = prolang) AS lanname,\n "
+						"proconfig,\n"
+						"procost,\n"
+						"prorows,\n"
+						"prodataaccess,\n"
+						"pg_catalog.pg_get_function_arguments(oid) AS funcargs,\n"
+						"pg_catalog.pg_get_function_identity_arguments(oid) AS funciargs,\n"
+						"pg_catalog.pg_get_function_result(oid) AS funcresult,\n"
+						"(SELECT procallback FROM pg_catalog.pg_proc_callback WHERE profnoid::pg_catalog.oid = oid) as callbackfunc,\n");
 
-	if (isGE60)
-	{
+	if (fout->remoteVersion >= 90200)
 		appendPQExpBuffer(query,
-						 /*
-						  * proleakproof was added at v9.2
-						  */
-						  "SELECT proretset, prosrc, probin, "
-						  "pg_catalog.pg_get_function_arguments(oid) as funcargs, "
-						  "pg_catalog.pg_get_function_identity_arguments(oid) as funciargs, "
-						  "pg_catalog.pg_get_function_result(oid) as funcresult, "
-						  "proiswindow, provolatile, proisstrict, prosecdef, "
-						  "proleakproof, proconfig, procost, prorows, prodataaccess, "
-						  "proexeclocation, "
-						  "(SELECT lanname FROM pg_catalog.pg_language WHERE oid = prolang) as lanname, "
-						  "(SELECT procallback FROM pg_catalog.pg_proc_callback WHERE profnoid::pg_catalog.oid = oid) as callbackfunc "
-						  "FROM pg_catalog.pg_proc "
-						  "WHERE oid = '%u'::pg_catalog.oid",
-						  finfo->dobj.catId.oid);
-	}
+						  "proleakproof,\n");
 	else
-	{
-		/*
-		 * In GPDB 5.0 and up we rely on pg_get_function_arguments and
-		 * pg_get_function_result instead of examining proallargtypes etc.
-		 */
 		appendPQExpBuffer(query,
-						  "SELECT proretset, prosrc, probin, "
-					"pg_catalog.pg_get_function_arguments(oid) AS funcargs, "
-		  "pg_catalog.pg_get_function_identity_arguments(oid) AS funciargs, "
-					 "pg_catalog.pg_get_function_result(oid) AS funcresult, "
-						  "proiswin as proiswindow, provolatile, proisstrict, prosecdef, "
-						  "false AS proleakproof, "
-						  "proconfig, procost, prorows, prodataaccess, "
-						  "'a' as proexeclocation, "
-						  "(SELECT lanname FROM pg_catalog.pg_language WHERE oid = prolang) as lanname, "
-						  "(SELECT procallback FROM pg_catalog.pg_proc_callback WHERE profnoid::pg_catalog.oid = oid) as callbackfunc "
-						  "FROM pg_catalog.pg_proc "
-						  "WHERE oid = '%u'::pg_catalog.oid",
-						  finfo->dobj.catId.oid);
-	}
+						  "false AS proleakproof,\n");
+
+	if (fout->remoteVersion >= 80400)
+			appendPQExpBuffer(query,
+						  "proiswindow,\n");
+	else
+			appendPQExpBuffer(query,
+							"proiswin as proiswindow,\n");
+
+	/* GPDB6 added proexeclocation */
+	if (fout->remoteVersion >= 90400)
+			appendPQExpBuffer(query,
+						  "proexeclocation\n");
+	else
+			appendPQExpBuffer(query,
+							"'a' as proexeclocation\n");
+
+	appendPQExpBuffer(query,
+					  "FROM pg_catalog.pg_proc "
+					  "WHERE oid = '%u'::pg_catalog.oid",
+					  finfo->dobj.catId.oid);
 
 	res = ExecuteSqlQueryForSingleRow(fout, query->data);
 
@@ -9793,7 +9706,6 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 	funcargs = PQgetvalue(res, 0, PQfnumber(res, "funcargs"));
 	funciargs = PQgetvalue(res, 0, PQfnumber(res, "funciargs"));
 	funcresult = PQgetvalue(res, 0, PQfnumber(res, "funcresult"));
-	proallargtypes = proargmodes = proargnames = NULL;
 	proiswindow = PQgetvalue(res, 0, PQfnumber(res, "proiswindow"));
 	provolatile = PQgetvalue(res, 0, PQfnumber(res, "provolatile"));
 	proisstrict = PQgetvalue(res, 0, PQfnumber(res, "proisstrict"));
@@ -9846,64 +9758,9 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 	}
 
 	nallargs = finfo->nargs;	/* unless we learn different from allargs */
+	funcfullsig = format_function_arguments(finfo, funcargs, false);
+	funcsig = format_function_arguments(finfo, funciargs, false);
 
-	if (proallargtypes && *proallargtypes)
-	{
-		int			nitems = 0;
-
-		if (!parsePGArray(proallargtypes, &allargtypes, &nitems) ||
-			nitems < finfo->nargs)
-		{
-			write_msg(NULL, "WARNING: could not parse proallargtypes array\n");
-			if (allargtypes)
-				free(allargtypes);
-			allargtypes = NULL;
-		}
-		else
-			nallargs = nitems;
-	}
-
-	if (proargmodes && *proargmodes)
-	{
-		int			nitems = 0;
-
-		if (!parsePGArray(proargmodes, &argmodes, &nitems) ||
-			nitems != nallargs)
-		{
-			write_msg(NULL, "WARNING: could not parse proargmodes array\n");
-			if (argmodes)
-				free(argmodes);
-			argmodes = NULL;
-		}
-	}
-
-	if (proargnames && *proargnames)
-	{
-		int			nitems = 0;
-
-		if (!parsePGArray(proargnames, &argnames, &nitems) ||
-			nitems != nallargs)
-		{
-			write_msg(NULL, "WARNING: could not parse proargnames array\n");
-			if (argnames)
-				free(argnames);
-			argnames = NULL;
-		}
-	}
-
-	if (funcargs)
-	{
-		/* GPDB 5.0 or later; we rely on server-side code for most of the work */
-		funcfullsig = format_function_arguments(finfo, funcargs, false);
-		funcsig = format_function_arguments(finfo, funciargs, false);
-	}
-	else
-	{
-		/* pre-GPDB 5.0, do it ourselves */
-		funcsig = format_function_arguments_old(fout, finfo, nallargs, allargtypes,
-												argmodes, argnames);
-		funcfullsig = funcsig;
-	}
 	funcsig_tag = format_function_signature(fout, finfo, false);
 
 	if (proconfig && *proconfig)
@@ -11351,25 +11208,8 @@ dumpAgg(Archive *fout, AggInfo *agginfo)
 	char	   *aggfullsig = NULL;		/* full signature */
 	char	   *aggsig_tag;
 	PGresult   *res;
-	int			i_aggtransfn;
-	int			i_aggfinalfn;
-	int			i_aggcombinefn;
-	int			i_aggserialfn;
-	int			i_aggdeserialfn;
-	int			i_aggmtransfn;
-	int			i_aggminvtransfn;
-	int			i_aggmfinalfn;
-	int			i_aggfinalextra;
-	int			i_aggmfinalextra;
-	int			i_aggsortop;
-	int			i_hypothetical;
-	int			i_aggtranstype;
-	int			i_aggtransspace;
-	int			i_aggmtranstype;
-	int			i_aggmtransspace;
 	int			i_agginitval;
 	int			i_aggminitval;
-	int			i_convertok;
 	const char *aggtransfn;
 	const char *aggfinalfn;
 	const char *aggcombinefn;
@@ -11389,7 +11229,6 @@ dumpAgg(Archive *fout, AggInfo *agginfo)
 	const char *aggmtransspace;
 	const char *agginitval;
 	const char *aggminitval;
-	bool		convertok;
 
 	/* Skip if not to be dumped */
 	if (!agginfo->aggfn.dobj.dump || dataOnly)
@@ -11401,109 +11240,76 @@ dumpAgg(Archive *fout, AggInfo *agginfo)
 	details = createPQExpBuffer();
 
 	/* Get aggregate-specific details */
+	appendPQExpBuffer(query,
+					  "SELECT\n"
+					  "aggtransfn,\n"
+					  "aggfinalfn,\n"
+					  "aggtranstype::pg_catalog.regtype,\n"
+					  "agginitval,\n"
+					  "aggsortop,\n"
+					  "pg_catalog.pg_get_function_arguments(p.oid) AS funcargs,\n"
+					  "pg_catalog.pg_get_function_identity_arguments(p.oid) AS funciargs,\n");
+
 	if (fout->remoteVersion >= 90400)
-	{
-		appendPQExpBuffer(query, "SELECT aggtransfn, "
-						  "aggfinalfn, aggtranstype::pg_catalog.regtype, "
-						  "aggcombinefn, aggserialfn, aggdeserialfn, "
-						  "aggmtransfn, aggminvtransfn, aggmfinalfn, "
-						  "aggmtranstype::pg_catalog.regtype, "
-						  "aggfinalextra, aggmfinalextra, "
-						  "aggsortop, "
-						  "(aggkind = 'h') AS hypothetical, "
-						  "aggtransspace, agginitval, "
-						  "aggmtransspace, aggminitval, "
-						  "true AS convertok, "
-						  "pg_catalog.pg_get_function_arguments(p.oid) AS funcargs, "
-						  "pg_catalog.pg_get_function_identity_arguments(p.oid) AS funciargs "
-						  "FROM pg_catalog.pg_aggregate a, pg_catalog.pg_proc p "
-						  "WHERE a.aggfnoid = p.oid "
-						  "AND p.oid = '%u'::pg_catalog.oid",
-						  agginfo->aggfn.dobj.catId.oid);
-	}
-	else if (fout->remoteVersion >= 80400)
-	{
-		appendPQExpBuffer(query, "SELECT aggtransfn, "
-						  "aggfinalfn, aggtranstype::pg_catalog.regtype, "
-						  "aggcombinefn, aggserialfn, aggdeserialfn, aggmtransfn, "
-						  "aggminvtransfn, aggmfinalfn, aggmtranstype::pg_catalog.regtype, "
-						  "aggfinalextra, aggmfinalextra, "
-						  "aggsortop::pg_catalog.regoperator, "
-						  "(aggkind = 'h') as hypothetical, " /* aggkind was backported to GPDB6 */
-						  "aggtransspace, aggmtransspace, " /* aggtransspace was backported to GPDB6 */
-						  "agginitval, aggminitval, "
-						  "true AS convertok, "
-						  "pg_catalog.pg_get_function_arguments(p.oid) AS funcargs, "
-						  "pg_catalog.pg_get_function_identity_arguments(p.oid) AS funciargs "
-						  "FROM pg_catalog.pg_aggregate a, pg_catalog.pg_proc p "
-						  "WHERE a.aggfnoid = p.oid "
-						  "AND p.oid = '%u'::pg_catalog.oid",
-						  agginfo->aggfn.dobj.catId.oid);
-	}
+		appendPQExpBuffer(query,
+						  "aggcombinefn,\n"
+						  "aggserialfn,\n"
+						  "aggdeserialfn,\n"
+						  "aggmtransfn,\n"
+						  "aggminvtransfn,\n"
+						  "aggmfinalfn,\n"
+						  "aggmtranstype::pg_catalog.regtype,\n"
+						  "aggfinalextra,\n"
+						  "aggmfinalextra,\n"
+							"(aggkind = 'h') AS hypothetical,\n"
+						  "aggtransspace,\n"
+						  "aggmtransspace,\n"
+						  "aggminitval\n");
 	else
-	{
-		appendPQExpBuffer(query, "SELECT aggtransfn, "
-						  "aggfinalfn, aggtranstype::pg_catalog.regtype, "
-						  "aggprelimfn AS aggcombinefn, '-' AS aggserialfn, "
-						  "'-' AS aggdeserialfn, '-' AS aggmtransfn, "
-						  "'-' AS aggminvtransfn, '-' AS aggmfinalfn, "
-						  "0 AS aggmtranstype, "
-						  "false AS aggfinalextra, "
-						  "false AS aggmfinalextra, "
-						  "aggsortop::pg_catalog.regoperator, "
-						  "false AS hypothetical, "
-						  "0 AS aggtransspace, 0 AS aggmtransspace, "
-						  "agginitval, NULL AS aggminitval, "
-						  "'t'::boolean AS convertok, "
-						  "pg_catalog.pg_get_function_arguments(p.oid) AS funcargs, "
-						  "pg_catalog.pg_get_function_identity_arguments(p.oid) AS funciargs "
-					  "from pg_catalog.pg_aggregate a, pg_catalog.pg_proc p "
-						  "WHERE a.aggfnoid = p.oid "
-						  "AND p.oid = '%u'::pg_catalog.oid",
-						  agginfo->aggfn.dobj.catId.oid);
-	}
+		appendPQExpBuffer(query,
+						  "aggprelimfn AS aggcombinefn,\n"
+						  "'-' AS aggserialfn,\n"
+						  "'-' AS aggdeserialfn,\n"
+						  "'-' AS aggmtransfn,\n"
+						  "'-' AS aggminvtransfn,\n"
+						  "'-' AS aggmfinalfn,\n"
+						  "0 AS aggmtranstype,\n"
+						  "false AS aggfinalextra,\n"
+						  "false AS aggmfinalextra,\n"
+							"false AS hypothetical,\n"
+						  "0 AS aggtransspace,\n"
+						  "0 AS aggmtransspace,\n"
+						  "NULL AS aggminitval\n");
+
+	appendPQExpBuffer(query,
+					  "FROM pg_catalog.pg_aggregate a, pg_catalog.pg_proc p "
+					  "WHERE a.aggfnoid = p.oid "
+					  "AND p.oid = '%u'::pg_catalog.oid",
+					  agginfo->aggfn.dobj.catId.oid);
 
 	res = ExecuteSqlQueryForSingleRow(fout, query->data);
 
-	i_aggtransfn = PQfnumber(res, "aggtransfn");
-	i_aggfinalfn = PQfnumber(res, "aggfinalfn");
-	i_aggcombinefn = PQfnumber(res, "aggcombinefn");
-	i_aggserialfn = PQfnumber(res, "aggserialfn");
-	i_aggdeserialfn = PQfnumber(res, "aggdeserialfn");
-	i_aggmtransfn = PQfnumber(res, "aggmtransfn");
-	i_aggminvtransfn = PQfnumber(res, "aggminvtransfn");
-	i_aggmfinalfn = PQfnumber(res, "aggmfinalfn");
-	i_aggfinalextra = PQfnumber(res, "aggfinalextra");
-	i_aggmfinalextra = PQfnumber(res, "aggmfinalextra");
-	i_aggsortop = PQfnumber(res, "aggsortop");
-	i_hypothetical = PQfnumber(res, "hypothetical");
-	i_aggtranstype = PQfnumber(res, "aggtranstype");
-	i_aggtransspace = PQfnumber(res, "aggtransspace");
-	i_aggmtranstype = PQfnumber(res, "aggmtranstype");
-	i_aggmtransspace = PQfnumber(res, "aggmtransspace");
 	i_agginitval = PQfnumber(res, "agginitval");
 	i_aggminitval = PQfnumber(res, "aggminitval");
-	i_convertok = PQfnumber(res, "convertok");
 
-	aggtransfn = PQgetvalue(res, 0, i_aggtransfn);
-	aggfinalfn = PQgetvalue(res, 0, i_aggfinalfn);
-	aggcombinefn = PQgetvalue(res, 0, i_aggcombinefn);
-	aggserialfn = PQgetvalue(res, 0, i_aggserialfn);
-	aggdeserialfn = PQgetvalue(res, 0, i_aggdeserialfn);
-	aggmtransfn = PQgetvalue(res, 0, i_aggmtransfn);
-	aggminvtransfn = PQgetvalue(res, 0, i_aggminvtransfn);
-	aggmfinalfn = PQgetvalue(res, 0, i_aggmfinalfn);
-	aggfinalextra = (PQgetvalue(res, 0, i_aggfinalextra)[0] == 't');
-	aggmfinalextra = (PQgetvalue(res, 0, i_aggmfinalextra)[0] == 't');
-	aggsortop = PQgetvalue(res, 0, i_aggsortop);
-	hypothetical = (PQgetvalue(res, 0, i_hypothetical)[0] == 't');
-	aggtranstype = PQgetvalue(res, 0, i_aggtranstype);
-	aggtransspace = PQgetvalue(res, 0, i_aggtransspace);
-	aggmtranstype = PQgetvalue(res, 0, i_aggmtranstype);
-	aggmtransspace = PQgetvalue(res, 0, i_aggmtransspace);
+	aggtransfn = PQgetvalue(res, 0, PQfnumber(res, "aggtransfn"));
+	aggfinalfn = PQgetvalue(res, 0, PQfnumber(res, "aggfinalfn"));
+	aggcombinefn = PQgetvalue(res, 0, PQfnumber(res,"aggcombinefn"));
+	aggserialfn = PQgetvalue(res, 0, PQfnumber(res,"aggserialfn"));
+	aggdeserialfn = PQgetvalue(res, 0, PQfnumber(res,"aggdeserialfn"));
+	aggmtransfn = PQgetvalue(res, 0, PQfnumber(res, "aggmtransfn"));
+	aggminvtransfn = PQgetvalue(res, 0, PQfnumber(res, "aggminvtransfn"));
+	aggmfinalfn = PQgetvalue(res, 0, PQfnumber(res, "aggmfinalfn"));
+	aggfinalextra = (PQgetvalue(res, 0, PQfnumber(res, "aggfinalextra"))[0] == 't');
+	aggmfinalextra = (PQgetvalue(res, 0, PQfnumber(res, "aggmfinalextra"))[0] == 't');
+	aggsortop = PQgetvalue(res, 0, PQfnumber(res, "aggsortop"));
+	hypothetical = (PQgetvalue(res, 0, PQfnumber(res, "hypothetical"))[0] == 't');
+	aggtranstype = PQgetvalue(res, 0, PQfnumber(res, "aggtranstype"));
+	aggtransspace = PQgetvalue(res, 0, PQfnumber(res, "aggtransspace"));
+	aggmtranstype = PQgetvalue(res, 0, PQfnumber(res, "aggmtranstype"));
+	aggmtransspace = PQgetvalue(res, 0, PQfnumber(res, "aggmtransspace"));
 	agginitval = PQgetvalue(res, 0, i_agginitval);
 	aggminitval = PQgetvalue(res, 0, i_aggminitval);
-	convertok = (PQgetvalue(res, 0, i_convertok)[0] == 't');
 
 	if (fout->remoteVersion >= 80400)
 	{
@@ -11521,19 +11327,6 @@ dumpAgg(Archive *fout, AggInfo *agginfo)
 		aggsig = format_aggregate_signature(agginfo, fout, true);
 
 	aggsig_tag = format_aggregate_signature(agginfo, fout, false);
-
-	if (!convertok)
-	{
-		write_msg(NULL, "WARNING: aggregate function %s could not be dumped correctly for this database version; ignored\n",
-				  aggsig);
-
-		if (aggfullsig)
-			free(aggfullsig);
-
-		free(aggsig);
-
-		return;
-	}
 
 	appendPQExpBuffer(details, "    SFUNC = %s,\n    STYPE = %s",
 						aggtransfn,
