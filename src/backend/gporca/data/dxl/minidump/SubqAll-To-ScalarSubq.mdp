@@ -443,7 +443,7 @@
                   </dxl:ParamList>
                   <dxl:Result>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="8.095703" Rows="2.000000" Width="1"/>
+                      <dxl:Cost StartupCost="0" TotalCost="8.095703" Rows="1.000000" Width="1"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="27" Alias="ColRef_0027">
@@ -454,7 +454,7 @@
                     <dxl:OneTimeFilter/>
                     <dxl:Result>
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="8.095703" Rows="2.000000" Width="1"/>
+                        <dxl:Cost StartupCost="0" TotalCost="8.095703" Rows="1.000000" Width="1"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="26" Alias="ColRef_0026">
@@ -470,7 +470,7 @@
                       <dxl:OneTimeFilter/>
                       <dxl:Result>
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="7.093750" Rows="2.000000" Width="1"/>
+                          <dxl:Cost StartupCost="0" TotalCost="7.093750" Rows="1.000000" Width="1"/>
                         </dxl:Properties>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="26" Alias="ColRef_0026">
@@ -484,12 +484,12 @@
                                   <dxl:Ident ColId="25" ColName="ColRef_0025" TypeMdid="0.20.1.0"/>
                                   <dxl:ConstValue TypeMdid="0.20.1.0" Value="0"/>
                                 </dxl:Comparison>
-                                <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="true" IsByValue="true"/>
+                                <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="true"/>
                                 <dxl:If TypeMdid="0.16.1.0">
                                   <dxl:IsNull>
                                     <dxl:Ident ColId="2" ColName="f3" TypeMdid="0.701.1.0"/>
                                   </dxl:IsNull>
-                                  <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="true" IsByValue="true"/>
+                                  <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="true"/>
                                   <dxl:If TypeMdid="0.16.1.0">
                                     <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.410.1.0">
                                       <dxl:Ident ColId="24" ColName="ColRef_0024" TypeMdid="0.20.1.0"/>
@@ -507,7 +507,7 @@
                         <dxl:OneTimeFilter/>
                         <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
                           <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="6.091797" Rows="2.000000" Width="16"/>
+                            <dxl:Cost StartupCost="0" TotalCost="6.091797" Rows="1.000000" Width="16"/>
                           </dxl:Properties>
                           <dxl:GroupingColumns/>
                           <dxl:ProjList>

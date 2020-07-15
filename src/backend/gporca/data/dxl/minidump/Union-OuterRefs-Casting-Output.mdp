@@ -426,7 +426,7 @@ select * from x2 where a in (select a from y union select 1::int8);
                 </dxl:ParamList>
                 <dxl:Result>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="10.380371" Rows="2.000000" Width="8"/>
+                    <dxl:Cost StartupCost="0" TotalCost="10.380371" Rows="1.000000" Width="8"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="23" Alias="ColRef_0023">
@@ -451,7 +451,7 @@ select * from x2 where a in (select a from y union select 1::int8);
                   <dxl:OneTimeFilter/>
                   <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="9.364746" Rows="2.000000" Width="16"/>
+                      <dxl:Cost StartupCost="0" TotalCost="9.364746" Rows="1.000000" Width="16"/>
                     </dxl:Properties>
                     <dxl:GroupingColumns/>
                     <dxl:ProjList>
@@ -467,7 +467,7 @@ select * from x2 where a in (select a from y union select 1::int8);
                     <dxl:Filter/>
                     <dxl:Result>
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="8.325684" Rows="2.000000" Width="4"/>
+                        <dxl:Cost StartupCost="0" TotalCost="8.325684" Rows="1.000000" Width="4"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="20" Alias="ColRef_0020">
@@ -484,7 +484,7 @@ select * from x2 where a in (select a from y union select 1::int8);
                       <dxl:OneTimeFilter/>
                       <dxl:Result>
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="7.317871" Rows="2.000000" Width="8"/>
+                          <dxl:Cost StartupCost="0" TotalCost="7.317871" Rows="1.000000" Width="8"/>
                         </dxl:Properties>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="17" Alias="a">
@@ -505,7 +505,7 @@ select * from x2 where a in (select a from y union select 1::int8);
                         <dxl:OneTimeFilter/>
                         <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="false">
                           <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="6.161621" Rows="4.000000" Width="8"/>
+                            <dxl:Cost StartupCost="0" TotalCost="6.161621" Rows="2.000000" Width="8"/>
                           </dxl:Properties>
                           <dxl:GroupingColumns>
                             <dxl:GroupingColumn ColId="17"/>

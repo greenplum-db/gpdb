@@ -314,6 +314,9 @@ ReplicatedNLJReplicated ReplicatedTableAggregate ReplicatedTableCTE
 ReplicatedTableGroupBy ReplicatedJoinPartitionedTable
 ReplicatedTableInClause;
 
+CTaintedReplicatedTest:
+InsertNonSingleton NonSingleton TaintedReplicatedAgg TaintedReplicatedWindowAgg TaintedReplicatedLimit TaintedReplicatedFilter;
+
 CDqaTest:
 NonSplittableAgg DqaHavingMax DqaMax DqaMin DqaSubqueryMax DqaNoRedistribute;
 

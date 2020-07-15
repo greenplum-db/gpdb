@@ -17,6 +17,7 @@
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CPhysicalFilter.h"
 #include "gpopt/operators/CPredicateUtils.h"
+#include "gpopt/base/CDistributionSpecReplicated.h"
 
 
 using namespace gpopt;
@@ -304,6 +305,15 @@ CDistributionSpec *
 CPhysicalFilter::PdsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl) const
 {
 	CDistributionSpec *pdsChild = PdsDerivePassThruOuter(exprhdl);
+
+	if (CDistributionSpec::EdtStrictReplicated == pdsChild->Edt() &&
+		IMDFunction::EfsVolatile ==
+			exprhdl.DeriveScalarFunctionProperties(1)->Efs())
+	{
+		pdsChild->Release();
+		return GPOS_NEW(mp) CDistributionSpecReplicated(
+			CDistributionSpec::EdtTaintedReplicated);
+	}
 
 	if (CDistributionSpec::EdtHashed == pdsChild->Edt() &&
 		exprhdl.HasOuterRefs())

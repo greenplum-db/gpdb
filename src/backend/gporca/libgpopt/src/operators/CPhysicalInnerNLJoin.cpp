@@ -94,11 +94,12 @@ CPhysicalInnerNLJoin::PdsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	if (exprhdl.HasOuterRefs())
 	{
 		if (CDistributionSpec::EdtSingleton == pdsRequired->Edt() ||
-			CDistributionSpec::EdtReplicated == pdsRequired->Edt())
+			CDistributionSpec::EdtStrictReplicated == pdsRequired->Edt())
 		{
 			return PdsPassThru(mp, exprhdl, pdsRequired, child_index);
 		}
-		return GPOS_NEW(mp) CDistributionSpecReplicated();
+		return GPOS_NEW(mp)
+			CDistributionSpecReplicated(CDistributionSpec::EdtReplicated);
 	}
 
 	if (GPOS_FTRACE(EopttraceDisableReplicateInnerNLJOuterChild) ||
@@ -164,7 +165,8 @@ CPhysicalInnerNLJoin::PdsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 
 	if (0 == child_index)
 	{
-		return GPOS_NEW(mp) CDistributionSpecReplicated();
+		return GPOS_NEW(mp)
+			CDistributionSpecReplicated(CDistributionSpec::EdtReplicated);
 	}
 
 	// compute a matching distribution based on derived distribution of outer child

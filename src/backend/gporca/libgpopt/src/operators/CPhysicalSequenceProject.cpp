@@ -331,12 +331,13 @@ CPhysicalSequenceProject::PdsRequired(CMemoryPool *mp,
 	if (exprhdl.HasOuterRefs())
 	{
 		if (CDistributionSpec::EdtSingleton == pdsRequired->Edt() ||
-			CDistributionSpec::EdtReplicated == pdsRequired->Edt())
+			CDistributionSpec::EdtStrictReplicated == pdsRequired->Edt())
 		{
 			return PdsPassThru(mp, exprhdl, pdsRequired, child_index);
 		}
 
-		return GPOS_NEW(mp) CDistributionSpecReplicated();
+		return GPOS_NEW(mp)
+			CDistributionSpecReplicated(CDistributionSpec::EdtStrictReplicated);
 	}
 
 	// if the window operator has a partition by clause, then always
@@ -502,10 +503,22 @@ CPhysicalSequenceProject::PosDerive(CMemoryPool *,	// mp
 //
 //---------------------------------------------------------------------------
 CDistributionSpec *
-CPhysicalSequenceProject::PdsDerive(CMemoryPool *,	// mp
+CPhysicalSequenceProject::PdsDerive(CMemoryPool *mp,
 									CExpressionHandle &exprhdl) const
 {
-	return PdsDerivePassThruOuter(exprhdl);
+	CDistributionSpec *pds = exprhdl.Pdpplan(0 /*child_index*/)->Pds();
+	if (CDistributionSpec::EdtStrictReplicated == pds->Edt())
+	{
+		// Sequence project (i.e. window functions) cannot guarantee replicated
+		// data. If the child was replicated, we can no longer guarantee that
+		// property. Therefore we must now dervive tainted replicated.
+		return GPOS_NEW(mp) CDistributionSpecReplicated(
+			CDistributionSpec::EdtTaintedReplicated);
+	}
+	else
+	{
+		return PdsDerivePassThruOuter(exprhdl);
+	}
 }
 
 

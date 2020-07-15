@@ -149,7 +149,8 @@ CPhysicalInnerIndexNLJoin::PdsRequired(CMemoryPool *mp,
 	}
 
 	// otherwise, require outer child to be replicated
-	return GPOS_NEW(mp) CDistributionSpecReplicated();
+	return GPOS_NEW(mp)
+		CDistributionSpecReplicated(CDistributionSpec::EdtStrictReplicated);
 }
 
 

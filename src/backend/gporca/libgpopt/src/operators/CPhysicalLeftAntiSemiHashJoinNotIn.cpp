@@ -59,7 +59,8 @@ CPhysicalLeftAntiSemiHashJoinNotIn::PdsRequired(
 		//	  whether the inner is empty, and this needs to be detected everywhere
 		// b. if the inner hash keys are nullable, because every segment needs to
 		//	  detect nulls coming from the inner child
-		return GPOS_NEW(mp) CDistributionSpecReplicated();
+		return GPOS_NEW(mp)
+			CDistributionSpecReplicated(CDistributionSpec::EdtReplicated);
 	}
 
 	return CPhysicalHashJoin::PdsRequired(mp, exprhdl, pdsInput, child_index,

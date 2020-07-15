@@ -324,7 +324,7 @@
                 </dxl:ParamList>
                 <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="431.000132" Rows="3.000000" Width="8"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.000132" Rows="1.000000" Width="8"/>
                   </dxl:Properties>
                   <dxl:GroupingColumns/>
                   <dxl:ProjList>
@@ -335,7 +335,7 @@
                   <dxl:Filter/>
                   <dxl:Limit>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="431.000132" Rows="15.000000" Width="1"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.000132" Rows="5.000000" Width="1"/>
                     </dxl:Properties>
                     <dxl:ProjList/>
                     <dxl:Materialize Eager="true">

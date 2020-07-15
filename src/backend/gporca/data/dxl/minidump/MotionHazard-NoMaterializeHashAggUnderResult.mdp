@@ -519,7 +519,7 @@ explain select f.k, f.subq from (select tab3.k, (select tab2.k from tab2 where t
                       </dxl:ParamList>
                       <dxl:Limit>
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="432.562823" Rows="3.000000" Width="1"/>
+                          <dxl:Cost StartupCost="0" TotalCost="432.562823" Rows="1.000000" Width="1"/>
                         </dxl:Properties>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="22" Alias="k">

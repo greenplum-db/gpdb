@@ -97,6 +97,16 @@ public:
 		return dynamic_cast<CDistributionSpecNonSingleton *>(pds);
 	}
 
+	// conversion function
+	static const CDistributionSpecNonSingleton *
+	PdsConvert(const CDistributionSpec *pds)
+	{
+		GPOS_ASSERT(NULL != pds);
+		GPOS_ASSERT(EdtNonSingleton == pds->Edt());
+
+		return dynamic_cast<const CDistributionSpecNonSingleton *>(pds);
+	}
+
 };	// class CDistributionSpecNonSingleton
 
 }  // namespace gpopt

@@ -861,7 +861,8 @@ CPhysicalUnionAll::PdsDeriveFromChildren(CMemoryPool *
 			break;
 		}
 
-		if (CDistributionSpec::EdtReplicated == edtChild)
+		if (CDistributionSpec::EdtStrictReplicated == edtChild ||
+			CDistributionSpec::EdtTaintedReplicated == edtChild)
 		{
 			fReplicatedChild = true;
 			pds = pdsChild;
@@ -994,18 +995,19 @@ CheckChildDistributions(CMemoryPool *mp, CExpressionHandle &exprhdl,
 						BOOL fSingletonChild, BOOL fReplicatedChild,
 						BOOL fUniversalOuterChild)
 {
-	CDistributionSpec::EDistributionType rgedt[4];
+	CDistributionSpec::EDistributionType rgedt[5];
 	rgedt[0] = CDistributionSpec::EdtSingleton;
 	rgedt[1] = CDistributionSpec::EdtStrictSingleton;
 	rgedt[2] = CDistributionSpec::EdtUniversal;
-	rgedt[3] = CDistributionSpec::EdtReplicated;
+	rgedt[3] = CDistributionSpec::EdtStrictReplicated;
+	rgedt[4] = CDistributionSpec::EdtTaintedReplicated;
 
 	if (fReplicatedChild)
 	{
 		// assert all children have distribution Universal or Replicated
 		AssertValidChildDistributions(
 			mp, exprhdl, rgedt + 2 /*start from Universal in rgedt*/,
-			2 /*ulDistrs*/,
+			3 /*ulDistrs*/,
 			"expecting Replicated or Universal distribution in UnionAll children" /*szAssertMsg*/);
 	}
 	else if (fSingletonChild || fUniversalOuterChild)

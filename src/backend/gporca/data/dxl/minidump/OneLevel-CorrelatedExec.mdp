@@ -769,7 +769,7 @@
                 </dxl:ParamList>
                 <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="113585.941012" Rows="2.000000" Width="8"/>
+                    <dxl:Cost StartupCost="0" TotalCost="113585.941012" Rows="1.000000" Width="8"/>
                   </dxl:Properties>
                   <dxl:GroupingColumns/>
                   <dxl:ProjList>
@@ -838,7 +838,7 @@
                                 </dxl:ParamList>
                                 <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
                                   <dxl:Properties>
-                                    <dxl:Cost StartupCost="0" TotalCost="78414.156250" Rows="2.000000" Width="8"/>
+                                    <dxl:Cost StartupCost="0" TotalCost="78414.156250" Rows="1.000000" Width="8"/>
                                   </dxl:Properties>
                                   <dxl:GroupingColumns/>
                                   <dxl:ProjList>

@@ -411,7 +411,7 @@ select * from x where a in (select a from y union select 1);
               </dxl:ParamList>
               <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="6.083496" Rows="4.000000" Width="4"/>
+                  <dxl:Cost StartupCost="0" TotalCost="6.083496" Rows="2.000000" Width="4"/>
                 </dxl:Properties>
                 <dxl:GroupingColumns>
                   <dxl:GroupingColumn ColId="17"/>

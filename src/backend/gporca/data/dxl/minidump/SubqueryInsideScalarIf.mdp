@@ -2510,7 +2510,7 @@
                   </dxl:ParamList>
                   <dxl:Result>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="1324049.882899" Rows="3.000000" Width="1"/>
+                      <dxl:Cost StartupCost="0" TotalCost="1324049.882899" Rows="1.000000" Width="1"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="39" Alias="ColRef_0039">
@@ -2524,12 +2524,12 @@
                               <dxl:Ident ColId="38" ColName="ColRef_0038" TypeMdid="0.20.1.0"/>
                               <dxl:ConstValue TypeMdid="0.20.1.0" Value="0"/>
                             </dxl:Comparison>
-                            <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="true" IsByValue="true"/>
+                            <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="true"/>
                             <dxl:If TypeMdid="0.16.1.0">
                               <dxl:IsNull>
                                 <dxl:Ident ColId="2" ColName="c" TypeMdid="0.23.1.0"/>
                               </dxl:IsNull>
-                              <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="true" IsByValue="true"/>
+                              <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="true"/>
                               <dxl:If TypeMdid="0.16.1.0">
                                 <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.410.1.0">
                                   <dxl:Ident ColId="37" ColName="ColRef_0037" TypeMdid="0.20.1.0"/>
@@ -2547,7 +2547,7 @@
                     <dxl:OneTimeFilter/>
                     <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="1324049.882898" Rows="3.000000" Width="16"/>
+                        <dxl:Cost StartupCost="0" TotalCost="1324049.882898" Rows="1.000000" Width="16"/>
                       </dxl:Properties>
                       <dxl:GroupingColumns/>
                       <dxl:ProjList>

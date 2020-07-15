@@ -129,7 +129,8 @@ CPhysicalLeftOuterIndexNLJoin::PdsRequired(CMemoryPool *mp,
 		gpopt::ExmaGPOPT, gpopt::ExmiUnsupportedOp,
 		GPOS_WSZ_LIT("Left outer index nestloop join broadcasting outer side"));
 	// otherwise, require outer child to be replicated
-	return GPOS_NEW(mp) CDistributionSpecReplicated();
+	return GPOS_NEW(mp)
+		CDistributionSpecReplicated(CDistributionSpec::EdtStrictReplicated);
 }
 
 

@@ -363,7 +363,7 @@
                 </dxl:ParamList>
                 <dxl:Limit>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="6.068359" Rows="2.000000" Width="8"/>
+                    <dxl:Cost StartupCost="0" TotalCost="6.068359" Rows="1.000000" Width="8"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="22" Alias="?column?">
