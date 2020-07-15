@@ -134,7 +134,7 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 	char	   *protocol = NULL;
 	char	   *resource = NULL;
 	char	   *reject_limit_type = FDW_OPTION_REJECT_LIMIT_ROWS;
-	bool		log_errors = -1;
+	bool		log_errors_set = false;
 	List	   *options_list = untransformRelOptions(PG_GETARG_DATUM(0));
 	Oid			catalog = PG_GETARG_OID(1);
 	List	   *copy_options = NIL;
@@ -220,7 +220,10 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 								FDW_OPTION_REJECT_LIMIT_PERCENT)));
 		}
 		else if (strcmp(def->defname, FDW_OPTION_LOG_ERRORS) == 0)
-			log_errors = defGetBoolean(def);
+		{
+			(void) defGetBoolean(def); /* call is required for validation */
+			log_errors_set = true;
+		}
 		else if (IsCopyOption(def->defname))
 			copy_options = lappend(copy_options, def);
 	}
@@ -265,7 +268,7 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 	}
 	else
 	{
-		if (log_errors != -1)
+		if (log_errors_set)
 			ereport(ERROR,
 					(errcode(ERRCODE_FDW_INVALID_STRING_FORMAT),
 					 errmsg("the %s option cannot be set without reject_limit", FDW_OPTION_LOG_ERRORS)));
