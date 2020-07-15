@@ -48,6 +48,12 @@ CDistributionSpecReplicated::FSatisfies
 		return CDistributionSpecNonSingleton::PdsConvert(const_cast<CDistributionSpec *>(pdss))->FAllowReplicated();
 	}
 
+	// replicated distribution satisfies a general replicated distribution spec
+	if (EdtGeneralReplicated == pdss->Edt())
+	{
+		return true;
+	}
+
 	// a replicated distribution satisfies any non-singleton one,
 	// as well as singleton distributions that are not master-only
 	return !(EdtSingleton == pdss->Edt() &&
@@ -100,5 +106,4 @@ CDistributionSpecReplicated::AppendEnforcers
 										);
 	pdrgpexpr->Append(pexprMotion);
 }
-
 // EOF

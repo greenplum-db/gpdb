@@ -407,7 +407,7 @@ explain select count(*) from r_p, s c, s d, s e where r_p.a = c.c and r_p.a = d.
         </dxl:LogicalJoin>
       </dxl:LogicalGroupBy>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="78553138">
+    <dxl:Plan Id="0" SpaceSize="78575442">
       <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1724.012335" Rows="1.000000" Width="8"/>

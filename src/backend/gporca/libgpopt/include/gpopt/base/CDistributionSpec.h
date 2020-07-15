@@ -41,6 +41,7 @@ namespace gpopt
 				EdtHashedNoOp,		// same as hashed, used to force multiple slices for parallel union all. The motions always mirror the underlying distributions.
 				EdtStrictHashed,	// same as hashed, used to force multiple slices for parallel union all. The motions mirror the distribution of the output columns.
 				EdtReplicated,		// data is replicated across all segments
+				EdtGeneralReplicated,// data is replicated across all segments or is Tainted replicated (required only)
 				EdtAny,				// data can be anywhere on the segments (required only)
 				EdtSingleton,		// data is on a single segment or the master
 				EdtStrictSingleton,	// data is on a single segment or the master (derived only, only compatible with other singleton distributions)

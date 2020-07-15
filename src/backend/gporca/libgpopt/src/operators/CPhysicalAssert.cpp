@@ -137,6 +137,7 @@ CPhysicalAssert::PdsRequired
 	// pass through singleton and broadcast requests
 	if (CDistributionSpec::EdtSingleton == edt ||
 		CDistributionSpec::EdtStrictSingleton == edt ||
+		CDistributionSpec::EdtGeneralReplicated == edt ||
 		CDistributionSpec::EdtReplicated == edt
 		)
 	{

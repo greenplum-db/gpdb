@@ -53,7 +53,8 @@ namespace gpopt
 		EDistributionType edt = pds->Edt();
 		return (CDistributionSpec::EdtUniversal == edt ||
 				CDistributionSpec::EdtSingleton == edt ||
-				CDistributionSpec::EdtReplicated == edt);
+				CDistributionSpec::EdtReplicated == edt ||
+				CDistributionSpec::EdtGeneralReplicated == edt);
 	}
 
 	void CDistributionSpecUniversal::AppendEnforcers(CMemoryPool *, CExpressionHandle &, CReqdPropPlan *, CExpressionArray *,

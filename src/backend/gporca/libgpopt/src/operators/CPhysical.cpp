@@ -19,6 +19,7 @@
 #include "gpopt/base/CDistributionSpecHashed.h"
 #include "gpopt/base/CDistributionSpecRandom.h"
 #include "gpopt/base/CDistributionSpecSingleton.h"
+#include "gpopt/base/CDistributionSpecGeneralReplicated.h"
 #include "gpopt/base/CDistributionSpecReplicated.h"
 #include "gpopt/base/CDistributionSpecAny.h"
 
@@ -418,7 +419,7 @@ CPhysical::PdsRequireSingletonOrReplicated
 	{
 		if (0 == ulOptReq)
 		{
-			return GPOS_NEW(mp) CDistributionSpecReplicated();
+			return GPOS_NEW(mp) CDistributionSpecGeneralReplicated();
 		}
 
 		return GPOS_NEW(mp) CDistributionSpecSingleton();

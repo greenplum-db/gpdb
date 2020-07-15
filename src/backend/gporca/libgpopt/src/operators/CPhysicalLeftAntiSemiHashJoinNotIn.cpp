@@ -11,6 +11,7 @@
 
 #include "gpos/base.h"
 #include "gpopt/base/CDistributionSpecReplicated.h"
+#include "gpopt/base/CDistributionSpecGeneralReplicated.h"
 #include "gpopt/operators/CPhysicalLeftAntiSemiHashJoinNotIn.h"
 #include "gpopt/operators/CExpressionHandle.h"
 
@@ -68,7 +69,7 @@ CPhysicalLeftAntiSemiHashJoinNotIn::PdsRequired
 		//	  whether the inner is empty, and this needs to be detected everywhere
 		// b. if the inner hash keys are nullable, because every segment needs to
 		//	  detect nulls coming from the inner child
-		return GPOS_NEW(mp) CDistributionSpecReplicated();
+		return GPOS_NEW(mp) CDistributionSpecGeneralReplicated();
 	}
 
 	return CPhysicalHashJoin::PdsRequired(mp, exprhdl, pdsInput, child_index, pdrgpdpCtxt, ulOptReq);
