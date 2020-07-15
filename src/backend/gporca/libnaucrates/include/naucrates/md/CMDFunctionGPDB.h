@@ -68,6 +68,9 @@ namespace gpmd
 			// single function argument (used for cardinality estimation)
 			BOOL m_is_ndv_preserving;
 
+			// is an increasing function (non-implicit/lossy cast) which can be used for partition selection
+			BOOL m_is_allowed_for_PS;
+
 			// dxl token array for stability
 			Edxltoken m_dxl_func_stability_array[EfsSentinel];
 
@@ -97,12 +100,13 @@ namespace gpmd
 				IMDId *mdid,
 				CMDName *mdname,
 				IMDId *result_type_mdid,
-						IMdIdArray *mdid_array,
+				IMdIdArray *mdid_array,
 				BOOL ReturnsSet,
 				EFuncStbl func_stability,
 				EFuncDataAcc func_data_access,
 				BOOL is_strict,
-				BOOL is_ndv_preserving
+				BOOL is_ndv_preserving,
+				BOOL is_allowed_for_PS
 				);
 			
 			virtual
@@ -142,6 +146,13 @@ namespace gpmd
 			BOOL IsNDVPreserving() const
 			{
 				return m_is_ndv_preserving;
+			}
+
+			// is this function a lossy cast allowed for Partition selection
+			virtual
+			BOOL IsAllowedForPS() const
+			{
+				return m_is_allowed_for_PS;
 			}
 
 			// function stability

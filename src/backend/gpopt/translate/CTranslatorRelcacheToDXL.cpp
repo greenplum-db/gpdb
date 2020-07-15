@@ -1805,7 +1805,8 @@ CTranslatorRelcacheToDXL::LookupFuncProps
 	IMDFunction::EFuncDataAcc *access, // output: function datya access
 	BOOL *is_strict, // output: is function strict?
 	BOOL *is_ndv_preserving, // output: preserves NDVs of inputs
-	BOOL *returns_set // output: does function return set?
+	BOOL *returns_set, // output: does function return set?
+	BOOL *is_allowed_for_PS // output: is this a lossy (non-implicit) cast which is allowed for Partition selection
 	)
 {
 	GPOS_ASSERT(NULL != stability);
@@ -1823,6 +1824,7 @@ CTranslatorRelcacheToDXL::LookupFuncProps
 	*returns_set = gpdb::GetFuncRetset(func_oid);
 	*is_strict = gpdb::FuncStrict(func_oid);
 	*is_ndv_preserving = gpdb::IsFuncNDVPreserving(func_oid);
+	*is_allowed_for_PS = gpdb::IsFuncAllowedForPartitionSelection(func_oid);
 }
 
 
@@ -1892,7 +1894,8 @@ CTranslatorRelcacheToDXL::RetrieveFunc
 	BOOL is_strict = true;
 	BOOL returns_set = true;
 	BOOL is_ndv_preserving = true;
-	LookupFuncProps(func_oid, &stability, &access, &is_strict, &is_ndv_preserving, &returns_set);
+	BOOL is_allowed_for_PS = false;
+	LookupFuncProps(func_oid, &stability, &access, &is_strict, &is_ndv_preserving, &returns_set, &is_allowed_for_PS);
 
 	mdid->AddRef();
 	CMDFunctionGPDB *md_func = GPOS_NEW(mp) CMDFunctionGPDB
@@ -1906,7 +1909,8 @@ CTranslatorRelcacheToDXL::RetrieveFunc
 											stability,
 											access,
 											is_strict,
-											is_ndv_preserving
+											is_ndv_preserving,
+											is_allowed_for_PS
 											);
 
 	return md_func;

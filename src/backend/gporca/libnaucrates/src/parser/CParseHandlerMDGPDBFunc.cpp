@@ -116,6 +116,17 @@ CParseHandlerMDGPDBFunc::StartElement
 											false // default is false
 											);
 
+		// parse whether func is a lossy cast allowed for partition selection
+		m_is_allowed_for_PS = CDXLOperatorFactory::ExtractConvertAttrValueToBool
+											(
+											m_parse_handler_mgr->GetDXLMemoryManager(),
+											attrs,
+											EdxltokenGPDBFuncIsAllowedForPS,
+											EdxltokenGPDBFunc,
+											true, // optional
+											false // default is false
+											);
+
 		// parse func stability property
 		const XMLCh *xmlszStbl = CDXLOperatorFactory::ExtractAttrValue
 														(
@@ -202,7 +213,8 @@ CParseHandlerMDGPDBFunc::EndElement
 												m_func_stability,
 												m_func_data_access,
 												m_is_strict,
-												m_is_ndv_preserving);
+												m_is_ndv_preserving,
+												m_is_allowed_for_PS);
 		
 		// deactivate handler
 		m_parse_handler_mgr->DeactivateHandler();

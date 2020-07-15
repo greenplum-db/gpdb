@@ -625,6 +625,41 @@ gpdb::FreeAttrStatsSlot
 }
 
 bool
+gpdb::IsFuncAllowedForPartitionSelection
+    (
+    Oid funcid
+    )
+{
+    GP_WRAP_START;
+    switch (funcid)
+    {
+	// These are the functions we have allowed as lossy casts for Partition selection.
+	// For range partition selection, the logic in ORCA checks on bounds of the partition ranges.
+	// Hence these must be increasing functions.
+        case CONVERT_TS_DATE_OID:
+        case CONVERT_FLOAT8_INT4_OID:
+        case CONVERT_FLOAT4_INT4_OID:
+        case CONVERT_INT8_INT2_OID:
+        case CONVERT_INT8_INT4_OID:
+        case CONVERT_INT4_INT2_OID:
+        case CONVERT_FLOAT4_INT8_OID:
+        case CONVERT_FLOAT4_INT2_OID:
+        case CONVERT_FLOAT4_NUMERIC_OID:
+        case CONVERT_FLOAT8_INT8_OID:
+        case CONVERT_FLOAT8_INT2_OID:
+        case CONVERT_FLOAT8_FLOAT4_OID:
+        case CONVERT_FLOAT8_NUMERIC_OID:
+        case CONVERT_NUMERIC_INT8_OID:
+        case CONVERT_NUMERIC_INT2_OID:
+        case CONVERT_NUMERIC_INT4_OID:
+            return true;
+        default:
+            return false;
+    }
+    GP_WRAP_END;
+}
+
+bool
 gpdb::FuncStrict
 	(
 	Oid funcid

@@ -458,8 +458,10 @@ DATA(insert OID = 236 (  float4			   PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1 0 
 DESCR("convert int2 to float4");
 DATA(insert OID = 237 (  int2			   PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1 0 21 "701" _null_ _null_ _null_ _null_ _null_ dtoi2 _null_ _null_ _null_ ));
 DESCR("convert float8 to int2");
+#define CONVERT_FLOAT8_INT2_OID 237
 DATA(insert OID = 238 (  int2			   PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1 0 21 "700" _null_ _null_ _null_ _null_ _null_ ftoi2 _null_ _null_ _null_ ));
 DESCR("convert float4 to int2");
+#define CONVERT_FLOAT4_INT2_OID 238
 DATA(insert OID = 239 (  line_distance	   PGNSP PGUID 12 1 0 0 0 f f f f t f i s 2 0 701 "628 628" _null_ _null_ _null_ _null_ _null_	line_distance _null_ _null_ _null_ ));
 
 DATA(insert OID = 240 (  abstimein		   PGNSP PGUID 12 1 0 0 0 f f f f t f s s 1 0 702 "2275" _null_ _null_ _null_ _null_ _null_ abstimein _null_ _null_ _null_ ));
@@ -557,18 +559,22 @@ DESCR("bucket number of operand in equal-width histogram");
 DATA(insert OID = 311 (  float8			   PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1 0 701 "700" _null_ _null_ _null_ _null_ _null_	ftod _null_ _null_ _null_ ));
 DESCR("convert float4 to float8");
 DATA(insert OID = 312 (  float4			   PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1 0 700 "701" _null_ _null_ _null_ _null_ _null_	dtof _null_ _null_ _null_ ));
+#define CONVERT_FLOAT8_FLOAT4_OID 312
 DESCR("convert float8 to float4");
 DATA(insert OID = 313 (  int4			   PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1 0 23	"21" _null_ _null_ _null_ _null_ _null_ i2toi4 _null_ _null_ _null_ ));
 DESCR("convert int2 to int4");
 DATA(insert OID = 314 (  int2			   PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1 0 21	"23" _null_ _null_ _null_ _null_ _null_ i4toi2 _null_ _null_ _null_ ));
 DESCR("convert int4 to int2");
+#define CONVERT_INT4_INT2_OID 314
 DATA(insert OID = 315 (  int2vectoreq	   PGNSP PGUID 12 1 0 0 0 f f f f t f i s 2 0 16 "22 22" _null_ _null_ _null_ _null_ _null_ int2vectoreq _null_ _null_ _null_ ));
 DATA(insert OID = 316 (  float8			   PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1 0 701  "23" _null_ _null_ _null_ _null_ _null_	i4tod _null_ _null_ _null_ ));
 DESCR("convert int4 to float8");
+#define CONVERT_FLOAT8_INT4_OID 317
 DATA(insert OID = 317 (  int4			   PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1 0 23 "701" _null_ _null_ _null_ _null_ _null_ dtoi4 _null_ _null_ _null_ ));
 DESCR("convert float8 to int4");
 DATA(insert OID = 318 (  float4			   PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1 0 700  "23" _null_ _null_ _null_ _null_ _null_	i4tof _null_ _null_ _null_ ));
 DESCR("convert int4 to float4");
+#define CONVERT_FLOAT4_INT4_OID 319
 DATA(insert OID = 319 (  int4			   PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1  0 23 "700" _null_ _null_ _null_ _null_ _null_	ftoi4 _null_ _null_ _null_ ));
 DESCR("convert float4 to int4");
 
@@ -751,6 +757,7 @@ DATA(insert OID = 477 (  int84gt		   PGNSP PGUID 12 1 0 0 0 f f f t t f i s 2 0 
 DATA(insert OID = 478 (  int84le		   PGNSP PGUID 12 1 0 0 0 f f f t t f i s 2 0 16 "20 23" _null_ _null_ _null_ _null_ _null_ int84le _null_ _null_ _null_ ));
 DATA(insert OID = 479 (  int84ge		   PGNSP PGUID 12 1 0 0 0 f f f t t f i s 2 0 16 "20 23" _null_ _null_ _null_ _null_ _null_ int84ge _null_ _null_ _null_ ));
 
+#define CONVERT_INT8_INT4_OID 480
 DATA(insert OID = 480 (  int4			   PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1 0 23 "20" _null_ _null_ _null_ _null_ _null_ int84 _null_ _null_ _null_ ));
 DESCR("convert int8 to int4");
 DATA(insert OID = 481 (  int8			   PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1 0 20 "23" _null_ _null_ _null_ _null_ _null_ int48 _null_ _null_ _null_ ));
@@ -759,7 +766,7 @@ DATA(insert OID = 482 (  float8			   PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1 0 
 DESCR("convert int8 to float8");
 DATA(insert OID = 483 (  int8			   PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1 0 20 "701" _null_ _null_ _null_ _null_ _null_ dtoi8 _null_ _null_ _null_ ));
 DESCR("convert float8 to int8");
-
+#define CONVERT_FLOAT8_INT8_OID 483
 /* OIDS 500 - 599 */
 
 /* OIDS 600 - 699 */
@@ -769,9 +776,11 @@ DESCR("hash");
 
 DATA(insert OID = 652 (  float4			   PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1 0 700 "20" _null_ _null_ _null_ _null_ _null_ i8tof _null_ _null_ _null_ ));
 DESCR("convert int8 to float4");
+#define CONVERT_FLOAT4_INT8_OID 653
 DATA(insert OID = 653 (  int8			   PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1 0 20 "700" _null_ _null_ _null_ _null_ _null_ ftoi8 _null_ _null_ _null_ ));
 DESCR("convert float4 to int8");
 
+#define CONVERT_INT8_INT2_OID 714
 DATA(insert OID = 714 (  int2			   PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1 0 21 "20" _null_ _null_ _null_ _null_ _null_ int82 _null_ _null_ _null_ ));
 DESCR("convert int8 to int2");
 DATA(insert OID = 754 (  int8			   PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1 0 20 "21" _null_ _null_ _null_ _null_ _null_ int28 _null_ _null_ _null_ ));
@@ -2368,10 +2377,13 @@ DATA(insert OID = 1741 ( log					PGNSP PGUID 14 1 0 0 0 f f f f t f i s 1 0 1700
 DESCR("base 10 logarithm");
 DATA(insert OID = 1742 ( numeric				PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1 0 1700 "700" _null_ _null_ _null_ _null_ _null_ float4_numeric _null_ _null_ _null_ ));
 DESCR("convert float4 to numeric");
+#define CONVERT_FLOAT4_NUMERIC_OID 1742
 DATA(insert OID = 1743 ( numeric				PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1 0 1700 "701" _null_ _null_ _null_ _null_ _null_ float8_numeric _null_ _null_ _null_ ));
 DESCR("convert float8 to numeric");
+#define CONVERT_FLOAT8_NUMERIC_OID 1743
 DATA(insert OID = 1744 ( int4					PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1 0 23 "1700" _null_ _null_ _null_ _null_ _null_ numeric_int4 _null_ _null_ _null_ ));
 DESCR("convert numeric to int4");
+#define CONVERT_NUMERIC_INT4_OID 1744
 DATA(insert OID = 1745 ( float4					PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1 0 700 "1700" _null_ _null_ _null_ _null_ _null_ numeric_float4 _null_ _null_ _null_ ));
 DESCR("convert numeric to float4");
 DATA(insert OID = 1746 ( float8					PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1 0 701 "1700" _null_ _null_ _null_ _null_ _null_ numeric_float8 _null_ _null_ _null_ ));
@@ -2401,12 +2413,14 @@ DESCR("sort support");
 DATA(insert OID = 1771 ( numeric_uminus			PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1 0 1700 "1700" _null_ _null_ _null_ _null_ _null_ numeric_uminus _null_ _null_ _null_ ));
 DATA(insert OID = 1779 ( int8					PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1 0 20 "1700" _null_ _null_ _null_ _null_ _null_ numeric_int8 _null_ _null_ _null_ ));
 DESCR("convert numeric to int8");
+#define CONVERT_NUMERIC_INT8_OID 1779
 DATA(insert OID = 1781 ( numeric				PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1 0 1700 "20" _null_ _null_ _null_ _null_ _null_ int8_numeric _null_ _null_ _null_ ));
 DESCR("convert int8 to numeric");
 DATA(insert OID = 1782 ( numeric				PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1 0 1700 "21" _null_ _null_ _null_ _null_ _null_ int2_numeric _null_ _null_ _null_ ));
 DESCR("convert int2 to numeric");
 DATA(insert OID = 1783 ( int2					PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1 0 21 "1700" _null_ _null_ _null_ _null_ _null_ numeric_int2 _null_ _null_ _null_ ));
 DESCR("convert numeric to int2");
+#define CONVERT_NUMERIC_INT2_OID 1783
 
 /* Complex Number type */
 DATA(insert OID = 7057 ( complex_cmp                   PGNSP PGUID 12 1 0 0 0 f f f f t f i s 2 0 23 "7198 7198" _null_ _null_ _null_ _null_ _null_ complex_cmp _null_ _null_ _null_ ));
@@ -3052,6 +3066,7 @@ DATA(insert OID = 2027 (  timestamp			PGNSP PGUID 12 1 0 0 0 f f f f t f s s 1 0
 DESCR("convert timestamp with time zone to timestamp");
 DATA(insert OID = 2028 (  timestamptz		PGNSP PGUID 12 1 0 0 0 f f f f t f s s 1 0 1184 "1114" _null_ _null_ _null_ _null_ _null_ timestamp_timestamptz _null_ _null_ _null_ ));
 DESCR("convert timestamp to timestamp with time zone");
+#define CONVERT_TS_DATE_OID 2029
 DATA(insert OID = 2029 (  date				PGNSP PGUID 12 1 0 0 0 f f f f t f i s 1 0 1082 "1114" _null_ _null_ _null_ _null_ _null_ timestamp_date _null_ _null_ _null_ ));
 DESCR("convert timestamp to date");
 DATA(insert OID = 2030 (  abstime			PGNSP PGUID 12 1 0 0 0 f f f f t f s s 1 0 702 "1114" _null_ _null_ _null_ _null_ _null_ timestamp_abstime _null_ _null_ _null_ ));

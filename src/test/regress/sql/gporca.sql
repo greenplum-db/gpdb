@@ -2466,6 +2466,25 @@ WHERE L1.lid = int4in(unknownout(meta.load_id));
 reset optimizer_join_order;
 SELECT * from tp;
 
+-- Test partition selection for lossy casts
+create table lossycastrangepart(a float, b float) partition by range(b) (start(0) end(40) every(10));
+insert into lossycastrangepart (values (5.1,5.1), (9.9,9.9), (10.1,10.1), (9.1,9.1), (10.9,10.9), (11.1,11.1), (21.0,21.0)); 
+explain select * from lossycastrangepart where b::int = 10;
+select * from lossycastrangepart where b::int = 10;
+explain select * from lossycastrangepart where b::int = 11;
+select * from lossycastrangepart where b::int = 11;
+explain select * from lossycastrangepart where b::int < 10;
+select * from lossycastrangepart where b::int < 10;
+explain select * from lossycastrangepart where b::int < 11;
+select * from lossycastrangepart where b::int < 11;
+
+create table lossycastlistpart( a int, b float) partition by list(b) (partition l1 values(1.7, 2.1), partition l2 values(1.3, 2.7), partition l3 values(1.8, 2.8));
+insert into lossycastlistpart (values (1.0,2.1), (1.0,1.3), (10.1,2.1), (9.1,2.7), (10.9,1.8), (11.1,2.8), (21.0,1.7));
+explain select * from lossycastlistpart where b::int < 2;
+select * from lossycastlistpart where b::int < 2;
+explain select * from lossycastlistpart where b::int = 2;
+select * from lossycastlistpart where b::int = 2;
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore

@@ -166,7 +166,8 @@ namespace gpdxl
 				IMDFunction::EFuncDataAcc *access, // output: function data access
 				BOOL *is_strict, // output: is function strict?
 				BOOL *is_ndv_preserving, // output: preserves NDVs of inputs
-				BOOL *ReturnsSet // output: does function return set?
+				BOOL *ReturnsSet, // output: does function return set?
+				BOOL *is_allowed_for_PS // output: is this an increasing function (lossy cast) allowed for partition selection
 				);
 
 			// check and fall back for unsupported relations

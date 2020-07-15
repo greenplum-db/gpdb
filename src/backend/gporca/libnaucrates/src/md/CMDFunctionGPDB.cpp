@@ -39,7 +39,8 @@ CMDFunctionGPDB::CMDFunctionGPDB
 	EFuncStbl func_stability,
 	EFuncDataAcc func_data_access,
 	BOOL is_strict,
-	BOOL is_ndv_preserving
+	BOOL is_ndv_preserving,
+	BOOL is_allowed_for_PS
 	)
 	:
 	m_mp(mp),
@@ -51,7 +52,8 @@ CMDFunctionGPDB::CMDFunctionGPDB
 	m_func_stability(func_stability),
 	m_func_data_access(func_data_access),
 	m_is_strict(is_strict),
-	m_is_ndv_preserving(is_ndv_preserving)
+	m_is_ndv_preserving(is_ndv_preserving),
+	m_is_allowed_for_PS(is_allowed_for_PS)
 {
 	GPOS_ASSERT(m_mdid->IsValid());
 	GPOS_ASSERT(EfsSentinel > func_stability);
@@ -231,6 +233,7 @@ CMDFunctionGPDB::Serialize
 	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenGPDBFuncDataAccess), GetFuncDataAccessStr());
 	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenGPDBFuncStrict), m_is_strict);
 	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenGPDBFuncNDVPreserving), m_is_ndv_preserving);
+	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenGPDBFuncIsAllowedForPS), m_is_allowed_for_PS);
 
 	SerializeMDIdAsElem(xml_serializer, CDXLTokens::GetDXLTokenStr(EdxltokenGPDBFuncResultTypeId), m_mdid_type_result);
 

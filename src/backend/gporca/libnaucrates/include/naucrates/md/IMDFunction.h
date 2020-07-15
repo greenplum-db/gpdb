@@ -73,6 +73,10 @@ namespace gpmd
 			virtual 
 			BOOL ReturnsSet() const = 0;
 
+			// is this function allowed for Partition selection
+			virtual
+			BOOL IsAllowedForPS() const = 0;
+
 			// function stability
 			virtual
 			EFuncStbl GetFuncStability() const = 0;

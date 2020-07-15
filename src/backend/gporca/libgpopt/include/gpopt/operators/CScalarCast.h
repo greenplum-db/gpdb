@@ -127,7 +127,6 @@ namespace gpopt
 			{
 				return m_is_binary_coercible;
 			}
-			
 
 			// boolean expression evaluation
 			virtual
