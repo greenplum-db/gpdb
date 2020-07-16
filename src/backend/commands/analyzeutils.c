@@ -519,6 +519,17 @@ datumHashTableHash(const void *keyPtr, Size keysize)
 	uint32 result = 0;
 	MCVFreqPair *mcvFreqPair = *((MCVFreqPair **)keyPtr);
 	Oid oidType = mcvFreqPair->typinfo->typOid;
+
+	/*
+	 * if this type is a domain type, get its base type to determine the hash
+	 * Note: in GPDB5, domains of array types are not considered hashable as
+	 * defined in isGreenplumDbHashable (see analyze.c)
+	 */
+	if (get_typtype(oidType) == TYPTYPE_DOMAIN)
+	{
+		oidType = getBaseType(oidType);
+	}
+
 	/*
 	 * if the incoming column type is an array, pass ANYARRAYOID
 	 * as datumhash function handles ANYARRAYOID instead of specific

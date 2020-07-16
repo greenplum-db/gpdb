@@ -17,6 +17,8 @@ CREATE TYPE inc_analyze_composite AS
     a numeric,
     b numeric
 );
+CREATE DOMAIN int32 int;
+CREATE DOMAIN domain_arr int[];
 CREATE TABLE foo (
     a int,
     b int, 
@@ -79,7 +81,9 @@ CREATE TABLE foo (
     c60_boxarray box[],
     c61_polygonarray polygon[],
     c62_circlearray circle[],
-    c63_inc_analyze_composite_array inc_analyze_composite[]
+    c63_inc_analyze_composite_array inc_analyze_composite[],
+    c64_domain_arr domain_arr,
+    c65_domain_int int32
 ) PARTITION BY RANGE (b) (START (0) END(6) EVERY(3));
 CREATE TYPE input_fields AS
 (
@@ -116,7 +120,8 @@ CREATE TYPE input_fields AS
     boxarray box[],
     polygonarray polygon[],
     circlearray circle[],
-    inc_analyze_composite_array inc_analyze_composite[]
+    inc_analyze_composite_array inc_analyze_composite[],
+    domain_array domain_arr
 );
 
 CREATE OR REPLACE FUNCTION get_input_fields(i INT) RETURNS input_fields AS $$
@@ -157,7 +162,8 @@ BEGIN
         ARRAY[box(point(i + 1, i + 2), point(i + 3, i + 4)), box(point(i + 1, i + 2), point(i + 3, i + 4))],
         ARRAY[polygon(box(point(i + 1, i + 2), point(i + 3, i + 4))), polygon(box(point(i + 1, i + 2), point(i + 3, i + 4)))], 
         ARRAY[circle(point(i + 1, i + 2), i + 3), circle(point(i + 4, i + 5), i + 6)],
-        ARRAY[ROW(i % 6, (i + 1) % 6), ROW(i % 6, (i + 1) % 6)]::inc_analyze_composite[]
+        ARRAY[ROW(i % 6, (i + 1) % 6), ROW(i % 6, (i + 1) % 6)]::inc_analyze_composite[],
+        ARRAY[i, i % 6]::domain_arr
     INTO fields;
 
     RETURN fields;
@@ -193,7 +199,8 @@ i%6,
 ('2018-01-01 '||(i%6)::text||':59:00 EST')::timestamptz,
 ('11111111-1111-1111-1111-1111111111'||(i%6)::text||(i%6)::text)::uuid,
 ('foo'||(i%6)::text||' & rat'||(i%6)::text)::tsquery,
-(get_input_fields(i)).*
+(get_input_fields(i)).*,
+i
 FROM generate_series(1,100) i;
 ANALYZE foo;
 SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' and attname != 'a' ORDER BY attname,tablename;
@@ -230,7 +237,8 @@ i,
 ('2018-01-01 '||(i%12)::text||':59:00 EST')::timestamptz,
 ('11111111-1111-1111-1111-1111111111'||(i%5)::text||(i%5)::text)::uuid,
 ('foo'||(i)::text||' & rat'||(i)::text)::tsquery,
-(get_input_fields(i)).*
+(get_input_fields(i)).*,
+i
 FROM generate_series(1,100) i;
 INSERT INTO foo 
 SELECT
@@ -262,7 +270,8 @@ i,
 ('2018-01-01 '||(i%12+12)::text||':59:00 EST')::timestamptz,
 ('11111111-1111-1111-1111-1111111111'||(i%5+5)::text||(i%5+5)::text)::uuid,
 ('foo'||(i+200)::text||' & rat'||(i+200)::text)::tsquery,
-(get_input_fields(i)).*
+(get_input_fields(i)).*,
+i
 FROM generate_series(1,100) i;
 INSERT INTO foo 
 SELECT
@@ -294,7 +303,8 @@ i,
 ('2018-01-01 '||(i%12)::text||':59:00 EST')::timestamptz,
 ('11111111-1111-1111-1111-1111111111'||(i%5)::text||(i%5)::text)::uuid,
 ('foo'||(i)::text||' & rat'||(i)::text)::tsquery,
-(get_input_fields(i)).*
+(get_input_fields(i)).*,
+i
 FROM generate_series(1,200) i;
 ANALYZE foo;
 SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' ORDER BY attname,tablename;
@@ -331,7 +341,8 @@ i%4,
 ('2018-01-01 '||'12:'||(i%4)::text||':00 EST')::timestamptz,
 ('11111111-1111-1111-1111-1111111111'||(i%4)::text||(i%4)::text)::uuid,
 ('foo'||(i%4)::text||' & rat'||(i%4)::text)::tsquery,
-(get_input_fields(i)).*
+(get_input_fields(i)).*,
+i
 FROM generate_series(1,100) i;
 INSERT INTO foo 
 SELECT
@@ -363,7 +374,8 @@ i,
 ('2018-01-01 '||'12:'||(i%60)::text||':00 EST')::timestamptz,
 ('11111111-1111-1111-1111-1111111111'||(i%6)::text||(i%6)::text)::uuid,
 ('foo'||(i)::text||' & rat'||(i)::text)::tsquery,
-(get_input_fields(i)).*
+(get_input_fields(i)).*,
+i
 FROM generate_series(1,60) i;
 INSERT INTO foo 
 SELECT
@@ -395,7 +407,8 @@ i%4+61,
 ('2018-01-01 '||'12:59:'||(i%4+10)::text||' EST')::timestamptz,
 ('11111111-1111-1111-1111-1111111111'||(i%4+6)::text||(i%4+6)::text)::uuid,
 ('foo'||(i%4)::text||' & rat'||(i%4)::text)::tsquery,
-(get_input_fields(i)).*
+(get_input_fields(i)).*,
+i
 FROM generate_series(1,40) i;
 ANALYZE foo;
 SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' ORDER BY attname,tablename;
@@ -432,7 +445,8 @@ i,
 ('2018-01-01 '||(i%12)::text||':59:00 EST')::timestamptz,
 ('11111111-1111-1111-1111-1111111111'||(i%5)::text||(i%5)::text)::uuid,
 ('foo'||(i)::text||' & rat'||(i)::text)::tsquery,
-(get_input_fields(i)).*
+(get_input_fields(i)).*,
+i
 FROM generate_series(1,100) i;
 INSERT INTO foo 
 SELECT
@@ -464,7 +478,8 @@ i%4+61,
 ('2018-01-01 '||'12:'||(i%4+56)::text||':00 EST')::timestamptz,
 ('11111111-1111-1111-1111-1111111111'||(i%4+6)::text||(i%4+6)::text)::uuid,
 ('foo'||(i%4+61)::text||' & rat'||(i%4+61)::text)::tsquery,
-(get_input_fields(i)).*
+(get_input_fields(i)).*,
+i
 FROM generate_series(1,8) i;
 INSERT INTO foo 
 SELECT
@@ -496,7 +511,8 @@ i,
 ('2018-01-01 '||'12:00'||(i%60)::text||' EST')::timestamptz,
 ('11111111-1111-1111-1111-1111111111'||(i%10)::text||(i%10)::text)::uuid,
 ('foo'||(i)::text||' & rat'||(i)::text)::tsquery,
-(get_input_fields(i)).*
+(get_input_fields(i)).*,
+i
 FROM generate_series(1,60) i;
 ANALYZE foo;
 SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' and attname != 'a' ORDER BY attname,tablename;
@@ -533,7 +549,8 @@ i,
 ('2018-01-01 '||'12:'||(i%60)::text||':'||(i%30)::text||' EST')::timestamptz,
 ('11111111-1111-1111-1111-1111111111'||(i%5)::text||(i%5)::text)::uuid,
 ('foo'||(i)::text||' & rat'||(i)::text)::tsquery,
-(get_input_fields(i)).*
+(get_input_fields(i)).*,
+i
 FROM generate_series(1,60) i;
 INSERT INTO foo 
 SELECT
@@ -565,7 +582,8 @@ i%4+61,
 ('2018-01-01 '||'01:00:'||(i%4)::text||' EST')::timestamptz,
 ('11111111-1111-1111-1111-1111111111'||(i%4+6)::text||(i%4+6)::text)::uuid,
 ('foo'||(i%4+61)::text||' & rat'||(i%4+61)::text)::tsquery,
-(get_input_fields(i)).*
+(get_input_fields(i)).*,
+i
 FROM generate_series(1,8) i;
 INSERT INTO foo 
 SELECT
@@ -597,7 +615,8 @@ i,
 ('2018-01-01 '||'12:'||(i%60)::text||':'||(i%30)::text||' EST')::timestamptz,
 ('11111111-1111-1111-1111-1111111111'||(i%10)::text||(i%10)::text)::uuid,
 ('foo'||(i)::text||' & rat'||(i)::text)::tsquery,
-(get_input_fields(i)).*
+(get_input_fields(i)).*,
+i
 FROM generate_series(1,10) i;
 ANALYZE foo;
 SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' and attname != 'a' ORDER BY attname,tablename;
