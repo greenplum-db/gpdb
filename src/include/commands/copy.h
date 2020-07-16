@@ -236,7 +236,6 @@ typedef struct CopyStateData
 
 	/* Greenplum Database specific variables */
 	bool		escape_off;		/* treat backslashes as non-special? */
-	bool		delim_off;		/* delimiter is set to OFF? */
 	int			first_qe_processed_field;
 	List	   *qd_attnumlist;
 	List	   *qe_attnumlist;
@@ -253,6 +252,8 @@ typedef struct CopyStateData
 
 	/* Information on the connections to QEs. */
 	CdbCopy    *cdbCopy;
+
+	bool		delim_off;		/* delimiter is set to OFF? */
 
 /* end Greenplum Database specific variables */
 } CopyStateData;
