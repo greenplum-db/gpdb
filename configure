@@ -14691,7 +14691,6 @@ if test x"$pgac_cv__builtin_unreachable" = xyes ; then
 $as_echo "#define HAVE__BUILTIN_UNREACHABLE 1" >>confdefs.h
 
 fi
-if test "$enable_orca" = yes; then :
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for __builtin_frame_address" >&5
 $as_echo_n "checking for __builtin_frame_address... " >&6; }
 if ${pgac_cv__builtin_frame_address+:} false; then :
@@ -14699,7 +14698,14 @@ if ${pgac_cv__builtin_frame_address+:} false; then :
 else
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-int main() { (void) __builtin_frame_address(0); return 0; }
+
+int
+main ()
+{
+(void) __builtin_frame_address(0);
+  ;
+  return 0;
+}
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
   pgac_cv__builtin_frame_address=yes
@@ -14715,11 +14721,6 @@ if test x"$pgac_cv__builtin_frame_address" = xyes ; then
 
 $as_echo "#define HAVE__BUILTIN_FRAME_ADDRESS 1" >>confdefs.h
 
-fi
-if test x"$pgac_cv__builtin_frame_address" = xno ; then :
-  as_fn_error $? "Built-in function __builtin_frame_address() is required for ORCA.
-Use --disable-orca to disable ORCA support." "$LINENO" 5
-fi
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for __VA_ARGS__" >&5
 $as_echo_n "checking for __VA_ARGS__... " >&6; }
@@ -15241,6 +15242,13 @@ _ACEOF
 
 fi
 
+
+if test x"$pgac_cv__builtin_frame_address" = xno && test "$enable_orca" = yes; then :
+    as_fn_error $? "
+Built-in function __builtin_frame_address() is required for ORCA.
+Use --disable-orca to disable ORCA support.
+" "$LINENO" 5
+fi
 
 if test "$with_zlib" = yes; then
   # Check that <zlib.h> defines z_streamp (versions before about 1.0.4

@@ -1942,6 +1942,13 @@ AC_CHECK_TYPES([struct option], [], [],
 #include <getopt.h>
 #endif])
 
+if test x"$pgac_cv__builtin_frame_address" = xno && test "$enable_orca" = yes; then :
+    AC_MSG_ERROR([[
+Built-in function __builtin_frame_address() is required for ORCA.
+Use --disable-orca to disable ORCA support.
+]])
+fi
+
 if test "$with_zlib" = yes; then
   # Check that <zlib.h> defines z_streamp (versions before about 1.0.4
   # did not).  While we could work around the lack of z_streamp, it

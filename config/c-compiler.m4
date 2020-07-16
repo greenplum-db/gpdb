@@ -275,14 +275,13 @@ fi])# PGAC_C_BUILTIN_UNREACHABLE
 
 
 # PGAC_C_BUILTIN_FRAME_ADDRESS
-# ----------------------------
+# --------------------------
 # Check if the C compiler understands __builtin_frame_address(),
 # and define HAVE__BUILTIN_FRAME_ADDRESS if so.
 AC_DEFUN([PGAC_C_BUILTIN_FRAME_ADDRESS],
 [AC_CACHE_CHECK(for __builtin_frame_address, pgac_cv__builtin_frame_address,
-[AC_COMPILE_IFELSE([AC_LANG_SOURCE(
-[int main() { (void) __builtin_frame_address(0); return 0; }]
-)],
+[AC_LINK_IFELSE([AC_LANG_PROGRAM([],
+[(void) __builtin_frame_address(0);])],
 [pgac_cv__builtin_frame_address=yes],
 [pgac_cv__builtin_frame_address=no])])
 if test x"$pgac_cv__builtin_frame_address" = xyes ; then
