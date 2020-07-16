@@ -811,8 +811,28 @@ ensureCleanShutdown(const char *argv0)
 		return;
 
 	/* finally run postgres single-user mode */
-	snprintf(cmd, MAXCMDLEN, "\"%s\" --single -D \"%s\" template1 < %s",
-			 exec_path, datadir_target, DEVNULL);
+	/*
+	 * gpdb: use postgres instead of template1, else the below postgres
+	 * instance might hang in the below scenario:
+	 *
+	 * 1. There was a prepared but not finished "create database " dtx
+	 *    transaction which was recovered during crash recovery in the startup
+	 *    process and thus it holds the lock of database template1 since
+	 *    by default template1 is the template for database creation.
+	 *
+	 * 2. Single mode postgres process will execute the below code in
+	 * InitPostgres() after finishing crash recovery (i.e. calling
+	 * startupXLOG()) and then hang due to lock conflict.
+	 *
+	 *    LockSharedObject(DatabaseRelationId, ...);
+	 *
+	 * DB_FOR_COMMON_ACCESS is used in fts probe, dtx recovery, gdd so it's
+	 * hard to have the above kind of dtx transaction on DB_FOR_COMMON_ACCESS
+	 * since the commands (e.g. create database with template
+	 * DB_FOR_COMMON_ACCESS) would fail.
+	 */
+	snprintf(cmd, MAXCMDLEN, "\"%s\" --single -D \"%s\" %s < %s",
+			 exec_path, datadir_target, DB_FOR_COMMON_ACCESS, DEVNULL);
 
 	if (system(cmd) != 0)
 		pg_fatal("postgres single-user mode of target instance failed for command: %s\n", cmd);

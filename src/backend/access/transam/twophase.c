@@ -432,6 +432,7 @@ MarkAsPreparing(TransactionId xid,
 	proc->backendId = InvalidBackendId;
 	proc->databaseId = databaseid;
 	proc->roleId = owner;
+	proc->mppSessionId = gp_session_id;
 	proc->lwWaiting = false;
 	proc->lwWaitMode = 0;
 	proc->waitLock = NULL;

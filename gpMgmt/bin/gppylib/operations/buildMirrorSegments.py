@@ -363,6 +363,7 @@ class GpMirrorListToBuild:
                                  dbname='template1')
             conn = dbconn.connect(dburl, utility=True)
             dbconn.execSQL(conn, "CHECKPOINT")
+            conn.close()
 
             # If the postmaster.pid still exists and another process
             # is actively using that pid, pg_rewind will fail when it
