@@ -779,6 +779,9 @@
 /* Define to 1 if your compiler understands __builtin_unreachable. */
 #undef HAVE__BUILTIN_UNREACHABLE
 
+/* Define to 1 if your compiler understands __builtin_frame_address. */
+#undef HAVE__BUILTIN_FRAME_ADDRESS
+
 /* Define to 1 if you have __cpuid. */
 #undef HAVE__CPUID
 

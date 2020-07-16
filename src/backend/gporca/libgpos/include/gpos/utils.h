@@ -20,9 +20,6 @@
 #include "gpos/error/CException.h"
 #include "gpos/io/COstreamBasic.h"
 
-#define GPOS_ASMFP asm volatile ("movq %%rbp, %0" : "=g" (ulp));
-#define GPOS_ASMSP asm volatile ("movq %%rsp, %0" : "=g" (ulp));
-
 #define ALIGNED_16(x) (((ULONG_PTR) x >> 1) << 1 == (ULONG_PTR) x)	// checks 16-bit alignment
 #define ALIGNED_32(x) (((ULONG_PTR) x >> 2) << 2 == (ULONG_PTR) x)	// checks 32-bit alignment
 #define ALIGNED_64(x) (((ULONG_PTR) x >> 3) << 3 == (ULONG_PTR) x)	// checks 64-bit alignment
@@ -31,8 +28,7 @@
 
 #define	ALIGN_STORAGE __attribute__((aligned (8)))
 
-#define GPOS_GET_FRAME_POINTER(x) do { ULONG_PTR ulp; GPOS_ASMFP; x = ulp; } while (0)
-#define GPOS_GET_STACK_POINTER(x) do { ULONG_PTR ulp; GPOS_ASMSP; x = ulp; } while (0)
+#define GPOS_GET_FRAME_POINTER(x) ((x) = (ULONG_PTR) __builtin_frame_address(0))
 
 #define GPOS_MSEC_IN_SEC	((ULLONG) 1000)
 #define GPOS_USEC_IN_MSEC	((ULLONG) 1000)
