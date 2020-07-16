@@ -3085,7 +3085,7 @@ calc_non_nestloop_required_outer(Path *outer_path, Path *inner_path)
  *
  * Returns the resulting path node.
  */
-NestPath *
+Path *
 create_nestloop_path(PlannerInfo *root,
 					 RelOptInfo *joinrel,
 					 JoinType jointype,
@@ -3229,7 +3229,26 @@ create_nestloop_path(PlannerInfo *root,
 
 	final_cost_nestloop(root, pathnode, workspace, sjinfo, semifactors);
 
-	return pathnode;
+	/*
+	 * Greenplum specific behavior:
+	 * If we find the join locus is general or segmentgeneral,
+	 * we should check the joinqual, if it contains volatile functions
+	 * we have to turn the join path to singleQE.
+	 *
+	 * NB: we do not add this logic in the above create_unique_rowid_path
+	 * code block, the reason is:
+	 *   create_unique_rowid_path is a technique to implement semi join
+	 *   using normal join, it can only happens for sublink query:
+	 *   1. if the sublink query contains volatile target list or havingQual
+	 *      it cannot be pulled up in pull_up_subquery, so it will be a
+	 *      subselect and be handled in the function set_subquery_pathlist
+	 *   2. if the sublink query contains volatile functions in joinqual
+	 *      or where clause, it will be handled in set_rel_pathlist and
+	 *      here.
+	 */
+	return turn_volatile_seggen_to_singleqe(root,
+											(Path *) pathnode,
+											(Node *) (pathnode->joinrestrictinfo));	
 }
 
 /*
@@ -3259,7 +3278,7 @@ create_nestloop_path(PlannerInfo *root,
  * 'innersortkeys' are the sort varkeys for the inner relation
  *      or NIL to use existing ordering
  */
-MergePath *
+Path *
 create_mergejoin_path(PlannerInfo *root,
 					  RelOptInfo *joinrel,
 					  JoinType jointype,
@@ -3382,7 +3401,12 @@ create_mergejoin_path(PlannerInfo *root,
 
 	final_cost_mergejoin(root, pathnode, workspace, sjinfo);
 
-	return pathnode;
+	/*
+	 * See the comments at the end of create_nestloop_path.
+	 */
+	return turn_volatile_seggen_to_singleqe(root,
+											(Path *) pathnode,
+											(Node *) (pathnode->jpath.joinrestrictinfo));	
 }
 
 /*
@@ -3401,7 +3425,7 @@ create_mergejoin_path(PlannerInfo *root,
  * 'hashclauses' are the RestrictInfo nodes to use as hash clauses
  *		(this should be a subset of the restrict_clauses list)
  */
-HashPath *
+Path *
 create_hashjoin_path(PlannerInfo *root,
 					 RelOptInfo *joinrel,
 					 JoinType jointype,
@@ -3515,7 +3539,12 @@ create_hashjoin_path(PlannerInfo *root,
 
 	final_cost_hashjoin(root, pathnode, workspace, sjinfo, semifactors);
 
-	return pathnode;
+	/*
+	 * See the comments at the end of create_nestloop_path.
+	 */
+	return turn_volatile_seggen_to_singleqe(root,
+											(Path *) pathnode,
+											(Node *) (pathnode->jpath.joinrestrictinfo));	
 }
 
 /*

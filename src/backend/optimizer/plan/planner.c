@@ -3218,6 +3218,12 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 										  offset_est,
 										  count_est);
 		result_plan->flow = pull_up_Flow(result_plan, result_plan->lefttree);
+
+		if (result_plan->flow->locustype == CdbLocusType_General)
+		{
+			result_plan->flow->locustype = CdbLocusType_SingleQE;
+			result_plan->flow->flotype = FLOW_SINGLETON;
+		}
 	}
 
 	/*

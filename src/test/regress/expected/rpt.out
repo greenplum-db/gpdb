@@ -694,6 +694,235 @@ ALTER TABLE foopart_1_prt_1 SET DISTRIBUTED REPLICATED;
 ERROR:  can't set the distribution policy of "foopart_1_prt_1"
 HINT:  Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.
 DROP TABLE foopart;
+-- volatile replicated
+-- General and segmentGeneral locus imply that if the corresponding
+-- slice is executed in many different segments should provide the
+-- same result data set. Thus, in some cases, General and segmentGeneral
+-- can be treated like broadcast. But if the segmentGeneral and general
+-- locus path contain volatile functions, they lose the property and
+-- can only be treated as singleQE. The following cases are to check that
+-- we correctly handle all these cases.
+-- FIXME: ORCA does not consider this, we need to fix the cases when ORCA
+-- consider this.
+set optimizer = off;
+create table t_hashdist(a int, b int, c int) distributed by (a);
+create table t_replicate_volatile(a int, b int, c int) distributed replicated;
+---- pushed down filter
+explain (costs off) select * from t_replicate_volatile, t_hashdist where t_replicate_volatile.a > random();
+                                 QUERY PLAN                                 
+----------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Nested Loop
+         ->  Seq Scan on t_hashdist
+         ->  Materialize
+               ->  Broadcast Motion 1:3  (slice1; segments: 1)
+                     ->  Result
+                           ->  Seq Scan on t_replicate_volatile
+                                 Filter: ((a)::double precision > random())
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+-- join qual
+explain (costs off) select * from t_hashdist, t_replicate_volatile x, t_replicate_volatile y where x.a + y.a > random();
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Nested Loop
+   ->  Result
+         ->  Gather Motion 1:1  (slice1; segments: 1)
+               ->  Nested Loop
+                     Join Filter: (((x.a + y.a))::double precision > random())
+                     ->  Seq Scan on t_replicate_volatile x
+                     ->  Materialize
+                           ->  Seq Scan on t_replicate_volatile y
+   ->  Materialize
+         ->  Gather Motion 3:1  (slice2; segments: 3)
+               ->  Seq Scan on t_hashdist
+ Optimizer: Postgres query optimizer
+(12 rows)
+
+-- sublink & subquery
+explain (costs off) select * from t_hashdist where a > All (select random() from t_replicate_volatile);
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Nested Loop Left Anti Semi (Not-In) Join
+         Join Filter: ((t_hashdist.a)::double precision <= "NotIn_SUBQUERY".random)
+         ->  Seq Scan on t_hashdist
+         ->  Materialize
+               ->  Broadcast Motion 1:3  (slice1; segments: 1)
+                     ->  Subquery Scan on "NotIn_SUBQUERY"
+                           ->  Seq Scan on t_replicate_volatile
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain (costs off) select * from t_hashdist where a in (select random()::int from t_replicate_volatile);
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Hash Semi Join
+         Hash Cond: (t_hashdist.a = ((random())::integer))
+         ->  Seq Scan on t_hashdist
+         ->  Hash
+               ->  Redistribute Motion 1:3  (slice1; segments: 1)
+                     Hash Key: ((random())::integer)
+                     ->  Seq Scan on t_replicate_volatile
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+-- subplan
+explain (costs off, verbose) select * from t_hashdist left join t_replicate_volatile on t_hashdist.a > any (select random() from t_replicate_volatile);
+                                                            QUERY PLAN                                                            
+----------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   Output: t_hashdist.a, t_hashdist.b, t_hashdist.c, t_replicate_volatile.a, t_replicate_volatile.b, t_replicate_volatile.c
+   ->  Nested Loop Left Join
+         Output: t_hashdist.a, t_hashdist.b, t_hashdist.c, t_replicate_volatile.a, t_replicate_volatile.b, t_replicate_volatile.c
+         Join Filter: (SubPlan 1)
+         ->  Seq Scan on rpt.t_hashdist
+               Output: t_hashdist.a, t_hashdist.b, t_hashdist.c
+         ->  Materialize
+               Output: t_replicate_volatile.a, t_replicate_volatile.b, t_replicate_volatile.c
+               ->  Seq Scan on rpt.t_replicate_volatile
+                     Output: t_replicate_volatile.a, t_replicate_volatile.b, t_replicate_volatile.c
+         SubPlan 1  (slice2; segments: 3)
+           ->  Materialize
+                 Output: random()
+                 ->  Broadcast Motion 1:3  (slice1; segments: 1)
+                       Output: (random())
+                       ->  Seq Scan on rpt.t_replicate_volatile t_replicate_volatile_1
+                             Output: random()
+ Optimizer: Postgres query optimizer
+ Settings: enable_seqscan=off, optimizer=off
+(20 rows)
+
+-- targetlist
+explain (costs off) select * from t_hashdist cross join (select random () from t_replicate_volatile)x;
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Nested Loop
+         ->  Seq Scan on t_hashdist
+         ->  Materialize
+               ->  Broadcast Motion 1:3  (slice1; segments: 1)
+                     ->  Seq Scan on t_replicate_volatile
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain (costs off) select * from t_hashdist cross join (select a, sum(random()) from t_replicate_volatile group by a) x;
+                           QUERY PLAN                           
+----------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Nested Loop
+         ->  Seq Scan on t_hashdist
+         ->  Materialize
+               ->  Broadcast Motion 1:3  (slice1; segments: 1)
+                     ->  HashAggregate
+                           Group Key: t_replicate_volatile.a
+                           ->  Seq Scan on t_replicate_volatile
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain (costs off) select * from t_hashdist cross join (select random() as k, sum(a) from t_replicate_volatile group by k) x;
+                        QUERY PLAN                        
+----------------------------------------------------------
+ Nested Loop
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on t_hashdist
+   ->  Materialize
+         ->  Gather Motion 1:1  (slice2; segments: 1)
+               ->  HashAggregate
+                     Group Key: random()
+                     ->  Seq Scan on t_replicate_volatile
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain (costs off) select * from t_hashdist cross join (select a, sum(b) as s from t_replicate_volatile group by a having sum(b) > random() order by a) x ;
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Nested Loop
+         ->  Seq Scan on t_hashdist
+         ->  Materialize
+               ->  Broadcast Motion 1:3  (slice1; segments: 1)
+                     ->  Sort
+                           Sort Key: t_replicate_volatile.a
+                           ->  HashAggregate
+                                 Group Key: t_replicate_volatile.a
+                                 Filter: ((sum(t_replicate_volatile.b))::double precision > random())
+                                 ->  Seq Scan on t_replicate_volatile
+ Optimizer: Postgres query optimizer
+(12 rows)
+
+-- insert
+explain (costs off) insert into t_replicate_volatile select random() from t_replicate_volatile;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Insert on t_replicate_volatile
+   ->  Broadcast Motion 1:3  (slice1; segments: 1)
+         ->  Subquery Scan on "*SELECT*"
+               ->  Seq Scan on t_replicate_volatile t_replicate_volatile_1
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+explain (costs off) insert into t_replicate_volatile select random(), a, a from generate_series(1, 10) a;
+                      QUERY PLAN                      
+------------------------------------------------------
+ Insert on t_replicate_volatile
+   ->  Broadcast Motion 1:3  (slice1; segments: 1)
+         ->  Subquery Scan on "*SELECT*"
+               ->  Function Scan on generate_series a
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+create sequence seq_for_insert_replicated_table;
+explain (costs off) insert into t_replicate_volatile select nextval('seq_for_insert_replicated_table');
+                    QUERY PLAN                     
+---------------------------------------------------
+ Insert on t_replicate_volatile
+   ->  Broadcast Motion 1:3  (slice1; segments: 1)
+         ->  Subquery Scan on "*SELECT*"
+               ->  Result
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+-- update & delete
+explain (costs off) update t_replicate_volatile set a = 1 where b > random();
+ERROR:  could not devise a plan (cdbpath.c:2074)
+explain (costs off) update t_replicate_volatile set a = 1 from t_replicate_volatile x where x.a + random() = t_replicate_volatile.b;
+ERROR:  could not devise a plan (cdbpath.c:2074)
+explain (costs off) update t_replicate_volatile set a = 1 from t_hashdist x where x.a + random() = t_replicate_volatile.b;
+ERROR:  could not devise a plan (cdbpath.c:2074)
+explain (costs off) delete from t_replicate_volatile where a < random();
+ERROR:  could not devise a plan (cdbpath.c:2074)
+explain (costs off) delete from t_replicate_volatile using t_replicate_volatile x where t_replicate_volatile.a + x.b < random();
+ERROR:  could not devise a plan (cdbpath.c:2074)
+explain (costs off) update t_replicate_volatile set a = random();
+ERROR:  could not devise a plan (createplan.c:6488)
+-- limit
+explain (costs off) insert into t_replicate_volatile select * from t_replicate_volatile limit 1;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Insert on t_replicate_volatile
+   ->  Broadcast Motion 1:3  (slice1; segments: 1)
+         ->  Limit
+               ->  Seq Scan on t_replicate_volatile t_replicate_volatile_1
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+explain (costs off) select * from t_hashdist cross join (select * from t_replicate_volatile limit 1) x;
+                           QUERY PLAN                           
+----------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Nested Loop
+         ->  Seq Scan on t_hashdist
+         ->  Materialize
+               ->  Broadcast Motion 1:3  (slice1; segments: 1)
+                     ->  Limit
+                           ->  Seq Scan on t_replicate_volatile
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+reset optimizer;
 -- start_ignore
 drop schema rpt cascade;
 NOTICE:  drop cascades to 7 other objects

@@ -1310,6 +1310,7 @@ create_projection_plan(PlannerInfo *root, ProjectionPath *best_path)
 	 * not using.)
 	 */
 	if (!best_path->cdb_restrict_clauses &&
+		!best_path->force &&
 		(is_projection_capable_plan(subplan) ||
 		 tlist_same_exprs(tlist, subplan->targetlist)))
 	{
@@ -6479,6 +6480,12 @@ make_modifytable(PlannerInfo *root,
 	foreach(subnode, subplans)
 	{
 		Plan	   *subplan = (Plan *) lfirst(subnode);
+
+		if (operation != CMD_INSERT &&
+			(subplan->flow->locustype == CdbLocusType_SegmentGeneral ||
+			 subplan->flow->locustype == CdbLocusType_General) &&
+			contain_volatile_functions((Node *) subplan->targetlist))
+			elog(ERROR, "could not devise a plan");
 
 		if (subnode == list_head(subplans))		/* first node? */
 			plan->startup_cost = subplan->startup_cost;

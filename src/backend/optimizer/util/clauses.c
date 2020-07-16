@@ -1209,6 +1209,16 @@ contain_volatile_functions_walker(Node *node, void *context)
 								 contain_volatile_functions_walker,
 								 context, 0);
 	}
+	else if (IsA(node, RestrictInfo))
+	{
+		/*
+		 * We need to handle RestrictInfo, a case that uses this
+		 * is that replicated table with a volatile restriction.
+		 * We have to find the pattern and turn it into singleQE.
+		 */
+		RestrictInfo * info = (RestrictInfo *) node;
+		return contain_volatile_functions_walker((Node*)info->clause, context);
+	}
 
 	return expression_tree_walker(node, contain_volatile_functions_walker,
 								  context);

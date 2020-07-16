@@ -116,7 +116,7 @@ extern Relids calc_nestloop_required_outer(Path *outer_path, Path *inner_path);
 extern Relids calc_non_nestloop_required_outer(Path *outer_path, Path *inner_path);
 
 extern bool path_contains_inner_index(Path *path);
-extern NestPath *create_nestloop_path(PlannerInfo *root,
+extern Path *create_nestloop_path(PlannerInfo *root,
 					 RelOptInfo *joinrel,
 					 JoinType jointype,
 					 JoinCostWorkspace *workspace,
@@ -129,7 +129,7 @@ extern NestPath *create_nestloop_path(PlannerInfo *root,
 					 List *pathkeys,
 					 Relids required_outer);
 
-extern MergePath *create_mergejoin_path(PlannerInfo *root,
+extern Path *create_mergejoin_path(PlannerInfo *root,
 					  RelOptInfo *joinrel,
 					  JoinType jointype,
 					  JoinCostWorkspace *workspace,
@@ -144,7 +144,7 @@ extern MergePath *create_mergejoin_path(PlannerInfo *root,
 					  List *outersortkeys,
 					  List *innersortkeys);
 
-extern HashPath *create_hashjoin_path(PlannerInfo *root,
+extern Path *create_hashjoin_path(PlannerInfo *root,
 					 RelOptInfo *joinrel,
 					 JoinType jointype,
 					 JoinCostWorkspace *workspace,

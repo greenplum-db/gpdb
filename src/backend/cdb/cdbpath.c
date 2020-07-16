@@ -2039,3 +2039,54 @@ has_redistributable_clause(RestrictInfo *restrictinfo)
 	return restrictinfo->hashjoinoperator != InvalidOid;
 }
 
+/*
+ * turn_volatile_seggen_to_singleqe
+ *
+ * This function is the key tool to build correct plan
+ * for general or segmentgeneral locus paths that contain
+ * volatile functions.
+ *
+ * If we find such a pattern:
+ *    1. if we are update or delete statement on replicated table
+ *       simply reject the query
+ *    2. if it is general locus, simply change it to singleQE
+ *    3. if it is segmentgeneral, use a motion to bring it to
+ *       singleQE and then create a projection path
+ *
+ * If we do not find the pattern, simply return the input path.
+ *
+ * The last parameter of this function is the part that we want to
+ * check volatile functions.
+ */
+Path *
+turn_volatile_seggen_to_singleqe(PlannerInfo *root, Path *path, Node *node)
+{
+	if ((CdbPathLocus_IsSegmentGeneral(path->locus) || CdbPathLocus_IsGeneral(path->locus)) &&
+		(contain_volatile_functions(node)))
+	{
+		CdbPathLocus     singleQE;
+		Path            *mpath;
+		ProjectionPath  *ppath;
+
+		if (root->upd_del_replicated_table > 0 &&
+			bms_is_member(root->upd_del_replicated_table,
+						  path->parent->relids))
+			elog(ERROR, "could not devise a plan");
+
+		if (CdbPathLocus_IsGeneral(path->locus))
+		{
+			CdbPathLocus_MakeSingleQE(&(path->locus),
+									  getgpsegmentCount());
+			return path;
+		}
+
+		CdbPathLocus_MakeSingleQE(&singleQE,
+								  CdbPathLocus_NumSegments(path->locus));
+		mpath = cdbpath_create_motion_path(root, path, NIL, false, singleQE);
+		ppath =  create_projection_path_with_quals(root, mpath->parent, mpath, NIL);
+		ppath->force = true;
+		return (Path *) ppath;
+	}
+	else
+		return path;
+}

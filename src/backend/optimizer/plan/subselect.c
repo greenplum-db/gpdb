@@ -615,6 +615,15 @@ make_subplan(PlannerInfo *root, Query *orig_subquery, SubLinkType subLinkType,
 							&subroot,
 							config);
 
+	if ((plan->flow->locustype == CdbLocusType_SegmentGeneral ||
+		 plan->flow->locustype == CdbLocusType_General) &&
+		(contain_volatile_functions((Node *) plan->targetlist) ||
+		 contain_volatile_functions(subquery->havingQual)))
+	{
+		plan->flow->locustype = CdbLocusType_SingleQE;
+		plan->flow->flotype = FLOW_SINGLETON;
+	}
+
 	/* Isolate the params needed by this specific subplan */
 	plan_params = root->plan_params;
 	root->plan_params = NIL;
