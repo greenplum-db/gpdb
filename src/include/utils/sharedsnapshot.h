@@ -67,6 +67,6 @@ extern void readSharedLocalSnapshot_forCursor(Snapshot snapshot, DtxContext dist
 
 extern void AtEOXact_SharedSnapshot(void);
 
-#define NUM_SHARED_SNAPSHOT_SLOTS (2 * max_prepared_xacts)
+#define NUM_SHARED_SNAPSHOT_SLOTS (2 * MaxBackends)
 
 #endif   /* SHAREDSNAPSHOT_H */

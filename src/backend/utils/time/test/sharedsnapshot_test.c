@@ -16,10 +16,10 @@ static void
 test_boundaries_of_CreateSharedSnapshotArray(void **state)
 {
 	/*
-	 * max_prepared_xacts is used to calculate NUM_SHARED_SNAPSHOT_SLOTS. Make
+	 * MaxBackends is used to calculate NUM_SHARED_SNAPSHOT_SLOTS. Make
 	 * it non-zero so that we actually allocate some local snapshot slots.
 	 */
-	max_prepared_xacts = 2;
+	MaxBackends = 2;
 
 	SharedSnapshotStruct 	*fakeSharedSnapshotArray = NULL;
 	LWLockPadded 			*fakeLockBase = NULL;
