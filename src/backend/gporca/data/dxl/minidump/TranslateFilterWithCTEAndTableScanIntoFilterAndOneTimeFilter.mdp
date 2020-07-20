@@ -743,7 +743,7 @@
                   </dxl:ParamList>
                   <dxl:Result>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="431.006782" Rows="3.000000" Width="4"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.006782" Rows="1.000000" Width="4"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="54" Alias="?column?">
@@ -754,7 +754,7 @@
                     <dxl:OneTimeFilter/>
                     <dxl:Limit>
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="431.006778" Rows="3.000000" Width="1"/>
+                        <dxl:Cost StartupCost="0" TotalCost="431.006778" Rows="1.000000" Width="1"/>
                       </dxl:Properties>
                       <dxl:ProjList/>
                       <dxl:Result>
