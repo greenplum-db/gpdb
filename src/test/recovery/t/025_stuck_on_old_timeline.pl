@@ -34,7 +34,7 @@ my $archivedir_primary = $node_primary->archive_dir;
 $archivedir_primary =~ s!\\!/!g if $TestLib::windows_os;
 $node_primary->append_conf('postgresql.conf', qq(
 archive_command = '"$perlbin" "$FindBin::RealBin/cp_history_files" "%p" "$archivedir_primary/%f"'
-wal_keep_segments=8
+wal_keep_size=128MB
 ));
 # Make sure that Msys perl doesn't complain about difficulty in setting locale
 # when called from the archive_command.
