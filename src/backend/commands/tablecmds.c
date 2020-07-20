@@ -3989,11 +3989,11 @@ AlterTableGetLockLevel(List *cmds)
 			case AT_PartAttachIndex:
 				cmd_lockmode = AccessExclusiveLock;
 				break;
-            case AT_ExpandTable:
+			case AT_ExpandTable:
                 cmd_lockmode = ExclusiveLock;
                 break;
-
-            default:			/* oops */
+			
+			default:			/* oops */
 				elog(ERROR, "unrecognized alter table type: %d",
 					 (int) cmd->subtype);
 				break;
@@ -4647,7 +4647,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 				{
 					case PART_STATUS_NONE:
 					case PART_STATUS_ROOT:
-                    case PART_STATUS_LEAF:
+					case PART_STATUS_LEAF:
 						break;
 
 					case PART_STATUS_INTERIOR:

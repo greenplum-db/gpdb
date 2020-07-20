@@ -1921,7 +1921,7 @@ class ExpandTable():
         if num_segments:
             self.num_segments = num_segments
         else:
-            logger.warning('numsegments is 0, gpexpand will fail if there is a partition table.')
+            logger.debug('numsegments is 0, gpexpand will fail if there is a partition table.')
         if row is not None:
             (self.dbname, self.fq_name, self.table_oid,
              self.root_partition_name,
@@ -1989,7 +1989,7 @@ WHERE
         status_conn = dbconn.connect(status_url, encoding='UTF8')
         table_conn = dbconn.connect(table_url, encoding='UTF8')
         partition_tables = [self.root_partition_name]
-        curs = dbconn.execSQL(table_conn, sql)
+        curs = dbconn.query(table_conn, sql)
         rows = curs.fetchall()
         for row in rows:
             partition_tables.append(row[0])
@@ -2006,7 +2006,7 @@ WHERE
             table_conn.close()
             return
         logger.info('Locking partition table %s' % self.root_partition_name)
-        dbconn.execSQL(table_conn, lock_sql)
+        dbconn.execSQL(table_conn, lock_sql, autocommit=False)
         logger.info('Locked partition table %s' % self.root_partition_name)
         # check if all leaf tables expanded
         check_sql = """SELECT COUNT(1) FROM gpexpand.status_detail WHERE root_partition_name = '%s' 
@@ -2041,7 +2041,7 @@ WHERE
             """ % self.root_partition_name
         cursor = None
         try:
-            cursor = dbconn.execSQL(table_conn, not_ext_sql)
+            cursor = dbconn.query(table_conn, not_ext_sql)
             for row in list(cursor.fetchall()):
                 tables.append(row[0])
         except Exception, ex:
@@ -2053,7 +2053,6 @@ WHERE
             sql = 'ANALYZE %s' % tab
             logger.info('Analyzing %s' % (tab.decode('utf-8')))
             dbconn.execSQL(table_conn, sql)
-            table_conn.commit()
 
     def update_partition_numsegments(self, table_conn, rootoid):
         sql = """
@@ -2069,7 +2068,7 @@ WHERE
     AND quote_ident(p.schemaname)||'.'||quote_ident(p.tablename) = '%s';
         """ % self.root_partition_name
         tableoids = []
-        curs = dbconn.execSQL(table_conn, sql)
+        curs = dbconn.query(table_conn, sql)
         rows = curs.fetchall()
         for row in rows:
             tableoids.append(int(row[0]))
@@ -2079,7 +2078,6 @@ WHERE
             sql = """UPDATE gp_distribution_policy SET numsegments=%d WHERE numsegments < %d AND localoid=%d; """ % (
                 self.num_segments, self.num_segments, tableoid)
             dbconn.execSQL(table_conn, sql)
-            table_conn.commit()
 
     def preprocess_partition_table(self, table_conn, status_conn, status_url, table_url):
         # find the first leaf partition table
@@ -2137,7 +2135,6 @@ WHERE
             logger.debug("Expand SQL: %s" % sql.decode('utf-8'))
 
             dbconn.execSQL(table_conn, sql)
-            table_conn.commit()
             if self.options.analyze and self.root_partition_name is None:
                 sql = 'ANALYZE %s' % (self.fq_name)
                 logger.info('Analyzing %s' % (self.fq_name.decode('utf-8')))
