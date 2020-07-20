@@ -39,7 +39,7 @@ try:
     from gppylib.operations.utils import ParallelOperation
     from gppylib.parseutils import line_reader, check_values, canonicalize_address
     from gppylib.heapchecksum import HeapChecksum
-    from gppylib.commands.pg import PgBaseBackup
+    from gppylib.commands.pg import PgBaseBackup, Thread
     from gppylib.mainUtils import ExceptionNoStackTraceNeeded
 
 except ImportError, e:
@@ -1593,7 +1593,7 @@ class gpexpand:
     quote_ident(n.nspname) || '.' || quote_ident(c.relname) as fq_name,
     c.oid as tableoid,
     NULL as root_partition_name,
-    2 as rank,
+    1 as rank,
     pe.writable is not null as external_writable,
     '%s' as undone_status,
     NULL as expansion_started,
@@ -1662,27 +1662,25 @@ WHERE
         sql = """
 SELECT
     current_database(),
-    quote_ident(n.nspname) || '.' || quote_ident(c.relname) as fq_name,
+    quote_ident(p.partitionschemaname)||'.'||quote_ident(p.partitiontablename) as fq_name,
     c.oid as tableoid,
-    quote_ident(n.nspname) || '.' || quote_ident(c.relname) as root_partition_name,
+    quote_ident(p.schemaname) || '.' || quote_ident(p.tablename) as root_partition_name,
     2 as rank,
     false as external_writable,
     '%s' as undone_status,
     NULL as expansion_started,
     NULL as expansion_finished,
     %s as source_bytes
-FROM
-    pg_class c,
-    pg_namespace n,
-    pg_partition p,
-    gp_distribution_policy d
+FROM 
+    pg_partitions p, pg_class c, pg_namespace n 
 WHERE
-    c.relnamespace = n.oid
-    AND p.parrelid = c.oid
-    AND d.localoid = c.oid
-    AND parlevel = 0
-ORDER BY fq_name, tableoid desc
-                  """ % (undone_status, src_bytes_str)
+    c.relnamespace = n.oid 
+    AND p.partitionschemaname = n.nspname 
+    AND p.partitiontablename = c.relname 
+    AND c.relstorage not in ('x', 'f') 
+    AND NOT c.relhassubclass
+ORDER BY root_partition_name, source_bytes
+        """ % (undone_status, src_bytes_str)
         self.logger.debug(sql)
         table_conn = self.connect_database(dbname)
 
@@ -1724,13 +1722,14 @@ ORDER BY fq_name, tableoid desc
         dbconn.execSQL(self.conn, sql)
 
         # read schema and queue up commands
-        sql = "SELECT * FROM gpexpand.status_detail WHERE status = 'NOT STARTED' ORDER BY rank"
+        sql = "SELECT * FROM gpexpand.status_detail WHERE status = 'NOT STARTED' ORDER BY rank, source_bytes"
         cursor = dbconn.query(self.conn, sql)
+        num_segments_after_expansion = len(self.gparray.segmentPairs)
 
         for row in cursor:
             self.logger.debug(row)
             name = "name"
-            tbl = ExpandTable(options=self.options, row=row)
+            tbl = ExpandTable(options=self.options, row=row, num_segments=num_segments_after_expansion)
             cmd = ExpandCommand(name=name, status_url=self.dburl, table=tbl, options=self.options)
             self.queue.addCommand(cmd)
 
@@ -1830,7 +1829,7 @@ ORDER BY fq_name, tableoid desc
             c = dbconn.connect(self.dburl, encoding='UTF8')
             self.logger.warn('Expansion has not yet completed.  Removing the expansion')
             self.logger.warn('schema now will leave the following tables unexpanded:')
-            unexpanded_tables_sql = "SELECT fq_name FROM gpexpand.status_detail WHERE status = 'NOT STARTED' ORDER BY rank"
+            unexpanded_tables_sql = "SELECT fq_name FROM gpexpand.status_detail WHERE status = 'NOT STARTED' ORDER BY rank, source_bytes"
 
             cursor = dbconn.query(c, unexpanded_tables_sql)
             unexpanded_tables_text = ''.join("\t%s\n" % row[0] for row in cursor)
@@ -1916,9 +1915,13 @@ ORDER BY fq_name, tableoid desc
 
 # -----------------------------------------------
 class ExpandTable():
-    def __init__(self, options, row=None):
+    def __init__(self, options, row=None, num_segments=0):
         self.options = options
         self.is_root_partition = False
+        if num_segments:
+            self.num_segments = num_segments
+        else:
+            logger.warning('numsegments is 0, gpexpand will fail if there is a partition table.')
         if row is not None:
             (self.dbname, self.fq_name, self.table_oid,
              self.root_partition_name,
@@ -1970,29 +1973,175 @@ class ExpandTable():
         logger.debug('Resetting detailed_status: %s' % sql.decode('utf-8'))
         dbconn.execSQL(status_conn, sql)
 
-    def expand(self, table_conn, cancel_flag):
-        # for root partition, we want to expand whose partition in one shot
-        # TODO: expand leaf partitions separately in parallel
+    def lock_partition_tables(self, status_url, table_url):
+        sql = """
+SELECT
+    quote_ident(p.partitionschemaname) ||'.'|| quote_ident(p.partitiontablename) as fq_name
+FROM 
+    pg_partitions p, pg_class c, pg_namespace n 
+WHERE
+    c.relnamespace = n.oid 
+    AND p.partitionschemaname = n.nspname 
+    AND p.partitiontablename = c.relname 
+    AND c.relhassubclass
+    AND quote_ident(p.schemaname)||'.'||quote_ident(p.tablename) = '%s';
+        """ % self.root_partition_name
+        status_conn = dbconn.connect(status_url, encoding='UTF8')
+        table_conn = dbconn.connect(table_url, encoding='UTF8')
+        partition_tables = [self.root_partition_name]
+        curs = dbconn.execSQL(table_conn, sql)
+        rows = curs.fetchall()
+        for row in rows:
+            partition_tables.append(row[0])
+        lock_sql_list = []
+        for table in partition_tables:
+            lock_sql_list.append('LOCK TABLE ONLY %s IN EXCLUSIVE MODE;' % table)
+        lock_sql = '\n'.join(lock_sql_list)
+        lock_check_sql = """SELECT COUNT(1) FROM pg_stat_activity WHERE query = 'LOCK TABLE ONLY %s IN EXCLUSIVE MODE;'
+        and datname = '%s';""" % (self.root_partition_name, self.dbname)
+        # double check
+        lock_count = dbconn.querySingleton(table_conn, lock_check_sql)
+        if lock_count > 0:
+            status_conn.close()
+            table_conn.close()
+            return
+        logger.info('Locking partition table %s' % self.root_partition_name)
+        dbconn.execSQL(table_conn, lock_sql)
+        logger.info('Locked partition table %s' % self.root_partition_name)
+        # check if all leaf tables expanded
+        check_sql = """SELECT COUNT(1) FROM gpexpand.status_detail WHERE root_partition_name = '%s' 
+        AND status <> '%s'""" % (self.root_partition_name, done_status)
+        while True:
+            time.sleep(3)
+            count = dbconn.querySingleton(status_conn, check_sql)
+            if count == 0:
+                table_conn.commit()
+                logger.info('Unlocked %s' % self.root_partition_name)
+                if self.options.analyze:
+                    logger.info('Analyzing %s' % self.root_partition_name)
+                    self.analyze_partition_table(table_conn)
+                table_conn.close()
+                status_conn.close()
+                break
+
+    def analyze_partition_table(self, table_conn):
+        tables = list()
+        not_ext_sql = """
+SELECT
+    quote_ident(p.partitionschemaname)||'.'||quote_ident(p.partitiontablename) as partitiontable
+FROM 
+    pg_partitions p, pg_class c, pg_namespace n 
+WHERE 
+    c.relnamespace = n.oid 
+    AND p.partitionschemaname = n.nspname 
+    AND p.partitiontablename = c.relname 
+    AND c.relstorage not in ('x', 'f') 
+    AND NOT c.relhassubclass
+    AND quote_ident(p.schemaname)||'.'||quote_ident(p.tablename) = '%s'
+            """ % self.root_partition_name
+        cursor = None
+        try:
+            cursor = dbconn.execSQL(table_conn, not_ext_sql)
+            for row in list(cursor.fetchall()):
+                tables.append(row[0])
+        except Exception, ex:
+            logger.warn(ex)
+        finally:
+            if cursor:
+                cursor.close()
+        for tab in tables:
+            sql = 'ANALYZE %s' % tab
+            logger.info('Analyzing %s' % (tab.decode('utf-8')))
+            dbconn.execSQL(table_conn, sql)
+            table_conn.commit()
+
+    def update_partition_numsegments(self, table_conn, rootoid):
+        sql = """
+SELECT
+    c.oid as tableoid
+FROM 
+    pg_partitions p, pg_class c, pg_namespace n 
+WHERE
+    c.relnamespace = n.oid 
+    AND p.partitionschemaname = n.nspname 
+    AND p.partitiontablename = c.relname 
+    AND c.relhassubclass
+    AND quote_ident(p.schemaname)||'.'||quote_ident(p.tablename) = '%s';
+        """ % self.root_partition_name
+        tableoids = []
+        curs = dbconn.execSQL(table_conn, sql)
+        rows = curs.fetchall()
+        for row in rows:
+            tableoids.append(int(row[0]))
+        tableoids.append(rootoid)
+
+        for tableoid in tableoids:
+            sql = """UPDATE gp_distribution_policy SET numsegments=%d WHERE numsegments < %d AND localoid=%d; """ % (
+                self.num_segments, self.num_segments, tableoid)
+            dbconn.execSQL(table_conn, sql)
+            table_conn.commit()
+
+    def preprocess_partition_table(self, table_conn, status_conn, status_url, table_url):
+        # find the first leaf partition table
+        sql = """SELECT fq_name FROM gpexpand.status_detail WHERE expansion_started = (SELECT min(expansion_started) 
+                FROM gpexpand.status_detail WHERE root_partition_name = '%s' AND expansion_started IS NOT NULL);
+                """ % self.root_partition_name
+        first_fq_name = dbconn.querySingleton(status_conn, sql)
+
+        oid_sql = """SELECT '%s'::regclass::oid""" % self.root_partition_name
+        rootoid = dbconn.querySingleton(table_conn, oid_sql)
+        lock_check_sql = """SELECT COUNT(1) FROM pg_stat_activity WHERE query = 'LOCK TABLE ONLY %s IN EXCLUSIVE MODE;' 
+        AND datname = '%s' AND waiting = 'f';""" % (self.root_partition_name, self.dbname)
+        lock_count = dbconn.querySingleton(table_conn, lock_check_sql)
+
+        if self.fq_name == first_fq_name:
+            lock_thread = Thread(name='lock partition tables', target=self.lock_partition_tables,
+                                 args=(status_url, table_url))
+            lock_thread.start()
+            # wait for the partition table to be locked by lock_partition_tables
+            while True:
+                table_conn.commit()
+                lock_count = dbconn.querySingleton(table_conn, lock_check_sql)
+                if lock_count > 0:
+                    break
+                else:
+                    time.sleep(1)
+            self.update_partition_numsegments(table_conn, rootoid)
+        # lock count is for restarting gpexpand due to interruption
+        elif lock_count == 0:
+            time.sleep(random.randint(1, 10))
+            lock_count = dbconn.querySingleton(table_conn, lock_check_sql)
+            if lock_count == 0:
+                lock_thread = Thread(name='lock partition tables', target=self.lock_partition_tables,
+                                     args=(status_url, table_url))
+                lock_thread.start()
+                while True:
+                    table_conn.commit()
+                    lock_count = dbconn.querySingleton(table_conn, lock_check_sql)
+                    if lock_count > 0:
+                        break
+                    else:
+                        time.sleep(1)
+                self.update_partition_numsegments(table_conn, rootoid)
+
+    def expand(self, table_conn, status_conn, cancel_flag, status_url, table_url):
         only_str = "" if self.is_root_partition else "ONLY"
         external_str = "EXTERNAL" if self.external_writable else ""
-        sql = 'ALTER %s TABLE %s %s EXPAND TABLE' % (external_str, only_str, self.fq_name)
-
-        logger.info('Expanding %s.%s' % (self.dbname.decode('utf-8'), self.fq_name.decode('utf-8')))
-        logger.debug("Expand SQL: %s" % sql.decode('utf-8'))
 
         # check is atomic in python
         if not cancel_flag:
+            if self.root_partition_name is not None:
+                self.preprocess_partition_table(table_conn, status_conn, status_url, table_url)
+            sql = 'ALTER %s TABLE %s %s EXPAND TABLE' % (external_str, only_str, self.fq_name)
+            logger.info('Expanding %s.%s' % (self.dbname.decode('utf-8'), self.fq_name.decode('utf-8')))
+            logger.debug("Expand SQL: %s" % sql.decode('utf-8'))
+
             dbconn.execSQL(table_conn, sql)
-            # the ALTER TABLE command requires a commit to execute
             table_conn.commit()
-            if self.options.analyze:
+            if self.options.analyze and self.root_partition_name is None:
                 sql = 'ANALYZE %s' % (self.fq_name)
                 logger.info('Analyzing %s' % (self.fq_name.decode('utf-8')))
                 dbconn.execSQL(table_conn, sql)
-
-            return True
-
-        # I can only get here if the cancel flag is True
         return False
 
     def mark_finished(self, status_conn, start_time, finish_time):
@@ -2103,7 +2252,7 @@ class ExpandCommand(SQLCommand):
 
         try:
             status_conn = dbconn.connect(self.status_url, encoding='UTF8')
-            table_conn = dbconn.connect(self.table_url, encoding='UTF8')
+            table_conn = dbconn.connect(self.table_url, encoding='UTF8', allowSystemTableMods=True)
         except DatabaseError, ex:
             if self.options.verbose:
                 logger.exception(ex)
@@ -2132,10 +2281,9 @@ class ExpandCommand(SQLCommand):
                 # Set conn for  cancel
                 self.cancel_conn = table_conn
                 start_time = datetime.datetime.now()
-                if not self.options.simple_progress:
-                    self.table.mark_started(status_conn, table_conn, start_time, self.cancel_flag)
+                self.table.mark_started(status_conn, table_conn, start_time, self.cancel_flag)
 
-                table_exp_success = self.table.expand(table_conn, self.cancel_flag)
+                table_exp_success = self.table.expand(table_conn, status_conn, self.cancel_flag, self.status_url, self.table_url)
 
         except Exception, ex:
             if ex.__str__().find('canceling statement due to user request') == -1 and not self.cancel_flag:
