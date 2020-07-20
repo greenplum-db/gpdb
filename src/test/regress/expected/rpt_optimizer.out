@@ -895,8 +895,9 @@ explain (costs off) insert into t_replicate_volatile select * from t_replicate_v
 ---------------------------------------------------------------------------
  Insert on t_replicate_volatile
    ->  Result
-         ->  Limit
-               ->  Seq Scan on t_replicate_volatile t_replicate_volatile_1
+         ->  Broadcast Motion 1:3  (slice1; segments: 1)
+               ->  Limit
+                     ->  Seq Scan on t_replicate_volatile t_replicate_volatile_1
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 

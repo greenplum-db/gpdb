@@ -543,7 +543,7 @@ CPhysicalHashJoin::PdsRequiredReplicate
 	}
 
 	// otherwise, require second child to deliver non-singleton distribution
-	GPOS_ASSERT(CDistributionSpec::EdtReplicated == pdsInner->Edt());
+	GPOS_ASSERT(CDistributionSpec::EdtReplicated == pdsInner->Edt() || CDistributionSpec::EdtTaintedReplicated == pdsInner->Edt());
 	return GPOS_NEW(mp) CDistributionSpecNonSingleton();
 }
 

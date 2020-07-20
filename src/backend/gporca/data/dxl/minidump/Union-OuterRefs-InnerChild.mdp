@@ -372,7 +372,7 @@ select * from y where m in (select 1 union select n from x);
               </dxl:ParamList>
               <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000110" Rows="2.000000" Width="4"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000110" Rows="1.000000" Width="4"/>
                 </dxl:Properties>
                 <dxl:GroupingColumns>
                   <dxl:GroupingColumn ColId="10"/>
