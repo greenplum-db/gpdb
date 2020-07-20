@@ -19,7 +19,6 @@ import re
 try:
     from gppylib.gpparseopts import OptParser, OptChecker
     from gppylib.gparray import GpArray
-    from gppylib.gphostcache import *
     from gppylib.gplog import *
     from gppylib.commands.unix import *
     from gppylib.commands.gp import *
@@ -43,6 +42,7 @@ SAMEVALUE_GUCS = set(["gp_default_storage_options"])
 read_only_gucs = set()  # populated at runtime
 LOGGER = get_default_logger()
 setup_tool_logging(EXECNAME, getLocalHostname(), getUserName())
+gp_array = None
 
 
 def parseargs():
@@ -196,9 +196,9 @@ def confirm_user_wants_to_continue():
         raise Exception("User Aborted. Exiting.")
 
 
-def print_verbosely(options, normalized_hostname, hostname, directory):
+def print_verbosely(options, hostname, directory):
     if options.verbose:
-        msg = "normalized_host=%s host=%s dir=%s" % (normalized_hostname, hostname, directory)
+        msg = "host=%s dir=%s" % (hostname, directory)
         LOGGER.info(msg)
 
 
@@ -265,14 +265,14 @@ def _show_all_segment_values_always(options):
     return options.show == "port"
 
 # FIXME: add value to cmd_name.  We do not just do this due to encoding issues.
-def do_add_config_script(pool, hostname, segs, value, options):
+def do_add_config_script(pool, segs, value, options):
     for seg in segs:
-        print_verbosely(options, hostname, seg.hostname, seg.datadir)
-        cmd_name = "add %s parameter on host %s for seg %s" % (options.entry, hostname, seg.datadir)
+        print_verbosely(options, seg.hostname, seg.datadir)
+        cmd_name = "add %s parameter on host %s for seg %s" % (options.entry, seg.hostname, seg.datadir)
         cmd = GpConfigHelper(cmd_name, seg.datadir, options.entry, value=value,
                              removeParameter=options.remove,
                              ctxt=REMOTE,
-                             remoteHost=hostname)
+                             remoteHost=seg.hostname)
         pool.addCommand(cmd)
 
 
@@ -281,8 +281,6 @@ def do_change(options):
         enable_verbose_logging()
 
     try:
-        gp_array = GpArray.initFromCatalog(dbconn.DbURL(), utility=True)
-
         if not options.skipvalidation:
             conn = dbconn.connect(dbconn.DbURL(), True)
             guc = get_normal_guc(conn, options)
@@ -302,49 +300,24 @@ def do_change(options):
         raise Exception(msg)
 
     pool = WorkerPool()
-
-    host_cache = GpHostCache(gp_array, pool)
-    failed_pings = host_cache.ping_hosts(pool)
-
-    if failed_pings:
-        for i in failed_pings:
-            LOGGER.warning('unreachable host: ' + i.hostname)
-        confirm_user_wants_to_continue()
-
     failure = False
     try:
         # do the segments
         if not options.masteronly:
-            for host in host_cache.get_hosts():
+            if options.primaryvalue:
+                do_add_config_script(pool, [seg for seg in gp_array.getSegDbList() if seg.isSegmentPrimary()],
+                                     options.primaryvalue, options)
 
-                if options.primaryvalue:
-                    do_add_config_script(pool, host.hostname, [seg for seg in host.dbs if seg.isSegmentPrimary()],
-                                         options.primaryvalue, options)
+            if options.mirrorvalue:
+                do_add_config_script(pool, [seg for seg in gp_array.getSegDbList() if seg.isSegmentMirror()],
+                                     options.mirrorvalue, options)
 
-                if options.mirrorvalue:
-                    do_add_config_script(pool, host.hostname, [seg for seg in host.dbs if seg.isSegmentMirror()],
-                                         options.mirrorvalue, options)
+            if not options.primaryvalue and not options.mirrorvalue:
+                do_add_config_script(pool, [seg for seg in gp_array.getSegDbList()], options.value, options)
 
-                if not options.primaryvalue and not options.mirrorvalue:
-                    do_add_config_script(pool, host.hostname, host.dbs, options.value, options)
-
-        # do the master
+        # do the master and standby
         if options.mastervalue or options.remove:
-            print_verbosely(options, gp_array.master.hostname, gp_array.master.hostname, gp_array.master.datadir)
-            cmd_name = "remove %s parameter on master host %s" % (options.entry, gp_array.master.hostname)
-            cmd = GpConfigHelper(cmd_name, gp_array.master.datadir, options.entry, value=options.mastervalue,
-                                 removeParameter=options.remove, ctxt=REMOTE, remoteHost=gp_array.master.hostname)
-            pool.addCommand(cmd)
-
-            # do the standby master
-            if gp_array.standbyMaster:
-                print_verbosely(options, gp_array.standbyMaster.hostname, gp_array.standbyMaster.hostname,
-                                gp_array.standbyMaster.datadir)
-                cmd_name = "remove %s parameter on standbymaster host %s" % (options.entry, gp_array.standbyMaster.hostname)
-                cmd = GpConfigHelper(cmd_name, gp_array.standbyMaster.datadir, options.entry,
-                                     value=options.mastervalue, removeParameter=options.remove, ctxt=REMOTE,
-                                     remoteHost=gp_array.standbyMaster.hostname)
-                pool.addCommand(cmd)
+            do_add_config_script(pool, [seg for seg in [gp_array.master, gp_array.standbyMaster] if seg is not None], options.mastervalue, options)
 
         pool.join()
         items = pool.getCompletedItems()
@@ -462,16 +435,15 @@ def log_and_raise(err_str):
 
 
 def get_gucs_from_files(guc):
-    hosts, pool = _get_hosts()
+    pool = WorkerPool()
     gucs_found = []
-    for host in hosts:
-        for seg in host.dbs:
-            cmd_name = "get %s parameter on host %s" % (guc, host.hostname)
-            pool.addCommand(
-                GpConfigHelper(cmd_name, seg.datadir, guc,
-                               segInfo=seg, getParameter=True,
-                               ctxt=REMOTE,
-                               remoteHost=host.hostname))
+    for seg in gp_array.getDbList():
+        cmd_name = "get %s parameter on host %s" % (guc, seg.hostname)
+        pool.addCommand(
+            GpConfigHelper(cmd_name, seg.datadir, guc,
+                           segInfo=seg, getParameter=True,
+                           ctxt=REMOTE,
+                           remoteHost=seg.hostname))
 
     failedSegs = False
     pool.join()
@@ -496,18 +468,16 @@ def get_gucs_from_files(guc):
     return gucs_found
 
 
-def _get_hosts():
-    dburl = dbconn.DbURL()
-    gp_array = GpArray.initFromCatalog(dburl, utility=True)
-    pool = WorkerPool()
-    host_cache = GpHostCache(gp_array, pool, withMasters=True)
-    failed_pings = host_cache.ping_hosts(pool)
-    if failed_pings:
-        for i in failed_pings:
-            LOGGER.warning('unreachable host: ' + i.hostname)
-        confirm_user_wants_to_continue()  # todo test me
-    hosts = host_cache.get_hosts()
-    return hosts, pool
+def _set_gparray():
+    try:
+        global gp_array
+        gp_array = GpArray.initFromCatalog(dbconn.DbURL(), utility=True)
+    except DatabaseError as ex:
+        LOGGER.error(ex.__str__())
+        msg = 'Failed to connect to database, exiting without action. ' \
+              'This script can only be run when the database is up.'
+        LOGGER.error(msg)
+        raise Exception(msg)
 
 
 def do_show(options):
@@ -538,9 +508,10 @@ def check_gpexpand():
 
 def do_main():
     options = parseargs()
+    _set_gparray()
+
     if options.list:
         do_list(options.skipvalidation)
-
     elif options.show:
         do_show(options)
 

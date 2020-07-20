@@ -27,13 +27,6 @@ at once (the master and all of the segment instances). The gpstart utility
 handles the startup of the individual instances. Each instance is started 
 in parallel.
 
-The first time an administrator runs gpstart, the utility creates a hosts 
-cache file named .gphostcache in the user's home directory. Subsequently, 
-the utility uses this list of hosts to start the system more efficiently. 
-If new hosts are added to the system, you must manually remove this file 
-from the gpadmin user's home directory. The utility will create a new hosts 
-cache file at the next startup.
-
 Before you can start a Greenplum Database system, you must have initialized 
 the system using gpinitsystem first.
 

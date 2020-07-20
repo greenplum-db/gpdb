@@ -759,20 +759,6 @@ def createSegmentRowsFromSegmentList( newHostlist
 
     return rows
 
-#========================================================================
-
-# TODO: Destroy this  (MPP-7686)
-#   Now that "hostname" is a distinct field in gp_segment_configuration
-#   attempting to derive hostnames from interaface names should be eliminated.
-#
-def get_host_interface(full_hostname):
-    (host_part, inf_num) = ['-'.join(full_hostname.split('-')[:-1]),
-                            full_hostname.split('-')[-1]]
-    if host_part == '' or not inf_num.isdigit():
-        return (full_hostname, None)
-    else:
-        return (host_part, inf_num)
-
 
 # ============================================================================
 class GpArray:
@@ -1212,8 +1198,8 @@ class GpArray:
                 hosts.append(self.standbyMaster.hostname)
         for segPair in self.segmentPairs:
             hosts.extend(segPair.get_hosts())
-        # dedupe? segPair.get_hosts() doesn't promise to dedupe itself, and there might be more deduping to do
-        return hosts
+        # dedupe
+        return list(set(hosts))
 
     # --------------------------------------------------------------------
     def get_master_host_names(self):
@@ -1366,14 +1352,11 @@ class GpArray:
            This currently assumes that all segments are configured the same
            and gets the results only from the host of segment 0
 
-        NOTE 2:
-           The determination of hostname is based on faulty logic
         """
 
         primary_datadirs = []
 
         seg0_hostname = self.segmentPairs[0].primaryDB.getSegmentAddress()
-        (seg0_hostname, inf_num) = get_host_interface(seg0_hostname)
 
         for db in self.getDbList():
             if db.isSegmentPrimary(False) and db.getSegmentAddress().startswith(seg0_hostname):
@@ -1390,7 +1373,6 @@ class GpArray:
         mirror_datadirs = []
 
         seg0_hostname = self.segmentPairs[0].primaryDB.getSegmentAddress()
-        (seg0_hostname, inf_num) = get_host_interface(seg0_hostname)
 
         for db in self.getDbList():
             if db.isSegmentMirror(False) and db.getSegmentAddress().startswith(seg0_hostname):

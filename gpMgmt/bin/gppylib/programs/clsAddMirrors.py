@@ -25,7 +25,6 @@ from gppylib.system.environment import GpMasterEnvironment
 from gppylib.parseutils import line_reader, check_values, canonicalize_address
 from gppylib.utils import writeLinesToFile, readAllLinesFromFile, TableLogger, \
     PathNormalizationException, normalizeAndValidateInputPath
-from gppylib.gphostcache import GpInterfaceToHostNameCache
 from gppylib.userinput import *
 from gppylib.mainUtils import ExceptionNoStackTraceNeeded
 
@@ -292,8 +291,6 @@ class GpAddMirrorsProgram:
                 rows.append(self._getParsedRow(filename, lineno, line))
 
         allAddresses = [row["address"] for row in rows]
-        interfaceLookup = GpInterfaceToHostNameCache(self.__pool, allAddresses, [None]*len(allAddresses))
-
         #
         # build up the output now
         #
@@ -308,9 +305,8 @@ class GpAddMirrorsProgram:
             contentId = int(row['contentId'])
             address = row['address']
             dataDir = normalizeAndValidateInputPath(row['dataDirectory'], "in config file", row['lineno'])
-            hostName = interfaceLookup.getHostName(address)
-            if hostName is None:
-                raise Exception("Segment Host Address %s is unreachable" % address)
+            # FIXME: hostname probably should not be address, but to do so, "hostname" should be added to gpaddmirrors config file
+            hostName = address
 
             primary = segsByContentId[contentId]
             if primary is None:

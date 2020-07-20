@@ -8,7 +8,6 @@ import sys
 import tempfile
 
 from gppylib.gparray import Segment, GpArray, SegmentPair
-from gppylib.gphostcache import GpHost
 from gpconfig_modules.parse_guc_metadata import ParseGuc
 import errno
 from pg import DatabaseError
@@ -53,18 +52,14 @@ class GpConfig(GpTestCase):
         self.os_env["MASTER_DATA_DIRECTORY"] = self.temp_dir
         self.os_env["GPHOME"] = self.temp_dir
         self.gparray = self._create_gparray_with_2_primary_2_mirrors()
-        self.host_cache = Mock()
 
-        self.host = GpHost('localhost')
+        self.host = 'localhost'
         seg = SegmentPair()
         db = self.gparray.master
         seg.addPrimary(db)
         seg.datadir = self.gparray.master.datadir
         seg.hostname = 'localhost'
-        self.host.addDB(seg)
 
-        self.host_cache.get_hosts.return_value = [self.host]
-        self.host_cache.ping_hosts.return_value = []
 
         self.master_file = Mock(name='master')
         self.master_file.get_value.return_value = 'foo'
@@ -84,7 +79,6 @@ class GpConfig(GpTestCase):
             patch('gpconfig.dbconn.connect', return_value=self.conn),
             patch('gpconfig.dbconn.query', return_value=self.cursor),
             patch('gpconfig.dbconn.querySingleton', side_effect=singleton_side_effect),
-            patch('gpconfig.GpHostCache', return_value=self.host_cache),
             patch('gpconfig.GpArray.initFromCatalog', return_value=self.gparray),
             patch('gpconfig.WorkerPool', return_value=self.pool)
         ])
@@ -236,11 +230,9 @@ class GpConfig(GpTestCase):
         # mocked values in the files
         self.pool.getCompletedItems.return_value.append(seg_1)
 
-        self.host_cache.get_hosts.return_value.extend([self.host, self.host])
-
         self.subject.do_main()
 
-        self.assertEqual(self.pool.addCommand.call_count, 3)
+        self.assertEqual(self.pool.addCommand.call_count, 5)
         self.assertEqual(self.subject.LOGGER.error.call_count, 0)
         self.assertIn("WARNING: GUCS ARE OUT OF SYNC", mock_stdout.getvalue())
         self.assertIn("bar", mock_stdout.getvalue())
@@ -261,11 +253,9 @@ class GpConfig(GpTestCase):
         # mocked values in the files
         self.pool.getCompletedItems.return_value.append(seg_1)
 
-        self.host_cache.get_hosts.return_value.extend([self.host, self.host])
-
         self.subject.do_main()
 
-        self.assertEqual(self.pool.addCommand.call_count, 3)
+        self.assertEqual(self.pool.addCommand.call_count, 5)
         self.assertEqual(self.subject.LOGGER.error.call_count, 0)
         self.assertIn("WARNING: GUCS ARE OUT OF SYNC", mock_stdout.getvalue())
         self.assertIn("bar", mock_stdout.getvalue())
@@ -284,12 +274,12 @@ class GpConfig(GpTestCase):
         self.subject.do_main()
 
         self.subject.LOGGER.info.assert_called_with("completed successfully with parameters '-c my_property_name -v 100 -m 20'")
-        self.assertEqual(self.pool.addCommand.call_count, 2)
+        self.assertEqual(self.pool.addCommand.call_count, 5)
         segment_command = self.pool.addCommand.call_args_list[0][0][0]
         self.assertTrue("my_property_name" in segment_command.cmdStr)
         value = base64.urlsafe_b64encode(pickle.dumps("100"))
         self.assertTrue(value in segment_command.cmdStr)
-        master_command = self.pool.addCommand.call_args_list[1][0][0]
+        master_command = self.pool.addCommand.call_args_list[4][0][0]
         self.assertTrue("my_property_name" in master_command.cmdStr)
         value = base64.urlsafe_b64encode(pickle.dumps("20"))
         self.assertTrue(value in master_command.cmdStr)
@@ -327,7 +317,7 @@ class GpConfig(GpTestCase):
         self.subject.do_main()
 
         self.subject.LOGGER.info.assert_called_with("completed successfully with parameters '-c my_hidden_guc_name -v 100 --skipvalidation'")
-        self.assertEqual(self.pool.addCommand.call_count, 2)
+        self.assertEqual(self.pool.addCommand.call_count, 5)
         segment_command = self.pool.addCommand.call_args_list[0][0][0]
         self.assertTrue("my_hidden_guc_name" in segment_command.cmdStr)
         master_command = self.pool.addCommand.call_args_list[1][0][0]

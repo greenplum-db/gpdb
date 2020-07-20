@@ -52,7 +52,6 @@ class GpStop(GpTestCase):
             patch('gpstop.unix', return_value=self.mock_unix),
             patch('gpstop.GpEraFile', return_value=self.mock_gperafile),
             patch('gpstop.GpArray.initFromCatalog'),
-            patch('gpstop.gphostcache.unix.Ping'),
             patch('gpstop.RemoteOperation'),
             patch('gpstop.base.WorkerPool'),
             patch('gpstop.socket.gethostname'),

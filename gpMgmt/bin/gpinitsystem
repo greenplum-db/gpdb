@@ -76,7 +76,6 @@ REMOTE_HOST_COUNT=0
 SINGLE_HOST_BATCH_LIMIT=4
 INPUT_CONFIG=""
 OUTPUT_CONFIG=""
-GPHOSTCACHELOOKUP=$WORKDIR/lib/gphostcachelookup.py
 STANDBY_RET_CODE=0
 
 #******************************************************************************
@@ -950,7 +949,7 @@ CREATE_QE_ARRAY () {
 	LAST_HOST=X
 	SEG_DIR_VECTOR=0
 	MIR_COUNT=-1
-	MASTER_HOST=`HOST_LOOKUP $MASTER_HOSTNAME`
+	MASTER_HOST=$MASTER_HOSTNAME
 	QD_PRIMARY_ARRAY=${MASTER_HOST}~${MASTER_HOSTNAME}~${MASTER_PORT}~${MASTER_DIRECTORY}/${SEG_PREFIX}${CONTENT_COUNT}~${DBID_COUNT}~${CONTENT_COUNT}~0
 	((DBID_COUNT=$DBID_COUNT+1));((CONTENT_COUNT=$CONTENT_COUNT+1))
 	for QE_PAIR in ${M_HOST_ARRAY[@]}
@@ -1283,10 +1282,7 @@ CREATE_QD_DB () {
 		BACKOUT_COMMAND "if [ -d $GP_DIR ]; then $EXPORT_LIB_PATH;export PGPORT=$GP_PORT; $PG_CTL -D $GP_DIR stop; fi"
 		BACKOUT_COMMAND "$ECHO \"Stopping Master instance\""
 		LOG_MSG "[INFO]:-Completed starting the Master in admin mode"
-		GP_HOSTNAME=`HOST_LOOKUP $GP_HOSTADDRESS`
-		if [ x"$GP_HOSTNAME" = x"__lookup_of_hostname_failed__" ]; then
-			ERROR_EXIT "[FATAL]:-Hostname lookup for host $GP_HOSTADDRESS failed."
-		fi
+		GP_HOSTNAME=$GP_HOSTADDRESS
 		PING_HOST $GP_HOSTNAME
 		RETVAL=$?
 		if [ $RETVAL -ne 0 ]; then
@@ -1296,17 +1292,6 @@ CREATE_QD_DB () {
 		LOAD_QE_SYSTEM_DATA $DEFAULTDB
 		SET_VAR $QD_PRIMARY_ARRAY
 		LOG_MSG "[INFO]:-End Function $FUNCNAME"
-}
-
-# returns hostname for given address or "__lookup_of_hostname_failed__" if hostname not found
-HOST_LOOKUP() {
-	res=`echo $1 | $GPHOSTCACHELOOKUP`
-	err_index=`echo $res | awk '{print index($0,"__lookup_of_hostname_failed__")}'`
-	if [ $err_index -ne 0 ]; then
-		echo "__lookup_of_hostname_failed__"
-	else
-		echo $res
-	fi
 }
 
 UPDATE_GPCONFIG () {
@@ -1343,10 +1328,7 @@ LOAD_QE_SYSTEM_DATA () {
 		do
 				SET_VAR $I
 				LOG_MSG "[INFO]:-Adding segment $GP_HOSTADDRESS to Master system tables"
-				GP_HOSTNAME=`HOST_LOOKUP $GP_HOSTADDRESS`
-				if [ x"$GP_HOSTNAME" = x"__lookup_of_hostname_failed__" ]; then
-					ERROR_EXIT "[FATAL]:-Hostname lookup for host $GP_HOSTADDRESS failed."
-				fi
+				GP_HOSTNAME=$GP_HOSTADDRESS
 				PING_HOST $GP_HOSTNAME
 				RETVAL=$?
 				if [ $RETVAL -ne 0 ]; then

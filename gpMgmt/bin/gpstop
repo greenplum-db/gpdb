@@ -21,7 +21,6 @@ try:
     from gppylib.db import dbconn
     from gppylib.db import catalog
     from gppylib.gparray import *
-    from gppylib import gphostcache
     from gppylib import userinput
     from gppylib import pgconf
     from gppylib.commands import unix
@@ -116,7 +115,6 @@ class GpStop:
         self.dburl = None
         self.conn = None
         self.gparray = None
-        self.hostcache = None
         self.gpversion = None
 
         logger.debug("Setting level of parallelism to: %d" % self.parallel)
@@ -255,11 +253,11 @@ class GpStop:
         """
 
         logger.info('Cleaning up leftover shared memory')
-        cluster_hosts = set([gphost for gphost in self.hostcache.get_hosts()])
+        cluster_hosts = self.gparray.get_hostlist()
 
         operations = []
         for gphost in cluster_hosts:
-            operations.append(RemoteOperation(CleanSharedMem(gphost.dbs), gphost.hostname))
+            operations.append(RemoteOperation(CleanSharedMem(self.gparray.getDbList()), gphost))
 
         operations.append(
             RemoteOperation(CleanSharedMem([self.gparray.master]), self.gparray.master.getSegmentHostName()))
@@ -554,15 +552,6 @@ class GpStop:
 
         logger.info("Targeting dbid %s for shutdown" % [seg.getSegmentDbId() for seg in segs])
 
-        self.hostcache = gphostcache.GpHostCache(self.gparray, self.pool, segs=segs)
-
-        failed_pings = self.hostcache.ping_hosts(self.pool)
-        for db in failed_pings:
-            logger.warning(
-                "Skipping startup of segdb on %s directory %s Ping Failed <<<<<<" % (db.hostname, db.datadir))
-            failed_seg_status.append(SegStopStatus(db, False, 'Failed to Ping on host: %s' % db.hostname))
-
-        self.hostcache.log_contents()
 
         if self.gparray.hasMirrors:
             # stop primaries
