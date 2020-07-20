@@ -508,7 +508,6 @@ SET_VERSION_SCRIPTS = \
 	sbin/gpsegstop.py \
 	sbin/gpupgrademirror.py \
 	lib/python/gppylib/programs/clsAddMirrors.py \
-	lib/python/gppylib/programs/clsHostCacheLookup.py \
 	lib/python/gppylib/programs/clsRecoverSegment.py \
 	lib/python/gppylib/programs/clsSystemState.py \
 	lib/python/gppylib/programs/gppkg.py \

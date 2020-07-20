@@ -18,7 +18,6 @@ try:
     from gppylib.gpparseopts import OptParser, OptChecker
     from gppylib.gparray import *
     from gppylib.gplog import get_default_logger, log_to_file_only
-    from gppylib import gphostcache
     from gppylib import userinput
     from gppylib.db import catalog
     from gppylib.commands import unix
