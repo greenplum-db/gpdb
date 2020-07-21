@@ -51,7 +51,7 @@ CREATE TABLE foo AS SELECT i a, i b FROM generate_series(1, 10) i;
 CREATE 10
 
 -- this query will be terminated by 'test pg_terminate_backend'
-1&:EXPLAIN ANALYZE CREATE TEMP TABLE t1 AS SELECT count(*) FROM QUERY_METRICS.foo WHERE pg_sleep(20) IS NULL;  <waiting ...>
+1&:EXPLAIN ANALYZE CREATE TEMP TABLE t1 AS SELECT count(*) FROM QUERY_METRICS.foo WHERE pg_sleep(200) IS NULL;  <waiting ...>
 -- terminate above query
 SELECT pg_terminate_backend(pid, 'test pg_terminate_backend') FROM pg_stat_activity WHERE query LIKE 'EXPLAIN ANALYZE CREATE TEMP TABLE t1 AS SELECT%' ORDER BY pid LIMIT 1;
  pg_terminate_backend 
@@ -84,7 +84,7 @@ SELECT count(*) FROM (SELECT 1 FROM gp_instrument_shmem_detail GROUP BY ssid, cc
 (1 row)
 
 -- this query will be cancelled by 'test pg_cancel_backend'
-2&:EXPLAIN ANALYZE CREATE TEMP TABLE t2 AS SELECT count(*) FROM QUERY_METRICS.foo WHERE pg_sleep(20) IS NULL;  <waiting ...>
+2&:EXPLAIN ANALYZE CREATE TEMP TABLE t2 AS SELECT count(*) FROM QUERY_METRICS.foo WHERE pg_sleep(200) IS NULL;  <waiting ...>
 -- cancel above query
 SELECT pg_cancel_backend(pid, 'test pg_cancel_backend') FROM pg_stat_activity WHERE query LIKE 'EXPLAIN ANALYZE CREATE TEMP TABLE t2 AS SELECT%' ORDER BY pid LIMIT 1;
  pg_cancel_backend 
@@ -114,7 +114,7 @@ SELECT count(*) FROM (SELECT 1 FROM gp_instrument_shmem_detail GROUP BY ssid, cc
 (1 row)
 
 -- this query will be cancelled by 'test pg_cancel_backend'
-3&:SET OPTIMIZER TO off;EXPLAIN ANALYZE INSERT INTO QUERY_METRICS.a SELECT *, pg_sleep(1) FROM generate_series(1,10);  <waiting ...>
+3&:SET OPTIMIZER TO off;EXPLAIN ANALYZE INSERT INTO QUERY_METRICS.a SELECT *, pg_sleep(20) FROM generate_series(1,10);  <waiting ...>
 
 -- validate plan nodes exist in instrument solts
 SELECT count(*) FROM pg_sleep(1);
@@ -171,7 +171,7 @@ SELECT count(*) FROM (SELECT 1 FROM gp_instrument_shmem_detail GROUP BY ssid, cc
 (1 row)
 
 -- this query will be cancelled by 'test pg_cancel_backend'
-4&:SET OPTIMIZER TO off;SELECT a, b, array_dims(array_agg(x)) FROM QUERY_METRICS.mergeappend_test r GROUP BY a, b UNION ALL SELECT NULL, NULL, array_dims(array_agg(x)) FROM QUERY_METRICS.mergeappend_test r, pg_sleep(10) ORDER BY 1,2;  <waiting ...>
+4&:SET OPTIMIZER TO off;SELECT a, b, array_dims(array_agg(x)) FROM QUERY_METRICS.mergeappend_test r GROUP BY a, b UNION ALL SELECT NULL, NULL, array_dims(array_agg(x)) FROM QUERY_METRICS.mergeappend_test r, pg_sleep(200) ORDER BY 1,2;  <waiting ...>
 
 -- validate plan nodes exist in instrument solts
 SELECT count(*) FROM pg_sleep(1);
@@ -221,7 +221,7 @@ SELECT count(*) FROM (SELECT 1 FROM gp_instrument_shmem_detail GROUP BY ssid, cc
 (1 row)
 
 -- this query will be cancelled by 'test pg_cancel_backend'
-5&:SET OPTIMIZER TO off;EXPLAIN ANALYZE INSERT INTO QUERY_METRICS.a(id) SELECT oid FROM pg_class, pg_sleep(10);  <waiting ...>
+5&:SET OPTIMIZER TO off;EXPLAIN ANALYZE INSERT INTO QUERY_METRICS.a(id) SELECT oid FROM pg_class, pg_sleep(200);  <waiting ...>
 
 -- validate QD and entrydb have instrumentations on each backend process
 SELECT count(*) FROM pg_sleep(1);
