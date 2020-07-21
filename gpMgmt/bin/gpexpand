@@ -1997,7 +1997,7 @@ WHERE
         for table in partition_tables:
             lock_sql_list.append('LOCK TABLE ONLY %s IN EXCLUSIVE MODE;' % table)
         lock_sql = '\n'.join(lock_sql_list)
-        lock_check_sql = """SELECT COUNT(1) FROM pg_stat_activity WHERE query = 'LOCK TABLE ONLY %s IN EXCLUSIVE MODE;'
+        lock_check_sql = """SELECT COUNT(1) FROM pg_stat_activity WHERE query like 'LOCK TABLE ONLY %s IN EXCLUSIVE MODE;%%'
         and datname = '%s';""" % (self.root_partition_name, self.dbname)
         # double check
         lock_count = dbconn.querySingleton(table_conn, lock_check_sql)
@@ -2088,7 +2088,7 @@ WHERE
 
         oid_sql = """SELECT '%s'::regclass::oid""" % self.root_partition_name
         rootoid = dbconn.querySingleton(table_conn, oid_sql)
-        lock_check_sql = """SELECT COUNT(1) FROM pg_stat_activity WHERE query = 'LOCK TABLE ONLY %s IN EXCLUSIVE MODE;' 
+        lock_check_sql = """SELECT COUNT(1) FROM pg_stat_activity WHERE query like 'LOCK TABLE ONLY %s IN EXCLUSIVE MODE;%%' 
         AND datname = '%s' AND waiting = 'f';""" % (self.root_partition_name, self.dbname)
         lock_count = dbconn.querySingleton(table_conn, lock_check_sql)
 
