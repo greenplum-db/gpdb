@@ -1527,7 +1527,7 @@ GetDistributedSnapshotMaxCount(DtxContext distributedTransactionContext)
 		return 0;
 
 	case DTX_CONTEXT_QD_DISTRIBUTED_CAPABLE:
-		return max_prepared_xacts;
+		return GetMaxSnapshotXidCount();
 
 	case DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER:
 	case DTX_CONTEXT_QE_TWO_PHASE_IMPLICIT_WRITER:
