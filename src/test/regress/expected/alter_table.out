@@ -2943,6 +2943,8 @@ NOTICE:  drop cascades to table test_drop_constr_child
 --
 ALTER TABLE IF EXISTS tt8 ADD COLUMN f int;
 NOTICE:  relation "tt8" does not exist, skipping
+ALTER TABLE IF EXISTS tt8 SET DISTRIBUTED BY(f);
+NOTICE:  relation "tt8" does not exist, skipping
 ALTER TABLE IF EXISTS tt8 ADD CONSTRAINT xxx PRIMARY KEY(f);
 NOTICE:  relation "tt8" does not exist, skipping
 ALTER TABLE IF EXISTS tt8 ADD CHECK (f BETWEEN 0 AND 10);
@@ -2956,8 +2958,8 @@ NOTICE:  relation "tt8" does not exist, skipping
 CREATE TABLE tt8(a int);
 CREATE SCHEMA alter2;
 ALTER TABLE IF EXISTS tt8 ADD COLUMN f int;
+ALTER TABLE IF EXISTS tt8 SET DISTRIBUTED BY(f);
 ALTER TABLE IF EXISTS tt8 ADD CONSTRAINT xxx PRIMARY KEY(f);
-NOTICE:  updating distribution policy to match new PRIMARY KEY
 ALTER TABLE IF EXISTS tt8 ADD CHECK (f BETWEEN 0 AND 10);
 ALTER TABLE IF EXISTS tt8 ALTER COLUMN f SET DEFAULT 0;
 ALTER TABLE IF EXISTS tt8 RENAME COLUMN f TO f1;

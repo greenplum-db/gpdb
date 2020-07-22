@@ -2095,6 +2095,65 @@ transformDistributedBy(ParseState *pstate,
 		distrkeys = likeDistributedBy->keyCols;
 	}
 
+	/**
+	 * check for unique index.
+	 * If distrkeys is not determined by the above process,
+	 * we consider the most common columns in all unique indexes
+	 * as the distribution keys.
+	 */
+	foreach(lc, cxt->inh_indexes)
+	{
+		IndexStmt  *index_stmt;
+		ListCell *cell;
+		List *new_distrkeys = NIL;
+
+		index_stmt = (IndexStmt *) lfirst(lc);
+		if (!index_stmt->unique)
+			continue;
+		if (distrkeys)
+		{
+			foreach(cell, index_stmt->indexParams)
+			{
+				IndexElem *iparam = lfirst(cell);
+				ListCell *dkcell;
+
+				/* FIXME: when iparam or iparam->name is NULL */
+				if (!iparam || !iparam->name)
+					continue;
+				foreach(dkcell, distrkeys)
+				{
+					DistributionKeyElem  *dk = (DistributionKeyElem *) lfirst(dkcell);
+					if (strcmp(dk->name, iparam->name) == 0)
+					{
+						new_distrkeys = lappend(new_distrkeys, dk);
+						break;
+					}
+				}
+			}
+			/* If there were no common columns, we're out of luck. */
+			if (new_distrkeys == NIL)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+						 errmsg("UNIQUE or PRIMARY KEY definitions are incompatible with each other"),
+						 errhint("When there are multiple PRIMARY KEY / UNIQUE constraints, they must have at least one column in common.")));
+		}
+		else
+		{
+			foreach(cell, index_stmt->indexParams)
+			{
+				IndexElem *iparam = lfirst(cell);
+				/* FIXME: when iparam or iparam->name is NULL */
+				if (iparam && iparam->name)
+				{
+					IndexElem *distrkey = makeNode(IndexElem);
+					distrkey->name = iparam->name;
+					distrkey->opclass = NULL;
+					new_distrkeys = lappend(new_distrkeys, distrkey);
+				}
+			}
+		}
+		distrkeys = new_distrkeys;
+	}
 	if (gp_create_table_random_default_distribution && NIL == distrkeys)
 	{
 		Assert(NULL == likeDistributedBy);

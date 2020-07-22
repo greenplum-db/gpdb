@@ -82,12 +82,11 @@ DETAIL:  Distribution key column "yy" is not included in the constraint.
 /* Ok to create multiple unique indexes */
 /* GPDB: This query will fail because unique index must contain all distribution key */
 CREATE TABLE inhg (x text UNIQUE, LIKE inhz INCLUDING INDEXES);
-ERROR:  UNIQUE constraint must contain all columns in the table's distribution key
-DETAIL:  Distribution key column "x" is not included in the constraint.
+ERROR:  UNIQUE or PRIMARY KEY definitions are incompatible with each other
+HINT:  When there are multiple PRIMARY KEY / UNIQUE constraints, they must have at least one column in common.
 CREATE TABLE inhg (x text, LIKE inhz INCLUDING INDEXES);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'x' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  updating distribution policy to match new UNIQUE constraint
 INSERT INTO inhg (xx, yy, x) VALUES ('test', 5, 10);
 INSERT INTO inhg (xx, yy, x) VALUES ('test', 10, 15);
 INSERT INTO inhg (xx, yy, x) VALUES ('foo', 10, 15); -- should fail
