@@ -51,7 +51,10 @@ select validate_tablespace_symlink('@testtablespace@/some_basebackup_datadir', '
 -- Cleanup things we've created
 0U: select pg_drop_replication_slot('some_replication_slot');
 drop database some_database_with_tablespace;
-drop database some_database_without_tablespace;
+-- Need to poll until db drop succeeds since after 2q: happens the PGPROC
+-- on the server side might be still not released when we run database drop.
+-- This makes the test flaky.
+!\retcode bash -c 'for ((i = 0; i < 5; i++)); do dropdb some_database_without_tablespace && exit 0; done; exit 1';
 drop tablespace some_basebackup_tablespace;
 !\retcode rm -rf @testtablespace@/some_basebackup_datadir/;
 !\retcode rm -rf @testtablespace@/some_basebackup_tablespace/100;
@@ -91,7 +94,10 @@ select validate_tablespace_symlink('@testtablespace@/some_basebackup_datadir', '
 
 -- Cleanup things we've created
 0U: select pg_drop_replication_slot('some_replication_slot');
-drop database some_database_without_tablespace;
+-- Need to poll until db drop succeeds since after 2q: happens the PGPROC
+-- on the server side might be still not released when we run database drop.
+-- This makes the test flaky.
+!\retcode bash -c 'for ((i = 0; i < 5; i++)); do dropdb some_database_without_tablespace && exit 0; done; exit 1';
 drop tablespace some_basebackup_tablespace;
 !\retcode rm -rf @testtablespace@/some_basebackup_datadir/;
 !\retcode rm -rf @testtablespace@/some_basebackup_tablespace_c0/100;

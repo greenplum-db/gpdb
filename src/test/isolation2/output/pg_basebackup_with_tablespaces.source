@@ -103,8 +103,14 @@ select validate_tablespace_symlink('@testtablespace@/some_basebackup_datadir', '
 (1 row)
 drop database some_database_with_tablespace;
 DROP
-drop database some_database_without_tablespace;
-DROP
+-- Need to poll until db drop succeeds since after 2q: happens the PGPROC
+-- on the server side might be still not released when we run database drop.
+-- This makes the test flaky.
+!\retcode bash -c 'for ((i = 0; i < 5; i++)); do dropdb some_database_without_tablespace && exit 0; done; exit 1';
+-- start_ignore
+
+-- end_ignore
+(exited with code 0)
 drop tablespace some_basebackup_tablespace;
 DROP
 !\retcode rm -rf @testtablespace@/some_basebackup_datadir/;
@@ -192,8 +198,14 @@ select validate_tablespace_symlink('@testtablespace@/some_basebackup_datadir', '
 --------------------------
                           
 (1 row)
-drop database some_database_without_tablespace;
-DROP
+-- Need to poll until db drop succeeds since after 2q: happens the PGPROC
+-- on the server side might be still not released when we run database drop.
+-- This makes the test flaky.
+!\retcode bash -c 'for ((i = 0; i < 5; i++)); do dropdb some_database_without_tablespace && exit 0; done; exit 1';
+-- start_ignore
+
+-- end_ignore
+(exited with code 0)
 drop tablespace some_basebackup_tablespace;
 DROP
 !\retcode rm -rf @testtablespace@/some_basebackup_datadir/;
