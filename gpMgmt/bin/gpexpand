@@ -2130,6 +2130,7 @@ WHERE
         if not cancel_flag:
             if self.root_partition_name is not None:
                 self.preprocess_partition_table(table_conn, status_conn, status_url, table_url)
+
             sql = 'ALTER %s TABLE %s %s EXPAND TABLE' % (external_str, only_str, self.fq_name)
             logger.info('Expanding %s.%s' % (self.dbname.decode('utf-8'), self.fq_name.decode('utf-8')))
             logger.debug("Expand SQL: %s" % sql.decode('utf-8'))
@@ -2139,6 +2140,10 @@ WHERE
                 sql = 'ANALYZE %s' % (self.fq_name)
                 logger.info('Analyzing %s' % (self.fq_name.decode('utf-8')))
                 dbconn.execSQL(table_conn, sql)
+
+            return True
+
+        # I can only get here if the cancel flag is True
         return False
 
     def mark_finished(self, status_conn, start_time, finish_time):
