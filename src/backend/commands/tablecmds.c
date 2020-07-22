@@ -15394,10 +15394,12 @@ ATExecExpandTableCTAS(AlterTableCmd *rootCmd, Relation rel, AlterTableCmd *cmd)
 	 * this we must close the rel, since it needs to be forgotten by
 	 * the cache, we keep the lock though. ATRewriteCatalogs() knows
 	 * that we've closed the relation here.
+	 * We need to change the catalog so upgrade lock here to avoid the concurrent select 
+	 * transaction get inconsistent catalog data during planning.
 	 */
 	heap_close(rel, NoLock);
-    rel = heap_open(relid, AccessExclusiveLock);
-    heap_close(rel, NoLock);
+	rel = heap_open(relid, AccessExclusiveLock);
+	heap_close(rel, NoLock);
 	rel = NULL;
 	tmprelid = RangeVarGetRelid(tmprv, NoLock, false);
 	swap_relation_files(relid, tmprelid,
