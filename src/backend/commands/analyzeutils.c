@@ -1169,6 +1169,12 @@ leaf_parts_analyzed(Oid attrelid, Oid relid_exclude, List *va_cols, int elevel)
 	ListCell   *lc,
 			   *lc_col;
 
+	/*
+	 * The first loop only make sure all leaf tables are analyzed through
+	 * pg_class catalog, and don't touch any leaf tables' pg_statistic
+	 * and pg_attribute tuples to avoid overhead cost if there still leaf
+	 * tables not analyzed. Return false once find a leaf table not analyzed.
+	 */
 	foreach(lc, oid_list)
 	{
 		Oid			partRelid = lfirst_oid(lc);
@@ -1179,8 +1185,32 @@ leaf_parts_analyzed(Oid attrelid, Oid relid_exclude, List *va_cols, int elevel)
 		float4		relTuples = get_rel_reltuples(partRelid);
 		int32		relpages = get_rel_relpages(partRelid);
 
+		/* Partition is not analyzed */
+		if (relTuples == 0.0 && relpages == 0)
+		{
+			if (relid_exclude == InvalidOid)
+				ereport(elevel,
+						(errmsg("partition %s is not analyzed, so ANALYZE will collect sample for stats calculation",
+								get_rel_name(partRelid))));
+			else
+				ereport(elevel,
+						(errmsg("auto merging of leaf partition stats to calculate root partition stats is not possible because partition %s is not analyzed",
+								get_rel_name(partRelid))));
+			return false;
+		}
+	}
+
+	foreach(lc, oid_list)
+	{
+		Oid			partRelid = lfirst_oid(lc);
+
+		if (partRelid == relid_exclude)
+			continue;
+
+		float4		relTuples = get_rel_reltuples(partRelid);
+
 		/* Partition is analyzed and we detect it is empty */
-		if (relTuples == 0.0 && relpages > 0)
+		if (relTuples == 0.0)
 			continue;
 
 		all_parts_empty = false;
@@ -1224,7 +1254,7 @@ leaf_parts_analyzed(Oid attrelid, Oid relid_exclude, List *va_cols, int elevel)
 			HeapTuple	heaptupleStats = fetch_leaf_att_stats(partRelid, child_attno);
 
 			/* if there is no colstats */
-			if (!HeapTupleIsValid(heaptupleStats) || relpages == 0)
+			if (!HeapTupleIsValid(heaptupleStats))
 			{
 				if (relid_exclude == InvalidOid)
 					ereport(elevel,
