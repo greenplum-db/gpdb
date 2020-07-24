@@ -1746,17 +1746,17 @@ NOTICE:  CREATE TABLE will create partition "foo_1_prt_new_part" for table "foo"
 NOTICE:  CREATE TABLE will create partition "foo_1_prt_def_part" for table "foo"
 set client_min_messages to 'log';
 ANALYZE foo_1_prt_2;
-LOG:  Auto merging of leaf partition stats to calculate root partition stats is not possible because column a of partition foo_1_prt_3 is not analyzed
+LOG:  auto merging of leaf partition stats to calculate root partition stats is not possible because partition foo_1_prt_3 is not analyzed
 LOG:  Computing Scalar Stats : column a
 LOG:  Computing Scalar Stats : column c
 LOG:  Computing Scalar Stats : column d
 ANALYZE foo_1_prt_3;
-LOG:  Auto merging of leaf partition stats to calculate root partition stats is not possible because column a of partition foo_1_prt_new_part is not analyzed
+LOG:  auto merging of leaf partition stats to calculate root partition stats is not possible because partition foo_1_prt_new_part is not analyzed
 LOG:  Computing Scalar Stats : column a
 LOG:  Computing Scalar Stats : column c
 LOG:  Computing Scalar Stats : column d
 ANALYZE foo_1_prt_new_part;
-LOG:  Auto merging of leaf partition stats to calculate root partition stats is not possible because column a of partition foo_1_prt_def_part is not analyzed
+LOG:  auto merging of leaf partition stats to calculate root partition stats is not possible because partition foo_1_prt_def_part is not analyzed
 LOG:  Computing Scalar Stats : column a
 LOG:  Computing Scalar Stats : column c
 LOG:  Computing Scalar Stats : column d
@@ -1809,13 +1809,13 @@ NOTICE:  CREATE TABLE will create partition "foo_1_prt_new_part" for table "foo"
 NOTICE:  CREATE TABLE will create partition "foo_1_prt_def_part" for table "foo"
 set client_min_messages to 'log';
 ANALYZE foo_1_prt_2(a);
-LOG:  Auto merging of leaf partition stats to calculate root partition stats is not possible because column a of partition foo_1_prt_3 is not analyzed
+LOG:  auto merging of leaf partition stats to calculate root partition stats is not possible because partition foo_1_prt_3 is not analyzed
 LOG:  Computing Scalar Stats : column a
 ANALYZE foo_1_prt_3(a);
-LOG:  Auto merging of leaf partition stats to calculate root partition stats is not possible because column a of partition foo_1_prt_new_part is not analyzed
+LOG:  auto merging of leaf partition stats to calculate root partition stats is not possible because partition foo_1_prt_new_part is not analyzed
 LOG:  Computing Scalar Stats : column a
 ANALYZE foo_1_prt_new_part(a);
-LOG:  Auto merging of leaf partition stats to calculate root partition stats is not possible because column a of partition foo_1_prt_def_part is not analyzed
+LOG:  auto merging of leaf partition stats to calculate root partition stats is not possible because partition foo_1_prt_def_part is not analyzed
 LOG:  Computing Scalar Stats : column a
 ANALYZE foo_1_prt_def_part(a);
 LOG:  Computing Scalar Stats : column a
@@ -1852,13 +1852,13 @@ NOTICE:  CREATE TABLE will create partition "foo_1_prt_new_part" for table "foo"
 NOTICE:  CREATE TABLE will create partition "foo_1_prt_def_part" for table "foo"
 set client_min_messages to 'log';
 ANALYZE foo_1_prt_2(d);
-LOG:  Auto merging of leaf partition stats to calculate root partition stats is not possible because column d of partition foo_1_prt_3 is not analyzed
+LOG:  auto merging of leaf partition stats to calculate root partition stats is not possible because partition foo_1_prt_3 is not analyzed
 LOG:  Computing Scalar Stats : column d
 ANALYZE foo_1_prt_3(d);
-LOG:  Auto merging of leaf partition stats to calculate root partition stats is not possible because column d of partition foo_1_prt_new_part is not analyzed
+LOG:  auto merging of leaf partition stats to calculate root partition stats is not possible because partition foo_1_prt_new_part is not analyzed
 LOG:  Computing Scalar Stats : column d
 ANALYZE foo_1_prt_new_part(d);
-LOG:  Auto merging of leaf partition stats to calculate root partition stats is not possible because column d of partition foo_1_prt_def_part is not analyzed
+LOG:  auto merging of leaf partition stats to calculate root partition stats is not possible because partition foo_1_prt_def_part is not analyzed
 LOG:  Computing Scalar Stats : column d
 ANALYZE foo_1_prt_def_part(d);
 LOG:  Computing Scalar Stats : column d
@@ -1890,9 +1890,9 @@ set client_min_messages to 'log';
 -- ANALYZE ROOTPARTITION will sample the table and compute statistics since there
 -- is not stats to be merged in the leaf partitions
 ANALYZE ROOTPARTITION foo;
-LOG:  column a of partition foo_1_prt_1 is not analyzed, so ANALYZE will collect sample for stats calculation
-LOG:  column b of partition foo_1_prt_1 is not analyzed, so ANALYZE will collect sample for stats calculation
-LOG:  column c of partition foo_1_prt_1 is not analyzed, so ANALYZE will collect sample for stats calculation
+LOG:  partition foo_1_prt_1 is not analyzed, so ANALYZE will collect sample for stats calculation
+LOG:  partition foo_1_prt_1 is not analyzed, so ANALYZE will collect sample for stats calculation
+LOG:  partition foo_1_prt_1 is not analyzed, so ANALYZE will collect sample for stats calculation
 LOG:  Computing Scalar Stats : column a
 LOG:  Computing Scalar Stats : column b
 LOG:  Computing Scalar Stats : column c
