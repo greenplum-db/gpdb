@@ -4,7 +4,7 @@
      Objective: The join cardinality estimate for multiple distribution keys with other
      predicates on the same table should be accurate.
       
-     The query returns around 80 rows when run, and we should estimate around 200 rows when
+     The query returns around 80 rows when run, and we should estimate around 1-1.5k rows when
      optimizer_damping_factor_join is set to 0. When `optimizer_damping_factor_join` is set
      to .01 (the default), we estimate ~30K rows returned.
      
@@ -19,8 +19,8 @@
      EXPLAIN SELECT * FROM t1 JOIN t2 on t1.a = t2.a AND t1.b = t2.b AND t1.c = t2.c AND t1.d = t2.d;
                                              QUERY PLAN
      ------------------------------------------------------------------------------------------
-      Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.56 rows=227 width=32)
-        ->  Hash Join  (cost=0.00..862.53 rows=76 width=32)
+      Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.74 rows=1369 width=32)
+        ->  Hash Join  (cost=0.00..862.58 rows=457 width=32)
               Hash Cond: ((t1.a = t2.a) AND (t1.b = t2.b) AND (t1.c = t2.c) AND (t1.d = t2.d))
               ->  Seq Scan on t1  (cost=0.00..431.01 rows=334 width=16)
               ->  Hash  (cost=431.01..431.01 rows=334 width=16)
@@ -690,7 +690,7 @@
     <dxl:Plan Id="0" SpaceSize="32">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.561560" Rows="226.529936" Width="32"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.740340" Rows="1368.264678" Width="32"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -722,7 +722,7 @@
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="Inner">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.534545" Rows="226.529936" Width="32"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.577170" Rows="1368.264678" Width="32"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">

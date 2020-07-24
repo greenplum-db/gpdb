@@ -5,7 +5,7 @@
      predicates on the same table should be completely indepedent because
      we assume columns a and b are not correlated and are independent of any other column
 	   
-     The query returns around 100 rows when run, and we should estimate around 100 rows when
+     The query returns around 100 rows when run, and we should estimate around 900-1000 rows when
      optimizer_damping_factor_join is set to 0. When `optimizer_damping_factor_join` is set
      to .01 (the default), we estimate ~10K rows returned.
      
@@ -20,8 +20,8 @@
      EXPLAIN SELECT * FROM t1 JOIN t2 on t1.a = t2.a AND t1.c = t2.c;
                                         QUERY PLAN
      --------------------------------------------------------------------------------
-      Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.32 rows=97 width=24)
-        ->  Hash Join  (cost=0.00..862.31 rows=33 width=24)
+      Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.42 rows=971 width=24)
+        ->  Hash Join  (cost=0.00..862.33 rows=324 width=24)
               Hash Cond: ((t1.a = t2.a) AND (t1.c = t2.c))
               ->  Seq Scan on t1  (cost=0.00..431.01 rows=334 width=12)
               ->  Hash  (cost=431.01..431.01 rows=334 width=12)
@@ -1223,7 +1223,7 @@
     <dxl:Plan Id="0" SpaceSize="16">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.317337" Rows="96.116878" Width="24"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.420052" Rows="970.732885" Width="24"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -1249,7 +1249,7 @@
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="Inner">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.308741" Rows="96.116878" Width="24"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.333230" Rows="970.732885" Width="24"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
