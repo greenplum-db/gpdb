@@ -32,6 +32,7 @@
 
 #include "naucrates/statistics/CJoinStatsProcessor.h"
 #include "naucrates/md/CMDIdRelStats.h"
+#include "gpopt/cost/ICostModelParams.h"
 
 
 using namespace gpopt;
@@ -46,7 +47,10 @@ using namespace gpopt;
 // prohibitively high penalty for cross products when in GreedyAvoidXProd
 #define GPOPT_DPV2_CROSS_JOIN_GREEDY_PENALTY 1e9
 
-
+// from cost model used during optimization in CCostModelParamsGPDB.cpp
+#define BCAST_SEND_COST 4.965e-05
+#define BCAST_RECV_COST 1.35e-06
+#define SEQ_SCAN_COST 5.50e-07
 //---------------------------------------------------------------------------
 //	@function:
 //		CJoinOrderDPv2::CJoinOrderDPv2
@@ -82,7 +86,7 @@ CJoinOrderDPv2::CJoinOrderDPv2
 
 	m_bitset_to_group_info_map = GPOS_NEW(mp) BitSetToGroupInfoMap(mp);
 
-	// Contains top k expressions for a general DP algorithm, without considering cost of motitions/PS
+	// Contains top k expressions for a general DP algorithm, without considering cost of motions/PS
 	m_top_k_expressions = GPOS_NEW(mp) CKHeap<SExpressionInfoArray, SExpressionInfo>
 										(
 										 mp,
@@ -837,7 +841,7 @@ void CJoinOrderDPv2::RecursivelyMarkEdgesAsUsed(CExpression *expr)
 // If the right atom is a PT, then we need to check if the left expression has a PS that may satisfy it.
 // If it is, we mark this SExpressionInfo as containing a PS
 // We only consider linear trees here, since bushy trees would increase the search space and increase the
-// chance of motitions between the PS and PT, which then would fail requirements during optimization
+// chance of motions between the PS and PT, which then would fail requirements during optimization
 void
 CJoinOrderDPv2::PopulateDPEInfo
 	(
@@ -872,19 +876,18 @@ CJoinOrderDPv2::PopulateDPEInfo
 					{
 						SExpressionInfo *atom_ps = (*(*atom_groups)[iter_ps.Bit()]->m_best_expr_info_array)[0];
 						// This is a bit simplistic. We calculate how much we are reducing the cardinality of the atom, but also take into account the cost of broadcasting the inner rows. If the number of rows broadcasted is much larger than the savings, then PS will likely not benefit in this case
-						// The below numbers are from the cost model used during optimization
-						// broadcast send = 4.965e-05
-						// bcast receive = 1.35e-06
-						// table scan = 5.50e-07
-						// Therefore, 1 bcast receive == 2.45 scans, 1 bcast send = 90.27 scans
+						// The numbers are from the cost model used during optimization
 
 						// for a select(some_non_get_node()) ==> 0.9
 						// for a non-select node (won't even come here) ==> 0.0, in effect
 						// for a select(get) ==> 1 - (row count of select / row count of get)
 
-						CDouble percent_reduction = .9; // an arbitary default
-						CDouble num_segments = COptCtxt::PoctxtFromTLS()->GetCostModel()->UlHosts();
-						CDouble broadcast_penalty = part_selector_group_info->m_cardinality * ((num_segments * 2.45) + 90.27);
+						CDouble percent_reduction = .9; // an arbitary default if the logical operator is not a simple select
+						ICostModel *cost_model = COptCtxt::PoctxtFromTLS()->GetCostModel();
+						CDouble num_segments = cost_model->UlHosts();
+						CDouble distribution_cost_factor = (num_segments * BCAST_RECV_COST + BCAST_SEND_COST) / SEQ_SCAN_COST;
+						CDouble broadcast_penalty = part_selector_group_info->m_cardinality * distribution_cost_factor;
+
 						if (atom_ps->m_atom_base_table_rows.Get() > 0){
 							percent_reduction = (1 - (atom_ps->m_cost.Get() / atom_ps->m_atom_base_table_rows.Get()));
 						}
@@ -1109,7 +1112,6 @@ CJoinOrderDPv2::GreedySearchJoinOrders
 			ComputeCost(join_expr_info, join_group_info->m_cardinality);
 			CDouble join_cost = join_expr_info->GetCost();
 
-
 			if (NULL == best_expr_info_in_level || join_cost < best_cost_in_level)
 			{
 				best_group_info_in_level = join_group_info;
@@ -1171,8 +1173,6 @@ CJoinOrderDPv2::LookupOrCreateGroupInfo
 	{
 		// this is a group we haven't seen yet, create a new group info and derive stats, if needed
 		group_info = GPOS_NEW(m_mp) SGroupInfo(m_mp, atoms);
-
-
 		if (!stats_expr_info->m_properties.Satisfies(EJoinOrderStats))
 		{
 			SExpressionProperties stats_props(EJoinOrderStats);
@@ -1320,7 +1320,7 @@ CJoinOrderDPv2::PexprExpand()
 	SLevelInfo *atom_level = Level(1);
 
 	// the atoms all have stats derived
-	SExpressionProperties atom_props(EJoinOrderStats+EJoinOrderDP);
+	SExpressionProperties atom_props(EJoinOrderStats + EJoinOrderDP);
 
 	// populate level 1 with the atoms (the logical children of the NAry join)
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();

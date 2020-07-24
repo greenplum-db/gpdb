@@ -369,7 +369,7 @@ namespace gpopt
 			static
 			CTableDescriptor *PtabdescFromTableGet(COperator *pop);
 
-			// returns the output columns for selected operators
+			// returns the output columns for selected operator
 			static
 			CColRefArray *PoutputColsFromTableGet(COperator *pop);
 			
