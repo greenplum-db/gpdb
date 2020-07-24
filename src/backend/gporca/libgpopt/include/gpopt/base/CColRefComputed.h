@@ -66,15 +66,6 @@ namespace gpopt
 				return false;
 			}
 
-			// is column a distribution column?
-			virtual
-			BOOL IsDistCol() const
-			{
-				// we cannot introduce distribution columns as computed column
-				return false;
-			};
-
-
 	}; // class CColRefComputed
 
 }

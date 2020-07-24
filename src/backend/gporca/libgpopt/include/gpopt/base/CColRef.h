@@ -181,10 +181,6 @@ namespace gpopt
 			virtual
 			BOOL IsSystemCol() const = 0;
 
-			// is column a distribution column?
-			virtual
-			BOOL IsDistCol() const = 0;
-
 			// print
 			IOstream &OsPrint(IOstream &) const;
 

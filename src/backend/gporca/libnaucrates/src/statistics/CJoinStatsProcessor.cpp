@@ -9,6 +9,8 @@
 //		Statistics helper routines for processing all join types
 //---------------------------------------------------------------------------
 
+#include "gpopt/base/CColRefTable.h"
+
 #include "gpopt/operators/CLogicalIndexApply.h"
 #include "gpopt/operators/CLogicalNAryJoin.h"
 #include "gpopt/operators/CPredicateUtils.h"
@@ -430,7 +432,8 @@ CJoinStatsProcessor::SetResultingJoinStats
 			mdid_pair->Append(mdid_inner);
 			mdid_pair->Sort();
 
-			if (colref_outer->IsDistCol() && colref_inner->IsDistCol())
+			if (CColRefTable::PcrConvert(colref_outer)->IsDistCol() &&
+				CColRefTable::PcrConvert(colref_inner)->IsDistCol())
 			{
 				both_dist_keys = true;
 			}
