@@ -11,6 +11,7 @@
 #include "postgres.h"
 
 #include "access/heapam.h"
+#include "catalog/indexing.h"
 #include "catalog/pg_collation.h"
 #include "catalog/pg_statistic.h"
 #include "cdb/cdbhash.h"
@@ -22,6 +23,7 @@
 #include "parser/parse_oper.h"
 #include "utils/builtins.h"
 #include "utils/datum.h"
+#include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
 #include "utils/hsearch.h"
@@ -1037,6 +1039,91 @@ needs_sample(VacAttrStats **vacattrstats, int attr_cnt)
 }
 
 /*
+ * fetch_leaf_attnum - retrieve leaf table's attribute number by the
+ * attribute name through index scan on pg_attribute table.
+ */
+AttrNumber
+fetch_leaf_attnum(Oid leafRelid, const char* attname)
+{
+	Relation	rel;
+	ScanKeyData skey[2];
+	SysScanDesc sscan;
+	HeapTuple	tuple = NULL;
+	Form_pg_attribute attForm;
+	AttrNumber	result = InvalidAttrNumber;
+
+	rel = heap_open(AttributeRelationId, AccessShareLock);
+
+	ScanKeyInit(&skey[0],
+				Anum_pg_attribute_attrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(leafRelid));
+	ScanKeyInit(&skey[1],
+				Anum_pg_attribute_attname,
+				BTEqualStrategyNumber, F_NAMEEQ,
+				CStringGetDatum(attname));
+
+	sscan = systable_beginscan(rel, AttributeRelidNameIndexId, true,
+							   NULL, 2, skey);
+
+	tuple = systable_getnext(sscan);
+	if (HeapTupleIsValid(tuple))
+	{
+		attForm = (Form_pg_attribute) GETSTRUCT(tuple);
+		result = attForm->attnum;
+	}
+
+	systable_endscan(sscan);
+	heap_close(rel, AccessShareLock);
+
+	return result;
+}
+
+/*
+ * fetch_leaf_att_stats - retrieve leaf table's stats info
+ * through index scan on pg_statistic table and copy the tuple.
+ *
+ * Remember to free the returned tuple if not NULL.
+ */
+HeapTuple
+fetch_leaf_att_stats(Oid leafRelid, AttrNumber leafAttNum)
+{
+	Relation	rel;
+	ScanKeyData skey[3];
+	SysScanDesc sscan;
+	HeapTuple	tuple = NULL;
+
+	rel = heap_open(StatisticRelationId, AccessShareLock);
+
+	ScanKeyInit(&skey[0],
+				Anum_pg_statistic_starelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(leafRelid));
+	ScanKeyInit(&skey[1],
+				Anum_pg_statistic_staattnum,
+				BTEqualStrategyNumber, F_INT2EQ,
+				Int16GetDatum(leafAttNum));
+	ScanKeyInit(&skey[2],
+				Anum_pg_statistic_stainherit,
+				BTEqualStrategyNumber, F_BOOLEQ,
+				BoolGetDatum(false));
+
+	sscan = systable_beginscan(rel, StatisticRelidAttnumInhIndexId, true,
+							   NULL, 3, skey);
+
+	tuple = systable_getnext(sscan);
+	if (HeapTupleIsValid(tuple))
+	{
+		tuple = heap_copytuple(tuple);
+	}
+
+	systable_endscan(sscan);
+	heap_close(rel, AccessShareLock);
+
+	return tuple;
+}
+
+/*
  *	leaf_parts_analyzed() -- checks if all the leaf partitions are analyzed
  *                           for each requested column to be analyzed
  *
@@ -1081,6 +1168,12 @@ leaf_parts_analyzed(Oid attrelid, Oid relid_exclude, List *va_cols, int elevel)
 	ListCell   *lc,
 			   *lc_col;
 
+	/*
+	 * The first loop only make sure all leaf tables are analyzed through
+	 * pg_class catalog, and don't touch any leaf tables' pg_statistic
+	 * and pg_attribute tuples to avoid overhead cost if there still leaf
+	 * tables not analyzed. Return false once find a leaf table not analyzed.
+	 */
 	foreach(lc, oid_list)
 	{
 		Oid			partRelid = lfirst_oid(lc);
@@ -1091,8 +1184,32 @@ leaf_parts_analyzed(Oid attrelid, Oid relid_exclude, List *va_cols, int elevel)
 		float4		relTuples = get_rel_reltuples(partRelid);
 		int32		relpages = get_rel_relpages(partRelid);
 
+		/* Partition is not analyzed */
+		if (relTuples == 0.0 && relpages == 0)
+		{
+			if (relid_exclude == InvalidOid)
+				ereport(elevel,
+						(errmsg("partition %s is not analyzed, so ANALYZE will collect sample for stats calculation",
+								get_rel_name(partRelid))));
+			else
+				ereport(elevel,
+						(errmsg("auto merging of leaf partition stats to calculate root partition stats is not possible because partition %s is not analyzed",
+								get_rel_name(partRelid))));
+			return false;
+		}
+	}
+
+	foreach(lc, oid_list)
+	{
+		Oid			partRelid = lfirst_oid(lc);
+
+		if (partRelid == relid_exclude)
+			continue;
+
+		float4		relTuples = get_rel_reltuples(partRelid);
+
 		/* Partition is analyzed and we detect it is empty */
-		if (relTuples == 0.0 && relpages > 0)
+		if (relTuples == 0.0)
 			continue;
 
 		all_parts_empty = false;
@@ -1104,13 +1221,39 @@ leaf_parts_analyzed(Oid attrelid, Oid relid_exclude, List *va_cols, int elevel)
 			 * analyzed.
 			 */
 			AttrNumber	attnum = lfirst_int(lc_col);
-			const char *attname = get_relid_attribute_name(attrelid, attnum);
-			AttrNumber	child_attno = get_attnum(partRelid, attname);
 
-			HeapTuple	heaptupleStats = get_att_stats(partRelid, child_attno);
+			/*
+			 * Here, using the root table's attnum to retrieve the attname. And then use
+			 * the attname to retrieve the real attnum in current leaf table.
+			 * This is required because modification on root partition columns will cause
+			 * inconsistent attnum between root table and new added leaf tables.
+			 */
+			const char *attname = get_relid_attribute_name(attrelid, attnum);
+
+			/*
+			 * fetch_leaf_attnum and fetch_leaf_att_stats retrieve leaf partition
+			 * table's pg_attribute tuple and pg_statistic tuple through index scan
+			 * instead of system catalog cache. Since if using system catalog cache,
+			 * the total tuple entries insert into the cache will up to:
+			 * (number_of_leaf_tables * number_of_column_in_this_table) pg_attribute tuples
+			 * +
+			 * (number_of_leaf_tables * number_of_column_in_this_table) pg_statistic tuples
+			 * which could use extremely large memroy in CacheMemoryContext.
+			 * This happens when most of the leaf tables are analyzed. And the current loop
+			 * will loop lots of leaf tables.
+			 *
+			 * fetch_leaf_att_stats copy the original tuple, so remember to free it.
+			 *
+			 * As a side-effect, if insert/update/copy several leaf tables which under same
+			 * root partition table in same session will be much slower since auto_stats
+			 * will call this function everytime the leaf table gets update, and we don't
+			 * rely on system catalog cache now.
+			 */
+			AttrNumber	child_attno = fetch_leaf_attnum(partRelid, attname);
+			HeapTuple	heaptupleStats = fetch_leaf_att_stats(partRelid, child_attno);
 
 			/* if there is no colstats */
-			if (!HeapTupleIsValid(heaptupleStats) || relpages == 0)
+			if (!HeapTupleIsValid(heaptupleStats))
 			{
 				if (relid_exclude == InvalidOid)
 					ereport(elevel,

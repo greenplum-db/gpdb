@@ -4198,17 +4198,40 @@ merge_leaf_stats(VacAttrStatsP stats,
 	int totalhll_count = 0;
 	foreach (lc, oid_list)
 	{
-		Oid relid = lfirst_oid(lc);
-		colAvgWidth =
-			colAvgWidth +
-			get_attavgwidth(relid, stats->attr->attnum) * relTuples[i];
-		nullCount = nullCount +
-					get_attnullfrac(relid, stats->attr->attnum) * relTuples[i];
+		Oid		leaf_relid = lfirst_oid(lc);
+		int32	stawidth = 0;
+		float4	stanullfrac = 0.0;
 
+		/*
+		 * Here, using the root table's attnum to retrieve the attname. And then use
+		 * the attname to retrieve the real attnum in current leaf table.
+		 * This is required because modification on root partition columns will cause
+		 * inconsistent attnum between root table and new added leaf tables.
+		 */
 		const char *attname = get_relid_attribute_name(stats->attr->attrelid, stats->attr->attnum);
-		AttrNumber child_attno = get_attnum(relid, attname);
 
-		heaptupleStats[i] = get_att_stats(relid, child_attno);
+		/*
+		 * fetch_leaf_attnum and fetch_leaf_att_stats retrieve leaf partition
+		 * table's pg_attribute tuple and pg_statistic tuple through index scan
+		 * instead of system catalog cache. Since if using system catalog cache,
+		 * the total tuple entries insert into the cache will up to:
+		 * (number_of_leaf_tables * number_of_column_in_this_table) pg_attribute tuples
+		 * +
+		 * (number_of_leaf_tables * number_of_column_in_this_table) pg_statistic tuples
+		 * which could use extremely large memroy in CacheMemoryContext.
+		 * This happens when all of the leaf tables are analyzed. And the current function
+		 * will execute for all columns.
+		 *
+		 * fetch_leaf_att_stats copy the original tuple, so remember to free it.
+		 *
+		 * As a side-effect, ANALYZE same root table serveral times in same session is much
+		 * more slower than before since we don't rely on system catalog cache.
+		 *
+		 * But we still using the tuple descriptor in system catalog cache to retrieve
+		 * attribute in fetched tuples. See get_attstatsslot.
+		 */
+		AttrNumber child_attno = fetch_leaf_attnum(leaf_relid, attname);
+		heaptupleStats[i] = fetch_leaf_att_stats(leaf_relid, child_attno);
 
 		// if there is no colstats, we can skip this partition's stats
 		if (!HeapTupleIsValid(heaptupleStats[i]))
@@ -4216,6 +4239,11 @@ merge_leaf_stats(VacAttrStatsP stats,
 			i++;
 			continue;
 		}
+
+		stawidth = ((Form_pg_statistic) GETSTRUCT(heaptupleStats[i]))->stawidth;
+		stanullfrac = ((Form_pg_statistic) GETSTRUCT(heaptupleStats[i]))->stanullfrac;
+		colAvgWidth = colAvgWidth + (stawidth > 0 ? stawidth : 0) * relTuples[i];
+		nullCount = nullCount + (stanullfrac > 0.0 ? stanullfrac : 0.0) * relTuples[i];
 
 		AttStatsSlot hllSlot;
 
