@@ -967,6 +967,7 @@ InjectFault(char *faultName, char *type, char *ddlStatement, char *databaseName,
 	faultEntry.extraArg = extraArg;
 	faultEntry.startOccurrence = startOccurrence;
 	faultEntry.endOccurrence = endOccurrence;
+	faultEntry.numTimesTriggered = 0;
 
 	/*
 	 * Validations:

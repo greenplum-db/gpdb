@@ -737,6 +737,7 @@ PQclear(PGresult *res)
 
 	if (res->waitGxids)
 		free(res->waitGxids);
+	res->waitGxids = NULL;
 	res->nWaits = 0;
 
 	/* Free the PGresult structure itself */

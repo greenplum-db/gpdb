@@ -818,7 +818,8 @@ checkSegmentAlive(CdbDispatchCmdAsync *pParms)
 static inline void
 send_sequence_response(PGconn *conn, Oid oid, int64 last, int64 cached, int64 increment, bool overflow, bool error)
 {
-	pqPutMsgStart(SEQ_NEXTVAL_QUERY_RESPONSE, false, conn);
+	if (pqPutMsgStart(SEQ_NEXTVAL_QUERY_RESPONSE, false, conn) < 0)
+		elog(ERROR, "Failed to send sequence response: %s", PQerrorMessage(conn));
 	pqPutInt(oid, 4, conn);
 	pqPutInt(last >> 32, 4, conn);
 	pqPutInt(last, 4, conn);
@@ -828,8 +829,10 @@ send_sequence_response(PGconn *conn, Oid oid, int64 last, int64 cached, int64 in
 	pqPutInt(increment, 4, conn);
 	pqPutc(overflow ? SEQ_NEXTVAL_TRUE : SEQ_NEXTVAL_FALSE, conn);
 	pqPutc(error ? SEQ_NEXTVAL_TRUE : SEQ_NEXTVAL_FALSE, conn);
-	pqPutMsgEnd(conn);
-	pqFlush(conn);
+	if (pqPutMsgEnd(conn) < 0)
+		elog(ERROR, "Failed to send sequence response: %s", PQerrorMessage(conn));
+	if (pqFlush(conn) < 0)
+		elog(ERROR, "Failed to send sequence response: %s", PQerrorMessage(conn));
 }
 
 /*

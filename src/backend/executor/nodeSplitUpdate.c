@@ -221,7 +221,7 @@ ExecInitSplitUpdate(SplitUpdate *node, EState *estate, int eflags)
 	/* Check for unsupported flags */
 	Assert(!(eflags & (EXEC_FLAG_BACKWARD | EXEC_FLAG_MARK | EXEC_FLAG_REWIND)));
 
-	bool    has_oids = false;
+	bool    has_oids;
 
 	SplitUpdateState *splitupdatestate;
 
@@ -244,7 +244,8 @@ ExecInitSplitUpdate(SplitUpdate *node, EState *estate, int eflags)
 	splitupdatestate->deleteTuple = ExecInitExtraTupleSlot(estate);
 
 	/* New TupleDescriptor for output TupleTableSlots (old_values + new_values, ctid, gp_segment, action).*/
-	ExecContextForcesOids((PlanState *) splitupdatestate, &has_oids);
+	if (!ExecContextForcesOids((PlanState *) splitupdatestate, &has_oids))
+		has_oids = false;
 
 	TupleDesc tupDesc = ExecTypeFromTL(node->plan.targetlist, has_oids);
 	ExecSetSlotDescriptor(splitupdatestate->insertTuple, tupDesc);

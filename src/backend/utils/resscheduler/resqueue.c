@@ -2058,7 +2058,8 @@ int64 ResourceQueueGetMemoryLimitInCatalog(Oid queueId)
 
 #ifdef USE_ASSERT_CHECKING
 			bool result =
-
+#else
+			(void)
 #endif
 					parse_int(strVal(val), &memoryLimitKB, GUC_UNIT_KB, NULL);
 

@@ -436,7 +436,7 @@ struct ICGlobalControlInfo
 	ConnHashTable startupCacheHtab;
 
 	/* Used by main thread to ask the background thread to exit. */
-	uint32		shutdown;
+	pg_atomic_uint32 shutdown;
 
 	/*
 	 * Used by ic thread in the QE to identify the current serving ic instance
@@ -1438,7 +1438,7 @@ InitMotionUDPIFC(int *listenerSocketFd, uint16 *listenerPort)
 													   ALLOCSET_DEFAULT_MAXSIZE);
 	initMutex(&ic_control_info.lock);
 	InitLatch(&ic_control_info.latch);
-	ic_control_info.shutdown = 0;
+	pg_atomic_init_u32(&ic_control_info.shutdown, 0);
 	ic_control_info.threadCreated = false;
 	ic_control_info.ic_instance_id = 0;
 
@@ -1523,10 +1523,8 @@ CleanupMotionUDPIFC(void)
 	 */
 	pthread_mutex_unlock(&ic_control_info.lock);
 
-	uint32		expected = 0;
-
 	/* Shutdown rx thread. */
-	pg_atomic_compare_exchange_u32((pg_atomic_uint32 *) &ic_control_info.shutdown, &expected, 1);
+	pg_atomic_write_u32(&ic_control_info.shutdown, 1);
 
 	if (ic_control_info.threadCreated)
 		pthread_join(ic_control_info.threadHandle, NULL);
@@ -6142,7 +6140,6 @@ rxThreadFunc(void *arg)
 {
 	icpkthdr   *pkt = NULL;
 	bool		skip_poll = false;
-	uint32		expected = 1;
 
 	for (;;)
 	{
@@ -6150,8 +6147,7 @@ rxThreadFunc(void *arg)
 		int			n;
 
 		/* check shutdown condition */
-		expected = 1;
-		if (pg_atomic_compare_exchange_u32((pg_atomic_uint32 *) &ic_control_info.shutdown, &expected, 0))
+		if (pg_atomic_read_u32(&ic_control_info.shutdown) == 1)
 		{
 			if (DEBUG1 >= log_min_messages)
 			{
@@ -6182,8 +6178,7 @@ rxThreadFunc(void *arg)
 
 			n = poll(&nfd, 1, RX_THREAD_POLL_TIMEOUT);
 
-			expected = 1;
-			if (pg_atomic_compare_exchange_u32((pg_atomic_uint32 *) &ic_control_info.shutdown, &expected, 0))
+			if (pg_atomic_read_u32(&ic_control_info.shutdown) == 1)
 			{
 				if (DEBUG1 >= log_min_messages)
 				{
@@ -6228,8 +6223,7 @@ rxThreadFunc(void *arg)
 			read_count = recvfrom(UDP_listenerFd, (char *) pkt, Gp_max_packet_size, 0,
 								  (struct sockaddr *) &peer, &peerlen);
 
-			expected = 1;
-			if (pg_atomic_compare_exchange_u32((pg_atomic_uint32 *) &ic_control_info.shutdown, &expected, 0))
+			if (pg_atomic_read_u32(&ic_control_info.shutdown) == 1)
 			{
 				if (DEBUG1 >= log_min_messages)
 				{
@@ -6862,14 +6856,12 @@ dumpConnections(ChunkTransportStateEntry *pEntry, const char *fname)
 void
 WaitInterconnectQuitUDPIFC(void)
 {
-	uint32		expected = 0;
-
 	/*
 	 * Just in case ic thread is waiting on the locks.
 	 */
 	pthread_mutex_unlock(&ic_control_info.lock);
 
-	pg_atomic_compare_exchange_u32((pg_atomic_uint32 *) &ic_control_info.shutdown, &expected, 1);
+	pg_atomic_write_u32(&ic_control_info.shutdown, 1);
 
 	if (ic_control_info.threadCreated)
 	{
