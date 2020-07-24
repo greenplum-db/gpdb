@@ -78,19 +78,22 @@ GenerateScaleFactorMap
 			// element in the array is damped by the nth_root.
 			CDoubleArray *scale_factor_array = scale_factor_hashmap->Find(oid_pair);
 
-			// if it's a dist key pred, it should not be damped, so handle accordingly
-			if (both_dist_keys)
+			// no predicates have been added, so create the scale factor array
+			if (!scale_factor_array)
 			{
-				// no predicates have been added, so create the scale factor array
-				if (!scale_factor_array)
+				scale_factor_array = GPOS_NEW(mp) CDoubleArray(mp);
+				scale_factor_array->Append(GPOS_NEW(mp) CDouble(local_scale_factor));
+				oid_pair->AddRef();
+				scale_factor_hashmap->Insert(oid_pair, scale_factor_array);
+				if (both_dist_keys)
 				{
 					contains_dist_pred = true;
-					scale_factor_array = GPOS_NEW(mp) CDoubleArray(mp);
-					scale_factor_array->Append(GPOS_NEW(mp) CDouble(local_scale_factor));
-					oid_pair->AddRef();
-					scale_factor_hashmap->Insert(oid_pair, scale_factor_array);
 				}
-				else if (!contains_dist_pred)
+			}
+			// if it's a dist key pred, it should not be damped, so handle accordingly
+			else if (both_dist_keys)
+			{
+				if (!contains_dist_pred)
 				{
 					contains_dist_pred = true;
 					// it is a dist key pred and none exist yet in the scale_factor array
@@ -115,17 +118,11 @@ GenerateScaleFactorMap
 				}
 			}
 			// not a dist key pred so just append as necessary
-			else if (scale_factor_array)
-			{
-				// otherwise add to scale factor array so that the predicate gets damped accordingly
-				scale_factor_array->Append(GPOS_NEW(mp) CDouble(local_scale_factor));
-			}
 			else
 			{
-				scale_factor_array = GPOS_NEW(mp) CDoubleArray(mp);
+				GPOS_ASSERT(scale_factor_array);
+				// otherwise add to scale factor array so that the predicate gets damped accordingly
 				scale_factor_array->Append(GPOS_NEW(mp) CDouble(local_scale_factor));
-				oid_pair->AddRef();
-				scale_factor_hashmap->Insert(oid_pair, scale_factor_array);
 			}
 		}
 		else
