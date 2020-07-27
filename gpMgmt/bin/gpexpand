@@ -1918,9 +1918,8 @@ class ExpandTable():
     def __init__(self, options, row=None, num_segments=0):
         self.options = options
         self.is_root_partition = False
-        if num_segments:
-            self.num_segments = num_segments
-        else:
+        self.num_segments = num_segments
+        if not self.num_segments:
             logger.debug('numsegments is 0, gpexpand will fail if there is a partition table.')
         if row is not None:
             (self.dbname, self.fq_name, self.table_oid,
@@ -2136,6 +2135,8 @@ WHERE
             logger.debug("Expand SQL: %s" % sql.decode('utf-8'))
 
             dbconn.execSQL(table_conn, sql)
+            # the ALTER TABLE command requires a commit to execute
+            table_conn.commit()
             if self.options.analyze and self.root_partition_name is None:
                 sql = 'ANALYZE %s' % (self.fq_name)
                 logger.info('Analyzing %s' % (self.fq_name.decode('utf-8')))
