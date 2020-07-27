@@ -1007,12 +1007,13 @@ static int
 is_file_exists(const char* filename)
 {
 	FILE* file;
-    if ((file = fopen(filename, "r")) > 0)
-    {
-        fclose(file);
-        return 1;
-    }
-    return 0;
+	file = fopen(filename, "r");
+	if (file)
+	{
+		fclose(file);
+		return 1;
+	}
+	return 0;
 }
 
 URL_FILE *

@@ -136,7 +136,8 @@ checkIODataDirectory(void)
 		}
 	} while (0);
 
-	if (fd > 0)
+	pfree(data);
+	if (fd >= 0)
 	{
 		close(fd);
 
@@ -163,7 +164,6 @@ checkIODataDirectory(void)
 		ereport(ERROR,
 				(errmsg("disk IO check during FTS probe failed")));
 
-	pfree(data);
 	return failure;
 }
 

@@ -335,6 +335,12 @@ AuxiliaryProcessMain(int argc, char *argv[])
 		if (!SelectConfigFiles(userDoption, progname))
 			proc_exit(1);
 	}
+	if (userDoption)
+	{
+		/* userDoption isn't used any more */
+		free(userDoption);
+		userDoption = NULL;
+	}
 
 	/* Validate we have been given a reasonable-looking DataDir */
 	Assert(DataDir);
