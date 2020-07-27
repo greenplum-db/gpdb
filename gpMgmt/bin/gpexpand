@@ -1985,7 +1985,7 @@ WHERE
     AND p.partitiontablename = c.relname 
     AND c.relhassubclass
     AND quote_ident(p.schemaname)||'.'||quote_ident(p.tablename) = '%s';
-        """ % self.root_partition_name
+        """ % self.root_partition_name.replace("'", "''")
         status_conn = dbconn.connect(status_url, encoding='UTF8')
         table_conn = dbconn.connect(table_url, encoding='UTF8')
         partition_tables = [self.root_partition_name]
@@ -1998,7 +1998,7 @@ WHERE
             lock_sql_list.append('LOCK TABLE ONLY %s IN EXCLUSIVE MODE;' % table)
         lock_sql = '\n'.join(lock_sql_list)
         lock_check_sql = """SELECT COUNT(1) FROM pg_stat_activity WHERE query like 'LOCK TABLE ONLY %s IN EXCLUSIVE MODE;%%'
-        and datname = '%s';""" % (self.root_partition_name, self.dbname)
+        and datname = '%s';""" % (self.root_partition_name.replace("'", "''").replace("\\", "\\\\"), self.dbname.replace("'", "''"))
         # double check
         lock_count = dbconn.querySingleton(table_conn, lock_check_sql)
         if lock_count > 0:
@@ -2010,7 +2010,7 @@ WHERE
         logger.info('Locked partition table %s' % self.root_partition_name)
         # check if all leaf tables expanded
         check_sql = """SELECT COUNT(1) FROM gpexpand.status_detail WHERE root_partition_name = '%s' 
-        AND status <> '%s'""" % (self.root_partition_name, done_status)
+        AND status <> '%s'""" % (self.root_partition_name.replace("'", "''"), done_status)
         while True:
             time.sleep(3)
             count = dbconn.querySingleton(status_conn, check_sql)
@@ -2038,7 +2038,7 @@ WHERE
     AND c.relstorage not in ('x', 'f') 
     AND NOT c.relhassubclass
     AND quote_ident(p.schemaname)||'.'||quote_ident(p.tablename) = '%s'
-            """ % self.root_partition_name
+            """ % self.root_partition_name.replace("'", "''")
         cursor = None
         try:
             cursor = dbconn.query(table_conn, not_ext_sql)
@@ -2066,7 +2066,7 @@ WHERE
     AND p.partitiontablename = c.relname 
     AND c.relhassubclass
     AND quote_ident(p.schemaname)||'.'||quote_ident(p.tablename) = '%s';
-        """ % self.root_partition_name
+        """ % self.root_partition_name.replace("'", "''")
         tableoids = []
         curs = dbconn.query(table_conn, sql)
         rows = curs.fetchall()
@@ -2083,13 +2083,13 @@ WHERE
         # find the first leaf partition table
         sql = """SELECT fq_name FROM gpexpand.status_detail WHERE expansion_started = (SELECT min(expansion_started) 
                 FROM gpexpand.status_detail WHERE root_partition_name = '%s' AND expansion_started IS NOT NULL);
-                """ % self.root_partition_name
+                """ % self.root_partition_name.replace("'", "''")
         first_fq_name = dbconn.querySingleton(status_conn, sql)
 
-        oid_sql = """SELECT '%s'::regclass::oid""" % self.root_partition_name
+        oid_sql = """SELECT '%s'::regclass::oid""" % self.root_partition_name.replace("'", "''")
         rootoid = dbconn.querySingleton(table_conn, oid_sql)
-        lock_check_sql = """SELECT COUNT(1) FROM pg_stat_activity WHERE query like 'LOCK TABLE ONLY %s IN EXCLUSIVE MODE;%%' 
-        AND datname = '%s' AND waiting = 'f';""" % (self.root_partition_name, self.dbname)
+        lock_check_sql = """SELECT COUNT(1) FROM pg_stat_activity WHERE query like 'LOCK TABLE ONLY %s IN EXCLUSIVE MODE;%%'
+        and datname = '%s' AND wait_event is NULL;""" % (self.root_partition_name.replace("'", "''").replace("\\", "\\\\"), self.dbname.replace("'", "''"))
         lock_count = dbconn.querySingleton(table_conn, lock_check_sql)
 
         if self.fq_name == first_fq_name:
