@@ -197,8 +197,11 @@ def stop_database_if_started(context):
         stop_database(context)
 
 
-def stop_database(context):
-    run_gpcommand(context, 'gpstop -M fast -a')
+def stop_database(context, master_data_dir=""):
+    cmd = 'gpstop -M fast -a'
+    if master_data_dir:
+        cmd += ' -d ' + master_data_dir
+    run_gpcommand(context, cmd)
     if context.exception:
         raise context.exception
 

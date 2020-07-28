@@ -17,6 +17,14 @@ Feature: gpinitsystem tests
         And gpconfig should print "Master  value: off" to stdout
         And gpconfig should print "Segment value: off" to stdout
 
+    Scenario: gpinitsystem creates a cluster with a legacy input initialization file
+        Given a working directory of the test as '/tmp/gpinitsystem'
+        And the database is not running
+        And a legacy initialization file format "/tmp/gpinitsystem/initializationFile" is created
+        When the user runs command "gpinitsystem -aI /tmp/gpinitsystem/initializationFile --ignore-warnings"
+        Then gpinitsystem should return a return code of 0
+        Given the cluster with master data directory "/tmp/gpinitsystem/gpseg-1" is stopped
+
     Scenario: gpinitsystem creates a cluster when the user confirms the dialog when --ignore-warnings is passed in
         Given create demo cluster config
          When the user runs command "echo y | gpinitsystem -c ../gpAux/gpdemo/clusterConfigFile --ignore-warnings"

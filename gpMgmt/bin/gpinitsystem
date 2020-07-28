@@ -1695,6 +1695,9 @@ READ_INPUT_CONFIG () {
 
     . $INPUT_CONFIG
     SET_VAR $QD_PRIMARY_ARRAY
+
+    # always use the new 6-field format to allow uniform handling of the QD
+    QD_PRIMARY_ARRAY="$GP_HOSTNAME"~"$GP_HOSTADDRESS"~"$GP_PORT"~"$GP_DIR"~"$GP_DBID"~"$GP_CONTENT"
     MASTER_HOSTNAME=$GP_HOSTADDRESS
     MASTER_DIRECTORY=`$DIRNAME $GP_DIR`
     MASTER_PORT=$GP_PORT
@@ -1703,6 +1706,9 @@ READ_INPUT_CONFIG () {
     MACHINE_LIST=()
     DATA_DIRECTORY=()
     CONTENT_COUNT=0
+
+    # always use the new 6-field format to allow uniform handling of primaries
+    SET_PRIMARY_ARRAY_TO_NEW_FORMAT
     for QE in ${PRIMARY_ARRAY[@]}
     do
         SET_VAR $QE
@@ -1718,6 +1724,9 @@ READ_INPUT_CONFIG () {
     if [ x"" != x"${MIRROR_ARRAY}" ] ; then
         MIRRORING=1
         MIRROR_DATA_DIRECTORY=()
+
+        # always use the new 6-field format to allow uniform handling of mirrors
+        SET_MIRROR_ARRAY_TO_NEW_FORMAT
         for QE in ${MIRROR_ARRAY[@]}
         do
             SET_VAR $QE

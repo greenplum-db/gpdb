@@ -2652,6 +2652,42 @@ def impl(context, config_file):
     run_gpcommand(context, 'gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -O %s' % config_file)
     check_return_code(context, 0)
 
+@given('the cluster with master data directory "{master_data_dir}" is stopped')
+def impl(context, master_data_dir):
+    stop_database(context, master_data_dir)
+
+@given('a legacy initialization file format "{init_file}" is created')
+def impl(context, init_file):
+    # Since mirrors and primaries need to be in different directories, create
+    # a mirror subdirectory.
+    os.mkdir(os.path.join(context.working_directory, "mirror"))
+
+    config="""
+ARRAY_NAME="Greenplum DCA"
+TRUSTED_SHELL=ssh
+CHECK_POINT_SEGMENTS=8
+ENCODING=unicode
+
+QD_PRIMARY_ARRAY={0}:5432:{1}/gpseg-1:1:-1
+
+declare -a PRIMARY_ARRAY=(
+{0}:1025:{1}/gpseg0:2:0
+{0}:1026:{1}/gpseg1:3:1
+)
+
+# NOTE: It is critical that the ports (1153 & 1154) are ordered low to high, but
+#  the contents (1 & 0) are ordered high to low. 6X gpinitsystem supports both
+#  a legacy (5-field) and new (6-field) format. This test ensures gpinitsystem
+#  internally normalizes to the new (6-field) format, and sorts on content id
+#  rather than a different field.
+declare -a MIRROR_ARRAY=(
+{0}:1153:{1}/mirror/gpseg_mirror1:5:1
+{0}:1154:{1}/mirror/gpseg_mirror0:4:0
+)
+    """.format(socket.gethostname(), context.working_directory)
+    with open(init_file, 'w') as fd:
+        fd.write(config)
+
 @when('check segment conf: postgresql.conf')
 @then('check segment conf: postgresql.conf')
 def step_impl(context):

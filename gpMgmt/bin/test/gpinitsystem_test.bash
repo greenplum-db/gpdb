@@ -190,6 +190,26 @@ set_var_should_error_out_if_given_bad_field_values() {
   fi
 }
 
+formats_primary_array_for_both_legacy_and_new_formats() {
+  PRIMARY_ARRAY=("sdw1:50433:/data/primary/gpseg0:1:0" "sdw2:50434:/data/primary/gpseg1:2:1" "sdw1~myhost~50435~/data/primary/gpseg2~3~2")
+  SET_PRIMARY_ARRAY_TO_NEW_FORMAT
+  NEW_PRIMARY_ARRAY=("sdw1~sdw1~50433~/data/primary/gpseg0~1~0" "sdw2~sdw2~50434~/data/primary/gpseg1~2~1" "sdw1~myhost~50435~/data/primary/gpseg2~3~2")
+  if [[ "${PRIMARY_ARRAY[@]}" != "${NEW_PRIMARY_ARRAY[@]}" ]]; then
+    echo "got ${PRIMARY_ARRAY[@]}, want ${NEW_PRIMARY_ARRAY[@]}"
+    exit 1
+  fi
+}
+
+formats_mirror_array_for_both_legacy_and_new_formats() {
+  MIRROR_ARRAY=("sdw1:50433:/data/mirror/gpseg0:1:0" "sdw2:50434:/data/mirror/gpseg1:2:1" "sdw2~myhost~50435~/data/mirror/gpseg2~3~2")
+  SET_MIRROR_ARRAY_TO_NEW_FORMAT
+  NEW_MIRROR_ARRAY=("sdw1~sdw1~50433~/data/mirror/gpseg0~1~0" "sdw2~sdw2~50434~/data/mirror/gpseg1~2~1" "sdw2~myhost~50435~/data/mirror/gpseg2~3~2")
+  if [[ "${MIRROR_ARRAY[@]}" != "${NEW_MIRROR_ARRAY[@]}" ]]; then
+    echo "got ${MIRROR_ARRAY[@]}, want ${NEW_MIRROR_ARRAY[@]}"
+    exit 1
+  fi
+}
+
 main() {
   it_should_quote_the_username_during_alter_user_in_SET_GP_USER_PW
   it_should_quote_the_password_during_alter_user_in_SET_GP_USER_PW
@@ -198,6 +218,8 @@ main() {
   it_should_work_without_a_hostname_and_previous_6x_versions
   set_var_should_error_out_if_given_the_wrong_number_of_fields
   set_var_should_error_out_if_given_bad_field_values
+  formats_mirror_array_for_both_legacy_and_new_formats
+  formats_primary_array_for_both_legacy_and_new_formats
 }
 
 main

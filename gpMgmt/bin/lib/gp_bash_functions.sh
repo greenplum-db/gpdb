@@ -1383,6 +1383,26 @@ SET_VAR () {
 	fi
 }
 
+SET_PRIMARY_ARRAY_TO_NEW_FORMAT() {
+  local tmp_array=()
+  for QE in "${PRIMARY_ARRAY[@]}"
+  do
+    SET_VAR "$QE"
+    tmp_array=("${tmp_array[@]}" "$GP_HOSTNAME"~"$GP_HOSTADDRESS"~"$GP_PORT"~"$GP_DIR"~"$GP_DBID"~"$GP_CONTENT")
+  done
+  PRIMARY_ARRAY=("${tmp_array[@]}")
+}
+
+SET_MIRROR_ARRAY_TO_NEW_FORMAT(){
+  local tmp_array=()
+  for QE in "${MIRROR_ARRAY[@]}"
+  do
+    SET_VAR "$QE"
+    tmp_array=("${tmp_array[@]}" "$GP_HOSTNAME"~"$GP_HOSTADDRESS"~"$GP_PORT"~"$GP_DIR"~"$GP_DBID"~"$GP_CONTENT")
+  done
+  MIRROR_ARRAY=("${tmp_array[@]}")
+}
+
 #******************************************************************************
 # Main Section
 #******************************************************************************
