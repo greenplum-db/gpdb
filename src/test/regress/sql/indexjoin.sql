@@ -2549,4 +2549,13 @@ explain (costs off)
 SELECT * from with_index_table td JOIN no_index_table ro ON td.y = ro.a AND td.x = ro.b;
 SELECT * from with_index_table td JOIN no_index_table ro ON td.y = ro.a AND td.x = ro.b;
 
+-- Test Index Scan on table in the right tree of a NestLoop join with an aggregate.
+CREATE TABLE table_with_simple_index (col text);
+CREATE INDEX simple_index ON table_with_simple_index USING btree (col);
+INSERT INTO table_with_simple_index VALUES ('a_value');
+
+EXPLAIN (costs off)
+SELECT t.col FROM table_with_simple_index t LEFT JOIN (SELECT t.col FROM table_with_simple_index t GROUP BY t.col) g ON g.col = t.col;
+SELECT t.col FROM table_with_simple_index t LEFT JOIN (SELECT t.col FROM table_with_simple_index t GROUP BY t.col) g ON g.col = t.col;
+
 reset all;

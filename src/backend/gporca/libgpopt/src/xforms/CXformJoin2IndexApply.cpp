@@ -109,7 +109,8 @@ CXformJoin2IndexApply::CreateHomogeneousIndexApplyAlternatives
 	CTableDescriptor *ptabdescInner,
 	CLogicalDynamicGet *popDynamicGet,
 	CXformResult *pxfres,
-	IMDIndex::EmdindexType emdtype
+	IMDIndex::EmdindexType emdtype,
+	BOOL fWithGbAgg
 	) const
 {
 	GPOS_ASSERT(NULL != pexprOuter);
@@ -154,7 +155,8 @@ CXformJoin2IndexApply::CreateHomogeneousIndexApplyAlternatives
 			outer_refs,
 			pcrsReqd,
 			ulIndices,
-			pxfres
+			pxfres,
+			fWithGbAgg
 			);
 	}
 	else
@@ -201,7 +203,8 @@ CXformJoin2IndexApply::CreateHomogeneousBtreeIndexApplyAlternatives
 	CColRefSet *outer_refs,
 	CColRefSet *pcrsReqd,
 	ULONG ulIndices,
-	CXformResult *pxfres
+	CXformResult *pxfres,
+	BOOL fWithGbAgg
 	) const
 {
 	// array of expressions in the scalar expression
@@ -243,7 +246,8 @@ CXformJoin2IndexApply::CreateHomogeneousBtreeIndexApplyAlternatives
 			pmdrel,
 			pmdindex,
 			ppartcnstrIndex,
-			pxfres
+			pxfres,
+			fWithGbAgg
 			);
 	}
 
@@ -275,7 +279,8 @@ CXformJoin2IndexApply::CreateAlternativesForBtreeIndex
 	const IMDRelation *pmdrel,
 	const IMDIndex *pmdindex,
 	CPartConstraint *ppartcnstrIndex,
-	CXformResult *pxfres
+	CXformResult *pxfres,
+	BOOL fWithGbAgg
 	) const
 {
 	CExpression *pexprLogicalIndexGet = CXformUtils::PexprLogicalIndexGet
@@ -291,7 +296,8 @@ CXformJoin2IndexApply::CreateAlternativesForBtreeIndex
 						 pmdindex,
 						 pmdrel,
 						 false /*fAllowPartialIndex*/,
-						 ppartcnstrIndex
+						 ppartcnstrIndex,
+						 fWithGbAgg
 						);
 	if (NULL != pexprLogicalIndexGet)
 	{

@@ -98,6 +98,7 @@ CLogicalLeftOuterJoin::PxfsCandidates
 	(void) xform_set->ExchangeSet(CXform::ExfLeftOuterJoin2DynamicIndexGetApply);
 	(void) xform_set->ExchangeSet(CXform::ExfLeftOuterJoinWithInnerSelect2DynamicBitmapIndexGetApply);
 	(void) xform_set->ExchangeSet(CXform::ExfLeftOuterJoinWithInnerSelect2DynamicIndexGetApply);
+	(void) xform_set->ExchangeSet(CXform::ExfLeftOuterJoinWithInnerGbAgg2IndexGetApply);
 
 	return xform_set;
 }

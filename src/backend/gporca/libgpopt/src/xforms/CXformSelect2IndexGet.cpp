@@ -140,7 +140,8 @@ CXformSelect2IndexGet::Transform
 						 pmdindex,
 						 pmdrel,
 						 false /*fAllowPartialIndex*/,
-						 NULL /*ppartcnstrIndex*/
+						 NULL /*ppartcnstrIndex*/,
+						 false /* fWithGbAgg */
 						);
 		if (NULL != pexprIndexGet)
 		{

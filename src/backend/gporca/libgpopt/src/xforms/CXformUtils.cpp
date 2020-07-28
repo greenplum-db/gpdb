@@ -2875,7 +2875,8 @@ CXformUtils::PexprBuildIndexPlan
 	IMDIndex::EmdindexType emdindtype,
 	PDynamicIndexOpConstructor pdiopc,
 	PStaticIndexOpConstructor psiopc,
-	PRewrittenIndexPath prip
+	PRewrittenIndexPath prip,
+	BOOL fWithGbAgg
 	)
 {
 	GPOS_ASSERT(NULL != pexprGet);
@@ -2956,12 +2957,13 @@ CXformUtils::PexprBuildIndexPlan
 	// exit early if:
 	// (1) there are no index-able predicates or
 	// (2) there are no outer references in index-able predicates
+	// (3) inner child is GbAgg and there multiple outer references in prediates
 	//
 	// (2) is valid only for Join2IndexApply xform wherein the index-get
 	// expression must include outer references for it to be an alternative
 	// worth considering. Otherwise it has the same effect as a regular NLJ
 	// with an index lookup.
-	if (0 == pdrgpexprIndex->Size() || outer_refs_in_index_get->Size() == 0)
+	if (0 == pdrgpexprIndex->Size() || outer_refs_in_index_get->Size() == 0 || (pdrgpexprResidual->Size() > 1 && fWithGbAgg))
 	{
 		// clean up
 		GPOS_DELETE(alias);
@@ -3034,6 +3036,35 @@ CXformUtils::PexprBuildIndexPlan
 	CExpression *pexprIndexCond = CPredicateUtils::PexprConjunction(mp, pdrgpexprIndex);
 	CExpression *pexprResidualCond = CPredicateUtils::PexprConjunction(mp, pdrgpexprResidual);
 
+	if (fWithGbAgg)
+	{
+		CExpression *pexprLogical = GPOS_NEW(mp) CExpression(mp, popLogicalGet, pexprIndexCond);
+		if (CUtils::FScalarConstTrue(pexprResidualCond))
+		{
+			// caller must have add-refed the predicate before coming here
+			pexprResidualCond->Release();
+			return pexprLogical;
+		}
+		CColRefSet *included = GPOS_NEW(mp) CColRefSet(mp);
+		CExpressionHandle unused(mp);
+		CColRefSet *index = CScalar::PopConvert(pexprIndexCond->Pop())->PcrsDefined(mp, unused);
+		CColRefSet *residual = CScalar::PopConvert(pexprResidualCond->Pop())->PcrsDefined(mp, unused);
+		included->Include(index);
+		included->Include(residual);
+
+		CColRefArray *pdrgpcr = included->Pdrgpcr(mp);
+		included->Release();
+		index->Release();
+		residual->Release();
+
+		return GPOS_NEW(mp) CExpression
+							(
+							mp,
+							GPOS_NEW(mp) CLogicalGbAgg(mp, pdrgpcr, COperator::EgbaggtypeGlobal, CLogicalGbAgg::EasOthers),
+							pexprLogical,
+							pexprResidualCond
+							);
+	}
 	return (*prip)(mp, pexprIndexCond, pexprResidualCond, pmdindex, ptabdesc, popLogicalGet);
 }
 

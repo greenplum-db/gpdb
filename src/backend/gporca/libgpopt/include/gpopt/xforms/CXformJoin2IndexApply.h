@@ -41,7 +41,8 @@ namespace gpopt
 				CColRefSet *outer_refs,
 				CColRefSet *pcrsReqd,
 				ULONG ulIndices,
-				CXformResult *pxfres
+				CXformResult *pxfres,
+				BOOL fWithGbAgg
 				) const;
 
 			// helper to add IndexApply expression to given xform results container
@@ -60,7 +61,8 @@ namespace gpopt
 				const IMDRelation *pmdrel,
 				const IMDIndex *pmdindex,
 				CPartConstraint *ppartcnstrIndex,
-				CXformResult *pxfres
+				CXformResult *pxfres,
+				BOOL fWithGbAgg
 				) const;
 
 			// helper to add IndexApply expression to given xform results container
@@ -182,7 +184,8 @@ namespace gpopt
 				CTableDescriptor *PtabdescInner,
 				CLogicalDynamicGet *popDynamicGet,
 				CXformResult *pxfres,
-				gpmd::IMDIndex::EmdindexType emdtype
+				gpmd::IMDIndex::EmdindexType emdtype,
+				BOOL fWithGbAgg
 				) const;
 
 			// helper to add IndexApply expression to given xform results container

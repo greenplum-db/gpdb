@@ -16,7 +16,7 @@ namespace gpopt
 
 	class CXformLeftOuterJoin2IndexGetApply : public CXformJoin2IndexApplyBase
 		<CLogicalLeftOuterJoin, CLogicalIndexApply, CLogicalGet,
-		false /*fWithSelect*/, false /*is_partial*/, IMDIndex::EmdindBtree>
+		false /*fWithSelect*/, false /*fWithGbAgg*/, false /*is_partial*/, IMDIndex::EmdindBtree>
 	{
 
 		private:
@@ -31,7 +31,7 @@ namespace gpopt
 			CXformLeftOuterJoin2IndexGetApply(CMemoryPool *mp)
 				: CXformJoin2IndexApplyBase
 				<CLogicalLeftOuterJoin, CLogicalIndexApply, CLogicalGet,
-				false /*fWithSelect*/, false /*is_partial*/, IMDIndex::EmdindBtree>
+				false /*fWithSelect*/, false /*fWithGbAgg*/, false /*is_partial*/, IMDIndex::EmdindBtree>
 				(mp)
 			{}
 

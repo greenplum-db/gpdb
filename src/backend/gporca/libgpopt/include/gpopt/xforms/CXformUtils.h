@@ -337,7 +337,8 @@ namespace gpopt
 				IMDIndex::EmdindexType emdindtype,
 				PDynamicIndexOpConstructor pdiopc,
 				PStaticIndexOpConstructor psiopc,
-				PRewrittenIndexPath prip
+				PRewrittenIndexPath prip,
+				BOOL fWithGbAgg
 				);
 
 			// create a dynamic operator for a btree index plan
@@ -857,7 +858,8 @@ namespace gpopt
 				const IMDIndex *pmdindex,
 				const IMDRelation *pmdrel,
 				BOOL fAllowPartialIndex,
-				CPartConstraint *ppcartcnstrIndex
+				CPartConstraint *ppcartcnstrIndex,
+				BOOL fWithGbAgg
 				)
 			{
 				return PexprBuildIndexPlan
@@ -877,7 +879,8 @@ namespace gpopt
 						IMDIndex::EmdindBtree,
 						PopDynamicBtreeIndexOpConstructor,
 						PopStaticBtreeIndexOpConstructor,
-						PexprRewrittenBtreeIndexPath
+						PexprRewrittenBtreeIndexPath,
+						fWithGbAgg
 						);
 			}
 			

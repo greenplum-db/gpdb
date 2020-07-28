@@ -166,4 +166,25 @@ SELECT * from with_index_table td JOIN no_index_table ro ON td.y = ro.a AND td.x
  1 | 1 |         1 |         1 |         1 | 1 | 1
 (1 row)
 
+-- Test Index Scan on table in the right tree of a NestLoop join with an aggregate.
+CREATE TABLE table_with_simple_index (col text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'col' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE INDEX simple_index ON table_with_simple_index USING btree (col);
+INSERT INTO table_with_simple_index VALUES ('a_value');
+EXPLAIN (costs off)
+SELECT t.col FROM table_with_simple_index t LEFT JOIN (SELECT t.col FROM table_with_simple_index t GROUP BY t.col) g ON g.col = t.col;
+                              QUERY PLAN
+-----------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Index Only Scan using simple_index on table_with_simple_index t
+ Optimizer: Postgres query optimizer
+(3 rows)
+
+SELECT t.col FROM table_with_simple_index t LEFT JOIN (SELECT t.col FROM table_with_simple_index t GROUP BY t.col) g ON g.col = t.col;
+   col   
+---------
+ a_value
+(1 row)
+
 reset all;

@@ -153,7 +153,8 @@ CXformSelect2DynamicIndexGet::Transform
 							pmdindex,
 							pmdrel,
 							false /*fAllowPartialIndex*/,
-							ppartcnstrIndex
+							ppartcnstrIndex,
+							false /* fWithGbAgg */
 							);
 		if (NULL != pexprDynamicIndexGet)
 		{

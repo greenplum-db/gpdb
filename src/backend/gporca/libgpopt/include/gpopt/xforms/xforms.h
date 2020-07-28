@@ -136,6 +136,7 @@
 #include "gpopt/xforms/CXformLeftOuterJoin2IndexGetApply.h"
 #include "gpopt/xforms/CXformLeftOuterJoinWithInnerSelect2BitmapIndexGetApply.h"
 #include "gpopt/xforms/CXformLeftOuterJoinWithInnerSelect2IndexGetApply.h"
+#include "gpopt/xforms/CXformLeftOuterJoinWithInnerGbAgg2IndexGetApply.h"
 #include "gpopt/xforms/CXformLeftOuterJoin2DynamicBitmapIndexGetApply.h"
 #include "gpopt/xforms/CXformLeftOuterJoin2DynamicIndexGetApply.h"
 #include "gpopt/xforms/CXformLeftOuterJoinWithInnerSelect2DynamicBitmapIndexGetApply.h"
