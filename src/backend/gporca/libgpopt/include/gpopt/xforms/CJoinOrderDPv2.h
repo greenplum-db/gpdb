@@ -475,7 +475,6 @@ namespace gpopt
 			void EnumerateMinCard();
 			void EnumerateGreedyAvoidXProd();
 
-
 		public:
 
 			// ctor

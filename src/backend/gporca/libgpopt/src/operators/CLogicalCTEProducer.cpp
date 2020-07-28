@@ -166,7 +166,7 @@ CLogicalCTEProducer::DeriveTableDescriptor
 	)
 	const
 {
-	// pass on max card of first child
+	// pass on table descriptor of first child
 	return exprhdl.DeriveTableDescriptor(0);
 }
 
