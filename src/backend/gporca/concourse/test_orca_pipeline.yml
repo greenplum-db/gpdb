@@ -40,12 +40,12 @@ resources:
     json_key: ((concourse-gcs-resources-service-account-key))
     regexp: gp-internal-artifacts/centos7/libquicklz-devel-(1\.5\.0-.*)-1.el7.x86_64.rpm
 
-- name: python-centos7
+- name: libuv-centos7
   type: gcs
   source:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: gp-internal-artifacts/centos7/python-(2\.7\.12-.*).tar.gz
+    regexp: gp-internal-artifacts/centos7/libuv-(1\.38\.0.*).tar.gz
 
 
 jobs:
@@ -62,8 +62,8 @@ jobs:
       resource: libquicklz-centos7
     - get: libquicklz-devel-installer
       resource: libquicklz-devel-centos7
-    - get: python-tarball
-      resource: python-centos7
+    - get: libuv-installer
+      resource: libuv-centos7
 
   - do:
     - task: init gpdb_src
