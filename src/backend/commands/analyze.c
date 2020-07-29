@@ -2606,7 +2606,7 @@ acquire_sample_rows_dispatcher(Relation onerel, bool inh, int elevel,
 			 * This result is for a segment that's not holding any data for this
 			 * table. Should get 0 rows.
 			 */
-			if (this_totalrows != 0 || this_totalrows != 0)
+			if (this_totalrows != 0)
 				elog(WARNING, "table \"%s\" contains rows in segment %d, which is outside the # of segments for the table's policy (%d segments)",
 					 RelationGetRelationName(onerel), resultno, onerel->rd_cdbpolicy->numsegments);
 		}
