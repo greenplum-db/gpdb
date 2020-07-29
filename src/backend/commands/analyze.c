@@ -4180,7 +4180,7 @@ merge_leaf_stats(VacAttrStatsP stats,
 	MemoryContext old_context;
 
 	HeapTuple *heaptupleStats =
-		(HeapTuple *) palloc(numPartitions * sizeof(HeapTuple *));
+		(HeapTuple *) palloc(numPartitions * sizeof(HeapTuple));
 
 	// NDV calculations
 	float4 colAvgWidth = 0;
