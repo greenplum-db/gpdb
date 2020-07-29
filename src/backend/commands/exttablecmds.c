@@ -74,7 +74,6 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 	Datum		locationUris = 0;
 	Datum		locationExec = 0;
 	char	   *commandString = NULL;
-	char	   *customProtName = NULL;
 	char		rejectlimittype = '\0';
 	char		formattype;
 	int			rejectlimit = -1;
@@ -426,9 +425,6 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 									GetAssignedOidsForDispatch(),
 									NULL);
 	}
-
-	if (customProtName)
-		pfree(customProtName);
 }
 
 
