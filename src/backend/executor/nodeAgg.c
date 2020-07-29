@@ -1894,18 +1894,18 @@ hash_agg_set_limits(AggState *aggstate, double hashentrysize, uint64 input_group
 static void
 hash_agg_check_limits(AggState *aggstate)
 {
-	uint64 ngroups = aggstate->hash_ngroups_current;
-	Size meta_mem = MemoryContextMemAllocated(
-		aggstate->hash_metacxt, true);
-	Size hash_mem = MemoryContextMemAllocated(
-		aggstate->hashcontext->ecxt_per_tuple_memory, true);
+	uint64		ngroups = aggstate->hash_ngroups_current;
+	Size		meta_mem = MemoryContextMemAllocated(aggstate->hash_metacxt,
+													 true);
+	Size		hashkey_mem = MemoryContextMemAllocated(aggstate->hashcontext->ecxt_per_tuple_memory,
+														true);
 
 	/*
 	 * Don't spill unless there's at least one group in the hash table so we
 	 * can be sure to make progress even in edge cases.
 	 */
 	if (aggstate->hash_ngroups_current > 0 &&
-		(meta_mem + hash_mem > aggstate->hash_mem_limit ||
+		(meta_mem + hashkey_mem > aggstate->hash_mem_limit ||
 		 ngroups > aggstate->hash_ngroups_limit))
 	{
 		hash_agg_enter_spill_mode(aggstate);
@@ -1968,10 +1968,10 @@ hash_agg_enter_spill_mode(AggState *aggstate)
 static void
 hash_agg_update_metrics(AggState *aggstate, bool from_tape, int npartitions)
 {
-	Size	meta_mem;
-	Size	hash_mem;
-	Size	buffer_mem;
-	Size	total_mem;
+	Size		meta_mem;
+	Size		hashkey_mem;
+	Size		buffer_mem;
+	Size		total_mem;
 
 	if (aggstate->aggstrategy != AGG_MIXED &&
 		aggstate->aggstrategy != AGG_HASHED)
@@ -1981,8 +1981,7 @@ hash_agg_update_metrics(AggState *aggstate, bool from_tape, int npartitions)
 	meta_mem = MemoryContextMemAllocated(aggstate->hash_metacxt, true);
 
 	/* memory for the group keys and transition states */
-	hash_mem = MemoryContextMemAllocated(
-		aggstate->hashcontext->ecxt_per_tuple_memory, true);
+	hashkey_mem = MemoryContextMemAllocated(aggstate->hashcontext->ecxt_per_tuple_memory, true);
 
 	/* memory for read/write tape buffers, if spilled */
 	buffer_mem = npartitions * HASHAGG_WRITE_BUFFER_SIZE;
@@ -1990,7 +1989,7 @@ hash_agg_update_metrics(AggState *aggstate, bool from_tape, int npartitions)
 		buffer_mem += HASHAGG_READ_BUFFER_SIZE;
 
 	/* update peak mem */
-	total_mem = meta_mem + hash_mem + buffer_mem;
+	total_mem = meta_mem + hashkey_mem + buffer_mem;
 	if (total_mem > aggstate->hash_mem_peak)
 		aggstate->hash_mem_peak = total_mem;
 
@@ -2009,7 +2008,7 @@ hash_agg_update_metrics(AggState *aggstate, bool from_tape, int npartitions)
 	{
 		aggstate->hashentrysize =
 			sizeof(TupleHashEntryData) +
-			(hash_mem / (double)aggstate->hash_ngroups_current);
+			(hashkey_mem / (double) aggstate->hash_ngroups_current);
 	}
 
 	if (aggstate->ss.ps.instrument && aggstate->ss.ps.instrument->need_cdb)
