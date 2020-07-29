@@ -62,7 +62,7 @@ GenerateScaleFactorMap
 	// If a dist col = dist col predicate exists, it needs to be the first element in the scale factor array
 	// so that the predicate does not get damped, and any following predicate will be damped accordingly.
 	// If more than one dist col = dist col predicate exists (in the case of joins on multi-distkey tables)
-	// any additional dist col = dist col predicate needs to be treated as independent
+	// any additional dist col = dist col predicate are treated as independent
 	BOOL contains_dist_pred = false;
 	// iterate over joins to find predicates on same tables
 	for (ULONG ul = 0; ul < join_conds_scale_factors->Size(); ul++)
