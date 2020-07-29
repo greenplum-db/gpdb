@@ -1498,12 +1498,7 @@ heap_create_with_catalog(const char *relname,
 	 * Allocate new OIDs here.
 	 */
 	if (!OidIsValid(relid) && Gp_role != GP_ROLE_EXECUTE)
-	{
-		if (IsBootstrapProcessingMode())
-			relid = GetNewOid(pg_class_desc);
-		else
-			relid = GetNewOid(pg_class_desc);
-	}
+		relid = GetNewOid(pg_class_desc);
 
 	/*
 	 * Determine the relation's initial permissions.
