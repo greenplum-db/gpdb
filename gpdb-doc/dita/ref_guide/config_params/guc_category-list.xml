@@ -1415,11 +1415,15 @@
             </stentry>
             <stentry>
               <p>
+                <xref href="guc-list.xml#gp_fts_probe_threadcount" type="section"
+                  >gp_fts_probe_threadcount</xref>
+              </p>
+              <p>
                 <xref href="guc-list.xml#gp_fts_probe_timeout" format="dita"/>
               </p>
               <p>
-                <xref href="guc-list.xml#gp_fts_probe_threadcount" type="section"
-                  >gp_fts_probe_threadcount</xref>
+                <xref href="guc-list.xml#gp_fts_replication_attempt_count" type="section"
+                  >gp_fts_replication_attempt_count</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#gp_log_fts" format="dita"/>

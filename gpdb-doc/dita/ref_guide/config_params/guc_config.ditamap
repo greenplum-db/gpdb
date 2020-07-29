@@ -109,6 +109,7 @@
             <topicref href="guc-list.xml#gp_fts_probe_retries"/>
             <topicref href="guc-list.xml#gp_fts_probe_threadcount"/>
             <topicref href="guc-list.xml#gp_fts_probe_timeout"/>
+            <topicref href="guc-list.xml#gp_fts_replication_attempt_count"/>
             <topicref href="guc-list.xml#gp_global_deadlock_detector_period"/>
             <topicref href="guc-list.xml#gp_hashjoin_tuples_per_bucket"/>
             <topicref href="guc-list.xml#gp_ignore_error_table"/>
