@@ -322,7 +322,7 @@ CColumnFactory::PcrCopy
 			id,
 			name,
 			pcrTable->UlSourceOpId(),
-			pcrTable->IsDistCol(),
+			colref->IsDistCol(),
 			pcrTable->Width()
 			);
 }
