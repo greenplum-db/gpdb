@@ -2,6 +2,7 @@
 -- start_matchignore
 -- m/Execution time: \d+\.\d+ ms/
 -- m/Planning time: \d+\.\d+ ms/
+-- m/Memory used:  \d+\w?B/
 -- end_matchignore
 CREATE TEMP TABLE empty_table(a int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
