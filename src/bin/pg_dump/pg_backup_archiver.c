@@ -3377,8 +3377,8 @@ _printTocEntry(ArchiveHandle *AH, TocEntry *te, RestoreOptions *ropt, bool isDat
 
 	/* Set up OID mode too */
 	if (strcmp(te->desc, "TABLE") == 0 ||
-		strcmp(te->desc, "EXTERNAL TABLE") ||
-		strcmp(te->desc, "FOREIGN TABLE"))
+		strcmp(te->desc, "EXTERNAL TABLE") == 0 ||
+		strcmp(te->desc, "FOREIGN TABLE") == 0)
 		_setWithOids(AH, te);
 
 	/* Emit header comment for item */
