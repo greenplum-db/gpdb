@@ -14,9 +14,7 @@ EXPLAIN (ANALYZE, TIMING OFF, COSTS OFF) SELECT a FROM empty_table;
                                    QUERY PLAN                                    
 ---------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=0 loops=1)
-   Executor Memory: 0kB  Segments: 1  Max: 0kB (segment -1)
    ->  Seq Scan on empty_table (actual rows=0 loops=1)
-         Executor Memory: 0kB  Segments: 3  Max: 0kB (segment 0)
  Planning time: 21.532 ms
    (slice0)    Executor memory: 36K bytes.
    (slice1)    Executor memory: 35K bytes avg x 3 workers, 35K bytes max (seg0).
