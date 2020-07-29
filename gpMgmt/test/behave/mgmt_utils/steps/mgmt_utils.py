@@ -545,10 +545,13 @@ def impl(context, table_type, tablename, dbname):
 def impl(context, table_type, tablename, dbname, numrows):
     if not check_table_exists(context, dbname=dbname, table_name=tablename, table_type=table_type):
         raise Exception("Table '%s' of type '%s' does not exist when expected" % (tablename, table_type))
-        with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
-            rowcount = dbconn.execSQLForSingleton(conn, "SELECT count(*) FROM %s" % tablename)
-            if rowcount != numrows:
-                raise Exception("Expected to find %d rows in table %s, found %d" % (numrows, tablename, rowcount))
+    conn = dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False)
+    try:
+        rowcount = dbconn.execSQLForSingleton(conn, "SELECT count(*) FROM %s" % tablename)
+        if rowcount != int(numrows):
+            raise Exception("Expected to find %d rows in table %s, found %d" % (int(numrows), tablename, rowcount))
+    finally:
+        conn.close()
 
 @then(
     'data for partition table "{table_name}" with partition level "{part_level}" is distributed across all segments on "{dbname}"')
