@@ -288,7 +288,6 @@ switcheroo_tuplesort_begin_cluster(TupleDesc tupDesc,
 			tuplesort_begin_cluster_pg(tupDesc, indexRel,
 									   workMem, randomAccess);
 	}
-	state->is_mk_tuplesortstate = gp_enable_mk_sort;
 	state->is_mk_tuplesortstate = false;
 	return state;
 }
