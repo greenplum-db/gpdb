@@ -3535,12 +3535,12 @@ def processMissingDuplicateEntryResult(catname, colname, allValues, type):
 def processInconsistentEntryResult(catname, pknames, colname, allValues):
     # If tableHasInconsistentOid, columns does not have oid
     '''
-    17365 | test10 | 2200 | 17366 | 0 | 0 | 17366 | 0 | 0 | 0 | f | r | h | 3 | 0 | 0 | 0 | 0 | 0 | f | f | f | f | None | {0}     -- row1
-    17365 | test10 | 2200 | 17366 | 0 | 0 | 0     | 0 | 0 | 0 | f | r | h | 2 | 0 | 0 | 0 | 0 | 0 | f | f | f | f | None | {NULL}  -- row2
+    17365 | test10 | 2200 | 17366 | 0 | 0 | 17366 | 0 | 0 | 0 | f | r | h | 3 | 0 | 0 | 0 | 0 | 0 | f | f | f | f | None | [0]     -- row1
+    17365 | test10 | 2200 | 17366 | 0 | 0 | 0     | 0 | 0 | 0 | f | r | h | 2 | 0 | 0 | 0 | 0 | 0 | f | f | f | f | None | [None]  -- row2
 
-    176954 | test1 | 2200 | 176955 | 0 | 0 | 176956 | 0 | 0 | 0 | f | r | h | 4 | 0 | 0 | 0 | 0 | 0 | f | f | f | f | None | {-1}
-    176954 | test1 | 2200 | 176955 | 0 | 0 | 176956 | 0 | 0 | 0 | f | r | h | 2 | 0 | 0 | 0 | 0 | 0 | f | f | f | f | None | {0,1}
-    176954 | test1 | 2200 | 176955 | 0 | 0 | 176956 | 0 | 0 | 0 | f | r | h | 3 | 0 | 0 | 0 | 0 | 0 | f | f | f | f | None | {2,3}
+    176954 | test1 | 2200 | 176955 | 0 | 0 | 176956 | 0 | 0 | 0 | f | r | h | 4 | 0 | 0 | 0 | 0 | 0 | f | f | f | f | None | [-1]
+    176954 | test1 | 2200 | 176955 | 0 | 0 | 176956 | 0 | 0 | 0 | f | r | h | 2 | 0 | 0 | 0 | 0 | 0 | f | f | f | f | None | [0,1]
+    176954 | test1 | 2200 | 176955 | 0 | 0 | 176956 | 0 | 0 | 0 | f | r | h | 3 | 0 | 0 | 0 | 0 | 0 | f | f | f | f | None | [2,3]
     '''
 
     # Group allValues rows by its key (oid or primary key) into a dictionary:
@@ -3705,7 +3705,7 @@ class CatInconsistentIssue:
     def report(self):
 
         def format_segids(segids):
-            if segids == '{NULL}':
+            if segids == [None]:
                 idstr = 'all other segments'
             else:
                 ids =  segids
