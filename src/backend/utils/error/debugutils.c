@@ -278,6 +278,7 @@ void dump_mt_bind(MemTupleBinding *mt_bind, const char *fname)
                     mt_bind->large_bind.null_saves[i]
                );
     }
+	fclose(ofile);
 }
 
 #ifdef USE_ASSERT_CHECKING
