@@ -33,6 +33,7 @@
 #include "gpopt/operators/CLogicalGet.h"
 #include "gpopt/operators/CLogicalDynamicGet.h"
 #include "gpopt/operators/CLogicalNAryJoin.h"
+#include "gpopt/operators/CLogicalSelect.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CPredicateUtils.h"
@@ -1002,6 +1003,26 @@ CLogical::DeriveFunctionProperties
 
 //---------------------------------------------------------------------------
 //	@function:
+//		CLogical::DeriveTableDescriptor
+//
+//	@doc:
+//		Derive table descriptor for tables used by operator
+//
+//---------------------------------------------------------------------------
+CTableDescriptor *
+CLogical::DeriveTableDescriptor
+	(
+	CMemoryPool *,
+	CExpressionHandle &
+	)
+	const
+{
+	//currently return null unless there is a single table being used. Later we may want
+	//to make this return a set of table descriptors and pass them up all operators
+	return NULL;
+}
+//---------------------------------------------------------------------------
+//	@function:
 //		CLogical::PfpDeriveFromScalar
 //
 //	@doc:
@@ -1403,8 +1424,9 @@ CLogical::PtabdescFromTableGet
 			return CLogicalBitmapTableGet::PopConvert(pop)->Ptabdesc();
 		case CLogical::EopLogicalDynamicBitmapTableGet:
 			return CLogicalDynamicBitmapTableGet::PopConvert(pop)->Ptabdesc();
+		case CLogical::EopLogicalSelect:
+			return CLogicalSelect::PopConvert(pop)->Ptabdesc();
 		default:
-			GPOS_ASSERT(false && "Unsupported operator in CLogical::PtabdescFromTableGet");
 			return NULL;
 	}
 }

@@ -1256,7 +1256,7 @@ CStatisticsUtils::DeriveStatsForBitmapTableGet
 {
 	GPOS_ASSERT(CLogical::EopLogicalBitmapTableGet == expr_handle.Pop()->Eopid() ||
 				CLogical::EopLogicalDynamicBitmapTableGet == expr_handle.Pop()->Eopid());
-	CTableDescriptor *table_descriptor = CLogical::PtabdescFromTableGet(expr_handle.Pop());
+	CTableDescriptor *table_descriptor = expr_handle.DeriveTableDescriptor();
 
 	// the index of the condition
 	ULONG child_cond_index = 0;

@@ -281,6 +281,9 @@ namespace gpopt
 			virtual
 			CFunctionProp *DeriveFunctionProperties(CMemoryPool *mp, CExpressionHandle &exprhdl) const;
 
+			virtual
+			CTableDescriptor *DeriveTableDescriptor(CMemoryPool *mp, CExpressionHandle &exprhdl) const;
+
 			//-------------------------------------------------------------------------------------
 			// Derived Stats
 			//-------------------------------------------------------------------------------------
@@ -365,6 +368,10 @@ namespace gpopt
 			// returns the table descriptor for (Dynamic)(BitmapTable)Get operators
 			static
 			CTableDescriptor *PtabdescFromTableGet(COperator *pop);
+
+			// returns the output columns for selected operator
+			static
+			CColRefArray *PoutputColsFromTableGet(COperator *pop);
 			
 			// extract the output columns descriptor from a logical get or dynamic get operator
 			static

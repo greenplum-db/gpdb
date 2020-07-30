@@ -39,7 +39,20 @@ CLogicalSelect::CLogicalSelect
 	CMemoryPool *mp
 	)
 	:
-	CLogicalUnary(mp)
+	CLogicalUnary(mp),
+	m_ptabdesc(NULL)
+{
+	m_phmPexprPartPred = GPOS_NEW(mp) ExprPredToExprPredPartMap(mp);
+}
+
+CLogicalSelect::CLogicalSelect
+	(
+	CMemoryPool *mp,
+	CTableDescriptor *ptabdesc
+	)
+	:
+	CLogicalUnary(mp),
+	m_ptabdesc(ptabdesc)
 {
 	m_phmPexprPartPred = GPOS_NEW(mp) ExprPredToExprPredPartMap(mp);
 }

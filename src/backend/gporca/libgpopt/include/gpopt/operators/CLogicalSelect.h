@@ -39,11 +39,17 @@ namespace gpopt
 
 			ExprPredToExprPredPartMap *m_phmPexprPartPred;
 
+			// table descriptor
+			CTableDescriptor *m_ptabdesc;
+
 		public:
 
 			// ctor
 			explicit
 			CLogicalSelect(CMemoryPool *mp);
+
+			// ctor
+			CLogicalSelect(CMemoryPool *mp, CTableDescriptor *ptabdesc);
 
 			// dtor
 			virtual
@@ -60,6 +66,12 @@ namespace gpopt
 			const CHAR *SzId() const
 			{
 				return "CLogicalSelect";
+			}
+
+			// return table's descriptor
+			CTableDescriptor *Ptabdesc() const
+			{
+				return m_ptabdesc;
 			}
 
 			//-------------------------------------------------------------------------------------
@@ -88,6 +100,18 @@ namespace gpopt
 				const
 			{
 				return PpcDeriveConstraintFromPredicates(mp, exprhdl);
+			}
+
+			// derive table descriptor
+			virtual
+			CTableDescriptor *DeriveTableDescriptor
+				(
+				CMemoryPool *, // mp
+				CExpressionHandle &exprhdl
+				)
+				const
+			{
+				return exprhdl.DeriveTableDescriptor(0);
 			}
 
 			// compute partition predicate to pass down to n-th child

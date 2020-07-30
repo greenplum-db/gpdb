@@ -20,6 +20,7 @@
 #include "gpopt/base/CFunctionalDependency.h"
 #include "gpopt/base/CPropConstraint.h"
 #include "gpopt/base/CFunctionProp.h"
+#include "gpopt/metadata/CTableDescriptor.h"
 
 namespace gpopt
 {
@@ -67,6 +68,7 @@ namespace gpopt
 			EdptPfp,
 			EdptJoinDepth,
 			EdptFHasPartialIndexes,
+			EdptTableDescriptor,
 			EdptSentinel
 		};
 
@@ -113,6 +115,8 @@ namespace gpopt
 			// true if all logical operators in the group are of type CLogicalDynamicGet,
 			// and the dynamic get has partial indexes
 			BOOL m_fHasPartialIndexes;
+
+			CTableDescriptor *m_table_descriptor;
 
 			// private copy ctor
 			CDrvdPropRelational(const CDrvdPropRelational &);
@@ -173,7 +177,9 @@ namespace gpopt
 			CFunctionProp *DeriveFunctionProperties(CExpressionHandle &);
 
 			// has partial indexes
-			BOOL DeriveHasPartialIndexes(CExpressionHandle &exprhdl);
+			BOOL DeriveHasPartialIndexes(CExpressionHandle &);
+
+			CTableDescriptor *DeriveTableDescriptor(CExpressionHandle &);
 
 		public:
 
@@ -232,6 +238,8 @@ namespace gpopt
 
 			// has partial indexes
 			BOOL HasPartialIndexes() const;
+
+			CTableDescriptor *GetTableDescriptor() const;
 
 			// shorthand for conversion
 			static

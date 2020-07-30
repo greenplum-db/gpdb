@@ -28,8 +28,11 @@
 #include "gpopt/xforms/CJoinOrderDPv2.h"
 
 #include "gpopt/exception.h"
+#include "naucrates/md/IMDRelStats.h"
 
 #include "naucrates/statistics/CJoinStatsProcessor.h"
+#include "naucrates/md/CMDIdRelStats.h"
+#include "gpopt/cost/ICostModelParams.h"
 
 
 using namespace gpopt;
@@ -44,7 +47,10 @@ using namespace gpopt;
 // prohibitively high penalty for cross products when in GreedyAvoidXProd
 #define GPOPT_DPV2_CROSS_JOIN_GREEDY_PENALTY 1e9
 
-
+// from cost model used during optimization in CCostModelParamsGPDB.cpp
+#define BCAST_SEND_COST 4.965e-05
+#define BCAST_RECV_COST 1.35e-06
+#define SEQ_SCAN_COST 5.50e-07
 //---------------------------------------------------------------------------
 //	@function:
 //		CJoinOrderDPv2::CJoinOrderDPv2
@@ -80,10 +86,18 @@ CJoinOrderDPv2::CJoinOrderDPv2
 
 	m_bitset_to_group_info_map = GPOS_NEW(mp) BitSetToGroupInfoMap(mp);
 
+	// Contains top k expressions for a general DP algorithm, without considering cost of motions/PS
 	m_top_k_expressions = GPOS_NEW(mp) CKHeap<SExpressionInfoArray, SExpressionInfo>
 										(
 										 mp,
 										 GPOPT_DPV2_JOIN_ORDERING_TOPK
+										);
+	// We use a separate heap to ensure we produce an alternative expression that contains a dynamic PS
+	// If no dynamic PS is valid, this will be empty.
+	m_top_k_part_expressions = GPOS_NEW(mp) CKHeap<SExpressionInfoArray, SExpressionInfo>
+										(
+										 mp,
+										 1 /* keep top 1 expression */
 										);
 
 	m_mp = mp;
@@ -142,8 +156,10 @@ CJoinOrderDPv2::~CJoinOrderDPv2()
 	m_bitset_to_group_info_map->Release();
 	CRefCount::SafeRelease(m_expression_to_edge_map);
 	m_top_k_expressions->Release();
+	m_top_k_part_expressions->Release();
 	m_join_levels->Release();
 	m_on_pred_conjuncts->Release();
+
 #endif // GPOS_DEBUG
 }
 
@@ -183,6 +199,8 @@ CJoinOrderDPv2::ComputeCost
 			// penalize cross joins, similar to what we do in the optimization phase
 			dCost = dCost * m_cross_prod_penalty;
 		}
+		expr_info->m_cost_adj_PS = expr_info->m_cost_adj_PS + expr_info->m_left_child_expr.GetExprInfo()->m_cost_adj_PS;
+		expr_info->m_cost_adj_PS = expr_info->m_cost_adj_PS + expr_info->m_right_child_expr.GetExprInfo()->m_cost_adj_PS;
 	}
 
 	expr_info->m_cost = dCost;
@@ -376,7 +394,7 @@ CJoinOrderDPv2::GetJoinExpr
 		join_expr = CUtils::PexprLogicalJoin<CLogicalInnerJoin>(m_mp, left_expr, right_expr, scalar_expr);
 	}
 
-	return GPOS_NEW(m_mp) SExpressionInfo(join_expr, left_child_expr, right_child_expr, result_properties);
+	return GPOS_NEW(m_mp) SExpressionInfo(m_mp, join_expr, left_child_expr, right_child_expr, result_properties);
 }
 
 
@@ -509,7 +527,15 @@ CJoinOrderDPv2::AddExprToGroupIfNecessary
 		// At the top level, we have only one group. To be able to return multiple results
 		// for the xform, we keep the top k expressions (all from the same group) in a KHeap
 		new_expr_info->AddRef();
-		m_top_k_expressions->Insert(new_expr_info);
+		if (new_expr_info->m_properties.Satisfies(EJoinOrderHasPS))
+		{
+			m_top_k_part_expressions->Insert(new_expr_info);
+		}
+		else
+		{
+			m_top_k_expressions->Insert(new_expr_info);
+		}
+
 	}
 
 	if (0 == group_info->m_best_expr_info_array->Size() || new_cost < group_info->m_lowest_expr_cost)
@@ -800,6 +826,91 @@ void CJoinOrderDPv2::RecursivelyMarkEdgesAsUsed(CExpression *expr)
 }
 
 
+// Consider partition selector/broadcast and populate join_expr_info accordingly
+// Specifically, we're looking for joins in the form
+//   Join
+//     - DTS
+//     - table scan (or tree)
+//        - predicate
+//
+// In this case, we can put the PS over the TS
+// We make a few assumptions:
+//   1. The benefits of a PS are from the selectivity of a single table, rather than the join result between two tables. We find this table by looking for logical selects.
+//   2. The selectivty of this single table is equal to the selectivity of the PS
+//
+// If the right atom is a PT, then we need to check if the left expression has a PS that may satisfy it.
+// If it is, we mark this SExpressionInfo as containing a PS
+// We only consider linear trees here, since bushy trees would increase the search space and increase the
+// chance of motions between the PS and PT, which then would fail requirements during optimization
+void
+CJoinOrderDPv2::PopulateDPEInfo
+	(
+	SExpressionInfo *join_expr_info,
+	SGroupInfo *part_table_group_info,
+	SGroupInfo *part_selector_group_info
+	)
+{
+	SGroupInfoArray *atom_groups = GetGroupsForLevel(1);
+
+	CBitSetIter iter_pt(*part_table_group_info->m_atoms);
+	SGroupInfo *pt_atom = NULL;
+	CPartKeysArray *partition_keys = NULL;
+	while(iter_pt.Advance())
+	{
+		pt_atom = (*atom_groups)[iter_pt.Bit()];
+		partition_keys = (*pt_atom->m_best_expr_info_array)[0]->m_atom_part_keys_array;
+		if (partition_keys != NULL && partition_keys->Size() > 0){
+			break;
+		}
+	}
+	if (NULL != partition_keys)
+	{
+		GPOS_ASSERT(NULL != pt_atom);
+		GPOS_ASSERT(NULL != partition_keys && partition_keys->Size() > 0);
+		CExpression *join_expr = join_expr_info->m_expr;
+		CExpression *scalar_expr = (*join_expr)[join_expr->Arity() - 1];
+
+		CColRefSet *join_expr_cols = scalar_expr->DeriveUsedColumns();
+		for (ULONG i =0; i < partition_keys->Size(); i++){
+			CPartKeys *part_keys = (*partition_keys)[i];
+			// If the join expr overlaps the partition key, then we consider the expression as having a possible PS for that PT
+			if (part_keys->FOverlap(join_expr_cols))
+			{
+				CBitSetIter iter_ps(*part_selector_group_info->m_atoms);
+				join_expr_info->m_contain_PS->ExchangeSet(iter_pt.Bit());
+				while(iter_ps.Advance())
+				{
+					// if the part selector group has a potential PS, ensure that one of the group's atoms is a logical select
+					if ((*(*atom_groups)[iter_ps.Bit()]->m_best_expr_info_array)[0]->m_expr->Pop()->Eopid() == COperator::EopLogicalSelect)
+					{
+						SExpressionInfo *atom_ps = (*(*atom_groups)[iter_ps.Bit()]->m_best_expr_info_array)[0];
+						// This is a bit simplistic. We calculate how much we are reducing the cardinality of the atom, but also take into account the cost of broadcasting the inner rows. If the number of rows broadcasted is much larger than the savings, then PS will likely not benefit in this case
+						// The numbers are from the cost model used during optimization
+
+						// for a select(some_non_get_node()) ==> 0.9
+						// for a non-select node (won't even come here) ==> 0.0, in effect
+						// for a select(get) ==> 1 - (row count of select / row count of get)
+
+						CDouble percent_reduction = .9; // an arbitary default if the logical operator is not a simple select
+						ICostModel *cost_model = COptCtxt::PoctxtFromTLS()->GetCostModel();
+						CDouble num_segments = cost_model->UlHosts();
+						CDouble distribution_cost_factor = (num_segments * BCAST_RECV_COST + BCAST_SEND_COST) / SEQ_SCAN_COST;
+						CDouble broadcast_penalty = part_selector_group_info->m_cardinality * distribution_cost_factor;
+
+						if (atom_ps->m_atom_base_table_rows.Get() > 0){
+							percent_reduction = (1 - (atom_ps->m_cost.Get() / atom_ps->m_atom_base_table_rows.Get()));
+						}
+
+						// Adjust the cost of the expression for each partition selector
+						join_expr_info->m_cost_adj_PS = join_expr_info->m_cost_adj_PS - (percent_reduction * pt_atom->m_cardinality) + broadcast_penalty;
+					}
+				}
+				break;
+			}
+		}
+	}
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CJoinOrderDPv2::SearchJoinOrders
@@ -825,10 +936,10 @@ CJoinOrderDPv2::SearchJoinOrders
 
 	ULONG left_size = left_group_info_array->Size();
 	ULONG right_size = right_group_info_array->Size();
-
 	for (ULONG left_ix=0; left_ix<left_size; left_ix++)
 	{
 		SGroupInfo *left_group_info = (*left_group_info_array)[left_ix];
+
 		CBitSet *left_bitset = left_group_info->m_atoms;
 		ULONG right_ix = 0;
 
@@ -836,6 +947,8 @@ CJoinOrderDPv2::SearchJoinOrders
 		// entry to avoid duplicate join combinations
 		// i.e a join b and b join a, just try one
 		// commutativity will take care of the other
+		// this assumption is also necessary to ensure
+		// we generate correct results for LOJs
 		if (left_level == right_level)
 		{
 			right_ix = left_ix + 1;
@@ -852,21 +965,53 @@ CJoinOrderDPv2::SearchJoinOrders
 				continue;
 			}
 
-			SExpressionProperties reqd_properties(EJoinOrderAny);
+			SExpressionProperties reqd_properties(EJoinOrderDP);
 			SExpressionInfo *join_expr_info = GetJoinExprForProperties(left_group_info, right_group_info, reqd_properties);
 
 			if (NULL != join_expr_info)
 			{
 				// we have a valid join
-				CBitSet *join_bitset = GPOS_NEW(m_mp) CBitSet(m_mp, *left_bitset);
 
-				// TODO: Reduce non-mandatory cross products
+				CBitSet *join_bitset = GPOS_NEW(m_mp) CBitSet(m_mp, *left_bitset);
 
 				join_bitset->Union(right_bitset);
 
+				// Find the best expression for DP and add this to the group
+				// This doesn't consider PS, but we still want to generate these alternatives
 				SGroupInfo *group_info = LookupOrCreateGroupInfo(current_level_info, join_bitset, join_expr_info);
-
 				AddExprToGroupIfNecessary(group_info, join_expr_info);
+
+				// We only want to consider linear trees when enumerating partition selector alternatives
+				if (right_level != 1){
+					continue;
+				}
+
+				// For PS alternatives, get the best join expression for any properties
+				SExpressionProperties join_props(EJoinOrderAny);
+
+				// Now search for new PS alternatives
+				join_expr_info = GetJoinExprForProperties(left_group_info, right_group_info, join_props );
+
+
+
+				// TODO: Reduce non-mandatory cross products
+
+				PopulateDPEInfo(join_expr_info, left_group_info, right_group_info);
+				// For the first level, we should consider joining both ways
+				if (left_level == 1 && right_level == 1)
+				{
+					PopulateDPEInfo(join_expr_info, right_group_info, left_group_info);
+				}
+
+				if (join_expr_info->m_contain_PS->Size() > 0)
+				{
+					AddNewPropertyToExpr(join_expr_info, SExpressionProperties(EJoinOrderHasPS));
+					AddExprToGroupIfNecessary(group_info, join_expr_info);
+				}
+				else
+				{
+					join_expr_info->Release();
+				}
 			}
 		}
 	}
@@ -963,7 +1108,6 @@ CJoinOrderDPv2::GreedySearchJoinOrders
 		}
 
 		SExpressionInfo *join_expr_info = GetJoinExpr(left_child_expr_info, right_child_expr_info, result_properties);
-
 		if (NULL != join_expr_info)
 		{
 			// we have a valid join
@@ -1059,7 +1203,6 @@ CJoinOrderDPv2::LookupOrCreateGroupInfo
 			// allocate a ref count for us, so add one here
 			stats_expr_info->AddRef();
 		}
-
 		group_info->m_cardinality = real_expr_info_for_stats->m_expr->Pstats()->Rows();
 		AddExprToGroupIfNecessary(group_info, real_expr_info_for_stats);
 
@@ -1186,26 +1329,54 @@ CJoinOrderDPv2::PexprExpand()
 	SLevelInfo *atom_level = Level(1);
 
 	// the atoms all have stats derived
-	SExpressionProperties atom_props(EJoinOrderStats);
+	SExpressionProperties atom_props(EJoinOrderStats + EJoinOrderDP);
 
 	// populate level 1 with the atoms (the logical children of the NAry join)
+	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
 	for (ULONG atom_id = 0; atom_id < m_ulComps; atom_id++)
 	{
 		CBitSet *atom_bitset = GPOS_NEW(m_mp) CBitSet(m_mp);
 		atom_bitset->ExchangeSet(atom_id);
 		CExpression *pexpr_atom = m_rgpcomp[atom_id]->m_pexpr;
 		pexpr_atom->AddRef();
-		SExpressionInfo *atom_expr_info = GPOS_NEW(m_mp) SExpressionInfo(pexpr_atom, atom_props);
-
+		SExpressionInfo *atom_expr_info = GPOS_NEW(m_mp) SExpressionInfo(m_mp, pexpr_atom, atom_props);
 		if (0 == atom_id)
 		{
 			// this is the level 1 solution for the query join order
 			atom_expr_info->m_properties.Add(EJoinOrderQuery);
 		}
 
+		// populate partition keys for atoms. This is an array of partition keys for each atom, NULL for non-partition tables
+		CPartInfo *part_info = pexpr_atom->DerivePartitionInfo();
+		if (part_info->UlConsumers() > 0)
+		{
+			atom_expr_info->m_atom_part_keys_array = part_info->Pdrgppartkeys(0);
+			// mark this atom as containing a PS
+			AddNewPropertyToExpr(atom_expr_info, SExpressionProperties(EJoinOrderHasPS));
+		}
+
+		// Get base table descriptor if possible. We're particularly interested in Logical Gets/Selects
+		// We need the underlying partition and table row information to properly estimate cardinality for
+		// partition selection. If this is a logical expr that is more complex (eg: cte, nary join), we
+		// will use a default estimate
+		CTableDescriptor *table_desc = pexpr_atom->DeriveTableDescriptor();
+
+		if (table_desc != NULL)
+		{
+			IMDId *rel_mdid = table_desc->MDId();
+			rel_mdid->AddRef();
+			CMDIdRelStats *rel_stats_mdid = GPOS_NEW(m_mp) CMDIdRelStats(CMDIdGPDB::CastMdid(rel_mdid));
+			const IMDRelStats *pmdRelStats = md_accessor->Pmdrelstats(rel_stats_mdid);
+			rel_stats_mdid->Release();
+
+			atom_expr_info->m_atom_base_table_rows = std::max(DOUBLE(1.0), pmdRelStats->Rows().Get());
+		}
+
 		LookupOrCreateGroupInfo(atom_level, atom_bitset, atom_expr_info);
+
 		// note that for atoms with stats, the above call will also insert atom_expr_info as first (and only)
 		// expression into the group
+
 		atom_expr_info->Release();
 	}
 
@@ -1342,7 +1513,7 @@ CJoinOrderDPv2::FindLowestCardTwoWayJoin(JoinOrderPropType prop_type)
 	{
 		// due to above traceflags being turned on, EnumerateDP() didn't create
 		// the necessary two way join orders. We have to create them here.
-		SearchJoinOrders(1, 1);;
+		SearchJoinOrders(1, 1);
 	}
 
 	SLevelInfo *level_2 = Level(2);
@@ -1449,6 +1620,10 @@ CExpression*
 CJoinOrderDPv2::GetNextOfTopK()
 {
 	SExpressionInfo *join_result_info = m_top_k_expressions->RemoveBestElement();
+	if (NULL == join_result_info)
+	{
+		join_result_info = m_top_k_part_expressions->RemoveBestElement();
+	}
 
 	if (NULL == join_result_info)
 	{
@@ -1645,6 +1820,9 @@ CJoinOrderDPv2::OsPrint
 
 				os << "   Expression with properties ";
 				OsPrintProperty(os, expr_info->m_properties);
+				os << "   m_contain_ps bitset: ";
+				expr_info->m_contain_PS->OsPrint(os);
+				os << std::endl;
 
 				if (!gi->IsAnAtom())
 				{
@@ -1657,10 +1835,17 @@ CJoinOrderDPv2::OsPrint
 					os << " join ";
 					expr_info->m_right_child_expr.m_group_info->m_atoms->OsPrint(os);
 					os << std::endl;
+					os << "   left child cost: " << expr_info->m_left_child_expr.m_group_info->m_lowest_expr_cost << std::endl;
+					os << "   right child cost: " << expr_info->m_right_child_expr.m_group_info->m_lowest_expr_cost << std::endl;
 				}
 				os << "   Cost: ";
 				expr_info->m_cost.OsPrint(os);
+				os << "   Partition Selector Penalty Cost: ";
+				expr_info->m_cost_adj_PS.OsPrint(os);
+				os << "   Total Cost with Partition Selector Penalty: ";
+				expr_info->GetCost().OsPrint(os);
 				os << std::endl;
+
 				if (lev == 1)
 				{
 					os << "   Atom: " << std::endl;
@@ -1694,7 +1879,7 @@ CJoinOrderDPv2::OsPrintProperty(IOstream &os, SExpressionProperties &props) cons
 	os << "{ ";
 	if (0 == props.m_join_order)
 	{
-		os << "DP";
+		os << "";
 	}
 	else
 	{
@@ -1719,12 +1904,25 @@ CJoinOrderDPv2::OsPrintProperty(IOstream &os, SExpressionProperties &props) cons
 			os << "GreedyAvoidXProd";
 			is_first = false;
 		}
+		if (props.Satisfies(EJoinOrderHasPS))
+		{
+			if (!is_first)
+				os << ", ";
+			os << "HasPS";
+		}
 		if (props.Satisfies(EJoinOrderStats))
 		{
 			if (!is_first)
 				os << ", ";
 			os << "Stats";
 		}
+		if (props.Satisfies(EJoinOrderDP))
+		{
+			if (!is_first)
+				os << ", ";
+			os << "DP";
+		}
+
 	}
 	os << " }";
 

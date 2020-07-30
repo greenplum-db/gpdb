@@ -317,6 +317,9 @@ namespace gpopt
 			BOOL DeriveHasPartialIndexes();
 			BOOL DeriveHasPartialIndexes(ULONG child_index);
 
+			CTableDescriptor *DeriveTableDescriptor();
+			CTableDescriptor *DeriveTableDescriptor(ULONG child_index);
+
 			// Scalar property accessors
 			CColRefSet *DeriveDefinedColumns(ULONG child_index);
 			CColRefSet *DeriveUsedColumns(ULONG child_index);

@@ -1660,6 +1660,14 @@ CExpression::DeriveHasPartialIndexes()
 	return m_pdprel->DeriveHasPartialIndexes(exprhdl);
 }
 
+CTableDescriptor *
+CExpression::DeriveTableDescriptor()
+{
+	CExpressionHandle exprhdl(m_mp);
+	exprhdl.Attach(this);
+	return m_pdprel->DeriveTableDescriptor(exprhdl);
+}
+
 // Scalar property accessors - derived as needed
 CColRefSet *
 CExpression::DeriveDefinedColumns()

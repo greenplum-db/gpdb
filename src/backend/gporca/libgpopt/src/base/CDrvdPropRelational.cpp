@@ -137,6 +137,8 @@ CDrvdPropRelational::Derive
 
 	DeriveHasPartialIndexes(exprhdl);
 
+	DeriveTableDescriptor(exprhdl);
+
 	m_is_complete = true;
 }
 
@@ -635,5 +637,25 @@ CDrvdPropRelational::DeriveHasPartialIndexes(CExpressionHandle &exprhdl)
 	}
 
 	return m_fHasPartialIndexes;
+}
+
+// table descriptor
+CTableDescriptor *
+CDrvdPropRelational::GetTableDescriptor() const
+{
+	GPOS_RTL_ASSERT(IsComplete());
+	return m_table_descriptor;
+}
+
+CTableDescriptor *
+CDrvdPropRelational::DeriveTableDescriptor(CExpressionHandle &exprhdl)
+{
+	if (!m_is_prop_derived->ExchangeSet(EdptTableDescriptor))
+	{
+		CLogical *popLogical = CLogical::PopConvert(exprhdl.Pop());
+		m_table_descriptor = popLogical->DeriveTableDescriptor(m_mp, exprhdl);
+	}
+
+	return m_table_descriptor;
 }
 // EOF

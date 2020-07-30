@@ -148,6 +148,9 @@ namespace gpopt
 			virtual
 			CPartInfo *DerivePartitionInfo(CMemoryPool *mp, CExpressionHandle &exprhdl) const;
 
+			// derive table descriptor
+			virtual CTableDescriptor *DeriveTableDescriptor(CMemoryPool *mp, CExpressionHandle &exprhdl) const;
+
 			// compute required stats columns of the n-th child
 			virtual
 			CColRefSet *PcrsStat

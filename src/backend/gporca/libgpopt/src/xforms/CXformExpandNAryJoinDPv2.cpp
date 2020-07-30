@@ -155,6 +155,7 @@ CXformExpandNAryJoinDPv2::Transform
 		nextJoinOrder->Release();
 		pxfres->Add(pexprNormalized);
 	}
+
 }
 
 // EOF
