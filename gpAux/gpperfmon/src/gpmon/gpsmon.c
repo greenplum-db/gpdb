@@ -646,6 +646,8 @@ static void gx_gettcpcmd(SOCKET sock, short event, void* arg)
 		{
 			close(gx.tcp_sock);
 			gx.tcp_sock=0;
+			if (event_del(&gx.tcp_event))
+				gpsmon_fatal(FLINE, "event_del failed");
 		}
 		return;
 	}
