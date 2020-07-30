@@ -272,6 +272,6 @@ DROP TABLE as_select1;
 --DROP TABLE oid_pk;
 
 -- Test github issue #7340. truncating a toast unlogged table fails.
+-- Leave the table on purpose for pg_dump and gp_replica_check tests.
 CREATE UNLOGGED TABLE unlogged_toast (a text);
 TRUNCATE unlogged_toast;
-DROP TABLE unlogged_toast;

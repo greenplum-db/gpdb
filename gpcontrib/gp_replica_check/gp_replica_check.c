@@ -45,7 +45,8 @@
 								|| pg_strncasecmp(filename, "t_", 2) == 0 \
 								|| pg_strncasecmp(filename, ".", 1) == 0 \
 								|| pg_strncasecmp(filename + strlen(filename) - 4, "_fsm", 4) == 0 \
-								|| pg_strncasecmp(filename + strlen(filename) - 3, "_vm", 3) == 0)
+								|| pg_strncasecmp(filename + strlen(filename) - 3, "_vm", 3) == 0 \
+								|| pg_strncasecmp(filename + strlen(filename) - 5, "_init", 5) == 0)
 
 PG_MODULE_MAGIC;
 
@@ -521,6 +522,10 @@ get_relfilenode_map()
 			 || classtuple->relkind == RELKIND_COMPOSITE_TYPE)
 			|| (classtuple->relstorage != RELSTORAGE_HEAP
 				&& !relstorage_is_ao(classtuple->relstorage)))
+			continue;
+
+		/* unlogged tables do not propagate to replica servers */
+		if (classtuple->relpersistence == RELPERSISTENCE_UNLOGGED)
 			continue;
 
 		RelfilenodeEntry *rentry;
