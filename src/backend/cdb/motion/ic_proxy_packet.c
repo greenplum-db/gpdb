@@ -38,12 +38,16 @@ ic_proxy_message_type_to_str(ICProxyMessageType type)
 	{
 		case IC_PROXY_MESSAGE_DATA:
 			return "DATA";
+		case IC_PROXY_MESSAGE_PEER_HELLO:
+			return "PEER HELLO";
+		case IC_PROXY_MESSAGE_PEER_HELLO_ACK:
+			return "PEER HELLO ACK";
+		case IC_PROXY_MESSAGE_PEER_QUIT:
+			return "PEER QUIT";
 		case IC_PROXY_MESSAGE_HELLO:
 			return "HELLO";
 		case IC_PROXY_MESSAGE_HELLO_ACK:
 			return "HELLO ACK";
-		case IC_PROXY_MESSAGE_PEER_QUIT:
-			return "PEER QUIT";
 		case IC_PROXY_MESSAGE_BYE:
 			return "BYE";
 		case IC_PROXY_MESSAGE_PAUSE:

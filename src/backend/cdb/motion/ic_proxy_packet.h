@@ -27,20 +27,14 @@ typedef enum
 {
 	IC_PROXY_MESSAGE_DATA = 0,
 
-	/* TODO: separate peer messages and client messages */
-
-	/*
-	 * these are common messages of peers and clients, however they have
-	 * slightly different meanings between peers and clients, it's better to
-	 * separate them.
-	 * */
-	IC_PROXY_MESSAGE_HELLO,
-	IC_PROXY_MESSAGE_HELLO_ACK,
-
 	/* these are peer messages */
+	IC_PROXY_MESSAGE_PEER_HELLO,
+	IC_PROXY_MESSAGE_PEER_HELLO_ACK,
 	IC_PROXY_MESSAGE_PEER_QUIT,
 
 	/* these are client messages */
+	IC_PROXY_MESSAGE_HELLO,
+	IC_PROXY_MESSAGE_HELLO_ACK,
 	IC_PROXY_MESSAGE_BYE,
 	IC_PROXY_MESSAGE_PAUSE,
 	IC_PROXY_MESSAGE_RESUME,

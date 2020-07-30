@@ -563,7 +563,7 @@ ic_proxy_peer_on_hello_pkt(void *opaque, const void *data, uint16 size)
 	ic_proxy_key_reverse(&key);
 	key.localPid = MyProcPid;
 
-	ic_proxy_peer_send_message(peer, IC_PROXY_MESSAGE_HELLO_ACK, &key,
+	ic_proxy_peer_send_message(peer, IC_PROXY_MESSAGE_PEER_HELLO_ACK, &key,
 							   ic_proxy_peer_on_sent_hello_ack);
 }
 
@@ -652,7 +652,7 @@ ic_proxy_peer_on_hello_ack_pkt(void *opaque, const void *data, uint16 size)
 		return;
 	}
 
-	if (!ic_proxy_pkt_is(pkt, IC_PROXY_MESSAGE_HELLO_ACK))
+	if (!ic_proxy_pkt_is(pkt, IC_PROXY_MESSAGE_PEER_HELLO_ACK))
 		ic_proxy_log(ERROR, "%s: received invalid HELLO ACK: %s",
 					 peer->name, ic_proxy_pkt_to_str(pkt));
 
@@ -794,7 +794,7 @@ ic_proxy_peer_on_connected(uv_connect_t *conn, int status)
 	peer->state |= IC_PROXY_PEER_STATE_SENDING_HELLO;
 
 	ic_proxy_peer_update_name(peer);
-	ic_proxy_peer_send_message(peer, IC_PROXY_MESSAGE_HELLO, &key,
+	ic_proxy_peer_send_message(peer, IC_PROXY_MESSAGE_PEER_HELLO, &key,
 							   ic_proxy_peer_on_sent_hello);
 }
 

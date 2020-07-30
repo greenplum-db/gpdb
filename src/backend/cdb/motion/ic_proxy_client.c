@@ -702,8 +702,13 @@ ic_proxy_client_on_hello_data(uv_stream_t *stream,
 		if (buf->base)
 			ic_proxy_pkt_cache_free(buf->base);
 
-		ic_proxy_log(ERROR, "%s, TODO: fail to receive HELLO",
+		ic_proxy_log(WARNING, "%s, TODO: fail to receive HELLO",
 					 ic_proxy_client_get_name(client));
+		/* 
+		 * Pending data in a failed handshake is useless,
+		 * no need to call shutdown() explicitly.
+		 */
+		ic_proxy_client_close(client);
 		return;
 	}
 	else if (unlikely(nread == 0))
