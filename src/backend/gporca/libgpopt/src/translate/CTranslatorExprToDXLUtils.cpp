@@ -980,12 +980,15 @@ CTranslatorExprToDXLUtils::PdxlnRangeFilterScCmp
 		fLowerBound = true;
 		ecmptScCmp = IMDType::EcmptL;
 	}
-	else 
+	else if (IMDType::EcmptGEq == cmp_type || IMDType::EcmptG == cmp_type)
 	{
-		GPOS_ASSERT(IMDType::EcmptGEq == cmp_type || IMDType::EcmptG == cmp_type);
-		
 		// partkey >/>= other: construct condition max > other
 		ecmptScCmp = IMDType::EcmptG;
+	}
+	else
+	{
+		GPOS_ASSERT(IMDType::EcmptNEq == cmp_type);
+		ecmptScCmp = IMDType::EcmptNEq;
 	}
 
 	if (IMDType::EcmptLEq != cmp_type && IMDType::EcmptGEq != cmp_type)
