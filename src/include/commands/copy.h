@@ -256,6 +256,8 @@ typedef struct CopyStateData
 	/* Information on the connections to QEs. */
 	CdbCopy    *cdbCopy;
 
+	bool		delim_off;		/* delimiter is set to OFF? */
+
 /* end Greenplum Database specific variables */
 } CopyStateData;
 
