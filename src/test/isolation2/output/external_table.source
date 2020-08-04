@@ -234,3 +234,4 @@ SELECT * FROM ext_delimiter_off_csv;
 ---
  O 
 (1 row)
+

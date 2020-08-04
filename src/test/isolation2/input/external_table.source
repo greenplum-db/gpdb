@@ -144,3 +144,4 @@ CREATE EXTERNAL WEB TABLE ext_delimiter_off_csv
 (a text) EXECUTE E'echo O' ON MASTER FORMAT 'csv' (delimiter 'OFF') ENCODING 'UTF8';
 
 SELECT * FROM ext_delimiter_off_csv;
+
