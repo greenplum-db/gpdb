@@ -791,7 +791,10 @@ make_list_aggs_for_rollup(PlannerInfo *root,
 
 			/* update subplan if current_lefttree has been modified */
 			splan = findFirstSubqueryScan(root, current_lefttree);
-			if (splan != NULL && splan->subplan != root->simple_rel_array[1]->subplan)
+			if (splan != NULL &&
+					root->simple_rel_array[1] != NULL &&
+					root->simple_rte_array[1] != NULL &&
+					splan->subplan != root->simple_rel_array[1]->subplan)
 				root->simple_rel_array[1]->subplan = splan->subplan;
 
 			/* Add an Agg node */

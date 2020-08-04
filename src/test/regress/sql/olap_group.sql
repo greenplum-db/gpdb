@@ -685,3 +685,14 @@ select a, (select b from bar_gset where foo_gset.a = bar_gset.b) from foo_gset g
 
 drop table foo_gset;
 drop table bar_gset;
+
+-- GROUPING SETS meets sub-subplan
+create table foo_gset (c1 int, c2 int) distributed by (c1);
+insert into foo_gset select i,i from generate_series(1, 10) i;
+
+select *
+from (select * from (select c1, sum(c2) c2 from foo_gset group by c1 ) t2 ) t3
+group by c2, rollup((c1))
+order by 1, 2;
+
+drop table foo_gset;
