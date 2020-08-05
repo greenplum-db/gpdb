@@ -110,22 +110,6 @@ static void recycleWorkFileSet(workfile_set *work_set);
 static void ensureLocalWorkFileSet(void);
 static void forgetWorkFileSet(workfile_set *work_set);
 
-/* cleanup dangling workfile set in error recovery */
-void
-workfileCleanup(void)
-{
-	int i;
-	LWLockAcquire(WorkFileManagerLock, LW_EXCLUSIVE);
-	for (i = sizeLocalWorkSets - 1; i >= 0; i--)
-	{
-		workfile_set *work_set = localWorkSets[i];
-		Assert(work_set && work_set->active);
-		if (work_set->num_files == 0)
-			recycleWorkFileSet(work_set);
-	}
-	LWLockRelease(WorkFileManagerLock);
-}
-
 static void
 ensureLocalWorkFileSet(void)
 {
@@ -146,12 +130,12 @@ static void
 forgetWorkFileSet(workfile_set *work_set)
 {
 	int i;
-	for (i = sizeLocalWorkSets - 1; i >= 0; i--)
+	for (i = 0; i < sizeLocalWorkSets; i++)
 	{
 		if (localWorkSets[i] == work_set)
 			break;
 	}
-	if (i >= 0)
+	if (i < sizeLocalWorkSets)
 	{
 		sizeLocalWorkSets--;
 		localWorkSets[i] = localWorkSets[sizeLocalWorkSets];

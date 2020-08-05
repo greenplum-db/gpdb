@@ -91,7 +91,6 @@ extern void WorkFileShmemInit(void);
 extern void RegisterFileWithSet(File file, struct workfile_set *work_set);
 extern void UpdateWorkFileSize(File file, uint64 newsize);
 extern void WorkFileDeleted(File file);
-extern void workfileCleanup(void);
 
 extern workfile_set *workfile_mgr_create_set(const char *operator_name, const char *prefix);
 extern void workfile_mgr_close_set(workfile_set *work_set);
