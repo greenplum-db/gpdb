@@ -114,21 +114,45 @@ admin_users = gpadmin</codeblock></p>
           password information for users that are not in the authentication file. </p>
       <section id="pgb_auth">
         <title>PgBouncer Authentication File Format</title>
-        <p>PgBouncer requires its own user authentication file. You specify the name of this file 
-          in the <codeph>auth_file</codeph> property of the <codeph>pgbouncer.ini</codeph> configuration
-           file. <codeph>auth_file</codeph> is a text file in the following format:</p>
+        <p>PgBouncer requires its own user authentication file. You specify the name of this file in
+          the <codeph>auth_file</codeph> property of the <codeph>pgbouncer.ini</codeph>
+          configuration file. <codeph>auth_file</codeph> is a text file in the following format:</p>
         <codeblock>"username1" "password" ...
-"username2" "md5abcdef012342345" ...</codeblock>
-        <p><codeph>auth_file</codeph> contains one line per user. Each line must have at least two fields,
-          both of which are enclosed in double quotes (<codeph>" "</codeph>). The first
-          field identifies the Greenplum Database user name. The second field is
-          either a plain-text or an MD5-encoded password. PgBouncer ignores the remainder of the line.</p>
-        <p>(The format of <codeph>auth_file</codeph> is similar to that of the <codeph>pg_auth</codeph>
-          text file that Greenplum Database uses for authentication information. PgBouncer
-          can work directly with this Greenplum Database authentication file.)</p>
-        <p>Use an MD5 encoded password. The format of an MD5 encoded password is: 
-        <codeblock>"md5" + MD5_encoded(<varname>&lt;password>&lt;username></varname>)</codeblock></p>
-        <p>You can also obtain the MD5-encoded passwords of all Greenplum Database users from the <codeph>pg_shadow</codeph> view.</p>
+"username2" "md5abcdef012342345" ...
+"username2" "SCRAM-SHA-256$&lt;iterations>:&lt;salt>$&lt;storedkey>:&lt;serverkey>"</codeblock>
+        <p><codeph>auth_file</codeph> contains one line per user. Each line must have at least two
+          fields, both of which are enclosed in double quotes (<codeph>" "</codeph>). The first
+          field identifies the Greenplum Database user name. The second field is either a plain-text
+          password, an MD5-encoded password, or or a SCRAM secret. PgBouncer ignores the remainder
+          of the line.</p>
+        <p>(The format of <codeph>auth_file</codeph> is similar to that of the
+            <codeph>pg_auth</codeph> text file that Greenplum Database uses for authentication
+          information. PgBouncer can work directly with this Greenplum Database authentication
+          file.)</p>
+        <p>Use an MD5 encoded password. The format of an MD5 encoded password is:
+          <codeblock>"md5" + MD5_encoded(<varname>&lt;password>&lt;username></varname>)</codeblock></p>
+        <p>You can also obtain the MD5-encoded passwords of all Greenplum Database users from the
+            <codeph>pg_shadow</codeph> view.</p>
+        <p>PostgreSQL SCRAM secret
+          format:<codeblock>SCRAM-SHA-256$&lt;iterations>:&lt;salt>$&lt;storedkey>:&lt;serverkey></codeblock></p>
+        <p>See the PostgreSQL documentation and RFC 5803 for details on this.</p>
+        <p>The passwords or secrets stored in the authentication file serve two purposes. First,
+          they are used to verify the passwords of incoming client connections, if a password-based
+          authentication method is configured. Second, they are used as the passwords for outgoing
+          connections to the backend server, if the backend server requires password-based
+          authentication (unless the password is specified directly in the database’s connection
+          string). The latter works if the password is stored in plain text or MD5-hashed. SCRAM
+          secrets can only be used for logging into a server if the client authentication also uses
+          SCRAM, the PgBouncer database definition does not specify a user name, and the SCRAM
+          secrets are identical in PgBouncer and the PostgreSQL server (same salt and iterations,
+          not merely the same password). This is due to an inherent security property of SCRAM: The
+          stored SCRAM secret cannot by itself be used for deriving login credentials.</p>
+        <p>The authentication file can be written by hand, but it’s also useful to generate it from
+          some other list of users and passwords. See <codeph>./etc/mkauth.py</codeph> for a
+          sample script to generate the authentication file from the
+          <codeph>pg_shadow</codeph> system table. Alternatively, use
+          <codeblock>auth_query</codeblock> instead of <codeph>auth_file</codeph> to avoid
+          having to maintain a separate authentication file.\u0000</p>
       </section>
       <section id="pgb_hba">
         <title>Configuring HBA-based Authentication for PgBouncer</title>
