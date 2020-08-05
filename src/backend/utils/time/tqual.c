@@ -106,12 +106,15 @@ markDirty(Buffer buffer, Relation relation, HeapTupleHeader tuple, bool isXmin)
 	 * The GUC gp_disable_tuple_hints is on. Do further evaluation whether we
 	 * want to write out the buffer or not.
 	 */
-	Assert(relation != NULL);
 
-	if (RelationGetRelid(relation) < FirstNormalObjectId ||
+	/*
+	 * We always mark the buffer dirty for catalog tables. We do not expect
+	 * relation to be NULL but in case of that always mark the buffer dirty.
+	 */
+	if (relation == NULL ||
+		RelationGetRelid(relation) < FirstNormalObjectId ||
 		RelationGetNamespace(relation) == PG_AOSEGMENT_NAMESPACE)
 	{
-		/* Assume we want to always mark the buffer dirty */
 		MarkBufferDirtyHint(buffer, true);
 		return;
 	}
