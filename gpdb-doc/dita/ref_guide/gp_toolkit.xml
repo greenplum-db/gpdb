@@ -1687,10 +1687,10 @@
         </table>
         <p id="json_field_info1">The <codeph>cpu_usage</codeph> field is a JSON-formatted, key:value
           string that identifies, for each resource group, the per-segment instance CPU core usage.
-          The key is the segment id, the value is the sum of the percentages (as a decimal value) of
-          the CPU cores used by the segment instance's resource group on the segment host. For
-          example, if a segment host has 8 cores, the maximum value can be 8.00 (1.00 for 8 CPU
-          cores). The total CPU usage of all segment instances running on a host should not exceed
+          The key is the segment id. The value is the sum of the percentages (as a decimal value) of
+          the CPU cores used by the segment instance's resource group on the segment host;
+          the maximum value is 1.00.
+          The total CPU usage of all segment instances running on a host should not exceed
           the <codeph>gp_resource_group_cpu_limit</codeph>. Example <codeph>cpu_usage</codeph>
           column output:<codeblock>
 {"-1":0.01, "0":0.31, "1":0.31}</codeblock>In the example,
