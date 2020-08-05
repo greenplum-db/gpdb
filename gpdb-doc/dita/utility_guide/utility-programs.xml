@@ -116,9 +116,9 @@
                         <p><xref href="ref/plcontainer.xml#topic1" type="topic" format="dita"/></p>
                         <p><xref href="ref/plcontainer-configuration.xml#topic1" type="topic" format="dita"/></p>
                         <p><xref href="ref/psql.xml#topic1"/><sup otherprops="pivotal">3</sup></p>
-                        <p><xref href="../../pxf/5-13/ref/pxf.html" format="html" scope="external"
+                        <p><xref href="../../pxf/5-14/ref/pxf.html" format="html" scope="external"
                             >pxf</xref></p>
-                        <p><xref href="../../pxf/5-13/ref/pxf-cluster.html" format="html"
+                        <p><xref href="../../pxf/5-14/ref/pxf-cluster.html" format="html"
                             scope="external">pxf cluster</xref></p>
                         <p><xref href="ref/reindexdb.xml#topic1"/></p>
                         <p><xref href="ref/vacuumdb.xml#topic1"/></p>

@@ -63,8 +63,8 @@
             <topicref href="ref/plcontainer.xml"/>
             <topicref href="ref/plcontainer-configuration.xml"/>
             <topicref href="ref/psql.xml"/>
-            <topicref href="../../pxf/5-13/ref/pxf.html" scope="external" navtitle="pxf"/>
-            <topicref href="../../pxf/5-13/ref/pxf-cluster.html" scope="external" navtitle="pxf cluster"/>
+            <topicref href="../../pxf/5-14/ref/pxf.html" scope="external" navtitle="pxf"/>
+            <topicref href="../../pxf/5-14/ref/pxf-cluster.html" scope="external" navtitle="pxf cluster"/>
             <topicref href="ref/reindexdb.xml"/>
             <topicref href="ref/vacuumdb.xml"/>
         </topicref>

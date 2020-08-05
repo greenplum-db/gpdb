@@ -22,7 +22,7 @@
       single PXF JVM process on each Greenplum Database segment host. This long-
       running process concurrently serves multiple query requests.</p>
     <p>For detailed information about the architecture of and using PXF, refer
-      to the <xref href="../../../pxf/5-13/overview_pxf.html" type="topic"
+      to the <xref href="../../../pxf/5-14/overview_pxf.html" type="topic"
         format="html" scope="external">Greenplum Platform Extension Framework (PXF)</xref>
       documentation.</p>
   </body>
