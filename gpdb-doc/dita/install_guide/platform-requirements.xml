@@ -69,7 +69,7 @@
             <li>curl</li>
             <li>krb5</li>
             <li>libcurl</li>
-            <li>libevent</li>
+            <li>libevent (or libevent2 on RHEL/CentOS 6)</li>
             <li>libxml2</li>
             <li>libyaml</li>
             <li>zlib</li>
