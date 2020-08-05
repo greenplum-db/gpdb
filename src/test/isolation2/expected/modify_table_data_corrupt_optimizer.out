@@ -158,7 +158,7 @@ explain (costs off) delete from tab1 using tab2, tab3 where tab1.a = tab2.a and 
 begin;
 BEGIN
 delete from tab1 using tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
-ERROR:  distribution key of the tuple doesn't belong to current segment (actually from seg0) (nodeModifyTable.c:602)  (seg1 127.0.1.1:6003 pid=86447) (nodeModifyTable.c:602)
+ERROR:  distribution key of the tuple (0, 1) doesn't belong to current segment (actually from seg0) (nodeModifyTable.c:602)  (seg1 127.0.1.1:6003 pid=86447) (nodeModifyTable.c:602)
 abort;
 ABORT
 
@@ -188,7 +188,7 @@ explain (costs off) update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.
 begin;
 BEGIN
 update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
-ERROR:  distribution key of the tuple doesn't belong to current segment (actually from seg0) (nodeModifyTable.c:602)  (seg1 127.0.1.1:6003 pid=78344) (nodeModifyTable.c:602)
+ERROR:  distribution key of the tuple (0, 1) doesn't belong to current segment (actually from seg0) (nodeModifyTable.c:602)  (seg1 127.0.1.1:6003 pid=78344) (nodeModifyTable.c:602)
 abort;
 ABORT
 
@@ -209,7 +209,7 @@ explain (costs off) update tab1 set b = b + 1;
 begin;
 BEGIN
 update tab1 set b = b + 1;
-ERROR:  distribution key of the tuple doesn't belong to current segment (actually from seg0) (nodeModifyTable.c:602)  (seg1 127.0.1.1:6003 pid=78344) (nodeModifyTable.c:602)
+ERROR:  distribution key of the tuple (0, 1) doesn't belong to current segment (actually from seg0) (nodeModifyTable.c:602)  (seg1 127.0.1.1:6003 pid=78344) (nodeModifyTable.c:602)
 abort;
 ABORT
 
