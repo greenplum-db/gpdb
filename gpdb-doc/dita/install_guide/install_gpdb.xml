@@ -91,9 +91,13 @@ $ sudo chgrp -R gpadmin /usr/local/greenplum*</codeblock></li>
           systems, or <codeph>greenplum-db-&lt;version>-&lt;platform>.deb</codeph> for Ubuntu
           systems, where <codeph>&lt;platform></codeph> is similar to <codeph>rhel7-x86_64</codeph>
           (Red Hat 7 64-bit).</li>
-        <li>Manually install the Greenplum Database dependencies to each host
-          system:<codeblock>$ sudo yum install apr apr-util bash bzip2 curl krb5 libcurl libevent \
-libxml2 libyaml zlib openldap openssh openssl openssl-libs perl readline rsync R sed tar zip</codeblock>
+        <li>Manually install the Greenplum Database dependencies to each host system. For
+          RHEL/CentOS
+            7:<codeblock>$ sudo yum install apr apr-util bash bzip2 curl krb5 libcurl libevent \
+libxml2 libyaml zlib openldap openssh openssl openssl-libs perl readline rsync R sed tar zip</codeblock><p>For
+            RHEL/CentOS
+            6:<codeblock>$ sudo yum install apr apr-util bash bzip2 curl krb5 libcurl libevent2 \
+libxml2 libyaml zlib openldap openssh openssl openssl-libs perl readline rsync R sed tar zip</codeblock></p>
         </li>
         <li>Use <codeph>rpm</codeph> with the <codeph>--prefix</codeph> option to install the
           Greenplum Database package to your chosen installation directory on each host machine:
