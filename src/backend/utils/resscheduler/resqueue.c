@@ -447,14 +447,6 @@ ResLockAcquire(LOCKTAG *locktag, ResPortalIncrement *incrementSet)
 									   locktag->locktag_field1);
 
 		/*
-		 * Free/destroy idle gangs as we are going to sleep.
-		 */
-		if (ResourceCleanupIdleGangs)
-		{
-			cdbcomponent_cleanupIdleQEs(false);
-		}
-
-		/*
 		 * Sleep till someone wakes me up.
 		 */
 		ResWaitOnLock(locallock, owner, incrementSet);

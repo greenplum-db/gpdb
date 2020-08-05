@@ -2063,6 +2063,12 @@ ResProcSleep(LOCKMODE lockmode, LOCALLOCK *locallock, void *incrementSet)
 	/* Ok to wait.*/
 	LWLockRelease(partitionLock);
 
+	/*
+	 * Free/destroy idle gangs as we are going to sleep.
+	 */
+	if (ResourceCleanupIdleGangs)
+		cdbcomponent_cleanupIdleQEs(false);
+
 	if (LockTimeout > 0)
 	{
 		EnableTimeoutParams timeouts[2];
