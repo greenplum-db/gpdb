@@ -4,7 +4,7 @@ create or replace function test_connect(text) RETURNS bool AS
 create or replace function test_disconnect() RETURNS bool AS
  '@abs_builddir@/gplibpq@DLSUFFIX@' LANGUAGE C VOLATILE STRICT NO SQL;
 
-create or replace function test_receive() RETURNS bool AS
+create or replace function test_receive() RETURNS int4 AS
  '@abs_builddir@/gplibpq@DLSUFFIX@' LANGUAGE C VOLATILE STRICT NO SQL;
 
 create or replace function test_send() RETURNS bool AS

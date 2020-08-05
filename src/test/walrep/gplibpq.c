@@ -93,14 +93,17 @@ test_disconnect(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(true);
 }
 
+/* returns -1, 0 or 1 */
 Datum
 test_receive(PG_FUNCTION_ARGS)
 {
-	int			result;
+	int		result;
 	char	   *buf;
 	pgsocket	wait_fd;
 
 	result = walrcv_receive(&buf, &wait_fd);
+	if (result > 0)
+		result = 1;
 
 	PG_RETURN_INT32(result);
 }

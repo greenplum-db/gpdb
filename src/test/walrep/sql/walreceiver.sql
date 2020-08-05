@@ -55,10 +55,17 @@ select pg_current_xlog_location() as lsn;
 create table testwalreceiver(a int);
 insert into testwalreceiver select * from generate_series(0, 9);
 
+-- the reason is the same as the above vacuum
+vacuum freeze;
+
 -- Connect and receive the xlogs, validate everything was received from start to
 -- end
 SELECT test_connect('');
 SELECT test_receive_and_verify(:'lsn', pg_current_xlog_location());
 SELECT test_send();
 SELECT test_receive();
+-- start_ignore
+-- print the current xlog location, mainly for debugging the flaky test
+select pg_current_xlog_location() as lsn;
+-- end_ignore
 SELECT test_disconnect();
