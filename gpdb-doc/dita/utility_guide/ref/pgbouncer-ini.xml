@@ -415,6 +415,13 @@ db = ...
             <pd>Log error messages that the pooler sends to clients.<p>Default: 1</p></pd>
           </plentry>
           <plentry>
+            <pt>log_stats</pt>
+            <pd>Write aggregated statistics into the log, every <codeph>stats_period</codeph>. This
+              can be disabled if external monitoring tools are used to grab the same data from
+                <codeph>SHOW</codeph> commands.<p>Default: 1</p>
+            </pd>
+          </plentry>
+          <plentry>
             <pt>stats_period</pt>
             <pd>How often to write aggregated statistics to the log. <p>Default: 60</p></pd>
           </plentry>
