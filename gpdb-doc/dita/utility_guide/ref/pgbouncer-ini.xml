@@ -664,6 +664,23 @@ db = ...
                 limit.<p>Default: 5</p></pd>
           </plentry>
           <plentry>
+            <pt>SO_REUSEPORT</pt>
+            <pd>Specifies whether to set the socket option <codeph>SO_REUSEPORT</codeph> on TCP
+              listening sockets. On some operating systems, this allows running multiple PgBouncer
+              instances on the same host listening on the same port and having the kernel distribute
+              the connections automatically. This option is a way to get PgBouncer to use more CPU
+              cores. (PgBouncer is single-threaded and uses one CPU core per instance.)<p>The
+                behavior in detail depends on the operating system kernel. As of this writing, this
+                setting has the desired effect on recent versions of Linux. On systems that don’t
+                support the socket option at all, turning this setting on will result in an
+                error.</p><p>Each PgBouncer instance on the same host needs different settings for
+                at least <codeph>unix_socket_dir</codeph> and <codeph>pidfile</codeph>, as well as
+                  <codeph>logfile</codeph> if that is used. Also note that if you make use of this
+                option, you can no longer connect to a specific PgBouncer instance via TCP/IP, which
+                might have implications for monitoring and metrics collection.</p><p>Default:
+              0</p></pd>
+          </plentry>
+          <plentry>
             <pt>suspend_timeout</pt>
             <pd>How many seconds to wait for buffer flush during <codeph>SUSPEND</codeph> or
               restart (<codeph>-R</codeph>). Connection is dropped if flush does not
