@@ -97,9 +97,38 @@ DETAIL:
             session, enter <codeph>\q</codeph>.</pd>
         </plentry>
         <plentry>
+          <pt>RECONNECT</pt>
+          <pd>Close each open server connection for the given database, or all databases, after it
+            is released (according to the pooling mode), even if its lifetime is not up yet. New
+            server connections can be made immediately and will connect as necessary according to
+            the pool size settings.</pd>
+          <pd>This command is useful when the server connection setup has changed, for example to
+            perform a gradual switchover to a new server. It is <i>not</i> necessary to run this
+            command when the connection string in pgbouncer.ini has been changed and reloaded (see
+              <codeph>RELOAD</codeph>) or when DNS resolution has changed, because then the
+            equivalent of this command will be run automatically. This command is only necessary if
+            something downstream of PgBouncer routes the connections.</pd>
+          <pd>After this command is run, there could be an extended period where some server
+            connections go to an old destination and some server connections go to a new
+            destination. This is likely only sensible when switching read-only traffic between
+            read-only replicas, or when switching between nodes of a multimaster replication setup.
+            If all connections need to be switched at the same time, <codeph>PAUSE</codeph> is
+            recommended instead. To close server connections without waiting (for example, in
+            emergency failover rather than gradual switchover scenarios), also consider
+              <codeph>KILL</codeph>.</pd>
+        </plentry>
+        <plentry>
           <pt>RELOAD</pt>
           <pd>The PgBouncer process reloads the current configuration file and updates the
             changeable settings.</pd>
+        </plentry>
+        <plentry>
+          <pt>WAIT_CLOSE [ <varname>db</varname> ]</pt>
+          <pd>Wait until all server connections, either of the specified database or of all
+            databases, have cleared the “close_needed” state (see <codeph>SHOW SERVERS</codeph>). This can be
+            called after a <codeph>RECONNECT</codeph> or <codeph>RELOAD</codeph> to wait until the respective
+            configuration change has been fully activated, for example in switchover
+            scripts.</pd>
         </plentry>
         <plentry>
           <pt>SET <varname>key</varname> = <varname>value</varname></pt>
@@ -853,6 +882,12 @@ DETAIL:
               <row>
                 <entry>wait_us</entry>
                 <entry>Time waiting (microseconds).</entry>
+              </row>
+              <row>
+                <entry>close_needed</entry>
+                <entry>1 if the connection will be closed as soon as possible, because a
+                  configuration file reload or DNS update changed the connection information or
+                    <codeph>RECONNECT</codeph> was issued.</entry>
               </row>
               <row>
                 <entry>ptr</entry>

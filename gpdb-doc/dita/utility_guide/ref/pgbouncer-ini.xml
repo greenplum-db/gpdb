@@ -480,6 +480,23 @@ db = ...
                 then sanity checking is disabled.</p><p>Default: SELECT 1;</p></pd>
           </plentry>
           <plentry>
+            <pt>server_fast_close</pt>
+            <pd>Disconnect a server in session pooling mode immediately or after the end of the
+              current transaction if it is in “close_needed” mode (set by
+              <codeph>RECONNECT</codeph>, <codeph>RELOAD</codeph> that changes connection settings,
+              or DNS change), rather than waiting for the session end. In statement or transaction
+              pooling mode, this has no effect since that is the default behavior there.<p>If
+                because of this setting a server connection is closed before the end of the client
+                session, the client connection is also closed. This ensures that the client notices
+                that the session has been interrupted.</p><p>This setting makes connection
+                configuration changes take effect sooner if session pooling and long-running
+                sessions are used. The downside is that client sessions are liable to be interrupted
+                by a configuration change, so client applications will need logic to reconnect and
+                reestablish session state. But note that no transactions will be lost, because
+                running transactions are not interrupted, only idle sessions.</p><p>Default:
+              0</p></pd>
+          </plentry>
+          <plentry>
             <pt>server_lifetime</pt>
             <pd>The pooler tries to close server connections that have been connected longer
               than this number of seconds. Setting it to 0 means the connection is to be used
