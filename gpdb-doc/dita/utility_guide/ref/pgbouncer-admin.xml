@@ -1044,7 +1044,7 @@ DETAIL:
       <title>VERSION</title>
       <body>
         <p>Display PgBouncer version information.</p>
-        <note>This reference documentation is based on the PgBouncer 1.8.1 documentation.</note>
+        <note>This reference documentation is based on the PgBouncer 1.13 documentation.</note>
       </body>
     </topic>
   </topic>
