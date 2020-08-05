@@ -576,7 +576,7 @@ db = ...
           <plentry><pt>client_tls_cert_file</pt><pd>Root certificate file to validate client certificates.</pd><pd><p>Default: unset</p></pd>
           </plentry>
           <plentry><pt>client_tls_ca_file</pt><pd>Root certificate to validate client certificates.</pd><pd><p>Default: unset</p></pd></plentry>
-          <plentry><pt>client_tls_protocols</pt><pd>Which TLS protocol versions are allowed. </pd><pd>Valid values: are <codeph>tlsv1.0</codeph>, <codeph>tlsv1.1</codeph>, <codeph>tlsv1.2</codeph>. </pd><pd>Shortcuts: <codeph>all</codeph> (<codeph>tlsv1.0</codeph>,<codeph>tlsv1.1</codeph>,<codeph>tlsv1.2</codeph>), <codeph>secure</codeph> (<codeph>tlsv1.2</codeph>), <codeph>legacy</codeph> (<codeph>all</codeph>).</pd><pd><p>Default: <codeph>all</codeph></p></pd>
+          <plentry><pt>client_tls_protocols</pt><pd>Which TLS protocol versions are allowed. </pd><pd>Valid values: are <codeph>tlsv1.0</codeph>, <codeph>tlsv1.1</codeph>, <codeph>tlsv1.2</codeph>. </pd><pd>Shortcuts: <codeph>all</codeph> (<codeph>tlsv1.0</codeph>,<codeph>tlsv1.1</codeph>,<codeph>tlsv1.2</codeph>), <codeph>secure</codeph> (<codeph>tlsv1.2</codeph>), <codeph>legacy</codeph> (<codeph>all</codeph>).</pd><pd><p>Default: <codeph>secure</codeph></p></pd>
           </plentry>
           <plentry><pt>client_tls_ciphers</pt><pd><p>Default: <codeph>fast</codeph></p></pd>
           </plentry>
@@ -598,7 +598,7 @@ db = ...
           </plentry>
           <plentry><pt>server_tls_cert_file</pt><pd>Certificate for private key. Greenplum Database or PostgreSQL servers can validate it.</pd><pd><p>Default: not set</p></pd>
           </plentry>
-          <plentry><pt>server_tls_protocols</pt><pd>Which TLS protocol versions are allowed. </pd><pd>Valid values are: <codeph>tlsv1.0</codeph>, <codeph>tlsv1.1</codeph>, <codeph>tlsv1.2</codeph>. </pd><pd>Shortcuts: <codeph>all</codeph> (<codeph>tlsv1.0</codeph>, <codeph>tlsv1.1</codeph>, <codeph>tlsv1.2</codeph>); <codeph>secure</codeph> (<codeph>tlsv1.2</codeph>); <codeph>legacy</codeph> (<codeph>all</codeph>).</pd><pd><p>Default: <codeph>all</codeph></p></pd>
+          <plentry><pt>server_tls_protocols</pt><pd>Which TLS protocol versions are allowed. </pd><pd>Valid values are: <codeph>tlsv1.0</codeph>, <codeph>tlsv1.1</codeph>, <codeph>tlsv1.2</codeph>. </pd><pd>Shortcuts: <codeph>all</codeph> (<codeph>tlsv1.0</codeph>, <codeph>tlsv1.1</codeph>, <codeph>tlsv1.2</codeph>); <codeph>secure</codeph> (<codeph>tlsv1.2</codeph>); <codeph>legacy</codeph> (<codeph>all</codeph>).</pd><pd><p>Default: <codeph>secure</codeph></p></pd>
           </plentry>
           <plentry><pt>server_tls_ciphers</pt><pd><p>Default: <codeph>fast</codeph></p></pd>
           </plentry>
@@ -712,6 +712,14 @@ db = ...
           <plentry>
             <pt>tcp_keepintvl</pt>
             <pd><p>Default: not set</p></pd>
+          </plentry>
+          <plentry>
+            <pt>tcp_user_timeout</pt>
+            <pd>Sets the <codeph>TCP_USER_TIMEOUT</codeph> socket option. This specifies the maximum
+              amount of time in milliseconds that transmitted data may remain unacknowledged before
+              the TCP connection is forcibly closed. If set to 0, then operating system’s default is
+                used.<p>Default: 0</p>
+            </pd>
           </plentry>
         </parml>
       </section>
