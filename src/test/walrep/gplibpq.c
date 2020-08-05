@@ -97,7 +97,7 @@ test_disconnect(PG_FUNCTION_ARGS)
 Datum
 test_receive(PG_FUNCTION_ARGS)
 {
-	int		result;
+	int			result;
 	char	   *buf;
 	pgsocket	wait_fd;
 
