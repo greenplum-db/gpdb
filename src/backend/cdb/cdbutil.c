@@ -285,6 +285,8 @@ readCdbComponentInfo(bool DNSLookupAsError, HTAB *hostSegsHash)
 		pRow->hostip = NULL;
 		getAddressesForDBid(pRow, DNSLookupAsError ? ERROR : LOG);
 
+		pRow->net_fault_time = (pg_time_t)0;
+
 		/*
 		 * We make sure we get a valid hostip for primary here,
 		 * if hostip for mirrors can not be get, ignore the error.

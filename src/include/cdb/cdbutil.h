@@ -22,6 +22,7 @@
  */
 
 #include <math.h>
+#include "pgtime.h"
 
 /* cdb_rand returns a random float value between 0 and 1 inclusive */
 #define cdb_rand() ((double) random() / (double) MAX_RANDOM_VALUE)
@@ -62,6 +63,8 @@ typedef struct CdbComponentDatabaseInfo
 
 	char	   *hostaddrs[COMPONENT_DBS_MAX_ADDRS];	/* cached lookup of names */	
 	int16		hostSegs;		/* number of primary segments on the same hosts */
+
+	pg_time_t   net_fault_time; /* store the first net fault time*/
 } CdbComponentDatabaseInfo;
 
 #define SEGMENT_ROLE_PRIMARY 'p'

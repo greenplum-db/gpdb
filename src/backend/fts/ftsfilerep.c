@@ -269,6 +269,11 @@ FtsResolveStateFilerep(FtsSegmentPairState *pairState)
 	}
 }
 
+/*
+ * If mirror disconnects and re-connects between this period, it will not get
+ * reported as down to FTS.
+ */
+#define FTS_MARKING_MIRROR_DOWN_GRACE_PERIOD 30 /* secs */
 
 /*
  * pre-process probe results to take into account some special
@@ -353,13 +358,17 @@ FtsPreprocessProbeResultsFilerep(CdbComponentDatabases *dbs, uint8 *probe_result
 			{
 				if (PROBE_IS_ALIVE(primary))
 				{
-					elog(LOG, "FTS: primary (dbid=%d) reported networking fault "
-					          "while mirror (dbid=%d) is unusable, "
-					          "mirror considered to be down.",
-					     primary->dbid, mirror->dbid);
+					pg_time_t delta = ((pg_time_t)time(NULL)) - mirror->net_fault_time;
+					if (delta > FTS_MARKING_MIRROR_DOWN_GRACE_PERIOD)
+					{
+						elog(LOG, "FTS: primary (dbid=%d) reported networking fault "
+						          "while mirror (dbid=%d) is unusable, "
+						          "mirror considered to be down.",
+						     primary->dbid, mirror->dbid);
 
-					/* mirror cannot be used, consider mirror dead -- case (2) */
-					probe_results[mirror->dbid] &= ~PROBE_ALIVE;
+						/* mirror cannot be used, consider mirror dead -- case (2) */
+						probe_results[mirror->dbid] &= ~PROBE_ALIVE;
+					}
 				}
 			}
 		}

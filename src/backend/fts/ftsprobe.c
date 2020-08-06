@@ -815,7 +815,6 @@ probeProcessResponse(ProbeConnectionInfo *probeInfo)
 	return true;
 }
 
-
 /*
  * Function called by probing thread;
  * iteratively picks next segment pair to probe until all segments are probed;
@@ -911,6 +910,15 @@ probeSegmentFromThread(void *arg)
 				/* probe mirror */
 				probe_result_mirror = probeSegment(mirror);
 				Assert(!PROBE_CHECK_FLAG(probe_result_mirror, PROBE_SEGMENT));
+
+				/* record the first time mirror net fault */
+				if (PROBE_CHECK_FLAG(probe_result_mirror, PROBE_FAULT_NET)
+					&& (mirror->net_fault_time == 0))
+				{
+					mirror->net_fault_time = (pg_time_t) time(NULL) ;
+				}
+				else
+					mirror->net_fault_time = 0;
 
 				if ((probe_result_mirror & PROBE_ALIVE) == 0 && gp_log_fts >= GPVARS_VERBOSITY_VERBOSE)
 				{
