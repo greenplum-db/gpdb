@@ -645,7 +645,7 @@ system_reseed(void)
 		check_time = t;
 
 		/* roll dice */
-		px_get_random_bytes(buf, 1);
+		(void) px_get_random_bytes(buf, 1);
 		skip = buf[0] >= SYSTEM_RESEED_CHANCE;
 	}
 	/* clear 1 byte */

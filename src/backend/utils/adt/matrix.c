@@ -113,7 +113,7 @@ matrix_add(PG_FUNCTION_ARGS)
 		TupleDesc tupdesc;
 		
 		/* Determine what our return type should be */
-		get_call_result_type(fcinfo, &returntype, &tupdesc); 
+		(void) get_call_result_type(fcinfo, &returntype, &tupdesc);
 		switch (returntype)
 		{
 			case INT2ARRAYOID:

@@ -4247,8 +4247,8 @@ merge_leaf_stats(VacAttrStatsP stats,
 
 		AttStatsSlot hllSlot;
 
-		get_attstatsslot(&hllSlot, heaptupleStats[i], STATISTIC_KIND_FULLHLL,
-						 InvalidOid, ATTSTATSSLOT_VALUES);
+		(void) get_attstatsslot(&hllSlot, heaptupleStats[i], STATISTIC_KIND_FULLHLL,
+								InvalidOid, ATTSTATSSLOT_VALUES);
 
 		if (hllSlot.nvalues > 0)
 		{
@@ -4264,8 +4264,8 @@ merge_leaf_stats(VacAttrStatsP stats,
 			totalhll_count++;
 		}
 
-		get_attstatsslot(&hllSlot, heaptupleStats[i], STATISTIC_KIND_HLL,
-						 InvalidOid, ATTSTATSSLOT_VALUES);
+		(void) get_attstatsslot(&hllSlot, heaptupleStats[i], STATISTIC_KIND_HLL,
+								InvalidOid, ATTSTATSSLOT_VALUES);
 
 		if (hllSlot.nvalues > 0)
 		{

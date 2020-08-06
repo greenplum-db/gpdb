@@ -120,8 +120,8 @@ addLeafPartitionMCVsToHashTable (HTAB *datumHash, HeapTuple heaptupleStats,
 {
 	AttStatsSlot mcvSlot;
 
-	get_attstatsslot(&mcvSlot, heaptupleStats, STATISTIC_KIND_MCV,
-					 InvalidOid, ATTSTATSSLOT_VALUES | ATTSTATSSLOT_NUMBERS);
+	(void) get_attstatsslot(&mcvSlot, heaptupleStats, STATISTIC_KIND_MCV,
+							InvalidOid, ATTSTATSSLOT_VALUES | ATTSTATSSLOT_NUMBERS);
 
 	Assert(mcvSlot.nvalues == mcvSlot.nnumbers);
 	for (int i = 0; i < mcvSlot.nvalues; i++)
@@ -678,7 +678,7 @@ getHistogramHeapTuple(AttStatsSlot * *histSlots, HeapTuple *heaptupleStats,
 			continue;
 		}
 		histSlots[pid] = (AttStatsSlot *) palloc(sizeof(AttStatsSlot));
-		get_attstatsslot(histSlots[pid], heaptupleStats[i], STATISTIC_KIND_HISTOGRAM, InvalidOid, ATTSTATSSLOT_VALUES);
+		(void) get_attstatsslot(histSlots[pid], heaptupleStats[i], STATISTIC_KIND_HISTOGRAM, InvalidOid, ATTSTATSSLOT_VALUES);
 
 		if (histSlots[pid]->nvalues > 0)
 		{
