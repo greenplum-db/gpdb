@@ -933,19 +933,16 @@ select gp_segment_id, * from part_t1_1_prt_other_b_2_prt_2_3_prt_others_d;
 (7 rows)
 
 alter table part_t1_1_prt_other_b_2_prt_2_3_prt_others_d expand table;
-ERROR:  cannot expand leaf or interior partition "part_t1_1_prt_other_b_2_prt_2_3_prt_others_d"
-DETAIL:  root/leaf/interior partitions need to have same numsegments
-HINT:  use "ALTER TABLE part_t1 EXPAND TABLE" instead
 select gp_segment_id, * from part_t1_1_prt_other_b_2_prt_2_3_prt_others_d;
  gp_segment_id | a  | b | c | d | e 
 ---------------+----+---+---+---+---
-             0 |  9 | 0 | 1 | 4 | 0
              0 | 29 | 2 | 1 | 4 | 0
              0 | 45 | 0 | 1 | 0 | 0
              0 | 65 | 2 | 1 | 0 | 0
-             1 |  5 | 2 | 1 | 0 | 1
              1 | 69 | 0 | 1 | 4 | 1
              1 | 89 | 2 | 1 | 4 | 1
+             2 |  5 | 2 | 1 | 0 | 1
+             2 |  9 | 0 | 1 | 4 | 0
 (7 rows)
 
 -- try to expand root partition, should success
