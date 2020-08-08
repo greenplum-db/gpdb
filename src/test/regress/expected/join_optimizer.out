@@ -4496,33 +4496,31 @@ select d.* from d left join (select distinct * from b) s
 explain (costs off)
 select d.* from d left join (select * from b group by b.id, b.c_id) s
   on d.a = s.id;
-                   QUERY PLAN                   
-------------------------------------------------
+                      QUERY PLAN                      
+------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop Left Join
          Join Filter: true
          ->  Seq Scan on d
-         ->  Aggregate
-               ->  Index Scan using b_pkey on b
-                     Index Cond: (id = d.a)
- Optimizer: Pivotal Optimizer (GPORCA)
-(8 rows)
+         ->  Index Scan using b_pkey on b
+               Index Cond: (id = d.a)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.44.0
+(7 rows)
 
 -- similarly, but keying off a DISTINCT clause
 explain (costs off)
 select d.* from d left join (select distinct * from b) s
   on d.a = s.id;
-                   QUERY PLAN                   
-------------------------------------------------
+                      QUERY PLAN                      
+------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop Left Join
          Join Filter: true
          ->  Seq Scan on d
-         ->  Aggregate
-               ->  Index Scan using b_pkey on b
-                     Index Cond: (id = d.a)
- Optimizer: Pivotal Optimizer (GPORCA)
-(8 rows)
+         ->  Index Scan using b_pkey on b
+               Index Cond: (id = d.a)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.44.0
+(7 rows)
 
 -- check join removal works when uniqueness of the join condition is enforced
 -- by a UNION

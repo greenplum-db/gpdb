@@ -612,10 +612,13 @@ CCostModelGPDB::CostScalarAgg
 	const CDouble dHashAggInputTupWidthCostUnit = pcmgpdb->GetCostModelParams()->PcpLookup(CCostModelParamsGPDB::EcpHashAggInputTupWidthCostUnit)->Get();
 	GPOS_ASSERT(0 < dHashAggInputTupWidthCostUnit);
 
+	// tie breaker to prevent selecting ScalarAgg when costs are "identical"
+	const DOUBLE tiebreaker = 0.000001;
+
 	// scalarAgg cost is correlated with rows and width of the input tuples and the number of columns used in aggregate
 	// It also depends on the complexity of the aggregate algorithm, which is hard to model yet shared by all the aggregate
 	// operators, thus we ignore this part of cost for all.
-	CCost costLocal = CCost(pci->NumRebinds() * (num_rows_outer * dWidthOuter * ulAggCols * ulAggFunctions * dHashAggInputTupWidthCostUnit));
+	CCost costLocal = CCost(pci->NumRebinds() * (num_rows_outer * dWidthOuter * ulAggCols * ulAggFunctions * dHashAggInputTupWidthCostUnit) + tiebreaker);
 
 	CCost costChild = CostChildren(mp, exprhdl, pci, pcmgpdb->GetCostModelParams());
 	return costLocal + costChild;

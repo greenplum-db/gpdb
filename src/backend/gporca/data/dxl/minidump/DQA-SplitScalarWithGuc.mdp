@@ -336,7 +336,7 @@ explain select count(distinct b ) from foo;
     <dxl:Plan Id="0" SpaceSize="13">
       <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="438.327583" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="438.327584" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:GroupingColumns/>
         <dxl:ProjList>

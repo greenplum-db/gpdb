@@ -271,7 +271,7 @@ explain select * from foo,bar where b = (select min(b) from bar where a = b);
     <dxl:Plan Id="0" SpaceSize="40">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1324475.447475" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="1324475.448499" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -285,7 +285,7 @@ explain select * from foo,bar where b = (select min(b) from bar where a = b);
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="Inner">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1324475.447445" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="1324475.448469" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -305,7 +305,7 @@ explain select * from foo,bar where b = (select min(b) from bar where a = b);
           </dxl:HashCondList>
           <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1324044.447040" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="1324044.448064" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -324,7 +324,7 @@ explain select * from foo,bar where b = (select min(b) from bar where a = b);
             </dxl:HashExprList>
             <dxl:Result>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1324044.447027" Rows="1.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="1324044.448051" Rows="1.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="a">
@@ -338,7 +338,7 @@ explain select * from foo,bar where b = (select min(b) from bar where a = b);
               <dxl:OneTimeFilter/>
               <dxl:Result>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="1324044.447027" Rows="1.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="1324044.448051" Rows="1.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="25" Alias="ColRef_0025">
@@ -349,7 +349,7 @@ explain select * from foo,bar where b = (select min(b) from bar where a = b);
                       </dxl:ParamList>
                       <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="431.000311" Rows="3.000000" Width="4"/>
+                          <dxl:Cost StartupCost="0" TotalCost="431.000312" Rows="3.000000" Width="4"/>
                         </dxl:Properties>
                         <dxl:GroupingColumns/>
                         <dxl:ProjList>
@@ -434,7 +434,7 @@ explain select * from foo,bar where b = (select min(b) from bar where a = b);
                 <dxl:OneTimeFilter/>
                 <dxl:TableScan>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="1324044.447024" Rows="1000.000000" Width="8"/>
+                    <dxl:Cost StartupCost="0" TotalCost="1324044.448048" Rows="1000.000000" Width="8"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="0" Alias="a">

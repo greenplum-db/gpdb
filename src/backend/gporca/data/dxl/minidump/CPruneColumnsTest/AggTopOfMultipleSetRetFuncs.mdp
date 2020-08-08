@@ -132,7 +132,7 @@ select count(*) from ( select unnest(arr) i, unnest(arr) j  from (    select str
     <dxl:Plan Id="0" SpaceSize="2">
       <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="0.000011" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="0.000013" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:GroupingColumns/>
         <dxl:ProjList>
@@ -145,7 +145,7 @@ select count(*) from ( select unnest(arr) i, unnest(arr) j  from (    select str
         <dxl:Filter/>
         <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="0.000010" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="0.000011" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:GroupingColumns/>
           <dxl:ProjList>
@@ -178,7 +178,7 @@ select count(*) from ( select unnest(arr) i, unnest(arr) j  from (    select str
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="1" Alias="arr">
-                  <dxl:ConstValue TypeMdid="0.1009.1.0" Value="AAAAOAEAAAAAAAAAGQAAAAQAAAABAAAAAAAABmFhAAAAAAAGYmIAAAAAAAZj&#10;YwAAAAAABmRkAAA="/>
+                  <dxl:ConstValue TypeMdid="0.1009.1.0" Value="AAAAOAEAAAAAAAAAGQAAAAQAAAABAAAAAAAABmFhAAAAAAAGYmIAAAAAAAZj&#xA;YwAAAAAABmRkAAA="/>
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>

@@ -558,7 +558,7 @@ create table customer
     <dxl:Plan Id="0" SpaceSize="4">
       <dxl:Result>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="2155.000441" Rows="1.000000" Width="12"/>
+          <dxl:Cost StartupCost="0" TotalCost="2155.000442" Rows="1.000000" Width="12"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="2" Alias="pn">
@@ -579,7 +579,7 @@ create table customer
             </dxl:ParamList>
             <dxl:Result>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1293.000297" Rows="1.000000" Width="4"/>
+                <dxl:Cost StartupCost="0" TotalCost="1293.000298" Rows="1.000000" Width="4"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="13" Alias="cn">
@@ -595,7 +595,7 @@ create table customer
                   </dxl:ParamList>
                   <dxl:Result>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="431.000195" Rows="1.000000" Width="1"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.000196" Rows="1.000000" Width="1"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="42" Alias="ColRef_0042">
@@ -606,7 +606,7 @@ create table customer
                     <dxl:OneTimeFilter/>
                     <dxl:Result>
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="431.000195" Rows="1.000000" Width="1"/>
+                        <dxl:Cost StartupCost="0" TotalCost="431.000196" Rows="1.000000" Width="1"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="41" Alias="ColRef_0041">
@@ -622,7 +622,7 @@ create table customer
                       <dxl:OneTimeFilter/>
                       <dxl:Result>
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="431.000162" Rows="1.000000" Width="1"/>
+                          <dxl:Cost StartupCost="0" TotalCost="431.000163" Rows="1.000000" Width="1"/>
                         </dxl:Properties>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="41" Alias="ColRef_0041">
@@ -636,12 +636,12 @@ create table customer
                                   <dxl:Ident ColId="40" ColName="ColRef_0040" TypeMdid="0.20.1.0"/>
                                   <dxl:ConstValue TypeMdid="0.20.1.0" Value="0"/>
                                 </dxl:Comparison>
-                                <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="true" IsByValue="true"/>
+                                <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="true"/>
                                 <dxl:If TypeMdid="0.16.1.0">
                                   <dxl:IsNull>
                                     <dxl:Ident ColId="13" ColName="cn" TypeMdid="0.23.1.0"/>
                                   </dxl:IsNull>
-                                  <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="true" IsByValue="true"/>
+                                  <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="true"/>
                                   <dxl:If TypeMdid="0.16.1.0">
                                     <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.410.1.0">
                                       <dxl:Ident ColId="39" ColName="ColRef_0039" TypeMdid="0.20.1.0"/>
@@ -659,7 +659,7 @@ create table customer
                         <dxl:OneTimeFilter/>
                         <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
                           <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="431.000161" Rows="1.000000" Width="16"/>
+                            <dxl:Cost StartupCost="0" TotalCost="431.000162" Rows="1.000000" Width="16"/>
                           </dxl:Properties>
                           <dxl:GroupingColumns/>
                           <dxl:ProjList>

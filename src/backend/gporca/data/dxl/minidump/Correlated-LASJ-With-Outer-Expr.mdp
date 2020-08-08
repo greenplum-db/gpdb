@@ -600,7 +600,7 @@ select * from t1 where a + 10 not in (select a from t2 where t2.b<>t1.b group by
     <dxl:Plan Id="4" SpaceSize="12">
       <dxl:Result>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1293.088483" Rows="111.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="1293.088484" Rows="111.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -619,7 +619,7 @@ select * from t1 where a + 10 not in (select a from t2 where t2.b<>t1.b group by
             </dxl:ParamList>
             <dxl:Result>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.078593" Rows="1.000000" Width="1"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.078594" Rows="1.000000" Width="1"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="28" Alias="ColRef_0028">
@@ -630,7 +630,7 @@ select * from t1 where a + 10 not in (select a from t2 where t2.b<>t1.b group by
               <dxl:OneTimeFilter/>
               <dxl:Result>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.078593" Rows="1.000000" Width="1"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.078594" Rows="1.000000" Width="1"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="22" Alias="ColRef_0022">
@@ -646,7 +646,7 @@ select * from t1 where a + 10 not in (select a from t2 where t2.b<>t1.b group by
                 <dxl:OneTimeFilter/>
                 <dxl:Result>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="431.074941" Rows="1.000000" Width="1"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.074942" Rows="1.000000" Width="1"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="22" Alias="ColRef_0022">
@@ -660,7 +660,7 @@ select * from t1 where a + 10 not in (select a from t2 where t2.b<>t1.b group by
                             <dxl:Ident ColId="21" ColName="ColRef_0021" TypeMdid="0.20.1.0"/>
                             <dxl:ConstValue TypeMdid="0.20.1.0" Value="0"/>
                           </dxl:Comparison>
-                          <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="true" IsByValue="true"/>
+                          <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="true"/>
                           <dxl:If TypeMdid="0.16.1.0">
                             <dxl:IsNull>
                               <dxl:OpExpr OperatorName="+" OperatorMdid="0.551.1.0" OperatorType="0.23.1.0">
@@ -668,7 +668,7 @@ select * from t1 where a + 10 not in (select a from t2 where t2.b<>t1.b group by
                                 <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
                               </dxl:OpExpr>
                             </dxl:IsNull>
-                            <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="true" IsByValue="true"/>
+                            <dxl:ConstValue TypeMdid="0.16.1.0" IsNull="true"/>
                             <dxl:If TypeMdid="0.16.1.0">
                               <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.410.1.0">
                                 <dxl:Ident ColId="20" ColName="ColRef_0020" TypeMdid="0.20.1.0"/>
@@ -686,7 +686,7 @@ select * from t1 where a + 10 not in (select a from t2 where t2.b<>t1.b group by
                   <dxl:OneTimeFilter/>
                   <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="431.074940" Rows="1.000000" Width="16"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.074941" Rows="1.000000" Width="16"/>
                     </dxl:Properties>
                     <dxl:GroupingColumns/>
                     <dxl:ProjList>

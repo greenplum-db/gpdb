@@ -344,7 +344,7 @@
     <dxl:Plan Id="0" SpaceSize="13">
       <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="438.791035" Rows="1.000000" Width="16"/>
+          <dxl:Cost StartupCost="0" TotalCost="438.791036" Rows="1.000000" Width="16"/>
         </dxl:Properties>
         <dxl:GroupingColumns/>
         <dxl:ProjList>

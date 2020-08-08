@@ -3765,7 +3765,7 @@ The SQL along with the DDL are in TINC repo. In the aggregates directory under q
     <dxl:Plan Id="0" SpaceSize="19837440">
       <dxl:Result>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="57937329.740768" Rows="2959212724800.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="57937329.740864" Rows="2959212724800.000000" Width="4"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="122" Alias="?column?">
@@ -3776,14 +3776,14 @@ The SQL along with the DDL are in TINC repo. In the aggregates directory under q
         <dxl:OneTimeFilter/>
         <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="46100478.841568" Rows="2959212724800.000000" Width="1"/>
+            <dxl:Cost StartupCost="0" TotalCost="46100478.841664" Rows="2959212724800.000000" Width="1"/>
           </dxl:Properties>
           <dxl:ProjList/>
           <dxl:Filter/>
           <dxl:SortingColumnList/>
           <dxl:NestedLoopJoin JoinType="Left" IndexNestedLoopJoin="false" OuterRefAsParam="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="35072479.420480" Rows="2959212724800.000000" Width="1"/>
+              <dxl:Cost StartupCost="0" TotalCost="35072479.420576" Rows="2959212724800.000000" Width="1"/>
             </dxl:Properties>
             <dxl:ProjList/>
             <dxl:Filter/>
@@ -3806,33 +3806,33 @@ The SQL along with the DDL are in TINC repo. In the aggregates directory under q
             </dxl:TableScan>
             <dxl:Materialize Eager="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="14147.738846" Rows="361329.000000" Width="1"/>
+                <dxl:Cost StartupCost="0" TotalCost="14147.738862" Rows="361329.000000" Width="1"/>
               </dxl:Properties>
               <dxl:ProjList/>
               <dxl:Filter/>
               <dxl:BroadcastMotion InputSegments="0,1,2" OutputSegments="0,1,2">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="14147.618403" Rows="361329.000000" Width="1"/>
+                  <dxl:Cost StartupCost="0" TotalCost="14147.618419" Rows="361329.000000" Width="1"/>
                 </dxl:Properties>
                 <dxl:ProjList/>
                 <dxl:Filter/>
                 <dxl:SortingColumnList/>
                 <dxl:Append IsTarget="false" IsZapped="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="14145.462473" Rows="120443.000000" Width="1"/>
+                    <dxl:Cost StartupCost="0" TotalCost="14145.462489" Rows="120443.000000" Width="1"/>
                   </dxl:Properties>
                   <dxl:ProjList/>
                   <dxl:Filter/>
                   <dxl:Result>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="7064.686786" Rows="118963.000000" Width="1"/>
+                      <dxl:Cost StartupCost="0" TotalCost="7064.686794" Rows="118963.000000" Width="1"/>
                     </dxl:Properties>
                     <dxl:ProjList/>
                     <dxl:Filter/>
                     <dxl:OneTimeFilter/>
                     <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="7064.647131" Rows="118963.000000" Width="1"/>
+                        <dxl:Cost StartupCost="0" TotalCost="7064.647139" Rows="118963.000000" Width="1"/>
                       </dxl:Properties>
                       <dxl:ProjList/>
                       <dxl:Filter/>
@@ -3841,14 +3841,14 @@ The SQL along with the DDL are in TINC repo. In the aggregates directory under q
                       </dxl:JoinFilter>
                       <dxl:BroadcastMotion InputSegments="-1" OutputSegments="0,1,2">
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="894.082840" Rows="3.000000" Width="1"/>
+                          <dxl:Cost StartupCost="0" TotalCost="894.082842" Rows="3.000000" Width="1"/>
                         </dxl:Properties>
                         <dxl:ProjList/>
                         <dxl:Filter/>
                         <dxl:SortingColumnList/>
                         <dxl:Result>
                           <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="894.082787" Rows="1.000000" Width="1"/>
+                            <dxl:Cost StartupCost="0" TotalCost="894.082789" Rows="1.000000" Width="1"/>
                           </dxl:Properties>
                           <dxl:ProjList/>
                           <dxl:Filter>
@@ -3860,7 +3860,7 @@ The SQL along with the DDL are in TINC repo. In the aggregates directory under q
                           <dxl:OneTimeFilter/>
                           <dxl:Result>
                             <dxl:Properties>
-                              <dxl:Cost StartupCost="0" TotalCost="894.082754" Rows="1.000000" Width="8"/>
+                              <dxl:Cost StartupCost="0" TotalCost="894.082756" Rows="1.000000" Width="8"/>
                             </dxl:Properties>
                             <dxl:ProjList>
                               <dxl:ProjElem ColId="186" Alias="ColRef_0186">
@@ -3885,7 +3885,7 @@ The SQL along with the DDL are in TINC repo. In the aggregates directory under q
                             <dxl:OneTimeFilter/>
                             <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
                               <dxl:Properties>
-                                <dxl:Cost StartupCost="0" TotalCost="894.082746" Rows="1.000000" Width="16"/>
+                                <dxl:Cost StartupCost="0" TotalCost="894.082748" Rows="1.000000" Width="16"/>
                               </dxl:Properties>
                               <dxl:GroupingColumns/>
                               <dxl:ProjList>
@@ -3903,7 +3903,7 @@ The SQL along with the DDL are in TINC repo. In the aggregates directory under q
                               <dxl:Filter/>
                               <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
                                 <dxl:Properties>
-                                  <dxl:Cost StartupCost="0" TotalCost="894.082739" Rows="1.000000" Width="16"/>
+                                  <dxl:Cost StartupCost="0" TotalCost="894.082740" Rows="1.000000" Width="16"/>
                                 </dxl:Properties>
                                 <dxl:ProjList>
                                   <dxl:ProjElem ColId="187" Alias="ColRef_0187">
@@ -3917,7 +3917,7 @@ The SQL along with the DDL are in TINC repo. In the aggregates directory under q
                                 <dxl:SortingColumnList/>
                                 <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
                                   <dxl:Properties>
-                                    <dxl:Cost StartupCost="0" TotalCost="894.082679" Rows="1.000000" Width="16"/>
+                                    <dxl:Cost StartupCost="0" TotalCost="894.082680" Rows="1.000000" Width="16"/>
                                   </dxl:Properties>
                                   <dxl:GroupingColumns/>
                                   <dxl:ProjList>
@@ -4137,14 +4137,14 @@ The SQL along with the DDL are in TINC repo. In the aggregates directory under q
                   </dxl:Result>
                   <dxl:Result>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="7080.735540" Rows="1480.000000" Width="1"/>
+                      <dxl:Cost StartupCost="0" TotalCost="7080.735548" Rows="1480.000000" Width="1"/>
                     </dxl:Properties>
                     <dxl:ProjList/>
                     <dxl:Filter/>
                     <dxl:OneTimeFilter/>
                     <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="false">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="7080.735046" Rows="1480.000000" Width="1"/>
+                        <dxl:Cost StartupCost="0" TotalCost="7080.735054" Rows="1480.000000" Width="1"/>
                       </dxl:Properties>
                       <dxl:GroupingColumns>
                         <dxl:GroupingColumn ColId="41"/>
@@ -4161,7 +4161,7 @@ The SQL along with the DDL are in TINC repo. In the aggregates directory under q
                       <dxl:Filter/>
                       <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="7080.616259" Rows="1480.000000" Width="11"/>
+                          <dxl:Cost StartupCost="0" TotalCost="7080.616267" Rows="1480.000000" Width="11"/>
                         </dxl:Properties>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="41" Alias="element_id">
@@ -4183,7 +4183,7 @@ The SQL along with the DDL are in TINC repo. In the aggregates directory under q
                         </dxl:HashExprList>
                         <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="true">
                           <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="7080.599274" Rows="1480.000000" Width="11"/>
+                            <dxl:Cost StartupCost="0" TotalCost="7080.599282" Rows="1480.000000" Width="11"/>
                           </dxl:Properties>
                           <dxl:GroupingColumns>
                             <dxl:GroupingColumn ColId="41"/>
@@ -4200,7 +4200,7 @@ The SQL along with the DDL are in TINC repo. In the aggregates directory under q
                           <dxl:Filter/>
                           <dxl:Result>
                             <dxl:Properties>
-                              <dxl:Cost StartupCost="0" TotalCost="7070.860650" Rows="118963.000000" Width="11"/>
+                              <dxl:Cost StartupCost="0" TotalCost="7070.860658" Rows="118963.000000" Width="11"/>
                             </dxl:Properties>
                             <dxl:ProjList>
                               <dxl:ProjElem ColId="66" Alias="?column?">
@@ -4214,7 +4214,7 @@ The SQL along with the DDL are in TINC repo. In the aggregates directory under q
                             <dxl:OneTimeFilter/>
                             <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
                               <dxl:Properties>
-                                <dxl:Cost StartupCost="0" TotalCost="7070.424452" Rows="118963.000000" Width="7"/>
+                                <dxl:Cost StartupCost="0" TotalCost="7070.424460" Rows="118963.000000" Width="7"/>
                               </dxl:Properties>
                               <dxl:ProjList>
                                 <dxl:ProjElem ColId="41" Alias="element_id">
@@ -4246,20 +4246,20 @@ The SQL along with the DDL are in TINC repo. In the aggregates directory under q
                               </dxl:TableScan>
                               <dxl:Materialize Eager="false">
                                 <dxl:Properties>
-                                  <dxl:Cost StartupCost="0" TotalCost="894.082841" Rows="3.000000" Width="1"/>
+                                  <dxl:Cost StartupCost="0" TotalCost="894.082843" Rows="3.000000" Width="1"/>
                                 </dxl:Properties>
                                 <dxl:ProjList/>
                                 <dxl:Filter/>
                                 <dxl:BroadcastMotion InputSegments="-1" OutputSegments="0,1,2">
                                   <dxl:Properties>
-                                    <dxl:Cost StartupCost="0" TotalCost="894.082840" Rows="3.000000" Width="1"/>
+                                    <dxl:Cost StartupCost="0" TotalCost="894.082842" Rows="3.000000" Width="1"/>
                                   </dxl:Properties>
                                   <dxl:ProjList/>
                                   <dxl:Filter/>
                                   <dxl:SortingColumnList/>
                                   <dxl:Result>
                                     <dxl:Properties>
-                                      <dxl:Cost StartupCost="0" TotalCost="894.082787" Rows="1.000000" Width="1"/>
+                                      <dxl:Cost StartupCost="0" TotalCost="894.082789" Rows="1.000000" Width="1"/>
                                     </dxl:Properties>
                                     <dxl:ProjList/>
                                     <dxl:Filter>
@@ -4271,7 +4271,7 @@ The SQL along with the DDL are in TINC repo. In the aggregates directory under q
                                     <dxl:OneTimeFilter/>
                                     <dxl:Result>
                                       <dxl:Properties>
-                                        <dxl:Cost StartupCost="0" TotalCost="894.082754" Rows="1.000000" Width="8"/>
+                                        <dxl:Cost StartupCost="0" TotalCost="894.082756" Rows="1.000000" Width="8"/>
                                       </dxl:Properties>
                                       <dxl:ProjList>
                                         <dxl:ProjElem ColId="180" Alias="ColRef_0180">
@@ -4296,7 +4296,7 @@ The SQL along with the DDL are in TINC repo. In the aggregates directory under q
                                       <dxl:OneTimeFilter/>
                                       <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
                                         <dxl:Properties>
-                                          <dxl:Cost StartupCost="0" TotalCost="894.082746" Rows="1.000000" Width="16"/>
+                                          <dxl:Cost StartupCost="0" TotalCost="894.082748" Rows="1.000000" Width="16"/>
                                         </dxl:Properties>
                                         <dxl:GroupingColumns/>
                                         <dxl:ProjList>
@@ -4314,7 +4314,7 @@ The SQL along with the DDL are in TINC repo. In the aggregates directory under q
                                         <dxl:Filter/>
                                         <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
                                           <dxl:Properties>
-                                            <dxl:Cost StartupCost="0" TotalCost="894.082739" Rows="1.000000" Width="16"/>
+                                            <dxl:Cost StartupCost="0" TotalCost="894.082740" Rows="1.000000" Width="16"/>
                                           </dxl:Properties>
                                           <dxl:ProjList>
                                             <dxl:ProjElem ColId="181" Alias="ColRef_0181">
@@ -4328,7 +4328,7 @@ The SQL along with the DDL are in TINC repo. In the aggregates directory under q
                                           <dxl:SortingColumnList/>
                                           <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
                                             <dxl:Properties>
-                                              <dxl:Cost StartupCost="0" TotalCost="894.082679" Rows="1.000000" Width="16"/>
+                                              <dxl:Cost StartupCost="0" TotalCost="894.082680" Rows="1.000000" Width="16"/>
                                             </dxl:Properties>
                                             <dxl:GroupingColumns/>
                                             <dxl:ProjList>
