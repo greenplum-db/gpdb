@@ -610,7 +610,15 @@ transformColumnDefinition(CreateStmtContext *cxt, ColumnDef *column)
 		 */
 		seqstmt = makeNode(CreateSeqStmt);
 		seqstmt->sequence = makeRangeVar(snamespace, sname, -1);
-		seqstmt->options = NIL;
+
+		/*
+		 * gpdb sequence default cache is 20 to avoid frequent sequence value apply
+		 * in QE, we do not need this optimize here. Since each input data populate
+		 * serial column in QD and then dispatch to QE
+		 *
+		 * //seqstmt->options = NIL;
+		 */
+		seqstmt->options = list_make1(makeDefElem("cache", (Node *)makeInteger((long)1)));
 
 		/*
 		 * If this is ALTER ADD COLUMN, make sure the sequence will be owned

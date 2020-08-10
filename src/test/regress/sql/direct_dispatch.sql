@@ -230,7 +230,7 @@ SELECT a.* FROM MPP_22019_a a  WHERE a.j NOT IN (SELECT j FROM MPP_22019_a a2 wh
 
 -- Simple table.
 create table ddtesttab (i int, j int, k int8) distributed by (k);
-create sequence ddtestseq;
+create sequence ddtestseq cache 1;
 
 insert into ddtesttab values (1, 1, 5);
 insert into ddtesttab values (1, 1, 5 + random()); -- volatile expression as distribution key

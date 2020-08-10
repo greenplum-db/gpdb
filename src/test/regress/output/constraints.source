@@ -31,7 +31,7 @@ SELECT '' AS five, * FROM DEFAULT_TBL;
       |   3 |        |       1
 (5 rows)
 
-CREATE SEQUENCE DEFAULT_SEQ;
+CREATE SEQUENCE DEFAULT_SEQ CACHE 1;
 CREATE TABLE DEFAULTEXPR_TBL (i1 int DEFAULT 100 + (200-199) * 2,
 	i2 int DEFAULT nextval('default_seq'));
 INSERT INTO DEFAULTEXPR_TBL VALUES (-1, -2);
@@ -88,7 +88,7 @@ SELECT '' AS three, * FROM CHECK_TBL;
        | 6
 (3 rows)
 
-CREATE SEQUENCE CHECK_SEQ;
+CREATE SEQUENCE CHECK_SEQ CACHE 1;
 CREATE TABLE CHECK2_TBL (x int, y text, z int,
 	CONSTRAINT SEQUENCE_CON
 	CHECK (x > 3 and y <> 'check failed' and z < 8));
@@ -116,7 +116,7 @@ SELECT '' AS two, * from CHECK2_TBL;
 --
 -- Check constraints on INSERT
 --
-CREATE SEQUENCE INSERT_SEQ;
+CREATE SEQUENCE INSERT_SEQ CACHE 1;
 CREATE TABLE INSERT_TBL (x INT DEFAULT nextval('insert_seq'),
 	y TEXT DEFAULT '-NULL-',
 	z INT DEFAULT -1 * (nextval('insert_seq')-1),

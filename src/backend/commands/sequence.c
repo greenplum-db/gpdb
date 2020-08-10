@@ -1562,7 +1562,12 @@ init_params(List *options, bool isInit,
 		new->log_cnt = 0;
 	}
 	else if (isInit)
-		new->cache_value = 1;
+	    /*
+	     * PostgreSQL default value is 1, GPDB privately bump up to 20.
+	     * If a sequence in UDF, QE executor need to apply sequence value from QD.
+	     * Frequent sequence application is network bottleneck for query execution.
+	     */
+		new->cache_value = 20;
 }
 
 /*
