@@ -6594,6 +6594,7 @@ CopyReadAttributesText(CopyState cstate, int stop_processing_at_field)
 {
 	char		delimc = cstate->delim[0];
 	char		escapec = cstate->escape_off ? delimc : cstate->escape[0];
+	bool		delim_off = cstate->delim_off;
 	int			fieldno;
 	char	   *output_ptr;
 	char	   *cur_ptr;
@@ -6679,7 +6680,7 @@ CopyReadAttributesText(CopyState cstate, int stop_processing_at_field)
 			if (cur_ptr >= line_end_ptr)
 				break;
 			c = *cur_ptr++;
-			if (c == delimc && !cstate->delim_off)
+			if (c == delimc && !delim_off)
 			{
 				found_delim = true;
 				break;
@@ -6840,6 +6841,7 @@ static int
 CopyReadAttributesCSV(CopyState cstate, int stop_processing_at_field)
 {
 	char		delimc = cstate->delim[0];
+	bool		delim_off = cstate->delim_off;
 	char		quotec = cstate->quote[0];
 	char		escapec = cstate->escape[0];
 	int			fieldno;
@@ -6927,7 +6929,7 @@ CopyReadAttributesCSV(CopyState cstate, int stop_processing_at_field)
 					goto endfield;
 				c = *cur_ptr++;
 				/* unquoted field delimiter */
-				if (c == delimc && !cstate->delim_off)
+				if (c == delimc && !delim_off)
 				{
 					found_delim = true;
 					goto endfield;
