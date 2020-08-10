@@ -4606,8 +4606,8 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 					switch (ps)
 					{
 						case PART_STATUS_NONE:
-							break;
 						case PART_STATUS_LEAF:
+							break;
 						case PART_STATUS_ROOT:
 						case PART_STATUS_INTERIOR:
 							ereport(ERROR,
