@@ -663,6 +663,17 @@ ltreetest=&gt; SELECT ins_label(path,2,'Space') FROM test WHERE path &lt;@ 'Top.
  </sect2>
 
  <sect2>
+  <caution>
+   <para>
+    It is strongly recommended that the transform extensions be installed in
+    the same schema as <filename>ltree</filename>.  Otherwise there are
+    installation-time security hazards if a transform extension's schema
+    contains objects defined by a hostile user.
+   </para>
+  </caution>
+ </sect2>
+
+ <sect2>
   <title>Authors</title>
 
   <para>
