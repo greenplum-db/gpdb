@@ -2532,6 +2532,14 @@ select * from lossycastlistpart where b::int < 2;
 explain select * from lossycastlistpart where b::int = 2;
 select * from lossycastlistpart where b::int = 2;
 
+--Test lossy casted NEQ on range partitioned table
+drop table if exists sales;
+create table sales(id int, prod_id int, cust_id int, sales_ts timestamp)
+partition by range(sales_ts) (start (timestamp '2010-01-01 00:00:00') end(timestamp '2010-02-02 23:59:59')
+every (interval '1 day'));
+insert into sales select i, i%100, i%1000, timestamp '2010-01-01 00:00:00' + i * interval '1 day' from generate_series(1,20) i;
+select * from sales where sales_ts::date != '2010-01-05' order by sales_ts;
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore
