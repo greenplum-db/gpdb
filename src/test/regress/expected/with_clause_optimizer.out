@@ -2217,10 +2217,10 @@ SELECT count(a1.i)
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Sequence
          ->  Shared Scan (share slice:id 1:0)
-               ->  Seq Scan on foo foo_1
+               ->  Seq Scan on foo
          ->  Sequence
                ->  Shared Scan (share slice:id 1:1)
-                     ->  Seq Scan on foo
+                     ->  Seq Scan on foo foo_1
                ->  Append
                      ->  Hash Join
                            Hash Cond: (share0_ref2.i = share1_ref2.i)

@@ -3528,16 +3528,17 @@ CTranslatorDXLToPlStmt::TranslateDXLSequence
 		);
 
 	ULONG arity = sequence_dxlnode->Arity();
-	
-	// translate last child
-	// since last child may be a DynamicIndexScan with outer references,
-	// we pass the context received from parent to translate outer refs here
-
-	CDXLNode *last_child_dxlnode = (*sequence_dxlnode)[arity - 1];
 
 	CDXLTranslateContext child_context(m_mp, false, output_context->GetColIdToParamIdMap());
 
-	Plan *last_child_plan = TranslateDXLOperatorToPlan(last_child_dxlnode, &child_context, ctxt_translation_prev_siblings);
+	for (ULONG ul = 1; ul < arity; ul++)
+	{
+		CDXLNode *child_dxlnode = (*sequence_dxlnode)[ul];
+
+		Plan *child_plan = TranslateDXLOperatorToPlan(child_dxlnode, &child_context, ctxt_translation_prev_siblings);
+
+		psequence->subplans = gpdb::LAppend(psequence->subplans, child_plan);
+	}
 
 	CDXLNode *project_list_dxlnode = (*sequence_dxlnode)[0];
 
@@ -3552,18 +3553,6 @@ CTranslatorDXLToPlStmt::TranslateDXLSequence
 						child_contexts,
 						output_context
 						);
-
-	// translate the rest of the children
-	for (ULONG ul = 1; ul < arity - 1; ul++)
-	{
-		CDXLNode *child_dxlnode = (*sequence_dxlnode)[ul];
-
-		Plan *child_plan = TranslateDXLOperatorToPlan(child_dxlnode, &child_context, ctxt_translation_prev_siblings);
-
-		psequence->subplans = gpdb::LAppend(psequence->subplans, child_plan);
-	}
-
-	psequence->subplans = gpdb::LAppend(psequence->subplans, last_child_plan);
 
 	SetParamIds(plan);
 
