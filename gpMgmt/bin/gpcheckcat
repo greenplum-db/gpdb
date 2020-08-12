@@ -3717,7 +3717,7 @@ class CatInconsistentIssue:
             return idstr
 
         for i in range(0, len(self.columns) - 1):
-            colset = set(j[i] for j in self.rows)
+            colset = set(str(j[i]) for j in self.rows)
             if len(colset) > 1:
                 for row in self.rows:
                     myprint("%20s is '%s' on %s" % (self.columns[i], row[i], format_segids(row[-1])))
