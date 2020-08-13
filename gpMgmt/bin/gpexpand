@@ -39,7 +39,7 @@ try:
     from gppylib.operations.utils import ParallelOperation
     from gppylib.parseutils import line_reader, check_values, canonicalize_address
     from gppylib.heapchecksum import HeapChecksum
-    from gppylib.commands.pg import PgBaseBackup
+    from gppylib.commands.pg import PgBaseBackup, Thread
     from gppylib.mainUtils import ExceptionNoStackTraceNeeded
 
 except ImportError, e:
@@ -279,7 +279,6 @@ status_detail_table_sql = """CREATE TABLE gpexpand.status_detail
                           fq_name text,
                           table_oid oid,
                           root_partition_name text,
-                          distributed_policy text,
                           rank int,
                           external_writable bool,
                           status text,
@@ -1594,7 +1593,6 @@ class gpexpand:
     quote_ident(n.nspname) || '.' || quote_ident(c.relname) as fq_name,
     c.oid as tableoid,
     NULL as root_partition_name,
-    p.distkey as distributed_policy,
     1 as rank,
     pe.writable is not null as external_writable,
     '%s' as undone_status,
@@ -1667,7 +1665,6 @@ SELECT
     quote_ident(p.partitionschemaname)||'.'||quote_ident(p.partitiontablename) as fq_name,
     c.oid as tableoid,
     quote_ident(p.schemaname) || '.' || quote_ident(p.tablename) as root_partition_name,
-    d.distkey as distributed_policy,
     2 as rank,
     false as external_writable,
     '%s' as undone_status,
@@ -1923,7 +1920,6 @@ ORDER BY root_partition_name, tableoid
 class ExpandTable():
     def __init__(self, options, row=None, num_segments=0):
         self.options = options
-        self.is_root_partition = False
         self.num_segments = num_segments
         if not self.num_segments:
             logger.debug('numsegments is 0, gpexpand will fail if there is a partition table.')
@@ -1933,15 +1929,15 @@ class ExpandTable():
              self.rank, self.external_writable, self.status,
              self.expansion_started, self.expansion_finished,
              self.source_bytes) = row
-        if self.fq_name == self.root_partition_name:
-            self.is_root_partition = True
+            if self.root_partition_name is not None:
+                self.root_partition_name = self.root_partition_name.replace("'", "''")
 
     def add_table(self, conn):
         insertSQL = """INSERT INTO gpexpand.status_detail
                             VALUES ('%s','%s',%s,%s,
                                     '%s',%d,'%s','%s','%s','%s',%d)
                     """ % (self.dbname.replace("'", "''"), self.fq_name.replace("'", "''"), self.table_oid,
-                           self.root_partition_name.replace("'", "''"),
+                           self.root_partition_name,
                            self.distrib_policy,
                            self.rank, self.external_writable, self.status,
                            self.expansion_started, self.expansion_finished,
@@ -1980,14 +1976,15 @@ class ExpandTable():
         dbconn.execSQL(status_conn, sql)
 
     def form_dist_policy_name(self, conn):
-        if self.distrib_policy is None:
+        sql = "SELECT distkey FROM gp_distribution_policy WHERE localoid = '%s'::regclass::oid" % self.root_partition_name
+        policy = dbconn.querySingleton(conn, sql)
+        if policy is None:
             return None, None
-        policy = self.distrib_policy.strip()
-
         namedict = {}
         oiddict = {}
-        sql = "select attnum, attname, attrelid from pg_attribute where attrelid =  %s and attnum > 0" % self.table_oid
-        cursor = dbconn.query(conn, sql)
+        policy = policy.strip()
+        sql = "SELECT attnum, attname, attrelid FROM pg_attribute WHERE attrelid =  %s AND attnum > 0" % self.table_oid
+        cursor = dbconn.execSQL(conn, sql)
         for row in cursor:
             namedict[row[0]] = row[1]
             oiddict[row[0]] = row[2]
@@ -2001,8 +1998,6 @@ class ExpandTable():
         return ','.join(name_list), ','.join(oid_list)
 
     def update_distribution_policy(self, table_conn):
-        # TODO implement by new syntax instead of updating catalog
-
         sql = """
 UPDATE gp_distribution_policy
     SET distkey = ''::int2vector, distclass = ''::oidvector
@@ -2017,7 +2012,32 @@ UPDATE gp_distribution_policy
     ) p1
     WHERE localoid = p1.partitiontableoid;
 """ % self.root_partition_name
-        dbconn.execSQL(table_conn, sql, autocommit=False)
+        dbconn.execSQL(table_conn, sql, autocommit=True)
+
+        sql = """
+SELECT
+    quote_ident(p.partitionschemaname) ||'.'|| quote_ident(p.partitiontablename) as fq_name
+FROM 
+    pg_partitions p, pg_class c, pg_namespace n 
+WHERE
+    c.relnamespace = n.oid 
+    AND p.partitionschemaname = n.nspname 
+    AND p.partitiontablename = c.relname 
+    AND c.relhassubclass
+    AND quote_ident(p.schemaname)||'.'||quote_ident(p.tablename) = '%s';
+        """ % self.root_partition_name
+        partition_tables = [self.root_partition_name.replace("''", "'")]
+        curs = dbconn.query(table_conn, sql)
+        rows = curs.fetchall()
+        for row in rows:
+            partition_tables.append(row[0])
+        for table in partition_tables:
+            check_sql = """SELECT numsegments FROM gp_distribution_policy WHERE localoid = '%s'::regclass::oid""" \
+                        % self.fq_name.replace("'", "''")
+            fq_numsegments = dbconn.querySingleton(table_conn, check_sql)
+            if fq_numsegments < self.num_segments:
+                sql = """ALTER TABLE ONLY %s EXPAND TABLE""" % table
+                dbconn.execSQL(table_conn, sql)
 
         sql = """
 UPDATE gp_distribution_policy
@@ -2027,58 +2047,176 @@ UPDATE gp_distribution_policy
         c.relnamespace = n.oid
         AND p.partitionschemaname = n.nspname
         AND p.partitiontablename = c.relname
+        AND NOT c.relhassubclass
         AND quote_ident(p.schemaname)||'.'||quote_ident(p.tablename) = '%s'
         AND c.relstorage not in ('x', 'f')
-      UNION
-      SELECT '%s'::regclass::oid
     ) p1
     WHERE localoid = p1.partitiontableoid;
-        """ % (self.num_segments, self.root_partition_name, self.root_partition_name)
+        """ % (self.num_segments, self.root_partition_name)
         dbconn.execSQL(table_conn, sql)
 
-    def expand_leaf_partition_table(self, table_conn, status_conn):
+    def lock_partition_tables(self, table_url, status_url):
+        sql = """
+SELECT
+    quote_ident(p.partitionschemaname) ||'.'|| quote_ident(p.partitiontablename) as fq_name
+FROM 
+    pg_partitions p, pg_class c, pg_namespace n 
+WHERE
+    c.relnamespace = n.oid 
+    AND p.partitionschemaname = n.nspname 
+    AND p.partitiontablename = c.relname 
+    AND c.relhassubclass
+    AND quote_ident(p.schemaname)||'.'||quote_ident(p.tablename) = '%s';
+        """ % self.root_partition_name
+        status_conn = dbconn.connect(status_url, encoding='UTF8')
+        table_conn = dbconn.connect(table_url, encoding='UTF8')
+        partition_tables = [self.root_partition_name.replace("''", "'")]
+        curs = dbconn.query(table_conn, sql)
+        rows = curs.fetchall()
+        for row in rows:
+            partition_tables.append(row[0])
+        lock_sql_list = []
+        for table in partition_tables:
+            lock_sql_list.append('LOCK TABLE ONLY %s IN EXCLUSIVE MODE;' % table)
+        lock_sql = '\n'.join(lock_sql_list)
+        lock_check_sql = """SELECT COUNT(1) FROM pg_stat_activity WHERE query like 'LOCK TABLE ONLY %s IN EXCLUSIVE MODE;%%'
+            and datname = '%s';""" % (self.root_partition_name.replace("\\", "\\\\"), self.dbname.replace("'", "''"))
+        # double check
+        lock_count = dbconn.querySingleton(table_conn, lock_check_sql)
+        if lock_count > 0:
+            status_conn.close()
+            table_conn.close()
+            return
+        logger.info('Locking partition table %s' % self.root_partition_name)
+        dbconn.execSQL(table_conn, lock_sql, autocommit=False)
+        logger.info('Locked partition table %s' % self.root_partition_name)
+        # check if all leaf tables expanded
+        check_sql = """SELECT COUNT(1) FROM gpexpand.status_detail WHERE root_partition_name = '%s' 
+            AND status <> '%s'""" % (self.root_partition_name, done_status)
+        while True:
+            time.sleep(3)
+            count = dbconn.querySingleton(status_conn, check_sql)
+            if count == 0:
+                table_conn.commit()
+                logger.info('Unlocked %s' % self.root_partition_name)
+                if self.options.analyze:
+                    logger.info('Analyzing %s' % self.root_partition_name)
+                    self.analyze_partition_table(table_conn)
+                table_conn.close()
+                status_conn.close()
+                break
+
+    def analyze_partition_table(self, table_conn):
+        tables = list()
+        not_ext_sql = """
+SELECT
+    quote_ident(p.partitionschemaname)||'.'||quote_ident(p.partitiontablename) as partitiontable
+FROM 
+    pg_partitions p, pg_class c, pg_namespace n 
+WHERE 
+    c.relnamespace = n.oid 
+    AND p.partitionschemaname = n.nspname 
+    AND p.partitiontablename = c.relname 
+    AND c.relstorage not in ('x', 'f') 
+    AND NOT c.relhassubclass
+    AND quote_ident(p.schemaname)||'.'||quote_ident(p.tablename) = '%s'
+            """ % self.root_partition_name
+        cursor = None
+        try:
+            cursor = dbconn.query(table_conn, not_ext_sql)
+            for row in list(cursor.fetchall()):
+                tables.append(row[0])
+        except Exception, ex:
+            logger.warn(ex)
+        finally:
+            if cursor:
+                cursor.close()
+        for tab in tables:
+            sql = 'ANALYZE %s' % tab
+            logger.info('Analyzing %s' % (tab.decode('utf-8')))
+            dbconn.execSQL(table_conn, sql)
+
+    def preprocess_partition_table(self, table_conn, status_conn, table_url, status_url):
         sql = """SELECT fq_name FROM gpexpand.status_detail WHERE expansion_started = (SELECT min(expansion_started) 
-                FROM gpexpand.status_detail WHERE dbname = '%s' AND root_partition_name = '%s' AND expansion_started IS NOT NULL);
-                """ % (self.dbname, self.root_partition_name)
-        first_fq_name = dbconn.execSQLForSingleton(status_conn, sql)
+                FROM gpexpand.status_detail WHERE dbname = '%s' AND root_partition_name = '%s' 
+                AND expansion_started IS NOT NULL) LIMIT 1;
+                """ % (self.dbname.replace("'", "''"), self.root_partition_name)
+        first_fq_name = dbconn.querySingleton(status_conn, sql)
+        lock_check_sql = """SELECT COUNT(1) FROM pg_stat_activity WHERE query like 'LOCK TABLE ONLY %s IN EXCLUSIVE MODE;%%' 
+                    AND datname = '%s' AND waiting = 'f';""" % (self.root_partition_name.replace("\\", "\\\\"), self.dbname.replace("'", "''"))
+        lock_count = dbconn.querySingleton(table_conn, lock_check_sql)
+        numsegment_check_sql = """SELECT numsegments FROM gp_distribution_policy 
+                    WHERE localoid = '%s'::regclass::oid""" % self.root_partition_name
         if self.fq_name == first_fq_name:
             self.update_distribution_policy(table_conn)
+            lock_thread = Thread(name='lock partition tables', target=self.lock_partition_tables,
+                                 args=(table_url, status_url))
+            lock_thread.start()
+            # wait for the partition table to be locked by lock_partition_tables
+            while True:
+                table_conn.commit()
+                lock_count = dbconn.querySingleton(table_conn, lock_check_sql)
+                if lock_count > 0:
+                    break
+                else:
+                    time.sleep(1)
+
+        elif lock_count == 0:
+            time.sleep(random.randint(1, 5))
+            lock_count = dbconn.querySingleton(table_conn, lock_check_sql)
+            if lock_count == 0:
+                lock_thread = Thread(name='lock partition tables', target=self.lock_partition_tables,
+                                     args=(table_url, status_url))
+                lock_thread.start()
+                while True:
+                    table_conn.commit()
+                    lock_count = dbconn.querySingleton(table_conn, lock_check_sql)
+                    numsegments = dbconn.querySingleton(table_conn, numsegment_check_sql)
+                    if lock_count > 0 and numsegments == self.num_segments:
+                        break
+                    else:
+                        time.sleep(1)
+
+    def expand_leaf_partition_table(self, table_conn, status_conn, table_url, status_url):
+        self.preprocess_partition_table(table_conn, status_conn, table_url, status_url)
 
         policy_name, policy_oids = self.form_dist_policy_name(table_conn)
-        schema_name, table_name = self.fq_name.split('.')
         if policy_name:
             dist_cols = policy_name.split(',')
             dist_cols = ['"%s"' % x.strip() for x in dist_cols]
             dist_cols = ','.join(dist_cols)
-            sql = 'ALTER TABLE ONLY "%s"."%s" SET WITH(REORGANIZE=TRUE) DISTRIBUTED BY (%s)' % (
-                schema_name, table_name, dist_cols)
+            sql = 'ALTER TABLE ONLY %s SET WITH(REORGANIZE=TRUE) DISTRIBUTED BY (%s)' % (
+                self.fq_name, dist_cols)
         else:
-            sql = 'ALTER TABLE ONLY "%s"."%s" SET WITH(REORGANIZE=TRUE) DISTRIBUTED RANDOMLY' % (schema_name, table_name)
-        dbconn.execSQL(table_conn, sql)
-        table_conn.commit()
-
-    def expand(self, table_conn, cancel_flag):
-        # for root partition, we want to expand whose partition in one shot
-        # TODO: expand leaf partitions separately in parallel
-        only_str = "" if self.is_root_partition else "ONLY"
-        external_str = "EXTERNAL" if self.external_writable else ""
-        sql = 'ALTER %s TABLE %s %s EXPAND TABLE' % (external_str, only_str, self.fq_name)
+            sql = 'ALTER TABLE ONLY %s SET WITH(REORGANIZE=TRUE) DISTRIBUTED RANDOMLY' % self.fq_name
 
         logger.info('Expanding %s.%s' % (self.dbname.decode('utf-8'), self.fq_name.decode('utf-8')))
         logger.debug("Expand SQL: %s" % sql.decode('utf-8'))
+        dbconn.execSQL(table_conn, sql)
+
+    def expand(self, table_conn, status_conn, cancel_flag, table_url, status_url):
+        external_str = "EXTERNAL" if self.external_writable else ""
+        sql = 'ALTER %s TABLE ONLY %s EXPAND TABLE' % (external_str, self.fq_name)
 
         # check is atomic in python
         if not cancel_flag:
             if self.root_partition_name:
-                self.expand_leaf_partition_table(table_conn, status_conn)
+                self.expand_leaf_partition_table(table_conn, status_conn, table_url, status_url)
             else:
+                logger.info('Expanding %s.%s' % (self.dbname.decode('utf-8'), self.fq_name.decode('utf-8')))
+                logger.debug("Expand SQL: %s" % sql.decode('utf-8'))
                 dbconn.execSQL(table_conn, sql)
-                # the ALTER TABLE command requires a commit to execute
                 table_conn.commit()
-            if self.options.analyze:
-                sql = 'ANALYZE %s' % (self.fq_name)
+            if self.options.analyze and not self.root_partition_name:
+                sql = 'ANALYZE %s' % self.fq_name
                 logger.info('Analyzing %s' % (self.fq_name.decode('utf-8')))
-                dbconn.execSQL(table_conn, sql)
+                try:
+                    dbconn.execSQL(table_conn, sql)
+                except Exception, ex:
+                    if ex.__str__().find('unsupported table type') != -1:
+                        logger.warning('cannot analyze %s: unsupported table type' % self.fq_name.decode('utf-8'))
+                    else:
+                        logger.warning(ex)
 
             return True
 
