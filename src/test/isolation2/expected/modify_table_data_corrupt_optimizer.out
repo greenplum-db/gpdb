@@ -95,7 +95,7 @@ Optimizer status: PQO version 3.86.0
 begin;
 BEGIN
 delete from tab1 using tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
-ERROR:  distribution key of the tuple (0, 1) doesn't belong to current segment (actually from seg1) (nodeDML.c:136)  (seg0 127.0.1.1:25432 pid=127638) (cdbdisp.c:254)
+ERROR:  distribution key of the tuple (0, 1) doesn't belong to current segment (actually from seg1) (nodeDML.c:140)  (seg0 127.0.1.1:25432 pid=127638) (cdbdisp.c:254)
 abort;
 ABORT
 
@@ -126,7 +126,7 @@ Optimizer status: PQO version 3.86.0
 begin;
 BEGIN
 update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
-ERROR:  distribution key of the tuple (0, 1) doesn't belong to current segment (actually from seg1) (nodeDML.c:136)  (seg0 127.0.1.1:25432 pid=127638) (cdbdisp.c:254)
+ERROR:  distribution key of the tuple (0, 1) doesn't belong to current segment (actually from seg1) (nodeDML.c:140)  (seg0 127.0.1.1:25432 pid=127638) (cdbdisp.c:254)
 abort;
 ABORT
 
@@ -147,7 +147,7 @@ Optimizer status: PQO version 3.86.0
 begin;
 BEGIN
 update tab1 set b = 999;
-ERROR:  distribution key of the tuple (0, 1) doesn't belong to current segment (actually from seg1) (nodeDML.c:136)  (seg0 127.0.1.1:25432 pid=127638) (cdbdisp.c:254)
+ERROR:  distribution key of the tuple (0, 1) doesn't belong to current segment (actually from seg1) (nodeDML.c:140)  (seg0 127.0.1.1:25432 pid=127638) (cdbdisp.c:254)
 abort;
 ABORT
 
