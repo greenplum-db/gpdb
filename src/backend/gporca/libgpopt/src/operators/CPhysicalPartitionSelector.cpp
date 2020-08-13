@@ -899,8 +899,6 @@ CPhysicalPartitionSelector::OsPrint
 		<< ", Scan Id: " << m_scan_id
 		<< ", Part Table: ";
 	MDId()->OsPrint(os);
-	CPrintPrefix pref(NULL, "            ");
-	m_pexprCombinedPredicate->OsPrintExpression(os, &pref);
 	return os;
 }
 

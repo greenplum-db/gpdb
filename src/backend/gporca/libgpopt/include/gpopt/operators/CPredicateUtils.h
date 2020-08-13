@@ -418,7 +418,7 @@ namespace gpopt
 				CColRef *pcrPartKey,
 				CExpression *pexprCol,
 				CColRefSet *pcrsAllowedRefs,
-				BOOL isKnownToBeListPartitioned
+				BOOL allowNotEqualPreds
 				);
 
 			// append the conjuncts from the given expression to the given array, removing

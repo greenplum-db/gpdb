@@ -1436,7 +1436,7 @@ CPredicateUtils::PexprPartPruningPredicate
 	CColRef *pcrPartKey,
 	CExpression *pexprCol,	    // predicate on pcrPartKey obtained from pcnstr
 	CColRefSet *pcrsAllowedRefs, // allowed colrefs in exprs (except pcrPartKey)
-	BOOL isKnownToBeListPartitioned
+	BOOL allowNotEqualPreds    // allow NEq to generate partition pruning predicate
 	)
 {
 	CExpressionArray *pdrgpexprResult = GPOS_NEW(mp) CExpressionArray(mp);
@@ -1488,8 +1488,8 @@ CPredicateUtils::PexprPartPruningPredicate
 
 			if (FBoolPredicateOnColumn(pexpr, pcrPartKey) ||
 				FNullCheckOnColumn(pexpr, pcrPartKey) ||
-				IsDisjunctionOfRangeComparison(mp, pexpr, pcrPartKey, pcrsAllowedRefs, isKnownToBeListPartitioned) ||
-				(FRangeComparison(pexpr, pcrPartKey, pcrsAllowedRefs, isKnownToBeListPartitioned) &&
+				IsDisjunctionOfRangeComparison(mp, pexpr, pcrPartKey, pcrsAllowedRefs, allowNotEqualPreds) ||
+				(FRangeComparison(pexpr, pcrPartKey, pcrsAllowedRefs, allowNotEqualPreds) &&
 				 !pexpr->DeriveScalarFunctionProperties()->NeedsSingletonExecution()))
 			{
 				pexpr->AddRef();
@@ -1774,7 +1774,7 @@ CPredicateUtils::PexprExtractPredicatesOnPartKeys
 
 		// look for a filter on the part key
 		CExpression *pexprCmp =
-			PexprPartPruningPredicate(mp, pdrgpexprConjuncts, colref, pexprCol, pcrsAllowedRefs, isKnownToBeListPartitioned);
+			PexprPartPruningPredicate(mp, pdrgpexprConjuncts, colref, pexprCol, pcrsAllowedRefs, isKnownToBeListPartitioned /* allowNotEqualPreds */);
 		CRefCount::SafeRelease(pexprCol);
 		GPOS_ASSERT_IMP(NULL != pexprCmp && COperator::EopScalarCmp == pexprCmp->Pop()->Eopid(),
 				IMDType::EcmptOther != CScalarCmp::PopConvert(pexprCmp->Pop())->ParseCmpType());
