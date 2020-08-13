@@ -33,6 +33,21 @@ ERROR:  constraint "dup_constraint" for relation "dupconstr" already exists
 -- cleanup
 drop table dupconstr;
 --
+-- Alter datatype of column with constraint should raise meaningful error
+-- See github issue: https://github.com/greenplum-db/gpdb/issues/10561
+--
+create table contype (i int4 primary key, j int check (j < 100));
+alter table contype alter i type numeric; --error
+ERROR:  cannot alter column with primary key or unique constraint
+HINT:  DROP the constraint first, and recreate it after the ALTER
+insert into contype values (1, 1), (2, 2), (3, 3);
+-- after insert data, alter primary key/unique column's type will go through a special check logic
+alter table contype alter i type numeric; --error
+ERROR:  changing the type of a column that is used in a UNIQUE or PRIMARY KEY constraint is not allowed
+alter table contype alter j type numeric;
+-- cleanup
+drop table contype;
+--
 -- Test ALTER COLUMN TYPE after dropped column with text datatype (see MPP-19146)
 --
 create domain mytype as text;
