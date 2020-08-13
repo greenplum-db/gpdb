@@ -64,10 +64,12 @@
      <ul>
        <li>The Greenplum Database 6 distribution does not install any
          foreign data wrappers.</li>
-       <li>Greenplum Database uses the <codeph>mpp_execute</codeph> option value
-         for foreign table scans only. Greenplum does not honor the
-         <codeph>mpp_execute</codeph> setting when you write to, or update, a
-         foreign table; all write operations are initiated through the master.</li>
+       <li>Greenplum Database supports all values of the <codeph>mpp_execute</codeph>
+         option value for foreign table scans only. Greenplum supports parallel
+         write operations only when <codeph>mpp_execute</codeph> is set to
+         <codeph>'all segments'</codeph>; Greenplum initiates write operations
+         through the master for all other <codeph>mpp_execute</codeph> settings.
+         See <xref href="#topic5" type="topic" format="dita"/>.</li>
      </ul>
     </body>
   </topic>
@@ -259,6 +261,94 @@ EndForeignScan (ForeignScanState *node)</codeblock></entry>
           </tbody>
         </tgroup>
       </table>
+      <p>If a foreign data wrappers supports writable foreign tables, it should
+        provide the update-related callback functions that are required by the
+        capabilities of the FDW. Update-related callback functions include:</p>
+      <table id="in201681">
+        <tgroup cols="2">
+          <colspec colname="col1" colnum="1" colwidth="90*"/>
+          <colspec colname="col2" colnum="2" colwidth="163*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Callback Signature</entry>
+              <entry colname="col2">Description</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1"><codeblock>void
+AddForeignUpdateTargets (Query *parsetree,
+                         RangeTblEntry *target_rte,
+                         Relation target_relation)</codeblock></entry>
+              <entry colname="col2">Add additional information in the foreign
+                table that will be retrieved during an update or delete operation 
+                to identify the exact row on which to operate.</entry>
+            </row>
+            <row>
+              <entry colname="col1"><codeblock>List *
+PlanForeignModify (PlannerInfo *root,
+                   ModifyTable *plan,
+                   Index resultRelation,
+                   int subplan_index)</codeblock></entry>
+              <entry colname="col2">Perform additional planning actions required
+                for an insert, update, or delete operation on a foreign table,
+                and return the information generated.</entry>
+            </row>
+            <row>
+              <entry colname="col1"><codeblock>void
+BeginForeignModify (ModifyTableState *mtstate,
+                    ResultRelInfo *rinfo,
+                    List *fdw_private,
+                    int subplan_index,
+                    int eflags)</codeblock></entry>
+              <entry colname="col2">Begin executing a modify operation on a
+                foreign table. Called during executor startup.</entry>
+            </row>
+            <row>
+              <entry colname="col1"><codeblock>TupleTableSlot *
+ExecForeignInsert (EState *estate,
+                   ResultRelInfo *rinfo,
+                   TupleTableSlot *slot,
+                   TupleTableSlot *planSlot)</codeblock></entry>
+              <entry colname="col2">Insert a single tuple into the foreign table.
+                Return a slot containing the data that was actually inserted, or
+                NULL if no row was inserted.</entry>
+            </row>
+            <row>
+              <entry colname="col1"><codeblock>TupleTableSlot *
+ExecForeignUpdate (EState *estate,
+                   ResultRelInfo *rinfo,
+                   TupleTableSlot *slot,
+                   TupleTableSlot *planSlot)</codeblock></entry>
+              <entry colname="col2">Update a single tuple in the foreign table.
+                Return a slot containing the row as it was actually updated, or
+                NULL if no row was updated. </entry>
+            </row>
+            <row>
+              <entry colname="col1"><codeblock>TupleTableSlot *
+ExecForeignDelete (EState *estate,
+                   ResultRelInfo *rinfo,
+                   TupleTableSlot *slot,
+                   TupleTableSlot *planSlot)</codeblock></entry>
+              <entry colname="col2">Delete a single tuple from the foreign table.
+                Return a slot containing the row that was deleted, or NULL if no
+                row was deleted.</entry>
+            </row>
+            <row>
+              <entry colname="col1"><codeblock>void
+EndForeignModify (EState *estate,
+                  ResultRelInfo *rinfo)</codeblock></entry>
+              <entry colname="col2">End the update and release resources.</entry>
+            </row>
+            <row>
+              <entry colname="col1"><codeblock>int
+IsForeignRelUpdatable (Relation rel)</codeblock></entry>
+              <entry colname="col2">Report the update operations supported by the
+                specified foreign table.</entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
       <p>Refer to
         <xref href="https://www.postgresql.org/docs/9.4/fdw-callbacks.html" scope="external" format="html">Foreign Data Wrapper Callback Routines</xref>
         in the PostgreSQL documentation for detailed information about the inputs
@@ -344,13 +434,22 @@ GetForeignColumnOptions(Oid relid, AttrNumber attnum);</codeblock></entry>
       <p>A Greenplum Database user can specify the <codeph>mpp_execute</codeph>
         option when they create or alter a foreign table, foreign server, or
         foreign data wrapper. A Greenplum Database-compatible foreign-data
-        wrapper examines the <codeph>mpp_execute</codeph> option value on a scan
-        and uses it to determine where to request data - from the
+        wrapper examines the <codeph>mpp_execute</codeph> option value
+        and uses it to determine where to request or send data - from the
         <codeph>master</codeph> (the default), <codeph>any</codeph> (master or
-        any one segment), or <codeph>all</codeph> segments.</p>
-      <note>Write/update operations using a foreign data wrapper are always
-        performed on the Greenplum Database master, regardless of the
-        <codeph>mpp_execute</codeph> setting.</note>
+        any one segment), or <codeph>all segments</codeph> segments (parallel
+        read/write).</p>
+     <p>Greenplum Database supports all <codeph>mpp_execute</codeph> settings
+        for a scan.</p>
+     <p>Greenplum Database supports parallel write when
+        <codeph>mpp_execute 'all segments"</codeph> is set. For all other
+        <codeph>mpp_execute</codeph> settings, Greenplum Database executes
+        write/update operations initiated by a foreign data wrapper on the
+        Greenplum master node.</p>
+     <note>When <codeph>mpp_execute 'all segments'</codeph> is set, Greenplum
+        Database creates the foreign table with a random partition policy. This
+        enables a foreign data wrapper to write to a foreign table from all
+        segments.</note>
       <p>The following scan code snippet probes the <codeph>mpp_execute</codeph>
         value associated with a foreign table:</p>
         <codeblock>ForeignTable *table = GetForeignTable(foreigntableid);
