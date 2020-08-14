@@ -1768,6 +1768,8 @@ CPredicateUtils::PexprExtractPredicatesOnPartKeys
 		{
 			CHAR szPartType = pmdrel->PartTypeAtLevel(ul);
 			isKnownToBeListPartitioned = (IMDRelation::ErelpartitionList == szPartType);
+			// we want to allow NEq predicates for partition selection
+			// only for list partitioned tables
 		}
 
 		CExpression *pexprCol = PexprPredicateCol(mp, pcnstr, colref, fUseConstraints);
