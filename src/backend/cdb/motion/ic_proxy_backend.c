@@ -326,7 +326,7 @@ ic_proxy_backend_on_interrupt_timer(uv_timer_t *timer)
 {
 	ChunkTransportState *pTransportStates;
 
-	pTransportStates = uv_handle_get_data((uv_handle_t *)timer);
+	pTransportStates = timer->data;
 	ML_CHECK_FOR_INTERRUPTS(pTransportStates->teardownActive);
 }
 
@@ -338,7 +338,7 @@ ic_proxy_backend_on_cancel_from_qd_timer(uv_timer_t *timer)
 {
 	ChunkTransportState *pTransportStates;
 
-	pTransportStates = uv_handle_get_data((uv_handle_t *)timer);
+	pTransportStates = timer->data;
 	checkForCancelFromQD(pTransportStates);
 }
 
@@ -457,18 +457,18 @@ ic_proxy_backend_init_context(ChunkTransportState *state)
 
 	/* init libuv loop */
 	uv_loop_init(&context->loop);
-	uv_loop_set_data(&context->loop, (void *)context);
+	context->loop.data = context;
 
 	/* interrupt timer */
 	uv_timer_init(&context->loop, &context->interruptTimer);
-	uv_handle_set_data((uv_handle_t *)&context->interruptTimer, (void *)context->transportState);
+	context->interruptTimer.data = context->transportState;
 	uv_timer_start(&context->interruptTimer, ic_proxy_backend_on_interrupt_timer, 0, 500);
 	uv_unref((uv_handle_t *)&context->interruptTimer);
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
 		uv_timer_init(&context->loop, &context->cancelFromQDTimer);
-		uv_handle_set_data((uv_handle_t *)&context->cancelFromQDTimer, (void *)context->transportState);
+		context->cancelFromQDTimer.data = context->transportState;
 		uv_timer_start(&context->cancelFromQDTimer, ic_proxy_backend_on_cancel_from_qd_timer, 0, 2000);
 		uv_unref((uv_handle_t *)&context->cancelFromQDTimer);
 	}

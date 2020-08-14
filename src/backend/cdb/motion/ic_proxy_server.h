@@ -21,26 +21,6 @@
 #include "ic_proxy_packet.h"
 #include "ic_proxy_router.h"
 
-#if UV_VERSION_HEX < 0x011300
-static inline void
-uv_req_set_data(uv_req_t *req, void* data)
-{
-	req->data = data;
-}
-
-static inline void *
-uv_req_get_data(const uv_req_t *req)
-{
-	return req->data;
-}
-
-static inline uv_loop_t *
-uv_handle_get_loop(const uv_handle_t* handle)
-{
-	return handle->loop;
-}
-#endif
-
 typedef struct ICProxyPeer ICProxyPeer;
 typedef struct ICProxyClient ICProxyClient;
 typedef struct ICProxyDelay ICProxyDelay;

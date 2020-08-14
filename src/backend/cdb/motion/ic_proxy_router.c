@@ -248,7 +248,7 @@ static void
 ic_proxy_router_on_write(uv_write_t *req, int status)
 {
 	ICProxyWriteReq *wreq = (ICProxyWriteReq *) req;
-	ICProxyPkt *pkt = uv_req_get_data((uv_req_t *) req);
+	ICProxyPkt *pkt = req->data;
 
 	if (status < 0)
 		ic_proxy_log(LOG, "ic-proxy-router: fail to send %s: %s",
@@ -292,8 +292,8 @@ ic_proxy_router_write(uv_stream_t *stream, ICProxyPkt *pkt, int32 offset,
 	ic_proxy_log(LOG, "ic-proxy-router: sending %s", ic_proxy_pkt_to_str(pkt));
 
 	wreq = ic_proxy_new(ICProxyWriteReq);
-	uv_req_set_data((uv_req_t *) wreq, pkt);
 
+	wreq->req.data = pkt;
 	wreq->callback = callback;
 	wreq->opaque = opaque;
 
