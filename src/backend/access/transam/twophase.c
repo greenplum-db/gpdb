@@ -226,34 +226,35 @@ add_recover_post_checkpoint_prepared_transactions_map_entry(TransactionId xid, X
   prpt_map *entry = NULL;
   bool      found = false;
 
-  /*
-   * The table is lazily initialised.
-   */
-  if (crashRecoverPostCheckpointPreparedTransactions_map_ht == NULL)
+	Assert(!IsUnderPostmaster || AmStartupProcess());
+
+	/*
+	 * The table is lazily initialised.
+	 */
+	if (crashRecoverPostCheckpointPreparedTransactions_map_ht == NULL)
     {
-    crashRecoverPostCheckpointPreparedTransactions_map_ht
-                     = init_hash("two phase post checkpoint prepared transactions map",
-                                 sizeof(TransactionId), /* keysize */
-                                 sizeof(prpt_map),
-                                 10 /* initialize for 10 entries */);
+		crashRecoverPostCheckpointPreparedTransactions_map_ht
+			= init_hash("two phase post checkpoint prepared transactions map",
+						sizeof(TransactionId), /* keysize */
+						sizeof(prpt_map),
+						10 /* initialize for 10 entries */);
     }
 
-  entry = hash_search(crashRecoverPostCheckpointPreparedTransactions_map_ht,
-                      &xid,
-                      HASH_ENTER,
-                      &found);
+	entry = hash_search(crashRecoverPostCheckpointPreparedTransactions_map_ht,
+						&xid,
+						HASH_ENTER,
+						&found);
 
-  /*
-   * KAS should probably put out an error if found == true (i.e. it already exists).
-   */
+	/*
+	 * KAS should probably put out an error if found == true (i.e. it already exists).
+	 */
 
-  /*
-   * If this is a new entry, we need to add the data, if we found
-   * an entry, we need to update it, so just copy our data
-   * right over the top.
-   */
-  memcpy(&entry->xlogrecptr, m, sizeof(XLogRecPtr));
-
+	/*
+	 * If this is a new entry, we need to add the data, if we found
+	 * an entry, we need to update it, so just copy our data
+	 * right over the top.
+	 */
+	memcpy(&entry->xlogrecptr, m, sizeof(XLogRecPtr));
 }  /* end add_recover_post_checkpoint_prepared_transactions_map_entry */
 
 /*
@@ -262,15 +263,17 @@ add_recover_post_checkpoint_prepared_transactions_map_entry(TransactionId xid, X
 static void
 remove_recover_post_checkpoint_prepared_transactions_map_entry(TransactionId xid)
 {
-  bool      found = false;;
+	bool      found = false;;
 
-  if (crashRecoverPostCheckpointPreparedTransactions_map_ht != NULL)
-  {
-	  (void) hash_search(crashRecoverPostCheckpointPreparedTransactions_map_ht,
-						 &xid,
-						 HASH_REMOVE,
-						 &found);
-  }
+	Assert(!IsUnderPostmaster || AmStartupProcess());
+
+	if (crashRecoverPostCheckpointPreparedTransactions_map_ht != NULL)
+	{
+		(void) hash_search(crashRecoverPostCheckpointPreparedTransactions_map_ht,
+						   &xid,
+						   HASH_REMOVE,
+						   &found);
+	}
 }  /* end remove_recover_post_checkpoint_prepared_transactions_map_entry */
 
 
@@ -1193,9 +1196,6 @@ EndPrepare(GlobalTransaction gxact)
 	gxact->prepare_lsn       = XLogInsert(RM_XACT_ID, XLOG_XACT_PREPARE, records.head);
 	gxact->prepare_begin_lsn = XLogLastInsertBeginLoc();
 
-	/* Add the prepared record to our global list */
-	add_recover_post_checkpoint_prepared_transactions_map_entry(xid, &gxact->prepare_begin_lsn);
-
 	XLogFlush(gxact->prepare_lsn);
 
 	/*
@@ -1542,11 +1542,6 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 
 	/* Count the prepared xact as committed or aborted */
 	AtEOXact_PgStat(isCommit);
-
-	/*
-	 * And now we can clean up our mess.
-	 */
-	remove_recover_post_checkpoint_prepared_transactions_map_entry(xid);
 
 	RemoveGXact(gxact);
 	MyLockedGxact = NULL;
@@ -2276,6 +2271,50 @@ RecordTransactionAbortPrepared(TransactionId xid,
 }
 
 /*
+ * getTwoPhasePreparedTransactionDataInRecovery
+ *
+ * Get the two phase prepared transaction xid+lsn from the hash table
+ * crashRecoverPostCheckpointPreparedTransactions_map_ht since at the time
+ * the data structure in getTwoPhasePreparedTransactionData() might not be
+ * populated.
+ */
+static void
+getTwoPhasePreparedTransactionDataInRecovery(prepared_transaction_agg_state **ptas)
+{
+	prpt_map   *entry        = NULL;
+	XLogRecPtr tfXLogRecPtr = InvalidXLogRecPtr;
+	HASH_SEQ_STATUS hsStatus;
+	int         maxCount;
+
+	TwoPhaseAddPreparedTransactionInit(ptas, &maxCount);
+
+	if (crashRecoverPostCheckpointPreparedTransactions_map_ht != NULL)
+	{
+		hash_seq_init(&hsStatus,crashRecoverPostCheckpointPreparedTransactions_map_ht);
+
+		entry = (prpt_map *)hash_seq_search(&hsStatus);
+
+		if (entry != NULL)
+			tfXLogRecPtr = entry->xlogrecptr;
+	}
+
+	while (tfXLogRecPtr != InvalidXLogRecPtr)
+	{
+		TwoPhaseAddPreparedTransaction(ptas, &maxCount, entry->xid, &tfXLogRecPtr);
+
+		/* Get the next entry */
+		entry = (prpt_map *)hash_seq_search(&hsStatus);
+
+		if (entry != NULL)
+			tfXLogRecPtr = entry->xlogrecptr;
+		else
+			tfXLogRecPtr = InvalidXLogRecPtr;
+	}
+}
+
+/*
+ * getTwoPhasePreparedTransactionData
+ *
  * This function will gather up all the current prepared transaction xlog pointers,
  * and pass that information back to the caller.
  */
@@ -2289,6 +2328,12 @@ getTwoPhasePreparedTransactionData(prepared_transaction_agg_state **ptas)
 	int			maxCount;
 
 	Assert(*ptas == NULL);
+
+	if (InRecovery)
+	{
+		getTwoPhasePreparedTransactionDataInRecovery(ptas);
+		return;
+	}
 
 	TwoPhaseAddPreparedTransactionInit(ptas, &maxCount);
 
@@ -2314,7 +2359,6 @@ getTwoPhasePreparedTransactionData(prepared_transaction_agg_state **ptas)
 
 	LWLockRelease(TwoPhaseStateLock);
 }  /* end getTwoPhasePreparedTransactionData */
-
 
 /*
  * This function will allocate enough space to accomidate maxCount values.

@@ -64,32 +64,10 @@ select * from t_restart;
 
 -- recovery the nodes
 !\retcode gprecoverseg -a;
-
--- loop while segments come in sync
-do $$
-begin /* in func */
-  for i in 1..120 loop /* in func */
-    if (select count(*) = 2 from gp_segment_configuration where content = 0 and mode = 's') then /* in func */
-      return; /* in func */
-    end if; /* in func */
-    perform gp_request_fts_probe_scan(); /* in func */
-  end loop; /* in func */
-end; /* in func */
-$$;
+select wait_until_segment_synchronized(0);
 
 !\retcode gprecoverseg -ar;
-
--- loop while segments come in sync
-do $$
-begin /* in func */
-  for i in 1..120 loop /* in func */
-    if (select count(*) = 2 from gp_segment_configuration where content = 0 and mode = 's') then /* in func */
-      return; /* in func */
-    end if; /* in func */
-    perform gp_request_fts_probe_scan(); /* in func */
-  end loop; /* in func */
-end; /* in func */
-$$;
+select wait_until_segment_synchronized(0);
 
 -- verify the first segment is recovered to the original state.
 select role, preferred_role from gp_segment_configuration where content = 0;
