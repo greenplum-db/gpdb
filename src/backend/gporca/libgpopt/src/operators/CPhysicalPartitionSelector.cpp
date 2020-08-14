@@ -899,6 +899,7 @@ CPhysicalPartitionSelector::OsPrint
 		<< ", Scan Id: " << m_scan_id
 		<< ", Part Table: ";
 	MDId()->OsPrint(os);
+
 	return os;
 }
 
