@@ -10,14 +10,16 @@ OBJS = tablespace_test.o \
 	check_gp_test.o \
 	mock_server.o \
 	mock_util.o \
-	info_gp_test.o
+	info_gp_test.o \
+	reporting_test.o
 
 TARGETS = tablespace_test \
 	old_tablespace_file_contents_test \
 	old_tablespace_file_parser_test \
 	tablespace_gp_test \
 	check_gp_test \
-	info_gp_test
+	info_gp_test \
+	reporting_test
 
 include $(top_srcdir)/src/Makefile.global
 include $(top_srcdir)/src/Makefile.mock
@@ -53,6 +55,9 @@ check_gp_test.t: mock_util.o \
 	$(test_dependencies) \
 	$(pg_upgrade_greenplum_directory)/check_gp.o \
 	$(pg_upgrade_greenplum_directory)/option_gp.o
+	$(compile_test)
+
+reporting_test.t: reporting_test.o $(pg_upgrade_greenplum_directory)/reporting.o $(test_dependencies)
 	$(compile_test)
 
 clean:

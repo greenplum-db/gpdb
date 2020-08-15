@@ -25,7 +25,6 @@ INSERT 1
 ! ./gpdb6/bin/pg_upgrade --mode=dispatcher --old-gp-dbid=1 --new-gp-dbid=1 --check --old-bindir=@upgrade_test_path@/gpdb5/bin --new-bindir=@upgrade_test_path@/gpdb6/bin --old-datadir=@upgrade_test_path@/gpdb5-data/qddir/demoDataDir-1 --new-datadir=@upgrade_test_path@/gpdb6-data/qddir/demoDataDir-1 --old-port=@old_port@;
 Performing Consistency Checks on Old Live Server
 ------------------------------------------------
-Creating a dump of all tablespace metadata.                 ok
 Checking for abstime, reltime, tinterval user data types    fatal
 
 Your installation contains a user table, that uses a 'abstime',

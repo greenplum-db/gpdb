@@ -126,3 +126,39 @@ close_progress(void)
 	progress_counter = 0;
 	progress_prev = epoch_us();
 }
+
+void
+duration(instr_time duration, char *buf, size_t len)
+{
+	int seconds = INSTR_TIME_GET_DOUBLE(duration);
+	// convert total seconds to hour, minute and seconds
+	int h = (seconds / 3600);
+	int m = (seconds - (3600 * h)) / 60;
+	int s = (seconds - (3600 * h) - (60 * m));
+	if (h > 0) {
+		snprintf(buf, len, "%dh%dm%ds", h, m, s);
+	} else if (m > 0) {
+		snprintf(buf, len, "%dm%ds", m, s);
+	} else if (s > 0){
+		snprintf(buf, len, "%ds", s);
+	} else {
+		snprintf(buf, len, "%.3fms", INSTR_TIME_GET_MILLISEC(duration));
+	}
+}
+
+void
+log_with_timing(step_timer *st, const char *msg)
+{
+	size_t len=20;
+	char elapsed_time[len];
+	Assert(st->start_time.tv_sec != 0);
+	INSTR_TIME_SET_CURRENT(st->end_time);
+	INSTR_TIME_SUBTRACT(st->end_time, st->start_time);
+	duration(st->end_time, elapsed_time, len);
+
+	report_status(PG_REPORT, "%s %s", msg, elapsed_time);
+	fflush(stdout);
+
+	INSTR_TIME_SET_ZERO(st->start_time);
+	INSTR_TIME_SET_ZERO(st->end_time);
+}

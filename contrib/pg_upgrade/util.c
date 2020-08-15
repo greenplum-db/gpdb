@@ -70,6 +70,12 @@ prep_status(const char *fmt,...)
 	va_list		args;
 	char		message[MAX_STRING];
 
+	/*
+	 * If the start time is not set, it means a new step is being started.
+	 */
+	if (INSTR_TIME_IS_ZERO(timer.start_time))
+		INSTR_TIME_SET_CURRENT(timer.start_time);
+
 	va_start(args, fmt);
 	vsnprintf(message, sizeof(message), fmt, args);
 	va_end(args);
@@ -172,9 +178,7 @@ pg_fatal(const char *fmt,...)
 void
 check_ok(void)
 {
-	/* all seems well */
-	report_status(PG_REPORT, "ok");
-	fflush(stdout);
+	log_with_timing(&timer, "ok");
 }
 
 

@@ -9,10 +9,16 @@
 
 
 #include "pg_upgrade.h"
+#include <portability/instr_time.h>
 
 
 #define PG_OPTIONS_UTILITY_MODE " PGOPTIONS='-c gp_session_role=utility' "
 
+typedef struct {
+	instr_time start_time;
+	instr_time end_time;
+} step_timer;
+static step_timer timer;
 
 /*
  * Enumeration for operations in the progress report
@@ -118,6 +124,8 @@ void check_greenplum(void);
 void report_progress(ClusterInfo *cluster, progress_type op, char *fmt,...)
 pg_attribute_printf(3, 4);
 void close_progress(void);
+void log_with_timing(step_timer *timer, const char *msg);
+void duration(instr_time duration, char *buf, size_t len);
 
 /* tablespace_gp.c */
 

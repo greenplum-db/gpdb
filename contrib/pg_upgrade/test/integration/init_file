@@ -3,7 +3,13 @@
 -- Individual tests can contain additional patterns specific to the test.
 
 -- start_matchignore
-m/^Checking.*\s+ok$/
+m/^Checking.*\s+ok\s\d.*/
+-- end_matchignore
+-- start_matchignore
+m/Creating a dump of all tablespace metadata.*ok\s\d.*/
+-- end_matchignore
+-- start_matchignore
+m/Performing Consistency Checks took\s\d.*/
 -- end_matchignore
 -- start_matchsubs
 m/\d+ public.table_part_1_prt_part1/

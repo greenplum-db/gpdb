@@ -108,11 +108,14 @@ main(int argc, char **argv)
 	char	   *analyze_script_file_name = NULL;
 	char	   *deletion_script_file_name = NULL;
 	bool		live_check = false;
+	step_timer 	t;
 
 	/* Ensure that all files created by pg_upgrade are non-world-readable */
 	umask(S_IRWXG | S_IRWXO);
 
 	parseCommandLine(argc, argv);
+
+	INSTR_TIME_SET_CURRENT(t.start_time);
 
 	get_restricted_token(os_info.progname);
 
@@ -138,10 +141,13 @@ main(int argc, char **argv)
 	start_postmaster(&new_cluster, true);
 
 	check_new_cluster();
+	log_with_timing(&t, "\nPerforming Consistency Checks took");
 	report_clusters_compatible();
 
 	pg_log(PG_REPORT, "\nPerforming Upgrade\n");
 	pg_log(PG_REPORT, "------------------\n");
+
+	INSTR_TIME_SET_CURRENT(t.start_time);
 
 	prepare_new_cluster();
 
@@ -259,6 +265,8 @@ main(int argc, char **argv)
 	create_script_for_old_cluster_deletion(&deletion_script_file_name);
 
 	issue_warnings_and_set_wal_level(sequence_script_file_name);
+
+	log_with_timing(&t, "\nPerforming Upgrade took");
 
 	pg_log(PG_REPORT, "\nUpgrade Complete\n");
 	pg_log(PG_REPORT, "----------------\n");
