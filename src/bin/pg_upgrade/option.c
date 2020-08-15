@@ -217,7 +217,7 @@ parseCommandLine(int argc, char *argv[])
 				break;
 
 			default:
-				if (!process_greenplum_option(option, pg_strdup(optarg)))
+				if (!process_greenplum_option(option))
 				{
 					fprintf(stderr, _("Try \"%s --help\" for more information.\n"),
 							os_info.progname);
