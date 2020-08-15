@@ -1767,9 +1767,10 @@ CPredicateUtils::PexprExtractPredicatesOnPartKeys
 		if(pmdrel != NULL)
 		{
 			CHAR szPartType = pmdrel->PartTypeAtLevel(ul);
+			// we want to allow NEq predicates for partition selection only for
+			// list partitioned tables. We avoid this for ranged partitioned tables
+			// since NEq predicates can hardly eliminate any range partitions
 			isKnownToBeListPartitioned = (IMDRelation::ErelpartitionList == szPartType);
-			// we want to allow NEq predicates for partition selection
-			// only for list partitioned tables
 		}
 
 		CExpression *pexprCol = PexprPredicateCol(mp, pcnstr, colref, fUseConstraints);
