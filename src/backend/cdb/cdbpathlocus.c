@@ -1122,3 +1122,28 @@ cdbpathlocus_is_valid(CdbPathLocus locus)
 bad:
 	return false;
 }								/* cdbpathlocus_is_valid */
+
+double
+cdbpathrows(CdbPathLocus locus, double total_rows)
+{
+	double	rows;
+
+	if (CdbPathLocus_IsPartitioned(locus))
+		rows = total_rows / locus.numsegments;
+	else
+		rows = total_rows;
+	return rows;
+}
+
+double
+cdbtotalrows(CdbPathLocus locus, double path_rows)
+{
+	double total_rows;
+
+	if (CdbPathLocus_IsPartitioned(locus))
+		total_rows = path_rows * locus.numsegments;
+	else
+		total_rows = path_rows;
+
+	return total_rows;
+}

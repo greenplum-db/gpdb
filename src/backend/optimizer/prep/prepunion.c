@@ -366,7 +366,7 @@ recurse_set_operations(Node *setOp, PlannerInfo *root,
 			else
 				*pNumGroups = estimate_num_groups(subroot,
 							get_tlist_exprs(subroot->processed_tlist, false),
-												  subpath->rows,
+												  cdbtotalrows(subpath->locus, subpath->rows),
 												  NULL);
 		}
 

@@ -1580,6 +1580,7 @@ bitmap_scan_cost_est(PlannerInfo *root, RelOptInfo *rel, Path *ipath)
 	bpath.path.pathtarget = rel->reltarget;
 	bpath.path.param_info = get_baserel_parampathinfo(root, rel,
 													  required_outer);
+	bpath.path.locus = cdbpathlocus_from_baserel(root, rel);
 	bpath.path.pathkeys = NIL;
 	bpath.bitmapqual = ipath;
 
@@ -1623,6 +1624,7 @@ bitmap_and_cost_est(PlannerInfo *root, RelOptInfo *rel, List *paths)
 	bpath.path.param_info = get_baserel_parampathinfo(root, rel,
 													  required_outer);
 	bpath.path.pathkeys = NIL;
+	bpath.path.locus = cdbpathlocus_from_baserel(root, rel);
 	bpath.bitmapqual = (Path *) &apath;
 
 	/* Now we can do cost_bitmap_heap_scan */

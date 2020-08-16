@@ -3989,7 +3989,7 @@ create_grouping_paths(PlannerInfo *root,
 	 * Estimate number of groups.
 	 */
 	dNumGroups = get_number_of_groups(root,
-									  cheapest_path->rows,
+									  cdbtotalrows(cheapest_path->locus, cheapest_path->rows),
 									  rollup_lists,
 									  rollup_groupclauses);
 
@@ -5040,7 +5040,8 @@ create_distinct_paths(PlannerInfo *root,
 		distinctExprs = get_sortgrouplist_exprs(parse->distinctClause,
 												parse->targetList);
 		numDistinctRows = estimate_num_groups(root, distinctExprs,
-											  cheapest_input_path->rows,
+											  cdbtotalrows(cheapest_input_path->locus,
+											  			   cheapest_input_path->rows),
 											  NULL);
 	}
 
