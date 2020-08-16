@@ -9,3 +9,5 @@ DROP FUNCTION session_state_memory_entries_f_on_segments();
 DROP SCHEMA session_state;
 
 COMMIT;
+
+SET search_path TO DEFAULT;
