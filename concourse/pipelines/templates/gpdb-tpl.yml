@@ -963,7 +963,7 @@ jobs:
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb7-centos7-test
     params:
-      MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=proxy -c optimizer=on' EXTRA_REGRESS_OPTS=--exclude-tests=external_table installcheck-world
+      MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=proxy -c optimizer=on' installcheck-world
       TEST_OS: centos
       CONFIGURE_FLAGS: {{configure_flags}}
 
@@ -982,7 +982,7 @@ jobs:
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb7-centos7-test
     params:
-      MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=proxy -c optimizer=off' EXTRA_REGRESS_OPTS=--exclude-tests=external_table installcheck-world
+      MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=proxy -c optimizer=off' installcheck-world
       TEST_OS: centos
       CONFIGURE_FLAGS: {{configure_flags}}
 
@@ -1059,7 +1059,7 @@ jobs:
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
       image: gpdb7-ubuntu18.04-test
       params:
-        MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=proxy -c optimizer=on' EXTRA_REGRESS_OPTS=--exclude-tests=external_table installcheck-world
+        MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=proxy -c optimizer=on' installcheck-world
         TEST_OS: ubuntu
         CONFIGURE_FLAGS: {{configure_flags}}
 
@@ -1078,7 +1078,7 @@ jobs:
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
       image: gpdb7-ubuntu18.04-test
       params:
-        MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=proxy -c optimizer=off' EXTRA_REGRESS_OPTS=--exclude-tests=external_table installcheck-world
+        MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=proxy -c optimizer=off' installcheck-world
         TEST_OS: ubuntu
         CONFIGURE_FLAGS: {{configure_flags}}
 
