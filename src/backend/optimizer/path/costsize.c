@@ -199,9 +199,9 @@ cost_seqscan(Path *path, PlannerInfo *root,
 
 	/* Mark the path with the correct row estimate */
 	if (param_info)
-		path->rows = cdbpathrows(path->locus, param_info->ppi_rows);
+		path->rows = cdbpathrows_from_rel(path->locus, param_info->ppi_rows);
 	else
-		path->rows = cdbpathrows(path->locus, baserel->rows);
+		path->rows = cdbpathrows_from_rel(path->locus, baserel->rows);
 
 	if (!enable_seqscan)
 		startup_cost += disable_cost;
@@ -303,9 +303,9 @@ cost_samplescan(Path *path, PlannerInfo *root,
 
 	/* Mark the path with the correct row estimate */
 	if (param_info)
-		path->rows = cdbpathrows(path->locus, param_info->ppi_rows);
+		path->rows = cdbpathrows_from_rel(path->locus, param_info->ppi_rows);
 	else
-		path->rows = cdbpathrows(path->locus, baserel->rows);
+		path->rows = cdbpathrows_from_rel(path->locus, baserel->rows);
 
 	/* fetch estimated page cost for tablespace containing table */
 	get_tablespace_page_costs(baserel->reltablespace,
@@ -365,9 +365,10 @@ cost_gather(GatherPath *path, PlannerInfo *root,
 	if (rows)
 		path->path.rows = *rows;
 	else if (param_info)
-		path->path.rows = cdbpathrows(path->path.locus, param_info->ppi_rows);
+		path->path.rows = cdbpathrows_from_rel(
+				path->path.locus, param_info->ppi_rows);
 	else
-		path->path.rows = cdbpathrows(path->path.locus, rel->rows);
+		path->path.rows = cdbpathrows_from_rel(path->path.locus, rel->rows);
 
 	startup_cost = path->subpath->startup_cost;
 
@@ -438,8 +439,9 @@ cost_index(IndexPath *path, PlannerInfo *root, double loop_count)
 	 */
 	if (path->path.param_info)
 	{
-		path->path.rows = cdbpathrows(path->path.locus,
-									  path->path.param_info->ppi_rows);
+		path->path.rows = cdbpathrows_from_rel(
+				path->path.locus,
+				path->path.param_info->ppi_rows);
 		/* qpquals come from the rel's restriction clauses and ppi_clauses */
 		qpquals = list_concat(
 				extract_nonindex_conditions(path->indexinfo->indrestrictinfo,
@@ -449,7 +451,7 @@ cost_index(IndexPath *path, PlannerInfo *root, double loop_count)
 	}
 	else
 	{
-		path->path.rows = cdbpathrows(path->path.locus, baserel->rows);
+		path->path.rows = cdbpathrows_from_rel(path->path.locus, baserel->rows);
 		/* qpquals come from just the rel's restriction clauses */
 		qpquals = extract_nonindex_conditions(path->indexinfo->indrestrictinfo,
 											  path->indexquals);
@@ -877,9 +879,9 @@ cost_bitmap_heap_scan(Path *path, PlannerInfo *root, RelOptInfo *baserel,
 
 	/* Mark the path with the correct row estimate */
 	if (param_info)
-		path->rows = cdbpathrows(path->locus, param_info->ppi_rows);
+		path->rows = cdbpathrows_from_rel(path->locus, param_info->ppi_rows);
 	else
-		path->rows = cdbpathrows(path->locus, baserel->rows);
+		path->rows = cdbpathrows_from_rel(path->locus, baserel->rows);
 
 	if (!enable_bitmapscan)
 		startup_cost += disable_cost;
@@ -1127,9 +1129,9 @@ cost_tidscan(Path *path, PlannerInfo *root,
 
 	/* Mark the path with the correct row estimate */
 	if (param_info)
-		path->rows = cdbpathrows(path->locus, param_info->ppi_rows);
+		path->rows = cdbpathrows_from_rel(path->locus, param_info->ppi_rows);
 	else
-		path->rows = cdbpathrows(path->locus, baserel->rows);
+		path->rows = cdbpathrows_from_rel(path->locus, baserel->rows);
 
 	/* Count how many tuples we expect to retrieve */
 	ntuples = 0;
@@ -1225,9 +1227,10 @@ cost_subqueryscan(SubqueryScanPath *path, PlannerInfo *root,
 
 	/* Mark the path with the correct row estimate */
 	if (param_info)
-		path->path.rows = cdbpathrows(path->path.locus, param_info->ppi_rows);
+		path->path.rows = cdbpathrows_from_rel(
+				path->path.locus, param_info->ppi_rows);
 	else
-		path->path.rows = cdbpathrows(path->path.locus, baserel->rows);
+		path->path.rows = cdbpathrows_from_rel(path->path.locus, baserel->rows);
 
 	/*
 	 * Cost of path is cost of evaluating the subplan, plus cost of evaluating
@@ -1332,9 +1335,10 @@ cost_tablefunction(TableFunctionScanPath *path, PlannerInfo *root, RelOptInfo *b
 
 	/* Mark the path with the correct row estimate */
 	if (param_info)
-		path->path.rows = cdbpathrows(path->path.locus, param_info->ppi_rows);
+		path->path.rows = cdbpathrows_from_rel(
+				path->path.locus, param_info->ppi_rows);
 	else
-		path->path.rows = cdbpathrows(path->path.locus, baserel->rows);
+		path->path.rows = cdbpathrows_from_rel(path->path.locus, baserel->rows);
 
 	/* Initialize cost of the subquery input */
 	path->path.startup_cost = path->subpath->startup_cost;
@@ -1381,9 +1385,9 @@ cost_valuesscan(Path *path, PlannerInfo *root,
 
 	/* Mark the path with the correct row estimate */
 	if (param_info)
-		path->rows = cdbpathrows(path->locus, param_info->ppi_rows);
+		path->rows = cdbpathrows_from_rel(path->locus, param_info->ppi_rows);
 	else
-		path->rows = cdbpathrows(path->locus, baserel->rows);
+		path->rows = cdbpathrows_from_rel(path->locus, baserel->rows);
 
 	/*
 	 * For now, estimate list evaluation cost at one operator eval per list
@@ -1431,9 +1435,9 @@ cost_ctescan(Path *path, PlannerInfo *root,
 
 	/* Mark the path with the correct row estimate */
 	if (param_info)
-		path->rows = cdbpathrows(path->locus, param_info->ppi_rows);
+		path->rows = cdbpathrows_from_rel(path->locus, param_info->ppi_rows);
 	else
-		path->rows = cdbpathrows(path->locus, baserel->rows);
+		path->rows = cdbpathrows_from_rel(path->locus, baserel->rows);
 
 	/* Charge one CPU tuple cost per row for tuplestore manipulation */
 	cpu_per_tuple = cpu_tuple_cost;
@@ -2240,11 +2244,13 @@ final_cost_nestloop(PlannerInfo *root, NestPath *path,
 
 	/* Mark the path with the correct row estimate */
 	if (path->path.param_info)
-		path->path.rows = cdbpathrows(path->path.locus,
-									  path->path.param_info->ppi_rows);
+		path->path.rows = cdbpathrows_from_rel(
+				path->path.locus,
+				path->path.param_info->ppi_rows);
 	else
-		path->path.rows = cdbpathrows(path->path.locus,
-									  path->path.parent->rows);
+		path->path.rows = cdbpathrows_from_rel(
+				path->path.locus,
+				path->path.parent->rows);
 
 	/*
 	 * We could include disable_cost in the preliminary estimate, but that
@@ -2665,10 +2671,12 @@ final_cost_mergejoin(PlannerInfo *root, MergePath *path,
 
 	/* Mark the path with the correct row estimate */
 	if (path->jpath.path.param_info)
-		path->jpath.path.rows = cdbpathrows(path->jpath.path.locus,
+		path->jpath.path.rows = cdbpathrows_from_rel(
+				path->jpath.path.locus,
 				path->jpath.path.param_info->ppi_rows);
 	else
-		path->jpath.path.rows = cdbpathrows(path->jpath.path.locus,
+		path->jpath.path.rows = cdbpathrows_from_rel(
+				path->jpath.path.locus,
 				path->jpath.path.parent->rows);
 
 	/*
@@ -3040,10 +3048,12 @@ final_cost_hashjoin(PlannerInfo *root, HashPath *path,
 
 	/* Mark the path with the correct row estimate */
 	if (path->jpath.path.param_info)
-		path->jpath.path.rows = cdbpathrows(path->jpath.path.locus,
+		path->jpath.path.rows = cdbpathrows_from_rel(
+				path->jpath.path.locus,
 				path->jpath.path.param_info->ppi_rows);
 	else
-		path->jpath.path.rows = cdbpathrows(path->jpath.path.rows,
+		path->jpath.path.rows = cdbpathrows_from_rel(
+				path->jpath.path.rows,
 				path->jpath.path.parent->rows);
 
 	/*

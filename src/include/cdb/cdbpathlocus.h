@@ -387,7 +387,10 @@ bool
 cdbpathlocus_is_valid(CdbPathLocus locus);
 
 double
-cdbpathrows(CdbPathLocus locus, double total_rows);
+cdbpathrows_from_rel(CdbPathLocus locus, double total_rows);
+
+double
+cdbpathrows_from_total(CdbPathLocus locus, double total_rows);
 
 double
 cdbtotalrows(CdbPathLocus locus, double path_rows);

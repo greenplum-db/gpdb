@@ -1124,7 +1124,7 @@ bad:
 }								/* cdbpathlocus_is_valid */
 
 double
-cdbpathrows(CdbPathLocus locus, double total_rows)
+cdbpathrows_from_rel(CdbPathLocus locus, double total_rows)
 {
 	double	rows;
 
@@ -1132,6 +1132,22 @@ cdbpathrows(CdbPathLocus locus, double total_rows)
 		rows = total_rows / locus.numsegments;
 	else
 		rows = total_rows;
+
+	return rows;
+}
+
+double
+cdbpathrows_from_total(CdbPathLocus locus, double total_rows)
+{
+	double	rows;
+
+	if (CdbPathLocus_IsPartitioned(locus))
+		rows = total_rows / locus.numsegments;
+	else if (CdbPathLocus_IsBottleneck(locus))
+		rows = total_rows;
+	else
+		rows = total_rows / locus.numsegments;
+
 	return rows;
 }
 

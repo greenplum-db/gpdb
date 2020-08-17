@@ -75,10 +75,13 @@ cdbpath_cost_motion(PlannerInfo *root, CdbMotionPath *motionpath)
 	double		recvrows;
 	double		sendrows;
 
+	sendrows = cdbtotalrows(subpath->locus, subpath->rows);
 	if (CdbPathLocus_IsReplicated(motionpath->path.locus))
-		motionpath->path.rows = subpath->rows * CdbPathLocus_NumSegments(motionpath->path.locus);
+		recvrows = sendrows * CdbPathLocus_NumSegments(motionpath->path.locus);
 	else
-		motionpath->path.rows = subpath->rows;
+		recvrows = sendrows;
+	motionpath->path.rows = cdbpathrows_from_total(
+			motionpath->path.locus, recvrows);
 
 	cost_per_row = (gp_motion_cost_per_row > 0.0)
 		? gp_motion_cost_per_row
