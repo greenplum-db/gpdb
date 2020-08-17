@@ -1,6 +1,6 @@
 -- Before the extension is loaded no information is available
 select * from session_state.session_level_memory_consumption limit 0;
-ERROR:  schema "session_state" does not exist
+ERROR:  relation "session_state.session_level_memory_consumption" does not exist
 LINE 1: select * from session_state.session_level_memory_consumption...
                       ^
 CREATE EXTENSION gp_internal_tools;
@@ -21,6 +21,6 @@ having count(1) = (select count(1) from gp_segment_configuration where preferred
 DROP EXTENSION gp_internal_tools;
 -- Should error out as we uninstalled
 select * from session_state.session_level_memory_consumption limit 0;
-ERROR:  schema "session_state" does not exist
+ERROR:  relation "session_state.session_level_memory_consumption" does not exist
 LINE 1: select * from session_state.session_level_memory_consumption...
                       ^
