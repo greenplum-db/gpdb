@@ -502,6 +502,10 @@ newTempFile(void)
 		 * Use of the tempnam() function generates a warning in GCC; the code
 		 * surrounding this use addresses the exposure of which the warning
 		 * informs.
+		 *
+		 * Note: it's a linker warning, `-Wno-deprecated-declarations` has no
+		 * effect, and overriding the `.gnu.warning.foobar` binary section
+		 * doesn't work with other compilers.
 		 */
 		tempFileName = tempnam(tmpdir, "GPDB_");
 		if (tempFileName == NULL)
