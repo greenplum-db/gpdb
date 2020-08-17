@@ -34,7 +34,31 @@
 
 #include <limits.h>
 
+/* dblink is compiled as a backend, it needs the server's
+ * header files. It also needs libpq to connect to a
+ * remote postgres database, so it's statically linked to
+ * libpq.a which is compiled as a frontend using -DFRONTEND.
+ *
+ * But the struct PQconninfoOption's length is different between
+ * backend and frontend, there is no "connofs" field in frontend.
+ * When dblink calls the function "PQconndefaults" implemented
+ * in libpq.a and uses the returned PQconninfoOption variable, it crashs,
+ * because the PQconninfoOption variable returned by libpq.a doesn't contain
+ * the "connofs" value, but the dblink thinks it has, so it crashes.
+ *
+ * We define FRONTEND here to include frontend libpq header files.
+ */
+#ifdef LIBPQ_FE_H
+#error "libpq-fe.h" shouldn't be included before "dblink.c"
+#endif /* LIBPQ_FE_H */
+
+#ifndef FRONTEND
+#define FRONTEND
 #include "libpq-fe.h"
+#undef FRONTEND
+#else
+#include "libpq-fe.h"	#include "libpq-fe.h"
+#endif /* FRONTEND */
 
 #include "access/htup_details.h"
 #include "access/reloptions.h"

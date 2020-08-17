@@ -3,7 +3,7 @@
 MODULE_big = dblink
 OBJS	= dblink.o
 PG_CPPFLAGS = -I$(libpq_srcdir)
-SHLIB_LINK_INTERNAL = $(libpq)
+SHLIB_LINK_INTERNAL = -Wl,--exclude-libs=libpq.a -Wl,-Bstatic $(libpq) -Wl,-Bdynamic
 
 EXTENSION = dblink
 DATA = dblink--1.1.sql dblink--1.0--1.1.sql dblink--unpackaged--1.0.sql
