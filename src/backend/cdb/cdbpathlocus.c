@@ -21,6 +21,7 @@
 #include "nodes/plannodes.h"	/* Plan */
 #include "nodes/relation.h"		/* RelOptInfo */
 #include "optimizer/clauses.h"
+#include "optimizer/cost.h"
 #include "optimizer/pathnode.h" /* Path */
 #include "optimizer/paths.h"	/* cdb_make_distkey_for_expr() */
 #include "optimizer/tlist.h"	/* tlist_member() */
@@ -1133,7 +1134,7 @@ cdbpathrows_from_rel(CdbPathLocus locus, double total_rows)
 	else
 		rows = total_rows;
 
-	return rows;
+	return clamp_row_est(rows);
 }
 
 double
@@ -1148,7 +1149,7 @@ cdbpathrows_from_total(CdbPathLocus locus, double total_rows)
 	else
 		rows = total_rows / locus.numsegments;
 
-	return rows;
+	return clamp_row_est(rows);
 }
 
 double

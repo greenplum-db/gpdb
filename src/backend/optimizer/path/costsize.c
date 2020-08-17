@@ -3053,7 +3053,7 @@ final_cost_hashjoin(PlannerInfo *root, HashPath *path,
 				path->jpath.path.param_info->ppi_rows);
 	else
 		path->jpath.path.rows = cdbpathrows_from_rel(
-				path->jpath.path.rows,
+				path->jpath.path.locus,
 				path->jpath.path.parent->rows);
 
 	/*

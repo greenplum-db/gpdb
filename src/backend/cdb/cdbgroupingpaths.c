@@ -864,7 +864,7 @@ add_single_dqa_hash_agg_path(PlannerInfo *root,
 															   cdbtotalrows(path->locus, path->rows),
 															   getgpsegmentCount());
 		else
-			dNumGroupsPerSeg = dNumGroupsPerSeg / getgpsegmentCount();
+			dNumGroupsPerSeg = dNumDistinctGroups / getgpsegmentCount();
 		path = (Path *) create_agg_path(root,
 										output_rel,
 										path,
