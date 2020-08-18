@@ -32,13 +32,17 @@
  *
  * We define FRONTEND here to include frontend libpq header files.
  */
+#ifdef LIBPQ_FE_H
+#error "postgres_fdw.h" must be included before "libpq-fe.h"
+#endif /* LIBPQ_FE_H */
+
 #ifndef FRONTEND
 #define FRONTEND
 #include "libpq-fe.h"
 #undef FRONTEND
 #else
 #include "libpq-fe.h"
-#endif
+#endif /* FRONTEND */
 
 /*
  * FDW-specific planner information kept in RelOptInfo.fdw_private for a
