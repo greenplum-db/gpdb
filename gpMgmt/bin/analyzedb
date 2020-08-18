@@ -203,10 +203,6 @@ def get_partition_state_tuples(pg_port, dbname, catalog_schema, partition_info):
     partition_list = list()
     dburl = dbconn.DbURL(port=pg_port, dbname=dbname)
     num_sqls = 0
-    # ---- TODO: remove this before merging. Drop/create tables here to see the issue
-    import time
-    time.sleep(8)
-    # ----
     conn = dbconn.connect(dburl)
     for (oid, schemaname, partition_name, tupletable) in partition_info:
         try:
