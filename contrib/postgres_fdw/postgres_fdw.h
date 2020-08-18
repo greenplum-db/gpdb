@@ -18,11 +18,26 @@
 #include "nodes/relation.h"
 #include "utils/relcache.h"
 
-
+/* postgres_fdw is compiled as a backend, it needs the server's
+ * header files such as executor/tuptable.h. It also needs libpq
+ * to connect to a remote postgres database, so it's staticly linked
+ * to libpq.a which is compiled as a frontend using -DFRONTEND.
+ *
+ * But the struct PQconninfoOption's length is different between
+ * backend and frontend, there is no "connofs" field in frontend.
+ * When postgres_fdw calls the function "PQconndefaults" implemented
+ * in libpq.a and uses the returned PQconninfoOption variable, it crashs,
+ * because the PQconninfoOption variable returned by libpq.a doesn't contain
+ * the "connofs" value, but the postgres_fdw thinks it has, so it crashes.
+ *
+ * We define FRONTEND here to include frontend libpq header files.
+ */
 #ifndef FRONTEND
 #define FRONTEND
 #include "libpq-fe.h"
 #undef FRONTEND
+#else
+#include "libpq-fe.h"
 #endif
 
 /*
