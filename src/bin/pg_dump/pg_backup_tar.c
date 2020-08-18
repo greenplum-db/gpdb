@@ -455,7 +455,6 @@ tarOpen(ArchiveHandle *AH, const char *filename, char mode)
 static FILE *
 newTempFile(void)
 {
-	int			count;
 	int			fd;
 	char	   *tmpdir;
 	struct stat buf;
@@ -464,10 +463,8 @@ newTempFile(void)
 	static int	tmpdirChecked = 0;
 
 	/*
-	 * In some systems, the tempnam() function does't respect the value of the
-	 * TMPDIR environment variable.  To provide predictable operation of this
-	 * function, the value of TMPDIR is obtained and validated to provide it
-	 * as the first argument to tempnam().
+	 * The mkstemp() function does't respect the value of the TMPDIR
+	 * environment variable. Get it.
 	 */
 	if ((tmpdir = getenv("TMPDIR")) != NULL)
 	{
@@ -483,57 +480,33 @@ newTempFile(void)
 	}
 
 	/*
-	 * Attempt to generate and open exclusively a new temporary file. Repeat
-	 * until a new file is opened exclusively or TMP_MAX attempts have failed.
-	 * This section of code largely mirrors what the mkstemp() function might
-	 * do given "${TMPDIR}/GPDB_XXXXXX" as an argument.  Why not just use
-	 * mkstemp()?  Because the different supported OSes have different
-	 * admonitions about which functions are preferred and Solaris prefers
-	 * tmpfile() over mkstemp().
+	 * Attempt to generate and open exclusively a new temporary file.
 	 */
-	for (count = 0; count < TMP_MAX; count++)
+	if (tmpdir)
 	{
-		free(tempFileName);
+		char *template = "/GPDB_XXXXXX";
+		size_t len1 = strlen(tmpdir), len2 = strlen(template);
 
-		/*
-		 * Use of the tempnam() function generates a warning in GCC; the code
-		 * surrounding this use addresses the exposure of which the warning
-		 * informs.
-		 */
-		tempFileName = tempnam(tmpdir, "GPDB_");
-		if (tempFileName == NULL)
-		{
-			/* All name generation errors are fatal. */
-			return NULL;
-		}
-
-		/*
-		 * Create and open the file in exclusive mode with access limited to
-		 * the current user. If an "exists" error is returned, try another
-		 * file name; otherwise return the error.
-		 */
-		if ((fd = open(tempFileName, O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR)) < 0)
-		{
-			/* open() failed */
-			if (errno == EEXIST)
-			{
-				/* The temp file name is already in use; try again */
-				continue;
-			}
-
-			/* Error is considered fatal. */
-			if (tempFileName)
-				free(tempFileName);
-			return NULL;
-		}
-
-		break;
+		tempFileName = (char *)malloc(len1 + len2 + 1);
+		memcpy(tempFileName, tmpdir, len1);
+		memcpy(tempFileName+len1, template, len2+1);
 	}
+	else
+	{
+		tempFileName = strdup("/tmp/GPDB_XXXXXX");
+	}
+
+	fd = mkstemp(tempFileName);
+	if (fd < 0)
+		return NULL;
 
 	/*
 	 * We've created and opened a new file.  Make it temporary by unlinking
 	 * it; the file will exist only until the file descriptor is open.	This
 	 * code segment completes what tmpfile() would do.
+	 *
+	 * The trailing `Xs' of tempFileName were replaced with a unique
+	 * alphanumeric combination, which is fine to unlink().
 	 */
 	unlink(tempFileName);
 	free(tempFileName);
