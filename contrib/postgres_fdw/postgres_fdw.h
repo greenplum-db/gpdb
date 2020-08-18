@@ -18,7 +18,12 @@
 #include "nodes/relation.h"
 #include "utils/relcache.h"
 
+
+#ifndef FRONTEND
+#define FRONTEND
 #include "libpq-fe.h"
+#undef FRONTEND
+#endif
 
 /*
  * FDW-specific planner information kept in RelOptInfo.fdw_private for a
