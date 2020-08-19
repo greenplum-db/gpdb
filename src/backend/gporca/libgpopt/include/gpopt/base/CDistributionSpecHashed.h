@@ -72,6 +72,8 @@ private:
 	BOOL FMatchHashedDistribution(
 		const CDistributionSpecHashed *pdshashed) const;
 
+	BOOL FDistributionSpecHashedOnlyOnGpSegmentId() const;
+
 	// private copy ctor
 	CDistributionSpecHashed(const CDistributionSpecHashed &);
 

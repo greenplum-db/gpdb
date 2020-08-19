@@ -312,6 +312,12 @@ select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1 or gp_se
 explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1 or gp_segment_id=2 or gp_segment_id=3;
 select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1 or gp_segment_id=2 or gp_segment_id=3;
 
+explain (costs off) select t1.gp_segment_id, t2.gp_segment_id, * from t_test_dd_via_segid t1, t_test_dd_via_segid t2 where t1.gp_segment_id=t2.id;
+select t1.gp_segment_id, t2.gp_segment_id, * from t_test_dd_via_segid t1, t_test_dd_via_segid t2 where t1.gp_segment_id=t2.id;
+
+explain (costs off) select gp_segment_id, count(*) from t_test_dd_via_segid group by gp_segment_id;
+select gp_segment_id, count(*) from t_test_dd_via_segid group by gp_segment_id;
+
 -- cleanup
 set test_print_direct_dispatch_info=off;
 

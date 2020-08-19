@@ -731,6 +731,51 @@ INFO:  (slice 1) Dispatch command to PARTIAL contents: 1 2
              2 |  6
 (3 rows)
 
+explain (costs off) select t1.gp_segment_id, t2.gp_segment_id, * from t_test_dd_via_segid t1, t_test_dd_via_segid t2 where t1.gp_segment_id=t2.id;
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (t_test_dd_via_segid.gp_segment_id = t_test_dd_via_segid_1.id)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)
+               Hash Key: t_test_dd_via_segid.gp_segment_id
+               ->  Seq Scan on t_test_dd_via_segid
+         ->  Hash
+               ->  Seq Scan on t_test_dd_via_segid t_test_dd_via_segid_1
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+select t1.gp_segment_id, t2.gp_segment_id, * from t_test_dd_via_segid t1, t_test_dd_via_segid t2 where t1.gp_segment_id=t2.id;
+INFO:  (slice 2) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+ gp_segment_id | gp_segment_id | id | id 
+---------------+---------------+----+----
+             1 |             1 |  1 |  1
+             2 |             0 |  5 |  2
+             2 |             0 |  6 |  2
+(3 rows)
+
+explain (costs off) select gp_segment_id, count(*) from t_test_dd_via_segid group by gp_segment_id;
+                    QUERY PLAN                     
+---------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  GroupAggregate
+         Group Key: gp_segment_id
+         ->  Sort
+               Sort Key: gp_segment_id
+               ->  Seq Scan on t_test_dd_via_segid
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
+
+select gp_segment_id, count(*) from t_test_dd_via_segid group by gp_segment_id;
+INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+ gp_segment_id | count 
+---------------+-------
+             0 |     3
+             1 |     1
+             2 |     2
+(3 rows)
+
 -- cleanup
 set test_print_direct_dispatch_info=off;
 begin;

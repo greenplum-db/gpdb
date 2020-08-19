@@ -713,6 +713,54 @@ INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
              2 |  6
 (3 rows)
 
+explain (costs off) select t1.gp_segment_id, t2.gp_segment_id, * from t_test_dd_via_segid t1, t_test_dd_via_segid t2 where t1.gp_segment_id=t2.id;
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (t2.id = t1.gp_segment_id)
+         ->  Seq Scan on t_test_dd_via_segid t2
+         ->  Hash
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: t1.gp_segment_id
+                     ->  Seq Scan on t_test_dd_via_segid t1
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+select t1.gp_segment_id, t2.gp_segment_id, * from t_test_dd_via_segid t1, t_test_dd_via_segid t2 where t1.gp_segment_id=t2.id;
+INFO:  (slice 2) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+ gp_segment_id | gp_segment_id | id | id 
+---------------+---------------+----+----
+             1 |             1 |  1 |  1
+             2 |             0 |  5 |  2
+             2 |             0 |  6 |  2
+(3 rows)
+
+explain (costs off) select gp_segment_id, count(*) from t_test_dd_via_segid group by gp_segment_id;
+                       QUERY PLAN                        
+---------------------------------------------------------
+ Finalize GroupAggregate
+   Group Key: gp_segment_id
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: gp_segment_id
+         ->  Sort
+               Sort Key: gp_segment_id
+               ->  Partial HashAggregate
+                     Group Key: gp_segment_id
+                     ->  Seq Scan on t_test_dd_via_segid
+ Optimizer: Postgres query optimizer
+(10 rows)
+
+select gp_segment_id, count(*) from t_test_dd_via_segid group by gp_segment_id;
+INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+ gp_segment_id | count 
+---------------+-------
+             0 |     3
+             1 |     1
+             2 |     2
+(3 rows)
+
 -- cleanup
 set test_print_direct_dispatch_info=off;
 begin;
