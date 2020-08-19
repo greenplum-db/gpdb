@@ -1176,6 +1176,18 @@ _copyAgg(const Agg *from)
 	return newnode;
 }
 
+static DQAExpr *
+_copyDQAExpr(const DQAExpr *from)
+{
+    DQAExpr *newnode = makeNode(DQAExpr);
+
+    COPY_SCALAR_FIELD(agg_expr_id);
+    COPY_BITMAPSET_FIELD(agg_args_id_bms);
+    COPY_NODE_FIELD(agg_filter);
+
+    return newnode;
+}
+
 /*
  * _copyTupleSplit
  */
@@ -1191,10 +1203,7 @@ _copyTupleSplit(const TupleSplit *from)
 		COPY_POINTER_FIELD(grpColIdx, from->numCols * sizeof(AttrNumber));
 	}
 
-	COPY_SCALAR_FIELD(numDisDQAs);
-	newnode->dqa_args_id_bms = palloc0(sizeof(Bitmapset *) * from->numDisDQAs);
-	for (int i = 0; i < from->numDisDQAs; i ++)
-		COPY_BITMAPSET_FIELD(dqa_args_id_bms[i]);
+	COPY_NODE_FIELD(dqa_expr_lst);
 
 	return newnode;
 }
@@ -1713,6 +1722,7 @@ _copyAggref(const Aggref *from)
 	COPY_SCALAR_FIELD(agglevelsup);
 	COPY_SCALAR_FIELD(aggsplit);
 	COPY_LOCATION_FIELD(location);
+	COPY_SCALAR_FIELD(agg_expr_id);
 
 	return newnode;
 }
@@ -5617,6 +5627,9 @@ copyObject(const void *from)
 			break;
 		case T_TupleSplit:
 			retval = _copyTupleSplit(from);
+			break;
+		case T_DQAExpr:
+			retval = _copyDQAExpr(from);
 			break;
 		case T_WindowAgg:
 			retval = _copyWindowAgg(from);

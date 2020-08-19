@@ -185,6 +185,7 @@ typedef enum NodeTag
 	T_Var,
 	T_Const,
 	T_Param,
+	T_DQAExpr,
 	T_Aggref,
 	T_GroupingFunc,
 	T_WindowFunc,
@@ -920,6 +921,8 @@ typedef enum AggSplit
 #define DO_AGGSPLIT_DESERIALIZE(as) (((as) & AGGSPLITOP_DESERIALIZE) != 0)
 
 #define DO_AGGSPLIT_DEDUPLICATED(as) (((as) & AGGSPLITOP_DEDUPLICATED) != 0)
+
+#define DO_AGGSPLIT_FILTERPUSHDOWN(as) (((as) & AGGSPLITOP_FILTERPUSHDOWN) != 0)
 
 /*
  * SetOpCmd and SetOpStrategy -

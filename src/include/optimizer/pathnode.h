@@ -215,8 +215,7 @@ extern TupleSplitPath *create_tup_split_path(PlannerInfo *root,
 											 Path *subpath,
 											 PathTarget *target,
 											 List *groupClause,
-											 Bitmapset **bitmapset,
-											 int numDisDQAs);
+											 List *dqa_expr_lst);
 
 extern AggPath *create_shadow_eliminate_path(PlannerInfo *root,
 											 RelOptInfo *rel,

@@ -3959,6 +3959,7 @@ create_agg_path(PlannerInfo *root,
  * 'groupClause' is a list of SortGroupClause's representing the grouping
  * 'numGroups' is the estimated number of groups (1 if not grouping)
  * 'bitmapset' is the bitmap of DQA expr Index in PathTarget
+ * 'agg_filter_array' is filter of DQA expr, Bijection with bitmapset
  * 'numDisDQAs' is the number of bitmapset size
  */
 TupleSplitPath *
@@ -3967,8 +3968,7 @@ create_tup_split_path(PlannerInfo *root,
 					  Path *subpath,
 					  PathTarget *target,
 					  List *groupClause,
-					  Bitmapset **bitmapset,
-					  int numDisDQAs)
+					  List *dqa_expr_lst)
 {
 	TupleSplitPath *pathnode = makeNode(TupleSplitPath);
 
@@ -3987,13 +3987,9 @@ create_tup_split_path(PlannerInfo *root,
 	pathnode->subpath = subpath;
 	pathnode->groupClause = groupClause;
 
-	pathnode->numDisDQAs = numDisDQAs;
+	pathnode->dqa_expr_lst = dqa_expr_lst;
 
-	pathnode->agg_args_id_bms = palloc0(sizeof(Bitmapset *) * numDisDQAs);
-	for (int i = 0 ; i < numDisDQAs; i ++)
-		pathnode->agg_args_id_bms[i] = bms_copy(bitmapset[i]);
-
-	cost_tup_split(&pathnode->path, root, numDisDQAs,
+	cost_tup_split(&pathnode->path, root, list_length(dqa_expr_lst),
 				   subpath->startup_cost, subpath->total_cost,
 				   subpath->rows);
 

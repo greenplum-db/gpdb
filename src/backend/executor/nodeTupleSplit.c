@@ -85,11 +85,18 @@ TupleSplitState *ExecInitTupleSplit(TupleSplit *node, EState *estate, int eflags
 
 	/* create bitmap set for each dqa expr to store its input tuple attribute number */
 	AttrNumber maxAttrNum = 0;
-	tup_spl_state->dqa_args_attr_num = palloc0(sizeof(Bitmapset *) * node->numDisDQAs);
-	for (int i = 0; i < node->numDisDQAs; i++)
+	tup_spl_state->numDisDQAs = list_length(node->dqa_expr_lst);
+	tup_spl_state->dqa_args_attr_num = palloc0(sizeof(Bitmapset *) * tup_spl_state->numDisDQAs);
+	tup_spl_state->agg_filter_array = palloc0(sizeof(ExprState *) * tup_spl_state->numDisDQAs);
+
+	int i = 0;
+	ListCell *lc;
+	foreach(lc, node->dqa_expr_lst)
 	{
+		DQAExpr *dqaExpr = (DQAExpr *)lfirst(lc);
+
 		int j = -1;
-		while ((j = bms_next_member(node->dqa_args_id_bms[i], j)) >= 0)
+		while ((j = bms_next_member(dqaExpr->agg_args_id_bms, j)) >= 0)
 		{
 			TargetEntry *te = get_sortgroupref_tle((Index)j, node->plan.lefttree->targetlist);
 			tup_spl_state->dqa_args_attr_num[i] = bms_add_member(tup_spl_state->dqa_args_attr_num[i], te->resno);
@@ -97,13 +104,18 @@ TupleSplitState *ExecInitTupleSplit(TupleSplit *node, EState *estate, int eflags
 			if (maxAttrNum < te->resno)
 				maxAttrNum = te->resno;
 		}
+
+		/* init filter expr */
+		tup_spl_state->agg_filter_array[i] = ExecInitExpr(dqaExpr->agg_filter, (PlanState *)tup_spl_state);
+		i ++;
 	}
 
 	tup_spl_state->maxAttrNum = maxAttrNum;
+
 	/*
 	 * add all DQA expr AttrNum into a bitmapset
 	 */
-	for (int i = 0; i < node->numDisDQAs; i++)
+	for (int i = 0; i < tup_spl_state->numDisDQAs; i++)
 		tup_spl_state->all_dist_attr_num = bms_add_members(tup_spl_state->all_dist_attr_num, tup_spl_state->dqa_args_attr_num[i]);
 
 	return tup_spl_state;
@@ -123,24 +135,53 @@ struct TupleTableSlot *ExecTupleSplit(TupleSplitState *node)
 	ExprContext     *econtext;
 	TupleSplit      *plan;
 	ExprDoneCond     isDone;
+	bool             filter_out = false;
 
 	econtext = node->ss.ps.ps_ExprContext;
 	plan = (TupleSplit *)node->ss.ps.plan;
 
-	/* if all DQAs of the last slot were processed, get a new slot */
-	if (node->currentExprId == 0)
-	{
-		node->outerslot = ExecProcNode(outerPlanState(node));
+	do {
+		/* if all DQAs of the last slot were processed, get a new slot */
+		if (node->currentExprId == 0)
+		{
+			node->outerslot = ExecProcNode(outerPlanState(node));
 
-		if (TupIsNull(node->outerslot))
-			return NULL;
+			if (TupIsNull(node->outerslot))
+				return NULL;
 
-		slot_getsomeattrs(node->outerslot, node->maxAttrNum);
+			slot_getsomeattrs(node->outerslot, node->maxAttrNum);
 
-		/* store original tupleslot isnull array */
-		memcpy(node->isnull_orig, slot_get_isnull(node->outerslot),
-			   node->outerslot->PRIVATE_tts_nvalid * sizeof(bool));
-	}
+			/* store original tupleslot isnull array */
+			memcpy(node->isnull_orig, slot_get_isnull(node->outerslot),
+		           node->outerslot->PRIVATE_tts_nvalid * sizeof(bool));
+		}
+
+		econtext->ecxt_outertuple = node->outerslot;
+
+		/* The filter is pushed down from relative DQA */
+		ExprState * filter = node->agg_filter_array[node->currentExprId];
+		if (filter)
+		{
+			Datum		res;
+			bool		isnull;
+
+			res = ExecEvalExprSwitchContext(filter, node->ss.ps.ps_ExprContext
+				, &isnull, NULL);
+
+			if (isnull || !DatumGetBool(res))
+			{
+				/* skip tuple split once, if the tuple filter out */
+				node->currentExprId = (node->currentExprId + 1) % node->numDisDQAs;
+				filter_out = true;
+			}
+			else
+			{
+
+				filter_out = false;
+			}
+
+		}
+	} while(filter_out);
 
 	/* reset the isnull array to the original state */
 	bool *isnull = slot_get_isnull(node->outerslot);
@@ -165,11 +206,10 @@ struct TupleTableSlot *ExecTupleSplit(TupleSplitState *node)
 	}
 
 	/* project the tuple */
-	econtext->ecxt_outertuple = node->outerslot;
 	result = ExecProject(node->ss.ps.ps_ProjInfo, &isDone);
 
 	/* the next DQA to process */
-	node->currentExprId = (node->currentExprId + 1) % plan->numDisDQAs;
+	node->currentExprId = (node->currentExprId + 1) % node->numDisDQAs;
 	ResetExprContext(econtext);
 
 	return result;

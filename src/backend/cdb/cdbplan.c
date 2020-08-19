@@ -620,10 +620,7 @@ plan_tree_mutator(Node *node,
 				FLATCOPY(new_tup_split, tup_split, TupleSplit);
 				PLANMUTATE(new_tup_split, tup_split);
 				COPYARRAY(new_tup_split, tup_split, numCols, grpColIdx);
-
-				new_tup_split->dqa_args_id_bms = palloc0(sizeof(Bitmapset *) * tup_split->numDisDQAs);
-				for (int i = 0; i < tup_split->numDisDQAs; i++)
-					new_tup_split->dqa_args_id_bms[i] = bms_copy(tup_split->dqa_args_id_bms[i]);
+				MUTATE(new_tup_split->dqa_expr_lst, tup_split->dqa_expr_lst, List *);
 
 				return (Node *) new_tup_split;
 			}

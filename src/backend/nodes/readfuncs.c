@@ -1359,6 +1359,7 @@ _readAggref(void)
 	READ_ENUM_FIELD(aggsplit, AggSplit);
 
 	READ_LOCATION_FIELD(location);
+	READ_INT_FIELD(agg_expr_id);
 
 	READ_DONE();
 }
@@ -3103,13 +3104,22 @@ _readTupleSplit(void)
 
 	READ_INT_FIELD(numCols);
 	READ_ATTRNUMBER_ARRAY(grpColIdx, local_node->numCols);
-	READ_INT_FIELD(numDisDQAs);
 
-	local_node->dqa_args_id_bms = palloc0(sizeof(Bitmapset *) * local_node->numDisDQAs);
-	for (int i = 0; i < local_node->numDisDQAs; i++)
-		local_node->dqa_args_id_bms[i] = _readBitmapset();
+	READ_NODE_FIELD(dqa_expr_lst);
 
 	READ_DONE();
+}
+
+static DQAExpr*
+_readDQAExpr(void)
+{
+    READ_LOCALS(DQAExpr);
+
+    READ_INT_FIELD(agg_expr_id);
+    READ_BITMAPSET_FIELD(agg_args_id_bms);
+    READ_NODE_FIELD(agg_filter);
+
+    READ_DONE();
 }
 
 /*
@@ -4273,6 +4283,8 @@ parseNodeString(void)
 		return_value = _readAgg();
 	else if (MATCH("TupleSplit", 10))
 		return_value = _readTupleSplit();
+	else if (MATCH("DQAExpr", 7))
+		return_value = _readDQAExpr();
 	else if (MATCH("WINDOWAGG", 9))
 		return_value = _readWindowAgg();
 	else if (MATCH("UNIQUE", 6))

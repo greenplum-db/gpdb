@@ -1712,8 +1712,7 @@ typedef struct TupleSplitPath
 	Path	   *subpath;		/* path representing input source */
 	List	   *groupClause;	/* a list of SortGroupClause's */
 
-	int         numDisDQAs;     /* the number of different DQAs */
-	Bitmapset **agg_args_id_bms;  /* the bitmapsets which store the dqa arg indexes */
+	List       *dqa_expr_lst;
 } TupleSplitPath;
 
 /*

@@ -298,3 +298,37 @@ insert into nonullstab select 1, 1 from generate_series(1, 100);
 
 -- This returns wrong result. countall(distinct a) should return 1.
 select countall(distinct a), count(distinct b) from nonullstab;
+
+-- multi DQA with filter test
+set enable_hashagg=on;
+set enable_groupagg=off;
+
+create table dqa_f1(a int, b int, c int) distributed by (a);
+create table dqa_f2(x int, y int, z int) distributed by (x);
+
+insert into dqa_f1 select i%17, i%5 , i%3 from generate_series(1,1000) i;
+insert into dqa_f2 select i % 13, i % 5 , i % 11 from generate_series(1,1000) i;
+
+select sum(distinct a) filter (where a > 0), sum(distinct b) filter (where a > 0) from dqa_f1;
+
+select sum(distinct a) filter (where a > 0), sum(distinct b) filter (where a > 0) from dqa_f1 group by b;
+
+select sum(distinct a) filter (where a > 0), sum(distinct b) filter (where a > 0) from dqa_f1 group by c;
+
+select sum(distinct a) filter (where a in (select x from dqa_f2 where x = a)), sum(distinct b) filter (where a > 0) from dqa_f1;
+
+select sum(distinct a) filter (where a in (select x from dqa_f2 where x = a)), sum(distinct b) filter (where a > 0) from dqa_f1 group by c;
+
+select count(distinct a) filter (where a > 3),count( distinct b) filter (where a > 4), sum(distinct b) filter( where a > 4) from dqa_f1;
+
+explain select sum(distinct a) filter (where a > 0), sum(distinct b) filter (where a > 0) from dqa_f1;
+
+explain select sum(distinct a) filter (where a > 0), sum(distinct b) filter (where a > 0) from dqa_f1 group by b;
+
+explain select sum(distinct a) filter (where a > 0), sum(distinct b) filter (where a > 0) from dqa_f1 group by c;
+
+explain select sum(distinct a) filter (where a in (select x from dqa_f2 where x = a)), sum(distinct b) filter (where a > 0) from dqa_f1;
+
+explain select sum(distinct a) filter (where a in (select x from dqa_f2 where x = a)), sum(distinct b) filter (where a > 0) from dqa_f1 group by c;
+
+explain select count(distinct a) filter (where a > 3),count( distinct b) filter (where a > 4), sum(distinct b) filter( where a > 4) from dqa_f1;

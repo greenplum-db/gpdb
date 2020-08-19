@@ -1761,7 +1761,7 @@ create_tup_split_plan(PlannerInfo *root, TupleSplitPath *best_path)
 
 	tlist = build_path_tlist(root, &best_path->path);
 
-	plan = make_tup_split(tlist, best_path->numDisDQAs, best_path->agg_args_id_bms,
+	plan = make_tup_split(tlist, best_path->dqa_expr_lst,
 						  list_length(best_path->groupClause),
 						  extract_grouping_cols(best_path->groupClause,
 												subplan->targetlist),
@@ -6730,21 +6730,15 @@ make_agg(List *tlist, List *qual,
 }
 
 TupleSplit *
-make_tup_split(List *tlist,
-			   int numDQAs, Bitmapset **dqas_ref_bms,
-			   int numGroupCols, AttrNumber *grpColIdx,
-			   Plan *lefttree)
+make_tup_split(List *tlist, List *dqa_expr_lst, int numGroupCols,
+			   AttrNumber *grpColIdx, Plan *lefttree)
 {
 	TupleSplit *node = makeNode(TupleSplit);
 	Plan	   *plan = &node->plan;
 
 	node->numCols    = numGroupCols;
 	node->grpColIdx  = grpColIdx;
-	node->numDisDQAs = numDQAs;
-
-	node->dqa_args_id_bms = palloc0(sizeof(Bitmapset *) * numDQAs);
-	for (int id = 0; id < numDQAs; id++)
-		node->dqa_args_id_bms[id] = bms_copy(dqas_ref_bms[id]);
+	node->dqa_expr_lst = dqa_expr_lst;
 
 	plan->targetlist = tlist;
 	plan->lefttree = lefttree;

@@ -2647,6 +2647,15 @@ expression_tree_mutator(Node *node,
 				return (Node *) newnode;
 			}
 			break;
+		case T_DQAExpr:
+			{
+				DQAExpr *dqaExpr = (DQAExpr *)node;
+				DQAExpr *newDqaExpr;
+				FLATCOPY(newDqaExpr, dqaExpr, DQAExpr);
+				MUTATE(newDqaExpr->agg_filter, dqaExpr->agg_filter, Expr *);
+				return (Node *)newDqaExpr;
+			}
+            break;
 		case T_GroupingFunc:
 			{
 				GroupingFunc   *grouping = (GroupingFunc *) node;

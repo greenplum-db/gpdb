@@ -127,10 +127,8 @@ extern Agg *make_agg(List *tlist, List *qual,
 		 List *groupingSets, List *chain,
 		 double dNumGroups, Plan *lefttree);
 extern Limit *make_limit(Plan *lefttree, Node *limitOffset, Node *limitCount);
-extern TupleSplit *make_tup_split(List *tlist,
-								  int numDQAs, Bitmapset **dqas_ref_bms,
-								  int numGroupCols, AttrNumber *grpColIdx,
-								  Plan *lefttree);
+extern TupleSplit *make_tup_split(List *tlist, List *dqa_info_lst, int numGroupCols,
+								  AttrNumber *grpColIdx, Plan *lefttree);
 
 /*
  * prototypes for plan/initsplan.c

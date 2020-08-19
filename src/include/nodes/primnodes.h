@@ -320,7 +320,18 @@ typedef struct Aggref
 	Index		agglevelsup;	/* > 0 if agg belongs to outer query */
 	AggSplit	aggsplit;		/* expected agg-splitting mode of parent Agg */
 	int			location;		/* token location, or -1 if unknown */
+
+	int         agg_expr_id;    /* gpdb private, if aggref is distinct qualified, record AggExprId value in tuple split */
 } Aggref;
+
+typedef struct
+{
+    Expr        xpr;
+
+    Index       agg_expr_id;
+    Bitmapset  *agg_args_id_bms;       /* each DQA's arg indexes bitmapset */
+    Expr       *agg_filter;      /* DQA's filter. since tuplesplit, filter have to push down */
+} DQAExpr;
 
 /*
  * GroupId -

@@ -205,9 +205,6 @@ typedef struct AggStatePerTransData
 	 * combine function in all cases.
 	 */
 	FunctionCallInfoData combinefn_fcinfo;
-
-	/* for MultiDQA split tuple check */
-	int     agg_expr_id;
 }	AggStatePerTransData;
 
 /*

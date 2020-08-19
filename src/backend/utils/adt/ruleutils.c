@@ -426,6 +426,7 @@ static bool looks_like_function(Node *node);
 static void get_oper_expr(OpExpr *expr, deparse_context *context);
 static void get_func_expr(FuncExpr *expr, deparse_context *context,
 			  bool showimplicit);
+static void get_dqa_expr(DQAExpr *dqa_expr,deparse_context *context);
 static void get_agg_expr(Aggref *aggref, deparse_context *context,
 			 Aggref *original_aggref);
 static void get_agg_combine_expr(Node *node, deparse_context *context,
@@ -7397,6 +7398,9 @@ get_rule_expr(Node *node, deparse_context *context,
 		case T_Aggref:
 			get_agg_expr((Aggref *) node, context, (Aggref *) node);
 			break;
+		case T_DQAExpr:
+			get_dqa_expr((DQAExpr *) node, context);
+			break;
 
 		case T_GroupingFunc:
 			{
@@ -8741,6 +8745,45 @@ get_median_expr(Aggref *aggref, deparse_context *context)
 	appendStringInfoChar(buf, ')');
 
 	return true;
+}
+
+static void
+get_dqa_expr(DQAExpr *dqa_expr,deparse_context *context)
+{
+	int id = -1;
+	StringInfo	buf = context->buf;
+	Bitmapset *bm = dqa_expr->agg_args_id_bms;
+	deparse_namespace *dnps = (deparse_namespace *) linitial(context->namespaces);
+	struct PlanState *planstate = dnps->planstate;
+
+	resetStringInfo(buf);
+	appendStringInfoChar(buf, '(');
+	while ((id = bms_next_member(bm, id)) >= 0)
+	{
+		TargetEntry *te = get_sortgroupref_tle((Index)id, planstate->plan->targetlist);
+		char	   *exprstr;
+
+		if (!te)
+			elog(ERROR, "no tlist entry for sort key: %d", id);
+		/* Deparse the expression, showing any top-level cast */
+		exprstr = deparse_expression((Node *) te->expr, context->namespaces,
+		                             context->varprefix, true);
+
+		appendStringInfoString(buf, exprstr);
+		appendStringInfoChar(buf, ',');
+	}
+	buf->data[buf->len - 1] = ')';
+
+	if (dqa_expr->agg_filter != NULL)
+	{
+		char * exprstr;
+		exprstr = deparse_expression((Node *) dqa_expr->agg_filter, context->namespaces,
+		                             context->varprefix, false);
+		appendStringInfoString(buf, " FILTER (WHERE ");
+		appendStringInfoString(buf, exprstr);
+		appendStringInfoChar(buf, ')');
+	}
+
 }
 
 /*

@@ -372,7 +372,14 @@ plan_tree_walker(Node *node,
 		case T_TupleSplit:
 			if (walk_plan_node_fields((Plan *) node, walker, context))
 				return true;
+			if (expression_tree_walker((Node *)((TupleSplit *)node)->dqa_expr_lst, walker, context))
+				return true;
 			/* Other fields are simple items and lists of simple items. */
+			break;
+
+        case T_DQAExpr:
+	        if (walker(((DQAExpr *)node)->agg_filter, context))
+		        return true;
 			break;
 
 		case T_WindowAgg:

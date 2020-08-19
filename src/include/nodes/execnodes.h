@@ -2641,11 +2641,15 @@ typedef struct TupleSplitState
 	TupleTableSlot  *outerslot;
 	Index           currentExprId;
 
-	AttrNumber	maxAttrNum;
+	AttrNumber	    maxAttrNum;
+	int             numDisDQAs;
 	Bitmapset       **dqa_args_attr_num;
 	Bitmapset       *all_dist_attr_num;
 
+	ExprState       **agg_filter_array;
+
 	Index            largest_attno_in_dqas;
+	MemoryContext   filter_context;
 } TupleSplitState;
 
 typedef struct AggExprIdState

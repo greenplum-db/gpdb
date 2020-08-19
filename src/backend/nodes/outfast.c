@@ -391,6 +391,16 @@ _outMergeJoin(StringInfo str, MergeJoin *node)
 }
 
 static void
+_outDQAExpr(StringInfo str, DQAExpr* node)
+{
+    WRITE_NODE_TYPE("DQAExpr");
+
+    WRITE_INT_FIELD(agg_expr_id);
+    WRITE_BITMAPSET_FIELD(agg_args_id_bms);
+    WRITE_NODE_FIELD(agg_filter);
+}
+
+static void
 _outTupleSplit(StringInfo str, TupleSplit *node)
 {
 	WRITE_NODE_TYPE("TupleSplit");
@@ -399,10 +409,7 @@ _outTupleSplit(StringInfo str, TupleSplit *node)
 
 	WRITE_INT_FIELD(numCols);
 	WRITE_INT_ARRAY(grpColIdx, node->numCols, AttrNumber);
-	WRITE_INT_FIELD(numDisDQAs);
-
-	for (int i = 0; i < node->numDisDQAs ; i ++)
-		WRITE_BITMAPSET_FIELD(dqa_args_id_bms[i]);
+	WRITE_NODE_FIELD(dqa_expr_lst);
 }
 
 static void
@@ -1401,6 +1408,9 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_TupleSplit:
 				_outTupleSplit(str, obj);
+				break;
+			case T_DQAExpr:
+				_outDQAExpr(str, obj);
 				break;
 			case T_WindowAgg:
 				_outWindowAgg(str, obj);

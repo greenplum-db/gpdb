@@ -1033,6 +1033,18 @@ _outAgg(StringInfo str, const Agg *node)
 
 #ifndef COMPILING_BINARY_FUNCS
 static void
+_outDQAExpr(StringInfo str, const DQAExpr *node)
+{
+    WRITE_NODE_TYPE("DQAExpr");
+
+    WRITE_INT_FIELD(agg_expr_id);
+    WRITE_BITMAPSET_FIELD(agg_args_id_bms);
+    WRITE_NODE_FIELD(agg_filter);
+}
+#endif /* COMPILING_BINARY_FUNCS */
+
+#ifndef COMPILING_BINARY_FUNCS
+static void
 _outTupleSplit(StringInfo str, const TupleSplit *node)
 {
 	int         i;
@@ -1046,9 +1058,7 @@ _outTupleSplit(StringInfo str, const TupleSplit *node)
 	for (i = 0; i < node->numCols; i++)
 		appendStringInfo(str, " %d", node->grpColIdx[i]);
 
-	WRITE_INT_FIELD(numDisDQAs);
-	for (i = 0; i < node->numDisDQAs; i++)
-		WRITE_BITMAPSET_FIELD(dqa_args_id_bms[i]);
+	WRITE_NODE_FIELD(dqa_expr_lst);
 }
 #endif /* COMPILING_BINARY_FUNCS */
 
@@ -1537,6 +1547,7 @@ _outAggref(StringInfo str, const Aggref *node)
 	WRITE_UINT_FIELD(agglevelsup);
 	WRITE_ENUM_FIELD(aggsplit, AggSplit);
 	WRITE_LOCATION_FIELD(location);
+    WRITE_INT_FIELD(agg_expr_id);
 }
 
 static void
@@ -5384,6 +5395,9 @@ outNode(StringInfo str, const void *obj)
 			case T_TupleSplit:
 				_outTupleSplit(str, obj);
 				break;
+		    case T_DQAExpr:
+                _outDQAExpr(str, obj);
+                break;
 			case T_WindowAgg:
 				_outWindowAgg(str, obj);
 				break;

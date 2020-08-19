@@ -73,9 +73,7 @@ typedef struct
 
 	List        *dqa_group_clause;      /* DQA exprs + group by clause for remove duplication */
 
-	int          numDisDQAs;            /* the number of different dqa exprs */
-	Bitmapset  **agg_args_id_bms;       /* each DQA's arg indexes bitmapset */
-
+	List        *dqa_expr_lst;          /* DQAExpr list */
 } cdb_multi_dqas_info;
 
 static Index add_gsetid_tlist(List *tlist);
@@ -1092,8 +1090,7 @@ add_multi_dqas_hash_agg_path(PlannerInfo *root,
 										  path,
 										  info->tup_split_target,
 										  root->parse->groupClause,
-										  info->agg_args_id_bms,
-										  info->numDisDQAs);
+										  info->dqa_expr_lst);
 
 	AggClauseCosts DedupCost = {};
 	get_agg_clause_costs(root, (Node *) info->tup_split_target->exprs,
@@ -1436,9 +1433,8 @@ fetch_multi_dqas_info(PlannerInfo *root,
 					  cdb_agg_planning_context *ctx,
 					  cdb_multi_dqas_info *info)
 {
-	int id;
-	int bms_no = 0;
 	ListCell    *lc;
+	ListCell    *lcc;
 	Index		maxRef = 0;
 	PathTarget *proj_target = copy_pathtarget(path->pathtarget);
 
@@ -1453,16 +1449,18 @@ fetch_multi_dqas_info(PlannerInfo *root,
 	else
 		proj_target->sortgrouprefs = (Index *) palloc0(list_length(proj_target->exprs) * sizeof(Index));
 
-	info->agg_args_id_bms = palloc0(sizeof(Bitmapset *) * list_length(ctx->agg_costs->distinctAggrefs));
+	info->dqa_expr_lst = NIL;
 
 	/*
 	 * assign numDisDQAs and agg_args_id_bms
 	 *
 	 * find all DQAs with different args, count the number, store their args bitmapsets
 	 */
-	foreach (lc, ctx->agg_costs->distinctAggrefs)
+	forboth(lc, ctx->agg_partial_costs->distinctAggrefs,
+	        lcc, ctx->agg_final_costs->distinctAggrefs)
 	{
 		Aggref	        *aggref = (Aggref *) lfirst(lc);
+		Aggref	        *aggref_final = (Aggref *) lfirst(lcc);
 		SortGroupClause *arg_sortcl;
 		TargetEntry     *arg_tle;
 		ListCell        *lc2;
@@ -1488,7 +1486,7 @@ fetch_multi_dqas_info(PlannerInfo *root,
 			/*
 			 * DQA expr is not in PathTarget
 			 *
-			 * SELECT DQA(a) from foo;
+			 * SELECT DQA(a + b) from foo;
 			 */
 			if (dqa_idx == list_length(proj_target->exprs))
 			{
@@ -1509,7 +1507,7 @@ fetch_multi_dqas_info(PlannerInfo *root,
 				/*
 				 * DQA expr in PathTarget but no reference
 				 *
-				 * SELECT DQA(a) FROM foo;
+				 * SELECT DQA(a) FROM foo ;
 				 */
 				proj_target->sortgrouprefs[dqa_idx] = ++maxRef;
 
@@ -1535,18 +1533,41 @@ fetch_multi_dqas_info(PlannerInfo *root,
 			}
 		}
 
-		/* DQA(a, b) and DQA(b, a) can share one split tuple  */
-		for (id = 0; id < bms_no; id++)
+		/*
+		 * DQA(a, b) and DQA(b, a) and their filter is same,
+		 * then can share one split tuple
+		 */
+		ListCell *lc_dqa;
+		Index agg_expr_id = 1;
+		foreach (lc_dqa, info->dqa_expr_lst)
 		{
-			if (bms_equal(bms, info->agg_args_id_bms[id]))
+			DQAExpr *dqaExpr = (DQAExpr *)lfirst(lc_dqa);
+
+			if (bms_equal(bms, dqaExpr->agg_args_id_bms)
+				&& equal(aggref->aggfilter, dqaExpr->agg_filter))
 				break;
+
+			agg_expr_id++;
 		}
 
-		/* skip if same args pattern has stored */
-		if (id == bms_no)
-			info->agg_args_id_bms[bms_no++] = bms;
+		/* If DQA(expr1) FILTER (WHERE expr2) is different with previous, create new one */
+		if ((agg_expr_id - 1) == list_length(info->dqa_expr_lst))
+		{
+			DQAExpr *dqaExpr= makeNode(DQAExpr);
+
+			dqaExpr->agg_expr_id = agg_expr_id;
+			dqaExpr->agg_args_id_bms = bms;
+			dqaExpr->agg_filter = (Expr *)copyObject(aggref->aggfilter);
+			info->dqa_expr_lst = lappend(info->dqa_expr_lst, dqaExpr);
+		}
+
+		/* assign an agg_expr_id value to aggref*/
+		aggref->agg_expr_id = agg_expr_id;
+
+		/* rid of filter in aggref */
+		aggref->aggfilter = NULL;
+		aggref_final->aggfilter = NULL;
 	}
-	info->numDisDQAs = bms_no;
 
 	info->input_proj_target = proj_target;
 	info->tup_split_target = copy_pathtarget(proj_target);

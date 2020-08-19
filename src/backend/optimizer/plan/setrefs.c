@@ -973,7 +973,24 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
 			}
 			break;
 		case T_TupleSplit:
-			set_upper_references(root, plan, rtoffset);
+			{
+				indexed_tlist *subplan_itlist = build_tlist_index(plan->lefttree->targetlist);
+				ListCell *lc;
+				foreach(lc, ((TupleSplit*)plan)->dqa_expr_lst)
+				{
+					DQAExpr *dqaExpr = (DQAExpr *)lfirst(lc);
+
+					dqaExpr->agg_filter = (Expr *)fix_upper_expr(root,
+					                                             (Node *)dqaExpr->agg_filter,
+					                                             subplan_itlist,
+					                                             OUTER_VAR,
+					                                             rtoffset);
+
+					lfirst(lc) = dqaExpr;
+				}
+
+				set_upper_references(root, plan, rtoffset);
+			}
 			break;
 		case T_WindowAgg:
 			{

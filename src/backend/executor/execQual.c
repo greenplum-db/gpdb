@@ -5146,7 +5146,7 @@ static Datum ExecEvalAggExprId(AggExprIdState *exprstate,
 		*isNull = false;
 		*isDone = ExprSingleResult;
 
-		return Int32GetDatum(tsState->currentExprId);
+		return Int32GetDatum(tsState->currentExprId + 1);
 	}
 
 	*isNull = true;

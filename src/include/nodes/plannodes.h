@@ -1138,8 +1138,7 @@ typedef struct TupleSplit
 	int			numCols;		    /* number of grouping columns */
 	AttrNumber *grpColIdx;		    /* their indexes in the target list */
 
-	int         numDisDQAs;         /* the number of different dqa exprs */
-	Bitmapset **dqa_args_id_bms;    /* each DQA's arg indexes bitmapset */
+	List       *dqa_expr_lst;
 } TupleSplit;
 
 /* ----------------
