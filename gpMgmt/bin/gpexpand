@@ -1925,7 +1925,7 @@ class ExpandTable():
             logger.debug('numsegments is 0, gpexpand will fail if there is a partition table.')
         if row is not None:
             (self.dbname, self.fq_name, self.table_oid,
-             self.root_partition_name, self.distrib_policy,
+             self.root_partition_name,
              self.rank, self.external_writable, self.status,
              self.expansion_started, self.expansion_finished,
              self.source_bytes) = row
@@ -1934,11 +1934,10 @@ class ExpandTable():
 
     def add_table(self, conn):
         insertSQL = """INSERT INTO gpexpand.status_detail
-                            VALUES ('%s','%s',%s,%s,
+                            VALUES ('%s','%s',%s,
                                     '%s',%d,'%s','%s','%s','%s',%d)
                     """ % (self.dbname.replace("'", "''"), self.fq_name.replace("'", "''"), self.table_oid,
                            self.root_partition_name,
-                           self.distrib_policy,
                            self.rank, self.external_writable, self.status,
                            self.expansion_started, self.expansion_finished,
                            self.source_bytes)
@@ -1975,6 +1974,8 @@ class ExpandTable():
         logger.debug('Resetting detailed_status: %s' % sql.decode('utf-8'))
         dbconn.execSQL(status_conn, sql)
 
+    # get distribution policy of root partition table
+    # return distributed key list with their oid
     def form_dist_policy_name(self, conn):
         sql = "SELECT distkey FROM gp_distribution_policy WHERE localoid = '%s'::regclass::oid" % self.root_partition_name
         policy = dbconn.querySingleton(conn, sql)
@@ -1983,14 +1984,14 @@ class ExpandTable():
         namedict = {}
         oiddict = {}
         policy = policy.strip()
-        sql = "SELECT attnum, attname, attrelid FROM pg_attribute WHERE attrelid =  %s AND attnum > 0" % self.table_oid
-        cursor = dbconn.execSQL(conn, sql)
-        for row in cursor:
-            namedict[row[0]] = row[1]
-            oiddict[row[0]] = row[2]
-        name_list = []
-        oid_list = []
         if policy != "":
+            sql = "SELECT attnum, attname, attrelid FROM pg_attribute WHERE attrelid =  %s AND attnum > 0" % self.table_oid
+            cursor = dbconn.execSQL(conn, sql)
+            for row in cursor:
+                namedict[row[0]] = row[1]
+                oiddict[row[0]] = row[2]
+            name_list = []
+            oid_list = []
             rs_list = policy.split(' ')
             for colnum in rs_list:
                 name_list.append(namedict[int(colnum)])
@@ -2362,7 +2363,7 @@ class ExpandCommand(SQLCommand):
                 start_time = datetime.datetime.now()
                 self.table.mark_started(status_conn, table_conn, start_time, self.cancel_flag)
 
-                table_exp_success = self.table.expand(table_conn, status_conn, self.cancel_flag)
+                table_exp_success = self.table.expand(table_conn, status_conn, self.cancel_flag, self.table_url, self.status_url)
 
         except Exception, ex:
             if ex.__str__().find('canceling statement due to user request') == -1 and not self.cancel_flag:
