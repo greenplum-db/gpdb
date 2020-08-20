@@ -20,8 +20,9 @@
 
 /* postgres_fdw is compiled as a backend, it needs the server's
  * header files such as executor/tuptable.h. It also needs libpq
- * to connect to a remote postgres database, so it's staticly linked
- * to libpq.a which is compiled as a frontend using -DFRONTEND.
+ * to connect to a remote postgres database, so it's statically
+ * linked to libpq.a which is compiled as a frontend using
+ * -DFRONTEND.
  *
  * But the struct PQconninfoOption's length is different between
  * backend and frontend, there is no "connofs" field in frontend.
