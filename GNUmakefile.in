@@ -21,9 +21,10 @@ all:
 	$(MAKE) -C contrib/fuzzystrmatch all
 	$(MAKE) -C contrib/extprotocol all	
 ifeq ($(OS),Darwin)
-	@echo "dblink can't be built on Mac"
+	@echo "dblink and postgres_fdw can't be built on Mac"
 else
 	$(MAKE) -C contrib/dblink all
+	$(MAKE) -C contrib/postgres_fdw all
 endif
 	$(MAKE) -C contrib/indexscan all
 	$(MAKE) -C contrib/pageinspect all  # needed by src/test/isolation
@@ -66,6 +67,7 @@ install:
 	$(MAKE) -C contrib/extprotocol $@
 ifneq ($(OS),Darwin)
 	$(MAKE) -C contrib/dblink $@
+	$(MAKE) -C contrib/postgres_fdw $@
 endif
 	$(MAKE) -C contrib/indexscan $@ 
 	$(MAKE) -C contrib/pageinspect $@  # needed by src/test/isolation
@@ -159,7 +161,7 @@ ICW_TARGETS += contrib/amcheck contrib/auto_explain contrib/citext
 ICW_TARGETS += contrib/formatter_fixedwidth
 ICW_TARGETS += contrib/extprotocol
 ifneq ($(OS),Darwin)
-	ICW_TARGETS += contrib/dblink
+	ICW_TARGETS += contrib/dblink contrib/postgres_fdw
 endif
 ICW_TARGETS += contrib/indexscan contrib/hstore contrib/pgcrypto
 # sslinfo depends on openssl

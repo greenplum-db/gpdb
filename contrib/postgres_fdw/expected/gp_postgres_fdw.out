@@ -4,6 +4,9 @@
 -- ===================================================================
 -- Create source tables and populate with data
 -- ===================================================================
+CREATE SERVER loopback FOREIGN DATA WRAPPER postgres_fdw
+  OPTIONS (dbname 'contrib_regression');
+CREATE USER MAPPING FOR CURRENT_USER SERVER loopback;
 CREATE TABLE table_dist_rand
 (
 	f1 int,
@@ -54,6 +57,7 @@ INSERT INTO table_dist_int_text SELECT * FROM table_dist_rand;
 -- ===================================================================
 -- create target table
 -- ===================================================================
+CREATE SCHEMA "S 1";
 CREATE TABLE "S 1"."GP 1" (
 	f1 int,
 	f2 text,

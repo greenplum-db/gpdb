@@ -2371,6 +2371,30 @@ postgresAnalyzeForeignTable(Relation relation,
 		if (PQntuples(res) != 1 || PQnfields(res) != 1)
 			elog(ERROR, "unexpected result from deparseAnalyzeSizeSql query");
 		*totalpages = strtoul(PQgetvalue(res, 0, 0), NULL, 10);
+		/* FIXME:
+		 * When totalpages is 0, we set it to be 1 instead. The reason is:
+		 * totalpages can be 0 even if the table is not empty when remote
+		 * totalpages is 1 and local BLCKSZ is bigger than the remote one.
+		 * Because the totlpages is computed by local BLCKSZ as follow:
+		 * (in function deparseAnalyzeSizeSql)
+		 * SELECT pg_catalog.pg_relation_size(::pg_catalog.regclass) / BLCKSZ
+		 * (the BLCKSZ is local BLCKSZ, and the relation size is cumputed in remote).
+		 * When totalpages is 0 and num of tuples is not 0, the Assert will
+		 * fail in function vac_update_relstats.
+		 *
+		 * Maybe it is not good to set the totalpages to be 1 when the table
+		 * is empty in actual, but as the totalpages is not correct when local
+		 * BLCKSZ is different with the remote one, we think it's ok to do this.
+		 *
+		 * We are trying to submit a patch to the upstream to fix this issue
+		 * by using remote BLCKSZ to compute the totalpages in the upstream
+		 * instead of local BLCKSZ. After the patch merged, we will cherry pick it here.
+		 */
+
+		if (*totalpages == 0)
+		{
+			*totalpages = 1;
+		}
 
 		PQclear(res);
 		res = NULL;

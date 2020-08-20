@@ -1,4 +1,5 @@
 # Generated subdirectories
+/results
 /log/
-/results/
+/testdata/
 /tmp_check/

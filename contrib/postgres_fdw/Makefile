@@ -14,7 +14,8 @@ SHLIB_LINK_INTERNAL = -Wl,--exclude-libs=libpq.a -Wl,-Bstatic $(libpq) -Wl,-Bdyn
 EXTENSION = postgres_fdw
 DATA = postgres_fdw--1.0.sql
 
-REGRESS = postgres_fdw gp_postgres_fdw
+REGRESS = postgres_fdw
+REGRESS_OPTS = --load-extension=$(EXTENSION)
 
 # the db name is hard-coded in the tests
 override USE_MODULE_DB =
@@ -30,3 +31,14 @@ top_builddir = ../..
 include $(top_builddir)/src/Makefile.global
 include $(top_srcdir)/contrib/contrib-global.mk
 endif
+
+# For test
+# If you want to change the PG_PORT, please update
+# both the below PG_PORT and the port in test/sql/postgres_fdw.sql
+# which is the option of foreign server
+export PG_PORT=5432
+installcheck: prep_postgres
+prep_postgres:
+	sh postgres_setup.sh
+
+.PHONY: prep_postgres
