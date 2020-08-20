@@ -27,7 +27,7 @@ GRANT SELECT ON pg_catalog.gp_pgdatabase TO PUBLIC;
 ------------------------------------------------------------------
 CREATE OR REPLACE VIEW pg_catalog.gp_distributed_xacts AS 
     SELECT *
-      FROM gp_distributed_xacts() AS L(distributed_xid xid, distributed_id text, state text, gp_session_id int, xmin_distributed_snapshot xid);
+      FROM gp_distributed_xacts() AS L(distributed_xid xid, state text, gp_session_id int, xmin_distributed_snapshot xid);
 
 GRANT SELECT ON pg_catalog.gp_distributed_xacts TO PUBLIC;
 
@@ -40,7 +40,7 @@ GRANT SELECT ON pg_catalog.gp_transaction_log TO PUBLIC;
 
 CREATE OR REPLACE VIEW pg_catalog.gp_distributed_log AS 
     SELECT *
-      FROM gp_distributed_log() AS L(segment_id smallint, dbid smallint, distributed_xid xid, distributed_id text, status text, local_transaction xid);
+      FROM gp_distributed_log() AS L(segment_id smallint, dbid smallint, distributed_xid xid, status text, local_transaction xid);
 
 GRANT SELECT ON pg_catalog.gp_distributed_log TO PUBLIC;
 

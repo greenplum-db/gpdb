@@ -37,7 +37,6 @@
  */
 typedef struct DistributedLogEntry
 {
-	DistributedTransactionTimeStamp distribTimeStamp;
 	DistributedTransactionId distribXid;
 
 } DistributedLogEntry;
@@ -46,19 +45,15 @@ typedef struct DistributedLogEntry
 #define NUM_DISTRIBUTEDLOG_BUFFERS	8
 
 extern void DistributedLog_SetCommittedTree(TransactionId xid, int nxids, TransactionId *xids,
-								DistributedTransactionTimeStamp	distribTimeStamp,
 								DistributedTransactionId distribXid,
 								bool isRedo);
 extern bool DistributedLog_CommittedCheck(
 							  TransactionId localXid,
-							  DistributedTransactionTimeStamp *dtxStartTime,
 							  DistributedTransactionId *distribXid);
 extern bool DistributedLog_ScanForPrevCommitted(
 									TransactionId *indexXid,
-									DistributedTransactionTimeStamp *distribTimeStamp,
 									DistributedTransactionId *distribXid);
 extern TransactionId DistributedLog_AdvanceOldestXmin(TransactionId oldestInProgressLocalXid,
-								 DistributedTransactionTimeStamp distribTimeStamp,
 								 DistributedTransactionId oldestDistribXid);
 extern TransactionId DistributedLog_GetOldestXmin(TransactionId oldestLocalXmin);
 
@@ -84,7 +79,6 @@ extern void DistributedLog_desc(StringInfo buf, XLogReaderState *record);
 extern const char *DistributedLog_identify(uint8 info);
 extern void DistributedLog_GetDistributedXid(
 				TransactionId 						localXid,
-				DistributedTransactionTimeStamp		*distribTimeStamp,
 				DistributedTransactionId 			*distribXid);
 
 #endif							/* DISTRIBUTEDLOG_H */

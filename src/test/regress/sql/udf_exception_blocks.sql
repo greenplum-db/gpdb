@@ -526,8 +526,6 @@ SELECT count(*) FROM test_truncate_tab;
 -- m/ /
 -- m/transaction \d+/
 -- s/transaction \d+/transaction /
--- m/transaction -\d+/
--- s/transaction -\d+/transaction/
 -- end_matchsubs
 CREATE OR REPLACE FUNCTION test_excep (arg INTEGER) RETURNS INTEGER
 AS $$

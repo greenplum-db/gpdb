@@ -5318,6 +5318,14 @@ PostgresMain(int argc, char *argv[],
 						serializedDtxContextInfo = pq_getmsgbytes(&input_message,serializedDtxContextInfolen);
 
 					DtxContextInfo_Deserialize(serializedDtxContextInfo, serializedDtxContextInfolen, &TempDtxContextInfo);
+					if (TempDtxContextInfo.distributedXid != InvalidDistributedTransactionId &&
+						!IS_QUERY_DISPATCHER()) /* On segments only */
+					{
+						SpinLockAcquire(shmGxidGenLock);
+						if (TempDtxContextInfo.distributedXid > ShmemVariableCache->nextGxid)
+							ShmemVariableCache->nextGxid = TempDtxContextInfo.distributedXid;
+						SpinLockRelease(shmGxidGenLock);
+					}
 
 					/* get the query string and kick off processing. */
 					if (query_string_len > 0)

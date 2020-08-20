@@ -10,9 +10,6 @@
 -- m/(ERROR|WARNING|CONTEXT|NOTICE):.*The previous session was reset because its gang was disconnected/
 -- s/session id \=\s*\d+/session id \= DUMMY/gm
 --
--- m/^DETAIL:.*gid=.*/
--- s/gid=\d+-\d+/gid DUMMY/
---
 -- end_matchsubs
 --
 --
@@ -100,7 +97,7 @@ SET debug_dtm_action_target = "protocol";
 SET debug_dtm_action_protocol = "commit_prepared";
 COMMIT;
 WARNING:  the distributed transaction 'Commit Prepared' broadcast failed to one or more segments. Retrying ... try 1
-DETAIL:  gid=1561094833-0000002743, state=Retry Commit Prepared
+DETAIL:  gid=66802167, state=Retry Commit Prepared
 NOTICE:  Releasing segworker group to retry broadcast.
 SELECT * FROM distxact1_3;
  a  
@@ -139,7 +136,7 @@ SET debug_dtm_action_target = "protocol";
 SET debug_dtm_action_protocol = "abort_prepared";
 COMMIT;
 WARNING:  the distributed transaction broadcast failed to one or more segments
-DETAIL:  gid=1561094833-0000003185, state=Notifying Abort Prepared
+DETAIL:  gid=66802193, state=Notifying Abort Prepared
 ERROR:  Raise an error as directed by Debug_abort_after_distributed_prepared
 SELECT * FROM distxact1_4;
  a 
@@ -367,7 +364,7 @@ DROP TABLE
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 WARNING:  the distributed transaction 'Commit Prepared' broadcast failed to one or more segments. Retrying ... try 1
-DETAIL:  gid=1561094833-0000003786, state=Retry Commit Prepared
+DETAIL:  gid=66802449, state=Retry Commit Prepared
 NOTICE:  Releasing segworker group to retry broadcast.
 result: INSERT 0 2
 --

@@ -369,7 +369,8 @@ set_ps_display(const char *activity, bool force)
 
 	/* Add client session's global id. */
 	if (gp_session_id > 0 && ep - cp > 0 &&
-		strstr(ps_buffer, "bgworker") == NULL) /* ugly hack for fts, dtx recovery */
+		strstr(ps_buffer, "dtx recovery process") == NULL &&
+		strstr(ps_buffer, "ftsprobe process") == NULL)
 	{
 		cp += snprintf(cp, ep - cp, "con%d ", gp_session_id);
 

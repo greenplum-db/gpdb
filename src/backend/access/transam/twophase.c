@@ -2147,7 +2147,6 @@ RecoverPreparedTransactions(void)
 		TwoPhaseFileHeader *hdr;
 		TransactionId *subxids;
 		const char *gid;
-		DistributedTransactionTimeStamp distribTimeStamp;
 		DistributedTransactionId distribXid;
 		LocalDistribXactData localDistribXactData;
 
@@ -2188,14 +2187,13 @@ RecoverPreparedTransactions(void)
 		 * Crack open the gid to get the DTM start time and distributed
 		 * transaction id.
 		 */
-		dtxCrackOpenGid(gid, &distribTimeStamp, &distribXid);
+		dtxDeformGid(gid, &distribXid);
 
 		/*
 		 * Recreate its GXACT and dummy PGPROC. But, check whether it was
 		 * added in redo and already has a shmem entry for it.
 		 */
 		localDistribXactData.state = LOCALDISTRIBXACT_STATE_ACTIVE;
-		localDistribXactData.distribTimeStamp = distribTimeStamp;
 		localDistribXactData.distribXid = distribXid;
 		MarkAsPreparingGuts(gxact, xid, gid,
 							&localDistribXactData,
@@ -2384,7 +2382,6 @@ RecordTransactionCommitPrepared(TransactionId xid,
 	XLogRecPtr	recptr;
 	TimestampTz committs = GetCurrentTimestamp();
 	bool		replorigin;
-	DistributedTransactionTimeStamp distribTimeStamp;
 	DistributedTransactionId distribXid;
 
 	/*
@@ -2403,7 +2400,7 @@ RecordTransactionCommitPrepared(TransactionId xid,
 	 * Crack open the gid to get the DTM start time and distributed
 	 * transaction id.
 	 */
-	dtxCrackOpenGid(gid, &distribTimeStamp, &distribXid);
+	dtxDeformGid(gid, &distribXid);
 
 	SIMPLE_FAULT_INJECTOR("before_xlog_xact_commit_prepared");
 
@@ -2456,7 +2453,6 @@ RecordTransactionCommitPrepared(TransactionId xid,
 	 * Mark the distributed transaction committed.
 	 */
 	DistributedLog_SetCommittedTree(xid, nchildren, children,
-									distribTimeStamp,
 									distribXid,
 									/* isRedo */ false);
 
@@ -2558,6 +2554,7 @@ PrepareRedoAdd(char *buf, XLogRecPtr start_lsn,
 	char	   *bufptr;
 	const char *gid;
 	GlobalTransaction gxact;
+	DistributedTransactionId gxid;
 
 	Assert(LWLockHeldByMeInMode(TwoPhaseStateLock, LW_EXCLUSIVE));
 	Assert(RecoveryInProgress());
@@ -2608,7 +2605,11 @@ PrepareRedoAdd(char *buf, XLogRecPtr start_lsn,
 						   false /* backward */ , false /* WAL */ );
 	}
 
-	elog(DEBUG2, "added 2PC data in shared memory for transaction %u", gxact->xid);
+	if (log_min_messages <= DEBUG2)
+	{
+		dtxDeformGid(gid, &gxid);
+		elog(LOG, "added 2PC data in shared memory for transaction %u", gxact->xid);
+	}
 }
 
 /*

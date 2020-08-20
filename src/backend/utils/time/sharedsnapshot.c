@@ -342,7 +342,7 @@ SharedSnapshotDump(void)
 
 		if (testSlot->slotid != -1)
 		{
-			appendStringInfo(&str, "(SLOT index: %d slotid: %d QDxid: %u pid: %u)",
+			appendStringInfo(&str, "(SLOT index: %d slotid: %d QDxid: "UINT64_FORMAT" pid: %u)",
 							 testSlot->slotindex, testSlot->slotid, testSlot->distributedXid,
 							 testSlot->writer_proc ? testSlot->writer_proc->pid : 0);
 		}
@@ -798,8 +798,8 @@ LogDistributedSnapshotInfo(Snapshot snapshot, const char *prefix)
 	DistributedSnapshot *ds = &mapping->ds;
 
 	appendStringInfo(&buf, "%s Distributed snapshot info: "
-			 "xminAllDistributedSnapshots=%d, distribSnapshotId=%d"
-			 ", xmin=%d, xmax=%d, count=%d",
+			 "xminAllDistributedSnapshots="UINT64_FORMAT", distribSnapshotId=%d"
+			 ", xmin="UINT64_FORMAT", xmax="UINT64_FORMAT", count=%d",
 			 prefix,
 			 ds->xminAllDistributedSnapshots,
 			 ds->distribSnapshotId,
@@ -813,12 +813,12 @@ LogDistributedSnapshotInfo(Snapshot snapshot, const char *prefix)
 	{
 		if (no != 0)
 		{
-			appendStringInfo(&buf, ", (dx%d)",
+			appendStringInfo(&buf, ", (dx"UINT64_FORMAT")",
 					 ds->inProgressXidArray[no]);
 		}
 		else
 		{
-			appendStringInfo(&buf, " (dx%d)",
+			appendStringInfo(&buf, " (dx"UINT64_FORMAT")",
 					 ds->inProgressXidArray[no]);
 		}
 	}
