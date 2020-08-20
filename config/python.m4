@@ -6,10 +6,17 @@
 
 # PGAC_PATH_PYTHON
 # ----------------
-# Look for Python and set the output variable 'PYTHON'
-# to 'python' if found, empty otherwise.
+# Look for Python and set the output variable 'PYTHON' if found,
+# fail otherwise.
+#
+# As the Python 3 transition happens and PEP 394 isn't updated, we
+# need to cater to systems that don't have unversioned "python" by
+# default.  Some systems ship with "python3" by default and perhaps
+# have "python" in an optional package.  Some systems only have
+# "python2" and "python3", in which case it's reasonable to prefer the
+# newer version.
 AC_DEFUN([PGAC_PATH_PYTHON],
-[AC_PATH_PROG(PYTHON, python)
+[PGAC_PATH_PROGS(PYTHON, [python python2])
 if test x"$PYTHON" = x""; then
   AC_MSG_ERROR([Python not found])
 fi
@@ -18,9 +25,17 @@ fi
 
 # _PGAC_CHECK_PYTHON_DIRS
 # -----------------------
-# Determine the name of various directories of a given Python installation.
+# Determine the name of various directories of a given Python installation,
+# as well as the Python version.
 AC_DEFUN([_PGAC_CHECK_PYTHON_DIRS],
 [AC_REQUIRE([PGAC_PATH_PYTHON])
+python_fullversion=`${PYTHON} -c "import sys; print(sys.version)" | sed q`
+AC_MSG_NOTICE([using python $python_fullversion])
+# python_fullversion is typically n.n.n plus some trailing junk
+python_majorversion=`echo "$python_fullversion" | sed '[s/^\([0-9]*\).*/\1/]'`
+python_minorversion=`echo "$python_fullversion" | sed '[s/^[0-9]*\.\([0-9]*\).*/\1/]'`
+python_version=`echo "$python_fullversion" | sed '[s/^\([0-9]*\.[0-9]*\).*/\1/]'`
+
 AC_MSG_CHECKING([for Python distutils module])
 if "${PYTHON}" -c 'import distutils' 2>&AS_MESSAGE_LOG_FD
 then
@@ -30,8 +45,6 @@ else
     AC_MSG_ERROR([distutils module not found])
 fi
 AC_MSG_CHECKING([Python configuration directory])
-python_majorversion=`${PYTHON} -c "import sys; print(sys.version[[0]])"`
-python_version=`${PYTHON} -c "import sys; print(sys.version[[:3]])"`
 python_configdir=`${PYTHON} -c "import distutils.sysconfig; print(' '.join(filter(None,distutils.sysconfig.get_config_vars('LIBPL'))))"`
 AC_MSG_RESULT([$python_configdir])
 

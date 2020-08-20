@@ -1,6 +1,24 @@
 # config/programs.m4
 
 
+# PGAC_PATH_PROGS
+# ---------------
+# This wrapper for AC_PATH_PROGS behaves like that macro except when
+# VARIABLE is already set; in that case we just accept the value verbatim.
+# (AC_PATH_PROGS would accept it only if it looks like an absolute path.)
+# A desirable future improvement would be to convert a non-absolute-path
+# input into absolute form.
+AC_DEFUN([PGAC_PATH_PROGS],
+[if test -z "$$1"; then
+  AC_PATH_PROGS($@)
+else
+  # Report the value of $1 in configure's output in all cases.
+  AC_MSG_CHECKING([for $1])
+  AC_MSG_RESULT([$$1])
+fi
+])
+
+
 # PGAC_PATH_BISON
 # ---------------
 # Look for Bison, set the output variable BISON to its path if found.
