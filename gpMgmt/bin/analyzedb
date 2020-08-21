@@ -226,8 +226,6 @@ def get_partition_state_tuples(pg_port, dbname, catalog_schema, partition_info):
                     logger.info("Table %s.%s (%s) no longer exists and will not be analyzed", schemaname, partition_name, tupletable)
                 else:
                     logger.error(str(e))
-                if conn:
-                    conn.close()
                 # If there's an exception, the transaction is closed so we need to reconnect
                 conn = dbconn.connect(dburl)
             else:
