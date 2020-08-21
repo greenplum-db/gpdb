@@ -169,9 +169,11 @@ def get_partition_state_tuples(context, catalog_schema, partition_info):
                 modcount = execSQLForSingleton(conn, modcount_sql)
             except DatabaseError as e:
                 if "does not exist" in str(e):
-                    logger.debug("Table %s.%s (%s) no longer exists", schemaname, partition_name, tupletable)
+                    logger.info("Table %s.%s (%s) no longer exists and will not be analyzed", schemaname, partition_name, tupletable)
                 else:
                     logger.error(str(e))
+                # If there's an exception, the transaction is closed so we need to reconnect
+                conn = dbconn.connect(dburl)
             else:
                 num_sqls += 1
                 if num_sqls == 1000: # The choice of batch size was chosen arbitrarily
