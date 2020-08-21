@@ -203,31 +203,30 @@ def get_partition_state_tuples(pg_port, dbname, catalog_schema, partition_info):
     partition_list = list()
     dburl = dbconn.DbURL(port=pg_port, dbname=dbname)
     num_sqls = 0
-    conn = dbconn.connect(dburl)
-    for (oid, schemaname, partition_name, tupletable) in partition_info:
-        try:
-            modcount_sql = "select to_char(coalesce(sum(modcount::bigint), 0), '999999999999999999999') from gp_dist_random('%s.%s')" % (catalog_schema, tupletable)
-            modcount = dbconn.querySingleton(conn, modcount_sql)
-        except pg.DatabaseError as e:
-            if "does not exist" in str(e):
-                logger.info("Table %s.%s (%s) no longer exists and will not be analyzed", schemaname, partition_name, tupletable)
+    with closing(dbconn.connect(dburl)) as conn:
+        for (oid, schemaname, partition_name, tupletable) in partition_info:
+            try:
+                modcount_sql = "select to_char(coalesce(sum(modcount::bigint), 0), '999999999999999999999') from gp_dist_random('%s.%s')" % (catalog_schema, tupletable)
+                modcount = dbconn.querySingleton(conn, modcount_sql)
+            except pg.DatabaseError as e:
+                if "does not exist" in str(e):
+                    logger.info("Table %s.%s (%s) no longer exists and will not be analyzed", schemaname, partition_name, tupletable)
+                else:
+                    logger.error(str(e))
+                if conn:
+                    conn.close()
+                # If there's an exception, the transaction is closed so we need to reconnect
+                conn = dbconn.connect(dburl)
             else:
-                logger.error(str(e))
-            if conn:
-                conn.close()
-            # If there's an exception, the transaction is closed so we need to reconnect
-            conn = dbconn.connect(dburl)
-        else:
-            num_sqls += 1
-            if num_sqls == 1000: # The choice of batch size was chosen arbitrarily
-                logger.debug('Completed executing batch of 1000 tuple count SQLs')
-                conn.commit()
-                num_sqls = 0
-            if modcount:
-                modcount = modcount.strip()
-            validate_modcount(schemaname, partition_name, modcount)
-            partition_list.append((schemaname, partition_name, modcount))
-    conn.close()
+                num_sqls += 1
+                if num_sqls == 1000: # The choice of batch size was chosen arbitrarily
+                    logger.debug('Completed executing batch of 1000 tuple count SQLs')
+                    conn.commit()
+                    num_sqls = 0
+                if modcount:
+                    modcount = modcount.strip()
+                validate_modcount(schemaname, partition_name, modcount)
+                partition_list.append((schemaname, partition_name, modcount))
     return partition_list
 
 def validate_modcount(schema, tablename, cnt):
