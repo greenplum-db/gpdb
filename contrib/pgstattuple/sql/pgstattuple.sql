@@ -47,3 +47,27 @@ select pg_relpages(relname) from pg_class where relname = 'test_pkey';
 create index test_ginidx on test using gin (b);
 
 select * from pgstatginindex('test_ginidx');
+
+--
+-- Test cases for auxiliary system relations of appendonly table
+--
+create table ao_table
+(id int,
+ fname text,
+ lname text,
+ address1 text,
+ address2 text,
+ city text,
+ state text,
+ zip text)
+with (appendonly=true)
+distributed by (id);
+create index ao_table_fname_idx on ao_table (fname);
+
+select pgstattuple(blkdirrelid) from pg_appendonly where relid = 'ao_table'::regclass;
+select pgstattuple(segrelid) from pg_appendonly where relid = 'ao_table'::regclass;
+select pgstattuple(visimaprelid) from pg_appendonly where relid = 'ao_table'::regclass;
+
+select pgstattuple_approx(blkdirrelid) from pg_appendonly where relid = 'ao_table'::regclass;
+select pgstattuple_approx(segrelid) from pg_appendonly where relid = 'ao_table'::regclass;
+select pgstattuple_approx(visimaprelid) from pg_appendonly where relid = 'ao_table'::regclass;
