@@ -293,6 +293,25 @@ execute p3(1);
 execute p3(1);
 drop table test_prepare;
 
+-- test direct dispatch via gp_segment_id qual
+create table t_test_dd_via_segid(id int);
+insert into t_test_dd_via_segid select * from generate_series(1, 6);
+
+explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=0;
+select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=0;
+
+explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1;
+select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1;
+
+explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=2;
+select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=2;
+
+explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1 or gp_segment_id=2;
+select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1 or gp_segment_id=2;
+
+explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1 or gp_segment_id=2 or gp_segment_id=3;
+select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1 or gp_segment_id=2 or gp_segment_id=3;
+
 -- cleanup
 set test_print_direct_dispatch_info=off;
 

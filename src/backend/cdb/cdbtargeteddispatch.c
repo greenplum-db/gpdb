@@ -137,13 +137,76 @@ GetContentIdsFromPlanForSingleRelation(PlannerInfo *root, Plan *plan, int rangeT
 		/* fall through, policy will be NULL so we won't direct dispatch */
 	}
 
-	if (rte->forceDistRandom ||
-		policy == NULL ||
-		!GpPolicyIsHashPartitioned(policy))
+	if (rte->forceDistRandom ||	policy == NULL)
 	{
-		result.isDirectDispatch = false;
+		/*  we won't direct dispatch  */
+		if (rte->rtekind == RTE_RELATION)
+			relation_close(relation, NoLock);
+		result.haveProcessedAnyCalculations = true;
+		return result;
 	}
-	else
+
+	/*
+	 * We first test if the predict contains a qual like
+	 * gp_segment_id = some_const. This is very suitable
+	 * for a direct dispatch. If this leads to direct dispatch
+	 * then we just return because it does not need to
+	 * eval distkey.
+	 */
+	if (GpPolicyIsPartitioned(policy))
+	{
+		Var                *seg_id_var;
+		Oid                 vartypeid;
+		int32               type_mod;
+		Oid                 type_coll;
+		PossibleValueSet    pvs_segids;
+		Node              **seg_ids;
+		int                 len;
+		int                 i;
+		List               *contentIds = NULL;
+
+		get_atttypetypmodcoll(rte->relid, GpSegmentIdAttributeNumber,
+							  &vartypeid, &type_mod, &type_coll);
+		seg_id_var = makeVar(rangeTableIndex,
+							 GpSegmentIdAttributeNumber,
+							 vartypeid, type_mod, type_coll, 0);
+		pvs_segids = DeterminePossibleValueSet((Node *) qualification,
+											   (Node *) seg_id_var);
+		if (!pvs_segids.isAnyValuePossible)
+		{
+			seg_ids = GetPossibleValuesAsArray(&pvs_segids, &len);
+			if (len > 0 && len < policy->numsegments)
+			{
+				result.isDirectDispatch = true;
+				for (i = 0; i < len; i++)
+				{
+					Node *val = seg_ids[i];
+					if (IsA(val, Const))
+					{
+						int32 segid = DatumGetInt32(((Const *) val)->constvalue);
+						contentIds = list_append_unique_int(contentIds, segid);
+					}
+					else
+					{
+						result.isDirectDispatch = false;
+						break;
+					}
+				}
+			}
+		}
+
+		DeletePossibleValueSetData(&pvs_segids);
+		if (result.isDirectDispatch)
+		{
+			result.contentIds = contentIds;
+			result.haveProcessedAnyCalculations = true;
+			if (rte->rtekind == RTE_RELATION)
+				relation_close(relation, NoLock);
+			return result;
+		}
+	}
+
+	if (GpPolicyIsHashPartitioned(policy))
 	{
 		long		totalCombinations = 1;
 
