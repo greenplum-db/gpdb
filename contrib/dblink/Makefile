@@ -1,11 +1,16 @@
 # $PostgreSQL: pgsql/contrib/dblink/Makefile,v 1.15 2007/11/10 23:59:50 momjian Exp $
+# disable dblink on MaxOS as --exclude-libs and -Bstatic are not supported
+OS := $(shell uname -s)
+ifneq ($(OS),Darwin)
+	MODULE_big = dblink
+	PG_CPPFLAGS = -I$(libpq_srcdir)
+	SHLIB_LINK = -Wl,--exclude-libs=libpq.a -Wl,-Bstatic $(libpq) -Wl,-Bdynamic
+	OBJS	= dblink.o
 
-MODULE_big = dblink
-PG_CPPFLAGS = -I$(libpq_srcdir)
-OBJS	= dblink.o
+	DATA_built = dblink.sql
+	DATA = uninstall_dblink.sql
+endif
 
-DATA_built = dblink.sql 
-DATA = uninstall_dblink.sql 
 REGRESS = dblink
 REGRESS_OPTS = --init-file=$(top_builddir)/src/test/regress/init_file --dbname=contrib_regression
 
