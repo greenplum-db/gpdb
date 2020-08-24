@@ -49,7 +49,7 @@
  * We define FRONTEND here to include frontend libpq header files.
  */
 #ifdef LIBPQ_FE_H
-#error "libpq-fe.h" shouldn't be included before "dblink.c"
+#error "libpq-fe.h" should not be included before "dblink.c"
 #endif /* LIBPQ_FE_H */
 
 #ifndef FRONTEND
