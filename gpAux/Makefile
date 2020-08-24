@@ -695,7 +695,7 @@ copylibs : thirdparty-dist
 
 greenplum_path:
 	mkdir -p $(INSTLOC)
-	$(BUILDDIR)/gpMgmt/bin/generate-greenplum-path.sh $(INSTLOC) yes > $(INSTLOC)/greenplum_path.sh
+	$(BUILDDIR)/gpMgmt/bin/generate-greenplum-path.sh yes > $(INSTLOC)/greenplum_path.sh
 
 copylicense:
 	for proddir in $(INSTLOC) $(CLIENTSINSTLOC); do \
