@@ -1,12 +1,15 @@
 # contrib/dblink/Makefile
-
-MODULE_big = dblink
-OBJS	= dblink.o
-PG_CPPFLAGS = -I$(libpq_srcdir)
-SHLIB_LINK_INTERNAL = -Wl,--exclude-libs=libpq.a -Wl,-Bstatic $(libpq) -Wl,-Bdynamic
+# disbale dblink on MaxOS as --exclude-libs and -Bstatic are not supported
+OS := $(shell uname)
+ifneq ($(OS),Darwin)
+	MODULE_big = dblink
+	OBJS	= dblink.o
+	PG_CPPFLAGS = -I$(libpq_srcdir)
+	SHLIB_LINK_INTERNAL = -Wl,--exclude-libs=libpq.a -Wl,-Bstatic $(libpq) -Wl,-Bdynamic
 
 EXTENSION = dblink
 DATA = dblink--1.1.sql dblink--1.0--1.1.sql dblink--unpackaged--1.0.sql
+endif
 
 REGRESS = paths dblink
 REGRESS_OPTS = --dlpath=$(top_builddir)/src/test/regress \
