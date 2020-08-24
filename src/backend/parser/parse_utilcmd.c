@@ -2099,8 +2099,14 @@ transformDistributedBy(ParseState *pstate,
 	 * check for unique index.
 	 * If distrkeys is not determined by the above process,
 	 * we consider the most common columns in all unique indexes
-	 * as the distribution keys.
+	 * as the distribution keys. UNIQUE/PRIMARY KEY INDEX is a global constraint
+	 * for the table and we require the hash distribution keys map the same values
+	 * on the unique constraint to the same segment. So, the set of the distribution
+	 * keys must be a subset of the set of columns on the unique constraint.
+	 *
 	 * Note: the UNIQUE/PRIMARY KEY index is not only an index, but also a constraint.
+	 * Even CREATE TABLE LIKE clause includes only constraints, not indexes, we still
+	 * check the uniqueness to compute the distribution keys.
 	 */
 	foreach(lc, cxt->inh_indexes)
 	{
@@ -2111,6 +2117,7 @@ transformDistributedBy(ParseState *pstate,
 		index_stmt = (IndexStmt *) lfirst(lc);
 		if (!index_stmt->unique)
 			continue;
+
 		if (distrkeys)
 		{
 			foreach(cell, index_stmt->indexParams)
@@ -2118,7 +2125,6 @@ transformDistributedBy(ParseState *pstate,
 				IndexElem *iparam = lfirst(cell);
 				ListCell *dkcell;
 
-				/* FIXME: when iparam or iparam->name is NULL */
 				if (!iparam || !iparam->name)
 					continue;
 				foreach(dkcell, distrkeys)
@@ -2143,7 +2149,6 @@ transformDistributedBy(ParseState *pstate,
 			foreach(cell, index_stmt->indexParams)
 			{
 				IndexElem *iparam = lfirst(cell);
-				/* FIXME: when iparam or iparam->name is NULL */
 				if (iparam && iparam->name)
 				{
 					IndexElem *distrkey = makeNode(IndexElem);
@@ -2153,8 +2158,10 @@ transformDistributedBy(ParseState *pstate,
 				}
 			}
 		}
+
 		distrkeys = new_distrkeys;
 	}
+
 	if (gp_create_table_random_default_distribution && NIL == distrkeys)
 	{
 		Assert(NULL == likeDistributedBy);
