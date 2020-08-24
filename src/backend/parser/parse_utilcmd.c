@@ -2100,6 +2100,7 @@ transformDistributedBy(ParseState *pstate,
 	 * If distrkeys is not determined by the above process,
 	 * we consider the most common columns in all unique indexes
 	 * as the distribution keys.
+	 * Note: the UNIQUE/PRIMARY KEY index is not only an index, but also a constraint.
 	 */
 	foreach(lc, cxt->inh_indexes)
 	{
