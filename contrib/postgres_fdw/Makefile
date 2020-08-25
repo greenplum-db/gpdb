@@ -1,13 +1,16 @@
 # contrib/postgres_fdw/Makefile
+# disable postgre_fdw on MaxOS as --exclude-libs and -Bstatic are not supported
+OS := $(shell uname -s)
+ifneq ($(OS),Darwin)
+	MODULE_big = postgres_fdw
+	OBJS = postgres_fdw.o option.o deparse.o connection.o
 
-MODULE_big = postgres_fdw
-OBJS = postgres_fdw.o option.o deparse.o connection.o
+	PG_CPPFLAGS = -I$(libpq_srcdir)
+	SHLIB_LINK_INTERNAL = -Wl,--exclude-libs=libpq.a -Wl,-Bstatic $(libpq) -Wl,-Bdynamic
 
-PG_CPPFLAGS = -I$(libpq_srcdir)
-SHLIB_LINK_INTERNAL = -Wl,--exclude-libs=libpq.a -Wl,-Bstatic $(libpq) -Wl,-Bdynamic
-
-EXTENSION = postgres_fdw
-DATA = postgres_fdw--1.0.sql
+	EXTENSION = postgres_fdw
+	DATA = postgres_fdw--1.0.sql
+endif
 
 REGRESS = postgres_fdw gp_postgres_fdw
 
