@@ -700,7 +700,7 @@ fill_buffer(URL_CURL_FILE *curl, int want)
 		if (maxfd == -1)
 		{
 			elog(DEBUG2, "curl_multi_fdset set maxfd = %d", maxfd);
-			pg_usleep(100);
+			pg_usleep(100000);
 			// to call curl_multi_perform
 			nfds = 1;
 		}
