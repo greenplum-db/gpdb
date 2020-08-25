@@ -2,7 +2,7 @@
 # disable dblink on MaxOS as --exclude-libs and -Bstatic are not supported
 OS := $(shell uname -s)
 ifeq ($(OS),Darwin)
-$(error "dblink can't build on Mac")
+$(error "dblink can't be built on Mac")
 endif
 
 MODULE_big = dblink

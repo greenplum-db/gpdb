@@ -22,7 +22,7 @@ all:
 	$(MAKE) -C contrib/extprotocol all	
 	$(MAKE) -C contrib/citext all	
 ifeq ($(OS),Darwin)
-	@echo "dblink can't build on Mac"
+	@echo "dblink can't be built on Mac"
 else
 	$(MAKE) -C contrib/dblink all
 endif
