@@ -7,6 +7,7 @@
 subdir =
 top_builddir = .
 include $(top_builddir)/src/Makefile.global
+OS := $(shell uname -s)
 
 $(call recurse,all install,src config)
 
@@ -19,7 +20,11 @@ all:
 	$(MAKE) -C contrib/formatter_fixedwidth all
 	$(MAKE) -C contrib/fuzzystrmatch all
 	$(MAKE) -C contrib/extprotocol all	
+ifeq ($(OS),Darwin)
+	@echo "dblink can't be built on Mac"
+else
 	$(MAKE) -C contrib/dblink all
+endif
 	$(MAKE) -C contrib/indexscan all
 	$(MAKE) -C contrib/pageinspect all  # needed by src/test/isolation
 	$(MAKE) -C contrib/pg_upgrade_support all
@@ -59,7 +64,9 @@ install:
 	$(MAKE) -C contrib/formatter_fixedwidth $@
 	$(MAKE) -C contrib/fuzzystrmatch $@
 	$(MAKE) -C contrib/extprotocol $@
+ifneq ($(OS),Darwin)
 	$(MAKE) -C contrib/dblink $@
+endif
 	$(MAKE) -C contrib/indexscan $@ 
 	$(MAKE) -C contrib/pageinspect $@  # needed by src/test/isolation
 	$(MAKE) -C contrib/pg_upgrade_support $@
@@ -150,7 +157,10 @@ $(call recurse,check-world,src/test src/pl src/interfaces/ecpg contrib src/bin g
 ICW_TARGETS  = src/test src/pl src/interfaces/gppc
 ICW_TARGETS += contrib/amcheck contrib/auto_explain contrib/citext
 ICW_TARGETS += contrib/formatter_fixedwidth
-ICW_TARGETS += contrib/extprotocol contrib/dblink
+ICW_TARGETS += contrib/extprotocol
+ifneq ($(OS),Darwin)
+	ICW_TARGETS += contrib/dblink
+endif
 ICW_TARGETS += contrib/indexscan contrib/hstore contrib/pgcrypto
 # sslinfo depends on openssl
 ifeq ($(with_openssl), yes)
