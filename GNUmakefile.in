@@ -7,7 +7,7 @@
 subdir =
 top_builddir = .
 include $(top_builddir)/src/Makefile.global
-
+OS := $(shell uname -s)
 
 all:
 #	$(MAKE) -C doc all
@@ -21,7 +21,11 @@ all:
 	$(MAKE) -C contrib/fuzzystrmatch all
 	$(MAKE) -C contrib/extprotocol all	
 	$(MAKE) -C contrib/citext all	
+ifeq ($(OS),Darwin)
+	@echo "dblink can't build on Mac"
+else
 	$(MAKE) -C contrib/dblink all
+endif
 	$(MAKE) -C contrib/gp_error_handling all
 	$(MAKE) -C contrib/gp_sparse_vector all
 	$(MAKE) -C contrib/gp_distribution_policy all
@@ -50,7 +54,9 @@ install:
 	$(MAKE) -C contrib/fuzzystrmatch $@
 	$(MAKE) -C contrib/extprotocol $@
 	$(MAKE) -C contrib/citext $@
+ifneq ($(OS),Darwin)
 	$(MAKE) -C contrib/dblink $@
+endif
 	$(MAKE) -C contrib/gp_error_handling $@
 	$(MAKE) -C contrib/gp_sparse_vector $@
 	$(MAKE) -C contrib/gp_distribution_policy $@
@@ -80,7 +86,9 @@ installdirs uninstall:
 	$(MAKE) -C contrib/fuzzystrmatch $@
 	$(MAKE) -C contrib/extprotocol $@
 	$(MAKE) -C contrib/citext $@
+ifneq ($(OS),Darwin)
 	$(MAKE) -C contrib/dblink $@
+endif
 	$(MAKE) -C contrib/gp_error_handling $@
 	$(MAKE) -C contrib/gp_sparse_vector $@
 	$(MAKE) -C contrib/gp_distribution_policy $@
@@ -114,7 +122,9 @@ clean:
 	$(MAKE) -C contrib/fuzzystrmatch $@
 	$(MAKE) -C contrib/extprotocol $@
 	$(MAKE) -C contrib/citext $@
+ifneq ($(OS),Darwin)
 	$(MAKE) -C contrib/dblink $@
+endif
 	$(MAKE) -C contrib/gp_error_handling $@
 	$(MAKE) -C contrib/gp_sparse_vector $@
 	$(MAKE) -C contrib/gp_distribution_policy $@
@@ -166,7 +176,9 @@ installcheck-world:
 	$(MAKE) -C contrib/formatter_fixedwidth installcheck
 	$(MAKE) -C contrib/extprotocol installcheck
 	$(MAKE) -C contrib/citext installcheck
+ifneq ($(OS),Darwin)
 	$(MAKE) -C contrib/dblink installcheck
+endif
 	$(MAKE) -C contrib/indexscan installcheck
 	$(MAKE) -C contrib/hstore installcheck
 	$(MAKE) -C contrib/pgcrypto installcheck
