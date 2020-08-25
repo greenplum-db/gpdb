@@ -664,14 +664,14 @@ INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL cont
 explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=0;
                 QUERY PLAN                
 ------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)
+ Gather Motion 1:1  (slice1; segments: 1)
    ->  Seq Scan on t_test_dd_via_segid
          Filter: (gp_segment_id = 0)
  Optimizer: Postgres query optimizer
 (4 rows)
 
 select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=0;
-INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to SINGLE content
  gp_segment_id | id 
 ---------------+----
              0 |  2
@@ -682,14 +682,14 @@ INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1;
                 QUERY PLAN                
 ------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)
+ Gather Motion 1:1  (slice1; segments: 1)
    ->  Seq Scan on t_test_dd_via_segid
          Filter: (gp_segment_id = 1)
  Optimizer: Postgres query optimizer
 (4 rows)
 
 select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1;
-INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to SINGLE content
  gp_segment_id | id 
 ---------------+----
              1 |  1
@@ -698,14 +698,14 @@ INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=2;
                 QUERY PLAN                
 ------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)
+ Gather Motion 1:1  (slice1; segments: 1)
    ->  Seq Scan on t_test_dd_via_segid
          Filter: (gp_segment_id = 2)
  Optimizer: Postgres query optimizer
 (4 rows)
 
 select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=2;
-INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to SINGLE content
  gp_segment_id | id 
 ---------------+----
              2 |  5
@@ -715,14 +715,14 @@ INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1 or gp_segment_id=2;
                           QUERY PLAN                          
 --------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)
+ Gather Motion 2:1  (slice1; segments: 2)
    ->  Seq Scan on t_test_dd_via_segid
          Filter: ((gp_segment_id = 1) OR (gp_segment_id = 2))
  Optimizer: Postgres query optimizer
 (4 rows)
 
 select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1 or gp_segment_id=2;
-INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to PARTIAL contents: 1 2
  gp_segment_id | id 
 ---------------+----
              1 |  1
