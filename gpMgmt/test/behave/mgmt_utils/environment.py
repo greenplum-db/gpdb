@@ -67,6 +67,9 @@ def before_scenario(context, scenario):
         drop_database_if_exists(context, 'testdb')
 
 def after_scenario(context, scenario):
+    if 'cleanup_standby_host_failure' in context:
+        context.cleanup_standby_host_failure(context)
+
     if 'gpexpand' in context.feature.tags \
         or 'gpaddmirrors' in context.feature.tags \
         or 'gpinitstandby' in context.feature.tags:
