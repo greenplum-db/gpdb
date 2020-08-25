@@ -1453,7 +1453,8 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 	/*
 	 * Actual work_mem used and wanted
 	 */
-	if (es->analyze && es->verbose && ns->workmemused.vcnt > 0)
+	if (es->analyze && es->verbose && ns->workmemused.vcnt > 0 &&
+		ns->workmemused.vmax > 0)
 	{
 		if (es->format == EXPLAIN_FORMAT_TEXT)
 		{
@@ -1474,7 +1475,7 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 
 			appendStringInfo(es->str, "\n");
 
-			if (ns->workmemwanted.vcnt > 0)
+			if (ns->workmemwanted.vcnt > 0 && ns->workmemwanted.vmax > 0)
 			{
 				appendStringInfoSpaces(es->str, es->indent * 2);
 				cdbexplain_formatMemory(maxbuf, sizeof(maxbuf), ns->workmemwanted.vmax);
@@ -1512,7 +1513,7 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 			if (nodeSupportWorkfileCaching(planstate))
 				ExplainPropertyInteger("Workfile Spilling", NULL, ns->totalWorkfileCreated.vcnt, es);
 
-			if (ns->workmemwanted.vcnt > 0)
+			if (ns->workmemwanted.vcnt > 0 && ns->workmemwanted.vmax > 0)
 			{
 				ExplainPropertyInteger("Max Memory Wanted", "kB", kb(ns->workmemwanted.vmax), es);
 
