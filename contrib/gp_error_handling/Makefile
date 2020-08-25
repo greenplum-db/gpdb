@@ -24,4 +24,4 @@ installcheck: prepare_gpexterrorhandle_sql
 prepare_gpexterrorhandle_sql:
 	cp $(GPHOME)/share/postgresql/contrib/gpexterrorhandle.sql ./gpexterrorhandle.sql
 
-.PHONY: prepare_dblink_sql
+.PHONY: prepare_gpexterrorhandle_sql
