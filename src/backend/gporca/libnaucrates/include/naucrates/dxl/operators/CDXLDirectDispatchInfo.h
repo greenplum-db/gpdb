@@ -43,6 +43,8 @@ namespace gpdxl
 			// constants for determining segments to dispatch to
 			CDXLDatum2dArray *m_dispatch_identifer_datum_array;
 
+			// true indicates m_dispatch_identifer_datum_array contains raw
+			// gp_segment_id values rather than hashable datums
 			BOOL m_contains_raw_values;
 
 			// private copy ctor

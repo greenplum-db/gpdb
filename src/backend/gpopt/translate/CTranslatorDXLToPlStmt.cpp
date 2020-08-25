@@ -3956,26 +3956,29 @@ CTranslatorDXLToPlStmt::TranslateDXLDirectDispatchInfo
 	CDXLDatumArray *dxl_datum_array = (*dispatch_identifier_datum_arrays)[0];
 	GPOS_ASSERT(0 < dxl_datum_array->Size());
 
+	const ULONG length = dispatch_identifier_datum_arrays->Size();
+
 	if (dxl_direct_dispatch_info->FContainsRawValues()) {
-		const ULONG length = dispatch_identifier_datum_arrays->Size();
 		List *segids_list = NIL;
 
 		for (ULONG ul = 0; ul < length; ul++)
 		{
 			CDXLDatumArray *dispatch_identifier_datum_array = (*dispatch_identifier_datum_arrays)[ul];
-			INT value = (INT)GetDXLDatumGPDBValue(dispatch_identifier_datum_array);
+			GPOS_ASSERT(1 == dispatch_identifier_datum_array->Size());
+			Const *const_expr = (Const *) m_translator_dxl_to_scalar->TranslateDXLDatumToScalar(
+				(*dispatch_identifier_datum_array)[0]
+			);
 
-			if (value >= (INT)m_num_of_segments || value < -1) // invalid gp_segment_id (0 based)
+			if (const_expr->constvalue >= (INT)m_num_of_segments || const_expr->constvalue < -1) // invalid gp_segment_id (0 based)
 			{
 				return NIL;
 			}
-			segids_list = gpdb::LAppendInt(segids_list, value);
+			segids_list = gpdb::LAppendInt(segids_list, const_expr->constvalue);
 		}
 		return segids_list;
 	}
 
 	ULONG hash_code = GetDXLDatumGPDBHash(dxl_datum_array);
-	const ULONG length = dispatch_identifier_datum_arrays->Size();
 	for (ULONG ul = 0; ul < length; ul++)
 	{
 		CDXLDatumArray *dispatch_identifier_datum_array = (*dispatch_identifier_datum_arrays)[ul];
@@ -3991,24 +3994,6 @@ CTranslatorDXLToPlStmt::TranslateDXLDirectDispatchInfo
 	
 	List *segids_list = gpdb::LAppendInt(NIL, hash_code);
 	return segids_list;
-}
-
-ULONG
-CTranslatorDXLToPlStmt::GetDXLDatumGPDBValue
-	(
-	CDXLDatumArray *dxl_datum_array
-	)
-{
-	ULONG value = -1;
-	const ULONG length = dxl_datum_array->Size();
-
-	for (ULONG ul = 0; ul < length; ul++)
-	{
-		CDXLDatum *datum_dxl = (*dxl_datum_array)[ul];
-		Const *const_expr = (Const *) m_translator_dxl_to_scalar->TranslateDXLDatumToScalar(datum_dxl);
-		value = const_expr->constvalue;
-	}
-	return value;
 }
 
 //---------------------------------------------------------------------------
