@@ -42,18 +42,28 @@ namespace gpdxl
 
 			// constants for determining segments to dispatch to
 			CDXLDatum2dArray *m_dispatch_identifer_datum_array;
-		
+
+			BOOL m_contains_raw_values;
+
 			// private copy ctor
 			CDXLDirectDispatchInfo(const CDXLDirectDispatchInfo &);
 
 		public:
-			// ctor
 			explicit
 			CDXLDirectDispatchInfo(CDXLDatum2dArray *dispatch_identifer_datum_array);
+
+			// ctor
+			explicit
+			CDXLDirectDispatchInfo(CDXLDatum2dArray *dispatch_identifer_datum_array, BOOL contains_raw_values);
 
 			// dtor
 			virtual
 			~CDXLDirectDispatchInfo();
+
+			BOOL FContainsRawValues() const
+			{
+				return m_contains_raw_values;
+			}
 
 			// accessor to array of datums
 			CDXLDatum2dArray *GetDispatchIdentifierDatumArray() const

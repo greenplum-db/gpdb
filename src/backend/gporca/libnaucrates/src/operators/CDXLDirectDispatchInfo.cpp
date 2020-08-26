@@ -22,6 +22,14 @@
 using namespace gpos;
 using namespace gpdxl;
 
+CDXLDirectDispatchInfo::CDXLDirectDispatchInfo
+	(
+	CDXLDatum2dArray *dispatch_identifer_datum_array
+	)
+	: CDXLDirectDispatchInfo(dispatch_identifer_datum_array, false /* contains_raw_values */)
+{
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CDXLDirectDispatchInfo::CDXLDirectDispatchInfo
@@ -32,10 +40,12 @@ using namespace gpdxl;
 //---------------------------------------------------------------------------
 CDXLDirectDispatchInfo::CDXLDirectDispatchInfo
 	(
-	CDXLDatum2dArray *dispatch_identifer_datum_array
+	CDXLDatum2dArray *dispatch_identifer_datum_array,
+	BOOL contains_raw_values
 	)
 	:
-	m_dispatch_identifer_datum_array(dispatch_identifer_datum_array)
+	m_dispatch_identifer_datum_array(dispatch_identifer_datum_array),
+	m_contains_raw_values(contains_raw_values)
 {
 	GPOS_ASSERT(NULL != dispatch_identifer_datum_array);
 	

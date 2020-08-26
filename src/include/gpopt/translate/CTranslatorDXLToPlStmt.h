@@ -669,6 +669,9 @@ namespace gpdxl
 			// hash a DXL datum with GPDB's hash function
 			ULONG GetDXLDatumGPDBHash(CDXLDatumArray *dxl_datum_array);
 
+			// value of DXL datum
+			ULONG GetDXLDatumGPDBValue(CDXLDatumArray *dxl_datum_array);
+
 			// translate nest loop colrefs to GPDB nestparams
 			List *TranslateNestLoopParamList(CDXLColRefArray *pdrgdxlcrOuterRefs, CDXLTranslateContext *dxltrctxLeft, CDXLTranslateContext *dxltrctxRight);
 

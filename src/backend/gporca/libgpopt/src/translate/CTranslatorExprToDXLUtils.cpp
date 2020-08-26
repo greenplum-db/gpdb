@@ -2231,6 +2231,13 @@ CTranslatorExprToDXLUtils::PdxlddinfoSingleDistrKey
 	{
 		pdrgpdrgpdxldatum = PdrgpdrgpdxldatumFromDisjPointConstraint(mp, md_accessor, pcrDistrCol, pcnstrDistrCol);
 	}
+
+	BOOL useRawValues = false;
+	if (pcnstrDistrCol != NULL &&
+		pcnstrDistrCol->PcrsUsed()->PcrFirst()->Name().Equals(CDXLTokens::GetDXLTokenStr(EdxltokenGpSegmentIdColName)))
+	{
+		useRawValues = true;
+	}
 	
 	CRefCount::SafeRelease(pcnstrDistrCol);
 
@@ -2239,7 +2246,7 @@ CTranslatorExprToDXLUtils::PdxlddinfoSingleDistrKey
 		return NULL;
 	}
 	
-	return GPOS_NEW(mp) CDXLDirectDispatchInfo(pdrgpdrgpdxldatum);
+	return GPOS_NEW(mp) CDXLDirectDispatchInfo(pdrgpdrgpdxldatum, useRawValues);
 }
 
 

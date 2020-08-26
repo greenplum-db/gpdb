@@ -71,10 +71,8 @@ namespace gpopt
 				return m_str_name->Length();
 			}
 
-#ifdef GPOS_DEBUG
 			// comparison
 			BOOL Equals(const CName &) const;
-#endif // GPOS_DEBUG
 			
 			// debug print
 			IOstream &OsPrint(IOstream &) const;

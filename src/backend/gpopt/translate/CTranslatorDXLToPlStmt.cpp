@@ -3952,10 +3952,28 @@ CTranslatorDXLToPlStmt::TranslateDXLDirectDispatchInfo
 	{
 		return NIL;
 	}
-	
+
 	CDXLDatumArray *dxl_datum_array = (*dispatch_identifier_datum_arrays)[0];
 	GPOS_ASSERT(0 < dxl_datum_array->Size());
-		
+
+	if (dxl_direct_dispatch_info->FContainsRawValues()) {
+		const ULONG length = dispatch_identifier_datum_arrays->Size();
+		List *segids_list = NIL;
+
+		for (ULONG ul = 0; ul < length; ul++)
+		{
+			CDXLDatumArray *dispatch_identifier_datum_array = (*dispatch_identifier_datum_arrays)[ul];
+			INT value = (INT)GetDXLDatumGPDBValue(dispatch_identifier_datum_array);
+
+			if (value >= (INT)m_num_of_segments || value < -1) // invalid gp_segment_id (0 based)
+			{
+				return NIL;
+			}
+			segids_list = gpdb::LAppendInt(segids_list, value);
+		}
+		return segids_list;
+	}
+
 	ULONG hash_code = GetDXLDatumGPDBHash(dxl_datum_array);
 	const ULONG length = dispatch_identifier_datum_arrays->Size();
 	for (ULONG ul = 0; ul < length; ul++)
@@ -3973,6 +3991,24 @@ CTranslatorDXLToPlStmt::TranslateDXLDirectDispatchInfo
 	
 	List *segids_list = gpdb::LAppendInt(NIL, hash_code);
 	return segids_list;
+}
+
+ULONG
+CTranslatorDXLToPlStmt::GetDXLDatumGPDBValue
+	(
+	CDXLDatumArray *dxl_datum_array
+	)
+{
+	ULONG value = -1;
+	const ULONG length = dxl_datum_array->Size();
+
+	for (ULONG ul = 0; ul < length; ul++)
+	{
+		CDXLDatum *datum_dxl = (*dxl_datum_array)[ul];
+		Const *const_expr = (Const *) m_translator_dxl_to_scalar->TranslateDXLDatumToScalar(datum_dxl);
+		value = const_expr->constvalue;
+	}
+	return value;
 }
 
 //---------------------------------------------------------------------------

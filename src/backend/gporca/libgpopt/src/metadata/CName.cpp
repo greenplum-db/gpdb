@@ -176,7 +176,6 @@ CName::DeepCopy
 }
 
 
-#ifdef GPOS_DEBUG
 //---------------------------------------------------------------------------
 //	@function:
 //		CName::Equals
@@ -195,7 +194,6 @@ CName::Equals
 	return m_str_name->Equals((name.Pstr()));
 }
 
-#endif // GPOS_DEBUG
 
 
 //---------------------------------------------------------------------------
