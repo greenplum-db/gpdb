@@ -31,7 +31,7 @@ CMDRelationCtasGPDB::CMDRelationCtasGPDB(
 	BOOL fTemporary, BOOL fHasOids, Erelstoragetype rel_storage_type,
 	Ereldistrpolicy rel_distr_policy, CMDColumnArray *mdcol_array,
 	ULongPtrArray *distr_col_array, IMdIdArray *distr_opfamiles,
-	ULongPtr2dArray *keyset_array,
+	IMdIdArray *distr_opclasses, ULongPtr2dArray *keyset_array,
 	CDXLCtasStorageOptions *dxl_ctas_storage_options,
 	IntPtrArray *vartypemod_array)
 	: m_mp(mp),
@@ -45,6 +45,7 @@ CMDRelationCtasGPDB::CMDRelationCtasGPDB(
 	  m_md_col_array(mdcol_array),
 	  m_distr_col_array(distr_col_array),
 	  m_distr_opfamilies(distr_opfamiles),
+	  m_distr_opclasses(distr_opclasses),
 	  m_keyset_array(keyset_array),
 	  m_system_columns(0),
 	  m_nondrop_col_pos_array(NULL),
@@ -365,6 +366,11 @@ CMDRelationCtasGPDB::Serialize(CXMLSerializer *xml_serializer) const
 			xml_serializer, m_distr_opfamilies,
 			CDXLTokens::GetDXLTokenStr(EdxltokenRelDistrOpfamilies),
 			CDXLTokens::GetDXLTokenStr(EdxltokenRelDistrOpfamily));
+
+		SerializeMDIdList(
+			xml_serializer, m_distr_opclasses,
+			CDXLTokens::GetDXLTokenStr(EdxltokenRelDistrOpclasses),
+			CDXLTokens::GetDXLTokenStr(EdxltokenRelDistrOpclass));
 	}
 
 	xml_serializer->CloseElement(

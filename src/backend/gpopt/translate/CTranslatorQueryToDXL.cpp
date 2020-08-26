@@ -898,6 +898,8 @@ CTranslatorQueryToDXL::TranslateCTASToDXL()
 		IMDRelation::EreldistrRandom;
 	ULongPtrArray *distribution_colids = NULL;
 	IMdIdArray *distr_opfamilies = NULL;
+	IMdIdArray *distr_opclasses = NULL;
+
 
 	if (NULL != m_query->intoPolicy)
 	{
@@ -908,6 +910,8 @@ CTranslatorQueryToDXL::TranslateCTASToDXL()
 		{
 			distribution_colids = GPOS_NEW(m_mp) ULongPtrArray(m_mp);
 			distr_opfamilies = GPOS_NEW(m_mp) IMdIdArray(m_mp);
+			distr_opclasses = GPOS_NEW(m_mp) IMdIdArray(m_mp);
+
 
 			for (ULONG ul = 0; ul < (ULONG) m_query->intoPolicy->nattrs; ul++)
 			{
@@ -919,6 +923,8 @@ CTranslatorQueryToDXL::TranslateCTASToDXL()
 					gpdb::GetOpclassFamily(m_query->intoPolicy->opclasses[ul]);
 				GPOS_ASSERT(InvalidOid != opfamily);
 				distr_opfamilies->Append(GPOS_NEW(m_mp) CMDIdGPDB(opfamily));
+				distr_opclasses->Append(GPOS_NEW(m_mp) CMDIdGPDB(
+					m_query->intoPolicy->opclasses[ul]));
 			}
 		}
 	}
@@ -969,8 +975,9 @@ CTranslatorQueryToDXL::TranslateCTASToDXL()
 		m_mp, mdid, md_schema_name, md_relname, dxl_col_descr_array,
 		GPOS_NEW(m_mp) CDXLCtasStorageOptions(
 			md_tablespace_name, ctas_commit_action, ctas_storage_options),
-		rel_distr_policy, distribution_colids, distr_opfamilies, fTempTable,
-		has_oids, rel_storage_type, source_array, var_typmods);
+		rel_distr_policy, distribution_colids, distr_opfamilies,
+		distr_opclasses, fTempTable, has_oids, rel_storage_type, source_array,
+		var_typmods);
 
 	return GPOS_NEW(m_mp) CDXLNode(m_mp, ctas_dxlop, query_dxlnode);
 }

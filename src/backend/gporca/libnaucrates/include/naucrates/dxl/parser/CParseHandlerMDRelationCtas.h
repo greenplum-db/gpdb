@@ -64,6 +64,9 @@ public:
 
 	// distribution opfamilies parse handler
 	CParseHandlerBase *m_opfamilies_parse_handler;
+
+	// distribution opclasses parse handler
+	CParseHandlerBase *m_opclasses_parse_handler;
 };
 }  // namespace gpdxl
 

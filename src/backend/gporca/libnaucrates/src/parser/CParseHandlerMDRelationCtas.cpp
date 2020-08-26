@@ -45,7 +45,8 @@ CParseHandlerMDRelationCtas::CParseHandlerMDRelationCtas(
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerMDRelation(mp, parse_handler_mgr, parse_handler_root),
 	  m_vartypemod_array(NULL),
-	  m_opfamilies_parse_handler(NULL)
+	  m_opfamilies_parse_handler(NULL),
+	  m_opclasses_parse_handler(NULL)
 {
 }
 
@@ -75,6 +76,22 @@ CParseHandlerMDRelationCtas::StartElement(const XMLCh *const element_uri,
 		this->Append(m_opfamilies_parse_handler);
 		m_opfamilies_parse_handler->startElement(
 			element_uri, element_local_name, element_qname, attrs);
+
+		return;
+	}
+
+	if (0 == XMLString::compareString(
+				 CDXLTokens::XmlstrToken(EdxltokenRelDistrOpclasses),
+				 element_local_name))
+	{
+		// parse handler for check constraints
+		m_opclasses_parse_handler = CParseHandlerFactory::GetParseHandler(
+			m_mp, CDXLTokens::XmlstrToken(EdxltokenMetadataIdList),
+			m_parse_handler_mgr, this);
+		m_parse_handler_mgr->ActivateParseHandler(m_opclasses_parse_handler);
+		this->Append(m_opclasses_parse_handler);
+		m_opclasses_parse_handler->startElement(element_uri, element_local_name,
+												element_qname, attrs);
 
 		return;
 	}
@@ -189,6 +206,7 @@ CParseHandlerMDRelationCtas::EndElement(const XMLCh *const,	 // element_uri,
 	dxl_ctas_storage_options->AddRef();
 
 	IMdIdArray *distr_opfamilies = NULL;
+	IMdIdArray *distr_opclasses = NULL;
 	if (m_rel_distr_policy == IMDRelation::EreldistrHash &&
 		m_opfamilies_parse_handler != NULL)
 	{
@@ -196,13 +214,17 @@ CParseHandlerMDRelationCtas::EndElement(const XMLCh *const,	 // element_uri,
 							   m_opfamilies_parse_handler)
 							   ->GetMdIdArray();
 		distr_opfamilies->AddRef();
+		distr_opclasses = dynamic_cast<CParseHandlerMetadataIdList *>(
+							  m_opclasses_parse_handler)
+							  ->GetMdIdArray();
+		distr_opclasses->AddRef();
 	}
 
 	m_imd_obj = GPOS_NEW(m_mp) CMDRelationCtasGPDB(
 		m_mp, m_mdid, m_mdname_schema, m_mdname, m_is_temp_table, m_has_oids,
 		m_rel_storage_type, m_rel_distr_policy, md_col_array, m_distr_col_array,
-		distr_opfamilies, m_key_sets_arrays, dxl_ctas_storage_options,
-		m_vartypemod_array);
+		distr_opfamilies, distr_opclasses, m_key_sets_arrays,
+		dxl_ctas_storage_options, m_vartypemod_array);
 
 	// deactivate handler
 	m_parse_handler_mgr->DeactivateHandler();

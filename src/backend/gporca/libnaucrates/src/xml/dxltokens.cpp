@@ -526,6 +526,9 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenRelDistrOpfamilies, GPOS_WSZ_LIT("DistrOpfamilies")},
 		{EdxltokenRelDistrOpfamily, GPOS_WSZ_LIT("DistrOpfamily")},
 
+		{EdxltokenRelDistrOpclasses, GPOS_WSZ_LIT("DistrOpclasses")},
+		{EdxltokenRelDistrOpclass, GPOS_WSZ_LIT("DistrOpclass")},
+
 		{EdxltokenExtRelRejLimit, GPOS_WSZ_LIT("RejectLimit")},
 		{EdxltokenExtRelRejLimitInRows, GPOS_WSZ_LIT("RejectLimitInRows")},
 		{EdxltokenExtRelFmtErrRel, GPOS_WSZ_LIT("FormatErrorRelId")},

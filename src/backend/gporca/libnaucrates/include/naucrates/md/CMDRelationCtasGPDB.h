@@ -80,6 +80,9 @@ private:
 	// distribution opfamilies
 	IMdIdArray *m_distr_opfamilies;
 
+	// distribution opclasses
+	IMdIdArray *m_distr_opclasses;
+
 	// array of key sets
 	ULongPtr2dArray *m_keyset_array;
 
@@ -107,16 +110,14 @@ private:
 
 public:
 	// ctor
-	CMDRelationCtasGPDB(CMemoryPool *mp, IMDId *mdid, CMDName *mdname_schema,
-						CMDName *mdname, BOOL fTemporary, BOOL fHasOids,
-						Erelstoragetype rel_storage_type,
-						Ereldistrpolicy rel_distr_policy,
-						CMDColumnArray *mdcol_array,
-						ULongPtrArray *distr_col_array,
-						IMdIdArray *distr_opfamilies,
-						ULongPtr2dArray *keyset_array,
-						CDXLCtasStorageOptions *dxl_ctas_storage_options,
-						IntPtrArray *vartypemod_array);
+	CMDRelationCtasGPDB(
+		CMemoryPool *mp, IMDId *mdid, CMDName *mdname_schema, CMDName *mdname,
+		BOOL fTemporary, BOOL fHasOids, Erelstoragetype rel_storage_type,
+		Ereldistrpolicy rel_distr_policy, CMDColumnArray *mdcol_array,
+		ULongPtrArray *distr_col_array, IMdIdArray *distr_opfamilies,
+		IMdIdArray *distr_opclasses, ULongPtr2dArray *keyset_array,
+		CDXLCtasStorageOptions *dxl_ctas_storage_options,
+		IntPtrArray *vartypemod_array);
 
 	// dtor
 	virtual ~CMDRelationCtasGPDB();
@@ -232,6 +233,12 @@ public:
 
 	// return the position of a column in the metadata object given the attribute number in the system catalog
 	virtual ULONG GetPosFromAttno(INT attno) const;
+
+	virtual IMdIdArray *
+	GetDistrOpClasses() const
+	{
+		return m_distr_opclasses;
+	}
 
 	// retrieve the id of the metadata cache index at the given position
 	virtual IMDId *IndexMDidAt(ULONG  // pos
