@@ -215,9 +215,14 @@ namespace gpopt
 					)
 					const
 			{
-				return m_pcr == colref ||
-					(m_pcr->IsSystemCol() &&
-					 m_pcr->Name().Equals(CDXLTokens::GetDXLTokenStr(EdxltokenGpSegmentIdColName)));
+				return m_pcr == colref;
+			}
+
+			// check if constraint is on the gp_segment_id column
+			virtual
+			BOOL FConstraintOnSegmentId()
+			{
+				return m_pcr->IsSystemCol() && m_pcr->Name().Equals(CDXLTokens::GetDXLTokenStr(EdxltokenGpSegmentIdColName));
 			}
 
 			// return a copy of the constraint with remapped columns

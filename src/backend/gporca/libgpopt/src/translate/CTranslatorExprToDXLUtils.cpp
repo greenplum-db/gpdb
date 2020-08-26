@@ -2206,6 +2206,17 @@ CTranslatorExprToDXLUtils::PdxlddinfoSingleDistrKey
 	const CColRef *pcrDistrCol = CScalarIdent::PopConvert(pexprHashed->Pop())->Pcr();
 	
 	CConstraint *pcnstrDistrCol = pcnstr->Pcnstr(mp, pcrDistrCol);
+	CConstraintInterval *pcnstrInterval;
+	if (pcnstrDistrCol == NULL && (pcnstrInterval = dynamic_cast<CConstraintInterval *>(pcnstr)))
+	{
+		if (pcnstrInterval->FConstraintOnSegmentId())
+		{
+			// If the constraint is on gp_segment_id then we trick ourselves into
+			// considering the constraint as being on a distribution column.
+			pcnstrDistrCol = pcnstr;
+			pcrDistrCol = pcnstrInterval->Pcr();
+		}
+	}
 	
 	CDXLDatum2dArray *pdrgpdrgpdxldatum = NULL;
 	

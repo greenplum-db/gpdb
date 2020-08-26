@@ -1001,9 +1001,7 @@ CConstraintInterval::Pcnstr
 	const CColRef *colref
 	)
 {
-	if (m_pcr == colref ||
-		(m_pcr->IsSystemCol() &&
-		m_pcr->Name().Equals(CDXLTokens::GetDXLTokenStr(EdxltokenGpSegmentIdColName))))
+	if (m_pcr == colref)
 	{
 		this->AddRef();
 		return this;
