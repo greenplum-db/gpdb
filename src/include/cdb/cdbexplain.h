@@ -43,13 +43,13 @@ cdbexplain_agg_init0(CdbExplain_Agg *agg)
 static inline bool
 cdbexplain_agg_upd(CdbExplain_Agg *agg, double v, int id)
 {
-    if (v > 0)
+    if (v >= 0)
     {
         agg->vsum += v;
         agg->vcnt++;
 
         if (v > agg->vmax ||
-            agg->vcnt == 0)
+            agg->vcnt == 1)
         {
             agg->vmax = v;
             agg->imax = id;
