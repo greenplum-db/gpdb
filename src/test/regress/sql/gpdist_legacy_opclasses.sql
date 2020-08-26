@@ -237,3 +237,23 @@ select dp.localoid::regclass::name as name, oc.opcname
     on oc.oid::text = dp.distclass::text
  where dp.localoid in ('ctastest_on'::regclass::oid,
                        'ctastest_off'::regclass::oid);
+-- CTAS should use value of gp_use_legacy_hashops when setting the distribution policy based on an existing table
+set gp_use_legacy_hashops=on;
+create table ctas_base_legacy as select unnest(array[1,2,3]) as col distributed by (col);
+set gp_use_legacy_hashops=off;
+create table ctas_from_legacy as select * from ctas_base_legacy distributed by (col);
+
+create table ctas_base_nonlegacy as select unnest(array[1,2,3]) as col distributed by (col);
+set gp_use_legacy_hashops=on;
+create table ctas_from_nonlegacy as select * from ctas_base_nonlegacy distributed by (col);
+
+select dp.localoid::regclass::name as name, oc.opcname
+  from gp_distribution_policy dp
+  join pg_opclass oc
+    on oc.oid::text = dp.distclass::text
+ where dp.localoid in ('ctas_base_legacy'::regclass::oid,
+                       'ctas_from_legacy'::regclass::oid,
+                       'ctas_base_nonlegacy'::regclass::oid,
+                       'ctas_from_nonlegacy'::regclass::oid);
+select * from ctas_from_legacy where col=1;
+select * from ctas_from_nonlegacy where col=1;

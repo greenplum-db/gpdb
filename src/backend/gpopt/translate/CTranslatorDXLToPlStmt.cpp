@@ -5149,7 +5149,7 @@ CTranslatorDXLToPlStmt::TranslateDXLPhyCtasToDistrPolicy
 			Oid typeoid = gpdb::ExprType((Node *) tle->expr);
 
 			distr_policy->attrs[ul] = col_pos_idx + 1;
-			distr_policy->opclasses[ul] = m_dxl_to_plstmt_context->GetDistributionHashOpclassForType(typeoid);
+			distr_policy->opclasses[ul] = gpdb::GetColumnDefOpclassForType(NIL, typeoid);
 		}
 	}
 	return distr_policy;
