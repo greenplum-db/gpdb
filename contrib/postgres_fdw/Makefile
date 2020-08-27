@@ -1,7 +1,7 @@
 # contrib/postgres_fdw/Makefile
 # disable postgre_fdw on MaxOS as --exclude-libs and -Bstatic are not supported
 OS := $(shell uname -s)
-ifneq ($(OS),Darwin)
+ifeq ($(OS),Darwin)
 $(error "postgres_fdw can't be built on Mac")
 endif
 
