@@ -2360,11 +2360,9 @@ CTranslatorRelcacheToDXL::RetrieveColStats
 
 	// null frequency and NDV
 	CDouble null_freq(0.0);
-	int null_ndv = 0;
 	if (CStatistics::Epsilon < form_pg_stats->stanullfrac)
 	{
 		null_freq = form_pg_stats->stanullfrac;
-		null_ndv = 1;
 	}
 
 	// column width
@@ -2684,7 +2682,6 @@ CTranslatorRelcacheToDXL::RetrieveCast
 	CMDIdCast *mdid_cast = CMDIdCast::CastMdid(mdid);
 	IMDId *mdid_src = mdid_cast->MdidSrc();
 	IMDId *mdid_dest = mdid_cast->MdidDest();
-	IMDCast::EmdCoercepathType coercePathType;
 
 	OID src_oid = CMDIdGPDB::CastMdid(mdid_src)->Oid();
 	OID dest_oid = CMDIdGPDB::CastMdid(mdid_dest)->Oid();
@@ -2725,7 +2722,6 @@ CTranslatorRelcacheToDXL::RetrieveCast
 	switch (pathtype) {
 		case COERCION_PATH_ARRAYCOERCE:
 		{
-			coercePathType = IMDCast::EmdtArrayCoerce;
 			return GPOS_NEW(mp) CMDArrayCoerceCastGPDB(mp, mdid, mdname, mdid_src, mdid_dest, is_binary_coercible, GPOS_NEW(mp) CMDIdGPDB(cast_fn_oid), IMDCast::EmdtArrayCoerce, default_type_modifier, false, EdxlcfImplicitCast, -1);
 		}
 			break;
