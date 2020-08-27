@@ -3960,6 +3960,7 @@ CTranslatorDXLToPlStmt::TranslateDXLDirectDispatchInfo
 
 	if (dxl_direct_dispatch_info->FContainsRawValues()) {
 		List *segids_list = NIL;
+		INT segid;
 		Const *const_expr = NULL;
 
 		for (ULONG ul = 0; ul < length; ul++)
@@ -3970,9 +3971,10 @@ CTranslatorDXLToPlStmt::TranslateDXLDirectDispatchInfo
 				(*dispatch_identifier_datum_array)[0]
 			);
 
-			if ((const_expr->constvalue >= -1 && const_expr->constvalue < (INT)m_num_of_segments))
+			segid = DatumGetInt32(const_expr->constvalue);
+			if (segid >= -1 && segid < (INT)m_num_of_segments)
 			{
-				segids_list = gpdb::LAppendInt(segids_list, const_expr->constvalue);
+				segids_list = gpdb::LAppendInt(segids_list, segid);
 			}
 		}
 
@@ -3981,7 +3983,7 @@ CTranslatorDXLToPlStmt::TranslateDXLDirectDispatchInfo
 			// If no valid segids were found, and there were items in the
 			// dispatch identifier array, then append the last item to handle
 			// error in the same place as planner for consistency.
-			segids_list = gpdb::LAppendInt(segids_list, const_expr->constvalue);
+			segids_list = gpdb::LAppendInt(segids_list, segid);
 		}
 		return segids_list;
 	}
