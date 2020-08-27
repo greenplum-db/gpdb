@@ -1,0 +1,411 @@
+-- GUC preserve_json_illegal_escape and bad escapes with \u tests for json and jsonb
+-- Set GUC value
+SET gp_json_preserve_ill_formed = true;
+SET gp_json_preserve_ill_formed_prefix = "##";
+-- first json
+-- basic unicode input, the GUC doesn't handle those errors as well.
+SELECT '"\u"'::json;			-- ERROR, incomplete escape
+ERROR:  invalid input syntax for type json
+LINE 1: SELECT '"\u"'::json;
+               ^
+DETAIL:  "\u" must be followed by four hexadecimal digits.
+CONTEXT:  JSON data, line 1: "\u"
+SELECT '"\u00"'::json;			-- ERROR, incomplete escape
+ERROR:  invalid input syntax for type json
+LINE 1: SELECT '"\u00"'::json;
+               ^
+DETAIL:  "\u" must be followed by four hexadecimal digits.
+CONTEXT:  JSON data, line 1: "\u00"
+SELECT '"\u000g"'::json;		-- ERROR, g is not a hex digit
+ERROR:  invalid input syntax for type json
+LINE 1: SELECT '"\u000g"'::json;
+               ^
+DETAIL:  "\u" must be followed by four hexadecimal digits.
+CONTEXT:  JSON data, line 1: "\u000g...
+SELECT '"\u0000"'::json;		-- OK, legal escape
+   json   
+----------
+ "\u0000"
+(1 row)
+
+SELECT '"\uaBcD"'::json;		-- OK, uppercase and lower case both OK
+   json   
+----------
+ "\uaBcD"
+(1 row)
+
+-- handling of unicode surrogate pairs
+select json '{ "a":  "\ud83d\ude04\ud83d\udc36" }' -> 'a' as correct_in_utf8;
+      correct_in_utf8       
+----------------------------
+ "\ud83d\ude04\ud83d\udc36"
+(1 row)
+
+select json '{ "a":  "\ud83d\ud83d" }' -> 'a'; -- 2 high surrogates in a row
+    ?column?    
+----------------
+ "\ud83d\ud83d"
+(1 row)
+
+select json '{ "a":  "\ude04\ud83d" }' -> 'a'; -- surrogates in wrong order
+    ?column?    
+----------------
+ "\ude04\ud83d"
+(1 row)
+
+select json '{ "a":  "\ud83dX" }' -> 'a'; -- orphan high surrogate
+ ?column?  
+-----------
+ "\ud83dX"
+(1 row)
+
+select json '{ "a":  "\ude04X" }' -> 'a'; -- orphan low surrogate
+ ?column?  
+-----------
+ "\ude04X"
+(1 row)
+
+-- handling of simple unicode escapes
+select json '{ "a":  "the Copyright \u00a9 sign" }' as correct_in_utf8;
+            correct_in_utf8            
+---------------------------------------
+ { "a":  "the Copyright \u00a9 sign" }
+(1 row)
+
+select json '{ "a":  "dollar \u0024 character" }' as correct_everywhere;
+         correct_everywhere          
+-------------------------------------
+ { "a":  "dollar \u0024 character" }
+(1 row)
+
+select json '{ "a":  "dollar \\u0024 character" }' as not_an_escape;
+            not_an_escape             
+--------------------------------------
+ { "a":  "dollar \\u0024 character" }
+(1 row)
+
+select json '{ "a":  "null \u0000 escape" }' as not_unescaped;
+         not_unescaped          
+--------------------------------
+ { "a":  "null \u0000 escape" }
+(1 row)
+
+select json '{ "a":  "null \\u0000 escape" }' as not_an_escape;
+          not_an_escape          
+---------------------------------
+ { "a":  "null \\u0000 escape" }
+(1 row)
+
+select json '{ "a":  "the Copyright \u00a9 sign" }' ->> 'a' as correct_in_utf8;
+   correct_in_utf8    
+----------------------
+ the Copyright © sign
+(1 row)
+
+select json '{ "a":  "dollar \u0024 character" }' ->> 'a' as correct_everywhere;
+ correct_everywhere 
+--------------------
+ dollar $ character
+(1 row)
+
+select json '{ "a":  "dollar \\u0024 character" }' ->> 'a' as not_an_escape;
+      not_an_escape      
+-------------------------
+ dollar \u0024 character
+(1 row)
+
+select json '{ "a":  "null \u0000 escape" }' ->> 'a' as fails;
+        fails         
+----------------------
+ null ##\u0000 escape
+(1 row)
+
+select json '{ "a":  "null \\u0000 escape" }' ->> 'a' as not_an_escape;
+   not_an_escape    
+--------------------
+ null \u0000 escape
+(1 row)
+
+-- ill-formed escaped sequences in key
+select json '{ "\u0000": "abc" }' -> '##\u0000'; -- \u0000
+ ?column? 
+----------
+ "abc"
+(1 row)
+
+select json '{ "\u0000X": "abc" }' -> '##\u0000X'; -- \u0000 followed by a ASCII char
+ ?column? 
+----------
+ "abc"
+(1 row)
+
+select json '{ "Y\u0000": "abc" }' -> 'Y##\u0000'; -- \u0000 following a ASCII char
+ ?column? 
+----------
+ "abc"
+(1 row)
+
+select json '{ "Y\u0000X": "abc" }' -> 'Y##\u0000X'; -- \u0000 in between two ASCII chars
+ ?column? 
+----------
+ "abc"
+(1 row)
+
+select json '{ "\ud83dX": "abc" }' -> '##\ud83dX'; -- orphan high surrogate
+ ?column? 
+----------
+ "abc"
+(1 row)
+
+select json '{ "\ude04X": "abc" }' -> '##\ude04X'; -- orphan low surrogate
+ ?column? 
+----------
+ "abc"
+(1 row)
+
+select json '{ "\uDe04X": "abc" }' -> '##\uDe04X'; -- orphan low surrogate, the uppercase should be preserved
+ ?column? 
+----------
+ "abc"
+(1 row)
+
+-- then jsonb
+-- basic unicode input
+SELECT '"\u"'::jsonb;			-- ERROR, incomplete escape
+ERROR:  invalid input syntax for type json
+LINE 1: SELECT '"\u"'::jsonb;
+               ^
+DETAIL:  "\u" must be followed by four hexadecimal digits.
+CONTEXT:  JSON data, line 1: "\u"
+SELECT '"\u00"'::jsonb;			-- ERROR, incomplete escape
+ERROR:  invalid input syntax for type json
+LINE 1: SELECT '"\u00"'::jsonb;
+               ^
+DETAIL:  "\u" must be followed by four hexadecimal digits.
+CONTEXT:  JSON data, line 1: "\u00"
+SELECT '"\u000g"'::jsonb;		-- ERROR, g is not a hex digit
+ERROR:  invalid input syntax for type json
+LINE 1: SELECT '"\u000g"'::jsonb;
+               ^
+DETAIL:  "\u" must be followed by four hexadecimal digits.
+CONTEXT:  JSON data, line 1: "\u000g...
+SELECT '"\u0045"'::jsonb;		-- OK, legal escape
+ jsonb 
+-------
+ "E"
+(1 row)
+
+SELECT '"\u0000"'::jsonb;		-- ERROR, we don't support U+0000
+    jsonb    
+-------------
+ "##\\u0000"
+(1 row)
+
+-- use octet_length here so we don't get an odd unicode char in the
+-- output
+SELECT octet_length('"\uaBcD"'::jsonb::text); -- OK, uppercase and lower case both OK
+ octet_length 
+--------------
+            5
+(1 row)
+
+-- since "\u0000" will be represented as the original escaped form string, it will has
+-- the same length as "\\u0000"
+SELECT octet_length('"\u0000"'::jsonb::text); -- OK, represented as "\u0000"
+ octet_length 
+--------------
+           11
+(1 row)
+
+SELECT octet_length('"\u0000"'::jsonb::text); -- OK, totoally legal, represented as the same as the above one
+ octet_length 
+--------------
+           11
+(1 row)
+
+-- handling of unicode surrogate pairs
+SELECT octet_length((jsonb '{ "a":  "\ud83d\ude04\ud83d\udc36" }' -> 'a')::text) AS correct_in_utf8;
+ correct_in_utf8 
+-----------------
+              10
+(1 row)
+
+SELECT jsonb '{ "a":  "\ud83d\ud83d" }' -> 'a'; -- 2 high surrogates in a row
+       ?column?       
+----------------------
+ "##\\ud83d##\\ud83d"
+(1 row)
+
+SELECT jsonb '{ "a":  "\ude04\ud83d" }' -> 'a'; -- surrogates in wrong order
+       ?column?       
+----------------------
+ "##\\ude04##\\ud83d"
+(1 row)
+
+SELECT jsonb '{ "a":  "\ud83dX" }' -> 'a'; -- orphan high surrogate
+   ?column?   
+--------------
+ "##\\ud83dX"
+(1 row)
+
+SELECT jsonb '{ "a":  "\ude04X" }' -> 'a'; -- orphan low surrogate
+   ?column?   
+--------------
+ "##\\ude04X"
+(1 row)
+
+-- handling of simple unicode escapes
+SELECT jsonb '{ "a":  "the Copyright \u00a9 sign" }' as correct_in_utf8;
+        correct_in_utf8        
+-------------------------------
+ {"a": "the Copyright © sign"}
+(1 row)
+
+SELECT jsonb '{ "a":  "dollar \u0024 character" }' as correct_everywhere;
+     correct_everywhere      
+-----------------------------
+ {"a": "dollar $ character"}
+(1 row)
+
+SELECT jsonb '{ "a":  "dollar \\u0024 character" }' as not_an_escape;
+           not_an_escape           
+-----------------------------------
+ {"a": "dollar \\u0024 character"}
+(1 row)
+
+SELECT jsonb '{ "a":  "null \u0000 escape" }' as fails;
+             fails              
+--------------------------------
+ {"a": "null ##\\u0000 escape"}
+(1 row)
+
+SELECT jsonb '{ "a":  "null \\u0000 escape" }' as not_an_escape;
+        not_an_escape         
+------------------------------
+ {"a": "null \\u0000 escape"}
+(1 row)
+
+SELECT jsonb '{ "a":  "the Copyright \u00a9 sign" }' ->> 'a' as correct_in_utf8;
+   correct_in_utf8    
+----------------------
+ the Copyright © sign
+(1 row)
+
+SELECT jsonb '{ "a":  "dollar \u0024 character" }' ->> 'a' as correct_everywhere;
+ correct_everywhere 
+--------------------
+ dollar $ character
+(1 row)
+
+SELECT jsonb '{ "a":  "dollar \\u0024 character" }' ->> 'a' as not_an_escape;
+      not_an_escape      
+-------------------------
+ dollar \u0024 character
+(1 row)
+
+SELECT jsonb '{ "a":  "null \u0000 escape" }' ->> 'a' as fails;
+        fails         
+----------------------
+ null ##\u0000 escape
+(1 row)
+
+SELECT jsonb '{ "a":  "null \\u0000 escape" }' ->> 'a' as not_an_escape;
+   not_an_escape    
+--------------------
+ null \u0000 escape
+(1 row)
+
+-- ill-formed escaped sequences in key
+SELECT jsonb '{ "\u0000": "abc" }' -> '##\u0000'; -- \u0000
+ ?column? 
+----------
+ "abc"
+(1 row)
+
+SELECT jsonb '{ "\u0000X": "abc" }' -> '##\u0000X'; -- \u0000 followed by a ASCII char
+ ?column? 
+----------
+ "abc"
+(1 row)
+
+SELECT jsonb '{ "Y\u0000": "abc" }' -> 'Y##\u0000'; -- \u0000 following a ASCII char
+ ?column? 
+----------
+ "abc"
+(1 row)
+
+SELECT jsonb '{ "Y\u0000X": "abc" }' -> 'Y##\u0000X'; -- \u0000 in between two ASCII chars
+ ?column? 
+----------
+ "abc"
+(1 row)
+
+SELECT jsonb '{ "\ud83dX": "abc" }' -> '##\ud83dX'; -- orphan high surrogate
+ ?column? 
+----------
+ "abc"
+(1 row)
+
+SELECT jsonb '{ "\ude04X": "abc" }' -> '##\ude04X'; -- orphan low surrogate
+ ?column? 
+----------
+ "abc"
+(1 row)
+
+SELECT jsonb '{ "\uDe04X": "abc" }' -> '##\uDe04X'; -- orphan low surrogate, the uppercase should be preserved
+ ?column? 
+----------
+ "abc"
+(1 row)
+
+-- Inconsistencies
+select json '{ "a":  "null \u0000 escape" }' -> 'a' as it_is;
+        it_is         
+----------------------
+ "null \u0000 escape"
+(1 row)
+
+select json '{ "a":  "null \u0000 escape" }' ->> 'a' as preserved_with_prefix;
+ preserved_with_prefix 
+-----------------------
+ null ##\u0000 escape
+(1 row)
+
+SELECT jsonb '{ "a":  "null \u0000 escape" }' -> 'a' as preserved_with_prefix;
+  preserved_with_prefix  
+-------------------------
+ "null ##\\u0000 escape"
+(1 row)
+
+SELECT jsonb '{ "a":  "null \u0000 escape" }' ->> 'a' as preserved_with_prefix;
+ preserved_with_prefix 
+-----------------------
+ null ##\u0000 escape
+(1 row)
+
+select '{ "a":  "dollar \u0000 character" }'::jsonb::json->'a' as preserved_with_prefix;
+    preserved_with_prefix     
+------------------------------
+ "dollar ##\\u0000 character"
+(1 row)
+
+SELECT '{ "a":  "dollar \u0000 character" }'::json::jsonb->'a' as preserved_with_prefix;
+    preserved_with_prefix     
+------------------------------
+ "dollar ##\\u0000 character"
+(1 row)
+
+-- empty prefix
+SET gp_json_preserve_ill_formed_prefix = '';
+SELECT jsonb '{ "a":  "null \u0000 escape" }' ->> 'a' as no_prefix;
+     no_prefix      
+--------------------
+ null \u0000 escape
+(1 row)
+
+SELECT jsonb '{ "a":  "\ude04\ud83d" }' -> 'a' as no_prefix; -- surrogates in wrong order
+    no_prefix     
+------------------
+ "\\ude04\\ud83d"
+(1 row)
+

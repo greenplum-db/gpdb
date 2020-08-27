@@ -116,3 +116,5 @@
 		"verify_gpfdists_cert",
 		"vmem_process_interrupt",
 		"work_mem",
+		"gp_json_preserve_ill_formed",
+		"gp_json_preserve_ill_formed_prefix",

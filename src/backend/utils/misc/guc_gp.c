@@ -427,6 +427,10 @@ bool		gp_enable_mk_sort = true;
 /* Enable GDD */
 bool		gp_enable_global_deadlock_detector = false;
 
+/* Handling JSON ill-formed escape sequence*/
+bool		gp_json_preserve_ill_formed = false;
+char		*gp_json_preserve_ill_formed_prefix = NULL;
+
 static const struct config_enum_entry gp_log_format_options[] = {
 	{"text", 0},
 	{"csv", 1},
@@ -2893,6 +2897,17 @@ struct config_bool ConfigureNamesBool_gp[] =
 		false,
 		NULL, NULL, NULL
 	},
+
+	{
+		{"gp_json_preserve_ill_formed", PGC_USERSET, CUSTOM_OPTIONS,
+			gettext_noop("Preserve ill-formed escape sequence as the original sequence string in JSON with a specified prefix."),
+			NULL,
+		},
+		&gp_json_preserve_ill_formed,
+		false,
+		NULL, NULL, NULL
+	},
+
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, false, NULL, NULL
@@ -4382,6 +4397,16 @@ struct config_string ConfigureNamesString_gp[] =
 		NULL, NULL, NULL
 	},
 #endif  /* ENABLE_IC_PROXY */
+
+	{
+		{"gp_json_preserve_ill_formed_prefix", PGC_USERSET, CUSTOM_OPTIONS,
+			gettext_noop("Sets prefix string for preserved ill-formed JSON escape sequences."),
+			NULL
+		},
+		&gp_json_preserve_ill_formed_prefix,
+		"",
+		NULL, NULL, NULL
+	},
 
 	/* End-of-list marker */
 	{

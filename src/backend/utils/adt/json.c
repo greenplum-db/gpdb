@@ -75,6 +75,9 @@ typedef struct JsonAggState
 	Oid			val_output_func;
 } JsonAggState;
 
+extern bool gp_json_preserve_ill_formed;
+extern char *gp_json_preserve_ill_formed_prefix;
+
 static inline void json_lex(JsonLexContext *lex);
 static inline void json_lex_string(JsonLexContext *lex);
 static inline void json_lex_number(JsonLexContext *lex, char *s,
@@ -757,6 +760,7 @@ json_lex_string(JsonLexContext *lex)
 	char	   *s;
 	int			len;
 	int			hi_surrogate = -1;
+	char       *hi_pos = NULL;
 
 	if (lex->strval != NULL)
 		resetStringInfo(lex->strval);
@@ -835,6 +839,15 @@ json_lex_string(JsonLexContext *lex)
 
 					if (ch >= 0xd800 && ch <= 0xdbff)
 					{
+						if (hi_surrogate != -1 && gp_json_preserve_ill_formed) {
+							appendStringInfoString(lex->strval, gp_json_preserve_ill_formed_prefix);
+							appendBinaryStringInfo(lex->strval, hi_pos, 6);
+							appendStringInfoString(lex->strval, gp_json_preserve_ill_formed_prefix);
+							appendBinaryStringInfo(lex->strval, s - 5, 6);
+							hi_surrogate = -1;
+							hi_pos = NULL;
+							continue;
+						}
 						if (hi_surrogate != -1)
 							ereport(ERROR,
 							   (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
@@ -842,10 +855,16 @@ json_lex_string(JsonLexContext *lex)
 								errdetail("Unicode high surrogate must not follow a high surrogate."),
 								report_json_context(lex)));
 						hi_surrogate = (ch & 0x3ff) << 10;
+						hi_pos = s - 5;
 						continue;
 					}
 					else if (ch >= 0xdc00 && ch <= 0xdfff)
 					{
+						if (hi_surrogate == -1 && gp_json_preserve_ill_formed) {
+							appendStringInfoString(lex->strval, gp_json_preserve_ill_formed_prefix);
+							appendBinaryStringInfo(lex->strval, s - 5, 6);
+							continue;
+						}
 						if (hi_surrogate == -1)
 							ereport(ERROR,
 							   (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
@@ -854,6 +873,7 @@ json_lex_string(JsonLexContext *lex)
 								report_json_context(lex)));
 						ch = 0x10000 + hi_surrogate + (ch & 0x3ff);
 						hi_surrogate = -1;
+						hi_pos = NULL;
 					}
 
 					if (hi_surrogate != -1)
@@ -870,7 +890,10 @@ json_lex_string(JsonLexContext *lex)
 					 * otherwise raise an error.
 					 */
 
-					if (ch == 0)
+					if (ch == 0 && gp_json_preserve_ill_formed) {
+						appendStringInfo(lex->strval, "%s\\u0000", gp_json_preserve_ill_formed_prefix);
+					}
+					else if (ch == 0)
 					{
 						/* We can't allow this, since our TEXT type doesn't */
 						ereport(ERROR,
@@ -968,6 +991,12 @@ json_lex_string(JsonLexContext *lex)
 		}
 		else if (lex->strval != NULL)
 		{
+			if (hi_surrogate != -1 && gp_json_preserve_ill_formed) {
+				appendStringInfoString(lex->strval, gp_json_preserve_ill_formed_prefix);
+				appendBinaryStringInfo(lex->strval, hi_pos, 6);
+				hi_surrogate = -1;
+				hi_pos = NULL;
+			}
 			if (hi_surrogate != -1)
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
@@ -977,10 +1006,15 @@ json_lex_string(JsonLexContext *lex)
 
 			appendStringInfoChar(lex->strval, *s);
 		}
-
 	}
 
-	if (hi_surrogate != -1)
+	if (hi_surrogate != -1 && gp_json_preserve_ill_formed) {
+		appendStringInfoString(lex->strval, gp_json_preserve_ill_formed_prefix);
+		appendBinaryStringInfo(lex->strval, hi_pos, 6);
+		hi_surrogate = -1;
+		hi_pos = NULL;
+	}
+	else if (hi_surrogate != -1)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
 				 errmsg("invalid input syntax for type json"),
