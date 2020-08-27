@@ -21,6 +21,8 @@
 #include "parser/parse_coerce.h"
 #include "utils/lsyscache.h"
 
+#include "gpos/types.h"
+
 // fwd declarations
 typedef struct SysScanDescData *SysScanDesc;
 typedef int LOCKMODE;
