@@ -2205,6 +2205,7 @@ CTranslatorExprToDXLUtils::PdxlddinfoSingleDistrKey
 	
 	const CColRef *pcrDistrCol = CScalarIdent::PopConvert(pexprHashed->Pop())->Pcr();
 	
+	BOOL useRawValues = false;
 	CConstraint *pcnstrDistrCol = pcnstr->Pcnstr(mp, pcrDistrCol);
 	CConstraintInterval *pcnstrInterval;
 	if (pcnstrDistrCol == NULL && (pcnstrInterval = dynamic_cast<CConstraintInterval *>(pcnstr)))
@@ -2215,6 +2216,7 @@ CTranslatorExprToDXLUtils::PdxlddinfoSingleDistrKey
 			// considering the constraint as being on a distribution column.
 			pcnstrDistrCol = pcnstr;
 			pcrDistrCol = pcnstrInterval->Pcr();
+			useRawValues = true;
 		}
 	}
 	
@@ -2243,13 +2245,6 @@ CTranslatorExprToDXLUtils::PdxlddinfoSingleDistrKey
 		pdrgpdrgpdxldatum = PdrgpdrgpdxldatumFromDisjPointConstraint(mp, md_accessor, pcrDistrCol, pcnstrDistrCol);
 	}
 
-	BOOL useRawValues = false;
-	if (pcnstrDistrCol != NULL &&
-		pcnstrDistrCol->PcrsUsed()->PcrFirst()->Name().Equals(CDXLTokens::GetDXLTokenStr(EdxltokenGpSegmentIdColName)))
-	{
-		useRawValues = true;
-	}
-	
 	CRefCount::SafeRelease(pcnstrDistrCol);
 
 	if (NULL == pdrgpdrgpdxldatum)
