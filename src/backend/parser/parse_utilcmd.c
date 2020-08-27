@@ -2115,7 +2115,7 @@ transformDistributedBy(ParseState *pstate,
 		List *new_distrkeys = NIL;
 
 		index_stmt = (IndexStmt *) lfirst(lc);
-		if (!index_stmt->unique)
+		if (!index_stmt->unique && !index_stmt->primary)
 			continue;
 
 		if (distrkeys)
@@ -2125,6 +2125,20 @@ transformDistributedBy(ParseState *pstate,
 				IndexElem *iparam = lfirst(cell);
 				ListCell *dkcell;
 
+				/*
+				 * The index element could be either a column name or an expression.
+				 * If the index element is not a column name, it should be skipped
+				 * to compute the most common columns. For example,
+				 *
+				 *   create table t(i int, j int, k int) distributed by (i,j);
+				 *   create unique index on t(i, func1(j));
+				 *
+				 * The first index element is a name, the second index element
+				 * is an expression. The set of distribution keys is not a subset
+				 * of the column names in the index, so it violates the
+				 * compatibility and finally it fails.
+				 * But `create unique index on t(i, j);` will success.
+				 */
 				if (!iparam || !iparam->name)
 					continue;
 				foreach(dkcell, distrkeys)
