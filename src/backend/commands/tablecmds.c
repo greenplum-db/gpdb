@@ -8689,6 +8689,7 @@ ATPostAlterTypeCleanup(List **wqueue, AlteredTableInfo *tab)
 {
 	ObjectAddress obj;
 	ListCell   *l;
+	ListCell   *oid_item;
 
 	/*
 	 * Re-parse the index and constraint definitions, and attach them to the
@@ -8711,8 +8712,39 @@ ATPostAlterTypeCleanup(List **wqueue, AlteredTableInfo *tab)
 		/*ATPostAlterTypeParse((char *) lfirst(l), wqueue);*/
 	}
 
-	foreach(l, tab->changedConstraintDefs)
+	forboth(oid_item, tab->changedConstraintOids,
+	        l, tab->changedConstraintDefs)
+	{
+		Oid			oldId = lfirst_oid(oid_item);
+		HeapTuple	tup;
+		Form_pg_constraint con;
+		char		contype;
+
+		tup = SearchSysCache1(CONSTROID, ObjectIdGetDatum(oldId));
+		if (!HeapTupleIsValid(tup))		/* should not happen */
+			elog(ERROR, "cache lookup failed for constraint %u", oldId);
+		con = (Form_pg_constraint) GETSTRUCT(tup);
+		contype = con->contype;
+		ReleaseSysCache(tup);
+
+		if (contype == CONSTRAINT_PRIMARY || contype == CONSTRAINT_UNIQUE)
+		{
+			/*
+			 * Currently, GPDB doesn't support alter type on primary key and unique
+			 * constraint column. Because it requires drop - recreate logic.
+			 * The drop currently only performs on master which lead error when
+			 * recreating index (since recreate index will dispatch to segments and
+			 * there still old constraint index exists)
+			 * Related issue: https://github.com/greenplum-db/gpdb/issues/10561.
+			 */
+			ereport(ERROR,
+			        (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				        errmsg("cannot alter column with primary key or unique constraint"),
+				        errhint("DROP the constraint first, and recreate it after the ALTER")));
+		}
+
 		ATPostAlterTypeParse((char *) lfirst(l), wqueue);
+	}
 
 	/*
 	 * Now we can drop the existing constraints and indexes --- constraints
