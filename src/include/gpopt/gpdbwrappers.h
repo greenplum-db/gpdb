@@ -58,6 +58,8 @@ struct Var;
 struct Const;
 struct ArrayExpr;
 
+#include "gpopt/utils/RelationWrapper.h"
+
 namespace gpdb {
 
 	// convert datum to bool
@@ -548,6 +550,18 @@ namespace gpdb {
 
 	// close the given relation
 	void CloseRelation(Relation rel);
+	/// Passing the transparent wrapper (which is implicitly convertible to a
+	/// Relation pointer) to CloseRelation is almost definitely a double-close.
+	/// Defensively mark this radioactive. Now an accidental
+	///
+	/// \code
+	/// RelationWrapper rel = GetRelation(...);
+	/// CloseRelation(rel);
+	/// \endcode
+	///
+	/// will result in a compiler error.
+	/// FIXME: remove this once we remove the implicit cast to Relation
+	void CloseRelation(RelationWrapper rel) = delete;
 
 	// return the logical indexes for a partitioned table
 	LogicalIndexes *GetLogicalPartIndexes(Oid oid);
@@ -562,7 +576,7 @@ namespace gpdb {
 	void BuildRelationTriggers(Relation rel);
 
 	// get relation with given oid
-	Relation GetRelation(Oid rel_oid);
+	RelationWrapper GetRelation(Oid rel_oid);
 
 	// get external table entry with given oid
 	ExtTableEntry *GetExternalTableEntry(Oid rel_oid);
