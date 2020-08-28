@@ -3981,8 +3981,9 @@ CTranslatorDXLToPlStmt::TranslateDXLDirectDispatchInfo
 		if (segids_list == NIL && const_expr)
 		{
 			// If no valid segids were found, and there were items in the
-			// dispatch identifier array, then append the last item to handle
-			// error in the same place as planner for consistency.
+			// dispatch identifier array, then append the last item to behave
+			// in same manner as Planner for consistency. Currently this will
+			// lead to a FATAL in the backend when we dispatch.
 			segids_list = gpdb::LAppendInt(segids_list, segid);
 		}
 		return segids_list;

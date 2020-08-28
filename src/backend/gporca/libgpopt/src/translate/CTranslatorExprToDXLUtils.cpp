@@ -2176,7 +2176,7 @@ CTranslatorExprToDXLUtils::GetDXLDirectDispatchInfo
 	
 	CDXLDatum2dArray *pdrgpdrgpdxldatum = GPOS_NEW(mp) CDXLDatum2dArray(mp);
 	pdrgpdrgpdxldatum->Append(pdrgpdxldatum);
-	return GPOS_NEW(mp) CDXLDirectDispatchInfo(pdrgpdrgpdxldatum);
+	return GPOS_NEW(mp) CDXLDirectDispatchInfo(pdrgpdrgpdxldatum, false);
 }
 
 //---------------------------------------------------------------------------

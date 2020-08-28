@@ -51,9 +51,6 @@ namespace gpdxl
 			CDXLDirectDispatchInfo(const CDXLDirectDispatchInfo &);
 
 		public:
-			explicit
-			CDXLDirectDispatchInfo(CDXLDatum2dArray *dispatch_identifer_datum_array);
-
 			// ctor
 			explicit
 			CDXLDirectDispatchInfo(CDXLDatum2dArray *dispatch_identifer_datum_array, BOOL contains_raw_values);

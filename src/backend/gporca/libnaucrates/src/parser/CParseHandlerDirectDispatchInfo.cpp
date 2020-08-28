@@ -120,7 +120,7 @@ CParseHandlerDirectDispatchInfo::EndElement
 {
 	if (0 == XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenDirectDispatchInfo), element_local_name))
 	{
-		m_direct_dispatch_info = GPOS_NEW(m_mp) CDXLDirectDispatchInfo(m_datum_array_combination);
+		m_direct_dispatch_info = GPOS_NEW(m_mp) CDXLDirectDispatchInfo(m_datum_array_combination, false);
 		m_parse_handler_mgr->DeactivateHandler();
 	}
 	else if (0 == XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenDirectDispatchKeyValue), element_local_name))

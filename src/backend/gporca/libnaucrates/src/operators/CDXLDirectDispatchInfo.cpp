@@ -22,14 +22,6 @@
 using namespace gpos;
 using namespace gpdxl;
 
-CDXLDirectDispatchInfo::CDXLDirectDispatchInfo
-	(
-	CDXLDatum2dArray *dispatch_identifer_datum_array
-	)
-	: CDXLDirectDispatchInfo(dispatch_identifer_datum_array, false /* contains_raw_values */)
-{
-}
-
 //---------------------------------------------------------------------------
 //	@function:
 //		CDXLDirectDispatchInfo::CDXLDirectDispatchInfo
