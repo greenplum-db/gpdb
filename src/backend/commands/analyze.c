@@ -709,7 +709,13 @@ do_analyze_rel(Relation onerel, int options, VacuumParams *params,
 		rows = NULL;
 	}
 
-	if (ctx)
+	/*
+	 * When QD acquiring sample rows on QE, the QE should only collects required
+	 * on parent or all inherited tables. Otherwise, the QD may get wrong results
+	 * for parent table since the inherited tables will overwrite the expected
+	 * values.
+	 */
+	if (ctx && (inh == ctx->inherited))
 	{
 		ctx->sample_rows = rows;
 		ctx->num_sample_rows = numrows;

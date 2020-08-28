@@ -478,3 +478,28 @@ drop table testid;
 drop extension citext;
 drop schema test_ns;
 drop role nsuser1;
+set search_path to default;
+
+--
+-- Test analyze on inherited table.
+-- We used to have a bug for acquiring sample rows on QE. It always return
+-- rows for all inherited tables even the QD only wants samples for parent table's.
+--
+CREATE TABLE ana_parent (aa int);
+CREATE TABLE ana_c1 (bb text) INHERITS (ana_parent);
+CREATE TABLE ana_c2 (cc text) INHERITS (ana_c1);
+INSERT INTO ana_c1 SELECT i, 'bb' FROM generate_series(1, 10) AS i;
+INSERT INTO ana_c2 SELECT i, 'bb', 'cc' FROM generate_series(10, 20) AS i;
+ANALYZE ana_parent;
+ANALYZE ana_c1;
+ANALYZE ana_c2;
+
+-- Check pg_class entry
+SELECT relpages, reltuples FROM pg_class WHERE relname = 'ana_parent';
+SELECT relpages, reltuples FROM pg_class WHERE relname = 'ana_c1';
+SELECT relpages, reltuples FROM pg_class WHERE relname = 'ana_c2';
+
+-- Check pg_stats entries
+SELECT * FROM pg_stats WHERE tablename = 'ana_parent';
+SELECT * FROM pg_stats WHERE tablename = 'ana_c1';
+SELECT * FROM pg_stats WHERE tablename = 'ana_c2';

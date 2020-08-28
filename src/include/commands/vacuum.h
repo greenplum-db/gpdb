@@ -185,6 +185,9 @@ typedef struct
 	Relation	onerel;
 	int32		targrows;
 
+	/* whether acquire inherited sample rows */
+	bool        inherited;
+
 	/* Sampled rows and estimated total number of rows in the table. */
 	HeapTuple  *sample_rows;
 	int			num_sample_rows;
