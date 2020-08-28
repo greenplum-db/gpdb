@@ -708,19 +708,17 @@ GpPolicyRemove(Oid tbloid)
  * Otherwise, the set of columns being indexed should be a superset of the
  * policy.
  *
- * If the proposed index does not match the distribution policy but the relation
- * is empty and does not have a primary key or unique index, update the
- * distribution policy to match the index definition (MPP-101), as long as it
- * doesn't contain expressions.
+ * If the proposed index does not match the distribution policy, we raise
+ * an error.
  */
 void
 checkPolicyForUniqueIndex(Relation rel, AttrNumber *indattr, int nidxatts,
-						  bool isprimary, bool has_exprs, bool has_pkey,
-						  bool has_ukey)
+						  bool isprimary)
 {
 	Bitmapset  *polbm = NULL;
 	Bitmapset  *indbm = NULL;
 	int			i;
+	int			policy_attr;
 	TupleDesc	desc = RelationGetDescr(rel);
 
 	/*
@@ -768,66 +766,27 @@ checkPolicyForUniqueIndex(Relation rel, AttrNumber *indattr, int nidxatts,
 	Assert(bms_membership(polbm) != BMS_EMPTY_SET);
 	Assert(bms_membership(indbm) != BMS_EMPTY_SET);
 
-	/*
-	 * If the existing policy is not a subset, we must either error out or
-	 * update the distribution policy. It might be tempting to say that even
-	 * when the policy is a subset, we should update it to match the index
-	 * definition. The problem then is that if the user actually wants a
-	 * distribution on (a, b) but then creates an index on (a, b, c) we'll
-	 * change the policy underneath them.
-	 *
-	 * What is really needed is a new field in gp_distribution_policy telling
-	 * us if the policy has been explicitly set.
-	 */
-	if (!bms_is_subset(polbm, indbm))
-	{
-		if ((Gp_role == GP_ROLE_DISPATCH && cdbRelMaxSegSize(rel) != 0) ||
-			has_pkey || has_ukey || has_exprs)
-		{
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-					 errmsg("%s must contain all columns in the "
-							"distribution key of relation \"%s\"",
-							isprimary ? "PRIMARY KEY" : "UNIQUE index",
-							RelationGetRelationName(rel))));
-		}
+	polbm = bms_del_members(polbm, indbm);
+	policy_attr = bms_next_member(polbm, -1);
+	if (policy_attr < 0)
+		return;
 
-		/* update policy since table is not populated yet. See MPP-101 */
-		GpPolicy *policy = makeGpPolicy(POLICYTYPE_PARTITIONED, nidxatts,
-										rel->rd_cdbpolicy->numsegments);
+	/* report error */
+	do {
+		const char *attname = NameStr(TupleDescAttr(desc, policy_attr - 1)->attname);
+		ereport(NOTICE,
+				(errcode(ERRCODE_UNIQUE_VIOLATION),
+				 errdetail("Distribution key column \"%s\" is not included in the constraint.",
+					 		attname),
+				 errhint("Add \"%s\" to the constraint with the operator.", attname),
+				 errmsg("%s index must contain all columns in the table's distribution key.",
+							 isprimary ? "PRIMARY KEY" : "UNIQUE")));
 
-		for (i = 0; i < nidxatts; i++)
-		{
-			AttrNumber attno = indattr[i];
-			Oid			opclass;
+		policy_attr = bms_next_member(polbm, policy_attr);
+	} while(policy_attr >= 0);
 
-			opclass = cdb_default_distribution_opclass_for_type(desc->attrs[attno - 1]->atttypid);
-			if (!opclass)
-			{
-				/*
-				 * The datatype has no default opclass. Can't use it in the
-				 * distribution key.
-				 */
-				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-						 errmsg("%s must contain all columns in the "
-								"distribution key of relation \"%s\"",
-								isprimary ? "PRIMARY KEY" : "UNIQUE index",
-								RelationGetRelationName(rel))));
-			}
-
-			policy->attrs[i] = attno;
-			policy->opclasses[i] = opclass;
-		}
-
-		GpPolicyReplace(rel->rd_id, policy);
-
-		MemoryContext oldcontext = MemoryContextSwitchTo(GetMemoryChunkContext(rel));
-		rel->rd_cdbpolicy = GpPolicyCopy(policy);
-		MemoryContextSwitchTo(oldcontext);
-
-		if (Gp_role == GP_ROLE_DISPATCH)
-			elog(NOTICE, "updating distribution policy to match new %s", isprimary ? "primary key" : "unique index");
-	}
+	ereport(ERROR,
+			(errcode(ERRCODE_UNIQUE_VIOLATION),
+			 errmsg("the set of columns being indexed should be a superset of the policy.")));
 }
 

@@ -475,6 +475,7 @@ SELECT COUNT(*) FROM exttab_constraints_1;
 -- Error log should have a couple of rows
 SELECT COUNT(*) from gp_read_error_log('exttab_constraints_1');
 CREATE TABLE exttab_constraints_insert_1 (LIKE exttab_constraints_1) distributed by (i);
+ALTER TABLE exttab_constraints_insert_1 SET DISTRIBUTED BY(j);
 ALTER TABLE exttab_constraints_insert_1 ADD CONSTRAINT exttab_uniq_constraint_1 UNIQUE (j);
 -- This should fail
 select gp_truncate_error_log('exttab_constraints_1');

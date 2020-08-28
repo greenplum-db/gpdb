@@ -2885,7 +2885,10 @@ SELECT count(*) FROM onek_with_null WHERE unique1 IS NULL AND unique1 > 500;
 DROP INDEX onek_nulltest;
 -- Check initial-positioning logic too
 CREATE UNIQUE INDEX onek_nulltest ON onek_with_null (unique2);
-ERROR:  UNIQUE index must contain all columns in the distribution key of relation "onek_with_null"
+NOTICE:  UNIQUE index must contain all columns in the table's distribution key.
+DETAIL:  Distribution key column "unique1" is not included in the constraint.
+HINT:  Add "unique1" to the constraint with the operator.
+ERROR:  the set of columns being indexed should be a superset of the policy.
 SET enable_seqscan = OFF;
 SET enable_indexscan = ON;
 SET enable_bitmapscan = OFF;

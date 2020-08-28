@@ -208,8 +208,8 @@ CREATE TABLE r
     d NUMERIC(10,0), 
     e DATE
 ) DISTRIBUTED BY (a,b);
+ALTER TABLE r SET DISTRIBUTED BY (b);
 ALTER TABLE r ADD CONSTRAINT PKEY PRIMARY KEY (b);
-NOTICE:  updating distribution policy to match new primary key
 --TEST
 SELECT MAX(a) AS m FROM r GROUP BY b ORDER BY m;
  m 

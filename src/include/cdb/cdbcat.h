@@ -20,8 +20,6 @@
 #include "utils/relcache.h"
 
 extern void checkPolicyForUniqueIndex(Relation rel, AttrNumber *indattr,
-									  int nidxatts, bool isprimary, 
-									  bool has_exprs, bool has_pkey,
-									  bool has_ukey);
+									  int nidxatts, bool isprimary);
 
 #endif   /* CDBCAT_H */

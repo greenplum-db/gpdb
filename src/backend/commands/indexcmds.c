@@ -734,10 +734,7 @@ DefineIndex(Oid relationId,
 		checkPolicyForUniqueIndex(rel,
 								  indexInfo->ii_KeyAttrNumbers,
 								  indexInfo->ii_NumIndexAttrs,
-								  stmt->primary,
-								  list_length(indexInfo->ii_Expressions),
-								  relationHasPrimaryKey(rel),
-								  relationHasUniqueIndex(rel));
+								  stmt->primary);
 
 	/* We don't have to worry about constraints on parts.  Already checked. */
 	if ( stmt->isconstraint && rel_is_partitioned(relationId) )

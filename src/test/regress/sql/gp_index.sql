@@ -31,3 +31,34 @@ DROP INDEX CONCURRENTLY "tbl_drop_index1";
 \d tbl_drop_ind_concur
 
 DROP TABLE tbl_drop_ind_concur;
+
+-- Creating UNIQUE/PRIMARY KEY index is disallowed to change the distribution
+-- keys implicitly
+CREATE TABLE tbl_create_index(i int, j int, k int) distributed by(i, j);
+-- should fail
+CREATE UNIQUE INDEX ON tbl_create_index(i);
+CREATE UNIQUE INDEX ON tbl_create_index(k);
+CREATE UNIQUE INDEX ON tbl_create_index(i, k);
+ALTER TABLE tbl_create_index ADD CONSTRAINT PKEY PRIMARY KEY(i);
+ALTER TABLE tbl_create_index ADD CONSTRAINT PKEY PRIMARY KEY(k);
+ALTER TABLE tbl_create_index ADD CONSTRAINT PKEY PRIMARY KEY(i, k);
+-- should success
+CREATE UNIQUE INDEX tbl_create_index_ij ON tbl_create_index(i, j);
+CREATE UNIQUE INDEX tbl_create_index_ijk ON tbl_create_index(i, j, k);
+\d tbl_create_index
+DROP INDEX tbl_create_index_ij;
+DROP INDEX tbl_create_index_ijk;
+
+ALTER TABLE tbl_create_index ADD CONSTRAINT PKEY PRIMARY KEY(i, j, k);
+\d tbl_create_index
+ALTER TABLE tbl_create_index DROP CONSTRAINT PKEY;
+
+-- after changing the distribution keys, the above failed clause should success
+ALTER TABLE tbl_create_index SET DISTRIBUTED BY(k);
+CREATE UNIQUE INDEX ON tbl_create_index(k);
+CREATE UNIQUE INDEX ON tbl_create_index(i, k);
+ALTER TABLE tbl_create_index ADD CONSTRAINT PKEY PRIMARY KEY(i, k);
+\d tbl_create_index
+
+DROP TABLE tbl_create_index;
+

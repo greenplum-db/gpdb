@@ -369,10 +369,7 @@ create table part_table4
 -- create an index on all parts
 create index id_index on part_table4(id);
 
--- create 2 indexes on part_table4_1_prt_girls_2_prt_1
-create unique index id_index_unique on part_table4_1_prt_girls_2_prt_1(id);
-
--- create another index on column id
+-- create an index on column id
 create index id_rank_index on part_table4_1_prt_girls_2_prt_1(id, rank); 
 
 -- given index on part_table4_1_prt_boys_2_prt_3_id_idx, return similar index on part_table4_1_prt_girls_2_prt_1
@@ -381,14 +378,6 @@ select relname from
 pg_class where
 pg_class.oid =
 (select gp_get_physical_index_relid('part_table4'::regclass, 'part_table4_1_prt_girls_2_prt_1'::regclass, indkey, indpred, indexprs, indisunique)
-	from pg_index
-	where indexrelid = ('part_table4_1_prt_boys_2_prt_3_id_idx'::regclass));
-
--- return the unique index on column "id" on part "part_table4_1_prt_girls_2_prt_1"
-select relname from
-pg_class where 
-pg_class.oid =
-(select gp_get_physical_index_relid('part_table4'::regclass, 'part_table4_1_prt_girls_2_prt_1'::regclass, indkey, indpred, indexprs, true)
 	from pg_index
 	where indexrelid = ('part_table4_1_prt_boys_2_prt_3_id_idx'::regclass));
 
