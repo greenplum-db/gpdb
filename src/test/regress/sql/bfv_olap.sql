@@ -451,6 +451,35 @@ select * from cte;
 
 reset optimizer_trace_fallback;
 
+--
+-- Test for github issue #10729.
+-- This failed with:
+--   ERROR:  could not find pathkey item to sort (createplan.c:6326)
+--
+-- In the outermost query, group_pathkeys is NIL, even though there is a
+-- GROUP BY, because the grouping expression is a constant. The subquery scan
+-- comes out sorted by foo.t. We generated a plan with a Gather Motion that
+-- tried to preserve the ordering on foo.t, even though group_pathkeys was NIL,
+-- which failed. It was fixed by changing the code that generates the Motion
+-- path, to only preserve the order based on group_pathkeys, not the sub-path's
+-- pathkeys.
+--
+create temporary table foo (t text);
+
+set enable_hashagg=off;
+
+explain (costs off)
+with cte as
+( select t
+  from foo
+  group by t
+)
+select 'xx'::text
+from cte
+group by 'xx'::text;
+
+reset enable_hashagg;
+
 -- CLEANUP
 -- start_ignore
 drop schema bfv_olap cascade;

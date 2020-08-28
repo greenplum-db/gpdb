@@ -686,6 +686,49 @@ select * from cte;
 (3 rows)
 
 reset optimizer_trace_fallback;
+--
+-- Test for github issue #10729.
+-- This failed with:
+--   ERROR:  could not find pathkey item to sort (createplan.c:6326)
+--
+-- In the outermost query, group_pathkeys is NIL, even though there is a
+-- GROUP BY, because the grouping expression is a constant. The subquery scan
+-- comes out sorted by foo.t. We generated a plan with a Gather Motion that
+-- tried to preserve the ordering on foo.t, even though group_pathkeys was NIL,
+-- which failed. It was fixed by changing the code that generates the Motion
+-- path, to only preserve the order based on group_pathkeys, not the sub-path's
+-- pathkeys.
+--
+create temporary table foo (t text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 't' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+set enable_hashagg=off;
+explain (costs off)
+with cte as
+( select t
+  from foo
+  group by t
+)
+select 'xx'::text
+from cte
+group by 'xx'::text;
+                     QUERY PLAN                      
+-----------------------------------------------------
+ Finalize GroupAggregate
+   Group Key: ('xx'::text)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial GroupAggregate
+               Group Key: 'xx'::text
+               ->  Subquery Scan on cte
+                     ->  GroupAggregate
+                           Group Key: foo.t
+                           ->  Sort
+                                 Sort Key: foo.t
+                                 ->  Seq Scan on foo
+ Optimizer: Postgres query optimizer
+(12 rows)
+
+reset enable_hashagg;
 -- CLEANUP
 -- start_ignore
 drop schema bfv_olap cascade;

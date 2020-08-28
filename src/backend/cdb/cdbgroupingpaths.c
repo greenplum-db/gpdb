@@ -512,7 +512,6 @@ add_twostage_group_agg_path(PlannerInfo *root,
 	}
 	else if (parse->hasAggs || parse->groupClause)
 	{
-
 		initial_agg_path =
 			(Path *) create_agg_path(root,
 									 output_rel,
@@ -529,7 +528,7 @@ add_twostage_group_agg_path(PlannerInfo *root,
 																	 getgpsegmentCount()),
 									 NULL);
 
-		motion_pathkeys = initial_agg_path->pathkeys;
+		motion_pathkeys = root->group_pathkeys;
 	}
 	else
 	{
