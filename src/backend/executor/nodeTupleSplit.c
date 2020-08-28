@@ -191,8 +191,7 @@ struct TupleTableSlot *ExecTupleSplit(TupleSplitState *node)
 			Datum		res;
 			bool		isnull;
 
-			res = ExecEvalExprSwitchContext(filter, node->ss.ps.ps_ExprContext
-				, &isnull, NULL);
+			res = ExecEvalExprSwitchContext(filter, econtext, &isnull, NULL);
 
 			if (isnull || !DatumGetBool(res))
 			{

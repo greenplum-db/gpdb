@@ -922,8 +922,6 @@ typedef enum AggSplit
 
 #define DO_AGGSPLIT_DEDUPLICATED(as) (((as) & AGGSPLITOP_DEDUPLICATED) != 0)
 
-#define DO_AGGSPLIT_FILTERPUSHDOWN(as) (((as) & AGGSPLITOP_FILTERPUSHDOWN) != 0)
-
 /*
  * SetOpCmd and SetOpStrategy -
  *	  overall semantics and execution strategies for SetOp plan nodes

@@ -8776,7 +8776,6 @@ get_dqa_expr(DQAExpr *dqa_expr,deparse_context *context)
 
 	if (dqa_expr->agg_filter != NULL)
 	{
-		char * exprstr;
 		appendStringInfoString(buf, " FILTER (WHERE ");
 		get_rule_expr((Node *) dqa_expr->agg_filter, context, false);
 		appendStringInfoChar(buf, ')');

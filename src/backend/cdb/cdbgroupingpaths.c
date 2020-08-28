@@ -1535,7 +1535,7 @@ fetch_multi_dqas_info(PlannerInfo *root,
 
 		/*
 		 * DQA(a, b) and DQA(b, a) and their filter is same, as well as, they
-		 * do not contain violated expression, then they can share one split
+		 * do not contain volatile expression, then they can share one split
 		 * tuple.
 		 */
 		Index agg_expr_id ;
