@@ -82,9 +82,15 @@ CDXLDirectDispatchInfo::Serialize
 	)
 {
 	xml_serializer->OpenElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), CDXLTokens::GetDXLTokenStr(EdxltokenDirectDispatchInfo));
-	
+
+	if (m_contains_raw_values)
+	{
+		// Output attribute iff true. Default false keeps backward compatability
+		xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenDirectDispatchIsRaw), m_contains_raw_values);
+	}
+
 	const ULONG num_of_dispatch_identifiers = (m_dispatch_identifer_datum_array == NULL) ? 0 : m_dispatch_identifer_datum_array->Size();
-	
+
 	for (ULONG idx1 = 0; idx1 < num_of_dispatch_identifiers; idx1++)
 	{
 		xml_serializer->OpenElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), CDXLTokens::GetDXLTokenStr(EdxltokenDirectDispatchKeyValue));

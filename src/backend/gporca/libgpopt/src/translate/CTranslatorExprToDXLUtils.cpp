@@ -2215,6 +2215,7 @@ CTranslatorExprToDXLUtils::PdxlddinfoSingleDistrKey
 			// If the constraint is on gp_segment_id then we trick ourselves into
 			// considering the constraint as being on a distribution column.
 			pcnstrDistrCol = pcnstr;
+			pcnstrDistrCol->AddRef();
 			pcrDistrCol = pcnstrInterval->Pcr();
 			useRawValues = true;
 		}

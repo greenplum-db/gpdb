@@ -29,6 +29,7 @@ ULONG CDirectDispatchTest::m_ulDirectDispatchCounter = 0;  // start from first t
 const CHAR *rgszDirectDispatchFileNames[] =
 	{
 	"../data/dxl/minidump/DirectDispatch-SingleCol.mdp",
+	"../data/dxl/minidump/DirectDispatch-GpSegmentId.mdp",
 	"../data/dxl/minidump/DirectDispatch-SingleCol-Disjunction.mdp",
 	"../data/dxl/minidump/DirectDispatch-SingleCol-Disjunction-IsNull.mdp",
 	"../data/dxl/minidump/DirectDispatch-SingleCol-Disjunction-Negative.mdp",

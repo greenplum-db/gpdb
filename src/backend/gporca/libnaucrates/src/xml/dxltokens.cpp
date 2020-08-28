@@ -138,6 +138,7 @@ CDXLTokens::Init
 			{EdxltokenPhysicalDMLDelete, GPOS_WSZ_LIT("DMLDelete")},
 			{EdxltokenPhysicalDMLUpdate, GPOS_WSZ_LIT("DMLUpdate")},
 			{EdxltokenDirectDispatchInfo, GPOS_WSZ_LIT("DirectDispatchInfo")},
+			{EdxltokenDirectDispatchIsRaw, GPOS_WSZ_LIT("IsRaw")},
 			{EdxltokenDirectDispatchKeyValue, GPOS_WSZ_LIT("KeyValue")},
 			
 			{EdxltokenPhysicalPartitionSelector, GPOS_WSZ_LIT("PartitionSelector")},

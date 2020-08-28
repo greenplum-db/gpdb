@@ -220,7 +220,7 @@ namespace gpopt
 
 			// check if constraint is on the gp_segment_id column
 			virtual
-			BOOL FConstraintOnSegmentId()
+			BOOL FConstraintOnSegmentId() const
 			{
 				return m_pcr->IsSystemCol() && m_pcr->Name().Equals(CDXLTokens::GetDXLTokenStr(EdxltokenGpSegmentIdColName));
 			}

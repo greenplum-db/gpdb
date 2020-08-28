@@ -44,6 +44,10 @@ namespace gpdxl
 		
 			// direct dispatch spec
 			CDXLDirectDispatchInfo *m_direct_dispatch_info;
+
+			// true indicates m_dispatch_identifer_datum_array contains raw
+			// gp_segment_id values rather than hashable datums
+			BOOL m_dispatch_is_raw;
 			
 			// private copy ctor
 			CParseHandlerDirectDispatchInfo(const CParseHandlerDirectDispatchInfo &);
