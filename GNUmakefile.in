@@ -131,17 +131,57 @@ distclean maintainer-clean:
 installcheck-resgroup:
 	$(MAKE) -C src/test/isolation2 $@
 
-# Create or destroy a demo cluster.
+# Create or destroy or check start rediness a demo cluster.
 create-demo-cluster:
 	$(MAKE) -C gpAux/gpdemo create-demo-cluster
 
 destroy-demo-cluster:
 	$(MAKE) -C gpAux/gpdemo destroy-demo-cluster
 
+check-demo-cluster:
+	$(MAKE) -C gpAux/gpdemo check
+
 check check-tests: all
 
 check check-tests installcheck installcheck-parallel installcheck-tests:
 	$(MAKE) -C src/test/regress $@
+
+#Starts demo-cluster before test running and destroys after test if demo-cluster was not started before testing
+SIGNALFILE=$(top_builddir)/demo-cluster-ready-to-run
+
+precheck-demo-cluster:
+	$(MAKE) -C $(top_builddir) check-demo-cluster
+	@echo "#################################################################################"
+	@echo "demo-cluster not running															"
+	@echo "#################################################################################"
+	@touch $(SIGNALFILE)
+
+check:
+	@echo "#################################################################################"
+	@echo "check if demo-cluster is running..."
+	@echo "#################################################################################"
+	-@ $(MAKE) -C $(top_builddir) precheck-demo-cluster
+
+	@if [ -e $(SIGNALFILE) ]; then \
+		echo "#################################################################################" ;\
+		echo "run demo-cluster" ;\
+		echo "#################################################################################" ;\
+		. $(prefix)/greenplum_path.sh && $(MAKE) -C $(top_builddir) create-demo-cluster ;\
+	fi
+
+	@echo "#################################################################################"
+	@echo "CHECK : run tests 					"
+	@echo "#################################################################################"
+#Some tests may fail, it should be ignored to complete demo-cluster destroy
+	-@ . $(prefix)/greenplum_path.sh && .  $(top_builddir)/gpAux/gpdemo/gpdemo-env.sh && $(MAKE) -C  $(top_builddir) installcheck
+
+	@if [ -e $(SIGNALFILE) ]; then \
+		echo "#################################################################################" ;\
+		echo "destroy demo-cluster " ;\
+		echo "#################################################################################" ;\
+		. $(prefix)/greenplum_path.sh && $(MAKE) -C $(top_builddir) destroy-demo-cluster ;\
+		rm $(SIGNALFILE) ;\
+ 	fi
 
 $(call recurse,check-world,src/test src/pl src/interfaces/ecpg contrib src/bin gpcontrib,check)
 
