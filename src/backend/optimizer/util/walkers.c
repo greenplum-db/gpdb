@@ -380,6 +380,7 @@ plan_tree_walker(Node *node,
         case T_DQAExpr:
 	        if (walker(((DQAExpr *)node)->agg_filter, context))
 		        return true;
+			/* Other fields are simple items and lists of simple items. */
 			break;
 
 		case T_WindowAgg:

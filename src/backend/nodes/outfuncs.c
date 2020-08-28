@@ -1031,7 +1031,6 @@ _outAgg(StringInfo str, const Agg *node)
 }
 #endif /* COMPILING_BINARY_FUNCS */
 
-#ifndef COMPILING_BINARY_FUNCS
 static void
 _outDQAExpr(StringInfo str, const DQAExpr *node)
 {
@@ -1041,7 +1040,6 @@ _outDQAExpr(StringInfo str, const DQAExpr *node)
     WRITE_BITMAPSET_FIELD(agg_args_id_bms);
     WRITE_NODE_FIELD(agg_filter);
 }
-#endif /* COMPILING_BINARY_FUNCS */
 
 #ifndef COMPILING_BINARY_FUNCS
 static void

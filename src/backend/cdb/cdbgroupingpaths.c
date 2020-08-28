@@ -1534,20 +1534,29 @@ fetch_multi_dqas_info(PlannerInfo *root,
 		}
 
 		/*
-		 * DQA(a, b) and DQA(b, a) and their filter is same,
-		 * then can share one split tuple
+		 * DQA(a, b) and DQA(b, a) and their filter is same, as well as, they
+		 * do not contain violated expression, then they can share one split
+		 * tuple.
 		 */
-		ListCell *lc_dqa;
-		Index agg_expr_id = 1;
-		foreach (lc_dqa, info->dqa_expr_lst)
+		Index agg_expr_id ;
+		if (!contain_volatile_functions((Node *)aggref->aggfilter))
 		{
-			DQAExpr *dqaExpr = (DQAExpr *)lfirst(lc_dqa);
+			ListCell *lc_dqa;
+			agg_expr_id = 1;
+			foreach (lc_dqa, info->dqa_expr_lst)
+			{
+				DQAExpr *dqaExpr = (DQAExpr *)lfirst(lc_dqa);
 
-			if (bms_equal(bms, dqaExpr->agg_args_id_bms)
-				&& equal(aggref->aggfilter, dqaExpr->agg_filter))
-				break;
+				if (bms_equal(bms, dqaExpr->agg_args_id_bms)
+					&& equal(aggref->aggfilter, dqaExpr->agg_filter))
+					break;
 
-			agg_expr_id++;
+				agg_expr_id++;
+			}
+		}
+		else
+		{
+			agg_expr_id = list_length(info->dqa_expr_lst) + 1;
 		}
 
 		/* If DQA(expr1) FILTER (WHERE expr2) is different with previous, create new one */

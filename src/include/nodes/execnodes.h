@@ -2635,21 +2635,20 @@ typedef struct TupleSplitState
 {
 	ScanState	    ss;				/* its first field is NodeTag */
 
-	bool		    *isnull_orig;
-	Bitmapset       *grpbySet;
+	bool		    *isnull_orig;   /* each input tuple, original isnull array */
 
-	TupleTableSlot  *outerslot;
-	Index           currentExprId;
+	TupleTableSlot  *outerslot;    /* store input tuple for several split loop */
+	Index           currentExprId; /* current AggExprId value */
 
-	AttrNumber	    maxAttrNum;
-	int             numDisDQAs;
-	Bitmapset       **dqa_args_attr_num;
-	Bitmapset       *all_dist_attr_num;
+	AttrNumber      maxAttrNum;    /* the maximum AttrNum need to projection */
+	int             numDisDQAs;    /* number of splitting for each input tuple*/
 
-	ExprState       **agg_filter_array;
+	/* For each splitting tuple is mapping to a bitmap set depends on AggExprId,
+	 * Only the input AttrNum in the bitmap set, other column set to null
+	 */
+	Bitmapset       **dqa_split_bms;
 
-	Index            largest_attno_in_dqas;
-	MemoryContext   filter_context;
+	ExprState       **agg_filter_array; /* DQA filter which push down from aggref */
 } TupleSplitState;
 
 typedef struct AggExprIdState

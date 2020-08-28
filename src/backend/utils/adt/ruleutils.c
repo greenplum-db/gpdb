@@ -8777,10 +8777,8 @@ get_dqa_expr(DQAExpr *dqa_expr,deparse_context *context)
 	if (dqa_expr->agg_filter != NULL)
 	{
 		char * exprstr;
-		exprstr = deparse_expression((Node *) dqa_expr->agg_filter, context->namespaces,
-		                             context->varprefix, false);
 		appendStringInfoString(buf, " FILTER (WHERE ");
-		appendStringInfoString(buf, exprstr);
+		get_rule_expr((Node *) dqa_expr->agg_filter, context, false);
 		appendStringInfoChar(buf, ')');
 	}
 

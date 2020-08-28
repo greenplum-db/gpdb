@@ -391,16 +391,6 @@ _outMergeJoin(StringInfo str, MergeJoin *node)
 }
 
 static void
-_outDQAExpr(StringInfo str, DQAExpr* node)
-{
-    WRITE_NODE_TYPE("DQAExpr");
-
-    WRITE_INT_FIELD(agg_expr_id);
-    WRITE_BITMAPSET_FIELD(agg_args_id_bms);
-    WRITE_NODE_FIELD(agg_filter);
-}
-
-static void
 _outTupleSplit(StringInfo str, TupleSplit *node)
 {
 	WRITE_NODE_TYPE("TupleSplit");

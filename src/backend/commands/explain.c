@@ -2517,7 +2517,6 @@ show_tuple_split_keys(TupleSplitState *tstate, List *ancestors,
 	List	   *context;
 	bool		useprefix;
 	List	   *result = NIL;
-	PlanState *planstate = outerPlanState(tstate);
 	/* Set up deparsing context */
 	context = set_deparse_context_planstate(es->deparse_cxt,
 											(Node *) tstate,
@@ -2530,7 +2529,6 @@ show_tuple_split_keys(TupleSplitState *tstate, List *ancestors,
 	ListCell *lc;
 	foreach(lc, plan->dqa_expr_lst)
 	{
-		int id = -1;
 		DQAExpr *dqa_expr = (DQAExpr *)lfirst(lc);
 		result = lappend(result,
 		                 deparse_expression((Node *) dqa_expr, context,

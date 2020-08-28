@@ -71,14 +71,6 @@ TupleSplitState *ExecInitTupleSplit(TupleSplit *node, EState *estate, int eflags
 	ExecAssignProjectionInfo(&tup_spl_state->ss.ps, NULL);
 
 	/*
-	 * initialize group by bitmap set
-	 */
-	for (int keyno = 0; keyno < node->numCols; keyno++)
-	{
-		tup_spl_state->grpbySet = bms_add_member(tup_spl_state->grpbySet, node->grpColIdx[keyno]);
-	}
-
-	/*
 	 * initialize input tuple isnull buffer
 	 */
 	tup_spl_state->isnull_orig = (bool *) palloc0(sizeof(bool) * list_length(outerPlan(node)->targetlist));
@@ -86,7 +78,7 @@ TupleSplitState *ExecInitTupleSplit(TupleSplit *node, EState *estate, int eflags
 	/* create bitmap set for each dqa expr to store its input tuple attribute number */
 	AttrNumber maxAttrNum = 0;
 	tup_spl_state->numDisDQAs = list_length(node->dqa_expr_lst);
-	tup_spl_state->dqa_args_attr_num = palloc0(sizeof(Bitmapset *) * tup_spl_state->numDisDQAs);
+	tup_spl_state->dqa_split_bms = palloc0(sizeof(Bitmapset *) * tup_spl_state->numDisDQAs);
 	tup_spl_state->agg_filter_array = palloc0(sizeof(ExprState *) * tup_spl_state->numDisDQAs);
 
 	int i = 0;
@@ -99,7 +91,7 @@ TupleSplitState *ExecInitTupleSplit(TupleSplit *node, EState *estate, int eflags
 		while ((j = bms_next_member(dqaExpr->agg_args_id_bms, j)) >= 0)
 		{
 			TargetEntry *te = get_sortgroupref_tle((Index)j, node->plan.lefttree->targetlist);
-			tup_spl_state->dqa_args_attr_num[i] = bms_add_member(tup_spl_state->dqa_args_attr_num[i], te->resno);
+			tup_spl_state->dqa_split_bms[i] = bms_add_member(tup_spl_state->dqa_split_bms[i], te->resno);
 
 			if (maxAttrNum < te->resno)
 				maxAttrNum = te->resno;
@@ -113,10 +105,44 @@ TupleSplitState *ExecInitTupleSplit(TupleSplit *node, EState *estate, int eflags
 	tup_spl_state->maxAttrNum = maxAttrNum;
 
 	/*
-	 * add all DQA expr AttrNum into a bitmapset
+	 * fetch group by expr bitmap set
 	 */
-	for (int i = 0; i < tup_spl_state->numDisDQAs; i++)
-		tup_spl_state->all_dist_attr_num = bms_add_members(tup_spl_state->all_dist_attr_num, tup_spl_state->dqa_args_attr_num[i]);
+	Bitmapset *grpbySet = NULL;
+	for (int keyno = 0; keyno < node->numCols; keyno++)
+	{
+		grpbySet = bms_add_member(grpbySet, node->grpColIdx[keyno]);
+	}
+
+	/*
+	 * fetch all columns which is not referenced by all DQAs
+	 */
+	Bitmapset *all_input_attr_bms = NULL;
+	for (int id = 0; id < list_length(outerPlan(node)->targetlist); id++)
+		all_input_attr_bms = bms_add_member(all_input_attr_bms, id);
+
+	Bitmapset *dqa_not_used_bms = all_input_attr_bms;
+	for (int id = 0; id < tup_spl_state->numDisDQAs; id++)
+	{
+		dqa_not_used_bms =
+			bms_del_members(dqa_not_used_bms, tup_spl_state->dqa_split_bms[id]);
+	}
+
+	/* grpbySet + dqa_not_used_bms is common skip splitting pattern */
+	Bitmapset *skip_split_bms = bms_join(dqa_not_used_bms, grpbySet);
+
+	/*
+	 * For each DQA splitting tuple, it contain DQA's expr needed column and
+	 * common skip column.
+	 */
+	for (int id = 0; id < tup_spl_state->numDisDQAs; id++)
+	{
+		Bitmapset *orig_bms = tup_spl_state->dqa_split_bms[id];
+		tup_spl_state->dqa_split_bms[id] =
+			bms_union(orig_bms, skip_split_bms);
+		bms_free(orig_bms);
+	}
+
+	bms_free(skip_split_bms);
 
 	return tup_spl_state;
 }
@@ -189,16 +215,8 @@ struct TupleTableSlot *ExecTupleSplit(TupleSplitState *node)
 
 	for (AttrNumber attno = 1; attno <= node->outerslot->PRIVATE_tts_nvalid; attno++)
 	{
-		/* If the column is in the group by, keep it */
-		if (bms_is_member(attno, node->grpbySet))
-			continue;
-
 		/* If the column is relevant to the current dqa, keep it */
-		if (bms_is_member(attno, node->dqa_args_attr_num[node->currentExprId]))
-			continue;
-
-		/* If the column does not belong to any DQA but the projection needs it, keep it */
-		if (!bms_is_member(attno, node->all_dist_attr_num))
+		if (bms_is_member(attno, node->dqa_split_bms[node->currentExprId]))
 			continue;
 
 		/* otherwise, null this column out */
@@ -219,7 +237,6 @@ void ExecEndTupleSplit(TupleSplitState *node)
 {
 	PlanState   *outerPlan;
 
-	bms_free(node->grpbySet);
 	pfree(node->isnull_orig);
 
 	/*

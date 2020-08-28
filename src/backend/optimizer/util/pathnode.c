@@ -3959,7 +3959,6 @@ create_agg_path(PlannerInfo *root,
  * 'groupClause' is a list of SortGroupClause's representing the grouping
  * 'numGroups' is the estimated number of groups (1 if not grouping)
  * 'bitmapset' is the bitmap of DQA expr Index in PathTarget
- * 'agg_filter_array' is filter of DQA expr, Bijection with bitmapset
  * 'numDisDQAs' is the number of bitmapset size
  */
 TupleSplitPath *
