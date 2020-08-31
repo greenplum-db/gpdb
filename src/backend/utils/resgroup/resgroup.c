@@ -235,8 +235,10 @@ struct ResGroupControl
 	 * Safe memory threshold:
 	 * if remained global shared memory is less than this threshold,
 	 * then the resource group memory usage is in red zone.
+	 * Note that safeChunksThreshold100 is 100 times bigger than the real safe chunks.
+	 * This is used to avoid rounding problem caused by runaway_detector_activation_percent
 	 */
-	pg_atomic_uint32 safeChunksThreshold;
+	pg_atomic_uint32 safeChunksThreshold100;
 	pg_atomic_uint32 freeChunks;			/* memory chunks not allocated to any group,
 											will be used for the query which group share
 											memory is not enough*/
@@ -494,7 +496,7 @@ ResGroupControlInit(void)
     pResGroupControl->loaded = false;
     pResGroupControl->nGroups = MaxResourceGroups;
 	pResGroupControl->totalChunks = 0;
-	pg_atomic_init_u32(&pResGroupControl->safeChunksThreshold, 0);
+	pg_atomic_init_u32(&pResGroupControl->safeChunksThreshold100, 0);
 	pg_atomic_init_u32(&pResGroupControl->freeChunks, 0);
 	pResGroupControl->chunkSizeInBits = BITS_IN_MB;
 
@@ -579,8 +581,8 @@ InitResGroups(void)
 	/* These initialization must be done before createGroup() */
 	decideTotalChunks(&pResGroupControl->totalChunks, &pResGroupControl->chunkSizeInBits);
 	pg_atomic_write_u32(&pResGroupControl->freeChunks, pResGroupControl->totalChunks);
-	pg_atomic_write_u32(&pResGroupControl->safeChunksThreshold,
-						pResGroupControl->totalChunks * (100 - runaway_detector_activation_percent) / 100);
+	pg_atomic_write_u32(&pResGroupControl->safeChunksThreshold100,
+						pResGroupControl->totalChunks * (100 - runaway_detector_activation_percent));
 	if (pResGroupControl->totalChunks == 0)
 		ereport(PANIC,
 				(errcode(ERRCODE_INSUFFICIENT_RESOURCES),
@@ -2022,8 +2024,17 @@ mempoolReserve(Oid groupId, int32 chunks)
 	/* also update the safeChunksThreshold which is used in runaway detector */
 	if (reserved != 0)
 	{
-		pg_atomic_sub_fetch_u32(&pResGroupControl->safeChunksThreshold,
-								reserved * (100 - runaway_detector_activation_percent) / 100);
+		uint32	safeChunksThreshold100;
+		int		safeChunksDelta100;
+		
+		safeChunksThreshold100 = (uint32) pg_atomic_read_u32(&pResGroupControl->safeChunksThreshold100);
+		safeChunksDelta100 = reserved * (100 - runaway_detector_activation_percent);
+
+		if (safeChunksThreshold100 < safeChunksDelta100)
+			elog(ERROR, "safeChunksThreshold: %u should be positive after mempool reserved: %d",
+				 safeChunksThreshold100, safeChunksDelta100);
+
+		pg_atomic_sub_fetch_u32(&pResGroupControl->safeChunksThreshold100, safeChunksDelta100);
 	}
 	LOG_RESGROUP_DEBUG(LOG, "allocate %u out of %u chunks to group %d",
 					   reserved, oldFreeChunks, groupId);
@@ -2048,8 +2059,8 @@ mempoolRelease(Oid groupId, int32 chunks)
 											chunks);
 
 	/* also update the safeChunksThreshold which is used in runaway detector */
-	pg_atomic_add_fetch_u32(&pResGroupControl->safeChunksThreshold,
-							chunks * (100 - runaway_detector_activation_percent) / 100);
+	pg_atomic_add_fetch_u32(&pResGroupControl->safeChunksThreshold100,
+							chunks * (100 - runaway_detector_activation_percent));
 
 	LOG_RESGROUP_DEBUG(LOG, "free %u to pool(%u) chunks from group %d",
 					   chunks, newFreeChunks - chunks, groupId);
@@ -4400,7 +4411,7 @@ bool
 IsGroupInRedZone(void)
 {
 	uint32				remainGlobalSharedMem;
-	uint32				safeChunksThreshold;
+	uint32				safeChunksThreshold100;
 	ResGroupSlotData	*slot = self->slot;
 	ResGroupData		*group = self->group;
 
@@ -4411,8 +4422,8 @@ IsGroupInRedZone(void)
 	 * safe: global shared memory is not in redzone
 	 */
 	remainGlobalSharedMem = (uint32) pg_atomic_read_u32(&pResGroupControl->freeChunks);
-	safeChunksThreshold = (uint32) pg_atomic_read_u32(&pResGroupControl->safeChunksThreshold);
-	if (remainGlobalSharedMem >= safeChunksThreshold)
+	safeChunksThreshold100 = (uint32) pg_atomic_read_u32(&pResGroupControl->safeChunksThreshold100);
+	if (remainGlobalSharedMem * 100 >= safeChunksThreshold100)
 		return false;
 
 	AssertImply(slot != NULL, group != NULL);
@@ -4443,14 +4454,14 @@ ResGroupGetMemoryRunawayInfo(StringInfo str)
 	ResGroupSlotData	*slot = self->slot;
 	ResGroupData		*group = self->group;
 	uint32				remainGlobalSharedMem = 0;
-	uint32				safeChunksThreshold = 0;
+	uint32				safeChunksThreshold100 = 0;
 
 	if (group)
 	{
 		Assert(selfIsAssigned());
 
 		remainGlobalSharedMem = (uint32) pg_atomic_read_u32(&pResGroupControl->freeChunks);
-		safeChunksThreshold = (uint32) pg_atomic_read_u32(&pResGroupControl->safeChunksThreshold);
+		safeChunksThreshold100 = (uint32) pg_atomic_read_u32(&pResGroupControl->safeChunksThreshold100);
 
 		appendStringInfo(str,
 						 "current group id is %u, "
@@ -4464,7 +4475,7 @@ ResGroupGetMemoryRunawayInfo(StringInfo str)
 						 VmemTracker_ConvertVmemChunksToMB(group->memSharedGranted),
 						 VmemTracker_ConvertVmemChunksToMB(slot->memQuota),
 						 VmemTracker_ConvertVmemChunksToMB(remainGlobalSharedMem),
-						 VmemTracker_ConvertVmemChunksToMB(safeChunksThreshold));
+						 VmemTracker_ConvertVmemChunksToMB(safeChunksThreshold100 / 100));
 	}
 	else
 	{
