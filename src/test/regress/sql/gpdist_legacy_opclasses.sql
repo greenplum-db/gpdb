@@ -247,13 +247,13 @@ create table ctas_base_nonlegacy as select unnest(array[1,2,3]) as col distribut
 set gp_use_legacy_hashops=on;
 create table ctas_from_nonlegacy as select * from ctas_base_nonlegacy distributed by (col);
 
-select dp.localoid::regclass::name as name, oc.opcname
+select dp.localoid::regclass as name, opc.opcname
   from gp_distribution_policy dp
-  join pg_opclass oc
-    on oc.oid::text = dp.distclass::text
- where dp.localoid in ('ctas_base_legacy'::regclass::oid,
-                       'ctas_from_legacy'::regclass::oid,
-                       'ctas_base_nonlegacy'::regclass::oid,
-                       'ctas_from_nonlegacy'::regclass::oid);
+  join pg_opclass opc
+    on ARRAY[opc.oid]::oidvector = dp.distclass
+ where dp.localoid in ('ctas_base_legacy'::regclass,
+                       'ctas_from_legacy'::regclass,
+                       'ctas_base_nonlegacy'::regclass,
+                       'ctas_from_nonlegacy'::regclass);
 select * from ctas_from_legacy where col=1;
 select * from ctas_from_nonlegacy where col=1;
