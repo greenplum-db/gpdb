@@ -4502,12 +4502,50 @@ CTranslatorDXLToPlStmt::TranslateDXLDirectDispatchInfo
 	{
 		return NIL;
 	}
-	
+
 	CDXLDatumArray *dxl_datum_array = (*dispatch_identifier_datum_arrays)[0];
 	GPOS_ASSERT(0 < dxl_datum_array->Size());
-		
-	ULONG hash_code = GetDXLDatumGPDBHash(dxl_datum_array);
+
 	const ULONG length = dispatch_identifier_datum_arrays->Size();
+
+	if (dxl_direct_dispatch_info->FContainsRawValues()) {
+		List *segids_list = NIL;
+		INT segid;
+		Const *const_expr = NULL;
+
+		for (ULONG ul = 0; ul < length; ul++)
+		{
+			CDXLDatumArray *dispatch_identifier_datum_array = (*dispatch_identifier_datum_arrays)[ul];
+			GPOS_ASSERT(1 == dispatch_identifier_datum_array->Size());
+			const_expr = (Const *) m_translator_dxl_to_scalar->TranslateDXLDatumToScalar(
+				(*dispatch_identifier_datum_array)[0]
+			);
+
+			segid = DatumGetInt32(const_expr->constvalue);
+			if (segid >= -1 && segid < (INT)m_num_of_segments)
+			{
+				segids_list = gpdb::LAppendInt(segids_list, segid);
+			}
+		}
+
+		if (segids_list == NIL && const_expr)
+		{
+			// If no valid segids were found, and there were items in the
+			// dispatch identifier array, then append the last item to behave
+			// in same manner as Planner for consistency. Currently this will
+			// lead to a FATAL in the backend when we dispatch.
+			segids_list = gpdb::LAppendInt(segids_list, segid);
+		}
+
+		if (list_length(segids_list) > 1)
+		{
+			return NIL;
+		}
+
+		return segids_list;
+	}
+
+	ULONG hash_code = GetDXLDatumGPDBHash(dxl_datum_array);
 	for (ULONG ul = 0; ul < length; ul++)
 	{
 		CDXLDatumArray *dispatch_identifier_datum_array = (*dispatch_identifier_datum_arrays)[ul];
