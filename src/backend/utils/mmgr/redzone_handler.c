@@ -174,7 +174,7 @@ RedZoneHandler_FlagTopConsumer()
 
 	/*
 	 * In resource group mode, we should acquire ResGroupLock to avoid
-	 * resource group slot is changed during flag top consumer in redzone.
+	 * resource group slot being changed during flag top consumer in redzone.
 	 * Note that flag top consumer is a low frequency action, so the
 	 * additional overhead is acceptable.
 	 */
