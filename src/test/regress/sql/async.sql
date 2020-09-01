@@ -17,3 +17,13 @@ NOTIFY notify_async2;
 LISTEN notify_async2;
 UNLISTEN notify_async2;
 UNLISTEN *;
+
+-- start_matchsubs
+-- m/Asynchronous notification "notify_async3" received from server process with PID.*/
+-- s/Asynchronous notification "notify_async3" received from server process with PID.*/Asynchronous notification "notify_async3" received/
+-- end_matchsubs
+\c postgres
+LISTEN notify_async3;
+\! psql postgres -c "notify notify_async3;"
+SELECT;
+\c -

@@ -299,6 +299,9 @@ procsignal_sigusr1_handler(SIGNAL_ARGS)
 	if (CheckProcSignal(PROCSIG_CATCHUP_INTERRUPT))
 		HandleCatchupInterrupt();
 
+	if (CheckProcSignal(PROCSIG_NOTIFY_INTERRUPT))
+		HandleNotifyInterrupt();
+
 	if (CheckProcSignal(PROCSIG_QUERY_FINISH))
 		QueryFinishHandler();
 
