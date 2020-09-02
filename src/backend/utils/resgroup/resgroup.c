@@ -372,6 +372,7 @@ static void resgroupDumpSlots(StringInfo str);
 static void resgroupDumpFreeSlots(StringInfo str);
 
 static void sessionSetSlot(ResGroupSlotData *slot);
+static void sessionResetSlot(void);
 static ResGroupSlotData *sessionGetSlot(void);
 
 static void bindGroupOperation(ResGroupData *group);
@@ -2731,8 +2732,7 @@ UnassignResGroup(bool releaseSlot)
 		 * Reset resource group slot for current session. Note MySessionState
 		 * could be reset as NULL in shmem_exit() before.
 		 */
-		if (MySessionState != NULL)
-			MySessionState->resGroupSlot = NULL;
+		sessionResetSlot();
 	}
 
 	LWLockRelease(ResGroupLock);
@@ -3122,8 +3122,7 @@ groupWaitCancel(bool isMoveQuery)
 		 * Reset resource group slot for current session. Note MySessionState
 		 * could be reset as NULL in shmem_exit() before.
 		 */
-		if (MySessionState != NULL)
-			MySessionState->resGroupSlot = NULL;
+		sessionResetSlot();
 
 		group->totalExecuted++;
 
@@ -3858,7 +3857,37 @@ sessionSetSlot(ResGroupSlotData *slot)
 	Assert(slot != NULL);
 	Assert(MySessionState->resGroupSlot == NULL);
 
+	/*
+	 * SessionStateLock is required since runaway detector will traverse
+	 * the current session array and check corresponding resGroupSlot with
+	 * shared lock on SessionStateLock.
+	 */
+	LWLockAcquire(SessionStateLock, LW_EXCLUSIVE);
+
 	MySessionState->resGroupSlot = (void *) slot;
+
+	LWLockRelease(SessionStateLock);
+}
+
+/*
+ * Reset resource group slot for current session to NULL.
+ */
+static void
+sessionResetSlot(void)
+{
+	/*
+	 * SessionStateLock is required since runaway detector will traverse
+	 * the current session array and check corresponding resGroupSlot with
+	 * shared lock on SessionStateLock.
+	 */
+	if (MySessionState != NULL)
+	{
+		LWLockAcquire(SessionStateLock, LW_EXCLUSIVE);
+
+		MySessionState->resGroupSlot = NULL;
+
+		LWLockRelease(SessionStateLock);
+	}
 }
 
 /*
