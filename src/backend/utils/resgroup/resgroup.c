@@ -3889,7 +3889,7 @@ sessionResetSlot(void)
 	 * the current session array and check corresponding resGroupSlot with
 	 * shared lock on SessionStateLock.
 	 */
-	if (MySessionState == NULL)
+	if (MySessionState != NULL)
 	{
 		LWLockAcquire(SessionStateLock, LW_EXCLUSIVE);
 
