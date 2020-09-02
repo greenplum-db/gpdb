@@ -399,8 +399,7 @@ ic_proxy_server_on_read_postmaster_pipe(uv_stream_t *stream, ssize_t nread, cons
 	else if (nread < 0)
 		ic_proxy_log(FATAL, "read on postmaster death monitoring pipe failed: %s", uv_strerror(nread));
 	else if (nread > 0)
-		ic_proxy_log(FATAL, "unexpected data in postmaster death monitoring pipe with length: %d", nread);
-}
+		ic_proxy_log(FATAL, "unexpected data in postmaster death monitoring pipe with length: %ld", nread)
 
 /*
  * The main loop of the ic-proxy.
