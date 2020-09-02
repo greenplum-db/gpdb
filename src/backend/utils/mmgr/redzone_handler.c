@@ -177,6 +177,10 @@ RedZoneHandler_FlagTopConsumer()
 	 * resource group slot being changed during flag top consumer in redzone.
 	 * Note that flag top consumer is a low frequency action, so the
 	 * additional overhead is acceptable.
+	 *
+	 * Note that we also need to acquire SessionStateLock as well, so the lock
+	 * order is important to avoid deadlock. Make sure always acquire
+	 * ResGroupLock ahead.
 	 */
 	if (IsResGroupEnabled())
 		LWLockAcquire(ResGroupLock, LW_SHARED);
