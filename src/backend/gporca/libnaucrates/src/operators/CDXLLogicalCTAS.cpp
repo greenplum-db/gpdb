@@ -65,9 +65,9 @@ CDXLLogicalCTAS::CDXLLogicalCTAS(
 	GPOS_ASSERT(dxl_col_descr_array->Size() == vartypemod_array->Size());
 	GPOS_ASSERT(IMDRelation::ErelstorageSentinel > rel_storage_type);
 	GPOS_ASSERT(IMDRelation::EreldistrSentinel > rel_distr_policy);
-	GPOS_ASSERT(NULL == m_distr_opfamilies ||
+	GPOS_ASSERT(NULL == m_distr_column_pos_array ||
 				m_distr_opfamilies->Size() == m_distr_column_pos_array->Size());
-	GPOS_ASSERT(NULL == m_distr_opclasses ||
+	GPOS_ASSERT(NULL == m_distr_column_pos_array ||
 				m_distr_opclasses->Size() == m_distr_column_pos_array->Size());
 }
 
@@ -89,6 +89,8 @@ CDXLLogicalCTAS::~CDXLLogicalCTAS()
 	CRefCount::SafeRelease(m_distr_column_pos_array);
 	m_src_colids_array->Release();
 	m_vartypemod_array->Release();
+	m_distr_opfamilies->Release();
+	m_distr_opclasses->Release();
 }
 
 //---------------------------------------------------------------------------
@@ -236,19 +238,17 @@ CDXLLogicalCTAS::SerializeToDXL(CXMLSerializer *xml_serializer,
 
 	m_dxl_ctas_storage_option->Serialize(xml_serializer);
 
-	if (IMDRelation::EreldistrHash == m_rel_distr_policy &&
-		NULL != m_distr_opfamilies)
-	{
-		IMDCacheObject::SerializeMDIdList(
-			xml_serializer, m_distr_opfamilies,
-			CDXLTokens::GetDXLTokenStr(EdxltokenRelDistrOpfamilies),
-			CDXLTokens::GetDXLTokenStr(EdxltokenRelDistrOpfamily));
 
-		IMDCacheObject::SerializeMDIdList(
-			xml_serializer, m_distr_opclasses,
-			CDXLTokens::GetDXLTokenStr(EdxltokenRelDistrOpclasses),
-			CDXLTokens::GetDXLTokenStr(EdxltokenRelDistrOpclass));
-	}
+
+	IMDCacheObject::SerializeMDIdList(
+		xml_serializer, m_distr_opfamilies,
+		CDXLTokens::GetDXLTokenStr(EdxltokenRelDistrOpfamilies),
+		CDXLTokens::GetDXLTokenStr(EdxltokenRelDistrOpfamily));
+
+	IMDCacheObject::SerializeMDIdList(
+		xml_serializer, m_distr_opclasses,
+		CDXLTokens::GetDXLTokenStr(EdxltokenRelDistrOpclasses),
+		CDXLTokens::GetDXLTokenStr(EdxltokenRelDistrOpclass));
 
 	// serialize arguments
 	dxlnode->SerializeChildrenToDXL(xml_serializer);

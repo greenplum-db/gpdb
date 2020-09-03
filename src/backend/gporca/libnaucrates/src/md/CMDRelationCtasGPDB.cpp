@@ -111,6 +111,8 @@ CMDRelationCtasGPDB::~CMDRelationCtasGPDB()
 	CRefCount::SafeRelease(m_nondrop_col_pos_array);
 	m_dxl_ctas_storage_option->Release();
 	m_vartypemod_array->Release();
+	m_distr_opfamilies->Release();
+	m_distr_opclasses->Release();
 }
 
 //---------------------------------------------------------------------------
@@ -360,18 +362,15 @@ CMDRelationCtasGPDB::Serialize(CXMLSerializer *xml_serializer) const
 	m_dxl_ctas_storage_option->Serialize(xml_serializer);
 
 	// serialize distribution opfamilies
-	if (EreldistrHash == m_rel_distr_policy && NULL != m_distr_opfamilies)
-	{
-		SerializeMDIdList(
-			xml_serializer, m_distr_opfamilies,
-			CDXLTokens::GetDXLTokenStr(EdxltokenRelDistrOpfamilies),
-			CDXLTokens::GetDXLTokenStr(EdxltokenRelDistrOpfamily));
 
-		SerializeMDIdList(
-			xml_serializer, m_distr_opclasses,
-			CDXLTokens::GetDXLTokenStr(EdxltokenRelDistrOpclasses),
-			CDXLTokens::GetDXLTokenStr(EdxltokenRelDistrOpclass));
-	}
+	SerializeMDIdList(xml_serializer, m_distr_opfamilies,
+					  CDXLTokens::GetDXLTokenStr(EdxltokenRelDistrOpfamilies),
+					  CDXLTokens::GetDXLTokenStr(EdxltokenRelDistrOpfamily));
+
+	SerializeMDIdList(xml_serializer, m_distr_opclasses,
+					  CDXLTokens::GetDXLTokenStr(EdxltokenRelDistrOpclasses),
+					  CDXLTokens::GetDXLTokenStr(EdxltokenRelDistrOpclass));
+
 
 	xml_serializer->CloseElement(
 		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),

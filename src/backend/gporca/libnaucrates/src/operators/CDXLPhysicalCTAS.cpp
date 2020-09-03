@@ -83,6 +83,7 @@ CDXLPhysicalCTAS::~CDXLPhysicalCTAS()
 	CRefCount::SafeRelease(m_distr_column_pos_array);
 	m_src_colids_array->Release();
 	m_vartypemod_array->Release();
+	m_distr_opclasses->Release();
 }
 
 //---------------------------------------------------------------------------
@@ -188,14 +189,11 @@ CDXLPhysicalCTAS::SerializeToDXL(CXMLSerializer *xml_serializer,
 	dxlnode->SerializePropertiesToDXL(xml_serializer);
 
 	// serialize opclasses list
-	if (IMDRelation::EreldistrHash == m_rel_distr_policy)
-	{
-		GPOS_ASSERT(NULL != m_distr_opclasses);
-		IMDCacheObject::SerializeMDIdList(
-			xml_serializer, m_distr_opclasses,
-			CDXLTokens::GetDXLTokenStr(EdxltokenRelDistrOpclasses),
-			CDXLTokens::GetDXLTokenStr(EdxltokenRelDistrOpclass));
-	}
+
+	IMDCacheObject::SerializeMDIdList(
+		xml_serializer, m_distr_opclasses,
+		CDXLTokens::GetDXLTokenStr(EdxltokenRelDistrOpclasses),
+		CDXLTokens::GetDXLTokenStr(EdxltokenRelDistrOpclass));
 
 	// serialize column descriptors
 	xml_serializer->OpenElement(

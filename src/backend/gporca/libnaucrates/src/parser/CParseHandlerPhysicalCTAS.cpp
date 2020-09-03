@@ -159,6 +159,13 @@ CParseHandlerPhysicalCTAS::StartElement(const XMLCh *const,	 // element_uri,
 			m_parse_handler_mgr, this);
 	m_parse_handler_mgr->ActivateParseHandler(col_descr_parse_handler);
 
+	//parse handler for distr opclasses
+	CParseHandlerBase *opclasses_parse_handler =
+		CParseHandlerFactory::GetParseHandler(
+			m_mp, CDXLTokens::XmlstrToken(EdxltokenMetadataIdList),
+			m_parse_handler_mgr, this);
+	m_parse_handler_mgr->ActivateParseHandler(opclasses_parse_handler);
+
 	//parse handler for the properties of the operator
 	CParseHandlerBase *prop_parse_handler =
 		CParseHandlerFactory::GetParseHandler(
@@ -168,6 +175,7 @@ CParseHandlerPhysicalCTAS::StartElement(const XMLCh *const,	 // element_uri,
 
 	// store child parse handler in array
 	this->Append(prop_parse_handler);
+	this->Append(opclasses_parse_handler);
 	this->Append(col_descr_parse_handler);
 	this->Append(ctas_options_parse_handler);
 	this->Append(proj_list_parse_handler);
@@ -215,6 +223,7 @@ CParseHandlerPhysicalCTAS::EndElement(const XMLCh *const,  // element_uri,
 		dynamic_cast<CParseHandlerPhysicalOp *>((*this)[5]);
 
 	GPOS_ASSERT(NULL != prop_parse_handler->GetProperties());
+	GPOS_ASSERT(NULL != opclasses_parse_handler->GetMdIdArray());
 	GPOS_ASSERT(NULL != col_descr_parse_handler->GetDXLColumnDescrArray());
 	GPOS_ASSERT(NULL != ctas_options_parse_handler->GetDxlCtasStorageOption());
 	GPOS_ASSERT(NULL != proj_list_parse_handler->CreateDXLNode());

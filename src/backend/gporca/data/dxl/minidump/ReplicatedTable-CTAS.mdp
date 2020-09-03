@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
   <dxl:Comment><![CDATA[
-     CREATE TABLE r1 AS SELECT i AS a, i AS b FROM generate_series(1, 10) i DISTRIBUTED REPLICATED;
-  ]]>
+     CREATE TABLE r1 AS SELECT i AS a, i AS b FROM generate_series(1, 10) i DISTRIBUTED REPLICATED; ]]>
   </dxl:Comment>
   <dxl:Thread Id="0">
     <dxl:OptimizerConfig>
@@ -15,11 +14,13 @@
           <dxl:CostParam Name="NLJFactor" Value="1024.000000" LowerBound="1023.500000" UpperBound="1024.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
-      <dxl:TraceFlags Value="102074,102146,102120,103001,103014,103015,103022,103027,104003,104004,104005,105000,106000"/>
+      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10"/>
+      <dxl:TraceFlags Value="102074,102120,102146,102152,103001,103014,103022,103027,103029,103038,104002,104003,104004,104005,105000,106000"/>
     </dxl:OptimizerConfig>
-    <dxl:Metadata SystemIds="0.GPDB">
-      <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="1" PassByValue="true">
+    <dxl:Metadata SystemIds="0.CTAS,0.GPDB">
+      <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsTextRelated="false" IsFixedLength="true" Length="1" PassByValue="true">
+        <dxl:DistrOpfamily Mdid="0.2222.1.0"/>
+        <dxl:LegacyDistrOpfamily Mdid="0.7124.1.0"/>
         <dxl:EqualityOp Mdid="0.91.1.0"/>
         <dxl:InequalityOp Mdid="0.85.1.0"/>
         <dxl:LessThanOp Mdid="0.58.1.0"/>
@@ -34,7 +35,9 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Type Mdid="0.23.1.0" Name="int4" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="4" PassByValue="true">
+      <dxl:Type Mdid="0.23.1.0" Name="int4" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsTextRelated="false" IsFixedLength="true" Length="4" PassByValue="true">
+        <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
+        <dxl:LegacyDistrOpfamily Mdid="0.7100.1.0"/>
         <dxl:EqualityOp Mdid="0.96.1.0"/>
         <dxl:InequalityOp Mdid="0.518.1.0"/>
         <dxl:LessThanOp Mdid="0.97.1.0"/>
@@ -59,8 +62,10 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:CTASOptions OnCommitAction="NOOP"/>
+        <dxl:DistrOpfamilies/>
+        <dxl:DistrOpclasses/>
       </dxl:CTASRelation>
-      <dxl:GPDBFunc Mdid="0.1067.1.0" Name="generate_series" ReturnsSet="true" Stability="Immutable" DataAccess="ReadsSQLData" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.1067.1.0" Name="generate_series" ReturnsSet="true" Stability="Immutable" DataAccess="NoSQL" IsStrict="true" IsNDVPreserving="false" IsAllowedForPS="false">
         <dxl:ResultType Mdid="0.23.1.0"/>
       </dxl:GPDBFunc>
     </dxl:Metadata>
@@ -76,6 +81,8 @@
           <dxl:Column ColId="3" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
         </dxl:Columns>
         <dxl:CTASOptions OnCommitAction="NOOP"/>
+        <dxl:DistrOpfamilies/>
+        <dxl:DistrOpclasses/>
         <dxl:LogicalTVF FuncId="0.1067.1.0" Name="generate_series" TypeMdid="0.23.1.0">
           <dxl:Columns>
             <dxl:Column ColId="1" Attno="1" ColName="generate_series" TypeMdid="0.23.1.0"/>
@@ -90,6 +97,7 @@
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="31.262000" Rows="1000.000000" Width="4"/>
         </dxl:Properties>
+        <dxl:DistrOpclasses/>
         <dxl:Columns>
           <dxl:Column ColId="2" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
           <dxl:Column ColId="3" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>

@@ -897,9 +897,9 @@ CTranslatorQueryToDXL::TranslateCTASToDXL()
 	IMDRelation::Ereldistrpolicy rel_distr_policy =
 		IMDRelation::EreldistrRandom;
 	ULongPtrArray *distribution_colids = NULL;
-	IMdIdArray *distr_opfamilies = NULL;
-	IMdIdArray *distr_opclasses = NULL;
 
+	IMdIdArray *distr_opfamilies = GPOS_NEW(m_mp) IMdIdArray(m_mp);
+	IMdIdArray *distr_opclasses = GPOS_NEW(m_mp) IMdIdArray(m_mp);
 
 	if (NULL != m_query->intoPolicy)
 	{
@@ -909,9 +909,6 @@ CTranslatorQueryToDXL::TranslateCTASToDXL()
 		if (IMDRelation::EreldistrHash == rel_distr_policy)
 		{
 			distribution_colids = GPOS_NEW(m_mp) ULongPtrArray(m_mp);
-			distr_opfamilies = GPOS_NEW(m_mp) IMdIdArray(m_mp);
-			distr_opclasses = GPOS_NEW(m_mp) IMdIdArray(m_mp);
-
 
 			for (ULONG ul = 0; ul < (ULONG) m_query->intoPolicy->nattrs; ul++)
 			{

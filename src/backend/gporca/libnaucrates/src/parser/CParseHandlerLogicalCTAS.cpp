@@ -43,9 +43,7 @@ CParseHandlerLogicalCTAS::CParseHandlerLogicalCTAS(
 	  m_distr_column_pos_array(NULL),
 	  m_src_colids_array(NULL),
 	  m_vartypemod_array(NULL),
-	  m_is_temp_table(false),
-	  m_opfamilies_parse_handler(NULL),
-	  m_opclasses_parse_handler(NULL)
+	  m_is_temp_table(false)
 {
 }
 
@@ -58,43 +56,11 @@ CParseHandlerLogicalCTAS::CParseHandlerLogicalCTAS(
 //
 //---------------------------------------------------------------------------
 void
-CParseHandlerLogicalCTAS::StartElement(const XMLCh *const element_uri,
+CParseHandlerLogicalCTAS::StartElement(const XMLCh *const,
 									   const XMLCh *const element_local_name,
-									   const XMLCh *const element_qname,
+									   const XMLCh *const,
 									   const Attributes &attrs)
 {
-	if (0 == XMLString::compareString(
-				 CDXLTokens::XmlstrToken(EdxltokenRelDistrOpfamilies),
-				 element_local_name))
-	{
-		// parse handler for check constraints
-		m_opfamilies_parse_handler = CParseHandlerFactory::GetParseHandler(
-			m_mp, CDXLTokens::XmlstrToken(EdxltokenMetadataIdList),
-			m_parse_handler_mgr, this);
-		m_parse_handler_mgr->ActivateParseHandler(m_opfamilies_parse_handler);
-		this->Append(m_opfamilies_parse_handler);
-		m_opfamilies_parse_handler->startElement(
-			element_uri, element_local_name, element_qname, attrs);
-
-		return;
-	}
-
-	if (0 == XMLString::compareString(
-				 CDXLTokens::XmlstrToken(EdxltokenRelDistrOpclasses),
-				 element_local_name))
-	{
-		// parse handler for check constraints
-		m_opclasses_parse_handler = CParseHandlerFactory::GetParseHandler(
-			m_mp, CDXLTokens::XmlstrToken(EdxltokenMetadataIdList),
-			m_parse_handler_mgr, this);
-		m_parse_handler_mgr->ActivateParseHandler(m_opclasses_parse_handler);
-		this->Append(m_opclasses_parse_handler);
-		m_opclasses_parse_handler->startElement(element_uri, element_local_name,
-												element_qname, attrs);
-
-		return;
-	}
-
 	if (0 !=
 		XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenLogicalCTAS),
 								 element_local_name))
@@ -176,6 +142,20 @@ CParseHandlerLogicalCTAS::StartElement(const XMLCh *const element_uri,
 			m_parse_handler_mgr, this);
 	m_parse_handler_mgr->ActivateParseHandler(child_parse_handler);
 
+	// parse handler for distr opclasses
+	CParseHandlerBase *opclasses_parse_handler =
+		CParseHandlerFactory::GetParseHandler(
+			m_mp, CDXLTokens::XmlstrToken(EdxltokenMetadataIdList),
+			m_parse_handler_mgr, this);
+	m_parse_handler_mgr->ActivateParseHandler(opclasses_parse_handler);
+
+	// parse handler for distr opfamilies
+	CParseHandlerBase *opfamilies_parse_handler =
+		CParseHandlerFactory::GetParseHandler(
+			m_mp, CDXLTokens::XmlstrToken(EdxltokenMetadataIdList),
+			m_parse_handler_mgr, this);
+	m_parse_handler_mgr->ActivateParseHandler(opfamilies_parse_handler);
+
 	//parse handler for the storage options
 	CParseHandlerBase *ctas_options_parse_handler =
 		CParseHandlerFactory::GetParseHandler(
@@ -193,6 +173,8 @@ CParseHandlerLogicalCTAS::StartElement(const XMLCh *const element_uri,
 	// store child parse handler in array
 	this->Append(col_descr_parse_handler);
 	this->Append(ctas_options_parse_handler);
+	this->Append(opfamilies_parse_handler);
+	this->Append(opclasses_parse_handler);
 	this->Append(child_parse_handler);
 }
 
@@ -220,17 +202,23 @@ CParseHandlerLogicalCTAS::EndElement(const XMLCh *const,  // element_uri,
 				   str->GetBuffer());
 	}
 
-	GPOS_ASSERT(3 == this->Length());
+	GPOS_ASSERT(5 == this->Length());
 
 	CParseHandlerColDescr *col_descr_parse_handler =
 		dynamic_cast<CParseHandlerColDescr *>((*this)[0]);
 	CParseHandlerCtasStorageOptions *ctas_options_parse_handler =
 		dynamic_cast<CParseHandlerCtasStorageOptions *>((*this)[1]);
+	CParseHandlerMetadataIdList *opfamilies_parse_handler =
+		dynamic_cast<CParseHandlerMetadataIdList *>((*this)[2]);
+	CParseHandlerMetadataIdList *opclasses_parse_handler =
+		dynamic_cast<CParseHandlerMetadataIdList *>((*this)[3]);
 	CParseHandlerLogicalOp *child_parse_handler =
-		dynamic_cast<CParseHandlerLogicalOp *>((*this)[2]);
+		dynamic_cast<CParseHandlerLogicalOp *>((*this)[4]);
 
 	GPOS_ASSERT(NULL != col_descr_parse_handler->GetDXLColumnDescrArray());
 	GPOS_ASSERT(NULL != ctas_options_parse_handler->GetDxlCtasStorageOption());
+	GPOS_ASSERT(NULL != opfamilies_parse_handler->GetMdIdArray());
+	GPOS_ASSERT(NULL != opclasses_parse_handler->GetMdIdArray());
 	GPOS_ASSERT(NULL != child_parse_handler->CreateDXLNode());
 
 	CDXLColDescrArray *dxl_column_descr_array =
@@ -241,23 +229,17 @@ CParseHandlerLogicalCTAS::EndElement(const XMLCh *const,  // element_uri,
 		ctas_options_parse_handler->GetDxlCtasStorageOption();
 	dxl_ctas_storage_opt->AddRef();
 
-	IMdIdArray *distr_opfamilies = NULL;
-	if (m_opfamilies_parse_handler != NULL)
-	{
-		distr_opfamilies = dynamic_cast<CParseHandlerMetadataIdList *>(
-							   m_opfamilies_parse_handler)
-							   ->GetMdIdArray();
-		distr_opfamilies->AddRef();
-	}
 
-	IMdIdArray *distr_opclasses = NULL;
-	if (m_opclasses_parse_handler != NULL)
-	{
-		distr_opclasses = dynamic_cast<CParseHandlerMetadataIdList *>(
-							  m_opclasses_parse_handler)
-							  ->GetMdIdArray();
-		distr_opclasses->AddRef();
-	}
+	IMdIdArray *distr_opfamilies =
+		dynamic_cast<CParseHandlerMetadataIdList *>(opfamilies_parse_handler)
+			->GetMdIdArray();
+	distr_opfamilies->AddRef();
+
+	IMdIdArray *distr_opclasses =
+		dynamic_cast<CParseHandlerMetadataIdList *>(opclasses_parse_handler)
+			->GetMdIdArray();
+	distr_opclasses->AddRef();
+
 
 	m_dxl_node = GPOS_NEW(m_mp) CDXLNode(
 		m_mp,

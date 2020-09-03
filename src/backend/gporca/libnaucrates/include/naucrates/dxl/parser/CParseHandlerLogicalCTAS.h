@@ -65,12 +65,6 @@ private:
 	// storage type
 	IMDRelation::Erelstoragetype m_rel_storage_type;
 
-	// distribution opfamilies parse handler
-	CParseHandlerBase *m_opfamilies_parse_handler;
-
-	// distribution opclasses parse handler
-	CParseHandlerBase *m_opclasses_parse_handler;
-
 	// private copy ctor
 	CParseHandlerLogicalCTAS(const CParseHandlerLogicalCTAS &);
 
