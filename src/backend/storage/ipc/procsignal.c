@@ -301,46 +301,46 @@ procsignal_sigusr1_handler(SIGNAL_ARGS)
 		if (CheckProcSignal(PROCSIG_QUERY_FINISH))
 			QueryFinishHandler();
 
+		if (CheckProcSignal(PROCSIG_WALSND_INIT_STOPPING))
+			HandleWalSndInitStopping();
+
+		if (CheckProcSignal(PROCSIG_PARALLEL_MESSAGE))
+			HandleParallelMessageInterrupt();
+
+		if (CheckProcSignal(PROCSIG_RECOVERY_CONFLICT_DATABASE))
+			RecoveryConflictInterrupt(PROCSIG_RECOVERY_CONFLICT_DATABASE);
+
+		if (CheckProcSignal(PROCSIG_RECOVERY_CONFLICT_TABLESPACE))
+			RecoveryConflictInterrupt(PROCSIG_RECOVERY_CONFLICT_TABLESPACE);
+
+		if (CheckProcSignal(PROCSIG_RECOVERY_CONFLICT_LOCK))
+			RecoveryConflictInterrupt(PROCSIG_RECOVERY_CONFLICT_LOCK);
+
+		if (CheckProcSignal(PROCSIG_RECOVERY_CONFLICT_SNAPSHOT))
+			RecoveryConflictInterrupt(PROCSIG_RECOVERY_CONFLICT_SNAPSHOT);
+
+		if (CheckProcSignal(PROCSIG_RECOVERY_CONFLICT_STARTUP_DEADLOCK))
+			RecoveryConflictInterrupt(PROCSIG_RECOVERY_CONFLICT_STARTUP_DEADLOCK);
+
+		if (CheckProcSignal(PROCSIG_RECOVERY_CONFLICT_BUFFERPIN))
+			RecoveryConflictInterrupt(PROCSIG_RECOVERY_CONFLICT_BUFFERPIN);
+
+		if (CheckProcSignal(PROCSIG_RESOURCE_GROUP_MOVE_QUERY))
+			HandleMoveResourceGroup();
+
+		SetLatch(MyLatch);
+
 		latch_sigusr1_handler();
+
 		InSIGUSR1Handler = false;
 	}
 	PG_CATCH();
 	{
 		InSIGUSR1Handler = false;
+
 		PG_RE_THROW();
 	}
 	PG_END_TRY();
-
-	if (CheckProcSignal(PROCSIG_WALSND_INIT_STOPPING))
-		HandleWalSndInitStopping();
-
-	if (CheckProcSignal(PROCSIG_PARALLEL_MESSAGE))
-		HandleParallelMessageInterrupt();
-
-	if (CheckProcSignal(PROCSIG_RECOVERY_CONFLICT_DATABASE))
-		RecoveryConflictInterrupt(PROCSIG_RECOVERY_CONFLICT_DATABASE);
-
-	if (CheckProcSignal(PROCSIG_RECOVERY_CONFLICT_TABLESPACE))
-		RecoveryConflictInterrupt(PROCSIG_RECOVERY_CONFLICT_TABLESPACE);
-
-	if (CheckProcSignal(PROCSIG_RECOVERY_CONFLICT_LOCK))
-		RecoveryConflictInterrupt(PROCSIG_RECOVERY_CONFLICT_LOCK);
-
-	if (CheckProcSignal(PROCSIG_RECOVERY_CONFLICT_SNAPSHOT))
-		RecoveryConflictInterrupt(PROCSIG_RECOVERY_CONFLICT_SNAPSHOT);
-
-	if (CheckProcSignal(PROCSIG_RECOVERY_CONFLICT_STARTUP_DEADLOCK))
-		RecoveryConflictInterrupt(PROCSIG_RECOVERY_CONFLICT_STARTUP_DEADLOCK);
-
-	if (CheckProcSignal(PROCSIG_RECOVERY_CONFLICT_BUFFERPIN))
-		RecoveryConflictInterrupt(PROCSIG_RECOVERY_CONFLICT_BUFFERPIN);
-
-	if (CheckProcSignal(PROCSIG_RESOURCE_GROUP_MOVE_QUERY))
-		HandleMoveResourceGroup();
-
-	SetLatch(MyLatch);
-
-	latch_sigusr1_handler();
 
 	errno = save_errno;
 }
