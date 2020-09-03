@@ -1234,6 +1234,7 @@ def impl(context):
         context.standby_host = standby
         run_gpcommand(context, 'gpinitstandby -ra')
 
+@given('the catalog has a standby master entry')
 @then('verify the standby master entries in catalog')
 def impl(context):
 	check_segment_config_query = "SELECT * FROM gp_segment_configuration WHERE content = -1 AND role = 'm'"

@@ -123,7 +123,7 @@ class GpStart:
                                                           logger=logger).get_master_value()
 
             if not self.skip_standby_check:
-                self._check_standby_activated()
+                self.check_standby()
             else:
                 logger.info("Skipping Standby activation status checking.")
 
@@ -234,10 +234,34 @@ class GpStart:
         else:
             controldata = PgControlData("fetching pg_controldata remotely", data_dir_path, REMOTE, remoteHost)
 
+        controldata.run(validateAfter=True)
+        return int(controldata.get_value("Latest checkpoint's TimeLineID"))
+
+    class StandbyUnreachable(Exception):
+        pass
+
+    def _standby_activated(self):
+        logger.debug("Checking if standby has been activated...")
+
+        if not self.gparray.standbyMaster:
+            return False
+
+        # fetch timelineids for both primary and standby (post-promote)
+        primary_tli = self.fetch_tli(self.master_datadir)
         try:
-            controldata.run(validateAfter=True)
-            return int(controldata.get_value("Latest checkpoint's TimeLineID"))
+            standby_tli = self.fetch_tli(self.gparray.standbyMaster.getSegmentDataDirectory(),
+                                         self.gparray.standbyMaster.getSegmentHostName())
         except base.ExecutionError as err:
+            raise GpStart.StandbyUnreachable(err)
+
+        logger.debug("Primary TLI = %d" % primary_tli)
+        logger.debug("Standby TLI = %d" % standby_tli)
+        return primary_tli < standby_tli
+
+    def check_standby(self):
+        try:
+            standby_activated = self._standby_activated()
+        except GpStart.StandbyUnreachable as err:
             logger.warning("Standby host is unreachable, cannot determine whether the standby is currently acting as the master. Received error: %s" % err)
             logger.warning("Continue only if you are certain that the standby is not acting as the master.")
             if not self.interactive or not userinput.ask_yesno(None, "\nContinue with startup", 'N'):
@@ -245,31 +269,25 @@ class GpStart:
                     logger.warning("Non interactive mode detected. Not starting the cluster. Start the cluster in interactive mode.")
                 self.shutdown_master_only()
                 raise UserAbortedException()
-            return 0  # a 0 won't lead to standby promotion, as TimeLineIDs start at 1
 
-    def _check_standby_activated(self):
-        logger.debug("Checking if standby has been activated...")
+            # If the user wants to continue when the standby is unreachable,
+            # set start_standby to False to prevent starting the unreachable
+            # standy later in the startup process.
+            self.start_standby = False
+            return
 
-        if self.gparray.standbyMaster:
+        if not standby_activated:
+            return
 
-            # fetch timelineids for both primary and standby (post-promote)
-            primary_tli = self.fetch_tli(self.master_datadir)
-            standby_tli = self.fetch_tli(self.gparray.standbyMaster.getSegmentDataDirectory(),
-                                         self.gparray.standbyMaster.getSegmentHostName())
-
-            logger.debug("Primary TLI = %d" % primary_tli)
-            logger.debug("Standby TLI = %d" % standby_tli)
-
-            if primary_tli < standby_tli:
-                # stop the master we've started up.
-                cmd = gp.GpStop("Shutting down master", masterOnly=True,
-                                fast=True, quiet=logging_is_quiet(),
-                                verbose=logging_is_verbose(),
-                                parallel=self.parallel,
-                                datadir=self.master_datadir)
-                cmd.run(validateAfter=True)
-                logger.info("Master Stopped...")
-                raise ExceptionNoStackTraceNeeded("Standby activated, this node no more can act as master.")
+        # stop the master we've started up.
+        cmd = gp.GpStop("Shutting down master", masterOnly=True,
+                        fast=True, quiet=logging_is_quiet(),
+                        verbose=logging_is_verbose(),
+                        datadir=self.master_datadir,
+                        parallel=self.parallel)
+        cmd.run(validateAfter=True)
+        logger.info("Master Stopped...")
+        raise ExceptionNoStackTraceNeeded("Standby activated, this node no more can act as master.")
 
     ######
     def _recovery_startup(self):
