@@ -878,17 +878,17 @@ explain (costs off) insert into t_replicate_volatile select nextval('seq_for_ins
 
 -- update & delete
 explain (costs off) update t_replicate_volatile set a = 1 where b > random();
-ERROR:  could not devise a plan (cdbpath.c:2535)
+ERROR:  could not devise a plan (cdbpath.c:2544)
 explain (costs off) update t_replicate_volatile set a = 1 from t_replicate_volatile x where x.a + random() = t_replicate_volatile.b;
-ERROR:  could not devise a plan (cdbpath.c:2535)
+ERROR:  could not devise a plan (cdbpath.c:2544)
 explain (costs off) update t_replicate_volatile set a = 1 from t_hashdist x where x.a + random() = t_replicate_volatile.b;
-ERROR:  could not devise a plan (cdbpath.c:2535)
+ERROR:  could not devise a plan (cdbpath.c:2544)
 explain (costs off) delete from t_replicate_volatile where a < random();
-ERROR:  could not devise a plan (cdbpath.c:2535)
+ERROR:  could not devise a plan (cdbpath.c:2544)
 explain (costs off) delete from t_replicate_volatile using t_replicate_volatile x where t_replicate_volatile.a + x.b < random();
-ERROR:  could not devise a plan (cdbpath.c:2535)
+ERROR:  could not devise a plan (cdbpath.c:2544)
 explain (costs off) update t_replicate_volatile set a = random();
-ERROR:  could not devise a plan. (cdbpath.c:2398)
+ERROR:  could not devise a plan. (cdbpath.c:2407)
 -- limit
 explain (costs off) insert into t_replicate_volatile select * from t_replicate_volatile limit 1;
                                 QUERY PLAN                                 

@@ -37,6 +37,9 @@ INSERT INTO INT8_TBL(q1) VALUES ('');
 ERROR:  invalid input syntax for integer: ""
 LINE 1: INSERT INTO INT8_TBL(q1) VALUES ('');
                                          ^
+-- The queries in this file are not sensitive to the stats, but
+-- other more complicated queries in other test files are.
+ANALYZE int8_tbl;
 SELECT * FROM INT8_TBL;
         q1        |        q2         
 ------------------+-------------------

@@ -106,6 +106,7 @@
 #include "utils/tqual.h"
 
 #include "cdb/cdbvars.h"
+#include "cdb/cdbpartition.h"
 #include "utils/faultinjector.h"
 
 
@@ -170,6 +171,7 @@ typedef struct avl_dbase
 typedef struct avw_dbase
 {
 	Oid			adw_datid;
+	bool		adw_allowconn;
 	char	   *adw_name;
 	TransactionId adw_frozenxid;
 	MultiXactId adw_minmulti;
@@ -210,6 +212,8 @@ typedef struct autovac_table
  * wi_dboid		OID of the database this worker is supposed to work on
  * wi_tableoid	OID of the table currently being vacuumed, if any
  * wi_sharedrel flag indicating whether table is marked relisshared
+ * wi_for_analyze true means that we should do only analyze for wi_dboid. 
+ *                false means that we should do only vacuum for wi_dboid.
  * wi_proc		pointer to PGPROC of the running worker, NULL if not started
  * wi_launchtime Time at which this worker was launched
  * wi_cost_*	Vacuum cost-based delay parameters current in this worker
@@ -228,6 +232,7 @@ typedef struct WorkerInfoData
 	TimestampTz wi_launchtime;
 	bool		wi_dobalance;
 	bool		wi_sharedrel;
+	bool		wi_for_analyze;  /* GPDB only */
 	int			wi_cost_delay;
 	int			wi_cost_limit;
 	int			wi_cost_limit_base;
@@ -1194,10 +1199,17 @@ do_start_worker(void)
 		avw_dbase  *tmp = lfirst(cell);
 		dlist_iter	iter;
 
-		/* Check to see if this one is at risk of wraparound */
-		if (TransactionIdPrecedes(tmp->adw_frozenxid, xidForceLimit))
+		/* Check to see if this one is at risk of wraparound
+		 *
+		 * GPDB enable auto-analyze on master, and currently only template0
+		 * need to deal with the xid wrap around. So ignore other dbs for
+		 * the wraparound check.
+		 */
+		if (!tmp->adw_allowconn &&
+			TransactionIdPrecedes(tmp->adw_frozenxid, xidForceLimit))
 		{
 			if (avdb == NULL ||
+				avdb->adw_allowconn ||  /* GPDB: only do anti-wraparound for !datallowconn databases */
 				TransactionIdPrecedes(tmp->adw_frozenxid,
 									  avdb->adw_frozenxid))
 				avdb = tmp;
@@ -1206,9 +1218,11 @@ do_start_worker(void)
 		}
 		else if (for_xid_wrap)
 			continue;			/* ignore not-at-risk DBs */
-		else if (MultiXactIdPrecedes(tmp->adw_minmulti, multiForceLimit))
+		else if (!tmp->adw_allowconn &&
+				 MultiXactIdPrecedes(tmp->adw_minmulti, multiForceLimit))
 		{
 			if (avdb == NULL ||
+				avdb->adw_allowconn ||  /* GPDB: only do anti-wraparound for !datallowconn databases */
 				MultiXactIdPrecedes(tmp->adw_minmulti, avdb->adw_minmulti))
 				avdb = tmp;
 			for_multi_wrap = true;
@@ -1284,6 +1298,7 @@ do_start_worker(void)
 
 		worker = dlist_container(WorkerInfoData, wi_links, wptr);
 		worker->wi_dboid = avdb->adw_datid;
+		worker->wi_for_analyze = avdb->adw_allowconn;
 		worker->wi_proc = NULL;
 		worker->wi_launchtime = GetCurrentTimestamp();
 
@@ -1500,14 +1515,34 @@ AutoVacWorkerMain(int argc, char *argv[])
 {
 	sigjmp_buf	local_sigjmp_buf;
 	Oid			dbid;
+	bool		for_analyze = false;
+	GpRoleValue	orig_role;
 
 	am_autovacuum_worker = true;
 
 	/* MPP-4990: Autovacuum always runs as utility-mode */
 	Gp_role = GP_ROLE_UTILITY;
+	if (IS_QUERY_DISPATCHER() && AutoVacuumingActive())
+	{
+		/*
+		 * Gp_role for the current autovacuum worker should be determined by wi_for_analyze. 
+		 * But we don't know the value of wi_for_analyze now, so we set Gp_role to 
+		 * GP_ROLE_DISPATCH first. Gp_role will switch to GP_ROLE_UTILITY as needed 
+		 * after we get the wi_for_analyze.
+		 */
+		Gp_role = GP_ROLE_DISPATCH;
+	}
+	orig_role = Gp_role;
 
 	/* Identify myself via ps */
 	init_ps_display("autovacuum worker process", "", "", "");
+
+	/* 
+	 * PreAuthDelay is a debugging aid for investigating problems in the 
+	 * authentication cycle. 
+	 */
+	if (PreAuthDelay > 0)
+		pg_usleep(PreAuthDelay * 1000000L);
 
 	SetProcessingMode(InitProcessing);
 
@@ -1553,6 +1588,7 @@ AutoVacWorkerMain(int argc, char *argv[])
 	 */
 	if (sigsetjmp(local_sigjmp_buf, 1) != 0)
 	{
+		Gp_role = orig_role;
 		/* Prevents interrupts while cleaning up */
 		HOLD_INTERRUPTS();
 
@@ -1628,6 +1664,7 @@ AutoVacWorkerMain(int argc, char *argv[])
 	{
 		MyWorkerInfo = AutoVacuumShmem->av_startingWorker;
 		dbid = MyWorkerInfo->wi_dboid;
+		for_analyze = MyWorkerInfo->wi_for_analyze;
 		MyWorkerInfo->wi_proc = MyProc;
 
 		/* insert into the running list */
@@ -1689,7 +1726,16 @@ AutoVacWorkerMain(int argc, char *argv[])
 		/* And do an appropriate amount of work */
 		recentXid = ReadNewTransactionId();
 		recentMulti = ReadNextMultiXactId();
+
+		AssertImply(!IS_QUERY_DISPATCHER(), for_analyze == false);
+		AssertImply(for_analyze, IS_QUERY_DISPATCHER());
+		if (!for_analyze && orig_role == GP_ROLE_DISPATCH)
+			Gp_role = GP_ROLE_UTILITY;
+
 		do_autovacuum();
+
+		if (!for_analyze && orig_role == GP_ROLE_DISPATCH)
+			Gp_role = orig_role;
 	}
 
 	/*
@@ -1732,6 +1778,7 @@ FreeWorkerInfo(int code, Datum arg)
 		MyWorkerInfo->wi_proc = NULL;
 		MyWorkerInfo->wi_launchtime = 0;
 		MyWorkerInfo->wi_dobalance = false;
+		MyWorkerInfo->wi_for_analyze = false;
 		MyWorkerInfo->wi_cost_delay = 0;
 		MyWorkerInfo->wi_cost_limit = 0;
 		MyWorkerInfo->wi_cost_limit_base = 0;
@@ -1902,8 +1949,11 @@ get_database_list(void)
 		 * with !datallowconn). The administrator is expected to do all
 		 * VACUUMing manually, except for template0, which you cannot
 		 * VACUUM manually because you cannot connect to it.
+		 * 
+		 * If autovacuum on the master is enabled, it means that we also want to do 
+		 * autoanalyze work for databases whose datallowconn is true.
 		 */
-		if (pgdatabase->datallowconn)
+		if (!(IS_QUERY_DISPATCHER() && AutoVacuumingActive()) && pgdatabase->datallowconn)
 			continue;
 
 		avdb = (avw_dbase *) palloc(sizeof(avw_dbase));
@@ -1912,6 +1962,7 @@ get_database_list(void)
 		avdb->adw_name = pstrdup(NameStr(pgdatabase->datname));
 		avdb->adw_frozenxid = pgdatabase->datfrozenxid;
 		avdb->adw_minmulti = pgdatabase->datminmxid;
+		avdb->adw_allowconn = pgdatabase->datallowconn;
 		/* this gets set later: */
 		avdb->adw_entry = NULL;
 
@@ -2085,19 +2136,14 @@ do_autovacuum(void)
 		/*
 		 * Check if it is a temp table (presumably, of some other backend's).
 		 * We cannot safely process other backends' temp tables.
+		 *
+		 * GPDB: Currently we enable autovacuum ANALYZE on QD(Master), so the below
+		 * code only process temp tables on Master. Segments' temp tables still
+		 * need to be considered in future.
 		 */
 		if (classForm->relpersistence == RELPERSISTENCE_TEMP)
 		{
 			int			backendID;
-
-			/*
-			 * GPDB_91_MERGE_FIXME: Autovacuum operates only on template0
-			 * database in Greenplum.  We expect no temp tables in template0.
-			 * Whenever we allow autovacuum to operate on user databases, we
-			 * must deal with the logic to detect other backend's temp tables
-			 * below.
-			 */
-			Assert(false);
 			
 			backendID = GetTempNamespaceBackendId(classForm->relnamespace);
 
@@ -2445,6 +2491,12 @@ do_autovacuum(void)
 			FlushErrorState();
 			MemoryContextResetAndDeleteChildren(PortalContext);
 
+#ifdef FAULT_INJECTOR
+			FaultInjector_InjectFaultIfSet(
+				"auto_vac_worker_abort", DDLNotSpecified,
+				"", tab->at_relname);
+#endif
+
 			/* restart our transaction for the following operations */
 			StartTransactionCommand();
 			RESUME_INTERRUPTS();
@@ -2789,6 +2841,14 @@ relation_needs_vacanalyze(Oid relid,
 	int			multixact_freeze_max_age;
 	TransactionId xidForceLimit;
 	MultiXactId multiForceLimit;
+	bool		for_analyze;
+
+	/*
+	 * We don't need to hold AutovacuumLock here, since it should be read-only in the worker itself
+	 * once the MyWorkerInfo gets set, all the workers only care about its own value.
+	 */
+	Assert(MyWorkerInfo);
+	for_analyze = MyWorkerInfo->wi_for_analyze;
 
 	AssertArg(classForm != NULL);
 	AssertArg(OidIsValid(relid));
@@ -2894,6 +2954,30 @@ relation_needs_vacanalyze(Oid relid,
 	/* ANALYZE refuses to work with pg_statistics */
 	if (relid == StatisticRelationId)
 		*doanalyze = false;
+
+	/*
+	 * The Gp_role will be GP_ROLE_UTILITY when for_analyze is false, and do ANALYZE
+	 * in utility mode is useless, so just disable analyze here.
+	 */
+	if (!for_analyze)
+		*doanalyze = false;
+	else
+	{
+		*dovacuum = false;
+		*wraparound = false;
+	}
+
+	/*
+	 * There are a lot of things to do to enable auto-ANALYZE for partition tables,
+	 * see PR10515 for details.
+	 * Currently, we just disable auto-ANALYZE for partition tables.
+	 */
+	if (*doanalyze)
+	{
+		Assert(for_analyze && Gp_role == GP_ROLE_DISPATCH);
+		if (rel_part_status(relid) != PART_STATUS_NONE)
+			*doanalyze = false;
+	}
 }
 
 /*
@@ -2921,6 +3005,12 @@ autovacuum_do_vac_analyze(autovac_table *tab, BufferAccessStrategy bstrategy)
 
 	/* Let pgstat know what we're doing */
 	autovac_report_activity(tab);
+
+#ifdef FAULT_INJECTOR
+	FaultInjector_InjectFaultIfSet(
+		"auto_vac_worker_after_report_activity", DDLNotSpecified,
+		"", tab->at_relname);
+#endif
 
 	vacuum(tab->at_vacoptions, &rangevar, tab->at_relid, &tab->at_params, NIL,
 		   bstrategy, true);

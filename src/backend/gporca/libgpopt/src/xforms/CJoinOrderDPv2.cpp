@@ -241,9 +241,7 @@ CJoinOrderDPv2::PexprBuildInnerJoinPred
 			!pbsSnd->IsDisjoint(pedge->m_pbs)
 			)
 		{
-#ifdef GPOS_DEBUG
-		BOOL fSet =
-#endif // GPOS_DEBUG
+		BOOL fSet GPOS_ASSERTS_ONLY =
 			pbsEdges->ExchangeSet(ul);
 			GPOS_ASSERT(!fSet);
 		}

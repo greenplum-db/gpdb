@@ -131,9 +131,7 @@ CStateMachineTest::EresUnittest_Basics()
 		// choose random event
 		ULONG ul = rand.Next() % GPOS_ARRAY_SIZE(rgev);
 
-#ifdef GPOS_DEBUG
-		BOOL fCheck =
-#endif // GPOS_DEBUG
+		BOOL fCheck GPOS_ASSERTS_ONLY =
 			ptm->Psm()->FTransition(rgev[ul], es);
 			
 		GPOS_ASSERT_IFF(eeThree != rgev[ul], fCheck);

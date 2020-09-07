@@ -1336,9 +1336,7 @@ CGroup::BuildTreeMap
 	}
 
 	// remember processed links to avoid re-processing them later
-#ifdef GPOS_DEBUG
-	BOOL fInserted =
-#endif  // GPOS_DEBUG
+	BOOL fInserted GPOS_ASSERTS_ONLY =
 		m_plinkmap->Insert(pclink, GPOS_NEW(m_mp) BOOL(true));
 	GPOS_ASSERT(fInserted);
 }
@@ -2095,9 +2093,7 @@ CGroup::PstatsCompute
 
 	// add computed stats to local map
 	poc->AddRef();
-#ifdef GPOS_DEBUG
-	BOOL fSuccess =
-#endif  // GPOS_DEBUG
+	BOOL fSuccess GPOS_ASSERTS_ONLY =
 	m_pstatsmap->Insert(poc, stats);
 	GPOS_ASSERT(fSuccess);
 
@@ -2214,9 +2210,7 @@ CGroup::CostLowerBound
 
 
 	prppInput->AddRef();
-#ifdef GPOS_DEBUG
-	BOOL fSuccess =
-#endif // GPOS_DEBUG
+	BOOL fSuccess GPOS_ASSERTS_ONLY =
 		m_pcostmap->Insert(prppInput, GPOS_NEW(mp) CCost(costLowerBound.Get()));
 	GPOS_ASSERT(fSuccess);
 

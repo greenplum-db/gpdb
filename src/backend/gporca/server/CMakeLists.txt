@@ -26,10 +26,6 @@ if (COMPILER_HAS_WNO_LONG_LONG)
                                 PROPERTIES COMPILE_FLAGS "-Wno-long-long")
 endif()
 
-option(ENABLE_EXTENDED_TESTS
-       "Enable extended tests for fault-injection and timing that may take a long time to run."
-       OFF)
-
 # Convenience function to add the test specified by 'TEST_NAME' to the set of
 # tests to be run by CTest.
 function(add_orca_test TEST_NAME)
@@ -204,7 +200,7 @@ CPartTableLossyCastTest:
 RangePartLossyCastLTEqOnEndPartitionRange RangePartLossyCastLTOnEndPartitionRange
 RangePartLossyCastEqOnEndPartitionRange RangePartLossyCastLTEqInPartitionRange
 RangePartLossyCastLTInPartitionRange RangePartLossyCastEqInPartitionRange
-ListPartLossyCastLT ListPartLossyCastEq;
+ListPartLossyCastLT ListPartLossyCastEq ListPartLossyCastNEq MultiLevelPartLossyCastNEq;
 
 CPartTblDPETest:
 PartTbl-AvoidRangePred-DPE PartTbl-DPE-Correlated-NLOuter
@@ -489,16 +485,6 @@ add_orca_test(CXformTest)
 
 add_orca_test(CConstExprEvaluatorDefaultTest)
 add_orca_test(CConstExprEvaluatorDXLTest)
-
-if (${CMAKE_BUILD_TYPE} MATCHES "Debug")
-  if (ENABLE_EXTENDED_TESTS)
-    # fault-simulation while running other tests
-    add_orca_test(CFSimulatorTestExt)
-
-    # time-slicing
-    add_orca_test(CTimeSliceTest)
-  endif()
-endif()
 
 file(GLOB_RECURSE hdrs ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h
                        ${CMAKE_CURRENT_SOURCE_DIR}/include/*.inl

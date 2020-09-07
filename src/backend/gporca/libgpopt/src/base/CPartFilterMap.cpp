@@ -282,9 +282,7 @@ CPartFilterMap::AddPartFilter
 
 	ppf = GPOS_NEW(mp) CPartFilter(scan_id, pexpr, stats);
 
-#ifdef GPOS_DEBUG
-	BOOL fSuccess =
-#endif // GPOS_DEBUG
+	BOOL fSuccess GPOS_ASSERTS_ONLY =
 	m_phmulpf->Insert(GPOS_NEW(mp) ULONG(scan_id), ppf);
 
 	GPOS_ASSERT(fSuccess);
@@ -395,9 +393,7 @@ CPartFilterMap::CopyPartFilterMap
 
 		ppf->AddRef();
 
-#ifdef GPOS_DEBUG
-		BOOL fSuccess =
-#endif // GPOS_DEBUG
+		BOOL fSuccess GPOS_ASSERTS_ONLY =
 		m_phmulpf->Insert(GPOS_NEW(mp) ULONG(scan_id), ppf);
 
 		GPOS_ASSERT(fSuccess);

@@ -86,9 +86,7 @@ CPropConstraint::InitHashMap
 		while (crsi.Advance())
 		{
 			pcrs->AddRef();
-#ifdef GPOS_DEBUG
-			BOOL fres =
-#endif //GPOS_DEBUG
+			BOOL fres GPOS_ASSERTS_ONLY =
 			m_phmcrcrs->Insert(crsi.Pcr(), pcrs);
 			GPOS_ASSERT(fres);
 		}

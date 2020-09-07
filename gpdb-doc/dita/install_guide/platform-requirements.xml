@@ -385,7 +385,7 @@
               <row class="- topic/row ">
                 <entry colname="col1" class="- topic/entry "><xref href="../analytics/postGIS.xml"
                     format="dita" scope="peer">PostGIS Spatial and Geographic Objects</xref></entry>
-                <entry colname="col3" class="- topic/entry ">2.5.4+pivotal.2,
+                <entry colname="col3" class="- topic/entry ">2.5.4+pivotal.3, 2.5.4+pivotal.2,
                     2.5.4+pivotal.1,<p>2.1.5+pivotal.2-2</p></entry>
                 <entry/>
               </row>

@@ -2655,9 +2655,7 @@ CTranslatorExprToDXL::PdxlnAggregate
 
 		if (NULL == phmululPL->Find(&colid))
 		{
-#ifdef GPOS_DEBUG
-			BOOL fRes =
-#endif
+			BOOL fRes GPOS_ASSERTS_ONLY =
 			phmululPL->Insert(GPOS_NEW(m_mp) ULONG(colid), GPOS_NEW(m_mp) ULONG(colid));
 			GPOS_ASSERT(fRes);
 		}
@@ -2686,9 +2684,7 @@ CTranslatorExprToDXL::PdxlnAggregate
 		{
 			CDXLNode *pdxlnProjElem = CTranslatorExprToDXLUtils::PdxlnProjElem(m_mp, m_phmcrdxln, pcrGroupingCol);
 			proj_list_dxlnode->AddChild(pdxlnProjElem);
-#ifdef GPOS_DEBUG
-		BOOL fRes =
-#endif
+		BOOL fRes GPOS_ASSERTS_ONLY =
 				phmululPL->Insert(GPOS_NEW(m_mp) ULONG(colid), GPOS_NEW(m_mp) ULONG(colid));
 			GPOS_ASSERT(fRes);
 		}
@@ -3119,9 +3115,7 @@ CTranslatorExprToDXL::PdxlnQuantifiedSubplan
 	pdxlnSubPlan->AddChild(inner_dxlnode);
 
 	// add to hashmap
-#ifdef GPOS_DEBUG
-	BOOL fRes =
-#endif // GPOS_DEBUG
+	BOOL fRes GPOS_ASSERTS_ONLY =
 		m_phmcrdxln->Insert(const_cast<CColRef *>((*pdrgpcrInner)[0]), pdxlnSubPlan);
 	GPOS_ASSERT(fRes);
 
@@ -3323,9 +3317,7 @@ CTranslatorExprToDXL::PdxlnExistentialSubplan
 	pdxlnSubPlan->AddChild(inner_dxlnode);
 
 	// add to hashmap
-#ifdef GPOS_DEBUG
-	BOOL fRes =
-#endif // GPOS_DEBUG
+	BOOL fRes GPOS_ASSERTS_ONLY =
 		m_phmcrdxln->Insert(const_cast<CColRef *>((*pdrgpcrInner)[0]), pdxlnSubPlan);
 	GPOS_ASSERT(fRes);
 
@@ -3541,9 +3533,7 @@ CTranslatorExprToDXL::BuildDxlnSubPlan
 	pdxlnSubPlan->AddChild(pdxlnRelChild);
 
 	// add to hashmap
-#ifdef GPOS_DEBUG
-	BOOL fRes =
-#endif // GPOS_DEBUG
+	BOOL fRes GPOS_ASSERTS_ONLY =
 	m_phmcrdxln->Insert(const_cast<CColRef *>(colref), pdxlnSubPlan);
 	GPOS_ASSERT(fRes);
 }
@@ -5872,7 +5862,7 @@ CTranslatorExprToDXL::GetDXLDirectDispatchInfo
 
 	CDXLDatum2dArray *pdrgpdrgpdxldatum = GPOS_NEW(m_mp) CDXLDatum2dArray(m_mp);
 	pdrgpdrgpdxldatum->Append(pdrgpdxldatum);
-	return GPOS_NEW(m_mp) CDXLDirectDispatchInfo(pdrgpdrgpdxldatum);
+	return GPOS_NEW(m_mp) CDXLDirectDispatchInfo(pdrgpdrgpdxldatum, false);
 }
 
 //---------------------------------------------------------------------------
@@ -7728,9 +7718,7 @@ CTranslatorExprToDXL::PdxlnProjList
 				CScalarProjectElement::PopConvert(pexprProjElem->Pop());
 
 		ULONG *pulKey = GPOS_NEW(m_mp) ULONG(popScPrEl->Pcr()->Id());
-#ifdef GPOS_DEBUG
-		BOOL fInserted =
-#endif // GPOS_DEBUG
+		BOOL fInserted GPOS_ASSERTS_ONLY =
 		phmComputedColumns->Insert(pulKey, pdxlnProjElem);
 
 		GPOS_ASSERT(fInserted);

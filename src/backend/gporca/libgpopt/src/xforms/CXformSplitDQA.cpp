@@ -907,9 +907,7 @@ CXformSplitDQA::ExtractDistinctCols
 				// insert into the map between the expression representing the DQA argument 
 				// and its column reference
 				pexprArg->AddRef();
-#ifdef GPOS_DEBUG
-				BOOL fInserted =
-#endif
+				BOOL fInserted GPOS_ASSERTS_ONLY =
 						phmexprcr->Insert(pexprArg, pcrDistinctCol);
 				GPOS_ASSERT(fInserted);
 

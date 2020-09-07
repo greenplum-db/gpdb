@@ -395,8 +395,6 @@ where t4.thousand = t5.unique1 and ss.x1 = t4.tenthous and ss.x2 = t5.stringu1;
 -- regression test: check a case where we formerly missed including an EC
 -- enforcement clause because it was expected to be handled at scan level
 --
--- GPDB_94_MERGE_FIXME: The plan output is not as the upstream patch 
--- 72edc8ffeb0e949 expected. We need to look further.
 set enable_hashjoin = false;
 set enable_nestloop = true;
 explain (costs off)
@@ -437,6 +435,7 @@ reset enable_hashjoin;
 -- a different check for handling of redundant sort keys in merge joins
 --
 set enable_mergejoin = true;
+set enable_hashjoin = false;
 explain (costs off)
 select count(*) from
   (select * from tenk1 x order by x.thousand, x.twothousand, x.fivethous) x
@@ -450,6 +449,7 @@ select count(*) from
   (select * from tenk1 y order by y.unique2) y
   on x.thousand = y.unique2 and x.twothousand = y.hundred and x.fivethous = y.unique2;
 reset enable_mergejoin;
+reset enable_hashjoin;
 
 
 --

@@ -133,11 +133,6 @@ CMDAccessorUtils::GetScCmpMdid
 	GPOS_ASSERT(NULL != left_mdid);
 	GPOS_ASSERT(IMDType::EcmptOther > cmp_type);
 
-	CAutoTraceFlag atf1(EtraceSimulateOOM, false);
-	CAutoTraceFlag atf2(EtraceSimulateAbort, false);
-	CAutoTraceFlag atf3(EtraceSimulateIOError, false);
-	CAutoTraceFlag atf4(EtraceSimulateNetError, false);
-
 	IMDId *sc_cmp_mdid;
 
 	// if the left & right are the same, first check the MDType
@@ -361,11 +356,6 @@ CMDAccessorUtils::FCastExists
 	GPOS_ASSERT(NULL != mdid_src);
 	GPOS_ASSERT(NULL != mdid_dest);
 
-	CAutoTraceFlag atf1(EtraceSimulateOOM, false);
-	CAutoTraceFlag atf2(EtraceSimulateAbort, false);
-	CAutoTraceFlag atf3(EtraceSimulateIOError, false);
-	CAutoTraceFlag atf4(EtraceSimulateNetError, false);
-
 	GPOS_TRY
 	{
 		(void) md_accessor->Pmdcast(mdid_src, mdid_dest);
@@ -405,11 +395,6 @@ CMDAccessorUtils::FScalarOpReturnsNullOnNullInput
 		// invalid mdid
 		return false;
 	}
-
-	CAutoTraceFlag atf1(EtraceSimulateOOM, false);
-	CAutoTraceFlag atf2(EtraceSimulateAbort, false);
-	CAutoTraceFlag atf3(EtraceSimulateIOError, false);
-	CAutoTraceFlag atf4(EtraceSimulateNetError, false);
 
 	GPOS_TRY
 	{

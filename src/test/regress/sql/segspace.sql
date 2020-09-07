@@ -229,6 +229,7 @@ select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used
 drop table if exists testsort;
 create table testsort (i1 int, i2 int, i3 int, i4 int);
 insert into testsort select i, i % 1000, i % 100000, i % 75 from generate_series(0,1000000) i;
+analyze testsort;
 
 set statement_mem="1MB";
 set gp_enable_mk_sort=off;

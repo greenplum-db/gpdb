@@ -57,7 +57,7 @@ INSERT INTO out_of_range_insert VALUES (1), (2), (3);
 SELECT * FROM out_of_range_insert ORDER BY gid;
 SELECT * FROM out_of_range_insert_gid_seq;
 
-CREATE SEQUENCE descending_sequence INCREMENT -1 MINVALUE 1 MAXVALUE 9223372036854775806 START 9223372036854775806;
+CREATE SEQUENCE descending_sequence INCREMENT -1 MINVALUE 1 MAXVALUE 9223372036854775806 START 9223372036854775806 CACHE 1;
 SELECT nextval('descending_sequence');
 CREATE TABLE descending_sequence_insert(a bigint, b bigint);
 INSERT INTO descending_sequence_insert SELECT i, nextval('descending_sequence') FROM generate_series(1, 10)i;

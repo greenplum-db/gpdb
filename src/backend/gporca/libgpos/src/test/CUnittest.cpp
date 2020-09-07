@@ -196,63 +196,6 @@ CUnittest::FThrows
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CUnittest::EresExecLoop
-//
-//	@doc:
-//		Execute a single test -- top-level wrapper;
-//		Retries individual complex tests if exception simulation is enabled
-//
-//---------------------------------------------------------------------------
-GPOS_RESULT
-CUnittest::EresExecLoop
-	(
-	const CUnittest &ut
-	)
-{
-	while(true)
-	{
-		GPOS_TRY
-		{
-			return EresExecTest(ut);
-		}
-		GPOS_CATCH_EX(ex)
-		{
-			// check for exception simulation
-			if (ITask::Self()->IsTraceSet(EtraceSimulateOOM))
-			{
-				GPOS_ASSERT(GPOS_MATCH_EX(ex, CException::ExmaSystem, CException::ExmiOOM));
-			}
-			else if (ITask::Self()->IsTraceSet(EtraceSimulateAbort))
-			{
-				GPOS_ASSERT(GPOS_MATCH_EX(ex, CException::ExmaSystem, CException::ExmiAbort));
-			}
-			else if (ITask::Self()->IsTraceSet(EtraceSimulateIOError))
-			{
-				GPOS_ASSERT(GPOS_MATCH_EX(ex, CException::ExmaSystem, CException::ExmiIOError));
-			}
-			else if (ITask::Self()->IsTraceSet(EtraceSimulateNetError))
-			{
-				GPOS_ASSERT(GPOS_MATCH_EX(ex, CException::ExmaSystem, CException::ExmiNetError));
-			}
-			else
-			{
-				// unexpected exception
-				GPOS_RETHROW(ex);
-			}
-
-			// reset & retry
-			GPOS_RESET_EX;
-		}
-		GPOS_CATCH_END;
-	}
-
-	GPOS_ASSERT(!"Unexpected end of loop");
-	return GPOS_FAILED;
-}
-
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CUnittest::EresExecTest
 //
 //	@doc:
@@ -302,12 +245,6 @@ CUnittest::EresExecTest
 			return GPOS_OK;
 		}
 
-		// check if exception was injected by simulation
-		if (FSimulated(ex))
-		{
-			GPOS_RETHROW(ex);
-		}
-
 		GPOS_RESET_EX;
 	}
 	GPOS_CATCH_END;
@@ -315,37 +252,6 @@ CUnittest::EresExecTest
 	return GPOS_FAILED;
 }
 
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CUnittest::FSimulated
-//
-//	@doc:
-//		Check if exception was injected by simulation
-//
-//---------------------------------------------------------------------------
-BOOL
-CUnittest::FSimulated
-	(
-	CException ex
-	)
-{
-	ITask *ptsk = ITask::Self();
-	GPOS_ASSERT(NULL != ptsk);
-
-	return
-		(ptsk->IsTraceSet(EtraceSimulateOOM) &&
-		 GPOS_MATCH_EX(ex, CException::ExmaSystem, CException::ExmiOOM)) ||
-
-		(ptsk->IsTraceSet(EtraceSimulateAbort) &&
-		 GPOS_MATCH_EX(ex, CException::ExmaSystem, CException::ExmiAbort)) ||
-
-		(ptsk->IsTraceSet(EtraceSimulateIOError) &&
-		 GPOS_MATCH_EX(ex, CException::ExmaSystem, CException::ExmiIOError)) ||
-
-		(ptsk->IsTraceSet(EtraceSimulateNetError) &&
-		 GPOS_MATCH_EX(ex, CException::ExmaSystem, CException::ExmiNetError));
-}
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -371,7 +277,7 @@ CUnittest::EresExecute
 
 		{ // scope for timer
 			CAutoTimer timer(ut.m_szTitle, true /*fPrint*/);
-			eresPart = EresExecLoop(ut);
+			eresPart = EresExecTest(ut);
 		}
 
 		GPOS_TRACE_FORMAT

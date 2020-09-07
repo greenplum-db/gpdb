@@ -3211,6 +3211,12 @@ create_bitmap_subplan(PlannerInfo *root, Path *bitmapqual,
 		List	   *subindexquals = NIL;
 		List	   *subindexECs = NIL;
 		ListCell   *l;
+		double		numsegments;
+
+		if (apath->path.parent->cdbpolicy && apath->path.parent->cdbpolicy->ptype == POLICYTYPE_PARTITIONED)
+			numsegments = apath->path.parent->cdbpolicy->numsegments;
+		else
+			numsegments = 1;
 
 		/*
 		 * There may well be redundant quals among the subplans, since a
@@ -3239,7 +3245,7 @@ create_bitmap_subplan(PlannerInfo *root, Path *bitmapqual,
 		plan->startup_cost = apath->path.startup_cost;
 		plan->total_cost = apath->path.total_cost;
 		plan->plan_rows =
-			clamp_row_est(apath->bitmapselectivity * apath->path.parent->tuples);
+			clamp_row_est(apath->bitmapselectivity * apath->path.parent->tuples / numsegments);
 		plan->plan_width = 0;	/* meaningless */
 		plan->parallel_aware = false;
 		*qual = subquals;
@@ -3298,11 +3304,18 @@ create_bitmap_subplan(PlannerInfo *root, Path *bitmapqual,
 		}
 		else
 		{
+			double		numsegments;
+
+			if (opath->path.parent->cdbpolicy && opath->path.parent->cdbpolicy->ptype == POLICYTYPE_PARTITIONED)
+				numsegments = opath->path.parent->cdbpolicy->numsegments;
+			else
+				numsegments = 1;
+
 			plan = (Plan *) make_bitmap_or(subplans);
 			plan->startup_cost = opath->path.startup_cost;
 			plan->total_cost = opath->path.total_cost;
 			plan->plan_rows =
-				clamp_row_est(opath->bitmapselectivity * opath->path.parent->tuples);
+				clamp_row_est(opath->bitmapselectivity * opath->path.parent->tuples / numsegments);
 			plan->plan_width = 0;		/* meaningless */
 			plan->parallel_aware = false;
 		}
@@ -3332,6 +3345,12 @@ create_bitmap_subplan(PlannerInfo *root, Path *bitmapqual,
 		IndexScan  *iscan;
 		List	   *subindexECs;
 		ListCell   *l;
+		double		numsegments;
+
+		if (ipath->path.parent->cdbpolicy && ipath->path.parent->cdbpolicy->ptype == POLICYTYPE_PARTITIONED)
+			numsegments = ipath->path.parent->cdbpolicy->numsegments;
+		else
+			numsegments = 1;
 
 		/* Use the regular indexscan plan build machinery... */
 		iscan = (IndexScan *) create_indexscan_plan(root, ipath,
@@ -3346,7 +3365,7 @@ create_bitmap_subplan(PlannerInfo *root, Path *bitmapqual,
 		plan->startup_cost = 0.0;
 		plan->total_cost = ipath->indextotalcost;
 		plan->plan_rows =
-			clamp_row_est(ipath->indexselectivity * ipath->path.parent->tuples);
+			clamp_row_est(ipath->indexselectivity * ipath->path.parent->tuples / numsegments);
 		plan->plan_width = 0;	/* meaningless */
 		plan->parallel_aware = false;
 		*qual = get_actual_clauses(ipath->indexclauses);

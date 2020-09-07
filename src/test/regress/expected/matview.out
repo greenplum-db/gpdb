@@ -91,10 +91,10 @@ EXPLAIN (costs off)
                                   QUERY PLAN                                  
 ------------------------------------------------------------------------------
  Redistribute Motion 1:3  (slice1; segments: 1)
-   Hash Key: (sum((sum(mvtest_t.amt))))
-   ->  Finalize Aggregate
+   Hash Key: (sum(mvtest_tv.totamt))
+   ->  Aggregate
          ->  Gather Motion 3:1  (slice2; segments: 3)
-               ->  Partial Aggregate
+               ->  Subquery Scan on mvtest_tv
                      ->  HashAggregate
                            Group Key: mvtest_t.type
                            ->  Redistribute Motion 3:3  (slice3; segments: 3)

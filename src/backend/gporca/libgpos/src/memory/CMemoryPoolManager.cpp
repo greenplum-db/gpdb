@@ -15,7 +15,6 @@
 #include "gpos/common/clibwrapper.h"
 #include "gpos/common/CAutoP.h"
 #include "gpos/task/CAutoTraceFlag.h"
-#include "gpos/error/CFSimulator.h" // for GPOS_FPSIMULATOR
 #include "gpos/error/CAutoTrace.h"
 #include "gpos/memory/CMemoryPool.h"
 #include "gpos/memory/CMemoryPoolManager.h"
@@ -207,11 +206,6 @@ CMemoryPoolManager::PrintOverSizedPools
 	ULLONG size_threshold // size threshold in bytes
 	)
 {
-	CAutoTraceFlag Abort(EtraceSimulateAbort, false);
-	CAutoTraceFlag OOM(EtraceSimulateOOM, false);
-	CAutoTraceFlag Net(EtraceSimulateNetError, false);
-	CAutoTraceFlag IO(EtraceSimulateIOError, false);
-
 	MemoryPoolIter iter(*m_ht_all_pools);
 	while (iter.Advance())
 	{

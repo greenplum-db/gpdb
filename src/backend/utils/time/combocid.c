@@ -634,5 +634,4 @@ AtEOXact_ComboCid_Dsm_Detach(void)
 		shared_usedComboCids = 0;
 		shared_sizeComboCids = 0;
 	}
-
 }

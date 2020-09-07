@@ -194,9 +194,7 @@ CCTEReq::Insert
 {
 	GPOS_ASSERT(CCTEMap::EctSentinel > ect);
 	CCTEReqEntry *pcre = GPOS_NEW(m_mp) CCTEReqEntry(ulCteId, ect, fRequired, pdpplan);
-#ifdef GPOS_DEBUG
-	BOOL fSuccess =
-#endif // GPOS_DEBUG
+	BOOL fSuccess GPOS_ASSERTS_ONLY =
 	m_phmcter->Insert(GPOS_NEW(m_mp) ULONG(ulCteId), pcre);
 	GPOS_ASSERT(fSuccess);
 	if (fRequired)

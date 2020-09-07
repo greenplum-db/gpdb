@@ -47,6 +47,7 @@
 #include "executor/functions.h"
 #include "cdb/memquota.h"
 #include "parser/analyze.h"
+#include "pgstat.h"
 
 
 uint64		SPI_processed = 0;
@@ -2665,7 +2666,7 @@ _SPI_pquery(QueryDesc *queryDesc, bool fire_triggers, uint64 tcount)
 
 		/* MPP-14001: Running auto_stats */
 		if (Gp_role == GP_ROLE_DISPATCH)
-			auto_stats(cmdType, relationOid, queryDesc->es_processed, true /* inFunction */);
+			collect_tabstat(cmdType, relationOid, queryDesc->es_processed, true /* inFunction */);
 	}
 	PG_CATCH();
 	{

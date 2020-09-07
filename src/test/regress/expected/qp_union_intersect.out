@@ -1789,24 +1789,22 @@ with t(a, b, s) as (
     union all
     select a, b, sum(c) from t_test_append_hash where a < b group by a, b
 ) select * from t where t.a < t.b;
-                                QUERY PLAN                                
---------------------------------------------------------------------------
+                             QUERY PLAN                              
+---------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Append
          ->  Result
-               One-Time Filter: (gp_execution_segment() = 0)
+               One-Time Filter: (gp_execution_segment() = 2)
                ->  HashAggregate
                      Group Key: a, b
                      ->  Result
                            One-Time Filter: false
-         ->  GroupAggregate
+         ->  HashAggregate
                Group Key: t_test_append_hash.a, t_test_append_hash.b
-               ->  Sort
-                     Sort Key: t_test_append_hash.a, t_test_append_hash.b
-                     ->  Seq Scan on t_test_append_hash
-                           Filter: ((a < b) AND (a < b))
+               ->  Seq Scan on t_test_append_hash
+                     Filter: ((a < b) AND (a < b))
  Optimizer: Postgres query optimizer
-(15 rows)
+(13 rows)
 
 with t(a, b, s) as (
     select a, b, sum(c) from t_test_append_hash where a > b group by a, b

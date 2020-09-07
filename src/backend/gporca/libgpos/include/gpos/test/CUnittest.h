@@ -145,16 +145,6 @@ namespace gpos
 			static 
 			GPOS_RESULT EresExecTest(const CUnittest &ut);
 
-			// check if exception was injected by simulation
-			static
-			BOOL FSimulated(CException ex);
-
-			// top-level loop around execution of individual UT;
-			// used for exception simulation;
-			static 
-			GPOS_RESULT EresExecLoop(const CUnittest &ut);
-		
-
 		public:
 
 			// ctors

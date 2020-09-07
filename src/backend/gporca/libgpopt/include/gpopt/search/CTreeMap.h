@@ -512,9 +512,7 @@ namespace gpopt
                 ++m_ulCountLinks;
 
                 // add created link to links map
-#ifdef GPOS_DEBUG
-                BOOL fInserted =
-#endif // GPOS_DEBUG
+                BOOL fInserted GPOS_ASSERTS_ONLY =
                 m_plinkmap->Insert(ptlink, GPOS_NEW(m_mp) BOOL(true));
                 GPOS_ASSERT(fInserted);		
             }

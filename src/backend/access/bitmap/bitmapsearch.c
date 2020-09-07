@@ -54,7 +54,36 @@ _bitmap_first(IndexScanDesc scan, ScanDirection dir)
 	scanpos = (BMScanPosition) so->bm_currPos;
 	if (scanpos->done)
 		return false;
-		
+
+	/*
+	 * Bitmap indexes don't currently support Index Only Scans.
+	 * It would be pretty straightforward to return the index tuples from the
+	 * LOV index, but we haven't implemented it.
+	 *
+	 * However, even though the 'amcanreturn' function is not implemented,
+	 * the planner still chooses an Index Only Scan for some queries where
+	 * no attribute from the index are needed. Be prepared for that, by
+	 * filling xs_itup with a dummy IndexTuple with all NULL values.
+	 */
+	if (scan->xs_want_itup && !scan->xs_itup)
+	{
+		TupleDesc idesc = RelationGetDescr(scan->indexRelation);
+		Datum	   *nulldatums;
+		bool	   *isnulls;
+
+		nulldatums = palloc(idesc->natts * sizeof(Datum));
+		isnulls = palloc(idesc->natts * sizeof(bool));
+
+		for (int i = 0; i < idesc->natts; i++)
+		{
+			nulldatums[i] = (Datum) 0;
+			isnulls[i] = true;
+		}
+		scan->xs_itup = index_form_tuple(idesc, nulldatums, isnulls);
+		pfree(nulldatums);
+		pfree(isnulls);
+	}
+
 	return _bitmap_next(scan, dir);
 }
 

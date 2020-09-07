@@ -160,7 +160,7 @@ SELECT currval('sequence_test'::regclass);
 ERROR:  currval() not supported
 DROP SEQUENCE sequence_test;
 -- renaming sequences
-CREATE SEQUENCE foo_seq;
+CREATE SEQUENCE foo_seq CACHE 1;
 ALTER TABLE foo_seq RENAME TO foo_seq_new;
 SELECT * FROM foo_seq_new;
  sequence_name | last_value | start_value | increment_by |      max_value      | min_value | cache_value | log_cnt | is_cycled | is_called 

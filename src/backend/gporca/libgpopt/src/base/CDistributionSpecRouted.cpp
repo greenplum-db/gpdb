@@ -109,9 +109,7 @@ CDistributionSpecRouted::PdsCopyWithRemappedColumns
 			CColumnFactory *col_factory = COptCtxt::PoctxtFromTLS()->Pcf();
 			pcrSegmentId = col_factory->PcrCopy(m_pcrSegmentId);
 
-#ifdef GPOS_DEBUG
-			BOOL result =
-#endif // GPOS_DEBUG
+			BOOL result GPOS_ASSERTS_ONLY =
 			colref_mapping->Insert(GPOS_NEW(mp) ULONG(id), pcrSegmentId);
 			GPOS_ASSERT(result);
 		}

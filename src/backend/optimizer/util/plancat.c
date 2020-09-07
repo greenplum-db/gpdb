@@ -451,6 +451,9 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent,
  * If attr_widths isn't NULL, it points to the zero-index entry of the
  * relation's attr_width[] cache; we fill this in if we have need to compute
  * the attribute widths for estimation purposes.
+ *
+ * The returned estimates are for the table as whole. If you need the
+ * per-segment size, divide by # of segments if the policy is partitioned.
  */
 void
 cdb_estimate_rel_size(RelOptInfo   *relOptInfo,

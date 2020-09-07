@@ -328,9 +328,7 @@ COrderSpec::PosCopyWithRemappedColumns
 				// not found in hashmap, so create a new colref and add to hashmap
 				pcrMapped = col_factory->PcrCopy(colref);
 
-#ifdef GPOS_DEBUG
-				BOOL result =
-#endif // GPOS_DEBUG
+				BOOL result GPOS_ASSERTS_ONLY =
 				colref_mapping->Insert(GPOS_NEW(mp) ULONG(id), pcrMapped);
 				GPOS_ASSERT(result);
 			}

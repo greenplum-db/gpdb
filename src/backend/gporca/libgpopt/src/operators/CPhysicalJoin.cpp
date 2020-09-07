@@ -1229,9 +1229,7 @@ CPhysicalJoin::PppsRequiredJoinChild
 	if (NULL == ppps)
 	{
 		ppps = PppsRequiredCompute(mp, exprhdl, pppsRequired, child_index, fNLJoin);
-#ifdef GPOS_DEBUG
-		BOOL fSuccess =
-#endif // GPOS_DEBUG
+		BOOL fSuccess GPOS_ASSERTS_ONLY =
 			m_phmpp->Insert(pppr, ppps);
 		GPOS_ASSERT(fSuccess);
 	}

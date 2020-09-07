@@ -877,17 +877,16 @@ analyze trand_join_gp;
 explain select * from generate_series(1, 5) g left join trep_join_gp on g = trep_join_gp.c1 join thash_join_gp on true;
                                              QUERY PLAN                                             
 ----------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000001.05..10000000051.82 rows=2000 width=20)
-   ->  Nested Loop  (cost=10000000001.05..10000000051.82 rows=667 width=20)
-         ->  Hash Left Join  (cost=1.05..24.80 rows=1000 width=12)
-               Hash Cond: (g.g = trep_join_gp.c1)
-               ->  Function Scan on generate_series g  (cost=0.00..10.00 rows=334 width=4)
-               ->  Hash  (cost=1.02..1.02 rows=1 width=8)
-                     ->  Seq Scan on trep_join_gp  (cost=0.00..1.02 rows=2 width=8)
-         ->  Materialize  (cost=0.00..2.03 rows=1 width=8)
-               ->  Seq Scan on thash_join_gp  (cost=0.00..2.02 rows=1 width=8)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000001.05..10000000057.06 rows=2000 width=20)
+   ->  Hash Left Join  (cost=10000000001.05..10000000030.39 rows=667 width=20)
+         Hash Cond: (g.g = trep_join_gp.c1)
+         ->  Nested Loop  (cost=10000000000.00..10000000021.01 rows=667 width=12)
+               ->  Seq Scan on thash_join_gp  (cost=0.00..1.01 rows=1 width=8)
+               ->  Function Scan on generate_series g  (cost=0.00..10.00 rows=1000 width=4)
+         ->  Hash  (cost=1.02..1.02 rows=2 width=8)
+               ->  Seq Scan on trep_join_gp  (cost=0.00..1.02 rows=2 width=8)
  Optimizer: Postgres query optimizer
-(10 rows)
+(9 rows)
 
 select * from generate_series(1, 5) g left join trep_join_gp on g = trep_join_gp.c1 join thash_join_gp on true;
  g | c1 | c2 | c1 | c2 
@@ -1014,16 +1013,16 @@ select * from generate_series(1, 5) g full join trand_join_gp on g = trand_join_
 -- is suitable. If we can redistributed general-locus relation, we should not
 -- gather them to singleQE.
 explain select * from trep_join_gp left join thash_join_gp using (c1);
-                                             QUERY PLAN                                             
-----------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=1.08..3.15 rows=4 width=12)
-   ->  Hash Right Join  (cost=1.08..3.15 rows=2 width=12)
-         Hash Cond: (thash_join_gp.c1 = trep_join_gp.c1)
-         ->  Seq Scan on thash_join_gp  (cost=0.00..2.02 rows=1 width=8)
-         ->  Hash  (cost=1.06..1.06 rows=1 width=8)
-               ->  Redistribute Motion 1:3  (slice2; segments: 1)  (cost=0.00..1.06 rows=2 width=8)
-                     Hash Key: trep_join_gp.c1
-                     ->  Seq Scan on trep_join_gp  (cost=0.00..1.02 rows=2 width=8)
+                                          QUERY PLAN                                          
+----------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=1.02..2.13 rows=3 width=12)
+   ->  Hash Left Join  (cost=1.02..2.09 rows=1 width=12)
+         Hash Cond: (trep_join_gp.c1 = thash_join_gp.c1)
+         ->  Redistribute Motion 1:3  (slice2; segments: 1)  (cost=0.00..1.05 rows=1 width=8)
+               Hash Key: trep_join_gp.c1
+               ->  Seq Scan on trep_join_gp  (cost=0.00..1.02 rows=2 width=8)
+         ->  Hash  (cost=1.01..1.01 rows=1 width=8)
+               ->  Seq Scan on thash_join_gp  (cost=0.00..1.01 rows=1 width=8)
  Optimizer: Postgres query optimizer
 (9 rows)
 
@@ -1058,16 +1057,16 @@ select * from trep_join_gp left join trand_join_gp using (c1);
 (2 rows)
 
 explain select * from trep1_join_gp join thash_join_gp using (c1);
-                                             QUERY PLAN                                             
-----------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=1.08..3.15 rows=4 width=12)
-   ->  Hash Join  (cost=1.08..3.15 rows=2 width=12)
-         Hash Cond: (thash_join_gp.c1 = trep1_join_gp.c1)
-         ->  Seq Scan on thash_join_gp  (cost=0.00..2.02 rows=1 width=8)
-         ->  Hash  (cost=1.06..1.06 rows=1 width=8)
-               ->  Redistribute Motion 1:3  (slice2; segments: 1)  (cost=0.00..1.06 rows=2 width=8)
-                     Hash Key: trep1_join_gp.c1
-                     ->  Seq Scan on trep1_join_gp  (cost=0.00..1.02 rows=2 width=8)
+                                          QUERY PLAN                                          
+----------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=1.02..2.13 rows=3 width=12)
+   ->  Hash Join  (cost=1.02..2.09 rows=1 width=12)
+         Hash Cond: (trep1_join_gp.c1 = thash_join_gp.c1)
+         ->  Redistribute Motion 1:3  (slice2; segments: 1)  (cost=0.00..1.05 rows=1 width=8)
+               Hash Key: trep1_join_gp.c1
+               ->  Seq Scan on trep1_join_gp  (cost=0.00..1.02 rows=2 width=8)
+         ->  Hash  (cost=1.01..1.01 rows=1 width=8)
+               ->  Seq Scan on thash_join_gp  (cost=0.00..1.01 rows=1 width=8)
  Optimizer: Postgres query optimizer
 (9 rows)
 

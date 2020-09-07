@@ -12,9 +12,6 @@
 //		header from memory block;
 //---------------------------------------------------------------------------
 
-#ifdef GPOS_DEBUG
-#include "gpos/error/CFSimulator.h"
-#endif // GPOS_DEBUG
 #include "gpos/memory/CMemoryPool.h"
 #include "gpos/memory/CMemoryPoolTracker.h"
 #include "gpos/memory/CMemoryPoolManager.h"

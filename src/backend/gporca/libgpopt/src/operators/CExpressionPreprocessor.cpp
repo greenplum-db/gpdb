@@ -1959,9 +1959,7 @@ CExpressionPreprocessor::CollectCTEPredicates
 			if (NULL == pdrgpexpr)
 			{
 				pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
-#ifdef GPOS_DEBUG
-				BOOL fInserted =
-#endif // GPOS_DEBUG
+				BOOL fInserted GPOS_ASSERTS_ONLY =
 					phm->Insert(GPOS_NEW(mp) ULONG(ulCTEId), pdrgpexpr);
 				GPOS_ASSERT(fInserted);
 			}

@@ -12032,6 +12032,22 @@ ATPostAlterTypeCleanup(List **wqueue, AlteredTableInfo *tab, LOCKMODE lockmode)
 		conislocal = con->conislocal;
 		ReleaseSysCache(tup);
 
+		if (contype == CONSTRAINT_PRIMARY || contype == CONSTRAINT_UNIQUE)
+		{
+			/*
+			 * Currently, GPDB doesn't support alter type on primary key and unique
+			 * constraint column. Because it requires drop - recreate logic.
+			 * The drop currently only performs on master which lead error when
+			 * recreating index (since recreate index will dispatch to segments and
+			 * there still old constraint index exists)
+			 * Related issue: https://github.com/greenplum-db/gpdb/issues/10561.
+			 */
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("cannot alter column with primary key or unique constraint"),
+					 errhint("DROP the constraint first, and recreate it after the ALTER")));
+		}
+
 		/*
 		 * If the constraint is inherited (only), we don't want to inject a
 		 * new definition here; it'll get recreated when ATAddCheckConstraint
@@ -15346,7 +15362,7 @@ ATExecExpandTableCTAS(AlterTableCmd *rootCmd, Relation rel, AlterTableCmd *cmd)
 		ExecutorFinish(queryDesc);
 		ExecutorEnd(queryDesc);
 
-		auto_stats(cmdType, relationOid, queryDesc->es_processed, false);
+		collect_tabstat(cmdType, relationOid, queryDesc->es_processed, false);
 
 		FreeQueryDesc(queryDesc);
 
@@ -15858,7 +15874,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 		ExecutorEnd(queryDesc);
 
 		if (Gp_role == GP_ROLE_DISPATCH)
-			auto_stats(cmdType,
+			collect_tabstat(cmdType,
 					   relationOid,
 					   queryDesc->es_processed,
 					   false);

@@ -183,9 +183,7 @@ CPredicateUtilsTest::EresUnittest_Disjunctions()
 	CColRefSet *pcrs = pexprGet->DeriveOutputColumns();
 	CColRefSetIter crsi(*pcrs);
 
-#ifdef GPOS_DEBUG
-	BOOL fAdvance =
-#endif
+	BOOL fAdvance GPOS_ASSERTS_ONLY =
 	crsi.Advance();
 	GPOS_ASSERT(fAdvance);
 	CColRef *pcr1 = crsi.Pcr();

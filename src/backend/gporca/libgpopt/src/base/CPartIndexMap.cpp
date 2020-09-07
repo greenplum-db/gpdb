@@ -100,9 +100,7 @@ CPartIndexMap::CPartTableInfo::AddPartConstraint
 	)
 {
 	GPOS_ASSERT(NULL != m_ppartcnstrmap);
-#ifdef GPOS_DEBUG
-	BOOL result =
-#endif // GPOS_DEBUG
+	BOOL result GPOS_ASSERTS_ONLY =
 	m_ppartcnstrmap->Insert(GPOS_NEW(mp) ULONG(scan_id), ppartcnstr);
 
 	GPOS_ASSERT(result && "Part constraint already exists in map");
@@ -275,9 +273,7 @@ CPartIndexMap::Insert
 	{
 		// no entry is found, create a new entry
 		ppti = GPOS_NEW(m_mp) CPartTableInfo(scan_id, ppartcnstrmap, epim, mdid, pdrgppartkeys, ppartcnstrRel, ulExpectedPropagators);
-#ifdef GPOS_DEBUG
-		BOOL fSuccess =
-#endif // GPOS_DEBUG
+		BOOL fSuccess GPOS_ASSERTS_ONLY =
 		m_pim->Insert(GPOS_NEW(m_mp) ULONG(scan_id), ppti);
 		GPOS_ASSERT(fSuccess && "failed to insert partition index map entry");
 		

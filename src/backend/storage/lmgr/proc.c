@@ -327,11 +327,11 @@ InitProcess(void)
 	PGPROC	   *volatile * procgloballist;
 
 	/*
-	 * Autovacuum, WAL sender, FTS handler and FTS daemon processes are marked
+	 * WAL sender, FTS handler and FTS daemon processes are marked
 	 * as GP_ROLE_UTILITY to prevent unwanted GP_ROLE_DISPATCH MyProc settings
 	 * such as mppSessionId being valid and mppIsWriter set to true.
 	 */
-	if (IsAutoVacuumWorkerProcess() || am_walsender || am_ftshandler ||
+	if (am_walsender || am_ftshandler ||
 		IsFaultHandler)
 		Gp_role = GP_ROLE_UTILITY;
 

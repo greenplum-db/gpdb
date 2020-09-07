@@ -685,9 +685,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarSubplanToScalar
 			// keep outer reference mapping to the original column for subsequent subplans
 			CMappingElementColIdParamId *colid_to_param_id_map = GPOS_NEW(m_mp) CMappingElementColIdParamId(colid, dxl_to_plstmt_ctxt->GetNextParamId(), mdid, type_modifier);
 
-#ifdef GPOS_DEBUG
-			BOOL is_inserted =
-#endif
+			BOOL is_inserted GPOS_ASSERTS_ONLY =
 			subplan_translate_ctxt.FInsertParamMapping(colid, colid_to_param_id_map);
 			GPOS_ASSERT(is_inserted);
 		}

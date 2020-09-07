@@ -48,8 +48,7 @@ CErrorHandlerStandard::Process
 	// print error stack trace
 	if (CException::ExmaSystem == exception.Major() && !err_ctxt->IsRethrown())
 	{
-		if ((CException::ExmiIOError == exception.Minor() ||
-		    CException::ExmiNetError == exception.Minor() ) &&
+		if (CException::ExmiIOError == exception.Minor() &&
 			0 < errno)
 		{
 			err_ctxt->AppendErrnoMsg();

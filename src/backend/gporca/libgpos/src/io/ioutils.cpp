@@ -22,7 +22,6 @@
 
 #include "gpos/base.h"
 #include "gpos/common/clibwrapper.h"
-#include "gpos/error/CFSimulator.h"
 #include "gpos/error/CLogger.h"
 #include "gpos/io/ioutils.h"
 #include "gpos/string/CStringStatic.h"
@@ -53,10 +52,9 @@ gpos::ioutils::CheckState
 	// reset file state
 	(void) clib::Memset(file_state, 0, sizeof(*file_state));
 
-	INT res = -1;
+	INT res;
 
-	// check to simulate I/O error
-	GPOS_CHECK_SIM_IO_ERR(&res, stat(file_path, file_state));
+	res = stat(file_path, file_state);
 
 	if (0 != res)
 	{
@@ -85,10 +83,9 @@ gpos::ioutils::CheckStateUsingFileDescriptor
 	// reset file state
 	(void) clib::Memset(file_state, 0, sizeof(*file_state));
 
-	INT res = -1;
+	INT res;
 
-	// check to simulate I/O error
-	GPOS_CHECK_SIM_IO_ERR(&res, fstat(file_descriptor, file_state));
+	res = fstat(file_descriptor, file_state);
 
 	if (0 != res)
 	{
@@ -253,10 +250,9 @@ gpos::ioutils::CreateDir
 {
 	GPOS_ASSERT(NULL != file_path);
 
-	INT res = -1;
+	INT res;
 
-	// check to simulate I/O error
-	GPOS_CHECK_SIM_IO_ERR(&res, mkdir(file_path, (MODE_T) permission_bits));
+	res = mkdir(file_path, (MODE_T) permission_bits);
 
 	if (0 != res)
 	{
@@ -282,48 +278,10 @@ gpos::ioutils::RemoveDir
 	GPOS_ASSERT(NULL != file_path);
 	GPOS_ASSERT(IsDir(file_path));
 
-	INT res = -1;
+	INT res;
 
-	// delete existing directory and check to simulate I/O error
-	GPOS_CHECK_SIM_IO_ERR(&res, rmdir(file_path));
-
-	if (0 != res)
-	{
-		GPOS_RAISE(CException::ExmaSystem, CException::ExmiIOError, errno);
-	}
-}
-
-
-//---------------------------------------------------------------------------
-//	@function:
-//		ioutils::Move
-//
-//	@doc:
-//		Move file from old path to new path;
-//		any file currently mapped to new path is deleted
-//
-//---------------------------------------------------------------------------
-void
-gpos::ioutils::Move
-	(
-	const CHAR *old_path,
-	const CHAR *szNew
-	)
-{
-	GPOS_ASSERT(NULL != old_path);
-	GPOS_ASSERT(NULL != szNew);
-	GPOS_ASSERT(IsFile(old_path));
-
-	// delete any existing file with the new path
-	if (PathExists(szNew))
-	{
-		Unlink(szNew);
-	}
-
-	INT res = -1;
-
-	// rename file and check to simulate I/O error
-	GPOS_CHECK_SIM_IO_ERR(&res, rename(old_path, szNew));
+	// delete existing directory
+	res = rmdir(file_path);
 
 	if (0 != res)
 	{
@@ -509,11 +467,10 @@ gpos::ioutils::CreateTempDir
 	GPOS_ASSERT(0 == clib::Memcmp("XXXXXX", dir_path + (size - ulNumOfCmp), ulNumOfCmp));
 #endif	// GPOS_DEBUG
 
-	CHAR* szRes = NULL;
-
+	CHAR* szRes;
 
 	// check to simulate I/O error
-	GPOS_CHECK_SIM_IO_ERR(&szRes, mkdtemp(dir_path));
+	szRes = mkdtemp(dir_path);
 
 	if (NULL == szRes)
 	{
@@ -522,106 +479,6 @@ gpos::ioutils::CreateTempDir
 
 	return;
 }
-
-
-#ifdef GPOS_FPSIMULATOR
-
-
-//---------------------------------------------------------------------------
-//	@function:
-//		FSimulateIOErrorInternal
-//
-//	@doc:
-//		Inject I/O exception
-//
-//---------------------------------------------------------------------------
-static BOOL
-FSimulateIOErrorInternal
-	(
-	INT error_no,
-	const CHAR *file,
-	ULONG line_num
-	)
-{
-	BOOL fRes = false;
-
-	ITask *ptsk = ITask::Self();
-	if (NULL != ptsk &&
-	    ptsk->IsTraceSet(EtraceSimulateIOError) &&
-	    CFSimulator::FSim()->NewStack(CException::ExmaSystem, CException::ExmiIOError) &&
-	    !GPOS_MATCH_EX(ptsk->GetErrCtxt()->GetException(), CException::ExmaSystem, CException::ExmiIOError))
-	{
-		// disable simulation temporarily to log injection
-		CAutoTraceFlag(EtraceSimulateIOError, false);
-
-		GPOS_TRACE_FORMAT_ERR("Simulating I/O error at %s:%d", file, line_num);
-
-		errno = error_no;
-
-		if (ptsk->GetErrCtxt()->IsPending())
-		{
-			ptsk->GetErrCtxt()->Reset();
-		}
-
-		// inject I/O error
-		fRes = true;
-	}
-
-	return fRes;
-}
-
-
-//---------------------------------------------------------------------------
-//	@function:
-//		ioutils::SimulateIOError
-//
-//	@doc:
-//		Inject I/O exception for functions
-//		whose returned value type is INT
-//
-//---------------------------------------------------------------------------
-BOOL
-gpos::ioutils::SimulateIOError
-	(
-	INT *return_value,
-	INT error_no,
-	const CHAR *file,
-	ULONG line_num
-	)
-{
-	GPOS_ASSERT(NULL != return_value);
-
-	*return_value = -1;
-
-	return FSimulateIOErrorInternal(error_no, file, line_num);
-}
-
-
-//---------------------------------------------------------------------------
-//	@function:
-//		ioutils::SimulateIOError
-//
-//	@doc:
-//		Inject I/O exception for functions
-//		whose returned value type is CHAR*
-//
-//---------------------------------------------------------------------------
-BOOL
-gpos::ioutils::SimulateIOError
-	(
-	CHAR **return_value,
-	INT error_no,
-	const CHAR *file,
-	ULONG line_num
-	)
-{
-	GPOS_ASSERT(NULL != return_value);
-
-	*return_value = NULL;
-
-	return FSimulateIOErrorInternal(error_no, file, line_num);
-}
-#endif // GPOS_FPSIMULATOR
 
 // EOF
 

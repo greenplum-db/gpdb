@@ -183,9 +183,7 @@ CWStringDynamic::AppendCharArray
 	WCHAR *w_str_buffer = GPOS_NEW_ARRAY(m_mp, WCHAR, length + 1);
 
 	// convert input string to wide character buffer
-#ifdef GPOS_DEBUG
-	ULONG wide_length =
-#endif // GPOS_DEBUG
+	ULONG wide_length GPOS_ASSERTS_ONLY =
 		clib::Mbstowcs(w_str_buffer, sz, length);
 	GPOS_ASSERT(wide_length == length);
 

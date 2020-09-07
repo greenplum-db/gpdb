@@ -2450,9 +2450,7 @@ CUtils::PexprScalarProjListConst
 		CColRef *new_colref = col_factory->PcrCreate(colref->RetrieveType(), colref->TypeModifier(), colref->Name());
 		if (NULL != colref_mapping)
 		{
-#ifdef GPOS_DEBUG
-			BOOL fInserted =
-#endif
+			BOOL fInserted GPOS_ASSERTS_ONLY =
 			colref_mapping->Insert(GPOS_NEW(mp) ULONG(colref->Id()), new_colref);
 			GPOS_ASSERT(fInserted);
 		}
@@ -3618,9 +3616,7 @@ CUtils::GenerateFileName
 
 	// get local time
 	syslib::GetTimeOfDay(&tv, NULL/*timezone*/);
-#ifdef GPOS_DEBUG
-	TIME *ptm =
-#endif // GPOS_DEBUG
+	TIME *ptm GPOS_ASSERTS_ONLY =
 	clib::Localtime_r(&tv.tv_sec, &tm);
 
 	GPOS_ASSERT(NULL != ptm && "Failed to get local time");
@@ -3760,9 +3756,7 @@ CUtils::PdrgpcrRemapAndCreate
 			// not found in hashmap, so create a new colref and add to hashmap
 			pcrMapped = col_factory->PcrCopy(colref);
 
-#ifdef GPOS_DEBUG
-			BOOL result =
-#endif // GPOS_DEBUG
+			BOOL result GPOS_ASSERTS_ONLY =
 			colref_mapping->Insert(GPOS_NEW(mp) ULONG(id), pcrMapped);
 			GPOS_ASSERT(result);
 		}
@@ -3942,9 +3936,7 @@ CUtils::PdrgpcrCopy
 		pdrgpcrNew->Append(new_colref);
 		if (NULL != colref_mapping)
 		{
-#ifdef GPOS_DEBUG
-			BOOL fInserted =
-#endif
+			BOOL fInserted GPOS_ASSERTS_ONLY =
 			colref_mapping->Insert(GPOS_NEW(mp) ULONG(colref->Id()), new_colref);
 			GPOS_ASSERT(fInserted);
 		}
@@ -4277,9 +4269,7 @@ CUtils::PhmulcnstrBoolConstOnPartKeys
 
 		if (NULL != pcnstr)
 		{
-#ifdef GPOS_DEBUG
-			BOOL result =
-#endif // GPOS_DEBUG
+			BOOL result GPOS_ASSERTS_ONLY =
 			phmulcnstr->Insert(GPOS_NEW(mp) ULONG(ul), pcnstr);
 			GPOS_ASSERT(result);
 		}
@@ -4377,9 +4367,7 @@ CUtils::PpartcnstrFromMDPartCnstr
 
 			if (NULL != pcnstrLevel)
 			{
-#ifdef GPOS_DEBUG
-				BOOL result =
-#endif // GPOS_DEBUG
+				BOOL result GPOS_ASSERTS_ONLY =
 				phmulcnstr->Insert(GPOS_NEW(mp) ULONG(ul), pcnstrLevel);
 				GPOS_ASSERT(result);
 			}

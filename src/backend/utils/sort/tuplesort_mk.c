@@ -712,6 +712,11 @@ create_mksort_context(MKContext *mkctxt,
 			if (sinfo->scanKey.sk_func.fn_addr == btint4cmp)
 				sinfo->lvtype = MKLV_TYPE_INT32;
 
+/*
+* Users who are certain that their glibc is not affected by strcoll() and strxfrm()
+* inconsistency can speed up mk sort defining TRUST_STRXFRM_MK_SORT at compile time.
+*/
+#ifdef TRUST_STRXFRM_MK_SORT
 			/* GPDB_91_MERGE_FIXME: these MKLV_TYPE_CHAR and MKLV_TYPE_TEXT
 			 * fastpaths only work with the default collation of the database.
 			 */
@@ -723,6 +728,7 @@ create_mksort_context(MKContext *mkctxt,
 				else if (sinfo->scanKey.sk_func.fn_addr == bttextcmp)
 					sinfo->lvtype = MKLV_TYPE_TEXT;
 			}
+#endif
 		}
 		else
 		{

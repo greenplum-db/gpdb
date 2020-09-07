@@ -105,9 +105,7 @@ CScalarIdent::PopCopyWithRemappedColumns
 
 			colref = col_factory->PcrCopy(m_pcr);
 
-#ifdef GPOS_DEBUG
-			BOOL result =
-#endif // GPOS_DEBUG
+			BOOL result GPOS_ASSERTS_ONLY =
 			colref_mapping->Insert(GPOS_NEW(mp) ULONG(id), colref);
 			GPOS_ASSERT(result);
 		}

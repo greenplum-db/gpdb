@@ -67,9 +67,7 @@ CHashMapTest::EresUnittest_Basic()
 	UlongPtrToCharMap *phm = GPOS_NEW(mp) UlongPtrToCharMap(mp, 128);
 	for (ULONG i = 0; i < ulCnt; ++i)
 	{
-#ifdef GPOS_DEBUG
-		BOOL fSuccess =
-#endif // GPOS_DEBUG
+		BOOL fSuccess GPOS_ASSERTS_ONLY =
 			phm->Insert(&rgul[i], (CHAR*)rgsz[i]);
 		GPOS_ASSERT(fSuccess);
 		
@@ -84,9 +82,7 @@ CHashMapTest::EresUnittest_Basic()
 	CHAR rgszNew[][10] = {"abc_", "def_", "ghi_", "qwe_", "wer_", "wert_", "dfg_", "xcv_", "zxc_"};
 	for (ULONG i = 0; i < ulCnt; ++i)
 	{
-#ifdef GPOS_DEBUG
-		BOOL fSuccess =
-#endif // GPOS_DEBUG
+		BOOL fSuccess GPOS_ASSERTS_ONLY =
 			phm->Replace(&rgul[i], rgszNew[i]);
 		GPOS_ASSERT(fSuccess);
 
@@ -100,9 +96,7 @@ CHashMapTest::EresUnittest_Basic()
 
 	// test replacing entry value of a non-existing key
 	ULONG_PTR ulp = 0;
-#ifdef GPOS_DEBUG
-	BOOL fSuccess =
-#endif // GPOS_DEBUG
+	BOOL fSuccess GPOS_ASSERTS_ONLY =
 		phm->Replace(&ulp, rgsz[0]);
 	GPOS_ASSERT(!fSuccess);
 
@@ -169,9 +163,7 @@ CHashMapTest::EresUnittest_Ownership()
 		ULONG_PTR *pulp = GPOS_NEW(mp) ULONG_PTR(i);
 		CHAR *sz = GPOS_NEW_ARRAY(mp, CHAR, 3);
 	
-#ifdef GPOS_DEBUG
-		BOOL fSuccess =
-#endif // GPOS_DEBUG
+		BOOL fSuccess GPOS_ASSERTS_ONLY =
 			phm->Insert(pulp, sz);
 
 		GPOS_ASSERT(fSuccess);

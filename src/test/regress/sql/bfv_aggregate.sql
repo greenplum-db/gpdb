@@ -1433,6 +1433,21 @@ EXPLAIN (COSTS OFF)
 SELECT a.x, sum(b.x) FROM pagg_tab1 a FULL OUTER JOIN pagg_tab2 b ON a.x = b.y GROUP BY a.x ORDER BY 1 NULLS LAST;
 SELECT a.x, sum(b.x) FROM pagg_tab1 a FULL OUTER JOIN pagg_tab2 b ON a.x = b.y GROUP BY a.x ORDER BY 1 NULLS LAST;
 
+--
+-- Test GROUP BY with a constant
+--
+create temp table group_by_const (col1 int, col2 int);
+insert into group_by_const select i from generate_series(1, 1000) i;
+
+explain (costs off)
+select 1, sum(col1) from group_by_const group by 1;
+select 1, sum(col1) from group_by_const group by 1;
+
+-- Same, but using an aggregate that doesn't have a combine function, so
+-- that you get a one-phase aggregate plan.
+explain (costs off)
+select 1, median(col1) from group_by_const group by 1;
+select 1, median(col1) from group_by_const group by 1;
 
 -- CLEANUP
 set client_min_messages='warning';

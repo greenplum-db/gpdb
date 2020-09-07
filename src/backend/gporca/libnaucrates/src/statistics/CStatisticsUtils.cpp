@@ -857,17 +857,13 @@ CStatisticsUtils::AddHistogram
 
 	if (NULL == col_histogram_mapping->Find(&colid))
 	{
-#ifdef GPOS_DEBUG
-		BOOL result =
-#endif
+		BOOL result GPOS_ASSERTS_ONLY =
 		col_histogram_mapping->Insert(GPOS_NEW(mp) ULONG(colid), histogram->CopyHistogram());
 		GPOS_ASSERT(result);
 	}
 	else if (replace_old)
 	{
-#ifdef GPOS_DEBUG
-		BOOL result =
-#endif
+		BOOL result GPOS_ASSERTS_ONLY =
 		col_histogram_mapping->Replace(&colid, histogram->CopyHistogram());
 		GPOS_ASSERT(result);
 	}
@@ -1334,9 +1330,7 @@ CStatisticsUtils::GetGrpColIdToUpperBoundNDVIdxMap
 			{
 				ULongPtrArray *colids_new = GPOS_NEW(mp) ULongPtrArray(mp);
 				colids_new->Append(GPOS_NEW(mp) ULONG(colid));
-#ifdef GPOS_DEBUG
-		BOOL fres =
-#endif // GPOS_DEBUG
+		BOOL fres GPOS_ASSERTS_ONLY =
 					grp_colid_upper_bound_ndv_idx_map->Insert(GPOS_NEW(mp) ULONG(upper_bound_ndv_idx), colids_new);
 				GPOS_ASSERT(fres);
 			}

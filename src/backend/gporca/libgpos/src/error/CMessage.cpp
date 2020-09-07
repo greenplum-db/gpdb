@@ -214,12 +214,6 @@ CMessage::GetMessage
 				 1, // # params
 				 GPOS_WSZ_WSZLEN("I/O operation failed; use error code to identify the error type")),
 
-		CMessage(CException(CException::ExmaSystem, CException::ExmiNetError),
-				 CException::ExsevError,
-				 GPOS_WSZ_WSZLEN("Error during networking operation, error code: %d"),
-				 1, // # params
-				 GPOS_WSZ_WSZLEN("Networking operation failed; use error code to identify the error type")),
-
 		CMessage(CException(CException::ExmaSystem, CException::ExmiOverflow),
 				CException::ExsevError,
 				GPOS_WSZ_WSZLEN("Arithmetic Overflow"),
@@ -231,12 +225,6 @@ CMessage::GetMessage
 				GPOS_WSZ_WSZLEN("Error during delete operation, error code: %d"),
 				1, // # params
 				GPOS_WSZ_WSZLEN("Delete operation failed; use error code to identify the error type")),
-
-		CMessage(CException(CException::ExmaSystem, CException::ExmiUnexpectedOOMDuringFaultSimulation),
-				 CException::ExsevError,
-				 GPOS_WSZ_WSZLEN("Unexpected out of memory during fault simulation"),
-				 0, // # params
-				 GPOS_WSZ_WSZLEN("Unexpected out of memory during fault simulation")),
 
 		CMessage(CException(CException::ExmaSystem, CException::ExmiDummyWarning),
 				 CException::ExsevWarning,

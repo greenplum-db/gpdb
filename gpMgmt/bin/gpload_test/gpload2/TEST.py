@@ -98,9 +98,9 @@ d = mkpath('config')
 if not os.path.exists(d):
     os.mkdir(d)
 
-def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',portNum='8081',database='reuse_gptest',host='localhost',formatOpts='text',file='data/external_file_01.txt',table='texttable',format='text',delimiter="'|'",escape='',quote='',truncate='False',log_errors=None, error_limit='0',error_table=None,externalSchema=None,staging_table=None,fast_match='false', encoding=None, preload=True, fill=False):
+def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',portNum='8081',database='reuse_gptest',host='localhost',formatOpts='text',file='data/external_file_01.txt',table='texttable',format='text',delimiter="'|'",escape='',quote='',truncate='False',log_errors=None, error_limit='0',error_table=None,externalSchema=None,staging_table=None,fast_match='false', encoding=None, preload=True, fill=False, config='config/config_file'):
 
-    f = open(mkpath('config/config_file'),'w')
+    f = open(mkpath(config),'w')
     f.write("VERSION: 1.0.0.1")
     if database:
         f.write("\nDATABASE: "+database)
@@ -131,6 +131,11 @@ def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',
         f.write("\n           - s_n7: double precision")
         f.write("\n           - s_n8: text")
         f.write("\n           - s_n9: text")
+    if columns_flag == '2':
+        f.write("\n    - COLUMNS:")
+        f.write("\n           - 'Field1': bigint")
+        f.write("\n           - 'Field#2': text")
+
     if format:
         f.write("\n    - FORMAT: "+format)
     if log_errors:
@@ -445,7 +450,7 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
 
     def test_00_gpload_formatOpts_setup(self):
         "0  gpload setup"
-        for num in range(1,40):
+        for num in range(1,42):
            f = open(mkpath('query%d.sql' % num),'w')
            f.write("\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n"+"\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n")
            f.close()
@@ -762,6 +767,41 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
         copy_data('external_file_04.txt','data_file.txt')
         write_config_file(mode='insert',reuse_flag='false',fast_match='false',file='data_file.txt',table='texttable1', error_limit='1000', fill=True)
         self.doTest(39)
+
+    def test_40_gpload_merge_mode_with_multi_pk(self):
+	"40  gpload merge mode with multiple pk"
+        file = mkpath('setup.sql')
+        runfile(file)
+        copy_data('external_file_pk.txt','data_file.txt')
+        write_config_file(mode='merge',reuse_flag='true',fast_match='false',file='data_file.txt',table='testpk')
+        copy_data('external_file_pk2.txt','data_file2.txt')
+        write_config_file(mode='merge',reuse_flag='true',fast_match='false',file='data_file2.txt',table='testpk',config='config/config_file2')
+        f = open(mkpath('query40.sql'),'w')
+        f.write("""\! psql -d reuse_gptest -c "create table testpk (n1 integer, s1 integer, s2 varchar(128), n2 integer, primary key(n1,s1,s2))\
+                partition by range (s1)\
+                subpartition by list(s2)\
+                SUBPARTITION TEMPLATE\
+                ( SUBPARTITION usa VALUES ('usa'),\
+                        SUBPARTITION asia VALUES ('asia'),\
+                        SUBPARTITION europe VALUES ('europe'),\
+                        DEFAULT SUBPARTITION other_regions)\
+                (start (1) end (13) every (1),\
+                default partition others)\
+                ;"\n""")
+        f.write("\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n")
+        f.write("\! gpload -f "+mkpath('config/config_file2')+ " -d reuse_gptest\n")
+        f.write("\! psql -d reuse_gptest -c 'drop table testpk;'\n")
+        f.close()
+        self.doTest(40)
+
+    def test_41_gpload_special_char(self):
+        "41 gpload special char"
+        file = mkpath('setup.sql')
+        runfile(file)
+        copy_data('external_file_15.txt','data_file.txt')
+        write_config_file(mode='insert',reuse_flag='true',fast_match='false', file='data_file.txt',table='testSpecialChar',columns_flag='2', delimiter=";")
+        self.doTest(41)
+
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(GPLoad_FormatOpts_TestCase)

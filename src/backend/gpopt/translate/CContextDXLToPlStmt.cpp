@@ -176,9 +176,7 @@ CContextDXLToPlStmt::AddCTEConsumerInfo
 	List *cte_plan = ListMake1(share_input_scan);
 
 	ULONG *key = GPOS_NEW(m_mp) ULONG(cte_id);
-#ifdef GPOS_DEBUG
-	BOOL result =
-#endif
+	BOOL result GPOS_ASSERTS_ONLY =
 			m_cte_consumer_info->Insert(key, GPOS_NEW(m_mp) SCTEConsumerInfo(cte_plan));
 
 	GPOS_ASSERT(result);

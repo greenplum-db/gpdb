@@ -158,7 +158,12 @@ where <varname>action</varname> is one of:
                                                   href="../config_params/guc-list.xml#gp_default_storage_options"
                                                   >gp_default_storage_option</xref></codeph>.</li>
                                                   <li>The default compression parameter value.</li>
-                                                </ol></p></li>
+                                                </ol></p><p>For append-optimized and hash tables,
+                                                  <codeph>ADD COLUMN</codeph> requires a table
+                                                rewrite. For information about table rewrites
+                                                performed by <codeph>ALTER TABLE</codeph>, see <xref
+                                                  href="#topic1/section5" format="dita"
+                                                >Notes</xref>.</p></li>
                                 <li><b>DROP COLUMN [IF EXISTS]</b> — Drops a column from a table.
                                         Note that if you drop table columns that are being used as
                                         the Greenplum Database distribution key, the distribution
@@ -185,10 +190,15 @@ where <varname>action</varname> is one of:
                                         default conversion is the same as an assignment cast from
                                         old data type to new. A <codeph>USING</codeph> clause must
                                         be provided if there is no implicit or assignment cast from
-                                        old to new type.<note>GPORCA supports collation only when
-                                                all columns in the query use the same collation. If
-                                                columns in the query use different collations, then
-                                                Greenplum uses the Postgres Planner.</note></li>
+                                        old to new type.
+                                        <note>GPORCA supports collation only when all columns in the
+                                                query use the same collation. If columns in the
+                                                query use different collations, then Greenplum uses
+                                                the Postgres Planner.</note><p>Changing a column
+                                                data type requires a table rewrite. For information
+                                                about table rewrites performed by <codeph>ALTER
+                                                  TABLE</codeph>, see <xref href="#topic1/section5"
+                                                  format="dita">Notes</xref>.</p></li>
                                 <li id="ay136904"><b>SET/DROP DEFAULT</b> — Sets or removes the
                                         default value for a column. Default values only apply in
                                         subsequent <codeph>INSERT</codeph> or
@@ -256,9 +266,9 @@ where <varname>action</varname> is one of:
                                         assume that the constraint holds for all rows in the table,
                                         until it is validated by using the <codeph>VALIDATE
                                                 CONSTRAINT</codeph> option. Constraint checks are
-                                        skipped at create table time, so the <xref
-                                                href="CREATE_TABLE.xml#topic1"/> syntax does not
-                                        include this option. </li>
+                                        skipped at create table time, so the <codeph><xref
+                                                href="CREATE_TABLE.xml#topic1"/></codeph> syntax
+                                        does not include this option. </li>
                                 <li><b>VALIDATE CONSTRAINT</b> — This form validates a foreign key
                                         constraint that was previously created as <codeph>NOT
                                                 VALID</codeph>, by scanning the table to ensure
@@ -362,9 +372,13 @@ where <varname>action</varname> is one of:
                                         fillfactors are appropriate. Note that the table contents
                                         will not be modified immediately by this command. You will
                                         need to rewrite the table to get the desired effects. That
-                                        can be done with <xref href="VACUUM.xml#topic1"/> or one of
-                                        the forms of <xref href="#topic1" format="dita"/> that
-                                        forces a table rewrite.</li>
+                                        can be done with <codeph><xref href="VACUUM.xml#topic1"
+                                                /></codeph> or one of the forms of <codeph>ALTER
+                                                TABLE</codeph> that forces a table rewrite. For
+                                        information about the forms of <codeph>ALTER TABLE</codeph>
+                                        that perform a table rewrite, see <xref
+                                                href="#topic1/section5" format="dita"
+                                        >Notes</xref>.</li>
                                 <li id="ay141947"><b>SET DISTRIBUTED</b> — Changes the distribution
                                         policy of a table. Changing a hash distribution policy, or
                                         changing to or from a replicated policy, will cause the
@@ -445,23 +459,24 @@ where <varname>action</varname> is one of:
                         <note>If you add a partition to a table that has subpartition encodings, the
                                 new partition inherits the storage directives for the subpartitions.
                                 For more information about the precedence of compression settings,
-                                see "Using Compression" in the <cite>Greenplum Database
-                                        Administrator Guide</cite>.</note>
-                        <p>All the forms of ALTER TABLE that act on a single table, except
-                                        <codeph>RENAME</codeph> and <codeph>SET SCHEMA</codeph>, can
+                                see <xref href="../../admin_guide/ddl/ddl-storage.xml#topic40">Using
+                                        Compression</xref>.</note>
+                        <p>All the forms of <codeph>ALTER TABLE</codeph> that act on a single table,
+                                except <codeph>RENAME</codeph> and <codeph>SET SCHEMA</codeph>, can
                                 be combined into a list of multiple alterations to apply together.
                                 For example, it is possible to add several columns and/or alter the
                                 type of several columns in a single command. This is particularly
                                 useful with large tables, since only one pass over the table need be
                                 made. </p>
                         <p>You must own the table to use <codeph>ALTER TABLE</codeph>. To change the
-                                schema or tablespace of a table, you must also have <codeph>CREATE</codeph>
-                                privilege on the new schema or tablespace. To add the table as a new child of a
-                                parent table, you must own the parent table as well. To alter the
-                                owner, you must also be a direct or indirect member of the new
-                                owning role, and that role must have <codeph>CREATE</codeph>
-                                privilege on the table's schema. To add a column or alter a column
-                                type or use the <codeph>OF</codeph> clause, you must also have
+                                schema or tablespace of a table, you must also have
+                                        <codeph>CREATE</codeph> privilege on the new schema or
+                                tablespace. To add the table as a new child of a parent table, you
+                                must own the parent table as well. To alter the owner, you must also
+                                be a direct or indirect member of the new owning role, and that role
+                                must have <codeph>CREATE</codeph> privilege on the table's schema.
+                                To add a column or alter a column type or use the
+                                        <codeph>OF</codeph> clause, you must also have
                                         <codeph>USAGE</codeph> privilege on the data type. A
                                 superuser has these privileges automatically.</p>
                         <note>Memory usage increases significantly when a table has many partitions,
@@ -823,7 +838,7 @@ where <varname>action</varname> is one of:
                                                   <codeph>CHECK</codeph> constraint of the partition
                                                 you are exchanging. The default is to validate the
                                                 data against the <codeph>CHECK</codeph> constraint.
-                                                  <note type="warning">If you specify the
+                                                <note type="warning">If you specify the
                                                   <codeph>WITHOUT VALIDATION</codeph> clause, you
                                                   must ensure that the data in table that you are
                                                   exchanging for an existing child leaf partition is
@@ -930,20 +945,64 @@ where <varname>action</varname> is one of:
                         <p>Adding a <codeph>CHECK</codeph> or <codeph>NOT NULL</codeph> constraint
                                 requires scanning the table to verify that existing rows meet the
                                 constraint, but does not require a table rewrite.</p>
-                        <p>When a column is added with <codeph>ADD COLUMN</codeph>, all existing
-                                rows in the table are initialized with the column's default value,
-                                or <codeph>NULL</codeph> if no <codeph>DEFAULT</codeph> clause is
-                                specified. Adding a column with a non-null default or changing the
-                                type of an existing column will require the entire table and indexes
-                                to be rewritten. As an exception, if the <codeph>USING</codeph>
-                                clause does not change the column contents and the old type is
-                                either binary coercible to the new type or an unconstrained domain
-                                over the new type, a table rewrite is not needed, but any indexes on
-                                the affected columns must still be rebuilt. Adding or removing a
-                                system <codeph>oid</codeph> column also requires rewriting the
-                                entire table. Table and/or index rebuilds may take a significant
-                                amount of time for a large table; and will temporarily require as
-                                much as double the disk space. </p>
+                        <p>This table lists the <codeph>ALTER TABLE</codeph> operations that require
+                                a table rewrite when performed on tables defined with the specified
+                                type of table storage.</p>
+                        <table frame="all" rowsep="1" colsep="1" id="table_r2g_24r_qmb">
+                                <title>ALTER TABLE Operations that Require Table Rewrite</title>
+                                <tgroup cols="4">
+                                        <colspec colname="c1" colnum="1" colwidth="1.0*"/>
+                                        <colspec colname="c2" colnum="2" colwidth="1.0*"/>
+                                        <colspec colname="c3" colnum="3" colwidth="1.0*"/>
+                                        <colspec colname="c4" colnum="4" colwidth="1.0*"/>
+                                        <thead>
+                                                <row>
+                                                  <entry>Operation (See Note)</entry>
+                                                  <entry>Append-Optimized, Column-Oriented</entry>
+                                                  <entry>Append-Optimized</entry>
+                                                  <entry>Heap</entry>
+                                                </row>
+                                        </thead>
+                                        <tbody>
+                                                <row>
+                                                  <entry><codeph>ALTER COLUMN TYPE</codeph></entry>
+                                                  <entry>Yes</entry>
+                                                  <entry>Yes</entry>
+                                                  <entry>Yes</entry>
+                                                </row>
+                                                <row>
+                                                  <entry><codeph>ADD COLUMN</codeph></entry>
+                                                  <entry>No</entry>
+                                                  <entry>Yes</entry>
+                                                  <entry>Yes</entry>
+                                                </row>
+                                        </tbody>
+                                </tgroup>
+                        </table>
+                        <note>Dropping a system <codeph>oid</codeph> column also requires a table
+                                rewrite. <p>When a column is added with <codeph>ADD COLUMN</codeph>,
+                                        all existing rows in the table are initialized with the
+                                        column's default value, or <codeph>NULL</codeph> if no
+                                                <codeph>DEFAULT</codeph> clause is specified. Adding
+                                        a column with a non-null default or changing the type of an
+                                        existing column will require the entire table and indexes to
+                                        be rewritten. As an exception, if the <codeph>USING</codeph>
+                                        clause does not change the column contents and the old type
+                                        is either binary coercible to the new type or an
+                                        unconstrained domain over the new type, a table rewrite is
+                                        not needed, but any indexes on the affected columns must
+                                        still be rebuilt. Table and/or index rebuilds may take a
+                                        significant amount of time for a large table; and will
+                                        temporarily require as much as double the disk space.
+                                </p></note>
+                        <note type="important">The forms of <codeph>ALTER TABLE</codeph> that
+                                perform a table rewrite on an append-optimized table are not
+                                MVCC-safe. After a table rewrite, the table will appear empty to
+                                concurrent transactions if they are using a snapshot taken before
+                                the rewrite occurred. See <xref
+                                        href="https://www.postgresql.org/docs/9.4/mvcc-caveats.html"
+                                        scope="external" format="html">MVCC Caveats</xref> for more
+                                details.</note>
                         <p>You can specify multiple changes in a single <codeph>ALTER TABLE</codeph>
                                 command, which will be done in a single pass over the table. </p>
                         <p>The <codeph>DROP COLUMN</codeph> form does not physically remove the
@@ -955,19 +1014,12 @@ where <varname>action</varname> is one of:
                                 reclaimed over time as existing rows are updated. If you drop the
                                 system <codeph>oid</codeph> column, however, the table is rewritten
                                 immediately.</p>
-                        <p> To force immediate reclamation of space occupied by a dropped column,
-                                you can execute one of the forms of <codeph>ALTER TABLE</codeph>
-                                that performs a rewrite of the whole table. This results in
+                        <p>To force immediate reclamation of space occupied by a dropped column, you
+                                can execute one of the forms of <codeph>ALTER TABLE</codeph> that
+                                performs a rewrite of the whole table. This results in
                                 reconstructing each row with the dropped column replaced by a null
                                 value. </p>
-                        <p> The rewriting forms of <codeph>ALTER TABLE</codeph> are not MVCC-safe.
-                                After a table rewrite, the table will appear empty to concurrent
-                                transactions, if they are using a snapshot taken before the rewrite
-                                occurred. See <xref
-                                        href="https://www.postgresql.org/docs/9.4/mvcc-caveats.html"
-                                        scope="external" format="html">MVCC Caveats</xref> for more
-                                details. </p>
-                        <p> The <codeph>USING</codeph> option of <codeph>SET DATA TYPE</codeph> can
+                        <p>The <codeph>USING</codeph> option of <codeph>SET DATA TYPE</codeph> can
                                 actually specify any expression involving the old values of the row;
                                 that is, it can refer to other columns as well as the one being
                                 converted. This allows very general conversions to be done with the

@@ -141,9 +141,7 @@ CParseHandlerSearchStage::EndElement
 	for (ULONG idx = 0; idx < size; idx++)
 	{
 		CParseHandlerXform *xform_set_parse_handler = dynamic_cast<CParseHandlerXform*>((*this)[idx]);
-#ifdef GPOS_DEBUG
-		BOOL fSet =
-#endif // GPOS_DEBUG
+		BOOL fSet GPOS_ASSERTS_ONLY =
 			m_xforms->ExchangeSet(xform_set_parse_handler->GetXform()->Exfid());
 		GPOS_ASSERT(!fSet);
 	}

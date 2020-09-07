@@ -126,9 +126,7 @@ CDrvdPropCtxtPlan::AddProps
 	if (m_fUpdateCTEMap)
 	{
 		pdpplanProducer->AddRef();
-#ifdef GPOS_DEBUG
-		BOOL fInserted =
-#endif // GPOS_DEBUG
+		BOOL fInserted GPOS_ASSERTS_ONLY =
 				m_phmulpdpCTEs->Insert(GPOS_NEW(m_mp) ULONG(ulProducerId), pdpplanProducer);
 		GPOS_ASSERT(fInserted);
 	}
@@ -203,9 +201,7 @@ CDrvdPropCtxtPlan::CopyCTEProducerProps
 	GPOS_ASSERT(NULL != pdpplan);
 
 	pdpplan->AddRef();
-#ifdef GPOS_DEBUG
-	BOOL fInserted =
-#endif // GPOS_DEBUG
+	BOOL fInserted GPOS_ASSERTS_ONLY =
 		m_phmulpdpCTEs->Insert(GPOS_NEW(m_mp) ULONG(ulCTEId), pdpplan);
 	GPOS_ASSERT(fInserted);
 }

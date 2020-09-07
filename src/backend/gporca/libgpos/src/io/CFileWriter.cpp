@@ -99,10 +99,10 @@ CFileWriter::Write
 
 	while (0 < bytes_left_to_write)
 	{
-		INT_PTR current_byte = -1;
+		INT_PTR current_byte;
 
-		// write to file and check to simulate I/O error
-		GPOS_CHECK_SIM_IO_ERR(&current_byte, ioutils::Write(GetFileDescriptor(), read_buffer, bytes_left_to_write));
+		// write to file
+		current_byte = ioutils::Write(GetFileDescriptor(), read_buffer, bytes_left_to_write);
 
 		// check for error
 		if (-1 == current_byte)

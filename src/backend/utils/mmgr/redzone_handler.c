@@ -173,6 +173,19 @@ RedZoneHandler_FlagTopConsumer()
 	}
 
 	/*
+	 * In resource group mode, we should acquire ResGroupLock to avoid
+	 * resource group slot being changed during flag top consumer in redzone.
+	 * Note that flag top consumer is a low frequency action, so the
+	 * additional overhead is acceptable.
+	 *
+	 * Note that we also need to acquire SessionStateLock as well, so the lock
+	 * order is important to avoid deadlock. Make sure always acquire
+	 * ResGroupLock ahead.
+	 */
+	if (IsResGroupEnabled())
+		LWLockAcquire(ResGroupLock, LW_SHARED);
+
+	/*
 	 * Grabbing a shared lock prevents others to modify the SessionState
 	 * data structure, therefore ensuring that we don't flag someone
 	 * who was already dying. A shared lock is enough as we access the
@@ -189,15 +202,10 @@ RedZoneHandler_FlagTopConsumer()
 
 	/*
 	 * Find the group which used the most of global memory in resgroup mode.
-	 * Since there exists concurrent DDLs to drop resource group and it is
-	 * not safe to acquire resgroup lock in redzone. We access ResGroupData
-	 * in a lock free way, and using SessionStateLock to ensure the groups with
-	 * sessions will not be dropped.
 	 */
 	if (IsResGroupEnabled())
 	{
 		int32	maxGlobalShareMem = 0;
-		Oid		sessionGroupId = InvalidOid;
 		int32	sessionGroupGSMem;
 
 		while (curSessionState != NULL)
@@ -209,10 +217,7 @@ RedZoneHandler_FlagTopConsumer()
 			if (sessionGroupGSMem > maxGlobalShareMem)
 			{
 				maxGlobalShareMem = sessionGroupGSMem;
-				sessionGroupId = SessionGetResGroupId(curSessionState);
-
-				Assert(InvalidOid != sessionGroupId);
-				resGroupId = sessionGroupId;
+				resGroupId = SessionGetResGroupId(curSessionState);
 			}
 
 			curSessionState = curSessionState->next;
@@ -334,6 +339,9 @@ RedZoneHandler_FlagTopConsumer()
 	}
 
 	LWLockRelease(SessionStateLock);
+
+	if (IsResGroupEnabled())
+		LWLockRelease(ResGroupLock);
 }
 
 /*

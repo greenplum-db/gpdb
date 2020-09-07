@@ -238,7 +238,7 @@ extern double estimate_num_groups(PlannerInfo *root, List *groupExprs,
 					double input_rows, List **pgset);
 
 extern Selectivity estimate_hash_bucketsize(PlannerInfo *root, Node *hashkey,
-											double nbuckets, Path *path);
+						 double nbuckets);
 
 extern List *deconstruct_indexquals(IndexPath *path);
 extern void genericcostestimate(PlannerInfo *root, IndexPath *path,
@@ -254,7 +254,7 @@ extern Selectivity scalararraysel_containment(PlannerInfo *root,
 						   int varRelid);
 extern Datum arraycontsel(PG_FUNCTION_ARGS);
 extern Datum arraycontjoinsel(PG_FUNCTION_ARGS);
-extern double estimate_num_groups_per_segment(double groupNum, double numPerGroup, double numsegments);
-extern double estimate_num_groups_across_segments(double groupNum, double numPerGroup, double numsegments);
+extern double estimate_num_groups_on_segment(double dNumGroupsTotal, double rows, CdbPathLocus locus);
+
 
 #endif   /* SELFUNCS_H */

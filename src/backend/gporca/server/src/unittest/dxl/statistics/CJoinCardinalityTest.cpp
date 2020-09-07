@@ -93,9 +93,7 @@ CJoinCardinalityTest::EresUnittest_JoinNDVRemain()
 		CDouble num_NDV_remain = elem.m_dNDVRemain;
 
 		CHistogram *histogram = CCardinalityTestUtils::PhistInt4Remain(mp, num_of_buckets, dNDVPerBucket, fNullFreq, num_NDV_remain);
-#ifdef GPOS_DEBUG
-			BOOL result =
-#endif // GPOS_DEBUG
+			BOOL result GPOS_ASSERTS_ONLY =
 		col_histogram_mapping->Insert(GPOS_NEW(mp) ULONG(ul1), histogram);
 		GPOS_ASSERT(result);
 	}

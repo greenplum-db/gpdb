@@ -3525,15 +3525,9 @@ estimate_num_groups(PlannerInfo *root, List *groupExprs, double input_rows,
  * discourage use of a hash rather strongly if the inner relation is large,
  * which is what we want.  We do not want to hash unless we know that the
  * inner rel is well-dispersed (or the alternatives seem much worse).
- *
- * NB: Greenplum add an extra parameter path for this function, since
- * Greenplum is MPP database consist of many segments, we have to use
- * it to correct the estimation. For details, please refer the comments
- * in the code.
  */
 Selectivity
-estimate_hash_bucketsize(PlannerInfo *root, Node *hashkey, double nbuckets,
-						 Path *path)
+estimate_hash_bucketsize(PlannerInfo *root, Node *hashkey, double nbuckets)
 {
 	VariableStatData vardata;
 	double		estfract,
@@ -3543,53 +3537,11 @@ estimate_hash_bucketsize(PlannerInfo *root, Node *hashkey, double nbuckets,
 				avgfreq;
 	AttStatsSlot sslot;
 	bool		isdefault;
-	int         numsegments = path->locus.numsegments;
 
 	examine_variable(root, hashkey, 0, &vardata);
 
 	/* Get number of distinct values */
 	ndistinct = get_variable_numdistinct(&vardata, &isdefault);
-
-	/*
-	 * Greenplum specific behavior: the above ndistinct is from
-	 * a global view. When estimating hash_bucketsize, we should
-	 * shift to a local view. For this function, rows is seen from
-	 * a global view, so to make compensation for it, we have to
-	 * multiply numsegments for some cases.
-	 */
-	if (CdbPathLocus_IsReplicated(path->locus) ||
-		CdbPathLocus_IsGeneral(path->locus) ||
-		CdbPathLocus_IsSegmentGeneral(path->locus))
-	{
-		/*
-		 * These types of locus means on each segment
-		 * we have ndistinct groups. Do the compensation by
-		 * multiply numsegments.
-		 */
-		ndistinct *= numsegments;
-	}
-	else
-	{
-		if (cdbpathlocus_collocates_expressions(root, path->locus,
-												list_make1(hashkey), false))
-		{
-			/*
-			 * This is the case the path's distribution is collocated with
-			 * the hash table's hash key, then on each segment, we only
-			 * contains (ndistinct/numsegments) distinct groups. So, no need
-			 * to do the compensation.
-			 */
-		}
-		else
-		{
-			Assert(CdbPathLocus_IsPartitioned(path->locus));
-			/*
-			 * This is the case the path's distribution is not collocated with
-			 * the hash table's hash key.
-			 */
-			ndistinct = estimate_num_groups_across_segments(ndistinct, path->rows, numsegments);
-		}
-	}
 
 	/* If ndistinct isn't real, punt and return 0.1, per comments above */
 	if (isdefault)
@@ -8046,11 +7998,11 @@ brincostestimate(PlannerInfo *root, IndexPath *path, double loop_count,
 }
 
 /*
- * estimate_num_groups_per_segment
+ * estimate_num_groups_on_segment
  *
  *   - groupNum   : the number of groups globally
  *   - rows       : the number of tuples globally
- *   - numsegments: the number of all segments in the cluster
+ *   - locus      : how are the groups distributed?
  *
  * Estimate how many groups are on each segment, when the group keys do not contain
  * distribution keys. Understand such condition, we can consider data is roughly
@@ -8065,53 +8017,20 @@ brincostestimate(PlannerInfo *root, IndexPath *path, double loop_count,
  * is easy to prove.
  */
 double
-estimate_num_groups_per_segment(double groupNum, double rows, double numsegments)
+estimate_num_groups_on_segment(double dNumGroupsTotal, double rows, CdbPathLocus locus)
 {
-	double numPerGroup = rows / groupNum;
-	double group_num;
-	group_num = (1-pow((numsegments-1)/numsegments, numPerGroup))*groupNum;
-	return group_num;
-}
+	if (CdbPathLocus_IsPartitioned(locus))
+	{
+		double		numsegments = CdbPathLocus_NumSegments(locus);
+		double		totalrows = rows * numsegments;
+		double		numPerGroup = totalrows / dNumGroupsTotal;
+		double		group_num;
 
-/*
- * Number of groups seen by each segment, as calculated by
- * estimate_num_groups_per_segment() is more intuitive, but we often want that
- * value multiplied by the number of segments. This function is shorthand for
- * that.
- *
- * For example, in a two-stage aggregate like this, on a three-segment cluster:
- *
- * postgres=# explain select count(*) from tenk1 group by thousand;
- *                                              QUERY PLAN                                              
- * -----------------------------------------------------------------------------------------------------
- *  Gather Motion 3:1  (slice1; segments: 3)  (cost=342.18..372.18 rows=1000 width=12)
- *    ->  Finalize HashAggregate  (cost=342.18..352.18 rows=334 width=12)
- *          Group Key: thousand
- *          ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=239.00..327.44 rows=983 width=12)
- *                Hash Key: thousand
- *                ->  Partial HashAggregate  (cost=239.00..268.48 rows=983 width=12)
- *                      Group Key: thousand
- *                      ->  Seq Scan on tenk1  (cost=0.00..189.00 rows=3334 width=4)
- *  Optimizer: Postgres query optimizer
- * (9 rows)
- *
- * The Partial HashAggregate step is estimated to encounter 983 distinct values
- * on each segment, out of 1000 distinct values in total. So the total number
- * of rows output by the Partial HashAggregate step is 3 * 983 = 2949. 2949 is
- * the correct row count estimate to be stored in the Agg path's 'rows' field,
- * and that's what this function computes.
- *
- * Note that EXPLAIN divides the rows estimates by the number of segments, to
- * display the estimated number of rows per segment. So in the above query, the
- * 'rows' estimate stored on the Partial HashAggregate node is indeed 2949, even
- * though the EXPLAIN output says 983.
- */
-double
-estimate_num_groups_across_segments(double groupNum, double rows, double numsegments)
-{
-	return estimate_num_groups_per_segment(groupNum,
-										   rows,
-										   numsegments) * numsegments;
+		group_num = (1-pow((numsegments-1)/numsegments, numPerGroup))*dNumGroupsTotal;
+		return group_num;
+	}
+	else
+		return dNumGroupsTotal;
 }
 
 static void

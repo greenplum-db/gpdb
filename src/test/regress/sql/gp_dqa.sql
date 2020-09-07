@@ -9,6 +9,11 @@ from generate_series(0, 99) i;
 insert into dqa_t2 select i%34, i%45, (i%10) || '', '2009-06-10'::date + ( (i%56) || ' days')::interval
 from generate_series(0, 99) i;
 
+-- With the default very small cost, the planner often prefer to just Gather
+-- all the rows to the QD. We want to test the more complicated multi-tage DQA
+-- plans here, without using a huge number of rows.
+set gp_motion_cost_per_row=1;
+
 set enable_hashagg=on;
 set enable_groupagg=off;
 

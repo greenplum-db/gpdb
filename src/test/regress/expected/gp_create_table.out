@@ -46,46 +46,6 @@ select distkey, distclass from gp_distribution_policy where localoid = 'distpol'
 (1 row)
 
 drop table distpol;
--- now test that MPP-101 /actually/ works
-create table distpol (i int, j int, k int) distributed by (i);
-alter table distpol add primary key (j);
-NOTICE:  updating distribution policy to match new PRIMARY KEY
-select distkey, distclass from gp_distribution_policy where localoid = 'distpol'::regclass;
- distkey | distclass 
----------+-----------
- 2       | 10027
-(1 row)
-
--- make sure we can't overwrite it
-create unique index distpol_uidx on distpol(k);
-ERROR:  UNIQUE index must contain all columns in the table's distribution key
-DETAIL:  Distribution key column "j" is not included in the constraint.
--- should be able to now
-alter table distpol drop constraint distpol_pkey;
-create unique index distpol_uidx on distpol(k);
-NOTICE:  updating distribution policy to match new UNIQUE index
-select distkey, distclass from gp_distribution_policy where localoid = 'distpol'::regclass;
- distkey | distclass 
----------+-----------
- 3       | 10027
-(1 row)
-
-drop index distpol_uidx;
--- expressions shouldn't be able to update the distribution key
-create unique index distpol_uidx on distpol(ln(k));
-ERROR:  UNIQUE index must contain all columns in the table's distribution key
-DETAIL:  Distribution key column "k" is not included in the constraint.
-drop index distpol_uidx;
-ERROR:  index "distpol_uidx" does not exist
--- lets make sure we don't change the policy when the table is full
-insert into distpol values(1, 2, 3);
-create unique index distpol_uidx on distpol(i);
-ERROR:  UNIQUE index must contain all columns in the table's distribution key
-DETAIL:  Distribution key column "k" is not included in the constraint.
-alter table distpol add primary key (i);
-ERROR:  PRIMARY KEY definition must contain all columns in the table's distribution key
-DETAIL:  Distribution key column "k" is not included in the constraint.
-drop table distpol;
 -- if the datatype of the index column is not hashable, can't update distribution
 -- key to it.
 create table distpol_ts (i int4, t tsvector) distributed by (i);

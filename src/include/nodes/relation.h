@@ -623,6 +623,10 @@ static inline void planner_subplan_put_plan(struct PlannerInfo *root, SubPlan *s
  * We store baserestrictcost in the RelOptInfo (for base relations) because
  * we know we will need it at least once (to price the sequential scan)
  * and may need it multiple times to price index scans.
+ *
+ * GPDB: Even if the relation is distributed, 'rows', 'tuples' and 'pages' are
+ * totals are across all segments. Divide by cdbpolicy->numsegments to get the
+ * sizes of a distributed scan node.
  *----------
  */
 typedef enum RelOptKind
@@ -1036,6 +1040,9 @@ typedef struct PathTarget
  * in join cases it's NIL because the set of relevant clauses varies depending
  * on how the join is formed.  The relevant clauses will appear in each
  * parameterized join path's joinrestrictinfo list, instead.
+ *
+ * GPDB: Like the rowcount in RelOptInfo, 'ppi_rows' is the total across all
+ * segments.
  */
 typedef struct ParamPathInfo
 {
@@ -1075,6 +1082,13 @@ typedef struct ParamPathInfo
  *
  * "pathkeys" is a List of PathKey nodes (see above), describing the sort
  * ordering of the path's output rows.
+ *
+ * GPDB: The 'rows' estimate, as well as al the costs, are *per node* values.
+ * That's similar to upstream parallel Paths, which also hold estimates
+ * per worker. But note that the 'rows', 'tuples', 'pages' in RelOptInfo
+ * are for the whole relation, across all segmnents! So you cannot generally
+ * assign RelOptInfo->rows to Path->rows, you will need to adjust it for
+ * the number of segments used to execute the Path..
  */
 typedef struct Path
 {

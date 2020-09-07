@@ -19,34 +19,6 @@
 #include "gpos/types.h"
 #include "gpos/io/iotypes.h"
 
-// macro for I/O error simulation
-#ifdef GPOS_FPSIMULATOR
-// simulate I/O error with specified address of returned error value,
-// and specified errno
-#define GPOS_CHECK_SIM_IO_ERR_CODE(return_value, error_no, IOFunc) \
-		do \
-		{\
-			if (!ioutils::SimulateIOError(return_value, error_no, __FILE__, __LINE__)) \
-			{ \
-				*return_value = IOFunc; \
-			} \
-		} while(0)
-#else
-// execute the I/O function
-#define GPOS_CHECK_SIM_IO_ERR_CODE(return_value, error_no, IOFunc) \
-		do \
-		{\
-			GPOS_ASSERT(NULL != return_value); \
-                 \
-			*return_value = IOFunc; \
-		} while(0)
-#endif // GPOS_FPSIMULATOR
-
-// simulate I/O error with specified address of returned error value
-// and errno will set to 1 automatically
-#define GPOS_CHECK_SIM_IO_ERR(return_value, IOFunc)  GPOS_CHECK_SIM_IO_ERR_CODE(return_value, 1, IOFunc)
-
-
 namespace gpos
 {
 	namespace ioutils
@@ -82,9 +54,6 @@ namespace gpos
 		// delete file
 		void RemoveDir(const CHAR *file_path);
 
-		// move file
-		void Move(const CHAR *old_path, const CHAR *szNew);
-
 		// delete file
 		void Unlink(const CHAR *file_path);
 
@@ -105,21 +74,6 @@ namespace gpos
 
 		// create a unique temporary directory
 		void CreateTempDir(CHAR *dir_path);
-
-#ifdef GPOS_FPSIMULATOR
-		// inject I/O error for functions whose returned value type is INT
-		BOOL SimulateIOError(INT *return_value, INT error_no, const CHAR *file, ULONG line_num);
-
-		// inject I/O error for functions whose returned value type is INT_PTR
-		inline
-		BOOL SimulateIOError(INT_PTR *return_value, INT error_no, const CHAR *file, ULONG line_num)
-		{
-			return SimulateIOError((INT*) return_value, error_no, file, line_num);
-		}
-
-		// inject I/O error for functions whose returned value type is CHAR*
-		BOOL SimulateIOError(CHAR **return_value, INT error_no, const CHAR *file, ULONG line_num);
-#endif // GPOS_FPSIMULATOR
 
 	}	// namespace ioutils
 }

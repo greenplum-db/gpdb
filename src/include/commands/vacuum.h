@@ -183,6 +183,10 @@ typedef struct
 {
 	/* Table being sampled */
 	Relation	onerel;
+	int32		targrows;
+
+	/* whether acquire inherited sample rows */
+	bool        inherited;
 
 	/* Sampled rows and estimated total number of rows in the table. */
 	HeapTuple  *sample_rows;
@@ -224,6 +228,10 @@ extern double vac_estimate_reltuples(Relation relation, bool is_analyze,
 					   BlockNumber total_pages,
 					   BlockNumber scanned_pages,
 					   double scanned_tuples);
+extern void vac_send_relstats_to_qd(Relation relation,
+						BlockNumber num_pages,
+						double num_tuples,
+						BlockNumber num_all_visible_pages);
 extern void vac_update_relstats(Relation relation,
 					BlockNumber num_pages,
 					double num_tuples,

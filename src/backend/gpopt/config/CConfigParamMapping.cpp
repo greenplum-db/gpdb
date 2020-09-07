@@ -443,9 +443,7 @@ CConfigParamMapping::PackConfigParamInBitset
 
 		if (value)
 		{
-#ifdef GPOS_DEBUG
-			BOOL is_traceflag_set =
-#endif // GPOS_DEBUG
+			BOOL is_traceflag_set GPOS_ASSERTS_ONLY =
 				traceflag_bitset->ExchangeSet((ULONG) elem.m_trace_flag);
 			GPOS_ASSERT(!is_traceflag_set);
 		}
@@ -459,9 +457,7 @@ CConfigParamMapping::PackConfigParamInBitset
 
 		if (optimizer_xforms[ul])
 		{
-#ifdef GPOS_DEBUG
-			BOOL is_traceflag_set =
-#endif // GPOS_DEBUG
+			BOOL is_traceflag_set GPOS_ASSERTS_ONLY =
 				traceflag_bitset->ExchangeSet(EopttraceDisableXformBase + ul);
 			GPOS_ASSERT(!is_traceflag_set);
 		}

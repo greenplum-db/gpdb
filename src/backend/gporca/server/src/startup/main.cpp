@@ -17,7 +17,6 @@
 
 #include "gpos/common/CMainArgs.h"
 #include "gpos/memory/CAutoMemoryPool.h"
-#include "gpos/test/CFSimulatorTestExt.h"
 #include "gpos/test/CUnittest.h"
 
 
@@ -224,10 +223,6 @@ static gpos::CUnittest rgut[] =
 	GPOS_UNITTEST_STD(CConstExprEvaluatorDXLTest),
 	// disable CEnumeratorTest until it is fixed
 //	GPOS_UNITTEST_STD(CEnumeratorTest),
-	// extended tests
-#ifdef GPOS_FPSIMULATOR
-	GPOS_UNITTEST_EXT(CFSimulatorTestExt),
-#endif // GPOS_FPSIMULATOR
 };
 
 //---------------------------------------------------------------------------

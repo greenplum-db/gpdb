@@ -505,15 +505,12 @@ namespace gpdxl
 				);
 
 
-			// translate operator costs from the DXL cost structure into the types
-			// used by GPDB
+			// translate operator costs from the DXL cost structure into a Plan
+			// struct used by GPDB
 			void TranslatePlanCosts
 				(
-				const CDXLOperatorCost *dxl_operator_cost,
-				Cost *startup_cost_out,
-				Cost *total_cost_out,
-				Cost *cost_rows_out,
-				INT *width_out
+				const CDXLNode *dxlnode,
+				Plan *plan
 				);
 
 			// shortcut for translating both the projection list and the filter

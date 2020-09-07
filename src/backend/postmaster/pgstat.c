@@ -68,8 +68,12 @@
 #include "utils/snapmgr.h"
 #include "utils/timestamp.h"
 #include "utils/tqual.h"
+#include "utils/lsyscache.h"
 #include "cdb/cdbvars.h"
+#include "cdb/cdbpartition.h"
 #include "commands/resgroupcmds.h"
+
+#include "utils/faultinjector.h"
 
 
 /* ----------
@@ -5964,4 +5968,102 @@ pgstat_db_requested(Oid databaseid)
 		return true;
 
 	return false;
+}
+
+/*
+ * just as pgstat_count_heap_update(), with an extra parameter ntuples.
+ * ntuples is used to specify how many rows the caller has updated.
+ */
+static void
+gp_pgstat_count_heap_update(PgStat_TableStatus *pgstat_info, PgStat_Counter ntuples)
+{
+	int nest_level = GetCurrentTransactionNestLevel();
+	if (pgstat_info->trans == NULL || pgstat_info->trans->nest_level != nest_level)
+		add_tabstat_xact_level(pgstat_info, nest_level);
+	pgstat_info->trans->tuples_updated += ntuples;
+}
+
+/*
+ * just as pgstat_count_heap_delete(), with an extra parameter ntuples.
+ * ntuples is used to specify how many rows the caller has deleted.
+ */
+static void
+gp_pgstat_count_heap_delete(PgStat_TableStatus *pgstat_info, PgStat_Counter ntuples)
+{
+	int nest_level = GetCurrentTransactionNestLevel();
+	if (pgstat_info->trans == NULL || pgstat_info->trans->nest_level != nest_level)
+		add_tabstat_xact_level(pgstat_info, nest_level);
+	pgstat_info->trans->tuples_deleted += ntuples;
+}
+
+/*
+ * Report the statistics gathered by QD to statistics collector.
+ * These parameters tell us that 'tuples' rows of table 'reloid' has changed,
+ * and 'cmdtype' specifies the type of change.
+ * reloid must have been locked.
+ */
+void
+gp_pgstat_report_tabstat(AutoStatsCmdType cmdtype, Oid reloid, uint64 tuples)
+{
+	if (Gp_role != GP_ROLE_DISPATCH || reloid == InvalidOid || tuples <= 0
+		|| get_rel_relkind(reloid) != RELKIND_RELATION)
+		return;
+
+	Relation rel = relation_open(reloid, NoLock);
+	if (!rel->pgstat_info)
+	{
+		relation_close(rel, NoLock);
+		return;
+	}
+
+	switch (cmdtype)
+	{
+		case AUTOSTATS_CMDTYPE_CTAS:
+		case AUTOSTATS_CMDTYPE_INSERT:
+		case AUTOSTATS_CMDTYPE_COPY:
+			pgstat_count_heap_insert(rel, tuples);
+			break;
+		case AUTOSTATS_CMDTYPE_UPDATE:
+			gp_pgstat_count_heap_update(rel->pgstat_info, tuples);
+			break;
+		case AUTOSTATS_CMDTYPE_DELETE:
+			gp_pgstat_count_heap_delete(rel->pgstat_info, tuples);
+			break;
+		default:
+			break;
+	}
+
+#ifdef FAULT_INJECTOR
+	FaultInjector_InjectFaultIfSet(
+		"gp_pgstat_report_on_master", DDLNotSpecified,
+		"", RelationGetRelationName(rel));
+#endif
+
+	relation_close(rel, NoLock);
+}
+
+/*
+ * collect_tabstat - collect relation's pgstat or do auto_stats.
+ * it should be called after QD have gathered the number of tuples changed in QEs.
+ * cmdType specifies the type of change.
+ *
+ * ntuples means the processed tuples for a relation at end of a command execution
+ * on QD.
+ *
+ * NOTE: If the autovacuum is enabled on master, collect gpstat for the target
+ * relation for ANALYZE. Currently this is not support for partition table.
+ * This is because we don't have accurate pgstat on QD for parent table and child
+ * table. So run auto_stats for partition table.
+ * For relation who's storage parameter autovacuum_enable=false with autovacuum
+ * enabled, neither autovacuum ANALYZE nor auto_stats will execute for it. Users
+ * need to manually run ANALYZE for it. This is same with Postgres.
+ */
+void
+collect_tabstat(AutoStatsCmdType cmdType, Oid relationOid, uint64 ntuples, bool inFunction)
+{
+	if (Gp_role == GP_ROLE_DISPATCH && AutoVacuumingActive() &&
+		rel_part_status(relationOid) == PART_STATUS_NONE)
+		return gp_pgstat_report_tabstat(cmdType, relationOid, ntuples);
+	else
+		return auto_stats(cmdType, relationOid, ntuples, inFunction);
 }

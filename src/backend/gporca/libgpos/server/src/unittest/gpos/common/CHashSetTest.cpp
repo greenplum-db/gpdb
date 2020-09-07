@@ -71,9 +71,7 @@ CHashSetTest::EresUnittest_Basic()
 	UlongPtrHashSet *phs = GPOS_NEW(mp) UlongPtrHashSet(mp, 128);
 	for (ULONG ul = 0; ul < ulCnt; ul++)
 	{
-#ifdef GPOS_DEBUG
-		BOOL fSuccess =
-#endif // GPOS_DEBUG
+		BOOL fSuccess GPOS_ASSERTS_ONLY =
 			phs->Insert(&rgul[ul]);
 		GPOS_ASSERT(fSuccess);
 	}
@@ -114,9 +112,7 @@ CHashSetTest::EresUnittest_Ownership()
 	{
 		ULONG_PTR *pulp = GPOS_NEW(mp) ULONG_PTR(ul);
 
-#ifdef GPOS_DEBUG
-		BOOL fSuccess =
-#endif // GPOS_DEBUG
+		BOOL fSuccess GPOS_ASSERTS_ONLY =
 			phs->Insert(pulp);
 
 		GPOS_ASSERT(fSuccess);

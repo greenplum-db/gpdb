@@ -210,9 +210,13 @@ def get_partition_state_tuples(pg_port, dbname, catalog_schema, partition_info):
                 modcount = dbconn.querySingleton(conn, modcount_sql)
             except pg.DatabaseError as e:
                 if "does not exist" in str(e):
-                    logger.debug("Table %s.%s (%s) no longer exists", schemaname, partition_name, tupletable)
+                    logger.info("Table %s.%s (%s) no longer exists and will not be analyzed", schemaname, partition_name, tupletable)
                 else:
                     logger.error(str(e))
+                if conn:
+                    conn.close()
+                # If there's an exception, the transaction is closed so we need to reconnect
+                conn = dbconn.connect(dburl)
             else:
                 num_sqls += 1
                 if num_sqls == 1000: # The choice of batch size was chosen arbitrarily
@@ -683,8 +687,9 @@ class AnalyzeDb(Operation):
         for schema_table in (x for x in self.success_list if
                              x not in heap_partitions and x not in root_partition_col_dict):
             # update modcount for tables that are successfully analyzed
-            new_modcount = curr_ao_state_dict[schema_table]
-            prev_ao_state_dict[schema_table] = new_modcount
+            if schema_table in curr_ao_state_dict:
+                new_modcount = curr_ao_state_dict[schema_table]
+                prev_ao_state_dict[schema_table] = new_modcount
 
             # update last op for tables that are successfully analyzed
             last_op_info = curr_last_op_dict[schema_table]  # {'CREATE':'<entry>', 'ALTER':'<entry>', ...}

@@ -1,0 +1,88 @@
+-- Test the scenario when the VACUUM FULL is interrupted on segment after
+-- 'swap_relation_files' is finished.
+
+-- There was a bug that swap_relation_files inplace update the old entry in the
+-- pg_class and the pg_class entry has incorrect relfrozenxid after the
+-- transaction is aborted.
+
+1: CREATE TABLE vacuum_full_interrupt(a int, b int, c int);
+CREATE
+1: CREATE INDEX vacuum_full_interrupt_idx on vacuum_full_interrupt(b);
+CREATE
+1: INSERT INTO vacuum_full_interrupt SELECT i, i, i from generate_series(1,100)i;
+INSERT 100
+1: ANALYZE vacuum_full_interrupt;
+ANALYZE
+-- the relfrozenxid is the same as xmin when there's concurrent transactions.
+-- the reltuples is 100
+1: SELECT xmin=relfrozenxid relfrozenxid_not_changed, relhasindex, reltuples FROM pg_class WHERE relname='vacuum_full_interrupt';
+ relfrozenxid_not_changed | relhasindex | reltuples 
+--------------------------+-------------+-----------
+ t                        | t           | 100       
+(1 row)
+
+-- break on QE after 'swap_relation_files' is finished
+1: SELECT gp_inject_fault('after_swap_relation_files', 'suspend', dbid) FROM gp_segment_configuration WHERE role='p' AND content = 0;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+2&: VACUUM FULL vacuum_full_interrupt;  <waiting ...>
+1: SELECT gp_wait_until_triggered_fault('after_swap_relation_files', 1, dbid) FROM gp_segment_configuration WHERE role='p' AND content = 0;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+
+-- cancel VACUUM FULL
+1: SELECT pg_cancel_backend(pid) FROM pg_stat_activity WHERE query = 'VACUUM FULL vacuum_full_interrupt;';
+ pg_cancel_backend 
+-------------------
+ t                 
+(1 row)
+1: SELECT gp_inject_fault('after_swap_relation_files', 'reset', dbid) FROM gp_segment_configuration WHERE role='p' AND content = 0;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+2<:  <... completed>
+ERROR:  canceling statement due to user request
+
+-- the relfrozenxid should stay unchanged
+-- the reltuples should be 100, but QD has already commit the transaction and the reltuples is updated to 0, this looks like a bug
+2: SELECT xmin=relfrozenxid relfrozenxid_not_changed, relhasindex, reltuples FROM pg_class WHERE relname='vacuum_full_interrupt';
+ relfrozenxid_not_changed | relhasindex | reltuples 
+--------------------------+-------------+-----------
+ t                        | t           | 0         
+(1 row)
+0U: SELECT xmin=relfrozenxid relfrozenxid_not_changed, relhasindex, reltuples FROM pg_class WHERE relname='vacuum_full_interrupt';
+ relfrozenxid_not_changed | relhasindex | reltuples 
+--------------------------+-------------+-----------
+ t                        | t           | 38        
+(1 row)
+
+-- verify the index is correctly when insert new tuples, in bug also reset 'relhasindex' in pg_class.
+2: INSERT INTO vacuum_full_interrupt SELECT i, i, i from generate_series(1,100)i;
+INSERT 100
+2: SET optimizer=off;
+SET
+2: SET enable_seqscan=off;
+SET
+2: SET enable_bitmapscan=off;
+SET
+2: SET enable_indexscan=on;
+SET
+2: EXPLAIN SELECT * FROM vacuum_full_interrupt WHERE b=2;
+ QUERY PLAN                                                                                                    
+---------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.14..12.18 rows=2 width=12)                                  
+   ->  Index Scan using vacuum_full_interrupt_idx on vacuum_full_interrupt  (cost=0.14..12.14 rows=1 width=12) 
+         Index Cond: (b = 2)                                                                                   
+ Optimizer: Postgres query optimizer                                                                           
+(4 rows)
+2: SELECT * FROM vacuum_full_interrupt WHERE b=2;
+ a | b | c 
+---+---+---
+ 2 | 2 | 2 
+ 2 | 2 | 2 
+(2 rows)

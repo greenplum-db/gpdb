@@ -676,14 +676,28 @@ fill_buffer(URL_CURL_FILE *curl, int want)
 						e, curl_easy_strerror(e));
 		}
 
-		if (maxfd <= 0)
+		if (maxfd == 0)
 		{
 			elog(LOG, "curl_multi_fdset set maxfd = %d", maxfd);
 			curl->still_running = 0;
 			break;
 		}
-		nfds = select(maxfd+1, &fdread, &fdwrite, &fdexcep, &timeout);
-
+		/* When libcurl returns -1 in max_fd, it is because libcurl currently does something
+		 * that isn't possible for your application to monitor with a socket and unfortunately
+		 * you can then not know exactly when the current action is completed using select().
+		 * You then need to wait a while before you proceed and call curl_multi_perform anyway
+		 */
+		if (maxfd == -1)
+		{
+			elog(DEBUG2, "curl_multi_fdset set maxfd = %d", maxfd);
+			pg_usleep(100000);
+			// to call curl_multi_perform
+			nfds = 1;
+		}
+		else
+		{
+			nfds = select(maxfd+1, &fdread, &fdwrite, &fdexcep, &timeout);
+		}
 		if (nfds == -1)
 		{
 			if (errno == EINTR || errno == EAGAIN)

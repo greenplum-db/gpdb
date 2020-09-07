@@ -2213,8 +2213,8 @@ UNION ALL
 SELECT count(a1.i)
   FROM a1
   INNER JOIN a2 ON a2.i = a1.i;
-                                       QUERY PLAN                                       
-----------------------------------------------------------------------------------------
+                                    QUERY PLAN                                    
+----------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Append
          ->  Subquery Scan on "*SELECT* 1"
@@ -2228,17 +2228,16 @@ SELECT count(a1.i)
                                        ->  Seq Scan on foo foo_1
          ->  Redistribute Motion 1:3  (slice2; segments: 1)
                Hash Key: (count(share1_ref2.i))
-               ->  Finalize Aggregate
+               ->  Aggregate
                      ->  Gather Motion 3:1  (slice3; segments: 3)
-                           ->  Partial Aggregate
-                                 ->  Hash Join
-                                       Hash Cond: (share1_ref2.i = a2_1.i)
-                                       ->  Shared Scan (share slice:id 3:1)
-                                       ->  Hash
-                                             ->  Subquery Scan on a2_1
-                                                   ->  Shared Scan (share slice:id 3:0)
+                           ->  Hash Join
+                                 Hash Cond: (share1_ref2.i = a2_1.i)
+                                 ->  Shared Scan (share slice:id 3:1)
+                                 ->  Hash
+                                       ->  Subquery Scan on a2_1
+                                             ->  Shared Scan (share slice:id 3:0)
  Optimizer: Postgres query optimizer
-(23 rows)
+(22 rows)
 
 -- Another cross-slice ShareInputScan test. There is one producing slice,
 -- and two consumers in second slice. Make sure the Share Input Scan

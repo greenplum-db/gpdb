@@ -324,9 +324,7 @@ CJoinOrderDP::PexprPred
 	}
 
 	// store predicate in link map
-#ifdef GPOS_DEBUG
-	BOOL fInserted =
-#endif // GPOS_DEBUG
+	BOOL fInserted GPOS_ASSERTS_ONLY =
 		m_phmcomplink->Insert(pcomppair, pexprPred);
 	GPOS_ASSERT(fInserted);
 
@@ -429,9 +427,7 @@ CJoinOrderDP::InsertExpressionCost
 	}
 
 	pexpr->AddRef();
-#ifdef GPOS_DEBUG
-	BOOL fInserted =
-#endif // GPOS_DEBUG
+	BOOL fInserted GPOS_ASSERTS_ONLY =
 		m_phmexprcost->Insert(pexpr, GPOS_NEW(m_mp) CDouble(dCost));
 	GPOS_ASSERT(fInserted);
 }
@@ -484,9 +480,7 @@ CJoinOrderDP::PexprJoin
 	DeriveStats(pexprJoin);
 	// store solution in DP table
 	pbs->AddRef();
-#ifdef GPOS_DEBUG
-	BOOL fInserted =
-#endif // GPOS_DEBUG
+	BOOL fInserted GPOS_ASSERTS_ONLY =
 		m_phmbsexpr->Insert(pbs, pexprJoin);
 	GPOS_ASSERT(fInserted);
 
@@ -573,9 +567,7 @@ CJoinOrderDP::PexprBestJoinOrderDP
 
 	DeriveStats(pexprResult);
 	pbs->AddRef();
-#ifdef GPOS_DEBUG
-	BOOL fInserted =
-#endif // GPOS_DEBUG
+	BOOL fInserted GPOS_ASSERTS_ONLY =
 		m_phmbsexpr->Insert(pbs, pexprResult);
 	GPOS_ASSERT(fInserted);
 
@@ -620,9 +612,7 @@ CJoinOrderDP::GenerateSubsets
 	}
 
 	CBitSet *pbsCopy = GPOS_NEW(mp) CBitSet(mp, *pbsCurrent);
-#ifdef GPOS_DEBUG
-	BOOL fSet =
-#endif // GPOS_DEBUG
+	BOOL fSet GPOS_ASSERTS_ONLY =
 		pbsCopy->ExchangeSet(pulElems[ulIndex]);
 	GPOS_ASSERT(!fSet);
 
@@ -784,9 +774,7 @@ CJoinOrderDP::PexprCross
 	}
 
 	pbs->AddRef();
-#ifdef GPOS_DEBUG
-		BOOL fInserted =
-#endif // GPOS_DEBUG
+		BOOL fInserted GPOS_ASSERTS_ONLY =
 			m_phmbsexpr->Insert(pbs, pexprCross);
 		GPOS_ASSERT(fInserted);
 
@@ -832,9 +820,7 @@ CJoinOrderDP::PexprJoinCoveredSubsetWithUncoveredSubset
 	pexprCross->AddRef();
 	CExpression *pexprResult = CUtils::PexprLogicalJoin<CLogicalInnerJoin>(m_mp, pexprJoin, pexprCross, CPredicateUtils::PexprConjunction(m_mp, NULL));
 	pbs->AddRef();
-#ifdef GPOS_DEBUG
-	BOOL fInserted =
-#endif // GPOS_DEBUG
+	BOOL fInserted GPOS_ASSERTS_ONLY =
 		m_phmbsexpr->Insert(pbs, pexprResult);
 	GPOS_ASSERT(fInserted);
 
@@ -947,9 +933,7 @@ CJoinOrderDP::PexprBuildPred
 			!pbsSnd->IsDisjoint(pedge->m_pbs)
 			)
 		{
-#ifdef GPOS_DEBUG
-		BOOL fSet =
-#endif // GPOS_DEBUG
+		BOOL fSet GPOS_ASSERTS_ONLY =
 			pbsEdges->ExchangeSet(ul);
 			GPOS_ASSERT(!fSet);
 		}

@@ -517,6 +517,9 @@ set enable_seqscan = off;
 set enable_indexscan = on;
 set enable_bitmapscan = off;
 
+-- coerce the planner to choose Merge Append plans for the below queries.
+set cpu_tuple_cost = 10;
+
 -- Check handling of duplicated, constant, or volatile targetlist items
 explain (costs off)
 SELECT thousand, tenthous FROM tenk1

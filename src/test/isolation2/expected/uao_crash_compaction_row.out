@@ -181,15 +181,20 @@ UPDATE 1
  26 | 11 | c                    
 (11 rows)
 -- crash_vacuum_in_appendonly_insert
-1:SELECT * FROM gp_toolkit.__gp_aoseg('crash_vacuum_in_appendonly_insert');
+-- verify the old segment files are still visible after the vacuum is aborted.
+1:SELECT * FROM gp_toolkit.__gp_aoseg('crash_vacuum_in_appendonly_insert') where segno = 1;
  segment_id | segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 ------------+-------+-----+----------+---------------+------------------+----------+---------------+-------
  0          | 1     | 496 | 10       | 2             | 496              | 2        | 3             | 1     
  1          | 1     | 128 | 2        | 2             | 128              | 2        | 3             | 1     
- 1          | 2     | 0   | 0        | 0             | 0                | 0        | 3             | 1     
  2          | 1     | 400 | 8        | 2             | 400              | 2        | 3             | 1     
- 2          | 2     | 0   | 0        | 0             | 0                | 0        | 3             | 1     
-(5 rows)
+(3 rows)
+-- verify the new segment files contain no tuples.
+1:SELECT sum(tupcount) FROM gp_toolkit.__gp_aoseg('crash_vacuum_in_appendonly_insert') where segno = 2;
+ sum 
+-----
+ 0   
+(1 row)
 1:VACUUM crash_vacuum_in_appendonly_insert;
 VACUUM
 1:SELECT * FROM gp_toolkit.__gp_aoseg('crash_vacuum_in_appendonly_insert');

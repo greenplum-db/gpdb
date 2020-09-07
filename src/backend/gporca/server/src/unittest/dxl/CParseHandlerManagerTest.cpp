@@ -68,11 +68,9 @@ CParseHandlerManagerTest::EresUnittest_Basic()
 	// create XML reader and a parse handler manager for it
 	CDXLMemoryManager *dxl_memory_manager = GPOS_NEW(mp) CDXLMemoryManager(mp);
 
-	SAX2XMLReader* parser = NULL;
-	{
-		CAutoTraceFlag atf(EtraceSimulateOOM, false);
-		parser = XMLReaderFactory::createXMLReader(dxl_memory_manager);
-	}
+	SAX2XMLReader* parser;
+
+	parser = XMLReaderFactory::createXMLReader(dxl_memory_manager);
 
 	CParseHandlerManager *parse_handler_mgr = GPOS_NEW(mp) CParseHandlerManager(dxl_memory_manager, parser);
 	

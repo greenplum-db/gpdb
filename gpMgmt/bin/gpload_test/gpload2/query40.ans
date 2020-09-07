@@ -1,0 +1,87 @@
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_others" for table "testpk"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_others_2_prt_usa" for table "testpk_1_prt_others"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_others_2_prt_asia" for table "testpk_1_prt_others"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_others_2_prt_europe" for table "testpk_1_prt_others"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_others_2_prt_other_regions" for table "testpk_1_prt_others"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_2" for table "testpk"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_2_2_prt_usa" for table "testpk_1_prt_2"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_2_2_prt_asia" for table "testpk_1_prt_2"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_2_2_prt_europe" for table "testpk_1_prt_2"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_2_2_prt_other_regions" for table "testpk_1_prt_2"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_3" for table "testpk"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_3_2_prt_usa" for table "testpk_1_prt_3"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_3_2_prt_asia" for table "testpk_1_prt_3"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_3_2_prt_europe" for table "testpk_1_prt_3"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_3_2_prt_other_regions" for table "testpk_1_prt_3"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_4" for table "testpk"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_4_2_prt_usa" for table "testpk_1_prt_4"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_4_2_prt_asia" for table "testpk_1_prt_4"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_4_2_prt_europe" for table "testpk_1_prt_4"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_4_2_prt_other_regions" for table "testpk_1_prt_4"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_5" for table "testpk"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_5_2_prt_usa" for table "testpk_1_prt_5"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_5_2_prt_asia" for table "testpk_1_prt_5"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_5_2_prt_europe" for table "testpk_1_prt_5"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_5_2_prt_other_regions" for table "testpk_1_prt_5"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_6" for table "testpk"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_6_2_prt_usa" for table "testpk_1_prt_6"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_6_2_prt_asia" for table "testpk_1_prt_6"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_6_2_prt_europe" for table "testpk_1_prt_6"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_6_2_prt_other_regions" for table "testpk_1_prt_6"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_7" for table "testpk"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_7_2_prt_usa" for table "testpk_1_prt_7"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_7_2_prt_asia" for table "testpk_1_prt_7"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_7_2_prt_europe" for table "testpk_1_prt_7"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_7_2_prt_other_regions" for table "testpk_1_prt_7"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_8" for table "testpk"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_8_2_prt_usa" for table "testpk_1_prt_8"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_8_2_prt_asia" for table "testpk_1_prt_8"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_8_2_prt_europe" for table "testpk_1_prt_8"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_8_2_prt_other_regions" for table "testpk_1_prt_8"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_9" for table "testpk"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_9_2_prt_usa" for table "testpk_1_prt_9"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_9_2_prt_asia" for table "testpk_1_prt_9"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_9_2_prt_europe" for table "testpk_1_prt_9"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_9_2_prt_other_regions" for table "testpk_1_prt_9"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_10" for table "testpk"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_10_2_prt_usa" for table "testpk_1_prt_10"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_10_2_prt_asia" for table "testpk_1_prt_10"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_10_2_prt_europe" for table "testpk_1_prt_10"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_10_2_prt_other_regions" for table "testpk_1_prt_10"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_11" for table "testpk"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_11_2_prt_usa" for table "testpk_1_prt_11"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_11_2_prt_asia" for table "testpk_1_prt_11"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_11_2_prt_europe" for table "testpk_1_prt_11"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_11_2_prt_other_regions" for table "testpk_1_prt_11"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_12" for table "testpk"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_12_2_prt_usa" for table "testpk_1_prt_12"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_12_2_prt_asia" for table "testpk_1_prt_12"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_12_2_prt_europe" for table "testpk_1_prt_12"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_12_2_prt_other_regions" for table "testpk_1_prt_12"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_13" for table "testpk"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_13_2_prt_usa" for table "testpk_1_prt_13"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_13_2_prt_asia" for table "testpk_1_prt_13"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_13_2_prt_europe" for table "testpk_1_prt_13"
+NOTICE:  CREATE TABLE will create partition "testpk_1_prt_13_2_prt_other_regions" for table "testpk_1_prt_13"
+CREATE TABLE
+2020-08-21 14:09:30|INFO|gpload session started 2020-08-21 14:09:30
+2020-08-21 14:09:30|INFO|setting schema 'public' for table 'testpk'
+2020-08-21 14:09:30|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2020-08-21 14:09:30|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_9cfc886e8f484d05619f4e7cb992ce20
+2020-08-21 14:09:30|INFO|did not find an external table to reuse. creating ext_gpload_reusable_e068ae78_e374_11ea_bc95_00505698707d
+2020-08-21 14:09:31|INFO|running time: 0.19 seconds
+2020-08-21 14:09:31|INFO|rows Inserted          = 4
+2020-08-21 14:09:31|INFO|rows Updated           = 0
+2020-08-21 14:09:31|INFO|data formatting errors = 0
+2020-08-21 14:09:31|INFO|gpload succeeded
+2020-08-21 14:09:31|INFO|gpload session started 2020-08-21 14:09:31
+2020-08-21 14:09:31|INFO|setting schema 'public' for table 'testpk'
+2020-08-21 14:09:31|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file2.txt" -t 30
+2020-08-21 14:09:31|INFO|reusing staging table staging_gpload_reusable_9cfc886e8f484d05619f4e7cb992ce20
+2020-08-21 14:09:31|INFO|did not find an external table to reuse. creating ext_gpload_reusable_e0aab714_e374_11ea_a28c_00505698707d
+2020-08-21 14:09:31|INFO|running time: 0.19 seconds
+2020-08-21 14:09:31|INFO|rows Inserted          = 1
+2020-08-21 14:09:31|INFO|rows Updated           = 4
+2020-08-21 14:09:31|INFO|data formatting errors = 0
+2020-08-21 14:09:31|INFO|gpload succeeded
+DROP TABLE

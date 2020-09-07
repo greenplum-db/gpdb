@@ -388,7 +388,7 @@ create domain ddef1 int4 DEFAULT 3;
 create domain ddef2 oid DEFAULT '12';
 -- Type mixing, function returns int8
 create domain ddef3 text DEFAULT 5;
-create sequence ddef4_seq;
+create sequence ddef4_seq cache 1;
 create domain ddef4 int4 DEFAULT nextval('ddef4_seq');
 create domain ddef5 numeric(8,2) NOT NULL DEFAULT '12.12';
 create table defaulttest

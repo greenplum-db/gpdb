@@ -79,7 +79,7 @@ SELECT currval('sequence_test'::regclass);
 DROP SEQUENCE sequence_test;
 
 -- renaming sequences
-CREATE SEQUENCE foo_seq;
+CREATE SEQUENCE foo_seq CACHE 1;
 ALTER TABLE foo_seq RENAME TO foo_seq_new;
 SELECT * FROM foo_seq_new;
 SELECT nextval('foo_seq_new');

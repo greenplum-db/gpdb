@@ -293,9 +293,7 @@ CTestUtils::PtabdescCreate
 	// create a keyset containing the first column
 	CBitSet *pbs = GPOS_NEW(mp) CBitSet(mp, num_cols);
 	pbs->ExchangeSet(0);
-#ifdef GPOS_DEBUG
-	BOOL fSuccess =
-#endif // GPOS_DEBUG
+	BOOL fSuccess GPOS_ASSERTS_ONLY =
 		ptabdesc->FAddKeySet(pbs);
 	GPOS_ASSERT(fSuccess);
 
@@ -3505,25 +3503,6 @@ CTestUtils::PdrgpiSegments
 	}
 	return pdrgpiSegments;
 }
-
-#ifdef GPOS_DEBUG
-//---------------------------------------------------------------------------
-//	@function:
-//		CTestUtils::FFaultSimulation
-//
-//	@doc:
-//		Check if we are in fault simulation mode
-//
-//---------------------------------------------------------------------------
-BOOL
-CTestUtils::FFaultSimulation()
-{
-	return GPOS_FTRACE(EtraceSimulateAbort) 
-			|| GPOS_FTRACE(EtraceSimulateIOError) 
-			|| GPOS_FTRACE(EtraceSimulateOOM);
-}
-#endif // GPOS_DEBUG
-
 
 //---------------------------------------------------------------------------
 //	@function:

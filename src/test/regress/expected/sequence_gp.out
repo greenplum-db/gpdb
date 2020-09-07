@@ -138,7 +138,7 @@ SELECT * FROM out_of_range_insert_gid_seq;
  out_of_range_insert_gid_seq | 2147483648 |           1 |            1 | 9223372036854775807 |         1 |           1 |      30 | f         | t
 (1 row)
 
-CREATE SEQUENCE descending_sequence INCREMENT -1 MINVALUE 1 MAXVALUE 9223372036854775806 START 9223372036854775806;
+CREATE SEQUENCE descending_sequence INCREMENT -1 MINVALUE 1 MAXVALUE 9223372036854775806 START 9223372036854775806 CACHE 1;
 SELECT nextval('descending_sequence');
        nextval       
 ---------------------

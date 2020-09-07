@@ -27,16 +27,6 @@ package manager.
 
 # First Time Setup
 
-## Pre-Requisites
-
-GPORCA uses the following library:
-* GP-Xerces - Greenplum's patched version of Xerces-C 3.1.X
-
-### Installing GP-Xerces
-
-[GP-XERCES is available here](https://github.com/greenplum-db/gp-xerces). The GP-XERCES README
-gives instructions for building and installing.
-
 ## Build and install GPORCA
 
 ORCA is built automatically with GPDB as long as `--disable-orca` is not used.
@@ -202,22 +192,20 @@ cmake -GNinja -D CMAKE_BUILD_TYPE=Debug -H. -Bbuild.debug
 cmake -GNinja -D CMAKE_BUILD_TYPE=RelWithDebInfo -H. -Bbuild.release
 ```
 
-## Explicitly Specifying GP-Xerces For Build
+## Explicitly Specifying Xerces For Build
 
-### GP-XERCES
+If you want to build with a custom version of Xerces, is recommended to use the
+`--prefix` option to the Xerces-C configure script to install Xerces in a
+location other than the default under `/usr/local/`, because you may have other
+software that depends on the platform's version of Xerces-C. Installing in a
+non-default prefix allows you to have GP-Xerces installed side-by-side with
+unpatched Xerces without incompatibilities.
 
-It is recommended to use the `--prefix` option to the Xerces-C configure script
-to install GP-Xerces in a location other than the default under `/usr/local/`,
-because you may have other software that depends on Xerces-C, and the changes
-introduced in the GP-Xerces patch make it incompatible with the upstream
-version. Installing in a non-default prefix allows you to have GP-Xerces
-installed side-by-side with unpatched Xerces without incompatibilities.
-
-You can point cmake at your patched GP-Xerces installation using the
+You can point cmake at your custom Xerces installation using the
 `XERCES_INCLUDE_DIR` and `XERCES_LIBRARY` options like so:
 
-However, to use the current build scripts in GPDB, Xerces with the gp_xerces
-patch will need to be placed on the /usr path.
+However, to use the current build scripts in GPDB, Xerces will need to be
+placed on the /usr path.
 
 ```
 cmake -GNinja -D XERCES_INCLUDE_DIR=/opt/gp_xerces/include -D XERCES_LIBRARY=/opt/gp_xerces/lib/libxerces-c.so ..
@@ -232,14 +220,6 @@ Show all command lines while building (for debugging purpose)
 ```
 ninja -v -C build
 ```
-
-### Extended Tests
-
-Debug builds of GPORCA include a couple of "extended" tests for features like
-fault-simulation and time-slicing that work by running the entire test suite
-in combination with the feature being tested. These tests can take a long time
-to run and are not enabled by default. To turn extended tests on, add the cmake
-arguments `-D ENABLE_EXTENDED_TESTS=1`.
 
 <a name="contribute"></a>
 # How to Contribute

@@ -188,9 +188,7 @@ CLogger::AppendDate()
 
 	// get local time
 	syslib::GetTimeOfDay(&tv, NULL/*timezone*/);
-#ifdef GPOS_DEBUG
-	TIME *t =
-#endif // GPOS_DEBUG
+	TIME *t GPOS_ASSERTS_ONLY =
 	clib::Localtime_r(&tv.tv_sec, &tm);
 
 	GPOS_ASSERT(NULL != t && "Failed to get local time");

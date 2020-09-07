@@ -985,6 +985,10 @@ set enable_seqscan=on;
 insert into t select i from generate_series(7,8) i;
 -- 0~2 in seg0, 3~4 in seg 1, no data in seg2
 insert into pt select i from generate_series(0,4) i;
+-- Insert some more rows to coerce the planner to put 'pt' on the outer
+-- side of the join.
+insert into t select i from generate_series(7,8) i;
+insert into pt select 0 from generate_series(1,1000) g;
 analyze t;
 analyze pt;
 explain select * from t, pt where a = b;

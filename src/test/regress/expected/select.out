@@ -737,6 +737,7 @@ SELECT * FROM foo ORDER BY f1 DESC NULLS LAST;
 -- Test planning of some cases with partial indexes
 --
 -- partial index is usable
+SET enable_seqscan TO off;
 explain (costs off)
 select * from onek2 where unique2 = 11 and stringu1 = 'ATAAAA';
                   QUERY PLAN                   

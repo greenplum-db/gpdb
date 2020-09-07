@@ -2518,7 +2518,18 @@ set_cte_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 	pathkeys = subroot->query_pathkeys;
 
 	/* Mark rel with estimated output rows, width, etc */
-	set_cte_size_estimates(root, rel, sub_final_rel->cheapest_total_path->rows);
+	{
+		double		numsegments;
+		double		sub_total_rows;
+
+		if (CdbPathLocus_IsPartitioned(sub_final_rel->cheapest_total_path->locus))
+			numsegments = CdbPathLocus_NumSegments(sub_final_rel->cheapest_total_path->locus);
+		else
+			numsegments = 1;
+		sub_total_rows = sub_final_rel->cheapest_total_path->rows * numsegments;
+
+		set_cte_size_estimates(root, rel, sub_total_rows);
+	}
 
 	/*
 	 * We don't support pushing join clauses into the quals of a CTE scan, but

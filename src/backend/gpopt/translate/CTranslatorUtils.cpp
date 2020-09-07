@@ -32,6 +32,7 @@
 #define GPDB_SETVAL 1576
 
 #include "gpos/base.h"
+#include "gpos/attributes.h"
 #include "gpos/common/CAutoTimer.h"
 #include "gpos/common/CBitSetIter.h"
 #include "gpos/string/CWStringDynamic.h"
@@ -1034,13 +1035,12 @@ CTranslatorUtils::GetOpFamilyForIndexQual
 	OID index_oid
 	)
 {
-	Relation rel = gpdb::GetRelation(index_oid);
-	GPOS_ASSERT(NULL != rel);
+	gpdb::RelationWrapper rel = gpdb::GetRelation(index_oid);
+	GPOS_ASSERT(rel);
 	GPOS_ASSERT(attno <= rel->rd_index->indnatts);
 	
 	OID op_family_oid = rel->rd_opfamily[attno - 1];
-	gpdb::CloseRelation(rel);
-	
+
 	return op_family_oid;
 }
 
@@ -2325,7 +2325,7 @@ CTranslatorUtils::MapDXLSubplanToSublinkType
 
         const ULONG arity = GPOS_ARRAY_SIZE(mapping);
         SubLinkType slink = EXPR_SUBLINK;
-		BOOL found = false;
+		BOOL found GPOS_ASSERTS_ONLY = false;
         for (ULONG ul = 0; ul < arity; ul++)
         {
                 ULONG *elem = mapping[ul];
@@ -2368,7 +2368,7 @@ CTranslatorUtils::MapSublinkTypeToDXLSubplan
 
         const ULONG arity = GPOS_ARRAY_SIZE(mapping);
         EdxlSubPlanType dxl_subplan_type = EdxlSubPlanTypeScalar;
-		BOOL found = false;
+		BOOL found GPOS_ASSERTS_ONLY = false;
         for (ULONG ul = 0; ul < arity; ul++)
         {
                 ULONG *elem = mapping[ul];

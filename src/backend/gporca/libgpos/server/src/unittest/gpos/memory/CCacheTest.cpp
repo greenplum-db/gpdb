@@ -231,9 +231,7 @@ CCacheTest::EresUnittest_Basic()
 
 		SSimpleObject *pso = GPOS_NEW(ca.Pmp()) SSimpleObject(1, 2);
 
-#ifdef GPOS_DEBUG
-		SSimpleObject *psoReturned =
-#endif // GPOS_DEBUG
+		SSimpleObject *psoReturned GPOS_ASSERTS_ONLY =
 			ca.Insert(&(pso->m_ulKey), pso);
 
 		//release the ownership from pso, but ccacheentry still has the ownership
@@ -249,9 +247,7 @@ CCacheTest::EresUnittest_Basic()
 			CSimpleObjectCacheAccessor ca(pcache);
 			SSimpleObject *psoDuplicate = GPOS_NEW(ca.Pmp()) SSimpleObject(1, 5);
 
-#ifdef GPOS_DEBUG
-			SSimpleObject *psoReturned =
-#endif // GPOS_DEBUG
+			SSimpleObject *psoReturned GPOS_ASSERTS_ONLY =
 				ca.Insert(&(psoDuplicate->m_ulKey), psoDuplicate);
 
 			GPOS_ASSERT(psoReturned == pso &&
@@ -454,9 +450,7 @@ CCacheTest::ULFillCacheWithoutEviction(CCache<SSimpleObject*, ULONG*> *pCache, U
 		GPOS_CHECK_ABORT;
 	}
 
-#ifdef GPOS_DEBUG
-	ULLONG ullSizeBeforeEviction =
-#endif // GPOS_DEBUG
+	ULLONG ullSizeBeforeEviction GPOS_ASSERTS_ONLY =
 			pCache->TotalAllocatedSize();
 
 	// Check the size of the cache. Nothing should be evicted if the cache was initially empty
@@ -669,9 +663,7 @@ CCacheTest::EresInsertDuplicates
 			CSimpleObjectCacheAccessor ca(pcache);
 			SSimpleObject *pso = GPOS_NEW(ca.Pmp()) SSimpleObject(i, j);
 
-#ifdef GPOS_DEBUG
-			SSimpleObject *psoReturned =
-#endif // GPOS_DEBUG
+			SSimpleObject *psoReturned GPOS_ASSERTS_ONLY =
 					ca.Insert(&(pso->m_ulKey), pso);
 
 			GPOS_ASSERT(NULL != psoReturned);
@@ -784,9 +776,7 @@ CCacheTest::EresUnittest_DeepObject()
 		pdo->AddEntry(mp, 1, 1);
 		pdo->AddEntry(mp, 2, 2);
 
-#ifdef GPOS_DEBUG
-		CDeepObject *pdoReturned =
-#endif // GPOS_DEBUG
+		CDeepObject *pdoReturned GPOS_ASSERTS_ONLY =
 			ca.Insert(pdo->Key(), pdo);
 		pdo->Release();
 
@@ -802,9 +792,7 @@ CCacheTest::EresUnittest_DeepObject()
 			pdoDuplicate->AddEntry(mp, 1, 5);
 			pdoDuplicate->AddEntry(mp, 2, 5);
 
-#ifdef GPOS_DEBUG
-			CDeepObject *pdoReturned  =
-#endif // GPOS_DEBUG
+			CDeepObject *pdoReturned  GPOS_ASSERTS_ONLY =
 				ca.Insert(pdoDuplicate->Key(), pdoDuplicate);
 
 			GPOS_ASSERT(pdoReturned == pdo &&

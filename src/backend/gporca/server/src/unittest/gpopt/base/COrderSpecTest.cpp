@@ -119,16 +119,12 @@ COrderSpecTest::EresUnittest_Basics()
 	// iterate over the components of the order spec
 	for (ULONG ul = 0; ul < pos1->UlSortColumns(); ul++)
 	{
-#ifdef GPOS_DEBUG
-		const CColRef *colref =
-#endif // GPOS_DEBUG
+		const CColRef *colref GPOS_ASSERTS_ONLY =
 		pos1->Pcr(ul);
 		
 		GPOS_ASSERT(NULL != colref);
 		
-#ifdef GPOS_DEBUG
-		const IMDId *mdid =
-#endif // GPOS_DEBUG
+		const IMDId *mdid GPOS_ASSERTS_ONLY =
 		pos1->GetMdIdSortOp(ul);
 		
 		GPOS_ASSERT(mdid->IsValid());

@@ -83,9 +83,7 @@ CSyncListTest::EresUnittest_Basics()
 	// pop elements until empty
 	for (ULONG i = 0; i < GPOS_ARRAY_SIZE(rgelem); i++)
 	{
-#ifdef GPOS_DEBUG
-		SElem *pe =
-#endif // GPOS_DEBUG
+		SElem *pe GPOS_ASSERTS_ONLY =
 			list.Pop();
 
 		GPOS_ASSERT(pe == &rgelem[GPOS_ARRAY_SIZE(rgelem) - i - 1]);
@@ -103,9 +101,7 @@ CSyncListTest::EresUnittest_Basics()
 	// pop elements until empty
 	for (ULONG i = 0; i < GPOS_ARRAY_SIZE(rgelem); i++)
 	{
-#ifdef GPOS_DEBUG
-		SElem *pe =
-#endif // GPOS_DEBUG
+		SElem *pe GPOS_ASSERTS_ONLY =
 			list.Pop();
 
 		GPOS_ASSERT(pe == &rgelem[i]);

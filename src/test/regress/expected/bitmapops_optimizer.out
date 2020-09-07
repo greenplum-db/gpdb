@@ -1,5 +1,7 @@
 -- Test bitmap AND and OR
 SET default_statistics_target=1000;
+-- Encourage index use
+SET seq_page_cost=100;
 -- Generate enough data that we can test the lossy bitmaps.
 -- There's 55 tuples per page in the table. 53 is just
 -- below 55, so that an index scan with qual a = constant

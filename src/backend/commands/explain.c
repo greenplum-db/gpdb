@@ -1142,26 +1142,11 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	char       *skip_outer_msg = NULL;
 	int			motion_recv;
 	int			motion_snd;
-	float		scaleFactor = 1.0; /* we will divide planner estimates by this factor to produce
-									  per-segment estimates */
 	ExecSlice  *parentSlice = NULL;
 
 	/* Remember who called us. */
 	parentplanstate = es->parentPlanState;
 	es->parentPlanState = planstate;
-
-	if (Gp_role == GP_ROLE_DISPATCH)
-	{
-		/*
-		 * Estimates will have to be scaled down to be per-segment (except in a
-		 * few cases).
-		 */
-		if (es->currentSlice)
-		{
-			if (es->currentSlice->gangType != GANGTYPE_UNALLOCATED)
-				scaleFactor = list_length(es->currentSlice->segments);
-		}
-	}
 
 	/*
 	 * If this is a Motion node, we're descending into a new slice.
@@ -1424,19 +1409,14 @@ ExplainNode(PlanState *planstate, List *ancestors,
 				motion_snd = list_length(es->currentSlice->segments);
 				motion_recv = parentSlice == NULL ? 1 : list_length(parentSlice->segments);
 
-				/* scale the number of rows by the number of segments sending data */
-				scaleFactor = motion_snd;
-
 				switch (pMotion->motionType)
 				{
 					case MOTIONTYPE_GATHER:
 						sname = "Gather Motion";
-						scaleFactor = 1;
 						motion_recv = 1;
 						break;
 					case MOTIONTYPE_GATHER_SINGLE:
 						sname = "Explicit Gather Motion";
-						scaleFactor = 1;
 						motion_recv = 1;
 						break;
 					case MOTIONTYPE_HASH:
@@ -1739,15 +1719,13 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			break;
 	}
 
-	Assert(scaleFactor > 0.0);
-
 	if (es->costs)
 	{
 		if (es->format == EXPLAIN_FORMAT_TEXT)
 		{
 			appendStringInfo(es->str, "  (cost=%.2f..%.2f rows=%.0f width=%d)",
 							 plan->startup_cost, plan->total_cost,
-							 ceil(plan->plan_rows / scaleFactor), plan->plan_width);
+							 plan->plan_rows, plan->plan_width);
 		}
 		else
 		{

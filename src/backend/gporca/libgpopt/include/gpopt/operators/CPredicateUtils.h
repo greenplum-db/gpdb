@@ -398,12 +398,12 @@ namespace gpopt
 			// check if the given expression is a disjunction of scalar cmp 
 			// expressions on the given column
 			static
-			BOOL IsDisjunctionOfRangeComparison(CMemoryPool *mp, CExpression *pexpr, CColRef *colref, CColRefSet *pcrsAllowedRefs);
+			BOOL IsDisjunctionOfRangeComparison(CMemoryPool *mp, CExpression *pexpr, CColRef *colref, CColRefSet *pcrsAllowedRefs, BOOL allowNotEqualPreds);
 			
 			// check if the given comparison type is one of the range comparisons, i.e. 
 			// LT, GT, LEq, GEq, Eq
 			static 
-			BOOL FRangeComparison(CExpression *expr, CColRef *colref, CColRefSet *pcrsAllowedRefs);
+			BOOL FRangeComparison(CExpression *expr, CColRef *colref, CColRefSet *pcrsAllowedRefs, BOOL allowNotEqualPreds);
 			
 			// create disjunction
 			static
@@ -417,7 +417,8 @@ namespace gpopt
 				const CExpressionArray *pdrgpexpr, 
 				CColRef *pcrPartKey,
 				CExpression *pexprCol,
-				CColRefSet *pcrsAllowedRefs
+				CColRefSet *pcrsAllowedRefs,
+				BOOL allowNotEqualPreds
 				);
 
 			// append the conjuncts from the given expression to the given array, removing
@@ -438,7 +439,8 @@ namespace gpopt
 				CExpression *pexprScalar,
 				CColRef2dArray *pdrgpdrgpcrPartKeys,
 				CColRefSet *pcrsAllowedRefs,
-				BOOL fUseConstraints
+				BOOL fUseConstraints,
+				const IMDRelation *pmdrel = NULL
 				);
 			
 			// extract the constraint on the given column and return the corresponding

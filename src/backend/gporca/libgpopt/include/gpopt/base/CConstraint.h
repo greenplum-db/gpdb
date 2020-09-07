@@ -213,6 +213,12 @@ namespace gpopt
 			virtual
 			BOOL FConstraint(const CColRef *colref) const = 0;
 
+			virtual
+			BOOL FConstraintOnSegmentId() const
+			{
+				return false;
+			}
+
 			// return a copy of the constraint with remapped columns
 			virtual
 			CConstraint *PcnstrCopyWithRemappedColumns(CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist) = 0;

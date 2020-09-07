@@ -220,7 +220,8 @@ UPDATE 1
  26 | 11 | c                    
 (11 rows)
 -- crash_vacuum_in_appendonly_insert
-1:SELECT segno,column_num,physical_segno,tupcount,modcount,state FROM gp_toolkit.__gp_aocsseg('crash_vacuum_in_appendonly_insert');
+-- verify the old segment files are still visible after the vacuum is aborted.
+1:SELECT segno,column_num,physical_segno,tupcount,modcount,state FROM gp_toolkit.__gp_aocsseg('crash_vacuum_in_appendonly_insert') where segno = 1;
  segno | column_num | physical_segno | tupcount | modcount | state 
 -------+------------+----------------+----------+----------+-------
  1     | 0          | 1              | 10       | 2        | 1     
@@ -232,13 +233,13 @@ UPDATE 1
  1     | 2          | 257            | 10       | 2        | 1     
  1     | 2          | 257            | 2        | 2        | 1     
  1     | 2          | 257            | 8        | 2        | 1     
- 2     | 0          | 2              | 0        | 0        | 1     
- 2     | 0          | 2              | 0        | 0        | 1     
- 2     | 1          | 130            | 0        | 0        | 1     
- 2     | 1          | 130            | 0        | 0        | 1     
- 2     | 2          | 258            | 0        | 0        | 1     
- 2     | 2          | 258            | 0        | 0        | 1     
-(15 rows)
+(9 rows)
+-- verify the new segment files contain no tuples.
+1:SELECT sum(tupcount) FROM gp_toolkit.__gp_aocsseg('crash_vacuum_in_appendonly_insert') where segno = 2;
+ sum 
+-----
+ 0   
+(1 row)
 1:VACUUM crash_vacuum_in_appendonly_insert;
 VACUUM
 1:SELECT segno,column_num,physical_segno,tupcount,modcount,state FROM gp_toolkit.__gp_aocsseg('crash_vacuum_in_appendonly_insert');

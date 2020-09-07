@@ -85,6 +85,7 @@ gp_acquire_sample_rows(PG_FUNCTION_ARGS)
 	MemoryContext oldcontext;
 	Oid			relOid = PG_GETARG_OID(0);
 	int32		targrows = PG_GETARG_INT32(1);
+	bool        inherited = PG_GETARG_BOOL(2);
 	TupleDesc	relDesc;
 	TupleDesc	outDesc;
 	int			live_natts;
@@ -109,7 +110,9 @@ gp_acquire_sample_rows(PG_FUNCTION_ARGS)
 		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
 
 		/* Construct the context to keep across calls. */
-		ctx = (gp_acquire_sample_rows_context *) palloc(sizeof(gp_acquire_sample_rows_context));
+		ctx = (gp_acquire_sample_rows_context *) palloc0(sizeof(gp_acquire_sample_rows_context));
+		ctx->targrows = targrows;
+		ctx->inherited = inherited;
 
 		if (!pg_class_ownercheck(relOid, GetUserId()))
 			aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_CLASS,
@@ -211,7 +214,7 @@ gp_acquire_sample_rows(PG_FUNCTION_ARGS)
 	HeapTuple	res;
 
 	/* First return all the sample rows */
-	if (ctx->index < ctx->num_sample_rows && ctx->index < targrows)
+	if (ctx->index < ctx->num_sample_rows)
 	{
 		HeapTuple	relTuple = ctx->sample_rows[ctx->index];
 		int			attno;

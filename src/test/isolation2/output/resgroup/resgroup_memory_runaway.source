@@ -252,4 +252,52 @@ DROP
 DROP
 0q: ... <quitting>
 
+--  test for the rounding issue of runaway_detector_activation_percent
+--  when calculating safeChunksThreshold, we used to multiply
+--  runaway_detector_activation_percent and then divide 100. This will
+--  cause the small chunks to be rounded to zero.
+--  set runaway_detector_activation_percent to 99 to enlarge the rounding
+--  issue
+
+-- start_ignore
+! gpconfig -c runaway_detector_activation_percent -v 99;
+! gpstop -ari;
+-- end_ignore
+
+1: CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=60, memory_shared_quota=50);
+CREATE
+1: CREATE ROLE role1_memory_test RESOURCE GROUP rg1_memory_test;
+CREATE
+-- trigger small chunks rounding issue by reducing memory limit in small step
+-- while increasing memory limit in big step.
+1: ALTER RESOURCE GROUP rg1_memory_test SET MEMORY_LIMIT 57;
+ALTER
+1: ALTER RESOURCE GROUP rg1_memory_test SET MEMORY_LIMIT 54;
+ALTER
+1: ALTER RESOURCE GROUP rg1_memory_test SET MEMORY_LIMIT 51;
+ALTER
+1: ALTER RESOURCE GROUP rg1_memory_test SET MEMORY_LIMIT 48;
+ALTER
+1: ALTER RESOURCE GROUP rg1_memory_test SET MEMORY_LIMIT 60;
+ALTER
+--	1a) on QD
+1: SET ROLE TO role1_memory_test;
+SET
+1: SELECT hold_memory_by_percent(0.1);
+ hold_memory_by_percent 
+------------------------
+ 0                      
+(1 row)
+1: SELECT hold_memory_by_percent(0.1);
+ hold_memory_by_percent 
+------------------------
+ 0                      
+(1 row)
+1q: ... <quitting>
+
+0: DROP ROLE role1_memory_test;
+DROP
+0: DROP RESOURCE GROUP rg1_memory_test;
+DROP
+0q: ... <quitting>
 

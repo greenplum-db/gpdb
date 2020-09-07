@@ -317,6 +317,9 @@ bmbeginscan(Relation rel, int nkeys, int norderbys)
 	so->bm_markPos = NULL;
 	so->cur_pos_valid = false;
 	so->mark_pos_valid = false;
+
+	scan->xs_itupdesc = RelationGetDescr(rel);
+
 	scan->opaque = so;
 
 	return scan;

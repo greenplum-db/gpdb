@@ -305,8 +305,6 @@ CFileTest::Unittest_DeleteTmpDir
 	GPOS_ASSERT(NULL != szDir);
 	GPOS_ASSERT(NULL != szFile);
 
-	CAutoTraceFlag atf(EtraceSimulateIOError, false);
-
 	if (ioutils::PathExists(szFile))
 	{
 		// delete temporary file
@@ -468,9 +466,7 @@ CFileTest::Unittest_ReadInconsistentSize
 	GPOS_ASSERT(ulExpectSize == ulpRdSize);
 	GPOS_ASSERT(ulExpectSize == rd.FileReadSize());
 
-#ifdef GPOS_DEBUG
-	BOOL fEqual =
-#endif // GPOS_DEBUG
+	BOOL fEqual GPOS_ASSERTS_ONLY =
 	strRdData.Equals(szExpectData);
 
 	GPOS_ASSERT(fEqual);

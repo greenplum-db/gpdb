@@ -16,7 +16,10 @@ REGRESS_OPTS = --init-file=init_file
 installcheck: watchdog
 ifeq ($(enable_gpfdist),yes)
 ifeq ($(with_openssl),yes)
-	cp -rf $(MASTER_DATA_DIRECTORY)/gpfdists data/gpfdist_ssl/certs_matching
+	rm -rf data/gpfdist_ssl/certs_matching
+	mkdir data/gpfdist_ssl/certs_matching
+	cp -rf $(MASTER_DATA_DIRECTORY)/gpfdists/* data/gpfdist_ssl/certs_matching
+	# for verify_gpfdists_cert=off
 	cp data/gpfdist_ssl/certs_matching/root.crt data/gpfdist_ssl/certs_not_matching
 endif
 endif

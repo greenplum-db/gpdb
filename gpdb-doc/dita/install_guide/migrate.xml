@@ -283,7 +283,8 @@ SELECT '20190905 140000'::timestamp ;</codeblock></p></li>
           <codeph>gpbackup</codeph> or <codeph>gprestore</codeph> filter options to omit schemas or
         tables that cannot be restored without error. </p>
       <p otherprops="pivotal">If you use <codeph>gpcopy</codeph> to migrate data, initiate the
-          <codeph>gpcopy</codeph> operation from the Greenplum 4.3 or 5 cluster. See <xref
+          <codeph>gpcopy</codeph> operation from the Greenplum 4.3.26 (or later) or the
+          5.9 (or later) cluster. See <xref
           scope="peer" href="../admin_guide/managing/gpcopy-migrate.xml">Migrating Data with
           gpcopy</xref> for more information.</p>
       <note type="important">When you restore a backup taken from a Greenplum Database 4.3 or 5

@@ -187,9 +187,10 @@ EXPLAIN (COSTS OFF) SELECT * FROM document NATURAL JOIN category WHERE f_leak(dt
 --------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (document.cid = category.cid)
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)
-               Hash Key: document.cid
+         Hash Cond: (category.cid = document.cid)
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Seq Scan on category
+         ->  Hash
                ->  Subquery Scan on document
                      Filter: f_leak(document.dtitle)
                      ->  Seq Scan on document document_1
@@ -198,10 +199,8 @@ EXPLAIN (COSTS OFF) SELECT * FROM document NATURAL JOIN category WHERE f_leak(dt
                              ->  Gather Motion 1:1  (slice4; segments: 1)
                                    ->  Seq Scan on uaccount
                                          Filter: (pguser = 'regress_rls_carol'::name)
-         ->  Hash
-               ->  Seq Scan on category
  Optimizer: Postgres query optimizer
-(16 rows)
+(15 rows)
 
 -- only owner can change policies
 ALTER POLICY p1 ON document USING (true);    --fail
@@ -282,17 +281,16 @@ EXPLAIN (COSTS OFF) SELECT * FROM document NATURAL JOIN category WHERE f_leak(dt
 -------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (document.cid = category.cid)
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)
-               Hash Key: document.cid
+         Hash Cond: (category.cid = document.cid)
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Seq Scan on category
+         ->  Hash
                ->  Subquery Scan on document
                      Filter: f_leak(document.dtitle)
                      ->  Seq Scan on document document_1
                            Filter: (dauthor = 'regress_rls_carol'::name)
-         ->  Hash
-               ->  Seq Scan on category
  Optimizer: Postgres query optimizer
-(12 rows)
+(11 rows)
 
 -- interaction of FK/PK constraints
 SET SESSION AUTHORIZATION regress_rls_alice;
@@ -1309,15 +1307,15 @@ AND f_leak(t2_1.b) AND f_leak(t2_2.b) RETURNING *, t2_1, t2_2;
  Gather Motion 1:1  (slice1; segments: 1)
    ->  Update on t2 t2_1_1
          ->  Hash Join
-               Hash Cond: (t2_1.b = t2_2.b)
-               ->  Subquery Scan on t2_1
-                     Filter: f_leak(t2_1.b)
-                     ->  Seq Scan on t2 t2_1_2
+               Hash Cond: (t2_2.b = t2_1.b)
+               ->  Subquery Scan on t2_2
+                     Filter: f_leak(t2_2.b)
+                     ->  Seq Scan on t2 t2_2_1
                            Filter: ((a = 3) AND ((a % 2) = 1))
                ->  Hash
-                     ->  Subquery Scan on t2_2
-                           Filter: f_leak(t2_2.b)
-                           ->  Seq Scan on t2 t2_2_1
+                     ->  Subquery Scan on t2_1
+                           Filter: f_leak(t2_1.b)
+                           ->  Seq Scan on t2 t2_1_2
                                  Filter: ((a = 3) AND ((a % 2) = 1))
  Optimizer: Postgres query optimizer
 (14 rows)

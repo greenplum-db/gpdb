@@ -36,6 +36,9 @@ update gp_distribution_policy set numsegments = 2 where localoid = 'replicate_2_
 
 insert into replicate_2_5 select i,i,i,i from generate_series(1, 10)i;
 
+create table gangsize_input_data(a int, b int, c int, d int);
+insert into gangsize_input_data select i,i,i,i from generate_series(1,10)i;
+
 set Test_print_direct_dispatch_info = true;
 
 \o /dev/null
@@ -89,34 +92,34 @@ abort;
 -- Test for UPDATE/DELETE/INSERT;
 
 -- Insert
-insert into random_2_0 select i,i,i,i from generate_series(21, 30)i;
+insert into random_2_0 select * from gangsize_input_data where gp_segment_id = 0;
 
 begin;
-insert into random_2_0 select i,i,i,i from generate_series(21, 30)i;
+insert into random_2_0 select * from gangsize_input_data where gp_segment_id = 0;
 end;
 
-insert into replicate_2_1 select i,i,i,i from generate_series(21, 30)i;
+insert into replicate_2_1 select * from gangsize_input_data where gp_segment_id = 0;
 
 begin;
-insert into replicate_2_1 select i,i,i,i from generate_series(21, 30)i;
+insert into replicate_2_1 select * from gangsize_input_data where gp_segment_id = 0;
 end;
 
-insert into hash_3_3_2 select i,i,i,i from generate_series(21, 30)i;
+insert into hash_3_3_2 select * from gangsize_input_data where gp_segment_id = 0;
 
 begin;
-insert into hash_3_3_2 select i,i,i,i from generate_series(21, 30)i;
+insert into hash_3_3_2 select * from gangsize_input_data where gp_segment_id = 0;
 end;
 
-insert into replicate_3_3 select i,i,i,i from generate_series(21, 30)i;
+insert into replicate_3_3 select * from gangsize_input_data where gp_segment_id = 0;
 
 begin;
-insert into replicate_3_3 select i,i,i,i from generate_series(21, 30)i;
+insert into replicate_3_3 select * from gangsize_input_data where gp_segment_id = 0;
 end;
 
-insert into hash_2_3_4 select i,i,i,i from generate_series(21, 30)i;
+insert into hash_2_3_4 select * from gangsize_input_data where gp_segment_id = 0;
 
 begin;
-insert into hash_2_3_4 select i,i,i,i from generate_series(21, 30)i;
+insert into hash_2_3_4 select * from gangsize_input_data where gp_segment_id = 0;
 end;
 
 --Update

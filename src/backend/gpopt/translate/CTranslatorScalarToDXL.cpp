@@ -323,6 +323,9 @@ CTranslatorScalarToDXL::TranslateScalarToDXL
 		// give a better message.
 		if (tag == T_Param)
 		{
+			// Note: The choose_custom_plan() function in plancache.c
+			// knows that GPORCA doesn't support Params. If you lift this
+			// limitation, adjust choose_custom_plan() accordingly!
 			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion, GPOS_WSZ_LIT("Query Parameter"));
 		}
 		else

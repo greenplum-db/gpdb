@@ -16,6 +16,7 @@
 #include "gpos/base.h"
 #include "gpos/task/CAutoTraceFlag.h"
 #include "gpos/error/CAutoTrace.h"
+#include "naucrates/dxl/xml/dxltokens.h"
 #include "naucrates/traceflags/traceflags.h"
 
 #include "gpopt/base/CConstraint.h"
@@ -215,6 +216,13 @@ namespace gpopt
 					const
 			{
 				return m_pcr == colref;
+			}
+
+			// check if constraint is on the gp_segment_id column
+			virtual
+			BOOL FConstraintOnSegmentId() const
+			{
+				return m_pcr->IsSystemCol() && m_pcr->Name().Equals(CDXLTokens::GetDXLTokenStr(EdxltokenGpSegmentIdColName));
 			}
 
 			// return a copy of the constraint with remapped columns

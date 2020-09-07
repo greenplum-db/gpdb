@@ -607,9 +607,7 @@ CPhysical::PcrsChildReqd
 
 	// insert request in map
 	pcrs->AddRef();
-#ifdef GPOS_DEBUG
-	BOOL fSuccess =
-#endif // GPOS_DEBUG
+	BOOL fSuccess GPOS_ASSERTS_ONLY =
 	m_phmrcr->Insert(prcr, pcrs);
 	GPOS_ASSERT(fSuccess);
 

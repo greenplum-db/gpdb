@@ -5,7 +5,7 @@
 DROP TABLE complex_ttbl;   
 DROP SEQUENCE  complex_seq;
 -- end_ignore
-CREATE SEQUENCE complex_seq;
+CREATE SEQUENCE complex_seq CACHE 1;
 CREATE TABLE complex_ttbl (id INTEGER NOT NULL DEFAULT 1, orderid INTEGER NOT NULL DEFAULT NEXTVAL('complex_seq'), c COMPLEX) DISTRIBUTED BY (id); 
 
 -- regular input
@@ -354,7 +354,7 @@ DROP SEQUENCE complex_seq;
 DROP FUNCTION complex_dp_eq(a COMPLEX, b COMPLEX, diff FLOAT8);
 
 -- check hashable
-CREATE SEQUENCE complex_seq;
+CREATE SEQUENCE complex_seq CACHE 1;
 CREATE TABLE complex_ttbl (id INT4 DEFAULT NEXTVAL('complex_seq'), c COMPLEX) DISTRIBUTED BY (c);
 
 INSERT INTO complex_ttbl(c) VALUES (COMPLEX(NEXTVAL('complex_seq'), NEXTVAL('complex_seq')));

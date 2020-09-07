@@ -219,7 +219,7 @@ uint64_t S3KeyReader::read(char* buf, uint64_t count) {
         if (this->transferredKeyLen >= fileLen) {
             if (!this->hasEol && !this->eolAppended) {
                 uint64_t eolLen = strlen(eolString);
-                strncpy(buf, eolString, eolLen);
+                memcpy(buf, eolString, eolLen);
 
                 this->eolAppended = true;
 

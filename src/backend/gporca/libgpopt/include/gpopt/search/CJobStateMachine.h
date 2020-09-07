@@ -173,9 +173,7 @@ namespace gpopt
 
                     // use the event to transition state machine
                     estNext = estCurrent;
-#ifdef GPOS_DEBUG
-                    BOOL fSucceeded =
-#endif // GPOS_DEBUG
+                    BOOL fSucceeded GPOS_ASSERTS_ONLY =
                     m_sm.FTransition(eev, estNext);
 
                     GPOS_ASSERT(fSucceeded);

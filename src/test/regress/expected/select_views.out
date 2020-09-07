@@ -1483,10 +1483,13 @@ EXPLAIN (COSTS OFF) SELECT * FROM my_credit_card_usage_normal
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
          Hash Cond: (r.cid = l.cid)
-         ->  Seq Scan on credit_usage r
-               Filter: ((ymd >= '10-01-2011'::date) AND (ymd < '11-01-2011'::date))
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)
+               Hash Key: r.cid
+               ->  Seq Scan on credit_usage r
+                     Filter: ((ymd >= '10-01-2011'::date) AND (ymd < '11-01-2011'::date))
          ->  Hash
-               ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                     Hash Key: l.cid
                      ->  Subquery Scan on l
                            Filter: f_leak(l.cnum)
                            ->  Hash Join
@@ -1496,7 +1499,7 @@ EXPLAIN (COSTS OFF) SELECT * FROM my_credit_card_usage_normal
                                        ->  Seq Scan on customer l_1
                                              Filter: (name = 'regress_alice'::text)
  Optimizer: Postgres query optimizer
-(16 rows)
+(19 rows)
 
 SELECT * FROM my_credit_card_usage_secure
        WHERE f_leak(cnum) AND ymd >= '2011-10-01' AND ymd < '2011-11-01';
@@ -1519,21 +1522,18 @@ EXPLAIN (COSTS OFF) SELECT * FROM my_credit_card_usage_secure
          Filter: f_leak(my_credit_card_usage_secure.cnum)
          ->  Hash Join
                Hash Cond: (r.cid = l.cid)
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                     Hash Key: r.cid
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)
                      ->  Seq Scan on credit_usage r
                            Filter: ((ymd >= '10-01-2011'::date) AND (ymd < '11-01-2011'::date))
                ->  Hash
-                     ->  Redistribute Motion 3:3  (slice3; segments: 3)
-                           Hash Key: l.cid
-                           ->  Hash Join
-                                 Hash Cond: ((r_1.cid = l.cid) AND (r_1.dist_key = l.dist_key))
-                                 ->  Seq Scan on credit_card r_1
-                                 ->  Hash
-                                       ->  Seq Scan on customer l
-                                             Filter: (name = 'regress_alice'::text)
+                     ->  Hash Join
+                           Hash Cond: ((r_1.cid = l.cid) AND (r_1.dist_key = l.dist_key))
+                           ->  Seq Scan on credit_card r_1
+                           ->  Hash
+                                 ->  Seq Scan on customer l
+                                       Filter: (name = 'regress_alice'::text)
  Optimizer: Postgres query optimizer
-(19 rows)
+(16 rows)
 
 --
 -- Test for the case when security_barrier gets changed between rewriter

@@ -389,9 +389,7 @@ CLogicalProject::PstatsDerive
 			if (datum->StatsMappable())
 			{
 				datum->AddRef();
-#ifdef GPOS_DEBUG
-				BOOL fInserted =
-#endif
+				BOOL fInserted GPOS_ASSERTS_ONLY =
 						phmuldatum->Insert(GPOS_NEW(mp) ULONG(colref->Id()), datum);
 				GPOS_ASSERT(fInserted);
 			}

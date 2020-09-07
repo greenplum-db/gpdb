@@ -150,9 +150,7 @@ COstreamFileTest::Unittest_CheckOutputFile
 	const ULONG ulReadBufferSize = 1024;
 	WCHAR wszReadBuffer[ulReadBufferSize];
 
-#ifdef GPOS_DEBUG
-	ULONG_PTR ulpRead =
-#endif // GPOS_DEBUG
+	ULONG_PTR ulpRead GPOS_ASSERTS_ONLY =
 	fr.ReadBytesToBuffer((BYTE *) wszReadBuffer, GPOS_ARRAY_SIZE(wszReadBuffer));
 
 	CWStringConst strExpected(GPOS_WSZ_LIT("WC102-10some regular stringdeadbeef"));
@@ -179,8 +177,6 @@ COstreamFileTest::Unittest_DeleteTmpFile
 {
 	GPOS_ASSERT(NULL != szDir);
 	GPOS_ASSERT(NULL != szFile);
-
-	CAutoTraceFlag atf(EtraceSimulateIOError, false);
 
 	if (ioutils::PathExists(szFile))
 	{

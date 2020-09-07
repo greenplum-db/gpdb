@@ -193,12 +193,8 @@ CMiniDumperDXLTest::EresUnittest_Basic()
 	}	
 	GPOS_CATCH_EX(ex)
 	{
-		// unless we're simulating faults, the exception must be OOM
-		GPOS_ASSERT_IMP
-			(
-			!GPOS_FTRACE(EtraceSimulateAbort) && !GPOS_FTRACE(EtraceSimulateIOError),
-			CException::ExmaSystem == ex.Major() && CException::ExmiOOM == ex.Minor()
-			);
+		// The exception must be OOM
+		GPOS_ASSERT(CException::ExmaSystem == ex.Major() && CException::ExmiOOM == ex.Minor());
 		
 		mdrs.Finalize();
 

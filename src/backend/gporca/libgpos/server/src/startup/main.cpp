@@ -13,7 +13,6 @@
 #include "gpos/types.h"
 
 #include "gpos/common/CMainArgs.h"
-#include "gpos/test/CFSimulatorTestExt.h"
 #include "gpos/test/CUnittest.h"
 
 
@@ -40,7 +39,6 @@
 
 #include "unittest/gpos/error/CErrorHandlerTest.h"
 #include "unittest/gpos/error/CExceptionTest.h"
-#include "unittest/gpos/error/CFSimulatorTest.h"
 #include "unittest/gpos/error/CLoggerTest.h"
 #include "unittest/gpos/error/CMessageTest.h"
 #include "unittest/gpos/error/CMessageTableTest.h"
@@ -118,13 +116,6 @@ static gpos::CUnittest rgut[] =
 	GPOS_UNITTEST_STD_SUBTEST(CUnittestTest, 0),
 	GPOS_UNITTEST_STD_SUBTEST(CUnittestTest, 1),
 	GPOS_UNITTEST_STD_SUBTEST(CUnittestTest, 2),
-
-
-#ifdef GPOS_FPSIMULATOR
-	// simulation
-	GPOS_UNITTEST_STD(CFSimulatorTest),
-	GPOS_UNITTEST_EXT(CFSimulatorTestExt),
-#endif // GPOS_FPSIMULATOR
 };
 
 // static variable counting the number of failed tests; PvExec overwrites with

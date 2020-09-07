@@ -800,11 +800,6 @@ namespace gpopt
 			static
 			CExpression *PexprOr(CMemoryPool *mp, CExpression *pexprFst, CExpression *pexprSnd);
 
-#ifdef GPOS_DEBUG
-			static
-			BOOL FFaultSimulation();
-#endif // GPOS_DEBUG
-			
 			// default file-based metadata provider
 			static
 			CMDProviderMemory *m_pmdpf;

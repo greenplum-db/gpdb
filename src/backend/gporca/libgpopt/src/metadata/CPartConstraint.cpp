@@ -77,9 +77,7 @@ CPartConstraint::CPartConstraint
 	GPOS_ASSERT_IMP(is_unbounded, fDefaultPartition);
 
 	m_phmulcnstr = GPOS_NEW(mp) UlongToConstraintMap(mp);
-#ifdef GPOS_DEBUG
-	BOOL result =
-#endif // GPOS_DEBUG
+	BOOL result GPOS_ASSERTS_ONLY =
 	m_phmulcnstr->Insert(GPOS_NEW(mp) ULONG(0 /*ulLevel*/), pcnstr);
 	GPOS_ASSERT(result);
 
@@ -484,9 +482,7 @@ CPartConstraint::PpartcnstrRemaining
 
 	CConstraint *pcnstrRemaining = PcnstrRemaining(mp, pcnstrCurrent, pcnstrOther);
 
-#ifdef GPOS_DEBUG
-	BOOL result =
-#endif // GPOS_DEBUG
+	BOOL result GPOS_ASSERTS_ONLY =
 	phmulcnstr->Insert(GPOS_NEW(mp) ULONG(0), pcnstrRemaining);
 	GPOS_ASSERT(result);
 
@@ -502,9 +498,7 @@ CPartConstraint::PpartcnstrRemaining
 		if (NULL != pcnstrLevel)
 		{
 			pcnstrLevel->AddRef();
-#ifdef GPOS_DEBUG
-			BOOL result =
-#endif // GPOS_DEBUG
+			BOOL result GPOS_ASSERTS_ONLY =
 			phmulcnstr->Insert(GPOS_NEW(mp) ULONG(ul), pcnstrLevel);
 			GPOS_ASSERT(result);
 		}
@@ -588,9 +582,7 @@ CPartConstraint::PpartcnstrCopyWithRemappedColumns
 		if (NULL != pcnstr)
 		{
 			CConstraint *pcnstrRemapped = pcnstr->PcnstrCopyWithRemappedColumns(mp, colref_mapping, must_exist);
-#ifdef GPOS_DEBUG
-			BOOL result =
-#endif // GPOS_DEBUG
+			BOOL result GPOS_ASSERTS_ONLY =
 			phmulcnstr->Insert(GPOS_NEW(mp) ULONG(ul), pcnstrRemapped);
 			GPOS_ASSERT(result);
 		}
@@ -733,9 +725,7 @@ CPartConstraint::PpartcnstrDisjunction
 		CConstraint *pcnstrFst = ppartcnstrFst->Pcnstr(ul);
 
 		pcnstrFst->AddRef();
-#ifdef GPOS_DEBUG
-		BOOL result =
-#endif // GPOS_DEBUG
+		BOOL result GPOS_ASSERTS_ONLY =
 		phmulcnstr->Insert(GPOS_NEW(mp) ULONG(ul), pcnstrFst);
 		GPOS_ASSERT(result);
 
@@ -758,9 +748,7 @@ CPartConstraint::PpartcnstrDisjunction
 
 	CConstraint *pcnstrDisj = CConstraint::PcnstrDisjunction(mp, pdrgpcnstrCombined);
 	GPOS_ASSERT(NULL != pcnstrDisj);
-#ifdef GPOS_DEBUG
-	BOOL result =
-#endif // GPOS_DEBUG
+	BOOL result GPOS_ASSERTS_ONLY =
 	phmulcnstr->Insert(GPOS_NEW(mp) ULONG(ulLevels - 1), pcnstrDisj);
 	GPOS_ASSERT(result);
 
@@ -807,9 +795,7 @@ CPartConstraint::CopyPartConstraints
 		{
 			ppartcnstrSource->AddRef();
 
-#ifdef GPOS_DEBUG
-			BOOL result =
-#endif // GPOS_DEBUG
+			BOOL result GPOS_ASSERTS_ONLY =
 				ppartcnstrmapDest->Insert(GPOS_NEW(mp) ULONG(ulKey), ppartcnstrSource);
 
 			GPOS_ASSERT(result && "Duplicate part constraints");

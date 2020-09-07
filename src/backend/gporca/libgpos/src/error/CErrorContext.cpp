@@ -148,8 +148,7 @@ CErrorContext::AppendErrnoMsg()
 	GPOS_ASSERT(m_pending);
 	GPOS_ASSERT
 		(
-		GPOS_MATCH_EX(m_exception, CException::ExmaSystem, CException::ExmiIOError) ||
-		GPOS_MATCH_EX(m_exception, CException::ExmaSystem, CException::ExmiNetError)
+		GPOS_MATCH_EX(m_exception, CException::ExmaSystem, CException::ExmiIOError)
 		);
 	GPOS_ASSERT(0 < errno && "Errno has not been set");
 

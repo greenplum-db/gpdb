@@ -85,9 +85,7 @@ CXformImplementPartitionSelector::Transform
 		CExpression *pexprFilter = popSelector->PexprPartFilter(ul);
 		GPOS_ASSERT(NULL != pexprFilter);
 		pexprFilter->AddRef();
-#ifdef GPOS_DEBUG
-		BOOL fInserted =
-#endif
+		BOOL fInserted GPOS_ASSERTS_ONLY =
 		phmulexprFilter->Insert(GPOS_NEW(mp) ULONG(ul), pexprFilter);
 		GPOS_ASSERT(fInserted);
 	}

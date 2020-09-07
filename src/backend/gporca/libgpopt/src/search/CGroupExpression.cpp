@@ -554,9 +554,7 @@ CGroupExpression::CostLowerBound
 	// compute partial plan cost
 	CCost cost = ppp->CostCompute(mp);
 
-#ifdef GPOS_DEBUG
-	BOOL fSuccess =
-#endif // GPOS_DEBUG
+	BOOL fSuccess GPOS_ASSERTS_ONLY =
 		m_ppartialplancostmap->Insert(ppp, GPOS_NEW(mp) CCost(cost.Get()));
 	GPOS_ASSERT(fSuccess);
 

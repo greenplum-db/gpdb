@@ -21,6 +21,8 @@
 #include "parser/parse_coerce.h"
 #include "utils/lsyscache.h"
 
+#include "gpos/types.h"
+
 // fwd declarations
 typedef struct SysScanDescData *SysScanDesc;
 typedef int LOCKMODE;
@@ -55,6 +57,8 @@ struct Motion;
 struct Var;
 struct Const;
 struct ArrayExpr;
+
+#include "gpopt/utils/RelationWrapper.h"
 
 namespace gpdb {
 
@@ -560,7 +564,7 @@ namespace gpdb {
 	void BuildRelationTriggers(Relation rel);
 
 	// get relation with given oid
-	Relation GetRelation(Oid rel_oid);
+	RelationWrapper GetRelation(Oid rel_oid);
 
 	// get external table entry with given oid
 	ExtTableEntry *GetExternalTableEntry(Oid rel_oid);

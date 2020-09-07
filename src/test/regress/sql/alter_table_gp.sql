@@ -31,6 +31,20 @@ alter table dupconstr add constraint dup_constraint primary key (i);
 -- cleanup
 drop table dupconstr;
 
+--
+-- Alter datatype of column with constraint should raise meaningful error
+-- See github issue: https://github.com/greenplum-db/gpdb/issues/10561
+--
+create table contype (i int4 primary key, j int check (j < 100));
+alter table contype alter i type numeric; --error
+
+insert into contype values (1, 1), (2, 2), (3, 3);
+-- after insert data, alter primary key/unique column's type will go through a special check logic
+alter table contype alter i type numeric; --error
+
+alter table contype alter j type numeric;
+-- cleanup
+drop table contype;
 
 --
 -- Test ALTER COLUMN TYPE after dropped column with text datatype (see MPP-19146)

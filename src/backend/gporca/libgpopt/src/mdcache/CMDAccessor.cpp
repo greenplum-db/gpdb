@@ -636,9 +636,7 @@ CMDAccessor::GetImdObj
 				// object gets pinned independent of whether insertion succeeded or
 				// failed because object was already in cache
 
-#ifdef GPOS_DEBUG
-				IMDCacheObject *pmdobjInserted =
-#endif
+				IMDCacheObject *pmdobjInserted GPOS_ASSERTS_ONLY =
 				a_pmdcacc->Insert(a_pmdkeyCache.Value(), pmdobjNew);
 
 				GPOS_ASSERT(NULL != pmdobjInserted);

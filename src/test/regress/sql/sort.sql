@@ -119,3 +119,21 @@ insert into colltest VALUES ('a'), ('A'), ('b'), ('B'), ('c'), ('C'), ('d'), ('D
 
 select * from colltest order by t COLLATE "C";
 select * from colltest order by t COLLATE "C" NULLS FIRST;
+
+
+--
+-- Test strxfrm()/strcoll() sort order inconsistency in a
+-- merge join with russian characters and default collation
+--
+set gp_enable_mk_sort = on;
+set enable_hashjoin = off;
+
+with t as (
+    select * from (values ('б б'), ('бб ')) as t1(b)
+    full join (values ('б б'), ('бб ')) as t2(b)
+    using (b)
+)
+select count(*) from t;
+
+reset gp_enable_mk_sort;
+reset enable_hashjoin;

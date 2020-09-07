@@ -203,12 +203,6 @@ CParseHandlerTest::EresUnittest()
 		GPOS_UNITTEST_FUNC(CParseHandlerTest::EresUnittest_RunAllNegativeTests),
 		};
 
-	// skip OOM and Abort simulation for this test, it takes hours
-	if (ITask::Self()->IsTraceSet(EtraceSimulateOOM) || ITask::Self()->IsTraceSet(EtraceSimulateAbort))
-	{
-		return GPOS_OK;
-	}
-
 	return CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
 }
 

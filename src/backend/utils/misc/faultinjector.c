@@ -273,7 +273,11 @@ FaultInjector_InjectFaultIfSet_out_of_line(
 	if (IsAutoVacuumLauncherProcess() ||
 		(IsAutoVacuumWorkerProcess() &&
 		 !(0 == strcmp("vacuum_update_dat_frozen_xid", faultName) ||
-			 0 == strcmp("auto_vac_worker_before_do_autovacuum", faultName))))
+		   0 == strcmp("auto_vac_worker_before_do_autovacuum", faultName) ||
+		   0 == strcmp("auto_vac_worker_after_report_activity", faultName) ||
+		   0 == strcmp("auto_vac_worker_abort", faultName) ||
+		   0 == strcmp("analyze_after_hold_lock", faultName) ||
+		   0 == strcmp("analyze_finished_one_relation", faultName))))
 		return FaultInjectorTypeNotSpecified;
 
 	/*

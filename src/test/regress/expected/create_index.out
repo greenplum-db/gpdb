@@ -3086,20 +3086,16 @@ SET enable_bitmapscan = ON;
 EXPLAIN (COSTS OFF)
 SELECT * FROM tenk1
   WHERE thousand = 42 AND (tenthous = 1 OR tenthous = 3 OR tenthous = 42);
-                                                                  QUERY PLAN                                                                   
------------------------------------------------------------------------------------------------------------------------------------------------
+                              QUERY PLAN                               
+-----------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Bitmap Heap Scan on tenk1
-         Recheck Cond: (((thousand = 42) AND (tenthous = 1)) OR ((thousand = 42) AND (tenthous = 3)) OR ((thousand = 42) AND (tenthous = 42)))
-         ->  BitmapOr
-               ->  Bitmap Index Scan on tenk1_thous_tenthous
-                     Index Cond: ((thousand = 42) AND (tenthous = 1))
-               ->  Bitmap Index Scan on tenk1_thous_tenthous
-                     Index Cond: ((thousand = 42) AND (tenthous = 3))
-               ->  Bitmap Index Scan on tenk1_thous_tenthous
-                     Index Cond: ((thousand = 42) AND (tenthous = 42))
+         Recheck Cond: (thousand = 42)
+         Filter: ((tenthous = 1) OR (tenthous = 3) OR (tenthous = 42))
+         ->  Bitmap Index Scan on tenk1_thous_tenthous
+               Index Cond: (thousand = 42)
  Optimizer: Postgres query optimizer
-(11 rows)
+(7 rows)
 
 SELECT * FROM tenk1
   WHERE thousand = 42 AND (tenthous = 1 OR tenthous = 3 OR tenthous = 42);
@@ -3111,23 +3107,22 @@ SELECT * FROM tenk1
 EXPLAIN (COSTS OFF)
 SELECT count(*) FROM tenk1
   WHERE hundred = 42 AND (thousand = 42 OR thousand = 99);
-                                         QUERY PLAN                                          
----------------------------------------------------------------------------------------------
- Finalize Aggregate
+                                      QUERY PLAN                                       
+---------------------------------------------------------------------------------------
+ Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
-         ->  Partial Aggregate
-               ->  Bitmap Heap Scan on tenk1
-                     Recheck Cond: ((hundred = 42) AND ((thousand = 42) OR (thousand = 99)))
-                     ->  BitmapAnd
-                           ->  Bitmap Index Scan on tenk1_hundred
-                                 Index Cond: (hundred = 42)
-                           ->  BitmapOr
-                                 ->  Bitmap Index Scan on tenk1_thous_tenthous
-                                       Index Cond: (thousand = 42)
-                                 ->  Bitmap Index Scan on tenk1_thous_tenthous
-                                       Index Cond: (thousand = 99)
+         ->  Bitmap Heap Scan on tenk1
+               Recheck Cond: ((hundred = 42) AND ((thousand = 42) OR (thousand = 99)))
+               ->  BitmapAnd
+                     ->  Bitmap Index Scan on tenk1_hundred
+                           Index Cond: (hundred = 42)
+                     ->  BitmapOr
+                           ->  Bitmap Index Scan on tenk1_thous_tenthous
+                                 Index Cond: (thousand = 42)
+                           ->  Bitmap Index Scan on tenk1_thous_tenthous
+                                 Index Cond: (thousand = 99)
  Optimizer: Postgres query optimizer
-(14 rows)
+(13 rows)
 
 SELECT count(*) FROM tenk1
   WHERE hundred = 42 AND (thousand = 42 OR thousand = 99);

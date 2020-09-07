@@ -77,9 +77,6 @@ CDXLUtils::GetParseHandlerForDXLString
 	)
 {
 	GPOS_ASSERT(NULL != mp);
-	// we need to disable OOM simulation here, otherwise xerces throws ABORT signal
-	CAutoTraceFlag auto_trace_flg1(EtraceSimulateOOM, false);
-	CAutoTraceFlag auto_trace_flg2(EtraceSimulateAbort, false);
 
 	// setup own memory manager
 	CDXLMemoryManager *memory_manager = GPOS_NEW(mp) CDXLMemoryManager(mp);
@@ -174,13 +171,8 @@ CDXLUtils::GetParseHandlerForDXLFile
 	// setup own memory manager
 	CDXLMemoryManager mm(mp);
 	SAX2XMLReader* sax_2_xml_reader = NULL;
-	{
-		// we need to disable OOM simulation here, otherwise xerces throws ABORT signal
-		CAutoTraceFlag auto_trace_flg(EtraceSimulateOOM, false);
-		CAutoTraceFlag atf2(EtraceSimulateAbort, false);
 
-		sax_2_xml_reader = XMLReaderFactory::createXMLReader(&mm);
-	}
+	sax_2_xml_reader = XMLReaderFactory::createXMLReader(&mm);
 	
 	XMLCh *xsd_path = NULL;
 	
@@ -206,8 +198,6 @@ CDXLUtils::GetParseHandlerForDXLFile
 
 	try
 	{
-		CAutoTraceFlag auto_trace_flg1(EtraceSimulateOOM, false);
-		CAutoTraceFlag auto_trace_flg2(EtraceSimulateAbort, false);
 		GPOS_CHECK_ABORT;
 
 		sax_2_xml_reader->parse(dxl_filename);
@@ -904,7 +894,6 @@ CDXLUtils::SerializeULLONG
 	)
 {
 	GPOS_ASSERT(NULL != mp);
-	CAutoTraceFlag auto_trace_flg(EtraceSimulateAbort, false);
 
 	CAutoP<CWStringDynamic> string_var(GPOS_NEW(mp) CWStringDynamic(mp));
 
@@ -1325,7 +1314,6 @@ CDXLUtils::SerializeMDObj
 {
 	GPOS_ASSERT(NULL != mp);
 	GPOS_ASSERT(NULL != imd_cache_obj);
-	CAutoTraceFlag auto_trace_flag(EtraceSimulateAbort, false);
 
 	CAutoP<CWStringDynamic> string_var(GPOS_NEW(mp) CWStringDynamic(mp));
 	
@@ -1471,7 +1459,6 @@ CDXLUtils::CreateDynamicStringFromXMLChArray
 	CMemoryPool *mp = memory_manager->Pmp();
 	
 	{
-		CAutoTraceFlag auto_trace_flg(EtraceSimulateOOM, false);
 		CHAR *sz = XMLString::transcode(xml_string, memory_manager);
 
 		CWStringDynamic *dxl_string = GPOS_NEW(mp) CWStringDynamic(mp);
@@ -1504,7 +1491,6 @@ CDXLUtils::CreateStringFrom64XMLStr
 	GPOS_ASSERT(NULL != memory_manager);
 	GPOS_ASSERT(NULL != xml_string);
 
-	CAutoTraceFlag auto_trace_flg(EtraceSimulateOOM, false);
 	CMemoryPool *mp = memory_manager->Pmp();
 
 	// find out xml string length
@@ -1638,10 +1624,7 @@ CDXLUtils::EncodeByteArrayToString
 
 	CAutoRg<XMLByte> xml_byte_buffer;
 
-	{
-		CAutoTraceFlag auto_trace_flg(EtraceSimulateOOM, false);
-		xml_byte_buffer = Base64::encode(input, input_length, &output_length, a_pmm.Value());
-	}
+	xml_byte_buffer = Base64::encode(input, input_length, &output_length, a_pmm.Value());
 
 	GPOS_ASSERT(NULL != xml_byte_buffer.Rgt());
 
@@ -1709,10 +1692,8 @@ CDXLUtils::DecodeByteArrayFromString
 	data_in_byte[input_length] = 0;
 
 	XMLByte *xml_byte = NULL;
-	{
-		CAutoTraceFlag auto_trace_flg(EtraceSimulateOOM, false);
-		xml_byte = Base64::decode(data_in_byte.Rgt(), &xml_size, a_pmm.Value());
-	}
+
+	xml_byte = Base64::decode(data_in_byte.Rgt(), &xml_size, a_pmm.Value());
 
 	(* length) = static_cast<ULONG>(xml_size);
 

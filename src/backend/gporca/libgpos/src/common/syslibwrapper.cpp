@@ -42,9 +42,7 @@ gpos::syslib::GetTimeOfDay
 {
 	GPOS_ASSERT(NULL != tv);
 
-#ifdef GPOS_DEBUG
-	INT res =
-#endif // GPOS_DEBUG
+	INT res GPOS_ASSERTS_ONLY =
 	gettimeofday(tv, tz);
 
 	GPOS_ASSERT(0 == res);
@@ -67,9 +65,7 @@ gpos::syslib::GetRusage
 {
 	GPOS_ASSERT(NULL != usage);
 
-#ifdef GPOS_DEBUG
-	INT res =
-#endif // GPOS_DEBUG
+	INT res GPOS_ASSERTS_ONLY =
 	getrusage(RUSAGE_SELF, usage);
 
 	GPOS_ASSERT(0 == res);

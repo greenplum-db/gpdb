@@ -107,10 +107,10 @@ CFileReader::ReadBytesToBuffer
 
 	while (0 < bytes_to_read)
 	{
-			INT_PTR current_byte = -1;
+		INT_PTR current_byte;
 
-    	 	// read from file and check to simulate I/O error
-    	 	GPOS_CHECK_SIM_IO_ERR(&current_byte, ioutils::Read(GetFileDescriptor(), read_buffer, bytes_to_read));
+		// read from file
+		current_byte = ioutils::Read(GetFileDescriptor(), read_buffer, bytes_to_read);
 
     	 	// reach the end of file
     	 	if (0 == current_byte)

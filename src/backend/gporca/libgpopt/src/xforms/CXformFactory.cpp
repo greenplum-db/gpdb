@@ -111,9 +111,7 @@ CXformFactory::Add
 	CHAR *szXformName = GPOS_NEW_ARRAY(m_mp, CHAR, length + 1);
 	clib::Strncpy(szXformName, pxform->SzId(), length + 1);
 
-#ifdef GPOS_DEBUG
-		BOOL fInserted =
-#endif
+		BOOL fInserted GPOS_ASSERTS_ONLY =
 		m_phmszxform->Insert(szXformName, pxform);
 	GPOS_ASSERT(fInserted);
 

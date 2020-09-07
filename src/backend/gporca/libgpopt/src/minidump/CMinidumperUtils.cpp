@@ -65,9 +65,6 @@ CMinidumperUtils::PdxlmdLoad
 	const CHAR *file_name
 	)
 {
-	CAutoTraceFlag atf1(EtraceSimulateAbort, false);
-	CAutoTraceFlag atf2(EtraceSimulateOOM, false);
-
 	{
 		CAutoTrace at(mp);
 		at.Os() << "parsing DXL File " << file_name;
@@ -225,11 +222,6 @@ CMinidumperUtils::Finalize
 	BOOL fSerializeErrCtx
 	)
 {
-	CAutoTraceFlag atf1(EtraceSimulateAbort, false);
-	CAutoTraceFlag atf2(EtraceSimulateOOM, false);
-	CAutoTraceFlag atf3(EtraceSimulateNetError, false);
-	CAutoTraceFlag atf4(EtraceSimulateIOError, false);
-
 	if (fSerializeErrCtx)
 	{
 		CErrorContext *perrctxt = CTask::Self()->ConvertErrCtxt();

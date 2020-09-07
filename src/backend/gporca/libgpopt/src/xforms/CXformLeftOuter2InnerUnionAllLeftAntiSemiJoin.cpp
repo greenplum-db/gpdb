@@ -470,9 +470,7 @@ CXformLeftOuter2InnerUnionAllLeftAntiSemiJoin::PexprProjectOverLeftAntiSemiJoin
 	{
 		ULONG ulOrigIndex = *(*pdrgpulIndexesOfOuter)[ul];
 		CColRef *pcrOriginal = (*pdrgpcrJoinOutput)[ulOrigIndex];
-#ifdef GPOS_DEBUG
-		BOOL fInserted =
-#endif
+		BOOL fInserted GPOS_ASSERTS_ONLY =
 		colref_mapping->Insert(GPOS_NEW(mp) ULONG(pcrOriginal->Id()), (*pdrgpcrOuterCopy)[ul]);
 		GPOS_ASSERT(fInserted);
 	}

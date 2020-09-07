@@ -10,7 +10,6 @@
 //---------------------------------------------------------------------------
 
 #include "gpos/common/syslibwrapper.h"
-#include "gpos/error/CFSimulator.h"
 #include "gpos/memory/CMemoryPoolManager.h"
 #include "gpos/string/CWStringStatic.h"
 #include "gpos/task/CWorker.h"
@@ -106,13 +105,8 @@ CWorker::Execute(CTask *task)
 void
 CWorker::CheckForAbort
 	(
-#ifdef GPOS_FPSIMULATOR
-	const CHAR *file,
-	ULONG line_num
-#else
 	const CHAR *,
 	ULONG
-#endif // GPOS_FPSIMULATOR
 	)
 {
 	// check if there is a task assigned to worker,
@@ -121,10 +115,6 @@ CWorker::CheckForAbort
 	{
 		GPOS_ASSERT(!m_task->GetErrCtxt()->IsPending() &&
 		            "Check-For-Abort while an exception is pending");
-
-#ifdef GPOS_FPSIMULATOR
-		SimulateAbort(file, line_num);
-#endif // GPOS_FPSIMULATOR
 
 		if ((NULL != abort_requested_by_system && abort_requested_by_system()) ||
 			m_task->IsCanceled())
@@ -169,41 +159,6 @@ CWorker::CheckStackSize(ULONG request) const
 	}
 	return true;
 }
-
-
-#ifdef GPOS_FPSIMULATOR
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CWorker::SimulateAbort
-//
-//	@doc:
-//		Simulate abort request, log abort injection
-//
-//---------------------------------------------------------------------------
-void
-CWorker::SimulateAbort
-	(
-	const CHAR *file,
-	ULONG line_num
-	)
-{
-	if (m_task->IsTraceSet(EtraceSimulateAbort) &&
-		CFSimulator::FSim()->NewStack(CException::ExmaSystem, CException::ExmiAbort))
-	{
-		// GPOS_TRACE has CFA, disable simulation temporarily
-		m_task->SetTrace(EtraceSimulateAbort, false);
-
-		GPOS_TRACE_FORMAT_ERR("Simulating Abort at %s:%d", file, line_num);
-
-		// resume simulation
-		m_task->SetTrace(EtraceSimulateAbort, true);
-
-		m_task->Cancel();
-	}
-}
-
-#endif // GPOS_FPSIMULATOR
 
 
 // EOF

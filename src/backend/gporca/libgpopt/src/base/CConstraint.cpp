@@ -877,9 +877,7 @@ CConstraint::Phmcolconstr
 		CColRef *colref = crsi.Pcr();
 		CConstraintArray *pdrgpcnstrCol = PdrgpcnstrOnColumn(mp, pdrgpcnstr, colref, false /*fExclusive*/);
 
-#ifdef GPOS_DEBUG
-		BOOL fres =
-#endif //GPOS_DEBUG
+		BOOL fres GPOS_ASSERTS_ONLY =
 		phmcolconstr->Insert(colref, pdrgpcnstrCol);
 		GPOS_ASSERT(fres);
 	}
@@ -987,9 +985,7 @@ CConstraint::Contains
 	}
 
 	// insert containment query into the local map
-#ifdef GPOS_DEBUG
-	BOOL fSuccess =
-#endif // GPOS_DEBUG
+	BOOL fSuccess GPOS_ASSERTS_ONLY =
 		m_phmcontain->Insert(pcnstr, PfVal(fContains));
 	GPOS_ASSERT(fSuccess);
 

@@ -38,9 +38,7 @@ CParseHandlerFactory::AddMapping
 	const XMLCh *token_identifier_str = CDXLTokens::XmlstrToken(token_type);
 	GPOS_ASSERT(NULL != token_identifier_str);
 	
-#ifdef GPOS_DEBUG
-	BOOL success =
-#endif
+	BOOL success GPOS_ASSERTS_ONLY =
 	m_token_parse_handler_func_map->Insert(token_identifier_str, parse_handler_op_func);
 	
 	GPOS_ASSERT(success);

@@ -19,6 +19,10 @@ INSERT INTO INT8_TBL(q1) VALUES ('- 123');
 INSERT INTO INT8_TBL(q1) VALUES ('  345     5');
 INSERT INTO INT8_TBL(q1) VALUES ('');
 
+-- The queries in this file are not sensitive to the stats, but
+-- other more complicated queries in other test files are.
+ANALYZE int8_tbl;
+
 SELECT * FROM INT8_TBL;
 
 -- int8/int8 cmp

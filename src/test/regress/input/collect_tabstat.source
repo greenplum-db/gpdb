@@ -1,0 +1,150 @@
+\t on
+\a
+set client_min_messages to warning;
+
+-- Enable AUTOVACUUM launcher
+ALTER SYSTEM SET autovacuum = on;
+select pg_reload_conf();
+
+
+-- Test collect_tabstat() in copy.
+create table table_for_docopy(i int, j varchar) with (autovacuum_enabled=false) distributed by (i);
+copy table_for_docopy (i, j) from stdin;
+2	hello2
+1	hello1
+3	hello3
+\.
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'table_for_docopy'::regclass;
+
+
+-- Test collect_tabstat() in CTAS
+create table table_for_ctas with (autovacuum_enabled=false) as select i, 'hello' || i from generate_series(1, 100) f(i);
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'table_for_ctas'::regclass;
+select i, 'hello' || i into table_for_insert_into from generate_series(1, 100) f(i);
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'table_for_insert_into'::regclass;
+
+
+-- Test collect_tabstat() in ALTER TABLE SET DISTRIBUTED BY
+create table table_for_set_distributed_by(i int, j varchar) with (autovacuum_enabled=false) distributed by (i);
+insert into table_for_set_distributed_by select i, 'hello' || i from generate_series(1, 333) f(i);
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'table_for_set_distributed_by'::regclass;
+alter table table_for_set_distributed_by set distributed by (j);
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'table_for_set_distributed_by'::regclass;
+
+
+-- Test collect_tabstat() in execution of funciton.
+create table table_for_function(i int, j varchar) with (autovacuum_enabled=false) distributed by (i);
+create function update_table_for_function() returns void as
+$$
+  begin
+    insert into table_for_function select i, 'hello' || i from generate_series(1, 333) f(i);
+    delete from table_for_function where i <= 200;
+  end
+$$
+language plpgsql volatile execute on master;
+select update_table_for_function();
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'table_for_function'::regclass;
+
+
+-- Test collect_tabstat() in ALTER TABLE EXPAND TABLE;
+-- Thanks @uglthinx for telling me this way to execute ALTER TABLE EXPAND manually
+create table table_for_expand(i int, j varchar) with (autovacuum_enabled=false) distributed by (i);
+set allow_system_table_mods=true;
+update gp_distribution_policy set numsegments = 1 where localoid = 'table_for_expand'::regclass;
+set allow_system_table_mods to default;
+insert into table_for_expand select i, 'hello' || i from generate_series(1, 333) f(i);
+select count(distinct gp_segment_id) from table_for_expand;
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'table_for_expand'::regclass;
+alter table table_for_expand expand table;
+select count(distinct gp_segment_id) from table_for_expand;
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'table_for_expand'::regclass;
+
+
+-- Test collect_tabstat() in INSERT/UPDATE/DELETE
+create table table_for_iud(i int, j varchar) with (autovacuum_enabled=false) distributed by (i);
+begin;
+insert into table_for_iud select i, 'hello' || i from generate_series(1, 333) f(i);
+savepoint level1;
+savepoint level2;
+savepoint level3;
+savepoint level4;
+savepoint level5;
+savepoint level6;
+savepoint level7;
+delete from table_for_iud where i <= 200;
+rollback to savepoint level5;
+update table_for_iud set j = 'heroes never die' where i >= 300;
+release savepoint level3;
+commit;
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'table_for_iud'::regclass;
+
+begin;
+savepoint level1;
+savepoint level2;
+savepoint level3;
+savepoint level4;
+savepoint level5;
+savepoint level6;
+savepoint level7;
+insert into table_for_iud select i, 'hello' || i from generate_series(333, 777) f(i);
+rollback to savepoint level5;
+update table_for_iud set j = 'are you ok' where i >= 300;
+rollback to savepoint level3;
+delete from table_for_iud where i <= 200;
+commit;
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'table_for_iud'::regclass;
+
+
+-- Test collect_tabstat in TRUNCATE
+create table table_for_truncate(i int, j varchar) with (autovacuum_enabled=false) distributed by (i);
+insert into table_for_truncate select i, 'hello' || i from generate_series(1, 777) f(i);
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'table_for_truncate'::regclass;
+begin;
+savepoint level1;
+savepoint level2;
+savepoint level3;
+update table_for_truncate set j = 'D' where i <= 200;
+delete from table_for_truncate where i >= 700;
+insert into table_for_truncate select i, 'hello' || i from generate_series(778, 800) f(i);
+truncate table_for_truncate;
+insert into table_for_truncate select i, 'hello' || i from generate_series(1, 800) f(i);
+delete from table_for_truncate where i >= 700;
+update table_for_truncate set j = 'D' where i <= 200;
+commit;
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'table_for_truncate'::regclass;
+
+create table table_for_truncate_abort(i int, j varchar) with (autovacuum_enabled=false) distributed by (i);
+insert into table_for_truncate_abort select i, 'hello' || i from generate_series(1, 777) f(i);
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'table_for_truncate_abort'::regclass;
+begin;
+savepoint level1;
+savepoint level2;
+savepoint level3;
+update table_for_truncate_abort set j = 'D' where i <= 200;
+delete from table_for_truncate_abort where i >= 700;
+insert into table_for_truncate_abort select i, 'hello' || i from generate_series(778, 800) f(i);
+truncate table_for_truncate_abort;
+insert into table_for_truncate_abort select i, 'hello' || i from generate_series(1, 800) f(i);
+delete from table_for_truncate_abort where i < 700;
+update table_for_truncate_abort set j = 'D' where i >= 200;
+rollback;
+select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
+select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'table_for_truncate_abort'::regclass;
+
+-- Disable AUTOVACUUM launcher
+ALTER SYSTEM SET autovacuum = off;
+select pg_reload_conf();
+

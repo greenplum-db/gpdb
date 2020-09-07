@@ -2025,9 +2025,7 @@ CXformUtils::AddMinAggs
 											);
 
 			pdrgpexpr->Append(pexprProjElemMin);
-#ifdef GPOS_DEBUG
-			BOOL result =
-#endif // GPOS_DEBUG
+			BOOL result GPOS_ASSERTS_ONLY =
 			phmcrcr->Insert(colref, new_colref);
 			GPOS_ASSERT(result);
 		}
@@ -4399,9 +4397,7 @@ CXformUtils::PexprPartialDynamicIndexGet
 			{
 				CColRef *pcrOld = (*pdrgpcrOuter)[ul];
 				CColRef *new_colref = (*pdrgpcrNewOuter)[ul];
-#ifdef GPOS_DEBUG
-				BOOL fInserted =
-#endif
+				BOOL fInserted GPOS_ASSERTS_ONLY =
 				colref_mapping->Insert(GPOS_NEW(mp) ULONG(pcrOld->Id()), new_colref);
 				GPOS_ASSERT(fInserted);
 			}

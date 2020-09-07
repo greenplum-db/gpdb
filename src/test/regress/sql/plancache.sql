@@ -167,7 +167,7 @@ select cachebug();
 -- Test plan_cache_mode
 
 create table test_mode (a int);
-insert into test_mode select 1 from generate_series(1,1000) union all select 2;
+insert into test_mode select 1 from generate_series(1,10000) union all select 2;
 create index on test_mode (a);
 analyze test_mode;
 

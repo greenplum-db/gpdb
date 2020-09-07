@@ -74,11 +74,20 @@ cdbpath_cost_motion(PlannerInfo *root, CdbMotionPath *motionpath)
 	Cost		motioncost;
 	double		recvrows;
 	double		sendrows;
+	double		send_segments;
+	double		recv_segments;
 
-	if (CdbPathLocus_IsReplicated(motionpath->path.locus))
-		motionpath->path.rows = subpath->rows * CdbPathLocus_NumSegments(motionpath->path.locus);
+	if (CdbPathLocus_IsPartitioned(subpath->locus))
+		send_segments = CdbPathLocus_NumSegments(subpath->locus);
 	else
-		motionpath->path.rows = subpath->rows;
+		send_segments = 1;
+
+	if (CdbPathLocus_IsPartitioned(motionpath->path.locus))
+		recv_segments = CdbPathLocus_NumSegments(motionpath->path.locus);
+	else
+		recv_segments = 1;
+
+	motionpath->path.rows = clamp_row_est(subpath->rows * (send_segments / recv_segments));
 
 	cost_per_row = (gp_motion_cost_per_row > 0.0)
 		? gp_motion_cost_per_row
@@ -2565,6 +2574,10 @@ make_splitupdate_path(PlannerInfo *root, Path *subpath, Index rti)
 	rte = planner_rt_fetch(rti, root);
 
 	/* GPDB_96_MERGE_FIXME: Why is this not allowed? */
+	/* GPDB_12_MERGE_FIXME: PostgreSQL fires the DELETE+INSERT trigger, if
+	 * you UPDATE a partitioning key column. We could probably do the same with
+	 * update on the distribution key column.
+	 */
 	if (has_update_triggers(rte->relid))
 		ereport(ERROR,
 				(errcode(ERRCODE_GP_FEATURE_NOT_YET),

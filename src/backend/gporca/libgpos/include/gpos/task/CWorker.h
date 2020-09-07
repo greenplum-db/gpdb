@@ -54,11 +54,6 @@ namespace gpos
 			// check for abort request
 			void CheckForAbort(const CHAR *file, ULONG line_num);
 
-#ifdef GPOS_FPSIMULATOR
-			// simulate abort request, log abort injection
-			void SimulateAbort(const CHAR *file, ULONG line_num);
-#endif // GPOS_FPSIMULATOR
-
 			// no copy ctor
 			CWorker(const CWorker&);
 

@@ -301,18 +301,17 @@ SET enable_hashjoin TO OFF;
 SET enable_mergejoin TO OFF;
 SET enable_nestloop TO ON;
 EXPLAIN (COSTS OFF) SELECT * FROM ttr1 TABLESAMPLE BERNOULLI (50) REPEATABLE (1), ttr2 TABLESAMPLE BERNOULLI (50) REPEATABLE (1) WHERE ttr1.a = ttr2.a;
-                                       QUERY PLAN                                        
------------------------------------------------------------------------------------------
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop
          Join Filter: (ttr1.a = ttr2.a)
          ->  Sample Scan on ttr1
                Sampling: bernoulli ('50'::real) REPEATABLE ('1'::double precision)
-         ->  Materialize
-               ->  Sample Scan on ttr2
-                     Sampling: bernoulli ('50'::real) REPEATABLE ('1'::double precision)
+         ->  Sample Scan on ttr2
+               Sampling: bernoulli ('50'::real) REPEATABLE ('1'::double precision)
  Optimizer: Postgres query optimizer
-(9 rows)
+(8 rows)
 
 SELECT * FROM ttr1 TABLESAMPLE BERNOULLI (50) REPEATABLE (1), ttr2 TABLESAMPLE BERNOULLI (50) REPEATABLE (1) WHERE ttr1.a = ttr2.a;
  a  | b | a  | b 
@@ -322,18 +321,17 @@ SELECT * FROM ttr1 TABLESAMPLE BERNOULLI (50) REPEATABLE (1), ttr2 TABLESAMPLE B
 (2 rows)
 
 EXPLAIN (COSTS OFF) SELECT * FROM ttr1 TABLESAMPLE SYSTEM (50) REPEATABLE (1), ttr2 TABLESAMPLE SYSTEM (50) REPEATABLE (1) WHERE ttr1.a = ttr2.a;
-                                      QUERY PLAN                                      
---------------------------------------------------------------------------------------
+                                   QUERY PLAN                                   
+--------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop
          Join Filter: (ttr1.a = ttr2.a)
          ->  Sample Scan on ttr1
                Sampling: system ('50'::real) REPEATABLE ('1'::double precision)
-         ->  Materialize
-               ->  Sample Scan on ttr2
-                     Sampling: system ('50'::real) REPEATABLE ('1'::double precision)
+         ->  Sample Scan on ttr2
+               Sampling: system ('50'::real) REPEATABLE ('1'::double precision)
  Optimizer: Postgres query optimizer
-(9 rows)
+(8 rows)
 
 SELECT * FROM ttr1 TABLESAMPLE SYSTEM (50) REPEATABLE (1), ttr2 TABLESAMPLE SYSTEM (50) REPEATABLE (1) WHERE ttr1.a = ttr2.a;
  a  | b | a  | b 

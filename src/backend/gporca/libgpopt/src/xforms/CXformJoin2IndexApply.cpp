@@ -758,9 +758,7 @@ CXformJoin2IndexApply::PexprJoinOverCTEConsumer
 	{
 		CColRef *pcrOld = (*pdrgpcrOuter)[ul];
 		CColRef *new_colref = (*pdrgpcrOuterNew)[ul];
-#ifdef GPOS_DEBUG
-		BOOL fInserted =
-#endif
+		BOOL fInserted GPOS_ASSERTS_ONLY =
 		colref_mapping->Insert(GPOS_NEW(mp) ULONG(pcrOld->Id()), new_colref);
 		GPOS_ASSERT(fInserted);
 	}

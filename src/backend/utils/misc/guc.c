@@ -1265,10 +1265,9 @@ static struct config_bool ConfigureNamesBool[] =
 	},
 
 	{
-		{"autovacuum", PGC_SIGHUP, DEFUNCT_OPTIONS,
+		{"autovacuum", PGC_SIGHUP, AUTOVACUUM,
 			gettext_noop("Starts the autovacuum subprocess."),
-			NULL,
-			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
+			NULL
 		},
 		&autovacuum_start_daemon,
 		/*
@@ -2668,10 +2667,10 @@ static struct config_int ConfigureNamesInt[] =
 	},
 
 	{
-		{"autovacuum_naptime", PGC_SIGHUP, DEFUNCT_OPTIONS,
+		{"autovacuum_naptime", PGC_SIGHUP, AUTOVACUUM,
 			gettext_noop("Time to sleep between autovacuum runs."),
 			NULL,
-			GUC_UNIT_S | GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
+			GUC_UNIT_S
 		},
 		&autovacuum_naptime,
 		60, 1, INT_MAX / 1000,
@@ -2688,10 +2687,9 @@ static struct config_int ConfigureNamesInt[] =
 		NULL, NULL, NULL
 	},
 	{
-		{"autovacuum_analyze_threshold", PGC_SIGHUP, DEFUNCT_OPTIONS,
+		{"autovacuum_analyze_threshold", PGC_SIGHUP, AUTOVACUUM,
 			gettext_noop("Minimum number of tuple inserts, updates or deletes prior to analyze."),
-			NULL,
-			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
+			NULL
 		},
 		&autovacuum_anl_thresh,
 		50, 0, INT_MAX,
@@ -3033,10 +3031,9 @@ static struct config_real ConfigureNamesReal[] =
 		NULL, NULL, NULL
 	},
 	{
-		{"autovacuum_analyze_scale_factor", PGC_SIGHUP, DEFUNCT_OPTIONS,
+		{"autovacuum_analyze_scale_factor", PGC_SIGHUP, AUTOVACUUM,
 			gettext_noop("Number of tuple inserts, updates or deletes prior to analyze as a fraction of reltuples."),
-			NULL,
-			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
+			NULL
 		},
 		&autovacuum_anl_scale,
 		0.1, 0.0, 100.0,

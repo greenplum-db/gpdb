@@ -212,9 +212,7 @@ CTranslatorQueryToDXL::CTranslatorQueryToDXL
 			if (cte_query_level < query_level && NULL != cte_list_entry)
 			{
 				cte_list_entry->AddRef();
-#ifdef GPOS_DEBUG
-				BOOL is_res =
-#endif
+				BOOL is_res GPOS_ASSERTS_ONLY =
 				m_query_level_to_cte_map->Insert(GPOS_NEW(m_mp) ULONG(cte_query_level), cte_list_entry);
 				GPOS_ASSERT(is_res);
 			}
@@ -2014,9 +2012,7 @@ CTranslatorQueryToDXL::AddSortingGroupingColumn
 		ULONG *value = GPOS_NEW(m_mp) ULONG(colid);
 
 		// insert idx-colid mapping in the hash map
-#ifdef GPOS_DEBUG
-		BOOL is_res =
-#endif // GPOS_DEBUG
+		BOOL is_res GPOS_ASSERTS_ONLY =
 				sort_grpref_to_colid_mapping->Insert(key, value);
 
 		GPOS_ASSERT(is_res);
@@ -3170,13 +3166,12 @@ CTranslatorQueryToDXL::NoteDistributionPolicyOpclasses
 	// ones, for all hashing within the query.
 	if (rte->rtekind == RTE_RELATION)
 	{
-		Relation rel = gpdb::GetRelation(rte->relid);
+		gpdb::RelationWrapper rel = gpdb::GetRelation(rte->relid);
 		GpPolicy *policy = rel->rd_cdbpolicy;
 
 		// master-only tables
 		if (NULL == policy)
 		{
-			gpdb::CloseRelation(rel);
 			return;
 		}
 
@@ -3211,7 +3206,6 @@ CTranslatorQueryToDXL::NoteDistributionPolicyOpclasses
 					contains_nondefault_hashops = true;
 			}
 		}
-		gpdb::CloseRelation(rel);
 
 		if (contains_nondefault_hashops)
 		{
@@ -4275,9 +4269,7 @@ CTranslatorQueryToDXL::ConstructCTEProducerList
 		CDXLNode *cte_producer_dxlnode = GPOS_NEW(m_mp) CDXLNode(m_mp, lg_cte_prod_dxlop, cte_child_dxlnode);
 		
 		m_dxl_cte_producers->Append(cte_producer_dxlnode);
-#ifdef GPOS_DEBUG
-		BOOL result =
-#endif
+		BOOL result GPOS_ASSERTS_ONLY =
 		m_cteid_at_current_query_level_map->Insert(GPOS_NEW(m_mp) ULONG(lg_cte_prod_dxlop->Id()), GPOS_NEW(m_mp) BOOL(true));
 		GPOS_ASSERT(result);
 		
@@ -4286,9 +4278,7 @@ CTranslatorQueryToDXL::ConstructCTEProducerList
 		if (NULL == cte_list_entry)
 		{
 			cte_list_entry = GPOS_NEW(m_mp) CCTEListEntry (m_mp, cte_query_level, cte, cte_producer_dxlnode);
-#ifdef GPOS_DEBUG
-		BOOL is_res =
-#endif
+		BOOL is_res GPOS_ASSERTS_ONLY =
 			m_query_level_to_cte_map->Insert(GPOS_NEW(m_mp) ULONG(cte_query_level), cte_list_entry);
 			GPOS_ASSERT(is_res);
 		}
@@ -4444,9 +4434,7 @@ CTranslatorQueryToDXL::RemapColIds
 	const ULONG size = from_list_colids->Size();
 	for (ULONG ul = 0; ul < size; ul++)
 	{
-#ifdef GPOS_DEBUG
-		BOOL result =
-#endif // GPOS_DEBUG
+		BOOL result GPOS_ASSERTS_ONLY =
 		old_new_col_mapping->Insert(GPOS_NEW(mp) ULONG(*((*from_list_colids)[ul])), GPOS_NEW(mp) ULONG(*((*to_list_colids)[ul])));
 		GPOS_ASSERT(result);
 	}

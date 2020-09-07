@@ -28,8 +28,13 @@ addons:
             - libapr1-dev
             - libzstd1
             - libzstd1-dev
+            - net-tools
+            - ssh
 
 matrix:
+    allow_failures:
+        - arch: arm64
+    fast_finish: true
     include:
         # OS and Compiler variations
         # ----------------------------------------------------------------
@@ -87,6 +92,31 @@ matrix:
               apt:
                   sources: *common_sources
                   packages: *common_packages
+        # ARM64, Ubuntu Bionic, gcc 8, unit tests
+        # For arm64, disable orca to avoid job timeouts
+        - os: linux
+          arch: arm64
+          dist: bionic
+          compiler: gcc
+          env:
+              - tests=unit T=debug C="--disable-orca"
+              - OVERRIDE_CC="CC=gcc-8" OVERRIDE_CXX="CXX=g++-8"
+          addons:
+              apt:
+                  sources: *common_sources
+                  packages: *common_packages
+        # ARM64, Ubuntu Bionic, gcc 8, installcheck
+        - os: linux
+          arch: arm64
+          dist: bionic
+          compiler: gcc
+          env:
+              - tests=installcheck T=debug C="--disable-orca"
+              - OVERRIDE_CC="CC=gcc-8" OVERRIDE_CXX="CXX=g++-8"
+          addons:
+              apt:
+                  sources: *common_sources
+                  packages: *common_packages
 
 ## ----------------------------------------------------------------------
 ## Build tools
@@ -94,6 +124,9 @@ matrix:
 
 python:
     - "2.7"
+
+# For linux, to prevent a possible crash in gpstop, disable RemoveIPC. See:
+# https://www.postgresql.org/docs/current/kernel-resources.html#SYSTEMD-REMOVEIPC
 
 before_install:
     - eval "${OVERRIDE_CC}"
@@ -118,14 +151,19 @@ before_install:
             ;;
         esac
       fi
+      if [ "${TRAVIS_OS_NAME}" = linux ]; then
+        echo "RemoveIPC=no" | sudo tee -a /etc/systemd/logind.conf
+        sudo systemctl daemon-reload
+        sudo systemctl restart systemd-logind
+      fi
 
 ## ----------------------------------------------------------------------
 ## Install supporting Python modules
 ## ----------------------------------------------------------------------
 
 install:
-    - pip install --user --upgrade pip
-    - pip install --user setuptools
+    - python -m pip install --user --upgrade pip
+    - python -m pip install --user setuptools
 
 ## ----------------------------------------------------------------------
 ## Perform build:
@@ -157,13 +195,17 @@ script:
             --enable-orafce \
             --enable-ic-proxy \
             $C
-        travis_wait 40 make -s
+        travis_wait 50 make -s
         make -s install
         source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
-        make -s unittest-check
-        make -C gpAux/gpdemo cluster
-        source gpAux/gpdemo/gpdemo-env.sh
-        make -C src/test/regress installcheck-small
+        if [ -z "$tests" ] || [ "$tests" = "unit" ]; then
+            make -s unittest-check
+        fi
+        if [ -z "$tests" ] || [ "$tests" = "installcheck" ]; then
+            make -C gpAux/gpdemo cluster
+            source gpAux/gpdemo/gpdemo-env.sh
+            make -C src/test/regress installcheck-small
+        fi
       fi
   - |
       set -eo pipefail
@@ -181,7 +223,7 @@ script:
             --enable-orafce \
             --enable-ic-proxy \
             $C
-        make -s
+        travis_wait 50 make -s
         make -s install
         source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
         make -s unittest-check

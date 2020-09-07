@@ -230,7 +230,7 @@ SELECT a.* FROM MPP_22019_a a  WHERE a.j NOT IN (SELECT j FROM MPP_22019_a a2 wh
 
 -- Simple table.
 create table ddtesttab (i int, j int, k int8) distributed by (k);
-create sequence ddtestseq;
+create sequence ddtestseq cache 1;
 
 insert into ddtesttab values (1, 1, 5);
 insert into ddtesttab values (1, 1, 5 + random()); -- volatile expression as distribution key
@@ -292,6 +292,25 @@ execute p3(1);
 execute p3(1);
 execute p3(1);
 drop table test_prepare;
+
+-- test direct dispatch via gp_segment_id qual
+create table t_test_dd_via_segid(id int);
+insert into t_test_dd_via_segid select * from generate_series(1, 6);
+
+explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=0;
+select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=0;
+
+explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1;
+select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1;
+
+explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=2;
+select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=2;
+
+explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1 or gp_segment_id=2;
+select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1 or gp_segment_id=2;
+
+explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1 or gp_segment_id=2 or gp_segment_id=3;
+select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1 or gp_segment_id=2 or gp_segment_id=3;
 
 -- cleanup
 set test_print_direct_dispatch_info=off;

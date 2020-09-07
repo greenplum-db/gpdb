@@ -154,9 +154,7 @@ CMDAccessorTest::EresUnittest_Basic()
 #endif
 	mda.RetrieveType(mdid_type);
 	
-#ifdef GPOS_DEBUG
-	const IMDScalarOp *md_scalar_op =
-#endif
+	const IMDScalarOp *md_scalar_op GPOS_ASSERTS_ONLY =
 	mda.RetrieveScOp(mdid_op);
 
 	GPOS_ASSERT(IMDType::EcmptL == md_scalar_op->ParseCmpType());
@@ -349,9 +347,7 @@ CMDAccessorTest::EresUnittest_Navigate()
 	// lookup equality operator for function return type
 	IMDId *pmdidEqOp = pimdtype->GetMdidForCmpType(IMDType::EcmptEq);
 
-#ifdef GPOS_DEBUG
-	const IMDScalarOp *md_scalar_op =
-#endif
+	const IMDScalarOp *md_scalar_op GPOS_ASSERTS_ONLY =
 	mda.RetrieveScOp(pmdidEqOp);
 		
 #ifdef GPOS_DEBUG

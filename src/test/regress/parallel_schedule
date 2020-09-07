@@ -131,11 +131,7 @@ test: psql_crosstab select_parallel amutils
 # ----------
 # Another group of parallel tests
 # ----------
-test: select_views portals_p2 cluster dependency guc bitmapops tsearch tsdicts foreign_data window xmlmap functional_deps advisory_lock json jsonb json_encoding indirect_toast equivclass
-
-# Output of the 'combocid' test contains ctid and cmin values, which will
-# differ depending on how many segments are used. Hence disabled in GPDB.
-#test: combocid
+test: select_views portals_p2 cluster dependency guc bitmapops combocid tsearch tsdicts foreign_data window xmlmap functional_deps advisory_lock json jsonb json_encoding indirect_toast equivclass
 
 # 'foreign_key' test is disabled, because it contains several tables with
 # multiple UNIQUE constraints, which is not supported in GPDB.

@@ -147,8 +147,8 @@ explain (costs off)
 
 explain (costs off)
   select * from ec1, ec2 where ff = x1 and ff = '42'::int8;
-                                   QUERY PLAN                                    
----------------------------------------------------------------------------------
+                                     QUERY PLAN                                      
+-------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop
          Join Filter: (ec1.ff = ec2.x1)
@@ -260,31 +260,31 @@ explain (costs off)
      union all
      select ff + 4 as x from ec1) as ss1
   where ss1.x = ec1.f1 and ec1.ff = 42::int8 and ec1.ff = ec1.f1;
-                                     QUERY PLAN                                      
--------------------------------------------------------------------------------------
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop
          Join Filter: (((ss0.ff + 1)) = ec1.f1)
-         ->  Append
-               ->  Subquery Scan on ss0
-                     ->  Append
-                           ->  Bitmap Heap Scan on ec1 ec1_1
-                                 Recheck Cond: (((ff + 2) + 1) = '42'::bigint)
-                                 ->  Bitmap Index Scan on ec1_expr2
-                                       Index Cond: (((ff + 2) + 1) = '42'::bigint)
-                           ->  Bitmap Heap Scan on ec1 ec1_2
-                                 Recheck Cond: (((ff + 3) + 1) = '42'::bigint)
-                                 ->  Bitmap Index Scan on ec1_expr3
-                                       Index Cond: (((ff + 3) + 1) = '42'::bigint)
-               ->  Bitmap Heap Scan on ec1 ec1_3
-                     Recheck Cond: ((ff + 4) = '42'::bigint)
-                     ->  Bitmap Index Scan on ec1_expr4
-                           Index Cond: ((ff + 4) = '42'::bigint)
+         ->  Broadcast Motion 1:3  (slice2; segments: 1)
+               ->  Index Scan using ec1_pkey on ec1
+                     Index Cond: ((ff = '42'::bigint) AND (ff = '42'::bigint))
+                     Filter: (ff = f1)
          ->  Materialize
-               ->  Broadcast Motion 1:3  (slice2; segments: 1)
-                     ->  Index Scan using ec1_pkey on ec1
-                           Index Cond: ((ff = '42'::bigint) AND (ff = '42'::bigint))
-                           Filter: (ff = f1)
+               ->  Append
+                     ->  Subquery Scan on ss0
+                           ->  Append
+                                 ->  Bitmap Heap Scan on ec1 ec1_1
+                                       Recheck Cond: (((ff + 2) + 1) = '42'::bigint)
+                                       ->  Bitmap Index Scan on ec1_expr2
+                                             Index Cond: (((ff + 2) + 1) = '42'::bigint)
+                                 ->  Bitmap Heap Scan on ec1 ec1_2
+                                       Recheck Cond: (((ff + 3) + 1) = '42'::bigint)
+                                       ->  Bitmap Index Scan on ec1_expr3
+                                             Index Cond: (((ff + 3) + 1) = '42'::bigint)
+                     ->  Bitmap Heap Scan on ec1 ec1_3
+                           Recheck Cond: ((ff + 4) = '42'::bigint)
+                           ->  Bitmap Index Scan on ec1_expr4
+                                 Index Cond: ((ff + 4) = '42'::bigint)
  Optimizer: Postgres query optimizer
 (24 rows)
 

@@ -12,7 +12,6 @@
 #include "gpos/base.h"
 #include "gpos/_api.h"
 #include "gpos/common/CAutoP.h"
-#include "gpos/error/CFSimulator.h"
 #include "gpos/error/CMessageRepository.h"
 #include "gpos/error/CLoggerStream.h"
 #include "gpos/io/COstreamString.h"
@@ -160,15 +159,6 @@ void gpos_init(struct gpos_init_params* params) {
 		return;
 	}
 
-#ifdef GPOS_FPSIMULATOR
-	if (GPOS_OK != gpos::CFSimulator::Init())
-	{
-		CMessageRepository::GetMessageRepository()->Shutdown();
-		CWorkerPoolManager::WorkerPoolManager()->Shutdown();
-		CMemoryPoolManager::GetMemoryPoolMgr()->Shutdown();
-	}
-#endif // GPOS_FPSIMULATOR
-
 #ifdef GPOS_DEBUG_COUNTERS
 	CDebugCounter::Init();
 #endif
@@ -295,9 +285,6 @@ void gpos_terminate()
 	CDebugCounter::Shutdown();
 #endif
 #ifdef GPOS_DEBUG
-#ifdef GPOS_FPSIMULATOR
-	CFSimulator::FSim()->Shutdown();
-#endif // GPOS_FPSIMULATOR
 	CMessageRepository::GetMessageRepository()->Shutdown();
 	CWorkerPoolManager::WorkerPoolManager()->Shutdown();
 	CCacheFactory::GetFactory()->Shutdown();

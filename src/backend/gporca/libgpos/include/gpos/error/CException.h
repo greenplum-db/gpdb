@@ -115,13 +115,9 @@ namespace gpos
 				ExmiOutOfStack,
 				ExmiAbortTimeout,
 				ExmiIOError,
-				ExmiNetError,
 				ExmiOverflow,
 				ExmiInvalidDeletion,
 	
-				// unexpected OOM during fault simulation 
-				ExmiUnexpectedOOMDuringFaultSimulation,
-				
 				// sql exceptions
 				ExmiSQLDefault,
 				ExmiSQLNotNullViolation,

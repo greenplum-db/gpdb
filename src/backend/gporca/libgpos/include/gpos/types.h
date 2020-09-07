@@ -34,11 +34,6 @@
 /* wide character string literate */
 #define GPOS_WSZ_LIT(x)		L##x
 
-// failpoint simulation is enabled on debug build
-#ifdef GPOS_DEBUG
-#define GPOS_FPSIMULATOR 1
-#endif // GPOS_DEBUG
-
 namespace gpos
 {
 

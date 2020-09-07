@@ -112,9 +112,7 @@ CCTEInfo::CCTEInfoEntry::AddConsumerCols
 		CColRef *colref = (*colref_array)[ul];
 		if (NULL == m_phmcrulConsumers->Find(colref))
 		{
-#ifdef GPOS_DEBUG
-			BOOL fSuccess =
-#endif // GPOS_DEBUG
+			BOOL fSuccess GPOS_ASSERTS_ONLY =
 				m_phmcrulConsumers->Insert(colref, GPOS_NEW(m_mp) ULONG(ul));
 			GPOS_ASSERT(fSuccess);
 		}
@@ -261,9 +259,7 @@ CCTEInfo::AddCTEProducer
 	COperator *pop = pexprCTEProducer->Pop();
 	ULONG ulCTEId = CLogicalCTEProducer::PopConvert(pop)->UlCTEId();
 
-#ifdef GPOS_DEBUG
-	BOOL fInserted =
-#endif
+	BOOL fInserted GPOS_ASSERTS_ONLY =
 	m_phmulcteinfoentry->Insert(GPOS_NEW(m_mp) ULONG(ulCTEId), GPOS_NEW(m_mp) CCTEInfoEntry(m_mp, pexprProducerToAdd));
 	GPOS_ASSERT(fInserted);
 }
@@ -297,9 +293,7 @@ CCTEInfo::ReplaceCTEProducer
 
 	CExpression *pexprCTEProducerNew = PexprPreprocessCTEProducer(pexprCTEProducer);
 
-#ifdef GPOS_DEBUG
-	BOOL fReplaced =
-#endif
+	BOOL fReplaced GPOS_ASSERTS_ONLY =
 		m_phmulcteinfoentry->Replace(&ulCTEId, GPOS_NEW(m_mp) CCTEInfoEntry(m_mp, pexprCTEProducerNew, pcteinfoentry->FUsed()));
 	GPOS_ASSERT(fReplaced);
 }
@@ -494,9 +488,7 @@ CCTEInfo::IncrementConsumers
 	if (NULL == phmulconsumermap)
 	{
 		phmulconsumermap = GPOS_NEW(m_mp) UlongToConsumerCounterMap(m_mp);
-#ifdef GPOS_DEBUG
-		BOOL fInserted =
-#endif
+		BOOL fInserted GPOS_ASSERTS_ONLY =
 		m_phmulprodconsmap->Insert(GPOS_NEW(m_mp) ULONG(ulParentCTEId), phmulconsumermap);
 		GPOS_ASSERT(fInserted);
 	}
@@ -506,9 +498,7 @@ CCTEInfo::IncrementConsumers
 	if (NULL == pconsumercounter)
 	{
 		// no existing counter - start a new one
-#ifdef GPOS_DEBUG
-		BOOL fInserted =
-#endif
+		BOOL fInserted GPOS_ASSERTS_ONLY =
 		phmulconsumermap->Insert(GPOS_NEW(m_mp) ULONG(ulConsumerId), GPOS_NEW(m_mp) SConsumerCounter(ulConsumerId));
 		GPOS_ASSERT(fInserted);
 	}
@@ -768,9 +758,7 @@ CCTEInfo::PhmulcrConsumerToProducer
 			GPOS_ASSERT(ulPos < pdrgpcrProducer->Size());
 
 			CColRef *pcrProducer = (*pdrgpcrProducer)[ulPos];
-#ifdef GPOS_DEBUG
-			BOOL fSuccess =
-#endif // GPOS_DEBUG
+			BOOL fSuccess GPOS_ASSERTS_ONLY =
 				colref_mapping->Insert(GPOS_NEW(mp) ULONG(colref->Id()), pcrProducer);
 			GPOS_ASSERT(fSuccess);
 		}

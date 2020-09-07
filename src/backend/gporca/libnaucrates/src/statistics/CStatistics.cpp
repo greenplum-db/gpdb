@@ -794,9 +794,7 @@ CStatistics::AddWidthInfoWithRemap
 		{
 			const CDouble *width = col_width_map_iterator.Value();
 			CDouble *width_copy = GPOS_NEW(mp) CDouble(*width);
-#ifdef GPOS_DEBUG
-			BOOL result =
-#endif // GPOS_DEBUG
+			BOOL result GPOS_ASSERTS_ONLY =
 					dest_width->Insert(GPOS_NEW(mp) ULONG(colid), width_copy);
 			GPOS_ASSERT(result);
 		}

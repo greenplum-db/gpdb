@@ -10870,21 +10870,24 @@ explain select count(*) from foo group by cube(a,b);
 LOG:  2019-05-31 15:13:50:374760 PDT,THD000,NOTICE,"Feature not supported: Grouping Sets",
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Grouping Sets
-                                         QUERY PLAN                                         
---------------------------------------------------------------------------------------------
- GroupAggregate  (cost=8018.50..16794.97 rows=10611 width=16)
-   Group Key: a, b
-   Group Key: a
-   Group Key: ()
-   Sort Key: b
-     Group Key: b
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=8018.50..8233.75 rows=86100 width=8)
-         Merge Key: a, b
-         ->  Sort  (cost=8018.50..8233.75 rows=28700 width=8)
-               Sort Key: a, b
-               ->  Seq Scan on foo  (cost=0.00..961.00 rows=28700 width=8)
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Finalize GroupAggregate  (cost=10968.89..11841.18 rows=10611 width=16)
+   Group Key: (GROUPINGSET_ID()), a, b
+   ->  Sort  (cost=10968.89..11122.13 rows=61294 width=16)
+         Sort Key: (GROUPINGSET_ID()), a, b
+         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=2446.06..6094.94 rows=61294 width=16)
+               ->  Partial GroupAggregate  (cost=2446.06..5277.68 rows=20431 width=16)
+                     Group Key: a, b
+                     Group Key: a
+                     Group Key: ()
+                     Sort Key: b
+                       Group Key: b
+                     ->  Sort  (cost=2446.06..2517.81 rows=28700 width=8)
+                           Sort Key: a, b
+                           ->  Seq Scan on foo  (cost=0.00..321.00 rows=28700 width=8)
  Optimizer: Postgres query optimizer
-(12 rows)
+(15 rows)
 
 reset client_min_messages;
 reset log_statement;
@@ -11828,18 +11831,18 @@ DETAIL:  Unknown error: Partially Distributed Data
 explain select count(*) from noexp_hash n join gpexp_hash x on n.a=x.a;
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Unknown error: Partially Distributed Data
-                                                   QUERY PLAN                                                    
------------------------------------------------------------------------------------------------------------------
- Finalize Aggregate  (cost=8.47..8.48 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=8.44..8.47 rows=1 width=8)
-         ->  Partial Aggregate  (cost=8.44..8.45 rows=1 width=8)
-               ->  Hash Join  (cost=4.12..8.31 rows=17 width=0)
+                                                QUERY PLAN                                                 
+-----------------------------------------------------------------------------------------------------------
+ Finalize Aggregate  (cost=3.60..3.61 rows=1 width=8)
+   ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=3.55..3.59 rows=2 width=8)
+         ->  Partial Aggregate  (cost=3.55..3.56 rows=1 width=8)
+               ->  Hash Join  (cost=1.56..3.49 rows=25 width=0)
                      Hash Cond: (n.a = x.a)
-                     ->  Seq Scan on noexp_hash n  (cost=0.00..3.50 rows=17 width=4)
-                     ->  Hash  (cost=3.50..3.50 rows=17 width=4)
-                           ->  Redistribute Motion 2:3  (slice1; segments: 2)  (cost=0.00..3.50 rows=25 width=4)
-                                 Hash Key: x.a
-                                 ->  Seq Scan on gpexp_hash x  (cost=0.00..2.50 rows=25 width=4)
+                     ->  Redistribute Motion 3:2  (slice2; segments: 3)  (cost=0.00..1.58 rows=25 width=4)
+                           Hash Key: n.a
+                           ->  Seq Scan on noexp_hash n  (cost=0.00..1.17 rows=17 width=4)
+                     ->  Hash  (cost=1.25..1.25 rows=25 width=4)
+                           ->  Seq Scan on gpexp_hash x  (cost=0.00..1.25 rows=25 width=4)
  Optimizer: Postgres query optimizer
 (11 rows)
 
@@ -11942,14 +11945,14 @@ INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Unknown error: Partially Distributed Data
                                         QUERY PLAN                                         
 -------------------------------------------------------------------------------------------
- Finalize Aggregate  (cost=5.47..5.48 rows=1 width=8)
-   ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=5.44..5.47 rows=1 width=8)
-         ->  Partial Aggregate  (cost=5.44..5.45 rows=1 width=8)
-               ->  Hash Join  (cost=2.12..5.31 rows=25 width=0)
-                     Hash Cond: (h.a = r.a)
-                     ->  Seq Scan on gpexp_hash h  (cost=0.00..2.50 rows=25 width=4)
-                     ->  Hash  (cost=1.50..1.50 rows=17 width=4)
-                           ->  Seq Scan on gpexp_repl r  (cost=0.00..1.50 rows=50 width=4)
+ Finalize Aggregate  (cost=3.61..3.62 rows=1 width=8)
+   ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=3.56..3.60 rows=2 width=8)
+         ->  Partial Aggregate  (cost=3.56..3.57 rows=1 width=8)
+               ->  Hash Join  (cost=1.56..3.50 rows=25 width=0)
+                     Hash Cond: (r.a = h.a)
+                     ->  Seq Scan on gpexp_repl r  (cost=0.00..1.50 rows=50 width=4)
+                     ->  Hash  (cost=1.25..1.25 rows=25 width=4)
+                           ->  Seq Scan on gpexp_hash h  (cost=0.00..1.25 rows=25 width=4)
  Optimizer: Postgres query optimizer
 (9 rows)
 
@@ -11964,18 +11967,18 @@ DETAIL:  Unknown error: Partially Distributed Data
 explain select count(*) as expect_20 from noexp_hash h join gpexp_repl r on h.a=r.a;
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Unknown error: Partially Distributed Data
-                                                   QUERY PLAN                                                    
------------------------------------------------------------------------------------------------------------------
- Finalize Aggregate  (cost=7.47..7.48 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=7.44..7.47 rows=1 width=8)
-         ->  Partial Aggregate  (cost=7.44..7.45 rows=1 width=8)
-               ->  Hash Join  (cost=3.12..7.31 rows=17 width=0)
-                     Hash Cond: (h.a = r.a)
-                     ->  Seq Scan on noexp_hash h  (cost=0.00..3.50 rows=17 width=4)
-                     ->  Hash  (cost=2.50..2.50 rows=17 width=4)
-                           ->  Redistribute Motion 1:3  (slice1; segments: 1)  (cost=0.00..2.50 rows=50 width=4)
-                                 Hash Key: r.a
-                                 ->  Seq Scan on gpexp_repl r  (cost=0.00..1.50 rows=50 width=4)
+                                                QUERY PLAN                                                 
+-----------------------------------------------------------------------------------------------------------
+ Finalize Aggregate  (cost=3.87..3.88 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=3.81..3.86 rows=3 width=8)
+         ->  Partial Aggregate  (cost=3.81..3.82 rows=1 width=8)
+               ->  Hash Join  (cost=1.38..3.77 rows=17 width=0)
+                     Hash Cond: (r.a = h.a)
+                     ->  Redistribute Motion 1:3  (slice2; segments: 1)  (cost=0.00..2.17 rows=17 width=4)
+                           Hash Key: r.a
+                           ->  Seq Scan on gpexp_repl r  (cost=0.00..1.50 rows=50 width=4)
+                     ->  Hash  (cost=1.17..1.17 rows=17 width=4)
+                           ->  Seq Scan on noexp_hash h  (cost=0.00..1.17 rows=17 width=4)
  Optimizer: Postgres query optimizer
 (11 rows)
 
@@ -12472,4 +12475,69 @@ select * from lossycastlistpart where b::int = 2;
  21 | 1.7
   1 | 2.1
 (4 rows)
+
+--Test lossy casted NEQ on range partitioned table
+drop table if exists sales;
+create table sales(id int, prod_id int, cust_id int, sales_ts timestamp)
+partition by range(sales_ts) (start (timestamp '2010-01-01 00:00:00') end(timestamp '2010-02-02 23:59:59')
+every (interval '1 day'));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_1" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_2" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_3" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_4" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_5" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_6" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_7" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_8" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_9" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_10" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_11" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_12" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_13" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_14" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_15" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_16" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_17" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_18" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_19" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_20" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_21" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_22" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_23" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_24" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_25" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_26" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_27" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_28" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_29" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_30" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_31" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_32" for table "sales"
+NOTICE:  CREATE TABLE will create partition "sales_1_prt_33" for table "sales"
+insert into sales select i, i%100, i%1000, timestamp '2010-01-01 00:00:00' + i * interval '1 day' from generate_series(1,20) i;
+select * from sales where sales_ts::date != '2010-01-05' order by sales_ts;
+ id | prod_id | cust_id |         sales_ts         
+----+---------+---------+--------------------------
+  1 |       1 |       1 | Sat Jan 02 00:00:00 2010
+  2 |       2 |       2 | Sun Jan 03 00:00:00 2010
+  3 |       3 |       3 | Mon Jan 04 00:00:00 2010
+  5 |       5 |       5 | Wed Jan 06 00:00:00 2010
+  6 |       6 |       6 | Thu Jan 07 00:00:00 2010
+  7 |       7 |       7 | Fri Jan 08 00:00:00 2010
+  8 |       8 |       8 | Sat Jan 09 00:00:00 2010
+  9 |       9 |       9 | Sun Jan 10 00:00:00 2010
+ 10 |      10 |      10 | Mon Jan 11 00:00:00 2010
+ 11 |      11 |      11 | Tue Jan 12 00:00:00 2010
+ 12 |      12 |      12 | Wed Jan 13 00:00:00 2010
+ 13 |      13 |      13 | Thu Jan 14 00:00:00 2010
+ 14 |      14 |      14 | Fri Jan 15 00:00:00 2010
+ 15 |      15 |      15 | Sat Jan 16 00:00:00 2010
+ 16 |      16 |      16 | Sun Jan 17 00:00:00 2010
+ 17 |      17 |      17 | Mon Jan 18 00:00:00 2010
+ 18 |      18 |      18 | Tue Jan 19 00:00:00 2010
+ 19 |      19 |      19 | Wed Jan 20 00:00:00 2010
+ 20 |      20 |      20 | Thu Jan 21 00:00:00 2010
+(19 rows)
 

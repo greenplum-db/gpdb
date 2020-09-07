@@ -359,9 +359,7 @@ CPartitionPropagationSpec::SplitPartPredicates
 			CPredicateUtils::ExtractComponents((*pdrgpexprKey)[0], colref, &pexprPartKey, &pexprOther, &cmp_type);
 			GPOS_ASSERT(NULL != pexprOther);
 			pexprOther->AddRef();
-#ifdef GPOS_DEBUG
-			BOOL result =
-#endif // GPOS_DEBUG
+			BOOL result GPOS_ASSERTS_ONLY =
 			phmulexprEqFilter->Insert(GPOS_NEW(mp) ULONG(ul), pexprOther);
 			GPOS_ASSERT(result);
 			pdrgpexprKey->Release();
@@ -370,9 +368,7 @@ CPartitionPropagationSpec::SplitPartPredicates
 		{
 			// Filters
 			// more than one predicate on this key or one non-simple-equality predicate
-#ifdef GPOS_DEBUG
-			BOOL result =
-#endif // GPOS_DEBUG
+			BOOL result GPOS_ASSERTS_ONLY =
 			phmulexprFilter->Insert(GPOS_NEW(mp) ULONG(ul), CPredicateUtils::PexprConjunction(mp, pdrgpexprKey));
 			GPOS_ASSERT(result);
 			continue;

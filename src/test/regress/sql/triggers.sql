@@ -147,7 +147,7 @@ select * from trigtest;
 
 drop table trigtest;
 
-create sequence ttdummy_seq increment 10 start 0 minvalue 0;
+create sequence ttdummy_seq increment 10 start 0 minvalue 0 cache 1;
 
 create table tttest (
 	price_id	int4,

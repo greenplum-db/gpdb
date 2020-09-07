@@ -101,9 +101,7 @@ CScalarProjectElement::PopCopyWithRemappedColumns
 			CName name(m_pcr->Name());
 			colref = col_factory->PcrCreate(m_pcr->RetrieveType(), m_pcr->TypeModifier(), name);
 
-#ifdef GPOS_DEBUG
-			BOOL result =
-#endif // GPOS_DEBUG
+			BOOL result GPOS_ASSERTS_ONLY =
 			colref_mapping->Insert(GPOS_NEW(mp) ULONG(id), colref);
 			GPOS_ASSERT(result);
 		}

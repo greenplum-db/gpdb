@@ -735,7 +735,7 @@ insert into cache_tab select g, g, 0 from generate_series(1, 10) g;
 -- We use a temporary sequence to distinguish between two calls with the same
 -- value in the expected output; gpdiff masks out duplicated NOTICEs, the
 -- sequence makes them different.
-create sequence notice_value_seq;
+create sequence notice_value_seq cache 1;
 create or replace function pg_temp.notice_value(t text) returns bool as
 $$
 begin

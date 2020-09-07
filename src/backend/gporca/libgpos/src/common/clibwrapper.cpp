@@ -498,9 +498,7 @@ gpos::clib::Strerror_r
 	}
 #else  // !_GNU_SOURCE
 	// POSIX.1-2001 standard strerror_r() returns int.
-#ifdef GPOS_DEBUG
-	INT str_err_code =
-#endif
+	INT str_err_code GPOS_ASSERTS_ONLY =
 			strerror_r(errnum, buf, buf_len);
 	GPOS_ASSERT(0 == str_err_code);
 
@@ -734,9 +732,7 @@ gpos::clib::Dladdr
 	DL_INFO *info
 	)
 {
-#ifdef GPOS_DEBUG
-	INT res =
-#endif
+	INT res GPOS_ASSERTS_ONLY =
 	dladdr(addr, info);
 
 	GPOS_ASSERT(0 != res);

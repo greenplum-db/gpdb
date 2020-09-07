@@ -98,8 +98,6 @@ CRefCountTest::EresUnittest_DeletableObjects()
 	CAutoMemoryPool amp;
 	CMemoryPool *mp = amp.Pmp();
 
-	CAutoTraceFlag atfOOM(EtraceSimulateOOM, false);
-
 	CDeletableTest *pdt = GPOS_NEW(mp) CDeletableTest;
 
 	GPOS_TRY

@@ -1888,7 +1888,7 @@ class gpload:
 
                 # Mark this column as having no mapping, which is important
                 # for do_insert()
-                self.from_columns.append([key.lower(),d[key].lower(),None, False])
+                self.from_columns.append([quote_ident(key),d[key].lower(),None, False])
         else:
             self.from_columns = self.into_columns
             self.from_cols_from_user = False
@@ -2758,7 +2758,7 @@ class gpload:
         sql += 'FROM %s) AS from_table ' % self.staging_table_name
         sql += 'LEFT OUTER JOIN %s into_table ' % self.get_qualified_tablename()
         sql += 'ON %s '%' AND '.join(match)
-        where = self.map_stuff('gpload:output:match_columns',lambda x,y:'into_table.%s IS NULL'%x,0)
+        where = self.map_stuff('gpload:output:match_columns',lambda x,y:'(into_table.%s IS NULL OR CAST(into_table.%s AS varchar) = \'\')'%(x,x),0)
         sql += 'WHERE %s ' % ' AND '.join(where)
         sql += 'AND gpload_row_number=1)'
 

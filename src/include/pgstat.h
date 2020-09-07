@@ -21,6 +21,8 @@
 #include "utils/hsearch.h"
 #include "utils/relcache.h"
 
+#include "postmaster/autostats.h"
+
 
 /* ----------
  * Paths for the statistics files (relative to installation's $PGDATA).
@@ -1028,6 +1030,8 @@ extern void pgstat_ping(void);
 extern void pgstat_report_stat(bool force);
 extern void pgstat_vacuum_stat(void);
 extern void pgstat_report_queuestat(void); /* GPDB */
+extern void collect_tabstat(AutoStatsCmdType cmdType, Oid relationOid, uint64 ntuples, bool inFunction); /* GPDB */
+
 extern void pgstat_drop_database(Oid databaseid);
 
 extern void pgstat_clear_snapshot(void);
@@ -1071,6 +1075,7 @@ extern PgStat_TableStatus *find_tabstat_entry(Oid rel_id);
 extern PgStat_BackendFunctionEntry *find_funcstat_entry(Oid func_id);
 
 extern void pgstat_report_resgroup(Oid groupid);
+extern void gp_pgstat_report_tabstat(AutoStatsCmdType cmdtype, Oid reloid, uint64 tuples);
 
 extern void pgstat_initstats(Relation rel);
 

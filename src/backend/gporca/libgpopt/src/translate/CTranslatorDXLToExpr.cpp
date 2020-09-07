@@ -238,9 +238,7 @@ CTranslatorDXLToExpr::Pexpr
 		CDXLLogicalCTEProducer *pdxlopCTEProducer = CDXLLogicalCTEProducer::Cast(pdxlnCTE->GetOperator());
 
 		pdxlnCTE->AddRef();
-#ifdef GPOS_DEBUG
-		BOOL fres =
-#endif // GPOS_DEBUG
+		BOOL fres GPOS_ASSERTS_ONLY =
 				m_phmulpdxlnCTEProducer->Insert(GPOS_NEW(m_mp) ULONG(pdxlopCTEProducer->Id()), pdxlnCTE);
 		GPOS_ASSERT(fres);
 	}
@@ -1046,9 +1044,7 @@ CTranslatorDXLToExpr::PcrCreate
 
 	if (fStoreMapping)
 	{
-#ifdef GPOS_DEBUG
-		BOOL result =
-#endif // GPOS_DEBUG
+		BOOL result GPOS_ASSERTS_ONLY =
 				m_phmulcr->Insert(GPOS_NEW(m_mp) ULONG(colid), new_colref);
 
 		GPOS_ASSERT(result);
@@ -1121,9 +1117,7 @@ CTranslatorDXLToExpr::ConstructDXLColId2ColRefMapping
 
 		// copy key
 		ULONG *pulKey = GPOS_NEW(m_mp) ULONG(pdxlcd->Id());
-#ifdef GPOS_DEBUG
-		BOOL result =
-#endif // GPOS_DEBUG
+		BOOL result GPOS_ASSERTS_ONLY =
 		m_phmulcr->Insert(pulKey, colref);
 
 		GPOS_ASSERT(result);
@@ -1366,9 +1360,7 @@ CTranslatorDXLToExpr::PexprLogicalCTEConsumer
 		ULONG *pulColId = GPOS_NEW(m_mp) ULONG(*(*pdrgpulCols)[ul]);
 		CColRef *colref = (*pdrgpcrConsumer)[ul];
 
-#ifdef GPOS_DEBUG
-		BOOL result =
-#endif // GPOS_DEBUG
+		BOOL result GPOS_ASSERTS_ONLY =
 		m_phmulcr->Insert(pulColId, colref);
 		GPOS_ASSERT(result);
 	}
@@ -1397,9 +1389,7 @@ CTranslatorDXLToExpr::UlMapCTEId
 	{
 		pulNewId = GPOS_NEW(m_mp) ULONG(COptCtxt::PoctxtFromTLS()->Pcteinfo()->next_id());
 
-#ifdef GPOS_DEBUG
-		BOOL fInserted =
-#endif
+		BOOL fInserted GPOS_ASSERTS_ONLY =
 		m_phmululCTE->Insert(GPOS_NEW(m_mp) ULONG(ulIdOld), pulNewId);
 		GPOS_ASSERT(fInserted);
 	}
@@ -1753,9 +1743,7 @@ CTranslatorDXLToExpr::PexprLogicalSeqPr
 			CScalarProjectElement *popScPrEl = GPOS_NEW(m_mp) CScalarProjectElement(m_mp, colref);
 
 			// store colid -> colref mapping
-#ifdef GPOS_DEBUG
-		BOOL fInserted =
-#endif
+		BOOL fInserted GPOS_ASSERTS_ONLY =
 			m_phmulcr->Insert(GPOS_NEW(m_mp) ULONG(pdxlopPrEl->Id()), colref);
 			GPOS_ASSERT(fInserted);
 
@@ -1769,9 +1757,7 @@ CTranslatorDXLToExpr::PexprLogicalSeqPr
 			{
 				CExpressionArray *pdrgpexprNew = GPOS_NEW(m_mp) CExpressionArray(m_mp);
 				pdrgpexprNew->Append(pexprProjElem);
-#ifdef GPOS_DEBUG
-			BOOL fInsert =
-#endif
+			BOOL fInsert GPOS_ASSERTS_ONLY =
 				phmulpdrgpexpr->Insert(GPOS_NEW(m_mp) ULONG(ulSpecPos), pdrgpexprNew);
 				GPOS_ASSERT(fInsert);
 			}
@@ -3923,9 +3909,7 @@ CTranslatorDXLToExpr::PexprScalarProjElem
 	CColRef *colref = m_pcf->PcrCreate(pmdtype, popScalar->TypeModifier(), name);
 	
 	// store colid -> colref mapping
-#ifdef GPOS_DEBUG
-	BOOL fInserted =
-#endif
+	BOOL fInserted GPOS_ASSERTS_ONLY =
 	m_phmulcr->Insert(GPOS_NEW(m_mp) ULONG(pdxlopPrEl->Id()), colref);
 	
 	GPOS_ASSERT(fInserted);

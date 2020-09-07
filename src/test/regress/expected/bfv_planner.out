@@ -424,16 +424,17 @@ t_hashdist,
 where x.a + y.a > random();
                              QUERY PLAN                              
 ---------------------------------------------------------------------
- Nested Loop
+ Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop
          Join Filter: (((a.a + a_1.a))::double precision > random())
-         ->  Function Scan on generate_series a
          ->  Function Scan on generate_series a_1
-   ->  Materialize
-         ->  Gather Motion 3:1  (slice1; segments: 3)
-               ->  Seq Scan on t_hashdist
+         ->  Materialize
+               ->  Nested Loop
+                     ->  Function Scan on generate_series a
+                     ->  Materialize
+                           ->  Seq Scan on t_hashdist
  Optimizer: Postgres query optimizer
-(9 rows)
+(10 rows)
 
 ---- sublink & subquery
 explain (costs off) select * from t_hashdist where a > All (select random() from generate_series(1, 10));
@@ -551,17 +552,16 @@ explain (costs off) select * from t_hashdist cross join (select a, count(1) as s
 
 -- limit
 explain (costs off) select * from t_hashdist cross join (select * from generate_series(1, 10) limit 1) x;
-                           QUERY PLAN                           
-----------------------------------------------------------------
+                        QUERY PLAN                        
+----------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop
+         ->  Broadcast Motion 1:3  (slice2; segments: 1)
+               ->  Limit
+                     ->  Function Scan on generate_series
          ->  Seq Scan on t_hashdist
-         ->  Materialize
-               ->  Broadcast Motion 1:3  (slice2; segments: 1)
-                     ->  Limit
-                           ->  Function Scan on generate_series
  Optimizer: Postgres query optimizer
-(8 rows)
+(7 rows)
 
 -- start_ignore
 drop table if exists bfv_planner_x;

@@ -430,9 +430,7 @@ CColumnFactory::AddComputedToUsedColsMap
 	CColRefSet *pcrsUsed = pexpr->DeriveUsedColumns();
 	if (NULL != pcrsUsed && 0 < pcrsUsed->Size())
 	{
-#ifdef GPOS_DEBUG
-		BOOL fres =
-#endif // GPOS_DEBUG
+		BOOL fres GPOS_ASSERTS_ONLY =
 			m_phmcrcrs->Insert(pcrComputedCol, GPOS_NEW(m_mp) CColRefSet(m_mp, *pcrsUsed));
 		GPOS_ASSERT(fres);
 	}

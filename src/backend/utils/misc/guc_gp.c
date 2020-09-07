@@ -3516,7 +3516,7 @@ struct config_int ConfigureNamesInt_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_UNIT_S
 		},
 		&gp_snapshotadd_timeout,
-		10, 0, INT_MAX,
+		30, 0, INT_MAX,
 		NULL, NULL, NULL
 	},
 

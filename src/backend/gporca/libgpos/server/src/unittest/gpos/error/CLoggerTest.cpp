@@ -61,14 +61,8 @@ CLoggerTest::EresUnittest_Basic()
 	GPOS_TRACE(GPOS_WSZ_LIT("Log trace message as built string"));
 	GPOS_TRACE_FORMAT("Log trace message as %s %s", "formatted", "string");
 
-	{
-		// disable Abort simulation;
-		// simulation leads to self-deadlock while trying to log injection
-		CAutoTraceFlag atfSet(EtraceSimulateAbort, false);
-
-		// log warning message
-		GPOS_WARNING(CException::ExmaSystem, CException::ExmiDummyWarning, "Foo");
-	}
+	// log warning message
+	GPOS_WARNING(CException::ExmaSystem, CException::ExmiDummyWarning, "Foo");
 
 	return GPOS_OK;
 }

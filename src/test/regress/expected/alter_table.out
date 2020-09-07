@@ -847,7 +847,8 @@ DETAIL:  Distribution key column "test" is not included in the constraint.
 -- this errors out in Greenplum for a different reason: we don't support
 -- SET DATA TYPE on an indexed column yet
 alter table atacc1 alter column test type integer using 0;
-ERROR:  relation "atacc_test1" already exists  (seg2 127.0.1.1:25434 pid=8596)
+ERROR:  cannot alter column with primary key or unique constraint
+HINT:  DROP the constraint first, and recreate it after the ALTER
 drop table atacc1;
 -- let's do one where the unique constraint fails when added
 create table atacc1 ( test int ) distributed by (test);
@@ -2943,6 +2944,8 @@ NOTICE:  drop cascades to table test_drop_constr_child
 --
 ALTER TABLE IF EXISTS tt8 ADD COLUMN f int;
 NOTICE:  relation "tt8" does not exist, skipping
+ALTER TABLE IF EXISTS tt8 SET DISTRIBUTED BY(f);
+NOTICE:  relation "tt8" does not exist, skipping
 ALTER TABLE IF EXISTS tt8 ADD CONSTRAINT xxx PRIMARY KEY(f);
 NOTICE:  relation "tt8" does not exist, skipping
 ALTER TABLE IF EXISTS tt8 ADD CHECK (f BETWEEN 0 AND 10);
@@ -2956,8 +2959,8 @@ NOTICE:  relation "tt8" does not exist, skipping
 CREATE TABLE tt8(a int);
 CREATE SCHEMA alter2;
 ALTER TABLE IF EXISTS tt8 ADD COLUMN f int;
+ALTER TABLE IF EXISTS tt8 SET DISTRIBUTED BY(f);
 ALTER TABLE IF EXISTS tt8 ADD CONSTRAINT xxx PRIMARY KEY(f);
-NOTICE:  updating distribution policy to match new PRIMARY KEY
 ALTER TABLE IF EXISTS tt8 ADD CHECK (f BETWEEN 0 AND 10);
 ALTER TABLE IF EXISTS tt8 ALTER COLUMN f SET DEFAULT 0;
 ALTER TABLE IF EXISTS tt8 RENAME COLUMN f TO f1;

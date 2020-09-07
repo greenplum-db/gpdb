@@ -380,9 +380,7 @@ CSyncHashtableTest::EresUnittest_NonConcurrentIteration()
 	{
 		SElemHashtableIterAccessor htitacc(shtit);
 
-#ifdef GPOS_DEBUG
-		SElem *pelem =
-#endif	// GPOS_DEBUG
+		SElem *pelem GPOS_ASSERTS_ONLY =
 			htitacc.Value();
 
 		GPOS_ASSERT(NULL != pelem);

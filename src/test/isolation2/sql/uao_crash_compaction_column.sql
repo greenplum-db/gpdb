@@ -71,7 +71,10 @@ include: helpers/server_helpers.sql;
 1:UPDATE crash_before_cleanup_phase SET b = b+10 WHERE a=26;
 1:SELECT * FROM crash_before_cleanup_phase ORDER BY a,b;
 -- crash_vacuum_in_appendonly_insert
-1:SELECT segno,column_num,physical_segno,tupcount,modcount,state FROM gp_toolkit.__gp_aocsseg('crash_vacuum_in_appendonly_insert');
+-- verify the old segment files are still visible after the vacuum is aborted.
+1:SELECT segno,column_num,physical_segno,tupcount,modcount,state FROM gp_toolkit.__gp_aocsseg('crash_vacuum_in_appendonly_insert') where segno = 1;
+-- verify the new segment files contain no tuples.
+1:SELECT sum(tupcount) FROM gp_toolkit.__gp_aocsseg('crash_vacuum_in_appendonly_insert') where segno = 2;
 1:VACUUM crash_vacuum_in_appendonly_insert;
 1:SELECT segno,column_num,physical_segno,tupcount,modcount,state FROM gp_toolkit.__gp_aocsseg('crash_vacuum_in_appendonly_insert');
 1:INSERT INTO crash_vacuum_in_appendonly_insert VALUES(21, 1, 'c'), (26, 1, 'c');

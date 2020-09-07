@@ -302,9 +302,7 @@ CReqdPropPlan::PpfmCombineDerived
 		BOOL fCopied = ppfmDerived->FCopyPartFilter(mp, scan_id, prppInput->Pepp()->PpfmDerived(), NULL);
 		if (fCopied)
 		{
-#ifdef GPOS_DEBUG
-			BOOL fSet =
-#endif // GPOS_DEBUG
+			BOOL fSet GPOS_ASSERTS_ONLY =
 				pbs->ExchangeSet(scan_id);
 			GPOS_ASSERT(!fSet);
 		}
@@ -325,9 +323,7 @@ CReqdPropPlan::PpfmCombineDerived
 				BOOL fCopied = ppfmDerived->FCopyPartFilter(mp, scan_id, pdpplan->Ppfm(), NULL);
 				if (fCopied)
 				{
-#ifdef GPOS_DEBUG
-					BOOL fSet =
-#endif // GPOS_DEBUG
+					BOOL fSet GPOS_ASSERTS_ONLY =
 						pbs->ExchangeSet(scan_id);
 					GPOS_ASSERT(!fSet);
 				}
