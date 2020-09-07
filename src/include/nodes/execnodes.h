@@ -2649,6 +2649,7 @@ typedef struct TupleSplitState
 	Bitmapset       **dqa_split_bms;
 
 	ExprState       **agg_filter_array; /* DQA filter which push down from aggref */
+	int             *dqa_id_array; /* DQA id for each each split tuple */
 } TupleSplitState;
 
 typedef struct AggExprIdState

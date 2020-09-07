@@ -80,6 +80,7 @@ TupleSplitState *ExecInitTupleSplit(TupleSplit *node, EState *estate, int eflags
 	tup_spl_state->numDisDQAs = list_length(node->dqa_expr_lst);
 	tup_spl_state->dqa_split_bms = palloc0(sizeof(Bitmapset *) * tup_spl_state->numDisDQAs);
 	tup_spl_state->agg_filter_array = palloc0(sizeof(ExprState *) * tup_spl_state->numDisDQAs);
+	tup_spl_state->dqa_id_array = palloc0( sizeof(int) * tup_spl_state->numDisDQAs);
 
 	int i = 0;
 	ListCell *lc;
@@ -99,6 +100,7 @@ TupleSplitState *ExecInitTupleSplit(TupleSplit *node, EState *estate, int eflags
 
 		/* init filter expr */
 		tup_spl_state->agg_filter_array[i] = ExecInitExpr(dqaExpr->agg_filter, (PlanState *)tup_spl_state);
+		tup_spl_state->dqa_id_array[i] = dqaExpr->agg_expr_id;
 		i ++;
 	}
 

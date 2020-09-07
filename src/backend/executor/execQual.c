@@ -5139,19 +5139,14 @@ static Datum ExecEvalAggExprId(AggExprIdState *exprstate,
 {
 	Assert(NULL != exprstate);
 	Assert(NULL != isNull);
-	if (IsA(exprstate->parent, TupleSplitState))
-	{
-		TupleSplitState *tsState = (TupleSplitState *)exprstate->parent;
+	Assert(IsA(exprstate->parent, TupleSplitState));
 
-		*isNull = false;
-		*isDone = ExprSingleResult;
+	TupleSplitState *tsState = (TupleSplitState *)exprstate->parent;
 
-		return Int32GetDatum(tsState->currentExprId + 1);
-	}
-
-	*isNull = true;
+	*isNull = false;
 	*isDone = ExprSingleResult;
-	return Int32GetDatum(0);
+
+	return Int32GetDatum(tsState->dqa_id_array[tsState->currentExprId]);
 }
 
 
