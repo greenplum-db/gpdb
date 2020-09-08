@@ -11,7 +11,7 @@ drop external table if exists gpfdist_ssl_stop;
 -- 'gpfdists' protocol
 -- --------------------------------------
 CREATE EXTERNAL WEB TABLE gpfdist_ssl_start (x text)
-execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data --ssl @abs_srcdir@/data/gpfdist_ssl/certs_multiCA </dev/null >/dev/null 2>&1 &); for i in `seq 1 60`; do curl 127.0.0.1:7070 >/dev/null 2>&1 && break; sleep 1; done; ps -A -o pid,comm |grep [g]pfdist |grep -v postgres:) '
+execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data --ssl @abs_srcdir@/data/gpfdist_ssl/certs_multiCA </dev/null >/dev/null 2>&1 &); for i in `seq 1 60`; do curl -k https://localhost:7070 >/dev/null 2>&1; [ $? -ne 7 ] && break; sleep 1; done; ps -A -o pid,comm |grep [g]pfdist |grep -v postgres:) '
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 
@@ -49,7 +49,7 @@ INSERT INTO tbl_on_heap VALUES
 ('ccc','twoc','shpits','2011-06-01 12:30:30',23,732,834567,45.67,789.123,7.12345,123.456789 );
 DROP EXTERNAL TABLE IF EXISTS tbl;
 CREATE WRITABLE EXTERNAL TABLE tbl (s1 text, s2 text, s3 text, dt timestamp,n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)
-LOCATION ('gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl2.tbl')
+LOCATION ('gpfdists://localhost:7070/gpfdist_ssl/tbl2.tbl')
 FORMAT 'TEXT' (DELIMITER '|' );
 INSERT INTO tbl SELECT * FROM tbl_on_heap;
 SELECT * FROM tbl_on_heap ORDER BY s1;
@@ -63,7 +63,7 @@ CREATE TABLE tbl_on_heap2 (
             n5 numeric, n6 real, n7 double precision);
 DROP EXTERNAL TABLE IF EXISTS tbl2;
 CREATE EXTERNAL TABLE tbl2 (s1 text, s2 text, s3 text, dt timestamp,n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)
-LOCATION ('gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl2.tbl')
+LOCATION ('gpfdists://localhost:7070/gpfdist_ssl/tbl2.tbl')
 FORMAT 'TEXT' (DELIMITER '|' );
 INSERT INTO tbl_on_heap2 SELECT * FROM tbl2;
 SELECT * FROM tbl_on_heap2 ORDER BY s1;
@@ -77,7 +77,7 @@ CREATE TABLE tbl_on_heap (
             n5 numeric, n6 real, n7 double precision);
 DROP EXTERNAL TABLE IF EXISTS tbl;
 CREATE EXTERNAL TABLE tbl (s1 text, s2 text, s3 text, dt timestamp,n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)
-LOCATION ('gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl','gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl2.tbl')
+LOCATION ('gpfdists://localhost:7070/gpfdist_ssl/tbl1.tbl','gpfdists://localhost:7070/gpfdist_ssl/tbl2.tbl')
 FORMAT 'TEXT' (DELIMITER '|' );
 INSERT INTO tbl_on_heap SELECT * FROM tbl;
 SELECT * FROM tbl_on_heap ORDER BY s1;
@@ -90,7 +90,7 @@ SELECT * FROM tbl_on_heap ORDER BY s1;
 -- client cert changed
 DROP EXTERNAL TABLE IF EXISTS tbl;
 CREATE EXTERNAL TABLE tbl (s1 text, s2 text, s3 text, dt timestamp,n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)
-LOCATION ('gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl')
+LOCATION ('gpfdists://localhost:7070/gpfdist_ssl/tbl1.tbl')
 FORMAT 'TEXT' (DELIMITER '|' );
 SELECT * FROM tbl;
 
