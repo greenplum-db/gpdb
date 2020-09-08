@@ -945,10 +945,10 @@ standard_ProcessUtility(PlannedStmt *pstmt,
 				switch (stmt->kind)
 				{
 					case REINDEX_OBJECT_INDEX:
-						ReindexIndex(stmt);
+						ReindexIndex(stmt, isTopLevel);
 						break;
 					case REINDEX_OBJECT_TABLE:
-						ReindexTable(stmt);
+						ReindexTable(stmt, isTopLevel);
 						break;
 					case REINDEX_OBJECT_SCHEMA:
 					case REINDEX_OBJECT_SYSTEM:

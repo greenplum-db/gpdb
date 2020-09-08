@@ -37,17 +37,16 @@ DELETE FROM reindex_crtabforadd_part_aoco_btree  WHERE id < 12;
 DELETE 8
 1: BEGIN;
 BEGIN
-2: BEGIN;
-BEGIN
-1: REINDEX TABLE  reindex_crtabforadd_part_aoco_btree;
-REINDEX
-2&: alter table reindex_crtabforadd_part_aoco_btree add default partition part_others with(appendonly=true, orientation=column);  <waiting ...>
+1: LOCK reindex_crtabforadd_part_aoco_btree IN ACCESS EXCLUSIVE MODE;
+LOCK
+2&: REINDEX TABLE  reindex_crtabforadd_part_aoco_btree;  <waiting ...>
+3&: alter table reindex_crtabforadd_part_aoco_btree add default partition part_others with(appendonly=true, orientation=column);  <waiting ...>
 1: COMMIT;
 COMMIT
 2<:  <... completed>
+REINDEX
+3<:  <... completed>
 ALTER
-2: COMMIT;
-COMMIT
 3: Insert into reindex_crtabforadd_part_aoco_btree values(29,'2013-04-22',12.52);
 INSERT 1
 3: select count(*) from reindex_crtabforadd_part_aoco_btree where id = 29;
