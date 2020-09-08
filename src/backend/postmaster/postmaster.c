@@ -5548,6 +5548,11 @@ sigusr1_handler(SIGNAL_ARGS)
 		signal_child(FtsProbePID(), SIGINT);
 	}
 
+	if (CheckPostmasterSignal(PMSIGNAL_WAKEN_DTX_RECOVERY) && DtxRecoveryPID() != 0)
+	{
+		signal_child(DtxRecoveryPID(), SIGINT);
+	}
+
 	if (CheckPostmasterSignal(PMSIGNAL_ADVANCE_STATE_MACHINE) &&
 		(pmState == PM_WAIT_BACKUP || pmState == PM_WAIT_BACKENDS))
 	{
