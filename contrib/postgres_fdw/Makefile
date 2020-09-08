@@ -14,7 +14,7 @@ SHLIB_LINK_INTERNAL = -Wl,--exclude-libs=libpq.a -Wl,-Bstatic $(libpq) -Wl,-Bdyn
 EXTENSION = postgres_fdw
 DATA = postgres_fdw--1.0.sql
 
-REGRESS = postgres_fdw
+REGRESS = gp2pg_postgres_fdw
 REGRESS_OPTS = --load-extension=$(EXTENSION)
 
 # the db name is hard-coded in the tests
