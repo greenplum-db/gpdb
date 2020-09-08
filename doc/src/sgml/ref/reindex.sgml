@@ -84,7 +84,9 @@ REINDEX [ ( VERBOSE ) ] { INDEX | TABLE | SCHEMA | DATABASE | SYSTEM } [ CONCURR
     <term><literal>INDEX</literal></term>
     <listitem>
      <para>
-      Recreate the specified index.
+      Recreate the specified index. This form of <command>REINDEX</command>
+      cannot be executed inside a transaction block when used with a
+      partitioned index.
      </para>
     </listitem>
    </varlistentry>
@@ -95,6 +97,8 @@ REINDEX [ ( VERBOSE ) ] { INDEX | TABLE | SCHEMA | DATABASE | SYSTEM } [ CONCURR
      <para>
       Recreate all indexes of the specified table.  If the table has a
       secondary <quote>TOAST</quote> table, that is reindexed as well.
+      This form of <command>REINDEX</command> cannot be executed inside a
+      transaction block when used with a partitioned table.
      </para>
     </listitem>
    </varlistentry>
@@ -251,8 +255,11 @@ REINDEX [ ( VERBOSE ) ] { INDEX | TABLE | SCHEMA | DATABASE | SYSTEM } [ CONCURR
   </para>
 
   <para>
-   Reindexing partitioned tables or partitioned indexes is not supported.
-   Each individual partition can be reindexed separately instead.
+   Reindexing partitioned indexes or partitioned tables is supported
+   with <command>REINDEX INDEX</command> or <command>REINDEX TABLE</command>,
+   respectively. Each partition of the specified partitioned relation is
+   reindexed in a separate transaction. Those commands cannot be used inside
+   a transaction block when working on a partitioned table or index.
   </para>
 
   <refsect2 id="sql-reindex-concurrently">

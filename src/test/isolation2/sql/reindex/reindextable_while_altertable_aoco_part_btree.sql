@@ -26,12 +26,12 @@ select c_relname, 1 as have_same_number_of_rows from before_reindex_crtabforalte
 
 DELETE FROM reindex_crtabforalter_part_aoco_btree  WHERE id < 12;
 1: BEGIN;
-2: BEGIN;
-1: REINDEX TABLE  reindex_crtabforalter_part_aoco_btree;
-2&: alter table reindex_crtabforalter_part_aoco_btree drop column amt;
+1: LOCK reindex_crtabforalter_part_aoco_btree IN ACCESS EXCLUSIVE MODE;
+2&: REINDEX TABLE  reindex_crtabforalter_part_aoco_btree;
+3&: alter table reindex_crtabforalter_part_aoco_btree drop column amt;
 1: COMMIT;
 2<:
-2: COMMIT;
+3<:
 3: select count(*) from reindex_crtabforalter_part_aoco_btree where id = 29;
 3: set enable_seqscan=false;
 3: set enable_indexscan=true;

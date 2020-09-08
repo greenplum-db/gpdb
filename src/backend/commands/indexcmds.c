@@ -99,10 +99,11 @@ static char *ChooseIndexNameAddition(List *colnames);
 static void RangeVarCallbackForReindexIndex(const RangeVar *relation,
 											Oid relId, Oid oldRelId, void *arg);
 static bool ReindexRelationConcurrently(Oid relationOid, int options);
-static void ReindexPartitionedIndex(Relation parentIdx);
-static void update_relispartition(Oid relationId, bool newval);
 
-static void ReindexRelationList(List *relids, int options, bool concurrent, bool multiple);
+static void ReindexPartitions(Oid relid, int options, bool concurrent, bool isTopLevel);
+static void ReindexMultipleInternal(List *relids, int options, bool concurrent);
+static void reindex_error_callback(void *args);
+static void update_relispartition(Oid relationId, bool newval);
 
 /*
  * callback argument type for RangeVarCallbackForReindexIndex()
@@ -199,6 +200,16 @@ cdb_sync_indcheckxmin_with_segments(Oid indexRelationId)
 		heap_close(pg_index, RowExclusiveLock);
 	}
 }
+
+/*
+ * callback arguments for reindex_error_callback()
+ */
+typedef struct ReindexErrorInfo
+{
+	char	   *relname;
+	char	   *relnamespace;
+	char		relkind;
+} ReindexErrorInfo;
 
 /*
  * CheckIndexCompatible
@@ -2660,15 +2671,33 @@ ChooseIndexColumnNames(List *indexElems)
  *		Recreate a specific index.
  */
 void
-ReindexIndex(ReindexStmt *stmt)
+ReindexIndex(ReindexStmt *stmt, bool isTopLevel)
 {
 	RangeVar   *indexRelation = stmt->relation;
 	int			options = stmt->options;
 	bool		concurrent = stmt->concurrent;
 	struct ReindexIndexCallbackState state;
 	Oid			indOid;
-	Relation	irel;
 	char		persistence;
+	char		relkind;
+
+	/*
+	 * On QE, we already know the index relation oid since we set it before
+	 * dispatch the reindex statement.
+	 * Other checks should already done on QD when calling RangeVarGetRelidExtended.
+	 */
+	if (Gp_role == GP_ROLE_EXECUTE)
+	{
+		Assert(OidIsValid(stmt->relid) && !concurrent);
+
+		LockRelationOid(stmt->relid, AccessExclusiveLock);
+		persistence = get_rel_persistence(stmt->relid);
+
+		Assert(get_rel_relkind(stmt->relid) == RELKIND_INDEX);
+
+		reindex_index(stmt->relid, false, persistence, options);
+		return;
+	}
 
 	/*
 	 * Find and lock index, and check permissions on table; use callback to
@@ -2684,28 +2713,37 @@ ReindexIndex(ReindexStmt *stmt)
 									  &state);
 
 	/*
-	 * Obtain the current persistence of the existing index.  We already hold
-	 * lock on the index.
+	 * Obtain the current persistence and kind of the existing index.  We
+	 * already hold a lock on the index.
 	 */
-	irel = index_open(indOid, NoLock);
+	persistence = get_rel_persistence(indOid);
+	relkind = get_rel_relkind(indOid);
 
-	if (irel->rd_rel->relkind == RELKIND_PARTITIONED_INDEX)
-	{
-		ReindexPartitionedIndex(irel);
-		return;
-	}
 
-	persistence = irel->rd_rel->relpersistence;
-	index_close(irel, NoLock);
-
-	if (concurrent)
+	if (relkind == RELKIND_PARTITIONED_INDEX)
+		ReindexPartitions(indOid, options, concurrent, isTopLevel);
+	else if (concurrent &&
+			 persistence != RELPERSISTENCE_TEMP)
 		ReindexRelationConcurrently(indOid, options);
 	else
 		reindex_index(indOid, false, persistence, options);
 
-	if (Gp_role == GP_ROLE_DISPATCH)
+	/*
+	 * Reindex on partitioned index will do the reindex for each index in
+	 * it's own transaction, so dispatch the statement under ReindexPartitions.
+	 */
+	if (Gp_role == GP_ROLE_DISPATCH && relkind != RELKIND_PARTITIONED_INDEX)
 	{
-		CdbDispatchUtilityStatement((Node *) stmt,
+		ReindexStmt	   *qestmt;
+
+		qestmt = makeNode(ReindexStmt);
+		qestmt->kind = REINDEX_OBJECT_INDEX;
+		qestmt->relation = NULL;
+		qestmt->options = options;
+		qestmt->concurrent = concurrent;
+		qestmt->relid = indOid;
+
+		CdbDispatchUtilityStatement((Node *) qestmt,
 									DF_CANCEL_ON_ERROR |
 									DF_WITH_SNAPSHOT,
 									GetAssignedOidsForDispatch(),
@@ -2788,7 +2826,7 @@ RangeVarCallbackForReindexIndex(const RangeVar *relation,
  *		Recreate all indexes of a table (and of its toast table, if any)
  */
 Oid
-ReindexTable(ReindexStmt *stmt)
+ReindexTable(ReindexStmt *stmt, bool isTopLevel)
 {
 	RangeVar   *relation = stmt->relation;
 	int			options = stmt->options;
@@ -2796,6 +2834,11 @@ ReindexTable(ReindexStmt *stmt)
 	Oid			heapOid;
 	bool		result;
 
+	/*
+	 * On QE, we already know the table relation oid since we set it before
+	 * dispatch the reindex statement. reindex_relation will take care of the lock directly.
+	 * Other checks should already done on QD when calling RangeVarGetRelidExtended.
+	 */
 	if (Gp_role == GP_ROLE_EXECUTE)
 	{
 		reindex_relation(stmt->relid,
@@ -2805,33 +2848,23 @@ ReindexTable(ReindexStmt *stmt)
 		return stmt->relid;
 	}
 
-	/* The lock level used here should match reindex_relation(). */
+	/*
+	 * The lock level used here should match reindex_relation().
+	 *
+	 * If it's a temporary table, we will perform a non-concurrent reindex,
+	 * even if CONCURRENTLY was requested.  In that case, reindex_relation()
+	 * will upgrade the lock, but that's OK, because other sessions can't hold
+	 * locks on our temporary table.
+	 */
 	heapOid = RangeVarGetRelidExtended(relation,
 									   concurrent ? ShareUpdateExclusiveLock : ShareLock,
 									   0,
 									   RangeVarCallbackOwnsTable, NULL);
 
-	/*
-	 * PostgreSQL doesn't allow REINDEX on a partitioned table, but we support
-	 * it in Greenplum.
-	 *
-	 *
-	 */
 	if (get_rel_relkind(heapOid) == RELKIND_PARTITIONED_TABLE)
-	{
-		// FIXME transasction block check?
-		List	   *prels;
-
-		prels = find_all_inheritors(heapOid,
-									concurrent ? ShareUpdateExclusiveLock : ShareLock,
-									NULL);
-
-		ReindexRelationList(prels, options | REINDEX_REL_RECURSING_PARTITIONED_TABLE,
-							concurrent, false);
-		return heapOid;
-	}
-
-	if (concurrent)
+		ReindexPartitions(heapOid, options, concurrent, isTopLevel);
+	else if (concurrent &&
+			 get_rel_persistence(heapOid) != RELPERSISTENCE_TEMP)
 	{
 		result = ReindexRelationConcurrently(heapOid, options);
 
@@ -2852,25 +2885,26 @@ ReindexTable(ReindexStmt *stmt)
 							relation->relname)));
 	}
 
-	if (Gp_role == GP_ROLE_DISPATCH)
+	/*
+	 * Reindex on partitioned table will do the reindex for each index in
+	 * it's own transaction, so dispatch the statement under ReindexPartitions.
+	 */
+	if (Gp_role == GP_ROLE_DISPATCH && get_rel_relkind(heapOid) != RELKIND_PARTITIONED_TABLE)
 	{
 		ReindexStmt	   *qestmt;
 
 		qestmt = makeNode(ReindexStmt);
-
 		qestmt->kind = REINDEX_OBJECT_TABLE;
 		qestmt->relation = NULL;
 		qestmt->options = options;
 		qestmt->concurrent = concurrent;
 		qestmt->relid = heapOid;
 
-		PushActiveSnapshot(GetTransactionSnapshot());
 		CdbDispatchUtilityStatement((Node *) qestmt,
 									DF_CANCEL_ON_ERROR |
 									DF_WITH_SNAPSHOT,
 									GetAssignedOidsForDispatch(),
 									NULL);
-		PopActiveSnapshot();
 	}
 
 	return heapOid;
@@ -2982,11 +3016,8 @@ ReindexMultipleTables(const char *objectName, ReindexObjectType objectKind,
 		 * Only regular tables and matviews can have indexes, so ignore any
 		 * other kind of relation.
 		 *
-		 * It is tempting to also consider partitioned tables here, but that
-		 * has the problem that if the children are in the same schema, they
-		 * would be processed twice.  Maybe we could have a separate list of
-		 * partitioned tables, and expand that afterwards into relids,
-		 * ignoring any duplicates.
+		 * Partitioned tables/indexes are skipped but matching leaf partitions
+		 * are processed.
 		 */
 		if (classtuple->relkind != RELKIND_RELATION &&
 			classtuple->relkind != RELKIND_MATVIEW)
@@ -3049,38 +3080,215 @@ ReindexMultipleTables(const char *objectName, ReindexObjectType objectKind,
 	table_endscan(scan);
 	table_close(relationRelation, AccessShareLock);
 
-	ReindexRelationList(relids, options, concurrent, true);
+	/*
+	 * Process each relation listed in a separate transaction.  Note that this
+	 * commits and then starts a new transaction immediately.
+	 */
+	ReindexMultipleInternal(relids, options, concurrent);
 
 	MemoryContextDelete(private_context);
-
 }
 
 /*
- * Perform REINDEX on each relation of the relids list.  The function
- * opens and closes a transaction per relation.  This is designed for
- * QD/utility, and is not useful for QE.
+ * Error callback specific to ReindexPartitions().
  */
 static void
-ReindexRelationList(List *relids, int options, bool concurrent, bool multiple)
+reindex_error_callback(void *arg)
+{
+	ReindexErrorInfo *errinfo = (ReindexErrorInfo *) arg;
+
+	Assert(errinfo->relkind == RELKIND_PARTITIONED_INDEX ||
+		   errinfo->relkind == RELKIND_PARTITIONED_TABLE);
+
+	if (errinfo->relkind == RELKIND_PARTITIONED_TABLE)
+		errcontext("while reindexing partitioned table \"%s.%s\"",
+				   errinfo->relnamespace, errinfo->relname);
+	else if (errinfo->relkind == RELKIND_PARTITIONED_INDEX)
+		errcontext("while reindexing partitioned index \"%s.%s\"",
+				   errinfo->relnamespace, errinfo->relname);
+}
+
+/*
+ * ReindexPartitions
+ *
+ * Reindex a set of partitions, per the partitioned index or table given
+ * by the caller.
+ */
+static void
+ReindexPartitions(Oid relid, int options, bool concurrent, bool isTopLevel)
+{
+	List	   *partitions = NIL;
+	char		relkind = get_rel_relkind(relid);
+	char	   *relname = get_rel_name(relid);
+	char	   *relnamespace = get_namespace_name(get_rel_namespace(relid));
+	MemoryContext reindex_context;
+	List	   *inhoids;
+	ListCell   *lc;
+	ErrorContextCallback errcallback;
+	ReindexErrorInfo errinfo;
+
+	Assert(relkind == RELKIND_PARTITIONED_INDEX ||
+		   relkind == RELKIND_PARTITIONED_TABLE);
+
+	/*
+	 * Check if this runs in a transaction block, with an error callback to
+	 * provide more context under which a problem happens.
+	 */
+	errinfo.relname = pstrdup(relname);
+	errinfo.relnamespace = pstrdup(relnamespace);
+	errinfo.relkind = relkind;
+	errcallback.callback = reindex_error_callback;
+	errcallback.arg = (void *) &errinfo;
+	errcallback.previous = error_context_stack;
+	error_context_stack = &errcallback;
+
+	PreventInTransactionBlock(isTopLevel,
+							  relkind == RELKIND_PARTITIONED_TABLE ?
+							  "REINDEX TABLE" : "REINDEX INDEX");
+
+	/* Pop the error context stack */
+	error_context_stack = errcallback.previous;
+
+	/*
+	 * Create special memory context for cross-transaction storage.
+	 *
+	 * Since it is a child of PortalContext, it will go away eventually even
+	 * if we suffer an error so there is no need for special abort cleanup
+	 * logic.
+	 */
+	reindex_context = AllocSetContextCreate(PortalContext, "Reindex",
+											ALLOCSET_DEFAULT_SIZES);
+
+	/* ShareLock is enough to prevent schema modifications */
+	inhoids = find_all_inheritors(relid, ShareLock, NULL);
+
+	/*
+	 * The list of relations to reindex are the physical partitions of the
+	 * tree so discard any partitioned table or index.
+	 */
+	foreach(lc, inhoids)
+	{
+		Oid			partoid = lfirst_oid(lc);
+		char		partkind = get_rel_relkind(partoid);
+		MemoryContext old_context;
+
+		/*
+		 * This discards partitioned tables, partitioned indexes and foreign
+		 * tables.
+		 */
+		if (!RELKIND_HAS_STORAGE(partkind))
+			continue;
+
+		Assert(partkind == RELKIND_INDEX ||
+			   partkind == RELKIND_RELATION);
+
+		/* Save partition OID */
+		old_context = MemoryContextSwitchTo(reindex_context);
+		partitions = lappend_oid(partitions, partoid);
+		MemoryContextSwitchTo(old_context);
+	}
+
+	/*
+	 * Process each partition listed in a separate transaction.  Note that
+	 * this commits and then starts a new transaction immediately.
+	 */
+	ReindexMultipleInternal(partitions, options, concurrent);
+
+	/*
+	 * Clean up working storage --- note we must do this after
+	 * StartTransactionCommand, else we might be trying to delete the active
+	 * context!
+	 */
+	MemoryContextDelete(reindex_context);
+}
+
+/*
+ * ReindexMultipleInternal
+ *
+ * Reindex a list of relations, each one being processed in its own
+ * transaction.  This commits the existing transaction immediately,
+ * and starts a new transaction when finished.
+ */
+static void
+ReindexMultipleInternal(List *relids, int options, bool concurrent)
 {
 	ListCell   *l;
 
-	/* Now reindex each rel in a separate transaction */
 	PopActiveSnapshot();
 	CommitTransactionCommand();
+
 	foreach(l, relids)
 	{
 		Oid			relid = lfirst_oid(l);
-		bool		result;
+		Oid		heapId = InvalidOid;
+		char		relkind;
+		char		relpersistence;
+		bool		result = false;
+		LOCKMODE	lockmode;
 
 		StartTransactionCommand();
+
 		/* functions in indexes may want a snapshot set */
 		PushActiveSnapshot(GetTransactionSnapshot());
 
-		if (concurrent)
+		/* check if the relation still exists */
+		if (!SearchSysCacheExists1(RELOID, ObjectIdGetDatum(relid)))
+		{
+			PopActiveSnapshot();
+			CommitTransactionCommand();
+			continue;
+		}
+
+		relkind = get_rel_relkind(relid);
+		relpersistence = get_rel_persistence(relid);
+		lockmode = concurrent ? ShareUpdateExclusiveLock :
+			   (relkind == RELKIND_INDEX ? AccessExclusiveLock : ShareLock);
+		/*
+ 		 * If the relation is index, lock the table first to prevent dead lock.
+ 		 * ShareLock is sufficient since we only need to be sure no schema or
+ 		 * data changes are going on.
+ 		 */
+		if (relkind == RELKIND_INDEX)
+		{
+			heapId = IndexGetRelation(relid, false);
+			LockRelationOid(heapId, ShareLock);
+		}
+		LockRelationOid(relid, lockmode);
+		/*
+ 		 * Now that we have the lock, double-check to see if the relation
+ 		 * really exists or not.  If not, assume it was dropped while we
+ 		 * waited to acquire lock, and ignore it.
+ 		 */
+		if (!SearchSysCacheExists1(RELOID, ObjectIdGetDatum(relid)))
+		{
+			UnlockRelationOid(relid, lockmode);
+			if (OidIsValid(heapId))
+				UnlockRelationOid(heapId, ShareLock);
+			PopActiveSnapshot();
+			CommitTransactionCommand();
+			continue;
+		}
+
+		/*
+		 * Partitioned tables and indexes can never be processed directly, and
+		 * a list of their leaves should be built first.
+		 */
+		Assert(relkind != RELKIND_PARTITIONED_INDEX &&
+			   relkind != RELKIND_PARTITIONED_TABLE);
+
+		if (concurrent &&
+			relpersistence != RELPERSISTENCE_TEMP)
 		{
 			result = ReindexRelationConcurrently(relid, options);
 			/* ReindexRelationConcurrently() does the verbose output */
+		}
+		else if (relkind == RELKIND_INDEX)
+		{
+			reindex_index(relid, false, relpersistence,
+						  options);
+			PopActiveSnapshot();
+			/* reindex_index() does the verbose output */
+			result = true;
 		}
 		else
 		{
@@ -3105,7 +3313,8 @@ ReindexRelationList(List *relids, int options, bool concurrent, bool multiple)
 
 			stmt = makeNode(ReindexStmt);
 
-			stmt->kind = REINDEX_OBJECT_TABLE;
+			stmt->kind = relkind == RELKIND_INDEX ?
+						 REINDEX_OBJECT_INDEX : REINDEX_OBJECT_TABLE;
 			stmt->relation = NULL;
 			stmt->options = options;
 			stmt->concurrent = concurrent;
@@ -3122,6 +3331,7 @@ ReindexRelationList(List *relids, int options, bool concurrent, bool multiple)
 
 		CommitTransactionCommand();
 	}
+
 	StartTransactionCommand();
 }
 
@@ -3134,8 +3344,7 @@ ReindexRelationList(List *relids, int options, bool concurrent, bool multiple)
  * view.  For tables and materialized views, all its indexes will be rebuilt,
  * excluding invalid indexes and any indexes used in exclusion constraints,
  * but including its associated toast table indexes.  For indexes, the index
- * itself will be rebuilt.  If 'relationOid' belongs to a partitioned table
- * then we issue a warning to mention these are not yet supported.
+ * itself will be rebuilt.
  *
  * The locks taken on parent tables and involved indexes are kept until the
  * transaction is committed, at which point a session lock is taken on each
@@ -3323,13 +3532,9 @@ ReindexRelationConcurrently(Oid relationOid, int options)
 				MemoryContextSwitchTo(oldcontext);
 				break;
 			}
+
 		case RELKIND_PARTITIONED_TABLE:
-			/* see reindex_relation() */
-			ereport(WARNING,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("REINDEX of partitioned tables is not yet implemented, skipping \"%s\"",
-							get_rel_name(relationOid))));
-			return false;
+		case RELKIND_PARTITIONED_INDEX:
 		default:
 			/* Return error if type of relation is not supported */
 			ereport(ERROR,
@@ -3760,20 +3965,6 @@ ReindexRelationConcurrently(Oid relationOid, int options)
 	pgstat_progress_end_command();
 
 	return true;
-}
-
-/*
- *	ReindexPartitionedIndex
- *		Reindex each child of the given partitioned index.
- *
- * Not yet implemented.
- */
-static void
-ReindexPartitionedIndex(Relation parentIdx)
-{
-	ereport(ERROR,
-			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-			 errmsg("REINDEX is not yet implemented for partitioned indexes")));
 }
 
 /*

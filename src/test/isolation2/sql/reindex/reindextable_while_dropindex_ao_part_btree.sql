@@ -16,12 +16,12 @@ select 1 AS index_exists_on_all_segs from gp_dist_random('pg_class') WHERE relna
 
 DELETE FROM reindex_dropindex_crtab_part_ao_btree  WHERE id < 128;
 1: BEGIN;
-2: BEGIN;
-1: REINDEX TABLE  reindex_dropindex_crtab_part_ao_btree;
-2&: DROP INDEX reindex_dropindex_crtab_part_ao_btree_owner_idx;
+1: LOCK reindex_dropindex_crtab_part_ao_btree IN ACCESS EXCLUSIVE MODE;
+2&: REINDEX TABLE  reindex_dropindex_crtab_part_ao_btree;
+3&: DROP INDEX reindex_dropindex_crtab_part_ao_btree_owner_idx;
 1: COMMIT;
 2<:
-2: COMMIT;
+3<:
 3: select count(*) from reindex_dropindex_crtab_part_ao_btree where id = 998;
 3: set enable_seqscan=false;
 3: set enable_indexscan=true;
