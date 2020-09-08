@@ -40,3 +40,7 @@ DROP VIEW IF EXISTS sums_1_100 CASCADE;
 -- Cannot currently handle partitioned table with a composite type as
 -- partitioning key (see https://github.com/greenplum-db/gpdb/issues/9405).
 drop table public.employee_table;
+
+-- Cannot currently handle table with invalid index
+-- (see https://github.com/greenplum-db/gpdb/issues/10805).
+DROP TABLE public.bfv_tab1_with_invalid_index;
