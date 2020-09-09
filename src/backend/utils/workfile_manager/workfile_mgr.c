@@ -234,8 +234,9 @@ RegisterFileWithSet(File file, workfile_set *work_set)
 
 	LWLockAcquire(WorkFileManagerLock, LW_EXCLUSIVE);
 
-	Assert(work_set->active);
-	Assert(work_set->perquery->active);
+	if (!work_set->active || !work_set->perquery->active)
+		ereport(PANIC,
+				(errmsg("Register file to a non-active workfile_set/per-query summary is illegal")));
 
 	localEntry->work_set = work_set;
 	work_set->num_files++;
@@ -386,8 +387,9 @@ WorkFileDeleted(File file)
 	perquery = work_set->perquery;
 	oldsize = localEntry->size;
 
-	Assert(work_set->active);
-	Assert(perquery->active);
+	if (!work_set->active || !work_set->perquery->active)
+		ereport(PANIC,
+				(errmsg("workfile_set/per-query summarry is not active")));
 
 	/*
 	 * Update the summaries in shared memory
