@@ -213,7 +213,6 @@ enable_thread_safety	= @enable_thread_safety@
 enable_largefile	= @enable_largefile@
 enable_orca		= @enable_orca@
 enable_gpfdist		= @enable_gpfdist@
-enable_pxf			= @enable_pxf@
 enable_debug_extensions = @enable_debug_extensions@
 enable_orafce		= @enable_orafce@
 enable_mapreduce    = @enable_mapreduce@
