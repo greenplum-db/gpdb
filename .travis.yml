@@ -131,6 +131,7 @@ python:
 before_install:
     - eval "${OVERRIDE_CC}"
     - eval "${OVERRIDE_CXX}"
+    - ccache --max-size 4G
     # ccache 3.2 (from Ubuntu Xenial) has CCACHE_CPP2 default to off (this
     # setting defaults to on starting from ccache 3.3). That default leads to
     # unlegible compiler warning outputs because GCC and Clang will emit
