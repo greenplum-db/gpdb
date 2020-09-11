@@ -3422,6 +3422,7 @@ CTranslatorRelcacheToDXL::IsIndexSupported
 	// index expressions and index constraints not supported
 	return gpdb::HeapAttIsNull(tup, Anum_pg_index_indexprs) &&
 		gpdb::HeapAttIsNull(tup, Anum_pg_index_indpred) &&
+		index_rel->rd_index->indisvalid &&
 		(BTREE_AM_OID == index_rel->rd_rel->relam || BITMAP_AM_OID == index_rel->rd_rel->relam  || GIST_AM_OID == index_rel->rd_rel->relam);
 }
 
