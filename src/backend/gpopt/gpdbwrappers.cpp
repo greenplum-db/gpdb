@@ -2557,8 +2557,11 @@ gpdb::GetRelationIndexes
 {
 	GP_WRAP_START;
 	{
-		/* catalog tables: from relcache */
-		return RelationGetIndexList(relation);
+		if (relation->rd_rel->relhasindex)
+		{
+			/* catalog tables: from relcache */
+			return RelationGetIndexList(relation);
+		}
 	}
 	GP_WRAP_END;
 	return NIL;

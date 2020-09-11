@@ -48,6 +48,24 @@ explain select * from bfv_tab1, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i
  Optimizer status: Postgres query optimizer
 (8 rows)
 
+-- Test that we do not choose to perform an index scan if indisvalid=false.
+create table bfv_tab1_with_invalid_index (like bfv_tab1 including indexes);
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+set allow_system_table_mods=on;
+update pg_index set indisvalid=false where indrelid='bfv_tab1_with_invalid_index'::regclass;
+reset allow_system_table_mods;
+explain select * from bfv_tab1_with_invalid_index where unique1>42;
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..0.05 rows=3 width=244)
+   ->  Seq Scan on bfv_tab1_with_invalid_index  (cost=0.00..0.01 rows=1 width=244)
+         Filter: (unique1 > 42)
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+-- Cannot currently upgrade table with invalid index
+-- (see https://github.com/greenplum-db/gpdb/issues/10805).
+drop table bfv_tab1_with_invalid_index;
 reset gp_enable_relsize_collection;
 --start_ignore
 DROP TABLE IF EXISTS bfv_tab2_facttable1;
