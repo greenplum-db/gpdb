@@ -30,7 +30,9 @@ include: helpers/server_helpers.sql;
 -- with mode 5, but that conflicts with the mode 3 lock which is needed during
 -- postgres starting in InitPostgres() and thus pg_rewind hangs forever.
 !\retcode gprecoverseg -a;
+select wait_until_all_segments_synchronized();
 !\retcode gprecoverseg -ar;
+select wait_until_all_segments_synchronized();
 
 -- reset fts GUCs.
 3: alter system reset gp_fts_probe_retries;
