@@ -629,6 +629,20 @@ CMDTypeGenericGPDB::GetDistrOpfamilyMdid() const
 	}
 }
 
+BOOL
+CMDTypeGenericGPDB::IsRedistributable() const
+{
+	if (GPOS_FTRACE(EopttraceConsiderOpfamiliesForDistribution) &&
+		GPOS_FTRACE(EopttraceUseLegacyOpfamilies))
+	{
+		return (NULL != m_legacy_distr_opfamily);
+	}
+	// If EopttraceConsiderOpfamiliesForDistribution is set, m_is_redistributable
+	// is redundant. It's still used here for MDP tests where the traceflag is
+	// unset and/or opfamilies are not available for all types.
+	return m_is_redistributable;
+}
+
 #ifdef GPOS_DEBUG
 //---------------------------------------------------------------------------
 //	@function:

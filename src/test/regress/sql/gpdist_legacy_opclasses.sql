@@ -237,3 +237,9 @@ select dp.localoid::regclass::name as name, oc.opcname
     on oc.oid::text = dp.distclass::text
  where dp.localoid in ('ctastest_on'::regclass::oid,
                        'ctastest_off'::regclass::oid);
+
+set gp_use_legacy_hashops=on;
+create table try_distinct_array (test_char varchar,test_array integer[]);
+insert into try_distinct_array select 'y',string_to_array('1~1','~')::int[];
+insert into try_distinct_array select 'n',string_to_array('1~1','~')::int[];
+select distinct test_array from try_distinct_array;

@@ -65,7 +65,7 @@ namespace gpmd
 			// type name
 			CMDName *m_mdname;
 			
-			// can type be redistributed
+			// can type be redistributed based on non-legacy distr opfamily
 			BOOL m_is_redistributable;
 			
 			// is this a fixed-length type
@@ -196,10 +196,7 @@ namespace gpmd
 			CMDName Mdname() const;
 			
 			virtual
-			BOOL IsRedistributable() const
-			{
-				return m_is_redistributable;
-			}
+			BOOL IsRedistributable() const;
 			
 			virtual
 			BOOL IsFixedLength() const
