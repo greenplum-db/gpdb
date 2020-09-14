@@ -1,7 +1,7 @@
 -- ===================================================================
 -- create FDW objects
 -- ===================================================================
--- Changes on postgres_fdw test cases
+-- This sql file is based on postgre_fdw.sql, and the changes are as below:
 -- 1) This sql file is run by gpdb, and it connects to postgres database using postgres_fdw.
 -- 2) Test results are generated with timezone 'PST8PDT'
 -- 3) Skip some EXPLAIN cases, as gp's plans sometimes are different with postgres
@@ -21,7 +21,7 @@ CREATE USER MAPPING FOR CURRENT_USER SERVER pgserver;
 -- create objects used through FDW pgserver server
 -- ===================================================================
 CREATE TYPE user_enum AS ENUM ('foo', 'bar', 'buz');
-\! env PGOPTIONS='' psql -p ${PG_PORT} contrib_regression -f sql/postgres_init.sql
+\! env PGOPTIONS='' psql -p ${PG_PORT} contrib_regression -f sql/postgres_sql/gp2pg_postgres_init.sql
 -- ===================================================================
 -- create foreign tables
 -- ===================================================================
@@ -397,7 +397,7 @@ DELETE FROM ft2 WHERE c1 = 9999 RETURNING tableoid::regclass;
 DELETE FROM ft2 WHERE c1 = 9999 RETURNING tableoid::regclass;
 
 -- Test that trigger on remote table works as expected
- \! env PGOPTIONS='' psql -p ${PG_PORT} contrib_regression -f sql/create_trigger.sql
+ \! env PGOPTIONS='' psql -p ${PG_PORT} contrib_regression -f sql/postgres_sql/gp2pg_postgres_create_trigger.sql
 
 INSERT INTO ft2 (c1,c2,c3) VALUES (1208, 818, 'fff') RETURNING *;
 INSERT INTO ft2 (c1,c2,c3,c6) VALUES (1218, 818, 'ggg', '(--;') RETURNING *;

@@ -1,0 +1,23 @@
+Test
+===========================================
+There are 3 tests in this dir:
+
+1) postgres_fdw, this is the upstream test.
+A Postgres database uses postgres_fdw to connect to
+itself. There is no need for us to run it. We just
+keep it the same as the upstream.
+
+2) gp2pg_postgres_fdw, this is the Greenplum
+specific test. A Greenplum database uses postgres_fdw
+to connect to a Postgres database.
+In this test case, we need to set up a Postgres
+server by postgres_setup.sh, and run some test
+SQL in Postgres database to create remote tables
+and triggers, these SQL files are in sql/postgres_sql.
+
+3) gp_postgres_fdw. This test is used to test
+the MPP feature of postgres_fdw. A Greenplum database
+uses postgres_fdw to connect to itself. However
+this featrue is not implemented completely. We just
+leave the case there untill we starts working on
+postgres_fdw's MPP feature.

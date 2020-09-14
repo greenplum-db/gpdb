@@ -1,3 +1,6 @@
+-- This sql file is used by gp2pg_postgres_fdw test, and it runs in
+-- postgres dataserver.
+
 CREATE FUNCTION trig_row_before_insupdate() RETURNS TRIGGER AS $$
   BEGIN
     NEW.f2 := NEW.f2 || ' triggered !';

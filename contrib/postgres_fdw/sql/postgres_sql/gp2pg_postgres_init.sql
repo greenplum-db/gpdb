@@ -1,3 +1,6 @@
+-- This sql file is used by gp2pg_postgres_fdw test, and it runs in
+-- postgres dataserver.
+
 -- ===================================================================
 -- create objects used through FDW loopback server
 -- ===================================================================
