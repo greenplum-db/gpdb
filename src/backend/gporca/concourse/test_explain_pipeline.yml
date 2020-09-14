@@ -3,12 +3,12 @@
 ## ======================================================================
 resource_types:
 - name: gcs
-  type: docker-image
+  type: registry-image
   source:
     repository: frodenas/gcs-resource
 
 - name: git-lfs
-  type: docker-image
+  type: registry-image
   source:
      repository: concourse/git-resource
 
@@ -28,7 +28,7 @@ resources:
     uri: {{gp_workloads-git-remote}}
 
 - name: gpdb6-centos7-build
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/gpdb6-centos7-build
 

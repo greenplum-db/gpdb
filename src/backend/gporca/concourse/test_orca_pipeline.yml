@@ -4,7 +4,7 @@
 
 resource_types:
 - name: gcs
-  type: docker-image
+  type: registry-image
   source:
     repository: frodenas/gcs-resource
 
@@ -17,12 +17,12 @@ resources:
     uri: {{slack-trigger-git-remote}}
 
 - name: gpdb6-centos7-build
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/gpdb6-centos7-build
 
 - name: gpdb6-centos7-test
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/gpdb6-centos7-test
 

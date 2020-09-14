@@ -101,7 +101,7 @@ anchors:
       config:
         platform: linux
         image_resource:
-          type: docker-image
+          type: registry-image
           source:
             repository: pivotaldata/ccp
             tag: "7"
@@ -124,7 +124,7 @@ anchors:
 - &set_failed_two_clusters_common
   platform: linux
   image_resource:
-    type: docker-image
+    type: registry-image
     source:
       repository: pivotaldata/ccp
       tag: "7"
@@ -450,16 +450,16 @@ groups:
 
 resource_types:
 - name: terraform
-  type: docker-image
+  type: registry-image
   source:
     repository: ljfranklin/terraform-resource
     tag: 0.11.14
 - name: gcs
-  type: docker-image
+  type: registry-image
   source:
     repository: frodenas/gcs-resource
 - name: pivnet
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotalcf/pivnet-resource
     tag: latest-final
@@ -491,13 +491,13 @@ resources:
   <<: *terraform_cluster
 
 - name: alpine-docker
-  type: docker-image
+  type: registry-image
   source:
     repository: alpine
     tag: latest
 
 - name: ccp-image
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/ccp
     tag: '7'
@@ -623,26 +623,26 @@ resources:
 {% endif %}
 {% if "centos6" in os_types %}
 - name: gpdb6-centos6-build
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/gpdb6-centos6-build
     tag: latest
 
 - name: gpdb6-centos6-test
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/gpdb6-centos6-test
     tag: latest
 {% endif %}
 {% if "centos7" in os_types %}
 - name: gpdb6-centos7-build
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/gpdb6-centos7-build
     tag: latest
 
 - name: gpdb6-centos7-test
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/gpdb6-centos7-test
     tag: latest
@@ -650,7 +650,7 @@ resources:
 {% endif %}
 {% if "oracle7" in os_types %}
 - name: gpdb6-oracle7-test
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/gpdb6-oel7-test
     tag: latest
@@ -658,14 +658,14 @@ resources:
 {% endif %}
 
 - name: gpdb6-ubuntu18.04-build
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/gpdb6-ubuntu18.04-build
     tag: latest
 
 {% if "ubuntu18.04" in os_types %}
 - name: gpdb6-ubuntu18.04-test
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/gpdb6-ubuntu18.04-test
     tag: latest
@@ -1500,7 +1500,7 @@ jobs:
     config:
       platform: linux
       image_resource:
-        type: docker-image
+        type: registry-image
         source:
           repository: pivotaldata/ccp
           tag: "7"

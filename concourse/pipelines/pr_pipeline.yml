@@ -4,11 +4,11 @@
 
 resource_types:
 - name: pull-request
-  type: docker-image
+  type: registry-image
   source:
     repository: teliaoss/github-pr-resource
 - name: gcs
-  type: docker-image
+  type: registry-image
   source:
     repository: frodenas/gcs-resource
 
@@ -24,12 +24,12 @@ resources:
     - README*
 
 - name: gpdb6-centos7-build
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/gpdb6-centos7-build
 
 - name: gpdb6-centos7-test
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/gpdb6-centos7-test
 
