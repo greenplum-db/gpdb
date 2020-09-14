@@ -105,7 +105,7 @@ anchors:
       config:
         platform: linux
         image_resource:
-          type: docker-image
+          type: registry-image
           source:
             repository: pivotaldata/ccp
             tag: "7"
@@ -128,7 +128,7 @@ anchors:
 - &set_failed_two_clusters_common
   platform: linux
   image_resource:
-    type: docker-image
+    type: registry-image
     source:
       repository: pivotaldata/ccp
       tag: "7"
@@ -399,12 +399,12 @@ groups:
 
 resource_types:
 - name: terraform
-  type: docker-image
+  type: registry-image
   source:
     repository: ljfranklin/terraform-resource
     tag: 0.11.14
 - name: gcs
-  type: docker-image
+  type: registry-image
   source:
     repository: frodenas/gcs-resource
 ## ======================================================================
@@ -435,13 +435,13 @@ resources:
   <<: *terraform_cluster
 
 - name: alpine-docker
-  type: docker-image
+  type: registry-image
   source:
     repository: alpine
     tag: latest
 
 - name: ccp-image
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/ccp
     tag: '7'
@@ -500,7 +500,7 @@ resources:
 {% endif %}
 {% if "centos7" in os_types %}
 - name: gpdb7-centos7-build
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/gpdb7-centos7-build
     tag: latest
@@ -508,7 +508,7 @@ resources:
 {% endif %}
 {% if "centos7" in os_types or "CLI" in test_sections %}
 - name: gpdb7-centos7-test
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/gpdb7-centos7-test
     tag: latest
@@ -516,14 +516,14 @@ resources:
 {% endif %}
 
 - name: gpdb7-ubuntu18.04-build
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/gpdb7-ubuntu18.04-build
     tag: latest
 
 {% if "ubuntu18.04" in os_types %}
 - name: gpdb7-ubuntu18.04-test
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/gpdb7-ubuntu18.04-test
     tag: latest

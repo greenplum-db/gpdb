@@ -1,6 +1,6 @@
 resource_types:
 - name: gcs
-  type: docker-image
+  type: registry-image
   source:
     repository: frodenas/gcs-resource
 
@@ -12,7 +12,7 @@ resources:
     uri: {{gpdb-git-remote}}
 
 - name: centos-coverity
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/centos-coverity
     username: {{docker_username}}
