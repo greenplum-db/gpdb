@@ -18,7 +18,7 @@ resources:
   source:
     repository: greenplum-db/gpdb
     base_branch: "master"
-    access_token: {{gpdb-git-access-token}}
+    access_token: ((gpdb-git-access-token))
     ignore_paths:
     - gpdb-doc/*
     - README*
@@ -100,7 +100,7 @@ jobs:
       file: gpdb_pr/concourse/tasks/compile_gpdb.yml
       image: gpdb7-centos7-build
       params:
-        CONFIGURE_FLAGS: {{configure_flags_with_extensions}}
+        CONFIGURE_FLAGS: ((configure_flags_with_extensions))
         TARGET_OS: centos
         TARGET_OS_VERSION: 7
         BLD_TARGETS: "clients loaders"
@@ -117,7 +117,7 @@ jobs:
         params:
           MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
           TEST_OS: centos
-          CONFIGURE_FLAGS: {{configure_flags}}
+          CONFIGURE_FLAGS: ((configure_flags))
         timeout: 3h
 
       - task: icw_gporca_centos7
@@ -129,5 +129,5 @@ jobs:
         params:
           MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
           TEST_OS: centos
-          CONFIGURE_FLAGS: {{configure_flags}}
+          CONFIGURE_FLAGS: ((configure_flags))
         timeout: 5h

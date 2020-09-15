@@ -91,11 +91,11 @@ anchors:
         action: destroy
 
 - &ccp_gen_cluster_default_params
-  AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
-  AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
-  AWS_DEFAULT_REGION: {{aws-region}}
+  AWS_ACCESS_KEY_ID: ((tf-machine-access-key-id))
+  AWS_SECRET_ACCESS_KEY: ((tf-machine-secret-access-key))
+  AWS_DEFAULT_REGION: ((aws-region))
   BUCKET_PATH: clusters-google/
-  BUCKET_NAME: {{tf-bucket-name}}
+  BUCKET_NAME: ((tf-bucket-name))
   CLOUD_PROVIDER: google
   <<: *default_platform
 
@@ -115,15 +115,15 @@ anchors:
         run:
           path: 'ccp_src/google/ccp_failed_test.sh'
         params:
-          GOOGLE_CREDENTIALS: {{google-service-account-key}}
-          GOOGLE_PROJECT_ID: {{google-project-id}}
-          GOOGLE_ZONE: {{google-zone}}
-          GOOGLE_SERVICE_ACCOUNT: {{google-service-account}}
-          AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
-          AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
-          AWS_DEFAULT_REGION: {{tf-machine-region}}
+          GOOGLE_CREDENTIALS: ((google-service-account-key))
+          GOOGLE_PROJECT_ID: ((google-project-id))
+          GOOGLE_ZONE: ((google-zone))
+          GOOGLE_SERVICE_ACCOUNT: ((google-service-account))
+          AWS_ACCESS_KEY_ID: ((tf-machine-access-key-id))
+          AWS_SECRET_ACCESS_KEY: ((tf-machine-secret-access-key))
+          AWS_DEFAULT_REGION: ((tf-machine-region))
           BUCKET_PATH: clusters-google/
-          BUCKET_NAME: {{tf-bucket-name}}
+          BUCKET_NAME: ((tf-bucket-name))
 
 - &set_failed_two_clusters_common
   platform: linux
@@ -135,29 +135,29 @@ anchors:
   run:
     path: 'ccp_src/google/ccp_failed_test.sh'
   params:
-    GOOGLE_CREDENTIALS: {{google-service-account-key}}
-    GOOGLE_PROJECT_ID: {{google-project-id}}
-    GOOGLE_ZONE: {{google-zone}}
-    GOOGLE_SERVICE_ACCOUNT: {{google-service-account}}
-    AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
-    AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
-    AWS_DEFAULT_REGION: {{tf-machine-region}}
+    GOOGLE_CREDENTIALS: ((google-service-account-key))
+    GOOGLE_PROJECT_ID: ((google-project-id))
+    GOOGLE_ZONE: ((google-zone))
+    GOOGLE_SERVICE_ACCOUNT: ((google-service-account))
+    AWS_ACCESS_KEY_ID: ((tf-machine-access-key-id))
+    AWS_SECRET_ACCESS_KEY: ((tf-machine-secret-access-key))
+    AWS_DEFAULT_REGION: ((tf-machine-region))
     BUCKET_PATH: clusters-google/
-    BUCKET_NAME: {{tf-bucket-name}}
+    BUCKET_NAME: ((tf-bucket-name))
 
 - &terraform_cluster
   type: terraform
   source:
     env:
-      AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
-      AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
-      GOOGLE_CREDENTIALS: {{google-service-account-key}}
+      AWS_ACCESS_KEY_ID: ((tf-machine-access-key-id))
+      AWS_SECRET_ACCESS_KEY: ((tf-machine-secret-access-key))
+      GOOGLE_CREDENTIALS: ((google-service-account-key))
     vars:
-      project_id: {{google-project-id}}
+      project_id: ((google-project-id))
     storage:
-      access_key_id: {{tf-machine-access-key-id}}
-      secret_access_key: {{tf-machine-secret-access-key}}
-      region_name: {{aws-region}}
+      access_key_id: ((tf-machine-access-key-id))
+      secret_access_key: ((tf-machine-secret-access-key))
+      region_name: ((aws-region))
       # This is not parameterized, on purpose. All tfstates will go to this spot,
       # and different teams will place there clusters' tfstate files under different paths
       bucket: gpdb5-pipeline-dynamic-terraform
@@ -419,9 +419,9 @@ resources:
 - name: ccp_src
   type: git
   source:
-    branch: {{ccp-git-branch}}
-    private_key: {{ccp-git-key}}
-    uri: {{ccp-git-remote}}
+    branch: ((ccp-git-branch))
+    private_key: ((ccp-git-key))
+    uri: ((ccp-git-remote))
 
 {% if "centos7" in os_types or
       "ICW"     in test_sections %}
@@ -460,8 +460,8 @@ resources:
 - name: gpdb_src
   type: git
   source:
-    branch: {{gpdb-git-branch}}
-    uri: {{gpdb-git-remote}}
+    branch: ((gpdb-git-branch))
+    uri: ((gpdb-git-remote))
     ignore_paths:
     - gpdb-doc/*
     - README*
@@ -534,10 +534,10 @@ resources:
 - name: bin_gpdb_centos7_icw_green
   type: s3
   source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
+    access_key_id: ((bucket-access-key-id))
+    bucket: ((bucket-name))
+    region_name: ((aws-region))
+    secret_access_key: ((bucket-secret-access-key))
     versioned_file: bin_gpdb_centos7/gpdb_branch_master/icw_green/bin_gpdb.tar.gz
 
 - name: bin_gpdb_centos7_rc
@@ -626,17 +626,17 @@ resources:
   type: terraform
   source:
     env:
-      AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
-      AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
-      GOOGLE_CREDENTIALS: {{google-service-account-key}}
+      AWS_ACCESS_KEY_ID: ((tf-machine-access-key-id))
+      AWS_SECRET_ACCESS_KEY: ((tf-machine-secret-access-key))
+      GOOGLE_CREDENTIALS: ((google-service-account-key))
     vars:
-      project: {{google-project-id}}
-      region: {{google-region}}
-      region_zone: {{google-zone}}
+      project: ((google-project-id))
+      region: ((google-region))
+      region_zone: ((google-zone))
     storage:
-      access_key_id: {{tf-machine-access-key-id}}
-      secret_access_key: {{tf-machine-secret-access-key}}
-      region_name: {{aws-region}}
+      access_key_id: ((tf-machine-access-key-id))
+      secret_access_key: ((tf-machine-secret-access-key))
+      region_name: ((aws-region))
       # This is not parameterized, on purpose. All tfstates will go to this spot,
       # and different teams will place there clusters' tfstate files under different paths
       bucket: gpdb5-pipeline-dynamic-terraform
@@ -660,15 +660,15 @@ resources:
 - name: madlib_src
   type: git
   source:
-    branch: {{madlib-git-branch}}
-    uri: {{madlib-git-remote}}
+    branch: ((madlib-git-branch))
+    uri: ((madlib-git-remote))
 
 - name: madlib_ci
   type: git
   source:
-    branch: {{madlib-ci-git-branch}}
-    uri: {{madlib-ci-git-remote}}
-    private_key: {{madlib-ci-git-key}}
+    branch: ((madlib-ci-git-branch))
+    uri: ((madlib-ci-git-remote))
+    private_key: ((madlib-ci-git-key))
 
 - name: madlib_gppkg
   type: gcs
@@ -711,8 +711,8 @@ resources:
   source:
     location: America/Los_Angeles
     days: [Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday]
-    start: {{reduced-frequency-trigger-start}}
-    stop: {{reduced-frequency-trigger-stop}}
+    start: ((reduced-frequency-trigger-start))
+    stop: ((reduced-frequency-trigger-stop))
 
 
 ## ======================================================================
@@ -791,7 +791,7 @@ jobs:
     image: gpdb7-centos7-build
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
     params:
-      CONFIGURE_FLAGS: {{configure_flags_with_extensions}}
+      CONFIGURE_FLAGS: ((configure_flags_with_extensions))
       TARGET_OS: centos
       TARGET_OS_VERSION: 7
       BLD_TARGETS: "clients"
@@ -822,7 +822,7 @@ jobs:
       image: gpdb7-ubuntu18.04-build
       file: gpdb_src/concourse/tasks/compile_gpdb.yml
       params:
-        CONFIGURE_FLAGS: {{configure_flags_with_extensions}}
+        CONFIGURE_FLAGS: ((configure_flags_with_extensions))
         TARGET_OS: ubuntu
         TARGET_OS_VERSION: "18.04"
         BLD_TARGETS: "clients"
@@ -850,10 +850,10 @@ jobs:
     file: gpdb_src/concourse/tasks/compile_gpdb_remote_windows.yml
     image: gpdb7-centos7-build
     params:
-      REMOTE_HOST: {{remote_win_host_build}}
-      REMOTE_PORT: {{remote_win_port_build}}
-      REMOTE_USER: {{remote_win_user_build}}
-      REMOTE_KEY: {{remote_win_key_build}}
+      REMOTE_HOST: ((remote_win_host_build))
+      REMOTE_PORT: ((remote_win_port_build))
+      REMOTE_USER: ((remote_win_user_build))
+      REMOTE_KEY: ((remote_win_key_build))
   - put: bin_gpdb_clients_windows
     params:
       file: "gpdb_artifacts/greenplum-clients-x86_64.tar.gz"
@@ -881,9 +881,9 @@ jobs:
     file: gpdb_src/concourse/tasks/windows_remote_test.yml
     image: gpdb7-centos7-test
     params:
-      REMOTE_PORT: {{remote_win_port_test}}
-      REMOTE_USER: {{remote_win_user_test}}
-      REMOTE_KEY: {{remote_win_key_test}}
+      REMOTE_PORT: ((remote_win_port_test))
+      REMOTE_USER: ((remote_win_user_test))
+      REMOTE_KEY: ((remote_win_key_test))
   ensure:
     put: terraform_windows
     params:
@@ -922,7 +922,7 @@ jobs:
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
       TEST_OS: centos
-      CONFIGURE_FLAGS: {{configure_flags}}
+      CONFIGURE_FLAGS: ((configure_flags))
 
 - name: icw_planner_centos7
   plan:
@@ -941,8 +941,8 @@ jobs:
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
       TEST_OS: centos
-      TEST_BINARY_SWAP: {{test-binary-swap}}
-      CONFIGURE_FLAGS: {{configure_flags}}
+      TEST_BINARY_SWAP: ((test-binary-swap))
+      CONFIGURE_FLAGS: ((configure_flags))
       DUMP_DB: "true"
   - put: icw_planner_centos7_dump
     params:
@@ -965,7 +965,7 @@ jobs:
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=proxy -c optimizer=on' installcheck-world
       TEST_OS: centos
-      CONFIGURE_FLAGS: {{configure_flags}}
+      CONFIGURE_FLAGS: ((configure_flags))
 
 - name: icw_planner_icproxy_centos7
   plan:
@@ -984,7 +984,7 @@ jobs:
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=proxy -c optimizer=off' installcheck-world
       TEST_OS: centos
-      CONFIGURE_FLAGS: {{configure_flags}}
+      CONFIGURE_FLAGS: ((configure_flags))
 
 - name: icw_gporca_ictcp_centos7
   plan:
@@ -1023,7 +1023,7 @@ jobs:
       params:
         MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
         TEST_OS: ubuntu
-        CONFIGURE_FLAGS: {{configure_flags}}
+        CONFIGURE_FLAGS: ((configure_flags))
 
 - name: icw_planner_ubuntu18.04
   plan:
@@ -1042,7 +1042,7 @@ jobs:
       params:
         MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
         TEST_OS: ubuntu
-        CONFIGURE_FLAGS: {{configure_flags}}
+        CONFIGURE_FLAGS: ((configure_flags))
 
 - name: icw_gporca_icproxy_ubuntu18.04
   plan:
@@ -1061,7 +1061,7 @@ jobs:
       params:
         MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=proxy -c optimizer=on' installcheck-world
         TEST_OS: ubuntu
-        CONFIGURE_FLAGS: {{configure_flags}}
+        CONFIGURE_FLAGS: ((configure_flags))
 
 - name: icw_planner_icproxy_ubuntu18.04
   plan:
@@ -1080,7 +1080,7 @@ jobs:
       params:
         MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=proxy -c optimizer=off' installcheck-world
         TEST_OS: ubuntu
-        CONFIGURE_FLAGS: {{configure_flags}}
+        CONFIGURE_FLAGS: ((configure_flags))
 
 {% endif %}
 - name: gate_icw_end
@@ -1981,8 +1981,8 @@ jobs:
         file: gpdb_src/concourse/tasks/regression_tests_gpcloud.yml
         image: gpdb7-centos7-test
         params:
-          gpcloud_access_key_id: {{gpcloud-access-key-id}}
-          gpcloud_secret_access_key: {{gpcloud-secret-access-key}}
+          gpcloud_access_key_id: ((gpcloud-access-key-id))
+          gpcloud_secret_access_key: ((gpcloud-secret-access-key))
           TARGET_OS: centos
       - task: gpcheckcloud_tests_gpcloud_centos
         input_mapping:
@@ -1990,8 +1990,8 @@ jobs:
         file: gpdb_src/concourse/tasks/gpcheckcloud_tests_gpcloud.yml
         image: gpdb7-centos7-test
         params:
-          gpcloud_access_key_id: {{gpcloud-access-key-id}}
-          gpcloud_secret_access_key: {{gpcloud-secret-access-key}}
+          gpcloud_access_key_id: ((gpcloud-access-key-id))
+          gpcloud_secret_access_key: ((gpcloud-secret-access-key))
           TARGET_OS: centos
 {% endif %}
 {% endif %}

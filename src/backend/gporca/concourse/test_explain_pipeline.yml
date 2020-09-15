@@ -17,15 +17,15 @@ resources:
   type: git
   source:
     branch: master_explain_test
-    private_key: {{slack-trigger-git-key}}
-    uri: {{slack-trigger-git-remote}}
+    private_key: ((slack-trigger-git-key))
+    uri: ((slack-trigger-git-remote))
 
 - name: gp_workloads
   type: git-lfs
   source:
     branch: master
-    private_key: {{gp_workloads_deploy_key}}
-    uri: {{gp_workloads-git-remote}}
+    private_key: ((gp_workloads_deploy_key))
+    uri: ((gp_workloads-git-remote))
 
 - name: gpdb7-centos7-build
   type: registry-image
