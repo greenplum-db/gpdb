@@ -1984,10 +1984,11 @@ class ExpandTable():
         namedict = {}
         oiddict = {}
         policy = policy.strip()
-        if policy != "":
+        if policy:
             sql = "SELECT attnum, attname, attrelid FROM pg_attribute WHERE attrelid =  %s AND attnum > 0" % self.table_oid
-            cursor = dbconn.execSQL(conn, sql)
-            for row in cursor:
+            cursor = dbconn.query(conn, sql)
+            rows = cursor.fetchall()
+            for row in rows:
                 namedict[row[0]] = row[1]
                 oiddict[row[0]] = row[2]
             name_list = []
@@ -2144,7 +2145,7 @@ WHERE
                 """ % (self.dbname.replace("'", "''"), self.root_partition_name)
         first_fq_name = dbconn.querySingleton(status_conn, sql)
         lock_check_sql = """SELECT COUNT(1) FROM pg_stat_activity WHERE query like 'LOCK TABLE ONLY %s IN EXCLUSIVE MODE;%%' 
-                    AND datname = '%s' AND waiting = 'f';""" % (self.root_partition_name.replace("\\", "\\\\"), self.dbname.replace("'", "''"))
+                    AND datname = '%s' AND wait_event is NULL;""" % (self.root_partition_name.replace("\\", "\\\\"), self.dbname.replace("'", "''"))
         lock_count = dbconn.querySingleton(table_conn, lock_check_sql)
         numsegment_check_sql = """SELECT numsegments FROM gp_distribution_policy 
                     WHERE localoid = '%s'::regclass::oid""" % self.root_partition_name
