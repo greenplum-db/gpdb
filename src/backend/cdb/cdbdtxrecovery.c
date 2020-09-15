@@ -657,16 +657,27 @@ AbortOrphanedPreparedTransactions()
 {
 	HTAB	   *htab;
 
+#ifdef FAULT_INJECTOR
+	if (SIMPLE_FAULT_INJECTOR("before_orphaned_check") == FaultInjectorTypeSkip)
+		return;
+#endif
+
+	StartTransactionCommand();
 	htab = gatherRMInDoubtTransactions(gp_dtx_recovery_prepared_period, false);
 
 	/* in case an error happens somehow. */
-	if (htab == NULL)
-		return;
+	if (htab != NULL)
+	{
+		abortOrphanedTransactions(htab);
 
-	abortOrphanedTransactions(htab);
+		/* get rid of the hashtable */
+		hash_destroy(htab);
+	}
 
-	/* get rid of the hashtable */
-	hash_destroy(htab);
+	CommitTransactionCommand();
+	DisconnectAndDestroyAllGangs(true);
+
+	SIMPLE_FAULT_INJECTOR("after_orphaned_check");
 }
 
 static void
@@ -723,16 +734,9 @@ DtxRecoveryMain(Datum main_arg)
 			got_SIGHUP = false;
 			ProcessConfigFile(PGC_SIGHUP);
 		}
-		else
-		{
-			SIMPLE_FAULT_INJECTOR("before_orphaned_check");
 
-			/* Find orphaned prepared transactions and abort them. */
-			StartTransactionCommand();
-			AbortOrphanedPreparedTransactions();
-			CommitTransactionCommand();
-			DisconnectAndDestroyAllGangs(true);
-		}
+		/* Find orphaned prepared transactions and abort them. */
+		AbortOrphanedPreparedTransactions();
 
 		rc = WaitLatch(&MyProc->procLatch,
 					   WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH,

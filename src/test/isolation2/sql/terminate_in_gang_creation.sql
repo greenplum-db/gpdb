@@ -6,6 +6,16 @@ include: helpers/server_helpers.sql;
 -- s/lock \[\d+,\d+\]//
 -- end_matchsubs
 
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+
+-- skip dtx recovery check to avoid hitting the fault create_gang_in_progress.
+SELECT gp_inject_fault_infinite('before_orphaned_check', 'skip', dbid)
+    FROM gp_segment_configuration WHERE role='p' AND content=-1;
+ALTER SYSTEM SET gp_dtx_recovery_interval to 5;
+SELECT pg_reload_conf();
+SELECT gp_wait_until_triggered_fault('before_orphaned_check', 1, dbid)
+    FROM gp_segment_configuration WHERE role='p' AND content=-1;
+
 -- SIGSEGV issue when freeing gangs
 --
 -- When SIGTERM is handled during gang creation we used to trigger
@@ -24,8 +34,6 @@ include: helpers/server_helpers.sql;
 -- #15 createGang_async
 -- #16 createGang
 -- #17 AllocateWriterGang
-
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 
 DROP TABLE IF EXISTS foo;
 CREATE TABLE foo (c1 int, c2 int) DISTRIBUTED BY (c1);
@@ -87,4 +95,8 @@ SELECT pg_ctl(datadir, 'restart', 'immediate')
 11: RESET gp_vmem_idle_resource_timeout;
 
 SELECT gp_inject_fault('fts_probe', 'reset', dbid)
-FROM gp_segment_configuration WHERE role='p' AND content=-1;
+	FROM gp_segment_configuration WHERE role='p' AND content=-1;
+SELECT gp_inject_fault_infinite('before_orphaned_check', 'reset', dbid)
+    FROM gp_segment_configuration WHERE role='p' AND content=-1;
+ALTER SYSTEM RESET gp_dtx_recovery_interval;
+SELECT pg_reload_conf();
