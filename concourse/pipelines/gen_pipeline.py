@@ -213,15 +213,16 @@ def gen_pipeline(args, pipeline_name, secret_files,
         'branch': git_branch,
     }
 
-    return '''fly -t {target} \
+    return '''fly --target {target} \
 set-pipeline \
--p {name} \
--c {output_path} \
--l {secrets_path}/gpdb_common-ci-secrets.yml \
+--check-creds \
+--pipeline {name} \
+--config {output_path} \
+--load-vars-from {secrets_path}/gpdb_common-ci-secrets.yml \
 {secrets} \
--v gpdb-git-remote={remote} \
--v gpdb-git-branch={branch} \
--v pipeline-name={name} \
+--var gpdb-git-remote={remote} \
+--var gpdb-git-branch={branch} \
+--var pipeline-name={name} \
 
 '''.format(**format_args)
 
