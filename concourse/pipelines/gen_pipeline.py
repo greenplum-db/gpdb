@@ -53,7 +53,7 @@ BASE_BRANCH = "6X_STABLE"  # when branching gpdb update to 7X_STABLE, 6X_STABLE,
 SECRETS_PATH = os.path.expanduser('~/workspace/gp-continuous-integration/secrets')
 
 # Variables that govern pipeline validation
-RELEASE_VALIDATOR_JOB = ['Release_Candidate']
+RELEASE_VALIDATOR_JOB = ['Release_Candidate', 'Build_Release_Candidate_RPMs']
 JOBS_THAT_ARE_GATES = [
     'gate_icw_start',
     'gate_icw_end',
