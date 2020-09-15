@@ -25,6 +25,7 @@
 #include "libpq/pqformat.h"
 #include "miscadmin.h"
 #include "storage/lmgr.h"
+#include "storage/pmsignal.h"
 #include "storage/s_lock.h"
 #include "storage/shmem.h"
 #include "storage/ipc.h"
@@ -61,6 +62,7 @@ typedef struct TmControlBlock
 	DistributedTransactionTimeStamp	distribTimeStamp;
 	DistributedTransactionId	seqno;
 	bool						DtmStarted;
+	pid_t						DtxRecoveryPid;
 	uint32						NextSnapshotId;
 	int							num_committed_xacts;
 	slock_t						gxidGenLock;
@@ -711,9 +713,15 @@ retryAbortPrepared(void)
 	}
 
 	if (!succeeded)
-		ereport(PANIC,
-				(errmsg("unable to complete 'Abort' broadcast"),
+	{
+		DisconnectAndDestroyAllGangs(true);
+		CheckForResetSession();
+		SendPostmasterSignal(PMSIGNAL_WAKEN_DTX_RECOVERY);
+		ereport(WARNING,
+				(errmsg("unable to complete 'Abort' broadcast. The dtx recovery"
+						" process will continue trying that."),
 				TM_ERRDETAIL));
+	}
 
 	ereport(DTM_DEBUG5,
 			(errmsg("The distributed transaction 'Abort' broadcast succeeded to all the segments"),
@@ -1118,6 +1126,7 @@ tmShmemInit(void)
 		SpinLockInit(&shared->gxidGenLock);
 	}
 	shmDtmStarted = &shared->DtmStarted;
+	shmDtxRecoveryPid = &shared->DtxRecoveryPid;
 	shmNextSnapshotId = &shared->NextSnapshotId;
 	shmNumCommittedGxacts = &shared->num_committed_xacts;
 	shmGxidGenLock = &shared->gxidGenLock;
@@ -1128,6 +1137,7 @@ tmShmemInit(void)
 	{
 		*shmNextSnapshotId = 0;
 		*shmDtmStarted = false;
+		*shmDtxRecoveryPid = 0;
 		*shmNumCommittedGxacts = 0;
 	}
 }

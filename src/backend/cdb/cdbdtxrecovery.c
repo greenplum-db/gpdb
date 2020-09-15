@@ -37,7 +37,11 @@
 #include "tcop/tcopprot.h"
 #include "libpq-int.h"
 
-volatile bool *shmDtmStarted;
+#define MAX_FREQ_CHECK_TIMES 12
+static int frequent_check_times;
+
+volatile bool *shmDtmStarted = NULL;
+volatile pid_t *shmDtxRecoveryPid = NULL;
 
 /* transactions need recover */
 TMGXACT_LOG *shmCommittedGxactArray;
@@ -681,6 +685,16 @@ AbortOrphanedPreparedTransactions()
 }
 
 static void
+sigIntHandler(SIGNAL_ARGS)
+{
+	if (frequent_check_times == 0)
+		frequent_check_times = MAX_FREQ_CHECK_TIMES;
+
+	if (MyProc)
+		SetLatch(&MyProc->procLatch);
+}
+
+static void
 sigHupHandler(SIGNAL_ARGS)
 {
 	got_SIGHUP = true;
@@ -689,16 +703,25 @@ sigHupHandler(SIGNAL_ARGS)
 		SetLatch(&MyProc->procLatch);
 }
 
+pid_t
+DtxRecoveryPID(void)
+{
+	return *shmDtxRecoveryPid;
+}
+
 /*
  * DtxRecoveryMain
  */
 void
 DtxRecoveryMain(Datum main_arg)
 {
+	*shmDtxRecoveryPid = MyProcPid;
+
 	/*
 	 * reread postgresql.conf if requested
 	 */
 	pqsignal(SIGHUP, sigHupHandler);
+	pqsignal(SIGINT, sigIntHandler);
 
 	/* We're now ready to receive signals */
 	BackgroundWorkerUnblockSignals();
@@ -740,12 +763,16 @@ DtxRecoveryMain(Datum main_arg)
 
 		rc = WaitLatch(&MyProc->procLatch,
 					   WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH,
-					   gp_dtx_recovery_interval * 1000L);
+					   frequent_check_times > 0 ?
+					   5 * 1000L : gp_dtx_recovery_interval * 1000L);
 		ResetLatch(&MyProc->procLatch);
 
 		/* emergency bailout if postmaster has died */
 		if (rc & WL_POSTMASTER_DEATH)
 			proc_exit(1);
+
+		if (frequent_check_times > 0)
+			frequent_check_times--;
 	}
 
 	/* One iteration done, go away */

@@ -5577,6 +5577,11 @@ sigusr1_handler(SIGNAL_ARGS)
 		signal_child(FtsProbePID(), SIGINT);
 	}
 
+	if (CheckPostmasterSignal(PMSIGNAL_WAKEN_DTX_RECOVERY) && DtxRecoveryPID() != 0)
+	{
+		signal_child(DtxRecoveryPID(), SIGINT);
+	}
+
 	/*
 	 * Try to advance postmaster's state machine, if a child requests it.
 	 *

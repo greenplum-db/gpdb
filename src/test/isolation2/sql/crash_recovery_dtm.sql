@@ -244,3 +244,59 @@ $$ LANGUAGE plpgsql;
 
 -- ensure the orphaned prepared transaction is gone.
 1U: SELECT * from pg_prepared_xacts;
+
+-- Scenario 7: retry Abort Prepared on QD fails but won't cause panic. The dtx
+-- recovery process finally aborts it.
+
+-- speed up testing by setting some gucs.
+20: ALTER SYSTEM SET gp_dtx_recovery_prepared_period to 0;
+20: ALTER SYSTEM SET gp_dtx_recovery_interval to 5;
+20: ALTER SYSTEM SET dtx_phase2_retry_count to 2;
+20: SELECT pg_reload_conf();
+
+20: CREATE TABLE test_retry_abort(a int);
+
+-- master: set fault to trigger abort prepare
+-- primary 0: set fault so that retry prepared abort fails.
+20: SELECT gp_inject_fault('dtm_broadcast_prepare', 'error', dbid)
+   from gp_segment_configuration where role = 'p' and content = -1;
+20: SELECT gp_inject_fault_infinite('finish_prepared_start_of_function', 'error', dbid)
+   from gp_segment_configuration where role = 'p' and content = 0;
+
+-- run two phase query.
+21: INSERT INTO test_retry_abort SELECT generate_series(1,10);
+
+-- verify the transaction was aborted and there is one orphaned prepared
+-- transaction on seg0.
+20: SELECT * from test_retry_abort;
+0U: SELECT count(*) from pg_prepared_xacts;
+
+-- dtx recovery ready to handle the orphaned prepared transaction.
+20: SELECT gp_inject_fault_infinite('before_orphaned_check', 'suspend', dbid)
+   from gp_segment_configuration where role = 'p' and content = -1;
+20: SELECT gp_wait_until_triggered_fault('before_orphaned_check', 1, dbid)
+   from gp_segment_configuration where role = 'p' and content = -1;
+20: SELECT gp_inject_fault_infinite('after_orphaned_check', 'skip', dbid)
+   from gp_segment_configuration where role = 'p' and content = -1;
+
+-- kick off abort prepared on seg0 and then dtx recovery will abort that one.
+20: SELECT gp_inject_fault_infinite('finish_prepared_start_of_function', 'reset', dbid)
+   from gp_segment_configuration where role = 'p' and content = 0;
+20: SELECT gp_inject_fault_infinite('before_orphaned_check', 'reset', dbid)
+   from gp_segment_configuration where role = 'p' and content = -1;
+
+-- verify there is no orphaned prepared transaction on seg0.
+20: SELECT gp_wait_until_triggered_fault('after_orphaned_check', 1, dbid)
+   from gp_segment_configuration where role = 'p' and content = -1;
+0U: SELECT * from pg_prepared_xacts;
+
+-- cleanup
+20: ALTER SYSTEM RESET gp_dtx_recovery_interval;
+20: ALTER SYSTEM RESET gp_dtx_recovery_prepared_period;
+20: ALTER SYSTEM RESET dtx_phase2_retry_count;
+20: SELECT pg_reload_conf();
+20: SELECT gp_inject_fault('dtm_broadcast_prepare', 'reset', dbid)
+   from gp_segment_configuration where role = 'p' and content = -1;
+20: SELECT gp_inject_fault_infinite('after_orphaned_check', 'reset', dbid)
+   from gp_segment_configuration where role = 'p' and content = -1;
+20: DROP TABLE test_retry_abort;

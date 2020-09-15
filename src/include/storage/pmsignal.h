@@ -33,6 +33,7 @@ typedef enum
 	PMSIGNAL_ADVANCE_STATE_MACHINE,		/* advance postmaster's state machine */
 
 	PMSIGNAL_WAKEN_FTS,         /* wake up FTS to probe segments */
+	PMSIGNAL_WAKEN_DTX_RECOVERY,         /* wake up dtx recovery to abort dtx xacts */
 
 	NUM_PMSIGNALS				/* Must be last value of enum! */
 } PMSignalReason;
