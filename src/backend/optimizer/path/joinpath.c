@@ -20,6 +20,7 @@
 
 #include "executor/executor.h"
 #include "foreign/fdwapi.h"
+#include "optimizer/clauses.h"
 #include "optimizer/cost.h"
 #include "optimizer/pathnode.h"
 #include "optimizer/paths.h"
@@ -2088,6 +2089,11 @@ select_mergejoin_clauses(PlannerInfo *root,
 		{
 			have_nonmergeable_joinclause = true;
 			continue;			/* no good for these input relations */
+		}
+
+		if (jointype == JOIN_LASJ_NOTIN)
+		{
+			continue;
 		}
 
 		/*
