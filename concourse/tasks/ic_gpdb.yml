@@ -13,5 +13,6 @@ params:
   TEST_OS: ""
   CONFIGURE_FLAGS: ""
   WITH_MIRRORS:
+  VALIDATE_SYSTEM_TESTNAME: "check_cluster"
 run:
   path: gpdb_src/concourse/scripts/ic_gpdb.bash

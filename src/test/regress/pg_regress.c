@@ -124,6 +124,8 @@ static _resultmap *resultmap = NULL;
 static PID_TYPE postmaster_pid = INVALID_PID;
 static bool postmaster_running = false;
 
+static const char *validate_system_testname = NULL;
+static bool halt_work = false;
 static int	success_count = 0;
 static int	fail_count = 0;
 static int	fail_ignore_count = 0;
@@ -141,6 +143,8 @@ static int run_diff(const char *cmd, const char *filename);
 
 static char *content_zero_hostname = NULL;
 static char *get_host_name(int16 contentid, char role);
+
+static void run_single_test(const char *test, test_function tfunc);
 
 /*
  * allow core files if possible.
@@ -2117,6 +2121,18 @@ run_schedule(const char *schedule, test_function tfunc)
 			exit(2);
 		}
 
+		if (validate_system_testname)
+		{
+			int prev_fail_count = fail_count;
+			run_single_test(validate_system_testname, tfunc);
+			/* stop further testing if cluster is not found to be in good state */
+			if (prev_fail_count != fail_count)
+			{
+				halt_work = true;
+				break;
+			}
+		}
+
 		gettimeofday(&start_time, NULL);
 		if (num_tests == 1)
 		{
@@ -2261,9 +2277,12 @@ run_single_test(const char *test, test_function tfunc)
 			   *tl;
 	bool		differ = false;
 
+	struct timeval start_time, end_time;
+
 	status(_("test %-24s ... "), test);
+	gettimeofday(&start_time, NULL);
 	pid = (tfunc) (test, &resultfiles, &expectfiles, &tags);
-	wait_for_tests(&pid, &exit_status, NULL, NULL, 1);
+	wait_for_tests(&pid, &exit_status, NULL, &end_time, 1);
 
 	/*
 	 * Advance over all three lists simultaneously.
@@ -2287,6 +2306,10 @@ run_single_test(const char *test, test_function tfunc)
 		differ |= newdiff;
 	}
 
+	double diff_secs = 0;
+	diff_secs = end_time.tv_usec - start_time.tv_usec;
+	diff_secs /= 1000000;
+	diff_secs += end_time.tv_sec - start_time.tv_sec;
 	if (differ)
 	{
 		status(_("FAILED"));
@@ -2295,6 +2318,7 @@ run_single_test(const char *test, test_function tfunc)
 	else
 	{
 		status(_("ok"));
+		status(_(" (%.2f sec)"), diff_secs);
 		success_count++;
 	}
 
@@ -2587,6 +2611,7 @@ help(void)
 	printf(_("  --ignore-plans            ignore any explain plan diffs\n"));
 	printf(_("  --print-failure-diffs     Print the diff file to standard out after a failure\n"));
 	printf(_("  --tablespace-dir=DIR      place tablespace files in DIR/testtablespace (default \"./testtablespace\")\n"));
+	printf(_("  --validate-system=TEST    run TEST before processing every \"test:\" line in a schedule\n"));
 	printf(_("\n"));
 	printf(_("Options for \"temp-instance\" mode:\n"));
 	printf(_("  --no-locale               use C locale\n"));
@@ -2637,6 +2662,7 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 		{"prehook", required_argument, NULL, 28},
 		{"print-failure-diffs", no_argument, NULL, 29},
 		{"tablespace-dir", required_argument, NULL, 80},
+		{"validate-system", required_argument, NULL, 81},
 		{NULL, 0, NULL, 0}
 	};
 
@@ -2767,6 +2793,9 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 				break;
 			case 80:
 				tablespacedir = strdup(optarg);
+				break;
+			case 81:
+				validate_system_testname = strdup(optarg);
 				break;
 			default:
 				/* getopt_long already emitted a complaint */
@@ -3117,12 +3146,12 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 	 */
 	header(_("running regression test queries"));
 
-	for (sl = schedulelist; sl != NULL; sl = sl->next)
+	for (sl = schedulelist; sl != NULL && !halt_work; sl = sl->next)
 	{
 		run_schedule(sl->str, tfunc);
 	}
 
-	for (sl = extra_tests; sl != NULL; sl = sl->next)
+	for (sl = extra_tests; sl != NULL && !halt_work; sl = sl->next)
 	{
 		run_single_test(sl->str, tfunc);
 	}

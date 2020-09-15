@@ -47,6 +47,10 @@ function _main() {
         exit 1
     fi
 
+    if [ -n "${VALIDATE_SYSTEM_TESTNAME}" ]; then
+	MAKE_TEST_COMMAND="EXTRA_REGRESS_OPTS=--validate-system=${VALIDATE_SYSTEM_TESTNAME} ${MAKE_TEST_COMMAND}"
+    fi
+
     if [ -z "$TEST_OS" ]; then
         echo "FATAL: TEST_OS is not set"
         exit 1
