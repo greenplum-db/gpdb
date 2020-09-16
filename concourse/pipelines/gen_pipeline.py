@@ -48,7 +48,7 @@ TEMPLATE_ENVIRONMENT = Environment(
     extensions=['jinja2.ext.loopcontrols'])
 
 # Variables that govern pipeline validation
-RELEASE_VALIDATOR_JOB = ['Release_Candidate']
+RELEASE_VALIDATOR_JOB = ['Release_Candidate', 'Build_Release_Candidate_RPMs']
 JOBS_THAT_ARE_GATES = ['gate_compile_start', 'gate_compile_end',
                        'gate_icw_start', 'gate_icw_end',
                        'gate_cs_start', 'gate_cs_end',
