@@ -32,6 +32,7 @@ static void check_partition_schemas(void);
 static void check_large_objects(void);
 static void check_invalid_indexes(void);
 static void check_foreign_key_constraints_on_root_partition(void);
+static void check_views_with_unsupported_lag_lead_function(void);
 
 
 /*
@@ -59,6 +60,7 @@ check_greenplum(void)
 	check_partition_schemas();
 	check_large_objects();
 	check_invalid_indexes();
+	check_views_with_unsupported_lag_lead_function();
 }
 
 /*
@@ -1181,6 +1183,78 @@ check_foreign_key_constraints_on_root_partition(void)
 				 "partition tables. These constraints need to be dropped before \n"
 				 "proceeding to upgrade. A list of foreign key constraints is \n"
 				 "in the file:\n"
+				 "\t%s\n\n", output_path);
+	}
+	else
+		check_ok();
+}
+
+static void
+check_views_with_unsupported_lag_lead_function(void)
+{
+	/*
+	 * Only need to check for versions prior to GPDB6
+	 */
+	if (GET_MAJOR_VERSION(old_cluster.major_version) >= 804)
+		return;
+
+	char		output_path[MAXPGPATH];
+	FILE	   *script = NULL;
+	bool		found = false;
+	int			dbnum;
+	int			i_viewname;
+
+	prep_status("Checking for views with lead/lag functions using bigint");
+
+	snprintf(output_path, sizeof(output_path), "view_lead_lag_functions.txt");
+
+	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
+	{
+		PGresult   *res;
+		int			ntups;
+		int			rowno;
+		DbInfo	   *active_db = &old_cluster.dbarr.dbs[dbnum];
+		PGconn	   *conn;
+		bool		db_used = false;
+
+		conn = connectToServer(&old_cluster, active_db->db_name);
+		res = executeQueryOrDie(conn,
+								"SELECT ev_class::regclass::text viewname  "
+								"FROM pg_rewrite pgr "
+								"WHERE ev_action ~ "
+								"(SELECT $$:winfnoid ($$||string_agg(oid::text,'|')||$$) :$$ "
+								"	FROM (SELECT DISTINCT oid FROM pg_catalog.pg_proc WHERE (proname, pronamespace) in "
+								"			(('lag', 11), ('lead', 11))AND proargtypes[1]=20)s1);");
+
+		ntups = PQntuples(res);
+
+		i_viewname = PQfnumber(res, "viewname");
+		for (rowno = 0; rowno < ntups; rowno++)
+		{
+			found = true;
+			if (script == NULL && (script = fopen(output_path, "w")) == NULL)
+				pg_fatal("Could not create necessary file:  %s\n", output_path);
+			if (!db_used)
+			{
+				fprintf(script, "Database: %s\n", active_db->db_name);
+				db_used = true;
+			}
+			fprintf(script, "  %s \n",
+					PQgetvalue(res, rowno, i_viewname));
+		}
+
+		PQclear(res);
+		PQfinish(conn);
+	}
+
+	if (found)
+	{
+		fclose(script);
+		pg_log(PG_REPORT, "fatal\n");
+		pg_fatal("Your installation contains views using lag or lead \n"
+				 "functions with the second parameter as bigint. These views \n"
+				 "need to be dropped before proceeding to upgrade. \n"
+				 "A list of views is in the file:\n"
 				 "\t%s\n\n", output_path);
 	}
 	else

@@ -13,3 +13,4 @@ test: mismatched_partition_schemas
 test: vacuum_freeze_tables
 test: indexes
 test: foreign_key_constraint
+test: unsupported_lag_lead_in_views
