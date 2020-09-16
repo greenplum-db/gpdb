@@ -78,6 +78,8 @@
 
 #include "postgres.h"
 
+#include "miscadmin.h"
+
 #include "storage/buffile.h"
 #include "utils/builtins.h"
 #include "utils/logtape.h"
@@ -1271,9 +1273,26 @@ LogicalTapeTell(LogicalTapeSet *lts, int tapenum,
 
 /*
  * Obtain total disk space currently used by a LogicalTapeSet, in blocks.
+ *
+ * This should not be called while there are open write buffers; otherwise it
+ * may not account for buffered data.
  */
 long
 LogicalTapeSetBlocks(LogicalTapeSet *lts)
 {
-	return lts->nBlocksAllocated - lts->nHoleBlocks;
+#ifdef USE_ASSERT_CHECKING
+	/*
+	 * Greenplum interrupts the sort and set QueryFinishPending on purpose in
+	 * the test query_finish_pending.sql, skipping the assertion for that case.
+	 */
+	if (!QueryFinishPending)
+	{
+		for (int i = 0; i < lts->nTapes; i++)
+		{
+			LogicalTape *lt = &lts->tapes[i];
+			Assert(!lt->writing || lt->buffer == NULL);
+		}
+	}
+#endif
+	return lts->nBlocksWritten - lts->nHoleBlocks;
 }
