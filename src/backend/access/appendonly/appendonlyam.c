@@ -480,27 +480,34 @@ SetCurrentFileSegForWrite(AppendOnlyInsertDesc aoInsertDesc)
 	aoInsertDesc->rowCount = fsinfo->total_tupcount;
 
 	/*
-	 * Segment file #0 is created when the Append-Only table is created.
-	 *
-	 * Other segment files are created on-demand under transaction.
+	 * A QD process on the master may get here (e.g., via CopyFrom()), but should
+	 * skip creating segment files under its local data directory.
 	 */
-	if (aoInsertDesc->cur_segno > 0 && eof == 0)
+	if (Gp_role != GP_ROLE_DISPATCH)
 	{
-		AppendOnlyStorageWrite_TransactionCreateFile(&aoInsertDesc->storageWrite,
-													 &rnode,
-													 aoInsertDesc->cur_segno);
-	}
+		/*
+		 * Segment file #0 is created when the Append-Only table is created.
+		 *
+		 * Other segment files are created on-demand under transaction.
+		 */
+		if (aoInsertDesc->cur_segno > 0 && eof == 0)
+		{
+			AppendOnlyStorageWrite_TransactionCreateFile(&aoInsertDesc->storageWrite,
+														 &rnode,
+														 aoInsertDesc->cur_segno);
+		}
 
-	/*
-	 * Open the existing file for write.
-	 */
-	AppendOnlyStorageWrite_OpenFile(&aoInsertDesc->storageWrite,
-									aoInsertDesc->appendFilePathName,
-									aoInsertDesc->fsInfo->formatversion,
-									eof,
-									eof_uncompressed,
-									&rnode,
-									aoInsertDesc->cur_segno);
+		/*
+		 * Open the existing file for write.
+		 */
+		AppendOnlyStorageWrite_OpenFile(&aoInsertDesc->storageWrite,
+										aoInsertDesc->appendFilePathName,
+										aoInsertDesc->fsInfo->formatversion,
+										eof,
+										eof_uncompressed,
+										&rnode,
+										aoInsertDesc->cur_segno);
+	}
 
 	/* reset counts */
 	aoInsertDesc->insertCount = 0;
@@ -2757,34 +2764,40 @@ appendonly_insert_init(Relation rel, int segno, bool update_mode)
 	SetCurrentFileSegForWrite(aoInsertDesc);
 
 	Assert(aoInsertDesc->tempSpaceLen > 0);
-
-	/*
-	 * Obtain the next list of fast sequences for this relation.
-	 *
-	 * Even in the case of no indexes, we need to update the fast sequences,
-	 * since the table may contain indexes at some point of time.
-	 */
 	Assert(aoInsertDesc->fsInfo->segno == segno);
 
-	firstSequence =
-		GetFastSequences(aoInsertDesc->aoi_rel->rd_appendonly->segrelid,
-						 segno,
-						 aoInsertDesc->rowCount + 1,
-						 NUM_FAST_SEQUENCES);
-	aoInsertDesc->numSequences = NUM_FAST_SEQUENCES;
+	/*
+	 * A QD process on the master may get here (e.g., via CopyFrom()), but should
+	 * skip the following steps, as it does not write data to local segment file.
+	 */
+	if (Gp_role != GP_ROLE_DISPATCH)
+	{
+		/*
+		 * Obtain the next list of fast sequences for this relation.
+		 *
+		 * Even in the case of no indexes, we need to update the fast sequences,
+		 * since the table may contain indexes at some point of time.
+		 */
+		firstSequence =
+			GetFastSequences(aoInsertDesc->aoi_rel->rd_appendonly->segrelid,
+							 segno,
+							 aoInsertDesc->rowCount + 1,
+							 NUM_FAST_SEQUENCES);
+		aoInsertDesc->numSequences = NUM_FAST_SEQUENCES;
 
-	/* Set last_sequence value */
-	Assert(firstSequence > aoInsertDesc->rowCount);
-	aoInsertDesc->lastSequence = firstSequence - 1;
+		/* Set last_sequence value */
+		Assert(firstSequence > aoInsertDesc->rowCount);
+		aoInsertDesc->lastSequence = firstSequence - 1;
 
-	setupNextWriteBlock(aoInsertDesc);
+		setupNextWriteBlock(aoInsertDesc);
 
-	/* Initialize the block directory. */
-	AppendOnlyBlockDirectory_Init_forInsert(
-											&(aoInsertDesc->blockDirectory),
-aoInsertDesc->appendOnlyMetaDataSnapshot, //CONCERN:Safe to assume all block directory entries for segment are "covered" by same exclusive lock.
-											aoInsertDesc->fsInfo, aoInsertDesc->lastSequence,
-											rel, segno, 1, false);
+		/* Initialize the block directory. */
+		AppendOnlyBlockDirectory_Init_forInsert(
+			&(aoInsertDesc->blockDirectory),
+			aoInsertDesc->appendOnlyMetaDataSnapshot, //CONCERN:Safe to assume all block directory entries for segment are "covered" by same exclusive lock.
+			aoInsertDesc->fsInfo, aoInsertDesc->lastSequence,
+			rel, segno, 1, false);
+	}
 
 	return aoInsertDesc;
 }
@@ -3076,11 +3089,13 @@ appendonly_insert_finish(AppendOnlyInsertDesc aoInsertDesc)
 	/*
 	 * Finish up that last varblock.
 	 */
-	finishWriteBlock(aoInsertDesc);
+	if (Gp_role != GP_ROLE_DISPATCH)
+		finishWriteBlock(aoInsertDesc);
 
 	CloseWritableFileSeg(aoInsertDesc);
 
-	AppendOnlyBlockDirectory_End_forInsert(&(aoInsertDesc->blockDirectory));
+	if (Gp_role != GP_ROLE_DISPATCH)
+		AppendOnlyBlockDirectory_End_forInsert(&(aoInsertDesc->blockDirectory));
 
 	AppendOnlyStorageWrite_FinishSession(&aoInsertDesc->storageWrite);
 

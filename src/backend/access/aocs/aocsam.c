@@ -786,18 +786,24 @@ OpenAOCSDatumStreams(AOCSInsertDesc desc)
 	rnode.backend = desc->aoi_rel->rd_backend;
 	basepath = relpath(rnode, MAIN_FORKNUM);
 
-	for (i = 0; i < nvp; ++i)
+	/*
+	 * A QD process on the master may get here (e.g., via CopyFrom()), but should
+	 * skip creating segment files under its local data directory.
+	 */
+	if (Gp_role != GP_ROLE_DISPATCH)
 	{
-		AOCSVPInfoEntry *e = getAOCSVPEntry(seginfo, i);
+		for (i = 0; i < nvp; ++i)
+		{
+			AOCSVPInfoEntry *e = getAOCSVPEntry(seginfo, i);
 
-		FormatAOSegmentFileName(basepath, seginfo->segno, i, &fileSegNo, fn);
-		Assert(strlen(fn) + 1 <= MAXPGPATH);
+			FormatAOSegmentFileName(basepath, seginfo->segno, i, &fileSegNo, fn);
+			Assert(strlen(fn) + 1 <= MAXPGPATH);
 
-		datumstreamwrite_open_file(desc->ds[i], fn, e->eof, e->eof_uncompressed,
-								   &rnode,
-								   fileSegNo, seginfo->formatversion);
+			datumstreamwrite_open_file(desc->ds[i], fn, e->eof, e->eof_uncompressed,
+									   &rnode,
+									   fileSegNo, seginfo->formatversion);
+		}
 	}
-
 	pfree(basepath);
 }
 
@@ -848,37 +854,44 @@ aocs_insert_init(Relation rel, int segno, bool update_mode)
 	OpenAOCSDatumStreams(desc);
 
 	/*
-	 * Obtain the next list of fast sequences for this relation.
-	 *
-	 * Even in the case of no indexes, we need to update the fast sequences,
-	 * since the table may contain indexes at some point of time.
+	 * A QD process on the master may get here (e.g., via CopyFrom()), but should
+	 * skip the following steps, as it does not write data to local segment file.
 	 */
-	desc->numSequences = 0;
+	if (Gp_role != GP_ROLE_DISPATCH)
+	{
+		/*
+		 * Obtain the next list of fast sequences for this relation.
+		 *
+		 * Even in the case of no indexes, we need to update the fast sequences,
+		 * since the table may contain indexes at some point of time.
+		 */
+		desc->numSequences = 0;
 
-	firstSequence =
-		GetFastSequences(rel->rd_appendonly->segrelid,
-						 segno,
-						 desc->rowCount + 1,
-						 NUM_FAST_SEQUENCES);
-	desc->numSequences = NUM_FAST_SEQUENCES;
+		firstSequence =
+			GetFastSequences(rel->rd_appendonly->segrelid,
+							 segno,
+							 desc->rowCount + 1,
+							 NUM_FAST_SEQUENCES);
+		desc->numSequences = NUM_FAST_SEQUENCES;
 
-	/* Set last_sequence value */
-	Assert(firstSequence > desc->rowCount);
-	desc->lastSequence = firstSequence - 1;
+		/* Set last_sequence value */
+		Assert(firstSequence > desc->rowCount);
+		desc->lastSequence = firstSequence - 1;
 
-	SetBlockFirstRowNums(desc->ds, tupleDesc->natts, desc->lastSequence + 1);
+		SetBlockFirstRowNums(desc->ds, tupleDesc->natts, desc->lastSequence + 1);
 
-	/* Initialize the block directory. */
-	tupleDesc = RelationGetDescr(rel);
-	AppendOnlyBlockDirectory_Init_forInsert(&(desc->blockDirectory),
-											desc->appendOnlyMetaDataSnapshot,	/* CONCERN: Safe to
+		/* Initialize the block directory. */
+		tupleDesc = RelationGetDescr(rel);
+		AppendOnlyBlockDirectory_Init_forInsert(&(desc->blockDirectory),
+												desc->appendOnlyMetaDataSnapshot,    /* CONCERN: Safe to
 																				 * assume all block
 																				 * directory entries for
 																				 * segment are "covered"
 																				 * by same exclusive
 																				 * lock. */
-											(FileSegInfo *) desc->fsInfo, desc->lastSequence,
-											rel, segno, tupleDesc->natts, true);
+												(FileSegInfo *) desc->fsInfo, desc->lastSequence,
+												rel, segno, tupleDesc->natts, true);
+	}
 
 	return desc;
 }
@@ -998,13 +1011,16 @@ aocs_insert_finish(AOCSInsertDesc idesc)
 	Relation	rel = idesc->aoi_rel;
 	int			i;
 
-	for (i = 0; i < rel->rd_att->natts; ++i)
+	if (Gp_role != GP_ROLE_DISPATCH)
 	{
-		datumstreamwrite_block(idesc->ds[i], &idesc->blockDirectory, i, false);
-		datumstreamwrite_close_file(idesc->ds[i]);
-	}
+		for (i = 0; i < rel->rd_att->natts; ++i)
+		{
+			datumstreamwrite_block(idesc->ds[i], &idesc->blockDirectory, i, false);
+			datumstreamwrite_close_file(idesc->ds[i]);
+		}
 
-	AppendOnlyBlockDirectory_End_forInsert(&(idesc->blockDirectory));
+		AppendOnlyBlockDirectory_End_forInsert(&(idesc->blockDirectory));
+	}
 
 	UpdateAOCSFileSegInfo(idesc);
 
