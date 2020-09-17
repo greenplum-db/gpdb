@@ -98,6 +98,8 @@ typedef struct
 	PathTarget *partial_grouping_target;	/* targetlist of partially aggregated result */
 	List	   *final_groupClause;			/* SortGroupClause for final grouping */
 	List	   *final_group_tles;
+	List	   *final_group_input_pathkeys;	/* order of the input to (sorted) second stage */
+	List	   *final_group_pathkeys;		/* order of the result of sorted second stage */
 
 	/*
 	 * partial_rel holds the partially aggregated results from the first stage.
@@ -131,7 +133,7 @@ static CdbPathLocus choose_grouping_locus(PlannerInfo *root, Path *path,
 
 static Index add_gsetid_tlist(List *tlist);
 
-static List *add_gsetid_groupclause(List *groupClause, Index groupref);
+static SortGroupClause *create_gsetid_groupclause(Index groupref);
 
 static void add_first_stage_group_agg_path(PlannerInfo *root,
 										   Path *path,
@@ -320,22 +322,40 @@ cdb_create_twostage_grouping_paths(PlannerInfo *root,
 		Index		groupref;
 		GroupingSetId *gsetid = makeNode(GroupingSetId);
 		List	   *grouping_sets_tlist;
+		SortGroupClause *gsetcl;
+		List	   *tlist;
+		List	   *pl;
 
 		grouping_sets_tlist = copyObject(root->processed_tlist);
 		groupref = add_gsetid_tlist(grouping_sets_tlist);
 
-		ctx.final_groupClause =
-			add_gsetid_groupclause(copyObject(parse->groupClause), groupref);
+		gsetcl = create_gsetid_groupclause(groupref);
+
+		ctx.final_groupClause = lappend(copyObject(parse->groupClause), gsetcl);
 
 		ctx.partial_grouping_target = copyObject(partial_grouping_target);
 		if (!list_member(ctx.partial_grouping_target->exprs, gsetid))
 			add_column_to_pathtarget(ctx.partial_grouping_target,
 									 (Expr *) gsetid, groupref);
+
+		tlist = make_tlist_from_pathtarget(ctx.partial_grouping_target);
+
+		/* The final result will be sorted by this */
+		ctx.final_group_pathkeys = make_pathkeys_for_sortclauses(root, parse->groupClause, tlist);
+
+		/*
+		 * The input to the second-stage sorted Agg has GROUPINGSET_ID() as the last
+		 * sort key. It is not present in the final Agg result.
+		 */
+		pl = make_pathkeys_for_sortclauses(root, list_make1(gsetcl), tlist);
+		ctx.final_group_input_pathkeys = list_concat(list_copy(ctx.final_group_pathkeys), pl);
 	}
 	else
 	{
 		ctx.partial_grouping_target = partial_grouping_target;
 		ctx.final_groupClause = parse->groupClause;
+		ctx.final_group_input_pathkeys = root->group_pathkeys;
+		ctx.final_group_pathkeys = root->group_pathkeys;
 	}
 	ctx.final_group_tles = get_common_group_tles(ctx.partial_grouping_target,
 												 ctx.final_groupClause,
@@ -532,11 +552,11 @@ add_gsetid_tlist(List *tlist)
 }
 
 /*
- * Add a SortGroupClause node to the groupClause representing the GroupingSetId.
- * Note we insert the new node to the head of groupClause.
+ * Create a new SortGroupClause node representing the GroupingSetId, to be
+ * added to the groupClause.
  */
-static List *
-add_gsetid_groupclause(List *groupClause, Index groupref)
+static SortGroupClause *
+create_gsetid_groupclause(Index groupref)
 {
 	SortGroupClause *gc;
 	Oid         sortop;
@@ -555,9 +575,7 @@ add_gsetid_groupclause(List *groupClause, Index groupref)
 	gc->nulls_first = false;
 	gc->hashable = hashable;
 
-	groupClause = lcons(gc, groupClause);
-
-	return groupClause;
+	return gc;
 }
 
 /*
@@ -710,8 +728,7 @@ add_second_stage_group_agg_path(PlannerInfo *root,
 	 * We generate a Path for both, and let add_path() decide which ones
 	 * to keep.
 	 */
-	pathkeys = make_pathkeys_for_sortclauses(root, ctx->final_groupClause,
-											 make_tlist_from_pathtarget(ctx->partial_grouping_target));
+	pathkeys = ctx->final_group_input_pathkeys;
 
 	/* Alternative 1: Redistribute -> Sort -> Agg */
 	if (CdbPathLocus_IsHashed(group_locus))
@@ -737,6 +754,7 @@ add_second_stage_group_agg_path(PlannerInfo *root,
 										ctx->agg_final_costs,
 										ctx->dNumGroupsTotal,
 										NULL);
+		path->pathkeys = ctx->final_group_pathkeys;
 		add_path(output_rel, path);
 	}
 
@@ -771,6 +789,7 @@ add_second_stage_group_agg_path(PlannerInfo *root,
 									ctx->agg_final_costs,
 									ctx->dNumGroupsTotal,
 									NULL);
+	path->pathkeys = ctx->final_group_pathkeys;
 	add_path(output_rel, path);
 }
 

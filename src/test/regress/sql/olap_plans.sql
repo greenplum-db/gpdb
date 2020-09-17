@@ -69,6 +69,17 @@ select a, b, c, sum(d) from olap_test group by grouping sets((a, b), (a), (b, c)
 explain select a, b, d, sum(d) from olap_test group by grouping sets((a, b), (a), (b, d));
 -- do not execute this query as it would produce too many tuples.
 
+-- Test that when the second-stage Agg doesn't try to preserve the
+-- GROUPINGSET_ID(), used internally in the plan, in the result order. We had
+-- a bug like that at one point.
+--
+-- The notable thing in the plan is that the Sort node has GROUPINGSET_ID() in
+-- the Sort Key, as needed for the Finalize GroupAggregate, but in the Motion
+-- above the Finalize GroupAggregate, the GROUPINGSET_ID() has been dropped
+-- from the Merge Key.
+set enable_hashagg=off;
+explain select a, b, c, sum(d) from olap_test group by grouping sets((a, b), (a), (b, c)) limit 200;
+reset enable_hashagg;
 
 --
 -- Test an optimization in the grouping planner for CREATE TABLE AS, where

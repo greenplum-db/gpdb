@@ -635,7 +635,7 @@ explain (costs off)
    ->  Sort
          Sort Key: a
          ->  Finalize HashAggregate
-               Group Key: (GROUPINGSET_ID()), a
+               Group Key: a, (GROUPINGSET_ID())
                Filter: (a IS DISTINCT FROM 1)
                ->  Redistribute Motion 3:3  (slice2; segments: 3)
                      Hash Key: a, (GROUPINGSET_ID())

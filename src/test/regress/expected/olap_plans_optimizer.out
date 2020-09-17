@@ -264,6 +264,40 @@ explain select a, b, d, sum(d) from olap_test group by grouping sets((a, b), (a)
 (11 rows)
 
 -- do not execute this query as it would produce too many tuples.
+-- Test that when the second-stage Agg doesn't try to preserve the
+-- GROUPINGSET_ID(), used internally in the plan, in the result order. We had
+-- a bug like that at one point.
+--
+-- The notable thing in the plan is that the Sort node has GROUPINGSET_ID() in
+-- the Sort Key, as needed for the Finalize GroupAggregate, but in the Motion
+-- above the Finalize GroupAggregate, the GROUPINGSET_ID() has been dropped
+-- from the Merge Key.
+set enable_hashagg=off;
+explain select a, b, c, sum(d) from olap_test group by grouping sets((a, b), (a), (b, c)) limit 200;
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=777.19..912.19 rows=200 width=20)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=777.19..1182.19 rows=600 width=20)
+         Merge Key: a, b, c
+         ->  Limit  (cost=777.19..782.19 rows=200 width=20)
+               ->  Finalize GroupAggregate  (cost=776.52..783.20 rows=267 width=20)
+                     Group Key: a, b, c, (GROUPINGSET_ID())
+                     ->  Sort  (cost=776.52..777.19 rows=267 width=20)
+                           Sort Key: a, b, c, (GROUPINGSET_ID())
+                           ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=234.38..765.76 rows=267 width=20)
+                                 Hash Key: a, b, c, (GROUPINGSET_ID())
+                                 ->  Partial GroupAggregate  (cost=234.38..498.76 rows=267 width=20)
+                                       Group Key: a, b
+                                       Group Key: a
+                                       Sort Key: b, c
+                                         Group Key: b, c
+                                       ->  Sort  (cost=234.38..242.71 rows=3333 width=16)
+                                             Sort Key: a, b
+                                             ->  Seq Scan on olap_test  (cost=0.00..39.33 rows=3333 width=16)
+ Optimizer: Postgres query optimizer
+(19 rows)
+
+reset enable_hashagg;
 --
 -- Test an optimization in the grouping planner for CREATE TABLE AS, where
 -- partial aggregation results are redistributed directly according to the
