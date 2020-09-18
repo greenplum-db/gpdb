@@ -18,6 +18,8 @@
 
 LogOpts		log_opts;
 
+static step_timer timer;
+
 /*
  * report_status()
  *

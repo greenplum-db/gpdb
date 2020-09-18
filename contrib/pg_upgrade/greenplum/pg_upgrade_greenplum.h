@@ -18,7 +18,6 @@ typedef struct {
 	instr_time start_time;
 	instr_time end_time;
 } step_timer;
-static step_timer timer;
 
 /*
  * Enumeration for operations in the progress report
