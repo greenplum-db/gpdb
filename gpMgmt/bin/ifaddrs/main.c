@@ -9,11 +9,11 @@
 #include <arpa/inet.h>
 #include <getopt.h>
 #include <ifaddrs.h>
-#include <net/if.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
-#include <sys/types.h>
+#include <net/if.h>
+#include <c.h>
 
 int main(int argc, char *argv[])
 {
@@ -60,12 +60,6 @@ int main(int argc, char *argv[])
 		struct sockaddr_in6	   *addr6;
 		struct sockaddr		   *addr = list->ifa_addr;
 
-		if (no_loopback && (list->ifa_flags & IFF_LOOPBACK))
-		{
-			/* user has requested that loopback interfaces not be printed */
-			continue;
-		}
-
 		if (addr == NULL)
 			continue;
 
@@ -99,6 +93,25 @@ int main(int argc, char *argv[])
 		{
 			perror("inet_ntop");
 			return 1;
+		}
+
+		if (no_loopback && (list->ifa_flags & IFF_LOOPBACK))
+		{
+			/* Exclude 127.0.0.0/8 ip range */
+			if (addr->sa_family == AF_INET)
+			{
+				uint32 saddr = ntohl(addr4->sin_addr.s_addr);
+				uint8_t b1;
+				b1 = (uint8_t)(saddr >> 24 & 0xff);
+				if (b1 == 127)
+					continue;
+			}
+
+			/* Exclude ::1 */
+			if (addr->sa_family == AF_INET6 && IN6_IS_ADDR_LOOPBACK(&addr6->sin6_addr))
+			{
+				continue;
+			}
 		}
 
 		printf("%s\n", addrstr);

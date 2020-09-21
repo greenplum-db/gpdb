@@ -94,3 +94,9 @@ Feature: Tests for gpinitstandby feature
         When the user runs pg_controldata against the standby data directory
         Then pg_controldata should print "Data page checksum version:           0" to stdout
 
+    Scenario: gpinitstandby does not add entries for 127.0.0.x and ::1 in pg_hba.conf
+        Given the database is running
+        And the standby is not initialized
+        And the user runs gpinitstandby with options " "
+        Then gpinitstandby should return a return code of 0
+        And verify that the file "pg_hba.conf" in the master data directory has "no" line starting with "host.*replication.*(127.0.0.1|::1).*trust"
