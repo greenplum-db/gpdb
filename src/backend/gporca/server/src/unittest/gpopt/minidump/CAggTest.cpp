@@ -77,11 +77,9 @@ const CHAR *rgszAggFileNames[] = {
 	"../data/dxl/minidump/DistinctAgg-NonSplittable.mdp",
 	"../data/dxl/minidump/RollupNoAgg.mdp",
 	"../data/dxl/minidump/GroupingSets.mdp",
-#ifndef GPOS_DEBUG
 	"../data/dxl/minidump/CapGbCardToSelectCard.mdp",
 	"../data/dxl/minidump/GroupingOnSameTblCol-1.mdp",
 	"../data/dxl/minidump/GroupingOnSameTblCol-2.mdp",
-#endif
 	"../data/dxl/minidump/PushGbBelowJoin-NegativeCase.mdp",
 	"../data/dxl/minidump/Gb-on-keys.mdp",
 	"../data/dxl/minidump/ComputedGroupByCol.mdp",
