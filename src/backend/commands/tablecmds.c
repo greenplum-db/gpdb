@@ -3978,6 +3978,7 @@ AlterTableGetLockLevel(List *cmds)
 				/* GPDB additions */
 			case AT_ExpandTable:
 			case AT_SetDistributedBy:
+			case AT_ExpandTablePrepare:
 			case AT_PartAdd:
 			case AT_PartAddForSplit:
 			case AT_PartAlter:
@@ -4625,6 +4626,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 			pass = AT_PASS_MISC;
 			break;
 		case AT_ExpandTable:
+		case AT_ExpandTablePrepare:
 			/* External tables can be expanded */
 			ATSimplePermissions(rel, ATT_TABLE | ATT_FOREIGN_TABLE);
 			if (!recursing)
@@ -20527,6 +20529,7 @@ char *alterTableCmdString(AlterTableType subtype)
 			break;
 
 		case AT_ExpandTable:
+		case AT_ExpandTablePrepare:
 			cmdstring = pstrdup("expand table data on");
 			break;
 
