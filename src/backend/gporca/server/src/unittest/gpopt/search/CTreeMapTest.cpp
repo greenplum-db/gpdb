@@ -29,11 +29,6 @@
 
 ULONG CTreeMapTest::m_ulTestCounter = 0;  // start from first test
 
-// minidump files that fail during plan enumeration because of large plan space
-const CHAR *rgszFailedPlanEnumerationTests[] = {
-	"../data/dxl/minidump/106-way-join.mdp",
-};
-
 
 //---------------------------------------------------------------------------
 // raw data for test
@@ -58,10 +53,6 @@ CTreeMapTest::EresUnittest()
 		GPOS_UNITTEST_FUNC(CTreeMapTest::EresUnittest_Count),
 		GPOS_UNITTEST_FUNC(CTreeMapTest::EresUnittest_Unrank),
 		GPOS_UNITTEST_FUNC(CTreeMapTest::EresUnittest_Memo),
-
-#ifndef GPOS_DEBUG
-		GPOS_UNITTEST_FUNC(EresUnittest_FailedPlanEnumerationTests),
-#endif	// GPOS_DEBUG
 
 #ifdef GPOS_DEBUG
 		GPOS_UNITTEST_FUNC_ASSERT(CTreeMapTest::EresUnittest_Cycle),
@@ -432,71 +423,6 @@ CTreeMapTest::EresUnittest_Memo()
 
 	return GPOS_OK;
 }
-
-
-#ifndef GPOS_DEBUG
-//---------------------------------------------------------------------------
-//	@function:
-//		CTreeMapTest::EresUnittest_FailedPlanEnumerationTests
-//
-//	@doc:
-//		Run Minidump-based tests that fail during plan enumeration because
-//		of large plan space
-//
-//---------------------------------------------------------------------------
-GPOS_RESULT
-CTreeMapTest::EresUnittest_FailedPlanEnumerationTests()
-{
-	CAutoMemoryPool amp;
-	CMemoryPool *mp = amp.Pmp();
-
-	BOOL fMatchPlans = false;
-	BOOL fTestSpacePruning = false;
-	fMatchPlans = true;
-	fTestSpacePruning = true;
-
-	// enable plan enumeration only if we match plans
-	CAutoTraceFlag atf1(EopttraceEnumeratePlans, fMatchPlans);
-
-	// enable stats derivation for DPE
-	CAutoTraceFlag atf2(EopttraceDeriveStatsForDPE, true /*value*/);
-
-	const ULONG ulTests = GPOS_ARRAY_SIZE(rgszFailedPlanEnumerationTests);
-	GPOS_RESULT eres = GPOS_OK;
-	for (ULONG ul = 0; eres == GPOS_OK && ul < ulTests; ul++)
-	{
-		GPOS_TRY
-		{
-			eres = CTestUtils::EresRunMinidumps(
-				mp, &rgszFailedPlanEnumerationTests[ul],
-				1,	// ulTests
-				&m_ulTestCounter,
-				1,	// ulSessionId
-				1,	// ulCmdId
-				fMatchPlans, fTestSpacePruning);
-		}
-		GPOS_CATCH_EX(ex)
-		{
-			if (GPOS_MATCH_EX(ex, CException::ExmaSystem,
-							  CException::ExmiOverflow))
-			{
-				eres = GPOS_OK;
-				GPOS_RESET_EX;
-			}
-			else
-			{
-				GPOS_RETHROW(ex);
-
-				eres = GPOS_FAILED;
-			}
-		}
-		GPOS_CATCH_END;
-	}
-
-	return eres;
-}
-#endif	// GPOS_DEBUG
-
 
 
 #ifdef GPOS_DEBUG

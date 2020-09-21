@@ -79,12 +79,6 @@ public:
 	static GPOS_RESULT EresUnittest_Unrank();
 	static GPOS_RESULT EresUnittest_Memo();
 
-#ifndef GPOS_DEBUG
-	// this test is run in optimized build because of long optimization time
-	static GPOS_RESULT EresUnittest_FailedPlanEnumerationTests();
-#endif	// GPOS_DEBUG
-
-
 
 #ifdef GPOS_DEBUG
 	static GPOS_RESULT EresUnittest_Cycle();
