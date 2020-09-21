@@ -1983,7 +1983,6 @@ class ExpandTable():
             return None, None
         namedict = {}
         oiddict = {}
-        policy = policy.strip()
         if policy:
             sql = "SELECT attnum, attname, attrelid FROM pg_attribute WHERE attrelid =  %s AND attnum > 0" % self.table_oid
             cursor = dbconn.query(conn, sql)
@@ -1993,8 +1992,7 @@ class ExpandTable():
                 oiddict[row[0]] = row[2]
             name_list = []
             oid_list = []
-            rs_list = policy.split(' ')
-            for colnum in rs_list:
+            for colnum in policy:
                 name_list.append(namedict[int(colnum)])
                 oid_list.append(str(oiddict[int(colnum)]))
         return ','.join(name_list), ','.join(oid_list)
