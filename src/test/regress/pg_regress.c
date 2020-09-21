@@ -34,8 +34,10 @@
 #endif
 
 #include "common/restricted_token.h"
+#include "common/string.h"
 #include "common/username.h"
 #include "getopt_long.h"
+#include "lib/stringinfo.h"
 #include "libpq/pqcomm.h"		/* needed for UNIXSOCK_PATH() */
 #include "pg_config_paths.h"
 
@@ -465,22 +467,32 @@ string_matches_pattern(const char *str, const char *pattern)
 }
 
 /*
- * Replace all occurrences of a string in a string with a different string.
- * NOTE: Assumes there is enough room in the target buffer!
+ * Replace all occurrences of "replace" in "string" with "replacement".
+ * The StringInfo will be suitably enlarged if necessary.
+ *
+ * Note: this is optimized on the assumption that most calls will find
+ * no more than one occurrence of "replace", and quite likely none.
  */
 void
-replace_string(char *string, char *replace, char *replacement)
+replace_string(StringInfo string, const char *replace, const char *replacement)
 {
+	int			pos = 0;
 	char	   *ptr;
 
-	while ((ptr = strstr(string, replace)) != NULL)
+	while ((ptr = strstr(string->data + pos, replace)) != NULL)
 	{
-		char	   *dup = strdup(string);
+		/* Must copy the remainder of the string out of the StringInfo */
+		char	   *suffix = pg_strdup(ptr + strlen(replace));
 
-		strlcpy(string, dup, ptr - string + 1);
-		strcat(string, replacement);
-		strcat(string, dup + (ptr - string) + strlen(replace));
-		free(dup);
+		/* Truncate StringInfo at start of found string ... */
+		string->len = ptr - string->data;
+		/* ... and append the replacement (this restores the trailing '\0') */
+		appendStringInfoString(string, replacement);
+		/* Next search should start after the replacement */
+		pos = string->len;
+		/* Put back the remainder of the string */
+		appendStringInfoString(string, suffix);
+		free(suffix);
 	}
 }
 
@@ -537,7 +549,7 @@ detectCgroupMountPoint(char *cgdir, int len)
 }
 
 static void
-convert_line(char *line, replacements *repls)
+convert_line(StringInfo line, replacements *repls)
 {
 	replace_string(line, "@cgroup_mnt_point@", repls->cgroup_mnt_point);
 	replace_string(line, "@abs_srcdir@", repls->abs_srcdir);
@@ -598,8 +610,7 @@ generate_uao_sourcefiles(char *src_dir, char *dest_dir, char *suffix, replacemen
 		FILE	   *infile,
 				   *outfile_row,
 				   *outfile_col;
-		char		line[1024];
-		char		line_row[1024];
+		StringInfoData line, line_row;
 		bool		has_tokens = false;
 
 		/* reject filenames not finishing in ".source" */
@@ -655,23 +666,30 @@ generate_uao_sourcefiles(char *src_dir, char *dest_dir, char *suffix, replacemen
 			exit_nicely(2);
 		}
 
-		while (fgets(line, sizeof(line), infile))
+		initStringInfo(&line);
+		initStringInfo(&line_row);
+
+		while (pg_get_line_append(infile, &line))
 		{
-			strlcpy(line_row, line, sizeof(line_row));
+			appendStringInfoString(&line_row, line.data);
 			repls->orientation = "row";
-			convert_line(line_row, repls);
+			convert_line(&line_row, repls);
 			repls->orientation = "column";
-			convert_line(line, repls);
-			fputs(line, outfile_col);
-			fputs(line_row, outfile_row);
+			convert_line(&line, repls);
+			fputs(line.data, outfile_col);
+			fputs(line_row.data, outfile_row);
 			/*
 			 * Remember if there are any more tokens that we didn't recognize.
 			 * They need to be handled by the gpstringsubs.pl script
 			 */
-			if (!has_tokens && strstr(line, "@gp") != NULL)
+			if (!has_tokens && strstr(line.data, "@gp") != NULL)
 				has_tokens = true;
+			resetStringInfo(&line);
+			resetStringInfo(&line_row);
 		}
 
+		pfree(line.data);
+		pfree(line_row.data);
 		fclose(infile);
 		fclose(outfile_row);
 		fclose(outfile_col);
@@ -796,7 +814,7 @@ convert_sourcefiles_in(char *source_subdir, char *dest_dir, char *dest_subdir, c
 		char		prefix[MAXPGPATH];
 		FILE	   *infile,
 				   *outfile;
-		char		line[1024];
+		StringInfoData line;
 		bool		has_tokens = false;
 		struct stat fst;
 
@@ -853,18 +871,25 @@ convert_sourcefiles_in(char *source_subdir, char *dest_dir, char *dest_subdir, c
 					progname, destfile, strerror(errno));
 			exit(2);
 		}
-		while (fgets(line, sizeof(line), infile))
+
+		initStringInfo(&line);
+
+		while (pg_get_line_append(infile, &line))
 		{
-			convert_line(line, &repls);
-			fputs(line, outfile);
+			convert_line(&line, &repls);
+			fputs(line.data, outfile);
 
 			/*
 			 * Remember if there are any more tokens that we didn't recognize.
 			 * They need to be handled by the gpstringsubs.pl script
 			 */
-			if (!has_tokens && strstr(line, "@gp") != NULL)
+			if (!has_tokens && strstr(line.data, "@gp") != NULL)
 				has_tokens = true;
+
+			resetStringInfo(&line);
 		}
+
+		pfree(line.data);
 		fclose(infile);
 		fclose(outfile);
 

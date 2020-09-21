@@ -17,8 +17,9 @@
  */
 
 #include "pg_regress.h"
+#include "common/string.h"
+#include "lib/stringinfo.h"
 
-#define LINEBUFSIZE 300
 static void
 ecpg_filter(const char *sourcefile, const char *outfile)
 {
@@ -28,7 +29,7 @@ ecpg_filter(const char *sourcefile, const char *outfile)
 	 */
 	FILE	   *s,
 			   *t;
-	char		linebuf[LINEBUFSIZE];
+	StringInfoData linebuf;
 
 	s = fopen(sourcefile, "r");
 	if (!s)
@@ -43,13 +44,14 @@ ecpg_filter(const char *sourcefile, const char *outfile)
 		exit(2);
 	}
 
-	while (fgets(linebuf, LINEBUFSIZE, s))
+	initStringInfo(&linebuf);
+
+	while (pg_get_line_append(s, &linebuf))
 	{
 		/* check for "#line " in the beginning */
-		if (strstr(linebuf, "#line ") == linebuf)
+		if (strstr(linebuf.data, "#line ") == linebuf.data)
 		{
-			char	   *p = strchr(linebuf, '"');
-			char	   *n;
+			char	   *p = strchr(linebuf.data, '"');
 			int			plen = 1;
 
 			while (*p && (*(p + plen) == '.' || strchr(p + plen, '/') != NULL))
@@ -59,13 +61,15 @@ ecpg_filter(const char *sourcefile, const char *outfile)
 			/* plen is one more than the number of . and / characters */
 			if (plen > 1)
 			{
-				n = (char *) malloc(plen);
-				StrNCpy(n, p + 1, plen);
-				replace_string(linebuf, n, "");
+				memmove(p + 1, p + plen, strlen(p + plen) + 1);
+				/* we don't bother to fix up linebuf.len */
 			}
 		}
-		fputs(linebuf, t);
+		fputs(linebuf.data, t);
+		resetStringInfo(&linebuf);
 	}
+
+	pfree(linebuf.data);
 	fclose(s);
 	fclose(t);
 }
@@ -84,39 +88,41 @@ ecpg_start_test(const char *testname,
 	PID_TYPE	pid;
 	char		inprg[MAXPGPATH];
 	char		insource[MAXPGPATH];
-	char	   *outfile_stdout,
+	StringInfoData testname_dash;
+	char		outfile_stdout[MAXPGPATH],
 				expectfile_stdout[MAXPGPATH];
-	char	   *outfile_stderr,
+	char		outfile_stderr[MAXPGPATH],
 				expectfile_stderr[MAXPGPATH];
-	char	   *outfile_source,
+	char		outfile_source[MAXPGPATH],
 				expectfile_source[MAXPGPATH];
 	char		cmd[MAXPGPATH * 3];
-	char	   *testname_dash;
 
 	snprintf(inprg, sizeof(inprg), "%s/%s", inputdir, testname);
+	snprintf(insource, sizeof(insource), "%s.c", testname);
 
-	testname_dash = strdup(testname);
-	replace_string(testname_dash, "/", "-");
+	initStringInfo(&testname_dash);
+	appendStringInfoString(&testname_dash, testname);
+	replace_string(&testname_dash, "/", "-");
+
 	snprintf(expectfile_stdout, sizeof(expectfile_stdout),
 			 "%s/expected/%s.stdout",
-			 outputdir, testname_dash);
+			 outputdir, testname_dash.data);
 	snprintf(expectfile_stderr, sizeof(expectfile_stderr),
 			 "%s/expected/%s.stderr",
-			 outputdir, testname_dash);
+			 outputdir, testname_dash.data);
 	snprintf(expectfile_source, sizeof(expectfile_source),
 			 "%s/expected/%s.c",
-			 outputdir, testname_dash);
+			 outputdir, testname_dash.data);
 
-	/*
-	 * We can use replace_string() here because the replacement string does
-	 * not occupy more space than the replaced one.
-	 */
-	outfile_stdout = strdup(expectfile_stdout);
-	replace_string(outfile_stdout, "/expected/", "/results/");
-	outfile_stderr = strdup(expectfile_stderr);
-	replace_string(outfile_stderr, "/expected/", "/results/");
-	outfile_source = strdup(expectfile_source);
-	replace_string(outfile_source, "/expected/", "/results/");
+	snprintf(outfile_stdout, sizeof(outfile_stdout),
+			 "%s/results/%s.stdout",
+			 outputdir, testname_dash.data);
+	snprintf(outfile_stderr, sizeof(outfile_stderr),
+			 "%s/results/%s.stderr",
+			 outputdir, testname_dash.data);
+	snprintf(outfile_source, sizeof(outfile_source),
+			 "%s/results/%s.c",
+			 outputdir, testname_dash.data);
 
 	add_stringlist_item(resultfiles, outfile_stdout);
 	add_stringlist_item(expectfiles, expectfile_stdout);
@@ -130,10 +136,7 @@ ecpg_start_test(const char *testname,
 	add_stringlist_item(expectfiles, expectfile_source);
 	add_stringlist_item(tags, "source");
 
-	snprintf(insource, sizeof(insource), "%s.c", testname);
 	ecpg_filter(insource, outfile_source);
-
-	snprintf(inprg, sizeof(inprg), "%s/%s", inputdir, testname);
 
 	snprintf(cmd, sizeof(cmd),
 			 "\"%s\" >\"%s\" 2>\"%s\"",
@@ -150,9 +153,7 @@ ecpg_start_test(const char *testname,
 		exit(2);
 	}
 
-	free(outfile_stdout);
-	free(outfile_stderr);
-	free(outfile_source);
+	free(testname_dash.data);
 
 	return pid;
 }

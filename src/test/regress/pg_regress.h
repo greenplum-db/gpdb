@@ -19,6 +19,8 @@
 #define INVALID_PID INVALID_HANDLE_VALUE
 #endif
 
+struct StringInfoData;			/* avoid including stringinfo.h here */
+
 /* simple list of strings */
 typedef struct _stringlist
 {
@@ -53,6 +55,7 @@ int regression_main(int argc, char *argv[],
 				init_function ifunc, test_function tfunc);
 void		add_stringlist_item(_stringlist **listhead, const char *str);
 PID_TYPE	spawn_process(const char *cmdline);
+void		replace_string(struct StringInfoData *string,
+						   const char *replace, const char *replacement);
 void		exit_nicely(int code);
-void		replace_string(char *string, char *replace, char *replacement);
 bool		file_exists(const char *file);
