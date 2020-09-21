@@ -426,18 +426,16 @@ insert into try_distinct_array select 'y',string_to_array('1~1','~')::int[];
 insert into try_distinct_array select 'n',string_to_array('1~1','~')::int[];
 -- Aggregate with grouping column that does not have legacy hashop
 explain (costs off) select distinct test_array from try_distinct_array;
-                          QUERY PLAN                          
---------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)
-   ->  HashAggregate
-         Group Key: try_distinct_array.test_array
-         ->  Redistribute Motion 3:3  (slice1; segments: 3)
-               Hash Key: try_distinct_array.test_array
-               ->  HashAggregate
-                     Group Key: try_distinct_array.test_array
-                     ->  Seq Scan on try_distinct_array
+                    QUERY PLAN                    
+--------------------------------------------------
+ Finalize HashAggregate
+   Group Key: test_array
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial HashAggregate
+               Group Key: test_array
+               ->  Seq Scan on try_distinct_array
  Optimizer: Postgres query optimizer
-(9 rows)
+(7 rows)
 
 select distinct test_array from try_distinct_array;
  test_array 
@@ -449,14 +447,14 @@ select distinct test_array from try_distinct_array;
 explain (costs off) select * from try_distinct_array a, try_distinct_array b where a.test_array=b.test_array;
                             QUERY PLAN                            
 ------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)
+ Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
          Hash Cond: (a.test_array = b.test_array)
-         ->  Redistribute Motion 3:3  (slice1; segments: 3)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)
                Hash Key: a.test_array
                ->  Seq Scan on try_distinct_array a
          ->  Hash
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+               ->  Redistribute Motion 3:3  (slice3; segments: 3)
                      Hash Key: b.test_array
                      ->  Seq Scan on try_distinct_array b
  Optimizer: Postgres query optimizer
