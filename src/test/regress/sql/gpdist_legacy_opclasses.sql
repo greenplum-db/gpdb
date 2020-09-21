@@ -242,4 +242,9 @@ set gp_use_legacy_hashops=on;
 create table try_distinct_array (test_char varchar,test_array integer[]);
 insert into try_distinct_array select 'y',string_to_array('1~1','~')::int[];
 insert into try_distinct_array select 'n',string_to_array('1~1','~')::int[];
+-- Aggregate with grouping column that does not have legacy hashop
+explain (costs off) select distinct test_array from try_distinct_array;
 select distinct test_array from try_distinct_array;
+-- Hash join on column that does not have legacy hashop
+explain (costs off) select * from try_distinct_array a, try_distinct_array b where a.test_array=b.test_array;
+select * from try_distinct_array a, try_distinct_array b where a.test_array=b.test_array;
