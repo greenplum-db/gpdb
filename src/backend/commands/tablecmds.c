@@ -483,6 +483,7 @@ static void RangeVarCallbackForAlterRelation(const RangeVar *rv, Oid relid,
 								 Oid oldrelid, void *arg);
 static void RemoveInheritance(Relation child_rel, Relation parent_rel, bool is_partition);
 static void ATExecExpandTable(List **wqueue, Relation rel, AlterTableCmd *cmd);
+static void ATExecExpandTablePrepare(List **wqueue, Relation rel, AlterTableCmd *cmd);
 
 static void ATExecSetDistributedBy(Relation rel, Node *node,
 								   AlterTableCmd *cmd);
@@ -4610,8 +4611,8 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 					switch (ps)
 					{
 						case PART_STATUS_NONE:
-							break;
 						case PART_STATUS_LEAF:
+							break;
 						case PART_STATUS_ROOT:
 						case PART_STATUS_INTERIOR:
 							ereport(ERROR,
@@ -4646,13 +4647,13 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 				{
 					case PART_STATUS_NONE:
 					case PART_STATUS_ROOT:
+					case PART_STATUS_INTERIOR:
 						break;
 
-					case PART_STATUS_INTERIOR:
 					case PART_STATUS_LEAF:
 						ereport(ERROR,
 								(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-								 errmsg("cannot expand leaf or interior partition \"%s\"",
+								 errmsg("cannot expand leaf partition \"%s\"",
 										RelationGetRelationName(rel)),
 								 errdetail("root/leaf/interior partitions need to have same numsegments"),
 								 errhint("use \"ALTER TABLE %s EXPAND TABLE\" instead",
@@ -5647,6 +5648,9 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation *rel_p,
 			break;
 		case AT_ExpandTable:	/* EXPAND TABLE */
 			ATExecExpandTable(wqueue, rel, cmd);
+			break;
+		case AT_ExpandTablePrepare:	/* EXPAND TABLE PREPARE */
+			ATExecExpandTablePrepare(wqueue, rel, cmd);
 			break;
 			/* CDB: Partitioned Table commands */
 		case AT_PartAdd:				/* Add */
@@ -15208,6 +15212,75 @@ checkPolicyCompatibleWithIndexes(Relation rel, GpPolicy *pol)
 	}
 
 	list_free(indexoidlist);
+}
+
+/*
+ * ALTER TABLE EXPAND TABLE PREPARE
+ *
+ * For partition tables, in order to support parallel expansion, numsegments
+ * need to be updated before expansion.
+ */
+static void
+ATExecExpandTablePrepare(List **wqueue, Relation rel, AlterTableCmd *cmd)
+{
+	AlteredTableInfo	*tab;
+	AlterTableCmd		*rootCmd;
+	MemoryContext		oldContext;
+	Oid					relid = RelationGetRelid(rel);
+	GpPolicy			*newPolicy;
+	GpPolicy			*policy = rel->rd_cdbpolicy;
+
+	if (Gp_role == GP_ROLE_UTILITY)
+		ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+			 errmsg("EXPAND not supported in utility mode")));
+
+	/* Permissions checks */
+	if (!pg_class_ownercheck(relid, GetUserId()))
+		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_CLASS,
+					   RelationGetRelationName(rel));
+
+	/* Can't ALTER TABLE SET system catalogs */
+	if (IsSystemRelation(rel))
+		ereport(ERROR,
+			(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+			errmsg("permission denied: \"%s\" is a system catalog", RelationGetRelationName(rel))));
+
+	oldContext = MemoryContextSwitchTo(GetMemoryChunkContext(rel));
+	newPolicy = GpPolicyCopy(policy);
+	MemoryContextSwitchTo(oldContext);
+
+	tab = linitial(*wqueue);
+	rootCmd = (AlterTableCmd *)linitial(tab->subcmds[AT_PASS_MISC]);
+
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		/* only rootCmd is dispatched to QE, we can store */
+		if (rootCmd == cmd)
+			rootCmd->def = (Node*)makeNode(ExpandStmtSpec);
+	}
+
+	if (rel->rd_rel->relkind == RELKIND_FOREIGN_TABLE)
+	{
+		if (rel_is_external_table(relid))
+		{
+			ExtTableEntry *ext = GetExtTableEntry(relid);
+
+			if (!ext->iswritable)
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("unsupported ALTER command for external table")));
+		}
+		else
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("unsupported ALTER command for foreign table")));
+
+		relation_close(rel, NoLock);
+	}
+	/* Update numsegments to cluster size */
+	newPolicy->numsegments = getgpsegmentCount();
+	GpPolicyReplace(relid, newPolicy);
 }
 
 /*
