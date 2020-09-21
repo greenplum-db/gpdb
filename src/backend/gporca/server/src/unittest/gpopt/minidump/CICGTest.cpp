@@ -61,7 +61,6 @@ const CHAR *rgszFileNames[] = {
 	"../data/dxl/minidump/ConstraintIntervalWithMultiColumnsIncludeNull.mdp",
 	"../data/dxl/minidump/ConstraintIntervalWithMultiColumnsNotIncludeNull.mdp",
 
-#ifndef GPOS_DEBUG
 	"../data/dxl/minidump/HAWQ-TPCH-Stat-Derivation.mdp",
 	"../data/dxl/minidump/HJN-Redistribute-One-Side.mdp",
 	"../data/dxl/minidump/TPCH-Q5.mdp",
@@ -76,7 +75,6 @@ const CHAR *rgszFileNames[] = {
 	"../data/dxl/minidump/retail_28.mdp",
 	"../data/dxl/minidump/JoinNDVRemain.mdp",
 	"../data/dxl/minidump/Least-Greatest.mdp",
-#endif
 };
 
 struct UnSupportedTestCase
@@ -133,12 +131,9 @@ CICGTest::EresUnittest()
 		GPOS_UNITTEST_FUNC(
 			CICGTest::EresUnittest_RunTestsWithoutAdditionalTraceFlags),
 
-#ifndef GPOS_DEBUG
 		// This test is slow in debug build because it has to free a lot of memory structures
 		GPOS_UNITTEST_FUNC(
-			EresUnittest_PreferHashJoinVersusIndexJoinWhenRiskIsHigh)
-#endif	// GPOS_DEBUG
-	};
+			EresUnittest_PreferHashJoinVersusIndexJoinWhenRiskIsHigh)};
 
 	GPOS_RESULT eres = CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
 
