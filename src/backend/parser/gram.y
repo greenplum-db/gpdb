@@ -3074,6 +3074,13 @@ alter_table_cmd:
 					n->subtype = AT_ExpandTable;
 					$$ = (Node *)n;
 				}
+			/* ALTER TABLE <name> EXPAND TABLE PREPARE*/
+			| EXPAND TABLE PREPARE
+				{
+					AlterTableCmd *n = makeNode(AlterTableCmd);
+					n->subtype = AT_ExpandTablePrepare;
+					$$ = (Node *)n;
+				}
 			/* ALTER TABLE <name> OF <type_name> */
 			| OF any_name
 				{

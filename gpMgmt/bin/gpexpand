@@ -2001,60 +2001,22 @@ class ExpandTable():
 
     def update_distribution_policy(self, table_conn):
         sql = """
-UPDATE gp_distribution_policy
-    SET distkey = ''::int2vector, distclass = ''::oidvector
-    FROM
-    ( SELECT c.oid AS partitiontableoid FROM pg_partitions p, pg_class c, pg_namespace n WHERE 
-        c.relnamespace = n.oid 
-        AND p.partitionschemaname = n.nspname 
-        AND p.partitiontablename = c.relname 
-        AND NOT c.relhassubclass
-        AND quote_ident(p.schemaname)||'.'||quote_ident(p.tablename) = '%s'
-        AND c.relstorage not in ('x', 'f')
-    ) p1
-    WHERE localoid = p1.partitiontableoid;
-""" % self.root_partition_name
-        dbconn.execSQL(table_conn, sql, autocommit=True)
-
-        sql = """
-SELECT
-    quote_ident(p.partitionschemaname) ||'.'|| quote_ident(p.partitiontablename) as fq_name
-FROM 
-    pg_partitions p, pg_class c, pg_namespace n 
-WHERE
-    c.relnamespace = n.oid 
-    AND p.partitionschemaname = n.nspname 
-    AND p.partitiontablename = c.relname 
-    AND c.relhassubclass
-    AND quote_ident(p.schemaname)||'.'||quote_ident(p.tablename) = '%s';
-        """ % self.root_partition_name
-        partition_tables = [self.root_partition_name.replace("''", "'")]
-        curs = dbconn.query(table_conn, sql)
-        rows = curs.fetchall()
-        for row in rows:
-            partition_tables.append(row[0])
-        for table in partition_tables:
-            check_sql = """SELECT numsegments FROM gp_distribution_policy WHERE localoid = '%s'::regclass::oid""" \
-                        % self.fq_name.replace("'", "''")
-            fq_numsegments = dbconn.querySingleton(table_conn, check_sql)
-            if fq_numsegments < self.num_segments:
-                sql = """ALTER TABLE ONLY %s EXPAND TABLE""" % table
-                dbconn.execSQL(table_conn, sql)
-
-        sql = """
-UPDATE gp_distribution_policy
-    SET numsegments = %s
-    FROM
-    ( SELECT c.oid AS partitiontableoid FROM pg_partitions p, pg_class c, pg_namespace n WHERE
+SELECT quote_ident(p.partitionschemaname)||'.'||quote_ident(p.partitiontablename) as fq_name
+        FROM pg_partitions p, pg_class c, pg_namespace n WHERE
         c.relnamespace = n.oid
         AND p.partitionschemaname = n.nspname
         AND p.partitiontablename = c.relname
         AND NOT c.relhassubclass
         AND quote_ident(p.schemaname)||'.'||quote_ident(p.tablename) = '%s'
         AND c.relstorage not in ('x', 'f')
-    ) p1
-    WHERE localoid = p1.partitiontableoid;
-        """ % (self.num_segments, self.root_partition_name)
+""" % self.root_partition_name
+        curs = dbconn.query(table_conn, sql)
+        rows = curs.fetchall()
+        for row in rows:
+            sql = """ALTER TABLE ONLY %s SET DISTRIBUTED RANDOMLY""" % row[0]
+            dbconn.execSQL(table_conn, sql)
+        # update numsegments
+        sql = """ALTER TABLE %s EXPAND TABLE PREPARE""" % self.root_partition_name
         dbconn.execSQL(table_conn, sql)
 
     def lock_partition_tables(self, table_url, status_url):

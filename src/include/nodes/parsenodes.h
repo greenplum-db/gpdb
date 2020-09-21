@@ -1657,7 +1657,8 @@ typedef enum AlterTableType
 	AT_NoForceRowSecurity,		/* NO FORCE ROW SECURITY */
 	AT_GenericOptions,			/* OPTIONS (...) */
 	AT_SetDistributedBy,		/* SET DISTRIBUTED BY */
-	AT_ExpandTable,          /* EXPAND DISTRIBUTED */
+	AT_ExpandTable,				/* EXPAND DISTRIBUTED */
+	AT_ExpandTablePrepare,		/* EXPAND PREPARE */
 	/* CDB: Partitioned Tables */
 	AT_PartAdd,					/* Add */
 	AT_PartAddForSplit,			/* Add, as subcommand of a split */
