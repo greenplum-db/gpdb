@@ -2618,6 +2618,20 @@ retry1:
 				break;
 			}
 
+			/*
+			 * Allow connections if hot_standby is on and our postmaster is
+			 * acting as a standby.
+			 *
+			 * GPDB_XX_MERGE_FIXME: This is backported from master (GPDB 7)
+			 * strictly for developer testing usage only and should not be
+			 * used in production systems. Checking the GUC here is generally
+			 * not a good idea. In upstream, postmaster allows hot-standby
+			 * connections based on pmState in canAcceptConnections.
+			 * We should revert to that logic.
+			 */
+			if (EnableHotStandby)
+				break;
+
 			recptr = last_xlog_replay_location();
 			ereport(FATAL,
 					(errcode(ERRCODE_MIRROR_READY),
@@ -4471,7 +4485,8 @@ BackendStartup(Port *port)
 	/* Pass down canAcceptConnections state */
 	port->canAcceptConnections = canAcceptConnections();
 	bn->dead_end = (port->canAcceptConnections != CAC_OK &&
-					port->canAcceptConnections != CAC_WAITBACKUP);
+					port->canAcceptConnections != CAC_WAITBACKUP &&
+					port->canAcceptConnections != CAC_MIRROR_READY);
 
 	/*
 	 * Unless it's a dead_end child, assign it a child slot number

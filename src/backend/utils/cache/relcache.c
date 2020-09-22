@@ -3451,7 +3451,7 @@ RelationCacheInitializePhase3(void)
 	 * Relation cache initialization or any sort of heap access is
 	 * dangerous before recovery is finished.
 	 */
-	if (!IsBootstrapProcessingMode() && RecoveryInProgress())
+	if (!EnableHotStandby && !IsBootstrapProcessingMode() && RecoveryInProgress())
 		elog(ERROR, "relation cache initialization during recovery or non-bootstrap processes.");
 
 	/*
