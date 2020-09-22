@@ -29,7 +29,8 @@
  *
  *
  * Workfile set is removed automatically when the last file associated with
- * it is closed.
+ * it is closed excepted the pinned workfile_set, which should be removed by
+ * workfile_mgr_close_set().
  *
  *
  * The purpose of this tracking is twofold:
@@ -86,17 +87,37 @@ typedef struct
 
 static WorkFileShared *workfile_shared;
 
-/* indexed by virtual File descriptor */
+/*
+ * WorkFileLocalEntry - track workfile_set for each workfile.
+ *
+ * work_set - the workfile_set in shared memory for a workfile.
+ * size - the size of the workfile.
+ */
 typedef struct
 {
-	WorkFileSetSharedEntry *work_set;	/* pointer into the shared array */
-	int64		size;
+	WorkFileSetSharedEntry	   *work_set;
+	int64						size;
 } WorkFileLocalEntry;
 
-static WorkFileLocalEntry *localEntries = NULL;
-static int sizeLocalEntries = 0;
+/*
+ * WorkFileLocalCtl, local control struct for workfiles
+ *
+ * entries - The workfile created in current process will be stored in the the entries
+ * indexed by virtual File descriptor.
+ * sizeLocalEntries - The total number of workfiles created.
+ */
+typedef struct
+{
+	WorkFileLocalEntry	   *entries;
+	int						sizeLocalEntries;
+} WorkFileLocalCtl;
+
+static WorkFileLocalCtl localCtl = {NULL, 0};
 
 static workfile_set *workfile_mgr_create_set_internal(const char *operator_name, const char *prefix);
+static void remove_workfile_set_if_possible(workfile_set* work_set);
+static void pin_workset(workfile_set *work_set);
+static void unpin_workset(workfile_set *work_set);
 
 static void AtProcExit_WorkFile(int code, Datum arg);
 
@@ -181,8 +202,8 @@ AtProcExit_WorkFile(int code, Datum arg)
 {
 	int			i;
 
-	for (i = 0; i < sizeLocalEntries; i++)
-		WorkFileDeleted(i);
+	for (i = 0; i < localCtl.sizeLocalEntries; i++)
+		WorkFileDeleted(i, true);
 }
 
 /*
@@ -191,27 +212,29 @@ AtProcExit_WorkFile(int code, Datum arg)
 static void
 ensureLocalEntriesSize(File file)
 {
-	int			oldsize = sizeLocalEntries;
+	int			oldsize = localCtl.sizeLocalEntries;
 	int			newsize;
 
 	if (file < 0)
 		elog(ERROR, "invalid virtual file descriptor: %d", file);
 
-	if (file < sizeLocalEntries)
+	if (file < oldsize)
 		return;
 
 	newsize = file * 2 + 5;
-	if (sizeLocalEntries == 0)
-		localEntries = (WorkFileLocalEntry *)
+	if (oldsize == 0)
+	{
+		localCtl.entries = (WorkFileLocalEntry *)
 			MemoryContextAlloc(TopMemoryContext,
 							   newsize * sizeof(WorkFileLocalEntry));
+	}
 	else
-		localEntries = (WorkFileLocalEntry *)
-			repalloc(localEntries, newsize * sizeof(WorkFileLocalEntry));
-	sizeLocalEntries = newsize;
+		localCtl.entries = (WorkFileLocalEntry *)
+			repalloc(localCtl.entries, newsize * sizeof(WorkFileLocalEntry));
+	localCtl.sizeLocalEntries = newsize;
 
 	/* initialize the newly-allocated entries to all-zeros. */
-	memset(&localEntries[oldsize], 0,
+	memset(&localCtl.entries[oldsize], 0,
 		   (newsize - oldsize) * sizeof(WorkFileLocalEntry));
 }
 
@@ -226,12 +249,9 @@ ensureLocalEntriesSize(File file)
 void
 RegisterFileWithSet(File file, workfile_set *work_set)
 {
-	WorkFileLocalEntry *localEntry;
-
 	ensureLocalEntriesSize(file);
-	localEntry = &localEntries[file];
 
-	if (localEntry->work_set != NULL)
+	if (localCtl.entries[file].work_set != NULL)
 		elog(ERROR, "workfile is already registered with another workfile set");
 
 	LWLockAcquire(WorkFileManagerLock, LW_EXCLUSIVE);
@@ -240,7 +260,7 @@ RegisterFileWithSet(File file, workfile_set *work_set)
 		ereport(PANIC,
 				(errmsg("Register file to a non-active workfile_set/per-query summary is illegal")));
 
-	localEntry->work_set = work_set;
+	localCtl.entries[file].work_set = work_set;
 	work_set->num_files++;
 	work_set->perquery->num_files++;
 
@@ -273,7 +293,7 @@ UpdateWorkFileSize(File file, uint64 newsize)
 	int64		diff;
 
 	ensureLocalEntriesSize(file);
-	localEntry = &localEntries[file];
+	localEntry = &localCtl.entries[file];
 
 	diff = (int64) newsize - localEntry->size;
 	if (diff == 0)
@@ -367,7 +387,7 @@ UpdateWorkFileSize(File file, uint64 newsize)
 }
 
 void
-WorkFileDeleted(File file)
+WorkFileDeleted(File file, bool holdLock)
 {
 	WorkFileLocalEntry *localEntry;
 	WorkFileSetSharedEntry *work_set;
@@ -376,18 +396,18 @@ WorkFileDeleted(File file)
 
 	if (file < 0)
 		elog(ERROR, "invalid virtual file descriptor: %d", file);
-	if (file >= sizeLocalEntries)
+	if (file >= localCtl.sizeLocalEntries)
 		return;		/* not a tracked work file */
-	localEntry = &localEntries[file];
+	localEntry = &localCtl.entries[file];
 
 	if (!localEntry->work_set)
 		return;		/* not a tracked work file */
 
-	LWLockAcquire(WorkFileManagerLock, LW_EXCLUSIVE);
+	if (holdLock)
+		LWLockAcquire(WorkFileManagerLock, LW_EXCLUSIVE);
 
 	work_set = localEntry->work_set;
 	perquery = work_set->perquery;
-	oldsize = localEntry->size;
 
 	if (!work_set->active || !work_set->perquery->active)
 		ereport(PANIC,
@@ -396,6 +416,7 @@ WorkFileDeleted(File file)
 	/*
 	 * Update the summaries in shared memory
 	 */
+	oldsize = localEntry->size;
 	Assert(work_set->num_files > 0);
 	work_set->num_files--;
 	work_set->total_bytes -= oldsize;
@@ -410,7 +431,25 @@ WorkFileDeleted(File file)
 	 * Update the workfile_set. If this was the last file in this
 	 * set, remove it.
 	 */
-	if (work_set->num_files == 0)
+	remove_workfile_set_if_possible(work_set);
+
+	localEntry->size = 0;
+	localEntry->work_set = NULL;
+
+	if (holdLock)
+		LWLockRelease(WorkFileManagerLock);
+}
+
+static void
+remove_workfile_set_if_possible(workfile_set* work_set)
+{
+	WorkFileUsagePerQuery *perquery = work_set->perquery;
+
+	/*
+	 * Update the workfile_set. If there was no file exist in this
+	 * set, remove it unless the set is pinned.
+	 */
+	if (work_set->num_files == 0 && !work_set->pinned)
 	{
 		perquery->refcount--;
 
@@ -440,19 +479,17 @@ WorkFileDeleted(File file)
 				elog(PANIC, "per-query hash table is corrupt");
 		}
 	}
-
-	localEntry->size = 0;
-	localEntry->work_set = NULL;
-
-	LWLockRelease(WorkFileManagerLock);
 }
 
 
 /*
  * Public API for creating a workfile set
+ *
+ * When hold_pin is set to true, the caller should use workfile_mgr_close_set
+ * to remove the workfile_set.
  */
 workfile_set *
-workfile_mgr_create_set(const char *operator_name, const char *prefix)
+workfile_mgr_create_set(const char *operator_name, const char *prefix, bool hold_pin)
 {
 	workfile_set *work_set;
 
@@ -466,6 +503,9 @@ workfile_mgr_create_set(const char *operator_name, const char *prefix)
 	LWLockAcquire(WorkFileManagerLock, LW_EXCLUSIVE);
 
 	work_set = workfile_mgr_create_set_internal(operator_name, prefix);
+
+	if (hold_pin)
+		pin_workset(work_set);
 
 	LWLockRelease(WorkFileManagerLock);
 
@@ -536,6 +576,7 @@ workfile_mgr_create_set_internal(const char *operator_name, const char *prefix)
 	work_set->num_files = 0;
 	work_set->total_bytes = 0;
 	work_set->active = true;
+	work_set->pinned = false;
 
 	if (operator_name)
 		strlcpy(work_set->operator, operator_name, sizeof(work_set->operator));
@@ -561,10 +602,62 @@ workfile_mgr_create_set_internal(const char *operator_name, const char *prefix)
 	return work_set;
 }
 
+static void
+pin_workset(workfile_set *work_set)
+{
+	work_set->pinned = true;
+}
+
+static void
+unpin_workset(workfile_set *work_set)
+{
+	work_set->pinned = false;
+}
+
 void
 workfile_mgr_close_set(workfile_set *work_set)
 {
-	/* no op */
+	int			i;
+
+	LWLockAcquire(WorkFileManagerLock, LW_EXCLUSIVE);
+
+	if (!work_set->active)
+		ereport(PANIC, (errmsg("workfile_set is not active")));
+
+	unpin_workset(work_set);
+
+	/* Delete files which in current workfile set */
+	for (i = 0; i < localCtl.sizeLocalEntries; i++)
+	{
+		if (localCtl.entries[i].work_set == work_set)
+			WorkFileDeleted(i, false);
+	}
+
+	if (work_set->active)
+	{
+		if (work_set->num_files > 0)
+		{
+			WorkFileUsagePerQuery *perquery = work_set->perquery;
+
+			ereport(WARNING, (errmsg("workfile_set still contains files for unknow reason.")));
+
+			if (!perquery->active)
+				ereport(PANIC, (errmsg("per-query summarry is not active")));
+
+			Assert(work_set->total_bytes > 0);
+			Assert(perquery->num_files > 0);
+			perquery->num_files -= work_set->num_files;
+			perquery->total_bytes -= work_set->total_bytes;
+
+			work_set->num_files = 0;
+			work_set->total_bytes = 0;
+		}
+
+		Assert(work_set->num_files == 0);
+		remove_workfile_set_if_possible(work_set);
+	}
+
+	LWLockRelease(WorkFileManagerLock);
 }
 
 static void
@@ -755,6 +848,19 @@ WorkfileSegspace_GetSize(void)
 	LWLockAcquire(WorkFileManagerLock, LW_SHARED);
 
 	result = workfile_shared->total_bytes;
+
+	LWLockRelease(WorkFileManagerLock);
+
+	return result;
+}
+
+int
+WorkfileSetGetActiveNumber(void)
+{
+	int		result;
+	LWLockAcquire(WorkFileManagerLock, LW_SHARED);
+
+	result = workfile_shared->num_active;
 
 	LWLockRelease(WorkFileManagerLock);
 
