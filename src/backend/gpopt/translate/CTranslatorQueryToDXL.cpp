@@ -919,6 +919,10 @@ CTranslatorQueryToDXL::TranslateCTASToDXL()
 				Oid opfamily =
 					gpdb::GetOpclassFamily(m_query->intoPolicy->opclasses[ul]);
 				GPOS_ASSERT(InvalidOid != opfamily);
+				// We use the opfamily to populate the
+				// distribution spec within ORCA, but also need
+				// the opclass to populate the distribution
+				// policy of the created table in the catalog
 				distr_opfamilies->Append(GPOS_NEW(m_mp) CMDIdGPDB(opfamily));
 				distr_opclasses->Append(GPOS_NEW(m_mp) CMDIdGPDB(
 					m_query->intoPolicy->opclasses[ul]));

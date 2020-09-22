@@ -61,7 +61,7 @@ private:
 	// list of distribution column opfamilies
 	IMdIdArray *m_distr_opfamilies;
 
-	// list of distribution column opclasses
+	// list of distribution column opclasses for populating dist policy of created table
 	IMdIdArray *m_distr_opclasses;
 
 	// is this a temporary table
