@@ -418,7 +418,7 @@ check_orphaned_toastrels(void)
 
 	prep_status("Checking for orphaned TOAST relations");
 
-	snprintf(output_path, sizeof(output_path), "partitioned_tables.txt");
+	snprintf(output_path, sizeof(output_path), "orphaned_toast_tables.txt");
 
 	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
 	{
