@@ -1207,6 +1207,9 @@ jobs:
         trigger: [[ test_trigger ]]
       - get: gpdb6-centos6-test
   - task: ic_gpdb
+    {% if pipeline_configuration == "prod" %}
+    tags: [icw-centos6]
+    {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb_binary_swap.yml
     image: gpdb6-centos6-test
     params:
@@ -1231,6 +1234,9 @@ jobs:
         trigger: [[ test_trigger ]]
       - get: gpdb6-centos6-test
   - task: ic_gpdb
+    {% if pipeline_configuration == "prod" %}
+    tags: [icw-centos6]
+    {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-centos6-test
     params:
@@ -1250,6 +1256,9 @@ jobs:
         trigger: [[ test_trigger ]]
       - get: gpdb6-centos6-test
   - task: ic_gpdb
+    {% if pipeline_configuration == "prod" %}
+    tags: [icw-centos6]
+    {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-centos6-test
     params:
@@ -1269,6 +1278,9 @@ jobs:
         trigger: [[ test_trigger ]]
       - get: gpdb6-centos6-test
   - task: ic_gpdb
+    {% if pipeline_configuration == "prod" %}
+    tags: [icw-centos6]
+    {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-centos6-test
     params:
@@ -1288,6 +1300,9 @@ jobs:
         trigger: [[ test_trigger ]]
       - get: gpdb6-centos6-test
   - task: ic_gpdb
+    {% if pipeline_configuration == "prod" %}
+    tags: [icw-centos6]
+    {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-centos6-test
     params:
@@ -1308,6 +1323,9 @@ jobs:
         trigger: [[ test_trigger ]]
       - get: gpdb6-centos7-test
   - task: ic_gpdb
+    {% if pipeline_configuration == "prod" %}
+    tags: [icw-centos7]
+    {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-centos7-test
     params:
@@ -1327,6 +1345,9 @@ jobs:
         trigger: [[ test_trigger ]]
       - get: gpdb6-centos7-test
   - task: ic_gpdb
+    {% if pipeline_configuration == "prod" %}
+    tags: [icw-centos7]
+    {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-centos7-test
     params:
@@ -1346,6 +1367,9 @@ jobs:
         trigger: [[ test_trigger ]]
       - get: gpdb6-centos7-test
   - task: ic_gpdb
+    {% if pipeline_configuration == "prod" %}
+    tags: [icw-centos7]
+    {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-centos7-test
     params:
@@ -1365,6 +1389,9 @@ jobs:
         trigger: [[ test_trigger ]]
       - get: gpdb6-centos7-test
   - task: ic_gpdb
+    {% if pipeline_configuration == "prod" %}
+    tags: [icw-centos7]
+    {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-centos7-test
     params:
@@ -1386,6 +1413,9 @@ jobs:
         trigger: [[ test_trigger ]]
       - get: gpdb6-oracle7-test
   - task: ic_gpdb
+    {% if pipeline_configuration == "prod" %}
+    tags: [icw-oracle7]
+    {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-oracle7-test
     params:
@@ -1405,6 +1435,9 @@ jobs:
         trigger: [[ test_trigger ]]
       - get: gpdb6-oracle7-test
   - task: ic_gpdb
+    {% if pipeline_configuration == "prod" %}
+    tags: [icw-oracle7]
+    {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-oracle7-test
     params:
@@ -1426,6 +1459,9 @@ jobs:
           trigger: [[ test_trigger ]]
         - get: gpdb6-ubuntu18.04-test
     - task: ic_gpdb
+      {% if pipeline_configuration == "prod" %}
+      tags: [icw-ubuntu18.04]
+      {% endif %}
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
       image: gpdb6-ubuntu18.04-test
       params:
@@ -1445,6 +1481,9 @@ jobs:
           trigger: [[ test_trigger ]]
         - get: gpdb6-ubuntu18.04-test
     - task: ic_gpdb
+      {% if pipeline_configuration == "prod" %}
+      tags: [icw-ubuntu18.04]
+      {% endif %}
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
       image: gpdb6-ubuntu18.04-test
       params:
@@ -1464,6 +1503,9 @@ jobs:
           trigger: [[ test_trigger ]]
         - get: gpdb6-ubuntu18.04-test
     - task: ic_gpdb
+      {% if pipeline_configuration == "prod" %}
+      tags: [icw-ubuntu18.04]
+      {% endif %}
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
       image: gpdb6-ubuntu18.04-test
       params:
@@ -1483,6 +1525,9 @@ jobs:
           trigger: [[ test_trigger ]]
         - get: gpdb6-ubuntu18.04-test
     - task: ic_gpdb
+      {% if pipeline_configuration == "prod" %}
+      tags: [icw-ubuntu18.04]
+      {% endif %}
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
       image: gpdb6-ubuntu18.04-test
       params:
