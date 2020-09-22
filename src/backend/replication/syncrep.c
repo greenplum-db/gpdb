@@ -452,6 +452,17 @@ SyncRepInitConfig(void)
 	 * for handling replies from standby.
 	 */
 	priority = SyncRepGetStandbyPriority();
+
+	/*
+	 * Greenplum: master/standby replication is considered synchronous even
+	 * when synchronous_standby_names GUC is not set.
+	 */
+	if (IS_QUERY_DISPATCHER() && MyWalSnd->is_for_gp_walreceiver)
+	{
+		Assert(priority == 0);
+		priority = 1;
+	}
+	
 	if (MyWalSnd->sync_standby_priority != priority)
 	{
 		LWLockAcquire(SyncRepLock, LW_EXCLUSIVE);
@@ -839,15 +850,46 @@ SyncRepGetSyncStandbys(bool *am_sync)
  * priority sequence. Return priority if set, or zero to indicate that
  * we are not a potential sync standby.
  *
- * **Note:- Currently, GPDB does NOT apply the concept of standby priority as
- *   we allow max 1 walsender to be alive at a time. Hence, this function returns
- *   1.**
+ * Compare the parameter SyncRepStandbyNames against the application_name
+ * for this WALSender, or allow any name if we find a wildcard "*".
  */
 static int
 SyncRepGetStandbyPriority(void)
 {
-	/* Currently set the priority to 1 */
-	return 1;
+	const char *standby_name;
+	int			priority;
+	bool		found = false;
+
+	/*
+	 * Since synchronous cascade replication is not allowed, we always set the
+	 * priority of cascading walsender to zero.
+	 */
+	if (am_cascading_walsender)
+		return 0;
+
+	if (!SyncStandbysDefined() || SyncRepConfig == NULL)
+		return 0;
+
+	standby_name = SyncRepConfig->member_names;
+	for (priority = 1; priority <= SyncRepConfig->nmembers; priority++)
+	{
+		if (pg_strcasecmp(standby_name, application_name) == 0 ||
+			strcmp(standby_name, "*") == 0)
+		{
+			found = true;
+			break;
+		}
+		standby_name += strlen(standby_name) + 1;
+	}
+
+	if (!found)
+		return 0;
+
+	/*
+	 * In quorum-based sync replication, all the standbys in the list have the
+	 * same priority, one.
+	 */
+	return (SyncRepConfig->syncrep_method == SYNC_REP_PRIORITY) ? priority : 1;
 }
 
 /*
