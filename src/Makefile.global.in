@@ -232,6 +232,7 @@ COLLATEINDEX	= @COLLATEINDEX@
 
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
+PG_SYSROOT = @PG_SYSROOT@
 
 ifdef PGXS
 override CPPFLAGS := -I$(includedir_server) -I$(includedir_internal) $(CPPFLAGS)
@@ -307,6 +308,7 @@ else
 endif
 perl_archlibexp		= @perl_archlibexp@
 perl_privlibexp		= @perl_privlibexp@
+perl_includedir		= @perl_includedir@
 perl_useshrplib		= @perl_useshrplib@
 perl_embed_ldflags	= @perl_embed_ldflags@
 
