@@ -3,13 +3,17 @@
 # Copyright (c) Greenplum Inc 2012. All Rights Reserved. 
 #
 
-import unittest
-from mock import patch
-from gppylib.operations.filespace import is_filespace_configured, MoveTransFilespaceLocally
-import os
-import tempfile
-import shutil
 import hashlib
+import os
+import shutil
+import tempfile
+import unittest
+
+from gppylib.gparray import GpDB, GpArray
+from gppylib.operations.filespace import is_filespace_configured, MoveTransFilespaceLocally, UpdateFlatFiles
+from mock import Mock, patch
+from gppylib.test.unit.gp_unittest import GpTestCase
+
 
 class FileSpaceTestCase(unittest.TestCase):
     def setUp(self):
@@ -37,3 +41,32 @@ class FileSpaceTestCase(unittest.TestCase):
         local_digest = m.hexdigest()
         test_digest = self.subject.get_sha256(self.one_dir)
         self.assertEquals(test_digest, local_digest)
+
+class UpdateFlatFilesTestCase(GpTestCase):
+    def setUp(self):
+        self.subject = UpdateFlatFiles(None, None, None)
+        self.subject.logger = Mock(
+            spec=['warning', 'debug'])
+        self.apply_patches([
+            patch('gppylib.operations.filespace.logger', return_value=Mock(spec=['debug'])),
+            patch('os.path.exists'),
+        ])
+        self.mock_path_exists = self.get_mock_from_apply_patch('exists')
+
+    @patch('gppylib.operations.filespace.ParallelOperation.run')
+    @patch('gppylib.operations.filespace.GetFilespaceEntries.run',
+           return_value=[(16385L, 1, '/tmp/filespace/m/gpseg-1'),
+                         (16385L, 4, '/tmp/filespace/m1/gpseg0'),
+                         (16385L, 2, '/tmp/filespace/p1/gpseg0'),
+                         (16385L, 5, '/tmp/filespace/m2/gpseg1'),
+                         (16385L, 3, '/tmp/filespace/p2/gpseg1')
+                         ])
+    def test_update_flat_file_logs_warning_for_down_segments(self, mk1, mk2):
+        self.mock_path_exists.return_value = True
+        self.subject.gparray = GpArray([GpDB.initFromString("1|-1|p|p|s|u|c448b39a33aa|mdw|5432|5532|/home/gpadmin/data/master/gpseg-1||"),
+                                        GpDB.initFromString("2|0|p|p|s|u|sdw1|sdw1|6000|8000|/home/gpadmin/data/primary/gpseg0||"),
+                                        GpDB.initFromString("3|1|p|p|c|u|sdw2|sdw2|6000|8000|/home/gpadmin/data/primary/gpseg1||"),
+                                        GpDB.initFromString("4|0|m|m|s|u|sdw2|sdw2|7000|9000|/home/gpadmin/data/mirror/gpseg0||"),
+                                        GpDB.initFromString("5|1|m|m|s|d|sdw1|sdw1|7000|9000|/home/gpadmin/data/mirror/gpseg1||")])
+        self.subject.execute()
+        self.subject.logger.warning.assert_any_call('Segment with DBID 5 on host sdw1 is down, skipping updating the temporary filespace entries.')
