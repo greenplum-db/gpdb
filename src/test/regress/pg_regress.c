@@ -664,7 +664,7 @@ generate_uao_sourcefiles(const char *src_dir, const char *dest_dir, const char *
 		initStringInfo(&line);
 		initStringInfo(&line_row);
 
-		while (pg_get_line_append(infile, &line))
+		while (pg_get_line_buf(infile, &line))
 		{
 			appendStringInfoString(&line_row, line.data);
 			repls->amname = "ao_row";
@@ -679,7 +679,7 @@ generate_uao_sourcefiles(const char *src_dir, const char *dest_dir, const char *
 			 */
 			if (!has_tokens && strstr(line.data, "@gp") != NULL)
 				has_tokens = true;
-			resetStringInfo(&line);
+
 			resetStringInfo(&line_row);
 		}
 
@@ -869,7 +869,7 @@ convert_sourcefiles_in(const char *source_subdir, const char *dest_dir, const ch
 
 		initStringInfo(&line);
 
-		while (pg_get_line_append(infile, &line))
+		while (pg_get_line_buf(infile, &line))
 		{
 			convert_line(&line, &repls);
 			fputs(line.data, outfile);
@@ -880,8 +880,6 @@ convert_sourcefiles_in(const char *source_subdir, const char *dest_dir, const ch
 			 */
 			if (!has_tokens && strstr(line.data, "@gp") != NULL)
 				has_tokens = true;
-
-			resetStringInfo(&line);
 		}
 
 		pfree(line.data);
