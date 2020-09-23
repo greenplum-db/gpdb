@@ -881,11 +881,20 @@ buildGpQueryString(DispatchCommandQueryParms *pQueryParms,
 	 *
 	 * The +1 and -1 below are adjustments to accommodate terminating null
 	 * character.
+	 *
+	 * If log_statement GUC variable is currently set to LOGSTMT_NONE, QEs
+	 * would not use the dispatched query string at all. In this case, we
+	 * skip truncation and just send an empty query string.
 	 */
-	command_len = strlen(command) + 1;
-	if (plantree && command_len > QUERY_STRING_TRUNCATE_SIZE)
-		command_len = pg_mbcliplen(command, command_len,
-								   QUERY_STRING_TRUNCATE_SIZE-1) + 1;
+	if (log_statement != LOGSTMT_NONE)
+	{
+		command_len = strlen(command) + 1;
+		if (plantree && command_len > QUERY_STRING_TRUNCATE_SIZE)
+			command_len = pg_mbcliplen(command, command_len,
+									   QUERY_STRING_TRUNCATE_SIZE - 1) + 1;
+	}
+	else
+		command_len = 1;
 
 	initStringInfo(&resgroupInfo);
 	if (IsResGroupActivated())
@@ -973,7 +982,10 @@ buildGpQueryString(DispatchCommandQueryParms *pQueryParms,
 	}
 
 	memcpy(pos, command, command_len);
-	/* If command is truncated we need to set the terminating '\0' manually */
+	/*
+	 * If command is truncated or an empty command is sent,
+	 * we need to set the terminating '\0' manually.
+	 */
 	pos[command_len - 1] = '\0';
 	pos += command_len;
 
