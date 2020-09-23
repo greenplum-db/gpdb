@@ -5746,14 +5746,17 @@ CTranslatorExprToDXL::PdxlnCTAS(CExpression *pexpr,
 			CMDName(m_mp, pmdrel->GetMdNameSchema()->GetMDName());
 	}
 
+	IMdIdArray *distr_opclasses = pmdrel->GetDistrOpClasses();
+	distr_opclasses->AddRef();
+
 	vartypemod_array->AddRef();
 	CDXLPhysicalCTAS *pdxlopCTAS = GPOS_NEW(m_mp) CDXLPhysicalCTAS(
 		m_mp, mdname_schema,
 		GPOS_NEW(m_mp) CMDName(m_mp, pmdrel->Mdname().GetMDName()),
 		dxl_col_descr_array, pmdrel->GetDxlCtasStorageOption(),
-		pmdrel->GetRelDistribution(), pdrgpulDistr, pmdrel->IsTemporary(),
-		pmdrel->HasOids(), pmdrel->RetrieveRelStorageType(), pdrgpul,
-		vartypemod_array);
+		pmdrel->GetRelDistribution(), pdrgpulDistr, pmdrel->GetDistrOpClasses(),
+		pmdrel->IsTemporary(), pmdrel->HasOids(),
+		pmdrel->RetrieveRelStorageType(), pdrgpul, vartypemod_array);
 
 	CDXLNode *pdxlnCTAS = GPOS_NEW(m_mp) CDXLNode(m_mp, pdxlopCTAS);
 	CDXLPhysicalProperties *dxl_properties = GetProperties(pexpr);

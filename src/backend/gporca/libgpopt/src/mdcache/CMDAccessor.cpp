@@ -406,8 +406,6 @@ CMDAccessor::RegisterProvider(CSystemId sysid, IMDProvider *pmdp)
 
 	MDPHTAccessor mdhtacc(m_shtProviders, *(a_pmdpelem.Value()));
 
-	GPOS_ASSERT(NULL == mdhtacc.Find());
-
 	// insert provider in the hash table
 	mdhtacc.Insert(a_pmdpelem.Value());
 	a_pmdpelem.Reset();

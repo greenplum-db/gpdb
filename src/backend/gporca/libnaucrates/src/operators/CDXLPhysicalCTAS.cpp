@@ -36,7 +36,8 @@ CDXLPhysicalCTAS::CDXLPhysicalCTAS(
 	CDXLColDescrArray *dxl_col_descr_array,
 	CDXLCtasStorageOptions *dxl_ctas_opt,
 	IMDRelation::Ereldistrpolicy rel_distr_policy,
-	ULongPtrArray *distr_column_pos_array, BOOL is_temporary, BOOL has_oids,
+	ULongPtrArray *distr_column_pos_array, IMdIdArray *distr_opclasses,
+	BOOL is_temporary, BOOL has_oids,
 	IMDRelation::Erelstoragetype rel_storage_type,
 	ULongPtrArray *src_colids_array, IntPtrArray *vartypemod_array)
 	: CDXLPhysical(mp),
@@ -46,6 +47,7 @@ CDXLPhysicalCTAS::CDXLPhysicalCTAS(
 	  m_dxl_ctas_storage_option(dxl_ctas_opt),
 	  m_rel_distr_policy(rel_distr_policy),
 	  m_distr_column_pos_array(distr_column_pos_array),
+	  m_distr_opclasses(distr_opclasses),
 	  m_is_temp_table(is_temporary),
 	  m_has_oids(has_oids),
 	  m_rel_storage_type(rel_storage_type),
@@ -81,6 +83,7 @@ CDXLPhysicalCTAS::~CDXLPhysicalCTAS()
 	CRefCount::SafeRelease(m_distr_column_pos_array);
 	m_src_colids_array->Release();
 	m_vartypemod_array->Release();
+	m_distr_opclasses->Release();
 }
 
 //---------------------------------------------------------------------------
@@ -184,6 +187,13 @@ CDXLPhysicalCTAS::SerializeToDXL(CXMLSerializer *xml_serializer,
 
 	// serialize properties
 	dxlnode->SerializePropertiesToDXL(xml_serializer);
+
+	// serialize opclasses list
+
+	IMDCacheObject::SerializeMDIdList(
+		xml_serializer, m_distr_opclasses,
+		CDXLTokens::GetDXLTokenStr(EdxltokenRelDistrOpclasses),
+		CDXLTokens::GetDXLTokenStr(EdxltokenRelDistrOpclass));
 
 	// serialize column descriptors
 	xml_serializer->OpenElement(

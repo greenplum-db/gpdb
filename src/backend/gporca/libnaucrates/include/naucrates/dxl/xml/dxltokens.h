@@ -477,6 +477,9 @@ enum Edxltoken
 	EdxltokenRelDistrOpfamilies,
 	EdxltokenRelDistrOpfamily,
 
+	EdxltokenRelDistrOpclasses,
+	EdxltokenRelDistrOpclass,
+
 	EdxltokenExtRelRejLimit,
 	EdxltokenExtRelRejLimitInRows,
 	EdxltokenExtRelFmtErrRel,

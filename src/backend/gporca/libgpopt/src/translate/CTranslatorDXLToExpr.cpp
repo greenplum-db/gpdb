@@ -2212,13 +2212,19 @@ CTranslatorDXLToExpr::RegisterMDRelationCtas(CDXLLogicalCTAS *pdxlopCTAS)
 
 	IntPtrArray *vartypemod_array = pdxlopCTAS->GetVarTypeModArray();
 	vartypemod_array->AddRef();
+
+	IMdIdArray *distr_opfamilies = pdxlopCTAS->GetDistrOpfamilies();
+	distr_opfamilies->AddRef();
+	IMdIdArray *distr_opclasses = pdxlopCTAS->GetDistrOpclasses();
+	distr_opclasses->AddRef();
+
 	CMDRelationCtasGPDB *pmdrel = GPOS_NEW(m_mp) CMDRelationCtasGPDB(
 		m_mp, pdxlopCTAS->MDId(), mdname_schema,
 		GPOS_NEW(m_mp) CMDName(m_mp, pdxlopCTAS->MdName()->GetMDName()),
 		pdxlopCTAS->IsTemporary(), pdxlopCTAS->HasOids(),
 		pdxlopCTAS->RetrieveRelStorageType(), pdxlopCTAS->Ereldistrpolicy(),
-		mdcol_array, pdxlopCTAS->GetDistrColPosArray(),
-		pdxlopCTAS->GetDistrOpfamilies(),
+		mdcol_array, pdxlopCTAS->GetDistrColPosArray(), distr_opfamilies,
+		distr_opclasses,
 		GPOS_NEW(m_mp) ULongPtr2dArray(m_mp),  // keyset_array,
 		pdxlopCTAS->GetDxlCtasStorageOption(), vartypemod_array);
 
@@ -3882,7 +3888,7 @@ CTranslatorDXLToExpr::AddDistributionColumns(
 		{
 			opfamily = pmdrel->GetDistrOpfamilyAt(ul);
 			GPOS_ASSERT(NULL != opfamily && opfamily->IsValid());
-			opfamily->AddRef();
+			//opfamily->AddRef();
 		}
 
 		ptabdesc->AddDistributionColumn(*pulPos, opfamily);

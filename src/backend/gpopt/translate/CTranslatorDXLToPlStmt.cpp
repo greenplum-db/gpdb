@@ -5522,18 +5522,15 @@ CTranslatorDXLToPlStmt::TranslateDXLPhyCtasToDistrPolicy(
 	{
 		GPOS_ASSERT(0 < num_of_distr_cols);
 		distr_policy->nattrs = num_of_distr_cols;
-
+		IMdIdArray *opclasses = dxlop->GetDistrOpclasses();
+		GPOS_ASSERT(opclasses->Size() == num_of_distr_cols);
 		for (ULONG ul = 0; ul < num_of_distr_cols; ul++)
 		{
 			ULONG col_pos_idx = *((*distr_col_pos_array)[ul]);
-			TargetEntry *tle =
-				(TargetEntry *) gpdb::ListNth(target_list, col_pos_idx);
-			Oid typeoid = gpdb::ExprType((Node *) tle->expr);
-
 			distr_policy->attrs[ul] = col_pos_idx + 1;
-			distr_policy->opclasses[ul] =
-				m_dxl_to_plstmt_context->GetDistributionHashOpclassForType(
-					typeoid);
+
+			Oid opclass = CMDIdGPDB::CastMdid((*opclasses)[ul])->Oid();
+			distr_policy->opclasses[ul] = opclass;
 		}
 	}
 	return distr_policy;

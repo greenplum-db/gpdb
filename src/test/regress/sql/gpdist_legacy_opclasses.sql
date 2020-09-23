@@ -232,7 +232,6 @@ select dp.localoid::regclass::name as name, oc.opcname
     on oc.oid::text = dp.distclass::text
  where dp.localoid in ('ctastest_on'::regclass::oid,
                        'ctastest_off'::regclass::oid);
-
 set gp_use_legacy_hashops=on;
 create table try_distinct_array (test_char varchar,test_array integer[]);
 insert into try_distinct_array select 'y',string_to_array('1~1','~')::int[];
@@ -243,3 +242,30 @@ select distinct test_array from try_distinct_array;
 -- Hash join on column that does not have legacy hashop
 explain (costs off) select * from try_distinct_array a, try_distinct_array b where a.test_array=b.test_array;
 select * from try_distinct_array a, try_distinct_array b where a.test_array=b.test_array;
+
+-- CTAS should use value of gp_use_legacy_hashops when setting the distribution policy based on an existing table
+set gp_use_legacy_hashops=on;
+create table ctas_base_legacy as select unnest(array[1,2,3]) as col distributed by (col);
+set gp_use_legacy_hashops=off;
+create table ctas_from_legacy as select * from ctas_base_legacy distributed by (col);
+create table ctas_explicit_legacy as select * from ctas_base_legacy distributed by (col cdbhash_int4_ops);
+
+create table ctas_base_nonlegacy as select unnest(array[1,2,3]) as col distributed by (col);
+set gp_use_legacy_hashops=on;
+create table ctas_from_nonlegacy as select * from ctas_base_nonlegacy distributed by (col);
+create table ctas_explicit_nonlegacy as select * from ctas_base_nonlegacy distributed by (col int4_ops);
+
+select dp.localoid::regclass as name, opc.opcname
+  from gp_distribution_policy dp
+  join pg_opclass opc
+    on ARRAY[opc.oid]::oidvector = dp.distclass
+ where dp.localoid in ('ctas_base_legacy'::regclass,
+                       'ctas_from_legacy'::regclass,
+                       'ctas_base_nonlegacy'::regclass,
+                       'ctas_from_nonlegacy'::regclass,
+                       'ctas_explicit_legacy'::regclass,
+                       'ctas_explicit_nonlegacy'::regclass);
+select * from ctas_from_legacy where col=1;
+select * from ctas_explicit_legacy where col=1;
+select * from ctas_from_nonlegacy where col=1;
+select * from ctas_explicit_nonlegacy where col=1;

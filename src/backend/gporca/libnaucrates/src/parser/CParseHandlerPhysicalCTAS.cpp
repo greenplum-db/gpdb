@@ -14,6 +14,7 @@
 
 #include "naucrates/dxl/parser/CParseHandlerColDescr.h"
 #include "naucrates/dxl/parser/CParseHandlerCtasStorageOptions.h"
+#include "naucrates/dxl/parser/CParseHandlerMetadataIdList.h"
 #include "naucrates/dxl/parser/CParseHandlerProjList.h"
 #include "naucrates/dxl/parser/CParseHandlerProperties.h"
 #include "naucrates/dxl/parser/CParseHandlerUtils.h"
@@ -158,6 +159,13 @@ CParseHandlerPhysicalCTAS::StartElement(const XMLCh *const,	 // element_uri,
 			m_parse_handler_mgr, this);
 	m_parse_handler_mgr->ActivateParseHandler(col_descr_parse_handler);
 
+	//parse handler for distr opclasses
+	CParseHandlerBase *opclasses_parse_handler =
+		CParseHandlerFactory::GetParseHandler(
+			m_mp, CDXLTokens::XmlstrToken(EdxltokenMetadataIdList),
+			m_parse_handler_mgr, this);
+	m_parse_handler_mgr->ActivateParseHandler(opclasses_parse_handler);
+
 	//parse handler for the properties of the operator
 	CParseHandlerBase *prop_parse_handler =
 		CParseHandlerFactory::GetParseHandler(
@@ -167,6 +175,7 @@ CParseHandlerPhysicalCTAS::StartElement(const XMLCh *const,	 // element_uri,
 
 	// store child parse handler in array
 	this->Append(prop_parse_handler);
+	this->Append(opclasses_parse_handler);
 	this->Append(col_descr_parse_handler);
 	this->Append(ctas_options_parse_handler);
 	this->Append(proj_list_parse_handler);
@@ -197,21 +206,24 @@ CParseHandlerPhysicalCTAS::EndElement(const XMLCh *const,  // element_uri,
 				   str->GetBuffer());
 	}
 
-	GPOS_ASSERT(5 == this->Length());
+	GPOS_ASSERT(6 == this->Length());
 
 	CParseHandlerProperties *prop_parse_handler =
 		dynamic_cast<CParseHandlerProperties *>((*this)[0]);
+	CParseHandlerMetadataIdList *opclasses_parse_handler =
+		dynamic_cast<CParseHandlerMetadataIdList *>((*this)[1]);
 	CParseHandlerColDescr *col_descr_parse_handler =
-		dynamic_cast<CParseHandlerColDescr *>((*this)[1]);
+		dynamic_cast<CParseHandlerColDescr *>((*this)[2]);
 	CParseHandlerCtasStorageOptions *ctas_options_parse_handler =
-		dynamic_cast<CParseHandlerCtasStorageOptions *>((*this)[2]);
+		dynamic_cast<CParseHandlerCtasStorageOptions *>((*this)[3]);
 	CParseHandlerProjList *proj_list_parse_handler =
-		dynamic_cast<CParseHandlerProjList *>((*this)[3]);
+		dynamic_cast<CParseHandlerProjList *>((*this)[4]);
 	GPOS_ASSERT(NULL != proj_list_parse_handler->CreateDXLNode());
 	CParseHandlerPhysicalOp *child_parse_handler =
-		dynamic_cast<CParseHandlerPhysicalOp *>((*this)[4]);
+		dynamic_cast<CParseHandlerPhysicalOp *>((*this)[5]);
 
 	GPOS_ASSERT(NULL != prop_parse_handler->GetProperties());
+	GPOS_ASSERT(NULL != opclasses_parse_handler->GetMdIdArray());
 	GPOS_ASSERT(NULL != col_descr_parse_handler->GetDXLColumnDescrArray());
 	GPOS_ASSERT(NULL != ctas_options_parse_handler->GetDxlCtasStorageOption());
 	GPOS_ASSERT(NULL != proj_list_parse_handler->CreateDXLNode());
@@ -225,12 +237,15 @@ CParseHandlerPhysicalCTAS::EndElement(const XMLCh *const,  // element_uri,
 		ctas_options_parse_handler->GetDxlCtasStorageOption();
 	ctas_options->AddRef();
 
+	IMdIdArray *opclasses_array = opclasses_parse_handler->GetMdIdArray();
+	opclasses_array->AddRef();
+
 	m_dxl_node = GPOS_NEW(m_mp) CDXLNode(
 		m_mp, GPOS_NEW(m_mp) CDXLPhysicalCTAS(
 				  m_mp, m_mdname_schema, m_mdname, dxl_col_descr_array,
 				  ctas_options, m_rel_distr_policy, m_distr_column_pos_array,
-				  m_is_temp_table, m_has_oids, m_rel_storage_type,
-				  m_src_colids_array, m_vartypemod_array));
+				  opclasses_array, m_is_temp_table, m_has_oids,
+				  m_rel_storage_type, m_src_colids_array, m_vartypemod_array));
 	// set statistics and physical properties
 	CParseHandlerUtils::SetProperties(m_dxl_node, prop_parse_handler);
 
