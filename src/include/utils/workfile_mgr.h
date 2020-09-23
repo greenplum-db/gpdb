@@ -84,16 +84,20 @@ typedef struct workfile_set
 
 	/* If the workfile is pinned, don't free it unless call workfile_mgr_close_set */
 	bool		pinned;
+
+	/* Used to track workfile_set created in current process */
+	dlist_node	local_node;
 } workfile_set;
 
 /* Workfile Set operations */
 
 extern Size WorkFileShmemSize(void);
 extern void WorkFileShmemInit(void);
+extern void AtEOXact_WorkFile(void);
 
 extern void RegisterFileWithSet(File file, struct workfile_set *work_set);
 extern void UpdateWorkFileSize(File file, uint64 newsize);
-extern void WorkFileDeleted(File file, bool holdLock);
+extern void WorkFileDeleted(File file, bool hold_lock);
 
 extern workfile_set *workfile_mgr_create_set(const char *operator_name, const char *prefix, bool hold_pin);
 extern void workfile_mgr_close_set(workfile_set *work_set);
@@ -101,6 +105,5 @@ extern void workfile_mgr_close_set(workfile_set *work_set);
 extern Datum gp_workfile_mgr_cache_entries_internal(PG_FUNCTION_ARGS);
 extern workfile_set *workfile_mgr_cache_entries_get_copy(int* num_actives);
 extern uint64 WorkfileSegspace_GetSize(void);
-extern int WorkfileSetGetActiveNumber(void);
 
 #endif /* __WORKFILE_MGR_H__ */

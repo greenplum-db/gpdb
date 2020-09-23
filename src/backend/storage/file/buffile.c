@@ -96,6 +96,13 @@ struct BufFile
 	SharedFileSet *fileset;		/* space for segment files if shared */
 	const char *name;			/* name of this BufFile if shared */
 
+	/*
+	 * workfile_set for the files in current buffile. The workfile_set creator
+	 * should take care of the workfile_set's lifecycle. So, no need to call
+	 * workfile_mgr_close_set under the buffile logic.
+	 * If the workfile_set is created in BufFileCreateTemp. The workfile_set
+	 * should get freed once all the files in it are closed in BufFileClose.
+	 */
 	workfile_set *work_set;
 
 	/*
@@ -294,7 +301,7 @@ BufFileCreateTemp(char *operation_name, bool interXact)
 {
 	workfile_set *work_set;
 
-	work_set = workfile_mgr_create_set(operation_name, NULL, false);
+	work_set = workfile_mgr_create_set(operation_name, NULL, false /* hold pin */);
 
 	return BufFileCreateTempInSet(operation_name, interXact, work_set);
 }
@@ -490,12 +497,6 @@ BufFileClose(BufFile *file)
 	/* close and delete the underlying file(s) */
 	for (i = 0; i < file->numFiles; i++)
 		FileClose(file->files[i]);
-
-	/* FIXME: workfile_mgr_close_set() is a no-op, so no need to call it.
-	 * But if it was needed, we probably shouldn't call it, if the work set
-	 * was provided by the caller in BufFileCreateTempInSet()
-	 */
-	workfile_mgr_close_set(file->work_set);
 
 	/* release the buffer space */
 	pfree(file->files);

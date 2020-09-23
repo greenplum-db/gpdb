@@ -32,6 +32,37 @@
  * it is closed excepted the pinned workfile_set, which should be removed by
  * workfile_mgr_close_set().
  *
+ * Distinguish by the workfile_set life cycle, the workfile_set could be class
+ * into several classes.
+ * 1. workfile_set for a temporary workfile with interXact false(see buffile.c).
+ * Once the file closed, the workfile_set will also get freed.
+ * And if current transaction aborted, the workfile's resource owner is
+ * responsible for closing it if the workfile is leaked, which also removes
+ * the workfile_set.
+ *
+ * 2. workfile_set for a temporary workfile with interXact true(see buffile.c).
+ * Once the file closed, the workfile_set will also get removed.
+ * Since the workfile doesn't register to a resource owner, WorkFileLocalCtl
+ * is responsible for removing its corresponding workfile_set in
+ * AtProcExit_WorkFile(which gets called when process exit).
+ *
+ * 3. workfile_set is pinned and saved to prevent unexpected free operation.
+ * When the workfile_set gets pinned, after all the file in the workfile_set
+ * gets closed, we don't free the workfile_set, cause we may register new workfile
+ * later. Call workfile_mgr_close_set to explicitly remove the workfile_set.
+ * To deal with aborting, since the resource owner of the workfiles in the
+ * workfile_set will close the workfiles, and this operation will not
+ * remove workfile_set when no file exists in the workfile_set. We have to free
+ * these kinds of workfile_sets when transaction ends in AtEOXact_WorkFile.
+ * If the workfile_set contains interXact workfiles, we still rely on
+ * WorkFileLocalCtl to remove workfile_sets in AtProcExit_WorkFile. But currently,
+ * we don't have this kind of usage.
+ *
+ * NOTE: if a workfile_set gets created but no workfile register into it(in case of
+ * error, RegisterFileWithSet not called), it will never have a chance to be removed
+ * automatically through file close. Then we have to check and remove these
+ * workfile_sets when the transaction end to prevent overflow in AtEOXact_WorkFile.
+ *
  *
  * The purpose of this tracking is twofold:
  * 1. Provide the gp_toolkit views, so that you can view temporary file
@@ -105,21 +136,22 @@ typedef struct
  * entries - The workfile created in current process will be stored in the the entries
  * indexed by virtual File descriptor.
  * sizeLocalEntries - The total number of workfiles created.
+ * localList - track the workfile_sets created in current process.
  */
 typedef struct
 {
 	WorkFileLocalEntry	   *entries;
 	int						sizeLocalEntries;
+	bool					initialized;
+	dlist_head				localList;
 } WorkFileLocalCtl;
 
-static WorkFileLocalCtl localCtl = {NULL, 0};
+static WorkFileLocalCtl localCtl = {NULL, 0, false};
 
-static workfile_set *workfile_mgr_create_set_internal(const char *operator_name, const char *prefix);
 static void remove_workfile_set_if_possible(workfile_set* work_set);
+static workfile_set *workfile_mgr_create_set_internal(const char *operator_name, const char *prefix);
 static void pin_workset(workfile_set *work_set);
 static void unpin_workset(workfile_set *work_set);
-
-static void AtProcExit_WorkFile(int code, Datum arg);
 
 static bool proc_exit_hook_registered = false;
 
@@ -200,10 +232,49 @@ WorkFileShmemInit(void)
 static void
 AtProcExit_WorkFile(int code, Datum arg)
 {
-	int			i;
+	dlist_mutable_iter		iter;
 
-	for (i = 0; i < localCtl.sizeLocalEntries; i++)
-		WorkFileDeleted(i, true);
+	if (!localCtl.initialized)
+		return;
+	dlist_foreach_modify(iter, &localCtl.localList)
+	{
+		workfile_set	   *work_set = dlist_container(workfile_set, local_node, iter.cur);
+		workfile_mgr_close_set(work_set);
+	}
+}
+
+/*
+ * Cleanup the workfile_sets at the end of transaction.
+ * When transaction aborts, we should clean workfile_sets which
+ * don't contain any workfiles.
+ * Here we don't care about whether resource owner close workfiles first,
+ * or we unpin the workset first. Under either order, the expected workfile_set
+ * should be freed. Currently we put it after resource owner release logic.
+*/
+void
+AtEOXact_WorkFile(void)
+{
+	dlist_mutable_iter		iter;
+
+	if (!localCtl.initialized)
+		return;
+
+	LWLockAcquire(WorkFileManagerLock, LW_EXCLUSIVE);
+	dlist_foreach_modify(iter, &localCtl.localList)
+	{
+		workfile_set	   *work_set = dlist_container(workfile_set, local_node, iter.cur);
+		Assert(work_set->active && work_set->perquery->active);
+
+		/*
+		 * Currently, all pinned workfile_sets are calling workfile_mgr_close_set
+		 * in transaction. So we should unpin it for aborting.
+		 */
+		unpin_workset(work_set);
+
+		/*Remove the workfile_sets that don't contain any workfiles */
+		remove_workfile_set_if_possible(work_set);
+	}
+	LWLockRelease(WorkFileManagerLock);
 }
 
 /*
@@ -295,61 +366,29 @@ UpdateWorkFileSize(File file, uint64 newsize)
 	ensureLocalEntriesSize(file);
 	localEntry = &localCtl.entries[file];
 
+	work_set = localEntry->work_set;
+	/*
+	 * We got here only when the file's fdstate is FD_WORKFILE, and that
+	 * means the file is registered to a work set.
+	 */
+	Assert(work_set);
+	perquery = work_set->perquery;
+
 	diff = (int64) newsize - localEntry->size;
 	if (diff == 0)
 		return;
 
-	if (!proc_exit_hook_registered)
-	{
-		/* register proc-exit hook to ensure temp files are dropped at exit */
-		before_shmem_exit(AtProcExit_WorkFile, 0);
-		proc_exit_hook_registered = true;
-	}
-
 	LWLockAcquire(WorkFileManagerLock, LW_EXCLUSIVE);
 
-	/*
-	 * If this file doesn't belong to a working set yet, create a new one,
-	 * so that it can be tracked.
-	 *
-	 * XXX: perhaps we should skip this for very small files, to reduce
-	 * overhead?
-	 */
-	if (localEntry->work_set == NULL)
+	if (!work_set->active)
 	{
-		Assert(localEntry->size == 0);
-
-		work_set = workfile_mgr_create_set_internal(NULL, NULL);
-		localEntry->work_set = work_set;
-		work_set->num_files++;
-
-		perquery = work_set->perquery;
-		perquery->num_files++;
-
-		/*
-		 * Enforce the limit on number of files.
-		 *
-		 * We do this after associating the file with the set, so the
-		 * shared memory will reflect the state where we are already over
-		 * the limit. That seems accurate, we have already created the
-		 * file, after all. Transaction abort will delete it shortly, so
-		 * this is a very transient state.
-		 */
-		if (gp_workfile_limit_files_per_query > 0 &&
-			perquery->num_files > gp_workfile_limit_files_per_query)
-		{
-			ereport(ERROR,
-					(errcode(ERRCODE_INSUFFICIENT_RESOURCES),
-					 errmsg("number of workfiles per query limit exceeded")));
-		}
-
+		ereport(WARNING,
+				(errmsg("workfile_set %s for current file is freed which should not happen.", work_set->prefix),
+				 errprintstack(true)));
+		LWLockRelease(WorkFileManagerLock);
+		return;
 	}
-	else
-	{
-		work_set = localEntry->work_set;
-		perquery = work_set->perquery;
-	}
-	Assert(work_set->active);
+
 	Assert(perquery->active);
 
 	/*
@@ -386,8 +425,15 @@ UpdateWorkFileSize(File file, uint64 newsize)
 	LWLockRelease(WorkFileManagerLock);
 }
 
+/*
+ * WorkFileDeleted - Delete the file from it's workfile_set, update
+ * the stats for the workfile_set.
+ *
+ * If the file is the last one in the workfile_set, and it's workfile_set
+ * is not pinned, free the workfile set.
+ */
 void
-WorkFileDeleted(File file, bool holdLock)
+WorkFileDeleted(File file, bool hold_lock)
 {
 	WorkFileLocalEntry *localEntry;
 	WorkFileSetSharedEntry *work_set;
@@ -403,7 +449,7 @@ WorkFileDeleted(File file, bool holdLock)
 	if (!localEntry->work_set)
 		return;		/* not a tracked work file */
 
-	if (holdLock)
+	if (hold_lock)
 		LWLockAcquire(WorkFileManagerLock, LW_EXCLUSIVE);
 
 	work_set = localEntry->work_set;
@@ -436,10 +482,15 @@ WorkFileDeleted(File file, bool holdLock)
 	localEntry->size = 0;
 	localEntry->work_set = NULL;
 
-	if (holdLock)
+	if (hold_lock)
 		LWLockRelease(WorkFileManagerLock);
 }
 
+/*
+ * Remove the workfile_set if possible. The workfile_set must be unpinned
+ * and no workfile remains.
+ * WorkFileManagerLock must be held.
+ */
 static void
 remove_workfile_set_if_possible(workfile_set* work_set)
 {
@@ -461,6 +512,8 @@ remove_workfile_set_if_possible(workfile_set* work_set)
 		/* and add to the free list */
 		dlist_push_head(&workfile_shared->freeList, &work_set->node);
 		work_set->active = false;
+
+		dlist_delete(&work_set->local_node);
 
 		/*
 		 * Similarly, update / remove the per-query entry.
@@ -578,6 +631,14 @@ workfile_mgr_create_set_internal(const char *operator_name, const char *prefix)
 	work_set->active = true;
 	work_set->pinned = false;
 
+	/* Track all workfile_sets created in current process */
+	if (!localCtl.initialized)
+	{
+		dlist_init(&localCtl.localList);
+		localCtl.initialized = true;
+	}
+	dlist_push_tail(&localCtl.localList, &work_set->local_node);
+
 	if (operator_name)
 		strlcpy(work_set->operator, operator_name, sizeof(work_set->operator));
 	else
@@ -602,18 +663,31 @@ workfile_mgr_create_set_internal(const char *operator_name, const char *prefix)
 	return work_set;
 }
 
+/*
+ * Pin the workfile_set to prevent unexpected free operation.
+ */
 static void
 pin_workset(workfile_set *work_set)
 {
 	work_set->pinned = true;
 }
 
+/*
+ * Unping the workfile_set.
+ */
 static void
 unpin_workset(workfile_set *work_set)
 {
 	work_set->pinned = false;
 }
 
+/*
+ * workfile_mgr_close_set - force close and free the workfile_set.
+ *
+ * Normally, for unpinned workfile_set, it'll get freed until the last
+ * file closed in it. workfile_mgr_close_set will force free the workfile_set
+ * not matter it gets pinned or not.
+ */
 void
 workfile_mgr_close_set(workfile_set *work_set)
 {
@@ -633,13 +707,20 @@ workfile_mgr_close_set(workfile_set *work_set)
 			WorkFileDeleted(i, false);
 	}
 
+	/*
+	 * Since the workfile_mgr_close_set could be called at any moment to
+	 * force close and free the workfile_set, so current workfile_set
+	 * could have empty registered file yet.
+	 */
 	if (work_set->active)
 	{
 		if (work_set->num_files > 0)
 		{
 			WorkFileUsagePerQuery *perquery = work_set->perquery;
 
-			ereport(WARNING, (errmsg("workfile_set still contains files for unknow reason.")));
+			ereport(WARNING,
+					(errmsg("workfile_set %s still contains files for unknow reason.", work_set->prefix),
+					 errprintstack(true)));
 
 			if (!perquery->active)
 				ereport(PANIC, (errmsg("per-query summarry is not active")));
@@ -848,19 +929,6 @@ WorkfileSegspace_GetSize(void)
 	LWLockAcquire(WorkFileManagerLock, LW_SHARED);
 
 	result = workfile_shared->total_bytes;
-
-	LWLockRelease(WorkFileManagerLock);
-
-	return result;
-}
-
-int
-WorkfileSetGetActiveNumber(void)
-{
-	int		result;
-	LWLockAcquire(WorkFileManagerLock, LW_SHARED);
-
-	result = workfile_shared->num_active;
 
 	LWLockRelease(WorkFileManagerLock);
 

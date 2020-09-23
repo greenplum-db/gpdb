@@ -29,13 +29,12 @@
 #include "utils/memutils.h"
 #include "utils/workfile_mgr.h"
 
-#define TEST_NAME_LENGTH 50
-#define TEST_HT_NUM_ELEMENTS 8192
-
 /* Number of Workfiles created during the "stress" workfile test */
 #define TEST_MAX_NUM_WORKFILES 100000
 
+/* Used to specify created workfiles, default is TEST_MAX_NUM_WORKFILES */
 int num_workfiles;
+
 int tests_passed;
 int tests_failed;
 int tests_total;
@@ -62,6 +61,7 @@ static void unit_test_reset(void);
 static bool unit_test_summary(void);
 
 extern Datum gp_workfile_mgr_test_harness(PG_FUNCTION_ARGS);
+extern Datum gp_workfile_mgr_create_workset(PG_FUNCTION_ARGS);
 
 #define GET_STR(textp) DatumGetCString(DirectFunctionCall1(textout, PointerGetDatum(textp)))
 
@@ -101,8 +101,8 @@ gp_workfile_mgr_test_harness(PG_FUNCTION_ARGS)
 	char *test_name = GET_STR(PG_GETARG_TEXT_P(0));
 	bool run_all_tests = strcasecmp(test_name, "all") == 0;
 	bool ran_any_tests = false;
-
 	num_workfiles = PG_GETARG_INT32(1);
+
 	if (num_workfiles <= 0 || num_workfiles > TEST_MAX_NUM_WORKFILES)
 		num_workfiles = TEST_MAX_NUM_WORKFILES;
 
@@ -123,6 +123,42 @@ gp_workfile_mgr_test_harness(PG_FUNCTION_ARGS)
 	}
 
 	PG_RETURN_BOOL(ran_any_tests && result);
+}
+
+PG_FUNCTION_INFO_V1(gp_workfile_mgr_create_workset);
+Datum
+gp_workfile_mgr_create_workset(PG_FUNCTION_ARGS)
+{
+	Assert(PG_NARGS() == 1 || PG_NARGS() == 4);
+	bool emptySet = false;
+	bool interXact = false;
+	bool holdPin = false;
+	bool closeFile = false;
+
+	char *worksetName = GET_STR(PG_GETARG_TEXT_P(0));
+	if (PG_NARGS() == 1)
+		emptySet = true;
+	else
+	{
+		interXact = PG_GETARG_BOOL(1);
+		holdPin = PG_GETARG_BOOL(2);
+		closeFile = PG_GETARG_BOOL(3);
+	}
+	
+	BufFile *buffile;
+
+	workfile_set *work_set = workfile_mgr_create_set(worksetName, NULL, holdPin);
+	Assert(work_set->active);
+
+	if (!emptySet)
+	{
+		buffile = BufFileCreateTempInSet("workfile_test", interXact, work_set);
+
+		if (closeFile)
+			BufFileClose(buffile);
+	}
+
+	PG_RETURN_VOID();
 }
 
 /*
@@ -384,31 +420,27 @@ buffile_size_test(void)
 
 	unit_test_result(test_size == expected_size);
 
-	elog(LOG, "Running sub-test: Closing buffile");
-	BufFileClose(testBf);
-	unit_test_result(true);
-
 	elog(LOG, "Running sub-test: Opening existing and testing size");
-	testBf = BufFileOpenNamedTemp(file_name,
+	BufFile *testBf1 = BufFileOpenNamedTemp(file_name,
 								  false /*interXact */);
-	test_size = BufFileGetSize(testBf);
+	test_size = BufFileGetSize(testBf1);
 
 	unit_test_result(test_size == expected_size);
 
 	elog(LOG, "Running sub-test: Seek past end, appending and testing size");
 	int past_end_offset = 100;
 	int past_end_write = 200;
-	BufFileSeek(testBf, 0 /* fileno */, expected_size + past_end_offset, SEEK_SET);
-	BufFileWrite(testBf, text->data, past_end_write);
+	BufFileSeek(testBf1, 0 /* fileno */, expected_size + past_end_offset, SEEK_SET);
+	BufFileWrite(testBf1, text->data, past_end_write);
 	expected_size += past_end_offset + past_end_write;
-	test_size = BufFileGetSize(testBf);
+	test_size = BufFileGetSize(testBf1);
 
 	unit_test_result(test_size == expected_size);
 
 	elog(LOG, "Running sub-test: Closing buffile");
+	BufFileClose(testBf1);
 	BufFileClose(testBf);
 	unit_test_result(true);
-
 
 	pfree(text->data);
 	pfree(text);
@@ -504,14 +536,7 @@ buffile_large_file_test(void)
 	elog(LOG, "Running test: buffile_large_file_test");
 	char *file_name = "Test_large_buff.dat";
 
-	StringInfo filename = makeStringInfo();
-
-	appendStringInfo(filename,
-					 "%s/%s",
-					 PG_TEMP_FILES_DIR,
-					 "Test_large_buff.dat");
-
-	BufFile *bfile = BufFileCreateNamedTemp(filename->data,
+	BufFile *bfile = BufFileCreateNamedTemp(file_name,
 											true /* interXact */,
 											NULL /* workfile_set */);
 
@@ -787,7 +812,7 @@ workfile_fill_sharedcache(void)
 	int crt_entry = 0;
 	for (crt_entry = 0; crt_entry < n_entries; crt_entry++)
 	{
-		workfile_set *work_set = workfile_mgr_create_set("workfile_test", NULL, false);
+		workfile_set *work_set = workfile_mgr_create_set("workfile_test", NULL, false /* hold pin */);
 		if (NULL == work_set)
 		{
 			success = false;
@@ -821,7 +846,7 @@ workfile_create_and_set_cleanup(void)
 
 	elog(LOG, "Running sub-test: Create Workset");
 
-	workfile_set *work_set = workfile_mgr_create_set("workfile_test", NULL, false);
+	workfile_set *work_set = workfile_mgr_create_set("workfile_test", NULL, false /* hold pin */);
 
 	unit_test_result(NULL != work_set);
 
@@ -829,7 +854,6 @@ workfile_create_and_set_cleanup(void)
 
 	BufFile **ewfiles = (BufFile **) palloc(num_workfiles * sizeof(BufFile *));
 
-	elog(ERROR, "GPDB_12_MERGE_FIXME: BufFileCreateTempInSet was lost");
 	for (int i=0; i < num_workfiles; i++)
 	{
 		ewfiles[i] = BufFileCreateTempInSet("workfile_test", false /* interXact */, work_set);
@@ -867,9 +891,9 @@ workfile_made_in_temp_tablespace(void)
 	/*
 	 * Set temp_tablespaces at a session level to simulate what a user does
 	 */
-	SetConfigOption("temp_tablespaces", "ts1", PGC_INTERNAL, PGC_S_SESSION);
+	SetConfigOption("temp_tablespaces", "work_file_test_ts", PGC_INTERNAL, PGC_S_SESSION);
 
-	workfile_set *work_set = workfile_mgr_create_set("workfile_test", NULL, false);
+	workfile_set *work_set = workfile_mgr_create_set("workfile_test", NULL, false /* hold pin */);
 
 	/*
 	 * BufFileCreateTempInSet calls PrepareTempTablespaces
@@ -913,7 +937,7 @@ workfile_create_and_individual_cleanup(void)
 
 	elog(LOG, "Running sub-test: Create Workset");
 
-	workfile_set *work_set = workfile_mgr_create_set("workfile_test", NULL, false);
+	workfile_set *work_set = workfile_mgr_create_set("workfile_test", NULL, false /* hold pin */);
 
 	unit_test_result(NULL != work_set);
 
@@ -971,7 +995,7 @@ workfile_create_and_individual_cleanup_with_pinned_workfile_set(void)
 
 	elog(LOG, "Running sub-test: Create Workset");
 
-	workfile_set *work_set = workfile_mgr_create_set("workfile_test", NULL, true);
+	workfile_set *work_set = workfile_mgr_create_set("workfile_test", NULL, true /* hold pin */);
 
 	unit_test_result(NULL != work_set);
 
@@ -981,7 +1005,7 @@ workfile_create_and_individual_cleanup_with_pinned_workfile_set(void)
 
 	for (int i=0; i < num_workfiles; i++)
 	{
-		ewfiles[i] = BufFileCreateTempInSet(work_set, false /* interXact */);
+		ewfiles[i] = BufFileCreateTempInSet("workfile_test", false /* interXact */, work_set);
 
 		if (ewfiles[i] == NULL)
 		{
