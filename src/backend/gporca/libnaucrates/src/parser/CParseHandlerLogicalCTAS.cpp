@@ -56,10 +56,10 @@ CParseHandlerLogicalCTAS::CParseHandlerLogicalCTAS(
 //
 //---------------------------------------------------------------------------
 void
-CParseHandlerLogicalCTAS::StartElement(
-	const XMLCh *const element_uri GPOS_UNUSED,
-	const XMLCh *const element_local_name,
-	const XMLCh *const element_qname GPOS_UNUSED, const Attributes &attrs)
+CParseHandlerLogicalCTAS::StartElement(const XMLCh *const, /* element_uri */
+									   const XMLCh *const element_local_name,
+									   const XMLCh *const, /* element_qname */
+									   const Attributes &attrs)
 {
 	if (0 !=
 		XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenLogicalCTAS),
