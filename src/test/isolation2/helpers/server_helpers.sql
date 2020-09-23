@@ -28,14 +28,7 @@ returns text as $$
                             shell=True)
     stdout, stderr = proc.communicate()
 
-    # GPDB_12_MERGE_FIXME: upstream patch f13ea95f9e473a43ee4e1baeb94daaf83535d37c
-    # (Change pg_ctl to detect server-ready by watching status in postmaster.pid.)
-    # makes pg_ctl return 1 when the postgres is still starting up after timeout
-    # so there is only need of checking of returncode then. For now we still
-    # need to check stdout additionally since if the postgres is starting up
-    # pg_ctl still returns 0 after timeout.
-
-    if proc.returncode == 0 and stdout.find("server is still starting up") == -1:
+    if proc.returncode == 0:
         return 'OK'
     else:
         raise PgCtlError(stdout+'|'+stderr)
