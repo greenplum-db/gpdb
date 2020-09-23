@@ -155,7 +155,7 @@ extern void	InitResGroups(void);
 
 extern void AllocResGroupEntry(Oid groupId, const ResGroupCaps *caps);
 
-extern void SerializeResGroupInfo(StringInfo str);
+extern void SerializeResGroupInfo(StringInfo str, bool append);
 extern void DeserializeResGroupInfo(struct ResGroupCaps *capsOut,
 									Oid *groupId,
 									const char *buf,

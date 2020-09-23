@@ -2458,12 +2458,16 @@ groupReleaseSlot(ResGroupData *group, ResGroupSlotData *slot, bool isMoveQuery)
 
 /*
  * Serialize the resource group information that need to dispatch to segment.
+ *
+ * If append is false, str is reset before serialized data is added to it.
+ * Otherwise, serialized data is appended to str.
  */
 void
-SerializeResGroupInfo(StringInfo str)
+SerializeResGroupInfo(StringInfo str, bool append)
 {
 	unsigned int cpuset_len;
-	int32		itmp;
+	int32	     itmp;
+	int          serialized_size;
 	ResGroupCaps empty_caps;
 	ResGroupCaps *caps;
 
@@ -2473,6 +2477,22 @@ SerializeResGroupInfo(StringInfo str)
 	{
 		ClearResGroupCaps(&empty_caps);
 		caps = &empty_caps;
+	}
+	cpuset_len = strlen(caps->cpuset);
+
+	if (!append)
+	{
+		if (!str->data)
+		{
+			/*
+			 * Allocate exact amount of memory for serialized data.
+			 * Reserve one byte at the end as appendBinaryStringInfo() needs it.
+			 */
+			serialized_size = sizeof(int32) * 8 + cpuset_len + sizeof(itmp) + 1;
+			initStringInfoOfSize(str, serialized_size);
+		}
+		else
+			resetStringInfo(str);
 	}
 
 	itmp = htonl(self->groupId);
@@ -2491,7 +2511,6 @@ SerializeResGroupInfo(StringInfo str)
 	itmp = htonl(caps->memAuditor);
 	appendBinaryStringInfo(str, (char *) &itmp, sizeof(int32));
 
-	cpuset_len = strlen(caps->cpuset);
 	itmp = htonl(cpuset_len);
 	appendBinaryStringInfo(str, (char *) &itmp, sizeof(int32));
 	appendBinaryStringInfo(str, caps->cpuset, cpuset_len);
