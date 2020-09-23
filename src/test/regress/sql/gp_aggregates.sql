@@ -156,3 +156,16 @@ explain (costs off)
 select count(distinct j), count(distinct k), count(distinct m) from (select j,k,m from multiagg_with_subquery group by j,k,m ) sub group by j;
 select count(distinct j), count(distinct k), count(distinct m) from (select j,k,m from multiagg_with_subquery group by j,k,m ) sub group by j;
 drop table multiagg_with_subquery;
+
+-- Test multi-phase aggregate with an expression as the group key
+create table multiagg_expr_group_tbl (i int, j int) distributed by (i);
+insert into multiagg_expr_group_tbl values(-1, -2), (-1, -1), (0, 1), (1, 2);
+explain (costs off) select j >= 0, not j >= 0 from multiagg_expr_group_tbl group by 1;
+select j >= 0, not j >= 0 from multiagg_expr_group_tbl group by 1;
+select j >= 0,
+		case when not j >= 0 then
+			'not greater than 0'
+		end
+		from multiagg_expr_group_tbl group by 1;
+
+drop table multiagg_expr_group_tbl;

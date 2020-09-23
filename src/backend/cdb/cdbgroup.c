@@ -4037,6 +4037,33 @@ deconstruct_expr_mutator(Node *node, MppGroupContext *ctx)
 		return (Node*) var;
 	}
 
+	 
+	if (IsA(node, Var))
+	{
+		TargetEntry *sub_tle;
+		TargetEntry *prelim_tle;
+
+		char *resname;
+
+		sub_tle = tlist_member_ignore_relabel(node, ctx->sub_tlist);
+		if (sub_tle != NULL)
+		{
+			if (sub_tle->resname)
+				resname = pstrdup(sub_tle->resname);
+			else
+				resname = psprintf("prelim_aggref_%d", sub_tle->ressortgroupref);
+
+			prelim_tle = makeTargetEntry(copyObject(sub_tle->expr),
+										 list_length(ctx->grps_tlist) + 1,
+										 resname,
+										 false);
+			prelim_tle->ressortgroupref = sub_tle->ressortgroupref;
+			prelim_tle->resjunk = false;
+			ctx->grps_tlist = lappend(ctx->grps_tlist, prelim_tle);
+			return node;
+		}
+	}
+
 	return expression_tree_mutator(node, deconstruct_expr_mutator, (void *) ctx);
 }
 
