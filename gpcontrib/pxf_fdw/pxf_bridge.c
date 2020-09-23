@@ -167,7 +167,7 @@ BuildUriForWrite(PxfFdwModifyState *pxfmstate)
 	PxfOptions *options = pxfmstate->options;
 
 	resetStringInfo(&pxfmstate->uri);
-	appendStringInfo(&pxfmstate->uri, "http://%s/%s/%s/Writable/stream", psprintf("%s:%d", options->pxf_host, options->pxf_port), PXF_SERVICE_PREFIX, PXF_VERSION);
+	appendStringInfo(&pxfmstate->uri, "http://%s:%d/%s/%s/Writable/stream", options->pxf_host, options->pxf_port, PXF_SERVICE_PREFIX, PXF_VERSION);
 	elog(DEBUG2, "pxf_fdw: uri %s with file name for write: %s", pxfmstate->uri.data, options->resource);
 }
 
