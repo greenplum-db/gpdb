@@ -549,8 +549,6 @@ EOF
 		close($o);
 	}
 
-	if (!$buildclient)
-	{
 	my $mf = Project::read_file('src/backend/catalog/Makefile');
 	$mf =~ s{\\\r?\n}{}g;
 	$mf =~ /^CATALOG_HEADERS\s*:?=(.*)$/gm
@@ -615,7 +613,6 @@ EOF
 		  || confess "Could not touch header-stamp";
 		close($chs);
 	}
-	} # buildclient
 
 	open(my $o, '>', "doc/src/sgml/version.sgml")
 	  || croak "Could not write to version.sgml\n";
