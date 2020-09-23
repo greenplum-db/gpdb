@@ -2924,19 +2924,20 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 									  strlen(".sql") +
 									  1 /* '\0' */);
 		sprintf(fullname, "%s/sql/hooks/%s.sql", inputdir, prehook);
-		prehook = fullname;
 
-		if (!file_exists(prehook))
+		if (!file_exists(fullname))
 		{
 			convert_sourcefiles_in("input/hooks", outputdir, "sql/hooks", "sql");
 
-			if (!file_exists(prehook))
+			if (!file_exists(fullname))
 			{
 				fprintf(stderr, _("%s: could not open file \"%s\" for reading: %s\n"),
-						progname, prehook, strerror(errno));
+						progname, fullname, strerror(errno));
 				exit(2);
 			}
 		}
+		free(prehook);
+		free(fullname);
 	}
 
 	initialize_environment();
