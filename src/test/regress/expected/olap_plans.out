@@ -314,11 +314,11 @@ analyze foo_ctas;
 explain create table bar_ctas as select * from foo_ctas group by a, b distributed by (b);
                                         QUERY PLAN                                        
 ------------------------------------------------------------------------------------------
- Finalize HashAggregate  (cost=11.47..11.51 rows=3 width=8)
+ HashAggregate  (cost=11.47..11.51 rows=3 width=8)
    Group Key: a, b
    ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=1.50..11.42 rows=10 width=8)
          Hash Key: b
-         ->  Partial HashAggregate  (cost=1.50..1.60 rows=10 width=8)
+         ->  HashAggregate  (cost=1.50..1.60 rows=10 width=8)
                Group Key: a, b
                ->  Seq Scan on foo_ctas  (cost=0.00..1.33 rows=33 width=8)
  Optimizer: Postgres query optimizer
@@ -333,11 +333,11 @@ explain insert into bar_ctas select * from foo_ctas group by a, b;
  Insert on bar_ctas  (cost=11.47..14.87 rows=3 width=8)
    ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=11.47..14.87 rows=3 width=8)
          Hash Key: foo_ctas.b
-         ->  Finalize HashAggregate  (cost=11.47..11.51 rows=3 width=8)
+         ->  HashAggregate  (cost=11.47..11.51 rows=3 width=8)
                Group Key: foo_ctas.a, foo_ctas.b
                ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=1.50..11.42 rows=10 width=8)
                      Hash Key: foo_ctas.a, foo_ctas.b
-                     ->  Partial HashAggregate  (cost=1.50..1.60 rows=10 width=8)
+                     ->  HashAggregate  (cost=1.50..1.60 rows=10 width=8)
                            Group Key: foo_ctas.a, foo_ctas.b
                            ->  Seq Scan on foo_ctas  (cost=0.00..1.33 rows=33 width=8)
  Optimizer: Postgres query optimizer

@@ -4325,6 +4325,8 @@ create_sort_path(PlannerInfo *root,
 {
 	SortPath   *pathnode = makeNode(SortPath);
 
+	Assert(pathkeys != NIL);
+
 	pathnode->path.pathtype = T_Sort;
 	pathnode->path.parent = rel;
 	/* Sort doesn't project, so use source path's pathtarget */

@@ -1404,28 +1404,10 @@ transformSelectStmt(ParseState *pstate, SelectStmt *stmt)
 	else if (linitial(stmt->distinctClause) == NULL)
 	{
 		/* We had SELECT DISTINCT */
-		if (!pstate->p_hasAggs && !pstate->p_hasWindowFuncs &&
-			qry->groupClause == NIL && qry->groupingSets == NIL &&
-			qry->targetList != NIL)
-		{
-			/*
-			 * GPDB: We convert the DISTINCT to an equivalent GROUP BY, when
-			 * possible, because the planner can generate smarter plans for
-			 * GROUP BY. In particular, the "pre-unique" optimization has not
-			 * been implemented for DISTINCT.
-			 */
-			qry->distinctClause = transformDistinctToGroupBy(pstate,
-															 &qry->targetList,
-															 &qry->sortClause,
-															 &qry->groupClause);
-		}
-		else
-		{
-			qry->distinctClause = transformDistinctClause(pstate,
-														  &qry->targetList,
-														  qry->sortClause,
-														  false);
-		}
+		qry->distinctClause = transformDistinctClause(pstate,
+													  &qry->targetList,
+													  qry->sortClause,
+													  false);
 		qry->hasDistinctOn = false;
 	}
 	else

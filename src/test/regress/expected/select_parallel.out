@@ -258,18 +258,18 @@ select sp_parallel_restricted(unique1) from tenk1
 -- test parallel plan when group by expression is in target list.
 explain (costs off)
 	select length(stringu1) from tenk1 group by length(stringu1);
-                         QUERY PLAN                         
+                         QUERY PLAN
 ------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Finalize HashAggregate
+   ->  HashAggregate
          Group Key: (length((stringu1)::text))
          ->  Redistribute Motion 3:3  (slice2; segments: 3)
                Hash Key: (length((stringu1)::text))
-               ->  Partial HashAggregate
+               ->  HashAggregate
                      Group Key: length((stringu1)::text)
                      ->  Seq Scan on tenk1
  Optimizer: Postgres query optimizer
-(7 rows)
+(9 rows)
 
 select length(stringu1) from tenk1 group by length(stringu1);
  length 

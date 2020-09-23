@@ -74,7 +74,7 @@ SELECT DISTINCT (i || '/' || j)::pg_lsn f
   ORDER BY f;
                                 QUERY PLAN                                 
 ---------------------------------------------------------------------------
- GroupAggregate
+ Unique
    Group Key: (((((i.i)::text || '/'::text) || (j.j)::text))::pg_lsn)
    ->  Sort
          Sort Key: (((((i.i)::text || '/'::text) || (j.j)::text))::pg_lsn)

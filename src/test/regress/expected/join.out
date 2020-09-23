@@ -4568,19 +4568,21 @@ select d.* from d left join (select * from b group by b.id, b.c_id) s
 explain (costs off)
 select d.* from d left join (select distinct * from b) s
   on d.a = s.id;
-                 QUERY PLAN                  
----------------------------------------------
+                       QUERY PLAN                       
+--------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Left Join
          Hash Cond: (d.a = s.id)
          ->  Seq Scan on d
          ->  Hash
                ->  Subquery Scan on s
-                     ->  HashAggregate
-                           Group Key: b.id
-                           ->  Seq Scan on b
+                     ->  Unique
+                           Group Key: b.id, b.c_id
+                           ->  Sort
+                                 Sort Key: b.id, b.c_id
+                                 ->  Seq Scan on b
  Optimizer: Postgres query optimizer
-(10 rows)
+(12 rows)
 
 -- check join removal works when uniqueness of the join condition is enforced
 -- by a UNION

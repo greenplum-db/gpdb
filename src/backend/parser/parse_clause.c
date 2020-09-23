@@ -109,8 +109,6 @@ static WindowClause *findWindowClause(List *wclist, const char *name);
 static Node *transformFrameOffset(ParseState *pstate, int frameOptions,
 								  Oid rangeopfamily, Oid rangeopcintype, Oid *inRangeFunc,
 								  Node *clause);
-static SortGroupClause *make_group_clause(TargetEntry *tle, List *targetlist,
-				  Oid eqop, Oid sortop, bool nulls_first, bool hashable);
 
 typedef struct grouping_rewrite_ctx
 {
@@ -2350,94 +2348,6 @@ flatten_grouping_sets(Node *expr, bool toplevel, bool *hasGroupingSets)
 }
 
 /*
- * create_group_clause
- * 	Order group clauses based on equivalent sort clauses to allow plans
- * 	with sort-based grouping implementation,
- *
- * 	given a list of a GROUP-BY tle's, return a list of group clauses in the same order
- * 	of matching ORDER-BY tle's
- *
- *  the remaining GROUP-BY tle's are stored in tlist_remainder
- *
- *
- */
-static List *
-create_group_clause(List *tlist_group, List *targetlist,
-					List *sortClause, List **tlist_remainder)
-{
-	List	   *result = NIL;
-	ListCell   *l;
-	List *tlist = list_copy(tlist_group);
-
-	/*
-	 * Iterate through the ORDER BY clause. If we find a grouping element
-	 * that matches the ORDER BY element, append the grouping element to the
-	 * result set immediately. Otherwise, stop iterating. The effect of this
-	 * is to look for a prefix of the ORDER BY list in the grouping clauses,
-	 * and to move that prefix to the front of the GROUP BY.
-	 */
-	foreach(l, sortClause)
-	{
-		SortGroupClause *sc = (SortGroupClause *) lfirst(l);
-		ListCell   *prev = NULL;
-		ListCell   *tl = NULL;
-		bool		found = false;
-
-		foreach(tl, tlist)
-		{
-			Node        *node = (Node*)lfirst(tl);
-
-			if (IsA(node, TargetEntry))
-			{
-				TargetEntry *tle = (TargetEntry *) lfirst(tl);
-
-				if (!tle->resjunk &&
-					sc->tleSortGroupRef == tle->ressortgroupref)
-				{
-					SortGroupClause *gc;
-
-					tlist = list_delete_cell(tlist, tl, prev);
-
-					/* Use the sort clause's sorting information */
-					gc = make_group_clause(tle, targetlist,
-										   sc->eqop, sc->sortop, sc->nulls_first, sc->hashable);
-					result = lappend(result, gc);
-					found = true;
-					break;
-				}
-
-				prev = tl;
-			}
-		}
-
-		/* As soon as we've failed to match an ORDER BY element, stop */
-		if (!found)
-			break;
-	}
-
-	/* Save remaining GROUP-BY tle's */
-	*tlist_remainder = tlist;
-
-	return result;
-}
-
-static SortGroupClause *
-make_group_clause(TargetEntry *tle, List *targetlist,
-				  Oid eqop, Oid sortop, bool nulls_first, bool hashable)
-{
-	SortGroupClause *result;
-
-	result = makeNode(SortGroupClause);
-	result->tleSortGroupRef = assignSortGroupRef(tle, targetlist);
-	result->eqop = eqop;
-	result->sortop = sortop;
-	result->nulls_first = nulls_first;
-	result->hashable = hashable;
-
-	return result;
-}
-
-/*
  * Transform a single expression within a GROUP BY clause or grouping set.
  *
  * The expression is added to the targetlist if not already present, and to the
@@ -3108,55 +3018,6 @@ transformWindowDefinitions(ParseState *pstate,
 
 	return result;
 }
-
-/*
- * transformDistinctToGroupBy
- *
- * 		transform DISTINCT clause to GROUP-BY clause
- */
-List *
-transformDistinctToGroupBy(ParseState *pstate, List **targetlist,
-							List **sortClause, List **groupClause)
-{
-	List *group_tlist = list_copy(*targetlist);
-
-	/*
-	 * create first group clauses based on matching sort clauses, if any
-	 */
-	List *group_tlist_remainder = NIL;
-	List *group_clause_list = create_group_clause(group_tlist,
-												*targetlist,
-												*sortClause,
-												&group_tlist_remainder);
-
-	if (list_length(group_tlist_remainder) > 0)
-	{
-		/*
-		 * append remaining group clauses to the end of group clause list
-		 */
-		ListCell *lc = NULL;
-
-		foreach(lc, group_tlist_remainder)
-		{
-			TargetEntry *tle = (TargetEntry *) lfirst(lc);
-			if (!tle->resjunk)
-				group_clause_list = addTargetToGroupList(pstate, tle,
-														 group_clause_list, *targetlist,
-														 exprLocation((Node *) tle));
-		}
-	}
-
-	*groupClause = group_clause_list;
-
-	list_free(group_tlist);
-	list_free(group_tlist_remainder);
-
-	/*
-	 * return empty distinct list, since we have created a grouping clause to do the job
-	 */
-	return NIL;
-}
-
 
 /*
  * transformDistinctClause -

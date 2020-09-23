@@ -1925,13 +1925,13 @@ explain SELECT * FROM multiset_5( TABLE (SELECT DISTINCT a, b FROM example ORDER
 explain SELECT * FROM multiset_5( TABLE (SELECT DISTINCT a, b FROM example ORDER BY a, b SCATTER BY a) );
                                    QUERY PLAN                                   
 --------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=2.27..2.54 rows=10 width=36)
-   ->  Table Function Scan on multiset_5  (cost=2.27..2.54 rows=4 width=36)
-         ->  GroupAggregate  (cost=2.27..2.44 rows=4 width=16)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=1.06..1.59 rows=30 width=36)
+   ->  Table Function Scan on multiset_5  (cost=1.06..1.19 rows=10 width=36)
+         ->  Unique  (cost=1.06..1.09 rows=3 width=16)
                Group Key: example.a, example.b
-               ->  Sort  (cost=2.27..2.29 rows=4 width=16)
+               ->  Sort  (cost=1.06..1.07 rows=3 width=16)
                      Sort Key: example.a, example.b
-                     ->  Seq Scan on example  (cost=0.00..2.10 rows=4 width=16)
+                     ->  Seq Scan on example  (cost=0.00..1.03 rows=3 width=16)
  Optimizer: Postgres query optimizer
 (8 rows)
 
@@ -1953,18 +1953,18 @@ explain SELECT * FROM multiset_5( TABLE (SELECT DISTINCT a, b FROM example ORDER
 explain SELECT * FROM multiset_5( TABLE (SELECT DISTINCT a, b FROM example ORDER BY b, a LIMIT 2 SCATTER RANDOMLY) );
                                                QUERY PLAN                                               
 --------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=2.27..2.33 rows=2 width=36)
-   ->  Table Function Scan on multiset_5  (cost=2.27..2.33 rows=1 width=36)
-         ->  Redistribute Motion 1:3  (slice2; segments: 1)  (cost=2.27..2.31 rows=2 width=36)
-               ->  Limit  (cost=2.27..2.31 rows=2 width=36)
-                     ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=2.27..2.31 rows=2 width=36)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=1.07..1.28 rows=9 width=36)
+   ->  Table Function Scan on multiset_5  (cost=1.07..1.16 rows=3 width=36)
+         ->  Redistribute Motion 1:3  (slice2; segments: 1)  (cost=1.07..1.13 rows=1 width=16)
+               ->  Limit  (cost=1.07..1.10 rows=2 width=16)
+                     ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=1.07..1.16 rows=6 width=16)
                            Merge Key: example.b, example.a
-                           ->  Limit  (cost=2.27..2.27 rows=1 width=36)
-                                 ->  GroupAggregate  (cost=2.27..2.44 rows=27 width=36)
+                           ->  Limit  (cost=1.07..1.08 rows=2 width=16)
+                                 ->  Unique  (cost=1.06..1.09 rows=3 width=16)
                                        Group Key: example.b, example.a
-                                       ->  Sort  (cost=2.27..2.29 rows=4 width=16)
+                                       ->  Sort  (cost=1.06..1.07 rows=3 width=16)
                                              Sort Key: example.b, example.a
-                                             ->  Seq Scan on example  (cost=0.00..2.10 rows=4 width=16)
+                                             ->  Seq Scan on example  (cost=0.00..1.03 rows=3 width=16)
  Optimizer: Postgres query optimizer
 (13 rows)
 

@@ -421,16 +421,19 @@ analyze try_distinct_array;
 insert into try_distinct_array select 'n',string_to_array('1~1','~')::int[];
 -- Aggregate with grouping column that does not have legacy hashop
 explain (costs off) select distinct test_array from try_distinct_array;
-                    QUERY PLAN                    
---------------------------------------------------
- Finalize HashAggregate
-   Group Key: test_array
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         ->  Partial HashAggregate
-               Group Key: test_array
-               ->  Seq Scan on try_distinct_array
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: test_array
+   ->  Unique
+         Group Key: test_array
+         ->  Sort
+               Sort Key: test_array
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: test_array
+                     ->  Seq Scan on try_distinct_array
  Optimizer: Postgres query optimizer
-(7 rows)
+(10 rows)
 
 select distinct test_array from try_distinct_array;
  test_array 

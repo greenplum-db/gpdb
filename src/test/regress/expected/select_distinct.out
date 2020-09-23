@@ -138,13 +138,13 @@ SELECT count(*) FROM
          Output: (PARTIAL count(*))
          ->  Partial Aggregate
                Output: PARTIAL count(*)
-               ->  Finalize HashAggregate
+               ->  HashAggregate
                      Output: tenk1.two, tenk1.four, tenk1.two
                      Group Key: tenk1.two, tenk1.four, tenk1.two
                      ->  Redistribute Motion 3:3  (slice2; segments: 3)
                            Output: tenk1.two, tenk1.four, tenk1.two
                            Hash Key: tenk1.two, tenk1.four, tenk1.two
-                           ->  Partial HashAggregate
+                           ->  HashAggregate
                                  Output: tenk1.two, tenk1.four, tenk1.two
                                  Group Key: tenk1.two, tenk1.four, tenk1.two
                                  ->  Seq Scan on public.tenk1
@@ -174,7 +174,7 @@ EXPLAIN (costs off)
 SELECT DISTINCT g%1000 FROM generate_series(0,9999) g;
                    QUERY PLAN                   
 ------------------------------------------------
- GroupAggregate
+ Unique
    Group Key: ((g % 1000))
    ->  Sort
          Sort Key: ((g % 1000))

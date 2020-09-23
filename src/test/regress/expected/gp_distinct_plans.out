@@ -1,0 +1,271 @@
+--
+-- Test all the different plan shapes that the planner can generate for
+-- DISTINCT queries
+--
+create table distinct_test (a int, b int, c int) distributed by (a);
+insert into distinct_test select g / 1000, g / 2000, g from generate_series(1, 10000) g;
+analyze distinct_test;
+--
+-- With the default cost settings, you get hashed plans
+--
+-- If the DISTINCT is a superset of the table's distribution keys, the
+-- duplicates can be eliminated independently in the segments.
+explain select distinct a, b from distinct_test;
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=55.00..56.10 rows=66 width=8)
+   ->  HashAggregate  (cost=55.00..55.22 rows=22 width=8)
+         Group Key: a, b
+         ->  Seq Scan on distinct_test  (cost=0.00..38.33 rows=3333 width=8)
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+select distinct a, b from distinct_test;
+ a  | b 
+----+---
+  1 | 0
+  0 | 0
+  6 | 3
+  9 | 4
+ 10 | 5
+  5 | 2
+  3 | 1
+  4 | 2
+  2 | 1
+  7 | 3
+  8 | 4
+(11 rows)
+
+-- Otherwise, redistribution is needed
+explain select distinct b from distinct_test;
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=46.86..46.96 rows=6 width=4)
+   ->  Finalize HashAggregate  (cost=46.86..46.88 rows=2 width=4)
+         Group Key: b
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=46.67..46.85 rows=6 width=4)
+               Hash Key: b
+               ->  Partial HashAggregate  (cost=46.67..46.73 rows=6 width=4)
+                     Group Key: b
+                     ->  Seq Scan on distinct_test  (cost=0.00..38.33 rows=3333 width=4)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+select distinct b from distinct_test;
+ b 
+---
+ 5
+ 2
+ 4
+ 3
+ 1
+ 0
+(6 rows)
+
+-- The two-stage aggregation can be disabled with GUC
+set gp_enable_preunique = off;
+explain select distinct b from distinct_test;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=113.33..113.43 rows=6 width=4)
+   ->  HashAggregate  (cost=113.33..113.35 rows=2 width=4)
+         Group Key: b
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..105.00 rows=3333 width=4)
+               Hash Key: b
+               ->  Seq Scan on distinct_test  (cost=0.00..38.33 rows=3333 width=4)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+reset gp_enable_preunique;
+-- If the input is highly unique already the pre-Unique step is not worthwhile.
+-- (Only print count(*) of the result because it returns so many rows)
+explain select distinct c from distinct_test;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=113.33..280.00 rows=10000 width=4)
+   ->  HashAggregate  (cost=113.33..146.67 rows=3333 width=4)
+         Group Key: c
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..105.00 rows=3333 width=4)
+               Hash Key: c
+               ->  Seq Scan on distinct_test  (cost=0.00..38.33 rows=3333 width=4)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+select count(*) from (
+        select distinct c from distinct_test
+offset 0) as x;
+ count 
+-------
+ 10000
+(1 row)
+
+--
+-- Repeat the same tests with sorted Unique plans
+--
+set enable_hashagg=off;
+set optimizer_enable_hashagg=off;
+-- If the DISTINCT is a superset of the table's distribution keys, the
+-- duplicates can be eliminated independently in the segments.
+explain select distinct a, b from distinct_test;
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=233.38..259.26 rows=66 width=8)
+   Merge Key: a, b
+   ->  Unique  (cost=233.38..258.38 rows=22 width=8)
+         Group Key: a, b
+         ->  Sort  (cost=233.38..241.71 rows=3333 width=8)
+               Sort Key: a, b
+               ->  Seq Scan on distinct_test  (cost=0.00..38.33 rows=3333 width=8)
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+select distinct a, b from distinct_test;
+ a  | b 
+----+---
+  0 | 0
+  1 | 0
+  2 | 1
+  3 | 1
+  4 | 2
+  5 | 2
+  6 | 3
+  7 | 3
+  8 | 4
+  9 | 4
+ 10 | 5
+(11 rows)
+
+-- Otherwise, redistribution is needed
+explain select distinct b from distinct_test;
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Finalize GroupAggregate  (cost=233.38..250.45 rows=6 width=4)
+   Group Key: b
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=233.38..250.35 rows=18 width=4)
+         Merge Key: b
+         ->  Partial GroupAggregate  (cost=233.38..250.11 rows=6 width=4)
+               Group Key: b
+               ->  Sort  (cost=233.38..241.71 rows=3333 width=4)
+                     Sort Key: b
+                     ->  Seq Scan on distinct_test  (cost=0.00..38.33 rows=3333 width=4)
+ Optimizer: Postgres query optimizer
+(10 rows)
+
+select distinct b from distinct_test;
+ b 
+---
+ 0
+ 1
+ 2
+ 3
+ 4
+ 5
+(6 rows)
+
+-- If the input is highly unique already the pre-Unique step is not worthwhile.
+-- (Only print count(*) of the result because it returns so many rows)
+explain select distinct c from distinct_test;
+                                               QUERY PLAN                                                
+---------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=300.05..450.05 rows=10000 width=4)
+   Merge Key: c
+   ->  Unique  (cost=300.05..316.71 rows=3333 width=4)
+         Group Key: c
+         ->  Sort  (cost=300.05..308.38 rows=3333 width=4)
+               Sort Key: c
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..105.00 rows=3333 width=4)
+                     Hash Key: c
+                     ->  Seq Scan on distinct_test  (cost=0.00..38.33 rows=3333 width=4)
+ Optimizer: Postgres query optimizer
+(10 rows)
+
+select count(*) from (
+        select distinct c from distinct_test
+offset 0) as x;
+ count 
+-------
+ 10000
+(1 row)
+
+--
+-- Also test paths where the explicit Sort is not needed
+--
+create index on distinct_test (a, b);
+create index on distinct_test (b);
+create index on distinct_test (c);
+set random_page_cost=1;
+-- If the DISTINCT is a superset of the table's distribution keys, the
+-- duplicates can be eliminated independently in the segments.
+explain select distinct a, b from distinct_test;
+                                                   QUERY PLAN                                                    
+-----------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.16..206.04 rows=66 width=8)
+   Merge Key: a, b
+   ->  Unique  (cost=0.16..205.16 rows=22 width=8)
+         Group Key: a, b
+         ->  Index Only Scan using distinct_test_a_b_idx on distinct_test  (cost=0.16..188.49 rows=3333 width=8)
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+select distinct a, b from distinct_test;
+ a  | b 
+----+---
+  0 | 0
+  1 | 0
+  2 | 1
+  3 | 1
+  4 | 2
+  5 | 2
+  6 | 3
+  7 | 3
+  8 | 4
+  9 | 4
+ 10 | 5
+(11 rows)
+
+-- Otherwise, redistribution is needed
+explain select distinct b from distinct_test;
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
+ Finalize GroupAggregate  (cost=0.16..197.23 rows=6 width=4)
+   Group Key: b
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.16..197.13 rows=18 width=4)
+         Merge Key: b
+         ->  Partial GroupAggregate  (cost=0.16..196.89 rows=6 width=4)
+               Group Key: b
+               ->  Index Only Scan using distinct_test_b_idx on distinct_test  (cost=0.16..188.49 rows=3333 width=4)
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+select distinct b from distinct_test;
+ b 
+---
+ 0
+ 1
+ 2
+ 3
+ 4
+ 5
+(6 rows)
+
+-- If the input is highly unique already the pre-Unique step is not worthwhile.
+-- (Only print count(*) of the result because it returns so many rows)
+explain select distinct c from distinct_test;
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
+ Unique  (cost=0.16..346.83 rows=10000 width=4)
+   Group Key: c
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.16..321.83 rows=10000 width=4)
+         Merge Key: c
+         ->  Index Only Scan using distinct_test_c_idx on distinct_test  (cost=0.16..188.49 rows=3333 width=4)
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+select count(*) from (
+        select distinct c from distinct_test
+offset 0) as x;
+ count 
+-------
+ 10000
+(1 row)
+

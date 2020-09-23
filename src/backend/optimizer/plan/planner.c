@@ -5333,114 +5333,15 @@ create_distinct_paths(PlannerInfo *root,
 {
 	Query	   *parse = root->parse;
 	Path	   *cheapest_input_path = input_rel->cheapest_total_path;
-	Path	   *hash_input_path = NULL;
 	RelOptInfo *distinct_rel;
 	double		numDistinctRowsTotal;
 	double		numInputRowsTotal;
-	double		numDistinctRowsHash = 0;
 	bool		allow_hash;
-	bool		must_hash;
 	Path	   *path;
 	ListCell   *lc;
-	List	   *distinct_dist_pathkeys = NIL;
-	List	   *distinct_dist_exprs = NIL;
-	List	   *distinct_dist_opfamilies = NIL;
-	List	   *distinct_dist_sortrefs = NIL;
 
 	/* For now, do all work in the (DISTINCT, NULL) upperrel */
 	distinct_rel = fetch_upper_rel(root, UPPERREL_DISTINCT, NULL);
-
-
-	/*
-	 * MPP: If there's a DISTINCT clause and we're not collocated on the
-	 * distinct key, we need to redistribute on that key.  In addition, we
-	 * need to consider whether to "pre-unique" by doing a Sort-Unique
-	 * operation on the data as currently distributed, redistributing on the
-	 * district key, and doing the Sort-Unique again. This 2-phase approach
-	 * will be a win, if the cost of redistributing the entire input exceeds
-	 * the cost of an extra Redistribute-Sort-Unique on the pre-uniqued
-	 * (reduced) input.
-	 */
-	make_distribution_exprs_for_groupclause(root,
-											parse->distinctClause,
-			make_tlist_from_pathtarget(root->upper_targets[UPPERREL_WINDOW]),
-											&distinct_dist_pathkeys,
-											&distinct_dist_exprs,
-											&distinct_dist_opfamilies,
-											&distinct_dist_sortrefs);
-
-#if 0
-	if (Gp_role == GP_ROLE_DISPATCH && CdbPathLocus_IsPartitioned(path->locus))
-	{
-		/* Apply the preunique optimization, if enabled and worthwhile. */
-		/* GPDB_84_MERGE_FIXME: pre-unique for hash distinct not implemented. */
-		/* GPDB_96_MERGE_FIXME: disabled altogether */
-		if (gp_enable_preunique && needMotion && !use_hashed_distinct)
-		{
-			double		base_cost,
-				alt_cost;
-			Path		sort_path;	/* dummy for result of cost_sort */
-
-			base_cost = motion_cost_per_row * result_plan->plan_rows;
-			alt_cost = motion_cost_per_row * numDistinct;
-			cost_sort(&sort_path, root, NIL, alt_cost,
-					  numDistinct, result_plan->plan_rows,
-					  0, work_mem, -1.0);
-			alt_cost += sort_path.startup_cost;
-			alt_cost += cpu_operator_cost * numDistinct
-				* list_length(parse->distinctClause);
-
-			if (alt_cost < base_cost || gp_eager_preunique)
-			{
-				/*
-				 * Reduce the number of rows to move by adding a [Sort
-				 * and] Unique prior to the redistribute Motion.
-				 */
-				if (root->sort_pathkeys)
-				{
-					if (!pathkeys_contained_in(root->sort_pathkeys, current_pathkeys))
-					{
-						result_plan = (Plan *) make_sort_from_pathkeys(root,
-																	   result_plan,
-																	   root->sort_pathkeys,
-																	   limit_tuples,
-																	   true);
-						((Sort *) result_plan)->noduplicates = gp_enable_sort_distinct;
-						current_pathkeys = root->sort_pathkeys;
-					}
-				}
-
-				result_plan = (Plan *) make_unique(result_plan, parse->distinctClause);
-
-				result_plan->plan_rows = numDistinct;
-
-				/*
-				 * Our sort node (under the unique node), unfortunately
-				 * can't guarantee uniqueness -- so we aren't allowed to
-				 * push the limit into the sort; but we can avoid moving
-				 * the entire sorted result-set by plunking a limit on the
-				 * top of the unique-node.
-				 */
-				if (parse->limitCount)
-				{
-					/*
-					 * Our extra limit operation is basically a
-					 * third-phase on multi-phase limit (see 2-phase limit
-					 * below)
-					 */
-					result_plan = pushdown_preliminary_limit(result_plan, parse->limitCount, parse->limitOffset, limit_tuples);
-				}
-			}
-		}
-	}
-	else if ( result_plan->flow->flotype == FLOW_SINGLETON )
-		; /* Already collocated. */
-	else
-	{
-		ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
-						errmsg("unexpected input locus to distinct")));
-	}
-#endif
 
 	/*
 	 * We don't compute anything at this level, so distinct_rel will be
@@ -5524,23 +5425,16 @@ create_distinct_paths(PlannerInfo *root,
 			{
 				double		numDistinctRows;
 
-				if (!cdbpathlocus_collocates_pathkeys(root, path->locus,
-													  distinct_dist_pathkeys, false /* exact_match */ ))
-				{
-					/*
-					 * If the input path's locus is not suitable, gather the
-					 * result. We don't want to redistribute it because that
-					 * would break the input ordering, and we'd need to re-Sort
-					 * it. (We'll consider the explicit-sort case below, on top
-					 * of the cheapest overall path.)
-					 */
-					CdbPathLocus locus;
+				path = cdb_prepare_path_for_sorted_agg(root,
+													   true, /* is_sorted */
+													   distinct_rel,
+													   path, path->pathtarget,
+													   needed_pathkeys,
+													   -1.0,
+													   parse->distinctClause,
+													   NIL);
 
-					CdbPathLocus_MakeSingleQE(&locus, getgpsegmentCount());
-
-					path = cdbpath_create_motion_path(root, path, path->pathkeys, false, locus);
-				}
-
+				/* On how many segments will the distinct result reside? */
 				if (CdbPathLocus_IsPartitioned(path->locus))
 					numDistinctRows = numDistinctRowsTotal / CdbPathLocus_NumSegments(path->locus);
 				else
@@ -5567,59 +5461,16 @@ create_distinct_paths(PlannerInfo *root,
 			needed_pathkeys = root->distinct_pathkeys;
 
 		path = cheapest_input_path;
-		if (!pathkeys_contained_in(needed_pathkeys, path->pathkeys))
-		{
-			if (!cdbpathlocus_collocates_pathkeys(root, path->locus,
-												  distinct_dist_pathkeys, false /* exact_match */ ))
-			{
-				CdbPathLocus locus;
 
-				if (distinct_dist_exprs)
-				{
-					locus = cdbpathlocus_from_exprs(root,
-													path->parent,
-													distinct_dist_exprs,
-													distinct_dist_opfamilies,
-													distinct_dist_sortrefs,
-													getgpsegmentCount());
-				}
-				else
-				{
-					CdbPathLocus_MakeSingleQE(&locus, getgpsegmentCount());
-				}
-				/* we're about to sort the data, so don't try preserving any existing order. */
-				path = cdbpath_create_motion_path(root, path, NIL, false, locus);
-			}
-
-			path = (Path *) create_sort_path(root, distinct_rel,
-											 path,
-											 needed_pathkeys,
-											 -1.0);
-		}
-		else
-		{
-			if (!cdbpathlocus_collocates_pathkeys(root, path->locus,
-												  distinct_dist_pathkeys, false /* exact_match */ ))
-			{
-				CdbPathLocus locus;
-
-				if (distinct_dist_exprs)
-				{
-					locus = cdbpathlocus_from_exprs(root,
-													path->parent,
-													distinct_dist_exprs,
-													distinct_dist_opfamilies,
-													distinct_dist_sortrefs,
-													getgpsegmentCount());
-				}
-				else
-				{
-					CdbPathLocus_MakeSingleQE(&locus, getgpsegmentCount());
-				}
-				/* preserve any existing order */
-				path = cdbpath_create_motion_path(root, path, path->pathkeys, false, locus);
-			}
-		}
+		path = cdb_prepare_path_for_sorted_agg(root,
+											   pathkeys_contained_in(needed_pathkeys, cheapest_input_path->pathkeys),
+											   distinct_rel,
+											   cheapest_input_path,
+											   cheapest_input_path->pathtarget,
+											   needed_pathkeys,
+											   -1.0,
+											   parse->distinctClause,
+											   NIL);
 
 		double		numDistinctRows;
 
@@ -5639,90 +5490,49 @@ create_distinct_paths(PlannerInfo *root,
 	 * Consider hash-based implementations of DISTINCT, if possible.
 	 *
 	 * If we were not able to make any other types of path, we *must* hash or
-	 * die trying.  If we do have other choices, there are several things that
+	 * die trying.  If we do have other choices, there are two things that
 	 * should prevent selection of hashing: if the query uses DISTINCT ON
 	 * (because it won't really have the expected behavior if we hash), or if
-	 * enable_hashagg is off, or if it looks like the hashtable will exceed
-	 * work_mem.
+	 * enable_hashagg is off.
 	 *
 	 * Note: grouping_is_hashable() is much more expensive to check than the
 	 * other gating conditions, so we want to do it last.
 	 */
 	if (distinct_rel->pathlist == NIL)
-	{
 		allow_hash = true;		/* we have no alternatives */
-		must_hash = true;
-	}
 	else if (parse->hasDistinctOn || !enable_hashagg)
-	{
 		allow_hash = false;		/* policy-based decision not to hash */
-		must_hash = false;
-	}
 	else
-	{
-		allow_hash = true;
-		must_hash = false;
-	}
-
-	if (allow_hash)
-	{
-		Path	   *path;
-
-		path = cheapest_input_path;
-		if (!cdbpathlocus_collocates_pathkeys(root, path->locus,
-											  distinct_dist_pathkeys, false /* exact_match */ ))
-		{
-			CdbPathLocus locus;
-
-			if (distinct_dist_exprs)
-			{
-				locus = cdbpathlocus_from_exprs(root,
-												path->parent,
-												distinct_dist_exprs,
-												distinct_dist_opfamilies,
-												distinct_dist_sortrefs,
-												getgpsegmentCount());
-			}
-			else
-			{
-				CdbPathLocus_MakeSingleQE(&locus, getgpsegmentCount());
-			}
-
-			path = cdbpath_create_motion_path(root, path, path->pathkeys, false, locus);
-		}
-
-		hash_input_path = path;
-
-		if (CdbPathLocus_IsPartitioned(path->locus))
-			numDistinctRowsHash = numDistinctRowsTotal / CdbPathLocus_NumSegments(path->locus);
-		else
-			numDistinctRowsHash = numDistinctRowsTotal;
-
-		if (!must_hash)
-		{
-			Size		hashentrysize = hash_agg_entry_size(
-				0, cheapest_input_path->pathtarget->width, 0);
-
-			/* Allow hashing only if hashtable is predicted to fit in work_mem */
-			allow_hash = (hashentrysize * numDistinctRowsHash <= work_mem * 1024L);
-		}
-	}
+		allow_hash = true;		/* default */
 
 	if (allow_hash && grouping_is_hashable(parse->distinctClause))
 	{
 		/* Generate hashed aggregate path --- no sort needed */
+		double		numDistinctRows;
+
+		path = cdb_prepare_path_for_hashed_agg(root,
+											   cheapest_input_path,
+											   cheapest_input_path->pathtarget,
+											   parse->distinctClause,
+											   NIL);
+
+		if (CdbPathLocus_IsPartitioned(path->locus))
+			numDistinctRows = clamp_row_est(numDistinctRowsTotal / CdbPathLocus_NumSegments(path->locus));
+		else
+			numDistinctRows = numDistinctRowsTotal;
+
 		add_path(distinct_rel, (Path *)
 				 create_agg_path(root,
 								 distinct_rel,
-								 hash_input_path,
-								 hash_input_path->pathtarget,
+								 path,
+								 path->pathtarget,
 								 AGG_HASHED,
 								 AGGSPLIT_SIMPLE,
 								 false, /* streaming */
 								 parse->distinctClause,
 								 NIL,
 								 NULL,
-								 numDistinctRowsHash));
+								 numDistinctRows));
 	}
 
 	/* Give a helpful error if we failed to find any implementation */
@@ -5731,6 +5541,16 @@ create_distinct_paths(PlannerInfo *root,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				 errmsg("could not implement DISTINCT"),
 				 errdetail("Some of the datatypes only support hashing, while others only support sorting.")));
+
+	/*
+	 * Add GPDB two-stage agg plans
+	 */
+	if (Gp_role == GP_ROLE_DISPATCH && gp_enable_preunique)
+		cdb_create_twostage_distinct_paths(root,
+										   input_rel,
+										   distinct_rel,
+										   cheapest_input_path->pathtarget,
+										   numDistinctRowsTotal);
 
 	/*
 	 * If there is an FDW that's responsible for all baserels of the query,
@@ -7772,14 +7592,12 @@ add_paths_to_grouping_rel(PlannerInfo *root, RelOptInfo *input_rel,
 			}
 		}
 
-		cdb_create_twostage_grouping_paths(root,
+		cdb_create_multistage_grouping_paths(root,
 										   input_rel,
 										   grouped_rel,
 										   grouped_rel->reltarget,
 										   partially_grouped_target,
 										   havingQual,
-										   can_sort,
-										   can_mpp_hash,
 										   dNumGroupsTotal,
 										   agg_costs,
 										   &extra->agg_partial_costs,

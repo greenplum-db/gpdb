@@ -304,29 +304,29 @@ SELECT c FROM pagg_tab GROUP BY c ORDER BY 1;
 -------------------------------------------------------
  Merge Append
    Sort Key: pagg_tab_p1.c
-   ->  Finalize GroupAggregate
+   ->  GroupAggregate
          Group Key: pagg_tab_p1.c
          ->  Gather Motion 3:1  (slice1; segments: 3)
                Merge Key: pagg_tab_p1.c
-               ->  Partial GroupAggregate
+               ->  GroupAggregate
                      Group Key: pagg_tab_p1.c
                      ->  Sort
                            Sort Key: pagg_tab_p1.c
                            ->  Seq Scan on pagg_tab_p1
-   ->  Finalize GroupAggregate
+   ->  GroupAggregate
          Group Key: pagg_tab_p2.c
          ->  Gather Motion 3:1  (slice2; segments: 3)
                Merge Key: pagg_tab_p2.c
-               ->  Partial GroupAggregate
+               ->  GroupAggregate
                      Group Key: pagg_tab_p2.c
                      ->  Sort
                            Sort Key: pagg_tab_p2.c
                            ->  Seq Scan on pagg_tab_p2
-   ->  Finalize GroupAggregate
+   ->  GroupAggregate
          Group Key: pagg_tab_p3.c
          ->  Gather Motion 3:1  (slice3; segments: 3)
                Merge Key: pagg_tab_p3.c
-               ->  Partial GroupAggregate
+               ->  GroupAggregate
                      Group Key: pagg_tab_p3.c
                      ->  Sort
                            Sort Key: pagg_tab_p3.c

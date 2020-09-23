@@ -4727,14 +4727,14 @@ then 'MO' else 'foo' end
 case when ir_call_type_group_code in ('H', 'VH', 'PCB') then 'Thailland'
 else 'Unidentify' end
 ;
-                                                                                                                                QUERY PLAN                                                                                                                                 
+                                                                                                                                QUERY PLAN
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=184.79..258.96 rows=1000 width=96)
-   ->  Finalize HashAggregate  (cost=184.79..192.29 rows=333 width=96)
+   ->  HashAggregate  (cost=184.79..192.29 rows=333 width=96)
          Group Key: (CASE WHEN (ir_call_supplementary_svc_code = ANY ('{S20,S21}'::bpchar[])) THEN 'MO'::text ELSE 'foo'::text END), (CASE WHEN ((ir_call_type_group_code)::text = ANY ('{H,VH,PCB}'::text[])) THEN 'Thailland'::text ELSE 'Unidentify'::text END)
          ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=75.08..180.27 rows=905 width=102)
                Hash Key: (CASE WHEN (ir_call_supplementary_svc_code = ANY ('{S20,S21}'::bpchar[])) THEN 'MO'::text ELSE 'foo'::text END), (CASE WHEN ((ir_call_type_group_code)::text = ANY ('{H,VH,PCB}'::text[])) THEN 'Thailland'::text ELSE 'Unidentify'::text END)
-               ->  Partial HashAggregate  (cost=75.08..89.79 rows=905 width=102)
+               ->  HashAggregate  (cost=75.08..89.79 rows=905 width=102)
                      Group Key: CASE WHEN (ir_call_supplementary_svc_code = ANY ('{S20,S21}'::bpchar[])) THEN 'MO'::text ELSE 'foo'::text END, CASE WHEN ((ir_call_type_group_code)::text = ANY ('{H,VH,PCB}'::text[])) THEN 'Thailland'::text ELSE 'Unidentify'::text END
                      ->  Seq Scan on ir_voice_sms_and_data  (cost=0.00..65.42 rows=1933 width=102)
  Optimizer: Postgres query optimizer

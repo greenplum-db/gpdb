@@ -1,0 +1,287 @@
+--
+-- Test all the different plan shapes that the planner can generate for
+-- DISTINCT queries
+--
+create table distinct_test (a int, b int, c int) distributed by (a);
+insert into distinct_test select g / 1000, g / 2000, g from generate_series(1, 10000) g;
+analyze distinct_test;
+--
+-- With the default cost settings, you get hashed plans
+--
+-- If the DISTINCT is a superset of the table's distribution keys, the
+-- duplicates can be eliminated independently in the segments.
+explain select distinct a, b from distinct_test;
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.93 rows=38 width=8)
+   ->  HashAggregate  (cost=0.00..431.93 rows=13 width=8)
+         Group Key: a, b
+         ->  Seq Scan on distinct_test  (cost=0.00..431.08 rows=3334 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+select distinct a, b from distinct_test;
+ a  | b 
+----+---
+  1 | 0
+  0 | 0
+  6 | 3
+  9 | 4
+ 10 | 5
+  5 | 2
+  3 | 1
+  4 | 2
+  2 | 1
+  7 | 3
+  8 | 4
+(11 rows)
+
+-- Otherwise, redistribution is needed
+explain select distinct b from distinct_test;
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.51 rows=6 width=4)
+   ->  GroupAggregate  (cost=0.00..431.51 rows=2 width=4)
+         Group Key: b
+         ->  Sort  (cost=0.00..431.51 rows=2 width=4)
+               Sort Key: b
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.51 rows=2 width=4)
+                     Hash Key: b
+                     ->  Streaming HashAggregate  (cost=0.00..431.51 rows=2 width=4)
+                           Group Key: b
+                           ->  Seq Scan on distinct_test  (cost=0.00..431.08 rows=3334 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(11 rows)
+
+select distinct b from distinct_test;
+ b 
+---
+ 5
+ 2
+ 4
+ 3
+ 1
+ 0
+(6 rows)
+
+-- The two-stage aggregation can be disabled with GUC
+set gp_enable_preunique = off;
+explain select distinct b from distinct_test;
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.51 rows=6 width=4)
+   ->  GroupAggregate  (cost=0.00..431.51 rows=2 width=4)
+         Group Key: b
+         ->  Sort  (cost=0.00..431.51 rows=2 width=4)
+               Sort Key: b
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.51 rows=2 width=4)
+                     Hash Key: b
+                     ->  Streaming HashAggregate  (cost=0.00..431.51 rows=2 width=4)
+                           Group Key: b
+                           ->  Seq Scan on distinct_test  (cost=0.00..431.08 rows=3334 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(11 rows)
+
+reset gp_enable_preunique;
+-- If the input is highly unique already the pre-Unique step is not worthwhile.
+-- (Only print count(*) of the result because it returns so many rows)
+explain select distinct c from distinct_test;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.70 rows=10000 width=4)
+   ->  HashAggregate  (cost=0.00..431.55 rows=3334 width=4)
+         Group Key: c
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.14 rows=3334 width=4)
+               Hash Key: c
+               ->  Seq Scan on distinct_test  (cost=0.00..431.08 rows=3334 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
+
+select count(*) from (
+        select distinct c from distinct_test
+offset 0) as x;
+ count 
+-------
+ 10000
+(1 row)
+
+--
+-- Repeat the same tests with sorted Unique plans
+--
+set enable_hashagg=off;
+set optimizer_enable_hashagg=off;
+-- If the DISTINCT is a superset of the table's distribution keys, the
+-- duplicates can be eliminated independently in the segments.
+explain select distinct a, b from distinct_test;
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..432.92 rows=38 width=8)
+   ->  GroupAggregate  (cost=0.00..432.92 rows=13 width=8)
+         Group Key: a, b
+         ->  Sort  (cost=0.00..432.90 rows=3334 width=8)
+               Sort Key: a, b
+               ->  Seq Scan on distinct_test  (cost=0.00..431.08 rows=3334 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
+
+select distinct a, b from distinct_test;
+ a  | b 
+----+---
+  0 | 0
+  1 | 0
+  5 | 2
+  6 | 3
+  9 | 4
+ 10 | 5
+  2 | 1
+  3 | 1
+  4 | 2
+  7 | 3
+  8 | 4
+(11 rows)
+
+-- Otherwise, redistribution is needed
+explain select distinct b from distinct_test;
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..432.00 rows=6 width=4)
+   ->  GroupAggregate  (cost=0.00..432.00 rows=2 width=4)
+         Group Key: b
+         ->  Sort  (cost=0.00..432.00 rows=2 width=4)
+               Sort Key: b
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..432.00 rows=2 width=4)
+                     Hash Key: b
+                     ->  GroupAggregate  (cost=0.00..432.00 rows=2 width=4)
+                           Group Key: b
+                           ->  Sort  (cost=0.00..431.99 rows=3334 width=4)
+                                 Sort Key: b
+                                 ->  Seq Scan on distinct_test  (cost=0.00..431.08 rows=3334 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(13 rows)
+
+select distinct b from distinct_test;
+ b 
+---
+ 2
+ 3
+ 4
+ 0
+ 1
+ 5
+(6 rows)
+
+-- If the input is highly unique already the pre-Unique step is not worthwhile.
+-- (Only print count(*) of the result because it returns so many rows)
+explain select distinct c from distinct_test;
+                                               QUERY PLAN                                                
+---------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..432.20 rows=10000 width=4)
+   ->  GroupAggregate  (cost=0.00..432.05 rows=3334 width=4)
+         Group Key: c
+         ->  Sort  (cost=0.00..432.03 rows=3334 width=4)
+               Sort Key: c
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.14 rows=3334 width=4)
+                     Hash Key: c
+                     ->  Seq Scan on distinct_test  (cost=0.00..431.08 rows=3334 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+select count(*) from (
+        select distinct c from distinct_test
+offset 0) as x;
+ count 
+-------
+ 10000
+(1 row)
+
+--
+-- Also test paths where the explicit Sort is not needed
+--
+create index on distinct_test (a, b);
+create index on distinct_test (b);
+create index on distinct_test (c);
+set random_page_cost=1;
+-- If the DISTINCT is a superset of the table's distribution keys, the
+-- duplicates can be eliminated independently in the segments.
+explain select distinct a, b from distinct_test;
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..432.92 rows=38 width=8)
+   ->  GroupAggregate  (cost=0.00..432.92 rows=13 width=8)
+         Group Key: a, b
+         ->  Sort  (cost=0.00..432.90 rows=3334 width=8)
+               Sort Key: a, b
+               ->  Seq Scan on distinct_test  (cost=0.00..431.08 rows=3334 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
+
+select distinct a, b from distinct_test;
+ a  | b 
+----+---
+  0 | 0
+  1 | 0
+  5 | 2
+  6 | 3
+  9 | 4
+ 10 | 5
+  2 | 1
+  3 | 1
+  4 | 2
+  7 | 3
+  8 | 4
+(11 rows)
+
+-- Otherwise, redistribution is needed
+explain select distinct b from distinct_test;
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..432.00 rows=6 width=4)
+   ->  GroupAggregate  (cost=0.00..432.00 rows=2 width=4)
+         Group Key: b
+         ->  Sort  (cost=0.00..432.00 rows=2 width=4)
+               Sort Key: b
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..432.00 rows=2 width=4)
+                     Hash Key: b
+                     ->  GroupAggregate  (cost=0.00..432.00 rows=2 width=4)
+                           Group Key: b
+                           ->  Sort  (cost=0.00..431.99 rows=3334 width=4)
+                                 Sort Key: b
+                                 ->  Seq Scan on distinct_test  (cost=0.00..431.08 rows=3334 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(13 rows)
+
+select distinct b from distinct_test;
+ b 
+---
+ 0
+ 1
+ 5
+ 2
+ 3
+ 4
+(6 rows)
+
+-- If the input is highly unique already the pre-Unique step is not worthwhile.
+-- (Only print count(*) of the result because it returns so many rows)
+explain select distinct c from distinct_test;
+                                               QUERY PLAN                                                
+---------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..432.20 rows=10000 width=4)
+   ->  GroupAggregate  (cost=0.00..432.05 rows=3334 width=4)
+         Group Key: c
+         ->  Sort  (cost=0.00..432.03 rows=3334 width=4)
+               Sort Key: c
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.14 rows=3334 width=4)
+                     Hash Key: c
+                     ->  Seq Scan on distinct_test  (cost=0.00..431.08 rows=3334 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+select count(*) from (
+        select distinct c from distinct_test
+offset 0) as x;
+ count 
+-------
+ 10000
+(1 row)
+
