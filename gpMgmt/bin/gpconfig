@@ -533,5 +533,5 @@ if __name__ == '__main__':
     try:
         do_main()
     except Exception as err:
-        print((err.message))
+        print(err)
         sys.exit(1)

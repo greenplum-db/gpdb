@@ -21,11 +21,6 @@ class RaiseOperation_Nested(Operation):
         raise RaiseOperation_Nested.MyException2()
     class MyException2(Exception): pass
 
-# Exceptions with args must follow a strange idiom! http://bugs.python.org/issue1692335
-class RaiseOperation_Unsafe(Operation):
-    def execute(self):
-        raise ExceptionWithArgsUnsafe(1, 2)
-
 class RaiseOperation_Safe(Operation):
     def execute(self):
         raise ExceptionWithArgs(1, 2)

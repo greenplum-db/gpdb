@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 
 import os
-import base64
-import pickle
+import json
 
 from gppylib.gpparseopts import OptParser, OptChecker
 from gppylib.mainUtils import addStandardLoggingAndHelpOptions
@@ -62,8 +61,8 @@ def cleanup_pg_hba_backup_on_segment(gparr):
 
     try:
         for host, data_dirs_list in list(host_to_seg_map.items()):
-            pickled_data_dirs_list = base64.urlsafe_b64encode(pickle.dumps(data_dirs_list))
-            cmdStr = "$GPHOME/lib/python/gppylib/operations/initstandby.py -d %s -D" % pickled_data_dirs_list
+            json_data_dirs_list = json.dumps(str(data_dirs_list))
+            cmdStr = "$GPHOME/lib/python/gppylib/operations/initstandby.py -d '%s' -D" % json_data_dirs_list
             cmd = Command('Cleanup the pg_hba.conf backups on remote hosts', cmdStr=cmdStr , ctxt=REMOTE, remoteHost=host)
             pool.addCommand(cmd)
 
@@ -101,8 +100,8 @@ def restore_pg_hba_on_segment(gparr):
 
     try:
         for host, data_dirs_list in list(host_to_seg_map.items()):
-            pickled_data_dirs_list = base64.urlsafe_b64encode(pickle.dumps(data_dirs_list))
-            cmdStr = "$GPHOME/lib/python/gppylib/operations/initstandby.py -d %s -r" % pickled_data_dirs_list
+            json_data_dirs_list = json.dumps(data_dirs_list)
+            cmdStr = "$GPHOME/lib/python/gppylib/operations/initstandby.py -d '%s' -r" % json_data_dirs_list
             cmd = Command('Restore the pg_hba.conf on remote hosts', cmdStr=cmdStr , ctxt=REMOTE, remoteHost=host)
             pool.addCommand(cmd)
 
@@ -155,7 +154,7 @@ def update_pg_hba_conf_on_segments(gparr, standby_host, is_hba_hostnames=False):
     """
     logger.debug('Updating pg_hba.conf file on segments...')
     standby_pg_hba_info = get_standby_pg_hba_info(standby_host, is_hba_hostnames)
-    pickled_standby_pg_hba_info = base64.urlsafe_b64encode(pickle.dumps(standby_pg_hba_info))
+    json_standby_pg_hba_info = json.dumps(standby_pg_hba_info)
 
     host_to_seg_map = defaultdict(list) 
     for seg in gparr.getDbList():
@@ -166,8 +165,8 @@ def update_pg_hba_conf_on_segments(gparr, standby_host, is_hba_hostnames=False):
 
     try:
         for host, data_dirs_list in list(host_to_seg_map.items()):
-            pickled_data_dirs_list = base64.urlsafe_b64encode(pickle.dumps(data_dirs_list))
-            cmdStr = "$GPHOME/lib/python/gppylib/operations/initstandby.py -p %s -d %s" % (pickled_standby_pg_hba_info, pickled_data_dirs_list)
+            json_data_dirs_list = json.dumps(data_dirs_list)
+            cmdStr = "$GPHOME/lib/python/gppylib/operations/initstandby.py -p '%s' -d '%s'" % (json_standby_pg_hba_info, json_data_dirs_list)
             cmd = Command('Update the pg_hba.conf on remote hosts', cmdStr=cmdStr, ctxt=REMOTE, remoteHost=host)
             pool.addCommand(cmd)
 
@@ -205,9 +204,9 @@ def create_parser():
 if __name__ == '__main__':
     parser = create_parser()
     (options, args) = parser.parse_args()
-    data_dirs = pickle.loads(base64.urlsafe_b64decode(options.data_dirs))
+    data_dirs = json.loads(options.data_dirs)
     if options.pg_hba_info:
-        pg_hba_info = pickle.loads(base64.urlsafe_b64decode(options.pg_hba_info))
+        pg_hba_info = json.loads(options.pg_hba_info)
         update_pg_hba(pg_hba_info, data_dirs)
     elif options.backup:
         backup_pg_hba(data_dirs)

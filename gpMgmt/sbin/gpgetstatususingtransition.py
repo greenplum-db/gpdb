@@ -9,7 +9,7 @@
 from gppylib.mainUtils import *
 import os, sys
 
-import pickle, base64
+import json
 import re
 
 from optparse import Option, OptionGroup, OptionParser, OptionValueError
@@ -195,7 +195,7 @@ class GpSegStatusProgram:
                     
                 outputThisSeg[statusRequest] = data
 
-        status = '\nSTATUS_RESULTS:' + base64.urlsafe_b64encode(pickle.dumps(output))
+        status = '\nSTATUS_RESULTS:' + json.dumps(output)
         logger.info(status)
 
     def cleanup(self):

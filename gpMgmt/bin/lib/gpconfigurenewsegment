@@ -17,7 +17,6 @@ from gppylib.commands.pg import DbStatus
 from gppylib import gplog
 from gppylib.commands.base import *
 from gppylib.gparray import Segment
-from gppylib.utils import canStringBeParsedAsInt
 from time import sleep
 from gppylib.operations.buildMirrorSegments import gDatabaseDirectories, gDatabaseFiles
 
@@ -341,15 +340,22 @@ def parseargs():
             raise Exception('Invalid configuration value: %s' % conf_vals)
         if conf_vals[0] == '':
             raise Exception('Missing data directory in: %s' % conf_vals)
-        if not canStringBeParsedAsInt(conf_vals[1]) or conf_vals[1] < 1024:
+        try:
+            if int(conf_vals[1]) < 1024:
+                    conf_vals[1] = int(conf_vals[1])
+        except Exception as e:
             raise Exception('Invalid port in: %s' % conf_vals)
         if conf_vals[2] != 'true' and conf_vals[2] != 'false':
             raise Exception('Invalid isPrimary option in: %s' % conf_vals)
         if conf_vals[3] != 'true' and conf_vals[3] != 'false':
             raise Exception('Invalid directory validation option in: %s' % conf_vals)
-        if not canStringBeParsedAsInt(conf_vals[4]):
+        try:
+            conf_vals[4] = int(conf_vals[4])
+        except:
             raise Exception('Invalid dbid option in: %s' % conf_vals)
-        if not canStringBeParsedAsInt(conf_vals[5]):
+        try:
+            conf_vals[5] = int(conf_vals[5])
+        except:
             raise Exception('Invalid contentid option in: %s' % conf_vals)
         seg_info.append(conf_vals)
 

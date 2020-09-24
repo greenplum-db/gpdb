@@ -8,8 +8,7 @@ import mock
 
 from gppylib.commands.base import ExecutionError
 from gppylib.operations.utils import RemoteOperation, ParallelOperation
-from gppylib.operations.test_utils_helper import TestOperation, RaiseOperation, RaiseOperation_Nested, \
-    RaiseOperation_Unsafe, RaiseOperation_Unpicklable, RaiseOperation_Safe, MyException, ExceptionWithArgs
+from gppylib.operations.test_utils_helper import TestOperation, RaiseOperation, RaiseOperation_Unpicklable, RaiseOperation_Safe, ExceptionWithArgs
 from operations.unix import ListFiles
 from test.unit.gp_unittest import GpTestCase, run_tests
 from pg import DatabaseError
@@ -34,25 +33,6 @@ class UtilsTestCase(GpTestCase):
         """ Test that an Exception returned remotely will be raised locally. """
         with self.assertRaises(Exception):
             RemoteOperation(RaiseOperation(), "localhost").run()
-
-    def test_inner_exceptions(self):
-        """ Verify that an object not at the global level of this file cannot be pickled properly. """
-        try:
-            RemoteOperation(RaiseOperation_Nested(), "localhost").run()
-        except ExecutionError as e:
-            self.assertTrue(e.cmd.get_results().stderr.strip().endswith("raise RaiseOperation_Nested.MyException2()"))
-        else:
-            self.fail(
-                "A PicklingError should have been caused remotely, because RaiseOperation_Nested is not at the global-level.")
-
-    def test_unsafe_exceptions_with_args(self):
-        try:
-            RemoteOperation(RaiseOperation_Unsafe(), "localhost").run()
-        except TypeError as e:  # Because Exceptions don't retain init args, they are not pickle-able normally
-            pass
-        else:
-            self.fail(
-                "RaiseOperation_Unsafe should have caused a TypeError, due to an improper Exception idiom. See test_utils.ExceptionWithArgsUnsafe")
 
     def test_proper_exceptions_sanity(self):
         try:

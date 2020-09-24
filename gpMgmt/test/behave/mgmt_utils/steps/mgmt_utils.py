@@ -43,7 +43,7 @@ def show_all_installed(gphome):
     x = platform.linux_distribution()
     name = x[0].lower()
     if 'ubuntu' in name:
-        return "dpkg --get-selections --admindir=%s/share/packages/database/deb | awk '{print \$1}'" % gphome
+        return "dpkg --get-selections --admindir=%s/share/packages/database/deb | awk '{print $1}'" % gphome
     elif 'centos' in name:
         return "rpm -qa --dbpath %s/share/packages/database" % gphome
     else:
@@ -1054,7 +1054,7 @@ def impl(context, seg):
                   cmdStr='sh -c "python /tmp/pid_background_script.py" &>/dev/null &', remoteHost=hostname, ctxt=REMOTE)
     cmd.run(validateAfter=True)
 
-    cmd = Command(name="get bg pid", cmdStr="ps ux | grep pid_background_script.py | grep -v grep | awk '{print \$2}'",
+    cmd = Command(name="get bg pid", cmdStr="ps ux | grep pid_background_script.py | grep -v grep | awk '{print $2}'",
                   remoteHost=hostname, ctxt=REMOTE)
     cmd.run(validateAfter=True)
     context.bg_pid = cmd.get_stdout()
@@ -1075,7 +1075,7 @@ def impl(context, seg):
             raise Exception("Standby host is not saved in the context")
         hostname = context.standby_host
 
-    cmd = Command(name="get bg pid", cmdStr="ps ux | grep pid_background_script.py | grep -v grep | awk '{print \$2}'",
+    cmd = Command(name="get bg pid", cmdStr="ps ux | grep pid_background_script.py | grep -v grep | awk '{print $2}'",
                   remoteHost=hostname, ctxt=REMOTE)
     cmd.run(validateAfter=True)
     pids = cmd.get_stdout().splitlines()

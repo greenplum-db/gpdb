@@ -6,7 +6,9 @@
 """
 TODO: docs!
 """
-import os, pickle, base64, time
+import json
+import os, time
+import shlex
 import os.path
 import pipes
 import subprocess
@@ -19,7 +21,7 @@ from gppylib import gparray
 from gppylib.commands.base import *
 from .unix import *
 from gppylib import pgconf
-from gppylib.utils import writeLinesToFile, createFromSingleHostFile, shellEscape
+from gppylib.utils import writeLinesToFile, createFromSingleHostFile
 
 
 logger = get_default_logger()
@@ -534,11 +536,17 @@ class GpGetSegmentStatusValues(Command):
         if self.get_results().rc != 0:
             return ("Error getting status from host %s" % self.remoteHost, None)
 
+        # JSON turns int keys (like DBIDs) to string keys on dump, so we parse them back to ints on load
+        def keys_to_ints(d):
+            if isinstance(d, dict):
+                return {(int(k) if k.isdigit() else k):v for k,v in d.items()}
+            return d
+
         outputFromCmd = None
         for line in self.get_results().stdout.split('\n'):
             if line.startswith("STATUS_RESULTS:"):
                 toDecode = line[len("STATUS_RESULTS:"):]
-                outputFromCmd = pickle.loads(base64.urlsafe_b64decode(toDecode))
+                outputFromCmd = json.loads(toDecode, object_hook=keys_to_ints)
                 break
         if outputFromCmd is None:
             return ("No status output provided from host %s" % self.remoteHost, None)
@@ -1050,11 +1058,11 @@ class GpConfigHelper(Command):
 
         addParameter = (not getParameter) and (not removeParameter)
         if addParameter:
-            args = '--add-parameter %s --value %s ' % (name, base64.urlsafe_b64encode(pickle.dumps(value)))
+            args = "--add-parameter %s --value %s " % (name, shlex.quote(value))
         if getParameter:
-            args = '--get-parameter %s' % name
+            args = "--get-parameter %s" % name
         if removeParameter:
-            args = '--remove-parameter %s' % name
+            args = "--remove-parameter %s" % name
 
         cmdStr = "$GPHOME/sbin/gpconfig_helper.py --file %s %s" % (
             os.path.join(postgresconf_dir, 'postgresql.conf'),
@@ -1064,8 +1072,7 @@ class GpConfigHelper(Command):
 
     # FIXME: figure out how callers of this can handle exceptions here
     def get_value(self):
-        raw_value = self.get_results().stdout
-        return pickle.loads(base64.urlsafe_b64decode(raw_value))
+        return self.get_results().stdout
 
 
 #-----------------------------------------------
