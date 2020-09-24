@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 Purpose : Creates the repair dir and the corresponding sql/bash scripts for
           repairing some of the catalog issues(see the list below) reported by gpcheckcat.

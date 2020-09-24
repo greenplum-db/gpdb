@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from gppylib.mainUtils import simple_main
 from gppylib.operations.reload import GpReload

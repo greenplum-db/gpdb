@@ -48,7 +48,7 @@
 ##  at the top of the file so anchors are usable as early as possible.
 anchors:
 - &default_platform
-  PLATFORM: centos7
+  PLATFORM: centos7-gpdb7
 
 - &ccp_default_params
   action: create
@@ -503,7 +503,7 @@ resources:
   type: registry-image
   source:
     repository: pivotaldata/gpdb7-centos7-build
-    tag: latest
+    tag: devv40
 
 {% endif %}
 {% if "centos7" in os_types or "CLI" in test_sections %}
@@ -511,7 +511,7 @@ resources:
   type: registry-image
   source:
     repository: pivotaldata/gpdb7-centos7-test
-    tag: latest
+    tag: devv45
 
 {% endif %}
 
@@ -519,14 +519,14 @@ resources:
   type: registry-image
   source:
     repository: pivotaldata/gpdb7-ubuntu18.04-build
-    tag: latest
+    tag: devv41
 
 {% if "ubuntu18.04" in os_types %}
 - name: gpdb7-ubuntu18.04-test
   type: registry-image
   source:
     repository: pivotaldata/gpdb7-ubuntu18.04-test
-    tag: latest
+    tag: devv38
 
 {% endif %}
 
@@ -1222,13 +1222,13 @@ jobs:
       <<: *ccp_default_params
       vars:
         <<: *ccp_default_vars
-        PLATFORM: centos7
+        PLATFORM: centos7-gpdb7
         instance_type: n1-standard-2
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
-      PLATFORM: centos7
+      PLATFORM: centos7-gpdb7
   - task: gpinitsystem
     file: ccp_src/ci/tasks/gpinitsystem.yml
   - task: run_tests
@@ -1325,7 +1325,7 @@ jobs:
               vars:
                 <<: *ccp_default_vars
                 instance_type: n1-standard-2
-                PLATFORM: centos7
+                PLATFORM: centos7-gpdb7
                 [[ test.additional_ccp_vars ]]
           - task: gen_cluster
             file: ccp_src/ci/tasks/gen_cluster.yml
@@ -1416,13 +1416,13 @@ jobs:
               vars:
                 <<: *ccp_default_vars
                 instance_type: n1-standard-2
-                PLATFORM: ubuntu18.04
+                PLATFORM: ubuntu18.04-gpdb7
                 [[ test.additional_ccp_vars ]]
           - task: gen_cluster
             file: ccp_src/ci/tasks/gen_cluster.yml
             params:
               <<: *ccp_gen_cluster_default_params
-              PLATFORM: ubuntu18.04
+              PLATFORM: ubuntu18.04-gpdb7
           - task: gpinitsystem
             file: ccp_src/ci/tasks/gpinitsystem.yml
           - task: [[ test.name ]]_concourse_cluster_tests
@@ -1492,7 +1492,7 @@ jobs:
             vars:
               <<: *ccp_default_vars
               instance_type: n1-standard-2
-              PLATFORM: centos7
+              PLATFORM: centos7-gpdb7
               subnet: dynamic
               cluster_suffix: '-1'
               custom_ssh_key: "/tmp/build/put/ssh-extra-key/key"
@@ -1510,7 +1510,7 @@ jobs:
             <<: *ccp_default_params
             vars:
               instance_type: n1-standard-2
-              PLATFORM: centos7
+              PLATFORM: centos7-gpdb7
               subnet: toolshed
               cluster_suffix: '-2'
               custom_ssh_key: "/tmp/build/put/ssh-extra-key/key"
@@ -1645,13 +1645,13 @@ jobs:
       vars:
         <<: *ccp_default_vars
         instance_type: n1-standard-2
-        PLATFORM: centos7
+        PLATFORM: centos7-gpdb7
         number_of_nodes: 2
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
-      PLATFORM: centos7
+      PLATFORM: centos7-gpdb7
     input_mapping:
       gpdb_binary: bin_gpdb_centos7
   - task: set_gpinitsystem_config
@@ -1690,7 +1690,7 @@ jobs:
       vars:
         <<: *ccp_default_vars
         instance_type: n1-standard-4
-        PLATFORM: centos7
+        PLATFORM: centos7-gpdb7
         number_of_nodes: 5
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml

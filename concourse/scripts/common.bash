@@ -85,7 +85,7 @@ function install_python_requirements_on_single_host() {
     local requirements_txt="$1"
 
     export PIP_CACHE_DIR=${PWD}/pip-cache-dir
-    pip --retries 10 install -r ${requirements_txt}
+    pip3 --retries 10 install -r ${requirements_txt}
 }
 
 function install_python_requirements_on_multi_host() {
@@ -97,10 +97,10 @@ function install_python_requirements_on_multi_host() {
     # Set PIP Download cache directory
     export PIP_CACHE_DIR=/home/gpadmin/pip-cache-dir
 
-    pip --retries 10 install --user -r ${requirements_txt}
+    pip3 --retries 10 install --user -r ${requirements_txt}
     while read -r host; do
        scp ${requirements_txt} "$host":/tmp/requirements.txt
-       ssh $host PIP_CACHE_DIR=${PIP_CACHE_DIR} pip --retries 10 install --user -r /tmp/requirements.txt
+       ssh $host PIP_CACHE_DIR=${PIP_CACHE_DIR} pip3 --retries 10 install --user -r /tmp/requirements.txt
     done < /tmp/hostfile_all
 }
 

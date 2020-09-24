@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from gparray import Segment, GpArray
 from gppylib import gparray

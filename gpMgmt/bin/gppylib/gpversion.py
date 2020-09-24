@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) Greenplum Inc 2008. All Rights Reserved. 
 #
@@ -11,10 +11,10 @@
 # ===========================================================
 import sys, os, re
 
-# Python version 2.6.2 is expected, must be between 2.5-3.0
-if sys.version_info < (2, 5, 0) or sys.version_info >= (3, 0, 0):
-    sys.stderr.write("Error: %s is supported on Python versions 2.5 or greater\n" 
-                     "Please upgrade python installed on this machine." 
+# Python version 3.5 or newer expected
+if sys.version_info < (3, 5, 0):
+    sys.stderr.write("Error: %s is supported on Python versions 3.5 or greater\n" 
+                     "Please upgrade python installed on this machine."
                      % os.path.split(__file__)[-1])
     sys.exit(1)
 
