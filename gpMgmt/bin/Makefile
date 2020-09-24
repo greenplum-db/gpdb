@@ -55,7 +55,7 @@ SERVER_SBIN=$(SERVER_SRC)/../sbin
 LIB_DIR=$(SRC)/lib
 PYLIB_DIR=$(SRC)/ext
 
-core: subprocess32
+core:
 	python3 gpconfig_modules/parse_guc_metadata.py $(DESTDIR)$(prefix)
 
 ifneq "$(wildcard $(CURDIR)/pythonSrc/ext/*.tar.gz)" ""
@@ -79,16 +79,6 @@ pygresql:
 	cd $(PYLIB_SRC_EXT)/$(PYGRESQL_DIR)/ && PATH=$(bindir):$$PATH LDFLAGS='$(LDFLAGS) $(PYGRESQL_LDFLAGS)' python3 setup.py build
 	cp -r $(PYLIB_SRC_EXT)/$(PYGRESQL_DIR)/build/lib*-3*/* $(PYLIB_DIR)/
 
-#
-# subprocess32
-#
-subprocess32:
-	@echo "--- subprocess32, Linux only"
-	@if [ `uname -s` = 'Linux' ]; then \
-		  cd $(PYLIB_SRC)/subprocess32 && env -u CC python setup.py build; \
-		  cp -f $(PYLIB_SRC)/subprocess32/build/lib.*/* $(PYLIB_DIR)/;  \
-		  cp -f $(PYLIB_SRC)/subprocess32/ChangeLog $(PYLIB_DIR)/subprocess32-ChangeLog;  \
-	  fi
 
 #
 # PSUTIL
@@ -205,7 +195,6 @@ clean distclean:
 	rm -rf $(PYLIB_SRC_EXT)/$(LOGILAB_ASTNG_DIR)
 	rm -rf $(PYLIB_SRC_EXT)/$(PYGRESQL_DIR)/build
 	rm -rf $(PYLIB_SRC)/$(PYGRESQL_DIR)/build
-	rm -rf $(PYLIB_SRC)/subprocess32/build
 	rm -rf *.pyc
 	rm -f analyzedbc gpactivatestandbyc gpaddmirrorsc gpcheckcatc \
 		  gpcheckperfc gpcheckresgroupimplc gpchecksubnetcfgc gpconfigc \

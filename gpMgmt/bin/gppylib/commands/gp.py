@@ -9,10 +9,7 @@ TODO: docs!
 import os, pickle, base64, time
 import os.path
 import pipes
-try:
-    import subprocess32 as subprocess
-except:
-    import subprocess
+import subprocess
 
 import re, socket
 

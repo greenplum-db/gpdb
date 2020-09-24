@@ -1,9 +1,6 @@
 import glob
 from datetime import datetime, timedelta
-try:
-    from subprocess32 import Popen, PIPE
-except:
-    from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE
 from .utils import run_gpcommand
 
 from gppylib.commands.base import Command

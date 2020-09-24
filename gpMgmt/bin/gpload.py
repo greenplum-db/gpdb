@@ -46,10 +46,7 @@ except Exception as e:
 
 import hashlib
 import datetime,getpass,os,signal,socket,threading,time,traceback,re
-try:
-    import subprocess32 as subprocess
-except:
-    import subprocess
+import subprocess
 import uuid
 
 try:

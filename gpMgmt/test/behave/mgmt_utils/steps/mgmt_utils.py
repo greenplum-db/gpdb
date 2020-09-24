@@ -12,10 +12,7 @@ import socket
 import tempfile
 import _thread
 import time
-try:
-    from subprocess32 import check_output, Popen, PIPE
-except:
-    from subprocess import check_output, Popen, PIPE
+from subprocess import check_output, Popen, PIPE
 import subprocess
 from collections import defaultdict
 

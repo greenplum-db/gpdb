@@ -8,10 +8,7 @@ import stat
 import time
 import glob
 import shutil
-try:
-    import subprocess32 as subprocess
-except:
-    import subprocess
+import subprocess
 import difflib
 
 import pg

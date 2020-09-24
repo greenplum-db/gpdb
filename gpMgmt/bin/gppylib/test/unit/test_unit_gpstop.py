@@ -15,11 +15,7 @@ from gppylib.commands.base import Command, WorkerPool
 from gppylib.commands.gp import GpSegStopCmd
 from gppylib.mainUtils import ProgramArgumentValidationException
 
-try:
-    import subprocess32
-    mock_subprocess_str='subprocess32.call'
-except:
-    mock_subprocess_str='subprocess.call'
+mock_subprocess_str='subprocess.call'
 
 class GpStop(GpTestCase):
     def setUp(self):

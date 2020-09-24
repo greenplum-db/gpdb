@@ -22,10 +22,7 @@ from threading import Thread
 
 import os
 import signal
-try:
-    import subprocess32 as subprocess
-except:
-    import subprocess
+import subprocess
 import sys
 import time
 
