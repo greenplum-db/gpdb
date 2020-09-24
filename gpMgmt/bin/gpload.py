@@ -2256,15 +2256,17 @@ class gpload:
 
         specify_str = str(specify) if specify else option
         if len(val) != 1:
-            if val.startswith("E'") and val.endswith("'") and len(val[2:-1].decode('unicode-escape')) == 1:
+            val_decoded = val.encode().decode('unicode-escape')
+            subval_decoded = val[2:-1].encode().decode('unicode-escape')
+            if val.startswith("E'") and val.endswith("'") and len(subval_decoded) == 1:
                 subval = val[2:-1]
                 if subval == "\\'":
                     self.formatOpts += "%s %s " % (specify_str, val)
                 else:
-                    val = subval.decode('unicode-escape')
+                    val = subval_decoded
                     self.formatOpts += "%s '%s' " % (specify_str, val)
-            elif len(val.decode('unicode-escape')) == 1:
-                val = val.decode('unicode-escape')
+            elif len(val_decoded) == 1:
+                val = val_decoded
                 self.formatOpts += "%s '%s' " % (specify_str, val)
 
             else:
@@ -2479,7 +2481,7 @@ class gpload:
             target_table_name = quote_unident(self.table)
 
             # create a string from all reuse conditions for staging tables and ancode it
-            conditions_str = self.get_staging_conditions_string(target_table_name, target_columns, distcols)
+            conditions_str = self.get_staging_conditions_string(target_table_name, target_columns, distcols).encode()
             encoding_conditions = hashlib.md5(conditions_str).hexdigest()
 					
             sql = self.get_reuse_staging_table_query(encoding_conditions)
@@ -2576,8 +2578,8 @@ class gpload:
                 self.rowsInserted = self.db.query(sql)
             except Exception as e:
                 # We need to be a bit careful about the error since it may contain non-unicode characters
-                strE = str(str(e), errors = 'ignore')
-                strF = str(str(sql), errors = 'ignore')
+                strE = e.__str__().encode().decode('unicode-escape')
+                strF = sql.encode().decode('unicode-escape')
                 self.log(self.ERROR, strE + ' encountered while running ' + strF)
 
         #progress.condition.acquire()

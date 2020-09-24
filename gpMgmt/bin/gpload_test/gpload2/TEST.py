@@ -59,7 +59,7 @@ def getPortMasterOnly(host = 'localhost',master_value = None,
         raise Exception("Unable to connect to segment server %s as user %s" % (host, user))
 
     for line in out:
-        out = line.split('\n')
+        out = line.decode().split('\n')
     for line in out:
         if re.search(master_pattern, line):
             master_value = int(line.split()[3].strip())
@@ -770,7 +770,7 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
         self.doTest(39)
 
     def test_40_gpload_merge_mode_with_multi_pk(self):
-	"40  gpload merge mode with multiple pk"
+        "40  gpload merge mode with multiple pk"
         file = mkpath('setup.sql')
         runfile(file)
         copy_data('external_file_pk.txt','data_file.txt')
