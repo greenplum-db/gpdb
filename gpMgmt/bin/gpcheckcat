@@ -23,6 +23,7 @@ import logging
 import re
 import sys
 import time
+from functools import reduce
 
 try:
     from gppylib import gplog
@@ -900,7 +901,7 @@ def checkCatalogJoinDepend(catalogs):
             # linger after the language is dropped. Extensions (which
             # do drop their proclang handler functions) will be
             # replacing language so this exclusion should be fine.
-            if cat == 'pg_proc':
+            if str(cat) == 'pg_proc':
                 qry += """
                 AND pronamespace != {oid}
                 """.format(oid=PG_CATALOG_OID)
@@ -1112,7 +1113,7 @@ def checkACL():
     # looks up information in the catalog:
     tables = GV.catalog.getCatalogTables()
 
-    for cat in sorted(tables):
+    for cat in tables:
         checkTableACL(cat)
 # -------------------------------------------------------------------------------
 
@@ -1247,7 +1248,7 @@ def checkMissingEntry():
 def _checkAllTablesForMissingEntries():
     catalog_issues = {}
     tables = GV.catalog.getCatalogTables()
-    for catalog_table_obj in sorted(tables):
+    for catalog_table_obj in tables:
         issues = checkTableMissingEntry(catalog_table_obj)
         if not issues:
             continue
@@ -1499,7 +1500,7 @@ def checkInconsistentEntry():
     # looks up information in the catalog:
     tables = GV.catalog.getCatalogTables()
 
-    for cat in sorted(tables):
+    for cat in tables:
         checkTableInconsistentEntry(cat)
 
 
@@ -1650,9 +1651,9 @@ def checkDuplicateEntry():
     # looks up information in the catalog:
     tables = GV.catalog.getCatalogTables()
 
-    for cat in sorted(tables):
+    for cat in tables:
         ## pg_depend does not care about duplicates at the moment
-        if cat == 'pg_depend':
+        if str(cat) == 'pg_depend':
             continue
         checkTableDuplicateEntry(cat)
 
@@ -2367,9 +2368,9 @@ def filterSpuriousFailures(catname, colnames, results):
         # (e.g. pg_statistic*) should be excluded from pg_depend
         # comparisons between master and segments.
         legitFailures = []
-        masterOnlyOids = map(lambda cat: cat._oid,
+        masterOnlyOids = list(map(lambda cat: cat._oid,
                              filter(lambda cat: cat.isMasterOnly(),
-                                    GV.catalog.getCatalogTables()))
+                                    GV.catalog.getCatalogTables())))
         for row in results:
             legit = True
             if row[colnames.index('classid')] in masterOnlyOids:
@@ -3167,7 +3168,7 @@ def checkcatReport():
         par.reportAllIssues()
         if par not in graph:
             return
-        for child in sorted(graph[par]):
+        for child in graph[par]:
             reportAllIssuesRecursive(child, graph)
 
     buildGraph()
@@ -3196,7 +3197,7 @@ def checkcatReport():
         else:
             myprint('Found a total of %d issue(s)' % total)
 
-        for par in sorted(GPObjectGraph):
+        for par in GPObjectGraph:
             if par.isTopLevel():
                 reportAllIssuesRecursive(par, GPObjectGraph)
         myprint('')

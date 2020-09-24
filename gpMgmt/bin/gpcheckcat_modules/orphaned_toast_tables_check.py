@@ -170,15 +170,15 @@ GROUP BY gp_segment_id, toast_table_oid, toast_table_name, expected_table_oid, e
         # list by (table, issue type) before performing the grouping, for the
         # same reason that you need to perform `sort` in a `sort | uniq`
         # pipeline.
-        def issue_key(issue):
+        def sort_key(issue):
+            return issue.table.oid
+
+        def group_key(issue):
             return (issue.table.oid, type(issue))
 
-        def key_sort(this, that):
-            return cmp(hash(issue_key(this)), hash(issue_key(that)))
+        sorted_issues = sorted(self._issues, key=sort_key)
 
-        sorted_issues = sorted(self._issues, key_sort)
-
-        for _, group in itertools.groupby(sorted_issues, issue_key):
+        for _, group in itertools.groupby(sorted_issues, group_key):
             issues = list(group)
             yield issues[0], { i.row['content_id'] for i in issues }
 

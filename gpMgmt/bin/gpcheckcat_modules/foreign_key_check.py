@@ -21,8 +21,7 @@ class ForeignKeyCheck:
 
     def runCheck(self, tables):
         foreign_key_issues = dict()
-        for cat in sorted(tables):
-
+        for cat in tables:
             issues = self.checkTableForeignKey(cat)
             if issues:
                 foreign_key_issues[cat.getTableName()] = issues
