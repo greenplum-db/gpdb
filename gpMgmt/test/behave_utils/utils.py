@@ -141,8 +141,6 @@ def check_stdout_msg(context, msg, escapeStr = False):
     pat = re.compile(msg)
 
     actual = context.stdout_message
-    if isinstance(msg, str):
-        actual = actual.decode('utf-8')
 
     if not pat.search(actual):
         err_str = "Expected stdout string '%s' and found: '%s'" % (msg, actual)

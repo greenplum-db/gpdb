@@ -127,16 +127,22 @@ class Segment:
             self.status
             )
 
-    #
-    # Note that this is not an ideal comparison -- it uses the string representation
-    #   for comparison
-    #
-    def __cmp__(self,other):
-        left = repr(self)
-        right = repr(other)
-        if left < right: return -1
-        elif left > right: return 1
-        else: return 0
+    def __equal(self, other, ignoreAttr=[]):
+        if not isinstance(other, Segment):
+            return NotImplemented
+        for key in list(vars(other)):
+            if key in ignoreAttr:
+                continue
+            if vars(other)[key] != vars(self)[key]:
+                return False
+        return True
+
+    def __eq__(self, other):
+        return self.__equal(other)
+
+
+    def __hash__(self):
+        return hash(self.dbid)
 
     #
     # Moved here from system/configurationImplGpdb.py
@@ -149,21 +155,7 @@ class Segment:
         This method is used by updateSystemConfig() to know when a catalog
         change will cause removing and re-adding a mirror segment.
         """
-        firstMode = self.getSegmentMode()
-        firstStatus = self.getSegmentStatus()
-        try:
-
-            # make the elements we don't want to compare match and see if they are then equal
-            self.setSegmentMode(other.getSegmentMode())
-            self.setSegmentStatus(other.getSegmentStatus())
-
-            return self == other
-        finally:
-            #
-            # restore mode and status after comaprison
-            #
-            self.setSegmentMode(firstMode)
-            self.setSegmentStatus(firstStatus)
+        return self.__equal(other, ['mode','status'])
 
 
     # --------------------------------------------------------------------
@@ -1545,8 +1537,8 @@ class GpArray:
             if expect_all_segments_to_have_mirror:
                 valid_content.append((i, False))
 
-        valid_content.sort(lambda x,y: cmp(x[0], y[0]) or cmp(x[1], y[1]))
-        content.sort(lambda x,y: cmp(x[0], y[0]) or cmp(x[1], y[1]))
+        valid_content.sort()
+        content.sort()
 
         if valid_content != content:
             raise Exception('Invalid content ids')

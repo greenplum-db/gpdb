@@ -7,6 +7,8 @@ import traceback
 class NullDevice():
     def write(self, s):
         pass
+    def flush(self):
+        pass
 
 
 # Prevent use of stdout, as it disrupts pickling mechanism
@@ -20,11 +22,11 @@ from gppylib.commands import unix
 
 hostname = unix.getLocalHostname()
 username = unix.getUserName()
-execname = pickle.load(sys.stdin)
+execname = pickle.load(sys.stdin.buffer)
 gplog.setup_tool_logging(execname, hostname, username)
 logger = gplog.get_default_logger()
 
-operation = pickle.load(sys.stdin)
+operation = pickle.load(sys.stdin.buffer)
 
 try:
     ret = operation.run()
@@ -37,7 +39,7 @@ except Exception as e:
 
         # logger.exception(e)               # logging 'e' could be necessary for traceback
 
-        pickled_ret = pickle.dumps(e)  # Pickle exception for stdout transmission
+        pickled_ret = pickle.dumps(e) # Pickle exception for stdout transmission
     except Exception as f:
         # logger.exception(f)               # 'f' is not important to us, except for debugging perhaps
 
@@ -51,8 +53,8 @@ except Exception as e:
         print(pretty_trace, file=sys.stderr)
         sys.exit(2)  # signal that gpoperation.py has hit unexpected error
 else:
-    pickled_ret = pickle.dumps(ret)  # Pickle return data for stdout transmission
+    pickled_ret = pickle.dumps(ret)
 
 sys.stdout = old_stdout
-print(pickled_ret)
+sys.stdout.buffer.write(pickled_ret)
 sys.exit(0)

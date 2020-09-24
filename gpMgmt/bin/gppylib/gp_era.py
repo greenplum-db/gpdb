@@ -110,9 +110,9 @@ class GpEraFile:
         Write a new era based on the specified values
         """
         m = hashlib.sha256()
-        m.update(str(host))
-        m.update(str(port))
-        m.update(str(self.datadir))
+        m.update(host.encode())
+        m.update(str(port).encode())
+        m.update(self.datadir.encode())
         self.era = '%s_%s' % (m.hexdigest()[0:16], time)
         self.write_gp_era()
 

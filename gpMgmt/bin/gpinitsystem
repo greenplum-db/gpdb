@@ -544,31 +544,15 @@ import sys, re
 
 standard_host_re = re.compile(r'([a-zA-Z]+)((\\d+)(-(\\d+))?)')
 
-def standard_host_cmp(h1, h2):
-	m1 = standard_host_re.match(h1)
-	m2 = standard_host_re.match(h2)
-
-	if not m1 or not m2:
-		if h1 == h2:
-		        return 0
-		elif h1 < h2:
-		        return -1
-		else:
-		        return 1
-	else:
-		if m1.group(1) <= m2.group(1):
-			if not int(m1.group(3)) == int(m2.group(3)):
-				return int(m1.group(3)) - int(m2.group(3))
-			elif m1.group(5):
-				return int(m1.group(5)) - int(m2.group(5))
-			else:
-				return 0
-		else:
-			return 1
+def standard_host_key(host):
+	hostname_parts = standard_host_re.match(host)
+	if hostname_parts is not None:
+		return hostname_parts.group(1), hostname_parts.group(2), hostname_parts.group(3)
+	return None
 
 hl = sys.stdin.readlines()
-for h in sorted(hl,cmp=standard_host_cmp):
-        print h,
+for h in sorted(hl, key=standard_host_key):
+	print(h)
 END_PYTHON_CODE
 
 	MACHINE_LIST=(`$CAT $MACHINE_LIST_FILE|python -c "$HOSTNAME_SORTER"`)

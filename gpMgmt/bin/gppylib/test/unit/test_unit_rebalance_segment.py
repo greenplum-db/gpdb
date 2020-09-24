@@ -26,11 +26,11 @@ class RebalanceSegmentsTestCase(GpTestCase):
 
         self.failure_command_mock = Mock()
         self.failure_command_mock.get_results.return_value = CommandResult(
-            1, "stdout failure text", "stderr text", True, False)
+            1, b"stdout failure text", b"stderr text", True, False)
 
         self.success_command_mock = Mock()
         self.success_command_mock.get_results.return_value = CommandResult(
-            0, "stdout success text", "stderr text", True, False)
+            0, b"stdout success text", b"stderr text", True, False)
 
         self.subject = GpSegmentRebalanceOperation(Mock(), self._create_gparray_with_2_primary_2_mirrors())
         self.subject.logger = Mock()

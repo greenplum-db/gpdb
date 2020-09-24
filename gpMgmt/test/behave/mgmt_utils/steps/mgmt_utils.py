@@ -1,4 +1,3 @@
-import codecs
 import math
 import fnmatch
 import glob
@@ -1247,7 +1246,7 @@ def impl(context):
     with dbconn.connect(dbconn.DbURL(dbname='postgres'), unsetSearchPath=False) as conn:
         segconfig = dbconn.query(conn, check_segment_config_query).fetchall()
         statrep = dbconn.query(conn, check_stat_replication_query).fetchall()
-        conn.close()
+    conn.close()
 
     context.standby_dbid = segconfig[0][0]
 
@@ -1262,7 +1261,7 @@ def impl(context):
     check_segment_config_query = "SELECT * FROM gp_segment_configuration WHERE content = -1 AND role = 'p' AND preferred_role = 'p' AND dbid = %s" % context.standby_dbid
     with dbconn.connect(dbconn.DbURL(hostname=context.standby_hostname, dbname='postgres', port=context.standby_port), unsetSearchPath=False) as conn:
         segconfig = dbconn.query(conn, check_segment_config_query).fetchall()
-        conn.close()
+    conn.close()
     if len(segconfig) != 1:
         raise Exception("gp_segment_configuration did not have standby master acting as new master")
 
@@ -1398,7 +1397,7 @@ def find_string_in_master_data_directory(context, filename, output, escapeStr=Fa
     contents = ''
     file_path = os.path.join(master_data_dir, filename)
 
-    with codecs.open(file_path, encoding='utf-8') as f:
+    with open(file_path) as f:
         for line in f:
             contents = line.strip()
 
@@ -1498,7 +1497,7 @@ def impl(context, filename, output):
         cmd = Command(name='Running remote command: %s' % cmd_str, cmdStr=cmd_str)
         cmd.run(validateAfter=True)
 
-        actual = cmd.get_stdout().decode('utf-8')
+        actual = cmd.get_stdout()
         if output not in actual:
             raise Exception('File %s on host %s does not contain "%s"' % (filepath, host, output))
 
@@ -2894,13 +2893,13 @@ def impl(context):
 @when('the user runs {command} and selects {input}')
 def impl(context, command, input):
     p = Popen(command.split(), stdout=PIPE, stdin=PIPE, stderr=PIPE)
-    stdout, stderr = p.communicate(input=input)
+    stdout, stderr = p.communicate(input=input.encode())
 
     p.stdin.close()
 
     context.ret_code = p.returncode
-    context.stdout_message = stdout
-    context.error_message = stderr
+    context.stdout_message = stdout.decode()
+    context.error_message = stderr.decode()
 
 def are_on_different_subnets(primary_hostname, mirror_hostname):
     primary_broadcast = check_output(['ssh', '-n', primary_hostname, "/sbin/ip addr show eth0 | grep 'inet .* brd' | awk '{ print $4 }'"])

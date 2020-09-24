@@ -101,9 +101,9 @@ class ConfExpSegCmd(Command):
 
     def makeOrUpdatePathAsNeeded(self, path):
         if os.path.exists(path):
-            os.chmod(path, 0700)
+            os.chmod(path, 0o700)
         else:
-            os.makedirs(path, 0700)
+            os.makedirs(path, 0o700)
 
     def run(self):
         try:
@@ -113,16 +113,16 @@ class ConfExpSegCmd(Command):
                 try:
                     if not self.forceoverwrite:
                         self.validatePath(self.datadir)
-                except ValidationException, e:
+                except ValidationException as e:
                     msg = "for segment with port %s: %s" %  (self.port, e.getMessage())
-                    self.set_results(CommandResult(1, '', msg, True, False))
+                    self.set_results(CommandResult(1, b'', msg.encode(), True, False))
                     raise
-                except Exception, e:
-                    self.set_results(CommandResult(1, '', e, True, False))
+                except Exception as e:
+                    self.set_results(CommandResult(1, b'', str(e).encode(), True, False))
                     raise
 
                 if self.validationOnly:
-                   self.set_results(CommandResult(0, '', '', True, False))
+                   self.set_results(CommandResult(0, b'', b'', True, False))
                    return
 
                 if not self.isPrimary:
@@ -147,10 +147,11 @@ class ConfExpSegCmd(Command):
                     try:
                         logger.info("Running pg_basebackup with progress output temporarily in %s" % self.progressFile)
                         cmd.run(validateAfter=True)
-                        self.set_results(CommandResult(0, '', '', True, False))
+                        self.set_results(CommandResult(0, b'', b'', True, False))
                         if shouldDeleteProgressFile:
                             os.remove(self.progressFile)
-                    except Exception, e:
+
+                    except Exception as e:
                         #  If the cluster never has mirrors, cmd will fail
                         #  quickly because the internal slot doesn't exist.
                         #  Re-run with `create_slot`.
@@ -167,11 +168,11 @@ class ConfExpSegCmd(Command):
                         try:
                             logger.info("Re-running pg_basebackup, creating the slot this time")
                             cmd.run(validateAfter=True)
-                            self.set_results(CommandResult(0, '', '', True, False))
+                            self.set_results(CommandResult(0, b'', b'', True, False))
                             if shouldDeleteProgressFile:
                                 os.remove(self.progressFile)
-                        except Exception, e:
-                            self.set_results(CommandResult(1, '', e, True, False))
+                        except Exception as e:
+                            self.set_results(CommandResult(1, b'', str(e).encode(), True, False))
                             raise
 
                     logger.info("Successfully ran pg_basebackup: %s" % cmd.cmdStr)
@@ -180,8 +181,9 @@ class ConfExpSegCmd(Command):
                 logger.info("Create or update data directories for new segment")
                 try:
                     self.makeOrUpdatePathAsNeeded(self.datadir)
-                except Exception, e:
-                    self.set_results(CommandResult(1, '', e, True, False))
+
+                except Exception as e:
+                    self.set_results(CommandResult(1,b'',str(e).encode(),True,False))
                     raise
 
                 if self.tarfile:
@@ -233,9 +235,10 @@ class ConfExpSegCmd(Command):
 
                 # Create log for new segment in case it dosen't exist.
                 try:
+
                     self.makeOrUpdatePathAsNeeded(os.path.join(self.datadir, "log"))
-                except Exception, e:
-                    self.set_results(CommandResult(1,'',e,True,False))
+                except Exception as e:
+                    self.set_results(CommandResult(1,b'',str(e).encode(),True,False))
                     raise
 
                 logger.info("Updating %s/postgresql.conf" % self.datadir)
@@ -275,13 +278,13 @@ class ConfExpSegCmd(Command):
                 except:
                     pass
 
-        except Exception, e:
-            self.set_results(CommandResult(1, '', e, True, False))
+        except Exception as e:
+            self.set_results(CommandResult(1, b'', str(e).encode(), True, False))
             if self.verbose:
                 logger.exception(e)
             return
         else:
-            self.set_results(CommandResult(0, '', '', True, False))
+            self.set_results(CommandResult(0, b'', b'', True, False))
 
 def getOidDirLists(oidDirs):
     """ break up list in <oid>:<dir> format into list of oid list of dir """
@@ -412,28 +415,28 @@ try:
     if options.validationOnly:
         errors = []
         for item in pool.getCompletedItems():
-            if item.get_results().rc != 0:
+            if not item.get_results().wasSuccessful:
                 errors.append(str(item.get_results().stderr).replace("\n", " "))
 
         if errors:
-            print >> sys.stderr, "\n".join(errors)
+            print("\n".join(errors), file=sys.stderr)
             sys.exit(1)
         else: sys.exit(0)
     else:
         try:
             pool.check_results()
-        except Exception, e:
+        except Exception as e:
             if options.verbose:
                 logger.exception(e)
             logger.error(e)
-            print >> sys.stderr, e
+            print(e, file=sys.stderr)
             sys.exit(1)
 
     sys.exit(0)
 
-except Exception, msg:
+except Exception as msg:
     logger.error(msg)
-    print >> sys.stderr, msg
+    print(msg, file=sys.stderr)
     sys.exit(1)
 
 finally:

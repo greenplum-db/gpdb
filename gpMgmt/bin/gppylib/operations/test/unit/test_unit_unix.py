@@ -28,7 +28,7 @@ class CleanSharedMemTestCase(GpTestCase):
         file_contents = 'asdfads\nasdfsd asdfadsf\n12345 23456'.split()
         m = MagicMock()
         m.return_value.__enter__.return_value.readlines.return_value = file_contents
-        with patch('__builtin__.open', m, create=True):
+        with patch('builtins.open', m, create=True):
             c.run()
 
     @patch('os.path.isfile', return_value=False)
@@ -39,27 +39,27 @@ class CleanSharedMemTestCase(GpTestCase):
         c.run()
 
     @patch('os.path.isfile', return_value=True)
-    @patch('gppylib.operations.unix.Command.get_results', return_value=CommandResult(1, '', '', False, False))
+    @patch('gppylib.operations.unix.Command.get_results', return_value=CommandResult(1, b'', b'', False, False))
     def test_run_with_invalid_pid_file(self, mock1, mock2):
         segments = [self._get_mock_segment('seg1', '/tmp/gpseg1', 1234, 'host1', 'host1')]
         c = CleanSharedMem(segments)
         file_contents = 'asdfadsasdfasdf'.split()
         m = MagicMock()
         m.return_value.__enter__.return_value.readlines.return_value = file_contents
-        with patch('__builtin__.open', m, create=True):
+        with patch('builtins.open', m, create=True):
             with self.assertRaisesRegex(Exception, 'Unable to clean up shared memory for segment'):
                 c.run()
 
     @patch('os.path.isfile', return_value=True)
     @patch('gppylib.operations.unix.Command.run')
-    @patch('gppylib.operations.unix.Command.get_results', return_value=CommandResult(1, '', '', False, False))
+    @patch('gppylib.operations.unix.Command.get_results', return_value=CommandResult(1, b'', b'', False, False))
     def test_run_with_error_in_workerpool(self, mock1, mock2, mock3):
         segments = [self._get_mock_segment('seg1', '/tmp/gpseg1', 1234, 'host1', 'host1')]
         c = CleanSharedMem(segments)
         file_contents = 'asdfads\nasdfsd asdfadsf\n12345 23456'.split()
         m = MagicMock()
         m.return_value.__enter__.return_value.readlines.return_value = file_contents
-        with patch('__builtin__.open', m, create=True):
+        with patch('builtins.open', m, create=True):
             with self.assertRaisesRegex(Exception, 'Unable to clean up shared memory'):
                 c.run()
 

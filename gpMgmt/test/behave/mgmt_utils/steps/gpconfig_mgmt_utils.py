@@ -6,7 +6,7 @@ from gppylib.gparray import GpArray
 from behave import given, when, then
 from test.behave_utils.utils import *
 
-from .mgmt_utils import *
+from test.behave.mgmt_utils.steps.mgmt_utils import *
 
 
 # This class is intended to store per-Scenario state that is built up over

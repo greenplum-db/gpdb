@@ -21,15 +21,15 @@ Feature: Incrementally analyze the database
 
     Scenario: Missing parameters
         When the user runs "analyzedb -d"
-        Then analyzedb should print "error: -d option requires an argument" error message
+        Then analyzedb should print "error: -d option requires 1 argument" error message
         When the user runs "analyzedb -d incr_analyze -t"
-        Then analyzedb should print "error: -t option requires an argument" error message
+        Then analyzedb should print "error: -t option requires 1 argument" error message
         When the user runs "analyzedb -d incr_analyze -s"
-        Then analyzedb should print "error: -s option requires an argument" error message
+        Then analyzedb should print "error: -s option requires 1 argument" error message
         When the user runs "analyzedb -d incr_analyze -t public.t1_ao -i"
-        Then analyzedb should print "error: -i option requires an argument" error message
+        Then analyzedb should print "error: -i option requires 1 argument" error message
         When the user runs "analyzedb -d incr_analyze -t public.t1_ao -x"
-        Then analyzedb should print "error: -x option requires an argument" error message
+        Then analyzedb should print "error: -x option requires 1 argument" error message
 
     Scenario: Additional ignored arguments
         When the user runs "analyzedb -l -d incr_analyze xyz"

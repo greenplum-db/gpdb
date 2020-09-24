@@ -44,7 +44,7 @@ Maximum length of locale name:        128
 LC_COLLATE:                           en_US.utf-8
 LC_CTYPE:                             en_US.utf-8
 Data page checksum version:           1
-"""
+""".encode()
 
         self.apply_patches([
             patch('gppylib.heapchecksum.WorkerPool'),
@@ -57,10 +57,10 @@ Data page checksum version:           1
 
         self.data_dirs = ['/master', '/seg0', '/seg1', '/seg2']
         # rc,stdout,stderr,completed,halt
-        self.results = [CommandResult(0, self.COMMAND_RESULT, '', False, True),
-                        CommandResult(0, self.COMMAND_RESULT, '', False, True),
-                        CommandResult(0, self.COMMAND_RESULT, '', False, True),
-                        CommandResult(0, self.COMMAND_RESULT, '', False, True)]
+        self.results = [CommandResult(0, self.COMMAND_RESULT, b'', False, True),
+                        CommandResult(0, self.COMMAND_RESULT, b'', False, True),
+                        CommandResult(0, self.COMMAND_RESULT, b'', False, True),
+                        CommandResult(0, self.COMMAND_RESULT, b'', False, True)]
         self.assertEqual(len(self.data_dirs), len(self.results))
 
     def tearDown(self):
@@ -139,7 +139,7 @@ Data page checksum version:           1
 
     def test_get_segments_checksum_settings_accepts_array(self):
         get_values = ['1']
-        self.results = [CommandResult(0, self.COMMAND_RESULT, '', False, True)]
+        self.results = [CommandResult(0, self.COMMAND_RESULT, b'', False, True)]
         self.setup_worker_pool(get_values)
 
         successes, failures = self.subject.get_segments_checksum_settings([self.primary0])

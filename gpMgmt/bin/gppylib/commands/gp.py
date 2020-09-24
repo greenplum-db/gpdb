@@ -86,7 +86,10 @@ class CmdArgs(list):
         list.__init__(self, l)
 
     def __str__(self):
-        return " ".join(self)
+        ret = []
+        for i in self:
+            ret.append(str(i))
+        return " ".join(ret)
 
     def set_verbose(self, verbose):
         """
@@ -1308,7 +1311,7 @@ def start_standbymaster(host, datadir, port, era=None,
 
     logger.info("Checking if standby master is running on host: %s  in directory: %s" % (host,datadir))
     cmd = Command("recovery_startup",
-                  ("python -c "
+                  ("python3 -c "
                    "'from gppylib.commands.gp import recovery_startup; "
                    """recovery_startup("{0}", "{1}")'""").format(
                        datadir, port),
@@ -1342,9 +1345,9 @@ def start_standbymaster(host, datadir, port, era=None,
         # shell script.
         pid = getPostmasterPID(host, datadir)
         cmd = Command("get pids",
-                      ("python -c "
+                      ("python3 -c "
                        "'from gppylib.commands import unix; "
-                       "print unix.getDescendentProcesses({0})'".format(pid)),
+                       "print(unix.getDescendentProcesses({0}))'".format(pid)),
                       ctxt=REMOTE, remoteHost=host)
         cmd.run()
         logger.debug(str(cmd))
@@ -1540,7 +1543,7 @@ def get_local_db_mode(master_data_dir):
 ######
 def read_postmaster_pidfile(datadir, host=None):
     if host:
-        cmdStr ="""python -c 'from {module} import {func}; print {func}("{args}")'""".format(module=sys.modules[__name__].__name__,
+        cmdStr ="""python3 -c 'from {module} import {func}; print({func}("{args}"))'""".format(module=sys.modules[__name__].__name__,
                                                                                              func='read_postmaster_pidfile',
                                                                                              args=datadir)
         cmd = Command(name='run this method remotely', cmdStr=cmdStr, ctxt=REMOTE, remoteHost=host)
@@ -1591,7 +1594,7 @@ class IfAddrs:
         else:
             args = cmd
 
-        result = subprocess.check_output(args)
+        result = subprocess.check_output(args).decode()
         return result.splitlines()
 
 if __name__ == '__main__':

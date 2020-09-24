@@ -278,11 +278,11 @@ class GpConfig(GpTestCase):
         segment_command = self.pool.addCommand.call_args_list[0][0][0]
         self.assertTrue("my_property_name" in segment_command.cmdStr)
         value = base64.urlsafe_b64encode(pickle.dumps("100"))
-        self.assertTrue(value in segment_command.cmdStr)
+        self.assertTrue(value.decode() in segment_command.cmdStr)
         master_command = self.pool.addCommand.call_args_list[4][0][0]
         self.assertTrue("my_property_name" in master_command.cmdStr)
         value = base64.urlsafe_b64encode(pickle.dumps("20"))
-        self.assertTrue(value in master_command.cmdStr)
+        self.assertTrue(value.decode() in master_command.cmdStr)
 
     def test_option_change_value_masteronly_succeed(self):
         db_singleton_side_effect_list.append("some happy result")
@@ -301,7 +301,7 @@ class GpConfig(GpTestCase):
         master_command = self.pool.addCommand.call_args_list[0][0][0]
         self.assertTrue(("my_property_name") in master_command.cmdStr)
         value = base64.urlsafe_b64encode(pickle.dumps("100"))
-        self.assertTrue(value in master_command.cmdStr)
+        self.assertTrue(value.decode() in master_command.cmdStr)
 
     def test_option_change_value_master_separate_fail_not_valid_guc(self):
         db_singleton_side_effect_list.append("DatabaseError")
@@ -323,7 +323,7 @@ class GpConfig(GpTestCase):
         master_command = self.pool.addCommand.call_args_list[1][0][0]
         self.assertTrue("my_hidden_guc_name" in master_command.cmdStr)
         value = base64.urlsafe_b64encode(pickle.dumps("100"))
-        self.assertTrue(value in master_command.cmdStr)
+        self.assertTrue(value.decode() in master_command.cmdStr)
 
     def test_option_change_value_hidden_guc_without_skipvalidation(self):
         db_singleton_side_effect_list.append("my happy result")
@@ -530,7 +530,7 @@ class GpConfig(GpTestCase):
             gp_add_config_script_obj = call[0][0]
             value = base64.urlsafe_b64encode(pickle.dumps(expected_value))
             try:
-                self.assertTrue(value in gp_add_config_script_obj.cmdStr)
+                self.assertTrue(value.decode() in gp_add_config_script_obj.cmdStr)
             except AssertionError as e:
                 raise Exception("\nAssert failed: %s\n cmdStr:\n%s\nvs:\nvalue: %s" % (str(e),
                                                                                        gp_add_config_script_obj.cmdStr,

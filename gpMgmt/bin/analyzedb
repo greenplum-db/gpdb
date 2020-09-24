@@ -13,7 +13,7 @@
 # import mainUtils FIRST to get python version check
 from gppylib.mainUtils import *
 from optparse import OptionParser
-from Queue import Queue, Empty
+from queue import Queue, Empty
 import os
 import re
 import shutil
@@ -35,7 +35,7 @@ try:
     from gppylib.db import dbconn
     from gppylib.operations.unix import CheckDir, CheckFile, MakeDir
 
-except ImportError, e:
+except ImportError as e:
     sys.exit('Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
 
 EXECNAME = 'analyzedb'
@@ -439,7 +439,7 @@ class AnalyzeDb(Operation):
                 self._write_report(curr_ao_state, curr_last_op, heap_partitions, input_col_dict,
                                    root_partition_col_dict, dirty_partitions, target_list)
                 logger.info("Done.")
-        except Exception, ex:
+        except Exception as ex:
             logger.exception(ex)
             raise
 
@@ -589,7 +589,7 @@ class AnalyzeDb(Operation):
             for schema_table in alltables:
                 col_dict[(schema_table[0], schema_table[1])] = set(['-1'])
 
-        return col_dict.keys()
+        return list(col_dict.keys())
 
     def _get_include_or_exclude_cols(self, line_tokens, option_str):
         """
@@ -721,7 +721,7 @@ class AnalyzeDb(Operation):
                                                               self.dbname, current_time)
             logger.info("Writing last operation file %s" % last_operation_filename)
 
-            lines_to_write = map((lambda x: '%s,%s,%s,%s,%s,%s' % (x[0], x[1], x[2], x[3], x[4], x[5])), last_op_output)
+            lines_to_write = list(map((lambda x: '%s,%s,%s,%s,%s,%s' % (x[0], x[1], x[2], x[3], x[4], x[5])), last_op_output))
             write_lines_to_file(last_operation_filename, lines_to_write)
             logger.debug("Verifying last operation file ...")
             verify_lines_in_file(last_operation_filename, lines_to_write)
@@ -856,7 +856,7 @@ class AnalyzeDb(Operation):
         2. The leaf partitions (if range partitioned, especially by date) will be ordered in descending
            order of the partition key, so that newer partitions can be analyzed first.
         """
-        candidate_regclass_str = get_oid_str(candidates + root_partition_col_dict.keys())
+        candidate_regclass_str = get_oid_str(candidates + list(root_partition_col_dict.keys()))
         qresult = run_sql(self.conn, ORDER_CANDIDATES_BY_OID_SQL % candidate_regclass_str)
         ordered_candidates = []
         for schema_tbl in qresult:
@@ -916,7 +916,7 @@ def run_sql(conn, query):
     try:
         cursor = dbconn.query(conn, query)
         res = cursor.fetchall()
-    except Exception, db_err:
+    except Exception as db_err:
         raise ExceptionNoStackTraceNeeded("%s" % db_err.__str__())  # .split('\n')[0])
     cursor.close()
     return res
@@ -1001,7 +1001,7 @@ def get_prev_ao_state(timestamp, master_datadir, analyze_dir, dbname):
     # Parse the lines into (schemaname, tablename, modcount) tuples. Each line is
     # a comma-separated string. XXX: This file format cannot deal with names
     # with commas.
-    return map((lambda x: x.split(',')), lines)
+    return list(map((lambda x: x.split(',')), lines))
 
 
 def get_prev_last_op(timestamp, master_datadir, analyze_dir, dbname):
@@ -1032,7 +1032,7 @@ def get_prev_col_state(timestamp, master_datadir, analyze_dir, dbname):
     prev_col_dict = {}
     for line in lines:
         toks = line.strip().split(',')
-        toks = map(str.strip, toks)
+        toks = list(map(str.strip, toks))
         prev_col_dict[(toks[0], toks[1])] = set(toks[2:])
 
     return prev_col_dict
@@ -1062,7 +1062,7 @@ def create_last_op_dict(last_op_entries):
 
 def construct_entries_from_dict_aostate(ao_state_dict):
     ret = []
-    for key, item in ao_state_dict.iteritems():
+    for key, item in ao_state_dict.items():
         schema = key[0]
         table = key[1]
         ret.append("%s,%s,%s" % (schema, table, item))
@@ -1071,15 +1071,15 @@ def construct_entries_from_dict_aostate(ao_state_dict):
 
 def construct_entries_from_dict_lastop(last_op_dict):
     ret = []
-    for value in last_op_dict.itervalues():
-        for entry in value.itervalues():
+    for value in last_op_dict.values():
+        for entry in value.values():
             ret.append(entry)
     return ret
 
 
 def construct_entries_from_dict_colstate(prev_col_dict):
     ret = []
-    for schema_table, col_set in prev_col_dict.iteritems():
+    for schema_table, col_set in prev_col_dict.items():
         schema = schema_table[0]
         table = schema_table[1]
         cols = ','.join(col_set)
@@ -1150,7 +1150,7 @@ def validate_dir(path):
     else:
         try:
             MakeDir(path).run()
-        except OSError, e:
+        except OSError as e:
             logger.exception("Could not create directory %s" % path)
             raise AnalyzeDirCreateFailed()
         else:
@@ -1158,7 +1158,7 @@ def validate_dir(path):
     try:
         with tempfile.TemporaryFile(dir=path) as f:
             pass
-    except Exception, e:
+    except Exception as e:
         logger.exception("Cannot write to %s" % path)
         raise AnalyzeDirNotWritable()
 
@@ -1374,7 +1374,7 @@ class AnalyzeWorker(Worker):
                     self.pool.addFinishedWorkItem(self.cmd)
                     self.cmd = None
 
-            except Exception, e:
+            except Exception as e:
                 self.logger.exception(e)
                 if self.cmd:
                     self.logger.debug("[%s] finished cmd with exception: %s" % (self.name, self.cmd))

@@ -284,7 +284,7 @@ class Session(cmd.Cmd):
         for s in self.pxssh_list:
             # Split the output into an array of lines so that we can add text to the beginning of
             #    each line
-            output = s.before.split('\n')
+            output = s.before.split(b'\n')
             output = output[1:-1]
 
             commandoutput.append(output)

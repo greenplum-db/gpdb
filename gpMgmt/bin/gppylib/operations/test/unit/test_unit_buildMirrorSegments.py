@@ -93,14 +93,14 @@ class buildMirrorSegmentsTestCase(GpTestCase):
         self.assertEqual(segs, expected_output)
 
     @patch('gppylib.commands.base.Command.run')
-    @patch('gppylib.commands.base.Command.get_results', return_value=base.CommandResult(rc=0, stdout='/tmp/seg0', stderr='', completed=True, halt=False))
+    @patch('gppylib.commands.base.Command.get_results', return_value=base.CommandResult(rc=0, stdout=b'/tmp/seg0', stderr=b'', completed=True, halt=False))
     def test_dereference_remote_symlink_valid_symlink(self, mock1, mock2):
         datadir = '/tmp/link/seg0'
         host = 'h1'
         self.assertEqual(self.buildMirrorSegs.dereference_remote_symlink(datadir, host), '/tmp/seg0')
 
     @patch('gppylib.commands.base.Command.run')
-    @patch('gppylib.commands.base.Command.get_results', return_value=base.CommandResult(rc=1, stdout='', stderr='', completed=True, halt=False))
+    @patch('gppylib.commands.base.Command.get_results', return_value=base.CommandResult(rc=1, stdout=b'', stderr=b'', completed=True, halt=False))
     def test_dereference_remote_symlink_unable_to_determine_symlink(self, mock1, mock2):
         datadir = '/tmp/seg0'
         host = 'h1'

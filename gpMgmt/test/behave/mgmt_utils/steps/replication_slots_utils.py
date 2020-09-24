@@ -10,8 +10,7 @@ from test.behave_utils.utils import (
     wait_for_unblocked_transactions,
 )
 
-
-from .mirrors_mgmt_utils import (add_three_mirrors)
+from test.behave.mgmt_utils.steps.mirrors_mgmt_utils import (add_three_mirrors)
 
 
 def assert_successful_command(context):

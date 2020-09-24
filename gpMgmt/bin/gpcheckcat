@@ -757,7 +757,7 @@ def buildRemove(seg, name, table, cols, objname):
 
 
 def addRemove(seg, line):
-    if not GV.Remove.has_key(seg):
+    if not seg in GV.Remove:
         GV.Remove[seg] = []
     GV.Remove[seg].append(line)
 
@@ -775,13 +775,13 @@ def buildAdjustConname(seg, relname, relid, oldconname, newconname):
 
 
 def addAdjustConname(seg, stmt):
-    if not GV.AdjustConname.has_key(seg):
+    if not seg in GV.AdjustConname:
         GV.AdjustConname[seg] = []
     GV.AdjustConname[seg].append(stmt)
 
 
 def addDemoteConstraint(seg, repair_sequence):
-    if not GV.DemoteConstraint.has_key(seg):
+    if not seg in GV.DemoteConstraint:
         GV.DemoteConstraint[seg] = []
     GV.DemoteConstraint[seg].append(repair_sequence)
 
@@ -1087,7 +1087,7 @@ def checkOwners():
 
 
 def closeDbs():
-    for key, conns in GV.db.iteritems():
+    for key, conns in GV.db.items():
         db = conns[0]
         db.close()
     GV.db = {}  # remove everything
@@ -1211,7 +1211,7 @@ def checkForeignKey(cat_tables=None):
         if foreign_key_issues:
             GV.checkStatus = False
 
-        for catname, tuples in foreign_key_issues.iteritems():
+        for catname, tuples in foreign_key_issues.items():
                 for pkcatname, fields, results in tuples:
                     processForeignKeyResult(catname, pkcatname, fields, results)
                     if catname == 'gp_fastsequence' and pkcatname == 'pg_class':
@@ -2011,7 +2011,7 @@ def runCheckCatname(catalog_table_obj):
 #-------------------------------------------------------------------------------
 def runOneCheck(name):
 
-    if not all_checks.has_key(name):
+    if not name in all_checks:
         logger.info("'%s' is not a valid test" % (name))
         raise LookupError
     if GV.opt['-O'] and not all_checks[name]["online"]:
@@ -2112,7 +2112,7 @@ def do_repair_for_segments(segments_to_repair_statements, issue_type, descriptio
 def do_repair_for_extra(catalog_issues):
     setError(ERROR_REMOVE)
     repair_dir_path = ""
-    for (catalog_table_obj, pk_name), issues in catalog_issues.iteritems():
+    for (catalog_table_obj, pk_name), issues in catalog_issues.items():
         try:
             repair_obj = Repair(context=GV, issue_type="extra", desc="Removing extra entries")
             repair_dir_path = repair_obj.create_repair_for_extra_missing(catalog_table_obj=catalog_table_obj,
@@ -2177,11 +2177,11 @@ def checkSegmentRepair(maybeRemove, catmod_guc, seg):
 
     # unique
     lines = set()
-    if GV.Remove.has_key(seg):#foreign_key check
+    if seg in GV.Remove:#foreign_key check
         lines = lines.union(GV.Remove[seg])
-    if GV.AdjustConname.has_key(seg):#part_constraint
+    if seg in GV.AdjustConname:#part_constraint
         lines = lines.union(GV.AdjustConname[seg])
-    if GV.DemoteConstraint.has_key(seg):
+    if seg in GV.DemoteConstraint:
         lines = lines.union(GV.DemoteConstraint[seg])
 
     # make sure it is sorted
@@ -2213,7 +2213,7 @@ def getCatalog():
 # -------------------------------------------------------------------------------
 def getReportConfiguration():
     cfg = {}
-    for _, each in GV.cfg.iteritems():
+    for _, each in GV.cfg.items():
         cfg[each['content']] = {'segname': "content " + str(each['content']),
                                 'hostname': each['hostname'],
                                 'port': each['port']}
@@ -2294,7 +2294,7 @@ def getGPObject(oid, catname):
 # -------------------------------------------------------------------------------
 def getOidFromPK(catname, pkeys):
     # pkeys: name-value pair
-    pkeystrList = ["%s='%s'" % (key, value) for key, value in pkeys.iteritems()]
+    pkeystrList = ["%s='%s'" % (key, value) for key, value in pkeys.items()]
     pkeystr = ' and '.join(pkeystrList)
 
     qry = """
@@ -2500,7 +2500,7 @@ def processInconsistentEntryResult(catname, pknames, colname, allValues):
     elif 'oid' in colname:
         gpColName = 'oid'
 
-    for keys, values in groupedValues.iteritems():
+    for keys, values in groupedValues.items():
         rowObjName = gpObjName
         pkeys = dict((n, values[0][colname.index(n)]) for n in pknames)
 
@@ -2876,7 +2876,7 @@ class GPObject:
 
         # Report dependency issues
         if len(self.dependencyIssues):
-            for catname, issues in self.dependencyIssues.iteritems():
+            for catname, issues in self.dependencyIssues.items():
                 myprint('    Name of test which found this issue: dependency_%s' % catname)
                 for each in issues:
                     each.report()
@@ -2884,7 +2884,7 @@ class GPObject:
 
         # Report inconsistent issues
         if len(self.inconsistentIssues):
-            for catname, issues in self.inconsistentIssues.iteritems():
+            for catname, issues in self.inconsistentIssues.items():
                 myprint('    Name of test which found this issue: inconsistent_%s' % catname)
                 for each in issues:
                     each.report()
@@ -2901,13 +2901,13 @@ class GPObject:
                 for each in self.missingIssues['pg_class']:
                     each.report()
 
-                for catname, issues in self.missingIssues.iteritems():
+                for catname, issues in self.missingIssues.items():
                     if catname != 'pg_class' and catname not in omitlist:
                         myprint('    Name of test which found this issue: missing_extraneous_%s' % catname)
                         for each in issues:
                             each.report()
             else:
-                for catname, issues in self.missingIssues.iteritems():
+                for catname, issues in self.missingIssues.items():
                     myprint('    Name of test which found this issue: missing_extraneous_%s' % catname)
                     for each in issues:
                         each.report()
@@ -2917,7 +2917,7 @@ class GPObject:
 
         # Report foreign key issues
         if len(self.foreignkeyIssues):
-            for catname, issues in self.foreignkeyIssues.iteritems():
+            for catname, issues in self.foreignkeyIssues.items():
                 myprint('    Name of test which found this issue: foreign_key_%s' % catname)
                 for each in issues:
                     each.report()
@@ -2925,7 +2925,7 @@ class GPObject:
 
         # Report duplicate issues
         if len(self.duplicateIssues):
-            for catname, issues in self.duplicateIssues.iteritems():
+            for catname, issues in self.duplicateIssues.items():
                 myprint('    Name of test which found this issue: duplicate_%s' % catname)
                 for each in issues:
                     each.report()
@@ -2933,7 +2933,7 @@ class GPObject:
 
         # Report ACL issues
         if len(self.aclIssues):
-            for catname, issues in self.aclIssues.iteritems():
+            for catname, issues in self.aclIssues.items():
                 myprint('    Name of test which found this issue: acl_%s' % catname)
                 for each in issues:
                     each.report()
@@ -2941,7 +2941,7 @@ class GPObject:
 
         # Report Orphan Toast Table issues
         if len(self.orphanToastTableIssues):
-            for catname, issues in self.orphanToastTableIssues.iteritems():
+            for catname, issues in self.orphanToastTableIssues.items():
                 for each in issues:
                     each.report()
             myprint('')
@@ -3137,7 +3137,7 @@ def buildGraph():
         if objects == {}: return
         getRelInfo(objects)
         localObjects = {}
-        for (oid, catname), obj in objects.iteritems():
+        for (oid, catname), obj in objects.items():
             # Top level object, add to graph
             if obj.isTopLevel():
                 if obj not in graph:

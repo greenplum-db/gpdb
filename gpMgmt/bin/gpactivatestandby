@@ -31,9 +31,9 @@ try:
     from gppylib.gplog import get_default_logger, setup_tool_logging, enable_verbose_logging
     from gppylib import gparray
     from gppylib.userinput import ask_yesno
-except ImportError, e_:
+except Exception as e:
     sys.exit('ERROR: Cannot import modules.  Please check that you '
-             'have sourced greenplum_path.sh.  Detail: ' + str(e_))
+             'have sourced greenplum_path.sh.  Detail: ' + str(e))
 
 EXECNAME = os.path.split(__file__)[-1]
 
@@ -321,7 +321,7 @@ def promote_standby(master_data_dir):
     cmd.run(validateAfter=True)
 
     logger.debug('Waiting for connection...')
-    for i in xrange(50):
+    for i in range(50):
         try:
             dburl = dbconn.DbURL()
             conn = dbconn.connect(dburl, utility=True, logConn=False)
@@ -332,7 +332,7 @@ def promote_standby(master_data_dir):
             logger.info('Standby master is promoted')
             conn.close()
             return True
-        except pygresql.InternalError, e:
+        except pygresql.InternalError as e:
             pass
         time.sleep(1)
 
@@ -394,8 +394,8 @@ try:
     else:
         sys.exit(0)
     
-except Exception, e_:
-    logger.fatal('Error activating standby master: %s' % str(e_))
+except Exception as e:
+    logger.fatal('Error activating standby master: %s' % str(e))
     sys.exit(2)
 
 sys.exit(0)

@@ -304,7 +304,7 @@ class Ping(Command):
                     self.pingToUse = SYSTEM.getPing6()
                     self.cmdStr = "%s -c 1 %s" % (self.pingToUse, self.hostToPing)
             except Exception as e:
-                self.results = CommandResult(1, '', 'Failed to get ip address: ' + str(e), False, True)
+                self.results = CommandResult(1, b'', b'Failed to get ip address: ' + str(e).encode(), False, True)
                 if validateAfter:
                     self.validate()
                 else:
@@ -488,7 +488,7 @@ class RemoveGlob(Command):
 class FileDirExists(Command):
     def __init__(self, name, directory, ctxt=LOCAL, remoteHost=None):
         self.directory = directory
-        cmdStr = """python  -c "import os; print os.path.exists('%s')" """ % directory
+        cmdStr = """python3  -c "import os; print(os.path.exists('%s'))" """ % directory
         Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
     @staticmethod

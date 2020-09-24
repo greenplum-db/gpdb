@@ -7,8 +7,9 @@
 """
 import copy
 
-import dbconn, pg
-from  gppylib import gplog
+import pg
+from gppylib import gplog
+from gppylib.db import dbconn
 
 logger=gplog.get_default_logger()
 

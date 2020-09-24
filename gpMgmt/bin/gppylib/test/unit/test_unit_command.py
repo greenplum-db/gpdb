@@ -11,17 +11,17 @@ class CommandTest(GpTestCase):
             self.subject.get_stdout()
 
     def test_get_stdout_after_running_returns_stdout(self):
-        self.subject.set_results(CommandResult(0, "my stdout", "", True, False))
+        self.subject.set_results(CommandResult(0, b"my stdout", b"", True, False))
 
         self.assertEqual(self.subject.get_stdout(), "my stdout")
 
     def test_get_stdout_after_running_returns_stripped_stdout(self):
-        self.subject.set_results(CommandResult(0, "  my stdout\n", "", True, False))
+        self.subject.set_results(CommandResult(0, b"  my stdout\n", b"", True, False))
 
         self.assertEqual(self.subject.get_stdout(), "my stdout")
 
     def test_get_stdout_after_running_with_no_strip_returns_unstripped_stdout(self):
-        self.subject.set_results(CommandResult(0, "  my stdout\n", "", True, False))
+        self.subject.set_results(CommandResult(0, b"  my stdout\n", b"", True, False))
 
         self.assertEqual(self.subject.get_stdout(strip=False), "  my stdout\n")
 
@@ -30,7 +30,7 @@ class CommandTest(GpTestCase):
             self.subject.get_return_code()
 
     def test_get_stdout_after_running_returns_rc(self):
-        self.subject.set_results(CommandResult(-23, "my stdout", "", True, False))
+        self.subject.set_results(CommandResult(-23, b"my stdout", b"", True, False))
 
         self.assertEqual(self.subject.get_return_code(), -23)
 
@@ -39,7 +39,7 @@ class CommandTest(GpTestCase):
             self.subject.get_stderr()
 
     def test_get_stderr_after_running_returns_stderr(self):
-        self.subject.set_results(CommandResult(0, "", "my stderr", True, False))
+        self.subject.set_results(CommandResult(0, b"", b"my stderr", True, False))
 
         self.assertEqual(self.subject.get_stderr(), "my stderr")
 

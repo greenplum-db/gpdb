@@ -22,7 +22,7 @@ class InitStandbyTestCase(unittest.TestCase):
         expected = [file_contents + pg_hba_info, file_contents + pg_hba_info]
         m = MagicMock()
         m.return_value.__enter__.return_value.read.side_effect = [file_contents, file_contents]
-        with patch('__builtin__.open', m, create=True):
+        with patch('builtins.open', m, create=True):
             self.assertEqual(expected, update_pg_hba(pg_hba_info, data_dirs))
 
     def test_update_pg_hba_duplicate(self):
@@ -33,7 +33,7 @@ class InitStandbyTestCase(unittest.TestCase):
         expected = [file_contents + pg_hba_info]
         m = MagicMock()
         m.return_value.__enter__.return_value.read.side_effect = [file_contents, file_contents + duplicate_entry]
-        with patch('__builtin__.open', m, create=True):
+        with patch('builtins.open', m, create=True):
             res = update_pg_hba(pg_hba_info, data_dirs)
             self.assertEqual(expected, res) 
 

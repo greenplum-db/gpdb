@@ -39,7 +39,8 @@ _usage = """
 
 # Generic exception for all things activatestandby
 class GpDeleteSystemException(Exception):
-    pass
+    def __init__(self, message):
+        self.message=message
 
 
 # -------------------------------------------------------------------------

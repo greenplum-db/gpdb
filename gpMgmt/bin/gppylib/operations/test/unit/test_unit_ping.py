@@ -8,7 +8,7 @@ class PingTestCase(GpTestCase):
     ping_command = None
 
     def set_successful_command_results(self, _):
-        self.ping_command.set_results(CommandResult(0, '', '', True, True))
+        self.ping_command.set_results(CommandResult(0, b'', b'', True, True))
 
     def setUp(self):
         self.apply_patches([

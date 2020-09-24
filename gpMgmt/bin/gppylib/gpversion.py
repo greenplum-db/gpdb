@@ -184,18 +184,37 @@ class GpVersion:
                                 (str(version), str(e)))
 
     #------------------------------------------------------------
-    def __cmp__(self, other):
-        '''
-        One of the main reasons for this class is so that we can safely compare
-        versions with each other.  This needs to be pairwise integer comparison
-        of the tuples, not a string comparison, which is why we maintain the
-        internal version as a list.       
-        '''
+    # One of the main reasons for this class is so that we can safely compare
+    # versions with each other.  This needs to be pairwise integer comparison
+    # of the tuples, not a string comparison, which is why we maintain the
+    # internal version as a list.
+    #
+    # The following functions overload all comparison operators for GpVersion,
+    # as per PEP 207 -- Rich Comparisons.
+
+    def __get_version(other):
         if isinstance(other, GpVersion):
-            return cmp(self.version, other.version)
-        else:
-            return cmp(self, GpVersion(other))
-    
+            return other.version
+        return GpVersion(other).version
+
+    def __lt__(self, other):
+        return self.version < GpVersion.__get_version(other)
+
+    def __le__(self, other):
+        return self.version <= GpVersion.__get_version(other)
+
+    def __gt__(self, other):
+        return self.version > GpVersion.__get_version(other)
+
+    def __ge__(self, other):
+        return self.version >= GpVersion.__get_version(other)
+
+    def __eq__(self, other):
+        return self.version == GpVersion.__get_version(other)
+
+    def __ne__(self, other):
+        return self.version != GpVersion.__get_version(other)
+
     #------------------------------------------------------------
     def __str__(self):
         ''' 

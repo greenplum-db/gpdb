@@ -21,7 +21,7 @@ class GpAddMirrorsTest(GpTestCase):
         self.gparrayMock = self._createGpArrayWith2Primary2Mirrors()
         self.gparray_get_segments_by_hostname = dict(sdw1=[self.primary0])
         self.apply_patches([
-            patch('__builtin__.raw_input'),
+            patch('builtins.input'),
             patch('gppylib.programs.clsAddMirrors.base.WorkerPool'),
             patch('gppylib.programs.clsAddMirrors.logger', return_value=Mock(spec=['log', 'info', 'debug', 'error'])),
             patch('gppylib.programs.clsAddMirrors.log_to_file_only', return_value=Mock()),
@@ -32,10 +32,11 @@ class GpAddMirrorsTest(GpTestCase):
             patch('gppylib.gparray.GpArray.getSegmentsByHostName', return_value=self.gparray_get_segments_by_hostname),
 
         ])
-        self.raw_input_mock = self.get_mock_from_apply_patch("raw_input")
+        self.input_mock = self.get_mock_from_apply_patch("input")
         self.mock_logger = self.get_mock_from_apply_patch('logger')
         self.gpMasterEnvironmentMock = self.get_mock_from_apply_patch("GpMasterEnvironment")
         self.gpMasterEnvironmentMock.return_value.getMasterPort.return_value = 123456
+        self.gpMasterEnvironmentMock.return_value.getMasterDataDir.return_value = "/data/master/gpseg-1"
         self.getConfigProviderFunctionMock = self.get_mock_from_apply_patch('getConfigurationProvider')
         self.config_provider_mock = Mock(spec=GpConfigurationProvider)
         self.getConfigProviderFunctionMock.return_value = self.config_provider_mock
@@ -145,7 +146,7 @@ class GpAddMirrorsTest(GpTestCase):
         self.mock_logger.error.assert_any_call("Failed while modifying pg_hba.conf on primary segments to allow replication connections: boom")
 
     def test_datadir_interview(self):
-        self.raw_input_mock.side_effect = ["/tmp/datadirs/mirror1", "/tmp/datadirs/mirror2", "/tmp/datadirs/mirror3"]
+        self.input_mock.side_effect = ["/tmp/datadirs/mirror1", "/tmp/datadirs/mirror2", "/tmp/datadirs/mirror3"]
         sys.argv = ['gpaddmirrors', '-p', '5000']
         options, _ = self.parser.parse_args()
         self.config_provider_mock.loadSystemConfig.return_value = GpArray([self.master, self.primary0, self.primary1])

@@ -331,10 +331,13 @@ class CommandResult():
 
     # rc,stdout,stderr,completed,halt
 
-    def __init__(self, rc, stdout, stderr, completed, halt):
+    def __init__(self, rc, stdout, stderr, completed, halt, pickled=False):
         self.rc = rc
-        self.stdout = stdout
-        self.stderr = stderr
+        if pickled:
+            self.stdout = stdout
+        else:
+            self.stdout = stdout.decode()
+        self.stderr = stderr.decode()
         self.completed = completed
         self.halt = halt
 
@@ -436,7 +439,7 @@ class LocalExecutionContext(ExecutionContext):
         self.stdin = stdin
         pass
 
-    def execute(self, cmd, wait=True):
+    def execute(self, cmd, wait=True, pickled=False):
         # prepend env. variables from ExcecutionContext.propagate_env_map
         # e.g. Given {'FOO': 1, 'BAR': 2}, we'll produce "FOO=1 BAR=2 ..."
 
@@ -457,7 +460,7 @@ class LocalExecutionContext(ExecutionContext):
             (rc, stdout_value, stderr_value) = self.proc.communicate2(input=self.stdin)
             self.completed = True
             cmd.set_results(CommandResult(
-                rc, "".join(stdout_value), "".join(stderr_value), self.completed, self.halt))
+                rc, stdout_value, stderr_value, self.completed, self.halt, pickled=pickled))
 
     def cancel(self):
         if self.proc:
@@ -486,7 +489,7 @@ class RemoteExecutionContext(LocalExecutionContext):
         else:
             self.gphome = GPHOME
 
-    def execute(self, cmd):
+    def execute(self, cmd, pickled=False):
         # prepend env. variables from ExcecutionContext.propagate_env_map
         # e.g. Given {'FOO': 1, 'BAR': 2}, we'll produce "FOO=1 BAR=2 ..."
         self.__class__.trail.add(self.targetHost)
@@ -502,7 +505,7 @@ class RemoteExecutionContext(LocalExecutionContext):
                      "{targethost} \"{gphome} {cmdstr}\"".format(targethost=self.targetHost,
                                                                  gphome=". %s/greenplum_path.sh;" % self.gphome,
                                                                  cmdstr=cmd.cmdStr)
-        LocalExecutionContext.execute(self, cmd)
+        LocalExecutionContext.execute(self, cmd, pickled=pickled)
         if (cmd.get_results().stderr.startswith('ssh_exchange_identification: Connection closed by remote host')):
             self.__retry(cmd)
         pass
@@ -511,7 +514,7 @@ class RemoteExecutionContext(LocalExecutionContext):
         if count == SSH_MAX_RETRY:
             return
         time.sleep(SSH_RETRY_DELAY)
-        LocalExecutionContext.execute(self, cmd)
+        LocalExecutionContext.execute(self, cmd, pickled=pickled)
         if (cmd.get_results().stderr.startswith('ssh_exchange_identification: Connection closed by remote host')):
             self.__retry(cmd, count + 1)
 
@@ -524,13 +527,14 @@ class Command(object):
     exec_context = None
     propagate_env_map = {}  # specific environment variables for this command instance
 
-    def __init__(self, name, cmdStr, ctxt=LOCAL, remoteHost=None, stdin=None, gphome=None):
+    def __init__(self, name, cmdStr, ctxt=LOCAL, remoteHost=None, stdin=None, gphome=None, pickled=False):
         self.name = name
         self.cmdStr = cmdStr
         self.exec_context = createExecutionContext(ctxt, remoteHost, stdin=stdin,
                                                    gphome=gphome)
         self.remoteHost = remoteHost
         self.logger = gplog.get_default_logger()
+        self.pickled = pickled
 
     def __str__(self):
         if self.results:
@@ -541,12 +545,12 @@ class Command(object):
     # Start a process that will execute the command but don't wait for
     # it to complete.  Return the Popen object instead.
     def runNoWait(self):
-        self.exec_context.execute(self, wait=False)
+        self.exec_context.execute(self, wait=False, pickled=self.pickled)
         return self.exec_context.proc
 
     def run(self, validateAfter=False):
         self.logger.debug("Running Command: %s" % self.cmdStr)
-        self.exec_context.execute(self)
+        self.exec_context.execute(self, pickled=self.pickled)
 
         if validateAfter:
             self.validate()

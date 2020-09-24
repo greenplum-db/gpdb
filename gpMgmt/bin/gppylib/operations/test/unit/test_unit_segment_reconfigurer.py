@@ -35,16 +35,11 @@ class SegmentReconfiguerTestCase(GpTestCase):
         db_url.pgpass = self.passwd
 
         self.connect = MagicMock()
-        cm = contextlib.nested(
-                patch('gppylib.db.dbconn.connect', new=self.connect),
-                patch('gppylib.db.dbconn.DbURL', return_value=self.db_url),
-                patch('pg.connect'),
-                )
-        cm.__enter__()
-        self.cm = cm
-
-    def tearDown(self):
-        self.cm.__exit__(None, None, None)
+        self.apply_patches([
+            patch('gppylib.db.dbconn.connect', new=self.connect),
+            patch('gppylib.db.dbconn.DbURL', return_value=self.db_url),
+            patch('pg.connect'),
+        ])
 
     def test_it_triggers_fts_probe(self):
         reconfigurer = SegmentReconfigurer(logger=self.logger,
