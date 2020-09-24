@@ -809,9 +809,10 @@ cdbcomponent_allocateIdleQE(int contentId, SegmentType segmentType)
 		 */
 		isWriter = contentId == -1 ? false: (cdbinfo->numIdleQEs == 0 && cdbinfo->numActiveQEs == 0);
 		segdbDesc = cdbconn_createSegmentDescriptor(cdbinfo, nextQEIdentifer(cdbinfo->cdbs), isWriter);
-	}
 
-	cdbconn_setQEIdentifier(segdbDesc, -1);
+		/* Set QE identifier for this newly created SegmentDescriptor. */
+		cdbconn_setQEIdentifier(segdbDesc, -1);
+	}
 
 	INCR_COUNT(cdbinfo, numActiveQEs);
 

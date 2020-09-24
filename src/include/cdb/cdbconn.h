@@ -46,11 +46,24 @@ typedef struct SegmentDatabaseDescriptor
     /*
      * Connection info saved at most recent PQconnectdb.
      *
-     * NB: Use malloc/free, not palloc/pfree, for the items below.
+     * whoami stores a string of QE identifier for log messages. It may
+     * be changed upon events such as QE connection establishment and
+     * recycling of this SegmentDatabaseDescriptor. It is computed by
+     * cdbconn_setQEIdentifier() function.
+     *
+     * defaultWhoami also stores a string of QE identifier that contains
+     * backendPid but no slice index. Once set by cdbconn_setQEIdentifier(),
+     * its contents never changes.
+     *
+     * whoami would point to defaultWhoami whenever appropriate (e.g., when
+     * SegmentDatabaseDescriptor is recycled or the QE has no slice index),
+     * so that cdbconn_setQEIdentifier() does not have to re-construct this
+     * contents from scratch every time.
      */
     uint32		            motionListener; /* interconnect listener port */
     int32					backendPid;
     char                   *whoami;         /* QE identifier for msgs */
+	char                   *defaultWhoami;  /* Default QE identifier for msgs */
 	bool					isWriter;
 	int						identifier;		/* unique identifier in the cdbcomponent segment pool */
 } SegmentDatabaseDescriptor;
