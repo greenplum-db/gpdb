@@ -1668,8 +1668,8 @@ class GpArray:
         interface_count = len(interface_list)
 
         mirror_dict = {}
-        # must be sorted by isprimary, then hostname
-        rows.sort(lambda a,b: (cmp(b.isprimary, a.isprimary) or cmp(a.host,b.host)))
+        # must be sorted by isprimary (primaries before mirrors), then hostname (ascending order)
+        rows.sort(key=(lambda a: (0 if a.isprimary == 't' else 1, a.host)))
         current_host = rows[0].host
         curr_dbid = self.get_max_dbid(True) + 1
         curr_content = self.get_max_contentid(True) + 1
