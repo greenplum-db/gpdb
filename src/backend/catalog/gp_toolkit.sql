@@ -905,7 +905,7 @@ CREATE EXTERNAL WEB TABLE gp_toolkit.gp_disk_free
     dfdevice text,
     dfspace bigint
 )
-EXECUTE E'python -c "from gppylib.commands import unix; df=unix.DiskFree.get_disk_free_info_local(''token'',''$GP_SEG_DATADIR''); print ''%s, %s, %s, %s'' % (''$GP_SEGMENT_ID'', unix.getLocalHostname(), df[0], df[3])"' FORMAT 'CSV';
+EXECUTE E'python3 -c "from gppylib.commands import unix; df=unix.DiskFree.get_disk_free_info_local(''token'',''$GP_SEG_DATADIR''); print(''%s, %s, %s, %s'' % (''$GP_SEGMENT_ID'', unix.getLocalHostname(), df[0], df[3]))"' FORMAT 'CSV';
 
 
 --------------------------------------------------------------------------------

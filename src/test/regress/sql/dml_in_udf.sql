@@ -1,7 +1,7 @@
 -- Test various cases where a user-defined function modifies tables.
 
 -- start_ignore
-create language plpythonu;
+create language plpython3u;
 -- end_ignore
 
 --
@@ -12,7 +12,7 @@ CREATE or REPLACE FUNCTION  insert_correct () RETURNS void as $$
   plpy.execute('INSERT INTO  dml_plperl_t1 VALUES (2)');
   plpy.execute('INSERT INTO  dml_plperl_t1 VALUES (4)');
   return;
-$$ language plpythonu;
+$$ language plpython3u;
 
 CREATE or REPLACE FUNCTION dml_plperl_fn1 (st int,en int) returns void as $$
 DECLARE
@@ -68,7 +68,7 @@ CREATE OR REPLACE FUNCTION dml_fn2(x int) RETURNS INT as $$
   for i in range(0, x):
     plpy.execute('INSERT INTO dml_plpython_t2 values(%d)' % i);
   return plpy.execute('SELECT COUNT(*) as a FROM dml_plpython_t2')[0]["a"]
-$$ language plpythonu;
+$$ language plpython3u;
 
 CREATE TABLE dml_plpython_t2(a int) DISTRIBUTED randomly;
 BEGIN;

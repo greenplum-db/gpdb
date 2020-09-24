@@ -2,7 +2,7 @@ create schema sort_schema;
 set search_path to sort_schema;
  
 -- start_ignore
-create language plpythonu;
+create language plpython3u;
 -- end_ignore
  
 -- Check if analyze output has Sort Method
@@ -18,7 +18,7 @@ create language plpythonu;
          result.append(1)
  return result
  $$
- language plpythonu;
+ language plpython3u;
  
  select sort_schema.has_sortmethod('explain analyze select * from generate_series(1, 100) g order by g limit 100;');
  has_sortmethod 

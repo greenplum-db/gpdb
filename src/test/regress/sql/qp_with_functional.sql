@@ -36,7 +36,7 @@
 -- end_matchsubs
 
 -- start_ignore
-CREATE LANGUAGE plpythonu;
+CREATE LANGUAGE plpython3u;
 -- end_ignore
 
 CREATE TABLE foo AS SELECT i as a, i+1 as b from generate_series(1,10)i;
@@ -345,7 +345,7 @@ SELECT v1.a FROM v AS v1, v as v2 WHERE v1.a = v2.b)OUTERFOO ORDER BY 1", 5)
         val = rv[i]["a"]
         id.append(val)
     return id
-$$ LANGUAGE plpythonu READS SQL DATA;
+$$ LANGUAGE plpython3u READS SQL DATA;
 
 WITH v(a, b) AS (SELECT a,b FROM foo WHERE b < 5)
 SELECT * from v where b in ( select * from cte_func3()) ORDER BY 1;

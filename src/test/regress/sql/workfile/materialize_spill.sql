@@ -2,7 +2,7 @@ create schema materialize_spill;
 set search_path to materialize_spill;
 
 -- start_ignore
-create language plpythonu;
+create language plpython3u;
 -- end_ignore
 
 -- Helper function to verify that a plan spilled to disk. For each node
@@ -24,7 +24,7 @@ for i in range(len(rv)):
         result.append(workfile_created)
 return result
 $$
-language plpythonu;
+language plpython3u;
 
 -- Run a query that contains a Materialize node that spills to disk.
 --

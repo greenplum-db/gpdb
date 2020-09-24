@@ -4,7 +4,7 @@ create schema qp_query_execution;
 set search_path to qp_query_execution;
 
 -- count number of certain operators in a given plan
-create language plpythonu;
+create language plpython3u;
 create or replace function qx_count_operator(query text, planner_operator text, optimizer_operator text) returns int as
 $$
 rv = plpy.execute('EXPLAIN '+ query)
@@ -16,7 +16,7 @@ if optimizer >= 0:
 else:
     return plan.count(planner_operator)
 $$
-language plpythonu;
+language plpython3u;
 
 drop table if exists tmp1;
 -- end_ignore

@@ -1,7 +1,7 @@
 -- Scenario for validating mirror PANIC immediately on truncate record replay
 -- if file is missing.
 -- start_ignore
-create language plpythonu;
+create language plpython3u;
 -- end_ignore
 
 -- helper functions
@@ -22,7 +22,7 @@ $$
   else:
     plpy.info('changing file permission to readonly')
   os.chmod(path, stat.S_IRUSR);
-$$ LANGUAGE plpythonu;
+$$ LANGUAGE plpython3u;
 
 CREATE or REPLACE FUNCTION wait_for_replication_replay (retries int) RETURNS bool AS
 $$

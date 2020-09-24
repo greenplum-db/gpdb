@@ -4,7 +4,7 @@
 
 -- start_ignore
 -- count number of certain operators in a given plan
-create language plpythonu;
+create language plpython3u;
 create or replace function ow_count_operator(query text, operator text) returns int as
 $$
 rv = plpy.execute('EXPLAIN '+ query)
@@ -16,7 +16,7 @@ for i in range(len(rv)):
         result = result+1
 return result
 $$
-language plpythonu;
+language plpython3u;
 
 drop table ow_customer;
 drop table ow_vendor;

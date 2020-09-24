@@ -1869,7 +1869,7 @@ drop table can_set_tag_target;
 drop table can_set_tag_audit;
 
 -- start_ignore
-create language plpythonu;
+create language plpython3u;
 -- end_ignore
 
 -- Checking if ORCA uses parser's canSetTag for CREATE TABLE AS SELECT
@@ -1878,7 +1878,7 @@ create or replace function canSetTag_Func(x int) returns int as $$
         return 0
     else:
         return x * 3
-$$ language plpythonu;
+$$ language plpython3u;
 
 create table canSetTag_input_data (domain integer, class integer, attr text, value integer)
    distributed by (domain);

@@ -4,8 +4,8 @@ set search_path=bfv_partition_plans;
 -- Initial setup for all the partitioning test for this suite
 --
 -- start_ignore
-create language plpythonu;
-ERROR:  language "plpythonu" already exists
+create language plpython3u;
+ERROR:  language "plpython3u" already exists
 -- end_ignore
 create or replace function count_operator(query text, operator text) returns int as
 $$
@@ -18,7 +18,7 @@ for i in range(len(rv)):
         result = result+1
 return result
 $$
-language plpythonu;
+language plpython3u;
 create or replace function find_operator(query text, operator_name text) returns text as
 $$
 rv = plpy.execute('EXPLAIN ' + query)
@@ -31,7 +31,7 @@ for i in range(len(rv)):
         break
 return result
 $$
-language plpythonu;
+language plpython3u;
 -- Test UPDATE that moves row from one partition to another. The partitioning
 -- key is also the distribution key in this case.
 create table mpp3061 (i int) partition by range(i) (start(1) end(5) every(1));

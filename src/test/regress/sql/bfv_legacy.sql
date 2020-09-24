@@ -3,12 +3,12 @@
 --
 
 -- The helper functions are written in python.
-create or replace language plpythonu;
+create or replace language plpython3u;
 
 -- While we're at it, test that CREATE OR REPLACE LANGUAGE works when
 -- the language exists already (we had a little bug at one point, where
 -- the "OR REPLACE" was not dispatched to segments, and this failed)
-create or replace language plpythonu;
+create or replace language plpython3u;
 
 --start_ignore
 drop schema if exists bfv_legacy cascade;
@@ -25,7 +25,7 @@ first_line = rv[0]['QUERY PLAN']
 row_width = int(first_line[first_line.find('width=')+6:first_line.rfind(')')])
 return row_width > -1
 $$
-language plpythonu;
+language plpython3u;
 
 create or replace function count_operator(explain_query text, op_name text) returns int as
 $$
@@ -37,7 +37,7 @@ for i in range(len(rv)):
         result = result+1
 return result
 $$
-language plpythonu;
+language plpython3u;
 
 --
 -- aggregate width should be non-zero

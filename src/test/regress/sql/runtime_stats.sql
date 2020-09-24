@@ -19,7 +19,7 @@ for i in range(len(rv)):
          result = 1
 return result
 $$
-language plpythonu;
+language plpython3u;
 
 
 -- Force Sort operator to spill workfiles and examine if stats are correct

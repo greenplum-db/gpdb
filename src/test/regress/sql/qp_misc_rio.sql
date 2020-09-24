@@ -5,7 +5,7 @@
 -- start_ignore
 create schema qp_misc_rio;
 
-CREATE LANGUAGE plpythonu;
+CREATE LANGUAGE plpython3u;
 -- end_ignore
 set search_path to qp_misc_rio;
 
@@ -207,7 +207,7 @@ FROM testtable0006 GROUP BY s5 order by s5;
 
 
 
-CREATE FUNCTION t18_pytest() RETURNS VOID LANGUAGE plpythonu AS $$
+CREATE FUNCTION t18_pytest() RETURNS VOID LANGUAGE plpython3u AS $$
   plpy.execute("SHOW client_min_messages")
 $$;
 
@@ -215,7 +215,7 @@ SELECT t18_pytest();
 
 DROP FUNCTION t18_pytest();
 
-CREATE FUNCTION t18_pytest() RETURNS VARCHAR LANGUAGE plpythonu AS $$
+CREATE FUNCTION t18_pytest() RETURNS VARCHAR LANGUAGE plpython3u AS $$
   return plpy.execute("SELECT setting FROM pg_settings WHERE name='client_min_messages'")[0]['setting']
 $$;
 
@@ -267,7 +267,7 @@ CREATE OR REPLACE FUNCTION func_array_argument_plpythonu(arg FLOAT8[])
 RETURNS FLOAT8
 AS $$
     return arg[0];
-$$ LANGUAGE plpythonu;
+$$ LANGUAGE plpython3u;
 
 SELECT func_array_argument_plpythonu('{1,2,3}');
 
@@ -387,7 +387,7 @@ CREATE OR REPLACE FUNCTION func_plpythonu(n INT) RETURNS SETOF testdata_in
 AS $$
         sqlstm = "SELECT * FROM testdata_in WHERE c1 <= %d ORDER BY c1;" % n
         return plpy.execute(sqlstm);
-$$ LANGUAGE plpythonu;
+$$ LANGUAGE plpython3u;
 
 INSERT INTO testdata_in SELECT * FROM func_plpythonu(2);
 
@@ -403,7 +403,7 @@ AS $$
      for i in range(0, x):
          plpy.execute('INSERT INTO tbl_plpythonu VALUES(%d)' % i);
      return plpy.execute('SELECT COUNT(*) AS col FROM tbl_plpythonu;')[0]['col']
- $$ LANGUAGE plpythonu;
+ $$ LANGUAGE plpython3u;
 
 
 SELECT func_plpythonu2(200);

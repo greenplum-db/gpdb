@@ -421,7 +421,7 @@ for root, directories, filenames in os.walk('base/pgsql_tmp'):
   for dir in directories:
     dirNum += 1
 return '{} files and {} directories'.format(fileNum, dirNum)
-$$ language plpythonu;
+$$ language plpython3u;
 CREATE OR REPLACE FUNCTION get_country()
  RETURNS TABLE (
   country_id integer,

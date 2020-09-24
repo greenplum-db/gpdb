@@ -356,18 +356,18 @@ select count(foo.*) from
 --
 
 -- start_ignore
-create language plpythonu;
+create language plpython3u;
 --end_ignore
 
 select count(foo.*) 
 from (
       select oid, lanname, lanplcallfoid, lanvalidator
       from pg_language
-      where lanname='plpythonu'
+      where lanname='plpython3u'
       union
       select oid, lanname, lanplcallfoid, lanvalidator
       from gp_dist_random('pg_language')
-      where lanname='plpythonu' ) foo;
+      where lanname='plpython3u' ) foo;
 
 --
 -- pg_rewrite

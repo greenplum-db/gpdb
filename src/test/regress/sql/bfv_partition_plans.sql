@@ -5,7 +5,7 @@ set search_path=bfv_partition_plans;
 -- Initial setup for all the partitioning test for this suite
 --
 -- start_ignore
-create language plpythonu;
+create language plpython3u;
 -- end_ignore
 
 create or replace function count_operator(query text, operator text) returns int as
@@ -19,7 +19,7 @@ for i in range(len(rv)):
         result = result+1
 return result
 $$
-language plpythonu;
+language plpython3u;
 
 create or replace function find_operator(query text, operator_name text) returns text as
 $$
@@ -33,7 +33,7 @@ for i in range(len(rv)):
         break
 return result
 $$
-language plpythonu;
+language plpython3u;
 
 
 -- Test UPDATE that moves row from one partition to another. The partitioning

@@ -2430,7 +2430,7 @@ SELECT * FROM multiset_5( TABLE( SELECT 1::integer, 'hello'::text) ) as tf;
 -- ============================================
 -- start_ignore
 -- These may have been created by previous test
-create language plpythonu;
+create language plpython3u;
 -- end_ignore
 CREATE FUNCTION tf_sql(anytable) returns int AS $$ SELECT 1 $$ language sql CONTAINS SQL;
 ERROR:  SQL functions cannot have arguments of type anytable
@@ -2440,7 +2440,7 @@ BEGIN
 END;
 $$ language plpgsql NO SQL;
 ERROR:  PL/pgSQL functions cannot accept type anytable
-CREATE FUNCTION tf_python(anytable) returns int AS $$ return 1 $$ language plpythonu NO SQL;
+CREATE FUNCTION tf_python(anytable) returns int AS $$ return 1 $$ language plpython3u NO SQL;
 ERROR:  PL/Python functions cannot accept type anytable
 -- ====================================
 -- Test support of dynamic return types (aka the DESCRIBE callback)

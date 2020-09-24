@@ -2312,7 +2312,7 @@ drop function ZeroFunc(int) cascade;
 NOTICE:  drop cascades to index mytable_idx1
 drop table mytable cascade;
 -- start_ignore
-create language plpythonu;
+create language plpython3u;
 -- end_ignore
 -- @description Tests for static partition selection (MPP-24709, GPSQL-2879)
 -- GPDB_12_MERGE_FIXME: this function extract the number such as [5,10] out of
@@ -2348,7 +2348,7 @@ result[0] = selected
 result[1] = out_of
 return result
 $$
-language plpythonu;
+language plpython3u;
 drop table if exists partprune_foo;
 NOTICE:  table "partprune_foo" does not exist, skipping
 create table partprune_foo(a int, b int, c int) partition by range (b) (start (1) end (101) every (10));

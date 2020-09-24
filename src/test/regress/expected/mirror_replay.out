@@ -1,7 +1,7 @@
 -- Scenario for validating mirror PANIC immediately on truncate record replay
 -- if file is missing.
 -- start_ignore
-create language plpythonu;
+create language plpython3u;
 -- end_ignore
 -- helper functions
 CREATE FUNCTION rel_filepaths_on_segments(regclass) RETURNS TABLE(gp_segment_id int, filepath text)
@@ -20,7 +20,7 @@ $$
   else:
     plpy.info('changing file permission to readonly')
   os.chmod(path, stat.S_IRUSR);
-$$ LANGUAGE plpythonu;
+$$ LANGUAGE plpython3u;
 CREATE or REPLACE FUNCTION wait_for_replication_replay (retries int) RETURNS bool AS
 $$
 declare

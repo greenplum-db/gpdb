@@ -1241,7 +1241,8 @@ select * from t1 where a in
     DISTRIBUTED BY (a, e);
 
 -- start_ignore
-create language plpythonu;
+create language plpython3u;
+-- end_ignore
 
 create or replace function find_operator(query text, operator_name text) returns text as
 $$
@@ -1255,8 +1256,7 @@ for i in range(len(rv)):
         break
 return result
 $$
-language plpythonu;
--- end_ignore
+language plpython3u;
 
 -- ETF sub-query contains join table / view
 -- Table t1, t2 are distributed by column a

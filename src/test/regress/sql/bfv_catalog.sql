@@ -3,7 +3,7 @@ set search_path=bfv_catalog;
 
 -- count number of certain operators in a given plan
 -- start_ignore
-create language plpythonu;
+create language plpython3u;
 -- end_ignore
 
 create or replace function count_operator(query text, operator text) returns int as
@@ -17,7 +17,7 @@ for i in range(len(rv)):
         result = result+1
 return result
 $$
-language plpythonu;
+language plpython3u;
 
 --
 -- Testing queries with subqueries with nested scalar functions

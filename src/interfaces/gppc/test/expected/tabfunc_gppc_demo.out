@@ -2822,7 +2822,8 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
     CREATE TABLE t3 (a int, b int, c int, d int, e text)
     DISTRIBUTED BY (a, e);
 -- start_ignore
-create language plpythonu;
+create language plpython3u;
+-- end_ignore
 create or replace function find_operator(query text, operator_name text) returns text as
 $$
 rv = plpy.execute(query)
@@ -2835,8 +2836,7 @@ for i in range(len(rv)):
         break
 return result
 $$
-language plpythonu;
--- end_ignore
+language plpython3u;
 -- ETF sub-query contains join table / view
 -- Table t1, t2 are distributed by column a
 -- Table t3, t5 are distributed by columns a and e

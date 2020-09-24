@@ -1,10 +1,10 @@
 -- start_ignore
-create language plpythonu;
+create language plpython3u;
 -- end_ignore
 
 --list all database oid relevant directories in all node(master, segments, mirrors, etc.)
 CREATE OR REPLACE FUNCTION db_dirs(dboid oid) RETURNS setof text
-  STRICT STABLE LANGUAGE plpythonu
+  STRICT STABLE LANGUAGE plpython3u
 as $$
 import os
 bash_cmd = "find " + os.getcwd() + "/../../ " + "-name %d -type d"

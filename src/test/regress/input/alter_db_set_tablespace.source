@@ -21,7 +21,7 @@ AS '@abs_builddir@/regress.so', 'get_tablespace_version_directory_name'
     LANGUAGE C;
 
 -- start_ignore
-CREATE LANGUAGE plpythonu;
+CREATE LANGUAGE plpython3u;
 -- end_ignore
 
 CREATE OR REPLACE FUNCTION setup_tablespace_location_dir_for_test(tablespace_location_dir text) RETURNS VOID AS $$
@@ -34,7 +34,7 @@ except OSError:
     plpy.debug(traceback.format_exc())
     plpy.debug('failed to remove tablespace location directory: %s' % (tablespace_location_dir))
 os.mkdir(tablespace_location_dir)
-$$ LANGUAGE plpythonu;
+$$ LANGUAGE plpython3u;
 
 \set adst_source_tablespace_location @testtablespace@/adst_source
 \set adst_destination_tablespace_location @testtablespace@/adst_dest
@@ -63,12 +63,12 @@ CREATE OR REPLACE FUNCTION list_db_tablespace(database_name text, tablespace_nam
 $$ LANGUAGE sql;
 
 -- start_ignore
-CREATE LANGUAGE plpythonu;
+CREATE LANGUAGE plpython3u;
 -- end_ignore
 
 CREATE OR REPLACE FUNCTION stat_db_objects(datname text, spcname text)
     RETURNS TABLE (dbid int2, relfilenode_dboid_relative_path text, size int)
-    VOLATILE LANGUAGE plpythonu
+    VOLATILE LANGUAGE plpython3u
 AS
 $fn$
 import os
