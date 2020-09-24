@@ -290,8 +290,9 @@ notifyCommittedDtxTransactionIsNeeded(void)
 {
 	if (DistributedTransactionContext != DTX_CONTEXT_QD_DISTRIBUTED_CAPABLE)
 	{
-		elog(DTM_DEBUG5, "notifyCommittedDtxTransaction nothing to do (DistributedTransactionContext = '%s')",
-			 DtxContextToString(DistributedTransactionContext));
+		ereport(DTM_DEBUG5,
+				(errmsg("notifyCommittedDtxTransaction nothing to do (DistributedTransactionContext = '%s')",
+						DtxContextToString(DistributedTransactionContext))));
 		return false;
 	}
 
@@ -416,8 +417,9 @@ doPrepareTransaction(void)
 
 	CHECK_FOR_INTERRUPTS();
 
-	elog(DTM_DEBUG5, "doPrepareTransaction entering in state = %s",
-		 DtxStateToString(MyTmGxactLocal->state));
+	ereport(DTM_DEBUG5,
+			(errmsg("doPrepareTransaction entering in state = %s",
+					DtxStateToString(MyTmGxactLocal->state))));
 
 	/*
 	 * Don't allow a cancel while we're dispatching our prepare (we wrap our
@@ -428,7 +430,9 @@ doPrepareTransaction(void)
 	Assert(MyTmGxactLocal->state == DTX_STATE_ACTIVE_DISTRIBUTED);
 	setCurrentDtxState(DTX_STATE_PREPARING);
 
-	elog(DTM_DEBUG5, "doPrepareTransaction moved to state = %s", DtxStateToString(MyTmGxactLocal->state));
+	ereport(DTM_DEBUG5,
+			(errmsg("doPrepareTransaction moved to state = %s",
+					DtxStateToString(MyTmGxactLocal->state))));
 
 	Assert(MyTmGxactLocal->dtxSegments != NIL);
 	succeeded = currentDtxDispatchProtocolCommand(DTX_PROTOCOL_COMMAND_PREPARE, true);
@@ -454,7 +458,9 @@ doPrepareTransaction(void)
 
 	SIMPLE_FAULT_INJECTOR("dtm_broadcast_prepare");
 
-	elog(DTM_DEBUG5, "doPrepareTransaction leaving in state = %s", DtxStateToString(MyTmGxactLocal->state));
+	ereport(DTM_DEBUG5,
+			(errmsg("doPrepareTransaction leaving in state = %s",
+					DtxStateToString(MyTmGxactLocal->state))));
 }
 
 /*
@@ -465,7 +471,9 @@ doInsertForgetCommitted(void)
 {
 	TMGXACT_LOG gxact_log;
 
-	elog(DTM_DEBUG5, "doInsertForgetCommitted entering in state = %s", DtxStateToString(MyTmGxactLocal->state));
+	ereport(DTM_DEBUG5,
+			(errmsg("doInsertForgetCommitted entering in state = %s",
+					DtxStateToString(MyTmGxactLocal->state))));
 
 	setCurrentDtxState(DTX_STATE_INSERTING_FORGET_COMMITTED);
 
@@ -486,7 +494,9 @@ doNotifyingOnePhaseCommit(void)
 	if (MyTmGxactLocal->dtxSegments == NIL)
 		return;
 
-	elog(DTM_DEBUG5, "doNotifyingOnePhaseCommit entering in state = %s", DtxStateToString(MyTmGxactLocal->state));
+	ereport(DTM_DEBUG5,
+			(errmsg("doNotifyingOnePhaseCommit entering in state = %s",
+					DtxStateToString(MyTmGxactLocal->state))));
 
 	Assert(MyTmGxactLocal->state == DTX_STATE_ONE_PHASE_COMMIT);
 	setCurrentDtxState(DTX_STATE_NOTIFYING_ONE_PHASE_COMMIT);
@@ -512,7 +522,9 @@ doNotifyingCommitPrepared(void)
 	time_t		retry_time_start;
 	bool		retry_timedout;
 
-	elog(DTM_DEBUG5, "doNotifyingCommitPrepared entering in state = %s", DtxStateToString(MyTmGxactLocal->state));
+	ereport(DTM_DEBUG5,
+			(errmsg("doNotifyingCommitPrepared entering in state = %s",
+					DtxStateToString(MyTmGxactLocal->state))));
 
 	Assert(MyTmGxactLocal->state == DTX_STATE_INSERTED_COMMITTED);
 	setCurrentDtxState(DTX_STATE_NOTIFYING_COMMIT_PREPARED);
@@ -710,7 +722,9 @@ doNotifyingAbort(void)
 	volatile int savedInterruptHoldoffCount;
 	MemoryContext oldcontext = CurrentMemoryContext;
 
-	elog(DTM_DEBUG5, "doNotifyingAborted entering in state = %s", DtxStateToString(MyTmGxactLocal->state));
+	ereport(DTM_DEBUG5,
+			(errmsg("doNotifyingAborted entering in state = %s",
+					DtxStateToString(MyTmGxactLocal->state))));
 
 	switch (MyTmGxactLocal->state)
 	{
@@ -817,8 +831,9 @@ prepareDtxTransaction(void)
 
 	if (DistributedTransactionContext != DTX_CONTEXT_QD_DISTRIBUTED_CAPABLE)
 	{
-		elog(DTM_DEBUG5, "prepareDtxTransaction nothing to do (DistributedTransactionContext = '%s')",
-			 DtxContextToString(DistributedTransactionContext));
+		ereport(DTM_DEBUG5,
+				(errmsg("prepareDtxTransaction nothing to do (DistributedTransactionContext = '%s')",
+						DtxContextToString(DistributedTransactionContext))));
 		Assert(Gp_role != GP_ROLE_DISPATCH || MyTmGxact->gxid == InvalidDistributedTransactionId);
 		return;
 	}
@@ -849,9 +864,9 @@ prepareDtxTransaction(void)
 		return;
 	}
 
-	elog(DTM_DEBUG5,
-		 "prepareDtxTransaction called with state = %s",
-		 DtxStateToString(MyTmGxactLocal->state));
+	ereport(DTM_DEBUG5,
+			(errmsg("prepareDtxTransaction called with state = %s",
+					DtxStateToString(MyTmGxactLocal->state))));
 
 	Assert(MyTmGxactLocal->state == DTX_STATE_ACTIVE_DISTRIBUTED);
 	Assert(MyTmGxact->gxid > FirstDistributedTransactionId);
@@ -868,8 +883,9 @@ rollbackDtxTransaction(void)
 {
 	if (DistributedTransactionContext != DTX_CONTEXT_QD_DISTRIBUTED_CAPABLE)
 	{
-		elog(DTM_DEBUG5, "rollbackDtxTransaction nothing to do (DistributedTransactionContext = '%s')",
-			 DtxContextToString(DistributedTransactionContext));
+		ereport(DTM_DEBUG5,
+				(errmsg("rollbackDtxTransaction nothing to do (DistributedTransactionContext = '%s')",
+						DtxContextToString(DistributedTransactionContext))));
 		return;
 	}
 	if (!isCurrentDtxActivated())
@@ -939,8 +955,9 @@ rollbackDtxTransaction(void)
 		case DTX_STATE_INSERTED_FORGET_COMMITTED:
 		case DTX_STATE_RETRY_COMMIT_PREPARED:
 		case DTX_STATE_RETRY_ABORT_PREPARED:
-			elog(DTM_DEBUG5, "rollbackDtxTransaction dtx state \"%s\" not expected here",
-				 DtxStateToString(MyTmGxactLocal->state));
+			ereport(DTM_DEBUG5,
+					(errmsg("rollbackDtxTransaction dtx state \"%s\" not expected here",
+							DtxStateToString(MyTmGxactLocal->state))));
 			return;
 
 		default:
@@ -1092,10 +1109,10 @@ mppTxnOptions(bool needDtx)
 {
 	int			options = 0;
 
-	elog(DTM_DEBUG5,
-		 "mppTxnOptions DefaultXactIsoLevel = %s, DefaultXactReadOnly = %s, XactIsoLevel = %s, XactReadOnly = %s.",
-		 IsoLevelAsUpperString(DefaultXactIsoLevel), (DefaultXactReadOnly ? "true" : "false"),
-		 IsoLevelAsUpperString(XactIsoLevel), (XactReadOnly ? "true" : "false"));
+	ereport(DTM_DEBUG5,
+			(errmsg("mppTxnOptions DefaultXactIsoLevel = %s, DefaultXactReadOnly = %s, XactIsoLevel = %s, XactReadOnly = %s.",
+					IsoLevelAsUpperString(DefaultXactIsoLevel), (DefaultXactReadOnly ? "true" : "false"),
+					IsoLevelAsUpperString(XactIsoLevel), (XactReadOnly ? "true" : "false"))));
 
 	if (needDtx)
 		options |= GP_OPT_NEED_DTX;
@@ -1115,11 +1132,11 @@ mppTxnOptions(bool needDtx)
 	if (isCurrentDtxActivated() && MyTmGxactLocal->explicitBeginRemembered)
 		options |= GP_OPT_EXPLICT_BEGIN;
 
-	elog(DTM_DEBUG5,
-		 "mppTxnOptions txnOptions = 0x%x, needDtx = %s, explicitBegin = %s, isoLevel = %s, readOnly = %s.",
-		 options,
-		 (isMppTxOptions_NeedDtx(options) ? "true" : "false"), (isMppTxOptions_ExplicitBegin(options) ? "true" : "false"),
-		 IsoLevelAsUpperString(mppTxOptions_IsoLevel(options)), (isMppTxOptions_ReadOnly(options) ? "true" : "false"));
+	ereport(DTM_DEBUG5,
+			(errmsg("mppTxnOptions txnOptions = 0x%x, needDtx = %s, explicitBegin = %s, isoLevel = %s, readOnly = %s.",
+					options,
+					(isMppTxOptions_NeedDtx(options) ? "true" : "false"), (isMppTxOptions_ExplicitBegin(options) ? "true" : "false"),
+					IsoLevelAsUpperString(mppTxOptions_IsoLevel(options)), (isMppTxOptions_ReadOnly(options) ? "true" : "false"))));
 
 	return options;
 
@@ -1444,9 +1461,9 @@ getNextDistributedXactStatus(TMGALLXACTSTATUS *allDistributedXactStatus, TMGXACT
 void
 insertingDistributedCommitted(void)
 {
-	elog(DTM_DEBUG5,
-		 "insertingDistributedCommitted entering in state = %s",
-		 DtxStateToString(MyTmGxactLocal->state));
+	ereport(DTM_DEBUG5,
+			(errmsg("insertingDistributedCommitted entering in state = %s",
+					DtxStateToString(MyTmGxactLocal->state))));
 
 	Assert(MyTmGxactLocal->state == DTX_STATE_PREPARED);
 	setCurrentDtxState(DTX_STATE_INSERTING_COMMITTED);
@@ -1635,8 +1652,9 @@ setupRegularDtxContext(void)
 			break;
 	}
 
-	elog(DTM_DEBUG5, "setupRegularDtxContext leaving with DistributedTransactionContext = '%s'.",
-		 DtxContextToString(DistributedTransactionContext));
+	ereport(DTM_DEBUG5,
+			(errmsg("setupRegularDtxContext leaving with DistributedTransactionContext = '%s'.",
+					DtxContextToString(DistributedTransactionContext))));
 }
 
 /**
@@ -1752,15 +1770,16 @@ setupQEDtxContext(DtxContextInfo *dtxContextInfo)
 
 		default:
 			Assert(DistributedTransactionContext == DTX_CONTEXT_LOCAL_ONLY);
-			elog(DTM_DEBUG5,
-				 "setupQEDtxContext leaving context = 'Local Only' for Gp_role = %s", role_to_string(Gp_role));
+			ereport(DTM_DEBUG5,
+					(errmsg("setupQEDtxContext leaving context = 'Local Only' for Gp_role = %s",
+							role_to_string(Gp_role))));
 			return;
 	}
 
-	elog(DTM_DEBUG5,
-		 "setupQEDtxContext intermediate result: isEntryDbSingleton = %s, isWriterQE = %s, isReaderQE = %s.",
-		 (isEntryDbSingleton ? "true" : "false"),
-		 (isWriterQE ? "true" : "false"), (isReaderQE ? "true" : "false"));
+	ereport(DTM_DEBUG5,
+			(errmsg("setupQEDtxContext intermediate result: isEntryDbSingleton = %s, isWriterQE = %s, isReaderQE = %s.",
+					(isEntryDbSingleton ? "true" : "false"),
+					(isWriterQE ? "true" : "false"), (isReaderQE ? "true" : "false"))));
 
 	/*
 	 * Copy to our QE global variable.
@@ -1890,8 +1909,9 @@ setupQEDtxContext(DtxContextInfo *dtxContextInfo)
 			break;
 	}
 
-	elog(DTM_DEBUG5, "setupQEDtxContext final result: DistributedTransactionContext = '%s'.",
-		 DtxContextToString(DistributedTransactionContext));
+	ereport(DTM_DEBUG5,
+			(errmsg("setupQEDtxContext final result: DistributedTransactionContext = '%s'.",
+				DtxContextToString(DistributedTransactionContext))));
 
 	if (haveDistributedSnapshot)
 	{
@@ -1923,12 +1943,12 @@ finishDistributedTransactionContext(char *debugCaller, bool aborted)
 	}
 
 	gxid = getDistributedTransactionId();
-	elog(DTM_DEBUG5,
-		 "finishDistributedTransactionContext called to change DistributedTransactionContext from %s to %s (caller = %s, gxid = %u)",
-		 DtxContextToString(DistributedTransactionContext),
-		 DtxContextToString(DTX_CONTEXT_LOCAL_ONLY),
-		 debugCaller,
-		 gxid);
+	ereport(DTM_DEBUG5,
+			(errmsg("finishDistributedTransactionContext called to change DistributedTransactionContext from %s to %s (caller = %s, gxid = %u)",
+					DtxContextToString(DistributedTransactionContext),
+					DtxContextToString(DTX_CONTEXT_LOCAL_ONLY),
+					debugCaller,
+					gxid)));
 
 	setDistributedTransactionContext(DTX_CONTEXT_LOCAL_ONLY);
 
@@ -2140,9 +2160,9 @@ performDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 						  const char *gid,
 						  DtxContextInfo *contextInfo)
 {
-	elog(DTM_DEBUG5,
-		 "performDtxProtocolCommand called with DTX protocol = %s, segment distribute transaction context: '%s'",
-		 DtxProtocolCommandToString(dtxProtocolCommand), DtxContextToString(DistributedTransactionContext));
+	ereport(DTM_DEBUG5,
+			(errmsg("performDtxProtocolCommand called with DTX protocol = %s, segment distribute transaction context: '%s'",
+					DtxProtocolCommandToString(dtxProtocolCommand), DtxContextToString(DistributedTransactionContext))));
 
 	switch (dtxProtocolCommand)
 	{
