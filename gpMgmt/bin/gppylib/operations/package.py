@@ -1035,7 +1035,7 @@ class SyncPackages(Operation):
 
         if install_package_set:
             logger.info(
-                'The following packages will be installed on %s: %s' % (self.host, ', '.join(install_package_set)))
+                'The following packages will be installed on %s: %s' % (self.host, ', '.join(sorted(install_package_set))))
             for package in install_package_set:
                 logger.debug('copying %s to %s' % (package, self.host))
                 dstFile = os.path.join(GPHOME, package)
@@ -1051,7 +1051,7 @@ class SyncPackages(Operation):
 
         if uninstall_package_set:
             logger.info(
-                'The following packages will be uninstalled on %s: %s' % (self.host, ', '.join(uninstall_package_set)))
+                'The following packages will be uninstalled on %s: %s' % (self.host, ', '.join(sorted(uninstall_package_set))))
             for package in uninstall_package_set:
                 if platform.linux_distribution()[0] == 'Ubuntu':
                     RemoteOperation(UninstallDebPackageLocally(package), self.host).run()

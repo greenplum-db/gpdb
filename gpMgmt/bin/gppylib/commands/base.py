@@ -499,7 +499,7 @@ class RemoteExecutionContext(LocalExecutionContext):
         for k in keys:
             cmd.cmdStr = "%s=%s && %s" % (k, cmd.propagate_env_map[k], cmd.cmdStr)
 
-        # Escape \ and " for remote execution otherwise it interferes with ssh
+        # Escape \ and  " for remote execution
         cmd.cmdStr = cmd.cmdStr.replace('\\','\\\\').replace('"', '\\"')
         cmd.cmdStr = "ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 " \
                      "{targethost} \"{gphome} {cmdstr}\"".format(targethost=self.targetHost,

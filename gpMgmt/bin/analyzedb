@@ -1209,6 +1209,8 @@ def validate_tables(conn, tablenames):
         batch = tablenames[curr_batch * batch_size:(curr_batch + 1) * batch_size]
 
         oid_str = ','.join(map((lambda x: "('%s')" % pg.escape_string(x)), batch))
+        if not oid_str:
+            break
 
         rows = run_sql(conn, VALIDATE_TABLE_NAMES_SQL % oid_str)
         curr_batch += 1

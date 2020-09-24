@@ -194,8 +194,8 @@ class GpStart(GpTestCase):
         up, down = gpstart._prepare_segment_start()
 
         # The master and standby should not be accounted for in these lists.
-        self.assertItemsEqual(up, [primary1, mirror0])
-        self.assertItemsEqual(down, [primary0, mirror1])
+        self.assertCountEqual(up, [primary1, mirror0])
+        self.assertCountEqual(down, [primary0, mirror1])
 
     @patch("gppylib.commands.pg.PgControlData.run")
     @patch("gppylib.commands.pg.PgControlData.get_value", return_value="2")

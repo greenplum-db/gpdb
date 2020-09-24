@@ -141,6 +141,8 @@ def check_stdout_msg(context, msg, escapeStr = False):
     pat = re.compile(msg)
 
     actual = context.stdout_message
+    if type(actual) is bytes:
+        actual = actual.decode()
 
     if not pat.search(actual):
         err_str = "Expected stdout string '%s' and found: '%s'" % (msg, actual)

@@ -166,7 +166,6 @@ class Connection(pgdb.Connection):
         # due to limitations in pg implementation. Wrap with with a
         # namedtuple for ease of use.
         def handle_notice(notice):
-            self._notices.append(notice)
             received = {}
             for attr in dir(notice):
                 if attr.startswith('__'):

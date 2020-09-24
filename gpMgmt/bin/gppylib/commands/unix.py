@@ -586,7 +586,7 @@ class InterfaceAddrs(Command):
         grep = findCmdInPath('grep')
         awk = findCmdInPath('awk')
         cut = findCmdInPath('cut')
-        cmdStr = '%s|%s "inet "|%s -v "127.0.0"|%s \'{print \$2}\'|%s -d: -f2' % (ifconfig, grep, grep, awk, cut)
+        cmdStr = '%s|%s "inet "|%s -v "127.0.0"|%s \'{print $2}\'|%s -d: -f2' % (ifconfig, grep, grep, awk, cut)
         Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
     @staticmethod

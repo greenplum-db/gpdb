@@ -146,7 +146,7 @@ class GpCommandTestCase(GpTestCase):
         self.assertTrue(is_pid_postmaster(datadir, pid, remoteHost=remoteHost))
 
     @patch('gppylib.commands.gp.Command.run')
-    @patch('gppylib.commands.gp.Command.get_results', return_value=CommandResult(0, b"1234", b"", True, False))
+    @patch('gppylib.commands.gp.Command.get_results', return_value=CommandResult(0, b"gpadmin  1234     1  0 18:48 ?        00:00:00 /usr/local/greenplum-db-devel/bin/postgres -D /tmp -p", b"", True, False))
     def test_get_postmaster_pid_locally(self, mock1, mock2):
         self.assertEqual(get_postmaster_pid_locally('/tmp'), 1234)
 

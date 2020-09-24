@@ -250,7 +250,7 @@ class SyncPackagesTestCase(GpTestCase):
         self.assertEqual(self.make_remote_dir_mock.call_count, 1)
 
         log_messages = [args[1][0] for args in self.mock_logger.method_calls]
-        self.assertIn('The following packages will be uninstalled on localhost: zing.gppkg, ga.gppkg', log_messages)
+        self.assertIn('The following packages will be uninstalled on localhost: ga.gppkg, zing.gppkg', log_messages)
         self.assertNotIn('The packages on %s are consistent.' % hostname, log_messages)
 
 

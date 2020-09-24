@@ -45,18 +45,18 @@ DEFAULT_GPSTART_NUM_WORKERS=64
 RECOVERY_REWIND_APPNAME = '__gprecoverseg_pg_rewind__'
 
 def get_postmaster_pid_locally(datadir):
-    cmdStr = "ps -ef | grep postgres | grep -v grep | awk '{print $2}' | grep `cat %s/postmaster.pid | head -1` || echo -1" % (datadir)
+    cmdStr = "ps -ef | grep 'postgres -D %s' | grep -v grep" % (datadir)
     name = "get postmaster"
     cmd = Command(name, cmdStr)
     try:
         cmd.run(validateAfter=True)
         sout = cmd.get_results().stdout.lstrip(' ')
-        return int(sout.split()[0])
+        return int(sout.split()[1])
     except:
         return -1
 
 def getPostmasterPID(hostname, datadir):
-    cmdStr="ps -ef | grep postgres | grep -v grep | awk '{print $2}' | grep \\`cat %s/postmaster.pid | head -1\\` || echo -1" % (datadir)
+    cmdStr="ps -ef | grep 'postgres -D %s' | grep -v grep" % (datadir)
     name="get postmaster pid"
     cmd=Command(name,cmdStr,ctxt=REMOTE,remoteHost=hostname)
     try:
