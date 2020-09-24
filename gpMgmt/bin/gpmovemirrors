@@ -383,7 +383,7 @@ try:
                     entries.append("host all {username} {hostname} trust".format(username=unix.getUserName(), hostname=hostname))
                     entries.append("host replication {username} {hostname} trust".format(username=unix.getUserName(), hostname=hostname))
                 else:
-                    newMirror_ips = unix.InterfaceAddrs.remote('get mirror ips', newMirror_hostname)
+                    newMirror_ips = IfAddrs.list_addrs(newMirror_hostname)
                     for ip in newMirror_ips:
                         cidr_suffix = '/128' if ':' in ip else '/32'
                         cidr = ip + cidr_suffix

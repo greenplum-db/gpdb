@@ -9,7 +9,7 @@ from mock import MagicMock, Mock, mock_open, patch
 
 class InitStandbyTestCase(unittest.TestCase):
 
-    @patch('gppylib.operations.initstandby.unix.InterfaceAddrs.remote', return_value=['192.168.2.1', '192.168.1.1'])
+    @patch('gppylib.operations.initstandby.gp.IfAddrs.list_addrs', return_value=['192.168.2.1', '192.168.1.1'])
     @patch('gppylib.operations.initstandby.unix.UserId.local', return_value='all')
     def test_get_standby_pg_hba_info(self, m1, m2):
         expected = '# standby master host ip addresses\nhost\tall\tall\t192.168.2.1/32\ttrust\nhost\tall\tall\t192.168.1.1/32\ttrust\n'

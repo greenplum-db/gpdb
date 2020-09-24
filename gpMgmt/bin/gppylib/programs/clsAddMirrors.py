@@ -512,7 +512,7 @@ class GpAddMirrorsProgram:
                     if mirror_hostname != primary_hostname:
                         entries.append("host replication {username} {hostname} trust".format(username=unix.getUserName(), hostname=primary_hostname))
                 else:
-                    mirror_ips = unix.InterfaceAddrs.remote('get mirror ips', segmentPair.mirrorDB.getSegmentHostName())
+                    mirror_ips = gp.IfAddrs.list_addrs(segmentPair.mirrorDB.getSegmentHostName())
                     for ip in mirror_ips:
                         cidr_suffix = '/128' if ':' in ip else '/32'
                         cidr = ip + cidr_suffix

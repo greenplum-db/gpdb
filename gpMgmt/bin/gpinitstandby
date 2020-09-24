@@ -336,7 +336,7 @@ def check_and_start_standby():
 
 #-------------------------------------------------------------------------
 def get_standby_pg_hba_info(standby_host):
-    standby_ips = unix.InterfaceAddrs.remote('get standby ips', standby_host)
+    standby_ips = gp.IfAddrs.list_addrs(standby_host)
     current_user = unix.UserId.local('get userid')
     new_section = ['# standby master host ip addresses\n']
     for ip in standby_ips:
@@ -483,8 +483,8 @@ def update_pg_hba_conf(options, array):
     try:
         master_data_dir = array.master.getSegmentDataDirectory()
         pg_hba_path = os.path.join(master_data_dir, 'pg_hba.conf')
-        standby_ips = unix.InterfaceAddrs.remote('get standby ips', options.standby_host)
-        # InterfaceAddrs doesn't return local address, but if standby
+        standby_ips = gp.IfAddrs.list_addrs(options.standby_host)
+        # IfAddrs as called doesn't return local address, but if standby
         # will be on the same host, we should add it too.
         if array.master.getSegmentHostName() == options.standby_host:
             standby_ips.append('127.0.0.1')

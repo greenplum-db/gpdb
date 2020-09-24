@@ -841,7 +841,7 @@ class ModifyPgHbaConfSetting(Command):
                 hba_content += "\nhost all {username} {hostname} trust".format(username=username, hostname=address)
                 hba_content += "\nhost replication {username} {hostname} trust".format(username=username, hostname=address)
             else:
-                ips = InterfaceAddrs.remote('get mirror ips', address)
+                ips = IfAddrs.list_addrs(address)
                 for ip in ips:
                     cidr_suffix = '/128' if ':' in ip else '/32'
                     cidr = ip + cidr_suffix

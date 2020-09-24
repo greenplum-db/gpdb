@@ -7,7 +7,7 @@ from gppylib.gpparseopts import OptParser, OptChecker
 from gppylib.mainUtils import addStandardLoggingAndHelpOptions
 from collections import defaultdict
 from gppylib import gplog
-from gppylib.commands import unix
+from gppylib.commands import unix, gp
 from gppylib.commands.base import REMOTE, WorkerPool, Command
 from gppylib.mainUtils import ExceptionNoStackTraceNeeded
 from gppylib.operations import Operation
@@ -19,7 +19,7 @@ logger = gplog.get_default_logger()
 DEFAULT_BATCH_SIZE = 16
 
 def get_standby_pg_hba_info(standby_host, is_hba_hostnames=False):
-    standby_ips = unix.InterfaceAddrs.remote('get standby ips', standby_host)
+    standby_ips = gp.IfAddrs.list_addrs(standby_host)
     current_user = unix.UserId.local('get userid')
     new_section = ['# standby master host ip addresses\n']
     for ip in standby_ips:
