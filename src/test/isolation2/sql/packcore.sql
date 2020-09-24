@@ -91,9 +91,9 @@ stderr: {stderr}
     # 'packcore --version' should return 0
     check_call([packcore, '--version'])
 
-    cores = glob.glob('/tmp/core.*')
+    cores = glob.glob('/tmp/core.postgres.*')
     if not cores:
-        # no coredump found, skip the packcore tests
+        # no postgres coredump found, skip the packcore tests
         return
 
     corefile = cores[0]

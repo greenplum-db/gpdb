@@ -18,7 +18,7 @@ postgres = '{}/bin/postgres'.format(gphome) assert os.path.exists(postgres)
 packcore = '{}/sbin/packcore'.format(gphome) assert os.path.exists(packcore) 
 # 'packcore --help' should return 0 check_call([packcore, '--help']) check_call([packcore, '-h']) 
 # 'packcore --version' should return 0 check_call([packcore, '--version']) 
-cores = glob.glob('/tmp/core.*') if not cores: # no coredump found, skip the packcore tests return 
+cores = glob.glob('/tmp/core.postgres.*') if not cores: # no postgres coredump found, skip the packcore tests return 
 corefile = cores[0] corename = os.path.basename(corefile) tarball = 'packcore-{}.tgz'.format(corename) dirname = 'packcore-{}'.format(corename) 
 # 'packcore core' should work test_packcore([packcore, corefile]) 
 # 'packcore -b postgres core' should work test_packcore([packcore, '--binary={}'.format(postgres), corefile]) test_packcore([packcore, '--binary', postgres, corefile]) test_packcore([packcore, '-b', postgres, corefile]) $$;
