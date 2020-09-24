@@ -6,7 +6,7 @@ create schema sisc_mat_sort;
 set search_path to sisc_mat_sort;
 
 -- start_ignore
-create language plpythonu;
+create language plpython3u;
 -- end_ignore
 
 -- set workfile is created to true if all segment did it.
@@ -30,7 +30,7 @@ for i in range(len(rv)):
         result.append(cur_row)
 return result
 $$
-language plpythonu;
+language plpython3u;
 
 create table testsiscm (i1 int, i2 int, i3 int, i4 int);
 insert into testsiscm select i, i % 1000, i % 100000, i % 75 from

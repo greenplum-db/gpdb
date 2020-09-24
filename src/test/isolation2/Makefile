@@ -23,7 +23,7 @@ extended_protocol_test: extended_protocol_test.c
 	$(CC) $(CPPFLAGS) -I$(top_builddir)/src/interfaces/libpq -L$(GPHOME)/lib -L$(top_builddir)/src/interfaces/libpq  -o $@ $< -lpq
 
 test_python:
-	python helpers_test.py
+	python3 helpers_test.py
 
 pg_regress.o:
 	$(MAKE) -C $(top_builddir)/src/test/regress pg_regress.o

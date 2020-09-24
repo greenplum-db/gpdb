@@ -17,10 +17,7 @@ limitations under the License.
 
 import pg
 import os
-try:
-    import subprocess32 as subprocess
-except:
-    import subprocess
+import subprocess
 import re
 import multiprocessing
 import tempfile
@@ -97,7 +94,7 @@ class SQLIsolationExecutor(object):
             sp.do()
 
         def query(self, command):
-            print >>self.out_file
+            print(file=self.out_file)
             self.out_file.flush()
             if len(command.strip()) == 0:
                 return
@@ -108,10 +105,10 @@ class SQLIsolationExecutor(object):
             r = self.pipe.recv()
             if r is None:
                 raise Exception("Execution failed")
-            print >>self.out_file, r.rstrip()
+            print(r.rstrip(), file=self.out_file)
 
         def fork(self, command, blocking):
-            print >>self.out_file, " <waiting ...>"
+            print("  <waiting ...>", file=self.out_file)
             self.pipe.send((command, True))
 
             if blocking:
@@ -123,12 +120,12 @@ class SQLIsolationExecutor(object):
 
         def join(self):
             r = None
-            print >>self.out_file, " <... completed>"
+            print("  <... completed>", file=self.out_file)
             if self.has_open:
                 r = self.pipe.recv()
             if r is None:
                 raise Exception("Execution failed")
-            print >>self.out_file, r.rstrip()
+            print(r.rstrip(), file=self.out_file)
             self.has_open = False
 
         def stop(self):
@@ -138,7 +135,7 @@ class SQLIsolationExecutor(object):
                 raise Exception("Should not finish test case while waiting for results")
 
         def quit(self):
-            print >>self.out_file, "... <quitting>"
+            print(" ... <quitting>", file=self.out_file)
             self.stop()
         
         def terminate(self):
@@ -424,13 +421,13 @@ class SQLIsolationExecutor(object):
 
                 cmd_output = subprocess.Popen(sql.strip(), stderr=subprocess.STDOUT, stdout=subprocess.PIPE, shell=True)
                 stdout, _ = cmd_output.communicate()
-                print >> output_file
+                print(file=output_file)
                 if mode == '\\retcode':
-                    print >> output_file, '-- start_ignore'
-                print >> output_file, stdout
+                    print('-- start_ignore', file=output_file)
+                print(stdout.decode(), file=output_file)
                 if mode == '\\retcode':
-                    print >> output_file, '-- end_ignore'
-                    print >> output_file, '(exited with code {})'.format(cmd_output.returncode)
+                    print('-- end_ignore', file=output_file)
+                    print('(exited with code {})'.format(cmd_output.returncode), file=output_file)
             elif sql.startswith('include:'):
                 helper_file = parse_include_statement(sql)
 
@@ -485,9 +482,12 @@ class SQLIsolationExecutor(object):
         """
         try:
             command = ""
+            newline = False
             for line in sql_file:
-                #tinctest.logger.info("re.match: %s" %re.match(r"^\d+[q\\<]:$", line))
-                print >>output_file, line.strip(),
+                # this logic replicates the python2 behavior of a trailing comma at the end of print
+                # i.e. ''' print >>output_file, line.strip(), '''
+                print((" " if command and not newline else "") + line.strip(), end="", file=output_file)
+                newline = False
                 if line[0] == "!":
                     command_part = line # shell commands can use -- for multichar options like --include
                 elif re.match(r";.*--", line) or re.match(r"^--", line):
@@ -495,25 +495,26 @@ class SQLIsolationExecutor(object):
                 else:
                     command_part = line
                 if command_part == "" or command_part == "\n":
-                    print >>output_file 
+                    print(file=output_file) 
+                    newline = True
                 elif re.match(r".*;\s*$", command_part) or re.match(r"^\d+[q\\<]:$", line) or re.match(r"^-?\d+[SU][q\\<]:$", line):
                     command += command_part
                     try:
                         self.process_command(command, output_file)
                     except Exception as e:
-                        print >>output_file, "FAILED: ", e
+                        print("FAILED: ", e, file=output_file)
                     command = ""
                 else:
                     command += command_part
 
-            for process in self.processes.values():
+            for process in list(self.processes.values()):
                 process.stop()
         except:
-            for process in self.processes.values():
+            for process in list(self.processes.values()):
                 process.terminate()
             raise
         finally:
-            for process in self.processes.values():
+            for process in list(self.processes.values()):
                 process.terminate()
 
 class SQLIsolationTestCase:

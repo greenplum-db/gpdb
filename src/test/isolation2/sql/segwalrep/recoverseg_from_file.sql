@@ -24,7 +24,7 @@ returns void as $$
     f = open("/tmp/recover_config_file", "w")
     f.write(configStr)
     f.close()
-$$ language plpythonu;
+$$ language plpython3u;
 
 SELECT dbid, role, preferred_role, content, mode, status FROM gp_segment_configuration order by dbid;
 -- stop a primary in order to trigger a mirror promotion

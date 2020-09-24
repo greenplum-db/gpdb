@@ -1,4 +1,4 @@
-create or replace language plpythonu;
+create or replace language plpython3u;
 
 
 --
@@ -31,8 +31,8 @@ returns text as $$
     if proc.returncode == 0:
         return 'OK'
     else:
-        raise PgCtlError(stdout+'|'+stderr)
-$$ language plpythonu;
+        raise PgCtlError(stdout.decode()+'|'+stderr.decode())
+$$ language plpython3u;
 
 --
 -- pg_ctl_start:
@@ -51,8 +51,8 @@ returns text as $$
     opts = '-p %d' % (port)
     opts = opts + ' -c gp_role=execute'
     cmd = cmd + '-o "%s" start' % opts
-    return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace('.', '')
-$$ language plpythonu;
+    return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode().replace('.', '')
+$$ language plpython3u;
 
 
 --

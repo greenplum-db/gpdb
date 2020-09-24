@@ -5,7 +5,7 @@ DROP
 -- start_ignore
 DROP RESOURCE GROUP rg_dumpinfo_test;
 ERROR:  resource group "rg_dumpinfo_test" does not exist
-CREATE LANGUAGE plpythonu;
+CREATE LANGUAGE plpython3u;
 CREATE
 -- end_ignore
 
@@ -18,7 +18,7 @@ conn = pg.connect(dbname="postgres")
 r = conn.query("select count(*) from gp_segment_configuration where  role = 'p';") n = r.getresult()[0][0] 
 r = conn.query("select value from pg_resgroup_get_status_kv('dump');") json_text =  r.getresult()[0][0] json_obj = json.loads(json_text) 
 return validate(json_obj, n) 
-$$ LANGUAGE plpythonu;
+$$ LANGUAGE plpython3u;
 CREATE
 
 CREATE RESOURCE GROUP rg_dumpinfo_test WITH (concurrency=2, cpu_rate_limit=20, memory_limit=20);
@@ -72,5 +72,5 @@ DROP ROLE role_permission;
 DROP
 DROP RESOURCE GROUP rg_dumpinfo_test;
 DROP
-DROP LANGUAGE plpythonu CASCADE;
+DROP LANGUAGE plpython3u CASCADE;
 DROP

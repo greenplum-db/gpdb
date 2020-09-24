@@ -10,11 +10,11 @@ DROP VIEW IF EXISTS many_ops;
 DROP ROLE r1_opmem_test;
 DROP RESOURCE GROUP rg1_opmem_test;
 DROP RESOURCE GROUP rg2_opmem_test;
-CREATE LANGUAGE plpythonu;
+CREATE LANGUAGE plpython3u;
 --end_ignore
 
 -- a helper function to run query via SPI
-CREATE OR REPLACE FUNCTION f1_opmem_test() RETURNS void AS $$ plpy.execute("""select * from gp_dist_random('gp_id')""") $$ LANGUAGE plpythonu;
+CREATE OR REPLACE FUNCTION f1_opmem_test() RETURNS void AS $$ plpy.execute("""select * from gp_dist_random('gp_id')""") $$ LANGUAGE plpython3u;
 CREATE
 
 -- this view contains many operators in the plan, which is used to trigger

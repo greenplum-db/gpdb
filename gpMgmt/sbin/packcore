@@ -179,7 +179,7 @@ curDIR=`pwd`
     {binary} \\
     "$@"
 '''.format(core=c, binary=b)
-    os.chmod('runGDB.sh', 0755)
+    os.chmod('runGDB.sh', 0o0755)
 
 
 # This is taken from Python 3.3:

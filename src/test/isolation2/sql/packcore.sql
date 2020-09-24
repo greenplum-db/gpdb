@@ -1,8 +1,8 @@
 -- start_ignore
-CREATE LANGUAGE plpythonu;
+CREATE LANGUAGE plpython3u;
 -- end_ignore
 
-DO LANGUAGE plpythonu $$
+DO LANGUAGE plpython3u $$
     import os
     import sys
     import glob

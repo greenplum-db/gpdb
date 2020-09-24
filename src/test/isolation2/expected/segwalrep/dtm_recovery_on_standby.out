@@ -118,7 +118,7 @@ create table standby_config as (select hostname, datadir, port, role from gp_seg
 CREATE 2
 
 create or replace function reinitialize_standby() returns text as $$ import subprocess rv = plpy.execute("select hostname, datadir, port from standby_config order by role", 2) standby = rv[0] # role = 'm' master = rv[1] # role = 'p' try: cmd = 'rm -rf %s.dtm_recovery && cp -R %s %s.dtm_recovery' % (standby['datadir'], standby['datadir'], standby['datadir']) remove_output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT) cmd = 'gpinitstandby -ar -P %d' % master['port'] remove_output += subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT) cmd = 'export PGPORT=%d; gpinitstandby -a -s %s -S %s -P %d' % (master['port'], standby['hostname'], standby['datadir'], standby['port']) init_output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT) except subprocess.CalledProcessError as e: plpy.info(e.output) raise 
-return remove_output + "\n" + init_output $$ language plpythonu;
+return remove_output + "\n" + init_output $$ language plpython3u;
 CREATE
 
 -- start_ignore

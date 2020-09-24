@@ -6,7 +6,7 @@ create schema hashjoin_spill;
 set search_path to hashjoin_spill;
 
 -- start_ignore
-create language plpythonu;
+create language plpython3u;
 -- end_ignore
 
 -- set workfile is created to true if all segment did it.
@@ -30,7 +30,7 @@ for i in range(len(rv)):
         result.append(cur_row)
 return result
 $$
-language plpythonu;
+language plpython3u;
 
 -- start_ignore
 DROP ROLE IF EXISTS role1_memory_test;
