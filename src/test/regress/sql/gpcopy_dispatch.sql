@@ -159,7 +159,7 @@ COPY partdisttest FROM '/tmp/ten-thousand-and-one-lines.txt';
 SELECT tableoid::regclass, count(*) FROM partdisttest GROUP BY 1;
 DROP TABLE partdisttest;
 
--- Log errors on QEs
+-- Log errors on QEs for partitions
 CREATE TABLE partdisttest(id INT, t TIMESTAMP, d VARCHAR(4))
   DISTRIBUTED BY (id)
   PARTITION BY RANGE (t)
@@ -168,9 +168,92 @@ CREATE TABLE partdisttest(id INT, t TIMESTAMP, d VARCHAR(4))
     DEFAULT PARTITION extra
   );
 
+\set QUIET off
+
 COPY partdisttest FROM STDIN LOG ERRORS SEGMENT REJECT LIMIT 2;
 1	'2020-04-15'	abcde
 1	'2020-04-15'	abc
 \.
 
+\set QUIET on
+
 DROP TABLE partdisttest;
+
+
+-- Check completion tags when COPY FROM
+CREATE TABLE copydisttest(id INT, d VARCHAR(4))
+  DISTRIBUTED BY (id);
+
+CREATE FUNCTION copydisttest_ignore_even() RETURNS trigger
+LANGUAGE plpgsql AS $$ 
+BEGIN
+  IF new.id % 2 = 0 THEN
+    RETURN NULL;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER copydisttest_before_ins BEFORE INSERT ON copydisttest
+FOR EACH ROW EXECUTE PROCEDURE copydisttest_ignore_even();
+
+\set QUIET off
+
+-- COPY on QD
+-- expect 'COPY 2'
+COPY copydisttest(d, id) FROM STDIN LOG ERRORS SEGMENT REJECT LIMIT 3;
+abc	1
+abc	1
+\.
+-- expect 'COPY 1'
+COPY copydisttest(d, id) FROM STDIN LOG ERRORS SEGMENT REJECT LIMIT 3;
+abcde	1
+abc	1
+\.
+-- expect 'COPY 0'
+COPY copydisttest(d, id) FROM STDIN LOG ERRORS SEGMENT REJECT LIMIT 3;
+abcde	1
+abcde	1
+\.
+-- expect 'COPY 0'
+COPY copydisttest(d, id) FROM STDIN LOG ERRORS SEGMENT REJECT LIMIT 3;
+abcde	2
+abc	2
+\.
+-- expect 'COPY 0'
+COPY copydisttest(d, id) FROM STDIN LOG ERRORS SEGMENT REJECT LIMIT 3;
+abcde	2
+abcde	2
+\.
+
+-- COPY on QE
+-- expect 'COPY 2'
+COPY copydisttest(id, d) FROM STDIN LOG ERRORS SEGMENT REJECT LIMIT 3;
+1	abc
+1	abc
+\.
+-- expect 'COPY 1'
+COPY copydisttest(id, d) FROM STDIN LOG ERRORS SEGMENT REJECT LIMIT 3;
+1	abcde
+1	abc
+\.
+-- expect 'COPY 0'
+COPY copydisttest(id, d) FROM STDIN LOG ERRORS SEGMENT REJECT LIMIT 3;
+1	abcde
+1	abcde
+\.
+-- expect 'COPY 0'
+COPY copydisttest(id, d) FROM STDIN LOG ERRORS SEGMENT REJECT LIMIT 3;
+2	abcde
+2	abc
+\.
+-- expect 'COPY 0'
+COPY copydisttest(id, d) FROM STDIN LOG ERRORS SEGMENT REJECT LIMIT 3;
+2	abcde
+2	abcde
+\.
+
+\set QUIET on
+
+DROP TABLE copydisttest;
+DROP FUNCTION copydisttest_ignore_even();

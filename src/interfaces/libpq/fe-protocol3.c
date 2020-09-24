@@ -457,7 +457,7 @@ pqParseInput3(PGconn *conn)
 
 					conn->result->numRejected += numRejected;
 
-					/* Optionally receive completed number when COPY FROM ON SEGMENT */
+					/* Optionally receive completed number when COPY FROM */
 					if (msgLength >= 12 && !pqGetInt64(&numCompleted, conn))
 					{
 						conn->result->numCompleted += numCompleted;
