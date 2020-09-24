@@ -151,7 +151,7 @@ class StartSegmentsOperation:
         mirroringModePreTransition = MIRROR_MODE_MIRRORLESS if startMethod == START_AS_MIRRORLESS else MIRROR_MODE_QUIESCENT
 
         # launch the start
-        for hostName, segments in GpArray.getSegmentsByHostName(segments).iteritems():
+        for hostName, segments in GpArray.getSegmentsByHostName(segments).items():
             logger.debug("Dispatching command to start segments on host: %s, " \
                             "with %s contents in cluster" % (hostName, numContentsInCluster))
 

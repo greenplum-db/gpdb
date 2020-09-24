@@ -79,7 +79,7 @@ class ReplicationInfoTestCase(unittest.TestCase):
         if rows is None:
             self.fail(
                 'Expected one of the query fragments {!r} to be in the query {!r}.'.format(
-                    self._pg_rows.keys(), query
+                    list(self._pg_rows.keys()), query
                 )
             )
 

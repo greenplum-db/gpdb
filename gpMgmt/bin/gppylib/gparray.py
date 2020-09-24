@@ -566,7 +566,7 @@ def createSegmentRows( hostlist
                 else:
                     address = mirror_host
 
-                if not mirror_port.has_key(mirror_host):
+                if mirror_host not in mirror_port:
                     mirror_port[mirror_host] = mirror_portbase
 
                 rows.append( SegmentRow( content = content
@@ -700,7 +700,7 @@ def createSegmentRowsFromSegmentList( newHostlist
                 else:
                     address = mirror_host
 
-                if not mirror_port.has_key(mirror_host):
+                if mirror_host not in mirror_port:
                     mirror_port[mirror_host] = mirror_portbase
 
                 rows.append( SegmentRow( content = content
@@ -922,7 +922,7 @@ class GpArray:
                 first = False
                 if suffixList != firstSuffixList:
                     raise Exception("The address list for %s doesn't not have the same pattern as %s." % (str(suffixList), str(firstSuffixList)))
-        except Exception, e:
+        except Exception as e:
             # Assume any exception implies a non-standard array
             return False, str(e)
 
@@ -1074,7 +1074,7 @@ class GpArray:
             arr.append(seg)
 
         result = {}
-        for contentId, arr in contentIdToSegments.iteritems():
+        for contentId, arr in contentIdToSegments.items():
             if len(arr) == 1:
                 pass
             elif len(arr) != 2:
@@ -1559,7 +1559,7 @@ class GpArray:
             datadir = db.getSegmentDataDirectory()
             hostname = db.getSegmentHostName()
             port = db.getSegmentPort()
-            if datadirs.has_key(hostname):
+            if hostname in datadirs:
                 if datadir in datadirs[hostname]:
                     raise Exception('Data directory %s used multiple times on host %s' % (datadir, hostname))
                 else:
@@ -1569,7 +1569,7 @@ class GpArray:
                 datadirs[hostname].append(datadir)
 
             # Check ports
-            if used_ports.has_key(hostname):
+            if hostname in used_ports:
                 if db.port in used_ports[hostname]:
                     raise Exception('Port %d is used multiple times on host %s' % (port, hostname))
                 else:
@@ -1794,7 +1794,7 @@ def get_segment_hosts(master_port):
     """
     gparray = GpArray.initFromCatalog( dbconn.DbURL(port=master_port), utility=True )
     segments = GpArray.getSegmentsByHostName( gparray.getDbList() )
-    return segments.keys()
+    return list(segments.keys())
 
 
 def get_session_ids(master_port):

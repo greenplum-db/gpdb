@@ -201,11 +201,11 @@ def impl(context):
 
 @then('the tablespace is valid after gpexpand')
 def impl(context):
-    for _, tbs in context.tablespaces.items():
+    for _, tbs in list(context.tablespaces.items()):
         tbs.verify_for_gpexpand()
 
 @then('all tablespaces are dropped')
 def impl(context):
-    for tablespace in context.tablespaces.values():
+    for tablespace in list(context.tablespaces.values()):
         tablespace.cleanup()
     context.tablespaces = {}

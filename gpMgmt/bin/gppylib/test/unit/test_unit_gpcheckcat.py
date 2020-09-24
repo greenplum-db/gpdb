@@ -5,7 +5,7 @@ import sys
 
 from mock import *
 
-from gp_unittest import *
+from .gp_unittest import *
 from gppylib.gpcatalog import GPCatalogTable
 
 class GpCheckCatTestCase(GpTestCase):
@@ -153,12 +153,12 @@ class GpCheckCatTestCase(GpTestCase):
         # which can then be mocked as necessary.
         with patch.object(sys, 'argv', testargs):
             self.subject.main()
-            self.assertEquals(self.subject.GV.opt['-B'], len(primaries))
+            self.assertEqual(self.subject.GV.opt['-B'], len(primaries))
 
         #mock_log.assert_any_call(50, "Truncated batch size to number of primaries: 50")
         # I am confused that .assert_any_call() did not seem to work as expected --Larry
         last_call = mock_log.call_args_list[0][0][2]
-        self.assertEquals(last_call, "Truncated batch size to number of primaries: 50")
+        self.assertEqual(last_call, "Truncated batch size to number of primaries: 50")
 
     @patch('gpcheckcat_modules.repair.Repair', return_value=Mock())
     @patch('gpcheckcat_modules.repair.Repair.create_repair_for_extra_missing', return_value="/tmp")
@@ -185,7 +185,7 @@ class GpCheckCatTestCase(GpTestCase):
         cat_tables = ["input1", "input2"]
         self.subject.checkForeignKey(cat_tables)
 
-        self.assertEquals(cat_mock.getCatalogTables.call_count, 0)
+        self.assertEqual(cat_mock.getCatalogTables.call_count, 0)
         self.assertFalse(self.subject.GV.checkStatus)
         self.assertTrue(self.subject.GV.foreignKeyStatus)
         self.subject.setError.assert_any_call(self.subject.ERROR_REMOVE)
@@ -200,7 +200,7 @@ class GpCheckCatTestCase(GpTestCase):
         cat_tables = ["input1", "input2"]
         self.subject.checkForeignKey(cat_tables)
 
-        self.assertEquals(cat_mock.getCatalogTables.call_count, 0)
+        self.assertEqual(cat_mock.getCatalogTables.call_count, 0)
         self.assertFalse(self.subject.GV.checkStatus)
         self.assertTrue(self.subject.GV.foreignKeyStatus)
         self.subject.setError.assert_any_call(self.subject.ERROR_NOREPAIR)
@@ -214,7 +214,7 @@ class GpCheckCatTestCase(GpTestCase):
         self.subject.GV.catalog = cat_mock
 
         self.subject.checkForeignKey()
-        self.assertEquals(cat_mock.getCatalogTables.call_count, 1)
+        self.assertEqual(cat_mock.getCatalogTables.call_count, 1)
         self.assertFalse(self.subject.GV.checkStatus)
         self.assertTrue(self.subject.GV.foreignKeyStatus)
         self.subject.setError.assert_any_call(self.subject.ERROR_NOREPAIR)
@@ -271,7 +271,7 @@ class GpCheckCatTestCase(GpTestCase):
 
         self.subject.runOneCheck("missing_extraneous")
 
-        self.assertEquals(aTable.getPrimaryKey.call_count, 1)
+        self.assertEqual(aTable.getPrimaryKey.call_count, 1)
         self.subject.setError.assert_called_once_with(self.subject.ERROR_REMOVE)
 
     @patch('gpcheckcat.checkTableMissingEntry', return_value= {("pg_operator", "typename, typenamespace"): "extra"})
@@ -288,7 +288,7 @@ class GpCheckCatTestCase(GpTestCase):
 
         self.subject.runOneCheck("missing_extraneous")
 
-        self.assertEquals(aTable.getPrimaryKey.call_count, 1)
+        self.assertEqual(aTable.getPrimaryKey.call_count, 1)
         self.subject.setError.assert_called_once_with(self.subject.ERROR_REMOVE)
 
     def test_getReportConfiguration_uses_contentid(self):

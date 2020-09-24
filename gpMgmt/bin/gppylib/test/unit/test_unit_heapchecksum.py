@@ -61,7 +61,7 @@ Data page checksum version:           1
                         CommandResult(0, self.COMMAND_RESULT, '', False, True),
                         CommandResult(0, self.COMMAND_RESULT, '', False, True),
                         CommandResult(0, self.COMMAND_RESULT, '', False, True)]
-        self.assertEquals(len(self.data_dirs), len(self.results))
+        self.assertEqual(len(self.data_dirs), len(self.results))
 
     def tearDown(self):
         super(GpHeapChecksumTestCase, self).tearDown()
@@ -87,7 +87,7 @@ Data page checksum version:           1
 
         successes, failures = self.subject.get_segments_checksum_settings()
         consistent, inconsistent, master_checksum = self.subject.check_segment_consistency(successes)
-        self.assertEquals(self.subject.are_segments_consistent(consistent, inconsistent), True)
+        self.assertEqual(self.subject.are_segments_consistent(consistent, inconsistent), True)
 
     def test_inconsistent_heap_checksum_returns_false(self):
         get_values = ['0', '1', '1', '1']
@@ -95,7 +95,7 @@ Data page checksum version:           1
 
         successes, failures = self.subject.get_segments_checksum_settings()
         consistent, inconsistent, master_checksum = self.subject.check_segment_consistency(successes)
-        self.assertEquals(self.subject.are_segments_consistent(consistent, inconsistent), False)
+        self.assertEqual(self.subject.are_segments_consistent(consistent, inconsistent), False)
 
     def test_pg_control_data_raises(self):
         get_values = ['1', '1', '1', Exception("hi")]
@@ -109,7 +109,7 @@ Data page checksum version:           1
 
         successes, failures = self.subject.get_segments_checksum_settings()
         consistent, inconsistent, master_checksum = self.subject.check_segment_consistency(successes)
-        self.assertEquals(self.subject.are_segments_consistent(consistent, inconsistent), True)
+        self.assertEqual(self.subject.are_segments_consistent(consistent, inconsistent), True)
 
     def test_pg_control_data_raises_every_segment(self):
         get_values = [Exception("hi"), Exception("hi"), Exception("hi"), Exception("hi")]
@@ -123,7 +123,7 @@ Data page checksum version:           1
 
         successes, failures = self.subject.get_segments_checksum_settings()
         consistent, inconsistent, master_checksum = self.subject.check_segment_consistency(successes)
-        self.assertEquals(self.subject.are_segments_consistent(consistent, inconsistent), False)
+        self.assertEqual(self.subject.are_segments_consistent(consistent, inconsistent), False)
 
     def test_are_segments_consistent_zero_consistent_zero_inconsistent(self):
         self.assertFalse(self.subject.are_segments_consistent([], []))
@@ -144,18 +144,18 @@ Data page checksum version:           1
 
         successes, failures = self.subject.get_segments_checksum_settings([self.primary0])
 
-        self.assertEquals(len(successes), 1)
-        self.assertEquals(len(failures), 0)
+        self.assertEqual(len(successes), 1)
+        self.assertEqual(len(failures), 0)
 
     @patch('gppylib.heapchecksum.PgControlData')
     def test_standby_master_context_is_remote(self, mock_pg_control_data):
         #  the standby can either be remote or local, depending on the user setup.
         self.subject.get_standby_value()
-        self.assertEquals(len(mock_pg_control_data.call_args_list), 1)
+        self.assertEqual(len(mock_pg_control_data.call_args_list), 1)
         call_args_dict = mock_pg_control_data.call_args_list[0][1]
         try:
-            self.assertEquals(call_args_dict['ctxt'], REMOTE)
-            self.assertEquals(call_args_dict['remoteHost'], 'mdw_standby')
+            self.assertEqual(call_args_dict['ctxt'], REMOTE)
+            self.assertEqual(call_args_dict['remoteHost'], 'mdw_standby')
         except KeyError as e:
             raise Exception("Argument is missing from the call argument %s " % str(e))
 
@@ -165,8 +165,8 @@ Data page checksum version:           1
 
         successes, failures = self.subject.get_segments_checksum_settings()
 
-        self.assertEquals(len(successes), 4)
-        self.assertEquals(len(failures), 0)
+        self.assertEqual(len(successes), 4)
+        self.assertEqual(len(failures), 0)
 
     def test_0_workers_in_WorkerPool_raises(self):
         with self.assertRaises(Exception):

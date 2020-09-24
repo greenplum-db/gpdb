@@ -34,7 +34,7 @@ try:
     from gppylib.operations.unix import CleanSharedMem
     from gppylib.operations.utils import ParallelOperation, RemoteOperation
     from gppylib.operations.rebalanceSegments import ReconfigDetectionSQLQueryCommand
-except ImportError, e:
+except ImportError as e:
     sys.exit('ERROR: Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
 
 DEFAULT_NUM_WORKERS = 64
@@ -298,7 +298,7 @@ class GpStop:
     ######
     def _is_hostname_valid(self):
         segments = self.gparray.getSegmentsByHostName( self.gparray.getDbList())
-        host_names = segments.keys()
+        host_names = list(segments.keys())
         if self.onlyThisHost not in host_names:
             logger.error("host '%s' is not found in gp_segment_configuration" % self.onlyThisHost)
             logger.error("hosts in cluster config: %s" % host_names)
@@ -509,7 +509,7 @@ class GpStop:
                                      ctxt=base.REMOTE,
                                      remoteHost=standby.hostname)
                 cmd.run(validateAfter=True)
-            except base.ExecutionError, e:
+            except base.ExecutionError as e:
                 logger.warning("Error occured while stopping the standby master: %s" % e)
 
             if not pg.DbStatus.remote('checking status of standby master instance', standby, standby.hostname):
@@ -522,7 +522,7 @@ class GpStop:
                                          timeout=self.timeout,
                                          ctxt=base.REMOTE, remoteHost=standby.hostname)
                     cmd.run(validateAfter=True)
-                except base.ExecutionError, e:
+                except base.ExecutionError as e:
                     logger.warning("Error occured while stopping the standby master: %s" % e)
 
                 if not pg.DbStatus.remote('checking status of standby master instance', standby, standby.hostname):
@@ -589,12 +589,12 @@ class GpStop:
     def _stopseg_cmds(self, includePrimaries, includeMirrors, segs):
         host_segs_map = {}
         for seg in segs:
-            if seg.getSegmentHostName() in host_segs_map.keys():
+            if seg.getSegmentHostName() in list(host_segs_map.keys()):
                 host_segs_map[seg.getSegmentHostName()].append(seg)
             else:
                 host_segs_map[seg.getSegmentHostName()] = [seg]
 
-        for hostname, gpdb_objs in host_segs_map.iteritems():
+        for hostname, gpdb_objs in host_segs_map.items():
             dbs = []
             for db in gpdb_objs:
                 role = db.getSegmentRole()

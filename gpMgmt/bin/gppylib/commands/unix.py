@@ -573,7 +573,7 @@ class Hostname(Command):
 
     def get_hostname(self):
         if not self.results:
-            raise Exception, 'Command not yet executed'
+            raise Exception('Command not yet executed')
         return self.results.stdout.strip()
 
 

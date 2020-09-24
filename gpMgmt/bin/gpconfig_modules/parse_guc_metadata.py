@@ -52,7 +52,7 @@ change a GUC.  The Makefile in gpMgmt/bin will use this parser to
             sys.exit(1)
         prefix = sys.argv[1]
         dir_path = os.path.join(prefix, self.DESTINATION_DIR)
-        _mkdir_p(dir_path, 0755)
+        _mkdir_p(dir_path, 0o755)
         output_file = os.path.join(dir_path, self.DESTINATION_FILENAME)
         self.write_gucs_to_file(output_file)
 

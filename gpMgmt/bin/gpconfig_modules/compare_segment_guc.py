@@ -130,7 +130,7 @@ class MultiValueGuc(SegmentGuc):
 
             return self._str[self._i]
 
-        def next(self):
+        def __next__(self):
             """
             Returns the next character in the string and advances the
             stream by one position. Returns an empty string if the end of the
@@ -178,10 +178,10 @@ class MultiValueGuc(SegmentGuc):
         quoted = []
         stream = MultiValueGuc._StringStream(guc_value)
         while stream.peek():
-            char = stream.next()
+            char = next(stream)
 
             if char == '\\':
-                char = stream.next()
+                char = next(stream)
                 if not char:
                     raise MultiValueGuc.ParseError('invalid trailing backslash')
 
@@ -208,14 +208,14 @@ class MultiValueGuc(SegmentGuc):
                             break
 
                         octal = (octal << 3) + int(char)
-                        stream.next() # advance
+                        next(stream) # advance
 
                     # Translate back to a character (truncating to one byte).
                     char = chr(octal & 0xFF)
 
             # Handle escaped single quotes.
             elif char == "'":
-                char = stream.next()
+                char = next(stream)
                 if char != "'":
                     raise MultiValueGuc.ParseError('invalid single quote')
 

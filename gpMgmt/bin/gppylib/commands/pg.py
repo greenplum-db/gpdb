@@ -8,8 +8,8 @@ import pipes
 
 from gppylib.gplog import *
 from gppylib.gparray import *
-from base import *
-from unix import *
+from .base import *
+from .unix import *
 from gppylib.commands.base import *
 
 logger = get_default_logger()
@@ -161,7 +161,7 @@ class PgControlData(Command):
 
     def get_value(self, name):
         if not self.results:
-            raise Exception, 'Command not yet executed'
+            raise Exception('Command not yet executed')
         if not self.data:
             self.data = {}
             for l in self.results.stdout.split('\n'):

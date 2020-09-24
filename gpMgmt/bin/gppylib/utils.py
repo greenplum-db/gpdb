@@ -140,22 +140,22 @@ def openAnything(source):
         return sys.stdin
 
     # try to open with urllib (if source is http, ftp, or file URL)
-    import urllib                         
+    import urllib.request, urllib.parse, urllib.error                         
     try:                                  
-        return urllib.urlopen(source)     
+        return urllib.request.urlopen(source)     
     except (IOError, OSError):            
         pass                              
     
     # try to open with native open function (if source is pathname)
     try:                                  
         return open(source)               
-    except Exception, e: 
-        print ("Exception occurred opening file %s Error: %s"  % (source, str(e)))                             
+    except Exception as e: 
+        print(("Exception occurred opening file %s Error: %s"  % (source, str(e))))                             
         
     
     # treat source as string
-    import StringIO                       
-    return StringIO.StringIO(str(source)) 
+    import io                       
+    return io.StringIO(str(source)) 
 def getOs():
     dist=None
     fdesc = None
@@ -187,7 +187,7 @@ def getOs():
             fdesc.close()
     return dist
 def factory(aClass, *args):
-    return apply(aClass,args)
+    return aClass(*args)
 
 def addDicts(a,b):
     c = dict(a)
@@ -200,7 +200,7 @@ def joinPath(a,b,parm=""):
 
 def debug(varname, o):
     if _debug == 1:
-        print "Debug: %s -> %s" %(varname, o)
+        print("Debug: %s -> %s" %(varname, o))
 
 def loadXmlElement(config,elementName):
     fdesc = openAnything(config)
@@ -221,7 +221,7 @@ def docIter(node):
         #have no set order. The values() call
         #gets a list of actual attribute node objects
         #from the dictionary
-        for attr in node.attributes.values():
+        for attr in list(node.attributes.values()):
             yield attr
     for child in node.childNodes:
         #Create a generator for each child,
@@ -289,17 +289,17 @@ def deleteBlock(fileName,beginPattern, endPattern):
                 fdesc.close()
                 os.rename(fileNameTmp,fileName)
         except IOError:
-            print("IOERROR", IOError)
+            print(("IOERROR", IOError))
             sys.exit()
     else:
-        print "***********%s  file does not exits"%(fileName)
+        print("***********%s  file does not exits"%(fileName))
 
 def make_inf_hosts(hp, hstart, hend, istart, iend, hf=None):
     hfArr = []
     inf_hosts=[]
     if None != hf:
         hfArr=hf.split('-')
-    print hfArr 
+    print(hfArr) 
     for h in range(int(hstart), int(hend)+1):
         host = '%s%d' % (hp, h)
         for i in range(int(istart), int(iend)+1):
@@ -323,7 +323,7 @@ def copyFile(srcDir,srcFile, destDir, destFile):
             result=pipe.read().strip()
             #debug ("result",result)
         else:
-            print "no such file or directory " + filePath
+            print("no such file or directory " + filePath)
     except OSError:
         print ("OS Error occurred")
     return result
@@ -390,9 +390,9 @@ def appendNewEntriesToHbaFile(fileName, segments):
                         existingLineMap[newLineCanonical] = True
         finally:
             fp.close()
-    except IOError, msg:
+    except IOError as msg:
         raise Exception('Failed to open %s' % fileName)
-    except Exception, msg:
+    except Exception as msg:
         raise Exception('Failed to add new segments to template %s' % fileName)
 
 class TableLogger:

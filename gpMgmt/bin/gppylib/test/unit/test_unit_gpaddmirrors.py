@@ -1,9 +1,9 @@
 import os
 import sys
 
-import StringIO
+import io
 from mock import *
-from gp_unittest import *
+from .gp_unittest import *
 from gppylib.programs.clsAddMirrors import GpAddMirrorsProgram, ProgramArgumentValidationException
 from gparray import Segment, GpArray
 from gppylib.system.environment import GpMasterEnvironment
@@ -74,7 +74,7 @@ class GpAddMirrorsTest(GpTestCase):
         sys.argv = ['gpaddmirrors', '-a']
         options, args = self.parser.parse_args()
         command_obj = self.subject.createProgram(options, args)
-        with self.assertRaisesRegexp(Exception, 'Segments have heap_checksum set inconsistently to master'):
+        with self.assertRaisesRegex(Exception, 'Segments have heap_checksum set inconsistently to master'):
             command_obj.run()
 
     def test_option_batch_of_size_0_will_raise(self):
@@ -84,14 +84,14 @@ class GpAddMirrorsTest(GpTestCase):
         with self.assertRaises(ProgramArgumentValidationException):
             self.subject.run()
 
-    @patch('sys.stdout', new_callable=StringIO.StringIO)
+    @patch('sys.stdout', new_callable=io.StringIO)
     def test_option_version(self, mock_stdout):
         sys.argv = ['gpaddmirrors', '--version']
         with self.assertRaises(SystemExit) as cm:
             options, _ = self.parser.parse_args()
 
         self.assertIn("gpaddmirrors version $Revision$", mock_stdout.getvalue())
-        self.assertEquals(cm.exception.code, 0)
+        self.assertEqual(cm.exception.code, 0)
 
     def test_generated_file_contains_default_port_offsets(self):
         datadir_config = _write_datadir_config(self.mdd)
@@ -139,7 +139,7 @@ class GpAddMirrorsTest(GpTestCase):
         sys.argv = ['gpaddmirrors', '-i', '/tmp/nonexistent/file']
         options, _ = self.parser.parse_args()
         self.subject = GpAddMirrorsProgram(options)
-        with self.assertRaisesRegexp(Exception, "boom"):
+        with self.assertRaisesRegex(Exception, "boom"):
             self.subject.config_primaries_for_replication(self.gparrayMock)
         self.mock_logger.info.assert_any_call("Starting to modify pg_hba.conf on primary segments to allow replication connections")
         self.mock_logger.error.assert_any_call("Failed while modifying pg_hba.conf on primary segments to allow replication connections: boom")

@@ -1,6 +1,6 @@
 from mock import *
 
-from gp_unittest import *
+from .gp_unittest import *
 from gppylib.gparray import GpArray, Segment
 from gppylib.commands.base import CommandResult
 from gppylib.operations.rebalanceSegments import GpSegmentRebalanceOperation
@@ -49,7 +49,7 @@ class RebalanceSegmentsTestCase(GpTestCase):
         self.pool.getCompletedItems.return_value = [self.failure_command_mock]
         self.mock_gp_recover_segment_prog.run.side_effect = SystemExit(1)
 
-        with self.assertRaisesRegexp(Exception, "Error synchronizing."):
+        with self.assertRaisesRegex(Exception, "Error synchronizing."):
             self.subject.rebalance()
 
     def test_rebalance_returns_failure(self):

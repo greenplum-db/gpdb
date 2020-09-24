@@ -75,7 +75,7 @@ class SegmentReconfiguerTestCase(GpTestCase):
 
         def fail_for_half_a_minute():
             new_time = start_time
-            for i in xrange(2):
+            for i in range(2):
                 # leap forward 15 seconds
                 new_time += self.timeout / 2
                 now_mock.configure_mock(return_value=new_time)

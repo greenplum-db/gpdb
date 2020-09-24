@@ -1,5 +1,5 @@
 from mock import *
-from gp_unittest import *
+from .gp_unittest import *
 from gpconfig_modules.database_segment_guc import DatabaseSegmentGuc
 from gpconfig_modules.file_segment_guc import FileSegmentGuc
 from gpconfig_modules.guc_collection import GucCollection
@@ -37,13 +37,13 @@ class GucCollectionTest(GpTestCase):
     def test_less_than_two_segments_raises(self):
         del self.subject.gucs['0']
 
-        with self.assertRaisesRegexp(Exception,
+        with self.assertRaisesRegex(Exception,
                                      "Collections must have at least a master and segment value"):
             self.subject.report()
 
     def test_when_invalid_gucs_with_no_master_raises(self):
         del self.subject.gucs['-1']
-        with self.assertRaisesRegexp(Exception,
+        with self.assertRaisesRegex(Exception,
                                      "Collections must have at least a master and segment value"):
             self.subject.validate()
 
@@ -141,8 +141,8 @@ class GucCollectionTest(GpTestCase):
         primary_file_seg = FileSegmentGuc(row)
         self.subject.update(primary_file_seg)
 
-        self.assertEquals(self.subject.gucs["-1"].primary_file_seg_guc, primary_file_seg)
-        self.assertEquals(self.subject.gucs["-1"].mirror_file_seg_guc, None)
+        self.assertEqual(self.subject.gucs["-1"].primary_file_seg_guc, primary_file_seg)
+        self.assertEqual(self.subject.gucs["-1"].mirror_file_seg_guc, None)
 
     def test_update_when_file_segments_first_succeeds(self):
         row = ['-1', 'guc_name', 'master_value', 'dbid1']
@@ -227,7 +227,7 @@ class GucCollectionTest(GpTestCase):
         row = ['1', 'guc_name', 'value', 'dbid5']
         self.subject.update(FileSegmentGuc(row))
 
-        self.assertEquals("[context: -1] [dbid: dbid1] [name: guc_name] [not set in file]\n"
+        self.assertEqual("[context: -1] [dbid: dbid1] [name: guc_name] [not set in file]\n"
                           "[context: -1] [dbid: dbid3] [name: guc_name] [value: master_value]\n"
                           "[context: 0] [dbid: dbid2] [name: guc_name] [value: value]\n"
                           "[context: 0] [dbid: dbid4] [name: guc_name] [value: value]\n"
@@ -253,11 +253,11 @@ class GucCollectionTest(GpTestCase):
         row = ['0', 'guc_name', 'value', 'dbid3']
         self.subject.update(FileSegmentGuc(row))
 
-        self.assertEquals("[context: -1] [dbid: dbid1] [name: guc_name] [value: master_value | file: master_value]\n"
+        self.assertEqual("[context: -1] [dbid: dbid1] [name: guc_name] [value: master_value | file: master_value]\n"
                           "[context: 0] [dbid: dbid2] [name: guc_name] [value: value | file: value]\n"
                           "[context: 0] [dbid: dbid3] [name: guc_name] [value: value | file: value]\n"
                           "[context: 1] [dbid: dbid4] [name: guc_name] [value: value | file: wrong_value]\n"
                           "[context: 1] [dbid: dbid5] [name: guc_name] [value: value | file: value]", self.subject.report())
 
     def test_values_succeeds(self):
-        self.assertEquals([self.db_seg_guc_1, self.db_seg_guc_2], self.subject.values())
+        self.assertEqual([self.db_seg_guc_1, self.db_seg_guc_2], list(self.subject.values()))

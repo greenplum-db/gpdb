@@ -1,5 +1,5 @@
 from mock import *
-from gp_unittest import *
+from .gp_unittest import *
 from gppylib.gparray import GpArray, Segment
 from gppylib.commands.base import WorkerPool
 

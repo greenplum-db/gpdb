@@ -43,7 +43,7 @@ def cleanup_pg_hba_backup(data_dirs_list):
             logger.info('Removing pg_hba.conf backup file %s' % backup_file)
             if os.path.exists(backup_file):
                 os.remove(backup_file)
-    except Exception, ex:
+    except Exception as ex:
         logger.error('Unable to cleanup backup of pg_hba.conf %s' % ex)
 
 def cleanup_pg_hba_backup_on_segment(gparr):
@@ -61,7 +61,7 @@ def cleanup_pg_hba_backup_on_segment(gparr):
     pool = WorkerPool(numWorkers=DEFAULT_BATCH_SIZE)
 
     try:
-        for host, data_dirs_list in host_to_seg_map.items():
+        for host, data_dirs_list in list(host_to_seg_map.items()):
             pickled_data_dirs_list = base64.urlsafe_b64encode(pickle.dumps(data_dirs_list))
             cmdStr = "$GPHOME/lib/python/gppylib/operations/initstandby.py -d %s -D" % pickled_data_dirs_list
             cmd = Command('Cleanup the pg_hba.conf backups on remote hosts', cmdStr=cmdStr , ctxt=REMOTE, remoteHost=host)
@@ -100,7 +100,7 @@ def restore_pg_hba_on_segment(gparr):
     pool = WorkerPool(numWorkers=DEFAULT_BATCH_SIZE)
 
     try:
-        for host, data_dirs_list in host_to_seg_map.items():
+        for host, data_dirs_list in list(host_to_seg_map.items()):
             pickled_data_dirs_list = base64.urlsafe_b64encode(pickle.dumps(data_dirs_list))
             cmdStr = "$GPHOME/lib/python/gppylib/operations/initstandby.py -d %s -r" % pickled_data_dirs_list
             cmd = Command('Restore the pg_hba.conf on remote hosts', cmdStr=cmdStr , ctxt=REMOTE, remoteHost=host)
@@ -126,7 +126,7 @@ def backup_pg_hba(data_dirs_list):
             logger.info('Backing up pg_hba.conf for %s' % data_dir)
             # back it up
             os.system('cp %s/pg_hba.conf %s/%s'% (data_dir, data_dir, PG_HBA_BACKUP))
-    except Exception, ex:
+    except Exception as ex:
         raise Exception('Failed to backup pg_hba.config file %s' % ex)
 
 def update_pg_hba(standby_pg_hba_info, data_dirs_list):
@@ -165,7 +165,7 @@ def update_pg_hba_conf_on_segments(gparr, standby_host, is_hba_hostnames=False):
     pool = WorkerPool(numWorkers=DEFAULT_BATCH_SIZE)
 
     try:
-        for host, data_dirs_list in host_to_seg_map.items():
+        for host, data_dirs_list in list(host_to_seg_map.items()):
             pickled_data_dirs_list = base64.urlsafe_b64encode(pickle.dumps(data_dirs_list))
             cmdStr = "$GPHOME/lib/python/gppylib/operations/initstandby.py -p %s -d %s" % (pickled_standby_pg_hba_info, pickled_data_dirs_list)
             cmd = Command('Update the pg_hba.conf on remote hosts', cmdStr=cmdStr, ctxt=REMOTE, remoteHost=host)

@@ -106,6 +106,6 @@ class MasterOperation(Operation):
 
 if __name__ == "__main__":
     import sys 
-    from unix import CheckFile, CheckRemoteFile
-    print RemoteOperation(CheckFile(sys.argv[1]), "localhost").run()
-    print CheckRemoteFile(sys.argv[1], "localhost").run()
+    from .unix import CheckFile, CheckRemoteFile
+    print(RemoteOperation(CheckFile(sys.argv[1]), "localhost").run())
+    print(CheckRemoteFile(sys.argv[1], "localhost").run())

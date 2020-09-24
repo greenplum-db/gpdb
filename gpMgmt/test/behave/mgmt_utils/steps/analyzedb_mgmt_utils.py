@@ -318,7 +318,7 @@ def get_list_of_analyze_dirs(dbname):
         return []
 
     ordered_list = [os.path.join(analyze_dir, x) for x in sorted(os.listdir(analyze_dir), reverse=True)]
-    return filter(os.path.isdir, ordered_list)
+    return list(filter(os.path.isdir, ordered_list))
 
 
 def get_latest_analyze_dir(dbname):

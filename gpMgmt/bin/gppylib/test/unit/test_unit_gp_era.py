@@ -2,7 +2,7 @@ import os
 import shutil
 import tempfile
 
-from gp_unittest import *
+from .gp_unittest import *
 from mock import *
 
 from gppylib.gp_era import GpEraFile

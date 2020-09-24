@@ -1,6 +1,6 @@
 from mock import *
 
-from gp_unittest import *
+from .gp_unittest import *
 from gpcheckcat_modules.leaked_schema_dropper import LeakedSchemaDropper
 
 

@@ -41,7 +41,7 @@ try:
     from gppylib.commands.pg import PgBaseBackup
     from gppylib.mainUtils import ExceptionNoStackTraceNeeded
 
-except ImportError, e:
+except ImportError as e:
     sys.exit('ERROR: Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
 
 # constants
@@ -205,7 +205,7 @@ def validate_options(options, args, parser):
     try:
         options.master_data_directory = get_masterdatadir()
         options.gphome = get_gphome()
-    except GpError, msg:
+    except GpError as msg:
         logger.error(msg)
         parser.exit()
 
@@ -421,7 +421,7 @@ class GpExpandStatus():
         except IOError:
             raise
 
-        if not self._status_values.has_key(self._status[-1]):
+        if self._status[-1] not in self._status_values:
             raise InvalidStatusError('Invalid status file.  Unknown status %s' % self._status)
 
     def create_status_file(self):
@@ -456,7 +456,7 @@ class GpExpandStatus():
 
         if not self._fp:
             raise InvalidStatusError('The status file is invalid and cannot be written to')
-        if not self._status_values.has_key(status):
+        if status not in self._status_values:
             raise InvalidStatusError('%s is an invalid gpexpand status' % status)
         # Only allow state transitions forward or backward 1
         # If force is True, allow write any status
@@ -482,7 +482,7 @@ class GpExpandStatus():
 
     def get_status_history(self):
         """Gets the full status history"""
-        return zip(self._status, self._status_info)
+        return list(zip(self._status, self._status_info))
 
     def remove_status_file(self):
         """Closes and removes the gpexand status file"""
@@ -605,7 +605,7 @@ class SegmentTemplate:
         for host in hosts:
             tmpHosts[host] = 0
 
-        for host in tmpHosts.keys():
+        for host in list(tmpHosts.keys()):
             hostnameCmd = Hostname('gpexpand associating hostnames with segments', ctxt=REMOTE, remoteHost=host)
             pool.addCommand(hostnameCmd)
 
@@ -665,7 +665,7 @@ class SegmentTemplate:
                                recovery_mode=False,
                                target_gp_dbid=dummyDBID)
             cmd.run(validateAfter=True)
-        except Exception, msg:
+        except Exception as msg:
             raise SegmentTemplateError(msg)
 
         # new segments' tablespace info is loaded from tablespace
@@ -975,7 +975,7 @@ class gpexpand:
             logger.info('Querying gpexpand schema for current expansion state')
             try:
                 gpexpand_db_status = gpexpand.get_status_from_db(dburl, options)
-            except Exception, e:
+            except Exception as e:
                 raise Exception('Error while trying to query the gpexpand schema: %s' % e)
             logger.debug('Expansion status returned is %s' % gpexpand_db_status)
 
@@ -1027,7 +1027,7 @@ class gpexpand:
         try:
             conn = dbconn.connect(self.dburl, utility=True, encoding='UTF8')
             max_connections = int(catalog.getSessionGUC(conn, 'max_connections'))
-        except DatabaseError, ex:
+        except DatabaseError as ex:
             if self.options.verbose:
                 logger.exception(ex)
             logger.error('Failed to check max_connections GUC')
@@ -1130,16 +1130,16 @@ class gpexpand:
             oids = "|".join(tblspc_oids)
             headline = "tableSpaceNameOrders={names}".format(names=names)
             secline = "tableSpaceOidOrders={oids}".format(oids=oids)
-            print >>f, headline
-            print >>f, secline
+            print(headline, file=f)
+            print(secline, file=f)
 
             for db in self.gparray.getExpansionSegDbList():
                 if db.isSegmentPrimary():
                     tmpStr = "{dbid}|{locations}"
                     locations = "|".join([tblspc_info[oid]["location"]
                                           for oid in tblspc_oids])
-                    print >>f, tmpStr.format(dbid=db.getSegmentDbId(),
-                                             locations=locations)
+                    print(tmpStr.format(dbid=db.getSegmentDbId(),
+                                             locations=locations), file=f)
 
         return filename
 
@@ -1163,7 +1163,7 @@ class gpexpand:
                                          )
         try:
             self.gparray.validateExpansionSegs()
-        except Exception, e:
+        except Exception as e:
             raise ExpansionError('Invalid input file: %s' % e)
 
     def _getParsedRow(self, lineno, line):
@@ -1202,7 +1202,7 @@ class gpexpand:
                     retValue.append(self._getParsedRow(lineno, line))
                 except ValueError:
                     raise ExpansionError('Missing or invalid value on line %d of file %s.' % (lineno, inputFilename))
-                except Exception, e:
+                except Exception as e:
                     raise ExpansionError('Invalid input file on line %d of file %s: %s' % (lineno, inputFilename, str(e)))
         except IOError:
             raise ExpansionError('Input file %s not found' % inputFilename)
@@ -1289,7 +1289,7 @@ class gpexpand:
         try:
             self.segTemplate.build_segment_template(newTableSpaceInfo)
             self.segTemplate.build_new_segments()
-        except SegmentTemplateError, msg:
+        except SegmentTemplateError as msg:
             raise ExpansionError(msg)
 
     def update_original_segments(self):
@@ -1498,7 +1498,7 @@ class gpexpand:
                     dbconn.execSQL(restore_conn, sqlStr)
 
                 restore_conn.commit()
-            except Exception, e:
+            except Exception as e:
                 raise Exception("Unable to restore master. Exception: " + str(e))
             finally:
                 if restore_conn != None:
@@ -1613,7 +1613,7 @@ WHERE
             self.logger.debug(copySQL)
             dbconn.execSQL(table_conn, copySQL)
             table_conn.close()
-        except Exception, e:
+        except Exception as e:
             raise ExpansionError(e)
 
         try:
@@ -1621,7 +1621,7 @@ WHERE
 
             self.logger.debug(copySQL)
             dbconn.execSQL(self.conn, copySQL)
-        except Exception, e:
+        except Exception as e:
             raise ExpansionError(e)
         finally:
             os.unlink(data_file)
@@ -1683,7 +1683,7 @@ ORDER BY fq_name, tableoid desc
             self.logger.debug(copySQL)
             dbconn.execSQL(table_conn, copySQL)
             table_conn.close()
-        except Exception, e:
+        except Exception as e:
             raise ExpansionError(e)
 
         try:
@@ -1691,7 +1691,7 @@ ORDER BY fq_name, tableoid desc
 
             self.logger.debug(copySQL)
             dbconn.execSQL(self.conn, copySQL)
-        except Exception, e:
+        except Exception as e:
             raise ExpansionError(e)
         finally:
             os.unlink(data_file)
@@ -2032,7 +2032,7 @@ class ExecuteSQLStatementsCommand(SQLCommand):
             self.conn = dbconn.connect(self.url, utility=True, encoding='UTF8', allowSystemTableMods=True)
             for statement in self.sqlCommandList:
                 dbconn.execSQL(self.conn, statement)
-        except Exception, e:
+        except Exception as e:
             # traceback.print_exc()
             logger.error("Exception in ExecuteSQLStatements. URL = %s" % str(self.url))
             logger.error("  Statement = %s" % str(statement))
@@ -2086,7 +2086,7 @@ class ExpandCommand(SQLCommand):
         try:
             status_conn = dbconn.connect(self.status_url, encoding='UTF8')
             table_conn = dbconn.connect(self.table_url, encoding='UTF8')
-        except DatabaseError, ex:
+        except DatabaseError as ex:
             if self.options.verbose:
                 logger.exception(ex)
             logger.error(ex.__str__().strip())
@@ -2119,7 +2119,7 @@ class ExpandCommand(SQLCommand):
 
                 table_exp_success = self.table.expand(table_conn, self.cancel_flag)
 
-        except Exception, ex:
+        except Exception as ex:
             if ex.__str__().find('canceling statement due to user request') == -1 and not self.cancel_flag:
                 self.table_expand_error = True
                 if self.options.verbose:
@@ -2253,12 +2253,12 @@ before continuing by re-running this utility and providing the input file. """
     try:
         gparray.addExpansionHosts(new_hosts, mirror_type)
         gparray.validateExpansionSegs()
-    except Exception, ex:
+    except Exception as ex:
         num_new_hosts = 0
         if ex.__str__() == 'No new hosts to add':
-            print
-            print '** No hostnames were given that do not already exist in the **'
-            print '** array. Additional segments will be added existing hosts. **'
+            print()
+            print('** No hostnames were given that do not already exist in the **')
+            print('** array. Additional segments will be added existing hosts. **')
         else:
             raise
 
@@ -2303,30 +2303,30 @@ before continuing by re-running this utility and providing the input file. """
                                      )
         try:
             gparray.validateExpansionSegs()
-        except Exception, ex:
+        except Exception as ex:
             if ex.__str__().find('Port') == 0:
                 raise ExpansionError(
                     'Current primary and mirror ports are contiguous.  The input file for gpexpand will need to be created manually.')
     elif num_new_hosts == 0:
         raise ExpansionError('No new hosts or segments were entered.')
 
-    print "\nGenerating configuration file...\n"
+    print("\nGenerating configuration file...\n")
 
     outfile = _gp_expand.generate_inputfile()
 
     outFileStr = """\nInput configuration file was written to '%s'.""" % (outfile)
-    print outFileStr
+    print(outFileStr)
 
     outfile_ts = _gp_expand.generate_tablespace_inputfile(outfile + ".ts")
     if outfile_ts:
         outFileTsStr = """Tablespace Input configuration file was written to '%s'.""" % (outfile_ts)
-        print outFileTsStr
+        print(outFileTsStr)
 
-    print
+    print()
 
-    print """Please review the file and make sure that it is correct then re-run
+    print("""Please review the file and make sure that it is correct then re-run
 with: gpexpand -i %s
-                """ % (outfile)
+                """ % (outfile))
 
 
 def sig_handler(sig):
@@ -2381,7 +2381,7 @@ def main(options, args, parser):
         # Get array configuration
         try:
             gparray = GpArray.initFromCatalog(dburl, utility=True)
-        except DatabaseError, ex:
+        except DatabaseError as ex:
             logger.error('Failed to connect to database.  Make sure the')
             logger.error('Greenplum instance you wish to expand is running')
             logger.error('and that your environment is correct, then rerun')
@@ -2412,7 +2412,7 @@ def main(options, args, parser):
                 _gp_expand.rollback(dburl)
                 logger.info('Rollback complete.')
                 sys.exit(0)
-            except ExpansionError, e:
+            except ExpansionError as e:
                 logger.error(e)
                 sys.exit(1)
 
@@ -2494,7 +2494,7 @@ def main(options, args, parser):
         if _gp_expand is not None:
             _gp_expand.shutdown()
         sys.exit()
-    except Exception, e:
+    except Exception as e:
         if options and options.verbose:
             logger.exception("gpexpand failed. exiting...")
         else:

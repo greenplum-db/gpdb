@@ -354,7 +354,7 @@ class GpMirrorListToBuild:
 
         rewindFailedSegments = []
         # Run pg_rewind on all the targets
-        for rewindSeg in rewindInfo.values():
+        for rewindSeg in list(rewindInfo.values()):
             # Do CHECKPOINT on source to force TimeLineID to be updated in pg_control.
             # pg_rewind wants that to make incremental recovery successful finally.
             self.__logger.debug('Do CHECKPOINT on %s (port: %d) before running pg_rewind.' % (rewindSeg.sourceHostname, rewindSeg.sourcePort))
@@ -420,7 +420,7 @@ class GpMirrorListToBuild:
         A detected problem causes an Exception to be raised
         """
 
-        for hostName, segmentArr in GpArray.getSegmentsByHostName(gpArray.getDbList()).iteritems():
+        for hostName, segmentArr in GpArray.getSegmentsByHostName(gpArray.getDbList()).items():
             usedPorts = {}
             usedDataDirectories = {}
             for segment in segmentArr:
@@ -555,7 +555,7 @@ class GpMirrorListToBuild:
         #
         self.__logger.info('Validating remote directories')
         cmds = []
-        for hostName in destSegmentByHost.keys():
+        for hostName in list(destSegmentByHost.keys()):
             cmds.append(createConfigureNewSegmentCommand(hostName, 'validate blank segments', True))
         for cmd in cmds:
             self.__pool.addCommand(cmd)
@@ -597,7 +597,7 @@ class GpMirrorListToBuild:
         cmds = []
         progressCmds = []
         removeCmds= []
-        for hostName in destSegmentByHost.keys():
+        for hostName in list(destSegmentByHost.keys()):
             for segment in destSegmentByHost[hostName]:
                 if self.__progressMode != GpMirrorListToBuild.Progress.NONE:
                     progressCmds.append(
@@ -689,7 +689,7 @@ class GpMirrorListToBuild:
         segments = [d.getSegment() for d in directives]
         segmentsByHost = GpArray.getSegmentsByHostName(segments)
         operation_list = [RemoteOperation(CleanSharedMem(segments), host=hostName) for hostName, segments in
-                          segmentsByHost.items()]
+                          list(segmentsByHost.items())]
         ParallelOperation(operation_list).run()
 
         for operation in operation_list:
@@ -713,7 +713,7 @@ class GpMirrorListToBuild:
         segmentByHost = GpArray.getSegmentsByHostName(segments)
 
         cmds = []
-        for hostName, segments in segmentByHost.iteritems():
+        for hostName, segments in segmentByHost.items():
             cmd = gp.GpSegStopCmd("remote segment stop on host '%s'" % hostName,
                                   gpEnv.getGpHome(), gpEnv.getGpVersion(),
                                   mode='fast', dbs=segments, verbose=gplog.logging_is_verbose(),
@@ -768,7 +768,7 @@ class GpMirrorListToBuild:
                 break
             else:
                 if last_seg_up_count != seg_up_count:
-                    print "\n",
+                    print("\n", end=' ')
                     self.__logger.info("%d of %d segments have been marked down." %
                                 (initial_seg_up_count - seg_up_count, initial_seg_up_count))
                     last_seg_up_count = seg_up_count
@@ -781,7 +781,7 @@ class GpMirrorListToBuild:
                 time_elapsed += 5
 
         if seg_up_count == 0:
-            print "\n",
+            print("\n", end=' ')
             self.__logger.info("%d of %d segments have been marked down." %
                         (initial_seg_up_count, initial_seg_up_count))
         else:
@@ -796,7 +796,7 @@ class GpMirrorListToBuild:
         segmentByHost = GpArray.getSegmentsByHostName(segments)
 
         cmds = []
-        for hostName, segments in segmentByHost.iteritems():
+        for hostName, segments in segmentByHost.items():
             cmds.append(gp.GpCleanSegmentDirectories("clean segment directories on %s" % hostName,
                                                      segments, gp.REMOTE, hostName))
 
@@ -813,7 +813,7 @@ class GpMirrorListToBuild:
         newSegmentInfo = gp.ConfigureNewSegment.buildSegmentInfoForNewSegment(segments)
 
         cmds = []
-        for hostName in segmentByHost.keys():
+        for hostName in list(segmentByHost.keys()):
             segmentInfo = newSegmentInfo[hostName]
             checkNotNone("segmentInfo for %s" % hostName, segmentInfo)
             cmd = gp.ConfigureNewSegment("update gpid file",

@@ -149,7 +149,7 @@ class GpStateData:
                     ]:
             self.__allValues[k] = True
 
-        for values in self.__entriesByCategory.values():
+        for values in list(self.__entriesByCategory.values()):
             for v in values:
                 self.__allValues[v] = True
 
@@ -559,7 +559,7 @@ class GpSystemStateProgram:
         logger.info("Gathering data from segments...")
         segmentsByHost = GpArray.getSegmentsByHostName(gpArray.getDbList())
         hostNameToCmd = {}
-        for hostName, segments in segmentsByHost.iteritems():
+        for hostName, segments in segmentsByHost.items():
             cmd = gp.GpGetSegmentStatusValues("get segment version status", segments,
                               [gp.SEGMENT_STATUS__GET_VERSION,
                                 gp.SEGMENT_STATUS__GET_PID,
@@ -575,7 +575,7 @@ class GpSystemStateProgram:
         self.__poolWait()
 
         hostNameToResults = {}
-        for hostName, cmd in hostNameToCmd.iteritems():
+        for hostName, cmd in hostNameToCmd.items():
             hostNameToResults[hostName] = cmd.decodeResults()
         return hostNameToResults
 
@@ -749,7 +749,7 @@ class GpSystemStateProgram:
             tabLog = TableLogger().setWarnWithArrows(True)
             logger.info("Number of tables to be redistributed")
             tabLog.info(["  Database", "Count of Tables to redistribute"])
-            for dbname, count in uncompleted.iteritems():
+            for dbname, count in uncompleted.items():
                 tabLog.info(["  %s" % dbname, "%d" % count])
             tabLog.addSeparator()
             tabLog.outputTable()
@@ -815,7 +815,7 @@ class GpSystemStateProgram:
               "(%s)\nEXECUTE '%s' ON MASTER\nFORMAT 'TEXT' (DELIMITER '|' NULL AS '');\n" % \
                (", ".join(columns), scriptName )
 
-        print sql
+        print(sql)
 
         return 0
 
@@ -826,7 +826,7 @@ class GpSystemStateProgram:
             if printToLogger:
                 logger.info(str)
             else:
-                print str
+                print(str)
 
     def __showStatus(self, gpEnv, gpArray):
         """
@@ -1053,7 +1053,7 @@ class GpSystemStateProgram:
         replay_left = kwargs.pop('replay_left', None)
 
         if kwargs:
-            raise TypeError('unexpected keyword argument {!r}'.format(kwargs.keys()[0]))
+            raise TypeError('unexpected keyword argument {!r}'.format(list(kwargs.keys())[0]))
 
         if state:
             # Sharp eyes will notice that we may have already set the
@@ -1313,7 +1313,7 @@ class GpSystemStateProgram:
 
         # fetch from hosts
         segmentsByHost = GpArray.getSegmentsByHostName(upSegmentsAndMaster)
-        for hostName, segments in segmentsByHost.iteritems():
+        for hostName, segments in segmentsByHost.items():
             cmd = gp.GpGetSegmentStatusValues("get segment version status", segments,
                                [gp.SEGMENT_STATUS__GET_VERSION],
                                verbose=logging_is_verbose(),

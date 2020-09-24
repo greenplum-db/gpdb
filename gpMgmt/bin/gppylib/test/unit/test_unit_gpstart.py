@@ -130,7 +130,7 @@ class GpStart(GpTestCase):
         self.subject.logger.info.assert_any_call('Starting Master instance in admin mode')
         self.subject.logger.info.assert_any_call('Master Started...')
 
-        self.assertEquals(self.mock_gplog_log_to_file_only.call_count, 0)
+        self.assertEqual(self.mock_gplog_log_to_file_only.call_count, 0)
 
     def test_skip_checksum_validation_succeeds(self):
         sys.argv = ["gpstart", "-a", "--skip-heap-checksum-validation"]

@@ -21,7 +21,7 @@ try:
 
     from optparse import Option, OptionParser
     from gppylib.gpparseopts import OptParser, OptChecker
-except ImportError, e:
+except ImportError as e:
     sys.exit('Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
 
 _help = ["""This enables one to add, get and remove postgresql.conf configuration parameters.

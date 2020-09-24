@@ -110,9 +110,9 @@ class GpVersionTestCase(unittest.TestCase):
 
     def test_lshift_negative(self):
         v = GpVersion('3.2')
-        with self.assertRaisesRegexp(StandardError, 'invalid version shift'):
+        with self.assertRaisesRegex(Exception, 'invalid version shift'):
             v << -1
-        with self.assertRaisesRegexp(StandardError, 'invalid version shift'):
+        with self.assertRaisesRegex(Exception, 'invalid version shift'):
             v << 1
 
 

@@ -10,13 +10,13 @@ import platform
 import shutil
 import socket
 import tempfile
-import thread
+import _thread
 import time
 try:
     from subprocess32 import check_output, Popen, PIPE
 except:
     from subprocess import check_output, Popen, PIPE
-import commands
+import subprocess
 from collections import defaultdict
 
 import psutil
@@ -666,7 +666,7 @@ def impl(context):
                 break
 
         if not found_match:
-            print context.stored_rows
+            print(context.stored_rows)
             raise Exception("'%s' not found in stored rows" % row)
 
 
@@ -788,7 +788,7 @@ def impl(context, options):
 @when('the user runs gpactivatestandby with options "{options}"')
 @then('the user runs gpactivatestandby with options "{options}"')
 def impl(context, options):
-    context.execute_steps(u'''Then the user runs command "gpactivatestandby -a %s" from standby master''' % options)
+    context.execute_steps('''Then the user runs command "gpactivatestandby -a %s" from standby master''' % options)
     context.standby_was_activated = True
 
 @when('the user runs command "{command}" from standby master')
@@ -805,14 +805,14 @@ def impl(context, command):
 @when('the master goes down')
 @then('the master goes down')
 def impl(context):
-	master = MasterStop("Stopping Master", master_data_dir, mode='immediate')
-	master.run()
+    master = MasterStop("Stopping Master", master_data_dir, mode='immediate')
+    master.run()
 
 @when('the standby master goes down')
 def impl(context):
-	master = MasterStop("Stopping Master Standby", context.standby_data_dir, mode='immediate', ctxt=REMOTE,
+    master = MasterStop("Stopping Master Standby", context.standby_data_dir, mode='immediate', ctxt=REMOTE,
                         remoteHost=context.standby_hostname)
-	master.run(validateAfter=True)
+    master.run(validateAfter=True)
 
 @when('the master goes down on "{host}"')
 def impl(context, host):
@@ -831,7 +831,7 @@ def impl(context):
     else:
         cmd = "gpinitstandby -a -s %s -P %s -S %s" % (context.master_hostname, context.master_port, master_data_dir)
 
-    context.execute_steps(u'''Then the user runs command "%s" from standby master''' % cmd)
+    context.execute_steps('''Then the user runs command "%s" from standby master''' % cmd)
 
     master = MasterStop("Stopping current master", context.standby_data_dir, mode='immediate', ctxt=REMOTE,
                         remoteHost=context.standby_hostname)
@@ -864,7 +864,7 @@ def impl(context, path, perm):
 
 @then('rely on environment.py to restore path permissions')
 def impl(context):
-    print "go look in environment.py to see how it uses the path and permissions on context to make sure it's cleaned up"
+    print("go look in environment.py to see how it uses the path and permissions on context to make sure it's cleaned up")
 
 
 @when('the user runs pg_controldata against the standby data directory')
@@ -907,7 +907,7 @@ def stop_segments(context, segment_type):
     gparray = GpArray.initFromCatalog(dbconn.DbURL())
     role = ROLE_PRIMARY if segment_type == 'primary' else ROLE_MIRROR
 
-    segments = filter(lambda seg: seg.getSegmentRole() == role and seg.content != -1, gparray.getDbList())
+    segments = [seg for seg in gparray.getDbList() if seg.getSegmentRole() == role and seg.content != -1]
     for seg in segments:
         # For demo_cluster tests that run on the CI gives the error 'bash: pg_ctl: command not found'
         # Thus, need to add pg_ctl to the path when ssh'ing to a demo cluster.
@@ -970,8 +970,8 @@ def impl(context, message):
             if message in column:
                 return
 
-    print context.stored_rows
-    print message
+    print(context.stored_rows)
+    print(message)
     raise Exception("'%s' not found in stored rows" % message)
 
 
@@ -994,7 +994,7 @@ def impl(context, second):
 def get_opened_files(filename, pidfile):
     cmd = "PATH=$PATH:/usr/bin:/usr/sbin lsof -p `cat %s` | grep %s | wc -l" % (
     pidfile, filename)
-    return commands.getstatusoutput(cmd)
+    return subprocess.getstatusoutput(cmd)
 
 
 @when('table "{tablename}" is dropped in "{dbname}"')
@@ -1245,29 +1245,29 @@ def impl(context):
 @given('the catalog has a standby master entry')
 @then('verify the standby master entries in catalog')
 def impl(context):
-	check_segment_config_query = "SELECT * FROM gp_segment_configuration WHERE content = -1 AND role = 'm'"
-	check_stat_replication_query = "SELECT * FROM pg_stat_replication"
-	with dbconn.connect(dbconn.DbURL(dbname='postgres'), unsetSearchPath=False) as conn:
-		segconfig = dbconn.query(conn, check_segment_config_query).fetchall()
-		statrep = dbconn.query(conn, check_stat_replication_query).fetchall()
+    check_segment_config_query = "SELECT * FROM gp_segment_configuration WHERE content = -1 AND role = 'm'"
+    check_stat_replication_query = "SELECT * FROM pg_stat_replication"
+    with dbconn.connect(dbconn.DbURL(dbname='postgres'), unsetSearchPath=False) as conn:
+        segconfig = dbconn.query(conn, check_segment_config_query).fetchall()
+        statrep = dbconn.query(conn, check_stat_replication_query).fetchall()
         conn.close()
 
-	context.standby_dbid = segconfig[0][0]
+    context.standby_dbid = segconfig[0][0]
 
-	if len(segconfig) != 1:
-		raise Exception("gp_segment_configuration did not have standby master")
+    if len(segconfig) != 1:
+        raise Exception("gp_segment_configuration did not have standby master")
 
-	if len(statrep) != 1:
-		raise Exception("pg_stat_replication did not have standby master")
+    if len(statrep) != 1:
+        raise Exception("pg_stat_replication did not have standby master")
 
 @then('verify the standby master is now acting as master')
 def impl(context):
-	check_segment_config_query = "SELECT * FROM gp_segment_configuration WHERE content = -1 AND role = 'p' AND preferred_role = 'p' AND dbid = %s" % context.standby_dbid
-	with dbconn.connect(dbconn.DbURL(hostname=context.standby_hostname, dbname='postgres', port=context.standby_port), unsetSearchPath=False) as conn:
-		segconfig = dbconn.query(conn, check_segment_config_query).fetchall()
+    check_segment_config_query = "SELECT * FROM gp_segment_configuration WHERE content = -1 AND role = 'p' AND preferred_role = 'p' AND dbid = %s" % context.standby_dbid
+    with dbconn.connect(dbconn.DbURL(hostname=context.standby_hostname, dbname='postgres', port=context.standby_port), unsetSearchPath=False) as conn:
+        segconfig = dbconn.query(conn, check_segment_config_query).fetchall()
         conn.close()
-	if len(segconfig) != 1:
-		raise Exception("gp_segment_configuration did not have standby master acting as new master")
+    if len(segconfig) != 1:
+        raise Exception("gp_segment_configuration did not have standby master acting as new master")
 
 @then('verify that the schema "{schema_name}" exists in "{dbname}"')
 def impl(context, schema_name, dbname):
@@ -1332,14 +1332,14 @@ def impl(context, seq_name, last_value, dbname):
 @given('the user runs the command "{cmd}" in the background')
 @when('the user runs the command "{cmd}" in the background')
 def impl(context, cmd):
-    thread.start_new_thread(run_command, (context, cmd))
+    _thread.start_new_thread(run_command, (context, cmd))
     time.sleep(10)
 
 
 @given('the user runs the command "{cmd}" in the background without sleep')
 @when('the user runs the command "{cmd}" in the background without sleep')
 def impl(context, cmd):
-    thread.start_new_thread(run_command, (context, cmd))
+    _thread.start_new_thread(run_command, (context, cmd))
 
 
 # For any pg_hba.conf line with `host ... trust`, its address should only contain FQDN
@@ -1384,7 +1384,7 @@ def impl(context, filename, output):
     with open(filename) as fr:
         for line in fr:
             contents = line.strip()
-    print contents
+    print(contents)
     check_stdout_msg(context, output)
 
 @then('verify that the last line of the file "{filename}" in the master data directory contains the string "{output}" escaped')
@@ -1568,7 +1568,7 @@ def impl(context, dbname):
 
 @then('validate and run gpcheckcat repair')
 def impl(context):
-    context.execute_steps(u'''
+    context.execute_steps('''
         Then gpcheckcat should print "repair script\(s\) generated in dir gpcheckcat.repair.*" to stdout
         Then the path "gpcheckcat.repair.*" is found in cwd "1" times
         Then run all the repair scripts in the dir "gpcheckcat.repair.*"
@@ -2071,10 +2071,10 @@ def _create_cluster(context, master_host, segment_host_list, hba_hostnames='0', 
         count = dbconn.querySingleton(conn, "select count(*) from gp_segment_configuration where role='m';")
         conn.close()
         if not with_mirrors and count == 0:
-            print "Skipping creating a new cluster since the cluster is primary only already."
+            print("Skipping creating a new cluster since the cluster is primary only already.")
             return
         elif with_mirrors and count > 0:
-            print "Skipping creating a new cluster since the cluster has mirrors already."
+            print("Skipping creating a new cluster since the cluster has mirrors already.")
             return
     except:
         pass
@@ -2141,7 +2141,7 @@ def impl(context, num_of_segments, num_of_hosts, hostnames):
 
 @given('there are no gpexpand_inputfiles')
 def impl(context):
-    map(os.remove, glob.glob("gpexpand_inputfile*"))
+    list(map(os.remove, glob.glob("gpexpand_inputfile*")))
 
 @when('the user runs gpexpand with the latest gpexpand_inputfile with additional parameters {additional_params}')
 def impl(context, additional_params=''):
@@ -2387,7 +2387,7 @@ def impl(context, table_name):
     query = """CREATE TABLE %s (a INT)""" % table_name
     try:
         data_result = dbconn.query(conn, query)
-    except Exception, msg:
+    except Exception as msg:
         key_msg = "FATAL:  cluster is expaneded"
         if key_msg not in msg.__str__():
             raise Exception("transaction not abort correctly, errmsg:%s" % msg)
@@ -2487,7 +2487,7 @@ def impl(context):
 @then('verify that gpstart on original master fails due to lower Timeline ID')
 def step_impl(context):
     ''' This assumes that gpstart still checks for Timeline ID if a standby master is present '''
-    context.execute_steps(u'''
+    context.execute_steps('''
                             When the user runs "gpstart -a"
                             Then gpstart should return a return code of 2
                             And gpstart should print "Standby activated, this node no more can act as master." to stdout

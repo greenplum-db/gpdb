@@ -164,7 +164,7 @@ class GpSegStatusProgram:
             raise ProgramArgumentValidationException("-D argument not specified")
 
         toFetch = self.__options.statusQueryRequests.split(":")
-        segments = map(gparray.Segment.initFromString, self.__options.dirList)
+        segments = list(map(gparray.Segment.initFromString, self.__options.dirList))
 
         output = {}
         for seg in segments:

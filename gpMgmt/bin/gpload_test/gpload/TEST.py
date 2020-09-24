@@ -334,7 +334,7 @@ def modify_sql_file(num):
                 line = re.sub('-U \w+', '-U fake_user', line)
             else:
                 line = re.sub('-U \w+', '-U '+user, line)
-            print str(re.sub('\n','',line))
+            print(str(re.sub('\n','',line)))
 
 def windows_path(command):
     if platform.system() in ['Windows', 'Microsoft']:

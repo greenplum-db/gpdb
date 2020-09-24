@@ -15,9 +15,9 @@ for executing this set of commands.
 
 
 """
-from __future__ import absolute_import
 
-from Queue import Queue, Empty
+
+from queue import Queue, Empty
 from threading import Thread
 
 import os
@@ -281,7 +281,7 @@ class Worker(Thread):
                     self.pool.addFinishedWorkItem(self.cmd)
                     self.cmd = None
 
-            except Exception, e:
+            except Exception as e:
                 self.logger.exception(e)
                 if self.cmd:
                     self.logger.debug("[%s] finished cmd with exception: %s" % (self.name, self.cmd))
@@ -444,7 +444,7 @@ class LocalExecutionContext(ExecutionContext):
         # e.g. Given {'FOO': 1, 'BAR': 2}, we'll produce "FOO=1 BAR=2 ..."
 
         # also propagate env from command instance specific map
-        keys = sorted(cmd.propagate_env_map.keys(), reverse=True)
+        keys = sorted(list(cmd.propagate_env_map.keys()), reverse=True)
         for k in keys:
             cmd.cmdStr = "%s=%s && %s" % (k, cmd.propagate_env_map[k], cmd.cmdStr)
 
@@ -495,7 +495,7 @@ class RemoteExecutionContext(LocalExecutionContext):
         self.__class__.trail.add(self.targetHost)
 
         # also propagate env from command instance specific map
-        keys = sorted(cmd.propagate_env_map.keys(), reverse=True)
+        keys = sorted(list(cmd.propagate_env_map.keys()), reverse=True)
         for k in keys:
             cmd.cmdStr = "%s=%s && %s" % (k, cmd.propagate_env_map[k], cmd.cmdStr)
 
@@ -634,7 +634,7 @@ def run_remote_commands(name, commands):
     """
     cmds = {}
     pool = WorkerPool()
-    for host, cmdStr in commands.items():
+    for host, cmdStr in list(commands.items()):
         cmd = Command(name=name, cmdStr=cmdStr, ctxt=REMOTE, remoteHost=host)
         pool.addCommand(cmd)
         cmds[host] = cmd

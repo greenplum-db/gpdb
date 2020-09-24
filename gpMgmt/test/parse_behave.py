@@ -13,7 +13,7 @@ for line in sys.stdin.readlines():
     if re.search('passed.*failed.*skipped', line):
         kvps = {}
         fields = line.split(',')
-        print ""
+        print("")
         category = None
         number = None
         status = None
@@ -36,4 +36,4 @@ for line in sys.stdin.readlines():
                 if number > 0:
                     success = False
         
-        print "BEHAVE_RESULTS=%s STATUS=%s MSG='%s'" % (category, statusString(success), line)
+        print("BEHAVE_RESULTS=%s STATUS=%s MSG='%s'" % (category, statusString(success), line))

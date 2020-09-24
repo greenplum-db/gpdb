@@ -1,9 +1,7 @@
 import abc
 
 
-class SegmentGuc():
-    __metaclass__ = abc.ABCMeta
-
+class SegmentGuc(metaclass=abc.ABCMeta):
     MASTER_CONTEXT = '-1'
 
     def __init__(self, row):

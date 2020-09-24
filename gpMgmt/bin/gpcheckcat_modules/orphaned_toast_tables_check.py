@@ -202,7 +202,7 @@ GROUP BY gp_segment_id, toast_table_oid, toast_table_name, expected_table_oid, e
             if issue.repair_script:
                 content_id_to_segment_map[issue.row['content_id']]['repair_statements'].append(issue.repair_script)
 
-        segments_with_repair_statements = filter(lambda segment: len(segment['repair_statements']) > 0, content_id_to_segment_map.values())
+        segments_with_repair_statements = [segment for segment in list(content_id_to_segment_map.values()) if len(segment['repair_statements']) > 0]
         for segment in segments_with_repair_statements:
             segment['repair_statements'] = ["SET allow_system_table_mods=true;"] + segment['repair_statements']
 
@@ -211,7 +211,7 @@ GROUP BY gp_segment_id, toast_table_oid, toast_table_name, expected_table_oid, e
     @staticmethod
     def _get_content_id_to_segment_map(segments):
         content_id_to_segment = {}
-        for segment in segments.values():
+        for segment in list(segments.values()):
             segment['repair_statements'] = []
             content_id_to_segment[segment['content']] = segment
 

@@ -104,7 +104,7 @@ class MakeDir(Operation):
     def execute(self):
          try:
              return os.makedirs(self.path)
-         except OSError, e:
+         except OSError as e:
              if e.errno != errno.EEXIST:
                  raise
     def __str__(self):
