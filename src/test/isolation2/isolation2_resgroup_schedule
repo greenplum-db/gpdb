@@ -41,6 +41,7 @@ test: resgroup/resgroup_move_query
 # regression tests
 test: resgroup/resgroup_recreate
 test: resgroup/resgroup_operator_memory
+test: resgroup/resgroup_functions
 
 # parallel tests
 #test: resgroup/restore_default_resgroup
