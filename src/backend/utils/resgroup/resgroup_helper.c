@@ -301,21 +301,21 @@ pg_resgroup_get_status(PG_FUNCTION_ARGS)
 		values[0] = row->groupId;
 		groupId = DatumGetObjectId(values[0]);
 
-		if (Gp_role == GP_ROLE_DISPATCH)
-		{
-			values[1] = ResGroupGetStat(groupId, RES_GROUP_STAT_NRUNNING);
-			values[2] = ResGroupGetStat(groupId, RES_GROUP_STAT_NQUEUEING);
-			values[3] = ResGroupGetStat(groupId, RES_GROUP_STAT_TOTAL_QUEUED);
-			values[4] = ResGroupGetStat(groupId, RES_GROUP_STAT_TOTAL_EXECUTED);
-			values[5] = ResGroupGetStat(groupId, RES_GROUP_STAT_TOTAL_QUEUE_TIME);
-		}
-		else
+		if (Gp_role == GP_ROLE_UTILITY)
 		{
 			nulls[1] = true;
 			nulls[2] = true;
 			nulls[3] = true;
 			nulls[4] = true;
 			nulls[5] = true;
+		}
+		else
+		{
+			values[1] = ResGroupGetStat(groupId, RES_GROUP_STAT_NRUNNING);
+			values[2] = ResGroupGetStat(groupId, RES_GROUP_STAT_NQUEUEING);
+			values[3] = ResGroupGetStat(groupId, RES_GROUP_STAT_TOTAL_QUEUED);
+			values[4] = ResGroupGetStat(groupId, RES_GROUP_STAT_TOTAL_EXECUTED);
+			values[5] = ResGroupGetStat(groupId, RES_GROUP_STAT_TOTAL_QUEUE_TIME);
 		}
 
 		values[6] = CStringGetTextDatum(row->cpuUsage->data);
