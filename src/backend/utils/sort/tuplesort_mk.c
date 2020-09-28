@@ -841,7 +841,7 @@ tuplesort_begin_heap_file_readerwriter_mk(ScanState *ss,
 
 		state->tapeset_file_prefix = MemoryContextStrdup(state->sortcontext, rwfile_prefix);
 
-		state->work_set = workfile_mgr_create_set("SharedSort", rwfile_prefix);
+		state->work_set = workfile_mgr_create_set("SharedSort", rwfile_prefix, true /* hold pin */);
 		state->tapeset_state_file = BufFileCreateNamedTemp(statedump,
 														   false /* interXact */,
 														   state->work_set);
@@ -1062,6 +1062,7 @@ tuplesort_end_mk(Tuplesortstate_mk *state)
 	if (state->work_set)
 	{
 		workfile_mgr_close_set(state->work_set);
+		state->work_set = NULL;
 	}
 
 

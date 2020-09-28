@@ -1099,7 +1099,7 @@ ExecHashJoinSaveTuple(PlanState *ps, MemTuple tuple, uint32 hashvalue,
 		MemoryContext oldcxt;
 
 		oldcxt = MemoryContextSwitchTo(bfCxt);
-		hashtable->work_set = workfile_mgr_create_set("HashJoin", NULL);
+		hashtable->work_set = workfile_mgr_create_set("HashJoin", NULL, true /* hold pin */);
 		MemoryContextSwitchTo(oldcxt);
 	}
 

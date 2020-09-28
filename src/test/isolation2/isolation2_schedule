@@ -230,6 +230,9 @@ test: reindex/repeatable_read_reindex_with_insert_heap
 test: reindex/repeatable_read_reindex_with_insert_part_heap reindex/vacuum_analyze_while_reindex_ao_btree
 test: reindex/vacuum_while_reindex_ao_bitmap reindex/vacuum_while_reindex_heap_btree reindex/vacuum_while_reindex_heap_btree_toast
 
+# test workfile_mgr
+test: workfile_mgr_test
+
 # Cancel test
 test: cancel_plpython
 

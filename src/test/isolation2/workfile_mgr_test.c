@@ -28,11 +28,11 @@
 #include "utils/memutils.h"
 
 
-#define TEST_NAME_LENGTH 50
-#define TEST_HT_NUM_ELEMENTS 8192
-
 /* Number of Workfiles created during the "stress" workfile test */
 #define TEST_MAX_NUM_WORKFILES 100000
+
+/* Used to specify created workfiles, default is TEST_MAX_NUM_WORKFILES */
+int num_workfiles;
 
 int tests_passed;
 int tests_failed;
@@ -49,6 +49,7 @@ static bool execworkfile_create_one_MB_file(void);
 static bool workfile_fill_sharedcache(void);
 static bool workfile_create_and_set_cleanup(void);
 static bool workfile_create_and_individual_cleanup(void);
+static bool workfile_create_and_individual_cleanup_with_pinned_workfile_set(void);
 
 static bool atomic_test(void);
 
@@ -58,6 +59,7 @@ static void unit_test_reset(void);
 static bool unit_test_summary(void);
 
 extern Datum gp_workfile_mgr_test_harness(PG_FUNCTION_ARGS);
+extern Datum gp_workfile_mgr_create_workset(PG_FUNCTION_ARGS);
 
 #define GET_STR(textp) DatumGetCString(DirectFunctionCall1(textout, PointerGetDatum(textp)))
 
@@ -81,6 +83,7 @@ static test_def test_defns[] = {
 		{"workfile_fill_sharedcache", workfile_fill_sharedcache},
 		{"workfile_create_and_set_cleanup", workfile_create_and_set_cleanup},
 		{"workfile_create_and_individual_cleanup", workfile_create_and_individual_cleanup},
+		{"workfile_create_and_individual_cleanup_with_pinned_workfile_set", workfile_create_and_individual_cleanup_with_pinned_workfile_set},
 		{NULL, NULL}, /* This has to be the last element of the array */
 };
 
@@ -90,11 +93,15 @@ gp_workfile_mgr_test_harness(PG_FUNCTION_ARGS)
 {
 	bool result = true;
 
-	Assert(PG_NARGS() == 1);
+	Assert(PG_NARGS() == 2);
 
 	char *test_name = GET_STR(PG_GETARG_TEXT_P(0));
 	bool run_all_tests = strcasecmp(test_name, "all") == 0;
 	bool ran_any_tests = false;
+	num_workfiles = PG_GETARG_INT32(1);
+
+	if (num_workfiles <= 0 || num_workfiles > TEST_MAX_NUM_WORKFILES)
+		num_workfiles = TEST_MAX_NUM_WORKFILES;
 
 	int crt_test = 0;
 	while (NULL != test_defns[crt_test].test_name)
@@ -113,6 +120,42 @@ gp_workfile_mgr_test_harness(PG_FUNCTION_ARGS)
 	}
 
 	PG_RETURN_BOOL(ran_any_tests && result);
+}
+
+PG_FUNCTION_INFO_V1(gp_workfile_mgr_create_workset);
+Datum
+gp_workfile_mgr_create_workset(PG_FUNCTION_ARGS)
+{
+	Assert(PG_NARGS() == 1 || PG_NARGS() == 4);
+	bool emptySet = false;
+	bool interXact = false;
+	bool holdPin = false;
+	bool closeFile = false;
+
+	char *worksetName = GET_STR(PG_GETARG_TEXT_P(0));
+	if (PG_NARGS() == 1)
+		emptySet = true;
+	else
+	{
+		interXact = PG_GETARG_BOOL(1);
+		holdPin = PG_GETARG_BOOL(2);
+		closeFile = PG_GETARG_BOOL(3);
+	}
+	
+	BufFile *buffile;
+
+	workfile_set *work_set = workfile_mgr_create_set(worksetName, NULL, holdPin);
+	Assert(work_set->active);
+
+	if (!emptySet)
+	{
+		buffile = BufFileCreateTempInSet(work_set, interXact);
+
+		if (closeFile)
+			BufFileClose(buffile);
+	}
+
+	PG_RETURN_VOID();
 }
 
 /*
@@ -366,31 +409,27 @@ buffile_size_test(void)
 
 	unit_test_result(test_size == expected_size);
 
-	elog(LOG, "Running sub-test: Closing buffile");
-	BufFileClose(testBf);
-	unit_test_result(true);
-
 	elog(LOG, "Running sub-test: Opening existing and testing size");
-	testBf = BufFileOpenNamedTemp(file_name,
+	BufFile *testBf1 = BufFileOpenNamedTemp(file_name,
 								  false /*interXact */);
-	test_size = BufFileGetSize(testBf);
+	test_size = BufFileGetSize(testBf1);
 
 	unit_test_result(test_size == expected_size);
 
 	elog(LOG, "Running sub-test: Seek past end, appending and testing size");
 	int past_end_offset = 100;
 	int past_end_write = 200;
-	BufFileSeek(testBf, 0 /* fileno */, expected_size + past_end_offset, SEEK_SET);
-	BufFileWrite(testBf, text->data, past_end_write);
+	BufFileSeek(testBf1, 0 /* fileno */, expected_size + past_end_offset, SEEK_SET);
+	BufFileWrite(testBf1, text->data, past_end_write);
 	expected_size += past_end_offset + past_end_write;
-	test_size = BufFileGetSize(testBf);
+	test_size = BufFileGetSize(testBf1);
 
 	unit_test_result(test_size == expected_size);
 
 	elog(LOG, "Running sub-test: Closing buffile");
+	BufFileClose(testBf1);
 	BufFileClose(testBf);
 	unit_test_result(true);
-
 
 	pfree(text->data);
 	pfree(text);
@@ -481,14 +520,7 @@ buffile_large_file_test(void)
 	elog(LOG, "Running test: buffile_large_file_test");
 	char *file_name = "Test_large_buff.dat";
 
-	StringInfo filename = makeStringInfo();
-
-	appendStringInfo(filename,
-					 "%s/%s",
-					 PG_TEMP_FILES_DIR,
-					 "Test_large_buff.dat");
-
-	BufFile *bfile = BufFileCreateNamedTemp(filename->data,
+	BufFile *bfile = BufFileCreateNamedTemp(file_name,
 											true /* interXact */,
 											NULL /* workfile_set */);
 
@@ -743,7 +775,7 @@ workfile_fill_sharedcache(void)
 	int crt_entry = 0;
 	for (crt_entry = 0; crt_entry < n_entries; crt_entry++)
 	{
-		workfile_set *work_set = workfile_mgr_create_set("workfile_test", NULL);
+		workfile_set *work_set = workfile_mgr_create_set("workfile_test", NULL, false /* hold pin */);
 		if (NULL == work_set)
 		{
 			success = false;
@@ -777,15 +809,15 @@ workfile_create_and_set_cleanup(void)
 
 	elog(LOG, "Running sub-test: Create Workset");
 
-	workfile_set *work_set = workfile_mgr_create_set("workfile_test", NULL);
+	workfile_set *work_set = workfile_mgr_create_set("workfile_test", NULL, false /* hold pin */);
 
 	unit_test_result(NULL != work_set);
 
-	elog(LOG, "Running sub-test: Create %d workfiles", TEST_MAX_NUM_WORKFILES);
+	elog(LOG, "Running sub-test: Create %d workfiles", num_workfiles);
 
-	BufFile **ewfiles = (BufFile **) palloc(TEST_MAX_NUM_WORKFILES * sizeof(BufFile *));
+	BufFile **ewfiles = (BufFile **) palloc(num_workfiles * sizeof(BufFile *));
 
-	for (int i=0; i < TEST_MAX_NUM_WORKFILES; i++)
+	for (int i=0; i < num_workfiles; i++)
 	{
 		ewfiles[i] = BufFileCreateTempInSet(work_set, false /* interXact */);
 
@@ -805,11 +837,10 @@ workfile_create_and_set_cleanup(void)
 	elog(LOG, "Running sub-test: Closing Workset");
 	workfile_mgr_close_set(work_set);
 
-	unit_test_result(true);
+	unit_test_result(!work_set->active);
 
 	return unit_test_summary();
 }
-
 
 /*
  * Unit test that creates very many workfiles, and then closes them one by one
@@ -824,15 +855,15 @@ workfile_create_and_individual_cleanup(void)
 
 	elog(LOG, "Running sub-test: Create Workset");
 
-	workfile_set *work_set = workfile_mgr_create_set("workfile_test", NULL);
+	workfile_set *work_set = workfile_mgr_create_set("workfile_test", NULL, false /* hold pin */);
 
 	unit_test_result(NULL != work_set);
 
-	elog(LOG, "Running sub-test: Create %d workfiles", TEST_MAX_NUM_WORKFILES);
+	elog(LOG, "Running sub-test: Create %d workfiles", num_workfiles);
 
-	BufFile **ewfiles = (BufFile **) palloc(TEST_MAX_NUM_WORKFILES * sizeof(BufFile *));
+	BufFile **ewfiles = (BufFile **) palloc(num_workfiles * sizeof(BufFile *));
 
-	for (int i=0; i < TEST_MAX_NUM_WORKFILES; i++)
+	for (int i=0; i < num_workfiles; i++)
 	{
 		ewfiles[i] = BufFileCreateTempInSet(work_set, false /* interXact */);
 
@@ -849,9 +880,9 @@ workfile_create_and_individual_cleanup(void)
 	}
 	unit_test_result(success);
 
-	elog(LOG, "Running sub-test: Closing %d workfiles", TEST_MAX_NUM_WORKFILES);
+	elog(LOG, "Running sub-test: Closing %d workfiles", num_workfiles);
 
-	for (int i=0; i < TEST_MAX_NUM_WORKFILES; i++)
+	for (int i=0; i < num_workfiles; i++)
 	{
 		BufFileClose(ewfiles[i]);
 
@@ -862,10 +893,71 @@ workfile_create_and_individual_cleanup(void)
 	}
 	unit_test_result(success);
 
-	elog(LOG, "Running sub-test: Closing Workset");
+	/* the workfile_set should be freed since all it's files are closed */
+	unit_test_result(!work_set->active);
+
+	return unit_test_summary();
+}
+
+/*
+ * Unit test that creates very many workfiles with pinned workfile_set, and
+ * then closes them one by one
+ */
+static bool
+workfile_create_and_individual_cleanup_with_pinned_workfile_set(void)
+{
+	bool success = true;
+
+	unit_test_reset();
+	elog(LOG, "Running test: workfile_create_and_individual_cleanup");
+
+	elog(LOG, "Running sub-test: Create Workset");
+
+	workfile_set *work_set = workfile_mgr_create_set("workfile_test", NULL, true /* hold pin */);
+
+	unit_test_result(NULL != work_set);
+
+	elog(LOG, "Running sub-test: Create %d workfiles", num_workfiles);
+
+	BufFile **ewfiles = (BufFile **) palloc(num_workfiles * sizeof(BufFile *));
+
+	for (int i=0; i < num_workfiles; i++)
+	{
+		ewfiles[i] = BufFileCreateTempInSet(work_set, false /* interXact */);
+
+		if (ewfiles[i] == NULL)
+		{
+			success = false;
+			break;
+		}
+
+		if (i % 1000 == 999)
+		{
+			elog(LOG, "Created %d workfiles so far", i);
+		}
+	}
+	unit_test_result(success);
+
+	elog(LOG, "Running sub-test: Closing %d workfiles", num_workfiles);
+
+	for (int i=0; i < num_workfiles; i++)
+	{
+		BufFileClose(ewfiles[i]);
+
+		if (i % 1000 == 999)
+		{
+			elog(LOG, "Closed %d workfiles so far", i);
+		}
+	}
+	unit_test_result(success);
+
+	/* the workfile_set should not be freed since it gets pinned */
+	unit_test_result(work_set->active);
+
+	/* free the workfile_set */
 	workfile_mgr_close_set(work_set);
 
-	unit_test_result(true);
+	unit_test_result(!work_set->active);
 
 	return unit_test_summary();
 }

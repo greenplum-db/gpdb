@@ -7,7 +7,7 @@ top_builddir = ../../..
 include $(top_builddir)/src/Makefile.global
 
 NAME = isolation2_regress
-OBJS = isolation2_regress.o
+OBJS = isolation2_regress.o workfile_mgr_test.o
 include $(top_srcdir)/src/Makefile.shlib
 
 # where to find psql for testing an existing installation

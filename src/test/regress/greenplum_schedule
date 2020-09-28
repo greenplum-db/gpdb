@@ -240,7 +240,6 @@ test: vacuum_full_heap_bitmapindex
 
 test: ao_checksum_corruption AOCO_Compression AORO_Compression table_statistics
 test: metadata_track
-test: workfile_mgr_test
 test: session_reset
 # below test(s) inject faults so each of them need to be in a separate group
 test: fts_error

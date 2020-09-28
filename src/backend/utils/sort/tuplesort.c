@@ -1045,6 +1045,12 @@ tuplesort_end(Tuplesortstate *state)
 		FreeExecutorState(state->estate);
 	}
 
+	if (state->work_set)
+	{
+		workfile_mgr_close_set(state->work_set);
+		state->work_set = NULL;
+	}
+
 	MemoryContextSwitchTo(oldcontext);
 
 	/*
@@ -3889,7 +3895,7 @@ tuplesort_begin_heap_file_readerwriter(ScanState *ss,
 									 sortOperators, sortCollations, nullsFirstFlags,
 									 workMem, randomAccess);
 
-		state->work_set = workfile_mgr_create_set("SharedSort", rwfile_prefix);
+		state->work_set = workfile_mgr_create_set("SharedSort", rwfile_prefix, true /* hold pin */);
 		state->pfile_rwfile_prefix = MemoryContextStrdup(state->sortcontext, rwfile_prefix);
 		state->pfile_rwfile_state = BufFileCreateNamedTemp(statedump,
 														   false /* interXact */,

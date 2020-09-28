@@ -77,6 +77,7 @@
 #include "cdb/cdblocaldistribxact.h"
 #include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h" /* Gp_role, Gp_is_writer, interconnect_setup_timeout */
+#include "utils/workfile_mgr.h"
 #include "utils/vmem_tracker.h"
 #include "cdb/cdbdisp.h"
 
@@ -2857,6 +2858,7 @@ CommitTransaction(void)
 	AtEOXact_HashTables(true);
 	AtEOXact_PgStat(true);
 	AtEOXact_Snapshot(true);
+	AtEOXact_WorkFile();
 	pgstat_report_xact_timestamp(0);
 
 	CurrentResourceOwner = NULL;
@@ -3173,6 +3175,7 @@ PrepareTransaction(void)
 	AtEOXact_HashTables(true);
 	/* don't call AtEOXact_PgStat here; we fixed pgstat state above */
 	AtEOXact_Snapshot(true);
+	AtEOXact_WorkFile();
 	pgstat_report_xact_timestamp(0);
 
 	CurrentResourceOwner = NULL;
@@ -3371,6 +3374,7 @@ AbortTransaction(void)
 		AtEOXact_ComboCid();
 		AtEOXact_HashTables(false);
 		AtEOXact_PgStat(false);
+		AtEOXact_WorkFile();
 		pgstat_report_xact_timestamp(0);
 	}
 

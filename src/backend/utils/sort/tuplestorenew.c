@@ -762,7 +762,7 @@ ntuplestore_create_readerwriter(const char *filename, int64 maxBytes, bool isWri
 		store->rwflag = NTS_IS_WRITER;
 		store->lobbytes = 0;
 		store->work_set = NULL;
-		store->work_set = workfile_mgr_create_set(store->operation_name, filename);
+		store->work_set = workfile_mgr_create_set(store->operation_name, filename, true /* hold pin */);
 		store->pfile = BufFileCreateNamedTemp(filename,
 											  false /* interXact */,
 											  store->work_set);
@@ -1384,7 +1384,7 @@ ntuplestore_create_spill_files(NTupleStore *nts)
 	}
 
 	Assert(!nts->work_set);
-	nts->work_set = workfile_mgr_create_set(nts->operation_name, NULL);
+	nts->work_set = workfile_mgr_create_set(nts->operation_name, NULL, true /* hold pin */);
 
 	oldcxt = MemoryContextSwitchTo(nts->mcxt);
 

@@ -186,7 +186,7 @@ BufFileCreateTemp(char *operation_name, bool interXact)
 {
 	workfile_set *work_set;
 
-	work_set = workfile_mgr_create_set(operation_name, NULL);
+	work_set = workfile_mgr_create_set(operation_name, NULL, false /* hold pin */);
 
 	return BufFileCreateTempInSet(work_set, interXact);
 }
