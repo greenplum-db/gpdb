@@ -199,7 +199,6 @@ groups:
 {% endif %}
 {% if "win" in os_types %}
   - compile_gpdb_clients_windows
-  - test_gpdb_clients_windows
 {% endif %}
 {% if "ICW" in test_sections %}
   ## --------------------------------------------------------------------
@@ -287,7 +286,6 @@ groups:
 {% endif %}
 {% if "win" in os_types %}
   - compile_gpdb_clients_windows
-  - test_gpdb_clients_windows
 {% endif %}
 
 {% if "ICW" in test_sections %}
@@ -628,26 +626,6 @@ resources:
 {% endif %}
 
 {% if "win" in os_types %}
-- name: terraform_windows
-  type: terraform
-  source:
-    env:
-      AWS_ACCESS_KEY_ID: ((tf-machine-access-key-id))
-      AWS_SECRET_ACCESS_KEY: ((tf-machine-secret-access-key))
-      GOOGLE_CREDENTIALS: ((google-service-account-key))
-    vars:
-      project: ((google-project-id))
-      region: ((google-region))
-      region_zone: ((google-zone))
-    storage:
-      access_key_id: ((tf-machine-access-key-id))
-      secret_access_key: ((tf-machine-secret-access-key))
-      region_name: ((aws-region))
-      # This is not parameterized, on purpose. All tfstates will go to this spot,
-      # and different teams will place there clusters' tfstate files under different paths
-      bucket: gpdb5-pipeline-dynamic-terraform
-      bucket_path: gp-clients-windows-tests-google/
-
 - name: bin_gpdb_clients_windows
   type: gcs
   source:
@@ -877,44 +855,6 @@ jobs:
   - put: bin_gpdb_clients_windows
     params:
       file: "gpdb_artifacts/greenplum-clients-x86_64.tar.gz"
-
-- name: test_gpdb_clients_windows
-  plan:
-  - in_parallel:
-      steps:
-      - get: ccp_src
-      - get: gpdb_src
-        trigger: true
-        passed: [compile_gpdb_centos7]
-      - get: gpdb7-centos7-test
-      - get: bin_gpdb_clients_windows
-        passed: [compile_gpdb_clients_windows]
-      - get: bin_gpdb
-        resource: bin_gpdb_centos7
-  - put: terraform_windows
-    params:
-      action: create
-      delete_on_failure: true
-      generate_random_name: true
-      terraform_source: ccp_src/gpdb_windows_client_test/
-  - task: run_tests
-    file: gpdb_src/concourse/tasks/windows_remote_test.yml
-    image: gpdb7-centos7-test
-    params:
-      REMOTE_PORT: ((remote_win_port_test))
-      REMOTE_USER: ((remote_win_user_test))
-      REMOTE_KEY: ((remote_win_key_test))
-  ensure:
-    put: terraform_windows
-    params:
-      action: destroy
-      env_name_file: terraform_windows/name
-      terraform_source: ccp_src/gpdb_windows_client_test/
-      vars:
-        aws_instance-node-instance_type: t2.micro #t2.micro is ignored in destroy, but aws_instance-node-instance_type is required.
-        aws_ebs_volume_type: standard
-    get_params:
-      action: destroy
 {% endif %}
 {% if "ICW" in test_sections %}
 ## ======================================================================
@@ -1864,7 +1804,6 @@ jobs:
         - icw_planner_ubuntu18.04
         - icw_gporca_icproxy_ubuntu18.04
         - icw_planner_icproxy_ubuntu18.04
-        - test_gpdb_clients_windows
         - cli_cross_subnet
 {% for test in CLI_BEHAVE_TESTS %}
         - [[ test.name ]]
@@ -1918,7 +1857,7 @@ jobs:
         - compile_gpdb_ubuntu18.04
       - get: bin_gpdb_clients_windows
         passed:
-        - test_gpdb_clients_windows
+        - compile_gpdb_clients_windows
 
 - name: Publish Server Builds
   plan:
