@@ -341,6 +341,12 @@ create view rollup_view as select cn,vn,pn,grouping(cn,vn,pn) from sale group by
 \d+ rollup_view;
 create view gs_view as select cn,vn,grouping(vn,cn) from sale group by grouping sets ((vn), (cn), (), (cn,vn));
 \d+ gs_view;
+-- A RowExpr that is immediately inside a grouping extension clause is treated
+-- as a single grouping set. Any RowExpr that is nested inside another RowExpr
+-- will be flattened.
+create view rollup_nested_rowexpr_view as
+select cn, vn, pn, dt, count(distinct dt) from sale group by rollup(cn, (vn, (pn, dt)));
+\d+ rollup_nested_rowexpr_view
 
 -- GROUP_ID function --
 

@@ -3562,9 +3562,9 @@ transformRowExprToList(ParseState *pstate, RowExpr *rowexpr,
 
 		if (IsA(node, RowExpr))
 		{
-			groupsets =
+			grping_set =
 				transformRowExprToGroupClauses(pstate, (RowExpr *)node,
-											   groupsets, targetList);
+											   grping_set, targetList);
 		}
 
 		else

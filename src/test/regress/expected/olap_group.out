@@ -2909,6 +2909,29 @@ View definition:
    FROM sale
   GROUP BY GROUPING SETS ((sale.vn), (sale.cn), (), ((sale.cn), (sale.vn)));
 
+-- A RowExpr that is immediately inside a grouping extension clause is treated
+-- as a single grouping set. Any RowExpr that is nested inside another RowExpr
+-- will be flattened.
+create view rollup_nested_rowexpr_view as
+select cn, vn, pn, dt, count(distinct dt) from sale group by rollup(cn, (vn, (pn, dt)));
+\d+ rollup_nested_rowexpr_view
+       View "public.rollup_nested_rowexpr_view"
+ Column |  Type   | Modifiers | Storage | Description 
+--------+---------+-----------+---------+-------------
+ cn     | integer |           | plain   | 
+ vn     | integer |           | plain   | 
+ pn     | integer |           | plain   | 
+ dt     | date    |           | plain   | 
+ count  | bigint  |           | plain   | 
+View definition:
+ SELECT sale.cn,
+    sale.vn,
+    sale.pn,
+    sale.dt,
+    count(DISTINCT sale.dt) AS count
+   FROM sale
+  GROUP BY ROLLUP (sale.cn, (sale.vn, sale.pn, sale.dt));
+
 -- GROUP_ID function --
 select pn, sum(qty), group_id() from sale group by rollup(pn);
  pn  | sum  | ?column? 
