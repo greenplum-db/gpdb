@@ -402,10 +402,20 @@ tuple_lock_retry:
 			InitDirtySnapshot(SnapshotDirty);
 			for (;;)
 			{
+				/*
+				 * Greenplum specific error message
+				 * Split-update is used to implment update on distribute keys
+				 * of hash partitioned table in Greenplum. UPDATE on distkeys
+				 * is similar to upstream's UPDATE on partition keys. We will
+				 * store bit info in the tuple's head to mark it is split-updated,
+				 * so the blocked transaction which also wants to update or delete
+				 * the same tuple will abort. We re-use upstream's code to implement
+				 * this, just modify a little of the following error message.
+				 */
 				if (ItemPointerIndicatesMovedPartitions(tid))
 					ereport(ERROR,
 							(errcode(ERRCODE_T_R_SERIALIZATION_FAILURE),
-							 errmsg("tuple to be locked was already moved to another partition due to concurrent update")));
+							 errmsg("tuple to be locked was already moved to another partition or segment due to concurrent update")));
 
 				tuple->t_self = *tid;
 				if (heap_fetch(relation, &SnapshotDirty, tuple, &buffer))
