@@ -4,7 +4,6 @@ test: exchange_partition_heap_table
 test: partitioned_heap_table_with_differently_sized_dropped_columns
 test: partitioned_heap_table_with_differently_aligned_dropped_columns
 test: partitioned_heap_table_with_differently_aligned_varlen_dropped_columns
-test: unsupported_dist_coltypes
 test: unsupported_name_col
 test: unsupported_tsquery_col
 test: gphdfs
