@@ -37,8 +37,13 @@ endif
 # both the below PG_PORT and the port in test/sql/postgres_fdw.sql
 # which is the option of foreign server
 export PG_PORT=5432
+
 installcheck: prep_postgres
+clean: clean_postgres
+
 prep_postgres:
 	sh postgres_setup.sh
+clean_postgres:
+	sh postgres_clean.sh
 
-.PHONY: prep_postgres
+.PHONY: prep_postgres clean_postgres
