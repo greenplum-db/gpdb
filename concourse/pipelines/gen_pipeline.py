@@ -169,7 +169,8 @@ def create_pipeline(args):
         'os_types': args.os_types,
         'test_sections': args.test_sections,
         'pipeline_configuration': args.pipeline_configuration,
-        'test_trigger': test_trigger
+        'test_trigger': test_trigger,
+        'pipeline_target': args.pipeline_target
     }
 
     pipeline_yml = render_template(args.template_filename, context)
