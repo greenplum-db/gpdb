@@ -53,7 +53,7 @@
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
 
-
+#define PG_BLCKSZ 8192
 /*
  * Global context for foreign_expr_walker's search of an expression tree.
  */
@@ -1048,7 +1048,11 @@ deparseAnalyzeSizeSql(StringInfo buf, Relation rel)
 
 	appendStringInfoString(buf, "SELECT pg_catalog.pg_relation_size(");
 	deparseStringLiteral(buf, relname.data);
-	appendStringInfo(buf, "::pg_catalog.regclass) / %d", BLCKSZ);
+	/*
+	 * We use the postgres deafult block size 8K here instead of the local
+	 * definition of block size, as it can work correctly in most situations.
+	*/
+	appendStringInfo(buf, "::pg_catalog.regclass) / %d", PG_BLCKSZ);
 }
 
 /*

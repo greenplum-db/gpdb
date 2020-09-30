@@ -18,6 +18,6 @@ and triggers, these SQL files are in sql/postgres_sql.
 3) gp_postgres_fdw. This test is used to test
 the MPP feature of postgres_fdw. A Greenplum database
 uses postgres_fdw to connect to itself. However
-this featrue is not implemented completely. We just
+this feature is not implemented completely. We just
 leave the case there untill we starts working on
 postgres_fdw's MPP feature.

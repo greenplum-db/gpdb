@@ -454,7 +454,7 @@ ExecInsert(TupleTableSlot *parentslot,
 			 * We need to check if the slot has a valid ctid when it has a HeapTuple
 			 * before calling slot_get_ctid, otherwise the Assert in slot_get_ctid will fail
 			 */
-			if (!TupHasHeapTuple(slot) || ItemPointerIsValid((&(slot->PRIVATE_tts_heaptuple->t_self))))
+			if (TupHasHeapTuple(slot) && ItemPointerIsValid((&(slot->PRIVATE_tts_heaptuple->t_self))))
 			{
 				slot_set_ctid(parentslot, slot_get_ctid(slot));
 			}
