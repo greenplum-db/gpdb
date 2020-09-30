@@ -24,8 +24,9 @@ Checking for heterogeneous partitioned tables               fatal
 | Your installation contains heterogenous partitioned tables
 | where the root partition does not match one or more child
 | partitions' on disk representation. In order to make the
-| tables homogeneous, CREATE TABLE AS must be performed on
-| the tables so that they can be be dropped before upgrade.
+| tables homogenous, create a new partition table with the same
+| schema as the old partition table, insert the old data into
+| the new table, and drop the old table.
 | A list of the problem tables is in the file:
 | 	heterogeneous_partitioned_tables.txt
 

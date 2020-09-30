@@ -580,8 +580,9 @@ check_heterogeneous_partition(void)
 			   "| Your installation contains heterogenous partitioned tables\n"
 			   "| where the root partition does not match one or more child\n"
 			   "| partitions' on disk representation. In order to make the\n"
-			   "| tables homogeneous, CREATE TABLE AS must be performed on\n"
-			   "| the tables so that they can be be dropped before upgrade.\n"
+			   "| tables homogenous, create a new partition table with the same\n"
+			   "| schema as the old partition table, insert the old data into\n"
+			   "| the new table, and drop the old table.\n"
 			   "| A list of the problem tables is in the file:\n" "| \t%s\n\n",
 			   output_path);
 	}
