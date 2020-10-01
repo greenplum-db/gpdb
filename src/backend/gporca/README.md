@@ -37,6 +37,7 @@ To test GPORCA, first go into the `gporca` directory:
 
 ```
 cmake -GNinja -H. -Bbuild
+ninja -C build
 ```
 
 
