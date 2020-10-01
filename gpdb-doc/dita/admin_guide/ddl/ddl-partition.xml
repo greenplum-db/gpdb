@@ -328,6 +328,8 @@ GRANT ALL PRIVILEGES ON sales TO admin;
 GRANT SELECT ON sales TO guest;
 </codeblock>
         </p>
+        <note>The <codeph>LIKE</codeph> clause does not copy over partition structures when creating
+          a new table. </note>
       </body>
     </topic>
     <topic id="topic72" xml:lang="en">
