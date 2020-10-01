@@ -776,10 +776,10 @@ INFO:  (slice 1) Dispatch command to PARTIAL contents: 1 2
 explain (costs off) select t1.gp_segment_id, t2.gp_segment_id, * from t_test_dd_via_segid t1, t_test_dd_via_segid t2 where t1.gp_segment_id=t2.id;
                                     QUERY PLAN                                     
 -----------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)
+ Gather Motion 3:1  (slice2; segments: 3)
    ->  Hash Join
          Hash Cond: (t_test_dd_via_segid.gp_segment_id = t_test_dd_via_segid_1.id)
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)
+         ->  Redistribute Motion 3:3  (slice1; segments: 3)
                Hash Key: t_test_dd_via_segid.gp_segment_id
                ->  Seq Scan on t_test_dd_via_segid
          ->  Hash
@@ -788,8 +788,8 @@ explain (costs off) select t1.gp_segment_id, t2.gp_segment_id, * from t_test_dd_
 (9 rows)
 
 select t1.gp_segment_id, t2.gp_segment_id, * from t_test_dd_via_segid t1, t_test_dd_via_segid t2 where t1.gp_segment_id=t2.id;
-INFO:  (slice 2) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 2) Dispatch command to ALL contents: 0 1 2
  gp_segment_id | gp_segment_id | id | id 
 ---------------+---------------+----+----
              1 |             1 |  1 |  1
