@@ -86,6 +86,13 @@ CXformIndexGet2IndexOnlyScan::Transform(CXformContext *pxfctxt,
 	CIndexDescriptor *pindexdesc = pop->Pindexdesc();
 	CTableDescriptor *ptabdesc = pop->Ptabdesc();
 
+	// extract components
+	CExpression *pexprIndexCond = (*pexpr)[0];
+	if (pexprIndexCond->DeriveHasSubquery())
+	{
+		return;
+	}
+
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
 	const IMDRelation *pmdrel = md_accessor->RetrieveRel(ptabdesc->MDId());
 	const IMDIndex *pmdindex = md_accessor->RetrieveIndex(pindexdesc->MDId());
@@ -127,8 +134,7 @@ CXformIndexGet2IndexOnlyScan::Transform(CXformContext *pxfctxt,
 	GPOS_ASSERT(NULL != pos);
 	pos->AddRef();
 
-	// extract components
-	CExpression *pexprIndexCond = (*pexpr)[0];
+
 
 	// addref all children
 	pexprIndexCond->AddRef();

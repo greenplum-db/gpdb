@@ -66,6 +66,14 @@ CXformDynamicIndexGet2DynamicIndexScan::Transform(CXformContext *pxfctxt,
 	// create/extract components for alternative
 	CName *pname = GPOS_NEW(mp) CName(mp, popIndexGet->Name());
 
+	// extract components
+	CExpression *pexprIndexCond = (*pexpr)[0];
+	if (pexprIndexCond->DeriveHasSubquery())
+	{
+		return;
+	}
+	pexprIndexCond->AddRef();
+
 	CTableDescriptor *ptabdesc = popIndexGet->Ptabdesc();
 	ptabdesc->AddRef();
 
@@ -87,10 +95,6 @@ CXformDynamicIndexGet2DynamicIndexScan::Transform(CXformContext *pxfctxt,
 
 	COrderSpec *pos = popIndexGet->Pos();
 	pos->AddRef();
-
-	// extract components
-	CExpression *pexprIndexCond = (*pexpr)[0];
-	pexprIndexCond->AddRef();
 
 	// create alternative expression
 	CExpression *pexprAlt = GPOS_NEW(mp) CExpression(
