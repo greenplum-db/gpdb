@@ -259,6 +259,9 @@
               <xref href="#gp_fts_probe_timeout"/>
             </li>
             <li>
+              <xref href="#gp_fts_replication_attempt_count"/>
+            </li>
+            <li>
               <xref href="#gp_global_deadlock_detector_period"/>
             </li>
             <li>
@@ -569,7 +572,13 @@
               <xref href="#timezone_abbreviations"/>
             </li>
             <li>
+              <xref href="#track_activities"/>
+            </li>
+            <li>
               <xref href="#track_activity_query_size"/>
+            </li>
+            <li>
+              <xref href="#track_counts"/>
             </li>
             <li>
               <xref href="#transaction_isolation"/>
@@ -627,6 +636,9 @@
             </li>
             <li><xref href="#writable_external_table_bufsize" type="section"
                 >writable_external_table_bufsize</xref>
+            </li>
+            <li><xref href="#write_to_gpfdist_timeout" type="section"
+                >write_to_gpfdist_timeout</xref>
             </li>
             <li>
               <xref href="#xid_stop_limit"/>
@@ -3322,6 +3334,36 @@
       </table>
     </body>
   </topic>
+  <topic id="gp_fts_replication_attempt_count">
+    <title>gp_fts_replication_attempt_count</title>
+    <body>
+      <p>Specifies the maximum number of times that Greenplum Database attempts
+        to establish a primary-mirror replication connection. When this count
+        is exceeded, the fault detection process (<codeph>ftsprobe</codeph>)
+        stops retrying and marks the mirror down.</p>
+      <table id="gp_fts_replication_attempt_count_tbl">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">0 - 100</entry>
+              <entry colname="col2">10</entry>
+              <entry colname="col3">master<p>system</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
   <topic id="gp_global_deadlock_detector_period">
     <title>gp_global_deadlock_detector_period</title>
     <body>
@@ -3654,6 +3696,65 @@
       </table>
     </body>
   </topic>
+  <topic id="gp_interconnect_proxy_addresses">
+    <title>gp_interconnect_proxy_addresses</title>
+    <body>
+      <p>Sets the proxy ports that Greenplum Database uses when the server configuration parameter
+            <codeph><xref href="#gp_interconnect_type" format="dita"/></codeph> is set to
+          <codeph>proxy</codeph>. Otherwise, this parameter is ignored. The default value is an
+        empty string (""). </p>
+      <p>When the <codeph>gp_interconnect_type</codeph> parameter is set to <codeph>proxy</codeph>,
+        You must specify a proxy port for the master, standby master, and all primary and mirror
+        segment instances in this format:</p>
+      <codeblock>&lt;db_id>:&lt;cont_id>:&lt;seg_ip>:&lt;port>[,&lt;dbid>:&lt;segid>:&lt;ip>:&lt;port> ... ]</codeblock>
+      <p>For the master, standby master, and segment instance, the first three fields,
+          <varname>db_id</varname>, <varname>cont_id</varname>, and <varname>seg_ip</varname> can be
+        found in the <codeph><xref href="../system_catalogs/gp_segment_configuration.xml"
+            >gp_segment_configuration</xref></codeph> catalog table. The fourth field,
+          <varname>port</varname>, is the proxy port for the Greenplum master or a segment
+          instance.<ul id="ul_zly_vpm_4mb">
+          <li><varname>db_id</varname> is the <codeph>dbid</codeph> column in the catalog
+            table.</li>
+          <li><varname>cont_id</varname> is the <codeph>content</codeph> column in the catalog
+            table.</li>
+          <li><varname>seg_ip</varname> is the IP address corresponding to <codeph>address</codeph>
+            column in the catalog table. If the <codeph>address</codeph> is a hostname, use the IP
+            address of the hostname.</li>
+          <li><varname>port</varname> is the TCP/IP port for the segment instance proxy that you
+            specify.</li>
+        </ul></p>
+      <note type="important">The <varname>seg_ip</varname> must be an IP address, not a hostname.
+        Also, If the mapping of a segment instance hostname to the IP address changes, you must
+        update the IP address in the parameter value.</note>
+      <p>You must specify the value as a single-quoted string. This <codeph>gpconfig</codeph>
+        command sets the value for <codeph>gp_interconnect_proxy_addresses</codeph> as a
+        single-quoted string. The Greenplum system consists of a master and a single segment
+        instance.<codeblock>gpconfig --skipvalidation -c gp_interconnect_proxy_addresses -v "'1:-1:192.168.180.50:35432,2:0:192.168.180.54:35000'"</codeblock></p>
+      <p>For an example of setting <codeph>gp_interconnect_proxy_addresses</codeph>, see <xref
+          href="../../admin_guide/managing/proxy-ic.xml"/>.</p>
+      <table id="table_dlg_dch_mmb">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">string (maximum length - 16384 bytes)</entry>
+              <entry colname="col2"/>
+              <entry colname="col3">local<p>system</p><p>restart</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
   <topic id="gp_interconnect_queue_depth">
     <title>gp_interconnect_queue_depth</title>
     <body>
@@ -3758,6 +3859,14 @@
       <p>With TCP as the interconnect protocol, Greenplum Database has an upper limit of 1000
         segment instances - less than that if the query workload involves complex, multi-slice
         queries.</p>
+      <p>The <codeph>PROXY</codeph> value specifies using the TCP protocol, and when running
+        queries, using a proxy for Greenplum interconnect communication between the master instance
+        and segment instances and between two segment instances. When this parameter is set to
+          <codeph>PROXY</codeph>, you must specify the proxy ports for the master and segment
+        instances with the server configuration parameter <codeph><xref
+            href="#gp_interconnect_proxy_addresses" format="dita"/></codeph>. For information about
+        configuring and using proxies with the Greenplum interconnect, see <xref
+          href="../../admin_guide/managing/proxy-ic.xml"/>.</p>
       <table id="table_jn5_frn_xv">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -3772,7 +3881,7 @@
           </thead>
           <tbody>
             <row>
-              <entry colname="col1">UDPIFC<p>TCP</p></entry>
+              <entry colname="col1">UDPIFC<p>TCP</p><p>PROXY</p></entry>
               <entry colname="col2">UDPIFC</entry>
               <entry colname="col3">local<p>system</p><p>restart</p></entry>
             </row>
@@ -5993,7 +6102,7 @@
     <body>
       <p>Controls logging of temporary file names and sizes. Temporary files can be created for
         sorts, hashes, temporary query results and spill files. A log entry is made in
-          <codeph>pg_log</codeph> for each temporary file when it is deleted. Depending on the
+          <codeph>log</codeph> for each temporary file when it is deleted. Depending on the
         source of the temporary files, the log entry could be created on either the master and/or
         segments. A <codeph>log_temp_files</codeph> value of zero logs all temporary file
         information, while positive values log only files whose size is greater than or equal to the
@@ -8705,6 +8814,38 @@ statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
       </table>
     </body>
   </topic>
+  <topic id="track_activities">
+    <title>track_activities</title>
+    <body>
+      <p>Enables the collection of information on the currently executing command of each session,
+        along with the time when that command began execution. This parameter is
+          <codeph>true</codeph> by default. Only superusers can change this setting. See the
+          <codeph>pg_stat_activity</codeph> view.</p>
+      <note>Even when enabled, this information is not visible to all users, only to superusers and
+        the user owning the session being reported on, so it should not represent a security risk. </note>
+      <table id="table_f1l_fwm_vlb">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Boolean</entry>
+              <entry colname="col2">true</entry>
+              <entry colname="col3">master<p>system</p><p>reload</p><p>superuser</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
   <topic id="track_activity_query_size">
     <title>track_activity_query_size</title>
     <body>
@@ -8727,6 +8868,35 @@ statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
               <entry colname="col1">integer</entry>
               <entry colname="col2">1024</entry>
               <entry colname="col3">local<p>system</p><p>restart</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="track_counts">
+    <title>track_counts</title>
+    <body>
+      <p>Collects information about executing commands. Enables the collection of information on the
+        currently executing command of each session, along with the time at which that command began
+        execution.</p>
+      <table id="table_e5c_fwm_vlb">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Boolean</entry>
+              <entry colname="col2">true</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p><p>superuser</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -9339,6 +9509,37 @@ statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
             <row>
               <entry colname="col1">integer 32 - 131072 (32KB - 128MB)</entry>
               <entry colname="col2">64</entry>
+              <entry colname="col3">local<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="write_to_gpfdist_timeout">
+    <title>write_to_gpfdist_timeout</title>
+    <body>
+      <p>Controls the time (in seconds) that Greenplum Database waits before returning an error when
+        Greenplum Database is attempting to write to a <codeph><xref
+            href="../../utility_guide/ref/gpfdist.xml"/></codeph> server and
+          <codeph>gpfdist</codeph> does not respond. The default value is 300 (5 minutes). A value
+        of 0 disables the timeout.</p>
+      <table id="table_fkm_jqp_dmb">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">0 - <codeph>INT_MAX</codeph> (2147483647)</entry>
+              <entry colname="col2">300</entry>
               <entry colname="col3">local<p>session</p><p>reload</p></entry>
             </row>
           </tbody>

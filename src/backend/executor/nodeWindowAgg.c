@@ -23,7 +23,7 @@
  * aggregate function over all rows in the current row's window frame.
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -42,8 +42,6 @@
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
 #include "nodes/nodeFuncs.h"
-#include "optimizer/clauses.h"
-#include "optimizer/var.h"
 #include "parser/parse_agg.h"
 #include "parser/parse_coerce.h"
 #include "parser/parse_oper.h"
@@ -52,10 +50,12 @@
 #include "utils/datum.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
+#include "utils/regproc.h"
 #include "utils/syscache.h"
 #include "utils/tuplesort.h"
 #include "windowapi.h"
 
+#include "optimizer/optimizer.h" // for exprType
 #include "parser/parse_expr.h" // for exprType
 
 /*
@@ -101,7 +101,7 @@ typedef struct WindowStatePerFuncData
 	int			aggno;			/* if so, index of its PerAggData */
 
 	WindowObject winobj;		/* object used in window function API */
-}	WindowStatePerFuncData;
+}			WindowStatePerFuncData;
 
 /*
  * For plain aggregate window functions, we also have one of these.
@@ -182,56 +182,49 @@ typedef struct WindowStatePerAggData
 } WindowStatePerAggData;
 
 static void initialize_windowaggregate(WindowAggState *winstate,
-						   WindowStatePerFunc perfuncstate,
-						   WindowStatePerAgg peraggstate);
+									   WindowStatePerFunc perfuncstate,
+									   WindowStatePerAgg peraggstate);
 static void advance_windowaggregate(WindowAggState *winstate,
-						WindowStatePerFunc perfuncstate,
-						WindowStatePerAgg peraggstate);
+									WindowStatePerFunc perfuncstate,
+									WindowStatePerAgg peraggstate);
 static bool advance_windowaggregate_base(WindowAggState *winstate,
-							 WindowStatePerFunc perfuncstate,
-							 WindowStatePerAgg peraggstate);
+										 WindowStatePerFunc perfuncstate,
+										 WindowStatePerAgg peraggstate);
 static void call_transfunc(WindowAggState *winstate,
-			   WindowStatePerFunc perfuncstate,
-			   WindowStatePerAgg peraggstate,
-			   FunctionCallInfo fcinfo);
+						   WindowStatePerFunc perfuncstate,
+						   WindowStatePerAgg peraggstate,
+						   FunctionCallInfo fcinfo);
 static void finalize_windowaggregate(WindowAggState *winstate,
-						 WindowStatePerFunc perfuncstate,
-						 WindowStatePerAgg peraggstate,
-						 Datum *result, bool *isnull);
+									 WindowStatePerFunc perfuncstate,
+									 WindowStatePerAgg peraggstate,
+									 Datum *result, bool *isnull);
 
 static void eval_windowaggregates(WindowAggState *winstate);
 static void eval_windowfunction(WindowAggState *winstate,
-					WindowStatePerFunc perfuncstate,
-					Datum *result, bool *isnull);
+								WindowStatePerFunc perfuncstate,
+								Datum *result, bool *isnull);
 
 static void begin_partition(WindowAggState *winstate);
 static void spool_tuples(WindowAggState *winstate, int64 pos);
 static void release_partition(WindowAggState *winstate);
 
-static bool row_is_in_frame(WindowAggState *winstate, int64 pos,
-				TupleTableSlot *slot);
-static void update_frameheadpos(WindowObject winobj, TupleTableSlot *slot);
-static void update_frametailpos(WindowObject winobj, TupleTableSlot *slot);
+static int	row_is_in_frame(WindowAggState *winstate, int64 pos,
+							TupleTableSlot *slot);
+static void update_frameheadpos(WindowAggState *winstate);
+static void update_frametailpos(WindowAggState *winstate);
+static void update_grouptailpos(WindowAggState *winstate);
 
 static WindowStatePerAggData *initialize_peragg(WindowAggState *winstate,
-				  WindowFunc *wfunc,
-				  WindowStatePerAgg peraggstate);
+												WindowFunc *wfunc,
+												WindowStatePerAgg peraggstate);
 static Datum GetAggInitVal(Datum textInitVal, Oid transtype);
 
 static bool are_peers(WindowAggState *winstate, TupleTableSlot *slot1,
-		  TupleTableSlot *slot2);
+					  TupleTableSlot *slot2);
 static bool window_gettupleslot(WindowObject winobj, int64 pos,
-					TupleTableSlot *slot);
+								TupleTableSlot *slot);
 
 static void compute_start_end_offsets(WindowAggState *winstate);
-static void initialize_range_bound_exprs(WindowAggState *winstate);
-static bool is_within_range_start(WindowAggState *winstate, TupleTableSlot *slot);
-static bool is_within_range_end(WindowAggState *winstate, TupleTableSlot *slot);
-static Datum eval_bound_value(WindowAggState *winstate,
-							  ExprState *boundExpr,
-							  ExprState *offsetIsNegativeExpr,
-							  Datum offset,
-							  bool *isnull);
 
 
 /*
@@ -271,12 +264,13 @@ initialize_windowaggregate(WindowAggState *winstate,
 	if (peraggstate->isDistinct)
 	{
 		peraggstate->distinctSortState =
-			tuplesort_begin_datum(&winstate->ss,
-								  peraggstate->distinctType,
+			tuplesort_begin_datum(peraggstate->distinctType,
 								  peraggstate->distinctLtOper,
 								  peraggstate->distinctColl,
 								  false, /* nullsFirstFlag */
-								  work_mem, false);
+								  work_mem,
+								  NULL, /* coordinate */
+								  false);
 	}
 }
 
@@ -289,9 +283,8 @@ advance_windowaggregate(WindowAggState *winstate,
 						WindowStatePerFunc perfuncstate,
 						WindowStatePerAgg peraggstate)
 {
+	LOCAL_FCINFO(fcinfo, FUNC_MAX_ARGS);
 	WindowFuncExprState *wfuncstate = perfuncstate->wfuncstate;
-	FunctionCallInfoData fcinfodata;
-	FunctionCallInfo fcinfo = &fcinfodata;
 	ListCell   *arg;
 	int			i;
 	MemoryContext oldContext;
@@ -304,7 +297,7 @@ advance_windowaggregate(WindowAggState *winstate,
 	if (filter)
 	{
 		bool		isnull;
-		Datum		res = ExecEvalExpr(filter, econtext, &isnull, NULL);
+		Datum		res = ExecEvalExpr(filter, econtext, &isnull);
 
 		if (isnull || !DatumGetBool(res))
 		{
@@ -319,8 +312,8 @@ advance_windowaggregate(WindowAggState *winstate,
 	{
 		ExprState  *argstate = (ExprState *) lfirst(arg);
 
-		fcinfo->arg[i] = ExecEvalExpr(argstate, econtext,
-									  &fcinfo->argnull[i], NULL);
+		fcinfo->args[i].value = ExecEvalExpr(argstate, econtext,
+											 &fcinfo->args[i].isnull);
 		i++;
 	}
 
@@ -339,12 +332,14 @@ advance_windowaggregate(WindowAggState *winstate,
 		 * For a strict transfn, nothing happens when there's a NULL input; we
 		 * just keep the prior transValue.
 		 */
-		if (peraggstate->transfn.fn_strict && fcinfo->argnull[1])
+		if (peraggstate->transfn.fn_strict && fcinfo->args[1].isnull)
 		{
 			/* skip it */
 		}
 		else
-			tuplesort_putdatum(peraggstate->distinctSortState, fcinfo->arg[1], fcinfo->argnull[1]);
+			tuplesort_putdatum(peraggstate->distinctSortState,
+							   fcinfo->args[1].value,
+							   fcinfo->args[1].isnull);
 	}
 	else
 		call_transfunc(winstate, perfuncstate, peraggstate, fcinfo);
@@ -386,7 +381,7 @@ call_transfunc(WindowAggState *winstate,
 		 */
 		for (i = 1; i <= numArguments; i++)
 		{
-			if (fcinfo->argnull[i])
+			if (fcinfo->args[i].isnull)
 			{
 				MemoryContextSwitchTo(oldContext);
 				return;
@@ -405,7 +400,7 @@ call_transfunc(WindowAggState *winstate,
 		if (peraggstate->transValueCount == 0 && peraggstate->transValueIsNull)
 		{
 			MemoryContextSwitchTo(peraggstate->aggcontext);
-			peraggstate->transValue = datumCopy(fcinfo->arg[1],
+			peraggstate->transValue = datumCopy(fcinfo->args[1].value,
 												peraggstate->transtypeByVal,
 												peraggstate->transtypeLen);
 			peraggstate->transValueIsNull = false;
@@ -438,8 +433,8 @@ call_transfunc(WindowAggState *winstate,
 							 numArguments + 1,
 							 perfuncstate->winCollation,
 							 (void *) winstate, NULL);
-	fcinfo->arg[0] = peraggstate->transValue;
-	fcinfo->argnull[0] = peraggstate->transValueIsNull;
+	fcinfo->args[0].value = peraggstate->transValue;
+	fcinfo->args[0].isnull = peraggstate->transValueIsNull;
 	winstate->curaggcontext = peraggstate->aggcontext;
 	newVal = FunctionCallInvoke(fcinfo);
 	winstate->curaggcontext = NULL;
@@ -451,7 +446,7 @@ call_transfunc(WindowAggState *winstate,
 	if (fcinfo->isnull && OidIsValid(peraggstate->invtransfn_oid))
 		ereport(ERROR,
 				(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
-		errmsg("moving-aggregate transition function must not return null")));
+				 errmsg("moving-aggregate transition function must not return null")));
 
 	/*
 	 * We must track the number of rows included in transValue, since to
@@ -463,8 +458,10 @@ call_transfunc(WindowAggState *winstate,
 
 	/*
 	 * If pass-by-ref datatype, must copy the new value into aggcontext and
-	 * pfree the prior transValue.  But if transfn returned a pointer to its
-	 * first input, we don't need to do anything.
+	 * free the prior transValue.  But if transfn returned a pointer to its
+	 * first input, we don't need to do anything.  Also, if transfn returned a
+	 * pointer to a R/W expanded object that is already a child of the
+	 * aggcontext, assume we can adopt that value without copying it.
 	 */
 	if (!peraggstate->transtypeByVal &&
 		DatumGetPointer(newVal) != DatumGetPointer(peraggstate->transValue))
@@ -472,12 +469,25 @@ call_transfunc(WindowAggState *winstate,
 		if (!fcinfo->isnull)
 		{
 			MemoryContextSwitchTo(peraggstate->aggcontext);
-			newVal = datumCopy(newVal,
-							   peraggstate->transtypeByVal,
-							   peraggstate->transtypeLen);
+			if (DatumIsReadWriteExpandedObject(newVal,
+											   false,
+											   peraggstate->transtypeLen) &&
+				MemoryContextGetParent(DatumGetEOHP(newVal)->eoh_context) == CurrentMemoryContext)
+				 /* do nothing */ ;
+			else
+				newVal = datumCopy(newVal,
+								   peraggstate->transtypeByVal,
+								   peraggstate->transtypeLen);
 		}
 		if (!peraggstate->transValueIsNull)
-			pfree(DatumGetPointer(peraggstate->transValue));
+		{
+			if (DatumIsReadWriteExpandedObject(peraggstate->transValue,
+											   false,
+											   peraggstate->transtypeLen))
+				DeleteExpandedObject(peraggstate->transValue);
+			else
+				pfree(DatumGetPointer(peraggstate->transValue));
+		}
 	}
 
 	MemoryContextSwitchTo(oldContext);
@@ -502,10 +512,9 @@ advance_windowaggregate_base(WindowAggState *winstate,
 							 WindowStatePerFunc perfuncstate,
 							 WindowStatePerAgg peraggstate)
 {
+	LOCAL_FCINFO(fcinfo, FUNC_MAX_ARGS);
 	WindowFuncExprState *wfuncstate = perfuncstate->wfuncstate;
 	int			numArguments = perfuncstate->numArguments;
-	FunctionCallInfoData fcinfodata;
-	FunctionCallInfo fcinfo = &fcinfodata;
 	Datum		newVal;
 	ListCell   *arg;
 	int			i;
@@ -519,7 +528,7 @@ advance_windowaggregate_base(WindowAggState *winstate,
 	if (filter)
 	{
 		bool		isnull;
-		Datum		res = ExecEvalExpr(filter, econtext, &isnull, NULL);
+		Datum		res = ExecEvalExpr(filter, econtext, &isnull);
 
 		if (isnull || !DatumGetBool(res))
 		{
@@ -534,8 +543,8 @@ advance_windowaggregate_base(WindowAggState *winstate,
 	{
 		ExprState  *argstate = (ExprState *) lfirst(arg);
 
-		fcinfo->arg[i] = ExecEvalExpr(argstate, econtext,
-									  &fcinfo->argnull[i], NULL);
+		fcinfo->args[i].value = ExecEvalExpr(argstate, econtext,
+											 &fcinfo->args[i].isnull);
 		i++;
 	}
 
@@ -548,7 +557,7 @@ advance_windowaggregate_base(WindowAggState *winstate,
 		 */
 		for (i = 1; i <= numArguments; i++)
 		{
-			if (fcinfo->argnull[i])
+			if (fcinfo->args[i].isnull)
 			{
 				MemoryContextSwitchTo(oldContext);
 				return true;
@@ -594,8 +603,8 @@ advance_windowaggregate_base(WindowAggState *winstate,
 							 numArguments + 1,
 							 perfuncstate->winCollation,
 							 (void *) winstate, NULL);
-	fcinfo->arg[0] = peraggstate->transValue;
-	fcinfo->argnull[0] = peraggstate->transValueIsNull;
+	fcinfo->args[0].value = peraggstate->transValue;
+	fcinfo->args[0].isnull = peraggstate->transValueIsNull;
 	winstate->curaggcontext = peraggstate->aggcontext;
 	newVal = FunctionCallInvoke(fcinfo);
 	winstate->curaggcontext = NULL;
@@ -614,8 +623,10 @@ advance_windowaggregate_base(WindowAggState *winstate,
 
 	/*
 	 * If pass-by-ref datatype, must copy the new value into aggcontext and
-	 * pfree the prior transValue.  But if invtransfn returned a pointer to
-	 * its first input, we don't need to do anything.
+	 * free the prior transValue.  But if invtransfn returned a pointer to its
+	 * first input, we don't need to do anything.  Also, if invtransfn
+	 * returned a pointer to a R/W expanded object that is already a child of
+	 * the aggcontext, assume we can adopt that value without copying it.
 	 *
 	 * Note: the checks for null values here will never fire, but it seems
 	 * best to have this stanza look just like advance_windowaggregate.
@@ -626,12 +637,25 @@ advance_windowaggregate_base(WindowAggState *winstate,
 		if (!fcinfo->isnull)
 		{
 			MemoryContextSwitchTo(peraggstate->aggcontext);
-			newVal = datumCopy(newVal,
-							   peraggstate->transtypeByVal,
-							   peraggstate->transtypeLen);
+			if (DatumIsReadWriteExpandedObject(newVal,
+											   false,
+											   peraggstate->transtypeLen) &&
+				MemoryContextGetParent(DatumGetEOHP(newVal)->eoh_context) == CurrentMemoryContext)
+				 /* do nothing */ ;
+			else
+				newVal = datumCopy(newVal,
+								   peraggstate->transtypeByVal,
+								   peraggstate->transtypeLen);
 		}
 		if (!peraggstate->transValueIsNull)
-			pfree(DatumGetPointer(peraggstate->transValue));
+		{
+			if (DatumIsReadWriteExpandedObject(peraggstate->transValue,
+											   false,
+											   peraggstate->transtypeLen))
+				DeleteExpandedObject(peraggstate->transValue);
+			else
+				pfree(DatumGetPointer(peraggstate->transValue));
+		}
 	}
 
 	MemoryContextSwitchTo(oldContext);
@@ -652,8 +676,7 @@ perform_distinct_windowaggregate(WindowAggState *winstate,
 								 WindowStatePerFunc perfuncstate,
 								 WindowStatePerAgg peraggstate)
 {
-	FunctionCallInfoData fcinfodata;
-	FunctionCallInfo fcinfo = &fcinfodata;
+	LOCAL_FCINFO(fcinfo, FUNC_MAX_ARGS);
 	Datum		prevDatum = (Datum) 0;
 	bool		prevNull = true;
 	MemoryContext oldcontext;
@@ -664,20 +687,20 @@ perform_distinct_windowaggregate(WindowAggState *winstate,
 
 	/* load the first tuple from spool */
 	if (tuplesort_getdatum(peraggstate->distinctSortState, true,
-						   &fcinfo->arg[1], &fcinfo->argnull[1], NULL))
+						   &fcinfo->args[1].value, &fcinfo->args[1].isnull, NULL))
 	{
 		call_transfunc(winstate, perfuncstate, peraggstate, fcinfo);
-		prevDatum = fcinfo->arg[1];
-		prevNull = fcinfo->argnull[1];
+		prevDatum = fcinfo->args[1].value;
+		prevNull = fcinfo->args[1].isnull;
 
 		/* continue loading more tuples */
 		while (tuplesort_getdatum(peraggstate->distinctSortState, true,
-								  &fcinfo->arg[1], &fcinfo->argnull[1], NULL))
+								  &fcinfo->args[1].value, &fcinfo->args[1].isnull, NULL))
 		{
 			int		cmp;
 
 			cmp = ApplySortComparator(prevDatum, prevNull,
-									  fcinfo->arg[1], fcinfo->argnull[1],
+									  fcinfo->args[1].value, fcinfo->args[1].isnull,
 									  &peraggstate->distinctComparator);
 			if (cmp < 0)
 			{
@@ -694,8 +717,8 @@ perform_distinct_windowaggregate(WindowAggState *winstate,
 			if (!peraggstate->distinctTypeByVal && !prevNull)
 				pfree(DatumGetPointer(prevDatum));
 
-			prevDatum = fcinfo->arg[1];
-			prevNull = fcinfo->argnull[1];
+			prevDatum = fcinfo->args[1].value;
+			prevNull = fcinfo->args[1].isnull;
 		}
 	}
 
@@ -741,28 +764,31 @@ finalize_windowaggregate(WindowAggState *winstate,
 	 */
 	if (OidIsValid(peraggstate->finalfn_oid))
 	{
+		LOCAL_FCINFO(fcinfo, FUNC_MAX_ARGS);
 		int			numFinalArgs = peraggstate->numFinalArgs;
-		FunctionCallInfoData fcinfo;
 		bool		anynull;
 		int			i;
 
-		InitFunctionCallInfoData(fcinfo, &(peraggstate->finalfn),
+		InitFunctionCallInfoData(fcinfodata.fcinfo, &(peraggstate->finalfn),
 								 numFinalArgs,
 								 perfuncstate->winCollation,
 								 (void *) winstate, NULL);
-		fcinfo.arg[0] = peraggstate->transValue;
-		fcinfo.argnull[0] = peraggstate->transValueIsNull;
+		fcinfo->args[0].value =
+			MakeExpandedObjectReadOnly(peraggstate->transValue,
+									   peraggstate->transValueIsNull,
+									   peraggstate->transtypeLen);
+		fcinfo->args[0].isnull = peraggstate->transValueIsNull;
 		anynull = peraggstate->transValueIsNull;
 
 		/* Fill any remaining argument positions with nulls */
 		for (i = 1; i < numFinalArgs; i++)
 		{
-			fcinfo.arg[i] = (Datum) 0;
-			fcinfo.argnull[i] = true;
+			fcinfo->args[i].value = (Datum) 0;
+			fcinfo->args[i].isnull = true;
 			anynull = true;
 		}
 
-		if (fcinfo.flinfo->fn_strict && anynull)
+		if (fcinfo->flinfo->fn_strict && anynull)
 		{
 			/* don't call a strict function with NULL inputs */
 			*result = (Datum) 0;
@@ -771,13 +797,14 @@ finalize_windowaggregate(WindowAggState *winstate,
 		else
 		{
 			winstate->curaggcontext = peraggstate->aggcontext;
-			*result = FunctionCallInvoke(&fcinfo);
+			*result = FunctionCallInvoke(fcinfo);
 			winstate->curaggcontext = NULL;
-			*isnull = fcinfo.isnull;
+			*isnull = fcinfo->isnull;
 		}
 	}
 	else
 	{
+		/* Don't need MakeExpandedObjectReadOnly; datumCopy will copy it */
 		*result = peraggstate->transValue;
 		*isnull = peraggstate->transValueIsNull;
 	}
@@ -833,11 +860,9 @@ eval_windowaggregates(WindowAggState *winstate)
 	temp_slot = winstate->temp_slot_1;
 
 	/*
-	 * Currently, we support only a subset of the SQL-standard window framing
-	 * rules.
-	 *
-	 * If the frame start is UNBOUNDED_PRECEDING, the window frame consists of
-	 * a contiguous group of rows extending forward from the start of the
+	 * If the window's frame start clause is UNBOUNDED_PRECEDING and no
+	 * exclusion clause is specified, then the window frame consists of a
+	 * contiguous group of rows extending forward from the start of the
 	 * partition, and rows only enter the frame, never exit it, as the current
 	 * row advances forward.  This makes it possible to use an incremental
 	 * strategy for evaluating aggregates: we run the transition function for
@@ -859,6 +884,11 @@ eval_windowaggregates(WindowAggState *winstate)
 	 * the aggregate doesn't have an inverse transition function at all, we
 	 * must perform the aggregation all over again for all tuples within the
 	 * new frame boundaries.
+	 *
+	 * If there's any exclusion clause, then we may have to aggregate over a
+	 * non-contiguous set of rows, so we punt and recalculate for every row.
+	 * (For some frame end choices, it might be that the frame is always
+	 * contiguous anyway, but that's an optimization to investigate later.)
 	 *
 	 * In many common cases, multiple rows share the same frame and hence the
 	 * same aggregate value. (In particular, if there's no ORDER BY in a RANGE
@@ -882,7 +912,7 @@ eval_windowaggregates(WindowAggState *winstate)
 	 * only allows constant offsets, but we're more flexible. The code below
 	 * does actually cope with it just fine.
 	 */
-	update_frameheadpos(agg_winobj, temp_slot);
+	update_frameheadpos(winstate);
 	if (winstate->start_offset_var_free &&
 		winstate->frameheadpos < winstate->aggregatedbase)
 		elog(ERROR, "window frame head moved backward");
@@ -892,15 +922,16 @@ eval_windowaggregates(WindowAggState *winstate)
 	 * the result values that were previously saved at the bottom of this
 	 * function.  Since we don't know the current frame's end yet, this is not
 	 * possible to check for fully.  But if the frame end mode is UNBOUNDED
-	 * FOLLOWING or CURRENT ROW, and the current row lies within the previous
-	 * row's frame, then the two frames' ends must coincide.  Note that on the
-	 * first row aggregatedbase == aggregatedupto, meaning this test must
-	 * fail, so we don't need to check the "there was no previous row" case
-	 * explicitly here.
+	 * FOLLOWING or CURRENT ROW, no exclusion clause is specified, and the
+	 * current row lies within the previous row's frame, then the two frames'
+	 * ends must coincide.  Note that on the first row aggregatedbase ==
+	 * aggregatedupto, meaning this test must fail, so we don't need to check
+	 * the "there was no previous row" case explicitly here.
 	 */
 	if (winstate->aggregatedbase == winstate->frameheadpos &&
 		(winstate->frameOptions & (FRAMEOPTION_END_UNBOUNDED_FOLLOWING |
 								   FRAMEOPTION_END_CURRENT_ROW)) &&
+		!(winstate->frameOptions & FRAMEOPTION_EXCLUSION) &&
 		winstate->aggregatedbase <= winstate->currentpos &&
 		winstate->aggregatedupto > winstate->currentpos &&
 		winstate->start_offset_var_free &&
@@ -942,7 +973,7 @@ eval_windowaggregates(WindowAggState *winstate)
 		 * the old and the new frame. In that case, we would restart
 		 * all the aggregates anyway.)
 		 */
-		else if (!row_is_in_frame(winstate, winstate->aggregatedupto - 1, agg_row_slot))
+		else if (row_is_in_frame(winstate, winstate->aggregatedupto - 1, agg_row_slot) != 1)
 		{
 			frame_tail_moved_backwards = true;
 		}
@@ -951,7 +982,7 @@ eval_windowaggregates(WindowAggState *winstate)
 	}
 
 	/*
-	 * Likewise, if the frame tail moves backwards, then we need to restart the
+	 * Likewise, if the frame head moves backwards, then we need to restart the
 	 * aggregation. (We could instead call the transition function on the rows
 	 * that became part of the frame again, but let's keep this simple for now.)
 	 */
@@ -967,6 +998,7 @@ eval_windowaggregates(WindowAggState *winstate)
 	 *	 - if we're processing the first row in the partition, or
 	 *	 - if the frame's head moved and we cannot use an inverse
 	 *	   transition function, or
+	 *	 - we have an EXCLUSION clause, or
 	 *	 - if the new frame doesn't overlap the old one
 	 *
 	 * Note that we don't strictly need to restart in the last case, but if
@@ -981,6 +1013,7 @@ eval_windowaggregates(WindowAggState *winstate)
 		if (winstate->currentpos == 0 ||
 			(winstate->aggregatedbase != winstate->frameheadpos &&
 			 !OidIsValid(peraggstate->invtransfn_oid)) ||
+			(winstate->frameOptions & FRAMEOPTION_EXCLUSION) ||
 			winstate->aggregatedupto <= winstate->frameheadpos ||
 			frame_head_moved_backwards ||
 			frame_tail_moved_backwards)
@@ -1064,7 +1097,7 @@ eval_windowaggregates(WindowAggState *winstate)
 	 *
 	 * We assume that aggregates using the shared context always restart if
 	 * *any* aggregate restarts, and we may thus clean up the shared
-	 * aggcontext if that is the case.	Private aggcontexts are reset by
+	 * aggcontext if that is the case.  Private aggcontexts are reset by
 	 * initialize_windowaggregate() if their owning aggregate restarts. If we
 	 * aren't restarting an aggregate, we need to free any previously saved
 	 * result for it, else we'll leak memory.
@@ -1101,9 +1134,9 @@ eval_windowaggregates(WindowAggState *winstate)
 	 * (i.e., frameheadpos) and aggregatedupto, while restarted aggregates
 	 * contain no rows.  If there are any restarted aggregates, we must thus
 	 * begin aggregating anew at frameheadpos, otherwise we may simply
-	 * continue at aggregatedupto.	We must remember the old value of
+	 * continue at aggregatedupto.  We must remember the old value of
 	 * aggregatedupto to know how long to skip advancing non-restarted
-	 * aggregates.	If we modify aggregatedupto, we must also clear
+	 * aggregates.  If we modify aggregatedupto, we must also clear
 	 * agg_row_slot, per the loop invariant below.
 	 */
 	aggregatedupto_nonrestarted = winstate->aggregatedupto;
@@ -1123,6 +1156,8 @@ eval_windowaggregates(WindowAggState *winstate)
 	 */
 	for (;;)
 	{
+		int			ret;
+
 		/* Fetch next row if we didn't already */
 		if (TupIsNull(agg_row_slot))
 		{
@@ -1131,9 +1166,15 @@ eval_windowaggregates(WindowAggState *winstate)
 				break;			/* must be end of partition */
 		}
 
-		/* Exit loop (for now) if not in frame */
-		if (!row_is_in_frame(winstate, winstate->aggregatedupto, agg_row_slot))
+		/*
+		 * Exit loop if no more rows can be in frame.  Skip aggregation if
+		 * current row is not in frame but there might be more in the frame.
+		 */
+		ret = row_is_in_frame(winstate, winstate->aggregatedupto, agg_row_slot);
+		if (ret < 0)
 			break;
+		if (ret == 0)
+			goto next_tuple;
 
 		/* Set tuple context for evaluation of aggregate arguments */
 		winstate->tmpcontext->ecxt_outertuple = agg_row_slot;
@@ -1154,6 +1195,7 @@ eval_windowaggregates(WindowAggState *winstate)
 									peraggstate);
 		}
 
+next_tuple:
 		/* Reset per-input-tuple context after each tuple */
 		ResetExprContext(winstate->tmpcontext);
 
@@ -1225,7 +1267,7 @@ static void
 eval_windowfunction(WindowAggState *winstate, WindowStatePerFunc perfuncstate,
 					Datum *result, bool *isnull)
 {
-	FunctionCallInfoData fcinfo;
+	LOCAL_FCINFO(fcinfo, FUNC_MAX_ARGS);
 	MemoryContext oldContext;
 
 	oldContext = MemoryContextSwitchTo(winstate->ss.ps.ps_ExprContext->ecxt_per_tuple_memory);
@@ -1236,17 +1278,18 @@ eval_windowfunction(WindowAggState *winstate, WindowStatePerFunc perfuncstate,
 	 * implementations to support varying numbers of arguments.  The real info
 	 * goes through the WindowObject, which is passed via fcinfo->context.
 	 */
-	InitFunctionCallInfoData(fcinfo, &(perfuncstate->flinfo),
+	InitFunctionCallInfoData(*fcinfo, &(perfuncstate->flinfo),
 							 perfuncstate->numArguments,
 							 perfuncstate->winCollation,
 							 (void *) perfuncstate->winobj, NULL);
 	/* Just in case, make all the regular argument slots be null */
-	memset(fcinfo.argnull, true, perfuncstate->numArguments);
+	for (int argno = 0; argno < perfuncstate->numArguments; argno++)
+		fcinfo->args[argno].isnull = true;
 	/* Window functions don't have a current aggregate context, either */
 	winstate->curaggcontext = NULL;
 
-	*result = FunctionCallInvoke(&fcinfo);
-	*isnull = fcinfo.isnull;
+	*result = FunctionCallInvoke(fcinfo);
+	*isnull = fcinfo->isnull;
 
 	/*
 	 * Make sure pass-by-ref data is allocated in the appropriate context. (We
@@ -1258,7 +1301,7 @@ eval_windowfunction(WindowAggState *winstate, WindowStatePerFunc perfuncstate,
 	// This is not actually 100% safe, there is a small chance
 	// MemoryContextContains() incorrectly says that the chunk is in the context,
 	// which could lead to a crash. nodeAgg.c has the same problem.
-	if (!perfuncstate->resulttypeByVal && !fcinfo.isnull &&
+	if (!perfuncstate->resulttypeByVal && !fcinfo->isnull &&
 		!MemoryContextContains(CurrentMemoryContext,
 							   DatumGetPointer(*result))
 		)
@@ -1276,20 +1319,30 @@ eval_windowfunction(WindowAggState *winstate, WindowStatePerFunc perfuncstate,
 static void
 begin_partition(WindowAggState *winstate)
 {
+	WindowAgg  *node = (WindowAgg *) winstate->ss.ps.plan;
 	PlanState  *outerPlan = outerPlanState(winstate);
+	int			frameOptions = winstate->frameOptions;
 	int			numfuncs = winstate->numfuncs;
 	int			i;
 
 	winstate->partition_spooled = false;
 	winstate->framehead_valid = false;
 	winstate->frametail_valid = false;
-	winstate->start_offset_valid = false;
-	winstate->end_offset_valid = false;
+	winstate->grouptail_valid = false;
 	winstate->spooled_rows = 0;
 	winstate->currentpos = 0;
 	winstate->frameheadpos = 0;
-	winstate->frametailpos = -1;
+	winstate->frametailpos = 0;
+	winstate->currentgroup = 0;
+	winstate->frameheadgroup = 0;
+	winstate->frametailgroup = 0;
+	winstate->groupheadpos = 0;
+	winstate->grouptailpos = -1;	/* see update_grouptailpos */
 	ExecClearTuple(winstate->agg_row_slot);
+	if (winstate->framehead_slot)
+		ExecClearTuple(winstate->framehead_slot);
+	if (winstate->frametail_slot)
+		ExecClearTuple(winstate->frametail_slot);
 
 	/*
 	 * If this is the very first partition, we need to fetch the first input
@@ -1316,7 +1369,7 @@ begin_partition(WindowAggState *winstate)
 	/*
 	 * Set up read pointers for the tuplestore.  The current pointer doesn't
 	 * need BACKWARD capability, but the per-window-function read pointers do,
-	 * and the aggregate pointer does if frame start is movable.
+	 * and the aggregate pointer does if we might need to restart aggregation.
 	 */
 	winstate->current_ptr = 0;	/* read pointer 0 is pre-allocated */
 
@@ -1329,11 +1382,15 @@ begin_partition(WindowAggState *winstate)
 		WindowObject agg_winobj = winstate->agg_winobj;
 		int			readptr_flags = 0;
 
-		/* If the frame head is potentially movable ... */
-		if (!(winstate->frameOptions & FRAMEOPTION_START_UNBOUNDED_PRECEDING) ||
+		/*
+		 * If the frame head is potentially movable, or we have an EXCLUSION
+		 * clause, we might need to restart aggregation ...
+		 */
+		if (!(frameOptions & FRAMEOPTION_START_UNBOUNDED_PRECEDING) ||
+			(frameOptions & FRAMEOPTION_EXCLUSION) ||
 			!winstate->end_offset_var_free)
 		{
-			/* ... create a mark pointer to track the frame head */
+			/* ... so create a mark pointer to track the frame head */
 			agg_winobj->markptr = tuplestore_alloc_read_pointer(winstate->buffer, 0);
 			/* and the read pointer will need BACKWARD capability */
 			readptr_flags |= EXEC_FLAG_BACKWARD;
@@ -1361,10 +1418,53 @@ begin_partition(WindowAggState *winstate)
 			winobj->markptr = tuplestore_alloc_read_pointer(winstate->buffer,
 															0);
 			winobj->readptr = tuplestore_alloc_read_pointer(winstate->buffer,
-														 EXEC_FLAG_BACKWARD);
+															EXEC_FLAG_BACKWARD);
 			winobj->markpos = -1;
 			winobj->seekpos = -1;
 		}
+	}
+
+	/*
+	 * If we are in RANGE or GROUPS mode, then determining frame boundaries
+	 * requires physical access to the frame endpoint rows, except in certain
+	 * degenerate cases.  We create read pointers to point to those rows, to
+	 * simplify access and ensure that the tuplestore doesn't discard the
+	 * endpoint rows prematurely.  (Must create pointers in exactly the same
+	 * cases that update_frameheadpos and update_frametailpos need them.)
+	 */
+	winstate->framehead_ptr = winstate->frametail_ptr = -1; /* if not used */
+
+	if (frameOptions & (FRAMEOPTION_RANGE | FRAMEOPTION_GROUPS))
+	{
+		if (((frameOptions & FRAMEOPTION_START_CURRENT_ROW) &&
+			 node->ordNumCols != 0) ||
+			(frameOptions & FRAMEOPTION_START_OFFSET))
+			winstate->framehead_ptr =
+				tuplestore_alloc_read_pointer(winstate->buffer,
+											  winstate->start_offset_var_free ? 0 : EXEC_FLAG_REWIND);
+		if (((frameOptions & FRAMEOPTION_END_CURRENT_ROW) &&
+			 node->ordNumCols != 0) ||
+			(frameOptions & FRAMEOPTION_END_OFFSET))
+			winstate->frametail_ptr =
+				tuplestore_alloc_read_pointer(winstate->buffer,
+											  winstate->end_offset_var_free ? 0 : EXEC_FLAG_REWIND);
+	}
+
+	/*
+	 * If we have an exclusion clause that requires knowing the boundaries of
+	 * the current row's peer group, we create a read pointer to track the
+	 * tail position of the peer group (i.e., first row of the next peer
+	 * group).  The head position does not require its own pointer because we
+	 * maintain that as a side effect of advancing the current row.
+	 */
+	winstate->grouptail_ptr = -1;
+
+	if ((frameOptions & (FRAMEOPTION_EXCLUDE_GROUP |
+						 FRAMEOPTION_EXCLUDE_TIES)) &&
+		node->ordNumCols != 0)
+	{
+		winstate->grouptail_ptr =
+			tuplestore_alloc_read_pointer(winstate->buffer, 0);
 	}
 
 	/*
@@ -1421,12 +1521,13 @@ spool_tuples(WindowAggState *winstate, int64 pos)
 
 		if (node->partNumCols > 0)
 		{
+			ExprContext *econtext = winstate->tmpcontext;
+
+			econtext->ecxt_innertuple = winstate->first_part_slot;
+			econtext->ecxt_outertuple = outerslot;
+
 			/* Check if this tuple still belongs to the current partition */
-			if (!execTuplesMatch(winstate->first_part_slot,
-								 outerslot,
-								 node->partNumCols, node->partColIdx,
-								 winstate->partEqfunctions,
-								 winstate->tmpcontext->ecxt_per_tuple_memory))
+			if (!ExecQualAndReset(winstate->partEqfunction, econtext))
 			{
 				/*
 				 * end of partition; copy the tuple for the next cycle.
@@ -1493,8 +1594,15 @@ release_partition(WindowAggState *winstate)
  * The caller must have already determined that the row is in the partition
  * and fetched it into a slot.  This function just encapsulates the framing
  * rules.
+ *
+ * Returns:
+ * -1, if the row is out of frame and no succeeding rows can be in frame
+ * 0, if the row is out of frame but succeeding rows might be in frame
+ * 1, if the row is in frame
+ *
+ * May clobber winstate->temp_slot_2.
  */
-static bool
+static int
 row_is_in_frame(WindowAggState *winstate, int64 pos, TupleTableSlot *slot)
 {
 	int			frameOptions = winstate->frameOptions;
@@ -1503,110 +1611,111 @@ row_is_in_frame(WindowAggState *winstate, int64 pos, TupleTableSlot *slot)
 
 	Assert(pos >= 0);			/* else caller error */
 
-	/* First, check frame starting conditions */
-	if (frameOptions & FRAMEOPTION_START_CURRENT_ROW)
-	{
-		if (frameOptions & FRAMEOPTION_ROWS)
-		{
-			/* rows before current row are out of frame */
-			if (pos < winstate->currentpos)
-				return false;
-		}
-		else if (frameOptions & FRAMEOPTION_RANGE)
-		{
-			/* preceding row that is not peer is out of frame */
-			if (pos < winstate->currentpos &&
-				!are_peers(winstate, slot, winstate->ss.ss_ScanTupleSlot))
-				return false;
-		}
-		else
-			Assert(false);
-	}
-	else if (frameOptions & FRAMEOPTION_START_VALUE)
-	{
-		if (frameOptions & FRAMEOPTION_ROWS)
-		{
-			int64		offset = DatumGetInt64(winstate->startOffsetValue);
+	/*
+	 * First, check frame starting conditions.  We might as well delegate this
+	 * to update_frameheadpos always; it doesn't add any notable cost.
+	 */
+	update_frameheadpos(winstate);
+	if (pos < winstate->frameheadpos)
+		return 0;
 
-			/* rows before current row + offset are out of frame */
-			if (frameOptions & FRAMEOPTION_START_VALUE_PRECEDING)
-				offset = -offset;
-
-			if (pos < winstate->currentpos + offset)
-				return false;
-		}
-		else if (frameOptions & FRAMEOPTION_RANGE)
-		{
-			if (!is_within_range_start(winstate, slot))
-				return false;
-		}
-		else
-			Assert(false);
-	}
-
-	/* Okay so far, now check frame ending conditions */
+	/*
+	 * Okay so far, now check frame ending conditions.  Here, we avoid calling
+	 * update_frametailpos in simple cases, so as not to spool tuples further
+	 * ahead than necessary.
+	 */
 	if (frameOptions & FRAMEOPTION_END_CURRENT_ROW)
 	{
 		if (frameOptions & FRAMEOPTION_ROWS)
 		{
 			/* rows after current row are out of frame */
 			if (pos > winstate->currentpos)
-				return false;
+				return -1;
 		}
-		else if (frameOptions & FRAMEOPTION_RANGE)
+		else if (frameOptions & (FRAMEOPTION_RANGE | FRAMEOPTION_GROUPS))
 		{
 			/* following row that is not peer is out of frame */
 			if (pos > winstate->currentpos &&
 				!are_peers(winstate, slot, winstate->ss.ss_ScanTupleSlot))
-				return false;
+				return -1;
 		}
 		else
 			Assert(false);
 	}
-	else if (frameOptions & FRAMEOPTION_END_VALUE)
+	else if (frameOptions & FRAMEOPTION_END_OFFSET)
 	{
 		if (frameOptions & FRAMEOPTION_ROWS)
 		{
 			int64		offset = DatumGetInt64(winstate->endOffsetValue);
 
 			/* rows after current row + offset are out of frame */
-			if (frameOptions & FRAMEOPTION_END_VALUE_PRECEDING)
+			if (frameOptions & FRAMEOPTION_END_OFFSET_PRECEDING)
 				offset = -offset;
 
 			if (pos > winstate->currentpos + offset)
-				return false;
+				return -1;
 		}
-		else if (frameOptions & FRAMEOPTION_RANGE)
+		else if (frameOptions & (FRAMEOPTION_RANGE | FRAMEOPTION_GROUPS))
 		{
-			if (!is_within_range_end(winstate, slot))
-				return false;
+			/* hard cases, so delegate to update_frametailpos */
+			update_frametailpos(winstate);
+			if (pos >= winstate->frametailpos)
+				return -1;
 		}
 		else
 			Assert(false);
 	}
 
+	/* Check exclusion clause */
+	if (frameOptions & FRAMEOPTION_EXCLUDE_CURRENT_ROW)
+	{
+		if (pos == winstate->currentpos)
+			return 0;
+	}
+	else if ((frameOptions & FRAMEOPTION_EXCLUDE_GROUP) ||
+			 ((frameOptions & FRAMEOPTION_EXCLUDE_TIES) &&
+			  pos != winstate->currentpos))
+	{
+		WindowAgg  *node = (WindowAgg *) winstate->ss.ps.plan;
+
+		/* If no ORDER BY, all rows are peers with each other */
+		if (node->ordNumCols == 0)
+			return 0;
+		/* Otherwise, check the group boundaries */
+		if (pos >= winstate->groupheadpos)
+		{
+			update_grouptailpos(winstate);
+			if (pos < winstate->grouptailpos)
+				return 0;
+		}
+	}
+
 	/* If we get here, it's in frame */
-	return true;
+	return 1;
 }
 
 /*
  * update_frameheadpos
  * make frameheadpos valid for the current row
  *
- * Uses the winobj's read pointer for any required fetches; hence, if the
- * frame mode is one that requires row comparisons, the winobj's mark must
- * not be past the currently known frame head.  Also uses the specified slot
- * for any required fetches.
+ * Note that frameheadpos is computed without regard for any window exclusion
+ * clause; the current row and/or its peers are considered part of the frame
+ * for this purpose even if they must be excluded later.
+ *
+ * May clobber winstate->temp_slot_2.
  */
 static void
-update_frameheadpos(WindowObject winobj, TupleTableSlot *slot)
+update_frameheadpos(WindowAggState *winstate)
 {
-	WindowAggState *winstate = winobj->winstate;
 	WindowAgg  *node = (WindowAgg *) winstate->ss.ps.plan;
 	int			frameOptions = winstate->frameOptions;
+	MemoryContext oldcontext;
 
 	if (winstate->framehead_valid)
 		return;					/* already known for current row */
+
+	/* We may be called in a short-lived context */
+	oldcontext = MemoryContextSwitchTo(winstate->ss.ps.ps_ExprContext->ecxt_per_query_memory);
 
 	compute_start_end_offsets(winstate);
 
@@ -1624,58 +1733,67 @@ update_frameheadpos(WindowObject winobj, TupleTableSlot *slot)
 			winstate->frameheadpos = winstate->currentpos;
 			winstate->framehead_valid = true;
 		}
-		else if (frameOptions & FRAMEOPTION_RANGE)
+		else if (frameOptions & (FRAMEOPTION_RANGE | FRAMEOPTION_GROUPS))
 		{
-			int64		fhprev;
-
 			/* If no ORDER BY, all rows are peers with each other */
 			if (node->ordNumCols == 0)
 			{
 				winstate->frameheadpos = 0;
 				winstate->framehead_valid = true;
+				MemoryContextSwitchTo(oldcontext);
 				return;
 			}
 
 			/*
-			 * In RANGE START_CURRENT mode, frame head is the first row that
-			 * is a peer of current row.  We search backwards from current,
-			 * which could be a bit inefficient if peer sets are large. Might
-			 * be better to have a separate read pointer that moves forward
-			 * tracking the frame head.
+			 * In RANGE or GROUPS START_CURRENT_ROW mode, frame head is the
+			 * first row that is a peer of current row.  We keep a copy of the
+			 * last-known frame head row in framehead_slot, and advance as
+			 * necessary.  Note that if we reach end of partition, we will
+			 * leave frameheadpos = end+1 and framehead_slot empty.
 			 */
-			fhprev = winstate->currentpos - 1;
-			for (;;)
+			tuplestore_select_read_pointer(winstate->buffer,
+										   winstate->framehead_ptr);
+			if (winstate->frameheadpos == 0 &&
+				TupIsNull(winstate->framehead_slot))
 			{
-				/* assume the frame head can't go backwards */
-				if (fhprev < winstate->frameheadpos)
-					break;
-				if (!window_gettupleslot(winobj, fhprev, slot))
-					break;		/* start of partition */
-				if (!are_peers(winstate, slot, winstate->ss.ss_ScanTupleSlot))
-					break;		/* not peer of current row */
-				fhprev--;
+				/* fetch first row into framehead_slot, if we didn't already */
+				if (!tuplestore_gettupleslot(winstate->buffer, true, true,
+											 winstate->framehead_slot))
+					elog(ERROR, "unexpected end of tuplestore");
 			}
-			winstate->frameheadpos = fhprev + 1;
+
+			while (!TupIsNull(winstate->framehead_slot))
+			{
+				if (are_peers(winstate, winstate->framehead_slot,
+							  winstate->ss.ss_ScanTupleSlot))
+					break;		/* this row is the correct frame head */
+				/* Note we advance frameheadpos even if the fetch fails */
+				winstate->frameheadpos++;
+				spool_tuples(winstate, winstate->frameheadpos);
+				if (!tuplestore_gettupleslot(winstate->buffer, true, true,
+											 winstate->framehead_slot))
+					break;		/* end of partition */
+			}
 			winstate->framehead_valid = true;
 		}
 		else
 			Assert(false);
 	}
-	else if (frameOptions & FRAMEOPTION_START_VALUE)
+	else if (frameOptions & FRAMEOPTION_START_OFFSET)
 	{
 		if (frameOptions & FRAMEOPTION_ROWS)
 		{
 			/* In ROWS mode, bound is physically n before/after current */
 			int64		offset = DatumGetInt64(winstate->startOffsetValue);
 
-			if (frameOptions & FRAMEOPTION_START_VALUE_PRECEDING)
+			if (frameOptions & FRAMEOPTION_START_OFFSET_PRECEDING)
 				offset = -offset;
 
 			winstate->frameheadpos = winstate->currentpos + offset;
 			/* frame head can't go before first row */
 			if (winstate->frameheadpos < 0)
 				winstate->frameheadpos = 0;
-			else if (winstate->frameheadpos > winstate->currentpos)
+			else if (winstate->frameheadpos > winstate->currentpos + 1)
 			{
 				/* make sure frameheadpos is not past end of partition */
 				spool_tuples(winstate, winstate->frameheadpos - 1);
@@ -1686,56 +1804,185 @@ update_frameheadpos(WindowObject winobj, TupleTableSlot *slot)
 		}
 		else if (frameOptions & FRAMEOPTION_RANGE)
 		{
-			int64		fhp;
-
 			/*
-			 * Advance the frame head position, until we reach a row that's
-			 * greater than or equal to the boundary.
+			 * In RANGE START_OFFSET mode, frame head is the first row that
+			 * satisfies the in_range constraint relative to the current row.
+			 * We keep a copy of the last-known frame head row in
+			 * framehead_slot, and advance as necessary.  Note that if we
+			 * reach end of partition, we will leave frameheadpos = end+1 and
+			 * framehead_slot empty.
 			 */
-			if (winstate->start_offset_var_free)
-			{
-				/* the frame head can't go backwards */
-				fhp = winstate->frameheadpos;
-			}
-			else
-				fhp = 0;
-			for (;;)
-			{
-				if (!window_gettupleslot(winobj, fhp, slot))
-					break;
+			int			sortCol = node->ordColIdx[0];
+			bool		sub,
+						less;
 
-				/* Stop at the first row that is within range */
-				if (is_within_range_start(winstate, slot))
-					break;
-				fhp++;
+			/* We must have an ordering column */
+			Assert(node->ordNumCols == 1);
+
+			/* Precompute flags for in_range checks */
+			if (frameOptions & FRAMEOPTION_START_OFFSET_PRECEDING)
+				sub = true;		/* subtract startOffset from current row */
+			else
+				sub = false;	/* add it */
+			less = false;		/* normally, we want frame head >= sum */
+			/* If sort order is descending, flip both flags */
+			if (!winstate->inRangeAsc)
+			{
+				sub = !sub;
+				less = true;
 			}
-			winstate->frameheadpos = fhp;
+
+			tuplestore_select_read_pointer(winstate->buffer,
+										   winstate->framehead_ptr);
+			/*
+			 * GPDB: If the start offset is not a constant, always start from
+			 * the beginning.
+			 *
+			 * XXX: This is very expensive. A smarter strategy might be
+			 * to walk backwards from the previous frame head, until we reach
+			 * a row that doesn't belong in the frame anymore.
+			 */
+			if (!winstate->start_offset_var_free)
+			{
+				winstate->frameheadpos = 0;
+				ExecClearTuple(winstate->framehead_slot);
+				tuplestore_rescan(winstate->buffer);
+			}
+
+			if (winstate->frameheadpos == 0 &&
+				TupIsNull(winstate->framehead_slot))
+			{
+				/* fetch first row into framehead_slot, if we didn't already */
+				if (!tuplestore_gettupleslot(winstate->buffer, true, true,
+											 winstate->framehead_slot))
+					elog(ERROR, "unexpected end of tuplestore");
+			}
+
+			while (!TupIsNull(winstate->framehead_slot))
+			{
+				Datum		headval,
+							currval;
+				bool		headisnull,
+							currisnull;
+
+				headval = slot_getattr(winstate->framehead_slot, sortCol,
+									   &headisnull);
+				currval = slot_getattr(winstate->ss.ss_ScanTupleSlot, sortCol,
+									   &currisnull);
+				if (headisnull || currisnull)
+				{
+					/* order of the rows depends only on nulls_first */
+					if (winstate->inRangeNullsFirst)
+					{
+						/* advance head if head is null and curr is not */
+						if (!headisnull || currisnull)
+							break;
+					}
+					else
+					{
+						/* advance head if head is not null and curr is null */
+						if (headisnull || !currisnull)
+							break;
+					}
+				}
+				else
+				{
+					if (DatumGetBool(FunctionCall5Coll(&winstate->startInRangeFunc,
+													   winstate->inRangeColl,
+													   headval,
+													   currval,
+													   winstate->startOffsetValue,
+													   BoolGetDatum(sub),
+													   BoolGetDatum(less))))
+						break;	/* this row is the correct frame head */
+				}
+				/* Note we advance frameheadpos even if the fetch fails */
+				winstate->frameheadpos++;
+				spool_tuples(winstate, winstate->frameheadpos);
+				if (!tuplestore_gettupleslot(winstate->buffer, true, true,
+											 winstate->framehead_slot))
+					break;		/* end of partition */
+			}
+			winstate->framehead_valid = true;
+		}
+		else if (frameOptions & FRAMEOPTION_GROUPS)
+		{
+			/*
+			 * In GROUPS START_OFFSET mode, frame head is the first row of the
+			 * first peer group whose number satisfies the offset constraint.
+			 * We keep a copy of the last-known frame head row in
+			 * framehead_slot, and advance as necessary.  Note that if we
+			 * reach end of partition, we will leave frameheadpos = end+1 and
+			 * framehead_slot empty.
+			 */
+			int64		offset = DatumGetInt64(winstate->startOffsetValue);
+			int64		minheadgroup;
+
+			if (frameOptions & FRAMEOPTION_START_OFFSET_PRECEDING)
+				minheadgroup = winstate->currentgroup - offset;
+			else
+				minheadgroup = winstate->currentgroup + offset;
+
+			tuplestore_select_read_pointer(winstate->buffer,
+										   winstate->framehead_ptr);
+			if (winstate->frameheadpos == 0 &&
+				TupIsNull(winstate->framehead_slot))
+			{
+				/* fetch first row into framehead_slot, if we didn't already */
+				if (!tuplestore_gettupleslot(winstate->buffer, true, true,
+											 winstate->framehead_slot))
+					elog(ERROR, "unexpected end of tuplestore");
+			}
+
+			while (!TupIsNull(winstate->framehead_slot))
+			{
+				if (winstate->frameheadgroup >= minheadgroup)
+					break;		/* this row is the correct frame head */
+				ExecCopySlot(winstate->temp_slot_2, winstate->framehead_slot);
+				/* Note we advance frameheadpos even if the fetch fails */
+				winstate->frameheadpos++;
+				spool_tuples(winstate, winstate->frameheadpos);
+				if (!tuplestore_gettupleslot(winstate->buffer, true, true,
+											 winstate->framehead_slot))
+					break;		/* end of partition */
+				if (!are_peers(winstate, winstate->temp_slot_2,
+							   winstate->framehead_slot))
+					winstate->frameheadgroup++;
+			}
+			ExecClearTuple(winstate->temp_slot_2);
+			winstate->framehead_valid = true;
 		}
 		else
 			Assert(false);
 	}
 	else
 		Assert(false);
+
+	MemoryContextSwitchTo(oldcontext);
 }
 
 /*
  * update_frametailpos
  * make frametailpos valid for the current row
  *
- * Uses the winobj's read pointer for any required fetches; hence, if the
- * frame mode is one that requires row comparisons, the winobj's mark must
- * not be past the currently known frame tail.  Also uses the specified slot
- * for any required fetches.
+ * Note that frametailpos is computed without regard for any window exclusion
+ * clause; the current row and/or its peers are considered part of the frame
+ * for this purpose even if they must be excluded later.
+ *
+ * May clobber winstate->temp_slot_2.
  */
 static void
-update_frametailpos(WindowObject winobj, TupleTableSlot *slot)
+update_frametailpos(WindowAggState *winstate)
 {
-	WindowAggState *winstate = winobj->winstate;
 	WindowAgg  *node = (WindowAgg *) winstate->ss.ps.plan;
 	int			frameOptions = winstate->frameOptions;
+	MemoryContext oldcontext;
 
 	if (winstate->frametail_valid)
 		return;					/* already known for current row */
+
+	/* We may be called in a short-lived context */
+	oldcontext = MemoryContextSwitchTo(winstate->ss.ps.ps_ExprContext->ecxt_per_query_memory);
 
 	compute_start_end_offsets(winstate);
 
@@ -1743,7 +1990,7 @@ update_frametailpos(WindowObject winobj, TupleTableSlot *slot)
 	{
 		/* In UNBOUNDED FOLLOWING mode, all partition rows are in frame */
 		spool_tuples(winstate, -1);
-		winstate->frametailpos = winstate->spooled_rows - 1;
+		winstate->frametailpos = winstate->spooled_rows;
 		winstate->frametail_valid = true;
 	}
 	else if (frameOptions & FRAMEOPTION_END_CURRENT_ROW)
@@ -1751,92 +1998,229 @@ update_frametailpos(WindowObject winobj, TupleTableSlot *slot)
 		if (frameOptions & FRAMEOPTION_ROWS)
 		{
 			/* In ROWS mode, exactly the rows up to current are in frame */
-			winstate->frametailpos = winstate->currentpos;
+			winstate->frametailpos = winstate->currentpos + 1;
 			winstate->frametail_valid = true;
 		}
-		else if (frameOptions & FRAMEOPTION_RANGE)
+		else if (frameOptions & (FRAMEOPTION_RANGE | FRAMEOPTION_GROUPS))
 		{
-			int64		ftnext;
+			/* If no ORDER BY, all rows are peers with each other */
+			if (node->ordNumCols == 0)
+			{
+				spool_tuples(winstate, -1);
+				winstate->frametailpos = winstate->spooled_rows;
+				winstate->frametail_valid = true;
+				MemoryContextSwitchTo(oldcontext);
+				return;
+			}
 
 			/*
-			 * Else we have to search for the first non-peer of the current
-			 * row.  We assume the current value of frametailpos is a lower
-			 * bound on the possible frame tail location, ie, frame tail never
-			 * goes backward, and that currentpos is also a lower bound, ie,
-			 * frame end always >= current row.
+			 * In RANGE or GROUPS END_CURRENT_ROW mode, frame end is the last
+			 * row that is a peer of current row, frame tail is the row after
+			 * that (if any).  We keep a copy of the last-known frame tail row
+			 * in frametail_slot, and advance as necessary.  Note that if we
+			 * reach end of partition, we will leave frametailpos = end+1 and
+			 * frametail_slot empty.
 			 */
-			ftnext = Max(winstate->frametailpos, winstate->currentpos) + 1;
-			for (;;)
+			tuplestore_select_read_pointer(winstate->buffer,
+										   winstate->frametail_ptr);
+			if (winstate->frametailpos == 0 &&
+				TupIsNull(winstate->frametail_slot))
 			{
-				if (!window_gettupleslot(winobj, ftnext, slot))
-					break;		/* end of partition */
-				if (!are_peers(winstate, slot, winstate->ss.ss_ScanTupleSlot))
-					break;		/* not peer of current row */
-				ftnext++;
+				/* fetch first row into frametail_slot, if we didn't already */
+				if (!tuplestore_gettupleslot(winstate->buffer, true, true,
+											 winstate->frametail_slot))
+					elog(ERROR, "unexpected end of tuplestore");
 			}
-			winstate->frametailpos = ftnext - 1;
+
+			while (!TupIsNull(winstate->frametail_slot))
+			{
+				if (winstate->frametailpos > winstate->currentpos &&
+					!are_peers(winstate, winstate->frametail_slot,
+							   winstate->ss.ss_ScanTupleSlot))
+					break;		/* this row is the frame tail */
+				/* Note we advance frametailpos even if the fetch fails */
+				winstate->frametailpos++;
+				spool_tuples(winstate, winstate->frametailpos);
+				if (!tuplestore_gettupleslot(winstate->buffer, true, true,
+											 winstate->frametail_slot))
+					break;		/* end of partition */
+			}
 			winstate->frametail_valid = true;
 		}
 		else
 			Assert(false);
 	}
-	else if (frameOptions & FRAMEOPTION_END_VALUE)
+	else if (frameOptions & FRAMEOPTION_END_OFFSET)
 	{
 		if (frameOptions & FRAMEOPTION_ROWS)
 		{
 			/* In ROWS mode, bound is physically n before/after current */
 			int64		offset = DatumGetInt64(winstate->endOffsetValue);
 
-			if (frameOptions & FRAMEOPTION_END_VALUE_PRECEDING)
+			if (frameOptions & FRAMEOPTION_END_OFFSET_PRECEDING)
 				offset = -offset;
 
-			winstate->frametailpos = winstate->currentpos + offset;
-			/* smallest allowable value of frametailpos is -1 */
+			winstate->frametailpos = winstate->currentpos + offset + 1;
+			/* smallest allowable value of frametailpos is 0 */
 			if (winstate->frametailpos < 0)
-				winstate->frametailpos = -1;
-			else if (winstate->frametailpos > winstate->currentpos)
+				winstate->frametailpos = 0;
+			else if (winstate->frametailpos > winstate->currentpos + 1)
 			{
-				/* make sure frametailpos is not past last row of partition */
-				spool_tuples(winstate, winstate->frametailpos);
-				if (winstate->frametailpos >= winstate->spooled_rows)
-					winstate->frametailpos = winstate->spooled_rows - 1;
+				/* make sure frametailpos is not past end of partition */
+				spool_tuples(winstate, winstate->frametailpos - 1);
+				if (winstate->frametailpos > winstate->spooled_rows)
+					winstate->frametailpos = winstate->spooled_rows;
 			}
 			winstate->frametail_valid = true;
 		}
 		else if (frameOptions & FRAMEOPTION_RANGE)
 		{
-			int64		ftnext;
-
-			/* If no ORDER BY, all rows are peers with each other */
-			if (node->ordNumCols == 0)
-			{
-				spool_tuples(winstate, -1);
-				winstate->frametailpos = winstate->spooled_rows - 1;
-				winstate->frametail_valid = true;
-				return;
-			}
-
 			/*
-			 * Else we have to search for the first row that's not within
-			 * the boundary. We assume the current value of frametailpos is a lower
-			 * bound on the possible frame tail location, ie, frame tail never
-			 * goes backward.
+			 * In RANGE END_OFFSET mode, frame end is the last row that
+			 * satisfies the in_range constraint relative to the current row,
+			 * frame tail is the row after that (if any).  We keep a copy of
+			 * the last-known frame tail row in frametail_slot, and advance as
+			 * necessary.  Note that if we reach end of partition, we will
+			 * leave frametailpos = end+1 and frametail_slot empty.
 			 */
-			if (winstate->end_offset_var_free)
-				ftnext = winstate->frametailpos + 1;
+			int			sortCol = node->ordColIdx[0];
+			bool		sub,
+						less;
+
+			/* We must have an ordering column */
+			Assert(node->ordNumCols == 1);
+
+			/* Precompute flags for in_range checks */
+			if (frameOptions & FRAMEOPTION_END_OFFSET_PRECEDING)
+				sub = true;		/* subtract endOffset from current row */
 			else
-				ftnext = 0;
-			for (;;)
+				sub = false;	/* add it */
+			less = true;		/* normally, we want frame tail <= sum */
+			/* If sort order is descending, flip both flags */
+			if (!winstate->inRangeAsc)
 			{
-				if (!window_gettupleslot(winobj, ftnext, slot))
-					break;		/* end of partition */
-
-				if (!is_within_range_end(winstate, slot))
-					break;
-
-				ftnext++;
+				sub = !sub;
+				less = false;
 			}
-			winstate->frametailpos = ftnext - 1;
+
+			tuplestore_select_read_pointer(winstate->buffer,
+										   winstate->frametail_ptr);
+			/*
+			 * GPDB: If the end offset is not a constant, always start from
+			 * the beginning.
+			 *
+			 * XXX: This is very expensive. A smarter strategy might be
+			 * to walk backwards from the previous frame tail until
+			 * we reach the last row that's in the frame. Or at least we
+			 * should begin from frame headpos.
+			 */
+			if (!winstate->end_offset_var_free)
+			{
+				winstate->frametailpos = 0;
+				ExecClearTuple(winstate->frametail_slot);
+				tuplestore_rescan(winstate->buffer);
+			}
+			if (winstate->frametailpos == 0 &&
+				TupIsNull(winstate->frametail_slot))
+			{
+				/* fetch first row into frametail_slot, if we didn't already */
+				if (!tuplestore_gettupleslot(winstate->buffer, true, true,
+											 winstate->frametail_slot))
+					elog(ERROR, "unexpected end of tuplestore");
+			}
+
+			while (!TupIsNull(winstate->frametail_slot))
+			{
+				Datum		tailval,
+							currval;
+				bool		tailisnull,
+							currisnull;
+
+				tailval = slot_getattr(winstate->frametail_slot, sortCol,
+									   &tailisnull);
+				currval = slot_getattr(winstate->ss.ss_ScanTupleSlot, sortCol,
+									   &currisnull);
+				if (tailisnull || currisnull)
+				{
+					/* order of the rows depends only on nulls_first */
+					if (winstate->inRangeNullsFirst)
+					{
+						/* advance tail if tail is null or curr is not */
+						if (!tailisnull)
+							break;
+					}
+					else
+					{
+						/* advance tail if tail is not null or curr is null */
+						if (!currisnull)
+							break;
+					}
+				}
+				else
+				{
+					if (!DatumGetBool(FunctionCall5Coll(&winstate->endInRangeFunc,
+														winstate->inRangeColl,
+														tailval,
+														currval,
+														winstate->endOffsetValue,
+														BoolGetDatum(sub),
+														BoolGetDatum(less))))
+						break;	/* this row is the correct frame tail */
+				}
+				/* Note we advance frametailpos even if the fetch fails */
+				winstate->frametailpos++;
+				spool_tuples(winstate, winstate->frametailpos);
+				if (!tuplestore_gettupleslot(winstate->buffer, true, true,
+											 winstate->frametail_slot))
+					break;		/* end of partition */
+			}
+			winstate->frametail_valid = true;
+		}
+		else if (frameOptions & FRAMEOPTION_GROUPS)
+		{
+			/*
+			 * In GROUPS END_OFFSET mode, frame end is the last row of the
+			 * last peer group whose number satisfies the offset constraint,
+			 * and frame tail is the row after that (if any).  We keep a copy
+			 * of the last-known frame tail row in frametail_slot, and advance
+			 * as necessary.  Note that if we reach end of partition, we will
+			 * leave frametailpos = end+1 and frametail_slot empty.
+			 */
+			int64		offset = DatumGetInt64(winstate->endOffsetValue);
+			int64		maxtailgroup;
+
+			if (frameOptions & FRAMEOPTION_END_OFFSET_PRECEDING)
+				maxtailgroup = winstate->currentgroup - offset;
+			else
+				maxtailgroup = winstate->currentgroup + offset;
+
+			tuplestore_select_read_pointer(winstate->buffer,
+										   winstate->frametail_ptr);
+			if (winstate->frametailpos == 0 &&
+				TupIsNull(winstate->frametail_slot))
+			{
+				/* fetch first row into frametail_slot, if we didn't already */
+				if (!tuplestore_gettupleslot(winstate->buffer, true, true,
+											 winstate->frametail_slot))
+					elog(ERROR, "unexpected end of tuplestore");
+			}
+
+			while (!TupIsNull(winstate->frametail_slot))
+			{
+				if (winstate->frametailgroup > maxtailgroup)
+					break;		/* this row is the correct frame tail */
+				ExecCopySlot(winstate->temp_slot_2, winstate->frametail_slot);
+				/* Note we advance frametailpos even if the fetch fails */
+				winstate->frametailpos++;
+				spool_tuples(winstate, winstate->frametailpos);
+				if (!tuplestore_gettupleslot(winstate->buffer, true, true,
+											 winstate->frametail_slot))
+					break;		/* end of partition */
+				if (!are_peers(winstate, winstate->temp_slot_2,
+							   winstate->frametail_slot))
+					winstate->frametailgroup++;
+			}
+			ExecClearTuple(winstate->temp_slot_2);
 			winstate->frametail_valid = true;
 		}
 		else
@@ -1844,6 +2228,65 @@ update_frametailpos(WindowObject winobj, TupleTableSlot *slot)
 	}
 	else
 		Assert(false);
+
+	MemoryContextSwitchTo(oldcontext);
+}
+
+/*
+ * update_grouptailpos
+ * make grouptailpos valid for the current row
+ *
+ * May clobber winstate->temp_slot_2.
+ */
+static void
+update_grouptailpos(WindowAggState *winstate)
+{
+	WindowAgg  *node = (WindowAgg *) winstate->ss.ps.plan;
+	MemoryContext oldcontext;
+
+	if (winstate->grouptail_valid)
+		return;					/* already known for current row */
+
+	/* We may be called in a short-lived context */
+	oldcontext = MemoryContextSwitchTo(winstate->ss.ps.ps_ExprContext->ecxt_per_query_memory);
+
+	/* If no ORDER BY, all rows are peers with each other */
+	if (node->ordNumCols == 0)
+	{
+		spool_tuples(winstate, -1);
+		winstate->grouptailpos = winstate->spooled_rows;
+		winstate->grouptail_valid = true;
+		MemoryContextSwitchTo(oldcontext);
+		return;
+	}
+
+	/*
+	 * Because grouptail_valid is reset only when current row advances into a
+	 * new peer group, we always reach here knowing that grouptailpos needs to
+	 * be advanced by at least one row.  Hence, unlike the otherwise similar
+	 * case for frame tail tracking, we do not need persistent storage of the
+	 * group tail row.
+	 */
+	Assert(winstate->grouptailpos <= winstate->currentpos);
+	tuplestore_select_read_pointer(winstate->buffer,
+								   winstate->grouptail_ptr);
+	for (;;)
+	{
+		/* Note we advance grouptailpos even if the fetch fails */
+		winstate->grouptailpos++;
+		spool_tuples(winstate, winstate->grouptailpos);
+		if (!tuplestore_gettupleslot(winstate->buffer, true, true,
+									 winstate->temp_slot_2))
+			break;				/* end of partition */
+		if (winstate->grouptailpos > winstate->currentpos &&
+			!are_peers(winstate, winstate->temp_slot_2,
+					   winstate->ss.ss_ScanTupleSlot))
+			break;				/* this row is the group tail */
+	}
+	ExecClearTuple(winstate->temp_slot_2);
+	winstate->grouptail_valid = true;
+
+	MemoryContextSwitchTo(oldcontext);
 }
 
 static void
@@ -1862,13 +2305,12 @@ compute_start_end_offsets(WindowAggState *winstate)
 	if (!winstate->start_offset_valid)
 	{
 		econtext->ecxt_outertuple = winstate->ss.ss_ScanTupleSlot;
-		if (frameOptions & FRAMEOPTION_START_VALUE)
+		if (frameOptions & FRAMEOPTION_START_OFFSET)
 		{
 			Assert(winstate->startOffset != NULL);
 			value = ExecEvalExprSwitchContext(winstate->startOffset,
 											  econtext,
-											  &isnull,
-											  NULL);
+											  &isnull);
 			if (isnull)
 				ereport(ERROR,
 						(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
@@ -1877,29 +2319,15 @@ compute_start_end_offsets(WindowAggState *winstate)
 			get_typlenbyval(exprType((Node *) winstate->startOffset->expr),
 							&len, &byval);
 			winstate->startOffsetValue = datumCopy(value, byval, len);
-			if (frameOptions & FRAMEOPTION_ROWS)
+			if (frameOptions & (FRAMEOPTION_ROWS | FRAMEOPTION_GROUPS))
 			{
 				/* value is known to be int8 */
 				int64		offset = DatumGetInt64(value);
 
 				if (offset < 0)
 					ereport(ERROR,
-							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					  errmsg("frame starting offset must not be negative")));
-			}
-			else
-			{
-				/*
-				 * For RANGE, compute the boundary, by adding the offset to the
-				 * current row's value. eval_bound_value will also check for
-				 * a negative RANGE.
-				 */
-				winstate->startBoundValue =
-					eval_bound_value(winstate,
-									 winstate->startBound,
-									 winstate->startOffsetIsNegative,
-									 winstate->startOffsetValue,
-									 &winstate->startBoundIsNull);
+							(errcode(ERRCODE_INVALID_PRECEDING_OR_FOLLOWING_SIZE),
+							 errmsg("frame starting offset must not be negative")));
 			}
 		}
 		winstate->start_offset_valid = true;
@@ -1907,13 +2335,12 @@ compute_start_end_offsets(WindowAggState *winstate)
 	if (!winstate->end_offset_valid)
 	{
 		econtext->ecxt_outertuple = winstate->ss.ss_ScanTupleSlot;
-		if (frameOptions & FRAMEOPTION_END_VALUE)
+		if (frameOptions & FRAMEOPTION_END_OFFSET)
 		{
 			Assert(winstate->endOffset != NULL);
 			value = ExecEvalExprSwitchContext(winstate->endOffset,
 											  econtext,
-											  &isnull,
-											  NULL);
+											  &isnull);
 			if (isnull)
 				ereport(ERROR,
 						(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
@@ -1922,29 +2349,15 @@ compute_start_end_offsets(WindowAggState *winstate)
 			get_typlenbyval(exprType((Node *) winstate->endOffset->expr),
 							&len, &byval);
 			winstate->endOffsetValue = datumCopy(value, byval, len);
-			if (frameOptions & FRAMEOPTION_ROWS)
+			if (frameOptions & (FRAMEOPTION_ROWS | FRAMEOPTION_GROUPS))
 			{
 				/* value is known to be int8 */
 				int64		offset = DatumGetInt64(value);
 
 				if (offset < 0)
 					ereport(ERROR,
-							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						errmsg("frame ending offset must not be negative")));
-			}
-			else
-			{
-				/*
-				 * For RANGE, compute the boundary, by adding the offset to the
-				 * current row's value. eval_bound_value will also check for
-				 * a negative RANGE.
-				 */
-				winstate->endBoundValue =
-					eval_bound_value(winstate,
-									 winstate->endBound,
-									 winstate->endOffsetIsNegative,
-									 winstate->endOffsetValue,
-									 &winstate->endBoundIsNull);
+							(errcode(ERRCODE_INVALID_PRECEDING_OR_FOLLOWING_SIZE),
+							 errmsg("frame ending offset must not be negative")));
 			}
 		}
 		winstate->end_offset_valid = true;
@@ -1957,40 +2370,39 @@ compute_start_end_offsets(WindowAggState *winstate)
  *	ExecWindowAgg receives tuples from its outer subplan and
  *	stores them into a tuplestore, then processes window functions.
  *	This node doesn't reduce nor qualify any row so the number of
- *	returned rows is exactly the same as its outer subplan's result
- *	(ignoring the case of SRFs in the targetlist, that is).
+ *	returned rows is exactly the same as its outer subplan's result.
  * -----------------
  */
-TupleTableSlot *
-ExecWindowAgg(WindowAggState *winstate)
+static TupleTableSlot *
+ExecWindowAgg(PlanState *pstate)
 {
-	TupleTableSlot *result;
-	ExprDoneCond isDone;
+	WindowAggState *winstate = castNode(WindowAggState, pstate);
 	ExprContext *econtext;
 	int			i;
 	int			numfuncs;
+
+	CHECK_FOR_INTERRUPTS();
 
 	if (winstate->all_done)
 		return NULL;
 
 	/*
-	 * Check to see if we're still projecting out tuples from a previous
-	 * output tuple (because there is a function-returning-set in the
-	 * projection expressions).  If so, try to project another one.
+	 * Compute frame offset values, if any, during first call (or after a
+	 * rescan).  These are assumed to hold constant throughout the scan; if
+	 * user gives us a volatile expression, we'll only use its initial value.
+	 *
+	 * GPDB: We accept non-constant frame offsets, too. If they're not
+	 * constants, we'll compute them later.
 	 */
-	if (winstate->ps_TupFromTlist)
+	if (winstate->all_first &&
+		winstate->start_offset_var_free &&
+		winstate->end_offset_var_free)
 	{
-		TupleTableSlot *result;
-		ExprDoneCond isDone;
+		compute_start_end_offsets(winstate);
 
-		result = ExecProject(winstate->ss.ps.ps_ProjInfo, &isDone);
-		if (isDone == ExprMultipleResult)
-			return result;
-		/* Done with that source tuple... */
-		winstate->ps_TupFromTlist = false;
+		winstate->all_first = false;
 	}
 
-restart:
 	if (winstate->buffer == NULL)
 	{
 		/* Initialize for first partition and set current row = 0 */
@@ -2004,19 +2416,12 @@ restart:
 		/* This might mean that the frame moves, too */
 		winstate->framehead_valid = false;
 		winstate->frametail_valid = false;
+		/* we don't need to invalidate grouptail here; see below */
 
-		if (winstate->frameOptions & FRAMEOPTION_RANGE)
-		{
+		if (!winstate->start_offset_var_free)
 			winstate->start_offset_valid = false;
+		if (!winstate->end_offset_var_free)
 			winstate->end_offset_valid = false;
-		}
-		else
-		{
-			if (!winstate->start_offset_var_free)
-				winstate->start_offset_valid = false;
-			if (!winstate->end_offset_var_free)
-				winstate->end_offset_valid = false;
-		}
 	}
 
 	/*
@@ -2056,12 +2461,38 @@ restart:
 	 * out of the tuplestore, since window function evaluation might cause the
 	 * tuplestore to dump its state to disk.)
 	 *
+	 * In GROUPS mode, or when tracking a group-oriented exclusion clause, we
+	 * must also detect entering a new peer group and update associated state
+	 * when that happens.  We use temp_slot_2 to temporarily hold the previous
+	 * row for this purpose.
+	 *
 	 * Current row must be in the tuplestore, since we spooled it above.
 	 */
 	tuplestore_select_read_pointer(winstate->buffer, winstate->current_ptr);
-	if (!tuplestore_gettupleslot(winstate->buffer, true, true,
-								 winstate->ss.ss_ScanTupleSlot))
-		elog(ERROR, "unexpected end of tuplestore");
+	if ((winstate->frameOptions & (FRAMEOPTION_GROUPS |
+								   FRAMEOPTION_EXCLUDE_GROUP |
+								   FRAMEOPTION_EXCLUDE_TIES)) &&
+		winstate->currentpos > 0)
+	{
+		ExecCopySlot(winstate->temp_slot_2, winstate->ss.ss_ScanTupleSlot);
+		if (!tuplestore_gettupleslot(winstate->buffer, true, true,
+									 winstate->ss.ss_ScanTupleSlot))
+			elog(ERROR, "unexpected end of tuplestore");
+		if (!are_peers(winstate, winstate->temp_slot_2,
+					   winstate->ss.ss_ScanTupleSlot))
+		{
+			winstate->currentgroup++;
+			winstate->groupheadpos = winstate->currentpos;
+			winstate->grouptail_valid = false;
+		}
+		ExecClearTuple(winstate->temp_slot_2);
+	}
+	else
+	{
+		if (!tuplestore_gettupleslot(winstate->buffer, true, true,
+									 winstate->ss.ss_ScanTupleSlot))
+			elog(ERROR, "unexpected end of tuplestore");
+	}
 
 	/*
 	 * Evaluate true window functions
@@ -2074,8 +2505,8 @@ restart:
 		if (perfuncstate->plain_agg)
 			continue;
 		eval_windowfunction(winstate, perfuncstate,
-			  &(econtext->ecxt_aggvalues[perfuncstate->wfuncstate->wfuncno]),
-			  &(econtext->ecxt_aggnulls[perfuncstate->wfuncstate->wfuncno]));
+							&(econtext->ecxt_aggvalues[perfuncstate->wfuncstate->wfuncno]),
+							&(econtext->ecxt_aggnulls[perfuncstate->wfuncstate->wfuncno]));
 	}
 
 	/*
@@ -2083,6 +2514,23 @@ restart:
 	 */
 	if (winstate->numaggs > 0)
 		eval_windowaggregates(winstate);
+
+	/*
+	 * If we have created auxiliary read pointers for the frame or group
+	 * boundaries, force them to be kept up-to-date, because we don't know
+	 * whether the window function(s) will do anything that requires that.
+	 * Failing to advance the pointers would result in being unable to trim
+	 * data from the tuplestore, which is bad.  (If we could know in advance
+	 * whether the window functions will use frame boundary info, we could
+	 * skip creating these pointers in the first place ... but unfortunately
+	 * the window function API doesn't require that.)
+	 */
+	if (winstate->framehead_ptr >= 0)
+		update_frameheadpos(winstate);
+	if (winstate->frametail_ptr >= 0)
+		update_frametailpos(winstate);
+	if (winstate->grouptail_ptr >= 0)
+		update_grouptailpos(winstate);
 
 	/*
 	 * Truncate any no-longer-needed rows from the tuplestore.
@@ -2095,18 +2543,8 @@ restart:
 	 * evaluated with respect to that row.
 	 */
 	econtext->ecxt_outertuple = winstate->ss.ss_ScanTupleSlot;
-	result = ExecProject(winstate->ss.ps.ps_ProjInfo, &isDone);
 
-	if (isDone == ExprEndResult)
-	{
-		/* SRF in tlist returned no rows, so advance to next input tuple */
-		goto restart;
-	}
-
-	winstate->ps_TupFromTlist =
-		(isDone == ExprMultipleResult);
-
-	return result;
+	return ExecProject(winstate->ss.ps.ps_ProjInfo);
 }
 
 /* -----------------
@@ -2125,10 +2563,12 @@ ExecInitWindowAgg(WindowAgg *node, EState *estate, int eflags)
 	ExprContext *tmpcontext;
 	WindowStatePerFunc perfunc;
 	WindowStatePerAgg peragg;
+	int			frameOptions = node->frameOptions;
 	int			numfuncs,
 				wfuncno,
 				numaggs,
 				aggno;
+	TupleDesc	scanDesc;
 	ListCell   *l;
 
 	/* check for unsupported flags */
@@ -2140,6 +2580,7 @@ ExecInitWindowAgg(WindowAgg *node, EState *estate, int eflags)
 	winstate = makeNode(WindowAggState);
 	winstate->ss.ps.plan = (Plan *) node;
 	winstate->ss.ps.state = estate;
+	winstate->ss.ps.ExecProcNode = ExecWindowAgg;
 
 	/*
 	 * Create expression contexts.  We need two, one for per-input-tuple
@@ -2154,10 +2595,8 @@ ExecInitWindowAgg(WindowAgg *node, EState *estate, int eflags)
 	/* Create long-lived context for storage of partition-local memory etc */
 	winstate->partcontext =
 		AllocSetContextCreate(CurrentMemoryContext,
-							  "WindowAgg_Partition",
-							  ALLOCSET_DEFAULT_MINSIZE,
-							  ALLOCSET_DEFAULT_INITSIZE,
-							  ALLOCSET_DEFAULT_MAXSIZE);
+							  "WindowAgg Partition",
+							  ALLOCSET_DEFAULT_SIZES);
 
 	/*
 	 * Create mid-lived context for aggregate trans values etc.
@@ -2167,31 +2606,15 @@ ExecInitWindowAgg(WindowAgg *node, EState *estate, int eflags)
 	 */
 	winstate->aggcontext =
 		AllocSetContextCreate(CurrentMemoryContext,
-							  "WindowAgg_Aggregates",
-							  ALLOCSET_DEFAULT_MINSIZE,
-							  ALLOCSET_DEFAULT_INITSIZE,
-							  ALLOCSET_DEFAULT_MAXSIZE);
-
-	/*
-	 * tuple table initialization
-	 */
-	winstate->ss.ss_ScanTupleSlot = ExecInitExtraTupleSlot(estate);
-	ExecInitResultTupleSlot(estate, &winstate->ss.ps);
-	winstate->first_part_slot = ExecInitExtraTupleSlot(estate);
-	winstate->agg_row_slot = ExecInitExtraTupleSlot(estate);
-	winstate->temp_slot_1 = ExecInitExtraTupleSlot(estate);
-	winstate->temp_slot_2 = ExecInitExtraTupleSlot(estate);
-
-	winstate->ss.ps.targetlist = (List *)
-		ExecInitExpr((Expr *) node->plan.targetlist,
-					 (PlanState *) winstate);
+                              "WindowAgg Aggregates",
+                              ALLOCSET_DEFAULT_SIZES);
 
 	/*
 	 * WindowAgg nodes never have quals, since they can only occur at the
 	 * logical top level of a query (ie, after any WHERE or HAVING filters)
 	 */
 	Assert(node->plan.qual == NIL);
-	winstate->ss.ps.qual = NIL;
+	winstate->ss.ps.qual = NULL;
 
 	/*
 	 * initialize child nodes
@@ -2203,32 +2626,71 @@ ExecInitWindowAgg(WindowAgg *node, EState *estate, int eflags)
 	 * initialize source tuple type (which is also the tuple type that we'll
 	 * store in the tuplestore and use in all our working slots).
 	 */
-	ExecAssignScanTypeFromOuterPlan(&winstate->ss);
+	ExecCreateScanSlotFromOuterPlan(estate, &winstate->ss, &TTSOpsMinimalTuple);
+	scanDesc = winstate->ss.ss_ScanTupleSlot->tts_tupleDescriptor;
 
-	ExecSetSlotDescriptor(winstate->first_part_slot,
-						  winstate->ss.ss_ScanTupleSlot->tts_tupleDescriptor);
-	ExecSetSlotDescriptor(winstate->agg_row_slot,
-						  winstate->ss.ss_ScanTupleSlot->tts_tupleDescriptor);
-	ExecSetSlotDescriptor(winstate->temp_slot_1,
-						  winstate->ss.ss_ScanTupleSlot->tts_tupleDescriptor);
-	ExecSetSlotDescriptor(winstate->temp_slot_2,
-						  winstate->ss.ss_ScanTupleSlot->tts_tupleDescriptor);
+	/* the outer tuple isn't the child's tuple, but always a minimal tuple */
+	winstate->ss.ps.outeropsset = true;
+	winstate->ss.ps.outerops = &TTSOpsMinimalTuple;
+	winstate->ss.ps.outeropsfixed = true;
 
 	/*
-	 * Initialize result tuple type and projection info.
+	 * tuple table initialization
 	 */
-	ExecAssignResultTypeFromTL(&winstate->ss.ps);
-	ExecAssignProjectionInfo(&winstate->ss.ps, NULL);
+	winstate->first_part_slot = ExecInitExtraTupleSlot(estate, scanDesc,
+													   &TTSOpsMinimalTuple);
+	winstate->agg_row_slot = ExecInitExtraTupleSlot(estate, scanDesc,
+													&TTSOpsMinimalTuple);
+	winstate->temp_slot_1 = ExecInitExtraTupleSlot(estate, scanDesc,
+												   &TTSOpsMinimalTuple);
+	winstate->temp_slot_2 = ExecInitExtraTupleSlot(estate, scanDesc,
+												   &TTSOpsMinimalTuple);
 
-	winstate->ps_TupFromTlist = false;
+	/*
+	 * create frame head and tail slots only if needed (must create slots in
+	 * exactly the same cases that update_frameheadpos and update_frametailpos
+	 * need them)
+	 */
+	winstate->framehead_slot = winstate->frametail_slot = NULL;
+
+	if (frameOptions & (FRAMEOPTION_RANGE | FRAMEOPTION_GROUPS))
+	{
+		if (((frameOptions & FRAMEOPTION_START_CURRENT_ROW) &&
+			 node->ordNumCols != 0) ||
+			(frameOptions & FRAMEOPTION_START_OFFSET))
+			winstate->framehead_slot = ExecInitExtraTupleSlot(estate, scanDesc,
+															  &TTSOpsMinimalTuple);
+		if (((frameOptions & FRAMEOPTION_END_CURRENT_ROW) &&
+			 node->ordNumCols != 0) ||
+			(frameOptions & FRAMEOPTION_END_OFFSET))
+			winstate->frametail_slot = ExecInitExtraTupleSlot(estate, scanDesc,
+															  &TTSOpsMinimalTuple);
+	}
+
+	/*
+	 * Initialize result slot, type and projection.
+	 */
+	ExecInitResultTupleSlotTL(&winstate->ss.ps, &TTSOpsVirtual);
+	ExecAssignProjectionInfo(&winstate->ss.ps, NULL);
 
 	/* Set up data for comparing tuples */
 	if (node->partNumCols > 0)
-		winstate->partEqfunctions = execTuplesMatchPrepare(node->partNumCols,
-														node->partOperators);
+		winstate->partEqfunction =
+			execTuplesMatchPrepare(scanDesc,
+								   node->partNumCols,
+								   node->partColIdx,
+								   node->partOperators,
+								   node->partCollations,
+								   &winstate->ss.ps);
+
 	if (node->ordNumCols > 0)
-		winstate->ordEqfunctions = execTuplesMatchPrepare(node->ordNumCols,
-														  node->ordOperators);
+		winstate->ordEqfunction =
+			execTuplesMatchPrepare(scanDesc,
+								   node->ordNumCols,
+								   node->ordColIdx,
+								   node->ordOperators,
+								   node->ordCollations,
+								   &winstate->ss.ps);
 
 	/*
 	 * WindowAgg nodes use aggvalues and aggnulls as well as Agg nodes.
@@ -2252,12 +2714,12 @@ ExecInitWindowAgg(WindowAgg *node, EState *estate, int eflags)
 	foreach(l, winstate->funcs)
 	{
 		WindowFuncExprState *wfuncstate = (WindowFuncExprState *) lfirst(l);
-		WindowFunc *wfunc = (WindowFunc *) wfuncstate->xprstate.expr;
+		WindowFunc *wfunc = wfuncstate->wfunc;
 		WindowStatePerFunc perfuncstate;
 		AclResult	aclresult;
 		int			i;
 
-		if (wfunc->winref != node->winref)		/* planner screwed up? */
+		if (wfunc->winref != node->winref)	/* planner screwed up? */
 			elog(ERROR, "WindowFunc with winref %u assigned to WindowAgg with winref %u",
 				 wfunc->winref, node->winref);
 
@@ -2285,7 +2747,7 @@ ExecInitWindowAgg(WindowAgg *node, EState *estate, int eflags)
 		aclresult = pg_proc_aclcheck(wfunc->winfnoid, GetUserId(),
 									 ACL_EXECUTE);
 		if (aclresult != ACLCHECK_OK)
-			aclcheck_error(aclresult, ACL_KIND_PROC,
+			aclcheck_error(aclresult, OBJECT_FUNCTION,
 						   get_func_name(wfunc->winfnoid));
 		InvokeFunctionExecuteHook(wfunc->winfnoid);
 
@@ -2348,7 +2810,7 @@ ExecInitWindowAgg(WindowAgg *node, EState *estate, int eflags)
 	}
 
 	/* copy frame options to state node for easy access */
-	winstate->frameOptions = node->frameOptions;
+	winstate->frameOptions = frameOptions;
 
 	/* initialize frame bound offset expressions */
 	winstate->startOffset = ExecInitExpr((Expr *) node->startOffset,
@@ -2356,8 +2818,14 @@ ExecInitWindowAgg(WindowAgg *node, EState *estate, int eflags)
 	winstate->endOffset = ExecInitExpr((Expr *) node->endOffset,
 									   (PlanState *) winstate);
 
-	if (node->frameOptions & FRAMEOPTION_RANGE)
-		initialize_range_bound_exprs(winstate);
+	/* Lookup in_range support functions if needed */
+	if (OidIsValid(node->startInRangeFunc))
+		fmgr_info(node->startInRangeFunc, &winstate->startInRangeFunc);
+	if (OidIsValid(node->endInRangeFunc))
+		fmgr_info(node->endInRangeFunc, &winstate->endInRangeFunc);
+	winstate->inRangeColl = node->inRangeColl;
+	winstate->inRangeAsc = node->inRangeAsc;
+	winstate->inRangeNullsFirst = node->inRangeNullsFirst;
 
 	winstate->start_offset_var_free =
 		!contain_var_clause(node->startOffset) &&
@@ -2371,183 +2839,6 @@ ExecInitWindowAgg(WindowAgg *node, EState *estate, int eflags)
 	winstate->more_partitions = false;
 
 	return winstate;
-}
-
-/*
- * Initialize expressions to compute the frame boundaries, for "RANGE
- * <value> PRECEDING/FOLLOWING".
- */
-static void
-initialize_range_bound_exprs(WindowAggState *winstate)
-{
-	WindowAgg  *node = (WindowAgg *) winstate->ss.ps.plan;
-	Oid			cmpFunc;
-	Var		   *cur_row_val;
-	Oid			opfamily;
-	int16		strategy;
-	Oid			typeId;
-	Expr	   *valExpr;
-	Expr	   *expr;
-	int			dir;
-	CaseTestExpr *offset;
-	Oid			inputFunctionOid;
-	uint32		typIOParam;
-	Datum		zero;
-	int16		len;
-	bool		byval;
-
-	if (!(node->frameOptions & (FRAMEOPTION_START_VALUE | FRAMEOPTION_END_VALUE)))
-		return;
-
-	/* the parser should've checked this already, but better safe than sorry */
-	if (node->ordNumCols > 1)
-		elog(ERROR, "RANGE with more than one ORDER BY column allowed");
-
-	/*
-	 * Initialize the ordering comparison function for the ORDER BY column.
-	 * This will be used to compare the computed boundary values against rows
-	 * in the window.
-	 */
-	get_compare_function_for_ordering_op(node->firstOrderCmpOperator,
-										 &cmpFunc,
-										 &winstate->ordReverse);
-	if (!OidIsValid(cmpFunc))
-		elog(ERROR, "could not find comparison function for ordering operator %u",
-			 node->firstOrderCmpOperator);
-	fmgr_info(cmpFunc, &winstate->ordCmpFunction);
-
-	/* Look up the column's datatype. */
-	if (!get_ordering_op_properties(node->firstOrderCmpOperator,
-									&opfamily,
-									&typeId,
-									&strategy))
-		elog(ERROR, "operator %u is not a valid ordering operator",
-			 node->firstOrderCmpOperator);
-
-	/*------
-	 * Build expressions for to compute the boundary values from the current
-	 * row and the offset. The expression is of the form:
-	 *
-	 * "<current row value> + <offset>", for "<value> FOLLOWING", and
-	 * "<current row value> - <offset>", for "<value> PRECEDING".
-	 *
-	 * (For DESC, they are reversed.)
-	 *
-	 * In the expression, we use a Var with OUTER_VAR to represent the current
-	 * row's value. The parser has stored the expression representing the
-	 * offset in node->start/endOffset, and we will store the expression for
-	 * the +/- in winstate->start/endOffset.
-	 *
-	 * In these expressions, we use CaseTestExpr to represent the <offset>. We
-	 * could use the start/endOffset expression directly, but we also want to
-	 * check that the offset is not negative. So at runtime, we first execute
-	 * the startOffset expression, to produce the offset value. Then we check
-	 * that it's not negative, stick it in the case-value, and execute the
-	 * start/endBound expression to produce the boundary value.
-	 *
-	 * At runtime, the boundary value is executed whenever the current row
-	 * changes, and the result is compared against other rows to determine
-	 * whether they are in the frame.
-	 *
-	 * The RANGE offset is not allowed to be negative. The code itself
-	 * could handle it, but it's forbidden by the spec, and GPDB has
-	 * historically rejected it, too. So we have to prepare an expression
-	 * to check that too. It is a bit hacky, because there is no datatype
-	 * agnostic way to determine what "negative" means. What we do is convert
-	 * the string "0" to the column's datatype, by calling the input function,
-	 * and then compare against that.
-	 *
-	 * There's a similar check in parse_clause.c, for the simple case
-	 * that the parameter is a Const. Make sure this matches!
-	 *------
-	 */
-	cur_row_val = makeVar(OUTER_VAR, node->firstOrderCol, typeId, -1, InvalidOid, 0);
-
-	if (node->frameOptions & FRAMEOPTION_START_VALUE)
-	{
-		dir = (node->frameOptions & FRAMEOPTION_START_VALUE_PRECEDING) ? -1 : 1;
-		if (strategy == BTGreaterStrategyNumber)
-			dir = -dir;
-
-		offset = makeNode(CaseTestExpr);
-		offset->typeId = exprType(node->startOffset);
-		offset->typeMod = exprTypmod(node->startOffset);
-
-		valExpr = make_op(NULL,
-						  list_make1(makeString(dir == 1 ? "+" : "-")),
-						  (Node *) cur_row_val,
-						  (Node *) offset,
-						  -1);
-
-		/* Coerce the expression to the same datatype as the column. */
-		valExpr = (Expr *) coerce_to_specific_type(NULL,
-												   (Node *) valExpr,
-												   typeId,
-												   "RANGE");
-
-		winstate->startBound = ExecInitExpr(valExpr,
-											(PlanState *) winstate);
-
-		/* Create a datum to represent 0 */
-		getTypeInputInfo(offset->typeId, &inputFunctionOid, &typIOParam);
-		zero = OidInputFunctionCall(inputFunctionOid, "0", typIOParam, -1);
-
-		get_typlenbyval(offset->typeId, &len, &byval);
-		expr = make_op(NULL,
-					   list_make1(makeString("<")),
-					   (Node *) offset,
-					   (Node *) makeConst(offset->typeId,
-										  offset->typeMod,
-										  exprCollation(node->startOffset),
-										  len,
-										  zero,
-										  false,
-										  byval),
-					   -1);
-		winstate->startOffsetIsNegative = ExecInitExpr(expr,
-													   (PlanState *) winstate);
-	}
-	if (node->frameOptions & FRAMEOPTION_END_VALUE)
-	{
-		dir = (node->frameOptions & FRAMEOPTION_END_VALUE_PRECEDING) ? -1 : 1;
-		if (strategy == BTGreaterStrategyNumber)
-			dir = -dir;
-
-		offset = makeNode(CaseTestExpr);
-		offset->typeId = exprType(node->endOffset);
-		offset->typeMod = exprTypmod(node->endOffset);
-
-		valExpr = make_op(NULL,
-						  list_make1(makeString(dir == 1 ? "+" : "-")),
-						  (Node *) cur_row_val,
-						  (Node *) offset,
-						  -1);
-		valExpr = (Expr *) coerce_to_specific_type(NULL,
-												   (Node *) valExpr,
-												   typeId,
-												   "RANGE");
-		winstate->endBound = ExecInitExpr(valExpr,
-										  (PlanState *) winstate);
-
-		/* Create a datum to represent 0 */
-		getTypeInputInfo(offset->typeId, &inputFunctionOid, &typIOParam);
-		zero = OidInputFunctionCall(inputFunctionOid, "0", typIOParam, -1);
-
-		get_typlenbyval(offset->typeId, &len, &byval);
-		expr = make_op(NULL,
-					   list_make1(makeString("<")),
-					   (Node *) offset,
-					   (Node *) makeConst(offset->typeId,
-										  offset->typeMod,
-										  exprCollation(node->endOffset),
-										  len,
-										  zero,
-										  false,
-										  byval),
-					   -1);
-		winstate->endOffsetIsNegative = ExecInitExpr(expr,
-													 (PlanState *) winstate);
-	}
 }
 
 /* -----------------
@@ -2567,6 +2858,10 @@ ExecEndWindowAgg(WindowAggState *node)
 	ExecClearTuple(node->agg_row_slot);
 	ExecClearTuple(node->temp_slot_1);
 	ExecClearTuple(node->temp_slot_2);
+	if (node->framehead_slot)
+		ExecClearTuple(node->framehead_slot);
+	if (node->frametail_slot)
+		ExecClearTuple(node->frametail_slot);
 
 	/*
 	 * Free both the expr contexts.
@@ -2601,8 +2896,6 @@ ExecReScanWindowAgg(WindowAggState *node)
 	ExprContext *econtext = node->ss.ps.ps_ExprContext;
 
 	node->all_done = false;
-
-	node->ps_TupFromTlist = false;
 	node->all_first = true;
 
 	/* release tuplestore et al */
@@ -2614,6 +2907,10 @@ ExecReScanWindowAgg(WindowAggState *node)
 	ExecClearTuple(node->agg_row_slot);
 	ExecClearTuple(node->temp_slot_1);
 	ExecClearTuple(node->temp_slot_2);
+	if (node->framehead_slot)
+		ExecClearTuple(node->framehead_slot);
+	if (node->frametail_slot)
+		ExecClearTuple(node->frametail_slot);
 
 	/* Forget current wfunc values */
 	MemSet(econtext->ecxt_aggvalues, 0, sizeof(Datum) * node->numfuncs);
@@ -2650,10 +2947,12 @@ initialize_peragg(WindowAggState *winstate, WindowFunc *wfunc,
 	Oid			aggtranstype;
 	AttrNumber	initvalAttNo;
 	AclResult	aclresult;
+	bool		use_ma_code;
 	Oid			transfn_oid,
 				invtransfn_oid,
 				finalfn_oid;
 	bool		finalextra;
+	char		finalmodify;
 	Expr	   *transfnexpr,
 			   *invtransfnexpr,
 			   *finalfnexpr;
@@ -2679,20 +2978,32 @@ initialize_peragg(WindowAggState *winstate, WindowFunc *wfunc,
 	 * Figure out whether we want to use the moving-aggregate implementation,
 	 * and collect the right set of fields from the pg_attribute entry.
 	 *
-	 * If the frame head can't move, we don't need moving-aggregate code. Even
-	 * if we'd like to use it, don't do so if the aggregate's arguments (and
-	 * FILTER clause if any) contain any calls to volatile functions.
-	 * Otherwise, the difference between restarting and not restarting the
-	 * aggregation would be user-visible.
+	 * It's possible that an aggregate would supply a safe moving-aggregate
+	 * implementation and an unsafe normal one, in which case our hand is
+	 * forced.  Otherwise, if the frame head can't move, we don't need
+	 * moving-aggregate code.  Even if we'd like to use it, don't do so if the
+	 * aggregate's arguments (and FILTER clause if any) contain any calls to
+	 * volatile functions.  Otherwise, the difference between restarting and
+	 * not restarting the aggregation would be user-visible.
 	 */
-	if (OidIsValid(aggform->aggminvtransfn) &&
-		!(winstate->frameOptions & FRAMEOPTION_START_UNBOUNDED_PRECEDING) &&
-		!contain_volatile_functions((Node *) wfunc))
+	if (!OidIsValid(aggform->aggminvtransfn))
+		use_ma_code = false;	/* sine qua non */
+	else if (aggform->aggmfinalmodify == AGGMODIFY_READ_ONLY &&
+			 aggform->aggfinalmodify != AGGMODIFY_READ_ONLY)
+		use_ma_code = true;		/* decision forced by safety */
+	else if (winstate->frameOptions & FRAMEOPTION_START_UNBOUNDED_PRECEDING)
+		use_ma_code = false;	/* non-moving frame head */
+	else if (contain_volatile_functions((Node *) wfunc))
+		use_ma_code = false;	/* avoid possible behavioral change */
+	else
+		use_ma_code = true;		/* yes, let's use it */
+	if (use_ma_code)
 	{
 		peraggstate->transfn_oid = transfn_oid = aggform->aggmtransfn;
 		peraggstate->invtransfn_oid = invtransfn_oid = aggform->aggminvtransfn;
 		peraggstate->finalfn_oid = finalfn_oid = aggform->aggmfinalfn;
 		finalextra = aggform->aggmfinalextra;
+		finalmodify = aggform->aggmfinalmodify;
 		aggtranstype = aggform->aggmtranstype;
 		initvalAttNo = Anum_pg_aggregate_aggminitval;
 	}
@@ -2702,6 +3013,7 @@ initialize_peragg(WindowAggState *winstate, WindowFunc *wfunc,
 		peraggstate->invtransfn_oid = invtransfn_oid = InvalidOid;
 		peraggstate->finalfn_oid = finalfn_oid = aggform->aggfinalfn;
 		finalextra = aggform->aggfinalextra;
+		finalmodify = aggform->aggfinalmodify;
 		aggtranstype = aggform->aggtranstype;
 		initvalAttNo = Anum_pg_aggregate_agginitval;
 	}
@@ -2727,7 +3039,7 @@ initialize_peragg(WindowAggState *winstate, WindowFunc *wfunc,
 		aclresult = pg_proc_aclcheck(transfn_oid, aggOwner,
 									 ACL_EXECUTE);
 		if (aclresult != ACLCHECK_OK)
-			aclcheck_error(aclresult, ACL_KIND_PROC,
+			aclcheck_error(aclresult, OBJECT_FUNCTION,
 						   get_func_name(transfn_oid));
 		InvokeFunctionExecuteHook(transfn_oid);
 
@@ -2736,7 +3048,7 @@ initialize_peragg(WindowAggState *winstate, WindowFunc *wfunc,
 			aclresult = pg_proc_aclcheck(invtransfn_oid, aggOwner,
 										 ACL_EXECUTE);
 			if (aclresult != ACLCHECK_OK)
-				aclcheck_error(aclresult, ACL_KIND_PROC,
+				aclcheck_error(aclresult, OBJECT_FUNCTION,
 							   get_func_name(invtransfn_oid));
 			InvokeFunctionExecuteHook(invtransfn_oid);
 		}
@@ -2746,11 +3058,22 @@ initialize_peragg(WindowAggState *winstate, WindowFunc *wfunc,
 			aclresult = pg_proc_aclcheck(finalfn_oid, aggOwner,
 										 ACL_EXECUTE);
 			if (aclresult != ACLCHECK_OK)
-				aclcheck_error(aclresult, ACL_KIND_PROC,
+				aclcheck_error(aclresult, OBJECT_FUNCTION,
 							   get_func_name(finalfn_oid));
 			InvokeFunctionExecuteHook(finalfn_oid);
 		}
 	}
+
+	/*
+	 * If the selected finalfn isn't read-only, we can't run this aggregate as
+	 * a window function.  This is a user-facing error, so we take a bit more
+	 * care with the error message than elsewhere in this function.
+	 */
+	if (finalmodify != AGGMODIFY_READ_ONLY)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("aggregate function %s does not support use as a window function",
+						format_procedure(wfunc->winfnoid))));
 
 	/* Detect how many arguments to pass to the finalfn */
 	if (finalextra)
@@ -2767,9 +3090,9 @@ initialize_peragg(WindowAggState *winstate, WindowFunc *wfunc,
 	/* build expression trees using actual argument & result types */
 	build_aggregate_transfn_expr(inputTypes,
 								 numArguments,
-								 0,		/* no ordered-set window functions yet */
+								 0, /* no ordered-set window functions yet */
 								 false, /* no variadic window functions yet */
-								 wfunc->wintype,
+								 aggtranstype,
 								 wfunc->inputcollid,
 								 transfn_oid,
 								 invtransfn_oid,
@@ -2901,10 +3224,8 @@ initialize_peragg(WindowAggState *winstate, WindowFunc *wfunc,
 	if (OidIsValid(invtransfn_oid))
 		peraggstate->aggcontext =
 			AllocSetContextCreate(CurrentMemoryContext,
-								  "WindowAgg_AggregatePrivate",
-								  ALLOCSET_DEFAULT_MINSIZE,
-								  ALLOCSET_DEFAULT_INITSIZE,
-								  ALLOCSET_DEFAULT_MAXSIZE);
+								  "WindowAgg Per Aggregate",
+								  ALLOCSET_DEFAULT_SIZES);
 	else
 		peraggstate->aggcontext = winstate->aggcontext;
 
@@ -2940,162 +3261,16 @@ are_peers(WindowAggState *winstate, TupleTableSlot *slot1,
 		  TupleTableSlot *slot2)
 {
 	WindowAgg  *node = (WindowAgg *) winstate->ss.ps.plan;
+	ExprContext *econtext = winstate->tmpcontext;
 
 	/* If no ORDER BY, all rows are peers with each other */
 	if (node->ordNumCols == 0)
 		return true;
 
-	return execTuplesMatch(slot1, slot2,
-						   node->ordNumCols, node->ordColIdx,
-						   winstate->ordEqfunctions,
-						   winstate->tmpcontext->ecxt_per_tuple_memory);
+	econtext->ecxt_outertuple = slot1;
+	econtext->ecxt_innertuple = slot2;
+	return ExecQualAndReset(winstate->ordEqfunction, econtext);
 }
-
-/*
- * Compute new boundary value.
- *
- * The current row is assumed to be in ss_ScanTupleSlot.
- */
-static Datum
-eval_bound_value(WindowAggState *winstate,
-				 ExprState *boundExpr,
-				 ExprState *offsetIsNegativeExpr,
-				 Datum offset,
-				 bool *isnull_p)
-{
-	ExprContext *econtext = winstate->ss.ps.ps_ExprContext;
-	Datum		result;
-	Datum		save_datum;
-	bool		save_isNull;
-	Datum		neg_datum;
-	bool		neg_isnull;
-
-	save_datum = econtext->caseValue_datum;
-	save_isNull = econtext->caseValue_isNull;
-
-	econtext->caseValue_datum = offset;
-	econtext->caseValue_isNull = false;
-
-	/* First check that the offset was not negative. */
-	neg_datum = ExecEvalExpr(offsetIsNegativeExpr,
-							 econtext, &neg_isnull, NULL);
-	if (neg_isnull)
-		elog(ERROR, "comparison of RANGE offset against 0 returned NULL");
-	if (DatumGetBool(neg_datum))
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("RANGE parameter cannot be negative")));
-
-	/* Evaluate the bound expression. */
-	result = ExecEvalExprSwitchContext(boundExpr,
-									   econtext,
-									   isnull_p,
-									   NULL);
-
-	econtext->caseValue_datum = save_datum;
-	econtext->caseValue_isNull = save_isNull;
-
-	return result;
-}
-
-static bool
-is_within_range_start(WindowAggState *winstate, TupleTableSlot *slot)
-{
-	WindowAgg  *node = (WindowAgg *) winstate->ss.ps.plan;
-	Datum		value;
-	bool		isnull;
-	int32		compare;
-
-	Assert(winstate->start_offset_valid);
-
-	/* We have a boundary value now. Compare the given tuple against it. */
-	value = slot_getattr(slot,
-						 node->firstOrderCol,
-						 &isnull);
-
-	if (winstate->startBoundIsNull)
-	{
-		/*
-		 * The SQL spec says:
-		 *
-		 * If VSK is the null value and if NULLS LAST is specified or implied, then
-		 * remove from WF all rows R2 such that the value of SK in row R2 is not the
-		 * null value.
-		 */
-		if (!isnull && !node->firstOrderNullsFirst)
-			return false;
-		else
-			return true;
-	}
-	else
-	{
-		if (isnull)
-		{
-			if (node->firstOrderNullsFirst)
-				return false;
-			else
-				return true;
-		}
-
-		compare = DatumGetInt32(FunctionCall2(&winstate->ordCmpFunction,
-											  winstate->startBoundValue,
-											  value));
-
-		if (winstate->ordReverse)
-			compare = -compare;
-
-		return (compare <= 0);
-	}
-}
-
-static bool
-is_within_range_end(WindowAggState *winstate, TupleTableSlot *slot)
-{
-	WindowAgg  *node = (WindowAgg *) winstate->ss.ps.plan;
-	Datum		value;
-	bool		isnull;
-	int32		compare;
-
-	Assert(winstate->end_offset_valid);
-
-	/* We have a boundary value now. Compare the given tuple against it. */
-	value = slot_getattr(slot,
-						 node->firstOrderCol,
-						 &isnull);
-	if (winstate->endBoundIsNull)
-	{
-		/*
-		 * The SQL spec says:
-		 *
-		 * If VSK is the null value and if NULLS FIRST is specified or implied, then
-		 * remove from WF all rows R2 such that the value of SK in row R2 is not the
-		 * null value.
-		 */
-		if (!isnull && node->firstOrderNullsFirst)
-			return false;
-		else
-			return true;
-	}
-	else
-	{
-		if (isnull)
-		{
-			if (!node->firstOrderNullsFirst)
-				return false;
-			else
-				return true;
-		}
-
-		compare = DatumGetInt32(FunctionCall2(&winstate->ordCmpFunction,
-											  winstate->endBoundValue,
-											  value));
-		if (winstate->ordReverse)
-			compare = -compare;
-
-		return (compare >= 0);
-	}
-}
-
 
 /*
  * window_gettupleslot
@@ -3109,6 +3284,9 @@ window_gettupleslot(WindowObject winobj, int64 pos, TupleTableSlot *slot)
 {
 	WindowAggState *winstate = winobj->winstate;
 	MemoryContext oldcontext;
+
+	/* often called repeatedly in a row */
+	CHECK_FOR_INTERRUPTS();
 
 	/* Don't allow passing -1 to spool_tuples here */
 	if (pos < 0)
@@ -3296,7 +3474,7 @@ WinSetMarkPosition(WindowObject winobj, int64 markpos)
 
 /*
  * WinRowsArePeers
- *		Compare two rows (specified by absolute position in window) to see
+ *		Compare two rows (specified by absolute position in partition) to see
  *		if they are equal according to the ORDER BY clause.
  *
  * NB: this does not consider the window frame mode.
@@ -3318,6 +3496,10 @@ WinRowsArePeers(WindowObject winobj, int64 pos1, int64 pos2)
 	if (node->ordNumCols == 0)
 		return true;
 
+	/*
+	 * Note: OK to use temp_slot_2 here because we aren't calling any
+	 * frame-related functions (those tend to clobber temp_slot_2).
+	 */
 	slot1 = winstate->temp_slot_1;
 	slot2 = winstate->temp_slot_2;
 
@@ -3402,33 +3584,10 @@ WinGetFuncArgInPartition(WindowObject winobj, int argno,
 		if (isout)
 			*isout = false;
 		if (set_mark)
-		{
-			int			frameOptions = winstate->frameOptions;
-			int64		mark_pos = abs_pos;
-
-			/*
-			 * In RANGE mode with a moving frame head, we must not let the
-			 * mark advance past frameheadpos, since that row has to be
-			 * fetchable during future update_frameheadpos calls.
-			 *
-			 * XXX it is very ugly to pollute window functions' marks with
-			 * this consideration; it could for instance mask a logic bug that
-			 * lets a window function fetch rows before what it had claimed
-			 * was its mark.  Perhaps use a separate mark for frame head
-			 * probes?
-			 */
-			if ((frameOptions & FRAMEOPTION_RANGE) &&
-				!(frameOptions & FRAMEOPTION_START_UNBOUNDED_PRECEDING))
-			{
-				update_frameheadpos(winobj, winstate->temp_slot_2);
-				if (mark_pos > winstate->frameheadpos)
-					mark_pos = winstate->frameheadpos;
-			}
-			WinSetMarkPosition(winobj, mark_pos);
-		}
+			WinSetMarkPosition(winobj, abs_pos);
 		econtext->ecxt_outertuple = slot;
 		return ExecEvalExpr((ExprState *) list_nth(winobj->argstates, argno),
-							econtext, isnull, NULL);
+							econtext, isnull);
 	}
 }
 
@@ -3436,19 +3595,34 @@ WinGetFuncArgInPartition(WindowObject winobj, int argno,
  * WinGetFuncArgInFrame
  *		Evaluate a window function's argument expression on a specified
  *		row of the window frame.  The row is identified in lseek(2) style,
- *		i.e. relative to the current, first, or last row.
+ *		i.e. relative to the first or last row of the frame.  (We do not
+ *		support WINDOW_SEEK_CURRENT here, because it's not very clear what
+ *		that should mean if the current row isn't part of the frame.)
  *
  * argno: argument number to evaluate (counted from 0)
  * relpos: signed rowcount offset from the seek position
- * seektype: WINDOW_SEEK_CURRENT, WINDOW_SEEK_HEAD, or WINDOW_SEEK_TAIL
- * set_mark: If the row is found and set_mark is true, the mark is moved to
- *		the row as a side-effect.
+ * seektype: WINDOW_SEEK_HEAD or WINDOW_SEEK_TAIL
+ * set_mark: If the row is found/in frame and set_mark is true, the mark is
+ *		moved to the row as a side-effect.
  * isnull: output argument, receives isnull status of result
  * isout: output argument, set to indicate whether target row position
  *		is out of frame (can pass NULL if caller doesn't care about this)
  *
- * Specifying a nonexistent row is not an error, it just causes a null result
- * (plus setting *isout true, if isout isn't NULL).
+ * Specifying a nonexistent or not-in-frame row is not an error, it just
+ * causes a null result (plus setting *isout true, if isout isn't NULL).
+ *
+ * Note that some exclusion-clause options lead to situations where the
+ * rows that are in-frame are not consecutive in the partition.  But we
+ * count only in-frame rows when measuring relpos.
+ *
+ * The set_mark flag is interpreted as meaning that the caller will specify
+ * a constant (or, perhaps, monotonically increasing) relpos in successive
+ * calls, so that *if there is no exclusion clause* there will be no need
+ * to fetch a row before the previously fetched row.  But we do not expect
+ * the caller to know how to account for exclusion clauses.  Therefore,
+ * if there is an exclusion clause we take responsibility for adjusting the
+ * mark request to something that will be safe given the above assumption
+ * about relpos.
  */
 Datum
 WinGetFuncArgInFrame(WindowObject winobj, int argno,
@@ -3458,8 +3632,8 @@ WinGetFuncArgInFrame(WindowObject winobj, int argno,
 	WindowAggState *winstate;
 	ExprContext *econtext;
 	TupleTableSlot *slot;
-	bool		gottuple;
 	int64		abs_pos;
+	int64		mark_pos;
 
 	Assert(WindowObjectIsValid(winobj));
 	winstate = winobj->winstate;
@@ -3469,66 +3643,167 @@ WinGetFuncArgInFrame(WindowObject winobj, int argno,
 	switch (seektype)
 	{
 		case WINDOW_SEEK_CURRENT:
-			abs_pos = winstate->currentpos + relpos;
+			elog(ERROR, "WINDOW_SEEK_CURRENT is not supported for WinGetFuncArgInFrame");
+			abs_pos = mark_pos = 0; /* keep compiler quiet */
 			break;
 		case WINDOW_SEEK_HEAD:
-			update_frameheadpos(winobj, slot);
+			/* rejecting relpos < 0 is easy and simplifies code below */
+			if (relpos < 0)
+				goto out_of_frame;
+			update_frameheadpos(winstate);
 			abs_pos = winstate->frameheadpos + relpos;
+			mark_pos = abs_pos;
+
+			/*
+			 * Account for exclusion option if one is active, but advance only
+			 * abs_pos not mark_pos.  This prevents changes of the current
+			 * row's peer group from resulting in trying to fetch a row before
+			 * some previous mark position.
+			 *
+			 * Note that in some corner cases such as current row being
+			 * outside frame, these calculations are theoretically too simple,
+			 * but it doesn't matter because we'll end up deciding the row is
+			 * out of frame.  We do not attempt to avoid fetching rows past
+			 * end of frame; that would happen in some cases anyway.
+			 */
+			switch (winstate->frameOptions & FRAMEOPTION_EXCLUSION)
+			{
+				case 0:
+					/* no adjustment needed */
+					break;
+				case FRAMEOPTION_EXCLUDE_CURRENT_ROW:
+					if (abs_pos >= winstate->currentpos &&
+						winstate->currentpos >= winstate->frameheadpos)
+						abs_pos++;
+					break;
+				case FRAMEOPTION_EXCLUDE_GROUP:
+					update_grouptailpos(winstate);
+					if (abs_pos >= winstate->groupheadpos &&
+						winstate->grouptailpos > winstate->frameheadpos)
+					{
+						int64		overlapstart = Max(winstate->groupheadpos,
+													   winstate->frameheadpos);
+
+						abs_pos += winstate->grouptailpos - overlapstart;
+					}
+					break;
+				case FRAMEOPTION_EXCLUDE_TIES:
+					update_grouptailpos(winstate);
+					if (abs_pos >= winstate->groupheadpos &&
+						winstate->grouptailpos > winstate->frameheadpos)
+					{
+						int64		overlapstart = Max(winstate->groupheadpos,
+													   winstate->frameheadpos);
+
+						if (abs_pos == overlapstart)
+							abs_pos = winstate->currentpos;
+						else
+							abs_pos += winstate->grouptailpos - overlapstart - 1;
+					}
+					break;
+				default:
+					elog(ERROR, "unrecognized frame option state: 0x%x",
+						 winstate->frameOptions);
+					break;
+			}
 			break;
 		case WINDOW_SEEK_TAIL:
-			update_frametailpos(winobj, slot);
-			abs_pos = winstate->frametailpos + relpos;
+			/* rejecting relpos > 0 is easy and simplifies code below */
+			if (relpos > 0)
+				goto out_of_frame;
+			update_frametailpos(winstate);
+			abs_pos = winstate->frametailpos - 1 + relpos;
+
+			/*
+			 * Account for exclusion option if one is active.  If there is no
+			 * exclusion, we can safely set the mark at the accessed row.  But
+			 * if there is, we can only mark the frame start, because we can't
+			 * be sure how far back in the frame the exclusion might cause us
+			 * to fetch in future.  Furthermore, we have to actually check
+			 * against frameheadpos here, since it's unsafe to try to fetch a
+			 * row before frame start if the mark might be there already.
+			 */
+			switch (winstate->frameOptions & FRAMEOPTION_EXCLUSION)
+			{
+				case 0:
+					/* no adjustment needed */
+					mark_pos = abs_pos;
+					break;
+				case FRAMEOPTION_EXCLUDE_CURRENT_ROW:
+					if (abs_pos <= winstate->currentpos &&
+						winstate->currentpos < winstate->frametailpos)
+						abs_pos--;
+					update_frameheadpos(winstate);
+					if (abs_pos < winstate->frameheadpos)
+						goto out_of_frame;
+					mark_pos = winstate->frameheadpos;
+					break;
+				case FRAMEOPTION_EXCLUDE_GROUP:
+					update_grouptailpos(winstate);
+					if (abs_pos < winstate->grouptailpos &&
+						winstate->groupheadpos < winstate->frametailpos)
+					{
+						int64		overlapend = Min(winstate->grouptailpos,
+													 winstate->frametailpos);
+
+						abs_pos -= overlapend - winstate->groupheadpos;
+					}
+					update_frameheadpos(winstate);
+					if (abs_pos < winstate->frameheadpos)
+						goto out_of_frame;
+					mark_pos = winstate->frameheadpos;
+					break;
+				case FRAMEOPTION_EXCLUDE_TIES:
+					update_grouptailpos(winstate);
+					if (abs_pos < winstate->grouptailpos &&
+						winstate->groupheadpos < winstate->frametailpos)
+					{
+						int64		overlapend = Min(winstate->grouptailpos,
+													 winstate->frametailpos);
+
+						if (abs_pos == overlapend - 1)
+							abs_pos = winstate->currentpos;
+						else
+							abs_pos -= overlapend - 1 - winstate->groupheadpos;
+					}
+					update_frameheadpos(winstate);
+					if (abs_pos < winstate->frameheadpos)
+						goto out_of_frame;
+					mark_pos = winstate->frameheadpos;
+					break;
+				default:
+					elog(ERROR, "unrecognized frame option state: 0x%x",
+						 winstate->frameOptions);
+					mark_pos = 0;	/* keep compiler quiet */
+					break;
+			}
 			break;
 		default:
 			elog(ERROR, "unrecognized window seek type: %d", seektype);
-			abs_pos = 0;		/* keep compiler quiet */
+			abs_pos = mark_pos = 0; /* keep compiler quiet */
 			break;
 	}
 
-	gottuple = window_gettupleslot(winobj, abs_pos, slot);
-	if (gottuple)
-		gottuple = row_is_in_frame(winstate, abs_pos, slot);
+	if (!window_gettupleslot(winobj, abs_pos, slot))
+		goto out_of_frame;
 
-	if (!gottuple)
-	{
-		if (isout)
-			*isout = true;
-		*isnull = true;
-		return (Datum) 0;
-	}
-	else
-	{
-		if (isout)
-			*isout = false;
-		if (set_mark)
-		{
-			int			frameOptions = winstate->frameOptions;
-			int64		mark_pos = abs_pos;
+	/* The code above does not detect all out-of-frame cases, so check */
+	if (row_is_in_frame(winstate, abs_pos, slot) <= 0)
+		goto out_of_frame;
 
-			/*
-			 * In RANGE mode with a moving frame head, we must not let the
-			 * mark advance past frameheadpos, since that row has to be
-			 * fetchable during future update_frameheadpos calls.
-			 *
-			 * XXX it is very ugly to pollute window functions' marks with
-			 * this consideration; it could for instance mask a logic bug that
-			 * lets a window function fetch rows before what it had claimed
-			 * was its mark.  Perhaps use a separate mark for frame head
-			 * probes?
-			 */
-			if ((frameOptions & FRAMEOPTION_RANGE) &&
-				!(frameOptions & FRAMEOPTION_START_UNBOUNDED_PRECEDING))
-			{
-				update_frameheadpos(winobj, winstate->temp_slot_2);
-				if (mark_pos > winstate->frameheadpos)
-					mark_pos = winstate->frameheadpos;
-			}
-			WinSetMarkPosition(winobj, mark_pos);
-		}
-		econtext->ecxt_outertuple = slot;
-		return ExecEvalExpr((ExprState *) list_nth(winobj->argstates, argno),
-							econtext, isnull, NULL);
-	}
+	if (isout)
+		*isout = false;
+	if (set_mark)
+		WinSetMarkPosition(winobj, mark_pos);
+	econtext->ecxt_outertuple = slot;
+	return ExecEvalExpr((ExprState *) list_nth(winobj->argstates, argno),
+						econtext, isnull);
+
+out_of_frame:
+	if (isout)
+		*isout = true;
+	*isnull = true;
+	return (Datum) 0;
 }
 
 /*
@@ -3557,5 +3832,5 @@ WinGetFuncArgCurrent(WindowObject winobj, int argno, bool *isnull)
 
 	econtext->ecxt_outertuple = winstate->ss.ss_ScanTupleSlot;
 	return ExecEvalExpr((ExprState *) list_nth(winobj->argstates, argno),
-						econtext, isnull, NULL);
+						econtext, isnull);
 }

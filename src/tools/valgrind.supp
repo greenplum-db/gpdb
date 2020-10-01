@@ -52,9 +52,9 @@
 {
 	padding_XLogRecData_write
 	Memcheck:Param
-	write(buf)
+	pwrite64(buf)
 
-    ...
+	...
 	fun:XLogWrite
 }
 

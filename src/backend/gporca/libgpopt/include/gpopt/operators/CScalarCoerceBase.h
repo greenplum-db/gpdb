@@ -22,79 +22,63 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CScalarCoerceBase
-	//
-	//	@doc:
-	//		Scalar coerce operator base class
-	//
-	//---------------------------------------------------------------------------
-	class CScalarCoerceBase : public CScalar
-	{
+//---------------------------------------------------------------------------
+//	@class:
+//		CScalarCoerceBase
+//
+//	@doc:
+//		Scalar coerce operator base class
+//
+//---------------------------------------------------------------------------
+class CScalarCoerceBase : public CScalar
+{
+private:
+	// catalog MDId of the result type
+	IMDId *m_result_type_mdid;
 
-		private:
+	// output type modifier
+	INT m_type_modifier;
 
-			// catalog MDId of the result type
-			IMDId *m_result_type_mdid;
+	// coercion form
+	ECoercionForm m_ecf;
 
-			// output type modifier
-			INT m_type_modifier;
+	// location of token to be coerced
+	INT m_location;
 
-			// coercion form
-			ECoercionForm m_ecf;
+	// private copy ctor
+	CScalarCoerceBase(const CScalarCoerceBase &);
 
-			// location of token to be coerced
-			INT m_location;
+public:
+	// ctor
+	CScalarCoerceBase(CMemoryPool *mp, IMDId *mdid_type, INT type_modifier,
+					  ECoercionForm dxl_coerce_format, INT location);
 
-			// private copy ctor
-			CScalarCoerceBase(const CScalarCoerceBase &);
+	// dtor
+	virtual ~CScalarCoerceBase();
 
-		public:
+	// the type of the scalar expression
+	virtual IMDId *MdidType() const;
 
-			// ctor
-			CScalarCoerceBase
-				(
-				CMemoryPool *mp,
-				IMDId *mdid_type,
-				INT type_modifier,
-				ECoercionForm dxl_coerce_format,
-				INT location
-				);
+	// return type modifier
+	INT TypeModifier() const;
 
-			// dtor
-			virtual
-			~CScalarCoerceBase();
+	// return coercion form
+	ECoercionForm Ecf() const;
 
-			// the type of the scalar expression
-			virtual
-			IMDId *MdidType() const;
+	// return token location
+	INT Location() const;
 
-			// return type modifier
-			INT TypeModifier() const;
+	// return a copy of the operator with remapped columns
+	virtual COperator *PopCopyWithRemappedColumns(
+		CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist);
 
-			// return coercion form
-			ECoercionForm Ecf() const;
+};	// class CScalarCoerceBase
 
-			// return token location
-			INT Location() const;
-
-			// return a copy of the operator with remapped columns
-			virtual
-			COperator *PopCopyWithRemappedColumns
-				(
-				CMemoryPool *mp,
-				UlongToColRefMap *colref_mapping,
-				BOOL must_exist
-				);
-
-	}; // class CScalarCoerceBase
-
-}
+}  // namespace gpopt
 
 
-#endif // !GPOPT_CScalarCoerceBase_H
+#endif	// !GPOPT_CScalarCoerceBase_H
 
 // EOF

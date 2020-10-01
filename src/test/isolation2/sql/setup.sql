@@ -14,17 +14,19 @@ CREATE OR REPLACE FUNCTION gp_ao_or_aocs_seg(rel regclass,
   state OUT smallint)
 RETURNS SETOF record as $$
 declare
-  relstorage_var char;	/* in func */
+  amname_var text;	/* in func */
 begin	/* in func */
-  select relstorage into relstorage_var from pg_class where oid = rel; /* in func */
-  if relstorage_var = 'c' then	/* in func */
+  select amname into amname_var from pg_class c, pg_am am where c.relam = am.oid and c.oid = rel; /* in func */
+  if amname_var = 'ao_column' then	/* in func */
     for segment_id, segno, tupcount, modcount, formatversion, state in SELECT DISTINCT x.segment_id, x.segno, x.tupcount, x.modcount, x.formatversion, x.state FROM gp_toolkit.__gp_aocsseg(rel) x loop	/* in func */
       return next;	/* in func */
     end loop;	/* in func */
-  else	/* in func */
+  elsif amname_var = 'ao_row' then	/* in func */
     for segment_id, segno, tupcount, modcount, formatversion, state in SELECT x.segment_id, x.segno, x.tupcount, x.modcount, x.formatversion, x.state FROM gp_toolkit.__gp_aoseg(rel) x loop	/* in func */
       return next;	/* in func */
     end loop;	/* in func */
+  else	/* in func */
+    raise '% is not an AO_ROW or AO_COLUMN table', rel::text;	/* in func */
   end if;	/* in func */
 end;	/* in func */
 $$ LANGUAGE plpgsql;

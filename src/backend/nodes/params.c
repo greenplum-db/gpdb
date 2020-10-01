@@ -4,7 +4,7 @@
  *	  Support for finding the values associated with Param nodes.
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -23,6 +23,33 @@
 
 
 /*
+ * Allocate and initialize a new ParamListInfo structure.
+ *
+ * To make a new structure for the "dynamic" way (with hooks), pass 0 for
+ * numParams and set numParams manually.
+ */
+ParamListInfo
+makeParamList(int numParams)
+{
+	ParamListInfo retval;
+	Size		size;
+
+	size = offsetof(ParamListInfoData, params) +
+		numParams * sizeof(ParamExternData);
+
+	retval = (ParamListInfo) palloc(size);
+	retval->paramFetch = NULL;
+	retval->paramFetchArg = NULL;
+	retval->paramCompile = NULL;
+	retval->paramCompileArg = NULL;
+	retval->parserSetup = NULL;
+	retval->parserSetupArg = NULL;
+	retval->numParams = numParams;
+
+	return retval;
+}
+
+/*
  * Copy a ParamListInfo structure.
  *
  * The result is allocated in CurrentMemoryContext.
@@ -36,44 +63,25 @@ ParamListInfo
 copyParamList(ParamListInfo from)
 {
 	ParamListInfo retval;
-	Size		size;
-	int			i;
 
 	if (from == NULL || from->numParams <= 0)
 		return NULL;
 
-	size = offsetof(ParamListInfoData, params) +
-		from->numParams * sizeof(ParamExternData);
+	retval = makeParamList(from->numParams);
 
-	retval = (ParamListInfo) palloc(size);
-	retval->paramFetch = NULL;
-	retval->paramFetchArg = NULL;
-	retval->parserSetup = NULL;
-	retval->parserSetupArg = NULL;
-	retval->numParams = from->numParams;
-	retval->paramMask = NULL;
-
-	for (i = 0; i < from->numParams; i++)
+	for (int i = 0; i < from->numParams; i++)
 	{
-		ParamExternData *oprm = &from->params[i];
+		ParamExternData *oprm;
 		ParamExternData *nprm = &retval->params[i];
+		ParamExternData prmdata;
 		int16		typLen;
 		bool		typByVal;
 
-		/* Ignore parameters we don't need, to save cycles and space. */
-		if (from->paramMask != NULL &&
-			!bms_is_member(i, from->paramMask))
-		{
-			nprm->value = (Datum) 0;
-			nprm->isnull = true;
-			nprm->pflags = 0;
-			nprm->ptype = InvalidOid;
-			continue;
-		}
-
 		/* give hook a chance in case parameter is dynamic */
-		if (!OidIsValid(oprm->ptype) && from->paramFetch != NULL)
-			(*from->paramFetch) (from, i + 1);
+		if (from->paramFetch != NULL)
+			oprm = from->paramFetch(from, i + 1, false, &prmdata);
+		else
+			oprm = &from->params[i];
 
 		/* flat-copy the parameter info */
 		*nprm = *oprm;
@@ -102,25 +110,22 @@ EstimateParamListSpace(ParamListInfo paramLI)
 
 	for (i = 0; i < paramLI->numParams; i++)
 	{
-		ParamExternData *prm = &paramLI->params[i];
+		ParamExternData *prm;
+		ParamExternData prmdata;
 		Oid			typeOid;
 		int16		typLen;
 		bool		typByVal;
 
-		/* Ignore parameters we don't need, to save cycles and space. */
-		if (paramLI->paramMask != NULL &&
-			!bms_is_member(i, paramLI->paramMask))
-			typeOid = InvalidOid;
+		/* give hook a chance in case parameter is dynamic */
+		if (paramLI->paramFetch != NULL)
+			prm = paramLI->paramFetch(paramLI, i + 1, false, &prmdata);
 		else
-		{
-			/* give hook a chance in case parameter is dynamic */
-			if (!OidIsValid(prm->ptype) && paramLI->paramFetch != NULL)
-				(*paramLI->paramFetch) (paramLI, i + 1);
-			typeOid = prm->ptype;
-		}
+			prm = &paramLI->params[i];
+
+		typeOid = prm->ptype;
 
 		sz = add_size(sz, sizeof(Oid)); /* space for type OID */
-		sz = add_size(sz, sizeof(uint16));		/* space for pflags */
+		sz = add_size(sz, sizeof(uint16));	/* space for pflags */
 
 		/* space for datum/isnull */
 		if (OidIsValid(typeOid))
@@ -132,7 +137,7 @@ EstimateParamListSpace(ParamListInfo paramLI)
 			typByVal = true;
 		}
 		sz = add_size(sz,
-			  datumEstimateSpace(prm->value, prm->isnull, typByVal, typLen));
+					  datumEstimateSpace(prm->value, prm->isnull, typByVal, typLen));
 	}
 
 	return sz;
@@ -171,22 +176,19 @@ SerializeParamList(ParamListInfo paramLI, char **start_address)
 	/* Write each parameter in turn. */
 	for (i = 0; i < nparams; i++)
 	{
-		ParamExternData *prm = &paramLI->params[i];
+		ParamExternData *prm;
+		ParamExternData prmdata;
 		Oid			typeOid;
 		int16		typLen;
 		bool		typByVal;
 
-		/* Ignore parameters we don't need, to save cycles and space. */
-		if (paramLI->paramMask != NULL &&
-			!bms_is_member(i, paramLI->paramMask))
-			typeOid = InvalidOid;
+		/* give hook a chance in case parameter is dynamic */
+		if (paramLI->paramFetch != NULL)
+			prm = paramLI->paramFetch(paramLI, i + 1, false, &prmdata);
 		else
-		{
-			/* give hook a chance in case parameter is dynamic */
-			if (!OidIsValid(prm->ptype) && paramLI->paramFetch != NULL)
-				(*paramLI->paramFetch) (paramLI, i + 1);
-			typeOid = prm->ptype;
-		}
+			prm = &paramLI->params[i];
+
+		typeOid = prm->ptype;
 
 		/* Write type OID. */
 		memcpy(*start_address, &typeOid, sizeof(Oid));
@@ -224,25 +226,14 @@ ParamListInfo
 RestoreParamList(char **start_address)
 {
 	ParamListInfo paramLI;
-	Size		size;
-	int			i;
 	int			nparams;
 
 	memcpy(&nparams, *start_address, sizeof(int));
 	*start_address += sizeof(int);
 
-	size = offsetof(ParamListInfoData, params) +
-		nparams * sizeof(ParamExternData);
+	paramLI = makeParamList(nparams);
 
-	paramLI = (ParamListInfo) palloc(size);
-	paramLI->paramFetch = NULL;
-	paramLI->paramFetchArg = NULL;
-	paramLI->parserSetup = NULL;
-	paramLI->parserSetupArg = NULL;
-	paramLI->numParams = nparams;
-	paramLI->paramMask = NULL;
-
-	for (i = 0; i < nparams; i++)
+	for (int i = 0; i < nparams; i++)
 	{
 		ParamExternData *prm = &paramLI->params[i];
 

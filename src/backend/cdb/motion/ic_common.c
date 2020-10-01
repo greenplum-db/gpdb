@@ -15,10 +15,10 @@
 
 #include "postgres.h"
 
+#include "common/ip.h"
 #include "nodes/execnodes.h"	/* ExecSlice, SliceTable */
 #include "miscadmin.h"
 #include "libpq/libpq-be.h"
-#include "libpq/ip.h"
 #include "utils/builtins.h"
 #include "utils/memutils.h"
 
@@ -97,7 +97,8 @@ RecvTupleChunk(MotionConn *conn, ChunkTransportState *transportStates)
 	uint32		tcSize;
 	int			bytesProcessed = 0;
 
-	if (Gp_interconnect_type == INTERCONNECT_TYPE_TCP)
+	if (Gp_interconnect_type == INTERCONNECT_TYPE_TCP ||
+		Gp_interconnect_type == INTERCONNECT_TYPE_PROXY)
 	{
 		/* read the packet in from the network. */
 		readPacket(conn, transportStates);
@@ -164,7 +165,8 @@ RecvTupleChunk(MotionConn *conn, ChunkTransportState *transportStates)
 		 * we only check for interrupts here when we don't have a guaranteed
 		 * full-message
 		 */
-		if (Gp_interconnect_type == INTERCONNECT_TYPE_TCP)
+		if (Gp_interconnect_type == INTERCONNECT_TYPE_TCP ||
+			Gp_interconnect_type == INTERCONNECT_TYPE_PROXY)
 		{
 			if (tcSize >= conn->msgSize)
 			{
@@ -236,7 +238,8 @@ InitMotionLayerIPC(void)
 
 	/* activated = false; */
 
-	if (Gp_interconnect_type == INTERCONNECT_TYPE_TCP)
+	if (Gp_interconnect_type == INTERCONNECT_TYPE_TCP ||
+		Gp_interconnect_type == INTERCONNECT_TYPE_PROXY)
 		InitMotionTCP(&TCP_listenerFd, &tcp_listener);
 	else if (Gp_interconnect_type == INTERCONNECT_TYPE_UDPIFC)
 		InitMotionUDPIFC(&UDP_listenerFd, &udp_listener);
@@ -253,7 +256,8 @@ CleanUpMotionLayerIPC(void)
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
 		elog(DEBUG3, "Cleaning Up Motion Layer IPC...");
 
-	if (Gp_interconnect_type == INTERCONNECT_TYPE_TCP)
+	if (Gp_interconnect_type == INTERCONNECT_TYPE_TCP ||
+		Gp_interconnect_type == INTERCONNECT_TYPE_PROXY)
 		CleanupMotionTCP();
 	else if (Gp_interconnect_type == INTERCONNECT_TYPE_UDPIFC)
 		CleanupMotionUDPIFC();
@@ -533,7 +537,8 @@ SetupInterconnect(EState *estate)
 
 	if (Gp_interconnect_type == INTERCONNECT_TYPE_UDPIFC)
 		SetupUDPIFCInterconnect(estate);
-	else if (Gp_interconnect_type == INTERCONNECT_TYPE_TCP)
+	else if (Gp_interconnect_type == INTERCONNECT_TYPE_TCP ||
+			 Gp_interconnect_type == INTERCONNECT_TYPE_PROXY)
 		SetupTCPInterconnect(estate);
 	else
 		elog(ERROR, "unsupported expected interconnect type");
@@ -557,7 +562,8 @@ TeardownInterconnect(ChunkTransportState *transportStates, bool hasErrors)
 	{
 		TeardownUDPIFCInterconnect(transportStates, hasErrors);
 	}
-	else if (Gp_interconnect_type == INTERCONNECT_TYPE_TCP)
+	else if (Gp_interconnect_type == INTERCONNECT_TYPE_TCP ||
+			 Gp_interconnect_type == INTERCONNECT_TYPE_PROXY)
 	{
 		TeardownTCPInterconnect(transportStates, hasErrors);
 	}

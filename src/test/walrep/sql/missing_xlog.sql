@@ -1,5 +1,5 @@
 -- start_ignore
-create language plpythonu;
+create language plpython3u;
 -- end_ignore
 
 create or replace function pg_ctl(datadir text, command text, port int)
@@ -17,8 +17,8 @@ returns text as $$
     else:
         return 'Invalid command input'
 
-    return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace('.', '')
-$$ language plpythonu;
+    return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode().replace('.', '')
+$$ language plpython3u;
 
 create or replace function wait_for_replication_error (expected_error text, segment_id int, retries int) returns bool as
 $$
@@ -97,7 +97,7 @@ select gp_wait_until_triggered_fault('keep_log_seg', 1, dbid)
   from gp_segment_configuration where role='p' and content = 0;
 -- wait for the mirror down, so the following SQLs needs no replication on seg0
 select wait_for_mirror_down(0::smallint, 30);
--- running pg_switch_xlog() several times and `checkpoint` to remove old WAL files
+-- running pg_switch_wal() several times and `checkpoint` to remove old WAL files
 do $$
     declare i int;
     begin
@@ -107,7 +107,7 @@ do $$
             if i >= 2 then
                 return ;
             end if;
-            perform pg_switch_xlog() from gp_dist_random('gp_id') where gp_segment_id=0;
+            perform pg_switch_wal() from gp_dist_random('gp_id') where gp_segment_id=0;
             insert into t_dummy_switch select generate_series(1,10);
             i := i + 1;
         end loop;
@@ -118,7 +118,7 @@ $$;
 checkpoint;
 
 -- start_ignore
-\! gprecoverseg -a
+\! gprecoverseg -av
 -- end_ignore
 -- check the view, we expect to see error, since the WAL files required
 -- by mirror are removed on the corresponding primary
@@ -136,9 +136,9 @@ select wait_for_mirror_down(0::smallint, 30);
 select gp_inject_fault('keep_log_seg', 'reset', dbid)
   from gp_segment_configuration where role='p' and content = 0;
 -- start_ignore
-\! gprecoverseg -aF
+\! gprecoverseg -avF
 -- end_ignore
--- force the WAL segment to switch over from after previous pg_switch_xlog().
+-- force the WAL segment to switch over from after previous pg_switch_wal().
 create temp table dummy2 (id int4) distributed randomly;
 
 -- the error should go away

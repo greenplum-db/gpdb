@@ -108,7 +108,7 @@
             <entry colname="col4">All transaction IDs (XIDs) before this one have been replaced with
               a permanent (frozen) transaction ID in this database. This is used to track whether
               the database needs to be vacuumed in order to prevent transaction ID wraparound or to
-              allow pg_clog to be shrunk. It is the minimum of the per-table
+              allow pg_xact to be shrunk. It is the minimum of the per-table
                 <i>pg_class.relfrozenxid</i> values.</entry>
           </row>
           <row>

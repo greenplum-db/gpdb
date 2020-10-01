@@ -22,6 +22,9 @@ CREATE TEXT SEARCH PARSER addr_ts_prs
 CREATE TABLE addr_nsp.gentable (
 	a serial primary key CONSTRAINT a_chk CHECK (a > 0),
 	b text DEFAULT 'hello');
+CREATE TABLE addr_nsp.parttable (
+	a int PRIMARY KEY
+) PARTITION BY RANGE (a);
 CREATE VIEW addr_nsp.genview AS SELECT * from addr_nsp.gentable;
 CREATE MATERIALIZED VIEW addr_nsp.genmatview AS SELECT * FROM addr_nsp.gentable;
 CREATE TYPE addr_nsp.gencomptype AS (a int);
@@ -32,13 +35,19 @@ CREATE DOMAIN addr_nsp.gendomain AS int4 CONSTRAINT domconstr CHECK (value > 0);
 CREATE FUNCTION addr_nsp.trig() RETURNS TRIGGER LANGUAGE plpgsql AS $$ BEGIN END; $$;
 CREATE TRIGGER t BEFORE INSERT ON addr_nsp.gentable FOR EACH ROW EXECUTE PROCEDURE addr_nsp.trig();
 CREATE POLICY genpol ON addr_nsp.gentable;
+CREATE PROCEDURE addr_nsp.proc(int4) LANGUAGE SQL AS $$ $$;
 CREATE SERVER "integer" FOREIGN DATA WRAPPER addr_fdw;
 CREATE USER MAPPING FOR regress_addr_user SERVER "integer";
 ALTER DEFAULT PRIVILEGES FOR ROLE regress_addr_user IN SCHEMA public GRANT ALL ON TABLES TO regress_addr_user;
 ALTER DEFAULT PRIVILEGES FOR ROLE regress_addr_user REVOKE DELETE ON TABLES FROM regress_addr_user;
+-- this transform would be quite unsafe to leave lying around,
+-- except that the SQL language pays no attention to transforms:
 CREATE TRANSFORM FOR int LANGUAGE SQL (
-	FROM SQL WITH FUNCTION varchar_transform(internal),
+	FROM SQL WITH FUNCTION prsd_lextype(internal),
 	TO SQL WITH FUNCTION int4recv(internal));
+CREATE PUBLICATION addr_pub FOR TABLE addr_nsp.gentable;
+CREATE SUBSCRIPTION regress_addr_sub CONNECTION '' PUBLICATION bar WITH (connect = false, slot_name = NONE);
+CREATE STATISTICS addr_nsp.gentable_stat ON a, b FROM addr_nsp.gentable;
 
 -- test some error cases
 SELECT pg_get_object_address('stone', '{}', '{}');
@@ -62,6 +71,12 @@ BEGIN
 END;
 $$;
 
+-- miscellaneous other errors
+select * from pg_get_object_address('operator of access method', '{btree,integer_ops,1}', '{int4,bool}');
+select * from pg_get_object_address('operator of access method', '{btree,integer_ops,99}', '{int4,int4}');
+select * from pg_get_object_address('function of access method', '{btree,integer_ops,1}', '{int4,bool}');
+select * from pg_get_object_address('function of access method', '{btree,integer_ops,99}', '{int4,int4}');
+
 DO $$
 DECLARE
 	objtype text;
@@ -72,13 +87,14 @@ BEGIN
 		('table'), ('index'), ('sequence'), ('view'),
 		('materialized view'), ('foreign table'),
 		('table column'), ('foreign table column'),
-		('aggregate'), ('function'), ('type'), ('cast'),
+		('aggregate'), ('function'), ('procedure'), ('type'), ('cast'),
 		('table constraint'), ('domain constraint'), ('conversion'), ('default value'),
 		('operator'), ('operator class'), ('operator family'), ('rule'), ('trigger'),
 		('text search parser'), ('text search dictionary'),
 		('text search template'), ('text search configuration'),
 		('policy'), ('user mapping'), ('default acl'), ('transform'),
-		('operator of access method'), ('function of access method')
+		('operator of access method'), ('function of access method'),
+		('publication relation')
 	LOOP
 		FOR names IN VALUES ('{eins}'), ('{addr_nsp, zwei}'), ('{eins, zwei, drei}')
 		LOOP
@@ -119,11 +135,17 @@ SELECT pg_get_object_address('event trigger', '{one}', '{}');
 SELECT pg_get_object_address('event trigger', '{one,two}', '{}');
 SELECT pg_get_object_address('access method', '{one}', '{}');
 SELECT pg_get_object_address('access method', '{one,two}', '{}');
+SELECT pg_get_object_address('publication', '{one}', '{}');
+SELECT pg_get_object_address('publication', '{one,two}', '{}');
+SELECT pg_get_object_address('subscription', '{one}', '{}');
+SELECT pg_get_object_address('subscription', '{one,two}', '{}');
 
 -- test successful cases
 WITH objects (type, name, args) AS (VALUES
 				('table', '{addr_nsp, gentable}'::text[], '{}'::text[]),
+				('table', '{addr_nsp, parttable}'::text[], '{}'::text[]),
 				('index', '{addr_nsp, gentable_pkey}', '{}'),
+				('index', '{addr_nsp, parttable_pkey}', '{}'),
 				('sequence', '{addr_nsp, gentable_a_seq}', '{}'),
 				-- toast table
 				('view', '{addr_nsp, genview}', '{}'),
@@ -133,6 +155,7 @@ WITH objects (type, name, args) AS (VALUES
 				('foreign table column', '{addr_nsp, genftable, a}', '{}'),
 				('aggregate', '{addr_nsp, genaggr}', '{int4}'),
 				('function', '{pg_catalog, pg_identify_object}', '{pg_catalog.oid, pg_catalog.oid, int4}'),
+				('procedure', '{addr_nsp, proc}', '{int4}'),
 				('type', '{pg_catalog._int4}', '{}'),
 				('type', '{addr_nsp.gendomain}', '{}'),
 				('type', '{addr_nsp.gencomptype}', '{}'),
@@ -169,23 +192,27 @@ WITH objects (type, name, args) AS (VALUES
 				-- event trigger
 				('policy', '{addr_nsp, gentable, genpol}', '{}'),
 				('transform', '{int}', '{sql}'),
-				('access method', '{btree}', '{}')
+				('access method', '{btree}', '{}'),
+				('publication', '{addr_pub}', '{}'),
+				('publication relation', '{addr_nsp, gentable}', '{addr_pub}'),
+				('subscription', '{regress_addr_sub}', '{}'),
+				('statistics object', '{addr_nsp, gentable_stat}', '{}')
         )
-SELECT (pg_identify_object(addr1.classid, addr1.objid, addr1.subobjid)).*,
+SELECT (pg_identify_object(addr1.classid, addr1.objid, addr1.objsubid)).*,
 	-- test roundtrip through pg_identify_object_as_address
-	ROW(pg_identify_object(addr1.classid, addr1.objid, addr1.subobjid)) =
-	ROW(pg_identify_object(addr2.classid, addr2.objid, addr2.subobjid))
+	ROW(pg_identify_object(addr1.classid, addr1.objid, addr1.objsubid)) =
+	ROW(pg_identify_object(addr2.classid, addr2.objid, addr2.objsubid))
 	  FROM objects, pg_get_object_address(type, name, args) addr1,
-			pg_identify_object_as_address(classid, objid, subobjid) ioa(typ,nms,args),
+			pg_identify_object_as_address(classid, objid, objsubid) ioa(typ,nms,args),
 			pg_get_object_address(typ, nms, ioa.args) as addr2
-	ORDER BY addr1.classid, addr1.objid, addr1.subobjid;
+	ORDER BY addr1.classid, addr1.objid, addr1.objsubid;
 
 ---
 --- Cleanup resources
 ---
-SET client_min_messages TO 'warning';
-
 DROP FOREIGN DATA WRAPPER addr_fdw CASCADE;
+DROP PUBLICATION addr_pub;
+DROP SUBSCRIPTION regress_addr_sub;
 
 DROP SCHEMA addr_nsp CASCADE;
 

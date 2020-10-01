@@ -6,7 +6,7 @@
  *
  * This code is released under the terms of the PostgreSQL License.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/test/regress/regress.c
@@ -16,7 +16,6 @@
 
 #include "postgres.h"
 
-#include <float.h>
 #include <math.h>
 #include <signal.h>
 
@@ -24,12 +23,16 @@
 #include "access/transam.h"
 #include "access/tuptoaster.h"
 #include "access/xact.h"
+#include "catalog/pg_operator.h"
 #include "catalog/pg_type.h"
 #include "commands/sequence.h"
 #include "commands/trigger.h"
 #include "executor/executor.h"
 #include "executor/spi.h"
 #include "miscadmin.h"
+#include "nodes/supportnodes.h"
+#include "optimizer/optimizer.h"
+#include "optimizer/plancat.h"
 #include "port/atomics.h"
 #include "utils/builtins.h"
 #include "utils/geo_decls.h"
@@ -38,128 +41,14 @@
 #include "utils/memutils.h"
 
 
-#define P_MAXDIG 12
 #define LDELIM			'('
 #define RDELIM			')'
 #define DELIM			','
 
-extern PATH *poly2path(POLYGON *poly);
-extern void regress_lseg_construct(LSEG *lseg, Point *pt1, Point *pt2);
-extern char *reverse_name(char *string);
-extern int	oldstyle_length(int n, text *t);
+static void regress_lseg_construct(LSEG *lseg, Point *pt1, Point *pt2);
 
-#ifdef PG_MODULE_MAGIC
 PG_MODULE_MAGIC;
-#endif
 
-
-/*
- * Distance from a point to a path
- */
-PG_FUNCTION_INFO_V1(regress_dist_ptpath);
-
-Datum
-regress_dist_ptpath(PG_FUNCTION_ARGS)
-{
-	Point	   *pt = PG_GETARG_POINT_P(0);
-	PATH	   *path = PG_GETARG_PATH_P(1);
-	float8		result = 0.0;	/* keep compiler quiet */
-	float8		tmp;
-	int			i;
-	LSEG		lseg;
-
-	switch (path->npts)
-	{
-		case 0:
-			PG_RETURN_NULL();
-		case 1:
-			result = point_dt(pt, &path->p[0]);
-			break;
-		default:
-
-			/*
-			 * the distance from a point to a path is the smallest distance
-			 * from the point to any of its constituent segments.
-			 */
-			Assert(path->npts > 1);
-			for (i = 0; i < path->npts - 1; ++i)
-			{
-				regress_lseg_construct(&lseg, &path->p[i], &path->p[i + 1]);
-				tmp = DatumGetFloat8(DirectFunctionCall2(dist_ps,
-														 PointPGetDatum(pt),
-													  LsegPGetDatum(&lseg)));
-				if (i == 0 || tmp < result)
-					result = tmp;
-			}
-			break;
-	}
-	PG_RETURN_FLOAT8(result);
-}
-
-/*
- * this essentially does a cartesian product of the lsegs in the
- * two paths, and finds the min distance between any two lsegs
- */
-PG_FUNCTION_INFO_V1(regress_path_dist);
-
-Datum
-regress_path_dist(PG_FUNCTION_ARGS)
-{
-	PATH	   *p1 = PG_GETARG_PATH_P(0);
-	PATH	   *p2 = PG_GETARG_PATH_P(1);
-	bool		have_min = false;
-	float8		min = 0.0;		/* initialize to keep compiler quiet */
-	float8		tmp;
-	int			i,
-				j;
-	LSEG		seg1,
-				seg2;
-
-	for (i = 0; i < p1->npts - 1; i++)
-	{
-		for (j = 0; j < p2->npts - 1; j++)
-		{
-			regress_lseg_construct(&seg1, &p1->p[i], &p1->p[i + 1]);
-			regress_lseg_construct(&seg2, &p2->p[j], &p2->p[j + 1]);
-
-			tmp = DatumGetFloat8(DirectFunctionCall2(lseg_distance,
-													 LsegPGetDatum(&seg1),
-													 LsegPGetDatum(&seg2)));
-			if (!have_min || tmp < min)
-			{
-				min = tmp;
-				have_min = true;
-			}
-		}
-	}
-
-	if (!have_min)
-		PG_RETURN_NULL();
-
-	PG_RETURN_FLOAT8(min);
-}
-
-PATH *
-poly2path(POLYGON *poly)
-{
-	int			i;
-	char	   *output = (char *) palloc(2 * (P_MAXDIG + 1) * poly->npts + 64);
-	char		buf[2 * (P_MAXDIG) + 20];
-
-	sprintf(output, "(1, %*d", P_MAXDIG, poly->npts);
-
-	for (i = 0; i < poly->npts; i++)
-	{
-		snprintf(buf, sizeof(buf), ",%*g,%*g",
-				 P_MAXDIG, poly->p[i].x, P_MAXDIG, poly->p[i].y);
-		strcat(output, buf);
-	}
-
-	snprintf(buf, sizeof(buf), "%c", RDELIM);
-	strcat(output, buf);
-	return DatumGetPathP(DirectFunctionCall1(path_in,
-											 CStringGetDatum(output)));
-}
 
 /* return the point where two paths intersect, or NULL if no intersection. */
 PG_FUNCTION_INFO_V1(interpt_pp);
@@ -205,7 +94,7 @@ interpt_pp(PG_FUNCTION_ARGS)
 
 
 /* like lseg_construct, but assume space already allocated */
-void
+static void
 regress_lseg_construct(LSEG *lseg, Point *pt1, Point *pt2)
 {
 	lseg->p[0].x = pt1->x;
@@ -240,14 +129,15 @@ typedef struct
 	double		radius;
 } WIDGET;
 
-WIDGET	   *widget_in(char *str);
-char	   *widget_out(WIDGET *widget);
+PG_FUNCTION_INFO_V1(widget_in);
+PG_FUNCTION_INFO_V1(widget_out);
 
 #define NARGS	3
 
-WIDGET *
-widget_in(char *str)
+Datum
+widget_in(PG_FUNCTION_ARGS)
 {
+	char	   *str = PG_GETARG_CSTRING(0);
 	char	   *p,
 			   *coord[NARGS];
 	int			i;
@@ -262,22 +152,25 @@ widget_in(char *str)
 	if (i < NARGS)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
-				 errmsg("invalid input syntax for type widget: \"%s\"",
-						str)));
+				 errmsg("invalid input syntax for type %s: \"%s\"",
+						"widget", str)));
 
 	result = (WIDGET *) palloc(sizeof(WIDGET));
 	result->center.x = atof(coord[0]);
 	result->center.y = atof(coord[1]);
 	result->radius = atof(coord[2]);
 
-	return result;
+	PG_RETURN_POINTER(result);
 }
 
-char *
-widget_out(WIDGET *widget)
+Datum
+widget_out(PG_FUNCTION_ARGS)
 {
-	return psprintf("(%g,%g,%g)",
-					widget->center.x, widget->center.y, widget->radius);
+	WIDGET	   *widget = (WIDGET *) PG_GETARG_POINTER(0);
+	char	   *str = psprintf("(%g,%g,%g)",
+							   widget->center.x, widget->center.y, widget->radius);
+
+	PG_RETURN_CSTRING(str);
 }
 
 PG_FUNCTION_INFO_V1(pt_in_widget);
@@ -287,27 +180,21 @@ pt_in_widget(PG_FUNCTION_ARGS)
 {
 	Point	   *point = PG_GETARG_POINT_P(0);
 	WIDGET	   *widget = (WIDGET *) PG_GETARG_POINTER(1);
+	float8		distance;
 
-	PG_RETURN_BOOL(point_dt(point, &widget->center) < widget->radius);
+	distance = DatumGetFloat8(DirectFunctionCall2(point_distance,
+												  PointPGetDatum(point),
+												  PointPGetDatum(&widget->center)));
+
+	PG_RETURN_BOOL(distance < widget->radius);
 }
 
-PG_FUNCTION_INFO_V1(boxarea);
+PG_FUNCTION_INFO_V1(reverse_name);
 
 Datum
-boxarea(PG_FUNCTION_ARGS)
+reverse_name(PG_FUNCTION_ARGS)
 {
-	BOX		   *box = PG_GETARG_BOX_P(0);
-	double		width,
-				height;
-
-	width = Abs(box->high.x - box->low.x);
-	height = Abs(box->high.y - box->low.y);
-	PG_RETURN_FLOAT8(width * height);
-}
-
-char *
-reverse_name(char *string)
-{
+	char	   *string = PG_GETARG_CSTRING(0);
 	int			i;
 	int			len;
 	char	   *new_string;
@@ -320,140 +207,7 @@ reverse_name(char *string)
 	len = i;
 	for (; i >= 0; --i)
 		new_string[len - i] = string[i];
-	return new_string;
-}
-
-/*
- * This rather silly function is just to test that oldstyle functions
- * work correctly on toast-able inputs.
- */
-int
-oldstyle_length(int n, text *t)
-{
-	int			len = 0;
-
-	if (t)
-		len = VARSIZE(t) - VARHDRSZ;
-
-	return n + len;
-}
-
-
-static TransactionId fd17b_xid = InvalidTransactionId;
-static TransactionId fd17a_xid = InvalidTransactionId;
-static int	fd17b_level = 0;
-static int	fd17a_level = 0;
-static bool fd17b_recursion = true;
-static bool fd17a_recursion = true;
-
-PG_FUNCTION_INFO_V1(funny_dup17);
-
-Datum
-funny_dup17(PG_FUNCTION_ARGS)
-{
-	TriggerData *trigdata = (TriggerData *) fcinfo->context;
-	TransactionId *xid;
-	int		   *level;
-	bool	   *recursion;
-	Relation	rel;
-	TupleDesc	tupdesc;
-	HeapTuple	tuple;
-	char	   *query,
-			   *fieldval,
-			   *fieldtype;
-	char	   *when;
-	uint64		inserted;
-	int			selected = 0;
-	int			ret;
-
-	if (!CALLED_AS_TRIGGER(fcinfo))
-		elog(ERROR, "funny_dup17: not fired by trigger manager");
-
-	tuple = trigdata->tg_trigtuple;
-	rel = trigdata->tg_relation;
-	tupdesc = rel->rd_att;
-	if (TRIGGER_FIRED_BEFORE(trigdata->tg_event))
-	{
-		xid = &fd17b_xid;
-		level = &fd17b_level;
-		recursion = &fd17b_recursion;
-		when = "BEFORE";
-	}
-	else
-	{
-		xid = &fd17a_xid;
-		level = &fd17a_level;
-		recursion = &fd17a_recursion;
-		when = "AFTER ";
-	}
-
-	if (!TransactionIdIsCurrentTransactionId(*xid))
-	{
-		*xid = GetCurrentTransactionId();
-		*level = 0;
-		*recursion = true;
-	}
-
-	if (*level == 17)
-	{
-		*recursion = false;
-		return PointerGetDatum(tuple);
-	}
-
-	if (!(*recursion))
-		return PointerGetDatum(tuple);
-
-	(*level)++;
-
-	SPI_connect();
-
-	fieldval = SPI_getvalue(tuple, tupdesc, 1);
-	fieldtype = SPI_gettype(tupdesc, 1);
-
-	query = (char *) palloc(100 + NAMEDATALEN * 3 +
-							strlen(fieldval) + strlen(fieldtype));
-
-	sprintf(query, "insert into %s select * from %s where %s = '%s'::%s",
-			SPI_getrelname(rel), SPI_getrelname(rel),
-			SPI_fname(tupdesc, 1),
-			fieldval, fieldtype);
-
-	if ((ret = SPI_exec(query, 0)) < 0)
-		elog(ERROR, "funny_dup17 (fired %s) on level %3d: SPI_exec (insert ...) returned %d",
-			 when, *level, ret);
-
-	inserted = SPI_processed;
-
-	sprintf(query, "select count (*) from %s where %s = '%s'::%s",
-			SPI_getrelname(rel),
-			SPI_fname(tupdesc, 1),
-			fieldval, fieldtype);
-
-	if ((ret = SPI_exec(query, 0)) < 0)
-		elog(ERROR, "funny_dup17 (fired %s) on level %3d: SPI_exec (select ...) returned %d",
-			 when, *level, ret);
-
-	if (SPI_processed > 0)
-	{
-		selected = DatumGetInt32(DirectFunctionCall1(int4in,
-												CStringGetDatum(SPI_getvalue(
-													   SPI_tuptable->vals[0],
-													   SPI_tuptable->tupdesc,
-																			 1
-																		))));
-	}
-
-	elog(DEBUG4, "funny_dup17 (fired %s) on level %3d: " UINT64_FORMAT "/%d tuples inserted/selected",
-		 when, *level, inserted, selected);
-
-	SPI_finish();
-
-	(*level)--;
-
-	if (*level == 0)
-		*xid = InvalidTransactionId;
-
-	return PointerGetDatum(tuple);
+	PG_RETURN_CSTRING(new_string);
 }
 
 PG_FUNCTION_INFO_V1(trigger_return_old);
@@ -539,11 +293,12 @@ ttdummy(PG_FUNCTION_ARGS)
 	for (i = 0; i < 2; i++)
 	{
 		attnum[i] = SPI_fnumber(tupdesc, args[i]);
-		if (attnum[i] < 0)
-			elog(ERROR, "ttdummy (%s): there is no attribute %s", relname, args[i]);
+		if (attnum[i] <= 0)
+			elog(ERROR, "ttdummy (%s): there is no attribute %s",
+				 relname, args[i]);
 		if (SPI_gettypeid(tupdesc, attnum[i]) != INT4OID)
-			elog(ERROR, "ttdummy (%s): attributes %s and %s must be of abstime type",
-				 relname, args[0], args[1]);
+			elog(ERROR, "ttdummy (%s): attribute %s must be of integer type",
+				 relname, args[i]);
 	}
 
 	oldon = SPI_getbinval(trigtuple, tupdesc, attnum[0], &isnull);
@@ -575,7 +330,7 @@ ttdummy(PG_FUNCTION_ARGS)
 			return PointerGetDatum(NULL);
 		}
 	}
-	else if (oldoff != TTDUMMY_INFINITY)		/* DELETE */
+	else if (oldoff != TTDUMMY_INFINITY)	/* DELETE */
 	{
 		pfree(relname);
 		return PointerGetDatum(NULL);
@@ -604,7 +359,7 @@ ttdummy(PG_FUNCTION_ARGS)
 	{
 		cvals[attnum[0] - 1] = newoff;	/* start_date eq current date */
 		cnulls[attnum[0] - 1] = ' ';
-		cvals[attnum[1] - 1] = TTDUMMY_INFINITY;		/* stop_date eq INFINITY */
+		cvals[attnum[1] - 1] = TTDUMMY_INFINITY;	/* stop_date eq INFINITY */
 		cnulls[attnum[1] - 1] = ' ';
 	}
 	else
@@ -639,7 +394,7 @@ ttdummy(PG_FUNCTION_ARGS)
 		/* Prepare plan for query */
 		pplan = SPI_prepare(query, natts, ctypes);
 		if (pplan == NULL)
-			elog(ERROR, "ttdummy (%s): SPI_prepare returned %d", relname, SPI_result);
+			elog(ERROR, "ttdummy (%s): SPI_prepare returned %s", relname, SPI_result_code_string(SPI_result));
 
 		if (SPI_keepplan(pplan))
 			elog(ERROR, "ttdummy (%s): SPI_keepplan failed", relname);
@@ -654,15 +409,8 @@ ttdummy(PG_FUNCTION_ARGS)
 
 	/* Tuple to return to upper Executor ... */
 	if (newtuple)				/* UPDATE */
-	{
-		HeapTuple	tmptuple;
-
-		tmptuple = SPI_copytuple(trigtuple);
-		rettuple = SPI_modifytuple(rel, tmptuple, 1, &(attnum[1]), &newoff, NULL);
-		SPI_freetuple(tmptuple);
-	}
-	else
-		/* DELETE */
+		rettuple = SPI_modifytuple(rel, trigtuple, 1, &(attnum[1]), &newoff, NULL);
+	else						/* DELETE */
 		rettuple = trigtuple;
 
 	SPI_finish();				/* don't forget say Bye to SPI mgr */
@@ -701,12 +449,12 @@ set_ttdummy(PG_FUNCTION_ARGS)
 
 
 /*
- * Type int44 has no real-world use, but the regression tests use it.
- * It's a four-element vector of int4's.
+ * Type int44 has no real-world use, but the regression tests use it
+ * (under the alias "city_budget").  It's a four-element vector of int4's.
  */
 
 /*
- *		int44in			- converts "num num ..." to internal form
+ *		int44in			- converts "num, num, ..." to internal form
  *
  *		Note: Fills any missing positions with zeroes.
  */
@@ -732,7 +480,7 @@ int44in(PG_FUNCTION_ARGS)
 }
 
 /*
- *		int44out		- converts internal form to "num num ..."
+ *		int44out		- converts internal form to "num, num, ..."
  */
 PG_FUNCTION_INFO_V1(int44out);
 
@@ -740,20 +488,14 @@ Datum
 int44out(PG_FUNCTION_ARGS)
 {
 	int32	   *an_array = (int32 *) PG_GETARG_POINTER(0);
-	char	   *result = (char *) palloc(16 * 4);		/* Allow 14 digits +
-														 * sign */
-	int			i;
-	char	   *walk;
+	char	   *result = (char *) palloc(16 * 4);
 
-	walk = result;
-	for (i = 0; i < 4; i++)
-	{
-		pg_ltoa(an_array[i], walk);
-		while (*++walk != '\0')
-			;
-		*walk++ = ' ';
-	}
-	*--walk = '\0';
+	snprintf(result, 16 * 4, "%d,%d,%d,%d",
+			 an_array[0],
+			 an_array[1],
+			 an_array[2],
+			 an_array[3]);
+
 	PG_RETURN_CSTRING(result);
 }
 
@@ -786,9 +528,7 @@ make_tuple_indirect(PG_FUNCTION_ARGS)
 	/* Build a temporary HeapTuple control structure */
 	tuple.t_len = HeapTupleHeaderGetDatumLength(rec);
 	ItemPointerSetInvalid(&(tuple.t_self));
-#if 0
 	tuple.t_tableOid = InvalidOid;
-#endif
 	tuple.t_data = rec;
 
 	values = (Datum *) palloc(ncolumns * sizeof(Datum));
@@ -805,9 +545,9 @@ make_tuple_indirect(PG_FUNCTION_ARGS)
 		struct varatt_indirect redirect_pointer;
 
 		/* only work on existing, not-null varlenas */
-		if (tupdesc->attrs[i]->attisdropped ||
+		if (TupleDescAttr(tupdesc, i)->attisdropped ||
 			nulls[i] ||
-			tupdesc->attrs[i]->attlen != -1)
+			TupleDescAttr(tupdesc, i)->attlen != -1)
 			continue;
 
 		attr = (struct varlena *) DatumGetPointer(values[i]);
@@ -900,7 +640,6 @@ wait_pid(PG_FUNCTION_ARGS)
 	PG_RETURN_VOID();
 }
 
-#ifndef PG_HAVE_ATOMIC_FLAG_SIMULATION
 static void
 test_atomic_flag(void)
 {
@@ -930,7 +669,6 @@ test_atomic_flag(void)
 
 	pg_atomic_clear_flag(&flag);
 }
-#endif   /* PG_HAVE_ATOMIC_FLAG_SIMULATION */
 
 static void
 test_atomic_uint32(void)
@@ -1032,7 +770,6 @@ test_atomic_uint32(void)
 		elog(ERROR, "pg_atomic_fetch_and_u32() #3 wrong");
 }
 
-#ifdef PG_HAVE_ATOMIC_U64_SUPPORT
 static void
 test_atomic_uint64(void)
 {
@@ -1108,32 +845,98 @@ test_atomic_uint64(void)
 	if (pg_atomic_fetch_and_u64(&var, ~0) != 0)
 		elog(ERROR, "pg_atomic_fetch_and_u64() #3 wrong");
 }
-#endif   /* PG_HAVE_ATOMIC_U64_SUPPORT */
 
 
 PG_FUNCTION_INFO_V1(test_atomic_ops);
 Datum
 test_atomic_ops(PG_FUNCTION_ARGS)
 {
-	/* ---
-	 * Can't run the test under the semaphore emulation, it doesn't handle
-	 * checking two edge cases well:
-	 * - pg_atomic_unlocked_test_flag() always returns true
-	 * - locking a already locked flag blocks
-	 * it seems better to not test the semaphore fallback here, than weaken
-	 * the checks for the other cases. The semaphore code will be the same
-	 * everywhere, whereas the efficient implementations wont.
-	 * ---
-	 */
-#ifndef PG_HAVE_ATOMIC_FLAG_SIMULATION
 	test_atomic_flag();
-#endif
 
 	test_atomic_uint32();
 
-#ifdef PG_HAVE_ATOMIC_U64_SUPPORT
 	test_atomic_uint64();
-#endif
 
 	PG_RETURN_BOOL(true);
+}
+
+PG_FUNCTION_INFO_V1(test_fdw_handler);
+Datum
+test_fdw_handler(PG_FUNCTION_ARGS)
+{
+	elog(ERROR, "test_fdw_handler is not implemented");
+	PG_RETURN_NULL();
+}
+
+PG_FUNCTION_INFO_V1(test_support_func);
+Datum
+test_support_func(PG_FUNCTION_ARGS)
+{
+	Node	   *rawreq = (Node *) PG_GETARG_POINTER(0);
+	Node	   *ret = NULL;
+
+	if (IsA(rawreq, SupportRequestSelectivity))
+	{
+		/*
+		 * Assume that the target is int4eq; that's safe as long as we don't
+		 * attach this to any other boolean-returning function.
+		 */
+		SupportRequestSelectivity *req = (SupportRequestSelectivity *) rawreq;
+		Selectivity s1;
+
+		if (req->is_join)
+			s1 = join_selectivity(req->root, Int4EqualOperator,
+								  req->args,
+								  req->inputcollid,
+								  req->jointype,
+								  req->sjinfo);
+		else
+			s1 = restriction_selectivity(req->root, Int4EqualOperator,
+										 req->args,
+										 req->inputcollid,
+										 req->varRelid);
+
+		req->selectivity = s1;
+		ret = (Node *) req;
+	}
+
+	if (IsA(rawreq, SupportRequestCost))
+	{
+		/* Provide some generic estimate */
+		SupportRequestCost *req = (SupportRequestCost *) rawreq;
+
+		req->startup = 0;
+		req->per_tuple = 2 * cpu_operator_cost;
+		ret = (Node *) req;
+	}
+
+	if (IsA(rawreq, SupportRequestRows))
+	{
+		/*
+		 * Assume that the target is generate_series_int4; that's safe as long
+		 * as we don't attach this to any other set-returning function.
+		 */
+		SupportRequestRows *req = (SupportRequestRows *) rawreq;
+
+		if (req->node && IsA(req->node, FuncExpr))	/* be paranoid */
+		{
+			List	   *args = ((FuncExpr *) req->node)->args;
+			Node	   *arg1 = linitial(args);
+			Node	   *arg2 = lsecond(args);
+
+			if (IsA(arg1, Const) &&
+				!((Const *) arg1)->constisnull &&
+				IsA(arg2, Const) &&
+				!((Const *) arg2)->constisnull)
+			{
+				int32		val1 = DatumGetInt32(((Const *) arg1)->constvalue);
+				int32		val2 = DatumGetInt32(((Const *) arg2)->constvalue);
+
+				req->rows = val2 - val1 + 1;
+				ret = (Node *) req;
+			}
+		}
+	}
+
+	PG_RETURN_POINTER(ret);
 }

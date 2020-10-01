@@ -29,31 +29,25 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CDXLMinidump::CDXLMinidump
-	(
-	CBitSet *pbs,
-	COptimizerConfig *optimizer_config,
-	CDXLNode *query, 
-	CDXLNodeArray *query_output_dxlnode_array,
-	CDXLNodeArray *cte_producers,
-	CDXLNode *pdxlnPlan, 
-	IMDCacheObjectArray *mdcache_obj_array,
-	CSystemIdArray *pdrgpsysid,
-	ULLONG plan_id,
-	ULLONG plan_space_size
-	)
-	:
-	m_pbs(pbs),
-	m_optimizer_config(optimizer_config),
-	m_query_dxl_root(query),
-	m_query_output(query_output_dxlnode_array),
-	m_cte_producers(cte_producers),
-	m_plan_dxl_root(pdxlnPlan),
-	m_mdid_cached_obj_array(mdcache_obj_array),
-	m_system_id_array(pdrgpsysid),
-	m_plan_id(plan_id),
-	m_plan_space_size(plan_space_size)
-{}
+CDXLMinidump::CDXLMinidump(CBitSet *pbs, COptimizerConfig *optimizer_config,
+						   CDXLNode *query,
+						   CDXLNodeArray *query_output_dxlnode_array,
+						   CDXLNodeArray *cte_producers, CDXLNode *pdxlnPlan,
+						   IMDCacheObjectArray *mdcache_obj_array,
+						   CSystemIdArray *pdrgpsysid, ULLONG plan_id,
+						   ULLONG plan_space_size)
+	: m_pbs(pbs),
+	  m_optimizer_config(optimizer_config),
+	  m_query_dxl_root(query),
+	  m_query_output(query_output_dxlnode_array),
+	  m_cte_producers(cte_producers),
+	  m_plan_dxl_root(pdxlnPlan),
+	  m_mdid_cached_obj_array(mdcache_obj_array),
+	  m_system_id_array(pdrgpsysid),
+	  m_plan_id(plan_id),
+	  m_plan_space_size(plan_space_size)
+{
+}
 
 
 //---------------------------------------------------------------------------

@@ -6,10 +6,10 @@
 
 #include "access/appendonlytid.h"
 #include "access/genam.h"
+#include "access/heapam.h"
 #include "access/nbtree.h"
 #include "utils/builtins.h"
 #include "utils/rel.h"
-#include "utils/tqual.h"
 
 PG_MODULE_MAGIC;
 
@@ -114,7 +114,7 @@ readindextuple(readindexinfo *info, Relation irel, Relation hrel, Datum *values,
 
 	if (hrel != NULL)
 	{
-		if (heap_fetch(hrel, SnapshotAny, &htup, &hbuf, true, NULL))
+		if (heap_fetch(hrel, SnapshotAny, &htup, &hbuf))
 			values[4] = PointerGetDatum(hstatus_text(htup.t_data, true));
 		else if (htup.t_data)
 			values[4] = PointerGetDatum(hstatus_text(htup.t_data, false));
@@ -160,7 +160,7 @@ readindex(PG_FUNCTION_ARGS)
 
 		funcctx = SRF_FIRSTCALL_INIT();
 		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
-		tupdesc = CreateTemplateTupleDesc(outattnum, false);
+		tupdesc = CreateTemplateTupleDesc(outattnum);
 		attno = 1;
 		TupleDescInitEntry(tupdesc, attno++, "ictid", TIDOID, -1, 0);
 		TupleDescInitEntry(tupdesc, attno++, "hctid", TIDOID, -1, 0);
@@ -170,7 +170,7 @@ readindex(PG_FUNCTION_ARGS)
 
 		for (i = 0; i < itupdesc->natts; i++)
 		{
-			Form_pg_attribute attr = itupdesc->attrs[i];
+			Form_pg_attribute attr = TupleDescAttr(itupdesc, i);
 			TupleDescInitEntry(tupdesc, attno++, NameStr(attr->attname), attr->atttypid, attr->atttypmod, 0);
 		}
 
@@ -182,9 +182,7 @@ readindex(PG_FUNCTION_ARGS)
 		info->ireloid = irelid;
 
 		hrel = relation_open(irel->rd_index->indrelid, AccessShareLock);
-		if (hrel->rd_rel != NULL &&
-			(hrel->rd_rel->relstorage == 'a' ||
-			 hrel->rd_rel->relstorage == 'c'))
+		if (hrel->rd_rel != NULL && RelationIsAppendOptimized(hrel))
 		{
 			relation_close(hrel, AccessShareLock);
 			hrel = NULL;

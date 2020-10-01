@@ -23,12 +23,7 @@ using namespace gpmd;
 //		Constructor
 //
 //---------------------------------------------------------------------------
-CDXLOperator::CDXLOperator
-	(
-	CMemoryPool *mp
-	)
-	:
-	m_mp(mp)
+CDXLOperator::CDXLOperator(CMemoryPool *mp) : m_mp(mp)
 {
 }
 
@@ -53,10 +48,7 @@ CDXLOperator::~CDXLOperator()
 //
 //---------------------------------------------------------------------------
 const CWStringConst *
-CDXLOperator::GetJoinTypeNameStr
-	(
-	EdxlJoinType join_type
-	)
+CDXLOperator::GetJoinTypeNameStr(EdxlJoinType join_type)
 {
 	GPOS_ASSERT(EdxljtSentinel > join_type);
 
@@ -81,7 +73,8 @@ CDXLOperator::GetJoinTypeNameStr
 			return CDXLTokens::GetDXLTokenStr(EdxltokenJoinLeftAntiSemiJoin);
 
 		case EdxljtLeftAntiSemijoinNotIn:
-			return CDXLTokens::GetDXLTokenStr(EdxltokenJoinLeftAntiSemiJoinNotIn);
+			return CDXLTokens::GetDXLTokenStr(
+				EdxltokenJoinLeftAntiSemiJoinNotIn);
 
 		default:
 			return CDXLTokens::GetDXLTokenStr(EdxltokenUnknown);
@@ -97,21 +90,21 @@ CDXLOperator::GetJoinTypeNameStr
 //
 //---------------------------------------------------------------------------
 const CWStringConst *
-CDXLOperator::GetIdxScanDirectionStr
-	(
-	EdxlIndexScanDirection idx_scan_direction
-	)
+CDXLOperator::GetIdxScanDirectionStr(EdxlIndexScanDirection idx_scan_direction)
 {
 	switch (idx_scan_direction)
 	{
 		case EdxlisdBackward:
-			return CDXLTokens::GetDXLTokenStr(EdxltokenIndexScanDirectionBackward);
+			return CDXLTokens::GetDXLTokenStr(
+				EdxltokenIndexScanDirectionBackward);
 
 		case EdxlisdForward:
-			return CDXLTokens::GetDXLTokenStr(EdxltokenIndexScanDirectionForward);
+			return CDXLTokens::GetDXLTokenStr(
+				EdxltokenIndexScanDirectionForward);
 
 		case EdxlisdNoMovement:
-			return CDXLTokens::GetDXLTokenStr(EdxltokenIndexScanDirectionNoMovement);
+			return CDXLTokens::GetDXLTokenStr(
+				EdxltokenIndexScanDirectionNoMovement);
 
 		default:
 			GPOS_ASSERT(!"Unrecognized index scan direction");

@@ -2,6 +2,7 @@ import re
 import os
 import shutil
 from gppylib.db import dbconn
+from contextlib import closing
 from test.behave_utils.utils import check_schema_exists, check_table_exists, drop_table_if_exists
 from behave import given, when, then
 
@@ -33,6 +34,7 @@ DEFAULT PARTITION default_dates);
 """
 
 
+
 @given('there is a regular "{storage_type}" table "{tablename}" with column name list "{col_name_list}" and column type list "{col_type_list}" in schema "{schemaname}"')
 def impl(context, storage_type, tablename, col_name_list, col_type_list, schemaname):
     schemaname_no_quote = schemaname
@@ -41,28 +43,29 @@ def impl(context, storage_type, tablename, col_name_list, col_type_list, scheman
     if not check_schema_exists(context, schemaname_no_quote, context.dbname):
         raise Exception("Schema %s does not exist in database %s" % (schemaname_no_quote, context.dbname))
     drop_table_if_exists(context, '.'.join([schemaname, tablename]), context.dbname)
-    create_table_with_column_list(context.conn, storage_type, schemaname, tablename, col_name_list, col_type_list)
+    with closing(dbconn.connect(dbconn.DbURL(dbname=context.dbname))) as conn:
+        create_table_with_column_list(conn, storage_type, schemaname, tablename, col_name_list, col_type_list)
     check_table_exists(context, context.dbname, '.'.join([schemaname, tablename]), table_type=storage_type)
 
 
-@given('there is a hard coded ao partition table "{tablename}" with 4 child partitions in schema "{schemaname}"')
+@given('there is a hard coded partition table "{tablename}" with 4 child partitions in schema "{schemaname}"')
 def impl(context, tablename, schemaname):
     if not check_schema_exists(context, schemaname, context.dbname):
         raise Exception("Schema %s does not exist in database %s" % (schemaname, context.dbname))
     drop_table_if_exists(context, '.'.join([schemaname, tablename]), context.dbname)
-    dbconn.execSQL(context.conn, CREATE_PARTITION_TABLE_SQL % (schemaname, tablename))
-    context.conn.commit()
-    check_table_exists(context, context.dbname, '.'.join([schemaname, tablename]), table_type='ao')
+    with closing(dbconn.connect(dbconn.DbURL(dbname=context.dbname))) as conn:
+        dbconn.execSQL(conn, CREATE_PARTITION_TABLE_SQL % (schemaname, tablename))
+    check_table_exists(context, context.dbname, '.'.join([schemaname, tablename]), table_type=None)
 
 
-@given('there is a hard coded multi-level ao partition table "{tablename}" with 4 mid-level and 16 leaf-level partitions in schema "{schemaname}"')
+@given('there is a hard coded multi-level partition table "{tablename}" with 4 mid-level and 16 leaf-level partitions in schema "{schemaname}"')
 def impl(context, tablename, schemaname):
     if not check_schema_exists(context, schemaname, context.dbname):
         raise Exception("Schema %s does not exist in database %s" % (schemaname, context.dbname))
     drop_table_if_exists(context, '.'.join([schemaname, tablename]), context.dbname)
-    dbconn.execSQL(context.conn, CREATE_MULTI_PARTITION_TABLE_SQL % (schemaname, tablename))
-    context.conn.commit()
-    check_table_exists(context, context.dbname, '.'.join([schemaname, tablename]), table_type='ao')
+    with closing(dbconn.connect(dbconn.DbURL(dbname=context.dbname))) as conn:
+        dbconn.execSQL(conn, CREATE_MULTI_PARTITION_TABLE_SQL % (schemaname, tablename))
+    check_table_exists(context, context.dbname, '.'.join([schemaname, tablename]), table_type=None)
 
 
 @given('no state files exist for database "{dbname}"')
@@ -82,7 +85,14 @@ def impl(context, number, dbname):
 
 @given('a view "{view_name}" exists on table "{table_name}" in schema "{schema_name}"')
 def impl(context, view_name, table_name, schema_name):
-    create_view_on_table(context.conn, schema_name, table_name, view_name)
+    with closing(dbconn.connect(dbconn.DbURL(dbname=context.dbname))) as conn:
+        create_view_on_table_in_schema(conn, schema_name, table_name, view_name)
+
+
+@given('a view "{view_name}" exists on table "{table_name}"')
+def impl(context, view_name, table_name):
+    with closing(dbconn.connect(dbconn.DbURL(dbname=context.dbname))) as conn:
+        create_view_on_table(context.conn, view_name, table_name)
 
 
 @given('"{qualified_table}" appears in the latest state files')
@@ -176,16 +186,19 @@ def impl(context, qualified_table):
 @then('{num_rows} rows are inserted into table "{tablename}" in schema "{schemaname}" with column type list "{column_type_list}"')
 @when('{num_rows} rows are inserted into table "{tablename}" in schema "{schemaname}" with column type list "{column_type_list}"')
 def impl(context, num_rows, tablename, schemaname, column_type_list):
-    insert_data_into_table(context.conn, schemaname, tablename, column_type_list, num_rows)
+    with closing(dbconn.connect(dbconn.DbURL(dbname=context.dbname))) as conn:
+        insert_data_into_table(conn, schemaname, tablename, column_type_list, num_rows)
 
 @given('some data is inserted into table "{tablename}" in schema "{schemaname}" with column type list "{column_type_list}"')
 @when('some data is inserted into table "{tablename}" in schema "{schemaname}" with column type list "{column_type_list}"')
 def impl(context, tablename, schemaname, column_type_list):
-    insert_data_into_table(context.conn, schemaname, tablename, column_type_list)
+    with closing(dbconn.connect(dbconn.DbURL(dbname=context.dbname))) as conn:
+        insert_data_into_table(conn, schemaname, tablename, column_type_list)
 
 @given('some ddl is performed on table "{tablename}" in schema "{schemaname}"')
 def impl(context, tablename, schemaname):
-    perform_ddl_on_table(context.conn, schemaname, tablename)
+    with closing(dbconn.connect(dbconn.DbURL(dbname=context.dbname))) as conn:
+        perform_ddl_on_table(conn, schemaname, tablename)
 
 
 @given('the user starts a transaction and runs "{query}" on "{dbname}"')
@@ -213,11 +226,14 @@ def impl(context, mod_count, table, schema, dbname):
 
 @then('root stats are populated for partition table "{tablename}" for database "{dbname}"')
 def impl(context, tablename, dbname):
-    with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
+    conn = dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False)
+    try:
         query = "select count(*) from pg_statistic where starelid='%s'::regclass;" % tablename
-        num_tuples = dbconn.execSQLForSingleton(conn, query)
+        num_tuples = dbconn.querySingleton(conn, query)
         if num_tuples == 0:
             raise Exception("Expected partition table %s to contain root statistics" % tablename)
+    finally:
+        conn.close()
 
 def get_mod_count_in_state_file(dbname, schema, table):
     file = get_latest_aostate_file(dbname)
@@ -302,7 +318,7 @@ def get_list_of_analyze_dirs(dbname):
         return []
 
     ordered_list = [os.path.join(analyze_dir, x) for x in sorted(os.listdir(analyze_dir), reverse=True)]
-    return filter(os.path.isdir, ordered_list)
+    return list(filter(os.path.isdir, ordered_list))
 
 
 def get_latest_analyze_dir(dbname):
@@ -393,11 +409,17 @@ def perform_ddl_on_table(conn, schemaname, tablename):
     dbconn.execSQL(conn, query)
     query = "ALTER TABLE " + schemaname + '.' + tablename + " DROP COLUMN tempcol"
     dbconn.execSQL(conn, query)
+
+
+def create_view_on_table_in_schema(conn, schemaname, tablename, viewname):
+    query = "CREATE OR REPLACE VIEW " + schemaname + "." + viewname + \
+            " AS SELECT * FROM " + schemaname + "." + tablename
+    dbconn.execSQL(conn, query)
     conn.commit()
 
 
-def create_view_on_table(conn, schemaname, tablename, viewname):
-    query = "CREATE OR REPLACE VIEW " + schemaname + "." + viewname + \
-            " AS SELECT * FROM " + schemaname + "." + tablename
+def create_view_on_table(conn, viewname, tablename):
+    query = "CREATE OR REPLACE VIEW " + viewname + \
+            " AS SELECT * FROM " + tablename
     dbconn.execSQL(conn, query)
     conn.commit()

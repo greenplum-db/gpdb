@@ -37,13 +37,9 @@ CMDCache::Init()
 {
 	GPOS_ASSERT(NULL == m_pcache && "Metadata cache was already created");
 
-	m_pcache = CCacheFactory::CreateCache<IMDCacheObject*, CMDKey*>
-					(
-					true /*fUnique*/,
-					m_ullCacheQuota,
-					CMDKey::UlHashMDKey,
-					CMDKey::FEqualMDKey
-					);
+	m_pcache = CCacheFactory::CreateCache<IMDCacheObject *, CMDKey *>(
+		true /*fUnique*/, m_ullCacheQuota, CMDKey::UlHashMDKey,
+		CMDKey::FEqualMDKey);
 }
 
 
@@ -91,7 +87,8 @@ ULLONG
 CMDCache::ULLGetCacheQuota()
 {
 	// make sure that the CMDCache's saved quota is reflected in the underlying CCache
-	GPOS_ASSERT_IMP(NULL != m_pcache, m_pcache->GetCacheQuota() == m_ullCacheQuota);
+	GPOS_ASSERT_IMP(NULL != m_pcache,
+					m_pcache->GetCacheQuota() == m_ullCacheQuota);
 	return m_ullCacheQuota;
 }
 
@@ -123,11 +120,6 @@ CMDCache::ULLGetCacheEvictionCounter()
 void
 CMDCache::Reset()
 {
-	CAutoTraceFlag atf1(EtraceSimulateOOM, false);
-	CAutoTraceFlag atf2(EtraceSimulateAbort, false);
-	CAutoTraceFlag atf3(EtraceSimulateIOError, false);
-	CAutoTraceFlag atf4(EtraceSimulateNetError, false);
-
 	Shutdown();
 	Init();
 }

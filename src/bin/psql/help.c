@@ -1,14 +1,13 @@
 /*
  * psql - the PostgreSQL interactive terminal
  *
- * Copyright (c) 2000-2016, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2019, PostgreSQL Global Development Group
  *
  * src/bin/psql/help.c
  */
 #include "postgres_fe.h"
 
 #ifndef WIN32
-#include <sys/types.h>			/* (ditto) */
 #include <unistd.h>				/* for geteuid() */
 #else
 #include <win32.h>
@@ -22,13 +21,14 @@
 #include <termios.h>
 #endif
 
-#include "common.h"
+#include "common/logging.h"
 #include "common/username.h"
+
+#include "common.h"
 #include "help.h"
 #include "input.h"
 #include "settings.h"
 #include "sql_help.h"
-
 
 /*
  * PLEASE:
@@ -60,7 +60,7 @@ usage(unsigned short int pager)
 		user = get_user_name(&errstr);
 		if (!user)
 		{
-			psql_error("%s\n", errstr);
+			pg_log_fatal("%s", errstr);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -69,7 +69,7 @@ usage(unsigned short int pager)
 	 * Keep this line count in sync with the number of lines printed below!
 	 * Use "psql --help=options | wc" to count correctly.
 	 */
-	output = PageOutput(60, pager ? &(pset.popt.topt) : NULL);
+	output = PageOutput(62, pager ? &(pset.popt.topt) : NULL);
 
 	fprintf(output, _("psql is the PostgreSQL interactive terminal (Greenplum version).\n\n"));
 	fprintf(output, _("Usage:\n"));
@@ -85,8 +85,8 @@ usage(unsigned short int pager)
 	fprintf(output, _("  -f, --file=FILENAME      execute commands from file, then exit\n"));
 	fprintf(output, _("  -l, --list               list available databases, then exit\n"));
 	fprintf(output, _("  -v, --set=, --variable=NAME=VALUE\n"
-			   "                           set psql variable NAME to VALUE\n"
-				 "                           (e.g., -v ON_ERROR_STOP=1)\n"));
+					  "                           set psql variable NAME to VALUE\n"
+					  "                           (e.g., -v ON_ERROR_STOP=1)\n"));
 	fprintf(output, _("  -V, --version            output version information, then exit\n"));
 	fprintf(output, _("  -X, --no-psqlrc          do not read startup file (~/.psqlrc)\n"));
 	fprintf(output, _("  -1 (\"one\"), --single-transaction\n"
@@ -109,6 +109,7 @@ usage(unsigned short int pager)
 
 	fprintf(output, _("\nOutput format options:\n"));
 	fprintf(output, _("  -A, --no-align           unaligned table output mode\n"));
+	fprintf(output, _("      --csv                CSV (Comma-Separated Values) table output mode\n"));
 	fprintf(output, _("  -F, --field-separator=STRING\n"
 					  "                           field separator for unaligned output (default: \"%s\")\n"),
 			DEFAULT_FIELD_SEP);
@@ -170,16 +171,18 @@ slashUsage(unsigned short int pager)
 	 * Use "psql --help=commands | wc" to count correctly.  It's okay to count
 	 * the USE_READLINE line even in builds without that.
 	 */
-	output = PageOutput(111, pager ? &(pset.popt.topt) : NULL);
+	output = PageOutput(127, pager ? &(pset.popt.topt) : NULL);
 
 	fprintf(output, _("General\n"));
 	fprintf(output, _("  \\copyright             show PostgreSQL usage and distribution terms\n"));
+	fprintf(output, _("  \\crosstabview [COLUMNS] execute query and display results in crosstab\n"));
 	fprintf(output, _("  \\errverbose            show most recent error message at maximum verbosity\n"));
 	fprintf(output, _("  \\g [FILE] or ;         execute query (and send results to file or |pipe)\n"));
+	fprintf(output, _("  \\gdesc                 describe result of query, without executing it\n"));
 	fprintf(output, _("  \\gexec                 execute query, then execute each value in its result\n"));
 	fprintf(output, _("  \\gset [PREFIX]         execute query and store results in psql variables\n"));
+	fprintf(output, _("  \\gx [FILE]             as \\g, but forces expanded output mode\n"));
 	fprintf(output, _("  \\q                     quit psql\n"));
-	fprintf(output, _("  \\crosstabview [COLUMNS] execute query and display results in crosstab\n"));
 	fprintf(output, _("  \\watch [SEC]           execute query every SEC seconds\n"));
 	fprintf(output, "\n");
 
@@ -212,6 +215,13 @@ slashUsage(unsigned short int pager)
 	fprintf(output, _("  \\qecho [STRING]        write string to query output stream (see \\o)\n"));
 	fprintf(output, "\n");
 
+	fprintf(output, _("Conditional\n"));
+	fprintf(output, _("  \\if EXPR               begin conditional block\n"));
+	fprintf(output, _("  \\elif EXPR             alternative within current conditional block\n"));
+	fprintf(output, _("  \\else                  final alternative within current conditional block\n"));
+	fprintf(output, _("  \\endif                 end conditional block\n"));
+	fprintf(output, "\n");
+
 	fprintf(output, _("Informational\n"));
 	fprintf(output, _("  (options: S = show system objects, + = additional detail)\n"));
 	fprintf(output, _("  \\d[S+]                 list tables, views, and sequences\n"));
@@ -222,13 +232,14 @@ slashUsage(unsigned short int pager)
 	fprintf(output, _("  \\dc[S+] [PATTERN]      list conversions\n"));
 	fprintf(output, _("  \\dC[+]  [PATTERN]      list casts\n"));
 	fprintf(output, _("  \\dd[S]  [PATTERN]      show object descriptions not displayed elsewhere\n"));
-	fprintf(output, _("  \\ddp    [PATTERN]      list default privileges\n"));
 	fprintf(output, _("  \\dD[S+] [PATTERN]      list domains\n"));
+	fprintf(output, _("  \\ddp    [PATTERN]      list default privileges\n"));
+	fprintf(output, _("  \\dE[S+] [PATTERN]      list foreign tables\n"));
 	fprintf(output, _("  \\det[+] [PATTERN]      list foreign tables\n"));
 	fprintf(output, _("  \\des[+] [PATTERN]      list foreign servers\n"));
 	fprintf(output, _("  \\deu[+] [PATTERN]      list user mappings\n"));
 	fprintf(output, _("  \\dew[+] [PATTERN]      list foreign-data wrappers\n"));
-	fprintf(output, _("  \\df[antw][S+] [PATRN]  list [only agg/normal/trigger/window] functions\n"));
+	fprintf(output, _("  \\df[anptw][S+] [PATRN] list [only agg/normal/procedures/trigger/window] functions\n"));
 	fprintf(output, _("  \\dF[+]  [PATTERN]      list text search configurations\n"));
 	fprintf(output, _("  \\dFd[+] [PATTERN]      list text search dictionaries\n"));
 	fprintf(output, _("  \\dFp[+] [PATTERN]      list text search parsers\n"));
@@ -242,7 +253,10 @@ slashUsage(unsigned short int pager)
 	fprintf(output, _("  \\do[S]  [PATTERN]      list operators\n"));
 	fprintf(output, _("  \\dO[S+] [PATTERN]      list collations\n"));
 	fprintf(output, _("  \\dp     [PATTERN]      list table, view, and sequence access privileges\n"));
+	fprintf(output, _("  \\dP[tin+] [PATTERN]    list [only table/index] partitioned relations\n"));
 	fprintf(output, _("  \\drds [PATRN1 [PATRN2]] list per-database role settings\n"));
+	fprintf(output, _("  \\dRp[+] [PATTERN]      list replication publications\n"));
+	fprintf(output, _("  \\dRs[+] [PATTERN]      list replication subscriptions\n"));
 	fprintf(output, _("  \\ds[S+] [PATTERN]      list sequences\n"));
 	fprintf(output, _("  \\dt[S+] [PATTERN]      list tables\n"));
 	fprintf(output, _("  \\dT[S+] [PATTERN]      list data types\n"));
@@ -265,14 +279,17 @@ slashUsage(unsigned short int pager)
 	fprintf(output, _("  \\H                     toggle HTML output mode (currently %s)\n"),
 			ON(pset.popt.topt.format == PRINT_HTML));
 	fprintf(output, _("  \\pset [NAME [VALUE]]   set table output option\n"
-					  "                         (NAME := {format|border|expanded|fieldsep|fieldsep_zero|footer|null|\n"
-					  "                         numericlocale|recordsep|recordsep_zero|tuples_only|title|tableattr|pager|\n"
-					  "                         unicode_border_linestyle|unicode_column_linestyle|unicode_header_linestyle})\n"));
+					  "                         (border|columns|csv_fieldsep|expanded|fieldsep|\n"
+					  "                         fieldsep_zero|footer|format|linestyle|null|\n"
+					  "                         numericlocale|pager|pager_min_lines|recordsep|\n"
+					  "                         recordsep_zero|tableattr|title|tuples_only|\n"
+					  "                         unicode_border_linestyle|unicode_column_linestyle|\n"
+					  "                         unicode_header_linestyle)\n"));
 	fprintf(output, _("  \\t [on|off]            show only rows (currently %s)\n"),
 			ON(pset.popt.topt.tuples_only));
 	fprintf(output, _("  \\T [STRING]            set HTML <table> tag attributes, or unset if none\n"));
 	fprintf(output, _("  \\x [on|off|auto]       toggle expanded output (currently %s)\n"),
-		pset.popt.topt.expanded == 2 ? "auto" : ON(pset.popt.topt.expanded));
+			pset.popt.topt.expanded == 2 ? "auto" : ON(pset.popt.topt.expanded));
 	fprintf(output, "\n");
 
 	fprintf(output, _("Connection\n"));
@@ -283,9 +300,9 @@ slashUsage(unsigned short int pager)
 	else
 		fprintf(output, _("  \\c[onnect] {[DBNAME|- USER|- HOST|- PORT|-] | conninfo}\n"
 						  "                         connect to new database (currently no connection)\n"));
+	fprintf(output, _("  \\conninfo              display information about current connection\n"));
 	fprintf(output, _("  \\encoding [ENCODING]   show or set client encoding\n"));
 	fprintf(output, _("  \\password [USERNAME]   securely change the password for a user\n"));
-	fprintf(output, _("  \\conninfo              display information about current connection\n"));
 	fprintf(output, "\n");
 
 	fprintf(output, _("Operating System\n"));
@@ -328,7 +345,7 @@ helpVariables(unsigned short int pager)
 	 * Windows builds currently print one more line than non-Windows builds.
 	 * Using the larger number is fine.
 	 */
-	output = PageOutput(87, pager ? &(pset.popt.topt) : NULL);
+	output = PageOutput(158, pager ? &(pset.popt.topt) : NULL);
 
 	fprintf(output, _("List of specially treated variables\n\n"));
 
@@ -336,62 +353,120 @@ helpVariables(unsigned short int pager)
 	fprintf(output, _("Usage:\n"));
 	fprintf(output, _("  psql --set=NAME=VALUE\n  or \\set NAME VALUE inside psql\n\n"));
 
-	fprintf(output, _("  AUTOCOMMIT         if set, successful SQL commands are automatically committed\n"));
-	fprintf(output, _("  COMP_KEYWORD_CASE  determines the case used to complete SQL key words\n"
-	"                     [lower, upper, preserve-lower, preserve-upper]\n"));
-	fprintf(output, _("  DBNAME             the currently connected database name\n"));
-	fprintf(output, _("  ECHO               controls what input is written to standard output\n"
-					  "                     [all, errors, none, queries]\n"));
-	fprintf(output, _("  ECHO_HIDDEN        if set, display internal queries executed by backslash commands;\n"
-					  "                     if set to \"noexec\", just show without execution\n"));
-	fprintf(output, _("  ENCODING           current client character set encoding\n"));
-	fprintf(output, _("  FETCH_COUNT        the number of result rows to fetch and display at a time\n"
-					  "                     (default: 0=unlimited)\n"));
-	fprintf(output, _("  HISTCONTROL        controls command history [ignorespace, ignoredups, ignoreboth]\n"));
-	fprintf(output, _("  HISTFILE           file name used to store the command history\n"));
-	fprintf(output, _("  HISTSIZE           the number of commands to store in the command history\n"));
-	fprintf(output, _("  HOST               the currently connected database server host\n"));
-	fprintf(output, _("  IGNOREEOF          if unset, sending an EOF to interactive session terminates application\n"));
-	fprintf(output, _("  LASTOID            value of the last affected OID\n"));
-	fprintf(output, _("  ON_ERROR_ROLLBACK  if set, an error doesn't stop a transaction (uses implicit savepoints)\n"));
-	fprintf(output, _("  ON_ERROR_STOP      stop batch execution after error\n"));
-	fprintf(output, _("  PORT               server port of the current connection\n"));
-	fprintf(output, _("  PROMPT1            specifies the standard psql prompt\n"));
-	fprintf(output, _("  PROMPT2            specifies the prompt used when a statement continues from a previous line\n"));
-	fprintf(output, _("  PROMPT3            specifies the prompt used during COPY ... FROM STDIN\n"));
-	fprintf(output, _("  QUIET              run quietly (same as -q option)\n"));
-	fprintf(output, _("  SHOW_CONTEXT       controls display of message context fields [never, errors, always]\n"));
-	fprintf(output, _("  SINGLELINE         end of line terminates SQL command mode (same as -S option)\n"));
-	fprintf(output, _("  SINGLESTEP         single-step mode (same as -s option)\n"));
-	fprintf(output, _("  USER               the currently connected database user\n"));
-	fprintf(output, _("  VERBOSITY          controls verbosity of error reports [default, verbose, terse]\n"));
+	fprintf(output, _("  AUTOCOMMIT\n"
+					  "    if set, successful SQL commands are automatically committed\n"));
+	fprintf(output, _("  COMP_KEYWORD_CASE\n"
+					  "    determines the case used to complete SQL key words\n"
+					  "    [lower, upper, preserve-lower, preserve-upper]\n"));
+	fprintf(output, _("  DBNAME\n"
+					  "    the currently connected database name\n"));
+	fprintf(output, _("  ECHO\n"
+					  "    controls what input is written to standard output\n"
+					  "    [all, errors, none, queries]\n"));
+	fprintf(output, _("  ECHO_HIDDEN\n"
+					  "    if set, display internal queries executed by backslash commands;\n"
+					  "    if set to \"noexec\", just show them without execution\n"));
+	fprintf(output, _("  ENCODING\n"
+					  "    current client character set encoding\n"));
+	fprintf(output, _("  ERROR\n"
+					  "    true if last query failed, else false\n"));
+	fprintf(output, _("  FETCH_COUNT\n"
+					  "    the number of result rows to fetch and display at a time (0 = unlimited)\n"));
+	fprintf(output, _("  HIDE_TABLEAM\n"
+					  "    if set, table access methods are not displayed\n"));
+	fprintf(output, _("  HISTCONTROL\n"
+					  "    controls command history [ignorespace, ignoredups, ignoreboth]\n"));
+	fprintf(output, _("  HISTFILE\n"
+					  "    file name used to store the command history\n"));
+	fprintf(output, _("  HISTSIZE\n"
+					  "    maximum number of commands to store in the command history\n"));
+	fprintf(output, _("  HOST\n"
+					  "    the currently connected database server host\n"));
+	fprintf(output, _("  IGNOREEOF\n"
+					  "    number of EOFs needed to terminate an interactive session\n"));
+	fprintf(output, _("  LASTOID\n"
+					  "    value of the last affected OID\n"));
+	fprintf(output, _("  LAST_ERROR_MESSAGE\n"
+					  "  LAST_ERROR_SQLSTATE\n"
+					  "    message and SQLSTATE of last error, or empty string and \"00000\" if none\n"));
+	fprintf(output, _("  ON_ERROR_ROLLBACK\n"
+					  "    if set, an error doesn't stop a transaction (uses implicit savepoints)\n"));
+	fprintf(output, _("  ON_ERROR_STOP\n"
+					  "    stop batch execution after error\n"));
+	fprintf(output, _("  PORT\n"
+					  "    server port of the current connection\n"));
+	fprintf(output, _("  PROMPT1\n"
+					  "    specifies the standard psql prompt\n"));
+	fprintf(output, _("  PROMPT2\n"
+					  "    specifies the prompt used when a statement continues from a previous line\n"));
+	fprintf(output, _("  PROMPT3\n"
+					  "    specifies the prompt used during COPY ... FROM STDIN\n"));
+	fprintf(output, _("  QUIET\n"
+					  "    run quietly (same as -q option)\n"));
+	fprintf(output, _("  ROW_COUNT\n"
+					  "    number of rows returned or affected by last query, or 0\n"));
+	fprintf(output, _("  SERVER_VERSION_NAME\n"
+					  "  SERVER_VERSION_NUM\n"
+					  "    server's version (in short string or numeric format)\n"));
+	fprintf(output, _("  SHOW_CONTEXT\n"
+					  "    controls display of message context fields [never, errors, always]\n"));
+	fprintf(output, _("  SINGLELINE\n"
+					  "    if set, end of line terminates SQL commands (same as -S option)\n"));
+	fprintf(output, _("  SINGLESTEP\n"
+					  "    single-step mode (same as -s option)\n"));
+	fprintf(output, _("  SQLSTATE\n"
+					  "    SQLSTATE of last query, or \"00000\" if no error\n"));
+	fprintf(output, _("  USER\n"
+					  "    the currently connected database user\n"));
+	fprintf(output, _("  VERBOSITY\n"
+					  "    controls verbosity of error reports [default, verbose, terse, sqlstate]\n"));
+	fprintf(output, _("  VERSION\n"
+					  "  VERSION_NAME\n"
+					  "  VERSION_NUM\n"
+					  "    psql's version (in verbose string, short string, or numeric format)\n"));
 
 	fprintf(output, _("\nDisplay settings:\n"));
 	fprintf(output, _("Usage:\n"));
 	fprintf(output, _("  psql --pset=NAME[=VALUE]\n  or \\pset NAME [VALUE] inside psql\n\n"));
 
-	fprintf(output, _("  border             border style (number)\n"));
-	fprintf(output, _("  columns            target width for the wrapped format\n"));
-	fprintf(output, _("  expanded (or x)    expanded output [on, off, auto]\n"));
-	fprintf(output, _("  fieldsep           field separator for unaligned output (default \"%s\")\n"), DEFAULT_FIELD_SEP);
-	fprintf(output, _("  fieldsep_zero      set field separator for unaligned output to zero byte\n"));
-	fprintf(output, _("  footer             enable or disable display of the table footer [on, off]\n"));
-	fprintf(output, _("  format             set output format [unaligned, aligned, wrapped, html, asciidoc, ...]\n"));
-	fprintf(output, _("  linestyle          set the border line drawing style [ascii, old-ascii, unicode]\n"));
-	fprintf(output, _("  null               set the string to be printed in place of a null value\n"));
-	fprintf(output, _("  numericlocale      enable or disable display of a locale-specific character to separate\n"
-					  "                     groups of digits [on, off]\n"));
-	fprintf(output, _("  pager              control when an external pager is used [yes, no, always]\n"));
-	fprintf(output, _("  recordsep          record (line) separator for unaligned output\n"));
-	fprintf(output, _("  recordsep_zero     set record separator for unaligned output to zero byte\n"));
-	fprintf(output, _("  tableattr (or T)   specify attributes for table tag in html format or proportional\n"
-					  "                     column widths for left-aligned data types in latex-longtable format\n"));
-	fprintf(output, _("  title              set the table title for any subsequently printed tables\n"));
-	fprintf(output, _("  tuples_only        if set, only actual table data is shown\n"));
+	fprintf(output, _("  border\n"
+					  "    border style (number)\n"));
+	fprintf(output, _("  columns\n"
+					  "    target width for the wrapped format\n"));
+	fprintf(output, _("  expanded (or x)\n"
+					  "    expanded output [on, off, auto]\n"));
+	fprintf(output, _("  fieldsep\n"
+					  "    field separator for unaligned output (default \"%s\")\n"),
+			DEFAULT_FIELD_SEP);
+	fprintf(output, _("  fieldsep_zero\n"
+					  "    set field separator for unaligned output to a zero byte\n"));
+	fprintf(output, _("  footer\n"
+					  "    enable or disable display of the table footer [on, off]\n"));
+	fprintf(output, _("  format\n"
+					  "    set output format [unaligned, aligned, wrapped, html, asciidoc, ...]\n"));
+	fprintf(output, _("  linestyle\n"
+					  "    set the border line drawing style [ascii, old-ascii, unicode]\n"));
+	fprintf(output, _("  null\n"
+					  "    set the string to be printed in place of a null value\n"));
+	fprintf(output, _("  numericlocale\n"
+					  "    enable display of a locale-specific character to separate groups of digits\n"));
+	fprintf(output, _("  pager\n"
+					  "    control when an external pager is used [yes, no, always]\n"));
+	fprintf(output, _("  recordsep\n"
+					  "    record (line) separator for unaligned output\n"));
+	fprintf(output, _("  recordsep_zero\n"
+					  "    set record separator for unaligned output to a zero byte\n"));
+	fprintf(output, _("  tableattr (or T)\n"
+					  "    specify attributes for table tag in html format, or proportional\n"
+					  "    column widths for left-aligned data types in latex-longtable format\n"));
+	fprintf(output, _("  title\n"
+					  "    set the table title for subsequently printed tables\n"));
+	fprintf(output, _("  tuples_only\n"
+					  "    if set, only actual table data is shown\n"));
 	fprintf(output, _("  unicode_border_linestyle\n"
 					  "  unicode_column_linestyle\n"
 					  "  unicode_header_linestyle\n"
-					  "                     set the style of Unicode line drawing [single, double]\n"));
+					  "    set the style of Unicode line drawing [single, double]\n"));
 
 	fprintf(output, _("\nEnvironment variables:\n"));
 	fprintf(output, _("Usage:\n"));
@@ -402,23 +477,36 @@ helpVariables(unsigned short int pager)
 	fprintf(output, _("  set NAME=VALUE\n  psql ...\n  or \\setenv NAME [VALUE] inside psql\n\n"));
 #endif
 
-	fprintf(output, _("  COLUMNS            number of columns for wrapped format\n"));
-	fprintf(output, _("  PAGER              name of external pager program\n"));
-	fprintf(output, _("  PGAPPNAME          same as the application_name connection parameter\n"));
-	fprintf(output, _("  PGDATABASE         same as the dbname connection parameter\n"));
-	fprintf(output, _("  PGHOST             same as the host connection parameter\n"));
-	fprintf(output, _("  PGPORT             same as the port connection parameter\n"));
-	fprintf(output, _("  PGUSER             same as the user connection parameter\n"));
-	fprintf(output, _("  PGPASSWORD         connection password (not recommended)\n"));
-	fprintf(output, _("  PGPASSFILE         password file name\n"));
+	fprintf(output, _("  COLUMNS\n"
+					  "    number of columns for wrapped format\n"));
+	fprintf(output, _("  PGAPPNAME\n"
+					  "    same as the application_name connection parameter\n"));
+	fprintf(output, _("  PGDATABASE\n"
+					  "    same as the dbname connection parameter\n"));
+	fprintf(output, _("  PGHOST\n"
+					  "    same as the host connection parameter\n"));
+	fprintf(output, _("  PGPASSWORD\n"
+					  "    connection password (not recommended)\n"));
+	fprintf(output, _("  PGPASSFILE\n"
+					  "    password file name\n"));
+	fprintf(output, _("  PGPORT\n"
+					  "    same as the port connection parameter\n"));
+	fprintf(output, _("  PGUSER\n"
+					  "    same as the user connection parameter\n"));
 	fprintf(output, _("  PSQL_EDITOR, EDITOR, VISUAL\n"
-					  "                     editor used by the \\e, \\ef, and \\ev commands\n"));
+					  "    editor used by the \\e, \\ef, and \\ev commands\n"));
 	fprintf(output, _("  PSQL_EDITOR_LINENUMBER_ARG\n"
-					  "                     how to specify a line number when invoking the editor\n"));
-	fprintf(output, _("  PSQL_HISTORY       alternative location for the command history file\n"));
-	fprintf(output, _("  PSQLRC             alternative location for the user's .psqlrc file\n"));
-	fprintf(output, _("  SHELL              shell used by the \\! command\n"));
-	fprintf(output, _("  TMPDIR             directory for temporary files\n"));
+					  "    how to specify a line number when invoking the editor\n"));
+	fprintf(output, _("  PSQL_HISTORY\n"
+					  "    alternative location for the command history file\n"));
+	fprintf(output, _("  PSQL_PAGER, PAGER\n"
+					  "    name of external pager program\n"));
+	fprintf(output, _("  PSQLRC\n"
+					  "    alternative location for the user's .psqlrc file\n"));
+	fprintf(output, _("  SHELL\n"
+					  "    shell used by the \\! command\n"));
+	fprintf(output, _("  TMPDIR\n"
+					  "    directory for temporary files\n"));
 
 	ClosePager(output);
 }
@@ -509,7 +597,7 @@ helpSQL(const char *topic, unsigned short int pager)
 					while (topic[j] != ' ' && j++ <= len)
 						wordlen++;
 				}
-				if (wordlen >= len)		/* Don't try again if the same word */
+				if (wordlen >= len) /* Don't try again if the same word */
 				{
 					if (!output)
 						output = PageOutput(nl_count, pager ? &(pset.popt.topt) : NULL);
@@ -541,16 +629,23 @@ helpSQL(const char *topic, unsigned short int pager)
 					strcmp(topic, "*") == 0)
 				{
 					PQExpBufferData buffer;
+					char	   *url;
 
 					initPQExpBuffer(&buffer);
 					QL_HELP[i].syntaxfunc(&buffer);
 					help_found = true;
+					url = psprintf("https://www.postgresql.org/docs/%s/%s.html",
+								   strstr(PG_VERSION, "devel") ? "devel" : PG_MAJORVERSION,
+								   QL_HELP[i].docbook_id);
 					fprintf(output, _("Command:     %s\n"
 									  "Description: %s\n"
-									  "Syntax:\n%s\n\n"),
+									  "Syntax:\n%s\n\n"
+									  "URL: %s\n\n"),
 							QL_HELP[i].cmd,
 							_(QL_HELP[i].help),
-							buffer.data);
+							buffer.data,
+							url);
+					free(url);
 					/* If we have an exact match, exit.  Fixes \h SELECT */
 					if (pg_strcasecmp(topic, QL_HELP[i].cmd) == 0)
 						break;
@@ -574,25 +669,25 @@ print_copyright(void)
 {
 	puts(
 		 "Greenplum Database version of PostgreSQL Database Management System\n"
-		 "Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group\n\n"
+		 "Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group\n\n"
 		 "Portions Copyright (c) 2014-Present Pivotal Software, Inc.\n\n"
 		 "Portions Copyright (c) 2011-2014 EMC\n\n"
 		 "This software is based on Postgres95, formerly known as Postgres, which\n"
 		 "contains the following notice:\n\n"
 		 "Portions Copyright (c) 1994, The Regents of the University of California\n\n"
-	"Permission to use, copy, modify, and distribute this software and its\n"
+		 "Permission to use, copy, modify, and distribute this software and its\n"
 		 "documentation for any purpose, without fee, and without a written agreement\n"
-	 "is hereby granted, provided that the above copyright notice and this\n"
-	   "paragraph and the following two paragraphs appear in all copies.\n\n"
+		 "is hereby granted, provided that the above copyright notice and this\n"
+		 "paragraph and the following two paragraphs appear in all copies.\n\n"
 		 "IN NO EVENT SHALL THE UNIVERSITY OF CALIFORNIA BE LIABLE TO ANY PARTY FOR\n"
 		 "DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING\n"
 		 "LOST PROFITS, ARISING OUT OF THE USE OF THIS SOFTWARE AND ITS\n"
 		 "DOCUMENTATION, EVEN IF THE UNIVERSITY OF CALIFORNIA HAS BEEN ADVISED OF THE\n"
 		 "POSSIBILITY OF SUCH DAMAGE.\n\n"
-	  "THE UNIVERSITY OF CALIFORNIA SPECIFICALLY DISCLAIMS ANY WARRANTIES,\n"
+		 "THE UNIVERSITY OF CALIFORNIA SPECIFICALLY DISCLAIMS ANY WARRANTIES,\n"
 		 "INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY\n"
 		 "AND FITNESS FOR A PARTICULAR PURPOSE.  THE SOFTWARE PROVIDED HEREUNDER IS\n"
 		 "ON AN \"AS IS\" BASIS, AND THE UNIVERSITY OF CALIFORNIA HAS NO OBLIGATIONS TO\n"
-	"PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.\n"
+		 "PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.\n"
 		);
 }

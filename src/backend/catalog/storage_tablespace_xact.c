@@ -12,7 +12,7 @@
  *
  *-------------------------------------------------------------------------
  */
-
+#include "postgres.h"
 
 #include "access/xact_storage_tablespace.h"
 #include "catalog/storage_tablespace.h"

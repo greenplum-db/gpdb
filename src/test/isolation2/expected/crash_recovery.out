@@ -76,8 +76,13 @@ CHECKPOINT
 -----------------
  Success:        
 (1 row)
+-- verify master panic happens. The PANIC message does not emit sometimes so
+-- mask it.
+-- start_matchsubs
+-- m/PANIC:  fault triggered, fault name:'before_read_command' fault type:'panic'\n/
+-- s/PANIC:  fault triggered, fault name:'before_read_command' fault type:'panic'\n//
+-- end_matchsubs
 1:select 1;
-PANIC:  fault triggered, fault name:'before_read_command' fault type:'panic'
 server closed the connection unexpectedly
 	This probably means the server terminated abnormally
 	before or while processing the request.

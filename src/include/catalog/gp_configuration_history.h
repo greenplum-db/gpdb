@@ -21,6 +21,7 @@
 #define _GP_CONFIGURATION_HISTORY_H_
 
 #include "catalog/genbki.h"
+#include "catalog/gp_configuration_history_d.h"
 
 /*
  * Defines for gp_configuration_history table
@@ -28,8 +29,6 @@
  * Used by fault-management components to record a "change history" description
  * with timestamp.
  */
-
-#define GpConfigHistoryRelName		"gp_configuration_history"
 
 /*
  * The CATALOG definition has to refer to the type of "time" as
@@ -47,9 +46,7 @@
  *		typedef struct FormData_gp_configuration_history
  * ----------------
  */
-#define GpConfigHistoryRelationId	5106
-
-CATALOG(gp_configuration_history,5106) BKI_SHARED_RELATION BKI_WITHOUT_OIDS
+CATALOG(gp_configuration_history,5106,GpConfigHistoryRelationId) BKI_SHARED_RELATION
 {
 	timestamptz	time;	
 	int16		dbid;	
@@ -67,14 +64,5 @@ CATALOG(gp_configuration_history,5106) BKI_SHARED_RELATION BKI_WITHOUT_OIDS
  * ----------------
  */
 typedef FormData_gp_configuration_history *Form_gp_configuration_history;
-
-/* ----------------
- *		compiler constants for gp_configuration_history
- * ----------------
- */
-#define Natts_gp_configuration_history		3
-#define Anum_gp_configuration_history_time	1
-#define Anum_gp_configuration_history_dbid	2
-#define Anum_gp_configuration_history_desc	3
 
 #endif /*_GP_CONFIGURATION_HISTORY_H_*/

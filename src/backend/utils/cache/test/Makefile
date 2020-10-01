@@ -8,3 +8,5 @@ include $(top_srcdir)/src/backend/mock.mk
 
 lsyscache.t: \
 	$(MOCK_DIR)/backend/utils/cache/syscache_mock.o \
+	$(MOCK_DIR)/backend/access/hash/hash_mock.o \
+	$(MOCK_DIR)/backend/utils/fmgr/fmgr_mock.o \

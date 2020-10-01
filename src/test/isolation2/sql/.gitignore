@@ -17,3 +17,5 @@ resgroup_cpu_rate_limit.sql
 resgroup_cpuset.sql
 resgroup_memory_limit.sql
 resgroup_memory_statistic.sql
+resgroup_memory_runaway.sql
+resgroup_move_query.sql

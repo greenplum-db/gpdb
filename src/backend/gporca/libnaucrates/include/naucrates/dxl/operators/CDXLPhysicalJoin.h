@@ -19,35 +19,33 @@
 
 namespace gpdxl
 {
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CDXLPhysicalJoin
-	//
-	//	@doc:
-	//		Base class for representing physical DXL join operators
-	//
-	//---------------------------------------------------------------------------
-	class CDXLPhysicalJoin : public CDXLPhysical
-	{
-		private:
-			// private copy ctor
-			CDXLPhysicalJoin(const CDXLPhysicalJoin&);
+//---------------------------------------------------------------------------
+//	@class:
+//		CDXLPhysicalJoin
+//
+//	@doc:
+//		Base class for representing physical DXL join operators
+//
+//---------------------------------------------------------------------------
+class CDXLPhysicalJoin : public CDXLPhysical
+{
+private:
+	// private copy ctor
+	CDXLPhysicalJoin(const CDXLPhysicalJoin &);
 
-			// join type (inner, outer, ...)
-			EdxlJoinType m_join_type;
-			
-		public:
-			// ctor
-			CDXLPhysicalJoin(CMemoryPool *mp, EdxlJoinType join_type);
-			
-			// join type
-			EdxlJoinType GetJoinType() const;
-			
-			const CWStringConst *GetJoinTypeNameStr() const;
+	// join type (inner, outer, ...)
+	EdxlJoinType m_join_type;
 
-	};
-}
-#endif // !GPDXL_CDXLPhysicalJoin_H
+public:
+	// ctor
+	CDXLPhysicalJoin(CMemoryPool *mp, EdxlJoinType join_type);
+
+	// join type
+	EdxlJoinType GetJoinType() const;
+
+	const CWStringConst *GetJoinTypeNameStr() const;
+};
+}  // namespace gpdxl
+#endif	// !GPDXL_CDXLPhysicalJoin_H
 
 // EOF
-

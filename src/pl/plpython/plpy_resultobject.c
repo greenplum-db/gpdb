@@ -20,8 +20,6 @@ static PyObject *PLy_result_nrows(PyObject *self, PyObject *args);
 static PyObject *PLy_result_status(PyObject *self, PyObject *args);
 static Py_ssize_t PLy_result_length(PyObject *arg);
 static PyObject *PLy_result_item(PyObject *arg, Py_ssize_t idx);
-static PyObject *PLy_result_slice(PyObject *arg, Py_ssize_t lidx, Py_ssize_t hidx);
-static int	PLy_result_ass_slice(PyObject *arg, Py_ssize_t lidx, Py_ssize_t hidx, PyObject *slice);
 static PyObject *PLy_result_str(PyObject *arg);
 static PyObject *PLy_result_subscript(PyObject *arg, PyObject *item);
 static int	PLy_result_ass_subscript(PyObject *self, PyObject *item, PyObject *value);
@@ -31,19 +29,14 @@ static char PLy_result_doc[] = {
 };
 
 static PySequenceMethods PLy_result_as_sequence = {
-	PLy_result_length,			/* sq_length */
-	NULL,						/* sq_concat */
-	NULL,						/* sq_repeat */
-	PLy_result_item,			/* sq_item */
-	PLy_result_slice,			/* sq_slice */
-	NULL,						/* sq_ass_item */
-	PLy_result_ass_slice,		/* sq_ass_slice */
+	.sq_length = PLy_result_length,
+	.sq_item = PLy_result_item,
 };
 
 static PyMappingMethods PLy_result_as_mapping = {
-	PLy_result_length,			/* mp_length */
-	PLy_result_subscript,		/* mp_subscript */
-	PLy_result_ass_subscript,	/* mp_ass_subscript */
+	.mp_length = PLy_result_length,
+	.mp_subscript = PLy_result_subscript,
+	.mp_ass_subscript = PLy_result_ass_subscript,
 };
 
 static PyMethodDef PLy_result_methods[] = {
@@ -57,37 +50,15 @@ static PyMethodDef PLy_result_methods[] = {
 
 static PyTypeObject PLy_ResultType = {
 	PyVarObject_HEAD_INIT(NULL, 0)
-	"PLyResult",				/* tp_name */
-	sizeof(PLyResultObject),	/* tp_size */
-	0,							/* tp_itemsize */
-
-	/*
-	 * methods
-	 */
-	PLy_result_dealloc,			/* tp_dealloc */
-	0,							/* tp_print */
-	0,							/* tp_getattr */
-	0,							/* tp_setattr */
-	0,							/* tp_compare */
-	0,							/* tp_repr */
-	0,							/* tp_as_number */
-	&PLy_result_as_sequence,	/* tp_as_sequence */
-	&PLy_result_as_mapping,		/* tp_as_mapping */
-	0,							/* tp_hash */
-	0,							/* tp_call */
-	&PLy_result_str,			/* tp_str */
-	0,							/* tp_getattro */
-	0,							/* tp_setattro */
-	0,							/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,	/* tp_flags */
-	PLy_result_doc,				/* tp_doc */
-	0,							/* tp_traverse */
-	0,							/* tp_clear */
-	0,							/* tp_richcompare */
-	0,							/* tp_weaklistoffset */
-	0,							/* tp_iter */
-	0,							/* tp_iternext */
-	PLy_result_methods,			/* tp_tpmethods */
+	.tp_name = "PLyResult",
+	.tp_basicsize = sizeof(PLyResultObject),
+	.tp_dealloc = PLy_result_dealloc,
+	.tp_as_sequence = &PLy_result_as_sequence,
+	.tp_as_mapping = &PLy_result_as_mapping,
+	.tp_str = &PLy_result_str,
+	.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+	.tp_doc = PLy_result_doc,
+	.tp_methods = PLy_result_methods,
 };
 
 void
@@ -112,6 +83,11 @@ PLy_result_new(void)
 	ob->nrows = PyInt_FromLong(-1);
 	ob->rows = PyList_New(0);
 	ob->tupdesc = NULL;
+	if (!ob->rows)
+	{
+		Py_DECREF(ob);
+		return NULL;
+	}
 
 	return (PyObject *) ob;
 }
@@ -147,8 +123,14 @@ PLy_result_colnames(PyObject *self, PyObject *unused)
 	}
 
 	list = PyList_New(ob->tupdesc->natts);
+	if (!list)
+		return NULL;
 	for (i = 0; i < ob->tupdesc->natts; i++)
-		PyList_SET_ITEM(list, i, PyString_FromString(NameStr(ob->tupdesc->attrs[i]->attname)));
+	{
+		Form_pg_attribute attr = TupleDescAttr(ob->tupdesc, i);
+
+		PyList_SET_ITEM(list, i, PyString_FromString(NameStr(attr->attname)));
+	}
 
 	return list;
 }
@@ -167,8 +149,14 @@ PLy_result_coltypes(PyObject *self, PyObject *unused)
 	}
 
 	list = PyList_New(ob->tupdesc->natts);
+	if (!list)
+		return NULL;
 	for (i = 0; i < ob->tupdesc->natts; i++)
-		PyList_SET_ITEM(list, i, PyInt_FromLong(ob->tupdesc->attrs[i]->atttypid));
+	{
+		Form_pg_attribute attr = TupleDescAttr(ob->tupdesc, i);
+
+		PyList_SET_ITEM(list, i, PyInt_FromLong(attr->atttypid));
+	}
 
 	return list;
 }
@@ -187,8 +175,14 @@ PLy_result_coltypmods(PyObject *self, PyObject *unused)
 	}
 
 	list = PyList_New(ob->tupdesc->natts);
+	if (!list)
+		return NULL;
 	for (i = 0; i < ob->tupdesc->natts; i++)
-		PyList_SET_ITEM(list, i, PyInt_FromLong(ob->tupdesc->attrs[i]->atttypmod));
+	{
+		Form_pg_attribute attr = TupleDescAttr(ob->tupdesc, i);
+
+		PyList_SET_ITEM(list, i, PyInt_FromLong(attr->atttypmod));
+	}
 
 	return list;
 }
@@ -228,24 +222,6 @@ PLy_result_item(PyObject *arg, Py_ssize_t idx)
 	rv = PyList_GetItem(ob->rows, idx);
 	if (rv != NULL)
 		Py_INCREF(rv);
-	return rv;
-}
-
-static PyObject *
-PLy_result_slice(PyObject *arg, Py_ssize_t lidx, Py_ssize_t hidx)
-{
-	PLyResultObject *ob = (PLyResultObject *) arg;
-
-	return PyList_GetSlice(ob->rows, lidx, hidx);
-}
-
-static int
-PLy_result_ass_slice(PyObject *arg, Py_ssize_t lidx, Py_ssize_t hidx, PyObject *slice)
-{
-	int			rv;
-	PLyResultObject *ob = (PLyResultObject *) arg;
-
-	rv = PyList_SetSlice(ob->rows, lidx, hidx, slice);
 	return rv;
 }
 

@@ -26,65 +26,59 @@
 
 namespace gpos
 {
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CAutoMemoryPool
-	//
-	//	@doc:
-	//		Automatic memory pool interface;
-	//		tears down memory pool when going out of scope;
-	//
-	//		For cleanliness, do not provide an automatic cast to CMemoryPool
-	//
-	//---------------------------------------------------------------------------
-	class CAutoMemoryPool : public CStackObject
+//---------------------------------------------------------------------------
+//	@class:
+//		CAutoMemoryPool
+//
+//	@doc:
+//		Automatic memory pool interface;
+//		tears down memory pool when going out of scope;
+//
+//		For cleanliness, do not provide an automatic cast to CMemoryPool
+//
+//---------------------------------------------------------------------------
+class CAutoMemoryPool : public CStackObject
+{
+public:
+	enum ELeakCheck
 	{
-		public:
-		
-			enum ELeakCheck
-			{
-				ElcNone,	// no leak checking -- to be deprecated
-				
-				ElcExc,		// check for leaks unless an exception is pending (default)
-				ElcStrict	// always check for leaks
-			};
-		
-		private:
+		ElcNone,  // no leak checking -- to be deprecated
 
-			// private copy ctor
-			CAutoMemoryPool(const CAutoMemoryPool &);
+		ElcExc,	   // check for leaks unless an exception is pending (default)
+		ElcStrict  // always check for leaks
+	};
 
-			// memory pool to protect
-			CMemoryPool *m_mp;
-			
-			// type of leak check to perform
-			ELeakCheck m_leak_check_type;
+private:
+	// private copy ctor
+	CAutoMemoryPool(const CAutoMemoryPool &);
 
-		public:
+	// memory pool to protect
+	CMemoryPool *m_mp;
 
-			// ctor
-			CAutoMemoryPool
-				(
-				ELeakCheck leak_check_type = ElcExc
-				);
+	// type of leak check to perform
+	ELeakCheck m_leak_check_type;
 
-			// FIXME: should mark this noexcept in non-assert builds
-			// dtor
-			~CAutoMemoryPool() noexcept(false);
+public:
+	// ctor
+	CAutoMemoryPool(ELeakCheck leak_check_type = ElcExc);
 
-			// accessor
-			CMemoryPool *Pmp() const
-			{
-				return m_mp;
-			}
-			
-			// detach from pool
-			CMemoryPool *Detach();
+	// FIXME: should mark this noexcept in non-assert builds
+	// dtor
+	~CAutoMemoryPool() noexcept(false);
 
-	}; // CAutoMemoryPool
-}
+	// accessor
+	CMemoryPool *
+	Pmp() const
+	{
+		return m_mp;
+	}
 
-#endif // GPOS_CAutoMemoryPool_H
+	// detach from pool
+	CMemoryPool *Detach();
+
+};	// CAutoMemoryPool
+}  // namespace gpos
+
+#endif	// GPOS_CAutoMemoryPool_H
 
 // EOF
-

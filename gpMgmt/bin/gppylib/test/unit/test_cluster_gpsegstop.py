@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os, sys
 import unittest
@@ -34,7 +34,7 @@ class SegStopTestCase(unittest.TestCase):
         self.assertEqual([''], self.segstop.get_datadir_and_port())
 
     @patch('gppylib.commands.base.Command.run')
-    @patch('gppylib.commands.base.Command.get_results', return_value=CommandResult(0, '', '',True, False))
+    @patch('gppylib.commands.base.Command.get_results', return_value=CommandResult(0, b'', b'',True, False))
     @patch('gppylib.commands.gp.SegmentIsShutDown.is_shutdown', return_value=True)
     @patch('gpsegstop.unix.kill_9_segment_processes')
     @patch('gpsegstop.pg.ReadPostmasterTempFile.getResults', return_value=(True, 1234, '/tmp/gpseg0'))
@@ -48,7 +48,7 @@ class SegStopTestCase(unittest.TestCase):
         self.assertEqual(str(expected), str(result))
 
     @patch('gppylib.commands.base.Command.run')
-    @patch('gppylib.commands.base.Command.get_results', return_value=CommandResult(1, '', '',True, False))
+    @patch('gppylib.commands.base.Command.get_results', return_value=CommandResult(1, b'', b'',True, False))
     @patch('gpsegstop.pg.ReadPostmasterTempFile.getResults', return_value=(True, 1234, '/tmp/gpseg0'))
     @patch('gpsegstop.unix.kill_sequence')
     @patch('gpsegstop.unix.kill_9_segment_processes')
@@ -62,7 +62,7 @@ class SegStopTestCase(unittest.TestCase):
         self.assertIn(str(expected), str(result))
  
     @patch('gppylib.commands.base.Command.run')
-    @patch('gppylib.commands.base.Command.get_results', return_value=CommandResult(0, '', '',True, False))
+    @patch('gppylib.commands.base.Command.get_results', return_value=CommandResult(0, b'', b'',True, False))
     @patch('gppylib.commands.gp.SegmentIsShutDown.is_shutdown', return_value=False)
     @patch('gpsegstop.pg.ReadPostmasterTempFile.getResults', return_value=(True, 1234, '/tmp/gpseg0'))
     @patch('gpsegstop.unix.kill_sequence')
@@ -77,7 +77,7 @@ class SegStopTestCase(unittest.TestCase):
         self.assertIn(str(expected), str(result))
 
     @patch('gppylib.commands.base.Command.run')
-    @patch('gppylib.commands.base.Command.get_results', return_value=CommandResult(0, '', '',True, False))
+    @patch('gppylib.commands.base.Command.get_results', return_value=CommandResult(0, b'', b'',True, False))
     @patch('gppylib.commands.gp.SegmentIsShutDown.is_shutdown', return_value=False)
     @patch('gpsegstop.pg.ReadPostmasterTempFile.getResults', return_value=(True, 1234, '/tmp/gpseg0'))
     @patch('gpsegstop.unix.kill_9_segment_processes')
@@ -91,7 +91,7 @@ class SegStopTestCase(unittest.TestCase):
         self.assertEqual(str(expected), str(result))
 
     @patch('gppylib.commands.base.Command.run')
-    @patch('gppylib.commands.base.Command.get_results', return_value=CommandResult(0, '', '',True, False))
+    @patch('gppylib.commands.base.Command.get_results', return_value=CommandResult(0, b'', b'',True, False))
     @patch('gppylib.commands.gp.SegmentIsShutDown.is_shutdown', return_value=False)
     @patch('gpsegstop.pg.ReadPostmasterTempFile.getResults', return_value=(True, 1234, '/tmp/gpseg0'))
     @patch('gpsegstop.unix.kill_sequence')

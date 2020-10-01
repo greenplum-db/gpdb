@@ -31,18 +31,14 @@ DROP TABLE disttest;
 --
 -- Distributed randomly, but QD needs the partitioning key.
 CREATE TABLE partdisttest (a int, b int, c int) DISTRIBUTED RANDOMLY PARTITION BY RANGE (b) (START (1) END (10) EVERY (5));
-NOTICE:  CREATE TABLE will create partition "partdisttest_1_prt_1" for table "partdisttest"
-NOTICE:  CREATE TABLE will create partition "partdisttest_1_prt_2" for table "partdisttest"
 COPY partdisttest FROM stdin;
-INFO:  first field processed in the QE: 2
-CONTEXT:  COPY partdisttest, line 0
+INFO:  first field processed in the QE: 0
 DROP TABLE partdisttest;
 -- With a dropped column
 CREATE TABLE partdisttest (a int, dropped int, b int, c int) DISTRIBUTED RANDOMLY PARTITION BY RANGE (b) (START (1) END (10) EVERY (5));
 ALTER TABLE partdisttest DROP COLUMN dropped;
 COPY partdisttest FROM stdin;
-INFO:  first field processed in the QE: 2
-CONTEXT:  COPY partdisttest, line 0
+INFO:  first field processed in the QE: 0
 DROP TABLE partdisttest;
 -- Hash distributed, with a dropped column
 -- We used to have a bug where QD would pick the wrong partition and/or the
@@ -59,13 +55,36 @@ CREATE TABLE partdisttest (dropped1 int, dropped2 int, a int, b int, c int)
 ALTER TABLE partdisttest DROP COLUMN dropped1, DROP COLUMN dropped2;
 ALTER TABLE partdisttest ADD PARTITION neg start (-10) end (0);
 COPY partdisttest FROM stdin;
-INFO:  first field processed in the QE: 2
-CONTEXT:  COPY partdisttest, line 0
+INFO:  first field processed in the QE: 1
 SELECT tableoid::regclass, * FROM partdisttest;
         tableoid        | a | b  | c 
 ------------------------+---+----+---
  partdisttest_1_prt_neg | 2 | -1 | 3
 (1 row)
+
+DROP TABLE partdisttest;
+-- Similar case, where the columns are in different order
+CREATE TABLE partdisttest (a int, b int, c int)
+  DISTRIBUTED BY (a)
+  PARTITION BY RANGE (b);
+CREATE TABLE partdisttest_part0 (a int, b int, c int) DISTRIBUTED BY (a);
+ALTER TABLE partdisttest ATTACH PARTITION partdisttest_part0 FOR VALUES FROM (0) TO (50);
+CREATE TABLE partdisttest_part50 (c int, a int, b int) DISTRIBUTED BY (a);
+ALTER TABLE partdisttest ATTACH PARTITION partdisttest_part50 FOR VALUES FROM (50) TO (100);
+COPY partdisttest FROM stdin;
+INFO:  first field processed in the QE: 1
+SELECT gp_segment_id, tableoid::regclass, * from partdisttest;
+ gp_segment_id |      tableoid       | a | b  | c 
+---------------+---------------------+---+----+---
+             0 | partdisttest_part0  | 2 |  0 | 3
+             0 | partdisttest_part0  | 3 |  0 | 3
+             0 | partdisttest_part0  | 4 |  0 | 3
+             0 | partdisttest_part50 | 2 | 50 | 3
+             0 | partdisttest_part50 | 3 | 50 | 3
+             0 | partdisttest_part50 | 4 | 50 | 3
+             1 | partdisttest_part0  | 1 |  0 | 3
+             1 | partdisttest_part50 | 1 | 50 | 3
+(8 rows)
 
 DROP TABLE partdisttest;
 -- Subpartitions
@@ -87,21 +106,17 @@ CREATE TABLE partdisttest (a int, dropped int, b int, c int, d int)
   );
 ALTER TABLE partdisttest DROP COLUMN dropped;
 COPY partdisttest FROM stdin;
-INFO:  first field processed in the QE: 3
-CONTEXT:  COPY partdisttest, line 0
+INFO:  first field processed in the QE: 0
 ALTER TABLE partdisttest ADD PARTITION b_negative start (-10) end (0) (subpartition c_negative start (-10) end (0));
 COPY partdisttest FROM stdin;
-INFO:  first field processed in the QE: 3
-CONTEXT:  COPY partdisttest, line 0
+INFO:  first field processed in the QE: 0
 DROP TABLE partdisttest;
 CREATE TABLE partdisttest (dropped bool, a smallint, b smallint)
   DISTRIBUTED BY (a)
   PARTITION BY RANGE(a)
   (PARTITION segundo START(5));
-NOTICE:  CREATE TABLE will create partition "partdisttest_1_prt_segundo" for table "partdisttest"
 ALTER TABLE partdisttest DROP dropped;
 ALTER TABLE partdisttest ADD PARTITION primero START(0) END(5);
-NOTICE:  CREATE TABLE will create partition "partdisttest_1_prt_primero" for table "partdisttest"
 -- We used to have bug, when a partition has a different distribution
 -- column number than the base table, we'd lazily construct a tuple
 -- table slot for that partition, but in a (mistakenly) short-lived
@@ -130,9 +145,7 @@ CREATE TABLE partdisttest(id INT, t TIMESTAMP, d VARCHAR(4))
     PARTITION p2020 START ('2020-01-01'::TIMESTAMP) END ('2021-01-01'::TIMESTAMP),
     DEFAULT PARTITION extra
   );
-NOTICE:  CREATE TABLE will create partition "partdisttest_1_prt_extra" for table "partdisttest"
-NOTICE:  CREATE TABLE will create partition "partdisttest_1_prt_p2020" for table "partdisttest"
 COPY partdisttest FROM STDIN LOG ERRORS SEGMENT REJECT LIMIT 2;
-INFO:  first field processed in the QE: 2
+INFO:  first field processed in the QE: 1
 NOTICE:  found 1 data formatting errors (1 or more input rows), rejected related input data
 DROP TABLE partdisttest;

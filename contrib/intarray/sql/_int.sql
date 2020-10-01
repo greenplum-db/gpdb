@@ -1,5 +1,10 @@
 CREATE EXTENSION intarray;
 
+-- Check whether any of our opclasses fail amvalidate
+SELECT amname, opcname
+FROM pg_opclass opc LEFT JOIN pg_am am ON am.oid = opcmethod
+WHERE opc.oid >= 16384 AND NOT amvalidate(opc.oid);
+
 SELECT intset(1234);
 SELECT icount('{1234234,234234}');
 SELECT sort('{1234234,-30,234234}');
@@ -25,6 +30,10 @@ SELECT '{123,623,445}'::int[] | 1623;
 SELECT '{123,623,445}'::int[] | '{1623,623}';
 SELECT '{123,623,445}'::int[] & '{1623,623}';
 SELECT '{-1,3,1}'::int[] & '{1,2}';
+SELECT '{1}'::int[] & '{2}'::int[];
+SELECT array_dims('{1}'::int[] & '{2}'::int[]);
+SELECT ('{1}'::int[] & '{2}'::int[]) = '{}'::int[];
+SELECT ('{}'::int[] & '{}'::int[]) = '{}'::int[];
 
 
 --test query_int

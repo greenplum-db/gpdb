@@ -30,4 +30,3 @@ CStackObject::CStackObject()
 
 
 // EOF
-

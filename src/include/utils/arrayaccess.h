@@ -4,7 +4,7 @@
  *	  Declarations for element-by-element access to Postgres arrays.
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/arrayaccess.h
@@ -71,8 +71,8 @@ array_iter_setup(array_iter *it, AnyArrayType *a)
 	{
 		it->datumptr = NULL;
 		it->isnullptr = NULL;
-		it->dataptr = ARR_DATA_PTR(&a->flt);
-		it->bitmapptr = ARR_NULLBITMAP(&a->flt);
+		it->dataptr = ARR_DATA_PTR((ArrayType *) a);
+		it->bitmapptr = ARR_NULLBITMAP((ArrayType *) a);
 	}
 	it->bitmask = 1;
 }
@@ -115,4 +115,4 @@ array_iter_next(array_iter *it, bool *isnull, int i,
 	return ret;
 }
 
-#endif   /* ARRAYACCESS_H */
+#endif							/* ARRAYACCESS_H */

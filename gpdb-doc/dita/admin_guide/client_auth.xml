@@ -318,20 +318,34 @@ max_prepared_transactions=100
               certificate authority (CA) should be used in production, so the client can verify the
               identity of the server. Either a global or local CA can be used. If all the clients
               are local to the organization, a local CA is recommended.</p></li>
-          <li>The <filepath>server.key</filepath> and <filepath>server.crt</filepath> have been
-            added to the master data directory on both the master host and standby master host. When
-            starting in SSL mode, the Greenplum Database master looks for
-              <filepath>server.key</filepath> and <filepath>server.crt</filepath>. Greenplum
-            Database does not start if the files are not in the master data directory of both the
-            master host and standby master host. <p>Also, if you use other SSL authentication files
-              such as <codeph>root.crt</codeph> (trusted certificate authorities), the files must be
-              on both the master host and standby master host.</p></li>
+          <li>Ensure that Greenplum Database can access <filepath>server.key</filepath> and
+              <filepath>server.crt</filepath>, and any additional authentication files such as
+              <codeph>root.crt</codeph> (for trusted certificate authorities). When starting in SSL
+            mode, the Greenplum Database master looks for <filepath>server.key</filepath> and
+              <filepath>server.crt</filepath>. As the default, Greenplum Database does not start if
+            the files are not in the master data directory
+            (<codeph>$MASTER_DATA_DIRECTORY</codeph>). Also, if you use other SSL authentication
+            files such as <codeph>root.crt</codeph> (trusted certificate authorities), the files
+            must be on the master host.<p>If Greenplum Database master mirroring is enabled with SSL
+              client authentication, SSL authentication files must be on both the master host and
+              standby master host and <i>should not be placed</i> in the default directory
+                <codeph>$MASTER_DATA_DIRECTORY</codeph>. When master mirroring is enabled, an
+                <codeph>initstandby</codeph> operation copies the contents of the
+                <codeph>$MASTER_DATA_DIRECTORY</codeph> from the master to the standby master and
+              the incorrect SSL key, and cert files (the master files, and not the standby master
+              files) will prevent standby master start up. </p><p>You can specify a different
+              directory for the location of the SSL server files with the
+                <codeph>postgresql.conf</codeph> parameters <codeph>sslcert</codeph>,
+                <codeph>sslkey</codeph>, <codeph>sslrootcert</codeph>, and <codeph>sslcrl</codeph>.
+              For more information about the parameters, see <xref
+                href="../security-guide/topics/Authenticate.xml#topic_fzv_wb2_jr"/> in the
+                <cite>Security Configuration Guide</cite>. </p></li>
         </ul> Greenplum Database can be started with SSL enabled by setting the server configuration
         parameter <codeph>ssl=on</codeph> in the <codeph>postgresql.conf</codeph> file on the master
         and standby master hosts. This <codeph>gpconfig</codeph> command sets the
         parameter:<codeblock>gpconfig -c ssl -m on -v off</codeblock></p>
       <p>Setting the parameter requires a server restart. This command restarts the system:
-          <codeph>gpstop -ra -M fast</codeph>.</p>
+          <codeph>gpstop -ra</codeph>.</p>
     </body>
     <topic id="topic6" xml:lang="en">
       <title>Creating a Self-signed Certificate without a Passphrase for Testing Only</title>

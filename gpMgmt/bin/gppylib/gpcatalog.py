@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) 2010-2011 EMC Corporation.  All Rights Reserved
 #
@@ -27,13 +27,13 @@ MASTER_ONLY_TABLES = [
     'gp_segment_configuration',
     'pg_auth_time_constraint',
     'pg_description',
-    'pg_partition',
-    'pg_partition_encoding',
-    'pg_partition_rule',
     'pg_shdescription',
     'pg_stat_last_operation',
     'pg_stat_last_shoperation',
     'pg_statistic',
+    'pg_statistic_ext',
+    'pg_statistic_ext_data',
+    'gp_partition_template', # GPDB_12_MERGE_FIXME: is gp_partition_template intentionally missing from segments?
     ]
 
 # Hard coded tables that have different values on every segment
@@ -54,8 +54,6 @@ DEPENDENCY_EXCLUSION = [
     'pg_database',
     'pg_enum',
     'pg_namespace',
-    'pg_partition',
-    'pg_partition_rule',
     'pg_resgroup',
     'pg_resgroupcapability',
     'pg_resourcetype',
@@ -103,7 +101,7 @@ class GPCatalog():
         """
         getCatalogTables() => Returns a list of CatalogTable
         """
-        return self._tables.values()
+        return list(self._tables.values())
 
     def getCatalogVersion(self):
         """
@@ -135,29 +133,30 @@ class GPCatalog():
            SELECT version()
         """
         catalog_query = """
-           SELECT relname, relisshared FROM pg_class 
+           SELECT oid, relname, relisshared FROM pg_class 
            WHERE relnamespace=11 and relkind = 'r' 
         """
 
         # Read the catalog version from the database
         try:
             curs = self._query(version_query)
-        except Exception, e:
+        except Exception as e:
             raise GPCatalogException("Error reading database version: " + str(e))
         self._version = GpVersion(curs.getresult()[0][0])
 
         # Read the list of catalog tables from the database
         try:
             curs = self._query(catalog_query)
-        except Exception, e:
+        except Exception as e:
             raise GPCatalogException("Error reading catalog: " + str(e))
 
         # Construct our internal representation of the catalog
         
-        for [relname, relisshared] in curs.getresult():
+        for [oid, relname, relisshared] in curs.getresult():
             self._tables[relname] = GPCatalogTable(self, relname)
             # Note: stupid API returns t/f for boolean value
             self._tables[relname]._setShared(relisshared == 't')
+            self._tables[relname]._setOid(oid)
         
         # The tidycat.pl utility has been used to generate a json file 
         # describing aspects of the catalog that we can not currently
@@ -255,7 +254,7 @@ class GPCatalog():
                 del d["__info"]
             infil.close()
             self._tidycat = d
-        except Exception, e:
+        except Exception as e:
             # older versions of product will not have tidycat defs --
             # need to handle this case
             logger.warn("GPCatalogTable: "+ str(e))
@@ -267,7 +266,7 @@ class GPCatalog():
         information is not derivable from the catalog.
         """
         try:
-            for tname, tdef in self._tidycat.iteritems():
+            for tname, tdef in self._tidycat.items():
                 if "foreign_keys" not in tdef:
                     continue
                 for fkdef in tdef["foreign_keys"]:
@@ -276,7 +275,7 @@ class GPCatalog():
                                                    fkdef[1], 
                                                    fkdef[2])
                     self._tables[tname]._addForeignKey(fk2)
-        except Exception, e:
+        except Exception as e:
             # older versions of product will not have tidycat defs --
             # need to handle this case
             logger.warn("GPCatalogTable: "+ str(e))
@@ -346,13 +345,7 @@ class GPCatalog():
         # indcheckxmin column related to HOT feature in pg_index is calculated
         # independently for master and segment based on individual nodes
         # transaction state, hence it can be different so skip it from checks.
-        self._tables['pg_index']._setKnownDifferences("indpred, indcheckxmin")
-
-        # This section should have exceptions for tables for which OIDs are not
-        # synchronized between master and segments, refer function
-        # RelationNeedsSynchronizedOIDs() in catalog.c
-        self._tables['pg_amop']._setKnownDifferences("oid, amopopr")
-        self._tables['pg_amproc']._setKnownDifferences("oid");
+        self._tables['pg_index']._setKnownDifferences("indpred indcheckxmin")
 
     def _validate(self):
         """
@@ -505,14 +498,15 @@ class GPCatalogTable():
 
         # If a primary key was not specified try to locate a unique index
         # If a table has multiple matching indexes, we'll pick the first index
-        # order by indkey to avoid the issue of MPP-16663. 
+        # order by indkey to avoid the issue of MPP-16663. We don't want to
+        # pick the index on OID, if any, though.
         if self._pkey == []:
             qry = """
             SELECT attname FROM (
               SELECT unnest(indkey) as keynum FROM (
                 SELECT indkey 
-                FROM pg_index 
-                WHERE indisunique and not (indkey @> '-2'::int2vector) and
+                FROM pg_index idx LEFT JOIN pg_attribute oidatt ON oidatt.attname='oid' and oidatt.attrelid = 'pg_catalog.{catname}'::regclass
+                WHERE indisunique and (oidatt.attnum is null or not indkey @> oidatt.attnum::text::int2vector) and
                       indrelid = 'pg_catalog.{catname}'::regclass
                 ORDER BY indkey LIMIT 1
               ) index_keys
@@ -544,6 +538,9 @@ class GPCatalogTable():
 
     def _setMasterOnly(self, value=True):
         self._master = value
+
+    def _setOid(self, oid):
+        self._oid = oid
 
     def _setShared(self, value):
         self._isshared = value

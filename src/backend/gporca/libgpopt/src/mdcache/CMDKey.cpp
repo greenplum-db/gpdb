@@ -27,12 +27,7 @@ using namespace gpopt;
 //		Constructs a md cache key
 //
 //---------------------------------------------------------------------------
-CMDKey::CMDKey
-	(
-	const IMDId *mdid
-	)
-	:
-	m_mdid(mdid)
+CMDKey::CMDKey(const IMDId *mdid) : m_mdid(mdid)
 {
 	GPOS_ASSERT(mdid->IsValid());
 }
@@ -46,12 +41,8 @@ CMDKey::CMDKey
 //
 //---------------------------------------------------------------------------
 BOOL
-CMDKey::Equals
-	(
-	const CMDKey &mdkey
-	)
-	const
-{	
+CMDKey::Equals(const CMDKey &mdkey) const
+{
 	return mdkey.MDId()->Equals(m_mdid);
 }
 
@@ -64,11 +55,7 @@ CMDKey::Equals
 //
 //---------------------------------------------------------------------------
 BOOL
-CMDKey::FEqualMDKey
-	(
-	CMDKey* const &pvLeft,
-	CMDKey* const &pvRight
-	)
+CMDKey::FEqualMDKey(CMDKey *const &pvLeft, CMDKey *const &pvRight)
 {
 	if (NULL == pvLeft && NULL == pvRight)
 	{
@@ -79,9 +66,9 @@ CMDKey::FEqualMDKey
 	{
 		return false;
 	}
-	
+
 	GPOS_ASSERT(NULL != pvLeft && NULL != pvRight);
-	
+
 	return pvLeft->MDId()->Equals(pvRight->MDId());
 }
 
@@ -93,7 +80,7 @@ CMDKey::FEqualMDKey
 //		Hash function
 //
 //---------------------------------------------------------------------------
-ULONG 
+ULONG
 CMDKey::HashValue() const
 {
 	return m_mdid->HashValue();
@@ -107,11 +94,8 @@ CMDKey::HashValue() const
 //		Hash function for using MD keys in a cache
 //
 //---------------------------------------------------------------------------
-ULONG 
-CMDKey::UlHashMDKey
-	(
-	CMDKey* const & pv
-	)
+ULONG
+CMDKey::UlHashMDKey(CMDKey *const &pv)
 {
 	return pv->MDId()->HashValue();
 }

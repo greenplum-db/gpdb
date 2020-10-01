@@ -8,10 +8,10 @@
 
 namespace gpdxl
 {
-	class CParseHandlerCostModelTest
-	{
-		public:
-			static gpos::GPOS_RESULT EresUnittest();
-	};
-}
-#endif  // GPOPT_CParseHandlerCostModelTest_H
+class CParseHandlerCostModelTest
+{
+public:
+	static gpos::GPOS_RESULT EresUnittest();
+};
+}  // namespace gpdxl
+#endif	// GPOPT_CParseHandlerCostModelTest_H

@@ -33,13 +33,13 @@ Feature: Tests for gpinitstandby feature
     Scenario: gpinitstandby exclude dirs
         Given the database is running
         And the standby is not initialized
-        And the file "pg_log/testfile" exists under master data directory
+        And the file "log/testfile" exists under master data directory
         And the file "db_dumps/testfile" exists under master data directory
         And the file "promote/testfile" exists under master data directory
         And the user runs gpinitstandby with options " "
         Then gpinitstandby should return a return code of 0
         And verify the standby master entries in catalog
-        And the file "pg_log/testfile" does not exist under standby master data directory
+        And the file "log/testfile" does not exist under standby master data directory
         And the file "db_dumps/testfile" does not exist under standby master data directory
         And the file "promote/testfile" does not exist under standby master data directory
         ## maybe clean up the directories created in the master data directory
@@ -90,3 +90,9 @@ Feature: Tests for gpinitstandby feature
         When the user runs pg_controldata against the standby data directory
         Then pg_controldata should print "Data page checksum version:           0" to stdout
 
+    Scenario: gpinitstandby does not add entries for 127.0.0.x and ::1 in pg_hba.conf
+        Given the database is running
+        And the standby is not initialized
+        And the user runs gpinitstandby with options " "
+        Then gpinitstandby should return a return code of 0
+        And verify that the file "pg_hba.conf" in the master data directory has "no" line starting with "host.*replication.*(127.0.0.1|::1).*trust"

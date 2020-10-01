@@ -19,65 +19,60 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CXformInnerApply2InnerJoin
-	//
-	//	@doc:
-	//		Transform Apply into Join by decorrelating the inner side
-	//
-	//---------------------------------------------------------------------------
-	class CXformInnerApply2InnerJoin : public CXformApply2Join<CLogicalInnerApply, CLogicalInnerJoin>
+//---------------------------------------------------------------------------
+//	@class:
+//		CXformInnerApply2InnerJoin
+//
+//	@doc:
+//		Transform Apply into Join by decorrelating the inner side
+//
+//---------------------------------------------------------------------------
+class CXformInnerApply2InnerJoin
+	: public CXformApply2Join<CLogicalInnerApply, CLogicalInnerJoin>
+{
+private:
+	// private copy ctor
+	CXformInnerApply2InnerJoin(const CXformInnerApply2InnerJoin &);
+
+public:
+	// ctor
+	explicit CXformInnerApply2InnerJoin(CMemoryPool *mp)
+		: CXformApply2Join<CLogicalInnerApply, CLogicalInnerJoin>(
+			  mp, true /*fDeepTree*/)
 	{
+	}
 
-		private:
+	// dtor
+	virtual ~CXformInnerApply2InnerJoin()
+	{
+	}
 
-			// private copy ctor
-			CXformInnerApply2InnerJoin(const CXformInnerApply2InnerJoin &);
+	// ident accessors
+	virtual EXformId
+	Exfid() const
+	{
+		return ExfInnerApply2InnerJoin;
+	}
 
-		public:
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CXformInnerApply2InnerJoin";
+	}
 
-			// ctor
-			explicit
-			CXformInnerApply2InnerJoin
-				(
-				CMemoryPool *mp
-				)
-				:
-				CXformApply2Join<CLogicalInnerApply, CLogicalInnerJoin>(mp, true /*fDeepTree*/)
-			{}
+	// compute xform promise for a given expression handle
+	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
 
-			// dtor
-			virtual
-			~CXformInnerApply2InnerJoin()
-			{}
+	// actual transform
+	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
+				   CExpression *pexpr) const;
 
-			// ident accessors
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfInnerApply2InnerJoin;
-			}
+};	// class CXformInnerApply2InnerJoin
 
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CXformInnerApply2InnerJoin";
-			}
+}  // namespace gpopt
 
-			// compute xform promise for a given expression handle
-			virtual
-			EXformPromise Exfp(CExpressionHandle &exprhdl) const;
-
-			// actual transform
-			void Transform(CXformContext *pxfctxt, CXformResult *pxfres, CExpression *pexpr) const;
-
-	}; // class CXformInnerApply2InnerJoin
-
-}
-
-#endif // !GPOPT_CXformInnerApply2InnerJoin_H
+#endif	// !GPOPT_CXformInnerApply2InnerJoin_H
 
 // EOF

@@ -3,7 +3,7 @@
  * auto_explain.c
  *
  *
- * Copyright (c) 2008-2016, PostgreSQL Global Development Group
+ * Copyright (c) 2008-2019, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  contrib/auto_explain/auto_explain.c
@@ -14,11 +14,13 @@
 
 #include <limits.h>
 
+#include "access/parallel.h"
 #include "commands/explain.h"
 #include "cdb/cdbdisp.h"
 #include "cdb/cdbexplain.h"
 #include "cdb/cdbvars.h"
 #include "executor/instrument.h"
+#include "jit/jit.h"
 #include "utils/guc.h"
 
 PG_MODULE_MAGIC;
@@ -30,7 +32,9 @@ static bool auto_explain_log_verbose = false;
 static bool auto_explain_log_buffers = false;
 static bool auto_explain_log_triggers = false;
 static bool auto_explain_log_timing = true;
+static bool auto_explain_log_settings = false;
 static int	auto_explain_log_format = EXPLAIN_FORMAT_TEXT;
+static int	auto_explain_log_level = LOG;
 static bool auto_explain_log_nested_statements = false;
 static double auto_explain_sample_rate = 1;
 
@@ -42,8 +46,30 @@ static const struct config_enum_entry format_options[] = {
 	{NULL, 0, false}
 };
 
+static const struct config_enum_entry loglevel_options[] = {
+	{"debug5", DEBUG5, false},
+	{"debug4", DEBUG4, false},
+	{"debug3", DEBUG3, false},
+	{"debug2", DEBUG2, false},
+	{"debug1", DEBUG1, false},
+	{"debug", DEBUG2, true},
+	{"info", INFO, false},
+	{"notice", NOTICE, false},
+	{"warning", WARNING, false},
+	{"log", LOG, false},
+	{NULL, 0, false}
+};
+
 /* Current nesting depth of ExecutorRun calls */
 static int	nesting_level = 0;
+
+/* Is the current top-level query to be sampled? */
+static bool current_query_sampled = false;
+
+#define auto_explain_enabled() \
+	(auto_explain_log_min_duration >= 0 && \
+	 (nesting_level == 0 || auto_explain_log_nested_statements) && \
+	 current_query_sampled)
 
 /* Saved hook values in case of unload */
 static ExecutorStart_hook_type prev_ExecutorStart = NULL;
@@ -51,20 +77,13 @@ static ExecutorRun_hook_type prev_ExecutorRun = NULL;
 static ExecutorFinish_hook_type prev_ExecutorFinish = NULL;
 static ExecutorEnd_hook_type prev_ExecutorEnd = NULL;
 
-/* Is the current query sampled, per backend */
-static bool current_query_sampled = true;
-
-#define auto_explain_enabled() \
-	(auto_explain_log_min_duration >= 0 && \
-	 (nesting_level == 0 || auto_explain_log_nested_statements))
-
 void		_PG_init(void);
 void		_PG_fini(void);
 
 static void explain_ExecutorStart(QueryDesc *queryDesc, int eflags);
 static void explain_ExecutorRun(QueryDesc *queryDesc,
-					ScanDirection direction,
-					uint64 count);
+								ScanDirection direction,
+								uint64 count, bool execute_once);
 static void explain_ExecutorFinish(QueryDesc *queryDesc);
 static void explain_ExecutorEnd(QueryDesc *queryDesc);
 
@@ -81,8 +100,8 @@ _PG_init(void)
 
 	/* Define custom GUC variables. */
 	DefineCustomIntVariable("auto_explain.log_min_duration",
-		 "Sets the minimum execution time above which plans will be logged.",
-						 "Zero prints all plans. -1 turns this feature off.",
+							"Sets the minimum execution time above which plans will be logged.",
+							"Zero prints all plans. -1 turns this feature off.",
 							&auto_explain_log_min_duration,
 							-1,
 							-1, INT_MAX,
@@ -96,6 +115,17 @@ _PG_init(void)
 							 "Use EXPLAIN ANALYZE for plan logging.",
 							 NULL,
 							 &auto_explain_log_analyze,
+							 false,
+							 PGC_SUSET,
+							 0,
+							 NULL,
+							 NULL,
+							 NULL);
+
+	DefineCustomBoolVariable("auto_explain.log_settings",
+							 "Log modified configuration parameters affecting query planning.",
+							 NULL,
+							 &auto_explain_log_settings,
 							 false,
 							 PGC_SUSET,
 							 0,
@@ -127,7 +157,7 @@ _PG_init(void)
 
 	DefineCustomBoolVariable("auto_explain.log_triggers",
 							 "Include trigger statistics in plans.",
-						"This has no effect unless log_analyze is also set.",
+							 "This has no effect unless log_analyze is also set.",
 							 &auto_explain_log_triggers,
 							 false,
 							 PGC_SUSET,
@@ -142,6 +172,18 @@ _PG_init(void)
 							 &auto_explain_log_format,
 							 EXPLAIN_FORMAT_TEXT,
 							 format_options,
+							 PGC_SUSET,
+							 0,
+							 NULL,
+							 NULL,
+							 NULL);
+
+	DefineCustomEnumVariable("auto_explain.log_level",
+							 "Log level for the plan.",
+							 NULL,
+							 &auto_explain_log_level,
+							 LOG,
+							 loglevel_options,
 							 PGC_SUSET,
 							 0,
 							 NULL,
@@ -218,14 +260,25 @@ explain_ExecutorStart(QueryDesc *queryDesc, int eflags)
 	instr_time		starttime;
 
 	/*
-	 * For rate sampling, randomly choose top-level statement. Either all
-	 * nested statements will be explained or none will.
+	 * At the beginning of each top-level statement, decide whether we'll
+	 * sample this statement.  If nested-statement explaining is enabled,
+	 * either all nested statements will be explained or none will.
+	 *
+	 * When in a parallel worker, we should do nothing, which we can implement
+	 * cheaply by pretending we decided not to sample the current statement.
+	 * If EXPLAIN is active in the parent session, data will be collected and
+	 * reported back to the parent, and it's no business of ours to interfere.
 	 */
-	if (auto_explain_log_min_duration >= 0 && nesting_level == 0)
-		current_query_sampled = (random() < auto_explain_sample_rate *
-								 MAX_RANDOM_VALUE);
+	if (nesting_level == 0)
+	{
+		if (auto_explain_log_min_duration >= 0 && !IsParallelWorker())
+			current_query_sampled = (random() < auto_explain_sample_rate *
+									 ((double) MAX_RANDOM_VALUE + 1));
+		else
+			current_query_sampled = false;
+	}
 
-	if (auto_explain_enabled() && current_query_sampled)
+	if (auto_explain_enabled())
 	{
 		/* Enable per-node instrumentation iff log_analyze is required. */
 		if (auto_explain_log_analyze && (eflags & EXEC_FLAG_EXPLAIN_ONLY) == 0)
@@ -250,7 +303,7 @@ explain_ExecutorStart(QueryDesc *queryDesc, int eflags)
 	else
 		standard_ExecutorStart(queryDesc, eflags);
 
-	if (auto_explain_enabled() && current_query_sampled)
+	if (auto_explain_enabled())
 	{
 		/*
 		 * Set up to track total elapsed time in ExecutorRun.  Make sure the
@@ -272,15 +325,16 @@ explain_ExecutorStart(QueryDesc *queryDesc, int eflags)
  * ExecutorRun hook: all we need do is track nesting depth
  */
 static void
-explain_ExecutorRun(QueryDesc *queryDesc, ScanDirection direction, uint64 count)
+explain_ExecutorRun(QueryDesc *queryDesc, ScanDirection direction,
+					uint64 count, bool execute_once)
 {
 	nesting_level++;
 	PG_TRY();
 	{
 		if (prev_ExecutorRun)
-			prev_ExecutorRun(queryDesc, direction, count);
+			prev_ExecutorRun(queryDesc, direction, count, execute_once);
 		else
-			standard_ExecutorRun(queryDesc, direction, count);
+			standard_ExecutorRun(queryDesc, direction, count, execute_once);
 		nesting_level--;
 	}
 	PG_CATCH();
@@ -320,7 +374,7 @@ explain_ExecutorFinish(QueryDesc *queryDesc)
 static void
 explain_ExecutorEnd(QueryDesc *queryDesc)
 {
-	if (queryDesc->totaltime && auto_explain_enabled() && current_query_sampled)
+	if (queryDesc->totaltime && auto_explain_enabled())
 	{
 		double		msec;
 
@@ -346,12 +400,15 @@ explain_ExecutorEnd(QueryDesc *queryDesc)
 			es->timing = (es->analyze && auto_explain_log_timing);
 			es->summary = es->analyze;
 			es->format = auto_explain_log_format;
+			es->settings = auto_explain_log_settings;
 
 			ExplainBeginOutput(es);
 			ExplainQueryText(es, queryDesc);
 			ExplainPrintPlan(es, queryDesc);
 			if (es->analyze && auto_explain_log_triggers)
 				ExplainPrintTriggers(es, queryDesc);
+			if (es->costs)
+				ExplainPrintJITSummary(es, queryDesc);
 			if (es->analyze)
 				ExplainPrintExecStatsEnd(es, queryDesc);
 			ExplainEndOutput(es);
@@ -373,7 +430,7 @@ explain_ExecutorEnd(QueryDesc *queryDesc)
 			 * reported.  This isn't ideal but trying to do it here would
 			 * often result in duplication.
 			 */
-			ereport(LOG,
+			ereport(auto_explain_log_level,
 					(errmsg("duration: %.3f ms  plan:\n%s",
 							msec, es->str->data),
 					 errhidestmt(true)));

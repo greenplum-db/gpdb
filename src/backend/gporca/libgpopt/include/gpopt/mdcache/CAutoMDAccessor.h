@@ -21,122 +21,107 @@
 
 namespace gpmd
 {
-	class IMDCacheObject;
+class IMDCacheObject;
 }
 namespace gpopt
 {
-	using namespace gpos;
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CAutoMDAccessor
-	//
-	//	@doc:
-	//		An auto object encapsulating metadata accessor
-	//
-	//---------------------------------------------------------------------------
-	class CAutoMDAccessor : public CStackObject
+using namespace gpos;
+//---------------------------------------------------------------------------
+//	@class:
+//		CAutoMDAccessor
+//
+//	@doc:
+//		An auto object encapsulating metadata accessor
+//
+//---------------------------------------------------------------------------
+class CAutoMDAccessor : public CStackObject
+{
+private:
+	// metadata provider
+	IMDProvider *m_pimdp;
+
+	// do we own cache object?
+	BOOL m_fOwnCache;
+
+	// metadata cache
+	CMDAccessor::MDCache *m_pcache;
+
+	// metadata accessor
+	CMDAccessor *m_pmda;
+
+	// system id
+	CSystemId m_sysid;
+
+	// private copy ctor
+	CAutoMDAccessor(const CAutoMDAccessor &);
+
+public:
+	// ctor
+	CAutoMDAccessor(CMemoryPool *mp, IMDProvider *pmdp, CSystemId sysid)
+		: m_pimdp(pmdp), m_fOwnCache(true), m_sysid(sysid)
 	{
-		private:
+		GPOS_ASSERT(NULL != pmdp);
 
-			// metadata provider
-			IMDProvider *m_pimdp;
+		m_pcache =
+			CCacheFactory::CreateCache<gpmd::IMDCacheObject *, gpopt::CMDKey *>(
+				true /*fUnique*/, 0 /* unlimited cache quota */,
+				gpopt::CMDKey::UlHashMDKey, gpopt::CMDKey::FEqualMDKey);
+		m_pmda = GPOS_NEW(mp) CMDAccessor(mp, m_pcache, sysid, pmdp);
+	}
 
-			// do we own cache object?
-			BOOL m_fOwnCache;
+	// ctor
+	CAutoMDAccessor(CMemoryPool *mp, IMDProvider *pmdp, CSystemId sysid,
+					CMDAccessor::MDCache *pcache)
+		: m_pimdp(pmdp), m_fOwnCache(false), m_pcache(pcache), m_sysid(sysid)
+	{
+		GPOS_ASSERT(NULL != pmdp);
+		GPOS_ASSERT(NULL != pcache);
 
-			// metadata cache
-			CMDAccessor::MDCache *m_pcache;
+		m_pmda = GPOS_NEW(mp) CMDAccessor(mp, m_pcache, sysid, pmdp);
+	}
 
-			// metadata accessor
-			CMDAccessor *m_pmda;
+	// dtor
+	virtual ~CAutoMDAccessor()
+	{
+		// because of dependencies among class members, cleaning up
+		// has to take place in the following order
+		GPOS_DELETE(m_pmda);
+		if (m_fOwnCache)
+		{
+			GPOS_DELETE(m_pcache);
+		}
+	}
 
-			// system id
-			CSystemId m_sysid;
+	// accessor of cache
+	CMDAccessor::MDCache *
+	Pcache() const
+	{
+		return m_pcache;
+	}
 
-			// private copy ctor
-			CAutoMDAccessor(const CAutoMDAccessor&);
+	// accessor of metadata accessor
+	CMDAccessor *
+	Pmda() const
+	{
+		return m_pmda;
+	}
 
-		public:
+	// accessor of metadata provider
+	IMDProvider *
+	Pimdp() const
+	{
+		return m_pimdp;
+	}
 
-			// ctor
-			CAutoMDAccessor
-				(
-				CMemoryPool *mp,
-				IMDProvider *pmdp,
-				CSystemId sysid
-				)
-				:
-				m_pimdp(pmdp),
-				m_fOwnCache(true),
-				m_sysid(sysid)
-			{
-				GPOS_ASSERT(NULL != pmdp);
+	// accessor of system id
+	CSystemId
+	Sysid() const
+	{
+		return m_sysid;
+	}
+};
+}  // namespace gpopt
 
-				m_pcache =
-					CCacheFactory::CreateCache<gpmd::IMDCacheObject*, gpopt::CMDKey*>(true /*fUnique*/, 0 /* unlimited cache quota */,
-							gpopt::CMDKey::UlHashMDKey, gpopt::CMDKey::FEqualMDKey);
-				m_pmda = GPOS_NEW(mp) CMDAccessor(mp, m_pcache, sysid, pmdp);
-			}
-
-			// ctor
-			CAutoMDAccessor
-				(
-				CMemoryPool *mp,
-				IMDProvider *pmdp,
-				CSystemId sysid,
-				CMDAccessor::MDCache *pcache
-				)
-				:
-				m_pimdp(pmdp),
-				m_fOwnCache(false),
-				m_pcache(pcache),
-				m_sysid(sysid)
-			{
-				GPOS_ASSERT(NULL != pmdp);
-				GPOS_ASSERT(NULL != pcache);
-
-				m_pmda = GPOS_NEW(mp) CMDAccessor(mp, m_pcache, sysid, pmdp);
-			}
-
-			// dtor
-			virtual
-			~CAutoMDAccessor()
-			{
-				// because of dependencies among class members, cleaning up
-				// has to take place in the following order
-				GPOS_DELETE(m_pmda);
-				if (m_fOwnCache)
-				{
-					GPOS_DELETE(m_pcache);
-				}
-			}
-
-			// accessor of cache
-			CMDAccessor::MDCache *Pcache() const
-			{
-				return m_pcache;
-			}
-
-			// accessor of metadata accessor
-			CMDAccessor *Pmda() const
-			{
-				return m_pmda;
-			}
-
-			// accessor of metadata provider
-			IMDProvider *Pimdp() const
-			{
-				return m_pimdp;
-			}
-
-			// accessor of system id
-			CSystemId Sysid() const
-			{
-				return m_sysid;
-			}
-	};
-}
-
-#endif // !GPOPT_CAutoMDAccessor_H
+#endif	// !GPOPT_CAutoMDAccessor_H
 
 // EOF

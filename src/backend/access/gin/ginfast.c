@@ -7,7 +7,7 @@
  *	  transfer pending entries into the regular index structure.  This
  *	  wins because bulk insertion is much more efficient than retail.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -19,6 +19,7 @@
 #include "postgres.h"
 
 #include "access/gin_private.h"
+#include "access/ginxlog.h"
 #include "access/xloginsert.h"
 #include "access/xlog.h"
 #include "commands/vacuum.h"
@@ -30,6 +31,8 @@
 #include "postmaster/autovacuum.h"
 #include "storage/indexfsm.h"
 #include "storage/lmgr.h"
+#include "storage/predicate.h"
+#include "utils/builtins.h"
 
 /* GUC parameter */
 int			gin_pending_list_limit = 0;
@@ -238,6 +241,13 @@ ginHeapTupleFastInsert(GinState *ginstate, GinTupleCollector *collector)
 	metabuffer = ReadBuffer(index, GIN_METAPAGE_BLKNO);
 	metapage = BufferGetPage(metabuffer);
 
+	/*
+	 * An insertion to the pending list could logically belong anywhere in the
+	 * tree, so it conflicts with all serializable scans.  All scans acquire a
+	 * predicate lock on the metabuffer to represent that.
+	 */
+	CheckForSerializableConflictIn(index, NULL, metabuffer);
+
 	if (collector->sumsize + collector->ntuples * sizeof(ItemIdData) > GinListPageSize)
 	{
 		/*
@@ -390,6 +400,16 @@ ginHeapTupleFastInsert(GinState *ginstate, GinTupleCollector *collector)
 	}
 
 	/*
+	 * Set pd_lower just past the end of the metadata.  This is essential,
+	 * because without doing so, metadata will be lost if xlog.c compresses
+	 * the page.  (We must do this here because pre-v11 versions of PG did not
+	 * set the metapage's pd_lower correctly, so a pg_upgraded index might
+	 * contain the wrong value.)
+	 */
+	((PageHeader) metapage)->pd_lower =
+		((char *) metadata + sizeof(GinMetaPageData)) - (char *) metapage;
+
+	/*
 	 * Write metabuffer, make xlog entry
 	 */
 	MarkBufferDirty(metabuffer);
@@ -400,7 +420,7 @@ ginHeapTupleFastInsert(GinState *ginstate, GinTupleCollector *collector)
 
 		memcpy(&data.metadata, metadata, sizeof(GinMetaPageData));
 
-		XLogRegisterBuffer(0, metabuffer, REGBUF_WILL_INIT);
+		XLogRegisterBuffer(0, metabuffer, REGBUF_WILL_INIT | REGBUF_STANDARD);
 		XLogRegisterData((char *) &data, sizeof(ginxlogUpdateMeta));
 
 		recptr = XLogInsert(RM_GIN_ID, XLOG_GIN_UPDATE_META_PAGE);
@@ -433,8 +453,12 @@ ginHeapTupleFastInsert(GinState *ginstate, GinTupleCollector *collector)
 
 	END_CRIT_SECTION();
 
+	/*
+	 * Since it could contend with concurrent cleanup process we cleanup
+	 * pending list not forcibly.
+	 */
 	if (needCleanup)
-		ginInsertCleanup(ginstate, false, true, NULL);
+		ginInsertCleanup(ginstate, false, true, false, NULL);
 }
 
 /*
@@ -463,19 +487,42 @@ ginHeapTupleFastCollect(GinState *ginstate,
 								&nentries, &categories);
 
 	/*
+	 * Protect against integer overflow in allocation calculations
+	 */
+	if (nentries < 0 ||
+		collector->ntuples + nentries > MaxAllocSize / sizeof(IndexTuple))
+		elog(ERROR, "too many entries for GIN index");
+
+	/*
 	 * Allocate/reallocate memory for storing collected tuples
 	 */
 	if (collector->tuples == NULL)
 	{
-		collector->lentuples = nentries * ginstate->origTupdesc->natts;
+		/*
+		 * Determine the number of elements to allocate in the tuples array
+		 * initially.  Make it a power of 2 to avoid wasting memory when
+		 * resizing (since palloc likes powers of 2).
+		 */
+		collector->lentuples = 16;
+		while (collector->lentuples < nentries)
+			collector->lentuples *= 2;
+
 		collector->tuples = (IndexTuple *) palloc(sizeof(IndexTuple) * collector->lentuples);
 	}
-
-	while (collector->ntuples + nentries > collector->lentuples)
+	else if (collector->lentuples < collector->ntuples + nentries)
 	{
-		collector->lentuples *= 2;
+		/*
+		 * Advance lentuples to the next suitable power of 2.  This won't
+		 * overflow, though we could get to a value that exceeds
+		 * MaxAllocSize/sizeof(IndexTuple), causing an error in repalloc.
+		 */
+		do
+		{
+			collector->lentuples *= 2;
+		} while (collector->lentuples < collector->ntuples + nentries);
+
 		collector->tuples = (IndexTuple *) repalloc(collector->tuples,
-								  sizeof(IndexTuple) * collector->lentuples);
+													sizeof(IndexTuple) * collector->lentuples);
 	}
 
 	/*
@@ -565,6 +612,16 @@ shiftList(Relation index, Buffer metabuffer, BlockNumber newHead,
 			metadata->nPendingHeapTuples = 0;
 		}
 
+		/*
+		 * Set pd_lower just past the end of the metadata.  This is essential,
+		 * because without doing so, metadata will be lost if xlog.c
+		 * compresses the page.  (We must do this here because pre-v11
+		 * versions of PG did not set the metapage's pd_lower correctly, so a
+		 * pg_upgraded index might contain the wrong value.)
+		 */
+		((PageHeader) metapage)->pd_lower =
+			((char *) metadata + sizeof(GinMetaPageData)) - (char *) metapage;
+
 		MarkBufferDirty(metabuffer);
 
 		for (i = 0; i < data.ndeleted; i++)
@@ -579,7 +636,8 @@ shiftList(Relation index, Buffer metabuffer, BlockNumber newHead,
 			XLogRecPtr	recptr;
 
 			XLogBeginInsert();
-			XLogRegisterBuffer(0, metabuffer, REGBUF_WILL_INIT);
+			XLogRegisterBuffer(0, metabuffer,
+							   REGBUF_WILL_INIT | REGBUF_STANDARD);
 			for (i = 0; i < data.ndeleted; i++)
 				XLogRegisterBuffer(i + 1, buffers[i], REGBUF_WILL_INIT);
 
@@ -720,7 +778,8 @@ processPendingPage(BuildAccumulator *accum, KeyArray *ka,
  */
 void
 ginInsertCleanup(GinState *ginstate, bool full_clean,
-				 bool fill_fsm, IndexBulkDeleteResult *stats)
+				 bool fill_fsm, bool forceCleanup,
+				 IndexBulkDeleteResult *stats)
 {
 	Relation	index = ginstate->index;
 	Buffer		metabuffer,
@@ -737,7 +796,6 @@ ginInsertCleanup(GinState *ginstate, bool full_clean,
 	bool		cleanupFinish = false;
 	bool		fsm_vac = false;
 	Size		workMemory;
-	bool		inVacuum = (stats == NULL);
 
 	/*
 	 * We would like to prevent concurrent cleanup process. For that we will
@@ -746,7 +804,7 @@ ginInsertCleanup(GinState *ginstate, bool full_clean,
 	 * insertion into pending list
 	 */
 
-	if (inVacuum)
+	if (forceCleanup)
 	{
 		/*
 		 * We are called from [auto]vacuum/analyze or gin_clean_pending_list()
@@ -803,9 +861,7 @@ ginInsertCleanup(GinState *ginstate, bool full_clean,
 	 */
 	opCtx = AllocSetContextCreate(CurrentMemoryContext,
 								  "GIN insert cleanup temporary context",
-								  ALLOCSET_DEFAULT_MINSIZE,
-								  ALLOCSET_DEFAULT_INITSIZE,
-								  ALLOCSET_DEFAULT_MAXSIZE);
+								  ALLOCSET_DEFAULT_SIZES);
 
 	oldCtx = MemoryContextSwitchTo(opCtx);
 
@@ -869,7 +925,7 @@ ginInsertCleanup(GinState *ginstate, bool full_clean,
 			 */
 			ginBeginBAScan(&accum);
 			while ((list = ginGetBAEntry(&accum,
-								  &attnum, &key, &category, &nlist)) != NULL)
+										 &attnum, &key, &category, &nlist)) != NULL)
 			{
 				ginEntryInsert(ginstate, attnum, key, category,
 							   list, nlist, NULL);
@@ -899,7 +955,7 @@ ginInsertCleanup(GinState *ginstate, bool full_clean,
 
 				ginBeginBAScan(&accum);
 				while ((list = ginGetBAEntry(&accum,
-								  &attnum, &key, &category, &nlist)) != NULL)
+											 &attnum, &key, &category, &nlist)) != NULL)
 					ginEntryInsert(ginstate, attnum, key, category,
 								   list, nlist, NULL);
 			}
@@ -908,8 +964,8 @@ ginInsertCleanup(GinState *ginstate, bool full_clean,
 			 * Remember next page - it will become the new list head
 			 */
 			blkno = GinPageGetOpaque(page)->rightlink;
-			UnlockReleaseBuffer(buffer);		/* shiftList will do exclusive
-												 * locking */
+			UnlockReleaseBuffer(buffer);	/* shiftList will do exclusive
+											 * locking */
 
 			/*
 			 * remove read pages from pending list, at this point all content
@@ -963,7 +1019,6 @@ ginInsertCleanup(GinState *ginstate, bool full_clean,
 	if (fsm_vac && fill_fsm)
 		IndexFreeSpaceMapVacuum(index);
 
-
 	/* Clean up temporary space */
 	MemoryContextSwitchTo(oldCtx);
 	MemoryContextDelete(opCtx);
@@ -976,7 +1031,7 @@ Datum
 gin_clean_pending_list(PG_FUNCTION_ARGS)
 {
 	Oid			indexoid = PG_GETARG_OID(0);
-	Relation	indexRel = index_open(indexoid, AccessShareLock);
+	Relation	indexRel = index_open(indexoid, RowExclusiveLock);
 	IndexBulkDeleteResult stats;
 	GinState	ginstate;
 
@@ -984,7 +1039,7 @@ gin_clean_pending_list(PG_FUNCTION_ARGS)
 		ereport(ERROR,
 				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
 				 errmsg("recovery is in progress"),
-		 errhint("GIN pending list cannot be cleaned up during recovery.")));
+				 errhint("GIN pending list cannot be cleaned up during recovery.")));
 
 	/* Must be a GIN index */
 	if (indexRel->rd_rel->relkind != RELKIND_INDEX ||
@@ -1002,18 +1057,18 @@ gin_clean_pending_list(PG_FUNCTION_ARGS)
 	if (RELATION_IS_OTHER_TEMP(indexRel))
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-			   errmsg("cannot access temporary indexes of other sessions")));
+				 errmsg("cannot access temporary indexes of other sessions")));
 
 	/* User must own the index (comparable to privileges needed for VACUUM) */
 	if (!pg_class_ownercheck(indexoid, GetUserId()))
-		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_CLASS,
+		aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_INDEX,
 					   RelationGetRelationName(indexRel));
 
 	memset(&stats, 0, sizeof(stats));
 	initGinState(&ginstate, indexRel);
-	ginInsertCleanup(&ginstate, true, true, &stats);
+	ginInsertCleanup(&ginstate, true, true, true, &stats);
 
-	index_close(indexRel, AccessShareLock);
+	index_close(indexRel, RowExclusiveLock);
 
 	PG_RETURN_INT64((int64) stats.pages_deleted);
 }

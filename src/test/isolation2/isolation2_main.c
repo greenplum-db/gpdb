@@ -10,6 +10,8 @@
  *-------------------------------------------------------------------------
  */
 
+#include "postgres_fe.h"
+
 #include "pg_regress.h"
 
 #include <sys/stat.h>
@@ -68,7 +70,7 @@ isolation_start_test(const char *testname,
 			{
 				fprintf(stderr, _("could not create directory \"%s\": %s\n"),
 						resultdir, strerror(errno));
-				exit_nicely(2);
+				exit(2);
 			}
 		}
 	}
@@ -107,7 +109,7 @@ isolation_start_test(const char *testname,
 						   "%s ", launcher);
 
 	snprintf(psql_cmd + offset, sizeof(psql_cmd) - offset,
-			 "python ./sql_isolation_testcase.py --dbname=\"%s\" < \"%s\" > \"%s\" 2>&1",
+			 "python3 ./sql_isolation_testcase.py --dbname=\"%s\" < \"%s\" > \"%s\" 2>&1",
 			 dblist->str,
 			 infile,
 			 outfile);
@@ -118,7 +120,7 @@ isolation_start_test(const char *testname,
 	{
 		fprintf(stderr, _("could not start process for test %s\n"),
 				testname);
-		exit_nicely(2);
+		exit(2);
 	}
 
 	return pid;

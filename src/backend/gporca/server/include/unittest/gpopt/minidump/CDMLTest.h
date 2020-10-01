@@ -15,37 +15,31 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CDMLTest
-	//
-	//	@doc:
-	//		Unittests
-	//
-	//---------------------------------------------------------------------------
-	class CDMLTest
-	{
-		private:
+//---------------------------------------------------------------------------
+//	@class:
+//		CDMLTest
+//
+//	@doc:
+//		Unittests
+//
+//---------------------------------------------------------------------------
+class CDMLTest
+{
+private:
+	// counter used to mark last successful test
+	static ULONG m_ulDMLTestCounter;
 
-			// counter used to mark last successful test
-			static
-			ULONG m_ulDMLTestCounter;
+public:
+	// unittests
+	static GPOS_RESULT EresUnittest();
 
-		public:
+	static GPOS_RESULT EresUnittest_RunTests();
 
-			// unittests
-			static
-			GPOS_RESULT EresUnittest();
+};	// class CDMLTest
+}  // namespace gpopt
 
-			static
-			GPOS_RESULT EresUnittest_RunTests();
-
-	}; // class CDMLTest
-}
-
-#endif // !GPOPT_CDMLTest_H
+#endif	// !GPOPT_CDMLTest_H
 
 // EOF
-

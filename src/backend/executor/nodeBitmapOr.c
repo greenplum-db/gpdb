@@ -3,7 +3,7 @@
  * nodeBitmapOr.c
  *	  routines to handle BitmapOr nodes.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -32,8 +32,20 @@
 #include "executor/execdebug.h"
 #include "executor/nodeBitmapOr.h"
 #include "miscadmin.h"
-#include "nodes/tidbitmap.h"
 
+
+/* ----------------------------------------------------------------
+ *		ExecBitmapOr
+ *
+ *		stub for pro forma compliance
+ * ----------------------------------------------------------------
+ */
+static TupleTableSlot *
+ExecBitmapOr(PlanState *pstate)
+{
+	elog(ERROR, "BitmapOr node does not support ExecProcNode call convention");
+	return NULL;
+}
 
 /* ----------------------------------------------------------------
  *		ExecInitBitmapOr
@@ -66,15 +78,9 @@ ExecInitBitmapOr(BitmapOr *node, EState *estate, int eflags)
 	 */
 	bitmaporstate->ps.plan = (Plan *) node;
 	bitmaporstate->ps.state = estate;
+	bitmaporstate->ps.ExecProcNode = ExecBitmapOr;
 	bitmaporstate->bitmapplans = bitmapplanstates;
 	bitmaporstate->nplans = nplans;
-
-	/*
-	 * Miscellaneous initialization
-	 *
-	 * BitmapOr plans don't have expression contexts because they never call
-	 * ExecQual or ExecProject.  They don't need any tuple slots either.
-	 */
 
 	/*
 	 * call ExecInitNode on each of the plans to be executed and save the
@@ -87,6 +93,13 @@ ExecInitBitmapOr(BitmapOr *node, EState *estate, int eflags)
 		bitmapplanstates[i] = ExecInitNode(initNode, estate, eflags);
 		i++;
 	}
+
+	/*
+	 * Miscellaneous initialization
+	 *
+	 * BitmapOr plans don't have expression contexts because they never call
+	 * ExecQual or ExecProject.  They don't need any tuple slots either.
+	 */
 
 	return bitmaporstate;
 }
@@ -109,7 +122,13 @@ MultiExecBitmapOr(BitmapOrState *node)
 	PlanState **bitmapplans;
 	int			nplans;
 	int			i;
-	TIDBitmap  *hbm = NULL;
+	/*
+	 * Greenplum uses result for TIDBitmap result, and node->bitmap for
+	 * StreamBitmap result if there is any StreamBitmap.
+	 *
+	 * At last it will union them and return.
+	 */
+	TIDBitmap  *result = NULL;
 
 	/* must provide our own instrumentation support */
 	if (node->ps.instrument)
@@ -129,9 +148,13 @@ MultiExecBitmapOr(BitmapOrState *node)
 		PlanState  *subnode = bitmapplans[i];
 		Node	   *subresult = NULL;
 
+		/*
+		 * Note for further merge iteration:
+		 *     Greenplum's BitmapIndexScan returns a StreamBitmap
+		 */
 		subresult = MultiExecProcNode(subnode);
 
-		if(subresult == NULL)
+		if (subresult == NULL)
 			continue;
 
 		if (!(IsA(subresult, TIDBitmap) ||
@@ -140,35 +163,48 @@ MultiExecBitmapOr(BitmapOrState *node)
 
 		if (IsA(subresult, TIDBitmap))
 		{
-			if (hbm == NULL)
-				hbm = (TIDBitmap *)subresult;
+			/* if it's a TIDBitmap, union into result */
+			if (result == NULL)
+				result = (TIDBitmap *)subresult;
 			else
 			{
-				tbm_union(hbm, (TIDBitmap *)subresult);
+				tbm_union(result, (TIDBitmap *)subresult);
+				/* GPDB_12_MERGE_FIXME: don't free the bitmap here, causes
+				 * assertion failure with:
+				 *
+				 * set enable_seqscan=off;
+				 * SELECT * FROM tenk1 WHERE thousand = 42 AND (tenthous = 1 OR tenthous = 3 OR tenthous = 42);
+				 *
+				 * I'm not sure why that's not cool in GPDB, even though in upstream, there's
+				 * a tbm_free() call here
+				 */
+				//tbm_generic_free(subresult);
 			}
 		}
 		else
 		{
-			if(node->bitmap)
+			/* if it's a StreamBitmap, union into node->bitmap */
+			if (node->bitmap)
 			{
-				if(node->bitmap != subresult)
+				if (node->bitmap != subresult)
 				{
 					StreamBitmap *s = (StreamBitmap *)subresult;
-					stream_move_node((StreamBitmap *)node->bitmap, s, BMS_OR);				}
+					stream_move_node((StreamBitmap *)node->bitmap, s, BMS_OR);
+				}
 			}
 			else
 				node->bitmap = subresult;
 		}
 	}
 
-	/* check to see if we have any hash bitmaps */
-	if (hbm != NULL)
+	/* union the TIDBitmap and StreamBitmap into node->bitmap */
+	if (result != NULL)
 	{
-		if(node->bitmap && IsA(node->bitmap, StreamBitmap))
+		if (node->bitmap && IsA(node->bitmap, StreamBitmap))
 			stream_add_node((StreamBitmap *)node->bitmap, 
-						tbm_create_stream_node(hbm), BMS_OR);
+						tbm_create_stream_node(result), BMS_OR);
 		else
-			node->bitmap = (Node *)hbm;
+			node->bitmap = (Node *)result;
 	}
 
 	/* must provide our own instrumentation support */

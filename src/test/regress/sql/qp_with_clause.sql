@@ -7,6 +7,8 @@
 
 -- Modified to use it with GPDB
 
+set extra_float_digits=0;
+
 --start_ignore
 create schema qp_with_clause;
 set search_path = qp_with_clause;

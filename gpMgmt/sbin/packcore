@@ -1,11 +1,10 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright Pivotal 2014
 
 
 import glob
 import os
 import re
-import string
 import shutil
 import stat
 import sys
@@ -29,7 +28,7 @@ def _getPlatformInfo():
 
 def _getFileInfo(coreFile):
     cmd = Popen(['/usr/bin/file', '--version'], stdout=PIPE, stderr=STDOUT)
-    fileVersion = cmd.communicate()[0].split()[0].strip()
+    fileVersion = cmd.communicate()[0].split()[0].strip().decode()
     # file allow setting parameters from command line from version 5.21, refer:
     # https://github.com/file/file/commit/6ce24f35cd4a43c4bdd249e8e0c4952c1f8eac67
     # Set ELF program sections processed for core files to suppres "too many
@@ -39,7 +38,7 @@ def _getFileInfo(coreFile):
         opts += ['-P', 'elf_phnum=2048']
     opts += [coreFile]
     cmd = Popen(opts, stdout=PIPE)
-    return cmd.communicate()[0]
+    return cmd.communicate()[0].decode()
 
 
 def _isCore(fileCmdOutput):
@@ -50,17 +49,17 @@ def _isCore(fileCmdOutput):
 
 def _findBinary(fileCmdOutput):
     # execfn: '/path/to/postgres'
-    field = string.find(fileCmdOutput, 'execfn')
+    field = str.find(fileCmdOutput, 'execfn')
     # if 'execfn' field is not found, search for 'from' field instead
     if field < 0:
         # from: /path/to/postgres
         # from: postgres: 5432, ...
-        field = string.find(fileCmdOutput, 'from')
+        field = str.find(fileCmdOutput, 'from')
     # if 'from' field is still missing, search for any single-quoted string
     if field < 0:
         field = 0
-    start = string.find(fileCmdOutput, "'", field) + 1
-    end = string.find(fileCmdOutput, "'", start)
+    start = str.find(fileCmdOutput, "'", field) + 1
+    end = str.find(fileCmdOutput, "'", start)
     if start <= 0 or end < 0:
         return None
     cmd = fileCmdOutput[start:end]
@@ -70,7 +69,7 @@ def _findBinary(fileCmdOutput):
         return cmd
     # otherwise try to search with the process name, punctuations like ':'
     # should be removed
-    cmd = cmd.split()[0].translate(None, string.punctuation)
+    cmd = cmd.split()[0].translate(None, str.punctuation)
     return which(cmd)
 
 
@@ -104,7 +103,7 @@ def _getLibraryListWithLDD(binary):
 
     ldd_output = Popen(args + [binary], stdout=PIPE)
     for line in ldd_output.stdout:
-        match = re.search(r'(\S+) \(0x', line)
+        match = re.search(r'(\S+) \(0x', line.decode())
         if match and match.group(1):
             libraries.append(match.group(1).strip())
     return libraries
@@ -130,7 +129,7 @@ def _getLibraryListWithGDB(coreFile, binary):
                  '-c', coreFile,
                  binary],
                 stdout=PIPE, stderr=PIPE)
-    result = cmd.communicate()[0]
+    result = cmd.communicate()[0].decode()
 
     # gdb output looks like below:
     #
@@ -168,7 +167,7 @@ def _copyFilePath(src, dst):
 
 def _generateGDBScript(b, c):
     with open('runGDB.sh', 'w') as f1:
-        print >>f1, '''\
+        print('''\
 #!/bin/bash
 unset PYTHONHOME
 unset PYTHONPATH
@@ -178,8 +177,8 @@ curDIR=`pwd`
     --eval-command="core {core}" \\
     {binary} \\
     "$@"
-'''.format(core=c, binary=b)
-    os.chmod('runGDB.sh', 0755)
+'''.format(core=c, binary=b), file=f1)
+    os.chmod('runGDB.sh', 0o0755)
 
 
 # This is taken from Python 3.3:

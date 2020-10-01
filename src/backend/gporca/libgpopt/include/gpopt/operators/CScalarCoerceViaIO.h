@@ -25,83 +25,70 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CScalarCoerceViaIO
-	//
-	//	@doc:
-	//		Scalar CoerceViaIO operator
-	//
-	//---------------------------------------------------------------------------
-	class CScalarCoerceViaIO : public CScalarCoerceBase
+//---------------------------------------------------------------------------
+//	@class:
+//		CScalarCoerceViaIO
+//
+//	@doc:
+//		Scalar CoerceViaIO operator
+//
+//---------------------------------------------------------------------------
+class CScalarCoerceViaIO : public CScalarCoerceBase
+{
+private:
+	// private copy ctor
+	CScalarCoerceViaIO(const CScalarCoerceViaIO &);
+
+public:
+	// ctor
+	CScalarCoerceViaIO(CMemoryPool *mp, IMDId *mdid_type, INT type_modifier,
+					   ECoercionForm dxl_coerce_format, INT location);
+
+	// dtor
+	virtual ~CScalarCoerceViaIO()
 	{
+	}
 
-		private:
-			// private copy ctor
-			CScalarCoerceViaIO(const CScalarCoerceViaIO &);
+	virtual EOperatorId
+	Eopid() const
+	{
+		return EopScalarCoerceViaIO;
+	}
 
-		public:
+	// return a string for operator name
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CScalarCoerceViaIO";
+	}
 
-			// ctor
-			CScalarCoerceViaIO
-				(
-				CMemoryPool *mp,
-				IMDId *mdid_type,
-				INT type_modifier,
-				ECoercionForm dxl_coerce_format,
-				INT location
-				);
+	// match function
+	virtual BOOL Matches(COperator *) const;
 
-			// dtor
-			virtual
-			~CScalarCoerceViaIO()
-			{
-			}
+	// sensitivity to order of inputs
+	virtual BOOL
+	FInputOrderSensitive() const
+	{
+		return false;
+	}
 
-			virtual
-			EOperatorId Eopid() const
-			{
-				return EopScalarCoerceViaIO;
-			}
+	// conversion function
+	static CScalarCoerceViaIO *
+	PopConvert(COperator *pop)
+	{
+		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(EopScalarCoerceViaIO == pop->Eopid());
 
-			// return a string for operator name
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CScalarCoerceViaIO";
-			}
+		return dynamic_cast<CScalarCoerceViaIO *>(pop);
+	}
 
-			// match function
-			virtual
-			BOOL Matches(COperator *) const;
+};	// class CScalarCoerceViaIO
 
-			// sensitivity to order of inputs
-			virtual
-			BOOL FInputOrderSensitive() const
-			{
-				return false;
-			}
-
-			// conversion function
-			static
-			CScalarCoerceViaIO *PopConvert
-				(
-				COperator *pop
-				)
-			{
-				GPOS_ASSERT(NULL != pop);
-				GPOS_ASSERT(EopScalarCoerceViaIO == pop->Eopid());
-
-				return dynamic_cast<CScalarCoerceViaIO*>(pop);
-			}
-
-	}; // class CScalarCoerceViaIO
-
-}
+}  // namespace gpopt
 
 
-#endif // !GPOPT_CScalarCoerceViaIO_H
+#endif	// !GPOPT_CScalarCoerceViaIO_H
 
 // EOF

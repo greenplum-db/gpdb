@@ -14,68 +14,63 @@
 
 namespace gpdxl
 {
+class CDXLScalarPartListValues : public CDXLScalar
+{
+private:
+	// partitioning level
+	ULONG m_partitioning_level;
 
-	class CDXLScalarPartListValues : public CDXLScalar
-	{
-		private:
-			// partitioning level
-			ULONG m_partitioning_level;
+	// result type
+	IMDId *m_result_type_mdid;
 
-			// result type
-			IMDId *m_result_type_mdid;
+	// element type
+	IMDId *m_elem_type_mdid;
 
-			// element type
-			IMDId *m_elem_type_mdid;
+	// private copy ctor
+	CDXLScalarPartListValues(const CDXLScalarPartListValues &);
 
-			// private copy ctor
-			CDXLScalarPartListValues(const CDXLScalarPartListValues&);
+public:
+	// ctor
+	CDXLScalarPartListValues(CMemoryPool *mp, ULONG partitioning_level,
+							 IMDId *result_type_mdid, IMDId *elem_type_mdid);
 
-		public:
-			// ctor
-			CDXLScalarPartListValues(CMemoryPool *mp, ULONG partitioning_level, IMDId *result_type_mdid, IMDId *elem_type_mdid);
+	// dtor
+	virtual ~CDXLScalarPartListValues();
 
-			// dtor
-			virtual
-			~CDXLScalarPartListValues();
+	// operator type
+	virtual Edxlopid GetDXLOperator() const;
 
-			// operator type
-			virtual
-			Edxlopid GetDXLOperator() const;
+	// operator name
+	virtual const CWStringConst *GetOpNameStr() const;
 
-			// operator name
-			virtual
-			const CWStringConst *GetOpNameStr() const;
+	// partitioning level
+	ULONG GetPartitioningLevel() const;
 
-			// partitioning level
-			ULONG GetPartitioningLevel() const;
+	// result type
+	IMDId *GetResultTypeMdId() const;
 
-			// result type
-			IMDId *GetResultTypeMdId() const;
+	// element type
+	IMDId *GetElemTypeMdId() const;
 
-			// element type
-			IMDId *GetElemTypeMdId() const;
+	// serialize operator in DXL format
+	virtual void SerializeToDXL(CXMLSerializer *xml_serializer,
+								const CDXLNode *dxlnode) const;
 
-			// serialize operator in DXL format
-			virtual
-			void SerializeToDXL(CXMLSerializer *xml_serializer, const CDXLNode *dxlnode) const;
-
-			// does the operator return a boolean result
-			virtual
-			BOOL HasBoolResult(CMDAccessor *md_accessor) const;
+	// does the operator return a boolean result
+	virtual BOOL HasBoolResult(CMDAccessor *md_accessor) const;
 
 #ifdef GPOS_DEBUG
-			// checks whether the operator has valid structure, i.e. number and
-			// types of child nodes
-			virtual
-			void AssertValid(const CDXLNode *dxlnode, BOOL validate_children) const;
-#endif // GPOS_DEBUG
+	// checks whether the operator has valid structure, i.e. number and
+	// types of child nodes
+	virtual void AssertValid(const CDXLNode *dxlnode,
+							 BOOL validate_children) const;
+#endif	// GPOS_DEBUG
 
-			// conversion function
-			static
-			CDXLScalarPartListValues *Cast(CDXLOperator *dxl_op);
-	};
-}
+	// conversion function
+	static CDXLScalarPartListValues *Cast(CDXLOperator *dxl_op);
+};
+}  // namespace gpdxl
 
-#endif // !GPDXL_CDXLScalarPartListValues_H
+#endif	// !GPDXL_CDXLScalarPartListValues_H
 
 // EOF

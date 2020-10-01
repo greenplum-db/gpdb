@@ -4,7 +4,7 @@
  *
  * Definitions corresponding to SE-PostgreSQL
  *
- * Copyright (c) 2010-2016, PostgreSQL Global Development Group
+ * Copyright (c) 2010-2019, PostgreSQL Global Development Group
  *
  * -------------------------------------------------------------------------
  */
@@ -226,43 +226,43 @@ extern int	sepgsql_set_mode(int new_mode);
 extern bool sepgsql_getenforce(void);
 
 extern void sepgsql_audit_log(bool denied,
-				  const char *scontext,
-				  const char *tcontext,
-				  uint16 tclass,
-				  uint32 audited,
-				  const char *audit_name);
+							  const char *scontext,
+							  const char *tcontext,
+							  uint16 tclass,
+							  uint32 audited,
+							  const char *audit_name);
 
 extern void sepgsql_compute_avd(const char *scontext,
-					const char *tcontext,
-					uint16 tclass,
-					struct av_decision * avd);
+								const char *tcontext,
+								uint16 tclass,
+								struct av_decision *avd);
 
 extern char *sepgsql_compute_create(const char *scontext,
-					   const char *tcontext,
-					   uint16 tclass,
-					   const char *objname);
+									const char *tcontext,
+									uint16 tclass,
+									const char *objname);
 
 extern bool sepgsql_check_perms(const char *scontext,
-					const char *tcontext,
-					uint16 tclass,
-					uint32 required,
-					const char *audit_name,
-					bool abort_on_violation);
+								const char *tcontext,
+								uint16 tclass,
+								uint32 required,
+								const char *audit_name,
+								bool abort_on_violation);
 
 /*
  * uavc.c
  */
 #define SEPGSQL_AVC_NOAUDIT			((void *)(-1))
 extern bool sepgsql_avc_check_perms_label(const char *tcontext,
-							  uint16 tclass,
-							  uint32 required,
-							  const char *audit_name,
-							  bool abort_on_violation);
+										  uint16 tclass,
+										  uint32 required,
+										  const char *audit_name,
+										  bool abort_on_violation);
 extern bool sepgsql_avc_check_perms(const ObjectAddress *tobject,
-						uint16 tclass,
-						uint32 required,
-						const char *audit_name,
-						bool abort_on_violation);
+									uint16 tclass,
+									uint32 required,
+									const char *audit_name,
+									bool abort_on_violation);
 extern char *sepgsql_avc_trusted_proc(Oid functionId);
 extern void sepgsql_avc_init(void);
 
@@ -274,13 +274,7 @@ extern void sepgsql_init_client_label(void);
 extern char *sepgsql_get_label(Oid relOid, Oid objOid, int32 subId);
 
 extern void sepgsql_object_relabel(const ObjectAddress *object,
-					   const char *seclabel);
-
-extern Datum sepgsql_getcon(PG_FUNCTION_ARGS);
-extern Datum sepgsql_setcon(PG_FUNCTION_ARGS);
-extern Datum sepgsql_mcstrans_in(PG_FUNCTION_ARGS);
-extern Datum sepgsql_mcstrans_out(PG_FUNCTION_ARGS);
-extern Datum sepgsql_restorecon(PG_FUNCTION_ARGS);
+								   const char *seclabel);
 
 /*
  * dml.c
@@ -291,7 +285,7 @@ extern bool sepgsql_dml_privileges(List *rangeTabls, bool abort_on_violation);
  * database.c
  */
 extern void sepgsql_database_post_create(Oid databaseId,
-							 const char *dtemplate);
+										 const char *dtemplate);
 extern void sepgsql_database_drop(Oid databaseId);
 extern void sepgsql_database_relabel(Oid databaseId, const char *seclabel);
 extern void sepgsql_database_setattr(Oid databaseId);
@@ -314,7 +308,7 @@ extern void sepgsql_schema_rename(Oid namespaceId);
 extern void sepgsql_attribute_post_create(Oid relOid, AttrNumber attnum);
 extern void sepgsql_attribute_drop(Oid relOid, AttrNumber attnum);
 extern void sepgsql_attribute_relabel(Oid relOid, AttrNumber attnum,
-						  const char *seclabel);
+									  const char *seclabel);
 extern void sepgsql_attribute_setattr(Oid relOid, AttrNumber attnum);
 extern void sepgsql_relation_post_create(Oid relOid);
 extern void sepgsql_relation_drop(Oid relOid);
@@ -330,4 +324,4 @@ extern void sepgsql_proc_relabel(Oid functionId, const char *seclabel);
 extern void sepgsql_proc_setattr(Oid functionId);
 extern void sepgsql_proc_execute(Oid functionId);
 
-#endif   /* SEPGSQL_H */
+#endif							/* SEPGSQL_H */

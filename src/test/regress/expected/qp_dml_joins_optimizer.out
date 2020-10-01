@@ -1,9 +1,3 @@
--- start_matchsubs
--- m/ERROR:  moving tuple from partition .* to partition .* not supported/
--- s/ERROR:  moving tuple from partition .* to partition .* not supported/ERROR:  cross-partition or multi-update to a row/
--- m/ERROR:  multiple updates to a row by the same query is not allowed/
--- s/ERROR:  multiple updates to a row by the same query is not allowed/ERROR:  cross-partition or multi-update to a row/
--- end_matchsubs
 -- First create a bunch of test tables
 -- start_matchsubs
 -- m/DETAIL:  Failing row contains \(.*\)/
@@ -64,21 +58,7 @@ DISTRIBUTED BY (b)
 partition by range(a) (
 	start(1) end(101) every(100),
 	default partition def);
-CREATE TABLE dml_ao_pt_p (
-	a int ,
-	b int,
-	c text ,
-	d numeric)
-WITH (appendonly = true)
-DISTRIBUTED BY (a,b)
-partition by list(a,d) (
-	partition one VALUES ((1,1),(1,2),(1,3),(1,4),(1,5)),
-	partition two VALUES((2,1),(2,2),(2,3),(2,4),(2,5)),
-	default partition def);
 INSERT INTO dml_ao_pt_r SELECT generate_series(1,100), generate_series(1,100) * 3,'r', generate_series(1,100) % 6;
-INSERT INTO dml_ao_pt_p SELECT generate_series(1,100), generate_series(1,100) * 3,'p', generate_series(1,100) % 6;
-INSERT INTO dml_ao_pt_p VALUES(generate_series(1,10),NULL,'pn',NULL);
-INSERT INTO dml_ao_pt_p VALUES(NULL,1,'pn',NULL),(1,NULL,'pn',0),(NULL,NULL,'pn',0),(0,1,'pn',NULL),(NULL,NULL,'pn',NULL);
 INSERT INTO dml_ao_pt_s SELECT generate_series(1,100), generate_series(1,100) * 3,'s', generate_series(1,100) % 6;
 INSERT INTO dml_ao_pt_s VALUES(generate_series(1,10),NULL,'sn',NULL);
 INSERT INTO dml_ao_pt_s VALUES(NULL,1,'sn',NULL),(1,NULL,'sn',0),(NULL,NULL,'sn',0),(0,1,'sn',NULL),(NULL,NULL,'sn',NULL);
@@ -149,21 +129,7 @@ DISTRIBUTED BY (b)
 partition by range(a) (
 	start(1) end(100) every(10),
 	default partition def);
-CREATE TABLE dml_co_pt_p (
-	a int ,
-	b int,
-	c text ,
-	d numeric)
-WITH (appendonly = true, orientation = column)
-DISTRIBUTED BY (a,b)
-partition by list(a,d) (
-	partition one VALUES ((1,1),(1,2),(1,3),(1,4),(1,5)),
-	partition two VALUES((2,1),(2,2),(2,3),(2,4),(2,5)),
-	default partition def);
 INSERT INTO dml_co_pt_r SELECT generate_series(1,100), generate_series(1,100) * 3,'r', generate_series(1,100) % 6;
-INSERT INTO dml_co_pt_p SELECT generate_series(1,100), generate_series(1,100) * 3,'p', generate_series(1,100) % 6;
-INSERT INTO dml_co_pt_p VALUES(generate_series(1,10),NULL,'pn',NULL);
-INSERT INTO dml_co_pt_p VALUES(NULL,1,'pn',NULL),(1,NULL,'pn',0),(NULL,NULL,'pn',0),(0,1,'pn',NULL),(NULL,NULL,'pn',NULL);
 INSERT INTO dml_co_pt_s SELECT generate_series(1,100), generate_series(1,100) * 3,'s', generate_series(1,100) % 6;
 INSERT INTO dml_co_pt_s VALUES(generate_series(1,10),NULL,'sn',NULL);
 INSERT INTO dml_co_pt_s VALUES(NULL,1,'sn',NULL),(1,NULL,'sn',0),(NULL,NULL,'sn',0),(0,1,'sn',NULL),(NULL,NULL,'sn',NULL);
@@ -254,9 +220,9 @@ CREATE TABLE dml_heap_pt_p (
 	c text ,
 	d numeric)
 DISTRIBUTED BY (a,b)
-partition by list(a,d) (
-	partition one VALUES ((1,1),(1,2),(1,3),(1,4),(1,5)),
-	partition two VALUES((2,1),(2,2),(2,3),(2,4),(2,5)),
+partition by list(d) (
+	partition one VALUES (1, 2, 3),
+	partition two VALUES (4, 5),
 	default partition def);
 INSERT INTO dml_heap_pt_r SELECT generate_series(1,100), generate_series(1,100) * 3,'r', generate_series(1,100) % 6;
 INSERT INTO dml_heap_pt_p SELECT generate_series(1,100), generate_series(1,100) * 3,'p', generate_series(1,100) % 6;
@@ -389,7 +355,6 @@ SELECT * FROM dml_ao_pt_r WHERE c ='text' ORDER BY 1;
 (10 rows)
 
 ALTER TABLE dml_ao_pt_r DROP DEFAULT partition;
-NOTICE:  dropped partition "def" for relation "dml_ao_pt_r"
 SELECT COUNT(*) FROM dml_ao_pt_r;
  count 
 -------
@@ -736,7 +701,8 @@ SELECT COUNT(*) FROM (SELECT dml_ao_pt_r.b, NULL, dml_ao_pt_r.c FROM dml_ao_pt_r
 (1 row)
 
 INSERT INTO dml_ao_pt_r SELECT dml_ao_pt_r.b, NULL, dml_ao_pt_r.c FROM dml_ao_pt_r, dml_ao_pt_s WHERE dml_ao_pt_r.b = dml_ao_pt_s.b;
-ERROR:  no partition for partitioning key  (seg0 127.0.0.1:40000 pid=18972)
+ERROR:  no partition of relation "dml_ao_pt_r" found for row  (seg0 127.0.0.1:40000 pid=29426)
+DETAIL:  Partition key of the failing row contains (b) = (null).
 SELECT COUNT(*) FROM dml_ao_pt_r;
  count 
 -------
@@ -757,7 +723,8 @@ SELECT COUNT(*) FROM (SELECT dml_ao_pt_r.b ,dml_ao_pt_r.a + dml_ao_pt_s.a + 100,
 (1 row)
 
 INSERT INTO dml_ao_pt_r SELECT dml_ao_pt_r.b ,dml_ao_pt_r.a + dml_ao_pt_s.a + 100, dml_ao_pt_r.c FROM dml_ao_pt_r, dml_ao_pt_s WHERE dml_ao_pt_r.a = dml_ao_pt_s.b;
-ERROR:  no partition for partitioning key  (seg1 127.0.0.1:40001 pid=18973)
+ERROR:  no partition of relation "dml_ao_pt_r" found for row  (seg0 127.0.0.1:40000 pid=29426)
+DETAIL:  Partition key of the failing row contains (b) = (null).
 SELECT COUNT(*) FROM dml_ao_pt_r;
  count 
 -------
@@ -1259,7 +1226,6 @@ SELECT * FROM dml_co_pt_r WHERE c ='text' ORDER BY 1;
 (10 rows)
 
 ALTER TABLE dml_co_pt_r DROP DEFAULT partition;
-NOTICE:  dropped partition "def" for relation "dml_co_pt_r"
 SELECT COUNT(*) FROM dml_co_pt_r;
  count 
 -------
@@ -1606,7 +1572,8 @@ SELECT COUNT(*) FROM (SELECT dml_co_pt_r.b, NULL, dml_co_pt_r.c FROM dml_co_pt_r
 (1 row)
 
 INSERT INTO dml_co_pt_r SELECT dml_co_pt_r.b, NULL, dml_co_pt_r.c FROM dml_co_pt_r, dml_co_pt_s WHERE dml_co_pt_r.b = dml_co_pt_s.b;
-ERROR:  no partition for partitioning key  (seg1 127.0.0.1:40001 pid=18973)
+ERROR:  no partition of relation "dml_co_pt_r" found for row  (seg0 127.0.0.1:40000 pid=29426)
+DETAIL:  Partition key of the failing row contains (b) = (null).
 SELECT COUNT(*) FROM dml_co_pt_r;
  count 
 -------
@@ -1621,7 +1588,8 @@ SELECT COUNT(*) FROM dml_co_pt_r;
 (1 row)
 
 INSERT INTO dml_co_pt_r SELECT dml_co_pt_r.b ,dml_co_pt_r.a + dml_co_pt_s.a + 100, dml_co_pt_r.c FROM dml_co_pt_r, dml_co_pt_s WHERE dml_co_pt_r.a = dml_co_pt_s.b;
-ERROR:  no partition for partitioning key  (seg1 127.0.0.1:40001 pid=18973)
+ERROR:  no partition of relation "dml_co_pt_r" found for row  (seg0 127.0.0.1:40000 pid=29426)
+DETAIL:  Partition key of the failing row contains (b) = (null).
 SELECT COUNT(*) FROM dml_co_pt_r;
  count 
 -------
@@ -2340,8 +2308,7 @@ SELECT COUNT(*) FROM dml_heap_s;
 (1 row)
 
 DELETE FROM dml_heap_s WHERE a = (SELECT dml_heap_r.a FROM dml_heap_r,dml_heap_s WHERE dml_heap_r.a = dml_heap_s.a);
-ERROR:  one or more assertions failed
-DETAIL:  Expected no more than one row to be returned by expression
+ERROR:  more than one row returned by a subquery used as an expression
 SELECT COUNT(*) FROM dml_heap_s;
  count 
 -------
@@ -2645,8 +2612,7 @@ SELECT COUNT(*) FROM dml_heap_pt_s;
 (1 row)
 
 DELETE FROM dml_heap_pt_s WHERE a = (SELECT dml_heap_pt_r.a FROM dml_heap_pt_r,dml_heap_pt_s WHERE dml_heap_pt_r.a = dml_heap_pt_s.a);
-ERROR:  one or more assertions failed
-DETAIL:  Expected no more than one row to be returned by expression
+ERROR:  more than one row returned by a subquery used as an expression
 SELECT COUNT(*) FROM dml_heap_pt_s;
  count 
 -------
@@ -2701,7 +2667,6 @@ SELECT * FROM dml_heap_pt_r WHERE c ='text' ORDER BY 1;
 (10 rows)
 
 ALTER TABLE dml_heap_pt_r DROP DEFAULT partition;
-NOTICE:  dropped partition "def" for relation "dml_heap_pt_r"
 SELECT COUNT(*) FROM dml_heap_pt_r;
  count 
 -------
@@ -2918,7 +2883,6 @@ SELECT COUNT(*) FROM dml_heap_pt_r;
 (1 row)
 
 ALTER TABLE dml_heap_pt_r DROP DEFAULT partition;
-NOTICE:  dropped partition "def" for relation "dml_heap_pt_r"
 rollback;
 --Join with DISTINCT
 begin;
@@ -3044,7 +3008,8 @@ SELECT COUNT(*) FROM dml_heap_pt_r;
 (1 row)
 
 INSERT INTO dml_heap_pt_r SELECT dml_heap_pt_r.b, NULL, dml_heap_pt_r.c FROM dml_heap_pt_r, dml_heap_pt_s WHERE dml_heap_pt_r.b = dml_heap_pt_s.b;
-ERROR:  no partition for partitioning key  (seg0 127.0.0.1:40000 pid=18972)
+ERROR:  no partition of relation "dml_heap_pt_r" found for row  (seg0 127.0.0.1:40000 pid=29426)
+DETAIL:  Partition key of the failing row contains (b) = (null).
 SELECT COUNT(*) FROM dml_heap_pt_r;
  count 
 -------
@@ -3059,7 +3024,8 @@ SELECT COUNT(*) FROM dml_heap_pt_r;
 (1 row)
 
 INSERT INTO dml_heap_pt_r SELECT dml_heap_pt_r.b ,dml_heap_pt_r.a + dml_heap_pt_s.a + 100, dml_heap_pt_r.c FROM dml_heap_pt_r, dml_heap_pt_s WHERE dml_heap_pt_r.a = dml_heap_pt_s.b;
-ERROR:  no partition for partitioning key  (seg1 127.0.0.1:40001 pid=18973)
+ERROR:  no partition of relation "dml_heap_pt_r" found for row  (seg0 127.0.0.1:40000 pid=29426)
+DETAIL:  Partition key of the failing row contains (b) = (null).
 SELECT COUNT(*) FROM dml_heap_pt_r;
  count 
 -------
@@ -3167,27 +3133,6 @@ SELECT COUNT(*) FROM (SELECT DISTINCT(a) FROM dml_heap_pt_r)foo;
 (1 row)
 
 rollback;
---Update and generate_series
-begin;
-SELECT COUNT(*) FROM dml_heap_pt_r WHERE a = 1;
- count 
--------
-     1
-(1 row)
-
-SELECT COUNT(*) FROM dml_heap_pt_r WHERE c ='n';
- count 
--------
-     0
-(1 row)
-
-UPDATE dml_heap_pt_r SET a = generate_series(1,10), c ='n';
-ERROR:  cross-partition or multi-update to a row
-SELECT COUNT(*) FROM dml_heap_pt_r WHERE c ='n';
-ERROR:  current transaction is aborted, commands ignored until end of transaction block
-SELECT COUNT(*) FROM dml_heap_pt_r WHERE a = 1;
-ERROR:  current transaction is aborted, commands ignored until end of transaction block
-rollback;
 --Update distcol where join on target table non dist key
 begin;
 SELECT SUM(a) FROM dml_heap_pt_r;
@@ -3197,7 +3142,7 @@ SELECT SUM(a) FROM dml_heap_pt_r;
 (1 row)
 
 UPDATE dml_heap_pt_r SET a = dml_heap_pt_r.a + 1 FROM dml_heap_pt_s WHERE dml_heap_pt_r.a = dml_heap_pt_s.a;
-ERROR:  cross-partition or multi-update to a row
+ERROR:  multiple updates to a row by the same query is not allowed  (seg0 127.0.0.1:7002 pid=93168)
 SELECT SUM(a) FROM dml_heap_pt_r;
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 rollback;
@@ -3269,7 +3214,7 @@ SELECT DISTINCT(b) FROM dml_heap_pt_s ORDER BY 1 LIMIT 1;
 (1 row)
 
 UPDATE dml_heap_pt_r SET a = (SELECT DISTINCT(b) FROM dml_heap_pt_s ORDER BY 1 LIMIT 1) FROM dml_heap_pt_s WHERE dml_heap_pt_r.b = dml_heap_pt_s.a;
-ERROR:  cross-partition or multi-update to a row
+ERROR:  multiple updates to a row by the same query is not allowed  (seg1 127.0.0.1:7003 pid=93169)
 SELECT COUNT(*) FROM dml_heap_pt_r WHERE a = 1;
  count 
 -------
@@ -3306,7 +3251,7 @@ ALTER TABLE dml_heap_pt_r ADD DEFAULT partition def;
 -- processing.
 SAVEPOINT sp1;
 UPDATE dml_heap_pt_r SET a = dml_heap_pt_s.a + 10 ,b = NULL FROM dml_heap_pt_s WHERE dml_heap_pt_r.a + 2= dml_heap_pt_s.b;
-ERROR:  cross-partition or multi-update to a row
+ERROR:  multiple updates to a row by the same query is not allowed  (seg0 127.0.1.1:7002 pid=99068)
 SELECT * FROM dml_heap_pt_r WHERE a = 11 ORDER BY 1,2;
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 SELECT COUNT(*) FROM dml_heap_pt_r WHERE b is NULL;
@@ -3329,7 +3274,7 @@ SELECT dml_heap_pt_s.a ,dml_heap_pt_s.b,'z' FROM dml_heap_pt_r,dml_heap_pt_s WHE
 
 ALTER TABLE dml_heap_pt_r ADD DEFAULT partition def;
 UPDATE dml_heap_pt_r SET (a,b,c) = (dml_heap_pt_s.a ,dml_heap_pt_s.b,'z') FROM dml_heap_pt_s WHERE dml_heap_pt_r.a + 1= dml_heap_pt_s.b;
-ERROR:  cross-partition or multi-update to a row
+ERROR:  multiple updates to a row by the same query is not allowed  (seg2 127.0.0.1:7004 pid=93170)
 SELECT * FROM dml_heap_pt_r WHERE c='z' ORDER BY 1 LIMIT 1;
  a | b | c | d 
 ---+---+---+---
@@ -3342,12 +3287,11 @@ SELECT COUNT(*) FROM dml_heap_pt_r WHERE c='z';
 (1 row)
 
 ALTER TABLE dml_heap_pt_r DROP DEFAULT partition;
-NOTICE:  dropped partition "def" for relation "dml_heap_pt_r"
 --Update with prepare plans
 begin;
 PREPARE plan_upd as UPDATE dml_heap_pt_r SET a = dml_heap_pt_s.a +1 FROM dml_heap_pt_s WHERE dml_heap_pt_r.a = dml_heap_pt_s.b ;
 EXECUTE plan_upd;
-ERROR:  cross-partition or multi-update to a row
+ERROR:  multiple updates to a row by the same query is not allowed  (seg1 127.0.0.1:7003 pid=93169)
 rollback;
 --Update and case
 begin;
@@ -3373,8 +3317,7 @@ SELECT SUM(a) FROM dml_heap_pt_r;
 (1 row)
 
 UPDATE dml_heap_pt_r SET a = ( SELECT DISTINCT(b) FROM dml_heap_pt_s ) FROM dml_heap_pt_s WHERE dml_heap_pt_r.b = dml_heap_pt_s.a;
-ERROR:  one or more assertions failed
-DETAIL:  Expected no more than one row to be returned by expression
+ERROR:  more than one row returned by a subquery used as an expression
 SELECT SUM(a) FROM dml_heap_pt_r;
  sum  
 ------
@@ -3389,8 +3332,7 @@ SELECT SUM(b) FROM dml_heap_pt_r;
 (1 row)
 
 UPDATE dml_heap_pt_r SET b = (SELECT dml_heap_pt_r.b FROM dml_heap_pt_r,dml_heap_pt_s WHERE dml_heap_pt_r.a = dml_heap_pt_s.a );
-ERROR:  one or more assertions failed
-DETAIL:  Expected no more than one row to be returned by expression
+ERROR:  more than one row returned by a subquery used as an expression
 SELECT SUM(b) FROM dml_heap_pt_r;
   sum  
 -------
@@ -3422,7 +3364,7 @@ SELECT SUM(a) FROM dml_heap_pt_r;
 (1 row)
 
 UPDATE dml_heap_pt_r SET a = dml_heap_pt_r.b+1 FROM dml_heap_pt_p,dml_heap_pt_s WHERE dml_heap_pt_r.b = dml_heap_pt_s.b and dml_heap_pt_r.a = dml_heap_pt_p.b+1;
-ERROR:  cross-partition or multi-update to a row  (seg0 10.34.53.37:25432 pid=9227)
+ERROR:  multiple updates to a row by the same query is not allowed  (seg0 127.0.0.1:7002 pid=93168)
 SELECT SUM(a) FROM dml_heap_pt_r;
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 rollback;
@@ -3431,7 +3373,6 @@ rollback;
 -- produce plans that update distribution key columns.
 begin;
 UPDATE dml_heap_pt_p SET a = dml_heap_pt_p.b % 2 FROM dml_heap_pt_r WHERE dml_heap_pt_p.b::int = dml_heap_pt_r.b::int and dml_heap_pt_p.a = dml_heap_pt_r.a and dml_heap_pt_p.b = 63;
-ERROR:  moving tuple from partition "dml_heap_pt_p_1_prt_def" to partition "dml_heap_pt_p_1_prt_one" not supported  (seg0 10.152.10.75:25432 pid=19629)
 rollback;
 --Update on table with composite distribution key
 begin;
@@ -3472,8 +3413,11 @@ SELECT SUM(b) FROM dml_heap_pt_r;
  15150
 (1 row)
 
+-- it's arbitary which row throws the error first, so omit the error DETAIL
+\set VERBOSITY terse
 UPDATE dml_heap_pt_r SET b = dml_heap_pt_r.a + 3000000 FROM dml_heap_pt_s WHERE dml_heap_pt_r.a = dml_heap_pt_s.a;
-ERROR:  no partition for partitioning key  (seg1 127.0.0.1:40001 pid=18973)
+ERROR:  no partition of relation "dml_heap_pt_r" found for row  (seg1 127.0.0.1:40001 pid=29427)
+\set VERBOSITY default
 SELECT SUM(b) FROM dml_heap_pt_r;
   sum  
 -------
@@ -3850,7 +3794,9 @@ SELECT COUNT(*) FROM dml_heap_r WHERE c ='n';
 (1 row)
 
 UPDATE dml_heap_r SET a = generate_series(1,10), c ='n';
-ERROR:  cross-partition or multi-update to a row
+ERROR:  set-returning functions are not allowed in UPDATE
+LINE 1: UPDATE dml_heap_r SET a = generate_series(1,10), c ='n';
+                                  ^
 SELECT COUNT(*) FROM dml_heap_r WHERE c ='n';
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 SELECT SUM(a) FROM dml_heap_r WHERE a = 1;
@@ -3917,7 +3863,7 @@ SELECT COUNT(*) FROM dml_heap_s WHERE b = (SELECT COUNT(*) FROM dml_heap_s);
 (1 row)
 
 UPDATE dml_heap_s SET b = (SELECT COUNT(*) FROM dml_heap_s) FROM dml_heap_r WHERE dml_heap_r.a = dml_heap_s.b;
-ERROR:  cross-partition or multi-update to a row
+ERROR:  multiple updates to a row by the same query is not allowed  (seg2 127.0.0.1:7004 pid=93170)
 SELECT COUNT(*) FROM dml_heap_s WHERE b = (SELECT COUNT(*) FROM dml_heap_s);
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 rollback;
@@ -3986,7 +3932,7 @@ SELECT dml_heap_s.a ,dml_heap_s.b,'z' FROM dml_heap_r,dml_heap_s WHERE dml_heap_
 (1 row)
 
 UPDATE dml_heap_r SET (a,b,c) = (dml_heap_s.a ,dml_heap_s.b,'z') FROM dml_heap_s WHERE dml_heap_r.a = dml_heap_s.b;
-ERROR:  cross-partition or multi-update to a row
+ERROR:  multiple updates to a row by the same query is not allowed  (seg2 127.0.0.1:7004 pid=93170)
 SELECT * FROM dml_heap_r WHERE c='z' ORDER BY 1 LIMIT 1;
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 SELECT COUNT(*) FROM dml_heap_r WHERE c='z';
@@ -3996,7 +3942,7 @@ rollback;
 begin;
 PREPARE plan_upd_2 as UPDATE dml_heap_r SET a = dml_heap_s.a +1 FROM dml_heap_s WHERE dml_heap_r.a = dml_heap_s.b ;
 EXECUTE plan_upd_2;
-ERROR:  cross-partition or multi-update to a row
+ERROR:  multiple updates to a row by the same query is not allowed  (seg1 127.0.0.1:7003 pid=93169)
 rollback;
 --Update and case
 begin;
@@ -4021,9 +3967,11 @@ SELECT SUM(a) FROM dml_heap_r;
  5106
 (1 row)
 
+-- start_ignore
+GPDB_12_MERGE_FIXME: Unsupported exec location fallback
+-- end_ignore
 UPDATE dml_heap_r SET a = ( SELECT DISTINCT(b) FROM dml_heap_s ) FROM dml_heap_s WHERE dml_heap_r.b = dml_heap_s.a;
-ERROR:  one or more assertions failed
-DETAIL:  Expected no more than one row to be returned by expression
+ERROR:  more than one row returned by a subquery used as an expression
 SELECT SUM(a) FROM dml_heap_r;
  sum  
 ------
@@ -4038,8 +3986,7 @@ SELECT SUM(b) FROM dml_heap_r;
 (1 row)
 
 UPDATE dml_heap_r SET b = (SELECT dml_heap_r.b FROM dml_heap_r,dml_heap_s WHERE dml_heap_r.a = dml_heap_s.a );
-ERROR:  one or more assertions failed
-DETAIL:  Expected no more than one row to be returned by expression
+ERROR:  more than one row returned by a subquery used as an expression
 SELECT SUM(b) FROM dml_heap_r;
  sum  
 ------
@@ -4073,7 +4020,7 @@ SELECT SUM(a) FROM dml_heap_v;
 (1 row)
 
 UPDATE dml_heap_v SET a = dml_heap_u.a FROM dml_heap_u WHERE dml_heap_u.b = dml_heap_v.b;
-ERROR:  cross-partition or multi-update to a row
+ERROR:  multiple updates to a row by the same query is not allowed  (seg2 127.0.0.1:7004 pid=82404)
 SELECT SUM(a) FROM dml_heap_v;
  sum 
 -----
@@ -4082,7 +4029,7 @@ SELECT SUM(a) FROM dml_heap_v;
 
 --Update with joins on multiple table
 UPDATE dml_heap_r SET a = dml_heap_r.b+1 FROM dml_heap_p,dml_heap_s WHERE dml_heap_r.b = dml_heap_s.b and dml_heap_r.a = dml_heap_p.b+1;
-ERROR:  cross-partition or multi-update to a row
+ERROR:  multiple updates to a row by the same query is not allowed  (seg0 127.0.0.1:7002 pid=82402)
 --Update on table with composite distribution key
 UPDATE dml_heap_p SET a = dml_heap_p.b % 2 FROM dml_heap_r WHERE dml_heap_p.b::int = dml_heap_r.b::int and dml_heap_p.a = dml_heap_r.a;
 --Update on table with composite distribution key

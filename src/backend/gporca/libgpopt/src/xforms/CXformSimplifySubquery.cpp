@@ -25,14 +25,14 @@ using namespace gpopt;
 
 
 // initialization of simplify function mappings
-const CXformSimplifySubquery::SSimplifySubqueryMapping CXformSimplifySubquery::m_rgssm[] =
-{
-	{FSimplifyExistential, CUtils::FExistentialSubquery},
-	{FSimplifyQuantified, CUtils::FQuantifiedSubquery},
+const CXformSimplifySubquery::SSimplifySubqueryMapping
+	CXformSimplifySubquery::m_rgssm[] = {
+		{FSimplifyExistential, CUtils::FExistentialSubquery},
+		{FSimplifyQuantified, CUtils::FQuantifiedSubquery},
 
-	// the last entry is used to replace existential subqueries with count(*)
-	// after quantified subqueries have been replaced in the input expression
-	{FSimplifyExistential, CUtils::FExistentialSubquery},
+		// the last entry is used to replace existential subqueries with count(*)
+		// after quantified subqueries have been replaced in the input expression
+		{FSimplifyExistential, CUtils::FExistentialSubquery},
 };
 
 //---------------------------------------------------------------------------
@@ -43,13 +43,10 @@ const CXformSimplifySubquery::SSimplifySubqueryMapping CXformSimplifySubquery::m
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CXformSimplifySubquery::CXformSimplifySubquery
-	(
-	CExpression *pexprPattern
-	)
-	:
-	CXformExploration(pexprPattern)
-{}
+CXformSimplifySubquery::CXformSimplifySubquery(CExpression *pexprPattern)
+	: CXformExploration(pexprPattern)
+{
+}
 
 
 //---------------------------------------------------------------------------
@@ -62,11 +59,7 @@ CXformSimplifySubquery::CXformSimplifySubquery
 //
 //---------------------------------------------------------------------------
 CXform::EXformPromise
-CXformSimplifySubquery::Exfp
-	(
-	CExpressionHandle &exprhdl
-	)
-	const
+CXformSimplifySubquery::Exfp(CExpressionHandle &exprhdl) const
 {
 	// consider this transformation only if subqueries exist
 	if (exprhdl.DeriveHasSubquery(1))
@@ -74,7 +67,8 @@ CXformSimplifySubquery::Exfp
 		return CXform::ExfpHigh;
 	}
 
-	return CXform::ExfpNone;;
+	return CXform::ExfpNone;
+	;
 }
 
 
@@ -89,12 +83,9 @@ CXformSimplifySubquery::Exfp
 //
 //---------------------------------------------------------------------------
 BOOL
-CXformSimplifySubquery::FSimplifyQuantified
-	(
-	CMemoryPool *mp,
-	CExpression *pexprScalar,
-	CExpression **ppexprNewScalar
-	)
+CXformSimplifySubquery::FSimplifyQuantified(CMemoryPool *mp,
+											CExpression *pexprScalar,
+											CExpression **ppexprNewScalar)
 {
 	GPOS_ASSERT(CUtils::FQuantifiedSubquery(pexprScalar->Pop()));
 
@@ -113,7 +104,6 @@ CXformSimplifySubquery::FSimplifyQuantified
 	pexprCmp->Release();
 
 	return true;
-
 }
 
 
@@ -127,18 +117,16 @@ CXformSimplifySubquery::FSimplifyQuantified
 //
 //---------------------------------------------------------------------------
 BOOL
-CXformSimplifySubquery::FSimplifyExistential
-	(
-	CMemoryPool *mp,
-	CExpression *pexprScalar,
-	CExpression **ppexprNewScalar
-	)
+CXformSimplifySubquery::FSimplifyExistential(CMemoryPool *mp,
+											 CExpression *pexprScalar,
+											 CExpression **ppexprNewScalar)
 {
 	GPOS_ASSERT(CUtils::FExistentialSubquery(pexprScalar->Pop()));
 
 	CExpression *pexprNewSubquery = NULL;
 	CExpression *pexprCmp = NULL;
-	CXformUtils::ExistentialToAgg(mp, pexprScalar, &pexprNewSubquery, &pexprCmp);
+	CXformUtils::ExistentialToAgg(mp, pexprScalar, &pexprNewSubquery,
+								  &pexprCmp);
 
 	// create a comparison predicate involving subquery expression
 	CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
@@ -164,14 +152,9 @@ CXformSimplifySubquery::FSimplifyExistential
 //
 //---------------------------------------------------------------------------
 BOOL
-CXformSimplifySubquery::FSimplify
-	(
-	CMemoryPool *mp,
-	CExpression *pexprScalar,
-	CExpression **ppexprNewScalar,
-	FnSimplify *pfnsimplify,
-	FnMatch *pfnmatch
-	)
+CXformSimplifySubquery::FSimplify(CMemoryPool *mp, CExpression *pexprScalar,
+								  CExpression **ppexprNewScalar,
+								  FnSimplify *pfnsimplify, FnMatch *pfnmatch)
 {
 	// protect against stack overflow during recursion
 	GPOS_CHECK_STACK_SIZE;
@@ -201,7 +184,8 @@ CXformSimplifySubquery::FSimplify
 	for (ULONG ul = 0; fSuccess && ul < arity; ul++)
 	{
 		CExpression *pexprChild = NULL;
-		fSuccess = FSimplify(mp, (*pexprScalar)[ul], &pexprChild, pfnsimplify, pfnmatch);
+		fSuccess = FSimplify(mp, (*pexprScalar)[ul], &pexprChild, pfnsimplify,
+							 pfnmatch);
 		if (fSuccess)
 		{
 			pdrgpexprChildren->Append(pexprChild);
@@ -236,13 +220,8 @@ CXformSimplifySubquery::FSimplify
 //
 //---------------------------------------------------------------------------
 void
-CXformSimplifySubquery::Transform
-	(
-	CXformContext *pxfctxt,
-	CXformResult *pxfres,
-	CExpression *pexpr
-	)
-	const
+CXformSimplifySubquery::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
+								  CExpression *pexpr) const
 {
 	GPOS_ASSERT(NULL != pxfctxt);
 	GPOS_ASSERT(NULL != pxfres);
@@ -258,7 +237,8 @@ CXformSimplifySubquery::Transform
 		CExpression *pexprScalar = (*pexprInput)[1];
 		CExpression *pexprNewScalar = NULL;
 
-		if (!FSimplify(mp, pexprScalar, &pexprNewScalar, m_rgssm[ul].m_pfnsimplify, m_rgssm[ul].m_pfnmatch))
+		if (!FSimplify(mp, pexprScalar, &pexprNewScalar,
+					   m_rgssm[ul].m_pfnsimplify, m_rgssm[ul].m_pfnmatch))
 		{
 			CRefCount::SafeRelease(pexprNewScalar);
 			continue;
@@ -268,17 +248,21 @@ CXformSimplifySubquery::Transform
 		CExpression *pexprResult = NULL;
 		if (COperator::EopLogicalSelect == pexprInput->Pop()->Eopid())
 		{
-			pexprResult = CUtils::PexprLogicalSelect(mp, pexprOuter, pexprNewScalar);
+			pexprResult =
+				CUtils::PexprLogicalSelect(mp, pexprOuter, pexprNewScalar);
 		}
 		else
 		{
-			GPOS_ASSERT(COperator::EopLogicalProject == pexprInput->Pop()->Eopid());
+			GPOS_ASSERT(COperator::EopLogicalProject ==
+						pexprInput->Pop()->Eopid());
 
-			pexprResult = CUtils::PexprLogicalProject(mp, pexprOuter, pexprNewScalar, false /*fNewComputedCol*/);
+			pexprResult = CUtils::PexprLogicalProject(
+				mp, pexprOuter, pexprNewScalar, false /*fNewComputedCol*/);
 		}
 
 		// normalize resulting expression
-		CExpression *pexprNormalized = CNormalizer::PexprNormalize(mp, pexprResult);
+		CExpression *pexprNormalized =
+			CNormalizer::PexprNormalize(mp, pexprResult);
 		pexprResult->Release();
 
 		pxfres->Add(pexprNormalized);

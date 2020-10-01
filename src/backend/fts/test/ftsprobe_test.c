@@ -14,6 +14,15 @@ static int poll_expected_revents;
 #define poll poll_mock
 static struct pollfd *PollFds;
 
+#define EXPECT_EREPORT()     \
+        expect_any_count(elog_start, filename, -1); \
+        expect_any_count(elog_start, lineno, -1); \
+        expect_any_count(elog_start, funcname, -1); \
+        will_be_called(elog_start); \
+        expect_any_count(elog_finish, elevel, -1); \
+        expect_any_count(elog_finish, fmt, -1); \
+        will_be_called(elog_finish);
+
 static int
 poll_mock (struct pollfd * p1, nfds_t p2, int p3)
 {
@@ -271,6 +280,7 @@ test_ftsConnect_one_failure_one_success(void **state)
 	expect_value(PQerrorMessage, conn, failure_pgconn);
 	will_return(PQerrorMessage, "");
 
+	EXPECT_EREPORT();
 	ftsConnect(&context);
 
 	assert_true(success_resp->state == FTS_PROBE_SEGMENT);
@@ -473,6 +483,8 @@ test_ftsReceive_when_fts_handler_FATAL(void **state)
 	expect_value(PQerrorMessage, conn, ftsInfo->conn);
 	will_return(PQerrorMessage, "");
 
+	EXPECT_EREPORT();
+
 	/*
 	 * TEST
 	 */
@@ -524,6 +536,8 @@ test_ftsReceive_when_fts_handler_ERROR(void **state)
 	will_return(PQresultStatus, PGRES_FATAL_ERROR);
 	expect_value(PQresultErrorMessage, res, result);
 	will_be_called(PQresultErrorMessage);
+
+	EXPECT_EREPORT();
 
 	expect_value(PQclear, res, result);
 	will_be_called(PQclear);
@@ -709,6 +723,7 @@ test_PrimayUpMirrorUpNotInSync_to_PrimaryDown(void **state)
 	will_be_called(PQfinish);
 	expect_value(PQfinish, conn, context.perSegInfos[1].conn);
 	will_be_called(PQfinish);
+	EXPECT_EREPORT();
 
 	/* No update must happen */
 	bool is_updated = processResponse(&context);
@@ -1300,6 +1315,7 @@ test_PrimaryUpMirrorDownNotInSync_to_PrimaryDown(void **state)
 	expect_value(PQfinish, conn, context.perSegInfos[1].conn);
 	will_be_called(PQfinish);
 
+	EXPECT_EREPORT();
 	bool is_updated = processResponse(&context);
 
 	assert_false(is_updated);
@@ -1324,6 +1340,7 @@ test_probeTimeout(void **state)
 	pg_time_t now = (pg_time_t) time(NULL);
 	context.perSegInfos[0].startTime = now - gp_fts_probe_timeout - 1;
 
+	EXPECT_EREPORT();
 	ftsCheckTimeout(&context.perSegInfos[0], now);
 
 	assert_true(context.perSegInfos[0].state == FTS_PROBE_FAILED);

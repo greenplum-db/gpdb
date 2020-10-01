@@ -497,7 +497,7 @@ select fun_array(25,50) as intarray, fun_array('abc'::text, 'bcf') AS textarray;
 (1 row)
 
 select fun_array(25,50) as intarray, fun_array('abc', 'bcf') AS textarray;
-ERROR:  could not determine polymorphic type because input has type "unknown"
+ERROR:  could not determine polymorphic type because input has type unknown
 create or replace function fun_is_greater(anyelement,anyelement) returns boolean AS $$ select $1 > $2 $$ language sql;
 select fun_is_greater(3,5);
  fun_is_greater 

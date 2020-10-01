@@ -1,6 +1,6 @@
-create schema uao_dml_cursor_@orientation@;
-set search_path=uao_dml_cursor_@orientation@;
-SET gp_default_storage_options='orientation=@orientation@';
+create schema uao_dml_cursor_@amname@;
+set search_path=uao_dml_cursor_@amname@;
+SET default_table_access_method=@amname@;
 
 -- @Description BINARY CURSOR.
 --
@@ -13,7 +13,7 @@ CREATE TABLE sto_uao_emp_forcursor (
    hiredate DATE,
    sal      NUMERIC(7,2),
    comm     NUMERIC(7,2) NULL,
-   dept     INT) with (appendonly=true) distributed by (empno);
+   dept     INT) distributed by (empno);
 
 insert into sto_uao_emp_forcursor values
  (1,'JOHNSON','ADMIN',6,'12-17-1990',18000,10,4)
@@ -37,7 +37,7 @@ DROP TABLE IF EXISTS sto_uao_dept_forcursor cascade;
 CREATE TABLE sto_uao_dept_forcursor (
    deptno INT NOT NULL,
    dname  VARCHAR(14),
-   loc    VARCHAR(15)) with (appendonly=true) distributed by (deptno);
+   loc    VARCHAR(15)) distributed by (deptno);
 
 insert into sto_uao_dept_forcursor values
  (1,'ACCOUNTING','ST LOUIS')
@@ -139,7 +139,7 @@ CREATE TABLE sto_uao_emp_forcursor (
    sal      NUMERIC(7,2),
    comm     NUMERIC(7,2) NULL,
    dept     INT) 
-with (appendonly=true) distributed by (empno);
+distributed by (empno);
 
 insert into sto_uao_emp_forcursor values
  (1,'JOHNSON','ADMIN',6,'12-17-1990',18000,10,4)
@@ -194,7 +194,7 @@ CREATE TABLE sto_uao_emp_forcursor (
    hiredate DATE,
    sal      NUMERIC(7,2),
    comm     NUMERIC(7,2) NULL,
-   dept     INT) with (appendonly=true) distributed by (empno);
+   dept     INT) distributed by (empno);
 
 insert into sto_uao_emp_forcursor values
  (1,'JOHNSON','ADMIN',6,'12-17-1990',18000,10,4)
@@ -218,7 +218,7 @@ DROP TABLE IF EXISTS sto_uao_dept_forcursor cascade;
 CREATE TABLE sto_uao_dept_forcursor (
    deptno INT NOT NULL,
    dname  VARCHAR(14),
-   loc    VARCHAR(15)) with (appendonly=true) distributed by (deptno);
+   loc    VARCHAR(15)) distributed by (deptno);
 
 insert into sto_uao_dept_forcursor values
  (1,'ACCOUNTING','ST LOUIS')

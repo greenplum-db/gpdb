@@ -27,21 +27,12 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CXformExternalGet2ExternalScan::CXformExternalGet2ExternalScan
-	(
-	CMemoryPool *mp
-	)
-	:
-	CXformImplementation
-		(
-		 // pattern
-		GPOS_NEW(mp) CExpression
-				(
-				mp,
-				GPOS_NEW(mp) CLogicalExternalGet(mp)
-				)
-		)
-{}
+CXformExternalGet2ExternalScan::CXformExternalGet2ExternalScan(CMemoryPool *mp)
+	: CXformImplementation(
+		  // pattern
+		  GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CLogicalExternalGet(mp)))
+{
+}
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -52,11 +43,8 @@ CXformExternalGet2ExternalScan::CXformExternalGet2ExternalScan
 //
 //---------------------------------------------------------------------------
 CXform::EXformPromise
-CXformExternalGet2ExternalScan::Exfp
-	(
-	CExpressionHandle & //exprhdl
-	)
-	const
+CXformExternalGet2ExternalScan::Exfp(CExpressionHandle &  //exprhdl
+) const
 {
 	return CXform::ExfpHigh;
 }
@@ -70,13 +58,9 @@ CXformExternalGet2ExternalScan::Exfp
 //
 //---------------------------------------------------------------------------
 void
-CXformExternalGet2ExternalScan::Transform
-	(
-	CXformContext *pxfctxt,
-	CXformResult *pxfres,
-	CExpression *pexpr
-	)
-	const
+CXformExternalGet2ExternalScan::Transform(CXformContext *pxfctxt,
+										  CXformResult *pxfres,
+										  CExpression *pexpr) const
 {
 	GPOS_ASSERT(NULL != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
@@ -97,16 +81,12 @@ CXformExternalGet2ExternalScan::Transform
 	pdrgpcrOutput->AddRef();
 
 	// create alternative expression
-	CExpression *pexprAlt =
-		GPOS_NEW(mp) CExpression
-			(
-			mp,
-			GPOS_NEW(mp) CPhysicalExternalScan(mp, pname, ptabdesc, pdrgpcrOutput)
-			);
+	CExpression *pexprAlt = GPOS_NEW(mp) CExpression(
+		mp,
+		GPOS_NEW(mp) CPhysicalExternalScan(mp, pname, ptabdesc, pdrgpcrOutput));
 
 	// add alternative to transformation result
 	pxfres->Add(pexprAlt);
 }
 
 // EOF
-

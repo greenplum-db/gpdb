@@ -504,7 +504,7 @@ WITH RECURSIVE w AS (
 SELECT * FROM w;
 $fn$;
 
--- Scenario 1: Parent is AOCO, 1 child is AO, 1 child is heap. Heap and AO children require full table rewrite
+-- Scenario 1: Parent is AOCO, 1 child is AO, 1 child is heap. AO children require full table rewrite
 CREATE TABLE rewrite_optimization_aoco_parent(a int, b int, c int)
 WITH (APPENDONLY = true, ORIENTATION = column)
 DISTRIBUTED BY (a)
@@ -512,22 +512,22 @@ DISTRIBUTED BY (a)
         (START (0) END (1) EVERY (1) WITH (APPENDONLY = true),
         START (1) END (2) EVERY (1) WITH (APPENDONLY = false));
 SELECT $$
-SELECT -1 AS segno, oid::regclass AS rel, relfilenode, relstorage
-FROM pg_class
-WHERE oid IN (SELECT descendant FROM descendants_of(:'ROOT_PARTITION_UNDER_TEST'))
+SELECT -1 AS segno, oid::regclass AS rel, relfilenode, (select amname from pg_am where pg_am.oid = relam)
+FROM pg_class c
+WHERE c.oid IN (SELECT descendant FROM descendants_of(:'ROOT_PARTITION_UNDER_TEST'))
 UNION ALL
-SELECT gp_segment_id, oid::regclass, relfilenode, relstorage
-FROM gp_dist_random('pg_class')
-WHERE oid IN (SELECT descendant FROM descendants_of(:'ROOT_PARTITION_UNDER_TEST'))
+SELECT gp_segment_id, oid::regclass, relfilenode, (select amname from pg_am where pg_am.oid = relam)
+FROM gp_dist_random('pg_class') c
+WHERE c.oid IN (SELECT descendant FROM descendants_of(:'ROOT_PARTITION_UNDER_TEST'))
 $$ AS qry \gset
 
 SELECT $$
 SELECT t.segno,
        t.rel,
-       t.relstorage,
+       t.amname,
        CASE
            WHEN table_relfilenode.segno IS NULL THEN 'full table rewritten'
-           ELSE 'ADD COLUMN optimized for columnar table' END AS aoco_add_col_optimized
+           ELSE 'ADD COLUMN optimized for table' END AS aoco_add_col_optimized
 FROM (:qry) t
          LEFT JOIN table_relfilenode USING (segno, rel, relfilenode)
 WHERE t.segno IN (-1, 0)
@@ -604,7 +604,7 @@ SELECT * FROM subpartition_aoco_leaf;
 
 REFRESH MATERIALIZED VIEW table_relfilenode;
 
--- Scenario 2: mixing ADD COLUMN with ALTER COLUMN TYPE should trigger full
+-- Scenario 2: mixing ADD COLUMN with ALTER COLUMN TYPE should trigger full on aoco
 -- table rewrite for every level
 ALTER TABLE subpartition_aoco_leaf ADD COLUMN new_col2 int DEFAULT 1, ALTER COLUMN new_col TYPE bigint;
 

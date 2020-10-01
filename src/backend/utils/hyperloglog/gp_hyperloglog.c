@@ -171,7 +171,7 @@ gp_hll_decompress_dense_unpacked(GpHLLCounter hloglog)
 
 	/* decompress the data */
 	pglz_decompress(hloglog->data, VARSIZE_ANY(hloglog) - sizeof(GpHLLData),
-					(char *) &htemp->data, data_rawsize);
+					(char *) &htemp->data, data_rawsize, true);
 
 	hloglog = htemp;
 
@@ -592,6 +592,13 @@ gp_hll_compress_dense(GpHLLCounter hloglog)
     	}
     	return hloglog;
     }
+
+	if (len < 0)
+		ereport(ERROR,
+				(errcode(ERRCODE_INTERNAL_ERROR),
+				 errmsg("LZ compression failed"),
+				 errdetail("LZ compression return value: %d", len)));
+
     memcpy(hloglog->data,dest,len);
 
     /* resize the counter to only encompass the compressed data and the struct
@@ -649,6 +656,13 @@ gp_hll_compress_dense_unpacked(GpHLLCounter hloglog)
 		}
 		return hloglog;
 	}
+
+	if (len < 0)
+		ereport(ERROR,
+				(errcode(ERRCODE_INTERNAL_ERROR),
+				 errmsg("LZ compression failed"),
+				 errdetail("LZ compression return value: %d", len)));
+
 	memcpy(hloglog->data, dest, len);
 
 	/* resize the counter to only encompass the compressed data and the struct
@@ -710,7 +724,7 @@ gp_hll_decompress_dense(GpHLLCounter hloglog)
 
     /* decompress the data */
     pglz_decompress(hloglog->data, VARSIZE_ANY(hloglog) - sizeof(GpHLLData),
-					dest, data_rawsize);
+					dest, data_rawsize, true);
 
     /* copy the struct internals but not the data into a counter with enough 
      * space for the uncompressed data  */

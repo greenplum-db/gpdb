@@ -34,7 +34,8 @@
 
 /*
  * Notes:
- * Only (selected) functions in _this_ file should treat chr* as non-constant.
+ * Only (selected) functions in _this_ file should treat the chr arrays
+ * of a cvec as non-constant.
  */
 
 /*
@@ -62,11 +63,12 @@ newcvec(int nchrs,				/* to hold this many chrs... */
  * Returns pointer as convenience.
  */
 static struct cvec *
-clearcvec(struct cvec * cv)
+clearcvec(struct cvec *cv)
 {
 	assert(cv != NULL);
 	cv->nchrs = 0;
 	cv->nranges = 0;
+	cv->cclasscode = -1;
 	return cv;
 }
 
@@ -74,24 +76,24 @@ clearcvec(struct cvec * cv)
  * addchr - add a chr to a cvec
  */
 static void
-addchr(struct cvec * cv,		/* character vector */
+addchr(struct cvec *cv,			/* character vector */
 	   chr c)					/* character to add */
 {
 	assert(cv->nchrs < cv->chrspace);
-	cv->chrs[cv->nchrs++] = (chr) c;
+	cv->chrs[cv->nchrs++] = c;
 }
 
 /*
  * addrange - add a range to a cvec
  */
 static void
-addrange(struct cvec * cv,		/* character vector */
+addrange(struct cvec *cv,		/* character vector */
 		 chr from,				/* first character of range */
 		 chr to)				/* last character of range */
 {
 	assert(cv->nranges < cv->rangespace);
-	cv->ranges[cv->nranges * 2] = (chr) from;
-	cv->ranges[cv->nranges * 2 + 1] = (chr) to;
+	cv->ranges[cv->nranges * 2] = from;
+	cv->ranges[cv->nranges * 2 + 1] = to;
 	cv->nranges++;
 }
 
@@ -107,7 +109,7 @@ addrange(struct cvec * cv,		/* character vector */
  * so transientness is a convenient behavior.
  */
 static struct cvec *
-getcvec(struct vars * v,		/* context */
+getcvec(struct vars *v,			/* context */
 		int nchrs,				/* to hold this many chrs... */
 		int nranges)			/* ... and this many ranges */
 {
@@ -130,7 +132,7 @@ getcvec(struct vars * v,		/* context */
  * freecvec - free a cvec
  */
 static void
-freecvec(struct cvec * cv)
+freecvec(struct cvec *cv)
 {
 	FREE(cv);
 }

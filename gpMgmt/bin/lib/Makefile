@@ -7,8 +7,14 @@ SUBDIRS= pexpect
 
 $(recurse)
 
-PROGRAMS= __init__.py gp_bash_functions.sh gp_bash_version.sh gpconfigurenewsegment \
-	gpcreateseg.sh gphostcachelookup.py gppinggpfdist.py gpstate.py multidd
+PROGRAMS= __init__.py \
+	gp_bash_functions.sh \
+	gp_bash_version.sh \
+	gpconfigurenewsegment \
+	gpcreateseg.sh \
+	gppinggpfdist.py \
+	gpstate.py \
+	multidd
 
 installdirs:
 	$(MKDIR_P) '$(DESTDIR)$(bindir)/lib'

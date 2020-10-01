@@ -3,15 +3,15 @@
  * subtrans.c
  *		PostgreSQL subtransaction-log manager
  *
- * The pg_subtrans manager is a pg_clog-like manager that stores the parent
+ * The pg_subtrans manager is a pg_xact-like manager that stores the parent
  * transaction Id for each transaction.  It is a fundamental part of the
  * nested transactions implementation.  A main transaction has a parent
  * of InvalidTransactionId, and each subtransaction has its immediate parent.
  * The tree can easily be walked from child to parent, but not in the
  * opposite direction.
  *
- * This code is based on clog.c, but the robustness requirements
- * are completely different from pg_clog, because we only need to remember
+ * This code is based on xact.c, but the robustness requirements
+ * are completely different from pg_xact, because we only need to remember
  * pg_subtrans information for currently-open transactions.  Thus, there is
  * no need to preserve data over a crash and restart.
  *
@@ -19,7 +19,7 @@
  * data across crashes.  During database startup, we simply force the
  * currently-active page of SUBTRANS to zeroes.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/backend/access/transam/subtrans.c
@@ -33,7 +33,6 @@
 #include "access/transam.h"
 #include "pg_trace.h"
 #include "utils/snapmgr.h"
-#include "utils/tqual.h"
 
 
 /*
@@ -107,11 +106,9 @@ SubTransGetData(TransactionId xid, SubTransData* subData)
 
 /*
  * Record the parent of a subtransaction in the subtrans log.
- *
- * In some cases we may need to overwrite an existing value.
  */
 void
-SubTransSetParent(TransactionId xid, TransactionId parent, bool overwriteOK)
+SubTransSetParent(TransactionId xid, TransactionId parent)
 {
 	int			pageno = TransactionIdToPage(xid);
 	int			entryno = TransactionIdToEntry(xid);
@@ -133,6 +130,7 @@ SubTransSetParent(TransactionId xid, TransactionId parent, bool overwriteOK)
 	}
 
 	Assert(TransactionIdIsValid(parent));
+	Assert(TransactionIdFollows(xid, parent));
 
 	LWLockAcquire(SubtransControlLock, LW_EXCLUSIVE);
 
@@ -140,16 +138,18 @@ SubTransSetParent(TransactionId xid, TransactionId parent, bool overwriteOK)
 	ptr = (SubTransData *) SubTransCtl->shared->page_buffer[slotno];
 	ptr += entryno;
 
-	/* Current state should be 0 */
-	Assert(ptr->parent == InvalidTransactionId ||
-		   (ptr->parent == parent && overwriteOK));
-	Assert(ptr->topMostParent == InvalidTransactionId ||
-		   (ptr->topMostParent == subData.topMostParent && overwriteOK));
-
-	ptr->parent = parent;
-	ptr->topMostParent = subData.topMostParent;
-
-	SubTransCtl->shared->page_dirty[slotno] = true;
+	/*
+	 * It's possible we'll try to set the parent xid multiple times but we
+	 * shouldn't ever be changing the xid from one valid xid to another valid
+	 * xid, which would corrupt the data structure.
+	 */
+	if (ptr->parent != parent)
+	{
+		Assert(ptr->parent == InvalidTransactionId);
+		ptr->parent = parent;
+		ptr->topMostParent = subData.topMostParent;
+		SubTransCtl->shared->page_dirty[slotno] = true;
+	}
 
 	LWLockRelease(SubtransControlLock);
 }
@@ -249,14 +249,15 @@ ZeroSUBTRANSPage(int pageno)
 
 /*
  * This must be called ONCE during postmaster or standalone-backend startup,
- * after StartupXLOG has initialized ShmemVariableCache->nextXid.
+ * after StartupXLOG has initialized ShmemVariableCache->nextFullXid.
  *
- * oldestActiveXID is the oldest XID of any prepared transaction, or nextXid
+ * oldestActiveXID is the oldest XID of any prepared transaction, or nextFullXid
  * if there are none.
  */
 void
 StartupSUBTRANS(TransactionId oldestActiveXID)
 {
+	FullTransactionId nextFullXid;
 	int			startPage;
 	int			endPage;
 
@@ -269,7 +270,8 @@ StartupSUBTRANS(TransactionId oldestActiveXID)
 	LWLockAcquire(SubtransControlLock, LW_EXCLUSIVE);
 
 	startPage = TransactionIdToPage(oldestActiveXID);
-	endPage = TransactionIdToPage(ShmemVariableCache->nextXid);
+	nextFullXid = ShmemVariableCache->nextFullXid;
+	endPage = TransactionIdToPage(XidFromFullTransactionId(nextFullXid));
 
 	while (startPage != endPage)
 	{

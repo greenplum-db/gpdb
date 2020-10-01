@@ -16,13 +16,16 @@
  */
 
 #include "postgres.h"
-#include "miscadmin.h"
 
 #include "access/genam.h"
 #include "access/bitmap.h"
+#include "access/bitmap_private.h"
+#include "access/bitmap_xlog.h"
 #include "access/heapam.h"
 #include "access/reloptions.h"
 #include "access/relscan.h"
+#include "miscadmin.h"
+#include "storage/bufmgr.h"
 
 static void _bitmap_findnextword(BMBatchWords* words, uint64 nextReadNo);
 static void _bitmap_resetWord(BMBatchWords *words, uint32 prevStartNo);
@@ -1119,12 +1122,6 @@ _bitmap_log_updatewords(Relation rel,
 
 		PageSetLSN(lovPage, recptr);
 	}
-}
-
-bytea *
-bmoptions(Datum reloptions, bool validate)
-{
-	return default_reloptions(reloptions, validate, RELOPT_KIND_BITMAP);
 }
 
 

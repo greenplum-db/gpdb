@@ -24,17 +24,13 @@ using namespace gpdxl;
 //		Constructor
 //
 //---------------------------------------------------------------------------
-CDXLPhysicalAgg::CDXLPhysicalAgg
-	(
-	CMemoryPool *mp,
-	EdxlAggStrategy dxl_agg_strategy,
-	BOOL stream_safe
-	)
-	:
-	CDXLPhysical(mp),
-	m_grouping_colids_array(NULL),
+CDXLPhysicalAgg::CDXLPhysicalAgg(CMemoryPool *mp,
+								 EdxlAggStrategy dxl_agg_strategy,
+								 BOOL stream_safe)
+	: CDXLPhysical(mp),
+	  m_grouping_colids_array(NULL),
 	  m_dxl_agg_strategy(dxl_agg_strategy),
-	m_stream_safe(stream_safe)
+	  m_stream_safe(stream_safe)
 {
 	GPOS_ASSERT_IMP(stream_safe, (EdxlaggstrategyHashed == dxl_agg_strategy));
 }
@@ -136,7 +132,7 @@ CDXLPhysicalAgg::GetAggStrategyNameStr() const
 const ULongPtrArray *
 CDXLPhysicalAgg::GetGroupingColidArray() const
 {
-	return m_grouping_colids_array; 
+	return m_grouping_colids_array;
 }
 
 
@@ -165,30 +161,38 @@ CDXLPhysicalAgg::SetGroupingCols(ULongPtrArray *grouping_colids_array)
 //
 //---------------------------------------------------------------------------
 void
-CDXLPhysicalAgg::SerializeGroupingColsToDXL
-	(
-	CXMLSerializer *xml_serializer
-	)
-	const
+CDXLPhysicalAgg::SerializeGroupingColsToDXL(
+	CXMLSerializer *xml_serializer) const
 {
 	GPOS_ASSERT(NULL != m_grouping_colids_array);
-	
-	const CWStringConst *grouping_cols_str = CDXLTokens::GetDXLTokenStr(EdxltokenGroupingCols);
-	const CWStringConst *grouping_col_str = CDXLTokens::GetDXLTokenStr(EdxltokenGroupingCol);
-		
-	xml_serializer->OpenElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), grouping_cols_str);
-	
+
+	const CWStringConst *grouping_cols_str =
+		CDXLTokens::GetDXLTokenStr(EdxltokenGroupingCols);
+	const CWStringConst *grouping_col_str =
+		CDXLTokens::GetDXLTokenStr(EdxltokenGroupingCol);
+
+	xml_serializer->OpenElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
+		grouping_cols_str);
+
 	for (ULONG idx = 0; idx < m_grouping_colids_array->Size(); idx++)
 	{
 		GPOS_ASSERT(NULL != (*m_grouping_colids_array)[idx]);
 		ULONG grouping_colid = *((*m_grouping_colids_array)[idx]);
-		
-		xml_serializer->OpenElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), grouping_col_str);
-		xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenColId), grouping_colid);
-		xml_serializer->CloseElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), grouping_col_str);
+
+		xml_serializer->OpenElement(
+			CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
+			grouping_col_str);
+		xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenColId),
+									 grouping_colid);
+		xml_serializer->CloseElement(
+			CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
+			grouping_col_str);
 	}
-	
-	xml_serializer->CloseElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), grouping_cols_str);
+
+	xml_serializer->CloseElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
+		grouping_cols_str);
 }
 
 //---------------------------------------------------------------------------
@@ -200,27 +204,28 @@ CDXLPhysicalAgg::SerializeGroupingColsToDXL
 //
 //---------------------------------------------------------------------------
 void
-CDXLPhysicalAgg::SerializeToDXL
-	(
-	CXMLSerializer *xml_serializer,
-	const CDXLNode *node
-	)
-	const
+CDXLPhysicalAgg::SerializeToDXL(CXMLSerializer *xml_serializer,
+								const CDXLNode *node) const
 {
 	const CWStringConst *element_name = GetOpNameStr();
-	
-	xml_serializer->OpenElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
-	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenAggStrategy), GetAggStrategyNameStr());
-	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenAggStreamSafe), m_stream_safe);
-	
+
+	xml_serializer->OpenElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	xml_serializer->AddAttribute(
+		CDXLTokens::GetDXLTokenStr(EdxltokenAggStrategy),
+		GetAggStrategyNameStr());
+	xml_serializer->AddAttribute(
+		CDXLTokens::GetDXLTokenStr(EdxltokenAggStreamSafe), m_stream_safe);
+
 	// serialize properties
 	node->SerializePropertiesToDXL(xml_serializer);
 	SerializeGroupingColsToDXL(xml_serializer);
-	
+
 	// serialize children
 	node->SerializeChildrenToDXL(xml_serializer);
-	
-	xml_serializer->CloseElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);		
+
+	xml_serializer->CloseElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 }
 
 
@@ -230,32 +235,31 @@ CDXLPhysicalAgg::SerializeToDXL
 //		CDXLPhysicalAgg::AssertValid
 //
 //	@doc:
-//		Checks whether operator node is well-structured 
+//		Checks whether operator node is well-structured
 //
 //---------------------------------------------------------------------------
 void
-CDXLPhysicalAgg::AssertValid
-	(
-	const CDXLNode *node,
-	BOOL validate_children
-	) const
+CDXLPhysicalAgg::AssertValid(const CDXLNode *node, BOOL validate_children) const
 {
 	// assert proj list and filter are valid
 	CDXLPhysical::AssertValid(node, validate_children);
-	
-	GPOS_ASSERT((EdxlaggstrategySentinel > m_dxl_agg_strategy) && (EdxlaggstrategyPlain <= m_dxl_agg_strategy));
+
+	GPOS_ASSERT((EdxlaggstrategySentinel > m_dxl_agg_strategy) &&
+				(EdxlaggstrategyPlain <= m_dxl_agg_strategy));
 
 	GPOS_ASSERT(EdxlaggIndexSentinel == node->Arity());
 	GPOS_ASSERT(NULL != m_grouping_colids_array);
-	
+
 	CDXLNode *child_dxlnode = (*node)[EdxlaggIndexChild];
-	GPOS_ASSERT(EdxloptypePhysical == child_dxlnode->GetOperator()->GetDXLOperatorType());
-	
+	GPOS_ASSERT(EdxloptypePhysical ==
+				child_dxlnode->GetOperator()->GetDXLOperatorType());
+
 	if (validate_children)
 	{
-		child_dxlnode->GetOperator()->AssertValid(child_dxlnode, validate_children);
+		child_dxlnode->GetOperator()->AssertValid(child_dxlnode,
+												  validate_children);
 	}
 }
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 // EOF

@@ -46,7 +46,7 @@ htfifo_create(void)
 static void
 htfifo_cleanup(htup_fifo htf)
 {
-	GenericTuple tup;
+	MinimalTuple tup;
 
 	AssertArg(htf != NULL);
 
@@ -95,12 +95,15 @@ htfifo_destroy(htup_fifo htf)
  * init-time, then an error is flagged.
  */
 void
-htfifo_addtuple(htup_fifo htf, GenericTuple tup)
+htfifo_addtuple(htup_fifo htf, MinimalTuple tup)
 {
 	htf_entry	p_ent;
 
 	AssertArg(htf != NULL);
 	AssertArg(tup != NULL);
+
+	/* Serialized tuple should never have external attribute */
+	Assert(!(tup->t_infomask & HEAP_HASEXTERNAL));
 
 	/* Populate the new entry. */
 	if (htf->freelist != NULL)
@@ -132,14 +135,14 @@ htfifo_addtuple(htup_fifo htf, GenericTuple tup)
 
 
 /*
- * Retrieve the next HeapTuple from the start of the FIFO. If the FIFO
+ * Retrieve the next tuple from the start of the FIFO. If the FIFO
  * is empty then NULL is returned.
  */
-GenericTuple
+MinimalTuple
 htfifo_gettuple(htup_fifo htf)
 {
 	htf_entry	p_ent;
-	GenericTuple tup;
+	MinimalTuple tup;
 
 	AssertArg(htf != NULL);
 

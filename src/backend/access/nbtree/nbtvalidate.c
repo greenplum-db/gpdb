@@ -3,7 +3,7 @@
  * nbtvalidate.c
  *	  Opclass validator for btree.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -22,6 +22,7 @@
 #include "catalog/pg_opfamily.h"
 #include "catalog/pg_type.h"
 #include "utils/builtins.h"
+#include "utils/regproc.h"
 #include "utils/syscache.h"
 
 
@@ -60,6 +61,7 @@ btree_or_bitmap_validate(Oid opclassoid, const char *amname)
 	List	   *grouplist;
 	OpFamilyOpFuncGroup *opclassgroup;
 	List	   *familytypes;
+	int			usefulgroups;
 	int			i;
 	ListCell   *lc;
 
@@ -104,12 +106,19 @@ btree_or_bitmap_validate(Oid opclassoid, const char *amname)
 				ok = check_amproc_signature(procform->amproc, VOIDOID, true,
 											1, 1, INTERNALOID);
 				break;
+			case BTINRANGE_PROC:
+				ok = check_amproc_signature(procform->amproc, BOOLOID, true,
+											5, 5,
+											procform->amproclefttype,
+											procform->amproclefttype,
+											procform->amprocrighttype,
+											BOOLOID, BOOLOID);
+				break;
 			default:
 				ereport(INFO,
 						(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
-						 errmsg("%s operator family \"%s\" contains function %s with invalid support number %d",
-								amname,
-								opfamilyname,
+						 errmsg("operator family \"%s\" of access method %s contains function %s with invalid support number %d",
+								opfamilyname, amname,
 								format_procedure(procform->amproc),
 								procform->amprocnum)));
 				result = false;
@@ -120,9 +129,8 @@ btree_or_bitmap_validate(Oid opclassoid, const char *amname)
 		{
 			ereport(INFO,
 					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
-					 errmsg("%s operator family \"%s\" contains function %s with wrong signature for support number %d",
-							amname,
-							opfamilyname,
+					 errmsg("operator family \"%s\" of access method %s contains function %s with wrong signature for support number %d",
+							opfamilyname, amname,
 							format_procedure(procform->amproc),
 							procform->amprocnum)));
 			result = false;
@@ -141,9 +149,8 @@ btree_or_bitmap_validate(Oid opclassoid, const char *amname)
 		{
 			ereport(INFO,
 					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
-					 errmsg("%s operator family \"%s\" contains operator %s with invalid strategy number %d",
-							amname,
-							opfamilyname,
+					 errmsg("operator family \"%s\" of access method %s contains operator %s with invalid strategy number %d",
+							opfamilyname, opfamilyname,
 							format_operator(oprform->amopopr),
 							oprform->amopstrategy)));
 			result = false;
@@ -155,9 +162,8 @@ btree_or_bitmap_validate(Oid opclassoid, const char *amname)
 		{
 			ereport(INFO,
 					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
-					 errmsg("%s operator family \"%s\" contains invalid ORDER BY specification for operator %s",
-							amname,
-							opfamilyname,
+					 errmsg("operator family \"%s\" of access method %s contains invalid ORDER BY specification for operator %s",
+							opfamilyname, opfamilyname,
 							format_operator(oprform->amopopr))));
 			result = false;
 		}
@@ -169,9 +175,8 @@ btree_or_bitmap_validate(Oid opclassoid, const char *amname)
 		{
 			ereport(INFO,
 					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
-					 errmsg("%soperator family \"%s\" contains operator %s with wrong signature",
-							amname,
-							opfamilyname,
+					 errmsg("operator family \"%s\" of access method %s contains operator %s with wrong signature",
+							opfamilyname, opfamilyname,
 							format_operator(oprform->amopopr))));
 			result = false;
 		}
@@ -179,11 +184,27 @@ btree_or_bitmap_validate(Oid opclassoid, const char *amname)
 
 	/* Now check for inconsistent groups of operators/functions */
 	grouplist = identify_opfamily_groups(oprlist, proclist);
+	usefulgroups = 0;
 	opclassgroup = NULL;
 	familytypes = NIL;
 	foreach(lc, grouplist)
 	{
 		OpFamilyOpFuncGroup *thisgroup = (OpFamilyOpFuncGroup *) lfirst(lc);
+
+		/*
+		 * It is possible for an in_range support function to have a RHS type
+		 * that is otherwise irrelevant to the opfamily --- for instance, SQL
+		 * requires the datetime_ops opclass to have range support with an
+		 * interval offset.  So, if this group appears to contain only an
+		 * in_range function, ignore it: it doesn't represent a pair of
+		 * supported types.
+		 */
+		if (thisgroup->operatorset == 0 &&
+			thisgroup->functionset == (1 << BTINRANGE_PROC))
+			continue;
+
+		/* Else count it as a relevant group */
+		usefulgroups++;
 
 		/* Remember the group exactly matching the test opclass */
 		if (thisgroup->lefttype == opcintype &&
@@ -200,8 +221,8 @@ btree_or_bitmap_validate(Oid opclassoid, const char *amname)
 
 		/*
 		 * Complain if there seems to be an incomplete set of either operators
-		 * or support functions for this datatype pair.  The only thing that
-		 * is considered optional is the sortsupport function.
+		 * or support functions for this datatype pair.  The only things
+		 * considered optional are the sortsupport and in_range functions.
 		 */
 		if (thisgroup->operatorset !=
 			((1 << BTLessStrategyNumber) |
@@ -212,9 +233,8 @@ btree_or_bitmap_validate(Oid opclassoid, const char *amname)
 		{
 			ereport(INFO,
 					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
-					 errmsg("%s operator family \"%s\" is missing operator(s) for types %s and %s",
-							amname,
-							opfamilyname,
+					 errmsg("operator family \"%s\" of access method %s is missing operator(s) for types %s and %s",
+							opfamilyname, opfamilyname,
 							format_type_be(thisgroup->lefttype),
 							format_type_be(thisgroup->righttype))));
 			result = false;
@@ -223,9 +243,8 @@ btree_or_bitmap_validate(Oid opclassoid, const char *amname)
 		{
 			ereport(INFO,
 					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
-					 errmsg("%s operator family \"%s\" is missing support function for types %s and %s",
-							amname,
-							opfamilyname,
+					 errmsg("operator family \"%s\" of access method %s is missing support function for types %s and %s",
+							opfamilyname, amname,
 							format_type_be(thisgroup->lefttype),
 							format_type_be(thisgroup->righttype))));
 			result = false;
@@ -238,9 +257,8 @@ btree_or_bitmap_validate(Oid opclassoid, const char *amname)
 	{
 		ereport(INFO,
 				(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
-				 errmsg("%s operator class \"%s\" is missing operator(s)",
-						amname,
-						opclassname)));
+				 errmsg("operator class \"%s\" of access method %s is missing operator(s)",
+						opclassname, amname)));
 		result = false;
 	}
 
@@ -251,14 +269,12 @@ btree_or_bitmap_validate(Oid opclassoid, const char *amname)
 	 * additional qual clauses from equivalence classes, so it seems
 	 * reasonable to insist that all built-in btree opfamilies be complete.
 	 */
-	if (list_length(grouplist) !=
-		list_length(familytypes) * list_length(familytypes))
+	if (usefulgroups != (list_length(familytypes) * list_length(familytypes)))
 	{
 		ereport(INFO,
 				(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
-				 errmsg("%s operator family \"%s\" is missing cross-type operator(s)",
-						amname,
-						opfamilyname)));
+				 errmsg("operator family \"%s\" of access method %s is missing cross-type operator(s)",
+						opfamilyname, amname)));
 		result = false;
 	}
 

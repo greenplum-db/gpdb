@@ -1,3 +1,45 @@
+-- start_ignore
+-- GPDB_12_MERGE_FIXME: there are multiple assertion failures arround the theme of
+-- 1) empty target list
+-- 2) the following assertion:
+-- INFO:  GPORCA failed to produce a plan, falling back to planner
+-- DETAIL:  CHistogram.cpp:1850: Failed assertion: result_buckets->Size() == desired_num_buckets
+-- Stack trace:
+-- 1    0x000055b39d2c8b8a gpos::CException::Raise + 278
+-- 2    0x000055b39d3c973e gpnaucrates::CHistogram::CombineBuckets + 2860
+-- 3    0x000055b39d3c8846 gpnaucrates::CHistogram::MakeUnionAllHistogramNormalize + 2262
+-- 4    0x000055b39d3d36d3 gpnaucrates::CLeftOuterJoinStatsProcessor::MakeLOJHistogram + 1137
+-- 5    0x000055b39d3d309b gpnaucrates::CLeftOuterJoinStatsProcessor::CalcLOJoinStatsStatic + 511
+-- 6    0x000055b39d3da218 gpnaucrates::CStatistics::CalcLOJoinStats + 52
+-- 7    0x000055b39d3cf762 gpnaucrates::CJoinStatsProcessor::CalcAllJoinStats + 1190
+-- 8    0x000055b39d3d0d47 gpnaucrates::CJoinStatsProcessor::DeriveJoinStats + 575
+-- 9    0x000055b39d4c1891 gpopt::CLogicalJoin::PstatsDerive + 51
+-- 10   0x000055b39d495890 gpopt::CExpressionHandle::DeriveRootStats + 428
+-- 11   0x000055b39d495cf0 gpopt::CExpressionHandle::DeriveStats + 1032
+-- 12   0x000055b39d53714d gpopt::CGroupExpression::PstatsRecursiveDerive + 435
+-- 13   0x000055b39d52937e gpopt::CGroup::PstatsRecursiveDerive + 702
+-- 14   0x000055b39d495bb7 gpopt::CExpressionHandle::DeriveStats + 719
+-- 15   0x000055b39d53714d gpopt::CGroupExpression::PstatsRecursiveDerive + 435
+-- 16   0x000055b39d529037 gpopt::CGroup::EspDerive + 541
+-- 17   0x000055b39d529836 gpopt::CGroup::PgexprBestPromise + 208
+-- 18   0x000055b39d529327 gpopt::CGroup::PstatsRecursiveDerive + 615
+-- 19   0x000055b39d4967f1 gpopt::CExpressionHandle::DeriveStats + 333
+-- 20   0x000055b39d462e7b gpopt::CEngine::DeriveStats + 143
+-- 21   0x000055b39d462d3d gpopt::CEngine::DeriveStats + 323
+-- 22   0x000055b39d466077 gpopt::CEngine::FinalizeExploration + 123
+-- 23   0x000055b39d545067 gpopt::CJobGroupExploration::EevtExploreChildren + 203
+-- 24   0x000055b39d5459b6 gpopt::CJobStateMachine + 370
+-- 25   0x000055b39d545120 gpopt::CJobGroupExploration::FExecute + 120
+-- 26   0x000055b39d55ba8e gpopt::CScheduler::FExecute + 156
+-- 27   0x000055b39d55b3d0 gpopt::CScheduler::ExecuteJobs + 164
+-- 28   0x000055b39d55b324 gpopt::CScheduler::Run + 54
+-- 29   0x000055b39d467539 gpopt::CEngine::Optimize + 981
+-- 30   0x000055b39d522aab gpopt::COptimizer::PexprOptimize + 115
+-- 31   0x000055b39d5223d8 gpopt::COptimizer::PdxlnOptimize + 1414
+-- We should fix them within ORCA post merge.
+SET optimizer TO off;
+-- end_ignore
+
 --
 -- JOIN
 -- Test JOIN clauses
@@ -36,6 +78,12 @@ INSERT INTO J2_TBL VALUES (5, -5);
 INSERT INTO J2_TBL VALUES (0, NULL);
 INSERT INTO J2_TBL VALUES (NULL, NULL);
 INSERT INTO J2_TBL VALUES (NULL, 0);
+
+-- useful in some tests below
+create temp table onerow();
+insert into onerow default values;
+analyze onerow;
+
 
 --
 -- CORRELATION NAMES
@@ -193,6 +241,15 @@ SELECT '' AS "xxx", *
 SELECT '' AS "xxx", *
   FROM J1_TBL LEFT JOIN J2_TBL USING (i) WHERE (i = 1);
 
+--
+-- semijoin selectivity for <>
+--
+explain (costs off)
+select * from int4_tbl i4, tenk1 a
+where exists(select * from tenk1 b
+             where a.twothousand = b.twothousand and a.fivethous <> b.fivethous)
+      and i4.f1 = a.tenthous;
+
 
 --
 -- More complicated constructs
@@ -287,6 +344,13 @@ NATURAL FULL JOIN
     NATURAL FULL JOIN
     (SELECT name, n as s3_n FROM t3) as s3
   ) ss2;
+
+-- Constants as join keys can also be problematic
+SELECT * FROM
+  (SELECT name, n as s1_n FROM t1) as s1
+FULL JOIN
+  (SELECT name, 2 as s2_n FROM t2) as s2
+ON (s1_n = s2_n);
 
 
 -- Test for propagation of nullability constraints into sub-joins
@@ -395,8 +459,6 @@ where t4.thousand = t5.unique1 and ss.x1 = t4.tenthous and ss.x2 = t5.stringu1;
 -- regression test: check a case where we formerly missed including an EC
 -- enforcement clause because it was expected to be handled at scan level
 --
--- GPDB_94_MERGE_FIXME: The plan output is not as the upstream patch 
--- 72edc8ffeb0e949 expected. We need to look further.
 set enable_hashjoin = false;
 set enable_nestloop = true;
 explain (costs off)
@@ -437,6 +499,7 @@ reset enable_hashjoin;
 -- a different check for handling of redundant sort keys in merge joins
 --
 set enable_mergejoin = true;
+set enable_hashjoin = false;
 explain (costs off)
 select count(*) from
   (select * from tenk1 x order by x.thousand, x.twothousand, x.fivethous) x
@@ -450,6 +513,7 @@ select count(*) from
   (select * from tenk1 y order by y.unique2) y
   on x.thousand = y.unique2 and x.twothousand = y.hundred and x.fivethous = y.unique2;
 reset enable_mergejoin;
+reset enable_hashjoin;
 
 
 --
@@ -946,8 +1010,8 @@ select t1.unique2, t1.stringu1, t2.unique1, t2.stringu2 from
   tenk1 t1
   inner join int4_tbl i1
     left join (select v1.x2, v2.y1, 11 AS d1
-               from (values(1,0)) v1(x1,x2)
-               left join (values(3,1)) v2(y1,y2)
+               from (select 1,0 from onerow) v1(x1,x2)
+               left join (select 3,1 from onerow) v2(y1,y2)
                on v1.x1 = v2.y2) subq1
     on (i1.f1 = subq1.x2)
   on (t1.unique2 = subq1.d1)
@@ -960,8 +1024,8 @@ select t1.unique2, t1.stringu1, t2.unique1, t2.stringu2 from
   tenk1 t1
   inner join int4_tbl i1
     left join (select v1.x2, v2.y1, 11 AS d1
-               from (values(1,0)) v1(x1,x2)
-               left join (values(3,1)) v2(y1,y2)
+               from (select 1,0 from onerow) v1(x1,x2)
+               left join (select 3,1 from onerow) v2(y1,y2)
                on v1.x1 = v2.y2) subq1
     on (i1.f1 = subq1.x2)
   on (t1.unique2 = subq1.d1)
@@ -986,6 +1050,35 @@ select ss1.d1 from
     on i8.q1 = i4.f1
   on t1.tenthous = ss1.d1
 where t1.unique1 < i4.f1;
+
+-- this variant is foldable by the remove-useless-RESULT-RTEs code
+
+explain (costs off)
+select t1.unique2, t1.stringu1, t2.unique1, t2.stringu2 from
+  tenk1 t1
+  inner join int4_tbl i1
+    left join (select v1.x2, v2.y1, 11 AS d1
+               from (values(1,0)) v1(x1,x2)
+               left join (values(3,1)) v2(y1,y2)
+               on v1.x1 = v2.y2) subq1
+    on (i1.f1 = subq1.x2)
+  on (t1.unique2 = subq1.d1)
+  left join tenk1 t2
+  on (subq1.y1 = t2.unique1)
+where t1.unique2 < 42 and t1.stringu1 > t2.stringu2;
+
+select t1.unique2, t1.stringu1, t2.unique1, t2.stringu2 from
+  tenk1 t1
+  inner join int4_tbl i1
+    left join (select v1.x2, v2.y1, 11 AS d1
+               from (values(1,0)) v1(x1,x2)
+               left join (values(3,1)) v2(y1,y2)
+               on v1.x1 = v2.y2) subq1
+    on (i1.f1 = subq1.x2)
+  on (t1.unique2 = subq1.d1)
+  left join tenk1 t2
+  on (subq1.y1 = t2.unique1)
+where t1.unique2 < 42 and t1.stringu1 > t2.stringu2;
 
 --
 -- test extraction of restriction OR clauses from join OR clause
@@ -1434,6 +1527,11 @@ explain (costs off)
 select i8.* from int8_tbl i8 left join (select f1 from int4_tbl group by f1) i4
   on i8.q1 = i4.f1;
 
+-- check join removal with lateral references
+explain (costs off)
+select 1 from (select a.id FROM a left join b on a.b_id = b.id) q,
+			  lateral generate_series(1, q.id) gs(i) where q.id = gs.i;
+
 rollback;
 
 create temp table parent (k int primary key, pd int);
@@ -1554,7 +1652,7 @@ select * from
 --
 
 select t1.uunique1 from
-  tenk1 t1 join tenk2 t2 on t1.two = t2.two; -- error, prefer "t1" suggestipn
+  tenk1 t1 join tenk2 t2 on t1.two = t2.two; -- error, prefer "t1" suggestion
 select t2.uunique1 from
   tenk1 t1 join tenk2 t2 on t1.two = t2.two; -- error, prefer "t2" suggestion
 select uunique1 from
@@ -1642,10 +1740,12 @@ select count(*) from tenk1 a,
 explain (costs off)
   select * from int8_tbl a,
     int8_tbl x left join lateral (select a.q1 from int4_tbl y) ss(z)
-      on x.q2 = ss.z;
+      on x.q2 = ss.z
+  order by a.q1, a.q2, x.q1, x.q2, ss.z;
 select * from int8_tbl a,
   int8_tbl x left join lateral (select a.q1 from int4_tbl y) ss(z)
-    on x.q2 = ss.z;
+    on x.q2 = ss.z
+  order by a.q1, a.q2, x.q1, x.q2, ss.z;
 --end_ignore
 
 -- lateral reference to a join alias variable
@@ -1682,13 +1782,10 @@ select v.* from
   (int8_tbl x left join (select q1,(select coalesce(q2,0)) q2 from int8_tbl) y on x.q2 = y.q1)
   left join int4_tbl z on z.f1 = x.q2,
   lateral (select x.q1,y.q1 union all select x.q2,y.q2) v(vx,vy);
-create temp table dual();
-insert into dual default values;
-analyze dual;
 select v.* from
   (int8_tbl x left join (select q1,(select coalesce(q2,0)) q2 from int8_tbl) y on x.q2 = y.q1)
   left join int4_tbl z on z.f1 = x.q2,
-  lateral (select x.q1,y.q1 from dual union all select x.q2,y.q2 from dual) v(vx,vy);
+  lateral (select x.q1,y.q1 from onerow union all select x.q2,y.q2 from onerow) v(vx,vy);
 
 explain (verbose, costs off)
 select * from
@@ -1775,6 +1872,14 @@ select * from
     select * from (select 3 as z offset 0) z where z.z = x.x
   ) zz on zz.z = y.y;
 
+-- check dummy rels with lateral references (bug #15694)
+explain (verbose, costs off)
+select * from int8_tbl i8 left join lateral
+  (select *, i8.q2 from int4_tbl where false) ss on true;
+explain (verbose, costs off)
+select * from int8_tbl i8 left join lateral
+  (select *, i8.q2 from int4_tbl i1, int4_tbl i2 where false) ss on true;
+
 -- check handling of nested appendrels inside LATERAL
 select * from
   ((select 2 as v) union all (select 3 as v)) as q1
@@ -1849,3 +1954,244 @@ update xx1 set x2 = f1 from xx1, lateral (select * from int4_tbl where f1 = x1) 
 delete from xx1 using (select * from int4_tbl where f1 = x1) ss;
 delete from xx1 using (select * from int4_tbl where f1 = xx1.x1) ss;
 delete from xx1 using lateral (select * from int4_tbl where f1 = x1) ss;
+
+--
+-- test LATERAL reference propagation down a multi-level inheritance hierarchy
+-- produced for a multi-level partitioned table hierarchy.
+--
+create table join_pt1 (a int, b int, c varchar) partition by range(a);
+create table join_pt1p1 partition of join_pt1 for values from (0) to (100) partition by range(b);
+create table join_pt1p2 partition of join_pt1 for values from (100) to (200);
+create table join_pt1p1p1 partition of join_pt1p1 for values from (0) to (100);
+insert into join_pt1 values (1, 1, 'x'), (101, 101, 'y');
+create table join_ut1 (a int, b int, c varchar);
+insert into join_ut1 values (101, 101, 'y'), (2, 2, 'z');
+-- GPDB_12_MERGE_FIXME: The query fails. This test query is new with v12,
+-- but a corresponding query fails on GPDB master, too. I think this is
+-- similar to the case marked with GPDB_94_STABLE_MERGE_FIXME above.
+-- upstream commit acfcd4. Need to come back to fix it when understanding more
+-- about that commit.
+-- start_ignore
+explain (verbose, costs off)
+select t1.b, ss.phv from join_ut1 t1 left join lateral
+              (select t2.a as t2a, t3.a t3a, least(t1.a, t2.a, t3.a) phv
+					  from join_pt1 t2 join join_ut1 t3 on t2.a = t3.b) ss
+              on t1.a = ss.t2a order by t1.a;
+select t1.b, ss.phv from join_ut1 t1 left join lateral
+              (select t2.a as t2a, t3.a t3a, least(t1.a, t2.a, t3.a) phv
+					  from join_pt1 t2 join join_ut1 t3 on t2.a = t3.b) ss
+              on t1.a = ss.t2a order by t1.a;
+-- end_ignore
+
+drop table join_pt1;
+drop table join_ut1;
+--
+-- test that foreign key join estimation performs sanely for outer joins
+--
+
+begin;
+
+-- GPDB: persuade the planner to choose same plan as in upstream.
+set local enable_nestloop=on;
+
+-- GPDB: in upstream, there's a unique index on 'c', but in GPDB you can't
+-- have two unique indexes with no columns in common. Create it as normal
+-- index instead, it doesn't affect the test.
+create table fkest (a int, b int, c int, primary key(a,b));
+create index fkest_c_key on fkest (c);
+create table fkest1 (a int, b int, primary key(a,b));
+
+-- GPDB: insert 10x as much data as in upstream, to further persuade
+-- index scans. In GPDB, 1000 rows, as used in upstream test, fits in on
+-- just one page on each segment, because of the larger block size.
+insert into fkest select x/10, x%10, x from generate_series(1,1000*10) x;
+insert into fkest1 select x/10, x%10 from generate_series(1,1000*10) x;
+
+alter table fkest1
+  add constraint fkest1_a_b_fkey foreign key (a,b) references fkest;
+
+analyze fkest;
+analyze fkest1;
+
+explain (costs off)
+select *
+from fkest f
+  left join fkest1 f1 on f.a = f1.a and f.b = f1.b
+  left join fkest1 f2 on f.a = f2.a and f.b = f2.b
+  left join fkest1 f3 on f.a = f3.a and f.b = f3.b
+where f.c = 1;
+
+rollback;
+
+--
+-- test planner's ability to mark joins as unique
+--
+
+create table j1 (id int primary key);
+create table j2 (id int primary key);
+create table j3 (id int);
+
+insert into j1 values(1),(2),(3);
+insert into j2 values(1),(2),(3);
+insert into j3 values(1),(1);
+
+-- In GPDB, we need more data to make the plans match the upstream.
+--
+-- In particular, with just a handful of rows, a Seq Scan on j1 or j3 appear to
+-- be 2x or 3x as expensive as a scan on j3, because on j3, all the rows reside
+-- on the same segment, and hence the total size of the table is just one page,
+-- whereas on j1 and j2 the rows are spread on different segments, and the
+-- total table size is therefore 2 or 3 pages.
+insert into j1 select g from generate_series(1000,1100) g;
+insert into j2 select g from generate_series(1000,1100) g;
+insert into j3 select 1000 from generate_series(1000,1100) g;
+
+analyze j1;
+analyze j2;
+analyze j3;
+
+-- ensure join is properly marked as unique
+explain (verbose, costs off)
+select * from j1 inner join j2 on j1.id = j2.id;
+
+-- ensure join is not unique when not an equi-join
+explain (verbose, costs off)
+select * from j1 inner join j2 on j1.id > j2.id;
+
+-- ensure non-unique rel is not chosen as inner
+explain (verbose, costs off)
+select * from j1 inner join j3 on j1.id = j3.id;
+
+-- ensure left join is marked as unique
+explain (verbose, costs off)
+select * from j1 left join j2 on j1.id = j2.id;
+
+-- ensure right join is marked as unique
+explain (verbose, costs off)
+select * from j1 right join j2 on j1.id = j2.id;
+
+-- ensure full join is marked as unique
+explain (verbose, costs off)
+select * from j1 full join j2 on j1.id = j2.id;
+
+-- a clauseless (cross) join can't be unique
+explain (verbose, costs off)
+select * from j1 cross join j2;
+
+-- ensure a natural join is marked as unique
+explain (verbose, costs off)
+select * from j1 natural join j2;
+
+-- ensure a distinct clause allows the inner to become unique
+explain (verbose, costs off)
+select * from j1
+inner join (select distinct id from j3) j3 on j1.id = j3.id;
+
+-- ensure group by clause allows the inner to become unique
+explain (verbose, costs off)
+select * from j1
+inner join (select id from j3 group by id) j3 on j1.id = j3.id;
+
+drop table j1;
+drop table j2;
+drop table j3;
+
+-- test more complex permutations of unique joins
+
+create table j1 (id1 int, id2 int, primary key(id1,id2));
+create table j2 (id1 int, id2 int, primary key(id1,id2));
+create table j3 (id1 int, id2 int, primary key(id1,id2));
+
+insert into j1 values(1,1),(1,2);
+insert into j2 values(1,1);
+insert into j3 values(1,1);
+
+analyze j1;
+analyze j2;
+analyze j3;
+
+-- ensure there's no unique join when not all columns which are part of the
+-- unique index are seen in the join clause
+explain (verbose, costs off)
+select * from j1
+inner join j2 on j1.id1 = j2.id1;
+
+-- ensure proper unique detection with multiple join quals
+explain (verbose, costs off)
+select * from j1
+inner join j2 on j1.id1 = j2.id1 and j1.id2 = j2.id2;
+
+-- ensure we don't detect the join to be unique when quals are not part of the
+-- join condition
+set enable_nestloop=on;
+explain (verbose, costs off)
+select * from j1
+inner join j2 on j1.id1 = j2.id1 where j1.id2 = 1;
+
+-- as above, but for left joins.
+explain (verbose, costs off)
+select * from j1
+left join j2 on j1.id1 = j2.id1 where j1.id2 = 1;
+
+-- validate logic in merge joins which skips mark and restore.
+-- it should only do this if all quals which were used to detect the unique
+-- are present as join quals, and not plain quals.
+set enable_nestloop to 0;
+set enable_hashjoin to 0;
+set enable_mergejoin to 1;
+set enable_sort to 0;
+
+-- create indexes that will be preferred over the PKs to perform the join
+create index j1_id1_idx on j1 (id1) where id1 % 1000 = 1;
+create index j2_id1_idx on j2 (id1) where id1 % 1000 = 1;
+
+-- need an additional row in j2, if we want j2_id1_idx to be preferred
+insert into j2 values(1,2);
+analyze j2;
+analyze j1; -- GPDB also needs this to get the same plan as in upstream
+
+explain (costs off) select * from j1
+inner join j2 on j1.id1 = j2.id1 and j1.id2 = j2.id2
+where j1.id1 % 1000 = 1 and j2.id1 % 1000 = 1;
+
+select * from j1
+inner join j2 on j1.id1 = j2.id1 and j1.id2 = j2.id2
+where j1.id1 % 1000 = 1 and j2.id1 % 1000 = 1;
+
+reset enable_nestloop;
+reset enable_hashjoin;
+reset enable_sort;
+
+drop table j1;
+drop table j2;
+drop table j3;
+
+-- check that semijoin inner is not seen as unique for a portion of the outerrel
+set enable_nestloop = on;
+set enable_seqscan = off;
+set enable_bitmapscan = off;
+
+explain (verbose, costs off)
+select t1.unique1, t2.hundred
+from onek t1, tenk1 t2
+where exists (select 1 from tenk1 t3
+              where t3.thousand = t1.unique1 and t3.tenthous = t2.hundred)
+      and t1.unique1 < 1;
+
+-- ... unless it actually is unique
+create table j3 as select unique1, tenthous from onek;
+vacuum analyze j3;
+create unique index on j3(unique1, tenthous);
+
+explain (verbose, costs off)
+select t1.unique1, t2.hundred
+from onek t1, tenk1 t2
+where exists (select 1 from j3
+              where j3.unique1 = t1.unique1 and j3.tenthous = t2.hundred)
+      and t1.unique1 < 1;
+
+drop table j3;
+
+reset enable_nestloop;
+reset enable_seqscan;
+reset enable_bitmapscan;

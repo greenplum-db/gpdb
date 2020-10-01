@@ -26,14 +26,9 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CFunctionalDependency::CFunctionalDependency
-	(
-	CColRefSet *pcrsKey,
-	CColRefSet *pcrsDetermined
-	)
-	:
-	m_pcrsKey(pcrsKey),
-	m_pcrsDetermined(pcrsDetermined)
+CFunctionalDependency::CFunctionalDependency(CColRefSet *pcrsKey,
+											 CColRefSet *pcrsDetermined)
+	: m_pcrsKey(pcrsKey), m_pcrsDetermined(pcrsDetermined)
 {
 	GPOS_ASSERT(0 < pcrsKey->Size());
 	GPOS_ASSERT(0 < m_pcrsDetermined->Size());
@@ -64,11 +59,7 @@ CFunctionalDependency::~CFunctionalDependency()
 //
 //---------------------------------------------------------------------------
 BOOL
-CFunctionalDependency::FIncluded
-	(
-	CColRefSet *pcrs
-	)
-	const
+CFunctionalDependency::FIncluded(CColRefSet *pcrs) const
 {
 	return pcrs->ContainsAll(m_pcrsKey) && pcrs->ContainsAll(m_pcrsDetermined);
 }
@@ -85,7 +76,8 @@ CFunctionalDependency::FIncluded
 ULONG
 CFunctionalDependency::HashValue() const
 {
-	return gpos::CombineHashes(m_pcrsKey->HashValue(), m_pcrsDetermined->HashValue());
+	return gpos::CombineHashes(m_pcrsKey->HashValue(),
+							   m_pcrsDetermined->HashValue());
 }
 
 
@@ -98,18 +90,15 @@ CFunctionalDependency::HashValue() const
 //
 //---------------------------------------------------------------------------
 BOOL
-CFunctionalDependency::Equals
-	(
-	const CFunctionalDependency *pfd
-	)
-	const
+CFunctionalDependency::Equals(const CFunctionalDependency *pfd) const
 {
 	if (NULL == pfd)
 	{
 		return false;
 	}
 
-	return m_pcrsKey->Equals(pfd->PcrsKey()) && m_pcrsDetermined->Equals(pfd->PcrsDetermined());
+	return m_pcrsKey->Equals(pfd->PcrsKey()) &&
+		   m_pcrsDetermined->Equals(pfd->PcrsDetermined());
 }
 
 
@@ -122,11 +111,7 @@ CFunctionalDependency::Equals
 //
 //---------------------------------------------------------------------------
 IOstream &
-CFunctionalDependency::OsPrint
-	(
-	IOstream &os
-	)
-	const
+CFunctionalDependency::OsPrint(IOstream &os) const
 {
 	os << "(" << *m_pcrsKey << ")";
 	os << " --> (" << *m_pcrsDetermined << ")";
@@ -143,10 +128,7 @@ CFunctionalDependency::OsPrint
 //
 //---------------------------------------------------------------------------
 ULONG
-CFunctionalDependency::HashValue
-	(
-	const CFunctionalDependencyArray *pdrgpfd
-	)
+CFunctionalDependency::HashValue(const CFunctionalDependencyArray *pdrgpfd)
 {
 	ULONG ulHash = 0;
 	if (NULL != pdrgpfd)
@@ -171,23 +153,20 @@ CFunctionalDependency::HashValue
 //
 //---------------------------------------------------------------------------
 BOOL
-CFunctionalDependency::Equals
-	(
-	const CFunctionalDependencyArray *pdrgpfdFst,
-	const CFunctionalDependencyArray *pdrgpfdSnd
-	)
+CFunctionalDependency::Equals(const CFunctionalDependencyArray *pdrgpfdFst,
+							  const CFunctionalDependencyArray *pdrgpfdSnd)
 {
 	if (NULL == pdrgpfdFst && NULL == pdrgpfdSnd)
-		return true;	/* both empty */
+		return true; /* both empty */
 
 	if (NULL == pdrgpfdFst || NULL == pdrgpfdSnd)
-		return false;	/* one is empty, the other is not */
+		return false; /* one is empty, the other is not */
 
 	const ULONG ulLenFst = pdrgpfdFst->Size();
 	const ULONG ulLenSnd = pdrgpfdSnd->Size();
 
 	if (ulLenFst != ulLenSnd)
-	  return false;
+		return false;
 
 	BOOL fEqual = true;
 	for (ULONG ulFst = 0; fEqual && ulFst < ulLenFst; ulFst++)
@@ -215,11 +194,8 @@ CFunctionalDependency::Equals
 //
 //---------------------------------------------------------------------------
 CColRefSet *
-CFunctionalDependency::PcrsKeys
-	(
-	CMemoryPool *mp,
-	const CFunctionalDependencyArray *pdrgpfd
-	)
+CFunctionalDependency::PcrsKeys(CMemoryPool *mp,
+								const CFunctionalDependencyArray *pdrgpfd)
 {
 	CColRefSet *pcrs = GPOS_NEW(mp) CColRefSet(mp);
 
@@ -245,11 +221,8 @@ CFunctionalDependency::PcrsKeys
 //
 //---------------------------------------------------------------------------
 CColRefArray *
-CFunctionalDependency::PdrgpcrKeys
-	(
-	CMemoryPool *mp,
-	const CFunctionalDependencyArray *pdrgpfd
-	)
+CFunctionalDependency::PdrgpcrKeys(CMemoryPool *mp,
+								   const CFunctionalDependencyArray *pdrgpfd)
 {
 	CColRefSet *pcrs = PcrsKeys(mp, pdrgpfd);
 	CColRefArray *colref_array = pcrs->Pdrgpcr(mp);

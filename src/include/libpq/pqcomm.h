@@ -6,7 +6,7 @@
  * NOTE: for historical reasons, this does not correspond to pqcomm.c.
  * pqcomm.c's routines are declared in libpq.h.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/libpq/pqcomm.h
@@ -57,7 +57,7 @@ struct sockaddr_storage
 #define ss_len		ss_stuff.sa.sa_len
 #define HAVE_STRUCT_SOCKADDR_STORAGE_SS_LEN 1
 #endif
-#endif   /* HAVE_STRUCT_SOCKADDR_STORAGE */
+#endif							/* HAVE_STRUCT_SOCKADDR_STORAGE */
 
 typedef struct
 {
@@ -111,7 +111,7 @@ typedef struct
 
 /* The earliest and latest frontend/backend protocol version supported. */
 
-#define PG_PROTOCOL_EARLIEST	PG_PROTOCOL(1,0)
+#define PG_PROTOCOL_EARLIEST	PG_PROTOCOL(2,0)
 #define PG_PROTOCOL_LATEST		PG_PROTOCOL(3,0)
 
 typedef uint32 ProtocolVersion; /* FE/BE protocol version number */
@@ -137,19 +137,19 @@ typedef uint32 PacketLen;
 #define SM_DATABASE		64
 #define SM_USER			32
 /* We append database name if db_user_namespace true. */
-#define SM_DATABASE_USER (SM_DATABASE+SM_USER+1)		/* +1 for @ */
+#define SM_DATABASE_USER (SM_DATABASE+SM_USER+1)	/* +1 for @ */
 #define SM_OPTIONS		64
 #define SM_UNUSED		64
 #define SM_TTY			64
 
 typedef struct StartupPacket
 {
-	ProtocolVersion protoVersion;		/* Protocol version */
+	ProtocolVersion protoVersion;	/* Protocol version */
 	char		database[SM_DATABASE];	/* Database name */
 	/* Db_user_namespace appends dbname */
 	char		user[SM_USER];	/* User name */
 	char		options[SM_OPTIONS];	/* Optional additional args */
-	char		unused[SM_UNUSED];		/* Unused */
+	char		unused[SM_UNUSED];	/* Unused */
 	char		tty[SM_TTY];	/* Tty for debug output */
 } StartupPacket;
 
@@ -176,8 +176,9 @@ extern bool Db_user_namespace;
 #define AUTH_REQ_GSS		7	/* GSSAPI without wrap() */
 #define AUTH_REQ_GSS_CONT	8	/* Continue GSS exchanges */
 #define AUTH_REQ_SSPI		9	/* SSPI negotiate without wrap() */
-#define AUTH_REQ_SASL	   10	/* SASL authentication. Not supported before
-								 * libpq version 10. */
+#define AUTH_REQ_SASL	   10	/* Begin SASL authentication */
+#define AUTH_REQ_SASL_CONT 11	/* Continue SASL authentication */
+#define AUTH_REQ_SASL_FIN  12	/* Final SASL message */
 
 typedef uint32 AuthRequest;
 
@@ -204,17 +205,18 @@ typedef uint32 AuthRequest;
 typedef struct CancelRequestPacket
 {
 	/* Note that each field is stored in network byte order! */
-	MsgType		cancelRequestCode;		/* code to identify a cancel request */
+	MsgType		cancelRequestCode;	/* code to identify a cancel request */
 	uint32		backendPID;		/* PID of client's backend */
 	uint32		cancelAuthCode; /* secret key to authorize cancel */
 } CancelRequestPacket;
 
 
 /*
- * A client can also start by sending a SSL negotiation request, to get a
- * secure channel.
+ * A client can also start by sending a SSL or GSSAPI negotiation request to
+ * get a secure channel.
  */
 #define NEGOTIATE_SSL_CODE PG_PROTOCOL(1234,5679)
+#define NEGOTIATE_GSS_CODE PG_PROTOCOL(1234,5680)
 
 /* the number of times trying to acquire the send mutex for the front
  * end connection after detecting process is exitting */
@@ -225,4 +227,4 @@ typedef struct CancelRequestPacket
 #define GPCONN_TYPE_FAULT "fault"
 #define GPCONN_TYPE_INTERNAL "internal"
 
-#endif   /* PQCOMM_H */
+#endif							/* PQCOMM_H */

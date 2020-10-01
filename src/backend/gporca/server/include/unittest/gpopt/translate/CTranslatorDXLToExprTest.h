@@ -7,7 +7,7 @@
 //
 //	@doc:
 //		Tests translating DXL trees into Expr tree
-//		
+//
 //---------------------------------------------------------------------------
 
 
@@ -27,67 +27,62 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CTranslatorDXLToExprTest
-	//
-	//	@doc:
-	//		Static unit tests
-	//
-	//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+//	@class:
+//		CTranslatorDXLToExprTest
+//
+//	@doc:
+//		Static unit tests
+//
+//---------------------------------------------------------------------------
 
-	class CTranslatorDXLToExprTest
-	{
-		private:
+class CTranslatorDXLToExprTest
+{
+private:
+	// translate a dxl document and check against the expected Expr tree's string representation
+	static GPOS_RESULT EresTranslateAndCheck(
+		CMemoryPool *mp,
+		const CHAR
+			*dxl_filename,	// DXL document representing the DXL logical tree
+		const CWStringDynamic
+			*pstrExpQuery  // string representation of the expected query
+	);
 
-			// translate a dxl document and check against the expected Expr tree's string representation
-			static GPOS_RESULT EresTranslateAndCheck
-						(
-						CMemoryPool *mp,
-						const CHAR *dxl_filename, // DXL document representing the DXL logical tree
-						const CWStringDynamic *pstrExpQuery // string representation of the expected query
-						);
+	// translate a dxl document into Expr Tree
+	static CExpression *Pexpr(
+		CMemoryPool *mp,  // memory pool
+		const CHAR
+			*dxl_filename  // DXL document representing the DXL logical tree
+	);
 
-			// translate a dxl document into Expr Tree
-			static CExpression* Pexpr
-						(
-						CMemoryPool *mp, // memory pool
-						const CHAR *dxl_filename // DXL document representing the DXL logical tree
-						);
+	// generate a string representation of a given Expr tree
+	static CWStringDynamic *Pstr(CMemoryPool *mp, CExpression *pexpr);
 
-			// generate a string representation of a given Expr tree
-			static CWStringDynamic *Pstr
-					(
-					CMemoryPool *mp,
-					CExpression *pexpr
-					);
+	// create a get expression for a table (r) with two integer columns
+	static CExpression *PexprGet(CMemoryPool *mp);
 
-			// create a get expression for a table (r) with two integer columns
-			static CExpression *PexprGet(CMemoryPool *mp);
+public:
+	// unittests
+	static GPOS_RESULT EresUnittest();
 
-		public:
+	// tests for supported operators
+	static GPOS_RESULT EresUnittest_MetadataColumnMapping();
+	static GPOS_RESULT EresUnittest_SingleTableQuery();
+	static GPOS_RESULT EresUnittest_SelectQuery();
+	static GPOS_RESULT EresUnittest_SelectQueryWithConst();
+	static GPOS_RESULT EresUnittest_SelectQueryWithBoolExpr();
+	static GPOS_RESULT EresUnittest_SelectQueryWithScalarOp();
+	static GPOS_RESULT EresUnittest_Limit();
+	static GPOS_RESULT EresUnittest_LimitNoOffset();
+	static GPOS_RESULT EresUnittest_ScalarSubquery();
+	static GPOS_RESULT EresUnittest_TVF();
+	static GPOS_RESULT EresUnittest_SelectQueryWithConstInList();
 
-			// unittests
-			static GPOS_RESULT EresUnittest();
+};	// class CTranslatorDXLToExprTest
+}  // namespace gpopt
 
-			// tests for supported operators
-			static GPOS_RESULT EresUnittest_MetadataColumnMapping();
-			static GPOS_RESULT EresUnittest_SingleTableQuery();
-			static GPOS_RESULT EresUnittest_SelectQuery();
-			static GPOS_RESULT EresUnittest_SelectQueryWithConst();
-			static GPOS_RESULT EresUnittest_SelectQueryWithBoolExpr();
-			static GPOS_RESULT EresUnittest_SelectQueryWithScalarOp();
-			static GPOS_RESULT EresUnittest_Limit();
-			static GPOS_RESULT EresUnittest_LimitNoOffset();
-			static GPOS_RESULT EresUnittest_ScalarSubquery();
-			static GPOS_RESULT EresUnittest_TVF();
-			static GPOS_RESULT EresUnittest_SelectQueryWithConstInList();
-			
-	}; // class CTranslatorDXLToExprTest
-}
-
-#endif // !GPOPT_CTranslatorDXLToExprTest_H
+#endif	// !GPOPT_CTranslatorDXLToExprTest_H
 
 // EOF

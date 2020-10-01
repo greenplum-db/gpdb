@@ -15,35 +15,31 @@
 
 namespace gpnaucrates
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CPointTest
-	//
-	//	@doc:
-	//		Static unit tests for point
-	//
-	//---------------------------------------------------------------------------
-	class CPointTest
-	{
-		public:
+//---------------------------------------------------------------------------
+//	@class:
+//		CPointTest
+//
+//	@doc:
+//		Static unit tests for point
+//
+//---------------------------------------------------------------------------
+class CPointTest
+{
+public:
+	// unittests
+	static GPOS_RESULT EresUnittest();
 
-			// unittests
-			static
-			GPOS_RESULT EresUnittest();
+	// point related tests
+	static GPOS_RESULT EresUnittest_CPointInt4();
 
-			// point related tests
-			static
-			GPOS_RESULT EresUnittest_CPointInt4();
+	static GPOS_RESULT EresUnittest_CPointBool();
 
-			static
-			GPOS_RESULT EresUnittest_CPointBool();
+};	// class CPointTest
+}  // namespace gpnaucrates
 
-	}; // class CPointTest
-}
-
-#endif // !GPNAUCRATES_CPointTest_H
+#endif	// !GPNAUCRATES_CPointTest_H
 
 
 // EOF

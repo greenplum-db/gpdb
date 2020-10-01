@@ -27,22 +27,15 @@ using namespace gpmd;
 //		Constructor
 //
 //---------------------------------------------------------------------------
-CDXLBucket::CDXLBucket
-	(
-	CDXLDatum *dxl_datum_lower,
-	CDXLDatum *dxl_datum_upper,
-	BOOL is_lower_closed,
-	BOOL is_upper_closed,
-	CDouble frequency,
-	CDouble distinct
-	)
-	:
-	m_lower_bound_dxl_datum(dxl_datum_lower),
-	m_upper_bound_dxl_datum(dxl_datum_upper),
-	m_is_lower_closed(is_lower_closed),
-	m_is_upper_closed(is_upper_closed),
-	m_frequency(frequency),
-	m_distinct(distinct)
+CDXLBucket::CDXLBucket(CDXLDatum *dxl_datum_lower, CDXLDatum *dxl_datum_upper,
+					   BOOL is_lower_closed, BOOL is_upper_closed,
+					   CDouble frequency, CDouble distinct)
+	: m_lower_bound_dxl_datum(dxl_datum_lower),
+	  m_upper_bound_dxl_datum(dxl_datum_upper),
+	  m_is_lower_closed(is_lower_closed),
+	  m_is_upper_closed(is_upper_closed),
+	  m_frequency(frequency),
+	  m_distinct(distinct)
 {
 	GPOS_ASSERT(NULL != dxl_datum_lower);
 	GPOS_ASSERT(NULL != dxl_datum_upper);
@@ -130,23 +123,29 @@ CDXLBucket::GetNumDistinct() const
 //
 //---------------------------------------------------------------------------
 void
-CDXLBucket::Serialize
-	(
-	CXMLSerializer *xml_serializer
-	) 
-	const
+CDXLBucket::Serialize(CXMLSerializer *xml_serializer) const
 {
-	xml_serializer->OpenElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), 
-						CDXLTokens::GetDXLTokenStr(EdxltokenColumnStatsBucket));
-	
-	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenStatsFrequency), m_frequency);
-	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenStatsDistinct), m_distinct);
-	
-	SerializeBoundaryValue(xml_serializer, CDXLTokens::GetDXLTokenStr(EdxltokenStatsBucketLowerBound), m_lower_bound_dxl_datum, m_is_lower_closed);
-	SerializeBoundaryValue(xml_serializer, CDXLTokens::GetDXLTokenStr(EdxltokenStatsBucketUpperBound), m_upper_bound_dxl_datum, m_is_upper_closed);
-	
-	xml_serializer->CloseElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), 
-						CDXLTokens::GetDXLTokenStr(EdxltokenColumnStatsBucket));
+	xml_serializer->OpenElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
+		CDXLTokens::GetDXLTokenStr(EdxltokenColumnStatsBucket));
+
+	xml_serializer->AddAttribute(
+		CDXLTokens::GetDXLTokenStr(EdxltokenStatsFrequency), m_frequency);
+	xml_serializer->AddAttribute(
+		CDXLTokens::GetDXLTokenStr(EdxltokenStatsDistinct), m_distinct);
+
+	SerializeBoundaryValue(
+		xml_serializer,
+		CDXLTokens::GetDXLTokenStr(EdxltokenStatsBucketLowerBound),
+		m_lower_bound_dxl_datum, m_is_lower_closed);
+	SerializeBoundaryValue(
+		xml_serializer,
+		CDXLTokens::GetDXLTokenStr(EdxltokenStatsBucketUpperBound),
+		m_upper_bound_dxl_datum, m_is_upper_closed);
+
+	xml_serializer->CloseElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
+		CDXLTokens::GetDXLTokenStr(EdxltokenColumnStatsBucket));
 
 	GPOS_CHECK_ABORT;
 }
@@ -160,19 +159,18 @@ CDXLBucket::Serialize
 //
 //---------------------------------------------------------------------------
 void
-CDXLBucket::SerializeBoundaryValue
-	(
-	CXMLSerializer *xml_serializer,
-	const CWStringConst *elem_str,
-	CDXLDatum *dxl_datum,
-	BOOL is_bound_closed
-	)
-	const
+CDXLBucket::SerializeBoundaryValue(CXMLSerializer *xml_serializer,
+								   const CWStringConst *elem_str,
+								   CDXLDatum *dxl_datum,
+								   BOOL is_bound_closed) const
 {
-	xml_serializer->OpenElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), elem_str);
-	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenStatsBoundClosed), is_bound_closed);
+	xml_serializer->OpenElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), elem_str);
+	xml_serializer->AddAttribute(
+		CDXLTokens::GetDXLTokenStr(EdxltokenStatsBoundClosed), is_bound_closed);
 	dxl_datum->Serialize(xml_serializer);
-	xml_serializer->CloseElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), elem_str);
+	xml_serializer->CloseElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), elem_str);
 }
 
 #ifdef GPOS_DEBUG
@@ -185,16 +183,12 @@ CDXLBucket::SerializeBoundaryValue
 //
 //---------------------------------------------------------------------------
 void
-CDXLBucket::DebugPrint
-	(
-	IOstream & //os
-	)
-	const
+CDXLBucket::DebugPrint(IOstream &  //os
+) const
 {
 	// TODO:  - Feb 13, 2012; implement
 }
 
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 // EOF
-

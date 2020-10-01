@@ -15,29 +15,27 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		COrderSpecTest
-	//
-	//	@doc:
-	//		Static unit tests for order specs
-	//
-	//---------------------------------------------------------------------------
-	class COrderSpecTest
-	{
+//---------------------------------------------------------------------------
+//	@class:
+//		COrderSpecTest
+//
+//	@doc:
+//		Static unit tests for order specs
+//
+//---------------------------------------------------------------------------
+class COrderSpecTest
+{
+public:
+	// unittests
+	static GPOS_RESULT EresUnittest();
+	static GPOS_RESULT EresUnittest_Basics();
 
-		public:
+};	// class COrderSpecTest
+}  // namespace gpopt
 
-			// unittests
-			static GPOS_RESULT EresUnittest();
-			static GPOS_RESULT EresUnittest_Basics();
-
-	}; // class COrderSpecTest
-}
-
-#endif // !GPOS_COrderSpecTest_H
+#endif	// !GPOS_COrderSpecTest_H
 
 
 // EOF

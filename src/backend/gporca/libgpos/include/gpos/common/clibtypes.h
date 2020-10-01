@@ -21,29 +21,28 @@
 
 namespace gpos
 {
-	// container for user and system time
-	typedef struct rusage RUSAGE;
+// container for user and system time
+typedef struct rusage RUSAGE;
 
-	// represent an elapsed time
-	typedef struct timeval TIMEVAL;
+// represent an elapsed time
+typedef struct timeval TIMEVAL;
 
-	// hold minimal information about the local time zone
-	typedef struct timezone TIMEZONE;
+// hold minimal information about the local time zone
+typedef struct timezone TIMEZONE;
 
-	// represents an elapsed time
-	typedef struct timespec	TIMESPEC;
+// represents an elapsed time
+typedef struct timespec TIMESPEC;
 
-	// store system time values
-	typedef time_t TIME_T;
+// store system time values
+typedef time_t TIME_T;
 
-	// containing a calendar date and time broken down into its components.
-	typedef struct tm TIME;
+// containing a calendar date and time broken down into its components.
+typedef struct tm TIME;
 
-	// store information of a calling process
-	typedef Dl_info DL_INFO;
-}
+// store information of a calling process
+typedef Dl_info DL_INFO;
+}  // namespace gpos
 
-#endif // !GPOS_clibtypes_H
+#endif	// !GPOS_clibtypes_H
 
 // EOF
-

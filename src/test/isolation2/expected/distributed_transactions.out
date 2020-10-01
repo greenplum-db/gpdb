@@ -1,0 +1,55 @@
+-- Test error after ProcArrayEndTransaction
+
+-- abort fail on QD
+SELECT gp_inject_fault( 'abort_after_procarray_end', 'error', 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+BEGIN;
+BEGIN
+CREATE TABLE test_xact_abort_failure(a int);
+CREATE
+ABORT;
+ERROR:  fault triggered, fault name:'abort_after_procarray_end' fault type:'error'
+SELECT gp_inject_fault( 'abort_after_procarray_end', 'reset', 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- abort fail on QE
+SELECT gp_inject_fault( 'abort_after_procarray_end', 'error', dbid) from gp_segment_configuration where role = 'p' and content = 0;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+BEGIN;
+BEGIN
+CREATE TABLE test_xact_abort_failure(a int);
+CREATE
+ABORT;
+ABORT
+SELECT gp_inject_fault( 'abort_after_procarray_end', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = 0;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- abort fail in local transaction
+SELECT gp_inject_fault( 'abort_after_procarray_end', 'error', dbid) from gp_segment_configuration where role = 'p' and content = 0;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+0U: BEGIN;
+BEGIN
+0U: CREATE TABLE test_xact_abort_failure(a int);
+CREATE
+0U: ABORT;
+ERROR:  fault triggered, fault name:'abort_after_procarray_end' fault type:'error'
+SELECT gp_inject_fault( 'abort_after_procarray_end', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = 0;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)

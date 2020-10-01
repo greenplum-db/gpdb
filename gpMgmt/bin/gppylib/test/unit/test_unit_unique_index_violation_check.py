@@ -1,6 +1,6 @@
 from mock import *
 
-from gp_unittest import *
+from .gp_unittest import *
 from gpcheckcat_modules.unique_index_violation_check import UniqueIndexViolationCheck
 
 
@@ -10,8 +10,8 @@ class UniqueIndexViolationCheckTestCase(GpTestCase):
 
         self.index_query_result = Mock()
         self.index_query_result.getresult.return_value = [
-            (9001, 'index1', 'table1', '{index1_column1,index1_column2}'),
-            (9001, 'index2', 'table1', '{index2_column1,index2_column2}')
+            (9001, 'index1', 'table1', ['index1_column1','index1_column2']),
+            (9001, 'index2', 'table1', ['index2_column1','index2_column2'])
         ]
 
         self.violated_segments_query_result = Mock()

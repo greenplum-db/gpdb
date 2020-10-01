@@ -1,18 +1,17 @@
 /*-------------------------------------------------------------------------
  *
  * pg_constraint.h
- *	  definition of the system "constraint" relation (pg_constraint)
- *	  along with the relation's initial contents.
+ *	  definition of the "constraint" system catalog (pg_constraint)
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_constraint.h
  *
  * NOTES
- *	  the genbki.pl script reads this file and generates .bki
- *	  information from the DATA() statements.
+ *	  The Catalog.pm module reads this file and derives schema
+ *	  information.
  *
  *-------------------------------------------------------------------------
  */
@@ -20,6 +19,10 @@
 #define PG_CONSTRAINT_H
 
 #include "catalog/genbki.h"
+#include "catalog/pg_constraint_d.h"
+
+#include "catalog/dependency.h"
+#include "nodes/pg_list.h"
 
 #include "catalog/dependency.h"
 #include "nodes/pg_list.h"
@@ -30,10 +33,10 @@
  *		typedef struct FormData_pg_constraint
  * ----------------
  */
-#define ConstraintRelationId  2606
-
-CATALOG(pg_constraint,2606)
+CATALOG(pg_constraint,2606,ConstraintRelationId)
 {
+	Oid			oid;			/* oid */
+
 	/*
 	 * conname + connamespace is deliberately not unique; we allow, for
 	 * example, the same name to be used for constraints of different
@@ -42,6 +45,10 @@ CATALOG(pg_constraint,2606)
 	 * global lock to generate a globally unique name for a nameless
 	 * constraint.  We associate a namespace with constraint names only for
 	 * SQL-spec compatibility.
+	 *
+	 * However, we do require conname to be unique among the constraints of a
+	 * single relation or domain.  This is enforced by a unique index on
+	 * conrelid + contypid + conname.
 	 */
 	NameData	conname;		/* name of this constraint */
 	Oid			connamespace;	/* OID of namespace containing constraint */
@@ -75,6 +82,12 @@ CATALOG(pg_constraint,2606)
 	 * confrelid in the second.
 	 */
 	Oid			conindid;		/* index supporting this constraint */
+
+	/*
+	 * If this constraint is on a partition inherited from a partitioned
+	 * table, this is the OID of the corresponding constraint in the parent.
+	 */
+	Oid			conparentid;
 
 	/*
 	 * These fields, plus confkey, are only meaningful for a foreign-key
@@ -135,11 +148,6 @@ CATALOG(pg_constraint,2606)
 	 * If a check constraint, nodeToString representation of expression
 	 */
 	pg_node_tree conbin;
-
-	/*
-	 * If a check constraint, source-text representation of expression
-	 */
-	text		consrc;
 #endif
 } FormData_pg_constraint;
 
@@ -156,43 +164,7 @@ FOREIGN_KEY(confrelid REFERENCES pg_class(oid));
  */
 typedef FormData_pg_constraint *Form_pg_constraint;
 
-/* ----------------
- *		compiler constants for pg_constraint
- * ----------------
- */
-#define Natts_pg_constraint					24
-#define Anum_pg_constraint_conname			1
-#define Anum_pg_constraint_connamespace		2
-#define Anum_pg_constraint_contype			3
-#define Anum_pg_constraint_condeferrable	4
-#define Anum_pg_constraint_condeferred		5
-#define Anum_pg_constraint_convalidated		6
-#define Anum_pg_constraint_conrelid			7
-#define Anum_pg_constraint_contypid			8
-#define Anum_pg_constraint_conindid			9
-#define Anum_pg_constraint_confrelid		10
-#define Anum_pg_constraint_confupdtype		11
-#define Anum_pg_constraint_confdeltype		12
-#define Anum_pg_constraint_confmatchtype	13
-#define Anum_pg_constraint_conislocal		14
-#define Anum_pg_constraint_coninhcount		15
-#define Anum_pg_constraint_connoinherit		16
-#define Anum_pg_constraint_conkey			17
-#define Anum_pg_constraint_confkey			18
-#define Anum_pg_constraint_conpfeqop		19
-#define Anum_pg_constraint_conppeqop		20
-#define Anum_pg_constraint_conffeqop		21
-#define Anum_pg_constraint_conexclop		22
-#define Anum_pg_constraint_conbin			23
-#define Anum_pg_constraint_consrc			24
-
-/* ----------------
- *		initial contents of pg_constraint
- * ----------------
- */
-
-/* nothing, at present */
-
+#ifdef EXPOSE_TO_CLIENT_CODE
 
 /* Valid values for contype */
 #define CONSTRAINT_CHECK			'c'
@@ -208,4 +180,85 @@ typedef FormData_pg_constraint *Form_pg_constraint;
  * the FKCONSTR_MATCH_xxx constants defined in parsenodes.h.
  */
 
-#endif   /* PG_CONSTRAINT_H */
+#endif							/* EXPOSE_TO_CLIENT_CODE */
+
+/*
+ * Identify constraint type for lookup purposes
+ */
+typedef enum ConstraintCategory
+{
+	CONSTRAINT_RELATION,
+	CONSTRAINT_DOMAIN,
+	CONSTRAINT_ASSERTION		/* for future expansion */
+} ConstraintCategory;
+
+
+extern Oid	CreateConstraintEntry(const char *constraintName,
+								  Oid constraintNamespace,
+								  char constraintType,
+								  bool isDeferrable,
+								  bool isDeferred,
+								  bool isValidated,
+								  Oid parentConstrId,
+								  Oid relId,
+								  const int16 *constraintKey,
+								  int constraintNKeys,
+								  int constraintNTotalKeys,
+								  Oid domainId,
+								  Oid indexRelId,
+								  Oid foreignRelId,
+								  const int16 *foreignKey,
+								  const Oid *pfEqOp,
+								  const Oid *ppEqOp,
+								  const Oid *ffEqOp,
+								  int foreignNKeys,
+								  char foreignUpdateType,
+								  char foreignDeleteType,
+								  char foreignMatchType,
+								  const Oid *exclOp,
+								  Node *conExpr,
+								  const char *conBin,
+								  bool conIsLocal,
+								  int conInhCount,
+								  bool conNoInherit,
+								  bool is_internal);
+
+extern void RemoveConstraintById(Oid conId);
+extern void RenameConstraintById(Oid conId, const char *newname);
+
+extern bool ConstraintNameIsUsed(ConstraintCategory conCat, Oid objId,
+								 const char *conname);
+extern bool ConstraintNameExists(const char *conname, Oid namespaceid);
+extern char *ChooseConstraintName(const char *name1, const char *name2,
+								  const char *label, Oid namespaceid,
+								  List *others);
+
+extern void AlterConstraintNamespaces(Oid ownerId, Oid oldNspId,
+									  Oid newNspId, bool isType, ObjectAddresses *objsMoved);
+extern void ConstraintSetParentConstraint(Oid childConstrId,
+										  Oid parentConstrId,
+										  Oid childTableId);
+extern Oid	get_relation_constraint_oid(Oid relid, const char *conname, bool missing_ok);
+extern Bitmapset *get_relation_constraint_attnos(Oid relid, const char *conname,
+												 bool missing_ok, Oid *constraintOid);
+extern Oid	get_domain_constraint_oid(Oid typid, const char *conname, bool missing_ok);
+extern Oid	get_relation_idx_constraint_oid(Oid relationId, Oid indexId);
+
+/**
+ * Identify primary key column from foreign key column.
+ */
+extern bool ConstraintGetPrimaryKeyOf(Oid relid, AttrNumber attno,
+					Oid *pkrelid, AttrNumber *pkattno);
+
+extern Bitmapset *get_primary_key_attnos(Oid relid, bool deferrableOk,
+										 Oid *constraintOid);
+extern void DeconstructFkConstraintRow(HeapTuple tuple, int *numfks,
+									   AttrNumber *conkey, AttrNumber *confkey,
+									   Oid *pf_eq_oprs, Oid *pp_eq_oprs, Oid *ff_eq_oprs);
+
+extern bool check_functional_grouping(Oid relid,
+									  Index varno, Index varlevelsup,
+									  List *grouping_columns,
+									  List **constraintDeps);
+
+#endif							/* PG_CONSTRAINT_H */

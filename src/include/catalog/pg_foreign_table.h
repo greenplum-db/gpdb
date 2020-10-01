@@ -1,16 +1,16 @@
 /*-------------------------------------------------------------------------
  *
  * pg_foreign_table.h
- *	  definition of the system "foreign table" relation (pg_foreign_table)
+ *	  definition of the "foreign table" system catalog (pg_foreign_table)
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_foreign_table.h
  *
  * NOTES
- *	  the genbki.sh script reads this file and generates .bki
- *	  information from the DATA() statements.
+ *	  The Catalog.pm module reads this file and derives schema
+ *	  information.
  *
  *-------------------------------------------------------------------------
  */
@@ -18,15 +18,14 @@
 #define PG_FOREIGN_TABLE_H
 
 #include "catalog/genbki.h"
+#include "catalog/pg_foreign_table_d.h"
 
 /* ----------------
  *		pg_foreign_table definition.  cpp turns this into
  *		typedef struct FormData_pg_foreign_table
  * ----------------
  */
-#define ForeignTableRelationId 3118
-
-CATALOG(pg_foreign_table,3118) BKI_WITHOUT_OIDS
+CATALOG(pg_foreign_table,3118,ForeignTableRelationId)
 {
 	Oid			ftrelid;		/* OID of foreign table */
 	Oid			ftserver;		/* OID of foreign server */
@@ -43,14 +42,4 @@ CATALOG(pg_foreign_table,3118) BKI_WITHOUT_OIDS
  */
 typedef FormData_pg_foreign_table *Form_pg_foreign_table;
 
-/* ----------------
- *		compiler constants for pg_foreign_table
- * ----------------
- */
-
-#define Natts_pg_foreign_table					3
-#define Anum_pg_foreign_table_ftrelid			1
-#define Anum_pg_foreign_table_ftserver			2
-#define Anum_pg_foreign_table_ftoptions			3
-
-#endif   /* PG_FOREIGN_TABLE_H */
+#endif							/* PG_FOREIGN_TABLE_H */

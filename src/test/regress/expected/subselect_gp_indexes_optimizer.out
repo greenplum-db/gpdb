@@ -14,6 +14,7 @@ analyze choose_seqscan_t1; analyze choose_seqscan_t2;
 -- making an indexscan cheaper with this GUC is only necessary with this small dataset
 -- if you insert more data, you can still ensure an indexscan is considered
 set random_page_cost=1;
+set seq_page_cost=5;
 -- and I query the table with the index from inside a subquery which will be pulled up inside of a subquery that will stay a subplan
 select (select id1 from (select * from choose_seqscan_t2) foo where id2=choose_seqscan_t1.id2) from choose_seqscan_t1 order by id1;
  id1 

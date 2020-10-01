@@ -29,12 +29,11 @@ using namespace gpos;
 GPOS_RESULT
 CStringTest::EresUnittest()
 {
-	CUnittest rgut[] =
-		{
+	CUnittest rgut[] = {
 		GPOS_UNITTEST_FUNC(CStringTest::EresUnittest_Equals),
 		GPOS_UNITTEST_FUNC(CStringTest::EresUnittest_Append),
 		GPOS_UNITTEST_FUNC(CStringTest::EresUnittest_AppendFormat),
-		};
+	};
 
 	return CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
 }
@@ -62,10 +61,10 @@ CStringTest::EresUnittest_Append()
 	ss1.Append(&ss2);
 
 	GPOS_ASSERT(ss1.Equals("123456"));
-	
+
 	// append an empty string
 	ss1.Append(&ss3);
-	
+
 	// string should be the same as before
 	GPOS_ASSERT(ss1.Equals("123456"));
 
@@ -73,7 +72,7 @@ CStringTest::EresUnittest_Append()
 	ss3.Append(&ss1);
 
 	GPOS_ASSERT(ss3.Equals("123456"));
-	
+
 	// check truncation
 	ss3.Append(&ss2);
 	GPOS_ASSERT(ss3.Equals("1234564"));
@@ -138,10 +137,9 @@ CStringTest::EresUnittest_Equals()
 	GPOS_ASSERT(ss1.Equals(ss2.Buffer()));
 	GPOS_ASSERT(!ss1.Equals(ss3.Buffer()));
 	GPOS_ASSERT(!ss3.Equals(ss1.Buffer()));
-#endif // #ifdef GPOS_DEBUG
-	
+#endif	// #ifdef GPOS_DEBUG
+
 	return GPOS_OK;
 }
 
 // EOF
-

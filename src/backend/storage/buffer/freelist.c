@@ -4,7 +4,7 @@
  *	  routines for managing the buffer pool's replacement strategy.
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -94,14 +94,14 @@ typedef struct BufferAccessStrategyData
 	 * struct.
 	 */
 	Buffer		buffers[FLEXIBLE_ARRAY_MEMBER];
-}	BufferAccessStrategyData;
+}			BufferAccessStrategyData;
 
 
 /* Prototypes for internal functions */
 static BufferDesc *GetBufferFromRing(BufferAccessStrategy strategy,
-				  uint32 *buf_state);
+									 uint32 *buf_state);
 static void AddBufferToRing(BufferAccessStrategy strategy,
-				BufferDesc *buf);
+							BufferDesc *buf);
 
 /*
  * ClockSweepTick - Helper routine for StrategyGetBuffer()
@@ -169,6 +169,23 @@ ClockSweepTick(void)
 }
 
 /*
+ * have_free_buffer -- a lockless check to see if there is a free buffer in
+ *					   buffer pool.
+ *
+ * If the result is true that will become stale once free buffers are moved out
+ * by other operations, so the caller who strictly want to use a free buffer
+ * should not call this.
+ */
+bool
+have_free_buffer()
+{
+	if (StrategyControl->firstFreeBuffer >= 0)
+		return true;
+	else
+		return false;
+}
+
+/*
  * StrategyGetBuffer
  *
  *	Called by the bufmgr to get the next candidate buffer to use in
@@ -203,7 +220,7 @@ StrategyGetBuffer(BufferAccessStrategy strategy, uint32 *buf_state)
 	 * If asked, we need to waken the bgwriter. Since we don't want to rely on
 	 * a spinlock for this we force a read from shared memory once, and then
 	 * set the latch based on that value. We need to go through that length
-	 * because otherwise bgprocno might be reset while/after we check because
+	 * because otherwise bgwprocno might be reset while/after we check because
 	 * the compiler might just reread from memory.
 	 *
 	 * This can possibly set the latch of the wrong process if the bgwriter
@@ -412,8 +429,8 @@ StrategySyncStart(uint32 *complete_passes, uint32 *num_buf_alloc)
 /*
  * StrategyNotifyBgWriter -- set or clear allocation notification latch
  *
- * If bgwriterLatch isn't NULL, the next invocation of StrategyGetBuffer will
- * set that latch.  Pass NULL to clear the pending notification before it
+ * If bgwprocno isn't -1, the next invocation of StrategyGetBuffer will
+ * set that latch.  Pass -1 to clear the pending notification before it
  * happens.  This feature is used by the bgwriter process to wake itself up
  * from hibernation, and is not meant for anybody else to use.
  */
@@ -680,7 +697,7 @@ StrategyRejectBuffer(BufferAccessStrategy strategy, BufferDesc *buf)
 
 	/* Don't muck with behavior of normal buffer-replacement strategy */
 	if (!strategy->current_was_in_ring ||
-	  strategy->buffers[strategy->current] != BufferDescriptorGetBuffer(buf))
+		strategy->buffers[strategy->current] != BufferDescriptorGetBuffer(buf))
 		return false;
 
 	/*

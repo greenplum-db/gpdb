@@ -29,12 +29,11 @@ using namespace gpos;
 GPOS_RESULT
 CListTest::EresUnittest()
 {
-	CUnittest rgut[] =
-		{
+	CUnittest rgut[] = {
 		GPOS_UNITTEST_FUNC(CListTest::EresUnittest_Basics),
 		GPOS_UNITTEST_FUNC(CListTest::EresUnittest_Navigate),
 		GPOS_UNITTEST_FUNC(CListTest::EresUnittest_Cursor),
-		};
+	};
 
 	return CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
 }
@@ -68,7 +67,7 @@ CListTest::EresUnittest_Basics()
 	GPOS_ASSERT(0 == listBwd.Size());
 
 	// insert all elements
-	for(ULONG i = 0; i < cSize; i++)
+	for (ULONG i = 0; i < cSize; i++)
 	{
 		GPOS_ASSERT(i == listFwd.Size());
 		GPOS_ASSERT(i == listBwd.Size());
@@ -81,7 +80,7 @@ CListTest::EresUnittest_Basics()
 	GPOS_ASSERT(cSize == listBwd.Size());
 
 	// remove first/last element until empty
-	for(ULONG i = 0; i < cSize; i++)
+	for (ULONG i = 0; i < cSize; i++)
 	{
 		GPOS_ASSERT(cSize - i == listFwd.Size());
 		GPOS_ASSERT(&rgelem[i] == listFwd.Last());
@@ -95,16 +94,16 @@ CListTest::EresUnittest_Basics()
 
 	// insert all elements in reverse order,
 	// i.e. list is in same order as array
-	for(ULONG i = cSize; i > 0; i--)
+	for (ULONG i = cSize; i > 0; i--)
 	{
 		GPOS_ASSERT(cSize - i == listFwd.Size());
 		listFwd.Prepend(&rgelem[i - 1]);
 	}
 	GPOS_ASSERT(cSize == listFwd.Size());
 
-	for(ULONG i = 0; i < cSize; i++)
+	for (ULONG i = 0; i < cSize; i++)
 	{
-		listFwd.Remove(&rgelem[(cSize/2 + i) % cSize]);
+		listFwd.Remove(&rgelem[(cSize / 2 + i) % cSize]);
 	}
 	GPOS_ASSERT(NULL == listFwd.First());
 	GPOS_ASSERT(NULL == listFwd.Last());
@@ -113,7 +112,6 @@ CListTest::EresUnittest_Basics()
 	GPOS_DELETE_ARRAY(rgelem);
 	return GPOS_OK;
 }
-
 
 
 
@@ -143,7 +141,7 @@ CListTest::EresUnittest_Navigate()
 
 	// insert all elements in reverse order,
 	// i.e. list is in same order as array
-	for(ULONG i = 0; i < cSize; i++)
+	for (ULONG i = 0; i < cSize; i++)
 	{
 		listBwd.Prepend(&rgelem[i]);
 		listFwd.Append(&rgelem[i]);
@@ -151,7 +149,7 @@ CListTest::EresUnittest_Navigate()
 
 	// use getnext to walk list
 	SElem *pelem = listFwd.First();
-	for(ULONG i = 0; i < cSize; i++)
+	for (ULONG i = 0; i < cSize; i++)
 	{
 		GPOS_ASSERT(pelem == &rgelem[i]);
 		pelem = listFwd.Next(pelem);
@@ -160,13 +158,13 @@ CListTest::EresUnittest_Navigate()
 
 	// go to end of list -- then traverse backward
 	pelem = listFwd.First();
-	while(pelem && listFwd.Next(pelem))
+	while (pelem && listFwd.Next(pelem))
 	{
 		pelem = listFwd.Next(pelem);
 	}
 	GPOS_ASSERT(listFwd.Last() == pelem);
 
-	for(ULONG i = cSize; i > 0; i--)
+	for (ULONG i = cSize; i > 0; i--)
 	{
 		GPOS_ASSERT(pelem == &rgelem[i - 1]);
 		pelem = listFwd.Prev(pelem);
@@ -219,5 +217,3 @@ CListTest::EresUnittest_Cursor()
 }
 
 // EOF
-
-

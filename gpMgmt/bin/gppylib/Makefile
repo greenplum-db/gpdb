@@ -9,10 +9,22 @@ $(recurse)
 
 PROGRAMS= gparray.py gpunit unit2
 
-DATA= __init__.py datetimeutils.py fault_injection.py gp_era.py gpcatalog.py \
-	gphostcache.py gplog.py gpparseopts.py gpresgroup.py gpsubprocess.py \
-	gpversion.py heapchecksum.py logfilter.py mainUtils.py parseutils.py \
-	pgconf.py userinput.py utils.py
+DATA= __init__.py \
+	datetimeutils.py \
+	gp_era.py \
+	gpcatalog.py \
+	gplog.py \
+	gpparseopts.py \
+	gpresgroup.py \
+	gpsubprocess.py \
+	gpversion.py \
+	heapchecksum.py \
+	logfilter.py \
+	mainUtils.py \
+	parseutils.py \
+	pgconf.py \
+	userinput.py \
+	utils.py
 
 installdirs:
 	$(MKDIR_P) '$(DESTDIR)$(libdir)/python/gppylib'

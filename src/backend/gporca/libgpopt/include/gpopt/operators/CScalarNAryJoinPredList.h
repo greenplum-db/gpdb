@@ -22,81 +22,75 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	class CScalarNAryJoinPredList
-	//---------------------------------------------------------------------------
-	class CScalarNAryJoinPredList : public CScalar
+//---------------------------------------------------------------------------
+//	class CScalarNAryJoinPredList
+//---------------------------------------------------------------------------
+class CScalarNAryJoinPredList : public CScalar
+{
+private:
+	// private copy ctor
+	CScalarNAryJoinPredList(const CScalarNAryJoinPredList &);
+
+public:
+	// ctor
+	explicit CScalarNAryJoinPredList(CMemoryPool *mp);
+
+	// dtor
+	virtual ~CScalarNAryJoinPredList()
 	{
-	private:
+	}
 
-		// private copy ctor
-		CScalarNAryJoinPredList(const CScalarNAryJoinPredList &);
+	// ident accessors
+	virtual EOperatorId
+	Eopid() const
+	{
+		return EopScalarNAryJoinPredList;
+	}
 
-	public:
+	// return a string for operator name
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CScalarNAryJoinPredList";
+	}
 
-		// ctor
-		explicit
-		CScalarNAryJoinPredList(CMemoryPool *mp);
+	// match function
+	BOOL Matches(COperator *pop) const;
 
-		// dtor
-		virtual
-		~CScalarNAryJoinPredList() {}
+	// sensitivity to order of inputs
+	BOOL FInputOrderSensitive() const;
 
-		// ident accessors
-		virtual
-		EOperatorId Eopid() const
-		{
-			return EopScalarNAryJoinPredList;
-		}
+	// return a copy of the operator with remapped columns
+	virtual COperator *
+	PopCopyWithRemappedColumns(CMemoryPool *,		//mp,
+							   UlongToColRefMap *,	//colref_mapping,
+							   BOOL					//must_exist
+	)
+	{
+		return PopCopyDefault();
+	}
 
-		// return a string for operator name
-		virtual
-		const CHAR *SzId() const
-		{
-			return "CScalarNAryJoinPredList";
-		}
+	// conversion function
+	static CScalarNAryJoinPredList *
+	PopConvert(COperator *pop)
+	{
+		return dynamic_cast<CScalarNAryJoinPredList *>(pop);
+	}
 
-		// match function
-		BOOL Matches(COperator *pop) const;
+	virtual IMDId *
+	MdidType() const
+	{
+		GPOS_ASSERT(
+			!"Invalid function call: CScalarNAryJoinPredList::MdidType()");
+		return NULL;
+	}
 
-		// sensitivity to order of inputs
-		BOOL FInputOrderSensitive() const;
+};	// class CScalarNAryJoinPredList
 
-		// return a copy of the operator with remapped columns
-		virtual
-		COperator *PopCopyWithRemappedColumns
-		(
-		 CMemoryPool *, //mp,
-		 UlongToColRefMap *, //colref_mapping,
-		 BOOL //must_exist
-		)
-		{
-			return PopCopyDefault();
-		}
+}  // namespace gpopt
 
-		// conversion function
-		static
-		CScalarNAryJoinPredList *PopConvert
-		(
-		 COperator *pop
-		)
-		{
-			return dynamic_cast<CScalarNAryJoinPredList*>(pop);
-		}
-
-		virtual
-		IMDId *MdidType() const
-		{
-			GPOS_ASSERT(!"Invalid function call: CScalarNAryJoinPredList::MdidType()");
-			return NULL;
-		}
-
-	}; // class CScalarNAryJoinPredList
-
-}
-
-#endif // !GPOPT_CScalarNAryJoinPredList_H
+#endif	// !GPOPT_CScalarNAryJoinPredList_H
 
 // EOF

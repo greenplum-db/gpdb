@@ -126,13 +126,9 @@ PARTITION BY range(b)
             START(40) END(46) EVERY(3)
         )
 (START(0) END(4) EVERY(2));
-NOTICE:  CREATE TABLE will create partition "homer_1_prt_1" for table "homer"
-NOTICE:  CREATE TABLE will create partition "homer_1_prt_1_2_prt_1" for table "homer_1_prt_1"
-NOTICE:  CREATE TABLE will create partition "homer_1_prt_1_2_prt_2" for table "homer_1_prt_1"
-NOTICE:  CREATE TABLE will create partition "homer_1_prt_2" for table "homer"
-NOTICE:  CREATE TABLE will create partition "homer_1_prt_2_2_prt_1" for table "homer_1_prt_2"
-NOTICE:  CREATE TABLE will create partition "homer_1_prt_2_2_prt_2" for table "homer_1_prt_2"
 INSERT INTO homer VALUES (1,0,40),(2,1,43),(3,2,41),(4,3,44);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  DXL-to-PlStmt Translation: PartitionSelector not supported
 SELECT * FROM ONLY homer;
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: ONLY in the FROM clause
@@ -151,6 +147,8 @@ UPDATE ONLY homer SET c = c + 1;
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: ONLY in the FROM clause
 SELECT * FROM homer;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  DXL-to-PlStmt Translation: multi-level partitioned tables not supported
  a | b | c  
 ---+---+----
  1 | 0 | 40
@@ -163,6 +161,8 @@ DELETE FROM ONLY homer WHERE a = 3;
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: ONLY in the FROM clause
 SELECT * FROM homer;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  DXL-to-PlStmt Translation: multi-level partitioned tables not supported
  a | b | c  
 ---+---+----
  1 | 0 | 40
@@ -222,21 +222,22 @@ DETAIL:  Feature not supported: DML not enabled
 EXPLAIN UPDATE ONLY homer SET c = c + 1;
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: DML not enabled
-                            QUERY PLAN                             
--------------------------------------------------------------------
- Update on homer  (cost=0.00..1073.75 rows=25967 width=22)
-   ->  Seq Scan on homer  (cost=0.00..1073.75 rows=25967 width=22)
+                    QUERY PLAN                     
+---------------------------------------------------
+ Update on homer  (cost=0.00..0.00 rows=0 width=0)
+   ->  Result  (cost=0.00..0.00 rows=0 width=22)
+         One-Time Filter: false
  Optimizer: Postgres query optimizer
 (3 rows)
 
 EXPLAIN DELETE FROM ONLY homer WHERE a = 3;
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: DML not enabled
-                           QUERY PLAN                           
-----------------------------------------------------------------
- Delete on homer  (cost=0.00..1073.75 rows=78 width=10)
-   ->  Seq Scan on homer  (cost=0.00..1073.75 rows=26 width=10)
-         Filter: (a = 3)
+                    QUERY PLAN                     
+---------------------------------------------------
+ Delete on homer  (cost=0.00..0.00 rows=0 width=0)
+   ->  Result  (cost=0.00..0.00 rows=0 width=0)
+         One-Time Filter: false
  Optimizer: Postgres query optimizer
 (4 rows)
 

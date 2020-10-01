@@ -12,9 +12,8 @@
 #define GPOPT_init_H
 
 #ifdef __cplusplus
-extern "C"
-{
-#endif // __cplusplus
+extern "C" {
+#endif	// __cplusplus
 
 // initialize gpopt library
 void gpopt_init();
@@ -25,9 +24,9 @@ void gpopt_terminate(void);
 
 #ifdef __cplusplus
 }
-#endif // __cplusplus
+#endif	// __cplusplus
 
-#endif // !GPOPT_init_H
+#endif	// !GPOPT_init_H
 
 
 // EOF

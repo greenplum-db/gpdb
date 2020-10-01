@@ -99,10 +99,11 @@ INSERT 1
 
 -- bring the mirror back up
 -1U: select pg_ctl_start(datadir, port) from gp_segment_configuration where role = 'm' and content = 0;
- pg_ctl_start     
-------------------
- server starting
+ pg_ctl_start                                     
+--------------------------------------------------
  
+ waiting for server to start done
+server started
 (1 row)
 
 -- should unblock and commit now that mirror is back up and in-sync

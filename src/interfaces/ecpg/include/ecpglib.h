@@ -21,26 +21,26 @@ extern char *ecpg_gettext(const char *msgid) pg_attribute_format_arg(1);
 #ifndef __cplusplus
 #ifndef bool
 #define bool char
-#endif   /* ndef bool */
+#endif							/* ndef bool */
 
 #ifndef true
 #define true	((bool) 1)
-#endif   /* ndef true */
+#endif							/* ndef true */
 #ifndef false
 #define false	((bool) 0)
-#endif   /* ndef false */
-#endif   /* not C++ */
+#endif							/* ndef false */
+#endif							/* not C++ */
 
 #ifndef TRUE
 #define TRUE	1
-#endif   /* TRUE */
+#endif							/* TRUE */
 
 #ifndef FALSE
 #define FALSE	0
-#endif   /* FALSE */
+#endif							/* FALSE */
 
 #ifdef __cplusplus
-extern		"C"
+extern "C"
 {
 #endif
 
@@ -55,6 +55,10 @@ bool		ECPGdisconnect(int, const char *);
 bool		ECPGprepare(int, const char *, const bool, const char *, const char *);
 bool		ECPGdeallocate(int, int, const char *, const char *);
 bool		ECPGdeallocate_all(int, int, const char *);
+bool		ECPGdeclare(int, const char *, const char *);
+bool		ECPGopen(const char *, const char *, const int, const int, const int, const char *, const bool, const int, const char *,...);
+bool		ECPGfetch(const char *, const int, const int, const int, const char *, const bool, const int, const char *,...);
+bool		ECPGclose(const char *, const int, const int, const int, const char *, const bool, const int, const char *,...);
 char	   *ECPGprepared_statement(const char *, const char *, int);
 PGconn	   *ECPGget_PGconn(const char *);
 PGTransactionStatusType ECPGtransactionStatus(const char *);
@@ -80,7 +84,7 @@ bool		ECPGset_desc_header(int, const char *, int);
 bool		ECPGset_desc(int, const char *, int, ...);
 
 void		ECPGset_noind_null(enum ECPGttype, void *);
-bool		ECPGis_noind_null(enum ECPGttype, void *);
+bool		ECPGis_noind_null(enum ECPGttype, const void *);
 bool		ECPGdescribe(int, int, bool, const char *, const char *,...);
 
 void		ECPGset_var(int, void *, int);
@@ -97,4 +101,4 @@ void		ecpg_pthreads_init(void);
 }
 #endif
 
-#endif   /* _ECPGLIB_H */
+#endif							/* _ECPGLIB_H */

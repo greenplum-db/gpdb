@@ -183,24 +183,33 @@ select sum(distinct d) from olap_test_single;
 --
 -- GROUPING SETS
 --
+set gp_motion_cost_per_row=1.0;
 -- If the query produces a relatively small number of groups in comparison to
 -- the number of input rows, two-stage aggregation will be picked.
+-- GPDB_12_MERGE_FIXME: We support hashing for GROUPING SETS now. The planner
+-- considers that cheaper than the two-stage grouping agg that was chosen
+-- before. Disable hashagg to force the same plan as before. We should
+-- implement two-stage Hash Agg for grouping sets; that would probably be
+-- the real optimal plan here, and what the planner would choose, if it
+-- was supported.
+set enable_hashagg=off;
 explain select a, b, c, sum(d) from olap_test group by grouping sets((a, b), (a), (b, c));
-                                           QUERY PLAN                                            
--------------------------------------------------------------------------------------------------
- Finalize GroupAggregate  (cost=1778.10..1804.80 rows=267 width=20)
-   Group Key: (GROUPINGSET_ID()), a, b, c
-   ->  Sort  (cost=1778.10..1782.11 rows=1602 width=20)
-         Sort Key: (GROUPINGSET_ID()), a, b, c
-         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=780.39..1692.83 rows=1602 width=20)
-               ->  Partial GroupAggregate  (cost=780.39..1660.79 rows=534 width=20)
+                                         QUERY PLAN                                         
+--------------------------------------------------------------------------------------------
+ Finalize GroupAggregate  (cost=509.52..1056.87 rows=267 width=20)
+   Group Key: a, b, c, (GROUPINGSET_ID())
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=509.52..1044.19 rows=801 width=20)
+         Merge Key: a, b, c, (GROUPINGSET_ID())
+         ->  Sort  (cost=509.52..510.19 rows=267 width=20)
+               Sort Key: a, b, c, (GROUPINGSET_ID())
+               ->  Partial GroupAggregate  (cost=234.38..498.76 rows=267 width=20)
                      Group Key: a, b
                      Group Key: a
                      Sort Key: b, c
                        Group Key: b, c
-                     ->  Sort  (cost=780.39..805.39 rows=3334 width=16)
+                     ->  Sort  (cost=234.38..242.71 rows=3333 width=16)
                            Sort Key: a, b
-                           ->  Seq Scan on olap_test  (cost=0.00..116.00 rows=3334 width=16)
+                           ->  Seq Scan on olap_test  (cost=0.00..39.33 rows=3333 width=16)
  Optimizer: Postgres query optimizer
 (14 rows)
 
@@ -244,22 +253,107 @@ select a, b, c, sum(d) from olap_test group by grouping sets((a, b), (a), (b, c)
    | 10 | 20 |    10000
 (35 rows)
 
+reset enable_hashagg;
 -- If the query produces a relatively large number of groups in comparison to
 -- the number of input rows, one-stage aggregation will be picked.
 explain select a, b, d, sum(d) from olap_test group by grouping sets((a, b), (a), (b, d));
-                                         QUERY PLAN                                         
---------------------------------------------------------------------------------------------
- GroupAggregate  (cost=780.39..2045.49 rows=20072 width=20)
-   Group Key: a, b
-   Group Key: a
-   Sort Key: b, d
-     Group Key: b, d
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=780.39..1005.39 rows=10000 width=12)
-         Merge Key: a, b
-         ->  Sort  (cost=780.39..805.39 rows=3334 width=12)
-               Sort Key: a, b
-               ->  Seq Scan on olap_test  (cost=0.00..116.00 rows=3334 width=12)
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ HashAggregate  (cost=392.00..617.36 rows=10036 width=20)
+   Hash Key: a, b
+   Hash Key: a
+   Hash Key: b, d
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..317.00 rows=10000 width=12)
+         ->  Seq Scan on olap_test  (cost=0.00..117.00 rows=3334 width=12)
  Optimizer: Postgres query optimizer
 (11 rows)
 
 -- do not execute this query as it would produce too many tuples.
+-- Test that when the second-stage Agg doesn't try to preserve the
+-- GROUPINGSET_ID(), used internally in the plan, in the result order. We had
+-- a bug like that at one point.
+--
+-- The notable thing in the plan is that the Sort node has GROUPINGSET_ID() in
+-- the Sort Key, as needed for the Finalize GroupAggregate, but in the Motion
+-- above the Finalize GroupAggregate, the GROUPINGSET_ID() has been dropped
+-- from the Merge Key.
+set enable_hashagg=off;
+explain select a, b, c, sum(d) from olap_test group by grouping sets((a, b), (a), (b, c)) limit 200;
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=777.19..912.19 rows=200 width=20)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=777.19..1182.19 rows=600 width=20)
+         Merge Key: a, b, c
+         ->  Limit  (cost=777.19..782.19 rows=200 width=20)
+               ->  Finalize GroupAggregate  (cost=776.52..783.20 rows=267 width=20)
+                     Group Key: a, b, c, (GROUPINGSET_ID())
+                     ->  Sort  (cost=776.52..777.19 rows=267 width=20)
+                           Sort Key: a, b, c, (GROUPINGSET_ID())
+                           ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=234.38..765.76 rows=267 width=20)
+                                 Hash Key: a, b, c, (GROUPINGSET_ID())
+                                 ->  Partial GroupAggregate  (cost=234.38..498.76 rows=267 width=20)
+                                       Group Key: a, b
+                                       Group Key: a
+                                       Sort Key: b, c
+                                         Group Key: b, c
+                                       ->  Sort  (cost=234.38..242.71 rows=3333 width=16)
+                                             Sort Key: a, b
+                                             ->  Seq Scan on olap_test  (cost=0.00..39.33 rows=3333 width=16)
+ Optimizer: Postgres query optimizer
+(19 rows)
+
+reset enable_hashagg;
+--
+-- Test an optimization in the grouping planner for CREATE TABLE AS, where
+-- partial aggregation results are redistributed directly according to the
+-- target table's distribution keys, if they're a subset of the GROUP BY
+-- columns.
+--
+create table foo_ctas(a int, b int) distributed randomly;
+insert into foo_ctas select g%5, g%2 from generate_series(1, 100) g;
+explain create table bar_ctas as select * from foo_ctas group by a, b distributed by (b);
+                                                 QUERY PLAN                                                 
+------------------------------------------------------------------------------------------------------------
+ Result  (cost=0.00..431.10 rows=6 width=8)
+   ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.01 rows=6 width=8)
+         Hash Key: b
+         ->  GroupAggregate  (cost=0.00..431.01 rows=2 width=8)
+               Group Key: a, b
+               ->  Sort  (cost=0.00..431.01 rows=2 width=8)
+                     Sort Key: a, b
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.01 rows=2 width=8)
+                           Hash Key: a, b
+                           ->  GroupAggregate  (cost=0.00..431.01 rows=2 width=8)
+                                 Group Key: a, b
+                                 ->  Sort  (cost=0.00..431.01 rows=34 width=8)
+                                       Sort Key: a, b
+                                       ->  Seq Scan on foo_ctas  (cost=0.00..431.00 rows=34 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(15 rows)
+
+create table bar_ctas as select * from foo_ctas group by a, b distributed by (b);
+-- Currently, the planner misses this optimization with INSERT, so this
+-- needs an extra Redistribute Motion.
+explain insert into bar_ctas select * from foo_ctas group by a, b;
+                                                    QUERY PLAN                                                    
+------------------------------------------------------------------------------------------------------------------
+ Insert on bar_ctas  (cost=0.00..431.10 rows=2 width=8)
+   ->  Result  (cost=0.00..431.01 rows=6 width=12)
+         ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.01 rows=6 width=8)
+               Hash Key: foo_ctas.b
+               ->  GroupAggregate  (cost=0.00..431.01 rows=2 width=8)
+                     Group Key: foo_ctas.a, foo_ctas.b
+                     ->  Sort  (cost=0.00..431.01 rows=2 width=8)
+                           Sort Key: foo_ctas.a, foo_ctas.b
+                           ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.01 rows=2 width=8)
+                                 Hash Key: foo_ctas.a, foo_ctas.b
+                                 ->  GroupAggregate  (cost=0.00..431.01 rows=2 width=8)
+                                       Group Key: foo_ctas.a, foo_ctas.b
+                                       ->  Sort  (cost=0.00..431.01 rows=34 width=8)
+                                             Sort Key: foo_ctas.a, foo_ctas.b
+                                             ->  Seq Scan on foo_ctas  (cost=0.00..431.00 rows=34 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(16 rows)
+
+drop table foo_ctas;
+drop table bar_ctas;

@@ -3,7 +3,7 @@
  * blvacuum.c
  *		Bloom VACUUM functions.
  *
- * Copyright (c) 2016, PostgreSQL Global Development Group
+ * Copyright (c) 2016-2019, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  contrib/bloom/blvacuum.c
@@ -51,7 +51,7 @@ blbulkdelete(IndexVacuumInfo *info, IndexBulkDeleteResult *stats,
 	initBloomState(&state, index);
 
 	/*
-	 * Interate over the pages. We don't care about concurrently added pages,
+	 * Iterate over the pages. We don't care about concurrently added pages,
 	 * they can't contain tuples to delete.
 	 */
 	npages = RelationGetNumberOfBlocks(index);
@@ -84,7 +84,7 @@ blbulkdelete(IndexVacuumInfo *info, IndexBulkDeleteResult *stats,
 		 */
 		itup = itupPtr = BloomPageGetTuple(&state, page, FirstOffsetNumber);
 		itupEnd = BloomPageGetTuple(&state, page,
-							  OffsetNumberNext(BloomPageGetMaxOffset(page)));
+									OffsetNumberNext(BloomPageGetMaxOffset(page)));
 		while (itup < itupEnd)
 		{
 			/* Do we have to delete this tuple? */
@@ -108,7 +108,7 @@ blbulkdelete(IndexVacuumInfo *info, IndexBulkDeleteResult *stats,
 
 		/* Assert that we counted correctly */
 		Assert(itupPtr == BloomPageGetTuple(&state, page,
-							 OffsetNumberNext(BloomPageGetMaxOffset(page))));
+											OffsetNumberNext(BloomPageGetMaxOffset(page))));
 
 		/*
 		 * Add page to new notFullPage list if we will not mark page as
@@ -125,7 +125,7 @@ blbulkdelete(IndexVacuumInfo *info, IndexBulkDeleteResult *stats,
 			/* Is it empty page now? */
 			if (BloomPageGetMaxOffset(page) == 0)
 				BloomPageSetDeleted(page);
-			/* Adjust pg_lower */
+			/* Adjust pd_lower */
 			((PageHeader) page)->pd_lower = (Pointer) itupPtr - page;
 			/* Finish WAL-logging */
 			GenericXLogFinish(gxlogState);

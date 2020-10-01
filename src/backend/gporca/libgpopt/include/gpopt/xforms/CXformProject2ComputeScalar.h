@@ -16,72 +16,64 @@
 
 namespace gpopt
 {
-	using namespace gpos;
-	
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CXformProject2ComputeScalar
-	//
-	//	@doc:
-	//		Transform Project to ComputeScalar
-	//
-	//---------------------------------------------------------------------------
-	class CXformProject2ComputeScalar : public CXformImplementation
+using namespace gpos;
+
+//---------------------------------------------------------------------------
+//	@class:
+//		CXformProject2ComputeScalar
+//
+//	@doc:
+//		Transform Project to ComputeScalar
+//
+//---------------------------------------------------------------------------
+class CXformProject2ComputeScalar : public CXformImplementation
+{
+private:
+	// private copy ctor
+	CXformProject2ComputeScalar(const CXformProject2ComputeScalar &);
+
+public:
+	// ctor
+	explicit CXformProject2ComputeScalar(CMemoryPool *mp);
+
+	// dtor
+	virtual ~CXformProject2ComputeScalar()
 	{
+	}
 
-		private:
+	// ident accessors
+	virtual EXformId
+	Exfid() const
+	{
+		return ExfProject2ComputeScalar;
+	}
 
-			// private copy ctor
-			CXformProject2ComputeScalar(const CXformProject2ComputeScalar &);
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CXformProject2ComputeScalar";
+	}
 
-		public:
-		
-			// ctor
-			explicit
-			CXformProject2ComputeScalar(CMemoryPool *mp);
+	// compute xform promise for a given expression handle
+	virtual EXformPromise
+	Exfp(CExpressionHandle &exprhdl) const
+	{
+		if (exprhdl.DeriveHasSubquery(1))
+		{
+			return CXform::ExfpNone;
+		}
 
-			// dtor
-			virtual 
-			~CXformProject2ComputeScalar() 
-			{}
+		return CXform::ExfpHigh;
+	}
 
-			// ident accessors
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfProject2ComputeScalar;
-			}
-			
-			virtual 
-			const CHAR *SzId() const
-			{
-				return "CXformProject2ComputeScalar";
-			}
+	// actual transform
+	virtual void Transform(CXformContext *, CXformResult *,
+						   CExpression *) const;
 
-			// compute xform promise for a given expression handle
-			virtual
-			EXformPromise Exfp
-				(
-				CExpressionHandle &exprhdl
-				)
-				const
-			{
-				if (exprhdl.DeriveHasSubquery(1))
-				{
-					return CXform::ExfpNone;
-				}
+};	// class CXformProject2ComputeScalar
 
-				return CXform::ExfpHigh;
-			}
+}  // namespace gpopt
 
-			// actual transform
-			virtual
-			void Transform(CXformContext *, CXformResult *, CExpression *) const;
-
-	}; // class CXformProject2ComputeScalar
-
-}
-
-#endif // !GPOPT_CXformProject2ComputeScalar_H
+#endif	// !GPOPT_CXformProject2ComputeScalar_H
 
 // EOF

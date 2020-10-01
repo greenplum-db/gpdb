@@ -42,9 +42,9 @@ ALTER
 SELECT * FROM rg_activity_status;
  rsgname             | wait_event_type | state               | query  
 ---------------------+-----------------+---------------------+--------
+ rg_concurrency_test | Client          | idle in transaction | BEGIN; 
  rg_concurrency_test | ResourceGroup   | active              | BEGIN; 
  rg_concurrency_test | ResourceGroup   | active              | BEGIN; 
- rg_concurrency_test |                 | idle in transaction | BEGIN; 
 (3 rows)
 
 11:END;
@@ -58,8 +58,8 @@ BEGIN
 SELECT * FROM rg_activity_status;
  rsgname             | wait_event_type | state               | query  
 ---------------------+-----------------+---------------------+--------
- rg_concurrency_test |                 | idle in transaction | BEGIN; 
- rg_concurrency_test |                 | idle in transaction | BEGIN; 
+ rg_concurrency_test | Client          | idle in transaction | BEGIN; 
+ rg_concurrency_test | Client          | idle in transaction | BEGIN; 
 (2 rows)
 
 21:END;
@@ -99,9 +99,9 @@ SET
 SELECT * FROM rg_activity_status;
  rsgname             | wait_event_type | state               | query  
 ---------------------+-----------------+---------------------+--------
+ rg_concurrency_test | Client          | idle in transaction | BEGIN; 
  rg_concurrency_test | ResourceGroup   | active              | BEGIN; 
  rg_concurrency_test | ResourceGroup   | active              | BEGIN; 
- rg_concurrency_test |                 | idle in transaction | BEGIN; 
 (3 rows)
 
 11:END;
@@ -115,8 +115,8 @@ BEGIN
 SELECT * FROM rg_activity_status;
  rsgname             | wait_event_type | state               | query  
 ---------------------+-----------------+---------------------+--------
- rg_concurrency_test |                 | idle in transaction | BEGIN; 
- rg_concurrency_test |                 | idle in transaction | BEGIN; 
+ rg_concurrency_test | Client          | idle in transaction | BEGIN; 
+ rg_concurrency_test | Client          | idle in transaction | BEGIN; 
 (2 rows)
 
 21:END;
@@ -158,9 +158,9 @@ ALTER
 SELECT * FROM rg_activity_status;
  rsgname             | wait_event_type | state               | query  
 ---------------------+-----------------+---------------------+--------
+ rg_concurrency_test | Client          | idle in transaction | BEGIN; 
  rg_concurrency_test | ResourceGroup   | active              | BEGIN; 
  rg_concurrency_test | ResourceGroup   | active              | BEGIN; 
- rg_concurrency_test |                 | idle in transaction | BEGIN; 
 (3 rows)
 
 ALTER RESOURCE GROUP rg_concurrency_test SET MEMORY_SHARED_QUOTA 20;
@@ -172,9 +172,9 @@ BEGIN
 SELECT * FROM rg_activity_status;
  rsgname             | wait_event_type | state               | query  
 ---------------------+-----------------+---------------------+--------
+ rg_concurrency_test | Client          | idle in transaction | BEGIN; 
+ rg_concurrency_test | Client          | idle in transaction | BEGIN; 
  rg_concurrency_test | ResourceGroup   | active              | BEGIN; 
- rg_concurrency_test |                 | idle in transaction | BEGIN; 
- rg_concurrency_test |                 | idle in transaction | BEGIN; 
 (3 rows)
 
 11:END;
@@ -186,8 +186,8 @@ BEGIN
 SELECT * FROM rg_activity_status;
  rsgname             | wait_event_type | state               | query  
 ---------------------+-----------------+---------------------+--------
- rg_concurrency_test |                 | idle in transaction | BEGIN; 
- rg_concurrency_test |                 | idle in transaction | BEGIN; 
+ rg_concurrency_test | Client          | idle in transaction | BEGIN; 
+ rg_concurrency_test | Client          | idle in transaction | BEGIN; 
 (2 rows)
 
 21:END;
@@ -232,9 +232,9 @@ BEGIN
 SELECT * FROM rg_activity_status;
  rsgname             | wait_event_type | state               | query  
 ---------------------+-----------------+---------------------+--------
+ rg_concurrency_test | Client          | idle in transaction | BEGIN; 
+ rg_concurrency_test | Client          | idle in transaction | BEGIN; 
  rg_concurrency_test | ResourceGroup   | active              | BEGIN; 
- rg_concurrency_test |                 | idle in transaction | BEGIN; 
- rg_concurrency_test |                 | idle in transaction | BEGIN; 
 (3 rows)
 
 11:END;
@@ -246,8 +246,8 @@ BEGIN
 SELECT * FROM rg_activity_status;
  rsgname             | wait_event_type | state               | query  
 ---------------------+-----------------+---------------------+--------
- rg_concurrency_test |                 | idle in transaction | BEGIN; 
- rg_concurrency_test |                 | idle in transaction | BEGIN; 
+ rg_concurrency_test | Client          | idle in transaction | BEGIN; 
+ rg_concurrency_test | Client          | idle in transaction | BEGIN; 
 (2 rows)
 
 21:END;
@@ -293,9 +293,9 @@ ALTER
 SELECT * FROM rg_activity_status;
  rsgname             | wait_event_type | state               | query  
 ---------------------+-----------------+---------------------+--------
+ rg_concurrency_test | Client          | idle in transaction | BEGIN; 
  rg_concurrency_test | ResourceGroup   | active              | BEGIN; 
  rg_concurrency_test | ResourceGroup   | active              | BEGIN; 
- rg_concurrency_test |                 | idle in transaction | BEGIN; 
 (3 rows)
 
 ALTER RESOURCE GROUP rg_concurrency_test SET MEMORY_LIMIT 50;
@@ -305,9 +305,9 @@ ALTER
 SELECT * FROM rg_activity_status;
  rsgname             | wait_event_type | state               | query  
 ---------------------+-----------------+---------------------+--------
+ rg_concurrency_test | Client          | idle in transaction | BEGIN; 
  rg_concurrency_test | ResourceGroup   | active              | BEGIN; 
  rg_concurrency_test | ResourceGroup   | active              | BEGIN; 
- rg_concurrency_test |                 | idle in transaction | BEGIN; 
 (3 rows)
 
 ALTER RESOURCE GROUP rg_concurrency_test SET MEMORY_LIMIT 60;
@@ -321,9 +321,9 @@ BEGIN
 SELECT * FROM rg_activity_status;
  rsgname             | wait_event_type | state               | query  
 ---------------------+-----------------+---------------------+--------
+ rg_concurrency_test | Client          | idle in transaction | BEGIN; 
+ rg_concurrency_test | Client          | idle in transaction | BEGIN; 
  rg_concurrency_test | ResourceGroup   | active              | BEGIN; 
- rg_concurrency_test |                 | idle in transaction | BEGIN; 
- rg_concurrency_test |                 | idle in transaction | BEGIN; 
 (3 rows)
 
 11:END;
@@ -337,8 +337,8 @@ BEGIN
 SELECT * FROM rg_activity_status;
  rsgname             | wait_event_type | state               | query  
 ---------------------+-----------------+---------------------+--------
- rg_concurrency_test |                 | idle in transaction | BEGIN; 
- rg_concurrency_test |                 | idle in transaction | BEGIN; 
+ rg_concurrency_test | Client          | idle in transaction | BEGIN; 
+ rg_concurrency_test | Client          | idle in transaction | BEGIN; 
 (2 rows)
 
 21:END;
@@ -377,7 +377,7 @@ ALTER
 SELECT * FROM rg_activity_status;
  rsgname             | wait_event_type | state               | query  
 ---------------------+-----------------+---------------------+--------
- rg_concurrency_test |                 | idle in transaction | BEGIN; 
+ rg_concurrency_test | Client          | idle in transaction | BEGIN; 
 (1 row)
 
 ALTER RESOURCE GROUP rg_concurrency_test SET MEMORY_LIMIT 60;
@@ -399,9 +399,9 @@ BEGIN
 SELECT * FROM rg_activity_status;
  rsgname             | wait_event_type | state               | query  
 ---------------------+-----------------+---------------------+--------
+ rg_concurrency_test | Client          | idle in transaction | BEGIN; 
+ rg_concurrency_test | Client          | idle in transaction | BEGIN; 
  rg_concurrency_test | ResourceGroup   | active              | BEGIN; 
- rg_concurrency_test |                 | idle in transaction | BEGIN; 
- rg_concurrency_test |                 | idle in transaction | BEGIN; 
 (3 rows)
 
 11:END;
@@ -415,8 +415,8 @@ BEGIN
 SELECT * FROM rg_activity_status;
  rsgname             | wait_event_type | state               | query  
 ---------------------+-----------------+---------------------+--------
- rg_concurrency_test |                 | idle in transaction | BEGIN; 
- rg_concurrency_test |                 | idle in transaction | BEGIN; 
+ rg_concurrency_test | Client          | idle in transaction | BEGIN; 
+ rg_concurrency_test | Client          | idle in transaction | BEGIN; 
 (2 rows)
 
 21:END;
@@ -473,6 +473,15 @@ ALTER
 13q: ... <quitting>
 14q: ... <quitting>
 15q: ... <quitting>
+-- start_ignore
+-- The 'q' command returns before the underlying segments all actually quit,
+-- so a following DROP command might fail.  Add a delay here as a workaround.
+SELECT pg_sleep(1);
+ pg_sleep 
+----------
+          
+(1 row)
+-- end_ignore
 
 --
 -- 8. increase concurrency from 0
@@ -503,7 +512,7 @@ BEGIN
 SELECT * FROM rg_activity_status;
  rsgname             | wait_event_type | state               | query  
 ---------------------+-----------------+---------------------+--------
- rg_concurrency_test |                 | idle in transaction | BEGIN; 
+ rg_concurrency_test | Client          | idle in transaction | BEGIN; 
 (1 row)
 
 11:END;
@@ -550,7 +559,7 @@ BEGIN
 SELECT * FROM rg_activity_status;
  rsgname             | wait_event_type | state               | query  
 ---------------------+-----------------+---------------------+--------
- rg_concurrency_test |                 | idle in transaction | BEGIN; 
+ rg_concurrency_test | Client          | idle in transaction | BEGIN; 
 (1 row)
 
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 0;
@@ -558,7 +567,7 @@ ALTER
 SELECT * FROM rg_activity_status;
  rsgname             | wait_event_type | state               | query  
 ---------------------+-----------------+---------------------+--------
- rg_concurrency_test |                 | idle in transaction | BEGIN; 
+ rg_concurrency_test | Client          | idle in transaction | BEGIN; 
 (1 row)
 
 11:END;
@@ -588,8 +597,8 @@ SET
 SELECT * FROM rg_activity_status;
  rsgname             | wait_event_type | state               | query  
 ---------------------+-----------------+---------------------+--------
+ rg_concurrency_test | Client          | idle in transaction | BEGIN; 
  rg_concurrency_test | ResourceGroup   | active              | BEGIN; 
- rg_concurrency_test |                 | idle in transaction | BEGIN; 
 (2 rows)
 
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 0;
@@ -597,8 +606,8 @@ ALTER
 SELECT * FROM rg_activity_status;
  rsgname             | wait_event_type | state               | query  
 ---------------------+-----------------+---------------------+--------
+ rg_concurrency_test | Client          | idle in transaction | BEGIN; 
  rg_concurrency_test | ResourceGroup   | active              | BEGIN; 
- rg_concurrency_test |                 | idle in transaction | BEGIN; 
 (2 rows)
 
 11:END;

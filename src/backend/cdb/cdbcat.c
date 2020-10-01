@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------
  *
  * cdbcat.c
- *	  Provides routines for reading info from mpp schema tables
+ *	  Routines for dealing with GpPolicy
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
@@ -15,17 +15,17 @@
 
 #include "postgres.h"
 
+#include "access/external.h"
 #include "access/genam.h"
 #include "access/hash.h"
 #include "access/heapam.h"
 #include "access/htup_details.h"
 #include "catalog/dependency.h"
-#include "catalog/gp_policy.h"
+#include "catalog/gp_distribution_policy.h"
 #include "catalog/indexing.h"
 #include "catalog/namespace.h"
 #include "catalog/objectaddress.h"
 #include "catalog/pg_constraint.h"
-#include "catalog/pg_exttable.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_opclass.h"
 #include "catalog/pg_type.h"
@@ -39,9 +39,8 @@
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
-#include "utils/tqual.h"
+#include "utils/regproc.h"
 #include "utils/syscache.h"
-#include "utils/lsyscache.h"
 
 static int errdetails_index_policy(char *attname,
 								   Oid policy_indclass,
@@ -209,6 +208,41 @@ GpPolicyEqual(const GpPolicy *lft, const GpPolicy *rgt)
 	return true;
 }								/* GpPolicyEqual */
 
+/*
+ * Like GpPolicyEqual, but the attributes are matched by name.
+ */
+bool
+GpPolicyEqualByName(const TupleDesc ltd, const GpPolicy *lpol,
+					const TupleDesc rtd, const GpPolicy *rpol)
+{
+	int			i;
+
+	if (!lpol || !rpol)
+		return false;
+
+	if (lpol->ptype != rpol->ptype)
+		return false;
+
+	if (lpol->numsegments != rpol->numsegments)
+		return false;
+
+	if (lpol->nattrs != rpol->nattrs)
+		return false;
+
+	for (i = 0; i < lpol->nattrs; i++)
+	{
+		Form_pg_attribute latt = TupleDescAttr(ltd, lpol->attrs[i] - 1);
+		Form_pg_attribute ratt = TupleDescAttr(rtd, rpol->attrs[i] - 1);
+
+		if (strcmp(NameStr(latt->attname), NameStr(ratt->attname)) != 0)
+			return false;
+		if (lpol->opclasses[i] != rpol->opclasses[i])
+			return false;
+	}
+
+	return true;
+}
+
 bool
 IsReplicatedTable(Oid relid)
 {
@@ -316,7 +350,7 @@ GpPolicyFetch(Oid tbloid)
 			return createRandomPartitionedPolicy(getgpsegmentCount());
 		}
 	}
-	else if (get_rel_relstorage(tbloid) == RELSTORAGE_FOREIGN)
+	else if (get_rel_relkind(tbloid) == RELKIND_FOREIGN_TABLE)
 	{
 		/*
 		 * Similar to the external table creation, there is a transient state
@@ -359,7 +393,7 @@ GpPolicyFetch(Oid tbloid)
 	 */
 	if (HeapTupleIsValid(gp_policy_tuple))
 	{
-		Form_gp_policy policyform = (Form_gp_policy) GETSTRUCT(gp_policy_tuple);
+		Form_gp_distribution_policy policyform = (Form_gp_distribution_policy) GETSTRUCT(gp_policy_tuple);
 		bool		isNull;
 		int			i;
 		int			nattrs;
@@ -399,7 +433,7 @@ GpPolicyFetch(Oid tbloid)
 				 */
 				distkey = (int2vector *) DatumGetPointer(
 					SysCacheGetAttr(GPPOLICYID, gp_policy_tuple,
-									Anum_gp_policy_distkey,
+									Anum_gp_distribution_policy_distkey,
 									&isNull));
 
 				/*
@@ -410,7 +444,7 @@ GpPolicyFetch(Oid tbloid)
 					nattrs = distkey->dim1;
 					distopclasses = (oidvector *) DatumGetPointer(
 						SysCacheGetAttr(GPPOLICYID, gp_policy_tuple,
-										Anum_gp_policy_distclass,
+										Anum_gp_distribution_policy_distclass,
 										&isNull));
 					Assert(!isNull);
 					Assert(distopclasses->dim1 == nattrs);
@@ -481,7 +515,7 @@ GpPolicyStore(Oid tbloid, const GpPolicy *policy)
 	/*
 	 * Open and lock the gp_distribution_policy catalog.
 	 */
-	gp_policy_rel = heap_open(GpPolicyRelationId, RowExclusiveLock);
+	gp_policy_rel = table_open(GpPolicyRelationId, RowExclusiveLock);
 
 	if (GpPolicyIsReplicated(policy))
 	{
@@ -505,8 +539,7 @@ GpPolicyStore(Oid tbloid, const GpPolicy *policy)
 	gp_policy_tuple = heap_form_tuple(RelationGetDescr(gp_policy_rel), values, nulls);
 
 	/* Insert tuple into the relation */
-	simple_heap_insert(gp_policy_rel, gp_policy_tuple);
-	CatalogUpdateIndexes(gp_policy_rel, gp_policy_tuple);
+	CatalogTupleInsert(gp_policy_rel, gp_policy_tuple);
 
 	/*
 	 * Register the table as dependent on the operator classes used in the
@@ -534,7 +567,7 @@ GpPolicyStore(Oid tbloid, const GpPolicy *policy)
 	 * have updated the catalog: consequently the lock must be held until end
 	 * of transaction.
 	 */
-	heap_close(gp_policy_rel, NoLock);
+	table_close(gp_policy_rel, NoLock);
 }								/* GpPolicyStore */
 
 /*
@@ -575,7 +608,7 @@ GpPolicyReplace(Oid tbloid, const GpPolicy *policy)
 	/*
 	 * Open and lock the gp_distribution_policy catalog.
 	 */
-	gp_policy_rel = heap_open(GpPolicyRelationId, RowExclusiveLock);
+	gp_policy_rel = table_open(GpPolicyRelationId, RowExclusiveLock);
 
 	if (GpPolicyIsReplicated(policy))
 	{
@@ -607,7 +640,7 @@ GpPolicyReplace(Oid tbloid, const GpPolicy *policy)
 	 * Select by value of the localoid field
 	 */
 	ScanKeyInit(&skey,
-				Anum_gp_policy_localoid,
+				Anum_gp_distribution_policy_localoid,
 				BTEqualStrategyNumber, F_OIDEQ,
 				ObjectIdGetDatum(tbloid));
 	scan = systable_beginscan(gp_policy_rel, GpPolicyLocalOidIndexId, true,
@@ -622,16 +655,14 @@ GpPolicyReplace(Oid tbloid, const GpPolicy *policy)
 												 RelationGetDescr(gp_policy_rel),
 												 values, nulls, repl);
 
-		simple_heap_update(gp_policy_rel, &gp_policy_tuple->t_self, newtuple);
-		CatalogUpdateIndexes(gp_policy_rel, newtuple);
+		CatalogTupleUpdate(gp_policy_rel, &gp_policy_tuple->t_self, newtuple);
 
 		heap_freetuple(newtuple);
 	}
 	else
 	{
 		gp_policy_tuple = heap_form_tuple(gp_policy_rel->rd_att, values, nulls);
-		(void) simple_heap_insert(gp_policy_rel, gp_policy_tuple);
-		CatalogUpdateIndexes(gp_policy_rel, gp_policy_tuple);
+		CatalogTupleInsert(gp_policy_rel, gp_policy_tuple);
 	}
 	systable_endscan(scan);
 
@@ -659,7 +690,7 @@ GpPolicyReplace(Oid tbloid, const GpPolicy *policy)
 	 * have updated the catalog: consequently the lock must be held until end
 	 * of transaction.
 	 */
-	heap_close(gp_policy_rel, NoLock);
+	table_close(gp_policy_rel, NoLock);
 }								/* GpPolicyReplace */
 
 
@@ -678,10 +709,10 @@ GpPolicyRemove(Oid tbloid)
 	/*
 	 * Open and lock the gp_distribution_policy catalog.
 	 */
-	gp_policy_rel = heap_open(GpPolicyRelationId, RowExclusiveLock);
+	gp_policy_rel = table_open(GpPolicyRelationId, RowExclusiveLock);
 
 	/* Delete the policy entry from the catalog. */
-	ScanKeyInit(&scankey, Anum_gp_policy_localoid,
+	ScanKeyInit(&scankey, Anum_gp_distribution_policy_localoid,
 				BTEqualStrategyNumber, F_OIDEQ,
 				ObjectIdGetDatum(tbloid));
 
@@ -690,7 +721,7 @@ GpPolicyRemove(Oid tbloid)
 
 	while ((tuple = systable_getnext(sscan)) != NULL)
 	{
-		simple_heap_delete(gp_policy_rel, &tuple->t_self);
+		CatalogTupleDelete(gp_policy_rel, &tuple->t_self);
 	}
 
 	systable_endscan(sscan);
@@ -705,7 +736,7 @@ GpPolicyRemove(Oid tbloid)
 	 * have updated the catalog: consequently the lock must be held until end
 	 * of transaction.
 	 */
-	heap_close(gp_policy_rel, NoLock);
+	table_close(gp_policy_rel, NoLock);
 }								/* GpPolicyRemove */
 
 /*
@@ -806,7 +837,7 @@ index_check_policy_compatible(GpPolicy *policy,
 
 		/* Look up the equality operator for the distribution key opclass */
 		policy_attr = policy->attrs[i];
-		policy_typeid = desc->attrs[policy_attr - 1]->atttypid;
+		policy_typeid = TupleDescAttr(desc, policy_attr - 1)->atttypid;
 		policy_opclass = policy->opclasses[i];
 		policy_opfamily = get_opclass_family(policy_opclass);
 		policy_eqop = cdb_eqop_in_hash_opfamily(policy_opfamily, policy_typeid);
@@ -1008,89 +1039,4 @@ errdetails_index_policy(char *attname,
 	}
 
 	return 0;
-}
-
-/*
- * If the proposed index does not match the distribution policy but the relation
- * is empty and does not have a primary key or unique index, update the
- * distribution policy to match the index definition (MPP-101).
- */
-bool
-change_policy_to_match_index(Relation rel,
-							 AttrNumber *indattr,
-							 Oid *indclasses,
-							 Oid *exclop,
-							 int nidxatts)
-{
-	TupleDesc	desc = RelationGetDescr(rel);
-	GpPolicy *policy;
-	int			i;
-	MemoryContext oldcontext;
-
-	/*
-	 * Don't do anything with exclusion constraints, for now. We could
-	 * do the analogous thing we do with unique indexes, if any of the
-	 * exclusion operators have a compatible hash opclass. But we don't
-	 * bother.
-	 */
-	if (exclop)
-		return false;
-
-	policy = makeGpPolicy(POLICYTYPE_PARTITIONED, nidxatts,
-						  rel->rd_cdbpolicy->numsegments);
-	for (i = 0; i < nidxatts; i++)
-	{
-		AttrNumber	attno = indattr[i];
-		Oid			typeid = desc->attrs[attno - 1]->atttypid;
-		Oid			policy_opclass;
-		Oid			policy_opfamily;
-		Oid			policy_eqop;
-		Oid			indopfamily;
-		Oid			indeqop;
-
-		policy_opclass = cdb_default_distribution_opclass_for_type(typeid);
-		if (!policy_opclass)
-		{
-			/*
-			 * The datatype has no default opclass. Can't use it in the
-			 * distribution key.
-			 */
-			return false;
-		}
-
-		policy_opfamily = get_opclass_family(policy_opclass);
-		policy_eqop = get_opfamily_member(policy_opfamily,
-										  typeid,
-										  typeid,
-										  HTEqualStrategyNumber);
-
-		indopfamily = get_opclass_family(indclasses[i]);
-		indeqop = get_opfamily_member(indopfamily,
-									  typeid,
-									  typeid,
-									  BTEqualStrategyNumber);
-		if (policy_eqop != indeqop)
-		{
-			/*
-			 * The default hash opclass isn't compatible with the index opclass.
-			 * That is, they use a different equality operator. Give up.
-			 *
-			 * We could perhaps work a bit harder, and search for a different
-			 * hash opclass that would be compatible. But doesn't seem worth
-			 * the trouble.
-			 */
-			return false;
-		}
-
-		policy->attrs[i] = attno;
-		policy->opclasses[i] = policy_opclass;
-	}
-
-	GpPolicyReplace(rel->rd_id, policy);
-
-	oldcontext = MemoryContextSwitchTo(GetMemoryChunkContext(rel));
-	rel->rd_cdbpolicy = GpPolicyCopy(policy);
-	MemoryContextSwitchTo(oldcontext);
-
-	return true;
 }

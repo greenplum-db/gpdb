@@ -112,19 +112,19 @@ CREATE VIEW test_tablesample_v1 AS
 CREATE VIEW test_tablesample_v2 AS
   SELECT id FROM test_tablesample TABLESAMPLE SYSTEM (99);
 \d+ test_tablesample_v1
-          View "public.test_tablesample_v1"
- Column |  Type   | Modifiers | Storage | Description 
---------+---------+-----------+---------+-------------
- id     | integer |           | plain   | 
+                     View "public.test_tablesample_v1"
+ Column |  Type   | Collation | Nullable | Default | Storage | Description 
+--------+---------+-----------+----------+---------+---------+-------------
+ id     | integer |           |          |         | plain   | 
 View definition:
  SELECT test_tablesample.id
    FROM test_tablesample TABLESAMPLE system ((10 * 2)) REPEATABLE (2);
 
 \d+ test_tablesample_v2
-          View "public.test_tablesample_v2"
- Column |  Type   | Modifiers | Storage | Description 
---------+---------+-----------+---------+-------------
- id     | integer |           | plain   | 
+                     View "public.test_tablesample_v2"
+ Column |  Type   | Collation | Nullable | Default | Storage | Description 
+--------+---------+-----------+----------+---------+---------+-------------
+ id     | integer |           |          |         | plain   | 
 View definition:
  SELECT test_tablesample.id
    FROM test_tablesample TABLESAMPLE system (99);
@@ -301,18 +301,17 @@ SET enable_hashjoin TO OFF;
 SET enable_mergejoin TO OFF;
 SET enable_nestloop TO ON;
 EXPLAIN (COSTS OFF) SELECT * FROM ttr1 TABLESAMPLE BERNOULLI (50) REPEATABLE (1), ttr2 TABLESAMPLE BERNOULLI (50) REPEATABLE (1) WHERE ttr1.a = ttr2.a;
-                                       QUERY PLAN                                        
------------------------------------------------------------------------------------------
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop
          Join Filter: (ttr1.a = ttr2.a)
          ->  Sample Scan on ttr1
                Sampling: bernoulli ('50'::real) REPEATABLE ('1'::double precision)
-         ->  Materialize
-               ->  Sample Scan on ttr2
-                     Sampling: bernoulli ('50'::real) REPEATABLE ('1'::double precision)
+         ->  Sample Scan on ttr2
+               Sampling: bernoulli ('50'::real) REPEATABLE ('1'::double precision)
  Optimizer: Postgres query optimizer
-(9 rows)
+(8 rows)
 
 SELECT * FROM ttr1 TABLESAMPLE BERNOULLI (50) REPEATABLE (1), ttr2 TABLESAMPLE BERNOULLI (50) REPEATABLE (1) WHERE ttr1.a = ttr2.a;
  a  | b | a  | b 
@@ -322,18 +321,17 @@ SELECT * FROM ttr1 TABLESAMPLE BERNOULLI (50) REPEATABLE (1), ttr2 TABLESAMPLE B
 (2 rows)
 
 EXPLAIN (COSTS OFF) SELECT * FROM ttr1 TABLESAMPLE SYSTEM (50) REPEATABLE (1), ttr2 TABLESAMPLE SYSTEM (50) REPEATABLE (1) WHERE ttr1.a = ttr2.a;
-                                      QUERY PLAN                                      
---------------------------------------------------------------------------------------
+                                   QUERY PLAN                                   
+--------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop
          Join Filter: (ttr1.a = ttr2.a)
          ->  Sample Scan on ttr1
                Sampling: system ('50'::real) REPEATABLE ('1'::double precision)
-         ->  Materialize
-               ->  Sample Scan on ttr2
-                     Sampling: system ('50'::real) REPEATABLE ('1'::double precision)
+         ->  Sample Scan on ttr2
+               Sampling: system ('50'::real) REPEATABLE ('1'::double precision)
  Optimizer: Postgres query optimizer
-(9 rows)
+(8 rows)
 
 SELECT * FROM ttr1 TABLESAMPLE SYSTEM (50) REPEATABLE (1), ttr2 TABLESAMPLE SYSTEM (50) REPEATABLE (1) WHERE ttr1.a = ttr2.a;
  a  | b | a  | b 
@@ -472,6 +470,21 @@ SELECT q.* FROM (SELECT * FROM test_tablesample) as q TABLESAMPLE BERNOULLI (5);
 ERROR:  syntax error at or near "TABLESAMPLE"
 LINE 1: ...CT q.* FROM (SELECT * FROM test_tablesample) as q TABLESAMPL...
                                                              ^
-DROP VIEW test_tablesample_v1;
-DROP VIEW test_tablesample_v2;
-DROP TABLE test_tablesample;
+-- check partitioned tables support tablesample
+create table parted_sample (a int) partition by list (a);
+create table parted_sample_1 partition of parted_sample for values in (1);
+create table parted_sample_2 partition of parted_sample for values in (2);
+explain (costs off)
+  select * from parted_sample tablesample bernoulli (100);
+                   QUERY PLAN                    
+-------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Append
+         ->  Sample Scan on parted_sample_1
+               Sampling: bernoulli ('100'::real)
+         ->  Sample Scan on parted_sample_2
+               Sampling: bernoulli ('100'::real)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+drop table parted_sample, parted_sample_1, parted_sample_2;

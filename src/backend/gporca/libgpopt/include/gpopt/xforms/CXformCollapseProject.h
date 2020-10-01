@@ -16,60 +16,55 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CXformCollapseProject
-	//
-	//	@doc:
-	//		Transform that collapses two cascaded project nodes
-	//
-	//---------------------------------------------------------------------------
-	class CXformCollapseProject : public CXformExploration
+//---------------------------------------------------------------------------
+//	@class:
+//		CXformCollapseProject
+//
+//	@doc:
+//		Transform that collapses two cascaded project nodes
+//
+//---------------------------------------------------------------------------
+class CXformCollapseProject : public CXformExploration
+{
+private:
+	// private copy ctor
+	CXformCollapseProject(const CXformCollapseProject &);
+
+public:
+	// ctor
+	explicit CXformCollapseProject(CMemoryPool *mp);
+
+	// dtor
+	virtual ~CXformCollapseProject()
 	{
+	}
 
-		private:
+	// ident accessors
+	virtual EXformId
+	Exfid() const
+	{
+		return ExfCollapseProject;
+	}
 
-			// private copy ctor
-			CXformCollapseProject(const CXformCollapseProject &);
+	// return a string for xform name
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CXformCollapseProject";
+	}
 
-		public:
+	// compute xform promise for a given expression handle
+	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
 
-			// ctor
-			explicit
-			CXformCollapseProject(CMemoryPool *mp);
+	// actual transform
+	void Transform(CXformContext *, CXformResult *, CExpression *) const;
 
-			// dtor
-			virtual
-			~CXformCollapseProject()
-			{}
+};	// class CXformCollapseProject
 
-			// ident accessors
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfCollapseProject;
-			}
+}  // namespace gpopt
 
-			// return a string for xform name
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CXformCollapseProject";
-			}
-
-			// compute xform promise for a given expression handle
-			virtual
-			EXformPromise Exfp (CExpressionHandle &exprhdl) const;
-
-			// actual transform
-			void Transform(CXformContext *, CXformResult *, CExpression *) const;
-
-	}; // class CXformCollapseProject
-
-}
-
-#endif // !GPOPT_CXformCollapseProject_H
+#endif	// !GPOPT_CXformCollapseProject_H
 
 // EOF

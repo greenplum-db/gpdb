@@ -3,7 +3,7 @@
  * arrayutils.c
  *	  This file contains some support routines required for array functions.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -93,7 +93,7 @@ ArrayGetNItems(int ndim, const int *dims)
 					 errmsg("array size exceeds the maximum allowed (%d)",
 							(int) MaxArraySize)));
 
-		prod = (int64) ret *(int64) dims[i];
+		prod = (int64) ret * (int64) dims[i];
 
 		ret = (int32) prod;
 		if ((int64) ret != prod)
@@ -226,8 +226,7 @@ ArrayGetIntegerTypmods(ArrayType *arr, int *n)
 	result = (int32 *) palloc(*n * sizeof(int32));
 
 	for (i = 0; i < *n; i++)
-		result[i] = pg_atoi(DatumGetCString(elem_values[i]),
-							sizeof(int32), '\0');
+		result[i] = pg_strtoint32(DatumGetCString(elem_values[i]));
 
 	pfree(elem_values);
 

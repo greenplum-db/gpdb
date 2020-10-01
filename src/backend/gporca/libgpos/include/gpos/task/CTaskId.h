@@ -17,81 +17,64 @@
 
 namespace gpos
 {
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CTaskId
-	//
-	//	@doc:
-	//		Identification class; uses a serial number.
-	//
-	//---------------------------------------------------------------------------
-	class CTaskId
+//---------------------------------------------------------------------------
+//	@class:
+//		CTaskId
+//
+//	@doc:
+//		Identification class; uses a serial number.
+//
+//---------------------------------------------------------------------------
+class CTaskId
+{
+private:
+	// task id
+	ULONG_PTR m_task_id;
+
+	// atomic counter
+	static ULONG_PTR m_counter;
+
+public:
+	// ctor
+	CTaskId() : m_task_id(m_counter++)
 	{
+	}
 
-		private:
+	// simple comparison
+	BOOL
+	Equals(const CTaskId &tid) const
+	{
+		return m_task_id == tid.m_task_id;
+	}
 
-			// task id
-			ULONG_PTR m_task_id;
+	// comparison operator
+	inline BOOL
+	operator==(const CTaskId &tid) const
+	{
+		return this->Equals(tid);
+	}
 
-			// atomic counter
-			static ULONG_PTR m_counter;
+	// comparison function; used in hashtables
+	static BOOL
+	Equals(const CTaskId &tid, const CTaskId &other)
+	{
+		return tid == other;
+	}
 
-		public:
+	// primitive hash function
+	static ULONG
+	HashValue(const CTaskId &tid)
+	{
+		return gpos::HashValue<ULONG_PTR>(&tid.m_task_id);
+	}
 
-			// ctor
-			CTaskId()
-				:
-				m_task_id(m_counter++)
-			{}
+	// invalid id
+	static const CTaskId m_invalid_tid;
 
-			// simple comparison
-			BOOL Equals
-				(
-				const CTaskId &tid
-				)
-				const
-			{
-				return m_task_id == tid.m_task_id;
-			}
+};	// class CTaskId
 
-			// comparison operator
-			inline
-			BOOL operator ==
-				(
-				const CTaskId &tid
-				)
-				const
-			{
-				return this->Equals(tid);
-			}
+}  // namespace gpos
 
-			// comparison function; used in hashtables
-			static
-			BOOL Equals
-				(
-				const CTaskId &tid,
-				const CTaskId &other
-				)
-			{
-				return tid == other;
-			}
-
-			// primitive hash function
-			static
-			ULONG HashValue(const CTaskId &tid)
-			{
-				return gpos::HashValue<ULONG_PTR>(&tid.m_task_id);
-			}
-
-			// invalid id
-			static
-			const CTaskId m_invalid_tid;
-
-	}; // class CTaskId
-
-}
-
-#endif // !GPOS_CTaskId_H
+#endif	// !GPOS_CTaskId_H
 
 // EOF
-

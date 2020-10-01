@@ -16,57 +16,49 @@
 
 namespace gpos
 {
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		COstreamString
-	//
-	//	@doc:
-	//		Implements an output stream writing to a string
-	//
-	//---------------------------------------------------------------------------
-	class COstreamString : public COstream
+//---------------------------------------------------------------------------
+//	@class:
+//		COstreamString
+//
+//	@doc:
+//		Implements an output stream writing to a string
+//
+//---------------------------------------------------------------------------
+class COstreamString : public COstream
+{
+private:
+	// underlying string
+	CWString *m_string;
+
+	// private copy ctor
+	COstreamString(const COstreamString &);
+
+public:
+	// please see comments in COstream.h for an explanation
+	using COstream::operator<<;
+
+	// ctor
+	explicit COstreamString(CWString *);
+
+	virtual ~COstreamString()
 	{
-		private:
-			
-			// underlying string
-			CWString *m_string;
+	}
 
-			// private copy ctor
-			COstreamString(const COstreamString &);
-			
-		public:
+	// implement << operator on wide char array
+	virtual IOstream &operator<<(const WCHAR *wc_array);
 
-			// please see comments in COstream.h for an explanation
-			using COstream::operator <<;
-			
-			// ctor
-			explicit
-			COstreamString(CWString*);
+	// implement << operator on char array
+	virtual IOstream &operator<<(const CHAR *c_array);
 
-			virtual
-			~COstreamString() {}
+	// implement << operator on wide char
+	virtual IOstream &operator<<(const WCHAR wc);
 
-			// implement << operator on wide char array
-			virtual
-			IOstream& operator<< (const WCHAR * wc_array);
+	// implement << operator on char
+	virtual IOstream &operator<<(const CHAR c);
+};
 
-			// implement << operator on char array
-			virtual
-			IOstream& operator<< (const CHAR *c_array);
+}  // namespace gpos
 
-			// implement << operator on wide char
-			virtual
-			IOstream& operator<< (const WCHAR wc);
-
-			// implement << operator on char
-			virtual
-			IOstream& operator<< (const CHAR c);
-
-	};
-
-}
-
-#endif // !GPOS_COstreamString_H
+#endif	// !GPOS_COstreamString_H
 
 // EOF
-

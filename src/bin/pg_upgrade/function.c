@@ -3,7 +3,7 @@
  *
  *	server-side function support
  *
- *	Copyright (c) 2010-2016, PostgreSQL Global Development Group
+ *	Copyright (c) 2010-2019, PostgreSQL Global Development Group
  *	src/bin/pg_upgrade/function.c
  */
 
@@ -12,6 +12,37 @@
 #include "pg_upgrade.h"
 
 #include "access/transam.h"
+#include "catalog/pg_language_d.h"
+
+
+/*
+ * qsort comparator for pointers to library names
+ *
+ * We sort first by name length, then alphabetically for names of the
+ * same length, then database array index.  This is to ensure that, eg,
+ * "hstore_plpython" sorts after both "hstore" and "plpython"; otherwise
+ * transform modules will probably fail their LOAD tests.  (The backend
+ * ought to cope with that consideration, but it doesn't yet, and even
+ * when it does it'll still be a good idea to have a predictable order of
+ * probing here.)
+ */
+static int
+library_name_compare(const void *p1, const void *p2)
+{
+	const char *str1 = ((const LibraryInfo *) p1)->name;
+	const char *str2 = ((const LibraryInfo *) p2)->name;
+	int			slen1 = strlen(str1);
+	int			slen2 = strlen(str2);
+	int			cmp = strcmp(str1, str2);
+
+	if (slen1 != slen2)
+		return slen1 - slen2;
+	if (cmp != 0)
+		return cmp;
+	else
+		return ((const LibraryInfo *) p1)->dbnum -
+			((const LibraryInfo *) p2)->dbnum;
+}
 
 /*
  * get_loadable_libraries()
@@ -48,18 +79,16 @@ get_loadable_libraries(void)
 		PGconn	   *conn = connectToServer(&old_cluster, active_db->db_name);
 
 		/*
-		 * Fetch all libraries referenced in this DB.  We can't exclude the
-		 * "pg_catalog" schema because, while such functions are not
-		 * explicitly dumped by pg_dump, they do reference implicit objects
-		 * that pg_dump does dump, e.g. CREATE LANGUAGE plperl.
+		 * Fetch all libraries containing non-built-in C functions in this DB.
 		 */
 		ress[dbnum] = executeQueryOrDie(conn,
 										"SELECT DISTINCT probin "
-										"FROM	pg_catalog.pg_proc "
-										"WHERE	prolang = 13 /* C */ AND "
+										"FROM pg_catalog.pg_proc "
+										"WHERE prolang = %u AND "
 										"probin IS NOT NULL AND "
 										" %s "
 										"oid >= %u;",
+										ClanguageId,
 										pg83_str,
 										FirstNormalObjectId);
 		totaltups += PQntuples(ress[dbnum]);
@@ -81,13 +110,15 @@ get_loadable_libraries(void)
 
 			res = executeQueryOrDie(conn,
 									"SELECT 1 "
-						   "FROM	pg_catalog.pg_proc JOIN pg_namespace "
-							 "		ON pronamespace = pg_namespace.oid "
-							   "WHERE proname = 'plpython_call_handler' AND "
+									"FROM pg_catalog.pg_proc p "
+									"    JOIN pg_catalog.pg_namespace n "
+									"    ON pronamespace = n.oid "
+									"WHERE proname = 'plpython_call_handler' AND "
 									"nspname = 'public' AND "
-									"prolang = 13 /* C */ AND "
+									"prolang = %u AND "
 									"probin = '$libdir/plpython' AND "
-									"pg_proc.oid >= %u;",
+									"p.oid >= %u;",
+									ClanguageId,
 									FirstNormalObjectId);
 			if (PQntuples(res) > 0)
 			{
@@ -105,9 +136,9 @@ get_loadable_libraries(void)
 						   "pre-8.1 install of plpython, and must be removed for pg_upgrade\n"
 						   "to complete because it references a now-obsolete \"plpython\"\n"
 						   "shared object file.  You can remove the \"public\" schema version\n"
-					   "of this function by running the following command:\n"
+						   "of this function by running the following command:\n"
 						   "\n"
-						 "    DROP FUNCTION public.plpython_call_handler()\n"
+						   "    DROP FUNCTION public.plpython_call_handler()\n"
 						   "\n"
 						   "in each affected database:\n"
 						   "\n");
@@ -124,13 +155,7 @@ get_loadable_libraries(void)
 	if (found_public_plpython_handler)
 		pg_fatal("Remove the problem functions from the old cluster to continue.\n");
 
-	/* Allocate what's certainly enough space */
-	os_info.libraries = (char **) pg_malloc(totaltups * sizeof(char *));
-
-	/*
-	 * Now remove duplicates across DBs.  This is pretty inefficient code, but
-	 * there probably aren't enough entries to matter.
-	 */
+	os_info.libraries = (LibraryInfo *) pg_malloc(totaltups * sizeof(LibraryInfo));
 	totaltups = 0;
 
 	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
@@ -143,27 +168,18 @@ get_loadable_libraries(void)
 		for (rowno = 0; rowno < ntups; rowno++)
 		{
 			char	   *lib = PQgetvalue(res, rowno, 0);
-			bool		dup = false;
-			int			n;
 
-			for (n = 0; n < totaltups; n++)
-			{
-				if (strcmp(lib, os_info.libraries[n]) == 0)
-				{
-					dup = true;
-					break;
-				}
-			}
-			if (!dup)
-				os_info.libraries[totaltups++] = pg_strdup(lib);
+			os_info.libraries[totaltups].name = pg_strdup(lib);
+			os_info.libraries[totaltups].dbnum = dbnum;
+
+			totaltups++;
 		}
-
 		PQclear(res);
 	}
 
-	os_info.num_libraries = totaltups;
-
 	pg_free(ress);
+
+	os_info.num_libraries = totaltups;
 }
 
 
@@ -179,6 +195,7 @@ check_loadable_libraries(void)
 {
 	PGconn	   *conn = connectToServer(&new_cluster, "template1");
 	int			libnum;
+	int			was_load_failure = false;
 	FILE	   *script = NULL;
 	bool		found = false;
 	char		output_path[MAXPGPATH];
@@ -187,52 +204,72 @@ check_loadable_libraries(void)
 
 	snprintf(output_path, sizeof(output_path), "loadable_libraries.txt");
 
+	/*
+	 * Now we want to sort the library names into order.  This avoids multiple
+	 * probes of the same library, and ensures that libraries are probed in a
+	 * consistent order, which is important for reproducible behavior if one
+	 * library depends on another.
+	 */
+	qsort((void *) os_info.libraries, os_info.num_libraries,
+		  sizeof(LibraryInfo), library_name_compare);
+
 	for (libnum = 0; libnum < os_info.num_libraries; libnum++)
 	{
-		char	   *lib = os_info.libraries[libnum];
+		char	   *lib = os_info.libraries[libnum].name;
 		int			llen = strlen(lib);
 		char		cmd[7 + 2 * MAXPGPATH + 1];
 		PGresult   *res;
 
-		/*
-		 * In Postgres 9.0, Python 3 support was added, and to do that, a
-		 * plpython2u language was created with library name plpython2.so as a
-		 * symbolic link to plpython.so.  In Postgres 9.1, only the
-		 * plpython2.so library was created, and both plpythonu and plpython2u
-		 * pointing to it.  For this reason, any reference to library name
-		 * "plpython" in an old PG <= 9.1 cluster must look for "plpython2" in
-		 * the new cluster.
-		 *
-		 * For this case, we could check pg_pltemplate, but that only works
-		 * for languages, and does not help with function shared objects, so
-		 * we just do a general fix.
-		 */
-		if (GET_MAJOR_VERSION(old_cluster.major_version) < 901 &&
-			strcmp(lib, "$libdir/plpython") == 0)
+		/* Did the library name change?  Probe it. */
+		if (libnum == 0 || strcmp(lib, os_info.libraries[libnum - 1].name) != 0)
 		{
-			lib = "$libdir/plpython2";
-			llen = strlen(lib);
+			/*
+			 * In Postgres 9.0, Python 3 support was added, and to do that, a
+			 * plpython2u language was created with library name plpython2.so
+			 * as a symbolic link to plpython.so.  In Postgres 9.1, only the
+			 * plpython2.so library was created, and both plpythonu and
+			 * plpython2u pointing to it.  For this reason, any reference to
+			 * library name "plpython" in an old PG <= 9.1 cluster must look
+			 * for "plpython2" in the new cluster.
+			 *
+			 * For this case, we could check pg_pltemplate, but that only
+			 * works for languages, and does not help with function shared
+			 * objects, so we just do a general fix.
+			 */
+			if (GET_MAJOR_VERSION(old_cluster.major_version) < 901 &&
+				strcmp(lib, "$libdir/plpython") == 0)
+			{
+				lib = "$libdir/plpython2";
+				llen = strlen(lib);
+			}
+
+			strcpy(cmd, "LOAD '");
+			PQescapeStringConn(conn, cmd + strlen(cmd), lib, llen, NULL);
+			strcat(cmd, "'");
+
+			res = PQexec(conn, cmd);
+
+			if (PQresultStatus(res) != PGRES_COMMAND_OK)
+			{
+				found = true;
+				was_load_failure = true;
+
+				if (script == NULL && (script = fopen_priv(output_path, "w")) == NULL)
+					pg_fatal("could not open file \"%s\": %s\n",
+							 output_path, strerror(errno));
+				fprintf(script, _("could not load library \"%s\": %s"),
+						lib,
+						PQerrorMessage(conn));
+			}
+			else
+				was_load_failure = false;
+
+			PQclear(res);
 		}
 
-		strcpy(cmd, "LOAD '");
-		PQescapeStringConn(conn, cmd + strlen(cmd), lib, llen, NULL);
-		strcat(cmd, "'");
-
-		res = PQexec(conn, cmd);
-
-		if (PQresultStatus(res) != PGRES_COMMAND_OK)
-		{
-			found = true;
-
-			if (script == NULL && (script = fopen_priv(output_path, "w")) == NULL)
-				pg_fatal("Could not open file \"%s\": %s\n",
-						 output_path, getErrorText());
-			fprintf(script, "Could not load library \"%s\"\n%s\n",
-					lib,
-					PQerrorMessage(conn));
-		}
-
-		PQclear(res);
+		if (was_load_failure)
+			fprintf(script, _("Database: %s\n"),
+					old_cluster.dbarr.dbs[os_info.libraries[libnum].dbnum].db_name);
 	}
 
 	PQfinish(conn);

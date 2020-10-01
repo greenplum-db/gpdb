@@ -36,17 +36,20 @@ else
    CFLAGS_SL = +Z
 endif
 
+# env var name to use in place of LD_LIBRARY_PATH
+ld_library_path_var = SHLIB_PATH
+
 # Rule for building a shared library from a single .o file
 %$(DLSUFFIX): %.o
 ifeq ($(GCC), yes)
   ifeq ($(with_gnu_ld), yes)
-	$(CC) $(CFLAGS) $(LDFLAGS) $(LDFLAGS_SL) -shared -o $@ $< `$(CC) $(LDFLAGS) -print-libgcc-file-name`
+	$(CC) $(CFLAGS) $< $(LDFLAGS) $(LDFLAGS_SL) -shared -o $@ `$(CC) $(LDFLAGS) -print-libgcc-file-name`
   else
 	$(LD) -b -o $@ $< `$(CC) $(LDFLAGS) -print-libgcc-file-name`
   endif
 else
   ifeq ($(with_gnu_ld), yes)
-	$(CC) $(CFLAGS) $(LDFLAGS) $(LDFLAGS_SL) -shared -o $@ $<
+	$(CC) $(CFLAGS) $< $(LDFLAGS) $(LDFLAGS_SL) -shared -o $@
   else
 	$(LD) -b -o $@ $<
   endif

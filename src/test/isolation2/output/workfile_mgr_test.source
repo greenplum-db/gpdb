@@ -1,0 +1,307 @@
+CREATE OR REPLACE FUNCTION gp_workfile_mgr_test_on_master(testname text, numfiles int) RETURNS setof bool LANGUAGE C VOLATILE EXECUTE ON MASTER AS '@abs_builddir@/isolation2_regress@DLSUFFIX@', 'gp_workfile_mgr_test_harness';
+CREATE
+
+CREATE OR REPLACE FUNCTION gp_workfile_mgr_test_on_segments(testname text, numfiles int) RETURNS setof bool LANGUAGE C VOLATILE EXECUTE ON ALL SEGMENTS AS '@abs_builddir@/isolation2_regress@DLSUFFIX@', 'gp_workfile_mgr_test_harness';
+CREATE
+
+CREATE FUNCTION gp_workfile_mgr_test(testname text, numfiles int) RETURNS SETOF BOOL AS $$ SELECT C.* FROM gp_workfile_mgr_test_on_master($1, $2) as C UNION ALL SELECT C.* FROM gp_workfile_mgr_test_on_segments($1, $2) as C $$ LANGUAGE SQL;
+CREATE
+
+CREATE OR REPLACE FUNCTION gp_workfile_mgr_create_workset(worksetname text, interXact bool, holdPin bool, closeFile bool) RETURNS void LANGUAGE C VOLATILE EXECUTE ON ALL SEGMENTS AS '@abs_builddir@/isolation2_regress@DLSUFFIX@', 'gp_workfile_mgr_create_workset';
+CREATE
+
+CREATE OR REPLACE FUNCTION gp_workfile_mgr_create_empty_workset(worksetname text) RETURNS void LANGUAGE C VOLATILE EXECUTE ON ALL SEGMENTS AS '@abs_builddir@/isolation2_regress@DLSUFFIX@', 'gp_workfile_mgr_create_workset';
+CREATE
+
+CREATE FUNCTION gp_workfile_mgr_cache_entries() RETURNS TABLE(segid int4, prefix text, size int8, operation text, slice int4, sessionid int4, commandid int4, numfiles int4) AS '$libdir/gp_workfile_mgr', 'gp_workfile_mgr_cache_entries' LANGUAGE C VOLATILE EXECUTE ON ALL SEGMENTS;
+CREATE
+
+-- start_ignore
+!\retcode gpconfig -c gp_workfile_max_entries -v 32 --skipvalidation;
+-- start_ignore
+20200923:12:05:57:013768 gpconfig:mdw:gpadmin-[INFO]:-completed successfully with parameters '-c gp_workfile_max_entries -v 32 --skipvalidation'
+
+-- end_ignore
+(exited with code 0)
+!\retcode gpstop -ari;
+-- start_ignore
+20200923:12:05:57:014232 gpstop:mdw:gpadmin-[INFO]:-Starting gpstop with args: -ari
+20200923:12:05:57:014232 gpstop:mdw:gpadmin-[INFO]:-Gathering information and validating the environment...
+20200923:12:05:57:014232 gpstop:mdw:gpadmin-[INFO]:-Obtaining Greenplum Master catalog information
+20200923:12:05:57:014232 gpstop:mdw:gpadmin-[INFO]:-Obtaining Segment details from master...
+20200923:12:05:58:014232 gpstop:mdw:gpadmin-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.7339.g02578435d1 build dev'
+20200923:12:05:58:014232 gpstop:mdw:gpadmin-[INFO]:-Commencing Master instance shutdown with mode='immediate'
+20200923:12:05:58:014232 gpstop:mdw:gpadmin-[INFO]:-Master segment instance directory=/home/gpadmin/Documents/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
+20200923:12:05:58:014232 gpstop:mdw:gpadmin-[INFO]:-Attempting forceful termination of any leftover master process
+20200923:12:05:58:014232 gpstop:mdw:gpadmin-[INFO]:-Terminating processes for segment /home/gpadmin/Documents/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
+20200923:12:05:58:014232 gpstop:mdw:gpadmin-[INFO]:-Stopping master standby host mdw mode=immediate
+20200923:12:05:58:014232 gpstop:mdw:gpadmin-[INFO]:-Successfully shutdown standby process on mdw
+20200923:12:05:58:014232 gpstop:mdw:gpadmin-[INFO]:-Targeting dbid [2, 5, 3, 6, 4, 7] for shutdown
+20200923:12:05:58:014232 gpstop:mdw:gpadmin-[INFO]:-Commencing parallel primary segment instance shutdown, please wait...
+20200923:12:05:58:014232 gpstop:mdw:gpadmin-[INFO]:-0.00% of jobs completed
+20200923:12:05:59:014232 gpstop:mdw:gpadmin-[INFO]:-100.00% of jobs completed
+20200923:12:05:59:014232 gpstop:mdw:gpadmin-[INFO]:-Commencing parallel mirror segment instance shutdown, please wait...
+20200923:12:05:59:014232 gpstop:mdw:gpadmin-[INFO]:-0.00% of jobs completed
+20200923:12:05:59:014232 gpstop:mdw:gpadmin-[INFO]:-100.00% of jobs completed
+20200923:12:05:59:014232 gpstop:mdw:gpadmin-[INFO]:-----------------------------------------------------
+20200923:12:05:59:014232 gpstop:mdw:gpadmin-[INFO]:-   Segments stopped successfully      = 6
+20200923:12:05:59:014232 gpstop:mdw:gpadmin-[INFO]:-   Segments with errors during stop   = 0
+20200923:12:05:59:014232 gpstop:mdw:gpadmin-[INFO]:-----------------------------------------------------
+20200923:12:05:59:014232 gpstop:mdw:gpadmin-[INFO]:-Successfully shutdown 6 of 6 segment instances 
+20200923:12:05:59:014232 gpstop:mdw:gpadmin-[INFO]:-Database successfully shutdown with no errors reported
+20200923:12:05:59:014232 gpstop:mdw:gpadmin-[INFO]:-Cleaning up leftover shared memory
+20200923:12:05:59:014232 gpstop:mdw:gpadmin-[INFO]:-Restarting System...
+
+-- end_ignore
+(exited with code 0)
+-- end_ignore
+
+-- setup for workfile made in temp tablespace test
+! mkdir -p '@testtablespace@/workfile_mgr';
+
+1: DROP TABLESPACE IF EXISTS work_file_test_ts;
+DROP
+1: CREATE TABLESPACE work_file_test_ts LOCATION '@testtablespace@/workfile_mgr';
+CREATE
+
+1: select gp_workfile_mgr_test('atomic_test', 0);
+ gp_workfile_mgr_test 
+----------------------
+ f                    
+ f                    
+ f                    
+ f                    
+(4 rows)
+1: select gp_workfile_mgr_test('fd_tests', 0);
+ gp_workfile_mgr_test 
+----------------------
+ t                    
+ t                    
+ t                    
+ t                    
+(4 rows)
+1: select gp_workfile_mgr_test('fd_large_file_test', 0);
+ gp_workfile_mgr_test 
+----------------------
+ t                    
+ t                    
+ t                    
+ t                    
+(4 rows)
+
+-- test will fail when the workset exceeds gp_workfile_max_entries, the workset will be released at the end of transaction.
+1: select gp_workfile_mgr_test('workfile_fill_sharedcache', 0);
+ERROR:  could not create workfile manager entry: exceeded number of concurrent spilling queries
+CONTEXT:  SQL function "gp_workfile_mgr_test" statement 1
+1: select segid, count(*) from gp_workfile_mgr_cache_entries() group by segid order by segid;
+ segid | count 
+-------+-------
+(0 rows)
+
+1: select gp_workfile_mgr_test('workfile_create_and_set_cleanup', 2000);
+ gp_workfile_mgr_test 
+----------------------
+ t                    
+ t                    
+ t                    
+ t                    
+(4 rows)
+1: select gp_workfile_mgr_test('workfile_create_and_individual_cleanup', 2000);
+ gp_workfile_mgr_test 
+----------------------
+ t                    
+ t                    
+ t                    
+ t                    
+(4 rows)
+1: select gp_workfile_mgr_test('workfile_made_in_temp_tablespace', 2000);
+ gp_workfile_mgr_test 
+----------------------
+ t                    
+ t                    
+ t                    
+ t                    
+(4 rows)
+1: select gp_workfile_mgr_test('workfile_create_and_individual_cleanup_with_pinned_workfile_set', 2000);
+ gp_workfile_mgr_test 
+----------------------
+ t                    
+ t                    
+ t                    
+ t                    
+(4 rows)
+
+1: DROP TABLESPACE work_file_test_ts;
+DROP
+
+-- start_ignore
+!\retcode gpconfig -r gp_workfile_max_entries --skipvalidation;
+-- start_ignore
+20200923:12:08:05:015690 gpconfig:mdw:gpadmin-[INFO]:-completed successfully with parameters '-r gp_workfile_max_entries --skipvalidation'
+
+-- end_ignore
+(exited with code 0)
+!\retcode gpstop -ari;
+-- start_ignore
+20200923:12:08:05:016154 gpstop:mdw:gpadmin-[INFO]:-Starting gpstop with args: -ari
+20200923:12:08:05:016154 gpstop:mdw:gpadmin-[INFO]:-Gathering information and validating the environment...
+20200923:12:08:05:016154 gpstop:mdw:gpadmin-[INFO]:-Obtaining Greenplum Master catalog information
+20200923:12:08:05:016154 gpstop:mdw:gpadmin-[INFO]:-Obtaining Segment details from master...
+20200923:12:08:05:016154 gpstop:mdw:gpadmin-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.7339.g02578435d1 build dev'
+20200923:12:08:05:016154 gpstop:mdw:gpadmin-[INFO]:-Commencing Master instance shutdown with mode='immediate'
+20200923:12:08:05:016154 gpstop:mdw:gpadmin-[INFO]:-Master segment instance directory=/home/gpadmin/Documents/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
+20200923:12:08:05:016154 gpstop:mdw:gpadmin-[INFO]:-Attempting forceful termination of any leftover master process
+20200923:12:08:05:016154 gpstop:mdw:gpadmin-[INFO]:-Terminating processes for segment /home/gpadmin/Documents/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
+20200923:12:08:05:016154 gpstop:mdw:gpadmin-[INFO]:-Stopping master standby host mdw mode=immediate
+20200923:12:08:05:016154 gpstop:mdw:gpadmin-[INFO]:-Successfully shutdown standby process on mdw
+20200923:12:08:05:016154 gpstop:mdw:gpadmin-[INFO]:-Targeting dbid [2, 5, 3, 6, 4, 7] for shutdown
+20200923:12:08:05:016154 gpstop:mdw:gpadmin-[INFO]:-Commencing parallel primary segment instance shutdown, please wait...
+20200923:12:08:05:016154 gpstop:mdw:gpadmin-[INFO]:-0.00% of jobs completed
+20200923:12:08:06:016154 gpstop:mdw:gpadmin-[INFO]:-100.00% of jobs completed
+20200923:12:08:06:016154 gpstop:mdw:gpadmin-[INFO]:-Commencing parallel mirror segment instance shutdown, please wait...
+20200923:12:08:06:016154 gpstop:mdw:gpadmin-[INFO]:-0.00% of jobs completed
+20200923:12:08:06:016154 gpstop:mdw:gpadmin-[INFO]:-100.00% of jobs completed
+20200923:12:08:06:016154 gpstop:mdw:gpadmin-[INFO]:-----------------------------------------------------
+20200923:12:08:06:016154 gpstop:mdw:gpadmin-[INFO]:-   Segments stopped successfully      = 6
+20200923:12:08:06:016154 gpstop:mdw:gpadmin-[INFO]:-   Segments with errors during stop   = 0
+20200923:12:08:06:016154 gpstop:mdw:gpadmin-[INFO]:-----------------------------------------------------
+20200923:12:08:06:016154 gpstop:mdw:gpadmin-[INFO]:-Successfully shutdown 6 of 6 segment instances 
+20200923:12:08:06:016154 gpstop:mdw:gpadmin-[INFO]:-Database successfully shutdown with no errors reported
+20200923:12:08:06:016154 gpstop:mdw:gpadmin-[INFO]:-Cleaning up leftover shared memory
+20200923:12:08:07:016154 gpstop:mdw:gpadmin-[INFO]:-Restarting System...
+
+-- end_ignore
+(exited with code 0)
+-- end_ignore
+
+-- test workset cleanup
+2: begin;
+BEGIN
+2: select gp_workfile_mgr_create_workset('short_live_workset', false, false, false);
+ gp_workfile_mgr_create_workset 
+--------------------------------
+                                
+                                
+                                
+(3 rows)
+2: select gp_workfile_mgr_create_empty_workset('long_live_workset');
+ gp_workfile_mgr_create_empty_workset 
+--------------------------------------
+                                      
+                                      
+                                      
+(3 rows)
+2: select segid, count(*) from gp_workfile_mgr_cache_entries() group by segid order by segid;
+ segid | count 
+-------+-------
+ 0     | 1     
+ 1     | 1     
+ 2     | 1     
+(3 rows)
+
+3: select gp_workfile_mgr_create_workset('inter_xact_workset', true, false, false);
+ gp_workfile_mgr_create_workset 
+--------------------------------
+                                
+                                
+                                
+(3 rows)
+
+-- transaction commit will cleanup the pinned workfile_set.
+4: begin;
+BEGIN
+4: select gp_workfile_mgr_create_workset('commit_tnx_workset', false, true, false);
+ gp_workfile_mgr_create_workset 
+--------------------------------
+                                
+                                
+                                
+(3 rows)
+4: select gp_workfile_mgr_create_workset('commit_tnx_workset_empty', false, true, true);
+ gp_workfile_mgr_create_workset 
+--------------------------------
+                                
+                                
+                                
+(3 rows)
+4: select segid, prefix, size, operation, slice, numfiles from gp_workfile_mgr_cache_entries() order by (segid, prefix);
+ segid | prefix                     | size | operation                | slice | numfiles 
+-------+----------------------------+------+--------------------------+-------+----------
+ 0     | commit_tnx_workset_3       | 0    | commit_tnx_workset       | 1     | 0        
+ 0     | commit_tnx_workset_empty_4 | 0    | commit_tnx_workset_empty | 1     | 0        
+ 0     | inter_xact_workset_2       | 0    | inter_xact_workset       | 1     | 1        
+ 0     | long_live_workset_1        | 0    | long_live_workset        | 1     | 0        
+ 1     | commit_tnx_workset_3       | 0    | commit_tnx_workset       | 1     | 0        
+ 1     | commit_tnx_workset_empty_4 | 0    | commit_tnx_workset_empty | 1     | 0        
+ 1     | inter_xact_workset_2       | 0    | inter_xact_workset       | 1     | 1        
+ 1     | long_live_workset_1        | 0    | long_live_workset        | 1     | 0        
+ 2     | commit_tnx_workset_3       | 0    | commit_tnx_workset       | 1     | 0        
+ 2     | commit_tnx_workset_empty_4 | 0    | commit_tnx_workset_empty | 1     | 0        
+ 2     | inter_xact_workset_2       | 0    | inter_xact_workset       | 1     | 1        
+ 2     | long_live_workset_1        | 0    | long_live_workset        | 1     | 0        
+(12 rows)
+4: end;
+END
+4: select segid, prefix, size, operation, slice, numfiles from gp_workfile_mgr_cache_entries() order by (segid, prefix);
+ segid | prefix               | size | operation          | slice | numfiles 
+-------+----------------------+------+--------------------+-------+----------
+ 0     | inter_xact_workset_2 | 0    | inter_xact_workset | 1     | 1        
+ 0     | long_live_workset_1  | 0    | long_live_workset  | 1     | 0        
+ 1     | inter_xact_workset_2 | 0    | inter_xact_workset | 1     | 1        
+ 1     | long_live_workset_1  | 0    | long_live_workset  | 1     | 0        
+ 2     | inter_xact_workset_2 | 0    | inter_xact_workset | 1     | 1        
+ 2     | long_live_workset_1  | 0    | long_live_workset  | 1     | 0        
+(6 rows)
+
+-- transaction abort will cleanup the workset.
+4: begin;
+BEGIN
+4: select gp_workfile_mgr_create_workset('abort_tnx_workset', false, false, false);
+ gp_workfile_mgr_create_workset 
+--------------------------------
+                                
+                                
+                                
+(3 rows)
+4: select gp_workfile_mgr_create_workset('abort_tnx_workset_pinned', false, true, false);
+ gp_workfile_mgr_create_workset 
+--------------------------------
+                                
+                                
+                                
+(3 rows)
+4: select segid, prefix, size, operation, slice, numfiles from gp_workfile_mgr_cache_entries() order by (segid, prefix);
+ segid | prefix                     | size | operation                | slice | numfiles 
+-------+----------------------------+------+--------------------------+-------+----------
+ 0     | abort_tnx_workset_pinned_4 | 0    | abort_tnx_workset_pinned | 1     | 0        
+ 0     | inter_xact_workset_2       | 0    | inter_xact_workset       | 1     | 1        
+ 0     | long_live_workset_1        | 0    | long_live_workset        | 1     | 0        
+ 1     | abort_tnx_workset_pinned_4 | 0    | abort_tnx_workset_pinned | 1     | 0        
+ 1     | inter_xact_workset_2       | 0    | inter_xact_workset       | 1     | 1        
+ 1     | long_live_workset_1        | 0    | long_live_workset        | 1     | 0        
+ 2     | abort_tnx_workset_pinned_4 | 0    | abort_tnx_workset_pinned | 1     | 0        
+ 2     | inter_xact_workset_2       | 0    | inter_xact_workset       | 1     | 1        
+ 2     | long_live_workset_1        | 0    | long_live_workset        | 1     | 0        
+(9 rows)
+4: abort;
+ABORT
+4: select segid, prefix, size, operation, slice, numfiles from gp_workfile_mgr_cache_entries() order by (segid, prefix);
+ segid | prefix               | size | operation          | slice | numfiles 
+-------+----------------------+------+--------------------+-------+----------
+ 0     | inter_xact_workset_2 | 0    | inter_xact_workset | 1     | 1        
+ 0     | long_live_workset_1  | 0    | long_live_workset  | 1     | 0        
+ 1     | inter_xact_workset_2 | 0    | inter_xact_workset | 1     | 1        
+ 1     | long_live_workset_1  | 0    | long_live_workset  | 1     | 0        
+ 2     | inter_xact_workset_2 | 0    | inter_xact_workset | 1     | 1        
+ 2     | long_live_workset_1  | 0    | long_live_workset  | 1     | 0        
+(6 rows)
+
+-- for workset lives across transaction, e.g. with hold cursor, proc exit will cleanup the workset
+3q: ... <quitting>
+4: select segid, prefix, size, operation, slice, numfiles from gp_workfile_mgr_cache_entries() order by (segid, prefix);
+ segid | prefix              | size | operation         | slice | numfiles 
+-------+---------------------+------+-------------------+-------+----------
+ 0     | long_live_workset_1 | 0    | long_live_workset | 1     | 0        
+ 1     | long_live_workset_1 | 0    | long_live_workset | 1     | 0        
+ 2     | long_live_workset_1 | 0    | long_live_workset | 1     | 0        
+(3 rows)

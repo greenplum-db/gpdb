@@ -3,7 +3,7 @@ doc/src/sgml/ref/create_external_table.sgml
 PostgreSQL documentation
 -->
 
-<refentry id="SQL-CREATEEXTERNALTABLE">
+<refentry id="sql-createexternaltable">
  <indexterm zone="sql-createexternaltable">
   <primary>CREATE EXTERNAL TABLE</primary>
  </indexterm>

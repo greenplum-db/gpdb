@@ -19,83 +19,60 @@
 
 namespace gpopt
 {
-	using namespace gpos;
-	
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CDistributionSpecUniversal
-	//
-	//	@doc:
-	//		Class for representing general distribution specification which 
-	//		reports availability everywhere.
-	//
-	//---------------------------------------------------------------------------
-	class CDistributionSpecUniversal : public CDistributionSpec
-	{
-		private:
+using namespace gpos;
 
-			// private copy ctor
-			CDistributionSpecUniversal(const CDistributionSpecUniversal &);
-			
-		public:
+//---------------------------------------------------------------------------
+//	@class:
+//		CDistributionSpecUniversal
+//
+//	@doc:
+//		Class for representing general distribution specification which
+//		reports availability everywhere.
+//
+//---------------------------------------------------------------------------
+class CDistributionSpecUniversal : public CDistributionSpec
+{
+private:
+	// private copy ctor
+	CDistributionSpecUniversal(const CDistributionSpecUniversal &);
 
-			//ctor
-			CDistributionSpecUniversal();
-			
-			// accessor
-			virtual 
-			EDistributionType Edt() const;
-			
-			// does current distribution satisfy the given one
-			virtual 
-			BOOL FSatisfies
-				(
-				const CDistributionSpec *pds
-				)
-				const;
-			
-			// return true if distribution spec can be required
-			virtual
-			BOOL FRequirable() const;
+public:
+	//ctor
+	CDistributionSpecUniversal();
 
-			// does this distribution match the given one
-			virtual
-			BOOL Matches
-				(
-				const CDistributionSpec *pds
-				)
-				const;
+	// accessor
+	virtual EDistributionType Edt() const;
 
-			// append enforcers to dynamic array for the given plan properties
-			virtual
-			void AppendEnforcers
-				(
-				CMemoryPool *, //mp, 
-				CExpressionHandle &, // exprhdl
-				CReqdPropPlan *, //prpp,
-				CExpressionArray * , // pdrgpexpr, 
-				CExpression * // pexpr
-				);
+	// does current distribution satisfy the given one
+	virtual BOOL FSatisfies(const CDistributionSpec *pds) const;
 
-			// print
-			virtual
-			IOstream &OsPrint(IOstream &os) const;
+	// return true if distribution spec can be required
+	virtual BOOL FRequirable() const;
 
-			// return distribution partitioning type
-			virtual
-			EDistributionPartitioningType Edpt() const;
+	// does this distribution match the given one
+	virtual BOOL Matches(const CDistributionSpec *pds) const;
 
-			// conversion function
-			static
-			CDistributionSpecUniversal *PdsConvert
-				(
-				CDistributionSpec *pds
-				);
+	// append enforcers to dynamic array for the given plan properties
+	virtual void AppendEnforcers(CMemoryPool *,		   //mp,
+								 CExpressionHandle &,  // exprhdl
+								 CReqdPropPlan *,	   //prpp,
+								 CExpressionArray *,   // pdrgpexpr,
+								 CExpression *		   // pexpr
+	);
 
-	}; // class CDistributionSpecUniversal
+	// print
+	virtual IOstream &OsPrint(IOstream &os) const;
 
-}
+	// return distribution partitioning type
+	virtual EDistributionPartitioningType Edpt() const;
 
-#endif // !GPOPT_CDistributionSpecUniversal_H
+	// conversion function
+	static CDistributionSpecUniversal *PdsConvert(CDistributionSpec *pds);
+
+};	// class CDistributionSpecUniversal
+
+}  // namespace gpopt
+
+#endif	// !GPOPT_CDistributionSpecUniversal_H
 
 // EOF

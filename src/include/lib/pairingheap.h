@@ -3,7 +3,7 @@
  *
  * A Pairing Heap implementation
  *
- * Portions Copyright (c) 2012-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-2019, PostgreSQL Global Development Group
  *
  * src/include/lib/pairingheap.h
  */
@@ -58,8 +58,8 @@ typedef struct pairingheap_node
  * and >0 iff a > b.  For a min-heap, the conditions are reversed.
  */
 typedef int (*pairingheap_comparator) (const pairingheap_node *a,
-												   const pairingheap_node *b,
-												   void *arg);
+									   const pairingheap_node *b,
+									   void *arg);
 
 /*
  * A pairing heap.
@@ -76,7 +76,7 @@ typedef struct pairingheap
 } pairingheap;
 
 extern pairingheap *pairingheap_allocate(pairingheap_comparator compare,
-					 void *arg);
+										 void *arg);
 extern void pairingheap_free(pairingheap *heap);
 extern void pairingheap_add(pairingheap *heap, pairingheap_node *node);
 extern pairingheap_node *pairingheap_first(pairingheap *heap);
@@ -85,8 +85,8 @@ extern void pairingheap_remove(pairingheap *heap, pairingheap_node *node);
 
 #ifdef PAIRINGHEAP_DEBUG
 extern char *pairingheap_dump(pairingheap *heap,
-	 void (*dumpfunc) (pairingheap_node *node, StringInfo buf, void *opaque),
-				 void *opaque);
+							  void (*dumpfunc) (pairingheap_node *node, StringInfo buf, void *opaque),
+							  void *opaque);
 #endif
 
 /* Resets the heap to be empty. */
@@ -99,4 +99,4 @@ extern char *pairingheap_dump(pairingheap *heap,
 #define pairingheap_is_singular(h) \
 	((h)->ph_root && (h)->ph_root->first_child == NULL)
 
-#endif   /* PAIRINGHEAP_H */
+#endif							/* PAIRINGHEAP_H */

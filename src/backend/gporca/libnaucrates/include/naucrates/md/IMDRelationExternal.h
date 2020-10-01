@@ -18,112 +18,104 @@
 
 namespace gpmd
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		IMDRelationExternal
-	//
-	//	@doc:
-	//		Interface for external relations in the metadata cache
-	//
-	//---------------------------------------------------------------------------
-	class IMDRelationExternal : public IMDRelation
+//---------------------------------------------------------------------------
+//	@class:
+//		IMDRelationExternal
+//
+//	@doc:
+//		Interface for external relations in the metadata cache
+//
+//---------------------------------------------------------------------------
+class IMDRelationExternal : public IMDRelation
+{
+public:
+	// storage type
+	virtual Erelstoragetype
+	RetrieveRelStorageType() const
 	{
-		public:
+		return ErelstorageExternal;
+	}
 
-			// storage type
-			virtual
-			Erelstoragetype RetrieveRelStorageType() const
-			{
-				return ErelstorageExternal;
-			}
+	// is this a temp relation
+	virtual BOOL
+	IsTemporary() const
+	{
+		return false;
+	}
 
-			// is this a temp relation
-			virtual
-			BOOL IsTemporary() const
-			{
-				return false;
-			}
+	// is this a partitioned table
+	virtual BOOL
+	IsPartitioned() const
+	{
+		return false;
+	}
 
-			// is this a partitioned table
-			virtual
-			BOOL IsPartitioned() const
-			{
-				return false;
-			}
-			
-			// return true if a hash distributed table needs to be considered as random
-			virtual
-			BOOL ConvertHashToRandom() const = 0;
-			
-			// does this table have oids
-			virtual
-			BOOL HasOids() const
-			{
-				return false;
-			}
+	// return true if a hash distributed table needs to be considered as random
+	virtual BOOL ConvertHashToRandom() const = 0;
 
-			// number of partition columns
-			virtual
-			ULONG PartColumnCount() const
-			{
-				return 0;
-			}
+	// does this table have oids
+	virtual BOOL
+	HasOids() const
+	{
+		return false;
+	}
 
-			// number of partitions
-			virtual
-			ULONG PartitionCount() const
-			{
-				return 0;
-			}
+	// number of partition columns
+	virtual ULONG
+	PartColumnCount() const
+	{
+		return 0;
+	}
 
-			// retrieve the partition column at the given position
-			virtual
-			const IMDColumn *PartColAt(ULONG /*pos*/) const
-			{
-				GPOS_ASSERT(!"External tables have no partition columns");
-				return NULL;
-			}
+	// number of partitions
+	virtual ULONG
+	PartitionCount() const
+	{
+		return 0;
+	}
 
-			// retrieve list of partition types
-			virtual
-			CharPtrArray *GetPartitionTypes() const
-			{
-				GPOS_ASSERT(!"External tables have no partition types");
-				return NULL;
-			}
+	// retrieve the partition column at the given position
+	virtual const IMDColumn *PartColAt(ULONG /*pos*/) const
+	{
+		GPOS_ASSERT(!"External tables have no partition columns");
+		return NULL;
+	}
 
-			// retrieve the partition type at the given position
-			virtual
-			CHAR PartTypeAtLevel(ULONG /*pos*/) const
-			{
-				GPOS_ASSERT(!"External tables have no partition types");
-				return (CHAR) 0;
-			}
+	// retrieve list of partition types
+	virtual CharPtrArray *
+	GetPartitionTypes() const
+	{
+		GPOS_ASSERT(!"External tables have no partition types");
+		return NULL;
+	}
 
-			// part constraint
-			virtual
-			IMDPartConstraint *MDPartConstraint() const
-			{
-				return NULL;
-			}
+	// retrieve the partition type at the given position
+	virtual CHAR PartTypeAtLevel(ULONG /*pos*/) const
+	{
+		GPOS_ASSERT(!"External tables have no partition types");
+		return (CHAR) 0;
+	}
 
-			// reject limit
-			virtual
-			INT RejectLimit() const = 0;
+	// part constraint
+	virtual IMDPartConstraint *
+	MDPartConstraint() const
+	{
+		return NULL;
+	}
 
-			// reject limit in rows?
-			virtual
-			BOOL IsRejectLimitInRows() const = 0;
+	// reject limit
+	virtual INT RejectLimit() const = 0;
 
-			// format error table mdid
-			virtual
-			IMDId *GetFormatErrTableMdid() const = 0;
+	// reject limit in rows?
+	virtual BOOL IsRejectLimitInRows() const = 0;
 
-	};
-}
+	// format error table mdid
+	virtual IMDId *GetFormatErrTableMdid() const = 0;
+};
+}  // namespace gpmd
 
-#endif // !GPMD_IMDRelationExternal_H
+#endif	// !GPMD_IMDRelationExternal_H
 
 // EOF

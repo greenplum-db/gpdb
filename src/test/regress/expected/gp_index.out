@@ -28,12 +28,83 @@ DROP INDEX CONCURRENTLY IF EXISTS "tbl_drop_index3";
 DROP INDEX CONCURRENTLY "tbl_drop_index4";
 DROP INDEX CONCURRENTLY "tbl_drop_index1";
 \d tbl_drop_ind_concur
-Table "public.tbl_drop_ind_concur"
- Column | Type | Modifiers 
---------+------+-----------
- f1     | text | 
- f2     | text | 
- dk     | text | 
+       Table "public.tbl_drop_ind_concur"
+ Column | Type | Collation | Nullable | Default 
+--------+------+-----------+----------+---------
+ f1     | text |           |          | 
+ f2     | text |           |          | 
+ dk     | text |           |          | 
 Distributed by: (dk)
 
 DROP TABLE tbl_drop_ind_concur;
+-- Creating UNIQUE/PRIMARY KEY index is disallowed to change the distribution
+-- keys implicitly
+CREATE TABLE tbl_create_index(i int, j int, k int) distributed by(i, j);
+-- should fail
+CREATE UNIQUE INDEX ON tbl_create_index(i);
+ERROR:  UNIQUE index must contain all columns in the table's distribution key
+DETAIL:  Distribution key column "j" is not included in the constraint.
+CREATE UNIQUE INDEX ON tbl_create_index(k);
+ERROR:  UNIQUE index must contain all columns in the table's distribution key
+DETAIL:  Distribution key column "i" is not included in the constraint.
+CREATE UNIQUE INDEX ON tbl_create_index(i, k);
+ERROR:  UNIQUE index must contain all columns in the table's distribution key
+DETAIL:  Distribution key column "j" is not included in the constraint.
+ALTER TABLE tbl_create_index ADD CONSTRAINT PKEY PRIMARY KEY(i);
+ERROR:  PRIMARY KEY definition must contain all columns in the table's distribution key
+DETAIL:  Distribution key column "j" is not included in the constraint.
+ALTER TABLE tbl_create_index ADD CONSTRAINT PKEY PRIMARY KEY(k);
+ERROR:  PRIMARY KEY definition must contain all columns in the table's distribution key
+DETAIL:  Distribution key column "i" is not included in the constraint.
+ALTER TABLE tbl_create_index ADD CONSTRAINT PKEY PRIMARY KEY(i, k);
+ERROR:  PRIMARY KEY definition must contain all columns in the table's distribution key
+DETAIL:  Distribution key column "j" is not included in the constraint.
+-- should success
+CREATE UNIQUE INDEX tbl_create_index_ij ON tbl_create_index(i, j);
+CREATE UNIQUE INDEX tbl_create_index_ijk ON tbl_create_index(i, j, k);
+\d tbl_create_index
+          Table "public.tbl_create_index"
+ Column |  Type   | Collation | Nullable | Default 
+--------+---------+-----------+----------+---------
+ i      | integer |           |          | 
+ j      | integer |           |          | 
+ k      | integer |           |          | 
+Indexes:
+    "tbl_create_index_ij" UNIQUE, btree (i, j)
+    "tbl_create_index_ijk" UNIQUE, btree (i, j, k)
+Distributed by: (i, j)
+
+DROP INDEX tbl_create_index_ij;
+DROP INDEX tbl_create_index_ijk;
+ALTER TABLE tbl_create_index ADD CONSTRAINT PKEY PRIMARY KEY(i, j, k);
+\d tbl_create_index
+          Table "public.tbl_create_index"
+ Column |  Type   | Collation | Nullable | Default 
+--------+---------+-----------+----------+---------
+ i      | integer |           | not null | 
+ j      | integer |           | not null | 
+ k      | integer |           | not null | 
+Indexes:
+    "pkey" PRIMARY KEY, btree (i, j, k)
+Distributed by: (i, j)
+
+ALTER TABLE tbl_create_index DROP CONSTRAINT PKEY;
+-- after changing the distribution keys, the above failed clause should success
+ALTER TABLE tbl_create_index SET DISTRIBUTED BY(k);
+CREATE UNIQUE INDEX ON tbl_create_index(k);
+CREATE UNIQUE INDEX ON tbl_create_index(i, k);
+ALTER TABLE tbl_create_index ADD CONSTRAINT PKEY PRIMARY KEY(i, k);
+\d tbl_create_index
+          Table "public.tbl_create_index"
+ Column |  Type   | Collation | Nullable | Default 
+--------+---------+-----------+----------+---------
+ i      | integer |           | not null | 
+ j      | integer |           | not null | 
+ k      | integer |           | not null | 
+Indexes:
+    "pkey" PRIMARY KEY, btree (i, k)
+    "tbl_create_index_i_k_idx" UNIQUE, btree (i, k)
+    "tbl_create_index_k_idx" UNIQUE, btree (k)
+Distributed by: (k)
+
+DROP TABLE tbl_create_index;

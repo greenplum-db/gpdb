@@ -13,7 +13,7 @@
  *		as this notice is not removed.
  *
  *	The author is not responsible for loss or damages that may
- *	result from it's use.
+ *	result from its use.
  *
  *
  * IDENTIFICATION
@@ -72,7 +72,7 @@ InitArchiveFmt_Null(ArchiveHandle *AH)
 	 * Now prevent reading...
 	 */
 	if (AH->mode == archModeRead)
-		exit_horribly(NULL, "this format cannot be read\n");
+		fatal("this format cannot be read");
 }
 
 /*
@@ -147,7 +147,7 @@ _StartBlob(ArchiveHandle *AH, TocEntry *te, Oid oid)
 	bool		old_blob_style = (AH->version < K_VERS_1_12);
 
 	if (oid == 0)
-		exit_horribly(NULL, "invalid OID for large object\n");
+		fatal("invalid OID for large object");
 
 	/* With an old archive we must do drop and create logic here */
 	if (old_blob_style && AH->public.ropt->dropSchema)
@@ -202,7 +202,7 @@ _PrintTocData(ArchiveHandle *AH, TocEntry *te)
 		if (strcmp(te->desc, "BLOBS") == 0)
 			_StartBlobs(AH, te);
 
-		(*te->dataDumper) ((Archive *) AH, te->dataDumperArg);
+		te->dataDumper((Archive *) AH, te->dataDumperArg);
 
 		if (strcmp(te->desc, "BLOBS") == 0)
 			_EndBlobs(AH, te);

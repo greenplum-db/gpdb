@@ -10,7 +10,7 @@
 //		 descriptor portion of an index scan node
 //
 //	@owner:
-//		
+//
 //
 //	@test:
 //
@@ -36,15 +36,11 @@ XERCES_CPP_NAMESPACE_USE
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CParseHandlerIndexDescr::CParseHandlerIndexDescr
-	(
-	CMemoryPool *mp,
-	CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root
-	)
-	:
-	CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
-	m_dxl_index_descr(NULL)
+CParseHandlerIndexDescr::CParseHandlerIndexDescr(
+	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+	CParseHandlerBase *parse_handler_root)
+	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
+	  m_dxl_index_descr(NULL)
 {
 }
 
@@ -84,22 +80,24 @@ CParseHandlerIndexDescr::GetDXLIndexDescr()
 //
 //---------------------------------------------------------------------------
 void
-CParseHandlerIndexDescr::StartElement
-	(
-	const XMLCh* const, // element_uri,
-	const XMLCh* const element_local_name,
-	const XMLCh* const, // element_qname
-	const Attributes& attrs
-	)
+CParseHandlerIndexDescr::StartElement(const XMLCh *const,  // element_uri,
+									  const XMLCh *const element_local_name,
+									  const XMLCh *const,  // element_qname
+									  const Attributes &attrs)
 {
-	if(0 != XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenIndexDescr), element_local_name))
+	if (0 !=
+		XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenIndexDescr),
+								 element_local_name))
 	{
-		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag, str->GetBuffer());
+		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
+			m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,
+				   str->GetBuffer());
 	}
 
 	// generate the index descriptor
-	m_dxl_index_descr = CDXLOperatorFactory::MakeDXLIndexDescr(m_parse_handler_mgr->GetDXLMemoryManager(), attrs);
+	m_dxl_index_descr = CDXLOperatorFactory::MakeDXLIndexDescr(
+		m_parse_handler_mgr->GetDXLMemoryManager(), attrs);
 }
 
 //---------------------------------------------------------------------------
@@ -111,17 +109,19 @@ CParseHandlerIndexDescr::StartElement
 //
 //---------------------------------------------------------------------------
 void
-CParseHandlerIndexDescr::EndElement
-	(
-	const XMLCh* const, // element_uri,
-	const XMLCh* const element_local_name,
-	const XMLCh* const // element_qname
-	)
+CParseHandlerIndexDescr::EndElement(const XMLCh *const,	 // element_uri,
+									const XMLCh *const element_local_name,
+									const XMLCh *const	// element_qname
+)
 {
-	if(0 != XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenIndexDescr), element_local_name))
+	if (0 !=
+		XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenIndexDescr),
+								 element_local_name))
 	{
-		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag, str->GetBuffer());
+		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
+			m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,
+				   str->GetBuffer());
 	}
 
 	GPOS_ASSERT(0 == this->Length());

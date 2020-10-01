@@ -191,7 +191,7 @@ CREATE TEMP TABLE reset_test ( data text ) ON COMMIT PRESERVE ROWS;
 
 -- test for guc dev_opt_unsafe_truncate_in_subtransaction
 -- start_ignore
-CREATE LANGUAGE plpythonu;
+CREATE LANGUAGE plpython3u;
 -- end_ignore
 CREATE OR REPLACE FUNCTION run_all_in_one() RETURNS VOID AS
 $$
@@ -209,13 +209,55 @@ $$
          plpy.execute('ALTER TABLE foobar RENAME TO unsafe_truncate')
 
          if before_truncate[0]['relfilenode'] == after_truncate[0]['relfilenode']:
-	     plpy.info('iteration:%d unsafe truncate performed' % (i))
+             plpy.info('iteration:%d unsafe truncate performed' % (i))
          else:
-	     plpy.info('iteration:%d safe truncate performed' % (i))
+             plpy.info('iteration:%d safe truncate performed' % (i))
 
-	 plpy.execute('SET dev_opt_unsafe_truncate_in_subtransaction TO ON')
+         plpy.execute('SET dev_opt_unsafe_truncate_in_subtransaction TO ON')
      plpy.execute('DROP TABLE unsafe_truncate')
      plpy.execute('RESET dev_opt_unsafe_truncate_in_subtransaction')
-$$ language plpythonu;
+$$ language plpython3u;
 
 select run_all_in_one();
+
+CREATE TABLE guc_gp_t1(i int);
+INSERT INTO guc_gp_t1 VALUES(1),(2);
+
+-- generate an idle redaer gang by the following query
+SELECT count(*) FROM guc_gp_t1, guc_gp_t1 t;
+
+-- test create role and set role in the same transaction
+BEGIN;
+DROP ROLE IF EXISTS guc_gp_test_role1;
+CREATE ROLE guc_gp_test_role1;
+SET ROLE guc_gp_test_role1;
+RESET ROLE;
+END;
+
+-- generate an idle redaer gang by the following query
+SELECT count(*) FROM guc_gp_t1, guc_gp_t1 t;
+
+BEGIN ISOLATION LEVEL REPEATABLE READ;
+DROP ROLE IF EXISTS guc_gp_test_role2;
+CREATE ROLE guc_gp_test_role2;
+SET ROLE guc_gp_test_role2;
+RESET ROLE;
+END;
+
+-- test cursor case
+-- cursors are also reader gangs, but they are not idle, thus will not be
+-- destroyed by utility statement.
+BEGIN;
+DECLARE c1 CURSOR FOR SELECT * FROM guc_gp_t1 a, guc_gp_t1 b order by a.i, b.i;
+DECLARE c2 CURSOR FOR SELECT * FROM guc_gp_t1 a, guc_gp_t1 b order by a.i, b.i;
+FETCH c1;
+DROP ROLE IF EXISTS guc_gp_test_role1;
+CREATE ROLE guc_gp_test_role1;
+SET ROLE guc_gp_test_role1;
+RESET ROLE;
+FETCH c2;
+FETCH c1;
+FETCH c2;
+END;
+
+DROP TABLE guc_gp_t1;

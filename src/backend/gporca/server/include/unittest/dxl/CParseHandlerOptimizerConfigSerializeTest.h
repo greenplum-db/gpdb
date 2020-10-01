@@ -8,11 +8,11 @@
 
 namespace gpdxl
 {
-	class CParseHandlerOptimizerConfigSerializeTest
-	{
-		public:
-			static gpos::GPOS_RESULT EresUnittest();
-	};
+class CParseHandlerOptimizerConfigSerializeTest
+{
+public:
+	static gpos::GPOS_RESULT EresUnittest();
+};
 
-}
-#endif  // GPOPT_CParseHandlerOptimizerConfigSerializeTest_H
+}  // namespace gpdxl
+#endif	// GPOPT_CParseHandlerOptimizerConfigSerializeTest_H

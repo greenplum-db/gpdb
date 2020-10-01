@@ -399,9 +399,9 @@ select avg(foo.b) from (select test1.b from test,test1 where test.col=test1.a an
 (1 row)
 
 select complexquery();
-   complexquery   
-------------------
- 530.166666666667
+   complexquery    
+-------------------
+ 530.1666666666666
 (1 row)
 
 -- ----------------------------------------------------------------------

@@ -1,6 +1,6 @@
 -- start_ignore
 create extension if not exists gp_debug_numsegments;
-create language plpythonu;
+create language plpython3u;
 -- end_ignore
 
 drop schema if exists test_expand_table_regression cascade;
@@ -15,7 +15,7 @@ set search_path=test_expand_table_regression,public;
 --
 
 -- with this trigger the inserted data is always hacked to '345'
-create function trig345() returns trigger language plpythonu as $$
+create function trig345() returns trigger language plpython3u as $$
     TD["new"]["data"] = '345'
     return 'modify'
 $$;

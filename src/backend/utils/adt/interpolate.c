@@ -13,6 +13,8 @@
  */
 #include "postgres.h"
 
+#include <limits.h>
+
 #include "catalog/pg_type.h"
 #include "utils/date.h"
 #include "utils/interpolate.h"

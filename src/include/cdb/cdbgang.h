@@ -122,6 +122,7 @@ typedef struct CdbProcess
 	int pid; /* Backend PID of the process. */
 
 	int contentid;
+	int dbid;
 } CdbProcess;
 
 typedef Gang *(*CreateGangFunc)(List *segments, SegmentType segmentType);

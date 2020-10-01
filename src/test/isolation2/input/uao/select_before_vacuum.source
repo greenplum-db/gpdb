@@ -1,7 +1,7 @@
 -- @Description Ensures that a select before a vacuum operation is ok
 -- 
 DROP TABLE IF EXISTS ao;
-CREATE TABLE ao (a INT) WITH (appendonly=true, orientation=@orientation@);
+CREATE TABLE ao (a INT) USING @amname@;
 insert into ao select generate_series(1,1000);
 insert into ao select generate_series(1,1000);
 insert into ao select generate_series(1,1000);

@@ -24,15 +24,10 @@ using namespace gpmd;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CMDIdRelStats::CMDIdRelStats
-	(
-	CMDIdGPDB *rel_mdid
-	)
-	:
-	m_rel_mdid(rel_mdid),
-	m_str(m_mdid_array, GPOS_ARRAY_SIZE(m_mdid_array))
+CMDIdRelStats::CMDIdRelStats(CMDIdGPDB *rel_mdid)
+	: m_rel_mdid(rel_mdid), m_str(m_mdid_array, GPOS_ARRAY_SIZE(m_mdid_array))
 {
-	// serialize mdid into static string 
+	// serialize mdid into static string
 	Serialize();
 }
 
@@ -61,14 +56,9 @@ void
 CMDIdRelStats::Serialize()
 {
 	// serialize mdid as SystemType.Oid.Major.Minor
-	m_str.AppendFormat
-			(
-			GPOS_WSZ_LIT("%d.%d.%d.%d"), 
-			MdidType(), 
-					   m_rel_mdid->Oid(),
-			m_rel_mdid->VersionMajor(),
-			m_rel_mdid->VersionMinor()
-			);
+	m_str.AppendFormat(GPOS_WSZ_LIT("%d.%d.%d.%d"), MdidType(),
+					   m_rel_mdid->Oid(), m_rel_mdid->VersionMajor(),
+					   m_rel_mdid->VersionMinor());
 }
 
 //---------------------------------------------------------------------------
@@ -108,20 +98,16 @@ CMDIdRelStats::GetRelMdId() const
 //
 //---------------------------------------------------------------------------
 BOOL
-CMDIdRelStats::Equals
-	(
-	const IMDId *mdid
-	) 
-	const
+CMDIdRelStats::Equals(const IMDId *mdid) const
 {
 	if (NULL == mdid || EmdidRelStats != mdid->MdidType())
 	{
 		return false;
 	}
-	
+
 	const CMDIdRelStats *rel_stats_mdid = CMDIdRelStats::CastMdid(mdid);
-	
-	return m_rel_mdid->Equals(rel_stats_mdid->GetRelMdId()); 
+
+	return m_rel_mdid->Equals(rel_stats_mdid->GetRelMdId());
 }
 
 //---------------------------------------------------------------------------
@@ -133,12 +119,8 @@ CMDIdRelStats::Equals
 //
 //---------------------------------------------------------------------------
 void
-CMDIdRelStats::Serialize
-	(
-	CXMLSerializer * xml_serializer,
-	const CWStringConst *attribute_str
-	)
-	const
+CMDIdRelStats::Serialize(CXMLSerializer *xml_serializer,
+						 const CWStringConst *attribute_str) const
 {
 	xml_serializer->AddAttribute(attribute_str, &m_str);
 }
@@ -152,11 +134,7 @@ CMDIdRelStats::Serialize
 //
 //---------------------------------------------------------------------------
 IOstream &
-CMDIdRelStats::OsPrint
-	(
-	IOstream &os
-	) 
-	const
+CMDIdRelStats::OsPrint(IOstream &os) const
 {
 	os << "(" << m_str.GetBuffer() << ")";
 	return os;

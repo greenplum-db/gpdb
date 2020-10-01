@@ -42,10 +42,4 @@ extern bool index_check_policy_compatible(GpPolicy *policy,
 							  bool report_error,
 							  index_check_policy_compatible_context *error_context);
 
-extern bool change_policy_to_match_index(Relation rel,
-							 AttrNumber *indattr,
-							 Oid *indclasses,
-							 Oid *exclop,
-							 int nidxatts);
-
 #endif   /* CDBCAT_H */

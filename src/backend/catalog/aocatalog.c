@@ -14,7 +14,10 @@
 
 #include "access/heapam.h"
 #include "access/xact.h"
+#include "catalog/aoblkdir.h"
 #include "catalog/aocatalog.h"
+#include "catalog/aoseg.h"
+#include "catalog/aovisimap.h"
 #include "catalog/dependency.h"
 #include "catalog/heap.h"
 #include "catalog/index.h"
@@ -44,8 +47,7 @@ CreateAOAuxiliaryTable(
 		IndexInfo  *indexInfo,
 		List *indexColNames,
 		Oid	*classObjectId,
-		int16 *coloptions,
-		bool is_part_parent)
+		int16 *coloptions)
 {
 	char aoauxiliary_relname[NAMEDATALEN];
 	char aoauxiliary_idxname[NAMEDATALEN];
@@ -135,25 +137,22 @@ CreateAOAuxiliaryTable(
 												 InvalidOid,
 												 InvalidOid,
 											     rel->rd_rel->relowner,
+												 HEAP_TABLE_AM_OID,
 											     tupledesc,
 												 NIL,
 											     relkind,
 												 rel->rd_rel->relpersistence,
-											     RELSTORAGE_HEAP,
 											     shared_relation,
 												 mapped_relation,
-											     true,
-											     0,
 											     ONCOMMIT_NOOP,
 											     NULL, /* GP Policy */
 											     (Datum) 0,
 												 /* use_user_acl */ false,
 											     true,
 												 true,
+												 InvalidOid,
 												 NULL, /* typeaddress */
-												 /* valid_opts */ false,
-												 /* is_part_child */ false,
-												 is_part_parent);
+												 /* valid_opts */ false);
 
 	/* Make this table visible, else index creation will fail */
 	CommandCounterIncrement();
@@ -165,7 +164,7 @@ CreateAOAuxiliaryTable(
 		Relation	aoauxiliary_rel;
 
 		/* ShareLock is not really needed here, but take it anyway */
-		aoauxiliary_rel = heap_open(aoauxiliary_relid, ShareLock);
+		aoauxiliary_rel = table_open(aoauxiliary_relid, ShareLock);
 
 		collationObjectId = palloc0(list_length(indexColNames) * sizeof(Oid));
 
@@ -180,11 +179,10 @@ CreateAOAuxiliaryTable(
 										 BTREE_AM_OID,
 										 rel->rd_rel->reltablespace,
 										 collationObjectId, classObjectId, coloptions, (Datum) 0,
-										 true, false, false, false,
-										 true, false, false, true, false, NULL);
+										 INDEX_CREATE_IS_PRIMARY, 0, true, true, NULL);
 
 		/* Unlock target table -- no one can see it */
-		heap_close(aoauxiliary_rel, ShareLock);
+		table_close(aoauxiliary_rel, ShareLock);
 
 		/* Unlock the index -- no one can see it anyway */
 		UnlockRelationOid(aoauxiliary_idxid, AccessExclusiveLock);
@@ -245,4 +243,14 @@ IsAppendonlyMetadataRelkind(const char relkind) {
 	return (relkind == RELKIND_AOSEGMENTS ||
 			relkind == RELKIND_AOBLOCKDIR ||
 			relkind == RELKIND_AOVISIMAP);
+}
+
+void
+NewRelationCreateAOAuxTables(Oid relOid, bool createBlkDir)
+{
+	AlterTableCreateAoSegTable(relOid);
+	AlterTableCreateAoVisimapTable(relOid);
+
+	if (createBlkDir)
+		AlterTableCreateAoBlkdirTable(relOid);
 }

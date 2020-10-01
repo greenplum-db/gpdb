@@ -4,7 +4,7 @@
  *
  * Routines to handle DML permission checks
  *
- * Copyright (c) 2010-2016, PostgreSQL Global Development Group
+ * Copyright (c) 2010-2019, PostgreSQL Global Development Group
  *
  * -------------------------------------------------------------------------
  */
@@ -18,7 +18,7 @@
 #include "catalog/dependency.h"
 #include "catalog/pg_attribute.h"
 #include "catalog/pg_class.h"
-#include "catalog/pg_inherits_fn.h"
+#include "catalog/pg_inherits.h"
 #include "commands/seclabel.h"
 #include "commands/tablecmds.h"
 #include "executor/executor.h"
@@ -118,10 +118,7 @@ fixup_inherited_columns(Oid parentId, Oid childId, Bitmapset *columns)
 			continue;
 		}
 
-		attname = get_attname(parentId, attno);
-		if (!attname)
-			elog(ERROR, "cache lookup failed for attribute %d of relation %u",
-				 attno, parentId);
+		attname = get_attname(parentId, attno, false);
 		attno = get_attnum(childId, attname);
 		if (attno == InvalidAttrNumber)
 			elog(ERROR, "cache lookup failed for attribute %s of relation %u",
@@ -164,12 +161,10 @@ check_relation_privileges(Oid relOid,
 	 */
 	if (sepgsql_getenforce() > 0)
 	{
-		Oid			relnamespace = get_rel_namespace(relOid);
-
-		if (IsSystemNamespace(relnamespace) &&
-			(required & (SEPG_DB_TABLE__UPDATE |
+		if ((required & (SEPG_DB_TABLE__UPDATE |
 						 SEPG_DB_TABLE__INSERT |
-						 SEPG_DB_TABLE__DELETE)) != 0)
+						 SEPG_DB_TABLE__DELETE)) != 0 &&
+			IsCatalogRelationOid(relOid))
 			ereport(ERROR,
 					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 					 errmsg("SELinux: hardwired security policy violation")));
@@ -190,6 +185,7 @@ check_relation_privileges(Oid relOid,
 	switch (relkind)
 	{
 		case RELKIND_RELATION:
+		case RELKIND_PARTITIONED_TABLE:
 			result = sepgsql_avc_check_perms(&object,
 											 SEPG_CLASS_DB_TABLE,
 											 required,
@@ -225,7 +221,7 @@ check_relation_privileges(Oid relOid,
 	/*
 	 * Only columns owned by relations shall be checked
 	 */
-	if (relkind != RELKIND_RELATION)
+	if (relkind != RELKIND_RELATION && relkind != RELKIND_PARTITIONED_TABLE)
 		return true;
 
 	/*

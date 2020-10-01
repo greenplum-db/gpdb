@@ -11,6 +11,7 @@ DROP EXTERNAL TABLE IF EXISTS temp_gpload_staging_table;
 DROP TABLE IF EXISTS texttable;
 DROP TABLE IF EXISTS csvtable;
 DROP TABLE IF EXISTS texttable1;
+DROP TABLE IF EXISTS testSpecialChar;
 reset client_min_messages;
 CREATE TABLE texttable (
             s1 text, s2 text, s3 text, dt timestamp,
@@ -26,3 +27,4 @@ CREATE TABLE csvtable (
 CREATE TABLE test.csvtable (
 	    year int, make text, model text, decription text, price decimal)
             DISTRIBUTED BY (year);
+create table testSpecialChar("Field1" bigint, "Field#2" text) distributed by ("Field1");

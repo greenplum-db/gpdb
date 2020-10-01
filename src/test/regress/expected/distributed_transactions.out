@@ -10,9 +10,6 @@
 -- m/(ERROR|WARNING|CONTEXT|NOTICE):.*The previous session was reset because its gang was disconnected/
 -- s/session id \=\s*\d+/session id \= DUMMY/gm
 --
--- m/NOTICE:  exchanged partition .*/
--- s/pg_temp_\d+/pg_temp_DUMMY/gm
---
 -- m/^DETAIL:.*gid=.*/
 -- s/gid=\d+-\d+/gid DUMMY/
 --
@@ -385,14 +382,9 @@ Create table subt_alter_part_tab_ao1 (
  (partition p1 start(1) end(5),
   partition p2 start(5) end(8),
   partition p3 start(8) end(10));
-NOTICE:  CREATE TABLE will create partition "subt_alter_part_tab_ao1_1_prt_p1" for table "subt_alter_part_tab_ao1"
-NOTICE:  CREATE TABLE will create partition "subt_alter_part_tab_ao1_1_prt_p2" for table "subt_alter_part_tab_ao1"
-NOTICE:  CREATE TABLE will create partition "subt_alter_part_tab_ao1_1_prt_p3" for table "subt_alter_part_tab_ao1"
 Savepoint sp1;
 Alter table subt_alter_part_tab_ao1 add partition p4 start(10) end(14);
-NOTICE:  CREATE TABLE will create partition "subt_alter_part_tab_ao1_1_prt_p4" for table "subt_alter_part_tab_ao1"
 Alter table subt_alter_part_tab_ao1 add default partition def_part;
-NOTICE:  CREATE TABLE will create partition "subt_alter_part_tab_ao1_1_prt_def_part" for table "subt_alter_part_tab_ao1"
 Insert into subt_alter_part_tab_ao1 values(
  generate_series(1,15), 'create table with subtransactions', 's',
  'subtransaction table', '12-11-2012', 3, '2012-10-09 10:23:54',
@@ -420,7 +412,6 @@ select count(*) = 0 as passed from subt_alter_part_tab_ao1
 
 Savepoint sp3; -- child of sp2
 Alter table subt_alter_part_tab_ao1 drop default partition;
-NOTICE:  dropped partition "def_part" for relation "subt_alter_part_tab_ao1"
 release savepoint sp3; -- commit sp3
 Select count(*) from subt_alter_part_tab_ao1;
  count 
@@ -459,10 +450,6 @@ select count(*) > 1 as passed from subt_alter_part_tab_ao1
 
 Alter table subt_alter_part_tab_ao1 split partition p4 at (13) into
  (partition splita,partition splitb);
-NOTICE:  exchanged partition "p4" of relation "subt_alter_part_tab_ao1" with relation "pg_temp_DUMMY"
-NOTICE:  dropped partition "p4" for relation "subt_alter_part_tab_ao1"
-NOTICE:  CREATE TABLE will create partition "subt_alter_part_tab_ao1_1_prt_splita" for table "subt_alter_part_tab_ao1"
-NOTICE:  CREATE TABLE will create partition "subt_alter_part_tab_ao1_1_prt_splitb" for table "subt_alter_part_tab_ao1"
 select count(*) from subt_alter_part_tab_ao1;
  count 
 -------

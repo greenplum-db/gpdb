@@ -35,7 +35,7 @@ WHERE buyer_name = 'ABC'
   <dxl:Thread Id="0">
     <dxl:OptimizerConfig>
       <dxl:EnumeratorConfig Id="0" PlanSamples="0" CostThreshold="0"/>
-      <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.010000" DampingFactorGroupBy="0.750000"/>
+      <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.010000" DampingFactorGroupBy="0.750000" MaxStatsBuckets="100"/>
       <dxl:CTEConfig CTEInliningCutoff="0"/> 
       <dxl:WindowOids RowNumber="7000" Rank="7001"/>
       <dxl:CostModelConfig CostModelType="1" SegmentsForCosting="54">
@@ -457,7 +457,7 @@ WHERE buyer_name = 'ABC'
         <dxl:OneTimeFilter/>
         <dxl:Window PartitionColumns="">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.008953" Rows="1.000012" Width="25"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.008953" Rows="1.000000" Width="25"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="12" Alias="curr_bidrate">
@@ -472,7 +472,7 @@ WHERE buyer_name = 'ABC'
           <dxl:Filter/>
           <dxl:HashJoin JoinType="Inner">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.008953" Rows="1.000012" Width="21"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.008953" Rows="1.000000" Width="21"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="2" Alias="curr_bidcnt">
@@ -492,7 +492,7 @@ WHERE buyer_name = 'ABC'
             </dxl:HashCondList>
             <dxl:GatherMotion InputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53" OutputSegments="-1">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.008369" Rows="1.000012" Width="21"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.008369" Rows="1.000000" Width="21"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="3" Alias="network_id">
@@ -506,7 +506,7 @@ WHERE buyer_name = 'ABC'
               <dxl:SortingColumnList/>
               <dxl:TableScan>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.008321" Rows="1.000012" Width="21"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.008321" Rows="1.000000" Width="21"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="3" Alias="network_id">

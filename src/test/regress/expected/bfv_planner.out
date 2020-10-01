@@ -353,7 +353,6 @@ CREATE TABLE bfv_planner_t2 (f int,g int) DISTRIBUTED BY (f) PARTITION BY RANGE(
 (
 PARTITION "201612" START (1) END (10)
 );
-NOTICE:  CREATE TABLE will create partition "bfv_planner_t2_1_prt_201612" for table "bfv_planner_t2"
 insert into bfv_planner_t1 values(1,2,3), (2,3,4), (3,4,5);
 insert into bfv_planner_t2 values(3,1), (4,2), (5,2);
 select count(*) from
@@ -387,6 +386,181 @@ WINDOW w AS (order by a);
  first_value | a 
 -------------+---
 (0 rows)
+
+-- volatile general
+-- General and segmentGeneral locus imply that if the corresponding
+-- slice is executed in many different segments should provide the
+-- same result data set. Thus, in some cases, General and segmentGeneral
+-- can be treated like broadcast. But if the segmentGeneral and general
+-- locus path contain volatile functions, they lose the property and
+-- can only be treated as singleQE. The following cases are to check that
+-- we correctly handle all these cases.
+-- FIXME: for ORCA the following SQL does not consider this. We should
+-- fix them when ORCA changes.
+create table t_hashdist(a int, b int, c int) distributed by (a);
+---- pushed down filter
+explain (costs off)
+select * from
+(select a from generate_series(1, 10)a) x, t_hashdist
+where x.a > random();
+                              QUERY PLAN                              
+----------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Seq Scan on t_hashdist
+         ->  Materialize
+               ->  Broadcast Motion 1:3  (slice2; segments: 1)
+                     ->  Function Scan on generate_series a
+                           Filter: ((a)::double precision > random())
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+---- join qual
+explain (costs off) select * from
+t_hashdist,
+(select a from generate_series(1, 1000) a) x,
+(select a from generate_series(1, 1000) a) y
+where x.a + y.a > random();
+                             QUERY PLAN                              
+---------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         Join Filter: (((a.a + a_1.a))::double precision > random())
+         ->  Function Scan on generate_series a_1
+         ->  Materialize
+               ->  Nested Loop
+                     ->  Function Scan on generate_series a
+                     ->  Materialize
+                           ->  Seq Scan on t_hashdist
+ Optimizer: Postgres query optimizer
+(10 rows)
+
+---- sublink & subquery
+explain (costs off) select * from t_hashdist where a > All (select random() from generate_series(1, 10));
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop Left Anti Semi (Not-In) Join
+         Join Filter: ((t_hashdist.a)::double precision <= "NotIn_SUBQUERY".random)
+         ->  Seq Scan on t_hashdist
+         ->  Materialize
+               ->  Broadcast Motion 1:3  (slice2; segments: 1)
+                     ->  Subquery Scan on "NotIn_SUBQUERY"
+                           ->  Function Scan on generate_series
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain (costs off) select * from t_hashdist where a in (select random()::int from generate_series(1, 10));
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Semi Join
+         Hash Cond: (t_hashdist.a = ((random())::integer))
+         ->  Seq Scan on t_hashdist
+         ->  Hash
+               ->  Redistribute Motion 1:3  (slice2; segments: 1)
+                     Hash Key: ((random())::integer)
+                     ->  Function Scan on generate_series
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+-- subplan
+explain (costs off, verbose) select * from
+t_hashdist left join (select a from generate_series(1, 10) a) x on t_hashdist.a > any (select random() from generate_series(1, 10));
+                                 QUERY PLAN                                  
+-----------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: t_hashdist.a, t_hashdist.b, t_hashdist.c, a.a
+   ->  Nested Loop Left Join
+         Output: t_hashdist.a, t_hashdist.b, t_hashdist.c, a.a
+         Join Filter: ((SubPlan 1))
+         ->  Seq Scan on public.t_hashdist
+               Output: t_hashdist.a, t_hashdist.b, t_hashdist.c, (SubPlan 1)
+               SubPlan 1
+                 ->  Materialize
+                       Output: (random())
+                       ->  Broadcast Motion 1:3  (slice2)
+                             Output: (random())
+                             ->  Function Scan on pg_catalog.generate_series
+                                   Output: random()
+                                   Function Call: generate_series(1, 10)
+         ->  Function Scan on pg_catalog.generate_series a
+               Output: a.a
+               Function Call: generate_series(1, 10)
+ Optimizer: Postgres query optimizer
+ Settings: enable_bitmapscan=off, enable_seqscan=off, optimizer=off
+(20 rows)
+
+-- targetlist
+explain (costs off) select * from t_hashdist cross join (select random () from generate_series(1, 10))x;
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Seq Scan on t_hashdist
+         ->  Materialize
+               ->  Broadcast Motion 1:3  (slice2; segments: 1)
+                     ->  Function Scan on generate_series
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain (costs off) select * from t_hashdist cross join (select a, sum(random()) from generate_series(1, 10) a group by a) x;
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Seq Scan on t_hashdist
+         ->  Materialize
+               ->  Broadcast Motion 1:3  (slice2; segments: 1)
+                     ->  HashAggregate
+                           Group Key: a.a
+                           ->  Function Scan on generate_series a
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain (costs off) select * from t_hashdist cross join (select random() as k, sum(a) from generate_series(1, 10) a group by k) x;
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Seq Scan on t_hashdist
+         ->  Materialize
+               ->  Broadcast Motion 1:3  (slice2; segments: 1)
+                     ->  HashAggregate
+                           Group Key: random()
+                           ->  Function Scan on generate_series a
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain (costs off) select * from t_hashdist cross join (select a, count(1) as s from generate_series(1, 10) a group by a having count(1) > random() order by a) x ;
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Seq Scan on t_hashdist
+         ->  Materialize
+               ->  Broadcast Motion 1:3  (slice2; segments: 1)
+                     ->  Sort
+                           Sort Key: a.a
+                           ->  HashAggregate
+                                 Group Key: a.a
+                                 Filter: ((count(1))::double precision > random())
+                                 ->  Function Scan on generate_series a
+ Optimizer: Postgres query optimizer
+(12 rows)
+
+-- limit
+explain (costs off) select * from t_hashdist cross join (select * from generate_series(1, 10) limit random()) x;
+                        QUERY PLAN                        
+----------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Broadcast Motion 1:3  (slice2; segments: 1)
+               ->  Limit
+                     ->  Function Scan on generate_series
+         ->  Seq Scan on t_hashdist
+ Optimizer: Postgres query optimizer
+(7 rows)
 
 -- start_ignore
 drop table if exists bfv_planner_x;

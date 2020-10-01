@@ -4,11 +4,11 @@
 
 resource_types:
 - name: pull-request
-  type: docker-image
+  type: registry-image
   source:
     repository: teliaoss/github-pr-resource
 - name: gcs
-  type: docker-image
+  type: registry-image
   source:
     repository: frodenas/gcs-resource
 
@@ -18,18 +18,18 @@ resources:
   source:
     repository: greenplum-db/gpdb
     base_branch: "master"
-    access_token: {{gpdb-git-access-token}}
+    access_token: ((gpdb-git-access-token))
     ignore_paths:
     - gpdb-doc/*
     - README*
 
 - name: gpdb7-centos7-build
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/gpdb7-centos7-build
 
 - name: gpdb7-centos7-test
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/gpdb7-centos7-test
 
@@ -47,13 +47,17 @@ resources:
     json_key: ((concourse-gcs-resources-service-account-key))
     regexp: gp-internal-artifacts/centos7/libquicklz-devel-(1\.5\.0-.*)-1.el7.x86_64.rpm
 
+- name: clang_toolchain
+  type: registry-image
+  source:
+    repository: gcr.io/data-orca/clang-toolchain
 
 jobs:
 - name: compile_and_test_gpdb
   public: true
   max_in_flight: 10
   plan:
-  - aggregate:
+  - in_parallel:
     - get: gpdb_pr
       trigger: true
       version: every
@@ -63,6 +67,7 @@ jobs:
       resource: libquicklz-centos7
     - get: libquicklz-devel-installer
       resource: libquicklz-devel-centos7
+    - get: clang_toolchain
 
   - put: gpdb_pr
     params:
@@ -96,18 +101,21 @@ jobs:
             git submodule update --init --recursive
         inputs: [{ name: gpdb_pr }]
         outputs: [{ name: gpdb_src }]
+    - task: check_format
+      image: clang_toolchain
+      file: gpdb_src/concourse/tasks/check_format.yml
     - task: compile_gpdb_centos7
       file: gpdb_pr/concourse/tasks/compile_gpdb.yml
       image: gpdb7-centos7-build
       params:
-        CONFIGURE_FLAGS: {{configure_flags_with_extensions}}
+        CONFIGURE_FLAGS: ((configure_flags_with_extensions))
         TARGET_OS: centos
         TARGET_OS_VERSION: 7
         BLD_TARGETS: "clients loaders"
       timeout: 30m
 
 
-    - aggregate:
+    - in_parallel:
       - task: icw_planner_centos7
         file: gpdb_pr/concourse/tasks/ic_gpdb.yml
         image: gpdb7-centos7-test
@@ -117,7 +125,7 @@ jobs:
         params:
           MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
           TEST_OS: centos
-          CONFIGURE_FLAGS: {{configure_flags}}
+          CONFIGURE_FLAGS: ((configure_flags))
         timeout: 3h
 
       - task: icw_gporca_centos7
@@ -129,5 +137,5 @@ jobs:
         params:
           MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
           TEST_OS: centos
-          CONFIGURE_FLAGS: {{configure_flags}}
+          CONFIGURE_FLAGS: ((configure_flags))
         timeout: 5h

@@ -17,8 +17,8 @@ HINT:  Replication slot names may only contain lower case letters, numbers, and 
 SELECT 'init' FROM pg_logical_slot_get_changes('regression_slot', NULL, NULL, 'include-xids', 'frakbar');
 ERROR:  could not parse value "frakbar" for parameter "include-xids"
 CONTEXT:  slot "regression_slot", output plugin "test_decoding", in the startup callback
-SELECT 'init' FROM pg_logical_slot_get_changes('regression_slot', NULL, NULL, 'nonexistant-option', 'frakbar');
-ERROR:  option "nonexistant-option" = "frakbar" is unknown
+SELECT 'init' FROM pg_logical_slot_get_changes('regression_slot', NULL, NULL, 'nonexistent-option', 'frakbar');
+ERROR:  option "nonexistent-option" = "frakbar" is unknown
 CONTEXT:  slot "regression_slot", output plugin "test_decoding", in the startup callback
 SELECT 'init' FROM pg_logical_slot_get_changes('regression_slot', NULL, NULL, 'include-xids', 'frakbar');
 ERROR:  could not parse value "frakbar" for parameter "include-xids"
@@ -58,7 +58,7 @@ SELECT 'init' FROM pg_create_logical_replication_slot('regression_slot', 'test_d
 SELECT slot_name, plugin, slot_type, active,
     NOT catalog_xmin IS NULL AS catalog_xmin_set,
     xmin IS NULl  AS data_xmin_not_set,
-    pg_xlog_location_diff(restart_lsn, '0/01000000') > 0 AS some_wal
+    pg_wal_lsn_diff(restart_lsn, '0/01000000') > 0 AS some_wal
 FROM pg_replication_slots;
     slot_name    |    plugin     | slot_type | active | catalog_xmin_set | data_xmin_not_set | some_wal 
 -----------------+---------------+-----------+--------+------------------+-------------------+----------
@@ -117,11 +117,11 @@ SELECT data FROM pg_logical_slot_get_changes('regression_slot', NULL, NULL, 'inc
 (22 rows)
 
 ALTER TABLE replication_example ALTER COLUMN somenum TYPE int4 USING (somenum::int4);
--- throw away changes, they contain oids
+-- check that this doesn't produce any changes from the heap rewrite
 SELECT count(data) FROM pg_logical_slot_get_changes('regression_slot', NULL, NULL, 'include-xids', '0', 'skip-empty-xacts', '1');
  count 
 -------
-    12
+     0
 (1 row)
 
 INSERT INTO replication_example(somedata, somenum) VALUES (5, 1);
@@ -192,16 +192,20 @@ SELECT data FROM pg_logical_slot_get_changes('regression_slot', NULL, NULL, 'inc
  COMMIT
 (33 rows)
 
--- hide changes bc of oid visible in full table rewrites
 CREATE TABLE tr_unique(id2 serial unique NOT NULL, data int);
 INSERT INTO tr_unique(data) VALUES(10);
 ALTER TABLE tr_unique RENAME TO tr_pkey;
 ALTER TABLE tr_pkey ADD COLUMN id serial primary key;
-SELECT count(data) FROM pg_logical_slot_get_changes('regression_slot', NULL, NULL, 'include-xids', '0', 'skip-empty-xacts', '1');
- count 
--------
-     6
-(1 row)
+SELECT data FROM pg_logical_slot_get_changes('regression_slot', NULL, NULL, 'include-xids', '0', 'skip-empty-xacts', '1', 'include-rewrites', '1');
+                                    data                                     
+-----------------------------------------------------------------------------
+ BEGIN
+ table public.tr_unique: INSERT: id2[integer]:1 data[integer]:10
+ COMMIT
+ BEGIN
+ table public.tr_pkey: INSERT: id2[integer]:1 data[integer]:10 id[integer]:1
+ COMMIT
+(6 rows)
 
 INSERT INTO tr_pkey(data) VALUES(1);
 --show deletion with primary key
@@ -274,9 +278,9 @@ INSERT INTO tr_etoomuch (id, data)
 SELECT g.i, -g.i FROM generate_series(8000, 12000) g(i)
 ON CONFLICT(id) DO UPDATE SET data = EXCLUDED.data;
 SELECT substring(data, 1, 29), count(*)
-FROM pg_logical_slot_get_changes('regression_slot', NULL, NULL, 'include-xids', '0', 'skip-empty-xacts', '1')
+FROM pg_logical_slot_get_changes('regression_slot', NULL, NULL, 'include-xids', '0', 'skip-empty-xacts', '1') WITH ORDINALITY
 GROUP BY 1
-ORDER BY min(location - '0/0');
+ORDER BY min(ordinality);
            substring           | count 
 -------------------------------+-------
  BEGIN                         |     1
@@ -405,6 +409,24 @@ SELECT data FROM pg_logical_slot_get_changes('regression_slot', NULL, NULL, 'inc
  COMMIT
 (6 rows)
 
+-- check that DDL in aborted subtransactions handled correctly
+CREATE TABLE tr_sub_ddl(data int);
+BEGIN;
+SAVEPOINT a;
+ALTER TABLE tr_sub_ddl ALTER COLUMN data TYPE text;
+INSERT INTO tr_sub_ddl VALUES ('blah-blah');
+ROLLBACK TO SAVEPOINT a;
+ALTER TABLE tr_sub_ddl ALTER COLUMN data TYPE bigint;
+INSERT INTO tr_sub_ddl VALUES(43);
+COMMIT;
+SELECT data FROM pg_logical_slot_get_changes('regression_slot', NULL, NULL, 'include-xids', '0', 'skip-empty-xacts', '1');
+                       data                       
+--------------------------------------------------
+ BEGIN
+ table public.tr_sub_ddl: INSERT: data[bigint]:43
+ COMMIT
+(3 rows)
+
 /*
  * Check whether treating a table as a catalog table works somewhat
  */
@@ -416,12 +438,12 @@ CREATE TABLE replication_metadata (
 WITH (user_catalog_table = true)
 ;
 \d+ replication_metadata
-                                              Table "public.replication_metadata"
-  Column  |  Type   |                             Modifiers                             | Storage  | Stats target | Description 
-----------+---------+-------------------------------------------------------------------+----------+--------------+-------------
- id       | integer | not null default nextval('replication_metadata_id_seq'::regclass) | plain    |              | 
- relation | name    | not null                                                          | plain    |              | 
- options  | text[]  |                                                                   | extended |              | 
+                                                 Table "public.replication_metadata"
+  Column  |  Type   | Collation | Nullable |                     Default                      | Storage  | Stats target | Description 
+----------+---------+-----------+----------+--------------------------------------------------+----------+--------------+-------------
+ id       | integer |           | not null | nextval('replication_metadata_id_seq'::regclass) | plain    |              | 
+ relation | name    |           | not null |                                                  | plain    |              | 
+ options  | text[]  |           |          |                                                  | extended |              | 
 Indexes:
     "replication_metadata_pkey" PRIMARY KEY, btree (id)
 Options: user_catalog_table=true
@@ -430,12 +452,12 @@ INSERT INTO replication_metadata(relation, options)
 VALUES ('foo', ARRAY['a', 'b']);
 ALTER TABLE replication_metadata RESET (user_catalog_table);
 \d+ replication_metadata
-                                              Table "public.replication_metadata"
-  Column  |  Type   |                             Modifiers                             | Storage  | Stats target | Description 
-----------+---------+-------------------------------------------------------------------+----------+--------------+-------------
- id       | integer | not null default nextval('replication_metadata_id_seq'::regclass) | plain    |              | 
- relation | name    | not null                                                          | plain    |              | 
- options  | text[]  |                                                                   | extended |              | 
+                                                 Table "public.replication_metadata"
+  Column  |  Type   | Collation | Nullable |                     Default                      | Storage  | Stats target | Description 
+----------+---------+-----------+----------+--------------------------------------------------+----------+--------------+-------------
+ id       | integer |           | not null | nextval('replication_metadata_id_seq'::regclass) | plain    |              | 
+ relation | name    |           | not null |                                                  | plain    |              | 
+ options  | text[]  |           |          |                                                  | extended |              | 
 Indexes:
     "replication_metadata_pkey" PRIMARY KEY, btree (id)
 
@@ -443,12 +465,12 @@ INSERT INTO replication_metadata(relation, options)
 VALUES ('bar', ARRAY['a', 'b']);
 ALTER TABLE replication_metadata SET (user_catalog_table = true);
 \d+ replication_metadata
-                                              Table "public.replication_metadata"
-  Column  |  Type   |                             Modifiers                             | Storage  | Stats target | Description 
-----------+---------+-------------------------------------------------------------------+----------+--------------+-------------
- id       | integer | not null default nextval('replication_metadata_id_seq'::regclass) | plain    |              | 
- relation | name    | not null                                                          | plain    |              | 
- options  | text[]  |                                                                   | extended |              | 
+                                                 Table "public.replication_metadata"
+  Column  |  Type   | Collation | Nullable |                     Default                      | Storage  | Stats target | Description 
+----------+---------+-----------+----------+--------------------------------------------------+----------+--------------+-------------
+ id       | integer |           | not null | nextval('replication_metadata_id_seq'::regclass) | plain    |              | 
+ relation | name    |           | not null |                                                  | plain    |              | 
+ options  | text[]  |           |          |                                                  | extended |              | 
 Indexes:
     "replication_metadata_pkey" PRIMARY KEY, btree (id)
 Options: user_catalog_table=true
@@ -461,13 +483,13 @@ ALTER TABLE replication_metadata ALTER COLUMN rewritemeornot TYPE text;
 ERROR:  cannot rewrite table "replication_metadata" used as a catalog table
 ALTER TABLE replication_metadata SET (user_catalog_table = false);
 \d+ replication_metadata
-                                                 Table "public.replication_metadata"
-     Column     |  Type   |                             Modifiers                             | Storage  | Stats target | Description 
-----------------+---------+-------------------------------------------------------------------+----------+--------------+-------------
- id             | integer | not null default nextval('replication_metadata_id_seq'::regclass) | plain    |              | 
- relation       | name    | not null                                                          | plain    |              | 
- options        | text[]  |                                                                   | extended |              | 
- rewritemeornot | integer |                                                                   | plain    |              | 
+                                                    Table "public.replication_metadata"
+     Column     |  Type   | Collation | Nullable |                     Default                      | Storage  | Stats target | Description 
+----------------+---------+-----------+----------+--------------------------------------------------+----------+--------------+-------------
+ id             | integer |           | not null | nextval('replication_metadata_id_seq'::regclass) | plain    |              | 
+ relation       | name    |           | not null |                                                  | plain    |              | 
+ options        | text[]  |           |          |                                                  | extended |              | 
+ rewritemeornot | integer |           |          |                                                  | plain    |              | 
 Indexes:
     "replication_metadata_pkey" PRIMARY KEY, btree (id)
 Options: user_catalog_table=false
@@ -702,7 +724,7 @@ SELECT pg_drop_replication_slot('regression_slot');
 
 /* check that the slot is gone */
 SELECT * FROM pg_replication_slots;
- slot_name | plugin | slot_type | datoid | database | active | active_pid | xmin | catalog_xmin | restart_lsn | confirmed_flush_lsn 
------------+--------+-----------+--------+----------+--------+------------+------+--------------+-------------+---------------------
+ slot_name | plugin | slot_type | datoid | database | temporary | active | active_pid | xmin | catalog_xmin | restart_lsn | confirmed_flush_lsn 
+-----------+--------+-----------+--------+----------+-----------+--------+------------+------+--------------+-------------+---------------------
 (0 rows)
 

@@ -36,6 +36,8 @@ extern char *orafce_timezone;
 extern char *nls_date_format;
 extern char *orafce_timezone;
 
+extern bool orafce_varchar2_null_safe_concat;
+
 /*
  * Version compatibility
  */
@@ -45,14 +47,22 @@ extern Oid	equality_oper_funcid(Oid argtype);
 /*
  * Date utils
  */
-#if PG_VERSION_NUM >= 90400
 #define STRING_PTR_FIELD_TYPE const char *const
-#else
-#define STRING_PTR_FIELD_TYPE char *
-#endif
 
 extern STRING_PTR_FIELD_TYPE ora_days[];
 
-extern int ora_seq_search(const char *name, STRING_PTR_FIELD_TYPE array[], int max);
+extern int ora_seq_search(const char *name, STRING_PTR_FIELD_TYPE array[], size_t max);
+
+#ifdef _MSC_VER
+
+#define int2size(v)			(size_t)(v)
+#define size2int(v)			(int)(v)
+
+#else
+
+#define int2size(v)			v
+#define size2int(v)			v
+
+#endif
 
 #endif

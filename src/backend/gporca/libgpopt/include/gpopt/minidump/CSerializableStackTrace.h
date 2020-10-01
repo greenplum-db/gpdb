@@ -23,33 +23,29 @@ using namespace gpdxl;
 
 namespace gpopt
 {
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CSerializableStackTrace
-	//
-	//	@doc:
-	//		Serializable stacktrace object 
-	//
-	//---------------------------------------------------------------------------
-	class CSerializableStackTrace : public CSerializable
-	{
-		public:
+//---------------------------------------------------------------------------
+//	@class:
+//		CSerializableStackTrace
+//
+//	@doc:
+//		Serializable stacktrace object
+//
+//---------------------------------------------------------------------------
+class CSerializableStackTrace : public CSerializable
+{
+public:
+	// ctor
+	CSerializableStackTrace();
 
-			// ctor
-			CSerializableStackTrace();
+	// dtor
+	virtual ~CSerializableStackTrace();
 
-			// dtor
-			virtual
-			~CSerializableStackTrace();
+	// serialize object to passed stream
+	virtual void Serialize(COstream &oos);
 
-			// serialize object to passed stream
-			virtual
-			void Serialize(COstream& oos);
+};	// class CSerializableStackTrace
+}  // namespace gpopt
 
-	}; // class CSerializableStackTrace
-}
-
-#endif // !GPOPT_CSerializableStackTrace_H
+#endif	// !GPOPT_CSerializableStackTrace_H
 
 // EOF
-

@@ -9,7 +9,7 @@
 //		Dummy implementation of the constant expression evaluator
 //
 //	@owner:
-//		
+//
 //
 //	@test:
 //
@@ -24,42 +24,38 @@
 
 namespace gpopt
 {
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CConstExprEvaluatorDefault
-	//
-	//	@doc:
-	//		Constant expression evaluator default implementation for the case when
-	//		no database instance is available
-	//
-	//---------------------------------------------------------------------------
-	class CConstExprEvaluatorDefault : public IConstExprEvaluator
+//---------------------------------------------------------------------------
+//	@class:
+//		CConstExprEvaluatorDefault
+//
+//	@doc:
+//		Constant expression evaluator default implementation for the case when
+//		no database instance is available
+//
+//---------------------------------------------------------------------------
+class CConstExprEvaluatorDefault : public IConstExprEvaluator
+{
+private:
+	// private copy ctor
+	CConstExprEvaluatorDefault(const CConstExprEvaluatorDefault &);
+
+public:
+	// ctor
+	CConstExprEvaluatorDefault() : IConstExprEvaluator()
 	{
-		private:
-			// private copy ctor
-			CConstExprEvaluatorDefault(const CConstExprEvaluatorDefault &);
+	}
 
-		public:
-			// ctor
-			CConstExprEvaluatorDefault()
-				:
-				IConstExprEvaluator()
-			{}
+	// dtor
+	virtual ~CConstExprEvaluatorDefault();
 
-			// dtor
-			virtual
-			~CConstExprEvaluatorDefault();
+	// Evaluate the given expression and return the result as a new expression
+	virtual CExpression *PexprEval(CExpression *pexpr);
 
-			// Evaluate the given expression and return the result as a new expression
-			virtual
-			CExpression *PexprEval(CExpression *pexpr);
+	// Returns true iff the evaluator can evaluate constant expressions
+	virtual BOOL FCanEvalExpressions();
+};
+}  // namespace gpopt
 
-			// Returns true iff the evaluator can evaluate constant expressions
-			virtual
-			BOOL FCanEvalExpressions();
-	};
-}
-
-#endif // !GPOPT_CConstExprEvaluatorGPDB_H
+#endif	// !GPOPT_CConstExprEvaluatorGPDB_H
 
 // EOF

@@ -26,14 +26,10 @@ XERCES_CPP_NAMESPACE_USE
 //		Constructor
 //
 //---------------------------------------------------------------------------
-CParseHandlerPhysicalOp::CParseHandlerPhysicalOp
-	(
-	CMemoryPool *mp, 
-	CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root
-	)
-	:
-	CParseHandlerOp(mp, parse_handler_mgr, parse_handler_root)
+CParseHandlerPhysicalOp::CParseHandlerPhysicalOp(
+	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+	CParseHandlerBase *parse_handler_root)
+	: CParseHandlerOp(mp, parse_handler_mgr, parse_handler_root)
 {
 }
 
@@ -61,24 +57,25 @@ CParseHandlerPhysicalOp::~CParseHandlerPhysicalOp()
 //
 //---------------------------------------------------------------------------
 void
-CParseHandlerPhysicalOp::StartElement
-	(
-	const XMLCh* const element_uri,
-	const XMLCh* const element_local_name,
-	const XMLCh* const element_qname,
-	const Attributes& attrs
-	)
+CParseHandlerPhysicalOp::StartElement(const XMLCh *const element_uri,
+									  const XMLCh *const element_local_name,
+									  const XMLCh *const element_qname,
+									  const Attributes &attrs)
 {
 	// instantiate the parse handler
-	CParseHandlerBase *parse_handler_base = CParseHandlerFactory::GetParseHandler(m_mp, element_local_name, m_parse_handler_mgr, this);
+	CParseHandlerBase *parse_handler_base =
+		CParseHandlerFactory::GetParseHandler(m_mp, element_local_name,
+											  m_parse_handler_mgr, this);
 
 	GPOS_ASSERT(NULL != parse_handler_base);
 
 	// activate the parse handler
-	m_parse_handler_mgr->ReplaceHandler(parse_handler_base, m_parse_handler_root);
-		
+	m_parse_handler_mgr->ReplaceHandler(parse_handler_base,
+										m_parse_handler_root);
+
 	// pass the startElement message for the specialized parse handler to process
-	parse_handler_base->startElement(element_uri, element_local_name, element_qname, attrs);
+	parse_handler_base->startElement(element_uri, element_local_name,
+									 element_qname, attrs);
 }
 
 //---------------------------------------------------------------------------
@@ -92,12 +89,10 @@ CParseHandlerPhysicalOp::StartElement
 //
 //---------------------------------------------------------------------------
 void
-CParseHandlerPhysicalOp::EndElement
-	(
-	const XMLCh* const, // element_uri,
-	const XMLCh* const, // element_local_name,
-	const XMLCh* const // element_qname
-	)
+CParseHandlerPhysicalOp::EndElement(const XMLCh *const,	 // element_uri,
+									const XMLCh *const,	 // element_local_name,
+									const XMLCh *const	 // element_qname
+)
 {
 	GPOS_ASSERT(!"Invalid call of endElement inside CParseHandlerPhysicalOp");
 }
@@ -105,4 +100,3 @@ CParseHandlerPhysicalOp::EndElement
 
 
 // EOF
-

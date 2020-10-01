@@ -4,7 +4,7 @@
  *	  routines for handling GIN entry tree pages.
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -15,21 +15,22 @@
 #include "postgres.h"
 
 #include "access/gin_private.h"
+#include "access/ginxlog.h"
 #include "access/xloginsert.h"
 #include "miscadmin.h"
 #include "utils/rel.h"
 
 static void entrySplitPage(GinBtree btree, Buffer origbuf,
-			   GinBtreeStack *stack,
-			   GinBtreeEntryInsertData *insertData,
-			   BlockNumber updateblkno,
-			   Page *newlpage, Page *newrpage);
+						   GinBtreeStack *stack,
+						   GinBtreeEntryInsertData *insertData,
+						   BlockNumber updateblkno,
+						   Page *newlpage, Page *newrpage);
 
 /*
  * Form a tuple for entry tree.
  *
  * If the tuple would be too big to be stored, function throws a suitable
- * error if errorTooBig is TRUE, or returns NULL if errorTooBig is FALSE.
+ * error if errorTooBig is true, or returns NULL if errorTooBig is false.
  *
  * See src/backend/access/gin/README for a description of the index tuple
  * format that is being built here.  We build on the assumption that we
@@ -106,9 +107,9 @@ GinFormTuple(GinState *ginstate,
 		if (errorTooBig)
 			ereport(ERROR,
 					(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
-			errmsg("index row size %zu exceeds maximum %zu for index \"%s\"",
-				   (Size) newsize, (Size) GinMaxItemSize,
-				   RelationGetRelationName(ginstate->index))));
+					 errmsg("index row size %zu exceeds maximum %zu for index \"%s\"",
+							(Size) newsize, (Size) GinMaxItemSize,
+							RelationGetRelationName(ginstate->index))));
 		pfree(itup);
 		return NULL;
 	}
@@ -248,18 +249,18 @@ entryIsMoveRight(GinBtree btree, Page page)
 	GinNullCategory category;
 
 	if (GinPageRightMost(page))
-		return FALSE;
+		return false;
 
 	itup = getRightMostTuple(page);
 	attnum = gintuple_get_attrnum(btree->ginstate, itup);
 	key = gintuple_get_key(btree->ginstate, itup, &category);
 
 	if (ginCompareAttEntries(btree->ginstate,
-				   btree->entryAttnum, btree->entryKey, btree->entryCategory,
+							 btree->entryAttnum, btree->entryKey, btree->entryCategory,
 							 attnum, key, category) > 0)
-		return TRUE;
+		return true;
 
-	return FALSE;
+	return false;
 }
 
 /*
@@ -355,7 +356,7 @@ entryLocateLeafEntry(GinBtree btree, GinBtreeStack *stack)
 	if (btree->fullScan)
 	{
 		stack->off = FirstOffsetNumber;
-		return TRUE;
+		return true;
 	}
 
 	low = FirstOffsetNumber;
@@ -570,7 +571,7 @@ entryExecPlaceToPage(GinBtree btree, Buffer buf, GinBtreeStack *stack,
 		elog(ERROR, "failed to add item to index page in \"%s\"",
 			 RelationGetRelationName(btree->index));
 
-	if (RelationNeedsWAL(btree->index))
+	if (RelationNeedsWAL(btree->index) && !btree->isBuild)
 	{
 		/*
 		 * This must be static, because it has to survive until XLogInsert,
@@ -761,9 +762,9 @@ ginPrepareEntryScan(GinBtree btree, OffsetNumber attnum,
 	btree->fillRoot = ginEntryFillRoot;
 	btree->prepareDownlink = entryPrepareDownlink;
 
-	btree->isData = FALSE;
-	btree->fullScan = FALSE;
-	btree->isBuild = FALSE;
+	btree->isData = false;
+	btree->fullScan = false;
+	btree->isBuild = false;
 
 	btree->entryAttnum = attnum;
 	btree->entryKey = key;

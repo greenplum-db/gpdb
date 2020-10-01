@@ -1,17 +1,17 @@
 -- @Description Ensures that an alter table while a vacuum operation is ok
 -- 
-CREATE TABLE alter_while_vacuum2_@orientation@ (a INT, b INT) WITH (appendonly=true, orientation=@orientation@);
-INSERT INTO alter_while_vacuum2_@orientation@ SELECT i as a, i as b FROM generate_series(1, 100000) AS i;
-INSERT INTO alter_while_vacuum2_@orientation@ SELECT i as a, i as b FROM generate_series(1, 100000) AS i;
-INSERT INTO alter_while_vacuum2_@orientation@ SELECT i as a, i as b FROM generate_series(1, 100000) AS i;
-INSERT INTO alter_while_vacuum2_@orientation@ SELECT i as a, i as b FROM generate_series(1, 100000) AS i;
-INSERT INTO alter_while_vacuum2_@orientation@ SELECT i as a, i as b FROM generate_series(1, 100000) AS i;
-INSERT INTO alter_while_vacuum2_@orientation@ SELECT i as a, i as b FROM generate_series(1, 100000) AS i;
+CREATE TABLE alter_while_vacuum2_@amname@ (a INT, b INT) USING @amname@;
+INSERT INTO alter_while_vacuum2_@amname@ SELECT i as a, i as b FROM generate_series(1, 100000) AS i;
+INSERT INTO alter_while_vacuum2_@amname@ SELECT i as a, i as b FROM generate_series(1, 100000) AS i;
+INSERT INTO alter_while_vacuum2_@amname@ SELECT i as a, i as b FROM generate_series(1, 100000) AS i;
+INSERT INTO alter_while_vacuum2_@amname@ SELECT i as a, i as b FROM generate_series(1, 100000) AS i;
+INSERT INTO alter_while_vacuum2_@amname@ SELECT i as a, i as b FROM generate_series(1, 100000) AS i;
+INSERT INTO alter_while_vacuum2_@amname@ SELECT i as a, i as b FROM generate_series(1, 100000) AS i;
 
-DELETE FROM alter_while_vacuum2_@orientation@ WHERE a < 12000;
-1: SELECT COUNT(*) FROM alter_while_vacuum2_@orientation@;
+DELETE FROM alter_while_vacuum2_@amname@ WHERE a < 12000;
+1: SELECT COUNT(*) FROM alter_while_vacuum2_@amname@;
 2: set debug_appendonly_print_compaction=true;
-2>: VACUUM alter_while_vacuum2_@orientation@;
-1: Alter table alter_while_vacuum2_@orientation@ set with ( reorganize='true') distributed randomly;
+2>: VACUUM alter_while_vacuum2_@amname@;
+1: Alter table alter_while_vacuum2_@amname@ set with ( reorganize='true') distributed randomly;
 2<:
-1: SELECT COUNT(*) FROM alter_while_vacuum2_@orientation@ WHERE a < 12010;
+1: SELECT COUNT(*) FROM alter_while_vacuum2_@amname@ WHERE a < 12010;

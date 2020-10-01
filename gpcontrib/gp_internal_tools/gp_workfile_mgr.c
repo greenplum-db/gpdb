@@ -60,7 +60,7 @@ gp_workfile_mgr_used_diskspace(PG_FUNCTION_ARGS)
 	 * view gp_workfile_mgr_diskspace
 	 */
 #define NUM_USED_DISKSPACE_ELEM 2
-	TupleDesc tupdesc = CreateTemplateTupleDesc(NUM_USED_DISKSPACE_ELEM, false);
+	TupleDesc tupdesc = CreateTemplateTupleDesc(NUM_USED_DISKSPACE_ELEM);
 
 	TupleDescInitEntry(tupdesc, (AttrNumber) 1, "segid",
 			INT4OID, -1 /* typmod */, 0 /* attdim */);

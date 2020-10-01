@@ -38,6 +38,7 @@
 #include "utils/session_state.h"
 #include "utils/typcache.h"
 #include "miscadmin.h"
+#include "mb/pg_wchar.h"
 
 #include "cdb/cdbdisp.h"
 #include "cdb/cdbdisp_query.h"
@@ -78,8 +79,6 @@ typedef struct DispatchCommandQueryParms
 	 */
 	const char *strCommand;
 	int			strCommandlen;
-	char	   *serializedQuerytree;
-	int			serializedQuerytreelen;
 	char	   *serializedPlantree;
 	int			serializedPlantreelen;
 	char	   *serializedQueryDispatchDesc;
@@ -464,6 +463,23 @@ cdbdisp_dispatchCommandInternal(DispatchCommandQueryParms *pQueryParms,
 	 */
 	ds = cdbdisp_makeDispatcherState(false);
 
+	/*
+	 * Reader gangs use local snapshot to access catalog, as a result, it will
+	 * not synchronize with the global snapshot from write gang which will lead
+	 * to inconsistent visibilty of catalog table. Considering the case:
+	 * 
+	 * select * from t, t t1; -- create a reader gang.
+	 * begin;
+	 * create role r1;
+	 * set role r1;  -- set command will also dispatched to idle reader gang
+	 *
+	 * When set role command dispatched to reader gang, reader gang cannot see
+	 * the new tuple t1 in catalog table pg_auth.
+	 * To fix this issue, we should drop the idle reader gangs after each
+	 * utility statement which may modify the catalog table.
+	 */
+	ds->destroyIdleReaderGang = true;
+
 	queryText = buildGpQueryString(pQueryParms, &queryTextLength);
 
 	/*
@@ -506,8 +522,6 @@ cdbdisp_buildCommandQueryParms(const char *strCommand, int flags)
 
 	pQueryParms = palloc0(sizeof(*pQueryParms));
 	pQueryParms->strCommand = strCommand;
-	pQueryParms->serializedQuerytree = NULL;
-	pQueryParms->serializedQuerytreelen = 0;
 	pQueryParms->serializedQueryDispatchDesc = NULL;
 	pQueryParms->serializedQueryDispatchDesclen = 0;
 
@@ -528,25 +542,23 @@ cdbdisp_buildUtilityQueryParms(struct Node *stmt,
 				int flags,
 				List *oid_assignments)
 {
-	char *serializedQuerytree = NULL;
+	char *serializedPlantree = NULL;
 	char *serializedQueryDispatchDesc = NULL;
-	int serializedQuerytree_len = 0;
+	int serializedPlantree_len = 0;
 	int serializedQueryDispatchDesc_len = 0;
 	bool needTwoPhase = flags & DF_NEED_TWO_PHASE;
 	bool withSnapshot = flags & DF_WITH_SNAPSHOT;
 	QueryDispatchDesc *qddesc;
-	Query *q;
+	PlannedStmt *pstmt;
 	DispatchCommandQueryParms *pQueryParms;
 
 	Assert(stmt != NULL);
 	Assert(stmt->type < 1000);
 	Assert(stmt->type > 0);
 
-	q = makeNode(Query);
-
-	q->querySource = QSRC_ORIGINAL;
-	q->commandType = CMD_UTILITY;
-	q->utilityStmt = stmt;
+	/* Wrap it in a PlannedStmt */
+	pstmt = makeNode(PlannedStmt);
+	pstmt->commandType = CMD_UTILITY;
 
 	/*
 	 * We must set q->canSetTag = true.  False would be used to hide a command
@@ -556,15 +568,17 @@ cdbdisp_buildUtilityQueryParms(struct Node *stmt,
 	 * should come back as "SELECT n" and should not reflect other commands
 	 * inserted by rewrite rules.  True means we want the status.
 	 */
-	q->canSetTag = true;
+	pstmt->canSetTag = true;
+	pstmt->utilityStmt = stmt;
+	pstmt->stmt_location = 0;
+	pstmt->stmt_len = 0;
 
 	/*
 	 * serialized the stmt tree, and create the sql statement: mppexec ....
 	 */
-	serializedQuerytree = serializeNode((Node *) q, &serializedQuerytree_len,
-										NULL /* uncompressed_size */ );
-
-	Assert(serializedQuerytree != NULL);
+	serializedPlantree = serializeNode((Node *) pstmt, &serializedPlantree_len,
+									   NULL /* uncompressed_size */ );
+	Assert(serializedPlantree != NULL);
 
 	if (oid_assignments)
 	{
@@ -577,8 +591,8 @@ cdbdisp_buildUtilityQueryParms(struct Node *stmt,
 
 	pQueryParms = palloc0(sizeof(*pQueryParms));
 	pQueryParms->strCommand = debug_query_string;
-	pQueryParms->serializedQuerytree = serializedQuerytree;
-	pQueryParms->serializedQuerytreelen = serializedQuerytree_len;
+	pQueryParms->serializedPlantree = serializedPlantree;
+	pQueryParms->serializedPlantreelen = serializedPlantree_len;
 	pQueryParms->serializedQueryDispatchDesc = serializedQueryDispatchDesc;
 	pQueryParms->serializedQueryDispatchDesclen = serializedQueryDispatchDesc_len;
 
@@ -637,8 +651,6 @@ cdbdisp_buildPlanQueryParms(struct QueryDesc *queryDesc,
 	sddesc = serializeNode((Node *) queryDesc->ddesc, &sddesc_len, NULL /* uncompressed_size */ );
 
 	pQueryParms->strCommand = queryDesc->sourceText;
-	pQueryParms->serializedQuerytree = NULL;
-	pQueryParms->serializedQuerytreelen = 0;
 	pQueryParms->serializedPlantree = splan;
 	pQueryParms->serializedPlantreelen = splan_len;
 	pQueryParms->serializedQueryDispatchDesc = sddesc;
@@ -833,8 +845,6 @@ buildGpQueryString(DispatchCommandQueryParms *pQueryParms,
 {
 	const char *command = pQueryParms->strCommand;
 	int			command_len;
-	const char *querytree = pQueryParms->serializedQuerytree;
-	int			querytree_len = pQueryParms->serializedQuerytreelen;
 	const char *plantree = pQueryParms->serializedPlantree;
 	int			plantree_len = pQueryParms->serializedPlantreelen;
 	const char *sddesc = pQueryParms->serializedQueryDispatchDesc;
@@ -863,16 +873,19 @@ buildGpQueryString(DispatchCommandQueryParms *pQueryParms,
 	oldContext = MemoryContextSwitchTo(DispatcherContext);
 
 	/*
-	 * If either querytree or plantree is set then the query string is not so
+	 * If plantree is set then the query string is not so
 	 * important, dispatch a truncated version to increase the performance.
 	 *
 	 * Here we only need to determine the truncated size, the actual work is
 	 * done later when copying it to the result buffer.
+	 *
+	 * The +1 and -1 below are adjustments to accommodate terminating null
+	 * character.
 	 */
-	if (querytree || plantree)
-		command_len = strnlen(command, QUERY_STRING_TRUNCATE_SIZE - 1) + 1;
-	else
-		command_len = strlen(command) + 1;
+	command_len = strlen(command) + 1;
+	if (plantree && command_len > QUERY_STRING_TRUNCATE_SIZE)
+		command_len = pg_mbcliplen(command, command_len,
+								   QUERY_STRING_TRUNCATE_SIZE-1) + 1;
 
 	initStringInfo(&resgroupInfo);
 	if (IsResGroupActivated())
@@ -886,13 +899,11 @@ buildGpQueryString(DispatchCommandQueryParms *pQueryParms,
 		sizeof(currentUserId) +
 		sizeof(n32) * 2 /* currentStatementStartTimestamp */ +
 		sizeof(command_len) +
-		sizeof(querytree_len) +
 		sizeof(plantree_len) +
 		sizeof(sddesc_len) +
 		sizeof(dtxContextInfo_len) +
 		dtxContextInfo_len +
 		command_len +
-		querytree_len +
 		plantree_len +
 		sddesc_len +
 		sizeof(numsegments) +
@@ -943,10 +954,6 @@ buildGpQueryString(DispatchCommandQueryParms *pQueryParms,
 	memcpy(pos, &tmp, sizeof(command_len));
 	pos += sizeof(command_len);
 
-	tmp = htonl(querytree_len);
-	memcpy(pos, &tmp, sizeof(querytree_len));
-	pos += sizeof(querytree_len);
-
 	tmp = htonl(plantree_len);
 	memcpy(pos, &tmp, sizeof(plantree_len));
 	pos += sizeof(plantree_len);
@@ -969,12 +976,6 @@ buildGpQueryString(DispatchCommandQueryParms *pQueryParms,
 	/* If command is truncated we need to set the terminating '\0' manually */
 	pos[command_len - 1] = '\0';
 	pos += command_len;
-
-	if (querytree_len > 0)
-	{
-		memcpy(pos, querytree, querytree_len);
-		pos += querytree_len;
-	}
 
 	if (plantree_len > 0)
 	{
@@ -1437,15 +1438,18 @@ serializeParamsForDispatch(QueryDesc *queryDesc,
 
 		for (int i = 0; i < externParams->numParams; i++)
 		{
-			ParamExternData *prm = &externParams->params[i];
+			ParamExternData *prm;
 			SerializedParamExternData *sprm = &result->externParams[i];
+			ParamExternData prmdata;
 
 			/*
 			 * First, use paramFetch to fetch any "lazy" parameters. (The callback
 			 * function is of no use in the QE.)
 			 */
-			if (externParams->paramFetch && !OidIsValid(prm->ptype))
-				(*externParams->paramFetch) (externParams, i + 1);
+			if (externParams->paramFetch != NULL)
+				prm = externParams->paramFetch(externParams, i + 1, false, &prmdata);
+			else
+				prm = &externParams->params[i];
 
 			sprm->value = prm->value;
 			sprm->isnull = prm->isnull;
@@ -1521,7 +1525,7 @@ getExecParamsToDispatch(PlannedStmt *stmt, ParamExecData *intPrm,
 	ParamWalkerContext context;
 	int			i;
 	Plan	   *plan = stmt->planTree;
-	int			nIntPrm = stmt->nParamExec;
+	int			nIntPrm = list_length(stmt->paramExecTypes);
 	Bitmapset  *sendParams = NULL;
 
 	if (nIntPrm == 0)

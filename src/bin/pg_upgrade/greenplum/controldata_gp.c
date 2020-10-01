@@ -29,8 +29,8 @@ reset_system_identifier(void)
 	sysidentifier |= ((uint64) tv.tv_usec) << 12;
 	sysidentifier |= getpid() & 0xFFF;
 
-	exec_prog(UTILITY_LOG_FILE, NULL, true,
-	          "\"%s/pg_resetxlog\" --binary-upgrade --system-identifier " UINT64_FORMAT " \"%s\"",
+	exec_prog(UTILITY_LOG_FILE, NULL, true, true,
+	          "\"%s/pg_resetwal\" --binary-upgrade --system-identifier " UINT64_FORMAT " \"%s\"",
 		new_cluster.bindir, sysidentifier, new_cluster.pgdata);
 
 	check_ok();

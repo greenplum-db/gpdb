@@ -5,7 +5,8 @@
 #include "miscadmin.h"
 
 #include "access/aocssegfiles.h"
-#include "access/heapam.h"
+#include "access/table.h"
+#include "catalog/indexing.h"
 #include "storage/bufmgr.h"
 #include "utils/numeric.h"
 #include "utils/snapmgr.h"
@@ -20,9 +21,10 @@ Datum
 flush_relation_buffers(PG_FUNCTION_ARGS)
 {
 	Oid relid = PG_GETARG_OID(0);
-	Relation r = heap_open(relid, AccessShareLock);
+	Relation r = table_open(relid, AccessShareLock);
+
 	FlushRelationBuffers(r);
-	heap_close(r, AccessShareLock);
+	table_close(r, AccessShareLock);
 	PG_RETURN_BOOL(true);
 }
 
@@ -35,7 +37,7 @@ setAOFormatVersion(PG_FUNCTION_ARGS)
 	int16			formatversion = PG_GETARG_INT16(1);
 	bool			columnoriented = PG_GETARG_BOOL(2);
 	Relation		aosegrel;
-	HeapScanDesc	scan;
+	SysScanDesc		scan;
 	HeapTuple		oldtuple;
 	HeapTuple		newtuple;
 	TupleDesc		tupdesc;
@@ -62,7 +64,7 @@ setAOFormatVersion(PG_FUNCTION_ARGS)
 	replace[formatversion_attnum - 1] = true;
 
 	/* Open the segment descriptor table. */
-	aosegrel = heap_open(aosegrelid, RowExclusiveLock);
+	aosegrel = table_open(aosegrelid, RowExclusiveLock);
 
 	if (!RelationIsValid(aosegrel))
 		elog(ERROR, "could not open aoseg table with OID %d", (int) aosegrelid);
@@ -75,14 +77,15 @@ setAOFormatVersion(PG_FUNCTION_ARGS)
 			 (int) aosegrelid);
 
 	/* Scan over the rows, overriding the formatversion for each entry. */
-	scan = heap_beginscan(aosegrel, GetActiveSnapshot(), 0, NULL);
-	while ((oldtuple = heap_getnext(scan, ForwardScanDirection)) != NULL)
+	scan = systable_beginscan(aosegrel, InvalidOid, false,
+							  NULL, 0, NULL);
+	while (HeapTupleIsValid((oldtuple = systable_getnext(scan))))
 	{
 		newtuple = heap_modify_tuple(oldtuple, tupdesc, values, isnull, replace);
-		simple_heap_update(aosegrel, &oldtuple->t_self, newtuple);
+		CatalogTupleUpdate(aosegrel, &oldtuple->t_self, newtuple);
 		pfree(newtuple);
 	}
-	heap_endscan(scan);
+	systable_endscan(scan);
 
 	/* Done. Clean up. */
 	heap_close(aosegrel, RowExclusiveLock);

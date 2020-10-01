@@ -1,7 +1,7 @@
 -- @Description Ensures that an vacuum while a vacuum operation is ok
 -- 
 DROP TABLE IF EXISTS ao;
-CREATE TABLE ao (a INT, b INT) WITH (appendonly=true, orientation=@orientation@);
+CREATE TABLE ao (a INT, b INT) USING @amname@;
 INSERT INTO ao SELECT i as a, i as b FROM generate_series(1, 10000) AS i;
 INSERT INTO ao SELECT i as a, i as b FROM generate_series(1, 10000) AS i;
 INSERT INTO ao SELECT i as a, i as b FROM generate_series(1, 10000) AS i;

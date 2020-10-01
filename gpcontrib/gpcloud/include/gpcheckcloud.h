@@ -9,7 +9,6 @@
 
 #define BUF_SIZE 64 * 1024
 
-extern volatile bool QueryCancelPending;
 extern bool S3QueryIsAbortInProgress(void);
 
 #endif

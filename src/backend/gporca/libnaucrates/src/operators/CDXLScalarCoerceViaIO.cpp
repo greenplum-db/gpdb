@@ -30,16 +30,12 @@ using namespace gpdxl;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CDXLScalarCoerceViaIO::CDXLScalarCoerceViaIO
-	(
-	CMemoryPool *mp,
-	IMDId *mdid_type,
-	INT type_modifier,
-	EdxlCoercionForm dxl_coerce_format,
-	INT location
-	)
-	:
-	CDXLScalarCoerceBase(mp, mdid_type, type_modifier, dxl_coerce_format, location)
+CDXLScalarCoerceViaIO::CDXLScalarCoerceViaIO(CMemoryPool *mp, IMDId *mdid_type,
+											 INT type_modifier,
+											 EdxlCoercionForm dxl_coerce_format,
+											 INT location)
+	: CDXLScalarCoerceBase(mp, mdid_type, type_modifier, dxl_coerce_format,
+						   location)
 {
 }
 

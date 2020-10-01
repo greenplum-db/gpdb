@@ -16,65 +16,54 @@
 
 namespace gpopt
 {
+//---------------------------------------------------------------------------
+//	@class:
+//		CPhysicalLeftAntiSemiNLJoinNotIn
+//
+//	@doc:
+//		Left anti semi nested-loops join operator with NotIn semantics
+//
+//---------------------------------------------------------------------------
+class CPhysicalLeftAntiSemiNLJoinNotIn : public CPhysicalLeftAntiSemiNLJoin
+{
+private:
+	// private copy ctor
+	CPhysicalLeftAntiSemiNLJoinNotIn(const CPhysicalLeftAntiSemiNLJoinNotIn &);
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CPhysicalLeftAntiSemiNLJoinNotIn
-	//
-	//	@doc:
-	//		Left anti semi nested-loops join operator with NotIn semantics
-	//
-	//---------------------------------------------------------------------------
-	class CPhysicalLeftAntiSemiNLJoinNotIn : public CPhysicalLeftAntiSemiNLJoin
+public:
+	// ctor
+	explicit CPhysicalLeftAntiSemiNLJoinNotIn(CMemoryPool *mp)
+		: CPhysicalLeftAntiSemiNLJoin(mp)
 	{
+	}
 
-		private:
+	// ident accessors
+	virtual EOperatorId
+	Eopid() const
+	{
+		return EopPhysicalLeftAntiSemiNLJoinNotIn;
+	}
 
-			// private copy ctor
-			CPhysicalLeftAntiSemiNLJoinNotIn(const CPhysicalLeftAntiSemiNLJoinNotIn &);
+	// return a string for operator name
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CPhysicalLeftAntiSemiNLJoinNotIn";
+	}
 
-		public:
+	// conversion function
+	static CPhysicalLeftAntiSemiNLJoinNotIn *
+	PopConvert(COperator *pop)
+	{
+		GPOS_ASSERT(EopPhysicalLeftAntiSemiNLJoinNotIn == pop->Eopid());
 
-			// ctor
-			explicit
-			CPhysicalLeftAntiSemiNLJoinNotIn
-				(
-				CMemoryPool *mp
-				)
-				:
-				CPhysicalLeftAntiSemiNLJoin(mp)
-			{}
+		return dynamic_cast<CPhysicalLeftAntiSemiNLJoinNotIn *>(pop);
+	}
 
-			// ident accessors
-			virtual
-			EOperatorId Eopid() const
-			{
-				return EopPhysicalLeftAntiSemiNLJoinNotIn;
-			}
+};	// class CPhysicalLeftAntiSemiNLJoinNotIn
 
-			 // return a string for operator name
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CPhysicalLeftAntiSemiNLJoinNotIn";
-			}
+}  // namespace gpopt
 
-			// conversion function
-			static
-			CPhysicalLeftAntiSemiNLJoinNotIn *PopConvert
-				(
-				COperator *pop
-				)
-			{
-				GPOS_ASSERT(EopPhysicalLeftAntiSemiNLJoinNotIn == pop->Eopid());
-
-				return dynamic_cast<CPhysicalLeftAntiSemiNLJoinNotIn*>(pop);
-			}
-
-	}; // class CPhysicalLeftAntiSemiNLJoinNotIn
-
-}
-
-#endif // !GPOPT_CPhysicalLeftAntiSemiNLJoinNotIn_H
+#endif	// !GPOPT_CPhysicalLeftAntiSemiNLJoinNotIn_H
 
 // EOF

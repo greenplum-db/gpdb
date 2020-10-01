@@ -3,7 +3,7 @@
   free available library PL/Vision. Please look www.quest.com
 
   Original author: Steven Feuerstein, 1996 - 2002
-  PostgreSQL implementation author: Pavel Stehule, 2006
+  PostgreSQL implementation author: Pavel Stehule, 2006-2018
 
   This module is under BSD Licence
 
@@ -43,7 +43,16 @@ dbms_utility_format_call_stack(char mode)
 	ErrorContextCallback *econtext;
 	StringInfo   sinfo;
 
+
+#if PG_VERSION_NUM >= 130000
+
+	errstart(ERROR, TEXTDOMAIN);
+
+#else
+
 	errstart(ERROR, __FILE__, __LINE__, PG_FUNCNAME_MACRO, TEXTDOMAIN);
+
+#endif
 
 	MemoryContextSwitchTo(oldcontext);
 

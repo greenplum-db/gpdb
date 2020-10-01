@@ -32,29 +32,27 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CScalarOp::CScalarOp
-	(
-	CMemoryPool *mp,
-	IMDId *mdid_op,
-	IMDId *return_type_mdid,
-	const CWStringConst *pstrOp
-	)
-	:
-	CScalar(mp),
-	m_mdid_op(mdid_op),
-	m_return_type_mdid(return_type_mdid),
-	m_pstrOp(pstrOp),
-	m_returns_null_on_null_input(false),
-	m_fBoolReturnType(false),
-	m_fCommutative(false)
+CScalarOp::CScalarOp(CMemoryPool *mp, IMDId *mdid_op, IMDId *return_type_mdid,
+					 const CWStringConst *pstrOp)
+	: CScalar(mp),
+	  m_mdid_op(mdid_op),
+	  m_return_type_mdid(return_type_mdid),
+	  m_pstrOp(pstrOp),
+	  m_returns_null_on_null_input(false),
+	  m_fBoolReturnType(false),
+	  m_fCommutative(false)
 {
 	GPOS_ASSERT(mdid_op->IsValid());
 
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
 
-	m_returns_null_on_null_input = CMDAccessorUtils::FScalarOpReturnsNullOnNullInput(md_accessor, m_mdid_op);
-	m_fCommutative = CMDAccessorUtils::FCommutativeScalarOp(md_accessor, m_mdid_op);
-	m_fBoolReturnType = CMDAccessorUtils::FBoolType(md_accessor, m_return_type_mdid);
+	m_returns_null_on_null_input =
+		CMDAccessorUtils::FScalarOpReturnsNullOnNullInput(md_accessor,
+														  m_mdid_op);
+	m_fCommutative =
+		CMDAccessorUtils::FCommutativeScalarOp(md_accessor, m_mdid_op);
+	m_fBoolReturnType =
+		CMDAccessorUtils::FBoolType(md_accessor, m_return_type_mdid);
 }
 
 
@@ -111,11 +109,7 @@ CScalarOp::HashValue() const
 //
 //---------------------------------------------------------------------------
 BOOL
-CScalarOp::Matches
-	(
-	COperator *pop
-	)
-	const
+CScalarOp::Matches(COperator *pop) const
 {
 	if (pop->Eopid() == Eopid())
 	{
@@ -157,7 +151,7 @@ CScalarOp::MdidType() const
 	{
 		return m_return_type_mdid;
 	}
-	
+
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
 	return md_accessor->RetrieveScOp(m_mdid_op)->GetResultTypeMdid();
 }
@@ -186,11 +180,7 @@ CScalarOp::FInputOrderSensitive() const
 //
 //---------------------------------------------------------------------------
 IOstream &
-CScalarOp::OsPrint
-	(
-	IOstream &os
-	)
-	const
+CScalarOp::OsPrint(IOstream &os) const
 {
 	os << SzId() << " (";
 	os << Pstr()->GetBuffer();
@@ -208,11 +198,7 @@ CScalarOp::OsPrint
 //
 //---------------------------------------------------------------------------
 CScalar::EBoolEvalResult
-CScalarOp::Eber
-	(
-	ULongPtrArray *pdrgpulChildren
-	)
-	const
+CScalarOp::Eber(ULongPtrArray *pdrgpulChildren) const
 {
 	if (m_returns_null_on_null_input)
 	{
@@ -223,4 +209,3 @@ CScalarOp::Eber
 }
 
 // EOF
-

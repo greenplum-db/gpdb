@@ -17,60 +17,52 @@
 
 namespace gpos
 {
+//---------------------------------------------------------------------------
+//	@class:
+//		CTaskLocalStorageTest
+//
+//	@doc:
+//		Unittest for TLS implementation
+//
+//---------------------------------------------------------------------------
+class CTaskLocalStorageTest
+{
+private:
 	//---------------------------------------------------------------------------
 	//	@class:
-	//		CTaskLocalStorageTest
+	//		CTestObject
 	//
 	//	@doc:
-	//		Unittest for TLS implementation
+	//		Simple subclass of CTaskLocalStorageObject
 	//
 	//---------------------------------------------------------------------------
-	class CTaskLocalStorageTest
+	class CTestObject : public CTaskLocalStorageObject
 	{
-		private:
-
-			//---------------------------------------------------------------------------
-			//	@class:
-			//		CTestObject
-			//
-			//	@doc:
-			//		Simple subclass of CTaskLocalStorageObject
-			//
-			//---------------------------------------------------------------------------
-			class CTestObject : public CTaskLocalStorageObject
-			{
-				public:
-
-					// ctor
-					CTestObject()
-						:
-						CTaskLocalStorageObject(CTaskLocalStorage::EtlsidxTest)
-					{}
+	public:
+		// ctor
+		CTestObject() : CTaskLocalStorageObject(CTaskLocalStorage::EtlsidxTest)
+		{
+		}
 
 #ifdef GPOS_DEBUG
-					// overwrite abstract member
-					IOstream &OsPrint
-						(
-						IOstream &os
-						)
-						const
-					{
-						return os;
-					}
-#endif // GPOS_DEBUG
-
-			};
-
-		public:
-			// actual unittests
-			static GPOS_RESULT EresUnittest();
-			static GPOS_RESULT EresUnittest_Basics();
-			static GPOS_RESULT EresUnittest_TraceFlags();
+		// overwrite abstract member
+		IOstream &
+		OsPrint(IOstream &os) const
+		{
+			return os;
+		}
+#endif	// GPOS_DEBUG
 	};
 
-}
+public:
+	// actual unittests
+	static GPOS_RESULT EresUnittest();
+	static GPOS_RESULT EresUnittest_Basics();
+	static GPOS_RESULT EresUnittest_TraceFlags();
+};
 
-#endif // !GPOS_CTaskLocalStorageTest_H
+}  // namespace gpos
+
+#endif	// !GPOS_CTaskLocalStorageTest_H
 
 // EOF
-

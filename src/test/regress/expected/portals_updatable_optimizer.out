@@ -240,7 +240,7 @@ SELECT * from uctest ORDER BY 1, 2, 3;
 ----+----+-------
   1 |  1 | one
   2 |  8 | two
-  3 | 22 | three
+  3 | 32 | three
 (3 rows)
 
 COMMIT;
@@ -249,7 +249,7 @@ SELECT * from uctest ORDER BY 1, 2, 3;
 ----+----+-------
   1 |  1 | one
   2 |  8 | two
-  3 | 22 | three
+  3 | 32 | three
 (3 rows)
 
 --
@@ -260,7 +260,7 @@ DECLARE c CURSOR FOR SELECT * FROM uctest WHERE f1 = 3;
 FETCH 1 FROM c;
  f1 | f2 |  f3   
 ----+----+-------
-  3 | 22 | three
+  3 | 32 | three
 (1 row)
 
 UPDATE uctest SET f2 = other.f2 + 10 FROM
@@ -272,7 +272,7 @@ SELECT * FROM uctest ORDER BY 1, 2, 3;
 ----+----+-------
   1 |  1 | one
   2 |  8 | two
-  3 | 32 | three
+  3 | 42 | three
 (3 rows)
 
 BEGIN;
@@ -280,7 +280,7 @@ DECLARE c CURSOR FOR SELECT * FROM uctest WHERE f1 = 3;
 FETCH 1 FROM c;
  f1 | f2 |  f3   
 ----+----+-------
-  3 | 32 | three
+  3 | 42 | three
 (1 row)
 
 UPDATE uctest SET f2 = (SELECT f2 - 10 FROM uctest WHERE f1 = 3) WHERE CURRENT OF c;
@@ -290,7 +290,7 @@ SELECT * FROM uctest ORDER BY 1, 2, 3;
 ----+----+-------
   1 |  1 | one
   2 |  8 | two
-  3 | 22 | three
+  3 | 32 | three
 (3 rows)
 
 --
@@ -303,17 +303,6 @@ CREATE TABLE portals_updatable_rank(id int, rank int, f int)
 	PARTITION BY RANGE (rank)
 		(START (0) END (10) EVERY (1),
 		 DEFAULT PARTITION extra );
-NOTICE:  CREATE TABLE will create partition "portals_updatable_rank_1_prt_extra" for table "portals_updatable_rank"
-NOTICE:  CREATE TABLE will create partition "portals_updatable_rank_1_prt_2" for table "portals_updatable_rank"
-NOTICE:  CREATE TABLE will create partition "portals_updatable_rank_1_prt_3" for table "portals_updatable_rank"
-NOTICE:  CREATE TABLE will create partition "portals_updatable_rank_1_prt_4" for table "portals_updatable_rank"
-NOTICE:  CREATE TABLE will create partition "portals_updatable_rank_1_prt_5" for table "portals_updatable_rank"
-NOTICE:  CREATE TABLE will create partition "portals_updatable_rank_1_prt_6" for table "portals_updatable_rank"
-NOTICE:  CREATE TABLE will create partition "portals_updatable_rank_1_prt_7" for table "portals_updatable_rank"
-NOTICE:  CREATE TABLE will create partition "portals_updatable_rank_1_prt_8" for table "portals_updatable_rank"
-NOTICE:  CREATE TABLE will create partition "portals_updatable_rank_1_prt_9" for table "portals_updatable_rank"
-NOTICE:  CREATE TABLE will create partition "portals_updatable_rank_1_prt_10" for table "portals_updatable_rank"
-NOTICE:  CREATE TABLE will create partition "portals_updatable_rank_1_prt_11" for table "portals_updatable_rank"
 INSERT INTO portals_updatable_rank (SELECT x, x, x FROM generate_series(0, 10) x);
 BEGIN;
 DECLARE c CURSOR FOR SELECT * FROM portals_updatable_rank WHERE id = 1;
@@ -388,7 +377,7 @@ DECLARE c CURSOR FOR SELECT * FROM portals_updatable_rank_1_prt_extra WHERE rank
 DELETE FROM portals_updatable_rank WHERE CURRENT OF c;	-- error out on wrong table
 ERROR:  cursor "c" is not a simply updatable scan of table "portals_updatable_rank"
 ROLLBACK;
--- Partitioning, negative, cursor-agnostic: cannot move tuple across partitions
+-- Partitioning, cursor-agnostic: move tuple across partitions
 BEGIN;
 DECLARE c CURSOR FOR SELECT * FROM portals_updatable_rank WHERE rank = 1;
 FETCH 1 FROM c;
@@ -398,7 +387,22 @@ FETCH 1 FROM c;
 (1 row)
 
 UPDATE portals_updatable_rank SET rank = rank + 1 WHERE CURRENT OF c;
-ERROR:  moving tuple from partition "portals_updatable_rank_1_prt_3" to partition "portals_updatable_rank_1_prt_4" not supported  (seg0 rahmaf2-mbp:40000 pid=52547)
+SELECT tableoid::regclass, * FROM portals_updatable_rank;
+              tableoid              | id | rank |  f  
+------------------------------------+----+------+-----
+ portals_updatable_rank_1_prt_7     |  5 |    5 |   5
+ portals_updatable_rank_1_prt_8     |  6 |    6 |   6
+ portals_updatable_rank_1_prt_11    |  9 |    9 |   9
+ portals_updatable_rank_1_prt_extra | 10 |   10 | -10
+ portals_updatable_rank_1_prt_4     |  2 |    2 |   2
+ portals_updatable_rank_1_prt_5     |  3 |    3 |   3
+ portals_updatable_rank_1_prt_6     |  4 |    4 |   4
+ portals_updatable_rank_1_prt_9     |  7 |    7 |   7
+ portals_updatable_rank_1_prt_10    |  8 |    8 |   8
+ portals_updatable_rank_1_prt_2     |  0 |    0 |   0
+ portals_updatable_rank_1_prt_4     |  1 |    2 |  -1
+(11 rows)
+
 ROLLBACK;
 -- Partitioning: AO part
 CREATE TABLE aopart (LIKE portals_updatable_rank) WITH (appendonly=true) DISTRIBUTED BY (id);
@@ -413,7 +417,7 @@ FETCH 1 FROM c;
 (1 row)
 
 DELETE FROM portals_updatable_rank WHERE CURRENT OF c;
-ERROR:  "portals_updatable_rank_1_prt_2" (partition of relation "portals_updatable_rank") is not updatable
+ERROR:  "portals_updatable_rank_1_prt_2" is not simply updatable
 ROLLBACK;
 -- Partitioning: AO/CO part
 CREATE TABLE aocopart (LIKE portals_updatable_rank) WITH (appendonly=true, orientation=column)
@@ -429,7 +433,7 @@ FETCH 1 FROM c;
 (1 row)
 
 DELETE FROM portals_updatable_rank WHERE CURRENT OF c;
-ERROR:  "portals_updatable_rank_1_prt_2" (partition of relation "portals_updatable_rank") is not updatable
+ERROR:  "portals_updatable_rank_1_prt_2" is not simply updatable
 ROLLBACK;
 -- Partitioning: mostly AO parts
 --  Despite some non-determinism, this should cover the case in which AO parts
@@ -513,34 +517,6 @@ CREATE TABLE bar (a int, b int, c int, d int)
             SUBPARTITION s2 VALUES(3,4,5)
         )
     ( DEFAULT PARTITION others, START(0) END(6) EVERY(1) );
-NOTICE:  CREATE TABLE will create partition "bar_1_prt_others" for table "bar"
-NOTICE:  CREATE TABLE will create partition "bar_1_prt_others_2_prt_subothers" for table "bar_1_prt_others"
-NOTICE:  CREATE TABLE will create partition "bar_1_prt_others_2_prt_s1" for table "bar_1_prt_others"
-NOTICE:  CREATE TABLE will create partition "bar_1_prt_others_2_prt_s2" for table "bar_1_prt_others"
-NOTICE:  CREATE TABLE will create partition "bar_1_prt_2" for table "bar"
-NOTICE:  CREATE TABLE will create partition "bar_1_prt_2_2_prt_subothers" for table "bar_1_prt_2"
-NOTICE:  CREATE TABLE will create partition "bar_1_prt_2_2_prt_s1" for table "bar_1_prt_2"
-NOTICE:  CREATE TABLE will create partition "bar_1_prt_2_2_prt_s2" for table "bar_1_prt_2"
-NOTICE:  CREATE TABLE will create partition "bar_1_prt_3" for table "bar"
-NOTICE:  CREATE TABLE will create partition "bar_1_prt_3_2_prt_subothers" for table "bar_1_prt_3"
-NOTICE:  CREATE TABLE will create partition "bar_1_prt_3_2_prt_s1" for table "bar_1_prt_3"
-NOTICE:  CREATE TABLE will create partition "bar_1_prt_3_2_prt_s2" for table "bar_1_prt_3"
-NOTICE:  CREATE TABLE will create partition "bar_1_prt_4" for table "bar"
-NOTICE:  CREATE TABLE will create partition "bar_1_prt_4_2_prt_subothers" for table "bar_1_prt_4"
-NOTICE:  CREATE TABLE will create partition "bar_1_prt_4_2_prt_s1" for table "bar_1_prt_4"
-NOTICE:  CREATE TABLE will create partition "bar_1_prt_4_2_prt_s2" for table "bar_1_prt_4"
-NOTICE:  CREATE TABLE will create partition "bar_1_prt_5" for table "bar"
-NOTICE:  CREATE TABLE will create partition "bar_1_prt_5_2_prt_subothers" for table "bar_1_prt_5"
-NOTICE:  CREATE TABLE will create partition "bar_1_prt_5_2_prt_s1" for table "bar_1_prt_5"
-NOTICE:  CREATE TABLE will create partition "bar_1_prt_5_2_prt_s2" for table "bar_1_prt_5"
-NOTICE:  CREATE TABLE will create partition "bar_1_prt_6" for table "bar"
-NOTICE:  CREATE TABLE will create partition "bar_1_prt_6_2_prt_subothers" for table "bar_1_prt_6"
-NOTICE:  CREATE TABLE will create partition "bar_1_prt_6_2_prt_s1" for table "bar_1_prt_6"
-NOTICE:  CREATE TABLE will create partition "bar_1_prt_6_2_prt_s2" for table "bar_1_prt_6"
-NOTICE:  CREATE TABLE will create partition "bar_1_prt_7" for table "bar"
-NOTICE:  CREATE TABLE will create partition "bar_1_prt_7_2_prt_subothers" for table "bar_1_prt_7"
-NOTICE:  CREATE TABLE will create partition "bar_1_prt_7_2_prt_s1" for table "bar_1_prt_7"
-NOTICE:  CREATE TABLE will create partition "bar_1_prt_7_2_prt_s2" for table "bar_1_prt_7"
 INSERT INTO bar (SELECT x, x % 6, x % 6, x FROM generate_series(0, 11) x);
 BEGIN;
 DECLARE a CURSOR FOR SELECT * FROM bar WHERE a = 0;
@@ -607,7 +583,7 @@ DECLARE c CURSOR FOR SELECT * FROM uctest WHERE f1 = 3 FOR READ ONLY;
 FETCH 1 FROM c;
  f1 | f2 |  f3   
 ----+----+-------
-  3 | 22 | three
+  3 | 32 | three
 (1 row)
 
 UPDATE uctest SET f2 = f2 + 10 WHERE CURRENT OF c; 
@@ -617,7 +593,7 @@ SELECT * FROM uctest ORDER BY 1, 2, 3;
 ----+----+-------
   1 |  1 | one
   2 |  8 | two
-  3 | 32 | three
+  3 | 42 | three
 (3 rows)
 
 -- gp_dist_random, edge case treated as special RTE_RELATION
@@ -626,7 +602,7 @@ DECLARE c CURSOR FOR SELECT * FROM gp_dist_random('uctest') WHERE f1 = 3;
 FETCH 1 FROM c;
  f1 | f2 |  f3   
 ----+----+-------
-  3 | 32 | three
+  3 | 42 | three
 (1 row)
 
 UPDATE uctest SET f2 = f2 + 10 WHERE CURRENT OF c;
@@ -636,7 +612,7 @@ SELECT * FROM uctest ORDER BY 1, 2, 3;
 ----+----+-------
   1 |  1 | one
   2 |  8 | two
-  3 | 42 | three
+  3 | 52 | three
 (3 rows)
 
 -- naive PREPARE usage
@@ -646,7 +622,7 @@ DECLARE a CURSOR FOR SELECT * FROM uctest WHERE f1 = 3;
 FETCH 1 FROM a;
  f1 | f2 |  f3   
 ----+----+-------
-  3 | 42 | three
+  3 | 52 | three
 (1 row)
 
 EXECUTE ucplan;
@@ -656,7 +632,7 @@ SELECT * FROM uctest ORDER BY 1, 2, 3;
 ----+-----+-------
   1 |   1 | one
   2 |   8 | two
-  3 | -42 | three
+  3 | -52 | three
 (3 rows)
 
 --
@@ -680,7 +656,7 @@ DECLARE c CURSOR FOR SELECT * FROM uctest where f1 = 3;
 FETCH 1 from c;
  f1 | f2  |  f3   
 ----+-----+-------
-  3 | -42 | three
+  3 | -52 | three
 (1 row)
 
 DELETE FROM uctest2 WHERE CURRENT OF c; 
@@ -768,9 +744,9 @@ DECLARE c1 CURSOR FOR SELECT * FROM uctest;
 FETCH ALL FROM c1;
  f1 | f2  |  f3   
 ----+-----+-------
-  1 |   1 | one
-  3 | -42 | three
   2 |   8 | two
+  3 | -52 | three
+  1 |   1 | one
 (3 rows)
 
 FETCH 1 FROM c1;
@@ -790,7 +766,7 @@ DECLARE c1 CURSOR FOR SELECT * FROM ucview WHERE f1 = 3;
 FETCH 1 FROM c1;
  f1 | f2  |  f3   
 ----+-----+-------
-  3 | -42 | three
+  3 | -52 | three
 (1 row)
 
 DELETE FROM ucview WHERE CURRENT OF c1;
@@ -850,16 +826,18 @@ end;
 $$ language plpgsql;
 select plpgsql_uc_test();
 NOTICE:  3, 3
-ERROR:  cursor "c" is not a simply updatable scan of table "uctest3"
-CONTEXT:  SQL statement "update uctest3 set i = i * 100, j = r.j * 2 where current of c"
-PL/pgSQL function plpgsql_uc_test() line 9 at SQL statement
+ plpgsql_uc_test 
+-----------------
+ 
+(1 row)
+
 select * from uctest3;
- i | j 
----+---
- 1 | 1
- 3 | 3
- 4 | 4
- 5 | 5
- 2 | 2
+  i  | j 
+-----+---
+   5 | 5
+   1 | 1
+   2 | 2
+   4 | 4
+ 300 | 6
 (5 rows)
 

@@ -136,7 +136,7 @@ CREATE TABLE T_random (c1 int, c2 int);
 INSERT INTO T_random SELECT i, i%5 from generate_series(1,30) i;
 
 --start_ignore
-create language plpythonu;
+create language plpython3u;
 --end_ignore
 
 create or replace function count_operator(query text, operator text) returns int as
@@ -150,7 +150,7 @@ for i in range(len(rv)):
         result = result+1
 return result
 $$
-language plpythonu;
+language plpython3u;
 
 --
 -- N-ary UNION ALL results
@@ -620,11 +620,9 @@ insert into union_schema.t2 select i, i from generate_series(1,20)i;
 analyze union_schema.t1;
 analyze union_schema.t2;
 
-explain
-  select * from union_schema.t1 join union_schema.t2
+explain select * from union_schema.t1 join union_schema.t2
     on union_schema.t1.a = union_schema.t2.b;
-explain
-  select union_schema.t1.a, union_schema.t2.b
+explain select union_schema.t1.a, union_schema.t2.b
   from union_schema.t1 join union_schema.t2
     on union_schema.t1.a = union_schema.t2.b
   union all
@@ -644,11 +642,9 @@ insert into union_schema.t2 select i, i from generate_series(1,10)i;
 analyze union_schema.t1;
 analyze union_schema.t2;
 
-explain
-  select * from union_schema.t1 join union_schema.t2
+explain select * from union_schema.t1 join union_schema.t2
     on union_schema.t1.a = union_schema.t2.b;
-explain
-  select union_schema.t1.a, union_schema.t2.b
+explain select union_schema.t1.a, union_schema.t2.b
     from union_schema.t1 join union_schema.t2
 	  on union_schema.t1.a = union_schema.t2.b
   union all

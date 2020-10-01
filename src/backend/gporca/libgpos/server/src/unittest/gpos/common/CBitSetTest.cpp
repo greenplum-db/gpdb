@@ -32,13 +32,11 @@ using namespace gpos;
 GPOS_RESULT
 CBitSetTest::EresUnittest()
 {
-	CUnittest rgut[] =
-		{
+	CUnittest rgut[] = {
 		GPOS_UNITTEST_FUNC(CBitSetTest::EresUnittest_Basics),
 		GPOS_UNITTEST_FUNC(CBitSetTest::EresUnittest_Removal),
 		GPOS_UNITTEST_FUNC(CBitSetTest::EresUnittest_SetOps),
-		GPOS_UNITTEST_FUNC(CBitSetTest::EresUnittest_Performance)
-		};
+		GPOS_UNITTEST_FUNC(CBitSetTest::EresUnittest_Performance)};
 
 	return CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
 }
@@ -90,10 +88,10 @@ CBitSetTest::EresUnittest_Basics()
 
 	CWStringDynamic str(mp);
 	COstreamString os(&str);
-	
+
 	os << *pbsCopy << std::endl;
 	GPOS_TRACE(str.GetBuffer());
-	
+
 	pbsCopy->Release();
 
 	return GPOS_OK;
@@ -190,7 +188,7 @@ CBitSetTest::EresUnittest_SetOps()
 	pbs->Union(pbs2);
 	GPOS_ASSERT(!pbs->Equals(pbs1) && !pbs->Equals(pbs2));
 	GPOS_ASSERT(pbs->ContainsAll(pbs1) && pbs->ContainsAll(pbs2));
-	
+
 	pbs->Difference(pbs2);
 	GPOS_ASSERT(pbs->Equals(pbs1));
 
@@ -225,31 +223,31 @@ CBitSetTest::EresUnittest_Performance()
 	// create memory pool
 	CAutoMemoryPool amp;
 	CMemoryPool *mp = amp.Pmp();
-	
+
 	ULONG vector_size = 512;
 	CBitSet *pbsBase = GPOS_NEW(mp) CBitSet(mp, vector_size);
 	for (ULONG i = 0; i < vector_size; i++)
-		{
-			(void) pbsBase->ExchangeSet(i);
-		}
+	{
+		(void) pbsBase->ExchangeSet(i);
+	}
 
 	CBitSet *pbsTest = GPOS_NEW(mp) CBitSet(mp, vector_size);
 	for (ULONG j = 0; j < 100000; j++)
 	{
 		ULONG cRandomBits = 16;
-		for (ULONG i = 0; i < cRandomBits; i += ((vector_size - 1) / cRandomBits))
+		for (ULONG i = 0; i < cRandomBits;
+			 i += ((vector_size - 1) / cRandomBits))
 		{
 			(void) pbsTest->ExchangeSet(i);
 		}
-			
-		pbsTest->Intersection(pbsBase);		
-	}	
-	
+
+		pbsTest->Intersection(pbsBase);
+	}
+
 	pbsTest->Release();
 	pbsBase->Release();
-	
+
 	return GPOS_OK;
-}	
+}
 
 // EOF
-

@@ -93,7 +93,7 @@ static struct pg_tm *gmtsub(pg_time_t const *, int32, struct pg_tm *);
 static bool increment_overflow(int *, int);
 static bool increment_overflow_time(pg_time_t *, int32);
 static struct pg_tm *timesub(pg_time_t const *, int32, struct state const *,
-		struct pg_tm *);
+							 struct pg_tm *);
 static bool typesequiv(struct state const *, int, int);
 
 
@@ -1365,7 +1365,7 @@ localsub(struct state const *sp, pg_time_t const *timep,
 	if (result)
 	{
 		result->tm_isdst = ttisp->tt_isdst;
-		result->tm_zone = (char *) &sp->chars[ttisp->tt_desigidx];
+		result->tm_zone = unconstify(char *, &sp->chars[ttisp->tt_desigidx]);
 	}
 	return result;
 }

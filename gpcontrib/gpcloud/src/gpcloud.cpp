@@ -11,9 +11,9 @@ extern "C" {
 #pragma clang diagnostic ignored "-Wdeprecated-register"
 #endif
 
+#include "access/external.h"
 #include "access/extprotocol.h"
 #include "access/xact.h"
-#include "catalog/pg_exttable.h"
 #include "catalog/pg_proc.h"
 #include "commands/defrem.h"
 #include "fmgr.h"

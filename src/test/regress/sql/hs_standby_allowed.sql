@@ -16,7 +16,7 @@ COPY hs1 TO '/tmp/copy_test';
 \! cat /tmp/copy_test
 
 -- Access sequence directly
-select min_value as sequence_min_value from hsseq;
+select is_called from hsseq;
 
 -- Transactions
 
@@ -109,6 +109,10 @@ LOCK hs1 IN ACCESS SHARE MODE;
 LOCK hs1 IN ROW SHARE MODE;
 LOCK hs1 IN ROW EXCLUSIVE MODE;
 COMMIT;
+
+-- UNLISTEN
+UNLISTEN a;
+UNLISTEN *;
 
 -- LOAD
 -- should work, easier if there is no test for that...

@@ -2,7 +2,7 @@
 --
 DROP TABLE IF EXISTS ao;
 DROP
-CREATE TABLE ao (a INT, b INT) WITH (appendonly=true, orientation=@orientation@);
+CREATE TABLE ao (a INT, b INT) USING @amname@;
 CREATE
 INSERT INTO ao SELECT i as a, i as b FROM generate_series(1,1000) AS i;
 INSERT 1000

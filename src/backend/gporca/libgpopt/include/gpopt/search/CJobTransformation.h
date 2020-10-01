@@ -17,143 +17,116 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	// prototypes
-	class CGroup;
-	class CGroupExpression;
-	class CXform;
+// prototypes
+class CGroup;
+class CGroupExpression;
+class CXform;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CJobTransformation
-	//
-	//	@doc:
-	//		Runs the given transformation (XForm) rule.
-	//
-	//---------------------------------------------------------------------------
-	class CJobTransformation : public CJob
+//---------------------------------------------------------------------------
+//	@class:
+//		CJobTransformation
+//
+//	@doc:
+//		Runs the given transformation (XForm) rule.
+//
+//---------------------------------------------------------------------------
+class CJobTransformation : public CJob
+{
+public:
+	// transition events of a transformation
+	enum EEvent
 	{
+		eevCompleted,
 
-		public:
+		eevSentinel
+	};
 
-			// transition events of a transformation
-			enum EEvent
-			{
-				eevCompleted,
+	// states of a transformation
+	enum EState
+	{
+		estInitialized = 0,
+		estCompleted,
 
-				eevSentinel
-			};
+		estSentinel
+	};
 
-			// states of a transformation
-			enum EState
-			{
-				estInitialized = 0,
-				estCompleted,
+private:
+	// shorthand for job state machine
+	typedef CJobStateMachine<EState, estSentinel, EEvent, eevSentinel> JSM;
 
-				estSentinel
-			};
+	// target group expression
+	CGroupExpression *m_pgexpr;
 
-		private:
+	// xform to apply to group expression
+	CXform *m_xform;
 
-			// shorthand for job state machine
-			typedef CJobStateMachine<EState, estSentinel, EEvent, eevSentinel> JSM;
+	// job state machine
+	JSM m_jsm;
 
-			// target group expression
-			CGroupExpression *m_pgexpr;
+	// apply transformation action
+	static EEvent EevtTransform(CSchedulerContext *psc, CJob *pj);
 
-			// xform to apply to group expression
-			CXform *m_xform;
+	// private copy ctor
+	CJobTransformation(const CJobTransformation &);
 
-			// job state machine
-			JSM m_jsm;
+public:
+	// ctor
+	CJobTransformation();
 
-			// apply transformation action
-			static
-			EEvent EevtTransform(CSchedulerContext *psc, CJob *pj);
+	// dtor
+	virtual ~CJobTransformation();
 
-			// private copy ctor
-			CJobTransformation(const CJobTransformation&);
+	// initialize job
+	void Init(CGroupExpression *pgexpr, CXform *pxform);
 
-		public:
+	// schedule a new transformation job
+	static void ScheduleJob(CSchedulerContext *psc, CGroupExpression *pgexpr,
+							CXform *pxform, CJob *pjParent);
 
-			// ctor
-			CJobTransformation();
-
-			// dtor
-			virtual
-			~CJobTransformation();
-
-			// initialize job
-			void Init(CGroupExpression *pgexpr, CXform *pxform);
-
-			// schedule a new transformation job
-			static
-			void ScheduleJob
-				(
-				CSchedulerContext *psc,
-				CGroupExpression *pgexpr,
-				CXform *pxform,
-				CJob *pjParent
-				);
-
-			// job's main function
-			virtual
-			BOOL FExecute(CSchedulerContext *psc);
+	// job's main function
+	virtual BOOL FExecute(CSchedulerContext *psc);
 
 #ifdef GPOS_DEBUG
 
-			// print function
-			virtual
-			IOstream &OsPrint(IOstream &os);
+	// print function
+	virtual IOstream &OsPrint(IOstream &os);
 
-			// dump state machine diagram in graphviz format
-			virtual
-			IOstream &OsDiagramToGraphviz
-				(
-				CMemoryPool *mp,
-				IOstream &os,
-				const WCHAR *wszTitle
-				)
-				const
-			{
-				(void) m_jsm.OsDiagramToGraphviz(mp, os, wszTitle);
+	// dump state machine diagram in graphviz format
+	virtual IOstream &
+	OsDiagramToGraphviz(CMemoryPool *mp, IOstream &os,
+						const WCHAR *wszTitle) const
+	{
+		(void) m_jsm.OsDiagramToGraphviz(mp, os, wszTitle);
 
-				return os;
-			}
+		return os;
+	}
 
-			// compute unreachable states
-			void Unreachable
-				(
-				CMemoryPool *mp,
-				EState **ppestate,
-				ULONG *pulSize
-				)
-				const
-			{
-				m_jsm.Unreachable(mp, ppestate, pulSize);
-			}
+	// compute unreachable states
+	void
+	Unreachable(CMemoryPool *mp, EState **ppestate, ULONG *pulSize) const
+	{
+		m_jsm.Unreachable(mp, ppestate, pulSize);
+	}
 
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
-			// conversion function
-			static
-			CJobTransformation *PjConvert
-				(
-				CJob *pj
-				)
-			{
-				GPOS_ASSERT(NULL != pj);
-				GPOS_ASSERT(EjtTransformation == pj->Ejt());
+	// conversion function
+	static CJobTransformation *
+	PjConvert(CJob *pj)
+	{
+		GPOS_ASSERT(NULL != pj);
+		GPOS_ASSERT(EjtTransformation == pj->Ejt());
 
-				return dynamic_cast<CJobTransformation*>(pj);
-			}
+		return dynamic_cast<CJobTransformation *>(pj);
+	}
 
-	}; // class CJobTransformation
+};	// class CJobTransformation
 
-}
+}  // namespace gpopt
 
-#endif // !GPOPT_CJobTransformation_H
+#endif	// !GPOPT_CJobTransformation_H
 
 
 // EOF

@@ -1,0 +1,14 @@
+platform: linux
+image_resource:
+  type: registry-image
+  source:
+    repository: gcr.io/data-orca/clang-toolchain
+
+inputs:
+  - name: gpdb_src
+    path: .
+run:
+  path: src/tools/fmt
+  args: [ chk ]
+params:
+  CLANG_FORMAT: clang-format-10

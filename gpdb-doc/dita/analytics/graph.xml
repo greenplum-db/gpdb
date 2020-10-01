@@ -2,573 +2,346 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1" xml:lang="en">
-  <title>Graph Extension</title>
+  <title id="pz212122">Graph Analytics</title>
   <body>
-    <p>Graph Extension is part of MADLib capabilities. This chapter includes the following information:</p>
-    <ul>
-      <li id="pz219023"><xref href="#topic2" type="topic" format="dita"/></li>
-      <li><xref href="#topic_khs_klx_g3b" format="dita"/></li>
-      <li id="pz213664" otherprops="pivotal"><xref href="#topic3" type="topic" format="dita"/></li>
-      <li otherprops="pivotal"><xref href="#topic_eqm_klx_hw" format="dita"/></li>
-      <li id="pz213668" otherprops="pivotal"><xref href="#topic6" type="topic" format="dita"/></li>
-      <li id="pz215253"><xref href="#topic9" type="topic" format="dita"/></li>
-      <li id="pz213676"><xref href="#topic10" type="topic" format="dita"/></li>
+    <p dir="ltr">Many modern business problems involve connections and relationships between
+      entities, and are not solely based on discrete data. Graphs are powerful at representing
+      complex interconnections, and graph data modeling is very effective and flexible when the
+      number and depth of relationships increase exponentially. </p>
+    <p dir="ltr">The use cases for graph analytics are diverse: social networks, transportation
+      routes, autonomous vehicles, cyber security, criminal networks, fraud detection, health
+      research, epidemiology, and so forth.</p>
+    <p>This chapter contains the following information: </p>
+    <ul id="ul_ond_45l_vlb">
+      <li><xref href="#topic_graph" format="dita">What is a Graph?</xref></li>
+      <li>
+        <xref href="#graph_on_greenplum" format="dita"/></li>
+      <li id="ij168827"><xref href="#topic_using_graph" format="dita"/>
+      </li>
+      <li><xref href="#topic_graph_modules" format="dita"/>
+      </li>
+      <li id="ij168816"><xref href="#topic_graph_references" format="dita"/>
+      </li>
     </ul>
   </body>
-  <topic id="topic2" xml:lang="en">
-    <title id="pz217886">About Graph with MADlib</title>
+  <topic id="topic_graph" xml:lang="en">
+    <title id="pz214493">What is a Graph?</title>
     <body>
-      <p>MADlib is an open-source library for scalable in-database analytics. With the Greenplum
-        Database MADlib extension, you can use MADlib functionality in a Greenplum Database. </p>
-      <p>MADlib provides data-parallel implementations of mathematical, statistical and
-        machine-learning methods for structured and unstructured data. It provides an suite of
-        SQL-based algorithms for machine learning, data mining and statistics that run at scale
-        within a database engine, with no need for transferring data between Greenplum Database and
-        other tools. </p>
-      <p>MADlib requires the <codeph>m4</codeph> macro processor version 1.4.13 or later.</p>
-      <p>MADlib can be used with PivotalR, an R package that enables users to interact with data
-        resident in Greenplum Database using the R client. See <xref href="#topic_dxp_vq2_sv"
-          format="dita"/>.</p>
+      <p>Graphs represent the interconnections between objects (vertices) and their relationships
+        (edges). Example objects could be people, locations, cities, computers, or components on a
+        circuit board. Example connections could be roads, circuits, cables, or interpersonal
+        relationships. Edges can have directions and weights, for example the distance between
+        towns. </p>
+      <fig id="graph_figure">
+        <image href="graphics/graph_example.png" id="graph_example_jpg" align="center" width="350"
+          height="275"/>
+      </fig>
+      <p>Graphs can be small and easily traversed - as with a small group of friends - or extremely
+        large and complex, similar to contacts in a modern-day social network. </p>
     </body>
   </topic>
-  <topic id="topic_khs_klx_g3b">
-    <title>About Deep Learning</title>
+  <topic id="graph_on_greenplum" xml:lang="en">
+    <title>Graph Analytics on Greenplum</title>
     <body>
-      <p>Deep learning is a type of machine learning, originally inspired by biology of the brain,
-        that uses a class of algorithms called artificial neural networks. Given the important use
-        cases that can be effectively addressed with deep learning, it is starting to become a more
-        important part of enterprise computing. </p>
-      <p>Deep learning support for Keras and TensorFlow was added to Apache MADlib starting with the
-        1.16 release. Refer to the following documents for more information about deep learning on
-        Greenplum using Apache MADlib:<ul id="ul_kyh_rlx_g3b">
-          <li><xref href="http://madlib.apache.org/docs/latest/group__grp__dl.html" format="html"
-              scope="external">MADlib user documentation</xref></li>
-          <li><xref href="https://cwiki.apache.org/confluence/display/MADLIB/Deep+Learning"
-              format="html" scope="external">Supported libraries and configuration
-              instructions</xref></li>
-        </ul></p>
-    </body>
-  </topic>
-  <topic id="topic3" xml:lang="en" otherprops="pivotal">
-    <title id="pz214493">Installing MADlib</title>
-    <body>
-      <p>To install MADlib on Greenplum Database, you first install a compatible Greenplum MADlib
-        package and then install the MADlib function libraries on all databases that will use
-        MADlib.</p>
-      <p>The <codeph><xref href="../../utility_guide/ref/gppkg.xml#topic1"
-          >gppkg</xref></codeph> utility installs Greenplum Database extensions, along with any
-        dependencies, on all hosts across a cluster. It also automatically installs extensions on
-        new hosts in the case of system expansion segment recovery. </p>
-    </body>
-    <topic id="topic4" xml:lang="en">
-      <title>Installing the Greenplum Database MADlib Package</title>
-      <body>
-        <p>Before you install the MADlib package, make sure that your Greenplum database is running,
-          you have sourced <codeph>greenplum_path.sh</codeph>, and that the<codeph>
-            $MASTER_DATA_DIRECTORY</codeph> and <codeph>$GPHOME</codeph> variables are set.</p>
-        <ol>
-          <li id="pz214496" otherprops="pivotal">Download the MADlib extension package from <xref
-              href="https://network.pivotal.io/products/pivotal-gpdb" format="html" scope="external"
-              >Pivotal Network</xref>.</li>
-          <li>Copy the MADlib package to the Greenplum Database master host.</li>
-          <li>Unpack the MADlib distribution package. For
-            example:<codeblock>$ tar xzvf madlib-1.16+2-gp6-rhel7-x86_64.tar.gz</codeblock></li>
-          <li id="pz216990">Install the software package by running the <codeph>gppkg</codeph>
-            command. For
-            example:<codeblock>$ gppkg -i ./madlib-1.16+2-gp6-rhel7-x86_64/madlib-1.16+2-gp6-rhel7-x86_64.gppkg</codeblock></li>
-        </ol>
-      </body>
-    </topic>
-    <topic id="topic5" xml:lang="en">
-      <title>Adding MADlib Functions to a Database</title>
-      <body>
-        <p>After installing the MADlib package, run the <codeph>madpack</codeph> command to add
-          MADlib functions to Greenplum Database. <codeph>madpack</codeph> is in
-            <codeph>$GPHOME/madlib/bin</codeph>. </p>
-        <codeblock>$ madpack [-s <varname>schema_name</varname>] -p greenplum -c <varname>user</varname>@<varname>host</varname>:<varname>port</varname>/<varname>database</varname> install</codeblock>
-        <p>For example, this command creates MADlib functions in the Greenplum database
-            <codeph>testdb</codeph> running on server <codeph>mdw</codeph> on port
-            <codeph>5432</codeph>. The <codeph>madpack</codeph> command logs in as the user
-            <codeph>gpadmin</codeph> and prompts for password. The target schema is
-            <codeph>madlib</codeph>.</p>
-        <codeblock>$ madpack -s madlib -p greenplum -c gpadmin@mdw:5432/testdb install</codeblock>
-        <p>After installing the functions, The Greenplum Database gpadmin superuser role should
-          grant all privileges on the target schema (in the example <codeph>madlib</codeph>) to
-          users who will be accessing MADlib functions. Users without access to the functions will
-          get the error <codeph>ERROR: permission denied for schema MADlib</codeph>.</p>
-        <p>The madpack <codeph>install-check</codeph> option runs test using Madlib modules to check
-          the MADlib installation:</p>
-        <codeblock>$ madpack -s madlib -p greenplum -c gpadmin@mdw:5432/testdb install-check</codeblock>
-        <note type="note">The command <codeph>madpack -h</codeph> displays information for the
-          utility.</note>
-      </body>
-    </topic>
-  </topic>
-  <topic id="topic_eqm_klx_hw" otherprops="pivotal">
-    <title>Upgrading MADlib </title>
-    <body>
-      <p>You upgrade an installed MADlib package with the Greenplum Database <codeph>gppkg</codeph>
-        utility and the MADlib <codeph>madpack</codeph> command.</p>
-      <p>For information about the upgrade paths that MADlib supports, see the MADlib support and
-        upgrade matrix in the <xref
-          href="https://cwiki.apache.org/confluence/display/MADLIB/FAQ#FAQ-Q1-2WhatdatabaseplatformsdoesMADlibsupportandwhatistheupgradematrix?"
-          format="html" scope="external">MADlib FAQ page</xref>.</p>
-    </body>
-    <topic id="topic_tb3_2gd_3w">
-      <title>Upgrading a MADlib Package</title>
-      <body>
-        <p>To upgrade MADlib, run the <codeph>gppkg</codeph> utility with the <codeph>-u</codeph>
-          option. This command upgrades an installed MADlib package to MADlib
-          1.16+2.<codeblock>$ gppkg -u madlib-1.16+2-gp6-rhel7-x86_64.gppkg</codeblock></p>
-      </body>
-    </topic>
-    <topic id="topic_bql_bgd_3w">
-      <title>Upgrading MADlib Functions</title>
-      <body>
-        <p>After you upgrade the MADlib package from one major version to another, run
-            <codeph>madpack upgrade</codeph> to upgrade the MADlib functions in a database
-          schema.</p>
-        <note>Use <codeph>madpack upgrade</codeph> only if you upgraded a major MADlib package
-          version, for example from 1.15 to 1.16. You do not need to update the functions within a
-          patch version upgrade, for example from 1.16+1 to 1.16+2.</note>
-        <p>This example command upgrades the MADlib functions in the schema <codeph>madlib</codeph>
-          of the Greenplum Database <codeph>test</codeph>. </p>
-        <codeblock>madpack -s madlib -p greenplum -c gpadmin@mdw:5432/testdb upgrade</codeblock>
-      </body>
-    </topic>
-  </topic>
-  <topic id="topic6" xml:lang="en" otherprops="pivotal">
-    <title id="pz213704">Uninstalling MADlib</title>
-    <body>
-      <ul>
-        <li id="pz217030"><xref href="#topic7" type="topic" format="dita"/></li>
-        <li id="pz217049"><xref href="#topic8" type="topic" format="dita"/></li>
-      </ul>
-      <p>When you remove MADlib support from a database, routines that you created in the database
-        that use MADlib functionality will no longer work. </p>
-    </body>
-    <topic id="topic7" xml:lang="en">
-      <title id="pz217588">Remove MADlib objects from the database</title>
-      <body>
-        <p>Use the <codeph>madpack uninstall</codeph> command to remove MADlib objects from a
-          Greenplum database. For example, this command removes MADlib objects from the database
-            <codeph>testdb</codeph>.</p>
-        <codeblock>$ madpack  -s madlib -p greenplum -c gpadmin@mdw:5432/testdb uninstall</codeblock>
-      </body>
-    </topic>
-    <topic id="topic8" xml:lang="en">
-      <title id="pz213708">Uninstall the Greenplum Database MADlib Package</title>
-      <body>
-        <p>If no databases use the MADlib functions, use the Greenplum <codeph>gppkg</codeph>
-          utility with the <codeph>-r</codeph> option to uninstall the MADlib package. When removing
-          the package you must specify the package and version. This example uninstalls MADlib
-          package version 1.16.</p>
-        <codeblock>$ gppkg -r madlib-1.16+2-gp5-rhel7-x86_64</codeblock>
-        <p>You can run the <codeph>gppkg</codeph> utility with the options <codeph>-q --all</codeph>
-          to list the installed extensions and their versions.</p>
-        <p>After you uninstall the package, restart the database.</p>
-        <codeblock>$ gpstop -r</codeblock>
-      </body>
-    </topic>
-  </topic>
-  <topic id="topic9" xml:lang="en">
-    <title id="pz215232">Examples</title>
-    <body>
-      <p>Following are examples using the Greenplum MADlib extension:</p>
-      <ul id="ul_wr3_lss_bz">
-        <li><xref href="#topic9/mlogr" format="dita">Linear Regression</xref></li>
-        <li><xref href="#topic9/assoc_rules" format="dita"/></li>
-        <li><xref href="#topic9/naive_bayes" format="dita"/></li>
-      </ul>
-      <p>See the MADlib documentation for additional examples.</p>
-      <section id="mlogr">
-        <title>Linear Regression</title>
-        <p>This example runs a linear regression on the table <codeph>regr_example</codeph>. The
-          dependent variable data are in the <codeph>y</codeph> column and the independent variable
-          data are in the <codeph>x1</codeph> and <codeph>x2</codeph> columns. </p>
-        <p>The following statements create the <codeph>regr_example</codeph> table and load some
-          sample data:</p>
-        <codeblock>DROP TABLE IF EXISTS regr_example;
-CREATE TABLE regr_example (
-   id int,
-   y int,
-   x1 int,
-   x2 int
-);
-INSERT INTO regr_example VALUES
-   (1,  5, 2, 3),
-   (2, 10, 7, 2),
-   (3,  6, 4, 1),
-   (4,  8, 3, 4);</codeblock>
-        <p>The MADlib <codeph>linregr_train()</codeph> function produces a regression model from an
-          input table containing training data. The following <codeph>SELECT</codeph> statement runs
-          a simple multivariate regression on the <codeph>regr_example</codeph> table and saves the
-          model in the <codeph>reg_example_model</codeph> table. </p>
-        <codeblock>SELECT madlib.linregr_train (
-   'regr_example',         -- source table
-   'regr_example_model',   -- output model table
-   'y',                    -- dependent variable
-   'ARRAY[1, x1, x2]'      -- independent variables
-);
-</codeblock>
-        <p>The <codeph>madlib.linregr_train()</codeph> function can have additional arguments to set
-          grouping columns and to calculate the heteroskedasticity of the model. </p>
-        <note type="note">The intercept is computed by setting one of the independent variables to a
-          constant <codeph>1</codeph>, as shown in the preceding example.</note>
-        <p> Running this query against the <codeph>regr_example</codeph> table creates the
-            <codeph>regr_example_model</codeph> table with one row of data: </p>
-        <codeblock>SELECT * FROM regr_example_model;
--[ RECORD 1 ]------------+------------------------
-coef                     | {0.111111111111127,1.14814814814815,1.01851851851852}
-r2                       | 0.968612680477111
-std_err                  | {1.49587911309236,0.207043331249903,0.346449758034495}
-t_stats                  | {0.0742781352708591,5.54544858420156,2.93987366103776}
-p_values                 | {0.952799748147436,0.113579771006374,0.208730790695278}
-condition_no             | 22.650203241881
-num_rows_processed       | 4
-num_missing_rows_skipped | 0
-variance_covariance      | {{2.23765432098598,-0.257201646090342,-0.437242798353582},
-                            {-0.257201646090342,0.042866941015057,0.0342935528120456},
-                            {-0.437242798353582,0.0342935528120457,0.12002743484216}}</codeblock>
-        <p>The model saved in the <codeph>regr_example_model</codeph> table can be used with the
-          MADlib linear regression prediction function, <codeph>madlib.linregr_predict()</codeph>,
-          to view the residuals: </p>
-        <codeblock>SELECT regr_example.*,
-        madlib.linregr_predict ( ARRAY[1, x1, x2], m.coef ) as predict,
-        y - madlib.linregr_predict ( ARRAY[1, x1, x2], m.coef ) as residual
-FROM regr_example, regr_example_model m;
- id | y  | x1 | x2 |     predict      |      residual
-----+----+----+----+------------------+--------------------
-  1 |  5 |  2 |  3 | 5.46296296296297 | -0.462962962962971
-  3 |  6 |  4 |  1 | 5.72222222222224 |  0.277777777777762
-  2 | 10 |  7 |  2 | 10.1851851851852 | -0.185185185185201
-  4 |  8 |  3 |  4 | 7.62962962962964 |  0.370370370370364
-(4 rows)</codeblock>
-      </section>
-      <section id="assoc_rules">
-        <title>Association Rules</title>
-        <p>This example demonstrates the association rules data mining technique on a transactional
-          data set. Association rule mining is a technique for discovering relationships between
-          variables in a large data set. This example considers items in a store that are commonly
-          purchased together. In addition to market basket analysis, association rules are also used
-          in bioinformatics, web analytics, and other fields.</p>
-        <p>The example analyzes purchase information for seven transactions that are stored in a
-          table with the MADlib function <codeph>MADlib.assoc_rules</codeph>. The function assumes
-          that the data is stored in two columns with a single item and transaction ID per row.
-          Transactions with multiple items consist of multiple rows with one row per item.</p>
-        <p>These commands create the table.</p>
-        <codeblock>DROP TABLE IF EXISTS test_data;
-CREATE TABLE test_data (
-   trans_id INT,
-   product text
-);</codeblock>
-        <p>This <codeph>INSERT</codeph> command adds the data to the table.</p>
-        <codeblock>INSERT INTO test_data VALUES
-   (1, 'beer'),
-   (1, 'diapers'),
-   (1, 'chips'),
-   (2, 'beer'),
-   (2, 'diapers'),
-   (3, 'beer'),
-   (3, 'diapers'),
-   (4, 'beer'),
-   (4, 'chips'),
-   (5, 'beer'),
-   (6, 'beer'),
-   (6, 'diapers'),
-   (6, 'chips'),
-   (7, 'beer'),
-   (7, 'diapers');</codeblock>
-        <p>The MADlib function <codeph>madlib.assoc_rules()</codeph> analyzes the data and
-          determines association rules with the following characteristics.</p>
-        <ul>
-          <li id="pz218950">A support value of at least .40. Support is the ratio of transactions
-            that contain X to all transactions. </li>
-          <li id="pz218637">A confidence value of at least .75. Confidence is the ratio of
-            transactions that contain X to transactions that contain Y. One could view this metric
-            as the conditional probability of X given Y. </li>
-        </ul>
-        <p>This <codeph>SELECT</codeph> command determines association rules, creates the table
-            <codeph>assoc_rules</codeph>, and adds the statistics to the table.</p>
-        <codeblock>SELECT * FROM madlib.assoc_rules (
-   .40,          -- support
-   .75,          -- confidence
-   'trans_id',   -- transaction column
-   'product',    -- product purchased column
-   'test_data',  -- table name
-   'public',     -- schema name
-   false);       -- display processing details</codeblock>
-        <p>This is the output of the <codeph>SELECT</codeph> command. There are two rules that fit
-          the characteristics.</p>
-        <codeblock>
- output_schema | output_table | total_rules | total_time
---------------+--------------+-------------+-----------------  
-public        | assoc_rules  |           2 | 00:00:01.153283
-(1 row)</codeblock>
-        <p>To view the association rules, you can run this <codeph>SELECT</codeph> command.</p>
-        <codeblock>SELECT pre, post, support FROM assoc_rules
-   ORDER BY support DESC;</codeblock>
-        <p>This is the output. The <codeph>pre</codeph> and <codeph>post</codeph> columns are the
-          itemsets of left and right hand sides of the association rule respectively. </p>
-        <codeblock>    pre    |  post  |      support
------------+--------+-------------------
- {diapers} | {beer} | 0.714285714285714
- {chips}   | {beer} | 0.428571428571429
-(2 rows)</codeblock>
-        <p>Based on the data, beer and diapers are often purchased together. To increase sales, you
-          might consider placing beer and diapers closer together on the shelves. </p>
-      </section>
-      <section id="naive_bayes">
-        <title>Naive Bayes Classification</title>
-        <p>Naive Bayes analysis predicts the likelihood of an outcome of a class variable, or
-          category, based on one or more independent variables, or attributes. The class variable is
-          a non-numeric categorial variable, a variable that can have one of a limited number of
-          values or categories. The class variable is represented with integers, each integer
-          representing a category. For example, if the category can be one of "true", "false", or
-          "unknown," the values can be represented with the integers 1, 2, or 3. </p>
-        <p>The attributes can be of numeric types and non-numeric, categorical, types. The training
-          function has two signatures – one for the case where all attributes are numeric and
-          another for mixed numeric and categorical types. Additional arguments for the latter
-          identify the attributes that should be handled as numeric values. The attributes are
-          submitted to the training function in an array. </p>
-        <p>The MADlib Naive Bayes training functions produce a features probabilities table and a
-          class priors table, which can be used with the prediction function to provide the
-          probability of a class for the set of attributes.</p>
-      </section>
-      <p><b>Naive Bayes Example 1 - Simple All-numeric Attributes</b></p>
-      <p>In the first example, the <codeph>class</codeph> variable is either 1 or 2 and there are
-        three integer attributes. </p>
-      <ol id="ol_ttz_13y_1z">
-        <li>The following commands create the input table and load sample
-            data.<codeblock>DROP TABLE IF EXISTS class_example CASCADE;
-CREATE TABLE class_example (
-   id int, class int, attributes int[]);
-INSERT INTO class_example VALUES
-   (1, 1, '{1, 2, 3}'),
-   (2, 1, '{1, 4, 3}'),
-   (3, 2, '{0, 2, 2}'),
-   (4, 1, '{1, 2, 1}'),
-   (5, 2, '{1, 2, 2}'),
-   (6, 2, '{0, 1, 3}');</codeblock><p>Actual
-            data in production scenarios is more extensive than this example data and yields better
-            results. Accuracy of classification improves significantly with larger training data
-            sets.</p></li>
-        <li>Train the model with the <codeph>create_nb_prepared_data_tables()</codeph>
-          function.<codeblock>SELECT * FROM madlib.create_nb_prepared_data_tables (
-   'class_example',         -- name of the training table
-   'class',                 -- name of the class (dependent) column
-   'attributes',            -- name of the attributes column
-   3,                       -- the number of attributes
-   'example_feature_probs', -- name for the feature probabilities output table
-   'example_priors'         -- name for the class priors output table
-    );
-</codeblock></li>
-        <li>Create a table with data to classify using the
-          model.<codeblock>DROP TABLE IF EXISTS class_example_topredict;
-CREATE TABLE class_example_topredict (
-   id int, attributes int[]);
-INSERT INTO class_example_topredict VALUES
-   (1, '{1, 3, 2}'),
-   (2, '{4, 2, 2}'),
-   (3, '{2, 1, 1}');</codeblock>
-        </li>
-        <li>Create a classification view using the feature probabilities, class priors, and
-            <codeph>class_example_topredict</codeph> tables.
-          <codeblock>SELECT madlib.create_nb_probs_view (
-   'example_feature_probs',    -- feature probabilities output table
-   'example_priors',           -- class priors output table
-   'class_example_topredict',  -- table with data to classify
-   'id',                       -- name of the key column
-   'attributes',               -- name of the attributes column
-    3,                         -- number of attributes
-    'example_classified'       -- name of the view to create
-    );
-</codeblock></li>
-        <li>Display the classification
-          results.<codeblock>SELECT * FROM example_classified;
- key | class | nb_prob
------+-------+---------
-   1 |     1 |     0.4
-   1 |     2 |     0.6
-   3 |     1 |     0.5
-   3 |     2 |     0.5
-   2 |     1 |    0.25
-   2 |     2 |    0.75
-(6 rows)</codeblock></li>
-      </ol>
-      <p><b>Naive Bayes Example 2 – Weather and Outdoor Sports</b></p>
-      <p>This example calculates the probability that the user will play an outdoor sport, such as
-        golf or tennis, based on weather conditions. </p>
-      <p>The table <codeph>weather_example</codeph> contains the example values. </p>
-      <p>The identification column for the table is <codeph>day</codeph>, an integer type. </p>
-      <p>The <codeph>play</codeph> column holds the dependent variable and has two
-        classifications:</p>
-      <ul id="ul_up1_v4y_1z">
-        <li>0 - No</li>
-        <li>1 - Yes</li>
-      </ul>
-      <p>There are four attributes: outlook, temperature, humidity, and wind. These are categorical
-        variables. The MADlib <codeph>create_nb_classify_view()</codeph> function expects the
-        attributes to be provided as an array of <codeph>INTEGER</codeph>, <codeph>NUMERIC</codeph>,
-        or <codeph>FLOAT8</codeph> values, so the attributes for this example are encoded with
-        integers as follows: </p>
-      <ul id="ul_eq2_3py_1z">
-        <li><i>outlook</i> may be sunny (1), overcast (2), or rain (3). </li>
-        <li><i>temperature</i> may be hot (1), mild (2), or cool (3).</li>
-        <li><i>humidity</i> may be high (1) or normal (2). </li>
-        <li><i>wind</i> may be strong (1) or weak (2).</li>
-      </ul>
-      <p>The following table shows the training data, before encoding the variables.</p>
-      <codeblock>  day | play | outlook  | temperature | humidity | wind
------+------+----------+-------------+----------+--------
- 2   | No   | Sunny    | Hot         | High     | Strong
- 4   | Yes  | Rain     | Mild        | High     | Weak
- 6   | No   | Rain     | Cool        | Normal   | Strong
- 8   | No   | Sunny    | Mild        | High     | Weak
-10   | Yes  | Rain     | Mild        | Normal   | Weak
-12   | Yes  | Overcast | Mild        | High     | Strong
-14   | No   | Rain     | Mild        | High     | Strong
- 1   | No   | Sunny    | Hot         | High     | Weak
- 3   | Yes  | Overcast | Hot         | High     | Weak
- 5   | Yes  | Rain     | Cool        | Normal   | Weak
- 7   | Yes  | Overcast | Cool        | Normal   | Strong
- 9   | Yes  | Sunny    | Cool        | Normal   | Weak
-11   | Yes  | Sunny    | Mild        | Normal   | Strong
-13   | Yes  | Overcast | Hot         | Normal   | Weak
-(14 rows)</codeblock>
-      <ol id="ol_vj1_jrw_1z">
-        <li>Create the training
-          table.<codeblock>DROP TABLE IF EXISTS weather_example;
-CREATE TABLE weather_example (
-   day int,
-   play int,
-   attrs int[]
-);
-INSERT INTO weather_example VALUES
-   ( 2, 0, '{1,1,1,1}'), -- sunny, hot, high, strong
-   ( 4, 1, '{3,2,1,2}'), -- rain, mild, high, weak
-   ( 6, 0, '{3,3,2,1}'), -- rain, cool, normal, strong
-   ( 8, 0, '{1,2,1,2}'), -- sunny, mild, high, weak
-   (10, 1, '{3,2,2,2}'), -- rain, mild, normal, weak
-   (12, 1, '{2,2,1,1}'), -- etc.
-   (14, 0, '{3,2,1,1}'),
-   ( 1, 0, '{1,1,1,2}'),
-   ( 3, 1, '{2,1,1,2}'),
-   ( 5, 1, '{3,3,2,2}'),
-   ( 7, 1, '{2,3,2,1}'),
-   ( 9, 1, '{1,3,2,2}'),
-   (11, 1, '{1,2,2,1}'),
-   (13, 1, '{2,1,2,2}');</codeblock></li>
-        <li>Create the model from the training
-          table.<codeblock>SELECT madlib.create_nb_prepared_data_tables (
-   'weather_example',  -- training source table
-   'play',             -- dependent class column
-   'attrs',            -- attributes column
-   4,                  -- number of attributes
-   'weather_probs',    -- feature probabilities output table
-   'weather_priors'    -- class priors
-   );</codeblock></li>
-        <li>View the feature
-          probabilities:<codeblock>SELECT * FROM weather_probs;
- class | attr | value | cnt | attr_cnt
--------+------+-------+-----+----------
-     1 |    3 |     2 |   6 |        2
-     1 |    1 |     2 |   4 |        3
-     0 |    1 |     1 |   3 |        3
-     0 |    1 |     3 |   2 |        3
-     0 |    3 |     1 |   4 |        2
-     1 |    4 |     1 |   3 |        2
-     1 |    2 |     3 |   3 |        3
-     1 |    2 |     1 |   2 |        3
-     0 |    2 |     2 |   2 |        3
-     0 |    4 |     2 |   2 |        2
-     0 |    3 |     2 |   1 |        2
-     0 |    1 |     2 |   0 |        3
-     1 |    1 |     1 |   2 |        3
-     1 |    1 |     3 |   3 |        3
-     1 |    3 |     1 |   3 |        2
-     0 |    4 |     1 |   3 |        2
-     0 |    2 |     3 |   1 |        3
-     0 |    2 |     1 |   2 |        3
-     1 |    2 |     2 |   4 |        3
-     1 |    4 |     2 |   6 |        2
-(20 rows)</codeblock></li>
-        <li id="in191289">To classify a group of records with a model, first load the data into a
-          table. In this example, the table <codeph>t1</codeph> has four rows to classify.<p>
-            <codeblock>DROP TABLE IF EXISTS t1;
-CREATE TABLE t1 (
-   id integer,
-   attributes integer[]);
-insert into t1 values
-   (1, '{1, 2, 1, 1}'),
-   (2, '{3, 3, 2, 1}'),
-   (3, '{2, 1, 2, 2}'),
-   (4, '{3, 1, 1, 2}');</codeblock>
-          </p></li>
-        <li>Use the MADlib <codeph>create_nb_classify_view()</codeph> function to classify the rows
-          in the
-            table.<codeblock>SELECT madlib.create_nb_classify_view (
-   'weather_probs',      -- feature probabilities table
-   'weather_priors',     -- classPriorsName
-   't1',                 -- table containing values to classify
-   'id',                 -- key column
-   'attributes',         -- attributes column
-   4,                    -- number of attributes
-   't1_out'              -- output table name
-);
-</codeblock><p>The
-            result is four rows, one for each record in the <codeph>t1</codeph>
-          table.</p><codeblock>SELECT * FROM t1_out ORDER BY key;
- key | nb_classification
------+-------------------
- 1 | {0}
- 2 | {1}
- 3 | {1}
- 4 | {0}
- (4 rows)</codeblock></li>
+      <p>Efficient processing of very large graphs can be challenging. Greenplum offers a suitable
+        environment for this work for these key reasons:</p>
+      <ol id="ol_tyk_h44_rlb">
+        <li>Using MADlib graph functions in Greenplum brings the graph computation close to where
+          the data lives. Otherwise, large data sets need to be moved to a specialized graph
+          database, requiring additional time and resources. </li>
+        <li>Specialized graph databases frequently use purpose-built languages. With Greenplum, you
+          can invoke graph functions using the familiar SQL interface. For example, for the <xref
+            href="http://madlib.apache.org/docs/latest/group__grp__pagerank.html" format="html"
+            scope="external">PageRank</xref> graph
+          algorithm:<codeblock>SELECT madlib.pagerank('vertex',     -- Vertex table
+               'id',                 -- Vertex id column
+               'edge',               -- Edge table
+               'src=src, dest=dest', -- Comma delimited string of edge arguments
+               'pagerank_out',       -- Output table of PageRank
+                0.5);                -- Damping factor
+SELECT * FROM pagerank_out ORDER BY pagerank DESC;</codeblock></li>
+        <li> A lot of data science problems are solved using a combination of models, with graphs
+          being just one. Regression, clustering, and other methods available in Greenplum, make for
+          a powerful combination.</li>
+        <li>Greenplum offers great benefits of scale, taking advantage of years of query execution
+          and optimization research focused on large data sets. </li>
       </ol>
     </body>
   </topic>
-  <topic id="topic10" xml:lang="en">
+  <topic id="topic_using_graph">
+    <title>Using Graph</title>
+    <body>
+      <section>
+        <p><b id="docs-internal-guid-115580ea-7fff-471c-274f-9ad5f8c87219">Installing Graph
+            Modules</b></p>
+        <p>To use the MADlib graph modules, install the version of MADlib corresponding to your
+          Greenplum Database version. To download the software, access the VMware Tanzu Network. For
+          Greenplum 6.x, see <xref
+            href="http://greenplum.docs.pivotal.io/6latest/analytics/madlib.html#topic3"
+            format="html" scope="external">Installing MADlib</xref>. </p>
+        <p dir="ltr">Graph modules on MADlib support many algorithms. </p>
+      </section>
+      <section>
+        <p><b id="docs-internal-guid-4e912884-7fff-c105-e4d6-c6f3bcf3cd2a">Creating a Graph in
+            Greenplum</b></p>
+        <p>To represent a graph in Greenplum, create tables that represent the vertices, edges, and
+          their properties. </p>
+        <fig id="fig_vertex_edge_table">
+          <image href="graphics/vertex_edge_table.png" align="center" width="500" height="300"/>
+        </fig>
+        <p>Using SQL, create the relevant tables in the database you want to use. This example uses
+            <codeph>testdb</codeph>:</p>
+        <codeblock>gpadmin@mdw ~]$ psql
+dev=# \c testdb</codeblock>
+        <p>Create a table for vertices, called <codeph>vertex</codeph>, and a table for edges and
+          their weights, called <codeph>edge</codeph>: </p>
+        <codeblock>testdb=# DROP TABLE IF EXISTS vertex, edge; 
+testdb=# CREATE TABLE vertex(id INTEGER); 
+testdb=# CREATE TABLE edge(         
+         src INTEGER,        
+         dest INTEGER,           
+         weight FLOAT8        
+         );</codeblock>
+        <p>Insert values related to your specific use case. For example : </p>
+        <codeblock>testdb#=> INSERT INTO vertex VALUES
+(0),
+(1),
+(2),
+(3),
+(4),
+(5),
+(6),
+(7); 
+
+testdb#=> INSERT INTO edge VALUES
+(0, 1, 1.0),
+(0, 2, 1.0),
+(0, 4, 10.0),
+(1, 2, 2.0),
+(1, 3, 10.0),
+(2, 3, 1.0),
+(2, 5, 1.0),
+(2, 6, 3.0),
+(3, 0, 1.0),
+(4, 0, -2.0),
+(5, 6, 1.0),
+(6, 7, 1.0);</codeblock>
+        <p>Now select the <xref href="#topic_graph_modules" format="dita">Graph Module</xref> that
+          suits your analysis. </p>
+      </section>
+    </body>
+  </topic>
+  <topic id="topic_graph_modules">
+    <title>Graph Modules </title>
+    <body>
+      <p>This section lists the graph functions supported in MADlib. They include:  <xref
+          href="#topic_graph_modules/section_m2x_rkr_xlb" format="dita"/>, <xref
+          href="#topic_graph_modules/section_ykg_53s_xlb" format="dita"/>, <xref
+          href="#topic_graph_modules/section_evh_t3s_xlb" format="dita"/>, <xref
+          href="#topic_graph_modules/section_e3f_s3s_xlb" format="dita"/>, <xref
+          href="#topic_graph_modules/section_rxc_r3s_xlb" format="dita"/>, <xref
+          href="#topic_graph_modules/section_zmd_q3s_xlb" format="dita"/>, and <xref
+          href="#topic_graph_modules/section_wcn_w3s_xlb" format="dita"/>. Explore each algorithm
+        using the example <codeph>edge</codeph> and <codeph>vertex</codeph> tables already created. </p>
+      <section id="section_m2x_rkr_xlb">
+        <title>All Pairs Shortest Path (APSP)</title>
+        <p>The all pairs shortest paths (APSP) algorithm finds the length (summed weights) of the
+          shortest paths between all pairs of vertices, such that the sum of the weights of the path
+          edges is minimized. </p>
+        <p>The function is:</p>
+        <codeblock>graph_apsp( vertex_table,
+vertex_id,
+edge_table,            
+edge_args,            
+out_table,            
+grouping_cols          
+)</codeblock>
+        <p>For details on the parameters, with examples, see the <xref
+            href="http://madlib.apache.org/docs/latest/group__grp__apsp.html" format="html"
+            scope="external">All Pairs Shortest Path</xref> in the Apache MADlib documentation.</p>
+      </section>
+      <section id="section_ykg_53s_xlb">
+        <title>Breadth-First Search</title>
+        <p>Given a graph and a source vertex, the breadth-first search (BFS) algorithm finds all
+          nodes reachable from the source vertex by searching / traversing the graph in a
+          breadth-first manner. </p>
+        <p>The function is:</p>
+        <codeblock>graph_bfs( vertex_table,
+          vertex_id,           
+          edge_table,           
+          edge_args,           
+          source_vertex,           
+          out_table,           
+          max_distance,           
+          directed,
+          grouping_cols
+          )</codeblock>
+        <p dir="ltr">For details on the parameters, with examples, see the <xref
+            href="http://madlib.apache.org/docs/latest/group__grp__bfs.html" format="html"
+            scope="external">Breadth-First Search</xref> in the Apache MADlib documentation.</p>
+      </section>
+      <section id="section_evh_t3s_xlb">
+        <title>Hyperlink-Induced Topic Search (HITS)</title>
+        <p>The all pairs shortest paths (APSP) algorithm finds the length (summed weights) of the
+          shortest paths between all pairs of vertices, such that the sum of the weights of the path
+          edges is minimized. </p>
+        <p>The function is:</p>
+        <codeblock>graph_apsp( vertex_table,
+           vertex_id,
+           edge_table,            
+           edge_args,            
+           out_table,            
+           grouping_cols          
+           )</codeblock>
+        <p dir="ltr">For details on the parameters, with examples, see the <xref
+            href="http://madlib.apache.org/docs/latest/group__grp__hits.html" format="html"
+            scope="external">Hyperlink-Induced Topic Search </xref> in the Apache MADlib
+          documentation.</p>
+      </section>
+      <section id="section_e3f_s3s_xlb">
+        <title>PageRank and Personalized PageRank</title>
+        <p>Given a graph, the PageRank algorithm outputs a probability distribution representing a
+          person’s likelihood to arrive at any particular vertex while randomly traversing the
+          graph. </p>
+        <p>MADlib graph also includes a personalized PageRank, where a notion of importance provides
+          personalization to a query. For example, importance scores can be biased according to a
+          specified set of graph vertices that are of interest or special in some way. </p>
+        <p>The function is:</p>
+        <codeblock>pagerank( vertex_table,
+          vertex_id,          
+          edge_table,          
+          edge_args,          
+          out_table,          
+          damping_factor,          
+          max_iter,          
+          threshold,          
+          grouping_cols,          
+          personalization_vertices         
+          )</codeblock>
+        <p>For details on the parameters, with examples, see the <xref
+            href="http://madlib.apache.org/docs/latest/group__grp__pagerank.html" format="html"
+            scope="external">PageRank</xref> in the Apache MADlib documentation.</p>
+      </section>
+      <section id="section_rxc_r3s_xlb">
+        <title>Single Source Shortest Path (SSSP)</title>
+        <p>Given a graph and a source vertex, the single source shortest path (SSSP) algorithm finds
+          a path from the source vertex to every other vertex in the graph, such that the sum of the
+          weights of the path edges is minimized. </p>
+        <p>The function is:</p>
+        <codeblock>graph_sssp ( vertex_table, 
+vertex_id, 
+edge_table, 
+edge_args, 
+source_vertex, 
+out_table, 
+grouping_cols 
+)</codeblock>
+        <p>For details on the parameters, with examples, see the <xref
+            href="http://madlib.apache.org/docs/latest/group__grp__sssp.html" format="html"
+            scope="external">Single Source Shortest Path</xref> in the Apache MADlib
+          documentation.</p>
+      </section>
+      <section id="section_zmd_q3s_xlb">
+        <title>Weakly Connected Components</title>
+        <p dir="ltr">Given a directed graph, a weakly connected component (WCC) is a subgraph of the
+          original graph where all vertices are connected to each other by some path, ignoring the
+          direction of edges.</p>
+        <p dir="ltr">The function is:</p>
+        <codeblock>weakly_connected_components( 
+vertex_table, 
+vertex_id, 
+edge_table, 
+edge_args, 
+out_table, 
+grouping_cols 
+)</codeblock>
+        <p dir="ltr">For details on the parameters, with examples, see the <xref
+            href="http://madlib.apache.org/docs/latest/group__grp__wcc.html" format="html"
+            scope="external">Weakly Connected Components</xref> in the Apache MADlib
+          documentation.</p>
+      </section>
+      <section id="section_wcn_w3s_xlb">
+        <title><i>Measures</i></title>
+        <p>These algorithms relate to metrics computed on a graph and include: <xref
+            href="#topic_graph_modules/section_k4q_x3s_xlb" format="dita"/>, <xref
+            href="#topic_graph_modules/section_a2q_y3s_xlb" format="dita"/> , <xref
+            href="#topic_graph_modules/section_pft_k4s_xlb" format="dita"/>, and <xref
+            href="#topic_graph_modules/section_srk_j4s_xlb" format="dita"/>.</p>
+      </section>
+      <section id="section_k4q_x3s_xlb">
+        <title>Average Path Length</title>
+        <p dir="ltr">This function computes the shortest path average between pairs of vertices.
+          Average path length is based on "reachable target vertices", so it averages the path
+          lengths in each connected component and ignores infinite-length paths between unconnected
+          vertices. If the user requires the average path length of a particular component, the
+          weakly connected components function may be used to isolate the relevant vertices. </p>
+        <p dir="ltr">The function is: </p>
+        <codeblock>graph_avg_path_length( apsp_table,
+                       output_table 
+                       )</codeblock>
+        <p dir="ltr">This function uses a previously run APSP (All Pairs Shortest Path) output. For
+          details on the parameters, with examples, see the <xref
+            href="http://madlib.apache.org/docs/latest/group__grp__graph__avg__path__length.html"
+            format="html" scope="external">Average Path Length</xref> in the Apache MADlib
+          documentation.</p>
+      </section>
+      <section id="section_a2q_y3s_xlb">
+        <title>Closeness Centrality</title>
+        <p>The closeness centrality algorithm helps quantify how much information passes through a
+          given vertex. The function returns various closeness centrality measures and the k-degree
+          for a given subset of vertices. </p>
+        <p dir="ltr">The function is:</p>
+        <codeblock>graph_closeness( apsp_table,
+output_table, 
+vertex_filter_expr 
+)</codeblock>
+        <p dir="ltr">This function uses a previously run APSP (All Pairs Shortest Path) output. For
+          details on the parameters, with examples, see the <xref
+            href="http://madlib.apache.org/docs/latest/group__grp__graph__closeness.html"
+            format="html" scope="external">Closeness</xref> in the Apache MADlib documentation.</p>
+      </section>
+      <section id="section_pft_k4s_xlb">
+        <title>Graph Diameter</title>
+        <p dir="ltr">Graph diameter is defined as the longest of all shortest paths in a graph. The
+          function is:</p>
+        <codeblock>graph_diameter( apsp_table, 
+output_table 
+)</codeblock>
+        <p dir="ltr">This function uses a previously run APSP (All Pairs Shortest Path) output. For
+          details on the parameters, with examples, see the <xref
+            href="http://madlib.apache.org/docs/latest/group__grp__graph__diameter.html"
+            format="html" scope="external">Graph Diameter</xref> in the Apache MADlib
+          documentation.</p>
+      </section>
+      <section id="section_srk_j4s_xlb">
+        <title>In-Out Degree</title>
+        <p dir="ltr">This function computes the degree of each node. The node degree is the number
+          of edges adjacent to that node. The node in-degree is the number of edges pointing in to
+          the node and node out-degree is the number of edges pointing out of the node.</p>
+        <p dir="ltr">The function is:</p>
+        <codeblock>graph_vertex_degrees( vertex_table,
+vertex_id,    
+edge_table,
+edge_args,    
+out_table,
+grouping_cols
+)</codeblock>
+        <p>For details on the parameters, with examples, see the <xref
+            href="http://madlib.apache.org/docs/latest/group__grp__graph__vertex__degrees.html"
+            format="html" scope="external">In-out Degree</xref> page in the Apache MADlib
+          documentation.</p>
+      </section>
+    </body>
+  </topic>
+  <topic id="topic_graph_references" xml:lang="en">
     <title id="pz213965">References</title>
     <body>
-      <p>MADlib web site is at <xref href="http://madlib.apache.org/" format="html" scope="external"
+      <p>MADlib on Greenplum is at <xref href="madlib.xml#topic1"/>.</p>
+      <p>MADlib Apache web site and MADlib release notes are at <xref
+          href="http://madlib.apache.org/" format="html" scope="external"
           >http://madlib.apache.org/</xref>.</p>
-      <p>MADlib documentation is at <xref href="http://madlib.apache.org/documentation.html"
+      <p>MADlib user documentation is at <xref href="http://madlib.apache.org/documentation.html"
           format="html" scope="external">http://madlib.apache.org/documentation.html</xref>.</p>
-      <p>PivotalR is a first class R package that enables users to interact with data resident in
-        Greenplum Database and MADLib using an R client.</p>
     </body>
-    <topic xml:lang="en" id="topic_dxp_vq2_sv">
-      <title>About MADlib, R, and PivotalR</title>
-      <body>
-        <p>The R language is an open-source language that is used for statistical computing.
-          PivotalR is an R package that enables users to interact with data resident in Greenplum
-          Database using the R client. Using PivotalR requires that MADlib is installed on the
-          Greenplum Database.</p>
-        <p>PivotalR allows R users to leverage the scalability and performance of in-database
-          analytics without leaving the R command line. The computational work is executed
-          in-database, while the end user benefits from the familiar R interface. Compared with
-          respective native R functions, there is an increase in scalability and a decrease in
-          running time. Furthermore, data movement, which can take hours for very large data sets,
-          is eliminated with PivotalR.</p>
-        <p>Key features of the PivotalR package:<ul id="ul_exp_vq2_sv">
-            <li>Explore and manipulate data in the database with R syntax. SQL translation is
-              performed by PivotalR.</li>
-            <li>Use the familiar R syntax for predictive analytics algorithms, for example linear
-              and logistic regression. PivotalR accesses the MADlib in-database analytics function
-              calls.</li>
-            <li>Comprehensive documentation package with examples in standard R format accessible
-              from an R client.</li>
-            <li>The PivotalR package also supports access to the MADlib functionality.</li>
-          </ul></p>
-        <p>For information about PivotalR, including supported MADlib functionality, see <xref
-            href="https://cwiki.apache.org/confluence/display/MADLIB/PivotalR" format="html"
-            scope="external">https://cwiki.apache.org/confluence/display/MADLIB/PivotalR</xref>.</p>
-        <p>The R package for PivotalR can be found at <xref
-            href="https://cran.r-project.org/web/packages/PivotalR/index.html" format="html"
-            scope="external">https://cran.r-project.org/web/packages/PivotalR/index.html</xref>.</p>
-      </body>
-    </topic>
   </topic>
 </topic>

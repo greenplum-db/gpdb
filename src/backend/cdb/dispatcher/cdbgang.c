@@ -21,6 +21,7 @@
 #include "access/xact.h"
 #include "catalog/namespace.h"
 #include "commands/variable.h"
+#include "common/ip.h"
 #include "nodes/execnodes.h"	/* CdbProcess, Slice, SliceTable */
 #include "postmaster/postmaster.h"
 #include "tcop/tcopprot.h"
@@ -40,7 +41,6 @@
 #include "cdb/cdbvars.h"		/* Gp_role, etc. */
 #include "cdb/cdbconn.h"		/* cdbconn_* */
 #include "libpq/libpq-be.h"
-#include "libpq/ip.h"
 
 #include "utils/guc_tables.h"
 
@@ -445,9 +445,6 @@ cdbgang_parse_gpqeid_params(struct Port *port pg_attribute_unused(),
 	char	   *cp;
 	char	   *np = gpqeid;
 
-	/* The presence of an gpqeid string means this backend is a qExec. */
-	SetConfigOption("gp_session_role", "execute", PGC_POSTMASTER, PGC_S_OVERRIDE);
-
 	/* gp_session_id */
 	if (gpqeid_next_param(&cp, &np))
 		SetConfigOption("gp_session_id", cp, PGC_POSTMASTER, PGC_S_OVERRIDE);
@@ -533,11 +530,13 @@ makeCdbProcess(SegmentDatabaseDescriptor *segdbDesc)
 
 	if (Gp_interconnect_type == INTERCONNECT_TYPE_UDPIFC)
 		process->listenerPort = (segdbDesc->motionListener >> 16) & 0x0ffff;
-	else if (Gp_interconnect_type == INTERCONNECT_TYPE_TCP)
+	else if (Gp_interconnect_type == INTERCONNECT_TYPE_TCP ||
+			 Gp_interconnect_type == INTERCONNECT_TYPE_PROXY)
 		process->listenerPort = (segdbDesc->motionListener & 0x0ffff);
 
 	process->pid = segdbDesc->backendPid;
 	process->contentid = segdbDesc->segindex;
+	process->dbid = qeinfo->config->dbid;
 	return process;
 }
 
@@ -626,11 +625,13 @@ getCdbProcessesForQD(int isPrimary)
 
 	if (Gp_interconnect_type == INTERCONNECT_TYPE_UDPIFC)
 		proc->listenerPort = (Gp_listener_port >> 16) & 0x0ffff;
-	else if (Gp_interconnect_type == INTERCONNECT_TYPE_TCP)
+	else if (Gp_interconnect_type == INTERCONNECT_TYPE_TCP ||
+			 Gp_interconnect_type == INTERCONNECT_TYPE_PROXY)
 		proc->listenerPort = (Gp_listener_port & 0x0ffff);
 
 	proc->pid = MyProcPid;
 	proc->contentid = -1;
+	proc->dbid = qdinfo->config->dbid;
 
 	list = lappend(list, proc);
 	return list;

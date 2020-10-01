@@ -1,0 +1,120 @@
+#!/usr/bin/env bash
+
+# src/tools/fmt
+
+set -e -u -o pipefail
+
+# This script formats (or checks) C++ code with clang-format in the following
+# locations:
+#
+# src/backend/gpopt
+# src/include/gpopt
+# src/backend/gporca
+#
+# To generate the expanded configuration file for a change in intent:
+# $ fmt gen
+#
+# To format all ORCA / GPOPT code:
+# $ fmt fmt
+#
+# To check for formatting conformance:
+# $ fmt chk
+#
+# If the name of your clang-format executable isn't "clang-format", you can
+# override it in the CLANG_FORMAT environment variable.
+#
+# For more about ORCA's format, see src/backend/gporca/README.format.md
+
+
+# we use mapfile from Bash 4.0, but it's sufficiently likely that *someone* on
+# a macOS system would be using Bash 3.2 that it'd be unkind not to guard
+# against it.
+if ((BASH_VERSINFO[0] < 4)); then false; fi
+
+readonly INTENT=src/backend/gporca/clang-format.intent.yaml
+: "${CLANG_FORMAT:=clang-format}"
+
+gen() {
+	local DIR
+	DIR=$(mktemp -d -t orca-clang-format.XXX)
+	cp "${INTENT}" "${DIR}/.clang-format"
+
+	local -a CLANG_FORMAT_CONFIG_FILES
+	# do not squish the assignment into the declaration, as that will swallow
+	# errors in the subshell
+	local _find_result
+	_find_result=$(find src/backend/gporca -name .clang-format)
+	mapfile -t CLANG_FORMAT_CONFIG_FILES <<<$_find_result
+
+	(
+		set -e
+		cd "${DIR}"
+		"${CLANG_FORMAT}" -style=file -dump-config >clang-format.yaml
+	)
+
+	for cf in "${CLANG_FORMAT_CONFIG_FILES[@]}"; do
+		cp -v "${DIR}/clang-format.yaml" "${cf}"
+	done
+	rm -r "${DIR}"
+}
+
+# NUL-delimited list of files to format
+files_to_format() {
+	local -a CLANG_FORMAT_CONFIG_FILES
+	# do not squish the assignment into the declaration, as that will swallow
+	# errors in the subshell
+	local _find_result
+	_find_result=$(find src/backend/gporca src/backend/gpopt src/include/gpopt -name .clang-format)
+	mapfile -t CLANG_FORMAT_CONFIG_FILES <<<$_find_result
+
+	local -a CF_DIRS PATTERNS
+	CF_DIRS=("${CLANG_FORMAT_CONFIG_FILES[@]%/*}")
+	PATTERNS=("${CF_DIRS[@]/%/\/*.cpp}" "${CF_DIRS[@]/%/\/*.h}")
+	git ls-files -z "${PATTERNS[@]}"
+}
+
+# This depends on GNU parallel (https://www.gnu.org/software/parallel/). To install:
+#   macOS: brew install parallel
+#   Debian-derivatives: apt install parallel
+fmt() {
+	files_to_format | parallel -n64 -P +0 -0 \
+		"${CLANG_FORMAT}" -i
+}
+
+chk() {
+	# --tty: enables colorful diagnostics
+	# --halt: fail as soon as we encounter the first formatting diagnostic
+	files_to_format | parallel -n64 -P +0 -0 \
+		--halt now,fail=1 --tty \
+		"${CLANG_FORMAT}" -dry-run -ferror-limit 1 -Werror
+}
+
+usage() {
+	printf >&2 "Usage: [CLANG_FORMAT=clang-format] %s (gen|fmt|chk)\n" "$0"
+
+	return 1
+}
+
+_main() {
+	local cmd
+	cmd=${1:-}
+	local TOPLEVEL
+	TOPLEVEL=$(git rev-parse --show-toplevel)
+	cd "${TOPLEVEL}"
+	case "${cmd}" in
+	gen)
+		gen
+		;;
+	fmt)
+		fmt
+		;;
+	chk)
+		chk
+		;;
+	*)
+		usage
+		;;
+	esac
+}
+
+_main "$@"

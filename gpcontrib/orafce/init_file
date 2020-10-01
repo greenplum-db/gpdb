@@ -1,0 +1,29 @@
+-- This file contains global patterns of messages that should be ignored or
+-- masked out, when comparing test results with the expected output.
+-- Individual tests can contain additional patterns specific to the test.
+
+-- start_matchignore
+
+# There are a number of NOTICE and HINT messages around table distribution,
+# for example to inform the user that the database will pick a particular
+# column in order to distribute the data. Merging tests from postgres will
+# cause the tests to output these messages and we would need to manually
+# modify the corresponding expected output. Hence we want to ignore these.
+# Some of the messages include:
+#
+# NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named '<colname>' as the Greenplum Database data distribution key for this table.
+# NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+# HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+#
+# The following regex is intended to cover all permutations of the above set
+# of messages.
+m/^(?:HINT|NOTICE):\s+.+\'DISTRIBUTED BY\' clause.*/
+
+# The following NOTICE is generated when creating a role. It is to inform the
+# user that the database will assign the default resource queue to the role if
+# the user has not explicitly specified one. Merging tests from postgres will
+# cause the tests to output these messages and we would need to manually modify
+# the corresponding expected output. Hence we want to ignore these.
+m/^NOTICE:.*resource queue required -- using default resource queue ".*"/
+
+-- end_matchignore

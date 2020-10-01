@@ -18,6 +18,7 @@
 CREATE TABLE BOX_TBL (f1 box);
 INSERT INTO BOX_TBL (f1) VALUES ('(2.0,2.0,0.0,0.0)');
 INSERT INTO BOX_TBL (f1) VALUES ('(1.0,1.0,3.0,3.0)');
+INSERT INTO BOX_TBL (f1) VALUES ('((-8, 2), (-2, -10))');
 -- degenerate cases where the box is a line or a point
 -- note that lines and points boxes all have zero area
 INSERT INTO BOX_TBL (f1) VALUES ('(2.5, 2.5, 2.5,3.5)');
@@ -26,6 +27,18 @@ INSERT INTO BOX_TBL (f1) VALUES ('(3.0, 3.0,3.0,3.0)');
 INSERT INTO BOX_TBL (f1) VALUES ('(2.3, 4.5)');
 ERROR:  invalid input syntax for type box: "(2.3, 4.5)"
 LINE 1: INSERT INTO BOX_TBL (f1) VALUES ('(2.3, 4.5)');
+                                         ^
+INSERT INTO BOX_TBL (f1) VALUES ('[1, 2, 3, 4)');
+ERROR:  invalid input syntax for type box: "[1, 2, 3, 4)"
+LINE 1: INSERT INTO BOX_TBL (f1) VALUES ('[1, 2, 3, 4)');
+                                         ^
+INSERT INTO BOX_TBL (f1) VALUES ('(1, 2, 3, 4]');
+ERROR:  invalid input syntax for type box: "(1, 2, 3, 4]"
+LINE 1: INSERT INTO BOX_TBL (f1) VALUES ('(1, 2, 3, 4]');
+                                         ^
+INSERT INTO BOX_TBL (f1) VALUES ('(1, 2, 3, 4) x');
+ERROR:  invalid input syntax for type box: "(1, 2, 3, 4) x"
+LINE 1: INSERT INTO BOX_TBL (f1) VALUES ('(1, 2, 3, 4) x');
                                          ^
 INSERT INTO BOX_TBL (f1) VALUES ('asdfasdf(ad');
 ERROR:  invalid input syntax for type box: "asdfasdf(ad"
@@ -36,9 +49,10 @@ SELECT '' AS four, * FROM BOX_TBL;
 ------+---------------------
       | (2,2),(0,0)
       | (3,3),(1,1)
+      | (-2,2),(-8,-10)
       | (2.5,3.5),(2.5,2.5)
       | (3,3),(3,3)
-(4 rows)
+(5 rows)
 
 SELECT '' AS four, b.*, area(b.f1) as barea
    FROM BOX_TBL b;
@@ -46,9 +60,10 @@ SELECT '' AS four, b.*, area(b.f1) as barea
 ------+---------------------+-------
       | (2,2),(0,0)         |     4
       | (3,3),(1,1)         |     4
+      | (-2,2),(-8,-10)     |    72
       | (2.5,3.5),(2.5,2.5) |     0
       | (3,3),(3,3)         |     0
-(4 rows)
+(5 rows)
 
 -- overlap
 SELECT '' AS three, b.f1
@@ -68,8 +83,9 @@ SELECT '' AS two, b1.*
  two |         f1          
 -----+---------------------
      | (2,2),(0,0)
+     | (-2,2),(-8,-10)
      | (2.5,3.5),(2.5,2.5)
-(2 rows)
+(3 rows)
 
 -- right-or-overlap (x only)
 SELECT '' AS two, b1.*
@@ -88,8 +104,9 @@ SELECT '' AS two, b.f1
  two |         f1          
 -----+---------------------
      | (2,2),(0,0)
+     | (-2,2),(-8,-10)
      | (2.5,3.5),(2.5,2.5)
-(2 rows)
+(3 rows)
 
 -- area <=
 SELECT '' AS four, b.f1
@@ -127,11 +144,12 @@ SELECT '' AS two, b.f1
 SELECT '' AS two, b.f1
    FROM BOX_TBL b				-- zero area
    WHERE b.f1 > box '(3.5,3.0,4.5,3.0)';
- two |     f1      
------+-------------
+ two |       f1        
+-----+-----------------
      | (2,2),(0,0)
      | (3,3),(1,1)
-(2 rows)
+     | (-2,2),(-8,-10)
+(3 rows)
 
 -- area >=
 SELECT '' AS four, b.f1
@@ -141,9 +159,10 @@ SELECT '' AS four, b.f1
 ------+---------------------
       | (2,2),(0,0)
       | (3,3),(1,1)
+      | (-2,2),(-8,-10)
       | (2.5,3.5),(2.5,2.5)
       | (3,3),(3,3)
-(4 rows)
+(5 rows)
 
 -- right of
 SELECT '' AS two, b.f1
@@ -152,8 +171,9 @@ SELECT '' AS two, b.f1
  two |         f1          
 -----+---------------------
      | (2,2),(0,0)
+     | (-2,2),(-8,-10)
      | (2.5,3.5),(2.5,2.5)
-(2 rows)
+(3 rows)
 
 -- contained in
 SELECT '' AS three, b.f1
@@ -193,9 +213,10 @@ SELECT '' AS four, @@(b1.f1) AS p
 ------+---------
       | (1,1)
       | (2,2)
+      | (-5,-4)
       | (2.5,3)
       | (3,3)
-(4 rows)
+(5 rows)
 
 -- wholly-contained
 SELECT '' AS one, b1.*, b2.*
@@ -211,9 +232,10 @@ SELECT '' AS four, height(f1), width(f1) FROM BOX_TBL;
 ------+--------+-------
       |      2 |     2
       |      2 |     2
+      |     12 |     6
       |      1 |     0
       |      0 |     0
-(4 rows)
+(5 rows)
 
 --
 -- Test the SP-GiST index
@@ -244,15 +266,13 @@ SELECT * FROM box_temp WHERE f1 << '(10,20),(30,40)';
 (7 rows)
 
 EXPLAIN (COSTS OFF) SELECT * FROM box_temp WHERE f1 << '(10,20),(30,40)';
-                        QUERY PLAN                        
-----------------------------------------------------------
+                     QUERY PLAN                     
+----------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Bitmap Heap Scan on box_temp
-         Recheck Cond: (f1 << '(30,40),(10,20)'::box)
-         ->  Bitmap Index Scan on box_spgist
-               Index Cond: (f1 << '(30,40),(10,20)'::box)
+   ->  Index Only Scan using box_spgist on box_temp
+         Index Cond: (f1 << '(30,40),(10,20)'::box)
  Optimizer: Postgres query optimizer
-(6 rows)
+(4 rows)
 
 SELECT * FROM box_temp WHERE f1 &< '(10,4.333334),(5,100)';
              f1             
@@ -268,15 +288,13 @@ SELECT * FROM box_temp WHERE f1 &< '(10,4.333334),(5,100)';
 (8 rows)
 
 EXPLAIN (COSTS OFF) SELECT * FROM box_temp WHERE f1 &< '(10,4.333334),(5,100)';
-                           QUERY PLAN                           
-----------------------------------------------------------------
+                        QUERY PLAN                        
+----------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Bitmap Heap Scan on box_temp
-         Recheck Cond: (f1 &< '(10,100),(5,4.333334)'::box)
-         ->  Bitmap Index Scan on box_spgist
-               Index Cond: (f1 &< '(10,100),(5,4.333334)'::box)
+   ->  Index Only Scan using box_spgist on box_temp
+         Index Cond: (f1 &< '(10,100),(5,4.333334)'::box)
  Optimizer: Postgres query optimizer
-(6 rows)
+(4 rows)
 
 SELECT * FROM box_temp WHERE f1 && '(15,20),(25,30)';
                     f1                     
@@ -326,15 +344,13 @@ SELECT * FROM box_temp WHERE f1 &> '(40,30),(45,50)';
 (11 rows)
 
 EXPLAIN (COSTS OFF) SELECT * FROM box_temp WHERE f1 &> '(40,30),(45,50)';
-                        QUERY PLAN                        
-----------------------------------------------------------
+                     QUERY PLAN                     
+----------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Bitmap Heap Scan on box_temp
-         Recheck Cond: (f1 &> '(45,50),(40,30)'::box)
-         ->  Bitmap Index Scan on box_spgist
-               Index Cond: (f1 &> '(45,50),(40,30)'::box)
+   ->  Index Only Scan using box_spgist on box_temp
+         Index Cond: (f1 &> '(45,50),(40,30)'::box)
  Optimizer: Postgres query optimizer
-(6 rows)
+(4 rows)
 
 SELECT * FROM box_temp WHERE f1 >> '(30,40),(40,30)';
         f1         
@@ -352,15 +368,13 @@ SELECT * FROM box_temp WHERE f1 >> '(30,40),(40,30)';
 (10 rows)
 
 EXPLAIN (COSTS OFF) SELECT * FROM box_temp WHERE f1 >> '(30,40),(40,30)';
-                        QUERY PLAN                        
-----------------------------------------------------------
+                     QUERY PLAN                     
+----------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Bitmap Heap Scan on box_temp
-         Recheck Cond: (f1 >> '(40,40),(30,30)'::box)
-         ->  Bitmap Index Scan on box_spgist
-               Index Cond: (f1 >> '(40,40),(30,30)'::box)
+   ->  Index Only Scan using box_spgist on box_temp
+         Index Cond: (f1 >> '(40,40),(30,30)'::box)
  Optimizer: Postgres query optimizer
-(6 rows)
+(4 rows)
 
 SELECT * FROM box_temp WHERE f1 <<| '(10,4.33334),(5,100)';
             f1            
@@ -371,15 +385,13 @@ SELECT * FROM box_temp WHERE f1 <<| '(10,4.33334),(5,100)';
 (3 rows)
 
 EXPLAIN (COSTS OFF) SELECT * FROM box_temp WHERE f1 <<| '(10,4.33334),(5,100)';
-                           QUERY PLAN                           
-----------------------------------------------------------------
+                        QUERY PLAN                        
+----------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Bitmap Heap Scan on box_temp
-         Recheck Cond: (f1 <<| '(10,100),(5,4.33334)'::box)
-         ->  Bitmap Index Scan on box_spgist
-               Index Cond: (f1 <<| '(10,100),(5,4.33334)'::box)
+   ->  Index Only Scan using box_spgist on box_temp
+         Index Cond: (f1 <<| '(10,100),(5,4.33334)'::box)
  Optimizer: Postgres query optimizer
-(6 rows)
+(4 rows)
 
 SELECT * FROM box_temp WHERE f1 &<| '(10,4.3333334),(5,1)';
             f1            
@@ -390,15 +402,13 @@ SELECT * FROM box_temp WHERE f1 &<| '(10,4.3333334),(5,1)';
 (3 rows)
 
 EXPLAIN (COSTS OFF) SELECT * FROM box_temp WHERE f1 &<| '(10,4.3333334),(5,1)';
-                           QUERY PLAN                           
-----------------------------------------------------------------
+                        QUERY PLAN                        
+----------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Bitmap Heap Scan on box_temp
-         Recheck Cond: (f1 &<| '(10,4.3333334),(5,1)'::box)
-         ->  Bitmap Index Scan on box_spgist
-               Index Cond: (f1 &<| '(10,4.3333334),(5,1)'::box)
+   ->  Index Only Scan using box_spgist on box_temp
+         Index Cond: (f1 &<| '(10,4.3333334),(5,1)'::box)
  Optimizer: Postgres query optimizer
-(6 rows)
+(4 rows)
 
 SELECT * FROM box_temp WHERE f1 |&> '(49.99,49.99),(49.99,49.99)';
           f1          
@@ -408,15 +418,13 @@ SELECT * FROM box_temp WHERE f1 |&> '(49.99,49.99),(49.99,49.99)';
 (2 rows)
 
 EXPLAIN (COSTS OFF) SELECT * FROM box_temp WHERE f1 |&> '(49.99,49.99),(49.99,49.99)';
-                              QUERY PLAN                               
------------------------------------------------------------------------
+                           QUERY PLAN                            
+-----------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Bitmap Heap Scan on box_temp
-         Recheck Cond: (f1 |&> '(49.99,49.99),(49.99,49.99)'::box)
-         ->  Bitmap Index Scan on box_spgist
-               Index Cond: (f1 |&> '(49.99,49.99),(49.99,49.99)'::box)
+   ->  Index Only Scan using box_spgist on box_temp
+         Index Cond: (f1 |&> '(49.99,49.99),(49.99,49.99)'::box)
  Optimizer: Postgres query optimizer
-(6 rows)
+(4 rows)
 
 SELECT * FROM box_temp WHERE f1 |>> '(37,38),(39,40)';
           f1          
@@ -435,15 +443,13 @@ SELECT * FROM box_temp WHERE f1 |>> '(37,38),(39,40)';
 (11 rows)
 
 EXPLAIN (COSTS OFF) SELECT * FROM box_temp WHERE f1 |>> '(37,38),(39,40)';
-                        QUERY PLAN                         
------------------------------------------------------------
+                     QUERY PLAN                      
+-----------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Bitmap Heap Scan on box_temp
-         Recheck Cond: (f1 |>> '(39,40),(37,38)'::box)
-         ->  Bitmap Index Scan on box_spgist
-               Index Cond: (f1 |>> '(39,40),(37,38)'::box)
+   ->  Index Only Scan using box_spgist on box_temp
+         Index Cond: (f1 |>> '(39,40),(37,38)'::box)
  Optimizer: Postgres query optimizer
-(6 rows)
+(4 rows)
 
 SELECT * FROM box_temp WHERE f1 @> '(10,11),(15,16)';
                     f1                     
@@ -495,3 +501,107 @@ EXPLAIN (COSTS OFF) SELECT * FROM box_temp WHERE f1 ~= '(20,20),(40,40)';
 
 RESET enable_seqscan;
 DROP INDEX box_spgist;
+--
+-- Test the SP-GiST index on the larger volume of data
+--
+CREATE TABLE quad_box_tbl (b box);
+INSERT INTO quad_box_tbl
+	SELECT box(point(x * 10, y * 10), point(x * 10 + 5, y * 10 + 5))
+	FROM generate_series(1, 100) x,
+		 generate_series(1, 100) y;
+-- insert repeating data to test allTheSame
+INSERT INTO quad_box_tbl
+	SELECT '((200, 300),(210, 310))'
+	FROM generate_series(1, 1000);
+INSERT INTO quad_box_tbl
+	VALUES
+		(NULL),
+		(NULL),
+		('((-infinity,-infinity),(infinity,infinity))'),
+		('((-infinity,100),(-infinity,500))'),
+		('((-infinity,-infinity),(700,infinity))');
+CREATE INDEX quad_box_tbl_idx ON quad_box_tbl USING spgist(b);
+SET enable_seqscan = OFF;
+SET enable_indexscan = ON;
+SET enable_bitmapscan = ON;
+SELECT count(*) FROM quad_box_tbl WHERE b <<  box '((100,200),(300,500))';
+ count 
+-------
+   901
+(1 row)
+
+SELECT count(*) FROM quad_box_tbl WHERE b &<  box '((100,200),(300,500))';
+ count 
+-------
+  3901
+(1 row)
+
+SELECT count(*) FROM quad_box_tbl WHERE b &&  box '((100,200),(300,500))';
+ count 
+-------
+  1653
+(1 row)
+
+SELECT count(*) FROM quad_box_tbl WHERE b &>  box '((100,200),(300,500))';
+ count 
+-------
+ 10100
+(1 row)
+
+SELECT count(*) FROM quad_box_tbl WHERE b >>  box '((100,200),(300,500))';
+ count 
+-------
+  7000
+(1 row)
+
+SELECT count(*) FROM quad_box_tbl WHERE b >>  box '((100,200),(300,500))';
+ count 
+-------
+  7000
+(1 row)
+
+SELECT count(*) FROM quad_box_tbl WHERE b <<| box '((100,200),(300,500))';
+ count 
+-------
+  1900
+(1 row)
+
+SELECT count(*) FROM quad_box_tbl WHERE b &<| box '((100,200),(300,500))';
+ count 
+-------
+  5901
+(1 row)
+
+SELECT count(*) FROM quad_box_tbl WHERE b |&> box '((100,200),(300,500))';
+ count 
+-------
+  9100
+(1 row)
+
+SELECT count(*) FROM quad_box_tbl WHERE b |>> box '((100,200),(300,500))';
+ count 
+-------
+  5000
+(1 row)
+
+SELECT count(*) FROM quad_box_tbl WHERE b @>  box '((201,301),(202,303))';
+ count 
+-------
+  1003
+(1 row)
+
+SELECT count(*) FROM quad_box_tbl WHERE b <@  box '((100,200),(300,500))';
+ count 
+-------
+  1600
+(1 row)
+
+SELECT count(*) FROM quad_box_tbl WHERE b ~=  box '((200,300),(205,305))';
+ count 
+-------
+     1
+(1 row)
+
+RESET enable_seqscan;
+RESET enable_indexscan;
+RESET enable_bitmapscan;

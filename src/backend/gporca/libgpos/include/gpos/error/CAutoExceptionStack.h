@@ -24,50 +24,46 @@
 
 namespace gpos
 {
+//---------------------------------------------------------------------------
+//	@class:
+//		CAutoExceptionStack
+//
+//	@doc:
+//		Auto object for saving and restoring exception stack
+//
+//---------------------------------------------------------------------------
+class CAutoExceptionStack : public CStackObject
+{
+private:
+	// address of the global exception stack value
+	void **m_global_exception_stack;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CAutoExceptionStack
-	//
-	//	@doc:
-    //		Auto object for saving and restoring exception stack
-	//
-	//---------------------------------------------------------------------------
-	class CAutoExceptionStack : public CStackObject
-	{
+	// value of exception stack when object is created
+	void *m_exception_stack;
 
-		private:
+	// address of the global error context stack value
+	void **m_global_error_context_stack;
 
-			// address of the global exception stack value
-			void **m_global_exception_stack;
+	// value of error context stack when object is created
+	void *m_error_context_stack;
 
-		// value of exception stack when object is created
-			void *m_exception_stack;
+	// private copy ctor
+	CAutoExceptionStack(const CAutoExceptionStack &);
 
-		// address of the global error context stack value
-			void **m_global_error_context_stack;
+public:
+	// ctor
+	CAutoExceptionStack(void **global_exception_stack,
+						void **global_error_context_stack);
 
-		// value of error context stack when object is created
-			void *m_error_context_stack;
+	// dtor
+	~CAutoExceptionStack();
 
-			// private copy ctor
-			CAutoExceptionStack(const CAutoExceptionStack &);
+	// set the exception stack to the given address
+	void SetLocalJmp(void *local_jump);
 
-		public:
+};	// class CAutoExceptionStack
+}  // namespace gpos
 
-			// ctor
-			CAutoExceptionStack(void **global_exception_stack, void **global_error_context_stack);
-
-			// dtor
-			~CAutoExceptionStack();
-
-			// set the exception stack to the given address
-			void SetLocalJmp(void *local_jump);
-
-	}; // class CAutoExceptionStack
-}
-
-#endif // !GPOS_CAutoExceptionStack_H
+#endif	// !GPOS_CAutoExceptionStack_H
 
 // EOF
-

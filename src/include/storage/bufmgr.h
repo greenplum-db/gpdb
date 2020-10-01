@@ -4,7 +4,7 @@
  *	  POSTGRES buffer manager definitions.
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/storage/bufmgr.h
@@ -20,7 +20,6 @@
 #include "storage/relfilenode.h"
 #include "utils/relcache.h"
 #include "utils/snapmgr.h"
-#include "utils/tqual.h"
 
 typedef void *Block;
 
@@ -54,17 +53,6 @@ struct WritebackContext;
 extern PGDLLIMPORT int NBuffers;
 
 /* in bufmgr.c */
-#define WRITEBACK_MAX_PENDING_FLUSHES 256
-
-/* FIXME: Also default to on for mmap && msync(MS_ASYNC)? */
-#ifdef HAVE_SYNC_FILE_RANGE
-#define DEFAULT_CHECKPOINT_FLUSH_AFTER 32
-#define DEFAULT_BGWRITER_FLUSH_AFTER 64
-#else
-#define DEFAULT_CHECKPOINT_FLUSH_AFTER 0
-#define DEFAULT_BGWRITER_FLUSH_AFTER 0
-#endif   /* HAVE_SYNC_FILE_RANGE */
-
 extern bool zero_damaged_pages;
 extern int	bgwriter_lru_maxpages;
 extern double bgwriter_lru_multiplier;
@@ -90,7 +78,7 @@ extern PGDLLIMPORT int32 *LocalRefCount;
 #define MAX_IO_CONCURRENCY 1000
 
 /* special block number for ReadBuffer() */
-#define P_NEW	InvalidBlockNumber		/* grow the file to get a new page */
+#define P_NEW	InvalidBlockNumber	/* grow the file to get a new page */
 
 /*
  * Buffer content lock modes (mode argument for LockBuffer())
@@ -175,20 +163,20 @@ extern PGDLLIMPORT int32 *LocalRefCount;
  */
 extern bool ComputeIoConcurrency(int io_concurrency, double *target);
 extern void PrefetchBuffer(Relation reln, ForkNumber forkNum,
-			   BlockNumber blockNum);
+						   BlockNumber blockNum);
 extern Buffer ReadBuffer(Relation reln, BlockNumber blockNum);
 extern Buffer ReadBufferExtended(Relation reln, ForkNumber forkNum,
-				   BlockNumber blockNum, ReadBufferMode mode,
-				   BufferAccessStrategy strategy);
+								 BlockNumber blockNum, ReadBufferMode mode,
+								 BufferAccessStrategy strategy);
 extern Buffer ReadBufferWithoutRelcache(RelFileNode rnode,
-						  ForkNumber forkNum, BlockNumber blockNum,
-						  ReadBufferMode mode, BufferAccessStrategy strategy);
+										ForkNumber forkNum, BlockNumber blockNum,
+										ReadBufferMode mode, BufferAccessStrategy strategy);
 extern void ReleaseBuffer(Buffer buffer);
 extern void UnlockReleaseBuffer(Buffer buffer);
 extern void MarkBufferDirty(Buffer buffer);
 extern void IncrBufferRefCount(Buffer buffer);
 extern Buffer ReleaseAndReadBuffer(Buffer buffer, Relation relation,
-					 BlockNumber blockNum);
+								   BlockNumber blockNum);
 
 extern void InitBufferPool(void);
 extern void InitBufferPoolAccess(void);
@@ -198,14 +186,16 @@ extern void PrintBufferLeakWarning(Buffer buffer);
 extern void CheckPointBuffers(int flags);
 extern BlockNumber BufferGetBlockNumber(Buffer buffer);
 extern BlockNumber RelationGetNumberOfBlocksInFork(Relation relation,
-								ForkNumber forkNum);
+												   ForkNumber forkNum);
 extern void FlushOneBuffer(Buffer buffer);
 extern void FlushRelationBuffers(Relation rel);
 extern void FlushDatabaseBuffers(Oid dbid);
 extern void DropRelFileNodeBuffers(RelFileNodeBackend rnode,
-					   ForkNumber forkNum, BlockNumber firstDelBlock);
+								   ForkNumber forkNum, BlockNumber firstDelBlock);
 extern void DropRelFileNodesAllBuffers(RelFileNodeBackend *rnodes, int nnodes);
 extern void DropDatabaseBuffers(Oid dbid);
+
+extern BlockNumber RelationGuessNumberOfBlocksFromSize(uint64 szbytes);
 
 #define RelationGetNumberOfBlocks(reln) \
 	RelationGetNumberOfBlocksInFork(reln, MAIN_FORKNUM)
@@ -220,7 +210,7 @@ extern void PrintPinnedBufs(void);
 #endif
 extern Size BufferShmemSize(void);
 extern void BufferGetTag(Buffer buffer, RelFileNode *rnode,
-			 ForkNumber *forknum, BlockNumber *blknum);
+						 ForkNumber *forknum, BlockNumber *blknum);
 
 extern void MarkBufferDirtyHint(Buffer buffer, bool buffer_std);
 
@@ -229,6 +219,7 @@ extern void LockBuffer(Buffer buffer, int mode);
 extern bool ConditionalLockBuffer(Buffer buffer);
 extern void LockBufferForCleanup(Buffer buffer);
 extern bool ConditionalLockBufferForCleanup(Buffer buffer);
+extern bool IsBufferCleanupOK(Buffer buffer);
 extern bool HoldingBufferPinThatDelaysRecovery(void);
 
 extern void AbortBufferIO(void);
@@ -249,7 +240,7 @@ extern void FreeAccessStrategy(BufferAccessStrategy strategy);
 
 /*
  * Although this header file is nominally backend-only, certain frontend
- * programs like pg_xlogdump include it.  For compilers that emit static
+ * programs like pg_waldump include it.  For compilers that emit static
  * inline functions even when they're unused, that leads to unsatisfied
  * external references; hence hide these with #ifndef FRONTEND.
  */
@@ -280,13 +271,13 @@ TestForOldSnapshot(Snapshot snapshot, Relation relation, Page page)
 
 	if (old_snapshot_threshold >= 0
 		&& (snapshot) != NULL
-		&& ((snapshot)->satisfies == HeapTupleSatisfiesMVCC
-			|| (snapshot)->satisfies == HeapTupleSatisfiesToast)
+		&& ((snapshot)->snapshot_type == SNAPSHOT_MVCC
+			|| (snapshot)->snapshot_type == SNAPSHOT_TOAST)
 		&& !XLogRecPtrIsInvalid((snapshot)->lsn)
 		&& PageGetLSN(page) > (snapshot)->lsn)
 		TestForOldSnapshot_impl(snapshot, relation);
 }
 
-#endif   /* FRONTEND */
+#endif							/* FRONTEND */
 
-#endif   /* BUFMGR_H */
+#endif							/* BUFMGR_H */

@@ -26,10 +26,8 @@ const WCHAR CWStringBase::m_empty_wcstr = GPOS_WSZ_LIT('\0');
 //		Creates a deep copy of the string
 //
 //---------------------------------------------------------------------------
-CWStringConst *CWStringBase::Copy
-	(
-	CMemoryPool *mp
-	) const
+CWStringConst *
+CWStringBase::Copy(CMemoryPool *mp) const
 {
 	return GPOS_NEW(mp) CWStringConst(mp, GetBuffer());
 }
@@ -50,18 +48,14 @@ CWStringBase::IsValid() const
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CWStringBase::operator == 
+//		CWStringBase::operator ==
 //
 //	@doc:
 //		Equality operator on strings
 //
 //---------------------------------------------------------------------------
 BOOL
-CWStringBase::operator ==
-	(
-	const CWStringBase &str
-	)
-	const
+CWStringBase::operator==(const CWStringBase &str) const
 {
 	return Equals(&str);
 }
@@ -91,11 +85,7 @@ CWStringBase::Length() const
 //
 //---------------------------------------------------------------------------
 BOOL
-CWStringBase::Equals
-	(
-	const CWStringBase *str
-	)
-	const
+CWStringBase::Equals(const CWStringBase *str) const
 {
 	GPOS_ASSERT(NULL != str);
 	return Equals(str->GetBuffer());
@@ -110,11 +100,7 @@ CWStringBase::Equals
 //
 //---------------------------------------------------------------------------
 BOOL
-CWStringBase::Equals
-	(
-	const WCHAR *w_str_buffer
-	)
-	const
+CWStringBase::Equals(const WCHAR *w_str_buffer) const
 {
 	GPOS_ASSERT(NULL != w_str_buffer);
 	ULONG length = GPOS_WSZ_LENGTH(w_str_buffer);
@@ -149,11 +135,7 @@ CWStringBase::IsEmpty() const
 //
 //---------------------------------------------------------------------------
 INT
-CWStringBase::Find
-	(
-	WCHAR wc
-	)
-	const
+CWStringBase::Find(WCHAR wc) const
 {
 	const WCHAR *w_str = GetBuffer();
 	const ULONG length = Length();
@@ -179,11 +161,7 @@ CWStringBase::Find
 //
 //---------------------------------------------------------------------------
 BOOL
-CWStringBase::HasEscapedCharAt
-	(
-	ULONG offset
-	)
-	const
+CWStringBase::HasEscapedCharAt(ULONG offset) const
 {
 	GPOS_ASSERT(!IsEmpty());
 	GPOS_ASSERT(Length() > offset);
@@ -226,10 +204,7 @@ CWStringBase::HasEscapedCharAt
 //
 //---------------------------------------------------------------------------
 ULONG
-CWStringBase::CountOccurrencesOf
-	(
-	const WCHAR wc
-	) const
+CWStringBase::CountOccurrencesOf(const WCHAR wc) const
 {
 	ULONG occurrences = 0;
 	ULONG length = Length();
@@ -245,4 +220,3 @@ CWStringBase::CountOccurrencesOf
 	return occurrences;
 }
 // EOF
-

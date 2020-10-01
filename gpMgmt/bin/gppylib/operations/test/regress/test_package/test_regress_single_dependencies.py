@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 
@@ -49,7 +49,7 @@ class SingleDependenciesTestCase(GppkgTestCase):
         self.install(update_gppkg_spec.get_filename())
     
         #Original gppkg with a lower gppkg, main and deps version
-        with self.assertRaisesRegexp(ExecutionError, "A newer version of %s is already installed" % self.alpha_spec.get_filename()):
+        with self.assertRaisesRegex(ExecutionError, "A newer version of %s is already installed" % self.alpha_spec.get_filename()):
             self.update(self.alpha_spec.get_filename())
 
     def test04_uninstall(self):

@@ -26,14 +26,9 @@ using namespace gpdxl;
 //		Constructor
 //
 //---------------------------------------------------------------------------
-CDXLPhysicalRandomMotion::CDXLPhysicalRandomMotion
-	(
-	CMemoryPool *mp,
-	BOOL is_duplicate_sensitive
-	)
-	:
-	CDXLPhysicalMotion(mp),
-	m_is_duplicate_sensitive(is_duplicate_sensitive)
+CDXLPhysicalRandomMotion::CDXLPhysicalRandomMotion(CMemoryPool *mp,
+												   BOOL is_duplicate_sensitive)
+	: CDXLPhysicalMotion(mp), m_is_duplicate_sensitive(is_duplicate_sensitive)
 {
 }
 
@@ -75,31 +70,30 @@ CDXLPhysicalRandomMotion::GetOpNameStr() const
 //
 //---------------------------------------------------------------------------
 void
-CDXLPhysicalRandomMotion::SerializeToDXL
-	(
-	CXMLSerializer *xml_serializer,
-	const CDXLNode *dxlnode
-	)
-	const
+CDXLPhysicalRandomMotion::SerializeToDXL(CXMLSerializer *xml_serializer,
+										 const CDXLNode *dxlnode) const
 {
 	const CWStringConst *element_name = GetOpNameStr();
-	
-	xml_serializer->OpenElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
-	
+
+	xml_serializer->OpenElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+
 	SerializeSegmentInfoToDXL(xml_serializer);
-	
+
 	if (m_is_duplicate_sensitive)
 	{
-		xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenDuplicateSensitive), true);
+		xml_serializer->AddAttribute(
+			CDXLTokens::GetDXLTokenStr(EdxltokenDuplicateSensitive), true);
 	}
 
 	// serialize properties
 	dxlnode->SerializePropertiesToDXL(xml_serializer);
-	
+
 	// serialize children
 	dxlnode->SerializeChildrenToDXL(xml_serializer);
-	
-	xml_serializer->CloseElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);		
+
+	xml_serializer->CloseElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 }
 
 #ifdef GPOS_DEBUG
@@ -108,15 +102,12 @@ CDXLPhysicalRandomMotion::SerializeToDXL
 //		CDXLPhysicalRandomMotion::AssertValid
 //
 //	@doc:
-//		Checks whether operator node is well-structured 
+//		Checks whether operator node is well-structured
 //
 //---------------------------------------------------------------------------
 void
-CDXLPhysicalRandomMotion::AssertValid
-	(
-	const CDXLNode *dxlnode,
-	BOOL validate_children
-	) const
+CDXLPhysicalRandomMotion::AssertValid(const CDXLNode *dxlnode,
+									  BOOL validate_children) const
 {
 	// assert proj list and filter are valid
 	CDXLPhysical::AssertValid(dxlnode, validate_children);
@@ -127,15 +118,17 @@ CDXLPhysicalRandomMotion::AssertValid
 	GPOS_ASSERT(0 < m_output_segids_array->Size());
 
 	GPOS_ASSERT(EdxlrandommIndexSentinel == dxlnode->Arity());
-	
+
 	CDXLNode *child_dxlnode = (*dxlnode)[EdxlrandommIndexChild];
-	GPOS_ASSERT(EdxloptypePhysical == child_dxlnode->GetOperator()->GetDXLOperatorType());
-	
+	GPOS_ASSERT(EdxloptypePhysical ==
+				child_dxlnode->GetOperator()->GetDXLOperatorType());
+
 	if (validate_children)
 	{
-		child_dxlnode->GetOperator()->AssertValid(child_dxlnode, validate_children);
+		child_dxlnode->GetOperator()->AssertValid(child_dxlnode,
+												  validate_children);
 	}
 }
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 // EOF

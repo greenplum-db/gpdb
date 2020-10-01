@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) Greenplum Inc 2008. All Rights Reserved. 
 #
@@ -20,10 +20,7 @@ import fcntl
 import os
 import select
 import time
-try:
-    import subprocess32 as subprocess
-except:
-    import subprocess
+import subprocess
 from gppylib import gplog
 
 
@@ -55,9 +52,11 @@ class Popen(subprocess.Popen):
 
         if self.stdin:
             if input:
+                if isinstance(input, str):
+                    input = str.encode(input)
                 self.stdin.write(input)
 
-            # ESCALATION-151 - always close stdin, even when no input from caller
+            # always close stdin, even when no input from caller
             self.stdin.close()
                 
         while not (terminated or self.cancelRequested):
@@ -95,11 +94,11 @@ class Popen(subprocess.Popen):
 
                 
     def _postprocess_outputs(self,output,error):
-        # All data exchanged.  Translate lists into strings.
+        # All data exchanged.  Translate lists into bytestrings
         if output is not None:
-            output = ''.join(output)
+            output = b''.join(output)
         if error is not None:
-            error = ''.join(error)
+            error = b''.join(error)
 
         # Translate newlines, if requested.  We cannot let the file
         # object do the translation: It is based on stdio, which is
@@ -119,7 +118,7 @@ class Popen(subprocess.Popen):
         readList.append(self.stderr)
         writeList = []
         errorList=[]
-        (rset,wset,eset) = self.__select(readList,writeList, errorList, timeout)
+        (rset,wset,eset) = select.select(readList,writeList, errorList, timeout)
 
         if self.stdout in rset:
             output.append(os.read(self.stdout.fileno(),8192))
@@ -135,27 +134,27 @@ class Popen(subprocess.Popen):
         
         # consume rest of output
         try:
-            (rset,wset,eset) = self.__select([self.stdout],[],[], timeout)
+            (rset,wset,eset) = select.select([self.stdout],[],[], timeout)
             while (self.stdout in rset):
                 buffer = os.read(self.stdout.fileno(), 8192)
-                if buffer == '':
+                if not buffer:
                     break
                 else:
                     output.append(buffer)
-                (rset,wset,eset) = self.__select([self.stdout],[],[], timeout)
+                (rset,wset,eset) = select.select([self.stdout],[],[], timeout)
         except OSError:
             # Pipe closed when we tried to read.  
             pass 
     
         try:
-            (rset,wset,eset) = self.__select([self.stderr],[],[], timeout)    
+            (rset,wset,eset) = select.select([self.stderr],[],[], timeout)    
             while (self.stderr in rset):
                 buffer = os.read(self.stderr.fileno(), 8192)
-                if buffer == '':
+                if not buffer:
                     break
                 else:
                     error.append(buffer)
-                (rset, wset, eset) = self.__select([self.stderr], [], [], timeout)
+                (rset, wset, eset) = select.select([self.stderr], [], [], timeout)
         except OSError:
             # Pipe closed when we tried to read.
             pass 
@@ -199,35 +198,3 @@ class Popen(subprocess.Popen):
 
         return terminated
 
-
-    def __select (self, iwtd, owtd, ewtd, timeout=None):
-        """This is a wrapper around select.select() that ignores signals. 
-        
-        If select.select raises a select.error exception and errno is an EINTR
-        error then it is ignored. 
-        
-        """        
-        if timeout is not None:
-            end_time = time.time() + timeout
-           
-            
-        while True:
-            try:
-                return select.select(iwtd, owtd, ewtd, timeout)
-            except select.error, e:
-                if e[0] == errno.EINTR or e[0] ==  errno.EAGAIN:
-                    # if we loop back we have to subtract the amount of time we already waited.
-                    if timeout is not None:
-                        timeout = end_time - time.time()
-                        if timeout < 0:
-                            return ([],[],[])
-                else: # something bad caused the select.error
-                    raise
-            except IOError, e:
-                if e[0] == errno.EINTR or e[0] ==  errno.EAGAIN:
-                    if timeout is not None:
-                        timeout = end_time - time.time()
-                        if timeout < 0:
-                            return ([],[],[])
-                else:
-                    raise

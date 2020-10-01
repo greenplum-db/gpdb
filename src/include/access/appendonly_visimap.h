@@ -25,8 +25,9 @@
 #include "access/appendonlytid.h"
 #include "access/appendonly_visimap_entry.h"
 #include "access/appendonly_visimap_store.h"
+#include "access/tableam.h"
 #include "storage/buffile.h"
-#include "utils/tqual.h"
+#include "utils/snapshot.h"
 
 /*
  * The uncompressed visibility entry bitmap should not be larger than 4 KB.
@@ -66,7 +67,7 @@ typedef struct AppendOnlyVisimapScan
 {
 	AppendOnlyVisimap visimap;
 
-	IndexScanDesc indexScan;
+	SysScanDesc indexScan;
 
 	bool		isFinished;
 } AppendOnlyVisimapScan;
@@ -143,7 +144,7 @@ void AppendOnlyVisimapDelete_Init(
 							 AppendOnlyVisimapDelete *visiMapDelete,
 							 AppendOnlyVisimap *visiMap);
 
-HTSU_Result AppendOnlyVisimapDelete_Hide(
+TM_Result AppendOnlyVisimapDelete_Hide(
 							 AppendOnlyVisimapDelete *visiMapDelete, AOTupleId *aoTupleId);
 
 void AppendOnlyVisimapDelete_Finish(

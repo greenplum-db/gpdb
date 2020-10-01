@@ -68,6 +68,13 @@ where content = -1 and role = 'm';
 -- by gpinitstandby needs access exclusive lock and the backend for
 -- this isolation spec is already holding an access share lock on
 -- gp_segment_configuration.
+-- NOTE: the select query should fail since the gang for master has been
+-- terminated by the dtx recovery process on standby during standby promote. We
+-- do not test the result of the select query; just expect it fail so that the
+-- next mpp query could recreate the gang and succeed.
+-- start_ignore
+select count(*) from committed_by_standby;
+-- end_ignore
 create table standby_config as (select hostname, datadir, port, role
 from gp_segment_configuration where content = -1) distributed by (hostname);
 
@@ -79,32 +86,21 @@ returns text as $$
     master = rv[1] # role = 'p'
     try:
         cmd = 'rm -rf %s.dtm_recovery && cp -R %s %s.dtm_recovery' % (standby['datadir'], standby['datadir'], standby['datadir'])
-	remove_output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
+        remove_output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
         cmd = 'gpinitstandby -ar -P %d' % master['port']
-	remove_output += subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
+        remove_output += subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
         cmd = 'export PGPORT=%d; gpinitstandby -a -s %s -S %s -P %d' % (master['port'], standby['hostname'], standby['datadir'], standby['port'])
         init_output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
         plpy.info(e.output)
-	raise
+        raise
 
     return remove_output + "\n" + init_output
-$$ language plpythonu;
+$$ language plpython3u;
 
 -- start_ignore
 select reinitialize_standby();
 -- end_ignore
 
 -- Sync state between master and standby must be restored at the end.
-do $$
-begin /* in func */
-  for i in 1..120 loop /* in func */
-    if (select count(*) = 1 from pg_stat_replication) then /* in func */
-      return; /* in func */
-    end if; /* in func */
-    perform pg_sleep(0.1); /* in func */
-  end loop; /* in func */
-end; /* in func */
-$$;
-
-select application_name, state from pg_stat_replication;
+select wait_until_standby_in_state('streaming');

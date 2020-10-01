@@ -2,7 +2,7 @@
 PostgreSQL documentation
 -->
 
-<refentry id="SQL-ALTERPROTOCOL">
+<refentry id="sql-alterprotocol">
  <indexterm zone="sql-alterprotocol">
   <primary>ALTER PROTOCOL</primary>
  </indexterm>

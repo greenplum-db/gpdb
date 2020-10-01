@@ -31,23 +31,18 @@ using namespace gpmd;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CXformSelect2PartialDynamicIndexGet::CXformSelect2PartialDynamicIndexGet
-	(
-	CMemoryPool *mp
-	)
-	:
-	// pattern
-	CXformExploration
-		(
-		GPOS_NEW(mp) CExpression
-				(
-				mp,
-				GPOS_NEW(mp) CLogicalSelect(mp),
-				GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CLogicalDynamicGet(mp)), // relational child
-				GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CPatternTree(mp))	// predicate tree
-				)
-		)
-{}
+CXformSelect2PartialDynamicIndexGet::CXformSelect2PartialDynamicIndexGet(
+	CMemoryPool *mp)
+	:  // pattern
+	  CXformExploration(GPOS_NEW(mp) CExpression(
+		  mp, GPOS_NEW(mp) CLogicalSelect(mp),
+		  GPOS_NEW(mp) CExpression(
+			  mp, GPOS_NEW(mp) CLogicalDynamicGet(mp)),	 // relational child
+		  GPOS_NEW(mp)
+			  CExpression(mp, GPOS_NEW(mp) CPatternTree(mp))  // predicate tree
+		  ))
+{
+}
 
 
 //---------------------------------------------------------------------------
@@ -59,11 +54,7 @@ CXformSelect2PartialDynamicIndexGet::CXformSelect2PartialDynamicIndexGet
 //
 //---------------------------------------------------------------------------
 CXform::EXformPromise
-CXformSelect2PartialDynamicIndexGet::Exfp
-	(
-	CExpressionHandle &exprhdl
-	)
-	const
+CXformSelect2PartialDynamicIndexGet::Exfp(CExpressionHandle &exprhdl) const
 {
 	if (exprhdl.DeriveHasSubquery(1))
 	{
@@ -82,13 +73,9 @@ CXformSelect2PartialDynamicIndexGet::Exfp
 //
 //---------------------------------------------------------------------------
 void
-CXformSelect2PartialDynamicIndexGet::Transform
-	(
-	CXformContext *pxfctxt,
-	CXformResult *pxfres,
-	CExpression *pexpr
-	)
-	const
+CXformSelect2PartialDynamicIndexGet::Transform(CXformContext *pxfctxt,
+											   CXformResult *pxfres,
+											   CExpression *pexpr) const
 {
 	GPOS_ASSERT(NULL != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
@@ -101,14 +88,15 @@ CXformSelect2PartialDynamicIndexGet::Transform
 	CExpression *pexprScalar = (*pexpr)[1];
 
 	// get the indexes on this relation
-	CLogicalDynamicGet *popGet = CLogicalDynamicGet::PopConvert(pexprRelational->Pop());
-	
+	CLogicalDynamicGet *popGet =
+		CLogicalDynamicGet::PopConvert(pexprRelational->Pop());
+
 	if (popGet->IsPartial())
 	{
 		// already a partial dynamic get; do not try to split further
 		return;
 	}
-	
+
 	CTableDescriptor *ptabdesc = popGet->Ptabdesc();
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
 	const IMDRelation *pmdrel = md_accessor->RetrieveRel(ptabdesc->MDId());
@@ -121,7 +109,8 @@ CXformSelect2PartialDynamicIndexGet::Transform
 	}
 
 	// array of expressions in the scalar expression
-	CExpressionArray *pdrgpexpr = CPredicateUtils::PdrgpexprConjuncts(mp, pexprScalar);
+	CExpressionArray *pdrgpexpr =
+		CPredicateUtils::PdrgpexprConjuncts(mp, pexprScalar);
 	GPOS_ASSERT(0 < pdrgpexpr->Size());
 
 	// derive the scalar and relational properties to build set of required columns
@@ -136,20 +125,13 @@ CXformSelect2PartialDynamicIndexGet::Transform
 	ppartcnstr->AddRef();
 
 	// find a candidate set of partial index combinations
-	SPartDynamicIndexGetInfoArrays *pdrgpdrgppartdig = CXformUtils::PdrgpdrgppartdigCandidates
-										(
-										mp,
-										md_accessor,
-										pdrgpexpr,
-										popGet->PdrgpdrgpcrPart(),
-										pmdrel,
-										ppartcnstr,
-										popGet->PdrgpcrOutput(),
-										pcrsReqd,
-										pcrsScalarExpr,
-										NULL // pcrsAcceptedOuterRefs
-										);
-	
+	SPartDynamicIndexGetInfoArrays *pdrgpdrgppartdig =
+		CXformUtils::PdrgpdrgppartdigCandidates(
+			mp, md_accessor, pdrgpexpr, popGet->PdrgpdrgpcrPart(), pmdrel,
+			ppartcnstr, popGet->PdrgpcrOutput(), pcrsReqd, pcrsScalarExpr,
+			NULL  // pcrsAcceptedOuterRefs
+		);
+
 	// construct alternative partial index scan plans
 	const ULONG ulCandidates = pdrgpdrgppartdig->Size();
 	for (ULONG ul = 0; ul < ulCandidates; ul++)
@@ -169,29 +151,25 @@ CXformSelect2PartialDynamicIndexGet::Transform
 //		CXformSelect2PartialDynamicIndexGet::CreatePartialIndexGetPlan
 //
 //	@doc:
-//		Create a plan as a union of the given partial index get candidates and 
+//		Create a plan as a union of the given partial index get candidates and
 //		possibly a dynamic table scan
 //
 //---------------------------------------------------------------------------
 void
-CXformSelect2PartialDynamicIndexGet::CreatePartialIndexGetPlan
-	(
-	CMemoryPool *mp,
-	CExpression *pexpr,
-	SPartDynamicIndexGetInfoArray *pdrgppartdig,
-	const IMDRelation *pmdrel,
-	CXformResult *pxfres
-	)
-	const
-{ 
+CXformSelect2PartialDynamicIndexGet::CreatePartialIndexGetPlan(
+	CMemoryPool *mp, CExpression *pexpr,
+	SPartDynamicIndexGetInfoArray *pdrgppartdig, const IMDRelation *pmdrel,
+	CXformResult *pxfres) const
+{
 	CExpression *pexprRelational = (*pexpr)[0];
 	CExpression *pexprScalar = (*pexpr)[1];
 
-	CLogicalDynamicGet *popGet = CLogicalDynamicGet::PopConvert(pexprRelational->Pop());
+	CLogicalDynamicGet *popGet =
+		CLogicalDynamicGet::PopConvert(pexprRelational->Pop());
 	CColRefArray *pdrgpcrGet = popGet->PdrgpcrOutput();
-	
+
 	const ULONG ulPartialIndexes = pdrgppartdig->Size();
-	
+
 	CColRef2dArray *pdrgpdrgpcrInput = GPOS_NEW(mp) CColRef2dArray(mp);
 	CExpressionArray *pdrgpexprInput = GPOS_NEW(mp) CExpressionArray(mp);
 	for (ULONG ul = 0; ul < ulPartialIndexes; ul++)
@@ -202,7 +180,7 @@ CXformSelect2PartialDynamicIndexGet::CreatePartialIndexGetPlan
 		CPartConstraint *ppartcnstr = ppartdig->m_part_constraint;
 		CExpressionArray *pdrgpexprIndex = ppartdig->m_pdrgpexprIndex;
 		CExpressionArray *pdrgpexprResidual = ppartdig->m_pdrgpexprResidual;
-		
+
 		CColRefArray *pdrgpcrNew = pdrgpcrGet;
 
 		if (0 < ul)
@@ -217,32 +195,18 @@ CXformSelect2PartialDynamicIndexGet::CreatePartialIndexGetPlan
 		CExpression *pexprDynamicScan = NULL;
 		if (NULL != pmdindex)
 		{
-			pexprDynamicScan = CXformUtils::PexprPartialDynamicIndexGet
-								(
-								mp,
-								popGet,
-								pexpr->Pop()->UlOpId(),
-								pdrgpexprIndex,
-								pdrgpexprResidual,
-								pdrgpcrNew,
-								pmdindex,
-								pmdrel,
-								ppartcnstr,
-								NULL, // pcrsAcceptedOuterRefs
-								NULL, // pdrgpcrOuter
-								NULL // pdrgpcrNewOuter
-								);
+			pexprDynamicScan = CXformUtils::PexprPartialDynamicIndexGet(
+				mp, popGet, pexpr->Pop()->UlOpId(), pdrgpexprIndex,
+				pdrgpexprResidual, pdrgpcrNew, pmdindex, pmdrel, ppartcnstr,
+				NULL,  // pcrsAcceptedOuterRefs
+				NULL,  // pdrgpcrOuter
+				NULL   // pdrgpcrNewOuter
+			);
 		}
 		else
 		{
-			pexprDynamicScan = PexprSelectOverDynamicGet
-								(
-								mp,
-								popGet,
-								pexprScalar,
-								pdrgpcrNew,
-								ppartcnstr
-								);
+			pexprDynamicScan = PexprSelectOverDynamicGet(
+				mp, popGet, pexprScalar, pdrgpcrNew, ppartcnstr);
 		}
 		GPOS_ASSERT(NULL != pexprDynamicScan);
 
@@ -260,12 +224,11 @@ CXformSelect2PartialDynamicIndexGet::CreatePartialIndexGetPlan
 			CColRefArray *pdrgpcrOuter = pdrgpcrGet;
 
 			// construct a new union all operator
-			pexprResult = GPOS_NEW(mp) CExpression
-							(
-							mp,
-							GPOS_NEW(mp) CLogicalUnionAll(mp, pdrgpcrOuter, pdrgpdrgpcrInput, popGet->ScanId()),
-							pdrgpexprInput
-							);
+			pexprResult = GPOS_NEW(mp) CExpression(
+				mp,
+				GPOS_NEW(mp) CLogicalUnionAll(
+					mp, pdrgpcrOuter, pdrgpdrgpcrInput, popGet->ScanId()),
+				pdrgpexprInput);
 		}
 		else
 		{
@@ -280,20 +243,19 @@ CXformSelect2PartialDynamicIndexGet::CreatePartialIndexGetPlan
 		// if scalar expression involves the partitioning key, keep a SELECT node
 		// on top for the purposes of partition selection
 		CColRef2dArray *pdrgpdrgpcrPartKeys = popGet->PdrgpdrgpcrPart();
-		CExpression *pexprPredOnPartKey = CPredicateUtils::PexprExtractPredicatesOnPartKeys
-											(
-											mp,
-											pexprScalar,
-											pdrgpdrgpcrPartKeys,
-											NULL, /*pcrsAllowedRefs*/
-											true /*fUseConstraints*/
-											);
-		
+		CExpression *pexprPredOnPartKey =
+			CPredicateUtils::PexprExtractPredicatesOnPartKeys(
+				mp, pexprScalar, pdrgpdrgpcrPartKeys, NULL, /*pcrsAllowedRefs*/
+				true										/*fUseConstraints*/
+			);
+
 		if (NULL != pexprPredOnPartKey)
 		{
-			pexprResult = GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CLogicalSelect(mp), pexprResult, pexprPredOnPartKey);
+			pexprResult =
+				GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CLogicalSelect(mp),
+										 pexprResult, pexprPredOnPartKey);
 		}
-		
+
 		pxfres->Add(pexprResult);
 
 		return;
@@ -313,33 +275,31 @@ CXformSelect2PartialDynamicIndexGet::CreatePartialIndexGetPlan
 //
 //---------------------------------------------------------------------------
 CExpression *
-CXformSelect2PartialDynamicIndexGet::PexprSelectOverDynamicGet
-	(
-	CMemoryPool *mp,
-	CLogicalDynamicGet *popGet,
-	CExpression *pexprScalar,
-	CColRefArray *pdrgpcrDGet,
-	CPartConstraint *ppartcnstr
-	)
+CXformSelect2PartialDynamicIndexGet::PexprSelectOverDynamicGet(
+	CMemoryPool *mp, CLogicalDynamicGet *popGet, CExpression *pexprScalar,
+	CColRefArray *pdrgpcrDGet, CPartConstraint *ppartcnstr)
 {
-	UlongToColRefMap *colref_mapping = CUtils::PhmulcrMapping(mp, popGet->PdrgpcrOutput(), pdrgpcrDGet);
+	UlongToColRefMap *colref_mapping =
+		CUtils::PhmulcrMapping(mp, popGet->PdrgpcrOutput(), pdrgpcrDGet);
 
 	// construct a partial dynamic get with the negated constraint
-	CPartConstraint *ppartcnstrPartialDynamicGet = ppartcnstr->PpartcnstrCopyWithRemappedColumns(mp, colref_mapping, true /*must_exist*/);
+	CPartConstraint *ppartcnstrPartialDynamicGet =
+		ppartcnstr->PpartcnstrCopyWithRemappedColumns(mp, colref_mapping,
+													  true /*must_exist*/);
 
 	CLogicalDynamicGet *popPartialDynamicGet =
-			(CLogicalDynamicGet *) popGet->PopCopyWithRemappedColumns(mp, colref_mapping, true /*must_exist*/);
+		(CLogicalDynamicGet *) popGet->PopCopyWithRemappedColumns(
+			mp, colref_mapping, true /*must_exist*/);
 	popPartialDynamicGet->SetPartConstraint(ppartcnstrPartialDynamicGet);
-	popPartialDynamicGet->SetSecondaryScanId(COptCtxt::PoctxtFromTLS()->UlPartIndexNextVal());
+	popPartialDynamicGet->SetSecondaryScanId(
+		COptCtxt::PoctxtFromTLS()->UlPartIndexNextVal());
 	popPartialDynamicGet->SetPartial();
 
-	CExpression *pexprSelect = GPOS_NEW(mp) CExpression
-								(
-								mp,
-								GPOS_NEW(mp) CLogicalSelect(mp),
-								GPOS_NEW(mp) CExpression(mp, popPartialDynamicGet),
-								pexprScalar->PexprCopyWithRemappedColumns(mp, colref_mapping, true /*must_exist*/)
-								);
+	CExpression *pexprSelect = GPOS_NEW(mp)
+		CExpression(mp, GPOS_NEW(mp) CLogicalSelect(mp),
+					GPOS_NEW(mp) CExpression(mp, popPartialDynamicGet),
+					pexprScalar->PexprCopyWithRemappedColumns(
+						mp, colref_mapping, true /*must_exist*/));
 
 	colref_mapping->Release();
 
@@ -347,4 +307,3 @@ CXformSelect2PartialDynamicIndexGet::PexprSelectOverDynamicGet
 }
 
 // EOF
-

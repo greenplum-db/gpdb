@@ -1,0 +1,5 @@
+# gp_exttable_fdw extension
+comment = 'External Table Foreign Data Wrapper for Greenplum'
+default_version = '1.0'
+module_pathname = '$libdir/gp_exttable_fdw'
+relocatable = true

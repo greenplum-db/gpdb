@@ -29,18 +29,13 @@ using namespace gpopt;
 //		ctor
 //
 //---------------------------------------------------------------------------
-CColRefSetIter::CColRefSetIter
-	(
-	const CColRefSet &bs
-	)
-	:
-	CBitSetIter(bs)
+CColRefSetIter::CColRefSetIter(const CColRefSet &bs) : CBitSetIter(bs)
 {
 	// get column factory from optimizer context object
 	m_pcf = COptCtxt::PoctxtFromTLS()->Pcf();
 	GPOS_ASSERT(NULL != m_pcf);
 }
-	
+
 
 //---------------------------------------------------------------------------
 //	@function:

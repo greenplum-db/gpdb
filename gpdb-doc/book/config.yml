@@ -84,4 +84,4 @@ template_variables:
   support_link: <a href="https://github.com/greenplum-db/gpdb/wiki">Wiki</a>
   support_url: https://greenplum.org
 
-broken_link_exclusions: iefix|arrowhead
+broken_link_exclusions: iefix|arrowhead|overview_pxf.html|pxf.html|pxf-cluster.html|pxf_kerbhdfs.html|cfginitstart_pxf.html|init_pxf.html|access_hdfs.html|intro_pxf.html|using_pxf.html|client_instcfg.html|install_java.html|pxfuserimpers.html|jdbc_cfg.html

@@ -9,7 +9,9 @@ include $(top_srcdir)/src/backend/mock.mk
 sharedsnapshot.t: \
 	$(MOCK_DIR)/backend/storage/ipc/shmem_mock.o \
 	$(MOCK_DIR)/backend/storage/lmgr/lwlock_mock.o \
-	$(MOCK_DIR)/backend/utils/misc/faultinjector_mock.o
+	$(MOCK_DIR)/backend/utils/misc/faultinjector_mock.o \
+	$(MOCK_DIR)/backend/access/hash/hash_mock.o\
+	$(MOCK_DIR)/backend/utils/fmgr/fmgr_mock.o
 
 .PHONY:
 %-check: %.t

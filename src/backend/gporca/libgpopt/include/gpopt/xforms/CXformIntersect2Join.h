@@ -16,73 +16,61 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CXformIntersect2Join
-	//
-	//	@doc:
-	//		Class to transform of Intersect into a Join
-	//
-	//---------------------------------------------------------------------------
-	class CXformIntersect2Join : public CXformExploration
+//---------------------------------------------------------------------------
+//	@class:
+//		CXformIntersect2Join
+//
+//	@doc:
+//		Class to transform of Intersect into a Join
+//
+//---------------------------------------------------------------------------
+class CXformIntersect2Join : public CXformExploration
+{
+private:
+	// private copy ctor
+	CXformIntersect2Join(const CXformIntersect2Join &);
+
+public:
+	// ctor
+	explicit CXformIntersect2Join(CMemoryPool *mp);
+
+	// dtor
+	virtual ~CXformIntersect2Join()
 	{
+	}
 
-		private:
+	// ident accessors
+	virtual EXformId
+	Exfid() const
+	{
+		return ExfIntersect2Join;
+	}
 
-			// private copy ctor
-			CXformIntersect2Join(const CXformIntersect2Join &);
+	// return a string for xform name
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CXformIntersect2Join";
+	}
 
-		public:
+	// compute xform promise for a given expression handle
+	virtual EXformPromise
+	Exfp(CExpressionHandle &  // exprhdl
+	) const
+	{
+		return CXform::ExfpHigh;
+	}
 
-			// ctor
-			explicit
-			CXformIntersect2Join(CMemoryPool *mp);
+	// actual transform
+	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
+				   CExpression *pexpr) const;
 
-			// dtor
-			virtual
-			~CXformIntersect2Join()
-			{}
+};	// class CXformIntersect2Join
 
-			// ident accessors
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfIntersect2Join;
-			}
+}  // namespace gpopt
 
-			// return a string for xform name
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CXformIntersect2Join";
-			}
-
-			// compute xform promise for a given expression handle
-			virtual
-			EXformPromise Exfp
-				(
-				CExpressionHandle & // exprhdl
-				)
-				const
-			{
-				return CXform::ExfpHigh;
-			}
-
-			// actual transform
-			void Transform
-					(
-					CXformContext *pxfctxt,
-					CXformResult *pxfres,
-					CExpression *pexpr
-					)
-			const;
-
-	}; // class CXformIntersect2Join
-
-}
-
-#endif // !GPOPT_CXformIntersect2Join_H
+#endif	// !GPOPT_CXformIntersect2Join_H
 
 // EOF

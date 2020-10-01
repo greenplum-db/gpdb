@@ -22,7 +22,6 @@
 #include "utils/guc.h"			/* log_min_messages */
 
 #include "cdb/cdbconn.h"		/* SegmentDatabaseDescriptor */
-#include "cdb/cdbpartition.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbsreh.h"
 #include "cdb/cdbdispatchresult.h"
@@ -679,33 +678,6 @@ cdbdisp_sumRejectedRows(CdbDispatchResults *results)
 	if (totalRejected > 0)
 		ReportSrehResults(NULL, totalRejected);
 
-}
-
-/*
- * Find the max of the lastOid values returned from the QEs
- */
-Oid
-cdbdisp_maxLastOid(CdbDispatchResults *results, int sliceIndex)
-{
-	CdbDispatchResult *dispatchResult;
-	CdbDispatchResult *resultEnd = cdbdisp_resultEnd(results, sliceIndex);
-	PGresult   *pgresult;
-	Oid oid = InvalidOid;
-
-	for (dispatchResult = cdbdisp_resultBegin(results, sliceIndex);
-		 dispatchResult < resultEnd; ++dispatchResult)
-	{
-		pgresult = cdbdisp_getPGresult(dispatchResult, dispatchResult->okindex);
-		if (pgresult && !dispatchResult->errcode)
-		{
-			Oid			tmpoid = PQoidValue(pgresult);
-
-			if (tmpoid > oid)
-				oid = tmpoid;
-		}
-	}
-
-	return oid;
 }
 
 /*

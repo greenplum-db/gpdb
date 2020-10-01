@@ -217,6 +217,30 @@ WHERE	attcollation != 0 AND
 ------+--------------
 (0 rows)
 
+SELECT	ctid, roleid
+FROM	pg_catalog.pg_auth_members fk
+WHERE	roleid != 0 AND
+	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_authid pk WHERE pk.oid = fk.roleid);
+ ctid | roleid 
+------+--------
+(0 rows)
+
+SELECT	ctid, member
+FROM	pg_catalog.pg_auth_members fk
+WHERE	member != 0 AND
+	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_authid pk WHERE pk.oid = fk.member);
+ ctid | member 
+------+--------
+(0 rows)
+
+SELECT	ctid, grantor
+FROM	pg_catalog.pg_auth_members fk
+WHERE	grantor != 0 AND
+	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_authid pk WHERE pk.oid = fk.grantor);
+ ctid | grantor 
+------+---------
+(0 rows)
+
 SELECT	ctid, castsource
 FROM	pg_catalog.pg_cast fk
 WHERE	castsource != 0 AND
@@ -343,6 +367,14 @@ WHERE	conindid != 0 AND
 	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_class pk WHERE pk.oid = fk.conindid);
  ctid | conindid 
 ------+----------
+(0 rows)
+
+SELECT	ctid, conparentid
+FROM	pg_catalog.pg_constraint fk
+WHERE	conparentid != 0 AND
+	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_constraint pk WHERE pk.oid = fk.conparentid);
+ ctid | conparentid 
+------+-------------
 (0 rows)
 
 SELECT	ctid, confrelid
@@ -721,6 +753,22 @@ WHERE	opfowner != 0 AND
 ------+----------
 (0 rows)
 
+SELECT	ctid, partrelid
+FROM	pg_catalog.pg_partitioned_table fk
+WHERE	partrelid != 0 AND
+	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_class pk WHERE pk.oid = fk.partrelid);
+ ctid | partrelid 
+------+-----------
+(0 rows)
+
+SELECT	ctid, partdefid
+FROM	pg_catalog.pg_partitioned_table fk
+WHERE	partdefid != 0 AND
+	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_class pk WHERE pk.oid = fk.partdefid);
+ ctid | partdefid 
+------+-----------
+(0 rows)
+
 SELECT	ctid, polrelid
 FROM	pg_catalog.pg_policy fk
 WHERE	polrelid != 0 AND
@@ -761,12 +809,12 @@ WHERE	provariadic != 0 AND
 ------+-------------
 (0 rows)
 
-SELECT	ctid, protransform
+SELECT	ctid, prosupport
 FROM	pg_catalog.pg_proc fk
-WHERE	protransform != 0 AND
-	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_proc pk WHERE pk.oid = fk.protransform);
- ctid | protransform 
-------+--------------
+WHERE	prosupport != 0 AND
+	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_proc pk WHERE pk.oid = fk.prosupport);
+ ctid | prosupport 
+------+------------
 (0 rows)
 
 SELECT	ctid, prorettype
@@ -833,6 +881,22 @@ WHERE	ev_class != 0 AND
 ------+----------
 (0 rows)
 
+SELECT	ctid, seqrelid
+FROM	pg_catalog.pg_sequence fk
+WHERE	seqrelid != 0 AND
+	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_class pk WHERE pk.oid = fk.seqrelid);
+ ctid | seqrelid 
+------+----------
+(0 rows)
+
+SELECT	ctid, seqtypid
+FROM	pg_catalog.pg_sequence fk
+WHERE	seqtypid != 0 AND
+	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_type pk WHERE pk.oid = fk.seqtypid);
+ ctid | seqtypid 
+------+----------
+(0 rows)
+
 SELECT	ctid, refclassid
 FROM	pg_catalog.pg_shdepend fk
 WHERE	refclassid != 0 AND
@@ -894,6 +958,38 @@ FROM	pg_catalog.pg_statistic fk
 WHERE	staop5 != 0 AND
 	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_operator pk WHERE pk.oid = fk.staop5);
  ctid | staop5 
+------+--------
+(0 rows)
+
+SELECT	ctid, stxrelid
+FROM	pg_catalog.pg_statistic_ext fk
+WHERE	stxrelid != 0 AND
+	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_class pk WHERE pk.oid = fk.stxrelid);
+ ctid | stxrelid 
+------+----------
+(0 rows)
+
+SELECT	ctid, stxnamespace
+FROM	pg_catalog.pg_statistic_ext fk
+WHERE	stxnamespace != 0 AND
+	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_namespace pk WHERE pk.oid = fk.stxnamespace);
+ ctid | stxnamespace 
+------+--------------
+(0 rows)
+
+SELECT	ctid, stxowner
+FROM	pg_catalog.pg_statistic_ext fk
+WHERE	stxowner != 0 AND
+	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_authid pk WHERE pk.oid = fk.stxowner);
+ ctid | stxowner 
+------+----------
+(0 rows)
+
+SELECT	ctid, stxoid
+FROM	pg_catalog.pg_statistic_ext_data fk
+WHERE	stxoid != 0 AND
+	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_statistic_ext pk WHERE pk.oid = fk.stxoid);
+ ctid | stxoid 
 ------+--------
 (0 rows)
 

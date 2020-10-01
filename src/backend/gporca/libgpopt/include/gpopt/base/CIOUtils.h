@@ -15,29 +15,26 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CIOUtils
-	//
-	//	@doc:
-	//		Optimizer I/O utility functions
-	//
-	//---------------------------------------------------------------------------
-	class CIOUtils
-	{
+//---------------------------------------------------------------------------
+//	@class:
+//		CIOUtils
+//
+//	@doc:
+//		Optimizer I/O utility functions
+//
+//---------------------------------------------------------------------------
+class CIOUtils
+{
+public:
+	// dump given string to output file
+	static void Dump(CHAR *file_name, CHAR *sz);
 
-		public:
-
-			// dump given string to output file
-			static
-			void Dump(CHAR *file_name, CHAR *sz);
-
-	}; // class CIOUtils
-}
+};	// class CIOUtils
+}  // namespace gpopt
 
 
-#endif // !GPOPT_CIOUtils_H
+#endif	// !GPOPT_CIOUtils_H
 
 // EOF

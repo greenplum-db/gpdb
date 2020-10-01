@@ -59,6 +59,9 @@
             <xref href="#topic22" type="topic" format="dita"/>
           </li>
       <li>
+        <xref href="#moverg" type="topic" format="dita"/>
+      </li>
+      <li>
         <xref href="#topic777999" type="topic" format="dita"/>
       </li>
     </ul>
@@ -1056,6 +1059,52 @@ gpstart
         </note>
       </body>
     </topic>
+  </topic>
+  <topic id="moverg" xml:lang="en">
+    <title>Moving a Query to a Different Resource Group</title>
+    <body>
+      <p>A user with Greenplum Database superuser privileges can run the
+        <codeph>gp_toolkit.pg_resgroup_move_query()</codeph> function to move a
+        running query from one resource group to another, without stopping the
+        query. Use this function to expedite a long-running query by moving it to
+        a resource group with a higher resource allotment or availability.</p>
+      <note>You can move only an active or running query to a new resource group.
+        You cannot move a queued or pending query that is in an idle state due to
+        concurrency or memory limits.</note>
+      <p><codeph>pg_resgroup_move_query()</codeph> requires the process id
+        (pid) of the running query, as well as the name of the resource group
+        to which you want to move the query. The signature of the function follows:</p>
+      <codeblock>pg_resgroup_move_query( pid int4, group_name text );</codeblock>
+      <p>You can obtain the pid of a running query from the
+        <codeph>pg_stat_activity</codeph> system view as described in
+        <xref href="#topic27" type="topic" format="dita"/>. Use the
+        <codeph>gp_toolkit.gp_resgroup_status</codeph> view to list the name, id,
+        and status of each resource group.</p>
+      <p>When you invoke <codeph>pg_resgroup_move_query()</codeph>, the query is
+        subject to the limits configured for the destination resource group:</p>
+      <ul>
+        <li>If the group has already reached its concurrent task limit,
+          Greenplum Database queues the query until a slot opens.</li>
+        <li>If the destination resource group does not have enough memory
+          available to service the query's current memory requirements,
+          Greenplum Database returns the error: 
+          <codeph>group &lt;group_name> doesn't have enough memory ...</codeph>.
+          In this situation, you may choose to increase the group shared memory
+          allotted to the destination resource group, or perhaps wait a period
+          of time for running queries to complete and then invoke the function
+          again.</li>
+      </ul>
+      <p>After Greenplum moves the query, there is no way to guarantee that a
+        query currently running in the destination resource group does not
+        exceed the group memory quota. In this situation, one or more running
+        queries in the destination group may fail, including the moved query.
+        Reserve enough resource group global shared memory to minimize the
+        potential for this scenario to occur.</p>
+      <p><codeph>pg_resgroup_move_query()</codeph> moves only the specified
+        query to the destination resource group. Greenplum Database assigns
+        subsequent queries that you submit in the session to the original
+        resource group.</p>
+    </body>
   </topic>
   <topic id="topic777999" xml:lang="en">
     <title>Resource Group Frequently Asked Questions</title>

@@ -3,7 +3,7 @@
  * globals.c
  *	  global variable declarations
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -18,6 +18,7 @@
  */
 #include "postgres.h"
 
+#include "common/file_perm.h"
 #include "libpq/libpq-be.h"
 #include "libpq/pqcomm.h"
 #include "miscadmin.h"
@@ -27,13 +28,13 @@
 
 ProtocolVersion FrontendProtocol;
 
-volatile bool InterruptPending = false;
-volatile bool QueryCancelPending = false;
-volatile bool QueryCancelCleanup = false;
-volatile bool QueryFinishPending = false;
-volatile bool ProcDiePending = false;
-volatile bool ClientConnectionLost = false;
-volatile bool IdleInTransactionSessionTimeoutPending = false;
+volatile sig_atomic_t InterruptPending = false;
+volatile sig_atomic_t QueryCancelPending = false;
+volatile sig_atomic_t QueryCancelCleanup = false;
+volatile sig_atomic_t QueryFinishPending = false;
+volatile sig_atomic_t ProcDiePending = false;
+volatile sig_atomic_t ClientConnectionLost = false;
+volatile sig_atomic_t IdleInTransactionSessionTimeoutPending = false;
 volatile sig_atomic_t ConfigReloadPending = false;
 /*
  * GPDB: Make these signed integers (instead of uint32) to detect garbage
@@ -45,8 +46,9 @@ volatile int32 CritSectionCount = 0;
 
 int			MyProcPid;
 pg_time_t	MyStartTime;
+TimestampTz MyStartTimestamp;
 struct Port *MyProcPort;
-long		MyCancelKey;
+int32		MyCancelKey;
 int			MyPMChildSlot;
 
 /*
@@ -66,13 +68,19 @@ struct Latch *MyLatch;
  */
 char	   *DataDir = NULL;
 
+/*
+ * Mode of the data directory.  The default is 0700 but it may be changed in
+ * checkDataDir() to 0750 if the data directory actually has that mode.
+ */
+int			data_directory_mode = PG_DIR_MODE_OWNER;
+
 char		OutputFileName[MAXPGPATH];	/* debugging output file */
 
 char		my_exec_path[MAXPGPATH];	/* full path to my executable */
-char		pkglib_path[MAXPGPATH];		/* full path to lib directory */
+char		pkglib_path[MAXPGPATH]; /* full path to lib directory */
 
 #ifdef EXEC_BACKEND
-char		postgres_exec_path[MAXPGPATH];		/* full path to backend */
+char		postgres_exec_path[MAXPGPATH];	/* full path to backend */
 
 /* note: currently this is not valid in backend processes */
 #endif
@@ -134,7 +142,7 @@ int			max_statement_mem = 2048000;
  */
 int			gp_vmem_limit_per_query = 0;
 int			maintenance_work_mem = 65536;
-int			replacement_sort_tuples = 150000;
+int			max_parallel_maintenance_workers = 2;
 
 /*
  * Primary determinants of sizes of shared-memory structures.
@@ -145,20 +153,23 @@ int			replacement_sort_tuples = 150000;
 int			NBuffers = 4096;
 int			MaxConnections = 90;
 int			max_worker_processes = 8 + MaxPMAuxProc;
+int			max_parallel_workers = 8;
 int			MaxBackends = 0;
 
-int			VacuumCostPageHit = 1;		/* GUC parameters for vacuum */
+int			VacuumCostPageHit = 1;	/* GUC parameters for vacuum */
 int			VacuumCostPageMiss = 10;
 int			VacuumCostPageDirty = 20;
 int			VacuumCostLimit = 200;
-int			VacuumCostDelay = 0;
+double		VacuumCostDelay = 0;
 
 int			VacuumPageHit = 0;
 int			VacuumPageMiss = 0;
 int			VacuumPageDirty = 0;
 
-int			VacuumCostBalance = 0;		/* working state for vacuum */
+int			VacuumCostBalance = 0;	/* working state for vacuum */
 bool		VacuumCostActive = false;
+
+double		vacuum_cleanup_index_scale_factor;
 
 /* for pljava */
 char*	pljava_vmoptions = NULL;

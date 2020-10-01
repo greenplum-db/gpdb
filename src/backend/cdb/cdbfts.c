@@ -44,7 +44,7 @@
 volatile FtsProbeInfo *ftsProbeInfo = NULL;	/* Probe process updates this structure */
 static LWLockId ftsControlLock;
 
-extern volatile bool *pm_launch_walreceiver;
+extern volatile pid_t *shmFtsProbePID;
 
 /*
  * get fts share memory size
@@ -53,12 +53,6 @@ int
 FtsShmemSize(void)
 {
 	RequestNamedLWLockTranche("ftsControlLock", 1);
-
-	/*
-	 * this shared memory block doesn't even need to *exist* on the QEs!
-	 */
-	if ((Gp_role != GP_ROLE_DISPATCH) && (Gp_role != GP_ROLE_UTILITY))
-		return 0;
 
 	return MAXALIGN(sizeof(FtsControlBlock));
 }
@@ -69,14 +63,15 @@ FtsShmemInit(void)
 	bool		found;
 	FtsControlBlock *shared;
 
-	shared = (FtsControlBlock *) ShmemInitStruct("Fault Tolerance manager", FtsShmemSize(), &found);
+	shared = (FtsControlBlock *) ShmemInitStruct("Fault Tolerance manager", sizeof(FtsControlBlock), &found);
 	if (!shared)
 		elog(FATAL, "FTS: could not initialize fault tolerance manager share memory");
 
 	/* Initialize locks and shared memory area */
 	ftsControlLock = shared->ControlLock;
 	ftsProbeInfo = &shared->fts_probe_info;
-	pm_launch_walreceiver = &shared->pm_launch_walreceiver;
+	shmFtsProbePID = &shared->fts_probe_pid;
+	*shmFtsProbePID = 0;
 
 	if (!IsUnderPostmaster)
 	{
@@ -84,7 +79,6 @@ FtsShmemInit(void)
 		ftsControlLock = shared->ControlLock;
 
 		shared->fts_probe_info.status_version = 0;
-		shared->pm_launch_walreceiver = false;
 	}
 }
 

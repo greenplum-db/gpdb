@@ -3,7 +3,7 @@
  * pl_handler.c		- Handler for the PL/pgSQL
  *			  procedural language
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -13,7 +13,7 @@
  *-------------------------------------------------------------------------
  */
 
-#include "plpgsql.h"
+#include "postgres.h"
 
 #include "access/htup_details.h"
 #include "catalog/pg_proc.h"
@@ -24,6 +24,9 @@
 #include "utils/guc.h"
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
+#include "utils/varlena.h"
+
+#include "plpgsql.h"
 
 #include "cdb/cdbvars.h"
 
@@ -91,6 +94,10 @@ plpgsql_extra_checks_check_hook(char **newvalue, void **extra, GucSource source)
 
 			if (pg_strcasecmp(tok, "shadowed_variables") == 0)
 				extrachecks |= PLPGSQL_XCHECK_SHADOWVAR;
+			else if (pg_strcasecmp(tok, "too_many_rows") == 0)
+				extrachecks |= PLPGSQL_XCHECK_TOOMANYROWS;
+			else if (pg_strcasecmp(tok, "strict_multi_assignment") == 0)
+				extrachecks |= PLPGSQL_XCHECK_STRICTMULTIASSIGNMENT;
 			else if (pg_strcasecmp(tok, "all") == 0 || pg_strcasecmp(tok, "none") == 0)
 			{
 				GUC_check_errdetail("Key word \"%s\" cannot be combined with other key words.", tok);
@@ -173,7 +180,7 @@ _PG_init(void)
 							 NULL, NULL, NULL);
 
 	DefineCustomBoolVariable("plpgsql.check_asserts",
-				  gettext_noop("Perform checks given in ASSERT statements."),
+							 gettext_noop("Perform checks given in ASSERT statements."),
 							 NULL,
 							 &plpgsql_check_asserts,
 							 true,
@@ -224,15 +231,20 @@ PG_FUNCTION_INFO_V1(plpgsql_call_handler);
 Datum
 plpgsql_call_handler(PG_FUNCTION_ARGS)
 {
+	bool		nonatomic;
 	PLpgSQL_function *func;
 	PLpgSQL_execstate *save_cur_estate;
 	Datum		retval;
 	int			rc;
 
+	nonatomic = fcinfo->context &&
+		IsA(fcinfo->context, CallContext) &&
+		!castNode(CallContext, fcinfo->context)->atomic;
+
 	/*
 	 * Connect to SPI manager
 	 */
-	if ((rc = SPI_connect()) != SPI_OK_CONNECT)
+	if ((rc = SPI_connect_ext(nonatomic ? SPI_OPT_NONATOMIC : 0)) != SPI_OK_CONNECT)
 		elog(ERROR, "SPI_connect failed: %s", SPI_result_code_string(rc));
 
 	/* Find or compile the function */
@@ -252,7 +264,7 @@ plpgsql_call_handler(PG_FUNCTION_ARGS)
 		 */
 		if (CALLED_AS_TRIGGER(fcinfo))
 			retval = PointerGetDatum(plpgsql_exec_trigger(func,
-										   (TriggerData *) fcinfo->context));
+														  (TriggerData *) fcinfo->context));
 		else if (CALLED_AS_EVENT_TRIGGER(fcinfo))
 		{
 			plpgsql_exec_event_trigger(func,
@@ -260,7 +272,7 @@ plpgsql_call_handler(PG_FUNCTION_ARGS)
 			retval = (Datum) 0;
 		}
 		else
-			retval = plpgsql_exec_function(func, fcinfo, NULL);
+			retval = plpgsql_exec_function(func, fcinfo, NULL, !nonatomic);
 	}
 	PG_CATCH();
 	{
@@ -295,20 +307,18 @@ PG_FUNCTION_INFO_V1(plpgsql_inline_handler);
 Datum
 plpgsql_inline_handler(PG_FUNCTION_ARGS)
 {
-	InlineCodeBlock *codeblock = (InlineCodeBlock *) DatumGetPointer(PG_GETARG_DATUM(0));
+	LOCAL_FCINFO(fake_fcinfo, 0);
+	InlineCodeBlock *codeblock = castNode(InlineCodeBlock, DatumGetPointer(PG_GETARG_DATUM(0)));
 	PLpgSQL_function *func;
-	FunctionCallInfoData fake_fcinfo;
 	FmgrInfo	flinfo;
 	EState	   *simple_eval_estate;
 	Datum		retval;
 	int			rc;
 
-	Assert(IsA(codeblock, InlineCodeBlock));
-
 	/*
 	 * Connect to SPI manager
 	 */
-	if ((rc = SPI_connect()) != SPI_OK_CONNECT)
+	if ((rc = SPI_connect_ext(codeblock->atomic ? 0 : SPI_OPT_NONATOMIC)) != SPI_OK_CONNECT)
 		elog(ERROR, "SPI_connect failed: %s", SPI_result_code_string(rc));
 
 	/* Compile the anonymous code block */
@@ -322,9 +332,9 @@ plpgsql_inline_handler(PG_FUNCTION_ARGS)
 	 * plpgsql_exec_function().  In particular note that this sets things up
 	 * with no arguments passed.
 	 */
-	MemSet(&fake_fcinfo, 0, sizeof(fake_fcinfo));
+	MemSet(fake_fcinfo, 0, SizeForFunctionCallInfo(0));
 	MemSet(&flinfo, 0, sizeof(flinfo));
-	fake_fcinfo.flinfo = &flinfo;
+	fake_fcinfo->flinfo = &flinfo;
 	flinfo.fn_oid = InvalidOid;
 	flinfo.fn_mcxt = CurrentMemoryContext;
 
@@ -334,7 +344,7 @@ plpgsql_inline_handler(PG_FUNCTION_ARGS)
 	/* And run the function */
 	PG_TRY();
 	{
-		retval = plpgsql_exec_function(func, &fake_fcinfo, simple_eval_estate);
+		retval = plpgsql_exec_function(func, fake_fcinfo, simple_eval_estate, codeblock->atomic);
 	}
 	PG_CATCH();
 	{
@@ -445,14 +455,15 @@ plpgsql_validator(PG_FUNCTION_ARGS)
 	}
 
 	/* Disallow pseudotypes in arguments (either IN or OUT) */
-	/* except for polymorphic */
+	/* except for RECORD and polymorphic */
 	numargs = get_func_arg_info(tuple,
 								&argtypes, &argnames, &argmodes);
 	for (i = 0; i < numargs; i++)
 	{
 		if (get_typtype(argtypes[i]) == TYPTYPE_PSEUDO)
 		{
-			if (!IsPolymorphicType(argtypes[i]))
+			if (argtypes[i] != RECORDOID &&
+				!IsPolymorphicType(argtypes[i]))
 				ereport(ERROR,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 						 errmsg("PL/pgSQL functions cannot accept type %s",
@@ -463,7 +474,7 @@ plpgsql_validator(PG_FUNCTION_ARGS)
 	/* Postpone body checks if !check_function_bodies */
 	if (check_function_bodies)
 	{
-		FunctionCallInfoData fake_fcinfo;
+		LOCAL_FCINFO(fake_fcinfo, 0);
 		FmgrInfo	flinfo;
 		int			rc;
 		TriggerData trigdata;
@@ -479,26 +490,26 @@ plpgsql_validator(PG_FUNCTION_ARGS)
 		 * Set up a fake fcinfo with just enough info to satisfy
 		 * plpgsql_compile().
 		 */
-		MemSet(&fake_fcinfo, 0, sizeof(fake_fcinfo));
+		MemSet(fake_fcinfo, 0, SizeForFunctionCallInfo(0));
 		MemSet(&flinfo, 0, sizeof(flinfo));
-		fake_fcinfo.flinfo = &flinfo;
+		fake_fcinfo->flinfo = &flinfo;
 		flinfo.fn_oid = funcoid;
 		flinfo.fn_mcxt = CurrentMemoryContext;
 		if (is_dml_trigger)
 		{
 			MemSet(&trigdata, 0, sizeof(trigdata));
 			trigdata.type = T_TriggerData;
-			fake_fcinfo.context = (Node *) &trigdata;
+			fake_fcinfo->context = (Node *) &trigdata;
 		}
 		else if (is_event_trigger)
 		{
 			MemSet(&etrigdata, 0, sizeof(etrigdata));
 			etrigdata.type = T_EventTriggerData;
-			fake_fcinfo.context = (Node *) &etrigdata;
+			fake_fcinfo->context = (Node *) &etrigdata;
 		}
 
 		/* Test-compile the function */
-		plpgsql_compile(&fake_fcinfo, true);
+		plpgsql_compile(fake_fcinfo, true);
 
 		/*
 		 * Disconnect from SPI manager

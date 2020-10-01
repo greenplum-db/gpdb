@@ -49,7 +49,7 @@ GRANT SELECT ON gp_instrument_shmem_detail TO public;
 
 SET OPTIMIZER=OFF;
 
-SELECT count(*) FROM pg_stat_activity;
+SELECT count(*) FROM pg_stat_activity where backend_type = 'client backend';
 
 -- Expected result is 1 row, means only current query in instrument slots,
 -- If more than one row returned, means previous test has leaked slots.

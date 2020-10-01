@@ -15,16 +15,23 @@
 
 
 /*
- * conversion to pg_wchar is done by "table driven."
- * to add an encoding support, define mb2wchar_with_len(), mblen(), dsplen()
- * for the particular encoding. Note that if the encoding is only
- * supported in the client, you don't need to define
- * mb2wchar_with_len() function (SJIS is the case).
+ * Operations on multi-byte encodings are driven by a table of helper
+ * functions.
+ *
+ * To add an encoding support, define mblen(), dsplen() and verifier() for
+ * the encoding.  For server-encodings, also define mb2wchar() and wchar2mb()
+ * conversion functions.
  *
  * These functions generally assume that their input is validly formed.
  * The "verifier" functions, further down in the file, have to be more
- * paranoid.  We expect that mblen() does not need to examine more than
- * the first byte of the character to discover the correct length.
+ * paranoid.
+ *
+ * We expect that mblen() does not need to examine more than the first byte
+ * of the character to discover the correct length.  GB18030 is an exception
+ * to that rule, though, as it also looks at second byte.  But even that
+ * behaves in a predictable way, if you only pass the first byte: it will
+ * treat 4-byte encoded characters as two 2-byte encoded characters, which is
+ * good enough for all current uses.
  *
  * Note: for the display output of psql to work properly, the return values
  * of the dsplen functions must conform to the Unicode standard. In particular
@@ -85,20 +92,20 @@ pg_euc2wchar_with_len(const unsigned char *from, pg_wchar *to, int len)
 			*to = (SS2 << 8) | *from++;
 			len -= 2;
 		}
-		else if (*from == SS3 && len >= 3)		/* JIS X 0212 KANJI */
+		else if (*from == SS3 && len >= 3)	/* JIS X 0212 KANJI */
 		{
 			from++;
 			*to = (SS3 << 16) | (*from++ << 8);
 			*to |= *from++;
 			len -= 3;
 		}
-		else if (IS_HIGHBIT_SET(*from) && len >= 2)		/* JIS X 0208 KANJI */
+		else if (IS_HIGHBIT_SET(*from) && len >= 2) /* JIS X 0208 KANJI */
 		{
 			*to = *from++ << 8;
 			*to |= *from++;
 			len -= 2;
 		}
-		else	/* must be ASCII */
+		else					/* must be ASCII */
 		{
 			*to = *from++;
 			len--;
@@ -212,14 +219,14 @@ pg_euccn2wchar_with_len(const unsigned char *from, pg_wchar *to, int len)
 			*to |= *from++;
 			len -= 3;
 		}
-		else if (*from == SS3 && len >= 3)		/* code set 3 (unused ?) */
+		else if (*from == SS3 && len >= 3)	/* code set 3 (unused ?) */
 		{
 			from++;
 			*to = (SS3 << 16) | (*from++ << 8);
 			*to |= *from++;
 			len -= 3;
 		}
-		else if (IS_HIGHBIT_SET(*from) && len >= 2)		/* code set 1 */
+		else if (IS_HIGHBIT_SET(*from) && len >= 2) /* code set 1 */
 		{
 			*to = *from++ << 8;
 			*to |= *from++;
@@ -280,14 +287,14 @@ pg_euctw2wchar_with_len(const unsigned char *from, pg_wchar *to, int len)
 			*to |= *from++;
 			len -= 4;
 		}
-		else if (*from == SS3 && len >= 3)		/* code set 3 (unused?) */
+		else if (*from == SS3 && len >= 3)	/* code set 3 (unused?) */
 		{
 			from++;
 			*to = (SS3 << 16) | (*from++ << 8);
 			*to |= *from++;
 			len -= 3;
 		}
-		else if (IS_HIGHBIT_SET(*from) && len >= 2)		/* code set 2 */
+		else if (IS_HIGHBIT_SET(*from) && len >= 2) /* code set 2 */
 		{
 			*to = *from++ << 8;
 			*to |= *from++;
@@ -581,7 +588,7 @@ struct mbinterval
 
 /* auxiliary function for binary search in interval table */
 static int
-mbbisearch(pg_wchar ucs, const struct mbinterval * table, int max)
+mbbisearch(pg_wchar ucs, const struct mbinterval *table, int max)
 {
 	int			min = 0;
 	int			mid;
@@ -638,40 +645,70 @@ ucs_wcwidth(pg_wchar ucs)
 {
 	/* sorted list of non-overlapping intervals of non-spacing characters */
 	static const struct mbinterval combining[] = {
-		{0x0300, 0x034E}, {0x0360, 0x0362}, {0x0483, 0x0486},
-		{0x0488, 0x0489}, {0x0591, 0x05A1}, {0x05A3, 0x05B9},
-		{0x05BB, 0x05BD}, {0x05BF, 0x05BF}, {0x05C1, 0x05C2},
-		{0x05C4, 0x05C4}, {0x064B, 0x0655}, {0x0670, 0x0670},
-		{0x06D6, 0x06E4}, {0x06E7, 0x06E8}, {0x06EA, 0x06ED},
-		{0x070F, 0x070F}, {0x0711, 0x0711}, {0x0730, 0x074A},
-		{0x07A6, 0x07B0}, {0x0901, 0x0902}, {0x093C, 0x093C},
-		{0x0941, 0x0948}, {0x094D, 0x094D}, {0x0951, 0x0954},
-		{0x0962, 0x0963}, {0x0981, 0x0981}, {0x09BC, 0x09BC},
-		{0x09C1, 0x09C4}, {0x09CD, 0x09CD}, {0x09E2, 0x09E3},
-		{0x0A02, 0x0A02}, {0x0A3C, 0x0A3C}, {0x0A41, 0x0A42},
-		{0x0A47, 0x0A48}, {0x0A4B, 0x0A4D}, {0x0A70, 0x0A71},
-		{0x0A81, 0x0A82}, {0x0ABC, 0x0ABC}, {0x0AC1, 0x0AC5},
-		{0x0AC7, 0x0AC8}, {0x0ACD, 0x0ACD}, {0x0B01, 0x0B01},
-		{0x0B3C, 0x0B3C}, {0x0B3F, 0x0B3F}, {0x0B41, 0x0B43},
-		{0x0B4D, 0x0B4D}, {0x0B56, 0x0B56}, {0x0B82, 0x0B82},
-		{0x0BC0, 0x0BC0}, {0x0BCD, 0x0BCD}, {0x0C3E, 0x0C40},
-		{0x0C46, 0x0C48}, {0x0C4A, 0x0C4D}, {0x0C55, 0x0C56},
+		{0x0300, 0x036F}, {0x0483, 0x0489}, {0x0591, 0x05BD},
+		{0x05BF, 0x05BF}, {0x05C1, 0x05C2}, {0x05C4, 0x05C5},
+		{0x05C7, 0x05C7}, {0x0610, 0x061A}, {0x064B, 0x065F},
+		{0x0670, 0x0670}, {0x06D6, 0x06DC}, {0x06DF, 0x06E4},
+		{0x06E7, 0x06E8}, {0x06EA, 0x06ED}, {0x0711, 0x0711},
+		{0x0730, 0x074A}, {0x07A6, 0x07B0}, {0x07EB, 0x07F3},
+		{0x07FD, 0x07FD}, {0x0816, 0x0819}, {0x081B, 0x0823},
+		{0x0825, 0x0827}, {0x0829, 0x082D}, {0x0859, 0x085B},
+		{0x08D3, 0x08E1}, {0x08E3, 0x0902}, {0x093A, 0x093A},
+		{0x093C, 0x093C}, {0x0941, 0x0948}, {0x094D, 0x094D},
+		{0x0951, 0x0957}, {0x0962, 0x0963}, {0x0981, 0x0981},
+		{0x09BC, 0x09BC}, {0x09C1, 0x09C4}, {0x09CD, 0x09CD},
+		{0x09E2, 0x09E3}, {0x09FE, 0x0A02}, {0x0A3C, 0x0A3C},
+		{0x0A41, 0x0A51}, {0x0A70, 0x0A71}, {0x0A75, 0x0A75},
+		{0x0A81, 0x0A82}, {0x0ABC, 0x0ABC}, {0x0AC1, 0x0AC8},
+		{0x0ACD, 0x0ACD}, {0x0AE2, 0x0AE3}, {0x0AFA, 0x0B01},
+		{0x0B3C, 0x0B3C}, {0x0B3F, 0x0B3F}, {0x0B41, 0x0B44},
+		{0x0B4D, 0x0B56}, {0x0B62, 0x0B63}, {0x0B82, 0x0B82},
+		{0x0BC0, 0x0BC0}, {0x0BCD, 0x0BCD}, {0x0C00, 0x0C00},
+		{0x0C04, 0x0C04}, {0x0C3E, 0x0C40}, {0x0C46, 0x0C56},
+		{0x0C62, 0x0C63}, {0x0C81, 0x0C81}, {0x0CBC, 0x0CBC},
 		{0x0CBF, 0x0CBF}, {0x0CC6, 0x0CC6}, {0x0CCC, 0x0CCD},
-		{0x0D41, 0x0D43}, {0x0D4D, 0x0D4D}, {0x0DCA, 0x0DCA},
-		{0x0DD2, 0x0DD4}, {0x0DD6, 0x0DD6}, {0x0E31, 0x0E31},
+		{0x0CE2, 0x0CE3}, {0x0D00, 0x0D01}, {0x0D3B, 0x0D3C},
+		{0x0D41, 0x0D44}, {0x0D4D, 0x0D4D}, {0x0D62, 0x0D63},
+		{0x0DCA, 0x0DCA}, {0x0DD2, 0x0DD6}, {0x0E31, 0x0E31},
 		{0x0E34, 0x0E3A}, {0x0E47, 0x0E4E}, {0x0EB1, 0x0EB1},
-		{0x0EB4, 0x0EB9}, {0x0EBB, 0x0EBC}, {0x0EC8, 0x0ECD},
-		{0x0F18, 0x0F19}, {0x0F35, 0x0F35}, {0x0F37, 0x0F37},
-		{0x0F39, 0x0F39}, {0x0F71, 0x0F7E}, {0x0F80, 0x0F84},
-		{0x0F86, 0x0F87}, {0x0F90, 0x0F97}, {0x0F99, 0x0FBC},
-		{0x0FC6, 0x0FC6}, {0x102D, 0x1030}, {0x1032, 0x1032},
-		{0x1036, 0x1037}, {0x1039, 0x1039}, {0x1058, 0x1059},
-		{0x1160, 0x11FF}, {0x17B7, 0x17BD}, {0x17C6, 0x17C6},
-		{0x17C9, 0x17D3}, {0x180B, 0x180E}, {0x18A9, 0x18A9},
-		{0x200B, 0x200F}, {0x202A, 0x202E}, {0x206A, 0x206F},
-		{0x20D0, 0x20E3}, {0x302A, 0x302F}, {0x3099, 0x309A},
-		{0xFB1E, 0xFB1E}, {0xFE20, 0xFE23}, {0xFEFF, 0xFEFF},
-		{0xFFF9, 0xFFFB}
+		{0x0EB4, 0x0EBC}, {0x0EC8, 0x0ECD}, {0x0F18, 0x0F19},
+		{0x0F35, 0x0F35}, {0x0F37, 0x0F37}, {0x0F39, 0x0F39},
+		{0x0F71, 0x0F7E}, {0x0F80, 0x0F84}, {0x0F86, 0x0F87},
+		{0x0F8D, 0x0FBC}, {0x0FC6, 0x0FC6}, {0x102D, 0x1030},
+		{0x1032, 0x1037}, {0x1039, 0x103A}, {0x103D, 0x103E},
+		{0x1058, 0x1059}, {0x105E, 0x1060}, {0x1071, 0x1074},
+		{0x1082, 0x1082}, {0x1085, 0x1086}, {0x108D, 0x108D},
+		{0x109D, 0x109D}, {0x135D, 0x135F}, {0x1712, 0x1714},
+		{0x1732, 0x1734}, {0x1752, 0x1753}, {0x1772, 0x1773},
+		{0x17B4, 0x17B5}, {0x17B7, 0x17BD}, {0x17C6, 0x17C6},
+		{0x17C9, 0x17D3}, {0x17DD, 0x17DD}, {0x180B, 0x180D},
+		{0x1885, 0x1886}, {0x18A9, 0x18A9}, {0x1920, 0x1922},
+		{0x1927, 0x1928}, {0x1932, 0x1932}, {0x1939, 0x193B},
+		{0x1A17, 0x1A18}, {0x1A1B, 0x1A1B}, {0x1A56, 0x1A56},
+		{0x1A58, 0x1A60}, {0x1A62, 0x1A62}, {0x1A65, 0x1A6C},
+		{0x1A73, 0x1A7F}, {0x1AB0, 0x1B03}, {0x1B34, 0x1B34},
+		{0x1B36, 0x1B3A}, {0x1B3C, 0x1B3C}, {0x1B42, 0x1B42},
+		{0x1B6B, 0x1B73}, {0x1B80, 0x1B81}, {0x1BA2, 0x1BA5},
+		{0x1BA8, 0x1BA9}, {0x1BAB, 0x1BAD}, {0x1BE6, 0x1BE6},
+		{0x1BE8, 0x1BE9}, {0x1BED, 0x1BED}, {0x1BEF, 0x1BF1},
+		{0x1C2C, 0x1C33}, {0x1C36, 0x1C37}, {0x1CD0, 0x1CD2},
+		{0x1CD4, 0x1CE0}, {0x1CE2, 0x1CE8}, {0x1CED, 0x1CED},
+		{0x1CF4, 0x1CF4}, {0x1CF8, 0x1CF9}, {0x1DC0, 0x1DFF},
+		{0x20D0, 0x20F0}, {0x2CEF, 0x2CF1}, {0x2D7F, 0x2D7F},
+		{0x2DE0, 0x2DFF}, {0x302A, 0x302D}, {0x3099, 0x309A},
+		{0xA66F, 0xA672}, {0xA674, 0xA67D}, {0xA69E, 0xA69F},
+		{0xA6F0, 0xA6F1}, {0xA802, 0xA802}, {0xA806, 0xA806},
+		{0xA80B, 0xA80B}, {0xA825, 0xA826}, {0xA8C4, 0xA8C5},
+		{0xA8E0, 0xA8F1}, {0xA8FF, 0xA8FF}, {0xA926, 0xA92D},
+		{0xA947, 0xA951}, {0xA980, 0xA982}, {0xA9B3, 0xA9B3},
+		{0xA9B6, 0xA9B9}, {0xA9BC, 0xA9BD}, {0xA9E5, 0xA9E5},
+		{0xAA29, 0xAA2E}, {0xAA31, 0xAA32}, {0xAA35, 0xAA36},
+		{0xAA43, 0xAA43}, {0xAA4C, 0xAA4C}, {0xAA7C, 0xAA7C},
+		{0xAAB0, 0xAAB0}, {0xAAB2, 0xAAB4}, {0xAAB7, 0xAAB8},
+		{0xAABE, 0xAABF}, {0xAAC1, 0xAAC1}, {0xAAEC, 0xAAED},
+		{0xAAF6, 0xAAF6}, {0xABE5, 0xABE5}, {0xABE8, 0xABE8},
+		{0xABED, 0xABED}, {0xFB1E, 0xFB1E}, {0xFE00, 0xFE0F},
+		{0xFE20, 0xFE2F},
 	};
 
 	/* test for 8-bit control characters */
@@ -984,7 +1021,7 @@ pg_sjis_dsplen(const unsigned char *s)
 	else if (IS_HIGHBIT_SET(*s))
 		len = 2;				/* kanji? */
 	else
-		len = pg_ascii_dsplen(s);		/* should be ASCII */
+		len = pg_ascii_dsplen(s);	/* should be ASCII */
 	return len;
 }
 
@@ -1011,7 +1048,7 @@ pg_big5_dsplen(const unsigned char *s)
 	if (IS_HIGHBIT_SET(*s))
 		len = 2;				/* kanji? */
 	else
-		len = pg_ascii_dsplen(s);		/* should be ASCII */
+		len = pg_ascii_dsplen(s);	/* should be ASCII */
 	return len;
 }
 
@@ -1038,7 +1075,7 @@ pg_gbk_dsplen(const unsigned char *s)
 	if (IS_HIGHBIT_SET(*s))
 		len = 2;				/* kanji? */
 	else
-		len = pg_ascii_dsplen(s);		/* should be ASCII */
+		len = pg_ascii_dsplen(s);	/* should be ASCII */
 	return len;
 }
 
@@ -1065,13 +1102,24 @@ pg_uhc_dsplen(const unsigned char *s)
 	if (IS_HIGHBIT_SET(*s))
 		len = 2;				/* 2byte? */
 	else
-		len = pg_ascii_dsplen(s);		/* should be ASCII */
+		len = pg_ascii_dsplen(s);	/* should be ASCII */
 	return len;
 }
 
 /*
  * GB18030
  *	Added by Bill Huang <bhuang@redhat.com>,<bill_huanghb@ybb.ne.jp>
+ */
+
+/*
+ * Unlike all other mblen() functions, this also looks at the second byte of
+ * the input.  However, if you only pass the first byte of a multi-byte
+ * string, and \0 as the second byte, this still works in a predictable way:
+ * a 4-byte character will be reported as two 2-byte characters.  That's
+ * enough for all current uses, as a client-only encoding.  It works that
+ * way, because in any valid 4-byte GB18030-encoded character, the third and
+ * fourth byte look like a 2-byte encoded character, when looked at
+ * separately.
  */
 static int
 pg_gb18030_mblen(const unsigned char *s)
@@ -1095,7 +1143,7 @@ pg_gb18030_dsplen(const unsigned char *s)
 	if (IS_HIGHBIT_SET(*s))
 		len = 2;
 	else
-		len = pg_ascii_dsplen(s);		/* ASCII */
+		len = pg_ascii_dsplen(s);	/* ASCII */
 	return len;
 }
 
@@ -1157,7 +1205,7 @@ pg_eucjp_verifier(const unsigned char *s, int len)
 			break;
 
 		default:
-			if (IS_HIGHBIT_SET(c1))		/* JIS X 0208? */
+			if (IS_HIGHBIT_SET(c1)) /* JIS X 0208? */
 			{
 				l = 2;
 				if (l > len)
@@ -1241,7 +1289,7 @@ pg_euctw_verifier(const unsigned char *s, int len)
 			return -1;
 
 		default:
-			if (IS_HIGHBIT_SET(c1))		/* CNS 11643 Plane 1 */
+			if (IS_HIGHBIT_SET(c1)) /* CNS 11643 Plane 1 */
 			{
 				l = 2;
 				if (l > len)
@@ -1683,7 +1731,7 @@ pg_eucjp_increment(unsigned char *charptr, int length)
 			return false;
 
 		default:
-			if (IS_HIGHBIT_SET(c1))		/* JIS X 0208? */
+			if (IS_HIGHBIT_SET(c1)) /* JIS X 0208? */
 			{
 				if (length != 2)
 					return false;
@@ -1717,7 +1765,7 @@ pg_eucjp_increment(unsigned char *charptr, int length)
 
 	return true;
 }
-#endif   /* !FRONTEND */
+#endif							/* !FRONTEND */
 
 
 /*
@@ -1734,40 +1782,40 @@ const pg_wchar_tbl pg_wchar_table[] = {
 	{pg_euctw2wchar_with_len, pg_wchar2euc_with_len, pg_euctw_mblen, pg_euctw_dsplen, pg_euctw_verifier, 4},	/* PG_EUC_TW */
 	{pg_eucjp2wchar_with_len, pg_wchar2euc_with_len, pg_eucjp_mblen, pg_eucjp_dsplen, pg_eucjp_verifier, 3},	/* PG_EUC_JIS_2004 */
 	{pg_utf2wchar_with_len, pg_wchar2utf_with_len, pg_utf_mblen, pg_utf_dsplen, pg_utf8_verifier, 4},	/* PG_UTF8 */
-	{pg_mule2wchar_with_len, pg_wchar2mule_with_len, pg_mule_mblen, pg_mule_dsplen, pg_mule_verifier, 4},		/* PG_MULE_INTERNAL */
-	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1},		/* PG_LATIN1 */
-	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1},		/* PG_LATIN2 */
-	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1},		/* PG_LATIN3 */
-	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1},		/* PG_LATIN4 */
-	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1},		/* PG_LATIN5 */
-	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1},		/* PG_LATIN6 */
-	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1},		/* PG_LATIN7 */
-	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1},		/* PG_LATIN8 */
-	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1},		/* PG_LATIN9 */
-	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1},		/* PG_LATIN10 */
-	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1},		/* PG_WIN1256 */
-	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1},		/* PG_WIN1258 */
-	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1},		/* PG_WIN866 */
-	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1},		/* PG_WIN874 */
-	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1},		/* PG_KOI8R */
-	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1},		/* PG_WIN1251 */
-	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1},		/* PG_WIN1252 */
-	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1},		/* ISO-8859-5 */
-	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1},		/* ISO-8859-6 */
-	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1},		/* ISO-8859-7 */
-	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1},		/* ISO-8859-8 */
-	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1},		/* PG_WIN1250 */
-	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1},		/* PG_WIN1253 */
-	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1},		/* PG_WIN1254 */
-	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1},		/* PG_WIN1255 */
-	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1},		/* PG_WIN1257 */
-	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1},		/* PG_KOI8U */
+	{pg_mule2wchar_with_len, pg_wchar2mule_with_len, pg_mule_mblen, pg_mule_dsplen, pg_mule_verifier, 4},	/* PG_MULE_INTERNAL */
+	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1}, /* PG_LATIN1 */
+	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1}, /* PG_LATIN2 */
+	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1}, /* PG_LATIN3 */
+	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1}, /* PG_LATIN4 */
+	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1}, /* PG_LATIN5 */
+	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1}, /* PG_LATIN6 */
+	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1}, /* PG_LATIN7 */
+	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1}, /* PG_LATIN8 */
+	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1}, /* PG_LATIN9 */
+	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1}, /* PG_LATIN10 */
+	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1}, /* PG_WIN1256 */
+	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1}, /* PG_WIN1258 */
+	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1}, /* PG_WIN866 */
+	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1}, /* PG_WIN874 */
+	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1}, /* PG_KOI8R */
+	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1}, /* PG_WIN1251 */
+	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1}, /* PG_WIN1252 */
+	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1}, /* ISO-8859-5 */
+	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1}, /* ISO-8859-6 */
+	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1}, /* ISO-8859-7 */
+	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1}, /* ISO-8859-8 */
+	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1}, /* PG_WIN1250 */
+	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1}, /* PG_WIN1253 */
+	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1}, /* PG_WIN1254 */
+	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1}, /* PG_WIN1255 */
+	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1}, /* PG_WIN1257 */
+	{pg_latin12wchar_with_len, pg_wchar2single_with_len, pg_latin1_mblen, pg_latin1_dsplen, pg_latin1_verifier, 1}, /* PG_KOI8U */
 	{0, 0, pg_sjis_mblen, pg_sjis_dsplen, pg_sjis_verifier, 2}, /* PG_SJIS */
 	{0, 0, pg_big5_mblen, pg_big5_dsplen, pg_big5_verifier, 2}, /* PG_BIG5 */
 	{0, 0, pg_gbk_mblen, pg_gbk_dsplen, pg_gbk_verifier, 2},	/* PG_GBK */
 	{0, 0, pg_uhc_mblen, pg_uhc_dsplen, pg_uhc_verifier, 2},	/* PG_UHC */
-	{0, 0, pg_gb18030_mblen, pg_gb18030_dsplen, pg_gb18030_verifier, 4},		/* PG_GB18030 */
-	{0, 0, pg_johab_mblen, pg_johab_dsplen, pg_johab_verifier, 3},		/* PG_JOHAB */
+	{0, 0, pg_gb18030_mblen, pg_gb18030_dsplen, pg_gb18030_verifier, 4},	/* PG_GB18030 */
+	{0, 0, pg_johab_mblen, pg_johab_dsplen, pg_johab_verifier, 3},	/* PG_JOHAB */
 	{0, 0, pg_sjis_mblen, pg_sjis_dsplen, pg_sjis_verifier, 2}	/* PG_SHIFT_JIS_2004 */
 };
 
@@ -1785,8 +1833,8 @@ int
 pg_encoding_mblen(int encoding, const char *mbstr)
 {
 	return (PG_VALID_ENCODING(encoding) ?
-		((*pg_wchar_table[encoding].mblen) ((const unsigned char *) mbstr)) :
-	((*pg_wchar_table[PG_SQL_ASCII].mblen) ((const unsigned char *) mbstr)));
+			pg_wchar_table[encoding].mblen((const unsigned char *) mbstr) :
+			pg_wchar_table[PG_SQL_ASCII].mblen((const unsigned char *) mbstr));
 }
 
 /*
@@ -1796,8 +1844,8 @@ int
 pg_encoding_dsplen(int encoding, const char *mbstr)
 {
 	return (PG_VALID_ENCODING(encoding) ?
-	   ((*pg_wchar_table[encoding].dsplen) ((const unsigned char *) mbstr)) :
-	((*pg_wchar_table[PG_SQL_ASCII].dsplen) ((const unsigned char *) mbstr)));
+			pg_wchar_table[encoding].dsplen((const unsigned char *) mbstr) :
+			pg_wchar_table[PG_SQL_ASCII].dsplen((const unsigned char *) mbstr));
 }
 
 /*
@@ -1809,8 +1857,8 @@ int
 pg_encoding_verifymb(int encoding, const char *mbstr, int len)
 {
 	return (PG_VALID_ENCODING(encoding) ?
-			((*pg_wchar_table[encoding].mbverify) ((const unsigned char *) mbstr, len)) :
-			((*pg_wchar_table[PG_SQL_ASCII].mbverify) ((const unsigned char *) mbstr, len)));
+			pg_wchar_table[encoding].mbverify((const unsigned char *) mbstr, len) :
+			pg_wchar_table[PG_SQL_ASCII].mbverify((const unsigned char *) mbstr, len));
 }
 
 /*
@@ -2051,4 +2099,4 @@ report_untranslatable_char(int src_encoding, int dest_encoding,
 					pg_enc2name_tbl[dest_encoding].name)));
 }
 
-#endif   /* !FRONTEND */
+#endif							/* !FRONTEND */

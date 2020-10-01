@@ -5,7 +5,7 @@
  * Routines to expose the contents of the control data file via
  * a set of SQL functions.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -15,13 +15,15 @@
 
 #include "postgres.h"
 
-#include "funcapi.h"
-#include "miscadmin.h"
 #include "access/htup_details.h"
+#include "access/transam.h"
 #include "access/xlog_internal.h"
+#include "access/xlog.h"
 #include "catalog/pg_control.h"
 #include "catalog/pg_type.h"
 #include "common/controldata_utils.h"
+#include "funcapi.h"
+#include "miscadmin.h"
 #include "utils/builtins.h"
 #include "utils/pg_lsn.h"
 #include "utils/timestamp.h"
@@ -34,12 +36,13 @@ pg_control_system(PG_FUNCTION_ARGS)
 	TupleDesc	tupdesc;
 	HeapTuple	htup;
 	ControlFileData *ControlFile;
+	bool		crc_ok;
 
 	/*
 	 * Construct a tuple descriptor for the result row.  This must match this
 	 * function's pg_proc entry!
 	 */
-	tupdesc = CreateTemplateTupleDesc(4, false);
+	tupdesc = CreateTemplateTupleDesc(4);
 	TupleDescInitEntry(tupdesc, (AttrNumber) 1, "pg_control_version",
 					   INT4OID, -1, 0);
 	TupleDescInitEntry(tupdesc, (AttrNumber) 2, "catalog_version_no",
@@ -51,7 +54,10 @@ pg_control_system(PG_FUNCTION_ARGS)
 	tupdesc = BlessTupleDesc(tupdesc);
 
 	/* read the control file */
-	ControlFile = get_controlfile(DataDir, NULL);
+	ControlFile = get_controlfile(DataDir, &crc_ok);
+	if (!crc_ok)
+		ereport(ERROR,
+				(errmsg("calculated CRC checksum does not match value stored in file")));
 
 	values[0] = Int32GetDatum(ControlFile->pg_control_version);
 	nulls[0] = false;
@@ -80,122 +86,122 @@ pg_control_checkpoint(PG_FUNCTION_ARGS)
 	ControlFileData *ControlFile;
 	XLogSegNo	segno;
 	char		xlogfilename[MAXFNAMELEN];
+	bool		crc_ok;
 
 	/*
 	 * Construct a tuple descriptor for the result row.  This must match this
 	 * function's pg_proc entry!
 	 */
-	tupdesc = CreateTemplateTupleDesc(19, false);
-	TupleDescInitEntry(tupdesc, (AttrNumber) 1, "checkpoint_location",
+	tupdesc = CreateTemplateTupleDesc(18);
+	TupleDescInitEntry(tupdesc, (AttrNumber) 1, "checkpoint_lsn",
 					   LSNOID, -1, 0);
-	TupleDescInitEntry(tupdesc, (AttrNumber) 2, "prior_location",
+	TupleDescInitEntry(tupdesc, (AttrNumber) 2, "redo_lsn",
 					   LSNOID, -1, 0);
-	TupleDescInitEntry(tupdesc, (AttrNumber) 3, "redo_location",
-					   LSNOID, -1, 0);
-	TupleDescInitEntry(tupdesc, (AttrNumber) 4, "redo_wal_file",
+	TupleDescInitEntry(tupdesc, (AttrNumber) 3, "redo_wal_file",
 					   TEXTOID, -1, 0);
-	TupleDescInitEntry(tupdesc, (AttrNumber) 5, "timeline_id",
+	TupleDescInitEntry(tupdesc, (AttrNumber) 4, "timeline_id",
 					   INT4OID, -1, 0);
-	TupleDescInitEntry(tupdesc, (AttrNumber) 6, "prev_timeline_id",
+	TupleDescInitEntry(tupdesc, (AttrNumber) 5, "prev_timeline_id",
 					   INT4OID, -1, 0);
-	TupleDescInitEntry(tupdesc, (AttrNumber) 7, "full_page_writes",
+	TupleDescInitEntry(tupdesc, (AttrNumber) 6, "full_page_writes",
 					   BOOLOID, -1, 0);
-	TupleDescInitEntry(tupdesc, (AttrNumber) 8, "next_xid",
+	TupleDescInitEntry(tupdesc, (AttrNumber) 7, "next_xid",
 					   TEXTOID, -1, 0);
-	TupleDescInitEntry(tupdesc, (AttrNumber) 9, "next_oid",
+	TupleDescInitEntry(tupdesc, (AttrNumber) 8, "next_oid",
 					   OIDOID, -1, 0);
-	TupleDescInitEntry(tupdesc, (AttrNumber) 10, "next_multixact_id",
+	TupleDescInitEntry(tupdesc, (AttrNumber) 9, "next_multixact_id",
 					   XIDOID, -1, 0);
-	TupleDescInitEntry(tupdesc, (AttrNumber) 11, "next_multi_offset",
+	TupleDescInitEntry(tupdesc, (AttrNumber) 10, "next_multi_offset",
 					   XIDOID, -1, 0);
-	TupleDescInitEntry(tupdesc, (AttrNumber) 12, "oldest_xid",
+	TupleDescInitEntry(tupdesc, (AttrNumber) 11, "oldest_xid",
 					   XIDOID, -1, 0);
-	TupleDescInitEntry(tupdesc, (AttrNumber) 13, "oldest_xid_dbid",
+	TupleDescInitEntry(tupdesc, (AttrNumber) 12, "oldest_xid_dbid",
 					   OIDOID, -1, 0);
-	TupleDescInitEntry(tupdesc, (AttrNumber) 14, "oldest_active_xid",
+	TupleDescInitEntry(tupdesc, (AttrNumber) 13, "oldest_active_xid",
 					   XIDOID, -1, 0);
-	TupleDescInitEntry(tupdesc, (AttrNumber) 15, "oldest_multi_xid",
+	TupleDescInitEntry(tupdesc, (AttrNumber) 14, "oldest_multi_xid",
 					   XIDOID, -1, 0);
-	TupleDescInitEntry(tupdesc, (AttrNumber) 16, "oldest_multi_dbid",
+	TupleDescInitEntry(tupdesc, (AttrNumber) 15, "oldest_multi_dbid",
 					   OIDOID, -1, 0);
-	TupleDescInitEntry(tupdesc, (AttrNumber) 17, "oldest_commit_ts_xid",
+	TupleDescInitEntry(tupdesc, (AttrNumber) 16, "oldest_commit_ts_xid",
 					   XIDOID, -1, 0);
-	TupleDescInitEntry(tupdesc, (AttrNumber) 18, "newest_commit_ts_xid",
+	TupleDescInitEntry(tupdesc, (AttrNumber) 17, "newest_commit_ts_xid",
 					   XIDOID, -1, 0);
-	TupleDescInitEntry(tupdesc, (AttrNumber) 19, "checkpoint_time",
+	TupleDescInitEntry(tupdesc, (AttrNumber) 18, "checkpoint_time",
 					   TIMESTAMPTZOID, -1, 0);
 	tupdesc = BlessTupleDesc(tupdesc);
 
 	/* Read the control file. */
-	ControlFile = get_controlfile(DataDir, NULL);
+	ControlFile = get_controlfile(DataDir, &crc_ok);
+	if (!crc_ok)
+		ereport(ERROR,
+				(errmsg("calculated CRC checksum does not match value stored in file")));
 
 	/*
 	 * Calculate name of the WAL file containing the latest checkpoint's REDO
 	 * start point.
 	 */
-	XLByteToSeg(ControlFile->checkPointCopy.redo, segno);
-	XLogFileName(xlogfilename, ControlFile->checkPointCopy.ThisTimeLineID, segno);
+	XLByteToSeg(ControlFile->checkPointCopy.redo, segno, wal_segment_size);
+	XLogFileName(xlogfilename, ControlFile->checkPointCopy.ThisTimeLineID,
+				 segno, wal_segment_size);
 
 	/* Populate the values and null arrays */
 	values[0] = LSNGetDatum(ControlFile->checkPoint);
 	nulls[0] = false;
 
-	values[1] = LSNGetDatum(ControlFile->prevCheckPoint);
+	values[1] = LSNGetDatum(ControlFile->checkPointCopy.redo);
 	nulls[1] = false;
 
-	values[2] = LSNGetDatum(ControlFile->checkPointCopy.redo);
+	values[2] = CStringGetTextDatum(xlogfilename);
 	nulls[2] = false;
 
-	values[3] = CStringGetTextDatum(xlogfilename);
+	values[3] = Int32GetDatum(ControlFile->checkPointCopy.ThisTimeLineID);
 	nulls[3] = false;
 
-	values[4] = Int32GetDatum(ControlFile->checkPointCopy.ThisTimeLineID);
+	values[4] = Int32GetDatum(ControlFile->checkPointCopy.PrevTimeLineID);
 	nulls[4] = false;
 
-	values[5] = Int32GetDatum(ControlFile->checkPointCopy.PrevTimeLineID);
+	values[5] = BoolGetDatum(ControlFile->checkPointCopy.fullPageWrites);
 	nulls[5] = false;
 
-	values[6] = BoolGetDatum(ControlFile->checkPointCopy.fullPageWrites);
+	values[6] = CStringGetTextDatum(psprintf("%u:%u",
+											 EpochFromFullTransactionId(ControlFile->checkPointCopy.nextFullXid),
+											 XidFromFullTransactionId(ControlFile->checkPointCopy.nextFullXid)));
 	nulls[6] = false;
 
-	values[7] = CStringGetTextDatum(psprintf("%u:%u",
-									ControlFile->checkPointCopy.nextXidEpoch,
-									   ControlFile->checkPointCopy.nextXid));
+	values[7] = ObjectIdGetDatum(ControlFile->checkPointCopy.nextOid);
 	nulls[7] = false;
 
-	values[8] = ObjectIdGetDatum(ControlFile->checkPointCopy.nextOid);
+	values[8] = TransactionIdGetDatum(ControlFile->checkPointCopy.nextMulti);
 	nulls[8] = false;
 
-	values[9] = TransactionIdGetDatum(ControlFile->checkPointCopy.nextMulti);
+	values[9] = TransactionIdGetDatum(ControlFile->checkPointCopy.nextMultiOffset);
 	nulls[9] = false;
 
-	values[10] = TransactionIdGetDatum(ControlFile->checkPointCopy.nextMultiOffset);
+	values[10] = TransactionIdGetDatum(ControlFile->checkPointCopy.oldestXid);
 	nulls[10] = false;
 
-	values[11] = TransactionIdGetDatum(ControlFile->checkPointCopy.oldestXid);
+	values[11] = ObjectIdGetDatum(ControlFile->checkPointCopy.oldestXidDB);
 	nulls[11] = false;
 
-	values[12] = ObjectIdGetDatum(ControlFile->checkPointCopy.oldestXidDB);
+	values[12] = TransactionIdGetDatum(ControlFile->checkPointCopy.oldestActiveXid);
 	nulls[12] = false;
 
-	values[13] = TransactionIdGetDatum(ControlFile->checkPointCopy.oldestActiveXid);
+	values[13] = TransactionIdGetDatum(ControlFile->checkPointCopy.oldestMulti);
 	nulls[13] = false;
 
-	values[14] = TransactionIdGetDatum(ControlFile->checkPointCopy.oldestMulti);
+	values[14] = ObjectIdGetDatum(ControlFile->checkPointCopy.oldestMultiDB);
 	nulls[14] = false;
 
-	values[15] = ObjectIdGetDatum(ControlFile->checkPointCopy.oldestMultiDB);
+	values[15] = TransactionIdGetDatum(ControlFile->checkPointCopy.oldestCommitTsXid);
 	nulls[15] = false;
 
-	values[16] = TransactionIdGetDatum(ControlFile->checkPointCopy.oldestCommitTsXid);
+	values[16] = TransactionIdGetDatum(ControlFile->checkPointCopy.newestCommitTsXid);
 	nulls[16] = false;
 
-	values[17] = TransactionIdGetDatum(ControlFile->checkPointCopy.newestCommitTsXid);
+	values[17] = TimestampTzGetDatum(
+									 time_t_to_timestamptz(ControlFile->checkPointCopy.time));
 	nulls[17] = false;
-
-	values[18] = TimestampTzGetDatum(
-					time_t_to_timestamptz(ControlFile->checkPointCopy.time));
-	nulls[18] = false;
 
 	htup = heap_form_tuple(tupdesc, values, nulls);
 
@@ -210,26 +216,30 @@ pg_control_recovery(PG_FUNCTION_ARGS)
 	TupleDesc	tupdesc;
 	HeapTuple	htup;
 	ControlFileData *ControlFile;
+	bool		crc_ok;
 
 	/*
 	 * Construct a tuple descriptor for the result row.  This must match this
 	 * function's pg_proc entry!
 	 */
-	tupdesc = CreateTemplateTupleDesc(5, false);
-	TupleDescInitEntry(tupdesc, (AttrNumber) 1, "min_recovery_end_location",
+	tupdesc = CreateTemplateTupleDesc(5);
+	TupleDescInitEntry(tupdesc, (AttrNumber) 1, "min_recovery_end_lsn",
 					   LSNOID, -1, 0);
 	TupleDescInitEntry(tupdesc, (AttrNumber) 2, "min_recovery_end_timeline",
 					   INT4OID, -1, 0);
-	TupleDescInitEntry(tupdesc, (AttrNumber) 3, "backup_start_location",
+	TupleDescInitEntry(tupdesc, (AttrNumber) 3, "backup_start_lsn",
 					   LSNOID, -1, 0);
-	TupleDescInitEntry(tupdesc, (AttrNumber) 4, "backup_end_location",
+	TupleDescInitEntry(tupdesc, (AttrNumber) 4, "backup_end_lsn",
 					   LSNOID, -1, 0);
 	TupleDescInitEntry(tupdesc, (AttrNumber) 5, "end_of_backup_record_required",
 					   BOOLOID, -1, 0);
 	tupdesc = BlessTupleDesc(tupdesc);
 
 	/* read the control file */
-	ControlFile = get_controlfile(DataDir, NULL);
+	ControlFile = get_controlfile(DataDir, &crc_ok);
+	if (!crc_ok)
+		ereport(ERROR,
+				(errmsg("calculated CRC checksum does not match value stored in file")));
 
 	values[0] = LSNGetDatum(ControlFile->minRecoveryPoint);
 	nulls[0] = false;
@@ -254,17 +264,18 @@ pg_control_recovery(PG_FUNCTION_ARGS)
 Datum
 pg_control_init(PG_FUNCTION_ARGS)
 {
-	Datum		values[13];
-	bool		nulls[13];
+	Datum		values[12];
+	bool		nulls[12];
 	TupleDesc	tupdesc;
 	HeapTuple	htup;
 	ControlFileData *ControlFile;
+	bool		crc_ok;
 
 	/*
 	 * Construct a tuple descriptor for the result row.  This must match this
 	 * function's pg_proc entry!
 	 */
-	tupdesc = CreateTemplateTupleDesc(13, false);
+	tupdesc = CreateTemplateTupleDesc(12);
 	TupleDescInitEntry(tupdesc, (AttrNumber) 1, "max_data_alignment",
 					   INT4OID, -1, 0);
 	TupleDescInitEntry(tupdesc, (AttrNumber) 2, "database_block_size",
@@ -283,18 +294,19 @@ pg_control_init(PG_FUNCTION_ARGS)
 					   INT4OID, -1, 0);
 	TupleDescInitEntry(tupdesc, (AttrNumber) 9, "large_object_chunk_size",
 					   INT4OID, -1, 0);
-	TupleDescInitEntry(tupdesc, (AttrNumber) 10, "bigint_timestamps",
+	TupleDescInitEntry(tupdesc, (AttrNumber) 10, "float4_pass_by_value",
 					   BOOLOID, -1, 0);
-	TupleDescInitEntry(tupdesc, (AttrNumber) 11, "float4_pass_by_value",
+	TupleDescInitEntry(tupdesc, (AttrNumber) 11, "float8_pass_by_value",
 					   BOOLOID, -1, 0);
-	TupleDescInitEntry(tupdesc, (AttrNumber) 12, "float8_pass_by_value",
-					   BOOLOID, -1, 0);
-	TupleDescInitEntry(tupdesc, (AttrNumber) 13, "data_page_checksum_version",
+	TupleDescInitEntry(tupdesc, (AttrNumber) 12, "data_page_checksum_version",
 					   INT4OID, -1, 0);
 	tupdesc = BlessTupleDesc(tupdesc);
 
 	/* read the control file */
-	ControlFile = get_controlfile(DataDir, NULL);
+	ControlFile = get_controlfile(DataDir, &crc_ok);
+	if (!crc_ok)
+		ereport(ERROR,
+				(errmsg("calculated CRC checksum does not match value stored in file")));
 
 	values[0] = Int32GetDatum(ControlFile->maxAlign);
 	nulls[0] = false;
@@ -323,17 +335,14 @@ pg_control_init(PG_FUNCTION_ARGS)
 	values[8] = Int32GetDatum(ControlFile->loblksize);
 	nulls[8] = false;
 
-	values[9] = BoolGetDatum(ControlFile->enableIntTimes);
+	values[9] = BoolGetDatum(ControlFile->float4ByVal);
 	nulls[9] = false;
 
-	values[10] = BoolGetDatum(ControlFile->float4ByVal);
+	values[10] = BoolGetDatum(ControlFile->float8ByVal);
 	nulls[10] = false;
 
-	values[11] = BoolGetDatum(ControlFile->float8ByVal);
+	values[11] = Int32GetDatum(ControlFile->data_checksum_version);
 	nulls[11] = false;
-
-	values[12] = Int32GetDatum(ControlFile->data_checksum_version);
-	nulls[12] = false;
 
 	htup = heap_form_tuple(tupdesc, values, nulls);
 

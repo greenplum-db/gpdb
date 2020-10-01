@@ -85,10 +85,9 @@ BitmapDecompress_HasError(
  * bitmapDataSize in uint32-words.
  */
 void
-BitmapDecompress_Decompress(
-		BitmapDecompressState *state,
-		uint32* bitmap,
-		int bitmapDataSize)
+BitmapDecompress_Decompress(BitmapDecompressState *state,
+							uint32 *bitmap,
+							int bitmapDataSize)
 {
 	uint32 lastBlockData, flag, rleRepeatCount;
 	int i;

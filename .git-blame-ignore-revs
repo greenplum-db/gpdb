@@ -1,0 +1,56 @@
+# git-blame ignore list
+#
+# Since version 2.23 (released in August 2019), git-blame has a feature to
+# ignore or bypass certain commits.
+#
+# This file contains a list of commits that are unlikely what you are looking
+# for in a typical git-blame, such as mass reformatting or renaming. There are
+# three ways to use this file:
+#
+# 1. Most typically, you would want to configure git to use this file as the
+#    default ignore file for git-blame:
+#
+#    $ git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+#    This allows git-blame to act like git-hyper-blame, skipping specified
+#    commits and trying harder to attribute changes to "interesting" commits in
+#    the history. This also allows tools (most notably, IDE's and text editors)
+#    that lack options to adopt this behavior.
+#
+# 1. If you have configured Git as above, but occasionally needs the "real",
+#    unadulterated annotation, you can suppress this setting one-off by
+#    supplying an empty ignore-revs-file argument to blame like the following:
+#
+#    $ git blame --ignore-revs-file '' -w CTranslatorExprToDXL.cpp
+#
+# 1. For those paranoids out there who'd like to keep the default behavior,
+#    they can always manually ignore commits in this file manually:
+#
+#    $ git blame --ignore-revs-file .git-blame-ignore-revs -w -- src/backend/gpopt/gpdbwrappers.cpp
+
+# Hungarian notation removal specific to GPOS and Naucrates libraries
+d334b0163fceb0385be7cd98c7f8c87f93dc3bf5
+
+# Revert "Hungarian notation removal specific to GPOS and Naucrates libraries"
+8324e984dcd307fca307f968494353e9a7db5afe
+
+# Hungarian notation removal specific to GPOS and Naucrates libraries (5X_STABLE)
+5d30d4f58bb520e8040e4428429c980e2748bbc5
+
+# Hungarian notation removal specific to GPOS and Naucrates libraries
+2a38a9cdbbe5b70da5ed542e7c1a1ee93a41e1ca
+
+# Hungarian notation removal: GPOS and Naucrates libraries (GPORCA)
+f3da624ccd796364bb8bb84496cd6bf5b2828c1e
+
+# Format ORCA and GPOPT
+2f7dd76cadee68dc279b4fee866fe940e16fc9d7
+
+# Format ORCA and GPOPT (6X_STABLE)
+4a37ae941ab898053a3db1828207d2bb35baffc0
+
+# Format ORCA and GPOPT (5X_STABLE)
+219fe0c4fd60662a481a2a927835c6309e02a995
+
+# Format ORCA and GPOPT (GPORCA)
+9fb3df2549731629b3df1b38b99087c9dcbccb90

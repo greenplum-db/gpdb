@@ -31,10 +31,7 @@ using namespace gpos;
 GPOS_RESULT
 CAutoRefTest::EresUnittest()
 {
-	CUnittest rgut[] =
-		{
-		GPOS_UNITTEST_FUNC(CAutoRefTest::EresUnittest_Basics)
-		};
+	CUnittest rgut[] = {GPOS_UNITTEST_FUNC(CAutoRefTest::EresUnittest_Basics)};
 
 	return CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
 }
@@ -66,7 +63,7 @@ CAutoRefTest::EresUnittest_Basics()
 #ifdef GPOS_DEBUG
 	CElem *pelem2 = &(*pelem);
 	GPOS_ASSERT(pelem2 == pelem);
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 	// hand reference over to other auto ref count
 	CAutoRef<CElem> aelem2;
@@ -80,4 +77,3 @@ CAutoRefTest::EresUnittest_Basics()
 }
 
 // EOF
-

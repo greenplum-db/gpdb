@@ -2,7 +2,7 @@
  * brin_page.h
  *		Prototypes and definitions for BRIN page layouts
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -51,10 +51,12 @@ typedef struct BrinSpecialSpace
 #define		BRIN_PAGETYPE_META			0xF091
 #define		BRIN_PAGETYPE_REVMAP		0xF092
 #define		BRIN_PAGETYPE_REGULAR		0xF093
+#define		BRIN_PAGETYPE_UPPER			0xF094
 
 #define BRIN_IS_META_PAGE(page) (BrinPageType(page) == BRIN_PAGETYPE_META)
 #define BRIN_IS_REVMAP_PAGE(page) (BrinPageType(page) == BRIN_PAGETYPE_REVMAP)
 #define BRIN_IS_REGULAR_PAGE(page) (BrinPageType(page) == BRIN_PAGETYPE_REGULAR)
+#define BRIN_IS_UPPER_PAGE(page) (BrinPageType(page) == BRIN_PAGETYPE_UPPER)
 
 /* flags for BrinSpecialSpace */
 #define		BRIN_EVACUATE_PAGE			(1 << 0)
@@ -67,6 +69,7 @@ typedef struct BrinMetaPageData
 	uint32		brinVersion;
 	BlockNumber pagesPerRange;
 	BlockNumber lastRevmapPage;
+	bool		isAo;
 } BrinMetaPageData;
 
 #define BRIN_CURRENT_VERSION		1
@@ -85,6 +88,11 @@ typedef struct RevmapContents
 	ItemPointerData rm_tids[1];
 } RevmapContents;
 
+typedef struct RevmapUpperBlockContents
+{
+	BlockNumber rm_blocks[1];
+} RevmapUpperBlockContents;
+
 #define REVMAP_CONTENT_SIZE \
 	(BLCKSZ - MAXALIGN(SizeOfPageHeaderData) - \
 	 offsetof(RevmapContents, rm_tids) - \
@@ -93,4 +101,10 @@ typedef struct RevmapContents
 #define REVMAP_PAGE_MAXITEMS \
 	(REVMAP_CONTENT_SIZE / sizeof(ItemPointerData))
 
-#endif   /* BRIN_PAGE_H */
+#define REVMAP_UPPER_PAGE_MAXITEMS \
+	(REVMAP_CONTENT_SIZE/ sizeof(BlockNumber))
+
+#define REVMAP_INDEX_PAGE_NUM \
+	(65536 / REVMAP_PAGE_MAXITEMS) * 65536
+
+#endif							/* BRIN_PAGE_H */

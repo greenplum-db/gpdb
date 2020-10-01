@@ -108,14 +108,6 @@ ora_nvl2(PG_FUNCTION_ARGS)
 
 PG_FUNCTION_INFO_V1(ora_set_nls_sort);
 
-/*
- * GPDB_92_MERGE_FIXME: This function sets a global value on a backend. This
- * works in Postgres, because your session will always have the same backend.
- * In GPDB we have slices, and this is not necessarily going to run on the
- * slice that drives the SORT operation. The NLS sort functions either need to
- * be removed, or this needs to have a global state- possibly implemented as a
- * replicated temp table?
- */
 Datum
 ora_set_nls_sort(PG_FUNCTION_ARGS)
 {
@@ -302,6 +294,89 @@ ora_nlssort(PG_FUNCTION_ARGS)
 	PG_RETURN_BYTEA_P(result);
 }
 
+PG_FUNCTION_INFO_V1(ora_decode);
+
+/*
+ * decode(lhs, [rhs, ret], ..., [default])
+ */
+Datum
+ora_decode(PG_FUNCTION_ARGS)
+{
+	int		nargs;
+	int		i;
+	int		retarg;
+
+	/* default value is last arg or NULL. */
+	nargs = PG_NARGS();
+	if (nargs % 2 == 0)
+	{
+		retarg = nargs - 1;
+		nargs -= 1;		/* ignore the last argument */
+	}
+	else
+		retarg = -1;	/* NULL */
+
+	if (PG_ARGISNULL(0))
+	{
+		for (i = 1; i < nargs; i += 2)
+		{
+			if (PG_ARGISNULL(i))
+			{
+				retarg = i + 1;
+				break;
+			}
+		}
+	}
+	else
+	{
+		FmgrInfo   *eq;
+		Oid		collation = PG_GET_COLLATION();
+
+		/*
+		 * On first call, get the input type's operator '=' and save at
+		 * fn_extra.
+		 */
+		if (fcinfo->flinfo->fn_extra == NULL)
+		{
+			MemoryContext	oldctx;
+			Oid				typid = get_fn_expr_argtype(fcinfo->flinfo, 0);
+			Oid				eqoid = equality_oper_funcid(typid);
+
+			oldctx = MemoryContextSwitchTo(fcinfo->flinfo->fn_mcxt);
+			eq = palloc(sizeof(FmgrInfo));
+			fmgr_info(eqoid, eq);
+			MemoryContextSwitchTo(oldctx);
+
+			fcinfo->flinfo->fn_extra = eq;
+		}
+		else
+			eq = fcinfo->flinfo->fn_extra;
+
+		for (i = 1; i < nargs; i += 2)
+		{
+			Datum					result;
+
+			if (PG_ARGISNULL(i))
+				continue;
+
+			result = FunctionCall2Coll(eq,
+									   collation,
+									   PG_GETARG_DATUM(0),
+									   PG_GETARG_DATUM(i));
+
+			if (DatumGetBool(result))
+			{
+				retarg = i + 1;
+				break;
+			}
+		}
+	}
+
+	if (retarg < 0 || PG_ARGISNULL(retarg))
+		PG_RETURN_NULL();
+	else
+		PG_RETURN_DATUM(PG_GETARG_DATUM(retarg));
+}
 
 Oid
 equality_oper_funcid(Oid argtype)

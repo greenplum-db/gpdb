@@ -18,7 +18,7 @@
 -- end_matchignore
 
 -- start_ignore
-CREATE LANGUAGE plpythonu;
+CREATE LANGUAGE plpython3u;
 -- end_ignore
 
 -- Create our test tables (and functions) in a bespoken schema that we can drop
@@ -58,7 +58,7 @@ RETURNS integer as $$
 
     with open(data_file , "rb+") as f:
       char_location=0
-      write_char='*' # CONST.CORRUPTION
+      write_char='*'.encode() # CONST.CORRUPTION
 
       if corruption_offset >= 0:
         f.seek(corruption_offset, 0)
@@ -69,7 +69,7 @@ RETURNS integer as $$
       f.close()
 
   return 0
-$$ LANGUAGE plpythonu;
+$$ LANGUAGE plpython3u;
 
 -- Corrupt a file by replacing the last occurrence of 'str' within the file
 -- with 'replacement'
@@ -97,7 +97,7 @@ RETURNS integer as $$
       f.close()
 
   return 0
-$$ LANGUAGE plpythonu;
+$$ LANGUAGE plpython3u;
 
 
 -- Large content, corrupt block header

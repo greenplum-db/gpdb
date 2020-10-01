@@ -220,6 +220,10 @@ check_hash_partition_usage(void)
 	bool			found = false;
 	char			output_path[MAXPGPATH];
 
+	/* Merge with PostgreSQL v11 introduced hash partitioning again. */
+	if (GET_MAJOR_VERSION(old_cluster.major_version) >= 1100)
+		return;
+
 	prep_status("Checking for hash partitioned tables");
 
 	snprintf(output_path, sizeof(output_path), "hash_partitioned_tables.txt");
@@ -420,7 +424,7 @@ old_GPDB5_check_for_unsupported_distribution_key_data_types(void)
 			found = true;
 			if (script == NULL && (script = fopen_priv(output_path, "w")) == NULL)
 				pg_fatal("Could not open file \"%s\": %s\n",
-						 output_path, getErrorText());
+						 output_path, strerror(errno));
 			if (!db_used)
 			{
 				fprintf(script, "Database: %s\n", active_db->db_name);
@@ -491,7 +495,7 @@ old_GPDB6_check_for_unsupported_sha256_password_hashes(void)
 			found = true;
 			if (script == NULL && (script = fopen_priv(output_path, "w")) == NULL)
 				pg_fatal("Could not open file \"%s\": %s\n",
-						 output_path, getErrorText());
+						 output_path, strerror(errno));
 			fprintf(script, "  %s\n",
 					PQgetvalue(res, rowno, i_rolname));
 		}

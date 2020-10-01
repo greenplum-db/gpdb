@@ -4,7 +4,7 @@
  *	  PlaceHolderVar and PlaceHolderInfo manipulation routines
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -17,10 +17,10 @@
 
 #include "nodes/nodeFuncs.h"
 #include "optimizer/cost.h"
+#include "optimizer/optimizer.h"
 #include "optimizer/pathnode.h"
 #include "optimizer/placeholder.h"
 #include "optimizer/planmain.h"
-#include "optimizer/var.h"
 #include "utils/lsyscache.h"
 
 /* Local functions */
@@ -62,7 +62,7 @@ make_placeholder_expr(PlannerInfo *root, Expr *expr, Relids phrels)
  * simplified query passed to query_planner().
  *
  * Note: this should only be called after query_planner() has started.  Also,
- * create_new_ph must not be TRUE after deconstruct_jointree begins, because
+ * create_new_ph must not be true after deconstruct_jointree begins, because
  * make_outerjoininfo assumes that we already know about all placeholders.
  */
 PlaceHolderInfo *
@@ -101,7 +101,7 @@ find_placeholder_info(PlannerInfo *root, PlaceHolderVar *phv,
 	rels_used = pull_varnos((Node *) phv->phexpr);
 	phinfo->ph_lateral = bms_difference(rels_used, phv->phrels);
 	if (bms_is_empty(phinfo->ph_lateral))
-		phinfo->ph_lateral = NULL;		/* make it exactly NULL if empty */
+		phinfo->ph_lateral = NULL;	/* make it exactly NULL if empty */
 	phinfo->ph_eval_at = bms_int_members(rels_used, phv->phrels);
 	/* If no contained vars, force evaluation at syntactic location */
 	if (bms_is_empty(phinfo->ph_eval_at))

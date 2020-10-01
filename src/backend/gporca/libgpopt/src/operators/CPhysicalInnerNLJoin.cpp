@@ -34,12 +34,8 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CPhysicalInnerNLJoin::CPhysicalInnerNLJoin
-	(
-	CMemoryPool *mp
-	)
-	:
-	CPhysicalNLJoin(mp)
+CPhysicalInnerNLJoin::CPhysicalInnerNLJoin(CMemoryPool *mp)
+	: CPhysicalNLJoin(mp)
 {
 	// Inner NLJ creates two distribution requests for children:
 	// (0) Outer child is requested for ANY distribution, and inner child is requested for a Replicated (or a matching) distribution
@@ -58,7 +54,8 @@ CPhysicalInnerNLJoin::CPhysicalInnerNLJoin
 //
 //---------------------------------------------------------------------------
 CPhysicalInnerNLJoin::~CPhysicalInnerNLJoin()
-{}
+{
+}
 
 
 
@@ -79,16 +76,11 @@ CPhysicalInnerNLJoin::~CPhysicalInnerNLJoin()
 //
 //---------------------------------------------------------------------------
 CDistributionSpec *
-CPhysicalInnerNLJoin::PdsRequired
-	(
-	CMemoryPool *mp,
-	CExpressionHandle &exprhdl,
-	CDistributionSpec *pdsRequired,
-	ULONG child_index,
-	CDrvdPropArray *pdrgpdpCtxt,
-	ULONG  ulOptReq
-	)
-	const
+CPhysicalInnerNLJoin::PdsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
+								  CDistributionSpec *pdsRequired,
+								  ULONG child_index,
+								  CDrvdPropArray *pdrgpdpCtxt,
+								  ULONG ulOptReq) const
 {
 	GPOS_ASSERT(2 > child_index);
 	GPOS_ASSERT(ulOptReq < UlDistrRequests());
@@ -109,20 +101,26 @@ CPhysicalInnerNLJoin::PdsRequired
 		return GPOS_NEW(mp) CDistributionSpecReplicated();
 	}
 
-	if (GPOS_FTRACE(EopttraceDisableReplicateInnerNLJOuterChild) || 0 == ulOptReq)
+	if (GPOS_FTRACE(EopttraceDisableReplicateInnerNLJOuterChild) ||
+		0 == ulOptReq)
 	{
 		if (1 == child_index)
 		{
 			// compute a matching distribution based on derived distribution of outer child
-			CDistributionSpec *pdsOuter = CDrvdPropPlan::Pdpplan((*pdrgpdpCtxt)[0])->Pds();
-			if(CDistributionSpec::EdtHashed == pdsOuter->Edt())
+			CDistributionSpec *pdsOuter =
+				CDrvdPropPlan::Pdpplan((*pdrgpdpCtxt)[0])->Pds();
+			if (CDistributionSpec::EdtHashed == pdsOuter->Edt())
 			{
 				// require inner child to have matching hashed distribution
-				CExpression *pexprScPredicate = exprhdl.PexprScalarChild(2);
-				CExpressionArray *pdrgpexpr = CPredicateUtils::PdrgpexprConjuncts(mp, pexprScPredicate);
+				CExpression *pexprScPredicate =
+					exprhdl.PexprScalarExactChild(2);
+				CExpressionArray *pdrgpexpr =
+					CPredicateUtils::PdrgpexprConjuncts(mp, pexprScPredicate);
 
-				CExpressionArray *pdrgpexprMatching = GPOS_NEW(mp) CExpressionArray(mp);
-				CDistributionSpecHashed *pdshashed = CDistributionSpecHashed::PdsConvert(pdsOuter);
+				CExpressionArray *pdrgpexprMatching =
+					GPOS_NEW(mp) CExpressionArray(mp);
+				CDistributionSpecHashed *pdshashed =
+					CDistributionSpecHashed::PdsConvert(pdsOuter);
 				CExpressionArray *pdrgpexprHashed = pdshashed->Pdrgpexpr();
 				const ULONG ulSize = pdrgpexprHashed->Size();
 
@@ -132,7 +130,8 @@ CPhysicalInnerNLJoin::PdsRequired
 					CExpression *pexpr = (*pdrgpexprHashed)[ul];
 					// get matching expression from predicate for the corresponding outer child
 					// to create CDistributionSpecHashed for inner child
-					CExpression *pexprMatching = CUtils::PexprMatchEqualityOrINDF(pexpr, pdrgpexpr);
+					CExpression *pexprMatching =
+						CUtils::PexprMatchEqualityOrINDF(pexpr, pdrgpexpr);
 					fSuccess = (NULL != pexprMatching);
 					if (fSuccess)
 					{
@@ -144,18 +143,22 @@ CPhysicalInnerNLJoin::PdsRequired
 
 				if (fSuccess)
 				{
-					GPOS_ASSERT(pdrgpexprMatching->Size() == pdrgpexprHashed->Size());
+					GPOS_ASSERT(pdrgpexprMatching->Size() ==
+								pdrgpexprHashed->Size());
 
 					// create a matching hashed distribution request
 					BOOL fNullsColocated = pdshashed->FNullsColocated();
-					CDistributionSpecHashed *pdshashedEquiv = GPOS_NEW(mp) CDistributionSpecHashed(pdrgpexprMatching, fNullsColocated);
+					CDistributionSpecHashed *pdshashedEquiv =
+						GPOS_NEW(mp) CDistributionSpecHashed(pdrgpexprMatching,
+															 fNullsColocated);
 					pdshashedEquiv->ComputeEquivHashExprs(mp, exprhdl);
 					return pdshashedEquiv;
 				}
 				pdrgpexprMatching->Release();
 			}
 		}
-		return CPhysicalJoin::PdsRequired(mp, exprhdl, pdsRequired, child_index, pdrgpdpCtxt, ulOptReq);
+		return CPhysicalJoin::PdsRequired(mp, exprhdl, pdsRequired, child_index,
+										  pdrgpdpCtxt, ulOptReq);
 	}
 	GPOS_ASSERT(1 == ulOptReq);
 
@@ -165,7 +168,8 @@ CPhysicalInnerNLJoin::PdsRequired
 	}
 
 	// compute a matching distribution based on derived distribution of outer child
-	CDistributionSpec *pdsOuter = CDrvdPropPlan::Pdpplan((*pdrgpdpCtxt)[0])->Pds();
+	CDistributionSpec *pdsOuter =
+		CDrvdPropPlan::Pdpplan((*pdrgpdpCtxt)[0])->Pds();
 	if (CDistributionSpec::EdtUniversal == pdsOuter->Edt())
 	{
 		// first child is universal, request second child to execute on a single host to avoid duplicates
@@ -176,4 +180,3 @@ CPhysicalInnerNLJoin::PdsRequired
 }
 
 // EOF
-

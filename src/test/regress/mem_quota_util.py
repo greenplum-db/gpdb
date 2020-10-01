@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os, sys
 
@@ -9,18 +9,14 @@ mkpath = lambda *x: os.path.join(MYD, *x)
 #globals
 SAMPLE_QUERY="(select count(*) from (select o0.o_orderkey from (heap_orders o0 left outer join heap_orders o1 on o0.o_orderkey = o1.o_orderkey left outer join heap_orders o2 on o2.o_orderkey = o1.o_orderkey left outer join heap_orders o3 on o3.o_orderkey = o2.o_orderkey left outer join heap_orders o4 on o4.o_orderkey = o3.o_orderkey) order by o0.o_orderkey) as foo);"
 
-import shutil, time, re
-try:
-    import subprocess32 as subprocess
-except:
-    import subprocess
+import shutil, time, re, subprocess
 from optparse import OptionParser, OptionGroup
 
 try:
     from gppylib import gplog
     from multiprocessing import Process
     from gppylib.commands import unix
-except Exception, e:
+except Exception as e:
     sys.exit('Cannot import modules. Please check that you have sourced greenplum_path.sh. Detail: ' + str(e))
 
 def parseargs( help=False ):
@@ -52,8 +48,8 @@ def parseargs( help=False ):
         if options.concurrency <= 0:
             parser.print_help()
             raise Exception("\nERROR: You must provide a positive integer for concurrency\n\n")
-    except Exception, e:
-        print e
+    except Exception as e:
+        print(e)
         sys.exit(-1)
 
     if help:

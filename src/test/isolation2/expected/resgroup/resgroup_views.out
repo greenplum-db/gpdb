@@ -7,7 +7,7 @@ select * from gp_toolkit.gp_resgroup_config where groupname='default_group';
 select rsgname , groupid , num_running , num_queueing , num_queued , num_executed , cpu_usage->'-1' as qd_cpu_usage , memory_usage->'-1'->'used' as qd_memory_used , memory_usage->'-1'->'shared_used' as qd_memory_shared_used from gp_toolkit.gp_resgroup_status where rsgname='default_group';
  rsgname       | groupid | num_running | num_queueing | num_queued | num_executed | qd_cpu_usage | qd_memory_used | qd_memory_shared_used 
 ---------------+---------+-------------+--------------+------------+--------------+--------------+----------------+-----------------------
- default_group | 6437    | 0           | 0            | 0          | 0            | 0.00         | 0              | 0                     
+ default_group | 6437    | 0           | 0            | 0          | 0            | 0            | 0              | 0                     
 (1 row)
 
 select rsgname , groupid , cpu , memory_used , memory_shared_used from gp_toolkit.gp_resgroup_status_per_host s join gp_segment_configuration c on s.hostname=c.hostname and c.content=-1 and role='p' where rsgname='default_group';

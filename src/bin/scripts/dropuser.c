@@ -2,7 +2,7 @@
  *
  * dropuser
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/bin/scripts/dropuser.c
@@ -12,6 +12,7 @@
 
 #include "postgres_fe.h"
 #include "common.h"
+#include "common/logging.h"
 #include "fe_utils/string_utils.h"
 
 
@@ -46,12 +47,14 @@ main(int argc, char *argv[])
 	enum trivalue prompt_password = TRI_DEFAULT;
 	bool		echo = false;
 	bool		interactive = false;
+	char		dropuser_buf[128];
 
 	PQExpBufferData sql;
 
 	PGconn	   *conn;
 	PGresult   *result;
 
+	pg_logging_init(argv[0]);
 	progname = get_progname(argv[0]);
 	set_pglocale_pgservice(argv[0], PG_TEXTDOMAIN("pgscripts"));
 
@@ -99,8 +102,8 @@ main(int argc, char *argv[])
 			dropuser = argv[optind];
 			break;
 		default:
-			fprintf(stderr, _("%s: too many command-line arguments (first is \"%s\")\n"),
-					progname, argv[optind + 1]);
+			pg_log_error("too many command-line arguments (first is \"%s\")",
+						 argv[optind + 1]);
 			fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
 			exit(1);
 	}
@@ -108,10 +111,14 @@ main(int argc, char *argv[])
 	if (dropuser == NULL)
 	{
 		if (interactive)
-			dropuser = simple_prompt("Enter name of role to drop: ", 128, true);
+		{
+			simple_prompt("Enter name of role to drop: ",
+						  dropuser_buf, sizeof(dropuser_buf), true);
+			dropuser = dropuser_buf;
+		}
 		else
 		{
-			fprintf(stderr, _("%s: missing required argument role name\n"), progname);
+			pg_log_error("missing required argument role name");
 			fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
 			exit(1);
 		}
@@ -137,8 +144,8 @@ main(int argc, char *argv[])
 
 	if (PQresultStatus(result) != PGRES_COMMAND_OK)
 	{
-		fprintf(stderr, _("%s: removal of role \"%s\" failed: %s"),
-				progname, dropuser, PQerrorMessage(conn));
+		pg_log_error("removal of role \"%s\" failed: %s",
+					 dropuser, PQerrorMessage(conn));
 		PQfinish(conn);
 		exit(1);
 	}

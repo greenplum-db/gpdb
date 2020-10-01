@@ -28,12 +28,7 @@ using namespace gpdxl;
 //		Constructs an action expression
 //
 //---------------------------------------------------------------------------
-CDXLScalarDMLAction::CDXLScalarDMLAction
-	(
-	CMemoryPool *mp
-	)
-	:
-	CDXLScalar(mp)
+CDXLScalarDMLAction::CDXLScalarDMLAction(CMemoryPool *mp) : CDXLScalar(mp)
 {
 }
 
@@ -77,17 +72,16 @@ CDXLScalarDMLAction::GetOpNameStr() const
 //
 //---------------------------------------------------------------------------
 void
-CDXLScalarDMLAction::SerializeToDXL
-	(
-	CXMLSerializer *xml_serializer,
-	const CDXLNode * // node
-	)
-	const
+CDXLScalarDMLAction::SerializeToDXL(CXMLSerializer *xml_serializer,
+									const CDXLNode *  // node
+) const
 {
 	const CWStringConst *element_name = GetOpNameStr();
 
-	xml_serializer->OpenElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
-	xml_serializer->CloseElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	xml_serializer->OpenElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	xml_serializer->CloseElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 }
 
 //---------------------------------------------------------------------------
@@ -99,11 +93,8 @@ CDXLScalarDMLAction::SerializeToDXL
 //
 //---------------------------------------------------------------------------
 BOOL
-CDXLScalarDMLAction::HasBoolResult
-	(
-	CMDAccessor * // md_accessor
-	)
-	const
+CDXLScalarDMLAction::HasBoolResult(CMDAccessor *  // md_accessor
+) const
 {
 	return false;
 }
@@ -118,15 +109,12 @@ CDXLScalarDMLAction::HasBoolResult
 //
 //---------------------------------------------------------------------------
 void
-CDXLScalarDMLAction::AssertValid
-	(
-	const CDXLNode *node,
-	BOOL // validate_children
-	) 
-	const
+CDXLScalarDMLAction::AssertValid(const CDXLNode *node,
+								 BOOL  // validate_children
+) const
 {
 	GPOS_ASSERT(0 == node->Arity());
 }
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 // EOF

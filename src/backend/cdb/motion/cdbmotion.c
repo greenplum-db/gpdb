@@ -24,6 +24,7 @@
 #include "cdb/cdbvars.h"
 #include "cdb/htupfifo.h"
 #include "cdb/ml_ipc.h"
+#include "cdb/tupleremap.h"
 #include "cdb/tupser.h"
 #include "utils/memutils.h"
 #include "utils/typcache.h"
@@ -88,7 +89,7 @@ static void UpdateSentRecordCache(MotionConn *conn);
 static inline void
 reconstructTuple(MotionNodeEntry *pMNEntry, ChunkSorterEntry *pCSEntry, TupleRemapper *remapper)
 {
-	GenericTuple tup;
+	MinimalTuple tup;
 	SerTupInfo *pSerInfo = &pMNEntry->ser_tup_info;
 
 	/*
@@ -165,7 +166,8 @@ createMotionLayerState(int maxMotNodeID)
 
 	if (Gp_interconnect_type == INTERCONNECT_TYPE_UDPIFC)
 		Gp_max_tuple_chunk_size = Gp_max_packet_size - sizeof(struct icpkthdr) - TUPLE_CHUNK_HEADER_SIZE;
-	else if (Gp_interconnect_type == INTERCONNECT_TYPE_TCP)
+	else if (Gp_interconnect_type == INTERCONNECT_TYPE_TCP ||
+			 Gp_interconnect_type == INTERCONNECT_TYPE_PROXY)
 		Gp_max_tuple_chunk_size = Gp_max_packet_size - PACKET_HEADER_SIZE - TUPLE_CHUNK_HEADER_SIZE;
 
 	/*
@@ -555,8 +557,13 @@ SendEndOfStream(MotionLayerState *mlStates,
 	statSendEOS(mlStates, pMNEntry);
 }
 
-/* An unordered receiver will call this with srcRoute == ANY_ROUTE */
-GenericTuple
+/*
+ * Receive one tuple from a sender. An unordered receiver will call this with
+ * srcRoute == ANY_ROUTE.
+ *
+ * The tuple is stored in *slot.
+ */
+MinimalTuple
 RecvTupleFrom(MotionLayerState *mlStates,
 			  ChunkTransportState *transportStates,
 			  int16 motNodeID,
@@ -565,7 +572,7 @@ RecvTupleFrom(MotionLayerState *mlStates,
 	MotionNodeEntry *pMNEntry;
 	ChunkSorterEntry *pCSEntry;
 	htup_fifo	ReadyList;
-	GenericTuple tuple = NULL;
+	MinimalTuple tuple = NULL;
 
 #ifdef AMS_VERBOSE_LOGGING
 	elog(DEBUG5, "RecvTupleFrom( motNodeID = %d, srcRoute = %d )", motNodeID, srcRoute);
@@ -738,7 +745,7 @@ EndMotionLayerNode(MotionLayerState *mlStates, int16 motNodeID, bool flushCommLa
 	 */
 	if (pMNEntry->preserve_order && pMNEntry->ready_tuple_lists != NULL)
 	{
-		for (i = 0; i < getgpsegmentCount(); i++)
+		for (i = 0; i < pMNEntry->num_senders; i++)
 		{
 			pCSEntry = &pMNEntry->ready_tuple_lists[i];
 
@@ -891,7 +898,7 @@ getChunkSorterEntry(MotionLayerState *mlStates,
 	AssertArg(motNodeEntry != NULL);
 
 	Assert(srcRoute >= 0);
-	Assert(srcRoute < getgpsegmentCount());
+	Assert(srcRoute < motNodeEntry->num_senders);
 
 	/* Do we have a sorter initialized ? */
 	if (motNodeEntry->ready_tuple_lists != NULL)
@@ -904,7 +911,7 @@ getChunkSorterEntry(MotionLayerState *mlStates,
 	oldCtxt = MemoryContextSwitchTo(mlStates->motion_layer_mctx);
 
 	if (motNodeEntry->ready_tuple_lists == NULL)
-		motNodeEntry->ready_tuple_lists = (ChunkSorterEntry *) palloc0(getgpsegmentCount() * sizeof(ChunkSorterEntry));
+		motNodeEntry->ready_tuple_lists = (ChunkSorterEntry *) palloc0(motNodeEntry->num_senders * sizeof(ChunkSorterEntry));
 
 	chunkSorterEntry = &motNodeEntry->ready_tuple_lists[srcRoute];
 

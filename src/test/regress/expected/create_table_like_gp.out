@@ -13,31 +13,32 @@ CREATE TABLE t_ao_c (LIKE t_ao); -- Should create a heap table
 NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE t_ao_enc_a (LIKE t_ao_enc INCLUDING STORAGE);
 NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
--- Verify gp_default_storage_options GUC doesn't get used
-SET gp_default_storage_options = "appendonly=true, orientation=row";
+-- Verify default_table_access_method GUC doesn't get used
+SET default_table_access_method = ao_row;
 CREATE TABLE t_ao_d (LIKE t_ao INCLUDING ALL);
 RESET gp_default_storage_options;
 -- Verify created tables and attributes
 SELECT
 	c.relname,
-	c.relstorage,
+	am.amname,
 	a.columnstore,
 	a.compresstype,
 	a.compresslevel
 FROM
 	pg_catalog.pg_class c
+		LEFT OUTER JOIN pg_catalog.pg_am am ON (c.relam = am.oid)
 		LEFT OUTER JOIN pg_catalog.pg_appendonly a ON (c.oid = a.relid)
 WHERE
 	c.relname LIKE 't_ao%';
-  relname   | relstorage | columnstore | compresstype | compresslevel 
-------------+------------+-------------+--------------+---------------
- t_ao       | c          | t           |              |             0
- t_ao_enc   | c          | t           |              |             0
- t_ao_a     | c          | t           |              |             0
- t_ao_b     | c          | t           |              |             0
- t_ao_c     | h          |             |              |              
- t_ao_d     | c          | t           |              |             0
- t_ao_enc_a | c          | t           |              |             0
+  relname   |  amname   | columnstore | compresstype | compresslevel 
+------------+-----------+-------------+--------------+---------------
+ t_ao       | ao_column | t           |              |             0
+ t_ao_enc   | ao_column | t           |              |             0
+ t_ao_a     | ao_column | t           |              |             0
+ t_ao_b     | ao_column | t           |              |             0
+ t_ao_c     | heap      |             |              |              
+ t_ao_enc_a | ao_column | t           |              |             0
+ t_ao_d     | ao_column | t           |              |             0
 (7 rows)
 
 SELECT
@@ -92,17 +93,17 @@ NOTICE:  foreign table "t_ext_r" does not exist, skipping
 -- Verify created tables
 SELECT
 	c.relname,
-	c.relstorage,
+	c.relkind,
 	f.ftoptions
 FROM
 	pg_catalog.pg_class c
 		LEFT OUTER JOIN pg_catalog.pg_foreign_table f ON (c.oid = f.ftrelid)
 WHERE
 	c.relname LIKE 't_ext%';
- relname | relstorage |                                                                                        ftoptions                                                                                         
----------+------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- t_ext   | f          | {format=text,"delimiter=        ","null=\\N","escape=\\",format_type=t,location_uris=file://127.0.0.1/tmp/foo,execute_on=ALL_SEGMENTS,log_errors=f,encoding=6,is_writable=false}
- t_ext_b | f          | {format=text,"delimiter=        ","null=\\N","escape=\\",format_type=t,location_uris=file://127.0.0.1/tmp/foo,execute_on=ALL_SEGMENTS,log_errors=f,encoding=6,is_writable=false}
- t_ext_r | f          | {format=csv,"delimiter= ",null=,"escape=\"","quote=\"",format_type=c,location_uris=gpfdist://127.0.0.1:8080/tmp/dummy,execute_on=ALL_SEGMENTS,log_errors=f,encoding=6,is_writable=false}
+ relname | relkind |                                                                                        ftoptions                                                                                         
+---------+---------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ t_ext   | f       | {format=text,"delimiter=        ","null=\\N","escape=\\",format_type=t,location_uris=file://127.0.0.1/tmp/foo,execute_on=ALL_SEGMENTS,log_errors=f,encoding=6,is_writable=false}
+ t_ext_b | f       | {format=text,"delimiter=        ","null=\\N","escape=\\",format_type=t,location_uris=file://127.0.0.1/tmp/foo,execute_on=ALL_SEGMENTS,log_errors=f,encoding=6,is_writable=false}
+ t_ext_r | f       | {format=csv,"delimiter= ",null=,"escape=\"","quote=\"",format_type=c,location_uris=gpfdist://127.0.0.1:8080/tmp/dummy,execute_on=ALL_SEGMENTS,log_errors=f,encoding=6,is_writable=false}
 (3 rows)
 

@@ -9,7 +9,7 @@
 //		Filter for rechecking an index condition on the operator upstream of the index scan
 //
 //	@owner:
-//		
+//
 //
 //	@test:
 //

@@ -139,6 +139,18 @@ check_external_partition(void)
 	bool		found = false;
 	int			dbnum;
 
+	/*
+	 * This was only a problem with GPDB 6 and below.
+	 *
+	 * GPDB_12_MERGE_FIXME: Could we support upgrading these to GPDB 7,
+	 * even though it wasn't possible before? The upstream syntax used in
+	 * GPDB 7 to recreate the partition hierarchy is more flexible, and
+	 * could possibly handle this. If so, we could remove this check
+	 * entirely.
+	 */
+	if (GET_MAJOR_VERSION(old_cluster.major_version) >= 1000)
+		return;
+
 	prep_status("Checking for external tables used in partitioning");
 
 	snprintf(output_path, sizeof(output_path), "external_partitions.txt");
@@ -319,7 +331,7 @@ check_orphaned_toastrels(void)
 
 	prep_status("Checking for orphaned TOAST relations");
 
-	snprintf(output_path, sizeof(output_path), "partitioned_tables.txt");
+	snprintf(output_path, sizeof(output_path), "orphaned_toast_tables.txt");
 
 	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
 	{
@@ -387,6 +399,18 @@ check_partition_indexes(void)
 	FILE		   *script = NULL;
 	bool			found = false;
 	char			output_path[MAXPGPATH];
+
+	/*
+	 * This was only a problem with GPDB 6 and below.
+	 *
+	 * GPDB_12_MERGE_FIXME: Could we support upgrading these to GPDB 7,
+	 * even though it wasn't possible before? The upstream syntax used in
+	 * GPDB 7 to recreate the partition hierarchy is more flexible, and
+	 * could possibly handle this. If so, we could remove this check
+	 * entirely.
+	 */
+	if (GET_MAJOR_VERSION(old_cluster.major_version) >= 1000)
+		return;
 
 	prep_status("Checking for indexes on partitioned tables");
 
@@ -627,6 +651,18 @@ check_for_array_of_partition_table_types(ClusterInfo *cluster)
 	const char *const SEPARATOR = "\n";
 	int			dbnum;
 	char	   *dependee_partition_report = palloc0(1);
+
+	/*
+	 * This was only a problem with GPDB 6 and below.
+	 *
+	 * GPDB_12_MERGE_FIXME: Could we support upgrading these to GPDB 7,
+	 * even though it wasn't possible before? The upstream syntax used in
+	 * GPDB 7 to recreate the partition hierarchy is more flexible, and
+	 * could possibly handle this. If so, we could remove this check
+	 * entirely.
+	 */
+	if (GET_MAJOR_VERSION(old_cluster.major_version) >= 1000)
+		return;
 
 	prep_status("Checking array types derived from partitions");
 

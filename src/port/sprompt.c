@@ -3,7 +3,7 @@
  * sprompt.c
  *	  simple_prompt() routine
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -12,33 +12,31 @@
  *
  *-------------------------------------------------------------------------
  */
-
-
-/*
- * simple_prompt
- *
- * Generalized function especially intended for reading in usernames and
- * password interactively. Reads from /dev/tty or stdin/stderr.
- *
- * prompt:		The prompt to print
- * maxlen:		How many characters to accept
- * echo:		Set to false if you want to hide what is entered (for passwords)
- *
- * Returns a malloc()'ed string with the input (w/o trailing newline).
- */
 #include "c.h"
 
 #ifdef HAVE_TERMIOS_H
 #include <termios.h>
 #endif
 
-extern char *simple_prompt(const char *prompt, int maxlen, bool echo);
 
-char *
-simple_prompt(const char *prompt, int maxlen, bool echo)
+/*
+ * simple_prompt
+ *
+ * Generalized function especially intended for reading in usernames and
+ * passwords interactively.  Reads from /dev/tty or stdin/stderr.
+ *
+ * prompt:		The prompt to print, or NULL if none (automatically localized)
+ * destination: buffer in which to store result
+ * destlen:		allocated length of destination
+ * echo:		Set to false if you want to hide what is entered (for passwords)
+ *
+ * The input (without trailing newline) is returned in the destination buffer,
+ * with a '\0' appended.
+ */
+void
+simple_prompt(const char *prompt, char *destination, size_t destlen, bool echo)
 {
 	int			length;
-	char	   *destination;
 	FILE	   *termin,
 			   *termout;
 
@@ -49,10 +47,6 @@ simple_prompt(const char *prompt, int maxlen, bool echo)
 	HANDLE		t = NULL;
 	DWORD		t_orig = 0;
 #endif
-
-	destination = (char *) malloc(maxlen + 1);
-	if (!destination)
-		return NULL;
 
 #ifdef WIN32
 
@@ -132,7 +126,7 @@ simple_prompt(const char *prompt, int maxlen, bool echo)
 		fflush(termout);
 	}
 
-	if (fgets(destination, maxlen + 1, termin) == NULL)
+	if (fgets(destination, destlen, termin) == NULL)
 		destination[0] = '\0';
 
 	length = strlen(destination);
@@ -173,6 +167,4 @@ simple_prompt(const char *prompt, int maxlen, bool echo)
 		fclose(termin);
 		fclose(termout);
 	}
-
-	return destination;
 }

@@ -497,8 +497,8 @@ FETCH FROM foo25;
        2 |    2716 |   0 |    2 |   2 |      2 |       2 |        2 |           2 |         2 |        2 |   4 |    5 | CAAAAA   | MAEAAA   | AAAAxx
 (1 row)
 
---FETCH BACKWARD FROM foo25;
---FETCH ABSOLUTE -1 FROM foo25;
+--FETCH BACKWARD FROM foo25; -- backwards scans not supported in GPDB
+--FETCH ABSOLUTE -1 FROM foo25; -- backwards scans not supported in GPDB
 SELECT name, statement, is_holdable, is_binary, is_scrollable FROM pg_cursors;
  name  |                                statement                                 | is_holdable | is_binary | is_scrollable 
 -------+--------------------------------------------------------------------------+-------------+-----------+---------------
@@ -742,41 +742,38 @@ SELECT f1, f2 FROM uctest;
  13 | three
 (2 rows)
 
-UPDATE uctest SET f1 = f1 + 10 WHERE CURRENT OF c1; -- currently broken on GPDB! (does nothing)
+UPDATE uctest SET f1 = f1 + 10 WHERE CURRENT OF c1;
 SELECT f1, f2 FROM uctest;
  f1 |  f2   
 ----+-------
   8 | one
- 13 | three
+ 23 | three
 (2 rows)
 
 -- insensitive cursor should not show effects of updates or deletes
---FETCH RELATIVE 0 FROM c1;
-DELETE FROM uctest WHERE CURRENT OF c1; -- currently broken on GPDB! (does nothing)
+--FETCH RELATIVE 0 FROM c1; -- backwards scans not supported in GPDB
+DELETE FROM uctest WHERE CURRENT OF c1;
 SELECT f1, f2 FROM uctest;
- f1 |  f2   
-----+-------
+ f1 | f2  
+----+-----
   8 | one
- 13 | three
-(2 rows)
+(1 row)
 
 DELETE FROM uctest WHERE CURRENT OF c1; -- no-op
 SELECT f1, f2 FROM uctest;
- f1 |  f2   
-----+-------
+ f1 | f2  
+----+-----
   8 | one
- 13 | three
-(2 rows)
+(1 row)
 
 UPDATE uctest SET f1 = f1 + 10 WHERE CURRENT OF c1; -- no-op
 SELECT f1, f2 FROM uctest;
- f1 |  f2   
-----+-------
+ f1 | f2  
+----+-----
   8 | one
- 13 | three
-(2 rows)
+(1 row)
 
---FETCH RELATIVE 0 FROM c1;
+--FETCH RELATIVE 0 FROM c1; -- backwards scans not supported in GPDB
 ROLLBACK;
 SELECT f1, f2 FROM uctest;
  f1 |  f2   
@@ -801,37 +798,34 @@ SELECT f1, f2 FROM uctest;
  13 | three
 (2 rows)
 
-UPDATE uctest SET f1 = f1 + 10 WHERE CURRENT OF c1; -- currently broken on GPDB! (does nothing)
+UPDATE uctest SET f1 = f1 + 10 WHERE CURRENT OF c1;
 SELECT f1, f2 FROM uctest;
  f1 |  f2   
 ----+-------
   8 | one
- 13 | three
+ 23 | three
 (2 rows)
 
-DELETE FROM uctest WHERE CURRENT OF c1; -- currently broken on GPDB! (does nothing)
+DELETE FROM uctest WHERE CURRENT OF c1;
 SELECT f1, f2 FROM uctest;
- f1 |  f2   
-----+-------
+ f1 | f2  
+----+-----
   8 | one
- 13 | three
-(2 rows)
+(1 row)
 
 DELETE FROM uctest WHERE CURRENT OF c1; -- no-op
 SELECT f1, f2 FROM uctest;
- f1 |  f2   
-----+-------
+ f1 | f2  
+----+-----
   8 | one
- 13 | three
-(2 rows)
+(1 row)
 
 UPDATE uctest SET f1 = f1 + 10 WHERE CURRENT OF c1; -- no-op
 SELECT f1, f2 FROM uctest;
- f1 |  f2   
-----+-------
+ f1 | f2  
+----+-----
   8 | one
- 13 | three
-(2 rows)
+(1 row)
 
 --- sensitive cursors can't currently scroll back, so this is an error:
 FETCH RELATIVE 0 FROM c1;
@@ -995,15 +989,13 @@ COMMIT;
 BEGIN;
 EXPLAIN (costs off)
 DECLARE c1 CURSOR FOR SELECT stringu1 FROM onek WHERE stringu1 = 'DZAAAA';
-                      QUERY PLAN                       
--------------------------------------------------------
+                    QUERY PLAN                     
+---------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Bitmap Heap Scan on onek
-         Recheck Cond: (stringu1 = 'DZAAAA'::name)
-         ->  Bitmap Index Scan on onek_stringu1
-               Index Cond: (stringu1 = 'DZAAAA'::name)
+   ->  Index Only Scan using onek_stringu1 on onek
+         Index Cond: (stringu1 = 'DZAAAA'::name)
  Optimizer: Postgres query optimizer
-(6 rows)
+(4 rows)
 
 DECLARE c1 CURSOR FOR SELECT stringu1 FROM onek WHERE stringu1 = 'DZAAAA';
 FETCH FROM c1;
@@ -1180,17 +1172,19 @@ ERROR:  backward scan is not supported in this version of Greenplum Database
 rollback;
 begin;
 explain (costs off) declare c2 cursor for select generate_series(1,3) as g;
- QUERY PLAN 
-------------
- Result
-(1 row)
+  QUERY PLAN  
+--------------
+ ProjectSet
+   ->  Result
+(2 rows)
 
 explain (costs off) declare c2 scroll cursor for select generate_series(1,3) as g;
              QUERY PLAN              
 -------------------------------------
- Result
+ ProjectSet
+   ->  Result
  Optimizer: Postgres query optimizer
-(2 rows)
+(3 rows)
 
 declare c2 scroll cursor for select generate_series(1,3) as g;
 fetch all in c2;

@@ -1,29 +1,25 @@
-create schema alter_ao_part_tables_splitpartition_@orientation@;
-set search_path="$user",alter_ao_part_tables_splitpartition_@orientation@,public;
-SET gp_default_storage_options='orientation=@orientation@';
+create schema alter_ao_part_tables_splitpartition_@amname@;
+set search_path="$user",alter_ao_part_tables_splitpartition_@amname@,public;
+SET default_table_access_method=@amname@;
 BEGIN;
 CREATE TABLE sto_alt_uao_part_splitpartition (
  id int, date date, amt decimal(10,2))
- with (appendonly=true) DISTRIBUTED BY (id) PARTITION BY RANGE (date)
+ DISTRIBUTED BY (id) PARTITION BY RANGE (date)
  (PARTITION sales_Jul13 START (date '2013-07-01') INCLUSIVE,
   PARTITION sales_Aug13 START (date '2013-08-01') INCLUSIVE,
   PARTITION sales_Sep13 START (date '2013-09-01') INCLUSIVE
   END (date '2014-01-01') EXCLUSIVE);
-NOTICE:  CREATE TABLE will create partition "sto_alt_uao_part_splitpartition_1_prt_sales_jul13" for table "sto_alt_uao_part_splitpartition"
-NOTICE:  CREATE TABLE will create partition "sto_alt_uao_part_splitpartition_1_prt_sales_aug13" for table "sto_alt_uao_part_splitpartition"
-NOTICE:  CREATE TABLE will create partition "sto_alt_uao_part_splitpartition_1_prt_sales_sep13" for table "sto_alt_uao_part_splitpartition"
 SELECT 1 AS VisimapPresent FROM pg_appendonly WHERE visimaprelid is
 not NULL AND visimapidxid is not NULL AND relid in (SELECT c.oid FROM
 pg_class c join pg_namespace n on c.relnamespace = n.oid and
  c.relname like 'sto_alt_uao_part_splitpartition%' and
- n.nspname = 'alter_ao_part_tables_splitpartition_@orientation@');
+ n.nspname = 'alter_ao_part_tables_splitpartition_@amname@');
  visimappresent 
 ----------------
               1
               1
               1
-              1
-(4 rows)
+(3 rows)
 
 Insert into sto_alt_uao_part_splitpartition values(1,'2013-07-05',19.20);
 Insert into sto_alt_uao_part_splitpartition values(2,'2013-08-15',10.20);
@@ -37,16 +33,15 @@ select count(*) from sto_alt_uao_part_splitpartition;
 
 -- Alter table add default partition
 Alter table sto_alt_uao_part_splitpartition
- add default partition part_others with(appendonly=true);
-NOTICE:  CREATE TABLE will create partition "sto_alt_uao_part_splitpartition_1_prt_part_others" for table "sto_alt_uao_part_splitpartition"
+ add default partition part_others;
 select count(*) FROM pg_appendonly WHERE visimaprelid is not NULL AND
 visimapidxid is not NULL AND relid in (SELECT c.oid FROM pg_class c
  join pg_namespace n on c.relnamespace = n.oid and
  c.relname like 'sto_alt_uao_part_splitpartition%' and
- n.nspname = 'alter_ao_part_tables_splitpartition_@orientation@');
+ n.nspname = 'alter_ao_part_tables_splitpartition_@amname@');
  count 
 -------
-     5
+     4
 (1 row)
 
 insert into sto_alt_uao_part_splitpartition
@@ -76,18 +71,14 @@ select * from sto_alt_uao_part_splitpartition;
 Alter table sto_alt_uao_part_splitpartition split default partition
  start(date '2013-01-01') end(date '2013-03-01')
  into (partition p1, partition part_others);
-NOTICE:  exchanged partition "part_others" of relation "sto_alt_uao_part_splitpartition" with relation "pg_temp_117982"
-NOTICE:  dropped partition "part_others" for relation "sto_alt_uao_part_splitpartition"
-NOTICE:  CREATE TABLE will create partition "sto_alt_uao_part_splitpartition_1_prt_p1" for table "sto_alt_uao_part_splitpartition"
-NOTICE:  CREATE TABLE will create partition "sto_alt_uao_part_splitpartition_1_prt_part_others" for table "sto_alt_uao_part_splitpartition"
 select count(*) FROM pg_appendonly WHERE visimaprelid is not NULL AND
 visimapidxid is not NULL AND relid in (SELECT c.oid FROM pg_class c
  join pg_namespace n on c.relnamespace = n.oid and
  c.relname like 'sto_alt_uao_part_splitpartition%' and
- n.nspname = 'alter_ao_part_tables_splitpartition_@orientation@');
+ n.nspname = 'alter_ao_part_tables_splitpartition_@amname@');
  count 
 -------
-     6
+     5
 (1 row)
 
 update sto_alt_uao_part_splitpartition set amt = amt - 5;

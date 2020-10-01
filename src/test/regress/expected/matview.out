@@ -36,7 +36,7 @@ SELECT relispopulated FROM pg_class WHERE oid = 'mvtest_tm'::regclass;
  f
 (1 row)
 
-SELECT * FROM mvtest_tm;
+SELECT * FROM mvtest_tm ORDER BY type;
 ERROR:  materialized view "mvtest_tm" has not been populated
 HINT:  Use the REFRESH MATERIALIZED VIEW command.
 REFRESH MATERIALIZED VIEW mvtest_tm;
@@ -47,12 +47,12 @@ SELECT relispopulated FROM pg_class WHERE oid = 'mvtest_tm'::regclass;
 (1 row)
 
 CREATE UNIQUE INDEX mvtest_tm_type ON mvtest_tm (type);
-SELECT * FROM mvtest_tm;
+SELECT * FROM mvtest_tm ORDER BY type;
  type | totamt 
 ------+--------
+ x    |      5
  y    |     12
  z    |     11
- x    |      5
 (3 rows)
 
 -- create various views
@@ -91,10 +91,10 @@ EXPLAIN (costs off)
                                   QUERY PLAN                                  
 ------------------------------------------------------------------------------
  Redistribute Motion 1:3  (slice1; segments: 1)
-   Hash Key: (sum((sum(mvtest_t.amt))))
-   ->  Finalize Aggregate
+   Hash Key: (sum(mvtest_tv.totamt))
+   ->  Aggregate
          ->  Gather Motion 3:1  (slice2; segments: 3)
-               ->  Partial Aggregate
+               ->  Subquery Scan on mvtest_tv
                      ->  HashAggregate
                            Group Key: mvtest_t.type
                            ->  Redistribute Motion 3:3  (slice3; segments: 3)
@@ -109,11 +109,11 @@ CREATE MATERIALIZED VIEW mvtest_bb AS SELECT * FROM mvtest_tvvmv;
 CREATE INDEX mvtest_aa ON mvtest_bb (grandtot);
 -- check that plans seem reasonable
 \d+ mvtest_tvm
-                Materialized view "public.mvtest_tvm"
- Column |  Type   | Modifiers | Storage  | Stats target | Description 
---------+---------+-----------+----------+--------------+-------------
- type   | text    |           | extended |              | 
- totamt | numeric |           | main     |              | 
+                           Materialized view "public.mvtest_tvm"
+ Column |  Type   | Collation | Nullable | Default | Storage  | Stats target | Description 
+--------+---------+-----------+----------+---------+----------+--------------+-------------
+ type   | text    |           |          |         | extended |              | 
+ totamt | numeric |           |          |         | main     |              | 
 View definition:
  SELECT mvtest_tv.type,
     mvtest_tv.totamt
@@ -122,11 +122,11 @@ View definition:
 Distributed by: (type)
 
 \d+ mvtest_tvm
-                Materialized view "public.mvtest_tvm"
- Column |  Type   | Modifiers | Storage  | Stats target | Description 
---------+---------+-----------+----------+--------------+-------------
- type   | text    |           | extended |              | 
- totamt | numeric |           | main     |              | 
+                           Materialized view "public.mvtest_tvm"
+ Column |  Type   | Collation | Nullable | Default | Storage  | Stats target | Description 
+--------+---------+-----------+----------+---------+----------+--------------+-------------
+ type   | text    |           |          |         | extended |              | 
+ totamt | numeric |           |          |         | main     |              | 
 View definition:
  SELECT mvtest_tv.type,
     mvtest_tv.totamt
@@ -135,20 +135,20 @@ View definition:
 Distributed by: (type)
 
 \d+ mvtest_tvvm
-                Materialized view "public.mvtest_tvvm"
-  Column  |  Type   | Modifiers | Storage | Stats target | Description 
-----------+---------+-----------+---------+--------------+-------------
- grandtot | numeric |           | main    |              | 
+                           Materialized view "public.mvtest_tvvm"
+  Column  |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+----------+---------+-----------+----------+---------+---------+--------------+-------------
+ grandtot | numeric |           |          |         | main    |              | 
 View definition:
  SELECT mvtest_tvv.grandtot
    FROM mvtest_tvv;
 Distributed by: (grandtot)
 
 \d+ mvtest_bb
-                 Materialized view "public.mvtest_bb"
-  Column  |  Type   | Modifiers | Storage | Stats target | Description 
-----------+---------+-----------+---------+--------------+-------------
- grandtot | numeric |           | main    |              | 
+                            Materialized view "public.mvtest_bb"
+  Column  |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+----------+---------+-----------+----------+---------+---------+--------------+-------------
+ grandtot | numeric |           |          |         | main    |              | 
 Indexes:
     "mvtest_aa" btree (grandtot)
 View definition:
@@ -161,10 +161,10 @@ CREATE SCHEMA mvtest_mvschema;
 ALTER MATERIALIZED VIEW mvtest_tvm SET SCHEMA mvtest_mvschema;
 \d+ mvtest_tvm
 \d+ mvtest_tvmm
-                Materialized view "public.mvtest_tvmm"
-  Column  |  Type   | Modifiers | Storage | Stats target | Description 
-----------+---------+-----------+---------+--------------+-------------
- grandtot | numeric |           | main    |              | 
+                           Materialized view "public.mvtest_tvmm"
+  Column  |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+----------+---------+-----------+----------+---------+---------+--------------+-------------
+ grandtot | numeric |           |          |         | main    |              | 
 Indexes:
     "mvtest_tvmm_pred" UNIQUE, btree (grandtot) WHERE grandtot < 0::numeric
 View definition:
@@ -174,11 +174,11 @@ Distributed by: (grandtot)
 
 SET search_path = mvtest_mvschema, public;
 \d+ mvtest_tvm
-            Materialized view "mvtest_mvschema.mvtest_tvm"
- Column |  Type   | Modifiers | Storage  | Stats target | Description 
---------+---------+-----------+----------+--------------+-------------
- type   | text    |           | extended |              | 
- totamt | numeric |           | main     |              | 
+                      Materialized view "mvtest_mvschema.mvtest_tvm"
+ Column |  Type   | Collation | Nullable | Default | Storage  | Stats target | Description 
+--------+---------+-----------+----------+---------+----------+--------------+-------------
+ type   | text    |           |          |         | extended |              | 
+ totamt | numeric |           |          |         | main     |              | 
 View definition:
  SELECT mvtest_tv.type,
     mvtest_tv.totamt
@@ -345,12 +345,12 @@ SELECT type, m.totamt AS mtot, v.totamt AS vtot FROM mvtest_tm m LEFT JOIN mvtes
 DROP TABLE mvtest_t;
 ERROR:  cannot drop table mvtest_t because other objects depend on it
 DETAIL:  view mvtest_tv depends on table mvtest_t
+materialized view mvtest_mvschema.mvtest_tvm depends on view mvtest_tv
+materialized view mvtest_tvmm depends on materialized view mvtest_mvschema.mvtest_tvm
 view mvtest_tvv depends on view mvtest_tv
 materialized view mvtest_tvvm depends on view mvtest_tvv
 view mvtest_tvvmv depends on materialized view mvtest_tvvm
 materialized view mvtest_bb depends on view mvtest_tvvmv
-materialized view mvtest_mvschema.mvtest_tvm depends on view mvtest_tv
-materialized view mvtest_tvmm depends on materialized view mvtest_mvschema.mvtest_tvm
 materialized view mvtest_tm depends on table mvtest_t
 materialized view mvtest_tmm depends on materialized view mvtest_tm
 HINT:  Use DROP ... CASCADE to drop the dependent objects too.
@@ -361,12 +361,12 @@ BEGIN;
 DROP TABLE mvtest_t CASCADE;
 NOTICE:  drop cascades to 9 other objects
 DETAIL:  drop cascades to view mvtest_tv
+drop cascades to materialized view mvtest_mvschema.mvtest_tvm
+drop cascades to materialized view mvtest_tvmm
 drop cascades to view mvtest_tvv
 drop cascades to materialized view mvtest_tvvm
 drop cascades to view mvtest_tvvmv
 drop cascades to materialized view mvtest_bb
-drop cascades to materialized view mvtest_mvschema.mvtest_tvm
-drop cascades to materialized view mvtest_tvmm
 drop cascades to materialized view mvtest_tm
 drop cascades to materialized view mvtest_tmm
 ROLLBACK;
@@ -374,11 +374,11 @@ ROLLBACK;
 CREATE VIEW mvtest_vt1 AS SELECT 1 moo;
 CREATE VIEW mvtest_vt2 AS SELECT moo, 2*moo FROM mvtest_vt1 UNION ALL SELECT moo, 3*moo FROM mvtest_vt1;
 \d+ mvtest_vt2
-                View "public.mvtest_vt2"
-  Column  |  Type   | Modifiers | Storage | Description 
-----------+---------+-----------+---------+-------------
- moo      | integer |           | plain   | 
- ?column? | integer |           | plain   | 
+                          View "public.mvtest_vt2"
+  Column  |  Type   | Collation | Nullable | Default | Storage | Description 
+----------+---------+-----------+----------+---------+---------+-------------
+ moo      | integer |           |          |         | plain   | 
+ ?column? | integer |           |          |         | plain   | 
 View definition:
  SELECT mvtest_vt1.moo,
     2 * mvtest_vt1.moo
@@ -390,11 +390,11 @@ UNION ALL
 
 CREATE MATERIALIZED VIEW mv_test2 AS SELECT moo, 2*moo FROM mvtest_vt2 UNION ALL SELECT moo, 3*moo FROM mvtest_vt2;
 \d+ mv_test2
-                  Materialized view "public.mv_test2"
-  Column  |  Type   | Modifiers | Storage | Stats target | Description 
-----------+---------+-----------+---------+--------------+-------------
- moo      | integer |           | plain   |              | 
- ?column? | integer |           | plain   |              | 
+                            Materialized view "public.mv_test2"
+  Column  |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+----------+---------+-----------+----------+---------+---------+--------------+-------------
+ moo      | integer |           |          |         | plain   |              | 
+ ?column? | integer |           |          |         | plain   |              | 
 View definition:
  SELECT mvtest_vt2.moo,
     2 * mvtest_vt2.moo
@@ -521,6 +521,33 @@ DETAIL:  drop cascades to materialized view mvtest_mv_v
 drop cascades to materialized view mvtest_mv_v_2
 drop cascades to materialized view mvtest_mv_v_3
 drop cascades to materialized view mvtest_mv_v_4
+-- Check that unknown literals are converted to "text" in CREATE MATVIEW,
+-- so that we don't end up with unknown-type columns.
+CREATE MATERIALIZED VIEW mv_unspecified_types AS
+  SELECT 42 as i, 42.5 as num, 'foo' as u, 'foo'::unknown as u2, null as n;
+\d+ mv_unspecified_types
+                      Materialized view "public.mv_unspecified_types"
+ Column |  Type   | Collation | Nullable | Default | Storage  | Stats target | Description 
+--------+---------+-----------+----------+---------+----------+--------------+-------------
+ i      | integer |           |          |         | plain    |              | 
+ num    | numeric |           |          |         | main     |              | 
+ u      | text    |           |          |         | extended |              | 
+ u2     | text    |           |          |         | extended |              | 
+ n      | text    |           |          |         | extended |              | 
+View definition:
+ SELECT 42 AS i,
+    42.5 AS num,
+    'foo'::text AS u,
+    'foo'::text AS u2,
+    NULL::text AS n;
+
+SELECT * FROM mv_unspecified_types;
+ i  | num  |  u  | u2  | n 
+----+------+-----+-----+---
+ 42 | 42.5 | foo | foo | 
+(1 row)
+
+DROP MATERIALIZED VIEW mv_unspecified_types;
 -- make sure that create WITH NO DATA does not plan the query (bug #13907)
 create materialized view mvtest_error as select 1/0 as x;  -- fail
 ERROR:  division by zero

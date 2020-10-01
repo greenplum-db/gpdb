@@ -157,8 +157,8 @@
       <p>During this phase, system files in the primary segment's data directory are copied to the
         segment data directory. IO is suspended while the following flat files are copied from the
         primary data directory to the segment data directory:<ul id="ul_ozt_c3t_bx">
-          <li><codeph>pg_xlog/*</codeph></li>
-          <li><codeph>pg_clog/*</codeph></li>
+          <li><codeph>pg_wal/*</codeph></li>
+          <li><codeph>pg_xact/*</codeph></li>
           <li><codeph>pg_distributedlog/*</codeph></li>
           <li><codeph>pg_distributedxidmap/*</codeph></li>
           <li><codeph>pg_multixact/members</codeph></li>

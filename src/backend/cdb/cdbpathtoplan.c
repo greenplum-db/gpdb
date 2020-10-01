@@ -13,13 +13,12 @@
  */
 #include "postgres.h"
 
-#include "nodes/relation.h"
-
 #include "cdb/cdbpathlocus.h"
 #include "cdb/cdbllize.h"		/* makeFlow() */
 #include "cdb/cdbpathtoplan.h"	/* me */
 #include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"
+#include "nodes/pathnodes.h"
 
 /*
  * cdbpathtoplan_create_flow

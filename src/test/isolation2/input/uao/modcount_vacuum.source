@@ -1,7 +1,7 @@
 -- @Description Tests that vacuum is not changing the modification count.
 -- 
 DROP TABLE IF EXISTS ao;
-CREATE TABLE ao (a INT, b INT) WITH (appendonly=true, orientation=@orientation@);
+CREATE TABLE ao (a INT, b INT) USING @amname@;
 INSERT INTO ao SELECT i as a, i as b FROM generate_series(1,10) AS i;
 
 DELETE FROM ao WHERE a < 5;

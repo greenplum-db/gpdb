@@ -55,6 +55,7 @@ SELECT COUNT(*) FROM guid1 WHERE guid_field >= '22222222-2222-2222-2222-22222222
 
 -- btree and hash index creation test
 CREATE INDEX guid1_btree ON guid1 USING BTREE (guid_field);
+CREATE INDEX guid1_hash  ON guid1 USING HASH  (guid_field);
 
 -- unique index test
 CREATE UNIQUE INDEX guid1_unique_BTREE ON guid1 USING BTREE (guid_field);

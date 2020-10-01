@@ -357,7 +357,7 @@ validate_format_params(FormatConfig *format_in_config, TupleDesc tupdesc)
 		char *name = strVal(lfirst(l));
 		for (i = 0; i < num_fields_in_table_list; i++)
 		{
-			if (namestrcmp(&(tupdesc->attrs[i]->attname), name) == 0)
+			if (namestrcmp(&(TupleDescAttr(tupdesc, i)->attname), name) == 0)
 			{
 				is_in_both_lists = true;
 				break;
@@ -809,9 +809,9 @@ fixedwidth_in(PG_FUNCTION_ARGS)
 					encoding_encode_strinfo(fcinfo, &(myData->one_val), true);
 
 				myData->values[idx] = InputFunctionCall(&format_in_config.conv_functions[idx],
-											  myData->one_val.data,
-											  format_in_config.typioparams[idx],
-											  tupdesc->attrs[idx]->atttypmod);
+														myData->one_val.data,
+														format_in_config.typioparams[idx],
+														TupleDescAttr(tupdesc, idx)->atttypmod);
 				myData->nulls[idx] = false;
 			}
 		}
@@ -836,9 +836,9 @@ fixedwidth_in(PG_FUNCTION_ARGS)
 					encoding_encode_strinfo(fcinfo, &(myData->one_val), true);
 
 				myData->values[idx] = InputFunctionCall(&format_in_config.conv_functions[idx],
-													  myData->one_val.data,
-													  format_in_config.typioparams[idx],
-													  tupdesc->attrs[idx]->atttypmod);
+														myData->one_val.data,
+														format_in_config.typioparams[idx],
+														TupleDescAttr(tupdesc, idx)->atttypmod);
 				myData->nulls[idx] = false;
 			}
 		}

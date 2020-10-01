@@ -15,23 +15,23 @@
 - Make sure that you add `/usr/local/lib` and `/usr/local/lib64` to
 `/etc/ld.so.conf`, then run command `ldconfig`.
 
-- If you want to install and use gcc-6 by default, run:
+- If you want to install and use gcc-7 by default, run:
 
   ```bash
   sudo yum install -y centos-release-scl
-  sudo yum install -y devtoolset-6-toolchain
-  echo 'source scl_source enable devtoolset-6' >> ~/.bashrc
+  sudo yum install -y devtoolset-7-toolchain
+  echo 'source scl_source enable devtoolset-7' >> ~/.bashrc
   ```
 
 ## For RHEL
 
 Use dependency script for CentOS.
 
-- If you want to install `devtoolset-6`:
+- If you want to install `devtoolset-7`:
 
   ```bash
   sudo yum-config-manager --enable rhui-REGION-rhel-server-rhscl
-  sudo yum install -y devtoolset-6-toolchain
+  sudo yum install -y devtoolset-7-toolchain
   ```
 
 ## For Ubuntu:
@@ -46,12 +46,12 @@ Use dependency script for CentOS.
     ./README.ubuntu.bash
   ```
 
-- If you want to use gcc-6 and g++-6:
+- Ubuntu 18.04 and newer should have use gcc 7 or newer, but you can also enable gcc-7 on older versions of Ubuntu:
 
   ```bash
   add-apt-repository ppa:ubuntu-toolchain-r/test -y
   apt-get update
-  apt-get install -y gcc-6 g++-6
+  apt-get install -y gcc-7 g++-7
   ```
 
 ## Common Platform Tasks:
@@ -83,45 +83,6 @@ then run command `ldconfig`.
     ssh <hostname of your machine>  # e.g., ssh briarwood
    ```
 
-1. Set up your system configuration:
+1. Set up your system configuration by following the installation guide on [docs.greenplum.org](https://docs.greenplum.org)
 
-  ```bash
 
-  sudo bash -c 'cat >> /etc/sysctl.conf <<-EOF
-  kernel.shmmax = 500000000
-  kernel.shmmni = 4096
-  kernel.shmall = 4000000000
-  kernel.sem = 500 1024000 200 4096
-  kernel.sysrq = 1
-  kernel.core_uses_pid = 1
-  kernel.msgmnb = 65536
-  kernel.msgmax = 65536
-  kernel.msgmni = 2048
-  net.ipv4.tcp_syncookies = 1
-  net.ipv4.ip_forward = 0
-  net.ipv4.conf.default.accept_source_route = 0
-  net.ipv4.tcp_tw_recycle = 1
-  net.ipv4.tcp_max_syn_backlog = 4096
-  net.ipv4.conf.all.arp_filter = 1
-  net.ipv4.ip_local_port_range = 1025 65535
-  net.core.netdev_max_backlog = 10000
-  net.core.rmem_max = 2097152
-  net.core.wmem_max = 2097152
-  vm.overcommit_memory = 2
-
-  EOF'
-
-  sudo bash -c 'cat >> /etc/security/limits.conf <<-EOF
-  * soft nofile 65536
-  * hard nofile 65536
-  * soft nproc 131072
-  * hard nproc 131072
-
-  EOF'
-
-  sudo bash -c 'cat >> /etc/ld.so.conf <<-EOF
-  /usr/local/lib
-
-  EOF'
-
-  ```

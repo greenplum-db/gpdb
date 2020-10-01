@@ -3,7 +3,7 @@
  * spi.h
  *				Server Programming Interface public declarations
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/executor/spi.h
@@ -13,6 +13,7 @@
 #ifndef SPI_H
 #define SPI_H
 
+#include "commands/trigger.h"
 #include "lib/ilist.h"
 #include "nodes/parsenodes.h"
 #include "utils/portal.h"
@@ -43,6 +44,8 @@ typedef struct _SPI_plan *SPIPlanPtr;
 #define SPI_ERROR_NOATTRIBUTE	(-9)
 #define SPI_ERROR_NOOUTFUNC		(-10)
 #define SPI_ERROR_TYPUNKNOWN	(-11)
+#define SPI_ERROR_REL_DUPLICATE (-12)
+#define SPI_ERROR_REL_NOT_FOUND (-13)
 
 #define SPI_OK_CONNECT			1
 #define SPI_OK_FINISH			2
@@ -58,44 +61,51 @@ typedef struct _SPI_plan *SPIPlanPtr;
 #define SPI_OK_DELETE_RETURNING 12
 #define SPI_OK_UPDATE_RETURNING 13
 #define SPI_OK_REWRITTEN		14
+#define SPI_OK_REL_REGISTER		15
+#define SPI_OK_REL_UNREGISTER	16
+#define SPI_OK_TD_REGISTER		17
+
+#define SPI_OPT_NONATOMIC		(1 << 0)
+
+/* These used to be functions, now just no-ops for backwards compatibility */
+#define SPI_push()	((void) 0)
+#define SPI_pop()	((void) 0)
+#define SPI_push_conditional()	false
+#define SPI_pop_conditional(pushed) ((void) 0)
+#define SPI_restore_connection()	((void) 0)
 
 extern PGDLLIMPORT uint64 SPI_processed;
-extern PGDLLIMPORT Oid SPI_lastoid;
 extern PGDLLIMPORT SPITupleTable *SPI_tuptable;
 extern PGDLLIMPORT int SPI_result;
 
 extern int	SPI_connect(void);
+extern int	SPI_connect_ext(int options);
 extern int	SPI_finish(void);
-extern void SPI_push(void);
-extern void SPI_pop(void);
-extern bool SPI_push_conditional(void);
-extern void SPI_pop_conditional(bool pushed);
-extern void SPI_restore_connection(void);
 extern int	SPI_execute(const char *src, bool read_only, int64 tcount);
 extern int SPI_execute_plan(SPIPlanPtr plan, Datum *Values, const char *Nulls,
-				 bool read_only, int64 tcount);
+							bool read_only, int64 tcount);
 extern int SPI_execute_plan_with_paramlist(SPIPlanPtr plan,
-								ParamListInfo params,
-								bool read_only, long tcount);
+										   ParamListInfo params,
+										   bool read_only, long tcount);
 extern int	SPI_exec(const char *src, int64 tcount);
 extern int SPI_execp(SPIPlanPtr plan, Datum *Values, const char *Nulls,
-		  int64 tcount);
+					 int64 tcount);
 extern int SPI_execute_snapshot(SPIPlanPtr plan,
-					 Datum *Values, const char *Nulls,
-					 Snapshot snapshot,
-					 Snapshot crosscheck_snapshot,
-					 bool read_only, bool fire_triggers, int64 tcount);
+								Datum *Values, const char *Nulls,
+								Snapshot snapshot,
+								Snapshot crosscheck_snapshot,
+								bool read_only, bool fire_triggers, int64 tcount);
 extern int SPI_execute_with_args(const char *src,
-					  int nargs, Oid *argtypes,
-					  Datum *Values, const char *Nulls,
-					  bool read_only, int64 tcount);
+								 int nargs, Oid *argtypes,
+								 Datum *Values, const char *Nulls,
+								 bool read_only, int64 tcount);
 extern SPIPlanPtr SPI_prepare(const char *src, int nargs, Oid *argtypes);
 extern SPIPlanPtr SPI_prepare_cursor(const char *src, int nargs, Oid *argtypes,
-				   int cursorOptions);
+									 int cursorOptions);
 extern SPIPlanPtr SPI_prepare_params(const char *src,
-				   ParserSetupHook parserSetup,
-				   void *parserSetupArg,
-				   int cursorOptions);
+									 ParserSetupHook parserSetup,
+									 void *parserSetupArg,
+									 int cursorOptions);
 extern int	SPI_keepplan(SPIPlanPtr plan);
 extern SPIPlanPtr SPI_saveplan(SPIPlanPtr plan);
 extern int	SPI_freeplan(SPIPlanPtr plan);
@@ -112,7 +122,7 @@ extern CachedPlan *SPI_plan_get_cached_plan(SPIPlanPtr plan);
 extern HeapTuple SPI_copytuple(HeapTuple tuple);
 extern HeapTupleHeader SPI_returntuple(HeapTuple tuple, TupleDesc tupdesc);
 extern HeapTuple SPI_modifytuple(Relation rel, HeapTuple tuple, int natts,
-				int *attnum, Datum *Values, const char *Nulls);
+								 int *attnum, Datum *Values, const char *Nulls);
 extern int	SPI_fnumber(TupleDesc tupdesc, const char *fname);
 extern char *SPI_fname(TupleDesc tupdesc, int fnumber);
 extern char *SPI_getvalue(HeapTuple tuple, TupleDesc tupdesc, int fnumber);
@@ -129,14 +139,14 @@ extern void SPI_freetuple(HeapTuple pointer);
 extern void SPI_freetuptable(SPITupleTable *tuptable);
 
 extern Portal SPI_cursor_open(const char *name, SPIPlanPtr plan,
-				Datum *Values, const char *Nulls, bool read_only);
+							  Datum *Values, const char *Nulls, bool read_only);
 extern Portal SPI_cursor_open_with_args(const char *name,
-						  const char *src,
-						  int nargs, Oid *argtypes,
-						  Datum *Values, const char *Nulls,
-						  bool read_only, int cursorOptions);
+										const char *src,
+										int nargs, Oid *argtypes,
+										Datum *Values, const char *Nulls,
+										bool read_only, int cursorOptions);
 extern Portal SPI_cursor_open_with_paramlist(const char *name, SPIPlanPtr plan,
-							   ParamListInfo params, bool read_only);
+											 ParamListInfo params, bool read_only);
 extern Portal SPI_cursor_find(const char *name);
 extern void SPI_cursor_fetch(Portal portal, bool forward, long count);
 extern void SPI_cursor_move(Portal portal, bool forward, long count);
@@ -144,8 +154,20 @@ extern void SPI_scroll_cursor_fetch(Portal, FetchDirection direction, long count
 extern void SPI_scroll_cursor_move(Portal, FetchDirection direction, long count);
 extern void SPI_cursor_close(Portal portal);
 
+extern int	SPI_register_relation(EphemeralNamedRelation enr);
+extern int	SPI_unregister_relation(const char *name);
+extern int	SPI_register_trigger_data(TriggerData *tdata);
+
+extern void SPI_start_transaction(void);
+extern void SPI_commit(void);
+extern void SPI_commit_and_chain(void);
+extern void SPI_rollback(void);
+extern void SPI_rollback_and_chain(void);
+
+extern void SPICleanup(void);
 extern void AtEOXact_SPI(bool isCommit);
 extern void AtEOSubXact_SPI(bool isCommit, SubTransactionId mySubid);
+extern bool SPI_inside_nonatomic_context(void);
 extern bool SPI_context(void);
 
 /**
@@ -156,4 +178,4 @@ extern uint64 SPI_GetMemoryReservation(void);
 extern void SPI_ReserveMemory(uint64 mem_reserved);
 extern bool SPI_IsMemoryReserved(void);
 
-#endif   /* SPI_H */
+#endif							/* SPI_H */

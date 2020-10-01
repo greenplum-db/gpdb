@@ -18,55 +18,53 @@
 
 namespace gpopt
 {
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CXformSelect2DynamicBitmapBoolOp
-	//
-	//	@doc:
-	//		Transform select over partitioned table table into a dynamic bitmap
-	//		table get with bitmap bool op
-	//---------------------------------------------------------------------------
-	class CXformSelect2DynamicBitmapBoolOp : public CXformExploration
+//---------------------------------------------------------------------------
+//	@class:
+//		CXformSelect2DynamicBitmapBoolOp
+//
+//	@doc:
+//		Transform select over partitioned table table into a dynamic bitmap
+//		table get with bitmap bool op
+//---------------------------------------------------------------------------
+class CXformSelect2DynamicBitmapBoolOp : public CXformExploration
+{
+private:
+	// disable copy ctor
+	CXformSelect2DynamicBitmapBoolOp(const CXformSelect2DynamicBitmapBoolOp &);
+
+public:
+	// ctor
+	explicit CXformSelect2DynamicBitmapBoolOp(CMemoryPool *mp);
+
+	// dtor
+	virtual ~CXformSelect2DynamicBitmapBoolOp()
 	{
-		private:
-			// disable copy ctor
-			CXformSelect2DynamicBitmapBoolOp(const CXformSelect2DynamicBitmapBoolOp &);
+	}
 
-		public:
-			// ctor
-			explicit
-			CXformSelect2DynamicBitmapBoolOp(CMemoryPool *mp);
+	// identifier
+	virtual EXformId
+	Exfid() const
+	{
+		return ExfSelect2DynamicBitmapBoolOp;
+	}
 
-			// dtor
-			virtual
-			~CXformSelect2DynamicBitmapBoolOp()
-			{}
+	// xform name
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CXformSelect2DynamicBitmapBoolOp";
+	}
 
-			// identifier
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfSelect2DynamicBitmapBoolOp;
-			}
+	// compute xform promise for a given expression handle
+	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
 
-			// xform name
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CXformSelect2DynamicBitmapBoolOp";
-			}
+	// actual transform
+	virtual void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
+						   CExpression *pexpr) const;
 
-			// compute xform promise for a given expression handle
-			virtual
-			EXformPromise Exfp(CExpressionHandle & exprhdl) const;
+};	// class CXformSelect2DynamicBitmapBoolOp
+}  // namespace gpopt
 
-			// actual transform
-			virtual
-			void Transform(CXformContext *pxfctxt, CXformResult *pxfres, CExpression *pexpr) const;
-
-	};  // class CXformSelect2DynamicBitmapBoolOp
-}
-
-#endif  // !GPOPT_CXformSelect2DynamicBitmapBoolOp_H
+#endif	// !GPOPT_CXformSelect2DynamicBitmapBoolOp_H
 
 // EOF

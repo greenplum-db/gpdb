@@ -16,68 +16,60 @@
 
 namespace gpopt
 {
+//---------------------------------------------------------------------------
+//	@class:
+//		CPhysicalLeftSemiNLJoin
+//
+//	@doc:
+//		Left semi nested-loops join operator
+//
+//---------------------------------------------------------------------------
+class CPhysicalLeftSemiNLJoin : public CPhysicalNLJoin
+{
+private:
+	// private copy ctor
+	CPhysicalLeftSemiNLJoin(const CPhysicalLeftSemiNLJoin &);
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CPhysicalLeftSemiNLJoin
-	//
-	//	@doc:
-	//		Left semi nested-loops join operator
-	//
-	//---------------------------------------------------------------------------
-	class CPhysicalLeftSemiNLJoin : public CPhysicalNLJoin
+public:
+	// ctor
+	explicit CPhysicalLeftSemiNLJoin(CMemoryPool *mp);
+
+	// dtor
+	virtual ~CPhysicalLeftSemiNLJoin();
+
+	// ident accessors
+	virtual EOperatorId
+	Eopid() const
 	{
+		return EopPhysicalLeftSemiNLJoin;
+	}
 
-		private:
+	// return a string for operator name
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CPhysicalLeftSemiNLJoin";
+	}
 
-			// private copy ctor
-			CPhysicalLeftSemiNLJoin(const CPhysicalLeftSemiNLJoin &);
+	// check if required columns are included in output columns
+	virtual BOOL FProvidesReqdCols(CExpressionHandle &exprhdl,
+								   CColRefSet *pcrsRequired,
+								   ULONG ulOptReq) const;
 
-		public:
+	// conversion function
+	static CPhysicalLeftSemiNLJoin *
+	PopConvert(COperator *pop)
+	{
+		GPOS_ASSERT(EopPhysicalLeftSemiNLJoin == pop->Eopid());
 
-			// ctor
-			explicit
-			CPhysicalLeftSemiNLJoin(CMemoryPool *mp);
-
-			// dtor
-			virtual
-			~CPhysicalLeftSemiNLJoin();
-
-			// ident accessors
-			virtual
-			EOperatorId Eopid() const
-			{
-				return EopPhysicalLeftSemiNLJoin;
-			}
-
-			 // return a string for operator name
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CPhysicalLeftSemiNLJoin";
-			}
-
-			// check if required columns are included in output columns
-			virtual
-			BOOL FProvidesReqdCols(CExpressionHandle &exprhdl, CColRefSet *pcrsRequired, ULONG ulOptReq) const;
-			
-			// conversion function
-			static
-			CPhysicalLeftSemiNLJoin *PopConvert
-				(
-				COperator *pop
-				)
-			{
-				GPOS_ASSERT(EopPhysicalLeftSemiNLJoin == pop->Eopid());
-
-				return dynamic_cast<CPhysicalLeftSemiNLJoin*>(pop);
-			}
+		return dynamic_cast<CPhysicalLeftSemiNLJoin *>(pop);
+	}
 
 
-	}; // class CPhysicalLeftSemiNLJoin
+};	// class CPhysicalLeftSemiNLJoin
 
-}
+}  // namespace gpopt
 
-#endif // !GPOPT_CPhysicalLeftSemiNLJoin_H
+#endif	// !GPOPT_CPhysicalLeftSemiNLJoin_H
 
 // EOF

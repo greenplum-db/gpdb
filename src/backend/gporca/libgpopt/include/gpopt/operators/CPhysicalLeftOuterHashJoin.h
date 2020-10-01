@@ -16,70 +16,59 @@
 
 namespace gpopt
 {
+//---------------------------------------------------------------------------
+//	@class:
+//		CPhysicalLeftOuterHashJoin
+//
+//	@doc:
+//		Left outer hash join operator
+//
+//---------------------------------------------------------------------------
+class CPhysicalLeftOuterHashJoin : public CPhysicalHashJoin
+{
+private:
+	// private copy ctor
+	CPhysicalLeftOuterHashJoin(const CPhysicalLeftOuterHashJoin &);
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CPhysicalLeftOuterHashJoin
-	//
-	//	@doc:
-	//		Left outer hash join operator
-	//
-	//---------------------------------------------------------------------------
-	class CPhysicalLeftOuterHashJoin : public CPhysicalHashJoin
+public:
+	// ctor
+	CPhysicalLeftOuterHashJoin(CMemoryPool *mp,
+							   CExpressionArray *pdrgpexprOuterKeys,
+							   CExpressionArray *pdrgpexprInnerKeys,
+							   IMdIdArray *hash_opfamilies = NULL);
+
+	// dtor
+	virtual ~CPhysicalLeftOuterHashJoin();
+
+	// ident accessors
+	virtual EOperatorId
+	Eopid() const
 	{
+		return EopPhysicalLeftOuterHashJoin;
+	}
 
-		private:
+	// return a string for operator name
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CPhysicalLeftOuterHashJoin";
+	}
 
-			// private copy ctor
-			CPhysicalLeftOuterHashJoin(const CPhysicalLeftOuterHashJoin &);
+	// conversion function
+	static CPhysicalLeftOuterHashJoin *
+	PopConvert(COperator *pop)
+	{
+		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(EopPhysicalLeftOuterHashJoin == pop->Eopid());
 
-		public:
-
-			// ctor
-			CPhysicalLeftOuterHashJoin
-				(
-				CMemoryPool *mp,
-				CExpressionArray *pdrgpexprOuterKeys,
-				CExpressionArray *pdrgpexprInnerKeys,
-				IMdIdArray *hash_opfamilies = NULL
-				);
-
-			// dtor
-			virtual
-			~CPhysicalLeftOuterHashJoin();
-
-			// ident accessors
-			virtual
-			EOperatorId Eopid() const
-			{
-				return EopPhysicalLeftOuterHashJoin;
-			}
-
-			 // return a string for operator name
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CPhysicalLeftOuterHashJoin";
-			}
-
-			// conversion function
-			static
-			CPhysicalLeftOuterHashJoin *PopConvert
-				(
-				COperator *pop
-				)
-			{
-				GPOS_ASSERT(NULL != pop);
-				GPOS_ASSERT(EopPhysicalLeftOuterHashJoin == pop->Eopid());
-
-				return dynamic_cast<CPhysicalLeftOuterHashJoin*>(pop);
-			}
+		return dynamic_cast<CPhysicalLeftOuterHashJoin *>(pop);
+	}
 
 
-	}; // class CPhysicalLeftOuterHashJoin
+};	// class CPhysicalLeftOuterHashJoin
 
-}
+}  // namespace gpopt
 
-#endif // !GPOPT_CPhysicalLeftOuterHashJoin_H
+#endif	// !GPOPT_CPhysicalLeftOuterHashJoin_H
 
 // EOF

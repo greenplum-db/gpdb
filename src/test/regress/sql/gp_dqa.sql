@@ -1,3 +1,10 @@
+-- The last digits of some of the results vary from one invocation to another,
+-- because the intermediate operations are done in arbitrary order when rows
+-- are flowing from different segments in different order. Mask those
+-- differences by setting 'extra_float_digits'. This isn't enough for all of
+-- the queries, so a few also use TO_CHAR() to truncate the results further.
+set extra_float_digits=0;
+
 drop table if exists dqa_t1;
 drop table if exists dqa_t2;
 
@@ -8,6 +15,11 @@ insert into dqa_t1 select i%23, i%12, (i%10) || '', '2009-06-10'::date + ( (i%34
 from generate_series(0, 99) i;
 insert into dqa_t2 select i%34, i%45, (i%10) || '', '2009-06-10'::date + ( (i%56) || ' days')::interval
 from generate_series(0, 99) i;
+
+-- With the default very small cost, the planner often prefer to just Gather
+-- all the rows to the QD. We want to test the more complicated multi-tage DQA
+-- plans here, without using a huge number of rows.
+set gp_motion_cost_per_row=1;
 
 set enable_hashagg=on;
 set enable_groupagg=off;
@@ -74,8 +86,8 @@ explain (costs off) select corr(distinct d, i) from dqa_t1;
 select corr(distinct d, i) from dqa_t1 group by d;
 explain (costs off) select corr(distinct d, i) from dqa_t1 group by d;
 
-select corr(distinct d, i) from dqa_t1 group by c;
-explain (costs off) select corr(distinct d, i) from dqa_t1 group by c;
+select to_char(corr(distinct d, i), '9.99999999999999') from dqa_t1 group by c;
+explain (costs off) select to_char(corr(distinct d, i), '9.99999999999999') from dqa_t1 group by c;
 
 -- multi args multidqa
 select count(distinct c), corr(distinct d, i) from dqa_t1;
@@ -106,8 +118,8 @@ explain (costs off) select count(distinct d), corr(distinct d, i), i from dqa_t1
 select count(distinct d), corr(distinct d, i), d from dqa_t1 group by d;
 explain (costs off) select count(distinct d), corr(distinct d, i), d from dqa_t1 group by d;
 
-select count(distinct d), corr(distinct d, i), c from dqa_t1 group by c;
-explain (costs off) select count(distinct d), corr(distinct d, i), c from dqa_t1 group by c;
+select count(distinct d),  to_char(corr(distinct d, i), '9.99999999999999'), c from dqa_t1 group by c;
+explain (costs off) select count(distinct d),  to_char(corr(distinct d, i), '9.99999999999999'), c from dqa_t1 group by c;
 
 -- MPP-19037
 drop table if exists fact_route_aggregation;
@@ -298,3 +310,37 @@ insert into nonullstab select 1, 1 from generate_series(1, 100);
 
 -- This returns wrong result. countall(distinct a) should return 1.
 select countall(distinct a), count(distinct b) from nonullstab;
+
+-- multi DQA with filter test
+set enable_hashagg=on;
+set enable_groupagg=off;
+
+create table dqa_f1(a int, b int, c int) distributed by (a);
+create table dqa_f2(x int, y int, z int) distributed by (x);
+
+insert into dqa_f1 select i%17, i%5 , i%3 from generate_series(1,1000) i;
+insert into dqa_f2 select i % 13, i % 5 , i % 11 from generate_series(1,1000) i;
+
+select sum(distinct a) filter (where a > 0), sum(distinct b) filter (where a > 0) from dqa_f1;
+
+select sum(distinct a) filter (where a > 0), sum(distinct b) filter (where a > 0) from dqa_f1 group by b;
+
+select sum(distinct a) filter (where a > 0), sum(distinct b) filter (where a > 0) from dqa_f1 group by c;
+
+select sum(distinct a) filter (where a in (select x from dqa_f2 where x = a)), sum(distinct b) filter (where a > 0) from dqa_f1;
+
+select sum(distinct a) filter (where a in (select x from dqa_f2 where x = a)), sum(distinct b) filter (where a > 0) from dqa_f1 group by c;
+
+select count(distinct a) filter (where a > 3),count( distinct b) filter (where a > 4), sum(distinct b) filter( where a > 4) from dqa_f1;
+
+explain select sum(distinct a) filter (where a > 0), sum(distinct b) filter (where a > 0) from dqa_f1;
+
+explain select sum(distinct a) filter (where a > 0), sum(distinct b) filter (where a > 0) from dqa_f1 group by b;
+
+explain select sum(distinct a) filter (where a > 0), sum(distinct b) filter (where a > 0) from dqa_f1 group by c;
+
+explain select sum(distinct a) filter (where a in (select x from dqa_f2 where x = a)), sum(distinct b) filter (where a > 0) from dqa_f1;
+
+explain select sum(distinct a) filter (where a in (select x from dqa_f2 where x = a)), sum(distinct b) filter (where a > 0) from dqa_f1 group by c;
+
+explain select count(distinct a) filter (where a > 3),count( distinct b) filter (where a > 4), sum(distinct b) filter( where a > 4) from dqa_f1;

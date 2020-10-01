@@ -1,5 +1,12 @@
--- Test locking behaviour. When creating, dropping, querying or adding indexes
--- partitioned tables, we want to lock only the master, not the children.
+-- Test locking behaviour when operating on partitions.
+--
+-- In previous versions of GPDB, we used to only lock the parent table in
+-- many DDL operations. That was always a bit bogus, but we did it to avoid
+-- running out of lock space when working on large partition hierarchies. We
+-- don't play fast and loose like that anymore, but keep the tests. If a user
+-- runs out of lock space, you can work around that by simply bumping up
+-- max_locks_per_transactions.
+--
 
 -- Show locks in master and in segments. Because the number of segments
 -- in the cluster depends on configuration, we print only summary information
@@ -90,6 +97,8 @@ commit;
 begin;
 
 -- add a little data
+-- This only needs a lock on the parent table in the QD. On the segments, where the
+-- tuple is routed to the correct partition, the partitions are locked, too.
 insert into partlockt values(1), (2), (3);
 insert into partlockt values(1), (2), (3);
 insert into partlockt values(1), (2), (3);

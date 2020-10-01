@@ -490,10 +490,9 @@ buildPath(Oid group,
 
 	if (!result)
 	{
-		CGROUP_CONFIG_ERROR("invalid %s name '%s': %s",
+		CGROUP_CONFIG_ERROR("invalid %s name '%s': %m",
 							prop[0] ? "file" : "directory",
-							path,
-							strerror(errno));
+							path);
 	}
 
 	return result;
@@ -653,8 +652,8 @@ unassignGroup(Oid group, ResGroupCompType comp, int fddir)
 		int n = write(fdw, str, strlen(str));
 		if (n < 0)
 		{
-			elog(LOG, "failed to migrate pid to gpdb root cgroup: pid=%ld: %s",
-				 pid, strerror(errno));
+			elog(LOG, "failed to migrate pid to gpdb root cgroup: pid=%ld: %m",
+				 pid);
 		}
 		else
 		{
@@ -692,8 +691,7 @@ lockDir(const char *path, bool block)
 			return -1;
 		}
 
-		CGROUP_ERROR("can't open dir to lock: %s: %s",
-					 path, strerror(errno));
+		CGROUP_ERROR("can't open dir to lock: %s: %m", path);
 	}
 
 	int flags = LOCK_EX;
@@ -860,7 +858,7 @@ getCpuCores(void)
 	int i;
 
 	if (sched_getaffinity(0, sizeof(cpuset), &cpuset) < 0)
-		CGROUP_ERROR("can't get cpu cores: %s", strerror(errno));
+		CGROUP_ERROR("can't get cpu cores: %m");
 
 	for (i = 0; i < CPU_SETSIZE; i++)
 	{
@@ -882,7 +880,7 @@ readData(const char *path, char *data, size_t datasize)
 {
 	int fd = open(path, O_RDONLY);
 	if (fd < 0)
-		elog(ERROR, "can't open file '%s': %s", path, strerror(errno));
+		elog(ERROR, "can't open file '%s': %m", path);
 
 	ssize_t ret = read(fd, data, datasize);
 
@@ -904,7 +902,7 @@ writeData(const char *path, const char *data, size_t datasize)
 {
 	int fd = open(path, O_WRONLY);
 	if (fd < 0)
-		elog(ERROR, "can't open file '%s': %s", path, strerror(errno));
+		elog(ERROR, "can't open file '%s': %m", path);
 
 	ssize_t ret = write(fd, data, datasize);
 
@@ -1021,10 +1019,9 @@ permListCheck(const PermList *permlist, Oid group, bool report)
 
 			if (report && !permlist->optional)
 			{
-				CGROUP_CONFIG_ERROR("invalid %s name '%s': %s",
+				CGROUP_CONFIG_ERROR("invalid %s name '%s': %m",
 									prop[0] ? "file" : "directory",
-									path,
-									strerror(errno));
+									path);
 			}
 			return false;
 		}
@@ -1035,10 +1032,9 @@ permListCheck(const PermList *permlist, Oid group, bool report)
 
 			if (report && !permlist->optional)
 			{
-				CGROUP_CONFIG_ERROR("can't access %s '%s': %s",
+				CGROUP_CONFIG_ERROR("can't access %s '%s': %m",
 									prop[0] ? "file" : "directory",
-									path,
-									strerror(errno));
+									path);
 			}
 			return false;
 		}
@@ -1096,7 +1092,7 @@ getMemoryInfo(unsigned long *ram, unsigned long *swap)
 {
 	struct sysinfo info;
 	if (sysinfo(&info) < 0)
-		elog(ERROR, "can't get memory infomation: %s", strerror(errno));
+		elog(ERROR, "can't get memory infomation: %m");
 	*ram = info.totalram;
 	*swap = info.totalswap;
 }
@@ -1433,8 +1429,7 @@ ResGroupOps_CreateGroup(Oid group)
 		(gp_resource_group_enable_cgroup_memory &&
 		 !createDir(group, RESGROUP_COMP_TYPE_MEMORY)))
 	{
-		CGROUP_ERROR("can't create cgroup for resgroup '%d': %s",
-					 group, strerror(errno));
+		CGROUP_ERROR("can't create cgroup for resgroup '%d': %m", group);
 	}
 
 	/*
@@ -1483,8 +1478,8 @@ createDefaultCpuSetGroup(void)
 
 	if (!createDir(DEFAULT_CPUSET_GROUP_ID, comp))
 	{
-		CGROUP_ERROR("can't create cpuset cgroup for resgroup '%d': %s",
-					 DEFAULT_CPUSET_GROUP_ID, strerror(errno));
+		CGROUP_ERROR("can't create cpuset cgroup for resgroup '%d': %m",
+					 DEFAULT_CPUSET_GROUP_ID);
 	}
 
 	/*
@@ -1535,8 +1530,7 @@ ResGroupOps_DestroyGroup(Oid group, bool migrate)
 		(gp_resource_group_enable_cgroup_memory &&
 		 !removeDir(group, RESGROUP_COMP_TYPE_MEMORY, "memory.limit_in_bytes", migrate)))
 	{
-		CGROUP_ERROR("can't remove cgroup for resgroup '%d': %s",
-			 group, strerror(errno));
+		CGROUP_ERROR("can't remove cgroup for resgroup '%d': %m", group);
 	}
 }
 

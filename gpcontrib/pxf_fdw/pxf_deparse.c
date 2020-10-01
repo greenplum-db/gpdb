@@ -36,7 +36,7 @@ deparseTargetList(Relation rel, Bitmapset *attrs_used, List **retrieved_attrs)
 
 	for (i = 1; i <= tupdesc->natts; i++)
 	{
-		Form_pg_attribute attr = tupdesc->attrs[i - 1];
+		Form_pg_attribute attr = TupleDescAttr(tupdesc, i - 1);
 
 		/* Ignore dropped attributes. */
 		if (attr->attisdropped)

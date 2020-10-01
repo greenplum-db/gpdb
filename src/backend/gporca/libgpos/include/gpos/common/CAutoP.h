@@ -2,7 +2,7 @@
 //	Greenplum Database
 //	Copyright (C) 2008 Greenplum, Inc.
 //
-//	@filename: 
+//	@filename:
 //		CAutoP.h
 //
 //	@doc:
@@ -22,100 +22,94 @@
 
 namespace gpos
 {
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CAutoP
-	//
-	//	@doc:
-	//		Wrapps pointer of type T; overloads *, ->, = does not provide
-	//		copy ctor;
-	//
-	//---------------------------------------------------------------------------
-	template <class T>
-	class CAutoP : public CStackObject
+//---------------------------------------------------------------------------
+//	@class:
+//		CAutoP
+//
+//	@doc:
+//		Wrapps pointer of type T; overloads *, ->, = does not provide
+//		copy ctor;
+//
+//---------------------------------------------------------------------------
+template <class T>
+class CAutoP : public CStackObject
+{
+protected:
+	// actual element to point to
+	T *m_object;
+
+public:
+	CAutoP<T>(const CAutoP &) = delete;
+
+	// ctor
+	explicit CAutoP<T>() : m_object(NULL)
 	{
-
-		protected:
-
-			// actual element to point to
-			T *m_object;
-
-		public:
-
-			CAutoP<T>
-				(
-				const CAutoP&
-				) = delete;
-
-			// ctor
-			explicit
-			CAutoP<T>()
-				:
-				m_object(NULL)
-			{}
-
-			explicit
-			CAutoP<T>(T *object)
-				:
-				m_object(object)
-			{}
-
-			// dtor
-			virtual ~CAutoP();
-
-			// simple assignment
-			CAutoP<T> const & operator = (T* object)
-			{
-				m_object = object;
-				return *this;
-			}
-
-			// deref operator
-			T &operator * ()
-			{
-				GPOS_ASSERT(NULL != m_object);
-				return *m_object;
-			}
-			
-			// returns only base pointer, compiler does appropriate deref'ing
-			T* operator -> ()
-			{
-				return m_object;
-			}
-
-			// return basic pointer
-			T* Value() 
-			{
-				return m_object;
-			}
-			
-			// unhook pointer from auto object
-			T* Reset()
-			{
-				T* object = m_object;
-				m_object = NULL;
-				return object;
-			}
-
-	}; // class CAutoP
-
-	//---------------------------------------------------------------------------
-	//	@function:
-	//		CAutoP::~CAutoP
-	//
-	//	@doc:
-	//		Dtor
-	//
-	//---------------------------------------------------------------------------
-	template <class T>
-	CAutoP<T>::~CAutoP()
-	{
-		GPOS_DELETE(m_object);
 	}
+
+	explicit CAutoP<T>(T *object) : m_object(object)
+	{
+	}
+
+	// dtor
+	virtual ~CAutoP();
+
+	// simple assignment
+	CAutoP<T> const &
+	operator=(T *object)
+	{
+		m_object = object;
+		return *this;
+	}
+
+	// deref operator
+	T &
+	operator*()
+	{
+		GPOS_ASSERT(NULL != m_object);
+		return *m_object;
+	}
+
+	// returns only base pointer, compiler does appropriate deref'ing
+	T *
+	operator->()
+	{
+		return m_object;
+	}
+
+	// return basic pointer
+	T *
+	Value()
+	{
+		return m_object;
+	}
+
+	// unhook pointer from auto object
+	T *
+	Reset()
+	{
+		T *object = m_object;
+		m_object = NULL;
+		return object;
+	}
+
+};	// class CAutoP
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CAutoP::~CAutoP
+//
+//	@doc:
+//		Dtor
+//
+//---------------------------------------------------------------------------
+template <class T>
+CAutoP<T>::~CAutoP()
+{
+	GPOS_DELETE(m_object);
 }
+}  // namespace gpos
 
 
-#endif // !GPOS_CAutoP_H
+#endif	// !GPOS_CAutoP_H
 
 // EOF
-

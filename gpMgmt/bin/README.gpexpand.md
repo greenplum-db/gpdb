@@ -60,9 +60,6 @@ truncated anyway after copying to new segments. These catalog tables are:
     gp_segment_configuration
     pg_auth_time_constraint
     pg_description
-    pg_partition
-    pg_partition_encoding
-    pg_partition_rule
     pg_shdescription
     pg_stat_last_operation
     pg_stat_last_shoperation

@@ -1,19 +1,20 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) Greenplum Inc 2008. All Rights Reserved.
 #
 """
 TODO: module docs
 """
+import collections
 import sys
 import os
 import stat
 
 try:
-    from pygresql import pgdb
+    import pgdb
     from gppylib.commands.unix import UserId
 
-except ImportError, e:
+except ImportError as e:
     sys.exit('Error: unable to import module: ' + str(e))
 
 from gppylib import gplog
@@ -21,7 +22,7 @@ from gppylib import gplog
 logger = gplog.get_default_logger()
 
 
-class ConnectionError(StandardError): pass
+class ConnectionError(Exception): pass
 
 class Pgpass():
     """ Class for handling .pgpass file.
@@ -37,10 +38,10 @@ class Pgpass():
             return
 
         st_info = os.stat(PGPASSFILE)
-        mode = str(oct(st_info[stat.ST_MODE] & 0777))
+        mode = str(oct(st_info[stat.ST_MODE] & 0o777))
 
         if mode != "0600":
-            print 'WARNING: password file "%s" has group or world access; permissions should be u=rw (0600) or less' % PGPASSFILE
+            print('WARNING: password file "%s" has group or world access; permissions should be u=rw (0600) or less' % PGPASSFILE)
             self.valid_pgpass = False
             return
 
@@ -61,7 +62,7 @@ class Pgpass():
                                  'password': password }
                         self.entries.append(entry)
                     except:
-                        print 'Invalid line in .pgpass file.  Line number %d' % lineno
+                        print('Invalid line in .pgpass file.  Line number %d' % lineno)
                     lineno += 1
             except IOError:
                 pass
@@ -103,7 +104,7 @@ class DbURL:
         else:
             self.pghost = hostname
 
-        if port is 0:
+        if port == 0:
             self.pgport = int(os.environ.get('PGPORT', '5432'))
         else:
             self.pgport = int(port)
@@ -154,118 +155,157 @@ class DbURL:
             (canonicalize(self.pghost),self.pgport,self.pgdb,self.pguser,self.pgpass)
 
 
+# This wrapper of pgdb provides two useful additions:
+# 1. pg notice is accessible to a user of connection returned by dbconn.connect(),
+# lifted from the underlying _pg connection
+# 2. multiple calls to dbconn.close() should not return an error
+class Connection(pgdb.Connection):
+    def __init__(self, connection):
+        self._notices = collections.deque(maxlen=100)
+        # we must do an attribute by attribute copy of the notices here
+        # due to limitations in pg implementation. Wrap with with a
+        # namedtuple for ease of use.
+        def handle_notice(notice):
+            received = {}
+            for attr in dir(notice):
+                if attr.startswith('__'):
+                    continue
+                value = getattr(notice, attr)
+                received[attr] = value
+            Notice = collections.namedtuple('Notice', sorted(received))
+            self._notices.append(Notice(**received))
+
+
+        self._impl = connection
+        self._impl._cnx.set_notice_receiver(handle_notice)
+
+    def __enter__(self):
+        return self._impl.__enter__()
+
+    # __exit__() does not close the connection. This is in line with the
+    # python DB API v2 specification (pep-0249), where close() is done on
+    # __del__(), not __exit__().
+    def __exit__(self, *args):
+        return self._impl.__exit__(*args)
+
+    def __getattr__(self, name):
+        return getattr(self._impl, name)
+
+    def notices(self):
+        notice_list = list(self._notices)
+        self._notices.clear()
+        return notice_list
+
+    # don't return operational error if connection is already closed
+    def close(self):
+        if not self._impl.closed:
+            self._impl.close()
+
+
 def connect(dburl, utility=False, verbose=False,
             encoding=None, allowSystemTableMods=False, logConn=True, unsetSearchPath=True):
 
-    if utility:
-        options = '-c gp_session_role=utility'
-    else:
-        options = ''
+    conninfo = {
+        'user': dburl.pguser,
+        'password': dburl.pgpass,
+        'host': dburl.pghost,
+        'port': dburl.pgport,
+        'database': dburl.pgdb,
+    }
 
-    # MPP-13779, et al
-    if allowSystemTableMods:
-        options += ' -c allow_system_table_mods=true'
-
-    # bypass pgdb.connect() and instead call pgdb._connect_
-    # to avoid silly issues with : in ipv6 address names and the url string
-    #
-    dbbase   = dburl.pgdb
-    dbhost   = dburl.pghost
-    dbport   = int(dburl.pgport)
-    dbopt    = options
-    dbtty    = "1"
-    dbuser   = dburl.pguser
-    dbpasswd = dburl.pgpass
-    timeout  = dburl.timeout
-    cnx      = None
-
-    # All quotation and escaping here are to handle database name containing
-    # special characters like ' and \ and white spaces.
-
-    # Need to escape backslashes and single quote in db name
-    # Also single quoted the connection string for dbname
-    dbbase = dbbase.replace('\\', '\\\\')
-    dbbase = dbbase.replace('\'', '\\\'')
-
-    # MPP-14121, use specified connection timeout
-    # Single quote the connection string for dbbase name
-    if timeout is not None:
-        cstr    = "dbname='%s' connect_timeout=%s" % (dbbase, timeout)
-        retries = dburl.retries
-    else:
-        cstr    = "dbname='%s'" % dbbase
-        retries = 1
-
+    # building options
     options = []
+    if utility:
+        options.append("-c gp_role=utility")
 
     # unset search path due to CVE-2018-1058
     if unsetSearchPath:
         options.append("-c search_path=")
 
-    #by default, libpq will print WARNINGS to stdout
-    if not verbose:
-        options.append("-c CLIENT_MIN_MESSAGES=ERROR")
+    if allowSystemTableMods:
+        options.append("-c allow_system_table_mods=true")
 
     # set client encoding if needed
     if encoding:
         options.append("-c CLIENT_ENCODING=%s" % encoding)
-    cstr += " options='%s'" % " ".join(options)
+
+    #by default, libpq will print WARNINGS to stdout
+    if not verbose:
+        options.append("-c CLIENT_MIN_MESSAGES=ERROR")
+
+    if options:
+        conninfo['options'] = " ".join(options)
+
+    # use specified connection timeout
+    retries = 1
+    if dburl.timeout is not None:
+        conninfo['connect_timeout'] = dburl.timeout
+        retries = dburl.retries
 
     # This flag helps to avoid logging the connection string in some special
     # situations as requested
-    if (logConn == True):
-        (logger.info if timeout is not None else logger.debug)("Connecting to %s" % cstr)
+    if logConn:
+        logFunc = logger.info if dburl.timeout is not None else logger.debug
+        logFunc("Connecting to db {} on host {}".format(dburl.pgdb, dburl.pghost))
 
+    connection = None
     for i in range(retries):
         try:
-            cnx  = pgdb._connect_(cstr, dbhost, dbport, dbopt, dbtty, dbuser, dbpasswd)
+            connection = pgdb.connect(**conninfo)
             break
 
-        except pgdb.InternalError, e:
+        except pgdb.OperationalError as e:
             if 'timeout expired' in str(e):
-                logger.warning('Timeout expired connecting to %s, attempt %d/%d' % (dbbase, i+1, retries))
+                logger.warning('Timeout expired connecting to %s, attempt %d/%d' % (dburl.pgdb, i+1, retries))
                 continue
             raise
 
-    if cnx is None:
-        raise ConnectionError('Failed to connect to %s' % dbbase)
+    if connection is None:
+        raise ConnectionError('Failed to connect to %s' % dburl.pgdb)
 
-    # NOTE: the code to set ALWAYS_SECURE_SEARCH_PATH_SQL below assumes it is not part of an existing transaction
-    conn = pgdb.pgdbCnx(cnx)
+    return Connection(connection)
 
-    def __enter__(self):
-        return self
-    def __exit__(self, type, value, traceback):
-        self.close()
-    conn.__class__.__enter__, conn.__class__.__exit__ = __enter__, __exit__
-    return conn
-
-
-def execSQL(conn,sql):
+def execSQL(conn, sql, autocommit=True):
     """
-    If necessary, user must invoke conn.commit().
-    Do *NOT* violate that API here without considering
-    the existing callers of this function.
+    Execute a sql command that is NOT expected to return any rows and expects to commit
+    immediately.
+    This function does not return a cursor object, and sets connection.autocommit = autocommit,
+    which is necessary for queries like "create tablespace" that cannot be run inside a
+    transaction.
+    For SQL that captures some expected output, use "query()"
+
+    Using with `dbconn.connect() as conn` syntax will override autocommit and complete
+    queries in a transaction followed by a commit on context close
+    """
+    conn.autocommit = autocommit
+    with conn.cursor() as cursor:
+        cursor.execute(sql)
+
+def query(conn, sql):
+    """
+    Run SQL that is expected to return some rows of output
+
+    returns a cursor, which can then be used to itirate through all rows
+    or return them in an array.
     """
     cursor=conn.cursor()
     cursor.execute(sql)
     return cursor
 
-def execSQLForSingletonRow(conn, sql):
+def queryRow(conn, sql):
     """
     Run SQL that returns exactly one row, and return that one row
 
     TODO: Handle like gppylib.system.comfigurationImplGpdb.fetchSingleOutputRow().
     In the event of the wrong number of rows/columns, some logging would be helpful...
     """
-    cursor=conn.cursor()
-    cursor.execute(sql)
+    with conn.cursor() as cursor:
+        cursor.execute(sql)
 
-    if cursor.rowcount != 1 :
-        raise UnexpectedRowsError(1, cursor.rowcount, sql)
+        if cursor.rowcount != 1 :
+            raise UnexpectedRowsError(1, cursor.rowcount, sql)
+        res = cursor.fetchone()
 
-    res = cursor.fetchall()[0]
-    cursor.close()
     return res
 
 class UnexpectedRowsError(Exception):
@@ -274,14 +314,14 @@ class UnexpectedRowsError(Exception):
         Exception.__init__(self, "SQL retrieved %d rows but %d was expected:\n%s" % \
                                  (self.actual, self.expected, self.sql))
 
-def execSQLForSingleton(conn, sql):
+def querySingleton(conn, sql):
     """
     Run SQL that returns exactly one row and one column, and return that cell
 
     TODO: Handle like gppylib.system.comfigurationImplGpdb.fetchSingleOutputRow().
     In the event of the wrong number of rows/columns, some logging would be helpful...
     """
-    row = execSQLForSingletonRow(conn, sql)
+    row = queryRow(conn, sql)
     if len(row) > 1:
         raise Exception("SQL retrieved %d columns but 1 was expected:\n%s" % \
                          (len(row), sql))

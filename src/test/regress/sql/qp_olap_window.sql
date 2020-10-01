@@ -4,7 +4,7 @@
 
 -- start_ignore
 -- count number of certain operators in a given plan
-create language plpythonu;
+create language plpython3u;
 create or replace function ow_count_operator(query text, operator text) returns int as
 $$
 rv = plpy.execute('EXPLAIN '+ query)
@@ -16,7 +16,7 @@ for i in range(len(rv)):
         result = result+1
 return result
 $$
-language plpythonu;
+language plpython3u;
 
 drop table ow_customer;
 drop table ow_vendor;
@@ -429,7 +429,7 @@ win4 as (order by ow_sale.pn desc); -- mvd 4->3; 1,6->5; 4->7; 4->8;
 
 SELECT ow_sale.vn,ow_sale.qty,ow_sale.cn,ow_sale.cn, TO_CHAR(COALESCE(COUNT(floor(ow_sale.qty-ow_sale.cn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (order by ow_sale.vn asc range floor(ow_sale.qty) preceding ); -- mvd 1->5; 
+WINDOW win1 as (order by ow_sale.vn asc range floor(ow_sale.qty)::integer preceding ); -- mvd 1->5; 
 
 -- COUNT() function with ONLY order by having range based framing clause --
 
@@ -457,7 +457,7 @@ WINDOW win1 as (order by ow_sale.vn asc range between unbounded preceding and 2 
 SELECT ow_sale.dt, TO_CHAR(COALESCE(COUNT(floor(ow_sale.pn-ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.pn,
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win2),0),'99999999.9999999'),ow_sale.vn,ow_sale.qty
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.pn asc range between unbounded preceding and floor(ow_sale.vn/ow_sale.pn) preceding ),
+WINDOW win1 as (order by ow_sale.pn asc range between unbounded preceding and floor(ow_sale.vn/ow_sale.pn)::integer preceding ),
 win2 as (partition by ow_sale.qty,ow_sale.dt,ow_sale.pn order by ow_sale.vn asc); -- mvd 3->2; 1,5,6,3->4; 
 
 -- COUNT() function with ONLY order by having range based framing clause --
@@ -482,7 +482,7 @@ win3 as (order by ow_sale.ord, ow_sale.vn asc); -- mvd 1->4; 6,1->5; 6,1->7; 9->
 
 SELECT ow_sale.dt,ow_sale.dt,ow_sale.qty,ow_sale.qty, TO_CHAR(COALESCE(COUNT(floor(ow_sale.cn+ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range between unbounded preceding and floor(ow_sale.prc+ow_sale.qty) following ); -- mvd 6->5; 
+WINDOW win1 as (order by ow_sale.vn desc range between unbounded preceding and floor(ow_sale.prc+ow_sale.qty)::integer following ); -- mvd 6->5; 
 
 -- COUNT() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -515,7 +515,7 @@ win5 as (partition by ow_sale.dt order by ow_sale.ord, ow_sale.cn desc); -- mvd 
 
 SELECT ow_sale.dt,ow_sale.vn, TO_CHAR(COALESCE(COUNT(floor(ow_sale.vn-ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_vendor WHERE ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.pn asc range between 1 preceding and floor(ow_sale.vn) preceding ); -- mvd 4->3; 
+WINDOW win1 as (order by ow_sale.pn asc range between 1 preceding and floor(ow_sale.vn)::integer preceding ); -- mvd 4->3; 
 
 -- COUNT() function with ONLY order by having range based framing clause --
 
@@ -527,13 +527,13 @@ WINDOW win1 as (order by ow_sale.vn asc range between 4 preceding and current ro
 
 SELECT ow_sale.vn,ow_sale.pn, TO_CHAR(COALESCE(COUNT(floor(ow_sale.qty-ow_sale.cn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (order by ow_sale.pn asc range between 3 preceding and floor(ow_sale.pn) following ); -- mvd 2->3; 
+WINDOW win1 as (order by ow_sale.pn asc range between 3 preceding and floor(ow_sale.pn)::integer following ); -- mvd 2->3; 
 
 -- COUNT() function with ONLY order by having range based framing clause --
 
 SELECT ow_sale.pn, TO_CHAR(COALESCE(COUNT(floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.pn desc range between floor(ow_sale.qty+ow_sale.vn) preceding and unbounded following ); -- mvd 1->2; 
+WINDOW win1 as (order by ow_sale.pn desc range between floor(ow_sale.qty+ow_sale.vn)::integer preceding and unbounded following ); -- mvd 1->2; 
 
 -- COUNT() function with ONLY order by having range based framing clause --
 
@@ -575,7 +575,7 @@ WINDOW win1 as (order by ow_sale.pn asc range between current row and unbounded 
 
 SELECT ow_sale.vn,ow_sale.vn,ow_sale.cn, TO_CHAR(COALESCE(COUNT(floor(ow_sale.vn/ow_sale.pn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.cn asc range between 1 following and floor(ow_sale.prc) following ); -- mvd 3->4; 
+WINDOW win1 as (order by ow_sale.cn asc range between 1 following and floor(ow_sale.prc)::integer following ); -- mvd 3->4; 
 
 -- COUNT() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -591,7 +591,7 @@ win3 as (partition by ow_sale.vn order by ow_sale.vn desc); -- mvd 4->3; 6->5; 4
 
 SELECT ow_sale.pn,ow_sale.pn,ow_sale.vn, TO_CHAR(COALESCE(COUNT(floor(ow_sale.cn+ow_sale.qty)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.cn+ow_sale.prc) following and unbounded following ); -- mvd 3->4; 
+WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.cn+ow_sale.prc)::integer following and unbounded following ); -- mvd 3->4; 
 
 -- COUNT() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -866,7 +866,7 @@ win2 as (partition by ow_sale.dt,ow_sale.dt,ow_sale.prc order by ow_sale.cn desc
 
 SELECT ow_sale.cn,ow_sale.prc, TO_CHAR(COALESCE(COUNT(floor(ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.dt,ow_sale.qty,ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.dt,ow_sale.vn,ow_sale.cn,ow_sale.qty order by ow_sale.cn asc range floor(ow_sale.prc/ow_sale.cn) preceding ); -- mvd 1,4,5,6->3; 
+WINDOW win1 as (partition by ow_sale.dt,ow_sale.vn,ow_sale.cn,ow_sale.qty order by ow_sale.cn asc range floor(ow_sale.prc/ow_sale.cn)::integer preceding ); -- mvd 1,4,5,6->3; 
 
 -- COUNT() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -948,7 +948,7 @@ win4 as (order by ow_sale.cn desc); -- mvd 4,1,3->7; 1->8; 5->9; 1->10; 1->11; 1
 
 SELECT ow_sale.vn,ow_sale.pn,ow_sale.vn,ow_sale.vn,ow_sale.cn, TO_CHAR(COALESCE(COUNT(floor(ow_sale.qty-ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.prc,ow_sale.qty
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.prc,ow_sale.qty,ow_sale.prc,ow_sale.pn order by ow_sale.vn asc range between floor(ow_sale.cn) preceding and 4 preceding ); -- mvd 7,1,8,2->6; 
+WINDOW win1 as (partition by ow_sale.prc,ow_sale.qty,ow_sale.prc,ow_sale.pn order by ow_sale.vn asc range between floor(ow_sale.cn)::integer preceding and 4 preceding ); -- mvd 7,1,8,2->6; 
 
 -- COUNT() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -976,7 +976,7 @@ win3 as (partition by ow_sale.prc,ow_sale.vn,ow_sale.pn order by ow_sale.cn desc
 
 SELECT ow_sale.vn,ow_sale.qty,ow_sale.pn,ow_sale.vn, TO_CHAR(COALESCE(COUNT(floor(ow_sale.prc-ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.dt,ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.cn,ow_sale.dt,ow_sale.dt,ow_sale.vn order by ow_sale.cn asc range between floor(ow_sale.pn+ow_sale.pn) preceding and floor(ow_sale.qty) following ); -- mvd 6,7,1->5; 
+WINDOW win1 as (partition by ow_sale.cn,ow_sale.dt,ow_sale.dt,ow_sale.vn order by ow_sale.cn asc range between floor(ow_sale.pn+ow_sale.pn)::integer preceding and floor(ow_sale.qty)::integer following ); -- mvd 6,7,1->5; 
 
 -- COUNT() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -1025,7 +1025,7 @@ win4 as (partition by ow_sale.dt,ow_sale.cn,ow_sale.dt,ow_sale.qty,ow_sale.pn,ow
 
 SELECT ow_sale.pn,ow_sale.vn,ow_sale.cn, TO_CHAR(COALESCE(COUNT(floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.dt
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (partition by ow_sale.pn,ow_sale.dt,ow_sale.dt,ow_sale.vn,ow_sale.cn,ow_sale.vn order by ow_sale.pn desc range between current row and floor(ow_sale.vn) following ); -- mvd 3,5,2,1->4; 
+WINDOW win1 as (partition by ow_sale.pn,ow_sale.dt,ow_sale.dt,ow_sale.vn,ow_sale.cn,ow_sale.vn order by ow_sale.pn desc range between current row and floor(ow_sale.vn)::integer following ); -- mvd 3,5,2,1->4; 
 
 -- COUNT() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -1058,7 +1058,7 @@ win2 as (order by ow_sale.pn asc); -- mvd 1,7->6; 9->8; 9->10; 9->11;
 
 SELECT ow_sale.vn,ow_sale.cn,ow_sale.qty,ow_sale.pn,ow_sale.vn,ow_sale.vn, TO_CHAR(COALESCE(COUNT(floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn order by ow_sale.cn asc range between 3 following and floor(ow_sale.cn+ow_sale.vn) following ); -- mvd 2,1->7; 
+WINDOW win1 as (partition by ow_sale.vn order by ow_sale.cn asc range between 3 following and floor(ow_sale.cn+ow_sale.vn)::integer following ); -- mvd 2,1->7; 
 
 -- COUNT() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -1067,7 +1067,7 @@ TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.prc) as int),cast (floor(ow_sale.prc+ow_
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.vn/ow_sale.vn) as int),cast (floor(ow_sale.cn) as int),NULL) OVER(win3),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (partition by ow_sale.qty,ow_sale.prc,ow_sale.cn,ow_sale.dt order by ow_sale.pn desc range between floor(ow_sale.qty+ow_sale.prc) following and 4 following ),
+WINDOW win1 as (partition by ow_sale.qty,ow_sale.prc,ow_sale.cn,ow_sale.dt order by ow_sale.pn desc range between floor(ow_sale.qty+ow_sale.prc)::integer following and 4 following ),
 win2 as (order by ow_sale.ord, ow_sale.cn desc),
 win3 as (order by ow_sale.ord, ow_sale.pn asc); -- mvd 1,6,7,2,8->5; 7->9; 7->10; 8->11; 
 
@@ -1421,7 +1421,7 @@ win2 as (partition by ow_sale.dt,ow_sale.cn order by ow_sale.cn asc); -- mvd 1->
 
 SELECT ow_sale.prc,ow_sale.vn,ow_sale.pn,ow_sale.qty, TO_CHAR(COALESCE(MAX(floor(ow_sale.prc+ow_sale.pn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.vn asc range floor(ow_sale.vn+ow_sale.qty) preceding ); -- mvd 2->5; 
+WINDOW win1 as (order by ow_sale.vn asc range floor(ow_sale.vn+ow_sale.qty)::integer preceding ); -- mvd 2->5; 
 
 -- MAX() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -1462,7 +1462,7 @@ WINDOW win1 as (order by ow_sale.vn asc range between unbounded preceding and 4 
 SELECT ow_sale.vn,ow_sale.pn,ow_sale.prc, TO_CHAR(COALESCE(MAX(floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999'),
 TO_CHAR(COALESCE(CUME_DIST() OVER(win2),0),'99999999.9999999'),ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range between unbounded preceding and floor(ow_sale.qty+ow_sale.cn) preceding ),
+WINDOW win1 as (order by ow_sale.vn desc range between unbounded preceding and floor(ow_sale.qty+ow_sale.cn)::integer preceding ),
 win2 as (order by ow_sale.cn desc); -- mvd 1->4; 6->5; 
 
 -- MAX() function with ONLY order by having range based framing clause --
@@ -1475,7 +1475,7 @@ WINDOW win1 as (order by ow_sale.cn asc range between unbounded preceding and cu
 
 SELECT ow_sale.cn,ow_sale.cn,ow_sale.qty,ow_sale.qty, TO_CHAR(COALESCE(MAX(floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.vn) following ); -- mvd 1->5; 
+WINDOW win1 as (order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.vn)::integer following ); -- mvd 1->5; 
 
 -- MAX() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -1515,7 +1515,7 @@ SELECT ow_sale.pn,ow_sale.pn,ow_sale.qty,ow_sale.dt,ow_sale.qty, TO_CHAR(COALESC
 TO_CHAR(COALESCE(CUME_DIST() OVER(win2),0),'99999999.9999999'),ow_sale.vn,
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win3),0),'99999999.9999999'),ow_sale.prc
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.cn asc range between floor(ow_sale.pn) preceding and 4 preceding ),
+WINDOW win1 as (order by ow_sale.cn asc range between floor(ow_sale.pn)::integer preceding and 4 preceding ),
 win2 as (order by ow_sale.vn desc),
 win3 as (partition by ow_sale.qty,ow_sale.cn,ow_sale.prc,ow_sale.pn order by ow_sale.pn desc); -- mvd 7->6; 9->8; 11,7,3,1->10; 
 
@@ -1523,7 +1523,7 @@ win3 as (partition by ow_sale.qty,ow_sale.cn,ow_sale.prc,ow_sale.pn order by ow_
 
 SELECT ow_sale.dt,ow_sale.dt,ow_sale.prc,ow_sale.vn,ow_sale.prc, TO_CHAR(COALESCE(MAX(floor(ow_sale.qty+ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.vn/ow_sale.qty) preceding and current row ); -- mvd 7->6; 
+WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.vn/ow_sale.qty)::integer preceding and current row ); -- mvd 7->6; 
 
 -- MAX() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -1533,7 +1533,7 @@ TO_CHAR(COALESCE(COUNT(floor(ow_sale.cn/ow_sale.pn)) OVER(order by ow_sale.ord, 
 TO_CHAR(COALESCE(COUNT(floor(ow_sale.qty)) OVER(order by ow_sale.ord, ow_sale.pn asc),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.cn) as int),cast (floor(ow_sale.cn) as int),NULL) OVER(win3),0),'99999999.9999999'),ow_sale.dt
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_vendor WHERE ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range between floor(ow_sale.vn/ow_sale.vn) preceding and current row ),
+WINDOW win1 as (order by ow_sale.vn desc range between floor(ow_sale.vn/ow_sale.vn)::integer preceding and current row ),
 win2 as (order by ow_sale.ord, ow_sale.pn asc),
 win3 as (partition by ow_sale.cn,ow_sale.pn,ow_sale.vn,ow_sale.dt order by ow_sale.ord, ow_sale.pn desc); -- mvd 3->2; 5->4; 5->6; 5->7; 9,1,3,5->8; 
 
@@ -1541,7 +1541,7 @@ win3 as (partition by ow_sale.cn,ow_sale.pn,ow_sale.vn,ow_sale.dt order by ow_sa
 
 SELECT ow_sale.pn,ow_sale.pn, TO_CHAR(COALESCE(MAX(floor(ow_sale.cn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (order by ow_sale.pn asc range between 4 preceding and floor(ow_sale.vn*ow_sale.prc) following ); -- mvd 1->3; 
+WINDOW win1 as (order by ow_sale.pn asc range between 4 preceding and floor(ow_sale.vn*ow_sale.prc)::integer following ); -- mvd 1->3; 
 
 -- MAX() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -1550,7 +1550,7 @@ TO_CHAR(COALESCE(DENSE_RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(CUME_DIST() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(RANK() OVER(win3),0),'99999999.9999999'),ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_vendor WHERE ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.pn asc range between 4 preceding and floor(ow_sale.prc) following ),
+WINDOW win1 as (order by ow_sale.pn asc range between 4 preceding and floor(ow_sale.prc)::integer following ),
 win2 as (order by ow_sale.cn desc),
 win3 as (partition by ow_sale.pn,ow_sale.pn order by ow_sale.vn asc); -- mvd 5->4; 2->6; 2->7; 9,5->8; 
 
@@ -1625,7 +1625,7 @@ win3 as (partition by ow_sale.prc,ow_sale.prc,ow_sale.dt order by ow_sale.vn des
 
 SELECT ow_sale.cn,ow_sale.qty,ow_sale.qty, TO_CHAR(COALESCE(MAX(floor(ow_sale.qty*ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.pn asc range between floor(ow_sale.qty+ow_sale.qty) following and 0 following ); -- mvd 5->4; 
+WINDOW win1 as (order by ow_sale.pn asc range between floor(ow_sale.qty+ow_sale.qty)::integer following and 0 following ); -- mvd 5->4; 
 
 -- MAX() function with ONLY order by having range based framing clause --
 
@@ -1911,14 +1911,14 @@ win2 as (partition by ow_sale.pn,ow_sale.pn,ow_sale.qty,ow_sale.dt,ow_sale.dt or
 
 SELECT ow_sale.prc,ow_sale.qty,ow_sale.pn,ow_sale.vn,ow_sale.qty, TO_CHAR(COALESCE(MAX(floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (partition by ow_sale.qty,ow_sale.pn order by ow_sale.vn desc range floor(ow_sale.prc*ow_sale.cn) preceding ); -- mvd 4,2,3->6; 
+WINDOW win1 as (partition by ow_sale.qty,ow_sale.pn order by ow_sale.vn desc range floor(ow_sale.prc*ow_sale.cn)::integer preceding ); -- mvd 4,2,3->6; 
 
 -- MAX() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT ow_sale.cn,ow_sale.pn, TO_CHAR(COALESCE(MAX(floor(ow_sale.qty/ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.vn,
 TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.cn-ow_sale.qty) as int),cast (floor(ow_sale.prc) as int),NULL) OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn order by ow_sale.vn desc range floor(ow_sale.prc/ow_sale.vn) preceding ),
+WINDOW win1 as (partition by ow_sale.vn order by ow_sale.vn desc range floor(ow_sale.prc/ow_sale.vn)::integer preceding ),
 win2 as (order by ow_sale.ord, ow_sale.pn asc); -- mvd 4->3; 2->5; 
 
 -- MAX() function with partition by and order by having range based framing clause --
@@ -1940,7 +1940,7 @@ win2 as (order by ow_sale.vn desc); -- mvd 4->3; 6->5; 6->7;
 
 SELECT ow_sale.qty,ow_sale.vn,ow_sale.dt, TO_CHAR(COALESCE(MAX(floor(ow_sale.pn+ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.prc,ow_sale.cn,ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.pn,ow_sale.prc order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.cn+ow_sale.pn) preceding ); -- mvd 5,6,7->4; 
+WINDOW win1 as (partition by ow_sale.pn,ow_sale.prc order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.cn+ow_sale.pn)::integer preceding ); -- mvd 5,6,7->4; 
 
 -- MAX() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -1997,18 +1997,18 @@ win4 as (order by ow_sale.vn asc); -- mvd 4,5,6,7->3; 6->8; 7->9; 7->10; 2->11;
 
 SELECT ow_sale.qty,ow_sale.qty,ow_sale.vn,ow_sale.pn,ow_sale.pn,ow_sale.cn, TO_CHAR(COALESCE(MAX(floor(ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.prc,ow_sale.dt
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.prc,ow_sale.vn,ow_sale.dt order by ow_sale.cn desc range between floor(ow_sale.cn) preceding and floor(ow_sale.cn) preceding ); -- mvd 8,6,9,3->7; 
+WINDOW win1 as (partition by ow_sale.prc,ow_sale.vn,ow_sale.dt order by ow_sale.cn desc range between floor(ow_sale.cn)::integer preceding and floor(ow_sale.cn)::integer preceding ); -- mvd 8,6,9,3->7; 
 
 -- MAX() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT ow_sale.vn,ow_sale.vn, TO_CHAR(COALESCE(MAX(floor(ow_sale.vn-ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.dt,ow_sale.qty,
 TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.vn+ow_sale.qty) as int),cast (floor(ow_sale.qty*ow_sale.vn) as int),NULL) OVER(win2),0),'99999999.9999999'),ow_sale.cn,
 TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.prc-ow_sale.vn) as int),cast (floor(ow_sale.cn) as int),NULL) OVER(win3),0),'99999999.9999999'),ow_sale.pn,
-TO_CHAR(COALESCE(COUNT(floor(ow_sale.pn)) OVER(partition by ow_sale.dt,ow_sale.qty order by ow_sale.vn asc range between 1 preceding and floor(ow_sale.pn) preceding ),0),'99999999.9999999'),
+TO_CHAR(COALESCE(COUNT(floor(ow_sale.pn)) OVER(partition by ow_sale.dt,ow_sale.qty order by ow_sale.vn asc range between 1 preceding and floor(ow_sale.pn)::integer preceding ),0),'99999999.9999999'),
 TO_CHAR(COALESCE(COUNT(floor(ow_sale.pn)) OVER(win3),0),'99999999.9999999'),
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win4),0),'99999999.9999999'),ow_sale.prc
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.dt,ow_sale.qty order by ow_sale.vn asc range between 1 preceding and floor(ow_sale.pn) preceding ),
+WINDOW win1 as (partition by ow_sale.dt,ow_sale.qty order by ow_sale.vn asc range between 1 preceding and floor(ow_sale.pn)::integer preceding ),
 win2 as (partition by ow_sale.vn,ow_sale.cn,ow_sale.dt,ow_sale.vn,ow_sale.qty order by ow_sale.ord, ow_sale.cn asc),
 win3 as (order by ow_sale.ord, ow_sale.pn desc),
 win4 as (partition by ow_sale.prc order by ow_sale.pn asc); -- mvd 4,1,5->3; 4,7,5,1->6; 9->8; 4,1,5->10; 9->11; 13,9->12; 
@@ -2042,7 +2042,7 @@ TO_CHAR(COALESCE(DENSE_RANK() OVER(win2),0),'99999999.9999999'),ow_sale.qty,
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win3),0),'99999999.9999999'),ow_sale.dt
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_vendor WHERE ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn order by ow_sale.cn desc range between floor(ow_sale.vn+ow_sale.pn) preceding and 3 following ),
+WINDOW win1 as (partition by ow_sale.vn order by ow_sale.cn desc range between floor(ow_sale.vn+ow_sale.pn)::integer preceding and 3 following ),
 win2 as (partition by ow_sale.vn,ow_sale.cn,ow_sale.cn,ow_sale.qty order by ow_sale.pn asc),
 win3 as (partition by ow_sale.dt,ow_sale.vn order by ow_sale.vn desc); -- mvd 2,5->4; 2,7,5,1->6; 2,7,5,1->8; 10,5->9; 
 
@@ -2050,7 +2050,7 @@ win3 as (partition by ow_sale.dt,ow_sale.vn order by ow_sale.vn desc); -- mvd 2,
 
 SELECT ow_sale.cn,ow_sale.qty,ow_sale.qty,ow_sale.vn,ow_sale.prc,ow_sale.vn, TO_CHAR(COALESCE(MAX(floor(ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.dt,ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.dt,ow_sale.cn,ow_sale.cn,ow_sale.cn,ow_sale.pn order by ow_sale.vn asc range between floor(ow_sale.vn) preceding and unbounded following ); -- mvd 1,8,4,9->7; 
+WINDOW win1 as (partition by ow_sale.dt,ow_sale.cn,ow_sale.cn,ow_sale.cn,ow_sale.pn order by ow_sale.vn asc range between floor(ow_sale.vn)::integer preceding and unbounded following ); -- mvd 1,8,4,9->7; 
 
 -- MAX() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -2087,7 +2087,7 @@ TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.cn*ow_sale.prc) as int),cast (floor(ow_s
 TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.qty) as int),cast (floor(ow_sale.qty) as int),NULL) OVER(win3),0),'99999999.9999999'),
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(order by ow_sale.ord, ow_sale.cn asc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.prc,ow_sale.pn,ow_sale.cn,ow_sale.dt,ow_sale.pn order by ow_sale.pn asc range between current row and floor(ow_sale.prc) following ),
+WINDOW win1 as (partition by ow_sale.prc,ow_sale.pn,ow_sale.cn,ow_sale.dt,ow_sale.pn order by ow_sale.pn asc range between current row and floor(ow_sale.prc)::integer following ),
 win2 as (order by ow_sale.ord, ow_sale.cn asc),
 win3 as (order by ow_sale.ord, ow_sale.pn asc); -- mvd 6,8,9,5->7; 9->10; 5->11; 9->12; 
 
@@ -2114,7 +2114,7 @@ win4 as (order by ow_sale.vn asc); -- mvd 8,9,1,10->7; 1->11; 9,1->12; 1->13; 1-
 
 SELECT ow_sale.vn, TO_CHAR(COALESCE(MAX(floor(ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.pn order by ow_sale.cn asc range between 2 following and floor(ow_sale.pn+ow_sale.cn) following ); -- mvd 3,4->2; 
+WINDOW win1 as (partition by ow_sale.pn order by ow_sale.cn asc range between 2 following and floor(ow_sale.pn+ow_sale.cn)::integer following ); -- mvd 3,4->2; 
 
 -- MAX() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -2122,7 +2122,7 @@ SELECT ow_sale.pn,ow_sale.vn,ow_sale.dt, TO_CHAR(COALESCE(MAX(floor(ow_sale.vn-o
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(RANK() OVER(win3),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.cn,ow_sale.pn,ow_sale.prc,ow_sale.qty,ow_sale.pn,ow_sale.pn order by ow_sale.pn desc range between floor(ow_sale.cn/ow_sale.vn) following and 2 following ),
+WINDOW win1 as (partition by ow_sale.cn,ow_sale.pn,ow_sale.prc,ow_sale.qty,ow_sale.pn,ow_sale.pn order by ow_sale.pn desc range between floor(ow_sale.cn/ow_sale.vn)::integer following and 2 following ),
 win2 as (partition by ow_sale.cn,ow_sale.pn,ow_sale.cn order by ow_sale.vn asc),
 win3 as (order by ow_sale.cn asc); -- mvd 5,6,7,1->4; 6,2,1->8; 6->9; 
 
@@ -2135,12 +2135,12 @@ WINDOW win1 as (partition by ow_sale.prc order by ow_sale.vn desc range between 
 -- MAX() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT ow_sale.cn, TO_CHAR(COALESCE(MAX(floor(ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.dt,ow_sale.qty,ow_sale.pn,
-TO_CHAR(COALESCE(COUNT(floor(ow_sale.prc+ow_sale.cn)) OVER(partition by ow_sale.pn,ow_sale.qty,ow_sale.pn,ow_sale.pn,ow_sale.dt,ow_sale.pn order by ow_sale.cn asc range between floor(ow_sale.prc) following and unbounded following ),0),'99999999.9999999'),
+TO_CHAR(COALESCE(COUNT(floor(ow_sale.prc+ow_sale.cn)) OVER(partition by ow_sale.pn,ow_sale.qty,ow_sale.pn,ow_sale.pn,ow_sale.dt,ow_sale.pn order by ow_sale.cn asc range between floor(ow_sale.prc)::integer following and unbounded following ),0),'99999999.9999999'),
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win2),0),'99999999.9999999'),ow_sale.vn,
 TO_CHAR(COALESCE(COUNT(floor(ow_sale.cn*ow_sale.prc)) OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win3),0),'99999999.9999999'),ow_sale.prc
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.pn,ow_sale.qty,ow_sale.pn,ow_sale.pn,ow_sale.dt,ow_sale.pn order by ow_sale.cn asc range between floor(ow_sale.prc) following and unbounded following ),
+WINDOW win1 as (partition by ow_sale.pn,ow_sale.qty,ow_sale.pn,ow_sale.pn,ow_sale.dt,ow_sale.pn order by ow_sale.cn asc range between floor(ow_sale.prc)::integer following and unbounded following ),
 win2 as (order by ow_sale.vn asc),
 win3 as (partition by ow_sale.vn,ow_sale.pn,ow_sale.vn,ow_sale.prc,ow_sale.vn,ow_sale.pn order by ow_sale.cn asc); -- mvd 1,3,4,5->2; 1,3,4,5->6; 8->7; 8->9; 11,1,8,5->10; 
 
@@ -2436,7 +2436,7 @@ TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999'),ow_sale.dt,
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win3),0),'99999999.9999999'),
 TO_CHAR(COALESCE(RANK() OVER(partition by ow_sale.cn order by ow_sale.cn desc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range floor(ow_sale.prc) preceding ),
+WINDOW win1 as (order by ow_sale.cn desc range floor(ow_sale.prc)::integer preceding ),
 win2 as (partition by ow_sale.dt,ow_sale.dt,ow_sale.dt,ow_sale.pn,ow_sale.dt order by ow_sale.pn desc),
 win3 as (partition by ow_sale.cn order by ow_sale.cn desc); -- mvd 4->3; 4->5; 7,2->6; 4->8; 4->9; 
 
@@ -2481,7 +2481,7 @@ WINDOW win1 as (order by ow_sale.cn asc range between unbounded preceding and cu
 
 SELECT ow_sale.cn,ow_sale.pn,ow_sale.qty, TO_CHAR(COALESCE(MIN(floor(ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.vn asc range between unbounded preceding and floor(ow_sale.qty) following ); -- mvd 5->4; 
+WINDOW win1 as (order by ow_sale.vn asc range between unbounded preceding and floor(ow_sale.qty)::integer following ); -- mvd 5->4; 
 
 -- MIN() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -2514,7 +2514,7 @@ win4 as (order by ow_sale.ord, ow_sale.cn desc); -- mvd 5->4; 3->6; 8,5,1,2,3->7
 
 SELECT ow_sale.vn, TO_CHAR(COALESCE(MIN(floor(ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.prc+ow_sale.cn) preceding and floor(ow_sale.cn) preceding ); -- mvd 3->2; 
+WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.prc+ow_sale.cn)::integer preceding and floor(ow_sale.cn)::integer preceding ); -- mvd 3->2; 
 
 -- MIN() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -2531,7 +2531,7 @@ win2 as (partition by ow_sale.cn order by ow_sale.vn asc); -- mvd 5->7; 5->8; 10
 
 SELECT ow_sale.pn,ow_sale.cn, TO_CHAR(COALESCE(MIN(floor(ow_sale.vn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.cn) preceding and current row ); -- mvd 2->3; 
+WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.cn)::integer preceding and current row ); -- mvd 2->3; 
 
 -- MIN() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -2541,7 +2541,7 @@ TO_CHAR(COALESCE(CUME_DIST() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(RANK() OVER(win3),0),'99999999.9999999'),
 TO_CHAR(COALESCE(CUME_DIST() OVER(order by ow_sale.vn desc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_vendor WHERE ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.vn) preceding and current row ),
+WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.vn)::integer preceding and current row ),
 win2 as (partition by ow_sale.vn,ow_sale.cn,ow_sale.vn order by ow_sale.vn desc),
 win3 as (order by ow_sale.vn desc); -- mvd 4->3; 6,4->5; 6,4->7; 4->8; 4->9; 
 
@@ -2609,15 +2609,15 @@ win3 as (partition by ow_sale.prc order by ow_sale.ord, ow_sale.cn asc); -- mvd 
 
 SELECT ow_sale.prc,ow_sale.prc,ow_sale.qty, TO_CHAR(COALESCE(MIN(floor(ow_sale.pn*ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range between floor(ow_sale.qty) following and 2 following ); -- mvd 5->4; 
+WINDOW win1 as (order by ow_sale.vn desc range between floor(ow_sale.qty)::integer following and 2 following ); -- mvd 5->4; 
 
 -- MIN() function with ONLY order by having range based framing clause in combination with other functions --
 
 SELECT ow_sale.dt,ow_sale.pn,ow_sale.dt,ow_sale.qty,ow_sale.vn,ow_sale.pn, TO_CHAR(COALESCE(MIN(floor(ow_sale.qty-ow_sale.cn)) OVER(win1),0),'99999999.9999999'),
-TO_CHAR(COALESCE(COUNT(floor(ow_sale.cn)) OVER(order by ow_sale.pn asc range between 2 following and floor(ow_sale.prc/ow_sale.pn) following ),0),'99999999.9999999'),
+TO_CHAR(COALESCE(COUNT(floor(ow_sale.cn)) OVER(order by ow_sale.pn asc range between 2 following and floor(ow_sale.prc/ow_sale.pn)::integer following ),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.qty) as int),cast (floor(ow_sale.vn*ow_sale.vn) as int),NULL) OVER(win2),0),'99999999.9999999'),ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.pn asc range between 2 following and floor(ow_sale.prc/ow_sale.pn) following ),
+WINDOW win1 as (order by ow_sale.pn asc range between 2 following and floor(ow_sale.prc/ow_sale.pn)::integer following ),
 win2 as (order by ow_sale.ord, ow_sale.cn desc); -- mvd 2->7; 2->8; 10->9; 
 
 -- MIN() function with ONLY order by having range based framing clause --
@@ -2890,11 +2890,11 @@ WINDOW win1 as (partition by ow_sale.prc,ow_sale.prc order by ow_sale.cn asc ran
 -- MIN() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT ow_sale.pn,ow_sale.vn, TO_CHAR(COALESCE(MIN(floor(ow_sale.pn-ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.dt,ow_sale.qty,
-TO_CHAR(COALESCE(COUNT(floor(ow_sale.cn-ow_sale.qty)) OVER(partition by ow_sale.qty,ow_sale.dt order by ow_sale.pn asc range floor(ow_sale.pn) preceding ),0),'99999999.9999999'),
+TO_CHAR(COALESCE(COUNT(floor(ow_sale.cn-ow_sale.qty)) OVER(partition by ow_sale.qty,ow_sale.dt order by ow_sale.pn asc range floor(ow_sale.pn)::integer preceding ),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.vn*ow_sale.vn) as int),cast (floor(ow_sale.pn) as int),NULL) OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win3),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.qty,ow_sale.dt order by ow_sale.pn asc range floor(ow_sale.pn) preceding ),
+WINDOW win1 as (partition by ow_sale.qty,ow_sale.dt order by ow_sale.pn asc range floor(ow_sale.pn)::integer preceding ),
 win2 as (order by ow_sale.ord, ow_sale.pn asc),
 win3 as (order by ow_sale.pn asc); -- mvd 4,5,1->3; 4,5,1->6; 1->7; 1->8; 
 
@@ -2920,7 +2920,7 @@ win3 as (partition by ow_sale.pn,ow_sale.dt,ow_sale.vn,ow_sale.vn,ow_sale.vn,ow_
 
 SELECT ow_sale.pn,ow_sale.prc,ow_sale.vn,ow_sale.cn,ow_sale.vn,ow_sale.vn, TO_CHAR(COALESCE(MIN(floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.dt
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_vendor WHERE ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.dt,ow_sale.pn,ow_sale.vn,ow_sale.cn,ow_sale.pn,ow_sale.dt order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.pn*ow_sale.prc) preceding ); -- mvd 4,8,3,1->7; 
+WINDOW win1 as (partition by ow_sale.dt,ow_sale.pn,ow_sale.vn,ow_sale.cn,ow_sale.pn,ow_sale.dt order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.pn*ow_sale.prc)::integer preceding ); -- mvd 4,8,3,1->7; 
 
 -- MIN() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -2953,7 +2953,7 @@ win2 as (order by ow_sale.pn asc); -- mvd 4,5,6->3; 6->7;
 
 SELECT ow_sale.vn,ow_sale.pn,ow_sale.cn, TO_CHAR(COALESCE(MIN(floor(ow_sale.vn*ow_sale.pn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.pn order by ow_sale.pn asc range between unbounded preceding and floor(ow_sale.pn) following ); -- mvd 1,2->4; 
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.pn order by ow_sale.pn asc range between unbounded preceding and floor(ow_sale.pn)::integer following ); -- mvd 1,2->4; 
 
 -- MIN() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -2980,7 +2980,7 @@ win2 as (partition by ow_sale.pn,ow_sale.cn order by ow_sale.cn desc); -- mvd 5,
 
 SELECT ow_sale.cn, TO_CHAR(COALESCE(MIN(floor(ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.pn order by ow_sale.cn asc range between floor(ow_sale.prc-ow_sale.prc) preceding and 4 preceding ); -- mvd 1,3->2; 
+WINDOW win1 as (partition by ow_sale.pn order by ow_sale.cn asc range between floor(ow_sale.prc-ow_sale.prc)::integer preceding and 4 preceding ); -- mvd 1,3->2; 
 
 -- MIN() function with partition by and order by having range based framing clause --
 
@@ -2996,7 +2996,7 @@ TO_CHAR(COALESCE(CUME_DIST() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(MIN(floor(ow_sale.prc*ow_sale.cn)) OVER(order by ow_sale.cn desc),0),'99999999.9999999'),
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win3),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.pn,ow_sale.qty,ow_sale.vn,ow_sale.vn,ow_sale.cn order by ow_sale.cn asc range between floor(ow_sale.cn) preceding and current row ),
+WINDOW win1 as (partition by ow_sale.pn,ow_sale.qty,ow_sale.vn,ow_sale.vn,ow_sale.cn order by ow_sale.cn asc range between floor(ow_sale.cn)::integer preceding and current row ),
 win2 as (order by ow_sale.cn desc),
 win3 as (partition by ow_sale.cn,ow_sale.cn,ow_sale.vn,ow_sale.prc order by ow_sale.vn asc); -- mvd 1,3,6,7->5; 1,3,6,7->8; 1->9; 1->10; 2,1,3->11; 
 
@@ -3009,11 +3009,11 @@ WINDOW win1 as (partition by ow_sale.cn order by ow_sale.vn asc range between 0 
 -- MIN() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT ow_sale.pn, TO_CHAR(COALESCE(MIN(floor(ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,ow_sale.vn,
-TO_CHAR(COALESCE(MIN(floor(ow_sale.vn+ow_sale.prc)) OVER(partition by ow_sale.vn order by ow_sale.cn desc range between floor(ow_sale.pn) preceding and floor(ow_sale.vn/ow_sale.vn) following ),0),'99999999.9999999'),
+TO_CHAR(COALESCE(MIN(floor(ow_sale.vn+ow_sale.prc)) OVER(partition by ow_sale.vn order by ow_sale.cn desc range between floor(ow_sale.pn)::integer preceding and floor(ow_sale.vn/ow_sale.vn)::integer following ),0),'99999999.9999999'),
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win3),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.vn order by ow_sale.cn desc range between floor(ow_sale.pn) preceding and floor(ow_sale.vn/ow_sale.vn) following ),
+WINDOW win1 as (partition by ow_sale.vn order by ow_sale.cn desc range between floor(ow_sale.pn)::integer preceding and floor(ow_sale.vn/ow_sale.vn)::integer following ),
 win2 as (order by ow_sale.vn asc),
 win3 as (partition by ow_sale.cn,ow_sale.cn order by ow_sale.vn asc); -- mvd 3,4->2; 3,4->5; 4->6; 3,4->7; 
 
@@ -3021,7 +3021,7 @@ win3 as (partition by ow_sale.cn,ow_sale.cn order by ow_sale.vn asc); -- mvd 3,4
 
 SELECT ow_sale.qty, TO_CHAR(COALESCE(MIN(floor(ow_sale.pn+ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.pn,ow_sale.qty order by ow_sale.cn desc range between floor(ow_sale.cn) preceding and unbounded following ); -- mvd 3,1,4->2; 
+WINDOW win1 as (partition by ow_sale.pn,ow_sale.qty order by ow_sale.cn desc range between floor(ow_sale.cn)::integer preceding and unbounded following ); -- mvd 3,1,4->2; 
 
 -- MIN() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -3056,15 +3056,15 @@ win3 as (order by ow_sale.ord, ow_sale.vn asc); -- mvd 1,5->7; 3,5->8; 4->9; 3,5
 
 SELECT ow_sale.qty,ow_sale.qty,ow_sale.pn, TO_CHAR(COALESCE(MIN(floor(ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.pn,ow_sale.pn order by ow_sale.cn desc range between current row and floor(ow_sale.cn) following ); -- mvd 5,3->4; 
+WINDOW win1 as (partition by ow_sale.pn,ow_sale.pn order by ow_sale.cn desc range between current row and floor(ow_sale.cn)::integer following ); -- mvd 5,3->4; 
 
 -- MIN() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT ow_sale.prc,ow_sale.pn,ow_sale.pn,ow_sale.prc, TO_CHAR(COALESCE(MIN(floor(ow_sale.cn-ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.qty,ow_sale.vn,
 TO_CHAR(COALESCE(RANK() OVER(win2),0),'99999999.9999999'),ow_sale.cn,
-TO_CHAR(COALESCE(COUNT(floor(ow_sale.pn-ow_sale.prc)) OVER(partition by ow_sale.prc,ow_sale.vn,ow_sale.qty,ow_sale.pn order by ow_sale.pn asc range between current row and floor(ow_sale.pn) following ),0),'99999999.9999999')
+TO_CHAR(COALESCE(COUNT(floor(ow_sale.pn-ow_sale.prc)) OVER(partition by ow_sale.prc,ow_sale.vn,ow_sale.qty,ow_sale.pn order by ow_sale.pn asc range between current row and floor(ow_sale.pn)::integer following ),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (partition by ow_sale.prc,ow_sale.vn,ow_sale.qty,ow_sale.pn order by ow_sale.pn asc range between current row and floor(ow_sale.pn) following ),
+WINDOW win1 as (partition by ow_sale.prc,ow_sale.vn,ow_sale.qty,ow_sale.pn order by ow_sale.pn asc range between current row and floor(ow_sale.pn)::integer following ),
 win2 as (partition by ow_sale.vn,ow_sale.qty order by ow_sale.cn desc); -- mvd 1,6,7,2->5; 9,6,7->8; 1,6,7,2->10; 
 
 -- MIN() function with partition by and order by having range based framing clause --
@@ -3087,21 +3087,21 @@ win3 as (order by ow_sale.vn asc); -- mvd 2,4->3; 4->5; 7->6;
 
 SELECT ow_sale.qty,ow_sale.cn,ow_sale.dt,ow_sale.dt,ow_sale.pn, TO_CHAR(COALESCE(MIN(floor(ow_sale.vn-ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (partition by ow_sale.cn order by ow_sale.vn asc range between floor(ow_sale.pn) following and floor(ow_sale.prc) following ); -- mvd 2,7->6; 
+WINDOW win1 as (partition by ow_sale.cn order by ow_sale.vn asc range between floor(ow_sale.pn)::integer following and floor(ow_sale.prc)::integer following ); -- mvd 2,7->6; 
 
 -- MIN() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT ow_sale.dt,ow_sale.pn, TO_CHAR(COALESCE(MIN(floor(ow_sale.qty+ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,
 TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.qty-ow_sale.vn) as int),cast (floor(ow_sale.cn) as int),NULL) OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (partition by ow_sale.pn,ow_sale.pn order by ow_sale.cn desc range between 2 following and floor(ow_sale.vn+ow_sale.prc) following ),
+WINDOW win1 as (partition by ow_sale.pn,ow_sale.pn order by ow_sale.cn desc range between 2 following and floor(ow_sale.vn+ow_sale.prc)::integer following ),
 win2 as (order by ow_sale.ord, ow_sale.cn asc); -- mvd 4,2->3; 4->5; 
 
 -- MIN() function with partition by and order by having range based framing clause --
 
 SELECT ow_sale.vn, TO_CHAR(COALESCE(MIN(floor(ow_sale.cn-ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,ow_sale.qty
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_vendor WHERE ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.qty order by ow_sale.cn asc range between floor(ow_sale.vn) following and unbounded following ); -- mvd 3,4,1->2; 
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.qty order by ow_sale.cn asc range between floor(ow_sale.vn)::integer following and unbounded following ); -- mvd 3,4,1->2; 
 
 -- MIN() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -3504,7 +3504,7 @@ win2 as (partition by ow_sale.prc,ow_sale.vn,ow_sale.cn,ow_sale.cn,ow_sale.dt,ow
 
 SELECT ow_sale.prc,ow_sale.vn, TO_CHAR(COALESCE(STDDEV(floor(ow_sale.cn*ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.cn asc range between 0 preceding and floor(ow_sale.qty) preceding ); -- mvd 4->3; 
+WINDOW win1 as (order by ow_sale.cn asc range between 0 preceding and floor(ow_sale.qty)::integer preceding ); -- mvd 4->3; 
 
 -- STDDEV() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -3515,14 +3515,14 @@ TO_CHAR(COALESCE(ROW_NUMBER() OVER(order by ow_sale.vn asc),0),'99999999.9999999
 TO_CHAR(COALESCE(MAX(floor(ow_sale.vn*ow_sale.cn)) OVER(win1),0),'99999999.9999999'),
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(order by ow_sale.vn asc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.pn+ow_sale.cn) preceding and 0 preceding ),
+WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.pn+ow_sale.cn)::integer preceding and 0 preceding ),
 win2 as (order by ow_sale.vn asc); -- mvd 1->4; 1->5; 1->6; 1->7; 1->8; 1->9; 
 
 -- STDDEV() function with ONLY order by having range based framing clause --
 
 SELECT ow_sale.prc,ow_sale.pn,ow_sale.cn,ow_sale.cn,ow_sale.pn, TO_CHAR(COALESCE(STDDEV(floor(ow_sale.prc-ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range between floor(ow_sale.vn*ow_sale.vn) preceding and current row ); -- mvd 7->6; 
+WINDOW win1 as (order by ow_sale.vn desc range between floor(ow_sale.vn*ow_sale.vn)::integer preceding and current row ); -- mvd 7->6; 
 
 -- STDDEV() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -3545,7 +3545,7 @@ win2 as (order by ow_sale.cn desc); -- mvd 4->3; 4->5;
 
 SELECT ow_sale.vn,ow_sale.pn,ow_sale.qty,ow_sale.pn, TO_CHAR(COALESCE(STDDEV(floor(ow_sale.vn-ow_sale.pn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_vendor WHERE ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.cn) preceding and unbounded following ); -- mvd 1->5; 
+WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.cn)::integer preceding and unbounded following ); -- mvd 1->5; 
 
 -- STDDEV() function with ONLY order by having range based framing clause --
 
@@ -3568,14 +3568,14 @@ win2 as (partition by ow_sale.cn,ow_sale.cn,ow_sale.vn order by ow_sale.ord, ow_
 
 SELECT ow_sale.dt, TO_CHAR(COALESCE(STDDEV(floor(ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.vn asc range between current row and floor(ow_sale.prc) following ); -- mvd 3->2; 
+WINDOW win1 as (order by ow_sale.vn asc range between current row and floor(ow_sale.prc)::integer following ); -- mvd 3->2; 
 
 -- STDDEV() function with ONLY order by having range based framing clause in combination with other functions --
 
 SELECT ow_sale.dt,ow_sale.vn,ow_sale.vn,ow_sale.pn, TO_CHAR(COALESCE(STDDEV(floor(ow_sale.prc)) OVER(win1),0),'99999999.9999999'),
-TO_CHAR(COALESCE(COUNT(floor(ow_sale.vn+ow_sale.vn)) OVER(order by ow_sale.vn desc range between current row and floor(ow_sale.cn+ow_sale.vn) following ),0),'99999999.9999999')
+TO_CHAR(COALESCE(COUNT(floor(ow_sale.vn+ow_sale.vn)) OVER(order by ow_sale.vn desc range between current row and floor(ow_sale.cn+ow_sale.vn)::integer following ),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range between current row and floor(ow_sale.cn+ow_sale.vn) following ); -- mvd 2->5; 2->6; 
+WINDOW win1 as (order by ow_sale.vn desc range between current row and floor(ow_sale.cn+ow_sale.vn)::integer following ); -- mvd 2->5; 2->6; 
 
 -- STDDEV() function with ONLY order by having range based framing clause --
 
@@ -3607,14 +3607,14 @@ WINDOW win1 as (order by ow_sale.cn desc range between 0 following and 0 followi
 SELECT ow_sale.pn,ow_sale.qty,ow_sale.dt, TO_CHAR(COALESCE(STDDEV(floor(ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.vn,
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range between 3 following and floor(ow_sale.vn+ow_sale.qty) following ),
+WINDOW win1 as (order by ow_sale.vn desc range between 3 following and floor(ow_sale.vn+ow_sale.qty)::integer following ),
 win2 as (order by ow_sale.pn asc); -- mvd 5->4; 1->6; 
 
 -- STDDEV() function with ONLY order by having range based framing clause --
 
 SELECT ow_sale.pn,ow_sale.dt,ow_sale.cn,ow_sale.pn,ow_sale.cn,ow_sale.qty, TO_CHAR(COALESCE(STDDEV(floor(ow_sale.pn*ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.qty/ow_sale.cn) following and unbounded following ); -- mvd 8->7; 
+WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.qty/ow_sale.cn)::integer following and unbounded following ); -- mvd 8->7; 
 
 -- STDDEV() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -3624,7 +3624,7 @@ TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.vn-ow_sale.qty) as int),cast (floor(ow_
 TO_CHAR(COALESCE(CUME_DIST() OVER(win3),0),'99999999.9999999'),
 TO_CHAR(COALESCE(MAX(floor(ow_sale.cn+ow_sale.cn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.cn asc range between floor(ow_sale.cn) following and unbounded following ),
+WINDOW win1 as (order by ow_sale.cn asc range between floor(ow_sale.cn)::integer following and unbounded following ),
 win2 as (partition by ow_sale.dt,ow_sale.dt,ow_sale.cn,ow_sale.qty,ow_sale.vn,ow_sale.qty order by ow_sale.ord, ow_sale.vn desc),
 win3 as (order by ow_sale.ord, ow_sale.vn asc); -- mvd 4->3; 4,6,2,1->5; 2->7; 2->8; 4->9; 
 
@@ -3903,7 +3903,7 @@ win3 as (partition by ow_sale.cn,ow_sale.pn,ow_sale.pn,ow_sale.pn,ow_sale.pn ord
 
 SELECT ow_sale.vn, TO_CHAR(COALESCE(STDDEV(floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,ow_sale.dt,ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.dt,ow_sale.cn,ow_sale.pn order by ow_sale.pn desc range floor(ow_sale.vn) preceding ); -- mvd 3,4,1,5->2; 
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.dt,ow_sale.cn,ow_sale.pn order by ow_sale.pn desc range floor(ow_sale.vn)::integer preceding ); -- mvd 3,4,1,5->2; 
 
 -- STDDEV() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -3938,7 +3938,7 @@ win3 as (order by ow_sale.cn asc); -- mvd 3,4->2; 3,6->5; 3,6->7; 3->8; 3->9;
 
 SELECT ow_sale.vn,ow_sale.cn,ow_sale.qty,ow_sale.qty, TO_CHAR(COALESCE(STDDEV(floor(ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.prc,ow_sale.dt,ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.dt,ow_sale.prc,ow_sale.prc,ow_sale.vn order by ow_sale.pn asc range between unbounded preceding and floor(ow_sale.cn) preceding ); -- mvd 6,7,1,8->5; 
+WINDOW win1 as (partition by ow_sale.dt,ow_sale.prc,ow_sale.prc,ow_sale.vn order by ow_sale.pn asc range between unbounded preceding and floor(ow_sale.cn)::integer preceding ); -- mvd 6,7,1,8->5; 
 
 -- STDDEV() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -3963,7 +3963,7 @@ WINDOW win1 as (partition by ow_sale.dt order by ow_sale.cn desc range between u
 SELECT ow_sale.pn,ow_sale.qty,ow_sale.prc, TO_CHAR(COALESCE(STDDEV(floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,ow_sale.vn,
 TO_CHAR(COALESCE(CUME_DIST() OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (partition by ow_sale.cn,ow_sale.cn,ow_sale.vn,ow_sale.vn order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.cn) following ),
+WINDOW win1 as (partition by ow_sale.cn,ow_sale.cn,ow_sale.vn,ow_sale.vn order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.cn)::integer following ),
 win2 as (order by ow_sale.cn asc); -- mvd 5,6->4; 5->7; 
 
 -- STDDEV() function with partition by and order by having range based framing clause --
@@ -3987,39 +3987,39 @@ win3 as (order by ow_sale.pn asc); -- mvd 7,8->6; 8,10->9; 7,8->11; 3->12;
 
 SELECT ow_sale.prc,ow_sale.dt,ow_sale.prc,ow_sale.qty, TO_CHAR(COALESCE(STDDEV(floor(ow_sale.qty+ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.prc order by ow_sale.pn asc range between floor(ow_sale.vn+ow_sale.cn) preceding and 0 preceding ); -- mvd 1,6->5; 
+WINDOW win1 as (partition by ow_sale.prc order by ow_sale.pn asc range between floor(ow_sale.vn+ow_sale.cn)::integer preceding and 0 preceding ); -- mvd 1,6->5; 
 
 -- STDDEV() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT ow_sale.dt,ow_sale.vn,ow_sale.vn, TO_CHAR(COALESCE(STDDEV(floor(ow_sale.vn+ow_sale.pn)) OVER(win1),0),'99999999.9999999'),
 TO_CHAR(COALESCE(COUNT(floor(ow_sale.pn+ow_sale.cn)) OVER(win1),0),'99999999.9999999'),
-TO_CHAR(COALESCE(MAX(floor(ow_sale.vn+ow_sale.vn)) OVER(partition by ow_sale.vn,ow_sale.vn order by ow_sale.vn desc range between 1 preceding and floor(ow_sale.prc+ow_sale.vn) preceding ),0),'99999999.9999999')
+TO_CHAR(COALESCE(MAX(floor(ow_sale.vn+ow_sale.vn)) OVER(partition by ow_sale.vn,ow_sale.vn order by ow_sale.vn desc range between 1 preceding and floor(ow_sale.prc+ow_sale.vn)::integer preceding ),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.vn order by ow_sale.vn desc range between 1 preceding and floor(ow_sale.prc+ow_sale.vn) preceding ); -- mvd 2->4; 2->5; 2->6; 
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.vn order by ow_sale.vn desc range between 1 preceding and floor(ow_sale.prc+ow_sale.vn)::integer preceding ); -- mvd 2->4; 2->5; 2->6; 
 
 -- STDDEV() function with partition by and order by having range based framing clause --
 
 SELECT ow_sale.cn,ow_sale.vn,ow_sale.pn,ow_sale.cn,ow_sale.dt,ow_sale.dt, TO_CHAR(COALESCE(STDDEV(floor(ow_sale.pn*ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.prc
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.dt,ow_sale.prc,ow_sale.pn order by ow_sale.vn asc range between floor(ow_sale.cn-ow_sale.cn) preceding and current row ); -- mvd 8,5,2,3->7; 
+WINDOW win1 as (partition by ow_sale.dt,ow_sale.prc,ow_sale.pn order by ow_sale.vn asc range between floor(ow_sale.cn-ow_sale.cn)::integer preceding and current row ); -- mvd 8,5,2,3->7; 
 
 -- STDDEV() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT ow_sale.qty, TO_CHAR(COALESCE(STDDEV(floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.prc,ow_sale.cn,
-TO_CHAR(COALESCE(MIN(floor(ow_sale.prc)) OVER(partition by ow_sale.prc order by ow_sale.cn asc range between floor(ow_sale.cn) preceding and current row ),0),'99999999.9999999'),
+TO_CHAR(COALESCE(MIN(floor(ow_sale.prc)) OVER(partition by ow_sale.prc order by ow_sale.cn asc range between floor(ow_sale.cn)::integer preceding and current row ),0),'99999999.9999999'),
 TO_CHAR(COALESCE(COUNT(floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999'),
 TO_CHAR(COALESCE(MIN(floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999'),
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999'),ow_sale.vn,
 TO_CHAR(COALESCE(CUME_DIST() OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.prc order by ow_sale.cn asc range between floor(ow_sale.cn) preceding and current row ),
+WINDOW win1 as (partition by ow_sale.prc order by ow_sale.cn asc range between floor(ow_sale.cn)::integer preceding and current row ),
 win2 as (partition by ow_sale.qty,ow_sale.vn,ow_sale.cn,ow_sale.vn,ow_sale.vn order by ow_sale.cn desc); -- mvd 3,4->2; 3,4->5; 3,4->6; 3,4->7; 4,9,1->8; 4,9,1->10; 
 
 -- STDDEV() function with partition by and order by having range based framing clause --
 
 SELECT ow_sale.dt, TO_CHAR(COALESCE(STDDEV(floor(ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn order by ow_sale.cn desc range between 4 preceding and floor(ow_sale.vn*ow_sale.cn) following ); -- mvd 3,4->2; 
+WINDOW win1 as (partition by ow_sale.vn order by ow_sale.cn desc range between 4 preceding and floor(ow_sale.vn*ow_sale.cn)::integer following ); -- mvd 3,4->2; 
 
 -- STDDEV() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -4080,7 +4080,7 @@ WINDOW win1 as (partition by ow_sale.dt,ow_sale.pn order by ow_sale.cn asc range
 SELECT ow_sale.vn,ow_sale.vn,ow_sale.cn, TO_CHAR(COALESCE(STDDEV(floor(ow_sale.cn)) OVER(win1),0),'99999999.9999999'),
 TO_CHAR(COALESCE(RANK() OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.cn order by ow_sale.vn desc range between current row and floor(ow_sale.pn) following ),
+WINDOW win1 as (partition by ow_sale.cn order by ow_sale.vn desc range between current row and floor(ow_sale.pn)::integer following ),
 win2 as (order by ow_sale.vn asc); -- mvd 3,1->4; 1->5; 
 
 -- STDDEV() function with partition by and order by having range based framing clause --
@@ -4100,7 +4100,7 @@ WINDOW win1 as (partition by ow_sale.vn,ow_sale.vn,ow_sale.prc order by ow_sale.
 
 SELECT ow_sale.cn, TO_CHAR(COALESCE(STDDEV(floor(ow_sale.pn/ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.qty,ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (partition by ow_sale.qty,ow_sale.cn order by ow_sale.pn asc range between 0 following and floor(ow_sale.vn+ow_sale.qty) following ); -- mvd 1,3,4->2; 
+WINDOW win1 as (partition by ow_sale.qty,ow_sale.cn order by ow_sale.pn asc range between 0 following and floor(ow_sale.vn+ow_sale.qty)::integer following ); -- mvd 1,3,4->2; 
 
 -- STDDEV() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -4110,7 +4110,7 @@ TO_CHAR(COALESCE(COUNT(floor(ow_sale.pn)) OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.qty) as int),cast (floor(ow_sale.prc) as int),NULL) OVER(win3),0),'99999999.9999999'),
 TO_CHAR(COALESCE(CUME_DIST() OVER(order by ow_sale.cn desc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.pn,ow_sale.dt,ow_sale.pn order by ow_sale.vn asc range between floor(ow_sale.vn) following and floor(ow_sale.qty) following ),
+WINDOW win1 as (partition by ow_sale.pn,ow_sale.dt,ow_sale.pn order by ow_sale.vn asc range between floor(ow_sale.vn)::integer following and floor(ow_sale.qty)::integer following ),
 win2 as (order by ow_sale.cn desc),
 win3 as (order by ow_sale.ord, ow_sale.vn asc); -- mvd 6,7,1->5; 2->8; 2->9; 7->10; 2->11; 
 
@@ -4118,7 +4118,7 @@ win3 as (order by ow_sale.ord, ow_sale.vn asc); -- mvd 6,7,1->5; 2->8; 2->9; 7->
 
 SELECT ow_sale.qty,ow_sale.pn, TO_CHAR(COALESCE(STDDEV(floor(ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.dt,ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.dt order by ow_sale.vn desc range between floor(ow_sale.vn) following and unbounded following ); -- mvd 4,5->3; 
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.dt order by ow_sale.vn desc range between floor(ow_sale.vn)::integer following and unbounded following ); -- mvd 4,5->3; 
 
 -- STDDEV() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -4473,11 +4473,11 @@ WINDOW win1 as (order by ow_sale.cn desc range between unbounded preceding and 0
 -- STDDEV_POP() function with ONLY order by having range based framing clause in combination with other functions --
 
 SELECT ow_sale.pn,ow_sale.vn, TO_CHAR(COALESCE(STDDEV_POP(floor(ow_sale.prc*ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,
-TO_CHAR(COALESCE(MAX(floor(ow_sale.vn)) OVER(order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.cn) preceding ),0),'99999999.9999999'),
+TO_CHAR(COALESCE(MAX(floor(ow_sale.vn)) OVER(order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.cn)::integer preceding ),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.qty+ow_sale.vn) as int),cast (floor(ow_sale.cn) as int),NULL) OVER(win2),0),'99999999.9999999'),ow_sale.qty,
 TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.cn) as int),cast (floor(ow_sale.pn) as int),NULL) OVER(win3),0),'99999999.9999999'),ow_sale.prc
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.cn) preceding ),
+WINDOW win1 as (order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.cn)::integer preceding ),
 win2 as (partition by ow_sale.cn,ow_sale.qty order by ow_sale.ord, ow_sale.pn desc),
 win3 as (partition by ow_sale.pn,ow_sale.pn,ow_sale.cn,ow_sale.cn,ow_sale.prc order by ow_sale.ord, ow_sale.pn asc); -- mvd 4->3; 4->5; 4,7,1->6; 9,4,1->8; 
 
@@ -4496,13 +4496,13 @@ WINDOW win1 as (order by ow_sale.pn asc range between unbounded preceding and 2 
 -- STDDEV_POP() function with ONLY order by having range based framing clause in combination with other functions --
 
 SELECT ow_sale.prc,ow_sale.vn, TO_CHAR(COALESCE(STDDEV_POP(floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,
-TO_CHAR(COALESCE(MIN(floor(ow_sale.pn-ow_sale.cn)) OVER(order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.qty) following ),0),'99999999.9999999'),
+TO_CHAR(COALESCE(MIN(floor(ow_sale.pn-ow_sale.cn)) OVER(order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.qty)::integer following ),0),'99999999.9999999'),
 TO_CHAR(COALESCE(RANK() OVER(win2),0),'99999999.9999999'),ow_sale.dt,ow_sale.pn,
 TO_CHAR(COALESCE(RANK() OVER(win3),0),'99999999.9999999'),
 TO_CHAR(COALESCE(COUNT(floor(ow_sale.qty)) OVER(partition by ow_sale.pn,ow_sale.cn,ow_sale.prc,ow_sale.prc order by ow_sale.vn desc),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.vn) as int),cast (floor(ow_sale.vn) as int),NULL) OVER(win4),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.qty) following ),
+WINDOW win1 as (order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.qty)::integer following ),
 win2 as (partition by ow_sale.dt,ow_sale.pn,ow_sale.dt order by ow_sale.cn desc),
 win3 as (partition by ow_sale.pn,ow_sale.cn,ow_sale.prc,ow_sale.prc order by ow_sale.vn desc),
 win4 as (order by ow_sale.ord, ow_sale.cn desc); -- mvd 4->3; 4->5; 4,7,8->6; 1,4,2,8->9; 1,4,2,8->10; 4->11; 
@@ -4529,7 +4529,7 @@ win2 as (partition by ow_sale.dt,ow_sale.qty order by ow_sale.ord, ow_sale.pn de
 
 SELECT ow_sale.vn,ow_sale.prc,ow_sale.prc, TO_CHAR(COALESCE(STDDEV_POP(floor(ow_sale.qty-ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between 2 preceding and floor(ow_sale.qty*ow_sale.cn) preceding ); -- mvd 5->4; 
+WINDOW win1 as (order by ow_sale.cn desc range between 2 preceding and floor(ow_sale.qty*ow_sale.cn)::integer preceding ); -- mvd 5->4; 
 
 -- STDDEV_POP() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -4539,7 +4539,7 @@ TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.prc/ow_sale.cn) as int),cast (floor(ow_
 TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.qty) as int),cast (floor(ow_sale.cn) as int),NULL) OVER(win4),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.prc) as int),cast (floor(ow_sale.cn) as int),NULL) OVER(win5),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range between floor(ow_sale.vn) preceding and 2 preceding ),
+WINDOW win1 as (order by ow_sale.vn desc range between floor(ow_sale.vn)::integer preceding and 2 preceding ),
 win2 as (partition by ow_sale.vn,ow_sale.prc,ow_sale.dt,ow_sale.cn order by ow_sale.cn asc),
 win3 as (order by ow_sale.ord, ow_sale.vn desc),
 win4 as (order by ow_sale.ord, ow_sale.vn asc),
@@ -4559,7 +4559,7 @@ TO_CHAR(COALESCE(MIN(floor(ow_sale.vn/ow_sale.pn)) OVER(win1),0),'99999999.99999
 TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.prc) as int),cast (floor(ow_sale.vn+ow_sale.pn) as int),NULL) OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.cn) as int),cast (floor(ow_sale.pn) as int),NULL) OVER(win3),0),'99999999.9999999'),ow_sale.dt,ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (order by ow_sale.pn desc range between floor(ow_sale.pn-ow_sale.vn) preceding and current row ),
+WINDOW win1 as (order by ow_sale.pn desc range between floor(ow_sale.pn-ow_sale.vn)::integer preceding and current row ),
 win2 as (order by ow_sale.ord, ow_sale.pn asc),
 win3 as (partition by ow_sale.dt,ow_sale.vn order by ow_sale.ord, ow_sale.vn desc); -- mvd 3->2; 3->4; 3->5; 3->6; 8,9->7; 
 
@@ -4587,9 +4587,9 @@ WINDOW win1 as (order by ow_sale.vn asc range between 1 preceding and unbounded 
 SELECT ow_sale.cn,ow_sale.pn, TO_CHAR(COALESCE(STDDEV_POP(floor(ow_sale.cn/ow_sale.qty)) OVER(win1),0),'99999999.9999999'),
 TO_CHAR(COALESCE(CUME_DIST() OVER(win2),0),'99999999.9999999'),ow_sale.dt,ow_sale.vn,
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(win3),0),'99999999.9999999'),
-TO_CHAR(COALESCE(MAX(floor(ow_sale.prc-ow_sale.qty)) OVER(order by ow_sale.cn asc range between floor(ow_sale.vn) preceding and unbounded following ),0),'99999999.9999999')
+TO_CHAR(COALESCE(MAX(floor(ow_sale.prc-ow_sale.qty)) OVER(order by ow_sale.cn asc range between floor(ow_sale.vn)::integer preceding and unbounded following ),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.cn asc range between floor(ow_sale.vn) preceding and unbounded following ),
+WINDOW win1 as (order by ow_sale.cn asc range between floor(ow_sale.vn)::integer preceding and unbounded following ),
 win2 as (partition by ow_sale.cn,ow_sale.pn,ow_sale.pn,ow_sale.dt,ow_sale.vn order by ow_sale.cn desc),
 win3 as (order by ow_sale.vn asc); -- mvd 1->3; 5,1,6,2->4; 6->7; 1->8; 
 
@@ -4649,7 +4649,7 @@ win2 as (partition by ow_sale.vn,ow_sale.pn,ow_sale.vn,ow_sale.qty order by ow_s
 
 SELECT ow_sale.dt, TO_CHAR(COALESCE(STDDEV_POP(floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (order by ow_sale.cn asc range between floor(ow_sale.pn/ow_sale.qty) following and unbounded following ); -- mvd 3->2; 
+WINDOW win1 as (order by ow_sale.cn asc range between floor(ow_sale.pn/ow_sale.qty)::integer following and unbounded following ); -- mvd 3->2; 
 
 -- STDDEV_POP() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -4952,7 +4952,7 @@ win4 as (order by ow_sale.pn desc); -- mvd 1,4,5->3; 7,5,8->6; 8->9; 8->10; 8->1
 
 SELECT ow_sale.cn,ow_sale.vn,ow_sale.dt,ow_sale.prc,ow_sale.cn,ow_sale.dt, TO_CHAR(COALESCE(STDDEV_POP(floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.qty,ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.qty,ow_sale.pn,ow_sale.dt,ow_sale.pn order by ow_sale.vn asc range floor(ow_sale.cn) preceding ); -- mvd 3,2,8,9->7; 
+WINDOW win1 as (partition by ow_sale.qty,ow_sale.pn,ow_sale.dt,ow_sale.pn order by ow_sale.vn asc range floor(ow_sale.cn)::integer preceding ); -- mvd 3,2,8,9->7; 
 
 -- STDDEV_POP() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -4962,7 +4962,7 @@ TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.qty) as int),cast (floor(ow_sale.cn*ow_
 TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.vn) as int),cast (floor(ow_sale.qty) as int),NULL) OVER(win4),0),'99999999.9999999'),
 TO_CHAR(COALESCE(COUNT(floor(ow_sale.prc/ow_sale.vn)) OVER(win4),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.dt,ow_sale.prc order by ow_sale.vn desc range floor(ow_sale.prc) preceding ),
+WINDOW win1 as (partition by ow_sale.dt,ow_sale.prc order by ow_sale.vn desc range floor(ow_sale.prc)::integer preceding ),
 win2 as (order by ow_sale.cn desc),
 win3 as (order by ow_sale.ord, ow_sale.cn desc),
 win4 as (order by ow_sale.ord, ow_sale.cn desc); -- mvd 8,9,1->7; 11->10; 11->12; 11->13; 11->14; 
@@ -4991,7 +4991,7 @@ SELECT ow_sale.qty,ow_sale.pn, TO_CHAR(COALESCE(STDDEV_POP(floor(ow_sale.cn-ow_s
 TO_CHAR(COALESCE(MIN(floor(ow_sale.prc)) OVER(win1),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.cn) as int),cast (floor(ow_sale.prc) as int),NULL) OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.dt,ow_sale.vn,ow_sale.vn order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.qty) preceding ),
+WINDOW win1 as (partition by ow_sale.dt,ow_sale.vn,ow_sale.vn order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.qty)::integer preceding ),
 win2 as (order by ow_sale.ord, ow_sale.vn asc); -- mvd 4,5,6->3; 4,5,6->7; 6->8; 
 
 -- STDDEV_POP() function with partition by and order by having range based framing clause --
@@ -5018,16 +5018,16 @@ win4 as (partition by ow_sale.prc,ow_sale.dt,ow_sale.pn order by ow_sale.vn asc)
 
 SELECT ow_sale.qty, TO_CHAR(COALESCE(STDDEV_POP(floor(ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.dt,ow_sale.vn,ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.vn,ow_sale.pn,ow_sale.dt,ow_sale.vn,ow_sale.dt order by ow_sale.pn desc range between unbounded preceding and floor(ow_sale.pn+ow_sale.vn) following ); -- mvd 3,4,5->2; 
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.vn,ow_sale.pn,ow_sale.dt,ow_sale.vn,ow_sale.dt order by ow_sale.pn desc range between unbounded preceding and floor(ow_sale.pn+ow_sale.vn)::integer following ); -- mvd 3,4,5->2; 
 
 -- STDDEV_POP() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT ow_sale.prc,ow_sale.dt,ow_sale.vn, TO_CHAR(COALESCE(STDDEV_POP(floor(ow_sale.pn+ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,
-TO_CHAR(COALESCE(MAX(floor(ow_sale.vn)) OVER(partition by ow_sale.vn,ow_sale.cn,ow_sale.cn,ow_sale.dt order by ow_sale.vn asc range between unbounded preceding and floor(ow_sale.qty) following ),0),'99999999.9999999'),
+TO_CHAR(COALESCE(MAX(floor(ow_sale.vn)) OVER(partition by ow_sale.vn,ow_sale.cn,ow_sale.cn,ow_sale.dt order by ow_sale.vn asc range between unbounded preceding and floor(ow_sale.qty)::integer following ),0),'99999999.9999999'),
 TO_CHAR(COALESCE(RANK() OVER(win2),0),'99999999.9999999'),ow_sale.pn,
 TO_CHAR(COALESCE(CUME_DIST() OVER(win3),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.cn,ow_sale.cn,ow_sale.dt order by ow_sale.vn asc range between unbounded preceding and floor(ow_sale.qty) following ),
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.cn,ow_sale.cn,ow_sale.dt order by ow_sale.vn asc range between unbounded preceding and floor(ow_sale.qty)::integer following ),
 win2 as (order by ow_sale.pn desc),
 win3 as (order by ow_sale.pn asc); -- mvd 2,5,3->4; 2,5,3->6; 8->7; 8->9; 
 
@@ -5051,7 +5051,7 @@ win2 as (partition by ow_sale.pn order by ow_sale.vn asc); -- mvd 5,6,1->4; 1,8-
 
 SELECT ow_sale.vn,ow_sale.cn,ow_sale.cn,ow_sale.cn,ow_sale.dt,ow_sale.prc, TO_CHAR(COALESCE(STDDEV_POP(floor(ow_sale.qty-ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.pn order by ow_sale.pn desc range between 4 preceding and floor(ow_sale.qty+ow_sale.cn) preceding ); -- mvd 8->7; 
+WINDOW win1 as (partition by ow_sale.pn order by ow_sale.pn desc range between 4 preceding and floor(ow_sale.qty+ow_sale.cn)::integer preceding ); -- mvd 8->7; 
 
 -- STDDEV_POP() function with partition by and order by having range based framing clause --
 
@@ -5062,11 +5062,11 @@ WINDOW win1 as (partition by ow_sale.cn,ow_sale.cn,ow_sale.cn,ow_sale.pn order b
 -- STDDEV_POP() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT ow_sale.dt, TO_CHAR(COALESCE(STDDEV_POP(floor(ow_sale.vn/ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.prc,ow_sale.cn,ow_sale.qty,ow_sale.vn,ow_sale.pn,
-TO_CHAR(COALESCE(MIN(floor(ow_sale.prc-ow_sale.vn)) OVER(partition by ow_sale.vn,ow_sale.cn,ow_sale.prc,ow_sale.prc,ow_sale.qty order by ow_sale.pn desc range between floor(ow_sale.qty+ow_sale.pn) preceding and current row ),0),'99999999.9999999'),
-TO_CHAR(COALESCE(MIN(floor(ow_sale.prc-ow_sale.qty)) OVER(partition by ow_sale.vn,ow_sale.cn,ow_sale.prc,ow_sale.prc,ow_sale.qty order by ow_sale.pn desc range between floor(ow_sale.qty+ow_sale.pn) preceding and current row ),0),'99999999.9999999'),
+TO_CHAR(COALESCE(MIN(floor(ow_sale.prc-ow_sale.vn)) OVER(partition by ow_sale.vn,ow_sale.cn,ow_sale.prc,ow_sale.prc,ow_sale.qty order by ow_sale.pn desc range between floor(ow_sale.qty+ow_sale.pn)::integer preceding and current row ),0),'99999999.9999999'),
+TO_CHAR(COALESCE(MIN(floor(ow_sale.prc-ow_sale.qty)) OVER(partition by ow_sale.vn,ow_sale.cn,ow_sale.prc,ow_sale.prc,ow_sale.qty order by ow_sale.pn desc range between floor(ow_sale.qty+ow_sale.pn)::integer preceding and current row ),0),'99999999.9999999'),
 TO_CHAR(COALESCE(CUME_DIST() OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.cn,ow_sale.prc,ow_sale.prc,ow_sale.qty order by ow_sale.pn desc range between floor(ow_sale.qty+ow_sale.pn) preceding and current row ),
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.cn,ow_sale.prc,ow_sale.prc,ow_sale.qty order by ow_sale.pn desc range between floor(ow_sale.qty+ow_sale.pn)::integer preceding and current row ),
 win2 as (order by ow_sale.vn asc); -- mvd 3,4,5,6,7->2; 3,4,5,6,7->8; 3,4,5,6,7->9; 6->10; 
 
 -- STDDEV_POP() function with partition by and order by having range based framing clause in combination with other functions--
@@ -5078,7 +5078,7 @@ TO_CHAR(COALESCE(MIN(floor(ow_sale.cn*ow_sale.qty)) OVER(order by ow_sale.cn asc
 TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.pn+ow_sale.cn) as int),cast (floor(ow_sale.vn/ow_sale.vn) as int),NULL) OVER(win3),0),'99999999.9999999'),ow_sale.prc,ow_sale.qty,
 TO_CHAR(COALESCE(RANK() OVER(order by ow_sale.cn asc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.pn,ow_sale.pn,ow_sale.dt,ow_sale.vn,ow_sale.cn,ow_sale.cn order by ow_sale.cn desc range between floor(ow_sale.vn+ow_sale.cn) preceding and floor(ow_sale.cn+ow_sale.vn) following ),
+WINDOW win1 as (partition by ow_sale.pn,ow_sale.pn,ow_sale.dt,ow_sale.vn,ow_sale.cn,ow_sale.cn order by ow_sale.cn desc range between floor(ow_sale.vn+ow_sale.cn)::integer preceding and floor(ow_sale.cn+ow_sale.vn)::integer following ),
 win2 as (order by ow_sale.cn asc),
 win3 as (partition by ow_sale.prc,ow_sale.vn,ow_sale.qty order by ow_sale.ord, ow_sale.cn desc); -- mvd 4,1,5,2->3; 4->6; 4->7; 4->8; 10,4,11,5->9; 4->12; 
 
@@ -5086,15 +5086,15 @@ win3 as (partition by ow_sale.prc,ow_sale.vn,ow_sale.qty order by ow_sale.ord, o
 
 SELECT ow_sale.prc,ow_sale.prc,ow_sale.qty, TO_CHAR(COALESCE(STDDEV_POP(floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.dt,ow_sale.cn,ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.cn,ow_sale.dt,ow_sale.dt,ow_sale.pn order by ow_sale.cn desc range between floor(ow_sale.qty*ow_sale.qty) preceding and unbounded following ); -- mvd 5,6,7->4; 
+WINDOW win1 as (partition by ow_sale.cn,ow_sale.dt,ow_sale.dt,ow_sale.pn order by ow_sale.cn desc range between floor(ow_sale.qty*ow_sale.qty)::integer preceding and unbounded following ); -- mvd 5,6,7->4; 
 
 -- STDDEV_POP() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT ow_sale.vn,ow_sale.pn,ow_sale.qty, TO_CHAR(COALESCE(STDDEV_POP(floor(ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(win2),0),'99999999.9999999'),
-TO_CHAR(COALESCE(COUNT(floor(ow_sale.prc)) OVER(partition by ow_sale.cn order by ow_sale.vn desc range between floor(ow_sale.prc*ow_sale.vn) preceding and unbounded following ),0),'99999999.9999999')
+TO_CHAR(COALESCE(COUNT(floor(ow_sale.prc)) OVER(partition by ow_sale.cn order by ow_sale.vn desc range between floor(ow_sale.prc*ow_sale.vn)::integer preceding and unbounded following ),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.cn order by ow_sale.vn desc range between floor(ow_sale.prc*ow_sale.vn) preceding and unbounded following ),
+WINDOW win1 as (partition by ow_sale.cn order by ow_sale.vn desc range between floor(ow_sale.prc*ow_sale.vn)::integer preceding and unbounded following ),
 win2 as (order by ow_sale.vn asc); -- mvd 5,1->4; 1->6; 5,1->7; 
 
 -- STDDEV_POP() function with partition by and order by having range based framing clause --
@@ -5120,10 +5120,10 @@ WINDOW win1 as (partition by ow_sale.pn,ow_sale.vn,ow_sale.cn,ow_sale.pn,ow_sale
 -- STDDEV_POP() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT ow_sale.qty, TO_CHAR(COALESCE(STDDEV_POP(floor(ow_sale.vn+ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.dt,ow_sale.vn,ow_sale.pn,
-TO_CHAR(COALESCE(MIN(floor(ow_sale.vn)) OVER(partition by ow_sale.dt,ow_sale.pn order by ow_sale.vn asc range between current row and floor(ow_sale.pn) following ),0),'99999999.9999999'),
+TO_CHAR(COALESCE(MIN(floor(ow_sale.vn)) OVER(partition by ow_sale.dt,ow_sale.pn order by ow_sale.vn asc range between current row and floor(ow_sale.pn)::integer following ),0),'99999999.9999999'),
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.dt,ow_sale.pn order by ow_sale.vn asc range between current row and floor(ow_sale.pn) following ),
+WINDOW win1 as (partition by ow_sale.dt,ow_sale.pn order by ow_sale.vn asc range between current row and floor(ow_sale.pn)::integer following ),
 win2 as (order by ow_sale.vn asc); -- mvd 3,4,5->2; 3,4,5->6; 4->7; 
 
 -- STDDEV_POP() function with partition by and order by having range based framing clause --
@@ -5146,14 +5146,14 @@ win3 as (partition by ow_sale.dt order by ow_sale.ord, ow_sale.cn desc); -- mvd 
 
 SELECT ow_sale.prc, TO_CHAR(COALESCE(STDDEV_POP(floor(ow_sale.cn-ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,ow_sale.qty,ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.qty,ow_sale.pn,ow_sale.pn,ow_sale.prc order by ow_sale.cn asc range between floor(ow_sale.prc) following and 0 following ); -- mvd 1,3,4,5->2; 
+WINDOW win1 as (partition by ow_sale.qty,ow_sale.pn,ow_sale.pn,ow_sale.prc order by ow_sale.cn asc range between floor(ow_sale.prc)::integer following and 0 following ); -- mvd 1,3,4,5->2; 
 
 -- STDDEV_POP() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT ow_sale.vn,ow_sale.dt,ow_sale.vn,ow_sale.pn,ow_sale.prc, TO_CHAR(COALESCE(STDDEV_POP(floor(ow_sale.qty-ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,
 TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.pn) as int),cast (floor(ow_sale.pn) as int),NULL) OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.cn order by ow_sale.cn asc range between floor(ow_sale.prc) following and floor(ow_sale.pn-ow_sale.vn) following ),
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.cn order by ow_sale.cn asc range between floor(ow_sale.prc)::integer following and floor(ow_sale.pn-ow_sale.vn)::integer following ),
 win2 as (partition by ow_sale.cn,ow_sale.dt,ow_sale.pn,ow_sale.pn order by ow_sale.ord, ow_sale.cn asc); -- mvd 7,1->6; 2,7,4->8; 
 
 -- STDDEV_POP() function with partition by and order by having range based framing clause --
@@ -5516,7 +5516,7 @@ TO_CHAR(COALESCE(PERCENT_RANK() OVER(win2),0),'99999999.9999999'),ow_sale.cn,
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(partition by ow_sale.prc,ow_sale.pn,ow_sale.vn,ow_sale.cn order by ow_sale.vn desc),0),'99999999.9999999'),
 TO_CHAR(COALESCE(CUME_DIST() OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range between unbounded preceding and floor(ow_sale.cn) preceding ),
+WINDOW win1 as (order by ow_sale.vn desc range between unbounded preceding and floor(ow_sale.cn)::integer preceding ),
 win2 as (partition by ow_sale.prc,ow_sale.pn,ow_sale.vn,ow_sale.cn order by ow_sale.vn desc); -- mvd 2->6; 3,8,2,4->7; 3,8,2,4->9; 3,8,2,4->10; 
 
 -- STDDEV_SAMP() function with ONLY order by having range based framing clause --
@@ -5537,7 +5537,7 @@ SELECT ow_sale.qty,ow_sale.pn,ow_sale.qty,ow_sale.pn, TO_CHAR(COALESCE(STDDEV_SA
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.prc+ow_sale.prc) as int),cast (floor(ow_sale.vn) as int),NULL) OVER(win3),0),'99999999.9999999'),ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.vn+ow_sale.pn) following ),
+WINDOW win1 as (order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.vn+ow_sale.pn)::integer following ),
 win2 as (order by ow_sale.cn asc),
 win3 as (partition by ow_sale.cn,ow_sale.vn,ow_sale.cn order by ow_sale.ord, ow_sale.cn desc); -- mvd 6->5; 6->7; 6,9->8; 
 
@@ -5596,7 +5596,7 @@ win3 as (partition by ow_sale.cn,ow_sale.vn,ow_sale.vn,ow_sale.dt,ow_sale.qty or
 
 SELECT ow_sale.pn,ow_sale.qty,ow_sale.cn, TO_CHAR(COALESCE(STDDEV_SAMP(floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.qty) preceding and 2 following ); -- mvd 5->4; 
+WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.qty)::integer preceding and 2 following ); -- mvd 5->4; 
 
 -- STDDEV_SAMP() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -5605,9 +5605,9 @@ TO_CHAR(COALESCE(DENSE_RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(MIN(floor(ow_sale.prc*ow_sale.cn)) OVER(order by ow_sale.cn asc),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.prc) as int),cast (floor(ow_sale.qty) as int),NULL) OVER(win3),0),'99999999.9999999'),
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win4),0),'99999999.9999999'),
-TO_CHAR(COALESCE(MAX(floor(ow_sale.qty+ow_sale.qty)) OVER(order by ow_sale.cn desc range between 0 preceding and floor(ow_sale.qty) following ),0),'99999999.9999999')
+TO_CHAR(COALESCE(MAX(floor(ow_sale.qty+ow_sale.qty)) OVER(order by ow_sale.cn desc range between 0 preceding and floor(ow_sale.qty)::integer following ),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between 0 preceding and floor(ow_sale.qty) following ),
+WINDOW win1 as (order by ow_sale.cn desc range between 0 preceding and floor(ow_sale.qty)::integer following ),
 win2 as (order by ow_sale.cn asc),
 win3 as (partition by ow_sale.cn order by ow_sale.ord, ow_sale.cn desc),
 win4 as (order by ow_sale.vn desc); -- mvd 1->7; 1->8; 1->9; 1->10; 2->11; 1->12; 
@@ -5624,7 +5624,7 @@ SELECT ow_sale.dt,ow_sale.cn,ow_sale.qty,ow_sale.pn, TO_CHAR(COALESCE(STDDEV_SAM
 TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.vn) as int),cast (floor(ow_sale.qty) as int),NULL) OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.qty) as int),cast (floor(ow_sale.prc) as int),NULL) OVER(win3),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range between floor(ow_sale.qty+ow_sale.cn) preceding and unbounded following ),
+WINDOW win1 as (order by ow_sale.vn desc range between floor(ow_sale.qty+ow_sale.cn)::integer preceding and unbounded following ),
 win2 as (order by ow_sale.ord, ow_sale.cn desc),
 win3 as (order by ow_sale.ord, ow_sale.cn asc); -- mvd 6->5; 2->7; 2->8; 
 
@@ -5643,11 +5643,11 @@ WINDOW win1 as (order by ow_sale.vn desc range between current row and 1 followi
 -- STDDEV_SAMP() function with ONLY order by having range based framing clause in combination with other functions --
 
 SELECT ow_sale.cn, TO_CHAR(COALESCE(STDDEV_SAMP(floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.vn,
-TO_CHAR(COALESCE(MAX(floor(ow_sale.vn)) OVER(order by ow_sale.vn desc range between current row and floor(ow_sale.cn) following ),0),'99999999.9999999'),
-TO_CHAR(COALESCE(MIN(floor(ow_sale.prc-ow_sale.vn)) OVER(order by ow_sale.vn desc range between current row and floor(ow_sale.cn) following ),0),'99999999.9999999'),
+TO_CHAR(COALESCE(MAX(floor(ow_sale.vn)) OVER(order by ow_sale.vn desc range between current row and floor(ow_sale.cn)::integer following ),0),'99999999.9999999'),
+TO_CHAR(COALESCE(MIN(floor(ow_sale.prc-ow_sale.vn)) OVER(order by ow_sale.vn desc range between current row and floor(ow_sale.cn)::integer following ),0),'99999999.9999999'),
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win2),0),'99999999.9999999'),ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_vendor WHERE ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range between current row and floor(ow_sale.cn) following ),
+WINDOW win1 as (order by ow_sale.vn desc range between current row and floor(ow_sale.cn)::integer following ),
 win2 as (partition by ow_sale.vn,ow_sale.pn,ow_sale.pn,ow_sale.pn order by ow_sale.pn asc); -- mvd 3->2; 3->4; 3->5; 3,7->6; 
 
 -- STDDEV_SAMP() function with ONLY order by having range based framing clause --
@@ -5672,20 +5672,20 @@ win3 as (order by ow_sale.cn asc); -- mvd 6->5; 6->7; 6->8; 10,11,4->9; 6->12;
 
 SELECT ow_sale.cn, TO_CHAR(COALESCE(STDDEV_SAMP(floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_vendor WHERE ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.pn asc range between floor(ow_sale.vn) following and 2 following ); -- mvd 3->2; 
+WINDOW win1 as (order by ow_sale.pn asc range between floor(ow_sale.vn)::integer following and 2 following ); -- mvd 3->2; 
 
 -- STDDEV_SAMP() function with ONLY order by having range based framing clause --
 
 SELECT ow_sale.dt,ow_sale.pn,ow_sale.qty, TO_CHAR(COALESCE(STDDEV_SAMP(floor(ow_sale.vn*ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.pn) following and unbounded following ); -- mvd 5->4; 
+WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.pn)::integer following and unbounded following ); -- mvd 5->4; 
 
 -- STDDEV_SAMP() function with ONLY order by having range based framing clause in combination with other functions --
 
 SELECT ow_sale.pn,ow_sale.qty,ow_sale.qty, TO_CHAR(COALESCE(STDDEV_SAMP(floor(ow_sale.cn)) OVER(win1),0),'99999999.9999999'),
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999'),ow_sale.prc,ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_vendor WHERE ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.pn asc range between floor(ow_sale.prc) following and unbounded following ),
+WINDOW win1 as (order by ow_sale.pn asc range between floor(ow_sale.prc)::integer following and unbounded following ),
 win2 as (partition by ow_sale.prc,ow_sale.pn,ow_sale.qty order by ow_sale.vn asc); -- mvd 1->4; 6,7,2,1->5; 
 
 -- STDDEV_SAMP() function with ONLY order by having rows based framing clause --
@@ -5937,14 +5937,14 @@ WINDOW win1 as (partition by ow_sale.pn,ow_sale.dt,ow_sale.prc,ow_sale.pn,ow_sal
 
 SELECT ow_sale.qty,ow_sale.qty, TO_CHAR(COALESCE(STDDEV_SAMP(floor(ow_sale.pn+ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.prc,ow_sale.dt,ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.prc,ow_sale.qty,ow_sale.dt order by ow_sale.vn asc range floor(ow_sale.vn/ow_sale.cn) preceding ); -- mvd 4,5,6,1->3; 
+WINDOW win1 as (partition by ow_sale.prc,ow_sale.qty,ow_sale.dt order by ow_sale.vn asc range floor(ow_sale.vn/ow_sale.cn)::integer preceding ); -- mvd 4,5,6,1->3; 
 
 -- STDDEV_SAMP() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT ow_sale.qty,ow_sale.vn,ow_sale.prc,ow_sale.vn, TO_CHAR(COALESCE(STDDEV_SAMP(floor(ow_sale.vn/ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,ow_sale.dt,
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(win2),0),'99999999.9999999'),ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.vn,ow_sale.dt,ow_sale.qty,ow_sale.dt order by ow_sale.cn asc range floor(ow_sale.pn) preceding ),
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.vn,ow_sale.dt,ow_sale.qty,ow_sale.dt order by ow_sale.cn asc range floor(ow_sale.pn)::integer preceding ),
 win2 as (partition by ow_sale.pn,ow_sale.dt order by ow_sale.pn asc); -- mvd 6,7,1,2->5; 7,9->8; 
 
 -- STDDEV_SAMP() function with partition by and order by having range based framing clause --
@@ -5970,9 +5970,9 @@ WINDOW win1 as (partition by ow_sale.prc order by ow_sale.pn asc range between u
 -- STDDEV_SAMP() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT ow_sale.cn,ow_sale.vn, TO_CHAR(COALESCE(STDDEV_SAMP(floor(ow_sale.prc/ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.qty,ow_sale.pn,
-TO_CHAR(COALESCE(COUNT(floor(ow_sale.vn)) OVER(partition by ow_sale.vn,ow_sale.qty,ow_sale.pn,ow_sale.cn order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.prc) preceding ),0),'99999999.9999999')
+TO_CHAR(COALESCE(COUNT(floor(ow_sale.vn)) OVER(partition by ow_sale.vn,ow_sale.qty,ow_sale.pn,ow_sale.cn order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.prc)::integer preceding ),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.qty,ow_sale.pn,ow_sale.cn order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.prc) preceding ); -- mvd 1,4,2,5->3; 1,4,2,5->6; 
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.qty,ow_sale.pn,ow_sale.cn order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.prc)::integer preceding ); -- mvd 1,4,2,5->3; 1,4,2,5->6; 
 
 -- STDDEV_SAMP() function with partition by and order by having range based framing clause --
 
@@ -5992,7 +5992,7 @@ SELECT ow_sale.vn, TO_CHAR(COALESCE(STDDEV_SAMP(floor(ow_sale.vn+ow_sale.cn)) OV
 TO_CHAR(COALESCE(CUME_DIST() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(MAX(floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.pn,ow_sale.dt,ow_sale.dt,ow_sale.pn,ow_sale.dt order by ow_sale.vn desc range between unbounded preceding and floor(ow_sale.pn) following ),
+WINDOW win1 as (partition by ow_sale.pn,ow_sale.dt,ow_sale.dt,ow_sale.pn,ow_sale.dt order by ow_sale.vn desc range between unbounded preceding and floor(ow_sale.pn)::integer following ),
 win2 as (order by ow_sale.pn asc); -- mvd 3,1,4->2; 4->5; 3,1,4->6; 
 
 -- STDDEV_SAMP() function with partition by and order by having range based framing clause --
@@ -6020,7 +6020,7 @@ SELECT ow_sale.qty,ow_sale.prc,ow_sale.prc,ow_sale.vn,ow_sale.qty, TO_CHAR(COALE
 TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.cn) as int),cast (floor(ow_sale.qty+ow_sale.vn) as int),NULL) OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win3),0),'99999999.9999999'),ow_sale.dt
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.pn,ow_sale.cn,ow_sale.cn,ow_sale.vn order by ow_sale.pn asc range between 2 preceding and floor(ow_sale.cn) preceding ),
+WINDOW win1 as (partition by ow_sale.pn,ow_sale.cn,ow_sale.cn,ow_sale.vn order by ow_sale.pn asc range between 2 preceding and floor(ow_sale.cn)::integer preceding ),
 win2 as (order by ow_sale.ord, ow_sale.vn asc),
 win3 as (partition by ow_sale.vn,ow_sale.vn,ow_sale.pn,ow_sale.dt,ow_sale.vn,ow_sale.qty order by ow_sale.vn desc); -- mvd 7,4,8->6; 4->9; 11,1,4,8->10; 
 
@@ -6045,7 +6045,7 @@ win3 as (order by ow_sale.ord, ow_sale.vn desc); -- mvd 3,4,5,6->2; 3,4,5,6->7; 
 
 SELECT ow_sale.vn,ow_sale.pn,ow_sale.qty,ow_sale.qty,ow_sale.cn,ow_sale.pn, TO_CHAR(COALESCE(STDDEV_SAMP(floor(ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.prc
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.prc,ow_sale.pn order by ow_sale.vn desc range between floor(ow_sale.pn+ow_sale.vn) preceding and floor(ow_sale.cn) following ); -- mvd 8,1,2->7; 
+WINDOW win1 as (partition by ow_sale.prc,ow_sale.pn order by ow_sale.vn desc range between floor(ow_sale.pn+ow_sale.vn)::integer preceding and floor(ow_sale.cn)::integer following ); -- mvd 8,1,2->7; 
 
 -- STDDEV_SAMP() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -6054,14 +6054,14 @@ TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.qty+ow_sale.prc) as int),cast (floor(ow
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(partition by ow_sale.qty,ow_sale.qty order by ow_sale.ord, ow_sale.cn desc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.prc order by ow_sale.pn desc range between 3 preceding and floor(ow_sale.pn*ow_sale.cn) following ),
+WINDOW win1 as (partition by ow_sale.prc order by ow_sale.pn desc range between 3 preceding and floor(ow_sale.pn*ow_sale.cn)::integer following ),
 win2 as (partition by ow_sale.qty,ow_sale.qty order by ow_sale.ord, ow_sale.cn desc); -- mvd 1,5->4; 7,3->6; 7,3->8; 7,3->9; 
 
 -- STDDEV_SAMP() function with partition by and order by having range based framing clause --
 
 SELECT ow_sale.prc,ow_sale.qty,ow_sale.pn,ow_sale.qty, TO_CHAR(COALESCE(STDDEV_SAMP(floor(ow_sale.qty-ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.pn order by ow_sale.vn desc range between floor(ow_sale.vn) preceding and unbounded following ); -- mvd 6,3->5; 
+WINDOW win1 as (partition by ow_sale.pn order by ow_sale.vn desc range between floor(ow_sale.vn)::integer preceding and unbounded following ); -- mvd 6,3->5; 
 
 -- STDDEV_SAMP() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -6098,7 +6098,7 @@ win2 as (order by ow_sale.cn asc); -- mvd 4,5,1->3; 2->6; 4,5,1->7; 4,5,1->8; 2-
 
 SELECT ow_sale.vn,ow_sale.vn, TO_CHAR(COALESCE(STDDEV_SAMP(floor(ow_sale.cn-ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.dt,ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.pn,ow_sale.dt,ow_sale.dt order by ow_sale.vn asc range between current row and floor(ow_sale.prc) following ); -- mvd 4,1,5->3; 
+WINDOW win1 as (partition by ow_sale.pn,ow_sale.dt,ow_sale.dt order by ow_sale.vn asc range between current row and floor(ow_sale.prc)::integer following ); -- mvd 4,1,5->3; 
 
 -- STDDEV_SAMP() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -6130,7 +6130,7 @@ win3 as (order by ow_sale.pn desc); -- mvd 4,5,6->3; 6->7; 9->8; 6->10;
 
 SELECT ow_sale.qty,ow_sale.vn,ow_sale.qty,ow_sale.vn, TO_CHAR(COALESCE(STDDEV_SAMP(floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (partition by ow_sale.pn,ow_sale.pn order by ow_sale.cn desc range between 2 following and floor(ow_sale.qty) following ); -- mvd 6,7->5; 
+WINDOW win1 as (partition by ow_sale.pn,ow_sale.pn order by ow_sale.cn desc range between 2 following and floor(ow_sale.qty)::integer following ); -- mvd 6,7->5; 
 
 -- STDDEV_SAMP() function with partition by and order by having range based framing clause --
 
@@ -6459,7 +6459,7 @@ WINDOW win1 as (order by ow_sale.cn desc range current row ); -- mvd 4->3;
 
 SELECT ow_sale.qty,ow_sale.qty,ow_sale.pn,ow_sale.dt, TO_CHAR(COALESCE(SUM(floor(ow_sale.prc+ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.cn) preceding ); -- mvd 6->5; 
+WINDOW win1 as (order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.cn)::integer preceding ); -- mvd 6->5; 
 
 -- SUM() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -6482,7 +6482,7 @@ WINDOW win1 as (order by ow_sale.pn asc range between unbounded preceding and cu
 
 SELECT ow_sale.prc,ow_sale.dt,ow_sale.vn, TO_CHAR(COALESCE(SUM(floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.prc-ow_sale.prc) following ); -- mvd 5->4; 
+WINDOW win1 as (order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.prc-ow_sale.prc)::integer following ); -- mvd 5->4; 
 
 -- SUM() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -6515,7 +6515,7 @@ win2 as (order by ow_sale.pn desc); -- mvd 3->2; 5->4; 5->6; 5->7;
 
 SELECT ow_sale.vn,ow_sale.vn, TO_CHAR(COALESCE(SUM(floor(ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.cn asc range between 2 preceding and floor(ow_sale.qty) preceding ); -- mvd 4->3; 
+WINDOW win1 as (order by ow_sale.cn asc range between 2 preceding and floor(ow_sale.qty)::integer preceding ); -- mvd 4->3; 
 
 -- SUM() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -6523,7 +6523,7 @@ SELECT ow_sale.qty,ow_sale.cn, TO_CHAR(COALESCE(SUM(floor(ow_sale.qty)) OVER(win
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(win2),0),'99999999.9999999'),ow_sale.vn,ow_sale.pn,
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win3),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between 3 preceding and floor(ow_sale.qty) preceding ),
+WINDOW win1 as (order by ow_sale.cn desc range between 3 preceding and floor(ow_sale.qty)::integer preceding ),
 win2 as (partition by ow_sale.pn,ow_sale.vn,ow_sale.vn order by ow_sale.pn desc),
 win3 as (partition by ow_sale.vn order by ow_sale.vn desc); -- mvd 2->3; 5,6->4; 5->7; 
 
@@ -6531,7 +6531,7 @@ win3 as (partition by ow_sale.vn order by ow_sale.vn desc); -- mvd 2->3; 5,6->4;
 
 SELECT ow_sale.qty, TO_CHAR(COALESCE(SUM(floor(ow_sale.qty+ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.pn asc range between floor(ow_sale.cn+ow_sale.cn) preceding and current row ); -- mvd 3->2; 
+WINDOW win1 as (order by ow_sale.pn asc range between floor(ow_sale.cn+ow_sale.cn)::integer preceding and current row ); -- mvd 3->2; 
 
 -- SUM() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -6550,7 +6550,7 @@ win3 as (partition by ow_sale.dt,ow_sale.cn,ow_sale.prc,ow_sale.prc order by ow_
 
 SELECT ow_sale.vn,ow_sale.qty,ow_sale.dt, TO_CHAR(COALESCE(SUM(floor(ow_sale.pn-ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.vn) preceding and 4 following ); -- mvd 5->4; 
+WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.vn)::integer preceding and 4 following ); -- mvd 5->4; 
 
 -- SUM() function with ONLY order by having range based framing clause --
 
@@ -6584,10 +6584,10 @@ WINDOW win1 as (order by ow_sale.cn asc range between current row and 4 followin
 -- SUM() function with ONLY order by having range based framing clause in combination with other functions --
 
 SELECT ow_sale.qty,ow_sale.cn, TO_CHAR(COALESCE(SUM(floor(ow_sale.prc/ow_sale.pn)) OVER(win1),0),'99999999.9999999'),
-TO_CHAR(COALESCE(MAX(floor(ow_sale.cn-ow_sale.prc)) OVER(order by ow_sale.cn desc range between current row and floor(ow_sale.prc*ow_sale.prc) following ),0),'99999999.9999999'),
+TO_CHAR(COALESCE(MAX(floor(ow_sale.cn-ow_sale.prc)) OVER(order by ow_sale.cn desc range between current row and floor(ow_sale.prc*ow_sale.prc)::integer following ),0),'99999999.9999999'),
 TO_CHAR(COALESCE(COUNT(floor(ow_sale.vn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between current row and floor(ow_sale.prc*ow_sale.prc) following ); -- mvd 2->3; 2->4; 2->5; 
+WINDOW win1 as (order by ow_sale.cn desc range between current row and floor(ow_sale.prc*ow_sale.prc)::integer following ); -- mvd 2->3; 2->4; 2->5; 
 
 -- SUM() function with ONLY order by having range based framing clause --
 
@@ -6622,7 +6622,7 @@ TO_CHAR(COALESCE(DENSE_RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win3),0),'99999999.9999999'),
 TO_CHAR(COALESCE(COUNT(floor(ow_sale.pn+ow_sale.pn)) OVER(order by ow_sale.vn desc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.pn desc range between 4 following and floor(ow_sale.pn) following ),
+WINDOW win1 as (order by ow_sale.pn desc range between 4 following and floor(ow_sale.pn)::integer following ),
 win2 as (order by ow_sale.vn desc),
 win3 as (order by ow_sale.cn asc); -- mvd 3->6; 3->7; 5->8; 1->9; 5->10; 
 
@@ -6630,7 +6630,7 @@ win3 as (order by ow_sale.cn asc); -- mvd 3->6; 3->7; 5->8; 1->9; 5->10;
 
 SELECT ow_sale.vn,ow_sale.pn, TO_CHAR(COALESCE(SUM(floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.qty*ow_sale.cn) following and unbounded following ); -- mvd 4->3; 
+WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.qty*ow_sale.cn)::integer following and unbounded following ); -- mvd 4->3; 
 
 -- SUM() function with ONLY order by having rows based framing clause --
 
@@ -6894,7 +6894,7 @@ WINDOW win1 as (partition by ow_sale.cn,ow_sale.pn,ow_sale.vn,ow_sale.cn,ow_sale
 
 SELECT ow_sale.pn, TO_CHAR(COALESCE(SUM(floor(ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.pn order by ow_sale.pn desc range floor(ow_sale.cn+ow_sale.vn) preceding ); -- mvd 3,1->2; 
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.pn order by ow_sale.pn desc range floor(ow_sale.cn+ow_sale.vn)::integer preceding ); -- mvd 3,1->2; 
 
 -- SUM() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -6903,7 +6903,7 @@ TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.vn+ow_sale.qty) as int),cast (floor(ow_s
 TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.cn+ow_sale.pn) as int),cast (floor(ow_sale.vn+ow_sale.vn) as int),NULL) OVER(win3),0),'99999999.9999999'),ow_sale.vn,
 TO_CHAR(COALESCE(MAX(floor(ow_sale.vn/ow_sale.vn)) OVER(win3),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (partition by ow_sale.dt,ow_sale.dt,ow_sale.prc order by ow_sale.cn desc range floor(ow_sale.qty) preceding ),
+WINDOW win1 as (partition by ow_sale.dt,ow_sale.dt,ow_sale.prc order by ow_sale.cn desc range floor(ow_sale.qty)::integer preceding ),
 win2 as (order by ow_sale.ord, ow_sale.cn asc),
 win3 as (partition by ow_sale.prc,ow_sale.cn order by ow_sale.ord, ow_sale.vn asc); -- mvd 6,7,8->5; 7->9; 6,7,11->10; 6,7,11->12; 
 
@@ -6963,7 +6963,7 @@ win3 as (partition by ow_sale.dt,ow_sale.dt order by ow_sale.ord, ow_sale.vn des
 
 SELECT ow_sale.dt,ow_sale.pn,ow_sale.prc,ow_sale.pn, TO_CHAR(COALESCE(SUM(floor(ow_sale.cn-ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,ow_sale.vn,ow_sale.qty
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.cn,ow_sale.dt,ow_sale.qty,ow_sale.vn order by ow_sale.pn asc range between unbounded preceding and floor(ow_sale.cn) following ); -- mvd 1,6,7,8,2->5; 
+WINDOW win1 as (partition by ow_sale.cn,ow_sale.dt,ow_sale.qty,ow_sale.vn order by ow_sale.pn asc range between unbounded preceding and floor(ow_sale.cn)::integer following ); -- mvd 1,6,7,8,2->5; 
 
 -- SUM() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -6997,7 +6997,7 @@ win2 as (partition by ow_sale.cn,ow_sale.pn,ow_sale.dt order by ow_sale.cn asc);
 
 SELECT ow_sale.vn,ow_sale.dt,ow_sale.dt,ow_sale.dt, TO_CHAR(COALESCE(SUM(floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.cn,ow_sale.cn order by ow_sale.vn asc range between floor(ow_sale.prc/ow_sale.pn) preceding and 3 preceding ); -- mvd 6,1->5; 
+WINDOW win1 as (partition by ow_sale.cn,ow_sale.cn order by ow_sale.vn asc range between floor(ow_sale.prc/ow_sale.pn)::integer preceding and 3 preceding ); -- mvd 6,1->5; 
 
 -- SUM() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -7012,25 +7012,25 @@ win2 as (partition by ow_sale.pn,ow_sale.vn,ow_sale.pn,ow_sale.pn,ow_sale.pn,ow_
 -- SUM() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT ow_sale.dt,ow_sale.qty,ow_sale.cn,ow_sale.qty,ow_sale.pn,ow_sale.cn, TO_CHAR(COALESCE(SUM(floor(ow_sale.cn+ow_sale.qty)) OVER(win1),0),'99999999.9999999'),
-TO_CHAR(COALESCE(COUNT(floor(ow_sale.vn/ow_sale.pn)) OVER(partition by ow_sale.dt,ow_sale.cn,ow_sale.cn order by ow_sale.cn desc range between floor(ow_sale.prc/ow_sale.vn) preceding and current row ),0),'99999999.9999999'),
+TO_CHAR(COALESCE(COUNT(floor(ow_sale.vn/ow_sale.pn)) OVER(partition by ow_sale.dt,ow_sale.cn,ow_sale.cn order by ow_sale.cn desc range between floor(ow_sale.prc/ow_sale.vn)::integer preceding and current row ),0),'99999999.9999999'),
 TO_CHAR(COALESCE(CUME_DIST() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(RANK() OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.dt,ow_sale.cn,ow_sale.cn order by ow_sale.cn desc range between floor(ow_sale.prc/ow_sale.vn) preceding and current row ),
+WINDOW win1 as (partition by ow_sale.dt,ow_sale.cn,ow_sale.cn order by ow_sale.cn desc range between floor(ow_sale.prc/ow_sale.vn)::integer preceding and current row ),
 win2 as (order by ow_sale.pn asc); -- mvd 3,1->7; 3,1->8; 5->9; 5->10; 
 
 -- SUM() function with partition by and order by having range based framing clause --
 
 SELECT ow_sale.cn,ow_sale.prc, TO_CHAR(COALESCE(SUM(floor(ow_sale.cn-ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.dt,ow_sale.vn,ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.vn,ow_sale.pn,ow_sale.dt order by ow_sale.vn asc range between floor(ow_sale.vn*ow_sale.cn) preceding and floor(ow_sale.pn) following ); -- mvd 4,5,6->3; 
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.vn,ow_sale.pn,ow_sale.dt order by ow_sale.vn asc range between floor(ow_sale.vn*ow_sale.cn)::integer preceding and floor(ow_sale.pn)::integer following ); -- mvd 4,5,6->3; 
 
 -- SUM() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT ow_sale.pn,ow_sale.pn, TO_CHAR(COALESCE(SUM(floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,ow_sale.dt,
-TO_CHAR(COALESCE(COUNT(floor(ow_sale.cn+ow_sale.vn)) OVER(partition by ow_sale.dt,ow_sale.cn order by ow_sale.cn desc range between floor(ow_sale.prc+ow_sale.qty) preceding and floor(ow_sale.cn*ow_sale.vn) following ),0),'99999999.9999999')
+TO_CHAR(COALESCE(COUNT(floor(ow_sale.cn+ow_sale.vn)) OVER(partition by ow_sale.dt,ow_sale.cn order by ow_sale.cn desc range between floor(ow_sale.prc+ow_sale.qty)::integer preceding and floor(ow_sale.cn*ow_sale.vn)::integer following ),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.dt,ow_sale.cn order by ow_sale.cn desc range between floor(ow_sale.prc+ow_sale.qty) preceding and floor(ow_sale.cn*ow_sale.vn) following ); -- mvd 4,5->3; 4,5->6; 
+WINDOW win1 as (partition by ow_sale.dt,ow_sale.cn order by ow_sale.cn desc range between floor(ow_sale.prc+ow_sale.qty)::integer preceding and floor(ow_sale.cn*ow_sale.vn)::integer following ); -- mvd 4,5->3; 4,5->6; 
 
 -- SUM() function with partition by and order by having range based framing clause --
 
@@ -7047,7 +7047,7 @@ TO_CHAR(COALESCE(RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(MIN(floor(ow_sale.qty*ow_sale.qty)) OVER(win3),0),'99999999.9999999'),
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(win4),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (partition by ow_sale.dt,ow_sale.pn,ow_sale.pn,ow_sale.cn order by ow_sale.pn asc range between floor(ow_sale.vn) preceding and unbounded following ),
+WINDOW win1 as (partition by ow_sale.dt,ow_sale.pn,ow_sale.pn,ow_sale.cn order by ow_sale.pn asc range between floor(ow_sale.vn)::integer preceding and unbounded following ),
 win2 as (partition by ow_sale.pn,ow_sale.vn,ow_sale.prc,ow_sale.prc,ow_sale.qty order by ow_sale.vn asc),
 win3 as (partition by ow_sale.vn,ow_sale.prc order by ow_sale.vn desc),
 win4 as (partition by ow_sale.pn,ow_sale.dt order by ow_sale.cn asc); -- mvd 1,5,6->4; 2,8,9,6->7; 2,9->10; 2,8,9,6->11; 2,9->12; 1,5,6->13; 
@@ -7062,7 +7062,7 @@ WINDOW win1 as (partition by ow_sale.pn,ow_sale.prc,ow_sale.vn,ow_sale.qty order
 
 SELECT ow_sale.vn,ow_sale.qty,ow_sale.vn,ow_sale.pn,ow_sale.prc,ow_sale.pn, TO_CHAR(COALESCE(SUM(floor(ow_sale.cn-ow_sale.cn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.prc order by ow_sale.vn asc range between current row and floor(ow_sale.prc) following ); -- mvd 5,1->7; 
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.prc order by ow_sale.vn asc range between current row and floor(ow_sale.prc)::integer following ); -- mvd 5,1->7; 
 
 -- SUM() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -7073,7 +7073,7 @@ TO_CHAR(COALESCE(PERCENT_RANK() OVER(win3),0),'99999999.9999999'),ow_sale.prc,
 TO_CHAR(COALESCE(MAX(floor(ow_sale.qty)) OVER(partition by ow_sale.dt,ow_sale.pn,ow_sale.prc,ow_sale.vn,ow_sale.vn,ow_sale.pn order by ow_sale.cn desc),0),'99999999.9999999'),
 TO_CHAR(COALESCE(CUME_DIST() OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.dt,ow_sale.qty,ow_sale.dt,ow_sale.cn,ow_sale.pn,ow_sale.cn order by ow_sale.cn asc range between current row and floor(ow_sale.prc/ow_sale.pn) following ),
+WINDOW win1 as (partition by ow_sale.dt,ow_sale.qty,ow_sale.dt,ow_sale.cn,ow_sale.pn,ow_sale.cn order by ow_sale.cn asc range between current row and floor(ow_sale.prc/ow_sale.pn)::integer following ),
 win2 as (order by ow_sale.vn desc),
 win3 as (partition by ow_sale.dt,ow_sale.pn,ow_sale.prc,ow_sale.vn,ow_sale.vn,ow_sale.pn order by ow_sale.cn desc); -- mvd 3,1,7,4->6; 2->8; 2->9; 11,3,1,2,4->10; 11,3,1,2,4->12; 2->13; 
 
@@ -7095,17 +7095,17 @@ win2 as (partition by ow_sale.vn order by ow_sale.ord, ow_sale.cn asc); -- mvd 3
 
 SELECT ow_sale.qty, TO_CHAR(COALESCE(SUM(floor(ow_sale.cn-ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (partition by ow_sale.cn order by ow_sale.vn asc range between floor(ow_sale.cn) following and floor(ow_sale.qty) following ); -- mvd 3,4->2; 
+WINDOW win1 as (partition by ow_sale.cn order by ow_sale.vn asc range between floor(ow_sale.cn)::integer following and floor(ow_sale.qty)::integer following ); -- mvd 3,4->2; 
 
 -- SUM() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT ow_sale.vn,ow_sale.cn, TO_CHAR(COALESCE(SUM(floor(ow_sale.vn+ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.dt,ow_sale.pn,
-TO_CHAR(COALESCE(MAX(floor(ow_sale.cn*ow_sale.vn)) OVER(partition by ow_sale.cn,ow_sale.pn,ow_sale.dt order by ow_sale.pn desc range between floor(ow_sale.cn+ow_sale.cn) following and 0 following ),0),'99999999.9999999'),
+TO_CHAR(COALESCE(MAX(floor(ow_sale.cn*ow_sale.vn)) OVER(partition by ow_sale.cn,ow_sale.pn,ow_sale.dt order by ow_sale.pn desc range between floor(ow_sale.cn+ow_sale.cn)::integer following and 0 following ),0),'99999999.9999999'),
 TO_CHAR(COALESCE(CUME_DIST() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(COUNT(floor(ow_sale.pn)) OVER(partition by ow_sale.pn order by ow_sale.cn asc),0),'99999999.9999999'),
-TO_CHAR(COALESCE(MIN(floor(ow_sale.pn)) OVER(partition by ow_sale.cn,ow_sale.pn,ow_sale.dt order by ow_sale.pn desc range between floor(ow_sale.cn+ow_sale.cn) following and 0 following ),0),'99999999.9999999')
+TO_CHAR(COALESCE(MIN(floor(ow_sale.pn)) OVER(partition by ow_sale.cn,ow_sale.pn,ow_sale.dt order by ow_sale.pn desc range between floor(ow_sale.cn+ow_sale.cn)::integer following and 0 following ),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (partition by ow_sale.cn,ow_sale.pn,ow_sale.dt order by ow_sale.pn desc range between floor(ow_sale.cn+ow_sale.cn) following and 0 following ),
+WINDOW win1 as (partition by ow_sale.cn,ow_sale.pn,ow_sale.dt order by ow_sale.pn desc range between floor(ow_sale.cn+ow_sale.cn)::integer following and 0 following ),
 win2 as (partition by ow_sale.pn order by ow_sale.cn asc); -- mvd 4,2,5->3; 4,2,5->6; 2,5->7; 2,5->8; 4,2,5->9; 
 
 -- SUM() function with partition by and order by having range based framing clause in combination with other functions--
@@ -7427,7 +7427,7 @@ SELECT ow_sale.vn,ow_sale.cn,ow_sale.prc, TO_CHAR(COALESCE(VAR_POP(floor(ow_sale
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win2),0),'99999999.9999999'),ow_sale.pn,
 TO_CHAR(COALESCE(RANK() OVER(win3),0),'99999999.9999999'),ow_sale.dt
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.cn asc range floor(ow_sale.vn*ow_sale.pn) preceding ),
+WINDOW win1 as (order by ow_sale.cn asc range floor(ow_sale.vn*ow_sale.pn)::integer preceding ),
 win2 as (partition by ow_sale.prc,ow_sale.pn order by ow_sale.pn asc),
 win3 as (partition by ow_sale.cn,ow_sale.cn,ow_sale.dt,ow_sale.vn order by ow_sale.vn asc); -- mvd 2->4; 3,6->5; 8,2,1->7; 
 
@@ -7459,7 +7459,7 @@ WINDOW win1 as (order by ow_sale.cn asc range between unbounded preceding and 4 
 SELECT ow_sale.pn,ow_sale.vn,ow_sale.qty,ow_sale.prc, TO_CHAR(COALESCE(VAR_POP(floor(ow_sale.vn+ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,
 TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.pn) as int),cast (floor(ow_sale.vn-ow_sale.vn) as int),NULL) OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.qty) preceding ),
+WINDOW win1 as (order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.qty)::integer preceding ),
 win2 as (partition by ow_sale.vn,ow_sale.cn,ow_sale.vn,ow_sale.qty,ow_sale.vn,ow_sale.cn order by ow_sale.ord, ow_sale.cn desc); -- mvd 6->5; 6,3,2->7; 
 
 -- VAR_POP() function with ONLY order by having range based framing clause --
@@ -7486,13 +7486,13 @@ WINDOW win1 as (order by ow_sale.cn desc range between unbounded preceding and 0
 -- VAR_POP() function with ONLY order by having range based framing clause in combination with other functions --
 
 SELECT ow_sale.cn,ow_sale.pn, TO_CHAR(COALESCE(VAR_POP(floor(ow_sale.cn)) OVER(win1),0),'99999999.9999999'),
-TO_CHAR(COALESCE(MAX(floor(ow_sale.vn)) OVER(order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.pn) following ),0),'99999999.9999999'),
+TO_CHAR(COALESCE(MAX(floor(ow_sale.vn)) OVER(order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.pn)::integer following ),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.vn+ow_sale.pn) as int),cast (floor(ow_sale.vn) as int),NULL) OVER(win2),0),'99999999.9999999'),ow_sale.prc,ow_sale.vn,
 TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.vn) as int),cast (floor(ow_sale.cn) as int),NULL) OVER(win3),0),'99999999.9999999'),
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win4),0),'99999999.9999999'),
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win5),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.pn) following ),
+WINDOW win1 as (order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.pn)::integer following ),
 win2 as (partition by ow_sale.pn,ow_sale.vn,ow_sale.prc,ow_sale.prc,ow_sale.cn,ow_sale.pn order by ow_sale.ord, ow_sale.cn asc),
 win3 as (order by ow_sale.ord, ow_sale.cn asc),
 win4 as (order by ow_sale.cn asc),
@@ -7516,7 +7516,7 @@ win2 as (partition by ow_sale.vn order by ow_sale.cn asc); -- mvd 3->2; 3,5->4;
 
 SELECT ow_sale.prc,ow_sale.dt, TO_CHAR(COALESCE(VAR_POP(floor(ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range between floor(ow_sale.qty*ow_sale.cn) preceding and current row ); -- mvd 4->3; 
+WINDOW win1 as (order by ow_sale.vn desc range between floor(ow_sale.qty*ow_sale.cn)::integer preceding and current row ); -- mvd 4->3; 
 
 -- VAR_POP() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -7527,20 +7527,20 @@ TO_CHAR(COALESCE(MIN(floor(ow_sale.prc)) OVER(win1),0),'99999999.9999999'),
 TO_CHAR(COALESCE(COUNT(floor(ow_sale.prc)) OVER(win1),0),'99999999.9999999'),
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.cn asc range between floor(ow_sale.cn) preceding and current row ),
+WINDOW win1 as (order by ow_sale.cn asc range between floor(ow_sale.cn)::integer preceding and current row ),
 win2 as (order by ow_sale.pn desc); -- mvd 8->7; 8->9; 8->10; 8->11; 8->12; 2->13; 
 
 -- VAR_POP() function with ONLY order by having range based framing clause --
 
 SELECT ow_sale.qty,ow_sale.prc,ow_sale.cn,ow_sale.pn,ow_sale.prc,ow_sale.cn, TO_CHAR(COALESCE(VAR_POP(floor(ow_sale.pn-ow_sale.cn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.pn asc range between 2 preceding and floor(ow_sale.pn) following ); -- mvd 4->7; 
+WINDOW win1 as (order by ow_sale.pn asc range between 2 preceding and floor(ow_sale.pn)::integer following ); -- mvd 4->7; 
 
 -- VAR_POP() function with ONLY order by having range based framing clause --
 
 SELECT ow_sale.cn,ow_sale.dt,ow_sale.qty, TO_CHAR(COALESCE(VAR_POP(floor(ow_sale.cn-ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.vn/ow_sale.pn) preceding and unbounded following ); -- mvd 5->4; 
+WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.vn/ow_sale.pn)::integer preceding and unbounded following ); -- mvd 5->4; 
 
 -- VAR_POP() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -7550,7 +7550,7 @@ TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999'),ow_sale.vn,
 TO_CHAR(COALESCE(CUME_DIST() OVER(partition by ow_sale.cn order by ow_sale.vn asc),0),'99999999.9999999'),
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_vendor WHERE ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.pn asc range between floor(ow_sale.cn+ow_sale.pn) preceding and unbounded following ),
+WINDOW win1 as (order by ow_sale.pn asc range between floor(ow_sale.cn+ow_sale.pn)::integer preceding and unbounded following ),
 win2 as (partition by ow_sale.cn order by ow_sale.vn asc); -- mvd 4->5; 4->6; 3,8->7; 3,8->9; 3,8->10; 
 
 -- VAR_POP() function with ONLY order by having range based framing clause --
@@ -7573,7 +7573,7 @@ win3 as (order by ow_sale.cn desc); -- mvd 3->2; 5->4; 1->6;
 
 SELECT ow_sale.vn,ow_sale.dt,ow_sale.prc,ow_sale.pn, TO_CHAR(COALESCE(VAR_POP(floor(ow_sale.cn/ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between current row and floor(ow_sale.qty) following ); -- mvd 6->5; 
+WINDOW win1 as (order by ow_sale.cn desc range between current row and floor(ow_sale.qty)::integer following ); -- mvd 6->5; 
 
 -- VAR_POP() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -7603,7 +7603,7 @@ win2 as (order by ow_sale.cn desc); -- mvd 5->4; 5->6; 5->7;
 
 SELECT ow_sale.qty,ow_sale.vn,ow_sale.qty, TO_CHAR(COALESCE(VAR_POP(floor(ow_sale.vn*ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.pn asc range between floor(ow_sale.vn) following and 2 following ); -- mvd 5->4; 
+WINDOW win1 as (order by ow_sale.pn asc range between floor(ow_sale.vn)::integer following and 2 following ); -- mvd 5->4; 
 
 -- VAR_POP() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -7611,7 +7611,7 @@ SELECT ow_sale.pn,ow_sale.cn,ow_sale.vn,ow_sale.vn, TO_CHAR(COALESCE(VAR_POP(flo
 TO_CHAR(COALESCE(COUNT(floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999'),
 TO_CHAR(COALESCE(RANK() OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between 3 following and floor(ow_sale.vn*ow_sale.cn) following ),
+WINDOW win1 as (order by ow_sale.cn desc range between 3 following and floor(ow_sale.vn*ow_sale.cn)::integer following ),
 win2 as (order by ow_sale.pn desc); -- mvd 2->5; 2->6; 1->7; 
 
 -- VAR_POP() function with ONLY order by having range based framing clause in combination with other functions --
@@ -7619,7 +7619,7 @@ win2 as (order by ow_sale.pn desc); -- mvd 2->5; 2->6; 1->7;
 SELECT ow_sale.prc,ow_sale.vn,ow_sale.cn, TO_CHAR(COALESCE(VAR_POP(floor(ow_sale.pn+ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.pn,
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_vendor WHERE ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.pn asc range between floor(ow_sale.qty) following and unbounded following ),
+WINDOW win1 as (order by ow_sale.pn asc range between floor(ow_sale.qty)::integer following and unbounded following ),
 win2 as (order by ow_sale.vn asc); -- mvd 5->4; 2->6; 
 
 -- VAR_POP() function with ONLY order by having rows based framing clause --
@@ -7930,7 +7930,7 @@ win3 as (order by ow_sale.ord, ow_sale.cn asc); -- mvd 3,1,4,5,6->2; 1,3,4,5,6->
 
 SELECT ow_sale.qty,ow_sale.vn,ow_sale.qty,ow_sale.vn,ow_sale.vn,ow_sale.pn, TO_CHAR(COALESCE(VAR_POP(floor(ow_sale.qty-ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,ow_sale.dt
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.dt order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.cn) preceding ); -- mvd 8,9->7; 
+WINDOW win1 as (partition by ow_sale.dt order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.cn)::integer preceding ); -- mvd 8,9->7; 
 
 -- VAR_POP() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -7941,7 +7941,7 @@ TO_CHAR(COALESCE(DENSE_RANK() OVER(order by ow_sale.vn desc),0),'99999999.999999
 TO_CHAR(COALESCE(MIN(floor(ow_sale.vn+ow_sale.cn)) OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(CUME_DIST() OVER(order by ow_sale.vn desc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (partition by ow_sale.cn,ow_sale.vn,ow_sale.pn,ow_sale.qty order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.cn) preceding ),
+WINDOW win1 as (partition by ow_sale.cn,ow_sale.vn,ow_sale.pn,ow_sale.qty order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.cn)::integer preceding ),
 win2 as (order by ow_sale.vn desc); -- mvd 1,4,2,5->3; 2->6; 2->7; 2->8; 2->9; 2->10; 
 
 -- VAR_POP() function with partition by and order by having range based framing clause --
@@ -7976,7 +7976,7 @@ WINDOW win1 as (partition by ow_sale.vn,ow_sale.dt,ow_sale.dt order by ow_sale.p
 SELECT ow_sale.dt,ow_sale.cn, TO_CHAR(COALESCE(VAR_POP(floor(ow_sale.vn*ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.vn,ow_sale.pn,
 TO_CHAR(COALESCE(MAX(floor(ow_sale.vn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (partition by ow_sale.pn,ow_sale.cn,ow_sale.pn order by ow_sale.vn desc range between unbounded preceding and floor(ow_sale.cn*ow_sale.vn) following ); -- mvd 2,4,5->3; 2,4,5->6; 
+WINDOW win1 as (partition by ow_sale.pn,ow_sale.cn,ow_sale.pn order by ow_sale.vn desc range between unbounded preceding and floor(ow_sale.cn*ow_sale.vn)::integer following ); -- mvd 2,4,5->3; 2,4,5->6; 
 
 -- VAR_POP() function with partition by and order by having range based framing clause --
 
@@ -8011,7 +8011,7 @@ win2 as (partition by ow_sale.vn,ow_sale.pn,ow_sale.pn,ow_sale.vn order by ow_sa
 
 SELECT ow_sale.qty, TO_CHAR(COALESCE(VAR_POP(floor(ow_sale.prc-ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.dt,ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.dt order by ow_sale.vn desc range between floor(ow_sale.pn+ow_sale.pn) preceding and current row ); -- mvd 3,4->2; 
+WINDOW win1 as (partition by ow_sale.dt order by ow_sale.vn desc range between floor(ow_sale.pn+ow_sale.pn)::integer preceding and current row ); -- mvd 3,4->2; 
 
 -- VAR_POP() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -8029,7 +8029,7 @@ win3 as (partition by ow_sale.dt,ow_sale.dt order by ow_sale.ord, ow_sale.pn asc
 
 SELECT ow_sale.prc, TO_CHAR(COALESCE(VAR_POP(floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,ow_sale.dt,ow_sale.qty,ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (partition by ow_sale.dt,ow_sale.qty,ow_sale.pn,ow_sale.prc,ow_sale.pn order by ow_sale.cn desc range between 0 preceding and floor(ow_sale.vn) following ); -- mvd 1,3,4,5,6->2; 
+WINDOW win1 as (partition by ow_sale.dt,ow_sale.qty,ow_sale.pn,ow_sale.prc,ow_sale.pn order by ow_sale.cn desc range between 0 preceding and floor(ow_sale.vn)::integer following ); -- mvd 1,3,4,5,6->2; 
 
 -- VAR_POP() function with partition by and order by having range based framing clause --
 
@@ -8042,7 +8042,7 @@ WINDOW win1 as (partition by ow_sale.cn order by ow_sale.pn asc range between 2 
 SELECT ow_sale.qty,ow_sale.pn, TO_CHAR(COALESCE(VAR_POP(floor(ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,ow_sale.vn,
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.qty,ow_sale.cn order by ow_sale.vn asc range between floor(ow_sale.cn) preceding and unbounded following ),
+WINDOW win1 as (partition by ow_sale.qty,ow_sale.cn order by ow_sale.vn asc range between floor(ow_sale.cn)::integer preceding and unbounded following ),
 win2 as (partition by ow_sale.cn,ow_sale.pn order by ow_sale.vn desc); -- mvd 4,5,1->3; 4,5,2->6; 
 
 -- VAR_POP() function with partition by and order by having range based framing clause --
@@ -8087,7 +8087,7 @@ TO_CHAR(COALESCE(DENSE_RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(CUME_DIST() OVER(win3),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.pn) as int),cast (floor(ow_sale.pn*ow_sale.cn) as int),NULL) OVER(win4),0),'99999999.9999999'),ow_sale.prc,ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.pn,ow_sale.qty order by ow_sale.cn asc range between floor(ow_sale.pn) following and 4 following ),
+WINDOW win1 as (partition by ow_sale.pn,ow_sale.qty order by ow_sale.cn asc range between floor(ow_sale.pn)::integer following and 4 following ),
 win2 as (order by ow_sale.pn asc),
 win3 as (partition by ow_sale.pn,ow_sale.pn,ow_sale.dt,ow_sale.dt,ow_sale.pn,ow_sale.cn order by ow_sale.cn asc),
 win4 as (partition by ow_sale.dt,ow_sale.prc,ow_sale.dt,ow_sale.vn order by ow_sale.ord, ow_sale.vn asc); -- mvd 8,1,2->7; 2->9; 8,4,2->10; 12,4,13->11; 
@@ -8096,18 +8096,18 @@ win4 as (partition by ow_sale.dt,ow_sale.prc,ow_sale.dt,ow_sale.vn order by ow_s
 
 SELECT ow_sale.prc, TO_CHAR(COALESCE(VAR_POP(floor(ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.qty,ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.qty,ow_sale.qty order by ow_sale.pn asc range between floor(ow_sale.prc*ow_sale.cn) following and unbounded following ); -- mvd 3,4->2; 
+WINDOW win1 as (partition by ow_sale.qty,ow_sale.qty order by ow_sale.pn asc range between floor(ow_sale.prc*ow_sale.cn)::integer following and unbounded following ); -- mvd 3,4->2; 
 
 -- VAR_POP() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT ow_sale.cn,ow_sale.cn,ow_sale.dt,ow_sale.cn, TO_CHAR(COALESCE(VAR_POP(floor(ow_sale.vn/ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.vn,ow_sale.pn,
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999'),
-TO_CHAR(COALESCE(MIN(floor(ow_sale.qty)) OVER(partition by ow_sale.dt,ow_sale.dt,ow_sale.pn,ow_sale.dt,ow_sale.vn order by ow_sale.pn desc range between floor(ow_sale.vn) following and unbounded following ),0),'99999999.9999999'),
-TO_CHAR(COALESCE(MIN(floor(ow_sale.pn)) OVER(partition by ow_sale.dt,ow_sale.dt,ow_sale.pn,ow_sale.dt,ow_sale.vn order by ow_sale.pn desc range between floor(ow_sale.vn) following and unbounded following ),0),'99999999.9999999'),
+TO_CHAR(COALESCE(MIN(floor(ow_sale.qty)) OVER(partition by ow_sale.dt,ow_sale.dt,ow_sale.pn,ow_sale.dt,ow_sale.vn order by ow_sale.pn desc range between floor(ow_sale.vn)::integer following and unbounded following ),0),'99999999.9999999'),
+TO_CHAR(COALESCE(MIN(floor(ow_sale.pn)) OVER(partition by ow_sale.dt,ow_sale.dt,ow_sale.pn,ow_sale.dt,ow_sale.vn order by ow_sale.pn desc range between floor(ow_sale.vn)::integer following and unbounded following ),0),'99999999.9999999'),
 TO_CHAR(COALESCE(DENSE_RANK() OVER(order by ow_sale.pn asc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.dt,ow_sale.dt,ow_sale.pn,ow_sale.dt,ow_sale.vn order by ow_sale.pn desc range between floor(ow_sale.vn) following and unbounded following ),
+WINDOW win1 as (partition by ow_sale.dt,ow_sale.dt,ow_sale.pn,ow_sale.dt,ow_sale.vn order by ow_sale.pn desc range between floor(ow_sale.vn)::integer following and unbounded following ),
 win2 as (order by ow_sale.pn asc); -- mvd 3,6,7->5; 7->8; 7->9; 3,6,7->10; 3,6,7->11; 7->12; 
 
 -- VAR_POP() function with partition by and order by having rows based framing clause --
@@ -8440,7 +8440,7 @@ win3 as (partition by ow_sale.vn,ow_sale.prc order by ow_sale.pn desc); -- mvd 1
 
 SELECT ow_sale.qty,ow_sale.cn,ow_sale.vn,ow_sale.dt, TO_CHAR(COALESCE(VAR_SAMP(floor(ow_sale.prc/ow_sale.qty)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.vn asc range between unbounded preceding and floor(ow_sale.pn) preceding ); -- mvd 3->5; 
+WINDOW win1 as (order by ow_sale.vn asc range between unbounded preceding and floor(ow_sale.pn)::integer preceding ); -- mvd 3->5; 
 
 -- VAR_SAMP() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -8448,7 +8448,7 @@ SELECT ow_sale.vn,ow_sale.cn, TO_CHAR(COALESCE(VAR_SAMP(floor(ow_sale.pn)) OVER(
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999'),ow_sale.dt,ow_sale.pn,
 TO_CHAR(COALESCE(MAX(floor(ow_sale.cn)) OVER(partition by ow_sale.pn,ow_sale.vn,ow_sale.dt order by ow_sale.pn desc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range between unbounded preceding and floor(ow_sale.prc) preceding ),
+WINDOW win1 as (order by ow_sale.vn desc range between unbounded preceding and floor(ow_sale.prc)::integer preceding ),
 win2 as (partition by ow_sale.pn,ow_sale.vn,ow_sale.dt order by ow_sale.pn desc); -- mvd 1->3; 5,1,6->4; 5,1,6->7; 
 
 -- VAR_SAMP() function with ONLY order by having range based framing clause --
@@ -8469,7 +8469,7 @@ win2 as (partition by ow_sale.cn,ow_sale.pn order by ow_sale.ord, ow_sale.pn des
 
 SELECT ow_sale.qty, TO_CHAR(COALESCE(VAR_SAMP(floor(ow_sale.vn-ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.vn+ow_sale.cn) following ); -- mvd 3->2; 
+WINDOW win1 as (order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.vn+ow_sale.cn)::integer following ); -- mvd 3->2; 
 
 -- VAR_SAMP() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -8479,7 +8479,7 @@ TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.vn) as int),cast (floor(ow_sale.cn) as i
 TO_CHAR(COALESCE(COUNT(floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999'),
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(order by ow_sale.ord, ow_sale.cn asc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range between unbounded preceding and floor(ow_sale.pn+ow_sale.cn) following ),
+WINDOW win1 as (order by ow_sale.vn desc range between unbounded preceding and floor(ow_sale.pn+ow_sale.cn)::integer following ),
 win2 as (order by ow_sale.pn desc),
 win3 as (order by ow_sale.ord, ow_sale.cn asc); -- mvd 3->2; 5->4; 7->6; 3->8; 7->9; 
 
@@ -8493,13 +8493,13 @@ WINDOW win1 as (order by ow_sale.pn asc range between unbounded preceding and un
 
 SELECT ow_sale.vn, TO_CHAR(COALESCE(VAR_SAMP(floor(ow_sale.pn-ow_sale.prc)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.vn asc range between 1 preceding and floor(ow_sale.qty*ow_sale.qty) preceding ); -- mvd 1->2; 
+WINDOW win1 as (order by ow_sale.vn asc range between 1 preceding and floor(ow_sale.qty*ow_sale.qty)::integer preceding ); -- mvd 1->2; 
 
 -- VAR_SAMP() function with ONLY order by having range based framing clause --
 
 SELECT ow_sale.vn, TO_CHAR(COALESCE(VAR_SAMP(floor(ow_sale.vn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.vn) preceding and current row ); -- mvd 1->2; 
+WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.vn)::integer preceding and current row ); -- mvd 1->2; 
 
 -- VAR_SAMP() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -8517,14 +8517,14 @@ win3 as (order by ow_sale.pn desc); -- mvd 5->4; 5->6; 5->7; 9,1,5->8; 5->10;
 
 SELECT ow_sale.prc,ow_sale.qty,ow_sale.prc,ow_sale.qty, TO_CHAR(COALESCE(VAR_SAMP(floor(ow_sale.pn+ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.pn desc range between 2 preceding and floor(ow_sale.pn+ow_sale.cn) following ); -- mvd 6->5; 
+WINDOW win1 as (order by ow_sale.pn desc range between 2 preceding and floor(ow_sale.pn+ow_sale.cn)::integer following ); -- mvd 6->5; 
 
 -- VAR_SAMP() function with ONLY order by having range based framing clause in combination with other functions --
 
 SELECT ow_sale.vn,ow_sale.pn, TO_CHAR(COALESCE(VAR_SAMP(floor(ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,
 TO_CHAR(COALESCE(CUME_DIST() OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.cn asc range between floor(ow_sale.vn*ow_sale.qty) preceding and 2 following ),
+WINDOW win1 as (order by ow_sale.cn asc range between floor(ow_sale.vn*ow_sale.qty)::integer preceding and 2 following ),
 win2 as (order by ow_sale.vn desc); -- mvd 4->3; 1->5; 
 
 -- VAR_SAMP() function with ONLY order by having range based framing clause in combination with other functions --
@@ -8571,7 +8571,7 @@ SELECT ow_sale.pn,ow_sale.vn, TO_CHAR(COALESCE(VAR_SAMP(floor(ow_sale.cn+ow_sale
 TO_CHAR(COALESCE(RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(COUNT(floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between current row and floor(ow_sale.vn) following ),
+WINDOW win1 as (order by ow_sale.cn desc range between current row and floor(ow_sale.vn)::integer following ),
 win2 as (order by ow_sale.cn asc); -- mvd 4->3; 4->5; 4->6; 
 
 -- VAR_SAMP() function with ONLY order by having range based framing clause --
@@ -8599,16 +8599,16 @@ WINDOW win1 as (order by ow_sale.vn asc range between 3 following and 4 followin
 
 SELECT ow_sale.prc, TO_CHAR(COALESCE(VAR_SAMP(floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.vn,
 TO_CHAR(COALESCE(RANK() OVER(win2),0),'99999999.9999999'),ow_sale.cn,
-TO_CHAR(COALESCE(MIN(floor(ow_sale.vn-ow_sale.cn)) OVER(order by ow_sale.vn asc range between 4 following and floor(ow_sale.qty+ow_sale.vn) following ),0),'99999999.9999999')
+TO_CHAR(COALESCE(MIN(floor(ow_sale.vn-ow_sale.cn)) OVER(order by ow_sale.vn asc range between 4 following and floor(ow_sale.qty+ow_sale.vn)::integer following ),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.vn asc range between 4 following and floor(ow_sale.qty+ow_sale.vn) following ),
+WINDOW win1 as (order by ow_sale.vn asc range between 4 following and floor(ow_sale.qty+ow_sale.vn)::integer following ),
 win2 as (order by ow_sale.cn desc); -- mvd 3->2; 5->4; 3->6; 
 
 -- VAR_SAMP() function with ONLY order by having range based framing clause --
 
 SELECT ow_sale.vn,ow_sale.vn, TO_CHAR(COALESCE(VAR_SAMP(floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (order by ow_sale.pn desc range between floor(ow_sale.pn/ow_sale.vn) following and unbounded following ); -- mvd 4->3; 
+WINDOW win1 as (order by ow_sale.pn desc range between floor(ow_sale.pn/ow_sale.vn)::integer following and unbounded following ); -- mvd 4->3; 
 
 -- VAR_SAMP() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -8618,7 +8618,7 @@ TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.prc-ow_sale.cn) as int),cast (floor(ow_s
 TO_CHAR(COALESCE(COUNT(floor(ow_sale.cn/ow_sale.pn)) OVER(order by ow_sale.ord, ow_sale.vn desc),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.vn/ow_sale.cn) as int),cast (floor(ow_sale.qty/ow_sale.vn) as int),NULL) OVER(win3),0),'99999999.9999999'),ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (order by ow_sale.cn asc range between floor(ow_sale.prc/ow_sale.cn) following and unbounded following ),
+WINDOW win1 as (order by ow_sale.cn asc range between floor(ow_sale.prc/ow_sale.cn)::integer following and unbounded following ),
 win2 as (order by ow_sale.ord, ow_sale.vn desc),
 win3 as (partition by ow_sale.qty,ow_sale.qty,ow_sale.cn order by ow_sale.ord, ow_sale.pn asc); -- mvd 1->5; 1->6; 8->7; 8->9; 1,3,11->10; 
 
@@ -8944,7 +8944,7 @@ win5 as (partition by ow_sale.pn,ow_sale.cn,ow_sale.vn order by ow_sale.pn asc);
 
 SELECT ow_sale.cn,ow_sale.vn,ow_sale.vn,ow_sale.prc, TO_CHAR(COALESCE(VAR_SAMP(floor(ow_sale.prc/ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.dt
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.dt order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.pn) following ); -- mvd 1,6->5; 
+WINDOW win1 as (partition by ow_sale.dt order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.pn)::integer following ); -- mvd 1,6->5; 
 
 -- VAR_SAMP() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -8978,7 +8978,7 @@ win3 as (order by ow_sale.ord, ow_sale.cn desc); -- mvd 4,1,3->6; 4->7; 4->8; 4-
 
 SELECT ow_sale.vn,ow_sale.pn, TO_CHAR(COALESCE(VAR_SAMP(floor(ow_sale.qty-ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.dt,ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_vendor WHERE ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.cn,ow_sale.cn,ow_sale.pn,ow_sale.dt order by ow_sale.cn asc range between 0 preceding and floor(ow_sale.cn) preceding ); -- mvd 4,5,2->3; 
+WINDOW win1 as (partition by ow_sale.cn,ow_sale.cn,ow_sale.pn,ow_sale.dt order by ow_sale.cn asc range between 0 preceding and floor(ow_sale.cn)::integer preceding ); -- mvd 4,5,2->3; 
 
 -- VAR_SAMP() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -8986,14 +8986,14 @@ SELECT ow_sale.cn,ow_sale.dt,ow_sale.pn, TO_CHAR(COALESCE(VAR_SAMP(floor(ow_sale
 TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.cn) as int),cast (floor(ow_sale.prc/ow_sale.qty) as int),NULL) OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(MAX(floor(ow_sale.pn)) OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.cn,ow_sale.cn,ow_sale.vn,ow_sale.cn order by ow_sale.cn desc range between floor(ow_sale.qty+ow_sale.qty) preceding and floor(ow_sale.cn+ow_sale.vn) preceding ),
+WINDOW win1 as (partition by ow_sale.cn,ow_sale.cn,ow_sale.vn,ow_sale.cn order by ow_sale.cn desc range between floor(ow_sale.qty+ow_sale.qty)::integer preceding and floor(ow_sale.cn+ow_sale.vn)::integer preceding ),
 win2 as (partition by ow_sale.pn,ow_sale.dt,ow_sale.dt,ow_sale.vn,ow_sale.dt,ow_sale.cn order by ow_sale.ord, ow_sale.cn desc); -- mvd 1,5->4; 1,2,5,3->6; 1,2,5,3->7; 
 
 -- VAR_SAMP() function with partition by and order by having range based framing clause --
 
 SELECT ow_sale.vn,ow_sale.pn,ow_sale.cn,ow_sale.pn,ow_sale.vn, TO_CHAR(COALESCE(VAR_SAMP(floor(ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.prc,ow_sale.dt
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.cn,ow_sale.dt,ow_sale.pn,ow_sale.dt,ow_sale.prc order by ow_sale.pn asc range between floor(ow_sale.vn*ow_sale.qty) preceding and current row ); -- mvd 7,8,3,2->6; 
+WINDOW win1 as (partition by ow_sale.cn,ow_sale.dt,ow_sale.pn,ow_sale.dt,ow_sale.prc order by ow_sale.pn asc range between floor(ow_sale.vn*ow_sale.qty)::integer preceding and current row ); -- mvd 7,8,3,2->6; 
 
 -- VAR_SAMP() function with partition by and order by having range based framing clause --
 
@@ -9009,7 +9009,7 @@ TO_CHAR(COALESCE(PERCENT_RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(win3),0),'99999999.9999999'),
 TO_CHAR(COALESCE(CUME_DIST() OVER(order by ow_sale.cn asc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_vendor WHERE ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.pn,ow_sale.vn,ow_sale.vn order by ow_sale.cn desc range between floor(ow_sale.qty) preceding and 3 following ),
+WINDOW win1 as (partition by ow_sale.pn,ow_sale.vn,ow_sale.vn order by ow_sale.cn desc range between floor(ow_sale.qty)::integer preceding and 3 following ),
 win2 as (order by ow_sale.cn asc),
 win3 as (partition by ow_sale.pn,ow_sale.cn order by ow_sale.vn asc); -- mvd 8,6,2->7; 8->9; 8->10; 8,6,2->11; 8->12; 
 
@@ -9017,15 +9017,15 @@ win3 as (partition by ow_sale.pn,ow_sale.cn order by ow_sale.vn asc); -- mvd 8,6
 
 SELECT ow_sale.dt, TO_CHAR(COALESCE(VAR_SAMP(floor(ow_sale.vn/ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.prc,ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.prc order by ow_sale.vn desc range between floor(ow_sale.cn) preceding and unbounded following ); -- mvd 3,4->2; 
+WINDOW win1 as (partition by ow_sale.prc order by ow_sale.vn desc range between floor(ow_sale.cn)::integer preceding and unbounded following ); -- mvd 3,4->2; 
 
 -- VAR_SAMP() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT ow_sale.pn,ow_sale.cn,ow_sale.dt,ow_sale.prc, TO_CHAR(COALESCE(VAR_SAMP(floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999'),
-TO_CHAR(COALESCE(MIN(floor(ow_sale.pn)) OVER(partition by ow_sale.cn,ow_sale.dt order by ow_sale.cn asc range between floor(ow_sale.pn) preceding and unbounded following ),0),'99999999.9999999'),
+TO_CHAR(COALESCE(MIN(floor(ow_sale.pn)) OVER(partition by ow_sale.cn,ow_sale.dt order by ow_sale.cn asc range between floor(ow_sale.pn)::integer preceding and unbounded following ),0),'99999999.9999999'),
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win2),0),'99999999.9999999'),ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.cn,ow_sale.dt order by ow_sale.cn asc range between floor(ow_sale.pn) preceding and unbounded following ),
+WINDOW win1 as (partition by ow_sale.cn,ow_sale.dt order by ow_sale.cn asc range between floor(ow_sale.pn)::integer preceding and unbounded following ),
 win2 as (order by ow_sale.vn desc); -- mvd 3,2->5; 3,2->6; 8->7; 
 
 -- VAR_SAMP() function with partition by and order by having range based framing clause --
@@ -9077,7 +9077,7 @@ WINDOW win1 as (partition by ow_sale.qty,ow_sale.dt order by ow_sale.cn desc ran
 
 SELECT ow_sale.qty,ow_sale.vn,ow_sale.pn, TO_CHAR(COALESCE(VAR_SAMP(floor(ow_sale.cn+ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.prc,ow_sale.dt
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.pn,ow_sale.pn,ow_sale.dt,ow_sale.prc,ow_sale.pn order by ow_sale.pn desc range between floor(ow_sale.pn) following and floor(ow_sale.cn) following ); -- mvd 5,6,3->4; 
+WINDOW win1 as (partition by ow_sale.pn,ow_sale.pn,ow_sale.dt,ow_sale.prc,ow_sale.pn order by ow_sale.pn desc range between floor(ow_sale.pn)::integer following and floor(ow_sale.cn)::integer following ); -- mvd 5,6,3->4; 
 
 -- VAR_SAMP() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -9099,7 +9099,7 @@ WINDOW win1 as (partition by ow_sale.pn,ow_sale.cn,ow_sale.cn,ow_sale.qty,ow_sal
 SELECT ow_sale.cn,ow_sale.vn,ow_sale.cn, TO_CHAR(COALESCE(VAR_SAMP(floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.prc*ow_sale.qty) as int),cast (floor(ow_sale.qty) as int),NULL) OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.cn,ow_sale.vn order by ow_sale.cn desc range between floor(ow_sale.cn+ow_sale.cn) following and unbounded following ),
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.cn,ow_sale.vn order by ow_sale.cn desc range between floor(ow_sale.cn+ow_sale.cn)::integer following and unbounded following ),
 win2 as (order by ow_sale.ord, ow_sale.cn asc); -- mvd 1,2->4; 1->5; 
 
 -- VAR_SAMP() function with partition by and order by having rows based framing clause --
@@ -9418,7 +9418,7 @@ win2 as (partition by ow_sale.dt,ow_sale.dt,ow_sale.qty,ow_sale.vn,ow_sale.pn,ow
 
 SELECT ow_sale.pn,ow_sale.cn,ow_sale.cn, TO_CHAR(COALESCE(VARIANCE(floor(ow_sale.pn*ow_sale.prc)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.vn*ow_sale.qty) preceding ); -- mvd 2->4; 
+WINDOW win1 as (order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.vn*ow_sale.qty)::integer preceding ); -- mvd 2->4; 
 
 -- VARIANCE() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -9448,7 +9448,7 @@ WINDOW win1 as (order by ow_sale.pn desc range between unbounded preceding and c
 
 SELECT ow_sale.prc,ow_sale.qty,ow_sale.cn, TO_CHAR(COALESCE(VARIANCE(floor(ow_sale.pn/ow_sale.qty)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.prc) following ); -- mvd 3->4; 
+WINDOW win1 as (order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.prc)::integer following ); -- mvd 3->4; 
 
 -- VARIANCE() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -9459,7 +9459,7 @@ TO_CHAR(COALESCE(DENSE_RANK() OVER(order by ow_sale.pn asc),0),'99999999.9999999
 TO_CHAR(COALESCE(MIN(floor(ow_sale.pn)) OVER(order by ow_sale.pn asc),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.cn+ow_sale.qty) as int),cast (floor(ow_sale.pn+ow_sale.qty) as int),NULL) OVER(win3),0),'99999999.9999999'),ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (order by ow_sale.pn desc range between unbounded preceding and floor(ow_sale.prc) following ),
+WINDOW win1 as (order by ow_sale.pn desc range between unbounded preceding and floor(ow_sale.prc)::integer following ),
 win2 as (order by ow_sale.pn asc),
 win3 as (order by ow_sale.ord, ow_sale.vn desc); -- mvd 3->2; 3->4; 3->5; 3->6; 3->7; 9->8; 
 
@@ -9491,7 +9491,7 @@ WINDOW win1 as (order by ow_sale.cn asc range between 1 preceding and 3 precedin
 
 SELECT ow_sale.pn,ow_sale.qty,ow_sale.cn, TO_CHAR(COALESCE(VARIANCE(floor(ow_sale.prc)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (order by ow_sale.cn asc range between floor(ow_sale.prc) preceding and floor(ow_sale.prc+ow_sale.qty) following ); -- mvd 3->4; 
+WINDOW win1 as (order by ow_sale.cn asc range between floor(ow_sale.prc)::integer preceding and floor(ow_sale.prc+ow_sale.qty)::integer following ); -- mvd 3->4; 
 
 -- VARIANCE() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -9502,7 +9502,7 @@ TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.vn/ow_sale.cn) as int),cast (floor(ow_sa
 TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.qty-ow_sale.vn) as int),cast (floor(ow_sale.qty) as int),NULL) OVER(win4),0),'99999999.9999999'),ow_sale.prc,
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(order by ow_sale.vn asc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.pn desc range between 0 preceding and floor(ow_sale.pn) following ),
+WINDOW win1 as (order by ow_sale.pn desc range between 0 preceding and floor(ow_sale.pn)::integer following ),
 win2 as (order by ow_sale.vn asc),
 win3 as (order by ow_sale.ord, ow_sale.cn desc),
 win4 as (partition by ow_sale.qty,ow_sale.prc order by ow_sale.ord, ow_sale.cn desc); -- mvd 1->6; 4->7; 4->8; 10->9; 12,10,3->11; 4->13; 
@@ -9511,7 +9511,7 @@ win4 as (partition by ow_sale.qty,ow_sale.prc order by ow_sale.ord, ow_sale.cn d
 
 SELECT ow_sale.vn, TO_CHAR(COALESCE(VARIANCE(floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.cn) preceding and unbounded following ); -- mvd 3->2; 
+WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.cn)::integer preceding and unbounded following ); -- mvd 3->2; 
 
 -- VARIANCE() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -9521,7 +9521,7 @@ TO_CHAR(COALESCE(RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.prc) as int),cast (floor(ow_sale.qty/ow_sale.cn) as int),NULL) OVER(win3),0),'99999999.9999999'),ow_sale.dt,
 TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.vn) as int),cast (floor(ow_sale.pn+ow_sale.qty) as int),NULL) OVER(win4),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.pn) preceding and unbounded following ),
+WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.pn)::integer preceding and unbounded following ),
 win2 as (order by ow_sale.cn desc),
 win3 as (partition by ow_sale.vn,ow_sale.cn,ow_sale.pn,ow_sale.dt order by ow_sale.ord, ow_sale.vn asc),
 win4 as (order by ow_sale.ord, ow_sale.pn desc); -- mvd 8->7; 8->9; 8->10; 12,8,4,2->11; 2->13; 
@@ -9581,7 +9581,7 @@ win3 as (partition by ow_sale.vn,ow_sale.pn order by ow_sale.cn asc); -- mvd 3->
 
 SELECT ow_sale.dt,ow_sale.qty,ow_sale.cn,ow_sale.pn, TO_CHAR(COALESCE(VARIANCE(floor(ow_sale.cn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_vendor WHERE ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.pn asc range between 4 following and floor(ow_sale.pn-ow_sale.pn) following ); -- mvd 4->5; 
+WINDOW win1 as (order by ow_sale.pn asc range between 4 following and floor(ow_sale.pn-ow_sale.pn)::integer following ); -- mvd 4->5; 
 
 -- VARIANCE() function with ONLY order by having range based framing clause --
 
@@ -9819,7 +9819,7 @@ TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.cn/ow_sale.qty) as int),cast (floor(ow_s
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(order by ow_sale.ord, ow_sale.cn asc),0),'99999999.9999999'),
 TO_CHAR(COALESCE(MAX(floor(ow_sale.pn)) OVER(order by ow_sale.ord, ow_sale.cn asc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.qty,ow_sale.vn,ow_sale.prc order by ow_sale.cn asc range floor(ow_sale.cn) preceding ),
+WINDOW win1 as (partition by ow_sale.qty,ow_sale.vn,ow_sale.prc order by ow_sale.cn asc range floor(ow_sale.cn)::integer preceding ),
 win2 as (order by ow_sale.pn desc),
 win3 as (order by ow_sale.ord, ow_sale.cn asc); -- mvd 1,3,4,5->2; 7->6; 3->8; 3->9; 3->10; 
 
@@ -9843,7 +9843,7 @@ win2 as (order by ow_sale.cn desc); -- mvd 6,1,2,7->5; 1->8; 1->9; 6,1,2,7->10;
 
 SELECT ow_sale.pn,ow_sale.pn,ow_sale.dt,ow_sale.cn,ow_sale.vn,ow_sale.dt, TO_CHAR(COALESCE(VARIANCE(floor(ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.prc,ow_sale.qty
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.prc,ow_sale.vn,ow_sale.pn,ow_sale.qty order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.prc+ow_sale.qty) preceding ); -- mvd 8,4,9,5,1->7; 
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.prc,ow_sale.vn,ow_sale.pn,ow_sale.qty order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.prc+ow_sale.qty)::integer preceding ); -- mvd 8,4,9,5,1->7; 
 
 -- VARIANCE() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -9852,9 +9852,9 @@ TO_CHAR(COALESCE(MAX(floor(ow_sale.prc)) OVER(win1),0),'99999999.9999999'),
 TO_CHAR(COALESCE(CUME_DIST() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(CUME_DIST() OVER(win3),0),'99999999.9999999'),ow_sale.vn,
 TO_CHAR(COALESCE(CUME_DIST() OVER(win4),0),'99999999.9999999'),
-TO_CHAR(COALESCE(MAX(floor(ow_sale.cn*ow_sale.pn)) OVER(partition by ow_sale.prc,ow_sale.cn order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.pn) preceding ),0),'99999999.9999999')
+TO_CHAR(COALESCE(MAX(floor(ow_sale.cn*ow_sale.pn)) OVER(partition by ow_sale.prc,ow_sale.cn order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.pn)::integer preceding ),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (partition by ow_sale.prc,ow_sale.cn order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.pn) preceding ),
+WINDOW win1 as (partition by ow_sale.prc,ow_sale.cn order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.pn)::integer preceding ),
 win2 as (partition by ow_sale.pn,ow_sale.pn,ow_sale.qty order by ow_sale.cn desc),
 win3 as (order by ow_sale.vn desc),
 win4 as (order by ow_sale.cn desc); -- mvd 4,5->3; 4,5->6; 5,2,1->7; 9->8; 5->10; 4,5->11; 
@@ -9889,7 +9889,7 @@ SELECT ow_sale.vn,ow_sale.cn,ow_sale.cn, TO_CHAR(COALESCE(VARIANCE(floor(ow_sale
 TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.qty) as int),cast (floor(ow_sale.qty+ow_sale.qty) as int),NULL) OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(win3),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.prc,ow_sale.qty,ow_sale.pn,ow_sale.vn,ow_sale.dt order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.pn) following ),
+WINDOW win1 as (partition by ow_sale.prc,ow_sale.qty,ow_sale.pn,ow_sale.vn,ow_sale.dt order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.pn)::integer following ),
 win2 as (order by ow_sale.ord, ow_sale.cn desc),
 win3 as (order by ow_sale.pn asc); -- mvd 5,2,6,1,7,8->4; 2->9; 8->10; 
 
@@ -9911,13 +9911,13 @@ win2 as (partition by ow_sale.pn order by ow_sale.ord, ow_sale.cn asc); -- mvd 4
 
 SELECT ow_sale.prc,ow_sale.cn,ow_sale.prc,ow_sale.dt,ow_sale.prc, TO_CHAR(COALESCE(VARIANCE(floor(ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.vn,ow_sale.qty,ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.dt,ow_sale.qty,ow_sale.vn order by ow_sale.pn desc range between floor(ow_sale.cn) preceding and 4 preceding ); -- mvd 4,7,8,9->6; 
+WINDOW win1 as (partition by ow_sale.dt,ow_sale.qty,ow_sale.vn order by ow_sale.pn desc range between floor(ow_sale.cn)::integer preceding and 4 preceding ); -- mvd 4,7,8,9->6; 
 
 -- VARIANCE() function with partition by and order by having range based framing clause --
 
 SELECT ow_sale.prc, TO_CHAR(COALESCE(VARIANCE(floor(ow_sale.prc+ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,ow_sale.vn,ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.cn,ow_sale.vn order by ow_sale.pn desc range between floor(ow_sale.vn/ow_sale.vn) preceding and current row ); -- mvd 3,4,5->2; 
+WINDOW win1 as (partition by ow_sale.cn,ow_sale.vn order by ow_sale.pn desc range between floor(ow_sale.vn/ow_sale.vn)::integer preceding and current row ); -- mvd 3,4,5->2; 
 
 -- VARIANCE() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -9927,7 +9927,7 @@ TO_CHAR(COALESCE(MIN(floor(ow_sale.cn)) OVER(order by ow_sale.cn asc),0),'999999
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(win3),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.qty) as int),cast (floor(ow_sale.qty) as int),NULL) OVER(win4),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (partition by ow_sale.qty,ow_sale.cn,ow_sale.vn,ow_sale.dt,ow_sale.qty order by ow_sale.cn asc range between floor(ow_sale.cn) preceding and current row ),
+WINDOW win1 as (partition by ow_sale.qty,ow_sale.cn,ow_sale.vn,ow_sale.dt,ow_sale.qty order by ow_sale.cn asc range between floor(ow_sale.cn)::integer preceding and current row ),
 win2 as (order by ow_sale.cn asc),
 win3 as (order by ow_sale.vn asc),
 win4 as (order by ow_sale.ord, ow_sale.vn asc); -- mvd 6,1,7,4->5; 1->8; 1->9; 7->10; 7->11; 
@@ -9942,9 +9942,9 @@ WINDOW win1 as (partition by ow_sale.dt,ow_sale.prc order by ow_sale.cn asc rang
 
 SELECT ow_sale.vn,ow_sale.qty,ow_sale.vn,ow_sale.pn, TO_CHAR(COALESCE(VARIANCE(floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(win2),0),'99999999.9999999'),ow_sale.prc,
-TO_CHAR(COALESCE(COUNT(floor(ow_sale.vn+ow_sale.cn)) OVER(partition by ow_sale.vn order by ow_sale.cn desc range between floor(ow_sale.vn+ow_sale.qty) preceding and 0 following ),0),'99999999.9999999')
+TO_CHAR(COALESCE(COUNT(floor(ow_sale.vn+ow_sale.cn)) OVER(partition by ow_sale.vn order by ow_sale.cn desc range between floor(ow_sale.vn+ow_sale.qty)::integer preceding and 0 following ),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn order by ow_sale.cn desc range between floor(ow_sale.vn+ow_sale.qty) preceding and 0 following ),
+WINDOW win1 as (partition by ow_sale.vn order by ow_sale.cn desc range between floor(ow_sale.vn+ow_sale.qty)::integer preceding and 0 following ),
 win2 as (partition by ow_sale.cn,ow_sale.vn,ow_sale.prc,ow_sale.qty order by ow_sale.pn desc); -- mvd 6,1->5; 8,6,2,1,4->7; 6,1->9; 
 
 -- VARIANCE() function with partition by and order by having range based framing clause --
@@ -9996,7 +9996,7 @@ WINDOW win1 as (partition by ow_sale.prc,ow_sale.cn,ow_sale.prc order by ow_sale
 SELECT ow_sale.vn, TO_CHAR(COALESCE(VARIANCE(floor(ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,ow_sale.pn,
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.cn order by ow_sale.pn desc range between current row and floor(ow_sale.prc) following ),
+WINDOW win1 as (partition by ow_sale.cn order by ow_sale.pn desc range between current row and floor(ow_sale.prc)::integer following ),
 win2 as (order by ow_sale.cn asc); -- mvd 3,4->2; 3->5; 
 
 -- VARIANCE() function with partition by and order by having range based framing clause --
@@ -10020,7 +10020,7 @@ win3 as (partition by ow_sale.dt,ow_sale.cn,ow_sale.cn,ow_sale.qty order by ow_s
 
 SELECT ow_sale.cn, TO_CHAR(COALESCE(VARIANCE(floor(ow_sale.pn/ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.dt,ow_sale.vn,ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.dt,ow_sale.pn,ow_sale.cn,ow_sale.dt order by ow_sale.vn desc range between 0 following and floor(ow_sale.prc) following ); -- mvd 1,3,4,5->2; 
+WINDOW win1 as (partition by ow_sale.dt,ow_sale.pn,ow_sale.cn,ow_sale.dt order by ow_sale.vn desc range between 0 following and floor(ow_sale.prc)::integer following ); -- mvd 1,3,4,5->2; 
 
 -- VARIANCE() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -10028,14 +10028,14 @@ SELECT ow_sale.qty, TO_CHAR(COALESCE(VARIANCE(floor(ow_sale.prc)) OVER(win1),0),
 TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.prc-ow_sale.qty) as int),cast (floor(ow_sale.prc) as int),NULL) OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(MIN(floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.qty,ow_sale.vn,ow_sale.cn,ow_sale.cn,ow_sale.dt,ow_sale.cn order by ow_sale.pn desc range between floor(ow_sale.qty) following and 3 following ),
+WINDOW win1 as (partition by ow_sale.qty,ow_sale.vn,ow_sale.cn,ow_sale.cn,ow_sale.dt,ow_sale.cn order by ow_sale.pn desc range between floor(ow_sale.qty)::integer following and 3 following ),
 win2 as (partition by ow_sale.pn,ow_sale.cn,ow_sale.cn,ow_sale.dt,ow_sale.qty order by ow_sale.ord, ow_sale.vn asc); -- mvd 3,4,5,1,6->2; 3,4,5,1,6->7; 3,4,5,1,6->8; 
 
 -- VARIANCE() function with partition by and order by having range based framing clause --
 
 SELECT ow_sale.pn, TO_CHAR(COALESCE(VARIANCE(floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,ow_sale.qty,ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.qty,ow_sale.cn,ow_sale.cn order by ow_sale.pn asc range between floor(ow_sale.vn) following and unbounded following ); -- mvd 3,4,5,1->2; 
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.qty,ow_sale.cn,ow_sale.cn order by ow_sale.pn asc range between floor(ow_sale.vn)::integer following and unbounded following ); -- mvd 3,4,5,1->2; 
 
 -- VARIANCE() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -10046,7 +10046,7 @@ TO_CHAR(COALESCE(MAX(floor(ow_sale.cn)) OVER(order by ow_sale.ord, ow_sale.pn as
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(win3),0),'99999999.9999999'),
 TO_CHAR(COALESCE(MAX(floor(ow_sale.vn/ow_sale.vn)) OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.dt,ow_sale.pn order by ow_sale.pn asc range between floor(ow_sale.prc) following and unbounded following ),
+WINDOW win1 as (partition by ow_sale.dt,ow_sale.pn order by ow_sale.pn asc range between floor(ow_sale.prc)::integer following and unbounded following ),
 win2 as (order by ow_sale.ord, ow_sale.pn asc),
 win3 as (order by ow_sale.ord, ow_sale.cn asc); -- mvd 6,2->5; 2->7; 1->8; 2->9; 1->10; 2->11; 
 
@@ -10340,7 +10340,7 @@ TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.cn+ow_sale.pn) as int),cast (floor(ow_s
 TO_CHAR(COALESCE(COUNT(floor(ow_sale.vn)) OVER(win1),0),'99999999.9999999'),
 TO_CHAR(COALESCE(DENSE_RANK() OVER(partition by ow_sale.vn,ow_sale.vn,ow_sale.pn order by ow_sale.ord, ow_sale.cn desc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range floor(ow_sale.vn*ow_sale.vn) preceding ),
+WINDOW win1 as (order by ow_sale.vn desc range floor(ow_sale.vn*ow_sale.vn)::integer preceding ),
 win2 as (partition by ow_sale.vn,ow_sale.vn,ow_sale.pn order by ow_sale.ord, ow_sale.cn desc); -- mvd 4->3; 6,4,7->5; 4->8; 6,4,7->9; 
 
 -- CORR() function with ONLY order by having range based framing clause --
@@ -10365,7 +10365,7 @@ win3 as (partition by ow_sale.prc,ow_sale.prc,ow_sale.vn,ow_sale.vn,ow_sale.vn o
 
 SELECT ow_sale.vn, TO_CHAR(COALESCE(CORR(floor(ow_sale.cn/ow_sale.pn),floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.pn desc range between unbounded preceding and floor(ow_sale.prc) preceding ); -- mvd 3->2; 
+WINDOW win1 as (order by ow_sale.pn desc range between unbounded preceding and floor(ow_sale.prc)::integer preceding ); -- mvd 3->2; 
 
 -- CORR() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -10385,7 +10385,7 @@ WINDOW win1 as (order by ow_sale.pn asc range between unbounded preceding and cu
 
 SELECT ow_sale.vn, TO_CHAR(COALESCE(CORR(floor(ow_sale.pn+ow_sale.prc),floor(ow_sale.vn+ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (order by ow_sale.pn desc range between unbounded preceding and floor(ow_sale.qty+ow_sale.qty) following ); -- mvd 3->2; 
+WINDOW win1 as (order by ow_sale.pn desc range between unbounded preceding and floor(ow_sale.qty+ow_sale.qty)::integer following ); -- mvd 3->2; 
 
 -- CORR() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -10394,7 +10394,7 @@ TO_CHAR(COALESCE(PERCENT_RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(MAX(floor(ow_sale.cn)) OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.cn) as int),cast (floor(ow_sale.cn) as int),NULL) OVER(win3),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.pn asc range between unbounded preceding and floor(ow_sale.qty+ow_sale.cn) following ),
+WINDOW win1 as (order by ow_sale.pn asc range between unbounded preceding and floor(ow_sale.qty+ow_sale.cn)::integer following ),
 win2 as (order by ow_sale.vn desc),
 win3 as (partition by ow_sale.cn order by ow_sale.ord, ow_sale.pn asc); -- mvd 8->7; 2->9; 2->10; 4,8->11; 
 
@@ -10425,7 +10425,7 @@ TO_CHAR(COALESCE(CUME_DIST() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(MIN(floor(ow_sale.cn-ow_sale.vn)) OVER(win1),0),'99999999.9999999'),
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win3),0),'99999999.9999999'),ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.cn-ow_sale.cn) preceding and floor(ow_sale.prc-ow_sale.prc) preceding ),
+WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.cn-ow_sale.cn)::integer preceding and floor(ow_sale.prc-ow_sale.prc)::integer preceding ),
 win2 as (order by ow_sale.cn asc),
 win3 as (order by ow_sale.vn asc); -- mvd 3->2; 3->4; 3->5; 7->6; 
 
@@ -10459,7 +10459,7 @@ TO_CHAR(COALESCE(MIN(floor(ow_sale.cn+ow_sale.pn)) OVER(win1),0),'99999999.99999
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(COUNT(floor(ow_sale.vn/ow_sale.cn)) OVER(order by ow_sale.pn desc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.cn asc range between 0 preceding and floor(ow_sale.vn) following ),
+WINDOW win1 as (order by ow_sale.cn asc range between 0 preceding and floor(ow_sale.vn)::integer following ),
 win2 as (order by ow_sale.pn desc); -- mvd 7->6; 7->8; 5->9; 5->10; 
 
 -- CORR() function with ONLY order by having range based framing clause --
@@ -10534,7 +10534,7 @@ win2 as (partition by ow_sale.qty,ow_sale.qty,ow_sale.pn,ow_sale.cn,ow_sale.pn o
 
 SELECT ow_sale.vn,ow_sale.qty,ow_sale.vn,ow_sale.prc, TO_CHAR(COALESCE(CORR(floor(ow_sale.vn),floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range between floor(ow_sale.vn+ow_sale.qty) following and floor(ow_sale.vn+ow_sale.pn) following ); -- mvd 1->5; 
+WINDOW win1 as (order by ow_sale.vn desc range between floor(ow_sale.vn+ow_sale.qty)::integer following and floor(ow_sale.vn+ow_sale.pn)::integer following ); -- mvd 1->5; 
 
 -- CORR() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -10542,7 +10542,7 @@ SELECT ow_sale.pn,ow_sale.pn,ow_sale.vn, TO_CHAR(COALESCE(CORR(floor(ow_sale.cn-
 TO_CHAR(COALESCE(RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(COUNT(floor(ow_sale.pn)) OVER(partition by ow_sale.cn order by ow_sale.pn desc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between 4 following and floor(ow_sale.vn) following ),
+WINDOW win1 as (order by ow_sale.cn desc range between 4 following and floor(ow_sale.vn)::integer following ),
 win2 as (partition by ow_sale.cn order by ow_sale.pn desc); -- mvd 5->4; 5,1->6; 5,1->7; 
 
 -- CORR() function with ONLY order by having range based framing clause --
@@ -10557,7 +10557,7 @@ SELECT ow_sale.prc,ow_sale.qty,ow_sale.qty,ow_sale.qty, TO_CHAR(COALESCE(CORR(fl
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win2),0),'99999999.9999999'),ow_sale.pn,
 TO_CHAR(COALESCE(COUNT(floor(ow_sale.vn/ow_sale.pn)) OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.cn) following and unbounded following ),
+WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.cn)::integer following and unbounded following ),
 win2 as (order by ow_sale.pn desc); -- mvd 6->5; 8->7; 8->9; 
 
 -- CORR() function with ONLY order by having rows based framing clause --
@@ -10809,7 +10809,7 @@ win3 as (order by ow_sale.pn desc); -- mvd 4,2,1,6->5; 4,2,1,6->7; 4,2,1,6->8; 4
 
 SELECT ow_sale.cn,ow_sale.pn,ow_sale.pn,ow_sale.vn,ow_sale.dt, TO_CHAR(COALESCE(CORR(floor(ow_sale.vn),floor(ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.qty
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (partition by ow_sale.qty order by ow_sale.cn asc range floor(ow_sale.pn) preceding ); -- mvd 1,7->6; 
+WINDOW win1 as (partition by ow_sale.qty order by ow_sale.cn asc range floor(ow_sale.pn)::integer preceding ); -- mvd 1,7->6; 
 
 -- CORR() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -10878,7 +10878,7 @@ win4 as (order by ow_sale.ord, ow_sale.vn asc); -- mvd 6,2,7->5; 9,3->8; 1->10; 
 
 SELECT ow_sale.pn,ow_sale.cn,ow_sale.qty,ow_sale.qty,ow_sale.pn,ow_sale.qty, TO_CHAR(COALESCE(CORR(floor(ow_sale.qty),floor(ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.prc
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.pn,ow_sale.prc order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.prc*ow_sale.cn) following ); -- mvd 8,2,1->7; 
+WINDOW win1 as (partition by ow_sale.pn,ow_sale.prc order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.prc*ow_sale.cn)::integer following ); -- mvd 8,2,1->7; 
 
 -- CORR() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -10912,7 +10912,7 @@ win3 as (order by ow_sale.cn asc); -- mvd 3,4,1->2; 6->5; 6->7; 9->8;
 
 SELECT ow_sale.cn,ow_sale.vn,ow_sale.cn,ow_sale.vn,ow_sale.dt, TO_CHAR(COALESCE(CORR(floor(ow_sale.cn-ow_sale.cn),floor(ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.dt,ow_sale.dt,ow_sale.dt order by ow_sale.pn desc range between floor(ow_sale.qty/ow_sale.vn) preceding and floor(ow_sale.vn) preceding ); -- mvd 5,2,7->6; 
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.dt,ow_sale.dt,ow_sale.dt order by ow_sale.pn desc range between floor(ow_sale.qty/ow_sale.vn)::integer preceding and floor(ow_sale.vn)::integer preceding ); -- mvd 5,2,7->6; 
 
 -- CORR() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -10943,7 +10943,7 @@ win3 as (partition by ow_sale.prc,ow_sale.cn,ow_sale.pn,ow_sale.cn order by ow_s
 SELECT ow_sale.pn, TO_CHAR(COALESCE(CORR(floor(ow_sale.prc),floor(ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,ow_sale.qty,ow_sale.vn,
 TO_CHAR(COALESCE(CUME_DIST() OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.pn,ow_sale.vn,ow_sale.cn,ow_sale.vn,ow_sale.qty order by ow_sale.pn desc range between floor(ow_sale.vn) preceding and 3 following ),
+WINDOW win1 as (partition by ow_sale.pn,ow_sale.vn,ow_sale.cn,ow_sale.vn,ow_sale.qty order by ow_sale.pn desc range between floor(ow_sale.vn)::integer preceding and 3 following ),
 win2 as (partition by ow_sale.cn,ow_sale.pn,ow_sale.cn order by ow_sale.cn asc); -- mvd 3,4,5,1->2; 3,1->6; 
 
 -- CORR() function with partition by and order by having range based framing clause --
@@ -10962,7 +10962,7 @@ WINDOW win1 as (partition by ow_sale.dt order by ow_sale.cn asc range between cu
 
 SELECT ow_sale.dt, TO_CHAR(COALESCE(CORR(floor(ow_sale.vn),floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,ow_sale.qty
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (partition by ow_sale.qty order by ow_sale.cn desc range between current row and floor(ow_sale.vn) following ); -- mvd 3,4->2; 
+WINDOW win1 as (partition by ow_sale.qty order by ow_sale.cn desc range between current row and floor(ow_sale.vn)::integer following ); -- mvd 3,4->2; 
 
 -- CORR() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -10993,13 +10993,13 @@ win2 as (partition by ow_sale.cn order by ow_sale.vn asc); -- mvd 3,5->4; 3,5->6
 
 SELECT ow_sale.vn,ow_sale.prc,ow_sale.pn,ow_sale.qty, TO_CHAR(COALESCE(CORR(floor(ow_sale.vn*ow_sale.vn),floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.cn,ow_sale.cn,ow_sale.pn order by ow_sale.cn desc range between floor(ow_sale.prc) following and floor(ow_sale.prc) following ); -- mvd 6,3->5; 
+WINDOW win1 as (partition by ow_sale.cn,ow_sale.cn,ow_sale.pn order by ow_sale.cn desc range between floor(ow_sale.prc)::integer following and floor(ow_sale.prc)::integer following ); -- mvd 6,3->5; 
 
 -- CORR() function with partition by and order by having range based framing clause --
 
 SELECT ow_sale.dt, TO_CHAR(COALESCE(CORR(floor(ow_sale.prc-ow_sale.prc),floor(ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.prc,ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.prc,ow_sale.dt order by ow_sale.pn desc range between floor(ow_sale.cn) following and unbounded following ); -- mvd 3,1,4->2; 
+WINDOW win1 as (partition by ow_sale.prc,ow_sale.dt order by ow_sale.pn desc range between floor(ow_sale.cn)::integer following and unbounded following ); -- mvd 3,1,4->2; 
 
 -- CORR() function with partition by and order by having rows based framing clause --
 
@@ -11339,9 +11339,9 @@ WINDOW win1 as (order by ow_sale.cn asc range 3 preceding ); -- mvd 3->2;
 SELECT ow_sale.pn,ow_sale.cn, TO_CHAR(COALESCE(COVAR_POP(floor(ow_sale.pn+ow_sale.prc),floor(ow_sale.prc-ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.vn,
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(RANK() OVER(win2),0),'99999999.9999999'),
-TO_CHAR(COALESCE(MIN(floor(ow_sale.qty-ow_sale.vn)) OVER(order by ow_sale.vn desc range floor(ow_sale.cn) preceding ),0),'99999999.9999999')
+TO_CHAR(COALESCE(MIN(floor(ow_sale.qty-ow_sale.vn)) OVER(order by ow_sale.vn desc range floor(ow_sale.cn)::integer preceding ),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range floor(ow_sale.cn) preceding ),
+WINDOW win1 as (order by ow_sale.vn desc range floor(ow_sale.cn)::integer preceding ),
 win2 as (order by ow_sale.cn desc); -- mvd 4->3; 2->5; 2->6; 4->7; 
 
 -- COVAR_POP() function with ONLY order by having range based framing clause --
@@ -11427,7 +11427,7 @@ win4 as (order by ow_sale.ord, ow_sale.cn asc); -- mvd 5->6; 8,9,5->7; 9,3,11,5-
 
 SELECT ow_sale.prc, TO_CHAR(COALESCE(COVAR_POP(floor(ow_sale.qty),floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between 2 preceding and floor(ow_sale.cn) preceding ); -- mvd 3->2; 
+WINDOW win1 as (order by ow_sale.cn desc range between 2 preceding and floor(ow_sale.cn)::integer preceding ); -- mvd 3->2; 
 
 -- COVAR_POP() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -11444,7 +11444,7 @@ win3 as (order by ow_sale.cn desc); -- mvd 1->2; 1->3; 5,6,1->4; 8->7;
 
 SELECT ow_sale.qty, TO_CHAR(COALESCE(COVAR_POP(floor(ow_sale.cn*ow_sale.cn),floor(ow_sale.vn/ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range between floor(ow_sale.pn) preceding and current row ); -- mvd 3->2; 
+WINDOW win1 as (order by ow_sale.vn desc range between floor(ow_sale.pn)::integer preceding and current row ); -- mvd 3->2; 
 
 -- COVAR_POP() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -11457,7 +11457,7 @@ WINDOW win1 as (order by ow_sale.vn desc range between 3 preceding and current r
 
 SELECT ow_sale.pn,ow_sale.cn,ow_sale.vn,ow_sale.prc,ow_sale.prc, TO_CHAR(COALESCE(COVAR_POP(floor(ow_sale.cn),floor(ow_sale.prc-ow_sale.vn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.qty*ow_sale.prc) preceding and floor(ow_sale.cn/ow_sale.cn) following ); -- mvd 2->6; 
+WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.qty*ow_sale.prc)::integer preceding and floor(ow_sale.cn/ow_sale.cn)::integer following ); -- mvd 2->6; 
 
 -- COVAR_POP() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -11465,14 +11465,14 @@ SELECT ow_sale.cn, TO_CHAR(COALESCE(COVAR_POP(floor(ow_sale.pn),floor(ow_sale.qt
 TO_CHAR(COALESCE(CUME_DIST() OVER(win2),0),'99999999.9999999'),ow_sale.qty,ow_sale.pn,
 TO_CHAR(COALESCE(DENSE_RANK() OVER(partition by ow_sale.vn,ow_sale.qty order by ow_sale.pn desc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.cn/ow_sale.qty) preceding and floor(ow_sale.vn+ow_sale.pn) following ),
+WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.cn/ow_sale.qty)::integer preceding and floor(ow_sale.vn+ow_sale.pn)::integer following ),
 win2 as (partition by ow_sale.vn,ow_sale.qty order by ow_sale.pn desc); -- mvd 3->2; 5,3,6->4; 5,3,6->7; 
 
 -- COVAR_POP() function with ONLY order by having range based framing clause --
 
 SELECT ow_sale.qty,ow_sale.cn,ow_sale.vn,ow_sale.cn, TO_CHAR(COALESCE(COVAR_POP(floor(ow_sale.qty),floor(ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.pn asc range between floor(ow_sale.cn) preceding and unbounded following ); -- mvd 6->5; 
+WINDOW win1 as (order by ow_sale.pn asc range between floor(ow_sale.cn)::integer preceding and unbounded following ); -- mvd 6->5; 
 
 -- COVAR_POP() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -11482,7 +11482,7 @@ TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.vn) as int),cast (floor(ow_sale.vn) as 
 TO_CHAR(COALESCE(MIN(floor(ow_sale.prc)) OVER(win1),0),'99999999.9999999'),
 TO_CHAR(COALESCE(COUNT(floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.pn) preceding and unbounded following ),
+WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.pn)::integer preceding and unbounded following ),
 win2 as (partition by ow_sale.cn,ow_sale.vn order by ow_sale.vn desc),
 win3 as (partition by ow_sale.vn order by ow_sale.ord, ow_sale.pn desc); -- mvd 4->3; 4,6->5; 6,8->7; 4->9; 4->10; 
 
@@ -11514,7 +11514,7 @@ TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.prc) as int),cast (floor(ow_sale.prc+ow_
 TO_CHAR(COALESCE(CUME_DIST() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(CUME_DIST() OVER(win4),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (order by ow_sale.pn desc range between current row and floor(ow_sale.pn/ow_sale.qty) following ),
+WINDOW win1 as (order by ow_sale.pn desc range between current row and floor(ow_sale.pn/ow_sale.qty)::integer following ),
 win2 as (partition by ow_sale.vn,ow_sale.vn order by ow_sale.pn desc),
 win3 as (partition by ow_sale.dt,ow_sale.vn,ow_sale.cn,ow_sale.cn order by ow_sale.ord, ow_sale.pn desc),
 win4 as (order by ow_sale.cn asc); -- mvd 2->3; 5,2->4; 7,8,5,2->6; 5,2->9; 7->10; 
@@ -11566,10 +11566,10 @@ WINDOW win1 as (order by ow_sale.vn asc range between 4 following and unbounded 
 SELECT ow_sale.vn, TO_CHAR(COALESCE(COVAR_POP(floor(ow_sale.prc/ow_sale.vn),floor(ow_sale.pn+ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,
 TO_CHAR(COALESCE(MIN(floor(ow_sale.vn)) OVER(win1),0),'99999999.9999999'),
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win2),0),'99999999.9999999'),ow_sale.prc,ow_sale.dt,ow_sale.qty,ow_sale.pn,
-TO_CHAR(COALESCE(MIN(floor(ow_sale.cn)) OVER(order by ow_sale.cn asc range between floor(ow_sale.cn) following and unbounded following ),0),'99999999.9999999'),
+TO_CHAR(COALESCE(MIN(floor(ow_sale.cn)) OVER(order by ow_sale.cn asc range between floor(ow_sale.cn)::integer following and unbounded following ),0),'99999999.9999999'),
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win3),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.cn asc range between floor(ow_sale.cn) following and unbounded following ),
+WINDOW win1 as (order by ow_sale.cn asc range between floor(ow_sale.cn)::integer following and unbounded following ),
 win2 as (partition by ow_sale.cn,ow_sale.pn,ow_sale.qty,ow_sale.dt,ow_sale.prc order by ow_sale.cn asc),
 win3 as (order by ow_sale.vn desc); -- mvd 3->2; 3->4; 6,7,3,8,9->5; 3->10; 1->11; 
 
@@ -11846,14 +11846,14 @@ win4 as (partition by ow_sale.dt,ow_sale.prc,ow_sale.cn,ow_sale.pn order by ow_s
 
 SELECT ow_sale.qty,ow_sale.prc,ow_sale.pn,ow_sale.qty,ow_sale.pn,ow_sale.vn, TO_CHAR(COALESCE(COVAR_POP(floor(ow_sale.qty-ow_sale.qty),floor(ow_sale.vn-ow_sale.vn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.qty,ow_sale.prc order by ow_sale.pn asc range floor(ow_sale.qty) preceding ); -- mvd 2,1,3->7; 
+WINDOW win1 as (partition by ow_sale.qty,ow_sale.prc order by ow_sale.pn asc range floor(ow_sale.qty)::integer preceding ); -- mvd 2,1,3->7; 
 
 -- COVAR_POP() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT ow_sale.qty,ow_sale.cn,ow_sale.cn,ow_sale.pn,ow_sale.qty,ow_sale.qty, TO_CHAR(COALESCE(COVAR_POP(floor(ow_sale.prc+ow_sale.prc),floor(ow_sale.qty-ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.prc,
-TO_CHAR(COALESCE(COUNT(floor(ow_sale.vn)) OVER(partition by ow_sale.cn,ow_sale.prc order by ow_sale.pn asc range floor(ow_sale.pn*ow_sale.prc) preceding ),0),'99999999.9999999')
+TO_CHAR(COALESCE(COUNT(floor(ow_sale.vn)) OVER(partition by ow_sale.cn,ow_sale.prc order by ow_sale.pn asc range floor(ow_sale.pn*ow_sale.prc)::integer preceding ),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_vendor WHERE ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.cn,ow_sale.prc order by ow_sale.pn asc range floor(ow_sale.pn*ow_sale.prc) preceding ); -- mvd 8,2,4->7; 8,2,4->9; 
+WINDOW win1 as (partition by ow_sale.cn,ow_sale.prc order by ow_sale.pn asc range floor(ow_sale.pn*ow_sale.prc)::integer preceding ); -- mvd 8,2,4->7; 8,2,4->9; 
 
 -- COVAR_POP() function with partition by and order by having range based framing clause --
 
@@ -11878,7 +11878,7 @@ win4 as (partition by ow_sale.vn,ow_sale.cn order by ow_sale.ord, ow_sale.pn asc
 
 SELECT ow_sale.vn,ow_sale.qty,ow_sale.qty,ow_sale.pn, TO_CHAR(COALESCE(COVAR_POP(floor(ow_sale.prc),floor(ow_sale.pn-ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,ow_sale.dt
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.pn,ow_sale.vn,ow_sale.pn,ow_sale.dt,ow_sale.pn order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.qty) preceding ); -- mvd 6,7,1,4->5; 
+WINDOW win1 as (partition by ow_sale.pn,ow_sale.vn,ow_sale.pn,ow_sale.dt,ow_sale.pn order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.qty)::integer preceding ); -- mvd 6,7,1,4->5; 
 
 -- COVAR_POP() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -11889,7 +11889,7 @@ TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.qty/ow_sale.vn) as int),cast (floor(ow_
 TO_CHAR(COALESCE(RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(CUME_DIST() OVER(partition by ow_sale.cn,ow_sale.qty,ow_sale.qty,ow_sale.prc,ow_sale.vn order by ow_sale.ord, ow_sale.cn desc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.pn,ow_sale.dt,ow_sale.dt,ow_sale.prc order by ow_sale.pn asc range between unbounded preceding and floor(ow_sale.vn*ow_sale.pn) preceding ),
+WINDOW win1 as (partition by ow_sale.pn,ow_sale.dt,ow_sale.dt,ow_sale.prc order by ow_sale.pn asc range between unbounded preceding and floor(ow_sale.vn*ow_sale.pn)::integer preceding ),
 win2 as (partition by ow_sale.dt,ow_sale.cn,ow_sale.vn order by ow_sale.vn asc),
 win3 as (order by ow_sale.pn desc),
 win4 as (partition by ow_sale.cn,ow_sale.qty,ow_sale.qty,ow_sale.prc,ow_sale.vn order by ow_sale.ord, ow_sale.cn desc); -- mvd 3,4,5->2; 1,4,7->6; 5->8; 3,1,7,10->9; 1,4,7->11; 3,1,7,10->12; 
@@ -11916,9 +11916,9 @@ WINDOW win1 as (partition by ow_sale.cn,ow_sale.cn,ow_sale.cn,ow_sale.qty,ow_sal
 -- COVAR_POP() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT ow_sale.qty,ow_sale.vn,ow_sale.pn,ow_sale.cn, TO_CHAR(COALESCE(COVAR_POP(floor(ow_sale.cn*ow_sale.qty),floor(ow_sale.cn)) OVER(win1),0),'99999999.9999999'),
-TO_CHAR(COALESCE(MIN(floor(ow_sale.qty/ow_sale.cn)) OVER(partition by ow_sale.qty,ow_sale.qty,ow_sale.cn,ow_sale.vn order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.qty) following ),0),'99999999.9999999')
+TO_CHAR(COALESCE(MIN(floor(ow_sale.qty/ow_sale.cn)) OVER(partition by ow_sale.qty,ow_sale.qty,ow_sale.cn,ow_sale.vn order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.qty)::integer following ),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.qty,ow_sale.qty,ow_sale.cn,ow_sale.vn order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.qty) following ); -- mvd 4,2,1->5; 4,2,1->6; 
+WINDOW win1 as (partition by ow_sale.qty,ow_sale.qty,ow_sale.cn,ow_sale.vn order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.qty)::integer following ); -- mvd 4,2,1->5; 4,2,1->6; 
 
 -- COVAR_POP() function with partition by and order by having range based framing clause --
 
@@ -11948,7 +11948,7 @@ TO_CHAR(COALESCE(COUNT(floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999'),
 TO_CHAR(COALESCE(CUME_DIST() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(CUME_DIST() OVER(win3),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.dt,ow_sale.cn,ow_sale.vn,ow_sale.qty,ow_sale.dt,ow_sale.vn order by ow_sale.cn desc range between floor(ow_sale.vn) preceding and current row ),
+WINDOW win1 as (partition by ow_sale.dt,ow_sale.cn,ow_sale.vn,ow_sale.qty,ow_sale.dt,ow_sale.vn order by ow_sale.cn desc range between floor(ow_sale.vn)::integer preceding and current row ),
 win2 as (partition by ow_sale.qty,ow_sale.qty order by ow_sale.cn desc),
 win3 as (order by ow_sale.cn desc); -- mvd 3,4,5,1->2; 3,4,5,1->6; 3,5->7; 3->8; 
 
@@ -11956,7 +11956,7 @@ win3 as (order by ow_sale.cn desc); -- mvd 3,4,5,1->2; 3,4,5,1->6; 3,5->7; 3->8;
 
 SELECT ow_sale.pn,ow_sale.prc,ow_sale.vn,ow_sale.cn,ow_sale.vn, TO_CHAR(COALESCE(COVAR_POP(floor(ow_sale.prc-ow_sale.cn),floor(ow_sale.prc/ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.dt
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.dt order by ow_sale.cn asc range between floor(ow_sale.pn-ow_sale.pn) preceding and floor(ow_sale.pn-ow_sale.cn) following ); -- mvd 4,7->6; 
+WINDOW win1 as (partition by ow_sale.dt order by ow_sale.cn asc range between floor(ow_sale.pn-ow_sale.pn)::integer preceding and floor(ow_sale.pn-ow_sale.cn)::integer following ); -- mvd 4,7->6; 
 
 -- COVAR_POP() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -11965,7 +11965,7 @@ TO_CHAR(COALESCE(RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(order by ow_sale.pn desc),0),'99999999.9999999'),
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(win3),0),'99999999.9999999'),ow_sale.dt
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.vn,ow_sale.prc order by ow_sale.cn asc range between floor(ow_sale.qty) preceding and 1 following ),
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.vn,ow_sale.prc order by ow_sale.cn asc range between floor(ow_sale.qty)::integer preceding and 1 following ),
 win2 as (order by ow_sale.pn desc),
 win3 as (partition by ow_sale.dt,ow_sale.dt,ow_sale.dt,ow_sale.vn order by ow_sale.cn asc); -- mvd 1,3,5->4; 2->6; 2->7; 3,9,5->8; 
 
@@ -12010,7 +12010,7 @@ TO_CHAR(COALESCE(MIN(floor(ow_sale.prc/ow_sale.pn)) OVER(win2),0),'99999999.9999
 TO_CHAR(COALESCE(RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.vn*ow_sale.pn) as int),cast (floor(ow_sale.cn*ow_sale.pn) as int),NULL) OVER(win3),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.pn,ow_sale.pn,ow_sale.prc,ow_sale.prc,ow_sale.pn order by ow_sale.cn asc range between current row and floor(ow_sale.vn+ow_sale.pn) following ),
+WINDOW win1 as (partition by ow_sale.pn,ow_sale.pn,ow_sale.prc,ow_sale.prc,ow_sale.pn order by ow_sale.cn asc range between current row and floor(ow_sale.vn+ow_sale.pn)::integer following ),
 win2 as (partition by ow_sale.cn,ow_sale.prc order by ow_sale.cn asc),
 win3 as (partition by ow_sale.cn,ow_sale.cn,ow_sale.dt,ow_sale.cn,ow_sale.cn,ow_sale.pn order by ow_sale.ord, ow_sale.pn desc); -- mvd 5,1,6->4; 5,1->7; 5,1->8; 5,1->9; 2,1,6->10; 
 
@@ -12034,7 +12034,7 @@ win3 as (order by ow_sale.cn desc); -- mvd 1,6,4->5; 2->7; 9->8;
 
 SELECT ow_sale.pn, TO_CHAR(COALESCE(COVAR_POP(floor(ow_sale.qty),floor(ow_sale.vn*ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.vn order by ow_sale.pn asc range between floor(ow_sale.pn+ow_sale.pn) following and floor(ow_sale.pn-ow_sale.cn) following ); -- mvd 3,1->2; 
+WINDOW win1 as (partition by ow_sale.vn order by ow_sale.pn asc range between floor(ow_sale.pn+ow_sale.pn)::integer following and floor(ow_sale.pn-ow_sale.cn)::integer following ); -- mvd 3,1->2; 
 
 -- COVAR_POP() function with partition by and order by having rows based framing clause --
 
@@ -12336,7 +12336,7 @@ win4 as (partition by ow_sale.dt,ow_sale.qty,ow_sale.dt,ow_sale.cn,ow_sale.cn or
 
 SELECT ow_sale.pn,ow_sale.pn,ow_sale.vn,ow_sale.pn, TO_CHAR(COALESCE(COVAR_SAMP(floor(ow_sale.vn),floor(ow_sale.cn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range floor(ow_sale.qty*ow_sale.prc) preceding ); -- mvd 3->5; 
+WINDOW win1 as (order by ow_sale.vn desc range floor(ow_sale.qty*ow_sale.prc)::integer preceding ); -- mvd 3->5; 
 
 -- COVAR_SAMP() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -12394,7 +12394,7 @@ WINDOW win1 as (order by ow_sale.vn desc range between unbounded preceding and c
 
 SELECT ow_sale.qty,ow_sale.vn,ow_sale.vn,ow_sale.qty,ow_sale.cn, TO_CHAR(COALESCE(COVAR_SAMP(floor(ow_sale.vn/ow_sale.vn),floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range between unbounded preceding and floor(ow_sale.pn) following ); -- mvd 2->6; 
+WINDOW win1 as (order by ow_sale.vn desc range between unbounded preceding and floor(ow_sale.pn)::integer following ); -- mvd 2->6; 
 
 -- COVAR_SAMP() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -12427,7 +12427,7 @@ win2 as (order by ow_sale.pn asc); -- mvd 5->4; 1->6; 1->7; 1->8; 1->9;
 
 SELECT ow_sale.dt,ow_sale.cn, TO_CHAR(COALESCE(COVAR_SAMP(floor(ow_sale.qty),floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.cn-ow_sale.cn) preceding and floor(ow_sale.vn) preceding ); -- mvd 4->3; 
+WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.cn-ow_sale.cn)::integer preceding and floor(ow_sale.vn)::integer preceding ); -- mvd 4->3; 
 
 -- COVAR_SAMP() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -12458,29 +12458,29 @@ win3 as (partition by ow_sale.cn order by ow_sale.vn desc); -- mvd 5->4; 1->6; 1
 
 SELECT ow_sale.dt,ow_sale.qty,ow_sale.cn,ow_sale.vn, TO_CHAR(COALESCE(COVAR_SAMP(floor(ow_sale.pn),floor(ow_sale.qty*ow_sale.qty)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_vendor WHERE ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range between floor(ow_sale.pn) preceding and floor(ow_sale.pn) following ); -- mvd 4->5; 
+WINDOW win1 as (order by ow_sale.vn desc range between floor(ow_sale.pn)::integer preceding and floor(ow_sale.pn)::integer following ); -- mvd 4->5; 
 
 -- COVAR_SAMP() function with ONLY order by having range based framing clause in combination with other functions --
 
 SELECT ow_sale.cn,ow_sale.qty,ow_sale.cn, TO_CHAR(COALESCE(COVAR_SAMP(floor(ow_sale.qty+ow_sale.cn),floor(ow_sale.vn)) OVER(win1),0),'99999999.9999999'),
-TO_CHAR(COALESCE(COUNT(floor(ow_sale.pn/ow_sale.pn)) OVER(order by ow_sale.cn desc range between floor(ow_sale.prc) preceding and floor(ow_sale.pn) following ),0),'99999999.9999999'),
+TO_CHAR(COALESCE(COUNT(floor(ow_sale.pn/ow_sale.pn)) OVER(order by ow_sale.cn desc range between floor(ow_sale.prc)::integer preceding and floor(ow_sale.pn)::integer following ),0),'99999999.9999999'),
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.prc) preceding and floor(ow_sale.pn) following ),
+WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.prc)::integer preceding and floor(ow_sale.pn)::integer following ),
 win2 as (order by ow_sale.cn desc); -- mvd 1->4; 1->5; 1->6; 
 
 -- COVAR_SAMP() function with ONLY order by having range based framing clause --
 
 SELECT ow_sale.dt, TO_CHAR(COALESCE(COVAR_SAMP(floor(ow_sale.vn-ow_sale.prc),floor(ow_sale.qty-ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.vn*ow_sale.cn) preceding and unbounded following ); -- mvd 3->2; 
+WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.vn*ow_sale.cn)::integer preceding and unbounded following ); -- mvd 3->2; 
 
 -- COVAR_SAMP() function with ONLY order by having range based framing clause in combination with other functions --
 
 SELECT ow_sale.dt, TO_CHAR(COALESCE(COVAR_SAMP(floor(ow_sale.cn-ow_sale.pn),floor(ow_sale.prc*ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.vn,
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(win2),0),'99999999.9999999'),ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range between floor(ow_sale.pn) preceding and unbounded following ),
+WINDOW win1 as (order by ow_sale.vn desc range between floor(ow_sale.pn)::integer preceding and unbounded following ),
 win2 as (order by ow_sale.pn asc); -- mvd 3->2; 5->4; 
 
 -- COVAR_SAMP() function with ONLY order by having range based framing clause --
@@ -12501,7 +12501,7 @@ WINDOW win1 as (order by ow_sale.pn asc range between current row and current ro
 
 SELECT ow_sale.vn,ow_sale.vn, TO_CHAR(COALESCE(COVAR_SAMP(floor(ow_sale.vn),floor(ow_sale.cn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range between current row and floor(ow_sale.vn/ow_sale.cn) following ); -- mvd 1->3; 
+WINDOW win1 as (order by ow_sale.vn desc range between current row and floor(ow_sale.vn/ow_sale.cn)::integer following ); -- mvd 1->3; 
 
 -- COVAR_SAMP() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -12532,7 +12532,7 @@ win3 as (partition by ow_sale.cn,ow_sale.dt,ow_sale.qty,ow_sale.pn,ow_sale.pn or
 
 SELECT ow_sale.vn,ow_sale.qty,ow_sale.cn, TO_CHAR(COALESCE(COVAR_SAMP(floor(ow_sale.prc+ow_sale.pn),floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (order by ow_sale.vn asc range between 1 following and floor(ow_sale.vn) following ); -- mvd 1->4; 
+WINDOW win1 as (order by ow_sale.vn asc range between 1 following and floor(ow_sale.vn)::integer following ); -- mvd 1->4; 
 
 -- COVAR_SAMP() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -12542,7 +12542,7 @@ TO_CHAR(COALESCE(MIN(floor(ow_sale.vn*ow_sale.cn)) OVER(order by ow_sale.pn asc)
 TO_CHAR(COALESCE(MIN(floor(ow_sale.qty/ow_sale.cn)) OVER(win1),0),'99999999.9999999'),
 TO_CHAR(COALESCE(CUME_DIST() OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.cn asc range between 1 following and floor(ow_sale.cn/ow_sale.cn) following ),
+WINDOW win1 as (order by ow_sale.cn asc range between 1 following and floor(ow_sale.cn/ow_sale.cn)::integer following ),
 win2 as (order by ow_sale.pn asc); -- mvd 1->3; 2->4; 2->5; 1->6; 2->7; 
 
 -- COVAR_SAMP() function with ONLY order by having range based framing clause --
@@ -12835,7 +12835,7 @@ TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.pn-ow_sale.vn) as int),cast (floor(ow_sa
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win3),0),'99999999.9999999'),
 TO_CHAR(COALESCE(COUNT(floor(ow_sale.vn)) OVER(partition by ow_sale.cn,ow_sale.prc,ow_sale.qty order by ow_sale.ord, ow_sale.pn asc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.dt,ow_sale.dt,ow_sale.vn,ow_sale.cn,ow_sale.vn,ow_sale.cn order by ow_sale.pn desc range floor(ow_sale.pn) preceding ),
+WINDOW win1 as (partition by ow_sale.dt,ow_sale.dt,ow_sale.vn,ow_sale.cn,ow_sale.vn,ow_sale.cn order by ow_sale.pn desc range floor(ow_sale.pn)::integer preceding ),
 win2 as (partition by ow_sale.cn,ow_sale.prc,ow_sale.qty order by ow_sale.ord, ow_sale.pn asc),
 win3 as (partition by ow_sale.dt,ow_sale.cn,ow_sale.dt,ow_sale.pn order by ow_sale.cn asc); -- mvd 1,7,4,3->6; 9,1,2,3->8; 1,7,3->10; 9,1,2,3->11; 
 
@@ -12912,18 +12912,18 @@ win2 as (partition by ow_sale.vn,ow_sale.prc order by ow_sale.vn desc); -- mvd 3
 
 SELECT ow_sale.qty,ow_sale.pn, TO_CHAR(COALESCE(COVAR_SAMP(floor(ow_sale.vn-ow_sale.vn),floor(ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.prc
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.prc order by ow_sale.pn desc range between floor(ow_sale.vn) preceding and 3 preceding ); -- mvd 4,2->3; 
+WINDOW win1 as (partition by ow_sale.prc order by ow_sale.pn desc range between floor(ow_sale.vn)::integer preceding and 3 preceding ); -- mvd 4,2->3; 
 
 -- COVAR_SAMP() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT ow_sale.qty, TO_CHAR(COALESCE(COVAR_SAMP(floor(ow_sale.qty),floor(ow_sale.prc*ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.dt,ow_sale.vn,ow_sale.pn,
-TO_CHAR(COALESCE(COUNT(floor(ow_sale.qty)) OVER(partition by ow_sale.vn,ow_sale.vn,ow_sale.dt,ow_sale.pn order by ow_sale.pn asc range between floor(ow_sale.qty) preceding and 2 preceding ),0),'99999999.9999999'),
+TO_CHAR(COALESCE(COUNT(floor(ow_sale.qty)) OVER(partition by ow_sale.vn,ow_sale.vn,ow_sale.dt,ow_sale.pn order by ow_sale.pn asc range between floor(ow_sale.qty)::integer preceding and 2 preceding ),0),'99999999.9999999'),
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win3),0),'99999999.9999999'),ow_sale.prc,ow_sale.cn,
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win4),0),'99999999.9999999'),
 TO_CHAR(COALESCE(MIN(floor(ow_sale.prc-ow_sale.prc)) OVER(order by ow_sale.pn asc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.vn,ow_sale.dt,ow_sale.pn order by ow_sale.pn asc range between floor(ow_sale.qty) preceding and 2 preceding ),
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.vn,ow_sale.dt,ow_sale.pn order by ow_sale.pn asc range between floor(ow_sale.qty)::integer preceding and 2 preceding ),
 win2 as (order by ow_sale.vn desc),
 win3 as (partition by ow_sale.qty,ow_sale.cn,ow_sale.prc,ow_sale.prc,ow_sale.dt order by ow_sale.cn desc),
 win4 as (order by ow_sale.pn asc); -- mvd 3,4,5->2; 3,4,5->6; 4->7; 9,3,10,1->8; 5->11; 5->12; 
@@ -12943,7 +12943,7 @@ TO_CHAR(COALESCE(MIN(floor(ow_sale.qty)) OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(MAX(floor(ow_sale.qty+ow_sale.prc)) OVER(win1),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.prc) as int),cast (floor(ow_sale.vn) as int),NULL) OVER(win3),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.prc order by ow_sale.vn asc range between 0 preceding and floor(ow_sale.prc+ow_sale.cn) following ),
+WINDOW win1 as (partition by ow_sale.prc order by ow_sale.vn asc range between 0 preceding and floor(ow_sale.prc+ow_sale.cn)::integer following ),
 win2 as (order by ow_sale.pn asc),
 win3 as (order by ow_sale.ord, ow_sale.cn desc); -- mvd 4,5->6; 8->7; 8->9; 8->10; 4,5->11; 1->12; 
 
@@ -12979,7 +12979,7 @@ win3 as (order by ow_sale.ord, ow_sale.pn desc); -- mvd 7,8,9->6; 7,9,2->10; 7,9
 SELECT ow_sale.vn,ow_sale.cn,ow_sale.qty, TO_CHAR(COALESCE(COVAR_SAMP(floor(ow_sale.prc),floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.prc,
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win2),0),'99999999.9999999'),ow_sale.dt
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_vendor WHERE ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.cn,ow_sale.prc,ow_sale.cn,ow_sale.prc,ow_sale.cn order by ow_sale.vn asc range between current row and floor(ow_sale.prc/ow_sale.vn) following ),
+WINDOW win1 as (partition by ow_sale.cn,ow_sale.prc,ow_sale.cn,ow_sale.prc,ow_sale.cn order by ow_sale.vn asc range between current row and floor(ow_sale.prc/ow_sale.vn)::integer following ),
 win2 as (partition by ow_sale.qty,ow_sale.dt,ow_sale.vn,ow_sale.vn,ow_sale.vn order by ow_sale.vn desc); -- mvd 5,2,1->4; 7,1,3->6; 
 
 -- COVAR_SAMP() function with partition by and order by having range based framing clause --
@@ -13005,7 +13005,7 @@ SELECT ow_sale.vn, TO_CHAR(COALESCE(COVAR_SAMP(floor(ow_sale.cn),floor(ow_sale.c
 TO_CHAR(COALESCE(CUME_DIST() OVER(win2),0),'99999999.9999999'),ow_sale.qty,
 TO_CHAR(COALESCE(MIN(floor(ow_sale.cn)) OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (partition by ow_sale.dt,ow_sale.cn,ow_sale.prc,ow_sale.dt,ow_sale.cn order by ow_sale.cn desc range between 4 following and floor(ow_sale.prc) following ),
+WINDOW win1 as (partition by ow_sale.dt,ow_sale.cn,ow_sale.prc,ow_sale.dt,ow_sale.cn order by ow_sale.cn desc range between 4 following and floor(ow_sale.prc)::integer following ),
 win2 as (partition by ow_sale.qty,ow_sale.prc,ow_sale.dt,ow_sale.qty,ow_sale.dt order by ow_sale.cn desc); -- mvd 3,4,5->2; 3,4,5,7->6; 3,4,5,7->8; 
 
 -- COVAR_SAMP() function with partition by and order by having range based framing clause --
@@ -13020,7 +13020,7 @@ SELECT ow_sale.prc,ow_sale.qty, TO_CHAR(COALESCE(COVAR_SAMP(floor(ow_sale.qty/ow
 TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.qty) as int),cast (floor(ow_sale.cn) as int),NULL) OVER(win2),0),'99999999.9999999'),ow_sale.cn,
 TO_CHAR(COALESCE(RANK() OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.pn,ow_sale.vn order by ow_sale.pn desc range between floor(ow_sale.vn) following and unbounded following ),
+WINDOW win1 as (partition by ow_sale.pn,ow_sale.vn order by ow_sale.pn desc range between floor(ow_sale.vn)::integer following and unbounded following ),
 win2 as (partition by ow_sale.cn,ow_sale.vn,ow_sale.cn,ow_sale.pn order by ow_sale.ord, ow_sale.pn desc); -- mvd 4,5->3; 7,4,5->6; 7,4,5->8; 
 
 -- COVAR_SAMP() function with partition by and order by having rows based framing clause --
@@ -13334,7 +13334,7 @@ win3 as (partition by ow_sale.cn order by ow_sale.pn asc); -- mvd 1->5; 1->6; 1-
 
 SELECT ow_sale.cn,ow_sale.qty,ow_sale.cn,ow_sale.qty,ow_sale.cn,ow_sale.cn, TO_CHAR(COALESCE(REGR_AVGX(floor(ow_sale.pn*ow_sale.cn),floor(ow_sale.pn*ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.pn desc range floor(ow_sale.vn) preceding ); -- mvd 8->7; 
+WINDOW win1 as (order by ow_sale.pn desc range floor(ow_sale.vn)::integer preceding ); -- mvd 8->7; 
 
 -- REGR_AVGX() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -13370,7 +13370,7 @@ SELECT ow_sale.dt,ow_sale.pn,ow_sale.vn,ow_sale.qty, TO_CHAR(COALESCE(REGR_AVGX(
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(partition by ow_sale.pn,ow_sale.dt,ow_sale.dt order by ow_sale.cn asc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.pn) preceding ),
+WINDOW win1 as (order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.pn)::integer preceding ),
 win2 as (partition by ow_sale.pn,ow_sale.dt,ow_sale.dt order by ow_sale.cn asc); -- mvd 6->5; 6,1,2->7; 6,1,2->8; 
 
 -- REGR_AVGX() function with ONLY order by having range based framing clause --
@@ -13397,7 +13397,7 @@ win4 as (order by ow_sale.cn desc); -- mvd 5->4; 5->6; 2->7; 9->8; 2->10; 9->11;
 
 SELECT ow_sale.qty,ow_sale.prc,ow_sale.cn, TO_CHAR(COALESCE(REGR_AVGX(floor(ow_sale.pn),floor(ow_sale.cn*ow_sale.prc)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.qty) following ); -- mvd 3->4; 
+WINDOW win1 as (order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.qty)::integer following ); -- mvd 3->4; 
 
 -- REGR_AVGX() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -13445,7 +13445,7 @@ win2 as (partition by ow_sale.pn order by ow_sale.vn desc); -- mvd 4->3; 4,1->5;
 
 SELECT ow_sale.vn,ow_sale.vn,ow_sale.prc,ow_sale.dt,ow_sale.pn,ow_sale.qty, TO_CHAR(COALESCE(REGR_AVGX(floor(ow_sale.qty),floor(ow_sale.vn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.pn asc range between floor(ow_sale.qty) preceding and current row ); -- mvd 5->7; 
+WINDOW win1 as (order by ow_sale.pn asc range between floor(ow_sale.qty)::integer preceding and current row ); -- mvd 5->7; 
 
 -- REGR_AVGX() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -13456,7 +13456,7 @@ TO_CHAR(COALESCE(PERCENT_RANK() OVER(win3),0),'99999999.9999999'),
 TO_CHAR(COALESCE(RANK() OVER(win4),0),'99999999.9999999'),
 TO_CHAR(COALESCE(RANK() OVER(order by ow_sale.pn desc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_vendor WHERE ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.cn) preceding and current row ),
+WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.cn)::integer preceding and current row ),
 win2 as (partition by ow_sale.cn,ow_sale.dt,ow_sale.qty,ow_sale.vn order by ow_sale.ord, ow_sale.pn desc),
 win3 as (order by ow_sale.pn desc),
 win4 as (order by ow_sale.cn desc); -- mvd 4->5; 7,4,8,2,9->6; 7,4,8,2,9->10; 9->11; 4->12; 9->13; 
@@ -13465,7 +13465,7 @@ win4 as (order by ow_sale.cn desc); -- mvd 4->5; 7,4,8,2,9->6; 7,4,8,2,9->10; 9-
 
 SELECT ow_sale.cn,ow_sale.prc,ow_sale.prc, TO_CHAR(COALESCE(REGR_AVGX(floor(ow_sale.vn),floor(ow_sale.prc-ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range between 0 preceding and floor(ow_sale.cn+ow_sale.pn) following ); -- mvd 5->4; 
+WINDOW win1 as (order by ow_sale.vn desc range between 0 preceding and floor(ow_sale.cn+ow_sale.pn)::integer following ); -- mvd 5->4; 
 
 -- REGR_AVGX() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -13475,7 +13475,7 @@ TO_CHAR(COALESCE(CUME_DIST() OVER(win2),0),'99999999.9999999'),ow_sale.dt,ow_sal
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win3),0),'99999999.9999999'),
 TO_CHAR(COALESCE(MAX(floor(ow_sale.pn-ow_sale.pn)) OVER(partition by ow_sale.dt,ow_sale.qty order by ow_sale.pn desc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.vn*ow_sale.qty) preceding and 3 following ),
+WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.vn*ow_sale.qty)::integer preceding and 3 following ),
 win2 as (partition by ow_sale.dt,ow_sale.qty order by ow_sale.pn desc),
 win3 as (order by ow_sale.pn desc); -- mvd 4->3; 4->5; 7,8,1->6; 1->9; 7,8,1->10; 
 
@@ -13483,7 +13483,7 @@ win3 as (order by ow_sale.pn desc); -- mvd 4->3; 4->5; 7,8,1->6; 1->9; 7,8,1->10
 
 SELECT ow_sale.dt,ow_sale.dt,ow_sale.cn, TO_CHAR(COALESCE(REGR_AVGX(floor(ow_sale.cn),floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.qty) preceding and unbounded following ); -- mvd 3->4; 
+WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.qty)::integer preceding and unbounded following ); -- mvd 3->4; 
 
 -- REGR_AVGX() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -13515,11 +13515,11 @@ WINDOW win1 as (order by ow_sale.vn asc range between current row and current ro
 win2 as (partition by ow_sale.dt,ow_sale.cn,ow_sale.dt,ow_sale.dt order by ow_sale.vn desc),
 win3 as (order by ow_sale.vn asc); -- mvd 4->3; 1,6,4->5; 4->7; 
 
--- REGR_AVGX() function with ONLY order by having range based framing clause --
+-- RERG_AVGX() function with ONLY order by having range based framing clause --
 
 SELECT ow_sale.qty,ow_sale.vn,ow_sale.prc,ow_sale.cn,ow_sale.qty, TO_CHAR(COALESCE(REGR_AVGX(floor(ow_sale.pn/ow_sale.cn),floor(ow_sale.qty+ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_vendor WHERE ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.pn desc range between current row and floor(ow_sale.qty) following ); -- mvd 7->6; 
+WINDOW win1 as (order by ow_sale.pn desc range between current row and floor(ow_sale.qty)::integer following ); -- mvd 7->6; 
 
 -- REGR_AVGX() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -13527,7 +13527,7 @@ SELECT ow_sale.qty, TO_CHAR(COALESCE(REGR_AVGX(floor(ow_sale.cn),floor(ow_sale.v
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(win2),0),'99999999.9999999'),ow_sale.dt,ow_sale.pn,
 TO_CHAR(COALESCE(MAX(floor(ow_sale.vn)) OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range between current row and floor(ow_sale.cn+ow_sale.cn) following ),
+WINDOW win1 as (order by ow_sale.vn desc range between current row and floor(ow_sale.cn+ow_sale.cn)::integer following ),
 win2 as (partition by ow_sale.pn,ow_sale.pn,ow_sale.dt order by ow_sale.pn desc); -- mvd 3->2; 5,6->4; 5,6->7; 
 
 -- REGR_AVGX() function with ONLY order by having range based framing clause --
@@ -13547,13 +13547,13 @@ WINDOW win1 as (order by ow_sale.cn asc range between current row and unbounded 
 
 SELECT ow_sale.vn,ow_sale.prc,ow_sale.qty,ow_sale.pn,ow_sale.pn,ow_sale.prc, TO_CHAR(COALESCE(REGR_AVGX(floor(ow_sale.cn*ow_sale.cn),floor(ow_sale.pn+ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (order by ow_sale.cn asc range between floor(ow_sale.vn) following and floor(ow_sale.qty) following ); -- mvd 8->7; 
+WINDOW win1 as (order by ow_sale.cn asc range between floor(ow_sale.vn)::integer following and floor(ow_sale.qty)::integer following ); -- mvd 8->7; 
 
 -- REGR_AVGX() function with ONLY order by having range based framing clause --
 
 SELECT ow_sale.cn,ow_sale.vn,ow_sale.pn,ow_sale.vn, TO_CHAR(COALESCE(REGR_AVGX(floor(ow_sale.cn/ow_sale.cn),floor(ow_sale.cn-ow_sale.cn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.cn asc range between floor(ow_sale.vn/ow_sale.qty) following and unbounded following ); -- mvd 1->5; 
+WINDOW win1 as (order by ow_sale.cn asc range between floor(ow_sale.vn/ow_sale.qty)::integer following and unbounded following ); -- mvd 1->5; 
 
 -- REGR_AVGX() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -13848,14 +13848,14 @@ win2 as (order by ow_sale.ord, ow_sale.pn desc); -- mvd 3,4->2; 6->5;
 
 SELECT ow_sale.prc,ow_sale.qty, TO_CHAR(COALESCE(REGR_AVGX(floor(ow_sale.qty-ow_sale.vn),floor(ow_sale.pn+ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,ow_sale.dt
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_vendor WHERE ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.dt,ow_sale.cn order by ow_sale.cn asc range floor(ow_sale.cn*ow_sale.qty) preceding ); -- mvd 4,5->3; 
+WINDOW win1 as (partition by ow_sale.dt,ow_sale.cn order by ow_sale.cn asc range floor(ow_sale.cn*ow_sale.qty)::integer preceding ); -- mvd 4,5->3; 
 
 -- REGR_AVGX() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT ow_sale.cn,ow_sale.vn,ow_sale.dt, TO_CHAR(COALESCE(REGR_AVGX(floor(ow_sale.prc),floor(ow_sale.prc+ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.pn,
-TO_CHAR(COALESCE(MAX(floor(ow_sale.pn-ow_sale.qty)) OVER(partition by ow_sale.pn order by ow_sale.cn asc range floor(ow_sale.qty+ow_sale.vn) preceding ),0),'99999999.9999999')
+TO_CHAR(COALESCE(MAX(floor(ow_sale.pn-ow_sale.qty)) OVER(partition by ow_sale.pn order by ow_sale.cn asc range floor(ow_sale.qty+ow_sale.vn)::integer preceding ),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.pn order by ow_sale.cn asc range floor(ow_sale.qty+ow_sale.vn) preceding ); -- mvd 1,5->4; 1,5->6; 
+WINDOW win1 as (partition by ow_sale.pn order by ow_sale.cn asc range floor(ow_sale.qty+ow_sale.vn)::integer preceding ); -- mvd 1,5->4; 1,5->6; 
 
 -- REGR_AVGX() function with partition by and order by having range based framing clause --
 
@@ -13867,7 +13867,7 @@ WINDOW win1 as (partition by ow_sale.cn,ow_sale.dt order by ow_sale.cn asc range
 
 SELECT ow_sale.pn,ow_sale.pn,ow_sale.vn,ow_sale.cn, TO_CHAR(COALESCE(REGR_AVGX(floor(ow_sale.vn-ow_sale.pn),floor(ow_sale.vn*ow_sale.vn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.cn order by ow_sale.pn desc range between unbounded preceding and floor(ow_sale.cn*ow_sale.cn) preceding ); -- mvd 4,1->5; 
+WINDOW win1 as (partition by ow_sale.cn order by ow_sale.pn desc range between unbounded preceding and floor(ow_sale.cn*ow_sale.cn)::integer preceding ); -- mvd 4,1->5; 
 
 -- REGR_AVGX() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -13894,7 +13894,7 @@ WINDOW win1 as (partition by ow_sale.pn order by ow_sale.pn desc range between u
 
 SELECT ow_sale.cn,ow_sale.cn,ow_sale.pn,ow_sale.qty,ow_sale.prc,ow_sale.pn, TO_CHAR(COALESCE(REGR_AVGX(floor(ow_sale.vn-ow_sale.pn),floor(ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.cn order by ow_sale.vn desc range between unbounded preceding and floor(ow_sale.cn) following ); -- mvd 1,8->7; 
+WINDOW win1 as (partition by ow_sale.cn order by ow_sale.vn desc range between unbounded preceding and floor(ow_sale.cn)::integer following ); -- mvd 1,8->7; 
 
 -- REGR_AVGX() function with partition by and order by having range based framing clause --
 
@@ -13916,21 +13916,21 @@ win2 as (partition by ow_sale.prc,ow_sale.dt,ow_sale.dt,ow_sale.dt,ow_sale.qty,o
 
 SELECT ow_sale.cn,ow_sale.cn,ow_sale.vn, TO_CHAR(COALESCE(REGR_AVGX(floor(ow_sale.prc),floor(ow_sale.cn+ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.qty,ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.qty,ow_sale.cn,ow_sale.vn order by ow_sale.pn asc range between floor(ow_sale.vn) preceding and floor(ow_sale.qty*ow_sale.qty) preceding ); -- mvd 1,5,3,6->4; 
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.qty,ow_sale.cn,ow_sale.vn order by ow_sale.pn asc range between floor(ow_sale.vn)::integer preceding and floor(ow_sale.qty*ow_sale.qty)::integer preceding ); -- mvd 1,5,3,6->4; 
 
 -- REGR_AVGX() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT ow_sale.cn,ow_sale.qty,ow_sale.cn,ow_sale.pn,ow_sale.cn,ow_sale.pn, TO_CHAR(COALESCE(REGR_AVGX(floor(ow_sale.pn),floor(ow_sale.cn*ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.dt,ow_sale.vn,
-TO_CHAR(COALESCE(MAX(floor(ow_sale.cn)) OVER(partition by ow_sale.pn,ow_sale.dt,ow_sale.dt,ow_sale.cn order by ow_sale.vn desc range between 1 preceding and floor(ow_sale.vn+ow_sale.cn) preceding ),0),'99999999.9999999'),
+TO_CHAR(COALESCE(MAX(floor(ow_sale.cn)) OVER(partition by ow_sale.pn,ow_sale.dt,ow_sale.dt,ow_sale.cn order by ow_sale.vn desc range between 1 preceding and floor(ow_sale.vn+ow_sale.cn)::integer preceding ),0),'99999999.9999999'),
 TO_CHAR(COALESCE(COUNT(floor(ow_sale.qty-ow_sale.cn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.pn,ow_sale.dt,ow_sale.dt,ow_sale.cn order by ow_sale.vn desc range between 1 preceding and floor(ow_sale.vn+ow_sale.cn) preceding ); -- mvd 1,8,9,4->7; 1,8,9,4->10; 1,8,9,4->11; 
+WINDOW win1 as (partition by ow_sale.pn,ow_sale.dt,ow_sale.dt,ow_sale.cn order by ow_sale.vn desc range between 1 preceding and floor(ow_sale.vn+ow_sale.cn)::integer preceding ); -- mvd 1,8,9,4->7; 1,8,9,4->10; 1,8,9,4->11; 
 
 -- REGR_AVGX() function with partition by and order by having range based framing clause --
 
 SELECT ow_sale.qty,ow_sale.qty,ow_sale.qty,ow_sale.prc, TO_CHAR(COALESCE(REGR_AVGX(floor(ow_sale.vn+ow_sale.pn),floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.prc,ow_sale.cn order by ow_sale.cn desc range between floor(ow_sale.vn) preceding and current row ); -- mvd 4,6->5; 
+WINDOW win1 as (partition by ow_sale.prc,ow_sale.cn order by ow_sale.cn desc range between floor(ow_sale.vn)::integer preceding and current row ); -- mvd 4,6->5; 
 
 -- REGR_AVGX() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -13940,7 +13940,7 @@ TO_CHAR(COALESCE(MIN(floor(ow_sale.qty*ow_sale.pn)) OVER(order by ow_sale.ord, o
 TO_CHAR(COALESCE(RANK() OVER(win3),0),'99999999.9999999'),
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(order by ow_sale.ord, ow_sale.pn desc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.prc order by ow_sale.cn desc range between floor(ow_sale.cn+ow_sale.vn) preceding and current row ),
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.prc order by ow_sale.cn desc range between floor(ow_sale.cn+ow_sale.vn)::integer preceding and current row ),
 win2 as (order by ow_sale.ord, ow_sale.pn desc),
 win3 as (order by ow_sale.cn desc); -- mvd 5,6,7->4; 1->8; 1->9; 6->10; 1->11; 
 
@@ -13972,7 +13972,7 @@ TO_CHAR(COALESCE(RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win3),0),'99999999.9999999'),
 TO_CHAR(COALESCE(COUNT(floor(ow_sale.cn-ow_sale.qty)) OVER(partition by ow_sale.qty,ow_sale.vn,ow_sale.cn order by ow_sale.ord, ow_sale.vn desc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.dt order by ow_sale.pn asc range between floor(ow_sale.prc) preceding and unbounded following ),
+WINDOW win1 as (partition by ow_sale.dt order by ow_sale.pn asc range between floor(ow_sale.prc)::integer preceding and unbounded following ),
 win2 as (partition by ow_sale.qty,ow_sale.vn,ow_sale.cn order by ow_sale.ord, ow_sale.vn desc),
 win3 as (order by ow_sale.pn asc); -- mvd 4,2->3; 6,7,8->5; 6,7,8->9; 2->10; 6,7,8->11; 
 
@@ -14000,7 +14000,7 @@ win4 as (partition by ow_sale.vn,ow_sale.pn,ow_sale.pn,ow_sale.pn,ow_sale.vn,ow_
 
 SELECT ow_sale.qty,ow_sale.qty, TO_CHAR(COALESCE(REGR_AVGX(floor(ow_sale.vn-ow_sale.cn),floor(ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.prc,ow_sale.cn,ow_sale.vn,ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.prc,ow_sale.vn,ow_sale.pn,ow_sale.cn order by ow_sale.pn desc range between current row and floor(ow_sale.prc) following ); -- mvd 4,5,6,7->3; 
+WINDOW win1 as (partition by ow_sale.prc,ow_sale.vn,ow_sale.pn,ow_sale.cn order by ow_sale.pn desc range between current row and floor(ow_sale.prc)::integer following ); -- mvd 4,5,6,7->3; 
 
 -- REGR_AVGX() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -14008,7 +14008,7 @@ SELECT ow_sale.pn,ow_sale.vn, TO_CHAR(COALESCE(REGR_AVGX(floor(ow_sale.vn),floor
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999'),ow_sale.qty,
 TO_CHAR(COALESCE(MAX(floor(ow_sale.prc)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.dt,ow_sale.vn,ow_sale.cn,ow_sale.vn order by ow_sale.cn asc range between current row and floor(ow_sale.cn) following ),
+WINDOW win1 as (partition by ow_sale.dt,ow_sale.vn,ow_sale.cn,ow_sale.vn order by ow_sale.cn asc range between current row and floor(ow_sale.cn)::integer following ),
 win2 as (partition by ow_sale.qty,ow_sale.vn,ow_sale.cn order by ow_sale.cn asc); -- mvd 4,5,2->3; 4,2,7->6; 4,5,2->8; 
 
 -- REGR_AVGX() function with partition by and order by having range based framing clause --
@@ -14028,13 +14028,13 @@ WINDOW win1 as (partition by ow_sale.dt,ow_sale.cn,ow_sale.cn,ow_sale.vn,ow_sale
 
 SELECT ow_sale.vn, TO_CHAR(COALESCE(REGR_AVGX(floor(ow_sale.prc),floor(ow_sale.pn/ow_sale.cn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_vendor WHERE ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn order by ow_sale.vn desc range between 0 following and floor(ow_sale.qty+ow_sale.cn) following ); -- mvd 1->2; 
+WINDOW win1 as (partition by ow_sale.vn order by ow_sale.vn desc range between 0 following and floor(ow_sale.qty+ow_sale.cn)::integer following ); -- mvd 1->2; 
 
 -- REGR_AVGX() function with partition by and order by having range based framing clause --
 
 SELECT ow_sale.vn,ow_sale.vn,ow_sale.qty, TO_CHAR(COALESCE(REGR_AVGX(floor(ow_sale.vn+ow_sale.vn),floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn order by ow_sale.vn asc range between floor(ow_sale.cn*ow_sale.qty) following and unbounded following ); -- mvd 1->4; 
+WINDOW win1 as (partition by ow_sale.vn order by ow_sale.vn asc range between floor(ow_sale.cn*ow_sale.qty)::integer following and unbounded following ); -- mvd 1->4; 
 
 -- REGR_AVGX() function with partition by and order by having rows based framing clause --
 
@@ -14319,7 +14319,7 @@ WINDOW win1 as (order by ow_sale.cn asc,ow_sale.pn asc); -- mvd 6,4->5; 6,4->7;
 
 SELECT ow_sale.qty,ow_sale.vn, TO_CHAR(COALESCE(REGR_AVGY(floor(ow_sale.prc),floor(ow_sale.pn/ow_sale.pn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range floor(ow_sale.vn+ow_sale.pn) preceding ); -- mvd 2->3; 
+WINDOW win1 as (order by ow_sale.vn desc range floor(ow_sale.vn+ow_sale.pn)::integer preceding ); -- mvd 2->3; 
 
 -- REGR_AVGY() function with ONLY order by having range based framing clause --
 
@@ -14389,9 +14389,9 @@ SELECT ow_sale.qty,ow_sale.prc,ow_sale.vn,ow_sale.vn,ow_sale.cn,ow_sale.cn, TO_C
 TO_CHAR(COALESCE(CUME_DIST() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(RANK() OVER(win3),0),'99999999.9999999'),
 TO_CHAR(COALESCE(RANK() OVER(win4),0),'99999999.9999999'),
-TO_CHAR(COALESCE(MIN(floor(ow_sale.vn+ow_sale.qty)) OVER(order by ow_sale.pn desc range between floor(ow_sale.qty*ow_sale.vn) preceding and 0 preceding ),0),'99999999.9999999')
+TO_CHAR(COALESCE(MIN(floor(ow_sale.vn+ow_sale.qty)) OVER(order by ow_sale.pn desc range between floor(ow_sale.qty*ow_sale.vn)::integer preceding and 0 preceding ),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.pn desc range between floor(ow_sale.qty*ow_sale.vn) preceding and 0 preceding ),
+WINDOW win1 as (order by ow_sale.pn desc range between floor(ow_sale.qty*ow_sale.vn)::integer preceding and 0 preceding ),
 win2 as (order by ow_sale.vn desc),
 win3 as (partition by ow_sale.pn,ow_sale.pn order by ow_sale.pn desc),
 win4 as (order by ow_sale.vn desc); -- mvd 8->7; 3->9; 8->10; 3->11; 8->12; 
@@ -14400,7 +14400,7 @@ win4 as (order by ow_sale.vn desc); -- mvd 8->7; 3->9; 8->10; 3->11; 8->12;
 
 SELECT ow_sale.vn,ow_sale.cn,ow_sale.prc, TO_CHAR(COALESCE(REGR_AVGY(floor(ow_sale.qty),floor(ow_sale.vn-ow_sale.prc)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.cn asc range between floor(ow_sale.pn/ow_sale.cn) preceding and current row ); -- mvd 2->4; 
+WINDOW win1 as (order by ow_sale.cn asc range between floor(ow_sale.pn/ow_sale.cn)::integer preceding and current row ); -- mvd 2->4; 
 
 -- REGR_AVGY() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -14408,7 +14408,7 @@ SELECT ow_sale.qty, TO_CHAR(COALESCE(REGR_AVGY(floor(ow_sale.pn*ow_sale.vn),floo
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win2),0),'99999999.9999999'),ow_sale.cn,ow_sale.dt,
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(partition by ow_sale.dt,ow_sale.cn order by ow_sale.cn asc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.prc) preceding and current row ),
+WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.prc)::integer preceding and current row ),
 win2 as (partition by ow_sale.dt,ow_sale.cn order by ow_sale.cn asc); -- mvd 3->2; 5,6->4; 5,6->7; 
 
 -- REGR_AVGY() function with ONLY order by having range based framing clause --
@@ -14424,7 +14424,7 @@ TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999'),ow_sale.vn,
 TO_CHAR(COALESCE(MAX(floor(ow_sale.cn/ow_sale.pn)) OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(RANK() OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.pn desc range between floor(ow_sale.pn) preceding and floor(ow_sale.pn) following ),
+WINDOW win1 as (order by ow_sale.pn desc range between floor(ow_sale.pn)::integer preceding and floor(ow_sale.pn)::integer following ),
 win2 as (partition by ow_sale.pn,ow_sale.vn order by ow_sale.vn desc); -- mvd 3->2; 5,3->4; 5,3->6; 5,3->7; 
 
 -- REGR_AVGY() function with ONLY order by having range based framing clause --
@@ -14460,7 +14460,7 @@ win3 as (order by ow_sale.cn desc); -- mvd 5->4; 5->6; 5->7;
 
 SELECT ow_sale.pn, TO_CHAR(COALESCE(REGR_AVGY(floor(ow_sale.vn*ow_sale.prc),floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range between current row and floor(ow_sale.prc/ow_sale.vn) following ); -- mvd 3->2; 
+WINDOW win1 as (order by ow_sale.vn desc range between current row and floor(ow_sale.prc/ow_sale.vn)::integer following ); -- mvd 3->2; 
 
 -- REGR_AVGY() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -14471,7 +14471,7 @@ TO_CHAR(COALESCE(COUNT(floor(ow_sale.prc)) OVER(win1),0),'99999999.9999999'),
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(MAX(floor(ow_sale.prc)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range between current row and floor(ow_sale.qty+ow_sale.pn) following ),
+WINDOW win1 as (order by ow_sale.vn desc range between current row and floor(ow_sale.qty+ow_sale.pn)::integer following ),
 win2 as (order by ow_sale.vn desc); -- mvd 5->4; 5->6; 5->7; 5->8; 5->9; 5->10; 
 
 -- REGR_AVGY() function with ONLY order by having range based framing clause --
@@ -14764,7 +14764,7 @@ win2 as (order by ow_sale.ord, ow_sale.vn desc); -- mvd 5,6,1,7->4; 1->8; 1->9;
 
 SELECT ow_sale.vn,ow_sale.dt,ow_sale.qty,ow_sale.vn, TO_CHAR(COALESCE(REGR_AVGY(floor(ow_sale.prc-ow_sale.vn),floor(ow_sale.pn/ow_sale.pn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.dt order by ow_sale.vn asc range floor(ow_sale.qty/ow_sale.cn) preceding ); -- mvd 2,1->5; 
+WINDOW win1 as (partition by ow_sale.dt order by ow_sale.vn asc range floor(ow_sale.qty/ow_sale.cn)::integer preceding ); -- mvd 2,1->5; 
 
 -- REGR_AVGY() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -14862,7 +14862,7 @@ TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.pn) as int),cast (floor(ow_sale.prc+ow_s
 TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.pn) as int),cast (floor(ow_sale.prc) as int),NULL) OVER(win4),0),'99999999.9999999'),ow_sale.dt,
 TO_CHAR(COALESCE(CUME_DIST() OVER(win5),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.cn,ow_sale.cn,ow_sale.cn order by ow_sale.vn asc range between floor(ow_sale.qty/ow_sale.cn) preceding and floor(ow_sale.qty/ow_sale.cn) preceding ),
+WINDOW win1 as (partition by ow_sale.cn,ow_sale.cn,ow_sale.cn order by ow_sale.vn asc range between floor(ow_sale.qty/ow_sale.cn)::integer preceding and floor(ow_sale.qty/ow_sale.cn)::integer preceding ),
 win2 as (partition by ow_sale.prc,ow_sale.prc order by ow_sale.ord, ow_sale.pn desc),
 win3 as (partition by ow_sale.prc,ow_sale.pn,ow_sale.cn,ow_sale.prc order by ow_sale.ord, ow_sale.pn asc),
 win4 as (partition by ow_sale.dt,ow_sale.prc,ow_sale.vn order by ow_sale.ord, ow_sale.cn desc),
@@ -14872,7 +14872,7 @@ win5 as (order by ow_sale.cn asc); -- mvd 3,4->2; 6,7->5; 6,3,7->8; 6,3,10,4->9;
 
 SELECT ow_sale.qty,ow_sale.prc, TO_CHAR(COALESCE(REGR_AVGY(floor(ow_sale.pn+ow_sale.vn),floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,ow_sale.dt,ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.dt,ow_sale.cn,ow_sale.vn,ow_sale.prc order by ow_sale.cn desc range between floor(ow_sale.vn) preceding and current row ); -- mvd 2,4,5,6->3; 
+WINDOW win1 as (partition by ow_sale.dt,ow_sale.cn,ow_sale.vn,ow_sale.prc order by ow_sale.cn desc range between floor(ow_sale.vn)::integer preceding and current row ); -- mvd 2,4,5,6->3; 
 
 -- REGR_AVGY() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -14882,7 +14882,7 @@ TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.qty) as int),cast (floor(ow_sale.prc+ow
 TO_CHAR(COALESCE(COUNT(floor(ow_sale.qty-ow_sale.cn)) OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win3),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.qty order by ow_sale.vn desc range between floor(ow_sale.prc+ow_sale.prc) preceding and current row ),
+WINDOW win1 as (partition by ow_sale.qty order by ow_sale.vn desc range between floor(ow_sale.prc+ow_sale.prc)::integer preceding and current row ),
 win2 as (partition by ow_sale.prc,ow_sale.pn,ow_sale.vn,ow_sale.cn order by ow_sale.ord, ow_sale.cn desc),
 win3 as (partition by ow_sale.vn order by ow_sale.pn asc); -- mvd 1,7->6; 1,7->8; 2,10,1,4->9; 2,10,1,4->11; 1,4->12; 
 
@@ -14897,9 +14897,9 @@ WINDOW win1 as (partition by ow_sale.pn,ow_sale.vn order by ow_sale.pn desc rang
 SELECT ow_sale.cn,ow_sale.cn,ow_sale.dt, TO_CHAR(COALESCE(REGR_AVGY(floor(ow_sale.prc),floor(ow_sale.qty+ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.prc,ow_sale.vn,
 TO_CHAR(COALESCE(CUME_DIST() OVER(win2),0),'99999999.9999999'),ow_sale.pn,
 TO_CHAR(COALESCE(CUME_DIST() OVER(win3),0),'99999999.9999999'),
-TO_CHAR(COALESCE(MIN(floor(ow_sale.vn/ow_sale.qty)) OVER(partition by ow_sale.prc,ow_sale.vn,ow_sale.dt order by ow_sale.vn desc range between floor(ow_sale.vn/ow_sale.cn) preceding and floor(ow_sale.prc) following ),0),'99999999.9999999')
+TO_CHAR(COALESCE(MIN(floor(ow_sale.vn/ow_sale.qty)) OVER(partition by ow_sale.prc,ow_sale.vn,ow_sale.dt order by ow_sale.vn desc range between floor(ow_sale.vn/ow_sale.cn)::integer preceding and floor(ow_sale.prc)::integer following ),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.prc,ow_sale.vn,ow_sale.dt order by ow_sale.vn desc range between floor(ow_sale.vn/ow_sale.cn) preceding and floor(ow_sale.prc) following ),
+WINDOW win1 as (partition by ow_sale.prc,ow_sale.vn,ow_sale.dt order by ow_sale.vn desc range between floor(ow_sale.vn/ow_sale.cn)::integer preceding and floor(ow_sale.prc)::integer following ),
 win2 as (partition by ow_sale.prc,ow_sale.prc,ow_sale.cn,ow_sale.pn,ow_sale.cn order by ow_sale.pn desc),
 win3 as (order by ow_sale.vn asc); -- mvd 5,3,6->4; 5,1,8->7; 6->9; 5,3,6->10; 
 
@@ -14912,13 +14912,13 @@ WINDOW win1 as (partition by ow_sale.cn,ow_sale.vn,ow_sale.vn,ow_sale.dt order b
 -- REGR_AVGY() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT ow_sale.vn,ow_sale.pn,ow_sale.pn,ow_sale.vn,ow_sale.vn, TO_CHAR(COALESCE(REGR_AVGY(floor(ow_sale.prc),floor(ow_sale.qty*ow_sale.pn)) OVER(win1),0),'99999999.9999999'),
-TO_CHAR(COALESCE(COUNT(floor(ow_sale.pn)) OVER(partition by ow_sale.pn order by ow_sale.vn asc range between floor(ow_sale.pn+ow_sale.qty) preceding and unbounded following ),0),'99999999.9999999'),
+TO_CHAR(COALESCE(COUNT(floor(ow_sale.pn)) OVER(partition by ow_sale.pn order by ow_sale.vn asc range between floor(ow_sale.pn+ow_sale.qty)::integer preceding and unbounded following ),0),'99999999.9999999'),
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win3),0),'99999999.9999999'),ow_sale.cn,
 TO_CHAR(COALESCE(COUNT(floor(ow_sale.cn/ow_sale.qty)) OVER(win1),0),'99999999.9999999'),
 TO_CHAR(COALESCE(COUNT(floor(ow_sale.qty+ow_sale.vn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.pn order by ow_sale.vn asc range between floor(ow_sale.pn+ow_sale.qty) preceding and unbounded following ),
+WINDOW win1 as (partition by ow_sale.pn order by ow_sale.vn asc range between floor(ow_sale.pn+ow_sale.qty)::integer preceding and unbounded following ),
 win2 as (order by ow_sale.vn desc),
 win3 as (order by ow_sale.cn asc); -- mvd 1,2->6; 1,2->7; 1->8; 10->9; 1,2->11; 1,2->12; 
 
@@ -14942,7 +14942,7 @@ win2 as (partition by ow_sale.cn,ow_sale.prc,ow_sale.dt,ow_sale.cn order by ow_s
 
 SELECT ow_sale.dt,ow_sale.cn, TO_CHAR(COALESCE(REGR_AVGY(floor(ow_sale.prc),floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.prc,ow_sale.vn,ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.pn,ow_sale.vn,ow_sale.dt,ow_sale.prc order by ow_sale.pn desc range between current row and floor(ow_sale.vn-ow_sale.vn) following ); -- mvd 4,1,5,6->3; 
+WINDOW win1 as (partition by ow_sale.pn,ow_sale.vn,ow_sale.dt,ow_sale.prc order by ow_sale.pn desc range between current row and floor(ow_sale.vn-ow_sale.vn)::integer following ); -- mvd 4,1,5,6->3; 
 
 -- REGR_AVGY() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -14975,7 +14975,7 @@ win4 as (order by ow_sale.vn desc); -- mvd 2,1->4; 6->5; 8,6,3,2->7; 2->9; 2->10
 SELECT ow_sale.pn,ow_sale.qty,ow_sale.vn,ow_sale.qty,ow_sale.pn, TO_CHAR(COALESCE(REGR_AVGY(floor(ow_sale.qty),floor(ow_sale.cn+ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,ow_sale.dt,
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_vendor WHERE ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.dt,ow_sale.pn,ow_sale.cn,ow_sale.dt order by ow_sale.cn asc range between 4 following and floor(ow_sale.cn) following ),
+WINDOW win1 as (partition by ow_sale.dt,ow_sale.pn,ow_sale.cn,ow_sale.dt order by ow_sale.cn asc range between 4 following and floor(ow_sale.cn)::integer following ),
 win2 as (partition by ow_sale.qty,ow_sale.pn,ow_sale.dt,ow_sale.pn order by ow_sale.pn desc); -- mvd 7,8,1->6; 8,2,1->9; 
 
 -- REGR_AVGY() function with partition by and order by having range based framing clause --
@@ -15287,7 +15287,7 @@ WINDOW win1 as (order by ow_sale.pn asc range current row ); -- mvd 7->6;
 
 SELECT ow_sale.dt,ow_sale.vn, TO_CHAR(COALESCE(REGR_COUNT(floor(ow_sale.qty),floor(ow_sale.vn/ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (order by ow_sale.pn desc range between unbounded preceding and floor(ow_sale.prc) preceding ); -- mvd 4->3; 
+WINDOW win1 as (order by ow_sale.pn desc range between unbounded preceding and floor(ow_sale.prc)::integer preceding ); -- mvd 4->3; 
 
 -- REGR_COUNT() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -15318,7 +15318,7 @@ TO_CHAR(COALESCE(MAX(floor(ow_sale.pn*ow_sale.pn)) OVER(order by ow_sale.vn desc
 TO_CHAR(COALESCE(CUME_DIST() OVER(order by ow_sale.vn desc),0),'99999999.9999999'),
 TO_CHAR(COALESCE(MAX(floor(ow_sale.prc)) OVER(order by ow_sale.vn desc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.prc) following ),
+WINDOW win1 as (order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.prc)::integer following ),
 win2 as (order by ow_sale.vn desc); -- mvd 6->5; 8->7; 8->9; 8->10; 8->11; 8->12; 
 
 -- REGR_COUNT() function with ONLY order by having range based framing clause --
@@ -15344,7 +15344,7 @@ win4 as (order by ow_sale.ord, ow_sale.vn desc); -- mvd 4->3; 4->5; 4->6; 8->7; 
 
 SELECT ow_sale.qty,ow_sale.pn, TO_CHAR(COALESCE(REGR_COUNT(floor(ow_sale.cn),floor(ow_sale.vn*ow_sale.vn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.pn asc range between 4 preceding and floor(ow_sale.vn) preceding ); -- mvd 2->3; 
+WINDOW win1 as (order by ow_sale.pn asc range between 4 preceding and floor(ow_sale.vn)::integer preceding ); -- mvd 2->3; 
 
 -- REGR_COUNT() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -15368,14 +15368,14 @@ WINDOW win1 as (order by ow_sale.cn asc range between 0 preceding and current ro
 SELECT ow_sale.prc,ow_sale.dt,ow_sale.prc,ow_sale.prc, TO_CHAR(COALESCE(REGR_COUNT(floor(ow_sale.qty+ow_sale.qty),floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,
 TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.prc) as int),cast (floor(ow_sale.cn*ow_sale.vn) as int),NULL) OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.cn) preceding and current row ),
+WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.cn)::integer preceding and current row ),
 win2 as (partition by ow_sale.cn order by ow_sale.ord, ow_sale.cn desc); -- mvd 6->5; 6->7; 
 
 -- REGR_COUNT() function with ONLY order by having range based framing clause --
 
 SELECT ow_sale.cn, TO_CHAR(COALESCE(REGR_COUNT(floor(ow_sale.pn+ow_sale.cn),floor(ow_sale.pn*ow_sale.qty)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.cn asc range between 1 preceding and floor(ow_sale.cn+ow_sale.qty) following ); -- mvd 1->2; 
+WINDOW win1 as (order by ow_sale.cn asc range between 1 preceding and floor(ow_sale.cn+ow_sale.qty)::integer following ); -- mvd 1->2; 
 
 -- REGR_COUNT() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -15385,7 +15385,7 @@ TO_CHAR(COALESCE(ROW_NUMBER() OVER(win3),0),'99999999.9999999'),ow_sale.vn,
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win4),0),'99999999.9999999'),ow_sale.dt,
 TO_CHAR(COALESCE(CUME_DIST() OVER(order by ow_sale.pn asc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.pn desc range between floor(ow_sale.cn) preceding and 1 following ),
+WINDOW win1 as (order by ow_sale.pn desc range between floor(ow_sale.cn)::integer preceding and 1 following ),
 win2 as (order by ow_sale.pn asc),
 win3 as (partition by ow_sale.pn order by ow_sale.vn desc),
 win4 as (partition by ow_sale.dt,ow_sale.vn order by ow_sale.vn desc); -- mvd 2->3; 2->4; 6,2->5; 8,6->7; 2->9; 
@@ -15796,7 +15796,7 @@ TO_CHAR(COALESCE(MIN(floor(ow_sale.prc+ow_sale.qty)) OVER(win1),0),'99999999.999
 TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.vn) as int),cast (floor(ow_sale.vn) as int),NULL) OVER(win2),0),'99999999.9999999'),ow_sale.cn,ow_sale.pn,
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win3),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.dt order by ow_sale.vn asc range between unbounded preceding and floor(ow_sale.prc) preceding ),
+WINDOW win1 as (partition by ow_sale.dt order by ow_sale.vn asc range between unbounded preceding and floor(ow_sale.prc)::integer preceding ),
 win2 as (partition by ow_sale.pn,ow_sale.pn order by ow_sale.ord, ow_sale.cn desc),
 win3 as (partition by ow_sale.vn,ow_sale.cn,ow_sale.vn order by ow_sale.pn asc); -- mvd 3,2->5; 3,2->6; 8,9->7; 8,2,9->10; 
 
@@ -15821,7 +15821,7 @@ win2 as (partition by ow_sale.pn,ow_sale.qty,ow_sale.dt,ow_sale.cn order by ow_s
 
 SELECT ow_sale.prc,ow_sale.dt, TO_CHAR(COALESCE(REGR_COUNT(floor(ow_sale.vn/ow_sale.pn),floor(ow_sale.prc+ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.cn,ow_sale.prc,ow_sale.dt,ow_sale.pn order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.cn+ow_sale.cn) following ); -- mvd 1,2,4,5->3; 
+WINDOW win1 as (partition by ow_sale.cn,ow_sale.prc,ow_sale.dt,ow_sale.pn order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.cn+ow_sale.cn)::integer following ); -- mvd 1,2,4,5->3; 
 
 -- REGR_COUNT() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -15844,7 +15844,7 @@ win2 as (order by ow_sale.vn asc); -- mvd 1,5->4; 2->6; 2->7;
 
 SELECT ow_sale.qty,ow_sale.qty,ow_sale.vn,ow_sale.vn,ow_sale.prc,ow_sale.dt, TO_CHAR(COALESCE(REGR_COUNT(floor(ow_sale.prc+ow_sale.vn),floor(ow_sale.qty+ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.cn,ow_sale.dt,ow_sale.vn,ow_sale.vn,ow_sale.vn,ow_sale.cn order by ow_sale.vn desc range between floor(ow_sale.vn*ow_sale.cn) preceding and floor(ow_sale.prc) preceding ); -- mvd 6,8,3->7; 
+WINDOW win1 as (partition by ow_sale.cn,ow_sale.dt,ow_sale.vn,ow_sale.vn,ow_sale.vn,ow_sale.cn order by ow_sale.vn desc range between floor(ow_sale.vn*ow_sale.cn)::integer preceding and floor(ow_sale.prc)::integer preceding ); -- mvd 6,8,3->7; 
 
 -- REGR_COUNT() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -15882,7 +15882,7 @@ win4 as (order by ow_sale.vn asc); -- mvd 1,6->5; 3,6,8->7; 6->9; 3,6,8->10; 6->
 
 SELECT ow_sale.pn,ow_sale.vn, TO_CHAR(COALESCE(REGR_COUNT(floor(ow_sale.cn/ow_sale.cn),floor(ow_sale.pn-ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.prc,ow_sale.cn,ow_sale.dt
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.dt,ow_sale.prc order by ow_sale.cn desc range between floor(ow_sale.pn) preceding and 0 following ); -- mvd 4,5,6->3; 
+WINDOW win1 as (partition by ow_sale.dt,ow_sale.prc order by ow_sale.cn desc range between floor(ow_sale.pn)::integer preceding and 0 following ); -- mvd 4,5,6->3; 
 
 -- REGR_COUNT() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -15893,7 +15893,7 @@ TO_CHAR(COALESCE(DENSE_RANK() OVER(order by ow_sale.ord, ow_sale.cn asc),0),'999
 TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.pn) as int),cast (floor(ow_sale.pn) as int),NULL) OVER(win4),0),'99999999.9999999'),
 TO_CHAR(COALESCE(DENSE_RANK() OVER(order by ow_sale.ord, ow_sale.cn asc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.pn,ow_sale.dt,ow_sale.prc,ow_sale.cn,ow_sale.vn,ow_sale.pn order by ow_sale.pn desc range between floor(ow_sale.pn) preceding and floor(ow_sale.prc) following ),
+WINDOW win1 as (partition by ow_sale.pn,ow_sale.dt,ow_sale.prc,ow_sale.cn,ow_sale.vn,ow_sale.pn order by ow_sale.pn desc range between floor(ow_sale.pn)::integer preceding and floor(ow_sale.prc)::integer following ),
 win2 as (order by ow_sale.ord, ow_sale.cn asc),
 win3 as (order by ow_sale.ord, ow_sale.cn desc),
 win4 as (partition by ow_sale.qty,ow_sale.vn,ow_sale.cn,ow_sale.prc,ow_sale.dt,ow_sale.pn order by ow_sale.ord, ow_sale.cn desc); -- mvd 3,5,6,1,7->4; 5->8; 5->9; 5->10; 3,6,5,1,2,7->11; 5->12; 
@@ -15902,7 +15902,7 @@ win4 as (partition by ow_sale.qty,ow_sale.vn,ow_sale.cn,ow_sale.prc,ow_sale.dt,o
 
 SELECT ow_sale.cn,ow_sale.prc,ow_sale.qty,ow_sale.qty,ow_sale.vn, TO_CHAR(COALESCE(REGR_COUNT(floor(ow_sale.qty*ow_sale.prc),floor(ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.dt,ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.cn,ow_sale.dt,ow_sale.prc,ow_sale.dt,ow_sale.pn order by ow_sale.cn asc range between floor(ow_sale.pn/ow_sale.vn) preceding and unbounded following ); -- mvd 2,7,1,8->6; 
+WINDOW win1 as (partition by ow_sale.cn,ow_sale.dt,ow_sale.prc,ow_sale.dt,ow_sale.pn order by ow_sale.cn asc range between floor(ow_sale.pn/ow_sale.vn)::integer preceding and unbounded following ); -- mvd 2,7,1,8->6; 
 
 -- REGR_COUNT() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -15950,16 +15950,16 @@ win2 as (order by ow_sale.ord, ow_sale.vn asc); -- mvd 5,6,7,2->4; 7->8; 7->9;
 
 SELECT ow_sale.cn,ow_sale.vn,ow_sale.vn, TO_CHAR(COALESCE(REGR_COUNT(floor(ow_sale.qty),floor(ow_sale.vn-ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.prc
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.prc,ow_sale.prc order by ow_sale.cn desc range between floor(ow_sale.pn-ow_sale.vn) following and 1 following ); -- mvd 5,1->4; 
+WINDOW win1 as (partition by ow_sale.prc,ow_sale.prc order by ow_sale.cn desc range between floor(ow_sale.pn-ow_sale.vn)::integer following and 1 following ); -- mvd 5,1->4; 
 
 -- REGR_COUNT() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT ow_sale.qty,ow_sale.pn, TO_CHAR(COALESCE(REGR_COUNT(floor(ow_sale.pn),floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.prc,ow_sale.cn,ow_sale.vn,
-TO_CHAR(COALESCE(MIN(floor(ow_sale.vn*ow_sale.prc)) OVER(partition by ow_sale.vn,ow_sale.prc,ow_sale.pn,ow_sale.qty,ow_sale.prc,ow_sale.qty order by ow_sale.cn desc range between 0 following and floor(ow_sale.cn+ow_sale.prc) following ),0),'99999999.9999999'),
+TO_CHAR(COALESCE(MIN(floor(ow_sale.vn*ow_sale.prc)) OVER(partition by ow_sale.vn,ow_sale.prc,ow_sale.pn,ow_sale.qty,ow_sale.prc,ow_sale.qty order by ow_sale.cn desc range between 0 following and floor(ow_sale.cn+ow_sale.prc)::integer following ),0),'99999999.9999999'),
 TO_CHAR(COALESCE(CUME_DIST() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(RANK() OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_vendor WHERE ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.prc,ow_sale.pn,ow_sale.qty,ow_sale.prc,ow_sale.qty order by ow_sale.cn desc range between 0 following and floor(ow_sale.cn+ow_sale.prc) following ),
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.prc,ow_sale.pn,ow_sale.qty,ow_sale.prc,ow_sale.qty order by ow_sale.cn desc range between 0 following and floor(ow_sale.cn+ow_sale.prc)::integer following ),
 win2 as (order by ow_sale.vn desc); -- mvd 4,5,1,6,2->3; 4,5,1,6,2->7; 6->8; 6->9; 
 
 -- REGR_COUNT() function with partition by and order by having range based framing clause in combination with other functions--
@@ -15968,7 +15968,7 @@ SELECT ow_sale.pn,ow_sale.pn, TO_CHAR(COALESCE(REGR_COUNT(floor(ow_sale.cn),floo
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(win2),0),'99999999.9999999'),ow_sale.qty,
 TO_CHAR(COALESCE(CUME_DIST() OVER(win3),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.cn,ow_sale.vn,ow_sale.cn,ow_sale.pn order by ow_sale.vn desc range between floor(ow_sale.pn) following and unbounded following ),
+WINDOW win1 as (partition by ow_sale.cn,ow_sale.vn,ow_sale.cn,ow_sale.pn order by ow_sale.vn desc range between floor(ow_sale.pn)::integer following and unbounded following ),
 win2 as (partition by ow_sale.cn,ow_sale.qty order by ow_sale.cn asc),
 win3 as (order by ow_sale.pn asc); -- mvd 4,5,1->3; 4,7->6; 1->8; 
 
@@ -16245,14 +16245,14 @@ WINDOW win1 as (order by ow_sale.cn desc range unbounded preceding ); -- mvd 2->
 
 SELECT ow_sale.vn,ow_sale.cn,ow_sale.cn,ow_sale.cn, TO_CHAR(COALESCE(REGR_INTERCEPT(floor(ow_sale.prc+ow_sale.prc),floor(ow_sale.pn-ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.pn desc range floor(ow_sale.vn+ow_sale.vn) preceding ); -- mvd 6->5; 
+WINDOW win1 as (order by ow_sale.pn desc range floor(ow_sale.vn+ow_sale.vn)::integer preceding ); -- mvd 6->5; 
 
 -- REGR_INTERCEPT() function with ONLY order by having range based framing clause in combination with other functions --
 
 SELECT ow_sale.pn,ow_sale.vn,ow_sale.prc,ow_sale.pn,ow_sale.cn,ow_sale.cn, TO_CHAR(COALESCE(REGR_INTERCEPT(floor(ow_sale.cn+ow_sale.qty),floor(ow_sale.prc-ow_sale.cn)) OVER(win1),0),'99999999.9999999'),
 TO_CHAR(COALESCE(COUNT(floor(ow_sale.pn-ow_sale.qty)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.cn asc range floor(ow_sale.pn-ow_sale.cn) preceding ); -- mvd 5->7; 5->8; 
+WINDOW win1 as (order by ow_sale.cn asc range floor(ow_sale.pn-ow_sale.cn)::integer preceding ); -- mvd 5->7; 5->8; 
 
 -- REGR_INTERCEPT() function with ONLY order by having range based framing clause --
 
@@ -16279,7 +16279,7 @@ win5 as (order by ow_sale.cn desc); -- mvd 5->4; 5->6; 1,8->7; 10,1,2,5->9; 5->1
 
 SELECT ow_sale.pn,ow_sale.pn,ow_sale.qty,ow_sale.dt,ow_sale.qty, TO_CHAR(COALESCE(REGR_INTERCEPT(floor(ow_sale.cn-ow_sale.vn),floor(ow_sale.prc-ow_sale.cn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.pn desc range between unbounded preceding and floor(ow_sale.prc) preceding ); -- mvd 1->6; 
+WINDOW win1 as (order by ow_sale.pn desc range between unbounded preceding and floor(ow_sale.prc)::integer preceding ); -- mvd 1->6; 
 
 -- REGR_INTERCEPT() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -16345,16 +16345,16 @@ win2 as (order by ow_sale.vn asc); -- mvd 1->6; 1->7; 1->8; 2->9;
 
 SELECT ow_sale.dt,ow_sale.prc,ow_sale.qty, TO_CHAR(COALESCE(REGR_INTERCEPT(floor(ow_sale.prc*ow_sale.cn),floor(ow_sale.qty-ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.cn) preceding and 3 preceding ); -- mvd 5->4; 
+WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.cn)::integer preceding and 3 preceding ); -- mvd 5->4; 
 
 -- REGR_INTERCEPT() function with ONLY order by having range based framing clause in combination with other functions --
 
 SELECT ow_sale.pn,ow_sale.prc, TO_CHAR(COALESCE(REGR_INTERCEPT(floor(ow_sale.cn-ow_sale.qty),floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,
 TO_CHAR(COALESCE(COUNT(floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999'),
-TO_CHAR(COALESCE(MIN(floor(ow_sale.pn+ow_sale.pn)) OVER(order by ow_sale.cn asc range between floor(ow_sale.cn+ow_sale.pn) preceding and floor(ow_sale.cn+ow_sale.prc) preceding ),0),'99999999.9999999'),
+TO_CHAR(COALESCE(MIN(floor(ow_sale.pn+ow_sale.pn)) OVER(order by ow_sale.cn asc range between floor(ow_sale.cn+ow_sale.pn)::integer preceding and floor(ow_sale.cn+ow_sale.prc)::integer preceding ),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.qty-ow_sale.cn) as int),cast (floor(ow_sale.qty+ow_sale.qty) as int),NULL) OVER(win2),0),'99999999.9999999'),ow_sale.vn,ow_sale.qty
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.cn asc range between floor(ow_sale.cn+ow_sale.pn) preceding and floor(ow_sale.cn+ow_sale.prc) preceding ),
+WINDOW win1 as (order by ow_sale.cn asc range between floor(ow_sale.cn+ow_sale.pn)::integer preceding and floor(ow_sale.cn+ow_sale.prc)::integer preceding ),
 win2 as (partition by ow_sale.qty order by ow_sale.ord, ow_sale.vn desc); -- mvd 4->3; 4->5; 4->6; 8,9->7; 
 
 -- REGR_INTERCEPT() function with ONLY order by having range based framing clause --
@@ -16366,25 +16366,25 @@ WINDOW win1 as (order by ow_sale.vn asc range between 2 preceding and current ro
 -- REGR_INTERCEPT() function with ONLY order by having range based framing clause in combination with other functions --
 
 SELECT ow_sale.vn,ow_sale.cn,ow_sale.vn,ow_sale.pn,ow_sale.cn,ow_sale.pn, TO_CHAR(COALESCE(REGR_INTERCEPT(floor(ow_sale.cn),floor(ow_sale.prc)) OVER(win1),0),'99999999.9999999'),
-TO_CHAR(COALESCE(COUNT(floor(ow_sale.qty*ow_sale.pn)) OVER(order by ow_sale.pn asc range between floor(ow_sale.cn) preceding and current row ),0),'99999999.9999999')
+TO_CHAR(COALESCE(COUNT(floor(ow_sale.qty*ow_sale.pn)) OVER(order by ow_sale.pn asc range between floor(ow_sale.cn)::integer preceding and current row ),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.pn asc range between floor(ow_sale.cn) preceding and current row ); -- mvd 4->7; 4->8; 
+WINDOW win1 as (order by ow_sale.pn asc range between floor(ow_sale.cn)::integer preceding and current row ); -- mvd 4->7; 4->8; 
 
 -- REGR_INTERCEPT() function with ONLY order by having range based framing clause --
 
 SELECT ow_sale.cn,ow_sale.dt,ow_sale.pn,ow_sale.qty,ow_sale.dt,ow_sale.cn, TO_CHAR(COALESCE(REGR_INTERCEPT(floor(ow_sale.prc),floor(ow_sale.vn*ow_sale.pn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.pn desc range between 2 preceding and floor(ow_sale.vn) following ); -- mvd 3->7; 
+WINDOW win1 as (order by ow_sale.pn desc range between 2 preceding and floor(ow_sale.vn)::integer following ); -- mvd 3->7; 
 
 -- REGR_INTERCEPT() function with ONLY order by having range based framing clause in combination with other functions --
 
 SELECT ow_sale.pn,ow_sale.vn,ow_sale.pn,ow_sale.pn,ow_sale.vn,ow_sale.vn, TO_CHAR(COALESCE(REGR_INTERCEPT(floor(ow_sale.vn),floor(ow_sale.prc)) OVER(win1),0),'99999999.9999999'),
 TO_CHAR(COALESCE(MAX(floor(ow_sale.pn+ow_sale.pn)) OVER(win1),0),'99999999.9999999'),
-TO_CHAR(COALESCE(COUNT(floor(ow_sale.cn*ow_sale.prc)) OVER(order by ow_sale.vn asc range between floor(ow_sale.prc) preceding and floor(ow_sale.cn+ow_sale.cn) following ),0),'99999999.9999999'),
+TO_CHAR(COALESCE(COUNT(floor(ow_sale.cn*ow_sale.prc)) OVER(order by ow_sale.vn asc range between floor(ow_sale.prc)::integer preceding and floor(ow_sale.cn+ow_sale.cn)::integer following ),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.cn+ow_sale.vn) as int),cast (floor(ow_sale.vn*ow_sale.qty) as int),NULL) OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(COUNT(floor(ow_sale.pn-ow_sale.qty)) OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.prc) preceding and floor(ow_sale.cn+ow_sale.cn) following ),
+WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.prc)::integer preceding and floor(ow_sale.cn+ow_sale.cn)::integer following ),
 win2 as (order by ow_sale.ord, ow_sale.vn desc); -- mvd 2->7; 2->8; 2->9; 2->10; 2->11; 
 
 -- REGR_INTERCEPT() function with ONLY order by having range based framing clause --
@@ -16396,11 +16396,11 @@ WINDOW win1 as (order by ow_sale.pn desc range between 4 preceding and unbounded
 -- REGR_INTERCEPT() function with ONLY order by having range based framing clause in combination with other functions --
 
 SELECT ow_sale.pn,ow_sale.prc,ow_sale.qty,ow_sale.pn,ow_sale.prc, TO_CHAR(COALESCE(REGR_INTERCEPT(floor(ow_sale.pn-ow_sale.vn),floor(ow_sale.cn-ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,
-TO_CHAR(COALESCE(MAX(floor(ow_sale.pn)) OVER(order by ow_sale.cn desc range between floor(ow_sale.prc+ow_sale.vn) preceding and unbounded following ),0),'99999999.9999999'),
+TO_CHAR(COALESCE(MAX(floor(ow_sale.pn)) OVER(order by ow_sale.cn desc range between floor(ow_sale.prc+ow_sale.vn)::integer preceding and unbounded following ),0),'99999999.9999999'),
 TO_CHAR(COALESCE(RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(CUME_DIST() OVER(win3),0),'99999999.9999999'),ow_sale.dt,ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.prc+ow_sale.vn) preceding and unbounded following ),
+WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.prc+ow_sale.vn)::integer preceding and unbounded following ),
 win2 as (order by ow_sale.pn asc),
 win3 as (partition by ow_sale.qty,ow_sale.pn,ow_sale.pn,ow_sale.vn,ow_sale.dt,ow_sale.dt order by ow_sale.cn desc); -- mvd 7->6; 7->8; 1->9; 7,11,12,3,1->10; 
 
@@ -16423,18 +16423,18 @@ win2 as (partition by ow_sale.vn order by ow_sale.cn asc); -- mvd 3->5; 2,4->6; 
 
 SELECT ow_sale.pn,ow_sale.vn, TO_CHAR(COALESCE(REGR_INTERCEPT(floor(ow_sale.pn),floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.vn asc range between current row and floor(ow_sale.cn+ow_sale.prc) following ); -- mvd 2->3; 
+WINDOW win1 as (order by ow_sale.vn asc range between current row and floor(ow_sale.cn+ow_sale.prc)::integer following ); -- mvd 2->3; 
 
 -- REGR_INTERCEPT() function with ONLY order by having range based framing clause in combination with other functions --
 
 SELECT ow_sale.pn, TO_CHAR(COALESCE(REGR_INTERCEPT(floor(ow_sale.qty),floor(ow_sale.cn+ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,
 TO_CHAR(COALESCE(COUNT(floor(ow_sale.qty+ow_sale.qty)) OVER(win1),0),'99999999.9999999'),
 TO_CHAR(COALESCE(MIN(floor(ow_sale.prc*ow_sale.pn)) OVER(win1),0),'99999999.9999999'),
-TO_CHAR(COALESCE(COUNT(floor(ow_sale.cn)) OVER(order by ow_sale.cn desc range between current row and floor(ow_sale.qty*ow_sale.pn) following ),0),'99999999.9999999'),
+TO_CHAR(COALESCE(COUNT(floor(ow_sale.cn)) OVER(order by ow_sale.cn desc range between current row and floor(ow_sale.qty*ow_sale.pn)::integer following ),0),'99999999.9999999'),
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(win2),0),'99999999.9999999'),ow_sale.prc,ow_sale.vn,
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win3),0),'99999999.9999999'),ow_sale.dt
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between current row and floor(ow_sale.qty*ow_sale.pn) following ),
+WINDOW win1 as (order by ow_sale.cn desc range between current row and floor(ow_sale.qty*ow_sale.pn)::integer following ),
 win2 as (partition by ow_sale.prc,ow_sale.pn,ow_sale.cn,ow_sale.vn order by ow_sale.vn desc),
 win3 as (partition by ow_sale.dt,ow_sale.vn,ow_sale.vn order by ow_sale.pn desc); -- mvd 3->2; 3->4; 3->5; 3->6; 8,3,9,1->7; 11,9,1->10; 
 
@@ -16457,7 +16457,7 @@ TO_CHAR(COALESCE(MAX(floor(ow_sale.qty)) OVER(partition by ow_sale.pn,ow_sale.vn
 TO_CHAR(COALESCE(CUME_DIST() OVER(win3),0),'99999999.9999999'),
 TO_CHAR(COALESCE(MIN(floor(ow_sale.cn)) OVER(win3),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.pn+ow_sale.pn) following and floor(ow_sale.pn/ow_sale.vn) following ),
+WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.pn+ow_sale.pn)::integer following and floor(ow_sale.pn/ow_sale.vn)::integer following ),
 win2 as (partition by ow_sale.pn,ow_sale.vn,ow_sale.vn,ow_sale.prc order by ow_sale.cn asc),
 win3 as (order by ow_sale.pn desc); -- mvd 3->2; 5,3,6,1->4; 5,3,6,1->7; 1->8; 1->9; 
 
@@ -16465,7 +16465,7 @@ win3 as (order by ow_sale.pn desc); -- mvd 3->2; 5,3,6,1->4; 5,3,6,1->7; 1->8; 1
 
 SELECT ow_sale.pn,ow_sale.qty, TO_CHAR(COALESCE(REGR_INTERCEPT(floor(ow_sale.cn),floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.pn desc range between floor(ow_sale.pn) following and unbounded following ); -- mvd 1->3; 
+WINDOW win1 as (order by ow_sale.pn desc range between floor(ow_sale.pn)::integer following and unbounded following ); -- mvd 1->3; 
 
 -- REGR_INTERCEPT() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -16474,7 +16474,7 @@ TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.qty) as int),cast (floor(ow_sale.cn+ow_
 TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.pn*ow_sale.prc) as int),cast (floor(ow_sale.vn/ow_sale.qty) as int),NULL) OVER(win3),0),'99999999.9999999'),
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win4),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.pn desc range between floor(ow_sale.pn*ow_sale.qty) following and unbounded following ),
+WINDOW win1 as (order by ow_sale.pn desc range between floor(ow_sale.pn*ow_sale.qty)::integer following and unbounded following ),
 win2 as (partition by ow_sale.pn,ow_sale.dt,ow_sale.vn,ow_sale.cn,ow_sale.vn order by ow_sale.ord, ow_sale.cn desc),
 win3 as (order by ow_sale.ord, ow_sale.pn asc),
 win4 as (partition by ow_sale.pn order by ow_sale.pn desc); -- mvd 1->5; 7,8,4,1->6; 1->9; 1->10; 
@@ -16678,14 +16678,14 @@ WINDOW win1 as (partition by ow_sale.vn order by ow_sale.cn desc range unbounded
 
 SELECT ow_sale.qty, TO_CHAR(COALESCE(REGR_INTERCEPT(floor(ow_sale.qty),floor(ow_sale.vn-ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_vendor WHERE ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.cn,ow_sale.cn order by ow_sale.pn asc range floor(ow_sale.vn) preceding ); -- mvd 3,4->2; 
+WINDOW win1 as (partition by ow_sale.cn,ow_sale.cn order by ow_sale.pn asc range floor(ow_sale.vn)::integer preceding ); -- mvd 3,4->2; 
 
 -- REGR_INTERCEPT() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT ow_sale.pn,ow_sale.vn, TO_CHAR(COALESCE(REGR_INTERCEPT(floor(ow_sale.vn),floor(ow_sale.vn*ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.dt,
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999'),ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (partition by ow_sale.dt order by ow_sale.pn desc range floor(ow_sale.qty) preceding ),
+WINDOW win1 as (partition by ow_sale.dt order by ow_sale.pn desc range floor(ow_sale.qty)::integer preceding ),
 win2 as (partition by ow_sale.vn order by ow_sale.cn desc); -- mvd 4,1->3; 6,2->5; 
 
 -- REGR_INTERCEPT() function with partition by and order by having range based framing clause --
@@ -16709,7 +16709,7 @@ win3 as (order by ow_sale.pn asc); -- mvd 1,2->4; 6,7,1,3,2->5; 2->8; 2->9;
 
 SELECT ow_sale.pn,ow_sale.qty,ow_sale.qty,ow_sale.dt,ow_sale.vn, TO_CHAR(COALESCE(REGR_INTERCEPT(floor(ow_sale.pn),floor(ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.cn,ow_sale.vn,ow_sale.pn,ow_sale.cn order by ow_sale.pn desc range between unbounded preceding and floor(ow_sale.cn+ow_sale.pn) preceding ); -- mvd 7,5,1->6; 
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.cn,ow_sale.vn,ow_sale.pn,ow_sale.cn order by ow_sale.pn desc range between unbounded preceding and floor(ow_sale.cn+ow_sale.pn)::integer preceding ); -- mvd 7,5,1->6; 
 
 -- REGR_INTERCEPT() function with partition by and order by having range based framing clause --
 
@@ -16731,14 +16731,14 @@ win2 as (partition by ow_sale.dt,ow_sale.cn,ow_sale.vn,ow_sale.cn,ow_sale.vn,ow_
 
 SELECT ow_sale.cn,ow_sale.pn,ow_sale.qty, TO_CHAR(COALESCE(REGR_INTERCEPT(floor(ow_sale.vn),floor(ow_sale.cn*ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.dt
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.dt order by ow_sale.pn desc range between unbounded preceding and floor(ow_sale.vn) following ); -- mvd 5,2->4; 
+WINDOW win1 as (partition by ow_sale.dt order by ow_sale.pn desc range between unbounded preceding and floor(ow_sale.vn)::integer following ); -- mvd 5,2->4; 
 
 -- REGR_INTERCEPT() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT ow_sale.cn,ow_sale.vn, TO_CHAR(COALESCE(REGR_INTERCEPT(floor(ow_sale.cn/ow_sale.qty),floor(ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.dt,ow_sale.pn,
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999'),ow_sale.qty
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.cn,ow_sale.dt,ow_sale.pn order by ow_sale.vn desc range between unbounded preceding and floor(ow_sale.vn/ow_sale.cn) following ),
+WINDOW win1 as (partition by ow_sale.cn,ow_sale.dt,ow_sale.pn order by ow_sale.vn desc range between unbounded preceding and floor(ow_sale.vn/ow_sale.cn)::integer following ),
 win2 as (partition by ow_sale.vn,ow_sale.qty order by ow_sale.cn desc); -- mvd 4,1,2,5->3; 1,7,2->6; 
 
 -- REGR_INTERCEPT() function with partition by and order by having range based framing clause --
@@ -16759,7 +16759,7 @@ win2 as (partition by ow_sale.pn,ow_sale.cn order by ow_sale.pn asc); -- mvd 6,3
 
 SELECT ow_sale.pn,ow_sale.dt, TO_CHAR(COALESCE(REGR_INTERCEPT(floor(ow_sale.cn),floor(ow_sale.vn+ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.cn,ow_sale.vn,ow_sale.vn,ow_sale.dt order by ow_sale.cn desc range between floor(ow_sale.pn/ow_sale.pn) preceding and floor(ow_sale.cn) preceding ); -- mvd 2,4,5->3; 
+WINDOW win1 as (partition by ow_sale.cn,ow_sale.vn,ow_sale.vn,ow_sale.dt order by ow_sale.cn desc range between floor(ow_sale.pn/ow_sale.pn)::integer preceding and floor(ow_sale.cn)::integer preceding ); -- mvd 2,4,5->3; 
 
 -- REGR_INTERCEPT() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -16803,7 +16803,7 @@ win3 as (partition by ow_sale.pn,ow_sale.prc,ow_sale.prc,ow_sale.dt,ow_sale.pn,o
 
 SELECT ow_sale.qty,ow_sale.cn,ow_sale.dt,ow_sale.vn,ow_sale.dt,ow_sale.dt, TO_CHAR(COALESCE(REGR_INTERCEPT(floor(ow_sale.cn-ow_sale.cn),floor(ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.prc
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.prc,ow_sale.vn order by ow_sale.vn asc range between floor(ow_sale.prc*ow_sale.pn) preceding and unbounded following ); -- mvd 8,4->7; 
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.prc,ow_sale.vn order by ow_sale.vn asc range between floor(ow_sale.prc*ow_sale.pn)::integer preceding and unbounded following ); -- mvd 8,4->7; 
 
 -- REGR_INTERCEPT() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -16838,7 +16838,7 @@ TO_CHAR(COALESCE(RANK() OVER(win2),0),'99999999.9999999'),ow_sale.qty,
 TO_CHAR(COALESCE(CUME_DIST() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(partition by ow_sale.pn,ow_sale.qty,ow_sale.cn,ow_sale.cn,ow_sale.dt,ow_sale.pn order by ow_sale.cn desc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.cn,ow_sale.pn,ow_sale.vn,ow_sale.dt,ow_sale.prc,ow_sale.pn order by ow_sale.pn asc range between current row and floor(ow_sale.vn) following ),
+WINDOW win1 as (partition by ow_sale.cn,ow_sale.pn,ow_sale.vn,ow_sale.dt,ow_sale.prc,ow_sale.pn order by ow_sale.pn asc range between current row and floor(ow_sale.vn)::integer following ),
 win2 as (partition by ow_sale.pn,ow_sale.qty,ow_sale.cn,ow_sale.cn,ow_sale.dt,ow_sale.pn order by ow_sale.cn desc); -- mvd 2,5,6,1,3->4; 5,6,8,3->7; 5,6,8,3->9; 5,6,8,3->10; 
 
 -- REGR_INTERCEPT() function with partition by and order by having range based framing clause --
@@ -16860,7 +16860,7 @@ TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999'),ow_sale.qty,
 TO_CHAR(COALESCE(MIN(floor(ow_sale.qty*ow_sale.vn)) OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(DENSE_RANK() OVER(partition by ow_sale.qty order by ow_sale.vn asc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.dt,ow_sale.pn order by ow_sale.pn asc range between floor(ow_sale.prc+ow_sale.cn) following and 0 following ),
+WINDOW win1 as (partition by ow_sale.dt,ow_sale.pn order by ow_sale.pn asc range between floor(ow_sale.prc+ow_sale.cn)::integer following and 0 following ),
 win2 as (partition by ow_sale.qty order by ow_sale.vn asc); -- mvd 3,4->2; 1,6->5; 1,6->7; 1,6->8; 
 
 -- REGR_INTERCEPT() function with partition by and order by having range based framing clause --
@@ -17186,7 +17186,7 @@ WINDOW win1 as (order by ow_sale.cn asc range between unbounded preceding and 3 
 SELECT ow_sale.vn,ow_sale.cn, TO_CHAR(COALESCE(REGR_R2(floor(ow_sale.pn),floor(ow_sale.qty-ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.pn,
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.pn desc range between unbounded preceding and floor(ow_sale.prc) preceding ),
+WINDOW win1 as (order by ow_sale.pn desc range between unbounded preceding and floor(ow_sale.prc)::integer preceding ),
 win2 as (order by ow_sale.vn desc); -- mvd 4->3; 1->5; 
 
 -- REGR_R2() function with ONLY order by having range based framing clause --
@@ -17213,7 +17213,7 @@ win4 as (order by ow_sale.ord, ow_sale.cn asc); -- mvd 3->6; 8->7; 10,1,3,8->9; 
 
 SELECT ow_sale.vn,ow_sale.qty,ow_sale.pn, TO_CHAR(COALESCE(REGR_R2(floor(ow_sale.qty),floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range between unbounded preceding and floor(ow_sale.vn/ow_sale.cn) following ); -- mvd 1->4; 
+WINDOW win1 as (order by ow_sale.vn desc range between unbounded preceding and floor(ow_sale.vn/ow_sale.cn)::integer following ); -- mvd 1->4; 
 
 -- REGR_R2() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -17252,20 +17252,20 @@ win3 as (partition by ow_sale.dt order by ow_sale.ord, ow_sale.cn asc); -- mvd 5
 SELECT ow_sale.pn,ow_sale.qty,ow_sale.vn,ow_sale.prc, TO_CHAR(COALESCE(REGR_R2(floor(ow_sale.qty+ow_sale.cn),floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999'),
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win2),0),'99999999.9999999'),ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.pn desc range between 2 preceding and floor(ow_sale.prc) preceding ),
+WINDOW win1 as (order by ow_sale.pn desc range between 2 preceding and floor(ow_sale.prc)::integer preceding ),
 win2 as (order by ow_sale.cn asc); -- mvd 1->5; 7->6; 
 
 -- REGR_R2() function with ONLY order by having range based framing clause --
 
 SELECT ow_sale.pn,ow_sale.qty, TO_CHAR(COALESCE(REGR_R2(floor(ow_sale.qty),floor(ow_sale.pn/ow_sale.vn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_vendor WHERE ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.pn asc range between floor(ow_sale.cn) preceding and current row ); -- mvd 1->3; 
+WINDOW win1 as (order by ow_sale.pn asc range between floor(ow_sale.cn)::integer preceding and current row ); -- mvd 1->3; 
 
 -- REGR_R2() function with ONLY order by having range based framing clause --
 
 SELECT ow_sale.qty, TO_CHAR(COALESCE(REGR_R2(floor(ow_sale.prc),floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range between 0 preceding and floor(ow_sale.pn) following ); -- mvd 3->2; 
+WINDOW win1 as (order by ow_sale.vn desc range between 0 preceding and floor(ow_sale.pn)::integer following ); -- mvd 3->2; 
 
 -- REGR_R2() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -17318,7 +17318,7 @@ win4 as (partition by ow_sale.pn,ow_sale.pn,ow_sale.prc order by ow_sale.vn desc
 
 SELECT ow_sale.vn,ow_sale.vn, TO_CHAR(COALESCE(REGR_R2(floor(ow_sale.qty-ow_sale.prc),floor(ow_sale.vn*ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (order by ow_sale.pn asc range between current row and floor(ow_sale.prc*ow_sale.cn) following ); -- mvd 4->3; 
+WINDOW win1 as (order by ow_sale.pn asc range between current row and floor(ow_sale.prc*ow_sale.cn)::integer following ); -- mvd 4->3; 
 
 -- REGR_R2() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -17349,7 +17349,7 @@ win3 as (order by ow_sale.ord, ow_sale.cn asc); -- mvd 1->3; 2->4; 2->5; 7->6;
 
 SELECT ow_sale.pn,ow_sale.pn,ow_sale.vn, TO_CHAR(COALESCE(REGR_R2(floor(ow_sale.pn),floor(ow_sale.vn*ow_sale.pn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.pn) following and 2 following ); -- mvd 3->4; 
+WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.pn)::integer following and 2 following ); -- mvd 3->4; 
 
 -- REGR_R2() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -17358,7 +17358,7 @@ TO_CHAR(COALESCE(MIN(floor(ow_sale.cn)) OVER(win1),0),'99999999.9999999'),
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(RANK() OVER(order by ow_sale.vn asc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range between 3 following and floor(ow_sale.vn) following ),
+WINDOW win1 as (order by ow_sale.vn desc range between 3 following and floor(ow_sale.vn)::integer following ),
 win2 as (order by ow_sale.vn asc); -- mvd 3->4; 3->5; 3->6; 3->7; 
 
 -- REGR_R2() function with ONLY order by having range based framing clause --
@@ -17657,7 +17657,7 @@ win2 as (order by ow_sale.pn asc); -- mvd 5,3,2,6->4; 6->7; 5,3,2,6->8;
 
 SELECT ow_sale.cn,ow_sale.vn,ow_sale.cn, TO_CHAR(COALESCE(REGR_R2(floor(ow_sale.cn+ow_sale.qty),floor(ow_sale.prc/ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.qty
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.qty,ow_sale.cn order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.pn) preceding ); -- mvd 1,5->4; 
+WINDOW win1 as (partition by ow_sale.qty,ow_sale.cn order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.pn)::integer preceding ); -- mvd 1,5->4; 
 
 -- REGR_R2() function with partition by and order by having range based framing clause --
 
@@ -17677,7 +17677,7 @@ WINDOW win1 as (partition by ow_sale.qty,ow_sale.prc,ow_sale.prc order by ow_sal
 
 SELECT ow_sale.vn,ow_sale.vn,ow_sale.vn,ow_sale.prc, TO_CHAR(COALESCE(REGR_R2(floor(ow_sale.qty/ow_sale.pn),floor(ow_sale.prc-ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.pn,ow_sale.vn order by ow_sale.pn asc range between unbounded preceding and floor(ow_sale.pn-ow_sale.vn) following ); -- mvd 1,6->5; 
+WINDOW win1 as (partition by ow_sale.pn,ow_sale.vn order by ow_sale.pn asc range between unbounded preceding and floor(ow_sale.pn-ow_sale.vn)::integer following ); -- mvd 1,6->5; 
 
 -- REGR_R2() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -17686,7 +17686,7 @@ TO_CHAR(COALESCE(RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(CUME_DIST() OVER(win3),0),'99999999.9999999'),
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(order by ow_sale.vn asc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.cn,ow_sale.pn,ow_sale.dt order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.cn*ow_sale.cn) following ),
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.cn,ow_sale.pn,ow_sale.dt order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.cn*ow_sale.cn)::integer following ),
 win2 as (order by ow_sale.vn asc),
 win3 as (order by ow_sale.vn asc); -- mvd 6,2,7,3->5; 7->8; 7->9; 7->10; 
 
@@ -17706,13 +17706,13 @@ win3 as (partition by ow_sale.dt,ow_sale.dt,ow_sale.prc,ow_sale.cn,ow_sale.dt or
 
 SELECT ow_sale.qty,ow_sale.dt,ow_sale.qty, TO_CHAR(COALESCE(REGR_R2(floor(ow_sale.vn*ow_sale.qty),floor(ow_sale.pn-ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.vn,ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.pn order by ow_sale.vn desc range between floor(ow_sale.qty-ow_sale.qty) preceding and floor(ow_sale.vn+ow_sale.pn) preceding ); -- mvd 5,6->4; 
+WINDOW win1 as (partition by ow_sale.pn order by ow_sale.vn desc range between floor(ow_sale.qty-ow_sale.qty)::integer preceding and floor(ow_sale.vn+ow_sale.pn)::integer preceding ); -- mvd 5,6->4; 
 
 -- REGR_R2() function with partition by and order by having range based framing clause --
 
 SELECT ow_sale.qty,ow_sale.qty,ow_sale.qty,ow_sale.cn,ow_sale.vn,ow_sale.prc, TO_CHAR(COALESCE(REGR_R2(floor(ow_sale.pn*ow_sale.prc),floor(ow_sale.vn*ow_sale.qty)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.vn,ow_sale.cn order by ow_sale.cn asc range between floor(ow_sale.pn-ow_sale.vn) preceding and current row ); -- mvd 4,5->7; 
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.vn,ow_sale.cn order by ow_sale.cn asc range between floor(ow_sale.pn-ow_sale.vn)::integer preceding and current row ); -- mvd 4,5->7; 
 
 -- REGR_R2() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -17722,7 +17722,7 @@ TO_CHAR(COALESCE(CUME_DIST() OVER(win3),0),'99999999.9999999'),ow_sale.qty,
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win3),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.vn+ow_sale.qty) as int),cast (floor(ow_sale.vn*ow_sale.qty) as int),NULL) OVER(win4),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.dt,ow_sale.vn order by ow_sale.cn desc range between floor(ow_sale.pn) preceding and current row ),
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.dt,ow_sale.vn order by ow_sale.cn desc range between floor(ow_sale.pn)::integer preceding and current row ),
 win2 as (partition by ow_sale.prc,ow_sale.dt order by ow_sale.vn desc),
 win3 as (partition by ow_sale.pn,ow_sale.dt,ow_sale.qty,ow_sale.prc order by ow_sale.pn desc),
 win4 as (partition by ow_sale.vn,ow_sale.vn,ow_sale.pn,ow_sale.qty,ow_sale.qty,ow_sale.pn order by ow_sale.ord, ow_sale.cn desc); -- mvd 3,4,5->2; 7,4,5->6; 7,4,9,1->8; 7,4,9,1->10; 3,9,5,1->11; 
@@ -17731,14 +17731,14 @@ win4 as (partition by ow_sale.vn,ow_sale.vn,ow_sale.pn,ow_sale.qty,ow_sale.qty,o
 
 SELECT ow_sale.cn,ow_sale.pn,ow_sale.pn, TO_CHAR(COALESCE(REGR_R2(floor(ow_sale.cn+ow_sale.cn),floor(ow_sale.qty/ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.prc,ow_sale.dt,ow_sale.qty,ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.prc,ow_sale.vn,ow_sale.qty,ow_sale.dt order by ow_sale.cn asc range between 1 preceding and floor(ow_sale.prc) following ); -- mvd 5,1,6,7,8->4; 
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.prc,ow_sale.vn,ow_sale.qty,ow_sale.dt order by ow_sale.cn asc range between 1 preceding and floor(ow_sale.prc)::integer following ); -- mvd 5,1,6,7,8->4; 
 
 -- REGR_R2() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT ow_sale.cn, TO_CHAR(COALESCE(REGR_R2(floor(ow_sale.prc-ow_sale.qty),floor(ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.dt,ow_sale.vn,
 TO_CHAR(COALESCE(RANK() OVER(win2),0),'99999999.9999999'),ow_sale.prc,ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.cn,ow_sale.vn,ow_sale.dt order by ow_sale.cn desc range between floor(ow_sale.pn-ow_sale.pn) preceding and 2 following ),
+WINDOW win1 as (partition by ow_sale.cn,ow_sale.vn,ow_sale.dt order by ow_sale.cn desc range between floor(ow_sale.pn-ow_sale.pn)::integer preceding and 2 following ),
 win2 as (partition by ow_sale.pn,ow_sale.cn,ow_sale.prc,ow_sale.cn order by ow_sale.cn asc); -- mvd 3,1,4->2; 6,1,7->5; 
 
 -- REGR_R2() function with partition by and order by having range based framing clause --
@@ -17753,7 +17753,7 @@ SELECT ow_sale.vn,ow_sale.dt,ow_sale.dt, TO_CHAR(COALESCE(REGR_R2(floor(ow_sale.
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win2),0),'99999999.9999999'),ow_sale.prc,ow_sale.cn,ow_sale.pn,
 TO_CHAR(COALESCE(MAX(floor(ow_sale.prc+ow_sale.prc)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.qty order by ow_sale.vn desc range between floor(ow_sale.qty) preceding and unbounded following ),
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.qty order by ow_sale.vn desc range between floor(ow_sale.qty)::integer preceding and unbounded following ),
 win2 as (partition by ow_sale.cn,ow_sale.prc,ow_sale.cn,ow_sale.prc,ow_sale.prc,ow_sale.dt order by ow_sale.pn asc); -- mvd 5,1->4; 7,2,8,9->6; 5,1->10; 
 
 -- REGR_R2() function with partition by and order by having range based framing clause --
@@ -17774,7 +17774,7 @@ win2 as (order by ow_sale.cn asc); -- mvd 6,2,4,7->5; 2->8;
 
 SELECT ow_sale.pn, TO_CHAR(COALESCE(REGR_R2(floor(ow_sale.qty),floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.prc,ow_sale.cn,ow_sale.dt,ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.prc,ow_sale.dt order by ow_sale.cn desc range between current row and floor(ow_sale.prc) following ); -- mvd 3,4,5,6->2; 
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.prc,ow_sale.dt order by ow_sale.cn desc range between current row and floor(ow_sale.prc)::integer following ); -- mvd 3,4,5,6->2; 
 
 -- REGR_R2() function with partition by and order by having range based framing clause --
 
@@ -17796,7 +17796,7 @@ win2 as (partition by ow_sale.vn,ow_sale.dt,ow_sale.qty,ow_sale.vn,ow_sale.dt,ow
 
 SELECT ow_sale.prc,ow_sale.pn, TO_CHAR(COALESCE(REGR_R2(floor(ow_sale.cn),floor(ow_sale.qty-ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.dt
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.dt,ow_sale.pn order by ow_sale.pn asc range between floor(ow_sale.qty) following and floor(ow_sale.prc*ow_sale.vn) following ); -- mvd 4,2->3; 
+WINDOW win1 as (partition by ow_sale.dt,ow_sale.pn order by ow_sale.pn asc range between floor(ow_sale.qty)::integer following and floor(ow_sale.prc*ow_sale.vn)::integer following ); -- mvd 4,2->3; 
 
 -- REGR_R2() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -17807,7 +17807,7 @@ TO_CHAR(COALESCE(DENSE_RANK() OVER(order by ow_sale.ord, ow_sale.cn desc),0),'99
 TO_CHAR(COALESCE(COUNT(floor(ow_sale.cn-ow_sale.pn)) OVER(order by ow_sale.ord, ow_sale.cn desc),0),'99999999.9999999'),
 TO_CHAR(COALESCE(MAX(floor(ow_sale.vn)) OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (partition by ow_sale.prc,ow_sale.cn,ow_sale.pn,ow_sale.pn order by ow_sale.cn desc range between 1 following and floor(ow_sale.vn/ow_sale.vn) following ),
+WINDOW win1 as (partition by ow_sale.prc,ow_sale.cn,ow_sale.pn,ow_sale.pn order by ow_sale.cn desc range between 1 following and floor(ow_sale.vn/ow_sale.vn)::integer following ),
 win2 as (order by ow_sale.ord, ow_sale.cn desc); -- mvd 4,5,1->3; 5->6; 5->7; 5->8; 5->9; 5->10; 
 
 -- REGR_R2() function with partition by and order by having range based framing clause --
@@ -18093,7 +18093,7 @@ WINDOW win1 as (order by ow_sale.pn desc range unbounded preceding ); -- mvd 3->
 
 SELECT ow_sale.qty, TO_CHAR(COALESCE(REGR_SLOPE(floor(ow_sale.prc),floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (order by ow_sale.pn asc range floor(ow_sale.vn) preceding ); -- mvd 3->2; 
+WINDOW win1 as (order by ow_sale.pn asc range floor(ow_sale.vn)::integer preceding ); -- mvd 3->2; 
 
 -- REGR_SLOPE() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -18129,7 +18129,7 @@ win3 as (partition by ow_sale.vn order by ow_sale.cn desc); -- mvd 5->4; 7,3,8,5
 
 SELECT ow_sale.vn,ow_sale.prc,ow_sale.cn,ow_sale.cn,ow_sale.pn, TO_CHAR(COALESCE(REGR_SLOPE(floor(ow_sale.pn),floor(ow_sale.prc/ow_sale.vn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.prc) preceding ); -- mvd 3->6; 
+WINDOW win1 as (order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.prc)::integer preceding ); -- mvd 3->6; 
 
 -- REGR_SLOPE() function with ONLY order by having range based framing clause --
 
@@ -18153,7 +18153,7 @@ win3 as (partition by ow_sale.vn order by ow_sale.cn desc); -- mvd 3->4; 3->5; 3
 
 SELECT ow_sale.pn,ow_sale.pn,ow_sale.pn, TO_CHAR(COALESCE(REGR_SLOPE(floor(ow_sale.pn),floor(ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.vn asc range between unbounded preceding and floor(ow_sale.prc) following ); -- mvd 5->4; 
+WINDOW win1 as (order by ow_sale.vn asc range between unbounded preceding and floor(ow_sale.prc)::integer following ); -- mvd 5->4; 
 
 -- REGR_SLOPE() function with ONLY order by having range based framing clause --
 
@@ -18173,7 +18173,7 @@ win2 as (order by ow_sale.cn asc); -- mvd 3->2; 3->4;
 
 SELECT ow_sale.vn,ow_sale.dt, TO_CHAR(COALESCE(REGR_SLOPE(floor(ow_sale.vn*ow_sale.prc),floor(ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.pn asc range between floor(ow_sale.qty) preceding and floor(ow_sale.prc) preceding ); -- mvd 4->3; 
+WINDOW win1 as (order by ow_sale.pn asc range between floor(ow_sale.qty)::integer preceding and floor(ow_sale.prc)::integer preceding ); -- mvd 4->3; 
 
 -- REGR_SLOPE() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -18182,7 +18182,7 @@ TO_CHAR(COALESCE(RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(RANK() OVER(win3),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range between floor(ow_sale.pn+ow_sale.pn) preceding and floor(ow_sale.qty+ow_sale.pn) preceding ),
+WINDOW win1 as (order by ow_sale.vn desc range between floor(ow_sale.pn+ow_sale.pn)::integer preceding and floor(ow_sale.qty+ow_sale.pn)::integer preceding ),
 win2 as (order by ow_sale.cn asc),
 win3 as (partition by ow_sale.vn,ow_sale.qty,ow_sale.vn,ow_sale.vn order by ow_sale.vn desc); -- mvd 7->6; 1->8; 1->9; 5,7->10; 
 
@@ -18214,7 +18214,7 @@ TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.cn+ow_sale.vn) as int),cast (floor(ow_sa
 TO_CHAR(COALESCE(MIN(floor(ow_sale.cn/ow_sale.qty)) OVER(order by ow_sale.ord, ow_sale.vn desc),0),'99999999.9999999'),
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.qty*ow_sale.cn) preceding and floor(ow_sale.cn/ow_sale.qty) following ),
+WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.qty*ow_sale.cn)::integer preceding and floor(ow_sale.cn/ow_sale.qty)::integer following ),
 win2 as (order by ow_sale.ord, ow_sale.vn desc); -- mvd 5->4; 5->6; 8->7; 8->9; 8->10; 
 
 -- REGR_SLOPE() function with ONLY order by having range based framing clause --
@@ -18257,14 +18257,14 @@ win2 as (partition by ow_sale.prc,ow_sale.pn,ow_sale.cn order by ow_sale.pn asc)
 
 SELECT ow_sale.prc, TO_CHAR(COALESCE(REGR_SLOPE(floor(ow_sale.vn*ow_sale.qty),floor(ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.vn asc range between current row and floor(ow_sale.prc-ow_sale.prc) following ); -- mvd 3->2; 
+WINDOW win1 as (order by ow_sale.vn asc range between current row and floor(ow_sale.prc-ow_sale.prc)::integer following ); -- mvd 3->2; 
 
 -- REGR_SLOPE() function with ONLY order by having range based framing clause in combination with other functions --
 
 SELECT ow_sale.vn,ow_sale.vn,ow_sale.vn, TO_CHAR(COALESCE(REGR_SLOPE(floor(ow_sale.qty+ow_sale.vn),floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between current row and floor(ow_sale.cn+ow_sale.prc) following ),
+WINDOW win1 as (order by ow_sale.cn desc range between current row and floor(ow_sale.cn+ow_sale.prc)::integer following ),
 win2 as (order by ow_sale.cn desc); -- mvd 5->4; 5->6; 
 
 -- REGR_SLOPE() function with ONLY order by having range based framing clause --
@@ -18291,13 +18291,13 @@ win4 as (order by ow_sale.ord, ow_sale.pn asc); -- mvd 3->2; 5,3->4; 5,3->6; 8->
 
 SELECT ow_sale.qty,ow_sale.dt, TO_CHAR(COALESCE(REGR_SLOPE(floor(ow_sale.vn-ow_sale.qty),floor(ow_sale.prc*ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.vn asc range between 2 following and floor(ow_sale.prc) following ); -- mvd 4->3; 
+WINDOW win1 as (order by ow_sale.vn asc range between 2 following and floor(ow_sale.prc)::integer following ); -- mvd 4->3; 
 
 -- REGR_SLOPE() function with ONLY order by having range based framing clause --
 
 SELECT ow_sale.pn,ow_sale.pn,ow_sale.vn, TO_CHAR(COALESCE(REGR_SLOPE(floor(ow_sale.prc*ow_sale.qty),floor(ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.cn asc range between floor(ow_sale.vn+ow_sale.prc) following and unbounded following ); -- mvd 5->4; 
+WINDOW win1 as (order by ow_sale.cn asc range between floor(ow_sale.vn+ow_sale.prc)::integer following and unbounded following ); -- mvd 5->4; 
 
 -- REGR_SLOPE() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -18573,7 +18573,7 @@ win2 as (partition by ow_sale.vn,ow_sale.pn,ow_sale.dt,ow_sale.dt order by ow_sa
 
 SELECT ow_sale.pn,ow_sale.pn, TO_CHAR(COALESCE(REGR_SLOPE(floor(ow_sale.vn/ow_sale.qty),floor(ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,ow_sale.dt,ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.dt,ow_sale.vn,ow_sale.cn,ow_sale.cn order by ow_sale.vn asc range floor(ow_sale.pn) preceding ); -- mvd 4,5,6->3; 
+WINDOW win1 as (partition by ow_sale.dt,ow_sale.vn,ow_sale.cn,ow_sale.cn order by ow_sale.vn asc range floor(ow_sale.pn)::integer preceding ); -- mvd 4,5,6->3; 
 
 -- REGR_SLOPE() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -18643,7 +18643,7 @@ WINDOW win1 as (partition by ow_sale.vn,ow_sale.qty,ow_sale.dt,ow_sale.dt,ow_sal
 SELECT ow_sale.pn,ow_sale.prc, TO_CHAR(COALESCE(REGR_SLOPE(floor(ow_sale.cn),floor(ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.vn,
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999'),ow_sale.dt,ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (partition by ow_sale.pn order by ow_sale.vn desc range between unbounded preceding and floor(ow_sale.prc+ow_sale.prc) following ),
+WINDOW win1 as (partition by ow_sale.pn order by ow_sale.vn desc range between unbounded preceding and floor(ow_sale.prc+ow_sale.prc)::integer following ),
 win2 as (partition by ow_sale.pn,ow_sale.cn,ow_sale.vn,ow_sale.dt order by ow_sale.cn desc); -- mvd 4,1->3; 6,7,4,1->5; 
 
 -- REGR_SLOPE() function with partition by and order by having range based framing clause --
@@ -18663,13 +18663,13 @@ WINDOW win1 as (partition by ow_sale.dt,ow_sale.qty,ow_sale.pn,ow_sale.dt order 
 
 SELECT ow_sale.qty,ow_sale.dt,ow_sale.pn, TO_CHAR(COALESCE(REGR_SLOPE(floor(ow_sale.vn-ow_sale.pn),floor(ow_sale.vn-ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.vn,ow_sale.pn,ow_sale.dt order by ow_sale.pn asc range between floor(ow_sale.qty) preceding and floor(ow_sale.prc-ow_sale.prc) preceding ); -- mvd 2,5,3->4; 
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.vn,ow_sale.pn,ow_sale.dt order by ow_sale.pn asc range between floor(ow_sale.qty)::integer preceding and floor(ow_sale.prc-ow_sale.prc)::integer preceding ); -- mvd 2,5,3->4; 
 
 -- REGR_SLOPE() function with partition by and order by having range based framing clause --
 
 SELECT ow_sale.qty,ow_sale.dt,ow_sale.pn,ow_sale.qty,ow_sale.qty, TO_CHAR(COALESCE(REGR_SLOPE(floor(ow_sale.pn*ow_sale.qty),floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.pn,ow_sale.vn,ow_sale.qty,ow_sale.dt,ow_sale.cn order by ow_sale.pn desc range between floor(ow_sale.qty) preceding and current row ); -- mvd 7,2,1,8,3->6; 
+WINDOW win1 as (partition by ow_sale.pn,ow_sale.vn,ow_sale.qty,ow_sale.dt,ow_sale.cn order by ow_sale.pn desc range between floor(ow_sale.qty)::integer preceding and current row ); -- mvd 7,2,1,8,3->6; 
 
 -- REGR_SLOPE() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -18678,7 +18678,7 @@ TO_CHAR(COALESCE(MIN(floor(ow_sale.prc)) OVER(win1),0),'99999999.9999999'),
 TO_CHAR(COALESCE(CUME_DIST() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win3),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.pn,ow_sale.qty order by ow_sale.cn asc range between floor(ow_sale.cn-ow_sale.cn) preceding and current row ),
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.pn,ow_sale.qty order by ow_sale.cn asc range between floor(ow_sale.cn-ow_sale.cn)::integer preceding and current row ),
 win2 as (partition by ow_sale.vn,ow_sale.qty,ow_sale.vn order by ow_sale.cn desc),
 win3 as (order by ow_sale.vn desc); -- mvd 4,1,5,6->3; 4,1,5,6->7; 4,1,5->8; 5->9; 
 
@@ -18686,7 +18686,7 @@ win3 as (order by ow_sale.vn desc); -- mvd 4,1,5,6->3; 4,1,5,6->7; 4,1,5->8; 5->
 
 SELECT ow_sale.qty,ow_sale.cn,ow_sale.vn,ow_sale.cn, TO_CHAR(COALESCE(REGR_SLOPE(floor(ow_sale.pn),floor(ow_sale.qty*ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.prc,ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_vendor WHERE ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.qty,ow_sale.pn,ow_sale.prc,ow_sale.cn,ow_sale.qty,ow_sale.vn order by ow_sale.vn desc range between 3 preceding and floor(ow_sale.prc) following ); -- mvd 6,2,3,1,7->5; 
+WINDOW win1 as (partition by ow_sale.qty,ow_sale.pn,ow_sale.prc,ow_sale.cn,ow_sale.qty,ow_sale.vn order by ow_sale.vn desc range between 3 preceding and floor(ow_sale.prc)::integer following ); -- mvd 6,2,3,1,7->5; 
 
 -- REGR_SLOPE() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -18703,16 +18703,16 @@ win3 as (order by ow_sale.cn desc); -- mvd 2,5,4,3->7; 4,3->8; 4,3->9; 5->10;
 
 SELECT ow_sale.cn,ow_sale.cn,ow_sale.pn,ow_sale.cn, TO_CHAR(COALESCE(REGR_SLOPE(floor(ow_sale.qty),floor(ow_sale.prc-ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn order by ow_sale.vn desc range between floor(ow_sale.cn) preceding and unbounded following ); -- mvd 6->5; 
+WINDOW win1 as (partition by ow_sale.vn order by ow_sale.vn desc range between floor(ow_sale.cn)::integer preceding and unbounded following ); -- mvd 6->5; 
 
 -- REGR_SLOPE() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT ow_sale.vn, TO_CHAR(COALESCE(REGR_SLOPE(floor(ow_sale.vn),floor(ow_sale.qty+ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.pn,
 TO_CHAR(COALESCE(COUNT(floor(ow_sale.vn-ow_sale.qty)) OVER(win1),0),'99999999.9999999'),
-TO_CHAR(COALESCE(COUNT(floor(ow_sale.prc*ow_sale.cn)) OVER(partition by ow_sale.pn,ow_sale.vn order by ow_sale.vn desc range between floor(ow_sale.qty) preceding and unbounded following ),0),'99999999.9999999'),
+TO_CHAR(COALESCE(COUNT(floor(ow_sale.prc*ow_sale.cn)) OVER(partition by ow_sale.pn,ow_sale.vn order by ow_sale.vn desc range between floor(ow_sale.qty)::integer preceding and unbounded following ),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.cn) as int),cast (floor(ow_sale.qty*ow_sale.qty) as int),NULL) OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.pn,ow_sale.vn order by ow_sale.vn desc range between floor(ow_sale.qty) preceding and unbounded following ),
+WINDOW win1 as (partition by ow_sale.pn,ow_sale.vn order by ow_sale.vn desc range between floor(ow_sale.qty)::integer preceding and unbounded following ),
 win2 as (order by ow_sale.ord, ow_sale.vn desc); -- mvd 1,3->2; 1,3->4; 1,3->5; 1->6; 
 
 -- REGR_SLOPE() function with partition by and order by having range based framing clause --
@@ -18744,7 +18744,7 @@ WINDOW win1 as (partition by ow_sale.dt,ow_sale.cn,ow_sale.cn,ow_sale.cn order b
 
 SELECT ow_sale.vn,ow_sale.cn,ow_sale.vn,ow_sale.prc, TO_CHAR(COALESCE(REGR_SLOPE(floor(ow_sale.cn*ow_sale.pn),floor(ow_sale.prc)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.prc order by ow_sale.vn desc range between floor(ow_sale.vn+ow_sale.pn) following and floor(ow_sale.vn) following ); -- mvd 4,1->5; 
+WINDOW win1 as (partition by ow_sale.prc order by ow_sale.vn desc range between floor(ow_sale.vn+ow_sale.pn)::integer following and floor(ow_sale.vn)::integer following ); -- mvd 4,1->5; 
 
 -- REGR_SLOPE() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -19044,7 +19044,7 @@ TO_CHAR(COALESCE(RANK() OVER(win2),0),'99999999.9999999'),ow_sale.cn,
 TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.cn) as int),cast (floor(ow_sale.prc+ow_sale.cn) as int),NULL) OVER(win3),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.qty*ow_sale.cn) as int),cast (floor(ow_sale.vn) as int),NULL) OVER(win4),0),'99999999.9999999'),ow_sale.dt,ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.pn asc range floor(ow_sale.pn*ow_sale.pn) preceding ),
+WINDOW win1 as (order by ow_sale.pn asc range floor(ow_sale.pn*ow_sale.pn)::integer preceding ),
 win2 as (partition by ow_sale.qty order by ow_sale.cn asc),
 win3 as (order by ow_sale.ord, ow_sale.pn asc),
 win4 as (partition by ow_sale.vn,ow_sale.pn,ow_sale.dt order by ow_sale.ord, ow_sale.pn asc); -- mvd 3->2; 5,1->4; 3->6; 8,9,3->7; 
@@ -19068,7 +19068,7 @@ win2 as (partition by ow_sale.qty order by ow_sale.cn desc); -- mvd 2->4; 2->5; 
 
 SELECT ow_sale.cn, TO_CHAR(COALESCE(REGR_SXX(floor(ow_sale.vn-ow_sale.pn),floor(ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (order by ow_sale.pn asc range between unbounded preceding and floor(ow_sale.prc/ow_sale.pn) preceding ); -- mvd 3->2; 
+WINDOW win1 as (order by ow_sale.pn asc range between unbounded preceding and floor(ow_sale.prc/ow_sale.pn)::integer preceding ); -- mvd 3->2; 
 
 -- REGR_SXX() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -19096,7 +19096,7 @@ win2 as (order by ow_sale.vn asc); -- mvd 1->4; 2->5;
 
 SELECT ow_sale.vn,ow_sale.qty, TO_CHAR(COALESCE(REGR_SXX(floor(ow_sale.prc-ow_sale.cn),floor(ow_sale.pn*ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.pn*ow_sale.cn) following ); -- mvd 4->3; 
+WINDOW win1 as (order by ow_sale.cn asc range between unbounded preceding and floor(ow_sale.pn*ow_sale.cn)::integer following ); -- mvd 4->3; 
 
 -- REGR_SXX() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -19141,7 +19141,7 @@ SELECT ow_sale.vn,ow_sale.prc,ow_sale.vn, TO_CHAR(COALESCE(REGR_SXX(floor(ow_sal
 TO_CHAR(COALESCE(RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win3),0),'99999999.9999999'),ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.cn asc range between floor(ow_sale.pn-ow_sale.cn) preceding and 0 preceding ),
+WINDOW win1 as (order by ow_sale.cn asc range between floor(ow_sale.pn-ow_sale.cn)::integer preceding and 0 preceding ),
 win2 as (partition by ow_sale.vn,ow_sale.cn,ow_sale.prc order by ow_sale.cn desc),
 win3 as (order by ow_sale.pn desc); -- mvd 5->4; 2,5,1->6; 8->7; 
 
@@ -19149,7 +19149,7 @@ win3 as (order by ow_sale.pn desc); -- mvd 5->4; 2,5,1->6; 8->7;
 
 SELECT ow_sale.vn,ow_sale.qty,ow_sale.pn,ow_sale.pn, TO_CHAR(COALESCE(REGR_SXX(floor(ow_sale.cn),floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.pn-ow_sale.cn) preceding and current row ); -- mvd 1->5; 
+WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.pn-ow_sale.cn)::integer preceding and current row ); -- mvd 1->5; 
 
 -- REGR_SXX() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -19162,7 +19162,7 @@ WINDOW win1 as (order by ow_sale.cn desc range between 1 preceding and current r
 
 SELECT ow_sale.vn,ow_sale.qty, TO_CHAR(COALESCE(REGR_SXX(floor(ow_sale.qty-ow_sale.vn),floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between 2 preceding and floor(ow_sale.pn) following ); -- mvd 4->3; 
+WINDOW win1 as (order by ow_sale.cn desc range between 2 preceding and floor(ow_sale.pn)::integer following ); -- mvd 4->3; 
 
 -- REGR_SXX() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -19183,7 +19183,7 @@ win5 as (order by ow_sale.cn desc); -- mvd 3->2; 1->4; 1->5; 1->6; 3->7; 3->8;
 
 SELECT ow_sale.cn, TO_CHAR(COALESCE(REGR_SXX(floor(ow_sale.pn),floor(ow_sale.qty-ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.pn desc range between floor(ow_sale.pn-ow_sale.cn) preceding and unbounded following ); -- mvd 3->2; 
+WINDOW win1 as (order by ow_sale.pn desc range between floor(ow_sale.pn-ow_sale.cn)::integer preceding and unbounded following ); -- mvd 3->2; 
 
 -- REGR_SXX() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -19222,7 +19222,7 @@ TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.pn) as int),cast (floor(ow_sale.pn) as i
 TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.cn) as int),cast (floor(ow_sale.vn) as int),NULL) OVER(win3),0),'99999999.9999999'),ow_sale.prc,
 TO_CHAR(COALESCE(RANK() OVER(win3),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range between current row and floor(ow_sale.cn) following ),
+WINDOW win1 as (order by ow_sale.vn desc range between current row and floor(ow_sale.cn)::integer following ),
 win2 as (partition by ow_sale.vn,ow_sale.qty,ow_sale.pn,ow_sale.cn order by ow_sale.ord, ow_sale.pn asc),
 win3 as (partition by ow_sale.cn,ow_sale.cn,ow_sale.pn,ow_sale.prc,ow_sale.pn order by ow_sale.ord, ow_sale.cn asc); -- mvd 7->6; 3,2,7,1->8; 10,3,1->9; 10,3,1->11; 
 
@@ -19245,7 +19245,7 @@ win2 as (order by ow_sale.pn desc); -- mvd 2->4; 6->5; 6->7;
 
 SELECT ow_sale.pn,ow_sale.cn, TO_CHAR(COALESCE(REGR_SXX(floor(ow_sale.vn-ow_sale.cn),floor(ow_sale.vn-ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.vn+ow_sale.cn) following and floor(ow_sale.pn+ow_sale.cn) following ); -- mvd 4->3; 
+WINDOW win1 as (order by ow_sale.vn asc range between floor(ow_sale.vn+ow_sale.cn)::integer following and floor(ow_sale.pn+ow_sale.cn)::integer following ); -- mvd 4->3; 
 
 -- REGR_SXX() function with ONLY order by having range based framing clause --
 
@@ -19259,7 +19259,7 @@ SELECT ow_sale.pn,ow_sale.pn,ow_sale.pn,ow_sale.vn, TO_CHAR(COALESCE(REGR_SXX(fl
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(COUNT(floor(ow_sale.qty+ow_sale.vn)) OVER(order by ow_sale.pn asc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.pn asc range between floor(ow_sale.prc) following and unbounded following ),
+WINDOW win1 as (order by ow_sale.pn asc range between floor(ow_sale.prc)::integer following and unbounded following ),
 win2 as (order by ow_sale.pn asc); -- mvd 1->5; 1->6; 1->7; 
 
 -- REGR_SXX() function with ONLY order by having rows based framing clause --
@@ -19474,11 +19474,11 @@ win2 as (order by ow_sale.vn desc); -- mvd 4,5,2->3; 4,5,2->6; 5->7; 4,5,2->8; 5
 -- REGR_SXX() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT ow_sale.qty,ow_sale.qty,ow_sale.pn,ow_sale.dt,ow_sale.vn, TO_CHAR(COALESCE(REGR_SXX(floor(ow_sale.vn/ow_sale.vn),floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,
-TO_CHAR(COALESCE(MAX(floor(ow_sale.qty-ow_sale.qty)) OVER(partition by ow_sale.cn order by ow_sale.cn desc range floor(ow_sale.prc) preceding ),0),'99999999.9999999'),
+TO_CHAR(COALESCE(MAX(floor(ow_sale.qty-ow_sale.qty)) OVER(partition by ow_sale.cn order by ow_sale.cn desc range floor(ow_sale.prc)::integer preceding ),0),'99999999.9999999'),
 TO_CHAR(COALESCE(CUME_DIST() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.pn) as int),cast (floor(ow_sale.vn+ow_sale.cn) as int),NULL) OVER(win3),0),'99999999.9999999'),ow_sale.prc
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.cn order by ow_sale.cn desc range floor(ow_sale.prc) preceding ),
+WINDOW win1 as (partition by ow_sale.cn order by ow_sale.cn desc range floor(ow_sale.prc)::integer preceding ),
 win2 as (partition by ow_sale.qty,ow_sale.pn,ow_sale.cn,ow_sale.pn order by ow_sale.cn asc),
 win3 as (partition by ow_sale.dt,ow_sale.prc order by ow_sale.ord, ow_sale.pn desc); -- mvd 7->6; 7->8; 7,1,3->9; 11,4,3->10; 
 
@@ -19532,10 +19532,10 @@ WINDOW win1 as (partition by ow_sale.cn,ow_sale.vn,ow_sale.vn,ow_sale.dt order b
 -- REGR_SXX() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT ow_sale.cn,ow_sale.qty,ow_sale.cn,ow_sale.qty, TO_CHAR(COALESCE(REGR_SXX(floor(ow_sale.qty),floor(ow_sale.prc*ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.prc,ow_sale.vn,
-TO_CHAR(COALESCE(MAX(floor(ow_sale.pn)) OVER(partition by ow_sale.prc,ow_sale.vn order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.vn/ow_sale.vn) following ),0),'99999999.9999999'),
+TO_CHAR(COALESCE(MAX(floor(ow_sale.pn)) OVER(partition by ow_sale.prc,ow_sale.vn order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.vn/ow_sale.vn)::integer following ),0),'99999999.9999999'),
 TO_CHAR(COALESCE(MIN(floor(ow_sale.qty+ow_sale.qty)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (partition by ow_sale.prc,ow_sale.vn order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.vn/ow_sale.vn) following ); -- mvd 6,1,7->5; 6,1,7->8; 6,1,7->9; 
+WINDOW win1 as (partition by ow_sale.prc,ow_sale.vn order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.vn/ow_sale.vn)::integer following ); -- mvd 6,1,7->5; 6,1,7->8; 6,1,7->9; 
 
 -- REGR_SXX() function with partition by and order by having range based framing clause --
 
@@ -19571,20 +19571,20 @@ win3 as (partition by ow_sale.prc,ow_sale.prc order by ow_sale.ord, ow_sale.vn d
 
 SELECT ow_sale.vn,ow_sale.qty,ow_sale.pn,ow_sale.qty,ow_sale.pn, TO_CHAR(COALESCE(REGR_SXX(floor(ow_sale.pn/ow_sale.vn),floor(ow_sale.cn/ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.dt
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.dt order by ow_sale.vn asc range between floor(ow_sale.pn) preceding and current row ); -- mvd 7,1->6; 
+WINDOW win1 as (partition by ow_sale.dt order by ow_sale.vn asc range between floor(ow_sale.pn)::integer preceding and current row ); -- mvd 7,1->6; 
 
 -- REGR_SXX() function with partition by and order by having range based framing clause --
 
 SELECT ow_sale.qty,ow_sale.qty,ow_sale.pn,ow_sale.pn,ow_sale.pn,ow_sale.prc, TO_CHAR(COALESCE(REGR_SXX(floor(ow_sale.cn-ow_sale.prc),floor(ow_sale.cn-ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,ow_sale.dt,ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.dt,ow_sale.cn,ow_sale.prc,ow_sale.dt order by ow_sale.pn asc range between floor(ow_sale.vn+ow_sale.cn) preceding and 0 following ); -- mvd 6,8,9,10,3->7; 
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.dt,ow_sale.cn,ow_sale.prc,ow_sale.dt order by ow_sale.pn asc range between floor(ow_sale.vn+ow_sale.cn)::integer preceding and 0 following ); -- mvd 6,8,9,10,3->7; 
 
 -- REGR_SXX() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT ow_sale.cn,ow_sale.prc,ow_sale.pn, TO_CHAR(COALESCE(REGR_SXX(floor(ow_sale.cn*ow_sale.prc),floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999'),
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.prc order by ow_sale.cn desc range between floor(ow_sale.prc) preceding and 2 following ),
+WINDOW win1 as (partition by ow_sale.prc order by ow_sale.cn desc range between floor(ow_sale.prc)::integer preceding and 2 following ),
 win2 as (order by ow_sale.pn desc); -- mvd 2,1->4; 3->5; 
 
 -- REGR_SXX() function with partition by and order by having range based framing clause --
@@ -19601,7 +19601,7 @@ TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.prc/ow_sale.pn) as int),cast (floor(ow_s
 TO_CHAR(COALESCE(MIN(floor(ow_sale.vn*ow_sale.prc)) OVER(partition by ow_sale.pn,ow_sale.cn,ow_sale.prc,ow_sale.vn order by ow_sale.ord, ow_sale.pn desc),0),'99999999.9999999'),
 TO_CHAR(COALESCE(MAX(floor(ow_sale.prc+ow_sale.qty)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (partition by ow_sale.pn,ow_sale.vn,ow_sale.pn,ow_sale.vn order by ow_sale.vn desc range between floor(ow_sale.cn) preceding and unbounded following ),
+WINDOW win1 as (partition by ow_sale.pn,ow_sale.vn,ow_sale.pn,ow_sale.vn order by ow_sale.vn desc range between floor(ow_sale.cn)::integer preceding and unbounded following ),
 win2 as (partition by ow_sale.dt,ow_sale.cn,ow_sale.pn,ow_sale.pn,ow_sale.pn,ow_sale.pn order by ow_sale.cn desc),
 win3 as (partition by ow_sale.pn,ow_sale.cn,ow_sale.prc,ow_sale.vn order by ow_sale.ord, ow_sale.pn desc); -- mvd 3,4->2; 1,6,4->5; 8,1,3,4->7; 8,1,3,4->9; 3,4->10; 
 
@@ -19661,13 +19661,13 @@ win2 as (partition by ow_sale.pn,ow_sale.vn,ow_sale.pn,ow_sale.pn order by ow_sa
 
 SELECT ow_sale.pn,ow_sale.pn,ow_sale.vn,ow_sale.pn,ow_sale.pn,ow_sale.qty, TO_CHAR(COALESCE(REGR_SXX(floor(ow_sale.qty+ow_sale.pn),floor(ow_sale.cn+ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.prc,ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_vendor WHERE ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.cn,ow_sale.prc,ow_sale.pn,ow_sale.cn,ow_sale.cn,ow_sale.cn order by ow_sale.cn desc range between floor(ow_sale.prc-ow_sale.prc) following and floor(ow_sale.pn) following ); -- mvd 8,9,1->7; 
+WINDOW win1 as (partition by ow_sale.cn,ow_sale.prc,ow_sale.pn,ow_sale.cn,ow_sale.cn,ow_sale.cn order by ow_sale.cn desc range between floor(ow_sale.prc-ow_sale.prc)::integer following and floor(ow_sale.pn)::integer following ); -- mvd 8,9,1->7; 
 
 -- REGR_SXX() function with partition by and order by having range based framing clause --
 
 SELECT ow_sale.qty,ow_sale.cn,ow_sale.qty,ow_sale.vn, TO_CHAR(COALESCE(REGR_SXX(floor(ow_sale.vn-ow_sale.cn),floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.dt
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.dt,ow_sale.cn,ow_sale.vn,ow_sale.qty order by ow_sale.cn asc range between floor(ow_sale.qty) following and unbounded following ); -- mvd 2,6,1,4->5; 
+WINDOW win1 as (partition by ow_sale.dt,ow_sale.cn,ow_sale.vn,ow_sale.qty order by ow_sale.cn asc range between floor(ow_sale.qty)::integer following and unbounded following ); -- mvd 2,6,1,4->5; 
 
 -- REGR_SXX() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -19972,7 +19972,7 @@ win3 as (order by ow_sale.ord, ow_sale.cn desc); -- mvd 1->2; 4,5,1->3; 5->6; 4,
 
 SELECT ow_sale.vn,ow_sale.vn,ow_sale.qty, TO_CHAR(COALESCE(REGR_SXY(floor(ow_sale.prc),floor(ow_sale.pn-ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_vendor WHERE ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range floor(ow_sale.pn+ow_sale.qty) preceding ); -- mvd 5->4; 
+WINDOW win1 as (order by ow_sale.cn desc range floor(ow_sale.pn+ow_sale.qty)::integer preceding ); -- mvd 5->4; 
 
 -- REGR_SXY() function with ONLY order by having range based framing clause --
 
@@ -19984,15 +19984,15 @@ WINDOW win1 as (order by ow_sale.cn desc range current row ); -- mvd 3->2;
 
 SELECT ow_sale.qty, TO_CHAR(COALESCE(REGR_SXY(floor(ow_sale.pn),floor(ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (order by ow_sale.pn desc range between unbounded preceding and floor(ow_sale.cn+ow_sale.qty) preceding ); -- mvd 3->2; 
+WINDOW win1 as (order by ow_sale.pn desc range between unbounded preceding and floor(ow_sale.cn+ow_sale.qty)::integer preceding ); -- mvd 3->2; 
 
 -- REGR_SXY() function with ONLY order by having range based framing clause in combination with other functions --
 
 SELECT ow_sale.vn,ow_sale.qty,ow_sale.pn,ow_sale.cn,ow_sale.vn, TO_CHAR(COALESCE(REGR_SXY(floor(ow_sale.pn),floor(ow_sale.qty-ow_sale.qty)) OVER(win1),0),'99999999.9999999'),
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win2),0),'99999999.9999999'),
-TO_CHAR(COALESCE(MAX(floor(ow_sale.cn*ow_sale.qty)) OVER(order by ow_sale.vn asc range between unbounded preceding and floor(ow_sale.cn*ow_sale.vn) preceding ),0),'99999999.9999999')
+TO_CHAR(COALESCE(MAX(floor(ow_sale.cn*ow_sale.qty)) OVER(order by ow_sale.vn asc range between unbounded preceding and floor(ow_sale.cn*ow_sale.vn)::integer preceding ),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.vn asc range between unbounded preceding and floor(ow_sale.cn*ow_sale.vn) preceding ),
+WINDOW win1 as (order by ow_sale.vn asc range between unbounded preceding and floor(ow_sale.cn*ow_sale.vn)::integer preceding ),
 win2 as (order by ow_sale.cn desc); -- mvd 1->6; 4->7; 1->8; 
 
 -- REGR_SXY() function with ONLY order by having range based framing clause --
@@ -20052,7 +20052,7 @@ win3 as (partition by ow_sale.vn,ow_sale.vn,ow_sale.cn order by ow_sale.vn desc)
 SELECT ow_sale.prc,ow_sale.cn, TO_CHAR(COALESCE(REGR_SXY(floor(ow_sale.cn),floor(ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.vn,
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(win2),0),'99999999.9999999'),ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.vn asc range between 0 preceding and floor(ow_sale.vn+ow_sale.prc) preceding ),
+WINDOW win1 as (order by ow_sale.vn asc range between 0 preceding and floor(ow_sale.vn+ow_sale.prc)::integer preceding ),
 win2 as (order by ow_sale.pn desc); -- mvd 4->3; 6->5; 
 
 -- REGR_SXY() function with ONLY order by having range based framing clause --
@@ -20079,18 +20079,18 @@ WINDOW win1 as (order by ow_sale.cn desc range between 3 preceding and 0 followi
 -- REGR_SXY() function with ONLY order by having range based framing clause in combination with other functions --
 
 SELECT ow_sale.qty, TO_CHAR(COALESCE(REGR_SXY(floor(ow_sale.cn),floor(ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.vn,
-TO_CHAR(COALESCE(MAX(floor(ow_sale.prc/ow_sale.qty)) OVER(order by ow_sale.vn desc range between floor(ow_sale.pn/ow_sale.vn) preceding and 2 following ),0),'99999999.9999999'),
+TO_CHAR(COALESCE(MAX(floor(ow_sale.prc/ow_sale.qty)) OVER(order by ow_sale.vn desc range between floor(ow_sale.pn/ow_sale.vn)::integer preceding and 2 following ),0),'99999999.9999999'),
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win2),0),'99999999.9999999'),ow_sale.prc,ow_sale.cn,
 TO_CHAR(COALESCE(MAX(floor(ow_sale.cn+ow_sale.vn)) OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range between floor(ow_sale.pn/ow_sale.vn) preceding and 2 following ),
+WINDOW win1 as (order by ow_sale.vn desc range between floor(ow_sale.pn/ow_sale.vn)::integer preceding and 2 following ),
 win2 as (partition by ow_sale.vn,ow_sale.qty,ow_sale.vn,ow_sale.vn,ow_sale.prc order by ow_sale.cn desc); -- mvd 3->2; 3->4; 6,7,1,3->5; 6,7,1,3->8; 
 
 -- REGR_SXY() function with ONLY order by having range based framing clause --
 
 SELECT ow_sale.pn,ow_sale.vn,ow_sale.qty,ow_sale.qty, TO_CHAR(COALESCE(REGR_SXY(floor(ow_sale.cn),floor(ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.qty-ow_sale.qty) preceding and unbounded following ); -- mvd 6->5; 
+WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.qty-ow_sale.qty)::integer preceding and unbounded following ); -- mvd 6->5; 
 
 -- REGR_SXY() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -20128,7 +20128,7 @@ win3 as (order by ow_sale.cn asc); -- mvd 5->4; 7,8,1,5->6; 7->9; 7->10; 7,8,1,5
 
 SELECT ow_sale.cn, TO_CHAR(COALESCE(REGR_SXY(floor(ow_sale.cn),floor(ow_sale.qty*ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.pn asc range between current row and floor(ow_sale.vn+ow_sale.cn) following ); -- mvd 3->2; 
+WINDOW win1 as (order by ow_sale.pn asc range between current row and floor(ow_sale.vn+ow_sale.cn)::integer following ); -- mvd 3->2; 
 
 -- REGR_SXY() function with ONLY order by having range based framing clause --
 
@@ -20182,7 +20182,7 @@ TO_CHAR(COALESCE(RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(CUME_DIST() OVER(win3),0),'99999999.9999999'),ow_sale.dt,
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(order by ow_sale.ord, ow_sale.cn asc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range between floor(ow_sale.pn) following and unbounded following ),
+WINDOW win1 as (order by ow_sale.vn desc range between floor(ow_sale.pn)::integer following and unbounded following ),
 win2 as (order by ow_sale.ord, ow_sale.cn asc),
 win3 as (partition by ow_sale.cn,ow_sale.prc,ow_sale.dt order by ow_sale.cn asc); -- mvd 1->4; 6->5; 6->7; 2,9,6->8; 6->10; 
 
@@ -20446,7 +20446,7 @@ win2 as (partition by ow_sale.cn,ow_sale.dt,ow_sale.vn order by ow_sale.cn asc);
 
 SELECT ow_sale.vn,ow_sale.cn, TO_CHAR(COALESCE(REGR_SXY(floor(ow_sale.vn),floor(ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.qty,ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (partition by ow_sale.pn,ow_sale.cn,ow_sale.qty order by ow_sale.cn desc range floor(ow_sale.cn) preceding ); -- mvd 2,4,5->3; 
+WINDOW win1 as (partition by ow_sale.pn,ow_sale.cn,ow_sale.qty order by ow_sale.cn desc range floor(ow_sale.cn)::integer preceding ); -- mvd 2,4,5->3; 
 
 -- REGR_SXY() function with partition by and order by having range based framing clause --
 
@@ -20469,7 +20469,7 @@ win3 as (order by ow_sale.pn desc); -- mvd 6,4,2,1->5; 6->7; 1->8; 6->9;
 
 SELECT ow_sale.cn,ow_sale.qty,ow_sale.vn, TO_CHAR(COALESCE(REGR_SXY(floor(ow_sale.cn),floor(ow_sale.vn)) OVER(win1),0),'99999999.9999999'),ow_sale.prc,ow_sale.dt,ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (partition by ow_sale.pn,ow_sale.dt,ow_sale.cn,ow_sale.prc order by ow_sale.pn asc range between unbounded preceding and floor(ow_sale.qty) preceding ); -- mvd 5,1,6,7->4; 
+WINDOW win1 as (partition by ow_sale.pn,ow_sale.dt,ow_sale.cn,ow_sale.prc order by ow_sale.pn asc range between unbounded preceding and floor(ow_sale.qty)::integer preceding ); -- mvd 5,1,6,7->4; 
 
 -- REGR_SXY() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -20530,7 +20530,7 @@ win3 as (order by ow_sale.ord, ow_sale.cn asc); -- mvd 3,4->2; 6,3,4->5; 8->7;
 
 SELECT ow_sale.pn,ow_sale.pn,ow_sale.cn, TO_CHAR(COALESCE(REGR_SXY(floor(ow_sale.vn),floor(ow_sale.pn/ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.prc,ow_sale.qty,ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.prc,ow_sale.cn,ow_sale.vn,ow_sale.qty,ow_sale.pn,ow_sale.vn order by ow_sale.pn asc range between floor(ow_sale.pn/ow_sale.vn) preceding and floor(ow_sale.pn) preceding ); -- mvd 5,3,6,7,1->4; 
+WINDOW win1 as (partition by ow_sale.prc,ow_sale.cn,ow_sale.vn,ow_sale.qty,ow_sale.pn,ow_sale.vn order by ow_sale.pn asc range between floor(ow_sale.pn/ow_sale.vn)::integer preceding and floor(ow_sale.pn)::integer preceding ); -- mvd 5,3,6,7,1->4; 
 
 -- REGR_SXY() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -20540,7 +20540,7 @@ TO_CHAR(COALESCE(DENSE_RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(MIN(floor(ow_sale.qty-ow_sale.vn)) OVER(partition by ow_sale.vn,ow_sale.prc order by ow_sale.cn desc),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.vn+ow_sale.qty) as int),cast (floor(ow_sale.pn) as int),NULL) OVER(win3),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.dt,ow_sale.pn,ow_sale.pn,ow_sale.vn,ow_sale.prc,ow_sale.dt order by ow_sale.cn asc range between floor(ow_sale.vn-ow_sale.vn) preceding and floor(ow_sale.vn) preceding ),
+WINDOW win1 as (partition by ow_sale.dt,ow_sale.pn,ow_sale.pn,ow_sale.vn,ow_sale.prc,ow_sale.dt order by ow_sale.cn asc range between floor(ow_sale.vn-ow_sale.vn)::integer preceding and floor(ow_sale.vn)::integer preceding ),
 win2 as (partition by ow_sale.vn,ow_sale.prc order by ow_sale.cn desc),
 win3 as (order by ow_sale.ord, ow_sale.pn asc); -- mvd 8,2,9,4,1->7; 8,2,9,4,1->10; 8,2,4->11; 8,2,4->12; 1->13; 
 
@@ -20566,7 +20566,7 @@ win4 as (partition by ow_sale.cn,ow_sale.dt,ow_sale.vn,ow_sale.pn order by ow_sa
 
 SELECT ow_sale.dt,ow_sale.pn,ow_sale.pn, TO_CHAR(COALESCE(REGR_SXY(floor(ow_sale.qty),floor(ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.prc,ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.dt,ow_sale.vn,ow_sale.dt,ow_sale.pn,ow_sale.dt,ow_sale.prc order by ow_sale.vn asc range between 3 preceding and floor(ow_sale.vn) following ); -- mvd 5,1,6,2->4; 
+WINDOW win1 as (partition by ow_sale.dt,ow_sale.vn,ow_sale.dt,ow_sale.pn,ow_sale.dt,ow_sale.prc order by ow_sale.vn asc range between 3 preceding and floor(ow_sale.vn)::integer following ); -- mvd 5,1,6,2->4; 
 
 -- REGR_SXY() function with partition by and order by having range based framing clause --
 
@@ -20579,7 +20579,7 @@ WINDOW win1 as (partition by ow_sale.cn,ow_sale.pn,ow_sale.pn order by ow_sale.p
 SELECT ow_sale.cn,ow_sale.vn, TO_CHAR(COALESCE(REGR_SXY(floor(ow_sale.vn+ow_sale.prc),floor(ow_sale.cn*ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.dt,ow_sale.pn,
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.dt,ow_sale.pn,ow_sale.vn order by ow_sale.cn asc range between floor(ow_sale.prc+ow_sale.pn) preceding and unbounded following ),
+WINDOW win1 as (partition by ow_sale.dt,ow_sale.pn,ow_sale.vn order by ow_sale.cn asc range between floor(ow_sale.prc+ow_sale.pn)::integer preceding and unbounded following ),
 win2 as (partition by ow_sale.cn,ow_sale.cn,ow_sale.pn,ow_sale.vn,ow_sale.dt,ow_sale.vn order by ow_sale.vn desc); -- mvd 1,4,2,5->3; 4,1,2,5->6; 
 
 -- REGR_SXY() function with partition by and order by having range based framing clause --
@@ -20592,7 +20592,7 @@ WINDOW win1 as (partition by ow_sale.pn,ow_sale.cn order by ow_sale.vn asc range
 
 SELECT ow_sale.vn,ow_sale.qty,ow_sale.qty,ow_sale.vn,ow_sale.prc,ow_sale.qty, TO_CHAR(COALESCE(REGR_SXY(floor(ow_sale.pn-ow_sale.cn),floor(ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (partition by ow_sale.pn order by ow_sale.vn desc range between current row and floor(ow_sale.qty) following ); -- mvd 1,8->7; 
+WINDOW win1 as (partition by ow_sale.pn order by ow_sale.vn desc range between current row and floor(ow_sale.qty)::integer following ); -- mvd 1,8->7; 
 
 -- REGR_SXY() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -20625,7 +20625,7 @@ TO_CHAR(COALESCE(DENSE_RANK() OVER(win4),0),'99999999.9999999'),
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win4),0),'99999999.9999999'),
 TO_CHAR(COALESCE(MIN(floor(ow_sale.cn)) OVER(win3),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.dt order by ow_sale.pn asc range between floor(ow_sale.prc) following and floor(ow_sale.vn-ow_sale.cn) following ),
+WINDOW win1 as (partition by ow_sale.dt order by ow_sale.pn asc range between floor(ow_sale.prc)::integer following and floor(ow_sale.vn-ow_sale.cn)::integer following ),
 win2 as (order by ow_sale.cn desc),
 win3 as (partition by ow_sale.pn,ow_sale.cn,ow_sale.pn,ow_sale.pn order by ow_sale.vn asc),
 win4 as (order by ow_sale.pn desc); -- mvd 3,1->2; 5->4; 5,7,1->6; 1->8; 1->9; 5,7,1->10; 
@@ -20643,7 +20643,7 @@ TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.qty+ow_sale.pn) as int),cast (floor(ow_s
 TO_CHAR(COALESCE(MAX(floor(ow_sale.prc)) OVER(win1),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LAG(cast(floor(ow_sale.qty/ow_sale.cn) as int),cast (floor(ow_sale.vn*ow_sale.prc) as int),NULL) OVER(win3),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn order by ow_sale.vn desc range between floor(ow_sale.vn*ow_sale.cn) following and unbounded following ),
+WINDOW win1 as (partition by ow_sale.vn order by ow_sale.vn desc range between floor(ow_sale.vn*ow_sale.cn)::integer following and unbounded following ),
 win2 as (partition by ow_sale.vn,ow_sale.vn,ow_sale.pn order by ow_sale.ord, ow_sale.vn desc),
 win3 as (order by ow_sale.ord, ow_sale.vn asc); -- mvd 4->7; 4,5->8; 4->9; 4->10; 
 
@@ -20954,7 +20954,7 @@ win2 as (order by ow_sale.pn desc); -- mvd 1->7; 4->8;
 
 SELECT ow_sale.pn,ow_sale.cn,ow_sale.qty,ow_sale.pn, TO_CHAR(COALESCE(REGR_SYY(floor(ow_sale.vn-ow_sale.cn),floor(ow_sale.prc+ow_sale.cn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range floor(ow_sale.cn/ow_sale.qty) preceding ); -- mvd 2->5; 
+WINDOW win1 as (order by ow_sale.cn desc range floor(ow_sale.cn/ow_sale.qty)::integer preceding ); -- mvd 2->5; 
 
 -- REGR_SYY() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -21010,14 +21010,14 @@ win3 as (order by ow_sale.pn asc); -- mvd 2->4; 2->5; 7->6;
 
 SELECT ow_sale.pn,ow_sale.vn, TO_CHAR(COALESCE(REGR_SYY(floor(ow_sale.pn+ow_sale.vn),floor(ow_sale.prc*ow_sale.pn)) OVER(win1),0),'99999999.9999999'),ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.qty) following ); -- mvd 4->3; 
+WINDOW win1 as (order by ow_sale.cn desc range between unbounded preceding and floor(ow_sale.qty)::integer following ); -- mvd 4->3; 
 
 -- REGR_SYY() function with ONLY order by having range based framing clause in combination with other functions --
 
 SELECT ow_sale.vn,ow_sale.prc, TO_CHAR(COALESCE(REGR_SYY(floor(ow_sale.cn/ow_sale.vn),floor(ow_sale.qty-ow_sale.cn)) OVER(win1),0),'99999999.9999999'),ow_sale.pn,
 TO_CHAR(COALESCE(CUME_DIST() OVER(win2),0),'99999999.9999999'),ow_sale.cn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor,ow_customer WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn AND ow_sale_ord.cn=ow_customer.cn) ow_sale
-WINDOW win1 as (order by ow_sale.pn asc range between unbounded preceding and floor(ow_sale.pn) following ),
+WINDOW win1 as (order by ow_sale.pn asc range between unbounded preceding and floor(ow_sale.pn)::integer following ),
 win2 as (order by ow_sale.cn desc); -- mvd 4->3; 6->5; 
 
 -- REGR_SYY() function with ONLY order by having range based framing clause --
@@ -21045,7 +21045,7 @@ win5 as (order by ow_sale.vn desc); -- mvd 2->4; 2->5; 2->6; 8,1,2->7; 10,11,2,1
 
 SELECT ow_sale.pn, TO_CHAR(COALESCE(REGR_SYY(floor(ow_sale.cn/ow_sale.cn),floor(ow_sale.qty)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.pn asc range between 0 preceding and floor(ow_sale.cn) preceding ); -- mvd 1->2; 
+WINDOW win1 as (order by ow_sale.pn asc range between 0 preceding and floor(ow_sale.cn)::integer preceding ); -- mvd 1->2; 
 
 -- REGR_SYY() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -21054,7 +21054,7 @@ TO_CHAR(COALESCE(CUME_DIST() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(win3),0),'99999999.9999999'),
 TO_CHAR(COALESCE(CUME_DIST() OVER(win4),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range between floor(ow_sale.prc/ow_sale.cn) preceding and floor(ow_sale.pn*ow_sale.prc) preceding ),
+WINDOW win1 as (order by ow_sale.vn desc range between floor(ow_sale.prc/ow_sale.cn)::integer preceding and floor(ow_sale.pn*ow_sale.prc)::integer preceding ),
 win2 as (order by ow_sale.vn desc),
 win3 as (order by ow_sale.cn asc),
 win4 as (partition by ow_sale.vn,ow_sale.vn,ow_sale.cn,ow_sale.dt order by ow_sale.cn asc); -- mvd 8->7; 8->9; 2->10; 1,2,8->11; 
@@ -21063,13 +21063,13 @@ win4 as (partition by ow_sale.vn,ow_sale.vn,ow_sale.cn,ow_sale.dt order by ow_sa
 
 SELECT ow_sale.cn,ow_sale.vn,ow_sale.cn, TO_CHAR(COALESCE(REGR_SYY(floor(ow_sale.vn),floor(ow_sale.qty-ow_sale.prc)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.pn-ow_sale.vn) preceding and current row ); -- mvd 1->4; 
+WINDOW win1 as (order by ow_sale.cn desc range between floor(ow_sale.pn-ow_sale.vn)::integer preceding and current row ); -- mvd 1->4; 
 
 -- REGR_SYY() function with ONLY order by having range based framing clause --
 
 SELECT ow_sale.cn,ow_sale.vn,ow_sale.cn,ow_sale.pn,ow_sale.cn,ow_sale.qty, TO_CHAR(COALESCE(REGR_SYY(floor(ow_sale.vn*ow_sale.pn),floor(ow_sale.qty-ow_sale.vn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (order by ow_sale.cn asc range between 0 preceding and floor(ow_sale.cn) following ); -- mvd 1->7; 
+WINDOW win1 as (order by ow_sale.cn asc range between 0 preceding and floor(ow_sale.cn)::integer following ); -- mvd 1->7; 
 
 -- REGR_SYY() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -21078,14 +21078,14 @@ TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(order by ow_sale.vn asc),0),'99999999.9999999'),
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (order by ow_sale.vn desc range between floor(ow_sale.cn/ow_sale.vn) preceding and 0 following ),
+WINDOW win1 as (order by ow_sale.vn desc range between floor(ow_sale.cn/ow_sale.vn)::integer preceding and 0 following ),
 win2 as (order by ow_sale.vn asc); -- mvd 1->4; 1->5; 1->6; 1->7; 
 
 -- REGR_SYY() function with ONLY order by having range based framing clause --
 
 SELECT ow_sale.pn,ow_sale.qty, TO_CHAR(COALESCE(REGR_SYY(floor(ow_sale.prc),floor(ow_sale.prc-ow_sale.prc)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.pn asc range between floor(ow_sale.qty+ow_sale.qty) preceding and unbounded following ); -- mvd 1->3; 
+WINDOW win1 as (order by ow_sale.pn asc range between floor(ow_sale.qty+ow_sale.qty)::integer preceding and unbounded following ); -- mvd 1->3; 
 
 -- REGR_SYY() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -21109,7 +21109,7 @@ WINDOW win1 as (order by ow_sale.cn asc range between current row and current ro
 
 SELECT ow_sale.dt,ow_sale.cn, TO_CHAR(COALESCE(REGR_SYY(floor(ow_sale.qty),floor(ow_sale.vn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (order by ow_sale.cn desc range between current row and floor(ow_sale.vn) following ); -- mvd 2->3; 
+WINDOW win1 as (order by ow_sale.cn desc range between current row and floor(ow_sale.vn)::integer following ); -- mvd 2->3; 
 
 -- REGR_SYY() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -21120,7 +21120,7 @@ TO_CHAR(COALESCE(RANK() OVER(win3),0),'99999999.9999999'),
 TO_CHAR(COALESCE(RANK() OVER(order by ow_sale.vn desc),0),'99999999.9999999'),
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(win2),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (order by ow_sale.cn asc range between current row and floor(ow_sale.prc) following ),
+WINDOW win1 as (order by ow_sale.cn asc range between current row and floor(ow_sale.prc)::integer following ),
 win2 as (order by ow_sale.ord, ow_sale.cn desc),
 win3 as (order by ow_sale.vn desc); -- mvd 3->4; 3->5; 3->6; 1->7; 1->8; 3->9; 
 
@@ -21490,7 +21490,7 @@ win2 as (order by ow_sale.cn desc); -- mvd 2,5,6->4; 2->7; 2->8; 2->9; 2,5,6->10
 
 SELECT ow_sale.dt,ow_sale.pn, TO_CHAR(COALESCE(REGR_SYY(floor(ow_sale.pn),floor(ow_sale.prc*ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.cn,ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product,ow_vendor WHERE ow_sale_ord.pn=ow_product.pn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.pn,ow_sale.pn,ow_sale.cn order by ow_sale.vn asc range between floor(ow_sale.vn) preceding and 0 preceding ); -- mvd 4,5,2->3; 
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.pn,ow_sale.pn,ow_sale.cn order by ow_sale.vn asc range between floor(ow_sale.vn)::integer preceding and 0 preceding ); -- mvd 4,5,2->3; 
 
 -- REGR_SYY() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -21501,7 +21501,7 @@ TO_CHAR(COALESCE(CUME_DIST() OVER(win4),0),'99999999.9999999'),
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(win4),0),'99999999.9999999'),
 TO_CHAR(COALESCE(RANK() OVER(win4),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.pn,ow_sale.prc,ow_sale.qty,ow_sale.cn,ow_sale.dt order by ow_sale.cn desc range between floor(ow_sale.vn) preceding and 2 preceding ),
+WINDOW win1 as (partition by ow_sale.pn,ow_sale.prc,ow_sale.qty,ow_sale.cn,ow_sale.dt order by ow_sale.cn desc range between floor(ow_sale.vn)::integer preceding and 2 preceding ),
 win2 as (partition by ow_sale.pn order by ow_sale.pn desc),
 win3 as (partition by ow_sale.vn,ow_sale.pn order by ow_sale.ord, ow_sale.cn desc),
 win4 as (order by ow_sale.cn desc); -- mvd 6,7,4,2,1->5; 1->8; 4,10,1->9; 4->11; 4->12; 4->13; 
@@ -21520,7 +21520,7 @@ TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.vn+ow_sale.qty) as int),cast (floor(ow_
 TO_CHAR(COALESCE(RANK() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(CUME_DIST() OVER(win4),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord) ow_sale
-WINDOW win1 as (partition by ow_sale.cn,ow_sale.cn order by ow_sale.cn asc range between floor(ow_sale.pn+ow_sale.prc) preceding and current row ),
+WINDOW win1 as (partition by ow_sale.cn,ow_sale.cn order by ow_sale.cn asc range between floor(ow_sale.pn+ow_sale.prc)::integer preceding and current row ),
 win2 as (order by ow_sale.cn asc),
 win3 as (partition by ow_sale.prc,ow_sale.pn order by ow_sale.ord, ow_sale.cn desc),
 win4 as (order by ow_sale.pn desc); -- mvd 1->4; 1->5; 7,1,8->6; 1->9; 8->10; 
@@ -21529,7 +21529,7 @@ win4 as (order by ow_sale.pn desc); -- mvd 1->4; 1->5; 7,1,8->6; 1->9; 8->10;
 
 SELECT ow_sale.dt,ow_sale.cn, TO_CHAR(COALESCE(REGR_SYY(floor(ow_sale.prc),floor(ow_sale.prc)) OVER(win1),0),'99999999.9999999'),ow_sale.prc,ow_sale.vn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.prc,ow_sale.vn,ow_sale.dt,ow_sale.dt order by ow_sale.cn asc range between 4 preceding and floor(ow_sale.qty) following ); -- mvd 4,2,1,5->3; 
+WINDOW win1 as (partition by ow_sale.prc,ow_sale.vn,ow_sale.dt,ow_sale.dt order by ow_sale.cn asc range between 4 preceding and floor(ow_sale.qty)::integer following ); -- mvd 4,2,1,5->3; 
 
 -- REGR_SYY() function with partition by and order by having range based framing clause --
 
@@ -21545,7 +21545,7 @@ TO_CHAR(COALESCE(DENSE_RANK() OVER(order by ow_sale.cn asc),0),'99999999.9999999
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(order by ow_sale.cn asc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer WHERE ow_sale_ord.cn=ow_customer.cn ) ow_sale
-WINDOW win1 as (partition by ow_sale.cn,ow_sale.cn,ow_sale.cn,ow_sale.pn,ow_sale.cn,ow_sale.cn order by ow_sale.pn desc range between floor(ow_sale.pn) preceding and unbounded following ),
+WINDOW win1 as (partition by ow_sale.cn,ow_sale.cn,ow_sale.cn,ow_sale.pn,ow_sale.cn,ow_sale.cn order by ow_sale.pn desc range between floor(ow_sale.pn)::integer preceding and unbounded following ),
 win2 as (order by ow_sale.cn asc); -- mvd 4,5->3; 4->6; 4->7; 4->8; 4->9; 
 
 -- REGR_SYY() function with partition by and order by having range based framing clause --
@@ -21575,9 +21575,9 @@ TO_CHAR(COALESCE(LEAD(cast(floor(ow_sale.qty*ow_sale.pn) as int),cast (floor(ow_
 TO_CHAR(COALESCE(COUNT(floor(ow_sale.qty/ow_sale.cn)) OVER(win1),0),'99999999.9999999'),
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(partition by ow_sale.dt,ow_sale.cn,ow_sale.dt,ow_sale.dt order by ow_sale.ord, ow_sale.cn asc),0),'99999999.9999999'),
 TO_CHAR(COALESCE(MIN(floor(ow_sale.cn+ow_sale.cn)) OVER(win1),0),'99999999.9999999'),
-TO_CHAR(COALESCE(MAX(floor(ow_sale.cn)) OVER(partition by ow_sale.vn,ow_sale.dt,ow_sale.cn,ow_sale.vn order by ow_sale.pn desc range between current row and floor(ow_sale.pn+ow_sale.qty) following ),0),'99999999.9999999')
+TO_CHAR(COALESCE(MAX(floor(ow_sale.cn)) OVER(partition by ow_sale.vn,ow_sale.dt,ow_sale.cn,ow_sale.vn order by ow_sale.pn desc range between current row and floor(ow_sale.pn+ow_sale.qty)::integer following ),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_product WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.vn,ow_sale.dt,ow_sale.cn,ow_sale.vn order by ow_sale.pn desc range between current row and floor(ow_sale.pn+ow_sale.qty) following ),
+WINDOW win1 as (partition by ow_sale.vn,ow_sale.dt,ow_sale.cn,ow_sale.vn order by ow_sale.pn desc range between current row and floor(ow_sale.pn+ow_sale.qty)::integer following ),
 win2 as (partition by ow_sale.dt,ow_sale.cn,ow_sale.dt,ow_sale.dt order by ow_sale.ord, ow_sale.cn asc); -- mvd 1,3,4,5->2; 1,3->6; 1,3,4,5->7; 1,3->8; 1,3,4,5->9; 1,3,4,5->10; 
 
 -- REGR_SYY() function with partition by and order by having range based framing clause --
@@ -21611,7 +21611,7 @@ TO_CHAR(COALESCE(CUME_DIST() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(PERCENT_RANK() OVER(win3),0),'99999999.9999999'),
 TO_CHAR(COALESCE(MIN(floor(ow_sale.pn/ow_sale.vn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.prc,ow_sale.prc,ow_sale.pn order by ow_sale.cn desc range between 0 following and floor(ow_sale.vn-ow_sale.cn) following ),
+WINDOW win1 as (partition by ow_sale.prc,ow_sale.prc,ow_sale.pn order by ow_sale.cn desc range between 0 following and floor(ow_sale.vn-ow_sale.cn)::integer following ),
 win2 as (partition by ow_sale.vn,ow_sale.vn,ow_sale.vn,ow_sale.pn order by ow_sale.cn desc),
 win3 as (order by ow_sale.pn desc); -- mvd 4,1,2->3; 1,6,2->5; 1,6,2->7; 2->8; 4,1,2->9; 
 
@@ -21619,7 +21619,7 @@ win3 as (order by ow_sale.pn desc); -- mvd 4,1,2->3; 1,6,2->5; 1,6,2->7; 2->8; 4
 
 SELECT ow_sale.vn,ow_sale.qty,ow_sale.prc,ow_sale.qty,ow_sale.dt, TO_CHAR(COALESCE(REGR_SYY(floor(ow_sale.prc),floor(ow_sale.qty+ow_sale.qty)) OVER(win1),0),'99999999.9999999'),ow_sale.pn
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_customer,ow_vendor WHERE ow_sale_ord.cn=ow_customer.cn AND ow_sale_ord.vn=ow_vendor.vn) ow_sale
-WINDOW win1 as (partition by ow_sale.qty,ow_sale.prc,ow_sale.pn order by ow_sale.pn desc range between floor(ow_sale.pn) following and unbounded following ); -- mvd 3,2,7->6; 
+WINDOW win1 as (partition by ow_sale.qty,ow_sale.prc,ow_sale.pn order by ow_sale.pn desc range between floor(ow_sale.pn)::integer following and unbounded following ); -- mvd 3,2,7->6; 
 
 -- REGR_SYY() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -21627,7 +21627,7 @@ SELECT ow_sale.vn,ow_sale.pn,ow_sale.qty,ow_sale.cn,ow_sale.cn,ow_sale.pn, TO_CH
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win2),0),'99999999.9999999'),ow_sale.prc,
 TO_CHAR(COALESCE(DENSE_RANK() OVER(partition by ow_sale.cn,ow_sale.dt,ow_sale.cn,ow_sale.pn,ow_sale.qty,ow_sale.prc order by ow_sale.pn asc),0),'99999999.9999999')
 FROM (SELECT ow_sale_ord.* FROM ow_sale_ord,ow_product WHERE ow_sale_ord.pn=ow_product.pn) ow_sale
-WINDOW win1 as (partition by ow_sale.dt,ow_sale.cn,ow_sale.cn,ow_sale.pn,ow_sale.cn,ow_sale.vn order by ow_sale.vn desc range between floor(ow_sale.prc) following and unbounded following ),
+WINDOW win1 as (partition by ow_sale.dt,ow_sale.cn,ow_sale.cn,ow_sale.pn,ow_sale.cn,ow_sale.vn order by ow_sale.vn desc range between floor(ow_sale.prc)::integer following and unbounded following ),
 win2 as (partition by ow_sale.cn,ow_sale.dt,ow_sale.cn,ow_sale.pn,ow_sale.qty,ow_sale.prc order by ow_sale.pn asc); -- mvd 4,8,1,2->7; 10,8,4,3,2->9; 10,8,4,3,2->11; 
 
 -- REGR_SYY() function with partition by and order by having rows based framing clause --

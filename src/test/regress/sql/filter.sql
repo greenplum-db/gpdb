@@ -36,8 +36,6 @@ SELECT count(i) FROM filter_test WHERE j = 1;
 SELECT max(*) FROM filter_test;
 SELECT max(*) FILTER (WHERE i < 5) FROM filter_test;
 
--- Use old sort implementation
-set gp_enable_mk_sort=off;
 
 -- TEST MAX(i)
 SELECT max(i) FROM filter_test;

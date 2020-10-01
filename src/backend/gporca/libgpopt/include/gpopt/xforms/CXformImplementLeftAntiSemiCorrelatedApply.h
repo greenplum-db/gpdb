@@ -19,60 +19,58 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//-------------------------------------------------------------------------
-	//	@class:
-	//		CXformImplementLeftAntiSemiCorrelatedApply
-	//
-	//	@doc:
-	//		Transform left anti semi correlated apply  (for NOT EXISTS subqueries)
-	//		to physical left anti semi correlated join
-	//
-	//-------------------------------------------------------------------------
-	class CXformImplementLeftAntiSemiCorrelatedApply :
-		public CXformImplementCorrelatedApply<CLogicalLeftAntiSemiCorrelatedApply, CPhysicalCorrelatedLeftAntiSemiNLJoin>
+//-------------------------------------------------------------------------
+//	@class:
+//		CXformImplementLeftAntiSemiCorrelatedApply
+//
+//	@doc:
+//		Transform left anti semi correlated apply  (for NOT EXISTS subqueries)
+//		to physical left anti semi correlated join
+//
+//-------------------------------------------------------------------------
+class CXformImplementLeftAntiSemiCorrelatedApply
+	: public CXformImplementCorrelatedApply<
+		  CLogicalLeftAntiSemiCorrelatedApply,
+		  CPhysicalCorrelatedLeftAntiSemiNLJoin>
+{
+private:
+	// private copy ctor
+	CXformImplementLeftAntiSemiCorrelatedApply(
+		const CXformImplementLeftAntiSemiCorrelatedApply &);
+
+public:
+	// ctor
+	explicit CXformImplementLeftAntiSemiCorrelatedApply(CMemoryPool *mp)
+		: CXformImplementCorrelatedApply<CLogicalLeftAntiSemiCorrelatedApply,
+										 CPhysicalCorrelatedLeftAntiSemiNLJoin>(
+			  mp)
 	{
+	}
 
-		private:
+	// dtor
+	virtual ~CXformImplementLeftAntiSemiCorrelatedApply()
+	{
+	}
 
-			// private copy ctor
-			CXformImplementLeftAntiSemiCorrelatedApply(const CXformImplementLeftAntiSemiCorrelatedApply &);
+	// ident accessors
+	virtual EXformId
+	Exfid() const
+	{
+		return ExfImplementLeftAntiSemiCorrelatedApply;
+	}
 
-		public:
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CXformImplementLeftAntiSemiCorrelatedApply";
+	}
 
-			// ctor
-			explicit
-			CXformImplementLeftAntiSemiCorrelatedApply
-				(
-				CMemoryPool *mp
-				)
-				:
-				CXformImplementCorrelatedApply<CLogicalLeftAntiSemiCorrelatedApply, CPhysicalCorrelatedLeftAntiSemiNLJoin>(mp)
-			{}
+};	// class CXformImplementLeftAntiSemiCorrelatedApply
 
-			// dtor
-			virtual
-			~CXformImplementLeftAntiSemiCorrelatedApply()
-			{}
+}  // namespace gpopt
 
-			// ident accessors
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfImplementLeftAntiSemiCorrelatedApply;
-			}
-
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CXformImplementLeftAntiSemiCorrelatedApply";
-			}
-
-	}; // class CXformImplementLeftAntiSemiCorrelatedApply
-
-}
-
-#endif // !GPOPT_CXformImplementLeftAntiSemiCorrelatedApply_H
+#endif	// !GPOPT_CXformImplementLeftAntiSemiCorrelatedApply_H
 
 // EOF

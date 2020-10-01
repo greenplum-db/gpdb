@@ -19,85 +19,82 @@
 
 namespace gpdxl
 {
-	// indices of redistribute motion elements in the children array
-	enum Edxlrm
+// indices of redistribute motion elements in the children array
+enum Edxlrm
+{
+	EdxlrmIndexProjList = 0,
+	EdxlrmIndexFilter,
+	EdxlrmIndexSortColList,
+	EdxlrmIndexHashExprList,
+	EdxlrmIndexChild,
+	EdxlrmIndexSentinel
+};
+
+
+
+//---------------------------------------------------------------------------
+//	@class:
+//		CDXLPhysicalRedistributeMotion
+//
+//	@doc:
+//		Class for representing DXL redistribute motion operators
+//
+//---------------------------------------------------------------------------
+class CDXLPhysicalRedistributeMotion : public CDXLPhysicalMotion
+{
+private:
+	// is this a duplicate sensitive redistribute motion
+	BOOL m_is_duplicate_sensitive;
+
+	// private copy ctor
+	CDXLPhysicalRedistributeMotion(const CDXLPhysicalRedistributeMotion &);
+
+
+public:
+	// ctor
+	CDXLPhysicalRedistributeMotion(CMemoryPool *mp,
+								   BOOL is_duplicate_sensitive);
+
+	// accessors
+	Edxlopid GetDXLOperator() const;
+	const CWStringConst *GetOpNameStr() const;
+
+	// does motion remove duplicates
+	BOOL
+	IsDuplicateSensitive() const
 	{
-		EdxlrmIndexProjList = 0,
-		EdxlrmIndexFilter,
-		EdxlrmIndexSortColList,
-		EdxlrmIndexHashExprList,
-		EdxlrmIndexChild,
-		EdxlrmIndexSentinel
-	};
+		return m_is_duplicate_sensitive;
+	}
 
-
-	
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CDXLPhysicalRedistributeMotion
-	//
-	//	@doc:
-	//		Class for representing DXL redistribute motion operators
-	//
-	//---------------------------------------------------------------------------
-	class CDXLPhysicalRedistributeMotion : public CDXLPhysicalMotion
+	// index of relational child node in the children array
+	virtual ULONG
+	GetRelationChildIdx() const
 	{
-		private:
-			
-			// is this a duplicate sensitive redistribute motion
-			BOOL m_is_duplicate_sensitive;
-			
-			// private copy ctor
-			CDXLPhysicalRedistributeMotion(const CDXLPhysicalRedistributeMotion&);
-			
-			
-		public:
-			// ctor
-			CDXLPhysicalRedistributeMotion(CMemoryPool *mp, BOOL is_duplicate_sensitive);
-			
-			// accessors
-			Edxlopid GetDXLOperator() const;
-			const CWStringConst *GetOpNameStr() const;
-			
-			// does motion remove duplicates
-			BOOL IsDuplicateSensitive() const
-			{
-				return m_is_duplicate_sensitive;
-			}
-			
-			// index of relational child node in the children array
-			virtual 
-			ULONG GetRelationChildIdx() const
-			{
-				return EdxlrmIndexChild;
-			}
-			
-			// serialize operator in DXL format
-			virtual
-			void SerializeToDXL(CXMLSerializer *xml_serializer, const CDXLNode *dxlnode) const;
+		return EdxlrmIndexChild;
+	}
 
-			// conversion function
-			static
-			CDXLPhysicalRedistributeMotion *Cast
-				(
-				CDXLOperator *dxl_op
-				)
-			{
-				GPOS_ASSERT(NULL != dxl_op);
-				GPOS_ASSERT(EdxlopPhysicalMotionRedistribute == dxl_op->GetDXLOperator());
+	// serialize operator in DXL format
+	virtual void SerializeToDXL(CXMLSerializer *xml_serializer,
+								const CDXLNode *dxlnode) const;
 
-				return dynamic_cast<CDXLPhysicalRedistributeMotion*>(dxl_op);
-			}
+	// conversion function
+	static CDXLPhysicalRedistributeMotion *
+	Cast(CDXLOperator *dxl_op)
+	{
+		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(EdxlopPhysicalMotionRedistribute ==
+					dxl_op->GetDXLOperator());
+
+		return dynamic_cast<CDXLPhysicalRedistributeMotion *>(dxl_op);
+	}
 
 #ifdef GPOS_DEBUG
-			// checks whether the operator has valid structure, i.e. number and
-			// types of child nodes
-			void AssertValid(const CDXLNode *, BOOL validate_children) const;
-#endif // GPOS_DEBUG
-			
-	};
-}
-#endif // !GPDXL_CDXLPhysicalRedistributeMotion_H
+	// checks whether the operator has valid structure, i.e. number and
+	// types of child nodes
+	void AssertValid(const CDXLNode *, BOOL validate_children) const;
+#endif	// GPOS_DEBUG
+};
+}  // namespace gpdxl
+#endif	// !GPDXL_CDXLPhysicalRedistributeMotion_H
 
 // EOF
-

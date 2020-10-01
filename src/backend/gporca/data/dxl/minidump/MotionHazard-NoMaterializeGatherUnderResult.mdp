@@ -34,7 +34,7 @@ explain select tab3.k, (select tab2.k from tab2 where tab2.i = tab1.i limit 1) a
   <dxl:Thread Id="0">
     <dxl:OptimizerConfig>
       <dxl:EnumeratorConfig Id="0" PlanSamples="0" CostThreshold="0"/>
-      <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.010000" DampingFactorGroupBy="0.750000"/>
+      <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.010000" DampingFactorGroupBy="0.750000" MaxStatsBuckets="100"/>
       <dxl:CTEConfig CTEInliningCutoff="0"/>
       <dxl:WindowOids RowNumber="3100" Rank="3101"/>
       <dxl:CostModelConfig CostModelType="1" SegmentsForCosting="3">
@@ -118,9 +118,7 @@ explain select tab3.k, (select tab2.k from tab2 where tab2.i = tab1.i limit 1) a
             <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
-        <dxl:IndexInfoList>
-          <dxl:IndexInfo Mdid="0.82836.1.0" IsPartial="false"/>
-        </dxl:IndexInfoList>
+        <dxl:IndexInfoList/>
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
@@ -158,9 +156,7 @@ explain select tab3.k, (select tab2.k from tab2 where tab2.i = tab1.i limit 1) a
             <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
-        <dxl:IndexInfoList>
-          <dxl:IndexInfo Mdid="0.82822.1.0" IsPartial="false"/>
-        </dxl:IndexInfoList>
+        <dxl:IndexInfoList/>
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>

@@ -15,12 +15,13 @@
 
 #include "storage/proc.h"
 #include "utils/combocid.h"
-#include "utils/tqual.h"
+#include "utils/snapshot.h"
 
 typedef struct SnapshotDump
 {
 	uint32 segmateSync;
-	TransactionId xid;
+	DistributedTransactionId distributedXid;
+	FullTransactionId localXid;
 	dsm_handle  handle;
 	dsm_segment *segment;
 } SnapshotDump;
@@ -34,7 +35,10 @@ typedef struct SharedSnapshotSlot
 	int32	 		slotid;
 	PGPROC			*writer_proc;
 	PGXACT			*writer_xact;
-	volatile TransactionId   QDxid;
+
+	/* only used by cursor dump identification, dose not always set */
+	volatile DistributedTransactionId distributedXid;
+
 	volatile bool			ready;
 	volatile uint32			segmateSync;
 	SnapshotData	snapshot;
@@ -43,7 +47,7 @@ typedef struct SharedSnapshotSlot
 	volatile int    cur_dump_id;
 	volatile SnapshotDump    dump[SNAPSHOTDUMPARRAYSZ];
 	/* for debugging only */
-	TransactionId	xid;
+	FullTransactionId	fullXid;
 	TimestampTz		startTimestamp;
 } SharedSnapshotSlot;
 
@@ -63,6 +67,6 @@ extern void readSharedLocalSnapshot_forCursor(Snapshot snapshot, DtxContext dist
 
 extern void AtEOXact_SharedSnapshot(void);
 
-#define NUM_SHARED_SNAPSHOT_SLOTS (2 * max_prepared_xacts)
+#define NUM_SHARED_SNAPSHOT_SLOTS (2 * MaxBackends)
 
 #endif   /* SHAREDSNAPSHOT_H */

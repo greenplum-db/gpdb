@@ -15,7 +15,7 @@
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Copyright (c) 2003-2016, PostgreSQL Global Development Group
+ * Copyright (c) 2003-2019, PostgreSQL Global Development Group
  *
  * src/include/nodes/tidbitmap.h
  *
@@ -25,12 +25,12 @@
 #define TIDBITMAP_H
 
 #include "c.h"
+#include "access/appendonlytid.h"
 #include "access/htup.h"
 #include "nodes/nodes.h"
 #include "nodes/pg_list.h"
 #include "storage/itemptr.h"
-#include "storage/bufpage.h"
-#include "access/appendonlytid.h"
+#include "utils/dsa.h"
 
 struct Instrumentation;                 /* #include "executor/instrument.h" */
 
@@ -54,12 +54,12 @@ struct Instrumentation;                 /* #include "executor/instrument.h" */
  * for that page in the page table.
  *
  * We actually store both exact pages and lossy chunks in the same hash
- * table, using identical data structures.	(This is because dynahash.c's
- * memory management doesn't allow space to be transferred easily from one
- * hashtable to another.)  Therefore it's best if PAGES_PER_CHUNK is the
- * same as MAX_TUPLES_PER_PAGE, or at least not too different.	But we
- * also want PAGES_PER_CHUNK to be a power of 2 to avoid expensive integer
- * remainder operations.  So, define it like this:
+ * table, using identical data structures.  (This is because the memory
+ * management for hashtables doesn't easily/efficiently allow space to be
+ * transferred easily from one hashtable to another.)  Therefore it's best
+ * if PAGES_PER_CHUNK is the same as MAX_TUPLES_PER_PAGE, or at least not
+ * too different.  But we also want PAGES_PER_CHUNK to be a power of 2 to
+ * avoid expensive integer remainder operations.  So, define it like this:
  */
 #define PAGES_PER_CHUNK  (BLCKSZ / 32)
 
@@ -67,6 +67,11 @@ struct Instrumentation;                 /* #include "executor/instrument.h" */
 #define BITMAP_IS_LOSSY -1
 
 /* The bitmap unit size can be adjusted by changing these declarations: */
+/*
+ * GPDB_12_MERGE_FIXME The bitmapword type in bitmapset.h can now be 64-bit
+ * wide.  Does it make sense to remove this Greenplum specific type to better
+ * align with upstream?
+ */
 #define TBM_BITS_PER_BITMAPWORD 64
 typedef uint64 tbm_bitmapword;		/* must be an unsigned type */
 
@@ -100,6 +105,7 @@ typedef enum StreamType
 typedef struct PagetableEntry
 {
 	BlockNumber blockno;		/* page number (hashtable key) */
+	char		status;			/* hash entry status */
 	bool		ischunk;		/* T = lossy storage, F = exact */
 	bool		recheck;		/* should the tuples be rechecked? */
 	tbm_bitmapword	words[Max(WORDS_PER_PAGE, WORDS_PER_CHUNK)];
@@ -113,6 +119,7 @@ typedef struct TIDBitmap TIDBitmap;
 
 /* Likewise, TBMIterator is private */
 typedef struct TBMIterator TBMIterator;
+typedef struct TBMSharedIterator TBMSharedIterator;
 
 /*
  * Stream bitmap representation.
@@ -156,7 +163,7 @@ typedef struct StreamNode   IndexStream;
 typedef struct StreamNode   OpStream;
 
 /* Result structure for tbm_iterate */
-typedef struct
+typedef struct TBMIterateResult
 {
 	BlockNumber blockno;		/* page number containing tuples */
 	int			ntuples;		/* -1 indicates lossy result */
@@ -187,20 +194,28 @@ struct StreamBMIterator
 };
 
 /* function prototypes in nodes/tidbitmap.c */
-extern TIDBitmap *tbm_create(long maxbytes);
+
+extern TIDBitmap *tbm_create(long maxbytes, dsa_area *dsa);
 extern void tbm_free(TIDBitmap *tbm);
+extern void tbm_free_shared_area(dsa_area *dsa, dsa_pointer dp);
 
 extern void tbm_add_tuples(TIDBitmap *tbm,
-			   const ItemPointer tids, int ntids,
-			   bool recheck);
+						   const ItemPointer tids, int ntids,
+						   bool recheck);
 extern void tbm_add_page(TIDBitmap *tbm, BlockNumber pageno);
 extern void tbm_union(TIDBitmap *a, const TIDBitmap *b);
 extern void tbm_intersect(TIDBitmap *a, const TIDBitmap *b);
 extern bool tbm_is_empty(const TIDBitmap *tbm);
 
 extern TBMIterator *tbm_begin_iterate(TIDBitmap *tbm);
+extern dsa_pointer tbm_prepare_shared_iterate(TIDBitmap *tbm);
 extern TBMIterateResult *tbm_iterate(TBMIterator *iterator);
+extern TBMIterateResult *tbm_shared_iterate(TBMSharedIterator *iterator);
 extern void tbm_end_iterate(TBMIterator *iterator);
+extern void tbm_end_shared_iterate(TBMSharedIterator *iterator);
+extern TBMSharedIterator *tbm_attach_shared_iterate(dsa_area *dsa,
+													dsa_pointer dp);
+extern long tbm_calculate_entries(double maxbytes);
 
 extern void stream_move_node(StreamBitmap *strm, StreamBitmap *other, StreamType kind);
 extern void stream_add_node(StreamBitmap *strm, StreamNode *node, StreamType kind);
@@ -216,5 +231,4 @@ extern void tbm_generic_upd_instrument(Node *bm);
 
 extern void tbm_convert_appendonly_tid_out(ItemPointer psudeoHeapTid, AOTupleId *aoTid);
 
-
-#endif   /* TIDBITMAP_H */
+#endif							/* TIDBITMAP_H */

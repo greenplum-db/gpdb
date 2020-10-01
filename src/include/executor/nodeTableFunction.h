@@ -17,7 +17,6 @@
 
 #include "nodes/execnodes.h"
 
-extern TupleTableSlot *ExecTableFunction(TableFunctionState *repeatstate);
 extern TableFunctionState *ExecInitTableFunction(TableFunctionScan *node, 
 												 EState *estate, 
 												 int eflags);

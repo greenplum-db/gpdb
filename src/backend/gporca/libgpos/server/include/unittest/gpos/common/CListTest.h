@@ -6,7 +6,7 @@
 //		CListTest.h
 //
 //	@doc:
-//		Tests for CList 
+//		Tests for CList
 //---------------------------------------------------------------------------
 #ifndef GPOS_CListTest_H
 #define GPOS_CListTest_H
@@ -16,52 +16,47 @@
 
 namespace gpos
 {
-
+//---------------------------------------------------------------------------
+//	@class:
+//		CListTest
+//
+//	@doc:
+//		Wrapper class for CList template to avoid compiler confusion regarding
+//		instantiation with sample parameters
+//
+//---------------------------------------------------------------------------
+class CListTest
+{
+public:
 	//---------------------------------------------------------------------------
 	//	@class:
-	//		CListTest
+	//		SElem
 	//
 	//	@doc:
-	//		Wrapper class for CList template to avoid compiler confusion regarding
-	//		instantiation with sample parameters
+	//		Local class for list experiment;
 	//
 	//---------------------------------------------------------------------------
-	class CListTest
+	struct SElem
 	{
+	public:
+		// generic link for primary list
+		SLink m_linkFwd;
 
-		public:
+		// ..for secondary list
+		SLink m_linkBwd;
 
-			//---------------------------------------------------------------------------
-			//	@class:
-			//		SElem
-			//
-			//	@doc:
-			//		Local class for list experiment;
-			//
-			//---------------------------------------------------------------------------
-			struct SElem
-			{
-				public:
+	};	// struct SElem
 
-					// generic link for primary list
-					SLink m_linkFwd;
+	// unittests
+	static GPOS_RESULT EresUnittest();
+	static GPOS_RESULT EresUnittest_Basics();
+	static GPOS_RESULT EresUnittest_Navigate();
+	static GPOS_RESULT EresUnittest_Cursor();
 
-					// ..for secondary list
-					SLink m_linkBwd;
-
-			}; // struct SElem
-
-			// unittests
-			static GPOS_RESULT EresUnittest();
-			static GPOS_RESULT EresUnittest_Basics();
-			static GPOS_RESULT EresUnittest_Navigate();
-			static GPOS_RESULT EresUnittest_Cursor();
-
-	}; // class CListTest
-}
+};	// class CListTest
+}  // namespace gpos
 
 
-#endif // !GPOS_CListTest_H
+#endif	// !GPOS_CListTest_H
 
 // EOF
-

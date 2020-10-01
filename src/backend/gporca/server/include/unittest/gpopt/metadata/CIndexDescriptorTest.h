@@ -17,25 +17,23 @@
 
 namespace gpopt
 {
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CIndexDescriptorTest
-	//
-	//	@doc:
-	//		Static unit tests
-	//
-	//---------------------------------------------------------------------------
-	class CIndexDescriptorTest
-	{
+//---------------------------------------------------------------------------
+//	@class:
+//		CIndexDescriptorTest
+//
+//	@doc:
+//		Static unit tests
+//
+//---------------------------------------------------------------------------
+class CIndexDescriptorTest
+{
+public:
+	// unittests
+	static GPOS_RESULT EresUnittest();
+	static GPOS_RESULT EresUnittest_Basic();
+};	// class CIndexDescriptorTest
+}  // namespace gpopt
 
-		public:
-
-			// unittests
-			static GPOS_RESULT EresUnittest();
-			static GPOS_RESULT EresUnittest_Basic();
-	}; // class CIndexDescriptorTest
-}
-
-#endif // !GPOPT_CIndexDescriptorTest_H
+#endif	// !GPOPT_CIndexDescriptorTest_H
 
 // EOF

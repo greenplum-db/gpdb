@@ -6,6 +6,7 @@
 
 #include "access/gist.h"
 #include "access/itup.h"
+#include "access/stratnum.h"
 #include "storage/bufpage.h"
 
 /*
@@ -26,14 +27,16 @@
 #define DIVUNION
 
 /* operator strategy numbers */
-#define SimilarityStrategyNumber		1
-#define DistanceStrategyNumber			2
-#define LikeStrategyNumber				3
-#define ILikeStrategyNumber				4
-#define RegExpStrategyNumber			5
-#define RegExpICaseStrategyNumber		6
-#define WordSimilarityStrategyNumber	7
-#define WordDistanceStrategyNumber		8
+#define SimilarityStrategyNumber			1
+#define DistanceStrategyNumber				2
+#define LikeStrategyNumber					3
+#define ILikeStrategyNumber					4
+#define RegExpStrategyNumber				5
+#define RegExpICaseStrategyNumber			6
+#define WordSimilarityStrategyNumber		7
+#define WordDistanceStrategyNumber			8
+#define StrictWordSimilarityStrategyNumber	9
+#define StrictWordDistanceStrategyNumber	10
 
 typedef char trgm[3];
 
@@ -120,7 +123,9 @@ typedef struct TrgmPackedGraph TrgmPackedGraph;
 
 extern double similarity_threshold;
 extern double word_similarity_threshold;
+extern double strict_word_similarity_threshold;
 
+extern double index_strategy_get_limit(StrategyNumber strategy);
 extern uint32 trgm2int(trgm *ptr);
 extern void compact_trigram(trgm *tptr, char *str, int bytelen);
 extern TRGM *generate_trgm(char *str, int slen);
@@ -129,7 +134,7 @@ extern float4 cnt_sml(TRGM *trg1, TRGM *trg2, bool inexact);
 extern bool trgm_contained_by(TRGM *trg1, TRGM *trg2);
 extern bool *trgm_presence_map(TRGM *query, TRGM *key);
 extern TRGM *createTrgmNFA(text *text_re, Oid collation,
-			  TrgmPackedGraph **graph, MemoryContext rcontext);
+						   TrgmPackedGraph **graph, MemoryContext rcontext);
 extern bool trigramsMatchGraph(TrgmPackedGraph *graph, bool *check);
 
-#endif   /* __TRGM_H__ */
+#endif							/* __TRGM_H__ */

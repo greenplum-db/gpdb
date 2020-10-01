@@ -74,7 +74,7 @@ CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth
 LOCATION ('gpfdist://@hostname@:7575/fixedwidth_small_error_fieldtype.tbl')       
 FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', s2='10', s3='10', dt='20',n1='5', n2='10', n3='10', n4='10', n5='10', n6='10', n7='15');
 SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
-ERROR:  invalid input syntax for integer: "bbb"  (seg1 slice1 @hostname@:40001 pid=11441)
+ERROR:  invalid input syntax for type integer: "bbb"  (seg1 slice1 @hostname@:40001 pid=11441)
 DETAIL:  External table tbl_ext_fixedwidth
 -- 3.  import data into table with string and numeric fields - too many fields error  -- no reject limit
 DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
@@ -112,7 +112,7 @@ FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', s2='10', s3='10', dt='20',n
 SEGMENT REJECT LIMIT 3 ROWS;
 SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
 ERROR:  segment reject limit reached, aborting operation
-DETAIL:  Last error was: invalid input syntax for integer: "y32"  (seg1 slice1 @hostname@:40001 pid=11441)
+DETAIL:  Last error was: invalid input syntax for type integer: "y32"  (seg1 slice1 @hostname@:40001 pid=11441)
 CONTEXT:  External table tbl_ext_fixedwidth
 -- 7.  import data into table with string and numeric fields - field type error  -- reject limit not crossed
 DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
@@ -153,12 +153,12 @@ NOTICE:  found 4 data formatting errors (4 or more input rows), rejected related
 (6 rows)
 
 SELECT relname,linenum,errmsg FROM gp_read_error_log('tbl_ext_fixedwidth') ORDER BY linenum;
-      relname       | linenum |                 errmsg                  
---------------------+---------+-----------------------------------------
- tbl_ext_fixedwidth |       3 | invalid input syntax for integer: "s32"
- tbl_ext_fixedwidth |       4 | invalid input syntax for integer: "7v2"
- tbl_ext_fixedwidth |       5 | invalid input syntax for integer: "y32"
- tbl_ext_fixedwidth |       6 | invalid input syntax for integer: "7d2"
+      relname       | linenum |                    errmsg                    
+--------------------+---------+----------------------------------------------
+ tbl_ext_fixedwidth |       3 | invalid input syntax for type integer: "s32"
+ tbl_ext_fixedwidth |       4 | invalid input syntax for type integer: "7v2"
+ tbl_ext_fixedwidth |       5 | invalid input syntax for type integer: "y32"
+ tbl_ext_fixedwidth |       6 | invalid input syntax for type integer: "7d2"
 (4 rows)
 
 DROP EXTERNAL TABLE tbl_ext_fixedwidth;
@@ -185,8 +185,8 @@ CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth
 LOCATION ('gpfdist://@hostname@:7575/fixedwidth_small_correct.tbl')       
 FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', n1='5', s2='10', s3='10', dt='20', n2='10', n3='10', n4='10', n5='10', n6='10', n7='15');
 SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
-ERROR:  invalid input syntax for integer: "twoa"  (seg1 slice1 @hostname@:40001 pid=11441)
-DETAIL:  External table tbl_ext_fixedwidth
+ERROR:  invalid input syntax for type smallint: "twoa"  (seg1 slice1 @hostname@:40001 pid=11441)
+CONTEXT:  External table tbl_ext_fixedwidth
 -- 11. import data into table with string and numeric fields - FORMAT string syntax error  -- fields names do not corespond fields in table
 DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
 CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth 

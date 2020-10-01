@@ -16,118 +16,101 @@
 
 namespace gpopt
 {
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CLogicalLeftOuterJoin
-	//
-	//	@doc:
-	//		Left outer join operator
-	//
-	//---------------------------------------------------------------------------
-	class CLogicalLeftOuterJoin : public CLogicalJoin
+//---------------------------------------------------------------------------
+//	@class:
+//		CLogicalLeftOuterJoin
+//
+//	@doc:
+//		Left outer join operator
+//
+//---------------------------------------------------------------------------
+class CLogicalLeftOuterJoin : public CLogicalJoin
+{
+private:
+	// private copy ctor
+	CLogicalLeftOuterJoin(const CLogicalLeftOuterJoin &);
+
+public:
+	// ctor
+	explicit CLogicalLeftOuterJoin(CMemoryPool *mp);
+
+	// dtor
+	virtual ~CLogicalLeftOuterJoin()
 	{
-		private:
+	}
 
-			// private copy ctor
-			CLogicalLeftOuterJoin(const CLogicalLeftOuterJoin &);
+	// ident accessors
+	virtual EOperatorId
+	Eopid() const
+	{
+		return EopLogicalLeftOuterJoin;
+	}
 
-		public:
+	// return a string for operator name
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CLogicalLeftOuterJoin";
+	}
 
-			// ctor
-			explicit
-			CLogicalLeftOuterJoin(CMemoryPool *mp);
+	// return true if we can pull projections up past this operator from its given child
+	virtual BOOL
+	FCanPullProjectionsUp(ULONG child_index) const
+	{
+		return (0 == child_index);
+	}
 
-			// dtor
-			virtual 
-			~CLogicalLeftOuterJoin() 
-			{}
+	//-------------------------------------------------------------------------------------
+	// Derived Relational Properties
+	//-------------------------------------------------------------------------------------
 
-			// ident accessors
-			virtual 
-			EOperatorId Eopid() const
-			{
-				return EopLogicalLeftOuterJoin;
-			}
-			
-			// return a string for operator name
-			virtual 
-			const CHAR *SzId() const
-			{
-				return "CLogicalLeftOuterJoin";
-			}
+	// derive not nullable output columns
+	virtual CColRefSet *
+	DeriveNotNullColumns(CMemoryPool *,	 // mp
+						 CExpressionHandle &exprhdl) const
+	{
+		// left outer join passes through not null columns from outer child only
+		return PcrsDeriveNotNullPassThruOuter(exprhdl);
+	}
 
-			// return true if we can pull projections up past this operator from its given child
-			virtual
-			BOOL FCanPullProjectionsUp
-				(
-				ULONG child_index
-				) const
-			{
-				return (0 == child_index);
-			}
+	// derive max card
+	virtual CMaxCard DeriveMaxCard(CMemoryPool *mp,
+								   CExpressionHandle &exprhdl) const;
 
-			//-------------------------------------------------------------------------------------
-			// Derived Relational Properties
-			//-------------------------------------------------------------------------------------
+	// derive constraint property
+	virtual CPropConstraint *
+	DerivePropertyConstraint(CMemoryPool *,	 //mp,
+							 CExpressionHandle &exprhdl) const
+	{
+		return PpcDeriveConstraintPassThru(exprhdl, 0 /*ulChild*/);
+	}
 
-			// derive not nullable output columns
-			virtual
-			CColRefSet *DeriveNotNullColumns
-				(
-				CMemoryPool *,// mp
-				CExpressionHandle &exprhdl
-				)
-				const
-			{
-				// left outer join passes through not null columns from outer child only
-				return PcrsDeriveNotNullPassThruOuter(exprhdl);
-			}
+	//-------------------------------------------------------------------------------------
+	// Transformations
+	//-------------------------------------------------------------------------------------
 
-			// derive max card
-			virtual
-			CMaxCard DeriveMaxCard(CMemoryPool *mp, CExpressionHandle &exprhdl) const;
+	// candidate set of xforms
+	CXformSet *PxfsCandidates(CMemoryPool *mp) const;
 
-			// derive constraint property
-			virtual
-			CPropConstraint *DerivePropertyConstraint
-				(
-				CMemoryPool *, //mp,
-				CExpressionHandle &exprhdl
-				)
-				const
-			{
-				return PpcDeriveConstraintPassThru(exprhdl, 0 /*ulChild*/);
-			}
+	//-------------------------------------------------------------------------------------
+	//-------------------------------------------------------------------------------------
+	//-------------------------------------------------------------------------------------
 
-			//-------------------------------------------------------------------------------------
-			// Transformations
-			//-------------------------------------------------------------------------------------
+	// conversion function
+	static CLogicalLeftOuterJoin *
+	PopConvert(COperator *pop)
+	{
+		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(EopLogicalLeftOuterJoin == pop->Eopid());
 
-			// candidate set of xforms
-			CXformSet *PxfsCandidates(CMemoryPool *mp) const;
+		return dynamic_cast<CLogicalLeftOuterJoin *>(pop);
+	}
 
-			//-------------------------------------------------------------------------------------
-			//-------------------------------------------------------------------------------------
-			//-------------------------------------------------------------------------------------
+};	// class CLogicalLeftOuterJoin
 
-			// conversion function
-			static
-			CLogicalLeftOuterJoin *PopConvert
-				(
-				COperator *pop
-				)
-			{
-				GPOS_ASSERT(NULL != pop);
-				GPOS_ASSERT(EopLogicalLeftOuterJoin == pop->Eopid());
-				
-				return dynamic_cast<CLogicalLeftOuterJoin*>(pop);
-			}
-
-	}; // class CLogicalLeftOuterJoin
-
-}
+}  // namespace gpopt
 
 
-#endif // !GPOS_CLogicalLeftOuterJoin_H
+#endif	// !GPOS_CLogicalLeftOuterJoin_H
 
 // EOF

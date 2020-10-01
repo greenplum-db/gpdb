@@ -38,7 +38,7 @@
  * by re-setting the page's page_dirty flag.
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/backend/access/transam/slru.c
@@ -54,6 +54,7 @@
 #include "access/slru.h"
 #include "access/transam.h"
 #include "access/xlog.h"
+#include "pgstat.h"
 #include "storage/fd.h"
 #include "storage/shmem.h"
 #include "miscadmin.h"
@@ -75,7 +76,7 @@ typedef struct SlruFlushData
 {
 	int			num_files;		/* # files actually open */
 	int			fd[MAX_FLUSH_BUFFERS];	/* their FD's */
-	int			segno[MAX_FLUSH_BUFFERS];		/* their log seg#s */
+	int			segno[MAX_FLUSH_BUFFERS];	/* their log seg#s */
 } SlruFlushData;
 
 typedef struct SlruFlushData *SlruFlush;
@@ -128,12 +129,12 @@ static void SimpleLruWaitIO(SlruCtl ctl, int slotno);
 static void SlruInternalWritePage(SlruCtl ctl, int slotno, SlruFlush fdata);
 static bool SlruPhysicalReadPage(SlruCtl ctl, int pageno, int slotno);
 static bool SlruPhysicalWritePage(SlruCtl ctl, int pageno, int slotno,
-					  SlruFlush fdata);
+								  SlruFlush fdata);
 static void SlruReportIOError(SlruCtl ctl, int pageno, TransactionId xid);
 static int	SlruSelectLRUPage(SlruCtl ctl, int pageno);
 
 static bool SlruScanDirCbDeleteCutoff(SlruCtl ctl, char *filename,
-						  int segpage, void *data);
+									  int segpage, void *data);
 static void SlruInternalDeleteSegment(SlruCtl ctl, char *filename);
 
 /*
@@ -149,10 +150,10 @@ SimpleLruShmemSize(int nslots, int nlsns)
 	sz = MAXALIGN(sizeof(SlruSharedData));
 	sz += MAXALIGN(nslots * sizeof(char *));	/* page_buffer[] */
 	sz += MAXALIGN(nslots * sizeof(SlruPageStatus));	/* page_status[] */
-	sz += MAXALIGN(nslots * sizeof(bool));		/* page_dirty[] */
-	sz += MAXALIGN(nslots * sizeof(int));		/* page_number[] */
-	sz += MAXALIGN(nslots * sizeof(int));		/* page_lru_count[] */
-	sz += MAXALIGN(nslots * sizeof(LWLockPadded));		/* buffer_locks[] */
+	sz += MAXALIGN(nslots * sizeof(bool));	/* page_dirty[] */
+	sz += MAXALIGN(nslots * sizeof(int));	/* page_number[] */
+	sz += MAXALIGN(nslots * sizeof(int));	/* page_lru_count[] */
+	sz += MAXALIGN(nslots * sizeof(LWLockPadded));	/* buffer_locks[] */
 
 	if (nlsns > 0)
 		sz += MAXALIGN(nslots * nlsns * sizeof(XLogRecPtr));	/* group_lsn[] */
@@ -204,21 +205,19 @@ SimpleLruInit(SlruCtl ctl, const char *name, int nslots, int nlsns,
 		shared->page_lru_count = (int *) (ptr + offset);
 		offset += MAXALIGN(nslots * sizeof(int));
 
+		/* Initialize LWLocks */
+		shared->buffer_locks = (LWLockPadded *) (ptr + offset);
+		offset += MAXALIGN(nslots * sizeof(LWLockPadded));
+
 		if (nlsns > 0)
 		{
 			shared->group_lsn = (XLogRecPtr *) (ptr + offset);
 			offset += MAXALIGN(nslots * nlsns * sizeof(XLogRecPtr));
 		}
 
-		/* Initialize LWLocks */
-		shared->buffer_locks = (LWLockPadded *) ShmemAlloc(sizeof(LWLockPadded) * nslots);
-
 		Assert(strlen(name) + 1 < SLRU_MAX_NAME_LENGTH);
 		strlcpy(shared->lwlock_tranche_name, name, SLRU_MAX_NAME_LENGTH);
 		shared->lwlock_tranche_id = tranche_id;
-		shared->lwlock_tranche.name = shared->lwlock_tranche_name;
-		shared->lwlock_tranche.array_base = shared->buffer_locks;
-		shared->lwlock_tranche.array_stride = sizeof(LWLockPadded);
 
 		ptr += BUFFERALIGN(offset);
 		for (slotno = 0; slotno < nslots; slotno++)
@@ -232,12 +231,16 @@ SimpleLruInit(SlruCtl ctl, const char *name, int nslots, int nlsns,
 			shared->page_lru_count[slotno] = 0;
 			ptr += BLCKSZ;
 		}
+
+		/* Should fit to estimated shmem size */
+		Assert(ptr - (char *) shared <= SimpleLruShmemSize(nslots, nlsns));
 	}
 	else
 		Assert(found);
 
 	/* Register SLRU tranche in the main tranches array */
-	LWLockRegisterTranche(shared->lwlock_tranche_id, &shared->lwlock_tranche);
+	LWLockRegisterTranche(shared->lwlock_tranche_id,
+						  shared->lwlock_tranche_name);
 
 	/*
 	 * Initialize the unshared control struct, including directory path. We
@@ -341,7 +344,7 @@ SimpleLruWaitIO(SlruCtl ctl, int slotno)
 			/* indeed, the I/O must have failed */
 			if (shared->page_status[slotno] == SLRU_PAGE_READ_IN_PROGRESS)
 				shared->page_status[slotno] = SLRU_PAGE_EMPTY;
-			else	/* write_in_progress */
+			else				/* write_in_progress */
 			{
 				shared->page_status[slotno] = SLRU_PAGE_VALID;
 				shared->page_dirty[slotno] = true;
@@ -596,7 +599,7 @@ SimpleLruDoesPhysicalPageExist(SlruCtl ctl, int pageno)
 
 	SlruFileName(ctl, path, segno);
 
-	fd = OpenTransientFile(path, O_RDWR | PG_BINARY, S_IRUSR | S_IWUSR);
+	fd = OpenTransientFile(path, O_RDONLY | PG_BINARY);
 	if (fd < 0)
 	{
 		/* expected: file doesn't exist */
@@ -618,7 +621,13 @@ SimpleLruDoesPhysicalPageExist(SlruCtl ctl, int pageno)
 
 	result = endpos >= (off_t) (offset + BLCKSZ);
 
-	CloseTransientFile(fd);
+	if (CloseTransientFile(fd))
+	{
+		slru_errcause = SLRU_CLOSE_FAILED;
+		slru_errno = errno;
+		return false;
+	}
+
 	return result;
 }
 
@@ -626,7 +635,7 @@ SimpleLruDoesPhysicalPageExist(SlruCtl ctl, int pageno)
  * Physical read of a (previously existing) page into a buffer slot
  *
  * On failure, we cannot just ereport(ERROR) since caller has put state in
- * shared memory that must be undone.  So, we return FALSE and save enough
+ * shared memory that must be undone.  So, we return false and save enough
  * info in static variables to let SlruReportIOError make the report.
  *
  * For now, assume it's not worth keeping a file pointer open across
@@ -651,7 +660,7 @@ SlruPhysicalReadPage(SlruCtl ctl, int pageno, int slotno)
 	 * SlruPhysicalWritePage).  Hence, if we are InRecovery, allow the case
 	 * where the file doesn't exist, and return zeroes instead.
 	 */
-	fd = OpenTransientFile(path, O_RDWR | PG_BINARY, S_IRUSR | S_IWUSR);
+	fd = OpenTransientFile(path, O_RDONLY | PG_BINARY);
 	if (fd < 0)
 	{
 		if (errno != ENOENT || !InRecovery)
@@ -677,13 +686,16 @@ SlruPhysicalReadPage(SlruCtl ctl, int pageno, int slotno)
 	}
 
 	errno = 0;
+	pgstat_report_wait_start(WAIT_EVENT_SLRU_READ);
 	if (read(fd, shared->page_buffer[slotno], BLCKSZ) != BLCKSZ)
 	{
+		pgstat_report_wait_end();
 		slru_errcause = SLRU_READ_FAILED;
 		slru_errno = errno;
 		CloseTransientFile(fd);
 		return false;
 	}
+	pgstat_report_wait_end();
 
 	if (CloseTransientFile(fd))
 	{
@@ -699,7 +711,7 @@ SlruPhysicalReadPage(SlruCtl ctl, int pageno, int slotno)
  * Physical write of a page from a buffer slot
  *
  * On failure, we cannot just ereport(ERROR) since caller has put state in
- * shared memory that must be undone.  So, we return FALSE and save enough
+ * shared memory that must be undone.  So, we return false and save enough
  * info in static variables to let SlruReportIOError make the report.
  *
  * For now, assume it's not worth keeping a file pointer open across
@@ -798,8 +810,7 @@ SlruPhysicalWritePage(SlruCtl ctl, int pageno, int slotno, SlruFlush fdata)
 		 * don't use O_EXCL or O_TRUNC or anything like that.
 		 */
 		SlruFileName(ctl, path, segno);
-		fd = OpenTransientFile(path, O_RDWR | O_CREAT | PG_BINARY,
-							   S_IRUSR | S_IWUSR);
+		fd = OpenTransientFile(path, O_RDWR | O_CREAT | PG_BINARY);
 		if (fd < 0)
 		{
 			slru_errcause = SLRU_OPEN_FAILED;
@@ -836,8 +847,10 @@ SlruPhysicalWritePage(SlruCtl ctl, int pageno, int slotno, SlruFlush fdata)
 	}
 
 	errno = 0;
+	pgstat_report_wait_start(WAIT_EVENT_SLRU_WRITE);
 	if (write(fd, shared->page_buffer[slotno], BLCKSZ) != BLCKSZ)
 	{
+		pgstat_report_wait_end();
 		/* if write didn't set errno, assume problem is no disk space */
 		if (errno == 0)
 			errno = ENOSPC;
@@ -847,6 +860,7 @@ SlruPhysicalWritePage(SlruCtl ctl, int pageno, int slotno, SlruFlush fdata)
 			CloseTransientFile(fd);
 		return false;
 	}
+	pgstat_report_wait_end();
 
 	/*
 	 * If not part of Flush, need to fsync now.  We assume this happens
@@ -854,13 +868,16 @@ SlruPhysicalWritePage(SlruCtl ctl, int pageno, int slotno, SlruFlush fdata)
 	 */
 	if (!fdata)
 	{
+		pgstat_report_wait_start(WAIT_EVENT_SLRU_SYNC);
 		if (ctl->do_fsync && pg_fsync(fd))
 		{
+			pgstat_report_wait_end();
 			slru_errcause = SLRU_FSYNC_FAILED;
 			slru_errno = errno;
 			CloseTransientFile(fd);
 			return false;
 		}
+		pgstat_report_wait_end();
 
 		if (CloseTransientFile(fd))
 		{
@@ -899,25 +916,25 @@ SlruReportIOError(SlruCtl ctl, int pageno, TransactionId xid)
 			ereport(ERROR,
 					(errcode_for_file_access(),
 					 errmsg("could not access status of transaction %u", xid),
-				 errdetail("Could not seek in file \"%s\" to offset %u: %m.",
-						   path, offset)));
+					 errdetail("Could not seek in file \"%s\" to offset %u: %m.",
+							   path, offset)));
 			break;
 		case SLRU_READ_FAILED:
 			ereport(ERROR,
 					(errcode_for_file_access(),
 					 errmsg("could not access status of transaction %u", xid),
-			   errdetail("Could not read from file \"%s\" at offset %u: %m.",
-						 path, offset)));
+					 errdetail("Could not read from file \"%s\" at offset %u: %m.",
+							   path, offset)));
 			break;
 		case SLRU_WRITE_FAILED:
 			ereport(ERROR,
 					(errcode_for_file_access(),
 					 errmsg("could not access status of transaction %u", xid),
-				errdetail("Could not write to file \"%s\" at offset %u: %m.",
-						  path, offset)));
+					 errdetail("Could not write to file \"%s\" at offset %u: %m.",
+							   path, offset)));
 			break;
 		case SLRU_FSYNC_FAILED:
-			ereport(ERROR,
+			ereport(data_sync_elevel(ERROR),
 					(errcode_for_file_access(),
 					 errmsg("could not access status of transaction %u", xid),
 					 errdetail("Could not fsync file \"%s\": %m.",
@@ -964,9 +981,9 @@ SlruSelectLRUPage(SlruCtl ctl, int pageno)
 		int			bestvalidslot = 0;	/* keep compiler quiet */
 		int			best_valid_delta = -1;
 		int			best_valid_page_number = 0; /* keep compiler quiet */
-		int			bestinvalidslot = 0;		/* keep compiler quiet */
+		int			bestinvalidslot = 0;	/* keep compiler quiet */
 		int			best_invalid_delta = -1;
-		int			best_invalid_page_number = 0;		/* keep compiler quiet */
+		int			best_invalid_page_number = 0;	/* keep compiler quiet */
 
 		/* See if page already has a buffer assigned */
 		for (slotno = 0; slotno < shared->num_slots; slotno++)
@@ -1128,6 +1145,7 @@ SimpleLruFlush(SlruCtl ctl, bool allow_redirtied)
 	ok = true;
 	for (i = 0; i < fdata.num_files; i++)
 	{
+		pgstat_report_wait_start(WAIT_EVENT_SLRU_FLUSH_SYNC);
 		if (ctl->do_fsync && pg_fsync(fdata.fd[i]))
 		{
 			slru_errcause = SLRU_FSYNC_FAILED;
@@ -1135,6 +1153,7 @@ SimpleLruFlush(SlruCtl ctl, bool allow_redirtied)
 			pageno = fdata.segno[i] * SLRU_PAGES_PER_SEGMENT;
 			ok = false;
 		}
+		pgstat_report_wait_end();
 
 		if (CloseTransientFile(fdata.fd[i]))
 		{

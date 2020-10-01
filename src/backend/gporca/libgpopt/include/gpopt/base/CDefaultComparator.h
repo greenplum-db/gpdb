@@ -9,7 +9,7 @@
 //		Default comparator for IDatum instances
 //
 //	@owner:
-//		
+//
 //
 //	@test:
 //
@@ -28,94 +28,87 @@
 
 namespace gpmd
 {
-	// fwd declarations
-	class IMDId;
-}
+// fwd declarations
+class IMDId;
+}  // namespace gpmd
 
 namespace gpnaucrates
 {
-	// fwd declarations
-	class IDatum;
-}
+// fwd declarations
+class IDatum;
+}  // namespace gpnaucrates
 
 namespace gpopt
 {
-	using namespace gpmd;
-	using namespace gpnaucrates;
-	using namespace gpos;
+using namespace gpmd;
+using namespace gpnaucrates;
+using namespace gpos;
 
-	// fwd declarations
-	class IConstExprEvaluator;
+// fwd declarations
+class IConstExprEvaluator;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CDefaultComparator
-	//
-	//	@doc:
-	//		Default comparator for IDatum instances. It is a singleton accessed
-	//		via CompGetInstance.
-	//
-	//---------------------------------------------------------------------------
-	class CDefaultComparator : public IComparator
+//---------------------------------------------------------------------------
+//	@class:
+//		CDefaultComparator
+//
+//	@doc:
+//		Default comparator for IDatum instances. It is a singleton accessed
+//		via CompGetInstance.
+//
+//---------------------------------------------------------------------------
+class CDefaultComparator : public IComparator
+{
+private:
+	// constant expression evaluator
+	IConstExprEvaluator *m_pceeval;
+
+	// disabled copy constructor
+	CDefaultComparator(const CDefaultComparator &);
+
+	// construct a comparison expression from the given components and evaluate it
+	BOOL FEvalComparison(CMemoryPool *mp, const IDatum *datum1,
+						 const IDatum *datum2,
+						 IMDType::ECmpType cmp_type) const;
+
+	// return true iff we use built-in evaluation for integers
+	static BOOL
+	FUseBuiltinIntEvaluators()
 	{
-		private:
-			// constant expression evaluator
-			IConstExprEvaluator *m_pceeval;
+		return !GPOS_FTRACE(EopttraceEnableConstantExpressionEvaluation) ||
+			   !GPOS_FTRACE(
+				   EopttraceUseExternalConstantExpressionEvaluationForInts);
+	}
 
-			// disabled copy constructor
-			CDefaultComparator(const CDefaultComparator &);
+public:
+	// ctor
+	CDefaultComparator(IConstExprEvaluator *pceeval);
 
-			// construct a comparison expression from the given components and evaluate it
-			BOOL FEvalComparison
-				(
-				CMemoryPool *mp,
-				const IDatum *datum1,
-				const IDatum *datum2,
-				IMDType::ECmpType cmp_type
-				)
-				const;
+	// dtor
+	virtual ~CDefaultComparator()
+	{
+	}
 
-			// return true iff we use built-in evaluation for integers
-			static
-			BOOL
-			FUseBuiltinIntEvaluators()
-			{
-				return !GPOS_FTRACE(EopttraceEnableConstantExpressionEvaluation) ||
-						!GPOS_FTRACE(EopttraceUseExternalConstantExpressionEvaluationForInts);
-			}
+	// tests if the two arguments are equal
+	virtual BOOL Equals(const IDatum *datum1, const IDatum *datum2) const;
 
-		public:
-			// ctor
-			CDefaultComparator(IConstExprEvaluator *pceeval);
+	// tests if the first argument is less than the second
+	virtual BOOL IsLessThan(const IDatum *datum1, const IDatum *datum2) const;
 
-			// dtor
-			virtual
-			~CDefaultComparator()
-			{}
+	// tests if the first argument is less or equal to the second
+	virtual BOOL IsLessThanOrEqual(const IDatum *datum1,
+								   const IDatum *datum2) const;
 
-			// tests if the two arguments are equal
-			virtual
-			BOOL Equals(const IDatum *datum1, const IDatum *datum2) const;
+	// tests if the first argument is greater than the second
+	virtual BOOL IsGreaterThan(const IDatum *datum1,
+							   const IDatum *datum2) const;
 
-			// tests if the first argument is less than the second
-			virtual
-			BOOL IsLessThan(const IDatum *datum1, const IDatum *datum2) const;
+	// tests if the first argument is greater or equal to the second
+	virtual BOOL IsGreaterThanOrEqual(const IDatum *datum1,
+									  const IDatum *datum2) const;
 
-			// tests if the first argument is less or equal to the second
-			virtual
-			BOOL IsLessThanOrEqual(const IDatum *datum1, const IDatum *datum2) const;
+};	// CDefaultComparator
+}  // namespace gpopt
 
-			// tests if the first argument is greater than the second
-			virtual
-			BOOL IsGreaterThan(const IDatum *datum1, const IDatum *datum2) const;
-
-			// tests if the first argument is greater or equal to the second
-			virtual
-			BOOL IsGreaterThanOrEqual(const IDatum *datum1, const IDatum *datum2) const;
-
-	};  // CDefaultComparator
-}
-
-#endif // !CDefaultComparator_H
+#endif	// !CDefaultComparator_H
 
 // EOF

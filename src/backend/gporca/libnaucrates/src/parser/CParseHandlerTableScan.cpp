@@ -33,15 +33,11 @@ XERCES_CPP_NAMESPACE_USE
 //		Constructor
 //
 //---------------------------------------------------------------------------
-CParseHandlerTableScan::CParseHandlerTableScan
-	(
-	CMemoryPool *mp,
-	CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root
-	)
-	:
-	CParseHandlerPhysicalOp(mp, parse_handler_mgr, parse_handler_root),
-	m_dxl_op(NULL)
+CParseHandlerTableScan::CParseHandlerTableScan(
+	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+	CParseHandlerBase *parse_handler_root)
+	: CParseHandlerPhysicalOp(mp, parse_handler_mgr, parse_handler_root),
+	  m_dxl_op(NULL)
 {
 }
 
@@ -55,13 +51,11 @@ CParseHandlerTableScan::CParseHandlerTableScan
 //
 //---------------------------------------------------------------------------
 void
-CParseHandlerTableScan::StartElement
-	(
-	const XMLCh* const, // element_uri,
-	const XMLCh* const element_local_name,
-	const XMLCh* const, // element_qname
-	const Attributes& // attrs
-	)
+CParseHandlerTableScan::StartElement(const XMLCh *const,  // element_uri,
+									 const XMLCh *const element_local_name,
+									 const XMLCh *const,  // element_qname
+									 const Attributes &	  // attrs
+)
 {
 	StartElement(element_local_name, EdxltokenPhysicalTableScan);
 }
@@ -75,16 +69,16 @@ CParseHandlerTableScan::StartElement
 //
 //---------------------------------------------------------------------------
 void
-CParseHandlerTableScan::StartElement
-	(
-	const XMLCh* const element_local_name,
-	Edxltoken token_type
-	)
+CParseHandlerTableScan::StartElement(const XMLCh *const element_local_name,
+									 Edxltoken token_type)
 {
-	if (0 != XMLString::compareString(CDXLTokens::XmlstrToken(token_type), element_local_name))
+	if (0 != XMLString::compareString(CDXLTokens::XmlstrToken(token_type),
+									  element_local_name))
 	{
-		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag, str->GetBuffer());
+		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
+			m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,
+				   str->GetBuffer());
 	}
 
 	if (EdxltokenPhysicalTableScan == token_type)
@@ -100,19 +94,31 @@ CParseHandlerTableScan::StartElement
 	// create child node parsers in reverse order of their expected occurrence
 
 	// parse handler for table descriptor
-	CParseHandlerBase *table_descr_parse_handler = CParseHandlerFactory::GetParseHandler(m_mp, CDXLTokens::XmlstrToken(EdxltokenTableDescr), m_parse_handler_mgr, this);
+	CParseHandlerBase *table_descr_parse_handler =
+		CParseHandlerFactory::GetParseHandler(
+			m_mp, CDXLTokens::XmlstrToken(EdxltokenTableDescr),
+			m_parse_handler_mgr, this);
 	m_parse_handler_mgr->ActivateParseHandler(table_descr_parse_handler);
 
 	// parse handler for the filter
-	CParseHandlerBase *filter_parse_handler = CParseHandlerFactory::GetParseHandler(m_mp, CDXLTokens::XmlstrToken(EdxltokenScalarFilter), m_parse_handler_mgr, this);
+	CParseHandlerBase *filter_parse_handler =
+		CParseHandlerFactory::GetParseHandler(
+			m_mp, CDXLTokens::XmlstrToken(EdxltokenScalarFilter),
+			m_parse_handler_mgr, this);
 	m_parse_handler_mgr->ActivateParseHandler(filter_parse_handler);
 
 	// parse handler for the proj list
-	CParseHandlerBase *proj_list_parse_handler = CParseHandlerFactory::GetParseHandler(m_mp, CDXLTokens::XmlstrToken(EdxltokenScalarProjList), m_parse_handler_mgr, this);
+	CParseHandlerBase *proj_list_parse_handler =
+		CParseHandlerFactory::GetParseHandler(
+			m_mp, CDXLTokens::XmlstrToken(EdxltokenScalarProjList),
+			m_parse_handler_mgr, this);
 	m_parse_handler_mgr->ActivateParseHandler(proj_list_parse_handler);
 
 	//parse handler for the properties of the operator
-	CParseHandlerBase *prop_parse_handler = CParseHandlerFactory::GetParseHandler(m_mp, CDXLTokens::XmlstrToken(EdxltokenProperties), m_parse_handler_mgr, this);
+	CParseHandlerBase *prop_parse_handler =
+		CParseHandlerFactory::GetParseHandler(
+			m_mp, CDXLTokens::XmlstrToken(EdxltokenProperties),
+			m_parse_handler_mgr, this);
 	m_parse_handler_mgr->ActivateParseHandler(prop_parse_handler);
 
 	// store child parse handlers in array
@@ -131,12 +137,10 @@ CParseHandlerTableScan::StartElement
 //
 //---------------------------------------------------------------------------
 void
-CParseHandlerTableScan::EndElement
-	(
-	const XMLCh* const, // element_uri,
-	const XMLCh* const element_local_name,
-	const XMLCh* const // element_qname
-	)
+CParseHandlerTableScan::EndElement(const XMLCh *const,	// element_uri,
+								   const XMLCh *const element_local_name,
+								   const XMLCh *const  // element_qname
+)
 {
 	EndElement(element_local_name, EdxltokenPhysicalTableScan);
 }
@@ -150,23 +154,27 @@ CParseHandlerTableScan::EndElement
 //
 //---------------------------------------------------------------------------
 void
-CParseHandlerTableScan::EndElement
-	(
-	const XMLCh* const element_local_name,
-	Edxltoken token_type
-	)
+CParseHandlerTableScan::EndElement(const XMLCh *const element_local_name,
+								   Edxltoken token_type)
 {
-	if (0 != XMLString::compareString(CDXLTokens::XmlstrToken(token_type), element_local_name))
+	if (0 != XMLString::compareString(CDXLTokens::XmlstrToken(token_type),
+									  element_local_name))
 	{
-		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag, str->GetBuffer());
+		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
+			m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,
+				   str->GetBuffer());
 	}
 
 	// construct node from the created child nodes
-	CParseHandlerProperties *prop_parse_handler = dynamic_cast<CParseHandlerProperties *>((*this)[0]);
-	CParseHandlerProjList *proj_list_parse_handler = dynamic_cast<CParseHandlerProjList*>((*this)[1]);
-	CParseHandlerFilter *filter_parse_handler = dynamic_cast<CParseHandlerFilter *>((*this)[2]);
-	CParseHandlerTableDescr *table_descr_parse_handler = dynamic_cast<CParseHandlerTableDescr*>((*this)[3]);
+	CParseHandlerProperties *prop_parse_handler =
+		dynamic_cast<CParseHandlerProperties *>((*this)[0]);
+	CParseHandlerProjList *proj_list_parse_handler =
+		dynamic_cast<CParseHandlerProjList *>((*this)[1]);
+	CParseHandlerFilter *filter_parse_handler =
+		dynamic_cast<CParseHandlerFilter *>((*this)[2]);
+	CParseHandlerTableDescr *table_descr_parse_handler =
+		dynamic_cast<CParseHandlerTableDescr *>((*this)[3]);
 
 	GPOS_ASSERT(NULL != table_descr_parse_handler->GetDXLTableDescr());
 
@@ -185,11 +193,10 @@ CParseHandlerTableScan::EndElement
 
 #ifdef GPOS_DEBUG
 	m_dxl_op->AssertValid(m_dxl_node, false /* validate_children */);
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 	// deactivate handler
 	m_parse_handler_mgr->DeactivateHandler();
 }
 
 // EOF
-

@@ -50,7 +50,7 @@ CREATE TABLE distpol_person (
 CREATE TABLE distpol_staff_member (
   salary    int4,
   manager   name
-) INHERITS (distpol_person) WITH OIDS;
+) INHERITS (distpol_person);
 select distkey from gp_distribution_policy where localoid = 'distpol_staff_member'::regclass;
 
 CREATE TABLE distpol_student (

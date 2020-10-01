@@ -18,48 +18,41 @@
 
 namespace gpdxl
 {
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CDXLLogicalExternalGet
-	//
-	//	@doc:
-	//		Class for representing DXL logical external get operator
-	//
-	//---------------------------------------------------------------------------
-	class CDXLLogicalExternalGet : public CDXLLogicalGet
+//---------------------------------------------------------------------------
+//	@class:
+//		CDXLLogicalExternalGet
+//
+//	@doc:
+//		Class for representing DXL logical external get operator
+//
+//---------------------------------------------------------------------------
+class CDXLLogicalExternalGet : public CDXLLogicalGet
+{
+private:
+	// private copy ctor
+	CDXLLogicalExternalGet(CDXLLogicalExternalGet &);
+
+public:
+	// ctor
+	CDXLLogicalExternalGet(CMemoryPool *mp, CDXLTableDescr *table_descr);
+
+	// operator type
+	virtual Edxlopid GetDXLOperator() const;
+
+	// operator name
+	virtual const CWStringConst *GetOpNameStr() const;
+
+	// conversion function
+	static CDXLLogicalExternalGet *
+	Cast(CDXLOperator *dxl_op)
 	{
-		private:
+		GPOS_ASSERT(NULL != dxl_op);
+		GPOS_ASSERT(EdxlopLogicalExternalGet == dxl_op->GetDXLOperator());
 
-			// private copy ctor
-			CDXLLogicalExternalGet(CDXLLogicalExternalGet&);
-
-		public:
-			// ctor
-			CDXLLogicalExternalGet(CMemoryPool *mp, CDXLTableDescr *table_descr);
-
-			// operator type
-			virtual
-			Edxlopid GetDXLOperator() const;
-
-			// operator name
-			virtual
-			const CWStringConst *GetOpNameStr() const;
-
-			// conversion function
-			static
-			CDXLLogicalExternalGet *Cast
-				(
-				CDXLOperator *dxl_op
-				)
-			{
-				GPOS_ASSERT(NULL != dxl_op);
-				GPOS_ASSERT(EdxlopLogicalExternalGet == dxl_op->GetDXLOperator());
-
-				return dynamic_cast<CDXLLogicalExternalGet*>(dxl_op);
-			}
-
-	};
-}
-#endif // !GPDXL_CDXLLogicalExternalGet_H
+		return dynamic_cast<CDXLLogicalExternalGet *>(dxl_op);
+	}
+};
+}  // namespace gpdxl
+#endif	// !GPDXL_CDXLLogicalExternalGet_H
 
 // EOF

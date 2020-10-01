@@ -29,11 +29,9 @@ using namespace gpopt;
 GPOS_RESULT
 CMaxCardTest::EresUnittest()
 {
-	CUnittest rgut[] =
-		{
+	CUnittest rgut[] = {
 		GPOS_UNITTEST_FUNC(CMaxCardTest::EresUnittest_Basics),
-		GPOS_UNITTEST_FUNC(CMaxCardTest::EresUnittest_RunMinidumpTests)
-		};
+		GPOS_UNITTEST_FUNC(CMaxCardTest::EresUnittest_RunMinidumpTests)};
 
 	return CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
 }
@@ -49,7 +47,6 @@ CMaxCardTest::EresUnittest()
 GPOS_RESULT
 CMaxCardTest::EresUnittest_Basics()
 {
-
 #ifdef GPOS_DEBUG
 
 	CMaxCard mcOne(1);
@@ -58,20 +55,20 @@ CMaxCardTest::EresUnittest_Basics()
 
 	CMaxCard mcThree;
 	GPOS_ASSERT(!(mcOne == mcThree));
-	
+
 	CMaxCard mcFour(0);
 	mcFour *= mcThree;
 	GPOS_ASSERT(0 == mcFour);
-	
+
 	mcFour += mcOne;
 	GPOS_ASSERT(1 == mcFour);
-	
+
 	mcFour *= mcThree;
 	GPOS_ASSERT(GPOPT_MAX_CARD == mcFour);
 
 	mcFour += mcThree;
 	GPOS_ASSERT(GPOPT_MAX_CARD == mcFour);
-	
+
 #endif
 
 	return GPOS_OK;
@@ -82,15 +79,15 @@ CMaxCardTest::EresUnittest_RunMinidumpTests()
 {
 	ULONG ulTestCounter = 0;
 	// minidump files
-	const CHAR *rgszFileNames[] =
-	{
+	const CHAR *rgszFileNames[] = {
 		"../data/dxl/minidump/FullOuterJoinMaxCardRightChild.mdp",
 		"../data/dxl/minidump/FullOuterJoinMaxCardLeftChild.mdp",
 		"../data/dxl/minidump/FullOuterJoinZeroMaxCard.mdp",
 		"../data/dxl/minidump/FullOuterJoinLeftMultiplyRightMaxCard.mdp",
 	};
 
-	return CTestUtils::EresUnittest_RunTests(rgszFileNames, &ulTestCounter, GPOS_ARRAY_SIZE(rgszFileNames));
+	return CTestUtils::EresUnittest_RunTests(rgszFileNames, &ulTestCounter,
+											 GPOS_ARRAY_SIZE(rgszFileNames));
 }
 
 // EOF

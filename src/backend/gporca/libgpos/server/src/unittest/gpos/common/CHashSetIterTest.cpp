@@ -16,10 +16,9 @@ using namespace gpos;
 GPOS_RESULT
 CHashSetIterTest::EresUnittest()
 {
-	CUnittest rgut[] =
-		{
+	CUnittest rgut[] = {
 		GPOS_UNITTEST_FUNC(CHashSetIterTest::EresUnittest_Basic),
-		};
+	};
 
 	return CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
 }
@@ -33,12 +32,16 @@ CHashSetIterTest::EresUnittest_Basic()
 	CMemoryPool *mp = amp.Pmp();
 
 	// test data
-	ULONG rgul[] = {1,2,3,4,5,6,7,8,9};
+	ULONG rgul[] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
 	const ULONG ulCnt = GPOS_ARRAY_SIZE(rgul);
 
-	typedef CHashSet<ULONG, HashValue<ULONG>, gpos::Equals<ULONG>, CleanupNULL<ULONG> > UlongHashSet;
+	typedef CHashSet<ULONG, HashValue<ULONG>, gpos::Equals<ULONG>,
+					 CleanupNULL<ULONG> >
+		UlongHashSet;
 
-	typedef CHashSetIter<ULONG, HashValue<ULONG>, gpos::Equals<ULONG>, CleanupNULL<ULONG> > UlongHashSetIter;
+	typedef CHashSetIter<ULONG, HashValue<ULONG>, gpos::Equals<ULONG>,
+						 CleanupNULL<ULONG> >
+		UlongHashSetIter;
 
 	// using N - 2 slots guarantees collisions
 	UlongHashSet *ps = GPOS_NEW(mp) UlongHashSet(mp, ulCnt - 2);
@@ -49,7 +52,7 @@ CHashSetIterTest::EresUnittest_Basic()
 	UlongHashSetIter siEmpty(ps);
 	GPOS_ASSERT(!siEmpty.Advance());
 
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 	typedef CDynamicPtrArray<const ULONG, CleanupNULL> ULongPtrArray;
 	CAutoRef<ULongPtrArray> pdrgpulValues(GPOS_NEW(mp) ULongPtrArray(mp));
@@ -59,7 +62,8 @@ CHashSetIterTest::EresUnittest_Basic()
 		(void) ps->Insert(&rgul[ul]);
 		pdrgpulValues->Append(&rgul[ul]);
 
-		CAutoRef<ULongPtrArray> pdrgpulIterValues(GPOS_NEW(mp) ULongPtrArray(mp));
+		CAutoRef<ULongPtrArray> pdrgpulIterValues(GPOS_NEW(mp)
+													  ULongPtrArray(mp));
 
 		// iterate over full set
 		UlongHashSetIter si(ps);
@@ -80,4 +84,3 @@ CHashSetIterTest::EresUnittest_Basic()
 
 
 // EOF
-

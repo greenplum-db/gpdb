@@ -17,84 +17,79 @@
 #include "gpos/string/CWStringStatic.h"
 
 // conversion buffer size
-#define GPOS_OSTREAM_CONVBUF_SIZE	(256)
+#define GPOS_OSTREAM_CONVBUF_SIZE (256)
 
 namespace gpos
 {
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		COstream
-	//
-	//	@doc:
-	//		Defines all available operator interfaces; avoids having to overload
-	//		system stream classes or their operators/member functions;
-	//		When inheriting from this class, C++ hides 'all' overloaded 
-	//		versions of a function in the subclass, by default. Therefore, the 
-	//		compiler will not be able to 'see' the default implementations of the << 
-	//		operator in subclasses of COstream. Use the 'using' keyword as in 
-	//		COstreamBasic.h to avoid the problem. Also refer to
-	//		Effective C++ Third Edition, pp156
-	//
-	//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+//	@class:
+//		COstream
+//
+//	@doc:
+//		Defines all available operator interfaces; avoids having to overload
+//		system stream classes or their operators/member functions;
+//		When inheriting from this class, C++ hides 'all' overloaded
+//		versions of a function in the subclass, by default. Therefore, the
+//		compiler will not be able to 'see' the default implementations of the <<
+//		operator in subclasses of COstream. Use the 'using' keyword as in
+//		COstreamBasic.h to avoid the problem. Also refer to
+//		Effective C++ Third Edition, pp156
+//
+//---------------------------------------------------------------------------
 
-	class COstream : public IOstream
+class COstream : public IOstream
+{
+protected:
+	// constructor
+	COstream();
+
+public:
+	using IOstream::operator<<;
+
+	// virtual dtor
+	virtual ~COstream()
 	{
+	}
 
-		protected:
+	// default implementations for the following interfaces available
+	virtual IOstream &operator<<(const CHAR *);
+	virtual IOstream &operator<<(const WCHAR);
+	virtual IOstream &operator<<(const CHAR);
+	virtual IOstream &operator<<(ULONG);
+	virtual IOstream &operator<<(ULLONG);
+	virtual IOstream &operator<<(INT);
+	virtual IOstream &operator<<(LINT);
+	virtual IOstream &operator<<(DOUBLE);
+	virtual IOstream &operator<<(const void *);
 
-			// constructor
-			COstream();
-			
-		public:
+	// to support std:endl only
+	virtual IOstream &operator<<(WOSTREAM &(*) (WOSTREAM &) );
 
-			using IOstream::operator <<;
+	// set the stream modifier
+	virtual IOstream &operator<<(EStreamManipulator);
 
-			// virtual dtor
-			virtual ~COstream()
-			{}
-		
-			// default implementations for the following interfaces available
-			virtual IOstream& operator<< (const CHAR *);
-			virtual IOstream& operator<< (const WCHAR);
-			virtual IOstream& operator<< (const CHAR);
-			virtual IOstream& operator<< (ULONG);
-			virtual IOstream& operator<< (ULLONG);
-			virtual IOstream& operator<< (INT);
-			virtual IOstream& operator<< (LINT);
-			virtual IOstream& operator<< (DOUBLE);
-			virtual IOstream& operator<< (const void*);
-			
-			// to support std:endl only
-			virtual IOstream& operator<<(WOSTREAM& (*)(WOSTREAM&));
-						
-			// set the stream modifier
-			virtual IOstream& operator<< (EStreamManipulator);
+private:
+	// formatting buffer
+	WCHAR m_string_format_buffer[GPOS_OSTREAM_CONVBUF_SIZE];
 
-		private:
+	// wrapper string for formatting buffer
+	CWStringStatic m_static_string_buffer;
 
-			// formatting buffer
-			WCHAR m_string_format_buffer[GPOS_OSTREAM_CONVBUF_SIZE];
+	// current mode
+	EStreamManipulator m_stream_manipulator;
 
-			// wrapper string for formatting buffer
-			CWStringStatic m_static_string_buffer;
+	// append formatted string
+	IOstream &AppendFormat(const WCHAR *format, ...);
 
-			// current mode
-			EStreamManipulator m_stream_manipulator;
+	// what is the stream modifier?
+	EStreamManipulator GetStreamManipulator() const;
 
-			// append formatted string
-			IOstream &AppendFormat(const WCHAR *format, ...);
+	// no copy constructor
+	COstream(COstream &);
+};
 
-			// what is the stream modifier?
-			EStreamManipulator GetStreamManipulator() const;
+}  // namespace gpos
 
-			// no copy constructor
-			COstream(COstream &);
-
-	};
-	
-}
-
-#endif // !GPOS_COstream_H
+#endif	// !GPOS_COstream_H
 
 // EOF
-

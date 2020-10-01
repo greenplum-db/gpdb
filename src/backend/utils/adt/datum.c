@@ -3,7 +3,7 @@
  * datum.c
  *	  POSTGRES Datum (abstract data type) manipulation routines.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -42,6 +42,8 @@
 
 #include "postgres.h"
 
+#include "access/tuptoaster.h"
+#include "fmgr.h"
 #include "utils/datum.h"
 #include "utils/expandeddatum.h"
 
@@ -212,6 +214,10 @@ datumTransfer(Datum value, bool typByVal, int typLen)
  * of say the representation of zero in one's complement arithmetic).
  * Also, it will probably not give the answer you want if either
  * datum has been "toasted".
+ *
+ * Do not try to make this any smarter than it currently is with respect
+ * to "toasted" datums, because some of the callers could be working in the
+ * context of an aborted transaction.
  *-------------------------------------------------------------------------
  */
 bool
@@ -251,6 +257,61 @@ datumIsEqual(Datum value1, Datum value2, bool typByVal, int typLen)
 }
 
 /*-------------------------------------------------------------------------
+ * datum_image_eq
+ *
+ * Compares two datums for identical contents, based on byte images.  Return
+ * true if the two datums are equal, false otherwise.
+ *-------------------------------------------------------------------------
+ */
+bool
+datum_image_eq(Datum value1, Datum value2, bool typByVal, int typLen)
+{
+	bool		result = true;
+
+	if (typLen == -1)
+	{
+		Size		len1,
+					len2;
+
+		len1 = toast_raw_datum_size(value1);
+		len2 = toast_raw_datum_size(value2);
+		/* No need to de-toast if lengths don't match. */
+		if (len1 != len2)
+			result = false;
+		else
+		{
+			struct varlena *arg1val;
+			struct varlena *arg2val;
+
+			arg1val = PG_DETOAST_DATUM_PACKED(value1);
+			arg2val = PG_DETOAST_DATUM_PACKED(value2);
+
+			result = (memcmp(VARDATA_ANY(arg1val),
+							 VARDATA_ANY(arg2val),
+							 len1 - VARHDRSZ) == 0);
+
+			/* Only free memory if it's a copy made here. */
+			if ((Pointer) arg1val != (Pointer) value1)
+				pfree(arg1val);
+			if ((Pointer) arg2val != (Pointer) value2)
+				pfree(arg2val);
+		}
+	}
+	else if (typByVal)
+	{
+		result = (value1 == value2);
+	}
+	else
+	{
+		result = (memcmp(DatumGetPointer(value1),
+						 DatumGetPointer(value2),
+						 typLen) == 0);
+	}
+
+	return result;
+}
+
+/*-------------------------------------------------------------------------
  * datumEstimateSpace
  *
  * Compute the amount of space that datumSerialize will require for a
@@ -267,11 +328,11 @@ datumEstimateSpace(Datum value, bool isnull, bool typByVal, int typLen)
 		/* no need to use add_size, can't overflow */
 		if (typByVal)
 			sz += sizeof(Datum);
-		else if (VARATT_IS_EXTERNAL_EXPANDED(value))
+		else if (typLen == -1 &&
+				 VARATT_IS_EXTERNAL_EXPANDED(DatumGetPointer(value)))
 		{
-			ExpandedObjectHeader *eoh = DatumGetEOHP(value);
-
-			sz += EOH_get_flat_size(eoh);
+			/* Expanded objects need to be flattened, see comment below */
+			sz += EOH_get_flat_size(DatumGetEOHP(value));
 		}
 		else
 			sz += datumGetSize(value, typByVal, typLen);
@@ -284,6 +345,13 @@ datumEstimateSpace(Datum value, bool isnull, bool typByVal, int typLen)
  * datumSerialize
  *
  * Serialize a possibly-NULL datum into caller-provided storage.
+ *
+ * Note: "expanded" objects are flattened so as to produce a self-contained
+ * representation, but other sorts of toast pointers are transferred as-is.
+ * This is because the intended use of this function is to pass the value
+ * to another process within the same database server.  The other process
+ * could not access an "expanded" object within this process's memory, but
+ * we assume it can dereference the same TOAST pointers this one can.
  *
  * The format is as follows: first, we write a 4-byte header word, which
  * is either the length of a pass-by-reference datum, -1 for a
@@ -309,7 +377,8 @@ datumSerialize(Datum value, bool isnull, bool typByVal, int typLen,
 		header = -2;
 	else if (typByVal)
 		header = -1;
-	else if (VARATT_IS_EXTERNAL_EXPANDED(value))
+	else if (typLen == -1 &&
+			 VARATT_IS_EXTERNAL_EXPANDED(DatumGetPointer(value)))
 	{
 		eoh = DatumGetEOHP(value);
 		header = EOH_get_flat_size(eoh);
@@ -329,8 +398,19 @@ datumSerialize(Datum value, bool isnull, bool typByVal, int typLen,
 		}
 		else if (eoh)
 		{
-			EOH_flatten_into(eoh, (void *) *start_address, header);
+			char	   *tmp;
+
+			/*
+			 * EOH_flatten_into expects the target address to be maxaligned,
+			 * so we can't store directly to *start_address.
+			 */
+			tmp = (char *) palloc(header);
+			EOH_flatten_into(eoh, (void *) tmp, header);
+			memcpy(*start_address, tmp, header);
 			*start_address += header;
+
+			/* be tidy. */
+			pfree(tmp);
 		}
 		else
 		{

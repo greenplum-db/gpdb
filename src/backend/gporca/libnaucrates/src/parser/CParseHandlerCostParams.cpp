@@ -29,16 +29,13 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CParseHandlerCostParams::CParseHandlerCostParams
-	(
-	CMemoryPool *mp,
-	CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root
-	)
-	:
-	CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
-	m_cost_model_params(NULL)
-{}
+CParseHandlerCostParams::CParseHandlerCostParams(
+	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+	CParseHandlerBase *parse_handler_root)
+	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
+	  m_cost_model_params(NULL)
+{
+}
 
 
 //---------------------------------------------------------------------------
@@ -64,36 +61,43 @@ CParseHandlerCostParams::~CParseHandlerCostParams()
 //
 //---------------------------------------------------------------------------
 void
-CParseHandlerCostParams::StartElement
-	(
-	const XMLCh* const element_uri,
-	const XMLCh* const element_local_name,
-	const XMLCh* const element_qname,
-	const Attributes& attrs
-	)
+CParseHandlerCostParams::StartElement(const XMLCh *const element_uri,
+									  const XMLCh *const element_local_name,
+									  const XMLCh *const element_qname,
+									  const Attributes &attrs)
 {
-	if (0 == XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenCostParams), element_local_name))
+	if (0 ==
+		XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenCostParams),
+								 element_local_name))
 	{
 		// as of now, we only parse params of GPDB cost model
 		m_cost_model_params = GPOS_NEW(m_mp) CCostModelParamsGPDB(m_mp);
 	}
-	else if(0 == XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenCostParam), element_local_name))
+	else if (0 == XMLString::compareString(
+					  CDXLTokens::XmlstrToken(EdxltokenCostParam),
+					  element_local_name))
 	{
 		GPOS_ASSERT(NULL != m_cost_model_params);
 
 		// start new search stage
-		CParseHandlerBase *parse_handler_cost_params = CParseHandlerFactory::GetParseHandler(m_mp, CDXLTokens::XmlstrToken(EdxltokenCostParam), m_parse_handler_mgr, this);
+		CParseHandlerBase *parse_handler_cost_params =
+			CParseHandlerFactory::GetParseHandler(
+				m_mp, CDXLTokens::XmlstrToken(EdxltokenCostParam),
+				m_parse_handler_mgr, this);
 		m_parse_handler_mgr->ActivateParseHandler(parse_handler_cost_params);
 
 		// store parse handler
 		this->Append(parse_handler_cost_params);
 
-		parse_handler_cost_params->startElement(element_uri, element_local_name, element_qname, attrs);
+		parse_handler_cost_params->startElement(element_uri, element_local_name,
+												element_qname, attrs);
 	}
 	else
 	{
-		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag, str->GetBuffer());
+		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
+			m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,
+				   str->GetBuffer());
 	}
 }
 
@@ -107,24 +111,31 @@ CParseHandlerCostParams::StartElement
 //
 //---------------------------------------------------------------------------
 void
-CParseHandlerCostParams::EndElement
-	(
-	const XMLCh* const, // element_uri,
-	const XMLCh* const element_local_name,
-	const XMLCh* const // element_qname
-	)
+CParseHandlerCostParams::EndElement(const XMLCh *const,	 // element_uri,
+									const XMLCh *const element_local_name,
+									const XMLCh *const	// element_qname
+)
 {
-	if (0 != XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenCostParams), element_local_name))
+	if (0 !=
+		XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenCostParams),
+								 element_local_name))
 	{
-		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag, str->GetBuffer());
+		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
+			m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,
+				   str->GetBuffer());
 	}
 
 	const ULONG length = this->Length();
 	for (ULONG ul = 0; ul < length; ul++)
 	{
-		CParseHandlerCostParam *parse_handler_cost_params = dynamic_cast<CParseHandlerCostParam*>((*this)[ul]);
-		m_cost_model_params->SetParam(parse_handler_cost_params->GetName(), parse_handler_cost_params->Get(), parse_handler_cost_params->GetLowerBoundVal(), parse_handler_cost_params->GetUpperBoundVal());
+		CParseHandlerCostParam *parse_handler_cost_params =
+			dynamic_cast<CParseHandlerCostParam *>((*this)[ul]);
+		m_cost_model_params->SetParam(
+			parse_handler_cost_params->GetName(),
+			parse_handler_cost_params->Get(),
+			parse_handler_cost_params->GetLowerBoundVal(),
+			parse_handler_cost_params->GetUpperBoundVal());
 	}
 
 	// deactivate handler
@@ -132,4 +143,3 @@ CParseHandlerCostParams::EndElement
 }
 
 // EOF
-

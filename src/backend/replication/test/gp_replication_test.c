@@ -10,7 +10,7 @@
 #include "../gp_replication.c"
 
 static void
-expect_lwlock(LWLockMode lockmode)
+expect_lwlock(LWLockMode lockmode, int count)
 {
 	expect_value(LWLockAcquire, lock, SyncRepLock);
 	expect_value(LWLockAcquire, mode, lockmode);
@@ -18,6 +18,21 @@ expect_lwlock(LWLockMode lockmode)
 
 	expect_value(LWLockRelease, lock, SyncRepLock);
 	will_be_called(LWLockRelease);
+
+	if (count > 0)
+	{
+		expect_value(LWLockAcquire, lock, FTSReplicationStatusLock);
+		expect_value(LWLockAcquire, mode, lockmode);
+		will_return(LWLockAcquire, true);
+
+#ifdef USE_ASSERT_CHECKING
+		expect_value_count(LWLockHeldByMe, l, FTSReplicationStatusLock, count);
+		will_return_count(LWLockHeldByMe, true, count);
+#endif
+
+		expect_value(LWLockRelease, lock, FTSReplicationStatusLock);
+		will_be_called(LWLockRelease);
+	}
 }
 
 static void
@@ -32,8 +47,8 @@ expect_ereport()
 	will_be_called(errstart);
 }
 
-static WalSndCtlData *
-test_setup(int pid, WalSndState state)
+static FTSReplicationStatusCtlData *
+test_setup(int pid, WalSndState state, int count)
 {
 	max_wal_senders = 1;
 	WalSndCtl = (WalSndCtlData *)malloc(WalSndShmemSize());
@@ -44,28 +59,35 @@ test_setup(int pid, WalSndState state)
 	WalSndCtl->walsnds[0].is_for_gp_walreceiver = true;
 	SpinLockInit(&WalSndCtl->walsnds[0].mutex);
 
-	expect_lwlock(LW_SHARED);
-	return WalSndCtl;
+	FTSRepStatusCtl = (FTSReplicationStatusCtlData *)malloc(FTSReplicationStatusShmemSize());
+	MemSet(FTSRepStatusCtl, 0, FTSReplicationStatusShmemSize());
+
+	FTSRepStatusCtl->replications[0].in_use = true;
+	StrNCpy(NameStr(FTSRepStatusCtl->replications[0].name), GP_WALRECEIVER_APPNAME, NAMEDATALEN);
+	SpinLockInit(&FTSRepStatusCtl->replications[0].mutex);
+
+	expect_lwlock(LW_SHARED, count);
+	return FTSRepStatusCtl;
 }
 
 static void
 test_GetMirrorStatus_Pid_Zero(void **state)
 {
 	FtsResponse response = { .IsMirrorUp = false };
-	WalSndCtlData *data;
-	data = test_setup(0, WALSNDSTATE_STARTUP);
+	FTSReplicationStatusCtlData *data;
+	data = test_setup(0, WALSNDSTATE_STARTUP, 3);
 
 	/*
 	 * This would make sure Mirror is reported as DOWN, as grace period
 	 * duration is taken into account.
 	 */
-	data->walsnds[0].replica_disconnected_at =
+	data->replications[0].replica_disconnected_at =
 		((pg_time_t) time(NULL)) - gp_fts_mark_mirror_down_grace_period;
 
 	/*
 	 * Ensure the recovery finished before wal sender died.
 	 */
-	PMAcceptingConnectionsStartTime = data->walsnds[0].replica_disconnected_at - 1;
+	PMAcceptingConnectionsStartTime = data->replications[0].replica_disconnected_at - 1;
 
 	GetMirrorStatus(&response);
 
@@ -78,25 +100,60 @@ static void
 test_GetMirrorStatus_RequestRetry(void **state)
 {
 	FtsResponse response = { .IsMirrorUp = false };
-	WalSndCtlData *data;
+	FTSReplicationStatusCtlData *data;
 
-	data = test_setup(0, WALSNDSTATE_STARTUP);
+	data = test_setup(0, WALSNDSTATE_STARTUP, 3);
 
 	/*
 	 * Make the pid zero time within the grace period.
 	 */
-	data->walsnds[0].replica_disconnected_at =
+	data->replications[0].replica_disconnected_at =
 		((pg_time_t) time(NULL)) - gp_fts_mark_mirror_down_grace_period/2;
 
 	/*
 	 * Ensure recovery finished before wal sender died.
 	 */
-	PMAcceptingConnectionsStartTime = data->walsnds[0].replica_disconnected_at - gp_fts_mark_mirror_down_grace_period;
+	PMAcceptingConnectionsStartTime = data->replications[0].replica_disconnected_at - gp_fts_mark_mirror_down_grace_period;
 
 	expect_ereport();
 	GetMirrorStatus(&response);
 
 	assert_true(response.RequestRetry);
+}
+
+/*
+ * If the replication keeps crash and continuously retry more than
+ * gp_fts_replication_attempt_count, FTS should not retry and mark
+ * mirror down directly.
+ */
+static void
+test_GetMirrorStatus_Exceed_ContinuouslyReplicationAttempt(void **state)
+{
+	FtsResponse response = { .IsMirrorUp = false };
+	FTSReplicationStatusCtlData *data;
+
+	data = test_setup(0, WALSNDSTATE_STARTUP, 2);
+
+	/*
+	 * Make the current replication attempt count exceeds the max attempt count.
+	 */
+	data->replications[0].con_attempt_count = gp_fts_replication_attempt_count + 1;
+
+	/*
+	 * Make the pid zero time within the grace period.
+	 */
+	data->replications[0].replica_disconnected_at =
+		((pg_time_t) time(NULL)) - gp_fts_mark_mirror_down_grace_period/2;
+
+	/*
+	 * Ensure recovery finished before wal sender died.
+	 */
+	PMAcceptingConnectionsStartTime = data->replications[0].replica_disconnected_at - gp_fts_mark_mirror_down_grace_period;
+
+	expect_ereport();
+	GetMirrorStatus(&response);
+
+	assert_false(response.RequestRetry);
 }
 
 /*
@@ -106,15 +163,15 @@ static void
 test_GetMirrorStatus_Delayed_AcceptingConnectionsStartTime(void **state)
 {
 	FtsResponse response = { .IsMirrorUp = false };
-	WalSndCtlData *data;
+	FTSReplicationStatusCtlData *data;
 
-	data = test_setup(0, WALSNDSTATE_STARTUP);
+	data = test_setup(0, WALSNDSTATE_STARTUP, 3);
 
 	/*
 	 * wal sender pid zero time over the grace period
 	 * Mirror will be marked down, and no retry.
 	 */
-	data->walsnds[0].replica_disconnected_at =
+	data->replications[0].replica_disconnected_at =
 		((pg_time_t) time(NULL)) - gp_fts_mark_mirror_down_grace_period;
 
 	/*
@@ -134,15 +191,15 @@ static void
 test_GetMirrorStatus_Overflow(void **state)
 {
 	FtsResponse response = { .IsMirrorUp = false };
-	WalSndCtlData *data;
+	FTSReplicationStatusCtlData *data;
 
-	data = test_setup(0, WALSNDSTATE_STARTUP);
+	data = test_setup(0, WALSNDSTATE_STARTUP, 3);
 
 	/*
 	 * This would make sure Mirror is reported as DOWN, as grace period
 	 * duration is taken into account.
 	 */
-	data->walsnds[0].replica_disconnected_at = INT64_MAX;
+	data->replications[0].replica_disconnected_at = INT64_MAX;
 	PMAcceptingConnectionsStartTime = ((pg_time_t) time(NULL));
 
 	GetMirrorStatus(&response);
@@ -156,16 +213,16 @@ static void
 test_GetMirrorStatus_WALSNDSTATE_STARTUP(void **state)
 {
 	FtsResponse response = { .IsMirrorUp = false };
-	WalSndCtlData *data;
+	FTSReplicationStatusCtlData *data;
 
-	data = test_setup(1, WALSNDSTATE_STARTUP);
+	data = test_setup(1, WALSNDSTATE_STARTUP, 3);
 
 	/*
 	 * This would make sure Mirror is not reported as DOWN, as still in grace
 	 * period.
 	 */
-	data->walsnds[0].replica_disconnected_at = ((pg_time_t) time(NULL));
-	PMAcceptingConnectionsStartTime = data->walsnds[0].replica_disconnected_at;
+	data->replications[0].replica_disconnected_at = ((pg_time_t) time(NULL));
+	PMAcceptingConnectionsStartTime = data->replications[0].replica_disconnected_at;
 
 	expect_ereport();
 	GetMirrorStatus(&response);
@@ -179,21 +236,21 @@ static void
 test_GetMirrorStatus_WALSNDSTATE_BACKUP(void **state)
 {
 	FtsResponse response = { .IsMirrorUp = false };
-	WalSndCtlData *data;
+	FTSReplicationStatusCtlData *data;
 
-	data = test_setup(1, WALSNDSTATE_BACKUP);
+	data = test_setup(1, WALSNDSTATE_BACKUP, 3);
 
 	/*
 	 * This would make sure Mirror is reported as DOWN, as grace period
 	 * duration is taken into account.
 	 */
-	data->walsnds[0].replica_disconnected_at =
+	data->replications[0].replica_disconnected_at =
 		((pg_time_t) time(NULL)) - gp_fts_mark_mirror_down_grace_period;
 
 	/*
 	 * Ensure the recovery finished before wal sender died.
 	 */
-	PMAcceptingConnectionsStartTime = data->walsnds[0].replica_disconnected_at - 1;
+	PMAcceptingConnectionsStartTime = data->replications[0].replica_disconnected_at - 1;
 
 	GetMirrorStatus(&response);
 
@@ -206,9 +263,9 @@ static void
 test_GetMirrorStatus_WALSNDSTATE_CATCHUP(void **state)
 {
 	FtsResponse response = { .IsMirrorUp = false };
-	WalSndCtlData *data;
+	FTSReplicationStatusCtlData *data;
 
-	data = test_setup(1, WALSNDSTATE_CATCHUP);
+	data = test_setup(1, WALSNDSTATE_CATCHUP, 0);
 
 	GetMirrorStatus(&response);
 
@@ -220,9 +277,9 @@ static void
 test_GetMirrorStatus_WALSNDSTATE_STREAMING(void **state)
 {
 	FtsResponse response = { .IsMirrorUp = false };
-	WalSndCtlData *data;
+	FTSReplicationStatusCtlData *data;
 
-	data = test_setup(1, WALSNDSTATE_STREAMING);
+	data = test_setup(1, WALSNDSTATE_STREAMING, 0);
 
 	GetMirrorStatus(&response);
 
@@ -238,6 +295,7 @@ main(int argc, char* argv[])
 	const UnitTest tests[] = {
 		unit_test(test_GetMirrorStatus_Pid_Zero),
 		unit_test(test_GetMirrorStatus_RequestRetry),
+		unit_test(test_GetMirrorStatus_Exceed_ContinuouslyReplicationAttempt),
 		unit_test(test_GetMirrorStatus_Delayed_AcceptingConnectionsStartTime),
 		unit_test(test_GetMirrorStatus_Overflow),
 		unit_test(test_GetMirrorStatus_WALSNDSTATE_STARTUP),

@@ -1,3 +1,8 @@
+-- start_matchsubs
+-- m/^LOG.*\"Feature/
+-- s/^LOG.*\"Feature/\"Feature/
+-- end_matchsubs
+
 CREATE SCHEMA auto_explain_test;
 CREATE TABLE auto_explain_test.t1(a int);
 INSERT INTO auto_explain_test.t1 VALUES(generate_series(0, 1000));

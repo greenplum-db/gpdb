@@ -16,9 +16,9 @@
 #
 # This file is read on server startup and when the server receives a SIGHUP
 # signal.  If you edit the file on a running system, you have to SIGHUP the
-# server for the changes to take effect, or use "pg_ctl reload".  Some
-# parameters, which are marked below, require a server shutdown and restart to
-# take effect.
+# server for the changes to take effect, run "pg_ctl reload", or execute
+# "SELECT pg_reload_conf()".  Some parameters, which are marked below,
+# require a server shutdown and restart to take effect.
 #
 # Any parameter can also be given as a command-line option to the server, e.g.,
 # "postgres -c log_connections=on".  Some parameters can be changed at run time
@@ -83,27 +83,7 @@
 #bonjour_name = ''			# defaults to the computer name
 					# (change requires restart)
 
-# - Security and Authentication -
-
-#authentication_timeout = 1min		# 1s-600s
-#ssl = off				# (change requires restart)
-#ssl_ciphers = 'HIGH:MEDIUM:+3DES:!aNULL' # allowed SSL ciphers
-					# (change requires restart)
-#ssl_prefer_server_ciphers = on		# (change requires restart)
-#ssl_ecdh_curve = 'prime256v1'		# (change requires restart)
-#ssl_cert_file = 'server.crt'		# (change requires restart)
-#ssl_key_file = 'server.key'		# (change requires restart)
-#ssl_ca_file = ''			# (change requires restart)
-#ssl_crl_file = ''			# (change requires restart)
-#password_encryption = on
-#db_user_namespace = off
-#row_security = on
-
-# GSSAPI using Kerberos
-#krb_server_keyfile = ''
-#krb_caseins_users = off
-
-# - TCP Keepalives -
+# - TCP settings -
 # see "man 7 tcp" for details
 
 #tcp_keepalives_idle = 0		# TCP_KEEPIDLE, in seconds;
@@ -112,6 +92,34 @@
 					# 0 selects the system default
 #tcp_keepalives_count = 0		# TCP_KEEPCNT;
 					# 0 selects the system default
+#tcp_user_timeout = 0			# TCP_USER_TIMEOUT, in milliseconds;
+					# 0 selects the system default
+
+# - Authentication -
+
+#authentication_timeout = 1min		# 1s-600s
+#password_encryption = md5		# md5 or scram-sha-256
+#db_user_namespace = off
+
+# GSSAPI using Kerberos
+#krb_server_keyfile = ''
+#krb_caseins_users = off
+
+# - SSL -
+
+#ssl = off
+#ssl_ca_file = ''
+#ssl_cert_file = 'server.crt'
+#ssl_crl_file = ''
+#ssl_key_file = 'server.key'
+#ssl_ciphers = 'HIGH:MEDIUM:+3DES:!aNULL' # allowed SSL ciphers
+#ssl_prefer_server_ciphers = on
+#ssl_ecdh_curve = 'prime256v1'
+#ssl_min_protocol_version = 'TLSv1'
+#ssl_max_protocol_version = ''
+#ssl_dh_params_file = ''
+#ssl_passphrase_command = ''
+#ssl_passphrase_command_supports_reload = off
 
 
 #------------------------------------------------------------------------------
@@ -131,16 +139,20 @@ max_prepared_transactions = 250		# can be 0 or more
 # you actively intend to use prepared transactions.
 #work_mem = 32MB				# min 64kB
 #maintenance_work_mem = 64MB		# min 1MB
-#replacement_sort_tuples = 150000	# limits use of replacement selection sort
 #autovacuum_work_mem = -1		# min 1MB, or -1 to use maintenance_work_mem
 #max_stack_depth = 2MB			# min 100kB
+#shared_memory_type = mmap		# the default is the first option
+					# supported by the operating system:
+					#   mmap
+					#   sysv
+					#   windows
+					# (change requires restart)
 #dynamic_shared_memory_type = posix	# the default is the first option
 					# supported by the operating system:
 					#   posix
 					#   sysv
 					#   windows
 					#   mmap
-					# use none to disable dynamic shared memory
 					# (change requires restart)
 
 # - Disk -
@@ -148,15 +160,14 @@ max_prepared_transactions = 250		# can be 0 or more
 #temp_file_limit = -1			# limits per-process temp file space
 					# in kB, or -1 for no limit
 
-# - Kernel Resource Usage -
+# - Kernel Resources -
 
 #max_files_per_process = 1000		# min 25
 					# (change requires restart)
-#shared_preload_libraries = ''		# (change requires restart)
 
 # - Cost-Based Vacuum Delay -
 
-#vacuum_cost_delay = 0			# 0-100 milliseconds
+#vacuum_cost_delay = 0			# 0-100 milliseconds (0 disables)
 #vacuum_cost_page_hit = 1		# 0-10000 credits
 #vacuum_cost_page_miss = 10		# 0-10000 credits
 #vacuum_cost_page_dirty = 20		# 0-10000 credits
@@ -166,23 +177,27 @@ max_prepared_transactions = 250		# can be 0 or more
 
 #effective_io_concurrency = 1		# 1-1000; 0 disables prefetching
 #max_worker_processes = 8		# (change requires restart)
-#max_parallel_workers_per_gather = 2	# taken from max_worker_processes
+#max_parallel_maintenance_workers = 2	# taken from max_parallel_workers
+#max_parallel_workers_per_gather = 2	# taken from max_parallel_workers
+#parallel_leader_participation = on
+#max_parallel_workers = 8		# maximum number of max_worker_processes that
+					# can be used in parallel operations
 #old_snapshot_threshold = -1		# 1min-60d; -1 disables; 0 is immediate
-									# (change requires restart)
-#backend_flush_after = 0		# 0 disables, default is 0
+					# (change requires restart)
+#backend_flush_after = 0		# measured in pages, 0 disables
 
 
 #------------------------------------------------------------------------------
-# WRITE AHEAD LOG
+# WRITE-AHEAD LOG
 #------------------------------------------------------------------------------
 
 # - Settings -
 
-#wal_level = minimal			# minimal, replica, or logical
+#wal_level = replica			# minimal, replica, or logical
 					# (change requires restart)
 #fsync = on				# flush data to disk for crash safety
-						# (turning this off can cause
-						# unrecoverable data corruption)
+					# (turning this off can cause
+					# unrecoverable data corruption)
 #synchronous_commit = on		# synchronization level;
 					# off, local, remote_write, remote_apply, or on
 #wal_sync_method = fsync		# the default is the first option
@@ -196,22 +211,23 @@ max_prepared_transactions = 250		# can be 0 or more
 #wal_compression = off			# enable compression of full-page writes
 #wal_log_hints = off			# also do full page writes of non-critical updates
 					# (change requires restart)
+#wal_init_zero = on			# zero-fill new WAL files
+#wal_recycle = on			# recycle WAL files
 #wal_buffers = -1			# min 32kB, -1 sets based on shared_buffers
 					# (change requires restart)
 #wal_writer_delay = 200ms		# 1-10000 milliseconds
-#wal_writer_flush_after = 1MB		# 0 disables
+#wal_writer_flush_after = 1MB		# measured in pages, 0 disables
 
 #commit_delay = 0			# range 0-100000, in microseconds
 #commit_siblings = 5			# range 1-1000
 
 # - Checkpoints -
 
-#checkpoint_timeout = 5min		# range 30s-1h
+#checkpoint_timeout = 5min		# range 30s-1d
 #max_wal_size = 1GB
 #min_wal_size = 80MB
 #checkpoint_completion_target = 0.5	# checkpoint target duration, 0.0 - 1.0
-#checkpoint_flush_after = 0		# 0 disables,
-					# default is 256kB on linux, 0 otherwise
+#checkpoint_flush_after = 0		# measured in pages, 0 disables
 #checkpoint_warning = 30s		# 0 disables
 
 # - Archiving -
@@ -225,21 +241,57 @@ max_prepared_transactions = 250		# can be 0 or more
 #archive_timeout = 0		# force a logfile segment switch after this
 				# number of seconds; 0 disables
 
+# - Archive Recovery -
+
+# These are only used in recovery mode.
+
+#restore_command = ''		# command to use to restore an archived logfile segment
+				# placeholders: %p = path of file to restore
+				#               %f = file name only
+				# e.g. 'cp /mnt/server/archivedir/%f %p'
+				# (change requires restart)
+#archive_cleanup_command = ''	# command to execute at every restartpoint
+#recovery_end_command = ''	# command to execute at completion of recovery
+
+# - Recovery Target -
+
+# Set these only when performing a targeted recovery.
+
+#recovery_target = ''		# 'immediate' to end recovery as soon as a
+                                # consistent state is reached
+				# (change requires restart)
+#recovery_target_name = ''	# the named restore point to which recovery will proceed
+				# (change requires restart)
+#recovery_target_time = ''	# the time stamp up to which recovery will proceed
+				# (change requires restart)
+#recovery_target_xid = ''	# the transaction ID up to which recovery will proceed
+				# (change requires restart)
+#recovery_target_lsn = ''	# the WAL LSN up to which recovery will proceed
+				# (change requires restart)
+#recovery_target_inclusive = on # Specifies whether to stop:
+				# just after the specified recovery target (on)
+				# just before the recovery target (off)
+				# (change requires restart)
+#recovery_target_timeline = 'latest'	# 'current', 'latest', or timeline ID
+				# (change requires restart)
+#recovery_target_action = 'pause'	# 'pause', 'promote', 'shutdown'
+				# (change requires restart)
+
 
 #------------------------------------------------------------------------------
 # REPLICATION
 #------------------------------------------------------------------------------
 
-# - Sending Server(s) -
+# - Sending Servers -
 
 # Set these on the master and on any standby that will send replication data.
 
-#max_wal_senders = 0		# max number of walsender processes
+#max_wal_senders = 10		# max number of walsender processes
 				# (change requires restart)
-#wal_keep_segments = 0		# in logfile segments, 16MB each; 0 disables
+#wal_keep_segments = 0		# in logfile segments; 0 disables
 #wal_sender_timeout = 60s	# in milliseconds; 0 disables
 
-#max_replication_slots = 0	# max number of replication slots
+#max_replication_slots = 10	# max number of replication slots
 				# (change requires restart)
 #track_commit_timestamp = off	# collect timestamp of transaction commit
 				# (change requires restart)
@@ -249,7 +301,8 @@ max_prepared_transactions = 250		# can be 0 or more
 # These settings are ignored on a standby server.
 
 #synchronous_standby_names = ''	# standby servers that provide sync rep
-				# number of sync standbys and comma-separated list of application_name
+				# method to choose sync standbys, number of sync standbys,
+				# and comma-separated list of application_name
 				# from standby(s); '*' = all
 #vacuum_defer_cleanup_age = 0	# number of xacts by which cleanup is delayed
 
@@ -257,6 +310,11 @@ max_prepared_transactions = 250		# can be 0 or more
 
 # These settings are ignored on a master server.
 
+#primary_conninfo = ''			# connection string to sending server
+					# (change requires restart)
+#primary_slot_name = ''			# replication slot on sending server
+					# (change requires restart)
+#promote_trigger_file = ''		# file name whose presence ends recovery
 #hot_standby = off			# "on" allows queries during recovery
 					# (change requires restart)
 #max_standby_archive_delay = 30s	# max delay before canceling queries
@@ -274,6 +332,15 @@ max_prepared_transactions = 250		# can be 0 or more
 					# in milliseconds; 0 disables
 #wal_retrieve_retry_interval = 5s	# time to wait before retrying to
 					# retrieve WAL after a failed attempt
+#recovery_min_apply_delay = 0		# minimum delay for applying changes during recovery
+
+# - Subscribers -
+
+# These settings are ignored on a publisher.
+
+#max_logical_replication_workers = 4	# taken from max_worker_processes
+					# (change requires restart)
+#max_sync_workers_per_subscription = 2	# taken from max_logical_replication_workers
 
 
 #------------------------------------------------------------------------------
@@ -286,12 +353,16 @@ max_prepared_transactions = 250		# can be 0 or more
 #enable_indexscan = on
 #enable_indexonlyscan = on
 #enable_material = on
+#enable_mergejoin = on
+#enable_nestloop = on
+#enable_parallel_append = on
 #enable_seqscan = on
+#enable_sort = on
 #enable_tidscan = on
-
-#enable_hashjoin = on
-#enable_mergejoin = off
-#enable_nestloop = off
+#enable_partitionwise_join = off
+#enable_partitionwise_aggregate = off
+#enable_parallel_hash = on
+#enable_partition_pruning = on
 
 #gp_enable_multiphase_agg = on
 #gp_enable_preunique = on
@@ -302,7 +373,6 @@ max_prepared_transactions = 250		# can be 0 or more
 #gp_selectivity_damping_for_scans = on
 #gp_selectivity_damping_for_joins = off
 
-#enable_sort = on
 #gp_enable_sort_limit = on
 #gp_enable_sort_distinct = on
 
@@ -317,7 +387,18 @@ max_prepared_transactions = 250		# can be 0 or more
 # GPDB_96_MERGE_FIXME: figure out the appropriate values for the parallel gucs
 #parallel_tuple_cost = 0.1		# same scale as above
 #parallel_setup_cost = 1000.0	# same scale as above
-#min_parallel_relation_size = 8MB
+
+#jit_above_cost = 100000		# perform JIT compilation if available
+					# and query more expensive than this;
+					# -1 disables
+#jit_inline_above_cost = 500000		# inline small functions if query is
+					# more expensive than this; -1 disables
+#jit_optimize_above_cost = 500000	# use expensive JIT optimizations if
+					# query is more expensive than this;
+					# -1 disables
+
+#min_parallel_table_scan_size = 8MB
+#min_parallel_index_scan_size = 512kB
 #effective_cache_size = 16GB
 
 #gp_motion_cost_per_row = 0.0  # (same) (if 0, 2*cpu_tuple_cost is used)
@@ -329,7 +410,9 @@ max_prepared_transactions = 250		# can be 0 or more
 #join_collapse_limit = 20		# 1 disables collapsing of explicit
 					# JOIN clauses
 #force_parallel_mode = off
-#plan_cache_mode = auto
+#jit = on				# allow JIT compilation
+#plan_cache_mode = auto			# auto, force_generic_plan or
+					# force_custom_plan
 
 #gp_segments_for_planner = 0     # if 0, actual number of segments is used
 
@@ -338,7 +421,7 @@ max_prepared_transactions = 250		# can be 0 or more
 optimizer_analyze_root_partition = on # stats collection on root partitions
 
 #------------------------------------------------------------------------------
-# ERROR REPORTING AND LOGGING
+# REPORTING AND LOGGING
 #------------------------------------------------------------------------------
 
 # - Set gp_reraise_signal to on to generate core files on SIGSEGV
@@ -364,17 +447,6 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 					# 0 disables.
 
 # - When to Log -
-
-#client_min_messages = notice		# values in order of decreasing detail:
-					#   debug5
-					#   debug4
-					#   debug3
-					#   debug2
-					#   debug1
-					#   log
-					#   notice
-					#   warning
-					#   error
 
 #log_min_messages = warning		# values in order of decreasing detail:
 					#   debug5
@@ -404,11 +476,18 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 					#   fatal
 					#   panic (effectively off)
 
-#log_min_duration_statement = -1	# -1 is disabled, 0 logs all statements
-					# and their durations, > 0 logs only
-					# statements running at least this number
-					# of milliseconds
+#log_min_duration_statement = -1	# logs statements and their durations
+					# according to log_statement_sample_rate. -1 is disabled,
+					# 0 logs all statements, > 0 logs only statements running
+					# at least this number of milliseconds.
 
+#log_statement_sample_rate = 1.0	# Fraction of logged statements exceeding
+					# log_min_duration_statement to be logged.
+					# 1.0 logs all such statements, 0.0 never logs.
+
+#log_transaction_sample_rate = 0.0	# Fraction of transactions whose statements
+					# are logged regardless of their duration. 1.0 logs all
+					# statements from all transactions, 0.0 never logs.
 
 # - What to Log -
 
@@ -424,7 +503,7 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 #log_duration = off
 #log_error_verbosity = default		# terse, default, or verbose messages
 #log_hostname = off
-#log_line_prefix = ''			# special values:
+#log_line_prefix = '%m [%p] '		# special values:
 					#   %a = application name
 					#   %u = user name
 					#   %d = database name
@@ -454,8 +533,9 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 #log_timezone = 'GMT'			# actually, defaults to TZ environment
 					# setting
 
-
-# - Process Title -
+#------------------------------------------------------------------------------
+# PROCESS TITLE
+#------------------------------------------------------------------------------
 
 #cluster_name = ''			# added to process titles if nonempty
 					# (change requires restart)
@@ -471,15 +551,15 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 #pljava_release_lingering_savepoints = off  # on/off to release/abort lingering savepoints
 
 #------------------------------------------------------------------------------
-# RUNTIME STATISTICS
+# STATISTICS
 #------------------------------------------------------------------------------
 
 # - ANALYZE Statistics on Database Contents -
 
 #default_statistics_target = 100	# range 1 - 10000 (target # of
 					# histogram bins)
-					
-# - Query/Index Statistics Collector -
+
+# - Query and Index Statistics Collector -
 
 #track_activities = on
 #track_counts = off
@@ -491,7 +571,7 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 #stats_queue_level = off
 
 
-# - Statistics Monitoring -
+# - Monitoring -
 
 #log_parser_stats = off
 #log_planner_stats = off
@@ -504,7 +584,7 @@ gp_autostats_on_change_threshold=2147483647 # [0..INT_MAX]. see documentation fo
 log_autostats=off	# print additional autostats information
 
 #------------------------------------------------------------------------------
-# AUTOVACUUM PARAMETERS
+# AUTOVACUUM
 #------------------------------------------------------------------------------
 
 #autovacuum = on			# Enable autovacuum subprocess?  'on'
@@ -527,7 +607,7 @@ log_autostats=off	# print additional autostats information
 #autovacuum_multixact_freeze_max_age = 400000000	# maximum multixact age
 					# before forced vacuum
 					# (change requires restart)
-#autovacuum_vacuum_cost_delay = 20ms	# default vacuum cost delay for
+#autovacuum_vacuum_cost_delay = 2ms	# default vacuum cost delay for
 					# autovacuum, in milliseconds;
 					# -1 means use vacuum_cost_delay
 #autovacuum_vacuum_cost_limit = -1	# default vacuum cost limit for
@@ -540,7 +620,18 @@ log_autostats=off	# print additional autostats information
 
 # - Statement Behavior -
 
+#client_min_messages = notice		# values in order of decreasing detail:
+					#   debug5
+					#   debug4
+					#   debug3
+					#   debug2
+					#   debug1
+					#   log
+					#   notice
+					#   warning
+					#   error
 #search_path = '"$user", public'	# schema names
+#row_security = on
 #default_tablespace = ''		# a tablespace name, '' uses the default
 #check_function_bodies = on
 #default_transaction_isolation = 'read committed'
@@ -550,11 +641,14 @@ log_autostats=off	# print additional autostats information
 #gp_vmem_idle_resource_timeout = 18s 	# in milliseconds, 0 is disabled
 #statement_timeout = 0			# in milliseconds, 0 is disabled
 #lock_timeout = 0			# in milliseconds, 0 is disabled
-#idle_in_transaction_session_timeout = 0		# in milliseconds, 0 is disabled
+#idle_in_transaction_session_timeout = 0	# in milliseconds, 0 is disabled
 #vacuum_freeze_min_age = 50000000
 #vacuum_freeze_table_age = 150000000
 #vacuum_multixact_freeze_min_age = 5000000
 #vacuum_multixact_freeze_table_age = 150000000
+#vacuum_cleanup_index_scale_factor = 0.1	# fraction of total number of tuples
+						# before index cleanup, 0 always performs
+						# index cleanup
 #bytea_output = 'hex'			# hex, escape
 #xmlbinary = 'base64'
 #xmloption = 'content'
@@ -573,7 +667,8 @@ log_autostats=off	# print additional autostats information
 					#   India
 					# You can create your own file in
 					# share/timezonesets/.
-#extra_float_digits = 0			# min -15, max 3
+#extra_float_digits = 1			# min -15, max 3; any value >0 actually
+					# selects precise output mode
 #client_encoding = sql_ascii		# actually, defaults to database
 					# encoding
 
@@ -587,12 +682,16 @@ log_autostats=off	# print additional autostats information
 # default configuration for text search
 #default_text_search_config = 'pg_catalog.simple'
 
+# - Shared Library Preloading -
+
+#shared_preload_libraries = ''	# (change requires restart)
+#local_preload_libraries = ''
+#session_preload_libraries = ''
+#jit_provider = 'llvmjit'		# JIT library to use
+
 # - Other Defaults -
 
 #dynamic_library_path = '$libdir'
-#explain_pretty_print = on
-#local_preload_libraries = ''
-#session_preload_libraries = ''
 
 
 #------------------------------------------------------------------------------
@@ -604,6 +703,10 @@ log_autostats=off	# print additional autostats information
 					# (change requires restart)
 #max_pred_locks_per_transaction = 64	# min 10
 					# (change requires restart)
+#max_pred_locks_per_relation = -2	# negative values mean
+					# (max_pred_locks_per_transaction
+					#  / -max_pred_locks_per_relation) - 1
+#max_pred_locks_per_page = 2            # min 0
 
 #---------------------------------------------------------------------------
 # RESOURCE SCHEDULING
@@ -627,7 +730,7 @@ gp_resqueue_memory_policy = 'eager_free'	# memory request based queueing.
 #---------------------------------------------------------------------------
 #gp_safefswritesize = 0   # minimum size for safe AO writes in a non-mature fs
 #------------------------------------------------------------------------------
-# VERSION/PLATFORM COMPATIBILITY
+# VERSION AND PLATFORM COMPATIBILITY
 #------------------------------------------------------------------------------
 
 # - Previous PostgreSQL Versions -
@@ -673,6 +776,9 @@ gp_vmem_protect_limit = 8192  #Virtual memory limit (in MB).
 
 #exit_on_error = off			# terminate session on any error?
 #restart_after_crash = on		# reinitialize after backend crash?
+#data_sync_retry = off			# retry or panic on failure to fsync
+					# data?
+					# (change requires restart)
 
 
 #------------------------------------------------------------------------------
@@ -682,10 +788,10 @@ gp_vmem_protect_limit = 8192  #Virtual memory limit (in MB).
 # These options allow settings to be loaded from files other than the
 # default postgresql.conf.
 
-#include_dir = 'conf.d'			# include files ending in '.conf' from
-					# directory 'conf.d'
-#include_if_exists = 'exists.conf'	# include file only if it exists
-#include = 'special.conf'		# include file
+#include_dir = ''			# include files ending in '.conf' from
+					# a directory, e.g., 'conf.d'
+#include_if_exists = ''			# include file only if it exists
+#include = 'special.conf'				# include file
 
 
 #------------------------------------------------------------------------------

@@ -7,7 +7,7 @@
 //
 //	@doc:
 //		Implementation of DXL window key
-//		
+//
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/operators/CDXLWindowKey.h"
@@ -26,14 +26,8 @@ using namespace gpdxl;
 //		Constructs a scalar window key node
 //
 //---------------------------------------------------------------------------
-CDXLWindowKey::CDXLWindowKey
-	(
-	CMemoryPool *mp
-	)
-	:
-	m_mp(mp),
-	m_window_frame_dxl(NULL),
-	m_sort_col_list_dxlnode(NULL)
+CDXLWindowKey::CDXLWindowKey(CMemoryPool *mp)
+	: m_mp(mp), m_window_frame_dxl(NULL), m_sort_col_list_dxlnode(NULL)
 {
 	GPOS_ASSERT(NULL != m_mp);
 }
@@ -61,13 +55,10 @@ CDXLWindowKey::~CDXLWindowKey()
 //
 //---------------------------------------------------------------------------
 void
-CDXLWindowKey::SetWindowFrame
-	(
-	CDXLWindowFrame *window_frame
-	)
+CDXLWindowKey::SetWindowFrame(CDXLWindowFrame *window_frame)
 {
 	// allow setting window frame only once
-	GPOS_ASSERT (NULL == m_window_frame_dxl);
+	GPOS_ASSERT(NULL == m_window_frame_dxl);
 	m_window_frame_dxl = window_frame;
 }
 
@@ -80,10 +71,7 @@ CDXLWindowKey::SetWindowFrame
 //
 //---------------------------------------------------------------------------
 void
-CDXLWindowKey::SetSortColList
-	(
-	CDXLNode *sort_col_list_dxlnode
-	)
+CDXLWindowKey::SetSortColList(CDXLNode *sort_col_list_dxlnode)
 {
 	// allow setting window frame only once
 	GPOS_ASSERT(NULL == m_sort_col_list_dxlnode);
@@ -99,14 +87,12 @@ CDXLWindowKey::SetSortColList
 //
 //---------------------------------------------------------------------------
 void
-CDXLWindowKey::SerializeToDXL
-	(
-	CXMLSerializer *xml_serializer
-	)
-	const
+CDXLWindowKey::SerializeToDXL(CXMLSerializer *xml_serializer) const
 {
-	const CWStringConst *element_name = CDXLTokens::GetDXLTokenStr(EdxltokenWindowKey);
-	xml_serializer->OpenElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	const CWStringConst *element_name =
+		CDXLTokens::GetDXLTokenStr(EdxltokenWindowKey);
+	xml_serializer->OpenElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 
 	if (NULL != m_sort_col_list_dxlnode)
 	{
@@ -118,7 +104,8 @@ CDXLWindowKey::SerializeToDXL
 		m_window_frame_dxl->SerializeToDXL(xml_serializer);
 	}
 
-	xml_serializer->CloseElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	xml_serializer->CloseElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 }
 
 // EOF

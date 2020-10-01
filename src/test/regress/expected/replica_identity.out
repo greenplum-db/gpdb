@@ -18,7 +18,6 @@ CREATE INDEX test_replica_identity_keyab ON test_replica_identity (keya, keyb);
 CREATE UNIQUE INDEX test_replica_identity_keyab_key ON test_replica_identity (keya, keyb);
 CREATE UNIQUE INDEX test_replica_identity_nonkey ON test_replica_identity (keya, nonkey);
 CREATE INDEX test_replica_identity_hash ON test_replica_identity USING hash (nonkey);
-ERROR:  hash indexes are not supported
 CREATE UNIQUE INDEX test_replica_identity_expr ON test_replica_identity (keya, keyb, (3));
 CREATE UNIQUE INDEX test_replica_identity_partial ON test_replica_identity (keya, keyb) WHERE keyb != '3';
 -- default is 'd'/DEFAULT for user created tables
@@ -52,7 +51,7 @@ ALTER TABLE test_replica_identity REPLICA IDENTITY USING INDEX test_replica_iden
 ERROR:  index "test_replica_identity_nonkey" cannot be used as replica identity because column "nonkey" is nullable
 -- fail, hash indexes cannot do uniqueness
 ALTER TABLE test_replica_identity REPLICA IDENTITY USING INDEX test_replica_identity_hash;
-ERROR:  index "test_replica_identity_hash" for table "test_replica_identity" does not exist
+ERROR:  cannot use non-unique index "test_replica_identity_hash" as replica identity
 -- fail, expression index
 ALTER TABLE test_replica_identity REPLICA IDENTITY USING INDEX test_replica_identity_expr;
 ERROR:  cannot use expression index "test_replica_identity_expr" as replica identity
@@ -83,13 +82,13 @@ SELECT relreplident FROM pg_class WHERE oid = 'test_replica_identity'::regclass;
 (1 row)
 
 \d test_replica_identity
-                         Table "public.test_replica_identity"
- Column |  Type   |                             Modifiers                              
---------+---------+--------------------------------------------------------------------
- id     | integer | not null default nextval('test_replica_identity_id_seq'::regclass)
- keya   | text    | not null
- keyb   | text    | not null
- nonkey | text    | 
+                            Table "public.test_replica_identity"
+ Column |  Type   | Collation | Nullable |                      Default                      
+--------+---------+-----------+----------+---------------------------------------------------
+ id     | integer |           | not null | nextval('test_replica_identity_id_seq'::regclass)
+ keya   | text    |           | not null | 
+ keyb   | text    |           | not null | 
+ nonkey | text    |           |          | 
 Indexes:
     "test_replica_identity_pkey" PRIMARY KEY, btree (keya) REPLICA IDENTITY
     "test_replica_identity_expr" UNIQUE, btree (keya, keyb, (3))
@@ -98,6 +97,7 @@ Indexes:
     "test_replica_identity_partial" UNIQUE, btree (keya, keyb) WHERE keyb <> '3'::text
     "test_replica_identity_unique_defer" UNIQUE CONSTRAINT, btree (keya, keyb) DEFERRABLE
     "test_replica_identity_unique_nondefer" UNIQUE CONSTRAINT, btree (keya, keyb)
+    "test_replica_identity_hash" hash (nonkey)
     "test_replica_identity_keyab" btree (keya, keyb)
 Distributed by: (keya)
 
@@ -113,13 +113,13 @@ SELECT relreplident FROM pg_class WHERE oid = 'test_replica_identity'::regclass;
 (1 row)
 
 \d test_replica_identity
-                         Table "public.test_replica_identity"
- Column |  Type   |                             Modifiers                              
---------+---------+--------------------------------------------------------------------
- id     | integer | not null default nextval('test_replica_identity_id_seq'::regclass)
- keya   | text    | not null
- keyb   | text    | not null
- nonkey | text    | 
+                            Table "public.test_replica_identity"
+ Column |  Type   | Collation | Nullable |                      Default                      
+--------+---------+-----------+----------+---------------------------------------------------
+ id     | integer |           | not null | nextval('test_replica_identity_id_seq'::regclass)
+ keya   | text    |           | not null | 
+ keyb   | text    |           | not null | 
+ nonkey | text    |           |          | 
 Indexes:
     "test_replica_identity_pkey" PRIMARY KEY, btree (keya)
     "test_replica_identity_expr" UNIQUE, btree (keya, keyb, (3))
@@ -128,6 +128,7 @@ Indexes:
     "test_replica_identity_partial" UNIQUE, btree (keya, keyb) WHERE keyb <> '3'::text
     "test_replica_identity_unique_defer" UNIQUE CONSTRAINT, btree (keya, keyb) DEFERRABLE
     "test_replica_identity_unique_nondefer" UNIQUE CONSTRAINT, btree (keya, keyb)
+    "test_replica_identity_hash" hash (nonkey)
     "test_replica_identity_keyab" btree (keya, keyb)
 Distributed by: (keya)
 
@@ -161,13 +162,13 @@ SELECT relreplident FROM pg_class WHERE oid = 'test_replica_identity'::regclass;
 (1 row)
 
 \d+ test_replica_identity
-                                             Table "public.test_replica_identity"
- Column |  Type   |                             Modifiers                              | Storage  | Stats target | Description 
---------+---------+--------------------------------------------------------------------+----------+--------------+-------------
- id     | integer | not null default nextval('test_replica_identity_id_seq'::regclass) | plain    |              | 
- keya   | text    | not null                                                           | extended |              | 
- keyb   | text    | not null                                                           | extended |              | 
- nonkey | text    |                                                                    | extended |              | 
+                                                Table "public.test_replica_identity"
+ Column |  Type   | Collation | Nullable |                      Default                      | Storage  | Stats target | Description 
+--------+---------+-----------+----------+---------------------------------------------------+----------+--------------+-------------
+ id     | integer |           | not null | nextval('test_replica_identity_id_seq'::regclass) | plain    |              | 
+ keya   | text    |           | not null |                                                   | extended |              | 
+ keyb   | text    |           | not null |                                                   | extended |              | 
+ nonkey | text    |           |          |                                                   | extended |              | 
 Indexes:
     "test_replica_identity_pkey" PRIMARY KEY, btree (keya)
     "test_replica_identity_expr" UNIQUE, btree (keya, keyb, (3))
@@ -176,6 +177,7 @@ Indexes:
     "test_replica_identity_partial" UNIQUE, btree (keya, keyb) WHERE keyb <> '3'::text
     "test_replica_identity_unique_defer" UNIQUE CONSTRAINT, btree (keya, keyb) DEFERRABLE
     "test_replica_identity_unique_nondefer" UNIQUE CONSTRAINT, btree (keya, keyb)
+    "test_replica_identity_hash" hash (nonkey)
     "test_replica_identity_keyab" btree (keya, keyb)
 Replica Identity: FULL
 Distributed by: (keya)

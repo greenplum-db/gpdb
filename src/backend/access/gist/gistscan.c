@@ -4,7 +4,7 @@
  *	  routines to manage scans on GiST index relations
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -17,6 +17,7 @@
 #include "access/gist_private.h"
 #include "access/gistscan.h"
 #include "access/relscan.h"
+#include "utils/float.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/rel.h"
@@ -32,12 +33,30 @@ pairingheap_GISTSearchItem_cmp(const pairingheap_node *a, const pairingheap_node
 	const GISTSearchItem *sb = (const GISTSearchItem *) b;
 	IndexScanDesc scan = (IndexScanDesc) arg;
 	int			i;
+	double	   *da = GISTSearchItemDistanceValues(sa, scan->numberOfOrderBys),
+			   *db = GISTSearchItemDistanceValues(sb, scan->numberOfOrderBys);
+	bool	   *na = GISTSearchItemDistanceNulls(sa, scan->numberOfOrderBys),
+			   *nb = GISTSearchItemDistanceNulls(sb, scan->numberOfOrderBys);
 
 	/* Order according to distance comparison */
 	for (i = 0; i < scan->numberOfOrderBys; i++)
 	{
-		if (sa->distances[i] != sb->distances[i])
-			return (sa->distances[i] < sb->distances[i]) ? 1 : -1;
+		if (na[i])
+		{
+			if (!nb[i])
+				return -1;
+		}
+		else if (nb[i])
+		{
+			return 1;
+		}
+		else
+		{
+			int			cmp = -float8_cmp_internal(da[i], db[i]);
+
+			if (cmp != 0)
+				return cmp;
+		}
 	}
 
 	/* Heap items go before inner pages, to ensure a depth-first search */
@@ -81,7 +100,8 @@ gistbeginscan(Relation r, int nkeys, int norderbys)
 	so->queueCxt = giststate->scanCxt;	/* see gistrescan */
 
 	/* workspaces with size dependent on numberOfOrderBys: */
-	so->distances = palloc(sizeof(double) * scan->numberOfOrderBys);
+	so->distanceValues = palloc(sizeof(double) * scan->numberOfOrderBys);
+	so->distanceNulls = palloc(sizeof(bool) * scan->numberOfOrderBys);
 	so->qual_ok = true;			/* in case there are zero keys */
 	if (scan->numberOfOrderBys > 0)
 	{
@@ -125,7 +145,7 @@ gistrescan(IndexScanDesc scan, ScanKey key, int nkeys,
 	 * which is created on the second call and reset on later calls.  Thus, in
 	 * the common case where a scan is only rescan'd once, we just put the
 	 * queue in scanCxt and don't pay the overhead of making a second memory
-	 * context.  If we do rescan more than once, the first RBTree is just left
+	 * context.  If we do rescan more than once, the first queue is just left
 	 * for dead until end of scan; this small wastage seems worth the savings
 	 * in the common case.
 	 */
@@ -140,9 +160,7 @@ gistrescan(IndexScanDesc scan, ScanKey key, int nkeys,
 		/* second time through */
 		so->queueCxt = AllocSetContextCreate(so->giststate->scanCxt,
 											 "GiST queue context",
-											 ALLOCSET_DEFAULT_MINSIZE,
-											 ALLOCSET_DEFAULT_INITSIZE,
-											 ALLOCSET_DEFAULT_MAXSIZE);
+											 ALLOCSET_DEFAULT_SIZES);
 		first_time = false;
 	}
 	else
@@ -157,9 +175,10 @@ gistrescan(IndexScanDesc scan, ScanKey key, int nkeys,
 	 * tuple descriptor to represent the returned index tuples and create a
 	 * memory context to hold them during the scan.
 	 */
-	if (scan->xs_want_itup && !scan->xs_itupdesc)
+	if (scan->xs_want_itup && !scan->xs_hitupdesc)
 	{
 		int			natts;
+		int			nkeyatts;
 		int			attno;
 
 		/*
@@ -169,23 +188,32 @@ gistrescan(IndexScanDesc scan, ScanKey key, int nkeys,
 		 * types.
 		 */
 		natts = RelationGetNumberOfAttributes(scan->indexRelation);
-		so->giststate->fetchTupdesc = CreateTemplateTupleDesc(natts, false);
-		for (attno = 1; attno <= natts; attno++)
+		nkeyatts = IndexRelationGetNumberOfKeyAttributes(scan->indexRelation);
+		so->giststate->fetchTupdesc = CreateTemplateTupleDesc(natts);
+		for (attno = 1; attno <= nkeyatts; attno++)
 		{
 			TupleDescInitEntry(so->giststate->fetchTupdesc, attno, NULL,
 							   scan->indexRelation->rd_opcintype[attno - 1],
 							   -1, 0);
 		}
-		scan->xs_itupdesc = so->giststate->fetchTupdesc;
 
+		for (; attno <= natts; attno++)
+		{
+			/* taking opcintype from giststate->tupdesc */
+			TupleDescInitEntry(so->giststate->fetchTupdesc, attno, NULL,
+							   TupleDescAttr(so->giststate->leafTupdesc,
+											 attno - 1)->atttypid,
+							   -1, 0);
+		}
+		scan->xs_hitupdesc = so->giststate->fetchTupdesc;
+
+		/* Also create a memory context that will hold the returned tuples */
 		so->pageDataCxt = AllocSetContextCreate(so->giststate->scanCxt,
 												"GiST page data context",
-												ALLOCSET_DEFAULT_MINSIZE,
-												ALLOCSET_DEFAULT_INITSIZE,
-												ALLOCSET_DEFAULT_MAXSIZE);
+												ALLOCSET_DEFAULT_SIZES);
 	}
 
-	/* create new, empty RBTree for search queue */
+	/* create new, empty pairing heap for search queue */
 	oldCxt = MemoryContextSwitchTo(so->queueCxt);
 	so->queue = pairingheap_allocate(pairingheap_GISTSearchItem_cmp, scan);
 	MemoryContextSwitchTo(oldCxt);
@@ -316,6 +344,9 @@ gistrescan(IndexScanDesc scan, ScanKey key, int nkeys,
 		if (!first_time)
 			pfree(fn_extras);
 	}
+
+	/* any previous xs_hitup will have been pfree'd in context resets above */
+	scan->xs_hitup = NULL;
 }
 
 void

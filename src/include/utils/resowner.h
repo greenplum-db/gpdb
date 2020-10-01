@@ -9,7 +9,7 @@
  * See utils/resowner/README for more info.
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/resowner.h
@@ -37,6 +37,7 @@ typedef struct ResourceOwnerData *ResourceOwner;
 extern PGDLLIMPORT ResourceOwner CurrentResourceOwner;
 extern PGDLLIMPORT ResourceOwner CurTransactionResourceOwner;
 extern PGDLLIMPORT ResourceOwner TopTransactionResourceOwner;
+extern PGDLLIMPORT ResourceOwner AuxProcessResourceOwner;
 
 /*
  * Resource releasing is done in three phases: pre-locks, locks, and
@@ -58,9 +59,9 @@ typedef enum
  *	by providing a callback of this form.
  */
 typedef void (*ResourceReleaseCallback) (ResourceReleasePhase phase,
-													 bool isCommit,
-													 bool isTopLevel,
-													 void *arg);
+										 bool isCommit,
+										 bool isTopLevel,
+										 void *arg);
 
 typedef void (*ResourceWalkerCallback) (const struct ResourceOwnerData * owner);
 
@@ -70,19 +71,21 @@ typedef void (*ResourceWalkerCallback) (const struct ResourceOwnerData * owner);
 
 /* generic routines */
 extern ResourceOwner ResourceOwnerCreate(ResourceOwner parent,
-					const char *name);
+										 const char *name);
 extern void ResourceOwnerRelease(ResourceOwner owner,
-					 ResourceReleasePhase phase,
-					 bool isCommit,
-					 bool isTopLevel);
+								 ResourceReleasePhase phase,
+								 bool isCommit,
+								 bool isTopLevel);
 extern void ResourceOwnerDelete(ResourceOwner owner);
 extern ResourceOwner ResourceOwnerGetParent(ResourceOwner owner);
 extern void ResourceOwnerNewParent(ResourceOwner owner,
-					   ResourceOwner newparent);
+								   ResourceOwner newparent);
 extern void RegisterResourceReleaseCallback(ResourceReleaseCallback callback,
-								void *arg);
+											void *arg);
 extern void UnregisterResourceReleaseCallback(ResourceReleaseCallback callback,
-								  void *arg);
+											  void *arg);
+extern void CreateAuxProcessResourceOwner(void);
+extern void ReleaseAuxProcessResources(bool isCommit);
 
 /* support for buffer refcount management */
 extern void ResourceOwnerEnlargeBuffers(ResourceOwner owner);
@@ -144,4 +147,4 @@ extern void ResourceOwnerForgetFile(ResourceOwner owner,
 extern void CdbResourceOwnerWalker(ResourceOwner owner,
 							ResourceWalkerCallback callback);
 
-#endif   /* RESOWNER_H */
+#endif							/* RESOWNER_H */

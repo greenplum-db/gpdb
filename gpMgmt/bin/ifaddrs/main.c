@@ -13,7 +13,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
-#include <sys/types.h>
+#include <stdbool.h>
 
 int main(int argc, char *argv[])
 {
@@ -60,11 +60,7 @@ int main(int argc, char *argv[])
 		struct sockaddr_in6	   *addr6;
 		struct sockaddr		   *addr = list->ifa_addr;
 
-		if (no_loopback && (list->ifa_flags & IFF_LOOPBACK))
-		{
-			/* user has requested that loopback interfaces not be printed */
-			continue;
-		}
+		bool exclude_loopback = (no_loopback && (list->ifa_flags & IFF_LOOPBACK));
 
 		if (addr == NULL)
 			continue;
@@ -73,6 +69,16 @@ int main(int argc, char *argv[])
 		{
 			case AF_INET:
 				addr4 = (struct sockaddr_in *) addr;
+
+				/* Exclude 127.0.0.0/8 ip range */
+				if (exclude_loopback)
+				{
+					uint32_t saddr = ntohl(addr4->sin_addr.s_addr);
+					uint8_t b1;
+					b1 = (uint8_t)(saddr >> 24 & 0xff);
+					if (b1 == 127)
+						continue;
+				}
 
 				netaddr = &addr4->sin_addr;
 				break;
@@ -84,6 +90,10 @@ int main(int argc, char *argv[])
 					/* Don't print out link-local addresses. */
 					continue;
 				}
+
+				/* Exclude ::1 */
+				if (exclude_loopback && IN6_IS_ADDR_LOOPBACK(&addr6->sin6_addr))
+					continue;
 
 				netaddr = &addr6->sin6_addr;
 				break;

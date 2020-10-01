@@ -14,49 +14,40 @@ using namespace gpopt;
 
 
 // ctor
-CXformImplementFullOuterMergeJoin::CXformImplementFullOuterMergeJoin
-	(
-	CMemoryPool *mp
-	)
-	:
-	CXformExploration
-		(
-		 // pattern
-		GPOS_NEW(mp) CExpression
-				(
-				mp,
-				GPOS_NEW(mp) CLogicalFullOuterJoin(mp),
-				GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CPatternLeaf(mp)), // outer child
-				GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CPatternLeaf(mp)), // inner child
-				GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CPatternTree(mp))  // scalar child
-				)
-		)
-{}
+CXformImplementFullOuterMergeJoin::CXformImplementFullOuterMergeJoin(
+	CMemoryPool *mp)
+	: CXformExploration(
+		  // pattern
+		  GPOS_NEW(mp) CExpression(
+			  mp, GPOS_NEW(mp) CLogicalFullOuterJoin(mp),
+			  GPOS_NEW(mp) CExpression(
+				  mp, GPOS_NEW(mp) CPatternLeaf(mp)),  // outer child
+			  GPOS_NEW(mp) CExpression(
+				  mp, GPOS_NEW(mp) CPatternLeaf(mp)),  // inner child
+			  GPOS_NEW(mp) CExpression(
+				  mp, GPOS_NEW(mp) CPatternTree(mp))  // scalar child
+			  ))
+{
+}
 
 CXform::EXformPromise
-CXformImplementFullOuterMergeJoin::Exfp
-	(
-	CExpressionHandle & //exprhdl
-	)
-	const
+CXformImplementFullOuterMergeJoin::Exfp(CExpressionHandle &	 //exprhdl
+) const
 {
 	return CXform::ExfpHigh;
 }
 
 void
-CXformImplementFullOuterMergeJoin::Transform
-	(
-	CXformContext *pxfctxt,
-	CXformResult *pxfres,
-	CExpression *pexpr
-	)
-	const
+CXformImplementFullOuterMergeJoin::Transform(CXformContext *pxfctxt,
+											 CXformResult *pxfres,
+											 CExpression *pexpr) const
 {
 	GPOS_ASSERT(NULL != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
-	CXformUtils::ImplementMergeJoin<CPhysicalFullMergeJoin>(pxfctxt, pxfres, pexpr);
+	CXformUtils::ImplementMergeJoin<CPhysicalFullMergeJoin>(pxfctxt, pxfres,
+															pexpr);
 }
 
 // EOF

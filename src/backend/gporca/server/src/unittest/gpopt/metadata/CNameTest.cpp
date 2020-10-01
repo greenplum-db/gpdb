@@ -30,11 +30,8 @@ using namespace gpopt;
 GPOS_RESULT
 CNameTest::EresUnittest()
 {
-	CUnittest rgut[] =
-		{
-		GPOS_UNITTEST_FUNC(CNameTest::EresUnittest_Basic),
-		GPOS_UNITTEST_FUNC(CNameTest::EresUnittest_Ownership)
-		};
+	CUnittest rgut[] = {GPOS_UNITTEST_FUNC(CNameTest::EresUnittest_Basic),
+						GPOS_UNITTEST_FUNC(CNameTest::EresUnittest_Ownership)};
 
 	return CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
 }
@@ -93,4 +90,3 @@ CNameTest::EresUnittest_Ownership()
 
 
 // EOF
-

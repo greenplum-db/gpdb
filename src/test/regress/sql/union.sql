@@ -4,41 +4,41 @@
 
 -- Simple UNION constructs
 
-SELECT 1 AS two UNION SELECT 2;
+SELECT 1 AS two UNION SELECT 2 ORDER BY 1;
 
-SELECT 1 AS one UNION SELECT 1;
+SELECT 1 AS one UNION SELECT 1 ORDER BY 1;
 
 SELECT 1 AS two UNION ALL SELECT 2;
 
 SELECT 1 AS two UNION ALL SELECT 1;
 
-SELECT 1 AS three UNION SELECT 2 UNION SELECT 3;
+SELECT 1 AS three UNION SELECT 2 UNION SELECT 3 ORDER BY 1;
 
-SELECT 1 AS two UNION SELECT 2 UNION SELECT 2;
+SELECT 1 AS two UNION SELECT 2 UNION SELECT 2 ORDER BY 1;
 
-SELECT 1 AS three UNION SELECT 2 UNION ALL SELECT 2;
+SELECT 1 AS three UNION SELECT 2 UNION ALL SELECT 2 ORDER BY 1;
 
-SELECT 1.1 AS two UNION SELECT 2.2;
+SELECT 1.1 AS two UNION SELECT 2.2 ORDER BY 1;
 
 -- Mixed types
 
-SELECT 1.1 AS two UNION SELECT 2;
+SELECT 1.1 AS two UNION SELECT 2 ORDER BY 1;
 
-SELECT 1 AS two UNION SELECT 2.2;
+SELECT 1 AS two UNION SELECT 2.2 ORDER BY 1;
 
-SELECT 1 AS one UNION SELECT 1.0::float8;
+SELECT 1 AS one UNION SELECT 1.0::float8 ORDER BY 1;
 
-SELECT 1.1 AS two UNION ALL SELECT 2;
+SELECT 1.1 AS two UNION ALL SELECT 2 ORDER BY 1;
 
-SELECT 1.0::float8 AS two UNION ALL SELECT 1;
+SELECT 1.0::float8 AS two UNION ALL SELECT 1 ORDER BY 1;
 
-SELECT 1.1 AS three UNION SELECT 2 UNION SELECT 3;
+SELECT 1.1 AS three UNION SELECT 2 UNION SELECT 3 ORDER BY 1;
 
 SELECT 1.1::float8 AS two UNION SELECT 2 UNION SELECT 2.0::float8 ORDER BY 1;
 
-SELECT 1.1 AS three UNION SELECT 2 UNION ALL SELECT 2;
+SELECT 1.1 AS three UNION SELECT 2 UNION ALL SELECT 2 ORDER BY 1;
 
-SELECT 1.1 AS two UNION (SELECT 2 UNION ALL SELECT 2);
+SELECT 1.1 AS two UNION (SELECT 2 UNION ALL SELECT 2) ORDER BY 1;
 
 --
 -- Try testing from tables...
@@ -66,7 +66,8 @@ SELECT f1 AS five FROM FLOAT8_TBL
   WHERE f1 BETWEEN -1e6 AND 1e6
 UNION
 SELECT f1 FROM INT4_TBL
-  WHERE f1 BETWEEN 0 AND 1000000;
+  WHERE f1 BETWEEN 0 AND 1000000
+ORDER BY 1;
 
 SELECT CAST(f1 AS char(4)) AS three FROM VARCHAR_TBL
 UNION
@@ -93,9 +94,9 @@ ORDER BY 1;
 -- INTERSECT and EXCEPT
 --
 
-SELECT q2 FROM int8_tbl INTERSECT SELECT q1 FROM int8_tbl;
+SELECT q2 FROM int8_tbl INTERSECT SELECT q1 FROM int8_tbl ORDER BY 1;
 
-SELECT q2 FROM int8_tbl INTERSECT ALL SELECT q1 FROM int8_tbl;
+SELECT q2 FROM int8_tbl INTERSECT ALL SELECT q1 FROM int8_tbl ORDER BY 1;
 
 SELECT q2 FROM int8_tbl EXCEPT SELECT q1 FROM int8_tbl ORDER BY 1;
 
@@ -103,19 +104,53 @@ SELECT q2 FROM int8_tbl EXCEPT ALL SELECT q1 FROM int8_tbl ORDER BY 1;
 
 SELECT q2 FROM int8_tbl EXCEPT ALL SELECT DISTINCT q1 FROM int8_tbl ORDER BY 1;
 
-SELECT q1 FROM int8_tbl EXCEPT SELECT q2 FROM int8_tbl;
+SELECT q1 FROM int8_tbl EXCEPT SELECT q2 FROM int8_tbl ORDER BY 1;
 
-SELECT q1 FROM int8_tbl EXCEPT ALL SELECT q2 FROM int8_tbl;
+SELECT q1 FROM int8_tbl EXCEPT ALL SELECT q2 FROM int8_tbl ORDER BY 1;
 
-SELECT q1 FROM int8_tbl EXCEPT ALL SELECT DISTINCT q2 FROM int8_tbl;
+SELECT q1 FROM int8_tbl EXCEPT ALL SELECT DISTINCT q2 FROM int8_tbl ORDER BY 1;
 
 SELECT q1 FROM int8_tbl EXCEPT ALL SELECT q1 FROM int8_tbl FOR NO KEY UPDATE;
+
+-- nested cases
+(SELECT 1,2,3 UNION SELECT 4,5,6) INTERSECT SELECT 4,5,6;
+(SELECT 1,2,3 UNION SELECT 4,5,6 ORDER BY 1,2) INTERSECT SELECT 4,5,6;
+(SELECT 1,2,3 UNION SELECT 4,5,6) EXCEPT SELECT 4,5,6;
+(SELECT 1,2,3 UNION SELECT 4,5,6 ORDER BY 1,2) EXCEPT SELECT 4,5,6;
+
+-- exercise both hashed and sorted implementations of INTERSECT/EXCEPT
+
+set enable_hashagg to on;
+
+explain (costs off)
+select count(*) from
+  ( select unique1 from tenk1 intersect select fivethous from tenk1 ) ss;
+select count(*) from
+  ( select unique1 from tenk1 intersect select fivethous from tenk1 ) ss;
+
+explain (costs off)
+select unique1 from tenk1 except select unique2 from tenk1 where unique2 != 10;
+select unique1 from tenk1 except select unique2 from tenk1 where unique2 != 10;
+
+set enable_hashagg to off;
+
+explain (costs off)
+select count(*) from
+  ( select unique1 from tenk1 intersect select fivethous from tenk1 ) ss;
+select count(*) from
+  ( select unique1 from tenk1 intersect select fivethous from tenk1 ) ss;
+
+explain (costs off)
+select unique1 from tenk1 except select unique2 from tenk1 where unique2 != 10;
+select unique1 from tenk1 except select unique2 from tenk1 where unique2 != 10;
+
+reset enable_hashagg;
 
 --
 -- Mixed types
 --
 
-SELECT f1 FROM float8_tbl INTERSECT SELECT f1 FROM int4_tbl;
+SELECT f1 FROM float8_tbl INTERSECT SELECT f1 FROM int4_tbl ORDER BY 1;
 
 SELECT f1 FROM float8_tbl EXCEPT SELECT f1 FROM int4_tbl ORDER BY 1;
 
@@ -123,11 +158,11 @@ SELECT f1 FROM float8_tbl EXCEPT SELECT f1 FROM int4_tbl ORDER BY 1;
 -- Operator precedence and (((((extra))))) parentheses
 --
 
-SELECT q1 FROM int8_tbl INTERSECT SELECT q2 FROM int8_tbl UNION ALL SELECT q2 FROM int8_tbl;
+SELECT q1 FROM int8_tbl INTERSECT SELECT q2 FROM int8_tbl UNION ALL SELECT q2 FROM int8_tbl  ORDER BY 1;
 
-SELECT q1 FROM int8_tbl INTERSECT (((SELECT q2 FROM int8_tbl UNION ALL SELECT q2 FROM int8_tbl)));
+SELECT q1 FROM int8_tbl INTERSECT (((SELECT q2 FROM int8_tbl UNION ALL SELECT q2 FROM int8_tbl))) ORDER BY 1;
 
-(((SELECT q1 FROM int8_tbl INTERSECT SELECT q2 FROM int8_tbl))) UNION ALL SELECT q2 FROM int8_tbl;
+(((SELECT q1 FROM int8_tbl INTERSECT SELECT q2 FROM int8_tbl ORDER BY 1))) UNION ALL SELECT q2 FROM int8_tbl ORDER BY 1;
 
 SELECT q1 FROM int8_tbl UNION ALL SELECT q2 FROM int8_tbl EXCEPT SELECT q1 FROM int8_tbl ORDER BY 1;
 
@@ -154,6 +189,49 @@ SELECT q1 FROM int8_tbl EXCEPT (((SELECT q2 FROM int8_tbl ORDER BY q2 LIMIT 1)))
 --
 
 (((((select * from int8_tbl)))));
+
+--
+-- Check behavior with empty select list (allowed since 9.4)
+--
+
+select union select;
+select intersect select;
+select except select;
+
+-- check hashed implementation
+set enable_hashagg = true;
+set enable_sort = false;
+
+explain (costs off)
+select from generate_series(1,5) union select from generate_series(1,3);
+explain (costs off)
+select from generate_series(1,5) intersect select from generate_series(1,3);
+
+select from generate_series(1,5) union select from generate_series(1,3);
+select from generate_series(1,5) union all select from generate_series(1,3);
+select from generate_series(1,5) intersect select from generate_series(1,3);
+select from generate_series(1,5) intersect all select from generate_series(1,3);
+select from generate_series(1,5) except select from generate_series(1,3);
+select from generate_series(1,5) except all select from generate_series(1,3);
+
+-- check sorted implementation
+set enable_hashagg = false;
+set enable_sort = true;
+
+explain (costs off)
+select from generate_series(1,5) union select from generate_series(1,3);
+explain (costs off)
+select from generate_series(1,5) intersect select from generate_series(1,3);
+
+select from generate_series(1,5) union select from generate_series(1,3);
+select from generate_series(1,5) union all select from generate_series(1,3);
+select from generate_series(1,5) intersect select from generate_series(1,3);
+select from generate_series(1,5) intersect all select from generate_series(1,3);
+select from generate_series(1,5) except select from generate_series(1,3);
+select from generate_series(1,5) except all select from generate_series(1,3);
+
+reset enable_hashagg;
+reset enable_sort;
 
 --
 -- Check handling of a case with unknown constants.  We don't guarantee
@@ -212,9 +290,9 @@ CREATE INDEX t1c_ab_idx on t1c ((a || b));
 
 set enable_seqscan = on;
 set enable_indexonlyscan = off;
+-- Coerce GPDB to produce same plan as in upstream
+set enable_sort=off;
 
--- NOTE: GPDB planner chooses a seqscan rather than indexscan for t1.
--- This is a side-effect of disabling pull-up for simple union all in GPDB.
 explain (costs off)
   SELECT * FROM
   (SELECT a || b AS ab FROM t1
@@ -231,8 +309,12 @@ explain (costs off)
 reset enable_seqscan;
 reset enable_indexscan;
 reset enable_bitmapscan;
+reset enable_sort;
 
 -- This simpler variant of the above test has been observed to fail differently
+
+-- Coerce GPDB to produce same plan as in upstream
+set enable_seqscan=off;
 
 create table events (event_id int primary key);
 create table other_events (event_id int primary key);
@@ -244,6 +326,8 @@ select event_id
        union all
        select event_id from other_events) ss
  order by event_id;
+
+reset enable_seqscan;
 
 drop table events_child, events, other_events;
 
@@ -263,13 +347,15 @@ SELECT * FROM
   (SELECT 1 AS t, 2 AS x
    UNION
    SELECT 2 AS t, 4 AS x) ss
-WHERE x < 4;
+WHERE x < 4
+ORDER BY x;
 
 SELECT * FROM
   (SELECT 1 AS t, 2 AS x
    UNION
    SELECT 2 AS t, 4 AS x) ss
-WHERE x < 4;
+WHERE x < 4
+ORDER BY x;
 
 explain (costs off)
 SELECT * FROM
@@ -291,13 +377,43 @@ SELECT * FROM
   (SELECT 1 AS t, (random()*3)::int AS x
    UNION
    SELECT 2 AS t, 4 AS x) ss
-WHERE x > 3;
+WHERE x > 3
+ORDER BY x;
 
 SELECT * FROM
   (SELECT 1 AS t, (random()*3)::int AS x
    UNION
    SELECT 2 AS t, 4 AS x) ss
-WHERE x > 3;
+WHERE x > 3
+ORDER BY x;
+
+-- Test cases where the native ordering of a sub-select has more pathkeys
+-- than the outer query cares about
+explain (costs off)
+select distinct q1 from
+  (select distinct * from int8_tbl i81
+   union all
+   select distinct * from int8_tbl i82) ss
+where q2 = q2;
+
+select distinct q1 from
+  (select distinct * from int8_tbl i81
+   union all
+   select distinct * from int8_tbl i82) ss
+where q2 = q2;
+
+explain (costs off)
+select distinct q1 from
+  (select distinct * from int8_tbl i81
+   union all
+   select distinct * from int8_tbl i82) ss
+where -q1 = q2;
+
+select distinct q1 from
+  (select distinct * from int8_tbl i81
+   union all
+   select distinct * from int8_tbl i82) ss
+where -q1 = q2;
 
 -- Test proper handling of parameterized appendrel paths when the
 -- potential join qual is expensive
@@ -319,3 +435,16 @@ select * from
 
 drop table t3;
 drop function expensivefunc(int);
+
+-- Test handling of appendrel quals that const-simplify into an AND
+explain (costs off)
+select * from
+  (select *, 0 as x from int8_tbl a
+   union all
+   select *, 1 as x from int8_tbl b) ss
+where (x = 0) or (q1 >= q2 and q1 <= q2);
+select * from
+  (select *, 0 as x from int8_tbl a
+   union all
+   select *, 1 as x from int8_tbl b) ss
+where (x = 0) or (q1 >= q2 and q1 <= q2);

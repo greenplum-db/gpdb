@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # $Id: $
 # $Change: $
 # $DateTime: $
@@ -125,7 +125,7 @@ def FilterLogEntries(iterable,
     """
     iterable = iter(iterable)
     spyIn = countIn = spyMid = spyMatch = countOut = None
-    if jend is not None and jend == sys.maxint:
+    if jend is not None and jend == sys.maxsize:
         jend = None
 
     # Collect unfiltered input statistics
@@ -149,7 +149,7 @@ def FilterLogEntries(iterable,
                 iterable = spyMid = TimestampSpy(iterable)
 
         # Include matching log entries.
-        if (isinstance(include, basestring) or   # one string
+        if (isinstance(include, str) or   # one string
             hasattr(include, 'search')):         # or compiled regex
             include = [include]
         if include:
@@ -157,7 +157,7 @@ def FilterLogEntries(iterable,
                 iterable = MatchRegex(iterable, regex)
 
         # Exclude non-matching log entries.
-        if (isinstance(exclude, basestring) or   # one string
+        if (isinstance(exclude, str) or   # one string
             hasattr(exclude, 'search')):         # or compiled regex
             exclude = [exclude]
         if exclude:
@@ -207,8 +207,8 @@ def FilterLogEntries(iterable,
     if verbose:
         # Did we even try to read any input?
         if spyIn.items == 0 and spyOut.items == 0 and not spyIn.eod:
-            print >>msgfile, ('%7d lines processed; an unsatisfiable condition '
-                              'was specified' % 0)
+            print(('%7d lines processed; an unsatisfiable condition '
+                              'was specified' % 0), file=msgfile)
             return
 
         # Unfiltered input statistics
@@ -222,7 +222,7 @@ def FilterLogEntries(iterable,
             msg += '; no timestamps found'
         if not spyIn.eod:
             msg += '; stopped before end of input'
-        print >>msgfile, msg
+        print(msg, file=msgfile)
 
         # Entries where begin <= timestamp < end
         if spyMid:
@@ -232,7 +232,7 @@ def FilterLogEntries(iterable,
                 msg += ', %7d log entries' % spyMid.groups
             if srange:
                 msg += '; timestamps from %s to %s' % srange
-            print >>msgfile, msg
+            print(msg, file=msgfile)
 
         # After applying include/exclude/filters
         if spyMatch:
@@ -242,7 +242,7 @@ def FilterLogEntries(iterable,
                 msg += ', %7d log entries' % spyMatch.groups
             if srange:
                 msg += '; timestamps from %s to %s' % srange
-            print >>msgfile, msg
+            print(msg, file=msgfile)
 
         # Final output statistics
         srange = spyOut.str_range()
@@ -251,7 +251,7 @@ def FilterLogEntries(iterable,
             msg += ', %7d log entries' % countOut.count()
         if srange:
             msg += '; timestamps from %s to %s' % srange
-        print >>msgfile, msg
+        print(msg, file=msgfile)
 
     
 
@@ -268,8 +268,8 @@ class CsvFlatten(object):
     def __iter__(self):
         return self
     
-    def next(self):
-        item = self.source.next()
+    def __next__(self):
+        item = next(self.source)
         #we need to make a minor format change to the log level field so that
         # our single regex will match both.
         item[16] = item[16] + ": "
@@ -293,8 +293,8 @@ class Count(object):
     def __iter__(self):
         return self
 
-    def next(self):
-        item = self.source.next()
+    def __next__(self):
+        item = next(self.source)
         self.n += 1
         return item
 
@@ -326,15 +326,15 @@ class TimestampSpy(object):
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         try:
-            item = self.source.next()
-        except StopIteration, e:
+            item = next(self.source)
+        except StopIteration as e:
             self.eod = True
             raise e
         self.items += 1
 
-        if isinstance(item, basestring):     # ungrouped input
+        if isinstance(item, str):     # ungrouped input
             s = item                         # item is a string
             self.lines += 1
         elif len(item) > 0:                  # grouped input
@@ -405,7 +405,7 @@ def GroupByTimestamp(iterable, skipnull=True):
     lines = []
     while more:
         try:
-            s = source.next()
+            s = next(source)
         except StopIteration:
             more = False
             break
@@ -426,7 +426,7 @@ def GroupByTimestamp(iterable, skipnull=True):
         # Any more lines with same (or no) timestamp?  Add them to the list.
         while True:
             try:
-                s = source.next()
+                s = next(source)
             except StopIteration:            # end of data
                 more = False
                 break
@@ -534,12 +534,12 @@ def TimestampInBounds(iterable, begin, end):
 
     # Fetch first item from input stream.
     source = iter(iterable)
-    item = source.next()
+    item = next(source)
 
     # If first item is a string, assume input consists of individual lines.
     # Yield lines which start with a timestamp within the given bounds, plus
     # any following lines which do not have timestamps.
-    if isinstance(item, basestring):
+    if isinstance(item, str):
         withinbounds = False
         while True:
             if begin <= item < end:
@@ -549,7 +549,7 @@ def TimestampInBounds(iterable, begin, end):
                 withinbounds = False
             elif withinbounds:
                 yield item
-            item = source.next()
+            item = next(source)
 
     # Else assume input consists of groups (i.e. sequences) of lines.
     # Yield groups in which the first line starts with a timestamp within
@@ -558,7 +558,7 @@ def TimestampInBounds(iterable, begin, end):
         if (len(item) > 0 and
             begin <= item[0] < end):
             yield item
-        item = source.next()
+        item = next(source)
 
 
 #--------------------------- Pattern Matching ----------------------------
@@ -584,12 +584,12 @@ def MatchRegex(iterable, regex):
         for s in MatchRegex(sys.stdin, re.compile('ERROR:')):
             print s
     """
-    if isinstance(regex, basestring):
+    if isinstance(regex, str):
         regex = re.compile(regex)
 
     # Yield items in which a match is found for the 'include' pattern.
     for item in iterable:
-        if isinstance(item, basestring):     # item is a string
+        if isinstance(item, str):     # item is a string
             if regex.search(item):
                 yield item
         else:                                # item is a group of strings
@@ -620,12 +620,12 @@ def NoMatchRegex(iterable, regex):
         for s in Ungroup(NoMatchRegex(TimestampInBounds(sys.stdin), 'HINT')):
             print s
     """
-    if isinstance(regex, basestring):
+    if isinstance(regex, str):
         regex = re.compile(regex)
 
     # Yield items in which no match is found for the 'exclude' pattern.
     for item in iterable:
-        if isinstance(item, basestring):     # item is a string
+        if isinstance(item, str):     # item is a string
             if not regex.search(item):
                 yield item
         else:                                # item is a group of strings
@@ -653,7 +653,7 @@ def MatchInFirstLine(iterable, regex):
         for s in Ungroup(MatchInFirstLine(GroupByTimestamp(sys.stdin), 'ERROR:')):
             print s
     """
-    if isinstance(regex, basestring):
+    if isinstance(regex, str):
         regex = re.compile(regex)
     for group in iterable:
         if (len(group) > 0 and
@@ -679,7 +679,7 @@ def NoMatchInFirstLine(iterable, regex):
         for s in Ungroup(NoMatchInFirstLine(GroupByTimestamp(sys.stdin), r'DEBUG\d:')):
             print s
     """
-    if isinstance(regex, basestring):
+    if isinstance(regex, str):
         regex = re.compile(regex)
     for group in iterable:
         if (len(group) == 0 or
@@ -687,9 +687,9 @@ def NoMatchInFirstLine(iterable, regex):
             yield group
 
 def MatchColumns(iterable, cols):
-    if isinstance(cols, basestring):
+    if isinstance(cols, str):
         cols = cols.split(',')
-        cols = map(lambda x: int(x), cols)
+        cols = [int(x) for x in cols]
 
     # Yield items in which a match is found for the 'include' pattern.
     for item in iterable:
@@ -729,13 +729,13 @@ def Slice(iterable, begin=0, end=None):
         begin = 0
     if begin >= 0:
         iterable = SkipNItems(iterable, begin)
-        if end is None or end == sys.maxint:
+        if end is None or end == sys.maxsize:
             pass
         elif end >= 0:
             iterable = FirstNItems(iterable, end-begin)
         else:
             iterable = SkipLastNItems(iterable, -end)
-    elif end is None or end == sys.maxint:
+    elif end is None or end == sys.maxsize:
         iterable = LastNItems(iterable, -begin)
     elif end < 0:
         iterable = LastNItems(iterable, -begin, -end)
@@ -761,7 +761,7 @@ def FirstNItems(iterable, n):
     def FNI(iterable, n):
         source = iter(iterable)
         while n > 0:
-            yield source.next()
+            yield next(source)
             n -= 1
 
     if n is None:
@@ -840,10 +840,10 @@ def SkipNItems(iterable, n):
     def SNI(iterable, n):
         source = iter(iterable)
         while n > 0:
-            source.next()
+            next(source)
             n -= 1
         while True:
-            yield source.next()
+            yield next(source)
 
     if n and n > 0:
         iterable = SNI(iterable, n)
@@ -929,7 +929,7 @@ def filterize(Filter, *args, **kwargs):
             print line.rstrip()
     """
     if args or kwargs:
-        return lambda(stream): Filter(stream, *args, **kwargs)
+        return lambda stream: Filter(stream, *args, **kwargs)
     else:
         return Filter
 

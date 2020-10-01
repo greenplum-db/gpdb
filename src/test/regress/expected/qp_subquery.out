@@ -945,10 +945,10 @@ select t1.a, t2.b from t1 inner join t2 on  (t1.a=t2.a) where ((t1.a,t2.b) not i
 explain select t1.a, t2.b from t1, t2 where t1.a=t2.a or ((t1.a,t2.b) not in (select i1.a,i1.b from i1));
                                            QUERY PLAN                                           
 ------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10000000002.11 rows=4 width=8)
-   ->  Nested Loop  (cost=10000000000.00..10000000002.11 rows=2 width=8)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10000000002.15 rows=3 width=8)
+   ->  Nested Loop  (cost=10000000000.00..10000000002.10 rows=1 width=8)
          Join Filter: ((t1.a = t2.a) OR (NOT (hashed SubPlan 1)))
-         ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1.05 rows=1 width=4)
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1.05 rows=3 width=4)
                ->  Seq Scan on t1  (cost=0.00..1.01 rows=1 width=4)
          ->  Materialize  (cost=0.00..1.01 rows=1 width=8)
                ->  Seq Scan on t2  (cost=0.00..1.01 rows=1 width=8)

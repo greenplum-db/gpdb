@@ -1,4 +1,17 @@
 CREATE EXTENSION pg_trgm;
+-- Check whether any of our opclasses fail amvalidate
+SELECT amname, opcname
+FROM pg_opclass opc LEFT JOIN pg_am am ON am.oid = opcmethod
+WHERE opc.oid >= 16384 AND NOT amvalidate(opc.oid);
+ amname | opcname 
+--------+---------
+(0 rows)
+
+--backslash is used in tests below, installcheck will fail if
+--standard_conforming_string is off
+set standard_conforming_strings=on;
+-- reduce noise
+set extra_float_digits = 0;
 select show_trgm('');
  show_trgm 
 -----------
@@ -3910,19 +3923,17 @@ SELECT similarity('Szczecin', 'Warsaw');
 EXPLAIN (COSTS OFF)
 SELECT DISTINCT city, similarity(city, 'Warsaw'), show_limit()
   FROM restaurants WHERE city % 'Warsaw';
-                                 QUERY PLAN                                 
-----------------------------------------------------------------------------
+                               QUERY PLAN                                
+-------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  GroupAggregate
-         Group Key: city, (similarity(city, 'Warsaw'::text)), ('0.3'::real)
-         ->  Sort
-               Sort Key: city, (similarity(city, 'Warsaw'::text))
-               ->  Bitmap Heap Scan on restaurants
-                     Recheck Cond: (city % 'Warsaw'::text)
-                     ->  Bitmap Index Scan on restaurants_city_idx
-                           Index Cond: (city % 'Warsaw'::text)
+   ->  HashAggregate
+         Group Key: city, similarity(city, 'Warsaw'::text), show_limit()
+         ->  Bitmap Heap Scan on restaurants
+               Recheck Cond: (city % 'Warsaw'::text)
+               ->  Bitmap Index Scan on restaurants_city_idx
+                     Index Cond: (city % 'Warsaw'::text)
  Optimizer: Postgres query optimizer
-(10 rows)
+(8 rows)
 
 SELECT set_limit(0.3);
  set_limit 

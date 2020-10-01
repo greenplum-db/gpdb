@@ -4,7 +4,6 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named '¦æ·~§
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 create index ¼t°Ó¸ê®Æindex1 on ¼t°Ó¸ê®Æ using btree (¦æ·~§O);
 create index ¼t°Ó¸ê®Æindex2 on ¼t°Ó¸ê®Æ using hash (¤½¥q©ïÀY);
-ERROR:  hash indexes are not supported
 insert into ¼t°Ó¸ê®Æ values ('¹q¸£·~', '¹F¹F¬ì§Þ', '¥_A01¤¯');
 insert into ¼t°Ó¸ê®Æ values ('»s³y·~', '°]·½¦³­­¤½¥q', '¤¤B10¤¤');
 insert into ¼t°Ó¸ê®Æ values ('À\¶¼·~', '¬ü¨ýªÑ¥÷¦³­­¤½¥q', '°ªZ01¤E');

@@ -1326,7 +1326,7 @@ GppcTFInputDesc(GppcFcinfo info, int argno, bool *iserror)
 		return NULL;
 	}
 
-	return (GppcTupleDesc) ExecCleanTypeFromTL(qexpr->targetList, false);
+	return (GppcTupleDesc) ExecCleanTypeFromTL(qexpr->targetList);
 }
 
 /*
@@ -1464,7 +1464,7 @@ GppcCheckForInterrupts(void)
 GppcTupleDesc
 GppcCreateTemplateTupleDesc(int natts)
 {
-	return (GppcTupleDesc) CreateTemplateTupleDesc(natts, false);
+	return (GppcTupleDesc) CreateTemplateTupleDesc(natts);
 }
 
 /*
@@ -1533,7 +1533,7 @@ const char *
 GppcTupleDescAttrName(GppcTupleDesc tupdesc, int16_t attno)
 {
 	CHECK_TUPLEDESC_ATTNO(tupdesc, attno);
-	return NameStr(((TupleDesc) tupdesc)->attrs[attno]->attname);
+	return NameStr(TupleDescAttr((TupleDesc) tupdesc, attno)->attname);
 }
 
 /* attno starts from 0 */
@@ -1541,7 +1541,7 @@ GppcOid
 GppcTupleDescAttrType(GppcTupleDesc tupdesc, int16_t attno)
 {
 	CHECK_TUPLEDESC_ATTNO(tupdesc, attno);
-	return (GppcOid) ((TupleDesc) tupdesc)->attrs[attno]->atttypid;
+	return (GppcOid) (TupleDescAttr((TupleDesc) tupdesc, attno)->atttypid);
 }
 
 /* attno starts from 0 */
@@ -1549,7 +1549,7 @@ int32_t
 GppcTupleDescAttrTypmod(GppcTupleDesc tupdesc, int16_t attno)
 {
 	CHECK_TUPLEDESC_ATTNO(tupdesc, attno);
-	return (int32_t) ((TupleDesc) tupdesc)->attrs[attno]->atttypmod;
+	return (int32_t) (TupleDescAttr((TupleDesc) tupdesc, attno)->atttypmod);
 }
 
 /* attno starts from 0 */
@@ -1557,7 +1557,7 @@ int16_t
 GppcTupleDescAttrLen(GppcTupleDesc tupdesc, int16_t attno)
 {
 	CHECK_TUPLEDESC_ATTNO(tupdesc, attno);
-	return (int16_t) ((TupleDesc) tupdesc)->attrs[attno]->attlen;
+	return (int16_t) (TupleDescAttr((TupleDesc) tupdesc, attno)->attlen);
 }
 
 /*

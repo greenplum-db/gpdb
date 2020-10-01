@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # $Id: $
 # $Change: $
 # $DateTime: $
@@ -233,13 +233,13 @@ def scan_datetime(string, pos=0, endpos=None):
         if m:
             # delimited format
             if len(d) != 2 and len(d) != 1:
-                raise ValueError, 'day should have 1 or 2 digits'
+                raise ValueError('day should have 1 or 2 digits')
             year, month, day = int(yyyy), int(m), int(d)
             timepat = _colontimepat
         else:
             # numeric format
             if len(dd) > 2:
-                raise ValueError, 'date should have 8 digits (YYYYMMDD)'
+                raise ValueError('date should have 8 digits (YYYYMMDD)')
             year, month, day = int(yyyy), int(mm), int(dd)
             timepat = _numerictimepat
 
@@ -252,22 +252,22 @@ def scan_datetime(string, pos=0, endpos=None):
             # delimited format
             hh, mm, ss, frac = timematch.groups()
             if len(hh) > 2:
-                raise ValueError, 'hour should have 1 or 2 digits'
+                raise ValueError('hour should have 1 or 2 digits')
             if len(mm) != 2:
-                raise ValueError, 'minute should have 2 digits'
+                raise ValueError('minute should have 2 digits')
             if ss is not None and len(ss) != 2:
-                raise ValueError, 'second should have 2 digits'
+                raise ValueError('second should have 2 digits')
         else:
             # numeric format
             hhmmss, frac = timematch.groups()
             if len(hhmmss) == 6:
                 hh, mm, ss = hhmmss[:2], hhmmss[2:4], hhmmss[4:]
             elif frac:
-                raise ValueError, 'time should have 6 digits before decimal point (HHMMSS.sss)'
+                raise ValueError('time should have 6 digits before decimal point (HHMMSS.sss)')
             elif len(hhmmss) == 4:
                 hh, mm, ss = hhmmss[:2], hhmmss[2:], None
             else:
-                raise ValueError, 'time should have 4 or 6 digits (HHMM or HHMMSS)'
+                raise ValueError('time should have 4 or 6 digits (HHMM or HHMMSS)')
 
         if frac:
             microsecond = int((frac + '000000')[1:7])
@@ -277,7 +277,7 @@ def scan_datetime(string, pos=0, endpos=None):
         else:
             dt = datetime(year, month, day, int(hh), int(mm))
         return dt, nextpos
-    except ValueError, e:
+    except ValueError as e:
         # Nonsensical date or time (e.g. field out of range, such as month > 12)
         raise DatetimeValueError(str(e), string, pos, nextpos)
 
@@ -424,10 +424,10 @@ def scan_duration(string, pos=0, endpos=None, signed=True):
             if sign == '-':
                 td = -td
         return td, match.end()
-    except OverflowError, e:
+    except OverflowError as e:
         # Nonsensical duration (e.g. field out of range)
         raise DatetimeValueError(str(e), string, pos, match.end())
-    except ValueError, e:
+    except ValueError as e:
         # Nonsensical duration (e.g. field out of range)
         raise DatetimeValueError(str(e), string, pos, match.end())
 

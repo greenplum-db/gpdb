@@ -31,11 +31,12 @@
 #include "utils/fmgroids.h"
 #include "utils/inet.h"
 #include "utils/lsyscache.h"
-#include "utils/nabstime.h"
 #include "utils/numeric.h"
 #include "utils/timestamp.h"
 #include "utils/uuid.h"
 #include "utils/varbit.h"
+
+#define PG_GETARG_ITEMPOINTER(n) DatumGetItemPointer(PG_GETARG_DATUM(n))
 
 /*
  * FNV1_32_INIT is defined in cdbhash.h, so that it can be used directly
@@ -120,9 +121,6 @@ Datum cdblegacyhash_date(PG_FUNCTION_ARGS);
 Datum cdblegacyhash_time(PG_FUNCTION_ARGS);
 Datum cdblegacyhash_timetz(PG_FUNCTION_ARGS);
 Datum cdblegacyhash_interval(PG_FUNCTION_ARGS);
-Datum cdblegacyhash_abstime(PG_FUNCTION_ARGS);
-Datum cdblegacyhash_reltime(PG_FUNCTION_ARGS);
-Datum cdblegacyhash_tinterval(PG_FUNCTION_ARGS);
 Datum cdblegacyhash_inet(PG_FUNCTION_ARGS);
 Datum cdblegacyhash_macaddr(PG_FUNCTION_ARGS);
 Datum cdblegacyhash_bit(PG_FUNCTION_ARGS);
@@ -218,15 +216,6 @@ get_legacy_cdbhash_opclass_for_base_type(Oid orig_typid)
 		case INTERVALOID:
 			opclass_name = "cdbhash_interval_ops";
 			break;
-		case ABSTIMEOID:
-			opclass_name = "cdbhash_abstime_ops";
-			break;
-		case RELTIMEOID:
-			opclass_name = "cdbhash_reltime_ops";
-			break;
-		case TINTERVALOID:
-			opclass_name = "cdbhash_tinterval_ops";
-			break;
 		case INETOID:
 		case CIDROID:
 			opclass_name = "cdbhash_inet_ops";
@@ -299,9 +288,6 @@ isLegacyCdbHashFunction(Oid funcid)
 		case F_CDBLEGACYHASH_TIME:
 		case F_CDBLEGACYHASH_TIMETZ:
 		case F_CDBLEGACYHASH_INTERVAL:
-		case F_CDBLEGACYHASH_ABSTIME:
-		case F_CDBLEGACYHASH_RELTIME:
-		case F_CDBLEGACYHASH_TINTERVAL:
 		case F_CDBLEGACYHASH_INET:
 		case F_CDBLEGACYHASH_MACADDR:
 		case F_CDBLEGACYHASH_BIT:
@@ -318,8 +304,6 @@ isLegacyCdbHashFunction(Oid funcid)
 			return false;
 	}
 }
-
-static uint32		invalidbuf = INVALID_VAL;
 
 Datum
 cdblegacyhash_int2(PG_FUNCTION_ARGS)
@@ -489,9 +473,11 @@ cdblegacyhash_oid(PG_FUNCTION_ARGS)
 Datum
 cdblegacyhash_tid(PG_FUNCTION_ARGS)
 {
-	ItemPointerData	tid = PG_GETARG_TID(0);
+	ItemPointer	tid = PG_GETARG_ITEMPOINTER(0);
 
-	PG_RETURN_UINT32(hashFn((char *) &tid, SizeOfIptrData));
+	/* See hashtid() for why we're not using sizeof(ItemPointerData) here */
+	PG_RETURN_UINT32(hashFn((char *) tid,
+							sizeof(BlockIdData) + sizeof(OffsetNumber)));
 }
 
 Datum
@@ -569,83 +555,6 @@ cdblegacyhash_interval(PG_FUNCTION_ARGS)
 }
 
 Datum
-cdblegacyhash_abstime(PG_FUNCTION_ARGS)
-{
-	AbsoluteTime abstime_buf = PG_GETARG_ABSOLUTETIME(0);
-	int			len;
-	void	   *buf;		/* pointer to the data */
-
-	if (abstime_buf == INVALID_ABSTIME)
-	{
-		/* hash to a constant value */
-		len = sizeof(invalidbuf);
-		buf = &invalidbuf;
-	}
-	else
-	{
-		len = sizeof(abstime_buf);
-		buf = &abstime_buf;
-	}
-
-	PG_RETURN_UINT32(hashFn(buf, len));
-}
-
-Datum
-cdblegacyhash_reltime(PG_FUNCTION_ARGS)
-{
-	RelativeTime reltime_buf = PG_GETARG_RELATIVETIME(0);
-	int			len;
-	void	   *buf;		/* pointer to the data */
-
-	if (reltime_buf == INVALID_RELTIME)
-	{
-		/* hash to a constant value */
-		len = sizeof(invalidbuf);
-		buf = &invalidbuf;
-	}
-	else
-	{
-		len = sizeof(reltime_buf);
-		buf = &reltime_buf;
-	}
-
-	PG_RETURN_UINT32(hashFn(buf, len));
-}
-
-Datum
-cdblegacyhash_tinterval(PG_FUNCTION_ARGS)
-{
-	TimeInterval tinterval = PG_GETARG_TIMEINTERVAL(0);
-	int			len;
-	void	   *buf;		/* pointer to the data */
-	AbsoluteTime tinterval_len;
-
-	/*
-	 * check if a valid interval. the '0' status code stands for
-	 * T_INTERVAL_INVAL which is defined in nabstime.c. We use the
-	 * actual value instead of defining it again here.
-	 */
-	if (tinterval->status == 0 ||
-		tinterval->data[0] == INVALID_ABSTIME ||
-		tinterval->data[1] == INVALID_ABSTIME)
-	{
-		/* hash to a constant value */
-		len = sizeof(invalidbuf);
-		buf = &invalidbuf;
-	}
-	else
-	{
-		/* normalize on length of the time interval */
-
-		tinterval_len = tinterval->data[1] - tinterval->data[0];
-		len = sizeof(tinterval_len);
-		buf = &tinterval_len;
-	}
-
-	PG_RETURN_UINT32(hashFn(buf, len));
-}
-
-Datum
 cdblegacyhash_inet(PG_FUNCTION_ARGS)
 {
 	/* inet/cidr */
@@ -701,7 +610,7 @@ cdblegacyhash_bit(PG_FUNCTION_ARGS)
 Datum
 cdblegacyhash_bool(PG_FUNCTION_ARGS)
 {
-	bool		bool_buf = PG_GETARG_BOOL(0);
+	char		bool_buf = PG_GETARG_BOOL(0);
 
 	PG_RETURN_UINT32(hashFn(&bool_buf, sizeof(bool_buf)));
 }

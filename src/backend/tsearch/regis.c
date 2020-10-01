@@ -3,7 +3,7 @@
  * regis.c
  *		Fast regex subset
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
@@ -115,7 +115,7 @@ RS_compile(Regis *r, bool issuffix, const char *str)
 				ptr->type = RSF_ONEOF;
 				state = RS_IN_ONEOF;
 			}
-			else	/* shouldn't get here */
+			else				/* shouldn't get here */
 				elog(ERROR, "invalid regis pattern: \"%s\"", str);
 		}
 		else if (state == RS_IN_ONEOF)
@@ -131,7 +131,7 @@ RS_compile(Regis *r, bool issuffix, const char *str)
 				ptr->len = pg_mblen(c);
 				state = RS_IN_ONEOF_IN;
 			}
-			else	/* shouldn't get here */
+			else				/* shouldn't get here */
 				elog(ERROR, "invalid regis pattern: \"%s\"", str);
 		}
 		else if (state == RS_IN_ONEOF_IN || state == RS_IN_NONEOF)
@@ -143,7 +143,7 @@ RS_compile(Regis *r, bool issuffix, const char *str)
 			}
 			else if (t_iseq(c, ']'))
 				state = RS_IN_WAIT;
-			else	/* shouldn't get here */
+			else				/* shouldn't get here */
 				elog(ERROR, "invalid regis pattern: \"%s\"", str);
 		}
 		else
@@ -178,7 +178,6 @@ RS_free(Regis *r)
 	r->node = NULL;
 }
 
-#ifdef USE_WIDE_UPPER_LOWER
 static bool
 mb_strchr(char *str, char *c)
 {
@@ -209,10 +208,6 @@ mb_strchr(char *str, char *c)
 
 	return res;
 }
-#else
-#define mb_strchr(s,c)	( (strchr((s),*(c)) == NULL) ? false : true )
-#endif
-
 
 bool
 RS_execute(Regis *r, char *str)

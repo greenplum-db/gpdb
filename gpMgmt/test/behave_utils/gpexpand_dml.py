@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import threading
 import time
@@ -35,6 +35,7 @@ class TestDML(threading.Thread):
         self.verify(conn)
 
         conn.commit()
+        conn.close()
 
     def prepare(self):
         sql = '''
@@ -52,6 +53,7 @@ class TestDML(threading.Thread):
         self.prepare_extra(conn)
 
         conn.commit()
+        conn.close()
 
     def prepare_extra(self, conn):
         pass
@@ -64,7 +66,7 @@ class TestDML(threading.Thread):
         self.maxtime = 0;
         while self.running or self.counter == 0:
             sql = self.loop_step()
-            dbconn.execSQL(conn, sql)
+            dbconn.execSQL(conn, sql, autocommit=False)
 
             self.counter = self.counter + 1
 
@@ -108,7 +110,7 @@ class TestInsert(TestDML):
         sql = '''
             select c1 from {tablename} order by c1;
         '''.format(tablename=self.tablename, counter=self.counter)
-        results = dbconn.execSQL(conn, sql).fetchall()
+        results = dbconn.query(conn, sql).fetchall()
 
         for i in range(0, self.counter):
             if i != int(results[i][0]):
@@ -134,7 +136,7 @@ class TestUpdate(TestDML):
         sql = '''
             select c2 from {tablename} order by c1;
         '''.format(tablename=self.tablename, counter=self.counter)
-        results = dbconn.execSQL(conn, sql).fetchall()
+        results = dbconn.query(conn, sql).fetchall()
 
         for i in range(0, self.datasize):
             if i + self.counter - 1 != int(results[i][0]):
@@ -160,7 +162,7 @@ class TestDelete(TestDML):
         sql = '''
             select c1 from {tablename} order by c1;
         '''.format(tablename=self.tablename, counter=self.counter)
-        results = dbconn.execSQL(conn, sql).fetchall()
+        results = dbconn.query(conn, sql).fetchall()
 
         for i in range(self.counter, self.datasize):
             if i != int(results[i - self.counter][0]):
@@ -181,7 +183,7 @@ if __name__ == '__main__':
 
     for dml, job in jobs:
         code, message = job.stop()
-        print '{dml}: {code}, message={message}, avgtime={avgtime}, maxtime={maxtime}'.format(
+        print('{dml}: {code}, message={message}, avgtime={avgtime}, maxtime={maxtime}'.format(
             dml=dml, code=code, message=message,
             avgtime=job.avgtime, maxtime=job.maxtime
-        )
+        ))

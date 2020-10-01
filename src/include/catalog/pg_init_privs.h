@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------
  *
  * pg_init_privs.h
- *	  definition of the system "initial privileges" relation (pg_init_privs)
+ *	  definition of the "initial privileges" system catalog (pg_init_privs)
  *
  * NOTE: an object is identified by the OID of the row that primarily
  * defines the object, plus the OID of the table that that row appears in.
@@ -15,17 +15,20 @@
  * for a table itself, so that it is distinct from any column privilege.
  * Currently, objsubid is unused and zero for all other kinds of objects.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Because the contents of this table depend on what is done with the other
+ * objects in the system (and, in particular, may change due to changes in
+ * system_views.sql), there is no pg_init_privs.dat file. The initial contents
+ * are loaded near the end of initdb.
+ *
+ *
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_init_privs.h
  *
  * NOTES
- *		the genbki.pl script reads this file and generates .bki
- *		information from the DATA() statements.
- *
- *		XXX do NOT break up DATA() statements into multiple lines!
- *			the scripts are not as smart as you might think...
+ *	  The Catalog.pm module reads this file and derives schema
+ *	  information.
  *
  *-------------------------------------------------------------------------
  */
@@ -33,15 +36,14 @@
 #define PG_INIT_PRIVS_H
 
 #include "catalog/genbki.h"
+#include "catalog/pg_init_privs_d.h"
 
 /* ----------------
  *		pg_init_privs definition.  cpp turns this into
  *		typedef struct FormData_pg_init_privs
  * ----------------
  */
-#define InitPrivsRelationId  3394
-
-CATALOG(pg_init_privs,3394) BKI_WITHOUT_OIDS
+CATALOG(pg_init_privs,3394,InitPrivsRelationId)
 {
 	Oid			objoid;			/* OID of object itself */
 	Oid			classoid;		/* OID of table containing object */
@@ -49,8 +51,7 @@ CATALOG(pg_init_privs,3394) BKI_WITHOUT_OIDS
 	char		privtype;		/* from initdb or extension? */
 
 #ifdef CATALOG_VARLEN			/* variable-length fields start here */
-	aclitem		initprivs[1] BKI_FORCE_NOT_NULL;		/* initial privs on
-														 * object */
+	aclitem		initprivs[1] BKI_FORCE_NOT_NULL;	/* initial privs on object */
 #endif
 } FormData_pg_init_privs;
 
@@ -59,18 +60,7 @@ CATALOG(pg_init_privs,3394) BKI_WITHOUT_OIDS
  *		the format of pg_init_privs relation.
  * ----------------
  */
-typedef FormData_pg_init_privs *Form_pg_init_privs;
-
-/* ----------------
- *		compiler constants for pg_init_privs
- * ----------------
- */
-#define Natts_pg_init_privs				5
-#define Anum_pg_init_privs_objoid		1
-#define Anum_pg_init_privs_classoid		2
-#define Anum_pg_init_privs_objsubid		3
-#define Anum_pg_init_privs_privtype		4
-#define Anum_pg_init_privs_privs		5
+typedef FormData_pg_init_privs * Form_pg_init_privs;
 
 /*
  * It is important to know if the initial privileges are from initdb or from an
@@ -85,17 +75,4 @@ typedef enum InitPrivsType
 	INITPRIVS_EXTENSION = 'e'
 } InitPrivsType;
 
-/* ----------------
- *		initial contents of pg_init_privs
- * ----------------
- */
-
-/*
- *	Because the contents of this table depend on what is done with the other
- *	objects in the system (and, in particular, may change due to changes is
- *	system_views.sql), there is no initialization here.
- *
- *	The initial contents are loaded near the end of initdb.
- */
-
-#endif   /* PG_INIT_PRIVS_H */
+#endif							/* PG_INIT_PRIVS_H */

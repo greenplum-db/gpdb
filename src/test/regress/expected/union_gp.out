@@ -232,19 +232,18 @@ union
 explain (SELECT 'test1' as branch, id FROM test1 LIMIT 1)
 union
 (SELECT 'test2' as branch, id FROM test2);
-                                             QUERY PLAN                                              
------------------------------------------------------------------------------------------------------
- HashAggregate  (cost=2.06..2.12 rows=6 width=36)
-   Group Key: ('test1'::text), "*SELECT* 1".id
-   ->  Append  (cost=2.05..2.06 rows=2 width=36)
-         ->  Subquery Scan on "*SELECT* 1"  (cost=1.01..2.05 rows=1 width=36)
-               ->  Limit  (cost=1.01..2.04 rows=1 width=36)
-                     ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=1.01..2.04 rows=1 width=36)
-                           ->  Limit  (cost=1.01..2.02 rows=1 width=36)
-                                 ->  Seq Scan on test1  (cost=0.00..1.01 rows=1 width=36)
+                                          QUERY PLAN                                           
+-----------------------------------------------------------------------------------------------
+ HashAggregate  (cost=2.08..2.10 rows=2 width=36)
+   Group Key: ('test1'::text), test1.id
+   ->  Append  (cost=2.05..2.07 rows=2 width=36)
+         ->  Limit  (cost=1.01..2.04 rows=1 width=36)
+               ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=1.01..2.04 rows=1 width=36)
+                     ->  Limit  (cost=1.01..2.02 rows=1 width=36)
+                           ->  Seq Scan on test1  (cost=0.00..1.01 rows=1 width=36)
          ->  Foreign Scan on test2  (cost=0.00..0.00 rows=1 width=36)
  Optimizer: Postgres query optimizer
-(10 rows)
+(9 rows)
 
 --
 -- Test pulling up distribution key expression, when the different branches
@@ -326,7 +325,7 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' a
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 INSERT INTO T_random SELECT i, i%5 from generate_series(1,30) i;
 --start_ignore
-create language plpythonu;
+create language plpython3u;
 --end_ignore
 create or replace function count_operator(query text, operator text) returns int as
 $$
@@ -339,7 +338,7 @@ for i in range(len(rv)):
         result = result+1
 return result
 $$
-language plpythonu;
+language plpython3u;
 --
 -- N-ary UNION ALL results
 --
@@ -1983,8 +1982,6 @@ ORDER BY a;
 create table t1_ncols(a int, b int, c text, d date) distributed by (a);
 create table t2_ncols(a smallint, b bigint, c varchar(20), d date) distributed by (c, b)
  partition by range (a) (start (0) end (8) every (4));
-NOTICE:  CREATE TABLE will create partition "t2_ncols_1_prt_1" for table "t2_ncols"
-NOTICE:  CREATE TABLE will create partition "t2_ncols_1_prt_2" for table "t2_ncols"
 create view v1_ncols(id, a, b, c, d) as select 1,* from t1_ncols union all select 2,* from t2_ncols;
 insert into t1_ncols values (1, 11, 'one', '2001-01-01');
 insert into t2_ncols values (2, 22, 'two', '2002-02-02');
@@ -2063,41 +2060,39 @@ insert into union_schema.t1 select i, i from generate_series(1,10)i;
 insert into union_schema.t2 select i, i from generate_series(1,20)i;
 analyze union_schema.t1;
 analyze union_schema.t2;
-explain
-  select * from union_schema.t1 join union_schema.t2
+explain select * from union_schema.t1 join union_schema.t2
     on union_schema.t1.a = union_schema.t2.b;
                                           QUERY PLAN                                           
 -----------------------------------------------------------------------------------------------
- Gather Motion 1:1  (slice1; segments: 1)  (cost=1.23..4.20 rows=10 width=16)
-   ->  Hash Join  (cost=1.23..4.00 rows=10 width=16)
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=1.23..3.00 rows=10 width=16)
+   ->  Hash Join  (cost=1.23..2.80 rows=10 width=16)
          Hash Cond: (t2.b = t1.a)
-         ->  Redistribute Motion 2:1  (slice2; segments: 2)  (cost=0.00..2.60 rows=10 width=8)
+         ->  Redistribute Motion 2:1  (slice2; segments: 2)  (cost=0.00..1.40 rows=20 width=8)
                Hash Key: t2.b
-               ->  Seq Scan on t2  (cost=0.00..2.20 rows=10 width=8)
+               ->  Seq Scan on t2  (cost=0.00..1.10 rows=10 width=8)
          ->  Hash  (cost=1.10..1.10 rows=10 width=8)
                ->  Seq Scan on t1  (cost=0.00..1.10 rows=10 width=8)
  Optimizer: Postgres query optimizer
 (9 rows)
 
-explain
-  select union_schema.t1.a, union_schema.t2.b
+explain select union_schema.t1.a, union_schema.t2.b
   from union_schema.t1 join union_schema.t2
     on union_schema.t1.a = union_schema.t2.b
   union all
   select * from union_schema.t3;
                                              QUERY PLAN                                              
 -----------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=1.23..2687.30 rows=86110 width=8)
-   ->  Append  (cost=1.23..965.10 rows=28704 width=8)
-         ->  Hash Join  (cost=1.23..4.00 rows=4 width=8)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=1.23..1472.30 rows=86130 width=8)
+   ->  Append  (cost=1.23..323.90 rows=28710 width=8)
+         ->  Hash Join  (cost=1.23..2.80 rows=10 width=8)
                Hash Cond: (t2.b = t1.a)
-               ->  Redistribute Motion 2:3  (slice2; segments: 2)  (cost=0.00..2.60 rows=10 width=4)
+               ->  Redistribute Motion 2:3  (slice2; segments: 2)  (cost=0.00..1.40 rows=20 width=4)
                      Hash Key: t2.b
                      Hash Module: 1
-                     ->  Seq Scan on t2  (cost=0.00..2.20 rows=10 width=4)
-               ->  Hash  (cost=1.10..1.10 rows=4 width=4)
-                     ->  Seq Scan on t1  (cost=0.00..1.10 rows=4 width=4)
-         ->  Seq Scan on t3  (cost=0.00..961.00 rows=28700 width=8)
+                     ->  Seq Scan on t2  (cost=0.00..1.10 rows=10 width=4)
+               ->  Hash  (cost=1.10..1.10 rows=10 width=4)
+                     ->  Seq Scan on t1  (cost=0.00..1.10 rows=10 width=4)
+         ->  Seq Scan on t3  (cost=0.00..321.00 rows=28700 width=8)
  Optimizer: Postgres query optimizer
 (12 rows)
 
@@ -2141,41 +2136,39 @@ insert into union_schema.t1 select i, i from generate_series(1,20)i;
 insert into union_schema.t2 select i, i from generate_series(1,10)i;
 analyze union_schema.t1;
 analyze union_schema.t2;
-explain
-  select * from union_schema.t1 join union_schema.t2
+explain select * from union_schema.t1 join union_schema.t2
     on union_schema.t1.a = union_schema.t2.b;
-                                             QUERY PLAN                                             
-----------------------------------------------------------------------------------------------------
- Gather Motion 1:1  (slice1; segments: 1)  (cost=2.43..4.00 rows=10 width=16)
-   ->  Hash Join  (cost=2.43..3.80 rows=10 width=16)
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=1.32..2.90 rows=10 width=16)
+   ->  Hash Join  (cost=1.32..2.70 rows=10 width=16)
          Hash Cond: (t1.a = t2.b)
          ->  Seq Scan on t1  (cost=0.00..1.20 rows=20 width=8)
-         ->  Hash  (cost=2.30..2.30 rows=10 width=8)
-               ->  Redistribute Motion 2:1  (slice2; segments: 2)  (cost=0.00..2.30 rows=5 width=8)
+         ->  Hash  (cost=1.20..1.20 rows=10 width=8)
+               ->  Redistribute Motion 2:1  (slice2; segments: 2)  (cost=0.00..1.20 rows=10 width=8)
                      Hash Key: t2.b
-                     ->  Seq Scan on t2  (cost=0.00..2.10 rows=5 width=8)
+                     ->  Seq Scan on t2  (cost=0.00..1.05 rows=5 width=8)
  Optimizer: Postgres query optimizer
 (9 rows)
 
-explain
-  select union_schema.t1.a, union_schema.t2.b
+explain select union_schema.t1.a, union_schema.t2.b
     from union_schema.t1 join union_schema.t2
 	  on union_schema.t1.a = union_schema.t2.b
   union all
   select * from union_schema.t3;
-                                                QUERY PLAN                                                
-----------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=2.43..2687.10 rows=86110 width=8)
-   ->  Append  (cost=2.43..964.90 rows=28704 width=8)
-         ->  Hash Join  (cost=2.43..3.80 rows=4 width=8)
+                                                QUERY PLAN                                                 
+-----------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=1.32..1472.20 rows=86130 width=8)
+   ->  Append  (cost=1.32..323.80 rows=28710 width=8)
+         ->  Hash Join  (cost=1.32..2.70 rows=10 width=8)
                Hash Cond: (t1.a = t2.b)
-               ->  Seq Scan on t1  (cost=0.00..1.20 rows=7 width=4)
-               ->  Hash  (cost=2.30..2.30 rows=4 width=4)
-                     ->  Redistribute Motion 2:3  (slice2; segments: 2)  (cost=0.00..2.30 rows=5 width=4)
+               ->  Seq Scan on t1  (cost=0.00..1.20 rows=20 width=4)
+               ->  Hash  (cost=1.20..1.20 rows=10 width=4)
+                     ->  Redistribute Motion 2:3  (slice2; segments: 2)  (cost=0.00..1.20 rows=10 width=4)
                            Hash Key: t2.b
                            Hash Module: 1
-                           ->  Seq Scan on t2  (cost=0.00..2.10 rows=5 width=4)
-         ->  Seq Scan on t3  (cost=0.00..961.00 rows=28700 width=8)
+                           ->  Seq Scan on t2  (cost=0.00..1.05 rows=5 width=4)
+         ->  Seq Scan on t3  (cost=0.00..321.00 rows=28700 width=8)
  Optimizer: Postgres query optimizer
 (12 rows)
 

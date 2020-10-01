@@ -72,27 +72,27 @@
           </row>
           <row>
             <entry>
-              <codeph>$MASTER_DATA_DIRECTORY/pg_log/startup.log</codeph>,
-              <codeph>$GPDATA_DIR/<varname>segprefixN</varname>/pg_log/startup.log</codeph>
+              <codeph>$MASTER_DATA_DIRECTORY/log/startup.log</codeph>,
+              <codeph>$GPDATA_DIR/<varname>segprefixN</varname>/log/startup.log</codeph>
             </entry>
             <entry>segment instance start log</entry>
           </row>
           <row>
             <entry>
-              <codeph>$MASTER_DATA_DIRECTORY/pg_log/*.csv</codeph>,
-              <codeph>$GPDATA_DIR/<varname>segprefixN</varname>/pg_log/*.csv</codeph>
+              <codeph>$MASTER_DATA_DIRECTORY/log/*.csv</codeph>,
+              <codeph>$GPDATA_DIR/<varname>segprefixN</varname>/log/*.csv</codeph>
             </entry>
             <entry>master and segment database logs</entry>
           </row>
           <row>
             <entry>
-              <codeph>$GPDATA_DIR/mirror/<varname>segprefixN</varname>/pg_log/*.csv</codeph>
+              <codeph>$GPDATA_DIR/mirror/<varname>segprefixN</varname>/log/*.csv</codeph>
             </entry>
             <entry>mirror segment database logs</entry>
           </row>
           <row>
             <entry>
-              <codeph>$GPDATA_DIR/primary/<varname>segprefixN</varname>/pg_log/*.csv</codeph>
+              <codeph>$GPDATA_DIR/primary/<varname>segprefixN</varname>/log/*.csv</codeph>
             </entry>
             <entry>primary segment database logs</entry>
           </row>

@@ -22,8 +22,11 @@
 #include "access/tupdesc.h"
 #include "access/heapam.h"
 #include "access/bitmap.h"
+#include "access/bitmap_private.h"
+#include "access/bitmap_xlog.h"
 #include "access/transam.h"
 #include "parser/parse_oper.h"
+#include "storage/bufmgr.h"
 #include "utils/builtins.h"
 #include "utils/datum.h"
 #include "utils/guc.h"
@@ -2302,7 +2305,7 @@ build_inserttuple(Relation rel, uint64 tidnum,
 				/* Copy the key values in case someone modifies them */
 				for(attno = 0; attno < tupDesc->natts; attno++)
 				{
-					Form_pg_attribute at = tupDesc->attrs[attno];
+					Form_pg_attribute at = TupleDescAttr(tupDesc, attno);
 
 					if (entry->isNullArr[attno])
 						entry->attributeValueArr[attno] = 0;
@@ -2543,7 +2546,7 @@ _bitmap_doinsert(Relation rel, ItemPointerData ht_ctid, Datum *attdata,
 		RegProcedure opfuncid;
 		ScanKey		scanKey;
 
-		get_sort_group_operators(tupDesc->attrs[attno]->atttypid,
+		get_sort_group_operators(TupleDescAttr(tupDesc, attno)->atttypid,
 								 false, true, false,
 								 NULL, &eq_opr, NULL, NULL);
 		opfuncid = get_opcode(eq_opr);

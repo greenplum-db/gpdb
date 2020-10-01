@@ -1,0 +1,40 @@
+#----------------------------------------------------------------------
+#
+# pg_resourcetype.dat
+#    Initial contents of the pg_resourcetype system relation.
+#
+# Portions Copyright (c) 1996-2018, PostgreSQL Global Development Group
+# Portions Copyright (c) 1994, Regents of the University of California
+#
+# src/include/catalog/pg_resourcetype.dat
+#
+#----------------------------------------------------------------------
+
+[
+
+{ oid => '6454',
+  resname => 'active_statements', restypid => '1', resrequired => 'f',
+  reshasdefault => 't', reshasdisable => 't', resdefaultsetting => '-1',
+  resdisabledsetting => '-1' },
+{ oid => '6455',
+  resname => 'max_cost', restypid => '2', resrequired => 'f',
+  reshasdefault => 't', reshasdisable => 't', resdefaultsetting => '-1',
+  resdisabledsetting => '-1' },
+{ oid => '6456',
+  resname => 'min_cost', restypid => '3', resrequired => 'f',
+  reshasdefault => 't', reshasdisable => 't', resdefaultsetting => '-1',
+  resdisabledsetting => '0' },
+{ oid => '6457',
+  resname => 'cost_overcommit', restypid => '4', resrequired => 'f',
+  reshasdefault => 't', reshasdisable => 't', resdefaultsetting => '-1',
+  resdisabledsetting => '-1' },
+{ oid => '6458',
+  resname => 'priority', restypid => '5', resrequired => 'f',
+  reshasdefault => 't', reshasdisable => 'f', resdefaultsetting => 'medium',
+  resdisabledsetting => '_null_' },
+{ oid => '6459',
+  resname => 'memory_limit', restypid => '6', resrequired => 'f',
+  reshasdefault => 't', reshasdisable => 't', resdefaultsetting => '-1',
+  resdisabledsetting => '-1' },
+
+]

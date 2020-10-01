@@ -21,57 +21,46 @@
 
 namespace gpopt
 {
-	using namespace gpos;
-	
-	// forward declaration
-	class CCostParams;
-	class ICostModel;
-	class COptimizerConfig;
-	class IConstExprEvaluator;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CAutoOptCtxt
-	//
-	//	@doc:
-	//		Auto optimizer context object creates and installs optimizer context
-	//		for unittesting
-	//
-	//---------------------------------------------------------------------------
-	class CAutoOptCtxt
-	{
+// forward declaration
+class CCostParams;
+class ICostModel;
+class COptimizerConfig;
+class IConstExprEvaluator;
 
-		private:
-			// private copy ctor
-			CAutoOptCtxt(CAutoOptCtxt &);
+//---------------------------------------------------------------------------
+//	@class:
+//		CAutoOptCtxt
+//
+//	@doc:
+//		Auto optimizer context object creates and installs optimizer context
+//		for unittesting
+//
+//---------------------------------------------------------------------------
+class CAutoOptCtxt
+{
+private:
+	// private copy ctor
+	CAutoOptCtxt(CAutoOptCtxt &);
 
-		public:
+public:
+	// ctor
+	CAutoOptCtxt(CMemoryPool *mp, CMDAccessor *md_accessor,
+				 IConstExprEvaluator *pceeval,
+				 COptimizerConfig *optimizer_config);
 
-			// ctor
-			CAutoOptCtxt
-				(
-				CMemoryPool *mp,
-				CMDAccessor *md_accessor,
-				IConstExprEvaluator *pceeval,
-				COptimizerConfig *optimizer_config
-				);
-			
-			// ctor
-			CAutoOptCtxt
-				(
-				CMemoryPool *mp,
-				CMDAccessor *md_accessor,
-				IConstExprEvaluator *pceeval,
-				ICostModel *pcm
-				);
+	// ctor
+	CAutoOptCtxt(CMemoryPool *mp, CMDAccessor *md_accessor,
+				 IConstExprEvaluator *pceeval, ICostModel *pcm);
 
-			// dtor
-			~CAutoOptCtxt();
+	// dtor
+	~CAutoOptCtxt();
 
-	}; // class CAutoOptCtxt
-}
+};	// class CAutoOptCtxt
+}  // namespace gpopt
 
 
-#endif // !GPOPT_CAutoOptCtxt_H
+#endif	// !GPOPT_CAutoOptCtxt_H
 
 // EOF

@@ -7,9 +7,9 @@
 //
 //	@doc:
 //		Implementation of DXL datum with type information
-//		
-//	@owner: 
-//		
+//
+//	@owner:
+//
 //
 //	@test:
 //
@@ -29,20 +29,13 @@ using namespace gpdxl;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CDXLDatum::CDXLDatum
-	(
-	CMemoryPool *mp,
-	IMDId *mdid_type,
-	INT type_modifier,
-	BOOL is_null,
-	ULONG length
-	)
-	:
-	m_mp(mp),
-	m_mdid_type(mdid_type),
-	m_type_modifier(type_modifier),
-	m_is_null(is_null),
-	m_length(length)
+CDXLDatum::CDXLDatum(CMemoryPool *mp, IMDId *mdid_type, INT type_modifier,
+					 BOOL is_null, ULONG length)
+	: m_mp(mp),
+	  m_mdid_type(mdid_type),
+	  m_type_modifier(type_modifier),
+	  m_is_null(is_null),
+	  m_length(length)
 {
 	GPOS_ASSERT(m_mdid_type->IsValid());
 }
@@ -75,7 +68,7 @@ CDXLDatum::IsNull() const
 //		Returns the size of the byte array
 //
 //---------------------------------------------------------------------------
-ULONG 
+ULONG
 CDXLDatum::Length() const
 {
 	return m_length;
@@ -90,15 +83,14 @@ CDXLDatum::Length() const
 //
 //---------------------------------------------------------------------------
 void
-CDXLDatum::Serialize
-	(
-	CXMLSerializer *xml_serializer,
-	const CWStringConst *datum_string
-	)
+CDXLDatum::Serialize(CXMLSerializer *xml_serializer,
+					 const CWStringConst *datum_string)
 {
-	xml_serializer->OpenElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), datum_string);
+	xml_serializer->OpenElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), datum_string);
 	Serialize(xml_serializer);
-	xml_serializer->CloseElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), datum_string);
+	xml_serializer->CloseElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), datum_string);
 }
 
 // EOF

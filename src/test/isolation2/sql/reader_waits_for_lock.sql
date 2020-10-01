@@ -22,6 +22,7 @@ begin
       return false; /* in func */
     end if; /* in func */
     perform pg_sleep(0.1); /* in func */
+    perform pg_stat_clear_snapshot(); /* in func */
     retries := retries - 1; /* in func */
   end loop; /* in func */
 end; /* in func */

@@ -3,7 +3,7 @@ doc/src/sgml/ref/create_user.sgml
 PostgreSQL documentation
 -->
 
-<refentry id="SQL-CREATEUSER">
+<refentry id="sql-createuser">
  <indexterm zone="sql-createuser">
   <primary>CREATE USER</primary>
  </indexterm>
@@ -21,9 +21,9 @@ PostgreSQL documentation
 
  <refsynopsisdiv>
 <synopsis>
-CREATE USER <replaceable class="PARAMETER">name</replaceable> [ [ WITH ] <replaceable class="PARAMETER">option</replaceable> [ ... ] ]
+CREATE USER <replaceable class="parameter">name</replaceable> [ [ WITH ] <replaceable class="parameter">option</replaceable> [ ... ] ]
 
-<phrase>where <replaceable class="PARAMETER">option</replaceable> can be:</phrase>
+<phrase>where <replaceable class="parameter">option</replaceable> can be:</phrase>
 
       SUPERUSER | NOSUPERUSER
     | CREATEDB | NOCREATEDB
@@ -32,6 +32,7 @@ CREATE USER <replaceable class="PARAMETER">name</replaceable> [ [ WITH ] <replac
     | LOGIN | NOLOGIN
     | REPLICATION | NOREPLICATION
     | BYPASSRLS | NOBYPASSRLS
+<<<<<<< HEAD
     | CONNECTION LIMIT <replaceable class="PARAMETER">connlimit</replaceable>
     | [ ENCRYPTED | UNENCRYPTED ] PASSWORD '<replaceable class="PARAMETER">password</replaceable>'
     | VALID UNTIL '<replaceable class="PARAMETER">timestamp</replaceable>'
@@ -42,6 +43,17 @@ CREATE USER <replaceable class="PARAMETER">name</replaceable> [ [ WITH ] <replac
     | USER <replaceable class="PARAMETER">role_name</replaceable> [, ...]
     | SYSID <replaceable class="PARAMETER">uid</replaceable>
     | RESOURCE QUEUE <replaceable class="PARAMETER">queuename</replaceable>
+=======
+    | CONNECTION LIMIT <replaceable class="parameter">connlimit</replaceable>
+    | [ ENCRYPTED ] PASSWORD '<replaceable class="parameter">password</replaceable>' | PASSWORD NULL
+    | VALID UNTIL '<replaceable class="parameter">timestamp</replaceable>'
+    | IN ROLE <replaceable class="parameter">role_name</replaceable> [, ...]
+    | IN GROUP <replaceable class="parameter">role_name</replaceable> [, ...]
+    | ROLE <replaceable class="parameter">role_name</replaceable> [, ...]
+    | ADMIN <replaceable class="parameter">role_name</replaceable> [, ...]
+    | USER <replaceable class="parameter">role_name</replaceable> [, ...]
+    | SYSID <replaceable class="parameter">uid</replaceable>
+>>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
 </synopsis>
  </refsynopsisdiv>
 
@@ -50,10 +62,10 @@ CREATE USER <replaceable class="PARAMETER">name</replaceable> [ [ WITH ] <replac
 
   <para>
    <command>CREATE USER</command> is now an alias for
-   <xref linkend="sql-createrole">.
+   <xref linkend="sql-createrole"/>.
    The only difference is that when the command is spelled
-   <command>CREATE USER</command>, <literal>LOGIN</> is assumed
-   by default, whereas <literal>NOLOGIN</> is assumed when
+   <command>CREATE USER</command>, <literal>LOGIN</literal> is assumed
+   by default, whereas <literal>NOLOGIN</literal> is assumed when
    the command is spelled
    <command>CREATE ROLE</command>.
   </para>
@@ -73,7 +85,7 @@ CREATE USER <replaceable class="PARAMETER">name</replaceable> [ [ WITH ] <replac
   <title>See Also</title>
 
   <simplelist type="inline">
-   <member><xref linkend="sql-createrole"></member>
+   <member><xref linkend="sql-createrole"/></member>
   </simplelist>
  </refsect1>
 </refentry>

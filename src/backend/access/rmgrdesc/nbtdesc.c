@@ -3,7 +3,7 @@
  * nbtdesc.c
  *	  rmgr descriptor routines for access/nbtree/nbtxlog.c
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -14,7 +14,7 @@
  */
 #include "postgres.h"
 
-#include "access/nbtree.h"
+#include "access/nbtxlog.h"
 
 /*
  * GPDB: Print additional information about an INSERT record.
@@ -102,8 +102,6 @@ btree_desc(StringInfo buf, XLogReaderState *record)
 			}
 		case XLOG_BTREE_SPLIT_L:
 		case XLOG_BTREE_SPLIT_R:
-		case XLOG_BTREE_SPLIT_L_ROOT:
-		case XLOG_BTREE_SPLIT_R_ROOT:
 			{
 				xl_btree_split *xlrec = (xl_btree_split *) rec;
 
@@ -123,7 +121,8 @@ btree_desc(StringInfo buf, XLogReaderState *record)
 			{
 				xl_btree_delete *xlrec = (xl_btree_delete *) rec;
 
-				appendStringInfo(buf, "%d items", xlrec->nitems);
+				appendStringInfo(buf, "%d items, latest removed xid %u",
+								 xlrec->nitems, xlrec->latestRemovedXid);
 				out_delete(buf, record);
 				break;
 			}
@@ -161,7 +160,18 @@ btree_desc(StringInfo buf, XLogReaderState *record)
 
 				appendStringInfo(buf, "rel %u/%u/%u; latestRemovedXid %u",
 								 xlrec->node.spcNode, xlrec->node.dbNode,
-							   xlrec->node.relNode, xlrec->latestRemovedXid);
+								 xlrec->node.relNode, xlrec->latestRemovedXid);
+				break;
+			}
+		case XLOG_BTREE_META_CLEANUP:
+			{
+				xl_btree_metadata *xlrec;
+
+				xlrec = (xl_btree_metadata *) XLogRecGetBlockData(record, 0,
+																  NULL);
+				appendStringInfo(buf, "oldest_btpo_xact %u; last_cleanup_num_heap_tuples: %f",
+								 xlrec->oldest_btpo_xact,
+								 xlrec->last_cleanup_num_heap_tuples);
 				break;
 			}
 	}
@@ -189,12 +199,6 @@ btree_identify(uint8 info)
 		case XLOG_BTREE_SPLIT_R:
 			id = "SPLIT_R";
 			break;
-		case XLOG_BTREE_SPLIT_L_ROOT:
-			id = "SPLIT_L_ROOT";
-			break;
-		case XLOG_BTREE_SPLIT_R_ROOT:
-			id = "SPLIT_R_ROOT";
-			break;
 		case XLOG_BTREE_VACUUM:
 			id = "VACUUM";
 			break;
@@ -215,6 +219,9 @@ btree_identify(uint8 info)
 			break;
 		case XLOG_BTREE_REUSE_PAGE:
 			id = "REUSE_PAGE";
+			break;
+		case XLOG_BTREE_META_CLEANUP:
+			id = "META_CLEANUP";
 			break;
 	}
 

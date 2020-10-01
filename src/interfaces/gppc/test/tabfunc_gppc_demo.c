@@ -576,7 +576,7 @@ userdata_project(GPPC_FUNCTION_ARGS)
          * Sanity checking, shouldn't occur if our CREATE FUNCTION in SQL is done
          * correctly.
          */
-        if (GPPC_NARGS() != 1 || GPPC_ARGISNULL(0) || GPPC_ARGISNULL(1))
+        if (GPPC_NARGS() != 1 || GPPC_ARGISNULL(0))
                 GppcReport(GPPC_ERROR, "invalid invocation of userdata_project");
         scan = GPPC_GETARG_ANYTABLE(0);  /* Should be the first parameter */
         if (GPPC_SRF_IS_FIRSTCALL())

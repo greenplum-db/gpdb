@@ -53,6 +53,22 @@ ERROR:  malformed record literal: "(Joe,,)"
 LINE 1: select '(Joe,,)'::fullname;
                ^
 DETAIL:  Too many columns.
+select '[]'::fullname;          -- bad
+ERROR:  malformed record literal: "[]"
+LINE 1: select '[]'::fullname;
+               ^
+DETAIL:  Missing left parenthesis.
+select ' (Joe,Blow)  '::fullname;  -- ok, extra whitespace
+  fullname  
+------------
+ (Joe,Blow)
+(1 row)
+
+select '(Joe,Blow) /'::fullname;  -- bad
+ERROR:  malformed record literal: "(Joe,Blow) /"
+LINE 1: select '(Joe,Blow) /'::fullname;
+               ^
+DETAIL:  Junk after right parenthesis.
 create temp table quadtable(f1 int, q quad);
 insert into quadtable values (1, ((3.3,4.4),(5.5,6.6)));
 insert into quadtable values (2, ((null,4.4),(5.5,6.6)));
@@ -236,6 +252,7 @@ order by 1;
 (2 rows)
 
 -- Also check row comparison with an indexable condition
+set enable_sort=off;
 explain (costs off)
 select thousand, tenthous from tenk1
 where (thousand, tenthous) >= (997, 5000)
@@ -281,6 +298,117 @@ order by thousand, tenthous;
       999 |     9999
 (25 rows)
 
+reset enable_sort;
+explain (costs off)
+select thousand, tenthous, four from tenk1
+where (thousand, tenthous, four) > (998, 5000, 3)
+order by thousand, tenthous;
+                                 QUERY PLAN                                  
+-----------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: thousand, tenthous
+   ->  Sort
+         Sort Key: thousand, tenthous
+         ->  Bitmap Heap Scan on tenk1
+               Filter: (ROW(thousand, tenthous, four) > ROW(998, 5000, 3))
+               ->  Bitmap Index Scan on tenk1_thous_tenthous
+                     Index Cond: (ROW(thousand, tenthous) >= ROW(998, 5000))
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+select thousand, tenthous, four from tenk1
+where (thousand, tenthous, four) > (998, 5000, 3)
+order by thousand, tenthous;
+ thousand | tenthous | four 
+----------+----------+------
+      998 |     5998 |    2
+      998 |     6998 |    2
+      998 |     7998 |    2
+      998 |     8998 |    2
+      998 |     9998 |    2
+      999 |      999 |    3
+      999 |     1999 |    3
+      999 |     2999 |    3
+      999 |     3999 |    3
+      999 |     4999 |    3
+      999 |     5999 |    3
+      999 |     6999 |    3
+      999 |     7999 |    3
+      999 |     8999 |    3
+      999 |     9999 |    3
+(15 rows)
+
+set enable_sort=off;
+explain (costs off)
+select thousand, tenthous from tenk1
+where (998, 5000) < (thousand, tenthous)
+order by thousand, tenthous;
+                           QUERY PLAN                           
+----------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: thousand, tenthous
+   ->  Index Only Scan using tenk1_thous_tenthous on tenk1
+         Index Cond: (ROW(thousand, tenthous) > ROW(998, 5000))
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+select thousand, tenthous from tenk1
+where (998, 5000) < (thousand, tenthous)
+order by thousand, tenthous;
+ thousand | tenthous 
+----------+----------
+      998 |     5998
+      998 |     6998
+      998 |     7998
+      998 |     8998
+      998 |     9998
+      999 |      999
+      999 |     1999
+      999 |     2999
+      999 |     3999
+      999 |     4999
+      999 |     5999
+      999 |     6999
+      999 |     7999
+      999 |     8999
+      999 |     9999
+(15 rows)
+
+reset enable_sort;
+explain (costs off)
+select thousand, hundred from tenk1
+where (998, 5000) < (thousand, hundred)
+order by thousand, hundred;
+                           QUERY PLAN                            
+-----------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: thousand, hundred
+   ->  Sort
+         Sort Key: thousand, hundred
+         ->  Bitmap Heap Scan on tenk1
+               Filter: (ROW(998, 5000) < ROW(thousand, hundred))
+               ->  Bitmap Index Scan on tenk1_thous_tenthous
+                     Index Cond: (thousand >= 998)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+select thousand, hundred from tenk1
+where (998, 5000) < (thousand, hundred)
+order by thousand, hundred;
+ thousand | hundred 
+----------+---------
+      999 |      99
+      999 |      99
+      999 |      99
+      999 |      99
+      999 |      99
+      999 |      99
+      999 |      99
+      999 |      99
+      999 |      99
+      999 |      99
+(10 rows)
+
 -- Test case for bug #14010: indexed row comparisons fail with nulls
 create temp table test_table (a text, b text);
 insert into test_table values ('a', 'b');
@@ -313,11 +441,11 @@ ERROR:  cannot compare dissimilar column types bigint and integer at record colu
 explain (costs off)
 select * from int8_tbl i8
 where i8 in (row(123,456)::int8_tbl, '(4567890123456789,123)');
-                                                    QUERY PLAN                                                     
--------------------------------------------------------------------------------------------------------------------
+                                     QUERY PLAN                                      
+-------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Seq Scan on int8_tbl i8
-         Filter: (i8.* = ANY (ARRAY[ROW('123'::bigint, '456'::bigint)::int8_tbl, '(4567890123456789,123)'::int8_tbl]))
+         Filter: (i8.* = ANY ('{"(123,456)","(4567890123456789,123)"}'::int8_tbl[]))
  Optimizer: Postgres query optimizer
 (4 rows)
 
@@ -376,6 +504,303 @@ ERROR:  could not identify an ordering operator for type cantcompare
 LINE 1: select * from cc order by f1;
                                   ^
 HINT:  Use an explicit ordering operator or modify the query.
+--
+-- Tests for record_{eq,cmp}
+--
+create type testtype1 as (a int, b int);
+-- all true
+select row(1, 2)::testtype1 < row(1, 3)::testtype1;
+ ?column? 
+----------
+ t
+(1 row)
+
+select row(1, 2)::testtype1 <= row(1, 3)::testtype1;
+ ?column? 
+----------
+ t
+(1 row)
+
+select row(1, 2)::testtype1 = row(1, 2)::testtype1;
+ ?column? 
+----------
+ t
+(1 row)
+
+select row(1, 2)::testtype1 <> row(1, 3)::testtype1;
+ ?column? 
+----------
+ t
+(1 row)
+
+select row(1, 3)::testtype1 >= row(1, 2)::testtype1;
+ ?column? 
+----------
+ t
+(1 row)
+
+select row(1, 3)::testtype1 > row(1, 2)::testtype1;
+ ?column? 
+----------
+ t
+(1 row)
+
+-- all false
+select row(1, -2)::testtype1 < row(1, -3)::testtype1;
+ ?column? 
+----------
+ f
+(1 row)
+
+select row(1, -2)::testtype1 <= row(1, -3)::testtype1;
+ ?column? 
+----------
+ f
+(1 row)
+
+select row(1, -2)::testtype1 = row(1, -3)::testtype1;
+ ?column? 
+----------
+ f
+(1 row)
+
+select row(1, -2)::testtype1 <> row(1, -2)::testtype1;
+ ?column? 
+----------
+ f
+(1 row)
+
+select row(1, -3)::testtype1 >= row(1, -2)::testtype1;
+ ?column? 
+----------
+ f
+(1 row)
+
+select row(1, -3)::testtype1 > row(1, -2)::testtype1;
+ ?column? 
+----------
+ f
+(1 row)
+
+-- true, but see *< below
+select row(1, -2)::testtype1 < row(1, 3)::testtype1;
+ ?column? 
+----------
+ t
+(1 row)
+
+-- mismatches
+create type testtype3 as (a int, b text);
+select row(1, 2)::testtype1 < row(1, 'abc')::testtype3;
+ERROR:  cannot compare dissimilar column types integer and text at record column 2
+select row(1, 2)::testtype1 <> row(1, 'abc')::testtype3;
+ERROR:  cannot compare dissimilar column types integer and text at record column 2
+create type testtype5 as (a int);
+select row(1, 2)::testtype1 < row(1)::testtype5;
+ERROR:  cannot compare record types with different numbers of columns
+select row(1, 2)::testtype1 <> row(1)::testtype5;
+ERROR:  cannot compare record types with different numbers of columns
+-- non-comparable types
+create type testtype6 as (a int, b point);
+select row(1, '(1,2)')::testtype6 < row(1, '(1,3)')::testtype6;
+ERROR:  could not identify a comparison function for type point
+select row(1, '(1,2)')::testtype6 <> row(1, '(1,3)')::testtype6;
+ERROR:  could not identify an equality operator for type point
+drop type testtype1, testtype3, testtype5, testtype6;
+--
+-- Tests for record_image_{eq,cmp}
+--
+create type testtype1 as (a int, b int);
+-- all true
+select row(1, 2)::testtype1 *< row(1, 3)::testtype1;
+ ?column? 
+----------
+ t
+(1 row)
+
+select row(1, 2)::testtype1 *<= row(1, 3)::testtype1;
+ ?column? 
+----------
+ t
+(1 row)
+
+select row(1, 2)::testtype1 *= row(1, 2)::testtype1;
+ ?column? 
+----------
+ t
+(1 row)
+
+select row(1, 2)::testtype1 *<> row(1, 3)::testtype1;
+ ?column? 
+----------
+ t
+(1 row)
+
+select row(1, 3)::testtype1 *>= row(1, 2)::testtype1;
+ ?column? 
+----------
+ t
+(1 row)
+
+select row(1, 3)::testtype1 *> row(1, 2)::testtype1;
+ ?column? 
+----------
+ t
+(1 row)
+
+-- all false
+select row(1, -2)::testtype1 *< row(1, -3)::testtype1;
+ ?column? 
+----------
+ f
+(1 row)
+
+select row(1, -2)::testtype1 *<= row(1, -3)::testtype1;
+ ?column? 
+----------
+ f
+(1 row)
+
+select row(1, -2)::testtype1 *= row(1, -3)::testtype1;
+ ?column? 
+----------
+ f
+(1 row)
+
+select row(1, -2)::testtype1 *<> row(1, -2)::testtype1;
+ ?column? 
+----------
+ f
+(1 row)
+
+select row(1, -3)::testtype1 *>= row(1, -2)::testtype1;
+ ?column? 
+----------
+ f
+(1 row)
+
+select row(1, -3)::testtype1 *> row(1, -2)::testtype1;
+ ?column? 
+----------
+ f
+(1 row)
+
+-- This returns the "wrong" order because record_image_cmp works on
+-- unsigned datums without knowing about the actual data type.
+-- In GPDB, Datum is signed, so this produces different result than
+-- on upstream.
+select row(1, -2)::testtype1 *< row(1, 3)::testtype1;
+ ?column? 
+----------
+ t
+(1 row)
+
+-- other types
+create type testtype2 as (a smallint, b bool);  -- byval different sizes
+select row(1, true)::testtype2 *< row(2, true)::testtype2;
+ ?column? 
+----------
+ t
+(1 row)
+
+select row(-2, true)::testtype2 *< row(-1, true)::testtype2;
+ ?column? 
+----------
+ t
+(1 row)
+
+select row(0, false)::testtype2 *< row(0, true)::testtype2;
+ ?column? 
+----------
+ t
+(1 row)
+
+select row(0, false)::testtype2 *<> row(0, true)::testtype2;
+ ?column? 
+----------
+ t
+(1 row)
+
+create type testtype3 as (a int, b text);  -- variable length
+select row(1, 'abc')::testtype3 *< row(1, 'abd')::testtype3;
+ ?column? 
+----------
+ t
+(1 row)
+
+select row(1, 'abc')::testtype3 *< row(1, 'abcd')::testtype3;
+ ?column? 
+----------
+ t
+(1 row)
+
+select row(1, 'abc')::testtype3 *> row(1, 'abd')::testtype3;
+ ?column? 
+----------
+ f
+(1 row)
+
+select row(1, 'abc')::testtype3 *<> row(1, 'abd')::testtype3;
+ ?column? 
+----------
+ t
+(1 row)
+
+create type testtype4 as (a int, b point);  -- by ref, fixed length
+select row(1, '(1,2)')::testtype4 *< row(1, '(1,3)')::testtype4;
+ ?column? 
+----------
+ t
+(1 row)
+
+select row(1, '(1,2)')::testtype4 *<> row(1, '(1,3)')::testtype4;
+ ?column? 
+----------
+ t
+(1 row)
+
+-- mismatches
+select row(1, 2)::testtype1 *< row(1, 'abc')::testtype3;
+ERROR:  cannot compare dissimilar column types integer and text at record column 2
+select row(1, 2)::testtype1 *<> row(1, 'abc')::testtype3;
+ERROR:  cannot compare dissimilar column types integer and text at record column 2
+create type testtype5 as (a int);
+select row(1, 2)::testtype1 *< row(1)::testtype5;
+ERROR:  cannot compare record types with different numbers of columns
+select row(1, 2)::testtype1 *<> row(1)::testtype5;
+ERROR:  cannot compare record types with different numbers of columns
+-- non-comparable types
+create type testtype6 as (a int, b point);
+select row(1, '(1,2)')::testtype6 *< row(1, '(1,3)')::testtype6;
+ ?column? 
+----------
+ t
+(1 row)
+
+select row(1, '(1,2)')::testtype6 *>= row(1, '(1,3)')::testtype6;
+ ?column? 
+----------
+ f
+(1 row)
+
+select row(1, '(1,2)')::testtype6 *<> row(1, '(1,3)')::testtype6;
+ ?column? 
+----------
+ t
+(1 row)
+
+-- anonymous rowtypes in coldeflists
+select q.a, q.b = row(2), q.c = array[row(3)], q.d = row(row(4)) from
+    unnest(array[row(1, row(2), array[row(3)], row(row(4))),
+                 row(2, row(3), array[row(4)], row(row(5)))])
+      as q(a int, b record, c record[], d record);
+ a | ?column? | ?column? | ?column? 
+---+----------+----------+----------
+ 1 | t        | t        | t
+ 2 | f        | f        | f
+(2 rows)
+
+drop type testtype1, testtype2, testtype3, testtype4, testtype5, testtype6;
 --
 -- Test case derived from bug #5716: check multiple uses of a rowtype result
 --
@@ -505,6 +930,50 @@ select (row('Jim', 'Beam')).text;  -- error
 ERROR:  could not identify column "text" in record data type
 LINE 1: select (row('Jim', 'Beam')).text;
                 ^
+--
+-- Check the equivalence of functional and column notation
+--
+insert into fullname values ('Joe', 'Blow');
+select f.last from fullname f;
+ last 
+------
+ Blow
+(1 row)
+
+select last(f) from fullname f;
+ last 
+------
+ Blow
+(1 row)
+
+create function longname(fullname) returns text language sql
+as $$select $1.first || ' ' || $1.last$$;
+select f.longname from fullname f;
+ longname 
+----------
+ Joe Blow
+(1 row)
+
+select longname(f) from fullname f;
+ longname 
+----------
+ Joe Blow
+(1 row)
+
+-- Starting in v11, the notational form does matter if there's ambiguity
+alter table fullname add column longname text;
+select f.longname from fullname f;
+ longname 
+----------
+ 
+(1 row)
+
+select longname(f) from fullname f;
+ longname 
+----------
+ Joe Blow
+(1 row)
+
 --
 -- Test that composite values are seen to have the correct column names
 -- (bug #11210 and other reports)
@@ -667,6 +1136,15 @@ select row_to_json(r) from (select q2,q1 from tt1 offset 0) r;
  {"q2":0,"q1":0}
 (3 rows)
 
+-- check no-op rowtype conversions
+create temp table tt3 () inherits(tt2);
+insert into tt3 values(33,44);
+select row_to_json(tt3::tt2::tt1) from tt3;
+    row_to_json    
+-------------------
+ {"q1":33,"q2":44}
+(1 row)
+
 --
 -- IS [NOT] NULL should not recurse into nested composites (bug #14235)
 --
@@ -694,20 +1172,22 @@ from (values (1,row(1,2)), (1,row(null,null)), (1,null),
 (6 rows)
 
 explain (verbose, costs off)
-with r(a,b) as
+with r(a,b) as materialized
   (values (1,row(1,2)), (1,row(null,null)), (1,null),
           (null,row(1,2)), (null,row(null,null)), (null,null) )
 select r, r is null as isnull, r is not null as isnotnull from r;
-                       QUERY PLAN                       
---------------------------------------------------------
+                          QUERY PLAN                          
+--------------------------------------------------------------
  Subquery Scan on r
    Output: r.*, (r.* IS NULL), (r.* IS NOT NULL)
-   ->  Values Scan on "*VALUES*"
-         Output: "*VALUES*".column1, "*VALUES*".column2
+   ->  Shared Scan (share slice:id 0:0)
+         Output: share0_ref1.column1, share0_ref1.column2
+         ->  Values Scan on "*VALUES*"
+               Output: "*VALUES*".column1, "*VALUES*".column2
  Optimizer: Postgres query optimizer
-(5 rows)
+(7 rows)
 
-with r(a,b) as
+with r(a,b) as materialized
   (values (1,row(1,2)), (1,row(null,null)), (1,null),
           (null,row(1,2)), (null,row(null,null)), (null,null) )
 select r, r is null as isnull, r is not null as isnotnull from r;
@@ -721,3 +1201,43 @@ select r, r is null as isnull, r is not null as isnotnull from r;
  (,)         | t      | f
 (6 rows)
 
+--
+-- Tests for component access / FieldSelect
+--
+CREATE TABLE compositetable(a text, b text);
+INSERT INTO compositetable(a, b) VALUES('fa', 'fb');
+-- composite type columns can't directly be accessed (error)
+SELECT d.a FROM (SELECT compositetable AS d FROM compositetable) s;
+ERROR:  missing FROM-clause entry for table "d"
+LINE 1: SELECT d.a FROM (SELECT compositetable AS d FROM compositeta...
+               ^
+-- but can be accessed with proper parens
+SELECT (d).a, (d).b FROM (SELECT compositetable AS d FROM compositetable) s;
+ a  | b  
+----+----
+ fa | fb
+(1 row)
+
+-- system columns can't be accessed in composite types (error)
+SELECT (d).ctid FROM (SELECT compositetable AS d FROM compositetable) s;
+ERROR:  column "ctid" not found in data type compositetable
+LINE 1: SELECT (d).ctid FROM (SELECT compositetable AS d FROM compos...
+                ^
+-- accessing non-existing column in NULL datum errors out
+SELECT (NULL::compositetable).nonexistent;
+ERROR:  column "nonexistent" not found in data type compositetable
+LINE 1: SELECT (NULL::compositetable).nonexistent;
+                ^
+-- existing column in a NULL composite yield NULL
+SELECT (NULL::compositetable).a;
+ a 
+---
+ 
+(1 row)
+
+-- oids can't be accessed in composite types (error)
+SELECT (NULL::compositetable).oid;
+ERROR:  column "oid" not found in data type compositetable
+LINE 1: SELECT (NULL::compositetable).oid;
+                ^
+DROP TABLE compositetable;

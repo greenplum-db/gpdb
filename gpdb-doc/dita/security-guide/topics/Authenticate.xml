@@ -537,76 +537,91 @@ Hostssl testdb all 192.168.0.0/16 cert map=gpuser
               <i>overrides</i> any ciphers string specified in <codeph>/etc/openssl.cnf</codeph>.
               The default value <codeph>ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH</codeph> enables all
               ciphers except for ADH, LOW, EXP, and MD5 ciphers, and prioritizes ciphers by their
-                strength.<note>With TLS 1.2 some ciphers in MEDIUM and HIGH strength still use NULL
-                encryption (no encryption for transport), which the default
-                  <codeph>ssl_ciphers</codeph> string allows. To bypass NULL ciphers with TLS 1.2
-                use a string such as <codeph>TLSv1.2:!eNULL:!aNULL</codeph>.</note></li>
+              strength.
+              <note>With TLS 1.2 some ciphers in MEDIUM and HIGH strength still use NULL encryption
+                (no encryption for transport), which the default <codeph>ssl_ciphers</codeph> string
+                allows. To bypass NULL ciphers with TLS 1.2 use a string such as
+                  <codeph>TLSv1.2:!eNULL:!aNULL</codeph>.<p>It is possible to have authentication
+                  without encryption overhead by using <codeph>NULL-SHA</codeph> or
+                    <codeph>NULL-MD5</codeph> ciphers. However, a man-in-the-middle could read and
+                  pass communications between client and server. Also, encryption overhead is
+                  minimal compared to the overhead of authentication. For these reasons, NULL
+                  ciphers should not be used.</p></note></li>
           </ul></p>
-        <p>The following SSL server files can be found in the Master Data Directory: <ul
-            id="ul_gzs_b22_jr">
-            <li><codeph>server.crt</codeph>. Server certificate.</li>
-            <li><codeph>server.key</codeph>. Server private key.</li>
-            <li><codeph>root.crt</codeph>. Trusted certificate authorities.</li>
-            <li><codeph>root.crl</codeph>. Certificates revoked by certificate authorities.</li>
+        <p>The default location for the following SSL server files is the Greenplum Database master
+          data directory (<codeph>$MASTER_DATA_DIRECTORY</codeph>): <ul id="ul_gzs_b22_jr">
+            <li><codeph>server.crt</codeph> - Server certificate.</li>
+            <li><codeph>server.key</codeph> - Server private key.</li>
+            <li><codeph>root.crt</codeph> - Trusted certificate authorities.</li>
+            <li><codeph>root.crl</codeph> - Certificates revoked by certificate authorities.</li>
           </ul></p>
+        <p>If Greenplum Database master mirroring is enabled with SSL client authentication, the SSL
+          server files <i>should not be placed</i> in the default directory
+            <codeph>$MASTER_DATA_DIRECTORY</codeph>. If an <codeph>initstandby</codeph> operation is
+          performed, the contents of <codeph>$MASTER_DATA_DIRECTORY</codeph> is copied from the
+          master to the standby master and the incorrect SSL key, and cert files (the master files,
+          and not the standby master files) will prevent standby master start up. </p>
+        <p>You can specify a different directory for the location of the SSL server files with the
+            <codeph>postgresql.conf</codeph> parameters <codeph>sslcert</codeph>,
+            <codeph>sslkey</codeph>, <codeph>sslrootcert</codeph>, and <codeph>sslcrl</codeph>.</p>
       </section>
       <section id="config_ssl_client_conn">
         <title>Configuring the SSL Client Connection</title>
       </section>
       <p>SSL options:<parml>
-        <plentry>
+          <plentry>
             <pt>sslmode</pt>
             <pd>Specifies the level of protection.<parml>
-          <plentry>
-            <pt>
-              <codeph>require</codeph>
-            </pt>
-            <pd>Only use an SSL connection. If a root CA file is present, verify the certificate in the
-              same way as if <codeph>verify-ca</codeph> was specified.</pd>
+                <plentry>
+                  <pt>
+                    <codeph>require</codeph>
+                  </pt>
+                  <pd>Only use an SSL connection. If a root CA file is present, verify the
+                    certificate in the same way as if <codeph>verify-ca</codeph> was specified.</pd>
+                </plentry>
+                <plentry>
+                  <pt>
+                    <codeph>verify-ca</codeph>
+                  </pt>
+                  <pd>Only use an SSL connection. Verify that the server certificate is issued by a
+                    trusted CA.</pd>
+                </plentry>
+                <plentry>
+                  <pt>
+                    <codeph>verify-full</codeph>
+                  </pt>
+                  <pd>Only use an SSL connection. Verify that the server certificate is issued by a
+                    trusted CA and that the server host name matches that in the certificate.</pd>
+                </plentry>
+              </parml></pd>
           </plentry>
-          <plentry>
-            <pt>
-              <codeph>verify-ca</codeph>
-            </pt>
-            <pd>Only use an SSL connection. Verify that the server certificate is issued by a
-              trusted CA.</pd>
-          </plentry>
-          <plentry>
-            <pt>
-              <codeph>verify-full</codeph>
-            </pt>
-            <pd>Only use an SSL connection. Verify that the server certificate is issued by a
-              trusted CA and that the server host name matches that in the certificate.</pd>
-          </plentry>
-         </parml></pd>
-        </plentry>
           <plentry>
             <pt>sslcert</pt>
             <pd>The file name of the client SSL certificate. The default is
-                <codeph>~/.postgresql/postgresql.crt</codeph>. </pd>
+                <codeph>$MASTER_DATA_DIRECTORY/postgresql.crt</codeph>. </pd>
           </plentry>
           <plentry>
             <pt>sslkey</pt>
             <pd>The secret key used for the client certificate. The default is
-                <codeph>~/.postgresql/postgresql.key</codeph>.</pd>
+                <codeph>$MASTER_DATA_DIRECTORY/postgresql.key</codeph>.</pd>
           </plentry>
           <plentry>
             <pt>sslrootcert</pt>
             <pd>The name of a file containing SSL Certificate Authority certificate(s). The default
-              is <codeph>~/.postgresql/root.crt</codeph>.</pd>
+              is <codeph>$MASTER_DATA_DIRECTORY/root.crt</codeph>.</pd>
           </plentry>
           <plentry>
             <pt>sslcrl</pt>
             <pd>The name of the SSL certificate revocation list. The default is
-                <codeph>~/.postgresql/root.crl</codeph>.</pd>
+                <codeph>$MASTER_DATA_DIRECTORY/root.crl</codeph>.</pd>
           </plentry>
         </parml></p>
       <p>The client connection parameters can be set using the following environment variables:<ul
           id="ul_yph_5g2_jr">
           <li><codeph>sslmode</codeph> – <codeph>PGSSLMODE</codeph></li>
+          <li><codeph>sslcert</codeph> – <codeph>PGSSLCERT</codeph></li>
           <li><codeph>sslkey</codeph> – <codeph>PGSSLKEY</codeph></li>
           <li><codeph>sslrootcert</codeph> – <codeph>PGSSLROOTCERT</codeph></li>
-          <li><codeph>sslcert</codeph> – <codeph>PGSSLCERT</codeph></li>
           <li><codeph>sslcrl</codeph> – <codeph>PGSSLCRL</codeph> </li>
         </ul></p>
     </body>

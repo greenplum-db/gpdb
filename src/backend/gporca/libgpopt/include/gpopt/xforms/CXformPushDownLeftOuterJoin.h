@@ -16,67 +16,57 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CXformPushDownLeftOuterJoin
-	//
-	//	@doc:
-	//		Transform LOJ whose outer child is an NAry-join to be a child
-	//		of NAry-join
-	//
-	//---------------------------------------------------------------------------
-	class CXformPushDownLeftOuterJoin : public CXformExploration
+//---------------------------------------------------------------------------
+//	@class:
+//		CXformPushDownLeftOuterJoin
+//
+//	@doc:
+//		Transform LOJ whose outer child is an NAry-join to be a child
+//		of NAry-join
+//
+//---------------------------------------------------------------------------
+class CXformPushDownLeftOuterJoin : public CXformExploration
+{
+private:
+	// private copy ctor
+	CXformPushDownLeftOuterJoin(const CXformPushDownLeftOuterJoin &);
+
+public:
+	// ctor
+	explicit CXformPushDownLeftOuterJoin(CMemoryPool *mp);
+
+	// dtor
+	virtual ~CXformPushDownLeftOuterJoin()
 	{
+	}
 
-		private:
+	// xform promise
+	virtual CXform::EXformPromise Exfp(CExpressionHandle &exprhdl) const;
 
-			// private copy ctor
-			CXformPushDownLeftOuterJoin(const CXformPushDownLeftOuterJoin &);
+	// ident accessors
+	virtual EXformId
+	Exfid() const
+	{
+		return ExfPushDownLeftOuterJoin;
+	}
 
-		public:
+	// return a string for xform name
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CXformPushDownLeftOuterJoin";
+	}
 
-			// ctor
-			explicit
-			CXformPushDownLeftOuterJoin(CMemoryPool *mp);
+	// actual transform
+	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
+				   CExpression *pexpr) const;
 
-			// dtor
-			virtual
-			~CXformPushDownLeftOuterJoin()
-			{}
+};	// class CXformPushDownLeftOuterJoin
 
-			// xform promise
-			virtual
-			CXform::EXformPromise Exfp(CExpressionHandle &exprhdl) const;
+}  // namespace gpopt
 
-			// ident accessors
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfPushDownLeftOuterJoin;
-			}
-
-			// return a string for xform name
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CXformPushDownLeftOuterJoin";
-			}
-
-			// actual transform
-			void Transform
-				(
-				CXformContext *pxfctxt,
-				CXformResult *pxfres,
-				CExpression *pexpr
-				)
-				const;
-
-	}; // class CXformPushDownLeftOuterJoin
-
-}
-
-#endif // !GPOPT_CXformPushDownLeftOuterJoin_H
+#endif	// !GPOPT_CXformPushDownLeftOuterJoin_H
 
 // EOF

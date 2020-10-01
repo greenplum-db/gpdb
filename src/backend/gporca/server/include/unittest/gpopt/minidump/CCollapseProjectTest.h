@@ -15,35 +15,29 @@
 
 namespace gpopt
 {
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CCollapseProjectTest
-	//
-	//	@doc:
-	//		Unittests
-	//
-	//---------------------------------------------------------------------------
-	class CCollapseProjectTest
-	{
-		private:
+//---------------------------------------------------------------------------
+//	@class:
+//		CCollapseProjectTest
+//
+//	@doc:
+//		Unittests
+//
+//---------------------------------------------------------------------------
+class CCollapseProjectTest
+{
+private:
+	// counter used to mark last successful test
+	static gpos::ULONG m_ulCollapseProjectTestCounter;
 
-			// counter used to mark last successful test
-			static
-			gpos::ULONG m_ulCollapseProjectTestCounter;
+public:
+	// unittests
+	static gpos::GPOS_RESULT EresUnittest();
 
-		public:
+	static gpos::GPOS_RESULT EresUnittest_RunTests();
 
-			// unittests
-			static
-			gpos::GPOS_RESULT EresUnittest();
+};	// class CCollapseProjectTest
+}  // namespace gpopt
 
-			static
-			gpos::GPOS_RESULT EresUnittest_RunTests();
-
-	}; // class CCollapseProjectTest
-}
-
-#endif // !GPOPT_CCollapseProjectTest_H
+#endif	// !GPOPT_CCollapseProjectTest_H
 
 // EOF
-

@@ -27,23 +27,23 @@
 // fwd decl
 namespace gpos
 {
-	class CMemoryPool;
-	class CBitSet;
-}
+class CMemoryPool;
+class CBitSet;
+}  // namespace gpos
 
 namespace gpdxl
 {
-	class CDXLNode;
+class CDXLNode;
 }
 
 namespace gpopt
 {
-	class CExpression;
-	class CMDAccessor;
-	class CQueryContext;
-	class COptimizerConfig;
-	class ICostModel;
-}
+class CExpression;
+class CMDAccessor;
+class CQueryContext;
+class COptimizerConfig;
+class ICostModel;
+}  // namespace gpopt
 
 struct PlannedStmt;
 struct Query;
@@ -57,16 +57,15 @@ using namespace gpopt;
 // context of optimizer input and output objects
 struct SOptContext
 {
-
 	// mark which pointer member should NOT be released
 	// when calling Free() function
 	enum EPin
 	{
-		epinQueryDXL, // keep m_query_dxl
-		epinQuery, 	 // keep m_query
-		epinPlanDXL, // keep m_plan_dxl
-		epinPlStmt, // keep m_plan_stmt
-		epinErrorMsg // keep m_error_msg
+		epinQueryDXL,  // keep m_query_dxl
+		epinQuery,	   // keep m_query
+		epinPlanDXL,   // keep m_plan_dxl
+		epinPlStmt,	   // keep m_plan_stmt
+		epinErrorMsg   // keep m_error_msg
 	};
 
 	// query object serialized to DXL
@@ -108,77 +107,66 @@ struct SOptContext
 	void Free(EPin input, EPin epinOutput);
 
 	// Clone the error message in given context.
-	CHAR* CloneErrorMsg(struct MemoryContextData *context);
+	CHAR *CloneErrorMsg(struct MemoryContextData *context);
 
 	// casting function
-	static
-	SOptContext *Cast(void *ptr);
+	static SOptContext *Cast(void *ptr);
 
-}; // struct SOptContext
+};	// struct SOptContext
 
 class COptTasks
 {
-	private:
+private:
+	// execute a task given the argument
+	static void Execute(void *(*func)(void *), void *func_arg);
 
-		// execute a task given the argument
-		static
-		void Execute ( void *(*func) (void *), void *func_arg);
+	// map GPOS log severity level to GPDB, print error and delete the given error buffer
+	static void LogExceptionMessageAndDelete(
+		CHAR *err_buf, ULONG severity_level = CException::ExsevInvalid);
 
-		// map GPOS log severity level to GPDB, print error and delete the given error buffer
-		static
-		void LogExceptionMessageAndDelete(CHAR* err_buf, ULONG severity_level=CException::ExsevInvalid);
+	// create optimizer configuration object
+	static COptimizerConfig *CreateOptimizerConfig(CMemoryPool *mp,
+												   ICostModel *cost_model);
 
-		// create optimizer configuration object
-		static
-		COptimizerConfig *CreateOptimizerConfig(CMemoryPool *mp, ICostModel *cost_model);
+	// optimize a query to a physical DXL
+	static void *OptimizeTask(void *ptr);
 
-		// optimize a query to a physical DXL
-		static
-		void* OptimizeTask(void *ptr);
+	// translate a DXL tree into a planned statement
+	static PlannedStmt *ConvertToPlanStmtFromDXL(
+		CMemoryPool *mp, CMDAccessor *md_accessor, const Query *orig_query,
+		const CDXLNode *dxlnode, bool can_set_tag,
+		DistributionHashOpsKind distribution_hashops);
 
-		// translate a DXL tree into a planned statement
-		static
-		PlannedStmt *ConvertToPlanStmtFromDXL(CMemoryPool *mp, CMDAccessor *md_accessor, const Query *orig_query, const CDXLNode *dxlnode, bool can_set_tag, DistributionHashOpsKind distribution_hashops);
+	// load search strategy from given path
+	static CSearchStageArray *LoadSearchStrategy(CMemoryPool *mp, char *path);
 
-		// load search strategy from given path
-		static
-		CSearchStageArray *LoadSearchStrategy(CMemoryPool *mp, char *path);
+	// helper for converting wide character string to regular string
+	static CHAR *CreateMultiByteCharStringFromWCString(const WCHAR *wcstr);
 
-		// helper for converting wide character string to regular string
-		static
-		CHAR *CreateMultiByteCharStringFromWCString(const WCHAR *wcstr);
+	// set cost model parameters
+	static void SetCostModelParams(ICostModel *cost_model);
 
-		// set cost model parameters
-		static
-		void SetCostModelParams(ICostModel *cost_model);
+	// generate an instance of optimizer cost model
+	static ICostModel *GetCostModel(CMemoryPool *mp, ULONG num_segments);
 
-		// generate an instance of optimizer cost model
-		static
-		ICostModel *GetCostModel(CMemoryPool *mp, ULONG num_segments);
+	// print warning messages for columns with missing statistics
+	static void PrintMissingStatsWarning(CMemoryPool *mp,
+										 CMDAccessor *md_accessor,
+										 IMdIdArray *col_stats,
+										 MdidHashSet *phsmdidRel);
 
-		// print warning messages for columns with missing statistics
-		static
-		void PrintMissingStatsWarning(CMemoryPool *mp, CMDAccessor *md_accessor, IMdIdArray *col_stats, MdidHashSet *phsmdidRel);
+public:
+	// convert Query->DXL->LExpr->Optimize->PExpr->DXL
+	static char *Optimize(Query *query);
 
-	public:
+	// optimize Query->DXL->LExpr->Optimize->PExpr->DXL->PlannedStmt
+	static PlannedStmt *GPOPTOptimizedPlan(Query *query,
+										   SOptContext *gpopt_context);
 
-		// convert Query->DXL->LExpr->Optimize->PExpr->DXL
-		static
-		char *Optimize(Query *query);
-
-		// optimize Query->DXL->LExpr->Optimize->PExpr->DXL->PlannedStmt
-		static
-		PlannedStmt *GPOPTOptimizedPlan
-			(
-			Query *query,
-			SOptContext* gpopt_context
-			);
-		
-		// enable/disable a given xforms
-		static
-		bool SetXform(char *xform_str, bool should_disable);
+	// enable/disable a given xforms
+	static bool SetXform(char *xform_str, bool should_disable);
 };
 
-#endif // COptTasks_H
+#endif	// COptTasks_H
 
 // EOF

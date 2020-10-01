@@ -20,7 +20,216 @@ To call the different functionalities from PL/pgSQL, use the PERFORM statement o
 
 **Overview**
 
-DBMS_ALERT has been removed, as it is not suitable for use in GPDB.
+The DBMS_ALERT package sends alerts from a PL/pgSQL session to multiple other PL/pgSQL sessions.
+
+This package can be used when processing 1:N, such as when notifying alerts from a given PL/pgSQL session to another PL/pgSQL session at the same time.
+
+**Features**
+
+| Feature | Description |
+|:--- |:--- |
+|REGISTER | Registers the specified alert.|
+|REMOVE | Removes the specified alert.|
+|REMOVEALL | Removes all alerts from a session.|
+|SIGNAL|Notifies alerts.|
+|WAITANY|Waits for notification of any alerts for which a session is registered.|
+|WAITONE|Waits for notification of a specific alert for which a session is registered.|
+
+
+
+**Syntax**
+
+![DBMS_ALERT](gif/DBMS_ALERT.gif)
+
+
+#### 6.1.1 Description of Features
+
+This section explains each feature of DBMS_ALERT.
+
+
+**REGISTER**
+
+ - REGISTER registers the specified alert to a session. By registering alerts to a session, SIGNAL notifications can be received.
+ - Specify the name of the alert.
+ - Alerts are case-sensitive.
+ - Multiple alerts can be registered within a single session. If registering multiple alerts, call REGISTER for each alert.
+
+**Example**
+
+----
+
+~~~
+PERFORM DBMS_ALERT.REGISTER('sample_alert');
+~~~
+
+----
+
+
+**REMOVE**
+
+ - REMOVE removes the specified alert from a session.
+ - Specify the name of the alert.
+ - Alerts are case-sensitive.
+ - The message left by the alert will be removed.
+
+**Example**
+
+----
+
+~~~
+PERFORM DBMS_ALERT.REMOVE('sample_alert');
+~~~
+
+----
+
+
+**REMOVEALL**
+
+ - REMOVEALL removes all alerts registered within a session.
+ - All messages left by the alerts will be removed.
+
+**Example**
+
+----
+
+~~~
+PERFORM DBMS_ALERT.REMOVEALL();
+~~~
+
+----
+
+
+**SIGNAL**
+
+ - SIGNAL sends a message notification for the specified alert.
+ - Specify the name of the alert for which message notifications are sent.
+ - Alerts are case-sensitive.
+ - In the message, specify the alert message for notifications.
+ - Message notifications are not complete at the stage when SIGNAL is executed. Message notifications are sent upon committing the transaction. Message notifications are discarded if a rollback is performed after SIGNAL is executed.
+ - If message notifications are sent for the same alert from multiple sessions, the messages will be accumulated without being removed.
+
+**Example**
+
+----
+
+~~~
+PERFORM DBMS_ALERT.SIGNAL('ALERT001','message001');
+~~~
+
+----
+
+**Note**
+
+----
+
+If SIGNAL is issued continuously and the accumulated messages exceed a certain amount, an insufficient memory error may be output. If the memory becomes insufficient, call AITANY or WAITONE to receive an alert, and reduce the accumulated messages.
+
+----
+
+**WAITANY**
+
+ - WAITANY waits for notification of any alerts registered for a session.
+ - Specify the maximum wait time *timeout* in seconds to wait for an alert.
+ - Use a SELECT statement to obtain the notified information, which is stored in the name, message and status columns.
+ - The name column stores the alert names. The data type of name is TEXT.
+ - The message column stores the messages of notified alerts. The data type of message is TEXT.
+ - The status column stores the status code returned by the operation: 0-an alert occurred; 1-a timeout occurred. The data type of status is INTEGER.
+
+
+**Example**
+
+----
+
+~~~
+DECLARE
+    alert_name         TEXT := 'sample_alert';
+    alert_message      TEXT;
+    alert_status       INTEGER;
+BEGIN
+    SELECT name,message,status INTO alert_name,alert_message,alert_status FROM DBMS_ALERT.WAITANY(60);
+~~~
+
+----
+
+
+**WAITONE**
+
+ - WAITONE waits for notification of the specified alert.
+ - Specify the name of the alert to wait for.
+ - Alerts are case-sensitive.
+ - Specify the maximum wait time *timeout* in seconds to wait for the alert.
+ - Use a SELECT statement to obtain the notified information, which is stored in the message and status columns.
+ - The message column stores the messages of notified alerts. The data type of message is TEXT.
+ - The status column stores the status code returned by the operation: 0-an alert occurred; 1-a timeout occurred. The data type of status is INTEGER.
+
+
+**Example**
+
+----
+
+~~~
+DECLARE
+    alert_message   TEXT;
+    alert_status    INTEGER;
+BEGIN
+    SELECT message,status INTO alert_message,alert_status FROM DBMS_ALERT.WAITONE('sample_alert', 60);
+~~~
+
+----
+
+
+#### 6.1.2 Usage Example
+Below is a usage example of the processing flow of DBMS_ALERT.
+
+**DBMS_ALERT flow**
+
+![DBMS_ALERT_flow](gif/DBMS_ALERT_flow.gif)
+
+
+**Note**
+
+----
+
+ - The target of message notifications by SIGNAL is sessions for which REGISTER is executed at the time of executing SIGNAL.
+ - On the receiving side, always ensure that REMOVE or REMOVEALL is used to remove alerts as soon as the alerts are no longer needed. If a session is closed without removing the alerts, it may no longer be possible to receive a SIGNAL for alerts of the same name in another session.
+ - DBMS_ALERT and DBMS_PIPE use the same memory environment. Therefore, when insufficient memory is detected for DBMS_PIPE, it is possible that insufficient memory will also be detected for DBMS_ALERT.
+
+----
+
+**Usage example**
+
+ - Sending side
+
+~~~
+CREATE FUNCTION send_dbms_alert_exe() RETURNS VOID AS $$
+BEGIN
+	PERFORM DBMS_ALERT.SIGNAL('sample_alert','SIGNAL ALERT');
+END;
+$$ LANGUAGE plpgsql;
+SELECT send_dbms_alert_exe();
+DROP FUNCTION send_dbms_alert_exe();
+~~~
+
+
+ - Receiving side
+
+~~~
+CREATE FUNCTION receive_dbms_alert_exe() RETURNS VOID AS $$
+DECLARE
+	alert_name    TEXT := 'sample_alert';
+	alert_message TEXT;
+	alert_status  INTEGER;
+BEGIN
+	PERFORM DBMS_ALERT.REGISTER(alert_name);
+	SELECT message,status INTO alert_message,alert_status FROM DBMS_ALERT.WAITONE(alert_name,300);
+	RAISE NOTICE 'Message : %', alert_message;
+	RAISE NOTICE 'Status  : %', alert_status;
+	PERFORM DBMS_ALERT.REMOVE(alert_name);
+END;
+$$ LANGUAGE plpgsql;
+SELECT receive_dbms_alert_exe();
+DROP FUNCTION receive_dbms_alert_exe();
+~~~
 
 ### 6.2 DBMS_ASSERT
 
@@ -493,8 +702,6 @@ DROP FUNCTION dbms_output_exe();
 Performs communication between sessions that execute PL/pgSQL.
 
 This package can be used for 1:1 communication, such as when data is being exchanged between sessions executing PL/pgSQL.
-
-GPDB: All DBMS_PIPE functions are declared 'EXECUTE ON MASTER'. Any communication between backends will occur on the master.
 
 For pipes, there are explicit pipes and implicit pipes, and furthermore, for explicit pipes, you can select public pipes and private pipes. The characteristics of each type are as follows:
 

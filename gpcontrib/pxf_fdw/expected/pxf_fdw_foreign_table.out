@@ -73,7 +73,7 @@ CREATE FOREIGN TABLE pxf_fdw_test_table_with_newline (id int, name text)
 --
 CREATE FOREIGN TABLE pxf_fdw_test_table_with_fill_missing_fields (id int, name text)
     SERVER pxf_fdw_test_server
-    OPTIONS ( resource '/path/to/resource', fill_missing_fields '');
+    OPTIONS ( resource '/path/to/resource', fill_missing_fields 'true');
 --
 -- Table creation succeeds if force_null is provided on column definition
 --
@@ -246,7 +246,7 @@ ALTER FOREIGN TABLE pxf_fdw_test_table_with_newline
 -- Table alteration succeeds when fill_missing_fields is provided
 --
 ALTER FOREIGN TABLE pxf_fdw_test_table_with_fill_missing_fields
-    OPTIONS ( SET fill_missing_fields '' );
+    OPTIONS ( SET fill_missing_fields 'true' );
 --
 -- Table alteration succeeds when force_null is provided on column definition
 --

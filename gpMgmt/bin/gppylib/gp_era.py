@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Line too long - pylint: disable=C0301
 # Invalid name  - pylint: disable=C0103
 
@@ -32,7 +32,7 @@ class GpEraFile:
         if do_read is True, immediately attempt to read values.
         """
         self.datadir      = datadir
-        self.filepath     = os.path.join(self.datadir, 'pg_log', 'gp_era')
+        self.filepath     = os.path.join(self.datadir, 'log', 'gp_era')
         self.era          = None
         self.logger       = logger
 
@@ -110,9 +110,9 @@ class GpEraFile:
         Write a new era based on the specified values
         """
         m = hashlib.sha256()
-        m.update(str(host))
-        m.update(str(port))
-        m.update(str(self.datadir))
+        m.update(host.encode())
+        m.update(str(port).encode())
+        m.update(self.datadir.encode())
         self.era = '%s_%s' % (m.hexdigest()[0:16], time)
         self.write_gp_era()
 
@@ -169,7 +169,7 @@ if __name__ == '__main__':
        
     if os.path.exists(TESTDIR): shutil.rmtree(TESTDIR)
     os.mkdir(TESTDIR)
-    os.mkdir(os.path.join(TESTDIR, 'pg_log'))
+    os.mkdir(os.path.join(TESTDIR, 'log'))
     unittest.main()
     shutil.rmtree(TESTDIR)
 

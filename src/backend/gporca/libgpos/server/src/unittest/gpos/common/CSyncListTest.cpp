@@ -33,10 +33,7 @@ using namespace gpos;
 GPOS_RESULT
 CSyncListTest::EresUnittest()
 {
-	CUnittest rgut[] =
-		{
-		GPOS_UNITTEST_FUNC(CSyncListTest::EresUnittest_Basics)
-		};
+	CUnittest rgut[] = {GPOS_UNITTEST_FUNC(CSyncListTest::EresUnittest_Basics)};
 
 	return CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
 }
@@ -78,15 +75,12 @@ CSyncListTest::EresUnittest_Basics()
 		os << GPOS_WSZ_LIT("Sync list contents:") << std::endl;
 		list.OsPrint(os);
 	}
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 	// pop elements until empty
 	for (ULONG i = 0; i < GPOS_ARRAY_SIZE(rgelem); i++)
 	{
-#ifdef GPOS_DEBUG
-		SElem *pe =
-#endif // GPOS_DEBUG
-			list.Pop();
+		SElem *pe GPOS_ASSERTS_ONLY = list.Pop();
 
 		GPOS_ASSERT(pe == &rgelem[GPOS_ARRAY_SIZE(rgelem) - i - 1]);
 	}
@@ -103,10 +97,7 @@ CSyncListTest::EresUnittest_Basics()
 	// pop elements until empty
 	for (ULONG i = 0; i < GPOS_ARRAY_SIZE(rgelem); i++)
 	{
-#ifdef GPOS_DEBUG
-		SElem *pe =
-#endif // GPOS_DEBUG
-			list.Pop();
+		SElem *pe GPOS_ASSERTS_ONLY = list.Pop();
 
 		GPOS_ASSERT(pe == &rgelem[i]);
 	}

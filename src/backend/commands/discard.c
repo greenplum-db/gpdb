@@ -3,7 +3,7 @@
  * discard.c
  *	  The implementation of the DISCARD command
  *
- * Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Copyright (c) 1996-2019, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
@@ -83,7 +83,7 @@ DiscardAll(bool isTopLevel)
 	 * DISCARD ALL inside a transaction block would leave the transaction
 	 * still uncommitted.
 	 */
-	PreventTransactionChain(isTopLevel, "DISCARD ALL");
+	PreventInTransactionBlock(isTopLevel, "DISCARD ALL");
 
 	/*
 	 * GPDB: It is not possible to safely dispatch DISCARD ALL and safe guard

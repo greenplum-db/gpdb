@@ -27,15 +27,12 @@ XERCES_CPP_NAMESPACE_USE
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CParseHandlerExternalScan::CParseHandlerExternalScan
-	(
-	CMemoryPool *mp,
-	CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root
-	)
-	:
-	CParseHandlerTableScan(mp, parse_handler_mgr, parse_handler_root)
-{}
+CParseHandlerExternalScan::CParseHandlerExternalScan(
+	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+	CParseHandlerBase *parse_handler_root)
+	: CParseHandlerTableScan(mp, parse_handler_mgr, parse_handler_root)
+{
+}
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -46,15 +43,14 @@ CParseHandlerExternalScan::CParseHandlerExternalScan
 //
 //---------------------------------------------------------------------------
 void
-CParseHandlerExternalScan::StartElement
-	(
-	const XMLCh* const, // element_uri,
-	const XMLCh* const element_local_name,
-	const XMLCh* const, // element_qname
-	const Attributes& // attrs
-	)
+CParseHandlerExternalScan::StartElement(const XMLCh *const,	 // element_uri,
+										const XMLCh *const element_local_name,
+										const XMLCh *const,	 // element_qname
+										const Attributes &	 // attrs
+)
 {
-	CParseHandlerTableScan::StartElement(element_local_name, EdxltokenPhysicalExternalScan);
+	CParseHandlerTableScan::StartElement(element_local_name,
+										 EdxltokenPhysicalExternalScan);
 }
 
 //---------------------------------------------------------------------------
@@ -66,15 +62,13 @@ CParseHandlerExternalScan::StartElement
 //
 //---------------------------------------------------------------------------
 void
-CParseHandlerExternalScan::EndElement
-	(
-	const XMLCh* const, // element_uri,
-	const XMLCh* const element_local_name,
-	const XMLCh* const // element_qname
-	)
+CParseHandlerExternalScan::EndElement(const XMLCh *const,  // element_uri,
+									  const XMLCh *const element_local_name,
+									  const XMLCh *const  // element_qname
+)
 {
-	CParseHandlerTableScan::EndElement(element_local_name, EdxltokenPhysicalExternalScan);
+	CParseHandlerTableScan::EndElement(element_local_name,
+									   EdxltokenPhysicalExternalScan);
 }
 
 // EOF
-

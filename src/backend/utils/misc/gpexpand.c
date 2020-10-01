@@ -17,9 +17,6 @@
 #include "catalog/pg_auth_time_constraint.h"
 #include "catalog/pg_description.h"
 #include "catalog/pg_namespace.h"
-#include "catalog/pg_partition.h"
-#include "catalog/pg_partition_encoding.h"
-#include "catalog/pg_partition_rule.h"
 #include "catalog/pg_shdescription.h"
 #include "catalog/pg_stat_last_operation.h"
 #include "catalog/pg_stat_last_shoperation.h"
@@ -127,13 +124,10 @@ gp_expand_protect_catalog_changes(Relation relation)
 		case GpSegmentConfigRelationId:
 		case GpConfigHistoryRelationId:
 		case DescriptionRelationId:
-		case PartitionRelationId:
-		case PartitionRuleRelationId:
 		case SharedDescriptionRelationId:
 		case StatLastOpRelationId:
 		case StatLastShOpRelationId:
 		case StatisticRelationId:
-		case PartitionEncodingRelationId:
 		case AuthTimeConstraintRelationId:
 			/* these catalog tables are only meaningful on qd */
 			return;

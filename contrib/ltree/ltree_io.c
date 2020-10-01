@@ -61,8 +61,8 @@ ltree_in(PG_FUNCTION_ARGS)
 	if (num + 1 > MaxAllocSize / sizeof(nodeitem))
 		ereport(ERROR,
 				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
-			 errmsg("number of levels (%d) exceeds the maximum allowed (%d)",
-					num + 1, (int) (MaxAllocSize / sizeof(nodeitem)))));
+				 errmsg("number of levels (%d) exceeds the maximum allowed (%d)",
+						num + 1, (int) (MaxAllocSize / sizeof(nodeitem)))));
 	list = lptr = (nodeitem *) palloc(sizeof(nodeitem) * (num + 1));
 	ptr = buf;
 	while (*ptr)
@@ -149,7 +149,7 @@ ltree_in(PG_FUNCTION_ARGS)
 Datum
 ltree_out(PG_FUNCTION_ARGS)
 {
-	ltree	   *in = PG_GETARG_LTREE(0);
+	ltree	   *in = PG_GETARG_LTREE_P(0);
 	char	   *buf,
 			   *ptr;
 	int			i;
@@ -230,8 +230,8 @@ lquery_in(PG_FUNCTION_ARGS)
 	if (num > MaxAllocSize / ITEMSIZE)
 		ereport(ERROR,
 				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
-			 errmsg("number of levels (%d) exceeds the maximum allowed (%d)",
-					num, (int) (MaxAllocSize / ITEMSIZE))));
+				 errmsg("number of levels (%d) exceeds the maximum allowed (%d)",
+						num, (int) (MaxAllocSize / ITEMSIZE))));
 	curqlevel = tmpql = (lquery_level *) palloc0(ITEMSIZE * num);
 	ptr = buf;
 	while (*ptr)
@@ -521,7 +521,7 @@ lquery_in(PG_FUNCTION_ARGS)
 Datum
 lquery_out(PG_FUNCTION_ARGS)
 {
-	lquery	   *in = PG_GETARG_LQUERY(0);
+	lquery	   *in = PG_GETARG_LQUERY_P(0);
 	char	   *buf,
 			   *ptr;
 	int			i,

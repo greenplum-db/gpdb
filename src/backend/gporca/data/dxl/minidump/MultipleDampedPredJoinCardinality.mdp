@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
     <dxl:Comment><![CDATA[
-Objective: The join cardinality estimate for multiple columns on the same table should be accurae.
+Objective: The join cardinality estimate for multiple columns on the same table should be accurate.
 The query returns 1-5 rows when run, and we should estimate 50-100 rows or lower when
 optimizer_damping_factor_join is set to 0. When `optimizer_damping_factor_join` is set
 to .01 (the default), we estimate ~1500 rows returned.
@@ -32,7 +32,7 @@ explain select * from t1, t2 where t1.a=t2.a and t1.b=t2.b;
   <dxl:Thread Id="0">
     <dxl:OptimizerConfig>
       <dxl:EnumeratorConfig Id="0" PlanSamples="0" CostThreshold="0"/>
-      <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.000000" DampingFactorGroupBy="0.750000"/>
+      <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.000000" DampingFactorGroupBy="0.750000" MaxStatsBuckets="100"/>
       <dxl:CTEConfig CTEInliningCutoff="0"/>
       <dxl:WindowOids RowNumber="7000" Rank="7001"/>
       <dxl:CostModelConfig CostModelType="1" SegmentsForCosting="3">
@@ -4721,7 +4721,7 @@ explain select * from t1, t2 where t1.a=t2.a and t1.b=t2.b;
     <dxl:Plan Id="0" SpaceSize="16">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.273335" Rows="61.198807" Width="16"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.273354" Rows="61.435742" Width="16"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -4741,7 +4741,7 @@ explain select * from t1, t2 where t1.a=t2.a and t1.b=t2.b;
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="Inner">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.269686" Rows="61.198807" Width="16"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.269691" Rows="61.435742" Width="16"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">

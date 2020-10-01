@@ -3,7 +3,7 @@
  * jsonfuncs.c
  *		Functions to process JSON data types.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -31,123 +31,17 @@
 #include "utils/jsonb.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
+#include "utils/syscache.h"
 #include "utils/typcache.h"
 
 /* Operations available for setPath */
-#define JB_PATH_NOOP					0x0000
 #define JB_PATH_CREATE					0x0001
 #define JB_PATH_DELETE					0x0002
-#define JB_PATH_INSERT_BEFORE			0x0004
-#define JB_PATH_INSERT_AFTER			0x0008
+#define JB_PATH_REPLACE					0x0004
+#define JB_PATH_INSERT_BEFORE			0x0008
+#define JB_PATH_INSERT_AFTER			0x0010
 #define JB_PATH_CREATE_OR_INSERT \
 	(JB_PATH_INSERT_BEFORE | JB_PATH_INSERT_AFTER | JB_PATH_CREATE)
-
-/* semantic action functions for json_object_keys */
-static void okeys_object_field_start(void *state, char *fname, bool isnull);
-static void okeys_array_start(void *state);
-static void okeys_scalar(void *state, char *token, JsonTokenType tokentype);
-
-/* semantic action functions for json_get* functions */
-static void get_object_start(void *state);
-static void get_object_end(void *state);
-static void get_object_field_start(void *state, char *fname, bool isnull);
-static void get_object_field_end(void *state, char *fname, bool isnull);
-static void get_array_start(void *state);
-static void get_array_end(void *state);
-static void get_array_element_start(void *state, bool isnull);
-static void get_array_element_end(void *state, bool isnull);
-static void get_scalar(void *state, char *token, JsonTokenType tokentype);
-
-/* common worker function for json getter functions */
-static Datum get_path_all(FunctionCallInfo fcinfo, bool as_text);
-static text *get_worker(text *json, char **tpath, int *ipath, int npath,
-		   bool normalize_results);
-static Datum get_jsonb_path_all(FunctionCallInfo fcinfo, bool as_text);
-
-/* semantic action functions for json_array_length */
-static void alen_object_start(void *state);
-static void alen_scalar(void *state, char *token, JsonTokenType tokentype);
-static void alen_array_element_start(void *state, bool isnull);
-
-/* common workers for json{b}_each* functions */
-static Datum each_worker(FunctionCallInfo fcinfo, bool as_text);
-static Datum each_worker_jsonb(FunctionCallInfo fcinfo, const char *funcname,
-				  bool as_text);
-
-/* semantic action functions for json_each */
-static void each_object_field_start(void *state, char *fname, bool isnull);
-static void each_object_field_end(void *state, char *fname, bool isnull);
-static void each_array_start(void *state);
-static void each_scalar(void *state, char *token, JsonTokenType tokentype);
-
-/* common workers for json{b}_array_elements_* functions */
-static Datum elements_worker(FunctionCallInfo fcinfo, const char *funcname,
-				bool as_text);
-static Datum elements_worker_jsonb(FunctionCallInfo fcinfo, const char *funcname,
-					  bool as_text);
-
-/* semantic action functions for json_array_elements */
-static void elements_object_start(void *state);
-static void elements_array_element_start(void *state, bool isnull);
-static void elements_array_element_end(void *state, bool isnull);
-static void elements_scalar(void *state, char *token, JsonTokenType tokentype);
-
-/* turn a json object into a hash table */
-static HTAB *get_json_object_as_hash(text *json, const char *funcname);
-
-/* common worker for populate_record and to_record */
-static Datum populate_record_worker(FunctionCallInfo fcinfo, const char *funcname,
-					   bool have_record_arg);
-
-/* semantic action functions for get_json_object_as_hash */
-static void hash_object_field_start(void *state, char *fname, bool isnull);
-static void hash_object_field_end(void *state, char *fname, bool isnull);
-static void hash_array_start(void *state);
-static void hash_scalar(void *state, char *token, JsonTokenType tokentype);
-
-/* semantic action functions for populate_recordset */
-static void populate_recordset_object_field_start(void *state, char *fname, bool isnull);
-static void populate_recordset_object_field_end(void *state, char *fname, bool isnull);
-static void populate_recordset_scalar(void *state, char *token, JsonTokenType tokentype);
-static void populate_recordset_object_start(void *state);
-static void populate_recordset_object_end(void *state);
-static void populate_recordset_array_start(void *state);
-static void populate_recordset_array_element_start(void *state, bool isnull);
-
-/* semantic action functions for json_strip_nulls */
-static void sn_object_start(void *state);
-static void sn_object_end(void *state);
-static void sn_array_start(void *state);
-static void sn_array_end(void *state);
-static void sn_object_field_start(void *state, char *fname, bool isnull);
-static void sn_array_element_start(void *state, bool isnull);
-static void sn_scalar(void *state, char *token, JsonTokenType tokentype);
-
-/* worker function for populate_recordset and to_recordset */
-static Datum populate_recordset_worker(FunctionCallInfo fcinfo, const char *funcname,
-						  bool have_record_arg);
-
-/* Worker that takes care of common setup for us */
-static JsonbValue *findJsonbValueFromContainerLen(JsonbContainer *container,
-							   uint32 flags,
-							   char *key,
-							   uint32 keylen);
-
-/* functions supporting jsonb_delete, jsonb_set and jsonb_concat */
-static JsonbValue *IteratorConcat(JsonbIterator **it1, JsonbIterator **it2,
-			   JsonbParseState **state);
-static JsonbValue *setPath(JsonbIterator **it, Datum *path_elems,
-		bool *path_nulls, int path_len,
-		JsonbParseState **st, int level, Jsonb *newval,
-		int op_type);
-static void setPathObject(JsonbIterator **it, Datum *path_elems,
-			  bool *path_nulls, int path_len, JsonbParseState **st,
-			  int level,
-			  Jsonb *newval, uint32 npairs, int op_type);
-static void setPathArray(JsonbIterator **it, Datum *path_elems,
-			 bool *path_nulls, int path_len, JsonbParseState **st,
-			 int level, Jsonb *newval, uint32 nelems, int op_type);
-static void addJsonbToParseState(JsonbParseState **jbps, Jsonb *jb);
 
 /* state for json_object_keys */
 typedef struct OkeysState
@@ -158,6 +52,27 @@ typedef struct OkeysState
 	int			result_count;
 	int			sent_count;
 } OkeysState;
+
+/* state for iterate_json_values function */
+typedef struct IterateJsonStringValuesState
+{
+	JsonLexContext *lex;
+	JsonIterateStringValuesAction action;	/* an action that will be applied
+											 * to each json value */
+	void	   *action_state;	/* any necessary context for iteration */
+	uint32		flags;			/* what kind of elements from a json we want
+								 * to iterate */
+} IterateJsonStringValuesState;
+
+/* state for transform_json_string_values function */
+typedef struct TransformJsonStringValuesState
+{
+	JsonLexContext *lex;
+	StringInfo	strval;			/* resulting json */
+	JsonTransformStringValuesAction action; /* an action that will be applied
+											 * to each json value */
+	void	   *action_state;	/* any necessary context for transformation */
+} TransformJsonStringValuesState;
 
 /* state for json_get* functions */
 typedef struct GetState
@@ -171,7 +86,8 @@ typedef struct GetState
 	char	  **path_names;		/* field name(s) being sought */
 	int		   *path_indexes;	/* array index(es) being sought */
 	bool	   *pathok;			/* is path matched to current depth? */
-	int		   *array_cur_index;	/* current element index at each path level */
+	int		   *array_cur_index;	/* current element index at each path
+									 * level */
 } GetState;
 
 /* state for json_array_length */
@@ -209,42 +125,115 @@ typedef struct ElementsState
 } ElementsState;
 
 /* state for get_json_object_as_hash */
-typedef struct JhashState
+typedef struct JHashState
 {
 	JsonLexContext *lex;
 	const char *function_name;
 	HTAB	   *hash;
 	char	   *saved_scalar;
 	char	   *save_json_start;
+	JsonTokenType saved_token_type;
 } JHashState;
 
 /* hashtable element */
 typedef struct JsonHashEntry
 {
-	char		fname[NAMEDATALEN];		/* hash key (MUST BE FIRST) */
+	char		fname[NAMEDATALEN]; /* hash key (MUST BE FIRST) */
 	char	   *val;
-	char	   *json;
-	bool		isnull;
+	JsonTokenType type;
 } JsonHashEntry;
 
-/* these two are stolen from hstore / record_out, used in populate_record* */
-typedef struct ColumnIOData
+/* structure to cache type I/O metadata needed for populate_scalar() */
+typedef struct ScalarIOData
 {
-	Oid			column_type;
-	Oid			typiofunc;
 	Oid			typioparam;
-	FmgrInfo	proc;
-} ColumnIOData;
+	FmgrInfo	typiofunc;
+} ScalarIOData;
 
-typedef struct RecordIOData
+/* these two structures are used recursively */
+typedef struct ColumnIOData ColumnIOData;
+typedef struct RecordIOData RecordIOData;
+
+/* structure to cache metadata needed for populate_array() */
+typedef struct ArrayIOData
+{
+	ColumnIOData *element_info; /* metadata cache */
+	Oid			element_type;	/* array element type id */
+	int32		element_typmod; /* array element type modifier */
+} ArrayIOData;
+
+/* structure to cache metadata needed for populate_composite() */
+typedef struct CompositeIOData
+{
+	/*
+	 * We use pointer to a RecordIOData here because variable-length struct
+	 * RecordIOData can't be used directly in ColumnIOData.io union
+	 */
+	RecordIOData *record_io;	/* metadata cache for populate_record() */
+	TupleDesc	tupdesc;		/* cached tuple descriptor */
+	/* these fields differ from target type only if domain over composite: */
+	Oid			base_typid;		/* base type id */
+	int32		base_typmod;	/* base type modifier */
+	/* this field is used only if target type is domain over composite: */
+	void	   *domain_info;	/* opaque cache for domain checks */
+} CompositeIOData;
+
+/* structure to cache metadata needed for populate_domain() */
+typedef struct DomainIOData
+{
+	ColumnIOData *base_io;		/* metadata cache */
+	Oid			base_typid;		/* base type id */
+	int32		base_typmod;	/* base type modifier */
+	void	   *domain_info;	/* opaque cache for domain checks */
+} DomainIOData;
+
+/* enumeration type categories */
+typedef enum TypeCat
+{
+	TYPECAT_SCALAR = 's',
+	TYPECAT_ARRAY = 'a',
+	TYPECAT_COMPOSITE = 'c',
+	TYPECAT_COMPOSITE_DOMAIN = 'C',
+	TYPECAT_DOMAIN = 'd'
+} TypeCat;
+
+/* these two are stolen from hstore / record_out, used in populate_record* */
+
+/* structure to cache record metadata needed for populate_record_field() */
+struct ColumnIOData
+{
+	Oid			typid;			/* column type id */
+	int32		typmod;			/* column type modifier */
+	TypeCat		typcat;			/* column type category */
+	ScalarIOData scalar_io;		/* metadata cache for directi conversion
+								 * through input function */
+	union
+	{
+		ArrayIOData array;
+		CompositeIOData composite;
+		DomainIOData domain;
+	}			io;				/* metadata cache for various column type
+								 * categories */
+};
+
+/* structure to cache record metadata needed for populate_record() */
+struct RecordIOData
 {
 	Oid			record_type;
 	int32		record_typmod;
 	int			ncolumns;
 	ColumnIOData columns[FLEXIBLE_ARRAY_MEMBER];
-} RecordIOData;
+};
 
-/* state for populate_recordset */
+/* per-query cache for populate_record_worker and populate_recordset_worker */
+typedef struct PopulateRecordCache
+{
+	Oid			argtype;		/* declared type of the record argument */
+	ColumnIOData c;				/* metadata cache for populate_composite() */
+	MemoryContext fn_mcxt;		/* where this is stored */
+} PopulateRecordCache;
+
+/* per-call state for populate_recordset */
 typedef struct PopulateRecordsetState
 {
 	JsonLexContext *lex;
@@ -252,12 +241,35 @@ typedef struct PopulateRecordsetState
 	HTAB	   *json_hash;
 	char	   *saved_scalar;
 	char	   *save_json_start;
+	JsonTokenType saved_token_type;
 	Tuplestorestate *tuple_store;
-	TupleDesc	ret_tdesc;
 	HeapTupleHeader rec;
-	RecordIOData *my_extra;
-	MemoryContext fn_mcxt;		/* used to stash IO funcs */
+	PopulateRecordCache *cache;
 } PopulateRecordsetState;
+
+/* common data for populate_array_json() and populate_array_dim_jsonb() */
+typedef struct PopulateArrayContext
+{
+	ArrayBuildState *astate;	/* array build state */
+	ArrayIOData *aio;			/* metadata cache */
+	MemoryContext acxt;			/* array build memory context */
+	MemoryContext mcxt;			/* cache memory context */
+	const char *colname;		/* for diagnostics only */
+	int		   *dims;			/* dimensions */
+	int		   *sizes;			/* current dimension counters */
+	int			ndims;			/* number of dimensions */
+} PopulateArrayContext;
+
+/* state for populate_array_json() */
+typedef struct PopulateArrayState
+{
+	JsonLexContext *lex;		/* json lexer */
+	PopulateArrayContext *ctx;	/* context */
+	char	   *element_start;	/* start of the current array element */
+	char	   *element_scalar; /* current array element token if it is a
+								 * scalar */
+	JsonTokenType element_type; /* current array element type */
+} PopulateArrayState;
 
 /* state for json_strip_nulls */
 typedef struct StripnullState
@@ -267,9 +279,214 @@ typedef struct StripnullState
 	bool		skip_next_null;
 } StripnullState;
 
-/* Turn a jsonb object into a record */
-static void make_row_from_rec_and_jsonb(Jsonb *element,
-							PopulateRecordsetState *state);
+/* structure for generalized json/jsonb value passing */
+typedef struct JsValue
+{
+	bool		is_json;		/* json/jsonb */
+	union
+	{
+		struct
+		{
+			char	   *str;	/* json string */
+			int			len;	/* json string length or -1 if null-terminated */
+			JsonTokenType type; /* json type */
+		}			json;		/* json value */
+
+		JsonbValue *jsonb;		/* jsonb value */
+	}			val;
+} JsValue;
+
+typedef struct JsObject
+{
+	bool		is_json;		/* json/jsonb */
+	union
+	{
+		HTAB	   *json_hash;
+		JsonbContainer *jsonb_cont;
+	}			val;
+} JsObject;
+
+/* useful macros for testing JsValue properties */
+#define JsValueIsNull(jsv) \
+	((jsv)->is_json ?  \
+		(!(jsv)->val.json.str || (jsv)->val.json.type == JSON_TOKEN_NULL) : \
+		(!(jsv)->val.jsonb || (jsv)->val.jsonb->type == jbvNull))
+
+#define JsValueIsString(jsv) \
+	((jsv)->is_json ? (jsv)->val.json.type == JSON_TOKEN_STRING \
+		: ((jsv)->val.jsonb && (jsv)->val.jsonb->type == jbvString))
+
+#define JsObjectIsEmpty(jso) \
+	((jso)->is_json \
+		? hash_get_num_entries((jso)->val.json_hash) == 0 \
+		: ((jso)->val.jsonb_cont == NULL || \
+		   JsonContainerSize((jso)->val.jsonb_cont) == 0))
+
+#define JsObjectFree(jso) \
+	do { \
+		if ((jso)->is_json) \
+			hash_destroy((jso)->val.json_hash); \
+	} while (0)
+
+/* semantic action functions for json_object_keys */
+static void okeys_object_field_start(void *state, char *fname, bool isnull);
+static void okeys_array_start(void *state);
+static void okeys_scalar(void *state, char *token, JsonTokenType tokentype);
+
+/* semantic action functions for json_get* functions */
+static void get_object_start(void *state);
+static void get_object_end(void *state);
+static void get_object_field_start(void *state, char *fname, bool isnull);
+static void get_object_field_end(void *state, char *fname, bool isnull);
+static void get_array_start(void *state);
+static void get_array_end(void *state);
+static void get_array_element_start(void *state, bool isnull);
+static void get_array_element_end(void *state, bool isnull);
+static void get_scalar(void *state, char *token, JsonTokenType tokentype);
+
+/* common worker function for json getter functions */
+static Datum get_path_all(FunctionCallInfo fcinfo, bool as_text);
+static text *get_worker(text *json, char **tpath, int *ipath, int npath,
+						bool normalize_results);
+static Datum get_jsonb_path_all(FunctionCallInfo fcinfo, bool as_text);
+
+/* semantic action functions for json_array_length */
+static void alen_object_start(void *state);
+static void alen_scalar(void *state, char *token, JsonTokenType tokentype);
+static void alen_array_element_start(void *state, bool isnull);
+
+/* common workers for json{b}_each* functions */
+static Datum each_worker(FunctionCallInfo fcinfo, bool as_text);
+static Datum each_worker_jsonb(FunctionCallInfo fcinfo, const char *funcname,
+							   bool as_text);
+
+/* semantic action functions for json_each */
+static void each_object_field_start(void *state, char *fname, bool isnull);
+static void each_object_field_end(void *state, char *fname, bool isnull);
+static void each_array_start(void *state);
+static void each_scalar(void *state, char *token, JsonTokenType tokentype);
+
+/* common workers for json{b}_array_elements_* functions */
+static Datum elements_worker(FunctionCallInfo fcinfo, const char *funcname,
+							 bool as_text);
+static Datum elements_worker_jsonb(FunctionCallInfo fcinfo, const char *funcname,
+								   bool as_text);
+
+/* semantic action functions for json_array_elements */
+static void elements_object_start(void *state);
+static void elements_array_element_start(void *state, bool isnull);
+static void elements_array_element_end(void *state, bool isnull);
+static void elements_scalar(void *state, char *token, JsonTokenType tokentype);
+
+/* turn a json object into a hash table */
+static HTAB *get_json_object_as_hash(char *json, int len, const char *funcname);
+
+/* semantic actions for populate_array_json */
+static void populate_array_object_start(void *_state);
+static void populate_array_array_end(void *_state);
+static void populate_array_element_start(void *_state, bool isnull);
+static void populate_array_element_end(void *_state, bool isnull);
+static void populate_array_scalar(void *_state, char *token, JsonTokenType tokentype);
+
+/* semantic action functions for get_json_object_as_hash */
+static void hash_object_field_start(void *state, char *fname, bool isnull);
+static void hash_object_field_end(void *state, char *fname, bool isnull);
+static void hash_array_start(void *state);
+static void hash_scalar(void *state, char *token, JsonTokenType tokentype);
+
+/* semantic action functions for populate_recordset */
+static void populate_recordset_object_field_start(void *state, char *fname, bool isnull);
+static void populate_recordset_object_field_end(void *state, char *fname, bool isnull);
+static void populate_recordset_scalar(void *state, char *token, JsonTokenType tokentype);
+static void populate_recordset_object_start(void *state);
+static void populate_recordset_object_end(void *state);
+static void populate_recordset_array_start(void *state);
+static void populate_recordset_array_element_start(void *state, bool isnull);
+
+/* semantic action functions for json_strip_nulls */
+static void sn_object_start(void *state);
+static void sn_object_end(void *state);
+static void sn_array_start(void *state);
+static void sn_array_end(void *state);
+static void sn_object_field_start(void *state, char *fname, bool isnull);
+static void sn_array_element_start(void *state, bool isnull);
+static void sn_scalar(void *state, char *token, JsonTokenType tokentype);
+
+/* worker functions for populate_record, to_record, populate_recordset and to_recordset */
+static Datum populate_recordset_worker(FunctionCallInfo fcinfo, const char *funcname,
+									   bool is_json, bool have_record_arg);
+static Datum populate_record_worker(FunctionCallInfo fcinfo, const char *funcname,
+									bool is_json, bool have_record_arg);
+
+/* helper functions for populate_record[set] */
+static HeapTupleHeader populate_record(TupleDesc tupdesc, RecordIOData **record_p,
+									   HeapTupleHeader defaultval, MemoryContext mcxt,
+									   JsObject *obj);
+static void get_record_type_from_argument(FunctionCallInfo fcinfo,
+										  const char *funcname,
+										  PopulateRecordCache *cache);
+static void get_record_type_from_query(FunctionCallInfo fcinfo,
+									   const char *funcname,
+									   PopulateRecordCache *cache);
+static void JsValueToJsObject(JsValue *jsv, JsObject *jso);
+static Datum populate_composite(CompositeIOData *io, Oid typid,
+								const char *colname, MemoryContext mcxt,
+								HeapTupleHeader defaultval, JsValue *jsv, bool isnull);
+static Datum populate_scalar(ScalarIOData *io, Oid typid, int32 typmod, JsValue *jsv);
+static void prepare_column_cache(ColumnIOData *column, Oid typid, int32 typmod,
+								 MemoryContext mcxt, bool need_scalar);
+static Datum populate_record_field(ColumnIOData *col, Oid typid, int32 typmod,
+								   const char *colname, MemoryContext mcxt, Datum defaultval,
+								   JsValue *jsv, bool *isnull);
+static RecordIOData *allocate_record_info(MemoryContext mcxt, int ncolumns);
+static bool JsObjectGetField(JsObject *obj, char *field, JsValue *jsv);
+static void populate_recordset_record(PopulateRecordsetState *state, JsObject *obj);
+static void populate_array_json(PopulateArrayContext *ctx, char *json, int len);
+static void populate_array_dim_jsonb(PopulateArrayContext *ctx, JsonbValue *jbv,
+									 int ndim);
+static void populate_array_report_expected_array(PopulateArrayContext *ctx, int ndim);
+static void populate_array_assign_ndims(PopulateArrayContext *ctx, int ndims);
+static void populate_array_check_dimension(PopulateArrayContext *ctx, int ndim);
+static void populate_array_element(PopulateArrayContext *ctx, int ndim, JsValue *jsv);
+static Datum populate_array(ArrayIOData *aio, const char *colname,
+							MemoryContext mcxt, JsValue *jsv);
+static Datum populate_domain(DomainIOData *io, Oid typid, const char *colname,
+							 MemoryContext mcxt, JsValue *jsv, bool isnull);
+
+/* Worker that takes care of common setup for us */
+static JsonbValue *findJsonbValueFromContainerLen(JsonbContainer *container,
+												  uint32 flags,
+												  char *key,
+												  uint32 keylen);
+
+/* functions supporting jsonb_delete, jsonb_set and jsonb_concat */
+static JsonbValue *IteratorConcat(JsonbIterator **it1, JsonbIterator **it2,
+								  JsonbParseState **state);
+static JsonbValue *setPath(JsonbIterator **it, Datum *path_elems,
+						   bool *path_nulls, int path_len,
+						   JsonbParseState **st, int level, Jsonb *newval,
+						   int op_type);
+static void setPathObject(JsonbIterator **it, Datum *path_elems,
+						  bool *path_nulls, int path_len, JsonbParseState **st,
+						  int level,
+						  Jsonb *newval, uint32 npairs, int op_type);
+static void setPathArray(JsonbIterator **it, Datum *path_elems,
+						 bool *path_nulls, int path_len, JsonbParseState **st,
+						 int level, Jsonb *newval, uint32 nelems, int op_type);
+static void addJsonbToParseState(JsonbParseState **jbps, Jsonb *jb);
+
+/* function supporting iterate_json_values */
+static void iterate_values_scalar(void *state, char *token, JsonTokenType tokentype);
+static void iterate_values_object_field_start(void *state, char *fname, bool isnull);
+
+/* functions supporting transform_json_string_values */
+static void transform_string_values_object_start(void *state);
+static void transform_string_values_object_end(void *state);
+static void transform_string_values_array_start(void *state);
+static void transform_string_values_array_end(void *state);
+static void transform_string_values_object_field_start(void *state, char *fname, bool isnull);
+static void transform_string_values_array_element_start(void *state, bool isnull);
+static void transform_string_values_scalar(void *state, char *token, JsonTokenType tokentype);
 
 /*
  * SQL function json_object_keys
@@ -293,7 +510,7 @@ jsonb_object_keys(PG_FUNCTION_ARGS)
 	if (SRF_IS_FIRSTCALL())
 	{
 		MemoryContext oldcontext;
-		Jsonb	   *jb = PG_GETARG_JSONB(0);
+		Jsonb	   *jb = PG_GETARG_JSONB_P(0);
 		bool		skipNested = false;
 		JsonbIterator *it;
 		JsonbValue	v;
@@ -370,7 +587,7 @@ json_object_keys(PG_FUNCTION_ARGS)
 
 	if (SRF_IS_FIRSTCALL())
 	{
-		text	   *json = PG_GETARG_TEXT_P(0);
+		text	   *json = PG_GETARG_TEXT_PP(0);
 		JsonLexContext *lex = makeJsonLexContext(json, true);
 		JsonSemAction *sem;
 		MemoryContext oldcontext;
@@ -481,7 +698,7 @@ okeys_scalar(void *state, char *token, JsonTokenType tokentype)
 Datum
 json_object_field(PG_FUNCTION_ARGS)
 {
-	text	   *json = PG_GETARG_TEXT_P(0);
+	text	   *json = PG_GETARG_TEXT_PP(0);
 	text	   *fname = PG_GETARG_TEXT_PP(1);
 	char	   *fnamestr = text_to_cstring(fname);
 	text	   *result;
@@ -497,7 +714,7 @@ json_object_field(PG_FUNCTION_ARGS)
 Datum
 jsonb_object_field(PG_FUNCTION_ARGS)
 {
-	Jsonb	   *jb = PG_GETARG_JSONB(0);
+	Jsonb	   *jb = PG_GETARG_JSONB_P(0);
 	text	   *key = PG_GETARG_TEXT_PP(1);
 	JsonbValue *v;
 
@@ -509,7 +726,7 @@ jsonb_object_field(PG_FUNCTION_ARGS)
 									   VARSIZE_ANY_EXHDR(key));
 
 	if (v != NULL)
-		PG_RETURN_JSONB(JsonbValueToJsonb(v));
+		PG_RETURN_JSONB_P(JsonbValueToJsonb(v));
 
 	PG_RETURN_NULL();
 }
@@ -517,7 +734,7 @@ jsonb_object_field(PG_FUNCTION_ARGS)
 Datum
 json_object_field_text(PG_FUNCTION_ARGS)
 {
-	text	   *json = PG_GETARG_TEXT_P(0);
+	text	   *json = PG_GETARG_TEXT_PP(0);
 	text	   *fname = PG_GETARG_TEXT_PP(1);
 	char	   *fnamestr = text_to_cstring(fname);
 	text	   *result;
@@ -533,7 +750,7 @@ json_object_field_text(PG_FUNCTION_ARGS)
 Datum
 jsonb_object_field_text(PG_FUNCTION_ARGS)
 {
-	Jsonb	   *jb = PG_GETARG_JSONB(0);
+	Jsonb	   *jb = PG_GETARG_JSONB_P(0);
 	text	   *key = PG_GETARG_TEXT_PP(1);
 	JsonbValue *v;
 
@@ -560,7 +777,7 @@ jsonb_object_field_text(PG_FUNCTION_ARGS)
 				break;
 			case jbvNumeric:
 				result = cstring_to_text(DatumGetCString(DirectFunctionCall1(numeric_out,
-										  PointerGetDatum(v->val.numeric))));
+																			 PointerGetDatum(v->val.numeric))));
 				break;
 			case jbvBinary:
 				{
@@ -584,7 +801,7 @@ jsonb_object_field_text(PG_FUNCTION_ARGS)
 Datum
 json_array_element(PG_FUNCTION_ARGS)
 {
-	text	   *json = PG_GETARG_TEXT_P(0);
+	text	   *json = PG_GETARG_TEXT_PP(0);
 	int			element = PG_GETARG_INT32(1);
 	text	   *result;
 
@@ -599,7 +816,7 @@ json_array_element(PG_FUNCTION_ARGS)
 Datum
 jsonb_array_element(PG_FUNCTION_ARGS)
 {
-	Jsonb	   *jb = PG_GETARG_JSONB(0);
+	Jsonb	   *jb = PG_GETARG_JSONB_P(0);
 	int			element = PG_GETARG_INT32(1);
 	JsonbValue *v;
 
@@ -619,7 +836,7 @@ jsonb_array_element(PG_FUNCTION_ARGS)
 
 	v = getIthJsonbValueFromContainer(&jb->root, element);
 	if (v != NULL)
-		PG_RETURN_JSONB(JsonbValueToJsonb(v));
+		PG_RETURN_JSONB_P(JsonbValueToJsonb(v));
 
 	PG_RETURN_NULL();
 }
@@ -627,7 +844,7 @@ jsonb_array_element(PG_FUNCTION_ARGS)
 Datum
 json_array_element_text(PG_FUNCTION_ARGS)
 {
-	text	   *json = PG_GETARG_TEXT_P(0);
+	text	   *json = PG_GETARG_TEXT_PP(0);
 	int			element = PG_GETARG_INT32(1);
 	text	   *result;
 
@@ -642,7 +859,7 @@ json_array_element_text(PG_FUNCTION_ARGS)
 Datum
 jsonb_array_element_text(PG_FUNCTION_ARGS)
 {
-	Jsonb	   *jb = PG_GETARG_JSONB(0);
+	Jsonb	   *jb = PG_GETARG_JSONB_P(0);
 	int			element = PG_GETARG_INT32(1);
 	JsonbValue *v;
 
@@ -677,7 +894,7 @@ jsonb_array_element_text(PG_FUNCTION_ARGS)
 				break;
 			case jbvNumeric:
 				result = cstring_to_text(DatumGetCString(DirectFunctionCall1(numeric_out,
-										  PointerGetDatum(v->val.numeric))));
+																			 PointerGetDatum(v->val.numeric))));
 				break;
 			case jbvBinary:
 				{
@@ -716,7 +933,7 @@ json_extract_path_text(PG_FUNCTION_ARGS)
 static Datum
 get_path_all(FunctionCallInfo fcinfo, bool as_text)
 {
-	text	   *json = PG_GETARG_TEXT_P(0);
+	text	   *json = PG_GETARG_TEXT_PP(0);
 	ArrayType  *path = PG_GETARG_ARRAYTYPE_P(1);
 	text	   *result;
 	Datum	   *pathtext;
@@ -957,7 +1174,7 @@ get_object_field_end(void *state, char *fname, bool isnull)
 	if (get_last && _state->result_start != NULL)
 	{
 		/*
-		 * make a text object from the string from the prevously noted json
+		 * make a text object from the string from the previously noted json
 		 * start up to the end of the previous token (the lexer is by now
 		 * ahead of us on whatever came after what we're interested in).
 		 */
@@ -1169,7 +1386,7 @@ jsonb_extract_path_text(PG_FUNCTION_ARGS)
 static Datum
 get_jsonb_path_all(FunctionCallInfo fcinfo, bool as_text)
 {
-	Jsonb	   *jb = PG_GETARG_JSONB(0);
+	Jsonb	   *jb = PG_GETARG_JSONB_P(0);
 	ArrayType  *path = PG_GETARG_ARRAYTYPE_P(1);
 	Jsonb	   *res;
 	Datum	   *pathtext;
@@ -1229,7 +1446,7 @@ get_jsonb_path_all(FunctionCallInfo fcinfo, bool as_text)
 		else
 		{
 			/* not text mode - just hand back the jsonb */
-			PG_RETURN_JSONB(jb);
+			PG_RETURN_JSONB_P(jb);
 		}
 	}
 
@@ -1239,8 +1456,8 @@ get_jsonb_path_all(FunctionCallInfo fcinfo, bool as_text)
 		{
 			jbvp = findJsonbValueFromContainerLen(container,
 												  JB_FOBJECT,
-												  VARDATA_ANY(pathtext[i]),
-											 VARSIZE_ANY_EXHDR(pathtext[i]));
+												  VARDATA(pathtext[i]),
+												  VARSIZE(pathtext[i]) - VARHDRSZ);
 		}
 		else if (have_array)
 		{
@@ -1265,10 +1482,10 @@ get_jsonb_path_all(FunctionCallInfo fcinfo, bool as_text)
 				uint32		nelements;
 
 				/* Container must be array, but make sure */
-				if ((container->header & JB_FARRAY) == 0)
+				if (!JsonContainerIsArray(container))
 					elog(ERROR, "not a jsonb array");
 
-				nelements = container->header & JB_CMASK;
+				nelements = JsonContainerSize(container);
 
 				if (-lindex > nelements)
 					PG_RETURN_NULL();
@@ -1327,7 +1544,7 @@ get_jsonb_path_all(FunctionCallInfo fcinfo, bool as_text)
 	else
 	{
 		/* not text mode - just hand back the jsonb */
-		PG_RETURN_JSONB(res);
+		PG_RETURN_JSONB_P(res);
 	}
 }
 
@@ -1337,7 +1554,7 @@ get_jsonb_path_all(FunctionCallInfo fcinfo, bool as_text)
 Datum
 json_array_length(PG_FUNCTION_ARGS)
 {
-	text	   *json = PG_GETARG_TEXT_P(0);
+	text	   *json = PG_GETARG_TEXT_PP(0);
 	AlenState  *state;
 	JsonLexContext *lex;
 	JsonSemAction *sem;
@@ -1365,7 +1582,7 @@ json_array_length(PG_FUNCTION_ARGS)
 Datum
 jsonb_array_length(PG_FUNCTION_ARGS)
 {
-	Jsonb	   *jb = PG_GETARG_JSONB(0);
+	Jsonb	   *jb = PG_GETARG_JSONB_P(0);
 
 	if (JB_ROOT_IS_SCALAR(jb))
 		ereport(ERROR,
@@ -1455,7 +1672,7 @@ jsonb_each_text(PG_FUNCTION_ARGS)
 static Datum
 each_worker_jsonb(FunctionCallInfo fcinfo, const char *funcname, bool as_text)
 {
-	Jsonb	   *jb = PG_GETARG_JSONB(0);
+	Jsonb	   *jb = PG_GETARG_JSONB_P(0);
 	ReturnSetInfo *rsi;
 	Tuplestorestate *tuple_store;
 	TupleDesc	tupdesc;
@@ -1503,9 +1720,7 @@ each_worker_jsonb(FunctionCallInfo fcinfo, const char *funcname, bool as_text)
 
 	tmp_cxt = AllocSetContextCreate(CurrentMemoryContext,
 									"jsonb_each temporary cxt",
-									ALLOCSET_DEFAULT_MINSIZE,
-									ALLOCSET_DEFAULT_INITSIZE,
-									ALLOCSET_DEFAULT_MAXSIZE);
+									ALLOCSET_DEFAULT_SIZES);
 
 	it = JsonbIteratorInit(&jb->root);
 
@@ -1530,6 +1745,7 @@ each_worker_jsonb(FunctionCallInfo fcinfo, const char *funcname, bool as_text)
 			 * matter what shape it is.
 			 */
 			r = JsonbIteratorNext(&it, &v, skipNested);
+			Assert(r != WJB_DONE);
 
 			values[0] = PointerGetDatum(key);
 
@@ -1593,7 +1809,7 @@ each_worker_jsonb(FunctionCallInfo fcinfo, const char *funcname, bool as_text)
 static Datum
 each_worker(FunctionCallInfo fcinfo, bool as_text)
 {
-	text	   *json = PG_GETARG_TEXT_P(0);
+	text	   *json = PG_GETARG_TEXT_PP(0);
 	JsonLexContext *lex;
 	JsonSemAction *sem;
 	ReturnSetInfo *rsi;
@@ -1641,9 +1857,7 @@ each_worker(FunctionCallInfo fcinfo, bool as_text)
 	state->lex = lex;
 	state->tmp_cxt = AllocSetContextCreate(CurrentMemoryContext,
 										   "json_each temporary cxt",
-										   ALLOCSET_DEFAULT_MINSIZE,
-										   ALLOCSET_DEFAULT_INITSIZE,
-										   ALLOCSET_DEFAULT_MAXSIZE);
+										   ALLOCSET_DEFAULT_SIZES);
 
 	pg_parse_json(lex, sem);
 
@@ -1774,7 +1988,7 @@ static Datum
 elements_worker_jsonb(FunctionCallInfo fcinfo, const char *funcname,
 					  bool as_text)
 {
-	Jsonb	   *jb = PG_GETARG_JSONB(0);
+	Jsonb	   *jb = PG_GETARG_JSONB_P(0);
 	ReturnSetInfo *rsi;
 	Tuplestorestate *tuple_store;
 	TupleDesc	tupdesc;
@@ -1822,9 +2036,7 @@ elements_worker_jsonb(FunctionCallInfo fcinfo, const char *funcname,
 
 	tmp_cxt = AllocSetContextCreate(CurrentMemoryContext,
 									"jsonb_array_elements temporary cxt",
-									ALLOCSET_DEFAULT_MINSIZE,
-									ALLOCSET_DEFAULT_INITSIZE,
-									ALLOCSET_DEFAULT_MAXSIZE);
+									ALLOCSET_DEFAULT_SIZES);
 
 	it = JsonbIteratorInit(&jb->root);
 
@@ -1911,7 +2123,7 @@ json_array_elements_text(PG_FUNCTION_ARGS)
 static Datum
 elements_worker(FunctionCallInfo fcinfo, const char *funcname, bool as_text)
 {
-	text	   *json = PG_GETARG_TEXT_P(0);
+	text	   *json = PG_GETARG_TEXT_PP(0);
 
 	/* elements only needs escaped strings when as_text */
 	JsonLexContext *lex = makeJsonLexContext(json, as_text);
@@ -1961,10 +2173,8 @@ elements_worker(FunctionCallInfo fcinfo, const char *funcname, bool as_text)
 	state->next_scalar = false;
 	state->lex = lex;
 	state->tmp_cxt = AllocSetContextCreate(CurrentMemoryContext,
-										 "json_array_elements temporary cxt",
-										   ALLOCSET_DEFAULT_MINSIZE,
-										   ALLOCSET_DEFAULT_INITSIZE,
-										   ALLOCSET_DEFAULT_MAXSIZE);
+										   "json_array_elements temporary cxt",
+										   ALLOCSET_DEFAULT_SIZES);
 
 	pg_parse_json(lex, sem);
 
@@ -2085,178 +2295,855 @@ elements_scalar(void *state, char *token, JsonTokenType tokentype)
 Datum
 jsonb_populate_record(PG_FUNCTION_ARGS)
 {
-	return populate_record_worker(fcinfo, "jsonb_populate_record", true);
+	return populate_record_worker(fcinfo, "jsonb_populate_record",
+								  false, true);
 }
 
 Datum
 jsonb_to_record(PG_FUNCTION_ARGS)
 {
-	return populate_record_worker(fcinfo, "jsonb_to_record", false);
+	return populate_record_worker(fcinfo, "jsonb_to_record",
+								  false, false);
 }
 
 Datum
 json_populate_record(PG_FUNCTION_ARGS)
 {
-	return populate_record_worker(fcinfo, "json_populate_record", true);
+	return populate_record_worker(fcinfo, "json_populate_record",
+								  true, true);
 }
 
 Datum
 json_to_record(PG_FUNCTION_ARGS)
 {
-	return populate_record_worker(fcinfo, "json_to_record", false);
+	return populate_record_worker(fcinfo, "json_to_record",
+								  true, false);
 }
 
-static Datum
-populate_record_worker(FunctionCallInfo fcinfo, const char *funcname,
-					   bool have_record_arg)
+/* helper function for diagnostics */
+static void
+populate_array_report_expected_array(PopulateArrayContext *ctx, int ndim)
 {
-	int			json_arg_num = have_record_arg ? 1 : 0;
-	Oid			jtype = get_fn_expr_argtype(fcinfo->flinfo, json_arg_num);
-	text	   *json;
-	Jsonb	   *jb = NULL;
-	HTAB	   *json_hash = NULL;
-	HeapTupleHeader rec = NULL;
-	Oid			tupType = InvalidOid;
-	int32		tupTypmod = -1;
-	TupleDesc	tupdesc;
-	HeapTupleData tuple;
-	HeapTuple	rettuple;
-	RecordIOData *my_extra;
-	int			ncolumns;
-	int			i;
-	Datum	   *values;
-	bool	   *nulls;
-
-	Assert(jtype == JSONOID || jtype == JSONBOID);
-
-	if (have_record_arg)
+	if (ndim <= 0)
 	{
-		Oid			argtype = get_fn_expr_argtype(fcinfo->flinfo, 0);
-
-		if (!type_is_rowtype(argtype))
+		if (ctx->colname)
 			ereport(ERROR,
-					(errcode(ERRCODE_DATATYPE_MISMATCH),
-					 errmsg("first argument of %s must be a row type",
-							funcname)));
+					(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
+					 errmsg("expected JSON array"),
+					 errhint("See the value of key \"%s\".", ctx->colname)));
+		else
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
+					 errmsg("expected JSON array")));
+	}
+	else
+	{
+		StringInfoData indices;
+		int			i;
 
-		if (PG_ARGISNULL(0))
+		initStringInfo(&indices);
+
+		Assert(ctx->ndims > 0 && ndim < ctx->ndims);
+
+		for (i = 0; i < ndim; i++)
+			appendStringInfo(&indices, "[%d]", ctx->sizes[i]);
+
+		if (ctx->colname)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
+					 errmsg("expected JSON array"),
+					 errhint("See the array element %s of key \"%s\".",
+							 indices.data, ctx->colname)));
+		else
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
+					 errmsg("expected JSON array"),
+					 errhint("See the array element %s.",
+							 indices.data)));
+	}
+}
+
+/* set the number of dimensions of the populated array when it becomes known */
+static void
+populate_array_assign_ndims(PopulateArrayContext *ctx, int ndims)
+{
+	int			i;
+
+	Assert(ctx->ndims <= 0);
+
+	if (ndims <= 0)
+		populate_array_report_expected_array(ctx, ndims);
+
+	ctx->ndims = ndims;
+	ctx->dims = palloc(sizeof(int) * ndims);
+	ctx->sizes = palloc0(sizeof(int) * ndims);
+
+	for (i = 0; i < ndims; i++)
+		ctx->dims[i] = -1;		/* dimensions are unknown yet */
+}
+
+/* check the populated subarray dimension */
+static void
+populate_array_check_dimension(PopulateArrayContext *ctx, int ndim)
+{
+	int			dim = ctx->sizes[ndim]; /* current dimension counter */
+
+	if (ctx->dims[ndim] == -1)
+		ctx->dims[ndim] = dim;	/* assign dimension if not yet known */
+	else if (ctx->dims[ndim] != dim)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
+				 errmsg("malformed JSON array"),
+				 errdetail("Multidimensional arrays must have "
+						   "sub-arrays with matching dimensions.")));
+
+	/* reset the current array dimension size counter */
+	ctx->sizes[ndim] = 0;
+
+	/* increment the parent dimension counter if it is a nested sub-array */
+	if (ndim > 0)
+		ctx->sizes[ndim - 1]++;
+}
+
+static void
+populate_array_element(PopulateArrayContext *ctx, int ndim, JsValue *jsv)
+{
+	Datum		element;
+	bool		element_isnull;
+
+	/* populate the array element */
+	element = populate_record_field(ctx->aio->element_info,
+									ctx->aio->element_type,
+									ctx->aio->element_typmod,
+									NULL, ctx->mcxt, PointerGetDatum(NULL),
+									jsv, &element_isnull);
+
+	accumArrayResult(ctx->astate, element, element_isnull,
+					 ctx->aio->element_type, ctx->acxt);
+
+	Assert(ndim > 0);
+	ctx->sizes[ndim - 1]++;		/* increment current dimension counter */
+}
+
+/* json object start handler for populate_array_json() */
+static void
+populate_array_object_start(void *_state)
+{
+	PopulateArrayState *state = (PopulateArrayState *) _state;
+	int			ndim = state->lex->lex_level;
+
+	if (state->ctx->ndims <= 0)
+		populate_array_assign_ndims(state->ctx, ndim);
+	else if (ndim < state->ctx->ndims)
+		populate_array_report_expected_array(state->ctx, ndim);
+}
+
+/* json array end handler for populate_array_json() */
+static void
+populate_array_array_end(void *_state)
+{
+	PopulateArrayState *state = (PopulateArrayState *) _state;
+	PopulateArrayContext *ctx = state->ctx;
+	int			ndim = state->lex->lex_level;
+
+	if (ctx->ndims <= 0)
+		populate_array_assign_ndims(ctx, ndim + 1);
+
+	if (ndim < ctx->ndims)
+		populate_array_check_dimension(ctx, ndim);
+}
+
+/* json array element start handler for populate_array_json() */
+static void
+populate_array_element_start(void *_state, bool isnull)
+{
+	PopulateArrayState *state = (PopulateArrayState *) _state;
+	int			ndim = state->lex->lex_level;
+
+	if (state->ctx->ndims <= 0 || ndim == state->ctx->ndims)
+	{
+		/* remember current array element start */
+		state->element_start = state->lex->token_start;
+		state->element_type = state->lex->token_type;
+		state->element_scalar = NULL;
+	}
+}
+
+/* json array element end handler for populate_array_json() */
+static void
+populate_array_element_end(void *_state, bool isnull)
+{
+	PopulateArrayState *state = (PopulateArrayState *) _state;
+	PopulateArrayContext *ctx = state->ctx;
+	int			ndim = state->lex->lex_level;
+
+	Assert(ctx->ndims > 0);
+
+	if (ndim == ctx->ndims)
+	{
+		JsValue		jsv;
+
+		jsv.is_json = true;
+		jsv.val.json.type = state->element_type;
+
+		if (isnull)
 		{
-			if (PG_ARGISNULL(1))
-				PG_RETURN_NULL();
-
-			/*
-			 * have no tuple to look at, so the only source of type info is
-			 * the argtype. The lookup_rowtype_tupdesc call below will error
-			 * out if we don't have a known composite type oid here.
-			 */
-			tupType = argtype;
-			tupTypmod = -1;
+			Assert(jsv.val.json.type == JSON_TOKEN_NULL);
+			jsv.val.json.str = NULL;
+			jsv.val.json.len = 0;
+		}
+		else if (state->element_scalar)
+		{
+			jsv.val.json.str = state->element_scalar;
+			jsv.val.json.len = -1;	/* null-terminated */
 		}
 		else
 		{
-			rec = PG_GETARG_HEAPTUPLEHEADER(0);
-
-			if (PG_ARGISNULL(1))
-				PG_RETURN_POINTER(rec);
-
-			/* Extract type info from the tuple itself */
-			tupType = HeapTupleHeaderGetTypeId(rec);
-			tupTypmod = HeapTupleHeaderGetTypMod(rec);
+			jsv.val.json.str = state->element_start;
+			jsv.val.json.len = (state->lex->prev_token_terminator -
+								state->element_start) * sizeof(char);
 		}
 
-		tupdesc = lookup_rowtype_tupdesc(tupType, tupTypmod);
+		populate_array_element(ctx, ndim, &jsv);
 	}
-	else
-	{
-		/* json{b}_to_record case */
-		if (PG_ARGISNULL(0))
-			PG_RETURN_NULL();
+}
 
-		if (get_call_result_type(fcinfo, NULL, &tupdesc) != TYPEFUNC_COMPOSITE)
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("function returning record called in context "
-							"that cannot accept type record"),
-					 errhint("Try calling the function in the FROM clause "
-							 "using a column definition list.")));
+/* json scalar handler for populate_array_json() */
+static void
+populate_array_scalar(void *_state, char *token, JsonTokenType tokentype)
+{
+	PopulateArrayState *state = (PopulateArrayState *) _state;
+	PopulateArrayContext *ctx = state->ctx;
+	int			ndim = state->lex->lex_level;
+
+	if (ctx->ndims <= 0)
+		populate_array_assign_ndims(ctx, ndim);
+	else if (ndim < ctx->ndims)
+		populate_array_report_expected_array(ctx, ndim);
+
+	if (ndim == ctx->ndims)
+	{
+		/* remember the scalar element token */
+		state->element_scalar = token;
+		/* element_type must already be set in populate_array_element_start() */
+		Assert(state->element_type == tokentype);
 	}
+}
 
-	if (jtype == JSONOID)
+/* parse a json array and populate array */
+static void
+populate_array_json(PopulateArrayContext *ctx, char *json, int len)
+{
+	PopulateArrayState state;
+	JsonSemAction sem;
+
+	state.lex = makeJsonLexContextCstringLen(json, len, true);
+	state.ctx = ctx;
+
+	memset(&sem, 0, sizeof(sem));
+	sem.semstate = (void *) &state;
+	sem.object_start = populate_array_object_start;
+	sem.array_end = populate_array_array_end;
+	sem.array_element_start = populate_array_element_start;
+	sem.array_element_end = populate_array_element_end;
+	sem.scalar = populate_array_scalar;
+
+	pg_parse_json(state.lex, &sem);
+
+	/* number of dimensions should be already known */
+	Assert(ctx->ndims > 0 && ctx->dims);
+
+	pfree(state.lex);
+}
+
+/*
+ * populate_array_dim_jsonb() -- Iterate recursively through jsonb sub-array
+ *		elements and accumulate result using given ArrayBuildState.
+ */
+static void
+populate_array_dim_jsonb(PopulateArrayContext *ctx, /* context */
+						 JsonbValue *jbv,	/* jsonb sub-array */
+						 int ndim)	/* current dimension */
+{
+	JsonbContainer *jbc = jbv->val.binary.data;
+	JsonbIterator *it;
+	JsonbIteratorToken tok;
+	JsonbValue	val;
+	JsValue		jsv;
+
+	check_stack_depth();
+
+	if (jbv->type != jbvBinary || !JsonContainerIsArray(jbc))
+		populate_array_report_expected_array(ctx, ndim - 1);
+
+	Assert(!JsonContainerIsScalar(jbc));
+
+	it = JsonbIteratorInit(jbc);
+
+	tok = JsonbIteratorNext(&it, &val, true);
+	Assert(tok == WJB_BEGIN_ARRAY);
+
+	tok = JsonbIteratorNext(&it, &val, true);
+
+	/*
+	 * If the number of dimensions is not yet known and we have found end of
+	 * the array, or the first child element is not an array, then assign the
+	 * number of dimensions now.
+	 */
+	if (ctx->ndims <= 0 &&
+		(tok == WJB_END_ARRAY ||
+		 (tok == WJB_ELEM &&
+		  (val.type != jbvBinary ||
+		   !JsonContainerIsArray(val.val.binary.data)))))
+		populate_array_assign_ndims(ctx, ndim);
+
+	jsv.is_json = false;
+	jsv.val.jsonb = &val;
+
+	/* process all the array elements */
+	while (tok == WJB_ELEM)
 	{
-		/* just get the text */
-		json = PG_GETARG_TEXT_P(json_arg_num);
-
-		json_hash = get_json_object_as_hash(json, funcname);
-
 		/*
-		 * if the input json is empty, we can only skip the rest if we were
-		 * passed in a non-null record, since otherwise there may be issues
-		 * with domain nulls.
+		 * Recurse only if the dimensions of dimensions is still unknown or if
+		 * it is not the innermost dimension.
 		 */
-		if (hash_get_num_entries(json_hash) == 0 && rec)
+		if (ctx->ndims > 0 && ndim >= ctx->ndims)
+			populate_array_element(ctx, ndim, &jsv);
+		else
 		{
-			hash_destroy(json_hash);
-			ReleaseTupleDesc(tupdesc);
-			PG_RETURN_POINTER(rec);
+			/* populate child sub-array */
+			populate_array_dim_jsonb(ctx, &val, ndim + 1);
+
+			/* number of dimensions should be already known */
+			Assert(ctx->ndims > 0 && ctx->dims);
+
+			populate_array_check_dimension(ctx, ndim);
 		}
+
+		tok = JsonbIteratorNext(&it, &val, true);
+	}
+
+	Assert(tok == WJB_END_ARRAY);
+
+	/* free iterator, iterating until WJB_DONE */
+	tok = JsonbIteratorNext(&it, &val, true);
+	Assert(tok == WJB_DONE && !it);
+}
+
+/* recursively populate an array from json/jsonb */
+static Datum
+populate_array(ArrayIOData *aio,
+			   const char *colname,
+			   MemoryContext mcxt,
+			   JsValue *jsv)
+{
+	PopulateArrayContext ctx;
+	Datum		result;
+	int		   *lbs;
+	int			i;
+
+	ctx.aio = aio;
+	ctx.mcxt = mcxt;
+	ctx.acxt = CurrentMemoryContext;
+	ctx.astate = initArrayResult(aio->element_type, ctx.acxt, true);
+	ctx.colname = colname;
+	ctx.ndims = 0;				/* unknown yet */
+	ctx.dims = NULL;
+	ctx.sizes = NULL;
+
+	if (jsv->is_json)
+		populate_array_json(&ctx, jsv->val.json.str,
+							jsv->val.json.len >= 0 ? jsv->val.json.len
+							: strlen(jsv->val.json.str));
+	else
+	{
+		populate_array_dim_jsonb(&ctx, jsv->val.jsonb, 1);
+		ctx.dims[0] = ctx.sizes[0];
+	}
+
+	Assert(ctx.ndims > 0);
+
+	lbs = palloc(sizeof(int) * ctx.ndims);
+
+	for (i = 0; i < ctx.ndims; i++)
+		lbs[i] = 1;
+
+	result = makeMdArrayResult(ctx.astate, ctx.ndims, ctx.dims, lbs,
+							   ctx.acxt, true);
+
+	pfree(ctx.dims);
+	pfree(ctx.sizes);
+	pfree(lbs);
+
+	return result;
+}
+
+static void
+JsValueToJsObject(JsValue *jsv, JsObject *jso)
+{
+	jso->is_json = jsv->is_json;
+
+	if (jsv->is_json)
+	{
+		/* convert plain-text json into a hash table */
+		jso->val.json_hash =
+			get_json_object_as_hash(jsv->val.json.str,
+									jsv->val.json.len >= 0
+									? jsv->val.json.len
+									: strlen(jsv->val.json.str),
+									"populate_composite");
 	}
 	else
 	{
-		jb = PG_GETARG_JSONB(json_arg_num);
+		JsonbValue *jbv = jsv->val.jsonb;
 
-		/* same logic as for json */
-		if (JB_ROOT_COUNT(jb) == 0 && rec)
+		if (jbv->type == jbvBinary &&
+			JsonContainerIsObject(jbv->val.binary.data))
 		{
-			ReleaseTupleDesc(tupdesc);
-			PG_RETURN_POINTER(rec);
+			jso->val.jsonb_cont = jbv->val.binary.data;
+		}
+		else
+		{
+			bool		is_scalar;
+
+			is_scalar = IsAJsonbScalar(jbv) ||
+				(jbv->type == jbvBinary &&
+				 JsonContainerIsScalar(jbv->val.binary.data));
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 is_scalar
+					 ? errmsg("cannot call %s on a scalar",
+							  "populate_composite")
+					 : errmsg("cannot call %s on an array",
+							  "populate_composite")));
 		}
 	}
+}
 
-	ncolumns = tupdesc->natts;
-
-	if (rec)
+/* acquire or update cached tuple descriptor for a composite type */
+static void
+update_cached_tupdesc(CompositeIOData *io, MemoryContext mcxt)
+{
+	if (!io->tupdesc ||
+		io->tupdesc->tdtypeid != io->base_typid ||
+		io->tupdesc->tdtypmod != io->base_typmod)
 	{
-		/* Build a temporary HeapTuple control structure */
-		tuple.t_len = HeapTupleHeaderGetDatumLength(rec);
-		ItemPointerSetInvalid(&(tuple.t_self));
-		tuple.t_data = rec;
+		TupleDesc	tupdesc = lookup_rowtype_tupdesc(io->base_typid,
+													 io->base_typmod);
+		MemoryContext oldcxt;
+
+		if (io->tupdesc)
+			FreeTupleDesc(io->tupdesc);
+
+		/* copy tuple desc without constraints into cache memory context */
+		oldcxt = MemoryContextSwitchTo(mcxt);
+		io->tupdesc = CreateTupleDescCopy(tupdesc);
+		MemoryContextSwitchTo(oldcxt);
+
+		ReleaseTupleDesc(tupdesc);
+	}
+}
+
+/* recursively populate a composite (row type) value from json/jsonb */
+static Datum
+populate_composite(CompositeIOData *io,
+				   Oid typid,
+				   const char *colname,
+				   MemoryContext mcxt,
+				   HeapTupleHeader defaultval,
+				   JsValue *jsv,
+				   bool isnull)
+{
+	Datum		result;
+
+	/* acquire/update cached tuple descriptor */
+	update_cached_tupdesc(io, mcxt);
+
+	if (isnull)
+		result = (Datum) 0;
+	else
+	{
+		HeapTupleHeader tuple;
+		JsObject	jso;
+
+		/* prepare input value */
+		JsValueToJsObject(jsv, &jso);
+
+		/* populate resulting record tuple */
+		tuple = populate_record(io->tupdesc, &io->record_io,
+								defaultval, mcxt, &jso);
+		result = HeapTupleHeaderGetDatum(tuple);
+
+		JsObjectFree(&jso);
 	}
 
 	/*
-	 * We arrange to look up the needed I/O info just once per series of
-	 * calls, assuming the record type doesn't change underneath us.
+	 * If it's domain over composite, check domain constraints.  (This should
+	 * probably get refactored so that we can see the TYPECAT value, but for
+	 * now, we can tell by comparing typid to base_typid.)
 	 */
-	my_extra = (RecordIOData *) fcinfo->flinfo->fn_extra;
-	if (my_extra == NULL ||
-		my_extra->ncolumns != ncolumns)
+	if (typid != io->base_typid && typid != RECORDOID)
+		domain_check(result, isnull, typid, &io->domain_info, mcxt);
+
+	return result;
+}
+
+/* populate non-null scalar value from json/jsonb value */
+static Datum
+populate_scalar(ScalarIOData *io, Oid typid, int32 typmod, JsValue *jsv)
+{
+	Datum		res;
+	char	   *str = NULL;
+	char	   *json = NULL;
+
+	if (jsv->is_json)
 	{
-		fcinfo->flinfo->fn_extra =
-			MemoryContextAlloc(fcinfo->flinfo->fn_mcxt,
-							   offsetof(RecordIOData, columns) +
-							   ncolumns * sizeof(ColumnIOData));
-		my_extra = (RecordIOData *) fcinfo->flinfo->fn_extra;
-		my_extra->record_type = InvalidOid;
-		my_extra->record_typmod = 0;
-		my_extra->ncolumns = ncolumns;
-		MemSet(my_extra->columns, 0, sizeof(ColumnIOData) * ncolumns);
+		int			len = jsv->val.json.len;
+
+		json = jsv->val.json.str;
+		Assert(json);
+		if (len >= 0)
+		{
+			/* Need to copy non-null-terminated string */
+			str = palloc(len + 1 * sizeof(char));
+			memcpy(str, json, len);
+			str[len] = '\0';
+		}
+		else
+			str = json;			/* string is already null-terminated */
+
+		/* If converting to json/jsonb, make string into valid JSON literal */
+		if ((typid == JSONOID || typid == JSONBOID) &&
+			jsv->val.json.type == JSON_TOKEN_STRING)
+		{
+			StringInfoData buf;
+
+			initStringInfo(&buf);
+			escape_json(&buf, str);
+			/* free temporary buffer */
+			if (str != json)
+				pfree(str);
+			str = buf.data;
+		}
+	}
+	else
+	{
+		JsonbValue *jbv = jsv->val.jsonb;
+
+		if (typid == JSONBOID)
+		{
+			Jsonb	   *jsonb = JsonbValueToJsonb(jbv); /* directly use jsonb */
+
+			return JsonbPGetDatum(jsonb);
+		}
+		/* convert jsonb to string for typio call */
+		else if (typid == JSONOID && jbv->type != jbvBinary)
+		{
+			/*
+			 * Convert scalar jsonb (non-scalars are passed here as jbvBinary)
+			 * to json string, preserving quotes around top-level strings.
+			 */
+			Jsonb	   *jsonb = JsonbValueToJsonb(jbv);
+
+			str = JsonbToCString(NULL, &jsonb->root, VARSIZE(jsonb));
+		}
+		else if (jbv->type == jbvString)	/* quotes are stripped */
+			str = pnstrdup(jbv->val.string.val, jbv->val.string.len);
+		else if (jbv->type == jbvBool)
+			str = pstrdup(jbv->val.boolean ? "true" : "false");
+		else if (jbv->type == jbvNumeric)
+			str = DatumGetCString(DirectFunctionCall1(numeric_out,
+													  PointerGetDatum(jbv->val.numeric)));
+		else if (jbv->type == jbvBinary)
+			str = JsonbToCString(NULL, jbv->val.binary.data,
+								 jbv->val.binary.len);
+		else
+			elog(ERROR, "unrecognized jsonb type: %d", (int) jbv->type);
 	}
 
-	if (have_record_arg && (my_extra->record_type != tupType ||
-							my_extra->record_typmod != tupTypmod))
+	res = InputFunctionCall(&io->typiofunc, str, io->typioparam, typmod);
+
+	/* free temporary buffer */
+	if (str != json)
+		pfree(str);
+
+	return res;
+}
+
+static Datum
+populate_domain(DomainIOData *io,
+				Oid typid,
+				const char *colname,
+				MemoryContext mcxt,
+				JsValue *jsv,
+				bool isnull)
+{
+	Datum		res;
+
+	if (isnull)
+		res = (Datum) 0;
+	else
 	{
-		MemSet(my_extra, 0,
-			   offsetof(RecordIOData, columns) +
+		res = populate_record_field(io->base_io,
+									io->base_typid, io->base_typmod,
+									colname, mcxt, PointerGetDatum(NULL),
+									jsv, &isnull);
+		Assert(!isnull);
+	}
+
+	domain_check(res, isnull, typid, &io->domain_info, mcxt);
+
+	return res;
+}
+
+/* prepare column metadata cache for the given type */
+static void
+prepare_column_cache(ColumnIOData *column,
+					 Oid typid,
+					 int32 typmod,
+					 MemoryContext mcxt,
+					 bool need_scalar)
+{
+	HeapTuple	tup;
+	Form_pg_type type;
+
+	column->typid = typid;
+	column->typmod = typmod;
+
+	tup = SearchSysCache1(TYPEOID, ObjectIdGetDatum(typid));
+	if (!HeapTupleIsValid(tup))
+		elog(ERROR, "cache lookup failed for type %u", typid);
+
+	type = (Form_pg_type) GETSTRUCT(tup);
+
+	if (type->typtype == TYPTYPE_DOMAIN)
+	{
+		/*
+		 * We can move directly to the bottom base type; domain_check() will
+		 * take care of checking all constraints for a stack of domains.
+		 */
+		Oid			base_typid;
+		int32		base_typmod = typmod;
+
+		base_typid = getBaseTypeAndTypmod(typid, &base_typmod);
+		if (get_typtype(base_typid) == TYPTYPE_COMPOSITE)
+		{
+			/* domain over composite has its own code path */
+			column->typcat = TYPECAT_COMPOSITE_DOMAIN;
+			column->io.composite.record_io = NULL;
+			column->io.composite.tupdesc = NULL;
+			column->io.composite.base_typid = base_typid;
+			column->io.composite.base_typmod = base_typmod;
+			column->io.composite.domain_info = NULL;
+		}
+		else
+		{
+			/* domain over anything else */
+			column->typcat = TYPECAT_DOMAIN;
+			column->io.domain.base_typid = base_typid;
+			column->io.domain.base_typmod = base_typmod;
+			column->io.domain.base_io =
+				MemoryContextAllocZero(mcxt, sizeof(ColumnIOData));
+			column->io.domain.domain_info = NULL;
+		}
+	}
+	else if (type->typtype == TYPTYPE_COMPOSITE || typid == RECORDOID)
+	{
+		column->typcat = TYPECAT_COMPOSITE;
+		column->io.composite.record_io = NULL;
+		column->io.composite.tupdesc = NULL;
+		column->io.composite.base_typid = typid;
+		column->io.composite.base_typmod = typmod;
+		column->io.composite.domain_info = NULL;
+	}
+	else if (type->typlen == -1 && OidIsValid(type->typelem))
+	{
+		column->typcat = TYPECAT_ARRAY;
+		column->io.array.element_info = MemoryContextAllocZero(mcxt,
+															   sizeof(ColumnIOData));
+		column->io.array.element_type = type->typelem;
+		/* array element typemod stored in attribute's typmod */
+		column->io.array.element_typmod = typmod;
+	}
+	else
+	{
+		column->typcat = TYPECAT_SCALAR;
+		need_scalar = true;
+	}
+
+	/* caller can force us to look up scalar_io info even for non-scalars */
+	if (need_scalar)
+	{
+		Oid			typioproc;
+
+		getTypeInputInfo(typid, &typioproc, &column->scalar_io.typioparam);
+		fmgr_info_cxt(typioproc, &column->scalar_io.typiofunc, mcxt);
+	}
+
+	ReleaseSysCache(tup);
+}
+
+/* recursively populate a record field or an array element from a json/jsonb value */
+static Datum
+populate_record_field(ColumnIOData *col,
+					  Oid typid,
+					  int32 typmod,
+					  const char *colname,
+					  MemoryContext mcxt,
+					  Datum defaultval,
+					  JsValue *jsv,
+					  bool *isnull)
+{
+	TypeCat		typcat;
+
+	check_stack_depth();
+
+	/*
+	 * Prepare column metadata cache for the given type.  Force lookup of the
+	 * scalar_io data so that the json string hack below will work.
+	 */
+	if (col->typid != typid || col->typmod != typmod)
+		prepare_column_cache(col, typid, typmod, mcxt, true);
+
+	*isnull = JsValueIsNull(jsv);
+
+	typcat = col->typcat;
+
+	/* try to convert json string to a non-scalar type through input function */
+	if (JsValueIsString(jsv) &&
+		(typcat == TYPECAT_ARRAY ||
+		 typcat == TYPECAT_COMPOSITE ||
+		 typcat == TYPECAT_COMPOSITE_DOMAIN))
+		typcat = TYPECAT_SCALAR;
+
+	/* we must perform domain checks for NULLs, otherwise exit immediately */
+	if (*isnull &&
+		typcat != TYPECAT_DOMAIN &&
+		typcat != TYPECAT_COMPOSITE_DOMAIN)
+		return (Datum) 0;
+
+	switch (typcat)
+	{
+		case TYPECAT_SCALAR:
+			return populate_scalar(&col->scalar_io, typid, typmod, jsv);
+
+		case TYPECAT_ARRAY:
+			return populate_array(&col->io.array, colname, mcxt, jsv);
+
+		case TYPECAT_COMPOSITE:
+		case TYPECAT_COMPOSITE_DOMAIN:
+			return populate_composite(&col->io.composite, typid,
+									  colname, mcxt,
+									  DatumGetPointer(defaultval)
+									  ? DatumGetHeapTupleHeader(defaultval)
+									  : NULL,
+									  jsv, *isnull);
+
+		case TYPECAT_DOMAIN:
+			return populate_domain(&col->io.domain, typid, colname, mcxt,
+								   jsv, *isnull);
+
+		default:
+			elog(ERROR, "unrecognized type category '%c'", typcat);
+			return (Datum) 0;
+	}
+}
+
+static RecordIOData *
+allocate_record_info(MemoryContext mcxt, int ncolumns)
+{
+	RecordIOData *data = (RecordIOData *)
+	MemoryContextAlloc(mcxt,
+					   offsetof(RecordIOData, columns) +
+					   ncolumns * sizeof(ColumnIOData));
+
+	data->record_type = InvalidOid;
+	data->record_typmod = 0;
+	data->ncolumns = ncolumns;
+	MemSet(data->columns, 0, sizeof(ColumnIOData) * ncolumns);
+
+	return data;
+}
+
+static bool
+JsObjectGetField(JsObject *obj, char *field, JsValue *jsv)
+{
+	jsv->is_json = obj->is_json;
+
+	if (jsv->is_json)
+	{
+		JsonHashEntry *hashentry = hash_search(obj->val.json_hash, field,
+											   HASH_FIND, NULL);
+
+		jsv->val.json.type = hashentry ? hashentry->type : JSON_TOKEN_NULL;
+		jsv->val.json.str = jsv->val.json.type == JSON_TOKEN_NULL ? NULL :
+			hashentry->val;
+		jsv->val.json.len = jsv->val.json.str ? -1 : 0; /* null-terminated */
+
+		return hashentry != NULL;
+	}
+	else
+	{
+		jsv->val.jsonb = !obj->val.jsonb_cont ? NULL :
+			findJsonbValueFromContainerLen(obj->val.jsonb_cont, JB_FOBJECT,
+										   field, strlen(field));
+
+		return jsv->val.jsonb != NULL;
+	}
+}
+
+/* populate a record tuple from json/jsonb value */
+static HeapTupleHeader
+populate_record(TupleDesc tupdesc,
+				RecordIOData **record_p,
+				HeapTupleHeader defaultval,
+				MemoryContext mcxt,
+				JsObject *obj)
+{
+	RecordIOData *record = *record_p;
+	Datum	   *values;
+	bool	   *nulls;
+	HeapTuple	res;
+	int			ncolumns = tupdesc->natts;
+	int			i;
+
+	/*
+	 * if the input json is empty, we can only skip the rest if we were passed
+	 * in a non-null record, since otherwise there may be issues with domain
+	 * nulls.
+	 */
+	if (defaultval && JsObjectIsEmpty(obj))
+		return defaultval;
+
+	/* (re)allocate metadata cache */
+	if (record == NULL ||
+		record->ncolumns != ncolumns)
+		*record_p = record = allocate_record_info(mcxt, ncolumns);
+
+	/* invalidate metadata cache if the record type has changed */
+	if (record->record_type != tupdesc->tdtypeid ||
+		record->record_typmod != tupdesc->tdtypmod)
+	{
+		MemSet(record, 0, offsetof(RecordIOData, columns) +
 			   ncolumns * sizeof(ColumnIOData));
-		my_extra->record_type = tupType;
-		my_extra->record_typmod = tupTypmod;
-		my_extra->ncolumns = ncolumns;
+		record->record_type = tupdesc->tdtypeid;
+		record->record_typmod = tupdesc->tdtypmod;
+		record->ncolumns = ncolumns;
 	}
 
 	values = (Datum *) palloc(ncolumns * sizeof(Datum));
 	nulls = (bool *) palloc(ncolumns * sizeof(bool));
 
-	if (rec)
+	if (defaultval)
 	{
+		HeapTupleData tuple;
+
+		/* Build a temporary HeapTuple control structure */
+		tuple.t_len = HeapTupleHeaderGetDatumLength(defaultval);
+		ItemPointerSetInvalid(&(tuple.t_self));
+		tuple.t_tableOid = InvalidOid;
+		tuple.t_data = defaultval;
+
 		/* Break down the tuple into fields */
 		heap_deform_tuple(&tuple, tupdesc, values, nulls);
 	}
@@ -2271,31 +3158,19 @@ populate_record_worker(FunctionCallInfo fcinfo, const char *funcname,
 
 	for (i = 0; i < ncolumns; ++i)
 	{
-		ColumnIOData *column_info = &my_extra->columns[i];
-		Oid			column_type = tupdesc->attrs[i]->atttypid;
-		JsonbValue *v = NULL;
-		JsonHashEntry *hashentry = NULL;
+		Form_pg_attribute att = TupleDescAttr(tupdesc, i);
+		char	   *colname = NameStr(att->attname);
+		JsValue		field = {0};
+		bool		found;
 
 		/* Ignore dropped columns in datatype */
-		if (tupdesc->attrs[i]->attisdropped)
+		if (att->attisdropped)
 		{
 			nulls[i] = true;
 			continue;
 		}
 
-		if (jtype == JSONOID)
-		{
-			hashentry = hash_search(json_hash,
-									NameStr(tupdesc->attrs[i]->attname),
-									HASH_FIND, NULL);
-		}
-		else
-		{
-			char	   *key = NameStr(tupdesc->attrs[i]->attname);
-
-			v = findJsonbValueFromContainerLen(&jb->root, JB_FOBJECT, key,
-											   strlen(key));
-		}
+		found = JsObjectGetField(obj, colname, &field);
 
 		/*
 		 * we can't just skip here if the key wasn't found since we might have
@@ -2305,73 +3180,193 @@ populate_record_worker(FunctionCallInfo fcinfo, const char *funcname,
 		 * then every field which we don't populate needs to be run through
 		 * the input function just in case it's a domain type.
 		 */
-		if (((jtype == JSONOID && hashentry == NULL) ||
-			 (jtype == JSONBOID && v == NULL)) && rec)
+		if (defaultval && !found)
 			continue;
 
-		/*
-		 * Prepare to convert the column value from text
-		 */
-		if (column_info->column_type != column_type)
-		{
-			getTypeInputInfo(column_type,
-							 &column_info->typiofunc,
-							 &column_info->typioparam);
-			fmgr_info_cxt(column_info->typiofunc, &column_info->proc,
-						  fcinfo->flinfo->fn_mcxt);
-			column_info->column_type = column_type;
-		}
-		if ((jtype == JSONOID && (hashentry == NULL || hashentry->isnull)) ||
-			(jtype == JSONBOID && (v == NULL || v->type == jbvNull)))
-		{
-			/*
-			 * need InputFunctionCall to happen even for nulls, so that domain
-			 * checks are done
-			 */
-			values[i] = InputFunctionCall(&column_info->proc, NULL,
-										  column_info->typioparam,
-										  tupdesc->attrs[i]->atttypmod);
-			nulls[i] = true;
-		}
+		values[i] = populate_record_field(&record->columns[i],
+										  att->atttypid,
+										  att->atttypmod,
+										  colname,
+										  mcxt,
+										  nulls[i] ? (Datum) 0 : values[i],
+										  &field,
+										  &nulls[i]);
+	}
+
+	res = heap_form_tuple(tupdesc, values, nulls);
+
+	pfree(values);
+	pfree(nulls);
+
+	return res->t_data;
+}
+
+/*
+ * Setup for json{b}_populate_record{set}: result type will be same as first
+ * argument's type --- unless first argument is "null::record", which we can't
+ * extract type info from; we handle that later.
+ */
+static void
+get_record_type_from_argument(FunctionCallInfo fcinfo,
+							  const char *funcname,
+							  PopulateRecordCache *cache)
+{
+	cache->argtype = get_fn_expr_argtype(fcinfo->flinfo, 0);
+	prepare_column_cache(&cache->c,
+						 cache->argtype, -1,
+						 cache->fn_mcxt, false);
+	if (cache->c.typcat != TYPECAT_COMPOSITE &&
+		cache->c.typcat != TYPECAT_COMPOSITE_DOMAIN)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATATYPE_MISMATCH),
+		/* translator: %s is a function name, eg json_to_record */
+				 errmsg("first argument of %s must be a row type",
+						funcname)));
+}
+
+/*
+ * Setup for json{b}_to_record{set}: result type is specified by calling
+ * query.  We'll also use this code for json{b}_populate_record{set},
+ * if we discover that the first argument is a null of type RECORD.
+ *
+ * Here it is syntactically impossible to specify the target type
+ * as domain-over-composite.
+ */
+static void
+get_record_type_from_query(FunctionCallInfo fcinfo,
+						   const char *funcname,
+						   PopulateRecordCache *cache)
+{
+	TupleDesc	tupdesc;
+	MemoryContext old_cxt;
+
+	if (get_call_result_type(fcinfo, NULL, &tupdesc) != TYPEFUNC_COMPOSITE)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+		/* translator: %s is a function name, eg json_to_record */
+				 errmsg("could not determine row type for result of %s",
+						funcname),
+				 errhint("Provide a non-null record argument, "
+						 "or call the function in the FROM clause "
+						 "using a column definition list.")));
+
+	Assert(tupdesc);
+	cache->argtype = tupdesc->tdtypeid;
+
+	/* If we go through this more than once, avoid memory leak */
+	if (cache->c.io.composite.tupdesc)
+		FreeTupleDesc(cache->c.io.composite.tupdesc);
+
+	/* Save identified tupdesc */
+	old_cxt = MemoryContextSwitchTo(cache->fn_mcxt);
+	cache->c.io.composite.tupdesc = CreateTupleDescCopy(tupdesc);
+	cache->c.io.composite.base_typid = tupdesc->tdtypeid;
+	cache->c.io.composite.base_typmod = tupdesc->tdtypmod;
+	MemoryContextSwitchTo(old_cxt);
+}
+
+/*
+ * common worker for json{b}_populate_record() and json{b}_to_record()
+ * is_json and have_record_arg identify the specific function
+ */
+static Datum
+populate_record_worker(FunctionCallInfo fcinfo, const char *funcname,
+					   bool is_json, bool have_record_arg)
+{
+	int			json_arg_num = have_record_arg ? 1 : 0;
+	JsValue		jsv = {0};
+	HeapTupleHeader rec;
+	Datum		rettuple;
+	JsonbValue	jbv;
+	MemoryContext fnmcxt = fcinfo->flinfo->fn_mcxt;
+	PopulateRecordCache *cache = fcinfo->flinfo->fn_extra;
+
+	/*
+	 * If first time through, identify input/result record type.  Note that
+	 * this stanza looks only at fcinfo context, which can't change during the
+	 * query; so we may not be able to fully resolve a RECORD input type yet.
+	 */
+	if (!cache)
+	{
+		fcinfo->flinfo->fn_extra = cache =
+			MemoryContextAllocZero(fnmcxt, sizeof(*cache));
+		cache->fn_mcxt = fnmcxt;
+
+		if (have_record_arg)
+			get_record_type_from_argument(fcinfo, funcname, cache);
 		else
+			get_record_type_from_query(fcinfo, funcname, cache);
+	}
+
+	/* Collect record arg if we have one */
+	if (!have_record_arg)
+		rec = NULL;				/* it's json{b}_to_record() */
+	else if (!PG_ARGISNULL(0))
+	{
+		rec = PG_GETARG_HEAPTUPLEHEADER(0);
+
+		/*
+		 * When declared arg type is RECORD, identify actual record type from
+		 * the tuple itself.
+		 */
+		if (cache->argtype == RECORDOID)
 		{
-			char	   *s = NULL;
+			cache->c.io.composite.base_typid = HeapTupleHeaderGetTypeId(rec);
+			cache->c.io.composite.base_typmod = HeapTupleHeaderGetTypMod(rec);
+		}
+	}
+	else
+	{
+		rec = NULL;
 
-			if (jtype == JSONOID)
-			{
-				/* already done the hard work in the json case */
-				s = hashentry->val;
-			}
-			else
-			{
-				if (v->type == jbvString)
-					s = pnstrdup(v->val.string.val, v->val.string.len);
-				else if (v->type == jbvBool)
-					s = pnstrdup((v->val.boolean) ? "t" : "f", 1);
-				else if (v->type == jbvNumeric)
-					s = DatumGetCString(DirectFunctionCall1(numeric_out,
-										   PointerGetDatum(v->val.numeric)));
-				else if (v->type == jbvBinary)
-					s = JsonbToCString(NULL, (JsonbContainer *) v->val.binary.data, v->val.binary.len);
-				else
-					elog(ERROR, "unrecognized jsonb type: %d", (int) v->type);
-			}
-
-			values[i] = InputFunctionCall(&column_info->proc, s,
-										  column_info->typioparam,
-										  tupdesc->attrs[i]->atttypmod);
-			nulls[i] = false;
+		/*
+		 * When declared arg type is RECORD, identify actual record type from
+		 * calling query, or fail if we can't.
+		 */
+		if (cache->argtype == RECORDOID)
+		{
+			get_record_type_from_query(fcinfo, funcname, cache);
+			/* This can't change argtype, which is important for next time */
+			Assert(cache->argtype == RECORDOID);
 		}
 	}
 
-	rettuple = heap_form_tuple(tupdesc, values, nulls);
+	/* If no JSON argument, just return the record (if any) unchanged */
+	if (PG_ARGISNULL(json_arg_num))
+	{
+		if (rec)
+			PG_RETURN_POINTER(rec);
+		else
+			PG_RETURN_NULL();
+	}
 
-	ReleaseTupleDesc(tupdesc);
+	jsv.is_json = is_json;
 
-	if (json_hash)
-		hash_destroy(json_hash);
+	if (is_json)
+	{
+		text	   *json = PG_GETARG_TEXT_PP(json_arg_num);
 
-	PG_RETURN_DATUM(HeapTupleGetDatum(rettuple));
+		jsv.val.json.str = VARDATA_ANY(json);
+		jsv.val.json.len = VARSIZE_ANY_EXHDR(json);
+		jsv.val.json.type = JSON_TOKEN_INVALID; /* not used in
+												 * populate_composite() */
+	}
+	else
+	{
+		Jsonb	   *jb = PG_GETARG_JSONB_P(json_arg_num);
+
+		jsv.val.jsonb = &jbv;
+
+		/* fill binary jsonb value pointing to jb */
+		jbv.type = jbvBinary;
+		jbv.val.binary.data = &jb->root;
+		jbv.val.binary.len = VARSIZE(jb) - VARHDRSZ;
+	}
+
+	rettuple = populate_composite(&cache->c.io.composite, cache->argtype,
+								  NULL, fnmcxt, rec, &jsv, false);
+
+	PG_RETURN_DATUM(rettuple);
 }
 
 /*
@@ -2380,12 +3375,12 @@ populate_record_worker(FunctionCallInfo fcinfo, const char *funcname,
  * decompose a json object into a hash table.
  */
 static HTAB *
-get_json_object_as_hash(text *json, const char *funcname)
+get_json_object_as_hash(char *json, int len, const char *funcname)
 {
 	HASHCTL		ctl;
 	HTAB	   *tab;
 	JHashState *state;
-	JsonLexContext *lex = makeJsonLexContext(json, true);
+	JsonLexContext *lex = makeJsonLexContextCstringLen(json, len, true);
 	JsonSemAction *sem;
 
 	memset(&ctl, 0, sizeof(ctl));
@@ -2422,6 +3417,9 @@ hash_object_field_start(void *state, char *fname, bool isnull)
 
 	if (_state->lex->lex_level > 1)
 		return;
+
+	/* remember token type */
+	_state->saved_token_type = _state->lex->token_type;
 
 	if (_state->lex->token_type == JSON_TOKEN_ARRAY_START ||
 		_state->lex->token_type == JSON_TOKEN_OBJECT_START)
@@ -2466,7 +3464,9 @@ hash_object_field_end(void *state, char *fname, bool isnull)
 	 * that, a later field with the same name overrides the earlier field.
 	 */
 
-	hashentry->isnull = isnull;
+	hashentry->type = _state->saved_token_type;
+	Assert(isnull == (hashentry->type == JSON_TOKEN_NULL));
+
 	if (_state->save_json_start != NULL)
 	{
 		int			len = _state->lex->prev_token_terminator - _state->save_json_start;
@@ -2491,7 +3491,7 @@ hash_array_start(void *state)
 	if (_state->lex->lex_level == 0)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-			   errmsg("cannot call %s on an array", _state->function_name)));
+				 errmsg("cannot call %s on an array", _state->function_name)));
 }
 
 static void
@@ -2502,10 +3502,14 @@ hash_scalar(void *state, char *token, JsonTokenType tokentype)
 	if (_state->lex->lex_level == 0)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-			   errmsg("cannot call %s on a scalar", _state->function_name)));
+				 errmsg("cannot call %s on a scalar", _state->function_name)));
 
 	if (_state->lex->lex_level == 1)
+	{
 		_state->saved_scalar = token;
+		/* saved_token_type must already be set in hash_object_field_start() */
+		Assert(_state->saved_token_type == tokentype);
+	}
 }
 
 
@@ -2522,182 +3526,83 @@ hash_scalar(void *state, char *token, JsonTokenType tokentype)
 Datum
 jsonb_populate_recordset(PG_FUNCTION_ARGS)
 {
-	return populate_recordset_worker(fcinfo, "jsonb_populate_recordset", true);
+	return populate_recordset_worker(fcinfo, "jsonb_populate_recordset",
+									 false, true);
 }
 
 Datum
 jsonb_to_recordset(PG_FUNCTION_ARGS)
 {
-	return populate_recordset_worker(fcinfo, "jsonb_to_recordset", false);
+	return populate_recordset_worker(fcinfo, "jsonb_to_recordset",
+									 false, false);
 }
 
 Datum
 json_populate_recordset(PG_FUNCTION_ARGS)
 {
-	return populate_recordset_worker(fcinfo, "json_populate_recordset", true);
+	return populate_recordset_worker(fcinfo, "json_populate_recordset",
+									 true, true);
 }
 
 Datum
 json_to_recordset(PG_FUNCTION_ARGS)
 {
-	return populate_recordset_worker(fcinfo, "json_to_recordset", false);
+	return populate_recordset_worker(fcinfo, "json_to_recordset",
+									 true, false);
 }
 
 static void
-make_row_from_rec_and_jsonb(Jsonb *element, PopulateRecordsetState *state)
+populate_recordset_record(PopulateRecordsetState *state, JsObject *obj)
 {
-	Datum	   *values;
-	bool	   *nulls;
-	int			i;
-	RecordIOData *my_extra = state->my_extra;
-	int			ncolumns = my_extra->ncolumns;
-	TupleDesc	tupdesc = state->ret_tdesc;
-	HeapTupleHeader rec = state->rec;
-	HeapTuple	rettuple;
+	PopulateRecordCache *cache = state->cache;
+	HeapTupleHeader tuphead;
+	HeapTupleData tuple;
 
-	values = (Datum *) palloc(ncolumns * sizeof(Datum));
-	nulls = (bool *) palloc(ncolumns * sizeof(bool));
+	/* acquire/update cached tuple descriptor */
+	update_cached_tupdesc(&cache->c.io.composite, cache->fn_mcxt);
 
-	if (state->rec)
-	{
-		HeapTupleData tuple;
+	/* replace record fields from json */
+	tuphead = populate_record(cache->c.io.composite.tupdesc,
+							  &cache->c.io.composite.record_io,
+							  state->rec,
+							  cache->fn_mcxt,
+							  obj);
 
-		/* Build a temporary HeapTuple control structure */
-		tuple.t_len = HeapTupleHeaderGetDatumLength(state->rec);
-		ItemPointerSetInvalid(&(tuple.t_self));
-#if 0
-		tuple.t_tableOid = InvalidOid;
-#endif
-		tuple.t_data = state->rec;
+	/* if it's domain over composite, check domain constraints */
+	if (cache->c.typcat == TYPECAT_COMPOSITE_DOMAIN)
+		domain_check(HeapTupleHeaderGetDatum(tuphead), false,
+					 cache->argtype,
+					 &cache->c.io.composite.domain_info,
+					 cache->fn_mcxt);
 
-		/* Break down the tuple into fields */
-		heap_deform_tuple(&tuple, tupdesc, values, nulls);
-	}
-	else
-	{
-		for (i = 0; i < ncolumns; ++i)
-		{
-			values[i] = (Datum) 0;
-			nulls[i] = true;
-		}
-	}
+	/* ok, save into tuplestore */
+	tuple.t_len = HeapTupleHeaderGetDatumLength(tuphead);
+	ItemPointerSetInvalid(&(tuple.t_self));
+	tuple.t_tableOid = InvalidOid;
+	tuple.t_data = tuphead;
 
-	for (i = 0; i < ncolumns; ++i)
-	{
-		ColumnIOData *column_info = &my_extra->columns[i];
-		Oid			column_type = tupdesc->attrs[i]->atttypid;
-		JsonbValue *v = NULL;
-		char	   *key;
-
-		/* Ignore dropped columns in datatype */
-		if (tupdesc->attrs[i]->attisdropped)
-		{
-			nulls[i] = true;
-			continue;
-		}
-
-		key = NameStr(tupdesc->attrs[i]->attname);
-
-		v = findJsonbValueFromContainerLen(&element->root, JB_FOBJECT,
-										   key, strlen(key));
-
-		/*
-		 * We can't just skip here if the key wasn't found since we might have
-		 * a domain to deal with. If we were passed in a non-null record
-		 * datum, we assume that the existing values are valid (if they're
-		 * not, then it's not our fault), but if we were passed in a null,
-		 * then every field which we don't populate needs to be run through
-		 * the input function just in case it's a domain type.
-		 */
-		if (v == NULL && rec)
-			continue;
-
-		/*
-		 * Prepare to convert the column value from text
-		 */
-		if (column_info->column_type != column_type)
-		{
-			getTypeInputInfo(column_type,
-							 &column_info->typiofunc,
-							 &column_info->typioparam);
-			fmgr_info_cxt(column_info->typiofunc, &column_info->proc,
-						  state->fn_mcxt);
-			column_info->column_type = column_type;
-		}
-		if (v == NULL || v->type == jbvNull)
-		{
-			/*
-			 * Need InputFunctionCall to happen even for nulls, so that domain
-			 * checks are done
-			 */
-			values[i] = InputFunctionCall(&column_info->proc, NULL,
-										  column_info->typioparam,
-										  tupdesc->attrs[i]->atttypmod);
-			nulls[i] = true;
-		}
-		else
-		{
-			char	   *s = NULL;
-
-			if (v->type == jbvString)
-				s = pnstrdup(v->val.string.val, v->val.string.len);
-			else if (v->type == jbvBool)
-				s = pnstrdup((v->val.boolean) ? "t" : "f", 1);
-			else if (v->type == jbvNumeric)
-				s = DatumGetCString(DirectFunctionCall1(numeric_out,
-										   PointerGetDatum(v->val.numeric)));
-			else if (v->type == jbvBinary)
-				s = JsonbToCString(NULL, (JsonbContainer *) v->val.binary.data, v->val.binary.len);
-			else
-				elog(ERROR, "unrecognized jsonb type: %d", (int) v->type);
-
-			values[i] = InputFunctionCall(&column_info->proc, s,
-										  column_info->typioparam,
-										  tupdesc->attrs[i]->atttypmod);
-			nulls[i] = false;
-		}
-	}
-
-	rettuple = heap_form_tuple(tupdesc, values, nulls);
-
-	tuplestore_puttuple(state->tuple_store, rettuple);
+	tuplestore_puttuple(state->tuple_store, &tuple);
 }
 
 /*
- * common worker for json_populate_recordset() and json_to_recordset()
+ * common worker for json{b}_populate_recordset() and json{b}_to_recordset()
+ * is_json and have_record_arg identify the specific function
  */
 static Datum
 populate_recordset_worker(FunctionCallInfo fcinfo, const char *funcname,
-						  bool have_record_arg)
+						  bool is_json, bool have_record_arg)
 {
 	int			json_arg_num = have_record_arg ? 1 : 0;
-	Oid			jtype = get_fn_expr_argtype(fcinfo->flinfo, json_arg_num);
 	ReturnSetInfo *rsi;
 	MemoryContext old_cxt;
-	Oid			tupType;
-	int32		tupTypmod;
 	HeapTupleHeader rec;
-	TupleDesc	tupdesc;
-	RecordIOData *my_extra;
-	int			ncolumns;
+	PopulateRecordCache *cache = fcinfo->flinfo->fn_extra;
 	PopulateRecordsetState *state;
-
-	if (have_record_arg)
-	{
-		Oid			argtype = get_fn_expr_argtype(fcinfo->flinfo, 0);
-
-		if (!type_is_rowtype(argtype))
-			ereport(ERROR,
-					(errcode(ERRCODE_DATATYPE_MISMATCH),
-					 errmsg("first argument of %s must be a row type",
-							funcname)));
-	}
 
 	rsi = (ReturnSetInfo *) fcinfo->resultinfo;
 
 	if (!rsi || !IsA(rsi, ReturnSetInfo) ||
-		(rsi->allowedModes & SFRM_Materialize) == 0 ||
-		rsi->expectedDesc == NULL)
+		(rsi->allowedModes & SFRM_Materialize) == 0)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				 errmsg("set-valued function called in context that "
@@ -2705,91 +3610,82 @@ populate_recordset_worker(FunctionCallInfo fcinfo, const char *funcname,
 
 	rsi->returnMode = SFRM_Materialize;
 
-	/* if the json is null send back an empty set */
-	if (PG_ARGISNULL(json_arg_num))
-		PG_RETURN_NULL();
-
-	if (!have_record_arg || PG_ARGISNULL(0))
+	/*
+	 * If first time through, identify input/result record type.  Note that
+	 * this stanza looks only at fcinfo context, which can't change during the
+	 * query; so we may not be able to fully resolve a RECORD input type yet.
+	 */
+	if (!cache)
 	{
-		rec = NULL;
+		fcinfo->flinfo->fn_extra = cache =
+			MemoryContextAllocZero(fcinfo->flinfo->fn_mcxt, sizeof(*cache));
+		cache->fn_mcxt = fcinfo->flinfo->fn_mcxt;
 
-		/*
-		 * get the tupdesc from the result set info - it must be a record type
-		 * because we already checked that arg1 is a record type, or we're in
-		 * a to_record function which returns a setof record.
-		 */
-		if (get_call_result_type(fcinfo, NULL, &tupdesc) != TYPEFUNC_COMPOSITE)
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("function returning record called in context "
-							"that cannot accept type record")));
+		if (have_record_arg)
+			get_record_type_from_argument(fcinfo, funcname, cache);
+		else
+			get_record_type_from_query(fcinfo, funcname, cache);
 	}
-	else
+
+	/* Collect record arg if we have one */
+	if (!have_record_arg)
+		rec = NULL;				/* it's json{b}_to_recordset() */
+	else if (!PG_ARGISNULL(0))
 	{
 		rec = PG_GETARG_HEAPTUPLEHEADER(0);
 
 		/*
-		 * use the input record's own type marking to find a tupdesc for it.
+		 * When declared arg type is RECORD, identify actual record type from
+		 * the tuple itself.
 		 */
-		tupType = HeapTupleHeaderGetTypeId(rec);
-		tupTypmod = HeapTupleHeaderGetTypMod(rec);
-		tupdesc = lookup_rowtype_tupdesc(tupType, tupTypmod);
+		if (cache->argtype == RECORDOID)
+		{
+			cache->c.io.composite.base_typid = HeapTupleHeaderGetTypeId(rec);
+			cache->c.io.composite.base_typmod = HeapTupleHeaderGetTypMod(rec);
+		}
+	}
+	else
+	{
+		rec = NULL;
+
+		/*
+		 * When declared arg type is RECORD, identify actual record type from
+		 * calling query, or fail if we can't.
+		 */
+		if (cache->argtype == RECORDOID)
+		{
+			get_record_type_from_query(fcinfo, funcname, cache);
+			/* This can't change argtype, which is important for next time */
+			Assert(cache->argtype == RECORDOID);
+		}
 	}
 
-	tupType = tupdesc->tdtypeid;
-	tupTypmod = tupdesc->tdtypmod;
-	ncolumns = tupdesc->natts;
+	/* if the json is null send back an empty set */
+	if (PG_ARGISNULL(json_arg_num))
+		PG_RETURN_NULL();
 
 	/*
-	 * We arrange to look up the needed I/O info just once per series of
-	 * calls, assuming the record type doesn't change underneath us.
+	 * Forcibly update the cached tupdesc, to ensure we have the right tupdesc
+	 * to return even if the JSON contains no rows.
 	 */
-	my_extra = (RecordIOData *) fcinfo->flinfo->fn_extra;
-	if (my_extra == NULL ||
-		my_extra->ncolumns != ncolumns)
-	{
-		fcinfo->flinfo->fn_extra =
-			MemoryContextAlloc(fcinfo->flinfo->fn_mcxt,
-							   offsetof(RecordIOData, columns) +
-							   ncolumns * sizeof(ColumnIOData));
-		my_extra = (RecordIOData *) fcinfo->flinfo->fn_extra;
-		my_extra->record_type = InvalidOid;
-		my_extra->record_typmod = 0;
-	}
-
-	if (my_extra->record_type != tupType ||
-		my_extra->record_typmod != tupTypmod)
-	{
-		MemSet(my_extra, 0,
-			   offsetof(RecordIOData, columns) +
-			   ncolumns * sizeof(ColumnIOData));
-		my_extra->record_type = tupType;
-		my_extra->record_typmod = tupTypmod;
-		my_extra->ncolumns = ncolumns;
-	}
+	update_cached_tupdesc(&cache->c.io.composite, cache->fn_mcxt);
 
 	state = palloc0(sizeof(PopulateRecordsetState));
 
-	/* make these in a sufficiently long-lived memory context */
+	/* make tuplestore in a sufficiently long-lived memory context */
 	old_cxt = MemoryContextSwitchTo(rsi->econtext->ecxt_per_query_memory);
-	state->ret_tdesc = CreateTupleDescCopy(tupdesc);
-	BlessTupleDesc(state->ret_tdesc);
 	state->tuple_store = tuplestore_begin_heap(rsi->allowedModes &
 											   SFRM_Materialize_Random,
 											   false, work_mem);
 	MemoryContextSwitchTo(old_cxt);
 
-	/* unnecessary, but harmless, if tupdesc came from get_call_result_type: */
-	ReleaseTupleDesc(tupdesc);
-
 	state->function_name = funcname;
-	state->my_extra = my_extra;
+	state->cache = cache;
 	state->rec = rec;
-	state->fn_mcxt = fcinfo->flinfo->fn_mcxt;
 
-	if (jtype == JSONOID)
+	if (is_json)
 	{
-		text	   *json = PG_GETARG_TEXT_P(json_arg_num);
+		text	   *json = PG_GETARG_TEXT_PP(json_arg_num);
 		JsonLexContext *lex;
 		JsonSemAction *sem;
 
@@ -2812,13 +3708,11 @@ populate_recordset_worker(FunctionCallInfo fcinfo, const char *funcname,
 	}
 	else
 	{
-		Jsonb	   *jb = PG_GETARG_JSONB(json_arg_num);
+		Jsonb	   *jb = PG_GETARG_JSONB_P(json_arg_num);
 		JsonbIterator *it;
 		JsonbValue	v;
 		bool		skipNested = false;
 		JsonbIteratorToken r;
-
-		Assert(jtype == JSONBOID);
 
 		if (JB_ROOT_IS_SCALAR(jb) || !JB_ROOT_IS_ARRAY(jb))
 			ereport(ERROR,
@@ -2834,20 +3728,30 @@ populate_recordset_worker(FunctionCallInfo fcinfo, const char *funcname,
 
 			if (r == WJB_ELEM)
 			{
-				Jsonb	   *element = JsonbValueToJsonb(&v);
+				JsObject	obj;
 
-				if (!JB_ROOT_IS_OBJECT(element))
+				if (v.type != jbvBinary ||
+					!JsonContainerIsObject(v.val.binary.data))
 					ereport(ERROR,
 							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						 errmsg("argument of %s must be an array of objects",
-								funcname)));
-				make_row_from_rec_and_jsonb(element, state);
+							 errmsg("argument of %s must be an array of objects",
+									funcname)));
+
+				obj.is_json = false;
+				obj.val.jsonb_cont = v.val.binary.data;
+
+				populate_recordset_record(state, &obj);
 			}
 		}
 	}
 
+	/*
+	 * Note: we must copy the cached tupdesc because the executor will free
+	 * the passed-back setDesc, but we want to hang onto the cache in case
+	 * we're called again in the same query.
+	 */
 	rsi->setResult = state->tuple_store;
-	rsi->setDesc = state->ret_tdesc;
+	rsi->setDesc = CreateTupleDescCopy(cache->c.io.composite.tupdesc);
 
 	PG_RETURN_NULL();
 }
@@ -2885,114 +3789,20 @@ static void
 populate_recordset_object_end(void *state)
 {
 	PopulateRecordsetState *_state = (PopulateRecordsetState *) state;
-	HTAB	   *json_hash = _state->json_hash;
-	Datum	   *values;
-	bool	   *nulls;
-	int			i;
-	RecordIOData *my_extra = _state->my_extra;
-	int			ncolumns = my_extra->ncolumns;
-	TupleDesc	tupdesc = _state->ret_tdesc;
-	JsonHashEntry *hashentry;
-	HeapTupleHeader rec = _state->rec;
-	HeapTuple	rettuple;
+	JsObject	obj;
 
 	/* Nested objects require no special processing */
 	if (_state->lex->lex_level > 1)
 		return;
 
+	obj.is_json = true;
+	obj.val.json_hash = _state->json_hash;
+
 	/* Otherwise, construct and return a tuple based on this level-1 object */
-	values = (Datum *) palloc(ncolumns * sizeof(Datum));
-	nulls = (bool *) palloc(ncolumns * sizeof(bool));
-
-	if (_state->rec)
-	{
-		HeapTupleData tuple;
-
-		/* Build a temporary HeapTuple control structure */
-		tuple.t_len = HeapTupleHeaderGetDatumLength(_state->rec);
-		ItemPointerSetInvalid(&(tuple.t_self));
-		tuple.t_data = _state->rec;
-
-		/* Break down the tuple into fields */
-		heap_deform_tuple(&tuple, tupdesc, values, nulls);
-	}
-	else
-	{
-		for (i = 0; i < ncolumns; ++i)
-		{
-			values[i] = (Datum) 0;
-			nulls[i] = true;
-		}
-	}
-
-	for (i = 0; i < ncolumns; ++i)
-	{
-		ColumnIOData *column_info = &my_extra->columns[i];
-		Oid			column_type = tupdesc->attrs[i]->atttypid;
-		char	   *value;
-
-		/* Ignore dropped columns in datatype */
-		if (tupdesc->attrs[i]->attisdropped)
-		{
-			nulls[i] = true;
-			continue;
-		}
-
-		hashentry = hash_search(json_hash,
-								NameStr(tupdesc->attrs[i]->attname),
-								HASH_FIND, NULL);
-
-		/*
-		 * we can't just skip here if the key wasn't found since we might have
-		 * a domain to deal with. If we were passed in a non-null record
-		 * datum, we assume that the existing values are valid (if they're
-		 * not, then it's not our fault), but if we were passed in a null,
-		 * then every field which we don't populate needs to be run through
-		 * the input function just in case it's a domain type.
-		 */
-		if (hashentry == NULL && rec)
-			continue;
-
-		/*
-		 * Prepare to convert the column value from text
-		 */
-		if (column_info->column_type != column_type)
-		{
-			getTypeInputInfo(column_type,
-							 &column_info->typiofunc,
-							 &column_info->typioparam);
-			fmgr_info_cxt(column_info->typiofunc, &column_info->proc,
-						  _state->fn_mcxt);
-			column_info->column_type = column_type;
-		}
-		if (hashentry == NULL || hashentry->isnull)
-		{
-			/*
-			 * need InputFunctionCall to happen even for nulls, so that domain
-			 * checks are done
-			 */
-			values[i] = InputFunctionCall(&column_info->proc, NULL,
-										  column_info->typioparam,
-										  tupdesc->attrs[i]->atttypmod);
-			nulls[i] = true;
-		}
-		else
-		{
-			value = hashentry->val;
-
-			values[i] = InputFunctionCall(&column_info->proc, value,
-										  column_info->typioparam,
-										  tupdesc->attrs[i]->atttypmod);
-			nulls[i] = false;
-		}
-	}
-
-	rettuple = heap_form_tuple(tupdesc, values, nulls);
-
-	tuplestore_puttuple(_state->tuple_store, rettuple);
+	populate_recordset_record(_state, &obj);
 
 	/* Done with hash for this object */
-	hash_destroy(json_hash);
+	hash_destroy(_state->json_hash);
 	_state->json_hash = NULL;
 }
 
@@ -3038,6 +3848,8 @@ populate_recordset_object_field_start(void *state, char *fname, bool isnull)
 	if (_state->lex->lex_level > 2)
 		return;
 
+	_state->saved_token_type = _state->lex->token_type;
+
 	if (_state->lex->token_type == JSON_TOKEN_ARRAY_START ||
 		_state->lex->token_type == JSON_TOKEN_OBJECT_START)
 	{
@@ -3079,7 +3891,9 @@ populate_recordset_object_field_end(void *state, char *fname, bool isnull)
 	 * that, a later field with the same name overrides the earlier field.
 	 */
 
-	hashentry->isnull = isnull;
+	hashentry->type = _state->saved_token_type;
+	Assert(isnull == (hashentry->type == JSON_TOKEN_NULL));
+
 	if (_state->save_json_start != NULL)
 	{
 		int			len = _state->lex->prev_token_terminator - _state->save_json_start;
@@ -3214,7 +4028,7 @@ sn_scalar(void *state, char *token, JsonTokenType tokentype)
 Datum
 json_strip_nulls(PG_FUNCTION_ARGS)
 {
-	text	   *json = PG_GETARG_TEXT_P(0);
+	text	   *json = PG_GETARG_TEXT_PP(0);
 	StripnullState *state;
 	JsonLexContext *lex;
 	JsonSemAction *sem;
@@ -3249,7 +4063,7 @@ json_strip_nulls(PG_FUNCTION_ARGS)
 Datum
 jsonb_strip_nulls(PG_FUNCTION_ARGS)
 {
-	Jsonb	   *jb = PG_GETARG_JSONB(0);
+	Jsonb	   *jb = PG_GETARG_JSONB_P(0);
 	JsonbIterator *it;
 	JsonbParseState *parseState = NULL;
 	JsonbValue *res = NULL;
@@ -3322,8 +4136,9 @@ addJsonbToParseState(JsonbParseState **jbps, Jsonb *jb)
 
 	if (JB_ROOT_IS_SCALAR(jb))
 	{
-		(void) JsonbIteratorNext(&it, &v, false);		/* skip array header */
-		(void) JsonbIteratorNext(&it, &v, false);		/* fetch scalar value */
+		(void) JsonbIteratorNext(&it, &v, false);	/* skip array header */
+		Assert(v.type == jbvArray);
+		(void) JsonbIteratorNext(&it, &v, false);	/* fetch scalar value */
 
 		switch (o->type)
 		{
@@ -3358,7 +4173,7 @@ addJsonbToParseState(JsonbParseState **jbps, Jsonb *jb)
 Datum
 jsonb_pretty(PG_FUNCTION_ARGS)
 {
-	Jsonb	   *jb = PG_GETARG_JSONB(0);
+	Jsonb	   *jb = PG_GETARG_JSONB_P(0);
 	StringInfo	str = makeStringInfo();
 
 	JsonbToCStringIndent(str, &jb->root, VARSIZE(jb));
@@ -3374,8 +4189,8 @@ jsonb_pretty(PG_FUNCTION_ARGS)
 Datum
 jsonb_concat(PG_FUNCTION_ARGS)
 {
-	Jsonb	   *jb1 = PG_GETARG_JSONB(0);
-	Jsonb	   *jb2 = PG_GETARG_JSONB(1);
+	Jsonb	   *jb1 = PG_GETARG_JSONB_P(0);
+	Jsonb	   *jb2 = PG_GETARG_JSONB_P(1);
 	JsonbParseState *state = NULL;
 	JsonbValue *res;
 	JsonbIterator *it1,
@@ -3390,9 +4205,9 @@ jsonb_concat(PG_FUNCTION_ARGS)
 	if (JB_ROOT_IS_OBJECT(jb1) == JB_ROOT_IS_OBJECT(jb2))
 	{
 		if (JB_ROOT_COUNT(jb1) == 0 && !JB_ROOT_IS_SCALAR(jb2))
-			PG_RETURN_JSONB(jb2);
+			PG_RETURN_JSONB_P(jb2);
 		else if (JB_ROOT_COUNT(jb2) == 0 && !JB_ROOT_IS_SCALAR(jb1))
-			PG_RETURN_JSONB(jb1);
+			PG_RETURN_JSONB_P(jb1);
 	}
 
 	it1 = JsonbIteratorInit(&jb1->root);
@@ -3402,7 +4217,7 @@ jsonb_concat(PG_FUNCTION_ARGS)
 
 	Assert(res != NULL);
 
-	PG_RETURN_JSONB(JsonbValueToJsonb(res));
+	PG_RETURN_JSONB_P(JsonbValueToJsonb(res));
 }
 
 
@@ -3415,7 +4230,7 @@ jsonb_concat(PG_FUNCTION_ARGS)
 Datum
 jsonb_delete(PG_FUNCTION_ARGS)
 {
-	Jsonb	   *in = PG_GETARG_JSONB(0);
+	Jsonb	   *in = PG_GETARG_JSONB_P(0);
 	text	   *key = PG_GETARG_TEXT_PP(1);
 	char	   *keyptr = VARDATA_ANY(key);
 	int			keylen = VARSIZE_ANY_EXHDR(key);
@@ -3432,11 +4247,11 @@ jsonb_delete(PG_FUNCTION_ARGS)
 				 errmsg("cannot delete from scalar")));
 
 	if (JB_ROOT_COUNT(in) == 0)
-		PG_RETURN_JSONB(in);
+		PG_RETURN_JSONB_P(in);
 
 	it = JsonbIteratorInit(&in->root);
 
-	while ((r = JsonbIteratorNext(&it, &v, skipNested)) != 0)
+	while ((r = JsonbIteratorNext(&it, &v, skipNested)) != WJB_DONE)
 	{
 		skipNested = true;
 
@@ -3446,7 +4261,7 @@ jsonb_delete(PG_FUNCTION_ARGS)
 		{
 			/* skip corresponding value as well */
 			if (r == WJB_KEY)
-				JsonbIteratorNext(&it, &v, true);
+				(void) JsonbIteratorNext(&it, &v, true);
 
 			continue;
 		}
@@ -3456,7 +4271,93 @@ jsonb_delete(PG_FUNCTION_ARGS)
 
 	Assert(res != NULL);
 
-	PG_RETURN_JSONB(JsonbValueToJsonb(res));
+	PG_RETURN_JSONB_P(JsonbValueToJsonb(res));
+}
+
+/*
+ * SQL function jsonb_delete (jsonb, variadic text[])
+ *
+ * return a copy of the jsonb with the indicated items
+ * removed.
+ */
+Datum
+jsonb_delete_array(PG_FUNCTION_ARGS)
+{
+	Jsonb	   *in = PG_GETARG_JSONB_P(0);
+	ArrayType  *keys = PG_GETARG_ARRAYTYPE_P(1);
+	Datum	   *keys_elems;
+	bool	   *keys_nulls;
+	int			keys_len;
+	JsonbParseState *state = NULL;
+	JsonbIterator *it;
+	JsonbValue	v,
+			   *res = NULL;
+	bool		skipNested = false;
+	JsonbIteratorToken r;
+
+	if (ARR_NDIM(keys) > 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_ARRAY_SUBSCRIPT_ERROR),
+				 errmsg("wrong number of array subscripts")));
+
+	if (JB_ROOT_IS_SCALAR(in))
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("cannot delete from scalar")));
+
+	if (JB_ROOT_COUNT(in) == 0)
+		PG_RETURN_JSONB_P(in);
+
+	deconstruct_array(keys, TEXTOID, -1, false, 'i',
+					  &keys_elems, &keys_nulls, &keys_len);
+
+	if (keys_len == 0)
+		PG_RETURN_JSONB_P(in);
+
+	it = JsonbIteratorInit(&in->root);
+
+	while ((r = JsonbIteratorNext(&it, &v, skipNested)) != WJB_DONE)
+	{
+		skipNested = true;
+
+		if ((r == WJB_ELEM || r == WJB_KEY) && v.type == jbvString)
+		{
+			int			i;
+			bool		found = false;
+
+			for (i = 0; i < keys_len; i++)
+			{
+				char	   *keyptr;
+				int			keylen;
+
+				if (keys_nulls[i])
+					continue;
+
+				keyptr = VARDATA_ANY(keys_elems[i]);
+				keylen = VARSIZE_ANY_EXHDR(keys_elems[i]);
+				if (keylen == v.val.string.len &&
+					memcmp(keyptr, v.val.string.val, keylen) == 0)
+				{
+					found = true;
+					break;
+				}
+			}
+			if (found)
+			{
+				/* skip corresponding value as well */
+				if (r == WJB_KEY)
+					(void) JsonbIteratorNext(&it, &v, true);
+
+				continue;
+			}
+		}
+
+		res = pushJsonbValue(&state, r, r < WJB_BEGIN_ARRAY ? &v : NULL);
+	}
+
+	Assert(res != NULL);
+
+	PG_RETURN_JSONB_P(JsonbValueToJsonb(res));
 }
 
 /*
@@ -3469,7 +4370,7 @@ jsonb_delete(PG_FUNCTION_ARGS)
 Datum
 jsonb_delete_idx(PG_FUNCTION_ARGS)
 {
-	Jsonb	   *in = PG_GETARG_JSONB(0);
+	Jsonb	   *in = PG_GETARG_JSONB_P(0);
 	int			idx = PG_GETARG_INT32(1);
 	JsonbParseState *state = NULL;
 	JsonbIterator *it;
@@ -3490,7 +4391,7 @@ jsonb_delete_idx(PG_FUNCTION_ARGS)
 				 errmsg("cannot delete from object using integer index")));
 
 	if (JB_ROOT_COUNT(in) == 0)
-		PG_RETURN_JSONB(in);
+		PG_RETURN_JSONB_P(in);
 
 	it = JsonbIteratorInit(&in->root);
 
@@ -3507,11 +4408,11 @@ jsonb_delete_idx(PG_FUNCTION_ARGS)
 	}
 
 	if (idx >= n)
-		PG_RETURN_JSONB(in);
+		PG_RETURN_JSONB_P(in);
 
 	pushJsonbValue(&state, r, NULL);
 
-	while ((r = JsonbIteratorNext(&it, &v, true)) != 0)
+	while ((r = JsonbIteratorNext(&it, &v, true)) != WJB_DONE)
 	{
 		if (r == WJB_ELEM)
 		{
@@ -3524,7 +4425,7 @@ jsonb_delete_idx(PG_FUNCTION_ARGS)
 
 	Assert(res != NULL);
 
-	PG_RETURN_JSONB(JsonbValueToJsonb(res));
+	PG_RETURN_JSONB_P(JsonbValueToJsonb(res));
 }
 
 /*
@@ -3534,9 +4435,9 @@ jsonb_delete_idx(PG_FUNCTION_ARGS)
 Datum
 jsonb_set(PG_FUNCTION_ARGS)
 {
-	Jsonb	   *in = PG_GETARG_JSONB(0);
+	Jsonb	   *in = PG_GETARG_JSONB_P(0);
 	ArrayType  *path = PG_GETARG_ARRAYTYPE_P(1);
-	Jsonb	   *newval = PG_GETARG_JSONB(2);
+	Jsonb	   *newval = PG_GETARG_JSONB_P(2);
 	bool		create = PG_GETARG_BOOL(3);
 	JsonbValue *res = NULL;
 	Datum	   *path_elems;
@@ -3556,32 +4457,32 @@ jsonb_set(PG_FUNCTION_ARGS)
 				 errmsg("cannot set path in scalar")));
 
 	if (JB_ROOT_COUNT(in) == 0 && !create)
-		PG_RETURN_JSONB(in);
+		PG_RETURN_JSONB_P(in);
 
 	deconstruct_array(path, TEXTOID, -1, false, 'i',
 					  &path_elems, &path_nulls, &path_len);
 
 	if (path_len == 0)
-		PG_RETURN_JSONB(in);
+		PG_RETURN_JSONB_P(in);
 
 	it = JsonbIteratorInit(&in->root);
 
 	res = setPath(&it, path_elems, path_nulls, path_len, &st,
-				  0, newval, create ? JB_PATH_CREATE : JB_PATH_NOOP);
+				  0, newval, create ? JB_PATH_CREATE : JB_PATH_REPLACE);
 
 	Assert(res != NULL);
 
-	PG_RETURN_JSONB(JsonbValueToJsonb(res));
+	PG_RETURN_JSONB_P(JsonbValueToJsonb(res));
 }
 
 
 /*
- * SQL function jsonb_delete(jsonb, text[])
+ * SQL function jsonb_delete_path(jsonb, text[])
  */
 Datum
 jsonb_delete_path(PG_FUNCTION_ARGS)
 {
-	Jsonb	   *in = PG_GETARG_JSONB(0);
+	Jsonb	   *in = PG_GETARG_JSONB_P(0);
 	ArrayType  *path = PG_GETARG_ARRAYTYPE_P(1);
 	JsonbValue *res = NULL;
 	Datum	   *path_elems;
@@ -3601,13 +4502,13 @@ jsonb_delete_path(PG_FUNCTION_ARGS)
 				 errmsg("cannot delete path in scalar")));
 
 	if (JB_ROOT_COUNT(in) == 0)
-		PG_RETURN_JSONB(in);
+		PG_RETURN_JSONB_P(in);
 
 	deconstruct_array(path, TEXTOID, -1, false, 'i',
 					  &path_elems, &path_nulls, &path_len);
 
 	if (path_len == 0)
-		PG_RETURN_JSONB(in);
+		PG_RETURN_JSONB_P(in);
 
 	it = JsonbIteratorInit(&in->root);
 
@@ -3616,7 +4517,7 @@ jsonb_delete_path(PG_FUNCTION_ARGS)
 
 	Assert(res != NULL);
 
-	PG_RETURN_JSONB(JsonbValueToJsonb(res));
+	PG_RETURN_JSONB_P(JsonbValueToJsonb(res));
 }
 
 /*
@@ -3626,9 +4527,9 @@ jsonb_delete_path(PG_FUNCTION_ARGS)
 Datum
 jsonb_insert(PG_FUNCTION_ARGS)
 {
-	Jsonb	   *in = PG_GETARG_JSONB(0);
+	Jsonb	   *in = PG_GETARG_JSONB_P(0);
 	ArrayType  *path = PG_GETARG_ARRAYTYPE_P(1);
-	Jsonb	   *newval = PG_GETARG_JSONB(2);
+	Jsonb	   *newval = PG_GETARG_JSONB_P(2);
 	bool		after = PG_GETARG_BOOL(3);
 	JsonbValue *res = NULL;
 	Datum	   *path_elems;
@@ -3651,7 +4552,7 @@ jsonb_insert(PG_FUNCTION_ARGS)
 					  &path_elems, &path_nulls, &path_len);
 
 	if (path_len == 0)
-		PG_RETURN_JSONB(in);
+		PG_RETURN_JSONB_P(in);
 
 	it = JsonbIteratorInit(&in->root);
 
@@ -3660,7 +4561,7 @@ jsonb_insert(PG_FUNCTION_ARGS)
 
 	Assert(res != NULL);
 
-	PG_RETURN_JSONB(JsonbValueToJsonb(res));
+	PG_RETURN_JSONB_P(JsonbValueToJsonb(res));
 }
 
 /*
@@ -3702,7 +4603,7 @@ IteratorConcat(JsonbIterator **it1, JsonbIterator **it2,
 		 * Append the all tokens from v2 to res, include last WJB_END_OBJECT
 		 * (the concatenation will be completed).
 		 */
-		while ((r2 = JsonbIteratorNext(it2, &v2, true)) != 0)
+		while ((r2 = JsonbIteratorNext(it2, &v2, true)) != WJB_DONE)
 			res = pushJsonbValue(state, r2, r2 != WJB_END_OBJECT ? &v2 : NULL);
 	}
 
@@ -3742,10 +4643,10 @@ IteratorConcat(JsonbIterator **it1, JsonbIterator **it2,
 		if (prepend)
 		{
 			pushJsonbValue(state, WJB_BEGIN_OBJECT, NULL);
-			while ((r1 = JsonbIteratorNext(it_object, &v1, true)) != 0)
+			while ((r1 = JsonbIteratorNext(it_object, &v1, true)) != WJB_DONE)
 				pushJsonbValue(state, r1, r1 != WJB_END_OBJECT ? &v1 : NULL);
 
-			while ((r2 = JsonbIteratorNext(it_array, &v2, true)) != 0)
+			while ((r2 = JsonbIteratorNext(it_array, &v2, true)) != WJB_DONE)
 				res = pushJsonbValue(state, r2, r2 != WJB_END_ARRAY ? &v2 : NULL);
 		}
 		else
@@ -3754,7 +4655,7 @@ IteratorConcat(JsonbIterator **it1, JsonbIterator **it2,
 				pushJsonbValue(state, r1, &v1);
 
 			pushJsonbValue(state, WJB_BEGIN_OBJECT, NULL);
-			while ((r2 = JsonbIteratorNext(it_object, &v2, true)) != 0)
+			while ((r2 = JsonbIteratorNext(it_object, &v2, true)) != WJB_DONE)
 				pushJsonbValue(state, r2, r2 != WJB_END_OBJECT ? &v2 : NULL);
 
 			res = pushJsonbValue(state, WJB_END_ARRAY, NULL);
@@ -3971,8 +4872,8 @@ setPathArray(JsonbIterator **it, Datum *path_elems, bool *path_nulls,
 			lindex < INT_MIN)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
-			  errmsg("path element at position %d is not an integer: \"%s\"",
-					 level + 1, c)));
+					 errmsg("path element at position %d is not an integer: \"%s\"",
+							level + 1, c)));
 		idx = lindex;
 	}
 	else
@@ -4025,7 +4926,7 @@ setPathArray(JsonbIterator **it, Datum *path_elems, bool *path_nulls,
 				if (op_type & (JB_PATH_INSERT_AFTER | JB_PATH_INSERT_BEFORE))
 					(void) pushJsonbValue(st, r, &v);
 
-				if (op_type & JB_PATH_INSERT_AFTER)
+				if (op_type & (JB_PATH_INSERT_AFTER | JB_PATH_REPLACE))
 					addJsonbToParseState(st, newval);
 
 				done = true;
@@ -4057,11 +4958,371 @@ setPathArray(JsonbIterator **it, Datum *path_elems, bool *path_nulls,
 				}
 			}
 
-			if (op_type & JB_PATH_CREATE_OR_INSERT && !done &&
+			if ((op_type & JB_PATH_CREATE_OR_INSERT) && !done &&
 				level == path_len - 1 && i == nelems - 1)
 			{
 				addJsonbToParseState(st, newval);
 			}
 		}
 	}
+}
+
+/*
+ * Parse information about what elements of a jsonb document we want to iterate
+ * in functions iterate_json(b)_values. This information is presented in jsonb
+ * format, so that it can be easily extended in the future.
+ */
+uint32
+parse_jsonb_index_flags(Jsonb *jb)
+{
+	JsonbIterator *it;
+	JsonbValue	v;
+	JsonbIteratorToken type;
+	uint32		flags = 0;
+
+	it = JsonbIteratorInit(&jb->root);
+
+	type = JsonbIteratorNext(&it, &v, false);
+
+	/*
+	 * We iterate over array (scalar internally is represented as array, so,
+	 * we will accept it too) to check all its elements.  Flag names are
+	 * chosen the same as jsonb_typeof uses.
+	 */
+	if (type != WJB_BEGIN_ARRAY)
+		ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+						errmsg("wrong flag type, only arrays and scalars are allowed")));
+
+	while ((type = JsonbIteratorNext(&it, &v, false)) == WJB_ELEM)
+	{
+		if (v.type != jbvString)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("flag array element is not a string"),
+					 errhint("Possible values are: \"string\", \"numeric\", \"boolean\", \"key\", and \"all\".")));
+
+		if (v.val.string.len == 3 &&
+			pg_strncasecmp(v.val.string.val, "all", 3) == 0)
+			flags |= jtiAll;
+		else if (v.val.string.len == 3 &&
+				 pg_strncasecmp(v.val.string.val, "key", 3) == 0)
+			flags |= jtiKey;
+		else if (v.val.string.len == 6 &&
+				 pg_strncasecmp(v.val.string.val, "string", 5) == 0)
+			flags |= jtiString;
+		else if (v.val.string.len == 7 &&
+				 pg_strncasecmp(v.val.string.val, "numeric", 7) == 0)
+			flags |= jtiNumeric;
+		else if (v.val.string.len == 7 &&
+				 pg_strncasecmp(v.val.string.val, "boolean", 7) == 0)
+			flags |= jtiBool;
+		else
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("wrong flag in flag array: \"%s\"",
+							pnstrdup(v.val.string.val, v.val.string.len)),
+					 errhint("Possible values are: \"string\", \"numeric\", \"boolean\", \"key\", and \"all\".")));
+	}
+
+	/* expect end of array now */
+	if (type != WJB_END_ARRAY)
+		elog(ERROR, "unexpected end of flag array");
+
+	/* get final WJB_DONE and free iterator */
+	type = JsonbIteratorNext(&it, &v, false);
+	if (type != WJB_DONE)
+		elog(ERROR, "unexpected end of flag array");
+
+	return flags;
+}
+
+/*
+ * Iterate over jsonb values or elements, specified by flags, and pass them
+ * together with an iteration state to a specified JsonIterateStringValuesAction.
+ */
+void
+iterate_jsonb_values(Jsonb *jb, uint32 flags, void *state,
+					 JsonIterateStringValuesAction action)
+{
+	JsonbIterator *it;
+	JsonbValue	v;
+	JsonbIteratorToken type;
+
+	it = JsonbIteratorInit(&jb->root);
+
+	/*
+	 * Just recursively iterating over jsonb and call callback on all
+	 * corresponding elements
+	 */
+	while ((type = JsonbIteratorNext(&it, &v, false)) != WJB_DONE)
+	{
+		if (type == WJB_KEY)
+		{
+			if (flags & jtiKey)
+				action(state, v.val.string.val, v.val.string.len);
+
+			continue;
+		}
+		else if (!(type == WJB_VALUE || type == WJB_ELEM))
+		{
+			/* do not call callback for composite JsonbValue */
+			continue;
+		}
+
+		/* JsonbValue is a value of object or element of array */
+		switch (v.type)
+		{
+			case jbvString:
+				if (flags & jtiString)
+					action(state, v.val.string.val, v.val.string.len);
+				break;
+			case jbvNumeric:
+				if (flags & jtiNumeric)
+				{
+					char	   *val;
+
+					val = DatumGetCString(DirectFunctionCall1(numeric_out,
+															  NumericGetDatum(v.val.numeric)));
+
+					action(state, val, strlen(val));
+					pfree(val);
+				}
+				break;
+			case jbvBool:
+				if (flags & jtiBool)
+				{
+					if (v.val.boolean)
+						action(state, "true", 4);
+					else
+						action(state, "false", 5);
+				}
+				break;
+			default:
+				/* do not call callback for composite JsonbValue */
+				break;
+		}
+	}
+}
+
+/*
+ * Iterate over json values and elements, specified by flags, and pass them
+ * together with an iteration state to a specified JsonIterateStringValuesAction.
+ */
+void
+iterate_json_values(text *json, uint32 flags, void *action_state,
+					JsonIterateStringValuesAction action)
+{
+	JsonLexContext *lex = makeJsonLexContext(json, true);
+	JsonSemAction *sem = palloc0(sizeof(JsonSemAction));
+	IterateJsonStringValuesState *state = palloc0(sizeof(IterateJsonStringValuesState));
+
+	state->lex = lex;
+	state->action = action;
+	state->action_state = action_state;
+	state->flags = flags;
+
+	sem->semstate = (void *) state;
+	sem->scalar = iterate_values_scalar;
+	sem->object_field_start = iterate_values_object_field_start;
+
+	pg_parse_json(lex, sem);
+}
+
+/*
+ * An auxiliary function for iterate_json_values to invoke a specified
+ * JsonIterateStringValuesAction for specified values.
+ */
+static void
+iterate_values_scalar(void *state, char *token, JsonTokenType tokentype)
+{
+	IterateJsonStringValuesState *_state = (IterateJsonStringValuesState *) state;
+
+	switch (tokentype)
+	{
+		case JSON_TOKEN_STRING:
+			if (_state->flags & jtiString)
+				_state->action(_state->action_state, token, strlen(token));
+			break;
+		case JSON_TOKEN_NUMBER:
+			if (_state->flags & jtiNumeric)
+				_state->action(_state->action_state, token, strlen(token));
+			break;
+		case JSON_TOKEN_TRUE:
+		case JSON_TOKEN_FALSE:
+			if (_state->flags & jtiBool)
+				_state->action(_state->action_state, token, strlen(token));
+			break;
+		default:
+			/* do not call callback for any other token */
+			break;
+	}
+}
+
+static void
+iterate_values_object_field_start(void *state, char *fname, bool isnull)
+{
+	IterateJsonStringValuesState *_state = (IterateJsonStringValuesState *) state;
+
+	if (_state->flags & jtiKey)
+	{
+		char	   *val = pstrdup(fname);
+
+		_state->action(_state->action_state, val, strlen(val));
+	}
+}
+
+/*
+ * Iterate over a jsonb, and apply a specified JsonTransformStringValuesAction
+ * to every string value or element. Any necessary context for a
+ * JsonTransformStringValuesAction can be passed in the action_state variable.
+ * Function returns a copy of an original jsonb object with transformed values.
+ */
+Jsonb *
+transform_jsonb_string_values(Jsonb *jsonb, void *action_state,
+							  JsonTransformStringValuesAction transform_action)
+{
+	JsonbIterator *it;
+	JsonbValue	v,
+			   *res = NULL;
+	JsonbIteratorToken type;
+	JsonbParseState *st = NULL;
+	text	   *out;
+	bool		is_scalar = false;
+
+	it = JsonbIteratorInit(&jsonb->root);
+	is_scalar = it->isScalar;
+
+	while ((type = JsonbIteratorNext(&it, &v, false)) != WJB_DONE)
+	{
+		if ((type == WJB_VALUE || type == WJB_ELEM) && v.type == jbvString)
+		{
+			out = transform_action(action_state, v.val.string.val, v.val.string.len);
+			v.val.string.val = VARDATA_ANY(out);
+			v.val.string.len = VARSIZE_ANY_EXHDR(out);
+			res = pushJsonbValue(&st, type, type < WJB_BEGIN_ARRAY ? &v : NULL);
+		}
+		else
+		{
+			res = pushJsonbValue(&st, type, (type == WJB_KEY ||
+											 type == WJB_VALUE ||
+											 type == WJB_ELEM) ? &v : NULL);
+		}
+	}
+
+	if (res->type == jbvArray)
+		res->val.array.rawScalar = is_scalar;
+
+	return JsonbValueToJsonb(res);
+}
+
+/*
+ * Iterate over a json, and apply a specified JsonTransformStringValuesAction
+ * to every string value or element. Any necessary context for a
+ * JsonTransformStringValuesAction can be passed in the action_state variable.
+ * Function returns a StringInfo, which is a copy of an original json with
+ * transformed values.
+ */
+text *
+transform_json_string_values(text *json, void *action_state,
+							 JsonTransformStringValuesAction transform_action)
+{
+	JsonLexContext *lex = makeJsonLexContext(json, true);
+	JsonSemAction *sem = palloc0(sizeof(JsonSemAction));
+	TransformJsonStringValuesState *state = palloc0(sizeof(TransformJsonStringValuesState));
+
+	state->lex = lex;
+	state->strval = makeStringInfo();
+	state->action = transform_action;
+	state->action_state = action_state;
+
+	sem->semstate = (void *) state;
+	sem->scalar = transform_string_values_scalar;
+	sem->object_start = transform_string_values_object_start;
+	sem->object_end = transform_string_values_object_end;
+	sem->array_start = transform_string_values_array_start;
+	sem->array_end = transform_string_values_array_end;
+	sem->scalar = transform_string_values_scalar;
+	sem->array_element_start = transform_string_values_array_element_start;
+	sem->object_field_start = transform_string_values_object_field_start;
+
+	pg_parse_json(lex, sem);
+
+	return cstring_to_text_with_len(state->strval->data, state->strval->len);
+}
+
+/*
+ * Set of auxiliary functions for transform_json_string_values to invoke a
+ * specified JsonTransformStringValuesAction for all values and left everything
+ * else untouched.
+ */
+static void
+transform_string_values_object_start(void *state)
+{
+	TransformJsonStringValuesState *_state = (TransformJsonStringValuesState *) state;
+
+	appendStringInfoCharMacro(_state->strval, '{');
+}
+
+static void
+transform_string_values_object_end(void *state)
+{
+	TransformJsonStringValuesState *_state = (TransformJsonStringValuesState *) state;
+
+	appendStringInfoCharMacro(_state->strval, '}');
+}
+
+static void
+transform_string_values_array_start(void *state)
+{
+	TransformJsonStringValuesState *_state = (TransformJsonStringValuesState *) state;
+
+	appendStringInfoCharMacro(_state->strval, '[');
+}
+
+static void
+transform_string_values_array_end(void *state)
+{
+	TransformJsonStringValuesState *_state = (TransformJsonStringValuesState *) state;
+
+	appendStringInfoCharMacro(_state->strval, ']');
+}
+
+static void
+transform_string_values_object_field_start(void *state, char *fname, bool isnull)
+{
+	TransformJsonStringValuesState *_state = (TransformJsonStringValuesState *) state;
+
+	if (_state->strval->data[_state->strval->len - 1] != '{')
+		appendStringInfoCharMacro(_state->strval, ',');
+
+	/*
+	 * Unfortunately we don't have the quoted and escaped string any more, so
+	 * we have to re-escape it.
+	 */
+	escape_json(_state->strval, fname);
+	appendStringInfoCharMacro(_state->strval, ':');
+}
+
+static void
+transform_string_values_array_element_start(void *state, bool isnull)
+{
+	TransformJsonStringValuesState *_state = (TransformJsonStringValuesState *) state;
+
+	if (_state->strval->data[_state->strval->len - 1] != '[')
+		appendStringInfoCharMacro(_state->strval, ',');
+}
+
+static void
+transform_string_values_scalar(void *state, char *token, JsonTokenType tokentype)
+{
+	TransformJsonStringValuesState *_state = (TransformJsonStringValuesState *) state;
+
+	if (tokentype == JSON_TOKEN_STRING)
+	{
+		text	   *out = _state->action(_state->action_state, token, strlen(token));
+
+		escape_json(_state->strval, text_to_cstring(out));
+	}
+	else
+		appendStringInfoString(_state->strval, token);
 }

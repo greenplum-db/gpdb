@@ -4,11 +4,11 @@ import time
 from gppylib.operations.segment_reconfigurer import SegmentReconfigurer, FTS_PROBE_QUERY
 
 from gppylib.test.unit.gp_unittest import GpTestCase
-from pygresql import pgdb
+import pg
+import pgdb
 import mock
 from mock import Mock, patch, call, MagicMock
 import contextlib
-import pygresql.pg
 
 
 class MyDbUrl:
@@ -35,22 +35,17 @@ class SegmentReconfiguerTestCase(GpTestCase):
         db_url.pgpass = self.passwd
 
         self.connect = MagicMock()
-        cm = contextlib.nested(
-                patch('gppylib.db.dbconn.connect', new=self.connect),
-                patch('gppylib.db.dbconn.DbURL', return_value=self.db_url),
-                patch('pygresql.pg.connect'),
-                )
-        cm.__enter__()
-        self.cm = cm
-
-    def tearDown(self):
-        self.cm.__exit__(None, None, None)
+        self.apply_patches([
+            patch('gppylib.db.dbconn.connect', new=self.connect),
+            patch('gppylib.db.dbconn.DbURL', return_value=self.db_url),
+            patch('pg.connect'),
+        ])
 
     def test_it_triggers_fts_probe(self):
         reconfigurer = SegmentReconfigurer(logger=self.logger,
                 worker_pool=self.worker_pool, timeout=self.timeout)
         reconfigurer.reconfigure()
-        pygresql.pg.connect.assert_has_calls([
+        pg.connect.assert_has_calls([
             call(self.db, self.host, self.port, None, self.user, self.passwd),
             call().query(FTS_PROBE_QUERY),
             call().close(),
@@ -75,7 +70,7 @@ class SegmentReconfiguerTestCase(GpTestCase):
 
         def fail_for_half_a_minute():
             new_time = start_time
-            for i in xrange(2):
+            for i in range(2):
                 # leap forward 15 seconds
                 new_time += self.timeout / 2
                 now_mock.configure_mock(return_value=new_time)

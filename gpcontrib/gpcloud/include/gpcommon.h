@@ -4,7 +4,6 @@
 #include "s3common_headers.h"
 
 // GPDB's global variable
-extern volatile bool QueryCancelPending;
 extern bool S3QueryIsAbortInProgress(void);
 
 #define EOL_STRING_MAX_LEN 4  // 'LF', 'CR', 'CRLF'

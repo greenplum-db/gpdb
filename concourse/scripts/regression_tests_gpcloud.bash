@@ -36,12 +36,8 @@ function setup_gpadmin_user() {
   ./gpdb_src/concourse/scripts/setup_gpadmin_user.bash
 }
 
-function build_gpdb(){
-  ${SCRIPT_DIR}/build_gpdb.py --mode=planner --output_dir=${GPDB_INSTALL_DIR}
-}
-
 function make_cluster() {
-  PYTHONPATH=${SCRIPT_DIR}:${PYTHONPATH} python2 -c "from builds.GpBuild import GpBuild; GpBuild(\"planner\").create_demo_cluster()"
+  PYTHONPATH=${SCRIPT_DIR}:${PYTHONPATH} python2 -c "from builds.GpBuild import GpBuild; GpBuild(\"planner\").create_demo_cluster(install_dir='/usr/local/gpdb')"
 }
 
 function configure_with_planner() {

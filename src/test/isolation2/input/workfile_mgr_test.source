@@ -1,0 +1,88 @@
+CREATE OR REPLACE FUNCTION gp_workfile_mgr_test_on_master(testname text, numfiles int)
+RETURNS setof bool
+LANGUAGE C VOLATILE EXECUTE ON MASTER AS '@abs_builddir@/isolation2_regress@DLSUFFIX@', 'gp_workfile_mgr_test_harness';
+
+CREATE OR REPLACE FUNCTION gp_workfile_mgr_test_on_segments(testname text, numfiles int)
+RETURNS setof bool
+LANGUAGE C VOLATILE EXECUTE ON ALL SEGMENTS AS '@abs_builddir@/isolation2_regress@DLSUFFIX@', 'gp_workfile_mgr_test_harness';
+
+CREATE FUNCTION gp_workfile_mgr_test(testname text, numfiles int)
+RETURNS SETOF BOOL
+AS
+$$
+	SELECT C.* FROM gp_workfile_mgr_test_on_master($1, $2) as C
+	UNION ALL
+	SELECT C.* FROM gp_workfile_mgr_test_on_segments($1, $2) as C
+$$
+LANGUAGE SQL;
+
+CREATE OR REPLACE FUNCTION gp_workfile_mgr_create_workset(worksetname text, interXact bool, holdPin bool, closeFile bool)
+RETURNS void 
+LANGUAGE C VOLATILE EXECUTE ON ALL SEGMENTS AS '@abs_builddir@/isolation2_regress@DLSUFFIX@', 'gp_workfile_mgr_create_workset';
+
+CREATE OR REPLACE FUNCTION gp_workfile_mgr_create_empty_workset(worksetname text)
+RETURNS void 
+LANGUAGE C VOLATILE EXECUTE ON ALL SEGMENTS AS '@abs_builddir@/isolation2_regress@DLSUFFIX@', 'gp_workfile_mgr_create_workset';
+
+CREATE FUNCTION gp_workfile_mgr_cache_entries()
+RETURNS TABLE(segid int4, prefix text, size int8, operation text, slice int4, sessionid int4, commandid int4, numfiles int4)
+AS '$libdir/gp_workfile_mgr', 'gp_workfile_mgr_cache_entries'
+LANGUAGE C VOLATILE EXECUTE ON ALL SEGMENTS;
+
+-- start_ignore
+!\retcode gpconfig -c gp_workfile_max_entries -v 32 --skipvalidation;
+!\retcode gpstop -ari;
+-- end_ignore
+
+-- setup for workfile made in temp tablespace test
+! mkdir -p '@testtablespace@/workfile_mgr';
+1: DROP TABLESPACE IF EXISTS work_file_test_ts;
+1: CREATE TABLESPACE work_file_test_ts LOCATION '@testtablespace@/workfile_mgr';
+
+1: select gp_workfile_mgr_test('atomic_test', 0);
+1: select gp_workfile_mgr_test('fd_tests', 0);
+1: select gp_workfile_mgr_test('fd_large_file_test', 0);
+
+-- test will fail when the workset exceeds gp_workfile_max_entries, the workset will be released at the end of transaction.
+1: select gp_workfile_mgr_test('workfile_fill_sharedcache', 0);
+1: select segid, count(*) from gp_workfile_mgr_cache_entries() group by segid order by segid;
+
+1: select gp_workfile_mgr_test('workfile_create_and_set_cleanup', 2000);
+1: select gp_workfile_mgr_test('workfile_create_and_individual_cleanup', 2000);
+1: select gp_workfile_mgr_test('workfile_made_in_temp_tablespace', 2000);
+1: select gp_workfile_mgr_test('workfile_create_and_individual_cleanup_with_pinned_workfile_set', 2000);
+
+1: DROP TABLESPACE work_file_test_ts;
+
+-- start_ignore
+!\retcode gpconfig -r gp_workfile_max_entries --skipvalidation;
+!\retcode gpstop -ari;
+-- end_ignore
+
+-- test workset cleanup
+2: begin;
+2: select gp_workfile_mgr_create_workset('short_live_workset', false, false, false);
+2: select gp_workfile_mgr_create_empty_workset('long_live_workset');
+2: select segid, count(*) from gp_workfile_mgr_cache_entries() group by segid order by segid;
+
+3: select gp_workfile_mgr_create_workset('inter_xact_workset', true, false, false);
+
+-- transaction commit will cleanup the pinned workfile_set.
+4: begin;
+4: select gp_workfile_mgr_create_workset('commit_tnx_workset', false, true, false);
+4: select gp_workfile_mgr_create_workset('commit_tnx_workset_empty', false, true, true);
+4: select segid, prefix, size, operation, slice, numfiles from gp_workfile_mgr_cache_entries() order by (segid, prefix);
+4: end;
+4: select segid, prefix, size, operation, slice, numfiles from gp_workfile_mgr_cache_entries() order by (segid, prefix);
+
+-- transaction abort will cleanup the workset.
+4: begin;
+4: select gp_workfile_mgr_create_workset('abort_tnx_workset', false, false, false);
+4: select gp_workfile_mgr_create_workset('abort_tnx_workset_pinned', false, true, false);
+4: select segid, prefix, size, operation, slice, numfiles from gp_workfile_mgr_cache_entries() order by (segid, prefix);
+4: abort;
+4: select segid, prefix, size, operation, slice, numfiles from gp_workfile_mgr_cache_entries() order by (segid, prefix);
+
+-- for workset lives across transaction, e.g. with hold cursor, proc exit will cleanup the workset
+3q:
+4: select segid, prefix, size, operation, slice, numfiles from gp_workfile_mgr_cache_entries() order by (segid, prefix);

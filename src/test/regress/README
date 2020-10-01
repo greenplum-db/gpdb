@@ -11,9 +11,9 @@ tests under input/uao*/ directory, e.g. input/uao_ddl/.  Place
 corresponding answer files, also named as .source, into output/uao*/
 directory.  The .source files must begin with the following header:
 
-    create schema <filename_prefix>@orientation@;
-    set search_path="$user",<filename_prefix>@orientation@,public;
-    SET gp_default_storage_options='orientation=@orientation@';
+    create schema <filename_prefix>@amname@;
+    set search_path="$user",<filename_prefix>@amname@,public;
+    SET default_table_access_method=@amname@;
 
 The schema creation is necessary to ensure tables created by _row.sql
 files don't conflict with those created by _column.sql.  Using the

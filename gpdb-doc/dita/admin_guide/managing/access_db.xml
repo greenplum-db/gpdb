@@ -131,12 +131,6 @@
               </row>
               <row>
                 <entry colname="col1">
-                  <codeph>createlang</codeph>
-                </entry>
-                <entry colname="col2">define a new procedural language</entry>
-              </row>
-              <row>
-                <entry colname="col1">
                   <codeph>createuser</codeph>
                 </entry>
                 <entry colname="col2">define a new database role</entry>
@@ -146,12 +140,6 @@
                   <codeph>dropdb</codeph>
                 </entry>
                 <entry colname="col2">remove a database</entry>
-              </row>
-              <row>
-                <entry colname="col1">
-                  <codeph>droplang</codeph>
-                </entry>
-                <entry colname="col2">remove a procedural language</entry>
               </row>
               <row>
                 <entry colname="col1">

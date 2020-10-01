@@ -37,7 +37,8 @@ static CMemoryPool *mp = NULL;
 //              are NULL, gpopt with be initialized with the default allocator.
 //
 //---------------------------------------------------------------------------
-void gpopt_init()
+void
+gpopt_init()
 {
 	{
 		CAutoMemoryPool amp;
@@ -45,7 +46,7 @@ void gpopt_init()
 
 		// add standard exception messages
 		(void) gpopt::EresExceptionInit(mp);
-	
+
 		// detach safety
 		(void) amp.Detach();
 	}
@@ -64,7 +65,8 @@ void gpopt_init()
 //              Destroy the memory pool
 //
 //---------------------------------------------------------------------------
-void gpopt_terminate()
+void
+gpopt_terminate()
 {
 #ifdef GPOS_DEBUG
 	CMDCache::Shutdown();
@@ -72,7 +74,7 @@ void gpopt_terminate()
 	CMemoryPoolManager::GetMemoryPoolMgr()->Destroy(mp);
 
 	CXformFactory::Pxff()->Shutdown();
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 }
 
 // EOF

@@ -372,13 +372,7 @@ PARTITION part201203 VALUES('201203') WITH (APPENDONLY=true, COMPRESSLEVEL=5, OR
 PARTITION part201204 VALUES('201204') WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=row),
 PARTITION part201205 VALUES('201205')
 );
-NOTICE:  CREATE TABLE will create partition "testbug_char5_1_prt_part201203" for table "testbug_char5"
-NOTICE:  CREATE TABLE will create partition "testbug_char5_1_prt_part201204" for table "testbug_char5"
-NOTICE:  CREATE TABLE will create partition "testbug_char5_1_prt_part201205" for table "testbug_char5"
 create index testbug_char5_tag1 on testbug_char5 using btree(tag1);
-NOTICE:  building index for child partition "testbug_char5_1_prt_part201203"
-NOTICE:  building index for child partition "testbug_char5_1_prt_part201204"
-NOTICE:  building index for child partition "testbug_char5_1_prt_part201205"
 insert into testbug_char5 (timest,user_id,to_be_drop) select '201203',1111,'10000';
 insert into testbug_char5 (timest,user_id,to_be_drop) select '201204',1111,'10000';
 insert into testbug_char5 (timest,user_id,to_be_drop) select '201205',1111,'10000';
@@ -415,11 +409,8 @@ select * from testbug_char5 order by 1,2;
 (6 rows)
 
 alter table testbug_char5 add PARTITION part201206 VALUES('201206') WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=column);
-NOTICE:  CREATE TABLE will create partition "testbug_char5_1_prt_part201206" for table "testbug_char5"
 alter table testbug_char5 add PARTITION part201207 VALUES('201207') WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=row);
-NOTICE:  CREATE TABLE will create partition "testbug_char5_1_prt_part201207" for table "testbug_char5"
 alter table testbug_char5 add PARTITION part201208 VALUES('201208');
-NOTICE:  CREATE TABLE will create partition "testbug_char5_1_prt_part201208" for table "testbug_char5"
 insert into testbug_char5 select '201206',3333,'1','2';
 insert into testbug_char5 select '201207',3333,'1','2';
 insert into testbug_char5 select '201208',3333,'1','2';
@@ -480,19 +471,20 @@ alter table ao_multi_level_part_table add partition part3 start(date '2010-01-01
   (subpartition usa values ('usa'), subpartition asia values ('asia'), default subpartition def);
 -- Add default partition (defaults to heap storage unless set with AO)
 alter table ao_multi_level_part_table add default partition yearYYYY (default subpartition def);
-select count(*) from pg_appendonly where relid='ao_multi_level_part_table_1_prt_yearyyyy'::regclass;
- count 
--------
-     0
+SELECT am.amname FROM pg_class c LEFT JOIN pg_am am ON (c.relam = am.oid)
+WHERE c.relname = 'ao_multi_level_part_table_1_prt_yearyyyy_2_prt_def';
+ amname 
+--------
+ heap
 (1 row)
 
 alter table ao_multi_level_part_table drop partition yearYYYY;
-NOTICE:  dropped partition "yearyyyy" for relation "ao_multi_level_part_table" and its children
 alter table ao_multi_level_part_table add default partition yearYYYY with (appendonly=true) (default subpartition def);
-select count(*) from pg_appendonly where relid='ao_multi_level_part_table_1_prt_yearyyyy'::regclass;
- count 
--------
-     1
+SELECT am.amname FROM pg_class c LEFT JOIN pg_am am ON (c.relam = am.oid)
+WHERE c.relname = 'ao_multi_level_part_table_1_prt_yearyyyy_2_prt_def';
+ amname 
+--------
+ ao_row
 (1 row)
 
 -- index on atts 1, 4
@@ -529,8 +521,7 @@ select * from ao_multi_level_part_table;
  03-03-2009 | asia   | Japan   |   1.01
 (3 rows)
 
-alter table ao_multi_level_part_table truncate partition for (rank(1));
-NOTICE:  truncated partition "part1" for relation "ao_multi_level_part_table" and its children
+alter table ao_multi_level_part_table truncate partition for ('2008-02-02');
 select * from ao_multi_level_part_table;
     date    | region | region1 | amount 
 ------------+--------+---------+--------
@@ -539,7 +530,6 @@ select * from ao_multi_level_part_table;
 (2 rows)
 
 alter table ao_multi_level_part_table alter partition part2 truncate partition usa;
-NOTICE:  truncated partition "usa" for partition "part2" of relation "ao_multi_level_part_table"
 select * from ao_multi_level_part_table;
     date    | region | region1 | amount 
 ------------+--------+---------+--------
@@ -547,7 +537,6 @@ select * from ao_multi_level_part_table;
 (1 row)
 
 alter table ao_multi_level_part_table truncate partition part2;
-NOTICE:  truncated partition "part2" for relation "ao_multi_level_part_table" and its children
 select * from ao_multi_level_part_table;
  date | region | region1 | amount 
 ------+--------+---------+--------
@@ -569,7 +558,7 @@ select count(*) from pg_attribute where attrelid='ao_multi_level_part_table'::re
 
 -- splitting top partition of a multi-level partition should not work
 alter table ao_multi_level_part_table split partition part3 at (date '2011-01-01') into (partition part3, partition part4);
-ERROR:  cannot split partition with child partitions
+ERROR:  cannot SPLIT PARTITION for relation "ao_multi_level_part_table" -- partition has children
 HINT:  Try splitting the child partitions.
 --
 -- Check index scan
@@ -678,7 +667,7 @@ set search_path=public;
 drop schema if exists mpp17582 cascade;
 NOTICE:  drop cascades to 4 other objects
 DETAIL:  drop cascades to table mpp17582.testbug_char5
-drop cascades to append only table mpp17582.ao_multi_level_part_table
+drop cascades to table mpp17582.ao_multi_level_part_table
 drop cascades to table mpp17582.dim
 drop cascades to table mpp17582.load
 -- Test for tuple descriptor leak during row splitting
@@ -696,12 +685,7 @@ PARTITION BY LIST(ym)
 (
 	DEFAULT PARTITION p_split_tupdesc_leak_ym  WITH (appendonly=true, orientation=row, compresstype=zlib)
 );
-NOTICE:  CREATE TABLE will create partition "split_tupdesc_leak_1_prt_p_split_tupdesc_leak_ym" for table "split_tupdesc_leak"
 INSERT INTO split_tupdesc_leak VALUES ('201412','0001EC1TPEvT5SaJKIR5yYXlFQ7tS','{0}');
 ALTER TABLE split_tupdesc_leak SPLIT DEFAULT PARTITION AT ('201412')
 	INTO (PARTITION p_split_tupdesc_leak_ym, PARTITION p_split_tupdesc_leak_ym_201412);
-NOTICE:  exchanged partition "p_split_tupdesc_leak_ym" of relation "split_tupdesc_leak" with relation "pg_temp_323542"
-NOTICE:  dropped partition "p_split_tupdesc_leak_ym" for relation "split_tupdesc_leak"
-NOTICE:  CREATE TABLE will create partition "split_tupdesc_leak_1_prt_p_split_tupdesc_leak_ym_201412" for table "split_tupdesc_leak"
-NOTICE:  CREATE TABLE will create partition "split_tupdesc_leak_1_prt_p_split_tupdesc_leak_ym" for table "split_tupdesc_leak"
 DROP TABLE split_tupdesc_leak;

@@ -22,8 +22,8 @@
 #ifndef CDBTARGETEDDISPATCH_H
 #define CDBTARGETEDDISPATCH_H
 
+#include "nodes/pathnodes.h"
 #include "nodes/plannodes.h"
-#include "nodes/relation.h"
 
 extern void FinalizeDirectDispatchDataForSlice(PlanSlice *slice);
 extern void DirectDispatchUpdateContentIdsFromPlan(PlannerInfo *root, Plan *plan);

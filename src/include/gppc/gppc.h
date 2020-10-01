@@ -1907,6 +1907,14 @@ typedef enum GppcReportLevel
 	GPPC_ERROR				= 20,
 } GppcReportLevel;
 
+#ifndef PG_PRINTF_ATTRIBUTE
+#ifdef WIN32
+#define PG_PRINTF_ATTRIBUTE gnu_printf
+#else
+#define PG_PRINTF_ATTRIBUTE printf
+#endif
+#endif
+
 /**
  * \brief Emits a formatted message and may raise error.
  * \param elevel reporting level.

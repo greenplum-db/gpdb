@@ -3,7 +3,7 @@
  * array_userfuncs.c
  *	  Misc user-visible array support functions
  *
- * Copyright (c) 2003-2016, PostgreSQL Global Development Group
+ * Copyright (c) 2003-2019, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/backend/utils/adt/array_userfuncs.c
@@ -13,6 +13,7 @@
 #include "postgres.h"
 
 #include "catalog/pg_type.h"
+#include "common/int.h"
 #include "utils/array.h"
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
@@ -32,6 +33,10 @@ static Datum array_position_common(FunctionCallInfo fcinfo);
  * Caution: if the input is a read/write pointer, this returns the input
  * argument; so callers must be sure that their changes are "safe", that is
  * they cannot leave the array in a corrupt state.
+ *
+ * If we're being called as an aggregate function, make sure any newly-made
+ * expanded array is allocated in the aggregate state context, so as to save
+ * copying operations.
  */
 static ExpandedArrayHeader *
 fetch_array_arg_replace_nulls(FunctionCallInfo fcinfo, int argno)
@@ -39,6 +44,7 @@ fetch_array_arg_replace_nulls(FunctionCallInfo fcinfo, int argno)
 	ExpandedArrayHeader *eah;
 	Oid			element_type;
 	ArrayMetaState *my_extra;
+	MemoryContext resultcxt;
 
 	/* If first time through, create datatype cache struct */
 	my_extra = (ArrayMetaState *) fcinfo->flinfo->fn_extra;
@@ -51,10 +57,17 @@ fetch_array_arg_replace_nulls(FunctionCallInfo fcinfo, int argno)
 		fcinfo->flinfo->fn_extra = my_extra;
 	}
 
+	/* Figure out which context we want the result in */
+	if (!AggCheckCallContext(fcinfo, &resultcxt))
+		resultcxt = CurrentMemoryContext;
+
 	/* Now collect the array value */
 	if (!PG_ARGISNULL(argno))
 	{
+		MemoryContext oldcxt = MemoryContextSwitchTo(resultcxt);
+
 		eah = PG_GETARG_EXPANDED_ARRAYX(argno, my_extra);
+		MemoryContextSwitchTo(oldcxt);
 	}
 	else
 	{
@@ -72,7 +85,7 @@ fetch_array_arg_replace_nulls(FunctionCallInfo fcinfo, int argno)
 					 errmsg("input data type is not an array")));
 
 		eah = construct_empty_expanded_array(element_type,
-											 CurrentMemoryContext,
+											 resultcxt,
 											 my_extra);
 	}
 
@@ -106,15 +119,11 @@ array_append(PG_FUNCTION_ARGS)
 	if (eah->ndims == 1)
 	{
 		/* append newelem */
-		int			ub;
-
 		lb = eah->lbound;
 		dimv = eah->dims;
-		ub = dimv[0] + lb[0] - 1;
-		indx = ub + 1;
 
-		/* overflow? */
-		if (indx < ub)
+		/* index of added elem is at lb[0] + (dimv[0] - 1) + 1 */
+		if (pg_add_s32_overflow(lb[0], dimv[0], &indx))
 			ereport(ERROR,
 					(errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE),
 					 errmsg("integer out of range")));
@@ -131,7 +140,7 @@ array_append(PG_FUNCTION_ARGS)
 
 	result = array_set_element(EOHPGetRWDatum(&eah->hdr),
 							   1, &indx, newelem, isNull,
-			   -1, my_extra->typlen, my_extra->typbyval, my_extra->typalign);
+							   -1, my_extra->typlen, my_extra->typbyval, my_extra->typalign);
 
 	PG_RETURN_DATUM(result);
 }
@@ -164,11 +173,9 @@ array_prepend(PG_FUNCTION_ARGS)
 	{
 		/* prepend newelem */
 		lb = eah->lbound;
-		indx = lb[0] - 1;
 		lb0 = lb[0];
 
-		/* overflow? */
-		if (indx > lb[0])
+		if (pg_sub_s32_overflow(lb0, 1, &indx))
 			ereport(ERROR,
 					(errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE),
 					 errmsg("integer out of range")));
@@ -188,7 +195,7 @@ array_prepend(PG_FUNCTION_ARGS)
 
 	result = array_set_element(EOHPGetRWDatum(&eah->hdr),
 							   1, &indx, newelem, isNull,
-			   -1, my_extra->typlen, my_extra->typbyval, my_extra->typalign);
+							   -1, my_extra->typlen, my_extra->typbyval, my_extra->typalign);
 
 	/* Readjust result's LB to match the input's, as expected for prepend */
 	Assert(result == EOHPGetRWDatum(&eah->hdr));
@@ -340,8 +347,8 @@ array_cat(PG_FUNCTION_ARGS)
 				ereport(ERROR,
 						(errcode(ERRCODE_ARRAY_SUBSCRIPT_ERROR),
 						 errmsg("cannot concatenate incompatible arrays"),
-					errdetail("Arrays with differing element dimensions are "
-							  "not compatible for concatenation.")));
+						 errdetail("Arrays with differing element dimensions are "
+								   "not compatible for concatenation.")));
 
 			dims[i] = dims1[i];
 			lbs[i] = lbs1[i];
@@ -439,76 +446,6 @@ array_cat(PG_FUNCTION_ARGS)
 	}
 
 	PG_RETURN_ARRAYTYPE_P(result);
-}
-
-
-/*
- * used by text_to_array() in varlena.c
- */
-ArrayType *
-create_singleton_array(FunctionCallInfo fcinfo,
-					   Oid element_type,
-					   Datum element,
-					   bool isNull,
-					   int ndims)
-{
-	Datum		dvalues[1];
-	bool		nulls[1];
-	int16		typlen;
-	bool		typbyval;
-	char		typalign;
-	int			dims[MAXDIM];
-	int			lbs[MAXDIM];
-	int			i;
-	ArrayMetaState *my_extra;
-
-	if (ndims < 1)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("invalid number of dimensions: %d", ndims)));
-	if (ndims > MAXDIM)
-		ereport(ERROR,
-				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
-				 errmsg("number of array dimensions (%d) exceeds the maximum allowed (%d)",
-						ndims, MAXDIM)));
-
-	dvalues[0] = element;
-	nulls[0] = isNull;
-
-	for (i = 0; i < ndims; i++)
-	{
-		dims[i] = 1;
-		lbs[i] = 1;
-	}
-
-	/*
-	 * We arrange to look up info about element type only once per series of
-	 * calls, assuming the element type doesn't change underneath us.
-	 */
-	my_extra = (ArrayMetaState *) fcinfo->flinfo->fn_extra;
-	if (my_extra == NULL)
-	{
-		fcinfo->flinfo->fn_extra = MemoryContextAlloc(fcinfo->flinfo->fn_mcxt,
-													  sizeof(ArrayMetaState));
-		my_extra = (ArrayMetaState *) fcinfo->flinfo->fn_extra;
-		my_extra->element_type = ~element_type;
-	}
-
-	if (my_extra->element_type != element_type)
-	{
-		/* Get info about element type */
-		get_typlenbyvalalign(element_type,
-							 &my_extra->typlen,
-							 &my_extra->typbyval,
-							 &my_extra->typalign);
-		my_extra->element_type = element_type;
-	}
-	typlen = my_extra->typlen;
-	typbyval = my_extra->typbyval;
-	typalign = my_extra->typalign;
-
-	return construct_md_array(dvalues, nulls, ndims, dims, lbs, element_type,
-							  typlen, typbyval, typalign);
 }
 
 
@@ -710,7 +647,7 @@ array_int4_add(PG_FUNCTION_ARGS)
 	ndims = ndims1;
 	dims = (int *) palloc(ndims * sizeof(int));
 	lbs = (int *) palloc(ndims * sizeof(int));
-	bigenuf1 = bigenuf2 = TRUE;
+	bigenuf1 = bigenuf2 = true;
 	nelem = 1; /* Neither is empty. */
 
 	for (i = 0; i < ndims; i++)
@@ -721,12 +658,12 @@ array_int4_add(PG_FUNCTION_ARGS)
 		}
 		else if ( dims1[i] < dims2[i] )
 		{
-			bigenuf1 = FALSE;
+			bigenuf1 = false;
 			dims[i] = dims2[i];
 		}
 		else /* dims1[i] > dims2[i] */
 		{
-			bigenuf2 = FALSE;
+			bigenuf2 = false;
 			dims[i] = dims1[i];
 		}
 		nelem *= dims[i];
@@ -1007,11 +944,12 @@ array_position_common(FunctionCallInfo fcinfo)
 		if (!OidIsValid(typentry->eq_opr_finfo.fn_oid))
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_FUNCTION),
-				errmsg("could not identify an equality operator for type %s",
-					   format_type_be(element_type))));
+					 errmsg("could not identify an equality operator for type %s",
+							format_type_be(element_type))));
 
 		my_extra->element_type = element_type;
-		fmgr_info(typentry->eq_opr_finfo.fn_oid, &my_extra->proc);
+		fmgr_info_cxt(typentry->eq_opr_finfo.fn_oid, &my_extra->proc,
+					  fcinfo->flinfo->fn_mcxt);
 	}
 
 	/* Examine each array element until we find a match. */
@@ -1145,11 +1083,12 @@ array_positions(PG_FUNCTION_ARGS)
 		if (!OidIsValid(typentry->eq_opr_finfo.fn_oid))
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_FUNCTION),
-				errmsg("could not identify an equality operator for type %s",
-					   format_type_be(element_type))));
+					 errmsg("could not identify an equality operator for type %s",
+							format_type_be(element_type))));
 
 		my_extra->element_type = element_type;
-		fmgr_info(typentry->eq_opr_finfo.fn_oid, &my_extra->proc);
+		fmgr_info_cxt(typentry->eq_opr_finfo.fn_oid, &my_extra->proc,
+					  fcinfo->flinfo->fn_mcxt);
 	}
 
 	/*

@@ -22,15 +22,11 @@ using namespace gpopt;
 
 XERCES_CPP_NAMESPACE_USE
 
-CParseHandlerWindowOids::CParseHandlerWindowOids
-	(
-	CMemoryPool *mp,
-	CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root
-	)
-	:
-	CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
-	m_window_oids(NULL)
+CParseHandlerWindowOids::CParseHandlerWindowOids(
+	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+	CParseHandlerBase *parse_handler_root)
+	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
+	  m_window_oids(NULL)
 {
 }
 
@@ -40,40 +36,47 @@ CParseHandlerWindowOids::~CParseHandlerWindowOids()
 }
 
 void
-CParseHandlerWindowOids::StartElement
-	(
-	const XMLCh* const , //element_uri,
-	const XMLCh* const element_local_name,
-	const XMLCh* const , //element_qname,
-	const Attributes& attrs
-	)
+CParseHandlerWindowOids::StartElement(const XMLCh *const,  //element_uri,
+									  const XMLCh *const element_local_name,
+									  const XMLCh *const,  //element_qname,
+									  const Attributes &attrs)
 {
-	if (0 != XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenWindowOids), element_local_name))
+	if (0 !=
+		XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenWindowOids),
+								 element_local_name))
 	{
-		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag, str->GetBuffer());
+		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
+			m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,
+				   str->GetBuffer());
 	}
 
 	// parse window function oids
-	OID row_number_oid = CDXLOperatorFactory::ExtractConvertAttrValueToOid(m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenOidRowNumber, EdxltokenWindowOids);
-	OID rank_oid = CDXLOperatorFactory::ExtractConvertAttrValueToOid(m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenOidRank, EdxltokenWindowOids);
+	OID row_number_oid = CDXLOperatorFactory::ExtractConvertAttrValueToOid(
+		m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
+		EdxltokenOidRowNumber, EdxltokenWindowOids);
+	OID rank_oid = CDXLOperatorFactory::ExtractConvertAttrValueToOid(
+		m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenOidRank,
+		EdxltokenWindowOids);
 
 	m_window_oids = GPOS_NEW(m_mp) CWindowOids(row_number_oid, rank_oid);
 }
 
 // invoked by Xerces to process a closing tag
 void
-CParseHandlerWindowOids::EndElement
-	(
-	const XMLCh* const, // element_uri,
-	const XMLCh* const element_local_name,
-	const XMLCh* const // element_qname
-	)
+CParseHandlerWindowOids::EndElement(const XMLCh *const,	 // element_uri,
+									const XMLCh *const element_local_name,
+									const XMLCh *const	// element_qname
+)
 {
-	if (0 != XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenWindowOids), element_local_name))
+	if (0 !=
+		XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenWindowOids),
+								 element_local_name))
 	{
-		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
-		GPOS_RAISE( gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag, str->GetBuffer());
+		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
+			m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,
+				   str->GetBuffer());
 	}
 
 	GPOS_ASSERT(NULL != m_window_oids);

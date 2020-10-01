@@ -52,7 +52,7 @@
 /***************************** COPYRIGHT NOTICES ***********************
 
 Most of this code is directly from the Text::DoubleMetaphone perl module
-version 0.05 available from http://www.cpan.org.
+version 0.05 available from https://www.cpan.org/.
 It bears this copyright notice:
 
 
@@ -93,9 +93,6 @@ The remaining code is authored by Andrew Dunstan <amdunstan@ncshp.org> and
 ***********************************************************************/
 
 
-
-
-
 /* include these first, according to the docs */
 #ifndef DMETAPHONE_MAIN
 
@@ -105,14 +102,19 @@ The remaining code is authored by Andrew Dunstan <amdunstan@ncshp.org> and
 
 /* turn off assertions for embedded function */
 #define NDEBUG
-#endif
 
+#else							/* DMETAPHONE_MAIN */
+
+/* we need these if we didn't get them from postgres.h */
 #include <stdio.h>
-#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+
+#endif							/* DMETAPHONE_MAIN */
+
 #include <assert.h>
+#include <ctype.h>
 
 /* prototype for the main function we got from the perl module */
 static void DoubleMetaphone(char *, char **);
@@ -137,7 +139,7 @@ dmetaphone(PG_FUNCTION_ARGS)
 	if (PG_ARGISNULL(0))
 		PG_RETURN_NULL();
 #endif
-	arg = PG_GETARG_TEXT_P(0);
+	arg = PG_GETARG_TEXT_PP(0);
 	aptr = text_to_cstring(arg);
 
 	DoubleMetaphone(aptr, codes);
@@ -166,7 +168,7 @@ dmetaphone_alt(PG_FUNCTION_ARGS)
 	if (PG_ARGISNULL(0))
 		PG_RETURN_NULL();
 #endif
-	arg = PG_GETARG_TEXT_P(0);
+	arg = PG_GETARG_TEXT_PP(0);
 	aptr = text_to_cstring(arg);
 
 	DoubleMetaphone(aptr, codes);
@@ -195,7 +197,7 @@ dmetaphone_alt(PG_FUNCTION_ARGS)
  * in a case like this.
  */
 
-#define META_FREE(x) ((void)true)		/* pfree((x)) */
+#define META_FREE(x) ((void)true)	/* pfree((x)) */
 #else							/* not defined DMETAPHONE_MAIN */
 
 /* use the standard malloc library when not running in PostgreSQL */
@@ -207,7 +209,7 @@ dmetaphone_alt(PG_FUNCTION_ARGS)
 					  (v = (t*)realloc((v),((n)*sizeof(t))))
 
 #define META_FREE(x) free((x))
-#endif   /* defined DMETAPHONE_MAIN */
+#endif							/* defined DMETAPHONE_MAIN */
 
 
 
@@ -230,7 +232,7 @@ metastring;
  */
 
 static metastring *
-NewMetaString(char *init_str)
+NewMetaString(const char *init_str)
 {
 	metastring *s;
 	char		empty_string[] = "";
@@ -373,7 +375,7 @@ StringAt(metastring *s, int start, int length,...)
 
 
 static void
-MetaphAdd(metastring *s, char *new_str)
+MetaphAdd(metastring *s, const char *new_str)
 {
 	int			add_length;
 
@@ -975,7 +977,7 @@ DoubleMetaphone(char *str, char **codes)
 					}
 				}
 
-				if (GetAt(original, current + 1) == 'J')		/* it could happen! */
+				if (GetAt(original, current + 1) == 'J')	/* it could happen! */
 					current += 2;
 				else
 					current += 1;

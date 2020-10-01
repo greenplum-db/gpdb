@@ -7,7 +7,7 @@
 //
 //	@doc:
 //		Implementation of DXL logical get operator
-//		
+//
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/operators/CDXLLogicalGet.h"
@@ -28,13 +28,8 @@ using namespace gpdxl;
 //		Construct a logical get operator node given its table descriptor rtable entry
 //
 //---------------------------------------------------------------------------
-CDXLLogicalGet::CDXLLogicalGet
-	(
-	CMemoryPool *mp,
-	CDXLTableDescr *table_descr
-	)
-	:CDXLLogical(mp),
-	 m_dxl_table_descr(table_descr)
+CDXLLogicalGet::CDXLLogicalGet(CMemoryPool *mp, CDXLTableDescr *table_descr)
+	: CDXLLogical(mp), m_dxl_table_descr(table_descr)
 {
 }
 
@@ -103,21 +98,20 @@ CDXLLogicalGet::GetDXLTableDescr() const
 //
 //---------------------------------------------------------------------------
 void
-CDXLLogicalGet::SerializeToDXL
-	(
-	CXMLSerializer *xml_serializer,
-	const CDXLNode *//dxlnode
-	)
-	const
+CDXLLogicalGet::SerializeToDXL(CXMLSerializer *xml_serializer,
+							   const CDXLNode *	 //dxlnode
+) const
 {
 	const CWStringConst *element_name = GetOpNameStr();
 
-	xml_serializer->OpenElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	xml_serializer->OpenElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 
 	// serialize table descriptor
 	m_dxl_table_descr->SerializeToDXL(xml_serializer);
 
-	xml_serializer->CloseElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	xml_serializer->CloseElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 }
 
 //---------------------------------------------------------------------------
@@ -129,11 +123,7 @@ CDXLLogicalGet::SerializeToDXL
 //
 //---------------------------------------------------------------------------
 BOOL
-CDXLLogicalGet::IsColDefined
-	(
-	ULONG colid
-	)
-	const
+CDXLLogicalGet::IsColDefined(ULONG colid) const
 {
 	const ULONG size = m_dxl_table_descr->Arity();
 	for (ULONG descr_id = 0; descr_id < size; descr_id++)
@@ -158,17 +148,15 @@ CDXLLogicalGet::IsColDefined
 //
 //---------------------------------------------------------------------------
 void
-CDXLLogicalGet::AssertValid
-	(
-	const CDXLNode *, //dxlnode
-	BOOL // validate_children
-	) const
+CDXLLogicalGet::AssertValid(const CDXLNode *,  //dxlnode
+							BOOL			   // validate_children
+) const
 {
 	// assert validity of table descriptor
 	GPOS_ASSERT(NULL != m_dxl_table_descr);
 	GPOS_ASSERT(NULL != m_dxl_table_descr->MdName());
 	GPOS_ASSERT(m_dxl_table_descr->MdName()->GetMDName()->IsValid());
 }
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 // EOF

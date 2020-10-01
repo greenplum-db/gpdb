@@ -33,24 +33,20 @@ using namespace gpopt;
 //		ctor
 //
 //---------------------------------------------------------------------------
-CXformLeftSemiJoin2InnerJoinUnderGb::CXformLeftSemiJoin2InnerJoinUnderGb
-	(
-	CMemoryPool *mp
-	)
-	:
-	// pattern
-	CXformExploration
-		(
-		GPOS_NEW(mp) CExpression
-					(
-					mp,
-					GPOS_NEW(mp) CLogicalLeftSemiJoin(mp),
-					GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CPatternLeaf(mp)), // left child
-					GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CPatternLeaf(mp)), // right child
-					GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CPatternLeaf(mp))  // predicate
-					)
-		)
-{}
+CXformLeftSemiJoin2InnerJoinUnderGb::CXformLeftSemiJoin2InnerJoinUnderGb(
+	CMemoryPool *mp)
+	:  // pattern
+	  CXformExploration(GPOS_NEW(mp) CExpression(
+		  mp, GPOS_NEW(mp) CLogicalLeftSemiJoin(mp),
+		  GPOS_NEW(mp)
+			  CExpression(mp, GPOS_NEW(mp) CPatternLeaf(mp)),  // left child
+		  GPOS_NEW(mp)
+			  CExpression(mp, GPOS_NEW(mp) CPatternLeaf(mp)),  // right child
+		  GPOS_NEW(mp)
+			  CExpression(mp, GPOS_NEW(mp) CPatternLeaf(mp))  // predicate
+		  ))
+{
+}
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -61,19 +57,15 @@ CXformLeftSemiJoin2InnerJoinUnderGb::CXformLeftSemiJoin2InnerJoinUnderGb
 //
 //---------------------------------------------------------------------------
 CXform::EXformPromise
-CXformLeftSemiJoin2InnerJoinUnderGb::Exfp
-	(
-	CExpressionHandle &exprhdl
-	)
-	const
+CXformLeftSemiJoin2InnerJoinUnderGb::Exfp(CExpressionHandle &exprhdl) const
 {
 	CColRefSet *pcrsInnerOutput = exprhdl.DeriveOutputColumns(1);
-	CExpression *pexprScalar = exprhdl.PexprScalarChild(2);
+	CExpression *pexprScalar = exprhdl.PexprScalarExactChild(2);
 	CAutoMemoryPool amp;
-	if (exprhdl.HasOuterRefs() ||
-		NULL == exprhdl.DeriveKeyCollection(0) ||
-		exprhdl.DeriveHasSubquery(2) ||
-		CPredicateUtils::FSimpleEqualityUsingCols(amp.Pmp(), pexprScalar, pcrsInnerOutput))
+	if (exprhdl.HasOuterRefs() || NULL == exprhdl.DeriveKeyCollection(0) ||
+		NULL == pexprScalar ||
+		CPredicateUtils::FSimpleEqualityUsingCols(amp.Pmp(), pexprScalar,
+												  pcrsInnerOutput))
 	{
 		return ExfpNone;
 	}
@@ -90,13 +82,9 @@ CXformLeftSemiJoin2InnerJoinUnderGb::Exfp
 //
 //---------------------------------------------------------------------------
 void
-CXformLeftSemiJoin2InnerJoinUnderGb::Transform
-	(
-	CXformContext *pxfctxt,
-	CXformResult *pxfres,
-	CExpression *pexpr
-	)
-	const
+CXformLeftSemiJoin2InnerJoinUnderGb::Transform(CXformContext *pxfctxt,
+											   CXformResult *pxfres,
+											   CExpression *pexpr) const
 {
 	GPOS_ASSERT(NULL != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
@@ -114,20 +102,20 @@ CXformLeftSemiJoin2InnerJoinUnderGb::Transform
 	pexprScalar->AddRef();
 
 	CColRefArray *pdrgpcrKeys = NULL;
-	CColRefArray *pdrgpcrGrouping = CUtils::PdrgpcrGroupingKey(mp, pexprOuter, &pdrgpcrKeys);
+	CColRefArray *pdrgpcrGrouping =
+		CUtils::PdrgpcrGroupingKey(mp, pexprOuter, &pdrgpcrKeys);
 	GPOS_ASSERT(NULL != pdrgpcrKeys);
 
-	CExpression *pexprInnerJoin =
-		CUtils::PexprLogicalJoin<CLogicalInnerJoin>(mp, pexprOuter, pexprInner, pexprScalar);
+	CExpression *pexprInnerJoin = CUtils::PexprLogicalJoin<CLogicalInnerJoin>(
+		mp, pexprOuter, pexprInner, pexprScalar);
 
-	CExpression *pexprGb =
-		GPOS_NEW(mp) CExpression
-			(
-			mp,
-			GPOS_NEW(mp) CLogicalGbAggDeduplicate(mp, pdrgpcrGrouping, COperator::EgbaggtypeGlobal  /*egbaggtype*/, pdrgpcrKeys),
-			pexprInnerJoin,
-			GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CScalarProjectList(mp))
-			);
+	CExpression *pexprGb = GPOS_NEW(mp) CExpression(
+		mp,
+		GPOS_NEW(mp) CLogicalGbAggDeduplicate(
+			mp, pdrgpcrGrouping, COperator::EgbaggtypeGlobal /*egbaggtype*/,
+			pdrgpcrKeys),
+		pexprInnerJoin,
+		GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CScalarProjectList(mp)));
 
 	pxfres->Add(pexprGb);
 }

@@ -27,13 +27,6 @@ at once (the master and all of the segment instances). The gpstart utility
 handles the startup of the individual instances. Each instance is started 
 in parallel.
 
-The first time an administrator runs gpstart, the utility creates a hosts 
-cache file named .gphostcache in the user's home directory. Subsequently, 
-the utility uses this list of hosts to start the system more efficiently. 
-If new hosts are added to the system, you must manually remove this file 
-from the gpadmin user's home directory. The utility will create a new hosts 
-cache file at the next startup.
-
 Before you can start a Greenplum Database system, you must have initialized 
 the system using gpinitsystem first.
 
@@ -71,7 +64,7 @@ OPTIONS
   for maintenance tasks. This mode only allows connections to the master 
   in utility mode. For example:
 
-  PGOPTIONS='-c gp_session_role=utility' psql
+  PGOPTIONS='-c gp_role=utility' psql
 
   Note that starting the system in master-only mode is only advisable
   under supervision of Greenplum support.  Improper use of this option
@@ -140,7 +133,7 @@ Start the Greenplum master instance only and connect in utility mode:
 
 gpstart -m
 
-PGOPTIONS='-c gp_session_role=utility' psql
+PGOPTIONS='-c gp_role=utility' psql
 
 
 Display the online help for the gpstart utility:

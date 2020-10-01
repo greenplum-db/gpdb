@@ -8,13 +8,12 @@
 
 #include "postgres.h"
 
-#include <float.h>
 #include <math.h>
 
 #include "access/gist.h"
 #include "access/stratnum.h"
 #include "utils/array.h"
-#include "utils/builtins.h"
+#include "utils/float.h"
 
 #include "cubedata.h"
 
@@ -122,11 +121,11 @@ cube_in(PG_FUNCTION_ARGS)
 	cube_scanner_init(str);
 
 	if (cube_yyparse(&result) != 0)
-		cube_yyerror(&result, "bogus input");
+		cube_yyerror(&result, "cube parser failed");
 
 	cube_scanner_finish();
 
-	PG_RETURN_NDBOX(result);
+	PG_RETURN_NDBOX_P(result);
 }
 
 
@@ -157,7 +156,7 @@ cube_a_f8_f8(PG_FUNCTION_ARGS)
 				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
 				 errmsg("can't extend cube"),
 				 errdetail("A cube cannot have more than %d dimensions.",
-							   CUBE_MAX_DIM)));
+						   CUBE_MAX_DIM)));
 
 	if (ARRNELEMS(ll) != dim)
 		ereport(ERROR,
@@ -194,7 +193,7 @@ cube_a_f8_f8(PG_FUNCTION_ARGS)
 	else
 		SET_POINT_BIT(result);
 
-	PG_RETURN_NDBOX(result);
+	PG_RETURN_NDBOX_P(result);
 }
 
 /*
@@ -221,7 +220,7 @@ cube_a_f8(PG_FUNCTION_ARGS)
 				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
 				 errmsg("array is too long"),
 				 errdetail("A cube cannot have more than %d dimensions.",
-							   CUBE_MAX_DIM)));
+						   CUBE_MAX_DIM)));
 
 	dur = ARRPTR(ur);
 
@@ -234,13 +233,13 @@ cube_a_f8(PG_FUNCTION_ARGS)
 	for (i = 0; i < dim; i++)
 		result->x[i] = dur[i];
 
-	PG_RETURN_NDBOX(result);
+	PG_RETURN_NDBOX_P(result);
 }
 
 Datum
 cube_subset(PG_FUNCTION_ARGS)
 {
-	NDBOX	   *c = PG_GETARG_NDBOX(0);
+	NDBOX	   *c = PG_GETARG_NDBOX_P(0);
 	ArrayType  *idx = PG_GETARG_ARRAYTYPE_P(1);
 	NDBOX	   *result;
 	int			size,
@@ -261,7 +260,7 @@ cube_subset(PG_FUNCTION_ARGS)
 				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
 				 errmsg("array is too long"),
 				 errdetail("A cube cannot have more than %d dimensions.",
-							   CUBE_MAX_DIM)));
+						   CUBE_MAX_DIM)));
 
 	size = IS_POINT(c) ? POINT_SIZE(dim) : CUBE_SIZE(dim);
 	result = (NDBOX *) palloc0(size);
@@ -274,49 +273,34 @@ cube_subset(PG_FUNCTION_ARGS)
 	for (i = 0; i < dim; i++)
 	{
 		if ((dx[i] <= 0) || (dx[i] > DIM(c)))
-		{
-			pfree(result);
 			ereport(ERROR,
 					(errcode(ERRCODE_ARRAY_ELEMENT_ERROR),
 					 errmsg("Index out of bounds")));
-		}
 		result->x[i] = c->x[dx[i] - 1];
 		if (!IS_POINT(c))
 			result->x[i + dim] = c->x[dx[i] + DIM(c) - 1];
 	}
 
 	PG_FREE_IF_COPY(c, 0);
-	PG_RETURN_NDBOX(result);
+	PG_RETURN_NDBOX_P(result);
 }
 
 Datum
 cube_out(PG_FUNCTION_ARGS)
 {
-	NDBOX	   *cube = PG_GETARG_NDBOX(0);
+	NDBOX	   *cube = PG_GETARG_NDBOX_P(0);
 	StringInfoData buf;
 	int			dim = DIM(cube);
 	int			i;
-	int			ndig;
 
 	initStringInfo(&buf);
 
-	/*
-	 * Get the number of digits to display.
-	 */
-	ndig = DBL_DIG + extra_float_digits;
-	if (ndig < 1)
-		ndig = 1;
-
-	/*
-	 * while printing the first (LL) corner, check if it is equal to the
-	 * second one
-	 */
 	appendStringInfoChar(&buf, '(');
 	for (i = 0; i < dim; i++)
 	{
 		if (i > 0)
 			appendStringInfoString(&buf, ", ");
-		appendStringInfo(&buf, "%.*g", ndig, LL_COORD(cube, i));
+		appendStringInfoString(&buf, float8out_internal(LL_COORD(cube, i)));
 	}
 	appendStringInfoChar(&buf, ')');
 
@@ -327,7 +311,7 @@ cube_out(PG_FUNCTION_ARGS)
 		{
 			if (i > 0)
 				appendStringInfoString(&buf, ", ");
-			appendStringInfo(&buf, "%.*g", ndig, UR_COORD(cube, i));
+			appendStringInfoString(&buf, float8out_internal(UR_COORD(cube, i)));
 		}
 		appendStringInfoChar(&buf, ')');
 	}
@@ -344,14 +328,14 @@ cube_out(PG_FUNCTION_ARGS)
 /*
 ** The GiST Consistent method for boxes
 ** Should return false if for all data items x below entry,
-** the predicate x op query == FALSE, where op is the oper
+** the predicate x op query == false, where op is the oper
 ** corresponding to strategy in the pg_amop table.
 */
 Datum
 g_cube_consistent(PG_FUNCTION_ARGS)
 {
 	GISTENTRY  *entry = (GISTENTRY *) PG_GETARG_POINTER(0);
-	NDBOX	   *query = PG_GETARG_NDBOX(1);
+	NDBOX	   *query = PG_GETARG_NDBOX_P(1);
 	StrategyNumber strategy = (StrategyNumber) PG_GETARG_UINT16(2);
 
 	/* Oid		subtype = PG_GETARG_OID(3); */
@@ -366,10 +350,10 @@ g_cube_consistent(PG_FUNCTION_ARGS)
 	 * g_cube_leaf_consistent
 	 */
 	if (GIST_LEAF(entry))
-		res = g_cube_leaf_consistent(DatumGetNDBOX(entry->key),
+		res = g_cube_leaf_consistent(DatumGetNDBOXP(entry->key),
 									 query, strategy);
 	else
-		res = g_cube_internal_consistent(DatumGetNDBOX(entry->key),
+		res = g_cube_internal_consistent(DatumGetNDBOXP(entry->key),
 										 query, strategy);
 
 	PG_FREE_IF_COPY(query, 1);
@@ -390,10 +374,7 @@ g_cube_union(PG_FUNCTION_ARGS)
 	NDBOX	   *tmp;
 	int			i;
 
-	/*
-	 * fprintf(stderr, "union\n");
-	 */
-	tmp = DatumGetNDBOX(entryvec->vector[0].key);
+	tmp = DatumGetNDBOXP(entryvec->vector[0].key);
 
 	/*
 	 * sizep = sizeof(NDBOX); -- NDBOX has variable size
@@ -403,7 +384,7 @@ g_cube_union(PG_FUNCTION_ARGS)
 	for (i = 1; i < entryvec->n; i++)
 	{
 		out = g_cube_binary_union(tmp,
-								  DatumGetNDBOX(entryvec->vector[i].key),
+								  DatumGetNDBOXP(entryvec->vector[i].key),
 								  sizep);
 		tmp = out;
 	}
@@ -426,15 +407,15 @@ Datum
 g_cube_decompress(PG_FUNCTION_ARGS)
 {
 	GISTENTRY  *entry = (GISTENTRY *) PG_GETARG_POINTER(0);
-	NDBOX	   *key = DatumGetNDBOX(PG_DETOAST_DATUM(entry->key));
+	NDBOX	   *key = DatumGetNDBOXP(entry->key);
 
-	if (key != DatumGetNDBOX(entry->key))
+	if (key != DatumGetNDBOXP(entry->key))
 	{
 		GISTENTRY  *retval = (GISTENTRY *) palloc(sizeof(GISTENTRY));
 
 		gistentryinit(*retval, PointerGetDatum(key),
 					  entry->rel, entry->page,
-					  entry->offset, FALSE);
+					  entry->offset, false);
 		PG_RETURN_POINTER(retval);
 	}
 	PG_RETURN_POINTER(entry);
@@ -455,15 +436,12 @@ g_cube_penalty(PG_FUNCTION_ARGS)
 	double		tmp1,
 				tmp2;
 
-	ud = cube_union_v0(DatumGetNDBOX(origentry->key),
-					   DatumGetNDBOX(newentry->key));
+	ud = cube_union_v0(DatumGetNDBOXP(origentry->key),
+					   DatumGetNDBOXP(newentry->key));
 	rt_cube_size(ud, &tmp1);
-	rt_cube_size(DatumGetNDBOX(origentry->key), &tmp2);
+	rt_cube_size(DatumGetNDBOXP(origentry->key), &tmp2);
 	*result = (float) (tmp1 - tmp2);
 
-	/*
-	 * fprintf(stderr, "penalty\n"); fprintf(stderr, "\t%g\n", *result);
-	 */
 	PG_RETURN_FLOAT8(*result);
 }
 
@@ -504,9 +482,6 @@ g_cube_picksplit(PG_FUNCTION_ARGS)
 			   *right;
 	OffsetNumber maxoff;
 
-	/*
-	 * fprintf(stderr, "picksplit\n");
-	 */
 	maxoff = entryvec->n - 2;
 	nbytes = (maxoff + 2) * sizeof(OffsetNumber);
 	v->spl_left = (OffsetNumber *) palloc(nbytes);
@@ -517,17 +492,18 @@ g_cube_picksplit(PG_FUNCTION_ARGS)
 
 	for (i = FirstOffsetNumber; i < maxoff; i = OffsetNumberNext(i))
 	{
-		datum_alpha = DatumGetNDBOX(entryvec->vector[i].key);
+		datum_alpha = DatumGetNDBOXP(entryvec->vector[i].key);
 		for (j = OffsetNumberNext(i); j <= maxoff; j = OffsetNumberNext(j))
 		{
-			datum_beta = DatumGetNDBOX(entryvec->vector[j].key);
+			datum_beta = DatumGetNDBOXP(entryvec->vector[j].key);
 
 			/* compute the wasted space by unioning these guys */
 			/* size_waste = size_union - size_inter; */
 			union_d = cube_union_v0(datum_alpha, datum_beta);
 			rt_cube_size(union_d, &size_union);
-			inter_d = DatumGetNDBOX(DirectFunctionCall2(cube_inter,
-						  entryvec->vector[i].key, entryvec->vector[j].key));
+			inter_d = DatumGetNDBOXP(DirectFunctionCall2(cube_inter,
+														 entryvec->vector[i].key,
+														 entryvec->vector[j].key));
 			rt_cube_size(inter_d, &size_inter);
 			size_waste = size_union - size_inter;
 
@@ -550,10 +526,10 @@ g_cube_picksplit(PG_FUNCTION_ARGS)
 	right = v->spl_right;
 	v->spl_nright = 0;
 
-	datum_alpha = DatumGetNDBOX(entryvec->vector[seed_1].key);
+	datum_alpha = DatumGetNDBOXP(entryvec->vector[seed_1].key);
 	datum_l = cube_union_v0(datum_alpha, datum_alpha);
 	rt_cube_size(datum_l, &size_l);
-	datum_beta = DatumGetNDBOX(entryvec->vector[seed_2].key);
+	datum_beta = DatumGetNDBOXP(entryvec->vector[seed_2].key);
 	datum_r = cube_union_v0(datum_beta, datum_beta);
 	rt_cube_size(datum_r, &size_r);
 
@@ -592,7 +568,7 @@ g_cube_picksplit(PG_FUNCTION_ARGS)
 		}
 
 		/* okay, which page needs least enlargement? */
-		datum_alpha = DatumGetNDBOX(entryvec->vector[i].key);
+		datum_alpha = DatumGetNDBOXP(entryvec->vector[i].key);
 		union_dl = cube_union_v0(datum_l, datum_alpha);
 		union_dr = cube_union_v0(datum_r, datum_alpha);
 		rt_cube_size(union_dl, &size_alpha);
@@ -628,19 +604,16 @@ g_cube_picksplit(PG_FUNCTION_ARGS)
 Datum
 g_cube_same(PG_FUNCTION_ARGS)
 {
-	NDBOX	   *b1 = PG_GETARG_NDBOX(0);
-	NDBOX	   *b2 = PG_GETARG_NDBOX(1);
+	NDBOX	   *b1 = PG_GETARG_NDBOX_P(0);
+	NDBOX	   *b2 = PG_GETARG_NDBOX_P(1);
 	bool	   *result = (bool *) PG_GETARG_POINTER(2);
 
 	if (cube_cmp_v0(b1, b2) == 0)
-		*result = TRUE;
+		*result = true;
 	else
-		*result = FALSE;
+		*result = false;
 
-	/*
-	 * fprintf(stderr, "same: %s\n", (*result ? "TRUE" : "FALSE" ));
-	 */
-	PG_RETURN_NDBOX(result);
+	PG_RETURN_NDBOX_P(result);
 }
 
 /*
@@ -653,29 +626,26 @@ g_cube_leaf_consistent(NDBOX *key,
 {
 	bool		retval;
 
-	/*
-	 * fprintf(stderr, "leaf_consistent, %d\n", strategy);
-	 */
 	switch (strategy)
 	{
 		case RTOverlapStrategyNumber:
-			retval = (bool) cube_overlap_v0(key, query);
+			retval = cube_overlap_v0(key, query);
 			break;
 		case RTSameStrategyNumber:
-			retval = (bool) (cube_cmp_v0(key, query) == 0);
+			retval = (cube_cmp_v0(key, query) == 0);
 			break;
 		case RTContainsStrategyNumber:
 		case RTOldContainsStrategyNumber:
-			retval = (bool) cube_contains_v0(key, query);
+			retval = cube_contains_v0(key, query);
 			break;
 		case RTContainedByStrategyNumber:
 		case RTOldContainedByStrategyNumber:
-			retval = (bool) cube_contains_v0(query, key);
+			retval = cube_contains_v0(query, key);
 			break;
 		default:
-			retval = FALSE;
+			retval = false;
 	}
-	return (retval);
+	return retval;
 }
 
 bool
@@ -685,9 +655,6 @@ g_cube_internal_consistent(NDBOX *key,
 {
 	bool		retval;
 
-	/*
-	 * fprintf(stderr, "internal_consistent, %d\n", strategy);
-	 */
 	switch (strategy)
 	{
 		case RTOverlapStrategyNumber:
@@ -703,9 +670,9 @@ g_cube_internal_consistent(NDBOX *key,
 			retval = (bool) cube_overlap_v0(key, query);
 			break;
 		default:
-			retval = FALSE;
+			retval = false;
 	}
-	return (retval);
+	return retval;
 }
 
 NDBOX *
@@ -716,7 +683,7 @@ g_cube_binary_union(NDBOX *r1, NDBOX *r2, int *sizep)
 	retval = cube_union_v0(r1, r2);
 	*sizep = VARSIZE(retval);
 
-	return (retval);
+	return retval;
 }
 
 
@@ -782,29 +749,29 @@ cube_union_v0(NDBOX *a, NDBOX *b)
 		SET_POINT_BIT(result);
 	}
 
-	return (result);
+	return result;
 }
 
 Datum
 cube_union(PG_FUNCTION_ARGS)
 {
-	NDBOX	   *a = PG_GETARG_NDBOX(0);
-	NDBOX	   *b = PG_GETARG_NDBOX(1);
+	NDBOX	   *a = PG_GETARG_NDBOX_P(0);
+	NDBOX	   *b = PG_GETARG_NDBOX_P(1);
 	NDBOX	   *res;
 
 	res = cube_union_v0(a, b);
 
 	PG_FREE_IF_COPY(a, 0);
 	PG_FREE_IF_COPY(b, 1);
-	PG_RETURN_NDBOX(res);
+	PG_RETURN_NDBOX_P(res);
 }
 
 /* cube_inter */
 Datum
 cube_inter(PG_FUNCTION_ARGS)
 {
-	NDBOX	   *a = PG_GETARG_NDBOX(0);
-	NDBOX	   *b = PG_GETARG_NDBOX(1);
+	NDBOX	   *a = PG_GETARG_NDBOX_P(0);
+	NDBOX	   *b = PG_GETARG_NDBOX_P(1);
 	NDBOX	   *result;
 	bool		swapped = false;
 	int			i;
@@ -876,21 +843,17 @@ cube_inter(PG_FUNCTION_ARGS)
 	/*
 	 * Is it OK to return a non-null intersection for non-overlapping boxes?
 	 */
-	PG_RETURN_NDBOX(result);
+	PG_RETURN_NDBOX_P(result);
 }
 
 /* cube_size */
 Datum
 cube_size(PG_FUNCTION_ARGS)
 {
-	NDBOX	   *a = PG_GETARG_NDBOX(0);
+	NDBOX	   *a = PG_GETARG_NDBOX_P(0);
 	double		result;
-	int			i;
 
-	result = 1.0;
-	for (i = 0; i < DIM(a); i++)
-		result = result * Abs((LL_COORD(a, i) - UR_COORD(a, i)));
-
+	rt_cube_size(a, &result);
 	PG_FREE_IF_COPY(a, 0);
 	PG_RETURN_FLOAT8(result);
 }
@@ -898,17 +861,26 @@ cube_size(PG_FUNCTION_ARGS)
 void
 rt_cube_size(NDBOX *a, double *size)
 {
+	double		result;
 	int			i;
 
 	if (a == (NDBOX *) NULL)
-		*size = 0.0;
+	{
+		/* special case for GiST */
+		result = 0.0;
+	}
+	else if (IS_POINT(a) || DIM(a) == 0)
+	{
+		/* necessarily has zero size */
+		result = 0.0;
+	}
 	else
 	{
-		*size = 1.0;
+		result = 1.0;
 		for (i = 0; i < DIM(a); i++)
-			*size = (*size) * Abs(UR_COORD(a, i) - LL_COORD(a, i));
+			result *= Abs(UR_COORD(a, i) - LL_COORD(a, i));
 	}
-	return;
+	*size = result;
 }
 
 /* make up a metric in which one box will be 'lower' than the other
@@ -996,8 +968,8 @@ cube_cmp_v0(NDBOX *a, NDBOX *b)
 Datum
 cube_cmp(PG_FUNCTION_ARGS)
 {
-	NDBOX	   *a = PG_GETARG_NDBOX(0),
-			   *b = PG_GETARG_NDBOX(1);
+	NDBOX	   *a = PG_GETARG_NDBOX_P(0),
+			   *b = PG_GETARG_NDBOX_P(1);
 	int32		res;
 
 	res = cube_cmp_v0(a, b);
@@ -1011,8 +983,8 @@ cube_cmp(PG_FUNCTION_ARGS)
 Datum
 cube_eq(PG_FUNCTION_ARGS)
 {
-	NDBOX	   *a = PG_GETARG_NDBOX(0),
-			   *b = PG_GETARG_NDBOX(1);
+	NDBOX	   *a = PG_GETARG_NDBOX_P(0),
+			   *b = PG_GETARG_NDBOX_P(1);
 	int32		res;
 
 	res = cube_cmp_v0(a, b);
@@ -1026,8 +998,8 @@ cube_eq(PG_FUNCTION_ARGS)
 Datum
 cube_ne(PG_FUNCTION_ARGS)
 {
-	NDBOX	   *a = PG_GETARG_NDBOX(0),
-			   *b = PG_GETARG_NDBOX(1);
+	NDBOX	   *a = PG_GETARG_NDBOX_P(0),
+			   *b = PG_GETARG_NDBOX_P(1);
 	int32		res;
 
 	res = cube_cmp_v0(a, b);
@@ -1041,8 +1013,8 @@ cube_ne(PG_FUNCTION_ARGS)
 Datum
 cube_lt(PG_FUNCTION_ARGS)
 {
-	NDBOX	   *a = PG_GETARG_NDBOX(0),
-			   *b = PG_GETARG_NDBOX(1);
+	NDBOX	   *a = PG_GETARG_NDBOX_P(0),
+			   *b = PG_GETARG_NDBOX_P(1);
 	int32		res;
 
 	res = cube_cmp_v0(a, b);
@@ -1056,8 +1028,8 @@ cube_lt(PG_FUNCTION_ARGS)
 Datum
 cube_gt(PG_FUNCTION_ARGS)
 {
-	NDBOX	   *a = PG_GETARG_NDBOX(0),
-			   *b = PG_GETARG_NDBOX(1);
+	NDBOX	   *a = PG_GETARG_NDBOX_P(0),
+			   *b = PG_GETARG_NDBOX_P(1);
 	int32		res;
 
 	res = cube_cmp_v0(a, b);
@@ -1071,8 +1043,8 @@ cube_gt(PG_FUNCTION_ARGS)
 Datum
 cube_le(PG_FUNCTION_ARGS)
 {
-	NDBOX	   *a = PG_GETARG_NDBOX(0),
-			   *b = PG_GETARG_NDBOX(1);
+	NDBOX	   *a = PG_GETARG_NDBOX_P(0),
+			   *b = PG_GETARG_NDBOX_P(1);
 	int32		res;
 
 	res = cube_cmp_v0(a, b);
@@ -1086,8 +1058,8 @@ cube_le(PG_FUNCTION_ARGS)
 Datum
 cube_ge(PG_FUNCTION_ARGS)
 {
-	NDBOX	   *a = PG_GETARG_NDBOX(0),
-			   *b = PG_GETARG_NDBOX(1);
+	NDBOX	   *a = PG_GETARG_NDBOX_P(0),
+			   *b = PG_GETARG_NDBOX_P(1);
 	int32		res;
 
 	res = cube_cmp_v0(a, b);
@@ -1106,7 +1078,7 @@ cube_contains_v0(NDBOX *a, NDBOX *b)
 	int			i;
 
 	if ((a == NULL) || (b == NULL))
-		return (FALSE);
+		return false;
 
 	if (DIM(a) < DIM(b))
 	{
@@ -1118,9 +1090,9 @@ cube_contains_v0(NDBOX *a, NDBOX *b)
 		for (i = DIM(a); i < DIM(b); i++)
 		{
 			if (LL_COORD(b, i) != 0)
-				return (FALSE);
+				return false;
 			if (UR_COORD(b, i) != 0)
-				return (FALSE);
+				return false;
 		}
 	}
 
@@ -1129,20 +1101,20 @@ cube_contains_v0(NDBOX *a, NDBOX *b)
 	{
 		if (Min(LL_COORD(a, i), UR_COORD(a, i)) >
 			Min(LL_COORD(b, i), UR_COORD(b, i)))
-			return (FALSE);
+			return false;
 		if (Max(LL_COORD(a, i), UR_COORD(a, i)) <
 			Max(LL_COORD(b, i), UR_COORD(b, i)))
-			return (FALSE);
+			return false;
 	}
 
-	return (TRUE);
+	return true;
 }
 
 Datum
 cube_contains(PG_FUNCTION_ARGS)
 {
-	NDBOX	   *a = PG_GETARG_NDBOX(0),
-			   *b = PG_GETARG_NDBOX(1);
+	NDBOX	   *a = PG_GETARG_NDBOX_P(0),
+			   *b = PG_GETARG_NDBOX_P(1);
 	bool		res;
 
 	res = cube_contains_v0(a, b);
@@ -1157,8 +1129,8 @@ cube_contains(PG_FUNCTION_ARGS)
 Datum
 cube_contained(PG_FUNCTION_ARGS)
 {
-	NDBOX	   *a = PG_GETARG_NDBOX(0),
-			   *b = PG_GETARG_NDBOX(1);
+	NDBOX	   *a = PG_GETARG_NDBOX_P(0),
+			   *b = PG_GETARG_NDBOX_P(1);
 	bool		res;
 
 	res = cube_contains_v0(b, a);
@@ -1175,12 +1147,8 @@ cube_overlap_v0(NDBOX *a, NDBOX *b)
 {
 	int			i;
 
-	/*
-	 * This *very bad* error was found in the source: if ( (a==NULL) ||
-	 * (b=NULL) ) return(FALSE);
-	 */
 	if ((a == NULL) || (b == NULL))
-		return (FALSE);
+		return false;
 
 	/* swap the box pointers if needed */
 	if (DIM(a) < DIM(b))
@@ -1195,29 +1163,29 @@ cube_overlap_v0(NDBOX *a, NDBOX *b)
 	for (i = 0; i < DIM(b); i++)
 	{
 		if (Min(LL_COORD(a, i), UR_COORD(a, i)) > Max(LL_COORD(b, i), UR_COORD(b, i)))
-			return (FALSE);
+			return false;
 		if (Max(LL_COORD(a, i), UR_COORD(a, i)) < Min(LL_COORD(b, i), UR_COORD(b, i)))
-			return (FALSE);
+			return false;
 	}
 
 	/* compare to zero those dimensions in (a) absent in (b) */
 	for (i = DIM(b); i < DIM(a); i++)
 	{
 		if (Min(LL_COORD(a, i), UR_COORD(a, i)) > 0)
-			return (FALSE);
+			return false;
 		if (Max(LL_COORD(a, i), UR_COORD(a, i)) < 0)
-			return (FALSE);
+			return false;
 	}
 
-	return (TRUE);
+	return true;
 }
 
 
 Datum
 cube_overlap(PG_FUNCTION_ARGS)
 {
-	NDBOX	   *a = PG_GETARG_NDBOX(0),
-			   *b = PG_GETARG_NDBOX(1);
+	NDBOX	   *a = PG_GETARG_NDBOX_P(0),
+			   *b = PG_GETARG_NDBOX_P(1);
 	bool		res;
 
 	res = cube_overlap_v0(a, b);
@@ -1236,8 +1204,8 @@ cube_overlap(PG_FUNCTION_ARGS)
 Datum
 cube_distance(PG_FUNCTION_ARGS)
 {
-	NDBOX	   *a = PG_GETARG_NDBOX(0),
-			   *b = PG_GETARG_NDBOX(1);
+	NDBOX	   *a = PG_GETARG_NDBOX_P(0),
+			   *b = PG_GETARG_NDBOX_P(1);
 	bool		swapped = false;
 	double		d,
 				distance;
@@ -1285,8 +1253,8 @@ cube_distance(PG_FUNCTION_ARGS)
 Datum
 distance_taxicab(PG_FUNCTION_ARGS)
 {
-	NDBOX	   *a = PG_GETARG_NDBOX(0),
-			   *b = PG_GETARG_NDBOX(1);
+	NDBOX	   *a = PG_GETARG_NDBOX_P(0),
+			   *b = PG_GETARG_NDBOX_P(1);
 	bool		swapped = false;
 	double		distance;
 	int			i;
@@ -1329,8 +1297,8 @@ distance_taxicab(PG_FUNCTION_ARGS)
 Datum
 distance_chebyshev(PG_FUNCTION_ARGS)
 {
-	NDBOX	   *a = PG_GETARG_NDBOX(0),
-			   *b = PG_GETARG_NDBOX(1);
+	NDBOX	   *a = PG_GETARG_NDBOX_P(0),
+			   *b = PG_GETARG_NDBOX_P(1);
 	bool		swapped = false;
 	double		d,
 				distance;
@@ -1383,36 +1351,96 @@ g_cube_distance(PG_FUNCTION_ARGS)
 {
 	GISTENTRY  *entry = (GISTENTRY *) PG_GETARG_POINTER(0);
 	StrategyNumber strategy = (StrategyNumber) PG_GETARG_UINT16(2);
-	NDBOX	   *cube = DatumGetNDBOX(entry->key);
+	NDBOX	   *cube = DatumGetNDBOXP(entry->key);
 	double		retval;
 
 	if (strategy == CubeKNNDistanceCoord)
 	{
+		/*
+		 * Handle ordering by ~> operator.  See comments of cube_coord_llur()
+		 * for details
+		 */
 		int			coord = PG_GETARG_INT32(1);
+		bool		isLeaf = GistPageIsLeaf(entry->page);
+		bool		inverse = false;
 
-		if (IS_POINT(cube))
-			retval = cube->x[(coord - 1) % DIM(cube)];
+		/* 0 is the only unsupported coordinate value */
+		if (coord == 0)
+			ereport(ERROR,
+					(errcode(ERRCODE_ARRAY_ELEMENT_ERROR),
+					 errmsg("zero cube index is not defined")));
+
+		/* Return inversed value for negative coordinate */
+		if (coord < 0)
+		{
+			coord = -coord;
+			inverse = true;
+		}
+
+		if (coord <= 2 * DIM(cube))
+		{
+			/* dimension index */
+			int			index = (coord - 1) / 2;
+
+			/* whether this is upper bound (lower bound otherwise) */
+			bool		upper = ((coord - 1) % 2 == 1);
+
+			if (IS_POINT(cube))
+			{
+				retval = cube->x[index];
+			}
+			else
+			{
+				if (isLeaf)
+				{
+					/* For leaf just return required upper/lower bound */
+					if (upper)
+						retval = Max(cube->x[index], cube->x[index + DIM(cube)]);
+					else
+						retval = Min(cube->x[index], cube->x[index + DIM(cube)]);
+				}
+				else
+				{
+					/*
+					 * For non-leaf we should always return lower bound,
+					 * because even upper bound of a child in the subtree can
+					 * be as small as our lower bound.  For inversed case we
+					 * return upper bound because it becomes lower bound for
+					 * inversed value.
+					 */
+					if (!inverse)
+						retval = Min(cube->x[index], cube->x[index + DIM(cube)]);
+					else
+						retval = Max(cube->x[index], cube->x[index + DIM(cube)]);
+				}
+			}
+		}
 		else
-			retval = Min(cube->x[(coord - 1) % DIM(cube)],
-						 cube->x[(coord - 1) % DIM(cube) + DIM(cube)]);
+		{
+			retval = 0.0;
+		}
+
+		/* Inverse return value if needed */
+		if (inverse)
+			retval = -retval;
 	}
 	else
 	{
-		NDBOX	   *query = PG_GETARG_NDBOX(1);
+		NDBOX	   *query = PG_GETARG_NDBOX_P(1);
 
 		switch (strategy)
 		{
 			case CubeKNNDistanceTaxicab:
 				retval = DatumGetFloat8(DirectFunctionCall2(distance_taxicab,
-							 PointerGetDatum(cube), PointerGetDatum(query)));
+															PointerGetDatum(cube), PointerGetDatum(query)));
 				break;
 			case CubeKNNDistanceEuclid:
 				retval = DatumGetFloat8(DirectFunctionCall2(cube_distance,
-							 PointerGetDatum(cube), PointerGetDatum(query)));
+															PointerGetDatum(cube), PointerGetDatum(query)));
 				break;
 			case CubeKNNDistanceChebyshev:
 				retval = DatumGetFloat8(DirectFunctionCall2(distance_chebyshev,
-							 PointerGetDatum(cube), PointerGetDatum(query)));
+															PointerGetDatum(cube), PointerGetDatum(query)));
 				break;
 			default:
 				elog(ERROR, "unrecognized cube strategy number: %d", strategy);
@@ -1435,14 +1463,14 @@ distance_1D(double a1, double a2, double b1, double b2)
 		return (Min(a1, a2) - Max(b1, b2));
 
 	/* the rest are all sorts of intersections */
-	return (0.0);
+	return 0.0;
 }
 
 /* Test if a box is also a point */
 Datum
 cube_is_point(PG_FUNCTION_ARGS)
 {
-	NDBOX	   *cube = PG_GETARG_NDBOX(0);
+	NDBOX	   *cube = PG_GETARG_NDBOX_P(0);
 	bool		result;
 
 	result = cube_is_point_internal(cube);
@@ -1477,7 +1505,7 @@ cube_is_point_internal(NDBOX *cube)
 Datum
 cube_dim(PG_FUNCTION_ARGS)
 {
-	NDBOX	   *c = PG_GETARG_NDBOX(0);
+	NDBOX	   *c = PG_GETARG_NDBOX_P(0);
 	int			dim = DIM(c);
 
 	PG_FREE_IF_COPY(c, 0);
@@ -1488,7 +1516,7 @@ cube_dim(PG_FUNCTION_ARGS)
 Datum
 cube_ll_coord(PG_FUNCTION_ARGS)
 {
-	NDBOX	   *c = PG_GETARG_NDBOX(0);
+	NDBOX	   *c = PG_GETARG_NDBOX_P(0);
 	int			n = PG_GETARG_INT32(1);
 	double		result;
 
@@ -1505,7 +1533,7 @@ cube_ll_coord(PG_FUNCTION_ARGS)
 Datum
 cube_ur_coord(PG_FUNCTION_ARGS)
 {
-	NDBOX	   *c = PG_GETARG_NDBOX(0);
+	NDBOX	   *c = PG_GETARG_NDBOX_P(0);
 	int			n = PG_GETARG_INT32(1);
 	double		result;
 
@@ -1526,7 +1554,7 @@ cube_ur_coord(PG_FUNCTION_ARGS)
 Datum
 cube_coord(PG_FUNCTION_ARGS)
 {
-	NDBOX	   *cube = PG_GETARG_NDBOX(0);
+	NDBOX	   *cube = PG_GETARG_NDBOX_P(0);
 	int			coord = PG_GETARG_INT32(1);
 
 	if (coord <= 0 || coord > 2 * DIM(cube))
@@ -1541,50 +1569,92 @@ cube_coord(PG_FUNCTION_ARGS)
 }
 
 
-/*
- * This function works like cube_coord(),
- * but rearranges coordinates of corners to get cube representation
- * in the form of (lower left, upper right).
- * For historical reasons that extension allows us to create cubes in form
- * ((2,1),(1,2)) and instead of normalizing such cube to ((1,1),(2,2)) it
- * stores cube in original way. But to get cubes ordered by one of dimensions
- * directly from the index without extra sort step we need some
- * representation-independent coordinate getter. This function implements it.
+/*----
+ * This function works like cube_coord(), but rearranges coordinates in the
+ * way suitable to support coordinate ordering using KNN-GiST.  For historical
+ * reasons this extension allows us to create cubes in form ((2,1),(1,2)) and
+ * instead of normalizing such cube to ((1,1),(2,2)) it stores cube in original
+ * way.  But in order to get cubes ordered by one of dimensions from the index
+ * without explicit sort step we need this representation-independent coordinate
+ * getter.  Moreover, indexed dataset may contain cubes of different dimensions
+ * number.  Accordingly, this coordinate getter should be able to return
+ * lower/upper bound for particular dimension independently on number of cube
+ * dimensions.  Also, KNN-GiST supports only ascending sorting.  In order to
+ * support descending sorting, this function returns inverse of value when
+ * negative coordinate is given.
+ *
+ * Long story short, this function uses following meaning of coordinates:
+ * # (2 * N - 1) -- lower bound of Nth dimension,
+ * # (2 * N) -- upper bound of Nth dimension,
+ * # - (2 * N - 1) -- negative of lower bound of Nth dimension,
+ * # - (2 * N) -- negative of upper bound of Nth dimension.
+ *
+ * When given coordinate exceeds number of cube dimensions, then 0 returned
+ * (reproducing logic of GiST indexing of variable-length cubes).
  */
 Datum
 cube_coord_llur(PG_FUNCTION_ARGS)
 {
-	NDBOX	   *cube = PG_GETARG_NDBOX(0);
+	NDBOX	   *cube = PG_GETARG_NDBOX_P(0);
 	int			coord = PG_GETARG_INT32(1);
+	bool		inverse = false;
+	float8		result;
 
-	if (coord <= 0 || coord > 2 * DIM(cube))
+	/* 0 is the only unsupported coordinate value */
+	if (coord == 0)
 		ereport(ERROR,
 				(errcode(ERRCODE_ARRAY_ELEMENT_ERROR),
-				 errmsg("cube index %d is out of bounds", coord)));
+				 errmsg("zero cube index is not defined")));
 
-	if (coord <= DIM(cube))
+	/* Return inversed value for negative coordinate */
+	if (coord < 0)
 	{
+		coord = -coord;
+		inverse = true;
+	}
+
+	if (coord <= 2 * DIM(cube))
+	{
+		/* dimension index */
+		int			index = (coord - 1) / 2;
+
+		/* whether this is upper bound (lower bound otherwise) */
+		bool		upper = ((coord - 1) % 2 == 1);
+
 		if (IS_POINT(cube))
-			PG_RETURN_FLOAT8(cube->x[coord - 1]);
+		{
+			result = cube->x[index];
+		}
 		else
-			PG_RETURN_FLOAT8(Min(cube->x[coord - 1],
-								 cube->x[coord - 1 + DIM(cube)]));
+		{
+			if (upper)
+				result = Max(cube->x[index], cube->x[index + DIM(cube)]);
+			else
+				result = Min(cube->x[index], cube->x[index + DIM(cube)]);
+		}
 	}
 	else
 	{
-		if (IS_POINT(cube))
-			PG_RETURN_FLOAT8(cube->x[(coord - 1) % DIM(cube)]);
-		else
-			PG_RETURN_FLOAT8(Max(cube->x[coord - 1],
-								 cube->x[coord - 1 - DIM(cube)]));
+		/*
+		 * Return zero if coordinate is out of bound.  That reproduces logic
+		 * of how cubes with low dimension number are expanded during GiST
+		 * indexing.
+		 */
+		result = 0.0;
 	}
+
+	/* Inverse value if needed */
+	if (inverse)
+		result = -result;
+
+	PG_RETURN_FLOAT8(result);
 }
 
 /* Increase or decrease box size by a radius in at least n dimensions. */
 Datum
 cube_enlarge(PG_FUNCTION_ARGS)
 {
-	NDBOX	   *a = PG_GETARG_NDBOX(0);
+	NDBOX	   *a = PG_GETARG_NDBOX_P(0);
 	double		r = PG_GETARG_FLOAT8(1);
 	int32		n = PG_GETARG_INT32(2);
 	NDBOX	   *result;
@@ -1642,7 +1712,7 @@ cube_enlarge(PG_FUNCTION_ARGS)
 	}
 
 	PG_FREE_IF_COPY(a, 0);
-	PG_RETURN_NDBOX(result);
+	PG_RETURN_NDBOX_P(result);
 }
 
 /* Create a one dimensional box with identical upper and lower coordinates */
@@ -1660,7 +1730,7 @@ cube_f8(PG_FUNCTION_ARGS)
 	SET_POINT_BIT(result);
 	result->x[0] = x;
 
-	PG_RETURN_NDBOX(result);
+	PG_RETURN_NDBOX_P(result);
 }
 
 /* Create a one dimensional box */
@@ -1691,7 +1761,7 @@ cube_f8_f8(PG_FUNCTION_ARGS)
 		result->x[1] = x1;
 	}
 
-	PG_RETURN_NDBOX(result);
+	PG_RETURN_NDBOX_P(result);
 }
 
 /* Add a dimension to an existing cube with the same values for the new
@@ -1699,7 +1769,7 @@ cube_f8_f8(PG_FUNCTION_ARGS)
 Datum
 cube_c_f8(PG_FUNCTION_ARGS)
 {
-	NDBOX	   *cube = PG_GETARG_NDBOX(0);
+	NDBOX	   *cube = PG_GETARG_NDBOX_P(0);
 	double		x = PG_GETARG_FLOAT8(1);
 	NDBOX	   *result;
 	int			size;
@@ -1710,7 +1780,7 @@ cube_c_f8(PG_FUNCTION_ARGS)
 				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
 				 errmsg("can't extend cube"),
 				 errdetail("A cube cannot have more than %d dimensions.",
-							   CUBE_MAX_DIM)));
+						   CUBE_MAX_DIM)));
 
 	if (IS_POINT(cube))
 	{
@@ -1739,14 +1809,14 @@ cube_c_f8(PG_FUNCTION_ARGS)
 	}
 
 	PG_FREE_IF_COPY(cube, 0);
-	PG_RETURN_NDBOX(result);
+	PG_RETURN_NDBOX_P(result);
 }
 
 /* Add a dimension to an existing cube */
 Datum
 cube_c_f8_f8(PG_FUNCTION_ARGS)
 {
-	NDBOX	   *cube = PG_GETARG_NDBOX(0);
+	NDBOX	   *cube = PG_GETARG_NDBOX_P(0);
 	double		x1 = PG_GETARG_FLOAT8(1);
 	double		x2 = PG_GETARG_FLOAT8(2);
 	NDBOX	   *result;
@@ -1758,7 +1828,7 @@ cube_c_f8_f8(PG_FUNCTION_ARGS)
 				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
 				 errmsg("can't extend cube"),
 				 errdetail("A cube cannot have more than %d dimensions.",
-							   CUBE_MAX_DIM)));
+						   CUBE_MAX_DIM)));
 
 	if (IS_POINT(cube) && (x1 == x2))
 	{
@@ -1787,5 +1857,5 @@ cube_c_f8_f8(PG_FUNCTION_ARGS)
 	}
 
 	PG_FREE_IF_COPY(cube, 0);
-	PG_RETURN_NDBOX(result);
+	PG_RETURN_NDBOX_P(result);
 }

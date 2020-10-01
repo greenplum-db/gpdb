@@ -180,8 +180,8 @@ CREATE OR REPLACE FUNCTION cleanupAllGangs() RETURNS BOOL
 AS '@abs_builddir@/regress@DLSUFFIX@', 'cleanupAllGangs' LANGUAGE C;
 
 -- check if segments has backend running
-CREATE OR REPLACE FUNCTION hasBackendsExist(int) RETURNS BOOL 
-AS '@abs_builddir@/regress@DLSUFFIX@', 'hasBackendsExist' LANGUAGE C;
+CREATE OR REPLACE FUNCTION hasBackendsExist(int) RETURNS SETOF BOOL
+AS '@abs_builddir@/regress@DLSUFFIX@', 'hasBackendsExist' LANGUAGE C EXECUTE ON ALL SEGMENTS;
 
 -- check if QD has reusable gangs
 CREATE OR REPLACE FUNCTION hasGangsExist() RETURNS BOOL
@@ -246,7 +246,7 @@ select 'wait recovery finish' from gp_dist_random('gp_id');
 select cleanupAllGangs();
 
 -- expect no zombie backends left on segments 
-select sum(case when hasBackendsExist(30)='t' then 1 else 0 end) > 0 as hasbackends from gp_dist_random('gp_id');
+select sum(case when h = 't' then 1 else 0 end) > 0 as hasbackends from hasbackendsexist(30) as h;
 
 -- should success 
 select * from dispatch_test_t1, dispatch_test_t2, dispatch_test_t3
@@ -270,7 +270,7 @@ where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispat
 select * from hasGangsExist();
 
 -- expect no zombie backends left on segments.
-select sum(case when hasBackendsExist(30)='t' then 1 else 0 end) > 0 as hasbackends from gp_dist_random('gp_id');
+select sum(case when h = 't' then 1 else 0 end) > 0 as hasbackends from hasbackendsexist(30) as h;
 
 -- cleanupAllGangs();
 select cleanupAllGangs();
@@ -288,7 +288,7 @@ where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispat
 select * from hasGangsExist();
 
 -- expect QEs exist.
-select sum(case when hasBackendsExist(0)='t' then 1 else 0 end) > 0 as hasbackends from gp_dist_random('gp_id');
+select sum(case when h = 't' then 1 else 0 end) > 0 as hasbackends from hasbackendsexist(0) as h;
 
 select gp_inject_fault('send_qe_details_init_backend', 'reset', 2);
 
@@ -487,5 +487,50 @@ language plpgsql volatile;
 set gp_cached_segworkers_threshold to 1;
 select count(*) from dispatch_foo, dispatch_bar where exists (select dispatch_foo_func());
 reset gp_cached_segworkers_threshold;
+
+--
+-- Test executor double fault
+-- check PG_TRY/PG_CATCH - we should always return an original error
+-- (for a query and its explain analyze)
+--
+drop table if exists double_fault;
+create table double_fault(a int) distributed by (a);
+insert into double_fault select generate_series(1, 10);
+create or replace function fault_exec_plan(explain_analyze bool default true) returns void as $_$
+declare
+    query text;
+begin
+    perform gp_inject_fault('executor_pre_tuple_processed', 'reset', dbid) from gp_segment_configuration;
+    perform gp_inject_fault('send_exec_stats', 'reset', dbid) from gp_segment_configuration;
+
+    perform gp_inject_fault('executor_pre_tuple_processed', 'error', dbid)
+    from gp_segment_configuration where role = 'p' and content > -1;
+    perform gp_inject_fault('send_exec_stats', 'error', dbid)
+    from gp_segment_configuration where role = 'p' and content > -1;
+
+    if explain_analyze then
+        query := 'explain analyze select count(*) from double_fault';
+    else
+        query := 'select count(*) from double_fault';
+    end if;
+    execute query;
+
+    perform gp_inject_fault('executor_pre_tuple_processed', 'reset', dbid) from gp_segment_configuration;
+    perform gp_inject_fault('send_exec_stats', 'reset', dbid) from gp_segment_configuration;
+exception when fault_inject then
+    perform gp_inject_fault('executor_pre_tuple_processed', 'reset', dbid) from gp_segment_configuration;
+    perform gp_inject_fault('send_exec_stats', 'reset', dbid) from gp_segment_configuration;
+
+    raise exception $$'%' fault triggered$$, case
+        when coalesce(substring(sqlerrm from 'send_exec_stats'), '') != '' then 'send_exec_stats'
+        when coalesce(substring(sqlerrm from 'executor_pre_tuple_processed'), '') != '' then 'executor_pre_tuple_processed'
+    end;
+end;
+$_$ language plpgsql;
+-- Query raising 'executor_pre_tuple_processed' error
+select fault_exec_plan(false);
+-- Same query with explain analyze (should raise
+-- 'executor_pre_tuple_processed' not 'send_exec_stats')
+select fault_exec_plan(true);
 \c regression
 DROP DATABASE dispatch_test_db;

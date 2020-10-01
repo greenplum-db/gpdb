@@ -20,15 +20,14 @@
 #define PG_PROC_CALLBACK_H
 
 #include "catalog/genbki.h"
+#include "catalog/pg_proc_callback_d.h"
 
 /* ----------------
  *		pg_proc_callback definition.  cpp turns this into
  *		typedef struct FormData_pg_proc_callback
  * ----------------
  */
-#define ProcCallbackRelationId	7176
-
-CATALOG(pg_proc_callback,7176) BKI_WITHOUT_OIDS
+CATALOG(pg_proc_callback,7176,ProcCallbackRelationId)
 {
 	regproc	profnoid;		/* oid of the main function */
 	regproc	procallback;	/* oid of the callback function */
@@ -45,16 +44,6 @@ FOREIGN_KEY(procallback REFERENCES pg_proc(oid));
  * ----------------
  */
 typedef FormData_pg_proc_callback *Form_pg_proc_callback;
-
-
-/* ----------------
- *		compiler constants for pg_proc_callback
- * ----------------
- */
-#define Natts_pg_proc_callback				3
-#define Anum_pg_proc_callback_profnoid		1
-#define Anum_pg_proc_callback_procallback	2
-#define Anum_pg_proc_callback_promethod		3
 
 /* values for promethod */
 #define PROMETHOD_DESCRIBE 'd'

@@ -19,7 +19,7 @@
  *		Unlock a previously acquired lock.
  *
  *	bool SpinLockFree(slock_t *lock)
- *		Tests if the lock is free. Returns TRUE if free, FALSE if locked.
+ *		Tests if the lock is free. Returns true if free, false if locked.
  *		This does *not* change the state of the lock.
  *
  *	Callers must beware that the macro argument may be evaluated multiple
@@ -41,7 +41,7 @@
  *	be again.
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/storage/spin.h
@@ -70,8 +70,8 @@ extern int	SpinlockSemas(void);
 extern Size SpinlockSemaSize(void);
 
 #ifndef HAVE_SPINLOCKS
-extern void SpinlockSemaInit(PGSemaphore);
-extern PGSemaphore SpinlockSemaArray;
+extern void SpinlockSemaInit(void);
+extern PGSemaphore *SpinlockSemaArray;
 #endif
 
-#endif   /* SPIN_H */
+#endif							/* SPIN_H */

@@ -15,7 +15,7 @@
         running it through the <codeph><xref href="./gpssh.xml#topic1" type="topic" format="dita"/></codeph> utility. For example, to display the last three lines of each segment log
         file:</p><codeblock>gpssh -f seg_host_file
 =&gt; source /usr/local/greenplum-db/greenplum_path.sh
-=&gt; gplogfilter -n 3 /gpdata/*/pg_log/gpdb*.csv</codeblock><p>By default, the output of <codeph>gplogfilter</codeph> is sent to standard
+=&gt; gplogfilter -n 3 /gpdata/*/log/gpdb*.csv</codeblock><p>By default, the output of <codeph>gplogfilter</codeph> is sent to standard
 output. Use the <codeph>-o</codeph> option to send the output to a file
 or a directory. If you supply an output file name ending in <codeph>.gz</codeph>,
 the output file will be compressed by default using maximum compression.
@@ -61,4 +61,4 @@ cmd11|</codeph>:</p><codeblock>gplogfilter -f '|con6 cmd11|'</codeblock><p>Using
           <codeph>gplogfilter</codeph> on the segment hosts and search for log messages in the
         segment log files containing the string <codeph>con6</codeph> and save output to a file.</p><codeblock>gpssh -f seg_hosts_file -e 'source 
 /usr/local/greenplum-db/greenplum_path.sh ; gplogfilter -f 
-con6 /gpdata/*/pg_log/gpdb*.csv' &gt; seglog.out</codeblock></section><section id="section10"><title>See Also</title><p><codeph><xref href="./gpssh.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref href="./gpscp.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+con6 /gpdata/*/log/gpdb*.csv' &gt; seglog.out</codeblock></section><section id="section10"><title>See Also</title><p><codeph><xref href="./gpssh.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref href="./gpscp.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>

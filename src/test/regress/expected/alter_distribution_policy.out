@@ -11,13 +11,13 @@ ERROR:  syntax error at or near ")"
 LINE 1: alter table atsdb set distributed by ();
                                               ^
 alter table atsdb set distributed by (m);
-ERROR:  column "m" of relation "atsdb" does not exist
+ERROR:  column "m" does not exist
 alter table atsdb set distributed by (i, i);
 ERROR:  duplicate column in DISTRIBUTED BY clause
 LINE 1: alter table atsdb set distributed by (i, i);
                                                  ^
 alter table atsdb set distributed by (i, m);
-ERROR:  column "m" of relation "atsdb" does not exist
+ERROR:  column "m" does not exist
 alter table atsdb set distributed by (i);
 WARNING:  distribution policy of relation "atsdb" already set to (i)
 HINT:  Use ALTER TABLE "atsdb" SET WITH (REORGANIZE=TRUE) DISTRIBUTED BY (i) to force redistribution
@@ -600,15 +600,6 @@ drop table atsdb;
 -- Check that we correctly cascade for partitioned tables
 create table atsdb (i int, j int, k int) distributed by (i) partition by range(k)
 (start(1) end(10) every(1));
-NOTICE:  CREATE TABLE will create partition "atsdb_1_prt_1" for table "atsdb"
-NOTICE:  CREATE TABLE will create partition "atsdb_1_prt_2" for table "atsdb"
-NOTICE:  CREATE TABLE will create partition "atsdb_1_prt_3" for table "atsdb"
-NOTICE:  CREATE TABLE will create partition "atsdb_1_prt_4" for table "atsdb"
-NOTICE:  CREATE TABLE will create partition "atsdb_1_prt_5" for table "atsdb"
-NOTICE:  CREATE TABLE will create partition "atsdb_1_prt_6" for table "atsdb"
-NOTICE:  CREATE TABLE will create partition "atsdb_1_prt_7" for table "atsdb"
-NOTICE:  CREATE TABLE will create partition "atsdb_1_prt_8" for table "atsdb"
-NOTICE:  CREATE TABLE will create partition "atsdb_1_prt_9" for table "atsdb"
 insert into atsdb select i+2, i+1, i from generate_series(1, 9) i;
 select * from distcheck where rel like 'atsdb%';
       rel      | attname 
@@ -707,25 +698,13 @@ drop view distcheck;
 -- Should succeed
 create table atsdb (i int, k int) distributed by (i) partition by range(i) (start (1) end(10)
 every(1));
-NOTICE:  CREATE TABLE will create partition "atsdb_1_prt_1" for table "atsdb"
-NOTICE:  CREATE TABLE will create partition "atsdb_1_prt_2" for table "atsdb"
-NOTICE:  CREATE TABLE will create partition "atsdb_1_prt_3" for table "atsdb"
-NOTICE:  CREATE TABLE will create partition "atsdb_1_prt_4" for table "atsdb"
-NOTICE:  CREATE TABLE will create partition "atsdb_1_prt_5" for table "atsdb"
-NOTICE:  CREATE TABLE will create partition "atsdb_1_prt_6" for table "atsdb"
-NOTICE:  CREATE TABLE will create partition "atsdb_1_prt_7" for table "atsdb"
-NOTICE:  CREATE TABLE will create partition "atsdb_1_prt_8" for table "atsdb"
-NOTICE:  CREATE TABLE will create partition "atsdb_1_prt_9" for table "atsdb"
-alter table atsdb alter partition for(rank(5)) set distributed by (i);
-NOTICE:  altering table "atsdb_1_prt_5" (partition for rank 5 of relation "atsdb")
+alter table atsdb alter partition for (5) set distributed by (i);
 WARNING:  distribution policy of relation "atsdb_1_prt_5" already set to (i)
 HINT:  Use ALTER TABLE "atsdb_1_prt_5" SET WITH (REORGANIZE=TRUE) DISTRIBUTED BY (i) to force redistribution
-alter table atsdb alter partition for(rank(5)) set distributed by (i);
-NOTICE:  altering table "atsdb_1_prt_5" (partition for rank 5 of relation "atsdb")
+alter table atsdb alter partition for (5) set distributed by (i);
 WARNING:  distribution policy of relation "atsdb_1_prt_5" already set to (i)
 HINT:  Use ALTER TABLE "atsdb_1_prt_5" SET WITH (REORGANIZE=TRUE) DISTRIBUTED BY (i) to force redistribution
-alter table atsdb alter partition for(rank(5)) set distributed by (i);
-NOTICE:  altering table "atsdb_1_prt_5" (partition for rank 5 of relation "atsdb")
+alter table atsdb alter partition for (5) set distributed by (i);
 WARNING:  distribution policy of relation "atsdb_1_prt_5" already set to (i)
 HINT:  Use ALTER TABLE "atsdb_1_prt_5" SET WITH (REORGANIZE=TRUE) DISTRIBUTED BY (i) to force redistribution
 drop table atsdb;
@@ -1107,15 +1086,6 @@ create table mpp5738 (a int, b int, c int, d int)
 partition by range(d) (start(1) end(10) inclusive every(1));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "mpp5738_1_prt_1" for table "mpp5738"
-NOTICE:  CREATE TABLE will create partition "mpp5738_1_prt_2" for table "mpp5738"
-NOTICE:  CREATE TABLE will create partition "mpp5738_1_prt_3" for table "mpp5738"
-NOTICE:  CREATE TABLE will create partition "mpp5738_1_prt_4" for table "mpp5738"
-NOTICE:  CREATE TABLE will create partition "mpp5738_1_prt_5" for table "mpp5738"
-NOTICE:  CREATE TABLE will create partition "mpp5738_1_prt_6" for table "mpp5738"
-NOTICE:  CREATE TABLE will create partition "mpp5738_1_prt_7" for table "mpp5738"
-NOTICE:  CREATE TABLE will create partition "mpp5738_1_prt_8" for table "mpp5738"
-NOTICE:  CREATE TABLE will create partition "mpp5738_1_prt_9" for table "mpp5738"
 insert into mpp5738 select i, i+1, i+2, i from generate_series(1, 10) i;
 select * from mpp5738;
  a  | b  | c  | d  
@@ -1132,8 +1102,7 @@ select * from mpp5738;
  10 | 11 | 12 | 10
 (10 rows)
 
-alter table mpp5738 alter partition for(rank(1)) set with (appendonly=true);
-NOTICE:  altering table "mpp5738_1_prt_1" (partition for rank 1 of relation "mpp5738")
+alter table mpp5738 alter partition for (1) set with (appendonly=true);
 ERROR:  option "appendonly" not supported
 select * from mpp5738;
  a  | b  | c  | d  
@@ -1314,9 +1283,7 @@ partition by list(col2)
 (
     partition part1 values(1,2,3,4,5,6,7,8,9,10) WITH (appendonly=false )
 );
-NOTICE:  CREATE TABLE will create partition "distrib_part_test_1_prt_part1" for table "distrib_part_test"
 create index distrib_part_test_idx on distrib_part_test(col1);
-NOTICE:  building index for child partition "distrib_part_test_1_prt_part1"
 ALTER TABLE public.distrib_part_test SET with (reorganize=false) DISTRIBUTED RANDOMLY;
 -- MPP-23801
 --
@@ -1430,15 +1397,14 @@ select *, gp_segment_id from reorg_leaf_1_prt_p0;
  1 | 1 | 1 |             1
 (5 rows)
 
+-- fail: cannot change the distribution key of one partition
 alter table reorg_leaf_1_prt_p0 set with (reorganize=true) distributed by(b);
 ERROR:  can't set the distribution policy of "reorg_leaf_1_prt_p0"
 HINT:  Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.
+-- distribution key is already 'c', so this is allowed
 alter table reorg_leaf_1_prt_p0 set with (reorganize=true) distributed by(c);
-ERROR:  can't set the distribution policy of "reorg_leaf_1_prt_p0"
-HINT:  Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.
 alter table reorg_leaf_1_prt_p0 set with (reorganize=true);
-ERROR:  can't set the distribution policy of "reorg_leaf_1_prt_p0"
-HINT:  Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.
+-- same with a leaf partition
 alter table reorg_leaf_1_prt_p0_2_prt_1 set with (reorganize=true) distributed by(b);
 ERROR:  can't set the distribution policy of "reorg_leaf_1_prt_p0_2_prt_1"
 HINT:  Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.

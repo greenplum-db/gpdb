@@ -28,6 +28,7 @@
 #include "utils/array.h"
 #include "utils/builtins.h"
 #include "utils/complex_type.h"
+#include "utils/float.h"
 #include "utils/float_utils.h"
 #include "utils/geo_decls.h"
 #include "utils/numeric.h"

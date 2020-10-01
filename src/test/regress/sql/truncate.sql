@@ -181,7 +181,7 @@ DROP TABLE trunc_trigger_log;
 DROP FUNCTION trunctrigger();
 
 -- test TRUNCATE ... RESTART IDENTITY
-CREATE SEQUENCE truncate_a_id1 START WITH 33;
+CREATE SEQUENCE truncate_a_id1 START WITH 33 CACHE 1;
 CREATE TABLE truncate_a (id serial,
                          id1 integer default nextval('truncate_a_id1'));
 ALTER SEQUENCE truncate_a_id1 OWNED BY truncate_a.id1;
@@ -202,6 +202,24 @@ INSERT INTO truncate_a DEFAULT VALUES;
 INSERT INTO truncate_a DEFAULT VALUES;
 SELECT * FROM truncate_a;
 
+CREATE TABLE truncate_b (id int GENERATED ALWAYS AS IDENTITY (START WITH 44));
+
+INSERT INTO truncate_b DEFAULT VALUES;
+INSERT INTO truncate_b DEFAULT VALUES;
+SELECT * FROM truncate_b;
+
+TRUNCATE truncate_b;
+
+INSERT INTO truncate_b DEFAULT VALUES;
+INSERT INTO truncate_b DEFAULT VALUES;
+SELECT * FROM truncate_b;
+
+TRUNCATE truncate_b RESTART IDENTITY;
+
+INSERT INTO truncate_b DEFAULT VALUES;
+INSERT INTO truncate_b DEFAULT VALUES;
+SELECT * FROM truncate_b;
+
 -- check rollback of a RESTART IDENTITY operation
 BEGIN;
 TRUNCATE truncate_a RESTART IDENTITY;
@@ -214,3 +232,60 @@ SELECT * FROM truncate_a;
 DROP TABLE truncate_a;
 
 SELECT nextval('truncate_a_id1'); -- fail, seq should have been dropped
+
+-- partitioned table
+CREATE TABLE truncparted (a int, b char) PARTITION BY LIST (a);
+-- error, can't truncate a partitioned table
+TRUNCATE ONLY truncparted;
+CREATE TABLE truncparted1 PARTITION OF truncparted FOR VALUES IN (1);
+INSERT INTO truncparted VALUES (1, 'a');
+-- error, must truncate partitions
+TRUNCATE ONLY truncparted;
+TRUNCATE truncparted;
+DROP TABLE truncparted;
+
+-- foreign key on partitioned table: partition key is referencing column.
+-- Make sure truncate did execute on all tables
+CREATE FUNCTION tp_ins_data() RETURNS void LANGUAGE plpgsql AS $$
+  BEGIN
+	INSERT INTO truncprim VALUES (1), (100), (150);
+	INSERT INTO truncpart VALUES (1), (100), (150);
+  END
+$$;
+CREATE FUNCTION tp_chk_data(OUT pktb regclass, OUT pkval int, OUT fktb regclass, OUT fkval int)
+  RETURNS SETOF record LANGUAGE plpgsql AS $$
+  BEGIN
+    RETURN QUERY SELECT
+      pk.tableoid::regclass, pk.a, fk.tableoid::regclass, fk.a
+    FROM truncprim pk FULL JOIN truncpart fk USING (a)
+    ORDER BY 2, 4;
+  END
+$$;
+CREATE TABLE truncprim (a int PRIMARY KEY);
+CREATE TABLE truncpart (a int REFERENCES truncprim)
+  PARTITION BY RANGE (a);
+CREATE TABLE truncpart_1 PARTITION OF truncpart FOR VALUES FROM (0) TO (100);
+CREATE TABLE truncpart_2 PARTITION OF truncpart FOR VALUES FROM (100) TO (200)
+  PARTITION BY RANGE (a);
+CREATE TABLE truncpart_2_1 PARTITION OF truncpart_2 FOR VALUES FROM (100) TO (150);
+CREATE TABLE truncpart_2_d PARTITION OF truncpart_2 DEFAULT;
+
+-- GPDB: this doesn't fail in GPDB, because GPDB doesn't enforce primary keys.
+TRUNCATE TABLE truncprim;	-- should fail
+
+select tp_ins_data();
+-- should truncate everything
+TRUNCATE TABLE truncprim, truncpart;
+select * from tp_chk_data();
+
+select tp_ins_data();
+-- should truncate everything
+TRUNCATE TABLE truncprim CASCADE;
+SELECT * FROM tp_chk_data();
+
+SELECT tp_ins_data();
+-- should truncate all partitions
+TRUNCATE TABLE truncpart;
+SELECT * FROM tp_chk_data();
+DROP TABLE truncprim, truncpart;
+DROP FUNCTION tp_ins_data(), tp_chk_data();

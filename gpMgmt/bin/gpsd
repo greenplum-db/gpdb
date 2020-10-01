@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (c) 2014 Pivotal inc.
 
 
@@ -11,14 +11,13 @@ import re
 from contextlib import closing
 from distutils.version import LooseVersion
 from optparse import OptionParser
-from pygresql import pgdb
+import pgdb
 
 gpsd_version = '%prog 1.0'
 
 sysnslist = "('pg_toast', 'pg_bitmapindex', 'pg_temp_1', 'pg_catalog', 'information_schema')"
-orca = False
 # unset search path due to CVE-2018-1058
-pgoptions = '-c gp_session_role=utility -c search_path='
+pgoptions = '-c gp_role=utility -c search_path='
 
 
 def ResultIter(cursor, arraysize=1000):
@@ -40,19 +39,16 @@ def getVersion(envOpts):
 
 
 def dumpSchema(connectionInfo, envOpts):
-    dmp_cmd = 'pg_dump -h %s -p %s -U %s -s -x --gp-syntax -O %s' % connectionInfo
-    p = subprocess.Popen(dmp_cmd, shell=True, stderr=subprocess.PIPE, env=envOpts)
+    dump_cmd = 'pg_dump -h {host} -p {port} -U {user} -s -x -O {database}'.format(**connectionInfo)
+    p = subprocess.Popen(dump_cmd, shell=True, stderr=subprocess.PIPE, env=envOpts)
     if p.wait() is not 0:
         sys.stderr.write('\nError while dumping schema.\n\n' + p.communicate()[1] + '\n\n')
         sys.exit(1)
 
 
 def dumpGlobals(connectionInfo, envOpts):
-    if orca:
-        dmp_cmd = 'pg_dumpall -h %s -p %s -U %s -l %s -g --no-gp-syntax' % connectionInfo
-    else:
-        dmp_cmd = 'pg_dumpall -h %s -p %s -U %s -l %s -g --gp-syntax' % connectionInfo
-    p = subprocess.Popen(dmp_cmd, shell=True, stderr=subprocess.PIPE, env=envOpts)
+    dump_cmd = 'pg_dumpall -h {host} -p {port} -U {user} -l {database} -g'.format(**connectionInfo)
+    p = subprocess.Popen(dump_cmd, shell=True, stderr=subprocess.PIPE, env=envOpts)
     if p.wait() is not 0:
         sys.stderr.write('\nError while dumping globals.\n\n' + p.communicate()[1] + '\n\n')
         sys.exit(1)
@@ -105,6 +101,11 @@ def dumpStats(cur, inclHLL):
              'oid',
              'oid',
              'oid',
+             'oid',
+             'oid',
+             'oid',
+             'oid',
+             'oid',
              'real[]',
              'real[]',
              'real[]',
@@ -134,13 +135,16 @@ def dumpStats(cur, inclHLL):
             if val is None:
                 val = 'NULL'
             elif isinstance(val, (str, unicode)) and val[0] == '{':
-                val = val.replace("'", "''").replace('\\', '\\\\')
+                val = val.replace("'", "''")
                 val = "E'" + val + "'"
+
             if i == 25 and hll == True:
                 if inclHLL == True:
                     rowVals.append('\t{0}::{1}'.format(str_val, 'bytea[]'))
                 else:
                     rowVals.append('\t{0}'.format('NULL::int4[]'))
+            elif i == 30 and str_val != "'None'":
+                rowVals.append('\t{0}::{1}'.format(str_val, 'bytea[]'))
             else:
                 rowVals.append('\t{0}::{1}'.format(val, typ))
         print pstring.format(vals[0], vals[2], ',\n'.join(rowVals))
@@ -160,18 +164,6 @@ def parseCmdLine():
     p.add_option('-l', '--hll', action='store_true', dest='dumpHLL',
                  default=False, help='Include HLL stats')
     return p
-
-
-def isOrcaPresent(versionString):
-    if 'HAWQ' in versionString:
-        return True
-    match = re.search('(?<=Greenplum Database )[0-9.]+', versionString)
-    if match and len(match.group()):
-        return LooseVersion(match.group()) >= LooseVersion('4.3')
-    # No HAWQ and we can't find the GPDB Version
-    sys.stderr.write('Cannot determine HAWQ/GPDB version.  Exiting.\n')
-    sys.exit(1)
-
 
 def main():
     parser = parseCmdLine()
@@ -193,19 +185,15 @@ def main():
 
     version = getVersion(envOpts)
 
-    # Let's update the global variable so we can tell if we're using ORCA aware or not
-    global orca
-    orca = isOrcaPresent(version)
-
-    if orca:
-        envOpts['PGOPTIONS'] = pgoptions + ' -c optimizer=off'
-
     timestamp = datetime.datetime.today()
 
-    # setup the connection info tuple with options
-    connectionInfo = (host, port, user, db)
-    connectionString = ':'.join([host, port, db, user, '', pgoptions, ''])
-
+    connectionInfo = {
+    'user': user,
+    'host': host,
+    'port': port,
+    'database': db,
+    'options': pgoptions
+    }
     sys.stdout.writelines(['\n-- Greenplum database Statistics Dump',
                            '\n-- Copyright (C) 2007 - 2014 Pivotal'
                            '\n-- Database: ' + db,
@@ -235,7 +223,8 @@ def main():
     sys.stdout.flush()
 
     try:
-        with closing(pgdb.connect(connectionString)) as connection:
+        pgdb.set_typecast('anyarray', lambda v, c=str: v)
+        with closing(pgdb.connect(**connectionInfo)) as connection:
             with closing(connection.cursor()) as cursor:
                 dumpTupleCount(cursor)
                 dumpStats(cursor, inclHLL)

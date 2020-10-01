@@ -61,3 +61,8 @@ repalloc(void *pointer, Size size)
 	fprintf(stderr, "repalloc: actually used and is not expected.");
 	return NULL;
 }
+
+int
+pg_fprintf(FILE *stream, const char *fmt,...)
+{
+}

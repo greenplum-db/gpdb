@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 '''
 gpssh -- ssh access to multiple hosts at once
@@ -28,7 +28,7 @@ import atexit
 import signal
 import pexpect
 import time
-import ConfigParser
+import configparser
 from gppylib.util import ssh_utils
 from gppylib.gpparseopts import OptParser
 
@@ -61,19 +61,19 @@ def usage(exitarg):
     try:
         parser.print_help()
     except:
-        print __doc__
+        print(__doc__)
     sys.exit(exitarg)
 
 
 def print_version():
-    print '%s version $Revision$' % GV.script_name
+    print('%s version $Revision$' % GV.script_name)
     sys.exit(0)
 
 
 def parseCommandLine():
     try:
         (options, args) = getopt.getopt(sys.argv[1:], '?evsh:f:D:u:d:t:', ['version'])
-    except Exception, e:
+    except Exception as e:
         usage('Error: ' + str(e))
     for (switch, val) in options:
         if (switch == '-?'):
@@ -103,11 +103,11 @@ def parseCommandLine():
 def parseConfigFile():
     if GV.DELAY_BEFORE_SEND is not None and GV.PROMPT_VALIDATION_TIMEOUT is not None:
         if GV.opt['-v']:
-            print 'Skip parsing gpssh.conf as both -d and -t are being used'
+            print('Skip parsing gpssh.conf as both -d and -t are being used')
         return
 
     try:
-        config = ConfigParser.RawConfigParser()
+        config = configparser.RawConfigParser()
         config.read(os.environ.get('MASTER_DATA_DIRECTORY') + '/gpssh.conf')
         if GV.DELAY_BEFORE_SEND is None:
             GV.DELAY_BEFORE_SEND = config.getfloat('gpssh', 'delaybeforesend')
@@ -117,7 +117,7 @@ def parseConfigFile():
             GV.SYNC_RETRIES = config.getint('gpssh', 'sync_retries')
     except Exception:
         if GV.opt['-v']:
-            print '[WARN] Reference default values as $MASTER_DATA_DIRECTORY/gpssh.conf could not be found'
+            print('[WARN] Reference default values as $MASTER_DATA_DIRECTORY/gpssh.conf could not be found')
 
         if GV.DELAY_BEFORE_SEND is None:
             GV.DELAY_BEFORE_SEND = 0.05
@@ -127,20 +127,20 @@ def parseConfigFile():
             GV.SYNC_RETRIES = 3
 
     if GV.DELAY_BEFORE_SEND < 0.0:
-        print '[ERROR] delaybeforesend cannot be negative'
+        print('[ERROR] delaybeforesend cannot be negative')
         sys.exit(1)
 
     if GV.PROMPT_VALIDATION_TIMEOUT <= 0.0:
-        print '[ERROR] prompt_validation_timeout cannot be negative or zero'
+        print('[ERROR] prompt_validation_timeout cannot be negative or zero')
         sys.exit(1)
 
     if GV.SYNC_RETRIES < 0:
-        print '[ERROR] sync_retries cannot be negative'
+        print('[ERROR] sync_retries cannot be negative')
         sys.exit(1)
 
     if GV.opt['-v']:
-        print 'Using delaybeforesend %s and prompt_validation_timeout %s' % (GV.DELAY_BEFORE_SEND,
-                                                                             GV.PROMPT_VALIDATION_TIMEOUT)
+        print('Using delaybeforesend %s and prompt_validation_timeout %s' % (GV.DELAY_BEFORE_SEND,
+                                                                             GV.PROMPT_VALIDATION_TIMEOUT))
 
 
 def sessionCleanup():
@@ -148,7 +148,7 @@ def sessionCleanup():
         try:
             return_code = 0
             if GV.session:
-                if GV.session.verbose: print '\n[Cleanup...]';
+                if GV.session.verbose: print('\n[Cleanup...]');
                 return_code = GV.session.close()
             GV.session = None
             return return_code
@@ -166,7 +166,7 @@ def sigint_handle(signum, frame):
         sigint_time = now
         raise KeyboardInterrupt
     signal.signal(signal.SIGINT, signal.SIG_IGN)
-    print '\n[Exiting...]'
+    print('\n[Exiting...]')
     sys.exit(1)
 
 
@@ -192,11 +192,11 @@ def interactive():
             atexit.register(readline.write_history_file, histfile)
             f.close()
         except IOError:
-            print "\n[WARN] Unable to write to gpssh history file: '%s'. Please check permissions." % histfile
+            print("\n[WARN] Unable to write to gpssh history file: '%s'. Please check permissions." % histfile)
 
 
-    except Exception, e:
-        print "Note: command history unsupported on this machine ..."
+    except Exception as e:
+        print("Note: command history unsupported on this machine ...")
 
     atexit.register(sessionCleanup)
     signal.signal(signal.SIGINT, sigint_handle)
@@ -212,16 +212,16 @@ def interactive():
                 GV.session.executeCommand("source {0}/greenplum_path.sh".format(os.environ["GPHOME"]))
             GV.session.cmdloop()
         except pexpect.EOF:
-            print '\n[Unexpected EOF from some hosts...]'
+            print('\n[Unexpected EOF from some hosts...]')
             pass
         except ssh_utils.Session.SessionCmdExit:
-            print ''
+            print('')
             break
-        except ssh_utils.Session.SessionError, e:
-            print 'Error: %s' % e
+        except ssh_utils.Session.SessionError as e:
+            print('Error: %s' % e)
             pass
         except KeyboardInterrupt:
-            print '\n[Interrupt...]'
+            print('\n[Interrupt...]')
             GV.session.reset()
             pass
 
@@ -266,10 +266,10 @@ def main():
                     GV.session.executeCommand("source {0}/greenplum_path.sh".format(os.environ["GPHOME"]))
                 output = GV.session.executeCommand(GV.argcmd)
                 GV.session.writeCommandOutput(output)
-                if GV.session.verbose: print '[INFO] completed successfully'
+                if GV.session.verbose: print('[INFO] completed successfully')
                 sys.stdout.flush()
-            except ssh_utils.Session.SessionError, e:
-                print 'Error: %s' % e
+            except ssh_utils.Session.SessionError as e:
+                print('Error: %s' % e)
                 pass
 
         else:  # Otherwise, implement an interactive session

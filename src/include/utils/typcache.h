@@ -6,7 +6,7 @@
  * The type cache exists to speed lookup of certain information about data
  * types that is not directly available from a type's pg_type row.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/typcache.h
@@ -18,6 +18,8 @@
 
 #include "access/tupdesc.h"
 #include "fmgr.h"
+#include "storage/dsm.h"
+#include "utils/dsa.h"
 
 
 /* DomainConstraintCache is an opaque struct known only within typcache.c */
@@ -38,6 +40,8 @@ typedef struct TypeCacheEntry
 	char		typstorage;
 	char		typtype;
 	Oid			typrelid;
+	Oid			typelem;
+	Oid			typcollation;
 
 	/*
 	 * Information obtained from opfamily entries
@@ -56,6 +60,7 @@ typedef struct TypeCacheEntry
 	Oid			gt_opr;			/* the greater-than operator */
 	Oid			cmp_proc;		/* the btree comparison function */
 	Oid			hash_proc;		/* the hash calculation function */
+	Oid			hash_extended_proc; /* the extended hash calculation function */
 
 	/*
 	 * Pre-set-up fmgr call info for the equality operator, the btree
@@ -67,13 +72,19 @@ typedef struct TypeCacheEntry
 	FmgrInfo	eq_opr_finfo;
 	FmgrInfo	cmp_proc_finfo;
 	FmgrInfo	hash_proc_finfo;
+	FmgrInfo	hash_extended_proc_finfo;
 
 	/*
 	 * Tuple descriptor if it's a composite type (row type).  NULL if not
 	 * composite or information hasn't yet been requested.  (NOTE: this is a
 	 * reference-counted tupledesc.)
+	 *
+	 * To simplify caching dependent info, tupDesc_identifier is an identifier
+	 * for this tupledesc that is unique for the life of the process, and
+	 * changes anytime the tupledesc does.  Zero if not yet determined.
 	 */
 	TupleDesc	tupDesc;
+	uint64		tupDesc_identifier;
 
 	/*
 	 * Fields computed when TYPECACHE_RANGE_INFO is requested.  Zeroes if not
@@ -83,9 +94,16 @@ typedef struct TypeCacheEntry
 	 */
 	struct TypeCacheEntry *rngelemtype; /* range's element type */
 	Oid			rng_collation;	/* collation for comparisons, if any */
-	FmgrInfo	rng_cmp_proc_finfo;		/* comparison function */
+	FmgrInfo	rng_cmp_proc_finfo; /* comparison function */
 	FmgrInfo	rng_canonical_finfo;	/* canonicalization function, if any */
-	FmgrInfo	rng_subdiff_finfo;		/* difference function, if any */
+	FmgrInfo	rng_subdiff_finfo;	/* difference function, if any */
+
+	/*
+	 * Domain's base type and typmod if it's a domain type.  Zeroes if not
+	 * domain, or if information hasn't been requested.
+	 */
+	Oid			domainBaseType;
+	int32		domainBaseTypmod;
 
 	/*
 	 * Domain constraint data if it's a domain type.  NULL if not domain, or
@@ -119,7 +137,13 @@ typedef struct TypeCacheEntry
 #define TYPECACHE_BTREE_OPFAMILY	0x0200
 #define TYPECACHE_HASH_OPFAMILY		0x0400
 #define TYPECACHE_RANGE_INFO		0x0800
-#define TYPECACHE_DOMAIN_INFO		0x1000
+#define TYPECACHE_DOMAIN_BASE_INFO			0x1000
+#define TYPECACHE_DOMAIN_CONSTR_INFO		0x2000
+#define TYPECACHE_HASH_EXTENDED_PROC		0x4000
+#define TYPECACHE_HASH_EXTENDED_PROC_FINFO	0x8000
+
+/* This value will not equal any valid tupledesc identifier, nor 0 */
+#define INVALID_TUPLEDESC_IDENTIFIER ((uint64) 1)
 
 /*
  * Callers wishing to maintain a long-lived reference to a domain's constraint
@@ -131,20 +155,22 @@ typedef struct DomainConstraintRef
 {
 	List	   *constraints;	/* list of DomainConstraintState nodes */
 	MemoryContext refctx;		/* context holding DomainConstraintRef */
+	TypeCacheEntry *tcache;		/* typcache entry for domain type */
+	bool		need_exprstate; /* does caller need check_exprstate? */
 
 	/* Management data --- treat these fields as private to typcache.c */
-	TypeCacheEntry *tcache;		/* owning typcache entry */
 	DomainConstraintCache *dcc; /* current constraints, or NULL if none */
-	MemoryContextCallback callback;		/* used to release refcount when done */
+	MemoryContextCallback callback; /* used to release refcount when done */
 } DomainConstraintRef;
 
+typedef struct SharedRecordTypmodRegistry SharedRecordTypmodRegistry;
 
 extern int32 NextRecordTypmod;
 
 extern TypeCacheEntry *lookup_type_cache(Oid type_id, int flags);
 
 extern void InitDomainConstraintRef(Oid type_id, DomainConstraintRef *ref,
-						MemoryContext refctx);
+									MemoryContext refctx, bool need_exprstate);
 
 extern void UpdateDomainConstraintRef(DomainConstraintRef *ref);
 
@@ -153,14 +179,26 @@ extern bool DomainHasConstraints(Oid type_id);
 extern TupleDesc lookup_rowtype_tupdesc(Oid type_id, int32 typmod);
 
 extern TupleDesc lookup_rowtype_tupdesc_noerror(Oid type_id, int32 typmod,
-							   bool noError);
+												bool noError);
 
 extern TupleDesc lookup_rowtype_tupdesc_copy(Oid type_id, int32 typmod);
 
+extern TupleDesc lookup_rowtype_tupdesc_domain(Oid type_id, int32 typmod,
+											   bool noError);
+
 extern void assign_record_type_typmod(TupleDesc tupDesc);
+
+extern uint64 assign_record_type_identifier(Oid type_id, int32 typmod);
 
 extern int	compare_values_of_enum(TypeCacheEntry *tcache, Oid arg1, Oid arg2);
 
+extern size_t SharedRecordTypmodRegistryEstimate(void);
+
+extern void SharedRecordTypmodRegistryInit(SharedRecordTypmodRegistry *,
+										   dsm_segment *segment, dsa_area *area);
+
+extern void SharedRecordTypmodRegistryAttach(SharedRecordTypmodRegistry *);
+
 extern List *build_tuple_node_list(int start);
 
-#endif   /* TYPCACHE_H */
+#endif							/* TYPCACHE_H */

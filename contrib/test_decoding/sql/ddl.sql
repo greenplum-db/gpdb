@@ -9,7 +9,7 @@ SELECT 'init' FROM pg_create_logical_replication_slot('Invalid Name', 'test_deco
 
 -- fail twice because of an invalid parameter values
 SELECT 'init' FROM pg_logical_slot_get_changes('regression_slot', NULL, NULL, 'include-xids', 'frakbar');
-SELECT 'init' FROM pg_logical_slot_get_changes('regression_slot', NULL, NULL, 'nonexistant-option', 'frakbar');
+SELECT 'init' FROM pg_logical_slot_get_changes('regression_slot', NULL, NULL, 'nonexistent-option', 'frakbar');
 SELECT 'init' FROM pg_logical_slot_get_changes('regression_slot', NULL, NULL, 'include-xids', 'frakbar');
 
 -- succeed once
@@ -29,7 +29,7 @@ SELECT 'init' FROM pg_create_logical_replication_slot('regression_slot', 'test_d
 SELECT slot_name, plugin, slot_type, active,
     NOT catalog_xmin IS NULL AS catalog_xmin_set,
     xmin IS NULl  AS data_xmin_not_set,
-    pg_xlog_location_diff(restart_lsn, '0/01000000') > 0 AS some_wal
+    pg_wal_lsn_diff(restart_lsn, '0/01000000') > 0 AS some_wal
 FROM pg_replication_slots;
 
 /*
@@ -67,7 +67,7 @@ INSERT INTO replication_example(somedata, somenum) VALUES (4, 1);
 SELECT data FROM pg_logical_slot_get_changes('regression_slot', NULL, NULL, 'include-xids', '0', 'skip-empty-xacts', '1');
 
 ALTER TABLE replication_example ALTER COLUMN somenum TYPE int4 USING (somenum::int4);
--- throw away changes, they contain oids
+-- check that this doesn't produce any changes from the heap rewrite
 SELECT count(data) FROM pg_logical_slot_get_changes('regression_slot', NULL, NULL, 'include-xids', '0', 'skip-empty-xacts', '1');
 
 INSERT INTO replication_example(somedata, somenum) VALUES (5, 1);
@@ -93,12 +93,11 @@ COMMIT;
 /* display results */
 SELECT data FROM pg_logical_slot_get_changes('regression_slot', NULL, NULL, 'include-xids', '0', 'skip-empty-xacts', '1');
 
--- hide changes bc of oid visible in full table rewrites
 CREATE TABLE tr_unique(id2 serial unique NOT NULL, data int);
 INSERT INTO tr_unique(data) VALUES(10);
 ALTER TABLE tr_unique RENAME TO tr_pkey;
 ALTER TABLE tr_pkey ADD COLUMN id serial primary key;
-SELECT count(data) FROM pg_logical_slot_get_changes('regression_slot', NULL, NULL, 'include-xids', '0', 'skip-empty-xacts', '1');
+SELECT data FROM pg_logical_slot_get_changes('regression_slot', NULL, NULL, 'include-xids', '0', 'skip-empty-xacts', '1', 'include-rewrites', '1');
 
 INSERT INTO tr_pkey(data) VALUES(1);
 --show deletion with primary key
@@ -146,9 +145,9 @@ SELECT g.i, -g.i FROM generate_series(8000, 12000) g(i)
 ON CONFLICT(id) DO UPDATE SET data = EXCLUDED.data;
 
 SELECT substring(data, 1, 29), count(*)
-FROM pg_logical_slot_get_changes('regression_slot', NULL, NULL, 'include-xids', '0', 'skip-empty-xacts', '1')
+FROM pg_logical_slot_get_changes('regression_slot', NULL, NULL, 'include-xids', '0', 'skip-empty-xacts', '1') WITH ORDINALITY
 GROUP BY 1
-ORDER BY min(location - '0/0');
+ORDER BY min(ordinality);
 
 /*
  * check whether we decode subtransactions correctly in relation with each
@@ -234,6 +233,19 @@ SAVEPOINT a;
 INSERT INTO tr_sub(path) VALUES ('5-top-1-#1');
 COMMIT;
 
+
+SELECT data FROM pg_logical_slot_get_changes('regression_slot', NULL, NULL, 'include-xids', '0', 'skip-empty-xacts', '1');
+
+-- check that DDL in aborted subtransactions handled correctly
+CREATE TABLE tr_sub_ddl(data int);
+BEGIN;
+SAVEPOINT a;
+ALTER TABLE tr_sub_ddl ALTER COLUMN data TYPE text;
+INSERT INTO tr_sub_ddl VALUES ('blah-blah');
+ROLLBACK TO SAVEPOINT a;
+ALTER TABLE tr_sub_ddl ALTER COLUMN data TYPE bigint;
+INSERT INTO tr_sub_ddl VALUES(43);
+COMMIT;
 
 SELECT data FROM pg_logical_slot_get_changes('regression_slot', NULL, NULL, 'include-xids', '0', 'skip-empty-xacts', '1');
 

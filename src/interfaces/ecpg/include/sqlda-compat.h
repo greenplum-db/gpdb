@@ -1,5 +1,5 @@
 /*
- * pgsql/src/interfaces/ecpg/include/sqlda-infx-compat.h
+ * src/interfaces/ecpg/include/sqlda-compat.h
  */
 
 #ifndef ECPG_SQLDA_COMPAT_H
@@ -40,8 +40,8 @@ struct sqlda_compat
 	struct sqlvar_compat *sqlvar;
 	char		desc_name[19];	/* descriptor name				*/
 	short		desc_occ;		/* size of sqlda structure		*/
-	struct sqlda_compat *desc_next;		/* pointer to next sqlda struct */
+	struct sqlda_compat *desc_next; /* pointer to next sqlda struct */
 	void	   *reserved;		/* reserved for future use */
 };
 
-#endif   /* ECPG_SQLDA_COMPAT_H */
+#endif							/* ECPG_SQLDA_COMPAT_H */

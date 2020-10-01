@@ -10,11 +10,11 @@ DROP
 DROP TABLE IF EXISTS aocs_rle_upgrade_test;
 DROP
 
-CREATE TABLE ao_upgrade_test (rowid int, n numeric) WITH (appendonly=true);
+CREATE TABLE ao_upgrade_test (rowid int, n numeric) USING ao_row;
 CREATE
-CREATE TABLE aocs_upgrade_test (rowid int, n numeric) WITH (appendonly=true, orientation=column);
+CREATE TABLE aocs_upgrade_test (rowid int, n numeric) USING ao_column;
 CREATE
-CREATE TABLE aocs_rle_upgrade_test (rowid int, n numeric) WITH (appendonly=true, orientation=column, compresstype=RLE_TYPE);
+CREATE TABLE aocs_rle_upgrade_test (rowid int, n numeric) USING ao_column WITH (compresstype=RLE_TYPE);
 CREATE
 
 -- We want to load GPDB4 numerics into the table; to do that, add a direct cast

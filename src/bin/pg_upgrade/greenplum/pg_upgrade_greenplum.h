@@ -11,7 +11,7 @@
 #include "pg_upgrade.h"
 
 
-#define PG_OPTIONS_UTILITY_MODE " PGOPTIONS='-c gp_session_role=utility' "
+#define PG_OPTIONS_UTILITY_MODE " PGOPTIONS='-c gp_role=utility' "
 
 
 /*
@@ -37,10 +37,10 @@ typedef enum
 } checksumMode;
 
 typedef enum {
-	GREENPLUM_MODE_OPTION = 1,
-	GREENPLUM_PROGRESS_OPTION = 2,
-	GREENPLUM_ADD_CHECKSUM_OPTION = 3,
-	GREENPLUM_REMOVE_CHECKSUM_OPTION = 4
+	GREENPLUM_MODE_OPTION = 10,
+	GREENPLUM_PROGRESS_OPTION = 11,
+	GREENPLUM_ADD_CHECKSUM_OPTION = 12,
+	GREENPLUM_REMOVE_CHECKSUM_OPTION = 13
 } greenplumOption;
 
 #define GREENPLUM_OPTIONS \

@@ -8,13 +8,6 @@
 static void
 KeepLogSeg_wrapper(XLogRecPtr recptr, XLogSegNo *logSegNo)
 {
-#ifdef FAULT_INJECTOR
-	expect_value(FaultInjector_InjectFaultIfSet, faultName, "keep_log_seg");
-	expect_value(FaultInjector_InjectFaultIfSet, ddlStatement, DDLNotSpecified);
-	expect_value(FaultInjector_InjectFaultIfSet, databaseName, "");
-	expect_value(FaultInjector_InjectFaultIfSet, tableName, "");
-	will_be_called(FaultInjector_InjectFaultIfSet);
-#endif
 	KeepLogSeg(recptr, logSegNo);
 }
 
@@ -35,18 +28,23 @@ test_KeepLogSeg(void **state)
 	 */
 	wal_keep_segments = 194;
 
+	/*
+	 * Set wal segment size to 64 mb
+	 */
+	wal_segment_size = 64 * 1024 * 1024;
+
 	/************************************************
 	 * Current Delete greater than what keep wants,
 	 * so, delete offset should get updated
 	 ***********************************************/
 	/* Current Delete pointer */
-	_logSegNo = 3 * XLogSegmentsPerXLogId + 10;
+	_logSegNo = 3 * XLogSegmentsPerXLogId(wal_segment_size) + 10;
 
 	/*
 	 * Current xlog location (4, 1)
 	 * xrecoff = seg * 67108864 (64 MB segsize)
 	 */
-	recptr = ((uint64) 4) << 32 | (XLogSegSize * 1);
+	recptr = ((uint64) 4) << 32 | (wal_segment_size * 1);
 
 	KeepLogSeg_wrapper(recptr, &_logSegNo);
 	assert_int_equal(_logSegNo, 63);
@@ -64,7 +62,7 @@ test_KeepLogSeg(void **state)
 	 * Current xlog location (4, 1)
 	 * xrecoff = seg * 67108864 (64 MB segsize)
 	 */
-	recptr = ((uint64) 4) << 32 | (XLogSegSize * 1);
+	recptr = ((uint64) 4) << 32 | (wal_segment_size * 1);
 
 	KeepLogSeg_wrapper(recptr, &_logSegNo);
 	assert_int_equal(_logSegNo, 60);
@@ -76,29 +74,29 @@ test_KeepLogSeg(void **state)
 	 * so, delete offset should NOT get updated
 	 ***********************************************/
 	/* Current Delete pointer */
-	_logSegNo = 1 * XLogSegmentsPerXLogId + 60;
+	_logSegNo = 1 * XLogSegmentsPerXLogId(wal_segment_size) + 60;
 
 	/*
 	 * Current xlog location (5, 8)
 	 * xrecoff = seg * 67108864 (64 MB segsize)
 	 */
-	recptr = ((uint64) 5) << 32 | (XLogSegSize * 8);
+	recptr = ((uint64) 5) << 32 | (wal_segment_size * 8);
 
 	KeepLogSeg_wrapper(recptr, &_logSegNo);
-	assert_int_equal(_logSegNo, 1 * XLogSegmentsPerXLogId + 60);
+	assert_int_equal(_logSegNo, 1 * XLogSegmentsPerXLogId(wal_segment_size) + 60);
 	/************************************************/
 
 	/************************************************
 	 * UnderFlow case, curent is lower than keep
 	 ***********************************************/
 	/* Current Delete pointer */
-	_logSegNo = 2 * XLogSegmentsPerXLogId + 1;
+	_logSegNo = 2 * XLogSegmentsPerXLogId(wal_segment_size) + 1;
 
 	/*
 	 * Current xlog location (3, 1)
 	 * xrecoff = seg * 67108864 (64 MB segsize)
 	 */
-	recptr = ((uint64) 3) << 32 | (XLogSegSize * 1);
+	recptr = ((uint64) 3) << 32 | (wal_segment_size * 1);
 
 	KeepLogSeg_wrapper(recptr, &_logSegNo);
 	assert_int_equal(_logSegNo, 1);
@@ -108,16 +106,16 @@ test_KeepLogSeg(void **state)
 	 * One more simple scenario of updating delete offset
 	 ***********************************************/
 	/* Current Delete pointer */
-	_logSegNo = 2 * XLogSegmentsPerXLogId + 8;
+	_logSegNo = 2 * XLogSegmentsPerXLogId(wal_segment_size) + 8;
 
 	/*
 	 * Current xlog location (5, 8)
 	 * xrecoff = seg * 67108864 (64 MB segsize)
 	 */
-	recptr = ((uint64) 5) << 32 | (XLogSegSize * 8);
+	recptr = ((uint64) 5) << 32 | (wal_segment_size * 8);
 
 	KeepLogSeg_wrapper(recptr, &_logSegNo);
-	assert_int_equal(_logSegNo, 2*XLogSegmentsPerXLogId + 6);
+	assert_int_equal(_logSegNo, 2*XLogSegmentsPerXLogId(wal_segment_size) + 6);
 	/************************************************/
 
 	/************************************************
@@ -125,15 +123,15 @@ test_KeepLogSeg(void **state)
 	 ***********************************************/
 	/* Current Delete pointer */
 	wal_keep_segments = 0;
-	_logSegNo = 9 * XLogSegmentsPerXLogId + 45;
+	_logSegNo = 9 * XLogSegmentsPerXLogId(wal_segment_size) + 45;
 
 	KeepLogSeg_wrapper(recptr, &_logSegNo);
-	assert_int_equal(_logSegNo, 9*XLogSegmentsPerXLogId + 45);
+	assert_int_equal(_logSegNo, 9*XLogSegmentsPerXLogId(wal_segment_size) + 45);
 
 	wal_keep_segments = -1;
 
 	KeepLogSeg_wrapper(recptr, &_logSegNo);
-	assert_int_equal(_logSegNo, 9*XLogSegmentsPerXLogId + 45);
+	assert_int_equal(_logSegNo, 9*XLogSegmentsPerXLogId(wal_segment_size) + 45);
 	/************************************************/
 }
 

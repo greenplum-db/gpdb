@@ -37,7 +37,6 @@
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
-#include "utils/tqual.h"
 
 static Oid ValidateProtocolFunction(List *fnName, ExtPtcFuncType fntype);
 static char *func_type_to_name(ExtPtcFuncType ftype);
@@ -91,7 +90,7 @@ ExtProtocolCreate(const char *protocolName,
 				 errhint("pick a different protocol name")));
 	}
 
-	rel = heap_open(ExtprotocolRelationId, RowExclusiveLock);
+	rel = table_open(ExtprotocolRelationId, RowExclusiveLock);
 
 	/* make sure there is no existing protocol of same name */
 	ScanKeyInit(&skey,
@@ -141,14 +140,16 @@ ExtProtocolCreate(const char *protocolName,
 	values[Anum_pg_extprotocol_ptctrusted - 1] = BoolGetDatum(trusted);
 	nulls[Anum_pg_extprotocol_ptcacl - 1] = true;
 
+	protOid = GetNewOidForExtprotocol(rel, ExtprotocolOidIndexId,
+									  Anum_pg_extprotocol_oid, NameStr(prtname));
+	values[Anum_pg_extprotocol_oid - 1] = protOid;
+	
 	tup = heap_form_tuple(RelationGetDescr(rel), values, nulls);
 
 	/* insert a new tuple */
-	protOid = simple_heap_insert(rel, tup);
+	CatalogTupleInsert(rel, tup);
 
-	CatalogUpdateIndexes(rel, tup);
-
-	heap_close(rel, RowExclusiveLock);
+	table_close(rel, RowExclusiveLock);
 
 	/*
 	 * Create dependencies for the protocol
@@ -257,7 +258,7 @@ ValidateProtocolFunction(List *fnName, ExtPtcFuncType fntype)
 	/* Check protocol creator has permission to call the function */
 	aclresult = pg_proc_aclcheck(fnOid, GetUserId(), ACL_EXECUTE);
 	if (aclresult != ACLCHECK_OK)
-		aclcheck_error(aclresult, ACL_KIND_PROC, get_func_name(fnOid));
+		aclcheck_error(aclresult, OBJECT_FUNCTION, get_func_name(fnOid));
 
 	return fnOid;
 }
@@ -282,7 +283,7 @@ LookupExtProtocolFunction(const char *prot_name,
 	HeapTuple	tup;
 	Form_pg_extprotocol extprot;
 
-	rel = heap_open(ExtprotocolRelationId, AccessShareLock);
+	rel = table_open(ExtprotocolRelationId, AccessShareLock);
 
 	/*
 	 * Check the pg_extprotocol relation to be certain the protocol
@@ -320,7 +321,7 @@ LookupExtProtocolFunction(const char *prot_name,
 			break;
 	}
 	systable_endscan(scan);
-	heap_close(rel, AccessShareLock);
+	table_close(rel, AccessShareLock);
 
 	if (!OidIsValid(funcOid) && error)
 		ereport(ERROR,
@@ -345,7 +346,7 @@ get_extprotocol_oid(const char *prot_name, bool missing_ok)
 	SysScanDesc scan;
 	HeapTuple	tup;
 
-	rel = heap_open(ExtprotocolRelationId, AccessShareLock);
+	rel = table_open(ExtprotocolRelationId, AccessShareLock);
 
 	/*
 	 * Check the pg_extprotocol relation to be certain the protocol
@@ -360,7 +361,11 @@ get_extprotocol_oid(const char *prot_name, bool missing_ok)
 	tup = systable_getnext(scan);
 
 	if (HeapTupleIsValid(tup))
-		protOid = HeapTupleGetOid(tup);
+	{
+		Form_pg_extprotocol extprot = (Form_pg_extprotocol) GETSTRUCT(tup);
+
+		protOid = extprot->oid;
+	}
 	else if (!missing_ok)
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -368,7 +373,7 @@ get_extprotocol_oid(const char *prot_name, bool missing_ok)
 						prot_name)));
 
 	systable_endscan(scan);
-	heap_close(rel, AccessShareLock);
+	table_close(rel, AccessShareLock);
 
 	return protOid;
 
@@ -384,13 +389,13 @@ ExtProtocolGetNameByOid(Oid protOid)
 	HeapTuple	tup;
 	Form_pg_extprotocol extprot;
 
-	rel = heap_open(ExtprotocolRelationId, AccessShareLock);
+	rel = table_open(ExtprotocolRelationId, AccessShareLock);
 
 	/*
 	 * Search pg_extprotocol.
 	 */
 	ScanKeyInit(&skey,
-				ObjectIdAttributeNumber,
+				Anum_pg_extprotocol_oid,
 				BTEqualStrategyNumber, F_OIDEQ,
 				ObjectIdGetDatum(protOid));
 	scan = systable_beginscan(rel, ExtprotocolOidIndexId, true,
@@ -404,7 +409,7 @@ ExtProtocolGetNameByOid(Oid protOid)
 	ptcnamestr = pstrdup(extprot->ptcname.data);
 
 	systable_endscan(scan);
-	heap_close(rel, AccessShareLock);
+	table_close(rel, AccessShareLock);
 
 	return ptcnamestr;
 }

@@ -15,7 +15,7 @@
 --
 -- start_ignore
 create language plperlu;
-create language plpythonu;
+create language plpython3u;
 -- Take a look at the installed languages, plperl and plpython should be in the list.
 --  + pg_pltemplate contains the list of languages that can be simply installed
 --  + pl_language contains the list of languages that are actually installed
@@ -27,7 +27,7 @@ select * from pg_pltemplate;
  pltclu    | f           | pltclu_call_handler   |                   | $libdir/pltcl    | 
  plperl    | t           | plperl_call_handler   | plperl_validator  | $libdir/plperl   | 
  plperlu   | f           | plperl_call_handler   | plperl_validator  | $libdir/plperl   | 
- plpythonu | f           | plpython_call_handler |                   | $libdir/plpython | 
+ plpython3u | f           | plpython_call_handler |                   | $libdir/plpython | 
  plr       | f           | plr_call_handler      |                   | $libdir/plr      | 
 (7 rows)
 
@@ -39,7 +39,7 @@ select lanname, lanispl, lanpltrusted from pg_language;
  sql       | f       | t
  plpgsql   | t       | t
  plperlu   | t       | f
- plpythonu | t       | f
+ plpython3u | t       | f
 (6 rows)
 
 -- Check environment variables that should have been set by greenplum_path.sh
@@ -93,7 +93,7 @@ SELECT * FROM env WHERE var in (
 CREATE OR REPLACE FUNCTION python_version() returns text as $$
 import sys
 return sys.version_info
-$$ language plpythonu NO SQL;
+$$ language plpython3u NO SQL;
 SELECT python_version() FROM env GROUP BY python_version;
     python_version     
 -----------------------
@@ -121,7 +121,7 @@ SELECT perl_version() FROM env GROUP BY perl_version;
 CREATE OR REPLACE FUNCTION python_path() returns text as $$
 import sys
 return sys.path[0]
-$$ language plpythonu NO SQL;
+$$ language plpython3u NO SQL;
 SELECT python_path() FROM env GROUP BY python_path;
                  python_path                 
 ---------------------------------------------
@@ -147,8 +147,8 @@ p = subprocess.Popen(cmd, shell=True,
                      stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 r = p.communicate()
 header = "---------------------\n"
-return header + r[0]
-$$ LANGUAGE plpythonu NO SQL;
+return header + r[0].decode()
+$$ LANGUAGE plpython3u NO SQL;
 --
 -- Create a harness to run mapreduce jobs on the correct host/port
 --
@@ -166,10 +166,10 @@ cmd = ['@gpwhich_gpmapreduce@',
 p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 r = p.communicate()
 header = "---------------------"
-err = '\nSTDERR> '.join(('STDERR> ' + r[1]).split('\n')).replace('\t', '   ')
-out = 'STDOUT>\n' + r[0].replace('\t', ', ')
+err = '\nSTDERR> '.join(('STDERR> ' + r[1].decode()).split('\n')).replace('\t', '   ')
+out = 'STDOUT>\n' + r[0].decode().replace('\t', ', ')
 return [header, err, out]
-$$ LANGUAGE plpythonu READS SQL DATA;
+$$ LANGUAGE plpython3u READS SQL DATA;
 CREATE OR REPLACE FUNCTION mapreduce(file text, keys text) returns setof text as $$
 import subprocess
 
@@ -186,10 +186,10 @@ for key in keys.split(';'):
 p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 r = p.communicate()
 header = "---------------------"
-err = '\nSTDERR> '.join(('STDERR> ' + r[1]).split('\n')).replace('\t', '   ')
-out = 'STDOUT>\n' + r[0].replace('\t', ', ')
+err = '\nSTDERR> '.join(('STDERR> ' + r[1].decode()).split('\n')).replace('\t', '   ')
+out = 'STDOUT>\n' + r[0].decode().replace('\t', ', ')
 return [header, err, out]
-$$ LANGUAGE plpythonu READS SQL DATA;
+$$ LANGUAGE plpython3u READS SQL DATA;
 --
 -- CHECK 1) make sure plperlu is really installed:
 --
@@ -626,13 +626,21 @@ STDERR>
 STDOUT>
 
 (3 rows)
+CREATE OR REPLACE FUNCTION parse_pg_rank_kv(s text) returns text as $$
+i = s.index(",")
+rank = s[:i]
+neighbors = list(map(int, s[i+1:].strip().strip("()").split(",")))
+neighbors.sort()
+ns = "(" + ",".join(map(str, neighbors)) + ")"
+return ", ".join([rank, ns])
+$$ LANGUAGE plpython3u NO SQL;
 -- The result of the following test case is related to the underlying hash algorithm
 -- because the intermediate result of computing is saved as table in gpdb and hash-distributed.
 -- If you change the underlying hash algorithm, please remember to verify the answer and change
 -- here also.
-SELECT ps.value, pn.value FROM pagerank_source ps JOIN pagerank_next pn USING (key) WHERE ps.key = '17';
-value|value
-0.85, (1,258,259,266,265,264,263,262,261,260)|0.265867988394584, (1,258,259,266,265,264,263,262,261,260)
+SELECT parse_pg_rank_kv(ps.value), parse_pg_rank_kv(pn.value) FROM pagerank_source ps JOIN pagerank_next pn USING (key) WHERE ps.key = '17';
+parse_pg_rank_kv|parse_pg_rank_kv
+0.85, (1,258,259,260,261,262,263,264,265,266)|0.265867988394584, (1,258,259,260,261,262,263,264,265,266)
 (1 row)
 -- Test setup
 CREATE TABLE simple (m int,n int) distributed randomly;

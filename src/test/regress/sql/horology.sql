@@ -2,16 +2,6 @@
 -- HOROLOGY
 --
 -- create needed tables
-CREATE TABLE ABSTIME_HOROLOGY_TBL (f1 abstime);
-INSERT INTO ABSTIME_HOROLOGY_TBL (f1) VALUES ('Jan 14, 1973 03:14:21'),
-(abstime 'Mon May  1 00:30:30 1995'),
-(abstime 'epoch'),
-(abstime 'infinity'),
-(abstime '-infinity'),
-(abstime 'May 10, 1947 23:59:12');
-
--- orca will fail for this
-INSERT INTO ABSTIME_HOROLOGY_TBL (f1) VALUES('Jun 10, 1843');
 
 CREATE TABLE INTERVAL_HOROLOGY_TBL (f1 interval);
 INSERT INTO INTERVAL_HOROLOGY_TBL (f1) VALUES ('@ 1 minute'),
@@ -24,14 +14,6 @@ INSERT INTO INTERVAL_HOROLOGY_TBL (f1) VALUES ('@ 1 minute'),
 ('6 years'),
 ('5 months'),
 ('5 months 12 hours');
-
-CREATE TABLE RELTIME_HOROLOGY_TBL (f1 reltime);
-INSERT INTO RELTIME_HOROLOGY_TBL (f1) VALUES ('@ 1 minute'),
-('@ 5 hour'),
-('@ 10 day'),
-('@ 34 year'),
-('@ 3 months'),
-('@ 14 seconds ago');
 
 CREATE TABLE TIME_HOROLOGY_TBL (f1 time(2));
 INSERT INTO TIME_HOROLOGY_TBL VALUES ('00:00'),
@@ -469,35 +451,6 @@ SELECT '' AS "226", d1.f1 AS timestamp1, d2.f1 AS timestamp2, d1.f1 - d2.f1 AS d
   ORDER BY timestamp1, timestamp2, difference;
 
 --
--- abstime, reltime arithmetic
---
-
-SELECT '' AS ten, ABSTIME_HOROLOGY_TBL.f1 AS abstime, RELTIME_HOROLOGY_TBL.f1 AS reltime
-    FROM ABSTIME_HOROLOGY_TBL, RELTIME_HOROLOGY_TBL
-   WHERE (ABSTIME_HOROLOGY_TBL.f1 + RELTIME_HOROLOGY_TBL.f1) < abstime 'Jan 14 14:00:00 1971'
-   ORDER BY abstime, reltime;
-
--- these four queries should return the same answer
--- the "infinity" and "-infinity" tuples in ABSTIME_HOROLOGY_TBL cannot be added and
--- therefore, should not show up in the results.
-
-SELECT '' AS three, * FROM ABSTIME_HOROLOGY_TBL
-  WHERE  (ABSTIME_HOROLOGY_TBL.f1 + reltime '@ 3 year')         -- +3 years
-    < abstime 'Jan 14 14:00:00 1977' ORDER BY 2;
-
-SELECT '' AS three, * FROM ABSTIME_HOROLOGY_TBL
-   WHERE  (ABSTIME_HOROLOGY_TBL.f1 + reltime '@ 3 year ago')    -- -3 years
-     < abstime 'Jan 14 14:00:00 1971' ORDER BY 2;
-
-SELECT '' AS three, * FROM ABSTIME_HOROLOGY_TBL
-   WHERE  (ABSTIME_HOROLOGY_TBL.f1 - reltime '@ 3 year')        -- -(+3) years
-    < abstime 'Jan 14 14:00:00 1971' ORDER BY 2;
-
-SELECT '' AS three, * FROM ABSTIME_HOROLOGY_TBL
-   WHERE  (ABSTIME_HOROLOGY_TBL.f1 - reltime '@ 3 year ago')    -- -(-3) years
-     < abstime 'Jan 14 14:00:00 1977' ORDER BY 2;
-
---
 -- Conversions
 --
 
@@ -505,27 +458,6 @@ SELECT '' AS "16", f1 AS "timestamp", date(f1) AS date
   FROM TEMP_TIMESTAMP
   WHERE f1 <> timestamp 'now'
   ORDER BY date, "timestamp";
-
-SELECT '' AS "16", f1 AS "timestamp", abstime(f1) AS abstime
-  FROM TEMP_TIMESTAMP
-  ORDER BY abstime;
-
-SELECT '' AS four, f1 AS abstime, date(f1) AS date
-  FROM ABSTIME_HOROLOGY_TBL
-  WHERE isfinite(f1) AND f1 <> abstime 'now'
-  ORDER BY date, abstime;
-
-SELECT '' AS two, d1 AS "timestamp", abstime(d1) AS abstime
-  FROM TIMESTAMP_HOROLOGY_TBL WHERE NOT isfinite(d1) ORDER BY 2;
-
-SELECT '' AS three, f1 as abstime, cast(f1 as timestamp) AS "timestamp"
-  FROM ABSTIME_HOROLOGY_TBL WHERE NOT isfinite(f1) ORDER BY 2;
-
-SELECT '' AS ten, f1 AS interval, reltime(f1) AS reltime
-  FROM INTERVAL_HOROLOGY_TBL ORDER BY 2;
-
-SELECT '' AS six, f1 as reltime, CAST(f1 AS interval) AS interval
-  FROM RELTIME_HOROLOGY_TBL ORDER BY 2;
 
 DROP TABLE TEMP_TIMESTAMP;
 
@@ -539,21 +471,15 @@ SHOW DateStyle;
 
 SELECT '' AS "64", d1 AS us_postgres FROM TIMESTAMP_HOROLOGY_TBL ORDER BY 2;
 
-SELECT '' AS seven, f1 AS us_postgres FROM ABSTIME_HOROLOGY_TBL ORDER BY 2;
-
 SET DateStyle TO 'US,ISO';
 
 SELECT '' AS "64", d1 AS us_iso FROM TIMESTAMP_HOROLOGY_TBL ORDER BY 2;
-
-SELECT '' AS seven, f1 AS us_iso FROM ABSTIME_HOROLOGY_TBL ORDER BY 2;
 
 SET DateStyle TO 'US,SQL';
 
 SHOW DateStyle;
 
 SELECT '' AS "64", d1 AS us_sql FROM TIMESTAMP_HOROLOGY_TBL ORDER BY 2;
-
-SELECT '' AS seven, f1 AS us_sql FROM ABSTIME_HOROLOGY_TBL ORDER BY 2;
 
 SET DateStyle TO 'European,Postgres';
 
@@ -565,23 +491,17 @@ SELECT count(*) as one FROM TIMESTAMP_HOROLOGY_TBL WHERE d1 = 'Jun 13 1957';
 
 SELECT '' AS "65", d1 AS european_postgres FROM TIMESTAMP_HOROLOGY_TBL ORDER BY 2;
 
-SELECT '' AS seven, f1 AS european_postgres FROM ABSTIME_HOROLOGY_TBL ORDER BY 2;
-
 SET DateStyle TO 'European,ISO';
 
 SHOW DateStyle;
 
 SELECT '' AS "65", d1 AS european_iso FROM TIMESTAMP_HOROLOGY_TBL ORDER BY 2;
 
-SELECT '' AS seven, f1 AS european_iso FROM ABSTIME_HOROLOGY_TBL ORDER BY 2;
-
 SET DateStyle TO 'European,SQL';
 
 SHOW DateStyle;
 
 SELECT '' AS "65", d1 AS european_sql FROM TIMESTAMP_HOROLOGY_TBL ORDER BY 2;
-
-SELECT '' AS seven, f1 AS european_sql FROM ABSTIME_HOROLOGY_TBL ORDER BY 2;
 
 RESET DateStyle;
 
@@ -593,21 +513,33 @@ SELECT to_timestamp('0097/Feb/16 --> 08:14:30', 'YYYY/Mon/DD --> HH:MI:SS');
 
 SELECT to_timestamp('97/2/16 8:14:30', 'FMYYYY/FMMM/FMDD FMHH:FMMI:FMSS');
 
+SELECT to_timestamp('2011$03!18 23_38_15', 'YYYY-MM-DD HH24:MI:SS');
+
 SELECT to_timestamp('1985 January 12', 'YYYY FMMonth DD');
 
+SELECT to_timestamp('1985 FMMonth 12', 'YYYY "FMMonth" DD');
+
+SELECT to_timestamp('1985 \ 12', 'YYYY \\ DD');
+
 SELECT to_timestamp('My birthday-> Year: 1976, Month: May, Day: 16',
-                    '"My birthday-> Year" YYYY, "Month:" FMMonth, "Day:" DD');
+                    '"My birthday-> Year:" YYYY, "Month:" FMMonth, "Day:" DD');
 
 SELECT to_timestamp('1,582nd VIII 21', 'Y,YYYth FMRM DD');
 
 SELECT to_timestamp('15 "text between quote marks" 98 54 45',
-                    E'HH24 "\\text between quote marks\\"" YY MI SS');
+                    E'HH24 "\\"text between quote marks\\"" YY MI SS');
 
 SELECT to_timestamp('05121445482000', 'MMDDHH24MISSYYYY');
 
 SELECT to_timestamp('2000January09Sunday', 'YYYYFMMonthDDFMDay');
 
 SELECT to_timestamp('97/Feb/16', 'YYMonDD');
+
+SELECT to_timestamp('97/Feb/16', 'YY:Mon:DD');
+
+SELECT to_timestamp('97/Feb/16', 'FXYY:Mon:DD');
+
+SELECT to_timestamp('97/Feb/16', 'FXYY/Mon/DD');
 
 SELECT to_timestamp('19971116', 'YYYYMMDD');
 
@@ -647,6 +579,12 @@ SELECT to_timestamp('  20050302', 'YYYYMMDD');
 SELECT to_timestamp('2011-12-18 11:38 AM', 'YYYY-MM-DD HH12:MI PM');
 SELECT to_timestamp('2011-12-18 11:38 PM', 'YYYY-MM-DD HH12:MI PM');
 
+SELECT to_timestamp('2011-12-18 11:38 +05',    'YYYY-MM-DD HH12:MI TZH');
+SELECT to_timestamp('2011-12-18 11:38 -05',    'YYYY-MM-DD HH12:MI TZH');
+SELECT to_timestamp('2011-12-18 11:38 +05:20', 'YYYY-MM-DD HH12:MI TZH:TZM');
+SELECT to_timestamp('2011-12-18 11:38 -05:20', 'YYYY-MM-DD HH12:MI TZH:TZM');
+SELECT to_timestamp('2011-12-18 11:38 20',     'YYYY-MM-DD HH12:MI TZM');
+
 --
 -- Check handling of multiple spaces in format and/or input
 --
@@ -659,6 +597,17 @@ SELECT to_timestamp('2011-12-18  23:38:15', 'YYYY-MM-DD HH24:MI:SS');
 SELECT to_timestamp('2011-12-18  23:38:15', 'YYYY-MM-DD  HH24:MI:SS');
 SELECT to_timestamp('2011-12-18  23:38:15', 'YYYY-MM-DD   HH24:MI:SS');
 
+SELECT to_timestamp('2000+   JUN', 'YYYY/MON');
+SELECT to_timestamp('  2000 +JUN', 'YYYY/MON');
+SELECT to_timestamp(' 2000 +JUN', 'YYYY//MON');
+SELECT to_timestamp('2000  +JUN', 'YYYY//MON');
+SELECT to_timestamp('2000 + JUN', 'YYYY MON');
+SELECT to_timestamp('2000 ++ JUN', 'YYYY  MON');
+SELECT to_timestamp('2000 + + JUN', 'YYYY  MON');
+SELECT to_timestamp('2000 + + JUN', 'YYYY   MON');
+SELECT to_timestamp('2000 -10', 'YYYY TZH');
+SELECT to_timestamp('2000 -10', 'YYYY  TZH');
+
 SELECT to_date('2011 12  18', 'YYYY MM DD');
 SELECT to_date('2011 12  18', 'YYYY MM  DD');
 SELECT to_date('2011 12  18', 'YYYY MM   DD');
@@ -666,6 +615,10 @@ SELECT to_date('2011 12  18', 'YYYY MM   DD');
 SELECT to_date('2011 12 18', 'YYYY  MM DD');
 SELECT to_date('2011  12 18', 'YYYY  MM DD');
 SELECT to_date('2011   12 18', 'YYYY  MM DD');
+
+SELECT to_date('2011 12 18', 'YYYYxMMxDD');
+SELECT to_date('2011x 12x 18', 'YYYYxMMxDD');
+SELECT to_date('2011 x12 x18', 'YYYYxMMxDD');
 
 --
 -- Check errors for some incorrect usages of to_timestamp() and to_date()
@@ -728,19 +681,8 @@ SELECT to_char('2012-12-12 12:00'::timestamptz, 'YYYY-MM-DD HH:MI:SS TZ');
 RESET TIME ZONE;
 
 -- Clean up
-DROP TABLE abstime_horology_tbl;
 DROP TABLE interval_horology_tbl;
-DROP TABLE reltime_horology_tbl;
 DROP TABLE time_horology_tbl;
 DROP TABLE timestamp_horology_tbl;
 DROP TABLE timestamptz_horology_tbl;
 DROP TABLE timetz_horology_tbl;
-
---
--- Drop tables that we don't want to keep because they interfere with
--- testing pg_upgrade to v12 and up
---
-
-DROP TABLE abstime_tbl;
-DROP TABLE reltime_tbl;
-DROP TABLE tinterval_tbl;

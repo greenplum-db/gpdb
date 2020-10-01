@@ -34,7 +34,7 @@
  * same flex version, or if they don't use the same flex options.
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/fe_utils/psqlscan_int.h
@@ -115,9 +115,11 @@ typedef struct PsqlScanStateData
 	char	   *dolqstart;		/* current $foo$ quote start string */
 
 	/*
-	 * Callback functions provided by the program making use of the lexer.
+	 * Callback functions provided by the program making use of the lexer,
+	 * plus a void* callback passthrough argument.
 	 */
 	const PsqlScanCallbacks *callbacks;
+	void	   *cb_passthrough;
 } PsqlScanStateData;
 
 
@@ -126,19 +128,21 @@ typedef struct PsqlScanStateData
  * compatible lexers.
  */
 extern void psqlscan_push_new_buffer(PsqlScanState state,
-						 const char *newstr, const char *varname);
+									 const char *newstr, const char *varname);
 extern void psqlscan_pop_buffer_stack(PsqlScanState state);
 extern void psqlscan_select_top_buffer(PsqlScanState state);
 extern bool psqlscan_var_is_current_source(PsqlScanState state,
-							   const char *varname);
+										   const char *varname);
 extern YY_BUFFER_STATE psqlscan_prepare_buffer(PsqlScanState state,
-						const char *txt, int len,
-						char **txtcopy);
+											   const char *txt, int len,
+											   char **txtcopy);
 extern void psqlscan_emit(PsqlScanState state, const char *txt, int len);
 extern char *psqlscan_extract_substring(PsqlScanState state,
-						   const char *txt, int len);
+										const char *txt, int len);
 extern void psqlscan_escape_variable(PsqlScanState state,
-						 const char *txt, int len,
-						 bool as_ident);
+									 const char *txt, int len,
+									 PsqlScanQuoteType quote);
+extern void psqlscan_test_variable(PsqlScanState state,
+								   const char *txt, int len);
 
-#endif   /* PSQLSCAN_INT_H */
+#endif							/* PSQLSCAN_INT_H */

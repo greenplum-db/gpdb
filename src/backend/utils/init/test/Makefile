@@ -8,4 +8,6 @@ include $(top_srcdir)/src/backend/mock.mk
 
 postinit.t: \
 	$(MOCK_DIR)/backend/utils/error/elog_mock.o \
-	$(MOCK_DIR)/backend/storage/lmgr/proc_mock.o
+	$(MOCK_DIR)/backend/storage/lmgr/proc_mock.o \
+	$(MOCK_DIR)/backend/access/hash/hash_mock.o \
+	$(MOCK_DIR)/backend/utils/fmgr/fmgr_mock.o \

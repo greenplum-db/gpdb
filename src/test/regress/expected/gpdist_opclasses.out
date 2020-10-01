@@ -163,16 +163,16 @@ SELECT a, b FROM abstab_a, abstab_b WHERE a = b;
 -- class, which prevents dropping it.
 DROP OPERATOR CLASS abs_int_hash_ops USING hash;
 ERROR:  cannot drop operator class abs_int_hash_ops for access method hash because other objects depend on it
-DETAIL:  table abstab_a depends on operator class abs_int_hash_ops for access method hash
-table abstab_b depends on operator class abs_int_hash_ops for access method hash
+DETAIL:  table abstab_b depends on operator class abs_int_hash_ops for access method hash
+table abstab_a depends on operator class abs_int_hash_ops for access method hash
 HINT:  Use DROP ... CASCADE to drop the dependent objects too.
 -- With CASCADE, though, the table should be dropped too. (It would be nicer
 -- if it just changed the distribution policy to randomly distributed, but
 -- that's not how it works currently.)
 DROP OPERATOR CLASS abs_int_hash_ops USING hash CASCADE;
 NOTICE:  drop cascades to 2 other objects
-DETAIL:  drop cascades to table abstab_a
-drop cascades to table abstab_b
+DETAIL:  drop cascades to table abstab_b
+drop cascades to table abstab_a
 -- Recreate the opclass, and a table using it again. This is just so that we
 -- leave behind a custom operator class and a table that uses it in the
 -- distribution key, so that it gets tested by pg_upgrade tests that run
@@ -189,12 +189,12 @@ INSERT INTO abs_opclass_test VALUES
   (1, 'one', 1);
 -- Test deparsing of the non-default opclass
 \d abs_opclass_test
-Table "public.abs_opclass_test"
- Column |  Type   | Modifiers 
---------+---------+-----------
- i      | integer | 
- t      | text    | 
- j      | integer | 
+          Table "public.abs_opclass_test"
+ Column |  Type   | Collation | Nullable | Default 
+--------+---------+-----------+----------+---------
+ i      | integer |           |          | 
+ t      | text    |           |          | 
+ j      | integer |           |          | 
 Distributed by: (i abs_int_hash_ops, t, j abs_int_hash_ops)
 
 --

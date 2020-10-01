@@ -7,7 +7,7 @@
 //
 //	@doc:
 //		SAX parse handler class for parsing LimitOffset
-//		
+//
 //---------------------------------------------------------------------------
 
 
@@ -20,51 +20,41 @@
 
 namespace gpdxl
 {
-	using namespace gpos;
+using namespace gpos;
 
-	XERCES_CPP_NAMESPACE_USE
+XERCES_CPP_NAMESPACE_USE
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CParseHandlerScalarLimitOffset
-	//
-	//	@doc:
-	//		Parse handler for parsing a LIMIT Offset statement
-	//
-	//---------------------------------------------------------------------------
-	class CParseHandlerScalarLimitOffset : public CParseHandlerScalarOp
-	{
-		private:
-			// private copy ctor
-			CParseHandlerScalarLimitOffset(const CParseHandlerScalarLimitOffset &);
+//---------------------------------------------------------------------------
+//	@class:
+//		CParseHandlerScalarLimitOffset
+//
+//	@doc:
+//		Parse handler for parsing a LIMIT Offset statement
+//
+//---------------------------------------------------------------------------
+class CParseHandlerScalarLimitOffset : public CParseHandlerScalarOp
+{
+private:
+	// private copy ctor
+	CParseHandlerScalarLimitOffset(const CParseHandlerScalarLimitOffset &);
 
-			// process the start of an element
-			void StartElement
-						(
-						const XMLCh* const element_uri,
-						const XMLCh* const element_local_name,
-						const XMLCh* const element_qname,
-						const Attributes& attr
-						);
+	// process the start of an element
+	void StartElement(const XMLCh *const element_uri,
+					  const XMLCh *const element_local_name,
+					  const XMLCh *const element_qname, const Attributes &attr);
 
-			// process the end of an element
-			void EndElement
-						(
-						const XMLCh* const element_uri,
-						const XMLCh* const element_local_name,
-						const XMLCh* const element_qname
-						);
+	// process the end of an element
+	void EndElement(const XMLCh *const element_uri,
+					const XMLCh *const element_local_name,
+					const XMLCh *const element_qname);
 
-		public:
-			// ctor
-			CParseHandlerScalarLimitOffset
-						(
-						CMemoryPool *mp,
-						CParseHandlerManager *parse_handler_mgr,
-						CParseHandlerBase *parse_handler_root
-						);
-		};
-}
-#endif // !GPDXL_CParseHandlerScalarLimitOffset_H
+public:
+	// ctor
+	CParseHandlerScalarLimitOffset(CMemoryPool *mp,
+								   CParseHandlerManager *parse_handler_mgr,
+								   CParseHandlerBase *parse_handler_root);
+};
+}  // namespace gpdxl
+#endif	// !GPDXL_CParseHandlerScalarLimitOffset_H
 
 //EOF

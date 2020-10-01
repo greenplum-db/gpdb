@@ -40,7 +40,7 @@ function _main() {
 	echo "======================================================================"
 	echo "SUMMARY"
 	echo "======================================================================"
-	gpdb_main_src/concourse/scripts/perfsummary.py --baseLog baseline_combined.out results_combined.out
+	gpdb_src/concourse/scripts/perfsummary.py --baseLog baseline_combined.out results_combined.out
 
 	return $([ ! -s simple.diffs ]);
 }

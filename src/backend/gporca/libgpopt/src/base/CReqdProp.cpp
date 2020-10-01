@@ -17,7 +17,7 @@
 #ifdef GPOS_DEBUG
 #include "gpos/error/CAutoTrace.h"
 #include "gpopt/base/COptCtxt.h"
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 using namespace gpopt;
 
@@ -30,7 +30,8 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CReqdProp::CReqdProp()
-{}
+{
+}
 
 
 //---------------------------------------------------------------------------
@@ -42,7 +43,8 @@ CReqdProp::CReqdProp()
 //
 //---------------------------------------------------------------------------
 CReqdProp::~CReqdProp()
-{}
+{
+}
 
 
 // EOF

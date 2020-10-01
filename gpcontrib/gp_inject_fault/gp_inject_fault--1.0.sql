@@ -56,23 +56,23 @@ LANGUAGE C;
 -- Force a mirror to have applied as much XLOG as it's primary has shipped.
 CREATE OR REPLACE FUNCTION force_mirrors_to_catch_up() RETURNS VOID AS $$
 BEGIN
-    -- Switch xlog to have no-op record at far distance from
-    -- previously emitted xlog record. This is required due to
+    -- Switch wal to have no-op record at far distance from
+    -- previously emitted WAL record. This is required due to
     -- existing code behavior in startup and walreceiver process. If
-    -- primary writes big (means spanning across multiple pages) xlog
-    -- record, flushes only partial xlog record due to
+    -- primary writes big (means spanning across multiple pages) WAL
+    -- record, flushes only partial WAL record due to
     -- XLogBackgroundFlush() but restarts before commiting the
     -- transaction, mirror only receives partial record and waits to
     -- get complete record. Meanwhile after recover, no-op record gets
     -- written in place of that big record, startup process on mirror
-    -- continues to wait to receive xlog beyond previously received
-    -- point to proceed further. Hence, switch xlog as temperory
+    -- continues to wait to receive WAL beyond previously received
+    -- point to proceed further. Hence, switch WAL as temporary
     -- workaround before writing no-op record to avoid this test from
     -- hanging sometimes in CI. Refer
     -- https://groups.google.com/a/greenplum.org/d/msg/gpdb-dev/vR7-LwpPsVs/zKmhIpJ3CAAJ
 
-    PERFORM pg_switch_xlog();
-    PERFORM pg_switch_xlog() from gp_dist_random('gp_id');
+    PERFORM pg_switch_wal();
+    PERFORM pg_switch_wal() from gp_dist_random('gp_id');
 
     PERFORM gp_inject_fault('after_xlog_redo_noop', 'sleep', dbid) FROM gp_segment_configuration WHERE role='m';
     PERFORM insert_noop_xlog_record();

@@ -1,8 +1,3 @@
--- GPDB_10_MERGE_FIXME: this shouldn't be needed after merge of upstream commit 1e7c4bb004. Remove when we get there.
--- start_matchsubs
--- m/^(ERROR:  .*)\(parse_coerce\.c:\d+\)$/
--- s/\(parse_coerce\.c:\d+\)$/(parse_coerce.c:XXX)/
--- end_matchsubs
 --
 -- STRINGS
 -- Test various data entry syntaxes.
@@ -431,7 +426,7 @@ SELECT SUBSTRING('1234567890' FROM 4 FOR 3) = '456' AS "456";
  t
 (1 row)
 
--- T581 regular expression substring (with SQL99's bizarre regexp syntax)
+-- T581 regular expression substring (with SQL's bizarre regexp syntax)
 SELECT SUBSTRING('abcdefg' FROM 'a#"(b_d)#"%' FOR '#') AS "bcd";
  bcd 
 -----
@@ -446,13 +441,13 @@ SELECT SUBSTRING('abcdefg' FROM '#"(b_d)#"%' FOR '#') IS NULL AS "True";
 (1 row)
 
 -- Null inputs should return NULL
-SELECT SUBSTRING('abcdefg' FROM '(b|c)' FOR NULL) IS NULL AS "True";
+SELECT SUBSTRING('abcdefg' FROM '%' FOR NULL) IS NULL AS "True";
  True 
 ------
  t
 (1 row)
 
-SELECT SUBSTRING(NULL FROM '(b|c)' FOR '#') IS NULL AS "True";
+SELECT SUBSTRING(NULL FROM '%' FOR '#') IS NULL AS "True";
  True 
 ------
  t
@@ -464,8 +459,57 @@ SELECT SUBSTRING('abcdefg' FROM NULL FOR '#') IS NULL AS "True";
  t
 (1 row)
 
--- PostgreSQL extension to allow omitting the escape character;
--- here the regexp is taken as Posix syntax
+-- The first and last parts should act non-greedy
+SELECT SUBSTRING('abcdefg' FROM 'a#"%#"g' FOR '#') AS "bcdef";
+ bcdef 
+-------
+ bcdef
+(1 row)
+
+SELECT SUBSTRING('abcdefg' FROM 'a*#"%#"g*' FOR '#') AS "abcdefg";
+ abcdefg 
+---------
+ abcdefg
+(1 row)
+
+-- Vertical bar in any part affects only that part
+SELECT SUBSTRING('abcdefg' FROM 'a|b#"%#"g' FOR '#') AS "bcdef";
+ bcdef 
+-------
+ bcdef
+(1 row)
+
+SELECT SUBSTRING('abcdefg' FROM 'a#"%#"x|g' FOR '#') AS "bcdef";
+ bcdef 
+-------
+ bcdef
+(1 row)
+
+SELECT SUBSTRING('abcdefg' FROM 'a#"%|ab#"g' FOR '#') AS "bcdef";
+ bcdef 
+-------
+ bcdef
+(1 row)
+
+-- Can't have more than two part separators
+SELECT SUBSTRING('abcdefg' FROM 'a*#"%#"g*#"x' FOR '#') AS "error";
+ERROR:  SQL regular expression may not contain more than two escape-double-quote separators
+CONTEXT:  SQL function "substring" statement 1
+-- Postgres extension: with 0 or 1 separator, assume parts 1 and 3 are empty
+SELECT SUBSTRING('abcdefg' FROM 'a#"%g' FOR '#') AS "bcdefg";
+ bcdefg 
+--------
+ bcdefg
+(1 row)
+
+SELECT SUBSTRING('abcdefg' FROM 'a%g' FOR '#') AS "abcdefg";
+ abcdefg 
+---------
+ abcdefg
+(1 row)
+
+-- substring() with just two arguments is not allowed by SQL spec;
+-- we accept it, but we interpret the pattern as a POSIX regexp not SQL
 SELECT SUBSTRING('abcdefg' FROM 'c.e') AS "cde";
  cde 
 -----
@@ -506,7 +550,7 @@ SELECT regexp_replace('AAA aaa', 'A+', 'Z', 'gi');
 
 -- invalid regexp option
 SELECT regexp_replace('AAA aaa', 'A+', 'Z', 'z');
-ERROR:  invalid regexp option: "z"
+ERROR:  invalid regular expression option: "z"
 -- set so we can tell NULL from empty string
 \pset null '\\N'
 -- return all matches from regexp
@@ -618,7 +662,7 @@ SELECT regexp_matches(chr(10) || '1' || chr(10) || '2' || chr(10) || '3' || chr(
 
 -- give me errors
 SELECT regexp_matches('foobarbequebaz', $re$(bar)(beque)$re$, 'gz');
-ERROR:  invalid regexp option: "z"
+ERROR:  invalid regular expression option: "z"
 SELECT regexp_matches('foobarbequebaz', $re$(barbeque$re$);
 ERROR:  invalid regular expression: parentheses () not balanced
 SELECT regexp_matches('foobarbequebaz', $re$(bar)(beque){2,1}$re$);
@@ -812,14 +856,14 @@ SELECT regexp_split_to_array('1','');
 
 -- errors
 SELECT foo, length(foo) FROM regexp_split_to_table('thE QUick bROWn FOx jUMPs ovEr The lazy dOG', 'e', 'zippy') AS foo;
-ERROR:  invalid regexp option: "z"
+ERROR:  invalid regular expression option: "z"
 SELECT regexp_split_to_array('thE QUick bROWn FOx jUMPs ovEr The lazy dOG', 'e', 'iz');
-ERROR:  invalid regexp option: "z"
+ERROR:  invalid regular expression option: "z"
 -- global option meaningless for regexp_split
 SELECT foo, length(foo) FROM regexp_split_to_table('thE QUick bROWn FOx jUMPs ovEr The lazy dOG', 'e', 'g') AS foo;
-ERROR:  regexp_split does not support the global option
+ERROR:  regexp_split_to_table() does not support the "global" option
 SELECT regexp_split_to_array('thE QUick bROWn FOx jUMPs ovEr The lazy dOG', 'e', 'g');
-ERROR:  regexp_split does not support the global option
+ERROR:  regexp_split_to_array() does not support the "global" option
 -- change NULL-display back
 \pset null ''
 -- E021-11 position expression
@@ -1220,6 +1264,22 @@ SELECT 'jack' LIKE '%____%' AS t;
 (1 row)
 
 --
+-- basic tests of LIKE with indexes
+--
+CREATE TABLE texttest (a text PRIMARY KEY, b int);
+SELECT * FROM texttest WHERE a LIKE '%1%';
+ a | b 
+---+---
+(0 rows)
+
+CREATE TABLE byteatest (a bytea PRIMARY KEY, b int);
+SELECT * FROM byteatest WHERE a LIKE '%1%';
+ a | b 
+---+---
+(0 rows)
+
+DROP TABLE texttest, byteatest;
+--
 -- test implicit type conversion
 --
 -- E021-07 character concatenation
@@ -1253,93 +1313,6 @@ SELECT text 'text' || varchar ' and varchar' AS "Concat text to varchar";
  text and varchar
 (1 row)
 
--- Test "unknown" from sub queries - MPP-2510
-select foo || 'bar'::text from (select 'bar' as foo) a;
-ERROR:  failed to find conversion function from unknown to text (parse_coerce.c:544)
-select foo || 'bar'::text from (select 'bar'::text as foo) a;
- ?column? 
-----------
- barbar
-(1 row)
-
-select * from ( select 'a' as a) x join (select 'b' as b) y on a=b;
-ERROR:  failed to find conversion function from unknown to text (parse_coerce.c:544)
--- Test "unknown" with typmod MPP-2658
-create table unknown_test (v varchar(20), n numeric(20, 2), t timestamp(2));
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'v' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-insert into unknown_test select '100', '123.23', '2008-01-01 11:11:11';
-select 'foo'::varchar(10) || bar from (select 'bar' as bar) moo;
-ERROR:  failed to find conversion function from unknown to text (parse_coerce.c:544)
-select '123'::numeric(4,1) + bar from (select '123' as bar) baz;
-ERROR:  failed to find conversion function from unknown to numeric (parse_coerce.c:544)
-drop table unknown_test;
--- Test nested "unknown"s from MPP-2689
-select 'foo'::text || foo from ( select foo from (select 4.5, foo from ( select
-1, 'foo' as foo) a ) b ) c;
-ERROR:  failed to find conversion function from unknown to text (parse_coerce.c:544)
-select 'foo'::text || foo from ( select foo from
- (select foo || bar as foo from ( select 'bar' as bar, 'foo' as foo) a ) b ) c;
-ERROR:  failed to find conversion function from unknown to text (parse_coerce.c:544)
-create domain u_d as text;
-prepare p1 as select $1::u_d || foo from (select 'foo' as foo) a;
-ERROR:  failed to find conversion function from unknown to text (parse_coerce.c:544)
-prepare p2 as select 'foo' || foo
-from (select $1::u_d || bar as foo from (select 'bar' as bar) a ) b;
-ERROR:  failed to find conversion function from unknown to text (parse_coerce.c:544)
-select 'a' as a, 'b' as b, 'c' as c, 1 as d union select * from (select 'a' as a, 'b' as b, 'c' as c, 1 as d)d;
- a | b | c | d 
----+---+---+---
- a | b | c | 1
-(1 row)
-
-select * from (select 'a' as a, 'b' as b, 'c' as c, 1 as d)d union select 'a' as a, 'b' as b, 'c' as c, 1 as d;
- a | b | c | d 
----+---+---+---
- a | b | c | 1
-(1 row)
-
--- Make sure we can convert unknown to other useful types (MPP-4298)
-create table t as select j as a, 'abc' as i from
-generate_series(1, 10) j;
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'a' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-WARNING:  column "i" has type "unknown"
-DETAIL:  Proceeding with relation creation anyway.
-select * from t order by a;
- a  |  i  
-----+-----
-  1 | abc
-  2 | abc
-  3 | abc
-  4 | abc
-  5 | abc
-  6 | abc
-  7 | abc
-  8 | abc
-  9 | abc
- 10 | abc
-(10 rows)
-
-alter table t alter i type int; -- should fail
-ERROR:  failed to find conversion function from unknown to integer (parse_coerce.c:544)
-alter table t alter i type text; -- should work
-select * from t order by a;
- a  |  i  
-----+-----
-  1 | abc
-  2 | abc
-  3 | abc
-  4 | abc
-  5 | abc
-  6 | abc
-  7 | abc
-  8 | abc
-  9 | abc
- 10 | abc
-(10 rows)
-
-drop table t;
 --
 -- test substr with toasted text values
 --
@@ -1390,6 +1363,36 @@ SELECT substr(f1, 99995, 10) from toasttest;
  567890
  567890
 (4 rows)
+
+-- GPDB: These tests are sensitive to block size. In GPDB, the block
+-- size is 32 kB, whereas in PostgreSQL it's 8kB. Therefore make
+-- the data 4x larger here.
+TRUNCATE TABLE toasttest;
+INSERT INTO toasttest values (repeat('1234567890',300*4));
+INSERT INTO toasttest values (repeat('1234567890',300*4));
+INSERT INTO toasttest values (repeat('1234567890',300*4));
+INSERT INTO toasttest values (repeat('1234567890',300*4));
+-- expect >0 blocks
+SELECT pg_relation_size(reltoastrelid) = 0 AS is_empty
+  FROM pg_class where relname = 'toasttest';
+ is_empty 
+----------
+ f
+(1 row)
+
+TRUNCATE TABLE toasttest;
+ALTER TABLE toasttest set (toast_tuple_target = 4080);
+INSERT INTO toasttest values (repeat('1234567890',300));
+INSERT INTO toasttest values (repeat('1234567890',300));
+INSERT INTO toasttest values (repeat('1234567890',300));
+INSERT INTO toasttest values (repeat('1234567890',300));
+-- expect 0 blocks
+SELECT pg_relation_size(reltoastrelid) = 0 AS is_empty
+  FROM pg_class where relname = 'toasttest';
+ is_empty 
+----------
+ t
+(1 row)
 
 DROP TABLE toasttest;
 --
@@ -1644,6 +1647,58 @@ select md5('12345678901234567890123456789012345678901234567890123456789012345678
 (1 row)
 
 --
+-- SHA-2
+--
+SET bytea_output TO hex;
+SELECT sha224('');
+                           sha224                           
+------------------------------------------------------------
+ \xd14a028c2a3a2bc9476102bb288234c415a2b01f828ea62ac5b3e42f
+(1 row)
+
+SELECT sha224('The quick brown fox jumps over the lazy dog.');
+                           sha224                           
+------------------------------------------------------------
+ \x619cba8e8e05826e9b8c519c0a5c68f4fb653e8a3d8aa04bb2c8cd4c
+(1 row)
+
+SELECT sha256('');
+                               sha256                               
+--------------------------------------------------------------------
+ \xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+(1 row)
+
+SELECT sha256('The quick brown fox jumps over the lazy dog.');
+                               sha256                               
+--------------------------------------------------------------------
+ \xef537f25c895bfa782526529a9b63d97aa631564d5d789c2b765448c8635fb6c
+(1 row)
+
+SELECT sha384('');
+                                               sha384                                               
+----------------------------------------------------------------------------------------------------
+ \x38b060a751ac96384cd9327eb1b1e36a21fdb71114be07434c0cc7bf63f6e1da274edebfe76f65fbd51ad2f14898b95b
+(1 row)
+
+SELECT sha384('The quick brown fox jumps over the lazy dog.');
+                                               sha384                                               
+----------------------------------------------------------------------------------------------------
+ \xed892481d8272ca6df370bf706e4d7bc1b5739fa2177aae6c50e946678718fc67a7af2819a021c2fc34e91bdb63409d7
+(1 row)
+
+SELECT sha512('');
+                                                               sha512                                                               
+------------------------------------------------------------------------------------------------------------------------------------
+ \xcf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e
+(1 row)
+
+SELECT sha512('The quick brown fox jumps over the lazy dog.');
+                                                               sha512                                                               
+------------------------------------------------------------------------------------------------------------------------------------
+ \x91ea1245f20d46ae9a037a989f54f1f790f0a47607eeb8a14d12890cea77a1bbc6c7ed9cf205e67b7f2b8fd4c7dfd3a7a8617e45f3c463d481c7e586c39ac1ed
+(1 row)
+
+--
 -- test behavior of escape_string_warning and standard_conforming_strings options
 --
 set escape_string_warning = off;
@@ -1759,6 +1814,7 @@ LINE 1: select E'\uD834';
 --
 -- Additional string functions
 --
+SET bytea_output TO escape;
 SELECT initcap('hi THOMAS');
   initcap  
 -----------

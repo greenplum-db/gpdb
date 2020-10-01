@@ -70,9 +70,15 @@ SELECT nextval('tmp_seq'), * FROM tmp_table_cache;
 (4 rows)
 
 SELECT * from tmp_seq;
- sequence_name | last_value | start_value | increment_by | max_value | min_value | cache_value | log_cnt | is_cycled | is_called 
----------------+------------+-------------+--------------+-----------+-----------+-------------+---------+-----------+-----------
- tmp_seq       |          4 |           1 |            1 |         4 |         1 |           3 |       0 | f         | t
+ last_value | log_cnt | is_called 
+------------+---------+-----------
+          4 |       0 | t
+(1 row)
+
+SELECT seqrelid::regclass, seqtypid::regtype, seqstart, seqincrement, seqmax, seqmin, seqcache, seqcycle FROM pg_sequence WHERE seqrelid='tmp_seq'::regclass;
+ seqrelid | seqtypid | seqstart | seqincrement | seqmax | seqmin | seqcache | seqcycle 
+----------+----------+----------+--------------+--------+--------+----------+----------
+ tmp_seq  | bigint   |        1 |            1 |      4 |      1 |        3 | f
 (1 row)
 
 DROP SEQUENCE tmp_seq;
@@ -116,9 +122,15 @@ SELECT gid FROM mytable;
 (3 rows)
 
 SELECT * FROM mytable_gid_seq;
-  sequence_name  |     last_value      | start_value | increment_by |      max_value      | min_value | cache_value | log_cnt | is_cycled | is_called 
------------------+---------------------+-------------+--------------+---------------------+-----------+-------------+---------+-----------+-----------
- mytable_gid_seq | 9223372036854775807 |           1 |            1 | 9223372036854775807 |         1 |           1 |       0 | f         | t
+     last_value      | log_cnt | is_called 
+---------------------+---------+-----------
+ 9223372036854775807 |       0 | t
+(1 row)
+
+SELECT seqrelid::regclass, seqtypid::regtype, seqstart, seqincrement, seqmax, seqmin, seqcache, seqcycle FROM pg_sequence WHERE seqrelid='mytable_gid_seq'::regclass;
+    seqrelid     | seqtypid | seqstart | seqincrement |       seqmax        | seqmin | seqcache | seqcycle 
+-----------------+----------+----------+--------------+---------------------+--------+----------+----------
+ mytable_gid_seq | bigint   |        1 |            1 | 9223372036854775807 |      1 |        1 | f
 (1 row)
 
 CREATE TABLE out_of_range_insert (size INTEGER, gid serial NOT NULL);
@@ -126,19 +138,25 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'size'
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 ALTER SEQUENCE out_of_range_insert_gid_seq RESTART WITH 2147483646;
 INSERT INTO out_of_range_insert VALUES (1), (2), (3);
-ERROR:  integer out of range  (seg0 slice1 127.0.0.1:25432 pid=33482)
+ERROR:  nextval: reached maximum value of sequence "out_of_range_insert_gid_seq" (2147483647)
 SELECT * FROM out_of_range_insert ORDER BY gid;
  size | gid 
 ------+-----
 (0 rows)
 
 SELECT * FROM out_of_range_insert_gid_seq;
-        sequence_name        | last_value | start_value | increment_by |      max_value      | min_value | cache_value | log_cnt | is_cycled | is_called 
------------------------------+------------+-------------+--------------+---------------------+-----------+-------------+---------+-----------+-----------
- out_of_range_insert_gid_seq | 2147483648 |           1 |            1 | 9223372036854775807 |         1 |           1 |      30 | f         | t
+ last_value | log_cnt | is_called 
+------------+---------+-----------
+ 2147483647 |       0 | t
 (1 row)
 
-CREATE SEQUENCE descending_sequence INCREMENT -1 MINVALUE 1 MAXVALUE 9223372036854775806 START 9223372036854775806;
+SELECT seqrelid::regclass, seqtypid::regtype, seqstart, seqincrement, seqmax, seqmin, seqcache, seqcycle FROM pg_sequence WHERE seqrelid='out_of_range_insert_gid_seq'::regclass;
+          seqrelid           | seqtypid | seqstart | seqincrement |   seqmax   | seqmin | seqcache | seqcycle 
+-----------------------------+----------+----------+--------------+------------+--------+----------+----------
+ out_of_range_insert_gid_seq | integer  |        1 |            1 | 2147483647 |      1 |        1 | f
+(1 row)
+
+CREATE SEQUENCE descending_sequence INCREMENT -1 MINVALUE 1 MAXVALUE 9223372036854775806 START 9223372036854775806 CACHE 1;
 SELECT nextval('descending_sequence');
        nextval       
 ---------------------
@@ -165,8 +183,14 @@ SELECT * FROM descending_sequence_insert ORDER BY b DESC;
 (10 rows)
 
 SELECT * FROM descending_sequence;
-    sequence_name    |     last_value      |     start_value     | increment_by |      max_value      | min_value | cache_value | log_cnt | is_cycled | is_called 
----------------------+---------------------+---------------------+--------------+---------------------+-----------+-------------+---------+-----------+-----------
- descending_sequence | 9223372036854775796 | 9223372036854775806 |           -1 | 9223372036854775806 |         1 |           1 |      22 | f         | t
+     last_value      | log_cnt | is_called 
+---------------------+---------+-----------
+ 9223372036854775796 |      22 | t
+(1 row)
+
+SELECT seqrelid::regclass, seqtypid::regtype, seqstart, seqincrement, seqmax, seqmin, seqcache, seqcycle FROM pg_sequence WHERE seqrelid='descending_sequence'::regclass;
+      seqrelid       | seqtypid |      seqstart       | seqincrement |       seqmax        | seqmin | seqcache | seqcycle 
+---------------------+----------+---------------------+--------------+---------------------+--------+----------+----------
+ descending_sequence | bigint   | 9223372036854775806 |           -1 | 9223372036854775806 |      1 |        1 | f
 (1 row)
 

@@ -24,6 +24,7 @@
 #include "catalog/gp_fastsequence.h"
 #include "access/genam.h"
 #include "access/heapam.h"
+#include "access/table.h"
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
 #include "utils/builtins.h"
@@ -62,11 +63,18 @@ InsertAppendOnlyEntry(Oid relid,
     /*
      * Open and lock the pg_appendonly catalog.
      */
-	pg_appendonly_rel = heap_open(AppendOnlyRelationId, RowExclusiveLock);
+	pg_appendonly_rel = table_open(AppendOnlyRelationId, RowExclusiveLock);
 
 	natts = Natts_pg_appendonly;
 	values = palloc0(sizeof(Datum) * natts);
 	nulls = palloc0(sizeof(bool) * natts);
+
+	/*
+	 * GPDB_12_MERGE_FIXME:
+	 *		Consider not storing the parsed values for blocksize, compresstype,
+	 *		compresslevel and checksum as those are also present in StdRdOptions
+	 *		of Relcache.
+	 */
 
 	if (compresstype)
 		namestrcpy(&compresstype_name, compresstype);
@@ -91,19 +99,131 @@ InsertAppendOnlyEntry(Oid relid,
 	pg_appendonly_tuple = heap_form_tuple(RelationGetDescr(pg_appendonly_rel), values, nulls);
 
 	/* insert a new tuple */
-	simple_heap_insert(pg_appendonly_rel, pg_appendonly_tuple);
-	CatalogUpdateIndexes(pg_appendonly_rel, pg_appendonly_tuple);
+	CatalogTupleInsert(pg_appendonly_rel, pg_appendonly_tuple);
 
 	/*
      * Close the pg_appendonly_rel relcache entry without unlocking.
      * We have updated the catalog: consequently the lock must be 
 	 * held until end of transaction.
      */
-    heap_close(pg_appendonly_rel, NoLock);
+    table_close(pg_appendonly_rel, NoLock);
 
 	pfree(values);
 	pfree(nulls);
 
+}
+
+void
+GetAppendOnlyEntryAttributes(Oid relid,
+							 int32 *blocksize,
+							 int32 *safefswritesize,
+							 int16 *compresslevel,
+							 bool *checksum,
+							 NameData *compresstype)
+{
+	Relation	pg_appendonly;
+	TupleDesc	tupDesc;
+	ScanKeyData key[1];
+	SysScanDesc scan;
+	HeapTuple	tuple;
+	bool isNull;
+	Datum dat;
+
+	pg_appendonly = table_open(AppendOnlyRelationId, AccessShareLock);
+	tupDesc = RelationGetDescr(pg_appendonly);
+
+	ScanKeyInit(&key[0],
+				Anum_pg_appendonly_relid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
+
+	scan = systable_beginscan(pg_appendonly, AppendOnlyRelidIndexId, true,
+							  NULL, 1, key);
+	tuple = systable_getnext(scan);
+	if (!HeapTupleIsValid(tuple))
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+				 errmsg("missing pg_appendonly entry for relation \"%s\"",
+						get_rel_name(relid))));
+
+	if (blocksize != NULL)
+	{
+		dat = heap_getattr(tuple,
+							  Anum_pg_appendonly_blocksize,
+							  tupDesc,
+							  &isNull);
+		Assert(!isNull);
+		if(isNull)
+			ereport(ERROR,
+					(errcode(ERRCODE_UNDEFINED_OBJECT),
+					 errmsg("got invalid segrelid value: NULL")));
+
+		*blocksize = DatumGetInt32(dat);
+	}
+
+	if (safefswritesize != NULL)
+	{
+		dat = heap_getattr(tuple,
+							  Anum_pg_appendonly_safefswritesize,
+							  tupDesc,
+							  &isNull);
+		Assert(!isNull);
+		if(isNull)
+			ereport(ERROR,
+					(errcode(ERRCODE_UNDEFINED_OBJECT),
+					 errmsg("got invalid segrelid value: NULL")));
+
+		*safefswritesize = DatumGetInt32(dat);
+	}
+
+	if (compresslevel != NULL)
+	{
+		dat = heap_getattr(tuple,
+							  Anum_pg_appendonly_compresslevel,
+							  tupDesc,
+							  &isNull);
+		Assert(!isNull);
+		if(isNull)
+			ereport(ERROR,
+					(errcode(ERRCODE_UNDEFINED_OBJECT),
+					 errmsg("got invalid segrelid value: NULL")));
+
+		*compresslevel = DatumGetInt16(dat);
+	}
+
+	if (checksum != NULL)
+	{
+		dat = heap_getattr(tuple,
+							  Anum_pg_appendonly_checksum,
+							  tupDesc,
+							  &isNull);
+		Assert(!isNull);
+		if(isNull)
+			ereport(ERROR,
+					(errcode(ERRCODE_UNDEFINED_OBJECT),
+					 errmsg("got invalid segrelid value: NULL")));
+
+		*checksum = DatumGetBool(dat);
+	}
+
+	if (compresstype != NULL)
+	{
+		dat = heap_getattr(tuple,
+							  Anum_pg_appendonly_compresstype,
+							  tupDesc,
+							  &isNull);
+		Assert(!isNull);
+		if(isNull)
+			ereport(ERROR,
+					(errcode(ERRCODE_UNDEFINED_OBJECT),
+					 errmsg("got invalid segrelid value: NULL")));
+
+		*compresstype = *DatumGetName(dat);
+	}
+
+	/* Finish up scan and close pg_appendonly catalog. */
+	systable_endscan(scan);
+	table_close(pg_appendonly, AccessShareLock);
 }
 
 /*
@@ -137,7 +257,7 @@ GetAppendOnlyEntryAuxOids(Oid relid,
 	 * Check the pg_appendonly relation to be certain the ao table 
 	 * is there. 
 	 */
-	pg_appendonly = heap_open(AppendOnlyRelationId, AccessShareLock);
+	pg_appendonly = table_open(AppendOnlyRelationId, AccessShareLock);
 	tupDesc = RelationGetDescr(pg_appendonly);
 
 	ScanKeyInit(&key[0],
@@ -230,7 +350,7 @@ GetAppendOnlyEntryAuxOids(Oid relid,
 	}
 	/* Finish up scan and close pg_appendonly catalog. */
 	systable_endscan(scan);
-	heap_close(pg_appendonly, AccessShareLock);
+	table_close(pg_appendonly, AccessShareLock);
 }
 
 /*
@@ -257,7 +377,7 @@ UpdateAppendOnlyEntryAuxOids(Oid relid,
 	 * Check the pg_appendonly relation to be certain the ao table 
 	 * is there. 
 	 */
-	pg_appendonly = heap_open(AppendOnlyRelationId, RowExclusiveLock);
+	pg_appendonly = table_open(AppendOnlyRelationId, RowExclusiveLock);
 
 	ScanKeyInit(&key[0],
 				Anum_pg_appendonly_relid,
@@ -308,14 +428,13 @@ UpdateAppendOnlyEntryAuxOids(Oid relid,
 	}
 	newTuple = heap_modify_tuple(tuple, RelationGetDescr(pg_appendonly),
 								 newValues, newNulls, replace);
-	simple_heap_update(pg_appendonly, &newTuple->t_self, newTuple);
-	CatalogUpdateIndexes(pg_appendonly, newTuple);
+	CatalogTupleUpdate(pg_appendonly, &newTuple->t_self, newTuple);
 
 	heap_freetuple(newTuple);
 
 	/* Finish up scan and close appendonly catalog. */
 	systable_endscan(scan);
-	heap_close(pg_appendonly, RowExclusiveLock);
+	table_close(pg_appendonly, RowExclusiveLock);
 
 	/* Also cause flush the relcache entry for the parent relation. */
 	CacheInvalidateRelcacheByRelid(relid);
@@ -340,7 +459,7 @@ RemoveAppendonlyEntry(Oid relid)
 	/*
 	 * now remove the pg_appendonly entry 
 	 */
-	pg_appendonly_rel = heap_open(AppendOnlyRelationId, RowExclusiveLock);
+	pg_appendonly_rel = table_open(AppendOnlyRelationId, RowExclusiveLock);
 
 	ScanKeyInit(&key[0],
 				Anum_pg_appendonly_relid,
@@ -378,7 +497,7 @@ RemoveAppendonlyEntry(Oid relid)
 	
 	/* Finish up scan and close appendonly catalog. */
 	systable_endscan(scan);
-	heap_close(pg_appendonly_rel, NoLock);
+	table_close(pg_appendonly_rel, NoLock);
 }
 
 static void
@@ -435,10 +554,10 @@ GetAppendEntryForMove(
 							  NULL, 1, key);
 	tuple = systable_getnext(scan);
 	if (!HeapTupleIsValid(tuple))
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("appendonly table relid \"%d\" does not exist in "
-						"pg_appendonly", relId)));
+	{
+		systable_endscan(scan);
+		return tuple;
+	}
 
     *aosegrelid = heap_getattr(tuple,
 							   Anum_pg_appendonly_segrelid,
@@ -479,81 +598,6 @@ GetAppendEntryForMove(
 }
 
 /*
- * Transfer pg_appendonly entry from one table to another.
- */
-void
-TransferAppendonlyEntry(Oid sourceRelId, Oid targetRelId)
-{
-	Relation	pg_appendonly_rel;
-	TupleDesc	pg_appendonly_dsc;
-	HeapTuple	tuple;
-	HeapTuple	tupleCopy;
-	Datum 		*newValues;
-	bool 		*newNulls;
-	bool 		*replace;
-	Oid			aosegrelid;
-	Oid			aoblkdirrelid;
-	Oid			aovisimaprelid;
-	
-
-	/*
-	 * Fetch the pg_appendonly entry 
-	 */
-	pg_appendonly_rel = heap_open(AppendOnlyRelationId, RowExclusiveLock);
-	pg_appendonly_dsc = RelationGetDescr(pg_appendonly_rel);
-	
-	tuple = GetAppendEntryForMove(
-							pg_appendonly_rel,
-							pg_appendonly_dsc,
-							sourceRelId,
-							&aosegrelid,
-							&aoblkdirrelid,
-							&aovisimaprelid);
-
-	/* Since gp_fastsequence entry is referenced by aosegrelid, it rides along  */
-
-	/*
-	 * Delete the appendonly table entry from the catalog (pg_appendonly).
-	 */
-	tupleCopy = heap_copytuple(tuple);
-	simple_heap_delete(pg_appendonly_rel, &tuple->t_self);
-	
-	newValues = palloc0(pg_appendonly_dsc->natts * sizeof(Datum));
-	newNulls = palloc0(pg_appendonly_dsc->natts * sizeof(bool));
-	replace = palloc0(pg_appendonly_dsc->natts * sizeof(bool));
-
-	replace[Anum_pg_appendonly_relid - 1] = true;
-	newValues[Anum_pg_appendonly_relid - 1] = targetRelId;
-
-	tupleCopy = heap_modify_tuple(tupleCopy, pg_appendonly_dsc,
-								  newValues, newNulls, replace);
-
-	simple_heap_insert(pg_appendonly_rel, tupleCopy);
-	CatalogUpdateIndexes(pg_appendonly_rel, tupleCopy);
-
-	heap_freetuple(tupleCopy);
-
-	heap_close(pg_appendonly_rel, NoLock);
-
-	pfree(newValues);
-	pfree(newNulls);
-	pfree(replace);
-
-	if (OidIsValid(aosegrelid))
-	{
-		TransferDependencyLink(targetRelId, aosegrelid, "aoseg");
-	}
-	if (OidIsValid(aoblkdirrelid))
-	{
-		TransferDependencyLink(targetRelId, aoblkdirrelid, "aoblkdir");
-	}
-	if (OidIsValid(aovisimaprelid))
-	{
-		TransferDependencyLink(targetRelId, aovisimaprelid, "aovisimap");
-	}
-}
-
-/*
  * Swap pg_appendonly entries between tables.
  */
 void
@@ -561,7 +605,6 @@ SwapAppendonlyEntries(Oid entryRelId1, Oid entryRelId2)
 {
 	Relation	pg_appendonly_rel;
 	TupleDesc	pg_appendonly_dsc;
-	HeapTuple	tuple;
 	HeapTuple	tupleCopy1;
 	HeapTuple	tupleCopy2;
 	Datum 		*newValues;
@@ -574,10 +617,10 @@ SwapAppendonlyEntries(Oid entryRelId1, Oid entryRelId2)
 	Oid			aoblkdirrelid2;
 	Oid			aovisimaprelid2;
 
-	pg_appendonly_rel = heap_open(AppendOnlyRelationId, RowExclusiveLock);
+	pg_appendonly_rel = table_open(AppendOnlyRelationId, RowExclusiveLock);
 	pg_appendonly_dsc = RelationGetDescr(pg_appendonly_rel);
 	
-	tuple = GetAppendEntryForMove(
+	tupleCopy1 = GetAppendEntryForMove(
 							pg_appendonly_rel,
 							pg_appendonly_dsc,
 							entryRelId1,
@@ -585,15 +628,7 @@ SwapAppendonlyEntries(Oid entryRelId1, Oid entryRelId2)
 							&aoblkdirrelid1,
 							&aovisimaprelid1);
 
-	/* Since gp_fastsequence entry is referenced by aosegrelid, it rides along  */
-
-	/*
-	 * Delete the appendonly table entry from the catalog (pg_appendonly).
-	 */
-	tupleCopy1 = heap_copytuple(tuple);
-	simple_heap_delete(pg_appendonly_rel, &tuple->t_self);
-	
-	tuple = GetAppendEntryForMove(
+	tupleCopy2 = GetAppendEntryForMove(
 							pg_appendonly_rel,
 							pg_appendonly_dsc,
 							entryRelId2,
@@ -601,13 +636,17 @@ SwapAppendonlyEntries(Oid entryRelId1, Oid entryRelId2)
 							&aoblkdirrelid2,
 							&aovisimaprelid2);
 
-	/* Since gp_fastsequence entry is referenced by aosegrelid, it rides along  */
+	if (!HeapTupleIsValid(tupleCopy1) || !HeapTupleIsValid(tupleCopy2))
+	{
+		if (HeapTupleIsValid(tupleCopy1) || HeapTupleIsValid(tupleCopy2))
+			elog(ERROR, "swapping pg_appendonly entries is not permitted for non-appendoptimized tables");
+		table_close(pg_appendonly_rel, NoLock);
+		return;
+	}
 
-	/*
-	 * Delete the appendonly table entry from the catalog (pg_appendonly).
-	 */
-	tupleCopy2 = heap_copytuple(tuple);
-	simple_heap_delete(pg_appendonly_rel, &tuple->t_self);
+	/* Since gp_fastsequence entry is referenced by aosegrelid, it rides along  */
+	simple_heap_delete(pg_appendonly_rel, &tupleCopy1->t_self);
+	simple_heap_delete(pg_appendonly_rel, &tupleCopy2->t_self);
 
 	/*
 	 * (Re)insert.
@@ -622,8 +661,7 @@ SwapAppendonlyEntries(Oid entryRelId1, Oid entryRelId2)
 	tupleCopy1 = heap_modify_tuple(tupleCopy1, pg_appendonly_dsc,
 								  newValues, newNulls, replace);
 
-	simple_heap_insert(pg_appendonly_rel, tupleCopy1);
-	CatalogUpdateIndexes(pg_appendonly_rel, tupleCopy1);
+	CatalogTupleInsert(pg_appendonly_rel, tupleCopy1);
 
 	heap_freetuple(tupleCopy1);
 
@@ -632,12 +670,11 @@ SwapAppendonlyEntries(Oid entryRelId1, Oid entryRelId2)
 	tupleCopy2 = heap_modify_tuple(tupleCopy2, pg_appendonly_dsc,
 								  newValues, newNulls, replace);
 
-	simple_heap_insert(pg_appendonly_rel, tupleCopy2);
-	CatalogUpdateIndexes(pg_appendonly_rel, tupleCopy2);
+	CatalogTupleInsert(pg_appendonly_rel, tupleCopy2);
 
 	heap_freetuple(tupleCopy2);
 
-	heap_close(pg_appendonly_rel, NoLock);
+	table_close(pg_appendonly_rel, NoLock);
 
 	pfree(newValues);
 	pfree(newNulls);

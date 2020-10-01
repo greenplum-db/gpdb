@@ -7,7 +7,7 @@
  * operators.  Estimates are based on null fraction, most common values,
  * and histogram of inet/cidr columns.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -23,6 +23,7 @@
 #include "access/htup_details.h"
 #include "catalog/pg_operator.h"
 #include "catalog/pg_statistic.h"
+#include "utils/builtins.h"
 #include "utils/inet.h"
 #include "utils/lsyscache.h"
 #include "utils/selfuncs.h"
@@ -43,33 +44,33 @@
 #define MAX_CONSIDERED_ELEMS 1024
 
 static Selectivity networkjoinsel_inner(Oid operator,
-					 VariableStatData *vardata1, VariableStatData *vardata2);
+										VariableStatData *vardata1, VariableStatData *vardata2);
 static Selectivity networkjoinsel_semi(Oid operator,
-					VariableStatData *vardata1, VariableStatData *vardata2);
+									   VariableStatData *vardata1, VariableStatData *vardata2);
 static Selectivity mcv_population(float4 *mcv_numbers, int mcv_nvalues);
 static Selectivity inet_hist_value_sel(Datum *values, int nvalues,
-					Datum constvalue, int opr_codenum);
+									   Datum constvalue, int opr_codenum);
 static Selectivity inet_mcv_join_sel(Datum *mcv1_values,
-				  float4 *mcv1_numbers, int mcv1_nvalues, Datum *mcv2_values,
-				  float4 *mcv2_numbers, int mcv2_nvalues, Oid operator);
+									 float4 *mcv1_numbers, int mcv1_nvalues, Datum *mcv2_values,
+									 float4 *mcv2_numbers, int mcv2_nvalues, Oid operator);
 static Selectivity inet_mcv_hist_sel(Datum *mcv_values, float4 *mcv_numbers,
-				  int mcv_nvalues, Datum *hist_values, int hist_nvalues,
-				  int opr_codenum);
+									 int mcv_nvalues, Datum *hist_values, int hist_nvalues,
+									 int opr_codenum);
 static Selectivity inet_hist_inclusion_join_sel(Datum *hist1_values,
-							 int hist1_nvalues,
-							 Datum *hist2_values, int hist2_nvalues,
-							 int opr_codenum);
+												int hist1_nvalues,
+												Datum *hist2_values, int hist2_nvalues,
+												int opr_codenum);
 static Selectivity inet_semi_join_sel(Datum lhs_value,
-				   bool mcv_exists, Datum *mcv_values, int mcv_nvalues,
-				   bool hist_exists, Datum *hist_values, int hist_nvalues,
-				   double hist_weight,
-				   FmgrInfo *proc, int opr_codenum);
+									  bool mcv_exists, Datum *mcv_values, int mcv_nvalues,
+									  bool hist_exists, Datum *hist_values, int hist_nvalues,
+									  double hist_weight,
+									  FmgrInfo *proc, int opr_codenum);
 static int	inet_opr_codenum(Oid operator);
 static int	inet_inclusion_cmp(inet *left, inet *right, int opr_codenum);
-static int inet_masklen_inclusion_cmp(inet *left, inet *right,
-						   int opr_codenum);
-static int inet_hist_match_divider(inet *boundary, inet *query,
-						int opr_codenum);
+static int	inet_masklen_inclusion_cmp(inet *left, inet *right,
+									   int opr_codenum);
+static int	inet_hist_match_divider(inet *boundary, inet *query,
+									int opr_codenum);
 
 /*
  * Selectivity estimation for the subnet inclusion/overlap operators
@@ -89,10 +90,10 @@ networksel(PG_FUNCTION_ARGS)
 				non_mcv_selec;
 	Datum		constvalue;
 	Form_pg_statistic stats;
+	AttStatsSlot hslot;
 	double		sumcommon,
 				nullfrac;
 	FmgrInfo	proc;
-	AttStatsSlot sslot;
 
 	/*
 	 * If expression is not (variable op something) or (something op
@@ -144,7 +145,7 @@ networksel(PG_FUNCTION_ARGS)
 	 * non-MCV population that satisfies the clause.  If we don't, apply the
 	 * default selectivity to that population.
 	 */
-	if (get_attstatsslot(&sslot, vardata.statsTuple,
+	if (get_attstatsslot(&hslot, vardata.statsTuple,
 						 STATISTIC_KIND_HISTOGRAM, InvalidOid,
 						 ATTSTATSSLOT_VALUES))
 	{
@@ -153,10 +154,10 @@ networksel(PG_FUNCTION_ARGS)
 		/* Commute if needed, so we can consider histogram to be on the left */
 		if (!varonleft)
 			opr_codenum = -opr_codenum;
-		non_mcv_selec = inet_hist_value_sel(sslot.values, sslot.nvalues,
+		non_mcv_selec = inet_hist_value_sel(hslot.values, hslot.nvalues,
 											constvalue, opr_codenum);
 
-		free_attstatsslot(&sslot);
+		free_attstatsslot(&hslot);
 	}
 	else
 		non_mcv_selec = DEFAULT_SEL(operator);
@@ -274,26 +275,31 @@ networkjoinsel_inner(Oid operator,
 	int			opr_codenum;
 	int			mcv1_length = 0,
 				mcv2_length = 0;
-	AttStatsSlot	mcv1,
-					hist1,
-					mcv2,
-					hist2;
+	AttStatsSlot mcv1_slot;
+	AttStatsSlot mcv2_slot;
+	AttStatsSlot hist1_slot;
+	AttStatsSlot hist2_slot;
 
 	if (HeapTupleIsValid(vardata1->statsTuple))
 	{
 		stats = (Form_pg_statistic) GETSTRUCT(vardata1->statsTuple);
 		nullfrac1 = stats->stanullfrac;
 
-		mcv1_exists = get_attstatsslot(&mcv1, vardata1->statsTuple,
+		mcv1_exists = get_attstatsslot(&mcv1_slot, vardata1->statsTuple,
 									   STATISTIC_KIND_MCV, InvalidOid,
 									   ATTSTATSSLOT_VALUES | ATTSTATSSLOT_NUMBERS);
-		hist1_exists = get_attstatsslot(&hist1, vardata1->statsTuple,
+		hist1_exists = get_attstatsslot(&hist1_slot, vardata1->statsTuple,
 										STATISTIC_KIND_HISTOGRAM, InvalidOid,
 										ATTSTATSSLOT_VALUES);
 		/* Arbitrarily limit number of MCVs considered */
-		mcv1_length = Min(mcv1.nvalues, MAX_CONSIDERED_ELEMS);
+		mcv1_length = Min(mcv1_slot.nvalues, MAX_CONSIDERED_ELEMS);
 		if (mcv1_exists)
-			sumcommon1 = mcv_population(mcv1.numbers, mcv1.nnumbers);
+			sumcommon1 = mcv_population(mcv1_slot.numbers, mcv1_length);
+	}
+	else
+	{
+		memset(&mcv1_slot, 0, sizeof(mcv1_slot));
+		memset(&hist1_slot, 0, sizeof(hist1_slot));
 	}
 
 	if (HeapTupleIsValid(vardata2->statsTuple))
@@ -301,16 +307,21 @@ networkjoinsel_inner(Oid operator,
 		stats = (Form_pg_statistic) GETSTRUCT(vardata2->statsTuple);
 		nullfrac2 = stats->stanullfrac;
 
-		mcv2_exists = get_attstatsslot(&mcv2, vardata2->statsTuple,
+		mcv2_exists = get_attstatsslot(&mcv2_slot, vardata2->statsTuple,
 									   STATISTIC_KIND_MCV, InvalidOid,
 									   ATTSTATSSLOT_VALUES | ATTSTATSSLOT_NUMBERS);
-		hist2_exists = get_attstatsslot(&hist2, vardata2->statsTuple,
+		hist2_exists = get_attstatsslot(&hist2_slot, vardata2->statsTuple,
 										STATISTIC_KIND_HISTOGRAM, InvalidOid,
 										ATTSTATSSLOT_VALUES);
 		/* Arbitrarily limit number of MCVs considered */
-		mcv2_length = Min(mcv2.nvalues, MAX_CONSIDERED_ELEMS);
+		mcv2_length = Min(mcv2_slot.nvalues, MAX_CONSIDERED_ELEMS);
 		if (mcv2_exists)
-			sumcommon2 = mcv_population(mcv2.numbers, mcv2.nnumbers);
+			sumcommon2 = mcv_population(mcv2_slot.numbers, mcv2_length);
+	}
+	else
+	{
+		memset(&mcv2_slot, 0, sizeof(mcv2_slot));
+		memset(&hist2_slot, 0, sizeof(hist2_slot));
 	}
 
 	opr_codenum = inet_opr_codenum(operator);
@@ -319,8 +330,10 @@ networkjoinsel_inner(Oid operator,
 	 * Calculate selectivity for MCV vs MCV matches.
 	 */
 	if (mcv1_exists && mcv2_exists)
-		selec += inet_mcv_join_sel(mcv1.values, mcv1.numbers, mcv1_length,
-								   mcv2.values, mcv2.numbers, mcv2_length,
+		selec += inet_mcv_join_sel(mcv1_slot.values, mcv1_slot.numbers,
+								   mcv1_length,
+								   mcv2_slot.values, mcv2_slot.numbers,
+								   mcv2_length,
 								   operator);
 
 	/*
@@ -330,13 +343,13 @@ networkjoinsel_inner(Oid operator,
 	 */
 	if (mcv1_exists && hist2_exists)
 		selec += (1.0 - nullfrac2 - sumcommon2) *
-			inet_mcv_hist_sel(mcv1.values, mcv1.numbers, mcv1_length,
-							  hist2.values, hist2.nvalues,
+			inet_mcv_hist_sel(mcv1_slot.values, mcv1_slot.numbers, mcv1_length,
+							  hist2_slot.values, hist2_slot.nvalues,
 							  opr_codenum);
 	if (mcv2_exists && hist1_exists)
 		selec += (1.0 - nullfrac1 - sumcommon1) *
-			inet_mcv_hist_sel(mcv2.values, mcv2.numbers, mcv2_length,
-							  hist1.values, hist1.nvalues,
+			inet_mcv_hist_sel(mcv2_slot.values, mcv2_slot.numbers, mcv2_length,
+							  hist1_slot.values, hist1_slot.nvalues,
 							  -opr_codenum);
 
 	/*
@@ -346,8 +359,8 @@ networkjoinsel_inner(Oid operator,
 	if (hist1_exists && hist2_exists)
 		selec += (1.0 - nullfrac1 - sumcommon1) *
 			(1.0 - nullfrac2 - sumcommon2) *
-			inet_hist_inclusion_join_sel(hist1.values, hist1.nvalues,
-										 hist2.values, hist2.nvalues,
+			inet_hist_inclusion_join_sel(hist1_slot.values, hist1_slot.nvalues,
+										 hist2_slot.values, hist2_slot.nvalues,
 										 opr_codenum);
 
 	/*
@@ -358,14 +371,10 @@ networkjoinsel_inner(Oid operator,
 		selec = (1.0 - nullfrac1) * (1.0 - nullfrac2) * DEFAULT_SEL(operator);
 
 	/* Release stats. */
-	if (mcv1_exists)
-		free_attstatsslot(&mcv1);
-	if (mcv2_exists)
-		free_attstatsslot(&mcv2);
-	if (hist1_exists)
-		free_attstatsslot(&hist1);
-	if (hist2_exists)
-		free_attstatsslot(&hist2);
+	free_attstatsslot(&mcv1_slot);
+	free_attstatsslot(&mcv2_slot);
+	free_attstatsslot(&hist1_slot);
+	free_attstatsslot(&hist2_slot);
 
 	return selec;
 }
@@ -396,26 +405,31 @@ networkjoinsel_semi(Oid operator,
 	int			i,
 				mcv1_length = 0,
 				mcv2_length = 0;
-	AttStatsSlot	mcv1,
-					hist1,
-					mcv2,
-					hist2;
+	AttStatsSlot mcv1_slot;
+	AttStatsSlot mcv2_slot;
+	AttStatsSlot hist1_slot;
+	AttStatsSlot hist2_slot;
 
 	if (HeapTupleIsValid(vardata1->statsTuple))
 	{
 		stats = (Form_pg_statistic) GETSTRUCT(vardata1->statsTuple);
 		nullfrac1 = stats->stanullfrac;
 
-		mcv1_exists = get_attstatsslot(&mcv1, vardata1->statsTuple,
+		mcv1_exists = get_attstatsslot(&mcv1_slot, vardata1->statsTuple,
 									   STATISTIC_KIND_MCV, InvalidOid,
 									   ATTSTATSSLOT_VALUES | ATTSTATSSLOT_NUMBERS);
-		hist1_exists = get_attstatsslot(&hist1, vardata1->statsTuple,
+		hist1_exists = get_attstatsslot(&hist1_slot, vardata1->statsTuple,
 										STATISTIC_KIND_HISTOGRAM, InvalidOid,
-									   ATTSTATSSLOT_VALUES);
+										ATTSTATSSLOT_VALUES);
 		/* Arbitrarily limit number of MCVs considered */
-		mcv1_length = Min(mcv1.nvalues, MAX_CONSIDERED_ELEMS);
+		mcv1_length = Min(mcv1_slot.nvalues, MAX_CONSIDERED_ELEMS);
 		if (mcv1_exists)
-			sumcommon1 = mcv_population(mcv1.numbers, mcv1.nnumbers);
+			sumcommon1 = mcv_population(mcv1_slot.numbers, mcv1_length);
+	}
+	else
+	{
+		memset(&mcv1_slot, 0, sizeof(mcv1_slot));
+		memset(&hist1_slot, 0, sizeof(hist1_slot));
 	}
 
 	if (HeapTupleIsValid(vardata2->statsTuple))
@@ -423,16 +437,21 @@ networkjoinsel_semi(Oid operator,
 		stats = (Form_pg_statistic) GETSTRUCT(vardata2->statsTuple);
 		nullfrac2 = stats->stanullfrac;
 
-		mcv2_exists = get_attstatsslot(&mcv2, vardata2->statsTuple,
+		mcv2_exists = get_attstatsslot(&mcv2_slot, vardata2->statsTuple,
 									   STATISTIC_KIND_MCV, InvalidOid,
 									   ATTSTATSSLOT_VALUES | ATTSTATSSLOT_NUMBERS);
-		hist2_exists = get_attstatsslot(&hist2, vardata2->statsTuple,
+		hist2_exists = get_attstatsslot(&hist2_slot, vardata2->statsTuple,
 										STATISTIC_KIND_HISTOGRAM, InvalidOid,
-									   ATTSTATSSLOT_VALUES);
+										ATTSTATSSLOT_VALUES);
 		/* Arbitrarily limit number of MCVs considered */
-		mcv2_length = Min(mcv2.nvalues, MAX_CONSIDERED_ELEMS);
+		mcv2_length = Min(mcv2_slot.nvalues, MAX_CONSIDERED_ELEMS);
 		if (mcv2_exists)
-			sumcommon2 = mcv_population(mcv2.numbers, mcv2_length);
+			sumcommon2 = mcv_population(mcv2_slot.numbers, mcv2_length);
+	}
+	else
+	{
+		memset(&mcv2_slot, 0, sizeof(mcv2_slot));
+		memset(&hist2_slot, 0, sizeof(hist2_slot));
 	}
 
 	opr_codenum = inet_opr_codenum(operator);
@@ -450,10 +469,11 @@ networkjoinsel_semi(Oid operator,
 	{
 		for (i = 0; i < mcv1_length; i++)
 		{
-			selec += mcv1.numbers[i] *
-				inet_semi_join_sel(mcv1.values[i],
-								   mcv2_exists, mcv2.values, mcv2_length,
-								   hist2_exists, hist2.values, hist2.nvalues,
+			selec += mcv1_slot.numbers[i] *
+				inet_semi_join_sel(mcv1_slot.values[i],
+								   mcv2_exists, mcv2_slot.values, mcv2_length,
+								   hist2_exists,
+								   hist2_slot.values, hist2_slot.nvalues,
 								   hist2_weight,
 								   &proc, opr_codenum);
 		}
@@ -470,21 +490,22 @@ networkjoinsel_semi(Oid operator,
 	 *
 	 * If there are too many histogram elements, decimate to limit runtime.
 	 */
-	if (hist1_exists && hist1.nvalues > 2 && (mcv2_exists || hist2_exists))
+	if (hist1_exists && hist1_slot.nvalues > 2 && (mcv2_exists || hist2_exists))
 	{
 		double		hist_selec_sum = 0.0;
 		int			k,
 					n;
 
-		k = (hist1.nvalues - 3) / MAX_CONSIDERED_ELEMS + 1;
+		k = (hist1_slot.nvalues - 3) / MAX_CONSIDERED_ELEMS + 1;
 
 		n = 0;
-		for (i = 1; i < hist1.nvalues - 1; i += k)
+		for (i = 1; i < hist1_slot.nvalues - 1; i += k)
 		{
 			hist_selec_sum +=
-				inet_semi_join_sel(hist1.values[i],
-								   mcv2_exists, mcv2.values, mcv2_length,
-								   hist2_exists, hist2.values, hist2.nvalues,
+				inet_semi_join_sel(hist1_slot.values[i],
+								   mcv2_exists, mcv2_slot.values, mcv2_length,
+								   hist2_exists,
+								   hist2_slot.values, hist2_slot.nvalues,
 								   hist2_weight,
 								   &proc, opr_codenum);
 			n++;
@@ -501,14 +522,10 @@ networkjoinsel_semi(Oid operator,
 		selec = (1.0 - nullfrac1) * (1.0 - nullfrac2) * DEFAULT_SEL(operator);
 
 	/* Release stats. */
-	if (mcv1_exists)
-		free_attstatsslot(&mcv1);
-	if (mcv2_exists)
-		free_attstatsslot(&mcv2);
-	if (hist1_exists)
-		free_attstatsslot(&hist1);
-	if (hist2_exists)
-		free_attstatsslot(&hist2);
+	free_attstatsslot(&mcv1_slot);
+	free_attstatsslot(&mcv2_slot);
+	free_attstatsslot(&hist1_slot);
+	free_attstatsslot(&hist2_slot);
 
 	return selec;
 }

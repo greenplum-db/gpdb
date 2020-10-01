@@ -181,7 +181,9 @@ LOG ERRORS INTO WHATEVER
 SEGMENT REJECT LIMIT 1000;
 
 SELECT * FROM sreh_ext_err_tbl ORDER BY a;
-WITH error_log AS (SELECT gp_read_error_log('sreh_ext_err_tbl')) select count(*) from error_log;
+-- Verify the fields that we easily can.
+WITH error_log AS (SELECT * FROM gp_read_error_log('sreh_ext_err_tbl'))
+  SELECT relname, filename LIKE 'gpfdist://@hostname@:8080/bad_data1.data [%]' as filename_ok, linenum, errmsg from error_log;
 
 CREATE EXTERNAL TABLE sreh_ext(a int, b int, c int)
 LOCATION ('gpfdist://@hostname@:8080/bad_data1.data' )

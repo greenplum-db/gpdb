@@ -16,13 +16,14 @@ static void
 test_boundaries_of_CreateSharedSnapshotArray(void **state)
 {
 	/*
-	 * max_prepared_xacts is used to calculate NUM_SHARED_SNAPSHOT_SLOTS. Make
+	 * MaxBackends is used to calculate NUM_SHARED_SNAPSHOT_SLOTS. Make
 	 * it non-zero so that we actually allocate some local snapshot slots.
 	 */
-	max_prepared_xacts = 2;
+	MaxBackends = 2;
 
 	SharedSnapshotStruct 	*fakeSharedSnapshotArray = NULL;
 	LWLockPadded 			*fakeLockBase = NULL;
+	bool found = false;
 
 	expect_string(RequestNamedLWLockTranche, tranche_name, "SharedSnapshotLocks");
 	expect_value(RequestNamedLWLockTranche, num_lwlocks, NUM_SHARED_SNAPSHOT_SLOTS);
@@ -31,7 +32,7 @@ test_boundaries_of_CreateSharedSnapshotArray(void **state)
 	fakeSharedSnapshotArray = malloc(sharedSnapshotShmemSize);
 
 	will_return(ShmemInitStruct, fakeSharedSnapshotArray);
-	will_assign_value(ShmemInitStruct, foundPtr, false);
+	will_assign_value(ShmemInitStruct, foundPtr, found);
 	expect_any_count(ShmemInitStruct, name, 1);
 	expect_any_count(ShmemInitStruct, size, 1);
 	expect_any_count(ShmemInitStruct, foundPtr, 1);
@@ -53,7 +54,6 @@ test_boundaries_of_CreateSharedSnapshotArray(void **state)
 		 * Assert that each slot in SharedSnapshotStruct has an associated
 		 * dynamically allocated LWLock.
 		 */
-		s->snapshot.satisfies = HeapTupleSatisfiesMVCC;
 		assert_true(s->slotLock == &fakeLockBase[i].lock);
 		/*
 		 * Assert that every slot xip array falls inside the boundaries of the

@@ -19,65 +19,57 @@
 
 namespace gpdxl
 {
-	using namespace gpos;
+using namespace gpos;
 
 
-	XERCES_CPP_NAMESPACE_USE
+XERCES_CPP_NAMESPACE_USE
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CParseHandlerLogicalGet
-	//
-	//	@doc:
-	//		Parse handler for parsing a logical get operator
-	//
-	//---------------------------------------------------------------------------
-	class CParseHandlerLogicalGet : public CParseHandlerLogicalOp
-	{
-		private:
+//---------------------------------------------------------------------------
+//	@class:
+//		CParseHandlerLogicalGet
+//
+//	@doc:
+//		Parse handler for parsing a logical get operator
+//
+//---------------------------------------------------------------------------
+class CParseHandlerLogicalGet : public CParseHandlerLogicalOp
+{
+private:
+	// private copy ctor
+	CParseHandlerLogicalGet(const CParseHandlerLogicalGet &);
 
-			// private copy ctor
-			CParseHandlerLogicalGet(const CParseHandlerLogicalGet &);
+	// process the start of an element
+	virtual void StartElement(
+		const XMLCh *const element_uri,			// URI of element's namespace
+		const XMLCh *const element_local_name,	// local part of element's name
+		const XMLCh *const element_qname,		// element's qname
+		const Attributes &attr					// element's attributes
+	);
 
-			// process the start of an element
-			virtual
-			void StartElement
-				(
-					const XMLCh* const element_uri, 		// URI of element's namespace
- 					const XMLCh* const element_local_name,	// local part of element's name
-					const XMLCh* const element_qname,		// element's qname
-					const Attributes& attr				// element's attributes
-				);
+	// process the end of an element
+	virtual void EndElement(
+		const XMLCh *const element_uri,			// URI of element's namespace
+		const XMLCh *const element_local_name,	// local part of element's name
+		const XMLCh *const element_qname		// element's qname
+	);
 
-			// process the end of an element
-			virtual
-			void EndElement
-				(
-					const XMLCh* const element_uri, 		// URI of element's namespace
-					const XMLCh* const element_local_name,	// local part of element's name
-					const XMLCh* const element_qname		// element's qname
-				);
+protected:
+	// start element helper function
+	void StartElement(const XMLCh *const element_local_name,
+					  Edxltoken token_type);
 
-		protected:
+	// end element helper function
+	void EndElement(const XMLCh *const element_local_name,
+					Edxltoken token_type);
 
-			// start element helper function
-			void StartElement(const XMLCh* const element_local_name, Edxltoken token_type);
+public:
+	// ctor
+	CParseHandlerLogicalGet(CMemoryPool *mp,
+							CParseHandlerManager *parse_handler_mgr,
+							CParseHandlerBase *parse_handler_root);
+};
+}  // namespace gpdxl
 
-			// end element helper function
-			void EndElement(const XMLCh* const element_local_name, Edxltoken token_type);
-
-		public:
-			// ctor
-			CParseHandlerLogicalGet
-				(
-				CMemoryPool *mp,
-				CParseHandlerManager *parse_handler_mgr,
-				CParseHandlerBase *parse_handler_root
-				);
-
-	};
-}
-
-#endif // !GPDXL_CParseHandlerLogicalGet_H
+#endif	// !GPDXL_CParseHandlerLogicalGet_H
 
 // EOF

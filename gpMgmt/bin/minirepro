@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 '''
 minirepro utility
 
@@ -60,8 +60,8 @@ minirepro gptest -h locahost -U gpadmin -p 4444 -q ~/in.sql -f ~/out.sql
 '''
 
 import os, sys, re, json, platform, subprocess
+import pgdb
 from optparse import OptionParser
-from pygresql import pgdb
 from datetime import datetime
 
 version = '1.13'
@@ -69,7 +69,7 @@ PATH_PREFIX = '/tmp/'
 PGDUMP_FILE = 'pg_dump_out.sql'
 sysnslist = "('pg_toast', 'pg_bitmapindex', 'pg_catalog', 'information_schema', 'gp_toolkit')"
 # unset search path due to CVE-2018-1058
-pgoptions = '-c gp_session_role=utility -c search_path='
+pgoptions = '-c gp_role=utility -c search_path='
 
 class MRQuery(object):
     def __init__(self):
@@ -330,9 +330,16 @@ def main():
 
     # setup the connection info tuple with options
     connectionInfo = (host, port, user, db)
-    connectionString = ':'.join([host, port, db, user, '', pgoptions, ''])
+    connectionDict = {
+            'host': host,
+            'port': port,
+            'database': db,
+            'user': user,
+            'options': pgoptions,
+            }
+
     print "Connecting to database: host=%s, port=%s, user=%s, db=%s ..." % connectionInfo
-    conn = pgdb.connect(connectionString)
+    conn = pgdb.connect(**connectionDict)
     cursor = conn.cursor()
 
     # get server version, which is dumped to minirepro output file

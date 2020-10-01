@@ -1,0 +1,30 @@
+#----------------------------------------------------------------------
+#
+# pg_compression.dat
+#    Initial contents of the pg_compression system relation.
+#
+# Portions Copyright (c) 1996-2018, PostgreSQL Global Development Group
+# Portions Copyright (c) 1994, Regents of the University of California
+#
+# src/include/catalog/pg_compression.dat
+#
+#----------------------------------------------------------------------
+
+[
+
+{ compname => 'zlib', compconstructor => 'gp_zlib_constructor',
+  compdestructor => 'gp_zlib_destructor', compcompressor => 'gp_zlib_compress',
+  compdecompressor => 'gp_zlib_decompress',
+  compvalidator => 'gp_zlib_validator', compowner => 'PGUID' },
+{ compname => 'rle_type', compconstructor => 'gp_rle_type_constructor',
+  compdestructor => 'gp_rle_type_destructor',
+  compcompressor => 'gp_rle_type_compress',
+  compdecompressor => 'gp_rle_type_decompress',
+  compvalidator => 'gp_rle_type_validator', compowner => 'PGUID' },
+{ compname => 'none', compconstructor => 'gp_dummy_compression_constructor',
+  compdestructor => 'gp_dummy_compression_destructor',
+  compcompressor => 'gp_dummy_compression_compress',
+  compdecompressor => 'gp_dummy_compression_decompress',
+  compvalidator => 'gp_dummy_compression_validator', compowner => 'PGUID' },
+
+]

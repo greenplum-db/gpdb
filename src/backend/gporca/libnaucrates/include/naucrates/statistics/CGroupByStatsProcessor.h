@@ -19,25 +19,17 @@
 
 namespace gpnaucrates
 {
+class CGroupByStatsProcessor
+{
+public:
+	// group by
+	static CStatistics *CalcGroupByStats(CMemoryPool *mp,
+										 const CStatistics *input_stats,
+										 ULongPtrArray *GCs,
+										 ULongPtrArray *aggs, CBitSet *keys);
+};
+}  // namespace gpnaucrates
 
-	class CGroupByStatsProcessor
-	{
-		public:
-
-		// group by
-		static
-		CStatistics *CalcGroupByStats
-						(
-						CMemoryPool *mp,
-						const CStatistics *input_stats,
-						ULongPtrArray *GCs,
-						ULongPtrArray *aggs,
-						CBitSet *keys
-						);
-	};
-}
-
-#endif // !GPNAUCRATES_CGroupByStatsProcessor_H
+#endif	// !GPNAUCRATES_CGroupByStatsProcessor_H
 
 // EOF
-

@@ -8,7 +8,7 @@
  *
  * See src/tools/testint128.c for a simple test harness for this file.
  *
- * Copyright (c) 2017, PostgreSQL Global Development Group
+ * Copyright (c) 2017-2019, PostgreSQL Global Development Group
  *
  * src/include/common/int128.h
  *
@@ -35,6 +35,24 @@
 typedef int128 INT128;
 
 /*
+ * Add an unsigned int64 value into an INT128 variable.
+ */
+static inline void
+int128_add_uint64(INT128 *i128, uint64 v)
+{
+	*i128 += v;
+}
+
+/*
+ * Add a signed int64 value into an INT128 variable.
+ */
+static inline void
+int128_add_int64(INT128 *i128, int64 v)
+{
+	*i128 += v;
+}
+
+/*
  * Add the 128-bit product of two int64 values into an INT128 variable.
  *
  * XXX with a stupid compiler, this could actually be less efficient than
@@ -43,7 +61,7 @@ typedef int128 INT128;
 static inline void
 int128_add_int64_mul_int64(INT128 *i128, int64 x, int64 y)
 {
-	*i128 += (int128) x *(int128) y;
+	*i128 += (int128) x * (int128) y;
 }
 
 /*
@@ -116,6 +134,33 @@ int128_add_uint64(INT128 *i128, uint64 v)
 	if (((int64) v < 0 && (int64) oldlo < 0) ||
 		(((int64) v < 0 || (int64) oldlo < 0) && (int64) i128->lo >= 0))
 		i128->hi++;
+}
+
+/*
+ * Add a signed int64 value into an INT128 variable.
+ */
+static inline void
+int128_add_int64(INT128 *i128, int64 v)
+{
+	/*
+	 * This is much like the above except that the carry logic differs for
+	 * negative v.  Ordinarily we'd need to subtract 1 from the .hi part
+	 * (corresponding to adding the sign-extended bits of v to it); but if
+	 * there is a carry out of the .lo part, that cancels and we do nothing.
+	 */
+	uint64		oldlo = i128->lo;
+
+	i128->lo += v;
+	if (v >= 0)
+	{
+		if ((int64) oldlo < 0 && (int64) i128->lo >= 0)
+			i128->hi++;
+	}
+	else
+	{
+		if (!((int64) oldlo < 0 || (int64) i128->lo >= 0))
+			i128->hi--;
+	}
 }
 
 /*
@@ -226,6 +271,6 @@ int128_to_int64(INT128 val)
 	return (int64) val.lo;
 }
 
-#endif   /* USE_NATIVE_INT128 */
+#endif							/* USE_NATIVE_INT128 */
 
-#endif   /* INT128_H */
+#endif							/* INT128_H */

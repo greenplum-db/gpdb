@@ -3,7 +3,7 @@
  * test.c
  *		Test harness code for shared memory message queues.
  *
- * Copyright (c) 2013-2016, PostgreSQL Global Development Group
+ * Copyright (c) 2013-2019, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *		src/test/modules/test_shm_mq/test.c
@@ -15,6 +15,7 @@
 
 #include "fmgr.h"
 #include "miscadmin.h"
+#include "pgstat.h"
 
 #include "test_shm_mq.h"
 
@@ -26,7 +27,7 @@ PG_FUNCTION_INFO_V1(test_shm_mq_pipelined);
 void		_PG_init(void);
 
 static void verify_message(Size origlen, char *origdata, Size newlen,
-			   char *newdata);
+						   char *newdata);
 
 /*
  * Simple test of the shared memory message queue infrastructure.
@@ -217,8 +218,8 @@ test_shm_mq_pipelined(PG_FUNCTION_ARGS)
 			if (send_count != receive_count)
 				ereport(ERROR,
 						(errcode(ERRCODE_INTERNAL_ERROR),
-					   errmsg("message sent %d times, but received %d times",
-							  send_count, receive_count)));
+						 errmsg("message sent %d times, but received %d times",
+								send_count, receive_count)));
 			break;
 		}
 
@@ -230,7 +231,8 @@ test_shm_mq_pipelined(PG_FUNCTION_ARGS)
 			 * have read or written data and therefore there may now be work
 			 * for us to do.
 			 */
-			WaitLatch(MyLatch, WL_LATCH_SET, 0);
+			(void) WaitLatch(MyLatch, WL_LATCH_SET | WL_EXIT_ON_PM_DEATH, 0,
+							 PG_WAIT_EXTENSION);
 			ResetLatch(MyLatch);
 			CHECK_FOR_INTERRUPTS();
 		}

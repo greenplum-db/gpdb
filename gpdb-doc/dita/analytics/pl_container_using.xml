@@ -214,7 +214,8 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
                         supported.</li>
                     <li>Executing the <codeph>SAVEPOINT</codeph> command with
                         <codeph>plpy.execute()</codeph> is not supported.</li>
-                    <li>The <codeph>DO</codeph> command is not supported.</li>
+                    <li>The <codeph>DO</codeph> command (anonymous code block) is supported only
+                        with PL/Container 3 (currently a Beta feature). </li>
                     <li>Container flow control is not supported.</li>
                     <li>Triggers are not supported.</li>
                     <li><codeph>OUT</codeph> parameters are not supported.</li>

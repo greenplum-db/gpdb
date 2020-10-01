@@ -17,7 +17,7 @@ BLD_TOP = $(top_builddir)/..
 OBJS = analyzejoins.o createplan.o initsplan.o planagg.o planmain.o planner.o \
 	setrefs.o subselect.o \
 	planshare.o \
-	planpartition.o \
+	joinpartprune.o \
 	transform.o
 
 ifeq ($(enable_orca),yes)

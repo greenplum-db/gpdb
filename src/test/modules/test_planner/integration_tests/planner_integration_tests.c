@@ -1,4 +1,6 @@
 #include "postgres.h"
+
+#include "optimizer/optimizer.h"
 #include "tcop/tcopprot.h"
 
 #include "planner_integration_tests.h"

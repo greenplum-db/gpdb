@@ -18,6 +18,17 @@
       <li><xref href="#topic10" format="dita"/> provides information about planning the data
         redistribution after the new segment hosts have been initialized.</li>
     </ul>
+    <note type="important">When expanding a Greenplum Database system, you must disable Greenplum
+      interconnect proxies before adding new hosts and segment instances to the system, and you must
+      update the <codeph>gp_interconnect_proxy_addresses</codeph> parameter with the newly-added
+      segment instances before you re-enable interconnect proxies. For example, these commands
+      disable Greenplum interconnect proxies by setting the interconnect to the default
+        (<codeph>UDPIFC</codeph>) and reloading the <codeph>postgresql.conf</codeph> file to update
+      the Greenplum system
+        configuration.<codeblock><codeph><xref href="../../utility_guide/ref/gpconfig.xml">gpconfig</xref></codeph> -r gp_interconnect_type
+<codeph><xref href="../../utility_guide/ref/gpstop.xml">gpstop</xref></codeph> -u</codeblock><p>For
+        information about Greenplum interconnect proxies, see <xref
+          href="../managing/proxy-ic.xml#topic1"/>.</p></note>
   </body>
   <topic id="topic4" xml:lang="en">
     <title>System Expansion Checklist</title>
@@ -86,7 +97,7 @@
                     id="image_ojd_t1m_2r"/>
                 </entry>
                 <entry>Validate that the master data directory has no extremely large files in the
-                    <codeph>pg_log</codeph> directory.</entry>
+                    <codeph>log</codeph> directory.</entry>
               </row>
               <row>
                 <entry namest="c1" nameend="c2"><p><b>Offline Pre-Expansion Tasks</b></p>

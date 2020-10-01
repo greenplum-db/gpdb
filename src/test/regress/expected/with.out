@@ -133,9 +133,9 @@ SELECT * FROM t LIMIT 10;
 
 -- Test behavior with an unknown-type literal in the WITH
 WITH q AS (SELECT 'foo' AS x)
-SELECT x, x IS OF (unknown) as is_unknown FROM q;
-  x  | is_unknown 
------+------------
+SELECT x, x IS OF (text) AS is_text FROM q;
+  x  | is_text 
+-----+---------
  foo | t
 (1 row)
 
@@ -144,7 +144,7 @@ WITH RECURSIVE t(n) AS (
 UNION ALL
     SELECT n || ' bar' FROM t WHERE length(n) < 20
 )
-SELECT n, n IS OF (text) as is_text FROM t;
+SELECT n, n IS OF (text) AS is_text FROM t;
             n            | is_text 
 -------------------------+---------
  foo                     | t
@@ -155,6 +155,18 @@ SELECT n, n IS OF (text) as is_text FROM t;
  foo bar bar bar bar bar | t
 (6 rows)
 
+-- In a perfect world, this would work and resolve the literal as int ...
+-- but for now, we have to be content with resolving to text too soon.
+WITH RECURSIVE t(n) AS (
+    SELECT '7'
+UNION ALL
+    SELECT n+1 FROM t WHERE n < 10
+)
+SELECT n, n IS OF (int) AS is_int FROM t;
+ERROR:  operator does not exist: text + integer
+LINE 4:     SELECT n+1 FROM t WHERE n < 10
+                    ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
 --
 -- Some examples with a tree
 --
@@ -358,10 +370,10 @@ UNION ALL
 )
 SELECT sum(n) FROM t;
 \d+ sums_1_100
-              View "public.sums_1_100"
- Column |  Type  | Modifiers | Storage | Description 
---------+--------+-----------+---------+-------------
- sum    | bigint |           | plain   | 
+                         View "public.sums_1_100"
+ Column |  Type  | Collation | Nullable | Default | Storage | Description 
+--------+--------+-----------+----------+---------+---------+-------------
+ sum    | bigint |           |          |         | plain   | 
 View definition:
  WITH RECURSIVE t(n) AS (
          VALUES (1)
@@ -1321,7 +1333,7 @@ WITH outermost(x) AS (
          SELECT * FROM innermost
          UNION SELECT 3)
 )
-SELECT * FROM outermost;
+SELECT * FROM outermost ORDER BY 1;
  x 
 ---
  1
@@ -1335,7 +1347,7 @@ WITH outermost(x) AS (
          SELECT * FROM outermost  -- fail
          UNION SELECT * FROM innermost)
 )
-SELECT * FROM outermost;
+SELECT * FROM outermost ORDER BY 1;
 ERROR:  relation "outermost" does not exist
 LINE 4:          SELECT * FROM outermost  
                                ^
@@ -1347,7 +1359,7 @@ WITH RECURSIVE outermost(x) AS (
          SELECT * FROM outermost
          UNION SELECT * FROM innermost)
 )
-SELECT * FROM outermost;
+SELECT * FROM outermost ORDER BY 1;
  x 
 ---
  1
@@ -1359,7 +1371,7 @@ WITH RECURSIVE outermost(x) AS (
     SELECT * FROM innermost
     UNION SELECT * from outermost
 )
-SELECT * FROM outermost;
+SELECT * FROM outermost ORDER BY 1;
 ERROR:  recursive reference to query "outermost" must not appear within a subquery
 LINE 2:   WITH innermost as (SELECT 2 FROM outermost) 
                                            ^
@@ -1887,12 +1899,12 @@ SELECT * FROM y;
 (17 rows)
 
 -- data-modifying WITH containing INSERT...ON CONFLICT DO UPDATE
-CREATE TABLE z AS SELECT i AS k, (i || ' v')::text v FROM generate_series(1, 16, 3) i DISTRIBUTED BY (k);
-ALTER TABLE z ADD UNIQUE (k);
+CREATE TABLE withz AS SELECT i AS k, (i || ' v')::text v FROM generate_series(1, 16, 3) i DISTRIBUTED BY (k);
+ALTER TABLE withz ADD UNIQUE (k);
 WITH t AS (
-    INSERT INTO z SELECT i, 'insert'
+    INSERT INTO withz SELECT i, 'insert'
     FROM generate_series(0, 16) i
-    ON CONFLICT (k) DO UPDATE SET v = z.v || ', now update'
+    ON CONFLICT (k) DO UPDATE SET v = withz.v || ', now update'
     RETURNING *
 )
 SELECT * FROM t JOIN y ON t.k = y.a ORDER BY a, k;
@@ -1903,8 +1915,8 @@ SELECT * FROM t JOIN y ON t.k = y.a ORDER BY a, k;
 
 -- Test EXCLUDED.* reference within CTE
 WITH aa AS (
-    INSERT INTO z VALUES(1, 5) ON CONFLICT (k) DO UPDATE SET v = EXCLUDED.v
-    WHERE z.k != EXCLUDED.k
+    INSERT INTO withz VALUES(1, 5) ON CONFLICT (k) DO UPDATE SET v = EXCLUDED.v
+    WHERE withz.k != EXCLUDED.k
     RETURNING *
 )
 SELECT * FROM aa;
@@ -1913,7 +1925,7 @@ SELECT * FROM aa;
 (0 rows)
 
 -- New query/snapshot demonstrates side-effects of previous query.
-SELECT * FROM z ORDER BY k;
+SELECT * FROM withz ORDER BY k;
  k  |        v         
 ----+------------------
   0 | insert
@@ -1940,19 +1952,19 @@ SELECT * FROM z ORDER BY k;
 -- reference outside values
 --
 WITH aa AS (SELECT 1 a, 2 b)
-INSERT INTO z VALUES(1, 'insert')
+INSERT INTO withz VALUES(1, 'insert')
 ON CONFLICT (k) DO UPDATE SET v = (SELECT b || ' update' FROM aa WHERE a = 1 LIMIT 1);
 WITH aa AS (SELECT 1 a, 2 b)
-INSERT INTO z VALUES(1, 'insert')
-ON CONFLICT (k) DO UPDATE SET v = ' update' WHERE z.k = (SELECT a FROM aa);
+INSERT INTO withz VALUES(1, 'insert')
+ON CONFLICT (k) DO UPDATE SET v = ' update' WHERE withz.k = (SELECT a FROM aa);
 WITH aa AS (SELECT 1 a, 2 b)
-INSERT INTO z VALUES(1, 'insert')
+INSERT INTO withz VALUES(1, 'insert')
 ON CONFLICT (k) DO UPDATE SET v = (SELECT b || ' update' FROM aa WHERE a = 1 LIMIT 1);
 WITH aa AS (SELECT 'a' a, 'b' b UNION ALL SELECT 'a' a, 'b' b)
-INSERT INTO z VALUES(1, 'insert')
+INSERT INTO withz VALUES(1, 'insert')
 ON CONFLICT (k) DO UPDATE SET v = (SELECT b || ' update' FROM aa WHERE a = 'a' LIMIT 1);
 WITH aa AS (SELECT 1 a, 2 b)
-INSERT INTO z VALUES(1, (SELECT b || ' insert' FROM aa WHERE a = 1 ))
+INSERT INTO withz VALUES(1, (SELECT b || ' insert' FROM aa WHERE a = 1 ))
 ON CONFLICT (k) DO UPDATE SET v = (SELECT b || ' update' FROM aa WHERE a = 1 LIMIT 1);
 -- Update a row more than once, in different parts of a wCTE. That is
 -- an allowed, presumably very rare, edge case, but since it was
@@ -1960,14 +1972,14 @@ ON CONFLICT (k) DO UPDATE SET v = (SELECT b || ' update' FROM aa WHERE a = 1 LIM
 WITH simpletup AS (
   SELECT 2 k, 'Green' v),
 upsert_cte AS (
-  INSERT INTO z VALUES(2, 'Blue') ON CONFLICT (k) DO
-    UPDATE SET (k, v) = (SELECT k, v FROM simpletup WHERE simpletup.k = z.k)
+  INSERT INTO withz VALUES(2, 'Blue') ON CONFLICT (k) DO
+    UPDATE SET (k, v) = (SELECT k, v FROM simpletup WHERE simpletup.k = withz.k)
     RETURNING k, v)
-INSERT INTO z VALUES(2, 'Red') ON CONFLICT (k) DO
-UPDATE SET (k, v) = (SELECT k, v FROM upsert_cte WHERE upsert_cte.k = z.k)
+INSERT INTO withz VALUES(2, 'Red') ON CONFLICT (k) DO
+UPDATE SET (k, v) = (SELECT k, v FROM upsert_cte WHERE upsert_cte.k = withz.k)
 RETURNING k, v;
 ERROR:  modification of distribution columns in OnConflictUpdate is not supported
-DROP TABLE z;
+DROP TABLE withz;
 -- check that run to completion happens in proper ordering
 TRUNCATE TABLE y;
 INSERT INTO y SELECT generate_series(1, 3);
@@ -2276,3 +2288,20 @@ with ordinality as (select 1 as x) select * from ordinality;
  1
 (1 row)
 
+-- check sane response to attempt to modify CTE relation
+WITH test AS (SELECT 42) INSERT INTO test VALUES (1);
+ERROR:  relation "test" does not exist
+LINE 1: WITH test AS (SELECT 42) INSERT INTO test VALUES (1);
+                                             ^
+-- check response to attempt to modify table with same name as a CTE (perhaps
+-- surprisingly it works, because CTEs don't hide tables from data-modifying
+-- statements)
+create temp table test (i int);
+with test as (select 42) insert into test select * from test;
+select * from test;
+ i  
+----
+ 42
+(1 row)
+
+drop table test;

@@ -109,13 +109,6 @@ distributed by (distcol) partition by range (ptcol)
   end (501) exclusive
   every (100)
 );
-NOTICE:  CREATE TABLE will create partition "decodenum1_1_prt_defaultpart" for table "decodenum1"
-NOTICE:  CREATE TABLE will create partition "decodenum1_1_prt_2" for table "decodenum1"
-NOTICE:  CREATE TABLE will create partition "decodenum1_1_prt_3" for table "decodenum1"
-NOTICE:  CREATE TABLE will create partition "decodenum1_1_prt_4" for table "decodenum1"
-NOTICE:  CREATE TABLE will create partition "decodenum1_1_prt_5" for table "decodenum1"
-NOTICE:  CREATE TABLE will create partition "decodenum1_1_prt_6" for table "decodenum1"
-NOTICE:  CREATE TABLE will create partition "decodenum1_1_prt_7" for table "decodenum1"
 insert into decodenum1 values
   (1.1, 100, 0, 'part0'),
   (10.10, 100, 10, 'part1'),
@@ -155,13 +148,6 @@ start (0) inclusive
 end (501) exclusive
 every (100)
 );
-NOTICE:  CREATE TABLE will create partition "decodenum2_1_prt_defaultpart" for table "decodenum2"
-NOTICE:  CREATE TABLE will create partition "decodenum2_1_prt_2" for table "decodenum2"
-NOTICE:  CREATE TABLE will create partition "decodenum2_1_prt_3" for table "decodenum2"
-NOTICE:  CREATE TABLE will create partition "decodenum2_1_prt_4" for table "decodenum2"
-NOTICE:  CREATE TABLE will create partition "decodenum2_1_prt_5" for table "decodenum2"
-NOTICE:  CREATE TABLE will create partition "decodenum2_1_prt_6" for table "decodenum2"
-NOTICE:  CREATE TABLE will create partition "decodenum2_1_prt_7" for table "decodenum2"
 insert into decodenum2 values
   (1.1, 100, 0, 'part0'),
   (2.2, 200, 0, 'part0'),
@@ -297,9 +283,6 @@ partition women values ('F'),
 partition men values ('M'),
 default partition other
 );
-NOTICE:  CREATE TABLE will create partition "employees_1_prt_women" for table "employees"
-NOTICE:  CREATE TABLE will create partition "employees_1_prt_men" for table "employees"
-NOTICE:  CREATE TABLE will create partition "employees_1_prt_other" for table "employees"
 CREATE TABLE emp_start_dates
 (
    empid integer,
@@ -414,9 +397,6 @@ partition women values ('F'),
 partition men values ('M'),
 default partition other
 );
-NOTICE:  CREATE TABLE will create partition "employees_1_prt_women" for table "employees"
-NOTICE:  CREATE TABLE will create partition "employees_1_prt_men" for table "employees"
-NOTICE:  CREATE TABLE will create partition "employees_1_prt_other" for table "employees"
 CREATE TABLE emp_start_dates
 (
    empid integer,
@@ -481,9 +461,6 @@ partition women values ('F'),
 partition men values ('M'),
 default partition other
 );
-NOTICE:  CREATE TABLE will create partition "employees_1_prt_women" for table "employees"
-NOTICE:  CREATE TABLE will create partition "employees_1_prt_men" for table "employees"
-NOTICE:  CREATE TABLE will create partition "employees_1_prt_other" for table "employees"
 CREATE TABLE emp_start_dates
 (
    empid integer,
@@ -527,9 +504,6 @@ partition women values ('F'),
 partition men values ('M'),
 default partition other
 );
-NOTICE:  CREATE TABLE will create partition "employees_1_prt_women" for table "employees"
-NOTICE:  CREATE TABLE will create partition "employees_1_prt_men" for table "employees"
-NOTICE:  CREATE TABLE will create partition "employees_1_prt_other" for table "employees"
 CREATE TABLE emp_start_dates
 (
    empid integer,
@@ -675,9 +649,6 @@ partition women values ('F'),
 partition men values ('M'),
 default partition other
 );
-NOTICE:  CREATE TABLE will create partition "employees_1_prt_women" for table "employees"
-NOTICE:  CREATE TABLE will create partition "employees_1_prt_men" for table "employees"
-NOTICE:  CREATE TABLE will create partition "employees_1_prt_other" for table "employees"
 CREATE TABLE emp_start_dates
 (
    empid integer,
@@ -751,9 +722,6 @@ partition women values ('F'),
 partition men values ('M'),
 default partition other
 );
-NOTICE:  CREATE TABLE will create partition "employees_1_prt_women" for table "employees"
-NOTICE:  CREATE TABLE will create partition "employees_1_prt_men" for table "employees"
-NOTICE:  CREATE TABLE will create partition "employees_1_prt_other" for table "employees"
 CREATE TABLE emp_start_dates
 (
    empid integer,
@@ -841,7 +809,7 @@ select decode(null, 1, 'null = 1', 'null != 1');
 ERROR:  operator does not exist: text = integer
 LINE 1: select decode(null, 1, 'null = 1', 'null != 1');
                             ^
-HINT:  No operator matches the given name and argument type(s). You might need to add explicit type casts.
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
 select decode(null::integer, 1, 'null = 1', 'null != 1');
    case    
 -----------
@@ -908,7 +876,7 @@ order by gender,student_id;
 ERROR:  operator does not exist: character = integer
 LINE 1: select gender, decode(gender, 1, 'Unknown', 'M', 'Male', 'F'...
                                       ^
-HINT:  No operator matches the given name and argument type(s). You might need to add explicit type casts.
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
 select gender,decode(gender, 'N/A', 'Unknown', 'M', 'Male', 'F', 'Female')
 from genders
 order by gender,student_id;
@@ -927,19 +895,19 @@ order by gender,student_id;
 select gender, decode(gender, 'Z', 'Unknown', 1)
 from genders
 order by student_id;
-ERROR:  invalid input syntax for integer: "Unknown"
+ERROR:  invalid input syntax for type integer: "Unknown"
 LINE 1: select gender, decode(gender, 'Z', 'Unknown', 1)
                                            ^
 select gender, decode(gender, 'Z', 0,  'M')
 from genders
 order by student_id;
-ERROR:  invalid input syntax for integer: "M"
+ERROR:  invalid input syntax for type integer: "M"
 LINE 1: select gender, decode(gender, 'Z', 0,  'M')
                                                ^
 select gender, decode(gender, 'Z', 0, 'M', 'Male', 'F')
 from genders
 order by student_id;
-ERROR:  invalid input syntax for integer: "F"
+ERROR:  invalid input syntax for type integer: "F"
 LINE 1: select gender, decode(gender, 'Z', 0, 'M', 'Male', 'F')
                                                            ^
 select decode('2011-01-05'::date, '2011-01-01'::date, 2011, '2010-12-30'::date, 2010, '2012');
@@ -1070,12 +1038,12 @@ select bus_name,
 from locations
 order by locid, country_code;
 \d+ decode_view;
-                    View "public.decode_view"
-    Column    |     Type     | Modifiers | Storage  | Description 
---------------+--------------+-----------+----------+-------------
- bus_name     | text         |           | extended | 
- country_code | character(2) |           | extended | 
- region       | text         |           | extended | 
+                               View "public.decode_view"
+    Column    |     Type     | Collation | Nullable | Default | Storage  | Description 
+--------------+--------------+-----------+----------+---------+----------+-------------
+ bus_name     | text         |           |          |         | extended | 
+ country_code | character(2) |           |          |         | extended | 
+ region       | text         |           |          |         | extended | 
 View definition:
  SELECT locations.bus_name,
     locations.country_code,

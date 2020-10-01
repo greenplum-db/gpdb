@@ -3,7 +3,7 @@
   <dxl:Thread Id="0">
     <dxl:OptimizerConfig>
       <dxl:EnumeratorConfig Id="0" PlanSamples="0" CostThreshold="0"/>
-      <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.010000" DampingFactorGroupBy="0.750000"/>
+      <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.010000" DampingFactorGroupBy="0.750000" MaxStatsBuckets="100"/>
       <dxl:CTEConfig CTEInliningCutoff="0"/> 
       <dxl:WindowOids RowNumber="7000" Rank="7001"/>
       <dxl:CostModelConfig CostModelType="1" SegmentsForCosting="2">
@@ -3307,7 +3307,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.2372852.1.1" Name="asset_records" Rows="43026700.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.2372852.1.1" Name="asset_records" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="5" Keys="25,26,24" PartitionColumns="23">
+      <dxl:Relation Mdid="0.2372852.1.1" Name="asset_records" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="5" Keys="25,26,24" PartitionColumns="23" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="parent" Attno="1" Mdid="0.16.1.0" Nullable="true" ColWidth="1">
             <dxl:DefaultValue/>

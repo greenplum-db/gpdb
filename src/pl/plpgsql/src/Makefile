@@ -1,6 +1,6 @@
 #-------------------------------------------------------------------------
 #
-# Makefile for the pl/pgsql procedural language
+# Makefile for the PL/pgSQL procedural language
 #
 # src/pl/plpgsql/src/Makefile
 #
@@ -23,6 +23,18 @@ OBJS = pl_gram.o pl_handler.o pl_comp.o pl_exec.o \
 	pl_funcs.o pl_scanner.o $(WIN32RES)
 
 DATA = plpgsql.control plpgsql--1.0.sql plpgsql--unpackaged--1.0.sql
+
+REGRESS_OPTS = --dbname=$(PL_TESTDB)
+REGRESS_OPTS += --init-file=init_file
+
+REGRESS = plpgsql_call plpgsql_control plpgsql_domain plpgsql_record \
+	plpgsql_cache plpgsql_transaction plpgsql_trap \
+	plpgsql_trigger plpgsql_varprops
+
+# where to find gen_keywordlist.pl and subsidiary files
+TOOLSDIR = $(top_srcdir)/src/tools
+GEN_KEYWORDLIST = $(PERL) -I $(TOOLSDIR) $(TOOLSDIR)/gen_keywordlist.pl
+GEN_KEYWORDLIST_DEPS = $(TOOLSDIR)/gen_keywordlist.pl $(TOOLSDIR)/PerfectHash.pm
 
 all: all-lib
 
@@ -56,6 +68,7 @@ uninstall-headers:
 
 # Force these dependencies to be known even without dependency info built:
 pl_gram.o pl_handler.o pl_comp.o pl_exec.o pl_funcs.o pl_scanner.o: plpgsql.h pl_gram.h plerrcodes.h
+pl_scanner.o: pl_reserved_kwlist_d.h pl_unreserved_kwlist_d.h
 
 # See notes in src/backend/parser/Makefile about the following two rules
 pl_gram.h: pl_gram.c
@@ -67,12 +80,33 @@ pl_gram.c: BISONFLAGS += -d
 plerrcodes.h: $(top_srcdir)/src/backend/utils/errcodes.txt generate-plerrcodes.pl
 	$(PERL) $(srcdir)/generate-plerrcodes.pl $< > $@
 
-distprep: pl_gram.h pl_gram.c plerrcodes.h
+# generate keyword headers for the scanner
+pl_reserved_kwlist_d.h: pl_reserved_kwlist.h $(GEN_KEYWORDLIST_DEPS)
+	$(GEN_KEYWORDLIST) --varname ReservedPLKeywords $<
 
-# pl_gram.c, pl_gram.h and plerrcodes.h are in the distribution tarball,
-# so they are not cleaned here.
+pl_unreserved_kwlist_d.h: pl_unreserved_kwlist.h $(GEN_KEYWORDLIST_DEPS)
+	$(GEN_KEYWORDLIST) --varname UnreservedPLKeywords $<
+
+
+check: submake
+	$(pg_regress_check) $(REGRESS_OPTS) $(REGRESS)
+
+installcheck: submake
+	$(pg_regress_installcheck) $(REGRESS_OPTS) $(REGRESS)
+
+.PHONY: submake
+submake:
+	$(MAKE) -C $(top_builddir)/src/test/regress pg_regress$(X)
+
+
+distprep: pl_gram.h pl_gram.c plerrcodes.h pl_reserved_kwlist_d.h pl_unreserved_kwlist_d.h
+
+# pl_gram.c, pl_gram.h, plerrcodes.h, pl_reserved_kwlist_d.h, and
+# pl_unreserved_kwlist_d.h are in the distribution tarball, so they
+# are not cleaned here.
 clean distclean: clean-lib
 	rm -f $(OBJS)
+	rm -rf $(pg_regress_clean_files)
 
-maintainer-clean: clean
-	rm -f pl_gram.c pl_gram.h plerrcodes.h
+maintainer-clean: distclean
+	rm -f pl_gram.c pl_gram.h plerrcodes.h pl_reserved_kwlist_d.h pl_unreserved_kwlist_d.h

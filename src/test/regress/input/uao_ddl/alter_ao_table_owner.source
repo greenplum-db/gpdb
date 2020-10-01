@@ -1,13 +1,13 @@
-create schema alter_ao_table_owner_@orientation@;
-set search_path="$user",alter_ao_table_owner_@orientation@,public;
-SET gp_default_storage_options='orientation=@orientation@';
+create schema alter_ao_table_owner_@amname@;
+set search_path="$user",alter_ao_table_owner_@amname@,public;
+SET default_table_access_method=@amname@;
 --- start_ignore
 drop owned by uao_user2 cascade;
 Drop role if exists uao_user2 ;
 --- stop_ignore
 --Alter table to a new owner
 Create role uao_user2;
-create table sto_alt_uao4 (i int, j char(10)) with (appendonly=true) DISTRIBUTED BY (i);
+create table sto_alt_uao4 (i int, j char(10)) DISTRIBUTED BY (i);
 insert into sto_alt_uao4 select i , 'cc'||i from generate_series(1,5) as i;
 Alter Table sto_alt_uao4  Owner to uao_user2;
 SELECT 1 AS VisimapPresent FROM pg_appendonly WHERE visimapidxid is not NULL AND

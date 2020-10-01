@@ -7,9 +7,6 @@
 
 #include "postgres_fe.h"
 
-#ifdef WIN32
-#include <windows.h>
-#endif
 #include <sys/time.h>
 #ifdef HAVE_SYS_SELECT_H
 #include <sys/select.h>
@@ -38,7 +35,7 @@ static int	dry_run = false;
 static void run_testspec(TestSpec *testspec);
 static void run_all_permutations(TestSpec *testspec);
 static void run_all_permutations_recurse(TestSpec *testspec, int nsteps,
-							 Step **steps);
+										 Step **steps);
 static void run_named_permutations(TestSpec *testspec);
 static void run_permutation(TestSpec *testspec, int nsteps, Step **steps);
 
@@ -50,16 +47,17 @@ static int	step_qsort_cmp(const void *a, const void *b);
 static int	step_bsearch_cmp(const void *a, const void *b);
 
 static void printResultSet(PGresult *res);
+static void isotesterNoticeProcessor(void *arg, const char *message);
+static void blackholeNoticeProcessor(void *arg, const char *message);
 
-/* close all connections and exit */
 static void
-exit_nicely(void)
+disconnect_atexit(void)
 {
 	int			i;
 
 	for (i = 0; i < nconns; i++)
-		PQfinish(conns[i]);
-	exit(1);
+		if (conns[i])
+			PQfinish(conns[i]);
 }
 
 int
@@ -119,7 +117,7 @@ main(int argc, char **argv)
 	for (i = 0; i < testspec->nsessions; i++)
 		nallsteps += testspec->sessions[i]->nsteps;
 
-	allsteps = malloc(nallsteps * sizeof(Step *));
+	allsteps = pg_malloc(nallsteps * sizeof(Step *));
 
 	n = 0;
 	for (i = 0; i < testspec->nsessions; i++)
@@ -140,7 +138,7 @@ main(int argc, char **argv)
 		{
 			fprintf(stderr, "duplicate step name: %s\n",
 					testspec->allsteps[i]->name);
-			exit_nicely();
+			exit(1);
 		}
 	}
 
@@ -162,6 +160,7 @@ main(int argc, char **argv)
 	 */
 	nconns = 1 + testspec->nsessions;
 	conns = calloc(nconns, sizeof(PGconn *));
+	atexit(disconnect_atexit);
 	backend_pids = calloc(nconns, sizeof(*backend_pids));
 	for (i = 0; i < nconns; i++)
 	{
@@ -170,8 +169,23 @@ main(int argc, char **argv)
 		{
 			fprintf(stderr, "Connection %d to database failed: %s",
 					i, PQerrorMessage(conns[i]));
-			exit_nicely();
+			exit(1);
 		}
+
+		/*
+		 * Set up notice processors for the user-defined connections, so that
+		 * messages can get printed prefixed with the session names.  The
+		 * control connection gets a "blackhole" processor instead (hides all
+		 * messages).
+		 */
+		if (i != 0)
+			PQsetNoticeProcessor(conns[i],
+								 isotesterNoticeProcessor,
+								 (void *) (testspec->sessions[i - 1]->name));
+		else
+			PQsetNoticeProcessor(conns[i],
+								 blackholeNoticeProcessor,
+								 NULL);
 
 		/*
 		 * Suppress NOTIFY messages, which otherwise pop into results at odd
@@ -181,28 +195,28 @@ main(int argc, char **argv)
 		if (PQresultStatus(res) != PGRES_COMMAND_OK)
 		{
 			fprintf(stderr, "message level setup failed: %s", PQerrorMessage(conns[i]));
-			exit_nicely();
+			exit(1);
 		}
 		PQclear(res);
 
 		/* Get the backend pid for lock wait checking. */
-		res = PQexec(conns[i], "SELECT pg_backend_pid()");
+		res = PQexec(conns[i], "SELECT pg_catalog.pg_backend_pid()");
 		if (PQresultStatus(res) == PGRES_TUPLES_OK)
 		{
 			if (PQntuples(res) == 1 && PQnfields(res) == 1)
-				backend_pids[i] = strdup(PQgetvalue(res, 0, 0));
+				backend_pids[i] = pg_strdup(PQgetvalue(res, 0, 0));
 			else
 			{
 				fprintf(stderr, "backend pid query returned %d rows and %d columns, expected 1 row and 1 column",
 						PQntuples(res), PQnfields(res));
-				exit_nicely();
+				exit(1);
 			}
 		}
 		else
 		{
 			fprintf(stderr, "backend pid query failed: %s",
 					PQerrorMessage(conns[i]));
-			exit_nicely();
+			exit(1);
 		}
 		PQclear(res);
 	}
@@ -227,19 +241,19 @@ main(int argc, char **argv)
 	 */
 	initPQExpBuffer(&wait_query);
 	appendPQExpBufferStr(&wait_query,
-						 "SELECT pg_catalog.pg_blocking_pids($1) && '{");
+						 "SELECT pg_catalog.pg_isolation_test_session_is_blocked($1, '{");
 	/* The spec syntax requires at least one session; assume that here. */
 	appendPQExpBufferStr(&wait_query, backend_pids[1]);
 	for (i = 2; i < nconns; i++)
 		appendPQExpBuffer(&wait_query, ",%s", backend_pids[i]);
-	appendPQExpBufferStr(&wait_query, "}'::integer[]");
+	appendPQExpBufferStr(&wait_query, "}')");
 
 	res = PQprepare(conns[0], PREP_WAITING, wait_query.data, 0, NULL);
 	if (PQresultStatus(res) != PGRES_COMMAND_OK)
 	{
 		fprintf(stderr, "prepare of lock wait query failed: %s",
 				PQerrorMessage(conns[0]));
-		exit_nicely();
+		exit(1);
 	}
 	PQclear(res);
 	termPQExpBuffer(&wait_query);
@@ -250,9 +264,6 @@ main(int argc, char **argv)
 	 */
 	run_testspec(testspec);
 
-	/* Clean up and exit */
-	for (i = 0; i < nconns; i++)
-		PQfinish(conns[i]);
 	return 0;
 }
 
@@ -286,7 +297,7 @@ run_all_permutations(TestSpec *testspec)
 	for (i = 0; i < testspec->nsessions; i++)
 		nsteps += testspec->sessions[i]->nsteps;
 
-	steps = malloc(sizeof(Step *) * nsteps);
+	steps = pg_malloc(sizeof(Step *) * nsteps);
 
 	/*
 	 * To generate the permutations, we conceptually put the steps of each
@@ -297,7 +308,7 @@ run_all_permutations(TestSpec *testspec)
 	 * A pile is actually just an integer which tells how many steps we've
 	 * already picked from this pile.
 	 */
-	piles = malloc(sizeof(int) * testspec->nsessions);
+	piles = pg_malloc(sizeof(int) * testspec->nsessions);
 	for (i = 0; i < testspec->nsessions; i++)
 		piles[i] = 0;
 
@@ -345,7 +356,7 @@ run_named_permutations(TestSpec *testspec)
 		Permutation *p = testspec->permutations[i];
 		Step	  **steps;
 
-		steps = malloc(p->nsteps * sizeof(Step *));
+		steps = pg_malloc(p->nsteps * sizeof(Step *));
 
 		/* Find all the named steps using the lookup table */
 		for (j = 0; j < p->nsteps; j++)
@@ -360,7 +371,7 @@ run_named_permutations(TestSpec *testspec)
 			{
 				fprintf(stderr, "undefined step \"%s\" specified in permutation\n",
 						p->stepnames[j]);
-				exit_nicely();
+				exit(1);
 			}
 			steps[j] = *this;
 		}
@@ -476,8 +487,8 @@ run_permutation(TestSpec *testspec, int nsteps, Step **steps)
 		return;
 	}
 
-	waiting = malloc(sizeof(Step *) * testspec->nsessions);
-	errorstep = malloc(sizeof(Step *) * testspec->nsessions);
+	waiting = pg_malloc(sizeof(Step *) * testspec->nsessions);
+	errorstep = pg_malloc(sizeof(Step *) * testspec->nsessions);
 
 	printf("\nstarting permutation:");
 	for (i = 0; i < nsteps; i++)
@@ -495,7 +506,7 @@ run_permutation(TestSpec *testspec, int nsteps, Step **steps)
 		else if (PQresultStatus(res) != PGRES_COMMAND_OK)
 		{
 			fprintf(stderr, "setup failed: %s", PQerrorMessage(conns[0]));
-			exit_nicely();
+			exit(1);
 		}
 		PQclear(res);
 	}
@@ -515,7 +526,7 @@ run_permutation(TestSpec *testspec, int nsteps, Step **steps)
 				fprintf(stderr, "setup of session %s failed: %s",
 						testspec->sessions[i]->name,
 						PQerrorMessage(conns[i + 1]));
-				exit_nicely();
+				exit(1);
 			}
 			PQclear(res);
 		}
@@ -597,7 +608,7 @@ run_permutation(TestSpec *testspec, int nsteps, Step **steps)
 		{
 			fprintf(stdout, "failed to send query for step %s: %s\n",
 					step->name, PQerrorMessage(conn));
-			exit_nicely();
+			exit(1);
 		}
 
 		/* Try to complete this step without blocking.  */
@@ -708,7 +719,7 @@ try_complete_step(Step *step, int flags)
 	if (sock < 0)
 	{
 		fprintf(stderr, "invalid socket: %s", PQerrorMessage(conn));
-		exit_nicely();
+		exit(1);
 	}
 
 	gettimeofday(&start_time, NULL);
@@ -726,7 +737,7 @@ try_complete_step(Step *step, int flags)
 			if (errno == EINTR)
 				continue;
 			fprintf(stderr, "select failed: %s\n", strerror(errno));
-			exit_nicely();
+			exit(1);
 		}
 		else if (ret == 0)		/* select() timeout: check for lock wait */
 		{
@@ -746,7 +757,7 @@ try_complete_step(Step *step, int flags)
 				{
 					fprintf(stderr, "lock wait query failed: %s",
 							PQerrorMessage(conns[0]));
-					exit_nicely();
+					exit(1);
 				}
 				waiting = ((PQgetvalue(res, 0, 0))[0] == 't');
 				PQclear(res);
@@ -768,15 +779,15 @@ try_complete_step(Step *step, int flags)
 			td += (int64) current_time.tv_usec - (int64) start_time.tv_usec;
 
 			/*
-			 * After 60 seconds, try to cancel the query.
+			 * After 180 seconds, try to cancel the query.
 			 *
 			 * If the user tries to test an invalid permutation, we don't want
 			 * to hang forever, especially when this is running in the
-			 * buildfarm.  So try to cancel it after a minute.  This will
-			 * presumably lead to this permutation failing, but remaining
-			 * permutations and tests should still be OK.
+			 * buildfarm.  This will presumably lead to this permutation
+			 * failing, but remaining permutations and tests should still be
+			 * OK.
 			 */
-			if (td > 60 * USECS_PER_SEC && !canceled)
+			if (td > 180 * USECS_PER_SEC && !canceled)
 			{
 				PGcancel   *cancel = PQgetCancel(conn);
 
@@ -793,24 +804,24 @@ try_complete_step(Step *step, int flags)
 			}
 
 			/*
-			 * After 75 seconds, just give up and die.
+			 * After 200 seconds, just give up and die.
 			 *
 			 * Since cleanup steps won't be run in this case, this may cause
 			 * later tests to fail.  That stinks, but it's better than waiting
 			 * forever for the server to respond to the cancel.
 			 */
-			if (td > 75 * USECS_PER_SEC)
+			if (td > 200 * USECS_PER_SEC)
 			{
-				fprintf(stderr, "step %s timed out after 75 seconds\n",
+				fprintf(stderr, "step %s timed out after 200 seconds\n",
 						step->name);
-				exit_nicely();
+				exit(1);
 			}
 		}
 		else if (!PQconsumeInput(conn)) /* select(): data available */
 		{
 			fprintf(stderr, "PQconsumeInput failed: %s\n",
 					PQerrorMessage(conn));
-			exit_nicely();
+			exit(1);
 		}
 	}
 
@@ -844,7 +855,7 @@ try_complete_step(Step *step, int flags)
 					const char *sev = PQresultErrorField(res,
 														 PG_DIAG_SEVERITY);
 					const char *msg = PQresultErrorField(res,
-													PG_DIAG_MESSAGE_PRIMARY);
+														 PG_DIAG_MESSAGE_PRIMARY);
 
 					if (sev && msg)
 						step->errormsg = psprintf("%s:  %s", sev, msg);
@@ -882,4 +893,18 @@ printResultSet(PGresult *res)
 			printf("%-15s", PQgetvalue(res, i, j));
 		printf("\n");
 	}
+}
+
+/* notice processor, prefixes each message with the session name */
+static void
+isotesterNoticeProcessor(void *arg, const char *message)
+{
+	fprintf(stderr, "%s: %s", (char *) arg, message);
+}
+
+/* notice processor, hides the message */
+static void
+blackholeNoticeProcessor(void *arg, const char *message)
+{
+	/* do nothing */
 }

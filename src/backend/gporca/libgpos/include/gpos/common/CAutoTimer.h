@@ -17,45 +17,40 @@
 
 namespace gpos
 {
+//---------------------------------------------------------------------------
+//	@class:
+//		CAutoTimer
+//
+//	@doc:
+//		Wrapper around timer object; prints elapsed time when going out of
+//		scope as indicated (ctor argument);
+//
+//---------------------------------------------------------------------------
+class CAutoTimer : public CStackObject
+{
+private:
+	// actual timer
+	CWallClock m_clock;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CAutoTimer
-	//
-	//	@doc:
-    //		Wrapper around timer object; prints elapsed time when going out of
-	//		scope as indicated (ctor argument); 
-	//
-	//---------------------------------------------------------------------------
-	class CAutoTimer : public CStackObject
-	{
+	// label for timer output
+	const CHAR *m_timer_text_label;
 
-		private:
-			
-			// actual timer
-			CWallClock m_clock;
-			
-			// label for timer output
-			const CHAR *m_timer_text_label;
-			
-			// trigger printing at destruction time
-			BOOL m_print_text_label;
-		
-			// private copy ctor
-			CAutoTimer(const CAutoTimer &);
-	
-		public:
+	// trigger printing at destruction time
+	BOOL m_print_text_label;
 
-            // ctor
-            CAutoTimer(const CHAR *sz, BOOL fPrint);
+	// private copy ctor
+	CAutoTimer(const CAutoTimer &);
 
-			// dtor
-            ~CAutoTimer() throw();
+public:
+	// ctor
+	CAutoTimer(const CHAR *sz, BOOL fPrint);
 
-	}; // class CAutoTimer
-}
+	// dtor
+	~CAutoTimer() throw();
 
-#endif // !GPOS_CAutoTimer_H
+};	// class CAutoTimer
+}  // namespace gpos
+
+#endif	// !GPOS_CAutoTimer_H
 
 // EOF
-

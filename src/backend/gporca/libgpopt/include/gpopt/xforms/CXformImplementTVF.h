@@ -16,69 +16,59 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CXformImplementTVF
-	//
-	//	@doc:
-	//		Implement TVF
-	//
-	//---------------------------------------------------------------------------
-	class CXformImplementTVF : public CXformImplementation
+//---------------------------------------------------------------------------
+//	@class:
+//		CXformImplementTVF
+//
+//	@doc:
+//		Implement TVF
+//
+//---------------------------------------------------------------------------
+class CXformImplementTVF : public CXformImplementation
+{
+private:
+	// private copy ctor
+	CXformImplementTVF(const CXformImplementTVF &);
+
+public:
+	// ctor
+	explicit CXformImplementTVF(CMemoryPool *mp);
+
+	// ctor
+	explicit CXformImplementTVF(CExpression *pexprPattern);
+
+	// dtor
+	virtual ~CXformImplementTVF()
 	{
+	}
 
-		private:
+	// ident accessors
+	virtual EXformId
+	Exfid() const
+	{
+		return ExfImplementTVF;
+	}
 
-			// private copy ctor
-			CXformImplementTVF(const CXformImplementTVF &);
+	// return a string for xform name
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CXformImplementTVF";
+	}
 
-		public:
+	// compute xform promise for a given expression handle
+	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
 
-			// ctor
-			explicit
-			CXformImplementTVF(CMemoryPool *mp);
+	// actual transform
+	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
+				   CExpression *pexpr) const;
 
-			// ctor
-			explicit
-			CXformImplementTVF(CExpression *pexprPattern);
+};	// class CXformImplementTVF
 
-			// dtor
-			virtual
-			~CXformImplementTVF() {}
+}  // namespace gpopt
 
-			// ident accessors
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfImplementTVF;
-			}
-
-			// return a string for xform name
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CXformImplementTVF";
-			}
-
-			// compute xform promise for a given expression handle
-			virtual
-			EXformPromise Exfp(CExpressionHandle &exprhdl) const;
-
-			// actual transform
-			void Transform
-				(
-				CXformContext *pxfctxt,
-				CXformResult *pxfres,
-				CExpression *pexpr
-				)
-				const;
-
-	}; // class CXformImplementTVF
-
-}
-
-#endif // !GPOPT_CXformImplementTVF_H
+#endif	// !GPOPT_CXformImplementTVF_H
 
 // EOF

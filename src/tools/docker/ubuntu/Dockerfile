@@ -43,7 +43,6 @@ RUN apt-get update -y && \
     openssh-server \
     pkg-config \
     python-dev \
-    python-lockfile \
     python-pip \
     python-psutil \
     python-setuptools \

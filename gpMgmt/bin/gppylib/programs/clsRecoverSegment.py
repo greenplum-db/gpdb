@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Line too long            - pylint: disable=C0301
 # Invalid name             - pylint: disable=C0103
 #
@@ -21,7 +21,6 @@ from gppylib.mainUtils import *
 from optparse import OptionGroup
 import os, sys, signal, time
 
-from pygresql import pg
 
 from gppylib import gparray, gplog, userinput, utils
 from gppylib.util import gp_utils
@@ -37,7 +36,6 @@ from gppylib.system import configurationInterface as configInterface
 from gppylib.system.environment import GpMasterEnvironment
 from gppylib.parseutils import line_reader, check_values, canonicalize_address
 from gppylib.utils import writeLinesToFile, normalizeAndValidateInputPath, TableLogger
-from gppylib.gphostcache import GpInterfaceToHostNameCache
 from gppylib.operations.utils import ParallelOperation
 from gppylib.operations.package import SyncPackages
 from gppylib.heapchecksum import HeapChecksum
@@ -71,7 +69,7 @@ class PortAssigner:
         self.__usedPortsByHostName = {}
 
         byHost = GpArray.getSegmentsByHostName(segments)
-        for hostName, segments in byHost.iteritems():
+        for hostName, segments in byHost.items():
             usedPorts = self.__usedPortsByHostName[hostName] = {}
             for seg in segments:
                 usedPorts[seg.getSegmentPort()] = True
@@ -113,9 +111,8 @@ class RemoteQueryCommand(Command):
             self.qname, self.query, self.hostname, self.port, self.dbname))
         with dbconn.connect(dbconn.DbURL(hostname=self.hostname, port=self.port, dbname=self.dbname),
                             utility=True) as conn:
-            res = dbconn.execSQL(conn, self.query)
-            self.res = res.fetchall()
-
+            self.res = dbconn.query(conn, self.query).fetchall()
+        conn.close()
 
 # -------------------------------------------------------------------------
 
@@ -218,7 +215,6 @@ class GpRecoverSegmentProgram:
                 rows.append(self._getParsedRow(filename, lineno, line))
 
         allAddresses = [row["newAddress"] for row in rows if "newAddress" in row]
-        interfaceLookup = GpInterfaceToHostNameCache(self.__pool, allAddresses, [None]*len(allAddresses))
 
         failedSegments = []
         failoverSegments = []
@@ -265,10 +261,9 @@ class GpRecoverSegmentProgram:
 
                 dataDirectory = normalizeAndValidateInputPath(row["newDataDirectory"], "config file",
                                                               row['lineno'])
-
-                hostName = interfaceLookup.getHostName(address)
-                if hostName is None:
-                    raise Exception('Unable to find host name for address %s from line:%s' % (address, row['lineno']))
+                # FIXME: hostname probably should not be address, but to do so, "hostname" should be added to gpaddmirrors config file
+                # FIXME: This appears identical to __getMirrorsToBuildFromConfigFilein clsAddMirrors
+                hostName = address
 
                 # now update values in failover segment
                 failoverSegment.setSegmentAddress(address)
@@ -340,7 +335,7 @@ class GpRecoverSegmentProgram:
                 segHostname = seg.getSegmentHostName()
 
                 # Haven't seen this hostname before so we put it on a new host
-                if not recoverHostMap.has_key(segHostname):
+                if segHostname not in recoverHostMap:
                     try:
                         recoverHostMap[segHostname] = self.__options.newRecoverHosts[recoverHostIdx]
                     except:
@@ -368,10 +363,10 @@ class GpRecoverSegmentProgram:
 
             # Now that we've generated the mapping, look up all the addresses to make
             # sure they are resolvable.
-            interfaces = [address for (_ignore, address) in recoverAddressMap.values()]
+            interfaces = [address for (_ignore, address) in list(recoverAddressMap.values())]
             interfaceLookup = GpInterfaceToHostNameCache(self.__pool, interfaces, [None] * len(interfaces))
 
-            for key in recoverAddressMap.keys():
+            for key in list(recoverAddressMap.keys()):
                 (newHostname, newAddress) = recoverAddressMap[key]
                 try:
                     addressHostnameLookup = interfaceLookup.getHostName(newAddress)
@@ -552,7 +547,8 @@ class GpRecoverSegmentProgram:
     def _get_dblist(self):
         # template0 does not accept any connections so we exclude it
         with dbconn.connect(dbconn.DbURL()) as conn:
-            res = dbconn.execSQL(conn, "SELECT datname FROM PG_DATABASE WHERE datname != 'template0'")
+            res = dbconn.query(conn, "SELECT datname FROM PG_DATABASE WHERE datname != 'template0'")
+        conn.close()
         return res.fetchall()
 
     def run(self):
@@ -593,7 +589,7 @@ class GpRecoverSegmentProgram:
                     if h.strip() not in uniqueHosts:
                         uniqueHosts.append(h.strip())
                 self.__options.newRecoverHosts = uniqueHosts
-            except Exception, ex:
+            except Exception as ex:
                 raise ProgramArgumentValidationException( \
                     "Invalid value for recover hosts: %s" % ex)
 
@@ -681,14 +677,14 @@ class GpRecoverSegmentProgram:
 
     def trigger_fts_probe(self, port=0):
         self.logger.info('Triggering FTS probe')
-        with dbconn.connect(dbconn.DbURL(port=port)) as conn:
-            db = pg.DB(conn)
+        conn = dbconn.connect(dbconn.DbURL(port=port))
 
-            # XXX Perform two probe scans in a row, to work around a known
-            # race where gp_request_fts_probe_scan() can return early during the
-            # first call. Remove this duplication once that race is fixed.
-            for _ in range(2):
-                db.query("SELECT gp_request_fts_probe_scan()")
+        # XXX Perform two probe scans in a row, to work around a known
+        # race where gp_request_fts_probe_scan() can return early during the
+        # first call. Remove this duplication once that race is fixed.
+        for _ in range(2):
+            dbconn.execSQL(conn,"SELECT gp_request_fts_probe_scan()")
+        conn.close()
 
     def validate_heap_checksum_consistency(self, gpArray, mirrorBuilder):
         live_segments = [target.getLiveSegment() for target in mirrorBuilder.getMirrorsToBuild()]
@@ -790,8 +786,8 @@ class GpRecoverSegmentProgram:
     def mainOptions():
         """
         The dictionary this method returns instructs the simple_main framework
-        to check for a gprecoverseg.pid file under MASTER_DATA_DIRECTORY to
+        to check for a gprecoverseg.lock file under MASTER_DATA_DIRECTORY to
         prevent the customer from trying to run more than one instance of
         gprecoverseg at the same time.
         """
-        return {'pidfilename': 'gprecoverseg.pid', 'parentpidvar': 'GPRECOVERPID'}
+        return {'pidlockpath': 'gprecoverseg.lock', 'parentpidvar': 'GPRECOVERPID'}

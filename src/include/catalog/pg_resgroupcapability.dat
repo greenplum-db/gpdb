@@ -1,0 +1,30 @@
+#----------------------------------------------------------------------
+#
+# pg_resgroupcapability.dat
+#    Initial contents of the pg_resgroupcapability system relation.
+#
+# Portions Copyright (c) 1996-2018, PostgreSQL Global Development Group
+# Portions Copyright (c) 1994, Regents of the University of California
+#
+# src/include/catalog/pg_resgroupcapability.dat
+#
+#----------------------------------------------------------------------
+
+[
+
+{ resgroupid => '6437', reslimittype => '1', value => '20' },
+{ resgroupid => '6437', reslimittype => '2', value => '30' },
+{ resgroupid => '6437', reslimittype => '3', value => '0' },
+{ resgroupid => '6437', reslimittype => '4', value => '80' },
+{ resgroupid => '6437', reslimittype => '5', value => '0' },
+{ resgroupid => '6437', reslimittype => '6', value => '0' },
+{ resgroupid => '6437', reslimittype => '7', value => '-1' },
+{ resgroupid => '6438', reslimittype => '1', value => '10' },
+{ resgroupid => '6438', reslimittype => '2', value => '10' },
+{ resgroupid => '6438', reslimittype => '3', value => '10' },
+{ resgroupid => '6438', reslimittype => '4', value => '80' },
+{ resgroupid => '6438', reslimittype => '5', value => '0' },
+{ resgroupid => '6438', reslimittype => '6', value => '0' },
+{ resgroupid => '6438', reslimittype => '7', value => '-1' },
+
+]

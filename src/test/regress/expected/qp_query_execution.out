@@ -4,7 +4,7 @@ ERROR:  schema "qp_query_execution" does not exist
 create schema qp_query_execution;
 set search_path to qp_query_execution;
 -- count number of certain operators in a given plan
-create language plpythonu;
+create language plpython3u;
 create or replace function qx_count_operator(query text, planner_operator text, optimizer_operator text) returns int as
 $$
 rv = plpy.execute('EXPLAIN '+ query)
@@ -16,7 +16,7 @@ if optimizer >= 0:
 else:
     return plan.count(planner_operator)
 $$
-language plpythonu;
+language plpython3u;
 drop table if exists tmp1;
 NOTICE:  table "tmp1" does not exist, skipping
 -- end_ignore
@@ -119,16 +119,6 @@ create table lossmithe_colstor
        partition by range(partvar) (start (0) end (100) every (10));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'loannumber' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "lossmithe_colstor_1_prt_1" for table "lossmithe_colstor"
-NOTICE:  CREATE TABLE will create partition "lossmithe_colstor_1_prt_2" for table "lossmithe_colstor"
-NOTICE:  CREATE TABLE will create partition "lossmithe_colstor_1_prt_3" for table "lossmithe_colstor"
-NOTICE:  CREATE TABLE will create partition "lossmithe_colstor_1_prt_4" for table "lossmithe_colstor"
-NOTICE:  CREATE TABLE will create partition "lossmithe_colstor_1_prt_5" for table "lossmithe_colstor"
-NOTICE:  CREATE TABLE will create partition "lossmithe_colstor_1_prt_6" for table "lossmithe_colstor"
-NOTICE:  CREATE TABLE will create partition "lossmithe_colstor_1_prt_7" for table "lossmithe_colstor"
-NOTICE:  CREATE TABLE will create partition "lossmithe_colstor_1_prt_8" for table "lossmithe_colstor"
-NOTICE:  CREATE TABLE will create partition "lossmithe_colstor_1_prt_9" for table "lossmithe_colstor"
-NOTICE:  CREATE TABLE will create partition "lossmithe_colstor_1_prt_10" for table "lossmithe_colstor"
 drop table if exists address_he_unique; 
 NOTICE:  table "address_he_unique" does not exist, skipping
 create table address_he_unique (
@@ -162,12 +152,6 @@ drop table if exists bar;
 NOTICE:  table "bar" does not exist, skipping
 -- end_ignore
 create table foo_p( a int, b int, k int, t text, p int) distributed by (a,b) partition by range(p) ( start(0) end(10) every (2), default partition other);
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_other" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_2" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_3" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_4" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_5" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_6" for table "foo_p"
 create table bar( a int, b int, k int, t text, p int) distributed by (a);
 insert into foo_p select i, i % 10, i , i || 'SOME NUMBER SOME NUMBER', i % 10 from generate_series(1, 1000) i;
 insert into bar select i % 7, i % 6, i % 9, i || 'SOME NUMBER', i % 4 from generate_series(1, 100) i;
@@ -330,12 +314,6 @@ drop table if exists b;
 NOTICE:  table "b" does not exist, skipping
 -- end_ignore
 create table abbp ( a character varying(60), b character varying(60), k character varying(60), t int, p int) distributed by (a,b) partition by range(p)  ( start(0) end(10) every (2), default partition other);
-NOTICE:  CREATE TABLE will create partition "abbp_1_prt_other" for table "abbp"
-NOTICE:  CREATE TABLE will create partition "abbp_1_prt_2" for table "abbp"
-NOTICE:  CREATE TABLE will create partition "abbp_1_prt_3" for table "abbp"
-NOTICE:  CREATE TABLE will create partition "abbp_1_prt_4" for table "abbp"
-NOTICE:  CREATE TABLE will create partition "abbp_1_prt_5" for table "abbp"
-NOTICE:  CREATE TABLE will create partition "abbp_1_prt_6" for table "abbp"
 create table b ( a character varying(60), b character varying(60), k character varying(60), t int, p int) distributed by(a);
 insert into abbp select i || 'SOME NUMBER', i || 'SN', i || 'SN SN', i, i%10 from generate_series(1, 1000)i;
 insert into b select i % 7 || 'SOME NUMBER', i%6 || 'SN', i % 9 || 'SOME NUMBER', i % 9, i % 4 from generate_series(1, 100)i;  
@@ -431,12 +409,6 @@ drop table if exists abbp;
 drop table if exists b;
 -- end_ignore
 create table abbp( a int, b int, k int, t text, p int) distributed by (a,b) partition by range(p) ( start(0) end(10) every (2), default partition other);
-NOTICE:  CREATE TABLE will create partition "abbp_1_prt_other" for table "abbp"
-NOTICE:  CREATE TABLE will create partition "abbp_1_prt_2" for table "abbp"
-NOTICE:  CREATE TABLE will create partition "abbp_1_prt_3" for table "abbp"
-NOTICE:  CREATE TABLE will create partition "abbp_1_prt_4" for table "abbp"
-NOTICE:  CREATE TABLE will create partition "abbp_1_prt_5" for table "abbp"
-NOTICE:  CREATE TABLE will create partition "abbp_1_prt_6" for table "abbp"
 create table b (a int, b int, k int, t text, p int) distributed by (a);
 insert into abbp select i, i, i , i || 'SOME NUMBER SOME NUMBER', i % 10 from generate_series(1, 1000) i;
 insert into b select i%7, i%10, i , i || 'SOME NUMBER', i % 4 from generate_series(1, 100) i;
@@ -485,12 +457,6 @@ drop table if exists foo_p;
 drop table if exists bar;
 -- end_ignore
 create table foo_p ( a decimal(10,2) , b int, k decimal(10,2), t text, p int) distributed by (a,b) partition by range(p)  ( start(0) end(10) every (2), default partition other);
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_other" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_2" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_3" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_4" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_5" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_6" for table "foo_p"
 create table bar ( a decimal(10, 2), b int, k decimal(10,2), t text, p int) distributed by(a);
 insert into foo_p select i, i % 10, i , i || 'SOME NUMBER SOME NUMBER', i % 10 from generate_series(1, 1000) i;
 insert into bar select i % 7, i % 6, i % 9, i || 'SOME NUMBER', i % 4 from generate_series(1, 100) i;
@@ -546,12 +512,6 @@ drop table if exists abbp;
 drop table if exists b;
 -- end_ignore
 create table abbp ( a character varying(60), b int, k character varying(60), t int, p int) distributed by (a,b) partition by range(p)  ( start(0) end(10) every (2), default partition other);
-NOTICE:  CREATE TABLE will create partition "abbp_1_prt_other" for table "abbp"
-NOTICE:  CREATE TABLE will create partition "abbp_1_prt_2" for table "abbp"
-NOTICE:  CREATE TABLE will create partition "abbp_1_prt_3" for table "abbp"
-NOTICE:  CREATE TABLE will create partition "abbp_1_prt_4" for table "abbp"
-NOTICE:  CREATE TABLE will create partition "abbp_1_prt_5" for table "abbp"
-NOTICE:  CREATE TABLE will create partition "abbp_1_prt_6" for table "abbp"
 create table b ( a character varying(60), b int, k character varying(60), t int, p int) distributed by(a);
 insert into abbp select i || 'SOME NUMBER', i, i || 'SN SN', i, i%10 from generate_series(1, 1000)i;
 insert into b select i % 7 || 'SOME NUMBER', i%6, i % 9 || 'SOME NUMBER', i % 9, i % 4 from generate_series(1, 100)i;
@@ -608,19 +568,7 @@ drop table if exists bar_p;
 NOTICE:  table "bar_p" does not exist, skipping
 -- end_ignore
 create table foo_p( a int, b int, k int, t text, p int) distributed by (a,b) partition by range(p) ( start(0) end(10) every (2), default partition other);
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_other" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_2" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_3" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_4" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_5" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_6" for table "foo_p"
 create table bar_p( a int, b int, k int, t text, p int) distributed by (a,b) partition by range(p) ( start(0) end(10) every (2), default partition other);
-NOTICE:  CREATE TABLE will create partition "bar_p_1_prt_other" for table "bar_p"
-NOTICE:  CREATE TABLE will create partition "bar_p_1_prt_2" for table "bar_p"
-NOTICE:  CREATE TABLE will create partition "bar_p_1_prt_3" for table "bar_p"
-NOTICE:  CREATE TABLE will create partition "bar_p_1_prt_4" for table "bar_p"
-NOTICE:  CREATE TABLE will create partition "bar_p_1_prt_5" for table "bar_p"
-NOTICE:  CREATE TABLE will create partition "bar_p_1_prt_6" for table "bar_p"
 insert into foo_p select i, i % 10, i , i || 'SOME NUMBER SOME NUMBER', i % 10 from generate_series(1, 1000) i;
 insert into bar_p select i % 7, i % 6, i % 9, i || 'SOME NUMBER', i % 4 from generate_series(1, 100) i;
 insert into bar_p select i % 7, i % 6, i % 9, i || 'SOME NUMBER', i % 4 from generate_series(1, 10000) i;
@@ -772,12 +720,6 @@ drop table if exists foo_p;
 drop table if exists bar;
 -- end_ignore
 create table foo_p( a int, b int, k int, t text, p int) distributed by (a,b) partition by range(p) ( start(0) end(10) every (2), default partition other);
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_other" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_2" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_3" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_4" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_5" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_6" for table "foo_p"
 create table bar( a int, b int, k int, t text, p int) distributed by (a);
 insert into foo_p select i, i % 10, i , i || 'SOME NUMBER SOME NUMBER', i % 10 from generate_series(1, 1000) i;
 insert into bar select i % 7, i % 6, i % 9, i || 'SOME NUMBER', i % 4 from generate_series(1, 100) i;
@@ -836,12 +778,6 @@ drop table if exists foo_p;
 drop table if exists bar;
 -- end_ignore
 create table foo_p( a int, b int, k int, t text, p int) distributed by (a,b) partition by range(p) ( start(0) end(10) every (2), default partition other);
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_other" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_2" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_3" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_4" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_5" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_6" for table "foo_p"
 create table bar( a int, b int, k int, t text, p int) distributed by (a);
 insert into foo_p select i, i % 10, i , i || 'SOME NUMBER SOME NUMBER', i % 10 from generate_series(1, 1000) i;
 insert into bar select i % 7, i % 6, i % 9, i || 'SOME NUMBER', i % 4 from generate_series(1, 100) i;
@@ -898,12 +834,6 @@ NOTICE:  table "a_p" does not exist, skipping
 drop table if exists bar;
 -- end_ignore
 create table a_p ( a character varying(60), b character varying(60), k character varying(60), t int, p int) distributed by (a,b) partition by range(p)  ( start(0) end(10) every (2), default partition other);
-NOTICE:  CREATE TABLE will create partition "a_p_1_prt_other" for table "a_p"
-NOTICE:  CREATE TABLE will create partition "a_p_1_prt_2" for table "a_p"
-NOTICE:  CREATE TABLE will create partition "a_p_1_prt_3" for table "a_p"
-NOTICE:  CREATE TABLE will create partition "a_p_1_prt_4" for table "a_p"
-NOTICE:  CREATE TABLE will create partition "a_p_1_prt_5" for table "a_p"
-NOTICE:  CREATE TABLE will create partition "a_p_1_prt_6" for table "a_p"
 create table b ( a character varying(60), b character varying(60), k character varying(60), t int, p int) distributed by(a);
 ERROR:  relation "b" already exists
 insert into a_p select i || 'SOME NUMBER', i || 'SN', i || 'SN SN', i, i%10 from generate_series(1, 1000)i;
@@ -962,12 +892,6 @@ drop table if exists a_p;
 drop table if exists b;
 -- end_ignore
 create table a_p( a int, b int, k int, t text, p int) distributed by (a,b) partition by range(p) ( start(0) end(10) every (2), default partition other);
-NOTICE:  CREATE TABLE will create partition "a_p_1_prt_other" for table "a_p"
-NOTICE:  CREATE TABLE will create partition "a_p_1_prt_2" for table "a_p"
-NOTICE:  CREATE TABLE will create partition "a_p_1_prt_3" for table "a_p"
-NOTICE:  CREATE TABLE will create partition "a_p_1_prt_4" for table "a_p"
-NOTICE:  CREATE TABLE will create partition "a_p_1_prt_5" for table "a_p"
-NOTICE:  CREATE TABLE will create partition "a_p_1_prt_6" for table "a_p"
 create table b (a int, b int, k int, t text, p int) distributed by (a);
 insert into a_p select i, i, i , i || 'SOME NUMBER SOME NUMBER', i % 10 from generate_series(1, 1000) i;
 insert into b select i%7, i%10, i , i || 'SOME NUMBER', i % 4 from generate_series(1, 100) i;
@@ -1017,12 +941,6 @@ drop table if exists bar;
 NOTICE:  table "bar" does not exist, skipping
 -- end_ignore
 create table foo_p ( a decimal(10,2) , b int, k decimal(10,2), t text, p int) distributed by (a,b) partition by range(p)  ( start(0) end(10) every (2), default partition other);
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_other" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_2" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_3" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_4" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_5" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_6" for table "foo_p"
 create table bar ( a decimal(10, 2), b int, k decimal(10,2), t text, p int) distributed by(a);
 insert into foo_p select i, i % 10, i , i || 'SOME NUMBER SOME NUMBER', i % 10 from generate_series(1, 1000) i;
 insert into bar select i % 7, i % 6, i % 9, i || 'SOME NUMBER', i % 4 from generate_series(1, 100) i;
@@ -1078,12 +996,6 @@ drop table if exists a_p;
 drop table if exists b;
 -- end_ignore
 create table a_p ( a character varying(60), b int, k character varying(60), t int, p int) distributed by (a,b) partition by range(p)  ( start(0) end(10) every (2), default partition other);
-NOTICE:  CREATE TABLE will create partition "a_p_1_prt_other" for table "a_p"
-NOTICE:  CREATE TABLE will create partition "a_p_1_prt_2" for table "a_p"
-NOTICE:  CREATE TABLE will create partition "a_p_1_prt_3" for table "a_p"
-NOTICE:  CREATE TABLE will create partition "a_p_1_prt_4" for table "a_p"
-NOTICE:  CREATE TABLE will create partition "a_p_1_prt_5" for table "a_p"
-NOTICE:  CREATE TABLE will create partition "a_p_1_prt_6" for table "a_p"
 create table b ( a character varying(60), b int, k character varying(60), t int, p int) distributed by(a);
 insert into a_p select i || 'SOME NUMBER', i, i || 'SN SN', i, i%10 from generate_series(1, 1000)i;
 insert into b select i % 7 || 'SOME NUMBER', i%6, i % 9 || 'SOME NUMBER', i % 9, i % 4 from generate_series(1, 100)i;
@@ -1129,19 +1041,7 @@ drop table if exists foo_p;
 drop table if exists bar_p;
 -- end_ignore
 create table foo_p( a int, b int, k int, t text, p int) distributed by (a,b) partition by range(p) ( start(0) end(10) every (2), default partition other);
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_other" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_2" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_3" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_4" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_5" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_6" for table "foo_p"
 create table bar_p( a int, b int, k int, t text, p int) distributed by (a,b) partition by range(p) ( start(0) end(10) every (2), default partition other);
-NOTICE:  CREATE TABLE will create partition "bar_p_1_prt_other" for table "bar_p"
-NOTICE:  CREATE TABLE will create partition "bar_p_1_prt_2" for table "bar_p"
-NOTICE:  CREATE TABLE will create partition "bar_p_1_prt_3" for table "bar_p"
-NOTICE:  CREATE TABLE will create partition "bar_p_1_prt_4" for table "bar_p"
-NOTICE:  CREATE TABLE will create partition "bar_p_1_prt_5" for table "bar_p"
-NOTICE:  CREATE TABLE will create partition "bar_p_1_prt_6" for table "bar_p"
 insert into foo_p select i, i % 10, i , i || 'SOME NUMBER SOME NUMBER', i % 10 from generate_series(1, 1000) i;
 insert into bar_p select i % 7, i % 6, i % 9, i || 'SOME NUMBER', i % 4 from generate_series(1, 100) i;
 insert into bar_p select i % 7, i % 6, i % 9, i || 'SOME NUMBER', i % 4 from generate_series(1, 10000) i;
@@ -1313,12 +1213,6 @@ drop table if exists foo_p;
 drop table if exists bar;
 -- end_ignore
 create table foo_p( a int, b int, k int, t text, p int) distributed by (a,b) partition by range(p) ( start(0) end(10) every (2), default partition other);
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_other" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_2" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_3" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_4" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_5" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_6" for table "foo_p"
 create table bar( a int, b int, k int, t text, p int) distributed by (a);
 insert into foo_p select i, i % 10, i , i || 'SOME NUMBER SOME NUMBER', i % 10 from generate_series(1, 1000) i;
 insert into bar select i % 7, i % 6, i % 9, i || 'SOME NUMBER', i % 4 from generate_series(1, 100) i;

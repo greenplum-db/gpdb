@@ -29,6 +29,16 @@ B125	Routine language MUMPS			NO
 B126	Routine language Pascal			NO	
 B127	Routine language PL/I			NO	
 B128	Routine language SQL			NO	
+B200	Polymorphic table functions			NO	
+B201	More than one PTF generic table parameter			NO	
+B202	PTF Copartitioning			NO	
+B203	More than one copartition specification			NO	
+B204	PRUNE WHEN EMPTY			NO	
+B205	Pass-through columns			NO	
+B206	PTF descriptor parameters			NO	
+B207	Cross products of partitionings			NO	
+B208	PTF component procedure interface			NO	
+B209	PTF extended names			NO	
 B211	Module language Ada: VARCHAR and NUMERIC support			NO	
 B221	Routine language Ada: VARCHAR and NUMERIC support			NO	
 E011	Numeric data types			YES	
@@ -200,7 +210,7 @@ F181	Multiple module support			NO
 F191	Referential delete actions			NO	
 F200	TRUNCATE TABLE statement			YES	
 F201	CAST function			YES	
-F202	TRUNCATE TABLE: identity column restart option			NO	
+F202	TRUNCATE TABLE: identity column restart option			YES	
 F221	Explicit defaults			YES	
 F222	INSERT statement: DEFAULT VALUES clause			YES	
 F231	Privilege tables			YES	
@@ -241,9 +251,9 @@ F381	Extended schema manipulation	02	ALTER TABLE statement: ADD CONSTRAINT claus
 F381	Extended schema manipulation	03	ALTER TABLE statement: DROP CONSTRAINT clause	YES	
 F382	Alter column data type			YES	
 F383	Set column not null clause			YES	
-F384	Drop identity property clause			NO	
+F384	Drop identity property clause			YES	
 F385	Drop column generation expression clause			NO	
-F386	Set identity column generation clause			NO	
+F386	Set identity column generation clause			YES	
 F391	Long identifiers			YES	
 F392	Unicode escapes in identifiers			YES	
 F393	Unicode escapes in literals			YES	
@@ -254,6 +264,7 @@ F401	Extended joined table	02	FULL OUTER JOIN	YES
 F401	Extended joined table	04	CROSS JOIN	YES	
 F402	Named column joins for LOBs, arrays, and multisets			YES	
 F403	Partitioned joined tables			NO	
+F404	Range variable for common column names			NO	
 F411	Time zone specification			YES	differences regarding literal interpretation
 F421	National character			YES	
 F431	Read-only scrollable cursors			YES	forward scroll only
@@ -291,6 +302,7 @@ F651	Catalog name qualifiers			YES
 F661	Simple tables			YES	
 F671	Subqueries in CHECK			NO	intentionally omitted
 F672	Retrospective check constraints			YES	
+F673	Reads SQL-data routine invocations in CHECK constraints			NO	
 F690	Collation support			YES	but no character set support
 F692	Extended collation support			YES	
 F693	SQL-session and client module collations			NO	
@@ -338,6 +350,9 @@ F864	Top-level <result offset clause> in views			YES
 F865	<offset row count> in <result offset clause>			YES	
 F866	FETCH FIRST clause: PERCENT option			NO	
 F867	FETCH FIRST clause: WITH TIES option			NO	
+R010	Row pattern recognition: FROM clause			NO	
+R020	Row pattern recognition: WINDOW clause			NO	
+R030	Row pattern recognition: full aggregate support			NO	
 S011	Distinct data types			NO	
 S011	Distinct data types	01	USER_DEFINED_TYPES view	NO	
 S023	Basic structured types			NO	
@@ -404,10 +419,10 @@ T042	Extended LOB data type support			NO
 T043	Multiplier T			NO	
 T044	Multiplier P			NO	
 T051	Row types			NO	
-T052	MAX and MIN for row types			NO	
 T053	Explicit aliases for all-fields reference			NO	
 T061	UCS support			NO	
 T071	BIGINT data type			YES	
+T076	DECFLOAT data type			NO	
 T101	Enhanced nullability determination			NO	
 T111	Updatable joins, unions, and columns			NO	
 T121	WITH (excluding RECURSIVE) in query expression			YES	
@@ -420,11 +435,11 @@ T152	DISTINCT predicate with negation			YES
 T171	LIKE clause in table definition			YES	
 T172	AS subquery clause in table definition			YES	
 T173	Extended LIKE clause in table definition			YES	
-T174	Identity columns			NO	
+T174	Identity columns			YES	
 T175	Generated columns			NO	
 T176	Sequence generator support			NO	
-T177	Sequence generator support: simple restart option			NO	
-T178	Identity columns:  simple restart option			NO	
+T177	Sequence generator support: simple restart option			YES	
+T178	Identity columns:  simple restart option			YES	
 T180	System-versioned tables			NO	
 T181	Application-time period tables			NO	
 T191	Referential action RESTRICT			NO	
@@ -443,18 +458,18 @@ T213	INSTEAD OF triggers			NO
 T231	Sensitive cursors			YES	
 T241	START TRANSACTION statement			YES	
 T251	SET TRANSACTION statement: LOCAL option			NO	
-T261	Chained transactions			NO	
+T261	Chained transactions			YES	
 T271	Savepoints			YES	
 T272	Enhanced savepoint management			NO	
 T281	SELECT privilege with column granularity			YES	
-T285	Enhanced derived column names			NO	
+T285	Enhanced derived column names			YES	
 T301	Functional dependencies			NO	partially supported
 T312	OVERLAY function			YES	
 T321	Basic SQL-invoked routines			NO	
 T321	Basic SQL-invoked routines	01	User-defined functions with no overloading	YES	
-T321	Basic SQL-invoked routines	02	User-defined stored procedures with no overloading	NO	
+T321	Basic SQL-invoked routines	02	User-defined stored procedures with no overloading	YES	
 T321	Basic SQL-invoked routines	03	Function invocation	YES	
-T321	Basic SQL-invoked routines	04	CALL statement	NO	
+T321	Basic SQL-invoked routines	04	CALL statement	YES	
 T321	Basic SQL-invoked routines	05	RETURN statement	NO	
 T321	Basic SQL-invoked routines	06	ROUTINES view	YES	
 T321	Basic SQL-invoked routines	07	PARAMETERS view	YES	
@@ -480,8 +495,11 @@ T495	Combined data change and retrieval			NO	different syntax
 T501	Enhanced EXISTS predicate			NO	
 T502	Period predicates			NO	
 T511	Transaction counts			NO	
-T521	Named arguments in CALL statement			NO	
+T521	Named arguments in CALL statement			YES	
 T522	Default values for IN parameters of SQL-invoked procedures			NO	supported except DEFAULT key word in invocation
+T523	Default values for INOUT parameters of SQL-invoked procedures			YES	
+T524	Named arguments in routine invocations other than a CALL statement			YES	
+T525	Default values for parameters of SQL-invoked functions			YES	
 T551	Optional key words for default syntax			YES	
 T561	Holdable locators			NO	
 T571	Array-returning external SQL-invoked functions			NO	
@@ -498,8 +516,12 @@ T616	Null treatment option for LEAD and LAG functions			NO
 T617	FIRST_VALUE and LAST_VALUE function			YES	
 T618	NTH_VALUE function			NO	function exists, but some options missing
 T619	Nested window functions			NO	
-T620	WINDOW clause: GROUPS option			NO	
+T620	WINDOW clause: GROUPS option			YES	
 T621	Enhanced numeric functions			YES	
+T622	Trigonometric functions			YES	
+T623	General logarithm functions			YES	
+T624	Common logarithm functions			YES	
+T625	LISTAGG			NO	
 T631	IN predicate with one list element			YES	
 T641	Multiple column assignment			NO	only some syntax variants supported
 T651	SQL-schema statements in SQL routines			YES	
@@ -507,6 +529,29 @@ T652	SQL-dynamic statements in SQL routines			NO
 T653	SQL-schema statements in external routines			NO	
 T654	SQL-dynamic statements in external routines			NO	
 T655	Cyclically dependent routines			YES	
+T811	Basic SQL/JSON constructor functions			NO	
+T812	SQL/JSON: JSON_OBJECTAGG			NO	
+T813	SQL/JSON: JSON_ARRAYAGG with ORDER BY			NO	
+T814	Colon in JSON_OBJECT or JSON_OBJECTAGG			NO	
+T821	Basic SQL/JSON query operators			NO	
+T822	SQL/JSON: IS JSON WITH UNIQUE KEYS predicate			NO	
+T823	SQL/JSON: PASSING clause			NO	
+T824	JSON_TABLE: specific PLAN clause			NO	
+T825	SQL/JSON: ON EMPTY and ON ERROR clauses			NO	
+T826	General value expression in ON ERROR or ON EMPTY clauses			NO	
+T827	JSON_TABLE: sibling NESTED COLUMNS clauses			NO	
+T828	JSON_QUERY			NO	
+T829	JSON_QUERY: array wrapper options			NO	
+T830	Enforcing unique keys in SQL/JSON constructor functions			NO	
+T831	SQL/JSON path language: strict mode			YES	
+T832	SQL/JSON path language: item method			NO	datetime() not yet implemented
+T833	SQL/JSON path language: multiple subscripts			YES	
+T834	SQL/JSON path language: wildcard member accessor			YES	
+T835	SQL/JSON path language: filter expressions			YES	
+T836	SQL/JSON path language: starts with predicate			YES	
+T837	SQL/JSON path language: regex_like predicate			YES	
+T838	JSON_TABLE: PLAN DEFAULT clause			NO	
+T839	Formatted cast of datetimes to/from character strings			NO	
 M001	Datalinks			NO	
 M002	Datalinks via SQL/CLI			NO	
 M003	Datalinks via Embedded SQL			NO	
@@ -536,7 +581,7 @@ X010	XML type			YES
 X011	Arrays of XML type			YES	
 X012	Multisets of XML type			NO	
 X013	Distinct types of XML type			NO	
-X014	Attributes of XML type			NO	
+X014	Attributes of XML type			YES	
 X015	Fields of XML type			NO	
 X016	Persistent XML values			YES	
 X020	XMLConcat			YES	
@@ -593,7 +638,7 @@ X085	Predefined namespace prefixes			NO
 X086	XML namespace declarations in XMLTable			NO	
 X090	XML document predicate			YES	
 X091	XML content predicate			NO	
-X096	XMLExists			NO	
+X096	XMLExists			NO	XPath 1.0 only
 X100	Host language support for XML: CONTENT option			NO	
 X101	Host language support for XML: DOCUMENT option			NO	
 X110	Host language support for XML: VARCHAR mapping			NO	
@@ -635,8 +680,8 @@ X204	XMLQuery: initializing an XQuery variable			NO
 X205	XMLQuery: EMPTY ON EMPTY option			NO	
 X206	XMLQuery: NULL ON EMPTY option			NO	
 X211	XML 1.1 support			NO	
-X221	XML passing mechanism BY VALUE			NO	
-X222	XML passing mechanism BY REF			NO	
+X221	XML passing mechanism BY VALUE			YES	
+X222	XML passing mechanism BY REF			NO	parser accepts BY REF but ignores it; passing is always BY VALUE
 X231	XML(CONTENT(UNTYPED)) type			NO	
 X232	XML(CONTENT(ANY)) type			NO	
 X241	RETURNING CONTENT in XML publishing			NO	
@@ -661,11 +706,11 @@ X282	XMLValidate with CONTENT option			NO
 X283	XMLValidate with SEQUENCE option			NO	
 X284	XMLValidate: NAMESPACE without ELEMENT clause			NO	
 X286	XMLValidate: NO NAMESPACE with ELEMENT clause			NO	
-X300	XMLTable			NO	
-X301	XMLTable: derived column list option			NO	
-X302	XMLTable: ordinality column option			NO	
-X303	XMLTable: column default option			NO	
-X304	XMLTable: passing a context item			NO	
+X300	XMLTable			NO	XPath 1.0 only
+X301	XMLTable: derived column list option			YES	
+X302	XMLTable: ordinality column option			YES	
+X303	XMLTable: column default option			YES	
+X304	XMLTable: passing a context item			YES	must be XML DOCUMENT
 X305	XMLTable: initializing an XQuery variable			NO	
 X400	Name and identifier mapping			YES	
 X410	Alter column data type: XML type			YES	

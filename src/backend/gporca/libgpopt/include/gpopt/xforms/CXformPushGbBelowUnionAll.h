@@ -18,68 +18,59 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CXformPushGbBelowUnionAll
-	//
-	//	@doc:
-	//		Push grouping below UnionAll operation
-	//
-	//---------------------------------------------------------------------------
-	class CXformPushGbBelowUnionAll : public CXformPushGbBelowSetOp<CLogicalUnionAll>
+//---------------------------------------------------------------------------
+//	@class:
+//		CXformPushGbBelowUnionAll
+//
+//	@doc:
+//		Push grouping below UnionAll operation
+//
+//---------------------------------------------------------------------------
+class CXformPushGbBelowUnionAll
+	: public CXformPushGbBelowSetOp<CLogicalUnionAll>
+{
+private:
+	// private copy ctor
+	CXformPushGbBelowUnionAll(const CXformPushGbBelowUnionAll &);
+
+public:
+	// ctor
+	explicit CXformPushGbBelowUnionAll(CMemoryPool *mp)
+		: CXformPushGbBelowSetOp<CLogicalUnionAll>(mp)
 	{
+	}
 
-		private:
+	// dtor
+	virtual ~CXformPushGbBelowUnionAll()
+	{
+	}
 
-			// private copy ctor
-			CXformPushGbBelowUnionAll(const CXformPushGbBelowUnionAll &);
+	// Compatibility function
+	virtual BOOL
+	FCompatible(CXform::EXformId exfid)
+	{
+		return ExfPushGbBelowUnionAll != exfid;
+	}
 
-		public:
+	// ident accessors
+	virtual EXformId
+	Exfid() const
+	{
+		return ExfPushGbBelowUnionAll;
+	}
 
-			// ctor
-			explicit
-			CXformPushGbBelowUnionAll
-				(
-				CMemoryPool *mp
-				)
-				:
-				CXformPushGbBelowSetOp<CLogicalUnionAll>(mp)
-			{}
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CXformPushGbBelowUnionAll";
+	}
 
-			// dtor
-			virtual
-			~CXformPushGbBelowUnionAll()
-			{}
+};	// class CXformPushGbBelowUnionAll
 
-			// Compatibility function
-			virtual
-			BOOL FCompatible
-				(
-				CXform::EXformId exfid
-				)
-			{
-				return ExfPushGbBelowUnionAll != exfid;
-			}
+}  // namespace gpopt
 
-			// ident accessors
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfPushGbBelowUnionAll;
-			}
-
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CXformPushGbBelowUnionAll";
-			}
-
-	}; // class CXformPushGbBelowUnionAll
-
-}
-
-#endif // !GPOPT_CXformPushGbBelowUnionAll_H
+#endif	// !GPOPT_CXformPushGbBelowUnionAll_H
 
 // EOF

@@ -5,14 +5,10 @@
 #include "gpopt/operators/CHashedDistributions.h"
 
 using namespace gpopt;
-CHashedDistributions::CHashedDistributions
-		(
-		CMemoryPool *mp,
-		CColRefArray *pdrgpcrOutput,
-		CColRef2dArray *pdrgpdrgpcrInput
-		)
-		:
-		CDistributionSpecArray(mp)
+CHashedDistributions::CHashedDistributions(CMemoryPool *mp,
+										   CColRefArray *pdrgpcrOutput,
+										   CColRef2dArray *pdrgpdrgpcrInput)
+	: CDistributionSpecArray(mp)
 {
 	const ULONG num_cols = pdrgpcrOutput->Size();
 	const ULONG arity = pdrgpdrgpcrInput->Size();
@@ -29,7 +25,8 @@ CHashedDistributions::CHashedDistributions
 
 		// create a hashed distribution on input columns of the current child
 		BOOL fNullsColocated = true;
-		CDistributionSpec *pdshashed = GPOS_NEW(mp) CDistributionSpecHashed(pdrgpexpr, fNullsColocated);
+		CDistributionSpec *pdshashed =
+			GPOS_NEW(mp) CDistributionSpecHashed(pdrgpexpr, fNullsColocated);
 		Append(pdshashed);
 	}
 }

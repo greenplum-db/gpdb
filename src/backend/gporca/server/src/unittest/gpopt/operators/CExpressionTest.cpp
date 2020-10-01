@@ -44,11 +44,15 @@ CReqdPropPlan *
 CExpressionTest::PrppCreateRequiredProperties(CMemoryPool *mp, CColRefSet *pcrs)
 {
 	COrderSpec *pos = GPOS_NEW(mp) COrderSpec(mp);
-	CDistributionSpec *pds = GPOS_NEW(mp) CDistributionSpecSingleton(CDistributionSpecSingleton::EstMaster);
-	CRewindabilitySpec *prs = GPOS_NEW(mp) CRewindabilitySpec(CRewindabilitySpec::ErtNone, CRewindabilitySpec::EmhtNoMotion);
+	CDistributionSpec *pds = GPOS_NEW(mp)
+		CDistributionSpecSingleton(CDistributionSpecSingleton::EstMaster);
+	CRewindabilitySpec *prs = GPOS_NEW(mp) CRewindabilitySpec(
+		CRewindabilitySpec::ErtNone, CRewindabilitySpec::EmhtNoMotion);
 	CEnfdOrder *peo = GPOS_NEW(mp) CEnfdOrder(pos, CEnfdOrder::EomSatisfy);
-	CEnfdDistribution *ped = GPOS_NEW(mp) CEnfdDistribution(pds, CEnfdDistribution::EdmSatisfy);
-	CEnfdRewindability *per = GPOS_NEW(mp) CEnfdRewindability(prs, CEnfdRewindability::ErmSatisfy);
+	CEnfdDistribution *ped =
+		GPOS_NEW(mp) CEnfdDistribution(pds, CEnfdDistribution::EdmSatisfy);
+	CEnfdRewindability *per =
+		GPOS_NEW(mp) CEnfdRewindability(prs, CEnfdRewindability::ErmSatisfy);
 	CCTEReq *pcter = GPOS_NEW(mp) CCTEReq(mp);
 	return GPOS_NEW(mp) CReqdPropPlan(pcrs, peo, ped, per, pcter);
 }
@@ -64,14 +68,16 @@ CExpressionTest::PrppCreateRequiredProperties(CMemoryPool *mp, CColRefSet *pcrs)
 //
 //---------------------------------------------------------------------------
 CExpression *
-CExpressionTest::PexprCreateGbyWithColumnFormat(CMemoryPool *mp, const WCHAR *wszColNameFormat)
+CExpressionTest::PexprCreateGbyWithColumnFormat(CMemoryPool *mp,
+												const WCHAR *wszColNameFormat)
 {
 	CWStringConst strRelName(GPOS_WSZ_LIT("Rel1"));
 	CMDIdGPDB *rel_mdid = GPOS_NEW(mp) CMDIdGPDB(GPOPT_TEST_REL_OID1, 1, 1);
 	CTableDescriptor *ptabdesc = CTestUtils::PtabdescPlainWithColNameFormat(
-			mp, 3, rel_mdid, wszColNameFormat, CName(&strRelName), false);
+		mp, 3, rel_mdid, wszColNameFormat, CName(&strRelName), false);
 	CWStringConst strRelAlias(GPOS_WSZ_LIT("Rel1"));
-	CExpression *pexprGet = CTestUtils::PexprLogicalGet(mp, ptabdesc, &strRelAlias);
+	CExpression *pexprGet =
+		CTestUtils::PexprLogicalGet(mp, ptabdesc, &strRelAlias);
 	return CTestUtils::PexprLogicalGbAggWithInput(mp, pexprGet);
 }
 
@@ -86,29 +92,32 @@ CExpressionTest::PexprCreateGbyWithColumnFormat(CMemoryPool *mp, const WCHAR *ws
 GPOS_RESULT
 CExpressionTest::EresUnittest()
 {
-	CUnittest rgut[] =
-		{
+	CUnittest rgut[] = {
 		GPOS_UNITTEST_FUNC(CExpressionTest::EresUnittest_SimpleOps),
 		GPOS_UNITTEST_FUNC(CExpressionTest::EresUnittest_Union),
 		GPOS_UNITTEST_FUNC(CExpressionTest::EresUnittest_BitmapGet),
 		GPOS_UNITTEST_FUNC(CExpressionTest::EresUnittest_Const),
 #ifdef GPOS_DEBUG
 		GPOS_UNITTEST_FUNC(CExpressionTest::EresUnittest_ComparisonTypes),
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 		GPOS_UNITTEST_FUNC(CExpressionTest::EresUnittest_FValidPlan),
-		GPOS_UNITTEST_FUNC(CExpressionTest::EresUnittest_FValidPlan_InvalidOrder),
-		GPOS_UNITTEST_FUNC(CExpressionTest::EresUnittest_FValidPlan_InvalidDistribution),
-		GPOS_UNITTEST_FUNC(CExpressionTest::EresUnittest_FValidPlan_InvalidRewindability),
-		GPOS_UNITTEST_FUNC(CExpressionTest::EresUnittest_FValidPlan_InvalidCTEs),
+		GPOS_UNITTEST_FUNC(
+			CExpressionTest::EresUnittest_FValidPlan_InvalidOrder),
+		GPOS_UNITTEST_FUNC(
+			CExpressionTest::EresUnittest_FValidPlan_InvalidDistribution),
+		GPOS_UNITTEST_FUNC(
+			CExpressionTest::EresUnittest_FValidPlan_InvalidRewindability),
+		GPOS_UNITTEST_FUNC(
+			CExpressionTest::EresUnittest_FValidPlan_InvalidCTEs),
 
 #ifdef GPOS_DEBUG
 		GPOS_UNITTEST_FUNC(CExpressionTest::EresUnittest_FValidPlanError),
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 		GPOS_UNITTEST_FUNC(EresUnittest_ReqdCols),
 #ifdef GPOS_DEBUG
 		GPOS_UNITTEST_FUNC_ASSERT(CExpressionTest::EresUnittest_InvalidSetOp),
-#endif // GPOS_DEBUG
-		};
+#endif	// GPOS_DEBUG
+	};
 
 	return CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
 }
@@ -132,10 +141,9 @@ CExpressionTest::EresUnittest_SimpleOps()
 	pmdp->AddRef();
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
-	typedef CExpression *(*Pfpexpr)(CMemoryPool*);
+	typedef CExpression *(*Pfpexpr)(CMemoryPool *);
 
-	Pfpexpr rgpf[] =
-		{
+	Pfpexpr rgpf[] = {
 		CTestUtils::PexprLogicalGet,
 		CTestUtils::PexprLogicalExternalGet,
 		CTestUtils::PexprLogicalGetPartitioned,
@@ -159,31 +167,26 @@ CExpressionTest::EresUnittest_SimpleOps()
 		CTestUtils::PexprLogicalSequence,
 		CTestUtils::PexprLogicalTVFTwoArgs,
 		CTestUtils::PexprLogicalAssert,
-		PexprComplexJoinTree
-		};
+		PexprComplexJoinTree};
 
 #ifdef GPOS_DEBUG
 	// misestimation risk for the roots of the plans in rgpf
-	ULONG rgulRisk[] =
-		{ 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 2, 1, 2, 1, 1, 1, 1, 1, 1, 6 };
-#endif // GPOS_DEBUG
+	ULONG rgulRisk[] = {1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+						2, 3, 2, 1, 2, 1, 1, 1, 1, 1, 1, 6};
+#endif	// GPOS_DEBUG
 
 	for (ULONG i = 0; i < GPOS_ARRAY_SIZE(rgpf); i++)
 	{
 		// install opt context in TLS
-		CAutoOptCtxt aoc
-						(
-						mp,
-						&mda,
-						NULL,  /* pceeval */
-						CTestUtils::GetCostModel(mp)
-						);
+		CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+						 CTestUtils::GetCostModel(mp));
 
 		// generate simple expression
 		CExpression *pexpr = rgpf[i](mp);
 
 		CLogicalGet *popGet = dynamic_cast<CLogicalGet *>(pexpr->Pop());
-		CLogicalDynamicGetBase *popDynGet = dynamic_cast<CLogicalDynamicGetBase *>(pexpr->Pop());
+		CLogicalDynamicGetBase *popDynGet =
+			dynamic_cast<CLogicalDynamicGetBase *>(pexpr->Pop());
 		CColRefArray *colrefs = NULL;
 
 		if (NULL != popGet)
@@ -223,21 +226,27 @@ CExpressionTest::EresUnittest_SimpleOps()
 
 		// copy expression
 		CColRef *pcrOld = pexpr->DeriveOutputColumns()->PcrAny();
-		CColRef *new_colref = COptCtxt::PoctxtFromTLS()->Pcf()->PcrCreate(pcrOld);
+		CColRef *new_colref =
+			COptCtxt::PoctxtFromTLS()->Pcf()->PcrCreate(pcrOld);
 		UlongToColRefMap *colref_mapping = GPOS_NEW(mp) UlongToColRefMap(mp);
 
-		BOOL result = colref_mapping->Insert(GPOS_NEW(mp) ULONG(pcrOld->Id()), new_colref);
+		BOOL result = colref_mapping->Insert(GPOS_NEW(mp) ULONG(pcrOld->Id()),
+											 new_colref);
 		GPOS_ASSERT(result);
-		CExpression *pexprCopy = pexpr->PexprCopyWithRemappedColumns(mp, colref_mapping, true /*must_exist*/);
+		CExpression *pexprCopy = pexpr->PexprCopyWithRemappedColumns(
+			mp, colref_mapping, true /*must_exist*/);
 		colref_mapping->Release();
-		oss << std::endl << "COPIED EXPRESSION (AFTER MAPPING " << *pcrOld << " TO " << *new_colref << "):" << std::endl;
+		oss << std::endl
+			<< "COPIED EXPRESSION (AFTER MAPPING " << *pcrOld << " TO "
+			<< *new_colref << "):" << std::endl;
 		GPOS_TRACE(str.GetBuffer());
 		str.Reset();
 		pexprCopy->DbgPrint();
 		pexprCopy->Release();
 
 		// derive stats on expression
-		CReqdPropRelational *prprel = GPOS_NEW(mp) CReqdPropRelational(GPOS_NEW(mp) CColRefSet(mp));
+		CReqdPropRelational *prprel =
+			GPOS_NEW(mp) CReqdPropRelational(GPOS_NEW(mp) CColRefSet(mp));
 		IStatisticsArray *stats_ctxt = GPOS_NEW(mp) IStatisticsArray(mp);
 		IStatistics *stats = pexpr->PstatsDerive(prprel, stats_ctxt);
 		GPOS_ASSERT(NULL != stats);
@@ -250,7 +259,7 @@ CExpressionTest::EresUnittest_SimpleOps()
 
 		prprel->Release();
 		stats_ctxt->Release();
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 		// cleanup
 		pexpr->Release();
@@ -278,13 +287,8 @@ CExpressionTest::EresUnittest_Union()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc
-					(
-					mp,
-					&mda,
-					NULL,  /* pceeval */
-					CTestUtils::GetCostModel(mp)
-					);
+	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+					 CTestUtils::GetCostModel(mp));
 
 	// build union tree of depth 2
 	CExpression *pexpr = CTestUtils::PexprLogicalUnion(mp, 2);
@@ -300,7 +304,8 @@ CExpressionTest::EresUnittest_Union()
 	(void) pexpr->PdpDerive();
 
 #ifdef GPOS_DEBUG
-	CReqdPropRelational *prprel = GPOS_NEW(mp) CReqdPropRelational(GPOS_NEW(mp) CColRefSet(mp));
+	CReqdPropRelational *prprel =
+		GPOS_NEW(mp) CReqdPropRelational(GPOS_NEW(mp) CColRefSet(mp));
 	IStatisticsArray *stats_ctxt = GPOS_NEW(mp) IStatisticsArray(mp);
 	IStatistics *stats = pexpr->PstatsDerive(prprel, stats_ctxt);
 	GPOS_ASSERT(NULL != stats);
@@ -309,7 +314,7 @@ CExpressionTest::EresUnittest_Union()
 	GPOS_ASSERT(3 == stats->StatsEstimationRisk());
 	stats_ctxt->Release();
 	prprel->Release();
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 	// cleanup
 	pexpr->Release();
@@ -336,20 +341,15 @@ CExpressionTest::EresUnittest_BitmapGet()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc
-					(
-					mp,
-					&mda,
-					NULL,  /* pceeval */
-					CTestUtils::GetCostModel(mp)
-					);
+	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+					 CTestUtils::GetCostModel(mp));
 
 	CWStringConst strRelName(GPOS_WSZ_LIT("MyTable"));
 	CWStringConst strRelAlias(GPOS_WSZ_LIT("T"));
 	CMDIdGPDB *rel_mdid = GPOS_NEW(mp) CMDIdGPDB(GPOPT_MDCACHE_TEST_OID, 1, 1);
 	const WCHAR *wszColNameFormat = GPOS_WSZ_LIT("column_%04d");
 	CTableDescriptor *ptabdesc = CTestUtils::PtabdescPlainWithColNameFormat(
-			mp, 3, rel_mdid, wszColNameFormat, CName(&strRelName), false);
+		mp, 3, rel_mdid, wszColNameFormat, CName(&strRelName), false);
 
 	// get the index associated with the table
 	const IMDRelation *pmdrel = mda.RetrieveRel(ptabdesc->MDId());
@@ -369,54 +369,36 @@ CExpressionTest::EresUnittest_BitmapGet()
 	const IMDType *pmdtype = mda.RetrieveType(pmdcol->MdidType());
 	CColRef *pcrFirst = col_factory->PcrCreate(pmdtype, pmdcol->TypeModifier());
 
-	CExpression *pexprIndexCond = CUtils::PexprScalarEqCmp
-								(
-								mp,
-								pcrFirst,
-								CUtils::PexprScalarConstInt4(mp, 20 /*val*/)
-								);
+	CExpression *pexprIndexCond = CUtils::PexprScalarEqCmp(
+		mp, pcrFirst, CUtils::PexprScalarConstInt4(mp, 20 /*val*/));
 
 	CMDIdGPDB *mdid = GPOS_NEW(mp) CMDIdGPDB(CMDIdGPDB::m_mdid_unknown);
-	CIndexDescriptor *pindexdesc = CIndexDescriptor::Pindexdesc(mp, ptabdesc, pmdindex);
-	CExpression *pexprBitmapIndex =
-			GPOS_NEW(mp) CExpression
-					(
-					mp,
-					GPOS_NEW(mp) CScalarBitmapIndexProbe(mp, pindexdesc, mdid),
-					pexprIndexCond
-					);
+	CIndexDescriptor *pindexdesc =
+		CIndexDescriptor::Pindexdesc(mp, ptabdesc, pmdindex);
+	CExpression *pexprBitmapIndex = GPOS_NEW(mp) CExpression(
+		mp, GPOS_NEW(mp) CScalarBitmapIndexProbe(mp, pindexdesc, mdid),
+		pexprIndexCond);
 
 	CColRefArray *pdrgpcrTable = GPOS_NEW(mp) CColRefArray(mp);
 	for (ULONG ul = 0; ul < num_cols; ++ul)
 	{
 		const IMDColumn *pmdcol = pmdrel->GetMdCol(ul);
 		const IMDType *pmdtype = mda.RetrieveType(pmdcol->MdidType());
-		CColRef *colref = col_factory->PcrCreate(pmdtype, pmdcol->TypeModifier());
+		CColRef *colref =
+			col_factory->PcrCreate(pmdtype, pmdcol->TypeModifier());
 		pdrgpcrTable->Append(colref);
 	}
 
-	CExpression *pexprTableCond = CUtils::PexprScalarEqCmp
-								(
-								mp,
-								pcrFirst,
-								CUtils::PexprScalarConstInt4(mp, 20 /*val*/)
-								);
+	CExpression *pexprTableCond = CUtils::PexprScalarEqCmp(
+		mp, pcrFirst, CUtils::PexprScalarConstInt4(mp, 20 /*val*/));
 
-	CExpression *pexprBitmapTableGet =
-			GPOS_NEW(mp) CExpression
-					(
-					mp,
-					GPOS_NEW(mp) CLogicalBitmapTableGet
-							(
-							mp,
-							ptabdesc,
-							gpos::ulong_max, // pgexprOrigin
-							GPOS_NEW(mp) CName(mp, CName(&strRelAlias)),
-							pdrgpcrTable
-							),
-					pexprTableCond,
-					pexprBitmapIndex
-					);
+	CExpression *pexprBitmapTableGet = GPOS_NEW(mp) CExpression(
+		mp,
+		GPOS_NEW(mp) CLogicalBitmapTableGet(
+			mp, ptabdesc,
+			gpos::ulong_max,  // pgexprOrigin
+			GPOS_NEW(mp) CName(mp, CName(&strRelAlias)), pdrgpcrTable),
+		pexprTableCond, pexprBitmapIndex);
 
 	// debug print
 	CWStringDynamic str(mp);
@@ -440,31 +422,24 @@ CExpressionTest::EresUnittest_BitmapGet()
 
 	// test matching of bitmap index probe expressions
 	CMDIdGPDB *pmdid2 = GPOS_NEW(mp) CMDIdGPDB(CMDIdGPDB::m_mdid_unknown);
-	CIndexDescriptor *pindexdesc2 = CIndexDescriptor::Pindexdesc(mp, ptabdesc, pmdindex);
-	CExpression *pexprIndexCond2 = CUtils::PexprScalarEqCmp
-								(
-								mp,
-								pcrFirst,
-								CUtils::PexprScalarConstInt4(mp, 20 /*val*/)
-								);
-	CExpression *pexprBitmapIndex2 =
-			GPOS_NEW(mp) CExpression
-					(
-					mp,
-					GPOS_NEW(mp) CScalarBitmapIndexProbe(mp, pindexdesc2, pmdid2),
-					pexprIndexCond2
-					);
+	CIndexDescriptor *pindexdesc2 =
+		CIndexDescriptor::Pindexdesc(mp, ptabdesc, pmdindex);
+	CExpression *pexprIndexCond2 = CUtils::PexprScalarEqCmp(
+		mp, pcrFirst, CUtils::PexprScalarConstInt4(mp, 20 /*val*/));
+	CExpression *pexprBitmapIndex2 = GPOS_NEW(mp) CExpression(
+		mp, GPOS_NEW(mp) CScalarBitmapIndexProbe(mp, pindexdesc2, pmdid2),
+		pexprIndexCond2);
 	CWStringDynamic strIndex2(mp);
 	COstreamString ossIndex2(&strIndex2);
 	pexprBitmapIndex2->OsPrint(ossIndex2);
 	CWStringConst strExpectedDebugPrintIndex2(GPOS_WSZ_LIT(
-	// clang-format off
+		// clang-format off
 		"+--CScalarBitmapIndexProbe   Bitmap Index Name: (\"T_a\")\n"
 		"   +--CScalarCmp (=)\n"
 		"      |--CScalarIdent \"ColRef_0000\" (0)\n"
 		"      +--CScalarConst (20)\n"
-	// clang-format on
-														   ));
+		// clang-format on
+		));
 
 	GPOS_ASSERT(strIndex2.Equals(&strExpectedDebugPrintIndex2));
 	GPOS_ASSERT(pexprBitmapIndex2->Matches(pexprBitmapIndex));
@@ -472,25 +447,19 @@ CExpressionTest::EresUnittest_BitmapGet()
 	mdid->AddRef();
 	pexprBitmapIndex->AddRef();
 	pexprBitmapIndex2->AddRef();
-	CExpression *pexprBitmapBoolOp1 =
-			GPOS_NEW(mp) CExpression
-					(
-					mp,
-					GPOS_NEW(mp) CScalarBitmapBoolOp(mp, CScalarBitmapBoolOp::EbitmapboolAnd, mdid),
-					pexprBitmapIndex,
-					pexprBitmapIndex2
-					);
+	CExpression *pexprBitmapBoolOp1 = GPOS_NEW(mp) CExpression(
+		mp,
+		GPOS_NEW(mp)
+			CScalarBitmapBoolOp(mp, CScalarBitmapBoolOp::EbitmapboolAnd, mdid),
+		pexprBitmapIndex, pexprBitmapIndex2);
 
 	mdid->AddRef();
 	pexprBitmapIndex->AddRef();
-	CExpression *pexprBitmapBoolOp2 =
-			GPOS_NEW(mp) CExpression
-					(
-					mp,
-					GPOS_NEW(mp) CScalarBitmapBoolOp(mp, CScalarBitmapBoolOp::EbitmapboolAnd, mdid),
-					pexprBitmapIndex,
-					pexprBitmapIndex2
-					);
+	CExpression *pexprBitmapBoolOp2 = GPOS_NEW(mp) CExpression(
+		mp,
+		GPOS_NEW(mp)
+			CScalarBitmapBoolOp(mp, CScalarBitmapBoolOp::EbitmapboolAnd, mdid),
+		pexprBitmapIndex, pexprBitmapIndex2);
 	GPOS_ASSERT(pexprBitmapBoolOp2->Matches(pexprBitmapBoolOp1));
 
 	// cleanup
@@ -521,13 +490,8 @@ CExpressionTest::EresUnittest_Const()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc
-					(
-					mp,
-					&mda,
-					NULL,  /* pceeval */
-					CTestUtils::GetCostModel(mp)
-					);
+	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+					 CTestUtils::GetCostModel(mp));
 
 	BOOL value = true;
 	CExpression *pexprTrue = CUtils::PexprScalarConstBool(mp, value);
@@ -553,11 +517,14 @@ CExpressionTest::EresUnittest_Const()
 
 #ifdef GPOS_DEBUG
 	CScalarConst *pscalarconstTrue = CScalarConst::PopConvert(pexprTrue->Pop());
-	CScalarConst *pscalarconstFalse = CScalarConst::PopConvert(pexprFalse->Pop());
+	CScalarConst *pscalarconstFalse =
+		CScalarConst::PopConvert(pexprFalse->Pop());
 	CScalarConst *pscalarconstUl = CScalarConst::PopConvert(pexprUl->Pop());
-	CScalarConst *pscalarconstUl2nd = CScalarConst::PopConvert(pexprUl2nd->Pop());
-	CScalarConst *pscalarconstUlOne = CScalarConst::PopConvert(pexprUlOne->Pop());
-#endif // GPOS_DEBUG
+	CScalarConst *pscalarconstUl2nd =
+		CScalarConst::PopConvert(pexprUl2nd->Pop());
+	CScalarConst *pscalarconstUlOne =
+		CScalarConst::PopConvert(pexprUlOne->Pop());
+#endif	// GPOS_DEBUG
 
 	GPOS_ASSERT(pscalarconstUl->HashValue() == pscalarconstUl2nd->HashValue());
 	GPOS_ASSERT(!pscalarconstTrue->Matches(pscalarconstFalse));
@@ -597,31 +564,38 @@ CExpressionTest::EresUnittest_ComparisonTypes()
 	mda.RegisterProvider(CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc
-					(
-					mp,
-					&mda,
-					NULL,  /* pceeval */
-					CTestUtils::GetCostModel(mp)
-					);
+	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+					 CTestUtils::GetCostModel(mp));
 
 	const IMDType *pmdtype = mda.PtMDType<IMDTypeInt4>();
 
-	GPOS_ASSERT(IMDType::EcmptEq == CUtils::ParseCmpType(pmdtype->GetMdidForCmpType(IMDType::EcmptEq)));
-	GPOS_ASSERT(IMDType::EcmptL == CUtils::ParseCmpType(pmdtype->GetMdidForCmpType(IMDType::EcmptL)));
-	GPOS_ASSERT(IMDType::EcmptG == CUtils::ParseCmpType(pmdtype->GetMdidForCmpType(IMDType::EcmptG)));
+	GPOS_ASSERT(
+		IMDType::EcmptEq ==
+		CUtils::ParseCmpType(pmdtype->GetMdidForCmpType(IMDType::EcmptEq)));
+	GPOS_ASSERT(
+		IMDType::EcmptL ==
+		CUtils::ParseCmpType(pmdtype->GetMdidForCmpType(IMDType::EcmptL)));
+	GPOS_ASSERT(
+		IMDType::EcmptG ==
+		CUtils::ParseCmpType(pmdtype->GetMdidForCmpType(IMDType::EcmptG)));
 
-	const IMDScalarOp *pmdscopEq = mda.RetrieveScOp(pmdtype->GetMdidForCmpType(IMDType::EcmptEq));
-	const IMDScalarOp *pmdscopLT = mda.RetrieveScOp(pmdtype->GetMdidForCmpType(IMDType::EcmptL));
-	const IMDScalarOp *pmdscopGT = mda.RetrieveScOp(pmdtype->GetMdidForCmpType(IMDType::EcmptG));
+	const IMDScalarOp *pmdscopEq =
+		mda.RetrieveScOp(pmdtype->GetMdidForCmpType(IMDType::EcmptEq));
+	const IMDScalarOp *pmdscopLT =
+		mda.RetrieveScOp(pmdtype->GetMdidForCmpType(IMDType::EcmptL));
+	const IMDScalarOp *pmdscopGT =
+		mda.RetrieveScOp(pmdtype->GetMdidForCmpType(IMDType::EcmptG));
 
-	GPOS_ASSERT(IMDType::EcmptNEq == CUtils::ParseCmpType(pmdscopEq->GetInverseOpMdid()));
-	GPOS_ASSERT(IMDType::EcmptLEq == CUtils::ParseCmpType(pmdscopGT->GetInverseOpMdid()));
-	GPOS_ASSERT(IMDType::EcmptGEq == CUtils::ParseCmpType(pmdscopLT->GetInverseOpMdid()));
+	GPOS_ASSERT(IMDType::EcmptNEq ==
+				CUtils::ParseCmpType(pmdscopEq->GetInverseOpMdid()));
+	GPOS_ASSERT(IMDType::EcmptLEq ==
+				CUtils::ParseCmpType(pmdscopGT->GetInverseOpMdid()));
+	GPOS_ASSERT(IMDType::EcmptGEq ==
+				CUtils::ParseCmpType(pmdscopLT->GetInverseOpMdid()));
 
 	return GPOS_OK;
 }
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -631,16 +605,15 @@ CExpressionTest::EresUnittest_ComparisonTypes()
 //		Helper function for the FValidPlan tests
 //
 //---------------------------------------------------------------------------
-void CExpressionTest::SetupPlanForFValidPlanTest
-	(
-	CMemoryPool *mp,
-	CExpression **ppexprGby,
-	CColRefSet **ppcrs,
-	CExpression **ppexprPlan,
-	CReqdPropPlan **pprpp
-	)
+void
+CExpressionTest::SetupPlanForFValidPlanTest(CMemoryPool *mp,
+											CExpression **ppexprGby,
+											CColRefSet **ppcrs,
+											CExpression **ppexprPlan,
+											CReqdPropPlan **pprpp)
 {
-	*ppexprGby = PexprCreateGbyWithColumnFormat(mp, GPOS_WSZ_LIT("Test Column%d"));
+	*ppexprGby =
+		PexprCreateGbyWithColumnFormat(mp, GPOS_WSZ_LIT("Test Column%d"));
 
 	// Create a column requirement using the first output column of the group by.
 	CColRefSet *pcrsGby = (*ppexprGby)->DeriveOutputColumns();
@@ -683,13 +656,8 @@ CExpressionTest::EresUnittest_FValidPlan()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc
-					(
-					mp,
-					&mda,
-					NULL,  /* pceeval */
-					CTestUtils::GetCostModel(mp)
-					);
+	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+					 CTestUtils::GetCostModel(mp));
 	const IMDType *pmdtype = mda.PtMDType<IMDTypeInt4>();
 
 	// Create a group-by with a get child. Properties required contain one of the columns in the group by.
@@ -713,14 +681,16 @@ CExpressionTest::EresUnittest_FValidPlan()
 	// Create a group-by with a get child. Properties required contain one column that doesn't exist.
 	// Test that the plan is NOT valid.
 	{
-		CExpression *pexprGby = PexprCreateGbyWithColumnFormat(mp, GPOS_WSZ_LIT("Test Column%d"));
+		CExpression *pexprGby =
+			PexprCreateGbyWithColumnFormat(mp, GPOS_WSZ_LIT("Test Column%d"));
 
 		(void) pexprGby->PdpDerive();
 		CColRefSet *pcrsInvalid = GPOS_NEW(mp) CColRefSet(mp);
 		CColumnFactory *col_factory = COptCtxt::PoctxtFromTLS()->Pcf();
 
 		// Creating the column reference with the column factory ensures that it's a brand new column.
-		CColRef *pcrComputed = col_factory->PcrCreate(pmdtype, default_type_modifier);
+		CColRef *pcrComputed =
+			col_factory->PcrCreate(pmdtype, default_type_modifier);
 		pcrsInvalid->Include(pcrComputed);
 
 		CReqdPropPlan *prpp = PrppCreateRequiredProperties(mp, pcrsInvalid);
@@ -769,13 +739,8 @@ CExpressionTest::EresUnittest_FValidPlan_InvalidOrder()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc
-					(
-					mp,
-					&mda,
-					NULL,  /* pceeval */
-					CTestUtils::GetCostModel(mp)
-					);
+	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+					 CTestUtils::GetCostModel(mp));
 
 	CExpression *pexprGby = NULL;
 	CColRefSet *pcrs = NULL;
@@ -801,12 +766,17 @@ CExpressionTest::EresUnittest_FValidPlan_InvalidOrder()
 	pos->Append(pmdidInt4LT, (*pdrgpcrGet)[1], COrderSpec::EntFirst);
 	CEnfdOrder *peo = GPOS_NEW(mp) CEnfdOrder(pos, CEnfdOrder::EomSatisfy);
 
-	CDistributionSpec *pds = GPOS_NEW(mp) CDistributionSpecSingleton(CDistributionSpecSingleton::EstMaster);
-	CRewindabilitySpec *prs = GPOS_NEW(mp) CRewindabilitySpec(CRewindabilitySpec::ErtNone, CRewindabilitySpec::EmhtNoMotion);
-	CEnfdDistribution *ped = GPOS_NEW(mp) CEnfdDistribution(pds, CEnfdDistribution::EdmExact);
-	CEnfdRewindability *per = GPOS_NEW(mp) CEnfdRewindability(prs, CEnfdRewindability::ErmSatisfy);
+	CDistributionSpec *pds = GPOS_NEW(mp)
+		CDistributionSpecSingleton(CDistributionSpecSingleton::EstMaster);
+	CRewindabilitySpec *prs = GPOS_NEW(mp) CRewindabilitySpec(
+		CRewindabilitySpec::ErtNone, CRewindabilitySpec::EmhtNoMotion);
+	CEnfdDistribution *ped =
+		GPOS_NEW(mp) CEnfdDistribution(pds, CEnfdDistribution::EdmExact);
+	CEnfdRewindability *per =
+		GPOS_NEW(mp) CEnfdRewindability(prs, CEnfdRewindability::ErmSatisfy);
 	CCTEReq *pcter = GPOS_NEW(mp) CCTEReq(mp);
-	CReqdPropPlan *prppIncompatibleOrder = GPOS_NEW(mp) CReqdPropPlan(pcrsGetCopy, peo, ped, per, pcter);
+	CReqdPropPlan *prppIncompatibleOrder =
+		GPOS_NEW(mp) CReqdPropPlan(pcrsGetCopy, peo, ped, per, pcter);
 
 	CPartInfo *ppartinfo = GPOS_NEW(mp) CPartInfo(mp);
 	prppIncompatibleOrder->InitReqdPartitionPropagation(mp, ppartinfo);
@@ -845,13 +815,8 @@ CExpressionTest::EresUnittest_FValidPlan_InvalidDistribution()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc
-					(
-					mp,
-					&mda,
-					NULL,  /* pceeval */
-					CTestUtils::GetCostModel(mp)
-					);
+	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+					 CTestUtils::GetCostModel(mp));
 
 	CExpression *pexprGby = NULL;
 	CColRefSet *pcrs = NULL;
@@ -862,18 +827,23 @@ CExpressionTest::EresUnittest_FValidPlan_InvalidDistribution()
 	CDrvdPropCtxtPlan *pdpctxtplan = GPOS_NEW(mp) CDrvdPropCtxtPlan(mp);
 	COrderSpec *pos = GPOS_NEW(mp) COrderSpec(mp);
 	CDistributionSpec *pds = GPOS_NEW(mp) CDistributionSpecRandom();
-	CRewindabilitySpec *prs = GPOS_NEW(mp) CRewindabilitySpec(CRewindabilitySpec::ErtNone, CRewindabilitySpec::EmhtNoMotion);
+	CRewindabilitySpec *prs = GPOS_NEW(mp) CRewindabilitySpec(
+		CRewindabilitySpec::ErtNone, CRewindabilitySpec::EmhtNoMotion);
 	CEnfdOrder *peo = GPOS_NEW(mp) CEnfdOrder(pos, CEnfdOrder::EomSatisfy);
-	CEnfdDistribution *ped = GPOS_NEW(mp) CEnfdDistribution(pds, CEnfdDistribution::EdmExact);
-	CEnfdRewindability *per = GPOS_NEW(mp) CEnfdRewindability(prs, CEnfdRewindability::ErmSatisfy);
+	CEnfdDistribution *ped =
+		GPOS_NEW(mp) CEnfdDistribution(pds, CEnfdDistribution::EdmExact);
+	CEnfdRewindability *per =
+		GPOS_NEW(mp) CEnfdRewindability(prs, CEnfdRewindability::ErmSatisfy);
 	CCTEReq *pcter = GPOS_NEW(mp) CCTEReq(mp);
 	CColRefSet *pcrsCopy = GPOS_NEW(mp) CColRefSet(mp, *pcrs);
-	CReqdPropPlan *prppIncompatibleDistribution = GPOS_NEW(mp) CReqdPropPlan(pcrsCopy, peo, ped, per, pcter);
+	CReqdPropPlan *prppIncompatibleDistribution =
+		GPOS_NEW(mp) CReqdPropPlan(pcrsCopy, peo, ped, per, pcter);
 	CPartInfo *ppartinfo = GPOS_NEW(mp) CPartInfo(mp);
 	prppIncompatibleDistribution->InitReqdPartitionPropagation(mp, ppartinfo);
 
 	// Test that the plan is not valid.
-	GPOS_ASSERT(!pexprPlan->FValidPlan(prppIncompatibleDistribution, pdpctxtplan));
+	GPOS_ASSERT(
+		!pexprPlan->FValidPlan(prppIncompatibleDistribution, pdpctxtplan));
 	pdpctxtplan->Release();
 	pexprPlan->Release();
 	prppIncompatibleDistribution->Release();
@@ -904,13 +874,8 @@ CExpressionTest::EresUnittest_FValidPlan_InvalidRewindability()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc
-					(
-					mp,
-					&mda,
-					NULL,  /* pceeval */
-					CTestUtils::GetCostModel(mp)
-					);
+	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+					 CTestUtils::GetCostModel(mp));
 
 	CExpression *pexprGby = NULL;
 	CColRefSet *pcrs = NULL;
@@ -921,19 +886,25 @@ CExpressionTest::EresUnittest_FValidPlan_InvalidRewindability()
 	CDrvdPropCtxtPlan *pdpctxtplan = GPOS_NEW(mp) CDrvdPropCtxtPlan(mp);
 
 	COrderSpec *pos = GPOS_NEW(mp) COrderSpec(mp);
-	CDistributionSpec *pds = GPOS_NEW(mp) CDistributionSpecSingleton(CDistributionSpecSingleton::EstMaster);
-	CRewindabilitySpec *prs = GPOS_NEW(mp) CRewindabilitySpec(CRewindabilitySpec::ErtRewindable, CRewindabilitySpec::EmhtNoMotion);
+	CDistributionSpec *pds = GPOS_NEW(mp)
+		CDistributionSpecSingleton(CDistributionSpecSingleton::EstMaster);
+	CRewindabilitySpec *prs = GPOS_NEW(mp) CRewindabilitySpec(
+		CRewindabilitySpec::ErtRewindable, CRewindabilitySpec::EmhtNoMotion);
 	CEnfdOrder *peo = GPOS_NEW(mp) CEnfdOrder(pos, CEnfdOrder::EomSatisfy);
-	CEnfdDistribution *ped = GPOS_NEW(mp) CEnfdDistribution(pds, CEnfdDistribution::EdmExact);
-	CEnfdRewindability *per = GPOS_NEW(mp) CEnfdRewindability(prs, CEnfdRewindability::ErmSatisfy);
+	CEnfdDistribution *ped =
+		GPOS_NEW(mp) CEnfdDistribution(pds, CEnfdDistribution::EdmExact);
+	CEnfdRewindability *per =
+		GPOS_NEW(mp) CEnfdRewindability(prs, CEnfdRewindability::ErmSatisfy);
 	CCTEReq *pcter = GPOS_NEW(mp) CCTEReq(mp);
 	CColRefSet *pcrsCopy = GPOS_NEW(mp) CColRefSet(mp, *pcrs);
-	CReqdPropPlan *prppIncompatibleRewindability = GPOS_NEW(mp) CReqdPropPlan(pcrsCopy, peo, ped, per, pcter);
+	CReqdPropPlan *prppIncompatibleRewindability =
+		GPOS_NEW(mp) CReqdPropPlan(pcrsCopy, peo, ped, per, pcter);
 	CPartInfo *ppartinfo = GPOS_NEW(mp) CPartInfo(mp);
 	prppIncompatibleRewindability->InitReqdPartitionPropagation(mp, ppartinfo);
 
 	// Test that the plan is not valid.
-	GPOS_ASSERT(!pexprPlan->FValidPlan(prppIncompatibleRewindability, pdpctxtplan));
+	GPOS_ASSERT(
+		!pexprPlan->FValidPlan(prppIncompatibleRewindability, pdpctxtplan));
 	pdpctxtplan->Release();
 	pexprPlan->Release();
 	prppIncompatibleRewindability->Release();
@@ -964,13 +935,8 @@ CExpressionTest::EresUnittest_FValidPlan_InvalidCTEs()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc
-					(
-					mp,
-					&mda,
-					NULL,  /* pceeval */
-					CTestUtils::GetCostModel(mp)
-					);
+	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+					 CTestUtils::GetCostModel(mp));
 
 	CExpression *pexprGby = NULL;
 	CColRefSet *pcrs = NULL;
@@ -981,20 +947,27 @@ CExpressionTest::EresUnittest_FValidPlan_InvalidCTEs()
 	CDrvdPropCtxtPlan *pdpctxtplan = GPOS_NEW(mp) CDrvdPropCtxtPlan(mp);
 
 	COrderSpec *pos = GPOS_NEW(mp) COrderSpec(mp);
-	CDistributionSpec *pds = GPOS_NEW(mp) CDistributionSpecSingleton(CDistributionSpecSingleton::EstMaster);
-	CRewindabilitySpec *prs = GPOS_NEW(mp) CRewindabilitySpec(CRewindabilitySpec::ErtNone, CRewindabilitySpec::EmhtNoMotion);
+	CDistributionSpec *pds = GPOS_NEW(mp)
+		CDistributionSpecSingleton(CDistributionSpecSingleton::EstMaster);
+	CRewindabilitySpec *prs = GPOS_NEW(mp) CRewindabilitySpec(
+		CRewindabilitySpec::ErtNone, CRewindabilitySpec::EmhtNoMotion);
 	CEnfdOrder *peo = GPOS_NEW(mp) CEnfdOrder(pos, CEnfdOrder::EomSatisfy);
-	CEnfdDistribution *ped = GPOS_NEW(mp) CEnfdDistribution(pds, CEnfdDistribution::EdmExact);
-	CEnfdRewindability *per = GPOS_NEW(mp) CEnfdRewindability(prs, CEnfdRewindability::ErmSatisfy);
+	CEnfdDistribution *ped =
+		GPOS_NEW(mp) CEnfdDistribution(pds, CEnfdDistribution::EdmExact);
+	CEnfdRewindability *per =
+		GPOS_NEW(mp) CEnfdRewindability(prs, CEnfdRewindability::ErmSatisfy);
 	CCTEReq *pcter = GPOS_NEW(mp) CCTEReq(mp);
 	ULONG ulCTEId = 0;
 
-	CExpression *pexprProducer = CTestUtils::PexprLogicalCTEProducerOverSelect(mp, ulCTEId);
+	CExpression *pexprProducer =
+		CTestUtils::PexprLogicalCTEProducerOverSelect(mp, ulCTEId);
 	CDrvdPropPlan *pdpplan = CDrvdPropPlan::Pdpplan(pexprPlan->PdpDerive());
 	pdpplan->AddRef();
-	pcter->Insert(ulCTEId, CCTEMap::EctProducer /*ect*/, true /*fRequired*/, pdpplan);
+	pcter->Insert(ulCTEId, CCTEMap::EctProducer /*ect*/, true /*fRequired*/,
+				  pdpplan);
 	CColRefSet *pcrsCopy = GPOS_NEW(mp) CColRefSet(mp, *pcrs);
-	CReqdPropPlan *prppIncompatibleCTE = GPOS_NEW(mp) CReqdPropPlan(pcrsCopy, peo, ped, per, pcter);
+	CReqdPropPlan *prppIncompatibleCTE =
+		GPOS_NEW(mp) CReqdPropPlan(pcrsCopy, peo, ped, per, pcter);
 	CPartInfo *ppartinfo = GPOS_NEW(mp) CPartInfo(mp);
 	prppIncompatibleCTE->InitReqdPartitionPropagation(mp, ppartinfo);
 
@@ -1034,13 +1007,8 @@ CExpressionTest::EresUnittest_FValidPlanError()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc
-					(
-					mp,
-					&mda,
-					NULL,  /* pceeval */
-					CTestUtils::GetCostModel(mp)
-					);
+	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+					 CTestUtils::GetCostModel(mp));
 	const IMDType *pmdtype = mda.PtMDType<IMDTypeInt4>();
 
 	GPOS_RESULT eres = GPOS_OK;
@@ -1048,13 +1016,15 @@ CExpressionTest::EresUnittest_FValidPlanError()
 	{
 		CColRefSet *pcrsInvalid = GPOS_NEW(mp) CColRefSet(mp);
 		CColumnFactory *col_factory = COptCtxt::PoctxtFromTLS()->Pcf();
-		CColRef *pcrComputed = col_factory->PcrCreate(pmdtype, default_type_modifier);
+		CColRef *pcrComputed =
+			col_factory->PcrCreate(pmdtype, default_type_modifier);
 		pcrsInvalid->Include(pcrComputed);
 
 		CReqdPropPlan *prpp = PrppCreateRequiredProperties(mp, pcrsInvalid);
-		IDatum *datum = GPOS_NEW(mp) gpnaucrates::CDatumInt8GPDB(CTestUtils::m_sysidDefault,
-				1 /*val*/, false /*is_null*/);
-		CExpression *pexpr = GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CScalarConst(mp, datum));
+		IDatum *datum = GPOS_NEW(mp) gpnaucrates::CDatumInt8GPDB(
+			CTestUtils::m_sysidDefault, 1 /*val*/, false /*is_null*/);
+		CExpression *pexpr =
+			GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CScalarConst(mp, datum));
 
 		CDrvdPropCtxtPlan *pdpctxtplan = GPOS_NEW(mp) CDrvdPropCtxtPlan(mp);
 		GPOS_TRY
@@ -1069,7 +1039,8 @@ CExpressionTest::EresUnittest_FValidPlanError()
 		GPOS_CATCH_EX(ex)
 		{
 			pdpctxtplan->Release();
-			if (!GPOS_MATCH_EX(ex, CException::ExmaSystem, CException::ExmiAssert))
+			if (!GPOS_MATCH_EX(ex, CException::ExmaSystem,
+							   CException::ExmiAssert))
 			{
 				GPOS_RETHROW(ex);
 			}
@@ -1086,7 +1057,7 @@ CExpressionTest::EresUnittest_FValidPlanError()
 
 	return eres;
 }
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 
 
@@ -1099,12 +1070,8 @@ CExpressionTest::EresUnittest_FValidPlanError()
 //
 //---------------------------------------------------------------------------
 GPOS_RESULT
-CExpressionTest::EresCheckCachedReqdCols
-	(
-	CMemoryPool *mp,
-	CExpression *pexpr,
-	CReqdPropPlan *prppInput
-	)
+CExpressionTest::EresCheckCachedReqdCols(CMemoryPool *mp, CExpression *pexpr,
+										 CReqdPropPlan *prppInput)
 {
 	if (pexpr->Pop()->FScalar())
 	{
@@ -1126,7 +1093,7 @@ CExpressionTest::EresCheckCachedReqdCols
 	CDrvdPropArray *pdrgpdp = GPOS_NEW(mp) CDrvdPropArray(mp);
 
 	GPOS_RESULT eres = GPOS_OK;
-	const ULONG arity =  pexpr->Arity();
+	const ULONG arity = pexpr->Arity();
 	for (ULONG ul = 0; GPOS_OK == eres && ul < arity; ul++)
 	{
 		CExpression *pexprChild = (*pexpr)[ul];
@@ -1148,15 +1115,18 @@ CExpressionTest::EresCheckCachedReqdCols
 		{
 			CAutoTrace at(mp);
 			at.Os() << "\nExpression: \n" << *pexprChild;
-			at.Os() << "\nCached cols: " << pcrsChildReqd << " : " << *pcrsChildReqd;
-			at.Os() << "\nComputed cols: " <<  exprhdl.Prpp(ul)->PcrsRequired() << " : " << *exprhdl.Prpp(ul)->PcrsRequired();
+			at.Os() << "\nCached cols: " << pcrsChildReqd << " : "
+					<< *pcrsChildReqd;
+			at.Os() << "\nComputed cols: " << exprhdl.Prpp(ul)->PcrsRequired()
+					<< " : " << *exprhdl.Prpp(ul)->PcrsRequired();
 
 			eres = GPOS_FAILED;
 			continue;
 		}
 
 		// call the function recursively for child expression
-		GPOS_RESULT eres = EresCheckCachedReqdCols(mp, pexprChild, exprhdl.Prpp(ul));
+		GPOS_RESULT eres =
+			EresCheckCachedReqdCols(mp, pexprChild, exprhdl.Prpp(ul));
 		if (GPOS_FAILED == eres)
 		{
 			eres = GPOS_FAILED;
@@ -1184,10 +1154,7 @@ CExpressionTest::EresCheckCachedReqdCols
 //
 //---------------------------------------------------------------------------
 GPOS_RESULT
-CExpressionTest::EresComputeReqdCols
-	(
-	const CHAR *szFilePath
-	)
+CExpressionTest::EresComputeReqdCols(const CHAR *szFilePath)
 {
 	CAutoMemoryPool amp;
 	CMemoryPool *mp = amp.Pmp();
@@ -1201,8 +1168,9 @@ CExpressionTest::EresComputeReqdCols
 
 	GPOS_RESULT eres = GPOS_FAILED;
 	{
-		CAutoMDAccessor amda(mp, pmdp,  CTestUtils::m_sysidDefault);
-		CAutoOptCtxt aoc(mp, amda.Pmda(), NULL,  /* pceeval */ CTestUtils::GetCostModel(mp));
+		CAutoMDAccessor amda(mp, pmdp, CTestUtils::m_sysidDefault);
+		CAutoOptCtxt aoc(mp, amda.Pmda(), NULL,
+						 /* pceeval */ CTestUtils::GetCostModel(mp));
 
 		// read query expression
 		CExpression *pexpr = CTestUtils::PexprReadQuery(mp, szFilePath);
@@ -1241,8 +1209,7 @@ CExpressionTest::EresComputeReqdCols
 GPOS_RESULT
 CExpressionTest::EresUnittest_ReqdCols()
 {
-	const CHAR *rgszTests[] =
-	{
+	const CHAR *rgszTests[] = {
 		"../data/dxl/tpch/q1.mdp",
 		"../data/dxl/tpch/q3.mdp",
 		"../data/dxl/expressiontests/WinFunc-OuterRef-Partition-Query.xml",
@@ -1301,21 +1268,26 @@ CExpressionTest::EresUnittest_InvalidSetOp()
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
 	{
-		CAutoOptCtxt aoc(mp, &mda, NULL /* pceeval */, CTestUtils::GetCostModel(mp));
+		CAutoOptCtxt aoc(mp, &mda, NULL /* pceeval */,
+						 CTestUtils::GetCostModel(mp));
 
 		// create two different Get expressions
 		CWStringConst strName1(GPOS_WSZ_LIT("T1"));
 		CMDIdGPDB *pmdid1 = GPOS_NEW(mp) CMDIdGPDB(GPOPT_TEST_REL_OID1, 1, 1);
-		CTableDescriptor *ptabdesc1 = CTestUtils::PtabdescCreate(mp, 3, pmdid1, CName(&strName1));
+		CTableDescriptor *ptabdesc1 =
+			CTestUtils::PtabdescCreate(mp, 3, pmdid1, CName(&strName1));
 		CWStringConst strAlias1(GPOS_WSZ_LIT("T1Alias"));
-		CExpression *pexprGet1 = CTestUtils::PexprLogicalGet(mp, ptabdesc1, &strAlias1);
+		CExpression *pexprGet1 =
+			CTestUtils::PexprLogicalGet(mp, ptabdesc1, &strAlias1);
 		CColRefSet *pcrsOutput1 = pexprGet1->DeriveOutputColumns();
 
 		CWStringConst strName2(GPOS_WSZ_LIT("T2"));
 		CMDIdGPDB *pmdid2 = GPOS_NEW(mp) CMDIdGPDB(GPOPT_TEST_REL_OID2, 1, 1);
-		CTableDescriptor *ptabdesc2 = CTestUtils::PtabdescCreate(mp, 3, pmdid2, CName(&strName2));
+		CTableDescriptor *ptabdesc2 =
+			CTestUtils::PtabdescCreate(mp, 3, pmdid2, CName(&strName2));
 		CWStringConst strAlias2(GPOS_WSZ_LIT("T2Alias"));
-		CExpression *pexprGet2 = CTestUtils::PexprLogicalGet(mp, ptabdesc2, &strAlias2);
+		CExpression *pexprGet2 =
+			CTestUtils::PexprLogicalGet(mp, ptabdesc2, &strAlias2);
 
 		// create output columns of SetOp from output columns of first Get expression
 		CColRefArray *pdrgpcrOutput = GPOS_NEW(mp) CColRefArray(mp);
@@ -1329,13 +1301,16 @@ CExpressionTest::EresUnittest_InvalidSetOp()
 		pdrgpdrgpcrInput->Append(pdrgpcr1);
 
 		CColRefArray *pdrgpcr2 = GPOS_NEW(mp) CColRefArray(mp);
-		CColRef *pcrOuterRef = COptCtxt::PoctxtFromTLS()->Pcf()->PcrCreate(pcrsOutput1->PcrFirst());
+		CColRef *pcrOuterRef = COptCtxt::PoctxtFromTLS()->Pcf()->PcrCreate(
+			pcrsOutput1->PcrFirst());
 		pdrgpcr2->Append(pcrOuterRef);
 		pdrgpdrgpcrInput->Append(pdrgpcr2);
 
 		// create invalid SetOp expression
-		CLogicalUnion *pop = GPOS_NEW(mp) CLogicalUnion(mp, pdrgpcrOutput, pdrgpdrgpcrInput);
-		CExpression *pexprSetOp = GPOS_NEW(mp) CExpression(mp, pop, pexprGet1, pexprGet2);
+		CLogicalUnion *pop =
+			GPOS_NEW(mp) CLogicalUnion(mp, pdrgpcrOutput, pdrgpdrgpcrInput);
+		CExpression *pexprSetOp =
+			GPOS_NEW(mp) CExpression(mp, pop, pexprGet1, pexprGet2);
 
 		{
 			CAutoTrace at(mp);
@@ -1359,10 +1334,8 @@ CExpressionTest::EresUnittest_InvalidSetOp()
 // 		Return an expression with several joins
 //
 //---------------------------------------------------------------------------
-CExpression *CExpressionTest::PexprComplexJoinTree
-	(
-	CMemoryPool *mp
-	)
+CExpression *
+CExpressionTest::PexprComplexJoinTree(CMemoryPool *mp)
 {
 	// The plan will have this shape
 	//
@@ -1382,28 +1355,28 @@ CExpression *CExpressionTest::PexprComplexJoinTree
 	//	      |--CLogicalGet
 	//	      +--CLogicalSelect
 
-	CExpression *pexprInnerJoin1 = CTestUtils::PexprLogicalJoin<CLogicalInnerJoin>
-									(
-									mp,
-									CTestUtils::PexprLogicalGet(mp),
-									CTestUtils::PexprLogicalSelect(mp)
-									);
-	CExpression *pexprJoinIndex = CTestUtils::PexprLogicalJoinWithPartitionedAndIndexedInnerChild(mp);
+	CExpression *pexprInnerJoin1 =
+		CTestUtils::PexprLogicalJoin<CLogicalInnerJoin>(
+			mp, CTestUtils::PexprLogicalGet(mp),
+			CTestUtils::PexprLogicalSelect(mp));
+	CExpression *pexprJoinIndex =
+		CTestUtils::PexprLogicalJoinWithPartitionedAndIndexedInnerChild(mp);
 	CExpression *pexprLeftJoin =
-			CTestUtils::PexprLogicalJoin<CLogicalLeftOuterJoin>(mp, pexprInnerJoin1, pexprJoinIndex);
+		CTestUtils::PexprLogicalJoin<CLogicalLeftOuterJoin>(mp, pexprInnerJoin1,
+															pexprJoinIndex);
 
-	CExpression *pexprOuterJoin = CTestUtils::PexprLogicalJoin<CLogicalLeftOuterJoin>(mp);
+	CExpression *pexprOuterJoin =
+		CTestUtils::PexprLogicalJoin<CLogicalLeftOuterJoin>(mp);
 	CExpression *pexprInnerJoin4 =
-			CTestUtils::PexprLogicalJoin<CLogicalInnerJoin>(mp, pexprLeftJoin, pexprOuterJoin);
+		CTestUtils::PexprLogicalJoin<CLogicalInnerJoin>(mp, pexprLeftJoin,
+														pexprOuterJoin);
 
-	CExpression *pexprInnerJoin5 = CTestUtils::PexprLogicalJoin<CLogicalInnerJoin>
-									(
-									mp,
-									CTestUtils::PexprLogicalGet(mp),
-									CTestUtils::PexprLogicalSelect(mp)
-									);
-	CExpression *pexprTopJoin =
-			CTestUtils::PexprLogicalJoin<CLogicalInnerJoin>(mp, pexprInnerJoin4, pexprInnerJoin5);
+	CExpression *pexprInnerJoin5 =
+		CTestUtils::PexprLogicalJoin<CLogicalInnerJoin>(
+			mp, CTestUtils::PexprLogicalGet(mp),
+			CTestUtils::PexprLogicalSelect(mp));
+	CExpression *pexprTopJoin = CTestUtils::PexprLogicalJoin<CLogicalInnerJoin>(
+		mp, pexprInnerJoin4, pexprInnerJoin5);
 
 	return pexprTopJoin;
 }

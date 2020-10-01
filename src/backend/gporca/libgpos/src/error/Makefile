@@ -15,7 +15,6 @@ OBJS        = CAutoExceptionStack.o \
               CErrorContext.o \
               CErrorHandlerStandard.o \
               CException.o \
-              CFSimulator.o \
               CLogger.o \
               CLoggerStream.o \
               CLoggerSyslog.o \

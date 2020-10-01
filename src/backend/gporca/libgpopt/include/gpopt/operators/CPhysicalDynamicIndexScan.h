@@ -17,145 +17,120 @@
 
 namespace gpopt
 {
+// fwd declarations
+class CTableDescriptor;
+class CIndexDescriptor;
+class CName;
+class CPartConstraint;
 
-	// fwd declarations
-	class CTableDescriptor;
-	class CIndexDescriptor;
-	class CName;
-	class CPartConstraint;
-	
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CPhysicalDynamicIndexScan
-	//
-	//	@doc:
-	//		Physical dynamic index scan operators for partitioned tables
-	//
-	//---------------------------------------------------------------------------
-	class CPhysicalDynamicIndexScan : public CPhysicalDynamicScan
+//---------------------------------------------------------------------------
+//	@class:
+//		CPhysicalDynamicIndexScan
+//
+//	@doc:
+//		Physical dynamic index scan operators for partitioned tables
+//
+//---------------------------------------------------------------------------
+class CPhysicalDynamicIndexScan : public CPhysicalDynamicScan
+{
+private:
+	// index descriptor
+	CIndexDescriptor *m_pindexdesc;
+
+	// order
+	COrderSpec *m_pos;
+
+	// private copy ctor
+	CPhysicalDynamicIndexScan(const CPhysicalDynamicIndexScan &);
+
+public:
+	// ctors
+	CPhysicalDynamicIndexScan(CMemoryPool *mp, BOOL is_partial,
+							  CIndexDescriptor *pindexdesc,
+							  CTableDescriptor *ptabdesc, ULONG ulOriginOpId,
+							  const CName *pnameAlias,
+							  CColRefArray *pdrgpcrOutput, ULONG scan_id,
+							  CColRef2dArray *pdrgpdrgpcrPart,
+							  ULONG ulSecondaryScanId,
+							  CPartConstraint *ppartcnstr,
+							  CPartConstraint *ppartcnstrRel, COrderSpec *pos);
+
+	// dtor
+	virtual ~CPhysicalDynamicIndexScan();
+
+
+	// ident accessors
+	virtual EOperatorId
+	Eopid() const
 	{
+		return EopPhysicalDynamicIndexScan;
+	}
 
-		private:
+	// operator name
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CPhysicalDynamicIndexScan";
+	}
 
-			// index descriptor
-			CIndexDescriptor *m_pindexdesc;
-			
-			// order
-			COrderSpec *m_pos;
+	// index descriptor
+	CIndexDescriptor *
+	Pindexdesc() const
+	{
+		return m_pindexdesc;
+	}
 
-			// private copy ctor
-			CPhysicalDynamicIndexScan(const CPhysicalDynamicIndexScan&);
+	// operator specific hash function
+	virtual ULONG HashValue() const;
 
-		public:
+	// match function
+	virtual BOOL Matches(COperator *pop) const;
 
-			// ctors
-			CPhysicalDynamicIndexScan
-				(
-				CMemoryPool *mp,
-				BOOL is_partial,
-				CIndexDescriptor *pindexdesc,
-				CTableDescriptor *ptabdesc,
-				ULONG ulOriginOpId,
-				const CName *pnameAlias,
-				CColRefArray *pdrgpcrOutput,
-				ULONG scan_id,
-				CColRef2dArray *pdrgpdrgpcrPart,
-				ULONG ulSecondaryScanId,
-				CPartConstraint *ppartcnstr,
-				CPartConstraint *ppartcnstrRel,
-				COrderSpec *pos
-				);
+	//-------------------------------------------------------------------------------------
+	// Derived Plan Properties
+	//-------------------------------------------------------------------------------------
 
-			// dtor
-			virtual
-			~CPhysicalDynamicIndexScan();
+	// derive sort order
+	virtual COrderSpec *
+	PosDerive(CMemoryPool *,	   //mp
+			  CExpressionHandle &  //exprhdl
+	) const
+	{
+		m_pos->AddRef();
+		return m_pos;
+	}
 
+	//-------------------------------------------------------------------------------------
+	// Enforced Properties
+	//-------------------------------------------------------------------------------------
 
-			// ident accessors
-			virtual
-			EOperatorId Eopid() const
-			{
-				return EopPhysicalDynamicIndexScan;
-			}
+	// return order property enforcing type for this operator
+	virtual CEnfdProp::EPropEnforcingType EpetOrder(
+		CExpressionHandle &exprhdl, const CEnfdOrder *peo) const;
 
-			// operator name
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CPhysicalDynamicIndexScan";
-			}
+	// conversion function
+	static CPhysicalDynamicIndexScan *
+	PopConvert(COperator *pop)
+	{
+		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(EopPhysicalDynamicIndexScan == pop->Eopid());
 
-			// index descriptor
-			CIndexDescriptor *Pindexdesc() const
-			{
-				return m_pindexdesc;
-			}
+		return dynamic_cast<CPhysicalDynamicIndexScan *>(pop);
+	}
 
-			// operator specific hash function
-			virtual
-			ULONG HashValue() const;
+	// debug print
+	virtual IOstream &OsPrint(IOstream &) const;
 
-			// match function
-			virtual
-			BOOL Matches(COperator *pop) const;
+	// statistics derivation during costing
+	virtual IStatistics *PstatsDerive(CMemoryPool *mp,
+									  CExpressionHandle &exprhdl,
+									  CReqdPropPlan *prpplan,
+									  IStatisticsArray *stats_ctxt) const;
 
-			//-------------------------------------------------------------------------------------
-			// Derived Plan Properties
-			//-------------------------------------------------------------------------------------
+};	// class CPhysicalDynamicIndexScan
 
-			// derive sort order
-			virtual
-			COrderSpec *PosDerive
-							(
-							CMemoryPool *,//mp
-							CExpressionHandle &//exprhdl
-							)
-							const
-			{
-				m_pos->AddRef();
-				return m_pos;
-			}
+}  // namespace gpopt
 
-			//-------------------------------------------------------------------------------------
-			// Enforced Properties
-			//-------------------------------------------------------------------------------------
-
-			// return order property enforcing type for this operator
-			virtual
-			CEnfdProp::EPropEnforcingType EpetOrder(CExpressionHandle &exprhdl, const CEnfdOrder *peo) const;
-
-			// conversion function
-			static
-			CPhysicalDynamicIndexScan *PopConvert
-				(
-				COperator *pop
-				)
-			{
-				GPOS_ASSERT(NULL != pop);
-				GPOS_ASSERT(EopPhysicalDynamicIndexScan == pop->Eopid());
-
-				return dynamic_cast<CPhysicalDynamicIndexScan*>(pop);
-			}
-
-			// debug print
-			virtual
-			IOstream &OsPrint(IOstream &) const;
-
-			// statistics derivation during costing
-			virtual
-			IStatistics *PstatsDerive
-				(
-				CMemoryPool *mp,
-				CExpressionHandle &exprhdl,
-				CReqdPropPlan *prpplan,
-				IStatisticsArray *stats_ctxt
-				)
-				const;
-
-	}; // class CPhysicalDynamicIndexScan
-
-}
-
-#endif // !GPOPT_CPhysicalDynamicIndexScan_H
+#endif	// !GPOPT_CPhysicalDynamicIndexScan_H
 
 // EOF

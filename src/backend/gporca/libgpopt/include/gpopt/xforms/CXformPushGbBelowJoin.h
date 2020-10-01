@@ -16,63 +16,58 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CXformPushGbBelowJoin
-	//
-	//	@doc:
-	//		Push group by below join transform
-	//
-	//---------------------------------------------------------------------------
-	class CXformPushGbBelowJoin : public CXformExploration
+//---------------------------------------------------------------------------
+//	@class:
+//		CXformPushGbBelowJoin
+//
+//	@doc:
+//		Push group by below join transform
+//
+//---------------------------------------------------------------------------
+class CXformPushGbBelowJoin : public CXformExploration
+{
+private:
+	// private copy ctor
+	CXformPushGbBelowJoin(const CXformPushGbBelowJoin &);
+
+public:
+	// ctor
+	explicit CXformPushGbBelowJoin(CMemoryPool *mp);
+
+	// ctor
+	explicit CXformPushGbBelowJoin(CExpression *pexprPattern);
+
+	// dtor
+	virtual ~CXformPushGbBelowJoin()
 	{
+	}
 
-		private:
+	// ident accessors
+	virtual EXformId
+	Exfid() const
+	{
+		return ExfPushGbBelowJoin;
+	}
 
-			// private copy ctor
-			CXformPushGbBelowJoin(const CXformPushGbBelowJoin &);
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CXformPushGbBelowJoin";
+	}
 
-		public:
+	// compute xform promise for a given expression handle
+	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
 
-			// ctor
-			explicit
-			CXformPushGbBelowJoin(CMemoryPool *mp);
+	// actual transform
+	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
+				   CExpression *pexpr) const;
 
-			// ctor
-			explicit
-			CXformPushGbBelowJoin(CExpression *pexprPattern);
+};	// class CXformPushGbBelowJoin
 
-			// dtor
-			virtual
-			~CXformPushGbBelowJoin()
-			{}
+}  // namespace gpopt
 
-			// ident accessors
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfPushGbBelowJoin;
-			}
-
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CXformPushGbBelowJoin";
-			}
-
-			// compute xform promise for a given expression handle
-			virtual
-			EXformPromise Exfp(CExpressionHandle &exprhdl) const;
-
-			// actual transform
-			void Transform(CXformContext *pxfctxt, CXformResult *pxfres, CExpression *pexpr) const;
-
-	}; // class CXformPushGbBelowJoin
-
-}
-
-#endif // !GPOPT_CXformPushGbBelowJoin_H
+#endif	// !GPOPT_CXformPushGbBelowJoin_H
 
 // EOF

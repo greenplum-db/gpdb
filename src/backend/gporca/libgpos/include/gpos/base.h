@@ -20,7 +20,6 @@
 #include "gpos/error/ILogger.h"
 #include "gpos/memory/CMemoryPool.h"
 
-#endif // GPOS_base_H
+#endif	// GPOS_base_H
 
 // EOF
-

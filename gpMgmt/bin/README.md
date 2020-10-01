@@ -79,14 +79,6 @@ gparray.py
    +-  GpArray   - Configuration information for a Greenplum Database
          \-  Contains multiple SegmentPair objects
 
-gphostcache.py   
-  |
-  +- GpHost      - Information about a single Host
-  |    \- Contains all the Segment objects on the host
-  |
-  +- GpHostCache - Helps resolve interface->hostname lookups
-       \- Contains all the GpHosts referenced in a Greenplum Database
-
 gplog.py         - Utility functions to assist in Greenplum standard logging
 
 gpparseopts.py   - Wrapper around optparse library to aid in locating help files

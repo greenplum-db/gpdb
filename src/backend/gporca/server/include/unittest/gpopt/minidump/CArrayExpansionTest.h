@@ -17,16 +17,14 @@
 
 namespace gpopt
 {
-	class CArrayExpansionTest
-	{
-		public:
+class CArrayExpansionTest
+{
+public:
+	// unittests
+	static gpos::GPOS_RESULT EresUnittest();
+};	// class CArrayExpansionTest
+}  // namespace gpopt
 
-			// unittests
-			static
-			gpos::GPOS_RESULT EresUnittest();
-	}; // class CArrayExpansionTest
-}
-
-#endif // !GPOPT_CArrayExpansionTest_H
+#endif	// !GPOPT_CArrayExpansionTest_H
 
 // EOF

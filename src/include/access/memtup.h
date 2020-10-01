@@ -79,11 +79,6 @@ typedef MemTupleData *MemTuple;
 #define MEMTUP_ALIGN(LEN) TYPEALIGN(8, (LEN)) 
 #define MEMTUPLE_LEN_FITSHORT 0xFFF0
 
-static inline bool mtbind_has_oid(MemTupleBinding *pbind)
-{
-	return pbind->tupdesc->tdhasoid;
-}
-
 static inline bool is_len_memtuplen(uint32 len)
 {
 	return (len & MEMTUP_LEAD_BIT) != 0;
@@ -154,10 +149,6 @@ extern void memtuple_form_to(MemTupleBinding *pbind, Datum *values, bool *isnull
 							 MemTuple mtup);
 extern void memtuple_deform(MemTuple mtup, MemTupleBinding *pbind, Datum *datum, bool *isnull);
 extern void memtuple_deform_misaligned(MemTuple mtup, MemTupleBinding *pbind, Datum *datum, bool *isnull);
-
-extern Oid MemTupleGetOid(MemTuple mtup, MemTupleBinding *pbind);
-extern Oid MemTupleGetOidDirect(MemTuple mtup);
-extern void MemTupleSetOid(MemTuple mtup, MemTupleBinding *pbind, Oid oid);
 
 static inline bool
 MemTupleHasMatch(MemTuple mtup)

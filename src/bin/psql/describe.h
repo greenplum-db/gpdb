@@ -1,7 +1,7 @@
 /*
  * psql - the PostgreSQL interactive terminal
  *
- * Copyright (c) 2000-2016, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2019, PostgreSQL Global Development Group
  *
  * src/bin/psql/describe.h
  */
@@ -75,6 +75,9 @@ extern bool listAllDbs(const char *pattern, bool verbose);
 /* \dt, \di, \ds, \dS, etc. */
 extern bool listTables(const char *tabtypes, const char *pattern, bool verbose, bool showSystem);
 
+/* \dP */
+extern bool listPartitionedTables(const char *reltypes, const char *pattern, bool verbose);
+
 /* \dD */
 extern bool listDomains(const char *pattern, bool verbose, bool showSystem);
 
@@ -114,4 +117,13 @@ extern bool listExtensionContents(const char *pattern);
 /* \dy */
 extern bool listEventTriggers(const char *pattern, bool verbose);
 
-#endif   /* DESCRIBE_H */
+/* \dRp */
+bool		listPublications(const char *pattern);
+
+/* \dRp+ */
+bool		describePublications(const char *pattern);
+
+/* \dRs */
+bool		describeSubscriptions(const char *pattern, bool verbose);
+
+#endif							/* DESCRIBE_H */

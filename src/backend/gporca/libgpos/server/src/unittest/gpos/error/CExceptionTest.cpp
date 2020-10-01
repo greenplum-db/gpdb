@@ -32,43 +32,29 @@ using namespace gpos;
 GPOS_RESULT
 CExceptionTest::EresUnittest()
 {
-	CUnittest rgut[] =
-		{
+	CUnittest rgut[] = {
 		GPOS_UNITTEST_FUNC(CExceptionTest::EresUnittest_BasicThrow),
-		GPOS_UNITTEST_FUNC_THROW
-			(
-			CExceptionTest::EresUnittest_StackOverflow,
-			CException::ExmaSystem,
-			CException::ExmiOutOfStack
-			),
+		GPOS_UNITTEST_FUNC_THROW(CExceptionTest::EresUnittest_StackOverflow,
+								 CException::ExmaSystem,
+								 CException::ExmiOutOfStack),
 
-		GPOS_UNITTEST_FUNC_THROW
-			(
-			CExceptionTest::EresUnittest_AdditionOverflow,
-			CException::ExmaSystem,
-			CException::ExmiOverflow
-			),
+		GPOS_UNITTEST_FUNC_THROW(CExceptionTest::EresUnittest_AdditionOverflow,
+								 CException::ExmaSystem,
+								 CException::ExmiOverflow),
 
-		GPOS_UNITTEST_FUNC_THROW
-			(
+		GPOS_UNITTEST_FUNC_THROW(
 			CExceptionTest::EresUnittest_MultiplicationOverflow,
-			CException::ExmaSystem,
-			CException::ExmiOverflow
-			),
+			CException::ExmaSystem, CException::ExmiOverflow),
 
 #ifdef GPOS_DEBUG
-		GPOS_UNITTEST_FUNC_THROW
-			(
-			CExceptionTest::EresUnittest_BasicRethrow,
-			CException::ExmaSystem,
-			CException::ExmiOOM
-			),
+		GPOS_UNITTEST_FUNC_THROW(CExceptionTest::EresUnittest_BasicRethrow,
+								 CException::ExmaSystem, CException::ExmiOOM),
 		GPOS_UNITTEST_FUNC_ASSERT(CExceptionTest::EresUnittest_Assert),
 		GPOS_UNITTEST_FUNC_ASSERT(CExceptionTest::EresUnittest_AssertImp),
 		GPOS_UNITTEST_FUNC_ASSERT(CExceptionTest::EresUnittest_AssertIffLHS),
 		GPOS_UNITTEST_FUNC_ASSERT(CExceptionTest::EresUnittest_AssertIffRHS)
-#endif // GPOS_DEBUG
-		};
+#endif	// GPOS_DEBUG
+	};
 
 	return CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
 }
@@ -93,10 +79,10 @@ CExceptionTest::EresUnittest_BasicThrow()
 	GPOS_CATCH_EX(ex)
 	{
 		if (GPOS_MATCH_EX(ex, CException::ExmaSystem, CException::ExmiOOM))
-			{
+		{
 			GPOS_RESET_EX;
 			return GPOS_OK;
-			}
+		}
 	}
 	GPOS_CATCH_END;
 
@@ -115,10 +101,7 @@ GPOS_RESULT
 CExceptionTest::EresUnittest_StackOverflow()
 {
 	// character data to bloat the stack frame somewhat
-	CHAR szTestData[5][1024] =
-	{
-		"5 KB data", "to bloat", "the", "stack frame"
-	};
+	CHAR szTestData[5][1024] = {"5 KB data", "to bloat", "the", "stack frame"};
 
 	// stack checker will throw after a few recursions
 	IWorker::Self()->CheckStackSize();
@@ -315,7 +298,6 @@ CExceptionTest::EresUnittest_AssertIffRHS()
 	return GPOS_FAILED;
 }
 
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 // EOF
-

@@ -23,21 +23,29 @@ CREATE TABLE dml_union_s (
         c text ,
         d numeric default 10.00)
 DISTRIBUTED BY (b)
-PARTITION BY range(d) (
-        start(1) end(1001) every(100),
-        default partition def
-);
-NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_def" for table "dml_union_s"
-NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_2" for table "dml_union_s"
-NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_3" for table "dml_union_s"
-NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_4" for table "dml_union_s"
-NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_5" for table "dml_union_s"
-NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_6" for table "dml_union_s"
-NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_7" for table "dml_union_s"
-NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_8" for table "dml_union_s"
-NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_9" for table "dml_union_s"
-NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_10" for table "dml_union_s"
-NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_11" for table "dml_union_s"
+PARTITION BY range(d);
+CREATE TABLE dml_union_s_1_prt_2 PARTITION OF dml_union_s FOR VALUES FROM (1) TO (1001);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE dml_union_s_1_prt_3 PARTITION OF dml_union_s FOR VALUES FROM (1001) TO (1101);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE dml_union_s_1_prt_4 PARTITION OF dml_union_s FOR VALUES FROM (1101) TO (1201);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE dml_union_s_1_prt_5 PARTITION OF dml_union_s FOR VALUES FROM (1201) TO (1301);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE dml_union_s_1_prt_6 PARTITION OF dml_union_s FOR VALUES FROM (1301) TO (1401);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE dml_union_s_1_prt_7 PARTITION OF dml_union_s FOR VALUES FROM (1401) TO (1501);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE dml_union_s_1_prt_8 PARTITION OF dml_union_s FOR VALUES FROM (1501) TO (1601);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE dml_union_s_1_prt_9 PARTITION OF dml_union_s FOR VALUES FROM (1601) TO (1701);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE dml_union_s_1_prt_10 PARTITION OF dml_union_s FOR VALUES FROM (1701) TO (1801);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE dml_union_s_1_prt_11 PARTITION OF dml_union_s FOR VALUES FROM (1801) TO (1901);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE dml_union_s_1_prt_def PARTITION OF dml_union_s DEFAULT;
+NOTICE:  table has parent, setting distribution columns to match parent table
 INSERT INTO dml_union_r SELECT generate_series(1,100), generate_series(1,100) * 3,'r', generate_series(1,100) % 6;
 INSERT INTO dml_union_r VALUES(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL);
 INSERT INTO dml_union_r VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
@@ -1165,9 +1173,12 @@ SELECT COUNT(DISTINCT(d)) FROM dml_union_s;
 (1 row)
 
 UPDATE dml_union_s SET d = (SELECT NULL UNION SELECT NULL)::numeric;
-ERROR:  moving tuple from partition "dml_union_s_1_prt_2" to partition "dml_union_s_1_prt_def" not supported
 SELECT COUNT(DISTINCT(d)) FROM dml_union_s; 
-ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ count 
+-------
+     0
+(1 row)
+
 rollback;
 -- @description union_update_test13: Update partition key to NULL values when default partition present
 begin;
@@ -1178,9 +1189,12 @@ SELECT COUNT(DISTINCT(d)) FROM dml_union_s;
 (1 row)
 
 UPDATE dml_union_s SET d = (SELECT NULL INTERSECT SELECT NULL)::numeric;
-ERROR:  moving tuple from partition "dml_union_s_1_prt_2" to partition "dml_union_s_1_prt_def" not supported
 SELECT COUNT(DISTINCT(d)) FROM dml_union_s; 
-ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ count 
+-------
+     0
+(1 row)
+
 rollback;
 -- @description union_update_test14: Update partition key to NULL values when default partition present
 begin;
@@ -1191,9 +1205,12 @@ SELECT COUNT(DISTINCT(d)) FROM dml_union_s;
 (1 row)
 
 UPDATE dml_union_s SET d = (SELECT NULL INTERSECT ALL SELECT NULL)::numeric;
-ERROR:  moving tuple from partition "dml_union_s_1_prt_2" to partition "dml_union_s_1_prt_def" not supported
 SELECT COUNT(DISTINCT(d)) FROM dml_union_s; 
-ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ count 
+-------
+     0
+(1 row)
+
 rollback;
 -- @description union_update_test15: Update partition key to NULL values when default partition present
 begin;
@@ -1204,9 +1221,12 @@ SELECT COUNT(DISTINCT(d)) FROM dml_union_s;
 (1 row)
 
 UPDATE dml_union_s SET d = (SELECT NULL EXCEPT SELECT NULL)::numeric;
-ERROR:  moving tuple from partition "dml_union_s_1_prt_2" to partition "dml_union_s_1_prt_def" not supported
 SELECT COUNT(DISTINCT(d)) FROM dml_union_s; 
-ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ count 
+-------
+     0
+(1 row)
+
 rollback;
 -- @description union_update_test16: Update partition key to NULL values when default partition present
 begin;
@@ -1217,9 +1237,12 @@ SELECT COUNT(DISTINCT(d)) FROM dml_union_s;
 (1 row)
 
 UPDATE dml_union_s SET d = (SELECT NULL EXCEPT ALL SELECT NULL)::numeric;
-ERROR:  moving tuple from partition "dml_union_s_1_prt_2" to partition "dml_union_s_1_prt_def" not supported
 SELECT COUNT(DISTINCT(d)) FROM dml_union_s; 
-ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ count 
+-------
+     0
+(1 row)
+
 rollback;
 -- @description union_update_test17: Update partition key to constant value with UNION/INTERSECT/EXCEPT within dml_union_sub-query
 begin;
@@ -1630,8 +1653,7 @@ SELECT COUNT(*) FROM dml_union_r WHERE a = 0;
 rollback;
 -- @description union_update_test26: Negative Tests Update the partition key to an out of dml_union_range value with no default partition
 begin;
-ALTER TABLE dml_union_s drop default partition;
-NOTICE:  dropped partition "def" for relation "dml_union_s"
+DROP TABLE dml_union_s_1_prt_def;
 SELECT COUNT(DISTINCT(d)) FROM dml_union_s;
  count 
 -------
@@ -1639,14 +1661,14 @@ SELECT COUNT(DISTINCT(d)) FROM dml_union_s;
 (1 row)
 
 UPDATE dml_union_s SET d = (SELECT NULL UNION SELECT NULL)::numeric;
-ERROR:  no partition for partitioning key  (seg0 sdw1:35511 pid=6757)
+ERROR:  no partition of relation "dml_union_s" found for row  (seg0 127.0.0.1:40000 pid=9624)
+DETAIL:  Partition key of the failing row contains (d) = (null).
 --SELECT DISTINCT(d) FROM dml_union_s;
 --SELECT COUNT(DISTINCT(d)) FROM dml_union_s;
 rollback;
 -- @description union_update_test27: Negative Tests Update the partition key to an out of range value with no default partition
 begin;
-ALTER TABLE dml_union_s drop default partition;
-NOTICE:  dropped partition "def" for relation "dml_union_s"
+DROP TABLE dml_union_s_1_prt_def;
 SELECT COUNT(DISTINCT(d)) FROM dml_union_s;
  count 
 -------
@@ -1654,14 +1676,14 @@ SELECT COUNT(DISTINCT(d)) FROM dml_union_s;
 (1 row)
 
 UPDATE dml_union_s SET d = (SELECT NULL INTERSECT SELECT NULL)::numeric; 
-ERROR:  no partition for partitioning key  (seg1 sdw1:35512 pid=6983)
+ERROR:  no partition of relation "dml_union_s" found for row  (seg0 127.0.0.1:40000 pid=9081)
+DETAIL:  Partition key of the failing row contains (d) = (null).
 --SELECT DISTINCT(d) FROM dml_union_s;
 --SELECT COUNT(DISTINCT(d)) FROM dml_union_s;
 rollback;
 -- @description union_update_test28: Negative Tests Update the partition key to an out of dml_union_range value with no default partition
 begin;
-ALTER TABLE dml_union_s drop default partition;
-NOTICE:  dropped partition "def" for relation "dml_union_s"
+DROP TABLE dml_union_s_1_prt_def;
 SELECT COUNT(DISTINCT(d)) FROM dml_union_s;
  count 
 -------
@@ -1669,7 +1691,8 @@ SELECT COUNT(DISTINCT(d)) FROM dml_union_s;
 (1 row)
 
 UPDATE dml_union_s SET d = (SELECT NULL EXCEPT SELECT NULL)::numeric; 
-ERROR:  no partition for partitioning key  (seg0 sdw1:35511 pid=7201)
+ERROR:  no partition of relation "dml_union_s" found for row  (seg0 127.0.0.1:40000 pid=9624)
+DETAIL:  Partition key of the failing row contains (d) = (null).
 --SELECT DISTINCT(d) FROM dml_union_s;
 --SELECT COUNT(DISTINCT(d)) FROM dml_union_s;
 rollback;
@@ -1789,24 +1812,22 @@ with t(a, b, s) as (
     union all
     select a, b, sum(c) from t_test_append_hash where a < b group by a, b
 ) select * from t where t.a < t.b;
-                                QUERY PLAN                                
---------------------------------------------------------------------------
+                             QUERY PLAN                              
+---------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Append
          ->  Result
-               One-Time Filter: (gp_execution_segment() = 0)
+               One-Time Filter: (gp_execution_segment() = 2)
                ->  HashAggregate
                      Group Key: a, b
                      ->  Result
                            One-Time Filter: false
-         ->  GroupAggregate
+         ->  HashAggregate
                Group Key: t_test_append_hash.a, t_test_append_hash.b
-               ->  Sort
-                     Sort Key: t_test_append_hash.a, t_test_append_hash.b
-                     ->  Seq Scan on t_test_append_hash
-                           Filter: ((a < b) AND (a < b))
+               ->  Seq Scan on t_test_append_hash
+                     Filter: ((a < b) AND (a < b))
  Optimizer: Postgres query optimizer
-(15 rows)
+(13 rows)
 
 with t(a, b, s) as (
     select a, b, sum(c) from t_test_append_hash where a > b group by a, b

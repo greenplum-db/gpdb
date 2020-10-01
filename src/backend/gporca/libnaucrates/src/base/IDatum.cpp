@@ -24,20 +24,18 @@ using namespace gpmd;
 //		Equality based on mapping to LINT or CDouble
 //
 //---------------------------------------------------------------------------
-BOOL 
-IDatum::StatsAreEqual
-		(
-				const IDatum *datum
-		)
-	const
+BOOL
+IDatum::StatsAreEqual(const IDatum *datum) const
 {
 	GPOS_ASSERT(NULL != datum);
 
 	// datums can be compared based on either LINT or Doubles or BYTEA values
 #ifdef GPOS_DEBUG
-	BOOL is_double_comparison = this->IsDatumMappableToDouble() && datum->IsDatumMappableToDouble();
-#endif // GPOS_DEBUG
-	BOOL is_lint_comparison = this->IsDatumMappableToLINT() && datum->IsDatumMappableToLINT();
+	BOOL is_double_comparison =
+		this->IsDatumMappableToDouble() && datum->IsDatumMappableToDouble();
+#endif	// GPOS_DEBUG
+	BOOL is_lint_comparison =
+		this->IsDatumMappableToLINT() && datum->IsDatumMappableToLINT();
 
 	GPOS_ASSERT(is_double_comparison || is_lint_comparison);
 
@@ -63,8 +61,8 @@ IDatum::StatsAreEqual
 
 	CDouble d1 = this->GetDoubleMapping();
 	CDouble d2 = datum->GetDoubleMapping();
-	CDouble diff = d1-d2;
-	return  diff.Absolute() <= CStatistics::Epsilon;
+	CDouble diff = d1 - d2;
+	return diff.Absolute() <= CStatistics::Epsilon;
 }
 
 //---------------------------------------------------------------------------
@@ -75,20 +73,18 @@ IDatum::StatsAreEqual
 //		Less-than based on mapping to LINT or CDouble
 //
 //---------------------------------------------------------------------------
-BOOL 
-IDatum::StatsAreLessThan
-	(
-	const IDatum *datum
-	)
-	const
+BOOL
+IDatum::StatsAreLessThan(const IDatum *datum) const
 {
 	GPOS_ASSERT(NULL != datum);
 
 	// datums can be compared based on either LINT or Doubles or BYTEA values
 #ifdef GPOS_DEBUG
-	BOOL is_double_comparison = this->IsDatumMappableToDouble() && datum->IsDatumMappableToDouble();
-#endif // GPOS_DEBUG
-	BOOL is_lint_comparison = this->IsDatumMappableToLINT() && datum->IsDatumMappableToLINT();
+	BOOL is_double_comparison =
+		this->IsDatumMappableToDouble() && datum->IsDatumMappableToDouble();
+#endif	// GPOS_DEBUG
+	BOOL is_lint_comparison =
+		this->IsDatumMappableToLINT() && datum->IsDatumMappableToLINT();
 
 	GPOS_ASSERT(is_double_comparison || is_lint_comparison);
 
@@ -125,20 +121,18 @@ IDatum::StatsAreLessThan
 //		Distance function based on mapping to LINT or CDouble
 //
 //---------------------------------------------------------------------------
-CDouble 
-IDatum::GetStatsDistanceFrom
-	(
-	const IDatum *datum
-	)
-	const
+CDouble
+IDatum::GetStatsDistanceFrom(const IDatum *datum) const
 {
 	GPOS_ASSERT(NULL != datum);
 
 	// datums can be compared based on either LINT or Doubles or BYTEA values
 #ifdef GPOS_DEBUG
-	BOOL is_double_comparison = this->IsDatumMappableToDouble() && datum->IsDatumMappableToDouble();
-#endif // GPOS_DEBUG
-	BOOL is_lint_comparison = this->IsDatumMappableToLINT() && datum->IsDatumMappableToLINT();
+	BOOL is_double_comparison =
+		this->IsDatumMappableToDouble() && datum->IsDatumMappableToDouble();
+#endif	// GPOS_DEBUG
+	BOOL is_lint_comparison =
+		this->IsDatumMappableToLINT() && datum->IsDatumMappableToLINT();
 
 	GPOS_ASSERT(is_double_comparison || is_lint_comparison);
 
@@ -201,11 +195,7 @@ IDatum::GetValAsDouble() const
 //
 //---------------------------------------------------------------------------
 BOOL
-IDatum::StatsAreComparable
-	(
-	const IDatum *datum
-	)
-	const
+IDatum::StatsAreComparable(const IDatum *datum) const
 {
 	GPOS_ASSERT(NULL != datum);
 
@@ -215,14 +205,17 @@ IDatum::StatsAreComparable
 	// to prevent inaccurate statistics, mark as non-comparable
 	if (!is_types_match)
 	{
-		BOOL is_time_comparison = CMDTypeGenericGPDB::IsTimeRelatedType(this->MDId())
-			&& CMDTypeGenericGPDB::IsTimeRelatedType(datum->MDId());
+		BOOL is_time_comparison =
+			CMDTypeGenericGPDB::IsTimeRelatedType(this->MDId()) &&
+			CMDTypeGenericGPDB::IsTimeRelatedType(datum->MDId());
 		if (is_time_comparison)
 			return false;
 	}
 	// datums can be compared based on either LINT or Doubles or BYTEA values
-	BOOL is_double_comparison = this->IsDatumMappableToDouble() && datum->IsDatumMappableToDouble();
-	BOOL is_lint_comparison = this->IsDatumMappableToLINT() && datum->IsDatumMappableToLINT();
+	BOOL is_double_comparison =
+		this->IsDatumMappableToDouble() && datum->IsDatumMappableToDouble();
+	BOOL is_lint_comparison =
+		this->IsDatumMappableToLINT() && datum->IsDatumMappableToLINT();
 
 	return is_double_comparison || is_lint_comparison;
 }

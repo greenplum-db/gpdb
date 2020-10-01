@@ -22,66 +22,69 @@
 
 namespace gpdxl
 {
-	using namespace gpos;
-	using namespace gpmd;
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CMappingElementColIdParamId
-	//
-	//	@doc:
-	//		Wrapper class providing functions for the mapping element between
-	//		ColId and ParamId during DXL->PlStmt translation
-	//
-	//---------------------------------------------------------------------------
-	class CMappingElementColIdParamId : public CRefCount
+using namespace gpos;
+using namespace gpmd;
+//---------------------------------------------------------------------------
+//	@class:
+//		CMappingElementColIdParamId
+//
+//	@doc:
+//		Wrapper class providing functions for the mapping element between
+//		ColId and ParamId during DXL->PlStmt translation
+//
+//---------------------------------------------------------------------------
+class CMappingElementColIdParamId : public CRefCount
+{
+private:
+	// column identifier that is used as the key
+	ULONG m_colid;
+
+	// param identifier
+	ULONG m_paramid;
+
+	// param type
+	IMDId *m_mdid;
+
+	INT m_type_modifier;
+
+public:
+	// ctors and dtor
+	CMappingElementColIdParamId(ULONG colid, ULONG paramid, IMDId *mdid,
+								INT type_modifier);
+
+	virtual ~CMappingElementColIdParamId()
 	{
-		private:
+	}
 
-			// column identifier that is used as the key
-			ULONG m_colid;
+	// return the ColId
+	ULONG
+	GetColId() const
+	{
+		return m_colid;
+	}
 
-			// param identifier
-			ULONG m_paramid;
+	// return the ParamId
+	ULONG
+	ParamId() const
+	{
+		return m_paramid;
+	}
 
-			// param type
-			IMDId *m_mdid;
+	// return the type
+	IMDId *
+	MdidType() const
+	{
+		return m_mdid;
+	}
 
-			INT m_type_modifier;
+	INT
+	TypeModifier() const
+	{
+		return m_type_modifier;
+	}
+};
+}  // namespace gpdxl
 
-		public:
-
-			// ctors and dtor
-			CMappingElementColIdParamId(ULONG colid, ULONG paramid, IMDId *mdid, INT type_modifier);
-
-			virtual
-			~CMappingElementColIdParamId()
-			{}
-
-			// return the ColId
-			ULONG GetColId() const
-			{
-				return m_colid;
-			}
-
-			// return the ParamId
-			ULONG ParamId() const
-			{
-				return m_paramid;
-			}
-
-			// return the type
-			IMDId *MdidType() const
-			{
-				return m_mdid;
-			}
-
-			INT TypeModifier() const
-			{
-				return m_type_modifier;
-			}
-	};
-}
-
-#endif // GPDXL_CMappingElementColIdParamId_H
+#endif	// GPDXL_CMappingElementColIdParamId_H
 
 // EOF

@@ -26,13 +26,7 @@ using namespace gpopt;
 //		Ctor - for pattern
 //
 //---------------------------------------------------------------------------
-CLogicalCTEAnchor::CLogicalCTEAnchor
-	(
-	CMemoryPool *mp
-	)
-	:
-	CLogical(mp),
-	m_id(0)
+CLogicalCTEAnchor::CLogicalCTEAnchor(CMemoryPool *mp) : CLogical(mp), m_id(0)
 {
 	m_fPattern = true;
 }
@@ -45,15 +39,10 @@ CLogicalCTEAnchor::CLogicalCTEAnchor
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CLogicalCTEAnchor::CLogicalCTEAnchor
-	(
-	CMemoryPool *mp,
-	ULONG id
-	)
-	:
-	CLogical(mp),
-	m_id(id)
-{}
+CLogicalCTEAnchor::CLogicalCTEAnchor(CMemoryPool *mp, ULONG id)
+	: CLogical(mp), m_id(id)
+{
+}
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -64,11 +53,8 @@ CLogicalCTEAnchor::CLogicalCTEAnchor
 //
 //---------------------------------------------------------------------------
 CColRefSet *
-CLogicalCTEAnchor::DeriveOutputColumns
-	(
-	CMemoryPool *, // mp
-	CExpressionHandle &exprhdl
-	)
+CLogicalCTEAnchor::DeriveOutputColumns(CMemoryPool *,  // mp
+									   CExpressionHandle &exprhdl)
 {
 	return PcrsDeriveOutputPassThru(exprhdl);
 }
@@ -82,12 +68,8 @@ CLogicalCTEAnchor::DeriveOutputColumns
 //
 //---------------------------------------------------------------------------
 CKeyCollection *
-CLogicalCTEAnchor::DeriveKeyCollection
-	(
-	CMemoryPool *, // mp
-	CExpressionHandle &exprhdl
-	)
-	const
+CLogicalCTEAnchor::DeriveKeyCollection(CMemoryPool *,  // mp
+									   CExpressionHandle &exprhdl) const
 {
 	return PkcDeriveKeysPassThru(exprhdl, 0 /* ulChild */);
 }
@@ -101,21 +83,19 @@ CLogicalCTEAnchor::DeriveKeyCollection
 //
 //---------------------------------------------------------------------------
 CPartInfo *
-CLogicalCTEAnchor::DerivePartitionInfo
-	(
-	CMemoryPool *mp,
-	CExpressionHandle &exprhdl
-	)
-	const
+CLogicalCTEAnchor::DerivePartitionInfo(CMemoryPool *mp,
+									   CExpressionHandle &exprhdl) const
 {
 	CPartInfo *ppartinfoChild = exprhdl.DerivePartitionInfo(0);
 	GPOS_ASSERT(NULL != ppartinfoChild);
 
-	CExpression *pexprProducer = COptCtxt::PoctxtFromTLS()->Pcteinfo()->PexprCTEProducer(m_id);
+	CExpression *pexprProducer =
+		COptCtxt::PoctxtFromTLS()->Pcteinfo()->PexprCTEProducer(m_id);
 	GPOS_ASSERT(NULL != pexprProducer);
 	CPartInfo *ppartinfoCTEProducer = pexprProducer->DerivePartitionInfo();
 
-	return CPartInfo::PpartinfoCombine(mp, ppartinfoChild, ppartinfoCTEProducer);
+	return CPartInfo::PpartinfoCombine(mp, ppartinfoChild,
+									   ppartinfoCTEProducer);
 }
 
 //---------------------------------------------------------------------------
@@ -127,12 +107,8 @@ CLogicalCTEAnchor::DerivePartitionInfo
 //
 //---------------------------------------------------------------------------
 CMaxCard
-CLogicalCTEAnchor::DeriveMaxCard
-	(
-	CMemoryPool *, // mp
-	CExpressionHandle &exprhdl
-	)
-	const
+CLogicalCTEAnchor::DeriveMaxCard(CMemoryPool *,	 // mp
+								 CExpressionHandle &exprhdl) const
 {
 	// pass on max card of first child
 	return exprhdl.DeriveMaxCard(0);
@@ -147,11 +123,7 @@ CLogicalCTEAnchor::DeriveMaxCard
 //
 //---------------------------------------------------------------------------
 BOOL
-CLogicalCTEAnchor::Matches
-	(
-	COperator *pop
-	)
-	const
+CLogicalCTEAnchor::Matches(COperator *pop) const
 {
 	if (pop->Eopid() != Eopid())
 	{
@@ -186,11 +158,7 @@ CLogicalCTEAnchor::HashValue() const
 //
 //---------------------------------------------------------------------------
 CXformSet *
-CLogicalCTEAnchor::PxfsCandidates
-	(
-	CMemoryPool *mp
-	)
-	const
+CLogicalCTEAnchor::PxfsCandidates(CMemoryPool *mp) const
 {
 	CXformSet *xform_set = GPOS_NEW(mp) CXformSet(mp);
 	(void) xform_set->ExchangeSet(CXform::ExfCTEAnchor2Sequence);
@@ -207,11 +175,7 @@ CLogicalCTEAnchor::PxfsCandidates
 //
 //---------------------------------------------------------------------------
 IOstream &
-CLogicalCTEAnchor::OsPrint
-	(
-	IOstream &os
-	)
-	const
+CLogicalCTEAnchor::OsPrint(IOstream &os) const
 {
 	os << SzId() << " (";
 	os << m_id;

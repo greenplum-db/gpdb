@@ -383,32 +383,6 @@ Feature: expand the cluster by adding more segments
         # Temporarily comment the verifys until redistribute is fixed. This allows us to commit a resource to get a dump of the ICW dump for other tests to use
         # Then distribution information from table "public.redistribute" with data in "gptest" is verified against saved data
 
-    @gpexpand_mirrors
-    @gpexpand_rollback
-    Scenario: inject a fail and test if rollback is ok
-        Given the database is not running
-        And a working directory of the test as '/data/gpdata/gpexpand'
-        And the user runs command "rm -rf /data/gpdata/gpexpand/*"
-        And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
-        And a cluster is created with mirrors on "mdw" and "sdw1"
-        And the user runs gpinitstandby with options " "
-        And database "gptest" exists
-        And there are no gpexpand_inputfiles
-        And the cluster is setup for an expansion on hosts "mdw,sdw1"
-        And the gp_segment_configuration have been saved
-        And set fault inject "gpexpand rollback test fault injection"
-        When the user runs gpexpand with a static inputfile for a single-node cluster with mirrors without ret code check
-        Then gpexpand should return a return code of 3
-        And run rollback
-        And verify the gp_segment_configuration has been restored
-        And unset fault inject
-		# The rollback will remove the new segment's datadir, but this is not
-		# enough to let it quit, it might stop immediately, it might stop after
-		# tens of minutes.  If it does not quit in time, in later tests the new
-		# segments might fail to be launched due to port conflicts.  So we must
-		# force it to quit now.
-        And the database is not running
-        And the user runs remote command "pkill postgres || true" on host "sdw1"
 
     @gpexpand_no_mirrors
     @gpexpand_with_special_character
@@ -430,22 +404,20 @@ Feature: expand the cluster by adding more segments
         When the user runs gpexpand to redistribute
         Then the tables have finished expanding
 
-    @gpexpand_mirrors
-    @gpexpand_retry_failing_work_in_phase1_after_releasing_catalog_lock
-    Scenario: inject a fail and test if retry is ok
+
+    @gpexpand_verify_partition_external_table
+    Scenario: Gpexpand should succeed when partition table contain an external table as child partition
         Given the database is not running
         And a working directory of the test as '/data/gpdata/gpexpand'
-        And the user runs command "rm -rf /data/gpdata/gpexpand/*"
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
-        And a cluster is created with mirrors on "mdw" and "sdw1"
-        And the user runs gpinitstandby with options " "
+        And the cluster is generated with "1" primaries only
         And database "gptest" exists
+        And the user create an external table with name "ext_test" in partition table t
         And there are no gpexpand_inputfiles
-        And the cluster is setup for an expansion on hosts "mdw,sdw1"
-        And set fault inject "gpexpand retry after releaseing catalog lock fault injection"
-        When the user runs gpexpand with a static inputfile for a single-node cluster with mirrors without ret code check
-        Then gpexpand should return a return code of 3
-        And verify status file and gp_segment_configuration backup file exist on standby
-        And unset fault inject
-        When the user runs gpexpand with a static inputfile for a single-node cluster with mirrors without ret code check
-        Then gpexpand should return a return code of 0
+        And the cluster is setup for an expansion on hosts "localhost"
+        When the user runs gpexpand interview to add 3 new segment and 0 new host "ignored.host"
+        Then the number of segments have been saved
+        When the user runs gpexpand with the latest gpexpand_inputfile with additional parameters "--silent"
+        Then verify that the cluster has 3 new segments
+        When the user runs gpexpand to redistribute
+        Then the numsegments of table "ext_test" is 4

@@ -1,6 +1,6 @@
 from mock import *
 import os
-from gp_unittest import *
+from .gp_unittest import *
 from gpcheckcat_modules.repair import Repair
 import tempfile
 import shutil
@@ -42,7 +42,7 @@ class RepairTestCase(GpTestCase):
         self.verify_repair_dir_contents("somedb_issuetype_timestamp.sql", sql_contents)
         self.verify_repair_dir_contents("runsql_timestamp.sh", bash_contents)
 
-    @patch('gpcheckcat_modules.repair.RepairMissingExtraneous', autospec=True)
+    @patch('gpcheckcat_modules.repair.RepairMissingExtraneous')
     def test_create_repair_extra__normal(self, mock_repair):
         self.subject = Repair(self.context, "extra", "some desc")
         catalog_table_obj = Mock()
@@ -68,10 +68,10 @@ class RepairTestCase(GpTestCase):
                     "cd $(dirname $0)\n",
                     "\n",
                     "echo \"some desc\"\n",
-                    "PGOPTIONS='-c gp_session_role=utility' psql -X -v ON_ERROR_STOP=1 -a -h somehost -p 25432 -c \"delete_sql\" \"somedb\" >> somedb_extra_timestamp.out 2>&1\n",
+                    "PGOPTIONS='-c gp_role=utility' psql -X -v ON_ERROR_STOP=1 -a -h somehost -p 25432 -c \"delete_sql\" \"somedb\" >> somedb_extra_timestamp.out 2>&1\n",
                     "\n",
                     "echo \"some desc\"\n",
-                    "PGOPTIONS='-c gp_session_role=utility' psql -X -v ON_ERROR_STOP=1 -a -h somehost -p 25433 -c \"delete_sql\" \"somedb\" >> somedb_extra_timestamp.out 2>&1\n",
+                    "PGOPTIONS='-c gp_role=utility' psql -X -v ON_ERROR_STOP=1 -a -h somehost -p 25433 -c \"delete_sql\" \"somedb\" >> somedb_extra_timestamp.out 2>&1\n",
                     "\n",
                     "echo \"some desc\"\n",
                     "psql -X -v ON_ERROR_STOP=1 -a -h somehost -p 15432 -c \"delete_sql\" \"somedb\" >> somedb_extra_timestamp.out 2>&1\n"]
@@ -83,7 +83,7 @@ class RepairTestCase(GpTestCase):
         self.subject = Repair(self.context, "orphan_toast_tables", "some desc")
 
         segments_with_repair_statements = []
-        for segment in self.context.cfg.values():
+        for segment in list(self.context.cfg.values()):
             if segment['content'] != -1:
                 segment['repair_statements'] = ['UPDATE pg_class']
                 segments_with_repair_statements.append(segment)
@@ -96,13 +96,13 @@ class RepairTestCase(GpTestCase):
             "cd $(dirname $0)\n",
             "\n",
             "echo \"some desc\"\n",
-            "PGOPTIONS='-c gp_session_role=utility' psql -X -v ON_ERROR_STOP=1 -a -h somehost -p 25432 -f \"0.somehost.25432.somedb.timestamp.sql\" \"somedb\" >> somedb_orphan_toast_tables_timestamp.out 2>&1\n",
+            "PGOPTIONS='-c gp_role=utility' psql -X -v ON_ERROR_STOP=1 -a -h somehost -p 25432 -f \"0.somehost.25432.somedb.timestamp.sql\" \"somedb\" >> somedb_orphan_toast_tables_timestamp.out 2>&1\n",
             "\n",
             "echo \"some desc\"\n",
-            "PGOPTIONS='-c gp_session_role=utility' psql -X -v ON_ERROR_STOP=1 -a -h somehost -p 25433 -f \"1.somehost.25433.somedb.timestamp.sql\" \"somedb\" >> somedb_orphan_toast_tables_timestamp.out 2>&1\n",
+            "PGOPTIONS='-c gp_role=utility' psql -X -v ON_ERROR_STOP=1 -a -h somehost -p 25433 -f \"1.somehost.25433.somedb.timestamp.sql\" \"somedb\" >> somedb_orphan_toast_tables_timestamp.out 2>&1\n",
             "\n",
             "echo \"some desc\"\n",
-            "PGOPTIONS='-c gp_session_role=utility' psql -X -v ON_ERROR_STOP=1 -a -h somehost -p 25434 -f \"2.somehost.25434.somedb.timestamp.sql\" \"somedb\" >> somedb_orphan_toast_tables_timestamp.out 2>&1\n"]
+            "PGOPTIONS='-c gp_role=utility' psql -X -v ON_ERROR_STOP=1 -a -h somehost -p 25434 -f \"2.somehost.25434.somedb.timestamp.sql\" \"somedb\" >> somedb_orphan_toast_tables_timestamp.out 2>&1\n"]
 
         self.verify_repair_dir_contents("runsql_timestamp.sh", bash_contents)
 
@@ -136,7 +136,7 @@ class RepairTestCase(GpTestCase):
         with open(file_path) as f:
             file_contents = f.readlines()
 
-        self.assertEqual(file_contents, contents)
+        self.assertCountEqual(file_contents, contents)
 
     def tearDown(self):
         shutil.rmtree(self.repair_dir_path)

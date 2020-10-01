@@ -3,7 +3,7 @@
  * nodeWorktablescan.c
  *	  routines to handle WorkTableScan nodes.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -82,9 +82,11 @@ WorkTableScanRecheck(WorkTableScanState *node, TupleTableSlot *slot)
  *		access method functions.
  * ----------------------------------------------------------------
  */
-TupleTableSlot *
-ExecWorkTableScan(WorkTableScanState *node)
+static TupleTableSlot *
+ExecWorkTableScan(PlanState *pstate)
 {
+	WorkTableScanState *node = castNode(WorkTableScanState, pstate);
+
 	/*
 	 * On the first call, find the ancestor RecursiveUnion's state via the
 	 * Param slot reserved for it.  (We can't do this during node init because
@@ -100,8 +102,8 @@ ExecWorkTableScan(WorkTableScanState *node)
 		param = &(estate->es_param_exec_vals[plan->wtParam]);
 		Assert(param->execPlan == NULL);
 		Assert(!param->isnull);
-		node->rustate = (RecursiveUnionState *) DatumGetPointer(param->value);
-		Assert(node->rustate && IsA(node->rustate, RecursiveUnionState));
+		node->rustate = castNode(RecursiveUnionState, DatumGetPointer(param->value));
+		Assert(node->rustate);
 
 		/*
 		 * The scan tuple type (ie, the rowtype we expect to find in the work
@@ -153,6 +155,7 @@ ExecInitWorkTableScan(WorkTableScan *node, EState *estate, int eflags)
 	scanstate = makeNode(WorkTableScanState);
 	scanstate->ss.ps.plan = (Plan *) node;
 	scanstate->ss.ps.state = estate;
+	scanstate->ss.ps.ExecProcNode = ExecWorkTableScan;
 	scanstate->rustate = NULL;	/* we'll set this later */
 
 	/*
@@ -163,27 +166,26 @@ ExecInitWorkTableScan(WorkTableScan *node, EState *estate, int eflags)
 	ExecAssignExprContext(estate, &scanstate->ss.ps);
 
 	/*
-	 * initialize child expressions
-	 */
-	scanstate->ss.ps.targetlist = (List *)
-		ExecInitExpr((Expr *) node->scan.plan.targetlist,
-					 (PlanState *) scanstate);
-	scanstate->ss.ps.qual = (List *)
-		ExecInitExpr((Expr *) node->scan.plan.qual,
-					 (PlanState *) scanstate);
-
-	/*
 	 * tuple table initialization
 	 */
-	ExecInitResultTupleSlot(estate, &scanstate->ss.ps);
-	ExecInitScanTupleSlot(estate, &scanstate->ss);
+	ExecInitResultTypeTL(&scanstate->ss.ps);
+
+	/* signal that return type is not yet known */
+	scanstate->ss.ps.resultopsset = true;
+	scanstate->ss.ps.resultopsfixed = false;
+
+	ExecInitScanTupleSlot(estate, &scanstate->ss, NULL, &TTSOpsMinimalTuple);
 
 	/*
-	 * Initialize result tuple type, but not yet projection info.
+	 * initialize child expressions
 	 */
-	ExecAssignResultTypeFromTL(&scanstate->ss.ps);
+	scanstate->ss.ps.qual =
+		ExecInitQual(node->scan.plan.qual, (PlanState *) scanstate);
 
-	/* scanstate->ss.ps.ps_TupFromTlist = false; */
+	/*
+	 * Do not yet initialize projection info, see ExecWorkTableScan() for
+	 * details.
+	 */
 
 	return scanstate;
 }
@@ -205,7 +207,8 @@ ExecEndWorkTableScan(WorkTableScanState *node)
 	/*
 	 * clean out the tuple table
 	 */
-	ExecClearTuple(node->ss.ps.ps_ResultTupleSlot);
+	if (node->ss.ps.ps_ResultTupleSlot)
+		ExecClearTuple(node->ss.ps.ps_ResultTupleSlot);
 	ExecClearTuple(node->ss.ss_ScanTupleSlot);
 }
 
@@ -218,7 +221,8 @@ ExecEndWorkTableScan(WorkTableScanState *node)
 void
 ExecReScanWorkTableScan(WorkTableScanState *node)
 {
-	ExecClearTuple(node->ss.ps.ps_ResultTupleSlot);
+	if (node->ss.ps.ps_ResultTupleSlot)
+		ExecClearTuple(node->ss.ps.ps_ResultTupleSlot);
 
 	ExecScanReScan(&node->ss);
 

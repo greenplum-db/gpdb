@@ -7,7 +7,7 @@
 //
 //	@doc:
 //		Implementation of DXL Scalar Limit Count
-//		
+//
 //---------------------------------------------------------------------------
 
 #include "naucrates/dxl/operators/CDXLScalarLimitCount.h"
@@ -27,12 +27,7 @@ using namespace gpdxl;
 //		Constructs a scalar Limit Count node
 //
 //---------------------------------------------------------------------------
-CDXLScalarLimitCount::CDXLScalarLimitCount
-	(
-	CMemoryPool *mp
-	)
-	:
-	CDXLScalar(mp)
+CDXLScalarLimitCount::CDXLScalarLimitCount(CMemoryPool *mp) : CDXLScalar(mp)
 {
 }
 
@@ -75,18 +70,16 @@ CDXLScalarLimitCount::GetOpNameStr() const
 //
 //---------------------------------------------------------------------------
 void
-CDXLScalarLimitCount::SerializeToDXL
-	(
-	CXMLSerializer *xml_serializer,
-	const CDXLNode *node
-	)
-	const
+CDXLScalarLimitCount::SerializeToDXL(CXMLSerializer *xml_serializer,
+									 const CDXLNode *node) const
 {
 	const CWStringConst *element_name = GetOpNameStr();
 
-	xml_serializer->OpenElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	xml_serializer->OpenElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 	node->SerializeChildrenToDXL(xml_serializer);
-	xml_serializer->CloseElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	xml_serializer->CloseElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 }
 
 #ifdef GPOS_DEBUG
@@ -99,12 +92,8 @@ CDXLScalarLimitCount::SerializeToDXL
 //
 //---------------------------------------------------------------------------
 void
-CDXLScalarLimitCount::AssertValid
-	(
-	const CDXLNode *node,
-	BOOL validate_children
-	) 
-	const
+CDXLScalarLimitCount::AssertValid(const CDXLNode *node,
+								  BOOL validate_children) const
 {
 	const ULONG arity = node->Arity();
 	GPOS_ASSERT(1 >= arity);
@@ -112,14 +101,16 @@ CDXLScalarLimitCount::AssertValid
 	for (ULONG idx = 0; idx < arity; ++idx)
 	{
 		CDXLNode *dxlnode_arg = (*node)[idx];
-		GPOS_ASSERT(EdxloptypeScalar == dxlnode_arg->GetOperator()->GetDXLOperatorType());
-		
+		GPOS_ASSERT(EdxloptypeScalar ==
+					dxlnode_arg->GetOperator()->GetDXLOperatorType());
+
 		if (validate_children)
 		{
-			dxlnode_arg->GetOperator()->AssertValid(dxlnode_arg, validate_children);
+			dxlnode_arg->GetOperator()->AssertValid(dxlnode_arg,
+													validate_children);
 		}
 	}
 }
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 // EOF

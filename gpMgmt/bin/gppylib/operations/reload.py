@@ -1,11 +1,12 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 import time
 
+from contextlib import closing
+
 from gppylib import gplog
 from gppylib.db import dbconn
-from gppylib.db.dbconn import execSQL, execSQLForSingleton
 from gppylib.mainUtils import ExceptionNoStackTraceNeeded
 from gppylib.userinput import ask_yesno
 
@@ -22,25 +23,33 @@ class GpReload:
         self.parent_partition_map = {}
 
     def validate_table(self, schema_name, table_name):
-        with dbconn.connect(dbconn.DbURL(dbname=self.database, port=self.port)) as conn:
-            c = execSQLForSingleton(conn,
+        conn = dbconn.connect(dbconn.DbURL(dbname=self.database, port=self.port))
+        try:
+            c = dbconn.querySingleton(conn,
                                     """SELECT count(*)
                                        FROM pg_class, pg_namespace
                                        WHERE pg_namespace.nspname = '{schema}'
-                                       AND pg_class.relname = '{table}'""".format(schema=schema_name, table=table_name))
+                                       AND pg_class.relname = '{table}'
+                                       AND pg_class.relnamespace = pg_namespace.oid
+                                       AND pg_class.relkind != 'v'""".format(schema=schema_name, table=table_name))
             if not c:
                 raise ExceptionNoStackTraceNeeded('Table {schema}.{table} does not exist'
                                                   .format(schema=schema_name, table=table_name))
+        finally:
+            conn.close()
 
     def validate_columns(self, schema_name, table_name, sort_column_list):
         columns = []
-        with dbconn.connect(dbconn.DbURL(dbname=self.database, port=self.port)) as conn:
-            res = execSQL(conn,
+        conn = dbconn.connect(dbconn.DbURL(dbname=self.database, port=self.port))
+        try:
+            res = dbconn.query(conn,
                           """SELECT attname
                              FROM pg_attribute
                              WHERE attrelid = (SELECT pg_class.oid
                                                FROM pg_class, pg_namespace
-                                               WHERE pg_class.relname = '{table}' AND pg_namespace.nspname = '{schema}')"""
+                                               WHERE pg_class.relname = '{table}' AND pg_namespace.nspname = '{schema}'
+                                               AND pg_class.relnamespace = pg_namespace.oid
+                                               AND pg_class.relkind != 'v')"""
                                  .format(table=table_name, schema=schema_name))
             for cols in res.fetchall():
                 columns.append(cols[0].strip())
@@ -48,36 +57,27 @@ class GpReload:
                 if c[0] not in columns:
                     raise ExceptionNoStackTraceNeeded('Table {schema}.{table} does not have column {col}'
                                                        .format(schema=schema_name, table=table_name, col=c[0]))
+        finally:
+            conn.close()
 
     def validate_mid_level_partitions(self, schema_name, table_name):
         partition_level, max_level = None, None
-        with dbconn.connect(dbconn.DbURL(dbname=self.database, port=self.port)) as conn:
+        conn = dbconn.connect(dbconn.DbURL(dbname=self.database, port=self.port))
+        try:
             parent_schema, parent_table = self.parent_partition_map[(schema_name, table_name)]
             if (parent_schema, parent_table) == (schema_name, table_name):
                 return
             try:
-                max_level = dbconn.execSQLForSingleton(conn, 
-                                                   """SELECT max(partitionlevel)
-                                                      FROM pg_partitions
-                                                      WHERE tablename='%s'
-                                                      AND schemaname='%s'
-                                                   """ % (parent_table, parent_schema))
+                res = dbconn.query(conn,
+                                   """ SELECT isleaf from pg_partition_tree('%s.%s') """ % (schema_name, table_name))
             except Exception as e:
-                logger.debug('Unable to get the maximum partition level for table %s: (%s)' % (table_name, str(e)))
+                logger.debug('Unable to get the partition information for table %s: (%s)' % (table_name, str(e)))
 
-            try:
-                partition_level = dbconn.execSQLForSingleton(conn,
-                                                         """SELECT partitionlevel
-                                                            FROM pg_partitions
-                                                            WHERE partitiontablename='%s'
-                                                            AND partitionschemaname='%s'
-                                                         """ % (table_name, schema_name))
-            except Exception as e:
-                logger.debug('Unable to get the partition level for table %s: (%s)' % (table_name, str(e)))
-
-            if partition_level != max_level:
-                logger.error('Partition level of the table = %s, Max partition level = %s' % (partition_level, max_level))
-                raise Exception('Mid Level partition %s.%s is not supported by gpreload. Please specify only leaf partitions or parent table name' % (schema_name, table_name))
+            for isleaf in res.fetchall():
+                if not isleaf[0]:
+                    raise Exception('Mid Level partition %s.%s is not supported by gpreload. Please specify only leaf partitions or parent table name' % (schema_name, table_name))
+        finally:
+            conn.close()
 
     def validate_options(self):
         if self.table_file is None:
@@ -142,18 +142,17 @@ class GpReload:
             self.validate_columns(schema_name, table_name, sort_column_list)
 
     def get_row_count(self, table_name):
-        with dbconn.connect(dbconn.DbURL(dbname=self.database, port=self.port)) as conn:
-            c = execSQLForSingleton(conn, 'SELECT count(*) FROM {table}'.format(table=table_name))
+        with closing(dbconn.connect(dbconn.DbURL(dbname=self.database, port=self.port))) as conn:
+            c = dbconn.querySingleton(conn, 'SELECT count(*) FROM {table}'.format(table=table_name))
         return c
 
     def check_indexes(self, schema_name, table_name):
-        with dbconn.connect(dbconn.DbURL(dbname=self.database, port=self.port)) as conn:
-            c = execSQLForSingleton(conn, """SELECT count(*)
+        with closing(dbconn.connect(dbconn.DbURL(dbname=self.database, port=self.port))) as conn:
+            c = dbconn.querySingleton(conn, """SELECT count(*)
                                              FROM pg_index
                                              WHERE indrelid = (SELECT pg_class.oid
                                                                FROM pg_class, pg_namespace
-                                                               WHERE pg_class.relname='{table}' AND pg_namespace.nspname='{schema}')
-                                          """.format(table=table_name, schema=schema_name))
+                                                               WHERE pg_class.relname='{table}' AND pg_namespace.nspname='{schema}' AND pg_class.relnamespace = pg_namespace.oid)""".format(table=table_name, schema=schema_name))
             if c != 0:
                 if self.interactive:
                     return ask_yesno(None,
@@ -163,30 +162,33 @@ class GpReload:
         return True
 
     def get_table_size(self, schema_name, table_name):
-        with dbconn.connect(dbconn.DbURL(dbname=self.database, port=self.port)) as conn:
-            size = execSQLForSingleton(conn,
+        with closing(dbconn.connect(dbconn.DbURL(dbname=self.database, port=self.port))) as conn:
+            size = dbconn.querySingleton(conn,
                                        """SELECT pg_size_pretty(pg_relation_size('{schema}.{table}'))"""
                                        .format(schema=schema_name, table=table_name))
         return size
 
     def get_parent_partitions(self):
-        with dbconn.connect(dbconn.DbURL(dbname=self.database, port=self.port)) as conn:
+        with closing(dbconn.connect(dbconn.DbURL(dbname=self.database, port=self.port))) as conn:
             for schema, table, col_list in self.table_list:
-                PARENT_PARTITION_TABLENAME = """SELECT schemaname, tablename
-                                                FROM pg_partitions
-                                                WHERE partitiontablename='%s' 
-                                                AND partitionschemaname='%s'""" % (table, schema)
-                res = execSQL(conn, PARENT_PARTITION_TABLENAME)
+                PARENT_PARTITION_TABLENAME = """SELECT nspname, relname
+                                                FROM pg_catalog.pg_class AS c
+                                                JOIN pg_catalog.pg_namespace AS ns
+                                                ON c.relnamespace = ns.oid
+                                                WHERE c.oid = pg_partition_root('%s.%s')
+                                                """ % (schema, table)
+                res = dbconn.query(conn, PARENT_PARTITION_TABLENAME)
                 for r in res:
                     self.parent_partition_map[(schema, table)] = (r[0], r[1]) 
 
                 if (schema, table) not in self.parent_partition_map:
                     self.parent_partition_map[(schema, table)] = (schema, table)
 
-            return self.parent_partition_map 
+        return self.parent_partition_map
 
     def reload_tables(self):
-        with dbconn.connect(dbconn.DbURL(dbname=self.database, port=self.port)) as conn:
+        conn =  dbconn.connect(dbconn.DbURL(dbname=self.database, port=self.port))
+        try:
             conn.commit()   #Commit the implicit transaction started by connect
             for schema_name, table_name, sort_column_list in self.table_list:
                 logger.info('Starting reload for table {schema}.{table}'.format(schema=schema_name, table=table_name))
@@ -201,8 +203,8 @@ class GpReload:
                 dbconn.execSQL(conn, 'BEGIN')
                 dbconn.execSQL(conn, """CREATE TEMP TABLE temp_{table} AS SELECT * FROM {schema}.{table}"""
                                      .format(schema=schema_name, table=table_name))
-                temp_row_count = dbconn.execSQLForSingleton(conn, """SELECT count(*) FROM temp_{table}""".format(table=table_name))
-                table_row_count = dbconn.execSQLForSingleton(conn, """SELECT count(*) from {schema}.{table}"""
+                temp_row_count = dbconn.querySingleton(conn, """SELECT count(*) FROM temp_{table}""".format(table=table_name))
+                table_row_count = dbconn.querySingleton(conn, """SELECT count(*) from {schema}.{table}"""
                                                                     .format(table=table_name, schema=schema_name))
                 if temp_row_count != table_row_count:
                     raise Exception('Row count for temp table(%s) does not match(%s)' % (temp_row_count, table_row_count))
@@ -216,6 +218,8 @@ class GpReload:
                 end = time.time()
                 logger.info('Finished reload for table {schema}.{table} in time {sec} seconds'
                             .format(schema=schema_name, table=table_name, sec=(end-start)))
+        finally:
+            conn.close()
 
     def run(self):
         self.validate_options()

@@ -1,14 +1,10 @@
 /*
- * src/bin/pg_archivecleanup/pg_archivecleanup.c
- *
  * pg_archivecleanup.c
  *
- * Production-ready example of an archive_cleanup_command
- * used to clean an archive when using standby_mode = on in 9.0
- * or for standalone use for any version of PostgreSQL 8.0+.
+ * To be used as archive_cleanup_command to clean an archive when using
+ * standby mode.
  *
- * Original author:		Simon Riggs  simon@2ndquadrant.com
- * Current maintainer:	Simon Riggs
+ * src/bin/pg_archivecleanup/pg_archivecleanup.c
  */
 #include "postgres_fe.h"
 
@@ -21,21 +17,21 @@
 
 #include "pg_getopt.h"
 
+#include "common/logging.h"
+
 #include "access/xlog_internal.h"
 
 const char *progname;
 
 /* Options and defaults */
-bool		debug = false;		/* are we debugging? */
 bool		dryrun = false;		/* are we performing a dry-run operation? */
-char	   *additional_ext = NULL;		/* Extension to remove from filenames */
+char	   *additional_ext = NULL;	/* Extension to remove from filenames */
 
 char	   *archiveLocation;	/* where to find the archive? */
 char	   *restartWALFileName; /* the file from which we can restart restore */
 char		WALFilePath[MAXPGPATH * 2];		/* the file path including archive */
-char		exclusiveCleanupFileName[MAXFNAMELEN];		/* the oldest file we
-														 * want to remain in
-														 * archive */
+char		exclusiveCleanupFileName[MAXFNAMELEN];	/* the oldest file we want
+													 * to remain in archive */
 
 
 /* =====================================================================
@@ -48,7 +44,7 @@ char		exclusiveCleanupFileName[MAXFNAMELEN];		/* the oldest file we
  *	accessible directory. If you want to make other assumptions,
  *	such as using a vendor-specific archive and access API, these
  *	routines are the ones you'll need to change. You're
- *	encouraged to submit any changes to pgsql-hackers@postgresql.org
+ *	encouraged to submit any changes to pgsql-hackers@lists.postgresql.org
  *	or personally to the current maintainer. Those changes may be
  *	folded in to later versions of this program.
  */
@@ -70,8 +66,8 @@ Initialize(void)
 	if (stat(archiveLocation, &stat_buf) != 0 ||
 		!S_ISDIR(stat_buf.st_mode))
 	{
-		fprintf(stderr, "%s: archive location \"%s\" does not exist\n",
-				progname, archiveLocation);
+		pg_log_error("archive location \"%s\" does not exist",
+					 archiveLocation);
 		exit(2);
 	}
 }
@@ -128,6 +124,9 @@ CleanupPriorWALFiles(void)
 			if ((IsXLogFileName(walfile) || IsPartialXLogFileName(walfile)) &&
 				strcmp(walfile + 8, exclusiveCleanupFileName + 8) < 0)
 			{
+				char		WALFilePath[MAXPGPATH * 2]; /* the file path
+														 * including archive */
+
 				/*
 				 * Use the original file name again now, including any
 				 * extension that might have been chopped off before testing
@@ -144,37 +143,32 @@ CleanupPriorWALFiles(void)
 					 * user can pipe the output into some other program.
 					 */
 					printf("%s\n", WALFilePath);
-					if (debug)
-						fprintf(stderr,
-								"%s: file \"%s\" would be removed\n",
-								progname, WALFilePath);
+					pg_log_debug("file \"%s\" would be removed", WALFilePath);
 					continue;
 				}
 
-				if (debug)
-					fprintf(stderr, "%s: removing file \"%s\"\n",
-							progname, WALFilePath);
+				pg_log_debug("removing file \"%s\"", WALFilePath);
 
 				rc = unlink(WALFilePath);
 				if (rc != 0)
 				{
-					fprintf(stderr, "%s: ERROR: could not remove file \"%s\": %s\n",
-							progname, WALFilePath, strerror(errno));
+					pg_log_error("could not remove file \"%s\": %m",
+								 WALFilePath);
 					break;
 				}
 			}
 		}
 
 		if (errno)
-			fprintf(stderr, "%s: could not read archive location \"%s\": %s\n",
-					progname, archiveLocation, strerror(errno));
+			pg_log_error("could not read archive location \"%s\": %m",
+						 archiveLocation);
 		if (closedir(xldir))
-			fprintf(stderr, "%s: could not close archive location \"%s\": %s\n",
-					progname, archiveLocation, strerror(errno));
+			pg_log_error("could not close archive location \"%s\": %m",
+						 archiveLocation);
 	}
 	else
-		fprintf(stderr, "%s: could not open archive location \"%s\": %s\n",
-				progname, archiveLocation, strerror(errno));
+		pg_log_error("could not open archive location \"%s\": %m",
+					 archiveLocation);
 }
 
 /*
@@ -246,8 +240,8 @@ SetWALFileNameForCleanup(void)
 
 	if (!fnameOK)
 	{
-		fprintf(stderr, "%s: invalid filename input\n", progname);
-		fprintf(stderr, "Try \"%s --help\" for more information.\n", progname);
+		pg_log_error("invalid file name argument");
+		fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
 		exit(2);
 	}
 }
@@ -260,25 +254,25 @@ SetWALFileNameForCleanup(void)
 static void
 usage(void)
 {
-	printf("%s removes older WAL files from PostgreSQL archives.\n\n", progname);
-	printf("Usage:\n");
-	printf("  %s [OPTION]... ARCHIVELOCATION OLDESTKEPTWALFILE\n", progname);
-	printf("\nOptions:\n");
-	printf("  -d             generate debug output (verbose mode)\n");
-	printf("  -n             dry run, show the names of the files that would be removed\n");
-	printf("  -V, --version  output version information, then exit\n");
-	printf("  -x EXT         clean up files if they have this extension\n");
-	printf("  -?, --help     show this help, then exit\n");
-	printf("\n"
-		   "For use as archive_cleanup_command in recovery.conf when standby_mode = on:\n"
-		   "  archive_cleanup_command = 'pg_archivecleanup [OPTION]... ARCHIVELOCATION %%r'\n"
-		   "e.g.\n"
-		   "  archive_cleanup_command = 'pg_archivecleanup /mnt/server/archiverdir %%r'\n");
-	printf("\n"
-		   "Or for use as a standalone archive cleaner:\n"
-		   "e.g.\n"
-		   "  pg_archivecleanup /mnt/server/archiverdir 000000010000000000000010.00000020.backup\n");
-	printf("\nReport bugs to <pgsql-bugs@postgresql.org>.\n");
+	printf(_("%s removes older WAL files from PostgreSQL archives.\n\n"), progname);
+	printf(_("Usage:\n"));
+	printf(_("  %s [OPTION]... ARCHIVELOCATION OLDESTKEPTWALFILE\n"), progname);
+	printf(_("\nOptions:\n"));
+	printf(_("  -d             generate debug output (verbose mode)\n"));
+	printf(_("  -n             dry run, show the names of the files that would be removed\n"));
+	printf(_("  -V, --version  output version information, then exit\n"));
+	printf(_("  -x EXT         clean up files if they have this extension\n"));
+	printf(_("  -?, --help     show this help, then exit\n"));
+	printf(_("\n"
+			 "For use as archive_cleanup_command in postgresql.conf:\n"
+			 "  archive_cleanup_command = 'pg_archivecleanup [OPTION]... ARCHIVELOCATION %%r'\n"
+			 "e.g.\n"
+			 "  archive_cleanup_command = 'pg_archivecleanup /mnt/server/archiverdir %%r'\n"));
+	printf(_("\n"
+			 "Or for use as a standalone archive cleaner:\n"
+			 "e.g.\n"
+			 "  pg_archivecleanup /mnt/server/archiverdir 000000010000000000000010.00000020.backup\n"));
+	printf(_("\nReport bugs to <pgsql-bugs@lists.postgresql.org>.\n"));
 }
 
 /*------------ MAIN ----------------------------------------*/
@@ -287,6 +281,8 @@ main(int argc, char **argv)
 {
 	int			c;
 
+	pg_logging_init(argv[0]);
+	set_pglocale_pgservice(argv[0], PG_TEXTDOMAIN("pg_archivecleanup"));
 	progname = get_progname(argv[0]);
 
 	if (argc > 1)
@@ -308,17 +304,17 @@ main(int argc, char **argv)
 		switch (c)
 		{
 			case 'd':			/* Debug mode */
-				debug = true;
+				pg_logging_set_level(PG_LOG_DEBUG);
 				break;
 			case 'n':			/* Dry-Run mode */
 				dryrun = true;
 				break;
 			case 'x':
-				additional_ext = strdup(optarg);		/* Extension to remove
-														 * from xlogfile names */
+				additional_ext = pg_strdup(optarg); /* Extension to remove
+													 * from xlogfile names */
 				break;
 			default:
-				fprintf(stderr, "Try \"%s --help\" for more information.\n", progname);
+				fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
 				exit(2);
 				break;
 		}
@@ -338,8 +334,8 @@ main(int argc, char **argv)
 	}
 	else
 	{
-		fprintf(stderr, "%s: must specify archive location\n", progname);
-		fprintf(stderr, "Try \"%s --help\" for more information.\n", progname);
+		pg_log_error("must specify archive location");
+		fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
 		exit(2);
 	}
 
@@ -350,15 +346,15 @@ main(int argc, char **argv)
 	}
 	else
 	{
-		fprintf(stderr, "%s: must specify restartfilename\n", progname);
-		fprintf(stderr, "Try \"%s --help\" for more information.\n", progname);
+		pg_log_error("must specify oldest kept WAL file");
+		fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
 		exit(2);
 	}
 
 	if (optind < argc)
 	{
-		fprintf(stderr, "%s: too many parameters\n", progname);
-		fprintf(stderr, "Try \"%s --help\" for more information.\n", progname);
+		pg_log_error("too many command-line arguments");
+		fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
 		exit(2);
 	}
 
@@ -372,13 +368,8 @@ main(int argc, char **argv)
 	 */
 	SetWALFileNameForCleanup();
 
-	if (debug)
-	{
-		snprintf(WALFilePath, MAXPGPATH, "%s/%s",
+	pg_log_debug("keeping WAL file \"%s/%s\" and later",
 				 archiveLocation, exclusiveCleanupFileName);
-		fprintf(stderr, "%s: keep WAL file \"%s\" and later\n",
-				progname, WALFilePath);
-	}
 
 	/*
 	 * Remove WAL files older than cut-off

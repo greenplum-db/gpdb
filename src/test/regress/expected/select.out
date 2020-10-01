@@ -438,19 +438,19 @@ SELECT p.name, p.age FROM person* p ORDER BY age using >, name;
 --
 -- Test some cases involving whole-row Var referencing a subquery
 --
-select foo from (select 1) as foo;
+select foo from (select 1 offset 0) as foo;
  foo 
 -----
  (1)
 (1 row)
 
-select foo from (select null) as foo;
+select foo from (select null offset 0) as foo;
  foo 
 -----
  ()
 (1 row)
 
-select foo from (select 'xyzzy',1,null) as foo;
+select foo from (select 'xyzzy',1,null offset 0) as foo;
     foo     
 ------------
  (xyzzy,1,)
@@ -737,6 +737,7 @@ SELECT * FROM foo ORDER BY f1 DESC NULLS LAST;
 -- Test planning of some cases with partial indexes
 --
 -- partial index is usable
+SET enable_seqscan TO off;
 explain (costs off)
 select * from onek2 where unique2 = 11 and stringu1 = 'ATAAAA';
                   QUERY PLAN                   
@@ -753,6 +754,18 @@ select * from onek2 where unique2 = 11 and stringu1 = 'ATAAAA';
 ---------+---------+-----+------+-----+--------+---------+----------+-------------+-----------+----------+-----+------+----------+----------+---------
      494 |      11 |   0 |    2 |   4 |     14 |       4 |       94 |          94 |       494 |      494 |   8 |    9 | ATAAAA   | LAAAAA   | VVVVxx
 (1 row)
+
+-- actually run the query with an analyze to use the partial index
+explain (costs off, analyze on, timing off, summary off)
+select * from onek2 where unique2 = 11 and stringu1 = 'ATAAAA';
+                              QUERY PLAN                               
+-----------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3) (actual rows=1 loops=1)
+   ->  Index Scan using onek2_u2_prtl on onek2 (actual rows=1 loops=1)
+         Index Cond: (unique2 = 11)
+         Filter: (stringu1 = 'ATAAAA'::name)
+ Optimizer: Postgres query optimizer
+(5 rows)
 
 explain (costs off)
 select unique2 from onek2 where unique2 = 11 and stringu1 = 'ATAAAA';
@@ -958,6 +971,19 @@ select * from (values (2),(null),(1)) v(k) where k = k;
  1
 (2 rows)
 
+-- Test partitioned tables with no partitions, which should be handled the
+-- same as the non-inheritance case when expanding its RTE.
+create table list_parted_tbl (a int,b int) partition by list (a);
+create table list_parted_tbl1 partition of list_parted_tbl
+  for values in (1) partition by list(b);
+explain (costs off) select * from list_parted_tbl;
+        QUERY PLAN        
+--------------------------
+ Result
+   One-Time Filter: false
+(2 rows)
+
+drop table list_parted_tbl;
 -- Test unsupported sorting operators
 CREATE TABLE nosort (i int);
 INSERT INTO nosort VALUES(1), (2);

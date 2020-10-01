@@ -92,6 +92,21 @@ SELECT '' AS eight, ss.f1 AS "Correlated Field", ss.f3 AS "Second Field"
 select q1, float8(count(*)) / (select count(*) from int8_tbl)
 from int8_tbl group by q1 order by q1;
 
+-- Unspecified-type literals in output columns should resolve as text
+
+SELECT *, pg_typeof(f1) FROM
+  (SELECT 'foo' AS f1 FROM generate_series(1,3)) ss ORDER BY 1;
+
+-- ... unless there's context to suggest differently
+
+explain (verbose, costs off) select '42' union all select '43';
+explain (verbose, costs off) select '42' union all select 43;
+
+-- check materialization of an initplan reference (bug #14524)
+explain (verbose, costs off)
+select 1 = all (select (select 1));
+select 1 = all (select (select 1));
+
 --
 -- Check EXISTS simplification with LIMIT
 --
@@ -364,6 +379,24 @@ with q as (select max(f1) from int4_tbl group by f1 order by f1)
   select q from q;  -- order none
 
 --
+-- Test case for sublinks pulled up into joinaliasvars lists in an
+-- inherited update/delete query
+--
+
+begin;  --  this shouldn't delete anything, but be safe
+
+delete from road
+where exists (
+  select 1
+  from
+    int4_tbl cross join
+    ( select f1, array(select q1 from int8_tbl) as arr
+      from text_tbl ) ss
+  where road.name = ss.f1 );
+
+rollback;
+
+--
 -- Test case for sublinks pushed down into subselects via join alias expansion
 --
 -- Greenplum note: This query will only work with ORCA. This type of query
@@ -409,6 +442,23 @@ insert into inner_7597 values(0, null);
 select * from outer_7597 where (f1, f2) not in (select * from inner_7597);
 
 --
+-- Similar test case using text that verifies that collation
+-- information is passed through by execTuplesEqual() in nodeSubplan.c
+-- (otherwise it would error in texteq())
+--
+
+create temp table outer_text (f1 text, f2 text);
+insert into outer_text values ('a', 'a');
+insert into outer_text values ('b', 'a');
+insert into outer_text values ('a', null);
+insert into outer_text values ('b', null);
+
+create temp table inner_text (c1 text, c2 text);
+insert into inner_text values ('a', null);
+
+select * from outer_text where (f1, f2) not in (select * from inner_text);
+
+--
 -- Test case for premature memory release during hashing of subplan output
 --
 
@@ -417,15 +467,16 @@ select '1'::text in (select '1'::name union all select '1'::name);
 --
 -- Test case for planner bug with nested EXISTS handling
 --
-select a.thousand from tenk1 a, tenk1 b
 -- GPDB_92_MERGE_FIXME: ORCA cannot decorrelate this query, and generates
--- correct-but-slow plan that takes 45 minutes. Wedge in a hack to
--- conditionally short-circuit it only when running under ORCA
-, (SELECT name, setting FROM pg_settings WHERE (name, setting) = ('optimizer', 'off')) AS FIXME
+-- correct-but-slow plan that takes 45 minutes. Revisit this when ORCA can
+-- reorder anti-joins
+set optimizer to off;
+select a.thousand from tenk1 a, tenk1 b
 where a.thousand = b.thousand
   and exists ( select 1 from tenk1 c where b.hundred = c.hundred
                    and not exists ( select 1 from tenk1 d
                                     where a.thousand = d.thousand ) );
+reset optimizer;
 
 --
 -- Check that nested sub-selects are not pulled up if they contain volatiles
@@ -442,6 +493,15 @@ explain (verbose, costs off)
 explain (verbose, costs off)
   select x, x from
     (select (select random() where y=y) as x from (values(1),(2)) v(y)) ss;
+
+--
+-- Check we don't misoptimize a NOT IN where the subquery returns no rows.
+--
+create temp table notinouter (a int);
+create temp table notininner (b int not null);
+insert into notinouter values (null), (1);
+
+select * from notinouter where a not in (select b from notininner);
 
 --
 -- Check we behave sanely in corner case of empty SELECT list (bug #8648)
@@ -476,9 +536,9 @@ select * from int4_tbl where
 --
 explain (verbose, costs off)
 select * from int4_tbl o where (f1, f1) in
-  (select f1, generate_series(1,2) / 10 g from int4_tbl i group by f1);
+  (select f1, generate_series(1,50) / 10 g from int4_tbl i group by f1);
 select * from int4_tbl o where (f1, f1) in
-  (select f1, generate_series(1,2) / 10 g from int4_tbl i group by f1);
+  (select f1, generate_series(1,50) / 10 g from int4_tbl i group by f1);
 
 --
 -- check for over-optimization of whole-row Var referencing an Append plan
@@ -494,7 +554,7 @@ from int4_tbl;
 -- Check that volatile quals aren't pushed down past a DISTINCT:
 -- nextval() should not be called more than the nominal number of times
 --
-create temp sequence ts1;
+create temp sequence ts1 cache 1;
 
 select * from
   (select distinct ten from tenk1) ss
@@ -504,9 +564,104 @@ select * from
 select nextval('ts1');
 
 --
+-- Check that volatile quals aren't pushed down past a set-returning function;
+-- while a nonvolatile qual can be, if it doesn't reference the SRF.
+--
+create function tattle(x int, y int) returns bool
+volatile language plpgsql as $$
+begin
+  raise notice 'x = %, y = %', x, y;
+  return x > y;
+end$$;
+
+explain (verbose, costs off)
+select * from
+  (select 9 as x, unnest(array[1,2,3,11,12,13]) as u) ss
+  where tattle(x, 8);
+
+select * from
+  (select 9 as x, unnest(array[1,2,3,11,12,13]) as u) ss
+  where tattle(x, 8);
+
+-- if we pretend it's stable, we get different results:
+alter function tattle(x int, y int) stable;
+
+explain (verbose, costs off)
+select * from
+  (select 9 as x, unnest(array[1,2,3,11,12,13]) as u) ss
+  where tattle(x, 8);
+
+select * from
+  (select 9 as x, unnest(array[1,2,3,11,12,13]) as u) ss
+  where tattle(x, 8);
+
+-- although even a stable qual should not be pushed down if it references SRF
+explain (verbose, costs off)
+select * from
+  (select 9 as x, unnest(array[1,2,3,11,12,13]) as u) ss
+  where tattle(x, u);
+
+select * from
+  (select 9 as x, unnest(array[1,2,3,11,12,13]) as u) ss
+  where tattle(x, u);
+
+drop function tattle(x int, y int);
+
+set optimizer to off;
+--
+-- Test that LIMIT can be pushed to SORT through a subquery that just projects
+-- columns.  We check for that having happened by looking to see if EXPLAIN
+-- ANALYZE shows that a top-N sort was used.  We must suppress or filter away
+-- all the non-invariant parts of the EXPLAIN ANALYZE output.
+--
+-- GPDB_12_MERGE_FIXME: we need to revisit the following test because it is not
+-- testing what it advertized in the above comment. Specificly, we don't
+-- execute top-N sort for the planner plan. Orca on the other hand never honors
+-- ORDER BY in a subquery, as permitted by the SQL spec.  Consider rewriting
+-- the test using a replicated table so that we get the plan stucture like
+-- this: Limit -> Subquery -> Sort
+--
+create table sq_limit (pk int primary key, c1 int, c2 int);
+insert into sq_limit values
+    (1, 1, 1),
+    (2, 2, 2),
+    (3, 3, 3),
+    (4, 4, 4),
+    (5, 1, 1),
+    (6, 2, 2),
+    (7, 3, 3),
+    (8, 4, 4);
+
+create function explain_sq_limit() returns setof text language plpgsql as
+$$
+declare ln text;
+begin
+    for ln in
+        explain (analyze, summary off, timing off, costs off)
+        select * from (select pk,c2 from sq_limit order by c1,pk) as x limit 3
+    loop
+        ln := regexp_replace(ln, 'Memory: \S*',  'Memory: xxx');
+        -- this case might occur if force_parallel_mode is on:
+        ln := regexp_replace(ln, 'Worker 0:  Sort Method',  'Sort Method');
+        return next ln;
+    end loop;
+end;
+$$;
+
+select * from explain_sq_limit();
+
+select * from (select pk,c2 from sq_limit order by c1,pk) as x limit 3;
+reset optimizer;
+
+drop function explain_sq_limit();
+
+drop table sq_limit;
+
+--
 -- Ensure that backward scan direction isn't propagated into
 -- expression subqueries (bug #15336)
 --
+
 --start_ignore
 begin;
 
@@ -519,3 +674,113 @@ fetch backward all in c1;
 
 commit;
 --end_ignore
+
+--
+-- Tests for CTE inlining behavior
+--
+
+set gp_cte_sharing to on;
+
+-- Basic subquery that can be inlined
+explain (verbose, costs off)
+with x as (select * from (select f1 from subselect_tbl) ss)
+select * from x where f1 = 1;
+
+-- Explicitly request materialization
+explain (verbose, costs off)
+with x as materialized (select * from (select f1 from subselect_tbl) ss)
+select * from x where f1 = 1;
+
+-- Stable functions are safe to inline
+explain (verbose, costs off)
+with x as (select * from (select f1, current_database() from subselect_tbl) ss)
+select * from x where f1 = 1;
+
+-- Volatile functions prevent inlining
+-- GPDB_12_MERGE_FIXME: inlining happens on GPDB: But the plan seems OK
+-- nevertheless. Is the GPDB planner smart, and notices that this is
+-- ok to inline, or is it doing something that would be unsafe in more
+-- complicated queries? Investigte
+explain (verbose, costs off)
+with x as (select * from (select f1, random() from subselect_tbl) ss)
+select * from x where f1 = 1;
+
+-- SELECT FOR UPDATE cannot be inlined
+-- GPDB_12_MERGE_FIXME: Without GDD, we don't do row locking, so it can be
+-- inlined. However at the moment, we seem to inline this even when GDD is
+-- enabled, losing the LockRows node altogether. That ought to be fixed.
+explain (verbose, costs off)
+with x as (select * from (select f1 from subselect_tbl for update) ss)
+select * from x where f1 = 1;
+
+-- Multiply-referenced CTEs are inlined only when requested
+explain (verbose, costs off)
+with x as (select * from (select f1, current_database() as n from subselect_tbl) ss)
+select * from x, x x2 where x.n = x2.n;
+
+explain (verbose, costs off)
+with x as not materialized (select * from (select f1, current_database() as n from subselect_tbl) ss)
+select * from x, x x2 where x.n = x2.n;
+
+-- Multiply-referenced CTEs can't be inlined if they contain outer self-refs
+-- start_ignore
+-- GPDB_12_MERGE_FIXME: This currenty produces incorrect results on GPDB.
+-- It's not a new issue, but it was exposed by this new upstream test case
+-- with the PostgreSQL v12 merge.
+-- See https://github.com/greenplum-db/gpdb/issues/10014
+explain (verbose, costs off)
+with recursive x(a) as
+  ((values ('a'), ('b'))
+   union all
+   (with z as not materialized (select * from x)
+    select z.a || z1.a as a from z cross join z as z1
+    where length(z.a || z1.a) < 5))
+select * from x;
+
+with recursive x(a) as
+  ((values ('a'), ('b'))
+   union all
+   (with z as not materialized (select * from x)
+    select z.a || z1.a as a from z cross join z as z1
+    where length(z.a || z1.a) < 5))
+select * from x;
+-- end_ignore
+
+explain (verbose, costs off)
+with recursive x(a) as
+  ((values ('a'), ('b'))
+   union all
+   (with z as not materialized (select * from x)
+    select z.a || z.a as a from z
+    where length(z.a || z.a) < 5))
+select * from x;
+
+with recursive x(a) as
+  ((values ('a'), ('b'))
+   union all
+   (with z as not materialized (select * from x)
+    select z.a || z.a as a from z
+    where length(z.a || z.a) < 5))
+select * from x;
+
+-- Check handling of outer references
+explain (verbose, costs off)
+with x as (select * from int4_tbl)
+select * from (with y as (select * from x) select * from y) ss;
+
+explain (verbose, costs off)
+with x as materialized (select * from int4_tbl)
+select * from (with y as (select * from x) select * from y) ss;
+
+-- Ensure that we inline the currect CTE when there are
+-- multiple CTEs with the same name
+explain (verbose, costs off)
+with x as (select 1 as y)
+select * from (with x as (select 2 as y) select * from x) ss;
+
+-- Row marks are not pushed into CTEs
+explain (verbose, costs off)
+with x as (select * from subselect_tbl)
+select * from x for update;
+
+set gp_cte_sharing to off;

@@ -59,7 +59,7 @@ WHERE (p1.typtype = 'c' AND p1.typrelid = 0) OR
 -- Look for types that should have an array type according to their typtype,
 -- but don't.  We exclude composites here because we have not bothered to
 -- make array types corresponding to the system catalogs' rowtypes.
--- NOTE: as of 9.1, this check finds pg_node_tree, smgr, and unknown.
+-- NOTE: as of v10, this check finds pg_node_tree, pg_ndistinct, smgr.
 SELECT p1.oid, p1.typname
 FROM pg_type as p1
 WHERE p1.typtype not in ('c','d','p') AND p1.typname NOT LIKE E'\\_%'
@@ -67,12 +67,13 @@ WHERE p1.typtype not in ('c','d','p') AND p1.typname NOT LIKE E'\\_%'
     (SELECT 1 FROM pg_type as p2
      WHERE p2.typname = ('_' || p1.typname)::name AND
            p2.typelem = p1.oid and p1.typarray = p2.oid);
- oid |   typname    
------+--------------
- 194 | pg_node_tree
- 210 | smgr
- 705 | unknown
-(3 rows)
+ oid  |     typname     
+------+-----------------
+  194 | pg_node_tree
+ 3361 | pg_ndistinct
+ 3402 | pg_dependencies
+ 5017 | pg_mcv_list
+(4 rows)
 
 -- Make sure typarray points to a varlena array type of our own base
 SELECT p1.oid, p1.typname as basetype, p2.typname as arraytype,
@@ -126,6 +127,35 @@ WHERE p1.typinput = p2.oid AND NOT
       p2.proargtypes[2] = 'int4'::regtype));
  oid | typname | oid | proname 
 -----+---------+-----+---------
+(0 rows)
+
+-- Check for type of the variadic array parameter's elements.
+-- provariadic should be ANYOID if the type of the last element is ANYOID,
+-- ANYELEMENTOID if the type of the last element is ANYARRAYOID, and otherwise
+-- the element type corresponding to the array type.
+SELECT oid::regprocedure, provariadic::regtype, proargtypes::regtype[]
+FROM pg_proc
+WHERE provariadic != 0
+AND case proargtypes[array_length(proargtypes, 1)-1]
+    WHEN 2276 THEN 2276 -- any -> any
+	WHEN 2277 THEN 2283 -- anyarray -> anyelement
+	ELSE (SELECT t.oid
+		  FROM pg_type t
+		  WHERE t.typarray = proargtypes[array_length(proargtypes, 1)-1])
+	END  != provariadic;
+ oid | provariadic | proargtypes 
+-----+-------------+-------------
+(0 rows)
+
+-- Check that all and only those functions with a variadic type have
+-- a variadic argument.
+SELECT oid::regprocedure, proargmodes, provariadic
+FROM pg_proc
+WHERE (proargmodes IS NOT NULL AND 'v' = any(proargmodes))
+    IS DISTINCT FROM
+    (provariadic != 0);
+ oid | proargmodes | provariadic 
+-----+-------------+-------------
 (0 rows)
 
 -- As of 8.0, this check finds refcursor, which is borrowing
@@ -474,32 +504,57 @@ WHERE t.typbasetype = 0 AND
     (t.typanalyze = 'array_typanalyze'::regproc) !=
     (typelem != 0 AND typlen < 0)
 ORDER BY 1;
- oid  |          typname          | typanalyze 
-------+---------------------------+------------
-   22 | int2vector                | -
-   30 | oidvector                 | -
- 7165 | _gp_hyperloglog_estimator | -
- 7199 | _complex                  | -
-(4 rows)
+ oid |  typname   | typanalyze 
+-----+------------+------------
+  22 | int2vector | -
+  30 | oidvector  | -
+(2 rows)
 
 -- **************** pg_class ****************
 -- Look for illegal values in pg_class fields
 SELECT p1.oid, p1.relname
 FROM pg_class as p1
-WHERE relkind NOT IN ('r', 'i', 's', 'S', 'c', 't', 'v', 'f') OR
+WHERE relkind NOT IN ('r', 'i', 'S', 't', 'v', 'm', 'c', 'f', 'p') OR
     relpersistence NOT IN ('p', 'u', 't') OR
     relreplident NOT IN ('d', 'n', 'f', 'i');
  oid | relname 
 -----+---------
 (0 rows)
 
--- Indexes should have an access method, others not.
+-- All tables and indexes should have an access method.
 SELECT p1.oid, p1.relname
 FROM pg_class as p1
-WHERE (p1.relkind = 'i' AND p1.relam = 0) OR
-    (p1.relkind != 'i' AND p1.relam != 0);
+WHERE p1.relkind NOT IN ('S', 'v', 'f', 'c') and
+    p1.relam = 0;
  oid | relname 
 -----+---------
+(0 rows)
+
+-- Conversely, sequences, views, types shouldn't have them
+SELECT p1.oid, p1.relname
+FROM pg_class as p1
+WHERE p1.relkind IN ('S', 'v', 'f', 'c') and
+    p1.relam != 0;
+ oid | relname 
+-----+---------
+(0 rows)
+
+-- Indexes should have AMs of type 'i'
+SELECT pc.oid, pc.relname, pa.amname, pa.amtype
+FROM pg_class as pc JOIN pg_am AS pa ON (pc.relam = pa.oid)
+WHERE pc.relkind IN ('i') and
+    pa.amtype != 'i';
+ oid | relname | amname | amtype 
+-----+---------+--------+--------
+(0 rows)
+
+-- Tables, matviews etc should have AMs of type 't'
+SELECT pc.oid, pc.relname, pa.amname, pa.amtype
+FROM pg_class as pc JOIN pg_am AS pa ON (pc.relam = pa.oid)
+WHERE pc.relkind IN ('r', 't', 'm') and
+    pa.amtype != 't';
+ oid | relname | amname | amtype 
+-----+---------+--------+--------
 (0 rows)
 
 -- **************** pg_attribute ****************

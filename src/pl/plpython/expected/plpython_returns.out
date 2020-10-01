@@ -29,110 +29,110 @@ CREATE FUNCTION test_return_void(s text)
 RETURNS void AS $$
   exec('y = ' + s)
   return y
-$$ language plpythonu;
+$$ LANGUAGE plpythonu;
 CREATE FUNCTION test_return_bool(s text) 
 RETURNS bool AS $$
   exec('y = ' + s)
   return y
-$$ language plpythonu;
+$$ LANGUAGE plpythonu;
 CREATE FUNCTION test_return_text(s text) 
 RETURNS text AS $$
   exec('y = ' + s)
   return y
-$$ language plpythonu;
+$$ LANGUAGE plpythonu;
 CREATE FUNCTION test_return_bytea(s text) 
 RETURNS bytea AS $$
   exec('y = ' + s)
   return y
-$$ language plpythonu;
+$$ LANGUAGE plpythonu;
 CREATE FUNCTION test_return_circle(s text) 
 RETURNS circle AS $$
   exec('y = ' + s)
   return y
-$$ language plpythonu;
+$$ LANGUAGE plpythonu;
 CREATE FUNCTION test_return_array_int(s text) 
 RETURNS int[] AS $$
   exec('y = ' + s)
   return y
-$$ language plpythonu;
+$$ LANGUAGE plpythonu;
 CREATE FUNCTION test_return_array_text(s text) 
 RETURNS text[] AS $$
   exec('y = ' + s)
   return y
-$$ language plpythonu;
+$$ LANGUAGE plpythonu;
 CREATE FUNCTION test_return_setof_void(s text) 
 RETURNS setof void AS $$
   exec('y = ' + s)
   return y
-$$ language plpythonu;
+$$ LANGUAGE plpythonu;
 CREATE FUNCTION test_return_setof_bool(s text) 
 RETURNS setof bool AS $$
   exec('y = ' + s)
   return y
-$$ language plpythonu;
+$$ LANGUAGE plpythonu;
 CREATE FUNCTION test_return_setof_text(s text) 
 RETURNS setof text AS $$
   exec('y = ' + s)
   return y
-$$ language plpythonu;
+$$ LANGUAGE plpythonu;
 CREATE FUNCTION test_return_setof_bytea(s text) 
 RETURNS setof bytea AS $$
   exec('y = ' + s)
   return y
-$$ language plpythonu;
+$$ LANGUAGE plpythonu;
 CREATE FUNCTION test_return_setof_circle(s text) 
 RETURNS setof circle AS $$
   exec('y = ' + s)
   return y
-$$ language plpythonu;
+$$ LANGUAGE plpythonu;
 -- RETURNS record types
 CREATE FUNCTION test_return_table_record(s text) 
 RETURNS table_record AS $$
   exec('y = ' + s)
   return y
-$$ language plpythonu;
+$$ LANGUAGE plpythonu;
 CREATE FUNCTION test_return_type_record(s text) 
 RETURNS type_record AS $$
   exec('y = ' + s)
   return y
-$$ language plpythonu;
+$$ LANGUAGE plpythonu;
 CREATE FUNCTION test_return_setof_table_record(s text) 
 RETURNS table_record AS $$
   exec('y = ' + s)
   return y
-$$ language plpythonu;
+$$ LANGUAGE plpythonu;
 CREATE FUNCTION test_return_setof_type_record(s text) 
 RETURNS type_record AS $$
   exec('y = ' + s)
   return y
-$$ language plpythonu;
+$$ LANGUAGE plpythonu;
 -- RETURNS with OUT Parameters
 CREATE FUNCTION test_return_out_text(s text, OUT text) 
 AS $$
   exec('y = ' + s)
   return y
-$$ language plpythonu;
+$$ LANGUAGE plpythonu;
 CREATE FUNCTION test_return_out_setof_text(s text, OUT text) 
 RETURNS setof text AS $$
   exec('y = ' + s)
   return y
-$$ language plpythonu;
+$$ LANGUAGE plpythonu;
 CREATE FUNCTION test_return_out_record(s text, OUT first text, OUT second int4) 
 AS $$
   exec('y = ' + s)
   return y
-$$ language plpythonu;
+$$ LANGUAGE plpythonu;
 CREATE FUNCTION test_return_out_setof_record(s text, OUT first text, OUT second int4)
 RETURNS setof record AS $$
   exec('y = ' + s)
   return y
-$$ language plpythonu;
+$$ LANGUAGE plpythonu;
 -- RETURNS TABLE
 CREATE FUNCTION test_return_table(s text) RETURNS TABLE(first text, second int4)
 AS $$
   exec('y = ' + s)
   return y
-$$ language plpythonu;
+$$ LANGUAGE plpythonu;
 -- =============================================
 -- TEST 1:  RETURN VALUE TESTING - Scalar values
 -- =============================================
@@ -980,19 +980,19 @@ SELECT * FROM test_return_array_int('[[1,2,3],[4,5,6]]');
 -- Error conditions
 -- Multi-dimensional array with non-fixed dimension sizes
 SELECT test_return_array_int('[[1,2,3],[1,2]]');
-ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 2 while expected 3 (plpy_elog.c:106)
+ERROR:  wrong length of inner sequence: has length 2, but 3 was expected
 SELECT * FROM test_return_array_int('[[1,2,3],[1,2]]');
-ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 2 while expected 3 (plpy_elog.c:106)
+ERROR:  wrong length of inner sequence: has length 2, but 3 was expected
 -- Multi-dimensional array with mix of arrays and atomic elements
 SELECT test_return_array_int('[[1,2,3],[1,[2,3],[4,5]]]');
-ERROR:  invalid input syntax for integer: "[2, 3]"
+ERROR:  invalid input syntax for type integer: "[2, 3]"
 SELECT * FROM test_return_array_int('[[1,2,3],[1,[2,3],[4,5]]]');
-ERROR:  invalid input syntax for integer: "[2, 3]"
+ERROR:  invalid input syntax for type integer: "[2, 3]"
 -- Multi-dimensional array with missing dimensions
 SELECT test_return_array_int('[[1,2,3],None,[4,5,6]]');
-ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length -1 while expected 3 (plpy_elog.c:106)
+ERROR:  wrong length of inner sequence: has length -1, but 3 was expected
 SELECT * FROM test_return_array_int('[[1,2,3],None,[4,5,6]]');
-ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length -1 while expected 3 (plpy_elog.c:106)
+ERROR:  wrong length of inner sequence: has length -1, but 3 was expected
 --
 -- Case 5: Return array of texts
 --
@@ -1053,19 +1053,19 @@ SELECT * FROM test_return_array_text('[["a","bcd","ef"],[None,"gh","ijklm"]]');
 -- Error conditions
 -- Multi-dimensional array with non-fixed dimension sizes
 SELECT test_return_array_text('[["a","bcd","ef"],[None,"gh","ijklm","ERROR"]]');
-ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 4 while expected 3 (plpy_elog.c:106)
+ERROR:  wrong length of inner sequence: has length 4, but 3 was expected
 SELECT * FROM test_return_array_text('[["a","bcd","ef"],[None,"gh","ijklm","ERROR"]]');
-ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 4 while expected 3 (plpy_elog.c:106)
+ERROR:  wrong length of inner sequence: has length 4, but 3 was expected
 -- Multi-dimensional array with mix of arrays and atomic elements
 SELECT test_return_array_text('[[["a"],"b"],["c",["d","e"]]]');
-ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 2 while expected 1 (plpy_elog.c:106)
+ERROR:  wrong length of inner sequence: has length 2, but 1 was expected
 SELECT * FROM test_return_array_text('[[["a"],"b"],["c",["d","e"]]]');
-ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 2 while expected 1 (plpy_elog.c:106)
+ERROR:  wrong length of inner sequence: has length 2, but 1 was expected
 -- Multi-dimensional array with missing dimensions
 SELECT test_return_array_text('[["abc","def"],None,["ghij","k"]]');
-ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length -1 while expected 2 (plpy_elog.c:106)
+ERROR:  wrong length of inner sequence: has length -1, but 2 was expected
 SELECT * FROM test_return_array_text('[["abc","def"],None,["ghij","k"]]');
-ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length -1 while expected 2 (plpy_elog.c:106)
+ERROR:  wrong length of inner sequence: has length -1, but 2 was expected
 -- ===================================================
 -- TEST 2:  RETURN VALUE TESTING - SETOF scalar values
 -- ===================================================
@@ -1873,9 +1873,9 @@ SELECT * FROM test_return_type_record('[False]');
 ERROR:  length of returned sequence did not match number of columns in row
 -- [ERROR] From Python non-empty list, wrong datatypes
 SELECT test_return_type_record('[4, "value"]');
-ERROR:  invalid input syntax for integer: "value"
+ERROR:  invalid input syntax for type integer: "value"
 SELECT * FROM test_return_type_record('[4, "value"]');
-ERROR:  invalid input syntax for integer: "value"
+ERROR:  invalid input syntax for type integer: "value"
 -- [ERROR] From Python empty dict
 SELECT test_return_type_record('{}');
 ERROR:  key "first" not found in mapping
@@ -2063,9 +2063,9 @@ SELECT * FROM test_return_table_record('[False]');
 ERROR:  length of returned sequence did not match number of columns in row
 -- [ERROR] From Python non-empty list, wrong datatypes
 SELECT test_return_table_record('[4, "value"]');
-ERROR:  invalid input syntax for integer: "value"
+ERROR:  invalid input syntax for type integer: "value"
 SELECT * FROM test_return_table_record('[4, "value"]');
-ERROR:  invalid input syntax for integer: "value"
+ERROR:  invalid input syntax for type integer: "value"
 -- [ERROR] From Python empty dict
 SELECT test_return_table_record('{}');
 ERROR:  key "first" not found in mapping
@@ -2118,17 +2118,17 @@ FROM gp_single_row;
 ERROR:  length of returned sequence did not match number of columns in row  (seg0 slice1 127.0.0.1:25432 pid=24014)
 -- From Python List
 SELECT test_return_setof_type_record('[ ("value", 4), {"first": "test", "second": 2} ]');
-ERROR:  invalid input syntax for integer: "{'second': 2, 'first': 'test'}"
+ERROR:  invalid input syntax for type integer: "{'second': 2, 'first': 'test'}"
 SELECT * FROM test_return_setof_type_record('[ None, ("value", 4), {"first": "test", "second": 2} ]');
 ERROR:  length of returned sequence did not match number of columns in row
 SELECT test_return_setof_type_record('[ ("value", 4), {"first": "test", "second": 2} ]')
 FROM gp_single_row;
-ERROR:  invalid input syntax for integer: "{'second': 2, 'first': 'test'}"  (seg0 slice1 127.0.0.1:25432 pid=24014)
+ERROR:  invalid input syntax for type integer: "{'second': 2, 'first': 'test'}"  (seg0 slice1 127.0.0.1:25432 pid=24014)
 SELECT (test_return_setof_type_record('[ ("value", 4), {"first": "test", "second": 2} ]')).*;
-ERROR:  invalid input syntax for integer: "{'second': 2, 'first': 'test'}"
+ERROR:  invalid input syntax for type integer: "{'second': 2, 'first': 'test'}"
 SELECT (test_return_setof_type_record('[ ("value", 4), {"first": "test", "second": 2} ]')).*
 FROM gp_single_row;
-ERROR:  invalid input syntax for integer: "{'second': 2, 'first': 'test'}"  (seg0 slice1 127.0.0.1:25432 pid=24014)
+ERROR:  invalid input syntax for type integer: "{'second': 2, 'first': 'test'}"  (seg0 slice1 127.0.0.1:25432 pid=24014)
 -- Error conditions
 -- [ERROR] From Python None
 SELECT test_return_setof_type_record('None');
@@ -2681,9 +2681,9 @@ SELECT * FROM test_return_out_record('[False]');
 ERROR:  length of returned sequence did not match number of columns in row
 -- [ERROR] From Python non-empty list, wrong datatypes
 SELECT test_return_out_record('[4, "value"]');
-ERROR:  invalid input syntax for integer: "value"
+ERROR:  invalid input syntax for type integer: "value"
 SELECT * FROM test_return_out_record('[4, "value"]');
-ERROR:  invalid input syntax for integer: "value"
+ERROR:  invalid input syntax for type integer: "value"
 -- [ERROR] From Python empty dict
 SELECT test_return_out_record('{}');
 ERROR:  key "first" not found in mapping
@@ -2937,9 +2937,9 @@ SELECT * FROM test_return_out_setof_record('[ [False] ]');
 ERROR:  length of returned sequence did not match number of columns in row
 -- [ERROR] From Python non-empty list, wrong datatypes
 SELECT test_return_out_setof_record('[ [4, "value"] ]');
-ERROR:  invalid input syntax for integer: "value"
+ERROR:  invalid input syntax for type integer: "value"
 SELECT * FROM test_return_out_setof_record('[ [4, "value"] ]');
-ERROR:  invalid input syntax for integer: "value"
+ERROR:  invalid input syntax for type integer: "value"
 -- [ERROR] From Python non-empty list, containing None
 SELECT test_return_out_setof_record('[ None ]');
  test_return_out_setof_record 
@@ -3093,9 +3093,9 @@ SELECT * FROM test_return_table('[ [False] ]');
 ERROR:  length of returned sequence did not match number of columns in row
 -- [ERROR] From Python non-empty list, wrong datatypes
 SELECT test_return_table('[ [4, "value"] ]');
-ERROR:  invalid input syntax for integer: "value"
+ERROR:  invalid input syntax for type integer: "value"
 SELECT * FROM test_return_table('[ [4, "value"] ]');
-ERROR:  invalid input syntax for integer: "value"
+ERROR:  invalid input syntax for type integer: "value"
 -- [ERROR] From Python non-empty list, containing None
 SELECT test_return_table('[ None, ["value", 4] ]');
  test_return_table 

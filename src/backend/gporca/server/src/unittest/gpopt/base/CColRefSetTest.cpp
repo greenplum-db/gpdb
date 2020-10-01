@@ -35,10 +35,8 @@
 GPOS_RESULT
 CColRefSetTest::EresUnittest()
 {
-	CUnittest rgut[] =
-		{
-		GPOS_UNITTEST_FUNC(CColRefSetTest::EresUnittest_Basics)
-		};
+	CUnittest rgut[] = {
+		GPOS_UNITTEST_FUNC(CColRefSetTest::EresUnittest_Basics)};
 
 	return CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
 }
@@ -66,13 +64,8 @@ CColRefSetTest::EresUnittest_Basics()
 	mda.RegisterProvider(CTestUtils::m_sysidDefault, pmdp);
 
 	// install opt context in TLS
-	CAutoOptCtxt aoc
-				(
-				mp,
-				&mda,
-				NULL, /* pceeval */
-				CTestUtils::GetCostModel(mp)
-				);
+	CAutoOptCtxt aoc(mp, &mda, NULL, /* pceeval */
+					 CTestUtils::GetCostModel(mp));
 
 	// get column factory from optimizer context object
 	CColumnFactory *col_factory = COptCtxt::PoctxtFromTLS()->Pcf();
@@ -83,9 +76,10 @@ CColRefSetTest::EresUnittest_Basics()
 	const IMDTypeInt4 *pmdtypeint4 = mda.PtMDType<IMDTypeInt4>();
 
 	ULONG num_cols = 10;
-	for(ULONG i = 0; i < num_cols; i++)
+	for (ULONG i = 0; i < num_cols; i++)
 	{
-		CColRef *colref = col_factory->PcrCreate(pmdtypeint4, default_type_modifier, name);
+		CColRef *colref =
+			col_factory->PcrCreate(pmdtypeint4, default_type_modifier, name);
 		pcrs->Include(colref);
 
 		GPOS_ASSERT(pcrs->FMember(colref));

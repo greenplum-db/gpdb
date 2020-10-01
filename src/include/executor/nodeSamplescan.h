@@ -4,7 +4,7 @@
  *
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/executor/nodeSamplescan.h
@@ -17,8 +17,7 @@
 #include "nodes/execnodes.h"
 
 extern SampleScanState *ExecInitSampleScan(SampleScan *node, EState *estate, int eflags);
-extern TupleTableSlot *ExecSampleScan(SampleScanState *node);
 extern void ExecEndSampleScan(SampleScanState *node);
 extern void ExecReScanSampleScan(SampleScanState *node);
 
-#endif   /* NODESAMPLESCAN_H */
+#endif							/* NODESAMPLESCAN_H */

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) 2017, Pivotal Software Inc.
 #
@@ -7,6 +7,7 @@ import os
 import sys
 from gppylib.commands import gp
 from gppylib import gpversion
+from functools import reduce
 
 gpverstr = gp.GpVersion.local("", os.getenv("GPHOME"))
 gpver = gpversion.GpVersion(gpverstr)
@@ -91,7 +92,7 @@ class cgroup(object):
             fullpath = os.path.join(self.mount_point, comp, compdir, path)
             pathtype = path[-1] == "/" and "directory" or "file"
             modebits = reduce(lambda x, y: x | y,
-                              map(lambda x: self.tab[x], mode), 0)
+                              [self.tab[x] for x in mode], 0)
 
             if not os.path.exists(fullpath):
                 self.die("%s '%s' does not exist" % (pathtype, fullpath))
@@ -99,7 +100,7 @@ class cgroup(object):
             if not os.access(fullpath, modebits):
                 self.die("%s '%s' permission denied: require permission '%s'" \
                          % (pathtype, fullpath, mode))
-        except IOError, e:
+        except IOError as e:
             self.die("can't check permission on %s '%s': %s" \
                      % (pathtype, fullpath, str(e)))
 

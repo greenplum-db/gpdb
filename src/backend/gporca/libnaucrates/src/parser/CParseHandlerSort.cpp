@@ -35,15 +35,11 @@ XERCES_CPP_NAMESPACE_USE
 //		Constructor
 //
 //---------------------------------------------------------------------------
-CParseHandlerSort::CParseHandlerSort
-	(
-	CMemoryPool *mp,
-	CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root
-	)
-	:
-	CParseHandlerPhysicalOp(mp, parse_handler_mgr, parse_handler_root),
-	m_dxl_op(NULL)
+CParseHandlerSort::CParseHandlerSort(CMemoryPool *mp,
+									 CParseHandlerManager *parse_handler_mgr,
+									 CParseHandlerBase *parse_handler_root)
+	: CParseHandlerPhysicalOp(mp, parse_handler_mgr, parse_handler_root),
+	  m_dxl_op(NULL)
 {
 }
 
@@ -57,51 +53,74 @@ CParseHandlerSort::CParseHandlerSort
 //
 //---------------------------------------------------------------------------
 void
-CParseHandlerSort::StartElement
-	(
-	const XMLCh* const, // element_uri,
-	const XMLCh* const element_local_name,
-	const XMLCh* const, // element_qname
-	const Attributes& attrs
-	)
+CParseHandlerSort::StartElement(const XMLCh *const,	 // element_uri,
+								const XMLCh *const element_local_name,
+								const XMLCh *const,	 // element_qname
+								const Attributes &attrs)
 {
-	if(0 != XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenPhysicalSort), element_local_name))
+	if (0 !=
+		XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenPhysicalSort),
+								 element_local_name))
 	{
-		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag, str->GetBuffer());
+		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
+			m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,
+				   str->GetBuffer());
 	}
-	
+
 	// parse and create Sort operator
-	m_dxl_op = (CDXLPhysicalSort *) CDXLOperatorFactory::MakeDXLSort(m_parse_handler_mgr->GetDXLMemoryManager(), attrs);
-	
+	m_dxl_op = (CDXLPhysicalSort *) CDXLOperatorFactory::MakeDXLSort(
+		m_parse_handler_mgr->GetDXLMemoryManager(), attrs);
+
 	// create and activate the parse handler for the children nodes in reverse
 	// order of their expected appearance
-	
+
 	// parse handler for the child
-	CParseHandlerBase *child_parse_handler = CParseHandlerFactory::GetParseHandler(m_mp, CDXLTokens::XmlstrToken(EdxltokenPhysical), m_parse_handler_mgr, this);
+	CParseHandlerBase *child_parse_handler =
+		CParseHandlerFactory::GetParseHandler(
+			m_mp, CDXLTokens::XmlstrToken(EdxltokenPhysical),
+			m_parse_handler_mgr, this);
 	m_parse_handler_mgr->ActivateParseHandler(child_parse_handler);
 
 	// create parse handlers for the limit count and offset expressions
-	CParseHandlerBase *offset_parse_handler = CParseHandlerFactory::GetParseHandler(m_mp, CDXLTokens::XmlstrToken(EdxltokenScalarLimitOffset), m_parse_handler_mgr, this);
+	CParseHandlerBase *offset_parse_handler =
+		CParseHandlerFactory::GetParseHandler(
+			m_mp, CDXLTokens::XmlstrToken(EdxltokenScalarLimitOffset),
+			m_parse_handler_mgr, this);
 	m_parse_handler_mgr->ActivateParseHandler(offset_parse_handler);
 
-	CParseHandlerBase *count_parse_handler = CParseHandlerFactory::GetParseHandler(m_mp, CDXLTokens::XmlstrToken(EdxltokenScalarLimitCount), m_parse_handler_mgr, this);
+	CParseHandlerBase *count_parse_handler =
+		CParseHandlerFactory::GetParseHandler(
+			m_mp, CDXLTokens::XmlstrToken(EdxltokenScalarLimitCount),
+			m_parse_handler_mgr, this);
 	m_parse_handler_mgr->ActivateParseHandler(count_parse_handler);
 
 	// parse handler for the sorting column list
-	CParseHandlerBase *sort_col_list_parse_handler = CParseHandlerFactory::GetParseHandler(m_mp, CDXLTokens::XmlstrToken(EdxltokenScalarSortColList), m_parse_handler_mgr, this);
+	CParseHandlerBase *sort_col_list_parse_handler =
+		CParseHandlerFactory::GetParseHandler(
+			m_mp, CDXLTokens::XmlstrToken(EdxltokenScalarSortColList),
+			m_parse_handler_mgr, this);
 	m_parse_handler_mgr->ActivateParseHandler(sort_col_list_parse_handler);
-	
+
 	// parse handler for the filter
-	CParseHandlerBase *filter_parse_handler = CParseHandlerFactory::GetParseHandler(m_mp, CDXLTokens::XmlstrToken(EdxltokenScalarFilter), m_parse_handler_mgr, this);
+	CParseHandlerBase *filter_parse_handler =
+		CParseHandlerFactory::GetParseHandler(
+			m_mp, CDXLTokens::XmlstrToken(EdxltokenScalarFilter),
+			m_parse_handler_mgr, this);
 	m_parse_handler_mgr->ActivateParseHandler(filter_parse_handler);
-	
+
 	// parse handler for the proj list
-	CParseHandlerBase *proj_list_parse_handler = CParseHandlerFactory::GetParseHandler(m_mp, CDXLTokens::XmlstrToken(EdxltokenScalarProjList), m_parse_handler_mgr, this);
+	CParseHandlerBase *proj_list_parse_handler =
+		CParseHandlerFactory::GetParseHandler(
+			m_mp, CDXLTokens::XmlstrToken(EdxltokenScalarProjList),
+			m_parse_handler_mgr, this);
 	m_parse_handler_mgr->ActivateParseHandler(proj_list_parse_handler);
-	
+
 	//parse handler for the properties of the operator
-	CParseHandlerBase *prop_parse_handler = CParseHandlerFactory::GetParseHandler(m_mp, CDXLTokens::XmlstrToken(EdxltokenProperties), m_parse_handler_mgr, this);
+	CParseHandlerBase *prop_parse_handler =
+		CParseHandlerFactory::GetParseHandler(
+			m_mp, CDXLTokens::XmlstrToken(EdxltokenProperties),
+			m_parse_handler_mgr, this);
 	m_parse_handler_mgr->ActivateParseHandler(prop_parse_handler);
 
 	// store parse handlers
@@ -123,34 +142,38 @@ CParseHandlerSort::StartElement
 //
 //---------------------------------------------------------------------------
 void
-CParseHandlerSort::EndElement
-	(
-	const XMLCh* const, // element_uri,
-	const XMLCh* const element_local_name,
-	const XMLCh* const // element_qname
-	)
+CParseHandlerSort::EndElement(const XMLCh *const,  // element_uri,
+							  const XMLCh *const element_local_name,
+							  const XMLCh *const  // element_qname
+)
 {
-	if(0 != XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenPhysicalSort), element_local_name))
+	if (0 !=
+		XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenPhysicalSort),
+								 element_local_name))
 	{
-		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
-		GPOS_RAISE
-			(
-			gpdxl::ExmaDXL,
-			gpdxl::ExmiDXLUnexpectedTag,
-			str->GetBuffer()
-			);
+		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
+			m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,
+				   str->GetBuffer());
 	}
-	
-	// construct node from the created child nodes
-	CParseHandlerProperties *prop_parse_handler = dynamic_cast<CParseHandlerProperties *>((*this)[0]);
-	CParseHandlerProjList *proj_list_parse_handler = dynamic_cast<CParseHandlerProjList*>((*this)[1]);
-	CParseHandlerFilter *filter_parse_handler = dynamic_cast<CParseHandlerFilter *>((*this)[2]);
-	CParseHandlerSortColList *sort_col_list_parse_handler = dynamic_cast<CParseHandlerSortColList *>((*this)[3]);
-	CParseHandlerScalarLimitCount *count_parse_handler = dynamic_cast<CParseHandlerScalarLimitCount *>((*this)[4]);
-	CParseHandlerScalarLimitOffset *offset_parse_handler = dynamic_cast<CParseHandlerScalarLimitOffset *>((*this)[5]);
-	CParseHandlerPhysicalOp *child_parse_handler = dynamic_cast<CParseHandlerPhysicalOp *>((*this)[6]);
 
-	m_dxl_node = GPOS_NEW(m_mp) CDXLNode(m_mp, m_dxl_op);	
+	// construct node from the created child nodes
+	CParseHandlerProperties *prop_parse_handler =
+		dynamic_cast<CParseHandlerProperties *>((*this)[0]);
+	CParseHandlerProjList *proj_list_parse_handler =
+		dynamic_cast<CParseHandlerProjList *>((*this)[1]);
+	CParseHandlerFilter *filter_parse_handler =
+		dynamic_cast<CParseHandlerFilter *>((*this)[2]);
+	CParseHandlerSortColList *sort_col_list_parse_handler =
+		dynamic_cast<CParseHandlerSortColList *>((*this)[3]);
+	CParseHandlerScalarLimitCount *count_parse_handler =
+		dynamic_cast<CParseHandlerScalarLimitCount *>((*this)[4]);
+	CParseHandlerScalarLimitOffset *offset_parse_handler =
+		dynamic_cast<CParseHandlerScalarLimitOffset *>((*this)[5]);
+	CParseHandlerPhysicalOp *child_parse_handler =
+		dynamic_cast<CParseHandlerPhysicalOp *>((*this)[6]);
+
+	m_dxl_node = GPOS_NEW(m_mp) CDXLNode(m_mp, m_dxl_op);
 	// set statictics and physical properties
 	CParseHandlerUtils::SetProperties(m_dxl_node, prop_parse_handler);
 
@@ -161,10 +184,10 @@ CParseHandlerSort::EndElement
 	AddChildFromParseHandler(count_parse_handler);
 	AddChildFromParseHandler(offset_parse_handler);
 	AddChildFromParseHandler(child_parse_handler);
-	
+
 #ifdef GPOS_DEBUG
 	m_dxl_op->AssertValid(m_dxl_node, false /* validate_children */);
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 	// deactivate handler
 	m_parse_handler_mgr->DeactivateHandler();

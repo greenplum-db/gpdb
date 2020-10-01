@@ -1408,9 +1408,9 @@ sub atmsort_bigloop
                     # ...)" construct, ignore it, because those constructs
                     # don't mean that the final result has to be in order.
                     my $t = $sql_statement;
-                    $t =~ s/over\s*\(order\s+by.*\)/xx/isg;
-                    $t =~ s/over\s*\((partition\s+by.*)?order\s+by.*\)/xx/isg;
-                    $t =~ s/window\s+\w+\s+as\s+\((partition\s+by.*)?order\s+by.*\)/xx/isg;
+                    $t =~ s/over\s*\(order\s+by/xx/isg;
+                    $t =~ s/over\s*\((partition\s+by.*)?order\s+by/xx/isg;
+                    $t =~ s/window\s+\w+\s+as\s+\((partition\s+by.*)?order\s+by/xx/isg;
                     $t =~ s/within\s+group\s*\((order\s+by.*)\)/xx/isg;
 
                     if ($t =~ m/order\s+by/is)

@@ -23,32 +23,25 @@ using namespace gpdxl;
 //
 //---------------------------------------------------------------------------
 void
-CParseHandlerPhysicalDynamicBitmapTableScan::StartElement
-	(
-	const XMLCh* const,  // element_uri
- 	const XMLCh* const element_local_name,
-	const XMLCh* const,  // element_qname
-	const Attributes& attrs
-	)
+CParseHandlerPhysicalDynamicBitmapTableScan::StartElement(
+	const XMLCh *const,	 // element_uri
+	const XMLCh *const element_local_name,
+	const XMLCh *const,	 // element_qname
+	const Attributes &attrs)
 {
-	StartElementHelper(element_local_name, EdxltokenPhysicalDynamicBitmapTableScan);
-	m_part_index_id = CDXLOperatorFactory::ExtractConvertAttrValueToUlong
-						(
-						m_parse_handler_mgr->GetDXLMemoryManager(),
-						attrs,
-						EdxltokenPartIndexId,
-						EdxltokenPhysicalDynamicBitmapTableScan
-						);
+	StartElementHelper(element_local_name,
+					   EdxltokenPhysicalDynamicBitmapTableScan);
+	m_part_index_id = CDXLOperatorFactory::ExtractConvertAttrValueToUlong(
+		m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenPartIndexId,
+		EdxltokenPhysicalDynamicBitmapTableScan);
 
-	m_part_index_id_printable = CDXLOperatorFactory::ExtractConvertAttrValueToUlong
-						(
-						m_parse_handler_mgr->GetDXLMemoryManager(),
-						attrs,
-						EdxltokenPartIndexIdPrintable,
-						EdxltokenPhysicalDynamicBitmapTableScan,
-						true, //is_optional
-						m_part_index_id
-						);
+	m_part_index_id_printable =
+		CDXLOperatorFactory::ExtractConvertAttrValueToUlong(
+			m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
+			EdxltokenPartIndexIdPrintable,
+			EdxltokenPhysicalDynamicBitmapTableScan,
+			true,  //is_optional
+			m_part_index_id);
 }
 
 //---------------------------------------------------------------------------
@@ -60,14 +53,15 @@ CParseHandlerPhysicalDynamicBitmapTableScan::StartElement
 //
 //---------------------------------------------------------------------------
 void
-CParseHandlerPhysicalDynamicBitmapTableScan::EndElement
-	(
-	const XMLCh* const,  // element_uri
-	const XMLCh* const element_local_name,
-	const XMLCh* const  // element_qname
-	)
+CParseHandlerPhysicalDynamicBitmapTableScan::EndElement(
+	const XMLCh *const,	 // element_uri
+	const XMLCh *const element_local_name,
+	const XMLCh *const	// element_qname
+)
 {
-	EndElementHelper(element_local_name, EdxltokenPhysicalDynamicBitmapTableScan, m_part_index_id, m_part_index_id_printable);
+	EndElementHelper(element_local_name,
+					 EdxltokenPhysicalDynamicBitmapTableScan, m_part_index_id,
+					 m_part_index_id_printable);
 }
 
 // EOF

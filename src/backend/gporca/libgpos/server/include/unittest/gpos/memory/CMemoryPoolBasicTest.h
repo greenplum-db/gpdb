@@ -23,40 +23,34 @@
 
 namespace gpos
 {
-	class CMemoryPoolBasicTest
-	{
-		private:
+class CMemoryPoolBasicTest
+{
+private:
+	static GPOS_RESULT EresTestType();
+	static GPOS_RESULT EresTestExpectedError(GPOS_RESULT (*pfunc)(),
+											 ULONG minor);
 
-			static GPOS_RESULT EresTestType();
-			static GPOS_RESULT EresTestExpectedError
-				(
-				GPOS_RESULT (*pfunc)(),
-				ULONG minor
-				);
-
-			static GPOS_RESULT EresNewDelete();
-			static GPOS_RESULT EresThrowingCtor();
+	static GPOS_RESULT EresNewDelete();
+	static GPOS_RESULT EresThrowingCtor();
 #ifdef GPOS_DEBUG
-			static GPOS_RESULT EresLeak();
-			static GPOS_RESULT EresLeakByException();
-#endif // GPOS_DEBUG
+	static GPOS_RESULT EresLeak();
+	static GPOS_RESULT EresLeakByException();
+#endif	// GPOS_DEBUG
 
-			static ULONG Size(ULONG offset);
+	static ULONG Size(ULONG offset);
 
-		public:
-
-			// unittests
-			static GPOS_RESULT EresUnittest();
+public:
+	// unittests
+	static GPOS_RESULT EresUnittest();
 #ifdef GPOS_DEBUG
-			static GPOS_RESULT EresUnittest_Print();
-#endif // GPOS_DEBUG
-			static GPOS_RESULT EresUnittest_TestTracker();
-			static GPOS_RESULT EresUnittest_TestSlab();
+	static GPOS_RESULT EresUnittest_Print();
+#endif	// GPOS_DEBUG
+	static GPOS_RESULT EresUnittest_TestTracker();
+	static GPOS_RESULT EresUnittest_TestSlab();
 
-	}; // class CMemoryPoolBasicTest
-}
+};	// class CMemoryPoolBasicTest
+}  // namespace gpos
 
-#endif // !GPOS_CMemoryPoolBasicTest_H
+#endif	// !GPOS_CMemoryPoolBasicTest_H
 
 // EOF
-

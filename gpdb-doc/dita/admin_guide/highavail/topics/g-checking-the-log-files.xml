@@ -5,7 +5,7 @@
   <title>Checking the Log Files for Failed Segments</title>
   <body>
     <p>Log files can provide information to help determine an error's cause. The master and segment
-      instances each have their own log file in <codeph>pg_log</codeph> of the data directory. The
+      instances each have their own log file in <codeph>log</codeph> of the data directory. The
       master log file contains the most information and you should always check it first. </p>
     <p>Use the <codeph><xref href="../../../utility_guide/ref/gplogfilter.xml"
           type="topic" format="dita"/></codeph> utility to check the Greenplum Database log files
@@ -24,7 +24,7 @@
           messages on each segment instance. For
           example:<codeblock>$ gpssh -f seg_hosts_file -e 'source 
 /usr/local/greenplum-db/greenplum_path.sh ; gplogfilter -t 
-/data1/primary/*/pg_log/gpdb*.log' &gt; seglog.out
+/data1/primary/*/log/gpdb*.log' &gt; seglog.out
 </codeblock>
         </li>
       </ol>

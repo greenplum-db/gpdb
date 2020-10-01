@@ -852,8 +852,14 @@
             <p>
               <xref href="guc-list.xml#stats_queue_level" type="section">stats_queue_level</xref>
             </p>
+            <p>
+              <xref href="guc-list.xml#track_activities" type="section">track_activities</xref>
+            </p>
           </stentry>
           <stentry>
+            <p>
+              <xref href="guc-list.xml#track_counts" type="section">track_counts</xref>
+            </p>
             <p>
               <xref href="guc-list.xml#update_process_title" type="section"
                 >update_process_title</xref>
@@ -1194,16 +1200,15 @@
                 >gp_reject_percent_threshold</xref>
             </p>
           </stentry>
-          <stentry>
-            <p>
+          <stentry><p>
               <xref href="guc-list.xml#readable_external_table_timeout" type="section"
                 >readable_external_table_timeout</xref>
-            </p>
-            <p>
+            </p><p>
               <xref href="guc-list.xml#writable_external_table_bufsize" type="section"
-                >writable_external_table_bufsize</xref></p>
-            <p><xref href="guc-list.xml#verify_gpfdists_cert">verify_gpfdists_cert</xref></p>
-          </stentry>
+                >writable_external_table_bufsize</xref></p><xref
+              href="guc-list.xml#write_to_gpfdist_timeout" type="section"
+              >write_to_gpfdist_timeout</xref><p><xref href="guc-list.xml#verify_gpfdists_cert"
+                >verify_gpfdists_cert</xref></p></stentry>
         </strow>
       </simpletable>
     </body>
@@ -1333,6 +1338,9 @@
                   >gp_interconnect_fc_method</xref>
               </p>
               <p>
+                <xref href="guc-list.xml#gp_interconnect_proxy_addresses" type="section"
+                  >gp_interconnect_proxy_addresses</xref></p>
+              <p>
                 <xref href="guc-list.xml#gp_interconnect_queue_depth" type="section"
                   >gp_interconnect_queue_depth</xref>
               </p>
@@ -1410,11 +1418,15 @@
             </stentry>
             <stentry>
               <p>
+                <xref href="guc-list.xml#gp_fts_probe_threadcount" type="section"
+                  >gp_fts_probe_threadcount</xref>
+              </p>
+              <p>
                 <xref href="guc-list.xml#gp_fts_probe_timeout" format="dita"/>
               </p>
               <p>
-                <xref href="guc-list.xml#gp_fts_probe_threadcount" type="section"
-                  >gp_fts_probe_threadcount</xref>
+                <xref href="guc-list.xml#gp_fts_replication_attempt_count" type="section"
+                  >gp_fts_replication_attempt_count</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#gp_log_fts" format="dita"/>

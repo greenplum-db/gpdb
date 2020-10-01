@@ -3636,32 +3636,27 @@ EXPLAIN SELECT a FROM qp_tab1 f1 LEFT JOIN qp_tab2 on a=c WHERE NOT EXISTS(SELEC
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
 (11 rows)
 
+-- start_ignore
+GPDB_12_MERGE_FIXME: Fallsback due to unsupported exec location.
+-- end_ignore
 EXPLAIN SELECT DISTINCT a FROM qp_tab1 WHERE NOT (SELECT TRUE FROM qp_tab2 WHERE EXISTS (SELECT * FROM qp_tab3 WHERE qp_tab2.c = qp_tab3.e));
-                                                             QUERY PLAN                                                             
-------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1765377.02 rows=1 width=4)
-   ->  GroupAggregate  (cost=0.00..1765377.02 rows=1 width=4)
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=3.15..3.18 rows=1 width=4)
+   InitPlan 1 (returns $0)  (slice2)
+     ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=1.02..2.14 rows=4 width=1)
+           ->  Hash Semi Join  (cost=1.02..2.07 rows=2 width=1)
+                 Hash Cond: (qp_tab2.c = qp_tab3.e)
+                 ->  Seq Scan on qp_tab2  (cost=0.00..1.01 rows=1 width=4)
+                 ->  Hash  (cost=1.01..1.01 rows=1 width=4)
+                       ->  Seq Scan on qp_tab3  (cost=0.00..1.01 rows=1 width=4)
+   ->  HashAggregate  (cost=3.15..3.16 rows=1 width=4)
          Group Key: qp_tab1.a
-         ->  Sort  (cost=0.00..1765377.02 rows=1 width=4)
-               Sort Key: qp_tab1.a
-               ->  Result  (cost=0.00..1765377.02 rows=1 width=4)
-                     Filter: (NOT (true))
-                     ->  Nested Loop Left Join  (cost=0.00..1765377.02 rows=1 width=5)
-                           Join Filter: true
-                           ->  Seq Scan on qp_tab1  (cost=0.00..431.00 rows=1 width=4)
-                           ->  Assert  (cost=0.00..862.00 rows=1 width=1)
-                                 Assert Cond: ((row_number() OVER (?)) = 1)
-                                 ->  Materialize  (cost=0.00..862.00 rows=1 width=9)
-                                       ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..862.00 rows=3 width=9)
-                                             ->  WindowAgg  (cost=0.00..862.00 rows=1 width=9)
-                                                   ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..862.00 rows=1 width=1)
-                                                         ->  Hash Semi Join  (cost=0.00..862.00 rows=1 width=1)
-                                                               Hash Cond: (qp_tab2.c = qp_tab3.e)
-                                                               ->  Seq Scan on qp_tab2  (cost=0.00..431.00 rows=1 width=4)
-                                                               ->  Hash  (cost=431.00..431.00 rows=1 width=4)
-                                                                     ->  Seq Scan on qp_tab3  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
-(22 rows)
+         ->  Result  (cost=0.00..1.01 rows=1 width=4)
+               One-Time Filter: (NOT $0)
+               ->  Seq Scan on qp_tab1  (cost=0.00..1.01 rows=1 width=4)
+ Optimizer: Postgres query optimizer
+(14 rows)
 
 SELECT DISTINCT a FROM qp_tab1 WHERE NOT (SELECT TRUE FROM qp_tab2 WHERE EXISTS (SELECT * FROM qp_tab3 WHERE qp_tab2.c = qp_tab3.e));
  a 

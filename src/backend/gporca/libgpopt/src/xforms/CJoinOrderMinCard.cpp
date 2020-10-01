@@ -35,23 +35,20 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CJoinOrderMinCard::CJoinOrderMinCard
-	(
-	CMemoryPool *mp,
-	CExpressionArray *pdrgpexprComponents,
-	CExpressionArray *pdrgpexprConjuncts
-	)
-	:
-	CJoinOrder(mp, pdrgpexprComponents, pdrgpexprConjuncts, true /* m_include_loj_childs */),
-	m_pcompResult(NULL)
+CJoinOrderMinCard::CJoinOrderMinCard(CMemoryPool *mp,
+									 CExpressionArray *pdrgpexprComponents,
+									 CExpressionArray *pdrgpexprConjuncts)
+	: CJoinOrder(mp, pdrgpexprComponents, pdrgpexprConjuncts,
+				 true /* m_include_loj_childs */),
+	  m_pcompResult(NULL)
 {
 #ifdef GPOS_DEBUG
 	for (ULONG ul = 0; ul < m_ulComps; ul++)
 	{
 		GPOS_ASSERT(NULL != m_rgpcomp[ul]->m_pexpr->Pstats() &&
-				"stats were not derived on input component");
+					"stats were not derived on input component");
 	}
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 }
 
 
@@ -86,8 +83,10 @@ CJoinOrderMinCard::PexprExpand()
 	while (ulCoveredComps < m_ulComps)
 	{
 		CDouble dMinRows(0.0);
-		SComponent *pcompBest = NULL; // best component to be added to current result
-		SComponent *pcompBestResult = NULL; // result after adding best component
+		SComponent *pcompBest =
+			NULL;  // best component to be added to current result
+		SComponent *pcompBestResult =
+			NULL;  // result after adding best component
 
 		for (ULONG ul = 0; ul < m_ulComps; ul++)
 		{
@@ -104,7 +103,8 @@ CJoinOrderMinCard::PexprExpand()
 			}
 
 			// combine component with current result and derive stats
-			CJoinOrder::SComponent *pcompTemp = PcompCombine(m_pcompResult, pcompCurrent);
+			CJoinOrder::SComponent *pcompTemp =
+				PcompCombine(m_pcompResult, pcompCurrent);
 			DeriveStats(pcompTemp->m_pexpr);
 			CDouble rows = pcompTemp->m_pexpr->Pstats()->Rows();
 
@@ -161,11 +161,7 @@ CJoinOrderMinCard::PexprExpand()
 //
 //---------------------------------------------------------------------------
 IOstream &
-CJoinOrderMinCard::OsPrint
-	(
-	IOstream &os
-	)
-	const
+CJoinOrderMinCard::OsPrint(IOstream &os) const
 {
 	if (NULL != m_pcompResult->m_pexpr)
 	{

@@ -12,10 +12,13 @@
  *------------------------------------------------------------------------------
 */
 #include "postgres.h"
+
 #include "access/appendonly_visimap.h"
 #include "access/appendonly_visimap_entry.h"
 #include "access/appendonly_visimap_store.h"
+#include "access/table.h"
 #include "catalog/namespace.h"
+#include "catalog/pg_am.h"
 #include "catalog/pg_appendonly_fn.h"
 #include "cdb/cdbappendonlyblockdirectory.h"
 #include "utils/guc.h"
@@ -35,6 +38,8 @@ gp_aovisimap(PG_FUNCTION_ARGS)
 	HeapTuple	tuple;
 	Datum		result;
 
+    Oid visimaprelid;
+    Oid visimapidxid;
 	typedef struct Context
 	{
 		Relation	aorel;
@@ -60,7 +65,7 @@ gp_aovisimap(PG_FUNCTION_ARGS)
 		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
 
 		/* build tupdesc for result tuples */
-		tupdesc = CreateTemplateTupleDesc(3, false);
+		tupdesc = CreateTemplateTupleDesc(3);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "tid",
 						   TIDOID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "segno",
@@ -76,19 +81,24 @@ gp_aovisimap(PG_FUNCTION_ARGS)
 		 */
 		context = (Context *) palloc0(sizeof(Context));
 
-		context->aorel = heap_open(aoRelOid, AccessShareLock);
+		context->aorel = table_open(aoRelOid, AccessShareLock);
 		if (!RelationIsAppendOptimized(context->aorel))
-		{
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("function not supported on relation")));
-		}
+
+		Snapshot sst = GetLatestSnapshot();
+
+        GetAppendOnlyEntryAuxOids(context->aorel->rd_id, sst,
+                                  NULL, NULL, NULL,
+                                  &visimaprelid, &visimapidxid);
 
 		AppendOnlyVisimapScan_Init(&context->visiMapScan,
-								   context->aorel->rd_appendonly->visimaprelid,
-								   context->aorel->rd_appendonly->visimapidxid,
+								   visimaprelid,
+								   visimapidxid,
 								   AccessShareLock,
-								   GetLatestSnapshot());
+								   sst);
+
 		AOTupleIdSetInvalid(&context->aoTupleId);
 
 		funcctx->user_fctx = (void *) context;
@@ -120,7 +130,7 @@ gp_aovisimap(PG_FUNCTION_ARGS)
 	}
 
 	AppendOnlyVisimapScan_Finish(&context->visiMapScan, AccessShareLock);
-	heap_close(context->aorel, AccessShareLock);
+	table_close(context->aorel, AccessShareLock);
 	pfree(context);
 	funcctx->user_fctx = NULL;
 	SRF_RETURN_DONE(funcctx);
@@ -136,6 +146,8 @@ gp_aovisimap_hidden_info(PG_FUNCTION_ARGS)
 	bool		nulls[3];
 	HeapTuple	tuple;
 	Datum		result;
+    Oid         visimaprelid;
+    Oid         visimapidxid;
 
 	typedef struct Context
 	{
@@ -168,7 +180,7 @@ gp_aovisimap_hidden_info(PG_FUNCTION_ARGS)
 		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
 
 		/* build tupdesc for result tuples */
-		tupdesc = CreateTemplateTupleDesc(3, false);
+		tupdesc = CreateTemplateTupleDesc(3);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "segno",
 						   INT4OID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "hidden_tupcount",
@@ -184,18 +196,21 @@ gp_aovisimap_hidden_info(PG_FUNCTION_ARGS)
 		 */
 		context = (Context *) palloc0(sizeof(Context));
 
-		context->parentRelation = heap_open(aoRelOid, AccessShareLock);
+		context->parentRelation = table_open(aoRelOid, AccessShareLock);
 		if (!RelationIsAppendOptimized(context->parentRelation))
-		{
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("function not supported on relation")));
-		}
 
+        Oid segrelid;
 		snapshot = GetLatestSnapshot();
+        GetAppendOnlyEntryAuxOids(context->parentRelation->rd_id, snapshot,
+                                  &segrelid, NULL, NULL,
+                                  &visimaprelid, &visimapidxid);
+
 		AppendOnlyVisimap_Init(&context->visiMap,
-							   context->parentRelation->rd_appendonly->visimaprelid,
-							   context->parentRelation->rd_appendonly->visimapidxid,
+							   visimaprelid,
+							   visimapidxid,
 							   AccessShareLock,
 							   snapshot);
 
@@ -273,7 +288,7 @@ gp_aovisimap_hidden_info(PG_FUNCTION_ARGS)
 		context->aocsSegfileInfo = NULL;
 
 	}
-	heap_close(context->parentRelation, AccessShareLock);
+	table_close(context->parentRelation, AccessShareLock);
 	pfree(context);
 	funcctx->user_fctx = NULL;
 
@@ -311,6 +326,8 @@ gp_aovisimap_entry(PG_FUNCTION_ARGS)
 	bool		nulls[4];
 	HeapTuple	tuple;
 	Datum		result;
+    Oid         visimaprelid;
+    Oid         visimapidxid;
 
 	typedef struct Context
 	{
@@ -318,7 +335,7 @@ gp_aovisimap_entry(PG_FUNCTION_ARGS)
 
 		Relation	parentRelation;
 
-		IndexScanDesc indexScan;
+		SysScanDesc indexScan;
 
 		text	   *bitmapBuffer;
 	} Context;
@@ -340,7 +357,7 @@ gp_aovisimap_entry(PG_FUNCTION_ARGS)
 		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
 
 		/* build tupdesc for result tuples */
-		tupdesc = CreateTemplateTupleDesc(4, false);
+		tupdesc = CreateTemplateTupleDesc(4);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "segno",
 						   INT4OID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "first_row_num",
@@ -358,19 +375,23 @@ gp_aovisimap_entry(PG_FUNCTION_ARGS)
 		 */
 		context = (Context *) palloc0(sizeof(Context));
 
-		context->parentRelation = heap_open(aoRelOid, AccessShareLock);
+		context->parentRelation = table_open(aoRelOid, AccessShareLock);
 		if (!RelationIsAppendOptimized(context->parentRelation))
-		{
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("function not supported on relation")));
-		}
+
+        Snapshot sst = GetLatestSnapshot();
+
+        GetAppendOnlyEntryAuxOids(context->parentRelation->rd_id, sst,
+                                  NULL, NULL, NULL,
+                                  &visimaprelid, &visimapidxid);
 
 		AppendOnlyVisimap_Init(&context->visiMap,
-							   context->parentRelation->rd_appendonly->visimaprelid,
-							   context->parentRelation->rd_appendonly->visimapidxid,
+							   visimaprelid,
+							   visimapidxid,
 							   AccessShareLock,
-							   GetLatestSnapshot());
+							   sst);
 
 		context->indexScan = AppendOnlyVisimapStore_BeginScan(&
 															  context->visiMap.visimapStore, 0, NULL);
@@ -414,7 +435,7 @@ gp_aovisimap_entry(PG_FUNCTION_ARGS)
 	AppendOnlyVisimapStore_EndScan(&context->visiMap.visimapStore,
 								   context->indexScan);
 	AppendOnlyVisimap_Finish(&context->visiMap, AccessShareLock);
-	heap_close(context->parentRelation, AccessShareLock);
+	table_close(context->parentRelation, AccessShareLock);
 
 	pfree(context->bitmapBuffer);
 	pfree(context);

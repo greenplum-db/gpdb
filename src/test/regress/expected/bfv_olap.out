@@ -135,53 +135,53 @@ create table ema_test (k int, v float ) distributed by (k);
 insert into ema_test select i, 4*(i::float/20) + 10.0*(1+cos(radians(i*5))) from generate_series(0,19) i(i);
 -- TEST
 select k, v, ema(v, 0.9) over (order by k) from ema_test order by k;
- k  |        v         |       ema        
-----+------------------+------------------
-  0 |               20 |               20
-  1 | 20.1619469809175 | 20.1457522828257
-  2 | 20.2480775301221 | 20.2378450053924
-  3 | 20.2592582628907 | 20.2571169371409
-  4 | 20.1969262078591 | 20.2029452807873
-  5 | 20.0630778703665 | 20.0770646114086
-  6 | 19.8602540378444 | 19.8819350952008
-  7 | 19.5915204428899 |  19.620561908121
-  8 | 19.2604444311898 | 19.2964561788829
-  9 | 18.8710678118655 | 18.9136066485672
- 10 | 18.4278760968654 | 18.4764491520356
- 11 | 17.9357643635105 |  17.989832842363
- 12 |             17.4 | 17.4589832842363
- 13 |  16.826182617407 | 16.8894626840899
- 14 | 16.2202014332567 |   16.28712755834
- 15 | 15.5881904510252 | 15.6580841617567
- 16 | 14.9364817766693 |  15.008642015178
- 17 | 14.2715574274766 | 14.3452658862467
- 18 |             13.6 | 13.6745265886247
- 19 | 12.9284425725234 | 13.0030509741335
+ k  |         v          |        ema         
+----+--------------------+--------------------
+  0 |                 20 |                 20
+  1 | 20.161946980917456 |  20.14575228282571
+  2 |  20.24807753012208 | 20.237845005392444
+  3 | 20.259258262890683 | 20.257116937140857
+  4 | 20.196926207859086 |  20.20294528078726
+  5 |   20.0630778703665 | 20.077064611408574
+  6 |  19.86025403784439 | 19.881935095200806
+  7 | 19.591520442889916 | 19.620561908121005
+  8 | 19.260444431189782 | 19.296456178882906
+  9 | 18.871067811865476 | 18.913606648567217
+ 10 | 18.427876096865393 | 18.476449152035578
+ 11 |  17.93576436351046 | 17.989832842362972
+ 12 |               17.4 | 17.458983284236297
+ 13 | 16.826182617406996 | 16.889462684089928
+ 14 |  16.22020143325669 | 16.287127558340014
+ 15 | 15.588190451025207 | 15.658084161756689
+ 16 | 14.936481776669304 | 15.008642015178042
+ 17 | 14.271557427476582 | 14.345265886246727
+ 18 |               13.6 | 13.674526588624673
+ 19 | 12.928442572523416 | 13.003050974133542
 (20 rows)
 
 select k, v, ema(v, 0.9) over (order by k rows between unbounded preceding and current row) from ema_test order by k;
- k  |        v         |       ema        
-----+------------------+------------------
-  0 |               20 |               20
-  1 | 20.1619469809175 | 20.1457522828257
-  2 | 20.2480775301221 | 20.2378450053924
-  3 | 20.2592582628907 | 20.2571169371409
-  4 | 20.1969262078591 | 20.2029452807873
-  5 | 20.0630778703665 | 20.0770646114086
-  6 | 19.8602540378444 | 19.8819350952008
-  7 | 19.5915204428899 |  19.620561908121
-  8 | 19.2604444311898 | 19.2964561788829
-  9 | 18.8710678118655 | 18.9136066485672
- 10 | 18.4278760968654 | 18.4764491520356
- 11 | 17.9357643635105 |  17.989832842363
- 12 |             17.4 | 17.4589832842363
- 13 |  16.826182617407 | 16.8894626840899
- 14 | 16.2202014332567 |   16.28712755834
- 15 | 15.5881904510252 | 15.6580841617567
- 16 | 14.9364817766693 |  15.008642015178
- 17 | 14.2715574274766 | 14.3452658862467
- 18 |             13.6 | 13.6745265886247
- 19 | 12.9284425725234 | 13.0030509741335
+ k  |         v          |        ema         
+----+--------------------+--------------------
+  0 |                 20 |                 20
+  1 | 20.161946980917456 |  20.14575228282571
+  2 |  20.24807753012208 | 20.237845005392444
+  3 | 20.259258262890683 | 20.257116937140857
+  4 | 20.196926207859086 |  20.20294528078726
+  5 |   20.0630778703665 | 20.077064611408574
+  6 |  19.86025403784439 | 19.881935095200806
+  7 | 19.591520442889916 | 19.620561908121005
+  8 | 19.260444431189782 | 19.296456178882906
+  9 | 18.871067811865476 | 18.913606648567217
+ 10 | 18.427876096865393 | 18.476449152035578
+ 11 |  17.93576436351046 | 17.989832842362972
+ 12 |               17.4 | 17.458983284236297
+ 13 | 16.826182617406996 | 16.889462684089928
+ 14 |  16.22020143325669 | 16.287127558340014
+ 15 | 15.588190451025207 | 15.658084161756689
+ 16 | 14.936481776669304 | 15.008642015178042
+ 17 | 14.271557427476582 | 14.345265886246727
+ 18 |               13.6 | 13.674526588624673
+ 19 | 12.928442572523416 | 13.003050974133542
 (20 rows)
 
 -- CLEANUP
@@ -208,8 +208,8 @@ CREATE TABLE r
     d NUMERIC(10,0), 
     e DATE
 ) DISTRIBUTED BY (a,b);
+ALTER TABLE r SET DISTRIBUTED BY (b);
 ALTER TABLE r ADD CONSTRAINT PKEY PRIMARY KEY (b);
-NOTICE:  updating distribution policy to match new PRIMARY KEY
 --TEST
 SELECT MAX(a) AS m FROM r GROUP BY b ORDER BY m;
  m 
@@ -591,6 +591,101 @@ select cn, sum(qty) from sale group by rollup(cn,vn) having sum(qty)=1144;
     | 1144
 (1 row)
 
+--
+-- Test a query with window function over an aggregate, and a subquery.
+--
+-- Github Issue https://github.com/greenplum-db/gpdb/issues/10143
+create table t1_github_issue_10143(
+  base_ym varchar(6),
+  code varchar(5),
+  name varchar(60)
+);
+create table t2_github_issue_10143(
+  base_ym varchar(6),
+  dong varchar(8),
+  code varchar(6),
+  salary numeric(18)
+);
+insert into t1_github_issue_10143 values ('a', 'acode', 'aname');
+insert into t2_github_issue_10143 values ('a', 'adong', 'acode', 1000);
+insert into t2_github_issue_10143 values ('b', 'bdong', 'bcode', 1100);
+set optimizer_trace_fallback = on;
+explain select (select name from t1_github_issue_10143 where code = a.code limit 1) as dongnm
+,sum(sum(a.salary)) over()
+from t2_github_issue_10143 a
+group by a.code;
+                                                QUERY PLAN                                                
+----------------------------------------------------------------------------------------------------------
+ WindowAgg  (cost=1.02..2075.51 rows=1 width=176)
+   ->  Finalize GroupAggregate  (cost=1.02..1408.47 rows=1 width=38)
+         Group Key: a.code
+         ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=1.02..1408.45 rows=2 width=38)
+               Merge Key: a.code
+               ->  Partial GroupAggregate  (cost=1.02..1.04 rows=1 width=38)
+                     Group Key: a.code
+                     ->  Sort  (cost=1.02..1.02 rows=1 width=11)
+                           Sort Key: a.code
+                           ->  Seq Scan on t2_github_issue_10143 a  (cost=0.00..1.01 rows=1 width=11)
+   SubPlan 1
+     ->  Limit  (cost=0.00..667.02 rows=1 width=6)
+           ->  Result  (cost=0.00..2001.06 rows=3 width=6)
+                 Filter: ((t1_github_issue_10143.code)::text = (a.code)::text)
+                 ->  Materialize  (cost=0.00..2001.03 rows=3 width=12)
+                       ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2001.01 rows=3 width=12)
+                             ->  Seq Scan on t1_github_issue_10143  (cost=0.00..1.01 rows=1 width=12)
+ Optimizer: Postgres query optimizer
+(18 rows)
+
+select (select name from t1_github_issue_10143 where code = a.code limit 1) as dongnm
+,sum(sum(a.salary)) over()
+from t2_github_issue_10143 a
+group by a.code;
+ dongnm | sum  
+--------+------
+ aname  | 2100
+        | 2100
+(2 rows)
+
+select * from (select sum(a.salary) over(), count(*)
+               from t2_github_issue_10143 a
+               group by a.salary) T;
+ sum  | count 
+------+-------
+ 2100 |     1
+ 2100 |     1
+(2 rows)
+
+-- this query currently falls back, needs to be fixed
+select (select rn from (select row_number() over () as rn, name
+                        from t1_github_issue_10143
+                        where code = a.code
+                        group by name) T
+       ) as dongnm
+,sum(sum(a.salary)) over()
+from t2_github_issue_10143 a
+group by a.code;
+ dongnm | sum  
+--------+------
+      1 | 2100
+        | 2100
+(2 rows)
+
+with cte as (select row_number() over (order by code) as rn1, code
+             from t2_github_issue_10143
+             group by code)
+select row_number() over (order by name) as rn2, name
+from t1_github_issue_10143
+group by name
+union all
+select * from cte;
+ rn2 | name  
+-----+-------
+   1 | aname
+   1 | acode
+   2 | bcode
+(3 rows)
+
+reset optimizer_trace_fallback;
 -- CLEANUP
 -- start_ignore
 drop schema bfv_olap cascade;

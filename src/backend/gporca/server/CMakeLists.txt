@@ -26,10 +26,6 @@ if (COMPILER_HAS_WNO_LONG_LONG)
                                 PROPERTIES COMPILE_FLAGS "-Wno-long-long")
 endif()
 
-option(ENABLE_EXTENDED_TESTS
-       "Enable extended tests for fault-injection and timing that may take a long time to run."
-       OFF)
-
 # Convenience function to add the test specified by 'TEST_NAME' to the set of
 # tests to be run by CTest.
 function(add_orca_test TEST_NAME)
@@ -113,7 +109,10 @@ IndexApply-InnerSelect-Basic IndexApply-InnerSelect-PartTable IndexApply-PartKey
 IndexApply-InnerSelect-Heterogeneous-DTS IndexApply-Heterogeneous-BothSidesPartitioned
 IndexApply-InnerSelect-PartTable2 IndexApply-ForPartialIndex CastedScalarIf-On-Index-Key
 IndexApply-MultiDistKey-WithComplexPreds IndexApply-MultiDistKeys-Bitmap
-IndexApply-MultiDistKeys-Bitmap-WithComplexPreds;
+IndexApply-MultiDistKeys-Bitmap-WithComplexPreds
+BitmapIndexNLJWithProject BitmapIndexNLOJWithProject
+BitmapIndexNLJWithProjectNoFilt BtreeIndexNLJWithProjectNoPart
+BitmapIndexNLOJWithProjectNonPart BtreeIndexNLOJWithProject;
 
 CDynamicIndexScanTest:
 DynamicIndexScan-Homogenous DynamicIndexScan-BoolTrue DynamicIndexScan-BoolFalse
@@ -141,13 +140,17 @@ SingleColumnHomogenousIndexOnRoot-AO SingleColumnHomogenousIndexOnRoot-HEAP;
 
 CStatsTest:
 Stat-Derivation-Leaf-Pattern MissingBoolColStats JoinColWithOnlyNDV UnsupportedStatsPredicate
-StatsFilter-AnyWithNewColStats;
+StatsFilter-AnyWithNewColStats EquiJoinOnExpr-Supported EquiJoinOnExpr-Unsupported;
 
 CICGMiscTest:
 BroadcastSkewedHashjoin OrderByNullsFirst ConvertHashToRandomSelect ConvertHashToRandomInsert HJN-DeeperOuter CTAS CTAS-Random CheckAsUser
 ProjectRepeatedColumn1 ProjectRepeatedColumn2 NLJ-BC-Outer-Spool-Inner Self-Comparison Self-Comparison-Nullable
 SelectCheckConstraint ExpandJoinOrder SelectOnBpchar EqualityJoin EffectsOfJoinFilter InnerJoin-With-OuterRefs
-UDA-AnyElement-1 UDA-AnyElement-2 Project-With-NonScalar-Func SixWayDPv2 MultipleDampedPredJoinCardinality MultipleIndependentPredJoinCardinality Join-Varchar-Equality;
+UDA-AnyElement-1 UDA-AnyElement-2 Project-With-NonScalar-Func SixWayDPv2 Join-Varchar-Equality;
+
+CJoinPredTest:
+MultipleDampedPredJoinCardinality MultipleIndependentPredJoinCardinality MultiDistKeyJoinCardinality
+MultiDistKeyWithOtherPredsJoinCardinality NoDistKeyMultiPredJoinCardinality OneDistKeyMultiPredJoinCardinality;
 
 CArrayCmpTest:
 ArrayConcat ArrayRef FoldedArrayCmp IN-ArrayCmp NOT-IN-ArrayCmp ArrayCmpAll UDA-AnyArray InClauseWithMCV
@@ -196,6 +199,12 @@ PartTbl-PredicateWithCastMultiLevelList PartTbl-WindowFuncPredPushDown
 PartTbl-WindowFuncPartialPredPushDown PartTbl-WindowFuncNoPredPushDown
 PartTbl-WindowFuncNoDisjunctPredPushDown PartTbl-WindowFuncSinglePredPushDown;
 
+CPartTableLossyCastTest:
+RangePartLossyCastLTEqOnEndPartitionRange RangePartLossyCastLTOnEndPartitionRange
+RangePartLossyCastEqOnEndPartitionRange RangePartLossyCastLTEqInPartitionRange
+RangePartLossyCastLTInPartitionRange RangePartLossyCastEqInPartitionRange
+ListPartLossyCastLT ListPartLossyCastEq ListPartLossyCastNEq MultiLevelPartLossyCastNEq;
+
 CPartTblDPETest:
 PartTbl-AvoidRangePred-DPE PartTbl-DPE-Correlated-NLOuter
 PartTbl-DPE PartTbl-DPE-WindowFunction PartTbl-DPE-GroupBy PartTbl-DPE-Limit
@@ -220,7 +229,7 @@ CSetop3Test:
 UnionWithOuterRefs UnionAll
 Union-Distributed-Table-With-Const-Table ExceptAllCompatibleDataType
 UnionAllCompatibleDataType UnionOfDQAQueries Union-Volatile-Func
-Intersect-Volatile-Func Except-Volatile-Func;
+Intersect-Volatile-Func Except-Volatile-Func UnionWithCTE;
 
 CSetop4Test:
 PushSelectDownUnionAllOfCTG Push-Subplan-Below-Union Intersect-OuterRefs
@@ -290,19 +299,31 @@ CGinIndexTest:
 GinIndex GinIndexPathOpfamily GinIndexSearchModeAll;
 
 CReplicatedTableTest:
-ReplicatedTableSelect ReplicatedTableInsert ReplicatedTable-CTAS ReplicatedHashJoinReplicated ReplicatedJoinHashDistributedTable ReplicatedJoinRandomDistributedTable ReplicatedLOJHashDistributedTable ReplicatedLOJRandomDistributedTable ReplicatedLOJReplicated ReplicatedNLJReplicated ReplicatedTableAggregate ReplicatedTableCTE ReplicatedTableGroupBy ReplicatedJoinPartitionedTable ReplicatedTableInClause;
+ReplicatedTableSelect ReplicatedTableInsert ReplicatedTable-CTAS
+ReplicatedHashJoinReplicated ReplicatedJoinHashDistributedTable
+ReplicatedJoinRandomDistributedTable ReplicatedLOJHashDistributedTable
+ReplicatedLOJRandomDistributedTable ReplicatedLOJReplicated
+ReplicatedNLJReplicated ReplicatedTableAggregate ReplicatedTableCTE
+ReplicatedTableGroupBy ReplicatedJoinPartitionedTable
+ReplicatedTableInClause;
 
 CDqaTest:
 NonSplittableAgg DqaHavingMax DqaMax DqaMin DqaSubqueryMax DqaNoRedistribute;
 
 CMCVCardinalityTest:
-BpCharMCVCardinalityEquals BpCharMCVCardinalityGreaterThan TextMCVCardinalityEquals TextMCVCardinalityGreaterThan VarcharMCVCardinalityEquals VarcharMCVCardinalityGreaterThan Citext-Cardinality Name-Cardinality Char-Cardinality;
+BpCharMCVCardinalityEquals BpCharMCVCardinalityGreaterThan
+TextMCVCardinalityEquals TextMCVCardinalityGreaterThan
+VarcharMCVCardinalityEquals VarcharMCVCardinalityGreaterThan Citext-Cardinality
+Name-Cardinality Char-Cardinality;
 
 COpfamiliesTest:
 JoinCitextVarchar JoinDefaultOpfamiliesUsingNonDefaultOpfamilyOp
 MultiColumnAggWithDefaultOpfamilies JoinTinterval FullJoin-NonDefaultOpfamily
 JoinAbsEqWithoutOpfamilies 3WayJoinUsingOperatorsOfNonDefaultOpfamily
+Distinct-LegacyOpfamily;
 
+CSubquery2Test:
+Subq2PartialDecorrelate Subq2CorrSQInLOJOn Subq2NotInWhereLOJ Subq2OuterRef2InJoin Subq2OuterRefMultiLevelInOn
 ")
 
 set(mdp_dir "../data/dxl/minidump/")
@@ -470,16 +491,6 @@ add_orca_test(CXformTest)
 
 add_orca_test(CConstExprEvaluatorDefaultTest)
 add_orca_test(CConstExprEvaluatorDXLTest)
-
-if (${CMAKE_BUILD_TYPE} MATCHES "Debug")
-  if (ENABLE_EXTENDED_TESTS)
-    # fault-simulation while running other tests
-    add_orca_test(CFSimulatorTestExt)
-
-    # time-slicing
-    add_orca_test(CTimeSliceTest)
-  endif()
-endif()
 
 file(GLOB_RECURSE hdrs ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h
                        ${CMAKE_CURRENT_SOURCE_DIR}/include/*.inl

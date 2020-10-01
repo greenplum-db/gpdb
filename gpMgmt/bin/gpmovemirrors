@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Line too long            - pylint: disable=C0301
 # Invalid name             - pylint: disable=C0103
 #
@@ -12,6 +12,8 @@ import signal
 import itertools
 
 try:
+    import pg
+
     from gppylib.commands.unix import *
     from gppylib.commands.gp import *
     from gppylib.commands.pg import PgControlData
@@ -21,12 +23,11 @@ try:
     from gppylib.db import dbconn
     from gppylib.userinput import *
     from gppylib.operations.startSegments import *
-    from pygresql.pgdb import DatabaseError
-    from pygresql import pg
+    from pgdb import DatabaseError
     from gppylib import gparray, gplog, pgconf, userinput, utils
     from gppylib.parseutils import line_reader, check_values, canonicalize_address
 
-except ImportError, e:
+except ImportError as e:
     sys.exit('ERROR: Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
 
 # constants
@@ -36,7 +37,7 @@ GPDB_STOPPED = 1
 GPDB_STARTED = 2
 GPDB_UTILITY = 3
 
-GP_MOVEMIRROS_PID_FILE = "gpmovemirrors.pid"
+GP_MOVEMIRRORS_LOCK_PATH = "gpmovemirrors.lock"
 
 description = ("""
 Moves mirror segments in a pre-existing GPDB Array.
@@ -107,7 +108,7 @@ def parseargs():
         if options.master_data_directory is None:
             options.master_data_directory = get_masterdatadir()
         options.gphome = get_gphome()
-    except GpError, msg:
+    except GpError as msg:
         logger.error(msg)
         parser.exit()
 
@@ -256,7 +257,7 @@ class Configuration:
                     self.newMirrorList.append(newMirror)
                 except ValueError:
                     raise ValueError('Missing or invalid value on line %d of file: %s.' % (line, inputFile))
-                except Exception, e:
+                except Exception as e:
                     raise Exception('Invalid input file on line %d of file %s: %s' % (line, inputFile, str(e)))
 
     def write_output_file(self, filename, oldToNew=True):
@@ -310,11 +311,12 @@ try:
 
     enable_verbose_logging()
 
-    mainOptions = {"pidfilename": GP_MOVEMIRROS_PID_FILE}
+    mainOptions = {"pidlockpath": GP_MOVEMIRRORS_LOCK_PATH}
     sml = SimpleMainLock(mainOptions)
     otherpid = sml.acquire()
     if otherpid is not None:
-        logger.error("An instance of %s is already running (pid %s)" % ("gpmovemirrors", otherpid))
+        logger.error("Lockfile %s indicates that an instance of %s is already running with PID %s" % (sml.ppath, "gpmovemirrors", otherpid))
+        logger.error("If this is not the case, remove the lockfile directory at %s" % (sml.ppath))
         sys.exit(1)
 
     logger.info("Invocation of gpmovemirrors mirrors")
@@ -325,7 +327,7 @@ try:
     # Get array configuration
     try:
         gpArrayInstance = GpArray.initFromCatalog(dburl, utility=True)
-    except DatabaseError, ex:
+    except DatabaseError as ex:
         logger.error('Failed to connect to database.  Make sure the')
         logger.error('Greenplum instance is running, and that')
         logger.error('your environment is correct, then rerun')
@@ -338,7 +340,7 @@ try:
 
     PgHbaEntriesToUpdate = []
     """ Do some sanity checks on the input. """
-    for oldMirror, newMirror in itertools.izip(newConfig.oldMirrorList, newConfig.newMirrorList):
+    for oldMirror, newMirror in zip(newConfig.oldMirrorList, newConfig.newMirrorList):
         seg = lookupGpdb(oldMirror.address, oldMirror.port, oldMirror.dataDirectory)
         if seg is None:
             raise Exception(
@@ -381,7 +383,7 @@ try:
                     entries.append("host all {username} {hostname} trust".format(username=unix.getUserName(), hostname=hostname))
                     entries.append("host replication {username} {hostname} trust".format(username=unix.getUserName(), hostname=hostname))
                 else:
-                    newMirror_ips = unix.InterfaceAddrs.remote('get mirror ips', newMirror_hostname)
+                    newMirror_ips = IfAddrs.list_addrs(newMirror_hostname)
                     for ip in newMirror_ips:
                         cidr_suffix = '/128' if ':' in ip else '/32'
                         cidr = ip + cidr_suffix
@@ -462,7 +464,7 @@ try:
             logging.error("There was an issue removing the old mirror segment directories.")
             raise Exception("Unable to complete removal of old mirror segment directories.")
 
-except Exception, e:
+except Exception as e:
     if options is not None and options.verbose:
         logger.exception("gpmovemirrors failed. exiting...")
     else:

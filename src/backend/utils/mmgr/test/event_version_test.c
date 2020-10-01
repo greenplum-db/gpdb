@@ -23,14 +23,15 @@ test__EventVersion_ShmemInit__AttachesPointersAndInitializesValuesWhenPostmaster
 
 	static EventVersion fakeCurrentVersion = 123;
 	static EventVersion fakeLatestRunawayVersion = 123;
+	bool found = false;
 
 	will_return(ShmemInitStruct, &fakeCurrentVersion);
 	will_return(ShmemInitStruct, &fakeLatestRunawayVersion);
 
 	/* Simulate Postmaster */
 	IsUnderPostmaster = false;
-	will_assign_value(ShmemInitStruct, foundPtr, false);
-	will_assign_value(ShmemInitStruct, foundPtr, false);
+	will_assign_value(ShmemInitStruct, foundPtr, found);
+	will_assign_value(ShmemInitStruct, foundPtr, found);
 
 	expect_any_count(ShmemInitStruct, name, 2);
 	expect_any_count(ShmemInitStruct, size, 2);
@@ -57,6 +58,7 @@ test__EventVersion_ShmemInit__AttachesPointersAndInitializesValuesWhenPostmaster
 static void
 test__EventVersion_ShmemInit__AttachesPointersWhenUnderPostmaster(void **state)
 {
+	bool found = true;
 	vmemTrackerInited = false;
 
 	CurrentVersion = NULL;
@@ -70,8 +72,8 @@ test__EventVersion_ShmemInit__AttachesPointersWhenUnderPostmaster(void **state)
 
 	/* Simulate Postmaster */
 	IsUnderPostmaster = true;
-	will_assign_value(ShmemInitStruct, foundPtr, true);
-	will_assign_value(ShmemInitStruct, foundPtr, true);
+	will_assign_value(ShmemInitStruct, foundPtr, found);
+	will_assign_value(ShmemInitStruct, foundPtr, found);
 
 	expect_any_count(ShmemInitStruct, name, 2);
 	expect_any_count(ShmemInitStruct, size, 2);

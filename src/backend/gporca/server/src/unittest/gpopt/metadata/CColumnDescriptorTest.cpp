@@ -41,10 +41,8 @@ using namespace gpopt;
 GPOS_RESULT
 CColumnDescriptorTest::EresUnittest()
 {
-	CUnittest rgut[] =
-		{
-		GPOS_UNITTEST_FUNC(CColumnDescriptorTest::EresUnittest_Basic)
-		};
+	CUnittest rgut[] = {
+		GPOS_UNITTEST_FUNC(CColumnDescriptorTest::EresUnittest_Basic)};
 
 	return CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
 }
@@ -70,11 +68,13 @@ CColumnDescriptorTest::EresUnittest_Basic()
 
 	CMDAccessor mda(mp, CMDCache::Pcache(), CTestUtils::m_sysidDefault, pmdp);
 
-	const IMDTypeInt4 *pmdtypeint4 = mda.PtMDType<IMDTypeInt4>(CTestUtils::m_sysidDefault);
+	const IMDTypeInt4 *pmdtypeint4 =
+		mda.PtMDType<IMDTypeInt4>(CTestUtils::m_sysidDefault);
 
 	CWStringConst strName(GPOS_WSZ_LIT("column desc test"));
 	CName name(&strName);
-	CColumnDescriptor *pcdesc = GPOS_NEW(mp) CColumnDescriptor(mp, pmdtypeint4, default_type_modifier, name, 1, false /*IsNullable*/);
+	CColumnDescriptor *pcdesc = GPOS_NEW(mp) CColumnDescriptor(
+		mp, pmdtypeint4, default_type_modifier, name, 1, false /*IsNullable*/);
 
 	GPOS_ASSERT(name.Equals(pcdesc->Name()));
 
@@ -87,4 +87,3 @@ CColumnDescriptorTest::EresUnittest_Basic()
 
 
 // EOF
-

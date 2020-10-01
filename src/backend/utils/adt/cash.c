@@ -21,8 +21,8 @@
 #include <limits.h>
 #include <ctype.h>
 #include <math.h>
-#include <locale.h>
 
+#include "common/int.h"
 #include "libpq/pqformat.h"
 #include "utils/builtins.h"
 #include "utils/cash.h"
@@ -39,13 +39,13 @@ static const char *
 num_word(Cash value)
 {
 	static char buf[128];
-	static const char *small[] = {
+	static const char *const small[] = {
 		"zero", "one", "two", "three", "four", "five", "six", "seven",
 		"eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen",
 		"fifteen", "sixteen", "seventeen", "eighteen", "nineteen", "twenty",
 		"thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"
 	};
-	const char **big = small + 18;
+	const char *const *big = small + 18;
 	int			tu = value % 100;
 
 	/* deal with the simple cases first */
@@ -85,7 +85,7 @@ num_word(Cash value)
 	}
 
 	return buf;
-}	/* num_word() */
+}								/* num_word() */
 
 /* cash_in()
  * Convert a string to a cash data type.
@@ -133,7 +133,7 @@ cash_in(PG_FUNCTION_ARGS)
 		dsymbol = '.';
 	if (*lconvert->mon_thousands_sep != '\0')
 		ssymbol = lconvert->mon_thousands_sep;
-	else	/* ssymbol should not equal dsymbol */
+	else						/* ssymbol should not equal dsymbol */
 		ssymbol = (dsymbol != ',') ? "," : ".";
 	csymbol = (*lconvert->currency_symbol != '\0') ? lconvert->currency_symbol : "$";
 	psymbol = (*lconvert->positive_sign != '\0') ? lconvert->positive_sign : "+";
@@ -189,13 +189,31 @@ cash_in(PG_FUNCTION_ARGS)
 	printf("cashin- string is '%s'\n", s);
 #endif
 
+	/*
+	 * We accumulate the absolute amount in "value" and then apply the sign at
+	 * the end.  (The sign can appear before or after the digits, so it would
+	 * be more complicated to do otherwise.)  Because of the larger range of
+	 * negative signed integers, we build "value" in the negative and then
+	 * flip the sign at the end, catching most-negative-number overflow if
+	 * necessary.
+	 */
+
 	for (; *s; s++)
 	{
-		/* we look for digits as long as we have found less */
-		/* than the required number of decimal places */
+		/*
+		 * We look for digits as long as we have found less than the required
+		 * number of decimal places.
+		 */
 		if (isdigit((unsigned char) *s) && (!seen_dot || dec < fpoint))
 		{
-			value = (value * 10) + (*s - '0');
+			int8		digit = *s - '0';
+
+			if (pg_mul_s64_overflow(value, 10, &value) ||
+				pg_sub_s64_overflow(value, digit, &value))
+				ereport(ERROR,
+						(errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE),
+						 errmsg("value \"%s\" is out of range for type %s",
+								str, "money")));
 
 			if (seen_dot)
 				dec++;
@@ -214,11 +232,24 @@ cash_in(PG_FUNCTION_ARGS)
 
 	/* round off if there's another digit */
 	if (isdigit((unsigned char) *s) && *s >= '5')
-		value++;
+	{
+		/* remember we build the value in the negative */
+		if (pg_sub_s64_overflow(value, 1, &value))
+			ereport(ERROR,
+					(errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE),
+					 errmsg("value \"%s\" is out of range for type %s",
+							str, "money")));
+	}
 
 	/* adjust for less than required decimal places */
 	for (; dec < fpoint; dec++)
-		value *= 10;
+	{
+		if (pg_mul_s64_overflow(value, 10, &value))
+			ereport(ERROR,
+					(errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE),
+					 errmsg("value \"%s\" is out of range for type %s",
+							str, "money")));
+	}
 
 	/*
 	 * should only be trailing digits followed by whitespace, right paren,
@@ -243,11 +274,25 @@ cash_in(PG_FUNCTION_ARGS)
 		else
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
-					 errmsg("invalid input syntax for type money: \"%s\"",
-							str)));
+					 errmsg("invalid input syntax for type %s: \"%s\"",
+							"money", str)));
 	}
 
-	result = value * sgn;
+	/*
+	 * If the value is supposed to be positive, flip the sign, but check for
+	 * the most negative number.
+	 */
+	if (sgn > 0)
+	{
+		if (value == PG_INT64_MIN)
+			ereport(ERROR,
+					(errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE),
+					 errmsg("value \"%s\" is out of range for type %s",
+							str, "money")));
+		result = -value;
+	}
+	else
+		result = value;
 
 #ifdef CASHDEBUG
 	printf("cashin- result is " INT64_FORMAT "\n", result);
@@ -301,7 +346,7 @@ cash_out(PG_FUNCTION_ARGS)
 		dsymbol = '.';
 	if (*lconvert->mon_thousands_sep != '\0')
 		ssymbol = lconvert->mon_thousands_sep;
-	else	/* ssymbol should not equal dsymbol */
+	else						/* ssymbol should not equal dsymbol */
 		ssymbol = (dsymbol != ',') ? "," : ".";
 	csymbol = (*lconvert->currency_symbol != '\0') ? lconvert->currency_symbol : "$";
 
@@ -925,10 +970,10 @@ cash_words(PG_FUNCTION_ARGS)
 	val = (uint64) value;
 
 	m0 = val % INT64CONST(100); /* cents */
-	m1 = (val / INT64CONST(100)) % 1000;		/* hundreds */
-	m2 = (val / INT64CONST(100000)) % 1000;		/* thousands */
+	m1 = (val / INT64CONST(100)) % 1000;	/* hundreds */
+	m2 = (val / INT64CONST(100000)) % 1000; /* thousands */
 	m3 = (val / INT64CONST(100000000)) % 1000;	/* millions */
-	m4 = (val / INT64CONST(100000000000)) % 1000;		/* billions */
+	m4 = (val / INT64CONST(100000000000)) % 1000;	/* billions */
 	m5 = (val / INT64CONST(100000000000000)) % 1000;	/* trillions */
 	m6 = (val / INT64CONST(100000000000000000)) % 1000; /* quadrillions */
 

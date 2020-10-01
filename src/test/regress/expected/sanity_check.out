@@ -9,7 +9,7 @@ VACUUM;
 \a\t
 SELECT relname, relhasindex
    FROM pg_class c LEFT JOIN pg_namespace n ON n.oid = relnamespace
-   WHERE relkind = 'r' AND (nspname ~ '^pg_temp_') IS NOT TRUE
+   WHERE relkind IN ('r', 'p') AND (nspname ~ '^pg_temp_') IS NOT TRUE
    AND relname NOT LIKE 'gp_%'
    AND relname NOT LIKE '__gp_%'
    AND relname <> 'pg_resqueue'
@@ -21,6 +21,7 @@ array_index_op_test|t
 array_op_test|f
 b|f
 b_star|f
+bit_defaults|f
 box_tbl|f
 bprime|f
 bt_f8_heap|t
@@ -45,6 +46,7 @@ dupindexcols|t
 e_star|f
 emp|f
 equipment_r|f
+extra_wide_table|f
 f_star|f
 fast_emp4000|t
 float4_tbl|f
@@ -57,8 +59,6 @@ hash_txt_heap|t
 hobbies_r|f
 ihighway|t
 inet_tbl|f
-inhf|f
-inhx|t
 insert_tbl|f
 int2_tbl|f
 int4_tbl|f
@@ -72,6 +72,17 @@ line_tbl|f
 log_table|f
 lseg_tbl|f
 main_table|f
+mlparted|f
+mlparted1|f
+mlparted11|f
+mlparted12|f
+mlparted2|f
+mlparted3|f
+mlparted4|f
+mlparted_def|f
+mlparted_def1|f
+mlparted_def2|f
+mlparted_defd|f
 money_data|f
 num_data|f
 num_exp_add|t
@@ -88,6 +99,9 @@ onek|t
 onek2|t
 path_tbl|f
 person|f
+persons|f
+persons2|t
+persons3|t
 pg_aggregate|t
 pg_am|t
 pg_amop|t
@@ -106,12 +120,10 @@ pg_db_role_setting|t
 pg_default_acl|t
 pg_depend|t
 pg_description|t
-pg_exttable|t
-pg_foreign_data_wrapper|t
-pg_foreign_server|t
 pg_enum|t
 pg_event_trigger|t
 pg_extension|t
+pg_exttable|t
 pg_foreign_data_wrapper|t
 pg_foreign_server|t
 pg_foreign_table|t
@@ -125,17 +137,25 @@ pg_namespace|t
 pg_opclass|t
 pg_operator|t
 pg_opfamily|t
+pg_partitioned_table|t
 pg_pltemplate|t
 pg_policy|t
 pg_proc|t
+pg_publication|t
+pg_publication_rel|t
 pg_range|t
 pg_replication_origin|t
 pg_rewrite|t
 pg_seclabel|t
+pg_sequence|t
 pg_shdepend|t
 pg_shdescription|t
 pg_shseclabel|t
 pg_statistic|t
+pg_statistic_ext|t
+pg_statistic_ext_data|t
+pg_subscription|t
+pg_subscription_rel|t
 pg_tablespace|t
 pg_transform|t
 pg_trigger|t
@@ -148,7 +168,9 @@ pg_type|t
 pg_user_mapping|t
 point_tbl|t
 polygon_tbl|t
+quad_box_tbl|t
 quad_point_tbl|t
+quad_poly_tbl|t
 radix_text_tbl|t
 ramp|f
 real_city|f
@@ -164,6 +186,19 @@ sql_sizing|f
 sql_sizing_profiles|f
 stud_emp|f
 student|f
+tableam_parted_a_heap2|f
+tableam_parted_b_heap2|f
+tableam_parted_c_heap2|f
+tableam_parted_d_heap2|f
+tableam_parted_heap2|f
+tableam_tbl_heap2|f
+tableam_tblas_heap2|f
+tbl_include_box|t
+tbl_include_box_pk|f
+tbl_include_pk|t
+tbl_include_reg|t
+tbl_include_unique1|t
+tbl_include_unique2|f
 tenk1|t
 tenk2|t
 test_range_excl|t
@@ -176,7 +211,9 @@ time_tbl|f
 timestamp_tbl|f
 timestamptz_tbl|f
 timetz_tbl|f
+tmp|f
 varchar_tbl|f
+view_base_table|t
 -- restore normal output mode
 \a\t
 --
@@ -186,13 +223,22 @@ varchar_tbl|f
 -- We exclude non-system tables from the check by looking at nspname.
 --
 SELECT relname, nspname
-FROM pg_class c LEFT JOIN pg_namespace n ON n.oid = relnamespace
-WHERE relhasoids
-    AND ((nspname ~ '^pg_') IS NOT FALSE)
-    AND NOT EXISTS (SELECT 1 FROM pg_index i WHERE indrelid = c.oid
-                    AND indkey[0] = -2 AND indnatts = 1
-                    AND indisunique AND indimmediate);
+ FROM pg_class c LEFT JOIN pg_namespace n ON n.oid = relnamespace JOIN pg_attribute a ON (attrelid = c.oid AND attname = 'oid')
+ WHERE relkind = 'r' and c.oid < 16384
+     AND ((nspname ~ '^pg_') IS NOT FALSE)
+     AND NOT EXISTS (SELECT 1 FROM pg_index i WHERE indrelid = c.oid
+                     AND indkey[0] = a.attnum AND indnatts = 1
+                     AND indisunique AND indimmediate);
  relname | nspname 
+---------+---------
+(0 rows)
+
+-- check that relations without storage don't have relfilenode
+SELECT relname, relkind
+  FROM pg_class
+ WHERE relkind IN ('v', 'c', 'f', 'p', 'I')
+       AND relfilenode <> 0;
+ relname | relkind 
 ---------+---------
 (0 rows)
 

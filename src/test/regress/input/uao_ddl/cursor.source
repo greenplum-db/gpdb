@@ -1,8 +1,8 @@
-create schema cursor_@orientation@;
-set search_path="$user",cursor_@orientation@,public;
-SET gp_default_storage_options='orientation=@orientation@';
+create schema cursor_@amname@;
+set search_path="$user",cursor_@amname@,public;
+SET default_table_access_method=@amname@;
 begin;
-create table uao_tab_cur_1 (a int, b int) with (appendonly=true)
+create table uao_tab_cur_1 (a int, b int)
 distributed by (a);
 insert into uao_tab_cur_1 select i,i from generate_series(1,10)i;
 update uao_tab_cur_1 set b = -a;

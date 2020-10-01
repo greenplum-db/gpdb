@@ -31,15 +31,11 @@ XERCES_CPP_NAMESPACE_USE
 //		Constructor
 //
 //---------------------------------------------------------------------------
-CParseHandlerTableDescr::CParseHandlerTableDescr
-	(
-	CMemoryPool *mp,
-	CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root
-	)
-	:
-	CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
-	m_dxl_table_descr(NULL)
+CParseHandlerTableDescr::CParseHandlerTableDescr(
+	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+	CParseHandlerBase *parse_handler_root)
+	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
+	  m_dxl_table_descr(NULL)
 {
 }
 
@@ -79,27 +75,32 @@ CParseHandlerTableDescr::GetDXLTableDescr()
 //
 //---------------------------------------------------------------------------
 void
-CParseHandlerTableDescr::StartElement
-	(
-	const XMLCh* const, // element_uri,
-	const XMLCh* const element_local_name,
-	const XMLCh* const, // element_qname
-	const Attributes& attrs
-	)
+CParseHandlerTableDescr::StartElement(const XMLCh *const,  // element_uri,
+									  const XMLCh *const element_local_name,
+									  const XMLCh *const,  // element_qname
+									  const Attributes &attrs)
 {
-	if(0 != XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenTableDescr), element_local_name))
+	if (0 !=
+		XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenTableDescr),
+								 element_local_name))
 	{
-		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag, str->GetBuffer());
+		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
+			m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,
+				   str->GetBuffer());
 	}
-	
+
 	// parse table name from attributes
-	m_dxl_table_descr = CDXLOperatorFactory::MakeDXLTableDescr(m_parse_handler_mgr->GetDXLMemoryManager(), attrs);
+	m_dxl_table_descr = CDXLOperatorFactory::MakeDXLTableDescr(
+		m_parse_handler_mgr->GetDXLMemoryManager(), attrs);
 
 	// install column descriptor parsers
-	CParseHandlerBase *col_descr_parse_handler = CParseHandlerFactory::GetParseHandler(m_mp, CDXLTokens::XmlstrToken(EdxltokenColumns), m_parse_handler_mgr, this);
+	CParseHandlerBase *col_descr_parse_handler =
+		CParseHandlerFactory::GetParseHandler(
+			m_mp, CDXLTokens::XmlstrToken(EdxltokenColumns),
+			m_parse_handler_mgr, this);
 	m_parse_handler_mgr->ActivateParseHandler(col_descr_parse_handler);
-	
+
 	// store parse handler
 	this->Append(col_descr_parse_handler);
 }
@@ -113,29 +114,33 @@ CParseHandlerTableDescr::StartElement
 //
 //---------------------------------------------------------------------------
 void
-CParseHandlerTableDescr::EndElement
-	(
-	const XMLCh* const, // element_uri,
-	const XMLCh* const element_local_name,
-	const XMLCh* const // element_qname
-	)
+CParseHandlerTableDescr::EndElement(const XMLCh *const,	 // element_uri,
+									const XMLCh *const element_local_name,
+									const XMLCh *const	// element_qname
+)
 {
-	if(0 != XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenTableDescr), element_local_name))
+	if (0 !=
+		XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenTableDescr),
+								 element_local_name))
 	{
-		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag, str->GetBuffer());
+		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
+			m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,
+				   str->GetBuffer());
 	}
-	
+
 	// construct node from the created child nodes
-	
+
 	GPOS_ASSERT(1 == this->Length());
-	
+
 	// assemble the properties container from the cost
-	CParseHandlerColDescr *col_descr_parse_handler = dynamic_cast<CParseHandlerColDescr *>((*this)[0]);
-	
+	CParseHandlerColDescr *col_descr_parse_handler =
+		dynamic_cast<CParseHandlerColDescr *>((*this)[0]);
+
 	GPOS_ASSERT(NULL != col_descr_parse_handler->GetDXLColumnDescrArray());
 
-	CDXLColDescrArray *dxl_column_descr_array = col_descr_parse_handler->GetDXLColumnDescrArray();
+	CDXLColDescrArray *dxl_column_descr_array =
+		col_descr_parse_handler->GetDXLColumnDescrArray();
 	dxl_column_descr_array->AddRef();
 	m_dxl_table_descr->SetColumnDescriptors(dxl_column_descr_array);
 
@@ -144,4 +149,3 @@ CParseHandlerTableDescr::EndElement
 }
 
 // EOF
-

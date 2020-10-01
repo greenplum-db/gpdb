@@ -54,4 +54,3 @@ CSerializable::~CSerializable()
 
 
 // EOF
-

@@ -5,6 +5,7 @@
 #include "access/formatter.h"
 #include "catalog/pg_proc.h"
 #include "utils/builtins.h"
+#include "utils/float.h"
 #include "utils/memutils.h"
 #include "utils/typcache.h"
 #include "utils/syscache.h"
@@ -72,11 +73,11 @@ formatter_export(PG_FUNCTION_ARGS)
 		myData->buflen = 0;
 		for (i = 0; i < ncolumns; i++)
 		{
-			Oid   type   = tupdesc->attrs[i]->atttypid;
-			int32 typmod = tupdesc->attrs[i]->atttypmod;
+			Oid   type   = TupleDescAttr(tupdesc, i)->atttypid;
+			int32 typmod = TupleDescAttr(tupdesc, i)->atttypmod;
 
 			/* Don't know how to format dropped columns, error for now */
-			if (tupdesc->attrs[i]->attisdropped)
+			if (TupleDescAttr(tupdesc, i)->attisdropped)
 				elog(ERROR, "formatter_export: dropped columns");
 
 			switch (type)
@@ -134,8 +135,8 @@ formatter_export(PG_FUNCTION_ARGS)
 	 * ======================================================================= */
 	for (i = 0; i < ncolumns; i++)
 	{
-		Oid	  type    = tupdesc->attrs[i]->atttypid;
-		int   typmod  = tupdesc->attrs[i]->atttypmod;
+		Oid	  type    = TupleDescAttr(tupdesc, i)->atttypid;
+		int   typmod  = TupleDescAttr(tupdesc, i)->atttypmod;
 		Datum val     = myData->values[i];
 		bool  nul     = myData->nulls[i];
 		
@@ -236,11 +237,11 @@ formatter_import(PG_FUNCTION_ARGS)
 		/* misc verification */
 		for (i = 0; i < ncolumns; i++)
 		{
-			Oid   type   = tupdesc->attrs[i]->atttypid;
-			//int32 typmod = tupdesc->attrs[i]->atttypmod;
+			Oid   type   = TupleDescAttr(tupdesc, i)->atttypid;
+			//int32 typmod = TupleDescAttr(tupdesc, i)->atttypmod;
 
 			/* Don't know how to format dropped columns, error for now */
-			if (tupdesc->attrs[i]->attisdropped)
+			if (TupleDescAttr(tupdesc, i)->attisdropped)
 				elog(ERROR, "formatter_import: dropped columns");
 
 			switch (type)
@@ -290,8 +291,8 @@ formatter_import(PG_FUNCTION_ARGS)
 
 	for (i = 0; i < ncolumns; i++)
 	{
-		Oid		type    	= tupdesc->attrs[i]->atttypid;
-		//int	typmod		= tupdesc->attrs[i]->atttypmod;
+		Oid		type    	= TupleDescAttr(tupdesc, i)->atttypid;
+		//int	typmod		= TupleDescAttr(tupdesc, i)->atttypmod;
 		int		remaining	= 0;
 		int		attr_len 	= 0;
 		

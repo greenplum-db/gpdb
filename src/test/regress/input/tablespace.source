@@ -16,10 +16,10 @@ DROP TABLESPACE regress_tblspacewith;
 CREATE TABLESPACE regress_tblspace LOCATION '@testtablespace@';
 
 -- try setting and resetting some properties for the new tablespace
-ALTER TABLESPACE regress_tblspace SET (random_page_cost = 1.0);
+ALTER TABLESPACE regress_tblspace SET (random_page_cost = 1.0, seq_page_cost = 1.1);
 ALTER TABLESPACE regress_tblspace SET (some_nonexistent_parameter = true);  -- fail
 ALTER TABLESPACE regress_tblspace RESET (random_page_cost = 2.0); -- fail
-ALTER TABLESPACE regress_tblspace RESET (random_page_cost, seq_page_cost); -- ok
+ALTER TABLESPACE regress_tblspace RESET (random_page_cost, effective_io_concurrency); -- ok
 
 -- create a schema we can use
 CREATE SCHEMA testschema;
@@ -48,26 +48,98 @@ CREATE INDEX foo_idx on testschema.foo(i) TABLESPACE regress_tblspace;
 SELECT relname, spcname FROM pg_catalog.pg_tablespace t, pg_catalog.pg_class c
     where c.reltablespace = t.oid AND c.relname = 'foo_idx';
 
+--
+-- partitioned table
+--
+CREATE TABLE testschema.part (a int) PARTITION BY LIST (a);
+SET default_tablespace TO pg_global;
+CREATE TABLE testschema.part_1 PARTITION OF testschema.part FOR VALUES IN (1);
+RESET default_tablespace;
+CREATE TABLE testschema.part_1 PARTITION OF testschema.part FOR VALUES IN (1);
+SET default_tablespace TO regress_tblspace;
+CREATE TABLE testschema.part_2 PARTITION OF testschema.part FOR VALUES IN (2);
+SET default_tablespace TO pg_global;
+CREATE TABLE testschema.part_3 PARTITION OF testschema.part FOR VALUES IN (3);
+-- GPDB: Greenplum's ALTER TABLE .. SET TABLESPACE command recurses by
+-- default, hence add ONLY to achieve the same results for SELECT.
+ALTER TABLE ONLY testschema.part SET TABLESPACE regress_tblspace;
+CREATE TABLE testschema.part_3 PARTITION OF testschema.part FOR VALUES IN (3);
+CREATE TABLE testschema.part_4 PARTITION OF testschema.part FOR VALUES IN (4)
+  TABLESPACE pg_default;
+CREATE TABLE testschema.part_56 PARTITION OF testschema.part FOR VALUES IN (5, 6)
+  PARTITION BY LIST (a);
+-- GPDB: Greenplum's ALTER TABLE .. SET TABLESPACE command recurses by
+-- default, hence add ONLY to achieve the same results for SELECT.
+ALTER TABLE ONLY testschema.part SET TABLESPACE pg_default;
+CREATE TABLE testschema.part_78 PARTITION OF testschema.part FOR VALUES IN (7, 8)
+  PARTITION BY LIST (a);
+CREATE TABLE testschema.part_910 PARTITION OF testschema.part FOR VALUES IN (9, 10)
+  PARTITION BY LIST (a) TABLESPACE regress_tblspace;
+RESET default_tablespace;
+CREATE TABLE testschema.part_78 PARTITION OF testschema.part FOR VALUES IN (7, 8)
+  PARTITION BY LIST (a);
+
+SELECT relname, spcname FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON (c.relnamespace = n.oid)
+    LEFT JOIN pg_catalog.pg_tablespace t ON c.reltablespace = t.oid
+    where c.relname LIKE 'part%' AND n.nspname = 'testschema' order by relname;
+RESET default_tablespace;
+DROP TABLE testschema.part;
+
+-- partitioned index
+CREATE TABLE testschema.part (a int) PARTITION BY LIST (a);
+CREATE TABLE testschema.part1 PARTITION OF testschema.part FOR VALUES IN (1);
+CREATE INDEX part_a_idx ON testschema.part (a) TABLESPACE regress_tblspace;
+CREATE TABLE testschema.part2 PARTITION OF testschema.part FOR VALUES IN (2);
+SELECT relname, spcname FROM pg_catalog.pg_tablespace t, pg_catalog.pg_class c
+    where c.reltablespace = t.oid AND c.relname LIKE 'part%_idx';
+\d testschema.part_a_idx
+
+-- partitioned rels cannot specify the default tablespace.  These fail:
+CREATE TABLE testschema.dflt (a int PRIMARY KEY) PARTITION BY LIST (a) TABLESPACE pg_default;
+CREATE TABLE testschema.dflt (a int PRIMARY KEY USING INDEX TABLESPACE pg_default) PARTITION BY LIST (a);
+SET default_tablespace TO 'pg_default';
+CREATE TABLE testschema.dflt (a int PRIMARY KEY) PARTITION BY LIST (a) TABLESPACE regress_tblspace;
+CREATE TABLE testschema.dflt (a int PRIMARY KEY USING INDEX TABLESPACE regress_tblspace) PARTITION BY LIST (a);
+-- but these work:
+CREATE TABLE testschema.dflt (a int PRIMARY KEY USING INDEX TABLESPACE regress_tblspace) PARTITION BY LIST (a) TABLESPACE regress_tblspace;
+SET default_tablespace TO '';
+CREATE TABLE testschema.dflt2 (a int PRIMARY KEY) PARTITION BY LIST (a);
+DROP TABLE testschema.dflt, testschema.dflt2;
+
 -- check that default_tablespace doesn't affect ALTER TABLE index rebuilds
 CREATE TABLE testschema.test_default_tab(id bigint) TABLESPACE regress_tblspace;
 INSERT INTO testschema.test_default_tab VALUES (1);
 CREATE INDEX test_index1 on testschema.test_default_tab (id);
 CREATE INDEX test_index2 on testschema.test_default_tab (id) TABLESPACE regress_tblspace;
+ALTER TABLE testschema.test_default_tab ADD CONSTRAINT test_index3 PRIMARY KEY (id);
+ALTER TABLE testschema.test_default_tab ADD CONSTRAINT test_index4 UNIQUE (id) USING INDEX TABLESPACE regress_tblspace;
+
 \d testschema.test_index1
 \d testschema.test_index2
+\d testschema.test_index3
+\d testschema.test_index4
 -- use a custom tablespace for default_tablespace
 SET default_tablespace TO regress_tblspace;
 -- tablespace should not change if no rewrite
 ALTER TABLE testschema.test_default_tab ALTER id TYPE bigint;
+-- start_ignore
+ANALYZE testschema.test_default_tab;
+-- end_ignore
 \d testschema.test_index1
 \d testschema.test_index2
-ANALYZE testschema.test_default_tab;
+\d testschema.test_index3
+\d testschema.test_index4
 SELECT * FROM testschema.test_default_tab;
 -- tablespace should not change even if there is an index rewrite
 ALTER TABLE testschema.test_default_tab ALTER id TYPE int;
+-- start_ignore
+ANALYZE testschema.test_default_tab;
+-- end_ignore
 \d testschema.test_index1
 \d testschema.test_index2
-ANALYZE testschema.test_default_tab;
+\d testschema.test_index3
+\d testschema.test_index4
 SELECT * FROM testschema.test_default_tab;
 -- now use the default tablespace for default_tablespace
 SET default_tablespace TO '';
@@ -75,11 +147,95 @@ SET default_tablespace TO '';
 ALTER TABLE testschema.test_default_tab ALTER id TYPE int;
 \d testschema.test_index1
 \d testschema.test_index2
+\d testschema.test_index3
+\d testschema.test_index4
 -- tablespace should not change even if there is an index rewrite
 ALTER TABLE testschema.test_default_tab ALTER id TYPE bigint;
 \d testschema.test_index1
 \d testschema.test_index2
+\d testschema.test_index3
+\d testschema.test_index4
 DROP TABLE testschema.test_default_tab;
+
+-- check that default_tablespace doesn't affect ALTER TABLE index rebuilds
+-- (this time with a partitioned table)
+CREATE TABLE testschema.test_default_tab_p(id bigint, val bigint)
+    PARTITION BY LIST (id) TABLESPACE regress_tblspace;
+CREATE TABLE testschema.test_default_tab_p1 PARTITION OF testschema.test_default_tab_p
+    FOR VALUES IN (1);
+INSERT INTO testschema.test_default_tab_p VALUES (1);
+CREATE INDEX test_index1 on testschema.test_default_tab_p (val);
+CREATE INDEX test_index2 on testschema.test_default_tab_p (val) TABLESPACE regress_tblspace;
+ALTER TABLE testschema.test_default_tab_p ADD CONSTRAINT test_index3 PRIMARY KEY (id);
+ALTER TABLE testschema.test_default_tab_p ADD CONSTRAINT test_index4 UNIQUE (id) USING INDEX TABLESPACE regress_tblspace;
+
+\d testschema.test_index1
+\d testschema.test_index2
+\d testschema.test_index3
+\d testschema.test_index4
+-- use a custom tablespace for default_tablespace
+SET default_tablespace TO regress_tblspace;
+-- tablespace should not change if no rewrite
+ALTER TABLE testschema.test_default_tab_p ALTER val TYPE bigint;
+\d testschema.test_index1
+\d testschema.test_index2
+\d testschema.test_index3
+\d testschema.test_index4
+SELECT * FROM testschema.test_default_tab_p;
+-- tablespace should not change even if there is an index rewrite
+ALTER TABLE testschema.test_default_tab_p ALTER val TYPE int;
+\d testschema.test_index1
+\d testschema.test_index2
+\d testschema.test_index3
+\d testschema.test_index4
+SELECT * FROM testschema.test_default_tab_p;
+-- now use the default tablespace for default_tablespace
+SET default_tablespace TO '';
+-- tablespace should not change if no rewrite
+ALTER TABLE testschema.test_default_tab_p ALTER val TYPE int;
+\d testschema.test_index1
+\d testschema.test_index2
+\d testschema.test_index3
+\d testschema.test_index4
+-- tablespace should not change even if there is an index rewrite
+ALTER TABLE testschema.test_default_tab_p ALTER val TYPE bigint;
+\d testschema.test_index1
+\d testschema.test_index2
+\d testschema.test_index3
+\d testschema.test_index4
+DROP TABLE testschema.test_default_tab_p;
+
+-- check that default_tablespace affects index additions in ALTER TABLE
+CREATE TABLE testschema.test_tab(id int) TABLESPACE regress_tblspace;
+INSERT INTO testschema.test_tab VALUES (1);
+SET default_tablespace TO regress_tblspace;
+ALTER TABLE testschema.test_tab ADD CONSTRAINT test_tab_unique UNIQUE (id);
+SET default_tablespace TO '';
+ALTER TABLE testschema.test_tab ADD CONSTRAINT test_tab_pkey PRIMARY KEY (id);
+\d testschema.test_tab_unique
+\d testschema.test_tab_pkey
+SELECT * FROM testschema.test_tab;
+DROP TABLE testschema.test_tab;
+
+-- check that default_tablespace is handled correctly by multi-command
+-- ALTER TABLE that includes a tablespace-preserving rewrite
+CREATE TABLE testschema.test_tab(a int, b int, c int);
+SET default_tablespace TO regress_tblspace;
+ALTER TABLE testschema.test_tab ADD CONSTRAINT test_tab_unique UNIQUE (a);
+CREATE INDEX test_tab_a_idx ON testschema.test_tab (a);
+SET default_tablespace TO '';
+CREATE INDEX test_tab_b_idx ON testschema.test_tab (b);
+\d testschema.test_tab_unique
+\d testschema.test_tab_a_idx
+\d testschema.test_tab_b_idx
+-- In GPDB; the distribution key must be included in the unique constraint,
+-- or it needs to be replicated.
+ALTER TABLE testschema.test_tab SET DISTRIBUTED REPLICATED;
+ALTER TABLE testschema.test_tab ALTER b TYPE bigint, ADD UNIQUE (c);
+\d testschema.test_tab_unique
+\d testschema.test_tab_a_idx
+\d testschema.test_tab_b_idx
+DROP TABLE testschema.test_tab;
 
 -- let's try moving a table from one place to another
 CREATE TABLE testschema.atable AS VALUES (1), (2);
@@ -88,6 +244,9 @@ CREATE UNIQUE INDEX anindex ON testschema.atable(column1);
 
 ALTER TABLE testschema.atable SET TABLESPACE regress_tblspace;
 ALTER INDEX testschema.anindex SET TABLESPACE regress_tblspace;
+ALTER INDEX testschema.part_a_idx SET TABLESPACE pg_global;
+ALTER INDEX testschema.part_a_idx SET TABLESPACE pg_default;
+ALTER INDEX testschema.part_a_idx SET TABLESPACE regress_tblspace;
 
 INSERT INTO testschema.atable VALUES(3);	-- ok
 INSERT INTO testschema.atable VALUES(1);	-- fail (checks index)

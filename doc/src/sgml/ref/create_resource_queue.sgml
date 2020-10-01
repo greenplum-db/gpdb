@@ -3,7 +3,7 @@ doc/src/sgml/ref/create_resource_queue.sgml
 PostgreSQL documentation
 -->
 
-<refentry id="SQL-CREATERESOURCEQUEUE">
+<refentry id="sql-createresourcequeue">
  <indexterm zone="sql-createresourcequeue">
   <primary>CREATE RESOURCE QUEUE</primary>
  </indexterm>

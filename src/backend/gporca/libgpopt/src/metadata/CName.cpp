@@ -8,7 +8,7 @@
 //	@doc:
 //		Metadata name of objects
 //		Encapsulates encoding etc. so optimizer logic does not have to
-//		deal with it. 
+//		deal with it.
 //		Only assumption, name string is NULL terminated;
 //---------------------------------------------------------------------------
 
@@ -27,13 +27,8 @@ using namespace gpopt;
 //		deep copy of the provided string
 //
 //---------------------------------------------------------------------------
-CName::CName
-	(
-	CMemoryPool *mp,
-	const CWStringBase *str
-	)
-	:m_str_name(NULL),
-	 m_fDeepCopy(true)
+CName::CName(CMemoryPool *mp, const CWStringBase *str)
+	: m_str_name(NULL), m_fDeepCopy(true)
 {
 	m_str_name = GPOS_NEW(mp) CWStringConst(mp, str->GetBuffer());
 }
@@ -48,14 +43,8 @@ CName::CName
 //		specified by the fOwnsMemory argument
 //
 //---------------------------------------------------------------------------
-CName::CName
-	(
-	const CWStringConst *str,
-	BOOL fOwnsMemory
-	)
-	:
-	m_str_name(str),
-	m_fDeepCopy(fOwnsMemory)
+CName::CName(const CWStringConst *str, BOOL fOwnsMemory)
+	: m_str_name(str), m_fDeepCopy(fOwnsMemory)
 {
 	GPOS_ASSERT(NULL != m_str_name);
 	GPOS_ASSERT(m_str_name->IsValid());
@@ -71,22 +60,16 @@ CName::CName
 //		names for canonical multi-part names
 //
 //---------------------------------------------------------------------------
-CName::CName
-	(
-	CMemoryPool *mp,
-	const CName &nameFirst,
-	const CName &nameSecond
-	)
-	:
-	m_str_name(NULL),
-	m_fDeepCopy(false)
+CName::CName(CMemoryPool *mp, const CName &nameFirst, const CName &nameSecond)
+	: m_str_name(NULL), m_fDeepCopy(false)
 {
-	CWStringDynamic *pstrTmp = GPOS_NEW(mp) CWStringDynamic(mp, (nameFirst.Pstr())->GetBuffer());
+	CWStringDynamic *pstrTmp =
+		GPOS_NEW(mp) CWStringDynamic(mp, (nameFirst.Pstr())->GetBuffer());
 	pstrTmp->Append(nameSecond.Pstr());
-	
+
 	m_str_name = GPOS_NEW(mp) CWStringConst(mp, pstrTmp->GetBuffer());
 	m_fDeepCopy = true;
-	
+
 	// release tmp string
 	GPOS_DELETE(pstrTmp);
 }
@@ -101,16 +84,10 @@ CName::CName
 //		shallow copy constructor
 //
 //---------------------------------------------------------------------------
-CName::CName
-	(
-	const CName &name
-	)
-	:
-	m_str_name(name.Pstr()),
-	m_fDeepCopy(false)
+CName::CName(const CName &name) : m_str_name(name.Pstr()), m_fDeepCopy(false)
 {
 	GPOS_ASSERT(NULL != m_str_name->GetBuffer());
-	GPOS_ASSERT(m_str_name->IsValid());	
+	GPOS_ASSERT(m_str_name->IsValid());
 }
 
 
@@ -123,14 +100,8 @@ CName::CName
 //		deep copy constructor
 //
 //---------------------------------------------------------------------------
-CName::CName
-	(
-	CMemoryPool *mp,
-	const CName &name
-	)
-	:
-	m_str_name(NULL),
-	m_fDeepCopy(false)
+CName::CName(CMemoryPool *mp, const CName &name)
+	: m_str_name(NULL), m_fDeepCopy(false)
 {
 	DeepCopy(mp, name.Pstr());
 }
@@ -165,18 +136,13 @@ CName::~CName()
 //
 //---------------------------------------------------------------------------
 void
-CName::DeepCopy
-	(
-	CMemoryPool *mp,
-	const CWStringConst *str
-	)
+CName::DeepCopy(CMemoryPool *mp, const CWStringConst *str)
 {
 	m_str_name = GPOS_NEW(mp) CWStringConst(mp, str->GetBuffer());
 	m_fDeepCopy = true;
 }
 
 
-#ifdef GPOS_DEBUG
 //---------------------------------------------------------------------------
 //	@function:
 //		CName::Equals
@@ -186,16 +152,11 @@ CName::DeepCopy
 //
 //---------------------------------------------------------------------------
 BOOL
-CName::Equals
-	(
-	const CName &name
-	)
-	const 
+CName::Equals(const CName &name) const
 {
 	return m_str_name->Equals((name.Pstr()));
 }
 
-#endif // GPOS_DEBUG
 
 
 //---------------------------------------------------------------------------
@@ -207,15 +168,11 @@ CName::Equals
 //
 //---------------------------------------------------------------------------
 IOstream &
-CName::OsPrint
-	(
-	IOstream &os
-	)
-	const
+CName::OsPrint(IOstream &os) const
 {
-	os << GPOPT_NAME_QUOTE_BEGIN << m_str_name->GetBuffer() << GPOPT_NAME_QUOTE_END;
+	os << GPOPT_NAME_QUOTE_BEGIN << m_str_name->GetBuffer()
+	   << GPOPT_NAME_QUOTE_END;
 	return os;
 }
 
 // EOF
-

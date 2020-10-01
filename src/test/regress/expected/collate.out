@@ -16,12 +16,11 @@ CREATE TABLE collate_test1 (
     b text COLLATE "C" NOT NULL
 );
 \d collate_test1
-  Table "collate_tests.collate_test1"
- Column |  Type   |     Modifiers      
---------+---------+--------------------
- a      | integer | 
- b      | text    | collate C not null
-Distributed by: (a)
+        Table "collate_tests.collate_test1"
+ Column |  Type   | Collation | Nullable | Default 
+--------+---------+-----------+----------+---------
+ a      | integer |           |          | 
+ b      | text    | C         | not null | 
 
 CREATE TABLE collate_test_fail (
     a int COLLATE "C",
@@ -34,11 +33,11 @@ CREATE TABLE collate_test_like (
     LIKE collate_test1
 );
 \d collate_test_like
-Table "collate_tests.collate_test_like"
- Column |  Type   |     Modifiers      
---------+---------+--------------------
- a      | integer | 
- b      | text    | collate C not null
+      Table "collate_tests.collate_test_like"
+ Column |  Type   | Collation | Nullable | Default 
+--------+---------+-----------+----------+---------
+ a      | integer |           |          | 
+ b      | text    | C         | not null | 
 Distributed by: (a)
 
 CREATE TABLE collate_test2 (
@@ -506,6 +505,21 @@ SELECT a, b, a < b as lt FROM
  A | b | t
 (2 rows)
 
+-- collation mismatch in subselects
+SELECT * FROM collate_test10 WHERE (x, y) NOT IN (SELECT y, x FROM collate_test10);
+ERROR:  could not determine which collation to use for string comparison  (seg1 slice1 127.0.0.1:40001 pid=24086)
+HINT:  Use the COLLATE clause to set the collation explicitly.
+-- now it works with overrides
+SELECT * FROM collate_test10 WHERE (x COLLATE "POSIX", y COLLATE "C") NOT IN (SELECT y, x FROM collate_test10);
+ a | x | y 
+---+---+---
+(0 rows)
+
+SELECT * FROM collate_test10 WHERE (x, y) NOT IN (SELECT y COLLATE "C", x COLLATE "POSIX" FROM collate_test10);
+ a | x | y 
+---+---+---
+(0 rows)
+
 -- casting
 SELECT CAST('42' AS text COLLATE "C");
 ERROR:  syntax error at or near "COLLATE"
@@ -634,6 +648,22 @@ EXPLAIN (COSTS OFF)
  Optimizer: Postgres query optimizer
 (6 rows)
 
+-- CREATE/DROP COLLATION
+CREATE COLLATION mycoll1 FROM "C";
+CREATE COLLATION mycoll2 ( LC_COLLATE = "POSIX", LC_CTYPE = "POSIX" );
+CREATE COLLATION mycoll3 FROM "default";  -- intentionally unsupported
+ERROR:  collation "default" cannot be copied
+DROP COLLATION mycoll1;
+CREATE TABLE collate_test23 (f1 text collate mycoll2);
+DROP COLLATION mycoll2;  -- fail
+ERROR:  cannot drop collation mycoll2 because other objects depend on it
+DETAIL:  column f1 of table collate_test23 depends on collation mycoll2
+HINT:  Use DROP ... CASCADE to drop the dependent objects too.
+-- invalid: non-lowercase quoted identifiers
+CREATE COLLATION case_coll ("Lc_Collate" = "POSIX", "Lc_Ctype" = "POSIX");
+ERROR:  collation attribute "Lc_Collate" not recognized
+LINE 1: CREATE COLLATION case_coll ("Lc_Collate" = "POSIX", "Lc_Ctyp...
+                                    ^
 -- 9.1 bug with useless COLLATE in an expression subject to length coercion
 CREATE TEMP TABLE vctable (f1 varchar(25));
 INSERT INTO vctable VALUES ('foo' COLLATE "C");
@@ -663,7 +693,7 @@ SELECT collation for ((SELECT b FROM collate_test1 LIMIT 1));
 -- must get rid of them.
 --
 DROP SCHEMA collate_tests CASCADE;
-NOTICE:  drop cascades to 15 other objects
+NOTICE:  drop cascades to 17 other objects
 DETAIL:  drop cascades to table collate_test1
 drop cascades to table collate_test_like
 drop cascades to table collate_test2
@@ -679,3 +709,5 @@ drop cascades to function dup(anyelement)
 drop cascades to table collate_test20
 drop cascades to table collate_test21
 drop cascades to table collate_test22
+drop cascades to collation mycoll2
+drop cascades to table collate_test23

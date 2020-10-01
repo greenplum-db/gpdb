@@ -1,6 +1,8 @@
 --
 -- AGGREGATES
 --
+-- avoid bit-exact output here because operations may not be bit-exact.
+SET extra_float_digits = 0;
 SELECT avg(four) AS avg_1 FROM onek;
        avg_1        
 --------------------
@@ -198,6 +200,50 @@ select avg('NaN'::numeric) from generate_series(1,3);
  NaN
 (1 row)
 
+-- verify correct results for infinite inputs
+SELECT avg(x::float8), var_pop(x::float8)
+FROM (VALUES ('1'), ('infinity')) v(x);
+   avg    | var_pop 
+----------+---------
+ Infinity |     NaN
+(1 row)
+
+SELECT avg(x::float8), var_pop(x::float8)
+FROM (VALUES ('infinity'), ('1')) v(x);
+   avg    | var_pop 
+----------+---------
+ Infinity |     NaN
+(1 row)
+
+SELECT avg(x::float8), var_pop(x::float8)
+FROM (VALUES ('infinity'), ('infinity')) v(x);
+   avg    | var_pop 
+----------+---------
+ Infinity |     NaN
+(1 row)
+
+SELECT avg(x::float8), var_pop(x::float8)
+FROM (VALUES ('-infinity'), ('infinity')) v(x);
+ avg | var_pop 
+-----+---------
+ NaN |     NaN
+(1 row)
+
+-- test accuracy with a large input offset
+SELECT avg(x::float8), var_pop(x::float8)
+FROM (VALUES (100000003), (100000004), (100000006), (100000007)) v(x);
+    avg    | var_pop 
+-----------+---------
+ 100000005 |     2.5
+(1 row)
+
+SELECT avg(x::float8), var_pop(x::float8)
+FROM (VALUES (7000000000005), (7000000000007)) v(x);
+      avg      | var_pop 
+---------------+---------
+ 7000000000006 |       1
+(1 row)
+
 -- SQL2003 binary aggregates
 SELECT regr_count(b, a) FROM aggtest;
  regr_count 
@@ -253,6 +299,90 @@ SELECT corr(b, a) FROM aggtest;
  0.139634516517873
 (1 row)
 
+-- test accum and combine functions directly
+CREATE TABLE regr_test (x float8, y float8);
+INSERT INTO regr_test VALUES (10,150),(20,250),(30,350),(80,540),(100,200);
+SELECT count(*), sum(x), regr_sxx(y,x), sum(y),regr_syy(y,x), regr_sxy(y,x)
+FROM regr_test WHERE x IN (10,20,30,80);
+ count | sum | regr_sxx | sum  | regr_syy | regr_sxy 
+-------+-----+----------+------+----------+----------
+     4 | 140 |     2900 | 1290 |    83075 |    15050
+(1 row)
+
+SELECT count(*), sum(x), regr_sxx(y,x), sum(y),regr_syy(y,x), regr_sxy(y,x)
+FROM regr_test;
+ count | sum | regr_sxx | sum  | regr_syy | regr_sxy 
+-------+-----+----------+------+----------+----------
+     5 | 240 |     6280 | 1490 |    95080 |     8680
+(1 row)
+
+SELECT float8_accum('{4,140,2900}'::float8[], 100);
+ float8_accum 
+--------------
+ {5,240,6280}
+(1 row)
+
+SELECT float8_regr_accum('{4,140,2900,1290,83075,15050}'::float8[], 200, 100);
+      float8_regr_accum       
+------------------------------
+ {5,240,6280,1490,95080,8680}
+(1 row)
+
+SELECT count(*), sum(x), regr_sxx(y,x), sum(y),regr_syy(y,x), regr_sxy(y,x)
+FROM regr_test WHERE x IN (10,20,30);
+ count | sum | regr_sxx | sum | regr_syy | regr_sxy 
+-------+-----+----------+-----+----------+----------
+     3 |  60 |      200 | 750 |    20000 |     2000
+(1 row)
+
+SELECT count(*), sum(x), regr_sxx(y,x), sum(y),regr_syy(y,x), regr_sxy(y,x)
+FROM regr_test WHERE x IN (80,100);
+ count | sum | regr_sxx | sum | regr_syy | regr_sxy 
+-------+-----+----------+-----+----------+----------
+     2 | 180 |      200 | 740 |    57800 |    -3400
+(1 row)
+
+SELECT float8_combine('{3,60,200}'::float8[], '{0,0,0}'::float8[]);
+ float8_combine 
+----------------
+ {3,60,200}
+(1 row)
+
+SELECT float8_combine('{0,0,0}'::float8[], '{2,180,200}'::float8[]);
+ float8_combine 
+----------------
+ {2,180,200}
+(1 row)
+
+SELECT float8_combine('{3,60,200}'::float8[], '{2,180,200}'::float8[]);
+ float8_combine 
+----------------
+ {5,240,6280}
+(1 row)
+
+SELECT float8_regr_combine('{3,60,200,750,20000,2000}'::float8[],
+                           '{0,0,0,0,0,0}'::float8[]);
+    float8_regr_combine    
+---------------------------
+ {3,60,200,750,20000,2000}
+(1 row)
+
+SELECT float8_regr_combine('{0,0,0,0,0,0}'::float8[],
+                           '{2,180,200,740,57800,-3400}'::float8[]);
+     float8_regr_combine     
+-----------------------------
+ {2,180,200,740,57800,-3400}
+(1 row)
+
+SELECT float8_regr_combine('{3,60,200,750,20000,2000}'::float8[],
+                           '{2,180,200,740,57800,-3400}'::float8[]);
+     float8_regr_combine      
+------------------------------
+ {5,240,6280,1490,95080,8680}
+(1 row)
+
+DROP TABLE regr_test;
+-- test count, distinct
 SELECT count(four) AS cnt_1000 FROM onek;
  cnt_1000 
 ----------
@@ -868,9 +998,10 @@ explain (costs off)
                  Merge Key: tenk1.unique2
                  ->  Index Only Scan Backward using tenk1_unique2 on tenk1
                        Index Cond: (unique2 IS NOT NULL)
-   ->  Result
+   ->  ProjectSet
+         ->  Result
  Optimizer: Postgres query optimizer
-(10 rows)
+(11 rows)
 
 select max(unique2), generate_series(1,3) as g from tenk1 order by g desc;
  max  | g 
@@ -1015,56 +1146,50 @@ explain (costs off) select * from t1 group by a,b,c,d;
 
 -- No removal can happen if the complete PK is not present in GROUP BY
 explain (costs off) select a,c from t1 group by a,c,d;
-                         QUERY PLAN                         
-------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)
-   ->  Finalize HashAggregate
-         Group Key: a, c, d
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)
-               Hash Key: a, c, d
-               ->  Partial HashAggregate
-                     Group Key: a, c, d
-                     ->  Seq Scan on t1
+                   QUERY PLAN                   
+------------------------------------------------
+ Finalize HashAggregate
+   Group Key: a, c, d
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial HashAggregate
+               Group Key: a, c, d
+               ->  Seq Scan on t1
  Optimizer: Postgres query optimizer
-(9 rows)
+(7 rows)
 
 -- Test removal across multiple relations
 explain (costs off) select *
 from t1 inner join t2 on t1.a = t2.x and t1.b = t2.y
 group by t1.a,t1.b,t1.c,t1.d,t2.x,t2.y,t2.z;
-                            QUERY PLAN                            
-------------------------------------------------------------------
+                         QUERY PLAN                         
+------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  GroupAggregate
+   ->  HashAggregate
          Group Key: t1.a, t1.b, t2.x, t2.y
-         ->  Sort
-               Sort Key: t1.a, t1.b
-               ->  Hash Join
-                     Hash Cond: ((t2.x = t1.a) AND (t2.y = t1.b))
-                     ->  Seq Scan on t2
-                     ->  Hash
-                           ->  Seq Scan on t1
+         ->  Hash Join
+               Hash Cond: ((t2.x = t1.a) AND (t2.y = t1.b))
+               ->  Seq Scan on t2
+               ->  Hash
+                     ->  Seq Scan on t1
  Optimizer: Postgres query optimizer
-(11 rows)
+(9 rows)
 
 -- Test case where t1 can be optimized but not t2
 explain (costs off) select t1.*,t2.x,t2.z
 from t1 inner join t2 on t1.a = t2.x and t1.b = t2.y
 group by t1.a,t1.b,t1.c,t1.d,t2.x,t2.z;
-                            QUERY PLAN                            
-------------------------------------------------------------------
+                         QUERY PLAN                         
+------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  GroupAggregate
+   ->  HashAggregate
          Group Key: t1.a, t1.b, t2.x, t2.z
-         ->  Sort
-               Sort Key: t1.a, t1.b, t2.z
-               ->  Hash Join
-                     Hash Cond: ((t2.x = t1.a) AND (t2.y = t1.b))
-                     ->  Seq Scan on t2
-                     ->  Hash
-                           ->  Seq Scan on t1
+         ->  Hash Join
+               Hash Cond: ((t2.x = t1.a) AND (t2.y = t1.b))
+               ->  Seq Scan on t2
+               ->  Hash
+                     ->  Seq Scan on t1
  Optimizer: Postgres query optimizer
-(11 rows)
+(9 rows)
 
 -- Cannot optimize when PK is deferrable
 explain (costs off) select * from t3 group by a,b,c;
@@ -1693,7 +1818,7 @@ LINE 1: select rank(3) within group (order by stringu1,stringu2) fro...
                ^
 HINT:  To use the hypothetical-set aggregate rank, the number of hypothetical direct arguments (here 1) must match the number of ordering columns (here 2).
 select rank('fred') within group (order by x) from generate_series(1,5) x;
-ERROR:  invalid input syntax for integer: "fred"
+ERROR:  invalid input syntax for type integer: "fred"
 LINE 1: select rank('fred') within group (order by x) from generate_...
                     ^
 select rank('adam'::text collate "C") within group (order by x collate "POSIX")
@@ -1812,6 +1937,12 @@ select min(unique1) filter (where unique1 > 100) from tenk1;
  min 
 -----
  101
+(1 row)
+
+select sum(1/ten) filter (where ten > 0) from tenk1;
+ sum  
+------
+ 1000
 (1 row)
 
 select ten, sum(distinct four) filter (where four::text ~ '123') from onek a
@@ -2094,7 +2225,7 @@ LINE 1: select rank(3) within group (order by stringu1,stringu2) fro...
                ^
 HINT:  To use the hypothetical-set aggregate rank, the number of hypothetical direct arguments (here 1) must match the number of ordering columns (here 2).
 select rank('fred') within group (order by x) from generate_series(1,5) x;
-ERROR:  invalid input syntax for integer: "fred"
+ERROR:  invalid input syntax for type integer: "fred"
 LINE 1: select rank('fred') within group (order by x) from generate_...
                     ^
 select rank('adam'::text collate "C") within group (order by x collate "POSIX")
@@ -2286,7 +2417,7 @@ NOTICE:  avg_transfn called with 3
       2 |      6
 (1 row)
 
--- ideally these would share state, but we have to fix the OSAs first.
+-- exercise cases where OSAs share state
 select
   percentile_cont(0.5) within group (order by a),
   percentile_disc(0.5) within group (order by a)
@@ -2296,6 +2427,16 @@ from (values(1::float8),(3),(5),(7)) t(a);
                4 |               3
 (1 row)
 
+select
+  percentile_cont(0.25) within group (order by a),
+  percentile_disc(0.5) within group (order by a)
+from (values(1::float8),(3),(5),(7)) t(a);
+ percentile_cont | percentile_disc 
+-----------------+-----------------
+             2.5 |               3
+(1 row)
+
+-- these can't share state currently
 select
   rank(4) within group (order by a),
   dense_rank(4) within group (order by a)
@@ -2403,6 +2544,135 @@ NOTICE:  sum_transfn called with 4
 (1 row)
 
 rollback;
+-- test that the aggregate transition logic correctly handles
+-- transition / combine functions returning NULL
+-- First test the case of a normal transition function returning NULL
+BEGIN;
+CREATE FUNCTION balkifnull(int8, int4)
+RETURNS int8
+STRICT
+LANGUAGE plpgsql AS $$
+BEGIN
+    IF $1 IS NULL THEN
+       RAISE 'erroneously called with NULL argument';
+    END IF;
+    RETURN NULL;
+END$$;
+CREATE AGGREGATE balk(int4)
+(
+    SFUNC = balkifnull(int8, int4),
+    STYPE = int8,
+    PARALLEL = SAFE,
+    INITCOND = '0'
+);
+SELECT balk(hundred) FROM tenk1;
+ balk 
+------
+     
+(1 row)
+
+ROLLBACK;
+-- Secondly test the case of a parallel aggregate combiner function
+-- returning NULL. For that use normal transition function, but a
+-- combiner function returning NULL.
+BEGIN ISOLATION LEVEL REPEATABLE READ;
+CREATE FUNCTION balkifnull(int8, int8)
+RETURNS int8
+PARALLEL SAFE
+STRICT
+LANGUAGE plpgsql AS $$
+BEGIN
+    IF $1 IS NULL THEN
+       RAISE 'erroneously called with NULL argument';
+    END IF;
+    RETURN NULL;
+END$$;
+CREATE AGGREGATE balk(int4)
+(
+    SFUNC = int4_sum(int8, int4),
+    STYPE = int8,
+    COMBINEFUNC = balkifnull(int8, int8),
+    PARALLEL = SAFE,
+    INITCOND = '0'
+);
+-- force use of parallelism
+ALTER TABLE tenk1 set (parallel_workers = 4);
+SET LOCAL parallel_setup_cost=0;
+SET LOCAL max_parallel_workers_per_gather=4;
+EXPLAIN (COSTS OFF) SELECT balk(hundred) FROM tenk1;
+                   QUERY PLAN                   
+------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Seq Scan on tenk1
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+SELECT balk(hundred) FROM tenk1;
+ balk 
+------
+     
+(1 row)
+
+ROLLBACK;
+-- test coverage for aggregate combine/serial/deserial functions
+BEGIN ISOLATION LEVEL REPEATABLE READ;
+SET parallel_setup_cost = 0;
+SET parallel_tuple_cost = 0;
+SET min_parallel_table_scan_size = 0;
+SET max_parallel_workers_per_gather = 4;
+SET enable_indexonlyscan = off;
+-- variance(int4) covers numeric_poly_combine
+-- sum(int8) covers int8_avg_combine
+-- regr_count(float8, float8) covers int8inc_float8_float8 and aggregates with > 1 arg
+EXPLAIN (COSTS OFF, VERBOSE)
+  SELECT variance(unique1::int4), sum(unique1::int8), regr_count(unique1::float8, unique1::float8) FROM tenk1;
+                                                                            QUERY PLAN                                                                             
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Finalize Aggregate
+   Output: variance(unique1), sum((unique1)::bigint), regr_count((unique1)::double precision, (unique1)::double precision)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Output: (PARTIAL variance(unique1)), (PARTIAL sum((unique1)::bigint)), (PARTIAL regr_count((unique1)::double precision, (unique1)::double precision))
+         ->  Partial Aggregate
+               Output: PARTIAL variance(unique1), PARTIAL sum((unique1)::bigint), PARTIAL regr_count((unique1)::double precision, (unique1)::double precision)
+               ->  Seq Scan on public.tenk1
+                     Output: unique1, unique2, two, four, ten, twenty, hundred, thousand, twothousand, fivethous, tenthous, odd, even, stringu1, stringu2, string4
+ Optimizer: Postgres query optimizer
+ Settings: enable_indexonlyscan=off, min_parallel_table_scan_size=0, parallel_setup_cost=0, parallel_tuple_cost=0
+(10 rows)
+
+SELECT variance(unique1::int4), sum(unique1::int8), regr_count(unique1::float8, unique1::float8) FROM tenk1;
+       variance       |   sum    | regr_count 
+----------------------+----------+------------
+ 8334166.666666666667 | 49995000 |      10000
+(1 row)
+
+ROLLBACK;
+-- test coverage for dense_rank
+SELECT dense_rank(x) WITHIN GROUP (ORDER BY x) FROM (VALUES (1),(1),(2),(2),(3),(3)) v(x) GROUP BY (x) ORDER BY 1;
+ dense_rank 
+------------
+          1
+          1
+          1
+(3 rows)
+
+-- Ensure that the STRICT checks for aggregates does not take NULLness
+-- of ORDER BY columns into account. See bug report around
+-- 2a505161-2727-2473-7c46-591ed108ac52@email.cz
+SELECT min(x ORDER BY y) FROM (VALUES(1, NULL)) AS d(x,y);
+ min 
+-----
+   1
+(1 row)
+
+SELECT min(x ORDER BY y) FROM (VALUES(1, 2)) AS d(x,y);
+ min 
+-----
+   1
+(1 row)
+
 -- check collation-sensitive matching between grouping expressions
 select v||'a', case v||'a' when 'aa' then 1 else 0 end, count(*)
   from unnest(array['a','b']) u(v)
@@ -2422,3 +2692,217 @@ select v||'a', case when v||'a' = 'aa' then 1 else 0 end, count(*)
  ba       |    0 |     1
 (2 rows)
 
+-- Make sure that generation of HashAggregate for uniqification purposes
+-- does not lead to array overflow due to unexpected duplicate hash keys
+-- see CAFeeJoKKu0u+A_A9R9316djW-YW3-+Gtgvy3ju655qRHR3jtdA@mail.gmail.com
+explain (costs off)
+  select 1 from tenk1
+   where (hundred, thousand) in (select twothousand, twothousand from onek);
+                                   QUERY PLAN                                    
+---------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Result
+         ->  HashAggregate
+               Group Key: (RowIdExpr)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: (RowIdExpr)
+                     ->  Hash Join
+                           Hash Cond: (onek.twothousand = tenk1.hundred)
+                           ->  Seq Scan on onek
+                           ->  Hash
+                                 ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                       ->  Seq Scan on tenk1
+                                             Filter: (hundred = thousand)
+ Optimizer: Postgres query optimizer
+(14 rows)
+
+--
+-- Hash Aggregation Spill tests
+--
+set enable_sort=false;
+set work_mem='64kB';
+WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
+select unique1, count(*), sum(twothousand) from tenk1
+group by unique1
+having sum(fivethous) > 4975
+order by sum(twothousand);
+ unique1 | count | sum  
+---------+-------+------
+    4976 |     1 |  976
+    4977 |     1 |  977
+    4978 |     1 |  978
+    4979 |     1 |  979
+    4980 |     1 |  980
+    4981 |     1 |  981
+    4982 |     1 |  982
+    4983 |     1 |  983
+    4984 |     1 |  984
+    4985 |     1 |  985
+    4986 |     1 |  986
+    4987 |     1 |  987
+    4988 |     1 |  988
+    4989 |     1 |  989
+    4990 |     1 |  990
+    4991 |     1 |  991
+    4992 |     1 |  992
+    4993 |     1 |  993
+    4994 |     1 |  994
+    4995 |     1 |  995
+    4996 |     1 |  996
+    4997 |     1 |  997
+    4998 |     1 |  998
+    4999 |     1 |  999
+    9976 |     1 | 1976
+    9977 |     1 | 1977
+    9978 |     1 | 1978
+    9979 |     1 | 1979
+    9980 |     1 | 1980
+    9981 |     1 | 1981
+    9982 |     1 | 1982
+    9983 |     1 | 1983
+    9984 |     1 | 1984
+    9985 |     1 | 1985
+    9986 |     1 | 1986
+    9987 |     1 | 1987
+    9988 |     1 | 1988
+    9989 |     1 | 1989
+    9990 |     1 | 1990
+    9991 |     1 | 1991
+    9992 |     1 | 1992
+    9993 |     1 | 1993
+    9994 |     1 | 1994
+    9995 |     1 | 1995
+    9996 |     1 | 1996
+    9997 |     1 | 1997
+    9998 |     1 | 1998
+    9999 |     1 | 1999
+(48 rows)
+
+set work_mem to default;
+WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
+set enable_sort to default;
+--
+-- Compare results between plans using sorting and plans using hash
+-- aggregation. Force spilling in both cases by setting work_mem low.
+--
+set work_mem='64kB';
+WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
+-- Produce results with sorting.
+set enable_hashagg = false;
+set jit_above_cost = 0;
+explain (costs off)
+select g%100000 as c1, sum(g::numeric) as c2, count(*) as c3
+  from generate_series(0, 199999) g
+  group by g%100000;
+                   QUERY PLAN                   
+------------------------------------------------
+ GroupAggregate
+   Group Key: ((g % 100000))
+   ->  Sort
+         Sort Key: ((g % 100000))
+         ->  Function Scan on generate_series g
+(5 rows)
+
+create table agg_group_1 as
+select g%100000 as c1, sum(g::numeric) as c2, count(*) as c3
+  from generate_series(0, 199999) g
+  group by g%100000;
+/*
+ * create table agg_group_2 as
+ * select * from
+ *   (values (100), (300), (500)) as r(a),
+ *   lateral (
+ *     select (g/2)::numeric as c1,
+ *            array_agg(g::numeric) as c2,
+ *            count(*) as c3
+ *     from generate_series(0, 1999) g
+ *     where g < r.a
+ *     group by g/2) as s;
+ */
+set jit_above_cost to default;
+create table agg_group_3 as
+select (g/2)::numeric as c1, sum(7::int4) as c2, count(*) as c3
+  from generate_series(0, 1999) g
+  group by g/2;
+create table agg_group_4 as
+select (g/2)::numeric as c1, array_agg(g::numeric) as c2, count(*) as c3
+  from generate_series(0, 1999) g
+  group by g/2;
+-- Produce results with hash aggregation
+set enable_hashagg = true;
+set enable_sort = false;
+set jit_above_cost = 0;
+explain (costs off)
+select g%100000 as c1, sum(g::numeric) as c2, count(*) as c3
+  from generate_series(0, 199999) g
+  group by g%100000;
+                QUERY PLAN                
+------------------------------------------
+ HashAggregate
+   Group Key: (g % 100000)
+   ->  Function Scan on generate_series g
+(3 rows)
+
+create table agg_hash_1 as
+select g%100000 as c1, sum(g::numeric) as c2, count(*) as c3
+  from generate_series(0, 199999) g
+  group by g%100000;
+/*
+ * create table agg_hash_2 as
+ * select * from
+ *   (values (100), (300), (500)) as r(a),
+ *   lateral (
+ *     select (g/2)::numeric as c1,
+ *            array_agg(g::numeric) as c2,
+ *            count(*) as c3
+ *     from generate_series(0, 1999) g
+ *     where g < r.a
+ *     group by g/2) as s;
+ */
+set jit_above_cost to default;
+create table agg_hash_3 as
+select (g/2)::numeric as c1, sum(7::int4) as c2, count(*) as c3
+  from generate_series(0, 1999) g
+  group by g/2;
+create table agg_hash_4 as
+select (g/2)::numeric as c1, array_agg(g::numeric) as c2, count(*) as c3
+  from generate_series(0, 1999) g
+  group by g/2;
+set enable_sort = true;
+set work_mem to default;
+WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
+-- Compare group aggregation results to hash aggregation results
+(select * from agg_hash_1 except select * from agg_group_1)
+  union all
+(select * from agg_group_1 except select * from agg_hash_1);
+ c1 | c2 | c3 
+----+----+----
+(0 rows)
+
+/*
+ * (select * from agg_hash_2 except select * from agg_group_2)
+ *   union all
+ * (select * from agg_group_2 except select * from agg_hash_2);
+ */
+(select * from agg_hash_3 except select * from agg_group_3)
+  union all
+(select * from agg_group_3 except select * from agg_hash_3);
+ c1 | c2 | c3 
+----+----+----
+(0 rows)
+
+(select * from agg_hash_4 except select * from agg_group_4)
+  union all
+(select * from agg_group_4 except select * from agg_hash_4);
+ c1 | c2 | c3 
+----+----+----
+(0 rows)
+
+drop table agg_group_1;
+--  drop table agg_group_2;
+drop table agg_group_3;
+drop table agg_group_4;
+drop table agg_hash_1;
+--  drop table agg_hash_2;
+drop table agg_hash_3;
+drop table agg_hash_4;

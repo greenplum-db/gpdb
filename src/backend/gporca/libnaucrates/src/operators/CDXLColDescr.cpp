@@ -27,26 +27,17 @@ using namespace gpmd;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CDXLColDescr::CDXLColDescr
-	(
-	CMemoryPool *mp,
-	CMDName *md_name,
-	ULONG column_id,
-	INT attr_no,
-	IMDId *column_mdid_type,
-	INT type_modifier,
-	BOOL is_dropped,
-	ULONG width
-	)
-	:
-	m_mp(mp),
-	m_md_name(md_name),
-	m_column_id(column_id),
-	m_attr_no(attr_no),
-	m_column_mdid_type(column_mdid_type),
-	m_type_modifier(type_modifier),
-	m_is_dropped(is_dropped),
-	m_column_width(width)
+CDXLColDescr::CDXLColDescr(CMemoryPool *mp, CMDName *md_name, ULONG column_id,
+						   INT attr_no, IMDId *column_mdid_type,
+						   INT type_modifier, BOOL is_dropped, ULONG width)
+	: m_mp(mp),
+	  m_md_name(md_name),
+	  m_column_id(column_id),
+	  m_attr_no(attr_no),
+	  m_column_mdid_type(column_mdid_type),
+	  m_type_modifier(type_modifier),
+	  m_is_dropped(is_dropped),
+	  m_column_width(width)
 {
 	GPOS_ASSERT_IMP(m_is_dropped, 0 == m_md_name->GetMDName()->Length());
 }
@@ -164,37 +155,45 @@ CDXLColDescr::Width() const
 //
 //---------------------------------------------------------------------------
 void
-CDXLColDescr::SerializeToDXL
-	(
-	CXMLSerializer *xml_serializer
-	)
-	const
+CDXLColDescr::SerializeToDXL(CXMLSerializer *xml_serializer) const
 {
-	const CWStringConst *pstrTokenColDescr = CDXLTokens::GetDXLTokenStr(EdxltokenColDescr);
-	
-	xml_serializer->OpenElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), pstrTokenColDescr);
-	
-	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenColId), m_column_id);
-	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenAttno), m_attr_no);
-	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenColName), m_md_name->GetMDName());
-	m_column_mdid_type->Serialize(xml_serializer, CDXLTokens::GetDXLTokenStr(EdxltokenTypeId));
+	const CWStringConst *pstrTokenColDescr =
+		CDXLTokens::GetDXLTokenStr(EdxltokenColDescr);
+
+	xml_serializer->OpenElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
+		pstrTokenColDescr);
+
+	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenColId),
+								 m_column_id);
+	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenAttno),
+								 m_attr_no);
+	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenColName),
+								 m_md_name->GetMDName());
+	m_column_mdid_type->Serialize(xml_serializer,
+								  CDXLTokens::GetDXLTokenStr(EdxltokenTypeId));
 
 	if (default_type_modifier != TypeModifier())
 	{
-		xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenTypeMod), TypeModifier());
+		xml_serializer->AddAttribute(
+			CDXLTokens::GetDXLTokenStr(EdxltokenTypeMod), TypeModifier());
 	}
 
 	if (m_is_dropped)
 	{
-		xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenColDropped), m_is_dropped);
+		xml_serializer->AddAttribute(
+			CDXLTokens::GetDXLTokenStr(EdxltokenColDropped), m_is_dropped);
 	}
 
 	if (gpos::ulong_max != m_column_width)
 	{
-		xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenColWidth), m_column_width);
+		xml_serializer->AddAttribute(
+			CDXLTokens::GetDXLTokenStr(EdxltokenColWidth), m_column_width);
 	}
-	
-	xml_serializer->CloseElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), pstrTokenColDescr);
+
+	xml_serializer->CloseElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
+		pstrTokenColDescr);
 
 	GPOS_CHECK_ABORT;
 }

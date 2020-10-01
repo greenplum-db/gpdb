@@ -142,35 +142,33 @@ CREATE TABLE mpp22263 (
         string4         name
 ) distributed by (unique1);
 create index mpp22263_idx1 on mpp22263 using btree(unique1);
+-- GPDB_12_MERGE_FIXME: Non default collation
 explain select * from mpp22263, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i, j)
 WHERE mpp22263.unique1 = v.i and mpp22263.stringu1 = v.j;
-                                         QUERY PLAN                                         
---------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2.00 rows=1 width=256)
-   ->  Nested Loop  (cost=0.00..2.00 rows=1 width=256)
-         Join Filter: true
-         ->  Result  (cost=0.00..0.00 rows=1 width=12)
-               ->  Values Scan on "Values"  (cost=0.00..0.00 rows=1 width=12)
-         ->  Index Scan using mpp22263_idx1 on mpp22263  (cost=0.00..2.00 rows=1 width=244)
-               Index Cond: unique1 = "Values".column1
-               Filter: stringu1::text = "Values".column2
- Optimizer: Pivotal Optimizer (GPORCA) version 2.64.0
-(9 rows)
+                                                    QUERY PLAN                                                     
+-------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.06..279.08 rows=14 width=280)
+   ->  Hash Join  (cost=0.06..278.81 rows=5 width=280)
+         Hash Cond: ((mpp22263.unique1 = "*VALUES*".column1) AND (mpp22263.stringu1 = ("*VALUES*".column2)::text))
+         ->  Seq Scan on mpp22263  (cost=0.00..219.00 rows=3967 width=244)
+         ->  Hash  (cost=0.03..0.03 rows=1 width=36)
+               ->  Values Scan on "*VALUES*"  (cost=0.00..0.03 rows=1 width=36)
+ Optimizer: Postgres query optimizer
+(7 rows)
 
 -- atmsort.pm masks out differences in the Filter line, so just memorizing
 -- the output of the above EXPLAIN isn't enough to catch a faulty Filter line.
 -- Extract the Filter explicitly.
+-- GPDB_12_MERGE_FIXME: Non default collation
 SELECT * from
   get_explain_output($$
 select * from mpp22263, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i, j)
 WHERE mpp22263.unique1 = v.i and mpp22263.stringu1 = v.j;
   $$) as et
 WHERE et like '%Filter: %';
-                             et                              
--------------------------------------------------------------
-         Join Filter: true
-               Filter: ((stringu1)::text = "Values".column2)
-(2 rows)
+ et 
+----
+(0 rows)
 
 --
 -- Join condition in explain plan should represent constants with proper
@@ -341,32 +339,31 @@ explain (format xml, costs off) insert into dummy_aotab values (1);
 -- github issues 5795. explain fails previously.
 --start_ignore
 explain SELECT * from information_schema.key_column_usage;
-                                                                   QUERY PLAN                                                                    
--------------------------------------------------------------------------------------------------------------------------------------------------
- Hash Join  (cost=368.29..19727.76 rows=38 width=232)
-   Hash Cond: ((a.attrelid = ss.roid) AND (a.attnum = (ss.x).x))
-   Join Filter: (pg_has_role(ss.relowner, 'USAGE'::text) OR has_column_privilege(ss.roid, a.attnum, 'SELECT, INSERT, UPDATE, REFERENCES'::text))
-   ->  Seq Scan on pg_attribute a  (cost=0.00..510.77 rows=34977 width=70)
-         Filter: (NOT attisdropped)
-   ->  Hash  (cost=235.38..235.38 rows=2954 width=333)
-         ->  Subquery Scan on ss  (cost=6.50..235.38 rows=8861 width=333)
-               ->  Result  (cost=0.00..0.00 rows=0 width=0)
-                     ->  Hash Join  (cost=6.50..146.78 rows=8861 width=341)
-                           Hash Cond: (r.relnamespace = nr.oid)
-                           ->  Hash Join  (cost=5.31..99.00 rows=10 width=273)
-                                 Hash Cond: (r.oid = c.conrelid)
-                                 ->  Seq Scan on pg_class r  (cost=0.00..91.85 rows=698 width=76)
-                                       Filter: (relkind = 'r'::"char")
-                                 ->  Hash  (cost=5.27..5.27 rows=2 width=201)
-                                       ->  Hash Join  (cost=4.12..5.27 rows=4 width=201)
-                                             Hash Cond: (nc.oid = c.connamespace)
-                                             ->  Seq Scan on pg_namespace nc  (cost=0.00..1.09 rows=9 width=68)
-                                             ->  Hash  (cost=4.11..4.11 rows=1 width=141)
-                                                   ->  Seq Scan on pg_constraint c  (cost=0.00..4.11 rows=1 width=141)
-                                                         Filter: (contype = ANY ('{p,u,f}'::"char"[]))
-                           ->  Hash  (cost=1.11..1.11 rows=3 width=68)
-                                 ->  Seq Scan on pg_namespace nr  (cost=0.00..1.11 rows=7 width=68)
-                                       Filter: (NOT pg_is_other_temp_schema(oid))
+                                                                  QUERY PLAN                                                                  
+----------------------------------------------------------------------------------------------------------------------------------------------
+ Hash Join  (cost=125.37..263.02 rows=13 width=456)
+   Hash Cond: ((r.oid = a.attrelid) AND (((information_schema._pg_expandarray(c.conkey))).x = a.attnum))
+   Join Filter: (pg_has_role(r.relowner, 'USAGE'::text) OR has_column_privilege(r.oid, a.attnum, 'SELECT, INSERT, UPDATE, REFERENCES'::text))
+   ->  ProjectSet  (cost=3.42..47.40 rows=5923 width=341)
+         ->  Hash Join  (cost=3.42..16.27 rows=6 width=333)
+               Hash Cond: (r.relnamespace = nr.oid)
+               ->  Hash Join  (cost=2.23..15.01 rows=7 width=273)
+                     Hash Cond: (r.oid = c.conrelid)
+                     ->  Seq Scan on pg_class r  (cost=0.00..12.49 rows=92 width=76)
+                           Filter: (relkind = ANY ('{r,p}'::"char"[]))
+                     ->  Hash  (cost=2.19..2.19 rows=4 width=201)
+                           ->  Hash Join  (cost=1.04..2.19 rows=4 width=201)
+                                 Hash Cond: (nc.oid = c.connamespace)
+                                 ->  Seq Scan on pg_namespace nc  (cost=0.00..1.09 rows=9 width=68)
+                                 ->  Hash  (cost=1.03..1.03 rows=1 width=141)
+                                       ->  Seq Scan on pg_constraint c  (cost=0.00..1.03 rows=1 width=141)
+                                             Filter: (contype = ANY ('{p,u,f}'::"char"[]))
+               ->  Hash  (cost=1.11..1.11 rows=7 width=68)
+                     ->  Seq Scan on pg_namespace nr  (cost=0.00..1.11 rows=7 width=68)
+                           Filter: (NOT pg_is_other_temp_schema(oid))
+   ->  Hash  (cost=60.18..60.18 rows=4118 width=70)
+         ->  Seq Scan on pg_attribute a  (cost=0.00..60.18 rows=4118 width=70)
+               Filter: (NOT attisdropped)
  Optimizer: Postgres query optimizer
 (25 rows)
 

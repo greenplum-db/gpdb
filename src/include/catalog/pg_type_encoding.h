@@ -16,15 +16,14 @@
 #define PG_TYPE_ENCODING_H
 
 #include "catalog/genbki.h"
+#include "catalog/pg_type_encoding_d.h"
 
 /* ----------------
  *		pg_type_encoding definition.  cpp turns this into
  *		typedef struct FormData_pg_type_encoding
  * ----------------
  */
-#define TypeEncodingRelationId	6220
-
-CATALOG(pg_type_encoding,6220) BKI_WITHOUT_OIDS
+CATALOG(pg_type_encoding,6220,TypeEncodingRelationId)
 {
 	Oid		typid;			
 #ifdef CATALOG_VARLEN			/* variable-length fields start here */
@@ -41,14 +40,5 @@ FOREIGN_KEY(typid REFERENCES pg_type(oid));
  * ----------------
  */
 typedef FormData_pg_type_encoding *Form_pg_type_encoding;
-
-
-/* ----------------
- *		compiler constants for pg_type_encoding
- * ----------------
- */
-#define Natts_pg_type_encoding				2
-#define Anum_pg_type_encoding_typid			1
-#define Anum_pg_type_encoding_typoptions	2
 
 #endif   /* PG_TYPE_ENCODING_H */

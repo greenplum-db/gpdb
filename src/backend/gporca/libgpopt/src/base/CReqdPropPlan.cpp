@@ -45,21 +45,15 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CReqdPropPlan::CReqdPropPlan
-	(
-	CColRefSet *pcrs,
-	CEnfdOrder *peo,
-	CEnfdDistribution *ped,
-	CEnfdRewindability *per,
-	CCTEReq *pcter
-	)
-	:
-	m_pcrs(pcrs),
-	m_peo(peo),
-	m_ped(ped),
-	m_per(per),
-	m_pepp(NULL),
-	m_pcter(pcter)
+CReqdPropPlan::CReqdPropPlan(CColRefSet *pcrs, CEnfdOrder *peo,
+							 CEnfdDistribution *ped, CEnfdRewindability *per,
+							 CCTEReq *pcter)
+	: m_pcrs(pcrs),
+	  m_peo(peo),
+	  m_ped(ped),
+	  m_per(per),
+	  m_pepp(NULL),
+	  m_pcter(pcter)
 {
 	GPOS_ASSERT(NULL != pcrs);
 	GPOS_ASSERT(NULL != peo);
@@ -77,22 +71,15 @@ CReqdPropPlan::CReqdPropPlan
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CReqdPropPlan::CReqdPropPlan
-	(
-	CColRefSet *pcrs,
-	CEnfdOrder *peo,
-	CEnfdDistribution *ped,
-	CEnfdRewindability *per,
-	CEnfdPartitionPropagation *pepp,
-	CCTEReq *pcter
-	)
-	:
-	m_pcrs(pcrs),
-	m_peo(peo),
-	m_ped(ped),
-	m_per(per),
-	m_pepp(pepp),
-	m_pcter(pcter)
+CReqdPropPlan::CReqdPropPlan(CColRefSet *pcrs, CEnfdOrder *peo,
+							 CEnfdDistribution *ped, CEnfdRewindability *per,
+							 CEnfdPartitionPropagation *pepp, CCTEReq *pcter)
+	: m_pcrs(pcrs),
+	  m_peo(peo),
+	  m_ped(ped),
+	  m_per(per),
+	  m_pepp(pepp),
+	  m_pcter(pcter)
 {
 	GPOS_ASSERT(NULL != pcrs);
 	GPOS_ASSERT(NULL != peo);
@@ -131,21 +118,17 @@ CReqdPropPlan::~CReqdPropPlan()
 //
 //---------------------------------------------------------------------------
 void
-CReqdPropPlan::ComputeReqdCols
-	(
-	CMemoryPool *mp,
-	CExpressionHandle &exprhdl,
-	CReqdProp *prpInput,
-	ULONG child_index,
-	CDrvdPropArray *pdrgpdpCtxt
-	)
+CReqdPropPlan::ComputeReqdCols(CMemoryPool *mp, CExpressionHandle &exprhdl,
+							   CReqdProp *prpInput, ULONG child_index,
+							   CDrvdPropArray *pdrgpdpCtxt)
 {
 	GPOS_ASSERT(NULL == m_pcrs);
 
-	CReqdPropPlan *prppInput =  CReqdPropPlan::Prpp(prpInput);
+	CReqdPropPlan *prppInput = CReqdPropPlan::Prpp(prpInput);
 	CPhysical *popPhysical = CPhysical::PopConvert(exprhdl.Pop());
 	m_pcrs =
-		popPhysical->PcrsRequired(mp, exprhdl, prppInput->PcrsRequired(), child_index, pdrgpdpCtxt, 0 /*ulOptReq*/);
+		popPhysical->PcrsRequired(mp, exprhdl, prppInput->PcrsRequired(),
+								  child_index, pdrgpdpCtxt, 0 /*ulOptReq*/);
 }
 
 //---------------------------------------------------------------------------
@@ -157,21 +140,17 @@ CReqdPropPlan::ComputeReqdCols
 //
 //---------------------------------------------------------------------------
 void
-CReqdPropPlan::ComputeReqdCTEs
-	(
-	CMemoryPool *mp,
-	CExpressionHandle &exprhdl,
-	CReqdProp *prpInput,
-	ULONG child_index,
-	CDrvdPropArray *pdrgpdpCtxt
-	)
+CReqdPropPlan::ComputeReqdCTEs(CMemoryPool *mp, CExpressionHandle &exprhdl,
+							   CReqdProp *prpInput, ULONG child_index,
+							   CDrvdPropArray *pdrgpdpCtxt)
 {
 	GPOS_ASSERT(NULL == m_pcter);
 
-	CReqdPropPlan *prppInput =  CReqdPropPlan::Prpp(prpInput);
+	CReqdPropPlan *prppInput = CReqdPropPlan::Prpp(prpInput);
 	CPhysical *popPhysical = CPhysical::PopConvert(exprhdl.Pop());
 	m_pcter =
-		popPhysical->PcteRequired(mp, exprhdl, prppInput->Pcter(), child_index, pdrgpdpCtxt, 0 /*ulOptReq*/);
+		popPhysical->PcteRequired(mp, exprhdl, prppInput->Pcter(), child_index,
+								  pdrgpdpCtxt, 0 /*ulOptReq*/);
 }
 
 //---------------------------------------------------------------------------
@@ -183,88 +162,50 @@ CReqdPropPlan::ComputeReqdCTEs
 //
 //---------------------------------------------------------------------------
 void
-CReqdPropPlan::Compute
-	(
-	CMemoryPool *mp,
-	CExpressionHandle &exprhdl,
-	CReqdProp *prpInput,
-	ULONG child_index,
-	CDrvdPropArray *pdrgpdpCtxt,
-	ULONG ulOptReq
-	)
+CReqdPropPlan::Compute(CMemoryPool *mp, CExpressionHandle &exprhdl,
+					   CReqdProp *prpInput, ULONG child_index,
+					   CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq)
 {
 	GPOS_CHECK_ABORT;
 
-	CReqdPropPlan *prppInput =  CReqdPropPlan::Prpp(prpInput);
+	CReqdPropPlan *prppInput = CReqdPropPlan::Prpp(prpInput);
 	CPhysical *popPhysical = CPhysical::PopConvert(exprhdl.Pop());
 	ComputeReqdCols(mp, exprhdl, prpInput, child_index, pdrgpdpCtxt);
 	ComputeReqdCTEs(mp, exprhdl, prpInput, child_index, pdrgpdpCtxt);
-	CPartFilterMap *ppfmDerived = PpfmCombineDerived(mp, exprhdl, prppInput, child_index, pdrgpdpCtxt);
+	CPartFilterMap *ppfmDerived =
+		PpfmCombineDerived(mp, exprhdl, prppInput, child_index, pdrgpdpCtxt);
 
 	ULONG ulOrderReq = 0;
 	ULONG ulDistrReq = 0;
 	ULONG ulRewindReq = 0;
 	ULONG ulPartPropagateReq = 0;
-	popPhysical->LookupRequest(ulOptReq, &ulOrderReq, &ulDistrReq, &ulRewindReq, &ulPartPropagateReq);
-	
-	m_peo = GPOS_NEW(mp) CEnfdOrder
-						(
-						popPhysical->PosRequired
-							(
-							mp,
-							exprhdl,
-							prppInput->Peo()->PosRequired(),
-							child_index,
-							pdrgpdpCtxt,
-							ulOrderReq
-							),
-						popPhysical->Eom(prppInput, child_index, pdrgpdpCtxt, ulOrderReq)
-						);
+	popPhysical->LookupRequest(ulOptReq, &ulOrderReq, &ulDistrReq, &ulRewindReq,
+							   &ulPartPropagateReq);
 
-	m_ped = GPOS_NEW(mp) CEnfdDistribution
-						(
-						popPhysical->PdsRequired
-							(
-							mp,
-							exprhdl,
-							prppInput->Ped()->PdsRequired(),
-							child_index,
-							pdrgpdpCtxt,
-							ulDistrReq
-							),
-							popPhysical->Edm(prppInput, child_index, pdrgpdpCtxt, ulDistrReq)
-						);
+	m_peo = GPOS_NEW(mp) CEnfdOrder(
+		popPhysical->PosRequired(mp, exprhdl, prppInput->Peo()->PosRequired(),
+								 child_index, pdrgpdpCtxt, ulOrderReq),
+		popPhysical->Eom(prppInput, child_index, pdrgpdpCtxt, ulOrderReq));
 
-	GPOS_ASSERT(CDistributionSpec::EdtUniversal != m_ped->PdsRequired()->Edt() && "CDistributionSpecUniversal is a derive-only, cannot be required");
+	m_ped = GPOS_NEW(mp) CEnfdDistribution(
+		popPhysical->PdsRequired(mp, exprhdl, prppInput->Ped()->PdsRequired(),
+								 child_index, pdrgpdpCtxt, ulDistrReq),
+		popPhysical->Edm(prppInput, child_index, pdrgpdpCtxt, ulDistrReq));
 
-	m_per = GPOS_NEW(mp) CEnfdRewindability
-							(
-							popPhysical->PrsRequired
-								(
-								mp,
-								exprhdl,
-								prppInput->Per()->PrsRequired(),
-								child_index,
-								pdrgpdpCtxt,
-								ulRewindReq
-								),
-							popPhysical->Erm(prppInput, child_index, pdrgpdpCtxt, ulRewindReq)
-							);
-	
-	m_pepp = GPOS_NEW(mp) CEnfdPartitionPropagation
-							(
-							popPhysical->PppsRequired
-								(
-								mp, 
-								exprhdl, 
-								prppInput->Pepp()->PppsRequired(), 
-								child_index, 
-								pdrgpdpCtxt, 
-								ulPartPropagateReq
-								),
-							CEnfdPartitionPropagation::EppmSatisfy,
-							ppfmDerived
-							);
+	GPOS_ASSERT(
+		CDistributionSpec::EdtUniversal != m_ped->PdsRequired()->Edt() &&
+		"CDistributionSpecUniversal is a derive-only, cannot be required");
+
+	m_per = GPOS_NEW(mp) CEnfdRewindability(
+		popPhysical->PrsRequired(mp, exprhdl, prppInput->Per()->PrsRequired(),
+								 child_index, pdrgpdpCtxt, ulRewindReq),
+		popPhysical->Erm(prppInput, child_index, pdrgpdpCtxt, ulRewindReq));
+
+	m_pepp = GPOS_NEW(mp) CEnfdPartitionPropagation(
+		popPhysical->PppsRequired(mp, exprhdl,
+								  prppInput->Pepp()->PppsRequired(),
+								  child_index, pdrgpdpCtxt, ulPartPropagateReq),
+		CEnfdPartitionPropagation::EppmSatisfy, ppfmDerived);
 }
 
 //---------------------------------------------------------------------------
@@ -277,14 +218,9 @@ CReqdPropPlan::Compute
 //
 //---------------------------------------------------------------------------
 CPartFilterMap *
-CReqdPropPlan::PpfmCombineDerived
-	(
-	CMemoryPool *mp,
-	CExpressionHandle &exprhdl,
-	CReqdPropPlan *prppInput,
-	ULONG child_index,
-	CDrvdPropArray *pdrgpdpCtxt
-	)
+CReqdPropPlan::PpfmCombineDerived(CMemoryPool *mp, CExpressionHandle &exprhdl,
+								  CReqdPropPlan *prppInput, ULONG child_index,
+								  CDrvdPropArray *pdrgpdpCtxt)
 {
 	// get partitioning info below required child
 	CPartInfo *ppartinfo = exprhdl.DerivePartitionInfo(child_index);
@@ -299,13 +235,11 @@ CReqdPropPlan::PpfmCombineDerived
 	for (ULONG ul = 0; ul < ulConsumers; ul++)
 	{
 		ULONG scan_id = ppartinfo->ScanId(ul);
-		BOOL fCopied = ppfmDerived->FCopyPartFilter(mp, scan_id, prppInput->Pepp()->PpfmDerived(), NULL);
+		BOOL fCopied = ppfmDerived->FCopyPartFilter(
+			mp, scan_id, prppInput->Pepp()->PpfmDerived(), NULL);
 		if (fCopied)
 		{
-#ifdef GPOS_DEBUG
-			BOOL fSet =
-#endif // GPOS_DEBUG
-				pbs->ExchangeSet(scan_id);
+			BOOL fSet GPOS_ASSERTS_ONLY = pbs->ExchangeSet(scan_id);
 			GPOS_ASSERT(!fSet);
 		}
 	}
@@ -314,7 +248,8 @@ CReqdPropPlan::PpfmCombineDerived
 	const ULONG size = pdrgpdpCtxt->Size();
 	for (ULONG ulDrvdProps = 0; ulDrvdProps < size; ulDrvdProps++)
 	{
-		CDrvdPropPlan *pdpplan = CDrvdPropPlan::Pdpplan((*pdrgpdpCtxt)[ulDrvdProps]);
+		CDrvdPropPlan *pdpplan =
+			CDrvdPropPlan::Pdpplan((*pdrgpdpCtxt)[ulDrvdProps]);
 		for (ULONG ul = 0; ul < ulConsumers; ul++)
 		{
 			ULONG scan_id = ppartinfo->ScanId(ul);
@@ -322,13 +257,11 @@ CReqdPropPlan::PpfmCombineDerived
 
 			if (!fFound)
 			{
-				BOOL fCopied = ppfmDerived->FCopyPartFilter(mp, scan_id, pdpplan->Ppfm(), NULL);
+				BOOL fCopied = ppfmDerived->FCopyPartFilter(
+					mp, scan_id, pdpplan->Ppfm(), NULL);
 				if (fCopied)
 				{
-#ifdef GPOS_DEBUG
-					BOOL fSet =
-#endif // GPOS_DEBUG
-						pbs->ExchangeSet(scan_id);
+					BOOL fSet GPOS_ASSERTS_ONLY = pbs->ExchangeSet(scan_id);
 					GPOS_ASSERT(!fSet);
 				}
 			}
@@ -349,17 +282,16 @@ CReqdPropPlan::PpfmCombineDerived
 //
 //---------------------------------------------------------------------------
 void
-CReqdPropPlan::InitReqdPartitionPropagation
-	(
-	CMemoryPool *mp, 
-	CPartInfo *ppartinfo
-	)
+CReqdPropPlan::InitReqdPartitionPropagation(CMemoryPool *mp,
+											CPartInfo *ppartinfo)
 {
-	GPOS_ASSERT(NULL == m_pepp && "Required Partition Propagation has been initialized already");
-	
+	GPOS_ASSERT(NULL == m_pepp &&
+				"Required Partition Propagation has been initialized already");
+
 	CPartIndexMap *ppim = GPOS_NEW(mp) CPartIndexMap(mp);
-	
-	CEnfdPartitionPropagation::EPartitionPropagationMatching eppm = CEnfdPartitionPropagation::EppmSatisfy;
+
+	CEnfdPartitionPropagation::EPartitionPropagationMatching eppm =
+		CEnfdPartitionPropagation::EppmSatisfy;
 	for (ULONG ul = 0; ul < ppartinfo->UlConsumers(); ul++)
 	{
 		ULONG scan_id = ppartinfo->ScanId(ul);
@@ -371,29 +303,18 @@ CReqdPropPlan::InitReqdPartitionPropagation
 		pdrgppartkeys->AddRef();
 		ppartcnstr->AddRef();
 
-		ppim->Insert
-			(
-			scan_id,
-			GPOS_NEW(mp) UlongToPartConstraintMap(mp), 
-			CPartIndexMap::EpimConsumer,
-			0, //ulExpectedPropagators
-			mdid,
-			pdrgppartkeys,
-			ppartcnstr
-			);
+		ppim->Insert(scan_id, GPOS_NEW(mp) UlongToPartConstraintMap(mp),
+					 CPartIndexMap::EpimConsumer,
+					 0,	 //ulExpectedPropagators
+					 mdid, pdrgppartkeys, ppartcnstr);
 	}
-	
-	m_pepp =
-		GPOS_NEW(mp) CEnfdPartitionPropagation
-			(
-			GPOS_NEW(mp) CPartitionPropagationSpec
-				(
-				ppim,
-				GPOS_NEW(mp) CPartFilterMap(mp)
-				),
-			eppm,
-			GPOS_NEW(mp) CPartFilterMap(mp)  // derived part filter map
-			);
+
+	m_pepp = GPOS_NEW(mp) CEnfdPartitionPropagation(
+		GPOS_NEW(mp)
+			CPartitionPropagationSpec(ppim, GPOS_NEW(mp) CPartFilterMap(mp)),
+		eppm,
+		GPOS_NEW(mp) CPartFilterMap(mp)	 // derived part filter map
+	);
 }
 
 
@@ -407,20 +328,16 @@ CReqdPropPlan::InitReqdPartitionPropagation
 //
 //---------------------------------------------------------------------------
 CPropSpec *
-CReqdPropPlan::Pps
-	(
-	ULONG ul
-	)
-	const
+CReqdPropPlan::Pps(ULONG ul) const
 {
 	CPropSpec::EPropSpecType epst = (CPropSpec::EPropSpecType) ul;
-	switch(epst)
+	switch (epst)
 	{
 		case CPropSpec::EpstOrder:
 			return m_peo->PosRequired();
 
 		case CPropSpec::EpstDistribution:
-			 return m_ped->PdsRequired();
+			return m_ped->PdsRequired();
 
 		case CPropSpec::EpstRewindability:
 			return m_per->PrsRequired();
@@ -450,13 +367,8 @@ CReqdPropPlan::Pps
 //
 //---------------------------------------------------------------------------
 BOOL
-CReqdPropPlan::FProvidesReqdCols
-	(
-	CMemoryPool *mp,
-	CExpressionHandle &exprhdl,
-	ULONG ulOptReq
-	)
-	const
+CReqdPropPlan::FProvidesReqdCols(CMemoryPool *mp, CExpressionHandle &exprhdl,
+								 ULONG ulOptReq) const
 {
 	CPhysical *popPhysical = CPhysical::PopConvert(exprhdl.Pop());
 
@@ -496,20 +408,14 @@ CReqdPropPlan::FProvidesReqdCols
 //
 //---------------------------------------------------------------------------
 BOOL
-CReqdPropPlan::Equals
-	(
-	const CReqdPropPlan *prpp
-	)
-	const
+CReqdPropPlan::Equals(const CReqdPropPlan *prpp) const
 {
 	GPOS_ASSERT(NULL != prpp);
 
-	BOOL result = 
-		   PcrsRequired()->Equals(prpp->PcrsRequired()) &&
-	       Pcter()->Equals(prpp->Pcter()) &&
-	       Peo()->Matches(prpp->Peo()) &&
-	       Ped()->Matches(prpp->Ped()) &&
-	       Per()->Matches(prpp->Per());
+	BOOL result = PcrsRequired()->Equals(prpp->PcrsRequired()) &&
+				  Pcter()->Equals(prpp->Pcter()) &&
+				  Peo()->Matches(prpp->Peo()) && Ped()->Matches(prpp->Ped()) &&
+				  Per()->Matches(prpp->Per());
 
 	if (result)
 	{
@@ -563,12 +469,8 @@ CReqdPropPlan::HashValue() const
 //
 //---------------------------------------------------------------------------
 BOOL
-CReqdPropPlan::FSatisfied
-	(
-	const CDrvdPropRelational *pdprel,
-	const CDrvdPropPlan *pdpplan
-	)
-	const
+CReqdPropPlan::FSatisfied(const CDrvdPropRelational *pdprel,
+						  const CDrvdPropPlan *pdpplan) const
 {
 	GPOS_ASSERT(NULL != pdprel);
 	GPOS_ASSERT(NULL != pdpplan);
@@ -579,19 +481,18 @@ CReqdPropPlan::FSatisfied
 	{
 		return false;
 	}
-	
+
 	// second, check satisfiability of plan properties;
 	// if max cardinality <= 1, then any order requirement is already satisfied;
 	// we only need to check satisfiability of distribution and rewindability
 	if (pdprel->GetMaxCard().Ull() <= 1)
 	{
 		GPOS_ASSERT(NULL != pdpplan->Ppim());
-		
-		return
-			pdpplan->Pds()->FSatisfies(this->Ped()->PdsRequired()) &&
-			pdpplan->Prs()->FSatisfies(this->Per()->PrsRequired()) &&
-			pdpplan->Ppim()->FSatisfies(this->Pepp()->PppsRequired()) &&
-			pdpplan->GetCostModel()->FSatisfies(this->Pcter());
+
+		return pdpplan->Pds()->FSatisfies(this->Ped()->PdsRequired()) &&
+			   pdpplan->Prs()->FSatisfies(this->Per()->PrsRequired()) &&
+			   pdpplan->Ppim()->FSatisfies(this->Pepp()->PppsRequired()) &&
+			   pdpplan->GetCostModel()->FSatisfies(this->Pcter());
 	}
 
 	// otherwise, check satisfiability of all plan properties
@@ -607,14 +508,9 @@ CReqdPropPlan::FSatisfied
 //
 //---------------------------------------------------------------------------
 BOOL
-CReqdPropPlan::FCompatible
-	(
-	CExpressionHandle &exprhdl,
-	CPhysical *popPhysical,
-	const CDrvdPropRelational *pdprel,
-	const CDrvdPropPlan *pdpplan
-	)
-	const
+CReqdPropPlan::FCompatible(CExpressionHandle &exprhdl, CPhysical *popPhysical,
+						   const CDrvdPropRelational *pdprel,
+						   const CDrvdPropPlan *pdpplan) const
 {
 	GPOS_ASSERT(NULL != pdpplan);
 	GPOS_ASSERT(NULL != pdprel);
@@ -626,10 +522,10 @@ CReqdPropPlan::FCompatible
 	}
 
 	return m_peo->FCompatible(pdpplan->Pos()) &&
-	       m_ped->FCompatible(pdpplan->Pds()) &&
-	       m_per->FCompatible(pdpplan->Prs()) &&
-	       pdpplan->Ppim()->FSatisfies(m_pepp->PppsRequired()) &&
-	       popPhysical->FProvidesReqdCTEs(exprhdl, m_pcter);
+		   m_ped->FCompatible(pdpplan->Pds()) &&
+		   m_per->FCompatible(pdpplan->Prs()) &&
+		   pdpplan->Ppim()->FSatisfies(m_pepp->PppsRequired()) &&
+		   popPhysical->FProvidesReqdCTEs(exprhdl, m_pcter);
 }
 
 //---------------------------------------------------------------------------
@@ -641,18 +537,19 @@ CReqdPropPlan::FCompatible
 //
 //---------------------------------------------------------------------------
 CReqdPropPlan *
-CReqdPropPlan::PrppEmpty
-	(
-	CMemoryPool *mp
-	)
+CReqdPropPlan::PrppEmpty(CMemoryPool *mp)
 {
 	CColRefSet *pcrs = GPOS_NEW(mp) CColRefSet(mp);
 	COrderSpec *pos = GPOS_NEW(mp) COrderSpec(mp);
-	CDistributionSpec *pds = GPOS_NEW(mp) CDistributionSpecAny(COperator::EopSentinel);
-	CRewindabilitySpec *prs = GPOS_NEW(mp) CRewindabilitySpec(CRewindabilitySpec::ErtNone, CRewindabilitySpec::EmhtNoMotion);
+	CDistributionSpec *pds =
+		GPOS_NEW(mp) CDistributionSpecAny(COperator::EopSentinel);
+	CRewindabilitySpec *prs = GPOS_NEW(mp) CRewindabilitySpec(
+		CRewindabilitySpec::ErtNone, CRewindabilitySpec::EmhtNoMotion);
 	CEnfdOrder *peo = GPOS_NEW(mp) CEnfdOrder(pos, CEnfdOrder::EomSatisfy);
-	CEnfdDistribution *ped = GPOS_NEW(mp) CEnfdDistribution(pds, CEnfdDistribution::EdmExact);
-	CEnfdRewindability *per = GPOS_NEW(mp) CEnfdRewindability(prs, CEnfdRewindability::ErmSatisfy);
+	CEnfdDistribution *ped =
+		GPOS_NEW(mp) CEnfdDistribution(pds, CEnfdDistribution::EdmExact);
+	CEnfdRewindability *per =
+		GPOS_NEW(mp) CEnfdRewindability(prs, CEnfdRewindability::ErmSatisfy);
 	CCTEReq *pcter = GPOS_NEW(mp) CCTEReq(mp);
 
 	return GPOS_NEW(mp) CReqdPropPlan(pcrs, peo, ped, per, pcter);
@@ -667,11 +564,7 @@ CReqdPropPlan::PrppEmpty
 //
 //---------------------------------------------------------------------------
 IOstream &
-CReqdPropPlan::OsPrint
-	(
-	IOstream &os
-	)
-	const
+CReqdPropPlan::OsPrint(IOstream &os) const
 {
 	if (GPOS_FTRACE(EopttracePrintRequiredColumns))
 	{
@@ -712,8 +605,8 @@ CReqdPropPlan::OsPrint
 	{
 		os << GetPrintablePtr(m_pepp);
 	}
-	os <<  "]";
-	
+	os << "]";
+
 	return os;
 }
 
@@ -726,10 +619,7 @@ CReqdPropPlan::OsPrint
 //
 //---------------------------------------------------------------------------
 ULONG
-CReqdPropPlan::UlHashForCostBounding
-	(
-	const CReqdPropPlan *prpp
-	)
+CReqdPropPlan::UlHashForCostBounding(const CReqdPropPlan *prpp)
 {
 	GPOS_ASSERT(NULL != prpp);
 
@@ -753,26 +643,20 @@ CReqdPropPlan::UlHashForCostBounding
 //
 //---------------------------------------------------------------------------
 BOOL
-CReqdPropPlan::FEqualForCostBounding
-	(
-	const CReqdPropPlan *prppFst,
-	const CReqdPropPlan *prppSnd
-	)
+CReqdPropPlan::FEqualForCostBounding(const CReqdPropPlan *prppFst,
+									 const CReqdPropPlan *prppSnd)
 {
 	GPOS_ASSERT(NULL != prppFst);
 	GPOS_ASSERT(NULL != prppSnd);
 
 	if (NULL == prppFst->Ped() || NULL == prppSnd->Ped())
 	{
-		return
-			NULL == prppFst->Ped() &&
-			NULL == prppSnd->Ped() &&
-			prppFst->PcrsRequired()->Equals(prppSnd->PcrsRequired());
+		return NULL == prppFst->Ped() && NULL == prppSnd->Ped() &&
+			   prppFst->PcrsRequired()->Equals(prppSnd->PcrsRequired());
 	}
 
-	return
-		prppFst->PcrsRequired()->Equals(prppSnd->PcrsRequired()) &&
-		prppFst->Ped()->Matches(prppSnd->Ped());
+	return prppFst->PcrsRequired()->Equals(prppSnd->PcrsRequired()) &&
+		   prppFst->Ped()->Matches(prppSnd->Ped());
 }
 
 
@@ -786,13 +670,9 @@ CReqdPropPlan::FEqualForCostBounding
 //
 //---------------------------------------------------------------------------
 CReqdPropPlan *
-CReqdPropPlan::PrppRemap
-	(
-	CMemoryPool *mp,
-	CReqdPropPlan *prppInput,
-	CDrvdPropPlan *pdpplanInput,
-	UlongToColRefMap *colref_mapping
-	)
+CReqdPropPlan::PrppRemap(CMemoryPool *mp, CReqdPropPlan *prppInput,
+						 CDrvdPropPlan *pdpplanInput,
+						 UlongToColRefMap *colref_mapping)
 {
 	GPOS_ASSERT(NULL != colref_mapping);
 	GPOS_ASSERT(NULL != prppInput);
@@ -800,8 +680,9 @@ CReqdPropPlan::PrppRemap
 
 	// remap derived sort order to a required sort order
 
-	COrderSpec *pos = pdpplanInput->Pos()->PosCopyWithRemappedColumns(mp, colref_mapping, false /*must_exist*/);
-	CEnfdOrder *peo = GPOS_NEW(mp) CEnfdOrder (pos, prppInput->Peo()->Eom());
+	COrderSpec *pos = pdpplanInput->Pos()->PosCopyWithRemappedColumns(
+		mp, colref_mapping, false /*must_exist*/);
+	CEnfdOrder *peo = GPOS_NEW(mp) CEnfdOrder(pos, prppInput->Peo()->Eom());
 
 	// remap derived distribution only if it can be used as required distribution
 
@@ -809,7 +690,8 @@ CReqdPropPlan::PrppRemap
 	CEnfdDistribution *ped = NULL;
 	if (pdsDerived->FRequirable())
 	{
-		CDistributionSpec *pds = pdsDerived->PdsCopyWithRemappedColumns(mp, colref_mapping, false /*must_exist*/);
+		CDistributionSpec *pds = pdsDerived->PdsCopyWithRemappedColumns(
+			mp, colref_mapping, false /*must_exist*/);
 		ped = GPOS_NEW(mp) CEnfdDistribution(pds, prppInput->Ped()->Edm());
 	}
 	else

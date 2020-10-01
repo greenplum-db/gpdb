@@ -60,17 +60,12 @@ mpool_init(MPool *mpool)
  * Create a MPool object and initialize its variables.
  */
 MPool *
-mpool_create(MemoryContext parent,
-			 const char *name)
+mpool_create_with_context(MemoryContext parent, MemoryContext context)
 {
 	MPool *mpool = MemoryContextAlloc(parent, sizeof(MPool));
 	Assert(parent != NULL);
 	mpool->parent = parent;
-	mpool->context = AllocSetContextCreate(parent, 
-										   name,
-										   ALLOCSET_DEFAULT_MINSIZE,
-										   ALLOCSET_DEFAULT_INITSIZE,
-										   ALLOCSET_DEFAULT_MAXSIZE);
+	mpool->context = context;
 	mpool_init(mpool);
 
 	return mpool;

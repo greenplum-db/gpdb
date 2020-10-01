@@ -2,7 +2,7 @@
 -- transactions. Actually, no UAO is involved here.
 -- 
 DROP TABLE IF EXISTS ao;
-CREATE TABLE ao (a INT, b INT) WITH (appendonly=true, orientation=@orientation@);
+CREATE TABLE ao (a INT, b INT) USING @amname@;
 INSERT INTO ao SELECT i as a, i as b FROM generate_series(1, 100) AS i;
 
 1: BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;

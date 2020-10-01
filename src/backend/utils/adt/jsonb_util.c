@@ -3,7 +3,7 @@
  * jsonb_util.c
  *	  converting between Jsonb and JsonbValues, and iterating.
  *
- * Copyright (c) 2014-2016, PostgreSQL Global Development Group
+ * Copyright (c) 2014-2019, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
@@ -13,12 +13,13 @@
  */
 #include "postgres.h"
 
-#include "access/hash.h"
 #include "catalog/pg_collation.h"
 #include "miscadmin.h"
 #include "utils/builtins.h"
+#include "utils/hashutils.h"
 #include "utils/jsonb.h"
 #include "utils/memutils.h"
+#include "utils/varlena.h"
 
 /*
  * Maximum number of elements in an array (or key/value pairs in an object).
@@ -33,8 +34,8 @@
 #define JSONB_MAX_PAIRS (Min(MaxAllocSize / sizeof(JsonbPair), JB_CMASK))
 
 static void fillJsonbValue(JsonbContainer *container, int index,
-			   char *base_addr, uint32 offset,
-			   JsonbValue *result);
+						   char *base_addr, uint32 offset,
+						   JsonbValue *result);
 static bool equalsJsonbScalarValue(JsonbValue *a, JsonbValue *b);
 static int	compareJsonbScalarValue(JsonbValue *a, JsonbValue *b);
 static Jsonb *convertToJsonb(JsonbValue *val);
@@ -58,8 +59,8 @@ static int	lengthCompareJsonbStringValue(const void *a, const void *b);
 static int	lengthCompareJsonbPair(const void *a, const void *b, void *arg);
 static void uniqueifyJsonbObject(JsonbValue *object);
 static JsonbValue *pushJsonbValueScalar(JsonbParseState **pstate,
-					 JsonbIteratorToken seq,
-					 JsonbValue *scalarVal);
+										JsonbIteratorToken seq,
+										JsonbValue *scalarVal);
 
 /*
  * Turn an in-memory JsonbValue into a Jsonb for on-disk storage.
@@ -327,7 +328,7 @@ findJsonbValueFromContainer(JsonbContainer *container, uint32 flags,
 							JsonbValue *key)
 {
 	JEntry	   *children = container->children;
-	int			count = (container->header & JB_CMASK);
+	int			count = JsonContainerSize(container);
 	JsonbValue *result;
 
 	Assert((flags & ~(JB_FARRAY | JB_FOBJECT)) == 0);
@@ -338,7 +339,7 @@ findJsonbValueFromContainer(JsonbContainer *container, uint32 flags,
 
 	result = palloc(sizeof(JsonbValue));
 
-	if (flags & JB_FARRAY & container->header)
+	if ((flags & JB_FARRAY) && JsonContainerIsArray(container))
 	{
 		char	   *base_addr = (char *) (children + count);
 		uint32		offset = 0;
@@ -357,7 +358,7 @@ findJsonbValueFromContainer(JsonbContainer *container, uint32 flags,
 			JBE_ADVANCE_OFFSET(offset, children[i]);
 		}
 	}
-	else if (flags & JB_FOBJECT & container->header)
+	else if ((flags & JB_FOBJECT) && JsonContainerIsObject(container))
 	{
 		/* Since this is an object, account for *Pairs* of Jentrys */
 		char	   *base_addr = (char *) (children + count * 2);
@@ -421,10 +422,10 @@ getIthJsonbValueFromContainer(JsonbContainer *container, uint32 i)
 	char	   *base_addr;
 	uint32		nelements;
 
-	if ((container->header & JB_FARRAY) == 0)
+	if (!JsonContainerIsArray(container))
 		elog(ERROR, "not a jsonb array");
 
-	nelements = container->header & JB_CMASK;
+	nelements = JsonContainerSize(container);
 	base_addr = (char *) &container->children[nelements];
 
 	if (i >= nelements)
@@ -556,7 +557,7 @@ pushJsonbValueScalar(JsonbParseState **pstate, JsonbIteratorToken seq,
 			(*pstate)->contVal.type = jbvArray;
 			(*pstate)->contVal.val.array.nElems = 0;
 			(*pstate)->contVal.val.array.rawScalar = (scalarVal &&
-											 scalarVal->val.array.rawScalar);
+													  scalarVal->val.array.rawScalar);
 			if (scalarVal && scalarVal->val.array.nElems > 0)
 			{
 				/* Assume that this array is still really a scalar */
@@ -871,7 +872,7 @@ recurse:
 			JBE_ADVANCE_OFFSET((*it)->curDataOffset,
 							   (*it)->children[(*it)->curIndex]);
 			JBE_ADVANCE_OFFSET((*it)->curValueOffset,
-						   (*it)->children[(*it)->curIndex + (*it)->nElems]);
+							   (*it)->children[(*it)->curIndex + (*it)->nElems]);
 			(*it)->curIndex++;
 
 			/*
@@ -900,10 +901,10 @@ iteratorFromContainer(JsonbContainer *container, JsonbIterator *parent)
 {
 	JsonbIterator *it;
 
-	it = palloc(sizeof(JsonbIterator));
+	it = palloc0(sizeof(JsonbIterator));
 	it->container = container;
 	it->parent = parent;
-	it->nElems = container->header & JB_CMASK;
+	it->nElems = JsonContainerSize(container);
 
 	/* Array starts just after header */
 	it->children = container->children;
@@ -913,7 +914,7 @@ iteratorFromContainer(JsonbContainer *container, JsonbIterator *parent)
 		case JB_FARRAY:
 			it->dataProper =
 				(char *) it->children + it->nElems * sizeof(JEntry);
-			it->isScalar = (container->header & JB_FSCALAR) != 0;
+			it->isScalar = JsonContainerIsScalar(container);
 			/* This is either a "raw scalar", or an array */
 			Assert(!it->isScalar || it->nElems == 1);
 
@@ -1227,7 +1228,7 @@ JsonbHashScalarValue(const JsonbValue *scalarVal, uint32 *hash)
 		case jbvNumeric:
 			/* Must hash equal numerics to equal hash codes */
 			tmp = DatumGetUInt32(DirectFunctionCall1(hash_numeric,
-								   NumericGetDatum(scalarVal->val.numeric)));
+													 NumericGetDatum(scalarVal->val.numeric)));
 			break;
 		case jbvBool:
 			tmp = scalarVal->val.boolean ? 0x02 : 0x04;
@@ -1249,6 +1250,49 @@ JsonbHashScalarValue(const JsonbValue *scalarVal, uint32 *hash)
 }
 
 /*
+ * Hash a value to a 64-bit value, with a seed. Otherwise, similar to
+ * JsonbHashScalarValue.
+ */
+void
+JsonbHashScalarValueExtended(const JsonbValue *scalarVal, uint64 *hash,
+							 uint64 seed)
+{
+	uint64		tmp;
+
+	switch (scalarVal->type)
+	{
+		case jbvNull:
+			tmp = seed + 0x01;
+			break;
+		case jbvString:
+			tmp = DatumGetUInt64(hash_any_extended((const unsigned char *) scalarVal->val.string.val,
+												   scalarVal->val.string.len,
+												   seed));
+			break;
+		case jbvNumeric:
+			tmp = DatumGetUInt64(DirectFunctionCall2(hash_numeric_extended,
+													 NumericGetDatum(scalarVal->val.numeric),
+													 UInt64GetDatum(seed)));
+			break;
+		case jbvBool:
+			if (seed)
+				tmp = DatumGetUInt64(DirectFunctionCall2(hashcharextended,
+														 BoolGetDatum(scalarVal->val.boolean),
+														 UInt64GetDatum(seed)));
+			else
+				tmp = scalarVal->val.boolean ? 0x02 : 0x04;
+
+			break;
+		default:
+			elog(ERROR, "invalid jsonb scalar type");
+			break;
+	}
+
+	*hash = ROTATE_HIGH_AND_LOW_32BITS(*hash);
+	*hash ^= tmp;
+}
+
+/*
  * Are two scalar JsonbValues of the same type a and b equal?
  */
 static bool
@@ -1264,8 +1308,8 @@ equalsJsonbScalarValue(JsonbValue *aScalar, JsonbValue *bScalar)
 				return lengthCompareJsonbStringValue(aScalar, bScalar) == 0;
 			case jbvNumeric:
 				return DatumGetBool(DirectFunctionCall2(numeric_eq,
-									   PointerGetDatum(aScalar->val.numeric),
-									 PointerGetDatum(bScalar->val.numeric)));
+														PointerGetDatum(aScalar->val.numeric),
+														PointerGetDatum(bScalar->val.numeric)));
 			case jbvBool:
 				return aScalar->val.boolean == bScalar->val.boolean;
 
@@ -1274,7 +1318,7 @@ equalsJsonbScalarValue(JsonbValue *aScalar, JsonbValue *bScalar)
 		}
 	}
 	elog(ERROR, "jsonb scalar type mismatch");
-	return -1;
+	return false;
 }
 
 /*
@@ -1300,8 +1344,8 @@ compareJsonbScalarValue(JsonbValue *aScalar, JsonbValue *bScalar)
 								  DEFAULT_COLLATION_OID);
 			case jbvNumeric:
 				return DatumGetInt32(DirectFunctionCall2(numeric_cmp,
-									   PointerGetDatum(aScalar->val.numeric),
-									 PointerGetDatum(bScalar->val.numeric)));
+														 PointerGetDatum(aScalar->val.numeric),
+														 PointerGetDatum(bScalar->val.numeric)));
 			case jbvBool:
 				if (aScalar->val.boolean == bScalar->val.boolean)
 					return 0;
@@ -1319,7 +1363,7 @@ compareJsonbScalarValue(JsonbValue *aScalar, JsonbValue *bScalar)
 
 
 /*
- * Functions for manipulating the resizeable buffer used by convertJsonb and
+ * Functions for manipulating the resizable buffer used by convertJsonb and
  * its subroutines.
  */
 
@@ -1684,6 +1728,14 @@ convertJsonbScalar(StringInfo buffer, JEntry *jentry, JsonbValue *scalarVal)
 			break;
 
 		case jbvNumeric:
+			/* replace numeric NaN with string "NaN" */
+			if (numeric_is_nan(scalarVal->val.numeric))
+			{
+				appendToBuffer(buffer, "NaN", 3);
+				*jentry = 3;
+				break;
+			}
+
 			numlen = VARSIZE_ANY(scalarVal->val.numeric);
 			padlen = padBufferToInt(buffer);
 

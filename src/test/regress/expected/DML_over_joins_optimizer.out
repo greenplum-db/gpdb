@@ -295,11 +295,8 @@ insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
 insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
 update s set b = b + 1 where exists (select 1 from r where s.a = r.b);
 delete from s where exists (select 1 from r where s.a = r.b);
--- ----------------------------------------------------------------------
--- Test: unsupported_cases1.sql
--- ----------------------------------------------------------------------
 ------------------------------------------------------------
--- Update with Motion: unsupported cases
+-- Update with Motion:
 --     	Updating the distribution key
 ------------------------------------------------------------
 -- start_ignore
@@ -315,11 +312,6 @@ create table p (a int4, b int4, c int4)
 	partition by range (c) (start(1) end(5) every(1), default partition extra);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "p_1_prt_extra" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_2" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_3" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_4" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_5" for table "p"
 insert into p select generate_series(1,10000), generate_series(1,10000)*3, generate_series(1,10000)%6;
 update s set a = r.a from r where r.b = s.b;
 ------------------------------------------------------------
@@ -332,11 +324,18 @@ delete from s where b = (select min(a) from r where b = s.b);
 ------------------------------------------------------------
 update p set c = c + 1 where c = 0;
 update p set c = c + 1 where b in (select b from s) and c = 0;
--- ----------------------------------------------------------------------
--- Test: unsupported_cases2.sql
--- ----------------------------------------------------------------------
+select tableoid::regclass, c, count(*) from p group by 1, 2;
+   tableoid    | c | count 
+---------------+---+-------
+ p_1_prt_3     | 2 |  1667
+ p_1_prt_4     | 3 |  1667
+ p_1_prt_extra | 5 |  1666
+ p_1_prt_5     | 4 |  1667
+ p_1_prt_2     | 1 |  3333
+(5 rows)
+
 ------------------------------------------------------------
--- Update with Motion: unsupported cases
+-- Update with Motion:
 --     	Updating the distribution key
 ------------------------------------------------------------
 -- start_ignore
@@ -352,11 +351,6 @@ create table p (a int8, b int8, c int8)
 	partition by range (c) (start(1) end(5) every(1), default partition extra);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "p_1_prt_extra" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_2" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_3" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_4" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_5" for table "p"
 insert into p select generate_series(1,10000), generate_series(1,10000)*3, generate_series(1,10000)%6;
 update s set a = r.a from r where r.b = s.b;
 ------------------------------------------------------------
@@ -369,11 +363,18 @@ delete from s where b = (select min(a) from r where b = s.b);
 ------------------------------------------------------------
 update p set c = c + 1 where c = 0;
 update p set c = c + 1 where b in (select b from s where b = 36);
--- ----------------------------------------------------------------------
--- Test: unsupported_cases3.sql
--- ----------------------------------------------------------------------
+select tableoid::regclass, c, count(*) from p group by 1, 2;
+   tableoid    | c | count 
+---------------+---+-------
+ p_1_prt_3     | 2 |  1668
+ p_1_prt_4     | 3 |  1667
+ p_1_prt_extra | 5 |  1666
+ p_1_prt_5     | 4 |  1667
+ p_1_prt_2     | 1 |  3332
+(5 rows)
+
 ------------------------------------------------------------
--- Update with Motion: unsupported cases
+-- Update with Motion:
 --     	Updating the distribution key
 ------------------------------------------------------------
 -- start_ignore
@@ -389,11 +390,6 @@ create table p (a float4, b float4, c float4)
 	partition by range (c) (start(1) end(5) every(1), default partition extra);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "p_1_prt_extra" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_2" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_3" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_4" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_5" for table "p"
 insert into p select generate_series(1,10000), generate_series(1,10000)*3, generate_series(1,10000)%6;
 update s set a = r.a from r where r.b = s.b;
 ------------------------------------------------------------
@@ -406,11 +402,18 @@ delete from s where b = (select min(a) from r where b = s.b);
 ------------------------------------------------------------
 update p set c = c + 1 where c = 0;
 update p set c = c + 1 where b in (select b from s) and c = 0;
--- ----------------------------------------------------------------------
--- Test: unsupported_cases4.sql
--- ----------------------------------------------------------------------
+select tableoid::regclass, c, count(*) from p group by 1, 2;
+   tableoid    | c | count 
+---------------+---+-------
+ p_1_prt_5     | 4 |  1667
+ p_1_prt_4     | 3 |  1667
+ p_1_prt_2     | 1 |  3333
+ p_1_prt_3     | 2 |  1667
+ p_1_prt_extra | 5 |  1666
+(5 rows)
+
 ------------------------------------------------------------
--- Update with Motion: unsupported cases
+-- Update with Motion:
 --     	Updating the distribution key
 ------------------------------------------------------------
 -- start_ignore
@@ -426,11 +429,6 @@ create table p (a float(24), b float(24), c float(24))
 	partition by range (c) (start(1) end(5) every(1), default partition extra);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "p_1_prt_extra" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_2" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_3" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_4" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_5" for table "p"
 insert into p select generate_series(1,10000), generate_series(1,10000)*3, generate_series(1,10000)%6;
 update s set a = r.a from r where r.b = s.b;
 ------------------------------------------------------------
@@ -443,11 +441,18 @@ delete from s where b = (select min(a) from r where b = s.b);
 ------------------------------------------------------------
 update p set c = c + 1 where c = 0;
 update p set c = c + 1 where b in (select b from s) and c = 0;
--- ----------------------------------------------------------------------
--- Test: unsupported_cases5.sql
--- ----------------------------------------------------------------------
+select tableoid::regclass, c, count(*) from p group by 1, 2;
+   tableoid    | c | count 
+---------------+---+-------
+ p_1_prt_3     | 2 |  1667
+ p_1_prt_extra | 5 |  1666
+ p_1_prt_5     | 4 |  1667
+ p_1_prt_4     | 3 |  1667
+ p_1_prt_2     | 1 |  3333
+(5 rows)
+
 ------------------------------------------------------------
--- Update with Motion: unsupported cases
+-- Update with Motion:
 --     	Updating the distribution key
 ------------------------------------------------------------
 -- start_ignore
@@ -463,11 +468,6 @@ create table p (a float(53), b float(53), c float(53))
 	partition by range (c) (start(1) end(5) every(1), default partition extra);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "p_1_prt_extra" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_2" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_3" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_4" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_5" for table "p"
 insert into p select generate_series(1,10000), generate_series(1,10000)*3, generate_series(1,10000)%6;
 update s set a = r.a from r where r.b = s.b;
 ------------------------------------------------------------
@@ -480,6 +480,16 @@ delete from s where b = (select min(a) from r where b = s.b);
 ------------------------------------------------------------
 update p set c = c + 1 where c = 0;
 update p set c = c + 1 where b in (select b from s) and c = 0;
+select tableoid::regclass, c, count(*) from p group by 1, 2;
+   tableoid    | c | count 
+---------------+---+-------
+ p_1_prt_extra | 5 |  1666
+ p_1_prt_4     | 3 |  1667
+ p_1_prt_3     | 2 |  1667
+ p_1_prt_2     | 1 |  3333
+ p_1_prt_5     | 4 |  1667
+(5 rows)
+
 -- ----------------------------------------------------------------------
 -- Test: partition_motion1.sql
 -- ----------------------------------------------------------------------
@@ -498,11 +508,6 @@ insert into s select generate_series(1, 100), generate_series(1, 100) * 3;
 create table p (a int4, b int4, c int4)
 	distributed by (a)
         partition by range (c) (start(1) end(5) every(1), default partition extra);
-NOTICE:  CREATE TABLE will create partition "p_1_prt_extra" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_2" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_3" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_4" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_5" for table "p"
 	
 insert into p select generate_series(1,10000), generate_series(1,10000) * 3, generate_series(1,10000) % 6;
 ------------------------------------------------------------
@@ -558,11 +563,6 @@ insert into s select generate_series(1, 100), generate_series(1, 100) * 3;
 create table p (a int8, b int8, c int8)
 	distributed by (a)
         partition by range (c) (start(1) end(5) every(1), default partition extra);
-NOTICE:  CREATE TABLE will create partition "p_1_prt_extra" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_2" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_3" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_4" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_5" for table "p"
 	
 insert into p select generate_series(1,10000), generate_series(1,10000) * 3, generate_series(1,10000) % 6;
 ------------------------------------------------------------
@@ -618,11 +618,6 @@ insert into s select generate_series(1, 100), generate_series(1, 100) * 3;
 create table p (a float4, b float4, c float4)
 	distributed by (a)
         partition by range (c) (start(1) end(5) every(1), default partition extra);
-NOTICE:  CREATE TABLE will create partition "p_1_prt_extra" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_2" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_3" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_4" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_5" for table "p"
 	
 insert into p select generate_series(1,10000), generate_series(1,10000) * 3, generate_series(1,10000) % 6;
 ------------------------------------------------------------
@@ -678,11 +673,6 @@ insert into s select generate_series(1, 100), generate_series(1, 100) * 3;
 create table p (a float(24), b float(24), c float(24))
 	distributed by (a)
         partition by range (c) (start(1) end(5) every(1), default partition extra);
-NOTICE:  CREATE TABLE will create partition "p_1_prt_extra" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_2" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_3" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_4" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_5" for table "p"
 	
 insert into p select generate_series(1,10000), generate_series(1,10000) * 3, generate_series(1,10000) % 6;
 ------------------------------------------------------------
@@ -738,11 +728,6 @@ insert into s select generate_series(1, 100), generate_series(1, 100) * 3;
 create table p (a float(53), b float(53), c float(53))
 	distributed by (a)
         partition by range (c) (start(1) end(5) every(1), default partition extra);
-NOTICE:  CREATE TABLE will create partition "p_1_prt_extra" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_2" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_3" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_4" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_5" for table "p"
 	
 insert into p select generate_series(1,10000), generate_series(1,10000) * 3, generate_series(1,10000) % 6;
 ------------------------------------------------------------
@@ -904,11 +889,6 @@ create table t (region text, id int) distributed by (region);
 create table p (a int, b int, c int)
         distributed by (a)
         partition by range (c) (start(1) end(5) every(1), default partition extra);
-NOTICE:  CREATE TABLE will create partition "p_1_prt_extra" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_2" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_3" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_4" for table "p"
-NOTICE:  CREATE TABLE will create partition "p_1_prt_5" for table "p"
 CREATE TABLE sales (id int, year int, month int, day int, region text)
    DISTRIBUTED BY (id);
 -- Create one or more indexes before we insert data.
@@ -922,10 +902,6 @@ CREATE TABLE sales_par (id int, year int, month int, day int, region text)
 	PARTITION asia VALUES ('asia'),
 	DEFAULT PARTITION other_regions)
    ;
-NOTICE:  CREATE TABLE will create partition "sales_par_1_prt_usa" for table "sales_par"
-NOTICE:  CREATE TABLE will create partition "sales_par_1_prt_europe" for table "sales_par"
-NOTICE:  CREATE TABLE will create partition "sales_par_1_prt_asia" for table "sales_par"
-NOTICE:  CREATE TABLE will create partition "sales_par_1_prt_other_regions" for table "sales_par"
 CREATE TABLE sales_par2 (id int, year int, month int, day int, region text)
    DISTRIBUTED BY (id)
    PARTITION BY RANGE (year)
@@ -942,38 +918,8 @@ CREATE TABLE sales_par2 (id int, year int, month int, day int, region text)
     PARTITION year2006 START (2006) INCLUSIVE
                         END  (2007) EXCLUSIVE)
    ;
-NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2002" for table "sales_par2"
-NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2002_2_prt_usa" for table "sales_par2_1_prt_year2002"
-NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2002_2_prt_europe" for table "sales_par2_1_prt_year2002"
-NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2002_2_prt_asia" for table "sales_par2_1_prt_year2002"
-NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2002_2_prt_other_regions" for table "sales_par2_1_prt_year2002"
-NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2003" for table "sales_par2"
-NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2003_2_prt_usa" for table "sales_par2_1_prt_year2003"
-NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2003_2_prt_europe" for table "sales_par2_1_prt_year2003"
-NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2003_2_prt_asia" for table "sales_par2_1_prt_year2003"
-NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2003_2_prt_other_regions" for table "sales_par2_1_prt_year2003"
-NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2004" for table "sales_par2"
-NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2004_2_prt_usa" for table "sales_par2_1_prt_year2004"
-NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2004_2_prt_europe" for table "sales_par2_1_prt_year2004"
-NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2004_2_prt_asia" for table "sales_par2_1_prt_year2004"
-NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2004_2_prt_other_regions" for table "sales_par2_1_prt_year2004"
-NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2005" for table "sales_par2"
-NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2005_2_prt_usa" for table "sales_par2_1_prt_year2005"
-NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2005_2_prt_europe" for table "sales_par2_1_prt_year2005"
-NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2005_2_prt_asia" for table "sales_par2_1_prt_year2005"
-NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2005_2_prt_other_regions" for table "sales_par2_1_prt_year2005"
-NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2006" for table "sales_par2"
-NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2006_2_prt_usa" for table "sales_par2_1_prt_year2006"
-NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2006_2_prt_europe" for table "sales_par2_1_prt_year2006"
-NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2006_2_prt_asia" for table "sales_par2_1_prt_year2006"
-NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2006_2_prt_other_regions" for table "sales_par2_1_prt_year2006"
 -- Add default partition
 ALTER TABLE sales_par2 ADD DEFAULT PARTITION yearXXXX;
-NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_yearxxxx" for table "sales_par2"
-NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_yearxxxx_2_prt_usa" for table "sales_par2_1_prt_yearxxxx"
-NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_yearxxxx_2_prt_europe" for table "sales_par2_1_prt_yearxxxx"
-NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_yearxxxx_2_prt_asia" for table "sales_par2_1_prt_yearxxxx"
-NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_yearxxxx_2_prt_other_regions" for table "sales_par2_1_prt_yearxxxx"
 CREATE TABLE sales_par_CO (id int, year int, month int, day int, region text)
    WITH (APPENDONLY=True, ORIENTATION=column, COMPRESSTYPE='zlib', COMPRESSLEVEL=1)
    DISTRIBUTED BY (id)
@@ -991,39 +937,9 @@ CREATE TABLE sales_par_CO (id int, year int, month int, day int, region text)
     PARTITION year2006 START (2006) INCLUSIVE
     			END  (2007) EXCLUSIVE)
    ;
-NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2002" for table "sales_par_co"
-NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2002_2_prt_usa" for table "sales_par_co_1_prt_year2002"
-NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2002_2_prt_europe" for table "sales_par_co_1_prt_year2002"
-NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2002_2_prt_asia" for table "sales_par_co_1_prt_year2002"
-NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2002_2_prt_other_regions" for table "sales_par_co_1_prt_year2002"
-NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2003" for table "sales_par_co"
-NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2003_2_prt_usa" for table "sales_par_co_1_prt_year2003"
-NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2003_2_prt_europe" for table "sales_par_co_1_prt_year2003"
-NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2003_2_prt_asia" for table "sales_par_co_1_prt_year2003"
-NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2003_2_prt_other_regions" for table "sales_par_co_1_prt_year2003"
-NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2004" for table "sales_par_co"
-NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2004_2_prt_usa" for table "sales_par_co_1_prt_year2004"
-NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2004_2_prt_europe" for table "sales_par_co_1_prt_year2004"
-NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2004_2_prt_asia" for table "sales_par_co_1_prt_year2004"
-NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2004_2_prt_other_regions" for table "sales_par_co_1_prt_year2004"
-NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2005" for table "sales_par_co"
-NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2005_2_prt_usa" for table "sales_par_co_1_prt_year2005"
-NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2005_2_prt_europe" for table "sales_par_co_1_prt_year2005"
-NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2005_2_prt_asia" for table "sales_par_co_1_prt_year2005"
-NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2005_2_prt_other_regions" for table "sales_par_co_1_prt_year2005"
-NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2006" for table "sales_par_co"
-NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2006_2_prt_usa" for table "sales_par_co_1_prt_year2006"
-NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2006_2_prt_europe" for table "sales_par_co_1_prt_year2006"
-NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2006_2_prt_asia" for table "sales_par_co_1_prt_year2006"
-NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2006_2_prt_other_regions" for table "sales_par_co_1_prt_year2006"
 -- Add default partition
 ALTER TABLE sales_par_CO ADD DEFAULT PARTITION yearXXXX
 	WITH (APPENDONLY=True, ORIENTATION=column, COMPRESSTYPE='zlib', COMPRESSLEVEL=1);
-NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_yearxxxx" for table "sales_par_co"
-NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_yearxxxx_2_prt_usa" for table "sales_par_co_1_prt_yearxxxx"
-NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_yearxxxx_2_prt_europe" for table "sales_par_co_1_prt_yearxxxx"
-NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_yearxxxx_2_prt_asia" for table "sales_par_co_1_prt_yearxxxx"
-NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_yearxxxx_2_prt_other_regions" for table "sales_par_co_1_prt_yearxxxx"
 -- Create a function to insert data.
 CREATE FUNCTION insertIntoSales(VARCHAR, INTEGER, VARCHAR)
 RETURNS VOID AS
@@ -1242,9 +1158,7 @@ select sales_par.* from sales_par where id in (select s.b from s, r where s.a = 
   9 | 2004 |    10 |  10 | europe
 (2 rows)
 
--- start_ignore
 update sales_par set region = 'new_region' where id in (select s.b from s, r where s.a = r.b) and day in (select a from r);
--- end_ignore
 select sales_par.* from sales_par where id in (select s.b from s, r where s.a = r.b) and day in (select a from r);
  id | year | month | day |   region   
 ----+------+-------+-----+------------
@@ -1508,14 +1422,13 @@ select distinct sales_par.* from sales_par,s where sales_par.id in (s.b, s.b+1) 
 (4 rows)
 
 update sales_par set month = month+1 from s where sales_par.id in (s.b, s.b+1) and region = 'europe';
-ERROR:  multiple updates to a row by the same query is not allowed  (seg0 rhel62-vm1:25432 pid=32303)
 select distinct sales_par.* from sales_par,s where sales_par.id in (s.b, s.b+1) and region='europe';
  id | year | month | day | region 
 ----+------+-------+-----+--------
- 13 | 2008 |     2 |  14 | europe
-  5 | 2007 |     6 |   6 | europe
- 17 | 2005 |     6 |  18 | europe
-  9 | 2004 |    10 |  10 | europe
+  5 | 2007 |     7 |   6 | europe
+  9 | 2004 |    11 |  10 | europe
+ 13 | 2008 |     3 |  14 | europe
+ 17 | 2005 |     7 |  18 | europe
 (4 rows)
 
 -- direct dispatch: partitioned table: delete --
@@ -1608,14 +1521,13 @@ select distinct sales_par.* from sales_par,s where sales_par.id in (s.b, s.b+1) 
 
 PREPARE plan3 AS update sales_par set month = month+1 from s where sales_par.id in (s.b, s.b+1) and region = 'europe';
 EXECUTE plan3;
-ERROR:  multiple updates to a row by the same query is not allowed  (seg0 rhel62-vm1:25432 pid=32303)
 select distinct sales_par.* from sales_par,s where sales_par.id in (s.b, s.b+1) and region='europe';
  id | year | month | day | region 
 ----+------+-------+-----+--------
- 13 | 2008 |     2 |  14 | europe
-  5 | 2007 |     6 |   6 | europe
- 17 | 2005 |     6 |  18 | europe
-  9 | 2004 |    10 |  10 | europe
+  5 | 2007 |     7 |   6 | europe
+  9 | 2004 |    11 |  10 | europe
+ 13 | 2008 |     3 |  14 | europe
+ 17 | 2005 |     7 |  18 | europe
 (4 rows)
 
 -- direct dispatch: partitioned table: delete --
@@ -1751,8 +1663,8 @@ drop cascades to table p
 drop cascades to table sales
 drop cascades to table sales_par
 drop cascades to table sales_par2
-drop cascades to append only columnar table sales_par_co
+drop cascades to table sales_par_co
 drop cascades to function insertintosales(character varying,integer,character varying)
 drop cascades to function insertmanyintosales(integer,character varying)
-drop cascades to append only table s_ao
+drop cascades to table s_ao
 -- end_ignore

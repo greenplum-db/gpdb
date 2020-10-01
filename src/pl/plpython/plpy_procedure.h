@@ -17,7 +17,7 @@ typedef struct PLySavedArgs
 	struct PLySavedArgs *next;	/* linked-list pointer */
 	PyObject   *args;			/* "args" element of globals dict */
 	int			nargs;			/* length of namedargs array */
-	PyObject   *namedargs[FLEXIBLE_ARRAY_MEMBER];		/* named args */
+	PyObject   *namedargs[FLEXIBLE_ARRAY_MEMBER];	/* named args */
 } PLySavedArgs;
 
 /* cached procedure data */
@@ -30,13 +30,14 @@ typedef struct PLyProcedure
 	TransactionId fn_xmin;
 	ItemPointerData fn_tid;
 	bool		fn_readonly;
-	bool		is_setof;		/* true, if procedure returns result set */
-	PLyTypeInfo result;			/* also used to store info for trigger tuple
-								 * type */
+	bool		is_setof;		/* true, if function returns result set */
+	bool		is_procedure;
+	PLyObToDatum result;		/* Function result output conversion info */
+	PLyDatumToOb result_in;		/* For converting input tuples in a trigger */
 	char	   *src;			/* textual procedure code, after mangling */
 	char	  **argnames;		/* Argument names */
-	PLyTypeInfo args[FUNC_MAX_ARGS];
-	int			nargs;
+	PLyDatumToOb *args;			/* Argument input conversion info */
+	int			nargs;			/* Number of elements in above arrays */
 	Oid			langid;			/* OID of plpython pg_language entry */
 	List	   *trftypes;		/* OID list of transform types */
 	PyObject   *code;			/* compiled procedure code */
@@ -66,4 +67,4 @@ extern PLyProcedure *PLy_procedure_get(Oid fn_oid, Oid fn_rel, bool is_trigger);
 extern void PLy_procedure_compile(PLyProcedure *proc, const char *src);
 extern void PLy_procedure_delete(PLyProcedure *proc);
 
-#endif   /* PLPY_PROCEDURE_H */
+#endif							/* PLPY_PROCEDURE_H */

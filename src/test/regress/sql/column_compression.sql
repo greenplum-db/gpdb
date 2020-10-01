@@ -45,7 +45,7 @@ create table ccddl (
 	i int,
 	j int,
 	default column encoding (compresstype=zlib)
-) with (appendonly=true, orientation=column, fillfactor=11);
+) with (appendonly=true, orientation=column);
 
 execute ccddlcheck;
 
@@ -288,10 +288,6 @@ partition by range(j)
 
 execute ccddlcheck;
 
-select parencattnum, parencattoptions from
-pg_partition_encoding e, pg_partition p, pg_class c
-where c.relname = 'ccddl' and c.oid = p.parrelid and p.oid = e.parencoid;
-
 insert into ccddl select 1, (i % 19) + 1, ((i+3) % 5) + 1, i+3 from generate_series(1, 100) i;
 
 select * from ccddl;
@@ -300,10 +296,6 @@ select * from ccddl;
 alter table ccddl drop column l;
 
 insert into ccddl select 1, (i % 19) + 1, ((i+3) % 5) + 1 from generate_series(1, 100) i;
-
-select parencattnum, parencattoptions from
-pg_partition_encoding e, pg_partition p, pg_class c
-where c.relname = 'ccddl' and c.oid = p.parrelid and p.oid = e.parencoid;
 
 select * from ccddl;
 
@@ -352,9 +344,6 @@ alter table ccddl add partition p3 start(20) end(30);
 execute ccddlcheck;
 
 drop table ccddl;
-
--- Should be nothing in pg_partition_encoding now
-select * from pg_partition_encoding;
 
 -- Split support. We must preserve the column encodings of the split partition
 create table ccddl (i int encoding (compresstype=zlib))
@@ -520,7 +509,7 @@ create table ccddl (i int, d date, j int)
 
 alter table ccddl add partition newp 
 	start('2010-01-06') end('2010-01-07')
-	with (appendonly=true, orientation=column, compresstype=RLE_TYPE); 
+	with (appendonly=true, orientation=column);
 
 execute ccddlcheck;
 drop table ccddl;
@@ -754,30 +743,6 @@ SET enable_seqscan = FALSE;
 -- to the same internal representation.
 SELECT owner, property FROM ccddl
  WHERE property ~= '((7052,250),(6050,20))';
-drop table ccddl;
-
------------------------------------------------------------------------
--- Dump / restore
------------------------------------------------------------------------
-
--- We can only test partition dumping here, since pg_dump does table level
--- dump/restore
-
-create table ccddl (i int, j int)
-with (appendonly=true, orientation=column)
-partition by range(i) subpartition by range(j)
-	subpartition template
-		( subpartition sp1 start(1) end(2),
-		  subpartition sp2 start(2) end (3),
-		  column i encoding (compresstype=zlib),
-		  column j encoding (blocksize=65536)
-		)
-	(partition p1 start(1) end (2));
-
-select pg_get_partition_def('ccddl'::regclass, true);
-
-select pg_get_partition_template_def('ccddl'::regclass, true, false);
-
 drop table ccddl;
 
 \c regression

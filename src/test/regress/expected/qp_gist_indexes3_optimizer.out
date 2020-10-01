@@ -280,7 +280,7 @@ HINT:  You must specify an operator class or define a default operator class for
 ------------------------------------------------------------------------------
 -- PURPOSE:
 --     Test that you get a reasonable error message when you try to create a
---     HASH index (we no longer support those).
+--     HASH index ('box' datatype doesn't have a hash opclass).
 ------------------------------------------------------------------------------
 CREATE TABLE GistTable14 (
  id INTEGER,
@@ -289,9 +289,9 @@ CREATE TABLE GistTable14 (
  DISTRIBUTED BY (id);
 -- Try to create a hash index.
 CREATE INDEX GistIndex14a ON GistTable14 USING HASH (id);
-ERROR:  hash indexes are not supported
 CREATE INDEX GistIndex14b ON GistTable14 USING HASH (property);
-ERROR:  hash indexes are not supported
+ERROR:  data type box has no default operator class for access method "hash"
+HINT:  You must specify an operator class or define a default operator class for the data type.
 -- ----------------------------------------------------------------------
 -- Test GiST index on an AO table
 -- ----------------------------------------------------------------------

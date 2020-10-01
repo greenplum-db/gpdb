@@ -146,14 +146,14 @@ SELECT * FROM gpdb_two_phase_commit_after_restore_point ORDER BY num;
  10  
 (10 rows)
 
--- Run pg_switch_xlog() so that the WAL segment files with the restore
+-- Run pg_switch_wal() so that the WAL segment files with the restore
 -- points are archived to the WAL Archive directories.
-SELECT true FROM pg_switch_xlog();
+SELECT true FROM pg_switch_wal();
  bool 
 ------
  t    
 (1 row)
-SELECT (SELECT true FROM pg_switch_xlog()) FROM gp_dist_random('gp_id');
+SELECT (SELECT true FROM pg_switch_wal()) FROM gp_dist_random('gp_id');
  bool 
 ------
  t    

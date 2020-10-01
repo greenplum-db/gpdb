@@ -14,7 +14,7 @@
  * plenty of locality of access.
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -26,7 +26,9 @@
 #include "postgres.h"
 
 #include "access/hash.h"
+#include "commands/progress.h"
 #include "miscadmin.h"
+#include "pgstat.h"
 #include "utils/tuplesort.h"
 
 
@@ -37,7 +39,15 @@ struct HSpool
 {
 	Tuplesortstate *sortstate;	/* state data for tuplesort.c */
 	Relation	index;
-	uint32		hash_mask;		/* bitmask for hash codes */
+
+	/*
+	 * We sort the hash keys based on the buckets they belong to. Below masks
+	 * are used in _hash_hashkey2bucket to determine the bucket of given hash
+	 * key.
+	 */
+	uint32		high_mask;
+	uint32		low_mask;
+	uint32		max_buckets;
 };
 
 
@@ -56,11 +66,12 @@ _h_spoolinit(Relation heap, Relation index, uint32 num_buckets)
 	 * num_buckets buckets in the index, the appropriate mask can be computed
 	 * as follows.
 	 *
-	 * Note: at present, the passed-in num_buckets is always a power of 2, so
-	 * we could just compute num_buckets - 1.  We prefer not to assume that
-	 * here, though.
+	 * NOTE : This hash mask calculation should be in sync with similar
+	 * calculation in _hash_init_metabuffer.
 	 */
-	hspool->hash_mask = (((uint32) 1) << _hash_log2(num_buckets)) - 1;
+	hspool->high_mask = (((uint32) 1) << _hash_log2(num_buckets + 1)) - 1;
+	hspool->low_mask = (hspool->high_mask >> 1);
+	hspool->max_buckets = num_buckets - 1;
 
 	/*
 	 * We size the sort area as maintenance_work_mem rather than work_mem to
@@ -69,8 +80,11 @@ _h_spoolinit(Relation heap, Relation index, uint32 num_buckets)
 	 */
 	hspool->sortstate = tuplesort_begin_index_hash(heap,
 												   index,
-												   hspool->hash_mask,
+												   hspool->high_mask,
+												   hspool->low_mask,
+												   hspool->max_buckets,
 												   maintenance_work_mem,
+												   NULL,
 												   false);
 
 	return hspool;
@@ -101,18 +115,17 @@ _h_spool(HSpool *hspool, ItemPointer self, Datum *values, bool *isnull)
  * create an entire index.
  */
 void
-_h_indexbuild(HSpool *hspool)
+_h_indexbuild(HSpool *hspool, Relation heapRel)
 {
 	IndexTuple	itup;
-	bool		should_free;
+	int64		tups_done = 0;
 #ifdef USE_ASSERT_CHECKING
 	uint32		hashkey = 0;
 #endif
 
 	tuplesort_performsort(hspool->sortstate);
 
-	while ((itup = tuplesort_getindextuple(hspool->sortstate,
-										   true, &should_free)) != NULL)
+	while ((itup = tuplesort_getindextuple(hspool->sortstate, true)) != NULL)
 	{
 		/*
 		 * Technically, it isn't critical that hash keys be found in sorted
@@ -124,12 +137,15 @@ _h_indexbuild(HSpool *hspool)
 #ifdef USE_ASSERT_CHECKING
 		uint32		lasthashkey = hashkey;
 
-		hashkey = _hash_get_indextuple_hashkey(itup) & hspool->hash_mask;
+		hashkey = _hash_hashkey2bucket(_hash_get_indextuple_hashkey(itup),
+									   hspool->max_buckets, hspool->high_mask,
+									   hspool->low_mask);
 		Assert(hashkey >= lasthashkey);
 #endif
 
-		_hash_doinsert(hspool->index, itup);
-		if (should_free)
-			pfree(itup);
+		_hash_doinsert(hspool->index, itup, heapRel);
+
+		pgstat_progress_update_param(PROGRESS_CREATEIDX_TUPLES_DONE,
+									 ++tups_done);
 	}
 }

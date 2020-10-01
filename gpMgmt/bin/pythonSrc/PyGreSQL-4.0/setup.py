@@ -109,8 +109,8 @@ include_dirs = ['include', pg_include_dir,  pg_include_dir_server]
 pg_libdir = pg_config('libdir')
 library_dirs = [pg_libdir]
 
-libraries = ['pq']
-extra_compile_args = ['-O2']
+libraries = ['pq', 'pgport']
+extra_compile_args = ['-O2', '-fPIC']
 
 if sys.platform == "win32":
     include_dirs.append(os.path.join(pg_include_dir_server, 'port/win32'))

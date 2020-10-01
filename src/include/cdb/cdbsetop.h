@@ -15,8 +15,8 @@
 #define CDBSETOP_H
 
 #include "nodes/pg_list.h"
+#include "nodes/pathnodes.h"
 #include "nodes/plannodes.h"
-#include "nodes/relation.h"
 
 /*
  * GpSetOpType represents a strategy by which to construct a parallel

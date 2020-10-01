@@ -16,112 +16,107 @@
 
 namespace gpnaucrates
 {
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		IDatumOid
-	//
-	//	@doc:
-	//		Base abstract class for oid representation
-	//
-	//---------------------------------------------------------------------------
-	class IDatumOid : public IDatum
+//---------------------------------------------------------------------------
+//	@class:
+//		IDatumOid
+//
+//	@doc:
+//		Base abstract class for oid representation
+//
+//---------------------------------------------------------------------------
+class IDatumOid : public IDatum
+{
+private:
+	// private copy ctor
+	IDatumOid(const IDatumOid &);
+
+public:
+	// ctor
+	IDatumOid(){};
+
+	// dtor
+	virtual ~IDatumOid(){};
+
+	// accessor for datum type
+	virtual IMDType::ETypeInfo
+	GetDatumType()
 	{
+		return IMDType::EtiOid;
+	}
 
-		private:
+	// accessor of oid value
+	virtual OID OidValue() const = 0;
 
-			// private copy ctor
-			IDatumOid(const IDatumOid &);
+	// can datum be mapped to a double
+	BOOL
+	IsDatumMappableToDouble() const
+	{
+		return true;
+	}
 
-		public:
+	// map to double for stats computation
+	CDouble
+	GetDoubleMapping() const
+	{
+		return CDouble(GetLINTMapping());
+	}
 
-			// ctor
-			IDatumOid()
-			{};
+	// can datum be mapped to LINT
+	BOOL
+	IsDatumMappableToLINT() const
+	{
+		return true;
+	}
 
-			// dtor
-			virtual
-			~IDatumOid()
-			{};
+	// map to LINT for statistics computation
+	LINT
+	GetLINTMapping() const
+	{
+		return LINT(OidValue());
+	}
 
-			// accessor for datum type
-			virtual  IMDType::ETypeInfo GetDatumType()
-			{
-				return IMDType::EtiOid;
-			}
+	// byte array representation of datum
+	virtual const BYTE *
+	GetByteArrayValue() const
+	{
+		GPOS_ASSERT(!"Invalid invocation of MakeCopyOfValue");
+		return NULL;
+	}
 
-			// accessor of oid value
-			virtual
-			OID OidValue() const = 0;
+	// does the datum need to be padded before statistical derivation
+	virtual BOOL
+	NeedsPadding() const
+	{
+		return false;
+	}
 
-			// can datum be mapped to a double
-			BOOL IsDatumMappableToDouble() const
-			{
-				return true;
-			}
+	// return the padded datum
+	virtual IDatum *
+	MakePaddedDatum(CMemoryPool *,	// mp,
+					ULONG			// col_len
+	) const
+	{
+		GPOS_ASSERT(!"Invalid invocation of MakePaddedDatum");
+		return NULL;
+	}
 
-			// map to double for stats computation
-			CDouble GetDoubleMapping() const
-			{
-				return CDouble(GetLINTMapping());
-			}
+	// does datum support like predicate
+	virtual BOOL
+	SupportsLikePredicate() const
+	{
+		return false;
+	}
 
-			// can datum be mapped to LINT
-			BOOL IsDatumMappableToLINT() const
-			{
-				return true;
-			}
+	// return the default scale factor of like predicate
+	virtual CDouble
+	GetLikePredicateScaleFactor() const
+	{
+		GPOS_ASSERT(!"Invalid invocation of DLikeSelectivity");
+		return false;
+	}
+};	// class IDatumOid
+}  // namespace gpnaucrates
 
-			// map to LINT for statistics computation
-			LINT GetLINTMapping() const
-			{
-				return LINT(OidValue());
-			}
-
-			// byte array representation of datum
-			virtual
-			const BYTE *GetByteArrayValue() const
-			{
-				GPOS_ASSERT(!"Invalid invocation of MakeCopyOfValue");
-				return NULL;
-			}
-
-			// does the datum need to be padded before statistical derivation
-			virtual
-			BOOL NeedsPadding() const
-			{
-				return false;
-			}
-
-			// return the padded datum
-			virtual
-			IDatum *MakePaddedDatum
-				(
-				CMemoryPool *, // mp,
-				ULONG    // col_len
-				)
-				const
-			{
-				GPOS_ASSERT(!"Invalid invocation of MakePaddedDatum");
-				return NULL;
-			}
-
-			// does datum support like predicate
-			virtual
-			BOOL SupportsLikePredicate() const
-			{
-				return false;
-			}
-
-			// return the default scale factor of like predicate
-			virtual
-			CDouble GetLikePredicateScaleFactor() const
-			{
-				GPOS_ASSERT(!"Invalid invocation of DLikeSelectivity");
-				return false;
-			}
-	}; // class IDatumOid
-}
-
-#endif // !GPNAUCRATES_IDatumOid_H
+#endif	// !GPNAUCRATES_IDatumOid_H
 
 // EOF

@@ -1,6 +1,6 @@
 from mock import *
 
-from gp_unittest import *
+from .gp_unittest import *
 from gppylib.system.info import *
 
 
@@ -16,11 +16,11 @@ class InfoTestCase(GpTestCase):
         ])
 
     def test_automatic_thread_count(self):
-        self.assertEquals(get_max_available_thread_count(), 3)
+        self.assertEqual(get_max_available_thread_count(), 3)
 
     def test_automatic_thread_minimum(self):
         self.vmem.available = 123
-        self.assertEquals(get_max_available_thread_count(), 1)
+        self.assertEqual(get_max_available_thread_count(), 1)
 
 
 if __name__ == '__main__':

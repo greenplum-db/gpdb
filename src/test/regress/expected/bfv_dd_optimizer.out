@@ -163,16 +163,11 @@ INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 -- partitioned tables
 create table dd_part_singlecol(a int, b int, c int) distributed by (a) partition by range (b) 
 (start(1) end(100) every (20), default partition extra);
-NOTICE:  CREATE TABLE will create partition "dd_part_singlecol_1_prt_extra" for table "dd_part_singlecol"
-NOTICE:  CREATE TABLE will create partition "dd_part_singlecol_1_prt_2" for table "dd_part_singlecol"
-NOTICE:  CREATE TABLE will create partition "dd_part_singlecol_1_prt_3" for table "dd_part_singlecol"
-NOTICE:  CREATE TABLE will create partition "dd_part_singlecol_1_prt_4" for table "dd_part_singlecol"
-NOTICE:  CREATE TABLE will create partition "dd_part_singlecol_1_prt_5" for table "dd_part_singlecol"
-NOTICE:  CREATE TABLE will create partition "dd_part_singlecol_1_prt_6" for table "dd_part_singlecol"
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into dd_part_singlecol select g, g*2, g*3 from generate_series(1,49) g;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into dd_part_singlecol values (NULL, NULL);
@@ -180,7 +175,7 @@ INFO:  (slice 0) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 -- disjunction with partitioned tables
 select * from dd_part_singlecol where a in (10,11,12);
-INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to PARTIAL contents: 2 1
  a  | b  | c  
 ----+----+----
  10 | 20 | 30
@@ -189,7 +184,7 @@ INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 (3 rows)
 
 select * from dd_part_singlecol where a=10 or a=11 or a=12;
-INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to PARTIAL contents: 2 1
  a  | b  | c  
 ----+----+----
  10 | 20 | 30
@@ -198,7 +193,7 @@ INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 (3 rows)
 
 select * from dd_part_singlecol where a is null or a=1;
-INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to PARTIAL contents: 0 1
  a | b | c 
 ---+---+---
    |   |  
@@ -428,25 +423,14 @@ create table dd_singlecol_part_bitmap_idx(a int, b int, c int)
 distributed by (a)
 partition by range (b) 
 (start(1) end(100) every (20), default partition extra);;
-NOTICE:  CREATE TABLE will create partition "dd_singlecol_part_bitmap_idx_1_prt_extra" for table "dd_singlecol_part_bitmap_idx"
-NOTICE:  CREATE TABLE will create partition "dd_singlecol_part_bitmap_idx_1_prt_2" for table "dd_singlecol_part_bitmap_idx"
-NOTICE:  CREATE TABLE will create partition "dd_singlecol_part_bitmap_idx_1_prt_3" for table "dd_singlecol_part_bitmap_idx"
-NOTICE:  CREATE TABLE will create partition "dd_singlecol_part_bitmap_idx_1_prt_4" for table "dd_singlecol_part_bitmap_idx"
-NOTICE:  CREATE TABLE will create partition "dd_singlecol_part_bitmap_idx_1_prt_5" for table "dd_singlecol_part_bitmap_idx"
-NOTICE:  CREATE TABLE will create partition "dd_singlecol_part_bitmap_idx_1_prt_6" for table "dd_singlecol_part_bitmap_idx"
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create index sc_part_bitmap_idx_b on dd_singlecol_part_bitmap_idx using bitmap(b);
-NOTICE:  building index for child partition "dd_singlecol_part_bitmap_idx_1_prt_extra"
-NOTICE:  building index for child partition "dd_singlecol_part_bitmap_idx_1_prt_2"
-NOTICE:  building index for child partition "dd_singlecol_part_bitmap_idx_1_prt_3"
-NOTICE:  building index for child partition "dd_singlecol_part_bitmap_idx_1_prt_4"
-NOTICE:  building index for child partition "dd_singlecol_part_bitmap_idx_1_prt_5"
-NOTICE:  building index for child partition "dd_singlecol_part_bitmap_idx_1_prt_6"
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into dd_singlecol_part_bitmap_idx select g, g%5,g%5 from generate_series(1,100) g;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into dd_singlecol_part_bitmap_idx values(null, null);
@@ -590,25 +574,14 @@ create table dd_singlecol_part_idx(a int, b int, c int)
 distributed by (a)
 partition by range (b) 
 (start(1) end(100) every (20), default partition extra);;
-NOTICE:  CREATE TABLE will create partition "dd_singlecol_part_idx_1_prt_extra" for table "dd_singlecol_part_idx"
-NOTICE:  CREATE TABLE will create partition "dd_singlecol_part_idx_1_prt_2" for table "dd_singlecol_part_idx"
-NOTICE:  CREATE TABLE will create partition "dd_singlecol_part_idx_1_prt_3" for table "dd_singlecol_part_idx"
-NOTICE:  CREATE TABLE will create partition "dd_singlecol_part_idx_1_prt_4" for table "dd_singlecol_part_idx"
-NOTICE:  CREATE TABLE will create partition "dd_singlecol_part_idx_1_prt_5" for table "dd_singlecol_part_idx"
-NOTICE:  CREATE TABLE will create partition "dd_singlecol_part_idx_1_prt_6" for table "dd_singlecol_part_idx"
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create index sc_part_idx_b on dd_singlecol_part_idx(b);
-NOTICE:  building index for child partition "dd_singlecol_part_idx_1_prt_extra"
-NOTICE:  building index for child partition "dd_singlecol_part_idx_1_prt_2"
-NOTICE:  building index for child partition "dd_singlecol_part_idx_1_prt_3"
-NOTICE:  building index for child partition "dd_singlecol_part_idx_1_prt_4"
-NOTICE:  building index for child partition "dd_singlecol_part_idx_1_prt_5"
-NOTICE:  building index for child partition "dd_singlecol_part_idx_1_prt_6"
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into dd_singlecol_part_idx select g, g%5,g%5 from generate_series(1,100) g;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into dd_singlecol_part_idx values(null, null);
@@ -618,25 +591,14 @@ create table dd_singlecol_part_idx2(a int, b int, c int)
 distributed by (a)
 partition by range (b) 
 (start(1) end(100) every (20), default partition extra);;
-NOTICE:  CREATE TABLE will create partition "dd_singlecol_part_idx2_1_prt_extra" for table "dd_singlecol_part_idx2"
-NOTICE:  CREATE TABLE will create partition "dd_singlecol_part_idx2_1_prt_2" for table "dd_singlecol_part_idx2"
-NOTICE:  CREATE TABLE will create partition "dd_singlecol_part_idx2_1_prt_3" for table "dd_singlecol_part_idx2"
-NOTICE:  CREATE TABLE will create partition "dd_singlecol_part_idx2_1_prt_4" for table "dd_singlecol_part_idx2"
-NOTICE:  CREATE TABLE will create partition "dd_singlecol_part_idx2_1_prt_5" for table "dd_singlecol_part_idx2"
-NOTICE:  CREATE TABLE will create partition "dd_singlecol_part_idx2_1_prt_6" for table "dd_singlecol_part_idx2"
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create index sc_part_idx_a on dd_singlecol_part_idx2(a);
-NOTICE:  building index for child partition "dd_singlecol_part_idx2_1_prt_extra"
-NOTICE:  building index for child partition "dd_singlecol_part_idx2_1_prt_2"
-NOTICE:  building index for child partition "dd_singlecol_part_idx2_1_prt_3"
-NOTICE:  building index for child partition "dd_singlecol_part_idx2_1_prt_4"
-NOTICE:  building index for child partition "dd_singlecol_part_idx2_1_prt_5"
-NOTICE:  building index for child partition "dd_singlecol_part_idx2_1_prt_6"
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into dd_singlecol_part_idx2 select g, g%5,g%5 from generate_series(1,100) g;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into dd_singlecol_part_idx2 values(null, null);

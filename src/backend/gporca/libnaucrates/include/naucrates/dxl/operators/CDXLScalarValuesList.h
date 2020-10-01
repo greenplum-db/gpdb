@@ -18,53 +18,48 @@
 
 namespace gpdxl
 {
-	using namespace gpos;
-	using namespace gpmd;
+using namespace gpos;
+using namespace gpmd;
 
 
-	// class for representing DXL value list operator
-	class CDXLScalarValuesList : public CDXLScalar
-	{
-		private:
+// class for representing DXL value list operator
+class CDXLScalarValuesList : public CDXLScalar
+{
+private:
+	// private copy ctor
+	CDXLScalarValuesList(CDXLScalarValuesList &);
 
-			// private copy ctor
-			CDXLScalarValuesList(CDXLScalarValuesList&);
+public:
+	// ctor
+	CDXLScalarValuesList(CMemoryPool *mp);
 
-		public:
+	// dtor
+	virtual ~CDXLScalarValuesList();
 
-			// ctor
-			CDXLScalarValuesList(CMemoryPool *mp);
+	// ident accessors
+	Edxlopid GetDXLOperator() const;
 
-			// dtor
-			virtual
-			~CDXLScalarValuesList();
+	// name of the DXL operator
+	const CWStringConst *GetOpNameStr() const;
 
-			// ident accessors
-			Edxlopid GetDXLOperator() const;
+	// serialize operator in DXL format
+	virtual void SerializeToDXL(CXMLSerializer *xml_serializer,
+								const CDXLNode *dxlnode) const;
 
-			// name of the DXL operator
-			const CWStringConst *GetOpNameStr() const;
+	// conversion function
+	static CDXLScalarValuesList *Cast(CDXLOperator *dxl_op);
 
-			// serialize operator in DXL format
-			virtual
-			void SerializeToDXL(CXMLSerializer *xml_serializer, const CDXLNode *dxlnode) const;
-
-			// conversion function
-			static
-			CDXLScalarValuesList *Cast(CDXLOperator *dxl_op);
-
-			// does the operator return a boolean result
-			virtual
-			BOOL HasBoolResult(CMDAccessor * /*md_accessor*/) const;
+	// does the operator return a boolean result
+	virtual BOOL HasBoolResult(CMDAccessor * /*md_accessor*/) const;
 
 #ifdef GPOS_DEBUG
-			// checks whether the operator has valid structure, i.e. number and
-			// types of child nodes
-			void AssertValid(const CDXLNode *dxlnode, BOOL validate_children) const;
-#endif // GPOS_DEBUG
-	};
-}
+	// checks whether the operator has valid structure, i.e. number and
+	// types of child nodes
+	void AssertValid(const CDXLNode *dxlnode, BOOL validate_children) const;
+#endif	// GPOS_DEBUG
+};
+}  // namespace gpdxl
 
-#endif // !GPDXL_CDXLScalarValuesList_H
+#endif	// !GPDXL_CDXLScalarValuesList_H
 
 // EOF

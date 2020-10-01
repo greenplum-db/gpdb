@@ -4,7 +4,7 @@
  *	  POSTGRES heap tuple header definitions.
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/access/htup_details.h
@@ -66,7 +66,8 @@
  *			fixed fields (HeapTupleHeaderData struct)
  *			nulls bitmap (if HEAP_HASNULL is set in t_infomask)
  *			alignment padding (as needed to make user data MAXALIGN'd)
- *			object ID (if HEAP_HASOID is set in t_infomask)
+ *			object ID (if HEAP_HASOID_OLD is set in t_infomask, not created
+ *          anymore)
  *			user data fields
  *
  * We store five "virtual" fields Xmin, Cmin, Xmax, Cmax, and Xvac in three
@@ -84,11 +85,15 @@
  *
  * A word about t_ctid: whenever a new tuple is stored on disk, its t_ctid
  * is initialized with its own TID (location).  If the tuple is ever updated,
- * its t_ctid is changed to point to the replacement version of the tuple.
- * Thus, a tuple is the latest version of its row iff XMAX is invalid or
+ * its t_ctid is changed to point to the replacement version of the tuple.  Or
+ * if the tuple is moved from one partition to another, due to an update of
+ * the partition key, t_ctid is set to a special value to indicate that
+ * (see ItemPointerSetMovedPartitions).  Thus, a tuple is the latest version
+ * of its row iff XMAX is invalid or
  * t_ctid points to itself (in which case, if XMAX is valid, the tuple is
  * either locked or deleted).  One can follow the chain of t_ctid links
- * to find the newest version of the row.  Beware however that VACUUM might
+ * to find the newest version of the row, unless it was moved to a different
+ * partition.  Beware however that VACUUM might
  * erase the pointed-to (newer) tuple before erasing the pointing (older)
  * tuple.  Hence, when following a t_ctid link, it is necessary to check
  * to see if the referenced slot is empty or contains an unrelated tuple.
@@ -135,6 +140,11 @@ typedef struct DatumTupleFields
 	Oid			datum_typeid;	/* composite type OID, or RECORDOID */
 
 	/*
+	 * datum_typeid cannot be a domain over composite, only plain composite,
+	 * even if the datum is meant as a value of a domain-over-composite type.
+	 * This is in line with the general principle that CoerceToDomain does not
+	 * change the physical representation of the base type value.
+	 *
 	 * Note: field ordering is chosen with thought that Oid might someday
 	 * widen to 64 bits.
 	 */
@@ -153,20 +163,24 @@ struct HeapTupleHeaderData
 
 	/* Fields below here must match MinimalTupleData! */
 
+#define FIELDNO_HEAPTUPLEHEADERDATA_INFOMASK2 2
 	uint16		t_infomask2;	/* number of attributes + various flags */
 
+#define FIELDNO_HEAPTUPLEHEADERDATA_INFOMASK 3
 	uint16		t_infomask;		/* various flag bits, see below */
 
+#define FIELDNO_HEAPTUPLEHEADERDATA_HOFF 4
 	uint8		t_hoff;			/* sizeof header incl. bitmap, padding */
 
 	/* ^ - 23 bytes - ^ */
 
+#define FIELDNO_HEAPTUPLEHEADERDATA_BITS 5
 	bits8		t_bits[FLEXIBLE_ARRAY_MEMBER];	/* bitmap of NULLs */
 
 	/* MORE DATA FOLLOWS AT END OF STRUCT */
 };
 
-/* typedef appears in tupbasics.h */
+/* typedef appears in htup.h */
 
 #define SizeofHeapTupleHeader offsetof(HeapTupleHeaderData, t_bits)
 
@@ -176,7 +190,7 @@ struct HeapTupleHeaderData
 #define HEAP_HASNULL			0x0001	/* has null attribute(s) */
 #define HEAP_HASVARWIDTH		0x0002	/* has variable-width attribute(s) */
 #define HEAP_HASEXTERNAL		0x0004	/* has external stored attribute(s) */
-#define HEAP_HASOID				0x0008	/* has an object-id field */
+#define HEAP_HASOID_OLD			0x0008	/* has an object-id field */
 #define HEAP_XMAX_KEYSHR_LOCK	0x0010	/* xmax is a key-shared locker */
 #define HEAP_COMBOCID			0x0020	/* t_cid is a combo cid */
 #define HEAP_XMAX_EXCL_LOCK		0x0040	/* xmax is exclusive locker */
@@ -286,14 +300,6 @@ struct HeapTupleHeaderData
  * instead of using up a dedicated bit.
  */
 #define HEAP_TUPLE_HAS_MATCH	HEAP_ONLY_TUPLE /* tuple has a join match */
-
-/*
- * Special value used in t_ctid.ip_posid, to indicate that it holds a
- * speculative insertion token rather than a real TID.  This must be higher
- * than MaxOffsetNumber, so that it can be distinguished from a valid
- * offset number in a regular item pointer.
- */
-#define SpecTokenOffsetNumber		0xfffe
 
 /*
  * HeapTupleHeader accessor macros
@@ -433,7 +439,7 @@ do { \
 
 #define HeapTupleHeaderIsSpeculative(tup) \
 ( \
-	(tup)->t_ctid.ip_posid == SpecTokenOffsetNumber \
+	(ItemPointerGetOffsetNumberNoCheck(&(tup)->t_ctid) == SpecTokenOffsetNumber) \
 )
 
 #define HeapTupleHeaderGetSpeculativeToken(tup) \
@@ -446,6 +452,13 @@ do { \
 ( \
 	ItemPointerSet(&(tup)->t_ctid, token, SpecTokenOffsetNumber) \
 )
+
+#define HeapTupleHeaderIndicatesMovedPartitions(tup) \
+	(ItemPointerGetOffsetNumber(&(tup)->t_ctid) == MovedPartitionsOffsetNumber && \
+	 ItemPointerGetBlockNumberNoCheck(&(tup)->t_ctid) == MovedPartitionsBlockNumber)
+
+#define HeapTupleHeaderSetMovedPartitions(tup) \
+	ItemPointerSet(&(tup)->t_ctid, MovedPartitionsBlockNumber, MovedPartitionsOffsetNumber)
 
 #define HeapTupleHeaderGetDatumLength(tup) \
 	VARSIZE(tup)
@@ -472,20 +485,6 @@ do { \
 ( \
 	(tup)->t_choice.t_datum.datum_typmod = (typmod) \
 )
-
-#define HeapTupleHeaderGetOid(tup) \
-( \
-	((tup)->t_infomask & HEAP_HASOID) ? \
-		*((Oid *) ((char *)(tup) + (tup)->t_hoff - sizeof(Oid))) \
-	: \
-		InvalidOid \
-)
-
-#define HeapTupleHeaderSetOid(tup, oid) \
-do { \
-	Assert((tup)->t_infomask & HEAP_HASOID); \
-	*((Oid *) ((char *)(tup) + (tup)->t_hoff - sizeof(Oid))) = (oid); \
-} while (0)
 
 /*
  * Note that we stop considering a tuple HOT-updated as soon as it is known
@@ -576,7 +575,7 @@ do { \
  * MaxHeapTuplesPerPage is an upper bound on the number of tuples that can
  * fit on one heap page.  (Note that indexes could have more, because they
  * use a smaller tuple header.)  We arrive at the divisor because each tuple
- * must be maxaligned, and it must have an associated item pointer.
+ * must be maxaligned, and it must have an associated line pointer.
  *
  * Note: with HOT, there could theoretically be more line pointers (not actual
  * tuples) than this on a heap page.  However we constrain the number of line
@@ -703,17 +702,13 @@ struct MinimalTupleData
 #define HeapTupleClearHeapOnly(tuple) \
 		HeapTupleHeaderClearHeapOnly((tuple)->t_data)
 
-#define HeapTupleGetOid(tuple) \
-		HeapTupleHeaderGetOid((tuple)->t_data)
-
-#define HeapTupleSetOid(tuple, oid) \
-		HeapTupleHeaderSetOid((tuple)->t_data, (oid))
-
 
 extern Datum nocachegetattr(HeapTuple tup, int attnum,
-			   TupleDesc att);
+							TupleDesc att);
 extern Datum heap_getsysattr(HeapTuple tup, int attnum, TupleDesc tupleDesc,
-				bool *isnull);
+							 bool *isnull);
+extern Datum getmissingattr(TupleDesc tupleDesc,
+							int attnum, bool *isnull);
 
 /* ----------------
  *		fastgetattr
@@ -735,7 +730,7 @@ static inline Datum
 fastgetattr(HeapTuple tup, int attnum, TupleDesc tupleDesc, bool *isnull)
 {
     Datum               result;
-    Form_pg_attribute   att = tupleDesc->attrs[attnum-1];
+    Form_pg_attribute   att = TupleDescAttr(tupleDesc, attnum - 1);
 
     Assert(attnum > 0);
 
@@ -752,7 +747,7 @@ fastgetattr(HeapTuple tup, int attnum, TupleDesc tupleDesc, bool *isnull)
     }
     else if (att_isnull(attnum-1, tup->t_data->t_bits))
     {
-        result = Int32GetDatum(0);
+		result = Int32GetDatum(0);
 		*isnull = true;
     }
     else
@@ -788,8 +783,7 @@ heap_getattr(HeapTuple tup, int attnum, TupleDesc tupleDesc, bool *isnull)
 
     if (attnum > (int)HeapTupleHeaderGetNatts(tup->t_data))
     {
-        result = DatumGetInt32(0);
-		*isnull = true;
+        result = getmissingattr(tupleDesc, attnum, isnull);
     }
     else if (attnum > 0)
         result = fastgetattr(tup, attnum, tupleDesc, isnull);
@@ -801,13 +795,12 @@ heap_getattr(HeapTuple tup, int attnum, TupleDesc tupleDesc, bool *isnull)
 
 /* prototypes for functions in common/heaptuple.c */
 extern Size heap_compute_data_size(TupleDesc tupleDesc,
-					   Datum *values, bool *isnull);
+								   Datum *values, bool *isnull);
 extern Size heap_fill_tuple(TupleDesc tupleDesc,
-				Datum *values, bool *isnull,
-				char *data, Size data_size,
-				uint16 *infomask, bits8 *bit);
-extern bool heap_attisnull(HeapTuple tup, int attnum);
-extern bool heap_attisnull_normalattr(HeapTuple tup, int attnum);
+							Datum *values, bool *isnull,
+							char *data, Size data_size,
+							uint16 *infomask, bits8 *bit);
+extern bool heap_attisnull(HeapTuple tup, int attnum, TupleDesc tupleDesc);
 
 extern HeapTuple heaptuple_copy_to(HeapTuple tup, HeapTuple result, uint32 *len);
 
@@ -825,19 +818,29 @@ static inline HeapTuple heap_form_tuple(TupleDesc tupleDescriptor,
 {
 	return heaptuple_form_to(tupleDescriptor, values, isnull, NULL, NULL);
 }
+
 extern HeapTuple heap_modify_tuple(HeapTuple tuple,
-				  TupleDesc tupleDesc,
-				  Datum *replValues,
-				  bool *replIsnull,
-				  bool *doReplace);
+								   TupleDesc tupleDesc,
+								   Datum *replValues,
+								   bool *replIsnull,
+								   bool *doReplace);
+extern HeapTuple heap_modify_tuple_by_cols(HeapTuple tuple,
+										   TupleDesc tupleDesc,
+										   int nCols,
+										   int *replCols,
+										   Datum *replValues,
+										   bool *replIsnull);
 extern void heap_deform_tuple(HeapTuple tuple, TupleDesc tupleDesc,
-				  Datum *values, bool *isnull);
+							  Datum *values, bool *isnull);
 extern void heap_freetuple(HeapTuple htup);
 extern MinimalTuple heap_form_minimal_tuple(TupleDesc tupleDescriptor,
-						Datum *values, bool *isnull);
+											Datum *values, bool *isnull);
 extern void heap_free_minimal_tuple(MinimalTuple mtup);
 extern MinimalTuple heap_copy_minimal_tuple(MinimalTuple mtup);
 extern HeapTuple heap_tuple_from_minimal_tuple(MinimalTuple mtup);
 extern MinimalTuple minimal_tuple_from_heap_tuple(HeapTuple htup);
+extern size_t varsize_any(void *p);
+extern HeapTuple heap_expand_tuple(HeapTuple sourceTuple, TupleDesc tupleDesc);
+extern MinimalTuple minimal_expand_tuple(HeapTuple sourceTuple, TupleDesc tupleDesc);
 
-#endif   /* HTUP_DETAILS_H */
+#endif							/* HTUP_DETAILS_H */

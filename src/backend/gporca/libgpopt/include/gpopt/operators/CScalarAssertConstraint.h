@@ -7,14 +7,14 @@
 //
 //	@doc:
 //		Class for representing a single scalar assert constraints in physical
-//	    assert operators. Each node contains a constraint to be checked at 
+//	    assert operators. Each node contains a constraint to be checked at
 //		runtime, and an error message to print in case the constraint is violated.
 //
 //		For example:
 //            +--CScalarAssertConstraint (ErrorMsg: Check constraint r_c_check for table r violated)
 //               +--CScalarIsDistinctFrom (=)
 //                  |--CScalarCmp (>)
-//                  |  |--CScalarIdent "c" (3) 
+//                  |  |--CScalarIdent "c" (3)
 //                  |  +--CScalarConst (0)
 //                  +--CScalarConst (0)
 //---------------------------------------------------------------------------
@@ -29,102 +29,93 @@
 
 namespace gpopt
 {
+using namespace gpos;
+using namespace gpmd;
 
-	using namespace gpos;
-	using namespace gpmd;
+//---------------------------------------------------------------------------
+//	@class:
+//		CScalarAssertConstraint
+//
+//	@doc:
+//		Scalar assert constraint
+//
+//---------------------------------------------------------------------------
+class CScalarAssertConstraint : public CScalar
+{
+private:
+	// error message
+	CWStringBase *m_pstrErrorMsg;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CScalarAssertConstraint
-	//
-	//	@doc:
-	//		Scalar assert constraint
-	//
-	//---------------------------------------------------------------------------
-	class CScalarAssertConstraint : public CScalar
+	// private copy ctor
+	CScalarAssertConstraint(const CScalarAssertConstraint &);
+
+public:
+	// ctor
+	CScalarAssertConstraint(CMemoryPool *mp, CWStringBase *pstrErrorMsg);
+
+	// dtor
+	~CScalarAssertConstraint();
+
+	// ident accessors
+	virtual EOperatorId
+	Eopid() const
 	{
-		private:
-			// error message
-			CWStringBase *m_pstrErrorMsg;
-			
-			// private copy ctor
-			CScalarAssertConstraint(const CScalarAssertConstraint &);
+		return EopScalarAssertConstraint;
+	}
 
-		public:
+	// operator name
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CScalarAssertConstraint";
+	}
 
-			// ctor
-			CScalarAssertConstraint(CMemoryPool *mp, CWStringBase *pstrErrorMsg);
-			
-			// dtor
-			~CScalarAssertConstraint();
+	// match function
+	virtual BOOL Matches(COperator *pop) const;
 
-			// ident accessors
-			virtual
-			EOperatorId Eopid() const
-			{
-				return EopScalarAssertConstraint;
-			}
+	// sensitivity to order of inputs
+	virtual BOOL
+	FInputOrderSensitive() const
+	{
+		return false;
+	}
 
-			// operator name
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CScalarAssertConstraint";
-			}
+	// return a copy of the operator with remapped columns
+	virtual COperator *
+	PopCopyWithRemappedColumns(CMemoryPool *,		//mp,
+							   UlongToColRefMap *,	//colref_mapping,
+							   BOOL					//must_exist
+	)
+	{
+		return PopCopyDefault();
+	}
 
-			// match function
-			virtual
-			BOOL Matches(COperator *pop) const;
+	// type of expression's result
+	virtual IMDId *MdidType() const;
 
-			// sensitivity to order of inputs
-			virtual
-			BOOL FInputOrderSensitive() const
-			{
-				return false;
-			}
+	// error message
+	CWStringBase *
+	PstrErrorMsg() const
+	{
+		return m_pstrErrorMsg;
+	}
 
-			// return a copy of the operator with remapped columns
-			virtual
-			COperator *PopCopyWithRemappedColumns
-						(
-						CMemoryPool *, //mp,
-						UlongToColRefMap *, //colref_mapping,
-						BOOL //must_exist
-						)
-			{
-				return PopCopyDefault();
-			}
+	// print
+	virtual IOstream &OsPrint(IOstream &os) const;
 
-			// type of expression's result
-			virtual
-			IMDId *MdidType() const;
-			
-			// error message
-			CWStringBase *PstrErrorMsg() const
-			{
-				return m_pstrErrorMsg;
-			}
+	// conversion function
+	static CScalarAssertConstraint *
+	PopConvert(COperator *pop)
+	{
+		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(EopScalarAssertConstraint == pop->Eopid());
 
-			// print
-			virtual 
-			IOstream &OsPrint(IOstream &os) const;
-			
-			// conversion function
-			static
-			CScalarAssertConstraint *PopConvert
-				(
-				COperator *pop
-				)
-			{
-				GPOS_ASSERT(NULL != pop);
-				GPOS_ASSERT(EopScalarAssertConstraint == pop->Eopid());
+		return dynamic_cast<CScalarAssertConstraint *>(pop);
+	}
 
-				return dynamic_cast<CScalarAssertConstraint*>(pop);
-			}
+};	// class CScalarAssertConstraint
+}  // namespace gpopt
 
-	}; // class CScalarAssertConstraint
-}
-
-#endif // !GPOPT_CScalarAssertConstraint_H
+#endif	// !GPOPT_CScalarAssertConstraint_H
 
 // EOF

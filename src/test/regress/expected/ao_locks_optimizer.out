@@ -73,11 +73,10 @@ BEGIN;
 DELETE FROM ao_locks_table WHERE a = 1;
 SELECT * FROM locktest_master where coalesce = 'ao_locks_table' or
  coalesce like 'aovisimap%' or coalesce like 'aoseg%';
-    coalesce    |      mode       | locktype |  node  
-----------------+-----------------+----------+--------
- ao_locks_table | AccessShareLock | relation | master
- ao_locks_table | ExclusiveLock   | relation | master
-(2 rows)
+    coalesce    |     mode      | locktype |  node  
+----------------+---------------+----------+--------
+ ao_locks_table | ExclusiveLock | relation | master
+(1 row)
 
 SELECT * FROM locktest_segments where coalesce = 'ao_locks_table' or
  coalesce like 'aovisimap%' or coalesce like 'aoseg%';
@@ -94,11 +93,10 @@ BEGIN;
 UPDATE ao_locks_table SET b = -1 WHERE a = 2;
 SELECT * FROM locktest_master where coalesce = 'ao_locks_table' or
  coalesce like 'aovisimap%' or coalesce like 'aoseg%';
-    coalesce    |      mode       | locktype |  node  
-----------------+-----------------+----------+--------
- ao_locks_table | AccessShareLock | relation | master
- ao_locks_table | ExclusiveLock   | relation | master
-(2 rows)
+    coalesce    |     mode      | locktype |  node  
+----------------+---------------+----------+--------
+ ao_locks_table | ExclusiveLock | relation | master
+(1 row)
 
 SELECT * FROM locktest_segments where coalesce = 'ao_locks_table' or
  coalesce like 'aovisimap%' or coalesce like 'aoseg%';

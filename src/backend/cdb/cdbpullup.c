@@ -27,7 +27,8 @@
 #include "cdb/cdbpullup.h"		/* me */
 
 
-static bool cdbpullup_missingVarWalker(Node *node, void *targetlist);
+static bool cdbpullup_missingVarWalker(Expr *node, void *targetlist);
+static Expr *cdbpullup_make_expr(Index varno, AttrNumber varattno, Expr *oldexpr, bool modifyOld);
 
 /*
  * cdbpullup_expr
@@ -94,7 +95,7 @@ pullUpExpr_mutator(Node *node, void *context)
 		/* Is targetlist a List of TargetEntry?  (Plan nodes use this format) */
 		if (IsA(linitial(ctx->targetlist), TargetEntry))
 		{
-			tle = tlist_member((Node *) var, ctx->targetlist);
+			tle = tlist_member((Expr *) var, ctx->targetlist);
 
 			/* Fail if P's result does not include this column. */
 			if (!tle)
@@ -164,7 +165,7 @@ pullUpExpr_mutator(Node *node, void *context)
 	else if (!IsA(node, List) &&
 			 ctx->targetlist &&
 			 IsA(linitial(ctx->targetlist), TargetEntry) &&
-			 NULL != (tle = tlist_member(node, ctx->targetlist)))
+			 NULL != (tle = tlist_member((Expr *) node, ctx->targetlist)))
 	{
 		/* Substitute the corresponding entry from newvarlist, if given. */
 		if (ctx->newvarlist)
@@ -314,7 +315,7 @@ cdbpullup_findEclassInTargetList(EquivalenceClass *eclass, List *targetlist,
 
 		/* Return this item if all referenced Vars are in targetlist. */
 		if (!IsA(key, Var) &&
-			!cdbpullup_missingVarWalker((Node *) key, targetlist))
+			!cdbpullup_missingVarWalker(key, targetlist))
 		{
 			return key;
 		}
@@ -375,7 +376,7 @@ cdbpullup_isExprCoveredByTargetlist(Expr *expr, List *targetlist)
 	{
 		foreach(cell, (List *) expr)
 		{
-			Node	   *item = (Node *) lfirst(cell);
+			Expr	   *item = (Expr *) lfirst(cell);
 
 			/* The whole expr or all of its Vars must be in targetlist. */
 			if (!tlist_member_ignore_relabel(item, targetlist) &&
@@ -385,8 +386,8 @@ cdbpullup_isExprCoveredByTargetlist(Expr *expr, List *targetlist)
 	}
 
 	/* The whole expr or all of its Vars must be in targetlist. */
-	else if (!tlist_member_ignore_relabel((Node *) expr, targetlist) &&
-			 cdbpullup_missingVarWalker((Node *) expr, targetlist))
+	else if (!tlist_member_ignore_relabel(expr, targetlist) &&
+			 cdbpullup_missingVarWalker(expr, targetlist))
 		return false;
 
 	/* expr is evaluable on rows projected thru targetlist */
@@ -412,7 +413,7 @@ cdbpullup_isExprCoveredByTargetlist(Expr *expr, List *targetlist)
  * correctly for successful lookups by list_member(), tlist_member(),
  * make_canonical_pathkey(), etc.
  */
-Expr *
+static Expr *
 cdbpullup_make_expr(Index varno, AttrNumber varattno, Expr *oldexpr, bool modifyOld)
 {
 	Assert(oldexpr);
@@ -434,7 +435,7 @@ cdbpullup_make_expr(Index varno, AttrNumber varattno, Expr *oldexpr, bool modify
 	}
 	else if (IsA(oldexpr, Const))
 	{
-		Const	   *constExpr = copyObject(oldexpr);
+		Const	   *constExpr = copyObject((Const *) oldexpr);
 
 		return (Expr *) constExpr;
 	}
@@ -471,12 +472,16 @@ cdbpullup_make_expr(Index varno, AttrNumber varattno, Expr *oldexpr, bool modify
  * See also: cdbpullup_isExprCoveredByTargetlist
  */
 static bool
-cdbpullup_missingVarWalker(Node *node, void *targetlist)
+cdbpullup_missingVarWalker(Expr *node, void *targetlist)
 {
 	if (!node)
 		return false;
 
-	if (IsA(node, Var))
+	/*
+	 * Should also consider PlaceHolderVar in the targetlist.
+	 * See github issue: https://github.com/greenplum-db/gpdb/issues/10315
+	 */
+	if (IsA(node, Var) || IsA(node, PlaceHolderVar))
 	{
 		if (!targetlist)
 			return true;
@@ -495,5 +500,5 @@ cdbpullup_missingVarWalker(Node *node, void *targetlist)
 		return true;			/* Var is not in targetlist - quit the walk */
 	}
 
-	return expression_tree_walker(node, cdbpullup_missingVarWalker, targetlist);
+	return expression_tree_walker((Node *) node, cdbpullup_missingVarWalker, targetlist);
 }								/* cdbpullup_missingVarWalker */

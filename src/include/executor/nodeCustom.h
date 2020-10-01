@@ -4,7 +4,7 @@
  *
  * prototypes for CustomScan nodes
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * ------------------------------------------------------------------------
@@ -14,14 +14,12 @@
 
 #include "access/parallel.h"
 #include "nodes/execnodes.h"
-#include "nodes/extensible.h"
 
 /*
  * General executor code
  */
-extern CustomScanState *ExecInitCustomScan(CustomScan *custom_scan,
-				   EState *estate, int eflags);
-extern TupleTableSlot *ExecCustomScan(CustomScanState *node);
+extern CustomScanState *ExecInitCustomScan(CustomScan *cscan,
+										   EState *estate, int eflags);
 extern void ExecEndCustomScan(CustomScanState *node);
 
 extern void ExecReScanCustomScan(CustomScanState *node);
@@ -32,10 +30,13 @@ extern void ExecCustomRestrPos(CustomScanState *node);
  * Parallel execution support
  */
 extern void ExecCustomScanEstimate(CustomScanState *node,
-					   ParallelContext *pcxt);
+								   ParallelContext *pcxt);
 extern void ExecCustomScanInitializeDSM(CustomScanState *node,
-							ParallelContext *pcxt);
+										ParallelContext *pcxt);
+extern void ExecCustomScanReInitializeDSM(CustomScanState *node,
+										  ParallelContext *pcxt);
 extern void ExecCustomScanInitializeWorker(CustomScanState *node,
-							   shm_toc *toc);
+										   ParallelWorkerContext *pwcxt);
+extern void ExecShutdownCustomScan(CustomScanState *node);
 
-#endif   /* NODECUSTOM_H */
+#endif							/* NODECUSTOM_H */

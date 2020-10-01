@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import sys
 import pickle
 import traceback
@@ -6,6 +6,8 @@ import traceback
 
 class NullDevice():
     def write(self, s):
+        pass
+    def flush(self):
         pass
 
 
@@ -20,15 +22,15 @@ from gppylib.commands import unix
 
 hostname = unix.getLocalHostname()
 username = unix.getUserName()
-execname = pickle.load(sys.stdin)
+execname = pickle.load(sys.stdin.buffer)
 gplog.setup_tool_logging(execname, hostname, username)
 logger = gplog.get_default_logger()
 
-operation = pickle.load(sys.stdin)
+operation = pickle.load(sys.stdin.buffer)
 
 try:
     ret = operation.run()
-except Exception, e:
+except Exception as e:
     exc_type, exc_value, exc_traceback = sys.exc_info()
     tb_list = traceback.extract_tb(exc_traceback)
     try:
@@ -37,8 +39,8 @@ except Exception, e:
 
         # logger.exception(e)               # logging 'e' could be necessary for traceback
 
-        pickled_ret = pickle.dumps(e)  # Pickle exception for stdout transmission
-    except Exception, f:
+        pickled_ret = pickle.dumps(e) # Pickle exception for stdout transmission
+    except Exception as f:
         # logger.exception(f)               # 'f' is not important to us, except for debugging perhaps
 
         # No hope of pickling a precise Exception back to RemoteOperation.
@@ -48,11 +50,11 @@ except Exception, e:
         pretty_trace += 'Traceback (most recent call last):\n'
         pretty_trace += ''.join(traceback.format_list(tb_list))
         logger.critical(pretty_trace)
-        print >> sys.stderr, pretty_trace
+        print(pretty_trace, file=sys.stderr)
         sys.exit(2)  # signal that gpoperation.py has hit unexpected error
 else:
-    pickled_ret = pickle.dumps(ret)  # Pickle return data for stdout transmission
+    pickled_ret = pickle.dumps(ret)
 
 sys.stdout = old_stdout
-print pickled_ret
+sys.stdout.buffer.write(pickled_ret)
 sys.exit(0)

@@ -78,6 +78,22 @@ WITH (appendonly=true);
 
 SELECT * FROM pg_stat_last_operation_testview WHERE actionname = 'CREATE';
 
+-- CREATE TABLE .. PARTITION OF
+CREATE TABLE mdt_test_newpart PARTITION OF mdt_test_part1 FOR VALUES IN ('X');
+
+-- ATTACH PARTITION
+CREATE TABLE mdt_test_newpart2 (
+  id int,
+  rank int,
+  year date,
+  gender char(1))
+DISTRIBUTED BY (id, gender, year);
+ALTER TABLE mdt_test_part1 ATTACH PARTITION mdt_test_newpart2 FOR VALUES IN ('Y');
+
+-- DETACH PARTITION
+CREATE TABLE mdt_test_detach PARTITION OF mdt_test_part1 FOR VALUES IN ('Z');
+ALTER TABLE mdt_test_part1 DETACH PARTITION mdt_test_detach;
+
 -- GRANT
 GRANT ALL ON mdt_all_types TO public;
 SELECT * FROM pg_stat_last_operation_testview WHERE actionname = 'PRIVILEGE';

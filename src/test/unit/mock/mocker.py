@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import logging
 import optparse
@@ -218,7 +218,7 @@ class FuncSignature(object):
             # general case
             m = FuncSignature.arg_pat.match(arg.strip())
             if not m:
-                print '%s %s(%s)' % (self.rettype, self.funcname, arg_string)
+                print('%s %s(%s)' % (self.rettype, self.funcname, arg_string))
             argtype = m.group(1)
             argname = m.group(2) if m.group(2) else 'arg' + str(i)
             args.append((argtype.strip(), argname.strip()))

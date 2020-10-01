@@ -44,7 +44,7 @@ WHERE status &lt;&gt; 'u';</codeblock></entry>
                                 <entry>If the query returns any rows, follow these steps to correct
                                     the problem:<ol id="ol_okh_2cg_rp">
                                         <li>Verify that the hosts with down segments are responsive. </li>
-                                        <li>If hosts are OK, check the <filepath>pg_log</filepath>
+                                        <li>If hosts are OK, check the <filepath>log</filepath>
                                             files for the <ph>primaries and
                                                 mirrors of the </ph>down segments to discover the
                                             root cause of the segments going down. </li>
@@ -68,7 +68,7 @@ WHERE mode = 'c';</codeblock></p>
                                         the problem:<ol id="ol_ezt_kcg_rp">
                                             <li>Verify that hosts with down segments are responsive. </li>
                                             <li>If hosts are OK, check the
-                                                  <filepath>pg_log</filepath> files for the
+                                                  <filepath>log</filepath> files for the
                                                 primaries and mirrors of the down segments to
                                                 determine the root cause of the segments going down. </li>
                                             <li>If no unexpected errors are found, run the
@@ -91,7 +91,7 @@ WHERE mode = 'r';</codeblock></p>
                                     <p>When this query returns rows, it implies that the segments
                                         are in the process of being re-synched. If the state does
                                         not change from 'r' to 's', then check the
-                                            <filepath>pg_log</filepath> files from the primaries and
+                                            <filepath>log</filepath> files from the primaries and
                                         mirrors of the affected segments for errors.</p>
                                 </entry>
                             </row>
@@ -145,7 +145,7 @@ GROUP BY 1;</codeblock></p>
 FROM gp_master_mirroring;</codeblock></p>
                                 </entry>
                                 <entry>
-                                    <p>Check the <filepath>pg_log</filepath> from the master and
+                                    <p>Check the <filepath>log</filepath> from the master and
                                         standby master for errors. If there are no unexpected errors
                                         and the machines are up, run the
                                             <codeph>gpinitstandby</codeph> utility to bring the
@@ -163,7 +163,7 @@ FROM gp_master_mirroring;</codeblock></p>
                                         command:<codeblock>psql <i>dbname</i> -c 'SELECT pid, state FROM pg_stat_replication;'</codeblock></p>
                                 </entry>
                                 <entry>
-                                    <p>Check the <filepath>pg_log</filepath> file from the master
+                                    <p>Check the <filepath>log</filepath> file from the master
                                         and standby master for errors. If there are no unexpected
                                         errors and the machines are up, run the
                                             <codeph>gpinitstandby</codeph> utility to bring the

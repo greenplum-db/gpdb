@@ -19,45 +19,39 @@
 
 namespace gpopt
 {
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CMissingStatsTest
-	//
-	//	@doc:
-	//		Unittests
-	//
-	//---------------------------------------------------------------------------
-	class CMissingStatsTest
+//---------------------------------------------------------------------------
+//	@class:
+//		CMissingStatsTest
+//
+//	@doc:
+//		Unittests
+//
+//---------------------------------------------------------------------------
+class CMissingStatsTest
+{
+	struct SMissingStatsTestCase
 	{
-		struct SMissingStatsTestCase
-		{
-			// input stats dxl file
-			const CHAR *m_szInputFile;
+		// input stats dxl file
+		const CHAR *m_szInputFile;
 
-			// expected number of columns with missing statistics
-			ULONG m_ulExpectedMissingStats;
+		// expected number of columns with missing statistics
+		ULONG m_ulExpectedMissingStats;
 
-		}; // SMissingStatsTestCase
+	};	// SMissingStatsTestCase
 
-		private:
+private:
+	// counter used to mark last successful test
+	static gpos::ULONG m_ulMissingStatsTestCounter;
 
-			// counter used to mark last successful test
-			static
-			gpos::ULONG m_ulMissingStatsTestCounter;
+public:
+	// unittests
+	static gpos::GPOS_RESULT EresUnittest();
 
-		public:
+	static gpos::GPOS_RESULT EresUnittest_RunTests();
 
-			// unittests
-			static
-			gpos::GPOS_RESULT EresUnittest();
+};	// class CMissingStatsTest
+}  // namespace gpopt
 
-			static
-			gpos::GPOS_RESULT EresUnittest_RunTests();
-
-	}; // class CMissingStatsTest
-}
-
-#endif // !GPOPT_CMissingStatsTest_H
+#endif	// !GPOPT_CMissingStatsTest_H
 
 // EOF
-

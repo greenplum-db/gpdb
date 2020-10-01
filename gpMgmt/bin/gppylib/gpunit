@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 """
 gpunit is similar to unit2 in python but runs with our GpMgmtTestRunner and GpMgmtTextTestResult.
@@ -14,8 +14,6 @@ so that it can be integrated with Pulse.
 __unittest = True
 
 import unittest
-from unittest.main import USAGE_AS_MAIN
 from gppylib import gpMgmttest
 
-unittest.TestProgram.USAGE = USAGE_AS_MAIN
 unittest.TestProgram(module=None, testRunner=gpMgmttest.GpMgmtTestRunner)

@@ -37,9 +37,9 @@ extern "C" {
 #include "parser/parse_oper.h"
 
 #include "catalog/namespace.h"
-#include "catalog/pg_exttable.h"
-#include "cdb/cdbpartition.h"
+#if 0
 #include "cdb/partitionselection.h"
+#endif
 #include "cdb/cdbhash.h"
 #include "cdb/cdbutil.h"
 #include "cdb/cdbmutate.h"
@@ -62,9 +62,9 @@ extern "C" {
 #include "utils/faultinjector.h"
 #include "funcapi.h"
 
-} // end extern C
+}  // end extern C
 
 
-#endif // GPDBDefs_H
+#endif	// GPDBDefs_H
 
 // EOF

@@ -4,7 +4,7 @@
  *	  This file contains routines to support indexes defined on system
  *	  catalogs.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -15,12 +15,15 @@
  */
 #include "postgres.h"
 
+#include "access/genam.h"
+#include "access/heapam.h"
 #include "access/htup_details.h"
 #include "catalog/index.h"
 #include "catalog/indexing.h"
 #include "executor/executor.h"
 #include "utils/rel.h"
 
+#include "catalog/gp_fastsequence.h"
 
 /*
  * CatalogOpenIndexes - open the indexes on a system catalog.
@@ -42,7 +45,7 @@ CatalogOpenIndexes(Relation heapRel)
 	ResultRelInfo *resultRelInfo;
 
 	resultRelInfo = makeNode(ResultRelInfo);
-	resultRelInfo->ri_RangeTableIndex = 1;		/* dummy */
+	resultRelInfo->ri_RangeTableIndex = 0;	/* dummy */
 	resultRelInfo->ri_RelationDesc = heapRel;
 	resultRelInfo->ri_TrigDesc = NULL;	/* we don't fire triggers */
 
@@ -68,7 +71,7 @@ CatalogCloseIndexes(CatalogIndexState indstate)
  *
  * This is effectively a cut-down version of ExecInsertIndexTuples.
  */
-void
+static void
 CatalogIndexInsert(CatalogIndexState indstate, HeapTuple heapTuple)
 {
 	int			i;
@@ -80,9 +83,15 @@ CatalogIndexInsert(CatalogIndexState indstate, HeapTuple heapTuple)
 	Datum		values[INDEX_MAX_KEYS];
 	bool		isnull[INDEX_MAX_KEYS];
 
-	/* HOT update does not require index inserts */
+	/*
+	 * HOT update does not require index inserts. But with asserts enabled we
+	 * want to check that it'd be legal to currently insert into the
+	 * table/index.
+	 */
+#ifndef USE_ASSERT_CHECKING
 	if (HeapTupleIsHeapOnly(heapTuple))
 		return;
+#endif
 
 	/*
 	 * Get information from the state structure.  Fall out if nothing to do.
@@ -95,8 +104,9 @@ CatalogIndexInsert(CatalogIndexState indstate, HeapTuple heapTuple)
 	heapRelation = indstate->ri_RelationDesc;
 
 	/* Need a slot to hold the tuple being examined */
-	slot = MakeSingleTupleTableSlot(RelationGetDescr(heapRelation));
-	ExecStoreHeapTuple(heapTuple, slot, InvalidBuffer, false);
+	slot = MakeSingleTupleTableSlot(RelationGetDescr(heapRelation),
+									&TTSOpsHeapTuple);
+	ExecStoreHeapTuple(heapTuple, slot, false);
 
 	/*
 	 * for each index, form and insert the index tuple
@@ -104,8 +114,10 @@ CatalogIndexInsert(CatalogIndexState indstate, HeapTuple heapTuple)
 	for (i = 0; i < numIndexes; i++)
 	{
 		IndexInfo  *indexInfo;
+		Relation	index;
 
 		indexInfo = indexInfoArray[i];
+		index = relationDescs[i];
 
 		/* If the index is marked as read-only, ignore it */
 		if (!indexInfo->ii_ReadyForInserts)
@@ -118,7 +130,17 @@ CatalogIndexInsert(CatalogIndexState indstate, HeapTuple heapTuple)
 		Assert(indexInfo->ii_Expressions == NIL);
 		Assert(indexInfo->ii_Predicate == NIL);
 		Assert(indexInfo->ii_ExclusionOps == NULL);
-		Assert(relationDescs[i]->rd_index->indimmediate);
+		Assert(index->rd_index->indimmediate);
+		Assert(indexInfo->ii_NumIndexKeyAttrs != 0);
+
+		/* see earlier check above */
+#ifdef USE_ASSERT_CHECKING
+		if (HeapTupleIsHeapOnly(heapTuple))
+		{
+			Assert(!ReindexIsProcessingIndex(RelationGetRelid(index)));
+			continue;
+		}
+#endif							/* USE_ASSERT_CHECKING */
 
 		/*
 		 * FormIndexDatum fills in its values and isnull parameters with the
@@ -133,32 +155,137 @@ CatalogIndexInsert(CatalogIndexState indstate, HeapTuple heapTuple)
 		/*
 		 * The index AM does the rest.
 		 */
-		index_insert(relationDescs[i],	/* index relation */
+		index_insert(index,		/* index relation */
 					 values,	/* array of index Datums */
 					 isnull,	/* is-null flags */
-					 &(heapTuple->t_self),		/* tid of heap tuple */
+					 &(heapTuple->t_self),	/* tid of heap tuple */
 					 heapRelation,
-					 relationDescs[i]->rd_index->indisunique ?
-					 UNIQUE_CHECK_YES : UNIQUE_CHECK_NO);
+					 index->rd_index->indisunique ?
+					 UNIQUE_CHECK_YES : UNIQUE_CHECK_NO,
+					 indexInfo);
 	}
 
 	ExecDropSingleTupleTableSlot(slot);
 }
 
 /*
- * CatalogUpdateIndexes - do all the indexing work for a new catalog tuple
+ * CatalogTupleInsert - do heap and indexing work for a new catalog tuple
  *
- * This is a convenience routine for the common case where we only need
- * to insert or update a single tuple in a system catalog.  Avoid using it for
- * multiple tuples, since opening the indexes and building the index info
- * structures is moderately expensive.
+ * Insert the tuple data in "tup" into the specified catalog relation.
+ * The Oid of the inserted tuple is returned.
+ *
+ * This is a convenience routine for the common case of inserting a single
+ * tuple in a system catalog; it inserts a new heap tuple, keeping indexes
+ * current.  Avoid using it for multiple tuples, since opening the indexes
+ * and building the index info structures is moderately expensive.
+ * (Use CatalogTupleInsertWithInfo in such cases.)
  */
 void
-CatalogUpdateIndexes(Relation heapRel, HeapTuple heapTuple)
+CatalogTupleInsert(Relation heapRel, HeapTuple tup)
 {
 	CatalogIndexState indstate;
 
 	indstate = CatalogOpenIndexes(heapRel);
-	CatalogIndexInsert(indstate, heapTuple);
+
+	simple_heap_insert(heapRel, tup);
+
+	CatalogIndexInsert(indstate, tup);
+	CatalogCloseIndexes(indstate);
+}
+
+/*
+ * CatalogTupleInsertWithInfo - as above, but with caller-supplied index info
+ *
+ * This should be used when it's important to amortize CatalogOpenIndexes/
+ * CatalogCloseIndexes work across multiple insertions.  At some point we
+ * might cache the CatalogIndexState data somewhere (perhaps in the relcache)
+ * so that callers needn't trouble over this ... but we don't do so today.
+ */
+void
+CatalogTupleInsertWithInfo(Relation heapRel, HeapTuple tup,
+						   CatalogIndexState indstate)
+{
+	simple_heap_insert(heapRel, tup);
+
+	CatalogIndexInsert(indstate, tup);
+}
+
+/*
+ * CatalogTupleUpdate - do heap and indexing work for updating a catalog tuple
+ *
+ * Update the tuple identified by "otid", replacing it with the data in "tup".
+ *
+ * This is a convenience routine for the common case of updating a single
+ * tuple in a system catalog; it updates one heap tuple, keeping indexes
+ * current.  Avoid using it for multiple tuples, since opening the indexes
+ * and building the index info structures is moderately expensive.
+ * (Use CatalogTupleUpdateWithInfo in such cases.)
+ */
+void
+CatalogTupleUpdate(Relation heapRel, ItemPointer otid, HeapTuple tup)
+{
+	CatalogIndexState indstate;
+
+	indstate = CatalogOpenIndexes(heapRel);
+
+	simple_heap_update(heapRel, otid, tup);
+
+	CatalogIndexInsert(indstate, tup);
+	CatalogCloseIndexes(indstate);
+}
+
+/*
+ * CatalogTupleUpdateWithInfo - as above, but with caller-supplied index info
+ *
+ * This should be used when it's important to amortize CatalogOpenIndexes/
+ * CatalogCloseIndexes work across multiple updates.  At some point we
+ * might cache the CatalogIndexState data somewhere (perhaps in the relcache)
+ * so that callers needn't trouble over this ... but we don't do so today.
+ */
+void
+CatalogTupleUpdateWithInfo(Relation heapRel, ItemPointer otid, HeapTuple tup,
+						   CatalogIndexState indstate)
+{
+	simple_heap_update(heapRel, otid, tup);
+
+	CatalogIndexInsert(indstate, tup);
+}
+
+/*
+ * CatalogTupleDelete - do heap and indexing work for deleting a catalog tuple
+ *
+ * Delete the tuple identified by "tid" in the specified catalog.
+ *
+ * With Postgres heaps, there is no index work to do at deletion time;
+ * cleanup will be done later by VACUUM.  However, callers of this function
+ * shouldn't have to know that; we'd like a uniform abstraction for all
+ * catalog tuple changes.  Hence, provide this currently-trivial wrapper.
+ *
+ * The abstraction is a bit leaky in that we don't provide an optimized
+ * CatalogTupleDeleteWithInfo version, because there is currently nothing to
+ * optimize.  If we ever need that, rather than touching a lot of call sites,
+ * it might be better to do something about caching CatalogIndexState.
+ */
+void
+CatalogTupleDelete(Relation heapRel, ItemPointer tid)
+{
+	simple_heap_delete(heapRel, tid);
+}
+
+/*
+ * Greenplum: this interface is used to insert tuples into gp_fastsequence
+ * and aoseg relations during an appendoptimized (row as well as column)
+ * insert transaction.
+ */
+void
+CatalogTupleInsertFrozen(Relation heapRel, HeapTuple tup)
+{
+	CatalogIndexState indstate;
+
+	indstate = CatalogOpenIndexes(heapRel);
+
+	frozen_heap_insert(heapRel, tup);
+
+	CatalogIndexInsert(indstate, tup);
 	CatalogCloseIndexes(indstate);
 }

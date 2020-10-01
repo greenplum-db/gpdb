@@ -105,7 +105,7 @@ AS
         relacl as autrelacl,
         pgc.oid as autoid,
         pgc.reltoastrelid as auttoastoid,
-        pgc.relstorage as autrelstorage
+        pgc.relam as autrelam
     FROM
         pg_catalog.pg_class pgc,
         gp_toolkit.__gp_fullname fn
@@ -114,32 +114,11 @@ AS
         SELECT aunoid
         FROM gp_toolkit.__gp_user_namespaces
     )
-    AND (pgc.relkind = 'r' OR pgc.relkind = 'm')
+    AND pgc.relkind IN ('r', 'p', 'm')
     AND pgc.relispopulated = 't'
     AND pgc.oid = fn.fnoid;
 
 GRANT SELECT ON TABLE gp_toolkit.__gp_user_tables TO public;
-
-
---------------------------------------------------------------------------------
--- @view:
---        gp_toolkit.__gp_user_data_tables
---
--- @doc:
---        Shorthand for tables in user namespaces that may hold data
---
---------------------------------------------------------------------------------
-CREATE VIEW gp_toolkit.__gp_user_data_tables
-AS
-    SELECT aut.*
-    FROM
-        gp_toolkit.__gp_user_tables aut
-    LEFT OUTER JOIN
-        pg_catalog.pg_partition pgp
-    ON aut.autoid = pgp.parrelid
-    WHERE pgp.parrelid IS NULL;
-
-GRANT SELECT ON TABLE gp_toolkit.__gp_user_data_tables TO public;
 
 
 --------------------------------------------------------------------------------
@@ -179,6 +158,8 @@ AS
 
 GRANT SELECT ON TABLE gp_toolkit.__gp_number_of_segments TO public;
 
+
+CREATE EXTENSION gp_exttable_fdw;
 
 --------------------------------------------------------------------------------
 -- log-reading external tables and views
@@ -225,7 +206,7 @@ CREATE EXTERNAL WEB TABLE gp_toolkit.__gp_log_segment_ext
     logline int,
     logstack text
 )
-EXECUTE E'cat $GP_SEG_DATADIR/pg_log/*.csv'
+EXECUTE E'cat $GP_SEG_DATADIR/log/*.csv'
 FORMAT 'CSV' (DELIMITER AS ',' NULL AS '' QUOTE AS '"');
 
 REVOKE ALL ON TABLE gp_toolkit.__gp_log_segment_ext FROM public;
@@ -272,7 +253,7 @@ CREATE EXTERNAL WEB TABLE gp_toolkit.__gp_log_master_ext
     logline int,
     logstack text
 )
-EXECUTE E'cat $GP_SEG_DATADIR/pg_log/*.csv' ON MASTER
+EXECUTE E'cat $GP_SEG_DATADIR/log/*.csv' ON MASTER
 FORMAT 'CSV' (DELIMITER AS ',' NULL AS '' QUOTE AS '"');
 
 REVOKE ALL ON TABLE gp_toolkit.__gp_log_master_ext FROM public;
@@ -720,7 +701,7 @@ DECLARE
     skcoid oid;
     skcrec record;
 BEGIN
-    FOR skcoid IN SELECT autoid from gp_toolkit.__gp_user_data_tables_readable WHERE autrelstorage != 'x'
+    FOR skcoid IN SELECT autoid from gp_toolkit.__gp_user_data_tables_readable
     LOOP
         SELECT * INTO skcrec
         FROM
@@ -818,7 +799,7 @@ DECLARE
     skcoid oid;
     skcrec record;
 BEGIN
-    FOR skcoid IN SELECT autoid from gp_toolkit.__gp_user_data_tables_readable WHERE autrelstorage != 'x'
+    FOR skcoid IN SELECT autoid from gp_toolkit.__gp_user_data_tables_readable
     LOOP
         SELECT * INTO skcrec
         FROM
@@ -924,7 +905,7 @@ CREATE EXTERNAL WEB TABLE gp_toolkit.gp_disk_free
     dfdevice text,
     dfspace bigint
 )
-EXECUTE E'python -c "from gppylib.commands import unix; df=unix.DiskFree.get_disk_free_info_local(''token'',''$GP_SEG_DATADIR''); print ''%s, %s, %s, %s'' % (''$GP_SEGMENT_ID'', unix.getLocalHostname(), df[0], df[3])"' FORMAT 'CSV';
+EXECUTE E'python3 -c "from gppylib.commands import unix; df=unix.DiskFree.get_disk_free_info_local(''token'',''$GP_SEG_DATADIR''); print(''%s, %s, %s, %s'' % (''$GP_SEGMENT_ID'', unix.getLocalHostname(), df[0], df[3]))"' FORMAT 'CSV';
 
 
 --------------------------------------------------------------------------------
@@ -968,12 +949,7 @@ AS
                     FROM gp_toolkit.__gp_is_append_only
                     WHERE iaooid = pgc.oid AND iaotype = 't'
                 )
-                AND NOT EXISTS
-                (
-                    SELECT parrelid
-                    FROM pg_partition
-                    WHERE parrelid = pgc.oid
-                )
+                AND pgc.relkind not in ('p') -- partitioned tables have no data
             )
             AS pgc
         LEFT OUTER JOIN
@@ -1401,7 +1377,6 @@ AS
         FROM
             (SELECT *
              FROM gp_toolkit.__gp_user_data_tables_readable
-             WHERE autrelstorage != 'x'
             ) AS udtr
 
         LEFT JOIN pg_catalog.pg_appendonly ao
@@ -1619,54 +1594,6 @@ REVOKE ALL ON TABLE gp_toolkit.gp_size_of_table_and_indexes_licensing FROM publi
 
 --------------------------------------------------------------------------------
 -- @view:
---              gp_toolkit.gp_size_of_partition_and_indexes_disk
---
--- @doc:
---              Calculates partition table disk size and partition indexes disk size
---
---------------------------------------------------------------------------------
-CREATE VIEW gp_toolkit.gp_size_of_partition_and_indexes_disk
-AS
-    SELECT
-        sopaid.sopaidparentoid                AS sopaidparentoid,
-        sopaid.sopaidpartitionoid            AS sopaidpartitionoid,
-        sopaid.sopaidpartitiontablesize        AS sopaidpartitiontablesize,
-        sopaid.sopaidpartitionindexessize    AS sopaidpartitionindexessize,
-        fnparent.fnnspname                     AS sopaidparentschemaname,
-        fnparent.fnrelname                     AS sopaidparenttablename,
-        fnpart.fnnspname                     AS sopaidpartitionschemaname,
-        fnpart.fnrelname                     AS sopaidpartitiontablename
-    FROM
-        (SELECT
-            pgp.parrelid                 AS sopaidparentoid,
-            pgpr.parchildrelid           AS sopaidpartitionoid,
-            sotd.sotdsize +
-            sotd.sotdtoastsize +
-            sotd.sotdadditionalsize      AS sopaidpartitiontablesize,
-            COALESCE(soati.soatisize, 0) AS sopaidpartitionindexessize
-        FROM pg_catalog.pg_partition pgp
-
-        JOIN pg_partition_rule pgpr ON (pgp.oid = pgpr.paroid)
-
-        JOIN gp_toolkit.gp_size_of_table_disk sotd
-        ON (sotd.sotdoid = pgpr.parchildrelid)
-
-        LEFT JOIN gp_toolkit.gp_size_of_all_table_indexes soati
-        ON (soati.soatioid = pgpr.parchildrelid)
-        ) AS sopaid
-
-    JOIN gp_toolkit.__gp_fullname fnparent
-    ON (sopaid.sopaidparentoid = fnparent.fnoid)
-
-    JOIN gp_toolkit.__gp_fullname fnpart
-    ON (sopaid.sopaidpartitionoid = fnpart.fnoid)
-    ;
-
-GRANT SELECT ON TABLE gp_toolkit.gp_size_of_partition_and_indexes_disk TO public;
-
-
---------------------------------------------------------------------------------
--- @view:
 --              gp_toolkit.gp_size_of_schema_disk
 --
 -- @doc:
@@ -1843,7 +1770,7 @@ CREATE VIEW gp_toolkit.gp_resgroup_status_per_host AS
         s.rsgname
       , s.groupid
       , c.hostname
-      , sum((s.cpu                       )::text::numeric) AS cpu
+      , round(avg((s.cpu)::text::numeric), 2) AS cpu
       , sum((s.memory->'used'            )::text::integer) AS memory_used
       , sum((s.memory->'available'       )::text::integer) AS memory_available
       , sum((s.memory->'quota_used'      )::text::integer) AS memory_quota_used
@@ -1981,7 +1908,7 @@ RETURNS TABLE (tid tid,
     segno int,
     row_num bigint)
 AS '$libdir/gp_ao_co_diagnostics', 'gp_aovisimap_wrapper'
-LANGUAGE C IMMUTABLE;
+LANGUAGE C STRICT;
 GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_aovisimap(regclass) TO public;
 
 CREATE FUNCTION gp_toolkit.__gp_aovisimap_hidden_info(regclass)

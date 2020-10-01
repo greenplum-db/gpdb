@@ -1,0 +1,236 @@
+-- Enable auto-ANALYZE only on AUTOVACUUM launcher. When set `autovacuum` to
+-- true on Master, the launcher will take care of databases' analyze job on Master.
+-- VACUUM anti-XID wraparounds of 'template0' is not changed.
+
+-- Start AUTOVACUUM launcher.
+ALTER SYSTEM SET autovacuum = on;
+ALTER
+ALTER SYSTEM SET autovacuum_naptime = 5;
+ALTER
+select * from pg_reload_conf();
+ pg_reload_conf 
+----------------
+ t              
+(1 row)
+
+--
+-- Test1, sanity test to make sure auto-analyze works
+--
+
+-- Analyze all exists relations to prevent autoanalyze on them.
+-- These actually don't have too much effort for preventing
+-- autoanalyze on other tables, but it could reduce some of tables.
+1: ANALYZE;
+ANALYZE
+
+-- Prepare the table to be ANALYZEd
+1: CREATE TABLE anatest (id bigint);
+CREATE
+
+-- Track report gpstat on master
+SELECT gp_inject_fault('gp_pgstat_report_on_master', 'suspend', '', '', 'anatest', 1, -1, 0, 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+-- Track that we have updated the attributes stats in pg_statistic when finished
+SELECT gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'anatest', 1, -1, 0, 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+-- Suspend the autovacuum worker from analyze before
+SELECT gp_inject_fault('auto_vac_worker_after_report_activity', 'suspend', '', '', 'anatest', 1, -1, 0, 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+1&: INSERT INTO anatest select i from generate_series(1, 1000) as i;  <waiting ...>
+
+-- Wait until report pgstat on master
+SELECT gp_wait_until_triggered_fault('gp_pgstat_report_on_master', 1, 1);
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+SELECT gp_inject_fault('gp_pgstat_report_on_master', 'reset', 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+1<:  <... completed>
+INSERT 1000
+
+-- Wait until autovacuum is triggered
+SELECT gp_wait_until_triggered_fault('auto_vac_worker_after_report_activity', 1, 1);
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+select datname, query from pg_stat_activity where query like '%ANALYZE%' and datname=current_database();
+ datname        | query                                                                                                    
+----------------+----------------------------------------------------------------------------------------------------------
+ isolation2test | select datname, query from pg_stat_activity where query like '%ANALYZE%' and datname=current_database(); 
+ isolation2test | autovacuum: ANALYZE public.anatest                                                                       
+(2 rows)
+SELECT gp_inject_fault('auto_vac_worker_after_report_activity', 'reset', 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- Wait until autovacuum worker updates pg_database
+SELECT gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+SELECT gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- Should have statistic updated.
+SELECT count(*) FROM pg_statistic where starelid = 'anatest'::regclass;
+ count 
+-------
+ 1     
+(1 row)
+select relpages, reltuples from pg_class where oid = 'anatest'::regclass;
+ relpages | reltuples 
+----------+-----------
+ 3        | 1000      
+(1 row)
+
+
+--
+-- Test2, if another transaction want to acquire lock which conflict with
+-- auto-analyze's ShareUpdateExclusiveLock, the auto-analyze should abort.
+--
+
+1: CREATE TABLE anaabort(id int);
+CREATE
+
+-- Track report gpstat on master
+SELECT gp_inject_fault('gp_pgstat_report_on_master', 'suspend', '', '', 'anaabort', 1, -1, 0, 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+-- Suspend the autovacuum worker from analyze before
+SELECT gp_inject_fault('auto_vac_worker_after_report_activity', 'suspend', '', '', 'anaabort', 1, -1, 0, 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+-- Suspend the autovacuum worker after holding ShareUpdateExclusiveLock.
+SELECT gp_inject_fault('analyze_after_hold_lock', 'infinite_loop', '', '', 'anaabort', 1, -1, 0, 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+-- Track the autovacuum worker abort for conflict ShareUpdateExclusiveLock.
+SELECT gp_inject_fault('auto_vac_worker_abort', 'skip', '', '', 'anaabort', 1, -1, 0, 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+1&: INSERT INTO anaabort select i from generate_series(1, 1000) as i;  <waiting ...>
+
+-- Wait until report pgstat on master
+SELECT gp_wait_until_triggered_fault('gp_pgstat_report_on_master', 1, 1);
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+SELECT gp_inject_fault('gp_pgstat_report_on_master', 'reset', 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+1<:  <... completed>
+INSERT 1000
+
+-- Wait until autovacuum is triggered
+SELECT gp_wait_until_triggered_fault('auto_vac_worker_after_report_activity', 1, 1);
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+select datname, query from pg_stat_activity where query like '%ANALYZE%' and datname=current_database();
+ datname        | query                                                                                                    
+----------------+----------------------------------------------------------------------------------------------------------
+ isolation2test | select datname, query from pg_stat_activity where query like '%ANALYZE%' and datname=current_database(); 
+ isolation2test | autovacuum: ANALYZE public.anaabort                                                                      
+(2 rows)
+SELECT gp_inject_fault('auto_vac_worker_after_report_activity', 'reset', 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- Wait until autovacuum work hold ShareUpdateExclusiveLock.
+SELECT gp_wait_until_triggered_fault('analyze_after_hold_lock', 1, 1);
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+
+-- Acquire EXCLUSIVE lock on the analyze table
+1: BEGIN;
+BEGIN
+1&: LOCK TABLE anaabort in EXCLUSIVE mode;  <waiting ...>
+
+-- The auto-analyze should abort
+SELECT gp_wait_until_triggered_fault('auto_vac_worker_abort', 1, 1);
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+SELECT gp_inject_fault('auto_vac_worker_abort', 'reset', 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+SELECT gp_inject_fault('analyze_after_hold_lock', 'reset', 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- Get lock
+1<:  <... completed>
+LOCK
+
+-- Shouldn't have statistic updated.
+SELECT count(*) FROM pg_statistic where starelid = 'anaabort'::regclass;
+ count 
+-------
+ 0     
+(1 row)
+select relpages, reltuples from pg_class where oid = 'anaabort'::regclass;
+ relpages | reltuples 
+----------+-----------
+ 0        | 0         
+(1 row)
+
+1: END;
+END
+
+-- Disable AUTOVACUUM launcher.
+ALTER SYSTEM SET autovacuum_naptime = 60;
+ALTER
+ALTER SYSTEM SET autovacuum = off;
+ALTER
+select * from pg_reload_conf();
+ pg_reload_conf 
+----------------
+ t              
+(1 row)
+
+

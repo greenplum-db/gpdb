@@ -6,7 +6,7 @@
 //		CExternalTableTest.h
 //
 //	@doc:
-//		Test for external tables  
+//		Test for external tables
 //---------------------------------------------------------------------------
 #ifndef GPOPT_CExternalTableTest_H
 #define GPOPT_CExternalTableTest_H
@@ -15,35 +15,30 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CExternalTableTest
-	//
-	//	@doc:
-	//		Unittests
-	//
-	//---------------------------------------------------------------------------
-	class CExternalTableTest
-	{
-		private:
-			// counter used to mark last successful test
-			static 
-			ULONG m_ulTestCounter;
+//---------------------------------------------------------------------------
+//	@class:
+//		CExternalTableTest
+//
+//	@doc:
+//		Unittests
+//
+//---------------------------------------------------------------------------
+class CExternalTableTest
+{
+private:
+	// counter used to mark last successful test
+	static ULONG m_ulTestCounter;
 
-		public:
+public:
+	// unittests
+	static GPOS_RESULT EresUnittest();
 
-			// unittests
-			static 
-			GPOS_RESULT EresUnittest();
+	static GPOS_RESULT EresUnittest_RunMinidumpTests();
+};	// class CExternalTableTest
+}  // namespace gpopt
 
-			static 
-			GPOS_RESULT EresUnittest_RunMinidumpTests();
-	}; // class CExternalTableTest
-}
-
-#endif // !GPOPT_CExternalTableTest_H
+#endif	// !GPOPT_CExternalTableTest_H
 
 // EOF
-

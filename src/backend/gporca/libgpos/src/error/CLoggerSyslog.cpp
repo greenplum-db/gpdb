@@ -18,14 +18,8 @@
 using namespace gpos;
 
 // initialization of static members
-CLoggerSyslog CLoggerSyslog::m_alert_logger
-	(
-	NULL /*szName*/,
-	LOG_PERROR |
-	LOG_CONS,
-	LOG_ALERT
-	)
-	;
+CLoggerSyslog CLoggerSyslog::m_alert_logger(NULL /*szName*/,
+											LOG_PERROR | LOG_CONS, LOG_ALERT);
 
 
 //---------------------------------------------------------------------------
@@ -36,17 +30,13 @@ CLoggerSyslog CLoggerSyslog::m_alert_logger
 //		Ctor - set executable name, initialization flags and message priority
 //
 //---------------------------------------------------------------------------
-CLoggerSyslog::CLoggerSyslog
-	(
-	const CHAR *proc_name,
-	ULONG init_mask,
-	ULONG message_priority
-	)
-	:
-	m_proc_name(proc_name),
-	m_init_mask(init_mask),
-	m_message_priority(message_priority)
-{}
+CLoggerSyslog::CLoggerSyslog(const CHAR *proc_name, ULONG init_mask,
+							 ULONG message_priority)
+	: m_proc_name(proc_name),
+	  m_init_mask(init_mask),
+	  m_message_priority(message_priority)
+{
+}
 
 
 //---------------------------------------------------------------------------
@@ -58,7 +48,8 @@ CLoggerSyslog::CLoggerSyslog
 //
 //---------------------------------------------------------------------------
 CLoggerSyslog::~CLoggerSyslog()
-{}
+{
+}
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -69,11 +60,9 @@ CLoggerSyslog::~CLoggerSyslog()
 //
 //---------------------------------------------------------------------------
 void
-CLoggerSyslog::Write
-	(
-	const WCHAR *log_entry,
-	ULONG // severity
-	)
+CLoggerSyslog::Write(const WCHAR *log_entry,
+					 ULONG	// severity
+)
 {
 	CHAR *buffer = CLogger::Msg();
 
@@ -97,13 +86,9 @@ CLoggerSyslog::Write
 //
 //---------------------------------------------------------------------------
 void
-CLoggerSyslog::Alert
-	(
-	const WCHAR *msg
-	)
+CLoggerSyslog::Alert(const WCHAR *msg)
 {
 	m_alert_logger.Write(msg, CException::ExsevError);
 }
 
 // EOF
-

@@ -4,7 +4,7 @@
  *	  Routines to attempt to prove logical implications between predicate
  *	  expressions.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -20,9 +20,10 @@
 #include "catalog/pg_type.h"
 #include "executor/executor.h"
 #include "miscadmin.h"
+#include "nodes/makefuncs.h"
 #include "nodes/nodeFuncs.h"
-#include "optimizer/clauses.h"
-#include "optimizer/predtest.h"
+#include "nodes/pathnodes.h"
+#include "optimizer/optimizer.h"
 #include "utils/array.h"
 #include "utils/inval.h"
 #include "utils/lsyscache.h"
@@ -30,7 +31,9 @@
 #include "nodes/makefuncs.h"
 
 #include "catalog/pg_operator.h"
+#include "optimizer/clauses.h"
 #include "optimizer/paths.h"
+#include "optimizer/predtest_valueset.h"
 
 static const bool kUseFnEvaluationForPredicates = true;
 
@@ -83,8 +86,10 @@ typedef struct PredIterInfoData
 	} while (0)
 
 
-static bool predicate_implied_by_recurse(Node *clause, Node *predicate);
-static bool predicate_refuted_by_recurse(Node *clause, Node *predicate);
+static bool predicate_implied_by_recurse(Node *clause, Node *predicate,
+										 bool weak);
+static bool predicate_refuted_by_recurse(Node *clause, Node *predicate,
+										 bool weak);
 static PredClass predicate_classify(Node *clause, PredIterInfo info);
 static void list_startup_fn(Node *clause, PredIterInfo info);
 static Node *list_next_fn(PredIterInfo info);
@@ -96,17 +101,19 @@ static void arrayconst_cleanup_fn(PredIterInfo info);
 static void arrayexpr_startup_fn(Node *clause, PredIterInfo info);
 static Node *arrayexpr_next_fn(PredIterInfo info);
 static void arrayexpr_cleanup_fn(PredIterInfo info);
-static bool predicate_implied_by_simple_clause(Expr *predicate, Node *clause);
-static bool predicate_refuted_by_simple_clause(Expr *predicate, Node *clause);
+static bool predicate_implied_by_simple_clause(Expr *predicate, Node *clause,
+											   bool weak);
+static bool predicate_refuted_by_simple_clause(Expr *predicate, Node *clause,
+											   bool weak);
 static Node *extract_not_arg(Node *clause);
 static Node *extract_strong_not_arg(Node *clause);
-static bool list_member_strip(List *list, Expr *datum);
+static bool clause_is_strict_for(Node *clause, Node *subexpr, bool allow_false);
 static bool operator_predicate_proof(Expr *predicate, Node *clause,
-						 bool refute_it);
+									 bool refute_it, bool weak);
 static bool operator_same_subexprs_proof(Oid pred_op, Oid clause_op,
-							 bool refute_it);
+										 bool refute_it);
 static bool operator_same_subexprs_lookup(Oid pred_op, Oid clause_op,
-							  bool refute_it);
+										  bool refute_it);
 static Oid	get_btree_test_op(Oid pred_op, Oid clause_op, bool refute_it);
 static void InvalidateOprProofCacheCallBack(Datum arg, int cacheid, uint32 hashvalue);
 
@@ -115,8 +122,24 @@ static bool simple_equality_predicate_refuted(Node *clause, Node *predicate);
 
 /*
  * predicate_implied_by
- *	  Recursively checks whether the clauses in restrictinfo_list imply
- *	  that the given predicate is true.
+ *	  Recursively checks whether the clauses in clause_list imply that the
+ *	  given predicate is true.
+ *
+ * We support two definitions of implication:
+ *
+ * "Strong" implication: A implies B means that truth of A implies truth of B.
+ * We use this to prove that a row satisfying one WHERE clause or index
+ * predicate must satisfy another one.
+ *
+ * "Weak" implication: A implies B means that non-falsity of A implies
+ * non-falsity of B ("non-false" means "either true or NULL").  We use this to
+ * prove that a row satisfying one CHECK constraint must satisfy another one.
+ *
+ * Strong implication can also be used to prove that a WHERE clause implies a
+ * CHECK constraint, although it will fail to prove a few cases where we could
+ * safely conclude that the implication holds.  There's no support for proving
+ * the converse case, since only a few kinds of CHECK constraint would allow
+ * deducing anything.
  *
  * The top-level List structure of each list corresponds to an AND list.
  * We assume that eval_const_expressions() has been applied and so there
@@ -126,21 +149,23 @@ static bool simple_equality_predicate_refuted(Node *clause, Node *predicate);
  * valid, but no worse consequences will ensue.
  *
  * We assume the predicate has already been checked to contain only
- * immutable functions and operators.  (In most current uses this is true
- * because the predicate is part of an index predicate that has passed
- * CheckPredicate().)  We dare not make deductions based on non-immutable
- * functions, because they might change answers between the time we make
- * the plan and the time we execute the plan.
+ * immutable functions and operators.  (In many current uses this is known
+ * true because the predicate is part of an index predicate that has passed
+ * CheckPredicate(); otherwise, the caller must check it.)  We dare not make
+ * deductions based on non-immutable functions, because they might change
+ * answers between the time we make the plan and the time we execute the plan.
+ * Immutability of functions in the clause_list is checked here, if necessary.
  */
 bool
-predicate_implied_by(List *predicate_list, List *restrictinfo_list)
+predicate_implied_by(List *predicate_list, List *clause_list,
+					 bool weak)
 {
 	Node	   *p,
-			   *r;
+			   *c;
 
 	if (predicate_list == NIL)
 		return true;			/* no predicate: implication is vacuous */
-	if (restrictinfo_list == NIL)
+	if (clause_list == NIL)
 		return false;			/* no restriction: implication must fail */
 
 	/*
@@ -153,30 +178,40 @@ predicate_implied_by(List *predicate_list, List *restrictinfo_list)
 		p = (Node *) linitial(predicate_list);
 	else
 		p = (Node *) predicate_list;
-	if (list_length(restrictinfo_list) == 1)
-		r = (Node *) linitial(restrictinfo_list);
+	if (list_length(clause_list) == 1)
+		c = (Node *) linitial(clause_list);
 	else
-		r = (Node *) restrictinfo_list;
+		c = (Node *) clause_list;
 
 	/* And away we go ... */
-	return predicate_implied_by_recurse(r, p);
+	return predicate_implied_by_recurse(c, p, weak);
 }
 
 /*
  * predicate_refuted_by
- *	  Recursively checks whether the clauses in restrictinfo_list refute
- *	  the given predicate (that is, prove it false).
+ *	  Recursively checks whether the clauses in clause_list refute the given
+ *	  predicate (that is, prove it false).
  *
  * This is NOT the same as !(predicate_implied_by), though it is similar
  * in the technique and structure of the code.
  *
- * An important fine point is that truth of the clauses must imply that
- * the predicate returns FALSE, not that it does not return TRUE.  This
- * is normally used to try to refute CHECK constraints, and the only
- * thing we can assume about a CHECK constraint is that it didn't return
- * FALSE --- a NULL result isn't a violation per the SQL spec.  (Someday
- * perhaps this code should be extended to support both "strong" and
- * "weak" refutation, but for now we only need "strong".)
+ * We support two definitions of refutation:
+ *
+ * "Strong" refutation: A refutes B means truth of A implies falsity of B.
+ * We use this to disprove a CHECK constraint given a WHERE clause, i.e.,
+ * prove that any row satisfying the WHERE clause would violate the CHECK
+ * constraint.  (Observe we must prove B yields false, not just not-true.)
+ *
+ * "Weak" refutation: A refutes B means truth of A implies non-truth of B
+ * (i.e., B must yield false or NULL).  We use this to detect mutually
+ * contradictory WHERE clauses.
+ *
+ * Weak refutation can be proven in some cases where strong refutation doesn't
+ * hold, so it's useful to use it when possible.  We don't currently have
+ * support for disproving one CHECK constraint based on another one, nor for
+ * disproving WHERE based on CHECK.  (As with implication, the last case
+ * doesn't seem very practical.  CHECK-vs-CHECK might be useful, but isn't
+ * currently needed anywhere.)
  *
  * The top-level List structure of each list corresponds to an AND list.
  * We assume that eval_const_expressions() has been applied and so there
@@ -189,16 +224,18 @@ predicate_implied_by(List *predicate_list, List *restrictinfo_list)
  * immutable functions and operators.  We dare not make deductions based on
  * non-immutable functions, because they might change answers between the
  * time we make the plan and the time we execute the plan.
+ * Immutability of functions in the clause_list is checked here, if necessary.
  */
 bool
-predicate_refuted_by(List *predicate_list, List *restrictinfo_list)
+predicate_refuted_by(List *predicate_list, List *clause_list,
+					 bool weak)
 {
 	Node	   *p,
-			   *r;
+			   *c;
 
 	if (predicate_list == NIL)
 		return false;			/* no predicate: no refutation is possible */
-	if (restrictinfo_list == NIL)
+	if (clause_list == NIL)
 		return false;			/* no restriction: refutation must fail */
 
 	/*
@@ -211,18 +248,18 @@ predicate_refuted_by(List *predicate_list, List *restrictinfo_list)
 		p = (Node *) linitial(predicate_list);
 	else
 		p = (Node *) predicate_list;
-	if (list_length(restrictinfo_list) == 1)
-		r = (Node *) linitial(restrictinfo_list);
+	if (list_length(clause_list) == 1)
+		c = (Node *) linitial(clause_list);
 	else
-		r = (Node *) restrictinfo_list;
+		c = (Node *) clause_list;
 
 	/* And away we go ... */
-	if ( predicate_refuted_by_recurse(r, p))
+	if ( predicate_refuted_by_recurse(c, p, weak))
         return true;
 
     if ( ! kUseFnEvaluationForPredicates )
         return false;
-    return simple_equality_predicate_refuted((Node*)restrictinfo_list, (Node*)predicate_list);
+    return simple_equality_predicate_refuted((Node*)clause_list, (Node*)predicate_list);
 }
 
 /*----------
@@ -244,7 +281,9 @@ predicate_refuted_by(List *predicate_list, List *restrictinfo_list)
  *
  * An "atom" is anything other than an AND or OR node.  Notice that we don't
  * have any special logic to handle NOT nodes; these should have been pushed
- * down or eliminated where feasible by prepqual.c.
+ * down or eliminated where feasible during eval_const_expressions().
+ *
+ * All of these rules apply equally to strong or weak implication.
  *
  * We can't recursively expand either side first, but have to interleave
  * the expansions per the above rules, to be sure we handle all of these
@@ -261,7 +300,8 @@ predicate_refuted_by(List *predicate_list, List *restrictinfo_list)
  *----------
  */
 static bool
-predicate_implied_by_recurse(Node *clause, Node *predicate)
+predicate_implied_by_recurse(Node *clause, Node *predicate,
+							 bool weak)
 {
 	PredIterInfoData clause_info;
 	PredIterInfoData pred_info;
@@ -288,7 +328,8 @@ predicate_implied_by_recurse(Node *clause, Node *predicate)
 					result = true;
 					iterate_begin(pitem, predicate, pred_info)
 					{
-						if (!predicate_implied_by_recurse(clause, pitem))
+						if (!predicate_implied_by_recurse(clause, pitem,
+														  weak))
 						{
 							result = false;
 							break;
@@ -307,7 +348,8 @@ predicate_implied_by_recurse(Node *clause, Node *predicate)
 					result = false;
 					iterate_begin(pitem, predicate, pred_info)
 					{
-						if (predicate_implied_by_recurse(clause, pitem))
+						if (predicate_implied_by_recurse(clause, pitem,
+														 weak))
 						{
 							result = true;
 							break;
@@ -324,7 +366,8 @@ predicate_implied_by_recurse(Node *clause, Node *predicate)
 					 */
 					iterate_begin(citem, clause, clause_info)
 					{
-						if (predicate_implied_by_recurse(citem, predicate))
+						if (predicate_implied_by_recurse(citem, predicate,
+														 weak))
 						{
 							result = true;
 							break;
@@ -341,7 +384,8 @@ predicate_implied_by_recurse(Node *clause, Node *predicate)
 					result = false;
 					iterate_begin(citem, clause, clause_info)
 					{
-						if (predicate_implied_by_recurse(citem, predicate))
+						if (predicate_implied_by_recurse(citem, predicate,
+														 weak))
 						{
 							result = true;
 							break;
@@ -368,7 +412,8 @@ predicate_implied_by_recurse(Node *clause, Node *predicate)
 
 						iterate_begin(pitem, predicate, pred_info)
 						{
-							if (predicate_implied_by_recurse(citem, pitem))
+							if (predicate_implied_by_recurse(citem, pitem,
+															 weak))
 							{
 								presult = true;
 								break;
@@ -377,7 +422,7 @@ predicate_implied_by_recurse(Node *clause, Node *predicate)
 						iterate_end(pred_info);
 						if (!presult)
 						{
-							result = false;		/* doesn't imply any of B's */
+							result = false; /* doesn't imply any of B's */
 							break;
 						}
 					}
@@ -395,7 +440,8 @@ predicate_implied_by_recurse(Node *clause, Node *predicate)
 					result = true;
 					iterate_begin(citem, clause, clause_info)
 					{
-						if (!predicate_implied_by_recurse(citem, predicate))
+						if (!predicate_implied_by_recurse(citem, predicate,
+														  weak))
 						{
 							result = false;
 							break;
@@ -417,7 +463,8 @@ predicate_implied_by_recurse(Node *clause, Node *predicate)
 					result = true;
 					iterate_begin(pitem, predicate, pred_info)
 					{
-						if (!predicate_implied_by_recurse(clause, pitem))
+						if (!predicate_implied_by_recurse(clause, pitem,
+														  weak))
 						{
 							result = false;
 							break;
@@ -434,7 +481,8 @@ predicate_implied_by_recurse(Node *clause, Node *predicate)
 					result = false;
 					iterate_begin(pitem, predicate, pred_info)
 					{
-						if (predicate_implied_by_recurse(clause, pitem))
+						if (predicate_implied_by_recurse(clause, pitem,
+														 weak))
 						{
 							result = true;
 							break;
@@ -450,7 +498,8 @@ predicate_implied_by_recurse(Node *clause, Node *predicate)
 					 */
 					return
 						predicate_implied_by_simple_clause((Expr *) predicate,
-														   clause);
+														   clause,
+														   weak);
 			}
 			break;
 	}
@@ -477,21 +526,23 @@ predicate_implied_by_recurse(Node *clause, Node *predicate)
  *	OR-expr A R=> AND-expr B iff:	each of A's components R=> any of B's
  *	OR-expr A R=> OR-expr B iff:	A R=> each of B's components
  *
+ * All of the above rules apply equally to strong or weak refutation.
+ *
  * In addition, if the predicate is a NOT-clause then we can use
  *	A R=> NOT B if:					A => B
  * This works for several different SQL constructs that assert the non-truth
- * of their argument, ie NOT, IS FALSE, IS NOT TRUE, IS UNKNOWN.
- * Unfortunately we *cannot* use
+ * of their argument, ie NOT, IS FALSE, IS NOT TRUE, IS UNKNOWN, although some
+ * of them require that we prove strong implication.  Likewise, we can use
  *	NOT A R=> B if:					B => A
- * because this type of reasoning fails to prove that B doesn't yield NULL.
- * We can however make the more limited deduction that
- *	NOT A R=> A
+ * but here we must be careful about strong vs. weak refutation and make
+ * the appropriate type of implication proof (weak or strong respectively).
  *
  * Other comments are as for predicate_implied_by_recurse().
  *----------
  */
 static bool
-predicate_refuted_by_recurse(Node *clause, Node *predicate)
+predicate_refuted_by_recurse(Node *clause, Node *predicate,
+							 bool weak)
 {
 	PredIterInfoData clause_info;
 	PredIterInfoData pred_info;
@@ -523,7 +574,8 @@ predicate_refuted_by_recurse(Node *clause, Node *predicate)
 					result = false;
 					iterate_begin(pitem, predicate, pred_info)
 					{
-						if (predicate_refuted_by_recurse(clause, pitem))
+						if (predicate_refuted_by_recurse(clause, pitem,
+														 weak))
 						{
 							result = true;
 							break;
@@ -540,7 +592,8 @@ predicate_refuted_by_recurse(Node *clause, Node *predicate)
 					 */
 					iterate_begin(citem, clause, clause_info)
 					{
-						if (predicate_refuted_by_recurse(citem, predicate))
+						if (predicate_refuted_by_recurse(citem, predicate,
+														 weak))
 						{
 							result = true;
 							break;
@@ -557,7 +610,8 @@ predicate_refuted_by_recurse(Node *clause, Node *predicate)
 					result = true;
 					iterate_begin(pitem, predicate, pred_info)
 					{
-						if (!predicate_refuted_by_recurse(clause, pitem))
+						if (!predicate_refuted_by_recurse(clause, pitem,
+														  weak))
 						{
 							result = false;
 							break;
@@ -569,11 +623,19 @@ predicate_refuted_by_recurse(Node *clause, Node *predicate)
 				case CLASS_ATOM:
 
 					/*
-					 * If B is a NOT-clause, A R=> B if A => B's arg
+					 * If B is a NOT-type clause, A R=> B if A => B's arg
+					 *
+					 * Since, for either type of refutation, we are starting
+					 * with the premise that A is true, we can use a strong
+					 * implication test in all cases.  That proves B's arg is
+					 * true, which is more than we need for weak refutation if
+					 * B is a simple NOT, but it allows not worrying about
+					 * exactly which kind of negation clause we have.
 					 */
 					not_arg = extract_not_arg(predicate);
 					if (not_arg &&
-						predicate_implied_by_recurse(clause, not_arg))
+						predicate_implied_by_recurse(clause, not_arg,
+													 false))
 						return true;
 
 					/*
@@ -582,7 +644,8 @@ predicate_refuted_by_recurse(Node *clause, Node *predicate)
 					result = false;
 					iterate_begin(citem, clause, clause_info)
 					{
-						if (predicate_refuted_by_recurse(citem, predicate))
+						if (predicate_refuted_by_recurse(citem, predicate,
+														 weak))
 						{
 							result = true;
 							break;
@@ -604,7 +667,8 @@ predicate_refuted_by_recurse(Node *clause, Node *predicate)
 					result = true;
 					iterate_begin(pitem, predicate, pred_info)
 					{
-						if (!predicate_refuted_by_recurse(clause, pitem))
+						if (!predicate_refuted_by_recurse(clause, pitem,
+														  weak))
 						{
 							result = false;
 							break;
@@ -626,7 +690,8 @@ predicate_refuted_by_recurse(Node *clause, Node *predicate)
 
 						iterate_begin(pitem, predicate, pred_info)
 						{
-							if (predicate_refuted_by_recurse(citem, pitem))
+							if (predicate_refuted_by_recurse(citem, pitem,
+															 weak))
 							{
 								presult = true;
 								break;
@@ -635,7 +700,7 @@ predicate_refuted_by_recurse(Node *clause, Node *predicate)
 						iterate_end(pred_info);
 						if (!presult)
 						{
-							result = false;		/* citem refutes nothing */
+							result = false; /* citem refutes nothing */
 							break;
 						}
 					}
@@ -645,11 +710,14 @@ predicate_refuted_by_recurse(Node *clause, Node *predicate)
 				case CLASS_ATOM:
 
 					/*
-					 * If B is a NOT-clause, A R=> B if A => B's arg
+					 * If B is a NOT-type clause, A R=> B if A => B's arg
+					 *
+					 * Same logic as for the AND-clause case above.
 					 */
 					not_arg = extract_not_arg(predicate);
 					if (not_arg &&
-						predicate_implied_by_recurse(clause, not_arg))
+						predicate_implied_by_recurse(clause, not_arg,
+													 false))
 						return true;
 
 					/*
@@ -658,7 +726,8 @@ predicate_refuted_by_recurse(Node *clause, Node *predicate)
 					result = true;
 					iterate_begin(citem, clause, clause_info)
 					{
-						if (!predicate_refuted_by_recurse(citem, predicate))
+						if (!predicate_refuted_by_recurse(citem, predicate,
+														  weak))
 						{
 							result = false;
 							break;
@@ -672,16 +741,18 @@ predicate_refuted_by_recurse(Node *clause, Node *predicate)
 		case CLASS_ATOM:
 
 			/*
-			 * If A is a strong NOT-clause, A R=> B if B equals A's arg
+			 * If A is a strong NOT-clause, A R=> B if B => A's arg
 			 *
-			 * We cannot make the stronger conclusion that B is refuted if B
-			 * implies A's arg; that would only prove that B is not-TRUE, not
-			 * that it's not NULL either.  Hence use equal() rather than
-			 * predicate_implied_by_recurse().  We could do the latter if we
-			 * ever had a need for the weak form of refutation.
+			 * Since A is strong, we may assume A's arg is false (not just
+			 * not-true).  If B weakly implies A's arg, then B can be neither
+			 * true nor null, so that strong refutation is proven.  If B
+			 * strongly implies A's arg, then B cannot be true, so that weak
+			 * refutation is proven.
 			 */
 			not_arg = extract_strong_not_arg(clause);
-			if (not_arg && equal(predicate, not_arg))
+			if (not_arg &&
+				predicate_implied_by_recurse(predicate, not_arg,
+											 !weak))
 				return true;
 
 			switch (pclass)
@@ -694,7 +765,8 @@ predicate_refuted_by_recurse(Node *clause, Node *predicate)
 					result = false;
 					iterate_begin(pitem, predicate, pred_info)
 					{
-						if (predicate_refuted_by_recurse(clause, pitem))
+						if (predicate_refuted_by_recurse(clause, pitem,
+														 weak))
 						{
 							result = true;
 							break;
@@ -711,7 +783,8 @@ predicate_refuted_by_recurse(Node *clause, Node *predicate)
 					result = true;
 					iterate_begin(pitem, predicate, pred_info)
 					{
-						if (!predicate_refuted_by_recurse(clause, pitem))
+						if (!predicate_refuted_by_recurse(clause, pitem,
+														  weak))
 						{
 							result = false;
 							break;
@@ -723,11 +796,14 @@ predicate_refuted_by_recurse(Node *clause, Node *predicate)
 				case CLASS_ATOM:
 
 					/*
-					 * If B is a NOT-clause, A R=> B if A => B's arg
+					 * If B is a NOT-type clause, A R=> B if A => B's arg
+					 *
+					 * Same logic as for the AND-clause case above.
 					 */
 					not_arg = extract_not_arg(predicate);
 					if (not_arg &&
-						predicate_implied_by_recurse(clause, not_arg))
+						predicate_implied_by_recurse(clause, not_arg,
+													 false))
 						return true;
 
 					/*
@@ -735,7 +811,8 @@ predicate_refuted_by_recurse(Node *clause, Node *predicate)
 					 */
 					return
 						predicate_refuted_by_simple_clause((Expr *) predicate,
-														   clause);
+														   clause,
+														   weak);
 			}
 			break;
 	}
@@ -756,7 +833,7 @@ predicate_refuted_by_recurse(Node *clause, Node *predicate)
  * This function also implements enforcement of MAX_SAOP_ARRAY_SIZE: if a
  * ScalarArrayOpExpr's array has too many elements, we just classify it as an
  * atom.  (This will result in its being passed as-is to the simple_clause
- * functions, which will fail to prove anything about it.)	Note that we
+ * functions, many of which will fail to prove anything about it.) Note that we
  * cannot just stop after considering MAX_SAOP_ARRAY_SIZE elements; in general
  * that would result in wrong proofs, rather than failing to prove anything.
  */
@@ -780,14 +857,14 @@ predicate_classify(Node *clause, PredIterInfo info)
 	}
 
 	/* Handle normal AND and OR boolean clauses */
-	if (and_clause(clause))
+	if (is_andclause(clause))
 	{
 		info->startup_fn = boolexpr_startup_fn;
 		info->next_fn = list_next_fn;
 		info->cleanup_fn = list_cleanup_fn;
 		return CLASS_AND;
 	}
-	if (or_clause(clause))
+	if (is_orclause(clause))
 	{
 		info->startup_fn = boolexpr_startup_fn;
 		info->next_fn = list_next_fn;
@@ -1027,24 +1104,22 @@ arrayexpr_cleanup_fn(PredIterInfo info)
  *	  Does the predicate implication test for a "simple clause" predicate
  *	  and a "simple clause" restriction.
  *
- * We return TRUE if able to prove the implication, FALSE if not.
+ * We return true if able to prove the implication, false if not.
  *
  * We have three strategies for determining whether one simple clause
  * implies another:
  *
  * A simple and general way is to see if they are equal(); this works for any
- * kind of expression.  (Actually, there is an implied assumption that the
- * functions in the expression are immutable, ie dependent only on their input
- * arguments --- but this was checked for the predicate by the caller.)
+ * kind of expression, and for either implication definition.  (Actually,
+ * there is an implied assumption that the functions in the expression are
+ * immutable --- but this was checked for the predicate by the caller.)
  *
- * When the predicate is of the form "foo IS NOT NULL", we can conclude that
- * the predicate is implied if the clause is a strict operator or function
- * that has "foo" as an input.  In this case the clause must yield NULL when
- * "foo" is NULL, which we can take as equivalent to FALSE because we know
- * we are within an AND/OR subtree of a WHERE clause.  (Again, "foo" is
- * already known immutable, so the clause will certainly always fail.)
- * Also, if the clause is just "foo" (meaning it's a boolean variable),
- * the predicate is implied since the clause can't be true if "foo" is NULL.
+ * If the predicate is of the form "foo IS NOT NULL", and we are considering
+ * strong implication, we can conclude that the predicate is implied if the
+ * clause is strict for "foo", i.e., it must yield false or NULL when "foo"
+ * is NULL.  In that case truth of the clause ensures that "foo" isn't NULL.
+ * (Again, this is a safe conclusion because "foo" must be immutable.)
+ * This doesn't work for weak implication, though.
  *
  * Finally, if both clauses are binary operator expressions, we may be able
  * to prove something using the system's knowledge about operators; those
@@ -1052,7 +1127,8 @@ arrayexpr_cleanup_fn(PredIterInfo info)
  *----------
  */
 static bool
-predicate_implied_by_simple_clause(Expr *predicate, Node *clause)
+predicate_implied_by_simple_clause(Expr *predicate, Node *clause,
+								   bool weak)
 {
 	/* Allow interrupting long proof attempts */
 	CHECK_FOR_INTERRUPTS();
@@ -1062,30 +1138,24 @@ predicate_implied_by_simple_clause(Expr *predicate, Node *clause)
 		return true;
 
 	/* Next try the IS NOT NULL case */
-	if (predicate && IsA(predicate, NullTest) &&
-		((NullTest *) predicate)->nulltesttype == IS_NOT_NULL)
+	if (!weak &&
+		predicate && IsA(predicate, NullTest))
 	{
-		Expr	   *nonnullarg = ((NullTest *) predicate)->arg;
+		NullTest   *ntest = (NullTest *) predicate;
 
 		/* row IS NOT NULL does not act in the simple way we have in mind */
-		if (!((NullTest *) predicate)->argisrow)
+		if (ntest->nulltesttype == IS_NOT_NULL &&
+			!ntest->argisrow)
 		{
-			if (is_opclause(clause) &&
-				list_member_strip(((OpExpr *) clause)->args, nonnullarg) &&
-				op_strict(((OpExpr *) clause)->opno))
-				return true;
-			if (is_funcclause(clause) &&
-				list_member_strip(((FuncExpr *) clause)->args, nonnullarg) &&
-				func_strict(((FuncExpr *) clause)->funcid))
-				return true;
-			if (equal(clause, nonnullarg))
+			/* strictness of clause for foo implies foo IS NOT NULL */
+			if (clause_is_strict_for(clause, (Node *) ntest->arg, true))
 				return true;
 		}
 		return false;			/* we can't succeed below... */
 	}
 
 	/* Else try operator-related knowledge */
-	return operator_predicate_proof(predicate, clause, false);
+	return operator_predicate_proof(predicate, clause, false, weak);
 }
 
 /*----------
@@ -1093,19 +1163,25 @@ predicate_implied_by_simple_clause(Expr *predicate, Node *clause)
  *	  Does the predicate refutation test for a "simple clause" predicate
  *	  and a "simple clause" restriction.
  *
- * We return TRUE if able to prove the refutation, FALSE if not.
+ * We return true if able to prove the refutation, false if not.
  *
- * Unlike the implication case, checking for equal() clauses isn't
- * helpful.
+ * Unlike the implication case, checking for equal() clauses isn't helpful.
+ * But relation_excluded_by_constraints() checks for self-contradictions in a
+ * list of clauses, so that we may get here with predicate and clause being
+ * actually pointer-equal, and that is worth eliminating quickly.
  *
  * When the predicate is of the form "foo IS NULL", we can conclude that
- * the predicate is refuted if the clause is a strict operator or function
- * that has "foo" as an input (see notes for implication case), or if the
- * clause is "foo IS NOT NULL".  A clause "foo IS NULL" refutes a predicate
- * "foo IS NOT NULL", but unfortunately does not refute strict predicates,
- * because we are looking for strong refutation.  (The motivation for covering
- * these cases is to support using IS NULL/IS NOT NULL as partition-defining
- * constraints.)
+ * the predicate is refuted if the clause is strict for "foo" (see notes for
+ * implication case), or is "foo IS NOT NULL".  That works for either strong
+ * or weak refutation.
+ *
+ * A clause "foo IS NULL" refutes a predicate "foo IS NOT NULL" in all cases.
+ * If we are considering weak refutation, it also refutes a predicate that
+ * is strict for "foo", since then the predicate must yield false or NULL
+ * (and since "foo" appears in the predicate, it's known immutable).
+ *
+ * (The main motivation for covering these IS [NOT] NULL cases is to support
+ * using IS NULL/IS NOT NULL as partition-defining constraints.)
  *
  * Finally, if both clauses are binary operator expressions, we may be able
  * to prove something using the system's knowledge about operators; those
@@ -1113,7 +1189,8 @@ predicate_implied_by_simple_clause(Expr *predicate, Node *clause)
  *----------
  */
 static bool
-predicate_refuted_by_simple_clause(Expr *predicate, Node *clause)
+predicate_refuted_by_simple_clause(Expr *predicate, Node *clause,
+								   bool weak)
 {
 	/* Allow interrupting long proof attempts */
 	CHECK_FOR_INTERRUPTS();
@@ -1133,14 +1210,8 @@ predicate_refuted_by_simple_clause(Expr *predicate, Node *clause)
 		if (((NullTest *) predicate)->argisrow)
 			return false;
 
-		/* Any strict op/func on foo refutes foo IS NULL */
-		if (is_opclause(clause) &&
-			list_member_strip(((OpExpr *) clause)->args, isnullarg) &&
-			op_strict(((OpExpr *) clause)->opno))
-			return true;
-		if (is_funcclause(clause) &&
-			list_member_strip(((FuncExpr *) clause)->args, isnullarg) &&
-			func_strict(((FuncExpr *) clause)->funcid))
+		/* strictness of clause for foo refutes foo IS NULL */
+		if (clause_is_strict_for(clause, (Node *) isnullarg, true))
 			return true;
 
 		/* foo IS NOT NULL refutes foo IS NULL */
@@ -1170,11 +1241,16 @@ predicate_refuted_by_simple_clause(Expr *predicate, Node *clause)
 			equal(((NullTest *) predicate)->arg, isnullarg))
 			return true;
 
+		/* foo IS NULL weakly refutes any predicate that is strict for foo */
+		if (weak &&
+			clause_is_strict_for((Node *) predicate, (Node *) isnullarg, true))
+			return true;
+
 		return false;			/* we can't succeed below... */
 	}
 
 	/* Else try operator-related knowledge */
-	return operator_predicate_proof(predicate, clause, true);
+	return operator_predicate_proof(predicate, clause, true, weak);
 }
 
 /**
@@ -1398,30 +1474,171 @@ extract_strong_not_arg(Node *clause)
 
 
 /*
- * Check whether an Expr is equal() to any member of a list, ignoring
- * any top-level RelabelType nodes.  This is legitimate for the purposes
- * we use it for (matching IS [NOT] NULL arguments to arguments of strict
- * functions) because RelabelType doesn't change null-ness.  It's helpful
- * for cases such as a varchar argument of a strict function on text.
+ * Can we prove that "clause" returns NULL (or FALSE) if "subexpr" is
+ * assumed to yield NULL?
+ *
+ * In most places in the planner, "strictness" refers to a guarantee that
+ * an expression yields NULL output for a NULL input, and that's mostly what
+ * we're looking for here.  However, at top level where the clause is known
+ * to yield boolean, it may be sufficient to prove that it cannot return TRUE
+ * when "subexpr" is NULL.  The caller should pass allow_false = true when
+ * this weaker property is acceptable.  (When this function recurses
+ * internally, we pass down allow_false = false since we need to prove actual
+ * nullness of the subexpression.)
+ *
+ * We assume that the caller checked that least one of the input expressions
+ * is immutable.  All of the proof rules here involve matching "subexpr" to
+ * some portion of "clause", so that this allows assuming that "subexpr" is
+ * immutable without a separate check.
+ *
+ * The base case is that clause and subexpr are equal().
+ *
+ * We can also report success if the subexpr appears as a subexpression
+ * of "clause" in a place where it'd force nullness of the overall result.
  */
 static bool
-list_member_strip(List *list, Expr *datum)
+clause_is_strict_for(Node *clause, Node *subexpr, bool allow_false)
 {
-	ListCell   *cell;
+	ListCell   *lc;
 
-	if (datum && IsA(datum, RelabelType))
-		datum = ((RelabelType *) datum)->arg;
+	/* safety checks */
+	if (clause == NULL || subexpr == NULL)
+		return false;
 
-	foreach(cell, list)
+	/*
+	 * Look through any RelabelType nodes, so that we can match, say,
+	 * varcharcol with lower(varcharcol::text).  (In general we could recurse
+	 * through any nullness-preserving, immutable operation.)  We should not
+	 * see stacked RelabelTypes here.
+	 */
+	if (IsA(clause, RelabelType))
+		clause = (Node *) ((RelabelType *) clause)->arg;
+	if (IsA(subexpr, RelabelType))
+		subexpr = (Node *) ((RelabelType *) subexpr)->arg;
+
+	/* Base case */
+	if (equal(clause, subexpr))
+		return true;
+
+	/*
+	 * If we have a strict operator or function, a NULL result is guaranteed
+	 * if any input is forced NULL by subexpr.  This is OK even if the op or
+	 * func isn't immutable, since it won't even be called on NULL input.
+	 */
+	if (is_opclause(clause) &&
+		op_strict(((OpExpr *) clause)->opno))
 	{
-		Expr	   *elem = (Expr *) lfirst(cell);
-
-		if (elem && IsA(elem, RelabelType))
-			elem = ((RelabelType *) elem)->arg;
-
-		if (equal(elem, datum))
-			return true;
+		foreach(lc, ((OpExpr *) clause)->args)
+		{
+			if (clause_is_strict_for((Node *) lfirst(lc), subexpr, false))
+				return true;
+		}
+		return false;
 	}
+	if (is_funcclause(clause) &&
+		func_strict(((FuncExpr *) clause)->funcid))
+	{
+		foreach(lc, ((FuncExpr *) clause)->args)
+		{
+			if (clause_is_strict_for((Node *) lfirst(lc), subexpr, false))
+				return true;
+		}
+		return false;
+	}
+
+	/*
+	 * CoerceViaIO is strict (whether or not the I/O functions it calls are).
+	 * Likewise, ArrayCoerceExpr is strict for its array argument (regardless
+	 * of what the per-element expression is), ConvertRowtypeExpr is strict at
+	 * the row level, and CoerceToDomain is strict too.  These are worth
+	 * checking mainly because it saves us having to explain to users why some
+	 * type coercions are known strict and others aren't.
+	 */
+	if (IsA(clause, CoerceViaIO))
+		return clause_is_strict_for((Node *) ((CoerceViaIO *) clause)->arg,
+									subexpr, false);
+	if (IsA(clause, ArrayCoerceExpr))
+		return clause_is_strict_for((Node *) ((ArrayCoerceExpr *) clause)->arg,
+									subexpr, false);
+	if (IsA(clause, ConvertRowtypeExpr))
+		return clause_is_strict_for((Node *) ((ConvertRowtypeExpr *) clause)->arg,
+									subexpr, false);
+	if (IsA(clause, CoerceToDomain))
+		return clause_is_strict_for((Node *) ((CoerceToDomain *) clause)->arg,
+									subexpr, false);
+
+	/*
+	 * ScalarArrayOpExpr is a special case.  Note that we'd only reach here
+	 * with a ScalarArrayOpExpr clause if we failed to deconstruct it into an
+	 * AND or OR tree, as for example if it has too many array elements.
+	 */
+	if (IsA(clause, ScalarArrayOpExpr))
+	{
+		ScalarArrayOpExpr *saop = (ScalarArrayOpExpr *) clause;
+		Node	   *scalarnode = (Node *) linitial(saop->args);
+		Node	   *arraynode = (Node *) lsecond(saop->args);
+
+		/*
+		 * If we can prove the scalar input to be null, and the operator is
+		 * strict, then the SAOP result has to be null --- unless the array is
+		 * empty.  For an empty array, we'd get either false (for ANY) or true
+		 * (for ALL).  So if allow_false = true then the proof succeeds anyway
+		 * for the ANY case; otherwise we can only make the proof if we can
+		 * prove the array non-empty.
+		 */
+		if (clause_is_strict_for(scalarnode, subexpr, false) &&
+			op_strict(saop->opno))
+		{
+			int			nelems = 0;
+
+			if (allow_false && saop->useOr)
+				return true;	/* can succeed even if array is empty */
+
+			if (arraynode && IsA(arraynode, Const))
+			{
+				Const	   *arrayconst = (Const *) arraynode;
+				ArrayType  *arrval;
+
+				/*
+				 * If array is constant NULL then we can succeed, as in the
+				 * case below.
+				 */
+				if (arrayconst->constisnull)
+					return true;
+
+				/* Otherwise, we can compute the number of elements. */
+				arrval = DatumGetArrayTypeP(arrayconst->constvalue);
+				nelems = ArrayGetNItems(ARR_NDIM(arrval), ARR_DIMS(arrval));
+			}
+			else if (arraynode && IsA(arraynode, ArrayExpr) &&
+					 !((ArrayExpr *) arraynode)->multidims)
+			{
+				/*
+				 * We can also reliably count the number of array elements if
+				 * the input is a non-multidim ARRAY[] expression.
+				 */
+				nelems = list_length(((ArrayExpr *) arraynode)->elements);
+			}
+
+			/* Proof succeeds if array is definitely non-empty */
+			if (nelems > 0)
+				return true;
+		}
+
+		/*
+		 * If we can prove the array input to be null, the proof succeeds in
+		 * all cases, since ScalarArrayOpExpr will always return NULL for a
+		 * NULL array.  Otherwise, we're done here.
+		 */
+		return clause_is_strict_for(arraynode, subexpr, false);
+	}
+
+	/*
+	 * When recursing into an expression, we might find a NULL constant.
+	 * That's certainly NULL, whether it matches subexpr or not.
+	 */
+	if (IsA(clause, Const))
+		return ((Const *) clause)->constisnull;
 
 	return false;
 }
@@ -1497,12 +1714,12 @@ static const bool BT_implies_table[6][6] = {
  *			The predicate operator:
  *	 LT    LE	 EQ    GE	 GT    NE
  */
-	{TRUE, TRUE, none, none, none, TRUE},		/* LT */
-	{none, TRUE, none, none, none, none},		/* LE */
-	{none, TRUE, TRUE, TRUE, none, none},		/* EQ */
-	{none, none, none, TRUE, none, none},		/* GE */
-	{none, none, none, TRUE, TRUE, TRUE},		/* GT */
-	{none, none, none, none, none, TRUE}		/* NE */
+	{true, true, none, none, none, true},	/* LT */
+	{none, true, none, none, none, none},	/* LE */
+	{none, true, true, true, none, none},	/* EQ */
+	{none, none, none, true, none, none},	/* GE */
+	{none, none, none, true, true, true},	/* GT */
+	{none, none, none, none, none, true}	/* NE */
 };
 
 static const bool BT_refutes_table[6][6] = {
@@ -1510,12 +1727,12 @@ static const bool BT_refutes_table[6][6] = {
  *			The predicate operator:
  *	 LT    LE	 EQ    GE	 GT    NE
  */
-	{none, none, TRUE, TRUE, TRUE, none},		/* LT */
-	{none, none, none, none, TRUE, none},		/* LE */
-	{TRUE, none, none, none, TRUE, TRUE},		/* EQ */
-	{TRUE, none, none, none, none, none},		/* GE */
-	{TRUE, TRUE, TRUE, none, none, none},		/* GT */
-	{none, none, TRUE, none, none, none}		/* NE */
+	{none, none, true, true, true, none},	/* LT */
+	{none, none, none, none, true, none},	/* LE */
+	{true, none, none, none, true, true},	/* EQ */
+	{true, none, none, none, none, none},	/* GE */
+	{true, true, true, none, none, none},	/* GT */
+	{none, none, true, none, none, none}	/* NE */
 };
 
 static const StrategyNumber BT_implic_table[6][6] = {
@@ -1523,12 +1740,12 @@ static const StrategyNumber BT_implic_table[6][6] = {
  *			The predicate operator:
  *	 LT    LE	 EQ    GE	 GT    NE
  */
-	{BTGE, BTGE, none, none, none, BTGE},		/* LT */
-	{BTGT, BTGE, none, none, none, BTGT},		/* LE */
-	{BTGT, BTGE, BTEQ, BTLE, BTLT, BTNE},		/* EQ */
-	{none, none, none, BTLE, BTLT, BTLT},		/* GE */
-	{none, none, none, BTLE, BTLE, BTLE},		/* GT */
-	{none, none, none, none, none, BTEQ}		/* NE */
+	{BTGE, BTGE, none, none, none, BTGE},	/* LT */
+	{BTGT, BTGE, none, none, none, BTGT},	/* LE */
+	{BTGT, BTGE, BTEQ, BTLE, BTLT, BTNE},	/* EQ */
+	{none, none, none, BTLE, BTLT, BTLT},	/* GE */
+	{none, none, none, BTLE, BTLE, BTLE},	/* GT */
+	{none, none, none, none, none, BTEQ}	/* NE */
 };
 
 static const StrategyNumber BT_refute_table[6][6] = {
@@ -1536,12 +1753,12 @@ static const StrategyNumber BT_refute_table[6][6] = {
  *			The predicate operator:
  *	 LT    LE	 EQ    GE	 GT    NE
  */
-	{none, none, BTGE, BTGE, BTGE, none},		/* LT */
-	{none, none, BTGT, BTGT, BTGE, none},		/* LE */
-	{BTLE, BTLT, BTNE, BTGT, BTGE, BTEQ},		/* EQ */
-	{BTLE, BTLT, BTLT, none, none, none},		/* GE */
-	{BTLE, BTLE, BTLE, none, none, none},		/* GT */
-	{none, none, BTEQ, none, none, none}		/* NE */
+	{none, none, BTGE, BTGE, BTGE, none},	/* LT */
+	{none, none, BTGT, BTGT, BTGE, none},	/* LE */
+	{BTLE, BTLT, BTNE, BTGT, BTGE, BTEQ},	/* EQ */
+	{BTLE, BTLT, BTLT, none, none, none},	/* GE */
+	{BTLE, BTLE, BTLE, none, none, none},	/* GT */
+	{none, none, BTEQ, none, none, none}	/* NE */
 };
 
 
@@ -1554,8 +1771,24 @@ static const StrategyNumber BT_refute_table[6][6] = {
  * When refute_it == false, we want to prove the predicate true;
  * when refute_it == true, we want to prove the predicate false.
  * (There is enough common code to justify handling these two cases
- * in one routine.)  We return TRUE if able to make the proof, FALSE
+ * in one routine.)  We return true if able to make the proof, false
  * if not able to prove it.
+ *
+ * We mostly need not distinguish strong vs. weak implication/refutation here.
+ * This depends on the assumption that a pair of related operators (i.e.,
+ * commutators, negators, or btree opfamily siblings) will not return one NULL
+ * and one non-NULL result for the same inputs.  Then, for the proof types
+ * where we start with an assumption of truth of the clause, the predicate
+ * operator could not return NULL either, so it doesn't matter whether we are
+ * trying to make a strong or weak proof.  For weak implication, it could be
+ * that the clause operator returned NULL, but then the predicate operator
+ * would as well, so that the weak implication still holds.  This argument
+ * doesn't apply in the case where we are considering two different constant
+ * values, since then the operators aren't being given identical inputs.  But
+ * we only support that for btree operators, for which we can assume that all
+ * non-null inputs result in non-null outputs, so that it doesn't matter which
+ * two non-null constants we consider.  If either constant is NULL, we have
+ * to think harder, but sometimes the proof still works, as explained below.
  *
  * We can make proofs involving several expression forms (here "foo" and "bar"
  * represent subexpressions that are identical according to equal()):
@@ -1583,7 +1816,8 @@ static const StrategyNumber BT_refute_table[6][6] = {
  * and we dare not make deductions with those.
  */
 static bool
-operator_predicate_proof(Expr *predicate, Node *clause, bool refute_it)
+operator_predicate_proof(Expr *predicate, Node *clause,
+						 bool refute_it, bool weak)
 {
 	OpExpr	   *pred_opexpr,
 			   *clause_opexpr;
@@ -1730,12 +1964,46 @@ operator_predicate_proof(Expr *predicate, Node *clause, bool refute_it)
 	 * We have two identical subexpressions, and two other subexpressions that
 	 * are not identical but are both Consts; and we have commuted the
 	 * operators if necessary so that the Consts are on the right.  We'll need
-	 * to compare the Consts' values.  If either is NULL, fail.
+	 * to compare the Consts' values.  If either is NULL, we can't do that, so
+	 * usually the proof fails ... but in some cases we can claim success.
 	 */
-	if (pred_const->constisnull)
-		return false;
 	if (clause_const->constisnull)
+	{
+		/* If clause_op isn't strict, we can't prove anything */
+		if (!op_strict(clause_op))
+			return false;
+
+		/*
+		 * At this point we know that the clause returns NULL.  For proof
+		 * types that assume truth of the clause, this means the proof is
+		 * vacuously true (a/k/a "false implies anything").  That's all proof
+		 * types except weak implication.
+		 */
+		if (!(weak && !refute_it))
+			return true;
+
+		/*
+		 * For weak implication, it's still possible for the proof to succeed,
+		 * if the predicate can also be proven NULL.  In that case we've got
+		 * NULL => NULL which is valid for this proof type.
+		 */
+		if (pred_const->constisnull && op_strict(pred_op))
+			return true;
+		/* Else the proof fails */
 		return false;
+	}
+	if (pred_const->constisnull)
+	{
+		/*
+		 * If the pred_op is strict, we know the predicate yields NULL, which
+		 * means the proof succeeds for either weak implication or weak
+		 * refutation.
+		 */
+		if (weak && op_strict(pred_op))
+			return true;
+		/* Else the proof fails */
+		return false;
+	}
 
 	/*
 	 * Lookup the constant-comparison operator using the system catalogs and
@@ -1775,7 +2043,7 @@ operator_predicate_proof(Expr *predicate, Node *clause, bool refute_it)
 	/* And execute it. */
 	test_result = ExecEvalExprSwitchContext(test_exprstate,
 											GetPerTupleExprContext(estate),
-											&isNull, NULL);
+											&isNull);
 
 	/* Get back to outer memory context */
 	MemoryContextSwitchTo(oldcontext);
@@ -1798,7 +2066,7 @@ operator_predicate_proof(Expr *predicate, Node *clause, bool refute_it)
  *	  Assuming that EXPR1 clause_op EXPR2 is true, try to prove or refute
  *	  EXPR1 pred_op EXPR2.
  *
- * Return TRUE if able to make the proof, false if not able to prove it.
+ * Return true if able to make the proof, false if not able to prove it.
  */
 static bool
 operator_same_subexprs_proof(Oid pred_op, Oid clause_op, bool refute_it)
@@ -1941,7 +2209,7 @@ lookup_proof_cache(Oid pred_op, Oid clause_op, bool refute_it)
 	clause_op_infos = get_op_btree_interpretation(clause_op);
 	if (clause_op_infos)
 		pred_op_infos = get_op_btree_interpretation(pred_op);
-	else	/* no point in looking */
+	else						/* no point in looking */
 		pred_op_infos = NIL;
 
 	foreach(lcp, pred_op_infos)

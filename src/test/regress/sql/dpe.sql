@@ -1,3 +1,17 @@
+-- Tests for Dynamic Partition Elimination, or partition pruning in
+-- PostgreSQL terms, based on join quals.
+
+-- start_matchsubs
+-- m/Memory Usage: \d+\w?B/
+-- s/Memory Usage: \d+\w?B/Memory Usage: ###B/
+-- m/Memory: \d+kB/
+-- s/Memory: \d+kB/Memory: ###kB/
+-- m/Buckets: \d+/
+-- s/Buckets: \d+/Buckets: ###/
+-- m/Batches: \d+/
+-- s/Batches: \d+/Batches: ###/
+-- end_matchsubs
+
 drop schema if exists dpe_single cascade;
 create schema dpe_single;
 set search_path='dpe_single';
@@ -44,7 +58,8 @@ insert into pt select i, 'hello' || i, 'world', 'drop this', i % 6 from generate
 
 insert into t select i, i % 6, 'hello' || i, 'bar' from generate_series(0,1) i;
 
-create table t1 as select * from t;
+create table t1(dist int, tid int, t1 text, t2 text);
+insert into t1 select i, i % 6, 'hello' || i, 'bar' from generate_series(1,2) i;
 
 insert into pt1 select * from pt;
 insert into pt1 select dist, pt1, pt2, pt3, ptid-100 from pt;
@@ -60,19 +75,19 @@ analyze t1;
 -- Simple positive cases
 --
 
-explain select * from t, pt where tid = ptid;
+explain (costs off, timing off, summary off, analyze) select * from t, pt where tid = ptid;
 
 select * from t, pt where tid = ptid;
 
-explain select * from t, pt where tid + 1 = ptid;
+explain (costs off, timing off, summary off, analyze) select * from t, pt where tid + 1 = ptid;
 
 select * from t, pt where tid + 1 = ptid;
 
-explain select * from t, pt where tid = ptid and t1 = 'hello' || tid;
+explain (costs off, timing off, summary off, analyze) select * from t, pt where tid = ptid and t1 = 'hello' || tid;
 
 select * from t, pt where tid = ptid and t1 = 'hello' || tid;
 
-explain select * from t, pt where t1 = pt1 and ptid = tid;
+explain (costs off, timing off, summary off, analyze) select * from t, pt where t1 = pt1 and ptid = tid;
 
 select * from t, pt where t1 = pt1 and ptid = tid;
 
@@ -80,14 +95,14 @@ select * from t, pt where t1 = pt1 and ptid = tid;
 -- in and exists clauses
 --
 
-explain select * from pt where ptid in (select tid from t where t1 = 'hello' || tid);
+explain (costs off, timing off, summary off, analyze) select * from pt where ptid in (select tid from t where t1 = 'hello' || tid);
 
 select * from pt where ptid in (select tid from t where t1 = 'hello' || tid);
 
 -- start_ignore
 -- Known_opt_diff: MPP-21320
 -- end_ignore
-explain select * from pt where exists (select 1 from t where tid = ptid and t1 = 'hello' || tid);
+explain (costs off, timing off, summary off, analyze) select * from pt where exists (select 1 from t where tid = ptid and t1 = 'hello' || tid);
 
 select * from pt where exists (select 1 from t where tid = ptid and t1 = 'hello' || tid);
 
@@ -95,7 +110,7 @@ select * from pt where exists (select 1 from t where tid = ptid and t1 = 'hello'
 -- group-by on top
 --
 
-explain select count(*) from t, pt where tid = ptid;
+explain (costs off, timing off, summary off, analyze) select count(*) from t, pt where tid = ptid;
 
 select count(*) from t, pt where tid = ptid;
 
@@ -103,7 +118,7 @@ select count(*) from t, pt where tid = ptid;
 -- window function on top
 --
 
-explain select *, rank() over (order by ptid,pt1) from t, pt where tid = ptid;
+explain (costs off, timing off, summary off, analyze) select *, rank() over (order by ptid,pt1) from t, pt where tid = ptid;
 
 select *, rank() over (order by ptid,pt1) from t, pt where tid = ptid;
 
@@ -111,7 +126,7 @@ select *, rank() over (order by ptid,pt1) from t, pt where tid = ptid;
 -- set ops
 --
 
-explain select * from t, pt where tid = ptid
+explain (costs off, timing off, summary off, analyze) select * from t, pt where tid = ptid
 	  union all
 	  select * from t, pt where tid + 2 = ptid;
 
@@ -123,7 +138,7 @@ select * from t, pt where tid = ptid
 -- set-ops
 --
 
-explain select count(*) from
+explain (costs off, timing off, summary off, analyze) select count(*) from
 	( select * from t, pt where tid = ptid
 	  union all
 	  select * from t, pt where tid + 2 = ptid
@@ -143,7 +158,7 @@ set enable_hashjoin=off;
 set enable_nestloop=on;
 set enable_mergejoin=off;
 
-explain select * from t, pt where tid = ptid;
+explain (costs off, timing off, summary off, analyze) select * from t, pt where tid = ptid;
 
 select * from t, pt where tid = ptid;
 
@@ -160,7 +175,7 @@ set enable_hashjoin=off;
 -- start_ignore
 -- Known_opt_diff: MPP-21322
 -- end_ignore
-explain select * from t, pt where tid = ptid and pt1 = 'hello0';
+explain (costs off, timing off, summary off, analyze) select * from t, pt where tid = ptid and pt1 = 'hello0';
 
 select * from t, pt where tid = ptid and pt1 = 'hello0';
 
@@ -172,7 +187,7 @@ set enable_indexscan=on;
 set enable_seqscan=off;
 set enable_hashjoin=off;
 
-explain select * from t, pt where tid = ptid;
+explain (costs off, timing off, summary off, analyze) select * from t, pt where tid = ptid;
 
 select * from t, pt where tid = ptid;
 
@@ -185,40 +200,65 @@ set enable_seqscan=on;
 set enable_hashjoin=on;
 set enable_nestloop=off;
 
-explain select * from t, pt where t1 = pt1;
+explain (costs off, timing off, summary off, analyze) select * from t, pt where t1 = pt1;
 
 select * from t, pt where t1 = pt1;
 
-explain select * from t, pt where tid < ptid;
+explain (costs off, timing off, summary off, analyze) select * from t, pt where tid < ptid;
 
 select * from t, pt where tid < ptid;
 
+reset enable_indexscan;
+reset enable_seqscan;
+reset enable_hashjoin;
+reset enable_nestloop;
+
 --
--- cascading joins
+-- multiple joins
 --
 
-
-explain select * from t, t1, pt where t1.t2 = t.t2 and t1.tid = ptid;
+-- one of the joined tables can be used for partition elimination, the other can not
+explain (costs off, timing off, summary off, analyze) select * from t, t1, pt where t1.t2 = t.t2 and t1.tid = ptid;
 
 select * from t, t1, pt where t1.t2 = t.t2 and t1.tid = ptid;
 
+-- Both joined tables can be used for partition elimination. Only partitions
+-- that contain matching rows for both joins need to be scanned.
 
---
--- explain analyze
---
+-- have to do some tricks to coerce the planner to choose the plan we want.
+begin;
+insert into t select i, -100, 'dummy' from generate_series(1,10) i;
+insert into t1 select i, -100, 'dummy' from generate_series(1,10) i;
+analyze t;
+analyze t1;
 
-explain analyze select * from t, pt where tid = ptid;
+explain (costs off, timing off, summary off, analyze) select * from t, t1, pt where t1.tid = ptid and t.tid = ptid;
+
+select * from t, t1, pt where t1.tid = ptid and t.tid = ptid;
+
+rollback;
+
+-- One non-joined table contributing to partition elimination in two different
+-- partitioned tables
+begin;
+-- have to force the planner for it to consider the kind of plan we want
+-- to test
+set local from_collapse_limit = 1;
+set local join_collapse_limit = 1;
+explain (costs off, timing off, summary off, analyze) select * from t1 inner join (select pt1.*, pt2.ptid as ptid2 from pt as pt1, pt as pt2 WHERE pt1.ptid <= pt2.ptid and pt1.dist = pt2.dist ) as ptx ON t1.dist = ptx.dist and t1.tid = ptx.ptid and t1.tid = ptx.ptid2;
+rollback;
+
 
 --
 -- Partitioned table on both sides of the join. This will create a result node as Append node is
 -- not projection capable.
 --
 
-explain select * from pt, pt1 where pt.ptid = pt1.ptid and pt.pt1 = 'hello0' order by pt1.dist;
+explain (costs off, timing off, summary off, analyze) select * from pt, pt1 where pt.ptid = pt1.ptid and pt.pt1 = 'hello0' order by pt1.dist;
 
 select * from pt, pt1 where pt.ptid = pt1.ptid and pt.pt1 = 'hello0' order by pt1.dist;
 
-explain select count(*) from pt, pt1 where pt.ptid = pt1.ptid and pt.pt1 = 'hello0';
+explain (costs off, timing off, summary off, analyze) select count(*) from pt, pt1 where pt.ptid = pt1.ptid and pt.pt1 = 'hello0';
 
 select count(*) from pt, pt1 where pt.ptid = pt1.ptid and pt.pt1 = 'hello0';
 
@@ -242,7 +282,7 @@ set enable_hashjoin=off;
 set enable_seqscan=on;
 set enable_nestloop=on;
 
-explain select * from t, pt where a = b;
+explain (costs off, timing off, summary off, analyze) select * from t, pt where a = b;
 select * from t, pt where a = b;
 rollback;
 
@@ -266,10 +306,15 @@ insert into t select i from generate_series(7,8) i;
 -- 0~2 in seg0, 3~4 in seg 1, no data in seg2
 insert into pt select i from generate_series(0,4) i;
 
+-- Insert some more rows to coerce the planner to put 'pt' on the outer
+-- side of the join.
+insert into t select i from generate_series(7,8) i;
+insert into pt select 0 from generate_series(1,1000) g;
+
 analyze t;
 analyze pt;
 
-explain select * from t, pt where a = b;
+explain (costs off, timing off, summary off, analyze) select * from t, pt where a = b;
 select * from t, pt where a = b;
 rollback;
 
@@ -312,11 +357,11 @@ insert into fact1 select 1, i % 4 , 'CA', i + 10000 from generate_series (1,100)
 --
 
 set gp_dynamic_partition_pruning=off;
-explain select * from dim1 inner join fact1 on (dim1.pid=fact1.pid and dim1.code=fact1.code) order by fact1.u;
+explain (costs off, timing off, summary off, analyze) select * from dim1 inner join fact1 on (dim1.pid=fact1.pid and dim1.code=fact1.code) order by fact1.u;
 select * from dim1 inner join fact1 on (dim1.pid=fact1.pid and dim1.code=fact1.code) order by fact1.u;
 
 set gp_dynamic_partition_pruning=on;
-explain select * from dim1 inner join fact1 on (dim1.pid=fact1.pid and dim1.code=fact1.code) order by fact1.u;
+explain (costs off, timing off, summary off, analyze) select * from dim1 inner join fact1 on (dim1.pid=fact1.pid and dim1.code=fact1.code) order by fact1.u;
 select * from dim1 inner join fact1 on (dim1.pid=fact1.pid and dim1.code=fact1.code) order by fact1.u;
 
 --
@@ -324,23 +369,37 @@ select * from dim1 inner join fact1 on (dim1.pid=fact1.pid and dim1.code=fact1.c
 --
 
 set gp_dynamic_partition_pruning=off;
-explain select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) order by fact1.u;
+explain (costs off, timing off, summary off, analyze) select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) order by fact1.u;
 select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) order by fact1.u;
 
 set gp_dynamic_partition_pruning=on;
-explain select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) order by fact1.u;
+explain (costs off, timing off, summary off, analyze) select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) order by fact1.u;
 select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) order by fact1.u;
+
+--
+-- Join on the subpartitioning column only
+--
+
+set gp_dynamic_partition_pruning=off;
+explain (costs off, timing off, summary off, analyze)
+select * from dim1 inner join fact1 on (dim1.dist = fact1.dist and dim1.code=fact1.code);
+select * from dim1 inner join fact1 on (dim1.dist = fact1.dist and dim1.code=fact1.code);
+
+set gp_dynamic_partition_pruning=on;
+explain (costs off, timing off, summary off, analyze)
+select * from dim1 inner join fact1 on (dim1.dist = fact1.dist and dim1.code=fact1.code);
+select * from dim1 inner join fact1 on (dim1.dist = fact1.dist and dim1.code=fact1.code);
 
 --
 -- Join on one of the partitioning columns and static elimination on other
 --
 
 set gp_dynamic_partition_pruning=off;
-explain select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) and fact1.code = 'OH' order by fact1.u;
+explain (costs off, timing off, summary off, analyze) select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) and fact1.code = 'OH' order by fact1.u;
 select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) and fact1.code = 'OH' order by fact1.u;
 
 set gp_dynamic_partition_pruning=on;
-explain select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) and fact1.code = 'OH' order by fact1.u;
+explain (costs off, timing off, summary off, analyze) select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) and fact1.code = 'OH' order by fact1.u;
 select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) and fact1.code = 'OH' order by fact1.u;
 
 --
@@ -348,16 +407,22 @@ select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) and fact1.code = 'OH
 --
 
 set gp_dynamic_partition_pruning=off;
-explain select fact1.code, count(*) from dim1 inner join fact1 on (dim1.pid=fact1.pid) group by 1 order by 1;
+explain (costs off, timing off, summary off, analyze) select fact1.code, count(*) from dim1 inner join fact1 on (dim1.pid=fact1.pid) group by 1 order by 1;
 select fact1.code, count(*) from dim1 inner join fact1 on (dim1.pid=fact1.pid) group by 1 order by 1;
 
 set gp_dynamic_partition_pruning=on;
-explain select fact1.code, count(*) from dim1 inner join fact1 on (dim1.pid=fact1.pid) group by 1 order by 1;
+explain (costs off, timing off, summary off, analyze) select fact1.code, count(*) from dim1 inner join fact1 on (dim1.pid=fact1.pid) group by 1 order by 1;
 select fact1.code, count(*) from dim1 inner join fact1 on (dim1.pid=fact1.pid) group by 1 order by 1;
 
 
 --
 -- multi-attribute list partitioning
+--
+-- Before GPDB 7, we used to support multi-column list partitions natively,
+-- and these queries did partition elimination. We don't support that anymore,
+-- but emulate that by using a row expression as the partitioning key. You
+-- don't get partition elimination with that, however, so these tests are not
+-- very interesting anymore.
 --
 drop schema if exists dpe_malp cascade;
 create schema dpe_malp;
@@ -365,14 +430,15 @@ set search_path='dpe_malp';
 set gp_segments_for_planner=2;
 set optimizer_segments=2;
 
+create type malp_key as (i int, j int);
+
 create table malp (i int, j int, t text) 
 distributed by (i) 
-partition by list (i, j) 
-( 
-partition p1 values((1,10)) ,
-partition p2 values((2,20)),
-partition p3 values((3,30)) 
-);
+partition by list ((row(i, j)::malp_key));
+
+create table malp_p1 partition of malp for values in (row(1, 10));
+create table malp_p2 partition of malp for values in (row(2, 20));
+create table malp_p3 partition of malp for values in (row(3, 30));
 
 insert into malp select 1, 10, 'hello1';
 insert into malp select 1, 10, 'hello2';
@@ -391,7 +457,7 @@ analyze dim;
 
 -- ORCA doesn't do multi-attribute partitioning currently,so this falls
 -- back to the Postgres planner
-explain select * from dim inner join malp on (dim.i = malp.i);
+explain (costs off, timing off, summary off, analyze) select * from dim inner join malp on (dim.i = malp.i);
 
 set gp_dynamic_partition_pruning = off;
 select * from dim inner join malp on (dim.i = malp.i);
@@ -400,7 +466,8 @@ set gp_dynamic_partition_pruning = on;
 select * from dim inner join malp on (dim.i = malp.i);
 
 set gp_dynamic_partition_pruning = on;
-select * from dim inner join malp on (dim.i = malp.i and dim.j = malp.j); -- only one partition should be chosen
+-- if only the planner was smart enough, one partition would be chosen
+select * from dim inner join malp on (dim.i = malp.i and dim.j = malp.j);
 
 
 --
@@ -420,11 +487,11 @@ analyze b;
 analyze c;
 
 set gp_dynamic_partition_pruning = off;
-explain select * from apart as a, b, c where a.t = b.t and a.id = c.id;
+explain (costs off, timing off, summary off, analyze) select * from apart as a, b, c where a.t = b.t and a.id = c.id;
 select * from apart as a, b, c where a.t = b.t and a.id = c.id;
 
 set gp_dynamic_partition_pruning = on;
-explain select * from apart as a, b, c where a.t = b.t and a.id = c.id;
+explain (costs off, timing off, summary off, analyze) select * from apart as a, b, c where a.t = b.t and a.id = c.id;
 select * from apart as a, b, c where a.t = b.t and a.id = c.id;
 
 
@@ -445,7 +512,115 @@ insert into jpat values(1, '2010-01-02');
 -- start_ignore
 -- Known_opt_diff: MPP-21323
 -- end_ignore
-explain select * from (select count(*) over (order by a rows between 1 preceding and 1 following), a, b from jpat)jpat inner join pat using(b);
+explain (costs off, timing off, summary off, analyze) select * from (select count(*) over (order by a rows between 1 preceding and 1 following), a, b from jpat)jpat inner join pat using(b);
 
 select * from (select count(*) over (order by a rows between 1 preceding and 1 following), a, b from jpat)jpat inner join pat using(b);
 
+
+--
+-- Partitioning on an expression
+--
+drop table if exists t;
+drop table if exists pt;
+
+create table t(id int, b int);
+create table pt(id int, b int) partition by range (id);
+
+create table pt1 partition of pt for values from (1) to (2);
+create table pt2 partition of pt for values from (2) to (3);
+create table pt3 partition of pt for values from (3) to (4);
+
+create table ptx (id int, b int) partition by list (((b) % 2));
+create table ptx_even partition of ptx for values in (0);
+create table ptx_odd partition of ptx for values in (1);
+alter table pt attach partition ptx for values from (4) to (20);
+
+insert into t values (1, 1);
+insert into t values (2, 2);
+insert into pt select i, i from generate_series(1,7) i;
+analyze t;
+analyze pt;
+
+-- Prune on the simple partition columns, but not on the expression
+explain (analyze, costs off, timing off, summary off)
+select * from pt, t where t.id = pt.id;
+
+insert into t values (4, 4), (6, 6), (8, 8), (10, 10);
+
+explain (analyze, costs off, timing off, summary off)
+select * from pt, t where t.id = pt.id;
+
+-- Plan-time pruning based on the 'id' partitioning column, and
+-- run-time join pruning based on the expression
+explain (analyze, costs off, timing off, summary off)
+select * from pt, t where pt.id = 4 and t.id = 4 and (t.b % 2) = (pt.b % 2);
+
+-- Mixed case
+insert into pt values (4, 5);
+
+explain (analyze, costs off, timing off, summary off)
+select * from pt, t where t.id = pt.id and (t.b % 2) = (pt.b % 2);
+
+--
+-- Join pruning on an inequality qual
+--
+drop table if exists t;
+drop table if exists pt;
+
+create table t(dist int, tid int) distributed by (dist);
+create table pt(dist int, ptid int) distributed by (dist) partition by range (ptid);
+
+create table pt1 partition of pt for values from (1) to (2);
+create table pt2 partition of pt for values from (2) to (3);
+create table pt3 partition of pt for values from (3) to (4);
+create table pt4 partition of pt for values from (4) to (5);
+create table pt5 partition of pt for values from (5) to (6);
+
+create table ptdefault partition of pt default;
+
+insert into t values (0, 4);
+insert into t values (0, 3);
+insert into pt select 0, i from generate_series(1,9) i;
+analyze t;
+analyze pt;
+
+explain (analyze, costs off, timing off, summary off)
+select * from pt, t where t.dist = pt.dist and t.tid < pt.ptid;
+
+
+--
+-- Test join pruning with a MergeAppend
+--
+drop table if exists t;
+drop table if exists pt;
+
+
+create table t(dist int, tid int, sk int) distributed by (dist);
+create table pt(dist int, ptid int, sk int) distributed by (dist) partition by range (ptid);
+
+create table pt1 partition of pt for values from (1) to (2);
+create table pt2 partition of pt for values from (2) to (3);
+create table pt3 partition of pt for values from (3) to (4);
+create table pt4 partition of pt for values from (4) to (5);
+create table pt5 partition of pt for values from (5) to (6);
+
+create table ptdefault partition of pt default;
+
+insert into t values (1, 1, 1);
+insert into t values (2, 2, 2);
+insert into t select i, i, i from generate_series(5,100) i;
+
+insert into pt select i, i, i from generate_series(1,7) i;
+insert into pt select i, i, i from generate_series(1000, 1100) i;
+
+analyze t;
+analyze pt;
+
+create index on pt (ptid, sk);
+
+set enable_mergejoin=on;
+set enable_seqscan=off;
+
+-- force_explain
+explain (analyze, timing off, summary off)
+select * from pt, t where t.dist = pt.dist and t.tid = pt.ptid order by t.tid, t.sk;

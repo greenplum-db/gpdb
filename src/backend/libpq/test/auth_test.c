@@ -13,13 +13,10 @@
 static void
 pg_authid_search_will_return(const char *user_name, HeapTuple retval)
 {
-	expect_value(SearchSysCache, cacheId, AUTHNAME);
-	expect_string(SearchSysCache, key1, user_name);
-	expect_any(SearchSysCache, key2);
-	expect_any(SearchSysCache, key3);
-	expect_any(SearchSysCache, key4);
+	expect_value(SearchSysCache1, cacheId, AUTHNAME);
+	expect_string(SearchSysCache1, key1, user_name);
 
-	will_return(SearchSysCache, retval);
+	will_return(SearchSysCache1, retval);
 
 	if (retval != NULL)
 	{

@@ -652,6 +652,61 @@ create aggregate build_group(int8, integer) (
   SFUNC = add_group,
   STYPE = int8[]
 );
+-- check proper resolution of data types for polymorphic transfn/finalfn
+create function first_el(anyarray) returns anyelement as
+'select $1[1]' language sql strict immutable;
+create aggregate first_el_agg_f8(float8) (
+  SFUNC = array_append,
+  STYPE = float8[],
+  FINALFUNC = first_el
+);
+create aggregate first_el_agg_any(anyelement) (
+  SFUNC = array_append,
+  STYPE = anyarray,
+  FINALFUNC = first_el
+);
+select first_el_agg_f8(x::float8) from generate_series(1,10) x;
+ first_el_agg_f8 
+-----------------
+               1
+(1 row)
+
+select first_el_agg_any(x) from generate_series(1,10) x;
+ first_el_agg_any 
+------------------
+                1
+(1 row)
+
+select first_el_agg_f8(x::float8) over(order by x) from generate_series(1,10) x;
+ first_el_agg_f8 
+-----------------
+               1
+               1
+               1
+               1
+               1
+               1
+               1
+               1
+               1
+               1
+(10 rows)
+
+select first_el_agg_any(x) over(order by x) from generate_series(1,10) x;
+ first_el_agg_any 
+------------------
+                1
+                1
+                1
+                1
+                1
+                1
+                1
+                1
+                1
+                1
+(10 rows)
+
 -- check that we can apply functions taking ANYARRAY to pg_stats
 select distinct array_ndims(histogram_bounds) from pg_stats
 where histogram_bounds is not null;
@@ -877,10 +932,10 @@ select dfunc();
 
 -- verify it lists properly
 \df dfunc
-                                           List of functions
- Schema | Name  | Result data type |                    Argument data types                    |  Type  
---------+-------+------------------+-----------------------------------------------------------+--------
- public | dfunc | integer          | a integer DEFAULT 1, OUT sum integer, b integer DEFAULT 2 | normal
+                                          List of functions
+ Schema | Name  | Result data type |                    Argument data types                    | Type 
+--------+-------+------------------+-----------------------------------------------------------+------
+ public | dfunc | integer          | a integer DEFAULT 1, OUT sum integer, b integer DEFAULT 2 | func
 (1 row)
 
 drop function dfunc(int, int);
@@ -1045,10 +1100,10 @@ $$ select array_upper($1, 1) $$ language sql;
 ERROR:  cannot remove parameter defaults from existing function
 HINT:  Use DROP FUNCTION dfunc(integer[]) first.
 \df dfunc
-                                      List of functions
- Schema | Name  | Result data type |               Argument data types               |  Type  
---------+-------+------------------+-------------------------------------------------+--------
- public | dfunc | integer          | VARIADIC a integer[] DEFAULT ARRAY[]::integer[] | normal
+                                     List of functions
+ Schema | Name  | Result data type |               Argument data types               | Type 
+--------+-------+------------------+-------------------------------------------------+------
+ public | dfunc | integer          | VARIADIC a integer[] DEFAULT ARRAY[]::integer[] | func
 (1 row)
 
 drop function dfunc(a variadic int[]);
@@ -1265,31 +1320,31 @@ ERROR:  cannot change name of input parameter "c"
 HINT:  Use DROP FUNCTION dfunc(character varying,numeric) first.
 drop function dfunc(varchar, numeric);
 --fail, named parameters are not unique
-create function testfoo(a int, a int) returns int as $$ select 1;$$ language sql;
+create function testpolym(a int, a int) returns int as $$ select 1;$$ language sql;
 ERROR:  parameter name "a" used more than once
-create function testfoo(int, out a int, out a int) returns int as $$ select 1;$$ language sql;
+create function testpolym(int, out a int, out a int) returns int as $$ select 1;$$ language sql;
 ERROR:  parameter name "a" used more than once
-create function testfoo(out a int, inout a int) returns int as $$ select 1;$$ language sql;
+create function testpolym(out a int, inout a int) returns int as $$ select 1;$$ language sql;
 ERROR:  parameter name "a" used more than once
-create function testfoo(a int, inout a int) returns int as $$ select 1;$$ language sql;
+create function testpolym(a int, inout a int) returns int as $$ select 1;$$ language sql;
 ERROR:  parameter name "a" used more than once
 -- valid
-create function testfoo(a int, out a int) returns int as $$ select $1;$$ language sql;
-select testfoo(37);
- testfoo 
----------
-      37
+create function testpolym(a int, out a int) returns int as $$ select $1;$$ language sql;
+select testpolym(37);
+ testpolym 
+-----------
+        37
 (1 row)
 
-drop function testfoo(int);
-create function testfoo(a int) returns table(a int) as $$ select $1;$$ language sql;
-select * from testfoo(37);
+drop function testpolym(int);
+create function testpolym(a int) returns table(a int) as $$ select $1;$$ language sql;
+select * from testpolym(37);
  a  
 ----
  37
 (1 row)
 
-drop function testfoo(int);
+drop function testpolym(int);
 -- test polymorphic params and defaults
 create function dfunc(a anyelement, b anyelement = null, flag bool = true)
 returns anyelement as $$
@@ -1440,6 +1495,42 @@ select dfunc('a'::text, 'b', flag => true); -- mixed notation
  a
 (1 row)
 
+-- this tests lexer edge cases around =>
+select dfunc(a =>-1);
+ dfunc 
+-------
+    -1
+(1 row)
+
+select dfunc(a =>+1);
+ dfunc 
+-------
+     1
+(1 row)
+
+select dfunc(a =>/**/1);
+ dfunc 
+-------
+     1
+(1 row)
+
+select dfunc(a =>--comment to be removed by psql
+  1);
+ dfunc 
+-------
+     1
+(1 row)
+
+-- need DO to protect the -- from psql
+do $$
+  declare r integer;
+  begin
+    select dfunc(a=>-- comment
+      1) into r;
+    raise info 'r = %', r;
+  end;
+$$;
+INFO:  r = 1
 -- check reverse-listing of named-arg calls
 CREATE VIEW dfview AS
    SELECT q1, q2,
@@ -1457,13 +1548,13 @@ select * from dfview;
 (5 rows)
 
 \d+ dfview
-                View "public.dfview"
- Column |  Type  | Modifiers | Storage | Description 
---------+--------+-----------+---------+-------------
- q1     | bigint |           | plain   | 
- q2     | bigint |           | plain   | 
- c3     | bigint |           | plain   | 
- c4     | bigint |           | plain   | 
+                           View "public.dfview"
+ Column |  Type  | Collation | Nullable | Default | Storage | Description 
+--------+--------+-----------+----------+---------+---------+-------------
+ q1     | bigint |           |          |         | plain   | 
+ q2     | bigint |           |          |         | plain   | 
+ c3     | bigint |           |          |         | plain   | 
+ c4     | bigint |           |          |         | plain   | 
 View definition:
  SELECT int8_tbl.q1,
     int8_tbl.q2,

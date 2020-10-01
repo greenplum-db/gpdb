@@ -5,7 +5,7 @@
  *
  * This should be included _AFTER_ postgres.h and system include files
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1995, Regents of the University of California
  *
  * src/pl/plperl/plperl.h
@@ -17,13 +17,6 @@
 /* stop perl headers from hijacking stdio and other stuff on Windows */
 #ifdef WIN32
 #define WIN32IO_IS_STDIO
-/*
- * isnan is defined in both the perl and mingw headers. We don't use it,
- * so this just clears up the compile warning.
- */
-#ifdef isnan
-#undef isnan
-#endif
 #endif							/* WIN32 */
 
 /*
@@ -36,10 +29,43 @@
  * Sometimes perl carefully scribbles on our *printf macros.
  * So we undefine them here and redefine them after it's done its dirty deed.
  */
-
-#ifdef USE_REPL_SNPRINTF
-#undef snprintf
 #undef vsnprintf
+#undef snprintf
+#undef vsprintf
+#undef sprintf
+#undef vfprintf
+#undef fprintf
+#undef vprintf
+#undef printf
+
+/*
+ * Perl scribbles on the "_" macro too.
+ */
+#undef _
+
+/*
+ * ActivePerl 5.18 and later are MinGW-built, and their headers use GCC's
+ * __inline__.  Translate to something MSVC recognizes. Also, perl.h sometimes
+ * defines isnan, so undefine it here and put back the definition later if
+ * perl.h doesn't.
+ */
+#ifdef _MSC_VER
+#define __inline__ inline
+#ifdef isnan
+#undef isnan
+#endif
+#endif
+
+/*
+ * Regarding bool, both PostgreSQL and Perl might use stdbool.h or not,
+ * depending on configuration.  If both agree, things are relatively harmless.
+ * If not, things get tricky.  If PostgreSQL does but Perl does not, define
+ * HAS_BOOL here so that Perl does not redefine bool; this avoids compiler
+ * warnings.  If PostgreSQL does not but Perl does, we need to undefine bool
+ * after we include the Perl headers; see below.
+ */
+#ifdef USE_STDBOOL
+#define HAS_BOOL 1
 #endif
 
 /*
@@ -49,7 +75,6 @@
 #ifdef _MSC_VER
 #define __inline__ inline
 #endif
-
 
 /*
  * Get the basic Perl API.  We use PERL_NO_GET_CONTEXT mode so that our code
@@ -65,25 +90,84 @@
  * before ppport.h, so use a #define flag to control inclusion here.
  */
 #ifdef PG_NEED_PERL_XSUB_H
+/*
+ * On Windows, win32_port.h defines macros for a lot of these same functions.
+ * To avoid compiler warnings when XSUB.h redefines them, #undef our versions.
+ */
+#ifdef WIN32
+#undef accept
+#undef bind
+#undef connect
+#undef fopen
+#undef kill
+#undef listen
+#undef lstat
+#undef mkdir
+#undef open
+#undef putenv
+#undef recv
+#undef rename
+#undef select
+#undef send
+#undef socket
+#undef stat
+#undef unlink
+#endif
+
 #include "XSUB.h"
 #endif
 
-/* put back our snprintf and vsnprintf */
-#ifdef USE_REPL_SNPRINTF
-#ifdef snprintf
-#undef snprintf
-#endif
+/* put back our *printf macros ... this must match src/include/port.h */
 #ifdef vsnprintf
 #undef vsnprintf
 #endif
-#ifdef __GNUC__
-#define vsnprintf(...)	pg_vsnprintf(__VA_ARGS__)
-#define snprintf(...)	pg_snprintf(__VA_ARGS__)
-#else
+#ifdef snprintf
+#undef snprintf
+#endif
+#ifdef vsprintf
+#undef vsprintf
+#endif
+#ifdef sprintf
+#undef sprintf
+#endif
+#ifdef vfprintf
+#undef vfprintf
+#endif
+#ifdef fprintf
+#undef fprintf
+#endif
+#ifdef vprintf
+#undef vprintf
+#endif
+#ifdef printf
+#undef printf
+#endif
+
 #define vsnprintf		pg_vsnprintf
 #define snprintf		pg_snprintf
-#endif   /* __GNUC__ */
-#endif   /* USE_REPL_SNPRINTF */
+#define vsprintf		pg_vsprintf
+#define sprintf			pg_sprintf
+#define vfprintf		pg_vfprintf
+#define fprintf			pg_fprintf
+#define vprintf			pg_vprintf
+#define printf(...)		pg_printf(__VA_ARGS__)
+
+/*
+ * Put back "_" too; but rather than making it just gettext() as the core
+ * code does, make it dgettext() so that the right things will happen in
+ * loadable modules (if they've set up TEXTDOMAIN correctly).  Note that
+ * we can't just set TEXTDOMAIN here, because this file is used by more
+ * extensions than just PL/Perl itself.
+ */
+#undef _
+#define _(x) dgettext(TEXTDOMAIN, x)
+
+/* put back the definition of isnan if needed */
+#ifdef _MSC_VER
+#ifndef isnan
+#define isnan(x) _isnan(x)
+#endif
+#endif
 
 /* perl version and platform portability */
 #define NEED_eval_pv
@@ -91,9 +175,17 @@
 #define NEED_sv_2pv_flags
 #include "ppport.h"
 
-/* perl may have a different width of "bool", don't buy it */
+/*
+ * perl might have included stdbool.h.  If we also did that earlier (see c.h),
+ * then that's fine.  If not, we probably rejected it for some reason.  In
+ * that case, undef bool and proceed with our own bool.  (Note that stdbool.h
+ * makes bool a macro, but our own replacement is a typedef, so the undef
+ * makes ours visible again).
+ */
+#ifndef USE_STDBOOL
 #ifdef bool
 #undef bool
+#endif
 #endif
 
 /* supply HeUTF8 if it's missing - ppport.h doesn't supply it, unfortunately */
@@ -125,7 +217,9 @@ HV		   *plperl_spi_exec_prepared(char *, HV *, int, SV **);
 SV		   *plperl_spi_query_prepared(char *, int, SV **);
 void		plperl_spi_freeplan(char *);
 void		plperl_spi_cursor_close(char *);
+void		plperl_spi_commit(void);
+void		plperl_spi_rollback(void);
 char	   *plperl_sv_to_literal(SV *, char *);
 void		plperl_util_elog(int level, SV *msg);
 
-#endif   /* PL_PERL_H */
+#endif							/* PL_PERL_H */

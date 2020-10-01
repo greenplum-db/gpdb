@@ -35,10 +35,10 @@
  *
  * We are using traversal values provided by SP-GiST to calculate and
  * to store the bounds of the quadrants, while traversing into the tree.
- * Traversal value has all the boundaries in the 4D space, and is is
- * capable of transferring the required boundaries to the following
- * traversal values.  In conclusion, three things are necessary
- * to calculate the next traversal value:
+ * Traversal value has all the boundaries in the 4D space, and is capable
+ * of transferring the required boundaries to the following traversal
+ * values.  In conclusion, three things are necessary to calculate the
+ * next traversal value:
  *
  *	(1) the traversal value of the parent
  *	(2) the quadrant of the current node
@@ -62,7 +62,7 @@
  * except the root.  For the root node, we are setting the boundaries
  * that we don't yet have as infinity.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -74,23 +74,26 @@
 #include "postgres.h"
 
 #include "access/spgist.h"
+#include "access/spgist_private.h"
 #include "access/stratnum.h"
 #include "catalog/pg_type.h"
-#include "utils/builtins.h"
+#include "utils/float.h"
+#include "utils/fmgroids.h"
+#include "utils/fmgrprotos.h"
 #include "utils/geo_decls.h"
 
 /*
  * Comparator for qsort
  *
  * We don't need to use the floating point macros in here, because this
- * is going only going to be used in a place to effect the performance
+ * is only going to be used in a place to effect the performance
  * of the index, not the correctness.
  */
 static int
 compareDoubles(const void *a, const void *b)
 {
-	double		x = *(double *) a;
-	double		y = *(double *) b;
+	float8		x = *(float8 *) a;
+	float8		y = *(float8 *) b;
 
 	if (x == y)
 		return 0;
@@ -99,8 +102,8 @@ compareDoubles(const void *a, const void *b)
 
 typedef struct
 {
-	double		low;
-	double		high;
+	float8		low;
+	float8		high;
 } Range;
 
 typedef struct
@@ -174,7 +177,7 @@ static RectBox *
 initRectBox(void)
 {
 	RectBox    *rect_box = (RectBox *) palloc(sizeof(RectBox));
-	double		infinity = get_float8_infinity();
+	float8		infinity = get_float8_infinity();
 
 	rect_box->range_box_x.left.low = -infinity;
 	rect_box->range_box_x.left.high = infinity;
@@ -286,12 +289,28 @@ lower2D(RangeBox *range_box, Range *query)
 		FPlt(range_box->right.low, query->low);
 }
 
+/* Can any range from range_box not extend to the right side of the query? */
+static bool
+overLower2D(RangeBox *range_box, Range *query)
+{
+	return FPle(range_box->left.low, query->high) &&
+		FPle(range_box->right.low, query->high);
+}
+
 /* Can any range from range_box to be higher than this argument? */
 static bool
 higher2D(RangeBox *range_box, Range *query)
 {
 	return FPgt(range_box->left.high, query->high) &&
 		FPgt(range_box->right.high, query->high);
+}
+
+/* Can any range from range_box not extend to the left side of the query? */
+static bool
+overHigher2D(RangeBox *range_box, Range *query)
+{
+	return FPge(range_box->left.high, query->low) &&
+		FPge(range_box->right.high, query->low);
 }
 
 /* Can any rectangle from rect_box be left of this argument? */
@@ -305,7 +324,7 @@ left4D(RectBox *rect_box, RangeBox *query)
 static bool
 overLeft4D(RectBox *rect_box, RangeBox *query)
 {
-	return lower2D(&rect_box->range_box_x, &query->right);
+	return overLower2D(&rect_box->range_box_x, &query->left);
 }
 
 /* Can any rectangle from rect_box be right of this argument? */
@@ -319,7 +338,7 @@ right4D(RectBox *rect_box, RangeBox *query)
 static bool
 overRight4D(RectBox *rect_box, RangeBox *query)
 {
-	return higher2D(&rect_box->range_box_x, &query->right);
+	return overHigher2D(&rect_box->range_box_x, &query->left);
 }
 
 /* Can any rectangle from rect_box be below of this argument? */
@@ -333,7 +352,7 @@ below4D(RectBox *rect_box, RangeBox *query)
 static bool
 overBelow4D(RectBox *rect_box, RangeBox *query)
 {
-	return lower2D(&rect_box->range_box_y, &query->left);
+	return overLower2D(&rect_box->range_box_y, &query->right);
 }
 
 /* Can any rectangle from rect_box be above of this argument? */
@@ -347,8 +366,33 @@ above4D(RectBox *rect_box, RangeBox *query)
 static bool
 overAbove4D(RectBox *rect_box, RangeBox *query)
 {
-	return higher2D(&rect_box->range_box_y, &query->right);
+	return overHigher2D(&rect_box->range_box_y, &query->right);
 }
+
+/* Lower bound for the distance between point and rect_box */
+static double
+pointToRectBoxDistance(Point *point, RectBox *rect_box)
+{
+	double		dx;
+	double		dy;
+
+	if (point->x < rect_box->range_box_x.left.low)
+		dx = rect_box->range_box_x.left.low - point->x;
+	else if (point->x > rect_box->range_box_x.right.high)
+		dx = point->x - rect_box->range_box_x.right.high;
+	else
+		dx = 0;
+
+	if (point->y < rect_box->range_box_y.left.low)
+		dy = rect_box->range_box_y.left.low - point->y;
+	else if (point->y > rect_box->range_box_y.right.high)
+		dy = point->y - rect_box->range_box_y.right.high;
+	else
+		dy = 0;
+
+	return HYPOT(dx, dy);
+}
+
 
 /*
  * SP-GiST config function
@@ -375,7 +419,7 @@ spg_box_quad_choose(PG_FUNCTION_ARGS)
 	spgChooseIn *in = (spgChooseIn *) PG_GETARG_POINTER(0);
 	spgChooseOut *out = (spgChooseOut *) PG_GETARG_POINTER(1);
 	BOX		   *centroid = DatumGetBoxP(in->prefixDatum),
-			   *box = DatumGetBoxP(in->datum);
+			   *box = DatumGetBoxP(in->leafDatum);
 
 	out->resultType = spgMatchNode;
 	out->result.matchNode.restDatum = BoxPGetDatum(box);
@@ -401,10 +445,10 @@ spg_box_quad_picksplit(PG_FUNCTION_ARGS)
 	BOX		   *centroid;
 	int			median,
 				i;
-	double	   *lowXs = palloc(sizeof(double) * in->nTuples);
-	double	   *highXs = palloc(sizeof(double) * in->nTuples);
-	double	   *lowYs = palloc(sizeof(double) * in->nTuples);
-	double	   *highYs = palloc(sizeof(double) * in->nTuples);
+	float8	   *lowXs = palloc(sizeof(float8) * in->nTuples);
+	float8	   *highXs = palloc(sizeof(float8) * in->nTuples);
+	float8	   *lowYs = palloc(sizeof(float8) * in->nTuples);
+	float8	   *highYs = palloc(sizeof(float8) * in->nTuples);
 
 	/* Calculate median of all 4D coordinates */
 	for (i = 0; i < in->nTuples; i++)
@@ -417,10 +461,10 @@ spg_box_quad_picksplit(PG_FUNCTION_ARGS)
 		highYs[i] = box->high.y;
 	}
 
-	qsort(lowXs, in->nTuples, sizeof(double), compareDoubles);
-	qsort(highXs, in->nTuples, sizeof(double), compareDoubles);
-	qsort(lowYs, in->nTuples, sizeof(double), compareDoubles);
-	qsort(highYs, in->nTuples, sizeof(double), compareDoubles);
+	qsort(lowXs, in->nTuples, sizeof(float8), compareDoubles);
+	qsort(highXs, in->nTuples, sizeof(float8), compareDoubles);
+	qsort(lowYs, in->nTuples, sizeof(float8), compareDoubles);
+	qsort(highYs, in->nTuples, sizeof(float8), compareDoubles);
 
 	median = in->nTuples / 2;
 
@@ -458,6 +502,51 @@ spg_box_quad_picksplit(PG_FUNCTION_ARGS)
 }
 
 /*
+ * Check if result of consistent method based on bounding box is exact.
+ */
+static bool
+is_bounding_box_test_exact(StrategyNumber strategy)
+{
+	switch (strategy)
+	{
+		case RTLeftStrategyNumber:
+		case RTOverLeftStrategyNumber:
+		case RTOverRightStrategyNumber:
+		case RTRightStrategyNumber:
+		case RTOverBelowStrategyNumber:
+		case RTBelowStrategyNumber:
+		case RTAboveStrategyNumber:
+		case RTOverAboveStrategyNumber:
+			return true;
+
+		default:
+			return false;
+	}
+}
+
+/*
+ * Get bounding box for ScanKey.
+ */
+static BOX *
+spg_box_quad_get_scankey_bbox(ScanKey sk, bool *recheck)
+{
+	switch (sk->sk_subtype)
+	{
+		case BOXOID:
+			return DatumGetBoxP(sk->sk_argument);
+
+		case POLYGONOID:
+			if (recheck && !is_bounding_box_test_exact(sk->sk_strategy))
+				*recheck = true;
+			return &DatumGetPolygonP(sk->sk_argument)->boundbox;
+
+		default:
+			elog(ERROR, "unrecognized scankey subtype: %d", sk->sk_subtype);
+			return NULL;
+	}
+}
+
+/*
  * SP-GiST inner consistent function
  */
 Datum
@@ -472,17 +561,6 @@ spg_box_quad_inner_consistent(PG_FUNCTION_ARGS)
 	RangeBox   *centroid,
 			  **queries;
 
-	if (in->allTheSame)
-	{
-		/* Report that all nodes should be visited */
-		out->nNodes = in->nNodes;
-		out->nodeNumbers = (int *) palloc(sizeof(int) * in->nNodes);
-		for (i = 0; i < in->nNodes; i++)
-			out->nodeNumbers[i] = i;
-
-		PG_RETURN_VOID();
-	}
-
 	/*
 	 * We are saving the traversal value or initialize it an unbounded one, if
 	 * we have just begun to walk the tree.
@@ -492,6 +570,40 @@ spg_box_quad_inner_consistent(PG_FUNCTION_ARGS)
 	else
 		rect_box = initRectBox();
 
+	if (in->allTheSame)
+	{
+		/* Report that all nodes should be visited */
+		out->nNodes = in->nNodes;
+		out->nodeNumbers = (int *) palloc(sizeof(int) * in->nNodes);
+		for (i = 0; i < in->nNodes; i++)
+			out->nodeNumbers[i] = i;
+
+		if (in->norderbys > 0 && in->nNodes > 0)
+		{
+			double	   *distances = palloc(sizeof(double) * in->norderbys);
+			int			j;
+
+			for (j = 0; j < in->norderbys; j++)
+			{
+				Point	   *pt = DatumGetPointP(in->orderbys[j].sk_argument);
+
+				distances[j] = pointToRectBoxDistance(pt, rect_box);
+			}
+
+			out->distances = (double **) palloc(sizeof(double *) * in->nNodes);
+			out->distances[0] = distances;
+
+			for (i = 1; i < in->nNodes; i++)
+			{
+				out->distances[i] = palloc(sizeof(double) * in->norderbys);
+				memcpy(out->distances[i], distances,
+					   sizeof(double) * in->norderbys);
+			}
+		}
+
+		PG_RETURN_VOID();
+	}
+
 	/*
 	 * We are casting the prefix and queries to RangeBoxes for ease of the
 	 * following operations.
@@ -499,12 +611,18 @@ spg_box_quad_inner_consistent(PG_FUNCTION_ARGS)
 	centroid = getRangeBox(DatumGetBoxP(in->prefixDatum));
 	queries = (RangeBox **) palloc(in->nkeys * sizeof(RangeBox *));
 	for (i = 0; i < in->nkeys; i++)
-		queries[i] = getRangeBox(DatumGetBoxP(in->scankeys[i].sk_argument));
+	{
+		BOX		   *box = spg_box_quad_get_scankey_bbox(&in->scankeys[i], NULL);
+
+		queries[i] = getRangeBox(box);
+	}
 
 	/* Allocate enough memory for nodes */
 	out->nNodes = 0;
 	out->nodeNumbers = (int *) palloc(sizeof(int) * in->nNodes);
 	out->traversalValues = (void **) palloc(sizeof(void *) * in->nNodes);
+	if (in->norderbys > 0)
+		out->distances = (double **) palloc(sizeof(double *) * in->nNodes);
 
 	/*
 	 * We switch memory context, because we want to allocate memory for new
@@ -582,6 +700,22 @@ spg_box_quad_inner_consistent(PG_FUNCTION_ARGS)
 		{
 			out->traversalValues[out->nNodes] = next_rect_box;
 			out->nodeNumbers[out->nNodes] = quadrant;
+
+			if (in->norderbys > 0)
+			{
+				double	   *distances = palloc(sizeof(double) * in->norderbys);
+				int			j;
+
+				out->distances[out->nNodes] = distances;
+
+				for (j = 0; j < in->norderbys; j++)
+				{
+					Point	   *pt = DatumGetPointP(in->orderbys[j].sk_argument);
+
+					distances[j] = pointToRectBoxDistance(pt, next_rect_box);
+				}
+			}
+
 			out->nNodes++;
 		}
 		else
@@ -622,7 +756,9 @@ spg_box_quad_leaf_consistent(PG_FUNCTION_ARGS)
 	for (i = 0; i < in->nkeys; i++)
 	{
 		StrategyNumber strategy = in->scankeys[i].sk_strategy;
-		Datum		query = in->scankeys[i].sk_argument;
+		BOX		   *box = spg_box_quad_get_scankey_bbox(&in->scankeys[i],
+														&out->recheck);
+		Datum		query = BoxPGetDatum(box);
 
 		switch (strategy)
 		{
@@ -695,5 +831,50 @@ spg_box_quad_leaf_consistent(PG_FUNCTION_ARGS)
 			break;
 	}
 
+	if (flag && in->norderbys > 0)
+	{
+		Oid			distfnoid = in->orderbys[0].sk_func.fn_oid;
+
+		out->distances = spg_key_orderbys_distances(leaf, false,
+													in->orderbys, in->norderbys);
+
+		/* Recheck is necessary when computing distance to polygon */
+		out->recheckDistances = distfnoid == F_DIST_POLYP;
+	}
+
 	PG_RETURN_BOOL(flag);
+}
+
+
+/*
+ * SP-GiST config function for 2-D types that are lossy represented by their
+ * bounding boxes
+ */
+Datum
+spg_bbox_quad_config(PG_FUNCTION_ARGS)
+{
+	spgConfigOut *cfg = (spgConfigOut *) PG_GETARG_POINTER(1);
+
+	cfg->prefixType = BOXOID;	/* A type represented by its bounding box */
+	cfg->labelType = VOIDOID;	/* We don't need node labels. */
+	cfg->leafType = BOXOID;
+	cfg->canReturnData = false;
+	cfg->longValuesOK = false;
+
+	PG_RETURN_VOID();
+}
+
+/*
+ * SP-GiST compress function for polygons
+ */
+Datum
+spg_poly_quad_compress(PG_FUNCTION_ARGS)
+{
+	POLYGON    *polygon = PG_GETARG_POLYGON_P(0);
+	BOX		   *box;
+
+	box = (BOX *) palloc(sizeof(BOX));
+	*box = polygon->boundbox;
+
+	PG_RETURN_BOX_P(box);
 }

@@ -340,7 +340,7 @@ SELECT * FROM street;
  98th                          Ave  | [(-122.2001,37.258),(-122.1974,37.27)]                                                                                                                                                                                                                                                                                                                                                                                                       | Lafayette
 (333 rows)
 
-SELECT name, #thepath FROM iexit ORDER BY 1, 2;
+SELECT name, #thepath FROM iexit ORDER BY name COLLATE "C", 2;
                 name                | ?column? 
 ------------------------------------+----------
  I- 580                             |        2
@@ -1335,11 +1335,11 @@ NOTICE:  f_leak => hamburger  (seg0 slice1 127.0.0.1:25432 pid=890)
 (1 row)
 
 EXPLAIN (COSTS OFF) SELECT * FROM my_property_normal WHERE f_leak(passwd);
-                             QUERY PLAN                              
----------------------------------------------------------------------
+                         QUERY PLAN                         
+------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Seq Scan on customer
-         Filter: (f_leak(passwd) AND (name = 'regress_alice'::text))
+         Filter: (f_leak(passwd) AND (name = CURRENT_USER))
  Optimizer: Postgres query optimizer
 (4 rows)
 
@@ -1351,13 +1351,13 @@ NOTICE:  f_leak => passwd123
 (1 row)
 
 EXPLAIN (COSTS OFF) SELECT * FROM my_property_secure WHERE f_leak(passwd);
-                      QUERY PLAN                      
-------------------------------------------------------
+                    QUERY PLAN                     
+---------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Subquery Scan on my_property_secure
          Filter: f_leak(my_property_secure.passwd)
          ->  Seq Scan on customer
-               Filter: (name = 'regress_alice'::text)
+               Filter: (name = CURRENT_USER)
  Optimizer: Postgres query optimizer
 (6 rows)
 
@@ -1380,11 +1380,11 @@ NOTICE:  f_leak => hamburger  (seg1 slice1 127.0.0.1:25433 pid=98813)
 
 EXPLAIN (COSTS OFF) SELECT * FROM my_property_normal v
 		WHERE f_leak('passwd') AND f_leak(passwd);
-                                           QUERY PLAN                                           
-------------------------------------------------------------------------------------------------
+                                      QUERY PLAN                                       
+---------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Seq Scan on customer
-         Filter: (f_leak('passwd'::text) AND f_leak(passwd) AND (name = 'regress_alice'::text))
+         Filter: (f_leak('passwd'::text) AND f_leak(passwd) AND (name = CURRENT_USER))
  Optimizer: Postgres query optimizer
 (4 rows)
 
@@ -1401,13 +1401,13 @@ NOTICE:  f_leak => passwd  (seg1 slice1 127.0.0.1:25433 pid=98813)
 
 EXPLAIN (COSTS OFF) SELECT * FROM my_property_secure v
 		WHERE f_leak('passwd') AND f_leak(passwd);
-                                    QUERY PLAN                                     
------------------------------------------------------------------------------------
+                                QUERY PLAN                                
+--------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Subquery Scan on v
          Filter: f_leak(v.passwd)
          ->  Seq Scan on customer
-               Filter: (f_leak('passwd'::text) AND (name = 'regress_alice'::text))
+               Filter: (f_leak('passwd'::text) AND (name = CURRENT_USER))
  Optimizer: Postgres query optimizer
 (6 rows)
 
@@ -1435,7 +1435,7 @@ EXPLAIN (COSTS OFF) SELECT * FROM my_credit_card_normal WHERE f_leak(cnum);
                Filter: f_leak(cnum)
          ->  Hash
                ->  Seq Scan on customer l
-                     Filter: (name = 'regress_alice'::text)
+                     Filter: (name = CURRENT_USER)
  Optimizer: Postgres query optimizer
 (9 rows)
 
@@ -1457,7 +1457,7 @@ EXPLAIN (COSTS OFF) SELECT * FROM my_credit_card_secure WHERE f_leak(cnum);
                ->  Seq Scan on credit_card r
                ->  Hash
                      ->  Seq Scan on customer l
-                           Filter: (name = 'regress_alice'::text)
+                           Filter: (name = CURRENT_USER)
  Optimizer: Postgres query optimizer
 (10 rows)
 
@@ -1494,15 +1494,15 @@ EXPLAIN (COSTS OFF) SELECT * FROM my_credit_card_usage_normal
                                  ->  Seq Scan on credit_card r_1
                                  ->  Hash
                                        ->  Seq Scan on customer l_1
-                                             Filter: (name = 'regress_alice'::text)
+                                             Filter: (name = CURRENT_USER)
  Optimizer: Postgres query optimizer
 (16 rows)
 
 SELECT * FROM my_credit_card_usage_secure
        WHERE f_leak(cnum) AND ymd >= '2011-10-01' AND ymd < '2011-11-01';
-NOTICE:  f_leak => 1111-2222-3333-4444  (seg0 slice1 127.0.0.1:25434 pid=892)
-NOTICE:  f_leak => 1111-2222-3333-4444  (seg0 slice1 127.0.0.1:25434 pid=892)
-NOTICE:  f_leak => 1111-2222-3333-4444  (seg0 slice1 127.0.0.1:25434 pid=892)
+NOTICE:  f_leak => 1111-2222-3333-4444
+NOTICE:  f_leak => 1111-2222-3333-4444
+NOTICE:  f_leak => 1111-2222-3333-4444
  cid |     name      |       tel        |  passwd   |        cnum         | climit |    ymd     | usage 
 -----+---------------+------------------+-----------+---------------------+--------+------------+-------
  101 | regress_alice | +81-12-3456-7890 | passwd123 | 1111-2222-3333-4444 |   4000 | 10-05-2011 |    90
@@ -1531,7 +1531,7 @@ EXPLAIN (COSTS OFF) SELECT * FROM my_credit_card_usage_secure
                                  ->  Seq Scan on credit_card r_1
                                  ->  Hash
                                        ->  Seq Scan on customer l
-                                             Filter: (name = 'regress_alice'::text)
+                                             Filter: (name = CURRENT_USER)
  Optimizer: Postgres query optimizer
 (19 rows)
 

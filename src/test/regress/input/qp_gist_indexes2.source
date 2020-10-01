@@ -7,7 +7,7 @@ create schema qp_gist_indexes2;
 set search_path to qp_gist_indexes2;
 
  -- start_ignore
-create language plpythonu;
+create language plpython3u;
 -- end_ignore
 
 create or replace function count_index_scans(explain_query text) returns int as
@@ -21,7 +21,7 @@ for i in range(len(rv)):
         result = result+1
 return result
 $$
-language plpythonu;
+language plpython3u;
 
 -- ----------------------------------------------------------------------
 -- Test: test01create_table.sql

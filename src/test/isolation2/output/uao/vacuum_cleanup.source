@@ -2,28 +2,28 @@
 -- the AO/AOCS table gets reduced correctly.
 
 -- The age of the table is 1 after the following statement
-2: create table ao_@orientation@_vacuum_cleanup2(a int, b int) with(appendonly=true, orientation=@orientation@);
+2: create table ao_@amname@_vacuum_cleanup2(a int, b int) using @amname@;
 CREATE
 -- The age of the table is 2 after the following statement
-2: insert into ao_@orientation@_vacuum_cleanup2 select 0, i from generate_series(1, 100) i;
+2: insert into ao_@amname@_vacuum_cleanup2 select 0, i from generate_series(1, 100) i;
 INSERT 100
 -- The age of the table is 7 after the following 5 statements
-2: update ao_@orientation@_vacuum_cleanup2 set b = b + 1;
+2: update ao_@amname@_vacuum_cleanup2 set b = b + 1;
 UPDATE 100
-2: update ao_@orientation@_vacuum_cleanup2 set b = b + 1;
+2: update ao_@amname@_vacuum_cleanup2 set b = b + 1;
 UPDATE 100
-2: update ao_@orientation@_vacuum_cleanup2 set b = b + 1;
+2: update ao_@amname@_vacuum_cleanup2 set b = b + 1;
 UPDATE 100
-2: update ao_@orientation@_vacuum_cleanup2 set b = b + 1;
+2: update ao_@amname@_vacuum_cleanup2 set b = b + 1;
 UPDATE 100
-2: update ao_@orientation@_vacuum_cleanup2 set b = b + 1;
+2: update ao_@amname@_vacuum_cleanup2 set b = b + 1;
 UPDATE 100
 
 1: set vacuum_freeze_min_age = 0;
 SET
 -- Check the age of the table just before vacuum (use BETWEEN to mask minor
 -- differences that might happen if e.g. autovacuum kicks in)
-1: select age(relfrozenxid) between 6 and 9, regexp_replace(replace(relname, 'ao_@orientation@_vacuum_cleanup2'::regclass::oid::text, '<oid>'), 'ao.*seg', '<seg>') from gp_dist_random('pg_class') where relkind in ('r','t','o','b','M') and relstorage not in ('x','f','v') and (relname like '%' || 'ao_@orientation@_vacuum_cleanup2'::regclass::oid || '%') and gp_segment_id = 0;
+1: select age(relfrozenxid) between 6 and 9, regexp_replace(replace(relname, 'ao_@amname@_vacuum_cleanup2'::regclass::oid::text, '<oid>'), 'ao.*seg', '<seg>') from gp_dist_random('pg_class') where relkind in ('r','t','o','b','M') and (relname like '%' || 'ao_@amname@_vacuum_cleanup2'::regclass::oid || '%') and gp_segment_id = 0;
  ?column? | regexp_replace     
 ----------+--------------------
  t        | pg_<seg>_<oid>     
@@ -33,18 +33,18 @@ SET
 -- Hold AccessShareLock to make AO VACUUM skip drop phase
 2: begin;
 BEGIN
-2: select count(*) from ao_@orientation@_vacuum_cleanup2;
+2: select count(*) from ao_@amname@_vacuum_cleanup2;
  count 
 -------
  100   
 (1 row)
-1: vacuum ao_@orientation@_vacuum_cleanup2;
+1: vacuum ao_@amname@_vacuum_cleanup2;
 VACUUM
 
 -- The age should be smaller now. All the xids before the first
 -- vacuum were frozen. The relfrozenxid will be the xid of the last
 -- transaction before the vacuum (in this case it is the update statement)
-1: select age(relfrozenxid) < 7, regexp_replace(replace(relname, 'ao_@orientation@_vacuum_cleanup2'::regclass::oid::text, '<oid>'), 'ao.*seg', '<seg>') from gp_dist_random('pg_class') where relkind in ('r','t','o','b','M') and relstorage not in ('x','f','v') and (relname like '%' || 'ao_@orientation@_vacuum_cleanup2'::regclass::oid || '%') and gp_segment_id = 0;
+1: select age(relfrozenxid) < 7, regexp_replace(replace(relname, 'ao_@amname@_vacuum_cleanup2'::regclass::oid::text, '<oid>'), 'ao.*seg', '<seg>') from gp_dist_random('pg_class') where relkind in ('r','t','o','b','M') and (relname like '%' || 'ao_@amname@_vacuum_cleanup2'::regclass::oid || '%') and gp_segment_id = 0;
  ?column? | regexp_replace     
 ----------+--------------------
  t        | pg_<seg>_<oid>     
@@ -55,16 +55,16 @@ END
 
 -- Check that drop phase is skipped, but still the cleanup phase is performed
 -- when there are concurrent serializable transactions
-1: create table ao_@orientation@_vacuum_cleanup3(a int, b int) with(appendonly=true, orientation=@orientation@);
+1: create table ao_@amname@_vacuum_cleanup3(a int, b int) using @amname@;
 CREATE
-1: insert into ao_@orientation@_vacuum_cleanup3 select i, i from generate_series(1, 100) i;
+1: insert into ao_@amname@_vacuum_cleanup3 select i, i from generate_series(1, 100) i;
 INSERT 100
-1: delete from ao_@orientation@_vacuum_cleanup3;
+1: delete from ao_@amname@_vacuum_cleanup3;
 DELETE 100
 
 -- Check the age of the table before vacuum to make sure that clean phase gets
 -- performed
-1: select age(relfrozenxid) between 3 and 5, regexp_replace(replace(relname, 'ao_@orientation@_vacuum_cleanup3'::regclass::oid::text, '<oid>'), 'ao.*seg', '<seg>') from gp_dist_random('pg_class') where relkind in ('r','t','o','b','M') and relstorage not in ('x','f','v') and (relname like '%' || 'ao_@orientation@_vacuum_cleanup3'::regclass::oid || '%') and gp_segment_id = 0;
+1: select age(relfrozenxid) between 3 and 5, regexp_replace(replace(relname, 'ao_@amname@_vacuum_cleanup3'::regclass::oid::text, '<oid>'), 'ao.*seg', '<seg>') from gp_dist_random('pg_class') where relkind in ('r','t','o','b','M') and (relname like '%' || 'ao_@amname@_vacuum_cleanup3'::regclass::oid || '%') and gp_segment_id = 0;
  ?column? | regexp_replace     
 ----------+--------------------
  t        | pg_<seg>_<oid>     
@@ -75,7 +75,7 @@ DELETE 100
 --------------------------
  Success:                 
 (1 row)
-1&: vacuum ao_@orientation@_vacuum_cleanup3;  <waiting ...>
+1&: vacuum ao_@amname@_vacuum_cleanup3;  <waiting ...>
 
 -- Wait till compaction phase is completed and only then start the serializable
 -- transaction to ensure that only drop phase runs after the serializable
@@ -89,7 +89,7 @@ DELETE 100
 (1 row)
 2: begin isolation level serializable;
 BEGIN
-2: select * from ao_@orientation@_vacuum_cleanup3;
+2: select * from ao_@amname@_vacuum_cleanup3;
  a | b 
 ---+---
 (0 rows)
@@ -101,7 +101,7 @@ BEGIN
 
 1<:  <... completed>
 VACUUM
-1: select age(relfrozenxid) < 5, regexp_replace(replace(relname, 'ao_@orientation@_vacuum_cleanup3'::regclass::oid::text, '<oid>'), 'ao.*seg', '<seg>') from gp_dist_random('pg_class') where relkind in ('r','t','o','b','M') and relstorage not in ('x','f','v') and (relname like '%' || 'ao_@orientation@_vacuum_cleanup3'::regclass::oid || '%') and gp_segment_id = 0;
+1: select age(relfrozenxid) < 5, regexp_replace(replace(relname, 'ao_@amname@_vacuum_cleanup3'::regclass::oid::text, '<oid>'), 'ao.*seg', '<seg>') from gp_dist_random('pg_class') where relkind in ('r','t','o','b','M') and (relname like '%' || 'ao_@amname@_vacuum_cleanup3'::regclass::oid || '%') and gp_segment_id = 0;
  ?column? | regexp_replace     
 ----------+--------------------
  t        | pg_<seg>_<oid>     
@@ -112,7 +112,7 @@ VACUUM
 -- (AWAITING_DROP)
 -- This result is related to data distribution.
 -- Current hash algorithm is jump-consistent-hash.
-1: SELECT * FROM gp_ao_or_aocs_seg('ao_@orientation@_vacuum_cleanup3');
+1: SELECT * FROM gp_ao_or_aocs_seg('ao_@amname@_vacuum_cleanup3');
  segment_id | segno | tupcount | modcount | formatversion | state 
 ------------+-------+----------+----------+---------------+-------
  2          | 1     | 25       | 2        | 3             | 2     

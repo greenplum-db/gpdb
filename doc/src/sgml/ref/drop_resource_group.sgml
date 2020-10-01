@@ -3,7 +3,7 @@ doc/src/sgml/ref/drop_resource_group.sgml
 PostgreSQL documentation
 -->
 
-<refentry id="SQL-DROPRESOURCEGROUP">
+<refentry id="sql-dropresourcegroup">
  <indexterm zone="sql-dropresourcegroup">
   <primary>DROP RESOURCE GROUP</primary>
  </indexterm>

@@ -17,30 +17,29 @@
 
 namespace gpdxl
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CDXLUtilsTest
-	//
-	//	@doc:
-	//		Static unit tests
-	//
-	//---------------------------------------------------------------------------
-	
-	class CDXLUtilsTest
-	{		
-		public:
+//---------------------------------------------------------------------------
+//	@class:
+//		CDXLUtilsTest
+//
+//	@doc:
+//		Static unit tests
+//
+//---------------------------------------------------------------------------
 
-			// unittests
-			static GPOS_RESULT EresUnittest();
-			static GPOS_RESULT EresUnittest_SerializeQuery();
-			static GPOS_RESULT EresUnittest_SerializePlan();
-			static GPOS_RESULT EresUnittest_Encoding();
+class CDXLUtilsTest
+{
+public:
+	// unittests
+	static GPOS_RESULT EresUnittest();
+	static GPOS_RESULT EresUnittest_SerializeQuery();
+	static GPOS_RESULT EresUnittest_SerializePlan();
+	static GPOS_RESULT EresUnittest_Encoding();
 
-	}; // class CDXLUtilsTest
-}
+};	// class CDXLUtilsTest
+}  // namespace gpdxl
 
-#endif // !GPOPT_CDXLUtilsTest_H
+#endif	// !GPOPT_CDXLUtilsTest_H
 
 // EOF

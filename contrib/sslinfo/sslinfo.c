@@ -225,7 +225,7 @@ PG_FUNCTION_INFO_V1(ssl_client_dn_field);
 Datum
 ssl_client_dn_field(PG_FUNCTION_ARGS)
 {
-	text	   *fieldname = PG_GETARG_TEXT_P(0);
+	text	   *fieldname = PG_GETARG_TEXT_PP(0);
 	Datum		result;
 
 	if (!(MyProcPort->peer))
@@ -260,7 +260,7 @@ PG_FUNCTION_INFO_V1(ssl_issuer_field);
 Datum
 ssl_issuer_field(PG_FUNCTION_ARGS)
 {
-	text	   *fieldname = PG_GETARG_TEXT_P(0);
+	text	   *fieldname = PG_GETARG_TEXT_PP(0);
 	Datum		result;
 
 	if (!(MyProcPort->peer))
@@ -484,8 +484,8 @@ ssl_extension_info(PG_FUNCTION_ARGS)
 		if (nid == NID_undef)
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-			errmsg("unknown OpenSSL extension in certificate at position %d",
-				   call_cntr)));
+					 errmsg("unknown OpenSSL extension in certificate at position %d",
+							call_cntr)));
 		values[0] = CStringGetTextDatum(OBJ_nid2sn(nid));
 		nulls[0] = false;
 

@@ -19,115 +19,101 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	// prototypes
-	class CPhysical;
+// prototypes
+class CPhysical;
 
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CEnfdRewindability
-	//
-	//	@doc:
-	//		Enforceable rewindability property;
-	//
-	//---------------------------------------------------------------------------
-	class CEnfdRewindability : public CEnfdProp
+//---------------------------------------------------------------------------
+//	@class:
+//		CEnfdRewindability
+//
+//	@doc:
+//		Enforceable rewindability property;
+//
+//---------------------------------------------------------------------------
+class CEnfdRewindability : public CEnfdProp
+{
+public:
+	// type of rewindability matching function
+	enum ERewindabilityMatching
 	{
+		ErmSatisfy = 0,
 
-		public:
+		ErmSentinel
+	};
 
-			// type of rewindability matching function
-			enum ERewindabilityMatching
-			{
-				ErmSatisfy = 0,
+private:
+	// required rewindability
+	CRewindabilitySpec *m_prs;
 
-				ErmSentinel
-			};
+	// rewindability matching type
+	ERewindabilityMatching m_erm;
 
-		private:
+	// private copy ctor
+	CEnfdRewindability(const CEnfdRewindability &);
 
-			// required rewindability
-			CRewindabilitySpec *m_prs;
+	// names of rewindability matching types
+	static const CHAR *m_szRewindabilityMatching[ErmSentinel];
 
-			// rewindability matching type
-			ERewindabilityMatching m_erm;
+public:
+	// ctor
+	CEnfdRewindability(CRewindabilitySpec *prs, ERewindabilityMatching erm);
 
-			// private copy ctor
-			CEnfdRewindability(const CEnfdRewindability &);
+	// dtor
+	virtual ~CEnfdRewindability();
 
-			// names of rewindability matching types
-			static
-			const CHAR *m_szRewindabilityMatching[ErmSentinel];
+	// hash function
+	virtual ULONG HashValue() const;
 
-		public:
+	// check if the given rewindability specification is compatible with the
+	// rewindability specification of this object for the specified matching type
+	BOOL FCompatible(CRewindabilitySpec *pos) const;
 
-			// ctor
-			CEnfdRewindability(CRewindabilitySpec *prs, ERewindabilityMatching erm);
+	// required rewindability accessor
+	CRewindabilitySpec *
+	PrsRequired() const
+	{
+		return m_prs;
+	}
 
-			// dtor
-			virtual
-			~CEnfdRewindability();
+	// get rewindability enforcing type for the given operator
+	EPropEnforcingType Epet(CExpressionHandle &exprhdl, CPhysical *popPhysical,
+							BOOL fRewindabilityReqd) const;
 
-			// hash function
-			virtual
-			ULONG HashValue() const;
+	// property spec accessor
+	virtual CPropSpec *
+	Pps() const
+	{
+		return m_prs;
+	}
 
-			// check if the given rewindability specification is compatible with the
-			// rewindability specification of this object for the specified matching type
-			BOOL FCompatible(CRewindabilitySpec *pos) const;
+	// matching type accessor
+	ERewindabilityMatching
+	Erm() const
+	{
+		return m_erm;
+	}
 
-			// required rewindability accessor
-			CRewindabilitySpec *PrsRequired() const
-			{
-				return m_prs;
-			}
+	// matching function
+	BOOL
+	Matches(CEnfdRewindability *per)
+	{
+		GPOS_ASSERT(NULL != per);
 
-			// get rewindability enforcing type for the given operator
-			EPropEnforcingType Epet
-				(
-				CExpressionHandle &exprhdl,
-				CPhysical *popPhysical,
-				BOOL fRewindabilityReqd
-				)
-				const;
-
-			// property spec accessor
-			virtual
-			CPropSpec *Pps() const
-			{
-				return m_prs;
-			}
-
-			// matching type accessor
-			ERewindabilityMatching Erm() const
-			{
-				return m_erm;
-			}
-
-			// matching function
-			BOOL Matches
-				(
-				CEnfdRewindability *per
-				)
-			{
-				GPOS_ASSERT(NULL != per);
-
-				return m_erm == per->Erm() &&
-						m_prs->Matches(per->PrsRequired());
-			}
+		return m_erm == per->Erm() && m_prs->Matches(per->PrsRequired());
+	}
 
 
-			// print function
-			virtual
-			IOstream &OsPrint(IOstream &os) const;
+	// print function
+	virtual IOstream &OsPrint(IOstream &os) const;
 
-	}; // class CEnfdRewindability
+};	// class CEnfdRewindability
 
-}
+}  // namespace gpopt
 
 
-#endif // !GPOPT_CEnfdRewindability_H
+#endif	// !GPOPT_CEnfdRewindability_H
 
 // EOF

@@ -18,113 +18,110 @@
 
 namespace gpos
 {
+//---------------------------------------------------------------------------
+//	@class:
+//		CSyncHashtableAccessByKey<T, K, S>
+//
+//	@doc:
+//		Accessor class to encapsulate locking of a hashtable bucket based on
+//		a passed key; has to know all template parameters of the hashtable
+//		class in order to link to the target hashtable; see file doc for more
+//		details on the rationale behind this class
+//
+//---------------------------------------------------------------------------
+template <class T, class K>
+class CSyncHashtableAccessByKey : public CSyncHashtableAccessorBase<T, K>
+{
+private:
+	// shorthand for accessor's base class
+	typedef class CSyncHashtableAccessorBase<T, K> Base;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CSyncHashtableAccessByKey<T, K, S>
-	//
-	//	@doc:
-	//		Accessor class to encapsulate locking of a hashtable bucket based on
-	//		a passed key; has to know all template parameters of the hashtable
-	//		class in order to link to the target hashtable; see file doc for more
-	//		details on the rationale behind this class
-	//
-	//---------------------------------------------------------------------------
-	template <class T, class K>
-	class CSyncHashtableAccessByKey : public CSyncHashtableAccessorBase<T, K>
+	// target key
+	const K &m_key;
+
+	// no copy ctor
+	CSyncHashtableAccessByKey<T, K>(const CSyncHashtableAccessByKey<T, K> &);
+
+	// finds the first element matching target key starting from
+	// the given element
+	T *
+	NextMatch(T *value) const
 	{
+		T *curr = value;
 
-		private:
+		while (NULL != curr && !Base::GetHashTable().m_eqfn(
+								   Base::GetHashTable().Key(curr), m_key))
+		{
+			curr = Base::Next(curr);
+		}
 
-			// shorthand for accessor's base class
-			typedef class CSyncHashtableAccessorBase<T, K> Base;
-
-			// target key
-			const K &m_key;
-
-			// no copy ctor
-			CSyncHashtableAccessByKey<T, K>
-				(const CSyncHashtableAccessByKey<T, K>&);
-		
-			// finds the first element matching target key starting from
-			// the given element
-			T *NextMatch(T *value) const
-            {
-                T *curr = value;
-
-                while (NULL != curr &&
-                       !Base::GetHashTable().m_eqfn(Base::GetHashTable().Key(curr), m_key))
-                {
-                    curr = Base::Next(curr);
-                }
-
-                return curr;
-            }
+		return curr;
+	}
 
 #ifdef GPOS_DEBUG
-			// returns true if current bucket matches key
-			BOOL CurrentBucketMatchesKey(const K &key) const
-            {
-                ULONG bucket_idx = Base::GetHashTable().GetBucketIndex(key);
+	// returns true if current bucket matches key
+	BOOL
+	CurrentBucketMatchesKey(const K &key) const
+	{
+		ULONG bucket_idx = Base::GetHashTable().GetBucketIndex(key);
 
-                return &(Base::GetHashTable().GetBucket(bucket_idx)) == &(Base::GetBucket());
-            }
-#endif // GPOS_DEBUG
+		return &(Base::GetHashTable().GetBucket(bucket_idx)) ==
+			   &(Base::GetBucket());
+	}
+#endif	// GPOS_DEBUG
 
-		public:
-	
-			// ctor
-			CSyncHashtableAccessByKey<T, K>
-				(CSyncHashtable<T, K> &ht, const K &key)
-            :
-            Base(ht, ht.GetBucketIndex(key)),
-            m_key(key)
-            {
-            }
-				
-			// dtor
-			virtual 
-			~CSyncHashtableAccessByKey()
-			{}
+public:
+	// ctor
+	CSyncHashtableAccessByKey<T, K>(CSyncHashtable<T, K> &ht, const K &key)
+		: Base(ht, ht.GetBucketIndex(key)), m_key(key)
+	{
+	}
 
-			// finds the first bucket's element with a matching key
-			T *Find() const
-            {
-                return NextMatch(Base::First());
-            }
+	// dtor
+	virtual ~CSyncHashtableAccessByKey()
+	{
+	}
 
-			// finds the next element with a matching key
-			T *Next(T *value) const
-            {
-                GPOS_ASSERT(NULL != value);
+	// finds the first bucket's element with a matching key
+	T *
+	Find() const
+	{
+		return NextMatch(Base::First());
+	}
 
-                return NextMatch(Base::Next(value));
-            }
+	// finds the next element with a matching key
+	T *
+	Next(T *value) const
+	{
+		GPOS_ASSERT(NULL != value);
 
-			// insert at head of target bucket's hash chain
-			void Insert(T *value)
-            {
-                GPOS_ASSERT(NULL != value);
+		return NextMatch(Base::Next(value));
+	}
 
-    #ifdef GPOS_DEBUG
-                K &key = Base::GetHashTable().Key(value);
-    #endif // GPOS_DEBUG
+	// insert at head of target bucket's hash chain
+	void
+	Insert(T *value)
+	{
+		GPOS_ASSERT(NULL != value);
 
-                // make sure this is a valid key
-                GPOS_ASSERT(Base::GetHashTable().IsValid(key));
+#ifdef GPOS_DEBUG
+		K &key = Base::GetHashTable().Key(value);
+#endif	// GPOS_DEBUG
 
-                // make sure this is the right bucket
-                GPOS_ASSERT(CurrentBucketMatchesKey(key));
+		// make sure this is a valid key
+		GPOS_ASSERT(Base::GetHashTable().IsValid(key));
 
-                // inserting at bucket's head is required by hashtable iteration
-                Base::Prepend(value);
-            }
-		
-	}; // class CSyncHashtableAccessByKey
+		// make sure this is the right bucket
+		GPOS_ASSERT(CurrentBucketMatchesKey(key));
 
-}
+		// inserting at bucket's head is required by hashtable iteration
+		Base::Prepend(value);
+	}
 
-#endif // !GPOS_CSyncHashtableAccessByKey_H
+};	// class CSyncHashtableAccessByKey
+
+}  // namespace gpos
+
+#endif	// !GPOS_CSyncHashtableAccessByKey_H
 
 // EOF
-

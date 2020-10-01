@@ -16,6 +16,7 @@
 #ifndef _DEBUGUTILS_H_
 #define _DEBUGUTILS_H_
 
+#include "access/memtup.h"
 #include "executor/tuptable.h"
 
 extern void dotnode(void *, const char*);

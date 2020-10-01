@@ -55,37 +55,22 @@ test__IsTransactionExitStmtList__MultipleElementList(void **state)
 
 /*  Transaction with Exit Statement, return TRUE. */
 static void
-test__IsTransactionExitStmt__IsTransactionStmt(void **state)
+test__IsTransactionExitStmt(void **state)
 {
+	PlannedStmt *pstmt = makeNode(PlannedStmt);
 	TransactionStmt *stmt = makeNode(TransactionStmt);
-	stmt->kind = TRANS_STMT_COMMIT;
 
-	List *list = list_make1(stmt);
+	stmt->kind = TRANS_STMT_COMMIT;
+	pstmt->commandType = CMD_UTILITY;
+	pstmt->utilityStmt = (Node *)stmt;
+
+	List *list = list_make1(pstmt);
 
 	assert_true(IsTransactionExitStmtList(list));
 
 	list_free(list);
 	pfree(stmt);
-}
-
-/* Query with Transaction with Exit Statement, return TRUE. */
-static void
-test__IsTransactionExitStmt__IsQuery(void **state)
-{
-	TransactionStmt *stmt = makeNode(TransactionStmt);
-	stmt->kind = TRANS_STMT_COMMIT;
-	Query *query = (Query *)palloc(sizeof(Query));
-	query->type = T_Query;
-	query->commandType = CMD_UTILITY;
-	query->utilityStmt = (Node*) stmt;
-
-	List *list = list_make1(query);
-
-	assert_true(IsTransactionExitStmtList(list));
-
-	list_free(list);
-	pfree(query);
-	pfree(stmt);
+	pfree(pstmt);
 }
 
 /*
@@ -191,8 +176,7 @@ main(int argc, char* argv[])
 
 	const UnitTest tests[] = {
 		unit_test(test__IsTransactionExitStmtList__MultipleElementList),
-		unit_test(test__IsTransactionExitStmt__IsTransactionStmt),
-		unit_test(test__IsTransactionExitStmt__IsQuery),
+		unit_test(test__IsTransactionExitStmt),
 		unit_test(test__ProcessInterrupts__ClientConnectionLost),
 		unit_test(test__ProcessInterrupts__DoingCommandRead)
 	};

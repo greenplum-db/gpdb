@@ -385,7 +385,7 @@ def connect(host, port_num, db_name):
 def select_version(conn):
     global glob_gpdb_major_version
     sqlStr = "SELECT version()"
-    curs = dbconn.execSQL(conn, sqlStr)
+    curs = dbconn.query(conn, sqlStr)
 
     rows = curs.fetchall()
     for row in rows:
@@ -395,7 +395,7 @@ def select_version(conn):
 
     log_output("Backend pid:")
     sqlStr = "SELECT pg_backend_pid()"
-    curs = dbconn.execSQL(conn, sqlStr)
+    curs = dbconn.query(conn, sqlStr)
 
     rows = curs.fetchall()
     for row in rows:
@@ -469,7 +469,7 @@ def explain_index_scan(conn, sqlStr):
     try:
         log_output("")
         log_output("Executing query: %s" % ("explain " + sqlStr))
-        exp_curs = dbconn.execSQL(conn, "explain " + sqlStr)
+        exp_curs = dbconn.query(conn, "explain " + sqlStr)
         rows = exp_curs.fetchall()
         table_scan_pattern = TABLE_SCAN_PATTERN
         index_scan_pattern = INDEX_SCAN_PATTERN
@@ -508,7 +508,7 @@ def explain_join_scan(conn, sqlStr):
     try:
         log_output("")
         log_output("Executing query: %s" % ("explain " + sqlStr))
-        exp_curs = dbconn.execSQL(conn, "explain " + sqlStr)
+        exp_curs = dbconn.query(conn, "explain " + sqlStr)
         rows = exp_curs.fetchall()
         hash_join_pattern = HASH_JOIN_PATTERN
         nl_join_pattern = NL_JOIN_PATTERN

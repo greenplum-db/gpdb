@@ -17,58 +17,49 @@
 
 namespace gpdxl
 {
-	using namespace gpos;
+using namespace gpos;
 
-	XERCES_CPP_NAMESPACE_USE
+XERCES_CPP_NAMESPACE_USE
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CParseHandlerScalarOp
-	//
-	//	@doc:
-	//		Parse handler for parsing a scalar operator
-	//
-	//---------------------------------------------------------------------------
-	class CParseHandlerScalarOp : public CParseHandlerOp 
-	{
-		private:
+//---------------------------------------------------------------------------
+//	@class:
+//		CParseHandlerScalarOp
+//
+//	@doc:
+//		Parse handler for parsing a scalar operator
+//
+//---------------------------------------------------------------------------
+class CParseHandlerScalarOp : public CParseHandlerOp
+{
+private:
+	// private copy ctor
+	CParseHandlerScalarOp(const CParseHandlerScalarOp &);
 
-			// private copy ctor
-			CParseHandlerScalarOp(const CParseHandlerScalarOp &);
-			
-		protected:
+protected:
+	// process notification of the beginning of an element.
+	virtual void StartElement(
+		const XMLCh *const element_uri,			// URI of element's namespace
+		const XMLCh *const element_local_name,	// local part of element's name
+		const XMLCh *const element_qname,		// element's qname
+		const Attributes &attr					// element's attributes
+	);
 
-			// process notification of the beginning of an element.
-			virtual void StartElement
-				(
-					const XMLCh* const element_uri, 		// URI of element's namespace
- 					const XMLCh* const element_local_name,	// local part of element's name
-					const XMLCh* const element_qname,		// element's qname
-					const Attributes& attr				// element's attributes
-				);
-				
-			// process notification of the end of an element.
-			virtual void EndElement
-				(
-					const XMLCh* const element_uri, 		// URI of element's namespace
-					const XMLCh* const element_local_name,	// local part of element's name
-					const XMLCh* const element_qname		// element's qname
-				);
-			
-		public:
-			CParseHandlerScalarOp
-				(
-				CMemoryPool *mp,
-				CParseHandlerManager *parse_handler_mgr,
-				CParseHandlerBase *parse_handler_root
-				);
-			
-			virtual
-			~CParseHandlerScalarOp();
-			
-	};
-}
+	// process notification of the end of an element.
+	virtual void EndElement(
+		const XMLCh *const element_uri,			// URI of element's namespace
+		const XMLCh *const element_local_name,	// local part of element's name
+		const XMLCh *const element_qname		// element's qname
+	);
 
-#endif // !GPDXL_CParseHandlerScalarOp_H
+public:
+	CParseHandlerScalarOp(CMemoryPool *mp,
+						  CParseHandlerManager *parse_handler_mgr,
+						  CParseHandlerBase *parse_handler_root);
+
+	virtual ~CParseHandlerScalarOp();
+};
+}  // namespace gpdxl
+
+#endif	// !GPDXL_CParseHandlerScalarOp_H
 
 // EOF

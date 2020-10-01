@@ -10,11 +10,15 @@
 
 #include "plpy_planobject.h"
 
+#include "plpy_cursorobject.h"
 #include "plpy_elog.h"
+#include "plpy_spi.h"
 #include "utils/memutils.h"
 
 
 static void PLy_plan_dealloc(PyObject *arg);
+static PyObject *PLy_plan_cursor(PyObject *self, PyObject *args);
+static PyObject *PLy_plan_execute(PyObject *self, PyObject *args);
 static PyObject *PLy_plan_status(PyObject *self, PyObject *args);
 
 static char PLy_plan_doc[] = {
@@ -22,43 +26,20 @@ static char PLy_plan_doc[] = {
 };
 
 static PyMethodDef PLy_plan_methods[] = {
+	{"cursor", PLy_plan_cursor, METH_VARARGS, NULL},
+	{"execute", PLy_plan_execute, METH_VARARGS, NULL},
 	{"status", PLy_plan_status, METH_VARARGS, NULL},
 	{NULL, NULL, 0, NULL}
 };
 
 static PyTypeObject PLy_PlanType = {
 	PyVarObject_HEAD_INIT(NULL, 0)
-	"PLyPlan",					/* tp_name */
-	sizeof(PLyPlanObject),		/* tp_size */
-	0,							/* tp_itemsize */
-
-	/*
-	 * methods
-	 */
-	PLy_plan_dealloc,			/* tp_dealloc */
-	0,							/* tp_print */
-	0,							/* tp_getattr */
-	0,							/* tp_setattr */
-	0,							/* tp_compare */
-	0,							/* tp_repr */
-	0,							/* tp_as_number */
-	0,							/* tp_as_sequence */
-	0,							/* tp_as_mapping */
-	0,							/* tp_hash */
-	0,							/* tp_call */
-	0,							/* tp_str */
-	0,							/* tp_getattro */
-	0,							/* tp_setattro */
-	0,							/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,	/* tp_flags */
-	PLy_plan_doc,				/* tp_doc */
-	0,							/* tp_traverse */
-	0,							/* tp_clear */
-	0,							/* tp_richcompare */
-	0,							/* tp_weaklistoffset */
-	0,							/* tp_iter */
-	0,							/* tp_iternext */
-	PLy_plan_methods,			/* tp_tpmethods */
+	.tp_name = "PLyPlan",
+	.tp_basicsize = sizeof(PLyPlanObject),
+	.tp_dealloc = PLy_plan_dealloc,
+	.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+	.tp_doc = PLy_plan_doc,
+	.tp_methods = PLy_plan_methods,
 };
 
 void
@@ -112,14 +93,38 @@ PLy_plan_dealloc(PyObject *arg)
 
 
 static PyObject *
+PLy_plan_cursor(PyObject *self, PyObject *args)
+{
+	PyObject   *planargs = NULL;
+
+	if (!PyArg_ParseTuple(args, "|O", &planargs))
+		return NULL;
+
+	return PLy_cursor_plan(self, planargs);
+}
+
+
+static PyObject *
+PLy_plan_execute(PyObject *self, PyObject *args)
+{
+	PyObject   *list = NULL;
+	long		limit = 0;
+
+	if (!PyArg_ParseTuple(args, "|Ol", &list, &limit))
+		return NULL;
+
+	return PLy_spi_execute_plan(self, list, limit);
+}
+
+
+static PyObject *
 PLy_plan_status(PyObject *self, PyObject *args)
 {
-	if (PyArg_ParseTuple(args, ""))
+	if (PyArg_ParseTuple(args, ":status"))
 	{
 		Py_INCREF(Py_True);
 		return Py_True;
 		/* return PyInt_FromLong(self->status); */
 	}
-	PLy_exception_set(PLy_exc_error, "plan.status takes no arguments");
 	return NULL;
 }

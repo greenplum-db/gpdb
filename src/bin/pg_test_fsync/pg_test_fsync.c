@@ -14,6 +14,7 @@
 
 #include "getopt_long.h"
 #include "access/xlogdefs.h"
+#include "common/logging.h"
 
 
 /*
@@ -25,8 +26,9 @@
 #define XLOG_BLCKSZ_K	(XLOG_BLCKSZ / 1024)
 
 #define LABEL_FORMAT		"        %-30s"
-#define NA_FORMAT			"%20s"
-#define OPS_FORMAT			"%13.3f ops/sec  %6.0f usecs/op"
+#define NA_FORMAT			"%21s\n"
+/* translator: maintain alignment with NA_FORMAT */
+#define OPS_FORMAT			gettext_noop("%13.3f ops/sec  %6.0f usecs/op\n")
 #define USECS_SEC			1000000
 
 /* These are macros to avoid timing the function call overhead. */
@@ -45,7 +47,7 @@ do { \
 	if (CreateThread(NULL, 0, process_alarm, NULL, 0, NULL) == \
 		INVALID_HANDLE_VALUE) \
 	{ \
-		fprintf(stderr, "Cannot create thread for alarm\n"); \
+		pg_log_error("could not create thread for alarm"); \
 		exit(1); \
 	} \
 	gettimeofday(&start_t, NULL); \
@@ -63,7 +65,7 @@ static const char *progname;
 
 static int	secs_per_test = 5;
 static int	needs_unlink = 0;
-static char full_buf[XLOG_SEG_SIZE],
+static char full_buf[DEFAULT_XLOG_SEG_SIZE],
 		   *buf,
 		   *filename = FSYNC_FILENAME;
 static struct timeval start_t,
@@ -91,12 +93,15 @@ static void signal_cleanup(int sig);
 static int	pg_fsync_writethrough(int fd);
 #endif
 static void print_elapse(struct timeval start_t, struct timeval stop_t, int ops);
-static void die(const char *str);
+
+#define die(msg) do { pg_log_error("%s: %m", _(msg)); exit(1); } while(0)
 
 
 int
 main(int argc, char *argv[])
 {
+	pg_logging_init(argv[0]);
+	set_pglocale_pgservice(argv[0], PG_TEXTDOMAIN("pg_test_fsync"));
 	progname = get_progname(argv[0]);
 
 	handle_args(argc, argv);
@@ -149,7 +154,7 @@ handle_args(int argc, char *argv[])
 	{
 		if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-?") == 0)
 		{
-			printf("Usage: %s [-f FILENAME] [-s SECS-PER-TEST]\n", progname);
+			printf(_("Usage: %s [-f FILENAME] [-s SECS-PER-TEST]\n"), progname);
 			exit(0);
 		}
 		if (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-V") == 0)
@@ -165,7 +170,7 @@ handle_args(int argc, char *argv[])
 		switch (option)
 		{
 			case 'f':
-				filename = strdup(optarg);
+				filename = pg_strdup(optarg);
 				break;
 
 			case 's':
@@ -173,7 +178,7 @@ handle_args(int argc, char *argv[])
 				break;
 
 			default:
-				fprintf(stderr, "Try \"%s --help\" for more information.\n",
+				fprintf(stderr, _("Try \"%s --help\" for more information.\n"),
 						progname);
 				exit(1);
 				break;
@@ -182,19 +187,21 @@ handle_args(int argc, char *argv[])
 
 	if (argc > optind)
 	{
-		fprintf(stderr,
-				"%s: too many command-line arguments (first is \"%s\")\n",
-				progname, argv[optind]);
-		fprintf(stderr, "Try \"%s --help\" for more information.\n",
+		pg_log_error("too many command-line arguments (first is \"%s\")",
+					 argv[optind]);
+		fprintf(stderr, _("Try \"%s --help\" for more information.\n"),
 				progname);
 		exit(1);
 	}
 
-	printf("%d seconds per test\n", secs_per_test);
+	printf(ngettext("%d second per test\n",
+					"%d seconds per test\n",
+					secs_per_test),
+		   secs_per_test);
 #if PG_O_DIRECT != 0
-	printf("O_DIRECT supported on this platform for open_datasync and open_sync.\n");
+	printf(_("O_DIRECT supported on this platform for open_datasync and open_sync.\n"));
 #else
-	printf("Direct I/O is not supported on this platform.\n");
+	printf(_("Direct I/O is not supported on this platform.\n"));
 #endif
 }
 
@@ -204,7 +211,7 @@ prepare_buf(void)
 	int			ops;
 
 	/* write random data into buffer */
-	for (ops = 0; ops < XLOG_SEG_SIZE; ops++)
+	for (ops = 0; ops < DEFAULT_XLOG_SEG_SIZE; ops++)
 		full_buf[ops] = random();
 
 	buf = (char *) TYPEALIGN(XLOG_BLCKSZ, full_buf);
@@ -221,7 +228,8 @@ test_open(void)
 	if ((tmpfile = open(filename, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR)) == -1)
 		die("could not open output file");
 	needs_unlink = 1;
-	if (write(tmpfile, full_buf, XLOG_SEG_SIZE) != XLOG_SEG_SIZE)
+	if (write(tmpfile, full_buf, DEFAULT_XLOG_SEG_SIZE) !=
+		DEFAULT_XLOG_SEG_SIZE)
 		die("write failed");
 
 	/* fsync now so that dirty buffers don't skew later tests */
@@ -240,10 +248,10 @@ test_sync(int writes_per_op)
 	bool		fs_warning = false;
 
 	if (writes_per_op == 1)
-		printf("\nCompare file sync methods using one %dkB write:\n", XLOG_BLCKSZ_K);
+		printf(_("\nCompare file sync methods using one %dkB write:\n"), XLOG_BLCKSZ_K);
 	else
-		printf("\nCompare file sync methods using two %dkB writes:\n", XLOG_BLCKSZ_K);
-	printf("(in wal_sync_method preference order, except fdatasync is Linux's default)\n");
+		printf(_("\nCompare file sync methods using two %dkB writes:\n"), XLOG_BLCKSZ_K);
+	printf(_("(in wal_sync_method preference order, except fdatasync is Linux's default)\n"));
 
 	/*
 	 * Test open_datasync if available
@@ -254,7 +262,7 @@ test_sync(int writes_per_op)
 #ifdef OPEN_DATASYNC_FLAG
 	if ((tmpfile = open(filename, O_RDWR | O_DSYNC | PG_O_DIRECT, 0)) == -1)
 	{
-		printf(NA_FORMAT, "n/a*\n");
+		printf(NA_FORMAT, _("n/a*"));
 		fs_warning = true;
 	}
 	else
@@ -272,7 +280,7 @@ test_sync(int writes_per_op)
 		close(tmpfile);
 	}
 #else
-	printf(NA_FORMAT, "n/a\n");
+	printf(NA_FORMAT, _("n/a"));
 #endif
 
 /*
@@ -297,7 +305,7 @@ test_sync(int writes_per_op)
 	STOP_TIMER;
 	close(tmpfile);
 #else
-	printf(NA_FORMAT, "n/a\n");
+	printf(NA_FORMAT, _("n/a"));
 #endif
 
 /*
@@ -345,7 +353,7 @@ test_sync(int writes_per_op)
 	STOP_TIMER;
 	close(tmpfile);
 #else
-	printf(NA_FORMAT, "n/a\n");
+	printf(NA_FORMAT, _("n/a"));
 #endif
 
 /*
@@ -357,7 +365,7 @@ test_sync(int writes_per_op)
 #ifdef OPEN_SYNC_FLAG
 	if ((tmpfile = open(filename, O_RDWR | OPEN_SYNC_FLAG | PG_O_DIRECT, 0)) == -1)
 	{
-		printf(NA_FORMAT, "n/a*\n");
+		printf(NA_FORMAT, _("n/a*"));
 		fs_warning = true;
 	}
 	else
@@ -382,28 +390,28 @@ test_sync(int writes_per_op)
 		close(tmpfile);
 	}
 #else
-	printf(NA_FORMAT, "n/a\n");
+	printf(NA_FORMAT, _("n/a"));
 #endif
 
 	if (fs_warning)
 	{
-		printf("* This file system and its mount options do not support direct\n");
-		printf("I/O, e.g. ext4 in journaled mode.\n");
+		printf(_("* This file system and its mount options do not support direct\n"
+				 "  I/O, e.g. ext4 in journaled mode.\n"));
 	}
 }
 
 static void
 test_open_syncs(void)
 {
-	printf("\nCompare open_sync with different write sizes:\n");
-	printf("(This is designed to compare the cost of writing 16kB in different write\n"
-		   "open_sync sizes.)\n");
+	printf(_("\nCompare open_sync with different write sizes:\n"));
+	printf(_("(This is designed to compare the cost of writing 16kB in different write\n"
+			 "open_sync sizes.)\n"));
 
-	test_open_sync(" 1 * 16kB open_sync write", 16);
-	test_open_sync(" 2 *  8kB open_sync writes", 8);
-	test_open_sync(" 4 *  4kB open_sync writes", 4);
-	test_open_sync(" 8 *  2kB open_sync writes", 2);
-	test_open_sync("16 *  1kB open_sync writes", 1);
+	test_open_sync(_(" 1 * 16kB open_sync write"), 16);
+	test_open_sync(_(" 2 *  8kB open_sync writes"), 8);
+	test_open_sync(_(" 4 *  4kB open_sync writes"), 4);
+	test_open_sync(_(" 8 *  2kB open_sync writes"), 2);
+	test_open_sync(_("16 *  1kB open_sync writes"), 1);
 }
 
 /*
@@ -423,7 +431,7 @@ test_open_sync(const char *msg, int writes_size)
 
 #ifdef OPEN_SYNC_FLAG
 	if ((tmpfile = open(filename, O_RDWR | OPEN_SYNC_FLAG | PG_O_DIRECT, 0)) == -1)
-		printf(NA_FORMAT, "n/a*\n");
+		printf(NA_FORMAT, _("n/a*"));
 	else
 	{
 		START_TIMER;
@@ -440,7 +448,7 @@ test_open_sync(const char *msg, int writes_size)
 		close(tmpfile);
 	}
 #else
-	printf(NA_FORMAT, "n/a\n");
+	printf(NA_FORMAT, _("n/a"));
 #endif
 }
 
@@ -456,9 +464,9 @@ test_file_descriptor_sync(void)
 	 * against the same file. Possibly this should be done with writethrough
 	 * on platforms which support it.
 	 */
-	printf("\nTest if fsync on non-write file descriptor is honored:\n");
-	printf("(If the times are similar, fsync() can sync data written on a different\n"
-		   "descriptor.)\n");
+	printf(_("\nTest if fsync on non-write file descriptor is honored:\n"));
+	printf(_("(If the times are similar, fsync() can sync data written on a different\n"
+			 "descriptor.)\n"));
 
 	/*
 	 * first write, fsync and close, which is the normal behavior without
@@ -522,7 +530,7 @@ test_non_sync(void)
 	/*
 	 * Test a simple write without fsync
 	 */
-	printf("\nNon-sync'ed %dkB writes:\n", XLOG_BLCKSZ_K);
+	printf(_("\nNon-sync'ed %dkB writes:\n"), XLOG_BLCKSZ_K);
 	printf(LABEL_FORMAT, "write");
 	fflush(stdout);
 
@@ -576,7 +584,7 @@ print_elapse(struct timeval start_t, struct timeval stop_t, int ops)
 	double		per_second = ops / total_time;
 	double		avg_op_time_us = (total_time / ops) * USECS_SEC;
 
-	printf(OPS_FORMAT "\n", per_second, avg_op_time_us);
+	printf(_(OPS_FORMAT), per_second, avg_op_time_us);
 }
 
 #ifndef WIN32
@@ -595,10 +603,3 @@ process_alarm(LPVOID param)
 	ExitThread(0);
 }
 #endif
-
-static void
-die(const char *str)
-{
-	fprintf(stderr, "%s: %s\n", str, strerror(errno));
-	exit(1);
-}

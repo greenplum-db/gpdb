@@ -17,45 +17,37 @@
 
 namespace gpos
 {
-
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CAutoRefTest
-	//
-	//	@doc:
-	//		Static unit tests for auto pointer
-	//
-	//---------------------------------------------------------------------------
-	class CAutoRefTest
+//---------------------------------------------------------------------------
+//	@class:
+//		CAutoRefTest
+//
+//	@doc:
+//		Static unit tests for auto pointer
+//
+//---------------------------------------------------------------------------
+class CAutoRefTest
+{
+public:
+	class CElem : public CRefCount
 	{
-		public:
+	public:
+		CElem(ULONG ul) : m_ul(ul)
+		{
+		}
 
-			class CElem : public CRefCount
-			{
-				public:
+		ULONG m_ul;
 
-					CElem
-						(
-						ULONG ul
-						)
-						:
-						m_ul(ul)
-					{}
-
-					ULONG m_ul;
-
-			}; // class CElem
+	};	// class CElem
 
 
-			// unittests
-			static GPOS_RESULT EresUnittest();
-			static GPOS_RESULT EresUnittest_Basics();
+	// unittests
+	static GPOS_RESULT EresUnittest();
+	static GPOS_RESULT EresUnittest_Basics();
 
-	}; // class CAutoRefTest
+};	// class CAutoRefTest
 
-}
+}  // namespace gpos
 
-#endif // !GPOS_CAutoRefTest_H
+#endif	// !GPOS_CAutoRefTest_H
 
 // EOF
-

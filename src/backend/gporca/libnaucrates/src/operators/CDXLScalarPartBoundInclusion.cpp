@@ -28,16 +28,11 @@ using namespace gpdxl;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CDXLScalarPartBoundInclusion::CDXLScalarPartBoundInclusion
-	(
-	CMemoryPool *mp,
-	ULONG partitioning_level,
-	BOOL is_lower_bound
-	)
-	:
-	CDXLScalar(mp),
-	m_partitioning_level(partitioning_level),
-	m_is_lower_bound(is_lower_bound)
+CDXLScalarPartBoundInclusion::CDXLScalarPartBoundInclusion(
+	CMemoryPool *mp, ULONG partitioning_level, BOOL is_lower_bound)
+	: CDXLScalar(mp),
+	  m_partitioning_level(partitioning_level),
+	  m_is_lower_bound(is_lower_bound)
 {
 }
 
@@ -78,19 +73,21 @@ CDXLScalarPartBoundInclusion::GetOpNameStr() const
 //
 //---------------------------------------------------------------------------
 void
-CDXLScalarPartBoundInclusion::SerializeToDXL
-	(
-	CXMLSerializer *xml_serializer,
-	const CDXLNode * // dxlnode
-	)
-	const
+CDXLScalarPartBoundInclusion::SerializeToDXL(CXMLSerializer *xml_serializer,
+											 const CDXLNode *  // dxlnode
+) const
 {
 	const CWStringConst *element_name = GetOpNameStr();
 
-	xml_serializer->OpenElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
-	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenPartLevel), m_partitioning_level);
-	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenScalarPartBoundLower), m_is_lower_bound);
-	xml_serializer->CloseElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	xml_serializer->OpenElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenPartLevel),
+								 m_partitioning_level);
+	xml_serializer->AddAttribute(
+		CDXLTokens::GetDXLTokenStr(EdxltokenScalarPartBoundLower),
+		m_is_lower_bound);
+	xml_serializer->CloseElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 }
 
 #ifdef GPOS_DEBUG
@@ -103,15 +100,12 @@ CDXLScalarPartBoundInclusion::SerializeToDXL
 //
 //---------------------------------------------------------------------------
 void
-CDXLScalarPartBoundInclusion::AssertValid
-	(
-	const CDXLNode *dxlnode,
-	BOOL // validate_children
-	)
-	const
+CDXLScalarPartBoundInclusion::AssertValid(const CDXLNode *dxlnode,
+										  BOOL	// validate_children
+) const
 {
 	GPOS_ASSERT(0 == dxlnode->Arity());
 }
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 // EOF

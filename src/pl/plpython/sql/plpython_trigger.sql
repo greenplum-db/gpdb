@@ -67,6 +67,11 @@ SELECT * FROM users;
 CREATE TABLE trigger_test
 	(i int, v text );
 
+CREATE TABLE trigger_test_generated (
+	i int,
+        j int GENERATED ALWAYS AS (i * 2) STORED
+);
+
 CREATE FUNCTION trigger_data() RETURNS trigger LANGUAGE plpythonu AS $$
 
 if 'relid' in TD:
@@ -108,6 +113,24 @@ truncate table trigger_test;
 DROP TRIGGER show_trigger_data_trig_stmt on trigger_test;
 DROP TRIGGER show_trigger_data_trig_before on trigger_test;
 DROP TRIGGER show_trigger_data_trig_after on trigger_test;
+
+CREATE TRIGGER show_trigger_data_trig_before
+BEFORE INSERT OR UPDATE OR DELETE ON trigger_test_generated
+FOR EACH ROW EXECUTE PROCEDURE trigger_data();
+
+CREATE TRIGGER show_trigger_data_trig_after
+AFTER INSERT OR UPDATE OR DELETE ON trigger_test_generated
+FOR EACH ROW EXECUTE PROCEDURE trigger_data();
+
+insert into trigger_test_generated (i) values (1);
+-- GPDB: Fails, updating the distribution key with triggers is not allowed.
+update trigger_test_generated set i = 11 where i = 1;
+-- try this instead:
+update trigger_test_generated set j = default where i = 1;
+delete from trigger_test_generated;
+
+DROP TRIGGER show_trigger_data_trig_before ON trigger_test_generated;
+DROP TRIGGER show_trigger_data_trig_after ON trigger_test_generated;
 
 insert into trigger_test values(1,'insert');
 CREATE VIEW trigger_test_view AS SELECT * FROM trigger_test;
@@ -410,3 +433,46 @@ SELECT * FROM a;
 DROP TABLE a;
 INSERT INTO b DEFAULT VALUES;
 SELECT * FROM b;
+
+-- check that SQL run in trigger code can see transition tables
+
+CREATE TABLE transition_table_test (id int, name text);
+INSERT INTO transition_table_test VALUES (1, 'a');
+
+CREATE FUNCTION transition_table_test_f() RETURNS trigger LANGUAGE plpythonu AS
+$$
+    rv = plpy.execute("SELECT * FROM old_table")
+    assert(rv.nrows() == 1)
+    plpy.info("old: " + str(rv[0]["id"]) + " -> " + rv[0]["name"])
+    rv = plpy.execute("SELECT * FROM new_table")
+    assert(rv.nrows() == 1)
+    plpy.info("new: " + str(rv[0]["id"]) + " -> " + rv[0]["name"])
+    return None
+$$;
+
+-- GPDB: this test doesn't work properly on GPDB, because statement triggers
+-- are not fired.
+CREATE TRIGGER a_t AFTER UPDATE ON transition_table_test
+  REFERENCING OLD TABLE AS old_table NEW TABLE AS new_table
+  FOR EACH STATEMENT EXECUTE PROCEDURE transition_table_test_f();
+UPDATE transition_table_test SET name = 'b';
+
+DROP TABLE transition_table_test;
+DROP FUNCTION transition_table_test_f();
+
+
+-- dealing with generated columns
+
+CREATE FUNCTION generated_test_func1() RETURNS trigger
+LANGUAGE plpythonu
+AS $$
+TD['new']['j'] = 5  # not allowed
+return 'MODIFY'
+$$;
+
+CREATE TRIGGER generated_test_trigger1 BEFORE INSERT ON trigger_test_generated
+FOR EACH ROW EXECUTE PROCEDURE generated_test_func1();
+
+TRUNCATE trigger_test_generated;
+INSERT INTO trigger_test_generated (i) VALUES (1);
+SELECT * FROM trigger_test_generated;

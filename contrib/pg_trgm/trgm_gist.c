@@ -7,6 +7,7 @@
 
 #include "access/stratnum.h"
 #include "fmgr.h"
+#include "port/pg_bitutils.h"
 
 
 typedef struct
@@ -38,26 +39,6 @@ PG_FUNCTION_INFO_V1(gtrgm_union);
 PG_FUNCTION_INFO_V1(gtrgm_same);
 PG_FUNCTION_INFO_V1(gtrgm_penalty);
 PG_FUNCTION_INFO_V1(gtrgm_picksplit);
-
-/* Number of one-bits in an unsigned byte */
-static const uint8 number_of_ones[256] = {
-	0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
-	1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
-	1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
-	2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
-	1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
-	2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
-	2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
-	3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
-	1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
-	2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
-	2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
-	3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
-	2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
-	3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
-	3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
-	4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6, 7, 7, 8
-};
 
 
 Datum
@@ -100,13 +81,13 @@ gtrgm_compress(PG_FUNCTION_ARGS)
 	if (entry->leafkey)
 	{							/* trgm */
 		TRGM	   *res;
-		text	   *val = DatumGetTextP(entry->key);
+		text	   *val = DatumGetTextPP(entry->key);
 
-		res = generate_trgm(VARDATA(val), VARSIZE(val) - VARHDRSZ);
+		res = generate_trgm(VARDATA_ANY(val), VARSIZE_ANY_EXHDR(val));
 		retval = (GISTENTRY *) palloc(sizeof(GISTENTRY));
 		gistentryinit(*retval, PointerGetDatum(res),
 					  entry->rel, entry->page,
-					  entry->offset, FALSE);
+					  entry->offset, false);
 	}
 	else if (ISSIGNKEY(DatumGetPointer(entry->key)) &&
 			 !ISALLTRUE(DatumGetPointer(entry->key)))
@@ -130,7 +111,7 @@ gtrgm_compress(PG_FUNCTION_ARGS)
 		retval = (GISTENTRY *) palloc(sizeof(GISTENTRY));
 		gistentryinit(*retval, PointerGetDatum(res),
 					  entry->rel, entry->page,
-					  entry->offset, FALSE);
+					  entry->offset, false);
 	}
 	PG_RETURN_POINTER(retval);
 }
@@ -142,7 +123,7 @@ gtrgm_decompress(PG_FUNCTION_ARGS)
 	GISTENTRY  *retval;
 	text	   *key;
 
-	key = DatumGetTextP(entry->key);
+	key = DatumGetTextPP(entry->key);
 
 	if (key != (text *) DatumGetPointer(entry->key))
 	{
@@ -200,11 +181,12 @@ gtrgm_consistent(PG_FUNCTION_ARGS)
 	 * depends on strategy.
 	 *
 	 * The cached structure is a single palloc chunk containing the
-	 * gtrgm_consistent_cache header, then the input query (starting at a
-	 * MAXALIGN boundary), then the TRGM value (also starting at a MAXALIGN
-	 * boundary).  However we don't try to include the regex graph (if any) in
-	 * that struct.  (XXX currently, this approach can leak regex graphs
-	 * across index rescans.  Not clear if that's worth fixing.)
+	 * gtrgm_consistent_cache header, then the input query (4-byte length
+	 * word, uncompressed, starting at a MAXALIGN boundary), then the TRGM
+	 * value (also starting at a MAXALIGN boundary).  However we don't try to
+	 * include the regex graph (if any) in that struct.  (XXX currently, this
+	 * approach can leak regex graphs across index rescans.  Not clear if
+	 * that's worth fixing.)
 	 */
 	cache = (gtrgm_consistent_cache *) fcinfo->flinfo->fn_extra;
 	if (cache == NULL ||
@@ -220,6 +202,7 @@ gtrgm_consistent(PG_FUNCTION_ARGS)
 		{
 			case SimilarityStrategyNumber:
 			case WordSimilarityStrategyNumber:
+			case StrictWordSimilarityStrategyNumber:
 				qtrg = generate_trgm(VARDATA(query),
 									 querysize - VARHDRSZ);
 				break;
@@ -289,10 +272,15 @@ gtrgm_consistent(PG_FUNCTION_ARGS)
 	{
 		case SimilarityStrategyNumber:
 		case WordSimilarityStrategyNumber:
-			/* Similarity search is exact. Word similarity search is inexact */
-			*recheck = (strategy == WordSimilarityStrategyNumber);
-			nlimit = (strategy == SimilarityStrategyNumber) ?
-				similarity_threshold : word_similarity_threshold;
+		case StrictWordSimilarityStrategyNumber:
+
+			/*
+			 * Similarity search is exact. (Strict) word similarity search is
+			 * inexact
+			 */
+			*recheck = (strategy != SimilarityStrategyNumber);
+
+			nlimit = index_strategy_get_limit(strategy);
 
 			if (GIST_LEAF(entry))
 			{					/* all leafs contains orig trgm */
@@ -467,7 +455,9 @@ gtrgm_distance(PG_FUNCTION_ARGS)
 	{
 		case DistanceStrategyNumber:
 		case WordDistanceStrategyNumber:
-			*recheck = strategy == WordDistanceStrategyNumber;
+		case StrictWordDistanceStrategyNumber:
+			/* Only plain trigram distance is exact */
+			*recheck = (strategy != DistanceStrategyNumber);
 			if (GIST_LEAF(entry))
 			{					/* all leafs contains orig trgm */
 
@@ -625,12 +615,7 @@ gtrgm_same(PG_FUNCTION_ARGS)
 static int32
 sizebitvec(BITVECP sign)
 {
-	int32		size = 0,
-				i;
-
-	LOOPBYTE
-		size += number_of_ones[(unsigned char) sign[i]];
-	return size;
+	return pg_popcount(sign, SIGLEN);
 }
 
 static int
@@ -643,7 +628,8 @@ hemdistsign(BITVECP a, BITVECP b)
 	LOOPBYTE
 	{
 		diff = (unsigned char) (a[i] ^ b[i]);
-		dist += number_of_ones[diff];
+		/* Using the popcount functions here isn't likely to win */
+		dist += pg_number_of_ones[diff];
 	}
 	return dist;
 }

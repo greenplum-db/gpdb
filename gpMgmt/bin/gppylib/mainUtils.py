@@ -16,7 +16,7 @@ extend common functions of our gp utilities.  Please keep this in mind
 and try to avoid placing logic for a specific utility here.
 """
 
-import os, sys, signal, errno, yaml
+import errno, os, sys, shutil
 
 gProgramName = os.path.split(sys.argv[0])[-1]
 if sys.version_info < (2, 5, 0):
@@ -30,7 +30,6 @@ from gppylib.commands.base import ExecutionError
 from gppylib.system import configurationInterface, configurationImplGpdb, fileSystemInterface, \
     fileSystemImplOs, osInterface, osImplNative, faultProberInterface, faultProberImplGpdb
 from optparse import OptionGroup, OptionParser, SUPPRESS_HELP
-from lockfile.pidlockfile import PIDLockFile, LockTimeout
 
 
 def getProgramName():
@@ -40,6 +39,86 @@ def getProgramName():
     """
     global gProgramName
     return gProgramName
+
+class PIDLockHeld(Exception):
+    def __init__(self, message, path):
+        self.message = message
+        self.path = path
+
+class PIDLockFile:
+    """
+    Create a lock, utilizing the atomic nature of mkdir on Unix
+    Inside of this directory, a file named PID contains exactly the PID, with
+    no newline or space, of the process which created the lock.
+
+    The process which created the lock can release the lock. The lock will
+    be released by the process which created it on object deletion
+    """
+
+    def __init__(self, path):
+        self.path = path
+        self.PIDfile = os.path.join(path, "PID")
+        self.PID = os.getpid()
+
+    def acquire(self):
+        try:
+            os.makedirs(self.path)
+            with open(self.PIDfile, mode='w') as p:
+                p.write(str(self.PID))
+        except EnvironmentError as e:
+            if e.errno == errno.EEXIST:
+                raise PIDLockHeld("PIDLock already held at %s" % self.path, self.path)
+            else:
+                raise
+        except:
+            raise
+
+    def release(self):
+        """
+        If the PIDfile or directory have been removed, the lock no longer
+        exists, so pass
+        """
+        try:
+            # only delete the lock if we created the lock
+            if self.PID == self.read_pid():
+                # remove the dir and PID file inside of it
+                shutil.rmtree(self.path)
+        except EnvironmentError as e:
+            if e.errno == errno.ENOENT:
+                pass
+            else:
+                raise
+        except:
+            raise
+
+    def read_pid(self):
+        """
+        Return the PID of the process owning the lock as an int
+        Return None if there is no lock
+        """
+        owner = ""
+        try:
+            with open(self.PIDfile) as p:
+                owner = int(p.read())
+        except EnvironmentError as e:
+            if e.errno == errno.ENOENT:
+                return None
+            else:
+                raise
+        except:
+            raise
+        return owner
+
+    def __enter__(self):
+        self.acquire()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.release()
+        return None
+
+    def __del__(self):
+        self.release()
 
 
 class SimpleMainLock:
@@ -56,7 +135,7 @@ class SimpleMainLock:
     """
 
     def __init__(self, mainOptions):
-        self.pidfilename = mainOptions.get('pidfilename', None)  # the file we're using for locking
+        self.pidlockpath = mainOptions.get('pidlockpath', None)  # the directory we're using for locking
         self.parentpidvar = mainOptions.get('parentpidvar', None)  # environment variable holding parent pid
         self.parentpid = None  # parent pid which already has the lock
         self.ppath = None  # complete path to the lock file
@@ -67,8 +146,8 @@ class SimpleMainLock:
         if self.parentpidvar is not None and self.parentpidvar in os.environ:
             self.parentpid = int(os.environ[self.parentpidvar])
 
-        if self.pidfilename is not None:
-            self.ppath = os.path.join(gp.get_masterdatadir(), self.pidfilename)
+        if self.pidlockpath is not None:
+            self.ppath = os.path.join(gp.get_masterdatadir(), self.pidlockpath)
             self.pidlockfile = PIDLockFile(self.ppath)
 
     def acquire(self):
@@ -91,19 +170,11 @@ class SimpleMainLock:
             if self.pidfilepid == self.parentpid:
                 return None
 
-            # cleanup stale locks
-            try:
-                os.kill(self.pidfilepid, signal.SIG_DFL)
-            except OSError, exc:
-                if exc.errno == errno.ESRCH:
-                    self.pidlockfile.break_lock()
-                    self.pidfilepid = None
-
         # try and acquire the lock
         try:
-            self.pidlockfile.acquire(1)
+            self.pidlockfile.acquire()
 
-        except LockTimeout:
+        except PIDLockHeld:
             self.pidfilepid = self.pidlockfile.read_pid()
             return self.pidfilepid
 
@@ -180,7 +251,7 @@ def simple_main(createOptionParserFn, createCommandFn, mainOptions=None):
                               suppressStartupLogMessage (map to bool)
                               useHelperToolLogging (map to bool)
                               setNonuserOnToolLogger (map to bool, defaults to false)
-                              pidfilename (string)
+                              pidlockpath (string)
                               parentpidvar (string)
 
     """
@@ -189,18 +260,19 @@ def simple_main(createOptionParserFn, createCommandFn, mainOptions=None):
 
 def simple_main_internal(createOptionParserFn, createCommandFn, mainOptions):
     """
-    If caller specifies 'pidfilename' in mainOptions then we manage the
+    If caller specifies 'pidlockpath' in mainOptions then we manage the
     specified pid file within the MASTER_DATA_DIRECTORY before proceeding
     to execute the specified program and we clean up the pid file when
     we're done.
     """
     sml = None
-    if mainOptions is not None and 'pidfilename' in mainOptions:
+    if mainOptions is not None and 'pidlockpath' in mainOptions:
         sml = SimpleMainLock(mainOptions)
         otherpid = sml.acquire()
         if otherpid is not None:
             logger = gplog.get_default_logger()
-            logger.error("An instance of %s is already running (pid %s)" % (getProgramName(), otherpid))
+            logger.error("Lockfile %s indicates that an instance of %s is already running with PID %s" % (sml.ppath, getProgramName(), otherpid))
+            logger.error("If this is not the case, remove the lockfile directory at %s" % (sml.ppath))
             return
 
     # at this point we have whatever lock we require
@@ -270,24 +342,24 @@ def simple_main_locked(createOptionParserFn, createCommandFn, mainOptions):
         exitCode = commandObject.run()
         exit_status = exitCode
 
-    except ProgramArgumentValidationException, e:
+    except ProgramArgumentValidationException as e:
         if e.shouldPrintHelp():
             parser.print_help()
         logger.error("%s: error: %s" % (gProgramName, e.getMessage()))
         exit_status = 2
-    except ExceptionNoStackTraceNeeded, e:
+    except ExceptionNoStackTraceNeeded as e:
         logger.error("%s error: %s" % (gProgramName, e))
         exit_status = 2
-    except UserAbortedException, e:
+    except UserAbortedException as e:
         logger.info("User abort requested, Exiting...")
         exit_status = 4
-    except ExecutionError, e:
+    except ExecutionError as e:
         logger.fatal("Error occurred: %s\n Command was: '%s'\n"
                      "rc=%d, stdout='%s', stderr='%s'" % \
                      (e.summary, e.cmd.cmdStr, e.cmd.results.rc, e.cmd.results.stdout,
                       e.cmd.results.stderr))
         exit_status = 2
-    except Exception, e:
+    except Exception as e:
         if options is None:
             logger.exception("%s failed.  exiting...", gProgramName)
         else:
@@ -348,271 +420,3 @@ def addMasterDirectoryOptionForSingleClusterProgram(addTo):
                      help="Optional. The master host data directory. If not specified, the value set" \
                           "for $MASTER_DATA_DIRECTORY will be used.")
 
-
-#
-# YamlMain
-#
-
-def get_yaml(targetclass):
-    "get_yaml"
-
-    # doc    - class's doc string
-    # pos    - where YAML starts in doc
-    # ystr   - YAML string extracted from doc
-
-    if not hasattr(targetclass, '_yaml') or targetclass._yaml is None:
-        doc = targetclass.__doc__
-        pos = doc.find('%YAML')
-        assert pos >= 0, "targetclass doc string is missing %YAML plan"
-        ystr = doc[pos:].replace('\n    ', '\n')
-        targetclass._yaml = yaml.load(ystr)
-    return targetclass._yaml
-
-
-class YamlMain:
-    "YamlMain"
-
-    def __init__(self):
-        "Parse arguments based on yaml docstring"
-        self.current = None
-        self.plan = None
-        self.scenario_name = None
-        self.logger = None
-        self.logfilename = None
-        self.errmsg = None
-
-        self.parser = YamlOptions(self).parser
-        self.options, self.args = self.parser.parse_args()
-        self.options.quiet = self.options.q
-        self.options.verbose = self.options.v
-
-    #
-    # simple_main interface
-    #
-    def __call__(self, *args):
-        "Allows us to use self as the create_parser and create_program functions in call to simple_main"
-        return self
-
-    def parse_args(self):
-        "Called by simple_main to obtain results from parser returned by create_parser"
-        return self.options, self.args
-
-    def run(self):
-        "Called by simple_main to execute the program returned by create_program"
-        self.plan = Plan(self)
-        self.scenario_name = self.plan.name
-        self.logger = self.plan.logger
-        self.logfilename = self.plan.logfilename
-        self.errmsg = self.plan.errmsg
-        self.current = []
-        self.plan.run()
-
-    def cleanup(self):
-        "Called by simple_main to cleanup after program returned by create_program finishes"
-        pass
-
-    def simple(self):
-        "Delegates setup and control to mainUtils.simple_main"
-        simple_main(self, self)
-
-
-#
-# option parsing
-#
-
-class YamlOptions:
-    "YamlOptions"
-
-    def __init__(self, target):
-        """
-        Scan the class doc string of the given object, looking for the %YAML
-        containing the option specification.  Parse the YAML and setup the
-        corresponding OptionParser object.
-        """
-        # target - options object (input)
-        # gname  - option group name
-
-        self.y = get_yaml(target.__class__)
-        self.parser = OptionParser(description=self.y['Description'], version='%prog version $Revision$')
-        self.parser.remove_option('-h')
-        self.parser.set_usage(self.y['Usage'])
-        self.opty = self.y['Options']
-        for gname in self.opty.get('Groups', []):
-            self._register_group(gname)
-
-    def _register_group(self, gname):
-        """
-        Register options for the specified option group name to the OptionParser
-        using an OptionGroup unless the group name starts with 'Help' in which
-        case we just register the options with the top level OptionParser object.
-        """
-        # gname    - option group name (input)
-        # gy       - option group YAML object
-        # grp      - option group object
-        # tgt      - where to add options (parser or option group)
-        # optkey   - comma separated list of option flags
-        # optval   - help string or dict with detailed option settings
-        # listargs - list of option flags (e.g. ['-h', '--help'])
-        # dictargs - key/value arguments to add_option
-
-        gy = self.opty.get(gname, None)
-        if gname.startswith('Help'):
-            grp = None
-            tgt = self.parser
-        else:
-            grp = OptionGroup(self.parser, gname)
-            tgt = grp
-
-        for optkey, optval in gy.items():
-            listargs = optkey.split(',')
-            if type(optval) == type(''):
-                # short form: optval is just a help string
-                dictargs = {
-                    'action': 'store_true',
-                    'help': optval
-                }
-            else:
-                # optval is the complete option specification
-                dictargs = optval
-
-            # hide hidden options
-            if dictargs.get('help', '').startswith('hidden'):
-                dictargs['help'] = SUPPRESS_HELP
-
-            # print 'adding', listargs, dictargs
-            tgt.add_option(*listargs, **dictargs)
-
-        if grp is not None:
-            self.parser.add_option_group(grp)
-
-
-#
-# plan execution
-#
-
-class Task:
-    "Task"
-
-    def __init__(self, key, name, subtasks=None):
-        self.Key = key  # task key
-        self.Name = name  # task name
-        self.SubTasks = subtasks  # subtasks, if any
-        self.Func = None  # task function, set by _task
-
-    def _print(self, main, prefix):
-        print '%s %s %s:' % (prefix, self.Key, self.Name)
-
-    def _debug(self, main, prefix):
-        main.logger.debug('Execution Plan:%s %s %s%s' % (prefix, self.Key, self.Name, ':' if self.SubTasks else ''))
-
-    def _run(self, main, prefix):
-        main.logger.debug(' Now Executing:%s %s %s' % (prefix, self.Key, self.Name))
-        if self.Func:
-            self.Func()
-
-
-class Exit(Exception):
-    def __init__(self, rc, code=None, call_support=False):
-        Exception.__init__(self)
-        self.code = code
-        self.prm = sys._getframe(1).f_locals
-        self.rc = rc
-        self.call_support = call_support
-
-
-class Plan:
-    "Plan"
-
-    def __init__(self, main):
-        """
-        Create cached yaml from class doc string of the given object, 
-        looking for the %YAML indicating the beginning of the object's YAML plan and parse it.
-        Build the plan stages and tasks for the specified scenario.
-        """
-        # main - object with yaml scenarios (input)
-        # sy   - Stage yaml
-
-        self.logger = gplog.get_default_logger()
-        self.logfilename = gplog.get_logfile()
-
-        self.main = main
-        self.y = get_yaml(main.__class__)
-        self.name = main.options.scenario
-        if not self.name:
-            self.name = self.y['Default Scenario']
-        self.scenario = self.y['Scenarios'][self.name]
-        self.errors = self.y['Errors']
-        self.Tasks = [self._task(ty) for ty in self.scenario]
-
-    def _task(self, ty):
-        "Invoked by __init__ to build a top-level task from the YAML"
-
-        # ty   - Task yaml (input)
-        # tyk  - Task yaml key
-        # tyv  - Task yaml value
-        # sty  - Sub Task yaml
-        # t    - Task (returned)
-
-        for tyk, tyv in ty.items():
-            key, workers = tyk.split(None, 1)
-            subtasks = [self._subtask(sty) for sty in tyv]
-            t = Task(key, workers, subtasks)
-            return t
-
-    def _subtask(self, sty):
-        "Invoked by _stage to build a task from the YAML"
-
-        # sty  - Sub Task yaml (input)
-        # st   - Sub Task (returned)
-
-        key, rest = sty.split(None, 1)
-        st = Task(key, rest)
-        fn = st.Name.lower().replace(' ', '_')
-        try:
-            st.Func = getattr(self.main, fn)
-        except AttributeError, e:
-            raise Exception("Failed to lookup '%s' for sub task '%s': %s" % (fn, st.Name, str(e)))
-        return st
-
-    def _dotasks(self, subtasks, prefix, action):
-        "Apply an action to each subtask recursively"
-
-        # st   - Sub Task
-
-        for st in subtasks or []:
-            self.main.current.append(st)
-            action(st, self.main, prefix)
-            self._dotasks(st.SubTasks, '  ' + prefix, action)
-            self.main.current.pop()
-
-    def _print(self):
-        "Print in YAML form."
-
-        print '%s:' % self.name
-        self._dotasks(self.Tasks, ' -', lambda t, m, p: t._print(m, p))
-
-    def run(self):
-        "Run the stages and tasks."
-
-        self.logger.debug('Execution Plan: %s' % self.name)
-        self._dotasks(self.Tasks, ' -', lambda t, m, p: t._debug(m, p))
-
-        self.logger.debug(' Now Executing: %s' % self.name)
-        try:
-            self._dotasks(self.Tasks, ' -', lambda t, m, p: t._run(m, p))
-        except Exit, e:
-            self.exit(e.code, e.prm, e.rc, e.call_support)
-
-    def errmsg(self, code, prm={}):
-        "Return a formatted error message"
-        return self.errors[code] % prm
-
-    def exit(self, code=None, prm={}, rc=1, call_support=False):
-        "Terminate the application"
-        if code:
-            msg = self.errmsg(code, prm)
-            self.logger.error(msg)
-        if call_support:
-            self.logger.error('Please send %s to Greenplum support.' % self.logfilename)
-        self.logger.debug('exiting with status %(rc)s' % locals())
-        sys.exit(rc)

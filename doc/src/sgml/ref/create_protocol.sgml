@@ -2,7 +2,7 @@
 PostgreSQL documentation
 -->
 
-<refentry id="SQL-CREATEPROTOCOL">
+<refentry id="sql-createprotocol">
  <indexterm zone="sql-createprotocol">
   <primary>CREATE PROTOCOL</primary>
  </indexterm>

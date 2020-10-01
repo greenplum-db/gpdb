@@ -202,3 +202,29 @@ SELECT cup.* FROM
 SELECT sum(t.b) OVER(PARTITION BY t.a ) AS e FROM (select 1 as a, 2 as b from pg_class limit 1)foo,t
 ) as cup
 GROUP BY cup.e;
+
+--
+-- Test for a bug in translating a CTE's locus to the outer query.
+--
+-- This crashed at one point, when the code to translate the locus of
+-- CTE subquery to the outer query's equivalence classes was broken.
+-- The UNION ALL is a simple "pulled up" UNION ALL, creating an append
+-- rel.
+--
+create temp table bfv_cte_tab (t text, i int4, j int4) distributed randomly;
+
+insert into bfv_cte_tab values ('foo', 1, -1);
+insert into bfv_cte_tab values ('bar', 2, -2);
+
+with
+  foo as (select t, sum(i) as n from bfv_cte_tab group by t),
+  bar as (select t, sum(j) as n from bfv_cte_tab group by t)
+
+select const_a, const_b, sum(n)
+ from
+ (select 'foo_a' as const_a, 'foo_b' as const_b, n from foo
+  union all
+  select 'bar_a' as const_a, 'bar_b' as const_b, n from bar
+ ) x
+ group by const_a, const_b
+;

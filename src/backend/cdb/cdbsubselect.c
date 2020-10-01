@@ -20,11 +20,10 @@
 #include "catalog/pg_type.h"
 #include "nodes/makefuncs.h"
 #include "optimizer/clauses.h"
+#include "optimizer/optimizer.h"
 #include "optimizer/subselect.h"	/* convert_testexpr() */
 #include "optimizer/tlist.h"
 #include "optimizer/prep.h"		/* canonicalize_qual() */
-#include "optimizer/subselect.h"
-#include "optimizer/var.h"		/* contain_vars_of_level_or_above() */
 #include "parser/parse_oper.h"	/* make_op() */
 #include "parser/parse_expr.h"
 #include "parser/parse_relation.h"	/* addRangeTableEntryForSubquery() */
@@ -389,8 +388,8 @@ SubqueryToJoinWalker(Node *node, ConvertSubqueryToJoinContext *context)
 		/**
 		 * Be extremely conservative. If there are any outer vars under an or or a not expression, then give up.
 		 */
-		if (not_clause(node)
-			|| or_clause(node))
+		if (is_notclause(node)
+			|| is_orclause(node))
 		{
 			if (contain_vars_of_level_or_above(node, 1))
 			{
@@ -401,7 +400,7 @@ SubqueryToJoinWalker(Node *node, ConvertSubqueryToJoinContext *context)
 			return;
 		}
 
-		Assert(and_clause(node));
+		Assert(is_andclause(node));
 
 		BoolExpr   *bexp = (BoolExpr *) node;
 		ListCell   *lc = NULL;
@@ -938,7 +937,7 @@ make_lasj_quals(PlannerInfo *root, SubLink *sublink, int subquery_indx)
 										  sublink->testexpr,
 										  subquery_vars);
 
-	join_pred = canonicalize_qual(make_notclause(join_pred));
+	join_pred = canonicalize_qual(make_notclause(join_pred), false);
 
 	Assert(join_pred != NULL);
 	return (Node *) join_pred;

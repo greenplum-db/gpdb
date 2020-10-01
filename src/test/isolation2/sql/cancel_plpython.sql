@@ -1,33 +1,36 @@
+-- start_ignore
+CREATE LANGUAGE plpython3u;
+-- end_ignore
 CREATE OR REPLACE FUNCTION pybusyloop() RETURNS double precision AS $$
 import math
 while True:
     a = 1
 return 1
-$$ LANGUAGE plpythonu;
+$$ LANGUAGE plpython3u;
 
 CREATE OR REPLACE FUNCTION pysleep() RETURNS double precision AS $$
 import time
 time.sleep(100)
 return 1
-$$ LANGUAGE plpythonu;
+$$ LANGUAGE plpython3u;
 
 CREATE OR REPLACE FUNCTION pyspisleep() RETURNS double precision AS $$
 # container: plc_python_shared
 rv = plpy.execute("select pg_sleep(100)")
 return 1
-$$ LANGUAGE plpythonu;
+$$ LANGUAGE plpython3u;
 
 CREATE OR REPLACE FUNCTION pynestsleep() RETURNS double precision AS $$
 # container: plc_python_shared
 rv = plpy.execute("select pyspisleep()")
 return 1
-$$ LANGUAGE plpythonu;
+$$ LANGUAGE plpython3u;
 
 CREATE OR REPLACE FUNCTION pynestsleep2() RETURNS double precision AS $$
 # container: plc_python_shared
 rv = plpy.execute("select pysleep()")
 return 1
-$$ LANGUAGE plpythonu;
+$$ LANGUAGE plpython3u;
 
 
 CREATE TABLE a(i int);

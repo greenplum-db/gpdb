@@ -31,11 +31,10 @@ using namespace gpos;
 GPOS_RESULT
 CMessageTableTest::EresUnittest()
 {
-	CUnittest rgut[] =
-		{
+	CUnittest rgut[] = {
 		GPOS_UNITTEST_FUNC(CMessageTableTest::EresUnittest_Basic),
-		};
-	
+	};
+
 	return CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
 }
 
@@ -55,9 +54,9 @@ CMessageTableTest::EresUnittest_Basic()
 	CAutoMemoryPool amp;
 	CMemoryPool *mp = amp.Pmp();
 
-	CMessageTable *pmt = GPOS_NEW(mp)
-		CMessageTable(mp, GPOS_MSGTAB_SIZE, ElocEnUS_Utf8);
-	
+	CMessageTable *pmt =
+		GPOS_NEW(mp) CMessageTable(mp, GPOS_MSGTAB_SIZE, ElocEnUS_Utf8);
+
 	// insert all system messages
 	for (ULONG ul = 0; ul < CException::ExmiSentinel; ul++)
 	{
@@ -69,14 +68,13 @@ CMessageTableTest::EresUnittest_Basic()
 #ifdef GPOS_DEBUG
 			CMessage *pmsgLookedup = pmt->LookupMessage(pmsg->m_exception);
 			GPOS_ASSERT(pmsg == pmsgLookedup && "Lookup failed");
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 		}
 	}
-		
+
 	GPOS_DELETE(pmt);
-	
+
 	return GPOS_OK;
 }
 
 // EOF
-

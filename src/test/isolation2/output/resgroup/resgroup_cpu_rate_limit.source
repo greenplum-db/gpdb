@@ -10,7 +10,7 @@ ERROR:  resource group "rg1_cpu_test" does not exist
 DROP RESOURCE GROUP rg2_cpu_test;
 ERROR:  resource group "rg2_cpu_test" does not exist
 
-CREATE LANGUAGE plpythonu;
+CREATE LANGUAGE plpython3u;
 CREATE
 -- end_ignore
 
@@ -27,22 +27,22 @@ CREATE
 -- and dump them into text in json format then save them in db for
 -- further analysis.
 CREATE OR REPLACE FUNCTION fetch_sample() RETURNS text AS $$ import json 
-group_cpus = plpy.execute(''' SELECT rsgname, cpu_usage FROM gp_toolkit.gp_resgroup_status ''') json_text = json.dumps(dict([(row['rsgname'], json.loads(row['cpu_usage'])) for row in group_cpus])) plpy.execute(''' INSERT INTO cpu_usage_samples VALUES ('{value}') '''.format(value=json_text)) return json_text $$ LANGUAGE plpythonu;
+group_cpus = plpy.execute(''' SELECT rsgname, cpu_usage FROM gp_toolkit.gp_resgroup_status ''') json_text = json.dumps(dict([(row['rsgname'], json.loads(row['cpu_usage'])) for row in group_cpus])) plpy.execute(''' INSERT INTO cpu_usage_samples VALUES ('{value}') '''.format(value=json_text)) return json_text $$ LANGUAGE plpython3u;
 CREATE
 
 -- verify_cpu_usage: calculate each QE's average cpu usage using all the data in
 -- the table cpu_usage_sample. And compare the average value to the expected value.
 -- return true if the practical value is close to the expected value.
-CREATE OR REPLACE FUNCTION verify_cpu_usage(groupname TEXT, expect_cpu_usage INT, err_rate INT) RETURNS BOOL AS $$ import json 
+CREATE OR REPLACE FUNCTION verify_cpu_usage(groupname TEXT, expect_cpu_usage INT, err_rate INT) RETURNS BOOL AS $$ import json import functools 
 def add_vector(vec1, vec2): r = dict() for seg_id1, value1 in vec1.items(): r[seg_id1] = value1 + vec2[seg_id1] return r 
-def verify_cpu_usage(): all_info = plpy.execute(''' SELECT sample::json->'{name}' AS cpu FROM cpu_usage_samples '''.format(name=groupname)) usage_sum = reduce(add_vector, [json.loads(row['cpu']) for row in all_info]) usage = [(float(v) / all_info.nrows()) for k, v in usage_sum.items() if k != "-1"] avg = sum(usage) / len(usage) return abs(avg - expect_cpu_usage) <= err_rate 
-return verify_cpu_usage() $$ LANGUAGE plpythonu;
+def verify_cpu_usage(): all_info = plpy.execute(''' SELECT sample::json->'{name}' AS cpu FROM cpu_usage_samples '''.format(name=groupname)) usage_sum = functools.reduce(add_vector, [json.loads(row['cpu']) for row in all_info]) usage = [(float(v) / all_info.nrows()) for k, v in usage_sum.items() if k != "-1"] avg = sum(usage) / len(usage) return abs(avg - expect_cpu_usage) <= err_rate 
+return verify_cpu_usage() $$ LANGUAGE plpython3u;
 CREATE
 
 CREATE OR REPLACE FUNCTION busy() RETURNS void AS $$ import os import signal 
-n = 15 for i in xrange(n): if os.fork() == 0: # children must quit without invoking the atexit hooks signal.signal(signal.SIGINT,  lambda a, b: os._exit(0)) signal.signal(signal.SIGQUIT, lambda a, b: os._exit(0)) signal.signal(signal.SIGTERM, lambda a, b: os._exit(0)) 
+n = 15 for i in range(n): if os.fork() == 0: # children must quit without invoking the atexit hooks signal.signal(signal.SIGINT,  lambda a, b: os._exit(0)) signal.signal(signal.SIGQUIT, lambda a, b: os._exit(0)) signal.signal(signal.SIGTERM, lambda a, b: os._exit(0)) 
 # generate pure cpu load while True: pass 
-os.wait() $$ LANGUAGE plpythonu;
+os.wait() $$ LANGUAGE plpython3u;
 CREATE
 
 CREATE VIEW cancel_all AS SELECT pg_cancel_backend(pid) FROM pg_stat_activity WHERE query LIKE 'SELECT * FROM % WHERE busy%';
@@ -57,10 +57,10 @@ CREATE
 --
 -- check gpdb cgroup configuration
 --
-DO LANGUAGE PLPYTHONU $$ import subprocess 
+DO LANGUAGE PLPYTHON3U $$ import subprocess 
 cgroot = '@cgroup_mnt_point@' 
 def get_cgroup_prop(prop): fullpath = cgroot + '/' + prop return int(open(fullpath).readline()) 
-def run_command(cmd): return subprocess.check_output(cmd.split()) 
+def run_command(cmd): return subprocess.check_output(cmd.split()).decode() 
 def show_guc(guc): return plpy.execute('SHOW {}'.format(guc))[0][guc] 
 # # check gpdb top-level cgroup configuration # 
 # get top-level cgroup props cfs_quota_us = get_cgroup_prop('/cpu/gpdb/cpu.cfs_quota_us') cfs_period_us = get_cgroup_prop('/cpu/gpdb/cpu.cfs_period_us') shares = get_cgroup_prop('/cpu/gpdb/cpu.shares') 
@@ -481,5 +481,5 @@ DROP RESOURCE GROUP rg1_cpu_test;
 DROP
 DROP RESOURCE GROUP rg2_cpu_test;
 DROP
-DROP LANGUAGE plpythonu CASCADE;
+DROP LANGUAGE plpython3u CASCADE;
 DROP

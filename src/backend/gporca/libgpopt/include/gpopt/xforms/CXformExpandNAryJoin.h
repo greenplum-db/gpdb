@@ -16,66 +16,57 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CXformExpandNAryJoin
-	//
-	//	@doc:
-	//		Expand n-ary join into series of binary joins
-	//
-	//---------------------------------------------------------------------------
-	class CXformExpandNAryJoin : public CXformExploration
+//---------------------------------------------------------------------------
+//	@class:
+//		CXformExpandNAryJoin
+//
+//	@doc:
+//		Expand n-ary join into series of binary joins
+//
+//---------------------------------------------------------------------------
+class CXformExpandNAryJoin : public CXformExploration
+{
+private:
+	// private copy ctor
+	CXformExpandNAryJoin(const CXformExpandNAryJoin &);
+
+public:
+	// ctor
+	explicit CXformExpandNAryJoin(CMemoryPool *mp);
+
+	// dtor
+	virtual ~CXformExpandNAryJoin()
 	{
+	}
 
-		private:
+	// ident accessors
+	virtual EXformId
+	Exfid() const
+	{
+		return ExfExpandNAryJoin;
+	}
 
-			// private copy ctor
-			CXformExpandNAryJoin(const CXformExpandNAryJoin &);
+	// return a string for xform name
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CXformExpandNAryJoin";
+	}
 
-		public:
+	// compute xform promise for a given expression handle
+	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
 
-			// ctor
-			explicit
-			CXformExpandNAryJoin(CMemoryPool *mp);
+	// actual transform
+	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
+				   CExpression *pexpr) const;
 
-			// dtor
-			virtual
-			~CXformExpandNAryJoin() 
-			{}
+};	// class CXformExpandNAryJoin
 
-			// ident accessors
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfExpandNAryJoin;
-			}
-
-			// return a string for xform name
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CXformExpandNAryJoin";
-			}
-
-			// compute xform promise for a given expression handle
-			virtual
-			EXformPromise Exfp(CExpressionHandle &exprhdl) const;
-
-			// actual transform
-			void Transform
-					(
-					CXformContext *pxfctxt,
-					CXformResult *pxfres,
-					CExpression *pexpr
-					) const;
-
-	}; // class CXformExpandNAryJoin
-
-}
+}  // namespace gpopt
 
 
-#endif // !GPOPT_CXformExpandNAryJoin_H
+#endif	// !GPOPT_CXformExpandNAryJoin_H
 
 // EOF

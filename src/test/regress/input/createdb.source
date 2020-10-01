@@ -1,10 +1,10 @@
 -- start_ignore
-create language plpythonu;
+create language plpython3u;
 -- end_ignore
 
 --list all database oid relevant directories in all node(master, segments, mirrors, etc.)
 CREATE OR REPLACE FUNCTION db_dirs(dboid oid) RETURNS setof text
-  STRICT STABLE LANGUAGE plpythonu
+  STRICT STABLE LANGUAGE plpython3u
 as $$
 import os
 bash_cmd = "find " + os.getcwd() + "/../../ " + "-name %d -type d"
@@ -43,7 +43,7 @@ from gp_segment_configuration where content=0 and role='p';
 -- should fail
 create database db_with_leftover_files;
 
--- Wait until replay_location = flush_location.
+-- Wait until replay_lsn = flush_lsn.
 select force_mirrors_to_catch_up();
 
 -- since this is a failed case, db oid is invisible, however we need it to search 

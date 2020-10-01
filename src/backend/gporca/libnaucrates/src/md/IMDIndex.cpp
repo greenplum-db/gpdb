@@ -26,10 +26,7 @@ using namespace gpmd;
 //
 //---------------------------------------------------------------------------
 const CWStringConst *
-IMDIndex::GetDXLStr
-	(
-	EmdindexType index_type
-	)
+IMDIndex::GetDXLStr(EmdindexType index_type)
 {
 	switch (index_type)
 	{

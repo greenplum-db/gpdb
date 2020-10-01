@@ -25,10 +25,10 @@ select dfunc(4,5);
 (1 row)
 
 \df dfunc
-                                      List of functions
- Schema | Name  | Result data type |               Argument data types               |  Type  
---------+-------+------------------+-------------------------------------------------+--------
- public | dfunc | integer          | INOUT a integer DEFAULT 10, b integer DEFAULT 2 | normal
+                                     List of functions
+ Schema | Name  | Result data type |               Argument data types               | Type 
+--------+-------+------------------+-------------------------------------------------+------
+ public | dfunc | integer          | INOUT a integer DEFAULT 10, b integer DEFAULT 2 | func
 (1 row)
 
 drop function dfunc(int, int);
@@ -125,10 +125,10 @@ drop function dfunc(a variadic int[]);
 -- test expression
 create function dfunc(a int, b double precision default random()*10) returns double precision as $$ select $1+$2; $$ language sql;
 \df dfunc
-                                                   List of functions
- Schema | Name  | Result data type |                            Argument data types                            |  Type  
---------+-------+------------------+---------------------------------------------------------------------------+--------
- public | dfunc | double precision | a integer, b double precision DEFAULT (random() * (10)::double precision) | normal
+                                                  List of functions
+ Schema | Name  | Result data type |                            Argument data types                            | Type 
+--------+-------+------------------+---------------------------------------------------------------------------+------
+ public | dfunc | double precision | a integer, b double precision DEFAULT (random() * (10)::double precision) | func
 (1 row)
 
 create view dview as select random()*10, dfunc(4);

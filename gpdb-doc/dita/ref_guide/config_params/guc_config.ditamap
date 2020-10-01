@@ -109,6 +109,7 @@
             <topicref href="guc-list.xml#gp_fts_probe_retries"/>
             <topicref href="guc-list.xml#gp_fts_probe_threadcount"/>
             <topicref href="guc-list.xml#gp_fts_probe_timeout"/>
+            <topicref href="guc-list.xml#gp_fts_replication_attempt_count"/>
             <topicref href="guc-list.xml#gp_global_deadlock_detector_period"/>
             <topicref href="guc-list.xml#gp_hashjoin_tuples_per_bucket"/>
             <topicref href="guc-list.xml#gp_ignore_error_table"/>
@@ -116,6 +117,7 @@
             <topicref href="guc-list.xml#gp_instrument_shmem_size"/>
             <topicref href="guc-list.xml#gp_interconnect_debug_retry_interval"/>
             <topicref href="guc-list.xml#gp_interconnect_fc_method"/>
+            <topicref href="guc-list.xml#gp_interconnect_proxy_addresses"/>
             <topicref href="guc-list.xml#gp_interconnect_queue_depth"/>
             <topicref href="guc-list.xml#gp_interconnect_setup_timeout"/>
             <topicref href="guc-list.xml#gp_interconnect_snd_queue_depth"/>
@@ -271,7 +273,9 @@
             <topicref href="guc-list.xml#topic_k52_fqm_f3b"/>
             <topicref href="guc-list.xml#TimeZone"/>
             <topicref href="guc-list.xml#timezone_abbreviations"/>
+            <topicref href="guc-list.xml#track_activities"/>
             <topicref href="guc-list.xml#track_activity_query_size"/>
+            <topicref href="guc-list.xml#track_counts"/>
             <topicref href="guc-list.xml#transaction_isolation"/>
             <topicref href="guc-list.xml#transaction_read_only"/>
             <topicref href="guc-list.xml#transform_null_equals"/>
@@ -292,6 +296,7 @@
             <topicref href="guc-list.xml#wal_keep_segments"/>
             <topicref href="guc-list.xml#wal_receiver_status_interval"/>
             <topicref href="guc-list.xml#writable_external_table_bufsize"/>
+            <topicref href="guc-list.xml#write_to_gpfdist_timeout"/>
             <topicref href="guc-list.xml#xid_stop_limit"/>
             <topicref href="guc-list.xml#xid_warn_limit"/>
         </topicref>

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 class UniqueIndexViolationCheck:
     unique_indexes_query = """
@@ -39,7 +39,7 @@ class UniqueIndexViolationCheck:
         violations = []
 
         for (table_oid, index_name, table_name, column_names) in unique_indexes:
-            column_names = column_names[1:-1]
+            column_names = ",".join(column_names)
             sql = self.get_violated_segments_query(table_name, column_names)
             violated_segments = db_connection.query(sql).getresult()
             if violated_segments:

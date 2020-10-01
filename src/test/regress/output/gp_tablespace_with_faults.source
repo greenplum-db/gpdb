@@ -21,7 +21,7 @@
 20190628:12:33:29:008863 gpstop:Adams-MBP:adamberlin-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.479.gb6a83cfcde build dev'
 20190628:12:33:29:008863 gpstop:Adams-MBP:adamberlin-[INFO]:-Signalling all postmaster processes to reload
 -- end_ignore
-create or replace language plpythonu;
+create or replace language plpython3u;
 create or replace function remove_tablespace_location_directory(tablespace_location_dir text) returns void as $$
 	import shutil
 	import os
@@ -51,11 +51,11 @@ create or replace function remove_tablespace_location_directory(tablespace_locat
 		shutil.rmtree(tablespace_location_dir);
 	except OSError:
 		pass
-$$ LANGUAGE plpythonu;
+$$ LANGUAGE plpython3u;
 create or replace function setup_tablespace_location_dir_for_test(tablespace_location_dir text) returns void as $$
 	import os;
 	os.mkdir(tablespace_location_dir);
-$$ LANGUAGE plpythonu;
+$$ LANGUAGE plpython3u;
 create or replace function disable_fts() returns void as $$
 	declare
 		master_content_id integer = -1;
@@ -120,7 +120,7 @@ create or replace function list_tablespace_dbid_dirs(expected_number_of_tablespa
 	for row in rows:
 		result.append(str(row))
 	return result
-$$ language plpythonu;
+$$ language plpython3u;
 create or replace function wait_for_primaries_to_restart() returns boolean as $$
 	select count(gp_segment_id) > 0 from gp_dist_random('pg_tablespace');
 $$ language sql;

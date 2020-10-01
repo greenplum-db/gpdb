@@ -2,7 +2,7 @@
 //	Greenplum Database
 //	Copyright (C) 2008 Greenplum, Inc.
 //
-//	@filename: 
+//	@filename:
 //		CAutoTraceFlag.h
 //
 //	@doc:
@@ -19,42 +19,38 @@
 
 namespace gpos
 {
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CAutoTraceFlag
-	//
-	//	@doc:
-	//		Auto wrapper;
-	//
-	//---------------------------------------------------------------------------
-	class CAutoTraceFlag : public CStackObject
-	{
-		private:
+//---------------------------------------------------------------------------
+//	@class:
+//		CAutoTraceFlag
+//
+//	@doc:
+//		Auto wrapper;
+//
+//---------------------------------------------------------------------------
+class CAutoTraceFlag : public CStackObject
+{
+private:
+	// traceflag id
+	ULONG m_trace;
 
-			// traceflag id
-			ULONG m_trace;
+	// original value
+	BOOL m_orig;
 
-		// original value
-			BOOL m_orig;
+	// no copy ctor
+	CAutoTraceFlag(const CAutoTraceFlag &);
 
-			// no copy ctor
-			CAutoTraceFlag(const CAutoTraceFlag&);
-			
-		public:
-		
-			// ctor
-			CAutoTraceFlag(ULONG trace, BOOL orig);
+public:
+	// ctor
+	CAutoTraceFlag(ULONG trace, BOOL orig);
 
-			// dtor
-			virtual
-			~CAutoTraceFlag ();
+	// dtor
+	virtual ~CAutoTraceFlag();
 
-	}; // class CAutoTraceFlag
-	
-}
+};	// class CAutoTraceFlag
+
+}  // namespace gpos
 
 
-#endif // !GPOS_CAutoTraceFlag_H
+#endif	// !GPOS_CAutoTraceFlag_H
 
 // EOF
-

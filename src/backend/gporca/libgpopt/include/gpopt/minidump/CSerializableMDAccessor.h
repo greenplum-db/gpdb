@@ -20,51 +20,47 @@ using namespace gpdxl;
 
 namespace gpopt
 {
-	// fwd decl
-	class CMDAccessor;
-	
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CSerializableMDAccessor
-	//
-	//	@doc:
-	//		Wrapper for serializing MD objects in a minidump 
-	//
-	//---------------------------------------------------------------------------
-	class CSerializableMDAccessor : public CSerializable
+// fwd decl
+class CMDAccessor;
+
+//---------------------------------------------------------------------------
+//	@class:
+//		CSerializableMDAccessor
+//
+//	@doc:
+//		Wrapper for serializing MD objects in a minidump
+//
+//---------------------------------------------------------------------------
+class CSerializableMDAccessor : public CSerializable
+{
+private:
+	// MD accessor
+	CMDAccessor *m_pmda;
+
+	// serialize header
+	void SerializeHeader(COstream &oos);
+
+	// serialize footer
+	void SerializeFooter(COstream &oos);
+
+	// private copy ctor
+	CSerializableMDAccessor(const CSerializableMDAccessor &);
+
+public:
+	// ctor
+	explicit CSerializableMDAccessor(CMDAccessor *md_accessor);
+
+	// dtor
+	virtual ~CSerializableMDAccessor()
 	{
-		private:
-			// MD accessor
-			CMDAccessor *m_pmda;
-			
-			// serialize header
-			void SerializeHeader(COstream &oos);
-			
-			// serialize footer
-			void SerializeFooter(COstream &oos);
+	}
 
-			// private copy ctor
-			CSerializableMDAccessor(const CSerializableMDAccessor&);
+	// serialize object to passed stream
+	virtual void Serialize(COstream &oos);
 
-		public:
+};	// class CSerializableMDAccessor
+}  // namespace gpopt
 
-			// ctor
-			explicit
-			CSerializableMDAccessor(CMDAccessor *md_accessor);
-
-			// dtor
-			virtual
-			~CSerializableMDAccessor()
-			{}
-			
-			// serialize object to passed stream
-			virtual
-			void Serialize(COstream &oos);
-
-	}; // class CSerializableMDAccessor
-}
-
-#endif // !GPOS_CSerializableMDAccessor_H
+#endif	// !GPOS_CSerializableMDAccessor_H
 
 // EOF
-

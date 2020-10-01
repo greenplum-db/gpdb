@@ -64,10 +64,10 @@ SET
 SELECT * FROM memory_result;
  rsgname         | ismaster | avg_mem 
 -----------------+----------+---------
- rg1_memory_test | 0        | 0.0     
- rg1_memory_test | 1        | 0.0     
- rg2_memory_test | 0        | 0.0     
- rg2_memory_test | 1        | 0.0     
+ rg1_memory_test | 0        | 0       
+ rg1_memory_test | 1        | 0       
+ rg2_memory_test | 0        | 0       
+ rg2_memory_test | 1        | 0       
 (4 rows)
 1: BEGIN;
 BEGIN
@@ -79,10 +79,10 @@ BEGIN
 SELECT * FROM memory_result;
  rsgname         | ismaster | avg_mem 
 -----------------+----------+---------
- rg1_memory_test | 0        | 0.0     
- rg1_memory_test | 1        | 20.0    
- rg2_memory_test | 0        | 0.0     
- rg2_memory_test | 1        | 0.0     
+ rg1_memory_test | 0        | 0       
+ rg1_memory_test | 1        | 20      
+ rg2_memory_test | 0        | 0       
+ rg2_memory_test | 1        | 0       
 (4 rows)
 1q: ... <quitting>
 
@@ -93,10 +93,10 @@ SET
 SELECT * FROM memory_result;
  rsgname         | ismaster | avg_mem 
 -----------------+----------+---------
- rg1_memory_test | 0        | 0.0     
- rg1_memory_test | 1        | 0.0     
- rg2_memory_test | 0        | 0.0     
- rg2_memory_test | 1        | 0.0     
+ rg1_memory_test | 0        | 0       
+ rg1_memory_test | 1        | 0       
+ rg2_memory_test | 0        | 0       
+ rg2_memory_test | 1        | 0       
 (4 rows)
 1: SELECT * FROM eat_memory_on_qd;
  hold_memory 
@@ -106,10 +106,10 @@ SELECT * FROM memory_result;
 SELECT * FROM memory_result;
  rsgname         | ismaster | avg_mem 
 -----------------+----------+---------
- rg1_memory_test | 0        | 0.0     
- rg1_memory_test | 1        | 0.0     
- rg2_memory_test | 0        | 0.0     
- rg2_memory_test | 1        | 0.0     
+ rg1_memory_test | 0        | 0       
+ rg1_memory_test | 1        | 0       
+ rg2_memory_test | 0        | 0       
+ rg2_memory_test | 1        | 0       
 (4 rows)
 1q: ... <quitting>
 
@@ -124,10 +124,10 @@ SET
 SELECT * FROM memory_result;
  rsgname         | ismaster | avg_mem 
 -----------------+----------+---------
- rg1_memory_test | 0        | 0.0     
- rg1_memory_test | 1        | 0.0     
- rg2_memory_test | 0        | 0.0     
- rg2_memory_test | 1        | 0.0     
+ rg1_memory_test | 0        | 0       
+ rg1_memory_test | 1        | 0       
+ rg2_memory_test | 0        | 0       
+ rg2_memory_test | 1        | 0       
 (4 rows)
 1q: ... <quitting>
 
@@ -144,10 +144,10 @@ BEGIN
 SELECT * FROM memory_result;
  rsgname         | ismaster | avg_mem 
 -----------------+----------+---------
- rg1_memory_test | 0        | 20.0    
- rg1_memory_test | 1        | 0.0     
- rg2_memory_test | 0        | 0.0     
- rg2_memory_test | 1        | 0.0     
+ rg1_memory_test | 0        | 20      
+ rg1_memory_test | 1        | 0       
+ rg2_memory_test | 0        | 0       
+ rg2_memory_test | 1        | 0       
 (4 rows)
 1q: ... <quitting>
 
@@ -162,10 +162,10 @@ SET
 SELECT * FROM memory_result;
  rsgname         | ismaster | avg_mem 
 -----------------+----------+---------
- rg1_memory_test | 0        | 0.0     
- rg1_memory_test | 1        | 0.0     
- rg2_memory_test | 0        | 0.0     
- rg2_memory_test | 1        | 0.0     
+ rg1_memory_test | 0        | 0       
+ rg1_memory_test | 1        | 0       
+ rg2_memory_test | 0        | 0       
+ rg2_memory_test | 1        | 0       
 (4 rows)
 1: SET ROLE TO role2_memory_test;
 SET
@@ -177,10 +177,10 @@ SET
 SELECT * FROM memory_result;
  rsgname         | ismaster | avg_mem 
 -----------------+----------+---------
- rg1_memory_test | 0        | 0.0     
- rg1_memory_test | 1        | 0.0     
- rg2_memory_test | 0        | 0.0     
- rg2_memory_test | 1        | 0.0     
+ rg1_memory_test | 0        | 0       
+ rg1_memory_test | 1        | 0       
+ rg2_memory_test | 0        | 0       
+ rg2_memory_test | 1        | 0       
 (4 rows)
 1q: ... <quitting>
 
@@ -195,10 +195,10 @@ SET
 SELECT * FROM memory_result;
  rsgname         | ismaster | avg_mem 
 -----------------+----------+---------
- rg1_memory_test | 0        | 0.0     
- rg1_memory_test | 1        | 0.0     
- rg2_memory_test | 0        | 0.0     
- rg2_memory_test | 1        | 0.0     
+ rg1_memory_test | 0        | 0       
+ rg1_memory_test | 1        | 0       
+ rg2_memory_test | 0        | 0       
+ rg2_memory_test | 1        | 0       
 (4 rows)
 1q: ... <quitting>
 
@@ -206,10 +206,10 @@ SELECT * FROM memory_result;
 SELECT * FROM memory_result;
  rsgname         | ismaster | avg_mem 
 -----------------+----------+---------
- rg1_memory_test | 0        | 0.0     
- rg1_memory_test | 1        | 0.0     
- rg2_memory_test | 0        | 0.0     
- rg2_memory_test | 1        | 0.0     
+ rg1_memory_test | 0        | 0       
+ rg1_memory_test | 1        | 0       
+ rg2_memory_test | 0        | 0       
+ rg2_memory_test | 1        | 0       
 (4 rows)
 
 -- 4) single role concurrency test
@@ -231,10 +231,10 @@ SET
 SELECT * FROM memory_result;
  rsgname         | ismaster | avg_mem 
 -----------------+----------+---------
- rg1_memory_test | 0        | 0.0     
- rg1_memory_test | 1        | 0.0     
- rg2_memory_test | 0        | 0.0     
- rg2_memory_test | 1        | 0.0     
+ rg1_memory_test | 0        | 0       
+ rg1_memory_test | 1        | 0       
+ rg2_memory_test | 0        | 0       
+ rg2_memory_test | 1        | 0       
 (4 rows)
 1q: ... <quitting>
 2q: ... <quitting>
@@ -258,10 +258,10 @@ SET
 SELECT * FROM memory_result;
  rsgname         | ismaster | avg_mem 
 -----------------+----------+---------
- rg1_memory_test | 0        | 0.0     
- rg1_memory_test | 1        | 0.0     
- rg2_memory_test | 0        | 0.0     
- rg2_memory_test | 1        | 0.0     
+ rg1_memory_test | 0        | 0       
+ rg1_memory_test | 1        | 0       
+ rg2_memory_test | 0        | 0       
+ rg2_memory_test | 1        | 0       
 (4 rows)
 1q: ... <quitting>
 2q: ... <quitting>

@@ -324,7 +324,7 @@ void lookup_function_in_catalog(PGconn *conn, mapred_document_t *doc,
 	char				*tmp1	 = NULL;
 	char				*tmp2	 = NULL;
 	char				*tmp3	 = NULL;
-	const int			STR_LEN  = 50;
+#define STR_LEN 50
 	char				str[STR_LEN];
 	int					i, nargs;
 
@@ -381,7 +381,7 @@ void lookup_function_in_catalog(PGconn *conn, mapred_document_t *doc,
 
 		bufcat(&buffer,
 			   "FROM   pg_proc\n"
-			   "WHERE  not proisagg and not proiswindow\n"
+			   "WHERE  prokind = 'f'\n"
 			   "  AND  proname = lower('");
 		bufcat(&buffer, obj->name);
 		bufcat(&buffer, "')\n");

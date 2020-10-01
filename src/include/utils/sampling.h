@@ -3,7 +3,7 @@
  * sampling.h
  *	  definitions for sampling functions
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/sampling.h
@@ -20,7 +20,7 @@
 typedef unsigned short SamplerRandomState[3];
 
 extern void sampler_random_init_state(long seed,
-						  SamplerRandomState randstate);
+									  SamplerRandomState randstate);
 extern double sampler_random_fract(SamplerRandomState randstate);
 
 /* Block sampling methods */
@@ -32,13 +32,13 @@ typedef struct
 	int			n;				/* desired sample size */
 	BlockNumber t;				/* current block number */
 	int			m;				/* blocks selected so far */
-	SamplerRandomState randstate;		/* random generator state */
+	SamplerRandomState randstate;	/* random generator state */
 } BlockSamplerData;
 
 typedef BlockSamplerData *BlockSampler;
 
 extern void BlockSampler_Init(BlockSampler bs, BlockNumber nblocks,
-				  int samplesize, long randseed);
+							  int samplesize, long randseed);
 extern bool BlockSampler_HasMore(BlockSampler bs);
 extern BlockNumber BlockSampler_Next(BlockSampler bs);
 
@@ -47,7 +47,7 @@ extern BlockNumber BlockSampler_Next(BlockSampler bs);
 typedef struct
 {
 	double		W;
-	SamplerRandomState randstate;		/* random generator state */
+	SamplerRandomState randstate;	/* random generator state */
 } ReservoirStateData;
 
 typedef ReservoirStateData *ReservoirState;
@@ -62,4 +62,4 @@ extern double anl_random_fract(void);
 extern double anl_init_selection_state(int n);
 extern double anl_get_next_S(double t, int n, double *stateptr);
 
-#endif   /* SAMPLING_H */
+#endif							/* SAMPLING_H */

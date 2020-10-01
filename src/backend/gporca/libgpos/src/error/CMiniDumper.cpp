@@ -26,15 +26,8 @@ using namespace gpos;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CMiniDumper::CMiniDumper
-	(
-	CMemoryPool *mp
-	)
-	:
-	m_mp(mp),
-	m_initialized(false),
-	m_finalized(false),
-	m_oos(NULL)
+CMiniDumper::CMiniDumper(CMemoryPool *mp)
+	: m_mp(mp), m_initialized(false), m_finalized(false), m_oos(NULL)
 {
 	GPOS_ASSERT(NULL != mp);
 }
@@ -56,12 +49,11 @@ CMiniDumper::~CMiniDumper()
 
 		GPOS_ASSERT(NULL != task);
 
-		task->ConvertErrCtxt()->Unregister
-			(
+		task->ConvertErrCtxt()->Unregister(
 #ifdef GPOS_DEBUG
 			this
-#endif // GPOS_DEBUG
-			);
+#endif	// GPOS_DEBUG
+		);
 	}
 }
 
@@ -122,10 +114,8 @@ CMiniDumper::Finalize()
 //		Get stream to serialize to
 //
 //---------------------------------------------------------------------------
-COstream&
-CMiniDumper::GetOStream
-	(
-	)
+COstream &
+CMiniDumper::GetOStream()
 {
 	GPOS_ASSERT(m_initialized);
 
@@ -134,4 +124,3 @@ CMiniDumper::GetOStream
 
 
 // EOF
-

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # gplogfilter [options] [inputfile]...
@@ -365,10 +365,10 @@ try:
     if len(args) == 0:
         s = os.getenv('MASTER_DATA_DIRECTORY')
         if s:
-            # we only support log rotation in pg_log dir.
-            if os.path.exists(s + "/pg_log"):
-                for logfile in os.listdir(s + "/pg_log"):
-                    args.append(s + "/pg_log/" + logfile)
+            # we only support log rotation in log dir.
+            if os.path.exists(s + "/log"):
+                for logfile in os.listdir(s + "/log"):
+                    args.append(s + "/log/" + logfile)
             else:
                 raise IOError('Specify input file or "-" for standard input')
         else:

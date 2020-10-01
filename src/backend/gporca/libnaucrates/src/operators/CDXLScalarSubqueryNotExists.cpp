@@ -27,12 +27,8 @@ using namespace gpdxl;
 //		Constructor
 //
 //---------------------------------------------------------------------------
-CDXLScalarSubqueryNotExists::CDXLScalarSubqueryNotExists
-	(
-	CMemoryPool *mp
-	)
-	:
-	CDXLScalar(mp)
+CDXLScalarSubqueryNotExists::CDXLScalarSubqueryNotExists(CMemoryPool *mp)
+	: CDXLScalar(mp)
 {
 }
 
@@ -86,17 +82,15 @@ CDXLScalarSubqueryNotExists::GetOpNameStr() const
 //
 //---------------------------------------------------------------------------
 void
-CDXLScalarSubqueryNotExists::SerializeToDXL
-	(
-	CXMLSerializer *xml_serializer,
-	const CDXLNode *dxlnode
-	)
-	const
+CDXLScalarSubqueryNotExists::SerializeToDXL(CXMLSerializer *xml_serializer,
+											const CDXLNode *dxlnode) const
 {
 	const CWStringConst *element_name = GetOpNameStr();
-	xml_serializer->OpenElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	xml_serializer->OpenElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 	dxlnode->SerializeChildrenToDXL(xml_serializer);
-	xml_serializer->CloseElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	xml_serializer->CloseElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 }
 
 #ifdef GPOS_DEBUG
@@ -105,24 +99,21 @@ CDXLScalarSubqueryNotExists::SerializeToDXL
 //		CDXLScalarSubqueryNotExists::AssertValid
 //
 //	@doc:
-//		Checks whether operator node is well-structured 
+//		Checks whether operator node is well-structured
 //
 //---------------------------------------------------------------------------
 void
-CDXLScalarSubqueryNotExists::AssertValid
-	(
-	const CDXLNode *dxlnode,
-	BOOL validate_children
-	) 
-	const
+CDXLScalarSubqueryNotExists::AssertValid(const CDXLNode *dxlnode,
+										 BOOL validate_children) const
 {
 	GPOS_ASSERT(1 == dxlnode->Arity());
-	
+
 	CDXLNode *child_dxlnode = (*dxlnode)[0];
-	GPOS_ASSERT(EdxloptypeLogical == child_dxlnode->GetOperator()->GetDXLOperatorType());
+	GPOS_ASSERT(EdxloptypeLogical ==
+				child_dxlnode->GetOperator()->GetDXLOperatorType());
 
 	dxlnode->AssertValid(validate_children);
 }
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 // EOF

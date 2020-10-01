@@ -14,9 +14,9 @@ include: helpers/server_helpers.sql;
 2&:CHECKPOINT;
 3:INSERT INTO t VALUES (1, 0);
 
--- Force WAL to switch xlog files explicitly
+-- Force WAL to switch wal files explicitly
 -- start_ignore
-1U:SELECT pg_switch_xlog();
+1U:SELECT pg_switch_wal();
 -- end_ignore
 3:INSERT INTO t SELECT 0, i FROM generate_series(1, 25)i;
 
@@ -36,30 +36,12 @@ SELECT count(*) FROM t;
 !\retcode gprecoverseg -a;
 
 -- loop while segments come in sync
-do $$
-begin /* in func */
-  for i in 1..120 loop /* in func */
-    if (select count(*) = 2 from gp_segment_configuration where content = 1 and mode = 's') then /* in func */
-      return; /* in func */
-    end if; /* in func */
-    perform gp_request_fts_probe_scan(); /* in func */
-  end loop; /* in func */
-end; /* in func */
-$$;
+select wait_until_all_segments_synchronized();
 
 !\retcode gprecoverseg -ar;
 
 -- loop while segments come in sync
-do $$
-begin /* in func */
-  for i in 1..120 loop /* in func */
-    if (select count(*) = 2 from gp_segment_configuration where content = 1 and mode = 's') then /* in func */
-      return; /* in func */
-    end if; /* in func */
-    perform gp_request_fts_probe_scan(); /* in func */
-  end loop; /* in func */
-end; /* in func */
-$$;
+select wait_until_all_segments_synchronized();
 
 -- verify no segment is down after recovery
 1:SELECT COUNT(*) FROM gp_segment_configuration WHERE status = 'd';

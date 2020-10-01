@@ -18,79 +18,71 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CXformExpandNAryJoinGreedy
-	//
-	//	@doc:
-	//		Expand n-ary join into series of binary joins while minimizing
-	//		cardinality of intermediate results and delay cross joins to
-	//		the end
-	//
-	//---------------------------------------------------------------------------
-	class CXformExpandNAryJoinGreedy : public CXformExploration
+//---------------------------------------------------------------------------
+//	@class:
+//		CXformExpandNAryJoinGreedy
+//
+//	@doc:
+//		Expand n-ary join into series of binary joins while minimizing
+//		cardinality of intermediate results and delay cross joins to
+//		the end
+//
+//---------------------------------------------------------------------------
+class CXformExpandNAryJoinGreedy : public CXformExploration
+{
+private:
+	// private copy ctor
+	CXformExpandNAryJoinGreedy(const CXformExpandNAryJoinGreedy &);
+
+public:
+	// ctor
+	explicit CXformExpandNAryJoinGreedy(CMemoryPool *pmp);
+
+	// dtor
+	virtual ~CXformExpandNAryJoinGreedy()
 	{
+	}
 
-		private:
+	// ident accessors
+	virtual EXformId
+	Exfid() const
+	{
+		return ExfExpandNAryJoinGreedy;
+	}
 
-			// private copy ctor
-			CXformExpandNAryJoinGreedy(const CXformExpandNAryJoinGreedy &);
+	// return a string for xform name
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CXformExpandNAryJoinGreedy";
+	}
 
-		public:
+	// compute xform promise for a given expression handle
+	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
 
-			// ctor
-			explicit
-			CXformExpandNAryJoinGreedy(CMemoryPool *pmp);
+	// do stats need to be computed before applying xform?
+	virtual BOOL
+	FNeedsStats() const
+	{
+		return true;
+	}
 
-			// dtor
-			virtual
-			~CXformExpandNAryJoinGreedy()
-			{}
+	// actual transform
+	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
+				   CExpression *pexpr) const;
 
-			// ident accessors
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfExpandNAryJoinGreedy;
-			}
+	BOOL
+	IsApplyOnce()
+	{
+		return true;
+	}
+};	// class CXformExpandNAryJoinGreedy
 
-			// return a string for xform name
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CXformExpandNAryJoinGreedy";
-			}
-
-			// compute xform promise for a given expression handle
-			virtual
-			EXformPromise Exfp(CExpressionHandle &exprhdl) const;
-
-			// do stats need to be computed before applying xform?
-			virtual
-			BOOL FNeedsStats() const
-			{
-				return true;
-			}
-
-			// actual transform
-			void Transform
-					(
-					CXformContext *pxfctxt,
-					CXformResult *pxfres,
-					CExpression *pexpr
-					) const;
-
-			BOOL IsApplyOnce()
-			{
-				return true;
-			}
-	}; // class CXformExpandNAryJoinGreedy
-
-}
+}  // namespace gpopt
 
 
-#endif // !GPOPT_CXformExpandNAryJoinGreedy_H
+#endif	// !GPOPT_CXformExpandNAryJoinGreedy_H
 
 // EOF

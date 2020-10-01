@@ -17,7 +17,6 @@
 #ifndef NODEPARTITIONSELECTOR_H
 #define NODEPARTITIONSELECTOR_H
 
-extern TupleTableSlot* ExecPartitionSelector(PartitionSelectorState *node);
 extern PartitionSelectorState* ExecInitPartitionSelector(PartitionSelector *node, EState *estate, int eflags);
 extern void ExecEndPartitionSelector(PartitionSelectorState *node);
 extern void ExecReScanPartitionSelector(PartitionSelectorState *node);

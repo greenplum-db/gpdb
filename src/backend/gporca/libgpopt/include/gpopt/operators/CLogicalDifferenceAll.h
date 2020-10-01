@@ -19,132 +19,109 @@
 
 namespace gpopt
 {
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CLogicalDifferenceAll
-	//
-	//	@doc:
-	//		Difference all operators
-	//
-	//---------------------------------------------------------------------------
-	class CLogicalDifferenceAll : public CLogicalSetOp
+//---------------------------------------------------------------------------
+//	@class:
+//		CLogicalDifferenceAll
+//
+//	@doc:
+//		Difference all operators
+//
+//---------------------------------------------------------------------------
+class CLogicalDifferenceAll : public CLogicalSetOp
+{
+private:
+	// private copy ctor
+	CLogicalDifferenceAll(const CLogicalDifferenceAll &);
+
+public:
+	// ctor
+	explicit CLogicalDifferenceAll(CMemoryPool *mp);
+
+	CLogicalDifferenceAll(CMemoryPool *mp, CColRefArray *pdrgpcrOutput,
+						  CColRef2dArray *pdrgpdrgpcrInput);
+
+	// dtor
+	virtual ~CLogicalDifferenceAll();
+
+	// ident accessors
+	virtual EOperatorId
+	Eopid() const
 	{
+		return EopLogicalDifferenceAll;
+	}
 
-		private:
+	// return a string for operator name
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CLogicalDifferenceAll";
+	}
 
-			// private copy ctor
-			CLogicalDifferenceAll(const CLogicalDifferenceAll &);
+	// sensitivity to order of inputs
+	BOOL
+	FInputOrderSensitive() const
+	{
+		return true;
+	}
 
-		public:
+	// return a copy of the operator with remapped columns
+	virtual COperator *PopCopyWithRemappedColumns(
+		CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist);
 
-			// ctor
-			explicit
-			CLogicalDifferenceAll(CMemoryPool *mp);
+	//-------------------------------------------------------------------------------------
+	// Derived Relational Properties
+	//-------------------------------------------------------------------------------------
 
-			CLogicalDifferenceAll
-				(
-				CMemoryPool *mp,
-				CColRefArray *pdrgpcrOutput,
-				CColRef2dArray *pdrgpdrgpcrInput
-				);
+	// derive max card
+	virtual CMaxCard DeriveMaxCard(CMemoryPool *mp,
+								   CExpressionHandle &exprhdl) const;
 
-			// dtor
-			virtual
-			~CLogicalDifferenceAll();
+	// derive key collections
+	virtual CKeyCollection *DeriveKeyCollection(
+		CMemoryPool *mp, CExpressionHandle &exprhdl) const;
 
-			// ident accessors
-			virtual
-			EOperatorId Eopid() const
-			{
-				return EopLogicalDifferenceAll;
-			}
+	// derive constraint property
+	virtual CPropConstraint *
+	DerivePropertyConstraint(CMemoryPool *,	 //mp,
+							 CExpressionHandle &exprhdl) const
+	{
+		return PpcDeriveConstraintPassThru(exprhdl, 0 /*ulChild*/);
+	}
 
-			// return a string for operator name
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CLogicalDifferenceAll";
-			}
+	//-------------------------------------------------------------------------------------
+	// Transformations
+	//-------------------------------------------------------------------------------------
 
-			// sensitivity to order of inputs
-			BOOL FInputOrderSensitive() const
-			{
-				return true;
-			}
+	// candidate set of xforms
+	CXformSet *PxfsCandidates(CMemoryPool *mp) const;
 
-			// return a copy of the operator with remapped columns
-			virtual
-			COperator *PopCopyWithRemappedColumns(CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist);
+	// stat promise
+	virtual EStatPromise
+	Esp(CExpressionHandle &	 // exprhdl
+	) const
+	{
+		return CLogical::EspLow;
+	}
 
-			//-------------------------------------------------------------------------------------
-			// Derived Relational Properties
-			//-------------------------------------------------------------------------------------
+	// derive statistics
+	virtual IStatistics *PstatsDerive(CMemoryPool *mp,
+									  CExpressionHandle &exprhdl,
+									  IStatisticsArray *stats_ctxt) const;
 
-			// derive max card
-			virtual
-			CMaxCard DeriveMaxCard(CMemoryPool *mp, CExpressionHandle &exprhdl) const;
+	// conversion function
+	static CLogicalDifferenceAll *
+	PopConvert(COperator *pop)
+	{
+		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(EopLogicalDifferenceAll == pop->Eopid());
 
-			// derive key collections
-			virtual
-			CKeyCollection *DeriveKeyCollection(CMemoryPool *mp, CExpressionHandle &exprhdl) const;
+		return reinterpret_cast<CLogicalDifferenceAll *>(pop);
+	}
 
-			// derive constraint property
-			virtual
-			CPropConstraint *DerivePropertyConstraint
-				(
-				CMemoryPool *, //mp,
-				CExpressionHandle &exprhdl
-				)
-				const
-			{
-				return PpcDeriveConstraintPassThru(exprhdl, 0 /*ulChild*/);
-			}
+};	// class CLogicalDifferenceAll
 
-			//-------------------------------------------------------------------------------------
-			// Transformations
-			//-------------------------------------------------------------------------------------
+}  // namespace gpopt
 
-			// candidate set of xforms
-			CXformSet *PxfsCandidates(CMemoryPool *mp) const;
-
-			// stat promise
-			virtual
-			EStatPromise Esp
-				(
-				CExpressionHandle &  // exprhdl
-				)
-				const
-			{
-				return CLogical::EspLow;
-			}
-
-			// derive statistics
-			virtual
-			IStatistics *PstatsDerive
-				(
-				CMemoryPool *mp,
-				CExpressionHandle &exprhdl,
-				IStatisticsArray *stats_ctxt
-				)
-				const;
-
-			// conversion function
-			static
-			CLogicalDifferenceAll *PopConvert
-				(
-				COperator *pop
-				)
-			{
-				GPOS_ASSERT(NULL != pop);
-				GPOS_ASSERT(EopLogicalDifferenceAll == pop->Eopid());
-
-				return reinterpret_cast<CLogicalDifferenceAll*>(pop);
-			}
-
-	}; // class CLogicalDifferenceAll
-
-}
-
-#endif // !GPOPT_CLogicalDifferenceAll_H
+#endif	// !GPOPT_CLogicalDifferenceAll_H
 
 // EOF

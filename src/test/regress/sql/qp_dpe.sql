@@ -21,7 +21,7 @@ RESET ALL;
 --
 
 -- start_ignore
-create language plpythonu;
+create language plpython3u;
 -- end_ignore
 
 create or replace function count_operator(query text, operator text) returns int as
@@ -35,7 +35,7 @@ for i in range(len(rv)):
         result = result+1
 return result
 $$
-language plpythonu;
+language plpython3u;
 
 -- ----------------------------------------------------------------------
 -- Test: DPE not being applied for tables partitioned by a string column

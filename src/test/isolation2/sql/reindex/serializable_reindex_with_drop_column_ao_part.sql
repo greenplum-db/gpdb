@@ -18,24 +18,28 @@ create index reindex_serialize_tab_ao_part_idxh on reindex_serialize_tab_ao_part
 2: select 'dummy select to establish snapshot';
 1: alter table reindex_serialize_tab_ao_part drop column f;
 1: COMMIT;
--- Remember index relfilenodes from master and segments before
+-- Remember leaf index relfilenodes from master and segments before
 -- reindex.
 2: create temp table old_relfilenodes as
    (select gp_segment_id as dbid, relfilenode, oid, relname from gp_dist_random('pg_class')
     where relname like 'reindex_serialize_tab_ao_part%_idx%'
+    and relkind <> 'I'
     union all
     select gp_segment_id as dbid, relfilenode, oid, relname from pg_class
-    where relname like 'reindex_serialize_tab_ao_part%_idx%');
+    where relname like 'reindex_serialize_tab_ao_part%_idx%'
+    and relkind <> 'I');
 2: reindex table reindex_serialize_tab_ao_part;
 2: COMMIT;
--- Validate that reindex changed all index relfilenodes on master as well as
--- segments.  The following query should return 0 tuples.
+-- Validate that reindex changed all leaf index relfilenodes on master as well
+-- as segments.  The following query should return 0 tuples.
 2: select oldrels.* from old_relfilenodes oldrels join
    (select gp_segment_id as dbid, relfilenode, relname from gp_dist_random('pg_class')
     where relname like 'reindex_serialize_tab_ao_part%_idx%'
+    and relkind <> 'I'
     union all
     select gp_segment_id as dbid, relfilenode, relname from pg_class
-    where relname like 'reindex_serialize_tab_ao_part%_idx%') newrels
+    where relname like 'reindex_serialize_tab_ao_part%_idx%'
+    and relkind <> 'I') newrels
     on oldrels.relfilenode = newrels.relfilenode
     and oldrels.dbid = newrels.dbid
     and oldrels.relname = newrels.relname;

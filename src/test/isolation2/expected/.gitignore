@@ -19,3 +19,5 @@ resgroup_cpu_rate_limit.out
 resgroup_cpuset.out
 resgroup_memory_limit.out
 resgroup_memory_statistic.out
+resgroup_memory_runaway.out
+resgroup_move_query.out

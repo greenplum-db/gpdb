@@ -16,6 +16,7 @@
  */
 #include "postgres.h"
 
+#include <float.h>
 #include <sys/stat.h>
 #include <sys/unistd.h>
 
@@ -30,6 +31,7 @@
 #include "cdb/cdbsreh.h"
 #include "cdb/cdbvars.h"
 #include "cdb/memquota.h"
+#include "commands/defrem.h"
 #include "commands/vacuum.h"
 #include "miscadmin.h"
 #include "optimizer/cost.h"
@@ -42,13 +44,14 @@
 #include "storage/proc.h"
 #include "tcop/idle_resource_cleaner.h"
 #include "utils/builtins.h"
+#include "utils/gdd.h"
 #include "utils/guc_tables.h"
 #include "utils/inval.h"
 #include "utils/resscheduler.h"
 #include "utils/resgroup.h"
 #include "utils/resource_manager.h"
+#include "utils/varlena.h"
 #include "utils/vmem_tracker.h"
-#include "utils/gdd.h"
 
 /*
  * These constants are copied from guc.c. They should not bitrot when we
@@ -152,7 +155,6 @@ bool		Debug_datumstream_read_print_varlena_info = false;
 bool		Debug_datumstream_write_use_small_initial_buffers = false;
 bool		gp_create_table_random_default_distribution = true;
 bool		gp_allow_non_uniform_partitioning_ddl = true;
-bool		gp_enable_exchange_default_partition = false;
 int			dtx_phase2_retry_second = 0;
 
 bool		log_dispatch_stats = false;
@@ -225,10 +227,6 @@ bool		gp_resource_group_bypass;
 bool		vmem_process_interrupt = false;
 bool		execute_pruned_plan = false;
 
-/* partitioning GUC */
-bool		gp_partitioning_dynamic_selection_log;
-int			gp_max_partition_level;
-
 /* Upgrade & maintenance GUCs */
 bool		gp_maintenance_mode;
 bool		gp_maintenance_conn;
@@ -258,8 +256,7 @@ bool		gp_enable_hashjoin_size_heuristic = false;
 bool		gp_enable_predicate_propagation = false;
 bool		gp_enable_minmax_optimization = true;
 bool		gp_enable_multiphase_agg = true;
-bool		gp_enable_preunique = TRUE;
-bool		gp_eager_preunique = FALSE;
+bool		gp_enable_preunique = true;
 bool		gp_enable_agg_distinct = true;
 bool		gp_enable_dqa_pruning = true;
 bool		gp_dynamic_partition_pruning = true;
@@ -329,6 +326,7 @@ bool		optimizer_enable_master_only_queries;
 bool		optimizer_enable_hashjoin;
 bool		optimizer_enable_dynamictablescan;
 bool		optimizer_enable_indexscan;
+bool		optimizer_enable_indexonlyscan;
 bool		optimizer_enable_tablescan;
 bool		optimizer_enable_hashagg;
 bool		optimizer_enable_groupagg;
@@ -420,9 +418,6 @@ int			writable_external_table_bufsize = 64;
 
 bool		gp_external_enable_filter_pushdown = true;
 
-/* Executor */
-bool		gp_enable_mk_sort = true;
-
 /* Enable GDD */
 bool		gp_enable_global_deadlock_detector = false;
 
@@ -510,6 +505,9 @@ static const struct config_enum_entry gp_interconnect_fc_methods[] = {
 static const struct config_enum_entry gp_interconnect_types[] = {
 	{"udpifc", INTERCONNECT_TYPE_UDPIFC},
 	{"tcp", INTERCONNECT_TYPE_TCP},
+#ifdef ENABLE_IC_PROXY
+	{"proxy", INTERCONNECT_TYPE_PROXY},
+#endif  /* ENABLE_IC_PROXY */
 	{NULL, 0}
 };
 
@@ -537,7 +535,6 @@ static const struct config_enum_entry optimizer_join_order_options[] = {
 };
 
 IndexCheckType gp_indexcheck_insert = INDEX_CHECK_NONE;
-IndexCheckType gp_indexcheck_vacuum = INDEX_CHECK_NONE;
 
 struct config_bool ConfigureNamesBool_gp[] =
 {
@@ -698,17 +695,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"gp_eager_preunique", PGC_USERSET, QUERY_TUNING_METHOD,
-			gettext_noop("Experimental feature: 2-phase duplicate removal - cost override."),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_eager_preunique,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
 		{"gp_enable_agg_distinct", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable 2-phase aggregation to compute a single distinct-qualified aggregate."),
 			NULL,
@@ -758,32 +744,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 		true,
 		NULL, NULL, NULL
 	},
-
-	{
-		{"gp_enable_mk_sort", PGC_USERSET, QUERY_TUNING_METHOD,
-			gettext_noop("Enable multi-key sort."),
-			gettext_noop("A faster sort."),
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-
-		},
-		&gp_enable_mk_sort,
-		true,
-		NULL, NULL, NULL
-	},
-
-
-#ifdef USE_ASSERT_CHECKING
-	{
-		{"gp_mk_sort_check", PGC_USERSET, QUERY_TUNING_METHOD,
-			gettext_noop("Extensive check mk_sort"),
-			gettext_noop("Expensive debug checking"),
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_mk_sort_check,
-		false,
-		NULL, NULL, NULL
-	},
-#endif
 
 	{
 		{"gp_enable_motion_deadlock_sanity", PGC_USERSET, DEVELOPER_OPTIONS,
@@ -1662,17 +1622,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"gp_partitioning_dynamic_selection_log", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Print out debugging info for GPDB dynamic partition selection"),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_partitioning_dynamic_selection_log,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
 		{"gp_log_stack_trace_lines", PGC_USERSET, LOGGING_WHAT,
 			gettext_noop("Control if file/line information is included in stack traces"),
 			NULL,
@@ -1728,6 +1677,17 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&gp_resgroup_print_operator_memory_limits,
 		false,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_resgroup_debug_wait_queue", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Enable the debugging check on the wait queue of resource group."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_resgroup_debug_wait_queue,
+		true,
 		NULL, NULL, NULL
 	},
 
@@ -1804,16 +1764,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&gp_allow_non_uniform_partitioning_ddl,
 		true,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_enable_exchange_default_partition", PGC_USERSET, COMPAT_OPTIONS,
-			gettext_noop("Allow DDL that will exchange default partitions."),
-			NULL
-		},
-		&gp_enable_exchange_default_partition,
-		false,
 		NULL, NULL, NULL
 	},
 
@@ -2252,6 +2202,17 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
+		{"optimizer_enable_indexonlyscan", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Enables the optimizer's use of plans with index only scan."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_enable_indexonlyscan,
+		false,
+		NULL, NULL, NULL
+	},
+
+	{
 		{"optimizer_enable_tablescan", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Enables the optimizer's use of plans with table scan."),
 			NULL,
@@ -2662,17 +2623,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"dml_ignore_target_partition_check", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Ignores checking whether the user provided correct partition during a direct insert to a leaf partition"),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&dml_ignore_target_partition_check,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
 		{"optimizer_force_three_stage_scalar_dqa", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Force optimizer to always pick 3 stage aggregate plan for scalar distinct qualified aggregate."),
 			NULL,
@@ -2898,6 +2848,17 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
+		{"write_to_gpfdist_timeout", PGC_USERSET, EXTERNAL_TABLES,
+			gettext_noop("Timeout (in seconds) for writing data to gpfdist server."),
+			gettext_noop("Default value is 300."),
+			GUC_UNIT_S | GUC_NOT_IN_SAMPLE
+		},
+		&write_to_gpfdist_timeout,
+		300, 1, 7200,
+		NULL, NULL, NULL
+	},
+
+	{
 		{"writable_external_table_bufsize", PGC_USERSET, EXTERNAL_TABLES,
 			gettext_noop("Buffer size in kilobytes for writable external table before writing data to gpfdist."),
 			gettext_noop("Valid value is between 32K and 128M: [32, 131072]."),
@@ -3030,17 +2991,6 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&gp_max_plan_size,
 		0, 0, MAX_KILOBYTES,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_max_partition_level", PGC_SUSET, PRESET_OPTIONS,
-			gettext_noop("Sets the maximum number of levels allowed when creating a partitioned table."),
-			gettext_noop("Use 0 for no limit."),
-			GUC_SUPERUSER_ONLY | GUC_NOT_IN_SAMPLE
-		},
-		&gp_max_partition_level,
-		0, 0, INT_MAX,
 		NULL, NULL, NULL
 	},
 
@@ -3438,29 +3388,6 @@ struct config_int ConfigureNamesInt_gp[] =
 		NULL, NULL, NULL
 	},
 
-
-	{
-		{"gp_sort_flags", PGC_USERSET, QUERY_TUNING_OTHER,
-			gettext_noop("Experimental feature: Generic sort flags."),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_sort_flags,
-		10000, 0, INT_MAX,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_sort_max_distinct", PGC_USERSET, QUERY_TUNING_OTHER,
-			gettext_noop("Experimental feature: max number of distinct values for sort."),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_sort_max_distinct,
-		20000, 0, INT_MAX,
-		NULL, NULL, NULL
-	},
-
 	{
 		{"gp_interconnect_setup_timeout", PGC_USERSET, GP_ARRAY_TUNING,
 			gettext_noop("Timeout (in seconds) on interconnect setup that occurs at query start"),
@@ -3479,7 +3406,19 @@ struct config_int ConfigureNamesInt_gp[] =
 			GUC_NOT_IN_SAMPLE
 		},
 		&listenerBacklog,
-		128, 0, 65535,
+		/*
+		 * GPDB_12_MERGE_FIXME: in order to make case DML_over_joins
+		 * pass under tcp interconnect mode, enlarge this GUC's default
+		 * value to 256 as a work-around. Without this change, the case
+		 * will throw warnings like:
+		 *   +HINT:  Try enlarging the gp_interconnect_tcp_listener_backlog GUC value and OS net.core.somaxconn parameter
+		 *   +WARNING:  SetupTCPInterconnect: too many expected incoming connections(144), Interconnect setup might possibly fail
+		 * This is because the plan fallback from orca to planner, and planner
+		 * removes the motion under modifytable plannode by the PR: https://github.com/greenplum-db/gpdb/pull/9183
+		 * We should consider to remove the locus check in the PR 9183 and that would fix the case.
+		 * Also we should find out why orca fallback to planner for this simple case.
+		 */
+		256, 0, 65535,
 		NULL, NULL, NULL
 	},
 
@@ -3490,7 +3429,7 @@ struct config_int ConfigureNamesInt_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_UNIT_S
 		},
 		&gp_snapshotadd_timeout,
-		10, 0, INT_MAX,
+		30, 0, INT_MAX,
 		NULL, NULL, NULL
 	},
 
@@ -3545,6 +3484,38 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&gp_fts_mark_mirror_down_grace_period,
 		30, 0, 3600,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_fts_replication_attempt_count", PGC_SIGHUP, GP_ARRAY_TUNING,
+			gettext_noop("Primary-mirror replication connection max continuously attempt count for FTS"),
+			gettext_noop("Used by the fts-probe process.")
+		},
+		&gp_fts_replication_attempt_count,
+		10, 0, 100,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_dtx_recovery_interval", PGC_SIGHUP, GP_ARRAY_TUNING,
+			gettext_noop("A complete checking in dtx recovery process starts each time a timer with this period expires."),
+			gettext_noop("Used by the dtx recovery process. "),
+			GUC_UNIT_S
+		},
+		&gp_dtx_recovery_interval,
+		60, 5, 3600,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_dtx_recovery_prepared_period", PGC_SIGHUP, GP_ARRAY_TUNING,
+			gettext_noop("Gather prepared transactions before the time (in seconds) to find potential orphaned ones."),
+			gettext_noop("Used by the dtx recovery process. "),
+			GUC_UNIT_S
+		},
+		&gp_dtx_recovery_prepared_period,
+		120, 0, 3600,
 		NULL, NULL, NULL
 	},
 
@@ -3942,6 +3913,7 @@ struct config_int ConfigureNamesInt_gp[] =
 		0, 0, INT_MAX,
 		NULL, NULL, NULL
 	},
+
 	{
 		{"repl_catchup_within_range", PGC_SUSET, REPLICATION_STANDBY,
 			gettext_noop("Sets the maximum number of xlog segments allowed to lag"
@@ -3951,7 +3923,7 @@ struct config_int ConfigureNamesInt_gp[] =
 			GUC_SUPERUSER_ONLY
 		},
 		&repl_catchup_within_range,
-		1, 0, UINT_MAX / XLogSegSize,
+		1, 0, INT_MAX / WalSegMaxSize,
 		NULL, NULL, NULL
 	},
 
@@ -3985,17 +3957,6 @@ struct config_int ConfigureNamesInt_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		(int *) &gp_indexcheck_insert,
-		INDEX_CHECK_NONE, 0, INDEX_CHECK_ALL,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_indexcheck_vacuum", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Validate index after lazy vacuum."),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		(int *) &gp_indexcheck_vacuum,
 		INDEX_CHECK_NONE, 0, INDEX_CHECK_ALL,
 		NULL, NULL, NULL
 	},
@@ -4213,25 +4174,14 @@ struct config_string ConfigureNamesString_gp[] =
 	},
 
 	{
-		{"gp_session_role", PGC_BACKEND, GP_WORKER_IDENTITY,
-			gettext_noop("Reports the default role for the session."),
-			gettext_noop("Valid values are DISPATCH, EXECUTE, and UTILITY."),
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE
-		},
-		&gp_session_role_string,
-		"dispatch",
-		check_gp_session_role, assign_gp_session_role, show_gp_session_role
-	},
-
-	{
-		{"gp_role", PGC_SUSET, CLIENT_CONN_OTHER,
+		{"gp_role", PGC_BACKEND, GP_WORKER_IDENTITY,
 			gettext_noop("Sets the role for the session."),
 			gettext_noop("Valid values are DISPATCH, EXECUTE, and UTILITY."),
 			GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE
 		},
 		&gp_role_string,
-		"dispatch",
-		NULL, assign_gp_role, show_gp_role
+		"undefined",
+		check_gp_role, assign_gp_role, show_gp_role
 	},
 
 	{
@@ -4344,6 +4294,19 @@ struct config_string ConfigureNamesString_gp[] =
 		GP_VERSION,
 		NULL, NULL, NULL
 	},
+
+#ifdef ENABLE_IC_PROXY
+	{
+		{"gp_interconnect_proxy_addresses", PGC_SIGHUP, GP_ARRAY_CONFIGURATION,
+			gettext_noop("Sets the ic-proxy addresses as \"content:ip:port ...\", must be ordered by content, the port is ignored at the moment."),
+			gettext_noop("e.g. \"-1:10.0.0.1:2000 0:10.0.0.2:2000 1:10.0.0.2:2001\""),
+			GUC_NO_SHOW_ALL | GUC_GPDB_NO_SYNC
+		},
+		&gp_interconnect_proxy_addresses,
+		"",
+		NULL, NULL, NULL
+	},
+#endif  /* ENABLE_IC_PROXY */
 
 	/* End-of-list marker */
 	{
@@ -4499,7 +4462,11 @@ struct config_enum ConfigureNamesEnum_gp[] =
 	{
 		{"gp_interconnect_type", PGC_BACKEND, GP_ARRAY_TUNING,
 			gettext_noop("Sets the protocol used for inter-node communication."),
-			gettext_noop("Valid values are \"tcp\" and \"udpifc\".")
+			gettext_noop("Valid values are \"tcp\", \"udpifc\""
+#ifdef ENABLE_IC_PROXY
+						 " and \"proxy\""
+#endif  /* ENABLE_IC_PROXY */
+						 ".")
 		},
 		&Gp_interconnect_type,
 		INTERCONNECT_TYPE_UDPIFC, gp_interconnect_types,
@@ -4779,9 +4746,7 @@ storageOptToString(const StdRdOptions *ao_opts)
 	char	   *ret;
 
 	initStringInfo(&buf);
-	appendStringInfo(&buf, "%s=%s", SOPT_APPENDONLY,
-					 ao_opts->appendonly ? "true" : "false");
-	appendStringInfo(&buf, ",%s=%d,", SOPT_BLOCKSIZE,
+	appendStringInfo(&buf, "%s=%d,", SOPT_BLOCKSIZE,
 					 ao_opts->blocksize);
 	if (ao_opts->compresstype[0])
 	{
@@ -4802,10 +4767,8 @@ storageOptToString(const StdRdOptions *ao_opts)
 		appendStringInfo(&buf, "%s=%d,", SOPT_COMPLEVEL,
 						 ao_opts->compresslevel);
 	}
-	appendStringInfo(&buf, "%s=%s,", SOPT_CHECKSUM,
+	appendStringInfo(&buf, "%s=%s", SOPT_CHECKSUM,
 					 ao_opts->checksum ? "true" : "false");
-	appendStringInfo(&buf, "%s=%s", SOPT_ORIENTATION,
-					 ao_opts->columnstore ? "column" : "row");
 	ret = strdup(buf.data);
 	if (ret == NULL)
 		elog(ERROR, "out of memory");
@@ -4820,75 +4783,40 @@ storageOptToString(const StdRdOptions *ao_opts)
 static bool
 check_gp_default_storage_options(char **newval, void **extra, GucSource source)
 {
-	bool		result = false;
+	/* Value of "appendonly" option if one is specified. */
+	StdRdOptions *newopts;
 
-	PG_TRY();
+	newopts = calloc(sizeof(*newopts), 1);
+	if (!newopts)
+		ereport(ERROR,
+				(errcode(ERRCODE_OUT_OF_MEMORY),
+				 errmsg("out of memory")));
+
+	resetAOStorageOpts(newopts);
+
+	/*
+	 * Perform identical validations as in case of options specified
+	 * in a WITH() clause.
+	 */
+	if ((*newval)[0])
 	{
-		/* Value of "appendonly" option if one is specified. */
-		StdRdOptions newopts;
+		Datum		newopts_datum;
 
-		memset(&newopts, 0, sizeof(StdRdOptions));
-		resetAOStorageOpts(&newopts);
-
-		/*
-		 * Perform identical validations as in case of options specified
-		 * in a WITH() clause.
-		 */
-		if ((*newval)[0])
-		{
-			bool		aovalue = false;
-			Datum		newopts_datum;
-
-			newopts_datum = parseAOStorageOpts(*newval, &aovalue);
-			parse_validate_reloptions(&newopts, newopts_datum,
-									  /* validate */ true, RELOPT_KIND_HEAP);
-			validateAppendOnlyRelOptions(
-				newopts.appendonly,
-				newopts.blocksize,
-				gp_safefswritesize,
-				newopts.compresslevel,
-				newopts.compresstype,
-				newopts.checksum,
-				RELKIND_RELATION,
-				newopts.columnstore);
-			newopts.appendonly = aovalue;
-		}
-
-		/*
-		 * All validations succeeded, it is safe to update global
-		 * appendonly storage options.
-		 */
-		*extra = malloc(sizeof(StdRdOptions));
-		if (*extra == NULL)
-			ereport(ERROR,
-					(errcode(ERRCODE_OUT_OF_MEMORY),
-					 errmsg("out of memory")));
-		memcpy(*extra, &newopts, sizeof(StdRdOptions));
-
-		free(*newval);
-		*newval = NULL;
-		*newval = storageOptToString(&newopts);
-
-		result = true;
+		newopts_datum = parseAOStorageOpts(*newval);
+		parse_validate_reloptions(newopts, newopts_datum,
+								  /* validate */ true, RELOPT_KIND_APPENDOPTIMIZED);
 	}
-	PG_CATCH();
-	{
-		if (source >= PGC_S_INTERACTIVE)
-			PG_RE_THROW();
-		else
-		{
-			/*
-			 * We are in the middle of backend / postmaster startup.  The
-			 * configured value is bad, proceed with factory defaults.
-			 */
-			elog(WARNING, "could not set gp_default_storage_options to '%s'",
-				 *newval);
-		}
-		result = false;
-	}
-	PG_END_TRY();
 
-	return result;
+	/*
+	 * All validations succeeded, it is safe to update global
+	 * appendonly storage options.
+	 */
+
+	free(*newval);
+	*newval = storageOptToString(newopts);
+	*extra = newopts;
+
+	return true;
 }
 
 
@@ -4994,16 +4922,39 @@ DispatchSyncPGVariable(struct config_generic * gconfig)
 		{
 			struct config_string *sguc = (struct config_string *) gconfig;
 			const char *str = *sguc->variable;
-			int			i;
 
 			appendStringInfo(&buffer, "%s TO ", gconfig->name);
 
 			/*
-			 * All whitespace characters must be escaped. See
-			 * pg_split_opts() in the backend.
+			 * If it's a list, we need to split the list into elements and
+			 * quote the elements individually.
+			 *
+			 * This is the copied from pg_get_functiondef()'s handling of
+			 * proconfig options.
+			 * .
 			 */
-			for (i = 0; str[i] != '\0'; i++)
-				appendStringInfoChar(&buffer, str[i]);
+			if (sguc->gen.flags & GUC_LIST_QUOTE)
+			{
+				List	   *namelist;
+				ListCell   *lc;
+
+				/* Parse string into list of identifiers */
+				if (!SplitGUCList((char *) pstrdup(str), ',', &namelist))
+				{
+					/* this shouldn't fail really */
+					elog(ERROR, "invalid list syntax in proconfig item");
+				}
+				foreach(lc, namelist)
+				{
+					char	   *curname = (char *) lfirst(lc);
+
+					appendStringInfoString(&buffer, quote_literal_cstr(curname));
+					if (lnext(lc))
+						appendStringInfoString(&buffer, ", ");
+				}
+			}
+			else
+				appendStringInfoString(&buffer, quote_literal_cstr(str));
 
 			break;
 		}

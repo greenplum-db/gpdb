@@ -52,7 +52,7 @@ PQsendGpQuery_shared(PGconn *conn, char *shared_query, int query_len, bool nonbl
 
 	if (ret < 0)
 	{
-		pqHandleSendFailure(conn);
+		/* error message should be set up already */
 		return 0;
 	}
 

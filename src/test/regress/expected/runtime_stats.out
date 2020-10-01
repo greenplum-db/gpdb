@@ -18,7 +18,7 @@ for i in range(len(rv)):
          result = 1
 return result
 $$
-language plpythonu;
+language plpython3u;
 -- Force Sort operator to spill workfiles and examine if stats are correct
 drop table if exists testsort; 
 NOTICE:  table "testsort" does not exist, skipping
@@ -28,7 +28,6 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 insert into testsort select i, i % 1000, i % 100000, i % 75 from generate_series(0,199999) i; 
 set statement_mem="2MB";
 set gp_resqueue_print_operator_memory_limits=on;
-set gp_enable_mk_sort=off; 
 select isSpilling('explain (analyze, verbose) select i1,i2 from testsort order by i2');
  isspilling 
 ------------

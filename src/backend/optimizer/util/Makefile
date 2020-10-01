@@ -13,8 +13,9 @@ top_builddir = ../../../..
 include $(top_builddir)/src/Makefile.global
 override CPPFLAGS := -I$(libpq_srcdir) $(CPPFLAGS)
 
-OBJS = clauses.o joininfo.o orclauses.o pathnode.o placeholder.o \
-       plancat.o predtest.o relnode.o restrictinfo.o tlist.o var.o
+OBJS = appendinfo.o clauses.o inherit.o joininfo.o orclauses.o \
+       paramassign.o pathnode.o placeholder.o plancat.o predtest.o \
+       relnode.o restrictinfo.o tlist.o var.o
 
 OBJS += predtest_valueset.o walkers.o
 

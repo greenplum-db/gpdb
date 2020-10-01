@@ -19,153 +19,123 @@
 
 namespace gpopt
 {
-	
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CPhysicalMotionHashDistribute
-	//
-	//	@doc:
-	//		Hash distribute motion operator
-	//
-	//---------------------------------------------------------------------------
-	class CPhysicalMotionHashDistribute : public CPhysicalMotion
+//---------------------------------------------------------------------------
+//	@class:
+//		CPhysicalMotionHashDistribute
+//
+//	@doc:
+//		Hash distribute motion operator
+//
+//---------------------------------------------------------------------------
+class CPhysicalMotionHashDistribute : public CPhysicalMotion
+{
+private:
+	// hash distribution spec
+	CDistributionSpecHashed *m_pdsHashed;
+
+	// required columns in distribution spec
+	CColRefSet *m_pcrsRequiredLocal;
+
+	// private copy ctor
+	CPhysicalMotionHashDistribute(const CPhysicalMotionHashDistribute &);
+
+public:
+	// ctor
+	CPhysicalMotionHashDistribute(CMemoryPool *mp,
+								  CDistributionSpecHashed *pdsHashed);
+
+	// dtor
+	virtual ~CPhysicalMotionHashDistribute();
+
+	// ident accessors
+	virtual EOperatorId
+	Eopid() const
 	{
+		return EopPhysicalMotionHashDistribute;
+	}
 
-		private:
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CPhysicalMotionHashDistribute";
+	}
 
-			// hash distribution spec
-			CDistributionSpecHashed *m_pdsHashed;
-			
-			// required columns in distribution spec
-			CColRefSet *m_pcrsRequiredLocal;
+	// output distribution accessor
+	virtual CDistributionSpec *
+	Pds() const
+	{
+		return m_pdsHashed;
+	}
 
-			// private copy ctor
-			CPhysicalMotionHashDistribute(const CPhysicalMotionHashDistribute &);
+	// is motion eliminating duplicates
+	BOOL
+	IsDuplicateSensitive() const
+	{
+		return m_pdsHashed->IsDuplicateSensitive();
+	}
 
-		public:
-		
-			// ctor
-			CPhysicalMotionHashDistribute
-				(
-				CMemoryPool *mp,
-				CDistributionSpecHashed *pdsHashed
-				);
-			
-			// dtor
-			virtual 
-			~CPhysicalMotionHashDistribute();
+	// match function
+	virtual BOOL Matches(COperator *) const;
 
-			// ident accessors
-			virtual 
-			EOperatorId Eopid() const
-			{
-				return EopPhysicalMotionHashDistribute;
-			}
-			
-			virtual 
-			const CHAR *SzId() const
-			{
-				return "CPhysicalMotionHashDistribute";
-			}
-			
-			// output distribution accessor
-			virtual
-			CDistributionSpec *Pds() const
-			{
-				return m_pdsHashed;
-			}
-			
-			// is motion eliminating duplicates
-			BOOL IsDuplicateSensitive() const
-			{
-				return m_pdsHashed->IsDuplicateSensitive();
-			}
+	//-------------------------------------------------------------------------------------
+	// Required Plan Properties
+	//-------------------------------------------------------------------------------------
 
-			// match function
-			virtual
-			BOOL Matches(COperator *) const;
+	// compute required output columns of the n-th child
+	virtual CColRefSet *PcrsRequired(CMemoryPool *mp,
+									 CExpressionHandle &exprhdl,
+									 CColRefSet *pcrsInput, ULONG child_index,
+									 CDrvdPropArray *pdrgpdpCtxt,
+									 ULONG ulOptReq);
 
-			//-------------------------------------------------------------------------------------
-			// Required Plan Properties
-			//-------------------------------------------------------------------------------------
+	// compute required sort order of the n-th child
+	virtual COrderSpec *PosRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
+									COrderSpec *posInput, ULONG child_index,
+									CDrvdPropArray *pdrgpdpCtxt,
+									ULONG ulOptReq) const;
 
-			// compute required output columns of the n-th child
-			virtual
-			CColRefSet *PcrsRequired
-				(
-				CMemoryPool *mp,
-				CExpressionHandle &exprhdl,
-				CColRefSet *pcrsInput,
-				ULONG child_index,
-				CDrvdPropArray *pdrgpdpCtxt,
-				ULONG ulOptReq
-				);
+	// check if required columns are included in output columns
+	virtual BOOL FProvidesReqdCols(CExpressionHandle &exprhdl,
+								   CColRefSet *pcrsRequired,
+								   ULONG ulOptReq) const;
 
-			// compute required sort order of the n-th child
-			virtual
-			COrderSpec *PosRequired
-				(
-				CMemoryPool *mp,
-				CExpressionHandle &exprhdl,
-				COrderSpec *posInput,
-				ULONG child_index,
-				CDrvdPropArray *pdrgpdpCtxt,
-				ULONG ulOptReq
-				)
-				const;
+	//-------------------------------------------------------------------------------------
+	// Derived Plan Properties
+	//-------------------------------------------------------------------------------------
 
-			// check if required columns are included in output columns
-			virtual
-			BOOL FProvidesReqdCols(CExpressionHandle &exprhdl, CColRefSet *pcrsRequired, ULONG ulOptReq) const;
+	// derive sort order
+	virtual COrderSpec *PosDerive(CMemoryPool *mp,
+								  CExpressionHandle &exprhdl) const;
 
-			//-------------------------------------------------------------------------------------
-			// Derived Plan Properties
-			//-------------------------------------------------------------------------------------
+	//-------------------------------------------------------------------------------------
+	// Enforced Properties
+	//-------------------------------------------------------------------------------------
 
-			// derive sort order
-			virtual
-			COrderSpec *PosDerive(CMemoryPool *mp, CExpressionHandle &exprhdl) const;
+	// return order property enforcing type for this operator
+	virtual CEnfdProp::EPropEnforcingType EpetOrder(
+		CExpressionHandle &exprhdl, const CEnfdOrder *peo) const;
 
-			//-------------------------------------------------------------------------------------
-			// Enforced Properties
-			//-------------------------------------------------------------------------------------
+	//-------------------------------------------------------------------------------------
+	//-------------------------------------------------------------------------------------
+	//-------------------------------------------------------------------------------------
 
-			// return order property enforcing type for this operator
-			virtual
-			CEnfdProp::EPropEnforcingType EpetOrder
-				(
-				CExpressionHandle &exprhdl,
-				const CEnfdOrder *peo
-				)
-				const;
+	// print
+	virtual IOstream &OsPrint(IOstream &) const;
 
-			//-------------------------------------------------------------------------------------
-			//-------------------------------------------------------------------------------------
-			//-------------------------------------------------------------------------------------
+	// conversion function
+	static CPhysicalMotionHashDistribute *PopConvert(COperator *pop);
 
-			// print
-			virtual 
-			IOstream &OsPrint(IOstream &) const;
-			
-			// conversion function
-			static
-			CPhysicalMotionHashDistribute *PopConvert(COperator *pop);
+	virtual CDistributionSpec *PdsRequired(CMemoryPool *mp,
+										   CExpressionHandle &exprhdl,
+										   CDistributionSpec *pdsRequired,
+										   ULONG child_index,
+										   CDrvdPropArray *pdrgpdpCtxt,
+										   ULONG ulOptReq) const;
 
-			virtual
-			CDistributionSpec *PdsRequired
-				(
-				CMemoryPool *mp,
-				CExpressionHandle &exprhdl,
-				CDistributionSpec *pdsRequired,
-				ULONG child_index,
-				CDrvdPropArray *pdrgpdpCtxt,
-				ULONG ulOptReq
-				) const;
+};	// class CPhysicalMotionHashDistribute
 
-	}; // class CPhysicalMotionHashDistribute
+}  // namespace gpopt
 
-}
-
-#endif // !GPOPT_CPhysicalMotionHashDistribute_H
+#endif	// !GPOPT_CPhysicalMotionHashDistribute_H
 
 // EOF

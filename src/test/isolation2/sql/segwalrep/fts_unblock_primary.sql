@@ -1,22 +1,4 @@
 -- This test assumes 3 primaries and 3 mirrors from a gpdemo segwalrep cluster
-
--- function to wait for mirror to come up in sync (1 minute timeout)
-create or replace function wait_for_streaming(contentid smallint)
-returns void as $$
-declare
-  updated bool; /* in func */
-begin /* in func */
-  for i in 1 .. 120 loop /* in func */
-    perform gp_request_fts_probe_scan(); /* in func */
-    select (mode = 's' and status = 'u') into updated /* in func */
-    from gp_segment_configuration /* in func */
-    where content = contentid and role = 'm'; /* in func */
-    exit when updated; /* in func */
-    perform pg_sleep(0.5); /* in func */
-  end loop; /* in func */
-end; /* in func */
-$$ language plpgsql;
-
 include: helpers/server_helpers.sql;
 
 
@@ -95,7 +77,7 @@ select content, role, preferred_role, mode, status from gp_segment_configuration
 -- let the walsender proceed
 select gp_inject_fault('initialize_wal_sender', 'reset', dbid)
 from gp_segment_configuration where role='p' and content=2;
-select wait_for_streaming(2::smallint);
+select wait_until_segment_synchronized(2);
 select content, role, preferred_role, mode, status from gp_segment_configuration where content=2;
 
 -- everything is back to normal

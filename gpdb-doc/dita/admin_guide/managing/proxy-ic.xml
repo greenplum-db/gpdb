@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+  <title id="eb20941">Configuring Proxies for the Greenplum Interconnect</title>
+  <shortdesc>You can configure a Greenplum system to use proxies for interconnect communication to
+    reduce the use of connections and ports during query processing.</shortdesc>
+  <body>
+    <p>The Greenplum <i>interconnect</i> (the networking layer) refers to the inter-process
+      communication between segments and the network infrastructure on which this communication
+      relies. For information about the Greenplum architecture and interconnect, see <xref
+        href="../intro/arch_overview.xml" format="dita"/>. </p>
+    <p>In general, when running a query, a QD (query dispatcher) on the Greenplum master creates
+      connections to one or more QE (query executor) processes on segments, and a QE can create
+      connections to other QEs. For a description of Greenplum query processing and parallel query
+      processing, see <xref href="../query/topics/parallel-proc.xml"/>.</p>
+    <p>By default, connections between the QD on the master and QEs on segment instances and between
+      QEs on different segment instances require a separate network port. You can configure a
+      Greenplum system to use proxies when Greenplum communicates between the QD and QEs and between
+      QEs on different segment instances. The interconnect proxies require only one network
+      connection for Greenplum internal communication between two segment instances, so it consumes
+      fewer connections and ports than <codeph>TCP</codeph> mode, and has better performance than
+        <codeph>UDPIFC</codeph> mode in a high-latency network. </p>
+    <p>To enable interconnect proxies for the Greenplum system, set these system configuration
+        parameters.<ul id="ul_vqk_34f_4mb">
+        <li>List the proxy ports with the parameter <codeph><xref
+              href="../../ref_guide/config_params/guc-list.xml#gp_interconnect_proxy_addresses"
+              format="dita"/></codeph>. You must specify a proxy port for the master, standby
+          master, and all segment instances.</li>
+        <li>Set the parameter <codeph><xref
+              href="../../ref_guide/config_params/guc-list.xml#gp_interconnect_type" format="dita"
+            /></codeph> to <codeph>proxy</codeph>.</li>
+      </ul></p>
+    <note>When expanding a Greenplum Database system, you must disable interconnect proxies before
+      adding new hosts and segment instances to the system, and you must update the
+        <codeph>gp_interconnect_proxy_addresses</codeph> parameter with the newly-added segment
+      instances before you re-enable interconnect proxies. </note>
+  </body>
+  <topic id="topic_z4l_lcg_4mb">
+    <title>Example</title>
+    <body>
+      <p>This example sets up a Greenplum system to use proxies for the Greenplum interconnect when
+        running queries. The example sets the <codeph><xref
+            href="../../ref_guide/config_params/guc-list.xml#gp_interconnect_proxy_addresses"
+            format="dita"/></codeph> parameter and tests the proxies before setting the
+            <codeph><xref href="../../ref_guide/config_params/guc-list.xml#gp_interconnect_type"
+            format="dita"/></codeph> parameter for the Greenplum system.<ul id="ul_mtf_wsm_4mb">
+          <li><xref href="#topic_z4l_lcg_4mb/set_proxy_address" format="dita">Setting the
+              Interconnect Proxy Addresses</xref></li>
+          <li><xref href="#topic_z4l_lcg_4mb/test_proxy" format="dita">Testing the Interconnect
+              Proxies</xref></li>
+          <li><xref href="#topic_z4l_lcg_4mb/set_gpdb_proxy" format="dita">Setting Interconnect
+              Proxies for the System</xref></li>
+        </ul></p>
+      <section id="set_proxy_address">
+        <title>Setting the Interconnect Proxy Addresses</title>
+        <p>Set the <codeph>gp_interconnect_proxy_addresses</codeph> parameter to specify the proxy
+          ports for the master and segment instances. The syntax for the value has the following
+          format and you must specify the parameter value as a single-quoted string.</p>
+        <codeblock>&lt;db_id>:&lt;cont_id>:&lt;seg_ip>:&lt;port>[,&lt;dbid>:&lt;segid>:&lt;ip>:&lt;port> ... ]</codeblock>
+        <p>For the master, standby master, and segment instance, the first three fields,
+            <varname>db_id</varname>, <varname>cont_id</varname>, and <varname>seg_ip</varname> can
+          be found in the <codeph><xref
+              href="../../ref_guide/system_catalogs/gp_segment_configuration.xml"
+              >gp_segment_configuration</xref></codeph> catalog table. The fourth field,
+            <varname>port</varname>, is the proxy port for the Greenplum master or a segment
+            instance.<ul id="ul_hxd_2qm_4mb">
+            <li><varname>db_id</varname> is the <codeph>dbid</codeph> column in the catalog
+              table.</li>
+            <li><varname>cont_id</varname> is the <codeph>content</codeph> column in the catalog
+              table.</li>
+            <li><varname>seg_ip</varname> is the IP address corresponding to the
+                <codeph>address</codeph> column in the catalog table. If the
+                <codeph>address</codeph> is a hostname, use the IP address of the hostname.</li>
+            <li><varname>port</varname> is the TCP/IP port for the segment instance proxy that you
+              specify.</li>
+          </ul></p>
+        <p>This is an example PL/Python function that displays or sets the segment instance proxy
+          port values for the <codeph>gp_interconnect_proxy_addresses</codeph> parameter. To create
+          and run the function, you must enable PL/Python in the database with the <codeph>CREATE
+            EXTENSION plpythonu</codeph> command.</p>
+        <codeblock>--
+-- A PL/Python function to setup the interconnect proxy addresses.
+-- Requires the Python modules os and socket.
+--
+-- Usage:
+--   select my_setup_ic_proxy(-1000, '');              -- display IC proxy values for segments
+--   select my_setup_ic_proxy(-1000, 'update proxy');  -- update the gp_interconnect_proxy_addresses parameter
+--
+-- The first argument, "delta", is used to calculate the proxy port with this formula:
+--
+--   proxy_port = postmaster_port + delta
+--
+-- The second argument, "action", is used to update the gp_interconnect_proxy_addresses parameter.
+-- The parameter is not updated unless "action" is 'update proxy'.
+-- Note that running  "gpstop -u" is required for the update to take effect. 
+-- A Greenplum system restart will also work.
+--
+create or replace function my_setup_ic_proxy(delta int, action text)
+returns table(dbid smallint, content smallint, ip text, port int) as $$
+    import os
+    import socket
+
+    results = []
+    value = ''
+
+    segs = plpy.execute('''SELECT dbid, content, port, address
+                              FROM gp_segment_configuration
+                            ORDER BY 1''')
+    for seg in segs:
+        dbid = seg['dbid']
+        content = seg['content']
+        port = seg['port']
+        address = seg['address']
+
+        # lookup ip of the address
+        ip = socket.gethostbyname(address)
+
+        # decide the proxy port
+        port = port + delta
+
+        # append to the result list
+        results.append((dbid, content, ip, port))
+
+        # build the value for the GUC
+        if value:
+            value += ','
+        value += '{}:{}:{}:{}'.format(dbid, content, ip, port)
+
+    if action.lower() == 'update proxy':
+        os.system('''gpconfig --skipvalidation -c gp_interconnect_proxy_addresses -v "'{}'"'''.format(value))
+        plpy.notice('''the settings are applied, please reload with 'gpstop -u' to take effect.''')
+    else:
+        plpy.notice('''if the settings are correct, re-run with 'update proxy' to apply.''')
+    return results
+$$ language plpythonu execute on master;</codeblock>
+        <note>When you run the function, you should connect to the database using the Greenplum
+          interconnect type <codeph>UDPIFC</codeph> or <codeph>TCP</codeph>. This example uses
+            <codeph>psql</codeph> to connect to the database <codeph>mytest</codeph> with the
+          interconnect type
+          <codeph>UDPIFC</codeph>.<codeblock>PGOPTIONS="-c gp_interconnect_type=udpifc" psql -d mytest</codeblock></note>
+        <p>Running this command lists the segment instance values for the
+            <codeph>gp_interconnect_proxy_addresses</codeph> parameter.
+          <codeblock>select my_setup_ic_proxy(-1000, '');</codeblock></p>
+        <p>This command runs the function to set the
+          parameter.<codeblock>select my_setup_ic_proxy(-1000, 'update proxy');</codeblock></p>
+        <p>As an alternative, you can run the <codeph><xref
+              href="../../utility_guide/ref/gpconfig.xml">gpconfig</xref></codeph> utility to set
+          the <codeph>gp_interconnect_proxy_addresses</codeph> parameter. To set the value as a
+          string, the value is a single-quoted string that is enclosed in double quotes. The example
+          Greenplum system consists of a master and a single segment instance. </p>
+        <codeblock>gpconfig --skipvalidation -c gp_interconnect_proxy_addresses -v "'1:-1:192.168.180.50:35432,2:0:192.168.180.54:35000'"</codeblock>
+        <p>After setting the <codeph>gp_interconnect_proxy_addresses</codeph> parameter, reload the
+            <codeph>postgresql.conf</codeph> file with the <codeph>gpstop -u</codeph> command. This
+          command does not stop and restart the Greenplum system.</p>
+      </section>
+      <section id="test_proxy">
+        <title>Testing the Interconnect Proxies</title>
+        <p>To test the proxy ports configured for the system, you can set the
+            <codeph>PGOPTIONS</codeph> environment variable when you start a <codeph>psql</codeph>
+          session in a command shell. This command sets the environment variable to enable
+          interconnect proxies, starts <codeph>psql</codeph>, and logs into the database
+            <codeph>mytest</codeph>.</p>
+        <codeblock>PGOPTIONS="-c gp_interconnect_type=proxy" psql -d mytest</codeblock>
+        <p>You can run queries in the shell to test the system. For example, you can run a query
+          that accesses all the primary segment instances. This query displays the segment IDs and
+          number of rows on the segment instance from the table
+          <codeph>sales</codeph>.<codeblock># SELECT gp_segment_id, COUNT(*) FROM sales GROUP BY gp_segment_id ;</codeblock></p>
+      </section>
+      <section id="set_gpdb_proxy">
+        <title>Setting Interconnect Proxies for the System</title>
+        <p>After you have tested the interconnect proxies for the system, set the server
+          configuration parameter for the system with the <codeph>gpconfig</codeph> utility.</p>
+        <p>
+          <codeblock>gpconfig -c  gp_interconnect_type -v proxy</codeblock>
+        </p>
+        <p>Reload the <codeph>postgresql.conf</codeph> file with the <codeph>gpstop -u</codeph>
+          command. This command does not stop and restart the Greenplum system.</p>
+      </section>
+    </body>
+  </topic>
+</topic>

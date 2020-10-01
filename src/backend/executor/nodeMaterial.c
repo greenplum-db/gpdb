@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -45,15 +45,18 @@ static void ExecEagerFreeMaterial(MaterialState *node);
  *
  * ----------------------------------------------------------------
  */
-TupleTableSlot *				/* result tuple from subplan */
-ExecMaterial(MaterialState *node)
+static TupleTableSlot *			/* result tuple from subplan */
+ExecMaterial(PlanState *pstate)
 {
+	MaterialState *node = castNode(MaterialState, pstate);
 	EState	   *estate;
 	ScanDirection dir;
 	bool		forward;
 	Tuplestorestate *tuplestorestate;
 	bool		eof_tuplestore;
 	TupleTableSlot *slot;
+
+	CHECK_FOR_INTERRUPTS();
 
 	/*
 	 * get state info from node
@@ -76,7 +79,7 @@ ExecMaterial(MaterialState *node)
 			 * Allocate a second read pointer to serve as the mark. We know it
 			 * must have index 1, so needn't store that.
 			 */
-			int ptrno	PG_USED_FOR_ASSERTS_ONLY;
+			int			ptrno PG_USED_FOR_ASSERTS_ONLY;
 
 			ptrno = tuplestore_alloc_read_pointer(tuplestorestate,
 												  node->eflags);
@@ -194,12 +197,9 @@ ExecMaterial(MaterialState *node)
 		if (tuplestorestate)
 			tuplestore_puttupleslot(tuplestorestate, outerslot);
 
-		/*
-		 * We can just return the subplan's returned tuple, without copying.
-		 */
-		return outerslot;
+		ExecCopySlot(slot, outerslot);
+		return slot;
 	}
-
 
 	if (!node->delayEagerFree)
 	{
@@ -209,7 +209,7 @@ ExecMaterial(MaterialState *node)
 	/*
 	 * Nothing left ...
 	 */
-	return NULL;
+	return ExecClearTuple(slot);
 }
 
 /* ----------------------------------------------------------------
@@ -228,6 +228,7 @@ ExecInitMaterial(Material *node, EState *estate, int eflags)
 	matstate = makeNode(MaterialState);
 	matstate->ss.ps.plan = (Plan *) node;
 	matstate->ss.ps.state = estate;
+	matstate->ss.ps.ExecProcNode = ExecMaterial;
 
 	if (node->cdb_strict)
 		eflags |= EXEC_FLAG_REWIND;
@@ -277,14 +278,6 @@ ExecInitMaterial(Material *node, EState *estate, int eflags)
 	 */
 
 	/*
-	 * tuple table initialization
-	 *
-	 * material nodes only return tuples from their materialized relation.
-	 */
-	ExecInitResultTupleSlot(estate, &matstate->ss.ps);
-	matstate->ss.ss_ScanTupleSlot = ExecInitExtraTupleSlot(estate);
-
-	/*
 	 * If eflag contains EXEC_FLAG_REWIND or EXEC_FLAG_BACKWARD or EXEC_FLAG_MARK,
 	 * then this node is not eager free safe.
 	 */
@@ -323,12 +316,18 @@ ExecInitMaterial(Material *node, EState *estate, int eflags)
 	outerPlanState(matstate) = ExecInitNode(outerPlan, estate, eflags);
 
 	/*
-	 * initialize tuple type.  no need to initialize projection info because
-	 * this node doesn't do projections.
+	 * Initialize result type and slot. No need to initialize projection info
+	 * because this node doesn't do projections.
+	 *
+	 * material nodes only return tuples from their materialized relation.
 	 */
-	ExecAssignResultTypeFromTL(&matstate->ss.ps);
-	ExecAssignScanTypeFromOuterPlan(&matstate->ss);
+	ExecInitResultTupleSlotTL(&matstate->ss.ps, &TTSOpsMinimalTuple);
 	matstate->ss.ps.ps_ProjInfo = NULL;
+
+	/*
+	 * initialize tuple type.
+	 */
+	ExecCreateScanSlotFromOuterPlan(estate, &matstate->ss, &TTSOpsMinimalTuple);
 
 	return matstate;
 }
@@ -341,7 +340,7 @@ ExecInitMaterial(Material *node, EState *estate, int eflags)
  * needs to be done earlier in order to report statistics to EXPLAIN ANALYZE.
  * Note that ExecEndMaterial() will be called again during ExecutorEnd().
  */
-void
+static void
 ExecMaterialExplainEnd(PlanState *planstate, struct StringInfoData *buf)
 {
 	ExecEagerFreeMaterial((MaterialState*)planstate);
@@ -355,13 +354,13 @@ ExecMaterialExplainEnd(PlanState *planstate, struct StringInfoData *buf)
 void
 ExecEndMaterial(MaterialState *node)
 {
-	ExecClearTuple(node->ss.ps.ps_ResultTupleSlot);
+	/*
+	 * clean out the tuple table
+	 */
 	ExecClearTuple(node->ss.ss_ScanTupleSlot);
 
-	ExecEagerFreeMaterial(node);
-
 	/*
-	 * Release tuplestore resources for cases where EagerFree doesn't do it
+	 * Release tuplestore resources
 	 */
 	if (node->tuplestorestate != NULL)
 	{
@@ -503,7 +502,14 @@ ExecReScanMaterial(MaterialState *node)
 	else
 	{
 		/* In this case we are just passing on the subquery's output */
-		ExecChildRescan(node);
+
+		/*
+		 * if chgParam of subnode is not null then plan will be re-scanned by
+		 * first ExecProcNode.
+		 */
+		if (outerPlan->chgParam == NULL)
+			ExecReScan(outerPlan);
+		node->eof_underlying = false;
 	}
 }
 
@@ -516,9 +522,9 @@ ExecEagerFreeMaterial(MaterialState *node)
 	if (node->tuplestorestate)
 	{
 		tuplestore_end(node->tuplestorestate);
-		node->tuplestorestate = NULL;
 		node->ts_destroyed = true;
 	}
+	node->tuplestorestate = NULL;
 }
 
 void

@@ -1,13 +1,13 @@
-create schema alter_ao_table_index_@orientation@;
-set search_path="$user",alter_ao_table_index_@orientation@,public;
-SET gp_default_storage_options='orientation=@orientation@';
+create schema alter_ao_table_index_@amname@;
+set search_path="$user",alter_ao_table_index_@amname@,public;
+SET default_table_access_method=@amname@;
 -- Tests to update AO tables with indexes.
 CREATE TABLE sto_alt_uao3_idx(
   text_col text,
   bigint_col bigint,
   char_vary_col character varying(30),
   numeric_col numeric
-  ) with(appendonly=true) DISTRIBUTED by (text_col);
+  ) DISTRIBUTED by (text_col);
 Create index sto_alt_uao3_idx_idx on sto_alt_uao3_idx(bigint_col);
 insert into sto_alt_uao3_idx values ('1_zero', 1, '1_zero', 1);
 insert into sto_alt_uao3_idx select 'abc_'||i, i, 'pqr'||i, i

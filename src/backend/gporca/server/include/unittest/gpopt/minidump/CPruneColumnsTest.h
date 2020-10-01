@@ -15,35 +15,29 @@
 
 namespace gpopt
 {
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CPruneColumnsTest
-	//
-	//	@doc:
-	//		Unittests
-	//
-	//---------------------------------------------------------------------------
-	class CPruneColumnsTest
-	{
-		private:
+//---------------------------------------------------------------------------
+//	@class:
+//		CPruneColumnsTest
+//
+//	@doc:
+//		Unittests
+//
+//---------------------------------------------------------------------------
+class CPruneColumnsTest
+{
+private:
+	// counter used to mark last successful test
+	static gpos::ULONG m_ulPruneColumnsTestCounter;
 
-			// counter used to mark last successful test
-			static
-			gpos::ULONG m_ulPruneColumnsTestCounter;
+public:
+	// unittests
+	static gpos::GPOS_RESULT EresUnittest();
 
-		public:
+	static gpos::GPOS_RESULT EresUnittest_RunTests();
 
-			// unittests
-			static
-			gpos::GPOS_RESULT EresUnittest();
+};	// class CPruneColumnsTest
+}  // namespace gpopt
 
-			static
-			gpos::GPOS_RESULT EresUnittest_RunTests();
-
-	}; // class CPruneColumnsTest
-}
-
-#endif // !GPOPT_CPruneColumnsTest_H
+#endif	// !GPOPT_CPruneColumnsTest_H
 
 // EOF
-

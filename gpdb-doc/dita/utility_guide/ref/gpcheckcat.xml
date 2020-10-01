@@ -115,6 +115,10 @@
             restricted mode.</pd>
           <pd>These are the tests that can be performed: <p><codeph>acl</codeph> - Cross consistency
               check for access control privileges</p>
+            <p><codeph>aoseg_table</codeph> - Check that the vertical partition
+              information (vpinfo) on segment instances is consistent
+              with <codeph>pg_attribute</codeph> (checks only append-optimized,
+              column storage tables in the database)</p>
             <p><codeph>duplicate</codeph> - Check for duplicate entries</p>
             <p><codeph>foreign_key</codeph> - Check foreign keys</p>
             <p><codeph>inconsistent</codeph> - Cross consistency check for master segment

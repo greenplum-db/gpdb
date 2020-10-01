@@ -15,35 +15,32 @@
 
 namespace gpos
 {
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CWStringTest
-	//
-	//	@doc:
-	//		Unittests for strings
-	//
-	//---------------------------------------------------------------------------
-	class CWStringTest
-	{
-
-		public:
-
-			// unittests
-			static GPOS_RESULT EresUnittest();
-			static GPOS_RESULT EresUnittest_Initialize();
-			static GPOS_RESULT EresUnittest_Equals();
-			static GPOS_RESULT EresUnittest_Append();
-			static GPOS_RESULT EresUnittest_AppendFormat();
-			static GPOS_RESULT EresUnittest_Copy();
-			static GPOS_RESULT EresUnittest_AppendEscape();
-			static GPOS_RESULT EresUnittest_AppendFormatLarge();
+//---------------------------------------------------------------------------
+//	@class:
+//		CWStringTest
+//
+//	@doc:
+//		Unittests for strings
+//
+//---------------------------------------------------------------------------
+class CWStringTest
+{
+public:
+	// unittests
+	static GPOS_RESULT EresUnittest();
+	static GPOS_RESULT EresUnittest_Initialize();
+	static GPOS_RESULT EresUnittest_Equals();
+	static GPOS_RESULT EresUnittest_Append();
+	static GPOS_RESULT EresUnittest_AppendFormat();
+	static GPOS_RESULT EresUnittest_Copy();
+	static GPOS_RESULT EresUnittest_AppendEscape();
+	static GPOS_RESULT EresUnittest_AppendFormatLarge();
 #ifndef GPOS_Darwin
-			static GPOS_RESULT EresUnittest_AppendFormatInvalidLocale();
+	static GPOS_RESULT EresUnittest_AppendFormatInvalidLocale();
 #endif
-	}; // class CWStringTest
-}
+};	// class CWStringTest
+}  // namespace gpos
 
-#endif // !GPOS_CWStringTest_H
+#endif	// !GPOS_CWStringTest_H
 
 // EOF
-

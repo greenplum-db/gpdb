@@ -106,18 +106,22 @@ Enter mirror segment data directory location 2 of 2 &gt; /gpdb/m2</codeblock>
                 <plentry>
                     <pt>-i <varname>mirror_config_file</varname></pt>
                     <pd>A configuration file containing one line for each mirror segment you want to
-                        create. You must have one mirror segment listed for each primary segment in
-                        the system. The format of this file is as follows (as per attributes in the
-                            <codeph>gp_segment_configuration</codeph> catalog table):</pd>
+                        create. You must have one mirror segment instance listed for each primary
+                        segment in the system. The format of this file is as follows (as per
+                        attributes in the <codeph><xref
+                                href="../../ref_guide/system_catalogs/gp_segment_configuration.xml"
+                                >gp_segment_configuration</xref></codeph> catalog table):</pd>
                     <pd>
                         <codeblock>&lt;contentID>|&lt;address>|&lt;port>|&lt;data_dir></codeblock>
                     </pd>
                     <pd>
                         <p>Where <codeph>&lt;contentID></codeph> is the segment instance content ID,
-                                <codeph>&lt;address></codeph> is the host name or IP address of the
+                                <codeph>&lt;address></codeph> is the hostname or IP address of the
                             segment host, <codeph>&lt;port></codeph> is the communication port, and
                                 <codeph>&lt;data_dir></codeph> is the segment instance data
-                            directory.</p>
+                            directory. For information about using a hostname or IP address, see
+                                <xref href="#topic1/host_ip" format="dita"/>. Also, see <xref
+                                href="#topic1/multi_nic" format="dita"/>.</p>
                     </pd>
                 </plentry>
                 <plentry>
@@ -180,12 +184,69 @@ Enter mirror segment data directory location 2 of 2 &gt; /gpdb/m2</codeblock>
                 </plentry>
             </parml>
         </section>
+        <section id="host_ip">
+            <title>Specifying Hosts using Hostnames or IP Addresses</title>
+            <p>When specifying a mirroring configuration using the <codeph>gpaddmirrors</codeph>
+                option <codeph>-i</codeph>, you can specify either a hostname or an IP address for
+                the &lt;address> value. <ul id="ul_zsd_cmh_dmb">
+                    <li>If you specify a hostname, the resolution of the hostname to an IP address
+                        should be done locally for security. For example, you should use entries in
+                        a local <codeph>/etc/hosts</codeph> file to map the hostname to an IP
+                        address. The resolution of a hostname to an IP address should not be
+                        performed by an external service such as a public DNS server. You must stop
+                        the Greenplum system before you change the mapping of a hostname to a
+                        different IP address.</li>
+                    <li>If you specify an IP address, the address should not be changed after the
+                        initial configuration. When segment mirroring is enabled, replication from
+                        the primary to the mirror segment will fail if the IP address changes from
+                        the configured value. For this reason, you should use a hostname when
+                        enabling mirroring using the <codeph>-i</codeph> option unless you have a
+                        specific requirement to use IP addresses.</li>
+                </ul></p>
+            <p>When enabling a mirroring configuration that adds hosts to the Greenplum system,
+                    <codeph>gpaddmirrors</codeph> populates the <codeph><xref
+                        href="../../ref_guide/system_catalogs/gp_segment_configuration.xml"
+                        >gp_segment_configuration</xref></codeph> catalog table with the mirror
+                segment instance information. Greenplum Database uses the <varname>address</varname>
+                value of the <codeph>gp_segment_configuration</codeph> catalog table when looking up
+                host systems for Greenplum interconnect (internal) communication between the master
+                and segment instances and between segment instances, and for other internal
+                communication.</p>
+        </section>
+        <section id="multi_nic">
+            <title>Using Host Systems with Multiple NICs</title>
+            <p>If hosts systems are configured with multiple NICs, you can initialize a Greenplum
+                Database system to use each NIC as a Greenplum host system. You must ensure that the
+                host systems are configured with sufficient resources to support all the segment
+                instances being added to the host. Also, if you enable segment mirroring, you must
+                ensure that the Greenplum system configuration supports failover if a host system
+                fails. For information about Greenplum Database mirroring schemes, see <xref
+                    href="../../best_practices/ha.xml#topic_ngz_qf4_tt"/>.</p>
+            <p>For example, this is a segment instance configuration for a simple Greenplum system.
+                The segment host <codeph>gp6m</codeph> is configured with two NICs,
+                    <codeph>gp6m-1</codeph> and <codeph>gp6m-2</codeph>, where the Greenplum
+                Database system uses <codeph>gp6m-1</codeph> for the master segment and
+                    <codeph>gp6m-2</codeph> for segment instances. </p>
+            <codeblock>select content, role, port, hostname, address from gp_segment_configuration ;
+
+ content | role | port  | hostname | address
+---------+------+-------+----------+----------
+      -1 | p    |  5432 | gp6m     | gp6m-1
+       0 | p    | 40000 | gp6m     | gp6m-2
+       0 | m    | 50000 | gp6s     | gp6s
+       1 | p    | 40000 | gp6s     | gp6s
+       1 | m    | 50000 | gp6m     | gp6m-2
+(5 rows) </codeblock>
+        </section>
         <section id="section5">
             <title>Examples</title>
             <p>Add mirroring to an existing Greenplum Database system using the same set of hosts as
                 your primary data. Calculate the mirror database ports by adding 100 to the current
                 primary segment port numbers:</p>
             <codeblock>$ gpaddmirrors -p 100</codeblock>
+            <p>Generate a sample mirror configuration file with the <codeph>-o</codeph> option to
+                use with <codeph>gpaddmirrors -i</codeph>:</p>
+            <codeblock>$ gpaddmirrors -o /home/gpadmin/sample_mirror_config</codeblock>
             <p>Add mirroring to an existing Greenplum Database system using a different set of hosts
                 from your primary data:</p>
             <codeblock>$ gpaddmirrors -i mirror_config_file</codeblock>
@@ -194,9 +255,6 @@ Enter mirror segment data directory location 2 of 2 &gt; /gpdb/m2</codeblock>
 1|sdw1-2|52002|/gpdata/m2/gp1
 2|sdw2-1|52001|/gpdata/m1/gp2
 3|sdw2-2|52002|/gpdata/m2/gp3</codeblock>
-            <p>Generate a sample mirror configuration file with the <codeph>-o</codeph> option to
-                use with <codeph>gpaddmirrors -i</codeph>:</p>
-            <codeblock>$ gpaddmirrors -o /home/gpadmin/sample_mirror_config</codeblock>
         </section>
         <section id="section6">
             <title>See Also</title>

@@ -20,6 +20,7 @@
 #include "postgres.h"
 
 #include "cdb/cdbtm.h"
+#include "cdb/cdbvars.h"
 #include "access/xact.h"
 
 /*
@@ -36,7 +37,20 @@ dtxCrackOpenGid(
 
 	itemsScanned = sscanf(gid, "%u-%u", distribTimeStamp, distribXid);
 	if (itemsScanned != 2)
-		elog(ERROR, "Bad distributed transaction identifier \"%s\"", gid);
+	{
+		/*
+		 * Returning without an error here allows tests inheritied from
+		 * upstream PostgreSQL to run without errors.  These tests execute
+		 * PREPARE TRANSACTION command with a GID that doesn't conform to the
+		 * Greenplum specific format.  Note that DTM messages sent from QD
+		 * cannot be processed in utility mode.  Therefore, we can safely
+		 * allow non-Greenplum GIDs only in utility mode.
+		 */
+		if (Gp_role == GP_ROLE_UTILITY)
+			*distribTimeStamp = *distribXid = 0;
+		else
+			elog(ERROR, "Bad distributed transaction identifier \"%s\"", gid);
+	}
 }
 
 void

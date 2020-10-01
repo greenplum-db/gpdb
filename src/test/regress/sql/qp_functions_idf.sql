@@ -7,7 +7,7 @@ RESET ALL;
 create schema qp_idf;
 set search_path to qp_idf;
 
-create language plpythonu;
+create language plpython3u;
 
 create table perct as select a, a / 10 as b from generate_series(1, 100)a;
 create table perct2 as select a, a / 10 as b from generate_series(1, 100)a, generate_series(1, 2);

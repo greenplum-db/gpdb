@@ -79,15 +79,14 @@ SELECT DISTINCT (i || '/' || j)::pg_lsn f
    ->  Sort
          Sort Key: (((((i.i)::text || '/'::text) || (j.j)::text))::pg_lsn)
          ->  Nested Loop
+               ->  Nested Loop
+                     ->  Function Scan on generate_series i
+                           Filter: (i <= 10)
+                     ->  Function Scan on generate_series j
+                           Filter: ((j > 0) AND (j <= 10))
                ->  Function Scan on generate_series k
-               ->  Materialize
-                     ->  Nested Loop
-                           ->  Function Scan on generate_series j
-                                 Filter: ((j > 0) AND (j <= 10))
-                           ->  Function Scan on generate_series i
-                                 Filter: (i <= 10)
  Optimizer: Postgres query optimizer
-(13 rows)
+(12 rows)
 
 SELECT DISTINCT (i || '/' || j)::pg_lsn f
   FROM generate_series(1, 10) i,

@@ -1,10 +1,10 @@
 platform: linux
 image_resource:
-  type: docker-image
+  type: registry-image
   source:
-    repository: pivotaldata/qp-gpdbdev
+    repository: pivotaldata/gpdb7-centos7-test
 inputs:
-  - name: gpdb_main_src
+  - name: gpdb_src
   - name: explain_output
   - name: explain_output_baseline
 outputs:
@@ -12,4 +12,4 @@ outputs:
 params:
   prefix:
 run:
-  path: gpdb_main_src/concourse/scripts/diff_explain_results_with_baseline.bash
+  path: gpdb_src/concourse/scripts/diff_explain_results_with_baseline.bash

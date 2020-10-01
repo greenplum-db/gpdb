@@ -8,14 +8,14 @@ set search_path to materialize_spill;
 SET
 
 -- start_ignore
-create language plpythonu;
+create language plpython3u;
 CREATE
 -- end_ignore
 
 -- Helper function to verify that a plan spilled to disk. For each node
 -- in the plan that used Workfiles (Materialize or Sort nodes, currently),
 -- return the number of segments where the node spilled to disk.
-create or replace function num_workfiles_created(explain_query text) returns setof int as $$ import re rv = plpy.execute(explain_query) search_text = 'Work_mem used' result = [] for i in range(len(rv)): cur_line = rv[i]['QUERY PLAN'] if search_text.lower() in cur_line.lower(): p = re.compile('.+\((seg[\d]+).+ Workfile: \(([\d+]) spilling\)') m = p.match(cur_line) workfile_created = int(m.group(2)) result.append(workfile_created) return result $$ language plpythonu;
+create or replace function num_workfiles_created(explain_query text) returns setof int as $$ import re rv = plpy.execute(explain_query) search_text = 'Work_mem used' result = [] for i in range(len(rv)): cur_line = rv[i]['QUERY PLAN'] if search_text.lower() in cur_line.lower(): p = re.compile('.+\((seg[\d]+).+ Workfile: \(([\d+]) spilling\)') m = p.match(cur_line) workfile_created = int(m.group(2)) result.append(workfile_created) return result $$ language plpython3u;
 CREATE
 
 -- Run a query that contains a Materialize node that spills to disk.

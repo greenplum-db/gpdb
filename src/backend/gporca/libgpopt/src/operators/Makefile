@@ -99,6 +99,7 @@ OBJS        = CExpression.o \
               CPhysicalHashAggDeduplicate.o \
               CPhysicalHashJoin.o \
               CPhysicalIndexScan.o \
+              CPhysicalIndexOnlyScan.o \
               CPhysicalInnerHashJoin.o \
               CPhysicalInnerIndexNLJoin.o \
               CPhysicalInnerNLJoin.o \

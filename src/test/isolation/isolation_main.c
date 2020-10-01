@@ -2,13 +2,15 @@
  *
  * isolation_main --- pg_regress test launcher for isolation tests
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/test/isolation/isolation_main.c
  *
  *-------------------------------------------------------------------------
  */
+
+#include "postgres_fe.h"
 
 #include "pg_regress.h"
 
@@ -131,6 +133,28 @@ isolation_init(int argc, char **argv)
 
 	/* set default regression database name */
 	add_stringlist_item(&dblist, "isolation_regression");
+
+	/*
+	 * GPDB: Use utility mode for isolation tests till framework is enhanced
+	 * to work with Global Deadlock Detector and can understand waiting across
+	 * segments.  This is a bit more painful because we must use PGOPTIONS,
+	 * and we want to preserve the user's ability to set other variables
+	 * through that.
+	 */
+	{
+		const char *my_pgoptions = "-c gp_role=utility";
+		const char *old_pgoptions = getenv("PGOPTIONS");
+		char	   *new_pgoptions;
+
+		if (!old_pgoptions)
+			old_pgoptions = "";
+		new_pgoptions = psprintf("PGOPTIONS=%s %s",
+								 old_pgoptions, my_pgoptions);
+		putenv(new_pgoptions);
+
+		fprintf(stdout, "============== Using GP_ROLE=UTILITY for these tests ==============\n");
+		fflush(stdout);
+	}
 }
 
 int

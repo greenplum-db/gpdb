@@ -3,7 +3,7 @@
  * Interfaces in support of FE/BE connections.
  *
  *
- * Portions Copyright (c) 1996-2018, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/fe_utils/connect.h
@@ -23,6 +23,6 @@
  * might work with the old server, skip this.
  */
 #define ALWAYS_SECURE_SEARCH_PATH_SQL \
-	"SELECT pg_catalog.set_config('search_path', '', false)"
+	"SELECT pg_catalog.set_config('search_path', '', false);"
 
 #endif							/* CONNECT_H */

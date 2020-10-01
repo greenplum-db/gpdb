@@ -169,6 +169,11 @@ SELECT * FROM foo;
 SELECT a, b, a < b as lt FROM
   (VALUES ('a', 'B'), ('A', 'b' COLLATE "C")) v(a,b);
 
+-- collation mismatch in subselects
+SELECT * FROM collate_test10 WHERE (x, y) NOT IN (SELECT y, x FROM collate_test10);
+-- now it works with overrides
+SELECT * FROM collate_test10 WHERE (x COLLATE "POSIX", y COLLATE "C") NOT IN (SELECT y, x FROM collate_test10);
+SELECT * FROM collate_test10 WHERE (x, y) NOT IN (SELECT y COLLATE "C", x COLLATE "POSIX" FROM collate_test10);
 
 -- casting
 
@@ -236,6 +241,19 @@ EXPLAIN (COSTS OFF)
 EXPLAIN (COSTS OFF)
   SELECT * FROM collate_test10 ORDER BY x DESC, y COLLATE "C" ASC NULLS FIRST;
 
+
+-- CREATE/DROP COLLATION
+
+CREATE COLLATION mycoll1 FROM "C";
+CREATE COLLATION mycoll2 ( LC_COLLATE = "POSIX", LC_CTYPE = "POSIX" );
+CREATE COLLATION mycoll3 FROM "default";  -- intentionally unsupported
+
+DROP COLLATION mycoll1;
+CREATE TABLE collate_test23 (f1 text collate mycoll2);
+DROP COLLATION mycoll2;  -- fail
+
+-- invalid: non-lowercase quoted identifiers
+CREATE COLLATION case_coll ("Lc_Collate" = "POSIX", "Lc_Ctype" = "POSIX");
 
 -- 9.1 bug with useless COLLATE in an expression subject to length coercion
 

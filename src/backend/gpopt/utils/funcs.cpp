@@ -40,8 +40,7 @@ extern "C" {
 //---------------------------------------------------------------------------
 
 extern "C" {
-Datum
-DisableXform(PG_FUNCTION_ARGS)
+Datum DisableXform(PG_FUNCTION_ARGS)
 {
 	char *szXform = text_to_cstring(PG_GETARG_TEXT_P(0));
 	bool is_result = COptTasks::SetXform(szXform, true /*fDisable*/);
@@ -73,8 +72,7 @@ DisableXform(PG_FUNCTION_ARGS)
 //---------------------------------------------------------------------------
 
 extern "C" {
-Datum
-EnableXform(PG_FUNCTION_ARGS)
+Datum EnableXform(PG_FUNCTION_ARGS)
 {
 	char *szXform = text_to_cstring(PG_GETARG_TEXT_P(0));
 	bool is_result = COptTasks::SetXform(szXform, false /*fDisable*/);
@@ -118,4 +116,3 @@ LibraryVersion()
 	PG_RETURN_TEXT_P(result);
 }
 }
-

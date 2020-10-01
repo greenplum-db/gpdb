@@ -2,7 +2,7 @@
  * brin_minmax.c
  *		Implementation of Min/Max opclass for BRIN
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -16,6 +16,7 @@
 #include "access/stratnum.h"
 #include "catalog/pg_type.h"
 #include "catalog/pg_amop.h"
+#include "utils/builtins.h"
 #include "utils/datum.h"
 #include "utils/lsyscache.h"
 #include "utils/rel.h"
@@ -28,12 +29,8 @@ typedef struct MinmaxOpaque
 	FmgrInfo	strategy_procinfos[BTMaxStrategyNumber];
 } MinmaxOpaque;
 
-Datum		brin_minmax_opcinfo(PG_FUNCTION_ARGS);
-Datum		brin_minmax_add_value(PG_FUNCTION_ARGS);
-Datum		brin_minmax_consistent(PG_FUNCTION_ARGS);
-Datum		brin_minmax_union(PG_FUNCTION_ARGS);
 static FmgrInfo *minmax_get_strategy_procinfo(BrinDesc *bdesc, uint16 attno,
-							 Oid subtype, uint16 strategynum);
+											  Oid subtype, uint16 strategynum);
 
 
 Datum
@@ -93,7 +90,7 @@ brin_minmax_add_value(PG_FUNCTION_ARGS)
 	}
 
 	attno = column->bv_attno;
-	attr = bdesc->bd_tupdesc->attrs[attno - 1];
+	attr = TupleDescAttr(bdesc->bd_tupdesc, attno - 1);
 
 	/*
 	 * If the recorded value is null, store the new value (which we know to be
@@ -215,7 +212,7 @@ brin_minmax_consistent(PG_FUNCTION_ARGS)
 				break;
 			/* max() >= scankey */
 			finfo = minmax_get_strategy_procinfo(bdesc, attno, subtype,
-											   BTGreaterEqualStrategyNumber);
+												 BTGreaterEqualStrategyNumber);
 			matches = FunctionCall2Coll(finfo, colloid, column->bv_values[1],
 										value);
 			break;
@@ -263,7 +260,7 @@ brin_minmax_union(PG_FUNCTION_ARGS)
 		PG_RETURN_VOID();
 
 	attno = col_a->bv_attno;
-	attr = bdesc->bd_tupdesc->attrs[attno - 1];
+	attr = TupleDescAttr(bdesc->bd_tupdesc, attno - 1);
 
 	/*
 	 * Adjust "allnulls".  If A doesn't have values, just copy the values from
@@ -350,7 +347,7 @@ minmax_get_strategy_procinfo(BrinDesc *bdesc, uint16 attno, Oid subtype,
 		bool		isNull;
 
 		opfamily = bdesc->bd_index->rd_opfamily[attno - 1];
-		attr = bdesc->bd_tupdesc->attrs[attno - 1];
+		attr = TupleDescAttr(bdesc->bd_tupdesc, attno - 1);
 		tuple = SearchSysCache4(AMOPSTRATEGY, ObjectIdGetDatum(opfamily),
 								ObjectIdGetDatum(attr->atttypid),
 								ObjectIdGetDatum(subtype),
@@ -361,7 +358,7 @@ minmax_get_strategy_procinfo(BrinDesc *bdesc, uint16 attno, Oid subtype,
 				 strategynum, attr->atttypid, subtype, opfamily);
 
 		oprid = DatumGetObjectId(SysCacheGetAttr(AMOPSTRATEGY, tuple,
-											 Anum_pg_amop_amopopr, &isNull));
+												 Anum_pg_amop_amopopr, &isNull));
 		ReleaseSysCache(tuple);
 		Assert(!isNull && RegProcedureIsValid(oprid));
 

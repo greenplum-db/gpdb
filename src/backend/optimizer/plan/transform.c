@@ -18,8 +18,8 @@
 #include "nodes/parsenodes.h"
 #include "nodes/makefuncs.h"
 #include "optimizer/clauses.h"
+#include "optimizer/optimizer.h"
 #include "optimizer/transform.h"
-#include "optimizer/var.h"
 #include "utils/lsyscache.h"
 #include "catalog/pg_proc.h"
 #include "parser/parse_oper.h"
@@ -38,27 +38,6 @@ static SubLink *make_sirvf_subselect(FuncExpr *fe);
 static Query *make_sirvf_subquery(FuncExpr *fe);
 static bool safe_to_replace_sirvf_tle(Query *query);
 static bool safe_to_replace_sirvf_rte(Query *query);
-
-/**
- * Preprocess query structure for consumption by the optimizer
- */
-Query *
-preprocess_query_optimizer(PlannerInfo *root, Query *query, ParamListInfo boundParams)
-{
-#ifdef USE_ASSERT_CHECKING
-	Query *qcopy = (Query *) copyObject(query);
-#endif
-
-	/* fold all constant expressions */
-	Query *res = fold_constants(root, query, boundParams, GPOPT_MAX_FOLDED_CONSTANT_SIZE);
-
-#ifdef USE_ASSERT_CHECKING
-	Assert(equal(qcopy, query) && "Preprocessing should not modify original query object");
-#endif
-
-	return res;
-
-}
 
 /**
  * Normalize query before planning.
@@ -327,6 +306,7 @@ make_sirvf_subquery(FuncExpr *fe)
 	funcclass = get_expr_result_type((Node *) fe, &resultTypeId, &resultTupleDesc);
 
 	if (funcclass == TYPEFUNC_COMPOSITE ||
+		funcclass == TYPEFUNC_COMPOSITE_DOMAIN ||
 		funcclass == TYPEFUNC_RECORD)
 	{
 		Query	   *sub_sq = sq;
@@ -359,7 +339,7 @@ make_sirvf_subquery(FuncExpr *fe)
 
 		for (attno = 1; attno <= resultTupleDesc->natts; attno++)
 		{
-			Form_pg_attribute attr = resultTupleDesc->attrs[attno - 1];
+			Form_pg_attribute attr = TupleDescAttr(resultTupleDesc, attno - 1);
 			FieldSelect *fs;
 
 			fs = (FieldSelect *) makeNode(FieldSelect);

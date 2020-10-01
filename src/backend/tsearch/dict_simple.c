@@ -3,7 +3,7 @@
  * dict_simple.c
  *		Simple dictionary: just lowercase and check for stopword
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
@@ -16,6 +16,7 @@
 #include "commands/defrem.h"
 #include "tsearch/ts_locale.h"
 #include "tsearch/ts_utils.h"
+#include "utils/builtins.h"
 
 
 typedef struct
@@ -40,7 +41,7 @@ dsimple_init(PG_FUNCTION_ARGS)
 	{
 		DefElem    *defel = (DefElem *) lfirst(l);
 
-		if (pg_strcasecmp("StopWords", defel->defname) == 0)
+		if (strcmp(defel->defname, "stopwords") == 0)
 		{
 			if (stoploaded)
 				ereport(ERROR,
@@ -49,7 +50,7 @@ dsimple_init(PG_FUNCTION_ARGS)
 			readstoplist(defGetString(defel), &d->stoplist, lowerstr);
 			stoploaded = true;
 		}
-		else if (pg_strcasecmp("Accept", defel->defname) == 0)
+		else if (strcmp(defel->defname, "accept") == 0)
 		{
 			if (acceptloaded)
 				ereport(ERROR,
@@ -62,8 +63,8 @@ dsimple_init(PG_FUNCTION_ARGS)
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				   errmsg("unrecognized simple dictionary parameter: \"%s\"",
-						  defel->defname)));
+					 errmsg("unrecognized simple dictionary parameter: \"%s\"",
+							defel->defname)));
 		}
 	}
 

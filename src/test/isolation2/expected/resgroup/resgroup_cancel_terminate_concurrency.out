@@ -26,9 +26,9 @@ SET
 SELECT * FROM rg_concurrency_view;
  waiting | wait_event_type | state               | query  | rsgname             
 ---------+-----------------+---------------------+--------+---------------------
+ t       | Client          | idle in transaction | BEGIN; | rg_concurrency_test 
  t       | ResourceGroup   | active              | BEGIN; | rg_concurrency_test 
  t       | ResourceGroup   | active              | BEGIN; | rg_concurrency_test 
- f       |                 | idle in transaction | BEGIN; | rg_concurrency_test 
 (3 rows)
 SELECT pg_cancel_backend(pid) FROM pg_stat_activity WHERE wait_event_type='ResourceGroup' AND rsgname='rg_concurrency_test';
  pg_cancel_backend 
@@ -45,8 +45,8 @@ ERROR:  canceling statement due to user request
 SELECT * FROM rg_concurrency_view;
  waiting | wait_event_type | state | query  | rsgname             
 ---------+-----------------+-------+--------+---------------------
- f       |                 | idle  | BEGIN; | rg_concurrency_test 
- f       |                 | idle  | BEGIN; | rg_concurrency_test 
+ t       | Client          | idle  | BEGIN; | rg_concurrency_test 
+ t       | Client          | idle  | BEGIN; | rg_concurrency_test 
 (2 rows)
 1q: ... <quitting>
 2q: ... <quitting>
@@ -81,9 +81,9 @@ SET
 SELECT * FROM rg_concurrency_view;
  waiting | wait_event_type | state               | query  | rsgname             
 ---------+-----------------+---------------------+--------+---------------------
+ t       | Client          | idle in transaction | BEGIN; | rg_concurrency_test 
  t       | ResourceGroup   | active              | BEGIN; | rg_concurrency_test 
  t       | ResourceGroup   | active              | BEGIN; | rg_concurrency_test 
- f       |                 | idle in transaction | BEGIN; | rg_concurrency_test 
 (3 rows)
 SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE wait_event_type='ResourceGroup' AND rsgname='rg_concurrency_test';
  pg_terminate_backend 
@@ -142,12 +142,12 @@ SET
 SELECT * FROM rg_concurrency_view;
  waiting | wait_event_type | state  | query                   | rsgname             
 ---------+-----------------+--------+-------------------------+---------------------
+ t       | Timeout         | active | SELECT pg_sleep(10000); | rg_concurrency_test 
+ t       | Timeout         | active | SELECT pg_sleep(10000); | rg_concurrency_test 
  t       | ResourceGroup   | active | BEGIN;                  | rg_concurrency_test 
  t       | ResourceGroup   | active | BEGIN;                  | rg_concurrency_test 
- f       |                 | active | SELECT pg_sleep(10000); | rg_concurrency_test 
- f       |                 | active | SELECT pg_sleep(10000); | rg_concurrency_test 
 (4 rows)
-SELECT pg_cancel_backend(pid) FROM pg_stat_activity WHERE wait_event_type IS NULL AND rsgname='rg_concurrency_test';
+SELECT pg_cancel_backend(pid) FROM pg_stat_activity WHERE wait_event_type = 'Timeout' AND rsgname='rg_concurrency_test';
  pg_cancel_backend 
 -------------------
  t                 
@@ -164,8 +164,8 @@ BEGIN
 SELECT * FROM rg_concurrency_view;
  waiting | wait_event_type | state               | query  | rsgname             
 ---------+-----------------+---------------------+--------+---------------------
- f       |                 | idle in transaction | BEGIN; | rg_concurrency_test 
- f       |                 | idle in transaction | BEGIN; | rg_concurrency_test 
+ t       | Client          | idle in transaction | BEGIN; | rg_concurrency_test 
+ t       | Client          | idle in transaction | BEGIN; | rg_concurrency_test 
 (2 rows)
 1q: ... <quitting>
 2q: ... <quitting>
@@ -203,12 +203,12 @@ SET
 SELECT * FROM rg_concurrency_view;
  waiting | wait_event_type | state  | query                   | rsgname             
 ---------+-----------------+--------+-------------------------+---------------------
+ t       | Timeout         | active | SELECT pg_sleep(10000); | rg_concurrency_test 
+ t       | Timeout         | active | SELECT pg_sleep(10000); | rg_concurrency_test 
  t       | ResourceGroup   | active | BEGIN;                  | rg_concurrency_test 
  t       | ResourceGroup   | active | BEGIN;                  | rg_concurrency_test 
- f       |                 | active | SELECT pg_sleep(10000); | rg_concurrency_test 
- f       |                 | active | SELECT pg_sleep(10000); | rg_concurrency_test 
 (4 rows)
-SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE wait_event_type IS NULL AND rsgname='rg_concurrency_test';
+SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE wait_event_type = 'Timeout' AND rsgname='rg_concurrency_test';
  pg_terminate_backend 
 ----------------------
  t                    
@@ -231,8 +231,8 @@ BEGIN
 SELECT * FROM rg_concurrency_view;
  waiting | wait_event_type | state               | query  | rsgname             
 ---------+-----------------+---------------------+--------+---------------------
- f       |                 | idle in transaction | BEGIN; | rg_concurrency_test 
- f       |                 | idle in transaction | BEGIN; | rg_concurrency_test 
+ t       | Client          | idle in transaction | BEGIN; | rg_concurrency_test 
+ t       | Client          | idle in transaction | BEGIN; | rg_concurrency_test 
 (2 rows)
 1q: ... <quitting>
 2q: ... <quitting>

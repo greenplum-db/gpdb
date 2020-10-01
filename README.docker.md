@@ -35,7 +35,7 @@ gpdb_src/concourse/scripts/setup_gpadmin_user.bash
 echo "/usr/sbin/sshd" >> /root/.bashrc
 
 su - gpadmin
-pip install --user psutil lockfile
+pip install --user psutil
 cat >> ~/.bash_profile <<EOF
 export PS1='\n\w\n$ '
 source /opt/gcc_env.sh

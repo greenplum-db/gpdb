@@ -47,7 +47,7 @@ SET datestyle = 'MDY';
 SHOW datestyle;
 SELECT '2006-08-13 12:34:56'::timestamptz;
 SAVEPOINT first_sp;
-SET vacuum_cost_delay TO 80;
+SET vacuum_cost_delay TO 80.1;
 SHOW vacuum_cost_delay;
 SET datestyle = 'German, DMY';
 SHOW datestyle;
@@ -56,7 +56,7 @@ ROLLBACK TO first_sp;
 SHOW datestyle;
 SELECT '2006-08-13 12:34:56'::timestamptz;
 SAVEPOINT second_sp;
-SET vacuum_cost_delay TO 90;
+SET vacuum_cost_delay TO '900us';
 SET datestyle = 'SQL, YMD';
 SHOW datestyle;
 SELECT '2006-08-13 12:34:56'::timestamptz;
@@ -143,6 +143,10 @@ SELECT '2006-08-13 12:34:56'::timestamptz;
 RESET datestyle;
 SHOW datestyle;
 SELECT '2006-08-13 12:34:56'::timestamptz;
+
+-- Test some simple error cases
+SET seq_page_cost TO 'NaN';
+SET vacuum_cost_delay TO '10s';
 
 --
 -- Test DISCARD TEMP
@@ -288,6 +292,10 @@ set default_text_search_config = no_such_config;
 select func_with_bad_set();
 
 reset check_function_bodies;
+
+set default_with_oids to f;
+-- Should not allow to set it to true.
+set default_with_oids to t;
 
 SET "request.header.user-agent" = 'curl/7.29.0';
 SHOW "request.header.user-agent";

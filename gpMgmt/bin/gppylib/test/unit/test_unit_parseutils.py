@@ -58,20 +58,20 @@ class GpParseUtilsTest(GpTestCase):
     def test_line_reader(self):
         mylist = ['', '# test', 'abc:def']
         gen = line_reader(mylist)
-        offset, line = gen.next()
+        offset, line = next(gen)
         self.assertTrue(offset == 3 and line == 'abc:def')
         with self.assertRaises(StopIteration):
-            gen.next()
+            next(gen)
 
         l1 = "first"
         l2 = "second"
         gen = line_reader([l1,l2])
-        offset, line = gen.next()
+        offset, line = next(gen)
         self.assertTrue(offset == 1 and line == l1)
-        offset, line = gen.next()
+        offset, line = next(gen)
         self.assertTrue(offset == 2 and line == l2)
         with self.assertRaises(StopIteration):
-            gen.next()
+            next(gen)
 
     def test_check_values_negative(self):
         with self.assertRaises(ExceptionNoStackTraceNeeded):

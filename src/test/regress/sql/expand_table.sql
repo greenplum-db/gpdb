@@ -1,5 +1,3 @@
-\set has_oids true
-
 -- start_ignore
 create extension if not exists gp_debug_numsegments;
 -- end_ignore
@@ -7,7 +5,7 @@ create extension if not exists gp_debug_numsegments;
 drop schema if exists test_expand_table cascade;
 create schema test_expand_table;
 set search_path=test_expand_table,public;
-set gp_default_storage_options='appendonly=false';
+set default_table_access_method='heap';
 set allow_system_table_mods=true;
 
 -- Hash distributed tables
@@ -34,7 +32,7 @@ drop table t1;
 
 
 select gp_debug_set_create_table_default_numsegments(1);
-Create table t1(a int, b int, c int) with (OIDS=:has_oids) distributed by (a,b);
+Create table t1(a int, b int, c int) distributed by (a,b);
 insert into t1 select i,i,0 from generate_series(1,100) I;
 Update t1 set c = gp_segment_id;
 
@@ -129,7 +127,7 @@ select numsegments from gp_distribution_policy where localoid='r1'::regclass;
 drop table r1;
 
 select gp_debug_set_create_table_default_numsegments(2);
-Create table r1(a int, b int, c int) with (OIDS=:has_oids) distributed randomly;
+Create table r1(a int, b int, c int) distributed randomly;
 insert into r1 select i,i,0 from generate_series(1,100) I;
 Update r1 set c = gp_segment_id;
 
@@ -201,7 +199,7 @@ drop table r1;
 
 --
 select gp_debug_set_create_table_default_numsegments(1);
-Create table r1(a int, b int, c int) with (OIDS=:has_oids) distributed replicated;
+Create table r1(a int, b int, c int) distributed replicated;
 
 insert into r1 select i,i,0 from generate_series(1,100) I;
 

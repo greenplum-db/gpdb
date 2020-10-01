@@ -51,9 +51,8 @@
 # clean-lib             delete the static and shared libraries from the build dir
 # maintainer-clean-lib  delete .def files built for win32
 #
-# Since `all-lib' is the first rule in this file you probably want to
-# have the `all' target before including this file. In the most simple
-# case it would look like this:
+# Typically you would add `all-lib' to the `all' target so that `make all'
+# builds the libraries.  In the most simple case it would look like this:
 #
 #     all: all-lib
 #
@@ -65,11 +64,6 @@
 #
 # Got that?  Look at src/interfaces/libpq/Makefile for an example.
 #
-# While the linker allows creation of most shared libraries,
-# -Bsymbolic requires resolution of all symbols, making the
-# compiler a better choice for shared library creation on ELF platforms.
-# With the linker, -Bsymbolic requires the crt1.o startup object file.
-# bjm 2001-02-10
 
 
 COMPILER = $(CC) $(CFLAGS)
@@ -107,6 +101,7 @@ endif
 # Try to keep the sections in some kind of order, folks...
 
 override CFLAGS += $(CFLAGS_SL)
+override CXXFLAGS += $(CFLAGS_SL)
 ifdef SO_MAJOR_VERSION
 # libraries ought to use this to refer to versioned gettext domain names
 override CPPFLAGS += -DSO_MAJOR_VERSION=$(SO_MAJOR_VERSION)
@@ -134,7 +129,7 @@ ifeq ($(PORTNAME), darwin)
   else
     # loadable module
     DLSUFFIX		= .so
-    LINK.shared		= $(COMPILER) -bundle -multiply_defined suppress -Wl,-undefined,dynamic_lookup
+    LINK.shared		= $(COMPILER) -bundle -multiply_defined suppress
   endif
   BUILD.exports		= $(AWK) '/^[^\#]/ {printf "_%s\n",$$1}' $< >$@
   exports_file		= $(SHLIB_EXPORTS:%.txt=%.list)
@@ -148,6 +143,11 @@ ifeq ($(PORTNAME), openbsd)
     LINK.shared		= $(COMPILER) -shared
     ifdef soname
       LINK.shared	+= -Wl,-x,-soname,$(soname)
+    endif
+    BUILD.exports	= ( echo '{ global:'; $(AWK) '/^[^\#]/ {printf "%s;\n",$$1}' $<; echo ' local: *; };' ) >$@
+    exports_file	= $(SHLIB_EXPORTS:%.txt=%.list)
+    ifneq (,$(exports_file))
+      LINK.shared	+= -Wl,--version-script=$(exports_file)
     endif
     SHLIB_LINK		+= -lc
   else
@@ -164,6 +164,11 @@ ifeq ($(PORTNAME), freebsd)
     ifdef soname
       LINK.shared	+= -Wl,-x,-soname,$(soname)
     endif
+    BUILD.exports	= ( echo '{ global:'; $(AWK) '/^[^\#]/ {printf "%s;\n",$$1}' $<; echo ' local: *; };' ) >$@
+    exports_file	= $(SHLIB_EXPORTS:%.txt=%.list)
+    ifneq (,$(exports_file))
+      LINK.shared	+= -Wl,--version-script=$(exports_file)
+    endif
   else
     ifdef SO_MAJOR_VERSION
       shlib		= lib$(NAME)$(DLSUFFIX).$(SO_MAJOR_VERSION).$(SO_MINOR_VERSION)
@@ -178,6 +183,11 @@ ifeq ($(PORTNAME), netbsd)
     ifdef soname
       LINK.shared	+= -Wl,-x,-soname,$(soname)
     endif
+    BUILD.exports	= ( echo '{ global:'; $(AWK) '/^[^\#]/ {printf "%s;\n",$$1}' $<; echo ' local: *; };' ) >$@
+    exports_file	= $(SHLIB_EXPORTS:%.txt=%.list)
+    ifneq (,$(exports_file))
+      LINK.shared	+= -Wl,--version-script=$(exports_file)
+    endif
   else
     LINK.shared		= $(LD) -x -Bshareable -Bforcearchive
   endif
@@ -188,19 +198,19 @@ ifeq ($(PORTNAME), hpux)
     shlib			= lib$(NAME)$(DLSUFFIX).$(SO_MAJOR_VERSION)
   endif
   ifeq ($(with_gnu_ld), yes)
-    LINK.shared		= $(CC) -shared
+    LINK.shared		= $(CC) -shared -Wl,-Bsymbolic
     ifdef soname
       LINK.shared	+= -Wl,-h -Wl,$(soname)
     endif
   else
-    LINK.shared		= $(LD) -b
+    LINK.shared		= $(LD) -b -Bsymbolic
     ifdef soname
       LINK.shared	+= +h $(soname)
     endif
     # can't use the CC-syntax rpath pattern here, so instead:
     rpath =
     ifeq ($(enable_rpath), yes)
-      LINK.shared	+= +b '$(rpathdir)'
+      LINK.shared	+= +s +b '$(rpathdir)'
     endif
     # On HPUX platforms, gcc is usually configured to search for libraries
     # in /usr/local/lib, but ld won't do so.  Add an explicit -L switch so
@@ -230,9 +240,9 @@ endif
 
 ifeq ($(PORTNAME), solaris)
   ifeq ($(GCC), yes)
-    LINK.shared		= $(COMPILER) -shared
+    LINK.shared		= $(COMPILER) -shared -Wl,-Bsymbolic
   else
-    LINK.shared		= $(COMPILER) -G
+    LINK.shared		= $(COMPILER) -G -Bsymbolic
   endif
   ifdef soname
     ifeq ($(with_gnu_ld), yes)
@@ -240,30 +250,6 @@ ifeq ($(PORTNAME), solaris)
     else
       LINK.shared	+= -h $(soname)
     endif
-  endif
-endif
-
-ifeq ($(PORTNAME), sco)
-  ifeq ($(GCC), yes)
-    LINK.shared		= $(CC) -shared
-  else
-    LINK.shared		= $(CC) -G
-    endif
-  LINK.shared		+= -Wl,-z,text
-  ifdef soname
-    LINK.shared		+= -Wl,-h,$(soname)
-  endif
-endif
-
-ifeq ($(PORTNAME), unixware)
-  ifeq ($(GCC), yes)
-    LINK.shared		= $(CC) -shared
-  else
-    LINK.shared		= $(CC) -G
-  endif
-  LINK.shared		+= -Wl,-z,text
-  ifdef soname
-    LINK.shared		+= -Wl,-h,$(soname)
   endif
 endif
 
@@ -301,11 +287,17 @@ all-static-lib: $(stlib)
 
 all-shared-lib: $(shlib)
 
+# In this rule, "touch $@" works around a problem on some platforms wherein
+# ranlib updates the library file's mod time with a value calculated to
+# seconds precision.  If the filesystem has sub-second timestamps, this can
+# cause the library file to appear older than its input files, triggering
+# parallel-make problems.
 ifndef haslibarule
 $(stlib): $(OBJS) | $(SHLIB_PREREQS)
 	rm -f $@
 	$(LINK.static) $@ $^
 	$(RANLIB) $@
+	touch $@
 endif #haslibarule
 
 
@@ -329,7 +321,7 @@ endif
 endif # shlib_major
 
 # Where possible, restrict the symbols exported by the library to just the
-# official list, so as to avoid unintentional ABI changes.  On recent Darwin
+# official list, so as to avoid unintentional ABI changes.  On recent macOS
 # this also quiets multiply-defined-symbol warnings in programs that use
 # libpgport along with libpq.
 ifneq (,$(SHLIB_EXPORTS))
@@ -367,12 +359,11 @@ ifeq ($(PORTNAME), cygwin)
 # Cygwin case
 
 $(shlib): $(OBJS) | $(SHLIB_PREREQS)
-	$(CC) $(CFLAGS)  -shared -o $@  $(OBJS) $(LDFLAGS) $(LDFLAGS_SL) $(SHLIB_LINK) $(LIBS) $(LDAP_LIBS_BE)
+	$(CC) $(CFLAGS)  -shared -o $@ -Wl,--out-implib=$(stlib) $(OBJS) $(LDFLAGS) $(LDFLAGS_SL) $(SHLIB_LINK) $(LIBS) $(LDAP_LIBS_BE)
 
-$(stlib): $(OBJS) | $(SHLIB_PREREQS)
-	rm -f $@
-	$(LINK.static) $@ $^
-	$(RANLIB) $@
+# see notes in src/backend/parser/Makefile  about use of this type of rule
+$(stlib): $(shlib)
+	touch $@
 
 else
 
@@ -428,30 +419,22 @@ endif # PORTNAME == cygwin || PORTNAME == win32
 # tarballs.
 
 ifneq (,$(SHLIB_EXPORTS))
-distprep: lib$(NAME)dll.def lib$(NAME)ddll.def blib$(NAME)dll.def
+distprep: lib$(NAME)dll.def lib$(NAME)ddll.def
 
 UC_NAME = $(shell echo $(NAME) | tr 'abcdefghijklmnopqrstuvwxyz' 'ABCDEFGHIJKLMNOPQRSTUVWXYZ')
 
 lib$(NAME)dll.def: $(SHLIB_EXPORTS)
-	echo '; DEF file for win32.mak release build and for Makefile.shlib (MinGW)' >$@
+	echo '; DEF file for Makefile.shlib (MinGW)' >$@
 	echo 'LIBRARY LIB$(UC_NAME).dll' >>$@
 	echo 'EXPORTS' >>$@
 	sed -e '/^#/d' -e 's/^\(.*[ 	]\)\([0-9][0-9]*\)/    \1@ \2/' $< >>$@
 
 lib$(NAME)ddll.def: $(SHLIB_EXPORTS)
-	echo '; DEF file for win32.mak debug build' >$@
+	echo '; DEF file for Makefile.shlib (MinGW)' >$@
 	echo 'LIBRARY LIB$(UC_NAME)D.dll' >>$@
 	echo 'EXPORTS' >>$@
 	sed -e '/^#/d' -e 's/^\(.*[ 	]\)\([0-9][0-9]*\)/    \1@ \2/' $< >>$@
 
-blib$(NAME)dll.def: $(SHLIB_EXPORTS)
-	echo '; DEF file for bcc32.mak (Borland C++ Builder)' >$@
-	echo 'LIBRARY BLIB$(UC_NAME)' >>$@
-	echo 'EXPORTS' >>$@
-	sed -e '/^#/d' -e 's/^\(.*[ 	]\)\([0-9][0-9]*\)/    _\1@ \2/' $< >>$@
-	echo >>$@
-	echo '; Aliases for MS compatible names' >> $@
-	sed -e '/^#/d' -e 's/^\(.*[ 	]\)\([0-9][0-9]*\)/    \1= _\1/' $< | sed 's/ *$$//' >>$@
 endif # SHLIB_EXPORTS
 
 
@@ -473,7 +456,7 @@ install-lib-static: $(stlib) installdirs-lib
 	$(INSTALL_STLIB) $< '$(DESTDIR)$(libdir)/$(stlib)'
 ifeq ($(PORTNAME), darwin)
 	cd '$(DESTDIR)$(libdir)' && \
-	ranlib $(stlib)
+	$(RANLIB) $(stlib)
 endif
 
 install-lib-shared: $(shlib) installdirs-lib
@@ -540,5 +523,5 @@ clean-lib:
 
 ifneq (,$(SHLIB_EXPORTS))
 maintainer-clean-lib:
-	rm -f lib$(NAME)dll.def lib$(NAME)ddll.def blib$(NAME)dll.def
+	rm -f lib$(NAME)dll.def lib$(NAME)ddll.def
 endif

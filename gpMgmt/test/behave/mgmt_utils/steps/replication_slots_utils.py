@@ -6,12 +6,11 @@ from test.behave_utils.utils import (
     stop_database,
     run_command,
     stop_primary,
-    execute_sql,
+    query_sql,
     wait_for_unblocked_transactions,
 )
 
-
-from mirrors_mgmt_utils import (add_three_mirrors)
+from test.behave.mgmt_utils.steps.mirrors_mgmt_utils import (add_three_mirrors)
 
 
 def assert_successful_command(context):
@@ -65,7 +64,7 @@ def expand(context):
 
 
 def ensure_primary_mirror_switched_roles():
-    results = execute_sql(
+    results = query_sql(
         "postgres",
         "select * from gp_segment_configuration where preferred_role <> role"
     )
@@ -74,15 +73,15 @@ def ensure_primary_mirror_switched_roles():
         raise Exception("expected 2 segments to not be in preferred roles")
 
 
-@given(u'I have a machine with no cluster')
+@given('I have a machine with no cluster')
 def step_impl(context):
     stop_database(context)
 
 
-@given(u'a mirror has crashed')
-@when(u'a mirror has crashed')
+@given('a mirror has crashed')
+@when('a mirror has crashed')
 def step_impl(context):
-    host, datadir = execute_sql("postgres",
+    host, datadir = query_sql("postgres",
         "SELECT hostname, datadir FROM gp_segment_configuration WHERE role='m' AND content=0"
     ).fetchone()
 
@@ -100,14 +99,14 @@ def step_impl(context):
     wait_for_unblocked_transactions(context)
 
 
-@when(u'I create a cluster')
+@when('I create a cluster')
 def step_impl(context):
     create_cluster(context)
 
 
-@then(u'the primaries and mirrors should be replicating using replication slots')
+@then('the primaries and mirrors should be replicating using replication slots')
 def step_impl(context):
-    result_cursor = execute_sql(
+    result_cursor = query_sql(
         "postgres",
         "select pg_get_replication_slots() from gp_dist_random('gp_id') order by gp_segment_id"
     )
@@ -116,15 +115,16 @@ def step_impl(context):
         raise Exception("expected all %d primaries to have replication slots, only %d have slots" % (context.current_cluster_size, results.rowcount))
 
     for content_id, result in enumerate(result_cursor.fetchall()):
-        if not result[0].startswith('(internal_wal_replication_slot,,physical,,t,'):
+        pg_rep_slot = result[0]
+        if (pg_rep_slot[0], pg_rep_slot[2], pg_rep_slot[4]) != ('internal_wal_replication_slot','physical','f') :
             raise Exception(
                 "expected replication slot to be active for content id %d, got %s" %
                 (content_id, result[0])
             )
 
-@then(u'the mirrors should not have replication slots')
+@then('the mirrors should not have replication slots')
 def step_impl(context):
-    result_cursor = execute_sql(
+    result_cursor = query_sql(
         "postgres",
         "select datadir from gp_segment_configuration where role='m';"
     )
@@ -135,7 +135,7 @@ def step_impl(context):
             raise Exception("expected replication slot directory to be empty")
 
 
-@given(u'a preferred primary has failed')
+@given('a preferred primary has failed')
 def step_impl(context):
     stop_primary(context, 0)
     wait_for_unblocked_transactions(context)

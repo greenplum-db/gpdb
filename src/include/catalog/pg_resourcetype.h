@@ -21,6 +21,7 @@
 
 
 #include "catalog/genbki.h"
+#include "catalog/pg_resourcetype_d.h"
 
 /*
   The flavors of resource types:
@@ -59,10 +60,10 @@
  *		typedef struct FormData_pg_resourcetype
  * ----------------
  */
-#define ResourceTypeRelationId	6059
 
-CATALOG(pg_resourcetype,6059) BKI_SHARED_RELATION
+CATALOG(pg_resourcetype,6059,ResourceTypeRelationId) BKI_SHARED_RELATION
 {
+	Oid			oid;				/* oid */
 	NameData	resname;			/* name of resource type  */
 	int16		restypid;			/* resource type id  */
 	bool		resrequired;		/* if required, user must specify during CREATE */
@@ -82,28 +83,6 @@ CATALOG(pg_resourcetype,6059) BKI_SHARED_RELATION
  * ----------------
  */
 typedef FormData_pg_resourcetype *Form_pg_resourcetype;
-
-
-/* ----------------
- *		compiler constants for pg_resourcetype
- * ----------------
- */
-#define Natts_pg_resourcetype					7
-#define Anum_pg_resourcetype_resname			1
-#define Anum_pg_resourcetype_restypid			2
-#define Anum_pg_resourcetype_resrequired		3
-#define Anum_pg_resourcetype_reshasdefault		4
-#define Anum_pg_resourcetype_reshasdisable		5
-#define Anum_pg_resourcetype_resdefaultsetting	6
-#define Anum_pg_resourcetype_resdisabledsetting	7
-
-/* Create entry in pg_resourcetype for PRIORITY */
-DATA(insert OID = 6454  ( active_statements 1 f t t -1  -1 ));
-DATA(insert OID = 6455  ( max_cost 2 f t t -1  -1 ));
-DATA(insert OID = 6456  ( min_cost 3 f t t -1   0 ));
-DATA(insert OID = 6457  ( cost_overcommit 4 f t t -1  -1 )); 
-DATA(insert OID = 6458  ( priority 5 f t f medium _null_ ));
-DATA(insert OID = 6459  ( memory_limit 6 f t t -1 -1 ));
 
 /* 
    The first four entries of pg_resourcetype are special mappings for

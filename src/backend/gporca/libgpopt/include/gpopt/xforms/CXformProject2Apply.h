@@ -16,54 +16,50 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CXformProject2Apply
-	//
-	//	@doc:
-	//		Transform Project to Apply; this transformation is only applicable
-	//		to a Project expression with subqueries in its scalar project list
-	//
-	//---------------------------------------------------------------------------
-	class CXformProject2Apply : public CXformSubqueryUnnest
+//---------------------------------------------------------------------------
+//	@class:
+//		CXformProject2Apply
+//
+//	@doc:
+//		Transform Project to Apply; this transformation is only applicable
+//		to a Project expression with subqueries in its scalar project list
+//
+//---------------------------------------------------------------------------
+class CXformProject2Apply : public CXformSubqueryUnnest
+{
+private:
+	// private copy ctor
+	CXformProject2Apply(const CXformProject2Apply &);
+
+public:
+	// ctor
+	explicit CXformProject2Apply(CMemoryPool *mp);
+
+	// dtor
+	virtual ~CXformProject2Apply()
 	{
+	}
 
-		private:
+	// ident accessors
+	virtual EXformId
+	Exfid() const
+	{
+		return ExfProject2Apply;
+	}
 
-			// private copy ctor
-			CXformProject2Apply(const CXformProject2Apply &);
+	// return a string for xform name
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CXformProject2Apply";
+	}
 
-		public:
+};	// class CXformProject2Apply
 
-			// ctor
-			explicit
-			CXformProject2Apply(CMemoryPool *mp);
+}  // namespace gpopt
 
-			// dtor
-			virtual
-			~CXformProject2Apply()
-			{}
-
-			// ident accessors
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfProject2Apply;
-			}
-
-			// return a string for xform name
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CXformProject2Apply";
-			}
-
-	}; // class CXformProject2Apply
-
-}
-
-#endif // !GPOPT_CXformProject2Apply_H
+#endif	// !GPOPT_CXformProject2Apply_H
 
 // EOF

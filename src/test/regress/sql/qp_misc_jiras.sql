@@ -561,9 +561,6 @@ set gp_interconnect_setup_timeout=3600;
 show gp_interconnect_setup_timeout;
 set gp_interconnect_setup_timeout=10000;
 set gp_interconnect_setup_timeout=4000;
-create schema tbl5352_test;
-select tablename from pg_tables where schemaname='tbl5352_test' and tablename not in( select partitiontablename from pg_partitions where partitionschemaname = 'tbl5352_test' );
-drop schema tbl5352_test;
 
 CREATE TABLE qp_misc_jiras.tbl5223_sales_fact(
 	   time     timestamp,
@@ -695,7 +692,7 @@ insert into qp_misc_jiras.tbl5246_sale values
   ( 4, 40, 700, '1401-6-1', 1, 1),
   ( 4, 40, 800, '1401-6-1', 1, 1);
 
-explain select cn, count(*) over (order by dt range between '2 day'::interval preceding and 2 preceding) from qp_misc_jiras.tbl5246_sale;
+select cn, count(*) over (order by dt range between '2 day'::interval preceding and 2 preceding) from qp_misc_jiras.tbl5246_sale;
 
 drop table qp_misc_jiras.tbl5246_sale;
 
@@ -794,23 +791,6 @@ select x.b from ( ( select 'a'::text as a ) xx join (select 'a'::text as b) yy o
 create table qp_misc_jiras.tbl6027_test (i int, j bigint, k int, l int, m int);
 insert into qp_misc_jiras.tbl6027_test select i, i%100, i%123, i%234, i%345 from generate_series(1, 500) i;
 select j, sum(k), row_number() over (partition by j order by sum(k)) from qp_misc_jiras.tbl6027_test group by j order by j limit 10; -- order 1
-CREATE TABLE qp_misc_jiras.tbl6419_test(
-lstg_id numeric(38,0),
-icedt date,
-icehr smallint,
-cre_time timestamp without time zone,
-lstg_desc_txt text
-)
-WITH (appendonly=true, compresslevel=5) distributed by (lstg_id) PARTITION BY RANGE(cre_time)
-(
-START ('2009-05-26 00:00:00'::timestamp without time zone) 
-END ('2009-06-05 00:00:00'::timestamp without time zone) EVERY ('1 day'::interval) WITH (appendonly=true, compresslevel=5)
-);
-
-insert into qp_misc_jiras.tbl6419_test values( 123, '2009-06-01', 12, '2009-06-01 01:01:01', 'aaaaaa');
-select * from qp_misc_jiras.tbl6419_test where icedt::text = (select partitionrangestart FROM pg_partitions where tablename='test1' and schemaname='public' and partitionrank=1);
-select * from qp_misc_jiras.tbl6419_test where '2009-12-12'::date::text = (select 'test'::text);
-drop table qp_misc_jiras.tbl6419_test;
 
 CREATE TABLE qp_misc_jiras.m_ccr_mthy_cr_nds_t00
 (
@@ -1360,20 +1340,19 @@ create index tbl6874_a on qp_misc_jiras.tbl6874 using bitmap(a);
 drop index qp_misc_jiras.tbl6874_a;
 \d+ qp_misc_jiras.tbl6874
 drop table qp_misc_jiras.tbl6874;
-CREATE TABLE qp_misc_jiras.tbl7740_rank (id int, gender char(1), count char(1) )
+CREATE TYPE qp_misc_jiras.tbl7740_rank_partkey AS (gender char(1), count char(1));
+CREATE TABLE qp_misc_jiras.tbl7740_rank (id int, gender_count qp_misc_jiras.tbl7740_rank_partkey )
             DISTRIBUTED BY (id)
-            PARTITION BY LIST (gender,count)
-            ( PARTITION girls VALUES (('F','1')),
-              PARTITION boys VALUES (('M','1')),
+            PARTITION BY LIST (gender_count)
+            ( PARTITION girls VALUES (CAST('(F,1)' AS qp_misc_jiras.tbl7740_rank_partkey)),
+              PARTITION boys VALUES (CAST('(M,1)' AS qp_misc_jiras.tbl7740_rank_partkey)),
               DEFAULT PARTITION other );
 
-insert into qp_misc_jiras.tbl7740_rank values(1,'F','1');
-insert into qp_misc_jiras.tbl7740_rank values(1,'F','0');
-insert into qp_misc_jiras.tbl7740_rank values(1,'M','1');
-insert into qp_misc_jiras.tbl7740_rank values(1,'M','0');
--- start_ignore 
-alter table qp_misc_jiras.tbl7740_rank split default partition at (values(('F', '0'))) into (partition mother, partition other);
--- end_ignore
+insert into qp_misc_jiras.tbl7740_rank values(1,'(F,1)');
+insert into qp_misc_jiras.tbl7740_rank values(1,'(F,0)');
+insert into qp_misc_jiras.tbl7740_rank values(1,'(M,1)');
+insert into qp_misc_jiras.tbl7740_rank values(1,'(M,0)');
+alter table qp_misc_jiras.tbl7740_rank split default partition at ('(F,0)') into (partition mother, partition other);
 select * from qp_misc_jiras.tbl7740_rank_1_prt_girls;
 select * from qp_misc_jiras.tbl7740_rank_1_prt_boys;
 select * from qp_misc_jiras.tbl7740_rank_1_prt_mother;
@@ -1892,16 +1871,6 @@ reset enable_seqscan;
 reset enable_bitmapscan;
 reset enable_indexscan;
 
-create table qp_misc_jiras.tbl8258 (a int, b double precision)
-PARTITION BY RANGE(b)
-(START (1::double precision) END (100::double precision)
-EVERY ((20)::double precision),
-PARTITION p1 START (100::double precision) END (150::double precision));
-
-select pg_get_partition_def('qp_misc_jiras.tbl8258'::regclass, true);
-
-drop table qp_misc_jiras.tbl8258;
-
 reset statement_timeout;
 set statement_mem = '512MB';
 
@@ -1979,7 +1948,9 @@ drop table qp_misc_jiras.utable;
 -- end_ignore
 
 
-
+-- Test for an old planner bug, related to MPP group by planning,
+-- where EXPLAIN on this query produced a "bogus var" warning.
+-- (The code has been completely rewritten since, though)
 CREATE TABLE qp_misc_jiras.foo_6325 (
   foo_6325_attr text
 )
@@ -2074,7 +2045,6 @@ insert into qp_misc_jiras.tbl9613 values(1, 5);
 insert into qp_misc_jiras.tbl9613 values(1, 6);
 insert into qp_misc_jiras.tbl9613 values(1, 7);
 insert into qp_misc_jiras.tbl9613 values(1, 8);
-
 
 --
 -- First set of functions. These do not access external relations.
@@ -2353,46 +2323,6 @@ set gp_enable_explain_allstat=on;
 insert into qp_misc_jiras.test_heap select i, i from generate_series(0, 99999) i;
 explain analyze select count(*) from qp_misc_jiras.test_heap;
 
--- This is to verify MPP-8946
--- ramans2 : Modifying queries to add filter on schema name to remove diffs in multi-node cdbfast runs
-create schema schema1;
-create schema schema2;
-create schema schema3;
-create table schema1.foo1 (i int) partition by range(i)  (start(1) end(2) every(1));
-create table schema2.foo2 (i int) partition by range(i)  (start(1) end(2) every(1));
-create table schema2.foo3 (i int) partition by range(i)  (start(1) end(2) every(1));
-create table schema3.foo4 (i int) partition by range(i)  (start(1) end(2) every(1));
-set statement_mem='1900MB';
-select * from pg_partitions where schemaname in ('schema1', 'schema2', 'schema3');
-
---
--- Case 1: query from MPP-7073.
--- expected 0 rows
---
-select * from pg_partitions p 
-   where not exists (select 1 from pg_partitions p2 where p2.schemaname = p.schemaname) and p.schemaname in ('schema1', 'schema2', 'schema3'); 
-
---
--- Case 2: modified form of Case 1 which returns non-zero results
--- expected 2 rows: (foo1 and foo4)
---
-select * from pg_partitions p 
-   where not exists (select 1 from pg_partitions p2 where p2.schemaname = p.schemaname and p2.tablename != p.tablename ) and p.schemaname in ('schema1', 'schema2', 'schema3'); 
-
---
--- Case 3: query from MPP-8946.
---
-select schemaname, tablename, partitionschemaname,
-       partitiontablename, partitionlevel 
-  from pg_partitions p1 
-  where partitionlevel > 0 
-    and partitionlevel < (select max(partitionlevel)
-                          from pg_partitions p2 where p2.tablename=p1.tablename)  and schemaname in ('schema1', 'schema2', 'schema3'); 
-
-drop schema schema1 cascade;
-drop schema schema2 cascade;
-drop schema schema3 cascade;
-
 -- This is the to verify MPP-9167:
 --	Gather Motion shows wrong row estimate compared to 3.3
 -- 	from Lyublena: 
@@ -2579,6 +2509,11 @@ INSERT INTO pg_statistic VALUES (
         95::oid,
         0::oid,
         0::oid,
+	0::oid,
+	0::oid,
+	0::oid,
+	0::oid,
+	0::oid,
 	0::oid,
         E'{0.259358,0.15047,0.124118,0.117294,0.117195,0.11612,0.115285}'::real[],
         NULL::real[],

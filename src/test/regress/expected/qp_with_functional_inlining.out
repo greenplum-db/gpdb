@@ -45,7 +45,7 @@ set search_path='qp_with_functional';
 --
 -- end_matchsubs
 -- start_ignore
-CREATE LANGUAGE plpythonu;
+CREATE LANGUAGE plpython3u;
 -- end_ignore
 CREATE TABLE foo AS SELECT i as a, i+1 as b from generate_series(1,10)i;
 CREATE TABLE bar AS SELECT i as c, i+1 as d from generate_series(1,10)i;
@@ -490,7 +490,7 @@ SELECT v1.a FROM v AS v1, v as v2 WHERE v1.a = v2.b)OUTERFOO ORDER BY 1", 5)
         val = rv[i]["a"]
         id.append(val)
     return id
-$$ LANGUAGE plpythonu READS SQL DATA;
+$$ LANGUAGE plpython3u READS SQL DATA;
 WITH v(a, b) AS (SELECT a,b FROM foo WHERE b < 5)
 SELECT * from v where b in ( select * from cte_func3()) ORDER BY 1;
 ERROR:  plpy.SPIError: function cannot execute on a QE slice because it accesses relation "qp_with_functional.foo"
@@ -529,10 +529,10 @@ CREATE VIEW cte_view as
     SELECT a FROM foo limit 10
 )SELECT * FROM CTE);
 \d+ cte_view
-     View "qp_with_functional_inlining.cte_view"
- Column |  Type   | Modifiers | Storage | Description 
---------+---------+-----------+---------+-------------
- e      | integer |           | plain   | 
+                View "qp_with_functional_inlining.cte_view"
+ Column |  Type   | Collation | Nullable | Default | Storage | Description 
+--------+---------+-----------+----------+---------+---------+-------------
+ e      | integer |           |          |         | plain   | 
 View definition:
  WITH cte(e) AS (
          SELECT bar.d
@@ -569,11 +569,11 @@ CREATE VIEW cte_view as
 SELECT cte2.e,cte.f FROM cte,cte2 where cte.e = cte2.e
 );
 \d+ cte_view
-     View "qp_with_functional_inlining.cte_view"
- Column |  Type   | Modifiers | Storage | Description 
---------+---------+-----------+---------+-------------
- e      | integer |           | plain   | 
- f      | integer |           | plain   | 
+                View "qp_with_functional_inlining.cte_view"
+ Column |  Type   | Collation | Nullable | Default | Storage | Description 
+--------+---------+-----------+----------+---------+---------+-------------
+ e      | integer |           |          |         | plain   | 
+ f      | integer |           |          |         | plain   | 
 View definition:
  WITH cte(e, f) AS (
          SELECT foo.a,

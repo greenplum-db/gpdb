@@ -34,21 +34,15 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CDatumInt2GPDB::CDatumInt2GPDB
-	(
-	CSystemId sysid,
-	SINT val,
-	BOOL is_null
-	)
-	:
-	m_mdid(NULL),
-	m_val(val),
-	m_is_null(is_null)
+CDatumInt2GPDB::CDatumInt2GPDB(CSystemId sysid, SINT val, BOOL is_null)
+	: m_mdid(NULL), m_val(val), m_is_null(is_null)
 {
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
-	IMDId *mdid = dynamic_cast<const CMDTypeInt2GPDB *>(md_accessor->PtMDType<IMDTypeInt2>(sysid))->MDId();
+	IMDId *mdid = dynamic_cast<const CMDTypeInt2GPDB *>(
+					  md_accessor->PtMDType<IMDTypeInt2>(sysid))
+					  ->MDId();
 	mdid->AddRef();
-	
+
 	m_mdid = mdid;
 
 	if (IsNull())
@@ -66,16 +60,8 @@ CDatumInt2GPDB::CDatumInt2GPDB
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CDatumInt2GPDB::CDatumInt2GPDB
-	(
-	IMDId *mdid,
-	SINT val,
-	BOOL is_null
-	)
-	:
-	m_mdid(mdid),
-	m_val(val),
-	m_is_null(is_null)
+CDatumInt2GPDB::CDatumInt2GPDB(IMDId *mdid, SINT val, BOOL is_null)
+	: m_mdid(mdid), m_val(val), m_is_null(is_null)
 {
 	GPOS_ASSERT(NULL != m_mdid);
 	GPOS_ASSERT(GPDB_INT2_OID == CMDIdGPDB::CastMdid(m_mdid)->Oid());
@@ -171,7 +157,8 @@ CDatumInt2GPDB::MDId() const
 ULONG
 CDatumInt2GPDB::HashValue() const
 {
-	return gpos::CombineHashes(m_mdid->HashValue(), gpos::HashValue<SINT>(&m_val));
+	return gpos::CombineHashes(m_mdid->HashValue(),
+							   gpos::HashValue<SINT>(&m_val));
 }
 
 
@@ -184,11 +171,7 @@ CDatumInt2GPDB::HashValue() const
 //
 //---------------------------------------------------------------------------
 const CWStringConst *
-CDatumInt2GPDB::GetStrRepr
-	(
-	CMemoryPool *mp
-	)
-	const
+CDatumInt2GPDB::GetStrRepr(CMemoryPool *mp) const
 {
 	CWStringDynamic str(mp);
 	if (!IsNull())
@@ -213,18 +196,15 @@ CDatumInt2GPDB::GetStrRepr
 //
 //---------------------------------------------------------------------------
 BOOL
-CDatumInt2GPDB::Matches
-	(
-	const IDatum *datum
-	)
-	const
+CDatumInt2GPDB::Matches(const IDatum *datum) const
 {
 	if (!datum->MDId()->Equals(m_mdid))
 	{
 		return false;
 	}
 
-	const CDatumInt2GPDB *datum_cast = dynamic_cast<const CDatumInt2GPDB *>(datum);
+	const CDatumInt2GPDB *datum_cast =
+		dynamic_cast<const CDatumInt2GPDB *>(datum);
 
 	if (!datum_cast->IsNull() && !IsNull())
 	{
@@ -244,11 +224,7 @@ CDatumInt2GPDB::Matches
 //
 //---------------------------------------------------------------------------
 IDatum *
-CDatumInt2GPDB::MakeCopy
-	(
-	CMemoryPool *mp
-	)
-	const
+CDatumInt2GPDB::MakeCopy(CMemoryPool *mp) const
 {
 	m_mdid->AddRef();
 	return GPOS_NEW(mp) CDatumInt2GPDB(m_mdid, m_val, m_is_null);
@@ -264,11 +240,7 @@ CDatumInt2GPDB::MakeCopy
 //
 //---------------------------------------------------------------------------
 IOstream &
-CDatumInt2GPDB::OsPrint
-	(
-	IOstream &os
-	)
-	const
+CDatumInt2GPDB::OsPrint(IOstream &os) const
 {
 	if (!IsNull())
 	{
@@ -283,4 +255,3 @@ CDatumInt2GPDB::OsPrint
 }
 
 // EOF
-

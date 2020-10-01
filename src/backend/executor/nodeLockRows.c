@@ -3,7 +3,7 @@
  * nodeLockRows.c
  *	  Routines to handle FOR UPDATE/FOR SHARE row locking
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -21,28 +21,30 @@
 
 #include "postgres.h"
 
-#include "access/htup_details.h"
+#include "access/tableam.h"
 #include "access/xact.h"
 #include "executor/executor.h"
 #include "executor/nodeLockRows.h"
 #include "foreign/fdwapi.h"
-#include "storage/bufmgr.h"
+#include "miscadmin.h"
 #include "utils/rel.h"
-#include "utils/tqual.h"
 
 
 /* ----------------------------------------------------------------
  *		ExecLockRows
  * ----------------------------------------------------------------
  */
-TupleTableSlot *				/* return: a tuple or NULL */
-ExecLockRows(LockRowsState *node)
+static TupleTableSlot *			/* return: a tuple or NULL */
+ExecLockRows(PlanState *pstate)
 {
+	LockRowsState *node = castNode(LockRowsState, pstate);
 	TupleTableSlot *slot;
 	EState	   *estate;
 	PlanState  *outerPlan;
 	bool		epq_needed;
 	ListCell   *lc;
+
+	CHECK_FOR_INTERRUPTS();
 
 	/*
 	 * get information from the node
@@ -63,6 +65,12 @@ lnext:
 	epq_needed = false;
 
 	/*
+	 * Initialize EPQ machinery. Need to do that early because source tuples
+	 * are stored in slots initialized therein.
+	 */
+	EvalPlanQualBegin(&node->lr_epqstate, estate);
+
+	/*
 	 * Attempt to lock the source tuple(s).  (Note we only have locking
 	 * rowmarks in lr_arowMarks.)
 	 */
@@ -70,21 +78,18 @@ lnext:
 	{
 		ExecAuxRowMark *aerm = (ExecAuxRowMark *) lfirst(lc);
 		ExecRowMark *erm = aerm->rowmark;
-		HeapTuple  *testTuple;
 		Datum		datum;
 		bool		isNull;
-		HeapTupleData tuple;
-		Buffer		buffer;
-		HeapUpdateFailureData hufd;
+		ItemPointerData tid;
+		TM_FailureData tmfd;
 		LockTupleMode lockmode;
-		HTSU_Result test;
-		HeapTuple	copyTuple;
+		int			lockflags = 0;
+		TM_Result	test;
+		TupleTableSlot *markSlot;
 
 		/* clear any leftover test tuple for this rel */
-		testTuple = &(node->lr_curtuples[erm->rti - 1]);
-		if (*testTuple != NULL)
-			heap_freetuple(*testTuple);
-		*testTuple = NULL;
+		markSlot = EvalPlanQualSlot(&node->lr_epqstate, erm->relation, erm->rti);
+		ExecClearTuple(markSlot);
 
 		/* if child rel, must check whether it produced this row */
 		if (erm->rti != erm->prti)
@@ -105,6 +110,7 @@ lnext:
 				/* this child is inactive right now */
 				erm->ermActive = false;
 				ItemPointerSetInvalid(&(erm->curCtid));
+				ExecClearTuple(markSlot);
 				continue;
 			}
 		}
@@ -136,18 +142,17 @@ lnext:
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 						 errmsg("cannot lock rows in foreign table \"%s\"",
 								RelationGetRelationName(erm->relation))));
-			copyTuple = fdwroutine->RefetchForeignRow(estate,
-													  erm,
-													  datum,
-													  &updated);
-			if (copyTuple == NULL)
+
+			fdwroutine->RefetchForeignRow(estate,
+										  erm,
+										  datum,
+										  markSlot,
+										  &updated);
+			if (TupIsNull(markSlot))
 			{
 				/* couldn't get the lock, so skip this row */
 				goto lnext;
 			}
-
-			/* save locked tuple for possible EvalPlanQual testing below */
-			*testTuple = copyTuple;
 
 			/*
 			 * if FDW says tuple was updated before getting locked, we need to
@@ -159,8 +164,8 @@ lnext:
 			continue;
 		}
 
-		/* okay, try to lock the tuple */
-		tuple.t_self = *((ItemPointer) DatumGetPointer(datum));
+		/* okay, try to lock (and fetch) the tuple */
+		tid = *((ItemPointer) DatumGetPointer(datum));
 		switch (erm->markType)
 		{
 			case ROW_MARK_EXCLUSIVE:
@@ -177,22 +182,27 @@ lnext:
 				break;
 			default:
 				elog(ERROR, "unsupported rowmark type");
-				lockmode = LockTupleNoKeyExclusive;		/* keep compiler quiet */
+				lockmode = LockTupleNoKeyExclusive; /* keep compiler quiet */
 				break;
 		}
 
-		test = heap_lock_tuple(erm->relation, &tuple,
-							   estate->es_output_cid,
-							   lockmode, erm->waitPolicy, true,
-							   &buffer, &hufd);
-		ReleaseBuffer(buffer);
+		lockflags = TUPLE_LOCK_FLAG_LOCK_UPDATE_IN_PROGRESS;
+		if (!IsolationUsesXactSnapshot())
+			lockflags |= TUPLE_LOCK_FLAG_FIND_LAST_VERSION;
+
+		test = table_tuple_lock(erm->relation, &tid, estate->es_snapshot,
+								markSlot, estate->es_output_cid,
+								lockmode, erm->waitPolicy,
+								lockflags,
+								&tmfd);
+
 		switch (test)
 		{
-			case HeapTupleWouldBlock:
+			case TM_WouldBlock:
 				/* couldn't lock tuple in SKIP LOCKED mode */
 				goto lnext;
 
-			case HeapTupleSelfUpdated:
+			case TM_SelfModified:
 
 				/*
 				 * The target tuple was already updated or deleted by the
@@ -203,64 +213,50 @@ lnext:
 				 * to fetch the updated tuple instead, but doing so would
 				 * require changing heap_update and heap_delete to not
 				 * complain about updating "invisible" tuples, which seems
-				 * pretty scary (heap_lock_tuple will not complain, but few
-				 * callers expect HeapTupleInvisible, and we're not one of
-				 * them).  So for now, treat the tuple as deleted and do not
-				 * process.
+				 * pretty scary (table_tuple_lock will not complain, but few
+				 * callers expect TM_Invisible, and we're not one of them). So
+				 * for now, treat the tuple as deleted and do not process.
 				 */
 				goto lnext;
 
-			case HeapTupleMayBeUpdated:
-				/* got the lock successfully */
+			case TM_Ok:
+
+				/*
+				 * Got the lock successfully, the locked tuple saved in
+				 * markSlot for, if needed, EvalPlanQual testing below.
+				 */
+				if (tmfd.traversed)
+					epq_needed = true;
 				break;
 
-			case HeapTupleUpdated:
+			case TM_Updated:
 				if (IsolationUsesXactSnapshot())
 					ereport(ERROR,
 							(errcode(ERRCODE_T_R_SERIALIZATION_FAILURE),
 							 errmsg("could not serialize access due to concurrent update")));
-				if (ItemPointerEquals(&hufd.ctid, &tuple.t_self))
-				{
-					/* Tuple was deleted, so don't return it */
-					goto lnext;
-				}
-
-				/* updated, so fetch and lock the updated version */
-				copyTuple = EvalPlanQualFetch(estate, erm->relation,
-											  lockmode, erm->waitPolicy,
-											  &hufd.ctid, hufd.xmax);
-
-				if (copyTuple == NULL)
-				{
-					/*
-					 * Tuple was deleted; or it's locked and we're under SKIP
-					 * LOCKED policy, so don't return it
-					 */
-					goto lnext;
-				}
-				/* remember the actually locked tuple's TID */
-				tuple.t_self = copyTuple->t_self;
-
-				/* Save locked tuple for EvalPlanQual testing below */
-				*testTuple = copyTuple;
-
-				/* Remember we need to do EPQ testing */
-				epq_needed = true;
-
-				/* Continue loop until we have all target tuples */
+				elog(ERROR, "unexpected table_tuple_lock status: %u",
+					 test);
 				break;
 
-			case HeapTupleInvisible:
+			case TM_Deleted:
+				if (IsolationUsesXactSnapshot())
+					ereport(ERROR,
+							(errcode(ERRCODE_T_R_SERIALIZATION_FAILURE),
+							 errmsg("could not serialize access due to concurrent update")));
+				/* tuple was deleted so don't return it */
+				goto lnext;
+
+			case TM_Invisible:
 				elog(ERROR, "attempted to lock invisible tuple");
 				break;
 
 			default:
-				elog(ERROR, "unrecognized heap_lock_tuple status: %u",
+				elog(ERROR, "unrecognized table_tuple_lock status: %u",
 					 test);
 		}
 
 		/* Remember locked tuple's TID for EPQ testing and WHERE CURRENT OF */
-		erm->curCtid = tuple.t_self;
+		erm->curCtid = tid;
 	}
 
 	/*
@@ -268,59 +264,6 @@ lnext:
 	 */
 	if (epq_needed)
 	{
-		/* Initialize EPQ machinery */
-		EvalPlanQualBegin(&node->lr_epqstate, estate);
-
-		/*
-		 * Transfer any already-fetched tuples into the EPQ state, and fetch a
-		 * copy of any rows that were successfully locked without any update
-		 * having occurred.  (We do this in a separate pass so as to avoid
-		 * overhead in the common case where there are no concurrent updates.)
-		 * Make sure any inactive child rels have NULL test tuples in EPQ.
-		 */
-		foreach(lc, node->lr_arowMarks)
-		{
-			ExecAuxRowMark *aerm = (ExecAuxRowMark *) lfirst(lc);
-			ExecRowMark *erm = aerm->rowmark;
-			HeapTupleData tuple;
-			Buffer		buffer;
-
-			/* skip non-active child tables, but clear their test tuples */
-			if (!erm->ermActive)
-			{
-				Assert(erm->rti != erm->prti);	/* check it's child table */
-				EvalPlanQualSetTuple(&node->lr_epqstate, erm->rti, NULL);
-				continue;
-			}
-
-			/* was tuple updated and fetched above? */
-			if (node->lr_curtuples[erm->rti - 1] != NULL)
-			{
-				/* yes, so set it as the EPQ test tuple for this rel */
-				EvalPlanQualSetTuple(&node->lr_epqstate,
-									 erm->rti,
-									 node->lr_curtuples[erm->rti - 1]);
-				/* freeing this tuple is now the responsibility of EPQ */
-				node->lr_curtuples[erm->rti - 1] = NULL;
-				continue;
-			}
-
-			/* foreign tables should have been fetched above */
-			Assert(erm->relation->rd_rel->relkind != RELKIND_FOREIGN_TABLE);
-			Assert(ItemPointerIsValid(&(erm->curCtid)));
-
-			/* okay, fetch the tuple */
-			tuple.t_self = erm->curCtid;
-			if (!heap_fetch(erm->relation, SnapshotAny, &tuple, &buffer,
-							false, NULL))
-				elog(ERROR, "failed to fetch tuple for EvalPlanQual recheck");
-
-			/* successful, copy and store tuple */
-			EvalPlanQualSetTuple(&node->lr_epqstate, erm->rti,
-								 heap_copytuple(&tuple));
-			ReleaseBuffer(buffer);
-		}
-
 		/*
 		 * Now fetch any non-locked source rows --- the EPQ logic knows how to
 		 * do that.
@@ -367,36 +310,35 @@ ExecInitLockRows(LockRows *node, EState *estate, int eflags)
 	lrstate = makeNode(LockRowsState);
 	lrstate->ps.plan = (Plan *) node;
 	lrstate->ps.state = estate;
+	lrstate->ps.ExecProcNode = ExecLockRows;
 
 	/*
 	 * Miscellaneous initialization
 	 *
-	 * LockRows nodes never call ExecQual or ExecProject.
+	 * LockRows nodes never call ExecQual or ExecProject, therefore no
+	 * ExprContext is needed.
 	 */
 
 	/*
-	 * Tuple table initialization (XXX not actually used...)
+	 * Initialize result type.
 	 */
-	ExecInitResultTupleSlot(estate, &lrstate->ps);
+	ExecInitResultTypeTL(&lrstate->ps);
 
 	/*
 	 * then initialize outer plan
 	 */
 	outerPlanState(lrstate) = ExecInitNode(outerPlan, estate, eflags);
 
+	/* node returns unmodified slots from the outer plan */
+	lrstate->ps.resultopsset = true;
+	lrstate->ps.resultops = ExecGetResultSlotOps(outerPlanState(lrstate),
+												 &lrstate->ps.resultopsfixed);
+
 	/*
 	 * LockRows nodes do no projections, so initialize projection info for
 	 * this node appropriately
 	 */
-	ExecAssignResultTypeFromTL(&lrstate->ps);
 	lrstate->ps.ps_ProjInfo = NULL;
-
-	/*
-	 * Create workspace in which we can remember per-RTE locked tuples
-	 */
-	lrstate->lr_ntables = list_length(estate->es_range_table);
-	lrstate->lr_curtuples = (HeapTuple *)
-		palloc0(lrstate->lr_ntables * sizeof(HeapTuple));
 
 	/*
 	 * Locate the ExecRowMark(s) that this node is responsible for, and
@@ -407,18 +349,13 @@ ExecInitLockRows(LockRows *node, EState *estate, int eflags)
 	epq_arowmarks = NIL;
 	foreach(lc, node->rowMarks)
 	{
-		PlanRowMark *rc = (PlanRowMark *) lfirst(lc);
+		PlanRowMark *rc = lfirst_node(PlanRowMark, lc);
 		ExecRowMark *erm;
 		ExecAuxRowMark *aerm;
-
-		Assert(IsA(rc, PlanRowMark));
 
 		/* ignore "parent" rowmarks; they are irrelevant at runtime */
 		if (rc->isParent)
 			continue;
-
-		/* safety check on size of lr_curtuples array */
-		Assert(rc->rti > 0 && rc->rti <= lrstate->lr_ntables);
 
 		/* find ExecRowMark and build ExecAuxRowMark */
 		erm = ExecFindRowMark(estate, rc->rti, false);

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) Greenplum Inc 2008. All Rights Reserved.
 #
@@ -17,6 +17,8 @@
 from datetime import date
 import copy
 import traceback
+
+from contextlib import closing
 
 from gppylib.utils import checkNotNone, checkIsInt
 from gppylib    import gplog
@@ -125,16 +127,22 @@ class Segment:
             self.status
             )
 
-    #
-    # Note that this is not an ideal comparison -- it uses the string representation
-    #   for comparison
-    #
-    def __cmp__(self,other):
-        left = repr(self)
-        right = repr(other)
-        if left < right: return -1
-        elif left > right: return 1
-        else: return 0
+    def __equal(self, other, ignoreAttr=[]):
+        if not isinstance(other, Segment):
+            return NotImplemented
+        for key in list(vars(other)):
+            if key in ignoreAttr:
+                continue
+            if vars(other)[key] != vars(self)[key]:
+                return False
+        return True
+
+    def __eq__(self, other):
+        return self.__equal(other)
+
+
+    def __hash__(self):
+        return hash(self.dbid)
 
     #
     # Moved here from system/configurationImplGpdb.py
@@ -147,21 +155,7 @@ class Segment:
         This method is used by updateSystemConfig() to know when a catalog
         change will cause removing and re-adding a mirror segment.
         """
-        firstMode = self.getSegmentMode()
-        firstStatus = self.getSegmentStatus()
-        try:
-
-            # make the elements we don't want to compare match and see if they are then equal
-            self.setSegmentMode(other.getSegmentMode())
-            self.setSegmentStatus(other.getSegmentStatus())
-
-            return self == other
-        finally:
-            #
-            # restore mode and status after comaprison
-            #
-            self.setSegmentMode(firstMode)
-            self.setSegmentStatus(firstStatus)
+        return self.__equal(other, ['mode','status'])
 
 
     # --------------------------------------------------------------------
@@ -564,7 +558,7 @@ def createSegmentRows( hostlist
                 else:
                     address = mirror_host
 
-                if not mirror_port.has_key(mirror_host):
+                if mirror_host not in mirror_port:
                     mirror_port[mirror_host] = mirror_portbase
 
                 rows.append( SegmentRow( content = content
@@ -698,7 +692,7 @@ def createSegmentRowsFromSegmentList( newHostlist
                 else:
                     address = mirror_host
 
-                if not mirror_port.has_key(mirror_host):
+                if mirror_host not in mirror_port:
                     mirror_port[mirror_host] = mirror_portbase
 
                 rows.append( SegmentRow( content = content
@@ -756,26 +750,6 @@ def createSegmentRowsFromSegmentList( newHostlist
         raise Exception("Invalid mirror type specified: %s" % mirror_type)
 
     return rows
-
-#========================================================================
-def parseTrueFalse(value):
-    if value.lower() == 'f':
-        return False
-    elif value.lower() == 't':
-        return True
-    raise Exception('Invalid true/false value')
-
-# TODO: Destroy this  (MPP-7686)
-#   Now that "hostname" is a distinct field in gp_segment_configuration
-#   attempting to derive hostnames from interaface names should be eliminated.
-#
-def get_host_interface(full_hostname):
-    (host_part, inf_num) = ['-'.join(full_hostname.split('-')[:-1]),
-                            full_hostname.split('-')[-1]]
-    if host_part == '' or not inf_num.isdigit():
-        return (full_hostname, None)
-    else:
-        return (host_part, inf_num)
 
 
 # ============================================================================
@@ -940,7 +914,7 @@ class GpArray:
                 first = False
                 if suffixList != firstSuffixList:
                     raise Exception("The address list for %s doesn't not have the same pattern as %s." % (str(suffixList), str(firstSuffixList)))
-        except Exception, e:
+        except Exception as e:
             # Assume any exception implies a non-standard array
             return False, str(e)
 
@@ -955,44 +929,42 @@ class GpArray:
         """
 
         hasMirrors = False
-        conn = dbconn.connect(dbURL, utility)
+        with closing(dbconn.connect(dbURL, utility)) as conn:
+            # Get the version from the database:
+            version_str = dbconn.querySingleton(conn, "SELECT version()")
+            version = GpVersion(version_str)
+            if not version.isVersionCurrentRelease():
+                raise Exception("Cannot connect to GPDB version %s from installed version %s"%(version.getVersionRelease(), MAIN_VERSION[0]))
 
-        # Get the version from the database:
-        version_str = None
-        for row in dbconn.execSQL(conn, "SELECT version()"):
-            version_str = row[0]
-        version = GpVersion(version_str)
-        if not version.isVersionCurrentRelease():
-            raise Exception("Cannot connect to GPDB version %s from installed version %s"%(version.getVersionRelease(), MAIN_VERSION[0]))
+            config_rows = dbconn.query(conn, '''
+            SELECT dbid, content, role, preferred_role, mode, status,
+            hostname, address, port, datadir
+            FROM pg_catalog.gp_segment_configuration
+            ORDER BY content, preferred_role DESC
+            ''')
 
-        config_rows = dbconn.execSQL(conn, '''
-        SELECT dbid, content, role, preferred_role, mode, status,
-        hostname, address, port, datadir
-        FROM pg_catalog.gp_segment_configuration
-        ORDER BY content, preferred_role DESC
-        ''')
+            recoveredSegmentDbids = []
+            segments = []
+            seg = None
+            for row in config_rows:
 
-        recoveredSegmentDbids = []
-        segments = []
-        seg = None
-        for row in config_rows:
+                # Extract fields from the row
+                (dbid, content, role, preferred_role, mode, status, hostname,
+                 address, port, datadir) = row
 
-            # Extract fields from the row
-            (dbid, content, role, preferred_role, mode, status, hostname,
-             address, port, datadir) = row
+                # Check if segment mirrors exist
+                if preferred_role == ROLE_MIRROR and content != -1:
+                    hasMirrors = True
 
-            # Check if segment mirrors exist
-            if preferred_role == ROLE_MIRROR and content != -1:
-                hasMirrors = True
+                # If we have segments which have recovered, record them.
+                if preferred_role != role and content >= 0:
+                    if mode == MODE_SYNCHRONIZED and status == STATUS_UP:
+                        recoveredSegmentDbids.append(dbid)
 
-            # If we have segments which have recovered, record them.
-            if preferred_role != role and content >= 0:
-                if mode == MODE_SYNCHRONIZED and status == STATUS_UP:
-                    recoveredSegmentDbids.append(dbid)
+                seg = Segment(content, preferred_role, dbid, role, mode, status,
+                                  hostname, address, port, datadir)
+                segments.append(seg)
 
-            seg = Segment(content, preferred_role, dbid, role, mode, status,
-                              hostname, address, port, datadir)
-            segments.append(seg)
 
         origSegments = [seg.copy() for seg in segments]
 
@@ -1094,7 +1066,7 @@ class GpArray:
             arr.append(seg)
 
         result = {}
-        for contentId, arr in contentIdToSegments.iteritems():
+        for contentId, arr in contentIdToSegments.items():
             if len(arr) == 1:
                 pass
             elif len(arr) != 2:
@@ -1218,8 +1190,8 @@ class GpArray:
                 hosts.append(self.standbyMaster.hostname)
         for segPair in self.segmentPairs:
             hosts.extend(segPair.get_hosts())
-        # dedupe? segPair.get_hosts() doesn't promise to dedupe itself, and there might be more deduping to do
-        return hosts
+        # dedupe
+        return list(set(hosts))
 
     # --------------------------------------------------------------------
     def get_master_host_names(self):
@@ -1372,14 +1344,11 @@ class GpArray:
            This currently assumes that all segments are configured the same
            and gets the results only from the host of segment 0
 
-        NOTE 2:
-           The determination of hostname is based on faulty logic
         """
 
         primary_datadirs = []
 
         seg0_hostname = self.segmentPairs[0].primaryDB.getSegmentAddress()
-        (seg0_hostname, inf_num) = get_host_interface(seg0_hostname)
 
         for db in self.getDbList():
             if db.isSegmentPrimary(False) and db.getSegmentAddress().startswith(seg0_hostname):
@@ -1396,7 +1365,6 @@ class GpArray:
         mirror_datadirs = []
 
         seg0_hostname = self.segmentPairs[0].primaryDB.getSegmentAddress()
-        (seg0_hostname, inf_num) = get_host_interface(seg0_hostname)
 
         for db in self.getDbList():
             if db.isSegmentMirror(False) and db.getSegmentAddress().startswith(seg0_hostname):
@@ -1433,22 +1401,21 @@ class GpArray:
                     if segPair.mirrorDB and segPair.mirrorDB.dbid in self.recoveredSegmentDbids:
                         recovered_contents.append((segPair.primaryDB.content, segPair.primaryDB.dbid, segPair.mirrorDB.dbid))
 
-        conn = dbconn.connect(dbURL, True, allowSystemTableMods = True)
-        for (content_id, primary_dbid, mirror_dbid) in recovered_contents:
-            sql = "UPDATE gp_segment_configuration SET role=preferred_role where content = %d" % content_id
-            dbconn.executeUpdateOrInsert(conn, sql, 2)
+        with dbconn.connect(dbURL, True, allowSystemTableMods = True) as conn:
+            for (content_id, primary_dbid, mirror_dbid) in recovered_contents:
+                sql = "UPDATE gp_segment_configuration SET role=preferred_role where content = %d" % content_id
+                dbconn.executeUpdateOrInsert(conn, sql, 2)
 
-            # NOTE: primary-dbid (right now) is the mirror.
-            sql = "INSERT INTO gp_configuration_history VALUES (now(), %d, 'Reassigned role for content %d to MIRROR')" % (primary_dbid, content_id)
-            dbconn.executeUpdateOrInsert(conn, sql, 1)
+                # NOTE: primary-dbid (right now) is the mirror.
+                sql = "INSERT INTO gp_configuration_history VALUES (now(), %d, 'Reassigned role for content %d to MIRROR')" % (primary_dbid, content_id)
+                dbconn.executeUpdateOrInsert(conn, sql, 1)
 
-            # NOTE: mirror-dbid (right now) is the primary.
-            sql = "INSERT INTO gp_configuration_history VALUES (now(), %d, 'Reassigned role for content %d to PRIMARY')" % (mirror_dbid, content_id)
-            dbconn.executeUpdateOrInsert(conn, sql, 1)
+                # NOTE: mirror-dbid (right now) is the primary.
+                sql = "INSERT INTO gp_configuration_history VALUES (now(), %d, 'Reassigned role for content %d to PRIMARY')" % (mirror_dbid, content_id)
+                dbconn.executeUpdateOrInsert(conn, sql, 1)
 
-            # We could attempt to update the segments-array.
-            # But the caller will re-read the configuration from the catalog.
-        dbconn.execSQL(conn, "COMMIT")
+                # We could attempt to update the segments-array.
+                # But the caller will re-read the configuration from the catalog.
         conn.close()
 
     # --------------------------------------------------------------------
@@ -1570,8 +1537,8 @@ class GpArray:
             if expect_all_segments_to_have_mirror:
                 valid_content.append((i, False))
 
-        valid_content.sort(lambda x,y: cmp(x[0], y[0]) or cmp(x[1], y[1]))
-        content.sort(lambda x,y: cmp(x[0], y[0]) or cmp(x[1], y[1]))
+        valid_content.sort()
+        content.sort()
 
         if valid_content != content:
             raise Exception('Invalid content ids')
@@ -1584,7 +1551,7 @@ class GpArray:
             datadir = db.getSegmentDataDirectory()
             hostname = db.getSegmentHostName()
             port = db.getSegmentPort()
-            if datadirs.has_key(hostname):
+            if hostname in datadirs:
                 if datadir in datadirs[hostname]:
                     raise Exception('Data directory %s used multiple times on host %s' % (datadir, hostname))
                 else:
@@ -1594,7 +1561,7 @@ class GpArray:
                 datadirs[hostname].append(datadir)
 
             # Check ports
-            if used_ports.has_key(hostname):
+            if hostname in used_ports:
                 if db.port in used_ports[hostname]:
                     raise Exception('Port %d is used multiple times on host %s' % (port, hostname))
                 else:
@@ -1701,8 +1668,8 @@ class GpArray:
         interface_count = len(interface_list)
 
         mirror_dict = {}
-        # must be sorted by isprimary, then hostname
-        rows.sort(lambda a,b: (cmp(b.isprimary, a.isprimary) or cmp(a.host,b.host)))
+        # must be sorted by isprimary (primaries before mirrors), then hostname (ascending order)
+        rows.sort(key=(lambda a: (0 if a.isprimary == 't' else 1, a.host)))
         current_host = rows[0].host
         curr_dbid = self.get_max_dbid(True) + 1
         curr_content = self.get_max_contentid(True) + 1
@@ -1819,7 +1786,7 @@ def get_segment_hosts(master_port):
     """
     gparray = GpArray.initFromCatalog( dbconn.DbURL(port=master_port), utility=True )
     segments = GpArray.getSegmentsByHostName( gparray.getDbList() )
-    return segments.keys()
+    return list(segments.keys())
 
 
 def get_session_ids(master_port):
@@ -1827,7 +1794,7 @@ def get_session_ids(master_port):
     """
     conn = dbconn.connect( dbconn.DbURL(port=master_port), utility=True )
     try:
-        rows = dbconn.execSQL(conn, "SELECT sess_id from pg_stat_activity where sess_id > 0;")
+        rows = dbconn.query(conn, "SELECT sess_id from pg_stat_activity where sess_id > 0;")
         ids  = set(row[0] for row in rows)
         return ids
     finally:

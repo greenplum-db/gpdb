@@ -19,7 +19,6 @@
 #include "utils/tuplesort.h"
 
 extern TupleSplitState *ExecInitTupleSplit(TupleSplit *node, EState *estate, int eflags);
-extern struct TupleTableSlot *ExecTupleSplit(TupleSplitState *node);
 extern void ExecEndTupleSplit(TupleSplitState *node);
 extern void ExecReScanTupleSplit(TupleSplitState *node);
 

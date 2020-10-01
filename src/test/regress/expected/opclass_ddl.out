@@ -67,7 +67,7 @@ ALTER OPERATOR FAMILY alt_opf17 USING btree ADD
   OPERATOR 5 > (int4, int2) ,
   FUNCTION 1 btint42cmp(int4, int2) ,
   FUNCTION 1 btint42cmp(int4, int2);    -- procedure 1 appears twice in same statement
-ERROR:  procedure number 1 for (integer,smallint) appears more than once
+ERROR:  function number 1 for (integer,smallint) appears more than once
 ALTER OPERATOR FAMILY alt_opf17 USING btree ADD
   OPERATOR 1 < (int4, int2) ,
   OPERATOR 2 <= (int4, int2) ,

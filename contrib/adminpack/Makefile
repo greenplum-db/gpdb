@@ -5,7 +5,10 @@ OBJS = adminpack.o
 PG_CPPFLAGS = -I$(libpq_srcdir)
 
 EXTENSION = adminpack
-DATA = adminpack--1.0.sql
+DATA = adminpack--1.0.sql adminpack--1.0--1.1.sql adminpack--1.1--2.0.sql
+PGFILEDESC = "adminpack - support functions for pgAdmin"
+
+REGRESS = adminpack
 
 ifdef USE_PGXS
 PG_CONFIG = pg_config

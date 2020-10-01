@@ -15,19 +15,21 @@
 #define PG_RESGROUP_H
 
 #include "catalog/genbki.h"
+#include "catalog/pg_resgroup_d.h"
 
 /* ----------------
  *	pg_resgroup definition.  cpp turns this into
  *	typedef struct FormData_pg_resgroup
  * ----------------
  */
-#define ResGroupRelationId	6436
 
-CATALOG(pg_resgroup,6436) BKI_SHARED_RELATION
+CATALOG(pg_resgroup,6436,ResGroupRelationId) BKI_SHARED_RELATION
 {
+	Oid			oid;			/* oid */
+
 	NameData	rsgname;		/* name of resource group */
 
-	Oid		parent;			/* parent resource group */
+	Oid			parent;			/* parent resource group */
 } FormData_pg_resgroup;
 
 /* no foreign keys */
@@ -40,28 +42,10 @@ CATALOG(pg_resgroup,6436) BKI_SHARED_RELATION
 typedef FormData_pg_resgroup *Form_pg_resgroup;
 
 /* ----------------
- *	compiler constants for pg_resqueue
- * ----------------
- */
-#define Natts_pg_resgroup			2
-#define Anum_pg_resgroup_rsgname		1
-#define Anum_pg_resgroup_parent			2
-
-/* Create initial default resource group */
-
-DATA(insert OID = 6437 ( default_group, 0 ));
-
-DATA(insert OID = 6438 ( admin_group, 0 ));
-
-#define DEFAULTRESGROUP_OID 	6437
-#define ADMINRESGROUP_OID 	6438
-
-/* ----------------
  *	pg_resgroupcapability definition.  cpp turns this into
  *	typedef struct FormData_pg_resgroupcapability
  * ----------------
  */
-#define ResGroupCapabilityRelationId		6439
 
 typedef enum ResGroupLimitType
 {

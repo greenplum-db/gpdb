@@ -72,7 +72,7 @@ CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 7:SET ROLE role_concurrency_test;
 7&:BEGIN;
 SELECT * FROM rg_concurrency_view;
-SELECT pg_cancel_backend(pid) FROM pg_stat_activity WHERE wait_event_type IS NULL AND rsgname='rg_concurrency_test';
+SELECT pg_cancel_backend(pid) FROM pg_stat_activity WHERE wait_event_type = 'Timeout' AND rsgname='rg_concurrency_test';
 1<:
 2<:
 6<:
@@ -102,7 +102,7 @@ CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 7:SET ROLE role_concurrency_test;
 7&:BEGIN;
 SELECT * FROM rg_concurrency_view;
-SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE wait_event_type IS NULL AND rsgname='rg_concurrency_test';
+SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE wait_event_type = 'Timeout' AND rsgname='rg_concurrency_test';
 1<:
 2<:
 6<:

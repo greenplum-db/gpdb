@@ -139,14 +139,14 @@ a.query
     <topic id="topic8" xml:lang="en">
         <title id="jc155511">Investigating Error Messages</title>
         <body>
-            <p>Greenplum Database log messages are written to files in the <codeph>pg_log</codeph>
+            <p>Greenplum Database log messages are written to files in the <codeph>log</codeph>
                 directory within the master's or segment's data directory. Because the master log
                 file contains the most information, you should always check it first. Log files roll
                 over daily and use the naming convention:
                         <codeph>gpdb-</codeph><i><codeph>YYYY</codeph></i><codeph>-</codeph><i><codeph>MM</codeph></i><codeph>-</codeph><i><codeph>DD_hhmmss.csv</codeph></i>.
                 To locate the log files on the master host:</p>
             <p>
-                <codeblock>$ cd $MASTER_DATA_DIRECTORY/pg_log
+                <codeblock>$ cd $MASTER_DATA_DIRECTORY/log
 </codeblock>
             </p>
             <p>Log lines have the format of:</p>
@@ -173,7 +173,7 @@ a.query
             <p>
                 <codeblock>gpssh -f seg_hosts_file -e 'source 
 /usr/local/greenplum-db/greenplum_path.sh ; gplogfilter -f 
-con6 /gpdata/*/pg_log/gpdb*.csv' &gt; seglog.out
+con6 /gpdata/*/log/gpdb*.csv' &gt; seglog.out
 </codeblock>
             </p>
         </body>

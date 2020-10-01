@@ -16,75 +16,75 @@
 
 namespace gpdxl
 {
-	// major exception types - reserve range 200-1000
-	enum ExMajor
-	{
-		ExmaDXL = 200,
-		ExmaMD = 300,
-		ExmaComm = 400,
-		ExmaGPDB = 500,
-		ExmaConstExprEval = 600,
+// major exception types - reserve range 200-1000
+enum ExMajor
+{
+	ExmaDXL = 200,
+	ExmaMD = 300,
+	ExmaComm = 400,
+	ExmaGPDB = 500,
+	ExmaConstExprEval = 600,
 
-		ExmaSentinel
-	};
+	ExmaSentinel
+};
 
-	// minor exception types
-	enum ExMinor
-	{
-		// DXL-parsing related errors
-		ExmiDXLUnexpectedTag,
-		ExmiDXLMissingAttribute,
-		ExmiDXLInvalidAttributeValue,
-		ExmiDXLUnrecognizedOperator,
-		ExmiDXLUnrecognizedType,
-		ExmiDXLUnrecognizedCompOperator,
-		ExmiDXLValidationError,
-		ExmiDXLXercesParseError,
-		ExmiDXLIncorrectNumberOfChildren,
-		ExmiPlStmt2DXLConversion,
-		ExmiDXL2PlStmtConversion,
-		ExmiDXL2PlStmtExternalScanError,
-		ExmiDXL2PlStmtMissingPlanForSubPlanTranslation,
-		ExmiQuery2DXLAttributeNotFound,
-		ExmiQuery2DXLUnsupportedFeature,
-		ExmiQuery2DXLDuplicateRTE,
-		ExmiQuery2DXLMissingValue,
-		ExmiQuery2DXLNotNullViolation,
-		ExmiQuery2DXLError,
-		ExmiExpr2DXLUnsupportedFeature,
- 		ExmiExpr2DXLAttributeNotFound,
-		ExmiDXL2PlStmtAttributeNotFound,		
-		ExmiDXL2ExprAttributeNotFound,
-		
-		// MD related errors
-		ExmiMDCacheEntryDuplicate,
-		ExmiMDCacheEntryNotFound,
-		ExmiMDObjUnsupported,
-		
-		// communication related errors
-		ExmiCommPropagateError,
-		ExmiCommUnexpectedMessage,
+// minor exception types
+enum ExMinor
+{
+	// DXL-parsing related errors
+	ExmiDXLUnexpectedTag,
+	ExmiDXLMissingAttribute,
+	ExmiDXLInvalidAttributeValue,
+	ExmiDXLUnrecognizedOperator,
+	ExmiDXLUnrecognizedType,
+	ExmiDXLUnrecognizedCompOperator,
+	ExmiDXLValidationError,
+	ExmiDXLXercesParseError,
+	ExmiDXLIncorrectNumberOfChildren,
+	ExmiPlStmt2DXLConversion,
+	ExmiDXL2PlStmtConversion,
+	ExmiDXL2PlStmtExternalScanError,
+	ExmiDXL2PlStmtMissingPlanForSubPlanTranslation,
+	ExmiQuery2DXLAttributeNotFound,
+	ExmiQuery2DXLUnsupportedFeature,
+	ExmiQuery2DXLDuplicateRTE,
+	ExmiQuery2DXLMissingValue,
+	ExmiQuery2DXLNotNullViolation,
+	ExmiQuery2DXLError,
+	ExmiExpr2DXLUnsupportedFeature,
+	ExmiExpr2DXLAttributeNotFound,
+	ExmiDXL2PlStmtAttributeNotFound,
+	ExmiDXL2ExprAttributeNotFound,
 
-		// GPDB-related exceptions
-		ExmiGPDBError,
+	// MD related errors
+	ExmiMDCacheEntryDuplicate,
+	ExmiMDCacheEntryNotFound,
+	ExmiMDObjUnsupported,
 
-		// exceptions related to constant expression evaluation
-		ExmiConstExprEvalNonConst,
+	// communication related errors
+	ExmiCommPropagateError,
+	ExmiCommUnexpectedMessage,
 
-		// ORCA Exceptions that need to be reported as ERROR to GPDB
-		ExmiOptimizerError,
-		ExmiNoAvailableMemory,
-		ExmiInvalidComparisonTypeCode,
+	// GPDB-related exceptions
+	ExmiGPDBError,
 
-		ExmiDXLSentinel
-	};
+	// exceptions related to constant expression evaluation
+	ExmiConstExprEvalNonConst,
 
-	// message initialization for GPOS exceptions
-	gpos::GPOS_RESULT EresExceptionInit(gpos::CMemoryPool *mp);
+	// ORCA Exceptions that need to be reported as ERROR to GPDB
+	ExmiOptimizerError,
+	ExmiNoAvailableMemory,
+	ExmiInvalidComparisonTypeCode,
 
-}
+	ExmiDXLSentinel
+};
 
-#endif // !DXL_exception_H
+// message initialization for GPOS exceptions
+gpos::GPOS_RESULT EresExceptionInit(gpos::CMemoryPool *mp);
+
+}  // namespace gpdxl
+
+#endif	// !DXL_exception_H
 
 
 // EOF

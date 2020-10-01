@@ -9,7 +9,7 @@
 //		Class for representing the specification of directly dispatchable plans
 //
 //	@owner:
-//		
+//
 //
 //	@test:
 //
@@ -23,50 +23,59 @@
 
 namespace gpdxl
 {
-	using namespace gpos;
+using namespace gpos;
 
-	// fwd decl
-	class CXMLSerializer;
+// fwd decl
+class CXMLSerializer;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CDXLDirectDispatchInfo
-	//
-	//	@doc:
-	//		Class for representing the specification of directly dispatchable plans
-	//
-	//---------------------------------------------------------------------------
-	class CDXLDirectDispatchInfo : public CRefCount
+//---------------------------------------------------------------------------
+//	@class:
+//		CDXLDirectDispatchInfo
+//
+//	@doc:
+//		Class for representing the specification of directly dispatchable plans
+//
+//---------------------------------------------------------------------------
+class CDXLDirectDispatchInfo : public CRefCount
+{
+private:
+	// constants for determining segments to dispatch to
+	CDXLDatum2dArray *m_dispatch_identifer_datum_array;
+
+	// true indicates m_dispatch_identifer_datum_array contains raw
+	// gp_segment_id values rather than hashable datums
+	BOOL m_contains_raw_values;
+
+	// private copy ctor
+	CDXLDirectDispatchInfo(const CDXLDirectDispatchInfo &);
+
+public:
+	// ctor
+	explicit CDXLDirectDispatchInfo(
+		CDXLDatum2dArray *dispatch_identifer_datum_array,
+		BOOL contains_raw_values);
+
+	// dtor
+	virtual ~CDXLDirectDispatchInfo();
+
+	BOOL
+	FContainsRawValues() const
 	{
-		private:
+		return m_contains_raw_values;
+	}
 
-			// constants for determining segments to dispatch to
-			CDXLDatum2dArray *m_dispatch_identifer_datum_array;
-		
-			// private copy ctor
-			CDXLDirectDispatchInfo(const CDXLDirectDispatchInfo &);
+	// accessor to array of datums
+	CDXLDatum2dArray *
+	GetDispatchIdentifierDatumArray() const
+	{
+		return m_dispatch_identifer_datum_array;
+	}
 
-		public:
-			// ctor
-			explicit
-			CDXLDirectDispatchInfo(CDXLDatum2dArray *dispatch_identifer_datum_array);
+	// serialize the datum as the given element
+	void Serialize(CXMLSerializer *xml_serializer);
+};
+}  // namespace gpdxl
 
-			// dtor
-			virtual
-			~CDXLDirectDispatchInfo();
-
-			// accessor to array of datums
-			CDXLDatum2dArray *GetDispatchIdentifierDatumArray() const
-			{
-				return m_dispatch_identifer_datum_array;
-			}
-			
-			// serialize the datum as the given element
-			void Serialize(CXMLSerializer *xml_serializer);
-
-	};
-}
-
-#endif // !GPDXL_CDXLDirectDispatchInfo_H
+#endif	// !GPDXL_CDXLDirectDispatchInfo_H
 
 // EOF

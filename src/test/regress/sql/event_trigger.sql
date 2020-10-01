@@ -28,7 +28,7 @@ create event trigger regress_event_trigger on ddl_command_start
 
 -- OK
 create event trigger regress_event_trigger_end on ddl_command_end
-   execute procedure test_event_trigger();
+   execute function test_event_trigger();
 
 -- should fail, food is not a valid filter variable
 create event trigger regress_event_trigger2 on ddl_command_start
@@ -82,9 +82,6 @@ create event trigger regress_event_trigger2 on ddl_command_start
 -- OK
 comment on event trigger regress_event_trigger is 'test comment';
 
--- should fail, event triggers are not schema objects
-comment on event trigger wrong.regress_event_trigger is 'test comment';
-
 -- drop as non-superuser should fail
 create role regress_evt_user;
 set role regress_evt_user;
@@ -92,15 +89,45 @@ create event trigger regress_event_trigger_noperms on ddl_command_start
    execute procedure test_event_trigger();
 reset role;
 
--- all OK
-alter event trigger regress_event_trigger enable replica;
-alter event trigger regress_event_trigger enable always;
-alter event trigger regress_event_trigger enable;
+-- test enabling and disabling
 alter event trigger regress_event_trigger disable;
-
--- regress_event_trigger2 and regress_event_trigger_end should fire, but not
--- regress_event_trigger
+-- fires _trigger2 and _trigger_end should fire, but not _trigger
 create table event_trigger_fire1 (a int);
+alter event trigger regress_event_trigger enable;
+set session_replication_role = replica;
+-- fires nothing
+create table event_trigger_fire2 (a int);
+alter event trigger regress_event_trigger enable replica;
+-- fires only _trigger
+create table event_trigger_fire3 (a int);
+alter event trigger regress_event_trigger enable always;
+-- fires only _trigger
+create table event_trigger_fire4 (a int);
+reset session_replication_role;
+-- fires all three
+create table event_trigger_fire5 (a int);
+-- non-top-level command
+create function f1() returns int
+language plpgsql
+as $$
+begin
+  create table event_trigger_fire6 (a int);
+  return 0;
+end $$;
+select f1();
+-- non-top-level command
+create procedure p1()
+language plpgsql
+as $$
+begin
+  create table event_trigger_fire7 (a int);
+end $$;
+call p1();
+
+-- clean up
+alter event trigger regress_event_trigger disable;
+drop table event_trigger_fire2, event_trigger_fire3, event_trigger_fire4, event_trigger_fire5, event_trigger_fire6, event_trigger_fire7;
+drop routine f1(), p1();
 
 -- regress_event_trigger_end should fire on these commands
 grant all on table event_trigger_fire1 to public;
@@ -277,6 +304,19 @@ CREATE SCHEMA evttrig
 	CREATE INDEX one_idx ON one (col_b)
 	CREATE TABLE two (col_c INTEGER CHECK (col_c > 0) REFERENCES one DEFAULT 42);
 
+-- Partitioned tables with a partitioned index
+CREATE TABLE evttrig.parted (
+    id int PRIMARY KEY)
+    PARTITION BY RANGE (id);
+CREATE TABLE evttrig.part_1_10 PARTITION OF evttrig.parted (id)
+  FOR VALUES FROM (1) TO (10);
+CREATE TABLE evttrig.part_10_20 PARTITION OF evttrig.parted (id)
+  FOR VALUES FROM (10) TO (20) PARTITION BY RANGE (id);
+CREATE TABLE evttrig.part_10_15 PARTITION OF evttrig.part_10_20 (id)
+  FOR VALUES FROM (10) TO (15);
+CREATE TABLE evttrig.part_15_20 PARTITION OF evttrig.part_10_20 (id)
+  FOR VALUES FROM (15) TO (20);
+
 ALTER TABLE evttrig.two DROP COLUMN col_c;
 ALTER TABLE evttrig.one ALTER COLUMN col_b DROP DEFAULT;
 ALTER TABLE evttrig.one DROP CONSTRAINT one_pkey;
@@ -300,7 +340,7 @@ $$;
 create event trigger no_rewrite_allowed on table_rewrite
   execute procedure test_evtrig_no_rewrite();
 
-create table rewriteme (id serial primary key, foo float);
+create table rewriteme (id serial primary key, foo float, bar timestamptz);
 insert into rewriteme
      select x * 1.001 from generate_series(1, 500) as t(x);
 alter table rewriteme alter column foo type numeric;
@@ -323,6 +363,14 @@ alter table rewriteme
 
 -- shouldn't trigger a table_rewrite event
 alter table rewriteme alter column foo type numeric(12,4);
+begin;
+set timezone to 'UTC';
+alter table rewriteme alter column bar type timestamp;
+set timezone to '0';
+alter table rewriteme alter column bar type timestamptz;
+set timezone to 'Europe/London';
+alter table rewriteme alter column bar type timestamp; -- does rewrite
+rollback;
 
 -- typed tables are rewritten when their type changes.  Don't emit table
 -- name, because firing order is not stable.

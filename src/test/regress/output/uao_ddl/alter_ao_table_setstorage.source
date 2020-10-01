@@ -1,6 +1,6 @@
-create schema alter_ao_table_setstorage_@orientation@;
-set search_path="$user",alter_ao_table_setstorage_@orientation@,public;
-SET gp_default_storage_options='orientation=@orientation@';
+create schema alter_ao_table_setstorage_@amname@;
+set search_path="$user",alter_ao_table_setstorage_@amname@,public;
+SET default_table_access_method=@amname@;
 BEGIN;
 CREATE TABLE sto_alt_uao1_setstorage(
           text_col text default 'remove it',
@@ -13,7 +13,7 @@ CREATE TABLE sto_alt_uao1_setstorage(
           before_rename_col int4,
           change_datatype_col numeric,
           date_column date,
-          col_set_default numeric) with(appendonly=true) DISTRIBUTED BY (text_col);
+          col_set_default numeric) DISTRIBUTED BY (text_col);
 insert into sto_alt_uao1_setstorage values ('0_zero', 0, '0_zero', 0, 0, 0, '{0}', 0, 0, '1-1-2000',0);
 insert into sto_alt_uao1_setstorage values ('1_zero', 1, '1_zero', 1, 1, 1, '{1}', 1, 1, '1-1-2001',1);
 insert into sto_alt_uao1_setstorage values ('2_zero', 2, '2_zero', 2, 2, 2, '{2}', 2, 2, '1-1-2002',2);
@@ -87,11 +87,11 @@ not NULL AND visimapidxid is not NULL AND relid='sto_alt_uao1_setstorage'::regcl
 -- table will revert to the original distribution policy.
 ALTER TABLE sto_alt_uao1_setstorage SET WITH (reorganize='true');
 SELECT gp_segment_id, distkey, policytype FROM gp_distribution_policy WHERE
-localoid='alter_ao_table_setstorage_@orientation@.sto_alt_uao1_setstorage'::regclass
+localoid='alter_ao_table_setstorage_@amname@.sto_alt_uao1_setstorage'::regclass
 UNION
 SELECT gp_segment_id, distkey, policytype
 FROM gp_dist_random('gp_distribution_policy') WHERE
-localoid='alter_ao_table_setstorage_@orientation@.sto_alt_uao1_setstorage'::regclass;
+localoid='alter_ao_table_setstorage_@amname@.sto_alt_uao1_setstorage'::regclass;
  gp_segment_id | distkey | policytype 
 ---------------+---------+------------
             -1 | 2       | p

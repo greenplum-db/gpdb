@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import unittest
 from gppylib.operations.deletesystem import validate_pgport
@@ -14,7 +14,7 @@ class GpDeletesystemTestCase(unittest.TestCase):
     @patch('gppylib.operations.deletesystem.get_masterport', return_value=12345)
     def test_validate_pgport_with_non_matching_pgport(self, mock1, mock2):
         master_data_dir = '/foo'
-        with self.assertRaisesRegexp(Exception, 'PGPORT value in %s/postgresql.conf does not match PGPORT environment variable' % master_data_dir):
+        with self.assertRaisesRegex(Exception, 'PGPORT value in %s/postgresql.conf does not match PGPORT environment variable' % master_data_dir):
             validate_pgport(master_data_dir)        
     
     @patch('os.getenv', return_value='12345')

@@ -18,23 +18,28 @@ INSERT INTO some_table (SELECT gen_id, gen_data from generate_series(100000, 200
 INSERT INTO some_table VALUES (NULL, 123);
 CREATE TABLE nonfirst_distkey_table (id int4, t text) DISTRIBUTED BY (t);
 INSERT INTO nonfirst_distkey_table SELECT g, g::text FROM generate_series(1, 100) g;
--- Check that AO Tables throw error when checked
-SELECT gp_heap_distribution_check('appendonly_table');
-ERROR:  input relation is not a heap table (gp_distribution_policy.c:180)  (seg0 slice1 127.0.1.1:25432 pid=10683) (gp_distribution_policy.c:180)
-CONTEXT:  SQL function "gp_heap_distribution_check" statement 1
--- Check partitioned table returns something
-SELECT gp_heap_distribution_check('some_table');
- gp_heap_distribution_check 
-----------------------------
- (2,t)
+-- Check that checking AO Tables works
+SELECT gp_table_distribution_check('appendonly_table');
+ gp_table_distribution_check 
+-----------------------------
  (0,t)
  (1,t)
+ (2,t)
+(3 rows)
+
+-- Check that distributed table returns something
+SELECT gp_table_distribution_check('some_table');
+ gp_table_distribution_check 
+-----------------------------
+ (0,t)
+ (1,t)
+ (2,t)
 (3 rows)
 
 -- Check that table with non-first key column also works
-SELECT gp_heap_distribution_check('nonfirst_distkey_table');
- gp_heap_distribution_check 
-----------------------------
+SELECT gp_table_distribution_check('nonfirst_distkey_table');
+ gp_table_distribution_check 
+-----------------------------
  (0,t)
  (1,t)
  (2,t)
@@ -42,21 +47,21 @@ SELECT gp_heap_distribution_check('nonfirst_distkey_table');
 
 -- Check that a table with the wrong distribution correctly displays a false
 CREATE TABLE some_other_table(id int, some_other_data int) distributed by (id);
-CREATE FUNCTION gp_execute_on_server(content smallint, query cstring) returns boolean
+CREATE FUNCTION gp_execute_on_server(content smallint, query text) returns boolean
 language C as '@abs_builddir@/../../src/test/regress/regress.so', 'gp_execute_on_server';
 INSERT INTO some_other_table select i, i from generate_series(1,12)i;
 -- Ensure that the distribution is correct on all segments.
-SELECT gp_heap_distribution_check('some_other_table');
- gp_heap_distribution_check 
-----------------------------
- (2,t)
+SELECT gp_table_distribution_check('some_other_table');
+ gp_table_distribution_check 
+-----------------------------
  (0,t)
  (1,t)
+ (2,t)
 (3 rows)
 
--- Deliberately change distribution key on segments such that only one
--- of the segments has correct distribution key.
-select gp_execute_on_server(content, 'update some_other_table set id = 0') from
+-- Insert the same row to all segments. Only one of them is the correct
+-- segment for the row.
+select gp_execute_on_server(content, 'insert into some_other_table values (999, 999)') from
  gp_segment_configuration where role = 'p' and content >= 0;
  gp_execute_on_server 
 ----------------------
@@ -66,9 +71,9 @@ select gp_execute_on_server(content, 'update some_other_table set id = 0') from
 (3 rows)
 
 -- Expect only one segment to have correct distribution.
-SELECT gp_heap_distribution_check('some_other_table');
- gp_heap_distribution_check 
-----------------------------
+SELECT gp_table_distribution_check('some_other_table');
+ gp_table_distribution_check 
+-----------------------------
  (0,t)
  (1,f)
  (2,f)
@@ -80,8 +85,3 @@ DROP TABLE APPENDONLY_TABLE;
 DROP TABLE some_table;
 -- Check that the Extension is removed successfully
 DROP EXTENSION gp_distribution_policy;
-SELECT gp_heap_distribution_check('appendonly_table');
-ERROR:  function gp_heap_distribution_check(unknown) does not exist
-LINE 1: SELECT gp_heap_distribution_check('appendonly_table');
-               ^
-HINT:  No function matches the given name and argument types. You might need to add explicit type casts.

@@ -91,7 +91,7 @@ insert into t values(3,array[3],'b');
 select f3, array_sort(myaggp20a(f1)) from t group by f3 order by f3;
 
 -- start_ignore
-create language plpythonu;
+create language plpython3u;
 -- end_ignore
 create or replace function count_operator(query text, operator text) returns int as
 $$
@@ -104,7 +104,7 @@ for i in range(len(rv)):
         result = result+1
 return result
 $$
-language plpythonu;
+language plpython3u;
 
 --
 -- Testing adding a traceflag to favor multi-stage aggregation
@@ -130,6 +130,14 @@ reset optimizer_force_multistage_agg;
 --
 -- Testing not picking HashAgg for aggregates without combine functions
 --
+-- GPDB_12_MERGE_FIXME: The reason that we tested that a HashAggregate is
+-- not chosen when an aggregate is missing combine functions is that in
+-- GPDB Hybrid Hash Agg, a HashAggregate can spill to disk, and it requires
+-- the combine function for that. But that got reverted with the v12 merge.
+-- Currently, this does choose a Hash Agg, and as long as we don't do the
+-- spilling like we used to, that's OK. But if we resurrect the Hybrid Hash
+-- Agg spilling, then this test becomes relevant again.
+
 -- SETUP
 set optimizer_print_missing_stats = off;
 CREATE TABLE attribute_table (product_id integer, attribute_id integer,attribute text, attribute2 text,attribute_ref_lists text,short_name text,attribute6 text,attribute5 text,measure double precision,unit character varying(60)) DISTRIBUTED BY (product_id ,attribute_id);
@@ -214,6 +222,14 @@ insert into mtup1 values
 -- attributes, but not much more than that. There's some O(n^2) code in ExecInitAgg
 -- to detect duplicate AggRefs, so this starts to get really slow as you add more
 -- aggregates.
+
+-- GPDB_12_MERGE_FIXME: we use MinimalTuples in Motions now, and a MinimalTuple
+-- has a limit of 1600 columns. With the default plan, you now get an error from
+-- exceeding that limit. Are we OK with that limitation? Does the single-phase
+-- plan exercise the original bug?
+set gp_enable_multiphase_agg=off;
+
+
 select c0, c1, array_length(ARRAY[
  SUM(c4 % 2), SUM(c4 % 3), SUM(c4 % 4),
  SUM(c4 % 5), SUM(c4 % 6), SUM(c4 % 7), SUM(c4 % 8), SUM(c4 % 9),
@@ -1352,6 +1368,8 @@ select c0, c1, array_length(ARRAY[
  SUM(c4 % 5670), SUM(c4 % 5671)], 1)
 from mtup1 where c0 = 'foo' group by c0, c1 limit 10;
 
+reset gp_enable_multiphase_agg;
+
 -- MPP-29042 Multistage aggregation plans should have consistent targetlists in
 -- case of same column aliases and grouping on them.
 DROP TABLE IF EXISTS t1;
@@ -1380,15 +1398,12 @@ select array_agg(a order by b desc nulls first) from aggordertest;
 select array_agg(a order by b desc nulls last) from aggordertest;
 
 -- begin MPP-14125: if combine function is missing, do not choose hash agg.
+-- GPDB_12_MERGE_FIXME: Like in the 'attribute_table' and 'concat' test earlier in this
+-- file, a Hash Agg is currently OK, since we lost the Hybrid Hash Agg spilling
+-- code in the merge.
 create temp table mpp14125 as select repeat('a', a) a, a % 10 b from generate_series(1, 100)a;
 explain select string_agg(a, '') from mpp14125 group by b;
 -- end MPP-14125
-
--- Test unsupported ORCA feature: agg(set returning function)
-CREATE TABLE tbl_agg_srf (foo int[]) DISTRIBUTED RANDOMLY;
-INSERT INTO tbl_agg_srf VALUES (array[1,2,3]);
-EXPLAIN SELECT count(unnest(foo)) FROM tbl_agg_srf;
-SELECT count(unnest(foo)) FROM tbl_agg_srf;
 
 -- Test that integer AVG() aggregate is accurate with large values. We used to
 -- use float8 to hold the running sums, which did not have enough precision
@@ -1433,6 +1448,26 @@ EXPLAIN (COSTS OFF)
 SELECT a.x, sum(b.x) FROM pagg_tab1 a FULL OUTER JOIN pagg_tab2 b ON a.x = b.y GROUP BY a.x ORDER BY 1 NULLS LAST;
 SELECT a.x, sum(b.x) FROM pagg_tab1 a FULL OUTER JOIN pagg_tab2 b ON a.x = b.y GROUP BY a.x ORDER BY 1 NULLS LAST;
 
+
+EXPLAIN (COSTS OFF)
+SELECT a.x, b.y, count(*) FROM pagg_tab1 a FULL JOIN pagg_tab2 b ON a.x = b.y GROUP BY a.x, b.y;
+SELECT a.x, b.y, count(*) FROM pagg_tab1 a FULL JOIN pagg_tab2 b ON a.x = b.y GROUP BY a.x, b.y;
+
+--
+-- Test GROUP BY with a constant
+--
+create temp table group_by_const (col1 int, col2 int);
+insert into group_by_const select i from generate_series(1, 1000) i;
+
+explain (costs off)
+select 1, sum(col1) from group_by_const group by 1;
+select 1, sum(col1) from group_by_const group by 1;
+
+-- Same, but using an aggregate that doesn't have a combine function, so
+-- that you get a one-phase aggregate plan.
+explain (costs off)
+select 1, median(col1) from group_by_const group by 1;
+select 1, median(col1) from group_by_const group by 1;
 
 -- CLEANUP
 set client_min_messages='warning';

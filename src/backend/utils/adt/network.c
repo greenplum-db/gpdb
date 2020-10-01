@@ -12,17 +12,33 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#include "access/hash.h"
+#include "access/stratnum.h"
+#include "catalog/pg_opfamily.h"
 #include "catalog/pg_type.h"
-#include "libpq/ip.h"
+#include "common/ip.h"
 #include "libpq/libpq-be.h"
 #include "libpq/pqformat.h"
 #include "miscadmin.h"
+#include "nodes/makefuncs.h"
+#include "nodes/nodeFuncs.h"
+#include "nodes/supportnodes.h"
 #include "utils/builtins.h"
+#include "utils/fmgroids.h"
+#include "utils/hashutils.h"
 #include "utils/inet.h"
+#include "utils/lsyscache.h"
 
 
 static int32 network_cmp_internal(inet *a1, inet *a2);
+static List *match_network_function(Node *leftop,
+									Node *rightop,
+									int indexarg,
+									Oid funcid,
+									Oid opfamily);
+static List *match_network_subset(Node *leftop,
+								  Node *rightop,
+								  bool is_eq,
+								  Oid opfamily);
 static bool addressOK(unsigned char *a, int bits, int family);
 static inet *internal_inetpl(inet *ip, int64 addend);
 
@@ -268,11 +284,7 @@ Datum
 inet_to_cidr(PG_FUNCTION_ARGS)
 {
 	inet	   *src = PG_GETARG_INET_PP(0);
-	inet	   *dst;
 	int			bits;
-	int			byte;
-	int			nbits;
-	int			maxbytes;
 
 	bits = ip_bits(src);
 
@@ -280,29 +292,7 @@ inet_to_cidr(PG_FUNCTION_ARGS)
 	if ((bits < 0) || (bits > ip_maxbits(src)))
 		elog(ERROR, "invalid inet bit length: %d", bits);
 
-	/* clone the original data */
-	dst = (inet *) palloc(VARSIZE_ANY(src));
-	memcpy(dst, src, VARSIZE_ANY(src));
-
-	/* zero out any bits to the right of the netmask */
-	byte = bits / 8;
-
-	nbits = bits % 8;
-	/* clear the first byte, this might be a partial byte */
-	if (nbits != 0)
-	{
-		ip_addr(dst)[byte] &= ~(0xFF >> nbits);
-		byte++;
-	}
-	/* clear remaining bytes */
-	maxbytes = ip_addrsize(dst);
-	while (byte < maxbytes)
-	{
-		ip_addr(dst)[byte] = 0;
-		byte++;
-	}
-
-	PG_RETURN_INET_P(dst);
+	PG_RETURN_INET_P(cidr_set_masklen_internal(src, bits));
 }
 
 Datum
@@ -334,10 +324,6 @@ cidr_set_masklen(PG_FUNCTION_ARGS)
 {
 	inet	   *src = PG_GETARG_INET_PP(0);
 	int			bits = PG_GETARG_INT32(1);
-	inet	   *dst;
-	int			byte;
-	int			nbits;
-	int			maxbytes;
 
 	if (bits == -1)
 		bits = ip_maxbits(src);
@@ -347,31 +333,36 @@ cidr_set_masklen(PG_FUNCTION_ARGS)
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("invalid mask length: %d", bits)));
 
-	/* clone the original data */
-	dst = (inet *) palloc(VARSIZE_ANY(src));
-	memcpy(dst, src, VARSIZE_ANY(src));
+	PG_RETURN_INET_P(cidr_set_masklen_internal(src, bits));
+}
 
+/*
+ * Copy src and set mask length to 'bits' (which must be valid for the family)
+ */
+inet *
+cidr_set_masklen_internal(const inet *src, int bits)
+{
+	inet	   *dst = (inet *) palloc0(sizeof(inet));
+
+	ip_family(dst) = ip_family(src);
 	ip_bits(dst) = bits;
 
-	/* zero out any bits to the right of the new netmask */
-	byte = bits / 8;
+	if (bits > 0)
+	{
+		Assert(bits <= ip_maxbits(dst));
 
-	nbits = bits % 8;
-	/* clear the first byte, this might be a partial byte */
-	if (nbits != 0)
-	{
-		ip_addr(dst)[byte] &= ~(0xFF >> nbits);
-		byte++;
-	}
-	/* clear remaining bytes */
-	maxbytes = ip_addrsize(dst);
-	while (byte < maxbytes)
-	{
-		ip_addr(dst)[byte] = 0;
-		byte++;
+		/* Clone appropriate bytes of the address, leaving the rest 0 */
+		memcpy(ip_addr(dst), ip_addr(src), (bits + 7) / 8);
+
+		/* Clear any unwanted bits in the last partial byte */
+		if (bits % 8)
+			ip_addr(dst)[bits / 8] &= ~(0xFF >> (bits % 8));
 	}
 
-	PG_RETURN_INET_P(dst);
+	/* Set varlena header correctly */
+	SET_INET_VARSIZE(dst);
+
+	return dst;
 }
 
 /*
@@ -511,6 +502,16 @@ hashinet(PG_FUNCTION_ARGS)
 	return hash_any((unsigned char *) VARDATA_ANY(addr), addrsize + 2);
 }
 
+Datum
+hashinetextended(PG_FUNCTION_ARGS)
+{
+	inet	   *addr = PG_GETARG_INET_PP(0);
+	int			addrsize = ip_addrsize(addr);
+
+	return hash_any_extended((unsigned char *) VARDATA_ANY(addr), addrsize + 2,
+							 PG_GETARG_INT64(1));
+}
+
 /*
  *	Boolean network-inclusion tests.
  */
@@ -588,6 +589,198 @@ network_overlap(PG_FUNCTION_ARGS)
 
 	PG_RETURN_BOOL(false);
 }
+
+/*
+ * Planner support function for network subset/superset operators
+ */
+Datum
+network_subset_support(PG_FUNCTION_ARGS)
+{
+	Node	   *rawreq = (Node *) PG_GETARG_POINTER(0);
+	Node	   *ret = NULL;
+
+	if (IsA(rawreq, SupportRequestIndexCondition))
+	{
+		/* Try to convert operator/function call to index conditions */
+		SupportRequestIndexCondition *req = (SupportRequestIndexCondition *) rawreq;
+
+		if (is_opclause(req->node))
+		{
+			OpExpr	   *clause = (OpExpr *) req->node;
+
+			Assert(list_length(clause->args) == 2);
+			ret = (Node *)
+				match_network_function((Node *) linitial(clause->args),
+									   (Node *) lsecond(clause->args),
+									   req->indexarg,
+									   req->funcid,
+									   req->opfamily);
+		}
+		else if (is_funcclause(req->node))	/* be paranoid */
+		{
+			FuncExpr   *clause = (FuncExpr *) req->node;
+
+			Assert(list_length(clause->args) == 2);
+			ret = (Node *)
+				match_network_function((Node *) linitial(clause->args),
+									   (Node *) lsecond(clause->args),
+									   req->indexarg,
+									   req->funcid,
+									   req->opfamily);
+		}
+	}
+
+	PG_RETURN_POINTER(ret);
+}
+
+/*
+ * match_network_function
+ *	  Try to generate an indexqual for a network subset/superset function.
+ *
+ * This layer is just concerned with identifying the function and swapping
+ * the arguments if necessary.
+ */
+static List *
+match_network_function(Node *leftop,
+					   Node *rightop,
+					   int indexarg,
+					   Oid funcid,
+					   Oid opfamily)
+{
+	switch (funcid)
+	{
+		case F_NETWORK_SUB:
+			/* indexkey must be on the left */
+			if (indexarg != 0)
+				return NIL;
+			return match_network_subset(leftop, rightop, false, opfamily);
+
+		case F_NETWORK_SUBEQ:
+			/* indexkey must be on the left */
+			if (indexarg != 0)
+				return NIL;
+			return match_network_subset(leftop, rightop, true, opfamily);
+
+		case F_NETWORK_SUP:
+			/* indexkey must be on the right */
+			if (indexarg != 1)
+				return NIL;
+			return match_network_subset(rightop, leftop, false, opfamily);
+
+		case F_NETWORK_SUPEQ:
+			/* indexkey must be on the right */
+			if (indexarg != 1)
+				return NIL;
+			return match_network_subset(rightop, leftop, true, opfamily);
+
+		default:
+
+			/*
+			 * We'd only get here if somebody attached this support function
+			 * to an unexpected function.  Maybe we should complain, but for
+			 * now, do nothing.
+			 */
+			return NIL;
+	}
+}
+
+/*
+ * match_network_subset
+ *	  Try to generate an indexqual for a network subset function.
+ */
+static List *
+match_network_subset(Node *leftop,
+					 Node *rightop,
+					 bool is_eq,
+					 Oid opfamily)
+{
+	List	   *result;
+	Datum		rightopval;
+	Oid			datatype = INETOID;
+	Oid			opr1oid;
+	Oid			opr2oid;
+	Datum		opr1right;
+	Datum		opr2right;
+	Expr	   *expr;
+
+	/*
+	 * Can't do anything with a non-constant or NULL comparison value.
+	 *
+	 * Note that since we restrict ourselves to cases with a hard constant on
+	 * the RHS, it's a-fortiori a pseudoconstant, and we don't need to worry
+	 * about verifying that.
+	 */
+	if (!IsA(rightop, Const) ||
+		((Const *) rightop)->constisnull)
+		return NIL;
+	rightopval = ((Const *) rightop)->constvalue;
+
+	/*
+	 * Must check that index's opfamily supports the operators we will want to
+	 * apply.
+	 *
+	 * We insist on the opfamily being the specific one we expect, else we'd
+	 * do the wrong thing if someone were to make a reverse-sort opfamily with
+	 * the same operators.
+	 */
+	if (opfamily != NETWORK_BTREE_FAM_OID)
+		return NIL;
+
+	/*
+	 * create clause "key >= network_scan_first( rightopval )", or ">" if the
+	 * operator disallows equality.
+	 *
+	 * Note: seeing that this function supports only fixed values for opfamily
+	 * and datatype, we could just hard-wire the operator OIDs instead of
+	 * looking them up.  But for now it seems better to be general.
+	 */
+	if (is_eq)
+	{
+		opr1oid = get_opfamily_member(opfamily, datatype, datatype,
+									  BTGreaterEqualStrategyNumber);
+		if (opr1oid == InvalidOid)
+			elog(ERROR, "no >= operator for opfamily %u", opfamily);
+	}
+	else
+	{
+		opr1oid = get_opfamily_member(opfamily, datatype, datatype,
+									  BTGreaterStrategyNumber);
+		if (opr1oid == InvalidOid)
+			elog(ERROR, "no > operator for opfamily %u", opfamily);
+	}
+
+	opr1right = network_scan_first(rightopval);
+
+	expr = make_opclause(opr1oid, BOOLOID, false,
+						 (Expr *) leftop,
+						 (Expr *) makeConst(datatype, -1,
+											InvalidOid, /* not collatable */
+											-1, opr1right,
+											false, false),
+						 InvalidOid, InvalidOid);
+	result = list_make1(expr);
+
+	/* create clause "key <= network_scan_last( rightopval )" */
+
+	opr2oid = get_opfamily_member(opfamily, datatype, datatype,
+								  BTLessEqualStrategyNumber);
+	if (opr2oid == InvalidOid)
+		elog(ERROR, "no <= operator for opfamily %u", opfamily);
+
+	opr2right = network_scan_last(rightopval);
+
+	expr = make_opclause(opr2oid, BOOLOID, false,
+						 (Expr *) leftop,
+						 (Expr *) makeConst(datatype, -1,
+											InvalidOid, /* not collatable */
+											-1, opr2right,
+											false, false),
+						 InvalidOid, InvalidOid);
+	result = lappend(result, expr);
+
+	return result;
+}
+
 
 /*
  * Extract data from a network datatype.
@@ -719,11 +912,7 @@ network_broadcast(PG_FUNCTION_ARGS)
 	/* make sure any unused bits are zeroed */
 	dst = (inet *) palloc0(sizeof(inet));
 
-	if (ip_family(ip) == PGSQL_AF_INET)
-		maxbytes = 4;
-	else
-		maxbytes = 16;
-
+	maxbytes = ip_addrsize(ip);
 	bits = ip_bits(ip);
 	a = ip_addr(ip);
 	b = ip_addr(dst);
@@ -853,11 +1042,7 @@ network_hostmask(PG_FUNCTION_ARGS)
 	/* make sure any unused bits are zeroed */
 	dst = (inet *) palloc0(sizeof(inet));
 
-	if (ip_family(ip) == PGSQL_AF_INET)
-		maxbytes = 4;
-	else
-		maxbytes = 16;
-
+	maxbytes = ip_addrsize(ip);
 	bits = ip_maxbits(ip) - ip_bits(ip);
 	b = ip_addr(dst);
 
@@ -907,8 +1092,7 @@ Datum
 inet_merge(PG_FUNCTION_ARGS)
 {
 	inet	   *a1 = PG_GETARG_INET_PP(0),
-			   *a2 = PG_GETARG_INET_PP(1),
-			   *result;
+			   *a2 = PG_GETARG_INET_PP(1);
 	int			commonbits;
 
 	if (ip_family(a1) != ip_family(a2))
@@ -919,24 +1103,7 @@ inet_merge(PG_FUNCTION_ARGS)
 	commonbits = bitncommon(ip_addr(a1), ip_addr(a2),
 							Min(ip_bits(a1), ip_bits(a2)));
 
-	/* Make sure any unused bits are zeroed. */
-	result = (inet *) palloc0(sizeof(inet));
-
-	ip_family(result) = ip_family(a1);
-	ip_bits(result) = commonbits;
-
-	/* Clone appropriate bytes of the address. */
-	if (commonbits > 0)
-		memcpy(ip_addr(result), ip_addr(a1), (commonbits + 7) / 8);
-
-	/* Clean any unwanted bits in the last partial byte. */
-	if (commonbits % 8 != 0)
-		ip_addr(result)[commonbits / 8] &= ~(0xFF >> (commonbits % 8));
-
-	/* Set varlena header correctly. */
-	SET_INET_VARSIZE(result);
-
-	PG_RETURN_INET_P(result);
+	PG_RETURN_INET_P(cidr_set_masklen_internal(a1, commonbits));
 }
 
 /*
@@ -984,6 +1151,16 @@ convert_network_to_scalar(Datum value, Oid typid, bool *failure)
 				res = (mac->a << 16) | (mac->b << 8) | (mac->c);
 				res *= 256 * 256 * 256;
 				res += (mac->d << 16) | (mac->e << 8) | (mac->f);
+				return res;
+			}
+		case MACADDR8OID:
+			{
+				macaddr8   *mac = DatumGetMacaddr8P(value);
+				double		res;
+
+				res = (mac->a << 24) | (mac->b << 16) | (mac->c << 8) | (mac->d);
+				res *= ((double) 256) * 256 * 256 * 256;
+				res += (mac->e << 24) | (mac->f << 16) | (mac->g << 8) | (mac->h);
 				return res;
 			}
 	}
@@ -1133,7 +1310,7 @@ network_scan_first(Datum in)
 
 /*
  * return "last" IP on a given network. It's the broadcast address,
- * however, masklen has to be set to its max btis, since
+ * however, masklen has to be set to its max bits, since
  * 192.168.0.255/24 is considered less than 192.168.0.255/32
  *
  * inet_set_masklen() hacked to max out the masklength to 128 for IPv6
@@ -1517,7 +1694,7 @@ inetmi(PG_FUNCTION_ARGS)
 		 * have to do proper sign extension.
 		 */
 		if (carry == 0 && byte < sizeof(int64))
-			res |= ((int64) -1) << (byte * 8);
+			res |= ((uint64) (int64) -1) << (byte * 8);
 	}
 
 	PG_RETURN_INT64(res);

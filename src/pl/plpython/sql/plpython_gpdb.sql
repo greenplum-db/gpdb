@@ -27,7 +27,7 @@ $$
        plpy.log("Returning the SECOND tuple"); 
        yield [input+2, input + 3]
 $$
-language plpythonu; 
+LANGUAGE plpythonu; 
 
 SELECT (split(10)).*; 
 
@@ -48,7 +48,7 @@ select named_tuple_test();
 -- These test results will follow the upsteam results
 CREATE OR REPLACE FUNCTION oneline() returns text as $$ 
 return 'No spaces' 
-$$ language plpythonu;
+$$ LANGUAGE plpythonu;
 
 CREATE OR REPLACE FUNCTION oneline2() returns text as $$  
 x = "\""
@@ -56,14 +56,14 @@ y = ''
 z = ""
 w = '\'' + 'a string with # and "" inside ' + "another string with #  and '' inside "
 return x + y + z + w
-$$ language plpythonu;
+$$ LANGUAGE plpythonu;
 
 CREATE OR REPLACE FUNCTION multiline() returns text as $$ 
 return """ One space
   Two spaces
    Three spaces
 No spaces""" 
-$$ language plpythonu;
+$$ LANGUAGE plpythonu;
 
 CREATE OR REPLACE FUNCTION multiline2() returns text as $$
 # If there's something in my comment it can mess things up
@@ -74,14 +74,14 @@ The ' in the comment should not cause this line to begin with a tab
      Note that whitespace at the beginning of the line is\
 significant. The string can contain both \' and ".\n' + r"This is an another long string containing\n\
 two lines of text and defined with the r\"...\" syntax."
-$$ language plpythonu; 
+$$ LANGUAGE plpythonu; 
 
 CREATE OR REPLACE FUNCTION multiline3() returns text as $$  
 # This is a comment
 x = """ 
   # This is not a comment so the quotes at the end of the line do end the string """ 
 return x
-$$ language plpythonu;
+$$ LANGUAGE plpythonu;
 
 select oneline() 
 union all 

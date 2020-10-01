@@ -17,7 +17,7 @@
 #ifdef GPOS_DEBUG
 #include "gpopt/base/COptCtxt.h"
 #include "gpos/error/CAutoTrace.h"
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 using namespace gpos;
 using namespace gpopt;
@@ -31,16 +31,9 @@ using namespace gpnaucrates;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CPartFilterMap::CPartFilter::CPartFilter
-	(
-	ULONG scan_id,
-	CExpression *pexpr,
-	IStatistics *stats
-	)
-	:
-	m_scan_id(scan_id),
-	m_pexpr(pexpr),
-	m_pstats(stats)
+CPartFilterMap::CPartFilter::CPartFilter(ULONG scan_id, CExpression *pexpr,
+										 IStatistics *stats)
+	: m_scan_id(scan_id), m_pexpr(pexpr), m_pstats(stats)
 {
 	GPOS_ASSERT(NULL != pexpr);
 }
@@ -68,15 +61,10 @@ CPartFilterMap::CPartFilter::~CPartFilter()
 //
 //---------------------------------------------------------------------------
 BOOL
-CPartFilterMap::CPartFilter::Matches
-	(
-	const CPartFilter *ppf
-	)
-	const
+CPartFilterMap::CPartFilter::Matches(const CPartFilter *ppf) const
 {
-	return NULL != ppf &&
-			m_scan_id == ppf->m_scan_id &&
-			m_pexpr->Matches(ppf->m_pexpr);
+	return NULL != ppf && m_scan_id == ppf->m_scan_id &&
+		   m_pexpr->Matches(ppf->m_pexpr);
 }
 
 //---------------------------------------------------------------------------
@@ -88,14 +76,9 @@ CPartFilterMap::CPartFilter::Matches
 //
 //---------------------------------------------------------------------------
 IOstream &
-CPartFilterMap::CPartFilter::OsPrint
-	(
-	IOstream &os
-	)
-	const
+CPartFilterMap::CPartFilter::OsPrint(IOstream &os) const
 {
-	os << "[ " << m_scan_id << " : "
-		<< *m_pexpr << std::endl;
+	os << "[ " << m_scan_id << " : " << *m_pexpr << std::endl;
 	if (NULL != m_pstats)
 	{
 		os << *m_pstats;
@@ -117,10 +100,7 @@ CPartFilterMap::CPartFilter::OsPrint
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CPartFilterMap::CPartFilterMap
-	(
-	CMemoryPool *mp
-	)
+CPartFilterMap::CPartFilterMap(CMemoryPool *mp)
 {
 	m_phmulpf = GPOS_NEW(mp) UlongToPartFilterMap(mp);
 }
@@ -133,11 +113,7 @@ CPartFilterMap::CPartFilterMap
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CPartFilterMap::CPartFilterMap
-	(
-	CMemoryPool *mp,
-	CPartFilterMap *ppfm
-	)
+CPartFilterMap::CPartFilterMap(CMemoryPool *mp, CPartFilterMap *ppfm)
 {
 	GPOS_ASSERT(NULL != ppfm);
 	m_phmulpf = GPOS_NEW(mp) UlongToPartFilterMap(mp);
@@ -166,10 +142,7 @@ CPartFilterMap::~CPartFilterMap()
 //
 //---------------------------------------------------------------------------
 BOOL
-CPartFilterMap::FSubset
-	(
-	CPartFilterMap *ppfm
-	)
+CPartFilterMap::FSubset(CPartFilterMap *ppfm)
 {
 	GPOS_ASSERT(NULL != ppfm);
 
@@ -196,11 +169,7 @@ CPartFilterMap::FSubset
 //
 //---------------------------------------------------------------------------
 CExpression *
-CPartFilterMap::Pexpr
-	(
-	ULONG scan_id
-	)
-	const
+CPartFilterMap::Pexpr(ULONG scan_id) const
 {
 	CPartFilter *ppf = m_phmulpf->Find(&scan_id);
 	GPOS_ASSERT(NULL != ppf);
@@ -217,11 +186,7 @@ CPartFilterMap::Pexpr
 //
 //---------------------------------------------------------------------------
 IStatistics *
-CPartFilterMap::Pstats
-	(
-	ULONG scan_id
-	)
-	const
+CPartFilterMap::Pstats(ULONG scan_id) const
 {
 	CPartFilter *ppf = m_phmulpf->Find(&scan_id);
 	GPOS_ASSERT(NULL != ppf);
@@ -238,11 +203,7 @@ CPartFilterMap::Pstats
 //
 //---------------------------------------------------------------------------
 ULongPtrArray *
-CPartFilterMap::PdrgpulScanIds
-	(
-	CMemoryPool *mp
-	)
-	const
+CPartFilterMap::PdrgpulScanIds(CMemoryPool *mp) const
 {
 	ULongPtrArray *pdrgpul = GPOS_NEW(mp) ULongPtrArray(mp);
 	UlongToPartFilterMapIter hmulpfi(m_phmulpf);
@@ -265,13 +226,8 @@ CPartFilterMap::PdrgpulScanIds
 //
 //---------------------------------------------------------------------------
 void
-CPartFilterMap::AddPartFilter
-	(
-	CMemoryPool *mp,
-	ULONG scan_id,
-	CExpression *pexpr,
-	IStatistics *stats
-	)
+CPartFilterMap::AddPartFilter(CMemoryPool *mp, ULONG scan_id,
+							  CExpression *pexpr, IStatistics *stats)
 {
 	GPOS_ASSERT(NULL != pexpr);
 	CPartFilter *ppf = m_phmulpf->Find(&scan_id);
@@ -282,10 +238,8 @@ CPartFilterMap::AddPartFilter
 
 	ppf = GPOS_NEW(mp) CPartFilter(scan_id, pexpr, stats);
 
-#ifdef GPOS_DEBUG
-	BOOL fSuccess =
-#endif // GPOS_DEBUG
-	m_phmulpf->Insert(GPOS_NEW(mp) ULONG(scan_id), ppf);
+	BOOL fSuccess GPOS_ASSERTS_ONLY =
+		m_phmulpf->Insert(GPOS_NEW(mp) ULONG(scan_id), ppf);
 
 	GPOS_ASSERT(fSuccess);
 }
@@ -301,13 +255,9 @@ CPartFilterMap::AddPartFilter
 //
 //---------------------------------------------------------------------------
 BOOL
-CPartFilterMap::FCopyPartFilter
-	(
-	CMemoryPool *mp,
-	ULONG scan_id,
-	CPartFilterMap *ppfmSource,
-	CColRefSet *filter_colrefs
-	)
+CPartFilterMap::FCopyPartFilter(CMemoryPool *mp, ULONG scan_id,
+								CPartFilterMap *ppfmSource,
+								CColRefSet *filter_colrefs)
 {
 	GPOS_ASSERT(NULL != ppfmSource);
 	GPOS_ASSERT(this != ppfmSource);
@@ -320,10 +270,12 @@ CPartFilterMap::FCopyPartFilter
 		{
 			// separate the conjuncts in the filter and see if we can individually push down the
 			// constraints that are semantically equivalent.
-			CExpressionArray *pushable_conjuncts = GPOS_NEW(mp) CExpressionArray(mp);
-			CExpressionArray *conjuncts = CPredicateUtils::PdrgpexprConjuncts(mp, ppf->Pexpr());
+			CExpressionArray *pushable_conjuncts =
+				GPOS_NEW(mp) CExpressionArray(mp);
+			CExpressionArray *conjuncts =
+				CPredicateUtils::PdrgpexprConjuncts(mp, ppf->Pexpr());
 
-			for (ULONG ul=0; ul< conjuncts->Size(); ++ul)
+			for (ULONG ul = 0; ul < conjuncts->Size(); ++ul)
 			{
 				CExpression *conjunct = (*conjuncts)[ul];
 				CColRefSet *pcrsUsed = conjunct->DeriveUsedColumns();
@@ -340,7 +292,8 @@ CPartFilterMap::FCopyPartFilter
 				return false;
 			}
 
-			CExpression *pexprPushableFilter = CPredicateUtils::PexprConjunction(mp, pushable_conjuncts);
+			CExpression *pexprPushableFilter =
+				CPredicateUtils::PexprConjunction(mp, pushable_conjuncts);
 			ppf = GPOS_NEW(mp) CPartFilter(ppf->ScanId(), pexprPushableFilter);
 		}
 		else
@@ -372,11 +325,7 @@ CPartFilterMap::FCopyPartFilter
 //
 //---------------------------------------------------------------------------
 void
-CPartFilterMap::CopyPartFilterMap
-	(
-	CMemoryPool *mp,
-	CPartFilterMap *ppfmSource
-	)
+CPartFilterMap::CopyPartFilterMap(CMemoryPool *mp, CPartFilterMap *ppfmSource)
 {
 	GPOS_ASSERT(NULL != ppfmSource);
 	GPOS_ASSERT(this != ppfmSource);
@@ -395,10 +344,8 @@ CPartFilterMap::CopyPartFilterMap
 
 		ppf->AddRef();
 
-#ifdef GPOS_DEBUG
-		BOOL fSuccess =
-#endif // GPOS_DEBUG
-		m_phmulpf->Insert(GPOS_NEW(mp) ULONG(scan_id), ppf);
+		BOOL fSuccess GPOS_ASSERTS_ONLY =
+			m_phmulpf->Insert(GPOS_NEW(mp) ULONG(scan_id), ppf);
 
 		GPOS_ASSERT(fSuccess);
 	}
@@ -413,11 +360,7 @@ CPartFilterMap::CopyPartFilterMap
 //
 //---------------------------------------------------------------------------
 IOstream &
-CPartFilterMap::OsPrint
-	(
-	IOstream &os
-	)
-	const
+CPartFilterMap::OsPrint(IOstream &os) const
 {
 	UlongToPartFilterMapIter hmulpfi(m_phmulpf);
 	while (hmulpfi.Advance())
@@ -430,4 +373,3 @@ CPartFilterMap::OsPrint
 }
 
 // EOF
-

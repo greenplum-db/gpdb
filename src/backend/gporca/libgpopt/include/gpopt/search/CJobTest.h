@@ -18,130 +18,116 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CJobTest
-	//
-	//	@doc:
-	//		Job derivative for unittests
-	//
-	//---------------------------------------------------------------------------
-	class CJobTest : public CJob
+//---------------------------------------------------------------------------
+//	@class:
+//		CJobTest
+//
+//	@doc:
+//		Job derivative for unittests
+//
+//---------------------------------------------------------------------------
+class CJobTest : public CJob
+{
+	// friends
+	friend class CJobFactory;
+
+public:
+	// job test type
+	enum ETestType
 	{
-		// friends
-		friend class CJobFactory;
+		EttSpawn,
+		EttStartQueue,
+		EttQueueu
+	};
 
-		public:
+private:
+	// test type
+	ETestType m_ett;
 
-			// job test type
-			enum ETestType
-			{
-				EttSpawn,
-				EttStartQueue,
-				EttQueueu
-			};
+	// number of job spawning rounds
+	ULONG m_ulRounds;
 
-		private:
+	// spawning fanout
+	ULONG m_ulFanout;
 
-			// test type
-			ETestType m_ett;
+	// CPU-burning iterations per job
+	ULONG m_ulIters;
 
-			// number of job spawning rounds
-			ULONG m_ulRounds;
+	// iteration counter
+	static ULONG_PTR m_ulpCnt;
 
-			// spawning fanout
-			ULONG m_ulFanout;
+	// job queue
+	CJobQueue *m_pjq;
 
-			// CPU-burning iterations per job
-			ULONG m_ulIters;
+	// test job spawning
+	BOOL FSpawn(CSchedulerContext *psc);
 
-			// iteration counter
-			static
-			ULONG_PTR m_ulpCnt;
+	// start jobs to be queued
+	BOOL FStartQueue(CSchedulerContext *psc);
 
-			// job queue
-			CJobQueue *m_pjq;
+	// test job queueing
+	BOOL FQueue(CSchedulerContext *psc);
 
-			// test job spawning
-			BOOL FSpawn(CSchedulerContext *psc);
+	// burn some CPU to simulate actual work
+	void Loop();
 
-			// start jobs to be queued
-			BOOL FStartQueue(CSchedulerContext *psc);
+public:
+	// ctor
+	CJobTest();
 
-			// test job queueing
-			BOOL FQueue(CSchedulerContext *psc);
+	// dtor
+	virtual ~CJobTest();
 
-			// burn some CPU to simulate actual work
-			void Loop();
-
-		public:
-
-			// ctor
-			CJobTest();
-
-			// dtor
-			virtual ~CJobTest();
-
-			// execution
-			virtual BOOL FExecute(CSchedulerContext *psc);
+	// execution
+	virtual BOOL FExecute(CSchedulerContext *psc);
 
 #ifdef GPOS_DEBUG
-			// printer
-			virtual IOstream &OsPrint(IOstream &);
-#endif // GPOS_DEBUG
+	// printer
+	virtual IOstream &OsPrint(IOstream &);
+#endif	// GPOS_DEBUG
 
-			// set execution parameters
-			void Init
-				(
-				ETestType ett,
-				ULONG ulRounds,
-				ULONG ulFanout,
-				ULONG ulIters,
-				CJobQueue *pjq
-				)
-			{
-				m_ett = ett;
-				m_ulRounds = ulRounds;
-				m_ulFanout = ulFanout;
-				m_ulIters = ulIters;
-				m_pjq = pjq;
-			}
+	// set execution parameters
+	void
+	Init(ETestType ett, ULONG ulRounds, ULONG ulFanout, ULONG ulIters,
+		 CJobQueue *pjq)
+	{
+		m_ett = ett;
+		m_ulRounds = ulRounds;
+		m_ulFanout = ulFanout;
+		m_ulIters = ulIters;
+		m_pjq = pjq;
+	}
 
-			// copy execution parameters
-			void Init
-				(
-				CJobTest *pjt
-				)
-			{
-				Init(pjt->m_ett, pjt->m_ulRounds, pjt->m_ulFanout, pjt->m_ulIters, pjt->m_pjq);
-			}
+	// copy execution parameters
+	void
+	Init(CJobTest *pjt)
+	{
+		Init(pjt->m_ett, pjt->m_ulRounds, pjt->m_ulFanout, pjt->m_ulIters,
+			 pjt->m_pjq);
+	}
 
-			// reset
-			static
-			void ResetCnt()
-			{
-				m_ulpCnt = 0;
-			}
+	// reset
+	static void
+	ResetCnt()
+	{
+		m_ulpCnt = 0;
+	}
 
-			// conversion function
-			static
-			CJobTest *PjConvert
-				(
-				CJob *pj
-				)
-			{
-				GPOS_ASSERT(NULL != pj);
-				GPOS_ASSERT(EjtTest == pj->Ejt());
+	// conversion function
+	static CJobTest *
+	PjConvert(CJob *pj)
+	{
+		GPOS_ASSERT(NULL != pj);
+		GPOS_ASSERT(EjtTest == pj->Ejt());
 
-				return dynamic_cast<CJobTest*>(pj);
-			}
+		return dynamic_cast<CJobTest *>(pj);
+	}
+};
+}  // namespace gpopt
 
-	};
-}
-
-#endif // !GPOPT_CJobTest_H
+#endif	// !GPOPT_CJobTest_H
 
 
 // EOF

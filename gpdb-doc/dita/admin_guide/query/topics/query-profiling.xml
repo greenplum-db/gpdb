@@ -249,6 +249,14 @@ Gather Motion 2:1 (slice1; segments: 2) (cost=0.00..20.88 rows=1 width=13)
           adjust <codeph>enable_&lt;operator&gt; </codeph>parameters to see if you can force the
           Postgres Planner to choose a different plan by disabling a particular
           query plan operator for that query.</li>
+        <li id="in1825305"><b>Does the query planning time exceed query execution time?</b>
+          When the query involves many table joins, the Postgres Planner uses a dynamic
+          algorithm to plan the query that is in part based on the number of table joins. You
+          can reduce the amount of time that the Postgres Planner spends planning the query
+          by setting the <codeph>join_collapse_limit</codeph> and
+          <codeph>from_collapse_limit</codeph> server configuration parameters to a smaller
+          value, such as <codeph>8</codeph>. Note that while smaller values reduce planning
+          time, they may also yield inferior query plans.</li>
         <li id="in182538"><b>Are the optimizer's estimates close to reality?</b> Run <codeph>EXPLAIN
             ANALYZE</codeph> and see if the number of rows the optimizer estimates is close to the
           number of rows the query operation actually returns. If there is a large discrepancy,

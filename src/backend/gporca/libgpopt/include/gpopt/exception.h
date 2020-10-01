@@ -16,37 +16,37 @@
 
 namespace gpopt
 {
-	// major exception types - reserve range 1000-2000
-	enum ExMajor
-	{
-		ExmaGPOPT = 1000,
+// major exception types - reserve range 1000-2000
+enum ExMajor
+{
+	ExmaGPOPT = 1000,
 
-		ExmaSentinel
-	};
+	ExmaSentinel
+};
 
-	// minor exception types
-	enum ExMinor
-	{
-		ExmiNoPlanFound,
-		ExmiInvalidPlanAlternative,
-		ExmiUnsupportedOp,
-		ExmiUnexpectedOp,
-		ExmiUnsupportedPred,
-		ExmiUnsupportedCompositePartKey,
-		ExmiUnsupportedNonDeterministicUpdate,
-		ExmiUnsatisfiedRequiredProperties,
-		ExmiEvalUnsupportedScalarExpr,
-		ExmiCTEProducerConsumerMisAligned,
+// minor exception types
+enum ExMinor
+{
+	ExmiNoPlanFound,
+	ExmiInvalidPlanAlternative,
+	ExmiUnsupportedOp,
+	ExmiUnexpectedOp,
+	ExmiUnsupportedPred,
+	ExmiUnsupportedCompositePartKey,
+	ExmiUnsupportedNonDeterministicUpdate,
+	ExmiUnsatisfiedRequiredProperties,
+	ExmiEvalUnsupportedScalarExpr,
+	ExmiCTEProducerConsumerMisAligned,
 
-		ExmiSentinel
-	};
+	ExmiSentinel
+};
 
-	// message initialization for GPOS exceptions
-	gpos::GPOS_RESULT EresExceptionInit(gpos::CMemoryPool *mp);
+// message initialization for GPOS exceptions
+gpos::GPOS_RESULT EresExceptionInit(gpos::CMemoryPool *mp);
 
-}
+}  // namespace gpopt
 
-#endif // !GPOPT_exception_H
+#endif	// !GPOPT_exception_H
 
 
 // EOF

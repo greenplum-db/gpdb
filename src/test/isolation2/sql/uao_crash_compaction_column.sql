@@ -7,37 +7,14 @@
 -- end_matchsubs
 include: helpers/server_helpers.sql;
 
-create or replace function wait_for_replication_replay (retries int) returns bool as
-$$
-declare
-	i int; /* in func */
-	result bool; /* in func */
-begin /* in func */
-	i := 0; /* in func */
-	-- Wait until the mirror (content 0) has replayed up to flush location
-	loop /* in func */
-		SELECT flush_location = replay_location INTO result from gp_stat_replication where gp_segment_id = 0; /* in func */
-		if result then /* in func */
-			return true; /* in func */
-		end if; /* in func */
-
-		if i >= retries then /* in func */
-		   return false; /* in func */
-		end if; /* in func */
-		perform pg_sleep(0.1); /* in func */
-		i := i + 1; /* in func */
-	end loop; /* in func */
-end; /* in func */
-$$ language plpgsql;
-
 3:SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
 --
 -- Test to validate crash at different points in AO/CO vacuum.
 --
 -- Setup tables to test crash at different points
 -- for crash_before_cleanup_phase
-3:set gp_default_storage_options="appendonly=true,orientation=column";
-3:show gp_default_storage_options;
+3:set default_table_access_method = ao_column;
+3:show default_table_access_method;
 3:DROP TABLE IF EXISTS crash_before_cleanup_phase CASCADE;
 3:CREATE TABLE crash_before_cleanup_phase (a INT, b INT, c CHAR(20));
 3:CREATE INDEX crash_before_cleanup_phase_index ON crash_before_cleanup_phase(b);
@@ -94,7 +71,10 @@ $$ language plpgsql;
 1:UPDATE crash_before_cleanup_phase SET b = b+10 WHERE a=26;
 1:SELECT * FROM crash_before_cleanup_phase ORDER BY a,b;
 -- crash_vacuum_in_appendonly_insert
-1:SELECT segno,column_num,physical_segno,tupcount,modcount,state FROM gp_toolkit.__gp_aocsseg('crash_vacuum_in_appendonly_insert');
+-- verify the old segment files are still visible after the vacuum is aborted.
+1:SELECT segno,column_num,physical_segno,tupcount,modcount,state FROM gp_toolkit.__gp_aocsseg('crash_vacuum_in_appendonly_insert') where segno = 1;
+-- verify the new segment files contain no tuples.
+1:SELECT sum(tupcount) FROM gp_toolkit.__gp_aocsseg('crash_vacuum_in_appendonly_insert') where segno = 2;
 1:VACUUM crash_vacuum_in_appendonly_insert;
 1:SELECT segno,column_num,physical_segno,tupcount,modcount,state FROM gp_toolkit.__gp_aocsseg('crash_vacuum_in_appendonly_insert');
 1:INSERT INTO crash_vacuum_in_appendonly_insert VALUES(21, 1, 'c'), (26, 1, 'c');
@@ -105,8 +85,8 @@ $$ language plpgsql;
 -- Setup tables to test crash at different points on master now
 --
 -- for crash_master_before_cleanup_phase
-2:set gp_default_storage_options="appendonly=true,orientation=column";
-2:show gp_default_storage_options;
+2:set default_table_access_method = ao_column;
+2:show default_table_access_method;
 2:DROP TABLE IF EXISTS crash_master_before_cleanup_phase CASCADE;
 2:CREATE TABLE crash_master_before_cleanup_phase (a INT, b INT, c CHAR(20));
 2:CREATE INDEX crash_master_before_cleanup_phase_index ON crash_master_before_cleanup_phase(b);
@@ -139,7 +119,7 @@ $$ language plpgsql;
 4:SELECT gp_inject_fault_infinite('fts_probe', 'skip', 1);
 4:SELECT gp_request_fts_probe_scan();
 4:SELECT gp_wait_until_triggered_fault('fts_probe', 1, 1);
-4:SET gp_default_storage_options="appendonly=true,orientation=column";
+4:SET default_table_access_method = ao_column;
 4:CREATE TABLE crash_vacuum_in_appendonly_insert_1 (a INT, b INT, c CHAR(20));
 -- just sanity check to make sure appendonly table is created
 4:SELECT count(*) from pg_appendonly where relid in (select oid from pg_class where relname='crash_vacuum_in_appendonly_insert_1');
@@ -167,5 +147,5 @@ where c.role='p' and c.content=0), 'restart');
 -- Make sure mirror is able to successfully replay all the truncate
 -- records generated and doesn't encounter the "WAL contains
 -- references to invalid pages" PANIC.
-6:SELECT * from wait_for_replication_replay(5000);
+6:SELECT * from wait_for_replication_replay(0, 5000);
 6:SELECT gp_inject_fault('fts_probe', 'reset', 1);

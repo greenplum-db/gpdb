@@ -15,30 +15,27 @@
 
 namespace gpos
 {
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CBitSetTest
-	//
-	//	@doc:
-	//		Static unit tests for bit set
-	//
-	//---------------------------------------------------------------------------
-	class CBitSetTest
-	{
+//---------------------------------------------------------------------------
+//	@class:
+//		CBitSetTest
+//
+//	@doc:
+//		Static unit tests for bit set
+//
+//---------------------------------------------------------------------------
+class CBitSetTest
+{
+public:
+	// unittests
+	static GPOS_RESULT EresUnittest();
+	static GPOS_RESULT EresUnittest_Basics();
+	static GPOS_RESULT EresUnittest_Removal();
+	static GPOS_RESULT EresUnittest_SetOps();
+	static GPOS_RESULT EresUnittest_Performance();
 
-		public:
+};	// class CBitSetTest
+}  // namespace gpos
 
-			// unittests
-			static GPOS_RESULT EresUnittest();
-			static GPOS_RESULT EresUnittest_Basics();
-			static GPOS_RESULT EresUnittest_Removal();
-			static GPOS_RESULT EresUnittest_SetOps();
-			static GPOS_RESULT EresUnittest_Performance();
-
-	}; // class CBitSetTest
-}
-
-#endif // !GPOS_CBitSetTest_H
+#endif	// !GPOS_CBitSetTest_H
 
 // EOF
-

@@ -26,18 +26,12 @@ using namespace gpdxl;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CDXLPhysicalTVF::CDXLPhysicalTVF
-	(
-	CMemoryPool *mp,
-	IMDId *mdid_func,
-	IMDId *mdid_return_type,
-	CWStringConst *str
-	)
-	:
-	CDXLPhysical(mp),
-	m_func_mdid(mdid_func),
-	m_return_type_mdid(mdid_return_type),
-	func_name(str)
+CDXLPhysicalTVF::CDXLPhysicalTVF(CMemoryPool *mp, IMDId *mdid_func,
+								 IMDId *mdid_return_type, CWStringConst *str)
+	: CDXLPhysical(mp),
+	  m_func_mdid(mdid_func),
+	  m_return_type_mdid(mdid_return_type),
+	  func_name(str)
 {
 	GPOS_ASSERT(NULL != m_func_mdid);
 	GPOS_ASSERT(m_func_mdid->IsValid());
@@ -98,18 +92,18 @@ CDXLPhysicalTVF::GetOpNameStr() const
 //
 //---------------------------------------------------------------------------
 void
-CDXLPhysicalTVF::SerializeToDXL
-	(
-	CXMLSerializer *xml_serializer,
-	const CDXLNode *dxlnode
-	)
-	const
+CDXLPhysicalTVF::SerializeToDXL(CXMLSerializer *xml_serializer,
+								const CDXLNode *dxlnode) const
 {
 	const CWStringConst *element_name = GetOpNameStr();
-	xml_serializer->OpenElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
-	m_func_mdid->Serialize(xml_serializer, CDXLTokens::GetDXLTokenStr(EdxltokenFuncId));
-	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenName), func_name);
-	m_return_type_mdid->Serialize(xml_serializer, CDXLTokens::GetDXLTokenStr(EdxltokenTypeId));
+	xml_serializer->OpenElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	m_func_mdid->Serialize(xml_serializer,
+						   CDXLTokens::GetDXLTokenStr(EdxltokenFuncId));
+	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenName),
+								 func_name);
+	m_return_type_mdid->Serialize(xml_serializer,
+								  CDXLTokens::GetDXLTokenStr(EdxltokenTypeId));
 
 	// serialize properties
 	dxlnode->SerializePropertiesToDXL(xml_serializer);
@@ -117,7 +111,8 @@ CDXLPhysicalTVF::SerializeToDXL
 	// serialize children
 	dxlnode->SerializeChildrenToDXL(xml_serializer);
 
-	xml_serializer->CloseElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
+	xml_serializer->CloseElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 }
 
 #ifdef GPOS_DEBUG
@@ -130,12 +125,8 @@ CDXLPhysicalTVF::SerializeToDXL
 //
 //---------------------------------------------------------------------------
 void
-CDXLPhysicalTVF::AssertValid
-	(
-	const CDXLNode *dxlnode,
-	BOOL validate_children
-	)
-	const
+CDXLPhysicalTVF::AssertValid(const CDXLNode *dxlnode,
+							 BOOL validate_children) const
 {
 	// assert validity of function id and return type
 	GPOS_ASSERT(NULL != m_func_mdid);
@@ -145,16 +136,18 @@ CDXLPhysicalTVF::AssertValid
 	for (ULONG idx = 0; idx < arity; ++idx)
 	{
 		CDXLNode *dxlnode_arg = (*dxlnode)[idx];
-		GPOS_ASSERT(EdxloptypeScalar == dxlnode_arg->GetOperator()->GetDXLOperatorType());
+		GPOS_ASSERT(EdxloptypeScalar ==
+					dxlnode_arg->GetOperator()->GetDXLOperatorType());
 
 		if (validate_children)
 		{
-			dxlnode_arg->GetOperator()->AssertValid(dxlnode_arg, validate_children);
+			dxlnode_arg->GetOperator()->AssertValid(dxlnode_arg,
+													validate_children);
 		}
 	}
 }
 
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 
 // EOF

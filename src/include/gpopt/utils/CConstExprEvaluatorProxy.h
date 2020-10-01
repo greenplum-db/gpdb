@@ -24,104 +24,88 @@
 
 namespace gpdxl
 {
-	class CDXLNode;
+class CDXLNode;
 
+//---------------------------------------------------------------------------
+//	@class:
+//		CConstExprEvaluatorProxy
+//
+//	@doc:
+//		Wrapper over GPDB's expression evaluator that takes a constant expression,
+//		given as DXL, tries to evaluate it and returns the result as DXL.
+//
+//		The metadata cache should have been initialized by the caller before
+//		creating an instance of this class and should not be released before
+//		the destructor of this class.
+//
+//---------------------------------------------------------------------------
+class CConstExprEvaluatorProxy : public gpopt::IConstDXLNodeEvaluator
+{
+private:
 	//---------------------------------------------------------------------------
 	//	@class:
-	//		CConstExprEvaluatorProxy
+	//		CEmptyMappingColIdVar
 	//
 	//	@doc:
-	//		Wrapper over GPDB's expression evaluator that takes a constant expression,
-	//		given as DXL, tries to evaluate it and returns the result as DXL.
-	//
-	//		The metadata cache should have been initialized by the caller before
-	//		creating an instance of this class and should not be released before
-	//		the destructor of this class.
+	//		Dummy class to implement an empty variable mapping. Variable lookups
+	//		raise exceptions.
 	//
 	//---------------------------------------------------------------------------
-	class CConstExprEvaluatorProxy : public gpopt::IConstDXLNodeEvaluator
+	class CEmptyMappingColIdVar : public CMappingColIdVar
 	{
-		private:
-			//---------------------------------------------------------------------------
-			//	@class:
-			//		CEmptyMappingColIdVar
-			//
-			//	@doc:
-			//		Dummy class to implement an empty variable mapping. Variable lookups
-			//		raise exceptions.
-			//
-			//---------------------------------------------------------------------------
-			class CEmptyMappingColIdVar : public CMappingColIdVar
-			{
-				public:
-					explicit
-					CEmptyMappingColIdVar
-						(
-						CMemoryPool *mp
-						)
-						:
-						CMappingColIdVar(mp)
-					{
-					}
+	public:
+		explicit CEmptyMappingColIdVar(CMemoryPool *mp) : CMappingColIdVar(mp)
+		{
+		}
 
-					virtual
-					~CEmptyMappingColIdVar()
-					{
-					}
+		virtual ~CEmptyMappingColIdVar()
+		{
+		}
 
-					virtual
-					Var *VarFromDXLNodeScId(const CDXLScalarIdent *scalar_ident);
-
-			};
-
-			// memory pool, not owned
-			CMemoryPool *m_mp;
-
-			// empty mapping needed for the translator
-			CEmptyMappingColIdVar m_emptymapcidvar;
-
-			// pointer to metadata cache accessor
-			CMDAccessor *m_md_accessor;
-
-			// translator for the DXL input -> GPDB Expr
-			CTranslatorDXLToScalar m_dxl2scalar_translator;
-
-		public:
-			// ctor
-			CConstExprEvaluatorProxy
-				(
-				CMemoryPool *mp,
-				CMDAccessor *md_accessor
-				)
-				:
-				m_mp(mp),
-				m_emptymapcidvar(m_mp),
-				m_md_accessor(md_accessor),
-				m_dxl2scalar_translator(m_mp, m_md_accessor, 0)
-			{
-			}
-
-			// dtor
-			virtual
-			~CConstExprEvaluatorProxy()
-			{
-			}
-
-			// evaluate given constant expressionand return the DXL representation of the result.
-			// if the expression has variables, an error is thrown.
-			// caller keeps ownership of 'expr_dxlnode' and takes ownership of the returned pointer
-			virtual
-			CDXLNode *EvaluateExpr(const CDXLNode *expr);
-
-			// returns true iff the evaluator can evaluate constant expressions without subqueries
-			virtual
-			BOOL FCanEvalExpressions()
-			{
-				return true;
-			}
+		virtual Var *VarFromDXLNodeScId(const CDXLScalarIdent *scalar_ident);
 	};
-}
 
-#endif // !GPDXL_CConstExprEvaluator_H
+	// memory pool, not owned
+	CMemoryPool *m_mp;
+
+	// empty mapping needed for the translator
+	CEmptyMappingColIdVar m_emptymapcidvar;
+
+	// pointer to metadata cache accessor
+	CMDAccessor *m_md_accessor;
+
+	// translator for the DXL input -> GPDB Expr
+	CTranslatorDXLToScalar m_dxl2scalar_translator;
+
+public:
+	// ctor
+	CConstExprEvaluatorProxy(CMemoryPool *mp, CMDAccessor *md_accessor)
+		: m_mp(mp),
+		  m_emptymapcidvar(m_mp),
+		  m_md_accessor(md_accessor),
+		  m_dxl2scalar_translator(m_mp, m_md_accessor, 0)
+	{
+	}
+
+	// dtor
+	virtual ~CConstExprEvaluatorProxy()
+	{
+	}
+
+	// evaluate given constant expressionand return the DXL representation of the result.
+	// if the expression has variables, an error is thrown.
+	// caller keeps ownership of 'expr_dxlnode' and takes ownership of the returned pointer
+	virtual CDXLNode *EvaluateExpr(const CDXLNode *expr);
+
+	// returns true iff the evaluator can evaluate constant expressions without subqueries
+	virtual BOOL
+	FCanEvalExpressions()
+	{
+		return true;
+	}
+};
+}  // namespace gpdxl
+
+#endif	// !GPDXL_CConstExprEvaluator_H
 
 // EOF

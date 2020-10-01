@@ -28,12 +28,8 @@ CMDIdGPDBCtas CMDIdGPDBCtas::m_mdid_invalid_key(0);
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CMDIdGPDBCtas::CMDIdGPDBCtas
-	(
-	OID oid
-	)
-	:
-	CMDIdGPDB(CSystemId(IMDId::EmdidGPDB, GPMD_GPDB_CTAS_SYSID), oid)
+CMDIdGPDBCtas::CMDIdGPDBCtas(OID oid)
+	: CMDIdGPDB(CSystemId(IMDId::EmdidGPDB, GPMD_GPDB_CTAS_SYSID), oid)
 {
 	Serialize();
 }
@@ -47,12 +43,8 @@ CMDIdGPDBCtas::CMDIdGPDBCtas
 //		Copy constructor
 //
 //---------------------------------------------------------------------------
-CMDIdGPDBCtas::CMDIdGPDBCtas
-	(
-	const CMDIdGPDBCtas &mdid_source
-	)
-	:
-	CMDIdGPDB(mdid_source.Sysid(), mdid_source.Oid())
+CMDIdGPDBCtas::CMDIdGPDBCtas(const CMDIdGPDBCtas &mdid_source)
+	: CMDIdGPDB(mdid_source.Sysid(), mdid_source.Oid())
 {
 	GPOS_ASSERT(mdid_source.IsValid());
 	GPOS_ASSERT(IMDId::EmdidGPDBCtas == mdid_source.MdidType());
@@ -69,19 +61,16 @@ CMDIdGPDBCtas::CMDIdGPDBCtas
 //
 //---------------------------------------------------------------------------
 BOOL
-CMDIdGPDBCtas::Equals
-	(
-	const IMDId *mdid
-	) 
-	const
+CMDIdGPDBCtas::Equals(const IMDId *mdid) const
 {
 	if (NULL == mdid || EmdidGPDBCtas != mdid->MdidType())
 	{
 		return false;
 	}
-	
-	const CMDIdGPDBCtas *mdidGPDBCTAS = CMDIdGPDBCtas::CastMdid(const_cast<IMDId *>(mdid));
-	
+
+	const CMDIdGPDBCtas *mdidGPDBCTAS =
+		CMDIdGPDBCtas::CastMdid(const_cast<IMDId *>(mdid));
+
 	return m_oid == mdidGPDBCTAS->Oid();
 }
 
@@ -93,7 +82,8 @@ CMDIdGPDBCtas::Equals
 //		Is the mdid valid
 //
 //---------------------------------------------------------------------------
-BOOL CMDIdGPDBCtas::IsValid() const
+BOOL
+CMDIdGPDBCtas::IsValid() const
 {
 	return !Equals(&CMDIdGPDBCtas::m_mdid_invalid_key);
 }
@@ -107,14 +97,9 @@ BOOL CMDIdGPDBCtas::IsValid() const
 //
 //---------------------------------------------------------------------------
 IOstream &
-CMDIdGPDBCtas::OsPrint
-	(
-	IOstream &os
-	) 
-	const
+CMDIdGPDBCtas::OsPrint(IOstream &os) const
 {
-	os << "(" << Oid() << "," << 
-				VersionMajor() << "." << VersionMinor() << ")";
+	os << "(" << Oid() << "," << VersionMajor() << "." << VersionMinor() << ")";
 	return os;
 }
 

@@ -605,11 +605,11 @@ CONTEXT:  SQL statement "create table spi_test2 (a int, b text)"
 (1 row)
 
 \d spi_test2
-   Table "public.spi_test2"
- Column |  Type   | Modifiers 
---------+---------+-----------
- a      | integer | 
- b      | text    | 
+             Table "public.spi_test2"
+ Column |  Type   | Collation | Nullable | Default 
+--------+---------+-----------+----------+---------
+ a      | integer |           |          | 
+ b      | text    |           |          | 
 Distributed by: (a)
 
 -- DDL: alter table
@@ -620,12 +620,12 @@ SELECT spifunc1($$alter table spi_test2 add column c int$$, 1);
 (1 row)
 
 \d spi_test2
-   Table "public.spi_test2"
- Column |  Type   | Modifiers 
---------+---------+-----------
- a      | integer | 
- b      | text    | 
- c      | integer | 
+             Table "public.spi_test2"
+ Column |  Type   | Collation | Nullable | Default 
+--------+---------+-----------+----------+---------
+ a      | integer |           |          | 
+ b      | text    |           |          | 
+ c      | integer |           |          | 
 Distributed by: (a)
 
 -- DDL: drop table
@@ -881,11 +881,11 @@ SELECT spifunc6($$CREATE INDEX spi_idx1 ON spi_test (a, b)$$, 0, 0);
 (1 row)
 
 \d spi_idx1
-    Index "public.spi_idx1"
- Column |  Type   | Definition 
---------+---------+------------
- a      | integer | a
- b      | text    | b
+       Index "public.spi_idx1"
+ Column |  Type   | Key? | Definition 
+--------+---------+------+------------
+ a      | integer | yes  | a
+ b      | text    | yes  | b
 btree, for table "public.spi_test"
 
 SELECT spifunc6($$ALTER INDEX spi_idx1 RENAME TO spi_idx2$$, 0, 0);
@@ -895,11 +895,11 @@ SELECT spifunc6($$ALTER INDEX spi_idx1 RENAME TO spi_idx2$$, 0, 0);
 (1 row)
 
 \d spi_idx2
-    Index "public.spi_idx2"
- Column |  Type   | Definition 
---------+---------+------------
- a      | integer | a
- b      | text    | b
+       Index "public.spi_idx2"
+ Column |  Type   | Key? | Definition 
+--------+---------+------+------------
+ a      | integer | yes  | a
+ b      | text    | yes  | b
 btree, for table "public.spi_test"
 
 SELECT spifunc6($$DROP INDEX spi_idx2$$, 0 , 0);
@@ -911,7 +911,13 @@ SELECT spifunc6($$DROP INDEX spi_idx2$$, 0 , 0);
 \d spi_idx2
 -- Negative: connect again when already connected
 SELECT spifunc6($$select i, i * 2 from generate_series(1, 10)i order by 1$$, 2, 1);
-ERROR:  connect error: already connected and cannot connect again.
+HINT:  Check for missing "SPI_finish" calls.
+WARNING:  transaction left non-empty SPI stack
+ spifunc6 
+----------
+ 
+(1 row)
+
 -- Negative: try to execute without connection
 SELECT spifunc6($$select i, i * 2 from generate_series(1, 10)i order by 1$$, 2, 2);
 ERROR:  query execution error: Connection has been closed unexpectedly.

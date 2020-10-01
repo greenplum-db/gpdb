@@ -1,10 +1,10 @@
 /*
  * xlogdefs.h
  *
- * Postgres transaction log manager record pointer and
+ * Postgres write-ahead log manager record pointer and
  * timeline number definitions
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/access/xlogdefs.h
@@ -22,11 +22,18 @@ typedef uint64 XLogRecPtr;
 
 /*
  * Zero is used indicate an invalid pointer. Bootstrap skips the first possible
- * WAL segment, initializing the first WAL page at XLOG_SEG_SIZE, so no XLOG
+ * WAL segment, initializing the first WAL page at WAL segment size, so no XLOG
  * record can begin at zero.
  */
 #define InvalidXLogRecPtr	0
 #define XLogRecPtrIsInvalid(r)	((r) == InvalidXLogRecPtr)
+
+/*
+ * First LSN to use for "fake" LSNs.
+ *
+ * Values smaller than this can be used for special per-AM purposes.
+ */
+#define FirstNormalUnloggedLSN	((XLogRecPtr) 1000)
 
 /*
  * XLogSegNo - physical log file sequence number.
@@ -99,4 +106,4 @@ typedef uint16 RepOriginId;
 #define DEFAULT_SYNC_METHOD		SYNC_METHOD_FSYNC
 #endif
 
-#endif   /* XLOG_DEFS_H */
+#endif							/* XLOG_DEFS_H */

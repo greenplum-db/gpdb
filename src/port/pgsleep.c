@@ -4,7 +4,7 @@
  *	   Portable delay handling.
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  *
  * src/port/pgsleep.c
  *
@@ -60,4 +60,4 @@ pg_usleep(long microsec)
 	}
 }
 
-#endif   /* defined(FRONTEND) || !defined(WIN32) */
+#endif							/* defined(FRONTEND) || !defined(WIN32) */

@@ -202,6 +202,51 @@ SELECT '' AS "Not True", f1
    WHERE f1 IS NOT TRUE;
 
 --
+-- Tests for BooleanTest
+--
+CREATE TABLE BOOLTBL3 (d text, b bool, o int);
+INSERT INTO BOOLTBL3 (d, b, o) VALUES ('true', true, 1);
+INSERT INTO BOOLTBL3 (d, b, o) VALUES ('false', false, 2);
+INSERT INTO BOOLTBL3 (d, b, o) VALUES ('null', null, 3);
+
+SELECT
+    d,
+    b IS TRUE AS istrue,
+    b IS NOT TRUE AS isnottrue,
+    b IS FALSE AS isfalse,
+    b IS NOT FALSE AS isnotfalse,
+    b IS UNKNOWN AS isunknown,
+    b IS NOT UNKNOWN AS isnotunknown
+FROM booltbl3 ORDER BY o;
+
+
+-- Test to make sure short-circuiting and NULL handling is
+-- correct. Use a table as source to prevent constant simplification
+-- to interfer.
+CREATE TABLE booltbl4(isfalse bool, istrue bool, isnul bool);
+INSERT INTO booltbl4 VALUES (false, true, null);
+\pset null '(null)'
+
+-- AND expression need to return null if there's any nulls and not all
+-- of the value are true
+SELECT istrue AND isnul AND istrue FROM booltbl4;
+SELECT istrue AND istrue AND isnul FROM booltbl4;
+SELECT isnul AND istrue AND istrue FROM booltbl4;
+SELECT isfalse AND isnul AND istrue FROM booltbl4;
+SELECT istrue AND isfalse AND isnul FROM booltbl4;
+SELECT isnul AND istrue AND isfalse FROM booltbl4;
+
+-- OR expression need to return null if there's any nulls and none
+-- of the value is true
+SELECT isfalse OR isnul OR isfalse FROM booltbl4;
+SELECT isfalse OR isfalse OR isnul FROM booltbl4;
+SELECT isnul OR isfalse OR isfalse FROM booltbl4;
+SELECT isfalse OR isnul OR istrue FROM booltbl4;
+SELECT istrue OR isfalse OR isnul FROM booltbl4;
+SELECT isnul OR istrue OR isfalse FROM booltbl4;
+
+
+--
 -- Clean up
 -- Many tables are retained by the regression test, but these do not seem
 --  particularly useful so just get rid of them for now.
@@ -211,3 +256,7 @@ SELECT '' AS "Not True", f1
 DROP TABLE  BOOLTBL1;
 
 DROP TABLE  BOOLTBL2;
+
+DROP TABLE  BOOLTBL3;
+
+DROP TABLE  BOOLTBL4;

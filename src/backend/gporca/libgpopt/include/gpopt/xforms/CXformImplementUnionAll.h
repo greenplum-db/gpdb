@@ -16,66 +16,59 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CXformImplementUnionAll
-	//
-	//	@doc:
-	//		Transform Logical into Physical Union All
-	//
-	//---------------------------------------------------------------------------
-	class CXformImplementUnionAll : public CXformImplementation
+//---------------------------------------------------------------------------
+//	@class:
+//		CXformImplementUnionAll
+//
+//	@doc:
+//		Transform Logical into Physical Union All
+//
+//---------------------------------------------------------------------------
+class CXformImplementUnionAll : public CXformImplementation
+{
+private:
+	// private copy ctor
+	CXformImplementUnionAll(const CXformImplementUnionAll &);
+
+public:
+	// ctor
+	explicit CXformImplementUnionAll(CMemoryPool *mp);
+
+	// dtor
+	virtual ~CXformImplementUnionAll()
 	{
+	}
 
-		private:
+	// ident accessors
+	virtual EXformId
+	Exfid() const
+	{
+		return ExfImplementUnionAll;
+	}
 
-			// private copy ctor
-			CXformImplementUnionAll(const CXformImplementUnionAll &);
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CXformImplementUnionAll";
+	}
 
-		public:
+	// compute xform promise for a given expression handle
+	virtual EXformPromise
+	Exfp(CExpressionHandle &  // exprhdl
+	) const
+	{
+		return CXform::ExfpHigh;
+	}
 
-			// ctor
-			explicit
-			CXformImplementUnionAll(CMemoryPool *mp);
+	// actual transform
+	void Transform(CXformContext *, CXformResult *, CExpression *) const;
 
-			// dtor
-			virtual
-			~CXformImplementUnionAll()
-			{}
+};	// class CXformImplementUnionAll
 
-			// ident accessors
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfImplementUnionAll;
-			}
+}  // namespace gpopt
 
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CXformImplementUnionAll";
-			}
-
-			// compute xform promise for a given expression handle
-			virtual
-			EXformPromise Exfp
-				(
-				CExpressionHandle & // exprhdl
-				)
-				const
-			{
-				return CXform::ExfpHigh;
-			}
-
-			// actual transform
-			void Transform(CXformContext *, CXformResult *, CExpression *) const;
-
-	}; // class CXformImplementUnionAll
-
-}
-
-#endif // !GPOPT_CXformImplementUnionAll_H
+#endif	// !GPOPT_CXformImplementUnionAll_H
 
 // EOF

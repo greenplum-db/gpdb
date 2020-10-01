@@ -20,8 +20,7 @@ using namespace gpopt;
 ULONG CCastTest::m_ulTestCounter = 0;  // start from first test
 
 // minidump files
-const CHAR *rgszCastMdpFiles[] =
-{
+const CHAR *rgszCastMdpFiles[] = {
 	"../data/dxl/minidump/InferPredicatesForLimit.mdp",
 	"../data/dxl/minidump/ArrayCoerceExpr.mdp",
 	"../data/dxl/minidump/SelectOnCastedCol.mdp",
@@ -47,10 +46,9 @@ const CHAR *rgszCastMdpFiles[] =
 GPOS_RESULT
 CCastTest::EresUnittest()
 {
-	CUnittest rgut[] =
-		{
+	CUnittest rgut[] = {
 		GPOS_UNITTEST_FUNC(EresUnittest_RunTests),
-		};
+	};
 
 	GPOS_RESULT eres = CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
 
@@ -64,12 +62,8 @@ CCastTest::EresUnittest()
 GPOS_RESULT
 CCastTest::EresUnittest_RunTests()
 {
-	return CTestUtils::EresUnittest_RunTests
-						(
-						rgszCastMdpFiles,
-						&m_ulTestCounter,
-						GPOS_ARRAY_SIZE(rgszCastMdpFiles)
-						);
+	return CTestUtils::EresUnittest_RunTests(rgszCastMdpFiles, &m_ulTestCounter,
+											 GPOS_ARRAY_SIZE(rgszCastMdpFiles));
 }
 
 // EOF

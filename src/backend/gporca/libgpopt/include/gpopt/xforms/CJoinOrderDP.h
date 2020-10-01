@@ -22,192 +22,181 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
+//---------------------------------------------------------------------------
+//	@class:
+//		CJoinOrderDP
+//
+//	@doc:
+//		Helper class for creating join orders using dynamic programming
+//
+//---------------------------------------------------------------------------
+class CJoinOrderDP : public CJoinOrder
+{
+private:
 	//---------------------------------------------------------------------------
-	//	@class:
-	//		CJoinOrderDP
+	//	@struct:
+	//		SComponentPair
 	//
 	//	@doc:
-	//		Helper class for creating join orders using dynamic programming
+	//		Struct to capture a pair of components
 	//
 	//---------------------------------------------------------------------------
-	class CJoinOrderDP : public CJoinOrder
+	struct SComponentPair : public CRefCount
 	{
+		// first component
+		CBitSet *m_pbsFst;
 
-		private:
+		// second component
+		CBitSet *m_pbsSnd;
 
-			//---------------------------------------------------------------------------
-			//	@struct:
-			//		SComponentPair
-			//
-			//	@doc:
-			//		Struct to capture a pair of components
-			//
-			//---------------------------------------------------------------------------
-			struct SComponentPair : public CRefCount
-			{
-				// first component
-				CBitSet *m_pbsFst;
+		// ctor
+		SComponentPair(CBitSet *pbsFst, CBitSet *pbsSnd);
 
-				// second component
-				CBitSet *m_pbsSnd;
+		// dtor
+		~SComponentPair();
 
-				// ctor
-				SComponentPair(CBitSet *pbsFst, CBitSet *pbsSnd);
+		// hashing function
+		static ULONG HashValue(const SComponentPair *pcomppair);
 
-				// dtor
-				~SComponentPair();
+		// equality function
+		static BOOL Equals(const SComponentPair *pcomppairFst,
+						   const SComponentPair *pcomppairSnd);
+	};
 
-				// hashing function
-				static
-				ULONG HashValue(const SComponentPair *pcomppair);
+	// hashing function
+	static ULONG
+	UlHashBitSet(const CBitSet *pbs)
+	{
+		GPOS_ASSERT(NULL != pbs);
 
-				// equality function
-				static
-				BOOL Equals(const SComponentPair *pcomppairFst, const SComponentPair *pcomppairSnd);
-			};
+		return pbs->HashValue();
+	}
 
-			// hashing function
-			static
-			ULONG UlHashBitSet
-				(
-				const CBitSet *pbs
-				)
-			{
-				GPOS_ASSERT(NULL != pbs);
+	// equality function
+	static BOOL
+	FEqualBitSet(const CBitSet *pbsFst, const CBitSet *pbsSnd)
+	{
+		GPOS_ASSERT(NULL != pbsFst);
+		GPOS_ASSERT(NULL != pbsSnd);
 
-				return pbs->HashValue();
-			}
+		return pbsFst->Equals(pbsSnd);
+	}
 
-			 // equality function
-			static
-			BOOL FEqualBitSet
-				(
-				const CBitSet *pbsFst,
-				const CBitSet *pbsSnd
-				)
-			{
-				GPOS_ASSERT(NULL != pbsFst);
-				GPOS_ASSERT(NULL != pbsSnd);
+	// hash map from component to best join order
+	typedef CHashMap<CBitSet, CExpression, UlHashBitSet, FEqualBitSet,
+					 CleanupRelease<CBitSet>, CleanupRelease<CExpression> >
+		BitSetToExpressionMap;
 
-				return pbsFst->Equals(pbsSnd);
-			}
+	// hash map from component pair to connecting edges
+	typedef CHashMap<SComponentPair, CExpression, SComponentPair::HashValue,
+					 SComponentPair::Equals, CleanupRelease<SComponentPair>,
+					 CleanupRelease<CExpression> >
+		ComponentPairToExpressionMap;
 
-			// hash map from component to best join order
-			typedef CHashMap<CBitSet, CExpression, UlHashBitSet, FEqualBitSet,
-				CleanupRelease<CBitSet>, CleanupRelease<CExpression> > BitSetToExpressionMap;
+	// hash map from expression to cost of best join order
+	typedef CHashMap<CExpression, CDouble, CExpression::HashValue,
+					 CUtils::Equals, CleanupRelease<CExpression>,
+					 CleanupDelete<CDouble> >
+		ExpressionToCostMap;
 
-			// hash map from component pair to connecting edges
-			typedef CHashMap<SComponentPair, CExpression, SComponentPair::HashValue, SComponentPair::Equals,
-				CleanupRelease<SComponentPair>, CleanupRelease<CExpression> > ComponentPairToExpressionMap;
+	// lookup table for links
+	ComponentPairToExpressionMap *m_phmcomplink;
 
-			// hash map from expression to cost of best join order
-			typedef CHashMap<CExpression, CDouble, CExpression::HashValue, CUtils::Equals,
-				CleanupRelease<CExpression>, CleanupDelete<CDouble> > ExpressionToCostMap;
+	// dynamic programming table
+	BitSetToExpressionMap *m_phmbsexpr;
 
-			// lookup table for links
-			ComponentPairToExpressionMap *m_phmcomplink;
+	// map of expressions to its cost
+	ExpressionToCostMap *m_phmexprcost;
 
-			// dynamic programming table
-			BitSetToExpressionMap *m_phmbsexpr;
+	// array of top-k join expression
+	CExpressionArray *m_pdrgpexprTopKOrders;
 
-			// map of expressions to its cost
-			ExpressionToCostMap *m_phmexprcost;
+	// dummy expression to used for non-joinable components
+	CExpression *m_pexprDummy;
 
-			// array of top-k join expression
-			CExpressionArray *m_pdrgpexprTopKOrders;
+	// build expression linking given components
+	CExpression *PexprBuildPred(CBitSet *pbsFst, CBitSet *pbsSnd);
 
-			// dummy expression to used for non-joinable components
-			CExpression *m_pexprDummy;
+	// lookup best join order for given set
+	CExpression *PexprLookup(CBitSet *pbs);
 
-			// build expression linking given components
-			CExpression *PexprBuildPred(CBitSet *pbsFst, CBitSet *pbsSnd);
+	// extract predicate joining the two given sets
+	CExpression *PexprPred(CBitSet *pbsFst, CBitSet *pbsSnd);
 
-			// lookup best join order for given set
-			CExpression *PexprLookup(CBitSet *pbs);
+	// join expressions in the given two sets
+	CExpression *PexprJoin(CBitSet *pbsFst, CBitSet *pbsSnd);
 
-			// extract predicate joining the two given sets
-			CExpression *PexprPred(CBitSet *pbsFst, CBitSet *pbsSnd);
+	// join expressions in the given set
+	CExpression *PexprJoin(CBitSet *pbs);
 
-			// join expressions in the given two sets
-			CExpression *PexprJoin(CBitSet *pbsFst, CBitSet *pbsSnd);
+	// find best join order for given component using dynamic programming
+	CExpression *PexprBestJoinOrderDP(CBitSet *pbs);
 
-			// join expressions in the given set
-			CExpression *PexprJoin(CBitSet *pbs);
+	// find best join order for given component
+	CExpression *PexprBestJoinOrder(CBitSet *pbs);
 
-			// find best join order for given component using dynamic programming
-			CExpression *PexprBestJoinOrderDP(CBitSet *pbs);
+	// generate cross product for the given components
+	CExpression *PexprCross(CBitSet *pbs);
 
-			// find best join order for given component
-			CExpression *PexprBestJoinOrder(CBitSet *pbs);
+	// join a covered subset with uncovered subset
+	CExpression *PexprJoinCoveredSubsetWithUncoveredSubset(
+		CBitSet *pbs, CBitSet *pbsCovered, CBitSet *pbsUncovered);
 
-			// generate cross product for the given components
-			CExpression *PexprCross(CBitSet *pbs);
+	// return a subset of the given set covered by one or more edges
+	CBitSet *PbsCovered(CBitSet *pbsInput);
 
-			// join a covered subset with uncovered subset
-			CExpression *PexprJoinCoveredSubsetWithUncoveredSubset(CBitSet *pbs, CBitSet *pbsCovered, CBitSet *pbsUncovered);
+	// add given join order to best results
+	void AddJoinOrder(CExpression *pexprJoin, CDouble dCost);
 
-			// return a subset of the given set covered by one or more edges
-			CBitSet *PbsCovered(CBitSet *pbsInput);
+	// compute cost of given join expression
+	CDouble DCost(CExpression *pexpr);
 
-			// add given join order to best results
-			void AddJoinOrder(CExpression *pexprJoin, CDouble dCost);
+	// derive stats on given expression
+	virtual void DeriveStats(CExpression *pexpr);
 
-			// compute cost of given join expression
-			CDouble DCost(CExpression *pexpr);
+	// add expression to cost map
+	void InsertExpressionCost(CExpression *pexpr, CDouble dCost,
+							  BOOL fValidateInsert);
 
-			// derive stats on given expression
-			virtual
-			void DeriveStats(CExpression *pexpr);
+	// generate all subsets of the given array of elements
+	static void GenerateSubsets(CMemoryPool *mp, CBitSet *pbsCurrent,
+								ULONG *pulElems, ULONG size, ULONG ulIndex,
+								CBitSetArray *pdrgpbsSubsets);
 
-			// add expression to cost map
-			void InsertExpressionCost(CExpression *pexpr, CDouble dCost, BOOL fValidateInsert);
+	// driver of subset generation
+	static CBitSetArray *PdrgpbsSubsets(CMemoryPool *mp, CBitSet *pbs);
 
-			// generate all subsets of the given array of elements
-			static
-			void GenerateSubsets(CMemoryPool *mp, CBitSet *pbsCurrent, ULONG *pulElems, ULONG size, ULONG ulIndex, CBitSetArray *pdrgpbsSubsets);
+public:
+	// ctor
+	CJoinOrderDP(CMemoryPool *mp, CExpressionArray *pdrgpexprComponents,
+				 CExpressionArray *pdrgpexprConjuncts);
 
-			// driver of subset generation
-			static
-			CBitSetArray *PdrgpbsSubsets(CMemoryPool *mp, CBitSet *pbs);
+	// dtor
+	virtual ~CJoinOrderDP();
 
-		public:
+	// main handler
+	virtual CExpression *PexprExpand();
 
-			// ctor
-			CJoinOrderDP
-				(
-				CMemoryPool *mp,
-				CExpressionArray *pdrgpexprComponents,
-				CExpressionArray *pdrgpexprConjuncts
-				);
+	// best join orders
+	CExpressionArray *
+	PdrgpexprTopK() const
+	{
+		return m_pdrgpexprTopKOrders;
+	}
 
-			// dtor
-			virtual
-			~CJoinOrderDP();
-
-			// main handler
-			virtual
-			CExpression *PexprExpand();
-
-			// best join orders
-			CExpressionArray *PdrgpexprTopK() const
-			{
-				return m_pdrgpexprTopKOrders;
-			}
-
-			// print function
-			virtual
-			IOstream &OsPrint(IOstream &) const;
+	// print function
+	virtual IOstream &OsPrint(IOstream &) const;
 
 #ifdef GPOS_DEBUG
-			void DbgPrint();
+	void DbgPrint();
 #endif
 
-	}; // class CJoinOrderDP
+};	// class CJoinOrderDP
 
-}
+}  // namespace gpopt
 
-#endif // !GPOPT_CJoinOrderDP_H
+#endif	// !GPOPT_CJoinOrderDP_H
 
 // EOF

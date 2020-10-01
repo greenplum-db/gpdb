@@ -1585,8 +1585,6 @@ The following functions for making comparisons are supported:
 
 Compares values and if they match, returns a corresponding value.
 
-Note: decode is converted into a reserved word in Greenplum Database. If you want to use the Postgres two-argument decode function that decodes binary strings previously encoded to ASCII-only representation, you must invoke it by using the full schema-qualified syntax, pg_catalog.decode(), or by enclosing the function name in quotes "decode" ().
-
 **Syntax**
 
 ![DECODE]( gif/DECODE.gif) 
@@ -1819,7 +1817,7 @@ Returns a substitute value when a value is NULL.
 **General rules**
 
  - NVL returns a substitute value when the specified value is NULL. When *expr1* is NULL, *expr2* is returned. When *expr1* is not NULL, *expr1* is returned.
- - Specify the same data types for *expr1* and *expr2*. However, if a constant is specified in *expr2*, and the data type can also be converted by *expr1*, different data types can be specified. When this happens, the conversion by *expr2* is done to suit the data type in *expr1*, so the value of *expr2* returned when *expr1* is a NULL value will be the value converted in the data type of *expr1*.
+ - Specify the same data types for *expr1* and *expr2*. However, if a constant is specified in *expr2*, and the data type can also be converted by *expr1*, different data types can be specified. When this happens, the conversion by *expr2* is done to suit the data type in *expr1*, so the value of *expr2* returned when *expr1* is a NULL value will be the value converted in the data type of *expr1*. This is not necessary for types (numeric, int) and (bigint, int).
 
 **Example**
 

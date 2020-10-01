@@ -9,8 +9,8 @@ subdir = src/backend/access/external
 top_builddir = ../../../..
 include $(top_builddir)/src/Makefile.global
 
-OBJS = fileam.o url.o url_curl.o url_file.o url_execute.o url_custom.o \
-	exttable_fdw_shim.o
+OBJS = url.o url_curl.o url_file.o url_execute.o url_custom.o \
+	external.o
 
 include $(top_srcdir)/src/backend/common.mk
 

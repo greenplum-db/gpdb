@@ -16,11 +16,9 @@
 #ifndef TRANSFORM_H
 #define TRANSFORM_H
 
+#include "nodes/pathnodes.h"
 #include "nodes/plannodes.h"
-#include "nodes/relation.h"
 
 extern Query *normalize_query(Query *query);
 
-/* preprocess the query for the optimizer */
-extern Query *preprocess_query_optimizer(PlannerInfo *root, Query *query, ParamListInfo boundParams);
 #endif /* TRANSFORM_H */

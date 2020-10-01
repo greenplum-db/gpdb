@@ -16,39 +16,35 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CCostTest
-	//
-	//	@doc:
-	//		Unittests for costing
-	//
-	//---------------------------------------------------------------------------
-	class CCostTest
-	{
+//---------------------------------------------------------------------------
+//	@class:
+//		CCostTest
+//
+//	@doc:
+//		Unittests for costing
+//
+//---------------------------------------------------------------------------
+class CCostTest
+{
+private:
+	// test cost model parameters
+	static void TestParams(CMemoryPool *mp, BOOL fCalibrated);
 
-		private:
+public:
+	// unittests
+	static GPOS_RESULT EresUnittest();
+	static GPOS_RESULT EresUnittest_Arithmetic();
+	static GPOS_RESULT EresUnittest_Bool();
+	static GPOS_RESULT EresUnittest_Params();
+	static GPOS_RESULT EresUnittest_Parsing();
+	static GPOS_RESULT EresUnittest_ParsingWithException();
+	static GPOS_RESULT EresUnittest_SetParams();
 
-			// test cost model parameters
-			static
-			void TestParams(CMemoryPool *mp, BOOL fCalibrated);
+};	// class CCostTest
+}  // namespace gpopt
 
-		public:
-
-			// unittests
-			static GPOS_RESULT EresUnittest();
-			static GPOS_RESULT EresUnittest_Arithmetic();
-			static GPOS_RESULT EresUnittest_Bool();
-			static GPOS_RESULT EresUnittest_Params();
-			static GPOS_RESULT EresUnittest_Parsing();
-			static GPOS_RESULT EresUnittest_ParsingWithException();
-			static GPOS_RESULT EresUnittest_SetParams();
-
-	}; // class CCostTest
-}
-
-#endif // !GPOPT_CCostTest_H
+#endif	// !GPOPT_CCostTest_H
 
 // EOF

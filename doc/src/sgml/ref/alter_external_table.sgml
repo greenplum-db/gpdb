@@ -3,7 +3,7 @@ doc/src/sgml/ref/alter_external_table.sgml
 PostgreSQL documentation
 -->
 
-<refentry id="SQL-ALTEREXTERNALTABLE">
+<refentry id="sql-alterexternaltable">
  <indexterm zone="sql-alterexternaltable">
   <primary>ALTER EXTERNAL TABLE</primary>
  </indexterm>

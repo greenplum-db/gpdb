@@ -27,20 +27,22 @@
  */
 #include "postgres.h"
 
-#include "postmaster/backoff.h"
 #ifndef HAVE_GETRUSAGE
 #include "rusagestub.h"
 #else
 #include <sys/time.h>
 #include <sys/resource.h>
 #endif
+#include <sys/time.h>
+#include <signal.h>
+#include <math.h>
+
 #include "storage/ipc.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbdispatchresult.h"
 #include "libpq-fe.h"
 
-#include <signal.h>
 #include "libpq/pqsignal.h"
 #include "tcop/tcopprot.h"
 #include "postmaster/bgworker.h"
@@ -52,7 +54,9 @@
 #include "funcapi.h"
 #include "access/xact.h"
 #include "port/atomics.h"
+#include "postmaster/backoff.h"
 #include "pg_trace.h"
+#include "pgstat.h"
 
 extern bool gp_debug_resqueue_priority;
 
@@ -816,6 +820,7 @@ BackoffSweeper()
 																 * backend can get */
 
 		Assert(maxCPU > 0.0);
+		Assert(activeWeight > 0.0);
 
 		if (gp_debug_resqueue_priority)
 		{
@@ -839,13 +844,56 @@ BackoffSweeper()
 					double		targetCPU = 0.0;
 					const BackoffBackendSharedEntry *gl = getBackoffEntryRO(se->groupLeaderIndex);
 
-					Assert(gl->numFollowersActive > 0);
+					if (gl->numFollowersActive <= 0)
+					{
+						/*
+						 * There is a race condition here:
+						 * Backend A, B belong to the same statement. Backend A remains inactive
+						 * longer than gp_resqueue_priority_inactivity_timeout.
+						 * 
+						 * Timestamp1: backend A's leader is A, backend B's leader is B.
+						 *
+						 * Timestamp2: backend A's numFollowersActive remains zero due to timeout.
+						 *
+						 * Timestamp3: Sweeper calculates leader B's numFollowersActive to 1.
+						 *
+						 * Timestamp4: backend B changes it's leader to A.
+						 *
+						 * Backend process can change the backoff group leader without checking whether
+						 * the leader is an active backend due to performance consideration. This leads
+						 * to a backend could switch to an inactive leader whose numFollowersActive is
+						 * zero. Since backoff sweeper is not an accurate control, we could just skip
+						 * it in the current loop.
+						 */
+						backoffSingleton->sweeperInProgress = false;
+						elog(LOG, "numFollowersActive underflow!");
+						return;
+					}
+
+					Assert(se->weight > 0.0);
+					targetCPU = (CPUAvailable) * (se->weight) / activeWeight / gl->numFollowersActive;
+
+					/**
+					 * Some statements may be weighed so heavily that they are allocated the maximum cpu ratio.
+					 */
+					if (targetCPU >= maxCPU)
+					{
+						Assert(numProcsPerSegment() >= 1.0);	/* This can only happen
+																 * when there is more
+																 * than one proc */
+						se->targetUsage = maxCPU;
+						se->backoff = false;
+						activeWeight -= (se->weight / gl->numFollowersActive);
+
+						CPUAvailable -= maxCPU;
+						found = true;
+					}
 
 					if (activeWeight <= 0.0)
 					{
 						/*
 						 * There is a race condition here:
-						 * Backend A,B,C are belong to same statement and have weight of
+						 * Backend A,B,C belong to the same statement and have weight of
 						 * 100000.
 						 *
 						 * Timestamp1: backend A's leader is A, backend B's leader is B
@@ -865,27 +913,6 @@ BackoffSweeper()
 						backoffSingleton->sweeperInProgress = false;
 						elog(LOG, "activeWeight underflow!");
 						return;
-					}
-
-					Assert(activeWeight > 0.0);
-					Assert(se->weight > 0.0);
-
-					targetCPU = (CPUAvailable) * (se->weight) / activeWeight / gl->numFollowersActive;
-
-					/**
-					 * Some statements may be weighed so heavily that they are allocated the maximum cpu ratio.
-					 */
-					if (targetCPU >= maxCPU)
-					{
-						Assert(numProcsPerSegment() >= 1.0);	/* This can only happen
-																 * when there is more
-																 * than one proc */
-						se->targetUsage = maxCPU;
-						se->backoff = false;
-						activeWeight -= (se->weight / gl->numFollowersActive);
-
-						CPUAvailable -= maxCPU;
-						found = true;
 					}
 				}
 			}
@@ -911,8 +938,6 @@ BackoffSweeper()
 			{
 				const BackoffBackendSharedEntry *gl = getBackoffEntryRO(se->groupLeaderIndex);
 
-				Assert(activeWeight > 0.0);
-				Assert(gl->numFollowersActive > 0);
 				Assert(se->weight > 0.0);
 				se->targetUsage = (CPUAvailable) * (se->weight) / activeWeight / gl->numFollowersActive;
 			}
@@ -1208,7 +1233,8 @@ BackoffSweeperLoop(void)
 		/* Sleep a while. */
 		rc = WaitLatch(&MyProc->procLatch,
 					   WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH,
-					   gp_resqueue_priority_sweeper_interval);
+					   gp_resqueue_priority_sweeper_interval,
+					   WAIT_EVENT_BACKOFF_MAIN);
 		ResetLatch(&MyProc->procLatch);
 
 		/* emergency bailout if postmaster has died */
@@ -1253,7 +1279,7 @@ gp_list_backend_priorities(PG_FUNCTION_ARGS)
 
 		/* build tupdesc for result tuples */
 		/* this had better match gp_distributed_xacts view in system_views.sql */
-		tupdesc = CreateTemplateTupleDesc(4, false);
+		tupdesc = CreateTemplateTupleDesc(4);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "session_id",
 						   INT4OID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "command_count",

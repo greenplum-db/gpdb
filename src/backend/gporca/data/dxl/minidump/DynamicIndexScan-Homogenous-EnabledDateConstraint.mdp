@@ -3,7 +3,7 @@
   <dxl:Thread Id="0">
     <dxl:OptimizerConfig>
       <dxl:EnumeratorConfig Id="1" PlanSamples="0" CostThreshold="0"/>
-      <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.010000" DampingFactorGroupBy="0.750000"/>
+      <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.010000" DampingFactorGroupBy="0.750000" MaxStatsBuckets="100"/>
       <dxl:CTEConfig CTEInliningCutoff="0"/> 
       <dxl:WindowOids RowNumber="7000" Rank="7001"/>
       <dxl:TraceFlags Value="103027,101001,101013,103001"/>
@@ -253,7 +253,7 @@
       <dxl:ColumnStatistics Mdid="1.310650.1.1.0" Name="id" Width="8.000000"/>
       <dxl:ColumnStatistics Mdid="1.310650.1.1.1" Name="ship_date" Width="8.000000"/>
       <dxl:RelationStatistics Mdid="2.310650.1.1" Name="test_orders" Rows="0.000000"/>
-      <dxl:Relation Mdid="0.310650.1.1" Name="test_orders" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" PartitionColumns="1">
+      <dxl:Relation Mdid="0.310650.1.1" Name="test_orders" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" PartitionColumns="1" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

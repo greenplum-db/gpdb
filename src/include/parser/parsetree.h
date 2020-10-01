@@ -5,7 +5,7 @@
  *	  parse trees.
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/parser/parsetree.h
@@ -32,16 +32,6 @@
 	((RangeTblEntry *) list_nth(rangetable, (rangetable_index)-1))
 
 /*
- *		getrelid
- *
- *		Given the range index of a relation, return the corresponding
- *		relation OID.  Note that InvalidOid will be returned if the
- *		RTE is for a non-relation-type RTE.
- */
-#define getrelid(rangeindex,rangetable) \
-	(rt_fetch(rangeindex, rangetable)->relid)
-
-/*
  * Given an RTE and an attribute number, return the appropriate
  * variable name or alias for that attribute of that RTE.
  */
@@ -52,14 +42,14 @@ extern char *get_rte_attribute_name(RangeTblEntry *rte, AttrNumber attnum);
  * type and typemod info for that attribute of that RTE.
  */
 extern void get_rte_attribute_type(RangeTblEntry *rte, AttrNumber attnum,
-					   Oid *vartype, int32 *vartypmod, Oid *varcollid);
+								   Oid *vartype, int32 *vartypmod, Oid *varcollid);
 
 /*
  * Check whether an attribute of an RTE has been dropped (note that
  * get_rte_attribute_type will fail on such an attr)
  */
 extern bool get_rte_attribute_is_dropped(RangeTblEntry *rte,
-							 AttrNumber attnum);
+										 AttrNumber attnum);
 
 
 /* ----------------
@@ -76,4 +66,4 @@ extern TargetEntry *get_tle_by_resno(List *tlist, AttrNumber resno);
 
 extern RowMarkClause *get_parse_rowmark(Query *qry, Index rtindex);
 
-#endif   /* PARSETREE_H */
+#endif							/* PARSETREE_H */

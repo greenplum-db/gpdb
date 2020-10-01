@@ -28,27 +28,27 @@ CREATE TABLE randtable(id int, value text) distributed randomly;
 INSERT INTO intable   SELECT id::int, ('value_'||id)::text FROM generate_series(1, 10) id;
 INSERT INTO randtable SELECT id::int, ('value_'||id)::text FROM generate_series(1, 10) id;
 \d intable
-    Table "public.intable"
- Column |  Type   | Modifiers 
---------+---------+-----------
- id     | integer | 
- value  | text    | 
+              Table "public.intable"
+ Column |  Type   | Collation | Nullable | Default 
+--------+---------+-----------+----------+---------
+ id     | integer |           |          | 
+ value  | text    |           |          | 
 Distributed by: (id)
 
 \d outtable
-   Table "public.outtable"
- Column |  Type   | Modifiers 
---------+---------+-----------
- a      | text    | 
- b      | integer | 
+              Table "public.outtable"
+ Column |  Type   | Collation | Nullable | Default 
+--------+---------+-----------+----------+---------
+ a      | text    |           |          | 
+ b      | integer |           |          | 
 Distributed randomly
 
 \d randtable
-   Table "public.randtable"
- Column |  Type   | Modifiers 
---------+---------+-----------
- id     | integer | 
- value  | text    | 
+             Table "public.randtable"
+ Column |  Type   | Collation | Nullable | Default 
+--------+---------+-----------+----------+---------
+ id     | integer |           |          | 
+ value  | text    |           |          | 
 Distributed randomly
 
 select * from intable order by id,value;
@@ -119,10 +119,10 @@ SELECT * FROM history order  by id, time;
     AS '$libdir/gppc_test', 'mytransform'
     LANGUAGE C;
     \df transform
-                          List of functions
- Schema |   Name    | Result data type | Argument data types |  Type  
---------+-----------+------------------+---------------------+--------
- public | transform | SETOF outtable   | a anytable          | normal
+                         List of functions
+ Schema |   Name    | Result data type | Argument data types | Type 
+--------+-----------+------------------+---------------------+------
+ public | transform | SETOF outtable   | a anytable          | func
 (1 row)
 
     SELECT * FROM transform( 
@@ -245,10 +245,10 @@ SELECT * FROM transform(
 NOTICE:  type "hai10" is not yet defined
 DETAIL:  Creating a shell type definition.
     \df transform_new
-                            List of functions
- Schema |     Name      | Result data type | Argument data types |  Type  
---------+---------------+------------------+---------------------+--------
- public | transform_new | SETOF hai10      | a anytable          | normal
+                           List of functions
+ Schema |     Name      | Result data type | Argument data types | Type 
+--------+---------------+------------------+---------------------+------
+ public | transform_new | SETOF hai10      | a anytable          | func
 (1 row)
 
     drop function if exists transform_new(a anytable);
@@ -272,11 +272,11 @@ DETAIL:  Returned tuple does not match output tuple descriptor.
 alter table outtable add column newcol int;
 alter table outtable drop column newcol;
 \d outtable;
-   Table "public.outtable"
- Column |  Type   | Modifiers 
---------+---------+-----------
- a      | text    | 
- b      | integer | 
+              Table "public.outtable"
+ Column |  Type   | Collation | Nullable | Default 
+--------+---------+-----------+----------+---------
+ a      | text    |           |          | 
+ b      | integer |           |          | 
 Distributed randomly
 
 -- Calling ETF again, get ERROR: invalid output tuple
@@ -419,10 +419,9 @@ LINE 1: SELECT * FROM TABLE(select a from t1);
     SELECT * FROM t1 WHERE a IN ( 
         transform( TABLE(select a,e from t1 where a < 5) )
     );
-ERROR:  operator does not exist: integer = record
-LINE 1: SELECT * FROM t1 WHERE a IN ( 
-                                 ^
-HINT:  No operator matches the given name and argument type(s). You might need to add explicit type casts.
+ERROR:  set-returning functions are not allowed in WHERE
+LINE 2:         transform( TABLE(select a,e from t1 where a < 5) )
+                ^
     -- ERROR:  operator does not exist: integer = outtable
     -- TVE in IN clause
     SELECT * FROM t1 WHERE a IN ( 
@@ -2426,7 +2425,7 @@ select * from t1 order by transform( TABLE(select * from intable));
 ERROR:  table functions must be invoked in FROM clause
 -- ETF in LIMIT
 select * from t1 LIMIT transform (TABLE(select * from intable));
-ERROR:  argument of LIMIT must be type bigint, not type record
+ERROR:  set-returning functions are not allowed in LIMIT
 LINE 1: select * from t1 LIMIT transform (TABLE(select * from intabl...
                                ^
 -- ETF in GROUP BY
@@ -2436,10 +2435,9 @@ ERROR:  table functions must be invoked in FROM clause
 -- ETF in IN clause
 select * from t1 where a in 
               (transform(TABLE(select a,e from t1 where a<10)));
-ERROR:  operator does not exist: integer = record
-LINE 1: select * from t1 where a in 
-                                 ^
-HINT:  No operator matches the given name and argument type(s). You might need to add explicit type casts.
+ERROR:  set-returning functions are not allowed in WHERE
+LINE 2:               (transform(TABLE(select a,e from t1 where a<10...
+                       ^
 -- Positive: ETF can be used for table JOIN operation
 -- The followings should succeed
     -- join table t1 with ETF
@@ -2490,11 +2488,11 @@ HINT:  No operator matches the given name and argument type(s). You might need t
     -- This should succeed
     -- Describe the created view
     \d+ t1viewetf
-                View "public.t1viewetf"
- Column |  Type   | Modifiers | Storage  | Description 
---------+---------+-----------+----------+-------------
- a      | text    |           | extended | 
- b      | integer |           | plain    | 
+                          View "public.t1viewetf"
+ Column |  Type   | Collation | Nullable | Default | Storage  | Description 
+--------+---------+-----------+----------+---------+----------+-------------
+ a      | text    |           |          |         | extended | 
+ b      | integer |           |          |         | plain    | 
 View definition:
  SELECT transform.a,
     transform.b
@@ -2526,11 +2524,11 @@ LINE 2:     transform(
     -- This should succeed
   
     \d+ t1_etf_view
-               View "public.t1_etf_view"
- Column |  Type   | Modifiers | Storage  | Description 
---------+---------+-----------+----------+-------------
- a      | text    |           | extended | 
- b      | integer |           | plain    | 
+                         View "public.t1_etf_view"
+ Column |  Type   | Collation | Nullable | Default | Storage  | Description 
+--------+---------+-----------+----------+---------+----------+-------------
+ a      | text    |           |          |         | extended | 
+ b      | integer |           |          |         | plain    | 
 View definition:
  SELECT transform.a,
     transform.b
@@ -2824,7 +2822,8 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
     CREATE TABLE t3 (a int, b int, c int, d int, e text)
     DISTRIBUTED BY (a, e);
 -- start_ignore
-create language plpythonu;
+create language plpython3u;
+-- end_ignore
 create or replace function find_operator(query text, operator_name text) returns text as
 $$
 rv = plpy.execute(query)
@@ -2837,8 +2836,7 @@ for i in range(len(rv)):
         break
 return result
 $$
-language plpythonu;
--- end_ignore
+language plpython3u;
 -- ETF sub-query contains join table / view
 -- Table t1, t2 are distributed by column a
 -- Table t3, t5 are distributed by columns a and e
@@ -2988,6 +2986,7 @@ drop function if exists find_operator(query text, operator_name text);
     \x
     select * from pg_type where typname='anytable';
 -[ RECORD 1 ]--+-------------
+oid            | 7053
 typname        | anytable
 typnamespace   | 11
 typowner       | 10

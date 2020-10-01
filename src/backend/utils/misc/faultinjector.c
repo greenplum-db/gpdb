@@ -22,10 +22,9 @@
 #include "postgres.h"
 
 #include <signal.h>
-#ifdef HAVE_SYS_RESOURCE_H
-#include <sys/resource.h>
-#endif
+
 #include "access/xact.h"
+#include "catalog/pg_type.h"
 #include "cdb/cdbutil.h"
 #include "libpq/libpq.h"
 #include "libpq/pqformat.h"
@@ -33,6 +32,7 @@
 #include "postmaster/bgwriter.h"
 #include "storage/spin.h"
 #include "storage/shmem.h"
+#include "tcop/dest.h"
 #include "utils/faultinjector.h"
 #include "utils/hsearch.h"
 #include "miscadmin.h"
@@ -54,8 +54,7 @@
 typedef struct FaultInjectorShmem_s {
 	slock_t		lock;
 	
-	int			faultInjectorSlots;	
-		/* number of fault injection set */
+	int			numActiveFaults; /* number of fault injections set */
 	
 	HTAB		*hash;
 } FaultInjectorShmem_s;
@@ -63,6 +62,14 @@ typedef struct FaultInjectorShmem_s {
 bool am_faulthandler = false;
 
 static	FaultInjectorShmem_s *faultInjectorShmem = NULL;
+
+/*
+ * faultInjectorSlots_ptr points to this until shmem is initialized. Just to
+ * keep any FaultInjector_InjectFaultIfSet calls from crashing.
+ */
+static int dummy = 0;
+
+int *numActiveFaults_ptr = &dummy;
 
 static void FiLockAcquire(void);
 static void FiLockRelease(void);
@@ -202,6 +209,8 @@ FaultInjector_ShmemInit(void)
 				(errcode(ERRCODE_OUT_OF_MEMORY),
 				 (errmsg("not enough shared memory for fault injector"))));
 	}	
+
+	numActiveFaults_ptr = &faultInjectorShmem->numActiveFaults;
 	
 	if (! foundPtr) 
 	{
@@ -210,7 +219,7 @@ FaultInjector_ShmemInit(void)
 	
 	SpinLockInit(&faultInjectorShmem->lock);
 	
-	faultInjectorShmem->faultInjectorSlots = 0;
+	faultInjectorShmem->numActiveFaults = 0;
 	
 	MemSet(&hash_ctl, 0, sizeof(hash_ctl));
 	hash_ctl.keysize = FAULT_NAME_MAX_LENGTH;
@@ -233,7 +242,7 @@ FaultInjector_ShmemInit(void)
 }
 
 FaultInjectorType_e
-FaultInjector_InjectFaultIfSet(
+FaultInjector_InjectFaultIfSet_out_of_line(
 							   const char*				 faultName,
 							   DDLStatement_e			 ddlStatement,
 							   const char*				 databaseName,
@@ -267,7 +276,11 @@ FaultInjector_InjectFaultIfSet(
 	if (IsAutoVacuumLauncherProcess() ||
 		(IsAutoVacuumWorkerProcess() &&
 		 !(0 == strcmp("vacuum_update_dat_frozen_xid", faultName) ||
-			 0 == strcmp("auto_vac_worker_before_do_autovacuum", faultName))))
+		   0 == strcmp("auto_vac_worker_before_do_autovacuum", faultName) ||
+		   0 == strcmp("auto_vac_worker_after_report_activity", faultName) ||
+		   0 == strcmp("auto_vac_worker_abort", faultName) ||
+		   0 == strcmp("analyze_after_hold_lock", faultName) ||
+		   0 == strcmp("analyze_finished_one_relation", faultName))))
 		return FaultInjectorTypeNotSpecified;
 
 	/*
@@ -282,7 +295,7 @@ FaultInjector_InjectFaultIfSet(
 	 * Although this is a race condition without lock, a false negative is
 	 * ok given this framework is purely for dev/testing.
 	 */
-	if (faultInjectorShmem->faultInjectorSlots == 0)
+	if (faultInjectorShmem->numActiveFaults == 0)
 		return FaultInjectorTypeNotSpecified;
 
 	snprintf(databaseNameLocal, sizeof(databaseNameLocal), "%s", databaseName);
@@ -357,6 +370,15 @@ FaultInjector_InjectFaultIfSet(
 			break;
 
 		case FaultInjectorTypeFatal:
+			/*
+			 * Sometimes Fatal is upgraded to Panic (e.g. when it is called in
+			 * critical section or when it is called during QD prepare
+			 * handling).  We should avoid core file generation for this
+			 * scenario, just like what we do for the FaultInjectorTypePanic
+			 * case.  Even FATAL is not upgraded to PANIC the process will quit
+			 * soon, it does not affect subsequent code.
+			 */
+			AvoidCorefileGeneration();
 			ereport(FATAL, 
 					(errcode(ERRCODE_FAULT_INJECT),
 					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
@@ -365,19 +387,7 @@ FaultInjector_InjectFaultIfSet(
 			break;
 
 		case FaultInjectorTypePanic:
-			/*
-			 * Avoid core file generation for this PANIC. It helps to avoid
-			 * filling up disks during tests and also saves time.
-			 */
-#if defined(HAVE_GETRLIMIT) && defined(RLIMIT_CORE)
-			;struct rlimit lim;
-			getrlimit(RLIMIT_CORE, &lim);
-			lim.rlim_cur = 0;
-			if (setrlimit(RLIMIT_CORE, &lim) != 0)
-				elog(NOTICE,
-					 "setrlimit failed for RLIMIT_CORE soft limit to zero. errno: %d (%m).",
-					 errno);
-#endif
+			AvoidCorefileGeneration();
 			ereport(PANIC, 
 					(errcode(ERRCODE_FAULT_INJECT),
 					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
@@ -465,20 +475,7 @@ FaultInjector_InjectFaultIfSet(
 			
 		case FaultInjectorTypeSegv:
 		{
-			/*
-			 * Avoid core file generation for this PANIC. It helps to avoid
-			 * filling up disks during tests and also saves time.
-			 */
-#if defined(HAVE_GETRLIMIT) && defined(RLIMIT_CORE)
-			struct rlimit lim;
-			getrlimit(RLIMIT_CORE, &lim);
-			lim.rlim_cur = 0;
-			if (setrlimit(RLIMIT_CORE, &lim) != 0)
-				elog(NOTICE,
-					 "setrlimit failed for RLIMIT_CORE soft limit to zero. errno: %d (%m).",
-					 errno);
-#endif
-
+			AvoidCorefileGeneration();
 			*(volatile int *) 0 = 1234;
 			break;
 		}
@@ -572,7 +569,7 @@ FaultInjector_InsertHashEntry(
 												  &foundPtr);
 
 	if (entry == NULL) {
-		*exists = FALSE;
+		*exists = false;
 		return entry;
 	} 
 	
@@ -580,9 +577,9 @@ FaultInjector_InsertHashEntry(
 		 entry->faultName);
 	
 	if (foundPtr) {
-		*exists = TRUE;
+		*exists = true;
 	} else {
-		*exists = FALSE;
+		*exists = false;
 	}
 
 	return entry;
@@ -597,7 +594,7 @@ FaultInjector_RemoveHashEntry(
 {	
 	
 	FaultInjectorEntry_s	*entry;
-	bool					isRemoved = FALSE;
+	bool					isRemoved = false;
 	
 	Assert(faultInjectorShmem->hash != NULL);
 	entry = (FaultInjectorEntry_s *) hash_search(
@@ -611,9 +608,9 @@ FaultInjector_RemoveHashEntry(
 		ereport(LOG, 
 				(errmsg("fault removed, fault name:'%s' fault type:'%s' ",
 						entry->faultName,
-						FaultInjectorTypeEnumToString[entry->faultInjectorType])));							
-		
-		isRemoved = TRUE;
+						FaultInjectorTypeEnumToString[entry->faultInjectorType])));
+
+		isRemoved = true;
 	}
 	
 	return isRemoved;			
@@ -633,7 +630,7 @@ FaultInjector_NewHashEntry(
 
 	FiLockAcquire();
 
-	if ((faultInjectorShmem->faultInjectorSlots + 1) >= FAULTINJECTOR_MAX_SLOTS) {
+	if ((faultInjectorShmem->numActiveFaults + 1) >= FAULTINJECTOR_MAX_SLOTS) {
 		FiLockRelease();
 		status = STATUS_ERROR;
 		ereport(WARNING,
@@ -693,7 +690,7 @@ FaultInjector_NewHashEntry(
 		
 	entryLocal->faultInjectorState = FaultInjectorStateWaiting;
 
-	faultInjectorShmem->faultInjectorSlots++;
+	faultInjectorShmem->numActiveFaults++;
 		
 	FiLockRelease();
 	
@@ -763,7 +760,7 @@ FaultInjector_SetFaultInjection(
 						   FaultInjectorEntry_s	*entry)
 {
 	int		status = STATUS_OK;
-	bool	isRemoved = FALSE;
+	bool	isRemoved = false;
 	
 	switch (entry->faultInjectorType) {
 		case FaultInjectorTypeReset:
@@ -779,24 +776,24 @@ FaultInjector_SetFaultInjection(
 				
 				while ((entryLocal = (FaultInjectorEntry_s *) hash_seq_search(&hash_status)) != NULL) {
 					isRemoved = FaultInjector_RemoveHashEntry(entryLocal->faultName);
-					if (isRemoved == TRUE) {
-						faultInjectorShmem->faultInjectorSlots--;
+					if (isRemoved == true) {
+						faultInjectorShmem->numActiveFaults--;
 					}					
 				}
 				FiLockRelease();
-				Assert(faultInjectorShmem->faultInjectorSlots == 0);
+				Assert(faultInjectorShmem->numActiveFaults == 0);
 			}
 			else
 			{
 				FiLockAcquire();
 				isRemoved = FaultInjector_RemoveHashEntry(entry->faultName);
-				if (isRemoved == TRUE) {
-					faultInjectorShmem->faultInjectorSlots--;
+				if (isRemoved == true) {
+					faultInjectorShmem->numActiveFaults--;
 				}
 				FiLockRelease();
 			}
 				
-			if (isRemoved == FALSE)
+			if (isRemoved == false)
 				ereport(DEBUG1,
 						(errmsg("LOG(fault injector): could not remove fault injection from hash identifier:'%s'",
 								entry->faultName)));
@@ -986,6 +983,7 @@ InjectFault(char *faultName, char *type, char *ddlStatement, char *databaseName,
 	faultEntry.extraArg = extraArg;
 	faultEntry.startOccurrence = startOccurrence;
 	faultEntry.endOccurrence = endOccurrence;
+	faultEntry.numTimesTriggered = 0;
 
 	/*
 	 * Validations:

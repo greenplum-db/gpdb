@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) Greenplum Inc 2012. All Rights Reserved.
 #
@@ -29,14 +29,14 @@ class WorkerPoolTestCase(unittest.TestCase):
         self.subject = LocalExecutionContext(None)
         cmd = Command('test', cmdStr='ls /tmp')
         self.subject.execute(cmd)
-        self.assertEquals("ls /tmp", cmd.cmdStr)
+        self.assertEqual("ls /tmp", cmd.cmdStr)
 
     def test_LocalExecutionContext_uses_ampersand(self):
         self.subject = LocalExecutionContext(None)
         cmd = Command('test', cmdStr='ls /tmp')
         cmd.propagate_env_map['foo'] = 1
         self.subject.execute(cmd)
-        self.assertEquals("foo=1 && ls /tmp", cmd.cmdStr)
+        self.assertEqual("foo=1 && ls /tmp", cmd.cmdStr)
 
     def test_LocalExecutionContext_uses_ampersand_multiple(self):
         self.subject = LocalExecutionContext(None)
@@ -44,7 +44,7 @@ class WorkerPoolTestCase(unittest.TestCase):
         cmd.propagate_env_map['foo'] = 1
         cmd.propagate_env_map['bar'] = 1
         self.subject.execute(cmd)
-        self.assertEquals("bar=1 && foo=1 && ls /tmp", cmd.cmdStr)
+        self.assertEqual("bar=1 && foo=1 && ls /tmp", cmd.cmdStr)
 
     def test_RemoteExecutionContext_uses_ampersand_multiple(self):
         self.subject = RemoteExecutionContext('localhost', None, 'gphome')
@@ -52,5 +52,5 @@ class WorkerPoolTestCase(unittest.TestCase):
         cmd.propagate_env_map['foo'] = 1
         cmd.propagate_env_map['bar'] = 1
         self.subject.execute(cmd)
-        self.assertEquals("bar=1 && foo=1 && ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 localhost "
+        self.assertEqual("bar=1 && foo=1 && ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 localhost "
                           "\". gphome/greenplum_path.sh; bar=1 && foo=1 && ls /tmp\"", cmd.cmdStr)

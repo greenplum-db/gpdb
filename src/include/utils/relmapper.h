@@ -4,7 +4,7 @@
  *	  Catalog-to-filenode mapping
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/relmapper.h
@@ -40,7 +40,7 @@ extern Oid	RelationMapOidToFilenode(Oid relationId, bool shared);
 extern Oid	RelationMapFilenodeToOid(Oid relationId, bool shared);
 
 extern void RelationMapUpdateMap(Oid relationId, Oid fileNode, bool shared,
-					 bool immediate);
+								 bool immediate);
 
 extern void RelationMapRemoveMapping(Oid relationId);
 
@@ -48,7 +48,7 @@ extern void RelationMapInvalidate(bool shared);
 extern void RelationMapInvalidateAll(void);
 
 extern void AtCCI_RelationMap(void);
-extern void AtEOXact_RelationMap(bool isCommit);
+extern void AtEOXact_RelationMap(bool isCommit, bool isParallelWorker);
 extern void AtPrepare_RelationMap(void);
 
 extern void CheckPointRelationMap(void);
@@ -59,8 +59,12 @@ extern void RelationMapInitialize(void);
 extern void RelationMapInitializePhase2(void);
 extern void RelationMapInitializePhase3(void);
 
+extern Size EstimateRelationMapSpace(void);
+extern void SerializeRelationMap(Size maxSize, char *startAddress);
+extern void RestoreRelationMap(char *startAddress);
+
 extern void relmap_redo(XLogReaderState *record);
 extern void relmap_desc(StringInfo buf, XLogReaderState *record);
 extern const char *relmap_identify(uint8 info);
 
-#endif   /* RELMAPPER_H */
+#endif							/* RELMAPPER_H */

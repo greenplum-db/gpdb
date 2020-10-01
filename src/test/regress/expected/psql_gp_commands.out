@@ -12,7 +12,7 @@
 
 \dx+ gp_inject*
                        Objects in extension "gp_inject_fault"
-                                 Object Description                                 
+                                 Object description                                 
 ------------------------------------------------------------------------------------
  function force_mirrors_to_catch_up()
  function gp_inject_fault(text,text,integer)
@@ -156,24 +156,24 @@ ALTER EXTERNAL TABLE "dE_external_table" OWNER TO test_psql_de_role;
                                         List of relations
       Schema      |       Name        |     Type      |       Owner       |       Storage        
 ------------------+-------------------+---------------+-------------------+----------------------
- test_psql_schema | dE_external_table | foreign table | test_psql_de_role | foreign
- test_psql_schema | dE_foreign_table  | foreign table | test_psql_de_role | foreign
+ test_psql_schema | dE_external_table | foreign table | test_psql_de_role | 
+ test_psql_schema | dE_foreign_table  | foreign table | test_psql_de_role | 
  test_psql_schema | d_ao              | table         | test_psql_de_role | append only
  test_psql_schema | d_aocs            | table         | test_psql_de_role | append only columnar
  test_psql_schema | d_heap            | table         | test_psql_de_role | heap
- test_psql_schema | d_view            | view          | test_psql_de_role | none
+ test_psql_schema | d_view            | view          | test_psql_de_role | 
 (6 rows)
 
 \d+
                                                     List of relations
       Schema      |       Name        |     Type      |       Owner       |       Storage        |  Size   | Description 
 ------------------+-------------------+---------------+-------------------+----------------------+---------+-------------
- test_psql_schema | dE_external_table | foreign table | test_psql_de_role | foreign              | 0 bytes | 
- test_psql_schema | dE_foreign_table  | foreign table | test_psql_de_role | foreign              | 0 bytes | 
+ test_psql_schema | dE_external_table | foreign table | test_psql_de_role |                      | 0 bytes | 
+ test_psql_schema | dE_foreign_table  | foreign table | test_psql_de_role |                      | 0 bytes | 
  test_psql_schema | d_ao              | table         | test_psql_de_role | append only          | 128 kB  | 
  test_psql_schema | d_aocs            | table         | test_psql_de_role | append only columnar | 128 kB  | 
  test_psql_schema | d_heap            | table         | test_psql_de_role | heap                 | 0 bytes | 
- test_psql_schema | d_view            | view          | test_psql_de_role | none                 | 0 bytes | 
+ test_psql_schema | d_view            | view          | test_psql_de_role |                      | 0 bytes | 
 (6 rows)
 
 -- The Storage column is not interesting for indexes, so it's omitted with
@@ -200,7 +200,7 @@ ALTER EXTERNAL TABLE "dE_external_table" OWNER TO test_psql_de_role;
  test_psql_schema | d_ao    | table | test_psql_de_role | append only          | 
  test_psql_schema | d_aocs  | table | test_psql_de_role | append only columnar | 
  test_psql_schema | d_heap  | table | test_psql_de_role | heap                 | 
- test_psql_schema | d_index | index | test_psql_de_role | heap                 | d_heap
+ test_psql_schema | d_index | index | test_psql_de_role |                      | d_heap
 (4 rows)
 
 -- \dE should display both external and foreign tables

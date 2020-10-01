@@ -540,11 +540,11 @@ CREATE TABLE ctest (
 INSERT INTO ctest (id, name) SELECT id, 'Test' || id FROM generate_series(1, 1000) AS id;
 CREATE INDEX ctest_id_idx ON ctest(id);
 \d ctest;
-          Table "public.ctest"
- Column |       Type        | Modifiers 
---------+-------------------+-----------
- id     | bigint            | 
- name   | character varying | 
+                    Table "public.ctest"
+ Column |       Type        | Collation | Nullable | Default 
+--------+-------------------+-----------+----------+---------
+ id     | bigint            |           |          | 
+ name   | character varying |           |          | 
 Indexes:
     "ctest_id_idx" btree (id)
 Distributed randomly

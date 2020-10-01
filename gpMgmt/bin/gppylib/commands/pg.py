@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) Greenplum Inc 2008. All Rights Reserved. 
 #
@@ -8,8 +8,8 @@ import pipes
 
 from gppylib.gplog import *
 from gppylib.gparray import *
-from base import *
-from unix import *
+from .base import *
+from .unix import *
 from gppylib.commands.base import *
 
 logger = get_default_logger()
@@ -161,7 +161,7 @@ class PgControlData(Command):
 
     def get_value(self, name):
         if not self.results:
-            raise Exception, 'Command not yet executed'
+            raise Exception('Command not yet executed')
         if not self.data:
             self.data = {}
             for l in self.results.stdout.split('\n'):
@@ -175,7 +175,7 @@ class PgControlData(Command):
 
 
 class PgBaseBackup(Command):
-    def __init__(self, pgdata, host, port, replication_slot_name=None, excludePaths=[], ctxt=LOCAL, remoteHost=None, forceoverwrite=False, target_gp_dbid=0, logfile=None,
+    def __init__(self, pgdata, host, port, create_slot=False, replication_slot_name=None, excludePaths=[], ctxt=LOCAL, remoteHost=None, forceoverwrite=False, target_gp_dbid=0, logfile=None,
                  recovery_mode=True):
         cmd_tokens = ['pg_basebackup', '-c', 'fast']
         cmd_tokens.append('-D')
@@ -184,7 +184,17 @@ class PgBaseBackup(Command):
         cmd_tokens.append(host)
         cmd_tokens.append('-p')
         cmd_tokens.append(port)
+
+        if create_slot:
+            cmd_tokens.append('--create-slot')
+
         cmd_tokens.extend(self._xlog_arguments(replication_slot_name))
+
+        # GPDB_12_MERGE_FIXME: avoid checking checksum for heap tables
+        # till we code logic to skip/verify checksum for
+        # appendoptimized tables. Enabling this results in basebackup
+        # failures with appendoptimized tables.
+        cmd_tokens.append('--no-verify-checksums')
 
         if forceoverwrite:
             cmd_tokens.append('--force-overwrite')
@@ -223,6 +233,6 @@ class PgBaseBackup(Command):
     @staticmethod
     def _xlog_arguments(replication_slot_name):
         if replication_slot_name:
-            return ["--slot", replication_slot_name, "--xlog-method", "stream"]
+            return ["--slot", replication_slot_name, "--wal-method", "stream"]
         else:
-            return ['--xlog']
+            return ["--wal-method", "fetch"]

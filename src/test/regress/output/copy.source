@@ -15,8 +15,6 @@ COPY tenk1 FROM '@abs_srcdir@/data/tenk.data';
 -- where data distribution might make a difference to a test result.
 CREATE SCHEMA singleseg;
 create table singleseg.tenk1 (like tenk1, distkey int4) distributed by (distkey);
-NOTICE:  OIDS=TRUE is not recommended for user-created tables
-HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 COPY singleseg.tenk1 (unique1,unique2,two,four,ten,twenty,hundred,thousand,twothousand,fivethous,tenthous,odd,even,stringu1,stringu2,string4) FROM '@abs_srcdir@/data/tenk.data';
 COPY slow_emp4000 FROM '@abs_srcdir@/data/rect.data';
 COPY person FROM '@abs_srcdir@/data/person.data';
@@ -129,3 +127,74 @@ SELECT count(*) FROM venue;
     10
 (1 row)
 
+-- test copy from with a partitioned table
+create table parted_copytest (
+	a int,
+	b int,
+	c text
+) partition by list (b);
+create table parted_copytest_a1 (c text, b int, a int);
+create table parted_copytest_a2 (a int, c text, b int);
+alter table parted_copytest_a1 set distributed by (a);
+alter table parted_copytest attach partition parted_copytest_a1 for values in(1);
+alter table parted_copytest attach partition parted_copytest_a2 for values in(2);
+-- We must insert enough rows to trigger multi-inserts.  These are only
+-- enabled adaptively when there are few enough partition changes.
+insert into parted_copytest select x,1,'One' from generate_series(1,1000) x;
+insert into parted_copytest select x,2,'Two' from generate_series(1001,1010) x;
+insert into parted_copytest select x,1,'One' from generate_series(1011,1020) x;
+copy (select * from parted_copytest order by a) to '@abs_builddir@/results/parted_copytest.csv';
+truncate parted_copytest;
+copy parted_copytest from '@abs_builddir@/results/parted_copytest.csv';
+-- Ensure COPY FREEZE errors for partitioned tables.
+begin;
+truncate parted_copytest;
+copy parted_copytest from '@abs_builddir@/results/parted_copytest.csv' (freeze);
+ERROR:  cannot perform COPY FREEZE on a partitioned table
+rollback;
+select tableoid::regclass,count(*),sum(a) from parted_copytest
+group by tableoid order by tableoid::regclass::name;
+      tableoid      | count |  sum   
+--------------------+-------+--------
+ parted_copytest_a1 |  1010 | 510655
+ parted_copytest_a2 |    10 |  10055
+(2 rows)
+
+truncate parted_copytest;
+-- create before insert row trigger on parted_copytest_a2
+create function part_ins_func() returns trigger language plpgsql as $$
+begin
+  return new;
+end;
+$$;
+create trigger part_ins_trig
+	before insert on parted_copytest_a2
+	for each row
+	execute procedure part_ins_func();
+copy parted_copytest from '@abs_builddir@/results/parted_copytest.csv';
+select tableoid::regclass,count(*),sum(a) from parted_copytest
+group by tableoid order by tableoid::regclass::name;
+      tableoid      | count |  sum   
+--------------------+-------+--------
+ parted_copytest_a1 |  1010 | 510655
+ parted_copytest_a2 |    10 |  10055
+(2 rows)
+
+truncate table parted_copytest;
+create index on parted_copytest (b);
+drop trigger part_ins_trig on parted_copytest_a2;
+copy parted_copytest from stdin;
+-- Ensure index entries were properly added during the copy.
+select * from parted_copytest where b = 1;
+ a | b |  c   
+---+---+------
+ 1 | 1 | str1
+(1 row)
+
+select * from parted_copytest where b = 2;
+ a | b |  c   
+---+---+------
+ 2 | 2 | str2
+(1 row)
+
+drop table parted_copytest;

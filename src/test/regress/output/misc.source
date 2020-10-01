@@ -601,17 +601,6 @@ SELECT *, (equipment(CAST((h.*) AS hobbies_r))).name FROM hobbies_r h;
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.equipment_r"
 CONTEXT:  SQL function "equipment" during startup
 --
--- check that old-style C functions work properly with TOASTed values
---
-create table oldstyle_test(i int4, t text);
-insert into oldstyle_test values(null,null);
-insert into oldstyle_test values(0,'12');
-insert into oldstyle_test values(1000,'12');
-insert into oldstyle_test values(0, repeat('x', 50000));
-select i, length(t), octet_length(t), oldstyle_length(i,t) from oldstyle_test;
-ERROR:  Old style C function (API version 0) are no longer supported by Greenplum
-drop table oldstyle_test;
---
 -- functional joins
 --
 --

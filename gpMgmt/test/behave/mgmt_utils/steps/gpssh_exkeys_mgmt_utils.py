@@ -2,10 +2,7 @@ from os import path
 import os
 import shutil
 import socket
-try:
-    import subprocess32 as subprocess
-except:
-    import subprocess
+import subprocess
 import sys
 import tempfile
 
@@ -14,7 +11,7 @@ import pipes
 from behave import given, when, then
 from test.behave_utils.utils import *
 
-from mgmt_utils import *
+from test.behave.mgmt_utils.steps.mgmt_utils import *
 
 class GpsshExkeysMgmtContext:
     """
@@ -81,8 +78,8 @@ def run_exkeys(hosts, capture=False):
         with pipe_out.open('/dev/stdout', 'w') as out, pipe_err.open('/dev/stderr', 'w') as err:
             ret = subprocess.call(args, stdout=out, stderr=err)
 
-        stored_out = temp_out.read()
-        stored_err = temp_err.read()
+        stored_out = temp_out.read().decode()
+        stored_err = temp_err.read().decode()
 
     return ret, stored_out, stored_err
 
@@ -124,11 +121,11 @@ def impl(context, new_hosts):
 
     with old_host_file, new_host_file:
         for h in old_hosts:
-            old_host_file.write(h + '\n')
+            old_host_file.write(h.encode() + b'\n')
         old_host_file.flush()
 
         for h in new_hosts:
-            new_host_file.write(h + '\n')
+            new_host_file.write(h.encode() + b'\n')
         new_host_file.flush()
 
         subprocess.check_call([
@@ -142,7 +139,7 @@ def impl(context, new_hosts):
 def impl(context):
     with tempfile.NamedTemporaryFile() as host_file:
         for h in context.gpssh_exkeys_context.allHosts():
-            host_file.write(h + '\n')
+            host_file.write(h.encode() + b'\n')
         host_file.flush()
 
         subprocess.check_call([
@@ -159,16 +156,14 @@ def impl(context):
         try:
             addrs = socket.getaddrinfo(host, None, socket.AF_INET6)
         except socket.gaierror as err:
-            raise Exception, \
-                "failed to find IPv6 address for host '{}': {}".format(host, err), \
-                sys.exc_info()[2]
+            raise Exception("failed to find IPv6 address for host '{}': {}".format(host, err)).with_traceback(sys.exc_info()[2])
 
         # getaddrinfo() return value is a bit opaque. For AF_INET6, it's a list
         # of (family, socktype, proto, canonname, (address, port, flow info, scope id))
         # nested tuples. We're interested in the address piece of the first
         # entry in that list.
         addr = addrs[0][4][0]
-        print host, "maps to", addr
+        print(host, "maps to", addr)
 
         ipv6_addrs.append(addr)
 
@@ -177,7 +172,7 @@ def impl(context):
 
 @then('all hosts "{works}" reach each other or themselves automatically')
 def impl(context, works):
-    steps = u'''
+    steps = '''
     Then the segment hosts "{0}" reach each other or themselves automatically
      And the segment hosts "{0}" reach the master
      And the master host "{0}" reach itself
@@ -196,11 +191,11 @@ def impl(context, works):
     # we're not using gpssh here because we want to test each connection
     for fromHost in context.gpssh_exkeys_context.segment_hosts:
         for toHost in context.gpssh_exkeys_context.segment_hosts:
-            cmd = u'''
+            cmd = '''
             When the user runs command "ssh -o BatchMode=yes -o StrictHostKeyChecking=yes %s \"ssh -o BatchMode=yes -o StrictHostKeyChecking=yes %s hostname\"" eok
             And ssh should return a return code of %d
             ''' % (fromHost, toHost, ret)
-            print "CMD:%s" % cmd
+            print("CMD:%s" % cmd)
             context.execute_steps(cmd)
 
 

@@ -4,7 +4,7 @@
  *	  POSTGRES LIBPQ buffer structure definitions.
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/libpq/libpq.h
@@ -14,7 +14,6 @@
 #ifndef LIBPQ_H
 #define LIBPQ_H
 
-#include <sys/types.h>
 #include <netinet/in.h>
 
 #include "lib/stringinfo.h"
@@ -33,7 +32,7 @@ typedef struct
 	void		(*endcopyout) (bool errorAbort);
 } PQcommMethods;
 
-extern PGDLLIMPORT PQcommMethods *PqCommMethods;
+extern const PGDLLIMPORT PQcommMethods *PqCommMethods;
 
 #define pq_comm_reset() (PqCommMethods->comm_reset())
 #define pq_flush() (PqCommMethods->flush())
@@ -53,9 +52,11 @@ extern PGDLLIMPORT PQcommMethods *PqCommMethods;
 /*
  * prototypes for functions in pqcomm.c
  */
-extern int StreamServerPort(int family, char *hostName,
-				 unsigned short portNumber, char *unixSocketDir,
-				 pgsocket ListenSocket[], int MaxListen);
+extern WaitEventSet *FeBeWaitSet;
+
+extern int	StreamServerPort(int family, char *hostName,
+							 unsigned short portNumber, char *unixSocketDir,
+							 pgsocket ListenSocket[], int MaxListen);
 extern int	StreamConnection(pgsocket server_fd, Port *port);
 extern void StreamClose(pgsocket sock);
 extern void TouchSocketFiles(void);
@@ -77,15 +78,19 @@ extern bool pq_waitForDataUsingSelect(void);                /* GPDB only */
 /*
  * prototypes for functions in be-secure.c
  */
+extern char *ssl_library;
 extern char *ssl_cert_file;
 extern char *ssl_key_file;
 extern char *ssl_ca_file;
 extern char *ssl_crl_file;
+extern char *ssl_dh_params_file;
+extern char *ssl_passphrase_command;
+extern bool ssl_passphrase_command_supports_reload;
+#ifdef USE_SSL
+extern bool ssl_loaded_verify_locations;
+#endif
 
-extern int	(*pq_putmessage_hook) (char msgtype, const char *s, size_t len);
-extern int	(*pq_flush_hook) (void);
-
-extern int	secure_initialize(void);
+extern int	secure_initialize(bool isServerStart);
 extern bool secure_loaded_verify_locations(void);
 extern void secure_destroy(void);
 extern int	secure_open_server(Port *port);
@@ -95,13 +100,35 @@ extern ssize_t secure_write(Port *port, void *ptr, size_t len);
 extern ssize_t secure_raw_read(Port *port, void *ptr, size_t len);
 extern ssize_t secure_raw_write(Port *port, const void *ptr, size_t len);
 
-extern bool ssl_loaded_verify_locations;
-
-extern WaitEventSet *FeBeWaitSet;
+/*
+ * prototypes for functions in be-secure-gssapi.c
+ */
+#ifdef ENABLE_GSS
+extern ssize_t secure_open_gssapi(Port *port);
+#endif
 
 /* GUCs */
 extern char *SSLCipherSuites;
 extern char *SSLECDHCurve;
 extern bool SSLPreferServerCiphers;
+extern int	ssl_min_protocol_version;
+extern int	ssl_max_protocol_version;
 
-#endif   /* LIBPQ_H */
+enum ssl_protocol_versions
+{
+	PG_TLS_ANY = 0,
+	PG_TLS1_VERSION,
+	PG_TLS1_1_VERSION,
+	PG_TLS1_2_VERSION,
+	PG_TLS1_3_VERSION,
+};
+
+/*
+ * prototypes for functions in be-secure-common.c
+ */
+extern int	run_ssl_passphrase_command(const char *prompt, bool is_server_start,
+									   char *buf, int size);
+extern bool check_ssl_key_file_permissions(const char *ssl_key_file,
+										   bool isServerStart);
+
+#endif							/* LIBPQ_H */

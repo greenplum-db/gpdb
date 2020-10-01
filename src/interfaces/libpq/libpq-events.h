@@ -5,7 +5,7 @@
  *	  that invoke the libpq "events" API, but are not interesting to
  *	  ordinary users of libpq.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/interfaces/libpq/libpq-events.h
@@ -19,7 +19,7 @@
 #include "libpq-fe.h"
 
 #ifdef __cplusplus
-extern		"C"
+extern "C"
 {
 #endif
 
@@ -69,8 +69,8 @@ typedef struct
 typedef int (*PGEventProc) (PGEventId evtId, void *evtInfo, void *passThrough);
 
 /* Registers an event proc with the given PGconn. */
-extern int PQregisterEventProc(PGconn *conn, PGEventProc proc,
-					const char *name, void *passThrough);
+extern int	PQregisterEventProc(PGconn *conn, PGEventProc proc,
+								const char *name, void *passThrough);
 
 /* Sets the PGconn instance data for the provided proc to data. */
 extern int	PQsetInstanceData(PGconn *conn, PGEventProc proc, void *data);
@@ -91,4 +91,4 @@ extern int	PQfireResultCreateEvents(PGconn *conn, PGresult *res);
 }
 #endif
 
-#endif   /* LIBPQ_EVENTS_H */
+#endif							/* LIBPQ_EVENTS_H */

@@ -265,6 +265,8 @@
 				<topicref href="system_catalogs/pg_shdepend.xml"/>
 				<topicref href="system_catalogs/pg_shdescription.xml"/>
 				<topicref href="system_catalogs/pg_stat_activity.xml"/>
+				<topicref href="system_catalogs/pg_stat_indexes.xml"/>
+				<topicref href="system_catalogs/pg_stat_tables.xml"/>
 				<topicref href="system_catalogs/pg_stat_last_operation.xml"/>
 				<topicref href="system_catalogs/pg_stat_last_shoperation.xml"/>
 				<topicref href="system_catalogs/pg_stat_operations.xml"/>

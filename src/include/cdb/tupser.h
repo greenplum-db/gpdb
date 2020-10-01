@@ -85,8 +85,8 @@ extern void SerializeRecordCacheIntoChunks(SerTupInfo *pSerInfo,
 extern int SerializeTuple(TupleTableSlot *tuple, SerTupInfo *pSerInfo, struct directTransportBuffer *b, TupleChunkList tcList, int16 targetRoute);
 
 /* Convert a sequence of chunks containing serialized tuple data into a
- * HeapTuple or MemTuple.
+ * MinimalTuple.
  */
-extern GenericTuple CvtChunksToTup(TupleChunkList tclist, SerTupInfo * pSerInfo, TupleRemapper *remapper);
+extern MinimalTuple CvtChunksToTup(TupleChunkList tclist, SerTupInfo *pSerInfo, TupleRemapper *remapper);
 
 #endif   /* TUPSER_H */

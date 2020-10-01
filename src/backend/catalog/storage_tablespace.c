@@ -1,3 +1,5 @@
+#include "postgres.h"
+
 #include "catalog/storage_tablespace.h"
 
 

@@ -5,7 +5,7 @@
  *	to control oid and relfilenode assignment, and do other special
  *	hacks needed for pg_upgrade.
  *
- *	Copyright (c) 2010-2016, PostgreSQL Global Development Group
+ *	Copyright (c) 2010-2019, PostgreSQL Global Development Group
  *	src/backend/utils/adt/pg_upgrade_support.c
  */
 
@@ -13,6 +13,7 @@
 #include "fmgr.h"
 #include "access/transam.h"
 #include "catalog/binary_upgrade.h"
+#include "catalog/heap.h"
 #include "catalog/namespace.h"
 #include "catalog/oid_dispatch.h"
 #include "catalog/pg_authid.h"
@@ -26,19 +27,6 @@
 #include "utils/array.h"
 #include "utils/builtins.h"
 
-
-Datum		binary_upgrade_set_next_pg_type_oid(PG_FUNCTION_ARGS);
-Datum		binary_upgrade_set_next_array_pg_type_oid(PG_FUNCTION_ARGS);
-Datum		binary_upgrade_set_next_toast_pg_type_oid(PG_FUNCTION_ARGS);
-Datum		binary_upgrade_set_next_heap_pg_class_oid(PG_FUNCTION_ARGS);
-Datum		binary_upgrade_set_next_index_pg_class_oid(PG_FUNCTION_ARGS);
-Datum		binary_upgrade_set_next_toast_pg_class_oid(PG_FUNCTION_ARGS);
-Datum		binary_upgrade_set_next_pg_enum_oid(PG_FUNCTION_ARGS);
-Datum		binary_upgrade_set_next_pg_authid_oid(PG_FUNCTION_ARGS);
-Datum		binary_upgrade_create_empty_extension(PG_FUNCTION_ARGS);
-Datum		binary_upgrade_set_record_init_privs(PG_FUNCTION_ARGS);
-Datum		binary_upgrade_set_next_pg_namespace_oid(PG_FUNCTION_ARGS);
-Datum		binary_upgrade_set_preassigned_oids(PG_FUNCTION_ARGS);
 
 #define GET_STR(textp) DatumGetCString(DirectFunctionCall1(textout, PointerGetDatum(textp)))
 
@@ -86,8 +74,6 @@ binary_upgrade_set_next_toast_pg_type_oid(PG_FUNCTION_ARGS)
 	char	   *typname = GET_STR(PG_GETARG_TEXT_P(2));
 
 	CHECK_IS_BINARY_UPGRADE;
-	binary_upgrade_next_toast_pg_type_oid++;
-
 	AddPreassignedOidFromBinaryUpgrade(typoid, TypeRelationId, typname,
 						typnamespaceoid, InvalidOid, InvalidOid);
 
@@ -130,8 +116,6 @@ binary_upgrade_set_next_toast_pg_class_oid(PG_FUNCTION_ARGS)
 	char		*relname = GET_STR(PG_GETARG_TEXT_P(2));
 
 	CHECK_IS_BINARY_UPGRADE;
-	binary_upgrade_next_toast_pg_class_oid++;
-
 	AddPreassignedOidFromBinaryUpgrade(reloid, RelationRelationId, relname,
 									   relnamespace, InvalidOid, InvalidOid);
 
@@ -216,8 +200,7 @@ binary_upgrade_create_empty_extension(PG_FUNCTION_ARGS)
 						  &textDatums, NULL, &ndatums);
 		for (i = 0; i < ndatums; i++)
 		{
-			text	   *txtname = DatumGetTextPP(textDatums[i]);
-			char	   *extName = text_to_cstring(txtname);
+			char	   *extName = TextDatumGetCString(textDatums[i]);
 			Oid			extOid = get_extension_oid(extName, false);
 
 			requiredExtensions = lappend_oid(requiredExtensions, extOid);
@@ -226,7 +209,7 @@ binary_upgrade_create_empty_extension(PG_FUNCTION_ARGS)
 
 	InsertExtensionTuple(text_to_cstring(extName),
 						 GetUserId(),
-					   get_namespace_oid(text_to_cstring(schemaName), false),
+						 get_namespace_oid(text_to_cstring(schemaName), false),
 						 relocatable,
 						 text_to_cstring(extVersion),
 						 extConfig,
@@ -283,6 +266,21 @@ binary_upgrade_set_preassigned_oids(PG_FUNCTION_ARGS)
 
 		MarkOidPreassignedFromBinaryUpgrade(oid);
 	}
+
+	PG_RETURN_VOID();
+}
+
+Datum
+binary_upgrade_set_missing_value(PG_FUNCTION_ARGS)
+{
+	Oid			table_id = PG_GETARG_OID(0);
+	text	   *attname = PG_GETARG_TEXT_P(1);
+	text	   *value = PG_GETARG_TEXT_P(2);
+	char	   *cattname = text_to_cstring(attname);
+	char	   *cvalue = text_to_cstring(value);
+
+	CHECK_IS_BINARY_UPGRADE;
+	SetAttrMissing(table_id, cattname, cvalue);
 
 	PG_RETURN_VOID();
 }

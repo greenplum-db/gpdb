@@ -3,7 +3,7 @@
  * syslogger.h
  *	  Exports from postmaster/syslogger.c.
  *
- * Copyright (c) 2004-2016, PostgreSQL Global Development Group
+ * Copyright (c) 2004-2019, PostgreSQL Global Development Group
  *
  * src/include/postmaster/syslogger.h
  *
@@ -196,4 +196,14 @@ extern int syslogger_write_str(const char *data, int len, bool amsyslogger, bool
 extern void SysLoggerMain(int argc, char *argv[]) pg_attribute_noreturn();
 #endif
 
-#endif   /* _SYSLOGGER_H */
+extern bool CheckLogrotateSignal(void);
+extern void RemoveLogrotateSignalFiles(void);
+
+/*
+ * Name of files saving meta-data information about the log
+ * files currently in use by the syslogger
+ */
+#define LOG_METAINFO_DATAFILE  "current_logfiles"
+#define LOG_METAINFO_DATAFILE_TMP  LOG_METAINFO_DATAFILE ".tmp"
+
+#endif							/* _SYSLOGGER_H */

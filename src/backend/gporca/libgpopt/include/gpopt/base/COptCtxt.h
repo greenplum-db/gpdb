@@ -22,279 +22,276 @@
 
 namespace gpopt
 {
-	using namespace gpos;
-	
-	// forward declarations
-	class CColRefSet;
-	class COptimizerConfig;
-	class ICostModel;
-	class IConstExprEvaluator;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		COptCtxt
-	//
-	//	@doc:
-	//		"Optimizer Context" is a container of global objects (mostly
-	//		singletons) that are needed by the optimizer.
-	//
-	//		A COptCtxt object is instantiated in COptimizer::PdxlnOptimize() via
-	//		COptCtxt::PoctxtCreate() and stored as a task local object. The global
-	//		information contained in it can be accessed by calling
-	//		COptCtxt::PoctxtFromTLS(), instead of passing a pointer to it all
-	//		around. For example to get the global CMDAccessor:
-	//			CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
-	//
-	//---------------------------------------------------------------------------
-	class COptCtxt : public CTaskLocalStorageObject
+// forward declarations
+class CColRefSet;
+class COptimizerConfig;
+class ICostModel;
+class IConstExprEvaluator;
+
+//---------------------------------------------------------------------------
+//	@class:
+//		COptCtxt
+//
+//	@doc:
+//		"Optimizer Context" is a container of global objects (mostly
+//		singletons) that are needed by the optimizer.
+//
+//		A COptCtxt object is instantiated in COptimizer::PdxlnOptimize() via
+//		COptCtxt::PoctxtCreate() and stored as a task local object. The global
+//		information contained in it can be accessed by calling
+//		COptCtxt::PoctxtFromTLS(), instead of passing a pointer to it all
+//		around. For example to get the global CMDAccessor:
+//			CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
+//
+//---------------------------------------------------------------------------
+class COptCtxt : public CTaskLocalStorageObject
+{
+private:
+	// private copy ctor
+	COptCtxt(COptCtxt &);
+
+	// shared memory pool
+	CMemoryPool *m_mp;
+
+	// column factory
+	CColumnFactory *m_pcf;
+
+	// metadata accessor;
+	CMDAccessor *m_pmda;
+
+	// cost model
+	ICostModel *m_cost_model;
+
+	// constant expression evaluator
+	IConstExprEvaluator *m_pceeval;
+
+	// comparator between IDatum instances
+	IComparator *m_pcomp;
+
+	// atomic counter for generating part index ids
+	ULONG m_auPartId;
+
+	// global CTE information
+	CCTEInfo *m_pcteinfo;
+
+	// system columns required in query output
+	CColRefArray *m_pdrgpcrSystemCols;
+
+	// optimizer configurations
+	COptimizerConfig *m_optimizer_config;
+
+	// whether or not we are optimizing a DML query
+	BOOL m_fDMLQuery;
+
+	// value for the first valid part id
+	static ULONG m_ulFirstValidPartId;
+
+	// if there are master only tables in the query
+	BOOL m_has_master_only_tables;
+
+	// does the query contain any volatile functions or
+	// functions that read/modify SQL data
+	BOOL m_has_volatile_or_SQL_func;
+
+	// does the query have replicated tables
+	BOOL m_has_replicated_tables;
+
+	// does this plan have a direct dispatchable filter
+	CExpressionArray *m_direct_dispatchable_filters;
+
+public:
+	// ctor
+	COptCtxt(CMemoryPool *mp, CColumnFactory *col_factory,
+			 CMDAccessor *md_accessor, IConstExprEvaluator *pceeval,
+			 COptimizerConfig *optimizer_config);
+
+	// dtor
+	virtual ~COptCtxt();
+
+	// memory pool accessor
+	CMemoryPool *
+	Pmp() const
 	{
+		return m_mp;
+	}
 
-		private:
+	// optimizer configurations
+	COptimizerConfig *
+	GetOptimizerConfig() const
+	{
+		return m_optimizer_config;
+	}
 
-			// private copy ctor
-			COptCtxt(COptCtxt &);
+	// are we optimizing a DML query
+	BOOL
+	FDMLQuery() const
+	{
+		return m_fDMLQuery;
+	}
 
-			// shared memory pool
-			CMemoryPool *m_mp;
-		
-			// column factory
-			CColumnFactory *m_pcf;
+	// set the DML flag
+	void
+	MarkDMLQuery(BOOL fDMLQuery)
+	{
+		m_fDMLQuery = fDMLQuery;
+	}
 
-			// metadata accessor;
-			CMDAccessor *m_pmda;
+	void
+	SetHasMasterOnlyTables()
+	{
+		m_has_master_only_tables = true;
+	}
 
-			// cost model
-			ICostModel *m_cost_model;
+	void
+	SetHasVolatileOrSQLFunc()
+	{
+		m_has_volatile_or_SQL_func = true;
+	}
 
-			// constant expression evaluator
-			IConstExprEvaluator *m_pceeval;
+	void
+	SetHasReplicatedTables()
+	{
+		m_has_replicated_tables = true;
+	}
 
-			// comparator between IDatum instances
-			IComparator *m_pcomp;
+	void
+	AddDirectDispatchableFilterCandidate(CExpression *filter_expression)
+	{
+		filter_expression->AddRef();
+		m_direct_dispatchable_filters->Append(filter_expression);
+	}
 
-			// atomic counter for generating part index ids
-			ULONG m_auPartId;
+	BOOL
+	HasMasterOnlyTables() const
+	{
+		return m_has_master_only_tables;
+	}
 
-			// global CTE information
-			CCTEInfo *m_pcteinfo;
+	BOOL
+	HasVolatileOrSQLFunc() const
+	{
+		return m_has_volatile_or_SQL_func;
+	}
 
-			// system columns required in query output
-			CColRefArray *m_pdrgpcrSystemCols;
+	BOOL
+	HasReplicatedTables() const
+	{
+		return m_has_replicated_tables;
+	}
 
-			// optimizer configurations
-			COptimizerConfig *m_optimizer_config;
+	CExpressionArray *
+	GetDirectDispatchableFilters() const
+	{
+		return m_direct_dispatchable_filters;
+	}
 
-			// whether or not we are optimizing a DML query
-			BOOL m_fDMLQuery;
+	BOOL
+	OptimizeDMLQueryWithSingletonSegment() const
+	{
+		// A DML statement can be optimized by enforcing a gather motion on segment instead of master,
+		// whenever a singleton execution is needed.
+		// This optmization can not be applied if the query contains any of the following:
+		// (1). master-only tables
+		// (2). a volatile function
+		// (3). a function SQL dataaccess: EfdaContainsSQL or EfdaReadsSQLData or EfdaModifiesSQLData
+		//      In such cases, it is safe to *always* enforce gather motion on master as there is no way to determine
+		//      if the SQL contains any master-only tables.
+		return !GPOS_FTRACE(EopttraceDisableNonMasterGatherForDML) &&
+			   FDMLQuery() && !HasMasterOnlyTables() && !HasVolatileOrSQLFunc();
+	}
 
-			// value for the first valid part id
-			static
-			ULONG m_ulFirstValidPartId;
+	// column factory accessor
+	CColumnFactory *
+	Pcf() const
+	{
+		return m_pcf;
+	}
 
-			// if there are master only tables in the query
-			BOOL m_has_master_only_tables;
+	// metadata accessor
+	CMDAccessor *
+	Pmda() const
+	{
+		return m_pmda;
+	}
 
-			// does the query contain any volatile functions or
-			// functions that read/modify SQL data
-			BOOL m_has_volatile_or_SQL_func;
+	// cost model accessor
+	ICostModel *
+	GetCostModel() const
+	{
+		return m_cost_model;
+	}
 
-			// does the query have replicated tables
-			BOOL m_has_replicated_tables;
+	// constant expression evaluator
+	IConstExprEvaluator *
+	Pceeval()
+	{
+		return m_pceeval;
+	}
 
-			// does this plan have a direct dispatchable filter
-			CExpressionArray  *m_direct_dispatchable_filters;
+	// comparator
+	const IComparator *
+	Pcomp()
+	{
+		return m_pcomp;
+	}
 
-		public:
+	// cte info
+	CCTEInfo *
+	Pcteinfo()
+	{
+		return m_pcteinfo;
+	}
 
-			// ctor
-			COptCtxt
-				(
-				CMemoryPool *mp,
-				CColumnFactory *col_factory,
-				CMDAccessor *md_accessor,
-				IConstExprEvaluator *pceeval,
-				COptimizerConfig *optimizer_config
-				);
+	// return a new part index id
+	ULONG
+	UlPartIndexNextVal()
+	{
+		return m_auPartId++;
+	}
 
-			// dtor
-			virtual
-			~COptCtxt();
+	// required system columns
+	CColRefArray *
+	PdrgpcrSystemCols() const
+	{
+		return m_pdrgpcrSystemCols;
+	}
 
-			// memory pool accessor
-			CMemoryPool *Pmp() const
-			{
-				return m_mp;
-			}
-			
-			// optimizer configurations
-			COptimizerConfig *GetOptimizerConfig() const
-			{
-				return m_optimizer_config;
-			}
+	// set required system columns
+	void
+	SetReqdSystemCols(CColRefArray *pdrgpcrSystemCols)
+	{
+		GPOS_ASSERT(NULL != pdrgpcrSystemCols);
 
-			// are we optimizing a DML query
-			BOOL FDMLQuery() const
-			{
-				return m_fDMLQuery;
-			}
+		CRefCount::SafeRelease(m_pdrgpcrSystemCols);
+		m_pdrgpcrSystemCols = pdrgpcrSystemCols;
+	}
 
-			// set the DML flag
-			void MarkDMLQuery
-				(
-				BOOL fDMLQuery
-				)
-			{
-				m_fDMLQuery = fDMLQuery;
-			}
+	// factory method
+	static COptCtxt *PoctxtCreate(CMemoryPool *mp, CMDAccessor *md_accessor,
+								  IConstExprEvaluator *pceeval,
+								  COptimizerConfig *optimizer_config);
 
-			void SetHasMasterOnlyTables()
-			{
-				m_has_master_only_tables = true;
-			}
+	// shorthand to retrieve opt context from TLS
+	inline static COptCtxt *
+	PoctxtFromTLS()
+	{
+		return reinterpret_cast<COptCtxt *>(
+			ITask::Self()->GetTls().Get(CTaskLocalStorage::EtlsidxOptCtxt));
+	}
 
-			void SetHasVolatileOrSQLFunc()
-			{
-				m_has_volatile_or_SQL_func = true;
-			}
-
-			void SetHasReplicatedTables()
-			{
-				m_has_replicated_tables = true;
-			}
-
-			void AddDirectDispatchableFilterCandidate(CExpression *filter_expression)
-			{
-				filter_expression->AddRef();
-				m_direct_dispatchable_filters->Append(filter_expression);
-			}
-
-			BOOL HasMasterOnlyTables() const
-			{
-				return m_has_master_only_tables;
-			}
-
-			BOOL HasVolatileOrSQLFunc() const
-			{
-				return m_has_volatile_or_SQL_func;
-			}
-
-			BOOL HasReplicatedTables() const
-			{
-				return m_has_replicated_tables;
-			}
-
-			CExpressionArray* GetDirectDispatchableFilters() const
-			{
-				return m_direct_dispatchable_filters;
-			}
-
-			BOOL OptimizeDMLQueryWithSingletonSegment() const
-			{
-				// A DML statement can be optimized by enforcing a gather motion on segment instead of master,
-				// whenever a singleton execution is needed.
-				// This optmization can not be applied if the query contains any of the following:
-				// (1). master-only tables
-				// (2). a volatile function
-				// (3). a function SQL dataaccess: EfdaContainsSQL or EfdaReadsSQLData or EfdaModifiesSQLData
-				//      In such cases, it is safe to *always* enforce gather motion on master as there is no way to determine
-				//      if the SQL contains any master-only tables.
-				return !GPOS_FTRACE(EopttraceDisableNonMasterGatherForDML) &&
-					FDMLQuery() &&
-					!HasMasterOnlyTables() &&
-					!HasVolatileOrSQLFunc();
-			}
-
-			// column factory accessor
-			CColumnFactory *Pcf() const
-			{
-				return m_pcf;
-			}
-			
-			// metadata accessor
-			CMDAccessor *Pmda() const
-			{
-				return m_pmda;
-			}
-
-			// cost model accessor
-			ICostModel *GetCostModel() const
-			{
-				return m_cost_model;
-			}
-
-			// constant expression evaluator
-			IConstExprEvaluator *Pceeval()
-			{
-				return m_pceeval;
-			}
-
-			// comparator
-			const IComparator *Pcomp()
-			{
-				return m_pcomp;
-			}
-
-			// cte info
-			CCTEInfo *Pcteinfo()
-			{
-				return m_pcteinfo;
-			}
-
-			// return a new part index id
-			ULONG UlPartIndexNextVal()
-			{
-				return m_auPartId++;
-			}
-			
-			// required system columns
-			CColRefArray *PdrgpcrSystemCols() const
-			{
-				return m_pdrgpcrSystemCols;
-			}
-
-			// set required system columns
-			void SetReqdSystemCols
-				(
-				CColRefArray *pdrgpcrSystemCols
-				)
-			{
-				GPOS_ASSERT(NULL != pdrgpcrSystemCols);
-
-				CRefCount::SafeRelease(m_pdrgpcrSystemCols);
-				m_pdrgpcrSystemCols = pdrgpcrSystemCols;
-			}
-
-			// factory method
-			static
-			COptCtxt *PoctxtCreate
-						(
-						CMemoryPool *mp,
-						CMDAccessor *md_accessor,
-						IConstExprEvaluator *pceeval,
-						COptimizerConfig *optimizer_config
-						);
-			
-			// shorthand to retrieve opt context from TLS
-			inline
-			static
-			COptCtxt *PoctxtFromTLS()
-			{
-				return reinterpret_cast<COptCtxt*>(ITask::Self()->GetTls().Get(CTaskLocalStorage::EtlsidxOptCtxt));
-			}
-			
-			// return true if all enforcers are enabled
-			static
-			BOOL FAllEnforcersEnabled();
+	// return true if all enforcers are enabled
+	static BOOL FAllEnforcersEnabled();
 
 #ifdef GPOS_DEBUG
-			virtual
-			IOstream &OsPrint(IOstream &) const;
-#endif // GPOS_DEBUG
+	virtual IOstream &OsPrint(IOstream &) const;
+#endif	// GPOS_DEBUG
 
-	}; // class COptCtxt
-}
+};	// class COptCtxt
+}  // namespace gpopt
 
 
-#endif // !GPOPT_COptCtxt_H
+#endif	// !GPOPT_COptCtxt_H
 
 // EOF

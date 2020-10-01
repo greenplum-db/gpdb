@@ -3,7 +3,7 @@
  * sinval.c
  *	  POSTGRES shared cache invalidation communication code.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -76,7 +76,7 @@ SendSharedInvalidMessages(const SharedInvalidationMessage *msgs, int n)
  */
 void
 ReceiveSharedInvalidMessages(
-					  void (*invalFunction) (SharedInvalidationMessage *msg),
+							 void (*invalFunction) (SharedInvalidationMessage *msg),
 							 void (*resetFunction) (void))
 {
 #define MAXINVALMSGS 32

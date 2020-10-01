@@ -17,7 +17,7 @@
  * line and start/end of string.  Colors are numbered 0..C-1, but note that
  * color 0 is "white" (all unused characters) and can generally be ignored.
  *
- * Portions Copyright (c) 2013-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2013-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1998, 1999 Henry Spencer
  *
  * IDENTIFICATION
@@ -44,7 +44,7 @@ extern int	pg_reg_getinitialstate(const regex_t *regex);
 extern int	pg_reg_getfinalstate(const regex_t *regex);
 extern int	pg_reg_getnumoutarcs(const regex_t *regex, int st);
 extern void pg_reg_getoutarcs(const regex_t *regex, int st,
-				  regex_arc_t *arcs, int arcs_len);
+							  regex_arc_t *arcs, int arcs_len);
 
 /* Functions for gathering information about colors */
 extern int	pg_reg_getnumcolors(const regex_t *regex);
@@ -52,6 +52,6 @@ extern int	pg_reg_colorisbegin(const regex_t *regex, int co);
 extern int	pg_reg_colorisend(const regex_t *regex, int co);
 extern int	pg_reg_getnumcharacters(const regex_t *regex, int co);
 extern void pg_reg_getcharacters(const regex_t *regex, int co,
-					 pg_wchar *chars, int chars_len);
+								 pg_wchar *chars, int chars_len);
 
-#endif   /* _REGEXPORT_H_ */
+#endif							/* _REGEXPORT_H_ */

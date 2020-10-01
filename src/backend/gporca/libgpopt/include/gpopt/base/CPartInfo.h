@@ -18,195 +18,176 @@
 // fwd decl
 namespace gpmd
 {
-	class IMDId;
+class IMDId;
 }
 
 namespace gpopt
 {
-	using namespace gpos;
-	using namespace gpmd;
+using namespace gpos;
+using namespace gpmd;
 
-	// fwd decl
-	class CPartConstraint;
+// fwd decl
+class CPartConstraint;
 
+//---------------------------------------------------------------------------
+//	@class:
+//		CPartInfo
+//
+//	@doc:
+//		Derived partition information at the logical level
+//
+//---------------------------------------------------------------------------
+class CPartInfo : public CRefCount
+{
+private:
 	//---------------------------------------------------------------------------
 	//	@class:
-	//		CPartInfo
+	//		CPartInfoEntry
 	//
 	//	@doc:
-	//		Derived partition information at the logical level
+	//		A single entry of the CPartInfo
 	//
 	//---------------------------------------------------------------------------
-	class CPartInfo : public CRefCount
+	class CPartInfoEntry : public CRefCount
 	{
-		private:
+	private:
+		// scan id
+		ULONG m_scan_id;
 
-			//---------------------------------------------------------------------------
-			//	@class:
-			//		CPartInfoEntry
-			//
-			//	@doc:
-			//		A single entry of the CPartInfo
-			//
-			//---------------------------------------------------------------------------
-			class CPartInfoEntry : public CRefCount
-			{
+		// partition table mdid
+		IMDId *m_mdid;
 
-				private:
+		// partition keys
+		CPartKeysArray *m_pdrgppartkeys;
 
-					// scan id
-					ULONG m_scan_id;
+		// part constraint of the relation
+		CPartConstraint *m_ppartcnstrRel;
 
-					// partition table mdid
-					IMDId *m_mdid;
+		// private copy ctor
+		CPartInfoEntry(const CPartInfoEntry &);
 
-					// partition keys
-					CPartKeysArray *m_pdrgppartkeys;
+	public:
+		// ctor
+		CPartInfoEntry(ULONG scan_id, IMDId *mdid,
+					   CPartKeysArray *pdrgppartkeys,
+					   CPartConstraint *ppartcnstrRel);
 
-					// part constraint of the relation
-					CPartConstraint *m_ppartcnstrRel;
+		// dtor
+		virtual ~CPartInfoEntry();
 
-					// private copy ctor
-					CPartInfoEntry(const CPartInfoEntry &);
+		// scan id
+		virtual ULONG
+		ScanId() const
+		{
+			return m_scan_id;
+		}
 
-				public:
+		// relation part constraint
+		CPartConstraint *
+		PpartcnstrRel() const
+		{
+			return m_ppartcnstrRel;
+		}
 
-					// ctor
-					CPartInfoEntry(ULONG scan_id, IMDId *mdid, CPartKeysArray *pdrgppartkeys, CPartConstraint *ppartcnstrRel);
+		// create a copy of the current object, and add a set of remapped
+		// part keys to this entry, using the existing keys and the given hashmap
+		CPartInfoEntry *PpartinfoentryAddRemappedKeys(
+			CMemoryPool *mp, CColRefSet *pcrs,
+			UlongToColRefMap *colref_mapping);
 
-					// dtor
-					virtual
-					~CPartInfoEntry();
+		// mdid of partition table
+		virtual IMDId *
+		MDId() const
+		{
+			return m_mdid;
+		}
 
-					// scan id
-					virtual
-					ULONG ScanId() const
-					{
-						return m_scan_id;
-					}
+		// partition keys of partition table
+		virtual CPartKeysArray *
+		Pdrgppartkeys() const
+		{
+			return m_pdrgppartkeys;
+		}
 
-					// relation part constraint
-					CPartConstraint *PpartcnstrRel() const
-					{
-						return m_ppartcnstrRel;
-					}
+		// print function
+		virtual IOstream &OsPrint(IOstream &os) const;
 
-					// create a copy of the current object, and add a set of remapped
-					// part keys to this entry, using the existing keys and the given hashmap
-					CPartInfoEntry *PpartinfoentryAddRemappedKeys(CMemoryPool *mp, CColRefSet *pcrs, UlongToColRefMap *colref_mapping);
+		// copy part info entry into given memory pool
+		CPartInfoEntry *PpartinfoentryCopy(CMemoryPool *mp);
 
-					// mdid of partition table
-					virtual
-					IMDId *MDId() const
-					{
-						return m_mdid;
-					}
+	};	// CPartInfoEntry
 
-					// partition keys of partition table
-					virtual
-					CPartKeysArray *Pdrgppartkeys() const
-					{
-						return m_pdrgppartkeys;
-					}
+	typedef CDynamicPtrArray<CPartInfoEntry, CleanupRelease>
+		CPartInfoEntryArray;
 
-					// print function
-					virtual
-					IOstream &OsPrint(IOstream &os) const;
+	// partition table consumers
+	CPartInfoEntryArray *m_pdrgppartentries;
 
-					// copy part info entry into given memory pool
-					CPartInfoEntry *PpartinfoentryCopy(CMemoryPool *mp);
+	// private ctor
+	explicit CPartInfo(CPartInfoEntryArray *pdrgppartentries);
 
-			}; // CPartInfoEntry
+	//private copy ctor
+	CPartInfo(const CPartInfo &);
 
-			typedef CDynamicPtrArray<CPartInfoEntry, CleanupRelease> CPartInfoEntryArray;
+public:
+	// ctor
+	explicit CPartInfo(CMemoryPool *mp);
 
-			// partition table consumers
-			CPartInfoEntryArray *m_pdrgppartentries;
+	// dtor
+	virtual ~CPartInfo();
 
-			// private ctor
-			explicit
-			CPartInfo(CPartInfoEntryArray *pdrgppartentries);
-
-			//private copy ctor
-			CPartInfo(const CPartInfo &);
-
-		public:
-
-			// ctor
-			explicit
-			CPartInfo(CMemoryPool *mp);
-
-			// dtor
-			virtual
-			~CPartInfo();
-
-			// number of part table consumers
-			ULONG UlConsumers() const
-			{
-				return m_pdrgppartentries->Size();
-			}
-
-			// add part table consumer
-			void AddPartConsumer
-				(
-				CMemoryPool *mp,
-				ULONG scan_id,
-				IMDId *mdid,
-				CColRef2dArray *pdrgpdrgpcrPart,
-				CPartConstraint *ppartcnstrRel
-				);
-
-			// scan id of the entry at the given position
-			ULONG ScanId(ULONG ulPos)	const;
-
-			// relation mdid of the entry at the given position
-			IMDId *GetRelMdId(ULONG ulPos) const;
-
-			// part keys of the entry at the given position
-			CPartKeysArray *Pdrgppartkeys(ULONG ulPos) const;
-
-			// part constraint of the entry at the given position
-			CPartConstraint *Ppartcnstr(ULONG ulPos) const;
-
-			// check if part info contains given scan id
-			BOOL FContainsScanId(ULONG scan_id) const;
-
-			// part keys of the entry with the given scan id
-			CPartKeysArray *PdrgppartkeysByScanId(ULONG scan_id) const;
-
-			// return a new part info object with an additional set of remapped keys
-			CPartInfo *PpartinfoWithRemappedKeys
-				(
-				CMemoryPool *mp,
-				CColRefArray *pdrgpcrSrc,
-				CColRefArray *pdrgpcrDest
-				)
-				const;
-
-			// print
-			virtual
-			IOstream &OsPrint(IOstream &) const;
-
-			// combine two part info objects
-			static
-			CPartInfo *PpartinfoCombine
-				(
-				CMemoryPool *mp,
-				CPartInfo *ppartinfoFst,
-				CPartInfo *ppartinfoSnd
-				);
-
-	}; // CPartInfo
-
-	// shorthand for printing
-	inline
-	IOstream &operator << (IOstream &os, CPartInfo &partinfo)
+	// number of part table consumers
+	ULONG
+	UlConsumers() const
 	{
-		return partinfo.OsPrint(os);
+		return m_pdrgppartentries->Size();
 	}
-}
 
-#endif // !GPOPT_CPartInfo_H
+	// add part table consumer
+	void AddPartConsumer(CMemoryPool *mp, ULONG scan_id, IMDId *mdid,
+						 CColRef2dArray *pdrgpdrgpcrPart,
+						 CPartConstraint *ppartcnstrRel);
+
+	// scan id of the entry at the given position
+	ULONG ScanId(ULONG ulPos) const;
+
+	// relation mdid of the entry at the given position
+	IMDId *GetRelMdId(ULONG ulPos) const;
+
+	// part keys of the entry at the given position
+	CPartKeysArray *Pdrgppartkeys(ULONG ulPos) const;
+
+	// part constraint of the entry at the given position
+	CPartConstraint *Ppartcnstr(ULONG ulPos) const;
+
+	// check if part info contains given scan id
+	BOOL FContainsScanId(ULONG scan_id) const;
+
+	// part keys of the entry with the given scan id
+	CPartKeysArray *PdrgppartkeysByScanId(ULONG scan_id) const;
+
+	// return a new part info object with an additional set of remapped keys
+	CPartInfo *PpartinfoWithRemappedKeys(CMemoryPool *mp,
+										 CColRefArray *pdrgpcrSrc,
+										 CColRefArray *pdrgpcrDest) const;
+
+	// print
+	virtual IOstream &OsPrint(IOstream &) const;
+
+	// combine two part info objects
+	static CPartInfo *PpartinfoCombine(CMemoryPool *mp, CPartInfo *ppartinfoFst,
+									   CPartInfo *ppartinfoSnd);
+
+};	// CPartInfo
+
+// shorthand for printing
+inline IOstream &
+operator<<(IOstream &os, CPartInfo &partinfo)
+{
+	return partinfo.OsPrint(os);
+}
+}  // namespace gpopt
+
+#endif	// !GPOPT_CPartInfo_H
 
 // EOF
-

@@ -31,7 +31,7 @@ returning distkey, partkey, t;
 update returning_parttab set partkey = 9 where partkey = 3 returning *;
 update returning_parttab set partkey = 19 where partkey = 13 returning *;
 
--- update that moves the tuple across partitions (not supported)
+-- update that moves the tuple across partitions
 update returning_parttab set partkey = 18 where partkey = 4 returning *;
 
 -- delete
@@ -63,3 +63,7 @@ INSERT INTO returning_disttest VALUES (1), (2);
 UPDATE returning_disttest SET id = id + 1;
 
 SELECT * FROM returning_disttest;
+
+-- Test an UPDATE that moves the row to different segment and different partition
+UPDATE returning_parttab SET distkey = 2, partkey = 13 WHERE partkey = 2 RETURNING distkey, partkey, t;
+select * from returning_parttab WHERE distkey = 2 AND partkey = 13;

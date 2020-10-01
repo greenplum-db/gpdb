@@ -8,6 +8,9 @@ setup
  INSERT INTO c1 VALUES(10);
  CREATE TABLE c2 (a integer);
  INSERT INTO c2 VALUES(100);
+
+ -- GPDB: cannot alter column 'a' if it's the distribution key
+ alter table p set distributed randomly;
 }
 
 teardown

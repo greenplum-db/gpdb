@@ -1280,9 +1280,6 @@ class spawn(object):
             if pid == 0:
                 return True
 
-        if pid == 0:
-            return True
-
         if os.WIFEXITED(status):
             self.status = status
             self.exitstatus = os.WEXITSTATUS(status)

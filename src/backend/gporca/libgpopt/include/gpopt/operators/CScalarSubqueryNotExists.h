@@ -17,71 +17,60 @@
 
 namespace gpopt
 {
+using namespace gpos;
 
-	using namespace gpos;
+//---------------------------------------------------------------------------
+//	@class:
+//		CScalarSubqueryNotExists
+//
+//	@doc:
+//		Scalar subquery NOT EXISTS.
+//
+//---------------------------------------------------------------------------
+class CScalarSubqueryNotExists : public CScalarSubqueryExistential
+{
+private:
+	// private copy ctor
+	CScalarSubqueryNotExists(const CScalarSubqueryNotExists &);
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CScalarSubqueryNotExists
-	//
-	//	@doc:
-	//		Scalar subquery NOT EXISTS.
-	//
-	//---------------------------------------------------------------------------
-	class CScalarSubqueryNotExists : public CScalarSubqueryExistential
+public:
+	// ctor
+	CScalarSubqueryNotExists(CMemoryPool *mp) : CScalarSubqueryExistential(mp)
 	{
+	}
 
-		private:
+	// dtor
+	virtual ~CScalarSubqueryNotExists()
+	{
+	}
 
-			// private copy ctor
-			CScalarSubqueryNotExists(const CScalarSubqueryNotExists &);
+	// ident accessors
+	virtual EOperatorId
+	Eopid() const
+	{
+		return EopScalarSubqueryNotExists;
+	}
 
-		public:
+	// return a string for scalar subquery
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CScalarSubqueryNotExists";
+	}
 
-			// ctor
-			CScalarSubqueryNotExists
-				(
-				CMemoryPool *mp
-				)
-				:
-				CScalarSubqueryExistential(mp)
-			{}
+	// conversion function
+	static CScalarSubqueryNotExists *
+	PopConvert(COperator *pop)
+	{
+		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(EopScalarSubqueryNotExists == pop->Eopid());
 
-			// dtor
-			virtual
-			~CScalarSubqueryNotExists()
-			{}
+		return reinterpret_cast<CScalarSubqueryNotExists *>(pop);
+	}
 
-			// ident accessors
-			virtual
-			EOperatorId Eopid() const
-			{
-				return EopScalarSubqueryNotExists;
-			}
+};	// class CScalarSubqueryNotExists
+}  // namespace gpopt
 
-			// return a string for scalar subquery
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CScalarSubqueryNotExists";
-			}
-
-			// conversion function
-			static
-			CScalarSubqueryNotExists *PopConvert
-				(
-				COperator *pop
-				)
-			{
-				GPOS_ASSERT(NULL != pop);
-				GPOS_ASSERT(EopScalarSubqueryNotExists == pop->Eopid());
-
-				return reinterpret_cast<CScalarSubqueryNotExists*>(pop);
-			}
-
-	}; // class CScalarSubqueryNotExists
-}
-
-#endif // !GPOPT_CScalarSubqueryNotExists_H
+#endif	// !GPOPT_CScalarSubqueryNotExists_H
 
 // EOF

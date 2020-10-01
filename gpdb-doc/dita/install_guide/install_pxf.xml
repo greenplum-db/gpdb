@@ -5,8 +5,8 @@
     <title id="ji162527xx">Greenplum Platform Extension Framework (PXF)</title>
     <body>
       <p><i>Optional.</i> If you do not plan to use PXF, no action is necessary.</p>
-      <p>If you plan to use PXF, refer to <xref href="../pxf/instcfg_pxf.html" type="topic"
-          format="html">Configuring PXF</xref> for instructions.</p>
+      <p>If you plan to use PXF, refer to <xref href="../admin_guide/external/pxf-overview.xml"
+        type="topic"></xref> for introductory PXF information.</p>
     </body>
   </topic>
 </dita>

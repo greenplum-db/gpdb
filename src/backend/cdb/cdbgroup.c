@@ -24,27 +24,6 @@
 #include "cdb/cdbgroup.h"
 #include "optimizer/tlist.h"
 
-/* Coefficients for cost calculation adjustments: These are candidate GUCs
- * or, perhaps, replacements for the gp_eager_... series.  We wouldn't
- * need these if our statistics and cost calculations were correct, but
- * as of 3.2, they not.
- *
- * Early testing suggested that (1.0, 0.45, 1.7) was about right, but the
- * risk of introducing skew in the initial redistribution of a 1-phase plan
- * is great (especially given the 3.2 tendency to way underestimate the
- * cardinality of joins), so we penalize 1-phase and normalize to the
- * 2-phase cost (approximately).
- */
-/* GPDB_96_MERGE_FIXME: should we apply coefficient like this in the new pathified
- * MPP grouping implementation, in cdbgroupingpaths.c, still?
- */
-#ifdef NOT_USED
-static const double gp_coefficient_1phase_agg = 20.0;	/* penalty */
-static const double gp_coefficient_2phase_agg = 1.0;	/* normalized */
-static const double gp_coefficient_3phase_agg = 3.3;	/* increase systematic
-														 * underestimate */
-#endif
-
 /*
  * Function: cdbpathlocus_collocates_pathkeys
  *
@@ -106,19 +85,24 @@ cdbpathlocus_collocates_pathkeys(PlannerInfo *root, CdbPathLocus locus, List *pa
 	return cdbpathlocus_is_hashed_on_eclasses(locus, pk_eclasses, true);
 }
 
-
 /*
- * Function: cdbpathlocus_collocates_expressions
+ * Function: cdbpathlocus_collocates_tlist
  *
- * Like cdbpathlocus_collocates_pathkeys, but the key list is given as a list
- * of plain expressions, instead of PathKeys.
+ * Like cdbpathlocus_collocates_pathkeys, but the key list is given
+ * as a target list, instead of PathKeys.
  */
 bool
-cdbpathlocus_collocates_expressions(PlannerInfo *root, CdbPathLocus locus, List *exprs,
-								   bool exact_match)
+cdbpathlocus_collocates_tlist(PlannerInfo *root, CdbPathLocus locus, List *tlist)
 {
 	if (CdbPathLocus_IsBottleneck(locus))
 		return true;
+
+	/*
+	 * If there are no GROUP BY columns, the aggregation needs all rows in a
+	 * single node.
+	 */
+	if (tlist == NIL)
+		return false;
 
 	if (!CdbPathLocus_IsHashed(locus))
 	{
@@ -130,16 +114,13 @@ cdbpathlocus_collocates_expressions(PlannerInfo *root, CdbPathLocus locus, List 
 		return false;
 	}
 
-	if (exact_match && list_length(exprs) != list_length(locus.distkey))
-		return false;
-
 	/*
 	 * Check for containment of locus in pk_eclasses.
 	 *
 	 * We ignore constants in the locus hash key. A constant has the same
 	 * value everywhere, so it doesn't affect collocation.
 	 */
-	return cdbpathlocus_is_hashed_on_exprs(locus, exprs, true);
+	return cdbpathlocus_is_hashed_on_tlist(locus, tlist, true);
 }
 
 /**
@@ -169,7 +150,7 @@ UpdateScatterClause(Query *query, List *newtlist)
 			Expr	   *o = (Expr *) lfirst(lc);
 
 			Assert(o);
-			TargetEntry *tle = tlist_member((Node *) o, query->targetList);
+			TargetEntry *tle = tlist_member(o, query->targetList);
 
 			Assert(tle);
 			TargetEntry *ntle = list_nth(newtlist, tle->resno - 1);

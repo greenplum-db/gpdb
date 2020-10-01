@@ -22,28 +22,25 @@
 
 namespace gpos
 {
+//---------------------------------------------------------------------------
+//	@class:
+//		CHashSetTest
+//
+//	@doc:
+//		Static unit tests
+//
+//---------------------------------------------------------------------------
+class CHashSetTest
+{
+public:
+	// unittests
+	static GPOS_RESULT EresUnittest();
+	static GPOS_RESULT EresUnittest_Basic();
+	static GPOS_RESULT EresUnittest_Ownership();
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CHashSetTest
-	//
-	//	@doc:
-	//		Static unit tests
-	//
-	//---------------------------------------------------------------------------
-	class CHashSetTest
-	{
-		public:
+};	// class CHashSetTest
+}  // namespace gpos
 
-			// unittests
-			static GPOS_RESULT EresUnittest();
-			static GPOS_RESULT EresUnittest_Basic();
-			static GPOS_RESULT EresUnittest_Ownership();
-
-	}; // class CHashSetTest
-}
-
-#endif // !GPOS_CHashSetTest_H
+#endif	// !GPOS_CHashSetTest_H
 
 // EOF
-

@@ -47,16 +47,16 @@ Datum
 gp_instrument_shmem_summary(PG_FUNCTION_ARGS)
 {
 	TupleDesc	tupdesc;
-	int			nattr = 3;
+#define GP_INSTRUMENT_SHMEM_SUMMARY_NATTR 3
 
-	tupdesc = CreateTemplateTupleDesc(nattr, false);
+	tupdesc = CreateTemplateTupleDesc(GP_INSTRUMENT_SHMEM_SUMMARY_NATTR);
 	TupleDescInitEntry(tupdesc, (AttrNumber) 1, "segid", INT4OID, -1, 0);
 	TupleDescInitEntry(tupdesc, (AttrNumber) 2, "num_free", INT8OID, -1, 0);
 	TupleDescInitEntry(tupdesc, (AttrNumber) 3, "num_used", INT8OID, -1, 0);
 	tupdesc = BlessTupleDesc(tupdesc);
 
-	Datum		values[nattr];
-	bool		nulls[nattr];
+	Datum		values[GP_INSTRUMENT_SHMEM_SUMMARY_NATTR];
+	bool		nulls[GP_INSTRUMENT_SHMEM_SUMMARY_NATTR];
 
 	MemSet(nulls, 0, sizeof(nulls));
 
@@ -126,7 +126,7 @@ gp_instrument_shmem_detail(PG_FUNCTION_ARGS)
 		/* Switch to memory context appropriate for multiple function calls */
 		MemoryContext oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
 
-		TupleDesc	tupdesc = CreateTemplateTupleDesc(nattr, false);
+		TupleDesc	tupdesc = CreateTemplateTupleDesc(nattr);
 
 		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "tmid", INT4OID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "ssid", INT4OID, -1, 0);
@@ -157,8 +157,9 @@ gp_instrument_shmem_detail(PG_FUNCTION_ARGS)
 			/* Reached the end of the entry array, we're done */
 			SRF_RETURN_DONE(funcctx);
 		}
-		Datum		values[nattr];
-		bool		nulls[nattr];
+#define GP_INSTRUMENT_SHMEM_DETAIL_NATTR 9
+		Datum		values[GP_INSTRUMENT_SHMEM_DETAIL_NATTR];
+		bool		nulls[GP_INSTRUMENT_SHMEM_DETAIL_NATTR];
 
 		memset(nulls, 0, sizeof(nulls));
 

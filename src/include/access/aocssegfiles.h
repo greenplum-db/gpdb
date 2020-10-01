@@ -18,7 +18,7 @@
 
 #include "access/appendonly_visimap.h"
 #include "access/aosegfiles.h"
-#include "utils/tqual.h"
+#include "utils/snapshot.h"
 
 #define Natts_pg_aocsseg 7
 #define Anum_pg_aocs_segno 1
@@ -56,7 +56,7 @@ aocs_vpinfo_size(int nvp)
 static inline AOCSVPInfo *
 create_aocs_vpinfo(int nvp)
 {
-	AOCSVPInfo *vpinfo = palloc0(aocs_vpinfo_size(nvp));
+	AOCSVPInfo *vpinfo = (AOCSVPInfo *) palloc0(aocs_vpinfo_size(nvp));
 
 	SET_VARSIZE(vpinfo, aocs_vpinfo_size(nvp));
 	vpinfo->nEntry = nvp;
@@ -143,14 +143,10 @@ extern AOCSFileSegInfo **GetAllAOCSFileSegInfo(Relation prel,
 					  int *totalseg);
 extern void FreeAllAOCSSegFileInfo(AOCSFileSegInfo **allAOCSSegInfo, int totalSegFiles);
 
-extern int64 GetAOCSTotalBytes(
-				  Relation parentrel,
-				  Snapshot appendOnlyMetaDataSnapshot,
-				  bool compressed);
 extern FileSegTotals *GetAOCSSSegFilesTotals(Relation parentrel,
 					   Snapshot appendOnlyMetaDataSnapshot);
 
-extern void InsertInitialAOCSFileSegInfo(Relation prel, int32 segno, int32 nvp);
+extern void InsertInitialAOCSFileSegInfo(Relation prel, int32 segno, int32 nvp, Oid segrelid);
 extern void UpdateAOCSFileSegInfo(struct AOCSInsertDescData *desc);
 extern void AOCSFileSegInfoAddVpe(
 					  Relation prel, int32 segno,

@@ -14,13 +14,14 @@
 #ifndef APPENDONLY_VISIMAP_STORE_H
 #define APPENDONLY_VISIMAP_STORE_H
 
+#include "access/genam.h"
 #include "access/skey.h"
 #include "access/relscan.h"
 #include "access/sdir.h"
 #include "access/appendonly_visimap_entry.h"
 #include "storage/lock.h"
 #include "utils/rel.h"
-#include "utils/tqual.h"
+#include "utils/snapshot.h"
 
 /*
  * The visimap store is responsible for all
@@ -89,20 +90,16 @@ int64 AppendOnlyVisimapStore_GetRelationHiddenTupleCount(
 
 /* Scan related functions */
 
-IndexScanDesc AppendOnlyVisimapStore_BeginScan(
-								 AppendOnlyVisimapStore *visiMapStore,
-								 int nkeys,
-								 ScanKey keys);
+extern SysScanDesc AppendOnlyVisimapStore_BeginScan(AppendOnlyVisimapStore *visiMapStore,
+													int nkeys, ScanKey keys);
 
-void AppendOnlyVisimapStore_EndScan(
-							   AppendOnlyVisimapStore *visiMapStore,
-							   IndexScanDesc indexScan);
+extern void AppendOnlyVisimapStore_EndScan(AppendOnlyVisimapStore *visiMapStore,
+							   SysScanDesc indexScan);
 
-bool AppendOnlyVisimapStore_GetNext(
-							   AppendOnlyVisimapStore *visiMapStore,
-							   IndexScanDesc indexScan,
-							   ScanDirection scanDirection,
-							   AppendOnlyVisimapEntry *visiMapEntry,
-							   ItemPointerData *tupleTid);
+extern bool AppendOnlyVisimapStore_GetNext(AppendOnlyVisimapStore *visiMapStore,
+										   SysScanDesc indexScan,
+										   ScanDirection scanDirection,
+										   AppendOnlyVisimapEntry *visiMapEntry,
+										   ItemPointerData *tupleTid);
 
 #endif

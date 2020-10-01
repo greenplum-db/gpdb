@@ -21,7 +21,7 @@ def impl(context):
     # Check that every row exists in the standard out in the specified order.
     # We accept any amount of horizontal whitespace in between columns.
     def check_row(row):
-        split_row = map(lambda str: str.strip(), ''.join(row).split('='))
+        split_row = [str.strip() for str in ''.join(row).split('=')]
         row_pattern = r'[ \t]+=[ \t]+'.join(split_row)
         check_stdout_msg_in_order(context, row_pattern)
 

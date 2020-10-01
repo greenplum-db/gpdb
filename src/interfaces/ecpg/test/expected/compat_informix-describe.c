@@ -41,7 +41,7 @@ typedef struct sqlda_struct sqlda_t;
 
 #endif
 
-#endif   /* ECPG_SQLDA_H */
+#endif							/* ECPG_SQLDA_H */
 
 #line 5 "describe.pgc"
 
@@ -463,5 +463,5 @@ if (sqlca.sqlcode < 0) exit (1);}
 #line 196 "describe.pgc"
 
 
-	return (0);
+	return 0;
 }

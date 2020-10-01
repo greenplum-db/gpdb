@@ -4,7 +4,7 @@
  *	  POSTGRES index tuple definitions.
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/access/itup.h
@@ -41,7 +41,7 @@ typedef struct IndexTupleData
 	 *
 	 * 15th (high) bit: has nulls
 	 * 14th bit: has var-width attributes
-	 * 13th bit: unused
+	 * 13th bit: AM-defined meaning
 	 * 12-0 bit: size of tuple
 	 * ---------------
 	 */
@@ -55,20 +55,20 @@ typedef IndexTupleData *IndexTuple;
 typedef struct IndexAttributeBitMapData
 {
 	bits8		bits[(INDEX_MAX_KEYS + 8 - 1) / 8];
-}	IndexAttributeBitMapData;
+}			IndexAttributeBitMapData;
 
-typedef IndexAttributeBitMapData *IndexAttributeBitMap;
+typedef IndexAttributeBitMapData * IndexAttributeBitMap;
 
 /*
  * t_info manipulation macros
  */
 #define INDEX_SIZE_MASK 0x1FFF
-/* bit 0x2000 is not used at present */
+#define INDEX_AM_RESERVED_BIT 0x2000	/* reserved for index-AM specific
+										 * usage */
 #define INDEX_VAR_MASK	0x4000
 #define INDEX_NULL_MASK 0x8000
 
-#define IndexTupleSize(itup)		((Size) (((IndexTuple) (itup))->t_info & INDEX_SIZE_MASK))
-#define IndexTupleDSize(itup)		((Size) ((itup).t_info & INDEX_SIZE_MASK))
+#define IndexTupleSize(itup)		((Size) ((itup)->t_info & INDEX_SIZE_MASK))
 #define IndexTupleHasNulls(itup)	((((IndexTuple) (itup))->t_info & INDEX_NULL_MASK))
 #define IndexTupleHasVarwidths(itup) ((((IndexTuple) (itup))->t_info & INDEX_VAR_MASK))
 
@@ -103,11 +103,11 @@ typedef IndexAttributeBitMapData *IndexAttributeBitMap;
 	*(isnull) = false, \
 	!IndexTupleHasNulls(tup) ? \
 	( \
-		(tupleDesc)->attrs[(attnum)-1]->attcacheoff >= 0 ? \
+		TupleDescAttr((tupleDesc), (attnum)-1)->attcacheoff >= 0 ? \
 		( \
-			fetchatt((tupleDesc)->attrs[(attnum)-1], \
+			fetchatt(TupleDescAttr((tupleDesc), (attnum)-1), \
 			(char *) (tup) + IndexInfoFindDataOffset((tup)->t_info) \
-			+ (tupleDesc)->attrs[(attnum)-1]->attcacheoff) \
+			+ TupleDescAttr((tupleDesc), (attnum)-1)->attcacheoff) \
 		) \
 		: \
 			nocache_index_getattr((tup), (attnum), (tupleDesc)) \
@@ -131,9 +131,17 @@ typedef IndexAttributeBitMapData *IndexAttributeBitMap;
  * fit on one index page.  An index tuple must have either data or a null
  * bitmap, so we can safely assume it's at least 1 byte bigger than a bare
  * IndexTupleData struct.  We arrive at the divisor because each tuple
- * must be maxaligned, and it must have an associated item pointer.
+ * must be maxaligned, and it must have an associated line pointer.
+ *
+ * To be index-type-independent, this does not account for any special space
+ * on the page, and is thus conservative.
+ *
+ * Note: in btree non-leaf pages, the first tuple has no key (it's implicitly
+ * minus infinity), thus breaking the "at least 1 byte bigger" assumption.
+ * On such a page, N tuples could take one MAXALIGN quantum less space than
+ * estimated here, seemingly allowing one more tuple than estimated here.
+ * But such a page always has at least MAXALIGN special space, so we're safe.
  */
-#define MinIndexTupleSize MAXALIGN(sizeof(IndexTupleData) + 1)
 #define MaxIndexTuplesPerPage	\
 	((int) ((BLCKSZ - SizeOfPageHeaderData) / \
 			(MAXALIGN(sizeof(IndexTupleData) + 1) + sizeof(ItemIdData))))
@@ -141,11 +149,13 @@ typedef IndexAttributeBitMapData *IndexAttributeBitMap;
 
 /* routines in indextuple.c */
 extern IndexTuple index_form_tuple(TupleDesc tupleDescriptor,
-				 Datum *values, bool *isnull);
+								   Datum *values, bool *isnull);
 extern Datum nocache_index_getattr(IndexTuple tup, int attnum,
-					  TupleDesc tupleDesc);
+								   TupleDesc tupleDesc);
 extern void index_deform_tuple(IndexTuple tup, TupleDesc tupleDescriptor,
-				   Datum *values, bool *isnull);
+							   Datum *values, bool *isnull);
 extern IndexTuple CopyIndexTuple(IndexTuple source);
+extern IndexTuple index_truncate_tuple(TupleDesc sourceDescriptor,
+									   IndexTuple source, int leavenatts);
 
-#endif   /* ITUP_H */
+#endif							/* ITUP_H */

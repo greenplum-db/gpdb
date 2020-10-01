@@ -4,9 +4,7 @@
  *	  POSTGRES heap tuple definitions.
  *
  *
- * Portions Copyright (c) 2006-2009, Greenplum inc
- * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/access/htup.h
@@ -17,10 +15,6 @@
 #define HTUP_H
 
 #include "storage/itemptr.h"
-#include "storage/relfilenode.h"
-#include "access/sysattr.h"
-
-//#include "access/memtup.h"
 
 /* typedefs and forward declarations for structs defined in htup_details.h */
 
@@ -64,46 +58,19 @@ typedef MinimalTupleData *MinimalTuple;
  * t_self and t_tableOid should be valid if the HeapTupleData points to
  * a disk buffer, or if it represents a copy of a tuple on disk.  They
  * should be explicitly set invalid in manufactured tuples.
- *
- * CDB: t_tableOid deleted.  Instead, use tts_tableOid in TupleTableSlot.
  */
 typedef struct HeapTupleData
 {
 	uint32		t_len;			/* length of *t_data */
 	ItemPointerData t_self;		/* SelfItemPointer */
+	Oid			t_tableOid;		/* table the tuple came from */
+#define FIELDNO_HEAPTUPLEDATA_DATA 3
 	HeapTupleHeader t_data;		/* -> tuple header and data */
 } HeapTupleData;
 
 typedef HeapTupleData *HeapTuple;
 
 #define HEAPTUPLESIZE	MAXALIGN(sizeof(HeapTupleData))
-
-/*
- * GenericTuple is a pointer that can point to either a HeapTuple or a
- * MemTuple. Use is_memtuple() to check which one it is.
- *
- * GenericTupleData has no definition; this is a fake "supertype".
- */
-struct GenericTupleData;
-typedef struct GenericTupleData *GenericTuple;
-
-/* XXX Hack Hack Hack 
- * heaptuple, or memtuple, cannot be more than 2G, so, if
- * the first bit is ever set, it is really a memtuple
- */
-static inline bool is_memtuple(GenericTuple tup)
-{
-	return ((((HeapTuple) tup)->t_len & 0x80000000) != 0);
-}
-
-static inline bool is_heaptuple_splitter(HeapTuple htup)
-{
-	return ((char *) htup->t_data) != ((char *) htup + HEAPTUPLESIZE);
-}
-static inline uint32 heaptuple_get_size(HeapTuple htup)
-{
-	return htup->t_len + HEAPTUPLESIZE;
-}
 
 /*
  * Accessor macros to be used with HeapTuple pointers.
@@ -114,9 +81,9 @@ static inline uint32 heaptuple_get_size(HeapTuple htup)
 extern CommandId HeapTupleHeaderGetCmin(HeapTupleHeader tup);
 extern CommandId HeapTupleHeaderGetCmax(HeapTupleHeader tup);
 extern void HeapTupleHeaderAdjustCmax(HeapTupleHeader tup,
-						  CommandId *cmax, bool *iscombo);
+									  CommandId *cmax, bool *iscombo);
 
 /* Prototype for HeapTupleHeader accessors in heapam.c */
 extern TransactionId HeapTupleGetUpdateXid(HeapTupleHeader tuple);
 
-#endif   /* HTUP_H */
+#endif							/* HTUP_H */

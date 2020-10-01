@@ -7,6 +7,8 @@
 
 #include "access/tupdesc.h"
 
+#include "plpython.h"
+
 
 typedef struct PLyResultObject
 {
@@ -22,4 +24,4 @@ typedef struct PLyResultObject
 extern void PLy_result_init_type(void);
 extern PyObject *PLy_result_new(void);
 
-#endif   /* PLPY_RESULTOBJECT_H */
+#endif							/* PLPY_RESULTOBJECT_H */

@@ -3,7 +3,7 @@ doc/src/sgml/ref/create_sequence.sgml
 PostgreSQL documentation
 -->
 
-<refentry id="SQL-CREATESEQUENCE">
+<refentry id="sql-createsequence">
  <indexterm zone="sql-createsequence">
   <primary>CREATE SEQUENCE</primary>
  </indexterm>
@@ -21,7 +21,9 @@ PostgreSQL documentation
 
  <refsynopsisdiv>
 <synopsis>
-CREATE [ TEMPORARY | TEMP ] SEQUENCE [ IF NOT EXISTS ] <replaceable class="parameter">name</replaceable> [ INCREMENT [ BY ] <replaceable class="parameter">increment</replaceable> ]
+CREATE [ TEMPORARY | TEMP ] SEQUENCE [ IF NOT EXISTS ] <replaceable class="parameter">name</replaceable>
+    [ AS <replaceable class="parameter">data_type</replaceable> ]
+    [ INCREMENT [ BY ] <replaceable class="parameter">increment</replaceable> ]
     [ MINVALUE <replaceable class="parameter">minvalue</replaceable> | NO MINVALUE ] [ MAXVALUE <replaceable class="parameter">maxvalue</replaceable> | NO MAXVALUE ]
     [ START [ WITH ] <replaceable class="parameter">start</replaceable> ] [ CACHE <replaceable class="parameter">cache</replaceable> ] [ [ NO ] CYCLE ]
     [ OWNED BY { <replaceable class="parameter">table_name</replaceable>.<replaceable class="parameter">column_name</replaceable> | NONE } ]
@@ -54,7 +56,7 @@ CREATE [ TEMPORARY | TEMP ] SEQUENCE [ IF NOT EXISTS ] <replaceable class="param
    <function>currval</function>, and
    <function>setval</function>
    to operate on the sequence.  These functions are documented in
-   <xref linkend="functions-sequence">.
+   <xref linkend="functions-sequence"/>.
   </para>
 
   <para>
@@ -65,10 +67,10 @@ SELECT * FROM <replaceable>name</replaceable>;
 </programlisting>
 
    to examine the parameters and current state of a sequence.  In particular,
-   the <literal>last_value</> field of the sequence shows the last value
+   the <literal>last_value</literal> field of the sequence shows the last value
    allocated by any session.  (Of course, this value might be obsolete
    by the time it's printed, if other sessions are actively doing
-   <function>nextval</> calls.)
+   <function>nextval</function> calls.)
   </para>
  </refsect1>
 
@@ -111,6 +113,21 @@ SELECT * FROM <replaceable>name</replaceable>;
    </varlistentry>
 
    <varlistentry>
+    <term><replaceable class="parameter">data_type</replaceable></term>
+    <listitem>
+     <para>
+      The optional
+      clause <literal>AS <replaceable class="parameter">data_type</replaceable></literal>
+      specifies the data type of the sequence.  Valid types are
+      <literal>smallint</literal>, <literal>integer</literal>,
+      and <literal>bigint</literal>.  <literal>bigint</literal> is the
+      default.  The data type determines the default minimum and maximum
+      values of the sequence.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
     <term><replaceable class="parameter">increment</replaceable></term>
     <listitem>
      <para>
@@ -132,9 +149,8 @@ SELECT * FROM <replaceable>name</replaceable>;
       class="parameter">minvalue</replaceable></literal> determines
       the minimum value a sequence can generate. If this clause is not
       supplied or <option>NO MINVALUE</option> is specified, then
-      defaults will be used.  The defaults are 1 and
-      -2<superscript>63</>-1 for ascending and descending sequences,
-      respectively.
+      defaults will be used.  The default for an ascending sequence is 1.  The
+      default for a descending sequence is the minimum value of the data type.
      </para>
     </listitem>
    </varlistentry>
@@ -148,9 +164,9 @@ SELECT * FROM <replaceable>name</replaceable>;
       class="parameter">maxvalue</replaceable></literal> determines
       the maximum value for the sequence. If this clause is not
       supplied or <option>NO MAXVALUE</option> is specified, then
-      default values will be used.  The defaults are
-      2<superscript>63</>-1 and -1 for ascending and descending
-      sequences, respectively.
+      default values will be used.  The default for an ascending sequence is
+      the maximum value of the data type.  The default for a descending
+      sequence is -1.
      </para>
     </listitem>
    </varlistentry>
@@ -234,14 +250,14 @@ SELECT * FROM <replaceable>name</replaceable>;
   </para>
 
   <para>
-   Sequences are based on <type>bigint</> arithmetic, so the range
+   Sequences are based on <type>bigint</type> arithmetic, so the range
    cannot exceed the range of an eight-byte integer
    (-9223372036854775808 to 9223372036854775807).
   </para>
 
   <para>
-   Because <function>nextval</> and <function>setval</> calls are never
-   rolled back, sequence objects cannot be used if <quote>gapless</>
+   Because <function>nextval</function> and <function>setval</function> calls are never
+   rolled back, sequence objects cannot be used if <quote>gapless</quote>
    assignment of sequence numbers is needed.  It is possible to build
    gapless assignment by using exclusive locking of a table containing a
    counter; but this solution is much more expensive than sequence
@@ -255,9 +271,9 @@ SELECT * FROM <replaceable>name</replaceable>;
    used for a sequence object that will be used concurrently by
    multiple sessions.  Each session will allocate and cache successive
    sequence values during one access to the sequence object and
-   increase the sequence object's <literal>last_value</> accordingly.
+   increase the sequence object's <literal>last_value</literal> accordingly.
    Then, the next <replaceable class="parameter">cache</replaceable>-1
-   uses of <function>nextval</> within that session simply return the
+   uses of <function>nextval</function> within that session simply return the
    preallocated values without touching the sequence object.  So, any
    numbers allocated but not used within a session will be lost when
    that session ends, resulting in <quote>holes</quote> in the
@@ -274,18 +290,18 @@ SELECT * FROM <replaceable>name</replaceable>;
    11..20 and return <function>nextval</function>=11 before session A
    has generated <literal>nextval</literal>=2.  Thus, with a
    <replaceable class="parameter">cache</replaceable> setting of one
-   it is safe to assume that <function>nextval</> values are generated
+   it is safe to assume that <function>nextval</function> values are generated
    sequentially; with a <replaceable
    class="parameter">cache</replaceable> setting greater than one you
-   should only assume that the <function>nextval</> values are all
+   should only assume that the <function>nextval</function> values are all
    distinct, not that they are generated purely sequentially.  Also,
-   <literal>last_value</> will reflect the latest value reserved by
+   <literal>last_value</literal> will reflect the latest value reserved by
    any session, whether or not it has yet been returned by
-   <function>nextval</>.
+   <function>nextval</function>.
   </para>
 
   <para>
-   Another consideration is that a <function>setval</> executed on
+   Another consideration is that a <function>setval</function> executed on
    such a sequence will not be noticed by other sessions until they
    have used up any preallocated values they have cached.
   </para>
@@ -349,20 +365,14 @@ END;
    <itemizedlist>
     <listitem>
      <para>
-      The standard's <literal>AS &lt;data type&gt;</literal> expression is not
-      supported.
-     </para>
-    </listitem>
-    <listitem>
-     <para>
-      Obtaining the next value is done using the <function>nextval()</>
+      Obtaining the next value is done using the <function>nextval()</function>
       function instead of the standard's <command>NEXT VALUE FOR</command>
       expression.
      </para>
     </listitem>
     <listitem>
      <para>
-      The <literal>OWNED BY</> clause is a <productname>PostgreSQL</>
+      The <literal>OWNED BY</literal> clause is a <productname>PostgreSQL</productname>
       extension.
      </para>
     </listitem>
@@ -373,8 +383,8 @@ END;
   <title>See Also</title>
 
   <simplelist type="inline">
-   <member><xref linkend="sql-altersequence"></member>
-   <member><xref linkend="sql-dropsequence"></member>
+   <member><xref linkend="sql-altersequence"/></member>
+   <member><xref linkend="sql-dropsequence"/></member>
   </simplelist>
  </refsect1>
 

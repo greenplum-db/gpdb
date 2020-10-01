@@ -1,3 +1,7 @@
+-- start_matchsubs
+-- m/^LOG.*PartitionSelector/
+-- s/^LOG.*PartitionSelector/PartitionSelector/
+-- end_matchsubs
 -- start_ignore
 DROP DATABASE IF EXISTS incrementalanalyze;
 CREATE DATABASE incrementalanalyze;
@@ -780,7 +784,7 @@ CREATE TABLE incr_analyze_test (
     b character varying,
     c date
 )
-WITH (appendonly=true, compresslevel=5, orientation=row, compresstype=zlib) DISTRIBUTED BY (a) PARTITION BY RANGE(c)
+WITH (appendonly=true, orientation=row) DISTRIBUTED BY (a) PARTITION BY RANGE(c)
           (
           START ('2018-01-01'::date) END ('2018-01-02'::date) EVERY ('1 day'::interval) WITH (tablename='incr_analyze_test_1_prt_1', appendonly=true, compresslevel=3, orientation=column, compresstype=ZLIB ),
           START ('2018-01-02'::date) END ('2018-01-03'::date) EVERY ('1 day'::interval) WITH (tablename='incr_analyze_test_1_prt_2', appendonly=true, compresslevel=1, orientation=column, compresstype=RLE_TYPE ),

@@ -4,7 +4,7 @@
  *	  handle target lists
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/parser/parse_target.h
@@ -18,28 +18,29 @@
 
 
 extern List *transformTargetList(ParseState *pstate, List *targetlist,
-					ParseExprKind exprKind);
+								 ParseExprKind exprKind);
 extern List *transformExpressionList(ParseState *pstate, List *exprlist,
-						ParseExprKind exprKind);
+									 ParseExprKind exprKind, bool allowDefault);
+extern void resolveTargetListUnknowns(ParseState *pstate, List *targetlist);
 extern void markTargetListOrigins(ParseState *pstate, List *targetlist);
 extern TargetEntry *transformTargetEntry(ParseState *pstate,
-					 Node *node, Node *expr, ParseExprKind exprKind,
-					 char *colname, bool resjunk);
+										 Node *node, Node *expr, ParseExprKind exprKind,
+										 char *colname, bool resjunk);
 extern Expr *transformAssignedExpr(ParseState *pstate, Expr *expr,
-					  ParseExprKind exprKind,
-					  char *colname,
-					  int attrno,
-					  List *indirection,
-					  int location);
+								   ParseExprKind exprKind,
+								   const char *colname,
+								   int attrno,
+								   List *indirection,
+								   int location);
 extern void updateTargetListEntry(ParseState *pstate, TargetEntry *tle,
-					  char *colname, int attrno,
-					  List *indirection,
-					  int location);
+								  char *colname, int attrno,
+								  List *indirection,
+								  int location);
 extern List *checkInsertTargets(ParseState *pstate, List *cols,
-				   List **attrnos);
+								List **attrnos);
 extern TupleDesc expandRecordVariable(ParseState *pstate, Var *var,
-					 int levelsup);
+									  int levelsup);
 extern char *FigureColname(Node *node);
 extern char *FigureIndexColname(Node *node);
 
-#endif   /* PARSE_TARGET_H */
+#endif							/* PARSE_TARGET_H */

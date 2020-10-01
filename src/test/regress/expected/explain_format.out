@@ -7,14 +7,22 @@
 -- s/Executor memory: (\d+)\w bytes avg x \d+ workers, \d+\w bytes max \(seg\d+\)\./Executor memory: ####K bytes avg x #### workers, ####K bytes max (seg#)./
 -- m/Work_mem: \d+\w bytes max\./
 -- s/Work_mem: \d+\w bytes max\. */Work_mem: ###K bytes max./
--- m/Execution time: \d+\.\d+ ms/
--- s/Execution time: \d+\.\d+ ms/Execution time: ##.### ms/
--- m/Planning time: \d+\.\d+ ms/
--- s/Planning time: \d+\.\d+ ms/Planning time: ##.### ms/
+-- m/Execution Time: \d+\.\d+ ms/
+-- s/Execution Time: \d+\.\d+ ms/Execution Time: ##.### ms/
+-- m/Planning Time: \d+\.\d+ ms/
+-- s/Planning Time: \d+\.\d+ ms/Planning Time: ##.### ms/
 -- m/cost=\d+\.\d+\.\.\d+\.\d+ rows=\d+ width=\d+/
 -- s/\(cost=\d+\.\d+\.\.\d+\.\d+ rows=\d+ width=\d+\)/(cost=##.###..##.### rows=### width=###)/
 -- m/Memory used:  \d+\w?B/
 -- s/Memory used:  \d+\w?B/Memory used: ###B/
+-- m/Memory Usage: \d+\w?B/
+-- s/Memory Usage: \d+\w?B/Memory Usage: ###B/
+-- m/Peak Memory Usage: \d+/
+-- s/Peak Memory Usage: \d+/Peak Memory Usage: ###/
+-- m/Buckets: \d+/
+-- s/Buckets: \d+/Buckets: ###/
+-- m/Batches: \d+/
+-- s/Batches: \d+/Batches: ###/
 -- end_matchsubs
 --
 -- DEFAULT syntax
@@ -63,17 +71,19 @@ EXPLAIN (ANALYZE) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.appl
                            Hash Key: boxes.apple_id
                            ->  Seq Scan on boxes  (cost=0.00..879.00 rows=25967 width=12) (never executed)
                      ->  Hash  (cost=1111.00..1111.00 rows=33334 width=36) (actual time=39.093..39.093 rows=33462 loops=1)
+                           Buckets: 131072  Batches: 1  Memory Usage: 2332kB
                            ->  Seq Scan on apples  (cost=0.00..1111.00 rows=33334 width=36) (actual time=0.075..10.163 rows=33462 loops=1)
          ->  Hash  (cost=596.00..596.00 rows=16534 width=36) (never executed)
+               Buckets: 131072  Batches: 1  Memory Usage: 1024kB
                ->  Seq Scan on box_locations  (cost=0.00..596.00 rows=16534 width=36) (never executed)
- Planning time: 2.219 ms
+ Planning Time: 2.219 ms
    (slice0)    Executor memory: 127K bytes.
    (slice1)    Executor memory: 1104K bytes avg x 3 workers, 1104K bytes max (seg0).  Work_mem: 1024K bytes max.
    (slice2)    Executor memory: 2162K bytes avg x 3 workers, 2162K bytes max (seg0).  Work_mem: 2070K bytes max.
    (slice3)    Executor memory: 60K bytes avg x 3 workers, 60K bytes max (seg0).
  Memory used:  128000kB
  Optimizer: Postgres query optimizer
- Execution time: 59.644 ms
+ Execution Time: 59.644 ms
 (22 rows)
 
 -- explain_processing_on
@@ -140,6 +150,7 @@ QUERY PLAN
         Total Cost: 9714.25
         Plan Rows: 77900
         Plan Width: 84
+        Inner Unique: true
         Hash Cond: "(boxes.location_id = box_locations.id)"
         Plans: 
           - Node Type: "Redistribute Motion"
@@ -167,6 +178,7 @@ QUERY PLAN
                 Total Cost: 5869.12
                 Plan Rows: 77900
                 Plan Width: 48
+                Inner Unique: true
                 Hash Cond: "(boxes.apple_id = apples.id)"
                 Plans: 
                   - Node Type: "Redistribute Motion"
@@ -280,6 +292,7 @@ QUERY PLAN
         Actual Total Time: 0.000
         Actual Rows: 0
         Actual Loops: 0
+        Inner Unique: true
         Hash Cond: "(boxes.location_id = box_locations.id)"
         Plans: 
           - Node Type: "Redistribute Motion"
@@ -315,6 +328,7 @@ QUERY PLAN
                 Actual Total Time: 0.000
                 Actual Rows: 0
                 Actual Loops: 0
+                Inner Unique: true
                 Hash Cond: "(boxes.apple_id = apples.id)"
                 Plans: 
                   - Node Type: "Redistribute Motion"
@@ -365,6 +379,11 @@ QUERY PLAN
                     Actual Total Time: 58.354
                     Actual Rows: 33462
                     Actual Loops: 1
+                    Hash Buckets: 131072
+                    Original Hash Buckets: 131072
+                    Hash Batches: 1
+                    Original Hash Batches: 1
+                    Peak Memory Usage: 2332
                     Plans: 
                       - Node Type: "Seq Scan"
                         Parent Relationship: "Outer"
@@ -396,6 +415,11 @@ QUERY PLAN
             Actual Total Time: 0.000
             Actual Rows: 0
             Actual Loops: 0
+            Hash Buckets: 131072
+            Original Hash Buckets: 131072
+            Hash Batches: 1
+            Original Hash Batches: 1
+            Peak Memory Usage: 1024
             Plans: 
               - Node Type: "Seq Scan"
                 Parent Relationship: "Outer"
@@ -497,8 +521,6 @@ QUERY PLAN
 CREATE TABLE jsonexplaintest (i int4) PARTITION BY RANGE (i) (START(1) END(3) EVERY(1));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "jsonexplaintest_1_prt_1" for table "jsonexplaintest"
-NOTICE:  CREATE TABLE will create partition "jsonexplaintest_1_prt_2" for table "jsonexplaintest"
 EXPLAIN (FORMAT JSON, COSTS OFF) SELECT * FROM jsonexplaintest WHERE i = 2;
 QUERY PLAN
 [
@@ -513,25 +535,15 @@ QUERY PLAN
       "Parallel Aware": false,
       "Plans": [
         {
-          "Node Type": "Append",
+          "Node Type": "Seq Scan",
           "Parent Relationship": "Outer",
           "Slice": 1,
           "Segments": 1,
           "Gang Type": "primary reader",
           "Parallel Aware": false,
-          "Plans": [
-            {
-              "Node Type": "Seq Scan",
-              "Parent Relationship": "Member",
-              "Slice": 1,
-              "Segments": 1,
-              "Gang Type": "primary reader",
-              "Parallel Aware": false,
-              "Relation Name": "jsonexplaintest_1_prt_2",
-              "Alias": "jsonexplaintest_1_prt_2",
-              "Filter": "(i = 2)"
-            }
-          ]
+          "Relation Name": "jsonexplaintest_1_prt_2",
+          "Alias": "jsonexplaintest_1_prt_2",
+          "Filter": "(i = 2)"
         }
       ]
     },

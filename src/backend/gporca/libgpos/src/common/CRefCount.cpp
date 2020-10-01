@@ -17,13 +17,13 @@ using namespace gpos;
 
 #ifdef GPOS_DEBUG
 // debug print for interactive debugging sessions only
-void CRefCount::DbgPrint() const
+void
+CRefCount::DbgPrint() const
 {
 	CAutoTrace at(CTask::Self()->Pmp());
 
 	OsPrint(at.Os());
 }
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 // EOF
-

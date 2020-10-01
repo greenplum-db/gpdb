@@ -39,17 +39,22 @@
         <li>When redistributing data, Greenplum Database must be running in production mode.
           Greenplum Database cannot be running in restricted mode or in master mode. The
             <codeph>gpstart</codeph> options <codeph>-R</codeph> or <codeph>-m</codeph> cannot be
-          specified to start Greenplum Database. </li>      
+          specified to start Greenplum Database. </li>
       </ul>
       <note>These utilities cannot be run while <codeph>gpexpand</codeph> is performing segment
-        initialization.
-        <ul id="ul_c3w_wdp_lgb">
+        initialization. <ul id="ul_c3w_wdp_lgb">
           <li><codeph>gpbackup</codeph></li>
           <li><codeph>gpcheckcat</codeph></li>
           <li><codeph>gpconfig</codeph></li>
           <li><codeph>gppkg</codeph></li>
           <li><codeph>gprestore</codeph></li>
         </ul></note>
+      <note type="important">When expanding a Greenplum Database system, you must disable Greenplum
+        interconnect proxies before adding new hosts and segment instances to the system, and you
+        must update the <codeph>gp_interconnect_proxy_addresses</codeph> parameter with the
+        newly-added segment instances before you re-enable interconnect proxies. For information
+        about Greenplum interconnect proxies, see <xref
+          href="../../admin_guide/managing/proxy-ic.xml"/>.</note>
       <p>For information about preparing a system for expansion, see <xref
           href="../../admin_guide/expand/expand-main.xml" scope="peer">Expanding a Greenplum
           System</xref><ph otherprops="op-print"> in the <cite>Greenplum Database Administrator
@@ -75,8 +80,8 @@
       </ul>
       <p>In the table data redistribution phase, <codeph>gpexpand</codeph> redistributes table data
         to rebalance the data across the old and new segment instances.</p>
-      <note>Data redistribution should be performed during low-use hours. Redistribution can be divided
-        into batches over an extended period.</note>
+      <note>Data redistribution should be performed during low-use hours. Redistribution can be
+        divided into batches over an extended period.</note>
       <p>To begin the redistribution phase, run <codeph>gpexpand</codeph> with either the
           <codeph>-d</codeph> (duration) or <codeph>-e</codeph> (end time) options, or with no
         options. If you specify an end time or duration, then the utility redistributes tables in
@@ -142,6 +147,8 @@
               number to the host name. For example, <codeph>sdw1-1</codeph> and
                 <codeph>sdw1-2</codeph> are the two interface names for host <codeph>sdw1</codeph>.
             </note></pd>
+          <pd>For information about using a hostname or IP address, see <xref href="#topic1/host_ip"
+              format="dita"/>. Also, see <xref href="#topic1/multi_nic" format="dita"/>.</pd>
         </plentry>
         <plentry>
           <pt>-i | --input <varname>input_file</varname></pt>
@@ -198,6 +205,48 @@
           <pd>Displays the online help.</pd>
         </plentry>
       </parml>
+    </section>
+    <section id="host_ip">
+      <title>Specifying Hosts using Hostnames or IP Addresses</title>
+      <p>When expanding a Greenplum Database system, you can specify either a hostname or an IP
+        address for the value. <ul id="ul_zsd_cmh_dmb">
+          <li>If you specify a hostname, the resolution of the hostname to an IP address should be
+            done locally for security. For example, you should use entries in a local
+              <codeph>/etc/hosts</codeph> file to map a hostname to an IP address. The resolution of
+            a hostname to an IP address should not be performed by an external service such as a
+            public DNS server. You must stop the Greenplum system before you change the mapping of a
+            hostname to a different IP address.</li>
+          <li>If you specify an IP address, the address should not be changed after the initial
+            configuration. When segment mirroring is enabled, replication from the primary to the
+            mirror segment will fail if the IP address changes from the configured value. For this
+            reason, you should use a hostname when expanding a Greenplum Database system unless you
+            have a specific requirement to use IP addresses.</li>
+        </ul></p>
+      <p>When expanding a Greenplum system, <codeph>gpexpand</codeph> populates <codeph><xref
+            href="../../ref_guide/system_catalogs/gp_segment_configuration.xml"
+            >gp_segment_configuration</xref></codeph> catalog table with the new segment instance
+        information. Greenplum Database uses the <codeph>address</codeph> value of the
+          <codeph>gp_segment_configuration</codeph> catalog table when looking up host systems for
+        Greenplum interconnect (internal) communication between the master and segment instances and
+        between segment instances, and for other internal communication.</p>
+    </section>
+    <section id="multi_nic">
+      <title>Using Host Systems with Multiple NICs</title>
+      <p>If host systems are configured with multiple NICs, you can expand a Greenplum Database
+        system to use each NIC as a Greenplum host system. You must ensure that the host systems are
+        configured with sufficient resources to support all the segment instances being added to the
+        host. Also, if you enable segment mirroring, you must ensure that the expanded Greenplum
+        system configuration supports failover if a host system fails. For information about
+        Greenplum Database mirroring schemes, see <xref
+          href="../../best_practices/ha.xml#topic_ngz_qf4_tt"/>.</p>
+      <p>For example, this is a <codeph>gpexpand</codeph> configuration file for a simple Greenplum
+        system. The segment host <codeph>gp6s1</codeph> and <codeph>gp6s2</codeph> are configured
+        with two NICs, <codeph>-s1</codeph> and <codeph>-s2</codeph>, where the Greenplum Database
+        system uses each NIC as a host system. </p>
+      <codeblock>gp6s1-s2|gp6s1-s2|40001|/data/data1/gpseg2|6|2|p
+gp6s2-s1|gp6s2-s1|50000|/data/mirror1/gpseg2|9|2|m
+gp6s2-s1|gp6s2-s1|40000|/data/data1/gpseg3|7|3|p
+gp6s1-s2|gp6s1-s2|50001|/data/mirror1/gpseg3|8|3|m</codeblock>
     </section>
     <section id="section6">
       <title>Examples</title>

@@ -1,0 +1,36 @@
+-- setup
+\! mkdir -p /tmp/test_pg_resetwal/global /tmp/test_pg_resetwal/pg_wal
+\! touch /tmp/test_pg_resetwal/global/pg_control
+\! echo "12" > /tmp/test_pg_resetwal/PG_VERSION
+-- negative test:
+-- missing argument
+\! pg_resetwal -k -n /tmp/test_pg_resetwal
+pg_resetwal: invalid argument for option -k
+Try "pg_resetwal --help" for more information.
+-- wrong argument
+\! pg_resetwal -k wrong_version -n /tmp/test_pg_resetwal
+pg_resetwal: invalid argument for option -k
+Try "pg_resetwal --help" for more information.
+-- lower than 0
+\! pg_resetwal -k -1 -n /tmp/test_pg_resetwal
+pg_resetwal: data_checksum_version (-k) must be within 0..1
+-- greater than PG_DATA_CHECKSUM_VERSION
+\! pg_resetwal -k 2 -n /tmp/test_pg_resetwal
+pg_resetwal: data_checksum_version (-k) must be within 0..1
+-- positive test:
+-- disable the data checksum
+\! pg_resetwal -k 0 -n /tmp/test_pg_resetwal | grep "Data page checksum version"
+pg_resetwal: warning: pg_control exists but is broken or wrong version; ignoring it
+Data page checksum version:           1
+Data page checksum version:           0
+-- enable the data checksum
+\! pg_resetwal -k 1 -n /tmp/test_pg_resetwal | grep "Data page checksum version"
+pg_resetwal: warning: pg_control exists but is broken or wrong version; ignoring it
+Data page checksum version:           1
+Data page checksum version:           1
+-- default the checksum should be on
+\! pg_resetwal -n /tmp/test_pg_resetwal | grep "Data page checksum version"
+pg_resetwal: warning: pg_control exists but is broken or wrong version; ignoring it
+Data page checksum version:           1
+-- cleanup
+\! rm -fr /tmp/test_pg_resetwal

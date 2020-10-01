@@ -25,7 +25,6 @@
 #include "cdb/cdbvars.h"
 #include "lib/stringinfo.h"
 #include "utils/builtins.h"
-#include "utils/tqual.h"
 #include "utils/visibility_summary.h"
 
 static char *

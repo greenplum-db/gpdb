@@ -128,10 +128,10 @@ RemoveExtProtocolById(Oid protOid)
 	/*
 	 * Search pg_extprotocol.
 	 */
-	rel = heap_open(ExtprotocolRelationId, RowExclusiveLock);
+	rel = table_open(ExtprotocolRelationId, RowExclusiveLock);
 
 	ScanKeyInit(&skey,
-				ObjectIdAttributeNumber,
+				Anum_pg_extprotocol_oid,
 				BTEqualStrategyNumber, F_OIDEQ,
 				ObjectIdGetDatum(protOid));
 	scan = systable_beginscan(rel, ExtprotocolOidIndexId, true,
@@ -139,7 +139,7 @@ RemoveExtProtocolById(Oid protOid)
 
 	while (HeapTupleIsValid(tup = systable_getnext(scan)))
 	{
-		simple_heap_delete(rel, &tup->t_self);
+		CatalogTupleDelete(rel, &tup->t_self);
 		found = true;
 	}
 	systable_endscan(scan);
@@ -147,5 +147,5 @@ RemoveExtProtocolById(Oid protOid)
 	if (!found)
 		elog(ERROR, "protocol %u could not be found", protOid);
 
-	heap_close(rel, NoLock);
+	table_close(rel, NoLock);
 }

@@ -16,64 +16,55 @@
 
 namespace gpopt
 {
-	using namespace gpos;
-	
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CXformImplementDML
-	//
-	//	@doc:
-	//		Transform Logical DML to Physical DML
-	//
-	//---------------------------------------------------------------------------
-	class CXformImplementDML : public CXformImplementation
+using namespace gpos;
+
+//---------------------------------------------------------------------------
+//	@class:
+//		CXformImplementDML
+//
+//	@doc:
+//		Transform Logical DML to Physical DML
+//
+//---------------------------------------------------------------------------
+class CXformImplementDML : public CXformImplementation
+{
+private:
+	// private copy ctor
+	CXformImplementDML(const CXformImplementDML &);
+
+public:
+	// ctor
+	explicit CXformImplementDML(CMemoryPool *mp);
+
+	// dtor
+	virtual ~CXformImplementDML()
 	{
+	}
 
-		private:
+	// ident accessors
+	virtual EXformId
+	Exfid() const
+	{
+		return ExfImplementDML;
+	}
 
-			// private copy ctor
-			CXformImplementDML(const CXformImplementDML &);
+	// return a string for xform name
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CXformImplementDML";
+	}
 
-		public:
-		
-			// ctor
-			explicit
-			CXformImplementDML(CMemoryPool *mp);
+	// compute xform promise for a given expression handle
+	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
 
-			// dtor
-			virtual 
-			~CXformImplementDML() {}
+	// actual transform
+	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
+				   CExpression *pexpr) const;
 
-			// ident accessors
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfImplementDML;
-			}
-			
-			// return a string for xform name
-			virtual 
-			const CHAR *SzId() const
-			{
-				return "CXformImplementDML";
-			}
-			
-			// compute xform promise for a given expression handle
-			virtual
-			EXformPromise Exfp(CExpressionHandle &exprhdl) const;
-			
-			// actual transform
-			void Transform
-				(
-				CXformContext *pxfctxt,
-				CXformResult *pxfres,
-				CExpression *pexpr
-				) 
-				const;
-		
-	}; // class CXformImplementDML
-}
+};	// class CXformImplementDML
+}  // namespace gpopt
 
-#endif // !GPOPT_CXformImplementDML_H
+#endif	// !GPOPT_CXformImplementDML_H
 
 // EOF

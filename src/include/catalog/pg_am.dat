@@ -1,0 +1,49 @@
+#----------------------------------------------------------------------
+#
+# pg_am.dat
+#    Initial contents of the pg_am system catalog.
+#
+# Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
+# Portions Copyright (c) 1994, Regents of the University of California
+#
+# src/include/catalog/pg_am.dat
+#
+#----------------------------------------------------------------------
+
+[
+
+{ oid => '2', oid_symbol => 'HEAP_TABLE_AM_OID',
+  descr => 'heap table access method',
+  amname => 'heap', amhandler => 'heap_tableam_handler', amtype => 't' },
+
+{ oid => '3434', oid_symbol => 'AO_ROW_TABLE_AM_OID',
+  descr => 'row-oriented append-optimized table access method',
+  amname => 'ao_row', amhandler => 'ao_row_tableam_handler', amtype => 't' },
+{ oid => '3435', oid_symbol => 'AO_COLUMN_TABLE_AM_OID',
+  descr => 'column-oriented append-optimized table access method',
+  amname => 'ao_column', amhandler => 'ao_column_tableam_handler', amtype => 't' },
+
+{ oid => '403', oid_symbol => 'BTREE_AM_OID',
+  descr => 'b-tree index access method',
+  amname => 'btree', amhandler => 'bthandler', amtype => 'i' },
+{ oid => '405', oid_symbol => 'HASH_AM_OID',
+  descr => 'hash index access method',
+  amname => 'hash', amhandler => 'hashhandler', amtype => 'i' },
+{ oid => '783', oid_symbol => 'GIST_AM_OID',
+  descr => 'GiST index access method',
+  amname => 'gist', amhandler => 'gisthandler', amtype => 'i' },
+{ oid => '2742', oid_symbol => 'GIN_AM_OID',
+  descr => 'GIN index access method',
+  amname => 'gin', amhandler => 'ginhandler', amtype => 'i' },
+{ oid => '4000', oid_symbol => 'SPGIST_AM_OID',
+  descr => 'SP-GiST index access method',
+  amname => 'spgist', amhandler => 'spghandler', amtype => 'i' },
+{ oid => '3580', oid_symbol => 'BRIN_AM_OID',
+  descr => 'block range index (BRIN) access method',
+  amname => 'brin', amhandler => 'brinhandler', amtype => 'i' },
+
+{ oid => '7013', oid_symbol => 'BITMAP_AM_OID',
+  descr => 'bitmap index access method',
+  amname => 'bitmap', amhandler => 'bmhandler', amtype => 'i' },
+
+]

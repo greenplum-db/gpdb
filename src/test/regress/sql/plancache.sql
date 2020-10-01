@@ -163,11 +163,31 @@ end$$ language plpgsql;
 select cachebug();
 select cachebug();
 
+-- Check that addition or removal of any partition is correctly dealt with by
+-- default partition table when it is being used in prepared statement.
+create table pc_list_parted (a int) partition by list(a);
+create table pc_list_part_null partition of pc_list_parted for values in (null);
+create table pc_list_part_1 partition of pc_list_parted for values in (1);
+create table pc_list_part_def partition of pc_list_parted default;
+prepare pstmt_def_insert (int) as insert into pc_list_part_def values($1);
+-- should fail
+execute pstmt_def_insert(null);
+execute pstmt_def_insert(1);
+create table pc_list_part_2 partition of pc_list_parted for values in (2);
+execute pstmt_def_insert(2);
+alter table pc_list_parted detach partition pc_list_part_null;
+-- should be ok
+execute pstmt_def_insert(null);
+drop table pc_list_part_1;
+-- should be ok
+execute pstmt_def_insert(1);
+drop table pc_list_parted, pc_list_part_null;
+deallocate pstmt_def_insert;
 
 -- Test plan_cache_mode
 
 create table test_mode (a int);
-insert into test_mode select 1 from generate_series(1,1000) union all select 2;
+insert into test_mode select 1 from generate_series(1,10000) union all select 2;
 create index on test_mode (a);
 analyze test_mode;
 

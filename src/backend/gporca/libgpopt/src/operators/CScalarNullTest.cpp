@@ -32,11 +32,7 @@ using namespace gpmd;
 //
 //---------------------------------------------------------------------------
 BOOL
-CScalarNullTest::Matches
-	(
-	COperator *pop
-	)
-	const
+CScalarNullTest::Matches(COperator *pop) const
 {
 	return pop->Eopid() == Eopid();
 }
@@ -54,7 +50,7 @@ IMDId *
 CScalarNullTest::MdidType() const
 {
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
-	
+
 	return md_accessor->PtMDType<IMDTypeBool>()->MDId();
 }
 
@@ -68,16 +64,12 @@ CScalarNullTest::MdidType() const
 //
 //---------------------------------------------------------------------------
 CScalar::EBoolEvalResult
-CScalarNullTest::Eber
-	(
-	ULongPtrArray *pdrgpulChildren
-	)
-	const
+CScalarNullTest::Eber(ULongPtrArray *pdrgpulChildren) const
 {
 	GPOS_ASSERT(NULL != pdrgpulChildren);
 	GPOS_ASSERT(1 == pdrgpulChildren->Size());
 
-	EBoolEvalResult eber = (EBoolEvalResult) *((*pdrgpulChildren)[0]);
+	EBoolEvalResult eber = (EBoolEvalResult) * ((*pdrgpulChildren)[0]);
 	switch (eber)
 	{
 		case EberNull:
@@ -95,4 +87,3 @@ CScalarNullTest::Eber
 
 
 // EOF
-

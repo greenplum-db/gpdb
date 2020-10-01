@@ -2,14 +2,14 @@
 -- UNION (also INTERSECT, EXCEPT)
 --
 -- Simple UNION constructs
-SELECT 1 AS two UNION SELECT 2;
+SELECT 1 AS two UNION SELECT 2 ORDER BY 1;
  two 
 -----
    1
    2
 (2 rows)
 
-SELECT 1 AS one UNION SELECT 1;
+SELECT 1 AS one UNION SELECT 1 ORDER BY 1;
  one 
 -----
    1
@@ -29,7 +29,7 @@ SELECT 1 AS two UNION ALL SELECT 1;
    1
 (2 rows)
 
-SELECT 1 AS three UNION SELECT 2 UNION SELECT 3;
+SELECT 1 AS three UNION SELECT 2 UNION SELECT 3 ORDER BY 1;
  three 
 -------
      1
@@ -37,14 +37,14 @@ SELECT 1 AS three UNION SELECT 2 UNION SELECT 3;
      3
 (3 rows)
 
-SELECT 1 AS two UNION SELECT 2 UNION SELECT 2;
+SELECT 1 AS two UNION SELECT 2 UNION SELECT 2 ORDER BY 1;
  two 
 -----
    1
    2
 (2 rows)
 
-SELECT 1 AS three UNION SELECT 2 UNION ALL SELECT 2;
+SELECT 1 AS three UNION SELECT 2 UNION ALL SELECT 2 ORDER BY 1;
  three 
 -------
      1
@@ -52,7 +52,7 @@ SELECT 1 AS three UNION SELECT 2 UNION ALL SELECT 2;
      2
 (3 rows)
 
-SELECT 1.1 AS two UNION SELECT 2.2;
+SELECT 1.1 AS two UNION SELECT 2.2 ORDER BY 1;
  two 
 -----
  1.1
@@ -60,41 +60,41 @@ SELECT 1.1 AS two UNION SELECT 2.2;
 (2 rows)
 
 -- Mixed types
-SELECT 1.1 AS two UNION SELECT 2;
+SELECT 1.1 AS two UNION SELECT 2 ORDER BY 1;
  two 
 -----
  1.1
    2
 (2 rows)
 
-SELECT 1 AS two UNION SELECT 2.2;
+SELECT 1 AS two UNION SELECT 2.2 ORDER BY 1;
  two 
 -----
    1
  2.2
 (2 rows)
 
-SELECT 1 AS one UNION SELECT 1.0::float8;
+SELECT 1 AS one UNION SELECT 1.0::float8 ORDER BY 1;
  one 
 -----
    1
 (1 row)
 
-SELECT 1.1 AS two UNION ALL SELECT 2;
+SELECT 1.1 AS two UNION ALL SELECT 2 ORDER BY 1;
  two 
 -----
  1.1
    2
 (2 rows)
 
-SELECT 1.0::float8 AS two UNION ALL SELECT 1;
+SELECT 1.0::float8 AS two UNION ALL SELECT 1 ORDER BY 1;
  two 
 -----
    1
    1
 (2 rows)
 
-SELECT 1.1 AS three UNION SELECT 2 UNION SELECT 3;
+SELECT 1.1 AS three UNION SELECT 2 UNION SELECT 3 ORDER BY 1;
  three 
 -------
    1.1
@@ -109,7 +109,7 @@ SELECT 1.1::float8 AS two UNION SELECT 2 UNION SELECT 2.0::float8 ORDER BY 1;
    2
 (2 rows)
 
-SELECT 1.1 AS three UNION SELECT 2 UNION ALL SELECT 2;
+SELECT 1.1 AS three UNION SELECT 2 UNION ALL SELECT 2 ORDER BY 1;
  three 
 -------
    1.1
@@ -117,7 +117,7 @@ SELECT 1.1 AS three UNION SELECT 2 UNION ALL SELECT 2;
      2
 (3 rows)
 
-SELECT 1.1 AS two UNION (SELECT 2 UNION ALL SELECT 2);
+SELECT 1.1 AS two UNION (SELECT 2 UNION ALL SELECT 2) ORDER BY 1;
  two 
 -----
  1.1
@@ -195,7 +195,8 @@ SELECT f1 AS five FROM FLOAT8_TBL
   WHERE f1 BETWEEN -1e6 AND 1e6
 UNION
 SELECT f1 FROM INT4_TBL
-  WHERE f1 BETWEEN 0 AND 1000000;
+  WHERE f1 BETWEEN 0 AND 1000000
+ORDER BY 1;
          five          
 -----------------------
                -1004.3
@@ -260,19 +261,19 @@ ORDER BY 1;
 --
 -- INTERSECT and EXCEPT
 --
-SELECT q2 FROM int8_tbl INTERSECT SELECT q1 FROM int8_tbl;
+SELECT q2 FROM int8_tbl INTERSECT SELECT q1 FROM int8_tbl ORDER BY 1;
         q2        
 ------------------
- 4567890123456789
               123
+ 4567890123456789
 (2 rows)
 
-SELECT q2 FROM int8_tbl INTERSECT ALL SELECT q1 FROM int8_tbl;
+SELECT q2 FROM int8_tbl INTERSECT ALL SELECT q1 FROM int8_tbl ORDER BY 1;
         q2        
 ------------------
- 4567890123456789
- 4567890123456789
               123
+ 4567890123456789
+ 4567890123456789
 (3 rows)
 
 SELECT q2 FROM int8_tbl EXCEPT SELECT q1 FROM int8_tbl ORDER BY 1;
@@ -297,32 +298,173 @@ SELECT q2 FROM int8_tbl EXCEPT ALL SELECT DISTINCT q1 FROM int8_tbl ORDER BY 1;
   4567890123456789
 (3 rows)
 
-SELECT q1 FROM int8_tbl EXCEPT SELECT q2 FROM int8_tbl;
+SELECT q1 FROM int8_tbl EXCEPT SELECT q2 FROM int8_tbl ORDER BY 1;
  q1 
 ----
 (0 rows)
 
-SELECT q1 FROM int8_tbl EXCEPT ALL SELECT q2 FROM int8_tbl;
+SELECT q1 FROM int8_tbl EXCEPT ALL SELECT q2 FROM int8_tbl ORDER BY 1;
         q1        
 ------------------
- 4567890123456789
               123
+ 4567890123456789
 (2 rows)
 
-SELECT q1 FROM int8_tbl EXCEPT ALL SELECT DISTINCT q2 FROM int8_tbl;
+SELECT q1 FROM int8_tbl EXCEPT ALL SELECT DISTINCT q2 FROM int8_tbl ORDER BY 1;
         q1        
 ------------------
- 4567890123456789
- 4567890123456789
               123
+ 4567890123456789
+ 4567890123456789
 (3 rows)
 
 SELECT q1 FROM int8_tbl EXCEPT ALL SELECT q1 FROM int8_tbl FOR NO KEY UPDATE;
 ERROR:  FOR NO KEY UPDATE is not allowed with UNION/INTERSECT/EXCEPT
+-- nested cases
+(SELECT 1,2,3 UNION SELECT 4,5,6) INTERSECT SELECT 4,5,6;
+ ?column? | ?column? | ?column? 
+----------+----------+----------
+        4 |        5 |        6
+(1 row)
+
+(SELECT 1,2,3 UNION SELECT 4,5,6 ORDER BY 1,2) INTERSECT SELECT 4,5,6;
+ ?column? | ?column? | ?column? 
+----------+----------+----------
+        4 |        5 |        6
+(1 row)
+
+(SELECT 1,2,3 UNION SELECT 4,5,6) EXCEPT SELECT 4,5,6;
+ ?column? | ?column? | ?column? 
+----------+----------+----------
+        1 |        2 |        3
+(1 row)
+
+(SELECT 1,2,3 UNION SELECT 4,5,6 ORDER BY 1,2) EXCEPT SELECT 4,5,6;
+ ?column? | ?column? | ?column? 
+----------+----------+----------
+        1 |        2 |        3
+(1 row)
+
+-- exercise both hashed and sorted implementations of INTERSECT/EXCEPT
+set enable_hashagg to on;
+explain (costs off)
+select count(*) from
+  ( select unique1 from tenk1 intersect select fivethous from tenk1 ) ss;
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Subquery Scan on ss
+                     ->  HashSetOp Intersect
+                           ->  Append
+                                 ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                                       Hash Key: "*SELECT* 1".unique1
+                                       ->  Subquery Scan on "*SELECT* 1"
+                                             ->  Seq Scan on tenk1
+                                 ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                       Hash Key: "*SELECT* 2".fivethous
+                                       ->  Subquery Scan on "*SELECT* 2"
+                                             ->  Seq Scan on tenk1 tenk1_1
+ Optimizer: Postgres query optimizer
+(15 rows)
+
+select count(*) from
+  ( select unique1 from tenk1 intersect select fivethous from tenk1 ) ss;
+ count 
+-------
+  5000
+(1 row)
+
+explain (costs off)
+select unique1 from tenk1 except select unique2 from tenk1 where unique2 != 10;
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  HashSetOp Except
+         ->  Append
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: "*SELECT* 1".unique1
+                     ->  Subquery Scan on "*SELECT* 1"
+                           ->  Seq Scan on tenk1
+               ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                     Hash Key: "*SELECT* 2".unique2
+                     ->  Subquery Scan on "*SELECT* 2"
+                           ->  Seq Scan on tenk1 tenk1_1
+                                 Filter: (unique2 <> 10)
+ Optimizer: Postgres query optimizer
+(13 rows)
+
+select unique1 from tenk1 except select unique2 from tenk1 where unique2 != 10;
+ unique1 
+---------
+      10
+(1 row)
+
+set enable_hashagg to off;
+explain (costs off)
+select count(*) from
+  ( select unique1 from tenk1 intersect select fivethous from tenk1 ) ss;
+                                        QUERY PLAN                                        
+------------------------------------------------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Subquery Scan on ss
+                     ->  SetOp Intersect
+                           ->  Sort
+                                 Sort Key: "*SELECT* 1".unique1
+                                 ->  Append
+                                       ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                                             Hash Key: "*SELECT* 1".unique1
+                                             ->  Subquery Scan on "*SELECT* 1"
+                                                   ->  Seq Scan on tenk1
+                                       ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                             Hash Key: "*SELECT* 2".fivethous
+                                             ->  Subquery Scan on "*SELECT* 2"
+                                                   ->  Seq Scan on tenk1 tenk1_1
+ Optimizer: Postgres query optimizer
+(17 rows)
+
+select count(*) from
+  ( select unique1 from tenk1 intersect select fivethous from tenk1 ) ss;
+ count 
+-------
+  5000
+(1 row)
+
+explain (costs off)
+select unique1 from tenk1 except select unique2 from tenk1 where unique2 != 10;
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  SetOp Except
+         ->  Sort
+               Sort Key: "*SELECT* 1".unique1
+               ->  Append
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Hash Key: "*SELECT* 1".unique1
+                           ->  Subquery Scan on "*SELECT* 1"
+                                 ->  Seq Scan on tenk1
+                     ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                           Hash Key: "*SELECT* 2".unique2
+                           ->  Subquery Scan on "*SELECT* 2"
+                                 ->  Seq Scan on tenk1 tenk1_1
+                                       Filter: (unique2 <> 10)
+ Optimizer: Postgres query optimizer
+(15 rows)
+
+select unique1 from tenk1 except select unique2 from tenk1 where unique2 != 10;
+ unique1 
+---------
+      10
+(1 row)
+
+reset enable_hashagg;
 --
 -- Mixed types
 --
-SELECT f1 FROM float8_tbl INTERSECT SELECT f1 FROM int4_tbl;
+SELECT f1 FROM float8_tbl INTERSECT SELECT f1 FROM int4_tbl ORDER BY 1;
  f1 
 ----
   0
@@ -340,35 +482,35 @@ SELECT f1 FROM float8_tbl EXCEPT SELECT f1 FROM int4_tbl ORDER BY 1;
 --
 -- Operator precedence and (((((extra))))) parentheses
 --
-SELECT q1 FROM int8_tbl INTERSECT SELECT q2 FROM int8_tbl UNION ALL SELECT q2 FROM int8_tbl;
+SELECT q1 FROM int8_tbl INTERSECT SELECT q2 FROM int8_tbl UNION ALL SELECT q2 FROM int8_tbl  ORDER BY 1;
         q1         
 -------------------
-  4567890123456789
+ -4567890123456789
+               123
                123
                456
   4567890123456789
-               123
   4567890123456789
- -4567890123456789
+  4567890123456789
 (7 rows)
 
-SELECT q1 FROM int8_tbl INTERSECT (((SELECT q2 FROM int8_tbl UNION ALL SELECT q2 FROM int8_tbl)));
+SELECT q1 FROM int8_tbl INTERSECT (((SELECT q2 FROM int8_tbl UNION ALL SELECT q2 FROM int8_tbl))) ORDER BY 1;
         q1        
 ------------------
- 4567890123456789
               123
+ 4567890123456789
 (2 rows)
 
-(((SELECT q1 FROM int8_tbl INTERSECT SELECT q2 FROM int8_tbl))) UNION ALL SELECT q2 FROM int8_tbl;
+(((SELECT q1 FROM int8_tbl INTERSECT SELECT q2 FROM int8_tbl ORDER BY 1))) UNION ALL SELECT q2 FROM int8_tbl ORDER BY 1;
         q1         
 -------------------
-  4567890123456789
+ -4567890123456789
+               123
                123
                456
   4567890123456789
-               123
   4567890123456789
- -4567890123456789
+  4567890123456789
 (7 rows)
 
 SELECT q1 FROM int8_tbl UNION ALL SELECT q2 FROM int8_tbl EXCEPT SELECT q1 FROM int8_tbl ORDER BY 1;
@@ -436,6 +578,121 @@ SELECT q1 FROM int8_tbl EXCEPT (((SELECT q2 FROM int8_tbl ORDER BY q2 LIMIT 1)))
  4567890123456789 | -4567890123456789
 (5 rows)
 
+--
+-- Check behavior with empty select list (allowed since 9.4)
+--
+select union select;
+--
+(1 row)
+
+select intersect select;
+--
+(1 row)
+
+select except select;
+--
+(0 rows)
+
+-- check hashed implementation
+set enable_hashagg = true;
+set enable_sort = false;
+explain (costs off)
+select from generate_series(1,5) union select from generate_series(1,3);
+                           QUERY PLAN                           
+----------------------------------------------------------------
+ HashAggregate
+   ->  Append
+         ->  Function Scan on generate_series
+         ->  Function Scan on generate_series generate_series_1
+(4 rows)
+
+explain (costs off)
+select from generate_series(1,5) intersect select from generate_series(1,3);
+                              QUERY PLAN                              
+----------------------------------------------------------------------
+ HashSetOp Intersect
+   ->  Append
+         ->  Subquery Scan on "*SELECT* 1"
+               ->  Function Scan on generate_series
+         ->  Subquery Scan on "*SELECT* 2"
+               ->  Function Scan on generate_series generate_series_1
+(6 rows)
+
+select from generate_series(1,5) union select from generate_series(1,3);
+--
+(1 row)
+
+select from generate_series(1,5) union all select from generate_series(1,3);
+--
+(8 rows)
+
+select from generate_series(1,5) intersect select from generate_series(1,3);
+--
+(1 row)
+
+select from generate_series(1,5) intersect all select from generate_series(1,3);
+--
+(3 rows)
+
+select from generate_series(1,5) except select from generate_series(1,3);
+--
+(0 rows)
+
+select from generate_series(1,5) except all select from generate_series(1,3);
+--
+(2 rows)
+
+-- check sorted implementation
+set enable_hashagg = false;
+set enable_sort = true;
+explain (costs off)
+select from generate_series(1,5) union select from generate_series(1,3);
+                           QUERY PLAN                           
+----------------------------------------------------------------
+ Unique
+   ->  Append
+         ->  Function Scan on generate_series
+         ->  Function Scan on generate_series generate_series_1
+(4 rows)
+
+explain (costs off)
+select from generate_series(1,5) intersect select from generate_series(1,3);
+                              QUERY PLAN                              
+----------------------------------------------------------------------
+ SetOp Intersect
+   ->  Append
+         ->  Subquery Scan on "*SELECT* 1"
+               ->  Function Scan on generate_series
+         ->  Subquery Scan on "*SELECT* 2"
+               ->  Function Scan on generate_series generate_series_1
+(6 rows)
+
+select from generate_series(1,5) union select from generate_series(1,3);
+--
+(1 row)
+
+select from generate_series(1,5) union all select from generate_series(1,3);
+--
+(8 rows)
+
+select from generate_series(1,5) intersect select from generate_series(1,3);
+--
+(1 row)
+
+select from generate_series(1,5) intersect all select from generate_series(1,3);
+--
+(3 rows)
+
+select from generate_series(1,5) except select from generate_series(1,3);
+--
+(0 rows)
+
+select from generate_series(1,5) except all select from generate_series(1,3);
+--
+(2 rows)
+
+reset enable_hashagg;
+reset enable_sort;
 --
 -- Check handling of a case with unknown constants.  We don't guarantee
 -- an undecorated constant will work in all cases, but historically this
@@ -520,29 +777,28 @@ INSERT INTO t2c VALUES ('vw'), ('cd'), ('mn'), ('ef');
 CREATE INDEX t1c_ab_idx on t1c ((a || b));
 set enable_seqscan = on;
 set enable_indexonlyscan = off;
--- NOTE: GPDB planner chooses a seqscan rather than indexscan for t1.
--- This is a side-effect of disabling pull-up for simple union all in GPDB.
+-- Coerce GPDB to produce same plan as in upstream
+set enable_sort=off;
 explain (costs off)
   SELECT * FROM
   (SELECT a || b AS ab FROM t1
    UNION ALL
    SELECT ab FROM t2) t
   ORDER BY 1 LIMIT 8;
-                   QUERY PLAN                   
-------------------------------------------------
+                         QUERY PLAN                         
+------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: ((t1.a || t1.b))
          ->  Limit
-               ->  Sort
+               ->  Merge Append
                      Sort Key: ((t1.a || t1.b))
-                     ->  Append
-                           ->  Seq Scan on t1
-                           ->  Seq Scan on t1c
-                           ->  Seq Scan on t2
-                           ->  Seq Scan on t2c
+                     ->  Index Scan using t1_ab_idx on t1
+                     ->  Index Scan using t1c_ab_idx on t1c
+                     ->  Index Scan using t2_pkey on t2
+                     ->  Index Scan using t2c_pkey on t2c
  Optimizer: Postgres query optimizer
-(12 rows)
+(11 rows)
 
   SELECT * FROM
   (SELECT a || b AS ab FROM t1
@@ -564,7 +820,10 @@ explain (costs off)
 reset enable_seqscan;
 reset enable_indexscan;
 reset enable_bitmapscan;
+reset enable_sort;
 -- This simpler variant of the above test has been observed to fail differently
+-- Coerce GPDB to produce same plan as in upstream
+set enable_seqscan=off;
 create table events (event_id int primary key);
 create table other_events (event_id int primary key);
 create table events_child () inherits (events);
@@ -574,19 +833,21 @@ select event_id
        union all
        select event_id from other_events) ss
  order by event_id;
-                 QUERY PLAN                 
---------------------------------------------
+                           QUERY PLAN                           
+----------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Merge Key: events.event_id
-   ->  Sort
+   ->  Merge Append
          Sort Key: events.event_id
-         ->  Append
-               ->  Seq Scan on events
+         ->  Index Scan using events_pkey on events
+         ->  Sort
+               Sort Key: events_child.event_id
                ->  Seq Scan on events_child
-               ->  Seq Scan on other_events
+         ->  Index Scan using other_events_pkey on other_events
  Optimizer: Postgres query optimizer
-(9 rows)
+(10 rows)
 
+reset enable_seqscan;
 drop table events_child, events, other_events;
 reset enable_indexonlyscan;
 -- Test constraint exclusion of UNION ALL subqueries
@@ -599,10 +860,9 @@ explain (costs off)
                 QUERY PLAN                
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Append
-         ->  Seq Scan on tenk1 b
+   ->  Seq Scan on tenk1 b
  Optimizer: Postgres query optimizer
-(4 rows)
+(3 rows)
 
 -- Test that we push quals into UNION sub-selects only when it's safe
 explain (costs off)
@@ -610,23 +870,27 @@ SELECT * FROM
   (SELECT 1 AS t, 2 AS x
    UNION
    SELECT 2 AS t, 4 AS x) ss
-WHERE x < 4;
-              QUERY PLAN              
---------------------------------------
- HashAggregate
-   Group Key: (1), (2)
-   ->  Append
-         ->  Result
-         ->  Result
-               One-Time Filter: false
+WHERE x < 4
+ORDER BY x;
+                 QUERY PLAN                 
+--------------------------------------------
+ Sort
+   Sort Key: (2)
+   ->  HashAggregate
+         Group Key: (1), (2)
+         ->  Append
+               ->  Result
+               ->  Result
+                     One-Time Filter: false
  Optimizer: Postgres query optimizer
-(7 rows)
+(9 rows)
 
 SELECT * FROM
   (SELECT 1 AS t, 2 AS x
    UNION
    SELECT 2 AS t, 4 AS x) ss
-WHERE x < 4;
+WHERE x < 4
+ORDER BY x;
  t | x 
 ---+---
  1 | 2
@@ -639,8 +903,8 @@ SELECT * FROM
    SELECT 2 AS t, 4 AS x) ss
 WHERE x < 4
 ORDER BY x;
-                          QUERY PLAN                          
---------------------------------------------------------------
+                       QUERY PLAN                       
+--------------------------------------------------------
  Sort
    Sort Key: ss.x
    ->  Subquery Scan on ss
@@ -648,10 +912,11 @@ ORDER BY x;
          ->  HashAggregate
                Group Key: (1), (generate_series(1, 10))
                ->  Append
-                     ->  Result
+                     ->  ProjectSet
+                           ->  Result
                      ->  Result
  Optimizer: Postgres query optimizer
-(10 rows)
+(11 rows)
 
 SELECT * FROM
   (SELECT 1 AS t, generate_series(1,10) AS x
@@ -671,29 +936,108 @@ SELECT * FROM
   (SELECT 1 AS t, (random()*3)::int AS x
    UNION
    SELECT 2 AS t, 4 AS x) ss
-WHERE x > 3;
-                            QUERY PLAN                             
--------------------------------------------------------------------
- Subquery Scan on ss
-   Filter: (ss.x > 3)
-   ->  HashAggregate
-         Group Key: (1), ((($0 * '3'::double precision))::integer)
-         ->  Append
-               ->  Result
-                     InitPlan 1 (returns $0)
-                       ->  Result
-               ->  Result
+WHERE x > 3
+ORDER BY x;
+                               QUERY PLAN                                
+-------------------------------------------------------------------------
+ Sort
+   Sort Key: ss.x
+   ->  Subquery Scan on ss
+         Filter: (ss.x > 3)
+         ->  HashAggregate
+               Group Key: (1), ((($0 * '3'::double precision))::integer)
+               ->  Append
+                     ->  Result
+                           InitPlan 1 (returns $0)
+                             ->  Result
+                     ->  Result
  Optimizer: Postgres query optimizer
-(10 rows)
+(12 rows)
 
 SELECT * FROM
   (SELECT 1 AS t, (random()*3)::int AS x
    UNION
    SELECT 2 AS t, 4 AS x) ss
-WHERE x > 3;
+WHERE x > 3
+ORDER BY x;
  t | x 
 ---+---
  2 | 4
+(1 row)
+
+-- Test cases where the native ordering of a sub-select has more pathkeys
+-- than the outer query cares about
+explain (costs off)
+select distinct q1 from
+  (select distinct * from int8_tbl i81
+   union all
+   select distinct * from int8_tbl i82) ss
+where q2 = q2;
+                        QUERY PLAN                        
+----------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  HashAggregate
+         Group Key: "*SELECT* 1".q1
+         ->  Append
+               ->  Subquery Scan on "*SELECT* 1"
+                     ->  HashAggregate
+                           Group Key: i81.q1, i81.q2
+                           ->  Seq Scan on int8_tbl i81
+                                 Filter: (q2 IS NOT NULL)
+               ->  Subquery Scan on "*SELECT* 2"
+                     ->  HashAggregate
+                           Group Key: i82.q1, i82.q2
+                           ->  Seq Scan on int8_tbl i82
+                                 Filter: (q2 IS NOT NULL)
+ Optimizer: Postgres query optimizer
+(15 rows)
+
+select distinct q1 from
+  (select distinct * from int8_tbl i81
+   union all
+   select distinct * from int8_tbl i82) ss
+where q2 = q2;
+        q1        
+------------------
+              123
+ 4567890123456789
+(2 rows)
+
+explain (costs off)
+select distinct q1 from
+  (select distinct * from int8_tbl i81
+   union all
+   select distinct * from int8_tbl i82) ss
+where -q1 = q2;
+                          QUERY PLAN                          
+--------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  GroupAggregate
+         Group Key: "*SELECT* 1".q1
+         ->  Sort
+               Sort Key: "*SELECT* 1".q1
+               ->  Append
+                     ->  Subquery Scan on "*SELECT* 1"
+                           ->  HashAggregate
+                                 Group Key: i81.q1, i81.q2
+                                 ->  Seq Scan on int8_tbl i81
+                                       Filter: ((- q1) = q2)
+                     ->  Subquery Scan on "*SELECT* 2"
+                           ->  HashAggregate
+                                 Group Key: i82.q1, i82.q2
+                                 ->  Seq Scan on int8_tbl i82
+                                       Filter: ((- q1) = q2)
+ Optimizer: Postgres query optimizer
+(17 rows)
+
+select distinct q1 from
+  (select distinct * from int8_tbl i81
+   union all
+   select distinct * from int8_tbl i82) ss
+where -q1 = q2;
+        q1        
+------------------
+ 4567890123456789
 (1 row)
 
 -- Test proper handling of parameterized appendrel paths when the
@@ -733,3 +1077,35 @@ select * from
 
 drop table t3;
 drop function expensivefunc(int);
+-- Test handling of appendrel quals that const-simplify into an AND
+explain (costs off)
+select * from
+  (select *, 0 as x from int8_tbl a
+   union all
+   select *, 1 as x from int8_tbl b) ss
+where (x = 0) or (q1 >= q2 and q1 <= q2);
+                    QUERY PLAN                     
+---------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Append
+         ->  Seq Scan on int8_tbl a
+         ->  Seq Scan on int8_tbl b
+               Filter: ((q1 >= q2) AND (q1 <= q2))
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+select * from
+  (select *, 0 as x from int8_tbl a
+   union all
+   select *, 1 as x from int8_tbl b) ss
+where (x = 0) or (q1 >= q2 and q1 <= q2);
+        q1        |        q2         | x 
+------------------+-------------------+---
+              123 |               456 | 0
+              123 |  4567890123456789 | 0
+ 4567890123456789 |               123 | 0
+ 4567890123456789 |  4567890123456789 | 0
+ 4567890123456789 | -4567890123456789 | 0
+ 4567890123456789 |  4567890123456789 | 1
+(6 rows)
+

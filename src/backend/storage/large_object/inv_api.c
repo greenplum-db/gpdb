@@ -19,7 +19,7 @@
  * memory context given to inv_open (for LargeObjectDesc structs).
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -33,8 +33,8 @@
 #include <limits.h>
 
 #include "access/genam.h"
-#include "access/heapam.h"
 #include "access/sysattr.h"
+#include "access/table.h"
 #include "access/tuptoaster.h"
 #include "access/xact.h"
 #include "catalog/dependency.h"
@@ -48,8 +48,12 @@
 #include "utils/fmgroids.h"
 #include "utils/rel.h"
 #include "utils/snapmgr.h"
-#include "utils/tqual.h"
 
+
+/*
+ * GUC: backwards-compatibility flag to suppress LO permission checks
+ */
+bool		lo_compat_privileges;
 
 /*
  * All accesses to pg_largeobject and its index make use of a single Relation
@@ -75,23 +79,14 @@ open_lo_relation(void)
 
 	/* Arrange for the top xact to own these relation references */
 	currentOwner = CurrentResourceOwner;
-	PG_TRY();
-	{
-		CurrentResourceOwner = TopTransactionResourceOwner;
+	CurrentResourceOwner = TopTransactionResourceOwner;
 
-		/* Use RowExclusiveLock since we might either read or write */
-		if (lo_heap_r == NULL)
-			lo_heap_r = heap_open(LargeObjectRelationId, RowExclusiveLock);
-		if (lo_index_r == NULL)
-			lo_index_r = index_open(LargeObjectLOidPNIndexId, RowExclusiveLock);
-	}
-	PG_CATCH();
-	{
-		/* Ensure CurrentResourceOwner is restored on error */
-		CurrentResourceOwner = currentOwner;
-		PG_RE_THROW();
-	}
-	PG_END_TRY();
+	/* Use RowExclusiveLock since we might either read or write */
+	if (lo_heap_r == NULL)
+		lo_heap_r = table_open(LargeObjectRelationId, RowExclusiveLock);
+	if (lo_index_r == NULL)
+		lo_index_r = index_open(LargeObjectLOidPNIndexId, RowExclusiveLock);
+
 	CurrentResourceOwner = currentOwner;
 }
 
@@ -112,22 +107,13 @@ close_lo_relation(bool isCommit)
 			ResourceOwner currentOwner;
 
 			currentOwner = CurrentResourceOwner;
-			PG_TRY();
-			{
-				CurrentResourceOwner = TopTransactionResourceOwner;
+			CurrentResourceOwner = TopTransactionResourceOwner;
 
-				if (lo_index_r)
-					index_close(lo_index_r, NoLock);
-				if (lo_heap_r)
-					heap_close(lo_heap_r, NoLock);
-			}
-			PG_CATCH();
-			{
-				/* Ensure CurrentResourceOwner is restored on error */
-				CurrentResourceOwner = currentOwner;
-				PG_RE_THROW();
-			}
-			PG_END_TRY();
+			if (lo_index_r)
+				index_close(lo_index_r, NoLock);
+			if (lo_heap_r)
+				table_close(lo_heap_r, NoLock);
+
 			CurrentResourceOwner = currentOwner;
 		}
 		lo_heap_r = NULL;
@@ -150,12 +136,12 @@ myLargeObjectExists(Oid loid, Snapshot snapshot)
 	bool		retval = false;
 
 	ScanKeyInit(&skey[0],
-				ObjectIdAttributeNumber,
+				Anum_pg_largeobject_metadata_oid,
 				BTEqualStrategyNumber, F_OIDEQ,
 				ObjectIdGetDatum(loid));
 
-	pg_lo_meta = heap_open(LargeObjectMetadataRelationId,
-						   AccessShareLock);
+	pg_lo_meta = table_open(LargeObjectMetadataRelationId,
+							AccessShareLock);
 
 	sd = systable_beginscan(pg_lo_meta,
 							LargeObjectMetadataOidIndexId, true,
@@ -167,7 +153,7 @@ myLargeObjectExists(Oid loid, Snapshot snapshot)
 
 	systable_endscan(sd);
 
-	heap_close(pg_lo_meta, AccessShareLock);
+	table_close(pg_lo_meta, AccessShareLock);
 
 	return retval;
 }
@@ -268,21 +254,27 @@ inv_open(Oid lobjId, int flags, MemoryContext mcxt)
 	Snapshot	snapshot = NULL;
 	int			descflags = 0;
 
+	/*
+	 * Historically, no difference is made between (INV_WRITE) and (INV_WRITE
+	 * | INV_READ), the caller being allowed to read the large object
+	 * descriptor in either case.
+	 */
 	if (flags & INV_WRITE)
-	{
-		snapshot = NULL;		/* instantaneous MVCC snapshot */
-		descflags = IFS_WRLOCK | IFS_RDLOCK;
-	}
-	else if (flags & INV_READ)
-	{
-		snapshot = GetActiveSnapshot();
-		descflags = IFS_RDLOCK;
-	}
-	else
+		descflags |= IFS_WRLOCK | IFS_RDLOCK;
+	if (flags & INV_READ)
+		descflags |= IFS_RDLOCK;
+
+	if (descflags == 0)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("invalid flags for opening a large object: %d",
 						flags)));
+
+	/* Get snapshot.  If write is requested, use an instantaneous snapshot. */
+	if (descflags & IFS_WRLOCK)
+		snapshot = NULL;
+	else
+		snapshot = GetActiveSnapshot();
 
 	/* Can't use LargeObjectExists here because we need to specify snapshot */
 	if (!myLargeObjectExists(lobjId, snapshot))
@@ -290,24 +282,50 @@ inv_open(Oid lobjId, int flags, MemoryContext mcxt)
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
 				 errmsg("large object %u does not exist", lobjId)));
 
-	/*
-	 * We must register the snapshot in TopTransaction's resowner, because it
-	 * must stay alive until the LO is closed rather than until the current
-	 * portal shuts down. Do this after checking that the LO exists, to avoid
-	 * leaking the snapshot if an error is thrown.
-	 */
-	if (snapshot)
-		snapshot = RegisterSnapshotOnOwner(snapshot,
-										   TopTransactionResourceOwner);
+	/* Apply permission checks, again specifying snapshot */
+	if ((descflags & IFS_RDLOCK) != 0)
+	{
+		if (!lo_compat_privileges &&
+			pg_largeobject_aclcheck_snapshot(lobjId,
+											 GetUserId(),
+											 ACL_SELECT,
+											 snapshot) != ACLCHECK_OK)
+			ereport(ERROR,
+					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+					 errmsg("permission denied for large object %u",
+							lobjId)));
+	}
+	if ((descflags & IFS_WRLOCK) != 0)
+	{
+		if (!lo_compat_privileges &&
+			pg_largeobject_aclcheck_snapshot(lobjId,
+											 GetUserId(),
+											 ACL_UPDATE,
+											 snapshot) != ACLCHECK_OK)
+			ereport(ERROR,
+					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+					 errmsg("permission denied for large object %u",
+							lobjId)));
+	}
 
-	/* All set, create a descriptor */
+	/* OK to create a descriptor */
 	retval = (LargeObjectDesc *) MemoryContextAlloc(mcxt,
 													sizeof(LargeObjectDesc));
 	retval->id = lobjId;
 	retval->subid = GetCurrentSubTransactionId();
 	retval->offset = 0;
-	retval->snapshot = snapshot;
 	retval->flags = descflags;
+
+	/*
+	 * We must register the snapshot in TopTransaction's resowner, because it
+	 * must stay alive until the LO is closed rather than until the current
+	 * portal shuts down.  Do this last to avoid uselessly leaking the
+	 * snapshot if an error is thrown above.
+	 */
+	if (snapshot)
+		snapshot = RegisterSnapshotOnOwner(snapshot,
+										   TopTransactionResourceOwner);
+	retval->snapshot = snapshot;
 
 	return retval;
 }
@@ -330,7 +348,7 @@ inv_close(LargeObjectDesc *obj_desc)
 /*
  * Destroys an existing large object (not to be confused with a descriptor!)
  *
- * returns -1 if failed
+ * Note we expect caller to have done any required permissions check.
  */
 int
 inv_drop(Oid lobjId)
@@ -351,6 +369,7 @@ inv_drop(Oid lobjId)
 	 */
 	CommandCounterIncrement();
 
+	/* For historical reasons, we always return 1 on success. */
 	return 1;
 }
 
@@ -416,6 +435,11 @@ inv_seek(LargeObjectDesc *obj_desc, int64 offset, int whence)
 	Assert(PointerIsValid(obj_desc));
 
 	/*
+	 * We allow seek/tell if you have either read or write permission, so no
+	 * need for a permission check here.
+	 */
+
+	/*
 	 * Note: overflow in the additions is possible, but since we will reject
 	 * negative results, we don't need any extra test for that.
 	 */
@@ -445,8 +469,8 @@ inv_seek(LargeObjectDesc *obj_desc, int64 offset, int whence)
 	if (newoffset < 0 || newoffset > MAX_LARGE_OBJECT_SIZE)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-		   errmsg_internal("invalid large object seek target: " INT64_FORMAT,
-						   newoffset)));
+				 errmsg_internal("invalid large object seek target: " INT64_FORMAT,
+								 newoffset)));
 
 	obj_desc->offset = newoffset;
 	return newoffset;
@@ -456,6 +480,11 @@ int64
 inv_tell(LargeObjectDesc *obj_desc)
 {
 	Assert(PointerIsValid(obj_desc));
+
+	/*
+	 * We allow seek/tell if you have either read or write permission, so no
+	 * need for a permission check here.
+	 */
 
 	return obj_desc->offset;
 }
@@ -475,6 +504,12 @@ inv_read(LargeObjectDesc *obj_desc, char *buf, int nbytes)
 
 	Assert(PointerIsValid(obj_desc));
 	Assert(buf != NULL);
+
+	if ((obj_desc->flags & IFS_RDLOCK) == 0)
+		ereport(ERROR,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+				 errmsg("permission denied for large object %u",
+						obj_desc->id)));
 
 	if (nbytes <= 0)
 		return 0;
@@ -581,7 +616,11 @@ inv_write(LargeObjectDesc *obj_desc, const char *buf, int nbytes)
 	Assert(buf != NULL);
 
 	/* enforce writability because snapshot is probably wrong otherwise */
-	Assert(obj_desc->flags & IFS_WRLOCK);
+	if ((obj_desc->flags & IFS_WRLOCK) == 0)
+		ereport(ERROR,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+				 errmsg("permission denied for large object %u",
+						obj_desc->id)));
 
 	if (nbytes <= 0)
 		return 0;
@@ -624,7 +663,7 @@ inv_write(LargeObjectDesc *obj_desc, const char *buf, int nbytes)
 		{
 			if ((oldtuple = systable_getnext_ordered(sd, ForwardScanDirection)) != NULL)
 			{
-				if (HeapTupleHasNulls(oldtuple))		/* paranoia */
+				if (HeapTupleHasNulls(oldtuple))	/* paranoia */
 					elog(ERROR, "null field found in pg_largeobject");
 				olddata = (Form_pg_largeobject) GETSTRUCT(oldtuple);
 				Assert(olddata->pageno >= pageno);
@@ -678,8 +717,8 @@ inv_write(LargeObjectDesc *obj_desc, const char *buf, int nbytes)
 			replace[Anum_pg_largeobject_data - 1] = true;
 			newtup = heap_modify_tuple(oldtuple, RelationGetDescr(lo_heap_r),
 									   values, nulls, replace);
-			simple_heap_update(lo_heap_r, &newtup->t_self, newtup);
-			CatalogIndexInsert(indstate, newtup);
+			CatalogTupleUpdateWithInfo(lo_heap_r, &newtup->t_self, newtup,
+									   indstate);
 			heap_freetuple(newtup);
 
 			/*
@@ -721,8 +760,7 @@ inv_write(LargeObjectDesc *obj_desc, const char *buf, int nbytes)
 			values[Anum_pg_largeobject_pageno - 1] = Int32GetDatum(pageno);
 			values[Anum_pg_largeobject_data - 1] = PointerGetDatum(&workbuf);
 			newtup = heap_form_tuple(lo_heap_r->rd_att, values, nulls);
-			simple_heap_insert(lo_heap_r, newtup);
-			CatalogIndexInsert(indstate, newtup);
+			CatalogTupleInsertWithInfo(lo_heap_r, newtup, indstate);
 			heap_freetuple(newtup);
 		}
 		pageno++;
@@ -768,7 +806,11 @@ inv_truncate(LargeObjectDesc *obj_desc, int64 len)
 	Assert(PointerIsValid(obj_desc));
 
 	/* enforce writability because snapshot is probably wrong otherwise */
-	Assert(obj_desc->flags & IFS_WRLOCK);
+	if ((obj_desc->flags & IFS_WRLOCK) == 0)
+		ereport(ERROR,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+				 errmsg("permission denied for large object %u",
+						obj_desc->id)));
 
 	/*
 	 * use errmsg_internal here because we don't want to expose INT64_FORMAT
@@ -807,7 +849,7 @@ inv_truncate(LargeObjectDesc *obj_desc, int64 len)
 	olddata = NULL;
 	if ((oldtuple = systable_getnext_ordered(sd, ForwardScanDirection)) != NULL)
 	{
-		if (HeapTupleHasNulls(oldtuple))		/* paranoia */
+		if (HeapTupleHasNulls(oldtuple))	/* paranoia */
 			elog(ERROR, "null field found in pg_largeobject");
 		olddata = (Form_pg_largeobject) GETSTRUCT(oldtuple);
 		Assert(olddata->pageno >= pageno);
@@ -850,8 +892,8 @@ inv_truncate(LargeObjectDesc *obj_desc, int64 len)
 		replace[Anum_pg_largeobject_data - 1] = true;
 		newtup = heap_modify_tuple(oldtuple, RelationGetDescr(lo_heap_r),
 								   values, nulls, replace);
-		simple_heap_update(lo_heap_r, &newtup->t_self, newtup);
-		CatalogIndexInsert(indstate, newtup);
+		CatalogTupleUpdateWithInfo(lo_heap_r, &newtup->t_self, newtup,
+								   indstate);
 		heap_freetuple(newtup);
 	}
 	else
@@ -864,7 +906,7 @@ inv_truncate(LargeObjectDesc *obj_desc, int64 len)
 		if (olddata != NULL)
 		{
 			Assert(olddata->pageno > pageno);
-			simple_heap_delete(lo_heap_r, &oldtuple->t_self);
+			CatalogTupleDelete(lo_heap_r, &oldtuple->t_self);
 		}
 
 		/*
@@ -888,8 +930,7 @@ inv_truncate(LargeObjectDesc *obj_desc, int64 len)
 		values[Anum_pg_largeobject_pageno - 1] = Int32GetDatum(pageno);
 		values[Anum_pg_largeobject_data - 1] = PointerGetDatum(&workbuf);
 		newtup = heap_form_tuple(lo_heap_r->rd_att, values, nulls);
-		simple_heap_insert(lo_heap_r, newtup);
-		CatalogIndexInsert(indstate, newtup);
+		CatalogTupleInsertWithInfo(lo_heap_r, newtup, indstate);
 		heap_freetuple(newtup);
 	}
 
@@ -901,7 +942,7 @@ inv_truncate(LargeObjectDesc *obj_desc, int64 len)
 	{
 		while ((oldtuple = systable_getnext_ordered(sd, ForwardScanDirection)) != NULL)
 		{
-			simple_heap_delete(lo_heap_r, &oldtuple->t_self);
+			CatalogTupleDelete(lo_heap_r, &oldtuple->t_self);
 		}
 	}
 

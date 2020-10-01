@@ -1,0 +1,20 @@
+#----------------------------------------------------------------------
+#
+# pg_resgroup.dat
+#    Initial contents of the pg_resgroup system relation.
+#
+# Portions Copyright (c) 1996-2018, PostgreSQL Global Development Group
+# Portions Copyright (c) 1994, Regents of the University of California
+#
+# src/include/catalog/pg_resgroup.dat
+#
+#----------------------------------------------------------------------
+
+[
+
+{ oid => '6437', oid_symbol => 'DEFAULTRESGROUP_OID',
+  rsgname => 'default_group', parent => '0' },
+{ oid => '6438', oid_symbol => 'ADMINRESGROUP_OID',
+  rsgname => 'admin_group', parent => '0' },
+
+]

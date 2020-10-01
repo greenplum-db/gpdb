@@ -3,7 +3,7 @@
 -- lock was held by some other session.
 
 -- setup
-CREATE or REPLACE FUNCTION check_readers_are_blocked () RETURNS bool AS $$ declare retries int; /* in func */ begin retries := 1200; /* in func */ loop if (SELECT count(*) > 0 as reader_waits from pg_locks l join pg_stat_activity a on a.pid = l.pid and a.query like '%reader_waits_for_lock_table%' and not a.pid = pg_backend_pid() and l.granted = false and l.mppiswriter = false) then return true; /* in func */ end if; /* in func */ if retries <= 0 then return false; /* in func */ end if; /* in func */ perform pg_sleep(0.1); /* in func */ retries := retries - 1; /* in func */ end loop; /* in func */ end; /* in func */ $$ language plpgsql;
+CREATE or REPLACE FUNCTION check_readers_are_blocked () RETURNS bool AS $$ declare retries int; /* in func */ begin retries := 1200; /* in func */ loop if (SELECT count(*) > 0 as reader_waits from pg_locks l join pg_stat_activity a on a.pid = l.pid and a.query like '%reader_waits_for_lock_table%' and not a.pid = pg_backend_pid() and l.granted = false and l.mppiswriter = false) then return true; /* in func */ end if; /* in func */ if retries <= 0 then return false; /* in func */ end if; /* in func */ perform pg_sleep(0.1); /* in func */ perform pg_stat_clear_snapshot(); /* in func */ retries := retries - 1; /* in func */ end loop; /* in func */ end; /* in func */ $$ language plpgsql;
 CREATE
 1: create table reader_waits_for_lock_table(a int, b int) distributed by (a);
 CREATE

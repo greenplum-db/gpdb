@@ -190,18 +190,18 @@ explain select c1 from t1,
 	where c1 = foo.c2;
                                                  QUERY PLAN                                                  
 -------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=4.42..7.59 rows=4 width=4)
-   ->  Hash Join  (cost=4.42..7.59 rows=2 width=4)
-         Hash Cond: t1.c1 = t2.c2
-         ->  Seq Scan on t1  (cost=0.00..3.10 rows=4 width=4)
-         ->  Hash  (cost=4.38..4.38 rows=2 width=4)
-               ->  Hash Left Anti Semi (Not-In) Join  (cost=2.26..4.38 rows=2 width=4)
-                     Hash Cond: t2.c2 = t3.c3
-                     ->  Seq Scan on t2  (cost=0.00..2.05 rows=2 width=4)
-                     ->  Hash  (cost=2.15..2.15 rows=3 width=4)
-                           ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..2.15 rows=3 width=4)
-                                 ->  Seq Scan on t3  (cost=0.00..2.03 rows=1 width=4)
- Optimizer status: Postgres query optimizer
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=1.14..2.24 rows=3 width=4)
+   ->  Hash Join  (cost=1.14..2.19 rows=1 width=4)
+         Hash Cond: (t1.c1 = t2.c2)
+         ->  Seq Scan on t1  (cost=0.00..1.03 rows=3 width=4)
+         ->  Hash  (cost=1.12..1.12 rows=1 width=4)
+               ->  Hash Left Anti Semi (Not-In) Join  (cost=0.09..1.12 rows=1 width=4)
+                     Hash Cond: (t2.c2 = t3.c3)
+                     ->  Seq Scan on t2  (cost=0.00..1.02 rows=2 width=4)
+                     ->  Hash  (cost=0.05..0.05 rows=3 width=4)
+                           ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..0.05 rows=3 width=4)
+                                 ->  Seq Scan on t3  (cost=0.00..0.01 rows=1 width=4)
+ Optimizer: Postgres query optimizer
 (12 rows)
 
 select c1 from t1, 
@@ -394,21 +394,21 @@ explain select x,y from l1 where (x,y) not in
 	(select distinct y, sum(x) from l1 group by y having y < 4 order by y) order by 1,2;
                                                          QUERY PLAN                                                         
 ----------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000008.14..10000000008.22 rows=4 width=8)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000002.35..10000000002.40 rows=3 width=8)
    Merge Key: l1.x, l1.y
-   ->  Sort  (cost=10000000008.14..10000000008.15 rows=2 width=8)
+   ->  Sort  (cost=10000000002.35..10000000002.36 rows=1 width=8)
          Sort Key: l1.x, l1.y
-         ->  Nested Loop Left Anti Semi (Not-In) Join  (cost=10000000003.19..10000000008.11 rows=2 width=8)
+         ->  Nested Loop Left Anti Semi (Not-In) Join  (cost=10000000001.07..10000000002.34 rows=1 width=8)
                Join Filter: ((l1.x = "NotIn_SUBQUERY".y) AND (l1.y = "NotIn_SUBQUERY".sum))
-               ->  Seq Scan on l1  (cost=0.00..3.10 rows=4 width=8)
-               ->  Materialize  (cost=3.19..3.44 rows=4 width=12)
-                     ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=3.19..3.39 rows=4 width=12)
-                           ->  Subquery Scan on "NotIn_SUBQUERY"  (cost=3.19..3.25 rows=2 width=12)
-                                 ->  HashAggregate  (cost=3.19..3.22 rows=2 width=16)
+               ->  Seq Scan on l1  (cost=0.00..1.03 rows=3 width=8)
+               ->  Materialize  (cost=1.07..1.14 rows=3 width=12)
+                     ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=1.07..1.13 rows=3 width=12)
+                           ->  Subquery Scan on "NotIn_SUBQUERY"  (cost=1.07..1.09 rows=1 width=12)
+                                 ->  HashAggregate  (cost=1.07..1.08 rows=1 width=16)
                                        Group Key: l1_1.y
-                                       ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..3.19 rows=2 width=8)
+                                       ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..1.06 rows=1 width=8)
                                              Hash Key: l1_1.y
-                                             ->  Seq Scan on l1 l1_1  (cost=0.00..3.12 rows=2 width=8)
+                                             ->  Seq Scan on l1 l1_1  (cost=0.00..1.04 rows=1 width=8)
                                                    Filter: (y < 4)
  Optimizer: Postgres query optimizer
 (17 rows)
@@ -532,21 +532,19 @@ explain select c1 from t1 where c1 not in
 	(select sum(c2) as s from t2 where c2 > 2 group by c2 having c2 > 3);
                                            QUERY PLAN                                            
 -------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=3.35..6.52 rows=4 width=4)
-   ->  Hash Left Anti Semi (Not-In) Join  (cost=3.35..6.52 rows=2 width=4)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=1.13..2.34 rows=10 width=4)
+   ->  Hash Left Anti Semi (Not-In) Join  (cost=1.13..2.20 rows=3 width=4)
          Hash Cond: (t1.c1 = "NotIn_SUBQUERY".s)
-         ->  Seq Scan on t1  (cost=0.00..3.10 rows=4 width=4)
-         ->  Hash  (cost=3.26..3.26 rows=3 width=8)
-               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=3.09..3.26 rows=3 width=8)
-                     ->  Subquery Scan on "NotIn_SUBQUERY"  (cost=3.09..3.16 rows=1 width=8)
-                           ->  GroupAggregate  (cost=3.09..3.14 rows=1 width=16)
+         ->  Seq Scan on t1  (cost=0.00..1.03 rows=3 width=4)
+         ->  Hash  (cost=1.09..1.09 rows=3 width=8)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=1.03..1.09 rows=3 width=8)
+                     ->  Subquery Scan on "NotIn_SUBQUERY"  (cost=1.03..1.05 rows=1 width=8)
+                           ->  HashAggregate  (cost=1.03..1.04 rows=1 width=16)
                                  Group Key: t2.c2
-                                 ->  Sort  (cost=3.09..3.10 rows=1 width=4)
-                                       Sort Key: t2.c2
-                                       ->  Seq Scan on t2  (cost=0.00..3.08 rows=1 width=4)
-                                             Filter: ((c2 > 2) AND (c2 > 3))
+                                 ->  Seq Scan on t2  (cost=0.00..1.02 rows=1 width=4)
+                                       Filter: ((c2 > 2) AND (c2 > 3))
  Optimizer: Postgres query optimizer
-(14 rows)
+(12 rows)
 
 select c1 from t1 where c1 not in 
 	(select sum(c2) as s from t2 where c2 > 2 group by c2 having c2 > 3);
@@ -637,32 +635,30 @@ select c1 from t1 where c1 not in
 explain select (case when c1%2 = 0 
  then (select sum(c2) from t2 where c2 not in (select c3 from t3)) 
  else (select sum(c3) from t3 where c3 not in (select c4 from t4)) end) as foo from t1;
-                                                     QUERY PLAN                                                      
----------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=9.72..13.07 rows=10 width=8)
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=1.33..2.51 rows=10 width=8)
    InitPlan 1 (returns $0)  (slice2)
-     ->  Finalize Aggregate  (cost=5.41..5.42 rows=1 width=8)
-           ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=5.37..5.40 rows=1 width=8)
-                 ->  Partial Aggregate  (cost=5.37..5.38 rows=1 width=8)
-                       ->  Hash Left Anti Semi (Not-In) Join  (cost=2.26..5.36 rows=2 width=4)
-                             Hash Cond: (t2.c2 = t3.c3)
-                             ->  Seq Scan on t2  (cost=0.00..3.05 rows=2 width=4)
-                             ->  Hash  (cost=2.15..2.15 rows=3 width=4)
-                                   ->  Broadcast Motion 3:3  (slice4; segments: 3)  (cost=0.00..2.15 rows=3 width=4)
-                                         ->  Seq Scan on t3  (cost=0.00..2.03 rows=1 width=4)
+     ->  Aggregate  (cost=1.17..1.18 rows=1 width=8)
+           ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.09..1.17 rows=3 width=4)
+                 ->  Hash Left Anti Semi (Not-In) Join  (cost=0.09..1.12 rows=1 width=4)
+                       Hash Cond: (t2.c2 = t3.c3)
+                       ->  Seq Scan on t2  (cost=0.00..1.02 rows=2 width=4)
+                       ->  Hash  (cost=0.05..0.05 rows=3 width=4)
+                             ->  Broadcast Motion 3:3  (slice4; segments: 3)  (cost=0.00..0.05 rows=3 width=4)
+                                   ->  Seq Scan on t3  (cost=0.00..0.01 rows=1 width=4)
    InitPlan 2 (returns $1)  (slice5)
-     ->  Finalize Aggregate  (cost=4.29..4.30 rows=1 width=8)
-           ->  Gather Motion 3:1  (slice6; segments: 3)  (cost=4.26..4.29 rows=1 width=8)
-                 ->  Partial Aggregate  (cost=4.26..4.27 rows=1 width=8)
-                       ->  Hash Left Anti Semi (Not-In) Join  (cost=2.18..4.25 rows=2 width=4)
-                             Hash Cond: (t3_1.c3 = t4.c4)
-                             ->  Seq Scan on t3 t3_1  (cost=0.00..2.03 rows=1 width=4)
-                             ->  Hash  (cost=2.10..2.10 rows=2 width=4)
-                                   ->  Broadcast Motion 3:3  (slice7; segments: 3)  (cost=0.00..2.10 rows=2 width=4)
-                                         ->  Seq Scan on t4  (cost=0.00..2.02 rows=1 width=4)
-   ->  Seq Scan on t1  (cost=9.72..12.87 rows=4 width=8)
+     ->  Aggregate  (cost=0.14..0.15 rows=1 width=8)
+           ->  Gather Motion 3:1  (slice6; segments: 3)  (cost=0.06..0.13 rows=3 width=4)
+                 ->  Hash Left Anti Semi (Not-In) Join  (cost=0.06..0.08 rows=1 width=4)
+                       Hash Cond: (t3_1.c3 = t4.c4)
+                       ->  Seq Scan on t3 t3_1  (cost=0.00..0.01 rows=1 width=4)
+                       ->  Hash  (cost=0.03..0.03 rows=2 width=4)
+                             ->  Broadcast Motion 3:3  (slice7; segments: 3)  (cost=0.00..0.03 rows=2 width=4)
+                                   ->  Seq Scan on t4  (cost=0.00..0.01 rows=1 width=4)
+   ->  Seq Scan on t1  (cost=1.33..2.38 rows=3 width=8)
  Optimizer: Postgres query optimizer
-(23 rows)
+(21 rows)
 
 select (case when c1%2 = 0 
  then (select sum(c2) from t2 where c2 not in (select c3 from t3)) 

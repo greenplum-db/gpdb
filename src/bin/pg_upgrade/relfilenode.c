@@ -3,7 +3,7 @@
  *
  *	relfilenode functions
  *
- *	Copyright (c) 2010-2016, PostgreSQL Global Development Group
+ *	Copyright (c) 2010-2019, PostgreSQL Global Development Group
  *	src/bin/pg_upgrade/relfilenode.c
  */
 
@@ -12,7 +12,7 @@
 #include "pg_upgrade.h"
 
 #include <sys/stat.h>
-#include "catalog/pg_class.h"
+#include "catalog/pg_class_d.h"
 #include "access/aomd.h"
 #include "access/appendonlytid.h"
 #include "access/htup_details.h"
@@ -37,8 +37,18 @@ void
 transfer_all_new_tablespaces(DbInfoArr *old_db_arr, DbInfoArr *new_db_arr,
 							 char *old_pgdata, char *new_pgdata)
 {
-	pg_log(PG_REPORT, "%s user relation files\n",
-	  user_opts.transfer_mode == TRANSFER_MODE_LINK ? "Linking" : "Copying");
+	switch (user_opts.transfer_mode)
+	{
+		case TRANSFER_MODE_CLONE:
+			pg_log(PG_REPORT, "Cloning user relation files\n");
+			break;
+		case TRANSFER_MODE_COPY:
+			pg_log(PG_REPORT, "Copying user relation files\n");
+			break;
+		case TRANSFER_MODE_LINK:
+			pg_log(PG_REPORT, "Linking user relation files\n");
+			break;
+	}
 
 	/*
 	 * Transferring files by tablespace is tricky because a single database
@@ -203,7 +213,7 @@ transfer_relfile(FileNameMap *map, const char *type_suffix, bool vm_must_add_fro
 	/*
 	 * Now copy/link any related segments as well. Remember, PG breaks large
 	 * files into 1GB segments, the first segment has no extension, subsequent
-	 * segments are named relfilenode.1, relfilenode.2, relfilenode.3. copied.
+	 * segments are named relfilenode.1, relfilenode.2, relfilenode.3.
 	 */
 	for (segno = 0;; segno++)
 	{
@@ -269,7 +279,7 @@ transfer_relfile_segment(int segno, FileNameMap *map,
 			else
 				pg_fatal("error while checking for file existence \"%s.%s\" (\"%s\" to \"%s\"): %s\n",
 						map->nspname, map->relname, old_file, new_file,
-						getErrorText());
+						strerror(errno));
 		}
 
 		/* If file is empty, just return */
@@ -304,44 +314,32 @@ transfer_relfile_segment(int segno, FileNameMap *map,
 		return true;
 	}
 
-	if (user_opts.transfer_mode == TRANSFER_MODE_COPY)
+	/* Rewrite visibility map if needed */
+	if (vm_must_add_frozenbit && (strcmp(type_suffix, "_vm") == 0))
 	{
-		if (!is_checksum_mode(CHECKSUM_NONE) && map->type == HEAP)
-		{
-			pg_log(PG_VERBOSE, "copying and checksumming \"%s\" to \"%s\"\n", old_file, new_file);
-			if ((msg = rewriteHeapPageChecksum(old_file, new_file, map->nspname, map->relname)))
-				pg_log(PG_FATAL, "error while copying and checksumming relation \"%s.%s\" (\"%s\" to \"%s\"): %s\n",
-						map->nspname, map->relname, old_file, new_file, pg_strdup(msg));
-		}
-		else
-		{
-			pg_log(PG_VERBOSE, "copying \"%s\" to \"%s\"\n", old_file, new_file);
-
-			/* Rewrite visibility map if needed */
-			if (vm_must_add_frozenbit && (strcmp(type_suffix, "_vm") == 0))
-				msg = rewriteVisibilityMap(old_file, new_file);
-			else
-				msg = copyFile(old_file, new_file);
-
-		if (msg)
-			pg_fatal("error while copying relation \"%s.%s\" (\"%s\" to \"%s\"): %s\n",
-					map->nspname, map->relname, old_file, new_file, msg);
-		}
+		/* Need to rewrite visibility map format */
+		pg_log(PG_VERBOSE, "rewriting \"%s\" to \"%s\"\n",
+			   old_file, new_file);
+		rewriteVisibilityMap(old_file, new_file, map->nspname, map->relname);
 	}
 	else
-	{
-		pg_log(PG_VERBOSE, "linking \"%s\" to \"%s\"\n", old_file, new_file);
-
-		/* Rewrite visibility map if needed */
-		if (vm_must_add_frozenbit && (strcmp(type_suffix, "_vm") == 0))
-			msg = rewriteVisibilityMap(old_file, new_file);
-		else
-			msg = linkFile(old_file, new_file);
-
-		if (msg)
-			pg_fatal("error while creating link for relation \"%s.%s\" (\"%s\" to \"%s\"): %s\n",
-					map->nspname, map->relname, old_file, new_file, msg);
-	}
+		switch (user_opts.transfer_mode)
+		{
+			case TRANSFER_MODE_CLONE:
+				pg_log(PG_VERBOSE, "cloning \"%s\" to \"%s\"\n",
+					   old_file, new_file);
+				cloneFile(old_file, new_file, map->nspname, map->relname);
+				break;
+			case TRANSFER_MODE_COPY:
+				pg_log(PG_VERBOSE, "copying \"%s\" to \"%s\"\n",
+					   old_file, new_file);
+				copyFile(old_file, new_file, map->nspname, map->relname);
+				break;
+			case TRANSFER_MODE_LINK:
+				pg_log(PG_VERBOSE, "linking \"%s\" to \"%s\"\n",
+					   old_file, new_file);
+				linkFile(old_file, new_file, map->nspname, map->relname);
+		}
 
 	return true;
 }

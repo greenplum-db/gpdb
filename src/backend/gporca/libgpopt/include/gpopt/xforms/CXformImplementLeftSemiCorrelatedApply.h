@@ -19,60 +19,56 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//-------------------------------------------------------------------------
-	//	@class:
-	//		CXformImplementLeftSemiCorrelatedApply
-	//
-	//	@doc:
-	//		Transform left semi correlated apply to physical left semi
-	//		correlated join
-	//
-	//-------------------------------------------------------------------------
-	class CXformImplementLeftSemiCorrelatedApply :
-		public CXformImplementCorrelatedApply<CLogicalLeftSemiCorrelatedApply, CPhysicalCorrelatedLeftSemiNLJoin>
+//-------------------------------------------------------------------------
+//	@class:
+//		CXformImplementLeftSemiCorrelatedApply
+//
+//	@doc:
+//		Transform left semi correlated apply to physical left semi
+//		correlated join
+//
+//-------------------------------------------------------------------------
+class CXformImplementLeftSemiCorrelatedApply
+	: public CXformImplementCorrelatedApply<CLogicalLeftSemiCorrelatedApply,
+											CPhysicalCorrelatedLeftSemiNLJoin>
+{
+private:
+	// private copy ctor
+	CXformImplementLeftSemiCorrelatedApply(
+		const CXformImplementLeftSemiCorrelatedApply &);
+
+public:
+	// ctor
+	explicit CXformImplementLeftSemiCorrelatedApply(CMemoryPool *mp)
+		: CXformImplementCorrelatedApply<CLogicalLeftSemiCorrelatedApply,
+										 CPhysicalCorrelatedLeftSemiNLJoin>(mp)
 	{
+	}
 
-		private:
+	// dtor
+	virtual ~CXformImplementLeftSemiCorrelatedApply()
+	{
+	}
 
-			// private copy ctor
-			CXformImplementLeftSemiCorrelatedApply(const CXformImplementLeftSemiCorrelatedApply &);
+	// ident accessors
+	virtual EXformId
+	Exfid() const
+	{
+		return ExfImplementLeftSemiCorrelatedApply;
+	}
 
-		public:
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CXformImplementLeftSemiCorrelatedApply";
+	}
 
-			// ctor
-			explicit
-			CXformImplementLeftSemiCorrelatedApply
-				(
-				CMemoryPool *mp
-				)
-				:
-				CXformImplementCorrelatedApply<CLogicalLeftSemiCorrelatedApply, CPhysicalCorrelatedLeftSemiNLJoin>(mp)
-			{}
+};	// class CXformImplementLeftSemiCorrelatedApply
 
-			// dtor
-			virtual
-			~CXformImplementLeftSemiCorrelatedApply()
-			{}
+}  // namespace gpopt
 
-			// ident accessors
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfImplementLeftSemiCorrelatedApply;
-			}
-
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CXformImplementLeftSemiCorrelatedApply";
-			}
-
-	}; // class CXformImplementLeftSemiCorrelatedApply
-
-}
-
-#endif // !GPOPT_CXformImplementLeftSemiCorrelatedApply_H
+#endif	// !GPOPT_CXformImplementLeftSemiCorrelatedApply_H
 
 // EOF

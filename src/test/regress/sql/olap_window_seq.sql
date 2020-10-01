@@ -97,7 +97,7 @@ select cn,
 
 select cn,
   sum(cn) over (order by cn range '1'::float8 preceding)
-  from customer; -- this, however, should work
+  from customer; -- this used to work on GPDB 6 and before, but GPDB 7 got more strict
 
 -- 4 -- Partitioned, non-ordered window specifications -- OVER (PARTITION BY ...) --
 
@@ -1259,7 +1259,7 @@ from sale; --mvd 3->4
 
 -- MPP-2078
 SELECT sale.cn,sale.vn,
-COUNT(floor(sale.cn)) OVER(partition by sale.cn order by sale.vn asc range between 1 preceding and floor(sale.cn) preceding ) 
+COUNT(floor(sale.cn)) OVER(partition by sale.cn order by sale.vn asc range between 1 preceding and sale.cn preceding ) 
 FROM sale; --mvd 1,2->3
 
 -- MPP-2080
@@ -1269,7 +1269,7 @@ FROM sale; --mvd 1->3
 
 -- MPP-2081
 SELECT cn,qty,floor(prc/cn),
-COUNT(floor(sale.pn*sale.prc)) OVER(order by sale.cn asc range between floor(sale.qty) preceding and floor(sale.prc/sale.cn) preceding) 
+COUNT(floor(sale.pn*sale.prc)) OVER(order by sale.cn asc range between sale.qty preceding and floor(sale.prc/sale.cn)::integer preceding) 
 from sale; --mvd 1->4
 
 -- MPP-2135

@@ -27,29 +27,8 @@ create table direct_test_bitmap  as select '2008-02-01'::DATE AS DT,
         (i*1017-j)::bigint as s from generate_series(1,10) i, generate_series(1,10) j distributed by (dt);
 create index direct_test_bitmap_idx on direct_test_bitmap using bitmap (ind, dt);
 CREATE TABLE direct_test_partition (trans_id int, date date, amount decimal(9,2), region text) DISTRIBUTED BY (trans_id) PARTITION BY RANGE (date) (START (date '2008-01-01') INCLUSIVE END (date '2009-01-01') EXCLUSIVE EVERY (INTERVAL '1month') );
-NOTICE:  CREATE TABLE will create partition "direct_test_partition_1_prt_1" for table "direct_test_partition"
-NOTICE:  CREATE TABLE will create partition "direct_test_partition_1_prt_2" for table "direct_test_partition"
-NOTICE:  CREATE TABLE will create partition "direct_test_partition_1_prt_3" for table "direct_test_partition"
-NOTICE:  CREATE TABLE will create partition "direct_test_partition_1_prt_4" for table "direct_test_partition"
-NOTICE:  CREATE TABLE will create partition "direct_test_partition_1_prt_5" for table "direct_test_partition"
-NOTICE:  CREATE TABLE will create partition "direct_test_partition_1_prt_6" for table "direct_test_partition"
-NOTICE:  CREATE TABLE will create partition "direct_test_partition_1_prt_7" for table "direct_test_partition"
-NOTICE:  CREATE TABLE will create partition "direct_test_partition_1_prt_8" for table "direct_test_partition"
-NOTICE:  CREATE TABLE will create partition "direct_test_partition_1_prt_9" for table "direct_test_partition"
-NOTICE:  CREATE TABLE will create partition "direct_test_partition_1_prt_10" for table "direct_test_partition"
-NOTICE:  CREATE TABLE will create partition "direct_test_partition_1_prt_11" for table "direct_test_partition"
-NOTICE:  CREATE TABLE will create partition "direct_test_partition_1_prt_12" for table "direct_test_partition"
 create unique index direct_test_uk on direct_test_partition(trans_id,date);
 create table direct_test_range_partition (a int, b int, c int, d int) distributed by (a) partition by range(d) (start(1) end(10) every(1));
-NOTICE:  CREATE TABLE will create partition "direct_test_range_partition_1_prt_1" for table "direct_test_range_partition"
-NOTICE:  CREATE TABLE will create partition "direct_test_range_partition_1_prt_2" for table "direct_test_range_partition"
-NOTICE:  CREATE TABLE will create partition "direct_test_range_partition_1_prt_3" for table "direct_test_range_partition"
-NOTICE:  CREATE TABLE will create partition "direct_test_range_partition_1_prt_4" for table "direct_test_range_partition"
-NOTICE:  CREATE TABLE will create partition "direct_test_range_partition_1_prt_5" for table "direct_test_range_partition"
-NOTICE:  CREATE TABLE will create partition "direct_test_range_partition_1_prt_6" for table "direct_test_range_partition"
-NOTICE:  CREATE TABLE will create partition "direct_test_range_partition_1_prt_7" for table "direct_test_range_partition"
-NOTICE:  CREATE TABLE will create partition "direct_test_range_partition_1_prt_8" for table "direct_test_range_partition"
-NOTICE:  CREATE TABLE will create partition "direct_test_range_partition_1_prt_9" for table "direct_test_range_partition"
 insert into direct_test_range_partition select i, i+1, i+2, i+3 from generate_series(1, 2) i;
 commit;
 -- enable printing of printing info
@@ -440,7 +419,7 @@ INFO:  (slice 1) Dispatch command to SINGLE content
 create table ddtesttab (i int, j int, k int8) distributed by (k);
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
-create sequence ddtestseq;
+create sequence ddtestseq cache 1;
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into ddtesttab values (1, 1, 5);
@@ -467,8 +446,6 @@ INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL cont
 create table ddtesttab (i int, j int, k int8) distributed by (i) partition by
 range(k)
 (start(1) end(20) every(10));
-NOTICE:  CREATE TABLE will create partition "ddtesttab_1_prt_1" for table "ddtesttab"
-NOTICE:  CREATE TABLE will create partition "ddtesttab_1_prt_2" for table "ddtesttab"
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into ddtesttab values (1, 1, 5);
@@ -638,6 +615,152 @@ INFO:  (slice 1) Dispatch command to SINGLE content
 drop table test_prepare;
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+-- test direct dispatch via gp_segment_id qual
+create table t_test_dd_via_segid(id int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+insert into t_test_dd_via_segid select * from generate_series(1, 6);
+INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=0;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Seq Scan on t_test_dd_via_segid
+         Filter: (gp_segment_id = 0)
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=0;
+INFO:  (slice 1) Dispatch command to SINGLE content
+ gp_segment_id | id 
+---------------+----
+             0 |  2
+             0 |  3
+             0 |  4
+(3 rows)
+
+explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Seq Scan on t_test_dd_via_segid
+         Filter: (gp_segment_id = 1)
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1;
+INFO:  (slice 1) Dispatch command to SINGLE content
+ gp_segment_id | id 
+---------------+----
+             1 |  1
+(1 row)
+
+explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=2;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Seq Scan on t_test_dd_via_segid
+         Filter: (gp_segment_id = 2)
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=2;
+INFO:  (slice 1) Dispatch command to SINGLE content
+ gp_segment_id | id 
+---------------+----
+             2 |  5
+             2 |  6
+(2 rows)
+
+explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1 or gp_segment_id=2;
+                          QUERY PLAN                          
+--------------------------------------------------------------
+ Gather Motion 2:1  (slice1; segments: 2)
+   ->  Seq Scan on t_test_dd_via_segid
+         Filter: ((gp_segment_id = 1) OR (gp_segment_id = 2))
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1 or gp_segment_id=2;
+INFO:  (slice 1) Dispatch command to PARTIAL contents: 1 2
+ gp_segment_id | id 
+---------------+----
+             1 |  1
+             2 |  5
+             2 |  6
+(3 rows)
+
+explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1 or gp_segment_id=2 or gp_segment_id=3;
+                                     QUERY PLAN                                      
+-------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on t_test_dd_via_segid
+         Filter: ((gp_segment_id = 1) OR (gp_segment_id = 2) OR (gp_segment_id = 3))
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1 or gp_segment_id=2 or gp_segment_id=3;
+INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+ gp_segment_id | id 
+---------------+----
+             1 |  1
+             2 |  5
+             2 |  6
+(3 rows)
+
+explain (costs off) select t1.gp_segment_id, t2.gp_segment_id, * from t_test_dd_via_segid t1, t_test_dd_via_segid t2 where t1.gp_segment_id=t2.id;
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (t2.id = t1.gp_segment_id)
+         ->  Seq Scan on t_test_dd_via_segid t2
+         ->  Hash
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: t1.gp_segment_id
+                     ->  Seq Scan on t_test_dd_via_segid t1
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+select t1.gp_segment_id, t2.gp_segment_id, * from t_test_dd_via_segid t1, t_test_dd_via_segid t2 where t1.gp_segment_id=t2.id;
+INFO:  (slice 2) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+ gp_segment_id | gp_segment_id | id | id 
+---------------+---------------+----+----
+             1 |             1 |  1 |  1
+             2 |             0 |  5 |  2
+             2 |             0 |  6 |  2
+(3 rows)
+
+explain (costs off) select gp_segment_id, count(*) from t_test_dd_via_segid group by gp_segment_id;
+                       QUERY PLAN                        
+---------------------------------------------------------
+ Finalize GroupAggregate
+   Group Key: gp_segment_id
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: gp_segment_id
+         ->  Sort
+               Sort Key: gp_segment_id
+               ->  Partial HashAggregate
+                     Group Key: gp_segment_id
+                     ->  Seq Scan on t_test_dd_via_segid
+ Optimizer: Postgres query optimizer
+(10 rows)
+
+select gp_segment_id, count(*) from t_test_dd_via_segid group by gp_segment_id;
+INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+ gp_segment_id | count 
+---------------+-------
+             0 |     3
+             1 |     1
+             2 |     2
+(3 rows)
+
 -- cleanup
 set test_print_direct_dispatch_info=off;
 begin;

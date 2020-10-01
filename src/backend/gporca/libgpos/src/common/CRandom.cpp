@@ -24,14 +24,12 @@
 
 using namespace gpos;
 
-CRandom::CRandom()
-	:m_seed(DEFAULT_SEED)
+CRandom::CRandom() : m_seed(DEFAULT_SEED)
 {
 }
 
 
-CRandom::CRandom(ULONG seed)
-	:m_seed(seed)
+CRandom::CRandom(ULONG seed) : m_seed(seed)
 {
 }
 
@@ -44,7 +42,8 @@ CRandom::CRandom(ULONG seed)
 //
 //---------------------------------------------------------------------------
 
-ULONG CRandom::Next()
+ULONG
+CRandom::Next()
 {
 	return clib::Rand(&m_seed);
 }
@@ -54,4 +53,3 @@ CRandom::~CRandom()
 }
 
 // EOF
-

@@ -62,11 +62,11 @@ typedef ULONG OID;
 #define GPDB_TIMESTAMP_TO_DATE_CAST OID(1082)
 
 #define GPDB_COUNT_STAR OID(2803)  // count(*)
-#define GPDB_COUNT_ANY OID(2147)  // count(Any)
+#define GPDB_COUNT_ANY OID(2147)   // count(Any)
 #define GPDB_UUID OID(2950)
 #define GPDB_ANY OID(2283)
 
-#endif // !GPDXL_gpdb_types_H
+#endif	// !GPDXL_gpdb_types_H
 
 
 // EOF

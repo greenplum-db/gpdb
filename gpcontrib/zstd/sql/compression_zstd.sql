@@ -6,8 +6,7 @@ SELECT * FROM pg_compression WHERE compname = 'zstd';
 CREATE TABLE zstdtest (id int4, t text) WITH (appendonly=true, compresstype=zstd, orientation=column);
 
 -- Check that the reloptions on the table shows compression type
--- This is order sensitive to base on the order that the options were declared in the DDL of the table.
-SELECT reloptions[2] FROM pg_class WHERE relname = 'zstdtest';
+SELECT reloptions FROM pg_class WHERE relname = 'zstdtest';
 
 INSERT INTO zstdtest SELECT g, 'foo' || g FROM generate_series(1, 100000) g;
 INSERT INTO zstdtest SELECT g, 'bar' || g FROM generate_series(1, 100000) g;

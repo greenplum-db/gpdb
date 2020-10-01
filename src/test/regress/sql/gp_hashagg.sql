@@ -84,3 +84,59 @@ set enable_sort=off;
 -- use a Sort + Group, because nohash_int type is not hashable.
 select normal_int from hashagg_test2 group by normal_int;
 select nohash_int from hashagg_test2 group by nohash_int;
+
+reset enable_sort;
+
+-- We had a bug in the following combine functions where if the combine function
+-- returned a NULL, it didn't set fcinfo->isnull = true. This led to a segfault
+-- when we would spill in the final stage of a two-stage agg inside the serial
+-- function.
+CREATE TABLE test_combinefn_null (a int8, b int, c char(32000));
+INSERT INTO test_combinefn_null SELECT i, (i | 15), i::text FROM generate_series(1, 1024) i;
+ANALYZE test_combinefn_null;
+SET statement_mem='2MB';
+set enable_sort=off;
+
+-- Test int8_avg_combine()
+SELECT $$
+SELECT
+sum(a) FILTER (WHERE false)
+FROM test_combinefn_null
+GROUP BY b
+HAVING max(c) = '31'
+$$ AS qry \gset
+EXPLAIN (COSTS OFF, VERBOSE) :qry;
+:qry;
+
+-- Test numeric_poly_combine()
+SELECT $$
+SELECT
+var_pop(a::int) FILTER (WHERE false)
+FROM test_combinefn_null
+GROUP BY b
+HAVING max(c) = '31'
+$$ AS qry \gset
+EXPLAIN (COSTS OFF, VERBOSE) :qry;
+:qry;
+
+-- Test numeric_avg_combine()
+SELECT $$
+SELECT
+sum(a::numeric) FILTER (WHERE false)
+FROM test_combinefn_null
+GROUP BY b
+HAVING max(c) = '31'
+$$ AS qry \gset
+EXPLAIN (COSTS OFF, VERBOSE) :qry;
+:qry;
+
+-- Test numeric_combine()
+SELECT $$
+SELECT
+var_pop(a::numeric) FILTER (WHERE false)
+FROM test_combinefn_null
+GROUP BY b
+HAVING max(c) = '31'
+$$ AS qry \gset
+EXPLAIN (COSTS OFF, VERBOSE) :qry;
+:qry;

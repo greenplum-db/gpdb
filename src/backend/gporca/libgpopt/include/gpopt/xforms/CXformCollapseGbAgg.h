@@ -17,60 +17,55 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CXformCollapseGbAgg
-	//
-	//	@doc:
-	//		Collapse two cascaded GbAgg operators into a single GbAgg
-	//
-	//---------------------------------------------------------------------------
-	class CXformCollapseGbAgg : public CXformExploration
+//---------------------------------------------------------------------------
+//	@class:
+//		CXformCollapseGbAgg
+//
+//	@doc:
+//		Collapse two cascaded GbAgg operators into a single GbAgg
+//
+//---------------------------------------------------------------------------
+class CXformCollapseGbAgg : public CXformExploration
+{
+private:
+	// private copy ctor
+	CXformCollapseGbAgg(const CXformCollapseGbAgg &);
+
+public:
+	// ctor
+	explicit CXformCollapseGbAgg(CMemoryPool *mp);
+
+	// dtor
+	virtual ~CXformCollapseGbAgg()
 	{
+	}
 
-		private:
+	// ident accessors
+	virtual EXformId
+	Exfid() const
+	{
+		return ExfCollapseGbAgg;
+	}
 
-			// private copy ctor
-			CXformCollapseGbAgg(const CXformCollapseGbAgg &);
+	// return a string for xform name
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CXformCollapseGbAgg";
+	}
 
-		public:
+	// compute xform promise for a given expression handle
+	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
 
-			// ctor
-			explicit
-			CXformCollapseGbAgg(CMemoryPool *mp);
+	// actual transform
+	void Transform(CXformContext *, CXformResult *, CExpression *) const;
 
-			// dtor
-			virtual
-			~CXformCollapseGbAgg()
-			{}
+};	// class CXformCollapseGbAgg
 
-			// ident accessors
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfCollapseGbAgg;
-			}
+}  // namespace gpopt
 
-			// return a string for xform name
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CXformCollapseGbAgg";
-			}
-
-			// compute xform promise for a given expression handle
-			virtual
-			EXformPromise Exfp (CExpressionHandle &exprhdl) const;
-
-			// actual transform
-			void Transform(CXformContext *, CXformResult *, CExpression *) const;
-
-	}; // class CXformCollapseGbAgg
-
-}
-
-#endif // !GPOPT_CXformCollapseGbAgg_H
+#endif	// !GPOPT_CXformCollapseGbAgg_H
 
 // EOF

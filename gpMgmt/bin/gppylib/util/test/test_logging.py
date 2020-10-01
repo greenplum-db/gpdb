@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 test script to provide gplog.feature (behave) test with logging samples.

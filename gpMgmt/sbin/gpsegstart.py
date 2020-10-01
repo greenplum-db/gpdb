@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Line too long - pylint: disable=C0301
 # Invalid name  - pylint: disable=C0103
 #
@@ -103,7 +103,7 @@ class OverallStatus:
         """
         Add results for all remaining items in our datadir->segment map.
         """
-        for datadir in self.dirmap.keys():
+        for datadir in list(self.dirmap.keys()):
             self.results.append( StartResult(datadir=datadir, started=True, reason="Start Succeeded", reasoncode=gp.SEGSTART_SUCCESS ) )
 
 
@@ -136,7 +136,7 @@ class GpSegStart:
 
         # validate/store arguments
         #
-        self.dblist                = map(gparray.Segment.initFromString, dblist)
+        self.dblist                = list(map(gparray.Segment.initFromString, dblist))
 
         expected_gpversion         = gpversion
         actual_gpversion           = gp.GpVersion.local('local GP software version check', os.path.abspath(os.pardir))
@@ -168,7 +168,7 @@ class GpSegStart:
         self.master_checksum_version = master_checksum_version
 
     def getOverallStatusKeys(self):
-        return self.overall_status.dirmap.keys()
+        return list(self.overall_status.dirmap.keys())
 
     # return True if all running
     # return False if not all running
@@ -202,7 +202,7 @@ class GpSegStart:
         """
         self.logger.info("Validating directories...")
 
-        for datadir in self.overall_status.dirmap.keys():
+        for datadir in list(self.overall_status.dirmap.keys()):
             self.logger.info("Validating directory: %s" % datadir)
 
             if os.path.isdir(datadir):
@@ -235,7 +235,7 @@ class GpSegStart:
         """
         self.logger.info("Starting segments... (mirroringMode %s)" % self.mirroringMode)
 
-        for datadir, seg in self.overall_status.dirmap.items():
+        for datadir, seg in list(self.overall_status.dirmap.items()):
 
             if self.master_checksum_version != None:
                 cmd = PgControlData(name='run pg_controldata', datadir=datadir)

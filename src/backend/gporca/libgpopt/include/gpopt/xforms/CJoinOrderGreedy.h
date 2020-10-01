@@ -17,58 +17,45 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CJoinOrderGreedy
-	//
-	//	@doc:
-	//		Helper class for creating join orders based on cardinality of results
-	//
-	//---------------------------------------------------------------------------
-	class CJoinOrderGreedy : public CJoinOrder
-	{
+//---------------------------------------------------------------------------
+//	@class:
+//		CJoinOrderGreedy
+//
+//	@doc:
+//		Helper class for creating join orders based on cardinality of results
+//
+//---------------------------------------------------------------------------
+class CJoinOrderGreedy : public CJoinOrder
+{
+private:
+	// result component
+	SComponent *m_pcompResult;
 
-		private:
+	// returns starting joins with minimal cardinality
+	SComponent *GetStartingJoins();
 
-			// result component
-			SComponent *m_pcompResult;
+public:
+	// ctor
+	CJoinOrderGreedy(CMemoryPool *pmp, CExpressionArray *pdrgpexprComponents,
+					 CExpressionArray *pdrgpexprConjuncts);
 
-			// returns starting joins with minimal cardinality
-			SComponent *GetStartingJoins();
+	// dtor
+	virtual ~CJoinOrderGreedy();
 
-		public:
+	// main handler
+	virtual CExpression *PexprExpand();
 
-			// ctor
-			CJoinOrderGreedy
-				(
-				CMemoryPool *pmp,
-				CExpressionArray *pdrgpexprComponents,
-				CExpressionArray *pdrgpexprConjuncts
-				);
+	ULONG
+	PickBestJoin(CBitSet *candidate_nodes);
 
-			// dtor
-			virtual
-			~CJoinOrderGreedy();
+	CBitSet *GetAdjacentComponentsToJoinCandidate();
 
-			// main handler
-			virtual
-			CExpression *PexprExpand();
-		
-			ULONG
-			PickBestJoin
-				(
-				CBitSet *candidate_nodes
-				);
-		
-			CBitSet*
-			GetAdjacentComponentsToJoinCandidate();
+};	// class CJoinOrderGreedy
 
-	}; // class CJoinOrderGreedy
+}  // namespace gpopt
 
-}
-
-#endif // !GPOPT_CJoinOrderGreedy_H
+#endif	// !GPOPT_CJoinOrderGreedy_H
 
 // EOF

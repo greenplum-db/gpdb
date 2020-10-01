@@ -4,7 +4,7 @@
  *	  POSTGRES BRIN access XLOG definitions.
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/access/brin_xlog.h
@@ -33,9 +33,12 @@
 #define XLOG_BRIN_UPDATE			0x20
 #define XLOG_BRIN_SAMEPAGE_UPDATE	0x30
 #define XLOG_BRIN_REVMAP_EXTEND		0x40
-#define XLOG_BRIN_REVMAP_VACUUM		0x50
+#define XLOG_BRIN_DESUMMARIZE		0x50
+#define XLOG_BRIN_REVMAP_INIT_UPPER_BLK	0x60
+#define XLOG_BRIN_REVMAP_EXTEND_UPPER	0x70
 
 #define XLOG_BRIN_OPMASK			0x70
+
 /*
  * When we insert the first item on a new page, we restore the entire page in
  * redo.
@@ -51,8 +54,17 @@ typedef struct xl_brin_createidx
 {
 	BlockNumber pagesPerRange;
 	uint16		version;
+	bool 		isAo;
 } xl_brin_createidx;
-#define SizeOfBrinCreateIdx (offsetof(xl_brin_createidx, version) + sizeof(uint16))
+#define SizeOfBrinCreateIdx (offsetof(xl_brin_createidx, isAo) + sizeof(bool))
+
+
+typedef struct xl_brin_createupperblk
+{
+	BlockNumber targetBlk;
+} xl_brin_createupperblk;
+#define SizeOfBrinCreateUpperBlk (offsetof(xl_brin_createupperblk, targetBlk) \
+								  + sizeof(BlockNumber))
 
 /*
  * This is what we need to know about a BRIN tuple insert
@@ -120,13 +132,44 @@ typedef struct xl_brin_revmap_extend
 	 */
 	BlockNumber targetBlk;
 } xl_brin_revmap_extend;
-
 #define SizeOfBrinRevmapExtend	(offsetof(xl_brin_revmap_extend, targetBlk) + \
 								 sizeof(BlockNumber))
+
+/*
+ * This is what we need to know about a range de-summarization
+ *
+ * Backup block 0: revmap page
+ * Backup block 1: regular page
+ */
+typedef struct xl_brin_desummarize
+{
+	BlockNumber pagesPerRange;
+	/* page number location to set to invalid */
+	BlockNumber heapBlk;
+	/* offset of item to delete in regular index page */
+	OffsetNumber regOffset;
+} xl_brin_desummarize;
+
+#define SizeOfBrinDesummarize	(offsetof(xl_brin_desummarize, regOffset) + \
+								 sizeof(OffsetNumber))
+
+
+typedef struct xl_brin_revmap_extend_upper
+{
+	BlockNumber heapBlk;
+
+	/* extra information needed to update the revmap */
+	BlockNumber pagesPerRange;
+	BlockNumber revmapBlk;
+} xl_brin_revmap_extend_upper;
+#define SizeOfBrinRevmapExtendUpper	(offsetof(xl_brin_revmap_extend_upper, pagesPerRange) + \
+									 sizeof(BlockNumber))
+
 
 
 extern void brin_redo(XLogReaderState *record);
 extern void brin_desc(StringInfo buf, XLogReaderState *record);
 extern const char *brin_identify(uint8 info);
+extern void brin_mask(char *pagedata, BlockNumber blkno);
 
-#endif   /* BRIN_XLOG_H */
+#endif							/* BRIN_XLOG_H */

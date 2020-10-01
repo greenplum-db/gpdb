@@ -3,7 +3,7 @@
  * file_ops.h
  *	  Helper functions for operating on files
  *
- * Copyright (c) 2013-2016, PostgreSQL Global Development Group
+ * Copyright (c) 2013-2019, PostgreSQL Global Development Group
  *
  *-------------------------------------------------------------------------
  */
@@ -22,4 +22,4 @@ extern void remove_target(file_entry_t *t);
 
 extern char *slurpFile(const char *datadir, const char *path, size_t *filesize);
 
-#endif   /* FILE_OPS_H */
+#endif							/* FILE_OPS_H */

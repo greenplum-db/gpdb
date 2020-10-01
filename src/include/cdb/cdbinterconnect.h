@@ -31,6 +31,8 @@ struct CdbProcess;                          /* #include "nodes/execnodes.h" */
 struct ExecSlice;                           /* #include "nodes/execnodes.h" */
 struct SliceTable;                          /* #include "nodes/execnodes.h" */
 struct EState;                              /* #include "nodes/execnodes.h" */
+/* TODO: move "src/backend/cdb/motion/ic_proxy_backend.h" into public include folder*/
+struct ICProxyBackendContext;
 
 typedef struct icpkthdr
 {
@@ -525,6 +527,9 @@ typedef struct ChunkTransportState
 	TupleChunkListItem (*RecvTupleChunkFromAny)(struct ChunkTransportState *transportStates, int16 motNodeID, int16 *srcRoute);
 	void (*doSendStopMessage)(struct ChunkTransportState *transportStates, int16 motNodeID);
 	void (*SendEos)(struct ChunkTransportState *transportStates, int motNodeID, TupleChunkListItem tcItem);
+
+	/* ic_proxy backend context */
+	struct ICProxyBackendContext *proxyContext;
 } ChunkTransportState;
 
 extern void dumpICBufferList(ICBufferList *list, const char *fname);

@@ -3,7 +3,7 @@
 --
 DROP TABLE IF EXISTS ao;
 DROP
-CREATE TABLE ao (a INT, b INT) WITH (appendonly=true, orientation=@orientation@);
+CREATE TABLE ao (a INT, b INT) USING @amname@;
 CREATE
 INSERT INTO ao SELECT i as a, i as b FROM generate_series(1,10) AS i;
 INSERT 10
@@ -16,11 +16,10 @@ BEGIN
 2: UPDATE ao SET b = 42 WHERE a = 2;
 UPDATE 1
 2: SELECT * FROM locktest_master WHERE coalesce = 'ao';
- coalesce | mode            | locktype | node   
-----------+-----------------+----------+--------
- ao       | AccessShareLock | relation | master 
- ao       | ExclusiveLock   | relation | master 
-(2 rows)
+ coalesce | mode          | locktype | node   
+----------+---------------+----------+--------
+ ao       | ExclusiveLock | relation | master 
+(1 row)
 2: SELECT * FROM locktest_segments WHERE coalesce = 'ao';
  coalesce | mode             | locktype | node       
 ----------+------------------+----------+------------

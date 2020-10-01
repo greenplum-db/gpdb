@@ -58,7 +58,7 @@
           </thead>
           <tbody>
             <row>
-              <entry colname="col1">1.0.0</entry>
+              <entry colname="col1">1,1,0, 1.0.0</entry>
               <entry colname="col2">3.6+</entry>
               <entry colname="col3">6.1+</entry>
               <entry colname="col4">3.0.2+</entry>
@@ -218,15 +218,15 @@ Connection 1 is disconnected!
       </section>
       <section id="objs">
         <title>Examining  Database Obects</title>
-        <p>The <codeph>db.object()</codeph> function lists the tables and views
+        <p>The <codeph>db.objects()</codeph> function lists the tables and views
           in the database identified by a specific connection identifier. The
           function signature is:</p>
-        <codeblock>db.object( search = NULL, conn.id = 1 )</codeblock>
+        <codeblock>db.objects( search = NULL, conn.id = 1 )</codeblock>
         <p> If you choose, you can specify a filter string to narrow the returned
           results. For example, to list the tables and views in the
           <codeph>public</codeph> schema in the database identified by the
           default connection identifier, invoke the function as follows:</p>
-        <codeblock>> db.object( search = "public." )</codeblock>
+        <codeblock>> db.objects( search = "public." )</codeblock>
       </section>
       <section id="data">
         <title>Analyzing and Manipulating Data</title>
@@ -284,23 +284,31 @@ Connection  :    1
          <p>The function signatures follow:</p>
          <codeblock>db.gpapply( X, MARGIN = NULL, FUN = NULL, output.name = NULL, output.signature = NULL,
             clear.existing = FALSE, case.sensitive = FALSE, output.distributeOn = NULL,
-            debugger.mode = FALSE, runtime.id = "plc_r_shared", language = "plcontainer", ... )
+            debugger.mode = FALSE, runtime.id = "plc_r_shared", language = "plcontainer",
+            input.signature = NULL, ... )
 
 db.gptapply( X, INDEX, FUN = NULL, output.name = NULL, output.signature = NULL,
              clear.existing = FALSE, case.sensitive = FALSE,
              output.distributeOn = NULL, debugger.mode = FALSE,
-             runtime.id = "plc_r_shared", language = "plcontainer", ... )</codeblock>
+             runtime.id = "plc_r_shared", language = "plcontainer",
+             input.signature = NULL, ... )</codeblock>
          <p>Use the second variant of the function when the table data is indexed.</p>
-        <p><b>Example</b>:</p>
+         <p>By default, <codeph>db.gp[t]apply()</codeph> passes a single data frame
+           input argument to the R function <codeph>FUN</codeph>. If you define
+           <codeph>FUN</codeph> to take a list of arguments, you must specify the
+           function argument name to Greenplum table column name mapping in
+           <codeph>input.signature</codeph>. You must specify this mapping
+           in table column order.</p>
+        <p><b>Example 1</b>:</p>
         <p>Create a Greenplum table named <codeph>table1</codeph> in the
           database named <codeph>testdb</codeph>. This table has a single
           integer-type field. Populate the table with some data:</p>
           <codeblock>user@clientsys$ psql -h gpmaster -d testdb
 testdb=# CREATE TABLE table1( id int );
 testdb=# INSERT INTO table1 SELECT generate_series(1,13);
-testdb=#\q</codeblock>
+testdb=# \q</codeblock>
         <p>Create an R function that increments an integer. Run the function on
-          the <codeph>table1</codeph> <codeph>id</codeph> column in Greenplum
+          <codeph>table1</codeph> in Greenplum
           using the PL/R procedural language. Then write the new values to a
           table named <codeph>table1_r_inc</codeph>:
         <codeblock>user@clientsys$ R
@@ -313,7 +321,7 @@ testdb=#\q</codeblock>
     return (num[[1]] + 1)
 }
 
-> ## create the output signature
+> ## create the function output signature
 > .sig &lt;- list( "num" = "int" )
 
 > ## run the function in Greenplum and print
@@ -344,6 +352,51 @@ testdb=#\q</codeblock>
 > db.objects( search = "public.")
 [1] "public.abalone_from_r"		"public.table1_r_inc"
 </codeblock></p>
+        <p><b>Example 2</b>:</p>
+        <p>Create a Greenplum table named <codeph>table2</codeph> in the
+          database named <codeph>testdb</codeph>. This table has two
+          integer-type fields. Populate the table with some data:</p>
+          <codeblock>user@clientsys$ psql -h gpmaster -d testdb
+testdb=# CREATE TABLE table2( c1 int, c2 int );
+testdb=# INSERT INTO table2 VALUES (1, 2);
+testdb=#\q</codeblock>
+        <p>Create an R function that takes two integer arguments, manipulates
+          the arguments, and returns both.  Run the function on the data
+          in <codeph>table2</codeph> in Greenplum using the PL/R procedural
+          language, writing the new values to a table named <codeph>table2_r_upd</codeph>:</p>
+        <codeblock>user@clientsys$ R
+> ## create a reference to table2
+> t2 &lt;- db.data.frame("public.table2")
+
+> ## create the R function
+> fn.func_with_two_args &lt;- function(a, b)
+{
+    a &lt;- a * 20
+    b &lt;- a + 66
+    c &lt;- list(a, b)
+    return (as.data.frame(c))
+}
+
+> ## create the function input signature, mapping function argument name to
+> ## table column name
+> input.sig &lt;- list('a' = 'c1', 'b' = 'c2')
+
+> ## create the function output signature
+> return.sig &lt;- list('a' = 'int', 'b' = 'int')
+
+> ## run the function in Greenplum and write to the output table
+> db.gpapply(t2, output.name = "public.table2_r_upd", FUN = fn.func_with_two_args,
+   output.signature = return.sig, clear.existing = TRUE, case.sensitive = TRUE,
+   language = "plr", input.signature = input.sig )
+</codeblock>
+        <p>View the contents of the Greenplum table named <codeph>table2_r_upd</codeph>:</p>
+          <codeblock>user@clientsys$ psql -h gpmaster -d testdb
+testdb=# SELECT * FROM table2_r_upd;
+ a  | b  
+----+----
+ 20 | 86
+(1 row)
+testdb=# \q</codeblock>
       </section>
     </body>
   </topic>

@@ -1,6 +1,0 @@
-#!/bin/bash
-#
-# Normally, psql feeds the files in sql/ directory to psql, but we want to
-# run them as shell scripts instead.
-
-bash

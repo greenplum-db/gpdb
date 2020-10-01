@@ -3,7 +3,7 @@ doc/src/sgml/ref/alter_resource_group.sgml
 PostgreSQL documentation
 -->
 
-<refentry id="SQL-ALTERRESOURCEGROUP">
+<refentry id="sql-alterresourcegroup">
  <indexterm zone="sql-alterresourcegroup">
   <primary>ALTER RESOURCE GROUP</primary>
  </indexterm>

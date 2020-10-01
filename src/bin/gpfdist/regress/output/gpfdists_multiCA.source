@@ -7,7 +7,7 @@
 -- 'gpfdists' protocol
 -- --------------------------------------
 CREATE EXTERNAL WEB TABLE gpfdist_ssl_start (x text)
-execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data --ssl @abs_srcdir@/data/gpfdist_ssl/certs_multiCA </dev/null >/dev/null 2>&1 &); for i in `seq 1 60`; do curl 127.0.0.1:7070 >/dev/null 2>&1 && break; sleep 1; done; ps -A -o pid,comm |grep [g]pfdist |grep -v postgres:) '
+execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data --ssl @abs_srcdir@/data/gpfdist_ssl/certs_multiCA </dev/null >/dev/null 2>&1 &); for i in `seq 1 60`; do curl -k https://localhost:7070 >/dev/null 2>&1; [ $? -ne 7 ] && break; sleep 1; done; ps -A -o pid,comm |grep [g]pfdist |grep -v postgres:) '
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 CREATE EXTERNAL WEB TABLE gpfdist_ssl_stop (x text)
@@ -58,7 +58,7 @@ INSERT INTO tbl_on_heap VALUES
 DROP EXTERNAL TABLE IF EXISTS tbl;
 NOTICE:  table "tbl" does not exist, skipping
 CREATE WRITABLE EXTERNAL TABLE tbl (s1 text, s2 text, s3 text, dt timestamp,n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)
-LOCATION ('gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl2.tbl')
+LOCATION ('gpfdists://localhost:7070/gpfdist_ssl/tbl2.tbl')
 FORMAT 'TEXT' (DELIMITER '|' );
 INSERT INTO tbl SELECT * FROM tbl_on_heap;
 SELECT * FROM tbl_on_heap ORDER BY s1;
@@ -82,7 +82,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 DROP EXTERNAL TABLE IF EXISTS tbl2;
 NOTICE:  table "tbl2" does not exist, skipping
 CREATE EXTERNAL TABLE tbl2 (s1 text, s2 text, s3 text, dt timestamp,n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)
-LOCATION ('gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl2.tbl')
+LOCATION ('gpfdists://localhost:7070/gpfdist_ssl/tbl2.tbl')
 FORMAT 'TEXT' (DELIMITER '|' );
 INSERT INTO tbl_on_heap2 SELECT * FROM tbl2;
 SELECT * FROM tbl_on_heap2 ORDER BY s1;
@@ -104,7 +104,7 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 's1' a
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 DROP EXTERNAL TABLE IF EXISTS tbl;
 CREATE EXTERNAL TABLE tbl (s1 text, s2 text, s3 text, dt timestamp,n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)
-LOCATION ('gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl','gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl2.tbl')
+LOCATION ('gpfdists://localhost:7070/gpfdist_ssl/tbl1.tbl','gpfdists://localhost:7070/gpfdist_ssl/tbl2.tbl')
 FORMAT 'TEXT' (DELIMITER '|' );
 INSERT INTO tbl_on_heap SELECT * FROM tbl;
 SELECT * FROM tbl_on_heap ORDER BY s1;
@@ -130,7 +130,7 @@ SELECT * FROM tbl_on_heap ORDER BY s1;
 DROP EXTERNAL TABLE IF EXISTS tbl;
 NOTICE:  table "tbl" does not exist, skipping
 CREATE EXTERNAL TABLE tbl (s1 text, s2 text, s3 text, dt timestamp,n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)
-LOCATION ('gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl')
+LOCATION ('gpfdists://localhost:7070/gpfdist_ssl/tbl1.tbl')
 FORMAT 'TEXT' (DELIMITER '|' );
 SELECT * FROM tbl;
  s1  |  s2  |   s3   |            dt            | n1 | n2  |   n3   |  n4   |   n5    |   n6    |     n7     

@@ -4,12 +4,12 @@
 /* If objects exist, return oids */
 CREATE ROLE regress_regrole_test;
 -- without schemaname
--- GPDB: Use <#> instead of ||/ in the test, because ||/ is not unique in GPDB
+-- GPDB: Use -|- instead of ||/ in the test, because ||/ is not unique in GPDB
 -- (there's an extra ||/ operator for complex datatype)
-SELECT regoper('<#>');
+SELECT regoper('-|-');
  regoper 
 ---------
- <#>
+ -|-
 (1 row)
 
 SELECT regoperator('+(int4,int4)');
@@ -42,10 +42,10 @@ SELECT regtype('int4');
  integer
 (1 row)
 
-SELECT to_regoper('<#>');
+SELECT to_regoper('-|-');
  to_regoper 
 ------------
- <#>
+ -|-
 (1 row)
 
 SELECT to_regoperator('+(int4,int4)');
@@ -79,10 +79,10 @@ SELECT to_regtype('int4');
 (1 row)
 
 -- with schemaname
-SELECT regoper('pg_catalog.<#>');
+SELECT regoper('pg_catalog.-|-');
  regoper 
 ---------
- <#>
+ -|-
 (1 row)
 
 SELECT regoperator('pg_catalog.+(int4,int4)');
@@ -115,10 +115,10 @@ SELECT regtype('pg_catalog.int4');
  integer
 (1 row)
 
-SELECT to_regoper('pg_catalog.<#>');
+SELECT to_regoper('pg_catalog.-|-');
  to_regoper 
 ------------
- <#>
+ -|-
 (1 row)
 
 SELECT to_regproc('pg_catalog.now');

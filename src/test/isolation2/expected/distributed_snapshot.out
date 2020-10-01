@@ -156,3 +156,376 @@ COMMIT
 COMMIT
 DROP TABLE distributed_snapshot_test3;
 DROP
+
+-- The following test cases are to test that QEs can get
+-- latest distribute snapshot to scan normal tables (not catalog).
+-- Greenplum tests the visibility of heap tuples firstly using
+-- distributed snapshot. Distributed snapshot is generated on
+-- QD and then dispatched to QEs. Some utility statement needs
+-- to work under latest snapshot when executing, so that they
+-- invoke the function `GetLatestSnapshot` in QEs. But remember
+-- we cannot get the latest distributed snapshot.
+
+-- Subtle cases are: Alter Table or Alter Domain statements on QD
+-- get snapshot in Portal Run and then try to hold locks on the
+-- target table in ProcessUtilitySlow. Here is the key point:
+--   1. try to hold lock ==> it might be blocked by other transcations
+--   2. then it will be waked up to continue
+--   3. when it can continue, the world has changed because other transcations
+--      then blocks it have been over
+
+-- Previously, on QD we do not getsnapshot before we dispatch utility
+-- statement to QEs which leads to the distributed snapshot does not
+-- reflect the "world change". This will lead to some bugs. For example,
+-- if the first transaction is to rewrite the whole heap, and then
+-- the second Alter Table or Alter Domain statements continues with
+-- the distributed snapshot that txn1 does not commit yet, it will
+-- see no tuples in the new heap!
+-- See Github issue https://github.com/greenplum-db/gpdb/issues/10216
+
+-- Now this has been fixed, the following cases are tests to check this.
+
+-- Case 1: concurrently alter column type (will do rewrite heap)
+create table t_alter_snapshot_test(a int, b int, c int);
+CREATE
+insert into t_alter_snapshot_test values (1, 1, 1), (1, 1, 1);
+INSERT 2
+
+select * from t_alter_snapshot_test;
+ a | b | c 
+---+---+---
+ 1 | 1 | 1 
+ 1 | 1 | 1 
+(2 rows)
+
+1: begin;
+BEGIN
+1: alter table t_alter_snapshot_test alter column b type text;
+ALTER
+
+-- the following statement will hang
+2&: alter table t_alter_snapshot_test alter column c type text;  <waiting ...>
+
+1: end;
+END
+-- after 1 commit, 2 can continue, it should use latest distributed
+-- snapshot so that the data will not be lost.
+2<:  <... completed>
+ALTER
+
+select * from t_alter_snapshot_test;
+ a | b | c 
+---+---+---
+ 1 | 1 | 1 
+ 1 | 1 | 1 
+(2 rows)
+drop table t_alter_snapshot_test;
+DROP
+
+-- Case 2: concurrently add exclude constrain
+create table t_alter_snapshot_test(a int, b int);
+CREATE
+insert into t_alter_snapshot_test values (1, 1), (1, 1);
+INSERT 2
+
+select a from t_alter_snapshot_test;
+ a 
+---
+ 1 
+ 1 
+(2 rows)
+
+1: begin;
+BEGIN
+1: alter table t_alter_snapshot_test alter column b type int using b::int;
+ALTER
+
+2&: alter table t_alter_snapshot_test add exclude using btree (a WITH =);  <waiting ...>
+
+1: end;
+END
+-- after 1 commit, 2 can go on and it should fail
+2<:  <... completed>
+ERROR:  could not create exclusion constraint "t_alter_snapshot_test_a_excl"  (seg1 127.0.1.1:7003 pid=39163)
+DETAIL:  Key (a)=(1) conflicts with key (a)=(1).
+
+drop table t_alter_snapshot_test;
+DROP
+
+-- Case 3: concurrently split partition
+create table t_alter_snapshot_test(id int, rank int, year int) distributed by (id) partition by range (year) ( start (0) end (20) every (4), default partition extra );
+CREATE
+
+insert into t_alter_snapshot_test select i,i,i from generate_series(1, 100)i;
+INSERT 100
+select count(*) from t_alter_snapshot_test;
+ count 
+-------
+ 100   
+(1 row)
+
+1: begin;
+BEGIN
+1: alter table t_alter_snapshot_test alter column rank type text;
+ALTER
+
+2&: alter table t_alter_snapshot_test split partition for (5) at (5)  into (partition pa,  partition pb);  <waiting ...>
+
+1: end;
+END
+-- after 1 commit, 2 can go on and it should not lose data
+2<:  <... completed>
+ALTER
+
+select count(*) from t_alter_snapshot_test;
+ count 
+-------
+ 100   
+(1 row)
+drop table t_alter_snapshot_test;
+DROP
+
+-- case 4: concurrently validate check
+create table t_alter_snapshot_test(a int, b int);
+CREATE
+insert into t_alter_snapshot_test values (1, 1), (2, 2);
+INSERT 2
+alter table t_alter_snapshot_test ADD CONSTRAINT mychk CHECK(a > 20) NOT VALID;
+ALTER
+
+1: begin;
+BEGIN
+1: alter table t_alter_snapshot_test alter column b type text;
+ALTER
+
+2&: alter table t_alter_snapshot_test validate CONSTRAINT mychk;  <waiting ...>
+
+1: end;
+END
+-- after 1 commit, 2 can go on and it should fail
+2<:  <... completed>
+ERROR:  check constraint "mychk" is violated by some row  (seg1 127.0.1.1:7003 pid=39163)
+
+drop table t_alter_snapshot_test;
+DROP
+
+-- case 5: concurrently domain check
+create domain domain_snapshot_test as int;
+CREATE
+create table t_alter_snapshot_test(i domain_snapshot_test, j int, k int);
+CREATE
+insert into t_alter_snapshot_test values(200,1,1);
+INSERT 1
+alter domain domain_snapshot_test ADD CONSTRAINT mychk CHECK(VALUE > 300)  NOT VALID;
+ALTER
+
+1: begin;
+BEGIN
+1: alter table t_alter_snapshot_test alter column k type text;
+ALTER
+
+2&: alter domain domain_snapshot_test validate CONSTRAINT mychk;  <waiting ...>
+
+1:end;
+END
+-- after 1 commit, 2 can go on and it should fail
+2<:  <... completed>
+ERROR:  column "i" of table "t_alter_snapshot_test" contains values that violate the new constraint  (seg2 127.0.1.1:7004 pid=39164)
+
+drop table t_alter_snapshot_test;
+DROP
+drop domain domain_snapshot_test;
+DROP
+
+-- case 6: alter table expand table
+create table t_alter_snapshot_test(a int, b int);
+CREATE
+set allow_system_table_mods = on;
+SET
+update gp_distribution_policy set numsegments = 2 where localoid = 't_alter_snapshot_test'::regclass::oid;
+UPDATE 1
+insert into t_alter_snapshot_test select i,i from generate_series(1, 10)i;
+INSERT 10
+select gp_segment_id, * from t_alter_snapshot_test;
+ gp_segment_id | a  | b  
+---------------+----+----
+ 0             | 2  | 2  
+ 0             | 3  | 3  
+ 0             | 4  | 4  
+ 0             | 6  | 6  
+ 0             | 7  | 7  
+ 0             | 8  | 8  
+ 0             | 9  | 9  
+ 0             | 10 | 10 
+ 1             | 1  | 1  
+ 1             | 5  | 5  
+(10 rows)
+
+1: begin;
+BEGIN
+1: alter table t_alter_snapshot_test alter column b type text;
+ALTER
+
+2&: alter table t_alter_snapshot_test expand table;  <waiting ...>
+
+1: end;
+END
+-- after 1 commit, 2 can go on and data should not be lost
+2<:  <... completed>
+ALTER
+
+select gp_segment_id, * from t_alter_snapshot_test;
+ gp_segment_id | a  | b  
+---------------+----+----
+ 0             | 2  | 2  
+ 0             | 3  | 3  
+ 0             | 4  | 4  
+ 0             | 7  | 7  
+ 0             | 8  | 8  
+ 1             | 1  | 1  
+ 2             | 6  | 6  
+ 2             | 9  | 9  
+ 2             | 10 | 10 
+ 2             | 5  | 5  
+(10 rows)
+drop table t_alter_snapshot_test;
+DROP
+
+-- case 7: alter table set distributed by
+create table t_alter_snapshot_test(a int, b int) distributed randomly;
+CREATE
+insert into t_alter_snapshot_test select i,i from generate_series(1, 10)i;
+INSERT 10
+select count(*) from t_alter_snapshot_test;
+ count 
+-------
+ 10    
+(1 row)
+
+1: begin;
+BEGIN
+1: alter table t_alter_snapshot_test alter column b type text;
+ALTER
+
+2&: alter table t_alter_snapshot_test set distributed by (a);  <waiting ...>
+
+1: end;
+END
+-- after 1 commit, 2 can continue and data should not be lost
+2<:  <... completed>
+ALTER
+
+select count(*) from t_alter_snapshot_test;
+ count 
+-------
+ 10    
+(1 row)
+drop table t_alter_snapshot_test;
+DROP
+
+-- case 8: DML concurrent with Alter Table
+create table t_alter_snapshot_test(a int, b int);
+CREATE
+
+---- test for insert
+1: begin;
+BEGIN
+1: insert into t_alter_snapshot_test values (1, 1);
+INSERT 1
+2&: alter table t_alter_snapshot_test alter column b type text;  <waiting ...>
+1: end;
+END
+-- 2 can continue, and we should not lose data
+2<:  <... completed>
+ALTER
+select * from t_alter_snapshot_test;
+ a | b 
+---+---
+ 1 | 1 
+(1 row)
+
+---- test for update
+truncate t_alter_snapshot_test;
+TRUNCATE
+insert into t_alter_snapshot_test values (1, 1);
+INSERT 1
+1: begin;
+BEGIN
+1: update t_alter_snapshot_test set b = '3';
+UPDATE 1
+2&: alter table t_alter_snapshot_test alter column b type int using b::int;  <waiting ...>
+1: end;
+END
+-- 2 can continue and we should see the data has been updated
+2<:  <... completed>
+ALTER
+select * from t_alter_snapshot_test;
+ a | b 
+---+---
+ 1 | 3 
+(1 row)
+
+---- test for delete
+truncate t_alter_snapshot_test;
+TRUNCATE
+insert into t_alter_snapshot_test values (1, 1);
+INSERT 1
+1: begin;
+BEGIN
+1: delete from t_alter_snapshot_test;
+DELETE 1
+2&: alter table t_alter_snapshot_test alter column b type text;  <waiting ...>
+1: end;
+END
+-- 2 can continue and we should see the data has been deleted
+2<:  <... completed>
+ALTER
+select * from t_alter_snapshot_test;
+ a | b 
+---+---
+(0 rows)
+drop table t_alter_snapshot_test;
+DROP
+
+-- Case 9: Repeatable Read Isolation Level Test
+create table t_alter_snapshot_test(a int, b int);
+CREATE
+insert into t_alter_snapshot_test values (1, 1);
+INSERT 1
+1: begin;
+BEGIN
+1: insert into t_alter_snapshot_test values (1, 1);
+INSERT 1
+
+2: begin isolation level repeatable read;
+BEGIN
+2: select * from  t_alter_snapshot_test;
+ a | b 
+---+---
+ 1 | 1 
+(1 row)
+2&: alter table t_alter_snapshot_test alter column b type text;  <waiting ...>
+
+1: end;
+END
+-- 2 can continue and after its alter rewrite the heap
+-- it can see all the data even under repeatable read
+2<:  <... completed>
+ALTER
+2: select * from t_alter_snapshot_test;
+ a | b 
+---+---
+ 1 | 1 
+ 1 | 1 
+(2 rows)
+2: end;
+END
+
+select * from t_alter_snapshot_test;
+ a | b 
+---+---
+ 1 | 1 
+ 1 | 1 
+(2 rows)
+drop table t_alter_snapshot_test;
+DROP

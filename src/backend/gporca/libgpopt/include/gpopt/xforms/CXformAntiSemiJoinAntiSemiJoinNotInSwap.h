@@ -19,68 +19,62 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CXformAntiSemiJoinAntiSemiJoinNotInSwap
-	//
-	//	@doc:
-	//		Swap cascaded anti semi-join and anti semi-join (NotIn)
-	//
-	//---------------------------------------------------------------------------
-	class CXformAntiSemiJoinAntiSemiJoinNotInSwap : public CXformJoinSwap<CLogicalLeftAntiSemiJoin, CLogicalLeftAntiSemiJoinNotIn>
+//---------------------------------------------------------------------------
+//	@class:
+//		CXformAntiSemiJoinAntiSemiJoinNotInSwap
+//
+//	@doc:
+//		Swap cascaded anti semi-join and anti semi-join (NotIn)
+//
+//---------------------------------------------------------------------------
+class CXformAntiSemiJoinAntiSemiJoinNotInSwap
+	: public CXformJoinSwap<CLogicalLeftAntiSemiJoin,
+							CLogicalLeftAntiSemiJoinNotIn>
+{
+private:
+	// private copy ctor
+	CXformAntiSemiJoinAntiSemiJoinNotInSwap(
+		const CXformAntiSemiJoinAntiSemiJoinNotInSwap &);
+
+public:
+	// ctor
+	explicit CXformAntiSemiJoinAntiSemiJoinNotInSwap(CMemoryPool *mp)
+		: CXformJoinSwap<CLogicalLeftAntiSemiJoin,
+						 CLogicalLeftAntiSemiJoinNotIn>(mp)
 	{
+	}
 
-		private:
+	// dtor
+	virtual ~CXformAntiSemiJoinAntiSemiJoinNotInSwap()
+	{
+	}
 
-			// private copy ctor
-			CXformAntiSemiJoinAntiSemiJoinNotInSwap(const CXformAntiSemiJoinAntiSemiJoinNotInSwap &);
+	// compatibility function
+	virtual BOOL
+	FCompatible(CXform::EXformId exfid)
+	{
+		return ExfAntiSemiJoinNotInAntiSemiJoinSwap != exfid;
+	}
 
-		public:
+	// ident accessors
+	virtual EXformId
+	Exfid() const
+	{
+		return ExfAntiSemiJoinAntiSemiJoinNotInSwap;
+	}
 
-			// ctor
-			explicit
-			CXformAntiSemiJoinAntiSemiJoinNotInSwap
-				(
-				CMemoryPool *mp
-				)
-				:
-				CXformJoinSwap<CLogicalLeftAntiSemiJoin, CLogicalLeftAntiSemiJoinNotIn>(mp)
-			{}
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CXformAntiSemiJoinAntiSemiJoinNotInSwap";
+	}
 
-			// dtor
-			virtual
-			~CXformAntiSemiJoinAntiSemiJoinNotInSwap()
-			{}
+};	// class CXformAntiSemiJoinAntiSemiJoinNotInSwap
 
-			// compatibility function
-			virtual
-			BOOL FCompatible
-				(
-				CXform::EXformId exfid
-				)
-			{
-				return ExfAntiSemiJoinNotInAntiSemiJoinSwap != exfid;
-			}
+}  // namespace gpopt
 
-			// ident accessors
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfAntiSemiJoinAntiSemiJoinNotInSwap;
-			}
-
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CXformAntiSemiJoinAntiSemiJoinNotInSwap";
-			}
-
-	}; // class CXformAntiSemiJoinAntiSemiJoinNotInSwap
-
-}
-
-#endif // !GPOPT_CXformAntiSemiJoinAntiSemiJoinNotInSwap_H
+#endif	// !GPOPT_CXformAntiSemiJoinAntiSemiJoinNotInSwap_H
 
 // EOF

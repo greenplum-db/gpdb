@@ -3,7 +3,7 @@
  * wparser_def.c
  *		Default text search parser
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
@@ -199,10 +199,10 @@ typedef enum
 /* forward declaration */
 struct TParser;
 
-typedef int (*TParserCharTest) (struct TParser *);		/* any p_is* functions
-														 * except p_iseq */
-typedef void (*TParserSpecial) (struct TParser *);		/* special handler for
-														 * special cases... */
+typedef int (*TParserCharTest) (struct TParser *);	/* any p_is* functions
+													 * except p_iseq */
+typedef void (*TParserSpecial) (struct TParser *);	/* special handler for
+													 * special cases... */
 
 typedef struct
 {
@@ -241,11 +241,9 @@ typedef struct TParser
 	/* string and position information */
 	char	   *str;			/* multibyte string */
 	int			lenstr;			/* length of mbstring */
-#ifdef USE_WIDE_UPPER_LOWER
 	wchar_t    *wstr;			/* wide character string */
 	pg_wchar   *pgwstr;			/* wide character string for C-locale */
 	bool		usewide;
-#endif
 
 	/* State of parse */
 	int			charmaxlen;
@@ -294,15 +292,13 @@ TParserInit(char *str, int len)
 	prs->str = str;
 	prs->lenstr = len;
 
-#ifdef USE_WIDE_UPPER_LOWER
-
 	/*
 	 * Use wide char code only when max encoding length > 1.
 	 */
 	if (prs->charmaxlen > 1)
 	{
 		Oid			collation = DEFAULT_COLLATION_OID;	/* TODO */
-		pg_locale_t mylocale = 0;		/* TODO */
+		pg_locale_t mylocale = 0;	/* TODO */
 
 		prs->usewide = true;
 		if (lc_ctype_is_c(collation))
@@ -323,7 +319,6 @@ TParserInit(char *str, int len)
 	}
 	else
 		prs->usewide = false;
-#endif
 
 	prs->state = newTParserPosition(NULL);
 	prs->state->state = TPS_Base;
@@ -360,15 +355,12 @@ TParserCopyInit(const TParser *orig)
 	prs->charmaxlen = orig->charmaxlen;
 	prs->str = orig->str + orig->state->posbyte;
 	prs->lenstr = orig->lenstr - orig->state->posbyte;
-
-#ifdef USE_WIDE_UPPER_LOWER
 	prs->usewide = orig->usewide;
 
 	if (orig->pgwstr)
 		prs->pgwstr = orig->pgwstr + orig->state->poschar;
 	if (orig->wstr)
 		prs->wstr = orig->wstr + orig->state->poschar;
-#endif
 
 	prs->state = newTParserPosition(NULL);
 	prs->state->state = TPS_Base;
@@ -393,12 +385,10 @@ TParserClose(TParser *prs)
 		prs->state = ptr;
 	}
 
-#ifdef USE_WIDE_UPPER_LOWER
 	if (prs->wstr)
 		pfree(prs->wstr);
 	if (prs->pgwstr)
 		pfree(prs->pgwstr);
-#endif
 
 #ifdef WPARSER_TRACE
 	fprintf(stderr, "closing parser\n");
@@ -437,96 +427,45 @@ TParserCopyClose(TParser *prs)
  *	- if locale is C then we use pgwstr instead of wstr.
  */
 
-#ifdef USE_WIDE_UPPER_LOWER
-
-#define p_iswhat(type)														\
+#define p_iswhat(type, nonascii)											\
+																			\
 static int																	\
-p_is##type(TParser *prs) {													\
-	Assert( prs->state );													\
-	if ( prs->usewide )														\
+p_is##type(TParser *prs)													\
+{																			\
+	Assert(prs->state);														\
+	if (prs->usewide)														\
 	{																		\
-		if ( prs->pgwstr )													\
+		if (prs->pgwstr)													\
 		{																	\
 			unsigned int c = *(prs->pgwstr + prs->state->poschar);			\
-			if ( c > 0x7f )													\
-				return 0;													\
-			return is##type( c );											\
+			if (c > 0x7f)													\
+				return nonascii;											\
+			return is##type(c);												\
 		}																	\
-		return isw##type( *( prs->wstr + prs->state->poschar ) );			\
+		return isw##type(*(prs->wstr + prs->state->poschar));				\
 	}																		\
-																			\
-	return is##type( *(unsigned char*)( prs->str + prs->state->posbyte ) ); \
-}	\
+	return is##type(*(unsigned char *) (prs->str + prs->state->posbyte));	\
+}																			\
 																			\
 static int																	\
-p_isnot##type(TParser *prs) {												\
+p_isnot##type(TParser *prs)													\
+{																			\
 	return !p_is##type(prs);												\
 }
 
-static int
-p_isalnum(TParser *prs)
-{
-	Assert(prs->state);
-
-	if (prs->usewide)
-	{
-		if (prs->pgwstr)
-		{
-			unsigned int c = *(prs->pgwstr + prs->state->poschar);
-
-			/*
-			 * any non-ascii symbol with multibyte encoding with C-locale is
-			 * an alpha character
-			 */
-			if (c > 0x7f)
-				return 1;
-
-			return isalnum(c);
-		}
-
-		return iswalnum(*(prs->wstr + prs->state->poschar));
-	}
-
-	return isalnum(*(unsigned char *) (prs->str + prs->state->posbyte));
-}
-static int
-p_isnotalnum(TParser *prs)
-{
-	return !p_isalnum(prs);
-}
-
-static int
-p_isalpha(TParser *prs)
-{
-	Assert(prs->state);
-
-	if (prs->usewide)
-	{
-		if (prs->pgwstr)
-		{
-			unsigned int c = *(prs->pgwstr + prs->state->poschar);
-
-			/*
-			 * any non-ascii symbol with multibyte encoding with C-locale is
-			 * an alpha character
-			 */
-			if (c > 0x7f)
-				return 1;
-
-			return isalpha(c);
-		}
-
-		return iswalpha(*(prs->wstr + prs->state->poschar));
-	}
-
-	return isalpha(*(unsigned char *) (prs->str + prs->state->posbyte));
-}
-
-static int
-p_isnotalpha(TParser *prs)
-{
-	return !p_isalpha(prs);
-}
+/*
+ * In C locale with a multibyte encoding, any non-ASCII symbol is considered
+ * an alpha character, but not a member of other char classes.
+ */
+p_iswhat(alnum, 1)
+p_iswhat(alpha, 1)
+p_iswhat(digit, 0)
+p_iswhat(lower, 0)
+p_iswhat(print, 0)
+p_iswhat(punct, 0)
+p_iswhat(space, 0)
+p_iswhat(upper, 0)
+p_iswhat(xdigit, 0)
 
 /* p_iseq should be used only for ascii symbols */
 
@@ -536,39 +475,6 @@ p_iseq(TParser *prs, char c)
 	Assert(prs->state);
 	return ((prs->state->charlen == 1 && *(prs->str + prs->state->posbyte) == c)) ? 1 : 0;
 }
-#else							/* USE_WIDE_UPPER_LOWER */
-
-#define p_iswhat(type)														\
-static int																	\
-p_is##type(TParser *prs) {													\
-	Assert( prs->state );													\
-	return is##type( (unsigned char)*( prs->str + prs->state->posbyte ) );	\
-}	\
-																			\
-static int																	\
-p_isnot##type(TParser *prs) {												\
-	return !p_is##type(prs);												\
-}
-
-
-static int
-p_iseq(TParser *prs, char c)
-{
-	Assert(prs->state);
-	return (*(prs->str + prs->state->posbyte) == c) ? 1 : 0;
-}
-
-p_iswhat(alnum)
-p_iswhat(alpha)
-#endif   /* USE_WIDE_UPPER_LOWER */
-
-p_iswhat(digit)
-p_iswhat(lower)
-p_iswhat(print)
-p_iswhat(punct)
-p_iswhat(space)
-p_iswhat(upper)
-p_iswhat(xdigit)
 
 static int
 p_isEOF(TParser *prs)
@@ -665,17 +571,17 @@ SpecialTags(TParser *prs)
 {
 	switch (prs->state->lenchartoken)
 	{
-		case 8:			/* </script */
+		case 8:					/* </script */
 			if (pg_strncasecmp(prs->token, "</script", 8) == 0)
 				prs->ignore = false;
 			break;
-		case 7:			/* <script || </style */
+		case 7:					/* <script || </style */
 			if (pg_strncasecmp(prs->token, "</style", 7) == 0)
 				prs->ignore = false;
 			else if (pg_strncasecmp(prs->token, "<script", 7) == 0)
 				prs->ignore = true;
 			break;
-		case 6:			/* <style */
+		case 6:					/* <style */
 			if (pg_strncasecmp(prs->token, "<style", 6) == 0)
 				prs->ignore = true;
 			break;
@@ -784,8 +690,6 @@ p_isspecial(TParser *prs)
 	 */
 	if (pg_dsplen(prs->str + prs->state->posbyte) == 0)
 		return 1;
-
-#ifdef USE_WIDE_UPPER_LOWER
 
 	/*
 	 * Unicode Characters in the 'Mark, Spacing Combining' Category That
@@ -1050,7 +954,6 @@ p_isspecial(TParser *prs)
 				StopHigh = StopMiddle;
 		}
 	}
-#endif
 
 	return 0;
 }
@@ -1697,7 +1600,7 @@ static const TParserStateActionItem actionTPS_InHyphenUnsignedInt[] = {
  */
 typedef struct
 {
-	const TParserStateActionItem *action;		/* the actual state info */
+	const TParserStateActionItem *action;	/* the actual state info */
 	TParserState state;			/* only for Assert crosscheck */
 #ifdef WPARSER_TRACE
 	const char *state_name;		/* only for debug printout */
@@ -2123,7 +2026,7 @@ hlCover(HeadlineParsedText *prs, TSQuery query, int *p, int *q)
 
 		ch.words = &(prs->words[*p]);
 		ch.len = *q - *p + 1;
-		if (TS_execute(GETQUERY(query), &ch, false, checkcondition_HL))
+		if (TS_execute(GETQUERY(query), &ch, TS_EXEC_EMPTY, checkcondition_HL))
 			return true;
 		else
 		{
@@ -2295,7 +2198,7 @@ mark_hl_fragments(HeadlineParsedText *prs, TSQuery query, int highlight,
 		{
 			if (!covers[i].in && !covers[i].excluded &&
 				(maxitems < covers[i].poslen || (maxitems == covers[i].poslen
-											&& minwords > covers[i].curlen)))
+												 && minwords > covers[i].curlen)))
 			{
 				maxitems = covers[i].poslen;
 				minwords = covers[i].curlen;
@@ -2557,13 +2460,13 @@ prsd_headline(PG_FUNCTION_ARGS)
 		char	   *val = defGetString(defel);
 
 		if (pg_strcasecmp(defel->defname, "MaxWords") == 0)
-			max_words = pg_atoi(val, sizeof(int32), 0);
+			max_words = pg_strtoint32(val);
 		else if (pg_strcasecmp(defel->defname, "MinWords") == 0)
-			min_words = pg_atoi(val, sizeof(int32), 0);
+			min_words = pg_strtoint32(val);
 		else if (pg_strcasecmp(defel->defname, "ShortWord") == 0)
-			shortword = pg_atoi(val, sizeof(int32), 0);
+			shortword = pg_strtoint32(val);
 		else if (pg_strcasecmp(defel->defname, "MaxFragments") == 0)
-			max_fragments = pg_atoi(val, sizeof(int32), 0);
+			max_fragments = pg_strtoint32(val);
 		else if (pg_strcasecmp(defel->defname, "StartSel") == 0)
 			prs->startsel = pstrdup(val);
 		else if (pg_strcasecmp(defel->defname, "StopSel") == 0)

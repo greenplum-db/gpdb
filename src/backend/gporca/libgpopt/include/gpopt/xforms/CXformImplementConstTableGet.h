@@ -16,73 +16,62 @@
 
 namespace gpopt
 {
-	using namespace gpos;
-	
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CXformImplementConstTableGet
-	//
-	//	@doc:
-	//		Implement const table get
-	//
-	//---------------------------------------------------------------------------
-	class CXformImplementConstTableGet : public CXformImplementation
+using namespace gpos;
+
+//---------------------------------------------------------------------------
+//	@class:
+//		CXformImplementConstTableGet
+//
+//	@doc:
+//		Implement const table get
+//
+//---------------------------------------------------------------------------
+class CXformImplementConstTableGet : public CXformImplementation
+{
+private:
+	// private copy ctor
+	CXformImplementConstTableGet(const CXformImplementConstTableGet &);
+
+public:
+	// ctor
+	explicit CXformImplementConstTableGet(CMemoryPool *);
+
+	// dtor
+	virtual ~CXformImplementConstTableGet()
 	{
+	}
 
-		private:
+	// ident accessors
+	virtual EXformId
+	Exfid() const
+	{
+		return ExfImplementConstTableGet;
+	}
 
-			// private copy ctor
-			CXformImplementConstTableGet(const CXformImplementConstTableGet &);
+	// return a string for xform name
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CXformImplementConstTableGet";
+	}
 
-		public:
-		
-			// ctor
-			explicit
-			CXformImplementConstTableGet(CMemoryPool *);
+	// compute xform promise for a given expression handle
+	virtual EXformPromise
+	Exfp(CExpressionHandle &  // exprhdl
+	) const
+	{
+		return CXform::ExfpHigh;
+	}
 
-			// dtor
-			virtual 
-			~CXformImplementConstTableGet() {}
+	// actual transform
+	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
+				   CExpression *pexpr) const;
 
-			// ident accessors
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfImplementConstTableGet;
-			}
-			
-			// return a string for xform name
-			virtual 
-			const CHAR *SzId() const
-			{
-				return "CXformImplementConstTableGet";
-			}
-			
-			// compute xform promise for a given expression handle
-			virtual
-			EXformPromise Exfp
-				(
-				CExpressionHandle & // exprhdl
-				)
-				const
-			{
-				return CXform::ExfpHigh;
-			}
+};	// class CXformImplementConstTableGet
 
-			// actual transform
-			void Transform
-				(
-				CXformContext *pxfctxt,
-				CXformResult *pxfres,
-				CExpression *pexpr
-				) 
-				const;
-		
-	}; // class CXformImplementConstTableGet
-
-}
+}  // namespace gpopt
 
 
-#endif // !GPOPT_CXformImplementConstTableGet_H
+#endif	// !GPOPT_CXformImplementConstTableGet_H
 
 // EOF

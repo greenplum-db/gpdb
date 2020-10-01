@@ -47,7 +47,7 @@
                         <codeph>gpfdist</codeph> utility that is installed with Greenplum Database
                     4.x cannot be used with Greenplum Database 5.x or 6.x.</note>
                 <note>The Greenplum Database 5.22 and later <codeph>gpload</codeph> for Linux is
-                  compatible with Greenplum Database 6.x. The Greenplum Database 6.x
+                    compatible with Greenplum Database 6.x. The Greenplum Database 6.x
                   <codeph>gpload</codeph> for both Linux and Windows is compatible with Greenplum 5.x.</note>
                 <note id="gpload-limitation"><codeph>MERGE</codeph> and <codeph>UPDATE</codeph>
                     operations are not supported if the target table column name is a reserved
@@ -209,6 +209,7 @@
     - <xref href="#topic1/cfdelimiter" format="dita">DELIMITER</xref>: '<varname>delimiter_character</varname>'
     - <xref href="#topic1/cfescape" format="dita">ESCAPE</xref>: '<varname>escape_character</varname>' | 'OFF'
     - <xref href="#topic1/cfnullas" format="dita">NULL_AS</xref>: '<varname>null_string</varname>'
+    - <xref href="#topic1/cfillfields" format="dita">FILL_MISSING_FIELDS</xref>: true | false
     - <xref href="#topic1/cfforcenotnull" format="dita">FORCE_NOT_NULL</xref>: true | false
     - <xref href="#topic1/cfquote" format="dita">QUOTE</xref>: '<varname>csv_quote_character</varname>'
     - <xref href="#topic1/cfheader" format="dita">HEADER</xref>: true | false
@@ -306,9 +307,9 @@
                                                   information about using the
                                                   <codeph>gpfdist</codeph> parallel file server and
                                                   single and multiple <codeph>gpfdist</codeph>
-                                                  instances, see "Loading and Unloading Data" in the
-                                                  <cite>Greenplum Database Administrator
-                                                  Guide</cite>.</p><parml>
+                                                  instances, see <xref
+                                                  href="../../admin_guide/load/topics/g-loading-and-unloading-data.xml"
+                                                  />.</p><parml>
                                                   <plentry>
                                                   <pt id="cfsourcelocalname">LOCAL_HOSTNAME</pt>
                                                   <pd>Optional. Specifies the host name or IP
@@ -469,9 +470,9 @@
                                                 or comma separated values (<codeph>CSV</codeph>)
                                                 format. Defaults to <codeph>TEXT</codeph> if not
                                                 specified. For more information about the format of
-                                                the source data, see "Loading and Unloading Data" in
-                                                the <cite>Greenplum Database Administrator
-                                                  Guide</cite>.</pd>
+                                                the source data, see <xref
+                                                  href="../../admin_guide/load/topics/g-loading-and-unloading-data.xml"
+                                                />.</pd>
                                         </plentry>
                                         <plentry>
                                             <pt id="cfdelimiter">DELIMITER</pt>
@@ -521,6 +522,24 @@
                                                 from empty strings. Any source data item that
                                                 matches this string will be considered a null
                                                 value.</pd>
+                                        </plentry>
+                                        <plentry id="cfillfields">
+                                            <pt>FILL_MISSING_FIELDS</pt>
+                                            <pd>Optional. The default value is
+                                                  <codeph>false</codeph>. When reading a row of data
+                                                that has missing trailing field values (the row of
+                                                data has missing data fields at the end of a line or
+                                                row), Greenplum Database returns an error.</pd>
+                                            <pd>If the value is <codeph>true</codeph>, when reading
+                                                a row of data that has missing trailing field
+                                                values, the values are set to <codeph>NULL</codeph>.
+                                                Blank rows, fields with a <codeph>NOT NULL</codeph>
+                                                constraint, and trailing delimiters on a line will
+                                                still report an error.</pd>
+                                            <pd>See the <codeph>FILL MISSING FIELDS</codeph> clause
+                                                of the <codeph><xref
+                                                  href="../../ref_guide/sql_commands/CREATE_EXTERNAL_TABLE.xml"
+                                                  /></codeph> command.</pd>
                                         </plentry>
                                         <plentry>
                                             <pt id="cfforcenotnull">FORCE_NOT_NULL</pt>
@@ -589,8 +608,9 @@
                                                 errors, such as primary key violations, will still
                                                 cause the load operation to abort if encountered.
                                                 For information about handling load errors, see
-                                                "Loading and Unloading Data" in the <cite>Greenplum
-                                                  Database Administrator Guide.</cite></pd>
+                                                  <xref
+                                                  href="../../admin_guide/load/topics/g-loading-and-unloading-data.xml"
+                                                />.</pd>
                                         </plentry>
                                         <plentry>
                                             <pt id="cferrorlog">LOG_ERRORS</pt>
@@ -634,9 +654,9 @@
                                                   Database Administrator Guide</cite>. For
                                                 information about the
                                                   <codeph>gp_read_error_log()</codeph> function, see
-                                                the <codeph>CREATE EXTERNAL TABLE</codeph> command
-                                                in the <cite>Greenplum Database Reference
-                                                  Guide</cite></pd>
+                                                the <codeph><xref
+                                                  href="../../ref_guide/sql_commands/CREATE_EXTERNAL_TABLE.xml"
+                                                  /></codeph> command.</pd>
                                         </plentry>
                                         <plentry>
                                             <pt id="cfexternal">EXTERNAL</pt>
@@ -950,8 +970,8 @@ GPLOAD:
         <section id="section11">
             <title>See Also</title>
             <p><codeph><xref href="gpfdist.xml#topic1" type="topic" format="dita"/></codeph>,
-                    <codeph>CREATE EXTERNAL TABLE</codeph> in the <cite>Greenplum Database Reference
-                    Guide</cite></p>
+                        <codeph><xref href="../../ref_guide/sql_commands/CREATE_EXTERNAL_TABLE.xml"
+                    /></codeph></p>
         </section>
     </body>
 </topic>

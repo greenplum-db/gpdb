@@ -4,7 +4,7 @@
 %{
 #include "postgres_fe.h"
 
-#include "extern.h"
+#include "preproc_extern.h"
 #include "ecpg_config.h"
 #include <unistd.h>
 
@@ -38,6 +38,7 @@ char *current_function;
 int ecpg_internal_var = 0;
 char	*connection = NULL;
 char	*input_filename = NULL;
+char	*g_cursor_name = NULL;
 
 static int	FoundInto = 0;
 static int	initializer = 0;
@@ -46,6 +47,7 @@ static char	pacounter_buffer[sizeof(int) * CHAR_BIT * 10 / 3]; /* a rough guess 
 static struct this_type actual_type[STRUCT_DEPTH];
 static char *actual_startline[STRUCT_DEPTH];
 static int	varchar_counter = 1;
+static int	bytea_counter = 1;
 
 /* temporarily store struct members while creating the data structure */
 struct ECPGstruct_member *struct_member_list[STRUCT_DEPTH] = { NULL };
@@ -142,7 +144,7 @@ cat2_str(char *str1, char *str2)
 	strcat(res_str, str2);
 	free(str1);
 	free(str2);
-	return(res_str);
+	return res_str;
 }
 
 static char *
@@ -162,7 +164,7 @@ cat_str(int count, ...)
 
 	va_end(args);
 
-	return(res_str);
+	return res_str;
 }
 
 static char *
@@ -174,7 +176,7 @@ make2_str(char *str1, char *str2)
 	strcat(res_str, str2);
 	free(str1);
 	free(str2);
-	return(res_str);
+	return res_str;
 }
 
 static char *
@@ -188,7 +190,7 @@ make3_str(char *str1, char *str2, char *str3)
 	free(str1);
 	free(str2);
 	free(str3);
-	return(res_str);
+	return res_str;
 }
 
 /* and the rest */
@@ -233,7 +235,7 @@ create_questionmarks(char *name, bool array)
 	/* removed the trailing " ," */
 
 	result[strlen(result)-3] = '\0';
-	return(result);
+	return result;
 }
 
 static char *
@@ -562,6 +564,7 @@ add_typedef(char *name, char *dimension, char *length, enum ECPGttype type_enum,
 		ECPGstruct_member_dup(struct_member_list[struct_level]) : NULL;
 
 		if (type_enum != ECPGt_varchar &&
+			type_enum != ECPGt_bytea &&
 			type_enum != ECPGt_char &&
 			type_enum != ECPGt_unsigned_char &&
 			type_enum != ECPGt_string &&
@@ -590,4 +593,5 @@ add_typedef(char *name, char *dimension, char *length, enum ECPGttype type_enum,
 	struct	fetch_desc	descriptor;
 	struct  su_symbol	struct_union;
 	struct	prep		prep;
+	struct	exec		exec;
 }

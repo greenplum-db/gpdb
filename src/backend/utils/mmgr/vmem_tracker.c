@@ -18,6 +18,8 @@
 
 #include "postgres.h"
 
+#include <math.h>
+
 #include "cdb/cdbvars.h"
 #include "miscadmin.h"
 #include "port/atomics.h"

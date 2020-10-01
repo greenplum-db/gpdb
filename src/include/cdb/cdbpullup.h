@@ -16,7 +16,7 @@
 #ifndef CDBPULLUP_H
 #define CDBPULLUP_H
 
-#include "nodes/relation.h"     /* PathKey, Relids */
+#include "nodes/pathnodes.h"     /* PathKey, Relids */
 
 /*
  * cdbpullup_expr
@@ -78,26 +78,5 @@ extern List *cdbpullup_truncatePathKeysForTargetList(List *pathkeys, List *targe
  */
 bool
 cdbpullup_isExprCoveredByTargetlist(Expr *expr, List *targetlist);
-
-/*
- * cdbpullup_makeVar
- *
- * Returns a new Var node with given 'varno' and 'varattno', and varlevelsup=0.
- *
- * The caller must provide an 'oldexpr' from which we obtain the vartype and
- * vartypmod for the new Var node.  If 'oldexpr' is a Var node, all fields are
- * copied except for varno, varattno and varlevelsup.
- *
- * The parameter modifyOld determines if varnoold and varoattno are modified or
- * not. Rule of thumb is to use modifyOld = false if called before setrefs.
- *
- * Copying an existing Var node preserves its varnoold and varoattno fields,
- * which are used by EXPLAIN to display the table and column name.
- * Also these fields are tested by equal(), so they may need to be set
- * correctly for successful lookups by list_member(), tlist_member(),
- * make_canonical_pathkey(), etc.
- */
-Expr *
-cdbpullup_make_expr(Index varno, AttrNumber varattno, Expr *oldexpr, bool modifyOld);
 
 #endif   /* CDBPULLUP_H */

@@ -3,18 +3,18 @@
 #include "optimizer/planmain.h"
 #include "tcop/tcopprot.h"
 
-static Node *
+static RawStmt *
 get_parsetree_for(const char *query_string)
 {
 	List *parsetree_list = pg_parse_query(query_string);
 	ListCell *parsetree_item = list_head(parsetree_list);
-	return (Node *)lfirst(parsetree_item);
+	return lfirst_node(RawStmt, parsetree_item);
 }
 
 static Query *
 get_query_for_parsetree(Node *parsetree, const char *query_string)
 {
-	List *querytree_list = pg_analyze_and_rewrite(parsetree, query_string, NULL, 0);
+	List *querytree_list = pg_analyze_and_rewrite(parsetree, query_string, NULL, 0, NULL);
 	ListCell *querytree = list_head(querytree_list);
 	return (Query *)lfirst(querytree);
 }

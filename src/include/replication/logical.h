@@ -2,7 +2,7 @@
  * logical.h
  *	   PostgreSQL logical decoding coordination
  *
- * Copyright (c) 2012-2016, PostgreSQL Global Development Group
+ * Copyright (c) 2012-2019, PostgreSQL Global Development Group
  *
  *-------------------------------------------------------------------------
  */
@@ -18,24 +18,39 @@
 struct LogicalDecodingContext;
 
 typedef void (*LogicalOutputPluginWriterWrite) (
-										   struct LogicalDecodingContext *lr,
-															XLogRecPtr Ptr,
-															TransactionId xid,
-															bool last_write
+												struct LogicalDecodingContext *lr,
+												XLogRecPtr Ptr,
+												TransactionId xid,
+												bool last_write
 );
 
 typedef LogicalOutputPluginWriterWrite LogicalOutputPluginWriterPrepareWrite;
+
+typedef void (*LogicalOutputPluginWriterUpdateProgress) (
+														 struct LogicalDecodingContext *lr,
+														 XLogRecPtr Ptr,
+														 TransactionId xid
+);
 
 typedef struct LogicalDecodingContext
 {
 	/* memory context this is all allocated in */
 	MemoryContext context;
 
-	/* infrastructure pieces */
-	XLogReaderState *reader;
+	/* The associated replication slot */
 	ReplicationSlot *slot;
+
+	/* infrastructure pieces for decoding */
+	XLogReaderState *reader;
 	struct ReorderBuffer *reorder;
 	struct SnapBuild *snapshot_builder;
+
+	/*
+	 * Marks the logical decoding context as fast forward decoding one. Such a
+	 * context does not have plugin loaded so most of the following properties
+	 * are unused.
+	 */
+	bool		fast_forward;
 
 	OutputPluginCallbacks callbacks;
 	OutputPluginOptions options;
@@ -50,6 +65,7 @@ typedef struct LogicalDecodingContext
 	 */
 	LogicalOutputPluginWriterPrepareWrite prepare_write;
 	LogicalOutputPluginWriterWrite write;
+	LogicalOutputPluginWriterUpdateProgress update_progress;
 
 	/*
 	 * Output buffer.
@@ -75,27 +91,32 @@ typedef struct LogicalDecodingContext
 	TransactionId write_xid;
 } LogicalDecodingContext;
 
+
 extern void CheckLogicalDecodingRequirements(void);
 
 extern LogicalDecodingContext *CreateInitDecodingContext(char *plugin,
-						  List *output_plugin_options,
-						  bool need_full_snapshot,
-						  XLogPageReadCB read_page,
-						  LogicalOutputPluginWriterPrepareWrite prepare_write,
-						  LogicalOutputPluginWriterWrite do_write);
+														 List *output_plugin_options,
+														 bool need_full_snapshot,
+														 XLogRecPtr restart_lsn,
+														 XLogPageReadCB read_page,
+														 LogicalOutputPluginWriterPrepareWrite prepare_write,
+														 LogicalOutputPluginWriterWrite do_write,
+														 LogicalOutputPluginWriterUpdateProgress update_progress);
 extern LogicalDecodingContext *CreateDecodingContext(
-					  XLogRecPtr start_lsn,
-					  List *output_plugin_options,
-					  XLogPageReadCB read_page,
-					  LogicalOutputPluginWriterPrepareWrite prepare_write,
-					  LogicalOutputPluginWriterWrite do_write);
+													 XLogRecPtr start_lsn,
+													 List *output_plugin_options,
+													 bool fast_forward,
+													 XLogPageReadCB read_page,
+													 LogicalOutputPluginWriterPrepareWrite prepare_write,
+													 LogicalOutputPluginWriterWrite do_write,
+													 LogicalOutputPluginWriterUpdateProgress update_progress);
 extern void DecodingContextFindStartpoint(LogicalDecodingContext *ctx);
 extern bool DecodingContextReady(LogicalDecodingContext *ctx);
 extern void FreeDecodingContext(LogicalDecodingContext *ctx);
 
 extern void LogicalIncreaseXminForSlot(XLogRecPtr lsn, TransactionId xmin);
 extern void LogicalIncreaseRestartDecodingForSlot(XLogRecPtr current_lsn,
-									  XLogRecPtr restart_lsn);
+												  XLogRecPtr restart_lsn);
 extern void LogicalConfirmReceivedLocation(XLogRecPtr lsn);
 
 extern bool filter_by_origin_cb_wrapper(LogicalDecodingContext *ctx, RepOriginId origin_id);

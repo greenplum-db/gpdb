@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from gppylib.gplog import *
 from gppylib.gpcatalog import *
@@ -15,14 +15,13 @@ class ForeignKeyCheck:
         self.shared_option = shared_option
         self.autoCast = autoCast
         self.query_filters = dict()
-        self.query_filters['pg_appendonly.relid'] = "(relstorage='a' or relstorage='c')"
-        self.query_filters['pg_attribute.attrelid'] = "true"
+        self.query_filters['pg_appendonly.relid'] = "(select amname from pg_am am where am.oid = relam) IN ('ao_row', 'ao_column')"
+        self.query_filters['pg_attribute.attrelid'] = "(relnatts > 0 or relnatts is NULL)"
         self.query_filters["pg_index.indexrelid"] = "(relkind='i')"
 
     def runCheck(self, tables):
         foreign_key_issues = dict()
-        for cat in sorted(tables):
-
+        for cat in tables:
             issues = self.checkTableForeignKey(cat)
             if issues:
                 foreign_key_issues[cat.getTableName()] = issues
@@ -45,12 +44,18 @@ class ForeignKeyCheck:
         if len(cat.getPrimaryKey()) <= 0:
             return
 
-        # skip these master-only tables
-        skipped_masteronly = ['gp_relation_node', 'pg_description',
-                              'pg_shdescription', 'pg_stat_last_operation',
-                              'pg_stat_last_shoperation', 'pg_statistic']
+        if catname in MASTER_ONLY_TABLES:
+            return
 
-        if catname in skipped_masteronly:
+        # GPDB_12_MERGE_FIXME: Left outer join query generated below
+        # joins pg_rewrite and pg_attribute on ev_class == attrelid.
+        # This reports false positives (presence of null tuples) for
+        # the case when a view is defined with no columns.  The query
+        # should ideally exclude such views by adding
+        # pg_class.relnatts to the join.  But that's not possible
+        # without significantly changing the existing query generation
+        # logic.
+        if catname == 'pg_rewrite':
             return
 
         # skip shared/non-shared tables
@@ -97,7 +102,7 @@ class ForeignKeyCheck:
             # are foreign keys--using a very specific filtering condition, since the full join would otherwise contain
             # unwanted entries from pg_class.
             #
-            can_use_full_join = self.query_filters.has_key(catname_filter) and pkcatname == 'pg_class'
+            can_use_full_join = catname_filter in self.query_filters and pkcatname == 'pg_class'
             if can_use_full_join:
                 qry = self.get_fk_query_full_join(catname, pkcatname, fkeystr, pkeystr,
                                                   pkey_aliases, cat1pkeys=cat1_pkeys_column_rename, filter=self.query_filters[catname_filter])

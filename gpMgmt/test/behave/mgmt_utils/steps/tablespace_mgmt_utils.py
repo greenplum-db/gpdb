@@ -2,7 +2,7 @@ import pipes
 import tempfile
 
 from behave import given, then
-from pygresql import pg
+
 
 from gppylib.db import dbconn
 from gppylib.gparray import GpArray
@@ -20,30 +20,31 @@ class Tablespace:
         for host in gparray.getHostList():
             run_cmd('ssh %s mkdir -p %s' % (pipes.quote(host), pipes.quote(self.path)))
 
-        with dbconn.connect(dbconn.DbURL(), unsetSearchPath=False) as conn:
-            db = pg.DB(conn)
-            db.query("CREATE TABLESPACE %s LOCATION '%s'" % (self.name, self.path))
-            db.query("CREATE DATABASE %s TABLESPACE %s" % (self.dbname, self.name))
+        conn = dbconn.connect(dbconn.DbURL(), unsetSearchPath=False)
+        dbconn.execSQL(conn, "CREATE TABLESPACE %s LOCATION '%s'" % (self.name, self.path))
+        dbconn.execSQL(conn, "CREATE DATABASE %s TABLESPACE %s" % (self.dbname, self.name))
+        conn.close()
 
-        with dbconn.connect(dbconn.DbURL(dbname=self.dbname), unsetSearchPath=False) as conn:
-            db = pg.DB(conn)
-            db.query("CREATE TABLE tbl (i int) DISTRIBUTED RANDOMLY")
-            db.query("INSERT INTO tbl VALUES (GENERATE_SERIES(0, 25))")
-            # save the distributed data for later verification
-            self.initial_data = db.query("SELECT gp_segment_id, i FROM tbl").getresult()
+        conn = dbconn.connect(dbconn.DbURL(dbname=self.dbname), unsetSearchPath=False)
+        dbconn.execSQL(conn, "CREATE TABLE tbl (i int) DISTRIBUTED RANDOMLY")
+        dbconn.execSQL(conn, "INSERT INTO tbl VALUES (GENERATE_SERIES(0, 25))")
+
+        # save the distributed data for later verification
+        self.initial_data = dbconn.query(conn, "SELECT gp_segment_id, i FROM tbl").fetchall()
+        conn.close()
 
     def cleanup(self):
-        with dbconn.connect(dbconn.DbURL(dbname="postgres"), unsetSearchPath=False) as conn:
-            db = pg.DB(conn)
-            db.query("DROP DATABASE IF EXISTS %s" % self.dbname)
-            db.query("DROP TABLESPACE IF EXISTS %s" % self.name)
+        conn = dbconn.connect(dbconn.DbURL(dbname="postgres"), unsetSearchPath=False)
+        dbconn.execSQL(conn, "DROP DATABASE IF EXISTS %s" % self.dbname)
+        dbconn.execSQL(conn, "DROP TABLESPACE IF EXISTS %s" % self.name)
 
-            # Without synchronous_commit = 'remote_apply' introduced in 9.6, there
-            # is no guarantee that the mirrors have removed their tablespace
-            # directories by the time the DROP TABLESPACE command returns.
-            # We need those directories to no longer be in use by the mirrors
-            # before removing them below.
-            _checkpoint_and_wait_for_replication_replay(db)
+        # Without synchronous_commit = 'remote_apply' introduced in 9.6, there
+        # is no guarantee that the mirrors have removed their tablespace
+        # directories by the time the DROP TABLESPACE command returns.
+        # We need those directories to no longer be in use by the mirrors
+        # before removing them below.
+        _checkpoint_and_wait_for_replication_replay(conn)
+        conn.close()
 
         gparray = GpArray.initFromCatalog(dbconn.DbURL())
         for host in gparray.getHostList():
@@ -57,13 +58,13 @@ class Tablespace:
         """
         url = dbconn.DbURL(hostname=hostname, port=port, dbname=self.dbname)
         with dbconn.connect(url, unsetSearchPath=False) as conn:
-            db = pg.DB(conn)
-            data = db.query("SELECT gp_segment_id, i FROM tbl").getresult()
+            data = dbconn.query(conn, "SELECT gp_segment_id, i FROM tbl").fetchall()
 
             # verify that we can still write to the tablespace
             self.table_counter += 1
-            db.query("CREATE TABLE tbl_%s (i int) DISTRIBUTED RANDOMLY" % self.table_counter)
-            db.query("INSERT INTO tbl_%s VALUES (GENERATE_SERIES(0, 25))" % self.table_counter)
+            dbconn.execSQL(conn, "CREATE TABLE tbl_%s (i int) DISTRIBUTED RANDOMLY" % self.table_counter)
+            dbconn.execSQL(conn, "INSERT INTO tbl_%s VALUES (GENERATE_SERIES(0, 25))" % self.table_counter)
+        conn.close()
 
         if sorted(data) != sorted(self.initial_data):
             raise Exception("Tablespace data is not identically distributed. Expected:\n%r\n but found:\n%r" % (
@@ -77,14 +78,13 @@ class Tablespace:
         """
         url = dbconn.DbURL(hostname=hostname, port=port, dbname=self.dbname)
         with dbconn.connect(url, unsetSearchPath=False) as conn:
-            db = pg.DB(conn)
-            data = db.query("SELECT gp_segment_id, i FROM tbl").getresult()
-            tbl_numsegments = dbconn.execSQLForSingleton(conn,
+            data = dbconn.query(conn, "SELECT gp_segment_id, i FROM tbl").fetchall()
+            tbl_numsegments = dbconn.querySingleton(conn,
                                                          "SELECT numsegments FROM gp_distribution_policy "
                                                          "WHERE localoid = 'tbl'::regclass::oid")
-            num_segments = dbconn.execSQLForSingleton(conn,
+            num_segments = dbconn.querySingleton(conn,
                                                      "SELECT COUNT(DISTINCT(content)) - 1 FROM gp_segment_configuration")
-
+        conn.close()
         if tbl_numsegments != num_segments:
             raise Exception("After gpexpand the numsegments for tablespace table 'tbl' %d does not match "
                             "the number of segments in the cluster %d." % (tbl_numsegments, num_segments))
@@ -97,11 +97,11 @@ class Tablespace:
                                 sorted(self.initial_data), sorted(data)))
 
 
-def _checkpoint_and_wait_for_replication_replay(db):
+def _checkpoint_and_wait_for_replication_replay(conn):
     """
     Taken from src/test/walrep/sql/missing_xlog.sql
     """
-    db.query("""
+    dbconn.execSQL(conn, """
 -- checkpoint to ensure clean xlog replication before bring down mirror
 create or replace function checkpoint_and_wait_for_replication_replay (retries int) returns bool as
 $$
@@ -119,11 +119,11 @@ begin
 	checkpoint;
 
 	-- Get the WAL positions after the checkpoint records on every segment.
-	for r in select gp_segment_id, pg_current_xlog_location() as loc from gp_dist_random('gp_id') loop
+	for r in select gp_segment_id, pg_current_wal_lsn() as loc from gp_dist_random('gp_id') loop
 		checkpoint_locs[r.gp_segment_id] = r.loc;
 	end loop;
 	-- and the QD, too.
-	checkpoint_locs[-1] = pg_current_xlog_location();
+	checkpoint_locs[-1] = pg_current_wal_lsn();
 
 	-- Force some WAL activity, to nudge the mirrors to replay past the
 	-- checkpoint location. There are some cases where a non-transactional
@@ -137,7 +137,7 @@ begin
 	-- memorized above.
 	loop
 		all_caught_up = true;
-		for r in select gp_segment_id, replay_location as loc from gp_stat_replication loop
+		for r in select gp_segment_id, replay_lsn as loc from gp_stat_replication loop
 			replay_locs[r.gp_segment_id] = r.loc;
 			if r.loc < checkpoint_locs[r.gp_segment_id] then
 				all_caught_up = false;
@@ -201,11 +201,11 @@ def impl(context):
 
 @then('the tablespace is valid after gpexpand')
 def impl(context):
-    for _, tbs in context.tablespaces.items():
+    for _, tbs in list(context.tablespaces.items()):
         tbs.verify_for_gpexpand()
 
 @then('all tablespaces are dropped')
 def impl(context):
-    for tablespace in context.tablespaces.values():
+    for tablespace in list(context.tablespaces.values()):
         tablespace.cleanup()
     context.tablespaces = {}

@@ -17,7 +17,7 @@
 #ifndef CDBUTIL_H
 #define CDBUTIL_H
 
-#include "catalog/gp_segment_config.h"
+#include "catalog/gp_segment_configuration.h"
 #include "nodes/pg_list.h"
 #include "nodes/plannodes.h"
 
@@ -211,6 +211,8 @@ extern int numsegmentsFromQD;
 extern int getgpsegmentCount(void);
 
 extern bool IsOnConflictUpdate(PlannedStmt *ps);
+
+extern void AvoidCorefileGeneration(void);
 
 #define ELOG_DISPATCHER_DEBUG(...) do { \
        if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG) elog(LOG, __VA_ARGS__); \

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) Greenplum Inc 2009. All Rights Reserved.
 #
@@ -12,16 +12,14 @@
 #   opened the OLD file.
 
 try:
-    import base64
     import os
-    import pickle
     import shutil
     import sys
     import tempfile
 
     from optparse import Option, OptionParser
     from gppylib.gpparseopts import OptParser, OptChecker
-except ImportError, e:
+except ImportError as e:
     sys.exit('Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
 
 _help = ["""This enables one to add, get and remove postgresql.conf configuration parameters.
@@ -55,13 +53,6 @@ def validate_args(options):
         sys.stderr.write("Missing --value <value> when adding parameter '%s'." % options.add_parameter)
         sys.exit(1)
 
-    if options.add_parameter and options.value:
-        try:
-            pickle.loads(base64.urlsafe_b64decode(options.value))
-        except Exception:
-            sys.stderr.write("Expected value to be a pickled base64 encoded value.")
-            sys.exit(1)
-
     if (options.get_parameter or options.remove_parameter) and options.value:
         sys.stderr.write("Cannot specify --value when using --get-parameter or --remove-parameter")
         sys.exit(1)
@@ -76,7 +67,7 @@ def validate_args(options):
 
 
 def _read_from_file_and_get_empty_tempfile(filename):
-    with open(filename, 'rb') as infile:
+    with open(filename, 'r') as infile:
         lines = infile.readlines()
 
     # TODO: does this work in the case of temp_conf_file containing spaces?
@@ -90,7 +81,7 @@ def comment_parameter(filename, name):
     lines, temp_conf_path = _read_from_file_and_get_empty_tempfile(filename)
 
     new_lines = 0
-    with open(os.path.abspath(temp_conf_path), 'wb') as outfile:
+    with open(os.path.abspath(temp_conf_path), 'w') as outfile:
         for line in lines:
             potential_match = line.split("=", 1)[0]
             if potential_match.lstrip().startswith(name):
@@ -106,13 +97,11 @@ def add_parameter(filename, name, value):
     lines, temp_conf_path = _read_from_file_and_get_empty_tempfile(filename)
 
     new_lines = 0
-    with open(os.path.abspath(temp_conf_path), 'wb') as outfile:
+    with open(os.path.abspath(temp_conf_path), 'w') as outfile:
         for line in lines:
             outfile.write(line)
             new_lines = new_lines + 1
-        outfile.write(bytes(name) + '=' +
-                      bytes(pickle.loads(base64.urlsafe_b64decode(value))) +
-                      os.linesep)
+        outfile.write(name + '=' + value + os.linesep)
         new_lines = new_lines + 1
 
     if new_lines == len(lines) + 1:
@@ -121,7 +110,7 @@ def add_parameter(filename, name, value):
 
 # NOTE: though apparently not documented, postgresQL returns the last valid value
 def get_parameter(filename, name):
-    with open(filename, 'rb') as f:
+    with open(filename, 'r') as f:
         for line in reversed(f.readlines()):
             parts = line.split("=", 1)
             if len(parts) > 1 and parts[0].lstrip().startswith(name):
@@ -133,7 +122,7 @@ def main():
     if options.get_parameter:
         try:
             value = get_parameter(options.file, options.get_parameter)
-            sys.stdout.write(base64.urlsafe_b64encode(pickle.dumps(value)))
+            sys.stdout.write(value)
             return
         except Exception as err:
             sys.stderr.write("Failed to get value for parameter '%s' in file %s due to: %s" % (

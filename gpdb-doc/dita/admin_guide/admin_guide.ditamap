@@ -23,6 +23,7 @@
             <topicref href="access_db/access_db.ditamap" format="ditamap"/>
             <topicref href="configure.ditamap" format="ditamap"/>
             <topicref href="managing/compression.xml"/>
+            <topicref href="managing/proxy-ic.xml"/>
             <topicref href="highavail/highavail.ditamap" format="ditamap"/>
             <topicref href="managing/backup.ditamap" format="ditamap"/>
             <topicref href="expand/expand.ditamap" format="ditamap"/>

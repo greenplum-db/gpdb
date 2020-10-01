@@ -1,0 +1,168 @@
+CREATE SCHEMA orca_static_pruning;
+SET search_path TO orca_static_pruning;
+CREATE TABLE rp (a int, b int, c int) DISTRIBUTED BY (a) PARTITION BY RANGE (b);
+CREATE TABLE rp0 PARTITION OF rp FOR VALUES FROM (MINVALUE) TO (10);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE rp1 PARTITION OF rp FOR VALUES FROM (10) TO (20);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE rp2 PARTITION OF rp FOR VALUES FROM (4200) TO (4203);
+NOTICE:  table has parent, setting distribution columns to match parent table
+INSERT INTO rp VALUES (0, 0, 0), (11, 11, 0), (4201, 4201, 0);
+SELECT $query$
+SELECT *
+FROM rp
+WHERE b > 4200
+$query$ AS qry \gset
+SET optimizer_trace_fallback TO on;
+EXPLAIN (COSTS OFF, VERBOSE)
+:qry ;
+                QUERY PLAN                 
+-------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: rp2.a, rp2.b, rp2.c
+   ->  Seq Scan on orca_static_pruning.rp2
+         Output: rp2.a, rp2.b, rp2.c
+         Filter: (rp2.b > 4200)
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+:qry ;
+  a   |  b   | c 
+------+------+---
+ 4201 | 4201 | 0
+(1 row)
+
+SELECT $query$
+SELECT *
+FROM rp
+WHERE b = 4201
+$query$ AS qry \gset
+EXPLAIN (COSTS OFF, VERBOSE)
+:qry ;
+                QUERY PLAN                 
+-------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: rp2.a, rp2.b, rp2.c
+   ->  Seq Scan on orca_static_pruning.rp2
+         Output: rp2.a, rp2.b, rp2.c
+         Filter: (rp2.b = 4201)
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+:qry ;
+  a   |  b   | c 
+------+------+---
+ 4201 | 4201 | 0
+(1 row)
+
+SELECT $query$
+SELECT *
+FROM rp
+WHERE b IN (4201, 4200)
+$query$ AS qry \gset
+EXPLAIN (COSTS OFF, VERBOSE)
+:qry ;
+                        QUERY PLAN                        
+----------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: rp2.a, rp2.b, rp2.c
+   ->  Seq Scan on orca_static_pruning.rp2
+         Output: rp2.a, rp2.b, rp2.c
+         Filter: (rp2.b = ANY ('{4201,4200}'::integer[]))
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+:qry ;
+  a   |  b   | c 
+------+------+---
+ 4201 | 4201 | 0
+(1 row)
+
+RESET optimizer_trace_fallback;
+CREATE TABLE lp (a int, b int) DISTRIBUTED BY (a) PARTITION BY LIST (b);
+CREATE TABLE lp0 PARTITION OF lp FOR VALUES IN (0, 1);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE lp1 PARTITION OF lp FOR VALUES IN (10, 11);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE lp2 PARTITION OF lp FOR VALUES IN (42, 43);
+NOTICE:  table has parent, setting distribution columns to match parent table
+INSERT INTO lp VALUES (0, 0), (10, 10), (42, 42);
+SET optimizer_trace_fallback TO on;
+SELECT $query$
+SELECT *
+FROM lp
+WHERE b > 42
+$query$ AS qry \gset
+EXPLAIN (COSTS OFF, VERBOSE)
+:qry ;
+                QUERY PLAN                 
+-------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: lp2.a, lp2.b
+   ->  Seq Scan on orca_static_pruning.lp2
+         Output: lp2.a, lp2.b
+         Filter: (lp2.b > 42)
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+:qry ;
+ a | b 
+---+---
+(0 rows)
+
+SELECT $query$
+SELECT *
+FROM lp
+WHERE b = 42
+$query$ AS qry \gset
+EXPLAIN (COSTS OFF, VERBOSE)
+:qry ;
+                QUERY PLAN                 
+-------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: lp2.a, lp2.b
+   ->  Seq Scan on orca_static_pruning.lp2
+         Output: lp2.a, lp2.b
+         Filter: (lp2.b = 42)
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+:qry ;
+ a  | b  
+----+----
+ 42 | 42
+(1 row)
+
+RESET optimizer_trace_fallback;
+CREATE TABLE hp (a int, b int) PARTITION BY HASH (b);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE hp0 PARTITION OF hp FOR VALUES WITH (MODULUS 2, REMAINDER 0);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE hp1 PARTITION OF hp FOR VALUES WITH (MODULUS 2, REMAINDER 1);
+NOTICE:  table has parent, setting distribution columns to match parent table
+INSERT INTO hp VALUES (0, 1), (0, 3), (0, 4), (0, 42);
+SET optimizer_trace_fallback TO on;
+SELECT $query$
+SELECT *
+FROM hp
+WHERE b = 42
+$query$ AS qry \gset
+EXPLAIN (COSTS OFF, VERBOSE)
+:qry ;
+                QUERY PLAN                 
+-------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: hp0.a, hp0.b
+   ->  Seq Scan on orca_static_pruning.hp0
+         Output: hp0.a, hp0.b
+         Filter: (hp0.b = 42)
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+:qry ;
+ a | b  
+---+----
+ 0 | 42
+(1 row)
+

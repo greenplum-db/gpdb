@@ -7,7 +7,7 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  *
  *	  src/include/utils/guc_tables.h
  *
@@ -61,7 +61,8 @@ enum config_group
 	FILE_LOCATIONS,
 	CONN_AUTH,
 	CONN_AUTH_SETTINGS,
-	CONN_AUTH_SECURITY,
+	CONN_AUTH_AUTH,
+	CONN_AUTH_SSL,
 
 	EXTERNAL_TABLES,                    /*CDB*/
 	APPENDONLY_TABLES,                  /*CDB*/
@@ -77,10 +78,13 @@ enum config_group
 	WAL_SETTINGS,
 	WAL_CHECKPOINTS,
 	WAL_ARCHIVING,
+	WAL_ARCHIVE_RECOVERY,
+	WAL_RECOVERY_TARGET,
 	REPLICATION,
 	REPLICATION_SENDING,
 	REPLICATION_MASTER,
 	REPLICATION_STANDBY,
+	REPLICATION_SUBSCRIBERS,
 	QUERY_TUNING,
 	QUERY_TUNING_METHOD,
 	QUERY_TUNING_COST,
@@ -202,7 +206,7 @@ struct config_generic
 };
 
 /* bit values in status field */
-#define GUC_IS_IN_FILE		0x0001		/* found it in config file */
+#define GUC_IS_IN_FILE		0x0001	/* found it in config file */
 /*
  * Caution: the GUC_IS_IN_FILE bit is transient state for ProcessConfigFile.
  * Do not assume that its value represents useful information elsewhere.
@@ -307,9 +311,10 @@ extern int get_num_guc_variables(void);
 extern void build_guc_variables(void);
 
 /* search in enum options */
-extern const char *config_enum_lookup_by_value(struct config_enum * record, int val);
-extern bool config_enum_lookup_by_name(struct config_enum * record,
-						   const char *value, int *retval);
+extern const char *config_enum_lookup_by_value(struct config_enum *record, int val);
+extern bool config_enum_lookup_by_name(struct config_enum *record,
+									   const char *value, int *retval);
+extern struct config_generic **get_explain_guc_options(int *num);
 
 extern bool parse_int(const char *value, int *result, int flags, const char **hintmsg);
 
@@ -325,4 +330,4 @@ extern struct config_enum ConfigureNamesEnum_gp[];
 
 extern void gpdb_assign_sync_flag(struct config_generic **guc_variables, int size, bool predefine);
 
-#endif   /* GUC_TABLES_H */
+#endif							/* GUC_TABLES_H */

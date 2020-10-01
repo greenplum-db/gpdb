@@ -33,29 +33,23 @@ ULONG COptCtxt::m_ulFirstValidPartId = 1;
 //		ctor
 //
 //---------------------------------------------------------------------------
-COptCtxt::COptCtxt
-	(
-	CMemoryPool *mp,
-	CColumnFactory *col_factory,
-	CMDAccessor *md_accessor,
-	IConstExprEvaluator *pceeval,
-	COptimizerConfig *optimizer_config
-	)
-	:
-	CTaskLocalStorageObject(CTaskLocalStorage::EtlsidxOptCtxt),
-	m_mp(mp),
-	m_pcf(col_factory),
-	m_pmda(md_accessor),
-	m_pceeval(pceeval),
-	m_pcomp(GPOS_NEW(m_mp) CDefaultComparator(pceeval)),
-	m_auPartId(m_ulFirstValidPartId),
-	m_pcteinfo(NULL),
-	m_pdrgpcrSystemCols(NULL),
-	m_optimizer_config(optimizer_config),
-	m_fDMLQuery(false),
-	m_has_master_only_tables(false),
-	m_has_volatile_or_SQL_func(false),
-	m_has_replicated_tables(false)
+COptCtxt::COptCtxt(CMemoryPool *mp, CColumnFactory *col_factory,
+				   CMDAccessor *md_accessor, IConstExprEvaluator *pceeval,
+				   COptimizerConfig *optimizer_config)
+	: CTaskLocalStorageObject(CTaskLocalStorage::EtlsidxOptCtxt),
+	  m_mp(mp),
+	  m_pcf(col_factory),
+	  m_pmda(md_accessor),
+	  m_pceeval(pceeval),
+	  m_pcomp(GPOS_NEW(m_mp) CDefaultComparator(pceeval)),
+	  m_auPartId(m_ulFirstValidPartId),
+	  m_pcteinfo(NULL),
+	  m_pdrgpcrSystemCols(NULL),
+	  m_optimizer_config(optimizer_config),
+	  m_fDMLQuery(false),
+	  m_has_master_only_tables(false),
+	  m_has_volatile_or_SQL_func(false),
+	  m_has_replicated_tables(false)
 {
 	GPOS_ASSERT(NULL != mp);
 	GPOS_ASSERT(NULL != col_factory);
@@ -64,7 +58,7 @@ COptCtxt::COptCtxt
 	GPOS_ASSERT(NULL != m_pcomp);
 	GPOS_ASSERT(NULL != optimizer_config);
 	GPOS_ASSERT(NULL != optimizer_config->GetCostModel());
-	
+
 	m_pcteinfo = GPOS_NEW(m_mp) CCTEInfo(m_mp);
 	m_cost_model = optimizer_config->GetCostModel();
 	m_direct_dispatchable_filters = GPOS_NEW(mp) CExpressionArray(mp);
@@ -101,13 +95,9 @@ COptCtxt::~COptCtxt()
 //
 //---------------------------------------------------------------------------
 COptCtxt *
-COptCtxt::PoctxtCreate
-	(
-	CMemoryPool *mp,
-	CMDAccessor *md_accessor,
-	IConstExprEvaluator *pceeval,
-	COptimizerConfig *optimizer_config
-	)
+COptCtxt::PoctxtCreate(CMemoryPool *mp, CMDAccessor *md_accessor,
+					   IConstExprEvaluator *pceeval,
+					   COptimizerConfig *optimizer_config)
 {
 	GPOS_ASSERT(NULL != optimizer_config);
 
@@ -123,7 +113,8 @@ COptCtxt::PoctxtCreate
 		a_pcf = col_factory;
 		a_pcf.Value()->Initialize();
 
-		poctxt = GPOS_NEW(mp) COptCtxt(mp, col_factory, md_accessor, pceeval, optimizer_config);
+		poctxt = GPOS_NEW(mp)
+			COptCtxt(mp, col_factory, md_accessor, pceeval, optimizer_config);
 
 		// detach safety
 		(void) a_pcf.Reset();
@@ -168,17 +159,12 @@ COptCtxt::FAllEnforcersEnabled()
 //
 //---------------------------------------------------------------------------
 IOstream &
-COptCtxt::OsPrint
-	(
-	IOstream &os
-	)
-	const
+COptCtxt::OsPrint(IOstream &os) const
 {
 	// NOOP
 	return os;
 }
 
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 // EOF
-

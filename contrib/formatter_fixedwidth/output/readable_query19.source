@@ -9,5 +9,5 @@ FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10',
     s2='10', s3='10', dt='20',n1='5', n2='10',
     n3='10', n4='10', n5='10', n6='10', n7='15');
 SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
-ERROR:  invalid input syntax for integer: "bbb"  (seg0 slice1 rh55-qavm55:7532 pid=26366)
+ERROR:  invalid input syntax for type integer: "bbb"  (seg0 slice1 rh55-qavm55:7532 pid=26366)
 CONTEXT:  External table tbl_ext_fixedwidth

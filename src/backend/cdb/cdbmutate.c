@@ -15,11 +15,10 @@
 
 #include "postgres.h"
 
+#include "access/relation.h"
 #include "access/xact.h"
 #include "parser/parsetree.h"	/* for rt_fetch() */
-#include "utils/relcache.h"		/* RelationGetPartitioningKey() */
 #include "optimizer/planmain.h"
-#include "optimizer/var.h"
 #include "parser/parse_relation.h"
 #include "utils/fmgroids.h"
 #include "utils/guc.h"
@@ -27,6 +26,7 @@
 #include "utils/datum.h"
 #include "utils/syscache.h"
 #include "optimizer/clauses.h"
+#include "optimizer/optimizer.h"
 #include "optimizer/pathnode.h"
 #include "nodes/makefuncs.h"
 
@@ -39,7 +39,6 @@
 #include "cdb/cdbhash.h"
 #include "cdb/cdbllize.h"
 #include "cdb/cdbmutate.h"
-#include "cdb/cdbpartition.h"
 #include "cdb/cdbplan.h"
 #include "cdb/cdbpullup.h"
 #include "cdb/cdbvars.h"
@@ -601,9 +600,9 @@ create_shareinput_producer_rte(ApplyShareInputContext *ctxt, int share_id,
 	rte->alias = NULL;
 
 	rte->eref = makeAlias(rte->ctename, colnames);
-	rte->ctecoltypes = coltypes;
-	rte->ctecoltypmods = coltypmods;
-	rte->ctecolcollations = colcollations;
+	rte->coltypes = coltypes;
+	rte->coltypmods = coltypmods;
+	rte->colcollations = colcollations;
 
 	rte->inh = false;
 	rte->inFromCl = false;
@@ -1287,6 +1286,8 @@ rte_param_walker(List *rtable, ParamWalkerContext *context)
 			case RTE_RELATION:
 			case RTE_VOID:
 			case RTE_CTE:
+			case RTE_RESULT:
+			case RTE_NAMEDTUPLESTORE:
 				/* nothing to do */
 				break;
 			case RTE_SUBQUERY:
@@ -1309,6 +1310,9 @@ rte_param_walker(List *rtable, ParamWalkerContext *context)
 					RangeTblFunction *rtfunc = (RangeTblFunction *) lfirst(func_lc);
 					param_walker(rtfunc->funcexpr, context);
 				}
+				break;
+			case RTE_TABLEFUNC:
+				param_walker((Node *) rte->tablefunc, context);
 				break;
 			case RTE_VALUES:
 				param_walker((Node *) rte->values_lists, context);
@@ -1644,7 +1648,7 @@ pre_dispatch_function_evaluation_mutator(Node *node,
 			 */
 			const_val = ExecEvalExprSwitchContext(exprstate,
 												  GetPerTupleExprContext(estate),
-												  &const_is_null, NULL);
+												  &const_is_null);
 
 			/* Get info needed about result datatype */
 			get_typlenbyval(expr->funcresulttype, &resultTypLen, &resultTypByVal);
@@ -1787,10 +1791,9 @@ cdbpathtoplan_create_sri_plan(RangeTblEntry *rte, PlannerInfo *subroot, Path *su
 							  int createplan_flags)
 {
 	CdbMotionPath *motionpath;
-	ResultPath *resultpath;
+	Path	   *resultpath;
 	Result	   *resultplan;
 	Relation	rel;
-	PartitionNode *pn;
 	GpPolicy   *targetPolicy;
 	List	   *hashExprs;
 	List	   *hashOpfamilies;
@@ -1807,107 +1810,34 @@ cdbpathtoplan_create_sri_plan(RangeTblEntry *rte, PlannerInfo *subroot, Path *su
 		return NULL;
 	motionpath = (CdbMotionPath *) subpath;
 
-	if (!IsA(motionpath->subpath, ResultPath))
+	if (IsA(motionpath->subpath, GroupResultPath))
+	{
+		/* ok */
+	}
+	else if (IsA(motionpath->subpath, ProjectionPath) &&
+			 IsA(((ProjectionPath *) motionpath->subpath)->subpath, GroupResultPath))
+	{
+		/* ProjectionPath with a GroupResultPath beneath is also ok. */
+	}
+	else
 		return NULL;
 
-	resultpath = (ResultPath *) motionpath->subpath;
+	resultpath = motionpath->subpath;
 
-	if (contain_mutable_functions((Node *) resultpath->path.pathtarget->exprs))
+	if (contain_mutable_functions((Node *) resultpath->pathtarget->exprs))
 		return NULL;
 
-	resultplan = (Result *) create_plan_recurse(subroot, (Path *) resultpath, createplan_flags);
+	resultplan = (Result *) create_plan_recurse(subroot, resultpath, createplan_flags);
 	if (!IsA(resultplan, Result))
+	{
+		/* A GroupResultPath really should produce a Result node. */
+		Assert(false);
 		return NULL;
+	}
 
 	/* Suppose caller already hold proper locks for relation. */
 	rel = relation_open(rte->relid, NoLock);
 	targetPolicy = rel->rd_cdbpolicy;
-
-	/* 1: See if it's partitioned */
-	pn = RelationBuildPartitionDesc(rel, false);
-
-	/* Look up the distribution policy for the target partition. */
-	if (pn && !partition_policies_equal(targetPolicy, pn))
-	{
-		/*
-		 * 2: See if partitioning columns are constant
-		 */
-		List	   *partatts = get_partition_attrs(pn);
-		ListCell   *lc;
-		TupleTableSlot *slot;
-		bool	   *nulls;
-		Datum	   *values;
-		EState	   *estate = CreateExecutorState();
-		ResultRelInfo *rri;
-
-		/*
-		 * 4: build tuple, look up partitioning key
-		 */
-		slot = MakeSingleTupleTableSlot(RelationGetDescr(rel));
-		ExecClearTuple(slot);
-		values = slot_get_values(slot);
-		nulls = slot_get_isnull(slot);
-
-		foreach(lc, partatts)
-		{
-			AttrNumber	attnum = lfirst_int(lc);
-			List	   *tl = resultplan->plan.targetlist;
-			ListCell   *cell;
-
-			foreach(cell, tl)
-			{
-				TargetEntry *tle = (TargetEntry *) lfirst(cell);
-
-				Assert(tle->expr);
-
-				if (tle->resno == attnum)
-				{
-					/*
-					 * GPDB_96_MERGE_FIXME: it's bogus to assume that the
-					 * entries are all Consts. We used to verify that explicitly,
-					 * but now we just call contain_mutable_functions(), which
-					 * will return true also for more complicated expressions
-					 * that only contain immutable functions. The right way would
-					 * be to evaluate the expression here, with ExecPrepareExpr() +
-					 * ExecEvalExpr(). In practice this works, because the planner
-					 * has already "preprocessed" the target list, which does
-					 * replace more complicated expressions with Consts.
-					 */
-					Assert(IsA(tle->expr, Const));
-
-					nulls[attnum - 1] = ((Const *) tle->expr)->constisnull;
-					if (!nulls[attnum - 1])
-						values[attnum - 1] = ((Const *) tle->expr)->constvalue;
-				}
-			}
-		}
-		ExecStoreVirtualTuple(slot);
-
-		estate->es_result_partitions = pn;
-		estate->es_partition_state =
-			createPartitionState(estate->es_result_partitions, 1 /* resultPartSize */ );
-
-		rri = makeNode(ResultRelInfo);
-		rri->ri_RangeTableIndex = 1;	/* dummy */
-		rri->ri_RelationDesc = rel;
-
-		estate->es_result_relations = rri;
-		estate->es_num_result_relations = 1;
-		estate->es_result_relation_info = rri;
-		rri = slot_get_partition(slot, estate, false);
-
-		/*
-		 * 5: get target policy for destination table
-		 */
-		targetPolicy = RelationGetPartitioningKey(rri->ri_RelationDesc);
-
-		if (targetPolicy->ptype != POLICYTYPE_PARTITIONED)
-			elog(ERROR, "policy must be partitioned");
-
-		heap_close(rri->ri_RelationDesc, NoLock);
-		FreeExecutorState(estate);
-	}
-
 	hashExprs = getExprListFromTargetList(resultplan->plan.targetlist,
 										  targetPolicy->nattrs,
 										  targetPolicy->attrs);

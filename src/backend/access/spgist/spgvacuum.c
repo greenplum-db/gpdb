@@ -4,7 +4,7 @@
  *	  vacuum for SP-GiST
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -17,6 +17,7 @@
 
 #include "access/genam.h"
 #include "access/spgist_private.h"
+#include "access/spgxlog.h"
 #include "access/transam.h"
 #include "access/xloginsert.h"
 #include "catalog/storage_xlog.h"
@@ -33,7 +34,7 @@ typedef struct spgVacPendingItem
 {
 	ItemPointerData tid;		/* redirection target to visit */
 	bool		done;			/* have we dealt with this? */
-	struct spgVacPendingItem *next;		/* list link */
+	struct spgVacPendingItem *next; /* list link */
 } spgVacPendingItem;
 
 /* Local state for vacuum operations */
@@ -47,7 +48,7 @@ typedef struct spgBulkDeleteState
 
 	/* Additional working state */
 	SpGistState spgstate;		/* for SPGiST operations that need one */
-	spgVacPendingItem *pendingList;		/* TIDs we need to (re)visit */
+	spgVacPendingItem *pendingList; /* TIDs we need to (re)visit */
 	TransactionId myXmin;		/* for detecting newly-added redirects */
 	BlockNumber lastFilledBlock;	/* last non-deletable block */
 } spgBulkDeleteState;
@@ -191,9 +192,9 @@ vacuumLeafPage(spgBulkDeleteState *bds, Relation index, Buffer buffer,
 			 * happened since VACUUM started.
 			 *
 			 * Note: we could make a tighter test by seeing if the xid is
-			 * "running" according to the active snapshot; but tqual.c doesn't
-			 * currently export a suitable API, and it's not entirely clear
-			 * that a tighter test is worth the cycles anyway.
+			 * "running" according to the active snapshot; but snapmgr.c
+			 * doesn't currently export a suitable API, and it's not entirely
+			 * clear that a tighter test is worth the cycles anyway.
 			 */
 			if (TransactionIdFollowsOrEquals(dt->xid, bds->myXmin))
 				spgAddPendingTID(bds, &dt->pointer);
@@ -336,7 +337,7 @@ vacuumLeafPage(spgBulkDeleteState *bds, Relation index, Buffer buffer,
 							InvalidBlockNumber, InvalidOffsetNumber);
 
 	/*
-	 * We implement the move step by swapping the item pointers of the source
+	 * We implement the move step by swapping the line pointers of the source
 	 * and target tuples, then replacing the newly-source tuples with
 	 * placeholders.  This is perhaps unduly friendly with the page data
 	 * representation, but it's fast and doesn't risk page overflow when a
@@ -749,7 +750,7 @@ spgprocesspending(spgBulkDeleteState *bds)
 
 					offset = ItemPointerGetOffsetNumber(&nitem->tid);
 					innerTuple = (SpGistInnerTuple) PageGetItem(page,
-												PageGetItemId(page, offset));
+																PageGetItemId(page, offset));
 					if (innerTuple->tupstate == SPGIST_LIVE)
 					{
 						SpGistNodeTuple node;
@@ -765,7 +766,7 @@ spgprocesspending(spgBulkDeleteState *bds)
 					{
 						/* transfer attention to redirect point */
 						spgAddPendingTID(bds,
-								   &((SpGistDeadTuple) innerTuple)->pointer);
+										 &((SpGistDeadTuple) innerTuple)->pointer);
 					}
 					else
 						elog(ERROR, "unexpected SPGiST tuple state: %d",
@@ -845,6 +846,21 @@ spgvacuumscan(spgBulkDeleteState *bds)
 	SpGistUpdateMetaPage(index);
 
 	/*
+	 * If we found any empty pages (and recorded them in the FSM), then
+	 * forcibly update the upper-level FSM pages to ensure that searchers can
+	 * find them.  It's possible that the pages were also found during
+	 * previous scans and so this is a waste of time, but it's cheap enough
+	 * relative to scanning the index that it shouldn't matter much, and
+	 * making sure that free pages are available sooner not later seems
+	 * worthwhile.
+	 *
+	 * Note that if no empty pages exist, we don't bother vacuuming the FSM at
+	 * all.
+	 */
+	if (bds->stats->pages_deleted > 0)
+		IndexFreeSpaceMapVacuum(index);
+
+	/*
 	 * Truncate index if possible
 	 *
 	 * XXX disabled because it's unsafe due to possible concurrent inserts.
@@ -915,7 +931,6 @@ dummy_callback(ItemPointer itemptr, void *state)
 IndexBulkDeleteResult *
 spgvacuumcleanup(IndexVacuumInfo *info, IndexBulkDeleteResult *stats)
 {
-	Relation	index = info->index;
 	spgBulkDeleteState bds;
 
 	/* No-op in ANALYZE ONLY mode */
@@ -925,8 +940,8 @@ spgvacuumcleanup(IndexVacuumInfo *info, IndexBulkDeleteResult *stats)
 	/*
 	 * We don't need to scan the index if there was a preceding bulkdelete
 	 * pass.  Otherwise, make a pass that won't delete any live tuples, but
-	 * might still accomplish useful stuff with redirect/placeholder cleanup,
-	 * and in any case will provide stats.
+	 * might still accomplish useful stuff with redirect/placeholder cleanup
+	 * and/or FSM housekeeping, and in any case will provide stats.
 	 */
 	if (stats == NULL)
 	{
@@ -938,9 +953,6 @@ spgvacuumcleanup(IndexVacuumInfo *info, IndexBulkDeleteResult *stats)
 
 		spgvacuumscan(&bds);
 	}
-
-	/* Finally, vacuum the FSM */
-	IndexFreeSpaceMapVacuum(index);
 
 	/*
 	 * It's quite possible for us to be fooled by concurrent tuple moves into

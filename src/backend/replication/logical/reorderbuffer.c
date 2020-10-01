@@ -4,7 +4,7 @@
  *	  PostgreSQL logical replay/reorder buffer management
  *
  *
- * Copyright (c) 2012-2016, PostgreSQL Global Development Group
+ * Copyright (c) 2012-2019, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
@@ -15,7 +15,7 @@
  *	  they are written to the WAL and is responsible to reassemble them into
  *	  toplevel transaction sized pieces. When a transaction is completely
  *	  reassembled - signalled by reading the transaction commit record - it
- *	  will then call the output plugin (c.f. ReorderBufferCommit()) with the
+ *	  will then call the output plugin (cf. ReorderBufferCommit()) with the
  *	  individual changes. The output plugins rely on snapshots built by
  *	  snapbuild.c which hands them to us.
  *
@@ -43,6 +43,12 @@
  *	  transaction there will be no other data carrying records between a row's
  *	  toast chunks and the row data itself. See ReorderBufferToast* for
  *	  details.
+ *
+ *	  ReorderBuffer uses two special memory context types - SlabContext for
+ *	  allocations of fixed-length structures (changes and transactions), and
+ *	  GenerationContext for the variable-length transaction data (allocated
+ *	  and freed in groups with similar lifespan).
+ *
  * -------------------------------------------------------------------------
  */
 #include "postgres.h"
@@ -50,6 +56,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
+#include "access/heapam.h"
 #include "access/rewriteheap.h"
 #include "access/transam.h"
 #include "access/tuptoaster.h"
@@ -58,10 +65,11 @@
 #include "catalog/catalog.h"
 #include "lib/binaryheap.h"
 #include "miscadmin.h"
+#include "pgstat.h"
 #include "replication/logical.h"
 #include "replication/reorderbuffer.h"
 #include "replication/slot.h"
-#include "replication/snapbuild.h"		/* just for SnapBuildSnapDecRefcount */
+#include "replication/snapbuild.h"	/* just for SnapBuildSnapDecRefcount */
 #include "storage/bufmgr.h"
 #include "storage/fd.h"
 #include "storage/sinval.h"
@@ -71,7 +79,6 @@
 #include "utils/memutils.h"
 #include "utils/rel.h"
 #include "utils/relfilenodemap.h"
-#include "utils/tqual.h"
 
 
 /* entry for a hash table we use to map from xid to our transaction state */
@@ -123,8 +130,8 @@ typedef struct ReorderBufferToastEnt
 	Size		num_chunks;		/* number of chunks we've already seen */
 	Size		size;			/* combined size of chunks seen */
 	dlist_head	chunks;			/* linked list of chunks */
-	struct varlena *reconstructed;		/* reconstructed varlena now pointed
-										 * to in main tup */
+	struct varlena *reconstructed;	/* reconstructed varlena now pointed to in
+									 * main tup */
 } ReorderBufferToastEnt;
 
 /* Disk serialization support datastructures */
@@ -149,18 +156,6 @@ typedef struct ReorderBufferDiskChange
  */
 static const Size max_changes_in_memory = 4096;
 
-/*
- * We use a very simple form of a slab allocator for frequently allocated
- * objects, simply keeping a fixed number in a linked list when unused,
- * instead pfree()ing them. Without that in many workloads aset.c becomes a
- * major bottleneck, especially when spilling to disk while decoding batch
- * workloads.
- */
-static const Size max_cached_changes = 4096 * 2;
-static const Size max_cached_tuplebufs = 4096 * 2;		/* ~8MB */
-static const Size max_cached_transactions = 512;
-
-
 /* ---------------------------------------
  * primary reorderbuffer support routines
  * ---------------------------------------
@@ -168,10 +163,10 @@ static const Size max_cached_transactions = 512;
 static ReorderBufferTXN *ReorderBufferGetTXN(ReorderBuffer *rb);
 static void ReorderBufferReturnTXN(ReorderBuffer *rb, ReorderBufferTXN *txn);
 static ReorderBufferTXN *ReorderBufferTXNByXid(ReorderBuffer *rb,
-					  TransactionId xid, bool create, bool *is_new,
-					  XLogRecPtr lsn, bool create_as_top);
+											   TransactionId xid, bool create, bool *is_new,
+											   XLogRecPtr lsn, bool create_as_top);
 static void ReorderBufferTransferSnapToParent(ReorderBufferTXN *txn,
-								  ReorderBufferTXN *subtxn);
+											  ReorderBufferTXN *subtxn);
 
 static void AssertTXNLsnOrder(ReorderBuffer *rb);
 
@@ -184,10 +179,9 @@ static void AssertTXNLsnOrder(ReorderBuffer *rb);
  * ---------------------------------------
  */
 static ReorderBufferIterTXNState *ReorderBufferIterTXNInit(ReorderBuffer *rb, ReorderBufferTXN *txn);
-static ReorderBufferChange *
-			ReorderBufferIterTXNNext(ReorderBuffer *rb, ReorderBufferIterTXNState *state);
+static ReorderBufferChange *ReorderBufferIterTXNNext(ReorderBuffer *rb, ReorderBufferIterTXNState *state);
 static void ReorderBufferIterTXNFinish(ReorderBuffer *rb,
-						   ReorderBufferIterTXNState *state);
+									   ReorderBufferIterTXNState *state);
 static void ReorderBufferExecuteInvalidations(ReorderBuffer *rb, ReorderBufferTXN *txn);
 
 /*
@@ -198,19 +192,19 @@ static void ReorderBufferExecuteInvalidations(ReorderBuffer *rb, ReorderBufferTX
 static void ReorderBufferCheckSerializeTXN(ReorderBuffer *rb, ReorderBufferTXN *txn);
 static void ReorderBufferSerializeTXN(ReorderBuffer *rb, ReorderBufferTXN *txn);
 static void ReorderBufferSerializeChange(ReorderBuffer *rb, ReorderBufferTXN *txn,
-							 int fd, ReorderBufferChange *change);
+										 int fd, ReorderBufferChange *change);
 static Size ReorderBufferRestoreChanges(ReorderBuffer *rb, ReorderBufferTXN *txn,
-							int *fd, XLogSegNo *segno);
+										int *fd, XLogSegNo *segno);
 static void ReorderBufferRestoreChange(ReorderBuffer *rb, ReorderBufferTXN *txn,
-						   char *change);
+									   char *change);
 static void ReorderBufferRestoreCleanup(ReorderBuffer *rb, ReorderBufferTXN *txn);
 static void ReorderBufferCleanupSerializedTXNs(const char *slotname);
 static void ReorderBufferSerializedPath(char *path, ReplicationSlot *slot,
-							TransactionId xid, XLogSegNo segno);
+										TransactionId xid, XLogSegNo segno);
 
 static void ReorderBufferFreeSnap(ReorderBuffer *rb, Snapshot snap);
 static Snapshot ReorderBufferCopySnap(ReorderBuffer *rb, Snapshot orig_snap,
-					  ReorderBufferTXN *txn, CommandId cid);
+									  ReorderBufferTXN *txn, CommandId cid);
 
 /* ---------------------------------------
  * toast reassembly support
@@ -219,9 +213,9 @@ static Snapshot ReorderBufferCopySnap(ReorderBuffer *rb, Snapshot orig_snap,
 static void ReorderBufferToastInitHash(ReorderBuffer *rb, ReorderBufferTXN *txn);
 static void ReorderBufferToastReset(ReorderBuffer *rb, ReorderBufferTXN *txn);
 static void ReorderBufferToastReplace(ReorderBuffer *rb, ReorderBufferTXN *txn,
-						  Relation relation, ReorderBufferChange *change);
+									  Relation relation, ReorderBufferChange *change);
 static void ReorderBufferToastAppendChunk(ReorderBuffer *rb, ReorderBufferTXN *txn,
-							  Relation relation, ReorderBufferChange *change);
+										  Relation relation, ReorderBufferChange *change);
 
 
 /*
@@ -249,6 +243,20 @@ ReorderBufferAllocate(void)
 
 	buffer->context = new_ctx;
 
+	buffer->change_context = SlabContextCreate(new_ctx,
+											   "Change",
+											   SLAB_DEFAULT_BLOCK_SIZE,
+											   sizeof(ReorderBufferChange));
+
+	buffer->txn_context = SlabContextCreate(new_ctx,
+											"TXN",
+											SLAB_DEFAULT_BLOCK_SIZE,
+											sizeof(ReorderBufferTXN));
+
+	buffer->tup_context = GenerationContextCreate(new_ctx,
+												  "Tuples",
+												  SLAB_LARGE_BLOCK_SIZE);
+
 	hash_ctl.keysize = sizeof(TransactionId);
 	hash_ctl.entrysize = sizeof(ReorderBufferTXNByIdEnt);
 	hash_ctl.hcxt = buffer->context;
@@ -259,10 +267,6 @@ ReorderBufferAllocate(void)
 	buffer->by_txn_last_xid = InvalidTransactionId;
 	buffer->by_txn_last_txn = NULL;
 
-	buffer->nr_cached_transactions = 0;
-	buffer->nr_cached_changes = 0;
-	buffer->nr_cached_tuplebufs = 0;
-
 	buffer->outbuf = NULL;
 	buffer->outbufsize = 0;
 
@@ -270,9 +274,6 @@ ReorderBufferAllocate(void)
 
 	dlist_init(&buffer->toplevel_by_lsn);
 	dlist_init(&buffer->txns_by_base_snapshot_lsn);
-	dlist_init(&buffer->cached_transactions);
-	dlist_init(&buffer->cached_changes);
-	slist_init(&buffer->cached_tuplebufs);
 
 	/*
 	 * Ensure there's no stale data from prior uses of this slot, in case some
@@ -310,19 +311,8 @@ ReorderBufferGetTXN(ReorderBuffer *rb)
 {
 	ReorderBufferTXN *txn;
 
-	/* check the slab cache */
-	if (rb->nr_cached_transactions > 0)
-	{
-		rb->nr_cached_transactions--;
-		txn = (ReorderBufferTXN *)
-			dlist_container(ReorderBufferTXN, node,
-							dlist_pop_head_node(&rb->cached_transactions));
-	}
-	else
-	{
-		txn = (ReorderBufferTXN *)
-			MemoryContextAlloc(rb->context, sizeof(ReorderBufferTXN));
-	}
+	txn = (ReorderBufferTXN *)
+		MemoryContextAlloc(rb->txn_context, sizeof(ReorderBufferTXN));
 
 	memset(txn, 0, sizeof(ReorderBufferTXN));
 
@@ -335,9 +325,6 @@ ReorderBufferGetTXN(ReorderBuffer *rb)
 
 /*
  * Free a ReorderBufferTXN.
- *
- * Deallocation might be delayed for efficiency purposes, for details check
- * the comments above max_cached_changes's definition.
  */
 static void
 ReorderBufferReturnTXN(ReorderBuffer *rb, ReorderBufferTXN *txn)
@@ -363,41 +350,19 @@ ReorderBufferReturnTXN(ReorderBuffer *rb, ReorderBufferTXN *txn)
 		txn->invalidations = NULL;
 	}
 
-	/* check whether to put into the slab cache */
-	if (rb->nr_cached_transactions < max_cached_transactions)
-	{
-		rb->nr_cached_transactions++;
-		dlist_push_head(&rb->cached_transactions, &txn->node);
-		VALGRIND_MAKE_MEM_UNDEFINED(txn, sizeof(ReorderBufferTXN));
-		VALGRIND_MAKE_MEM_DEFINED(&txn->node, sizeof(txn->node));
-	}
-	else
-	{
-		pfree(txn);
-	}
+	pfree(txn);
 }
 
 /*
- * Get an unused, possibly preallocated, ReorderBufferChange.
+ * Get an fresh ReorderBufferChange.
  */
 ReorderBufferChange *
 ReorderBufferGetChange(ReorderBuffer *rb)
 {
 	ReorderBufferChange *change;
 
-	/* check the slab cache */
-	if (rb->nr_cached_changes)
-	{
-		rb->nr_cached_changes--;
-		change = (ReorderBufferChange *)
-			dlist_container(ReorderBufferChange, node,
-							dlist_pop_head_node(&rb->cached_changes));
-	}
-	else
-	{
-		change = (ReorderBufferChange *)
-			MemoryContextAlloc(rb->context, sizeof(ReorderBufferChange));
-	}
+	change = (ReorderBufferChange *)
+		MemoryContextAlloc(rb->change_context, sizeof(ReorderBufferChange));
 
 	memset(change, 0, sizeof(ReorderBufferChange));
 	return change;
@@ -405,9 +370,6 @@ ReorderBufferGetChange(ReorderBuffer *rb)
 
 /*
  * Free an ReorderBufferChange.
- *
- * Deallocation might be delayed for efficiency purposes, for details check
- * the comments above max_cached_changes's definition.
  */
 void
 ReorderBufferReturnChange(ReorderBuffer *rb, ReorderBufferChange *change)
@@ -447,30 +409,25 @@ ReorderBufferReturnChange(ReorderBuffer *rb, ReorderBufferChange *change)
 			}
 			break;
 			/* no data in addition to the struct itself */
+		case REORDER_BUFFER_CHANGE_TRUNCATE:
+			if (change->data.truncate.relids != NULL)
+			{
+				ReorderBufferReturnRelids(rb, change->data.truncate.relids);
+				change->data.truncate.relids = NULL;
+			}
+			break;
 		case REORDER_BUFFER_CHANGE_INTERNAL_SPEC_CONFIRM:
 		case REORDER_BUFFER_CHANGE_INTERNAL_COMMAND_ID:
 		case REORDER_BUFFER_CHANGE_INTERNAL_TUPLECID:
 			break;
 	}
 
-	/* check whether to put into the slab cache */
-	if (rb->nr_cached_changes < max_cached_changes)
-	{
-		rb->nr_cached_changes++;
-		dlist_push_head(&rb->cached_changes, &change->node);
-		VALGRIND_MAKE_MEM_UNDEFINED(change, sizeof(ReorderBufferChange));
-		VALGRIND_MAKE_MEM_DEFINED(&change->node, sizeof(change->node));
-	}
-	else
-	{
-		pfree(change);
-	}
+	pfree(change);
 }
 
-
 /*
- * Get an unused, possibly preallocated, ReorderBufferTupleBuf fitting at
- * least a tuple of size tuple_len (excluding header overhead).
+ * Get a fresh ReorderBufferTupleBuf fitting at least a tuple of size
+ * tuple_len (excluding header overhead).
  */
 ReorderBufferTupleBuf *
 ReorderBufferGetTupleBuf(ReorderBuffer *rb, Size tuple_len)
@@ -480,70 +437,54 @@ ReorderBufferGetTupleBuf(ReorderBuffer *rb, Size tuple_len)
 
 	alloc_len = tuple_len + SizeofHeapTupleHeader;
 
-	/*
-	 * Most tuples are below MaxHeapTupleSize, so we use a slab allocator for
-	 * those. Thus always allocate at least MaxHeapTupleSize. Note that tuples
-	 * generated for oldtuples can be bigger, as they don't have out-of-line
-	 * toast columns.
-	 */
-	if (alloc_len < MaxHeapTupleSize)
-		alloc_len = MaxHeapTupleSize;
-
-
-	/* if small enough, check the slab cache */
-	if (alloc_len <= MaxHeapTupleSize && rb->nr_cached_tuplebufs)
-	{
-		rb->nr_cached_tuplebufs--;
-		tuple = slist_container(ReorderBufferTupleBuf, node,
-								slist_pop_head_node(&rb->cached_tuplebufs));
-		Assert(tuple->alloc_tuple_size == MaxHeapTupleSize);
-#ifdef USE_ASSERT_CHECKING
-		memset(&tuple->tuple, 0xa9, sizeof(HeapTupleData));
-		VALGRIND_MAKE_MEM_UNDEFINED(&tuple->tuple, sizeof(HeapTupleData));
-#endif
-		tuple->tuple.t_data = ReorderBufferTupleBufData(tuple);
-#ifdef USE_ASSERT_CHECKING
-		memset(tuple->tuple.t_data, 0xa8, tuple->alloc_tuple_size);
-		VALGRIND_MAKE_MEM_UNDEFINED(tuple->tuple.t_data, tuple->alloc_tuple_size);
-#endif
-	}
-	else
-	{
-		tuple = (ReorderBufferTupleBuf *)
-			MemoryContextAlloc(rb->context,
-							   sizeof(ReorderBufferTupleBuf) +
-							   MAXIMUM_ALIGNOF + alloc_len);
-		tuple->alloc_tuple_size = alloc_len;
-		tuple->tuple.t_data = ReorderBufferTupleBufData(tuple);
-	}
+	tuple = (ReorderBufferTupleBuf *)
+		MemoryContextAlloc(rb->tup_context,
+						   sizeof(ReorderBufferTupleBuf) +
+						   MAXIMUM_ALIGNOF + alloc_len);
+	tuple->alloc_tuple_size = alloc_len;
+	tuple->tuple.t_data = ReorderBufferTupleBufData(tuple);
 
 	return tuple;
 }
 
 /*
  * Free an ReorderBufferTupleBuf.
- *
- * Deallocation might be delayed for efficiency purposes, for details check
- * the comments above max_cached_changes's definition.
  */
 void
 ReorderBufferReturnTupleBuf(ReorderBuffer *rb, ReorderBufferTupleBuf *tuple)
 {
-	/* check whether to put into the slab cache, oversized tuples never are */
-	if (tuple->alloc_tuple_size == MaxHeapTupleSize &&
-		rb->nr_cached_tuplebufs < max_cached_tuplebufs)
-	{
-		rb->nr_cached_tuplebufs++;
-		slist_push_head(&rb->cached_tuplebufs, &tuple->node);
-		VALGRIND_MAKE_MEM_UNDEFINED(tuple->tuple.t_data, tuple->alloc_tuple_size);
-		VALGRIND_MAKE_MEM_UNDEFINED(tuple, sizeof(ReorderBufferTupleBuf));
-		VALGRIND_MAKE_MEM_DEFINED(&tuple->node, sizeof(tuple->node));
-		VALGRIND_MAKE_MEM_DEFINED(&tuple->alloc_tuple_size, sizeof(tuple->alloc_tuple_size));
-	}
-	else
-	{
-		pfree(tuple);
-	}
+	pfree(tuple);
+}
+
+/*
+ * Get an array for relids of truncated relations.
+ *
+ * We use the global memory context (for the whole reorder buffer), because
+ * none of the existing ones seems like a good match (some are SLAB, so we
+ * can't use those, and tup_context is meant for tuple data, not relids). We
+ * could add yet another context, but it seems like an overkill - TRUNCATE is
+ * not particularly common operation, so it does not seem worth it.
+ */
+Oid *
+ReorderBufferGetRelids(ReorderBuffer *rb, int nrelids)
+{
+	Oid		   *relids;
+	Size		alloc_len;
+
+	alloc_len = sizeof(Oid) * nrelids;
+
+	relids = (Oid *) MemoryContextAlloc(rb->context, alloc_len);
+
+	return relids;
+}
+
+/*
+ * Free an array of relids.
+ */
+void
+ReorderBufferReturnRelids(ReorderBuffer *rb, Oid *relids)
+{
+	pfree(relids);
 }
 
 /*
@@ -850,9 +791,9 @@ ReorderBufferAssignChild(ReorderBuffer *rb, TransactionId xid,
 		else
 		{
 			/*
-			 * We already saw this transaction, but initially added it to the list
-			 * of top-level txns.  Now that we know it's not top-level, remove
-			 * it from there.
+			 * We already saw this transaction, but initially added it to the
+			 * list of top-level txns.  Now that we know it's not top-level,
+			 * remove it from there.
 			 */
 			dlist_delete(&subtxn->node);
 		}
@@ -1301,17 +1242,15 @@ ReorderBufferCleanupTXN(ReorderBuffer *rb, ReorderBufferTXN *txn)
 		dlist_delete(&txn->base_snapshot_node);
 	}
 
-	/* delete from list of known subxacts */
-	if (txn->is_known_as_subxact)
-	{
-		/* NB: nsubxacts count of parent will be too high now */
-		dlist_delete(&txn->node);
-	}
-	/* delete from LSN ordered list of toplevel TXNs */
-	else
-	{
-		dlist_delete(&txn->node);
-	}
+	/*
+	 * Remove TXN from its containing list.
+	 *
+	 * Note: if txn->is_known_as_subxact, we are deleting the TXN from its
+	 * parent's list of known subxacts; this leaves the parent's nsubxacts
+	 * count too high, but we don't care.  Otherwise, we are deleting the TXN
+	 * from the LSN-ordered list of toplevel TXNs.
+	 */
+	dlist_delete(&txn->node);
 
 	/* now remove reference from buffer */
 	hash_search(rb->by_txn,
@@ -1330,7 +1269,7 @@ ReorderBufferCleanupTXN(ReorderBuffer *rb, ReorderBufferTXN *txn)
 
 /*
  * Build a hash with a (relfilenode, ctid) -> (cmin, cmax) mapping for use by
- * tqual.c's HeapTupleSatisfiesHistoricMVCC.
+ * HeapTupleSatisfiesHistoricMVCC.
  */
 static void
 ReorderBufferBuildTupleCidHash(ReorderBuffer *rb, ReorderBufferTXN *txn)
@@ -1388,8 +1327,8 @@ ReorderBufferBuildTupleCidHash(ReorderBuffer *rb, ReorderBufferTXN *txn)
 		else
 		{
 			/*
-			 * Maybe we already saw this tuple before in this transaction,
-			 * but if so it must have the same cmin.
+			 * Maybe we already saw this tuple before in this transaction, but
+			 * if so it must have the same cmin.
 			 */
 			Assert(ent->cmin == change->data.tuplecid.cmin);
 
@@ -1435,7 +1374,7 @@ ReorderBufferCopySnap(ReorderBuffer *rb, Snapshot orig_snap,
 
 	/*
 	 * snap->subxip contains all txids that belong to our transaction which we
-	 * need to check via cmin/cmax. Thats why we store the toplevel
+	 * need to check via cmin/cmax. That's why we store the toplevel
 	 * transaction in there as well.
 	 */
 	snap->subxip = snap->xip + snap->xcnt;
@@ -1589,7 +1528,7 @@ ReorderBufferCommit(ReorderBuffer *rb, TransactionId xid,
 					Assert(snapshot_now);
 
 					reloid = RelidByRelfilenode(change->data.tp.relnode.spcNode,
-											change->data.tp.relnode.relNode);
+												change->data.tp.relnode.relNode);
 
 					/*
 					 * Mapped catalog tuple without data, emitted while
@@ -1621,6 +1560,13 @@ ReorderBufferCommit(ReorderBuffer *rb, TransactionId xid,
 										 MAIN_FORKNUM));
 
 					if (!RelationIsLogicallyLogged(relation))
+						goto change_done;
+
+					/*
+					 * Ignore temporary heaps created during DDL unless the
+					 * plugin has asked for them.
+					 */
+					if (relation->rd_rel->relrewrite && !rb->output_rewrites)
 						goto change_done;
 
 					/*
@@ -1710,6 +1656,38 @@ ReorderBufferCommit(ReorderBuffer *rb, TransactionId xid,
 					specinsert = change;
 					break;
 
+				case REORDER_BUFFER_CHANGE_TRUNCATE:
+					{
+						int			i;
+						int			nrelids = change->data.truncate.nrelids;
+						int			nrelations = 0;
+						Relation   *relations;
+
+						relations = palloc0(nrelids * sizeof(Relation));
+						for (i = 0; i < nrelids; i++)
+						{
+							Oid			relid = change->data.truncate.relids[i];
+							Relation	relation;
+
+							relation = RelationIdGetRelation(relid);
+
+							if (relation == NULL)
+								elog(ERROR, "could not open relation with OID %u", relid);
+
+							if (!RelationIsLogicallyLogged(relation))
+								continue;
+
+							relations[nrelations++] = relation;
+						}
+
+						rb->apply_truncate(rb, txn, nrelations, relations, change);
+
+						for (i = 0; i < nrelations; i++)
+							RelationClose(relations[i]);
+
+						break;
+					}
+
 				case REORDER_BUFFER_CHANGE_MESSAGE:
 					rb->message(rb, txn, change->lsn, true,
 								change->data.msg.prefix,
@@ -1761,7 +1739,7 @@ ReorderBufferCommit(ReorderBuffer *rb, TransactionId xid,
 						{
 							/* we don't use the global one anymore */
 							snapshot_now = ReorderBufferCopySnap(rb, snapshot_now,
-															txn, command_id);
+																 txn, command_id);
 						}
 
 						snapshot_now->curcid = command_id;
@@ -1930,7 +1908,7 @@ ReorderBufferAbortOld(ReorderBuffer *rb, TransactionId oldestRunningXid)
 			if (txn->serialized && txn->final_lsn == 0)
 			{
 				ReorderBufferChange *last =
-					dlist_tail_element(ReorderBufferChange, node, &txn->changes);
+				dlist_tail_element(ReorderBufferChange, node, &txn->changes);
 
 				txn->final_lsn = last->lsn;
 			}
@@ -1946,7 +1924,7 @@ ReorderBufferAbortOld(ReorderBuffer *rb, TransactionId oldestRunningXid)
 }
 
 /*
- * Forget the contents of a transaction if we aren't interested in it's
+ * Forget the contents of a transaction if we aren't interested in its
  * contents. Needs to be first called for subtransactions and then for the
  * toplevel xid.
  *
@@ -1991,7 +1969,7 @@ ReorderBufferForget(ReorderBuffer *rb, TransactionId xid, XLogRecPtr lsn)
 /*
  * Execute invalidations happening outside the context of a decoded
  * transaction. That currently happens either for xid-less commits
- * (c.f. RecordTransactionCommit()) or for invalidations in uninteresting
+ * (cf. RecordTransactionCommit()) or for invalidations in uninteresting
  * transactions (via ReorderBufferForget()).
  */
 void
@@ -2303,14 +2281,15 @@ ReorderBufferSerializeTXN(ReorderBuffer *rb, ReorderBufferTXN *txn)
 		 * store in segment in which it belongs by start lsn, don't split over
 		 * multiple segments tho
 		 */
-		if (fd == -1 || !XLByteInSeg(change->lsn, curOpenSegNo))
+		if (fd == -1 ||
+			!XLByteInSeg(change->lsn, curOpenSegNo, wal_segment_size))
 		{
 			char		path[MAXPGPATH];
 
 			if (fd != -1)
 				CloseTransientFile(fd);
 
-			XLByteToSeg(change->lsn, curOpenSegNo);
+			XLByteToSeg(change->lsn, curOpenSegNo, wal_segment_size);
 
 			/*
 			 * No need to care about TLIs here, only used during a single run,
@@ -2321,8 +2300,7 @@ ReorderBufferSerializeTXN(ReorderBuffer *rb, ReorderBufferTXN *txn)
 
 			/* open segment, create it if necessary */
 			fd = OpenTransientFile(path,
-								   O_CREAT | O_WRONLY | O_APPEND | PG_BINARY,
-								   S_IRUSR | S_IWUSR);
+								   O_CREAT | O_WRONLY | O_APPEND | PG_BINARY);
 
 			if (fd < 0)
 				ereport(ERROR,
@@ -2484,6 +2462,27 @@ ReorderBufferSerializeChange(ReorderBuffer *rb, ReorderBufferTXN *txn,
 				}
 				break;
 			}
+		case REORDER_BUFFER_CHANGE_TRUNCATE:
+			{
+				Size		size;
+				char	   *data;
+
+				/* account for the OIDs of truncated relations */
+				size = sizeof(Oid) * change->data.truncate.nrelids;
+				sz += size;
+
+				/* make sure we have enough space */
+				ReorderBufferSerializeReserve(rb, sz);
+
+				data = ((char *) rb->outbuf) + sizeof(ReorderBufferDiskChange);
+				/* might have been reallocated above */
+				ondisk = (ReorderBufferDiskChange *) rb->outbuf;
+
+				memcpy(data, change->data.truncate.relids, size);
+				data += size;
+
+				break;
+			}
 		case REORDER_BUFFER_CHANGE_INTERNAL_SPEC_CONFIRM:
 		case REORDER_BUFFER_CHANGE_INTERNAL_COMMAND_ID:
 		case REORDER_BUFFER_CHANGE_INTERNAL_TUPLECID:
@@ -2494,6 +2493,7 @@ ReorderBufferSerializeChange(ReorderBuffer *rb, ReorderBufferTXN *txn,
 	ondisk->size = sz;
 
 	errno = 0;
+	pgstat_report_wait_start(WAIT_EVENT_REORDER_BUFFER_WRITE);
 	if (write(fd, rb->outbuf, ondisk->size) != ondisk->size)
 	{
 		int			save_errno = errno;
@@ -2507,6 +2507,7 @@ ReorderBufferSerializeChange(ReorderBuffer *rb, ReorderBufferTXN *txn,
 				 errmsg("could not write to data file for XID %u: %m",
 						txn->xid)));
 	}
+	pgstat_report_wait_end();
 
 	Assert(ondisk->change.action == change->action);
 }
@@ -2537,7 +2538,7 @@ ReorderBufferRestoreChanges(ReorderBuffer *rb, ReorderBufferTXN *txn,
 	txn->nentries_mem = 0;
 	Assert(dlist_is_empty(&txn->changes));
 
-	XLByteToSeg(txn->final_lsn, last_segno);
+	XLByteToSeg(txn->final_lsn, last_segno, wal_segment_size);
 
 	while (restored < max_changes_in_memory && *segno <= last_segno)
 	{
@@ -2550,7 +2551,7 @@ ReorderBufferRestoreChanges(ReorderBuffer *rb, ReorderBufferTXN *txn,
 
 			/* first time in */
 			if (*segno == 0)
-				XLByteToSeg(txn->first_lsn, *segno);
+				XLByteToSeg(txn->first_lsn, *segno, wal_segment_size);
 
 			Assert(*segno != 0 || dlist_is_empty(&txn->changes));
 
@@ -2561,7 +2562,7 @@ ReorderBufferRestoreChanges(ReorderBuffer *rb, ReorderBufferTXN *txn,
 			ReorderBufferSerializedPath(path, MyReplicationSlot, txn->xid,
 										*segno);
 
-			*fd = OpenTransientFile(path, O_RDONLY | PG_BINARY, 0);
+			*fd = OpenTransientFile(path, O_RDONLY | PG_BINARY);
 			if (*fd < 0 && errno == ENOENT)
 			{
 				*fd = -1;
@@ -2573,7 +2574,6 @@ ReorderBufferRestoreChanges(ReorderBuffer *rb, ReorderBufferTXN *txn,
 						(errcode_for_file_access(),
 						 errmsg("could not open file \"%s\": %m",
 								path)));
-
 		}
 
 		/*
@@ -2582,7 +2582,9 @@ ReorderBufferRestoreChanges(ReorderBuffer *rb, ReorderBufferTXN *txn,
 		 * end of this file.
 		 */
 		ReorderBufferSerializeReserve(rb, sizeof(ReorderBufferDiskChange));
+		pgstat_report_wait_start(WAIT_EVENT_REORDER_BUFFER_READ);
 		readBytes = read(*fd, rb->outbuf, sizeof(ReorderBufferDiskChange));
+		pgstat_report_wait_end();
 
 		/* eof */
 		if (readBytes == 0)
@@ -2595,7 +2597,7 @@ ReorderBufferRestoreChanges(ReorderBuffer *rb, ReorderBufferTXN *txn,
 		else if (readBytes < 0)
 			ereport(ERROR,
 					(errcode_for_file_access(),
-				errmsg("could not read from reorderbuffer spill file: %m")));
+					 errmsg("could not read from reorderbuffer spill file: %m")));
 		else if (readBytes != sizeof(ReorderBufferDiskChange))
 			ereport(ERROR,
 					(errcode_for_file_access(),
@@ -2606,22 +2608,24 @@ ReorderBufferRestoreChanges(ReorderBuffer *rb, ReorderBufferTXN *txn,
 		ondisk = (ReorderBufferDiskChange *) rb->outbuf;
 
 		ReorderBufferSerializeReserve(rb,
-							 sizeof(ReorderBufferDiskChange) + ondisk->size);
+									  sizeof(ReorderBufferDiskChange) + ondisk->size);
 		ondisk = (ReorderBufferDiskChange *) rb->outbuf;
 
+		pgstat_report_wait_start(WAIT_EVENT_REORDER_BUFFER_READ);
 		readBytes = read(*fd, rb->outbuf + sizeof(ReorderBufferDiskChange),
 						 ondisk->size - sizeof(ReorderBufferDiskChange));
+		pgstat_report_wait_end();
 
 		if (readBytes < 0)
 			ereport(ERROR,
 					(errcode_for_file_access(),
-				errmsg("could not read from reorderbuffer spill file: %m")));
+					 errmsg("could not read from reorderbuffer spill file: %m")));
 		else if (readBytes != ondisk->size - sizeof(ReorderBufferDiskChange))
 			ereport(ERROR,
 					(errcode_for_file_access(),
 					 errmsg("could not read from reorderbuffer spill file: read %d instead of %u bytes",
 							readBytes,
-				(uint32) (ondisk->size - sizeof(ReorderBufferDiskChange)))));
+							(uint32) (ondisk->size - sizeof(ReorderBufferDiskChange)))));
 
 		/*
 		 * ok, read a full change from disk, now restore it into proper
@@ -2730,7 +2734,7 @@ ReorderBufferRestoreChange(ReorderBuffer *rb, ReorderBufferTXN *txn,
 				memcpy(&change->data.msg.message_size, data, sizeof(Size));
 				data += sizeof(Size);
 				change->data.msg.message = MemoryContextAlloc(rb->context,
-											  change->data.msg.message_size);
+															  change->data.msg.message_size);
 				memcpy(change->data.msg.message, data,
 					   change->data.msg.message_size);
 				data += change->data.msg.message_size;
@@ -2761,6 +2765,17 @@ ReorderBufferRestoreChange(ReorderBuffer *rb, ReorderBufferTXN *txn,
 				break;
 			}
 			/* the base struct contains all the data, easy peasy */
+		case REORDER_BUFFER_CHANGE_TRUNCATE:
+			{
+				Oid		   *relids;
+
+				relids = ReorderBufferGetRelids(rb,
+												change->data.truncate.nrelids);
+				memcpy(relids, data, change->data.truncate.nrelids * sizeof(Oid));
+				change->data.truncate.relids = relids;
+
+				break;
+			}
 		case REORDER_BUFFER_CHANGE_INTERNAL_SPEC_CONFIRM:
 		case REORDER_BUFFER_CHANGE_INTERNAL_COMMAND_ID:
 		case REORDER_BUFFER_CHANGE_INTERNAL_TUPLECID:
@@ -2784,8 +2799,8 @@ ReorderBufferRestoreCleanup(ReorderBuffer *rb, ReorderBufferTXN *txn)
 	Assert(txn->first_lsn != InvalidXLogRecPtr);
 	Assert(txn->final_lsn != InvalidXLogRecPtr);
 
-	XLByteToSeg(txn->first_lsn, first);
-	XLByteToSeg(txn->final_lsn, last);
+	XLByteToSeg(txn->first_lsn, first, wal_segment_size);
+	XLByteToSeg(txn->final_lsn, last, wal_segment_size);
 
 	/* iterate over all possible filenames, and delete them */
 	for (cur = first; cur <= last; cur++)
@@ -2831,7 +2846,7 @@ ReorderBufferCleanupSerializedTXNs(const char *slotname)
 			if (unlink(path) != 0)
 				ereport(ERROR,
 						(errcode_for_file_access(),
-						 errmsg("could not remove file \"%s\" during removal of pg_replslot/%s/*.xid: %m",
+						 errmsg("could not remove file \"%s\" during removal of pg_replslot/%s/xid*: %m",
 								path, slotname)));
 		}
 	}
@@ -2849,12 +2864,12 @@ ReorderBufferSerializedPath(char *path, ReplicationSlot *slot, TransactionId xid
 {
 	XLogRecPtr	recptr;
 
-	XLogSegNoOffsetToRecPtr(segno, 0, recptr);
+	XLogSegNoOffsetToRecPtr(segno, 0, wal_segment_size, recptr);
 
-	snprintf(path, MAXPGPATH, "pg_replslot/%s/xid-%u-lsn-%X-%X.snap",
-			NameStr(MyReplicationSlot->data.name),
-			xid,
-			(uint32) (recptr >> 32), (uint32) recptr);
+	snprintf(path, MAXPGPATH, "pg_replslot/%s/xid-%u-lsn-%X-%X.spill",
+			 NameStr(MyReplicationSlot->data.name),
+			 xid,
+			 (uint32) (recptr >> 32), (uint32) recptr);
 }
 
 /*
@@ -3029,7 +3044,7 @@ ReorderBufferToastReplace(ReorderBuffer *rb, ReorderBufferTXN *txn,
 
 	for (natt = 0; natt < desc->natts; natt++)
 	{
-		Form_pg_attribute attr = desc->attrs[natt];
+		Form_pg_attribute attr = TupleDescAttr(desc, natt);
 		ReorderBufferToastEnt *ent;
 		struct varlena *varlena;
 
@@ -3096,7 +3111,7 @@ ReorderBufferToastReplace(ReorderBuffer *rb, ReorderBufferTXN *txn,
 			cchange = dlist_container(ReorderBufferChange, node, it.cur);
 			ctup = cchange->data.tp.newtuple;
 			chunk = DatumGetPointer(
-						  fastgetattr(&ctup->tuple, 3, toast_desc, &isnull));
+									fastgetattr(&ctup->tuple, 3, toast_desc, &isnull));
 
 			Assert(!isnull);
 			Assert(!VARATT_IS_EXTERNAL(chunk));
@@ -3242,8 +3257,8 @@ DisplayMapping(HTAB *tuplecid_data)
 			 ent->key.relnode.dbNode,
 			 ent->key.relnode.spcNode,
 			 ent->key.relnode.relNode,
-			 BlockIdGetBlockNumber(&ent->key.tid.ip_blkid),
-			 ent->key.tid.ip_posid,
+			 ItemPointerGetBlockNumber(&ent->key.tid),
+			 ItemPointerGetOffsetNumber(&ent->key.tid),
 			 ent->cmin,
 			 ent->cmax
 			);
@@ -3266,7 +3281,7 @@ ApplyLogicalMappingFile(HTAB *tuplecid_data, Oid relid, const char *fname)
 	LogicalRewriteMappingData map;
 
 	sprintf(path, "pg_logical/mappings/%s", fname);
-	fd = OpenTransientFile(path, O_RDONLY | PG_BINARY, 0);
+	fd = OpenTransientFile(path, O_RDONLY | PG_BINARY);
 	if (fd < 0)
 		ereport(ERROR,
 				(errcode_for_file_access(),
@@ -3283,7 +3298,9 @@ ApplyLogicalMappingFile(HTAB *tuplecid_data, Oid relid, const char *fname)
 		memset(&key, 0, sizeof(ReorderBufferTupleCidKey));
 
 		/* read all mappings till the end of the file */
+		pgstat_report_wait_start(WAIT_EVENT_REORDER_LOGICAL_MAPPING_READ);
 		readBytes = read(fd, &map, sizeof(LogicalRewriteMappingData));
+		pgstat_report_wait_end();
 
 		if (readBytes < 0)
 			ereport(ERROR,
@@ -3343,7 +3360,10 @@ ApplyLogicalMappingFile(HTAB *tuplecid_data, Oid relid, const char *fname)
 		}
 	}
 
-	CloseTransientFile(fd);
+	if (CloseTransientFile(fd))
+		ereport(ERROR,
+				(errcode_for_file_access(),
+				 errmsg("could not close file \"%s\": %m", path)));
 }
 
 
@@ -3511,9 +3531,7 @@ restart:
 	 */
 	if (ent == NULL && !updated_mapping)
 	{
-		/* GPDB_94_MERGE_FIXME: t_tableOid has been removed in GPDB. Does this work
-		 * at all without it? */
-		UpdateLogicalMappings(tuplecid_data, InvalidOid /* was htup->t_tableOid */, snapshot);
+		UpdateLogicalMappings(tuplecid_data, htup->t_tableOid, snapshot);
 		/* now check but don't update for a mapping again */
 		updated_mapping = true;
 		goto restart;

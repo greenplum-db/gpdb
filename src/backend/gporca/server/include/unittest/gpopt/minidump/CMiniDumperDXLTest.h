@@ -16,29 +16,27 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CMiniDumperDXLTest
-	//
-	//	@doc:
-	//		Unittests
-	//
-	//---------------------------------------------------------------------------
-	class CMiniDumperDXLTest
-	{
+//---------------------------------------------------------------------------
+//	@class:
+//		CMiniDumperDXLTest
+//
+//	@doc:
+//		Unittests
+//
+//---------------------------------------------------------------------------
+class CMiniDumperDXLTest
+{
+public:
+	// unittests
+	static GPOS_RESULT EresUnittest();
+	static GPOS_RESULT EresUnittest_Basic();
+	static GPOS_RESULT EresUnittest_Load();
 
-		public:
+};	// class CMiniDumperDXLTest
+}  // namespace gpopt
 
-			// unittests
-			static GPOS_RESULT EresUnittest();
-			static GPOS_RESULT EresUnittest_Basic();
-			static GPOS_RESULT EresUnittest_Load();
-
-	}; // class CMiniDumperDXLTest
-}
-
-#endif // !GPOPT_CMiniDumperDXLTest_H
+#endif	// !GPOPT_CMiniDumperDXLTest_H
 
 // EOF

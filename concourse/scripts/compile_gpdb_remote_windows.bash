@@ -50,6 +50,7 @@ function remote_clone() {
     git clone "${GIT_URI}" gpdb_src
     cd gpdb_src
     git reset --hard "${GIT_COMMIT}"
+    git submodule update --init --recursive
 EOF
 }
 

@@ -31,11 +31,9 @@ using namespace gpopt;
 GPOS_RESULT
 CXformFactoryTest::EresUnittest()
 {
-	CUnittest rgut[] =
-	{
-		GPOS_UNITTEST_FUNC(CXformFactoryTest::EresUnittest_Basic)
-	};
-	
+	CUnittest rgut[] = {
+		GPOS_UNITTEST_FUNC(CXformFactoryTest::EresUnittest_Basic)};
+
 	return CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
 }
 
@@ -45,7 +43,7 @@ CXformFactoryTest::EresUnittest()
 //		CXformFactoryTest::EresUnittest_Basic
 //
 //	@doc:
-//		create factory and instantiate 
+//		create factory and instantiate
 //
 //---------------------------------------------------------------------------
 GPOS_RESULT
@@ -68,12 +66,11 @@ CXformFactoryTest::EresUnittest_Basic()
 	pxf = CXformFactory::Pxff()->Pxf(CXform::ExfJoinAssociativity);
 	GPOS_ASSERT(CXform::ExfJoinAssociativity == pxf->Exfid());
 
-#endif // GPOS_DEBUG
-	
+#endif	// GPOS_DEBUG
+
 	return GPOS_OK;
 }
 
 
 
 // EOF
-

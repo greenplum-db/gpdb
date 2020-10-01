@@ -60,8 +60,6 @@ DROP TYPE table_collision_a_b_key;
 -- Exchange Partition Scenario
 -- Create a partition table with a primary key constraint
 CREATE TABLE part_table_for_upgrade (a INT, b INT) DISTRIBUTED BY (a) PARTITION BY RANGE(b) (PARTITION alpha  END (3), PARTITION beta START (3));
-NOTICE:  CREATE TABLE will create partition "part_table_for_upgrade_1_prt_alpha" for table "part_table_for_upgrade"
-NOTICE:  CREATE TABLE will create partition "part_table_for_upgrade_1_prt_beta" for table "part_table_for_upgrade"
 ALTER TABLE part_table_for_upgrade ADD PRIMARY KEY(a, b);
 -- Create a table to be used as a partition exchange.
 CREATE TABLE like_table (like part_table_for_upgrade INCLUDING CONSTRAINTS INCLUDING INDEXES) DISTRIBUTED BY (a) ;
@@ -88,19 +86,23 @@ SELECT table_name,* FROM constraints_and_indices() WHERE table_name::text='part_
  part_table_for_upgrade | part_table_for_upgrade | part_table_for_upgrade_pkey | part_table_for_upgrade_pkey | p
 (1 row)
 
+-- GPDB_12_MERGE_FIXME: only tables are renamed in exchange partition,
+-- constraints or indexes used to be renamed as well pre-GPDB7, not
+-- any more. Does it surprise users (functionally it doesn't affect
+-- anything)?
 SELECT table_name,* FROM constraints_and_indices() WHERE table_name::text='like_table';
- table_name | table_name | constraint_name |   index_name    | constraint_type 
-------------+------------+-----------------+-----------------+-----------------
- like_table | like_table | like_table_pkey | like_table_pkey | p
+ table_name | table_name |            constraint_name             |               index_name               | constraint_type 
+------------+------------+----------------------------------------+----------------------------------------+-----------------
+ like_table | like_table | part_table_for_upgrade_1_prt_beta_pkey | part_table_for_upgrade_1_prt_beta_pkey | p
 (1 row)
 
 -- Drop part_table_for_upgrade before upgrade since that is not where the issue is.
 DROP TABLE part_table_for_upgrade CASCADE;
--- Verify that the constroint in like_table was NOT dropped
+-- Verify that the constraint in like_table was NOT dropped
 SELECT table_name,* FROM constraints_and_indices() WHERE table_name::text='like_table';
- table_name | table_name | constraint_name |   index_name    | constraint_type 
-------------+------------+-----------------+-----------------+-----------------
- like_table | like_table | like_table_pkey | like_table_pkey | p
+ table_name | table_name |            constraint_name             |               index_name               | constraint_type 
+------------+------------+----------------------------------------+----------------------------------------+-----------------
+ like_table | like_table | part_table_for_upgrade_1_prt_beta_pkey | part_table_for_upgrade_1_prt_beta_pkey | p
 (1 row)
 
 -- *************************************************************

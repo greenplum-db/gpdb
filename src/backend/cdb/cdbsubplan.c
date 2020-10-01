@@ -60,12 +60,14 @@ static bool isParamExecutableNow(SubPlanState *spstate, ParamExecData *prmList);
 void
 preprocess_initplans(QueryDesc *queryDesc)
 {
+	int			nParamExec;
 	int			i;
 	EState	   *estate = queryDesc->estate;
 	int			originalSlice,
 				rootIndex;
 
-	if (queryDesc->plannedstmt->nParamExec == 0)
+	nParamExec = list_length(queryDesc->plannedstmt->paramExecTypes);
+	if (nParamExec == 0)
 		return;
 
 	originalSlice = LocallyExecutingSliceIndex(queryDesc->estate);
@@ -78,7 +80,7 @@ preprocess_initplans(QueryDesc *queryDesc)
 	 * order, i.e. if a subplan x has a sublan y, then y will come before x in
 	 * the es_param_exec_vals array.
 	 */
-	for (i = 0; i < queryDesc->plannedstmt->nParamExec; i++)
+	for (i = 0; i < nParamExec; i++)
 	{
 		ParamExecData *prm;
 		SubPlanState *sps;
@@ -88,7 +90,7 @@ preprocess_initplans(QueryDesc *queryDesc)
 
 		if (isParamExecutableNow(sps, estate->es_param_exec_vals))
 		{
-			SubPlan    *subplan = (SubPlan *) sps->xprstate.expr;
+			SubPlan    *subplan = sps->subplan;
 			int			qDispSliceId;
 
 			Assert(IsA(subplan, SubPlan));
@@ -158,13 +160,16 @@ preprocess_initplans(QueryDesc *queryDesc)
 void
 postprocess_initplans(QueryDesc *queryDesc)
 {
-	EState *estate = queryDesc->estate;
+	EState	   *estate = queryDesc->estate;
+	int			nParamExec;
 	ParamExecData *prm;
 	SubPlanState *sps;
-	int	i;
+	int			i;
+
+	nParamExec = list_length(queryDesc->plannedstmt->paramExecTypes);
 
 	/* clean ntuplestore used by INITPLAN function */
-	for (i = 0; i < queryDesc->plannedstmt->nParamExec; i++)
+	for (i = 0; i < nParamExec; i++)
 	{
 		prm = &estate->es_param_exec_vals[i];
 		sps = (SubPlanState *) prm->execPlan;
@@ -183,7 +188,7 @@ isParamExecutableNow(SubPlanState *spstate, ParamExecData *prmList)
 	if (!spstate)
 		return false;
 
-	List	   *extParam = ((SubPlan *) spstate->xprstate.expr)->extParam;
+	List	   *extParam = spstate->subplan->extParam;
 
 	if (extParam == NIL)
 		return true;

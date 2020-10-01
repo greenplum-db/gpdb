@@ -16,73 +16,61 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CXformIntersectAll2LeftSemiJoin
-	//
-	//	@doc:
-	//		Class to transform of CLogicalIntersectAll into a left semi join
-	//
-	//---------------------------------------------------------------------------
-	class CXformIntersectAll2LeftSemiJoin : public CXformExploration
+//---------------------------------------------------------------------------
+//	@class:
+//		CXformIntersectAll2LeftSemiJoin
+//
+//	@doc:
+//		Class to transform of CLogicalIntersectAll into a left semi join
+//
+//---------------------------------------------------------------------------
+class CXformIntersectAll2LeftSemiJoin : public CXformExploration
+{
+private:
+	// private copy ctor
+	CXformIntersectAll2LeftSemiJoin(const CXformIntersectAll2LeftSemiJoin &);
+
+public:
+	// ctor
+	explicit CXformIntersectAll2LeftSemiJoin(CMemoryPool *mp);
+
+	// dtor
+	virtual ~CXformIntersectAll2LeftSemiJoin()
 	{
+	}
 
-		private:
+	// ident accessors
+	virtual EXformId
+	Exfid() const
+	{
+		return ExfIntersectAll2LeftSemiJoin;
+	}
 
-			// private copy ctor
-			CXformIntersectAll2LeftSemiJoin(const CXformIntersectAll2LeftSemiJoin &);
+	// return a string for xform name
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CXformIntersectAll2LeftSemiJoin";
+	}
 
-		public:
+	// compute xform promise for a given expression handle
+	virtual EXformPromise
+	Exfp(CExpressionHandle &  // exprhdl
+	) const
+	{
+		return CXform::ExfpHigh;
+	}
 
-			// ctor
-			explicit
-			CXformIntersectAll2LeftSemiJoin(CMemoryPool *mp);
+	// actual transform
+	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
+				   CExpression *pexpr) const;
 
-			// dtor
-			virtual
-			~CXformIntersectAll2LeftSemiJoin()
-			{}
+};	// class CXformIntersectAll2LeftSemiJoin
 
-			// ident accessors
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfIntersectAll2LeftSemiJoin;
-			}
+}  // namespace gpopt
 
-			// return a string for xform name
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CXformIntersectAll2LeftSemiJoin";
-			}
-
-			// compute xform promise for a given expression handle
-			virtual
-			EXformPromise Exfp
-				(
-				CExpressionHandle & // exprhdl
-				)
-				const
-			{
-				return CXform::ExfpHigh;
-			}
-
-			// actual transform
-			void Transform
-					(
-					CXformContext *pxfctxt,
-					CXformResult *pxfres,
-					CExpression *pexpr
-					)
-			const;
-
-	}; // class CXformIntersectAll2LeftSemiJoin
-
-}
-
-#endif // !GPOPT_CXformIntersectAll2LeftSemiJoin_H
+#endif	// !GPOPT_CXformIntersectAll2LeftSemiJoin_H
 
 // EOF

@@ -6,7 +6,7 @@
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/nodes/memnodes.h
@@ -41,17 +41,20 @@ typedef struct MemoryContextCounters
  *		A logical context in which memory allocations occur.
  *
  * MemoryContext itself is an abstract type that can have multiple
- * implementations, though for now we have only AllocSetContext.
+ * implementations.
  * The function pointers in MemoryContextMethods define one specific
  * implementation of MemoryContext --- they are a virtual function table
  * in C++ terms.
  *
  * Node types that are actual implementations of memory contexts must
- * begin with the same fields as MemoryContext.
+ * begin with the same fields as MemoryContextData.
  *
  * Note: for largely historical reasons, typedef MemoryContext is a pointer
  * to the context struct rather than the struct type itself.
  */
+
+typedef void (*MemoryStatsPrintFunc) (MemoryContext context, void *passthru,
+									  const char *stats_string);
 
 typedef struct MemoryContextMethods
 {
@@ -59,13 +62,13 @@ typedef struct MemoryContextMethods
 	/* call this free_p in case someone #define's free() */
 	void		(*free_p) (MemoryContext context, void *pointer);
 	void	   *(*realloc) (MemoryContext context, void *pointer, Size size);
-	void		(*init) (MemoryContext context);
 	void		(*reset) (MemoryContext context);
 	void		(*delete_context) (MemoryContext context, MemoryContext parent);
 	Size		(*get_chunk_space) (MemoryContext context, void *pointer);
 	bool		(*is_empty) (MemoryContext context);
-	void		(*stats) (MemoryContext context, int level, bool print,
-									  MemoryContextCounters *totals);
+	void		(*stats) (MemoryContext context,
+						  MemoryStatsPrintFunc printfunc, void *passthru,
+						  MemoryContextCounters *totals);
 	void		(*declare_accounting_root) (MemoryContext context);
 	Size		(*get_current_usage) (MemoryContext context);
 	Size		(*get_peak_usage) (MemoryContext context);
@@ -81,17 +84,21 @@ typedef struct MemoryContextData
 	NodeTag		type;			/* identifies exact kind of context */
 	/* these two fields are placed here to minimize alignment wastage: */
 	bool		isReset;		/* T = no space alloced since last reset */
-	bool		allowInCritSection;		/* allow palloc in critical section */
-	MemoryContextMethods *methods;		/* virtual function table */
+	bool		allowInCritSection; /* allow palloc in critical section */
+	int64		mem_allocated;	/* track memory allocated for this context */
+	const MemoryContextMethods *methods;	/* virtual function table */
 	MemoryContext parent;		/* NULL if no parent (toplevel context) */
 	MemoryContext firstchild;	/* head of linked list of children */
 	MemoryContext prevchild;	/* previous child of same parent */
 	MemoryContext nextchild;	/* next child of same parent */
-	char	   *name;			/* context name (just for debugging) */
+	const char *name;			/* context name (just for debugging) */
+	const char *ident;			/* context ID if any (just for debugging) */
+
 #ifdef CDB_PALLOC_CALLER_ID
     const char *callerFile;     /* __FILE__ of most recent caller */
     int         callerLine;     /* __LINE__ of most recent caller */
 #endif
+
 	MemoryContextCallback *reset_cbs;	/* list of reset/delete callbacks */
 } MemoryContextData;
 
@@ -106,6 +113,8 @@ typedef struct MemoryContextData
  */
 #define MemoryContextIsValid(context) \
 	((context) != NULL && \
-	 (IsA((context), AllocSetContext)))
+	 (IsA((context), AllocSetContext) || \
+	  IsA((context), SlabContext) || \
+	  IsA((context), GenerationContext)))
 
-#endif   /* MEMNODES_H */
+#endif							/* MEMNODES_H */

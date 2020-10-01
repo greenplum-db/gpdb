@@ -1,21 +1,20 @@
 /*-------------------------------------------------------------------------
  *
  * pg_rewrite.h
- *	  definition of the system "rewrite-rule" relation (pg_rewrite)
- *	  along with the relation's initial contents.
+ *	  definition of the "rewrite rule" system catalog (pg_rewrite)
  *
  * As of Postgres 7.3, the primary key for this table is <ev_class, rulename>
  * --- ie, rule names are only unique among the rules of a given table.
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_rewrite.h
  *
  * NOTES
- *	  the genbki.pl script reads this file and generates .bki
- *	  information from the DATA() statements.
+ *	  The Catalog.pm module reads this file and derives schema
+ *	  information.
  *
  *-------------------------------------------------------------------------
  */
@@ -23,16 +22,16 @@
 #define PG_REWRITE_H
 
 #include "catalog/genbki.h"
+#include "catalog/pg_rewrite_d.h"
 
 /* ----------------
  *		pg_rewrite definition.  cpp turns this into
  *		typedef struct FormData_pg_rewrite
  * ----------------
  */
-#define RewriteRelationId  2618
-
-CATALOG(pg_rewrite,2618)
+CATALOG(pg_rewrite,2618,RewriteRelationId)
 {
+	Oid			oid;			/* oid */
 	NameData	rulename;
 	Oid			ev_class;
 	char		ev_type;
@@ -40,13 +39,13 @@ CATALOG(pg_rewrite,2618)
 	bool		is_instead;
 
 #ifdef CATALOG_VARLEN			/* variable-length fields start here */
-	pg_node_tree ev_qual;
-	pg_node_tree ev_action;
+	pg_node_tree ev_qual BKI_FORCE_NOT_NULL;
+	pg_node_tree ev_action BKI_FORCE_NOT_NULL;
 #endif
 } FormData_pg_rewrite;
 
 /* GPDB added foreign key definitions for gpcheckcat. */
-FOREIGN_KEY(ev_class REFERENCES pg_attribute(attrelid));
+FOREIGN_KEY(ev_class REFERENCES pg_class(oid));
 
 /* ----------------
  *		Form_pg_rewrite corresponds to a pointer to a tuple with
@@ -55,17 +54,4 @@ FOREIGN_KEY(ev_class REFERENCES pg_attribute(attrelid));
  */
 typedef FormData_pg_rewrite *Form_pg_rewrite;
 
-/* ----------------
- *		compiler constants for pg_rewrite
- * ----------------
- */
-#define Natts_pg_rewrite				7
-#define Anum_pg_rewrite_rulename		1
-#define Anum_pg_rewrite_ev_class		2
-#define Anum_pg_rewrite_ev_type			3
-#define Anum_pg_rewrite_ev_enabled		4
-#define Anum_pg_rewrite_is_instead		5
-#define Anum_pg_rewrite_ev_qual			6
-#define Anum_pg_rewrite_ev_action		7
-
-#endif   /* PG_REWRITE_H */
+#endif							/* PG_REWRITE_H */

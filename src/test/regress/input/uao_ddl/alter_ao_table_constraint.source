@@ -1,13 +1,13 @@
-create schema alter_ao_table_constraint_@orientation@;
-set search_path="$user",alter_ao_table_constraint_@orientation@,public;
-SET gp_default_storage_options='orientation=@orientation@';
+create schema alter_ao_table_constraint_@amname@;
+set search_path="$user",alter_ao_table_constraint_@amname@,public;
+SET default_table_access_method=@amname@;
 -- Add/Drop constraints and validate update on AO table
 CREATE TABLE sto_alt_uao2_constraint(
   text_col text,
   bigint_col bigint,
   char_vary_col character varying(30),
   numeric_col numeric
-  ) with(appendonly=true) DISTRIBUTED RANDOMLY;
+  ) DISTRIBUTED RANDOMLY;
 insert into sto_alt_uao2_constraint values ('1_zero', 1, '1_zero', 1);
 SELECT 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL
  AND visimapidxid is not NULL AND relid='sto_alt_uao2_constraint'::regclass;

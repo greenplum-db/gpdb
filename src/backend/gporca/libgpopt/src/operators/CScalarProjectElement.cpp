@@ -42,15 +42,12 @@ CScalarProjectElement::HashValue() const
 //
 //---------------------------------------------------------------------------
 BOOL
-CScalarProjectElement::Matches
-	(
-	COperator *pop
-	)
-const
+CScalarProjectElement::Matches(COperator *pop) const
 {
 	if (pop->Eopid() == Eopid())
 	{
-		CScalarProjectElement *popScPrEl = CScalarProjectElement::PopConvert(pop);
+		CScalarProjectElement *popScPrEl =
+			CScalarProjectElement::PopConvert(pop);
 
 		// match if column reference is same
 		return Pcr() == popScPrEl->Pcr();
@@ -82,12 +79,8 @@ CScalarProjectElement::FInputOrderSensitive() const
 //
 //---------------------------------------------------------------------------
 COperator *
-CScalarProjectElement::PopCopyWithRemappedColumns
-	(
-	CMemoryPool *mp,
-	UlongToColRefMap *colref_mapping,
-	BOOL must_exist
-	)
+CScalarProjectElement::PopCopyWithRemappedColumns(
+	CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist)
 {
 	ULONG id = m_pcr->Id();
 	CColRef *colref = colref_mapping->Find(&id);
@@ -99,12 +92,11 @@ CScalarProjectElement::PopCopyWithRemappedColumns
 			CColumnFactory *col_factory = COptCtxt::PoctxtFromTLS()->Pcf();
 
 			CName name(m_pcr->Name());
-			colref = col_factory->PcrCreate(m_pcr->RetrieveType(), m_pcr->TypeModifier(), name);
+			colref = col_factory->PcrCreate(m_pcr->RetrieveType(),
+											m_pcr->TypeModifier(), name);
 
-#ifdef GPOS_DEBUG
-			BOOL result =
-#endif // GPOS_DEBUG
-			colref_mapping->Insert(GPOS_NEW(mp) ULONG(id), colref);
+			BOOL result GPOS_ASSERTS_ONLY =
+				colref_mapping->Insert(GPOS_NEW(mp) ULONG(id), colref);
 			GPOS_ASSERT(result);
 		}
 		else
@@ -125,11 +117,7 @@ CScalarProjectElement::PopCopyWithRemappedColumns
 //
 //---------------------------------------------------------------------------
 IOstream &
-CScalarProjectElement::OsPrint
-	(
-	IOstream &os
-	)
-	const
+CScalarProjectElement::OsPrint(IOstream &os) const
 {
 	os << SzId() << " ";
 	m_pcr->OsPrint(os);

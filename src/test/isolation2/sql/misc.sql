@@ -8,7 +8,15 @@
 -1U: create unique index idx_utilitymode_c1 on utilitymode_primary_key_tab (c1);
 -1U: drop table utilitymode_primary_key_tab;
 
+-- Try a few queries in utility mode. (Once upon a time, there was a bug that
+-- caused a crash on EXPLAIN ANALYZE on a Sort node in utility mode.)
+0U: begin;
+0U: set local enable_seqscan=off;
 0U: explain analyze select * from gp_segment_configuration order by dbid;
+0U: reset enable_seqscan;
+0U: set local enable_indexscan=off;
+0U: explain analyze select * from gp_segment_configuration order by dbid;
+0U: rollback;
 
 --
 -- Temp tables should have a different schema name pattern in utility mode.

@@ -16,75 +16,62 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CXformJoinAssociativity
-	//
-	//	@doc:
-	//		Associative transformation of left-deep join tree
-	//
-	//---------------------------------------------------------------------------
-	class CXformJoinAssociativity : public CXformExploration
+//---------------------------------------------------------------------------
+//	@class:
+//		CXformJoinAssociativity
+//
+//	@doc:
+//		Associative transformation of left-deep join tree
+//
+//---------------------------------------------------------------------------
+class CXformJoinAssociativity : public CXformExploration
+{
+private:
+	// private copy ctor
+	CXformJoinAssociativity(const CXformJoinAssociativity &);
+
+	// helper function for creating the new join predicate
+	void CreatePredicates(CMemoryPool *mp, CExpression *pexpr,
+						  CExpressionArray *pdrgpexprLower,
+						  CExpressionArray *pdrgpexprUpper) const;
+
+public:
+	// ctor
+	explicit CXformJoinAssociativity(CMemoryPool *mp);
+
+	// dtor
+	virtual ~CXformJoinAssociativity()
 	{
+	}
 
-		private:
+	// ident accessors
+	virtual EXformId
+	Exfid() const
+	{
+		return ExfJoinAssociativity;
+	}
 
-			// private copy ctor
-			CXformJoinAssociativity(const CXformJoinAssociativity &);
+	// return a string for xform name
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CXformJoinAssociativity";
+	}
 
-			// helper function for creating the new join predicate
-			void CreatePredicates
-				(
-				CMemoryPool *mp,
-				CExpression *pexpr,
-				CExpressionArray *pdrgpexprLower,
-				CExpressionArray *pdrgpexprUpper
-				) 
-				const;
+	// compute xform promise for a given expression handle
+	virtual EXformPromise Exfp(CExpressionHandle &exprhdl) const;
 
-		public:
+	// actual transform
+	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
+				   CExpression *pexpr) const;
 
-			// ctor
-			explicit
-			CXformJoinAssociativity(CMemoryPool *mp);
+};	// class CXformJoinAssociativity
 
-			// dtor
-			virtual
-			~CXformJoinAssociativity() {}
-
-			// ident accessors
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfJoinAssociativity;
-			}
-
-			// return a string for xform name
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CXformJoinAssociativity";
-			}
-
-			// compute xform promise for a given expression handle
-			virtual
-			EXformPromise Exfp (CExpressionHandle &exprhdl) const;
-
-			// actual transform
-			void Transform
-					(
-					CXformContext *pxfctxt,
-					CXformResult *pxfres,
-					CExpression *pexpr
-					) const;
-
-	}; // class CXformJoinAssociativity
-
-}
+}  // namespace gpopt
 
 
-#endif // !GPOPT_CXformJoinAssociativity_H
+#endif	// !GPOPT_CXformJoinAssociativity_H
 
 // EOF

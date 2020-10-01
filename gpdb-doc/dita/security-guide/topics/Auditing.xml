@@ -31,7 +31,7 @@
       <title>Viewing the Database Server Log Files</title>
       <p> Every database instance in Greenplum Database (master and segments) is a running
         PostgreSQL database server with its own server log file. Daily log files are created in the
-          <codeph>pg_log</codeph> directory of the master and each segment data directory. </p>
+          <codeph>log</codeph> directory of the master and each segment data directory. </p>
       <p> The server log files are written in comma-separated values (CSV) format. Not all log
         entries will have values for all of the log fields. For example, only log entries associated
         with a query worker process will have the <codeph>slice_id</codeph> populated. Related log
@@ -498,7 +498,7 @@
         last three lines of each segment log
         file:<codeblock>$ gpssh -f seg_host_file
   => source /usr/local/greenplum-db/greenplum_path.sh
-  => gplogfilter -n 3 /gpdata/gp*/pg_log/gpdb*.csv</codeblock></p>
+  => gplogfilter -n 3 /gpdata/gp*/log/gpdb*.csv</codeblock></p>
       <p> The following are the Greenplum security-related audit (or logging) server configuration
         parameters that are set in the postgresql.conf configuration file:</p>
       <table>

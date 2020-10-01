@@ -45,7 +45,7 @@ FROM all_entries
 ORDER BY segid;
 GRANT SELECT ON gp_instrument_shmem_detail TO public;
 SET OPTIMIZER=OFF;
-SELECT count(*) FROM pg_stat_activity;
+SELECT count(*) FROM pg_stat_activity where backend_type = 'client backend';
  count 
 -------
      1

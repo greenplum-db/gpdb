@@ -37,6 +37,34 @@ INSERT INTO inhg VALUES ('x', 'foo',  'y');  /* fails due to constraint */
 SELECT * FROM inhg; /* Two records with three columns in order x=x, xx=text, y=y */
 DROP TABLE inhg;
 
+CREATE TABLE test_like_id_1 (a bigint GENERATED ALWAYS AS IDENTITY, b text);
+\d test_like_id_1
+INSERT INTO test_like_id_1 (b) VALUES ('b1');
+SELECT * FROM test_like_id_1;
+CREATE TABLE test_like_id_2 (LIKE test_like_id_1);
+\d test_like_id_2
+INSERT INTO test_like_id_2 (b) VALUES ('b2');
+SELECT * FROM test_like_id_2;  -- identity was not copied
+CREATE TABLE test_like_id_3 (LIKE test_like_id_1 INCLUDING IDENTITY);
+\d test_like_id_3
+INSERT INTO test_like_id_3 (b) VALUES ('b3');
+SELECT * FROM test_like_id_3;  -- identity was copied and applied
+DROP TABLE test_like_id_1, test_like_id_2, test_like_id_3;
+
+CREATE TABLE test_like_gen_1 (a int, b int GENERATED ALWAYS AS (a * 2) STORED);
+\d test_like_gen_1
+INSERT INTO test_like_gen_1 (a) VALUES (1);
+SELECT * FROM test_like_gen_1;
+CREATE TABLE test_like_gen_2 (LIKE test_like_gen_1);
+\d test_like_gen_2
+INSERT INTO test_like_gen_2 (a) VALUES (1);
+SELECT * FROM test_like_gen_2;
+CREATE TABLE test_like_gen_3 (LIKE test_like_gen_1 INCLUDING GENERATED);
+\d test_like_gen_3
+INSERT INTO test_like_gen_3 (a) VALUES (1);
+SELECT * FROM test_like_gen_3;
+DROP TABLE test_like_gen_1, test_like_gen_2, test_like_gen_3;
+
 CREATE TABLE inhg (x text, LIKE inhx INCLUDING INDEXES, y text); /* copies indexes */
 INSERT INTO inhg VALUES (5, 10);
 INSERT INTO inhg VALUES (20, 10); -- should fail
@@ -59,6 +87,8 @@ DROP TABLE inhz;
 CREATE TABLE ctlt1 (a text CHECK (length(a) > 2) PRIMARY KEY, b text);
 CREATE INDEX ctlt1_b_key ON ctlt1 (b);
 CREATE INDEX ctlt1_fnidx ON ctlt1 ((a || b));
+CREATE STATISTICS ctlt1_a_b_stat ON a,b FROM ctlt1;
+COMMENT ON STATISTICS ctlt1_a_b_stat IS 'ab stats';
 COMMENT ON COLUMN ctlt1.a IS 'A';
 COMMENT ON COLUMN ctlt1.b IS 'B';
 COMMENT ON CONSTRAINT ctlt1_a_check ON ctlt1 IS 't1_a_check';
@@ -96,6 +126,7 @@ SELECT description FROM pg_description, pg_constraint c WHERE classoid = 'pg_con
 CREATE TABLE ctlt_all (LIKE ctlt1 INCLUDING ALL);
 \d+ ctlt_all
 SELECT c.relname, objsubid, description FROM pg_description, pg_index i, pg_class c WHERE classoid = 'pg_class'::regclass AND objoid = i.indexrelid AND c.oid = i.indexrelid AND i.indrelid = 'ctlt_all'::regclass ORDER BY c.relname, objsubid;
+SELECT s.stxname, objsubid, description FROM pg_description, pg_statistic_ext s WHERE classoid = 'pg_statistic_ext'::regclass AND objoid = s.oid AND s.stxrelid = 'ctlt_all'::regclass ORDER BY s.stxname, objsubid;
 
 CREATE TABLE inh_error1 () INHERITS (ctlt1, ctlt4);
 CREATE TABLE inh_error2 (LIKE ctlt4 INCLUDING STORAGE) INHERITS (ctlt1);
@@ -121,23 +152,3 @@ DROP SEQUENCE ctlseq1;
 DROP TYPE ctlty1;
 DROP VIEW ctlv1;
 DROP TABLE IF EXISTS ctlt4, ctlt10, ctlt11, ctlt11a, ctlt12;
-
-/* LIKE WITH OIDS */
-CREATE TABLE has_oid (x INTEGER) WITH OIDS;
-CREATE TABLE no_oid (y INTEGER);
-CREATE TABLE like_test (z INTEGER, LIKE has_oid);
-SELECT oid FROM like_test;
-CREATE TABLE like_test2 (z INTEGER, LIKE no_oid);
-SELECT oid FROM like_test2; -- fail
-CREATE TABLE like_test3 (z INTEGER, LIKE has_oid, LIKE no_oid);
-SELECT oid FROM like_test3;
-/*
- * In gpdb we are hard to support oid as distributed key,
- * this case dose not make sence for us
- * CREATE TABLE like_test4 (z INTEGER, PRIMARY KEY(oid), LIKE has_oid);
- * SELECT oid FROM like_test4;
- */
-CREATE TABLE like_test5 (z INTEGER, LIKE no_oid) WITH OIDS;
-SELECT oid FROM like_test5;
-DROP TABLE has_oid, no_oid, like_test, like_test2, like_test3,
-  like_test5;

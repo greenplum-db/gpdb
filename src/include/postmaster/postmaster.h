@@ -3,7 +3,7 @@
  * postmaster.h
  *	  Exports from postmaster/postmaster.c.
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/postmaster/postmaster.h
@@ -40,9 +40,9 @@ extern int	postmaster_alive_fds[2];
  * Constants that represent which of postmaster_alive_fds is held by
  * postmaster, and which is used in children to check for postmaster death.
  */
-#define POSTMASTER_FD_WATCH		0		/* used in children to check for
-										 * postmaster death */
-#define POSTMASTER_FD_OWN		1		/* kept open by postmaster only */
+#define POSTMASTER_FD_WATCH		0	/* used in children to check for
+									 * postmaster death */
+#define POSTMASTER_FD_OWN		1	/* kept open by postmaster only */
 #endif
 
 #define POSTMASTER_IN_STARTUP_MSG "the database system is starting up"
@@ -51,11 +51,11 @@ extern int	postmaster_alive_fds[2];
 /* gpstate must be updated if this message changes */
 #define POSTMASTER_MIRROR_VERSION_DETAIL_MSG "- VERSION:"
 
-extern const char *progname;
 extern PGDLLIMPORT const char *progname;
 
 extern void PostmasterMain(int argc, char *argv[]) pg_attribute_noreturn();
 extern void ClosePostmasterPorts(bool am_syslogger);
+extern void InitProcessGlobals(void);
 
 extern int	MaxLivePostmasterChildren(void);
 
@@ -74,7 +74,12 @@ extern void ShmemBackendArrayAllocation(void);
 
 extern void load_auxiliary_libraries(void);
 extern bool amAuxiliaryBgWorker(void);
-extern bool IsUnderMasterDispatchMode(void);
+
+#ifdef ENABLE_IC_PROXY
+# define IC_PROXY_NUM_BGWORKER 1
+#else  /* ENABLE_IC_PROXY */
+# define IC_PROXY_NUM_BGWORKER 0
+#endif  /* ENABLE_IC_PROXY */
 
 /*
  * Note: MAX_BACKENDS is limited to 2^18-1 because that's the width reserved
@@ -87,6 +92,6 @@ extern bool IsUnderMasterDispatchMode(void);
  * relevant GUC check hooks and in RegisterBackgroundWorker().
  */
 #define MAX_BACKENDS	0x3FFFF
-#define MaxPMAuxProc	4
+#define MaxPMAuxProc	(4 + IC_PROXY_NUM_BGWORKER)
 
-#endif   /* _POSTMASTER_H */
+#endif							/* _POSTMASTER_H */

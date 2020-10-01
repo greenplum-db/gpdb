@@ -7,14 +7,10 @@
 
 using namespace gpopt;
 
-CStrictHashedDistributions::CStrictHashedDistributions
-(
-CMemoryPool *mp,
-CColRefArray *pdrgpcrOutput,
-CColRef2dArray *pdrgpdrgpcrInput
-)
-:
-CDistributionSpecArray(mp)
+CStrictHashedDistributions::CStrictHashedDistributions(
+	CMemoryPool *mp, CColRefArray *pdrgpcrOutput,
+	CColRef2dArray *pdrgpdrgpcrInput)
+	: CDistributionSpecArray(mp)
 {
 	const ULONG num_cols = pdrgpcrOutput->Size();
 	const ULONG arity = pdrgpdrgpcrInput->Size();
@@ -38,7 +34,8 @@ CDistributionSpecArray(mp)
 		{
 			// create a hashed distribution on input columns of the current child
 			BOOL fNullsColocated = true;
-			pdshashed = GPOS_NEW(mp) CDistributionSpecStrictHashed(pdrgpexpr, fNullsColocated);
+			pdshashed = GPOS_NEW(mp)
+				CDistributionSpecStrictHashed(pdrgpexpr, fNullsColocated);
 		}
 		else
 		{

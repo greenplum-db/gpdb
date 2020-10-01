@@ -33,7 +33,6 @@
 /guc_env_var.out
 /hooktest.out
 /oid_wraparound.out
-/partindex_test.out
 /partition_ddl.out
 /qp_gist_indexes2_optimizer.out
 /qp_gist_indexes2.out

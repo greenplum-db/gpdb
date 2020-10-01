@@ -34,18 +34,11 @@ using namespace gpos;
 //
 //---------------------------------------------------------------------------
 void
-gpos::syslib::GetTimeOfDay
-	(
-	TIMEVAL *tv,
-	TIMEZONE *tz
-	)
+gpos::syslib::GetTimeOfDay(TIMEVAL *tv, TIMEZONE *tz)
 {
 	GPOS_ASSERT(NULL != tv);
 
-#ifdef GPOS_DEBUG
-	INT res =
-#endif // GPOS_DEBUG
-	gettimeofday(tv, tz);
+	INT res GPOS_ASSERTS_ONLY = gettimeofday(tv, tz);
 
 	GPOS_ASSERT(0 == res);
 }
@@ -60,17 +53,11 @@ gpos::syslib::GetTimeOfDay
 //
 //---------------------------------------------------------------------------
 void
-gpos::syslib::GetRusage
-	(
-	RUSAGE *usage
-	)
+gpos::syslib::GetRusage(RUSAGE *usage)
 {
 	GPOS_ASSERT(NULL != usage);
 
-#ifdef GPOS_DEBUG
-	INT res =
-#endif // GPOS_DEBUG
-	getrusage(RUSAGE_SELF, usage);
+	INT res GPOS_ASSERTS_ONLY = getrusage(RUSAGE_SELF, usage);
 
 	GPOS_ASSERT(0 == res);
 }
@@ -85,12 +72,7 @@ gpos::syslib::GetRusage
 //
 //---------------------------------------------------------------------------
 void
-gpos::syslib::OpenLog
-	(
-	const CHAR *ident,
-	INT option,
-	INT facility
-	)
+gpos::syslib::OpenLog(const CHAR *ident, INT option, INT facility)
 {
 	openlog(ident, option, facility);
 }
@@ -105,11 +87,7 @@ gpos::syslib::OpenLog
 //
 //---------------------------------------------------------------------------
 void
-gpos::syslib::SysLog
-	(
-	INT priority,
-	const CHAR *format
-	)
+gpos::syslib::SysLog(INT priority, const CHAR *format)
 {
 	syslog(priority, "%s", format);
 }
@@ -124,12 +102,9 @@ gpos::syslib::SysLog
 //
 //---------------------------------------------------------------------------
 void
-gpos::syslib::CloseLog
-	(
-	)
+gpos::syslib::CloseLog()
 {
 	closelog();
 }
 
 // EOF
-

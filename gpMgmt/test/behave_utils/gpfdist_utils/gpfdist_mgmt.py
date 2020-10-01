@@ -3,7 +3,7 @@ try:
     import os
     import platform
     from gppylib.commands.base import Command, LOCAL, REMOTE, WorkerPool
-except ImportError, import_exception:
+except ImportError as import_exception:
     sys.exit('Cannot import modules.  Please check that you have sourced' \
              ' greenplum_path.sh.  Detail: %s' % str(import_exception))
 import socket

@@ -71,12 +71,17 @@ ALTER TABLE part_table_for_upgrade EXCHANGE PARTITION beta WITH TABLE like_table
 
 -- show constraint and index names for each table
 SELECT table_name,* FROM constraints_and_indices() WHERE table_name::text='part_table_for_upgrade';
+
+-- GPDB_12_MERGE_FIXME: only tables are renamed in exchange partition,
+-- constraints or indexes used to be renamed as well pre-GPDB7, not
+-- any more. Does it surprise users (functionally it doesn't affect
+-- anything)?
 SELECT table_name,* FROM constraints_and_indices() WHERE table_name::text='like_table';
 
 -- Drop part_table_for_upgrade before upgrade since that is not where the issue is.
 DROP TABLE part_table_for_upgrade CASCADE;
 
--- Verify that the constroint in like_table was NOT dropped
+-- Verify that the constraint in like_table was NOT dropped
 SELECT table_name,* FROM constraints_and_indices() WHERE table_name::text='like_table';
 
 -- *************************************************************

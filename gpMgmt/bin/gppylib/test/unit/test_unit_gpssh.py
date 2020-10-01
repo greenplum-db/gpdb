@@ -5,7 +5,7 @@ import io
 import sys
 from mock import patch
 
-from gp_unittest import GpTestCase
+from .gp_unittest import GpTestCase
 
 
 class GpSshTestCase(GpTestCase):
@@ -27,8 +27,8 @@ class GpSshTestCase(GpTestCase):
     def test_when_run_without_args_prints_help_text(self, sys_exit_mock):
         sys_exit_mock.side_effect = Exception("on purpose")
         # GOOD_MOCK_EXAMPLE of stdout
-        with patch('sys.stdout', new=io.BytesIO()) as mock_stdout:
-            with self.assertRaisesRegexp(Exception, "on purpose"):
+        with patch('sys.stdout', new=io.StringIO()) as mock_stdout:
+            with self.assertRaisesRegex(Exception, "on purpose"):
                 self.subject.main()
         self.assertIn('gpssh -- ssh access to multiple hosts at once', mock_stdout.getvalue())
 

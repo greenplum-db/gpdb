@@ -480,8 +480,8 @@ FORMAT 'text'
 )
 ;
 SELECT count(*) FROM ext_lineitem;
-ERROR:  invalid input syntax for integer: "HEADER"  (seg0 slice1 127.0.0.1:25435 pid=67886)
-DETAIL:  External table ext_lineitem, line 1 of gpfdist://@hostname@:7070/gpfdist2/lineitem.tbl.*, column l_orderkey
+ERROR:  invalid input syntax for type bigint: "HEADER"  (seg0 slice1 127.0.0.1:25435 pid=67886)
+CONTEXT:  External table ext_lineitem, line 1 of gpfdist://@hostname@:7070/gpfdist2/lineitem.tbl.*, column l_orderkey
 DROP EXTERNAL TABLE ext_lineitem;
 -- test 14
 CREATE EXTERNAL TABLE ext_lineitem (
@@ -751,8 +751,8 @@ FORMAT 'csv'
 )
 ;
 SELECT count(*) FROM ext_lineitem;
-ERROR:  invalid input syntax for integer: "HEADER"  (seg1 slice1 127.0.0.1:25433 pid=67887)
-DETAIL:  External table ext_lineitem, line 1 of gpfdist://@hostname@:7070/gpfdist2/lineitem.tbl.csv.header, column l_orderkey
+ERROR:  invalid input syntax for type bigint: "HEADER"  (seg1 slice1 127.0.0.1:25433 pid=67887)
+CONTEXT:  External table ext_lineitem, line 1 of gpfdist://@hostname@:7070/gpfdist2/lineitem.tbl.csv.header, column l_orderkey
 DROP EXTERNAL TABLE ext_lineitem;
 -- test 20 without header row and header is not defined in format clause
 CREATE EXTERNAL TABLE ext_lineitem (

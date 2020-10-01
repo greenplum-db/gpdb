@@ -80,6 +80,7 @@
               resources.</li>
             <li>Supports more containers running concurrently.</li>
             <li>Includes improved log messages to help diagnose problems.</li>
+            <li>Supports the <codeph>DO</codeph> command (anonymous code block). </li>
           </ul></p>
         <p>PL/Container 3 is currently a Beta feature, and provides only an Beta R Docker image for
           executing functions; Python images are not yet available. Save and uninstall any existing

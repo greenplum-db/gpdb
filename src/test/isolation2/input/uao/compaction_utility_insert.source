@@ -1,7 +1,7 @@
 -- @Description Tests the compaction of data inserted in utility mode
 -- 
 DROP TABLE IF EXISTS foo;
-CREATE TABLE foo (a INT, b INT, c CHAR(128)) WITH (appendonly=true, orientation=@orientation@) distributed randomly;
+CREATE TABLE foo (a INT, b INT, c CHAR(128)) USING @amname@ distributed randomly;
 CREATE INDEX foo_index ON foo(b);
 
 0U: INSERT INTO foo VALUES (2, 2, 'c');

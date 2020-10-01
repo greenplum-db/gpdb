@@ -19,6 +19,7 @@
 #define PG_ATTRIBUTE_ENCODING_H
 
 #include "catalog/genbki.h"
+#include "catalog/pg_attribute_encoding_d.h"
 #include "utils/rel.h"
 
 /* ----------------
@@ -26,9 +27,7 @@
  *		typedef struct FormData_pg_attribute_encoding
  * ----------------
  */
-#define AttributeEncodingRelationId	6231
-
-CATALOG(pg_attribute_encoding,6231) BKI_WITHOUT_OIDS
+CATALOG(pg_attribute_encoding,6231,AttributeEncodingRelationId)
 {
 	Oid		attrelid;		
 	int16	attnum;			
@@ -47,15 +46,6 @@ FOREIGN_KEY(attrelid REFERENCES pg_attribute(attrelid));
  */
 typedef FormData_pg_attribute_encoding *Form_pg_attribute_encoding;
 
-
-/* ----------------
- *		compiler constants for pg_attribute_encoding
- * ----------------
- */
-#define Natts_pg_attribute_encoding				3
-#define Anum_pg_attribute_encoding_attrelid		1
-#define Anum_pg_attribute_encoding_attnum		2
-#define Anum_pg_attribute_encoding_attoptions	3
 
 extern PGFunction *get_funcs_for_compression(char *compresstype);
 extern StdRdOptions **RelationGetAttributeOptions(Relation rel);

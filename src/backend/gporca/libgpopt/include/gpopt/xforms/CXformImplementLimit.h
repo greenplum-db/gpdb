@@ -16,66 +16,59 @@
 
 namespace gpopt
 {
-	using namespace gpos;
-	
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CXformImplementLimit
-	//
-	//	@doc:
-	//		Transform Logical into Physical Limit
-	//
-	//---------------------------------------------------------------------------
-	class CXformImplementLimit : public CXformImplementation
+using namespace gpos;
+
+//---------------------------------------------------------------------------
+//	@class:
+//		CXformImplementLimit
+//
+//	@doc:
+//		Transform Logical into Physical Limit
+//
+//---------------------------------------------------------------------------
+class CXformImplementLimit : public CXformImplementation
+{
+private:
+	// private copy ctor
+	CXformImplementLimit(const CXformImplementLimit &);
+
+public:
+	// ctor
+	explicit CXformImplementLimit(CMemoryPool *mp);
+
+	// dtor
+	virtual ~CXformImplementLimit()
 	{
+	}
 
-		private:
+	// ident accessors
+	virtual EXformId
+	Exfid() const
+	{
+		return ExfImplementLimit;
+	}
 
-			// private copy ctor
-			CXformImplementLimit(const CXformImplementLimit &);
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CXformImplementLimit";
+	}
 
-		public:
-		
-			// ctor
-			explicit
-			CXformImplementLimit(CMemoryPool *mp);
+	// compute xform promise for a given expression handle
+	virtual EXformPromise
+	Exfp(CExpressionHandle &  // exprhdl
+	) const
+	{
+		return CXform::ExfpHigh;
+	}
 
-			// dtor
-			virtual 
-			~CXformImplementLimit() 
-			{}
+	// actual transform
+	void Transform(CXformContext *, CXformResult *, CExpression *) const;
 
-			// ident accessors
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfImplementLimit;
-			}
-			
-			virtual 
-			const CHAR *SzId() const
-			{
-				return "CXformImplementLimit";
-			}
-		
-			// compute xform promise for a given expression handle
-			virtual
-			EXformPromise Exfp
-				(
-				CExpressionHandle & // exprhdl
-				)
-				const
-			{
-				return CXform::ExfpHigh;
-			}
+};	// class CXformImplementLimit
 
-			// actual transform
-			void Transform(CXformContext *, CXformResult *, CExpression *) const;
+}  // namespace gpopt
 
-	}; // class CXformImplementLimit
-
-}
-
-#endif // !GPOPT_CXformImplementLimit_H
+#endif	// !GPOPT_CXformImplementLimit_H
 
 // EOF

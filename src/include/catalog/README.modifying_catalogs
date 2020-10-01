@@ -1,46 +1,3 @@
-Modifying system catalogs
-=========================
-
-The system catalog is a complicated beast.  Adding or modifying
-catalog tables is difficult, since this task requires a set of
-co-ordinated changes across multiple files.
-
-In Postgres, the header files are sprinkled with special CATALOG and
-DATA macros that define the structure and contents of the system
-catalog tables.  Postgres uses scripts (such as Gen_fmgrtab.sh and
-genbki.sh) to process header files to generate the postgres.bki file,
-which is used for system bootstrap.  Usage of these macros requires
-some detailed knowledge of internal system types, and it is quite easy
-to introduce subtle bugs when updating these structures manually.
-
-
-catullus - function definitions
-===============================
-
-Instead of manually constructing CATALOG and DATA statements for
-pg_proc.h, GPDB-added functions are defined using SQL-like
-declarations like "CREATE FUNCTION...", in file called pg_proc.sql.
-They get converted into required macro statements, in pg_prog_gp.h,
-by script called catullus.pl.
-
-For example, the function definition for int2 equality is defined
-using this DATA statement:
-
-DATA(insert OID = 63 ( int2eq  PGNSP PGUID 12 f f t f i 2 16 f "21 21" _null_ _null_ _null_ int2eq - _null_ ));
-DESCR("equal");
-
-Instead of constructing these DATA statements by hand, catullus uses a
-pg_proc.sql file with SQL-like definitions to generate them:
-
-CREATE FUNCTION int2eq(int2, int2) RETURNS bool LANGUAGE internal IMMUTABLE STRICT AS 'int2eq' WITH (OID=63, DESCRIPTION="equal");
-
-When catullus.pl is run, it converts these SQL statements to DATA
-macros and updates the contents of pg_proc_gp.h.  In Greenplum, all functions
-inherited from PostgreSQL are in pg_proc.h, like in PostgreSQL, but additional
-lines are kept in pg_proc_gp.h, which is generated from pg_proc.sql.
-
-See README.add_catalog_function for details.
-
 table definitions
 =================
 
@@ -71,15 +28,3 @@ If you modify any foreign key declarations, you must re-generate
 gpMgmt/bin/gppylib/data/<version>.json file. The src/backend/catalog
 Makefile contains a target to automatically regenerate the file on
 "make all".
-
-If you add a column to an existing PostgreSQL catalog, you can use
-the GPDB_COLUMN_DEFAULT(col, default) macro to specify a default
-value for it. By doing that, you don't have to modify every existing
-DATA row in the header file, which makes it easier to merge with
-upstream. You can simply set a default for the additional column,
-and only include the additional column in DATA rows that need a
-non-default value. GPDB_COLUMN_DEFAULTs are processed by
-process_col_defaults.pl script, before generating postgres.bki.
-If you need to provide non-default values for the GPDB-added
-attributes for some rows, you can do so with the GPDB_EXTRA_COL
-macro.

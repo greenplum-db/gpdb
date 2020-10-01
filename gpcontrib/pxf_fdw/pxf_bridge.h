@@ -38,7 +38,7 @@ typedef struct PxfFdwScanState
 	ListCell   *current_fragment;
 	Relation	relation;
 	char	   *filter_str;
-	List	   *quals;
+	ExprState  *quals;
 	List	   *fragments;
 	List	   *retrieved_attrs;
 	PxfOptions *options;
@@ -57,9 +57,6 @@ typedef struct PxfFdwModifyState
 	StringInfoData uri;			/* rest endpoint URI for modify */
 	Relation	relation;
 	PxfOptions *options;		/* FDW options */
-
-	Datum	   *values;			/* List of values exported for the row */
-	bool	   *nulls;			/* List of null fields for the exported row */
 } PxfFdwModifyState;
 
 /* Clean up churl related data structures from the context */
@@ -72,7 +69,7 @@ void		PxfBridgeImportStart(PxfFdwScanState *pxfsstate);
 void		PxfBridgeExportStart(PxfFdwModifyState *pxfmstate);
 
 /* Reads data from the PXF server into the given buffer of a given size */
-int			PxfBridgeRead(void *outbuf, int datasize, void *extra);
+int			PxfBridgeRead(void *outbuf, int minlen, int maxlen, void *extra);
 
 /* Writes data from the given buffer of a given size to the PXF server */
 int			PxfBridgeWrite(PxfFdwModifyState *context, char *databuf, int datalen);

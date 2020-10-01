@@ -4,7 +4,7 @@
  *		Common support routines for bin/scripts/
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/bin/scripts/common.c
@@ -18,6 +18,7 @@
 #include <unistd.h>
 
 #include "common.h"
+#include "common/logging.h"
 #include "fe_utils/connect.h"
 #include "fe_utils/string_utils.h"
 
@@ -70,18 +71,18 @@ connectDatabase(const char *dbname, const char *pghost,
 				bool echo, bool fail_ok, bool allow_password_reuse)
 {
 	PGconn	   *conn;
-	static char *password = NULL;
 	bool		new_pass;
+	static bool have_password = false;
+	static char password[100];
 
 	if (!allow_password_reuse)
-	{
-		if (password)
-			free(password);
-		password = NULL;
-	}
+		have_password = false;
 
-	if (password == NULL && prompt_password == TRI_YES)
-		password = simple_prompt("Password: ", 100, false);
+	if (!have_password && prompt_password == TRI_YES)
+	{
+		simple_prompt("Password: ", password, sizeof(password), false);
+		have_password = true;
+	}
 
 	/*
 	 * Start the connection.  Loop until we have a password if requested by
@@ -99,7 +100,7 @@ connectDatabase(const char *dbname, const char *pghost,
 		keywords[2] = "user";
 		values[2] = pguser;
 		keywords[3] = "password";
-		values[3] = password;
+		values[3] = have_password ? password : NULL;
 		keywords[4] = "dbname";
 		values[4] = dbname;
 		keywords[5] = "fallback_application_name";
@@ -112,8 +113,8 @@ connectDatabase(const char *dbname, const char *pghost,
 
 		if (!conn)
 		{
-			fprintf(stderr, _("%s: could not connect to database %s: out of memory\n"),
-					progname, dbname);
+			pg_log_error("could not connect to database %s: out of memory",
+						 dbname);
 			exit(1);
 		}
 
@@ -125,9 +126,8 @@ connectDatabase(const char *dbname, const char *pghost,
 			prompt_password != TRI_NO)
 		{
 			PQfinish(conn);
-			if (password)
-				free(password);
-			password = simple_prompt("Password: ", 100, false);
+			simple_prompt("Password: ", password, sizeof(password), false);
+			have_password = true;
 			new_pass = true;
 		}
 	} while (new_pass);
@@ -140,14 +140,13 @@ connectDatabase(const char *dbname, const char *pghost,
 			PQfinish(conn);
 			return NULL;
 		}
-		fprintf(stderr, _("%s: could not connect to database %s: %s"),
-				progname, dbname, PQerrorMessage(conn));
+		pg_log_error("could not connect to database %s: %s",
+					 dbname, PQerrorMessage(conn));
 		exit(1);
 	}
 
-	if (PQserverVersion(conn) >= 70300)
-		PQclear(executeQuery(conn, ALWAYS_SECURE_SEARCH_PATH_SQL,
-							 progname, echo));
+	PQclear(executeQuery(conn, ALWAYS_SECURE_SEARCH_PATH_SQL,
+						 progname, echo));
 
 	return conn;
 }
@@ -193,10 +192,8 @@ executeQuery(PGconn *conn, const char *query, const char *progname, bool echo)
 	if (!res ||
 		PQresultStatus(res) != PGRES_TUPLES_OK)
 	{
-		fprintf(stderr, _("%s: query failed: %s"),
-				progname, PQerrorMessage(conn));
-		fprintf(stderr, _("%s: query was: %s\n"),
-				progname, query);
+		pg_log_error("query failed: %s", PQerrorMessage(conn));
+		pg_log_info("query was: %s", query);
 		PQfinish(conn);
 		exit(1);
 	}
@@ -221,10 +218,8 @@ executeCommand(PGconn *conn, const char *query,
 	if (!res ||
 		PQresultStatus(res) != PGRES_COMMAND_OK)
 	{
-		fprintf(stderr, _("%s: query failed: %s"),
-				progname, PQerrorMessage(conn));
-		fprintf(stderr, _("%s: query was: %s\n"),
-				progname, query);
+		pg_log_error("query failed: %s", PQerrorMessage(conn));
+		pg_log_info("query was: %s", query);
 		PQfinish(conn);
 		exit(1);
 	}
@@ -265,9 +260,9 @@ executeMaintenanceCommand(PGconn *conn, const char *query, bool echo)
  * finish using them, pg_free(*table).  *columns is a pointer into "spec",
  * possibly to its NUL terminator.
  */
-static void
-split_table_columns_spec(const char *spec, int encoding,
-						 char **table, const char **columns)
+void
+splitTableColumnsSpec(const char *spec, int encoding,
+					  char **table, const char **columns)
 {
 	bool		inquotes = false;
 	const char *cp = spec;
@@ -311,14 +306,7 @@ appendQualifiedRelation(PQExpBuffer buf, const char *spec,
 	PGresult   *res;
 	int			ntups;
 
-	/* Before 7.3, the concept of qualifying a name did not exist. */
-	if (PQserverVersion(conn) < 70300)
-	{
-		appendPQExpBufferStr(&sql, spec);
-		return;
-	}
-
-	split_table_columns_spec(spec, PQclientEncoding(conn), &table, &columns);
+	splitTableColumnsSpec(spec, PQclientEncoding(conn), &table, &columns);
 
 	/*
 	 * Query must remain ABSOLUTELY devoid of unqualified names.  This would
@@ -335,7 +323,7 @@ appendQualifiedRelation(PQExpBuffer buf, const char *spec,
 	appendStringLiteralConn(&sql, table, conn);
 	appendPQExpBufferStr(&sql, "::pg_catalog.regclass;");
 
-	executeCommand(conn, "RESET search_path", progname, echo);
+	executeCommand(conn, "RESET search_path;", progname, echo);
 
 	/*
 	 * One row is a typical result, as is a nonexistent relation ERROR.
@@ -347,17 +335,15 @@ appendQualifiedRelation(PQExpBuffer buf, const char *spec,
 	ntups = PQntuples(res);
 	if (ntups != 1)
 	{
-		fprintf(stderr,
-				ngettext("%s: query returned %d row instead of one: %s\n",
-						 "%s: query returned %d rows instead of one: %s\n",
-						 ntups),
-				progname, ntups, sql.data);
+		pg_log_error(ngettext("query returned %d row instead of one: %s",
+							  "query returned %d rows instead of one: %s",
+							  ntups),
+					 ntups, sql.data);
 		PQfinish(conn);
 		exit(1);
 	}
 	appendPQExpBufferStr(buf,
-						 fmtQualifiedId(PQserverVersion(conn),
-										PQgetvalue(res, 0, 1),
+						 fmtQualifiedId(PQgetvalue(res, 0, 1),
 										PQgetvalue(res, 0, 0)));
 	appendPQExpBufferStr(buf, columns);
 	PQclear(res);
@@ -391,22 +377,15 @@ yesno_prompt(const char *question)
 
 	for (;;)
 	{
-		char	   *resp;
+		char		resp[10];
 
-		resp = simple_prompt(prompt, 1, true);
+		simple_prompt(prompt, resp, sizeof(resp), true);
 
 		if (strcmp(resp, _(PG_YESLETTER)) == 0)
-		{
-			free(resp);
 			return true;
-		}
-		else if (strcmp(resp, _(PG_NOLETTER)) == 0)
-		{
-			free(resp);
+		if (strcmp(resp, _(PG_NOLETTER)) == 0)
 			return false;
-		}
 
-		free(resp);
 		printf(_("Please answer \"%s\" or \"%s\".\n"),
 			   _(PG_YESLETTER), _(PG_NOLETTER));
 	}
@@ -549,4 +528,4 @@ setup_cancel_handler(void)
 	SetConsoleCtrlHandler(consoleHandler, TRUE);
 }
 
-#endif   /* WIN32 */
+#endif							/* WIN32 */

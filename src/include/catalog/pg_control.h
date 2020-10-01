@@ -5,7 +5,7 @@
  *	  However, we define it here so that the format is documented.
  *
  *
- * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_control.h
@@ -15,6 +15,7 @@
 #ifndef PG_CONTROL_H
 #define PG_CONTROL_H
 
+#include "access/transam.h"
 #include "access/xlogdefs.h"
 #include "pgtime.h"				/* for pg_time_t */
 #include "port/pg_crc32c.h"
@@ -23,10 +24,13 @@
 /*
  * Version identifier for this pg_control format.
  *
- * The first three digits is the PostgreSQL version number. The last
+ * The first four digits is the PostgreSQL version number. The last
  * four digits indicates the GPDB version.
  */
-#define PG_CONTROL_VERSION	9600700
+#define PG_CONTROL_VERSION	12010700
+
+/* Nonce key length, see below */
+#define MOCK_AUTH_NONCE_LEN		32
 
 /*
  * Body of CheckPoint XLOG records.  This is declared here because we keep
@@ -41,8 +45,7 @@ typedef struct CheckPoint
 	TimeLineID	PrevTimeLineID; /* previous TLI, if this record begins a new
 								 * timeline (equals ThisTimeLineID otherwise) */
 	bool		fullPageWrites; /* current full_page_writes */
-	uint32		nextXidEpoch;	/* higher-order bits of nextXid */
-	TransactionId nextXid;		/* next free XID */
+	FullTransactionId nextFullXid;	/* next free full transaction ID */
 	Oid			nextOid;		/* next free OID */
 	Oid			nextRelfilenode;	/* next free Relfilenode */
 	MultiXactId nextMulti;		/* next free MultiXactId */
@@ -101,10 +104,6 @@ typedef enum DBState
 
 /*
  * Contents of pg_control.
- *
- * NOTE: try to keep this under 512 bytes so that it will fit on one physical
- * sector of typical disk drives.  This reduces the odds of corruption due to
- * power failure midway through a write.
  */
 
 typedef struct ControlFileData
@@ -128,8 +127,8 @@ typedef struct ControlFileData
 	 * example, WAL logs contain per-page magic numbers that can serve as
 	 * version cues for the WAL log.
 	 */
-	uint32		pg_control_version;		/* PG_CONTROL_VERSION */
-	uint32		catalog_version_no;		/* see catversion.h */
+	uint32		pg_control_version; /* PG_CONTROL_VERSION */
+	uint32		catalog_version_no; /* see catversion.h */
 
 	/*
 	 * System status data
@@ -137,7 +136,6 @@ typedef struct ControlFileData
 	DBState		state;			/* see enum above */
 	pg_time_t	time;			/* time stamp of last pg_control update */
 	XLogRecPtr	checkPoint;		/* last check point record ptr */
-	XLogRecPtr	prevCheckPoint; /* previous check point record ptr */
 
 	CheckPoint	checkPointCopy; /* copy of last check point record */
 
@@ -187,6 +185,7 @@ typedef struct ControlFileData
 	bool		wal_log_hints;
 	int			MaxConnections;
 	int			max_worker_processes;
+	int			max_wal_senders;
 	int			max_prepared_xacts;
 	int			max_locks_per_xact;
 	bool		track_commit_timestamp;
@@ -223,9 +222,6 @@ typedef struct ControlFileData
 	uint32		toast_max_chunk_size;	/* chunk size in TOAST tables */
 	uint32		loblksize;		/* chunk size in pg_largeobject */
 
-	/* flag indicating internal format of timestamp, interval, time */
-	bool		enableIntTimes; /* int64 storage enabled? */
-
 	/* flags indicating pass-by-value status of various types */
 	bool		float4ByVal;	/* float4 pass-by-value? */
 	bool		float8ByVal;	/* float8, int8, etc pass-by-value? */
@@ -233,9 +229,24 @@ typedef struct ControlFileData
 	/* Are data pages protected by checksums? Zero if no checksum version */
 	uint32		data_checksum_version;
 
+	/*
+	 * Random nonce, used in authentication requests that need to proceed
+	 * based on values that are cluster-unique, like a SASL exchange that
+	 * failed at an early stage.
+	 */
+	char		mock_authentication_nonce[MOCK_AUTH_NONCE_LEN];
+
 	/* CRC of all above ... MUST BE LAST! */
 	pg_crc32c	crc;
 } ControlFileData;
+
+/*
+ * Maximum safe value of sizeof(ControlFileData).  For reliability's sake,
+ * it's critical that pg_control updates be atomic writes.  That generally
+ * means the active data can't be more than one disk sector, which is 512
+ * bytes on common hardware.  Be very careful about raising this limit.
+ */
+#define PG_CONTROL_MAX_SAFE_SIZE	512
 
 /*
  * Physical size of the pg_control file.  Note that this is considerably
@@ -244,6 +255,6 @@ typedef struct ControlFileData
  * changes, so that ReadControlFile will deliver a suitable wrong-version
  * message instead of a read error if it's looking at an incompatible file.
  */
-#define PG_CONTROL_SIZE		8192
+#define PG_CONTROL_FILE_SIZE		8192
 
-#endif   /* PG_CONTROL_H */
+#endif							/* PG_CONTROL_H */

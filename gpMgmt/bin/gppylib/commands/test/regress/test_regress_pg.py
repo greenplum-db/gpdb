@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) Greenplum Inc 2008. All Rights Reserved. 
 #
@@ -37,7 +37,7 @@ class PgCommandsTestCase(unittest.TestCase):
         logger.info("exists:=%s PID=%d datadir='%s'" % (exists,PID,datadir))                
         self.assertTrue(exists)
         self.assertTrue(PID > 0)
-        self.assertEquals(datadir,gpdb.master.datadir)
+        self.assertEqual(datadir,gpdb.master.datadir)
         
         
         gpdb.master.port=4000

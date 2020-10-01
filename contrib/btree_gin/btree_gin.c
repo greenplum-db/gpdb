@@ -10,10 +10,12 @@
 #include "utils/bytea.h"
 #include "utils/cash.h"
 #include "utils/date.h"
+#include "utils/float.h"
 #include "utils/inet.h"
 #include "utils/numeric.h"
 #include "utils/timestamp.h"
 #include "utils/varbit.h"
+#include "utils/uuid.h"
 
 PG_MODULE_MAGIC;
 
@@ -24,7 +26,6 @@ typedef struct QueryInfo
 	bool		is_varlena;
 	Datum		(*typecmp) (FunctionCallInfo);
 } QueryInfo;
-
 
 /*** GIN support functions shared by all datatypes ***/
 
@@ -88,6 +89,7 @@ gin_btree_extract_query(FunctionCallInfo fcinfo,
 		case BTGreaterEqualStrategyNumber:
 		case BTGreaterStrategyNumber:
 			*ptr_partialmatch = true;
+			/* FALLTHROUGH */
 		case BTEqualStrategyNumber:
 			entries[0] = datum;
 			break;
@@ -112,13 +114,14 @@ gin_btree_compare_prefix(FunctionCallInfo fcinfo)
 	int32		res,
 				cmp;
 
-	cmp = DatumGetInt32(DirectFunctionCall2Coll(
-												data->typecmp,
-												PG_GET_COLLATION(),
-								   (data->strategy == BTLessStrategyNumber ||
-								 data->strategy == BTLessEqualStrategyNumber)
-												? data->datum : a,
-												b));
+	cmp = DatumGetInt32(CallerFInfoFunctionCall2(
+												 data->typecmp,
+												 fcinfo->flinfo,
+												 PG_GET_COLLATION(),
+												 (data->strategy == BTLessStrategyNumber ||
+												  data->strategy == BTLessEqualStrategyNumber)
+												 ? data->datum : a,
+												 b));
 
 	switch (data->strategy)
 	{
@@ -323,6 +326,16 @@ leftmostvalue_macaddr(void)
 GIN_SUPPORT(macaddr, false, leftmostvalue_macaddr, macaddr_cmp)
 
 static Datum
+leftmostvalue_macaddr8(void)
+{
+	macaddr8   *v = palloc0(sizeof(macaddr8));
+
+	return Macaddr8PGetDatum(v);
+}
+
+GIN_SUPPORT(macaddr8, false, leftmostvalue_macaddr8, macaddr8_cmp)
+
+static Datum
 leftmostvalue_inet(void)
 {
 	return DirectFunctionCall1(inet_in, CStringGetDatum("0.0.0.0/0"));
@@ -339,6 +352,8 @@ leftmostvalue_text(void)
 }
 
 GIN_SUPPORT(text, true, leftmostvalue_text, bttextcmp)
+
+GIN_SUPPORT(bpchar, true, leftmostvalue_text, bpcharcmp)
 
 static Datum
 leftmostvalue_char(void)
@@ -416,3 +431,85 @@ leftmostvalue_numeric(void)
 }
 
 GIN_SUPPORT(numeric, true, leftmostvalue_numeric, gin_numeric_cmp)
+
+/*
+ * Use a similar trick to that used for numeric for enums, since we don't
+ * actually know the leftmost value of any enum without knowing the concrete
+ * type, so we use a dummy leftmost value of InvalidOid.
+ *
+ * Note that we use CallerFInfoFunctionCall2 here so that enum_cmp
+ * gets a valid fn_extra to work with. Unlike most other type comparison
+ * routines it needs it, so we can't use DirectFunctionCall2.
+ */
+
+#define ENUM_IS_LEFTMOST(x) ((x) == InvalidOid)
+
+PG_FUNCTION_INFO_V1(gin_enum_cmp);
+
+Datum
+gin_enum_cmp(PG_FUNCTION_ARGS)
+{
+	Oid			a = PG_GETARG_OID(0);
+	Oid			b = PG_GETARG_OID(1);
+	int			res = 0;
+
+	if (ENUM_IS_LEFTMOST(a))
+	{
+		res = (ENUM_IS_LEFTMOST(b)) ? 0 : -1;
+	}
+	else if (ENUM_IS_LEFTMOST(b))
+	{
+		res = 1;
+	}
+	else
+	{
+		res = DatumGetInt32(CallerFInfoFunctionCall2(
+													 enum_cmp,
+													 fcinfo->flinfo,
+													 PG_GET_COLLATION(),
+													 ObjectIdGetDatum(a),
+													 ObjectIdGetDatum(b)));
+	}
+
+	PG_RETURN_INT32(res);
+}
+
+static Datum
+leftmostvalue_enum(void)
+{
+	return ObjectIdGetDatum(InvalidOid);
+}
+
+GIN_SUPPORT(anyenum, false, leftmostvalue_enum, gin_enum_cmp)
+
+static Datum
+leftmostvalue_uuid(void)
+{
+	/*
+	 * palloc0 will create the UUID with all zeroes:
+	 * "00000000-0000-0000-0000-000000000000"
+	 */
+	pg_uuid_t  *retval = (pg_uuid_t *) palloc0(sizeof(pg_uuid_t));
+
+	return UUIDPGetDatum(retval);
+}
+
+GIN_SUPPORT(uuid, false, leftmostvalue_uuid, uuid_cmp)
+
+static Datum
+leftmostvalue_name(void)
+{
+	NameData   *result = (NameData *) palloc0(NAMEDATALEN);
+
+	return NameGetDatum(result);
+}
+
+GIN_SUPPORT(name, false, leftmostvalue_name, btnamecmp)
+
+static Datum
+leftmostvalue_bool(void)
+{
+	return BoolGetDatum(false);
+}
+
+GIN_SUPPORT(bool, false, leftmostvalue_bool, btboolcmp)

@@ -28,33 +28,26 @@ using namespace gpdxl;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CMDCastGPDB::CMDCastGPDB
-	(
-	CMemoryPool *mp,
-	IMDId *mdid,
-	CMDName *mdname,
-	IMDId *mdid_src,
-	IMDId *mdid_dest,
-	BOOL is_binary_coercible,
-	IMDId *mdid_cast_func,
-	EmdCoercepathType path_type
-	)
-	:
-	m_mp(mp),
-	m_mdid(mdid),
-	m_mdname(mdname),
-	m_mdid_src(mdid_src),
-	m_mdid_dest(mdid_dest),
-	m_is_binary_coercible(is_binary_coercible),
-	m_mdid_cast_func(mdid_cast_func),
-	m_path_type(path_type)
+CMDCastGPDB::CMDCastGPDB(CMemoryPool *mp, IMDId *mdid, CMDName *mdname,
+						 IMDId *mdid_src, IMDId *mdid_dest,
+						 BOOL is_binary_coercible, IMDId *mdid_cast_func,
+						 EmdCoercepathType path_type)
+	: m_mp(mp),
+	  m_mdid(mdid),
+	  m_mdname(mdname),
+	  m_mdid_src(mdid_src),
+	  m_mdid_dest(mdid_dest),
+	  m_is_binary_coercible(is_binary_coercible),
+	  m_mdid_cast_func(mdid_cast_func),
+	  m_path_type(path_type)
 {
 	GPOS_ASSERT(m_mdid->IsValid());
 	GPOS_ASSERT(m_mdid_src->IsValid());
 	GPOS_ASSERT(m_mdid_dest->IsValid());
 	GPOS_ASSERT_IMP(!is_binary_coercible, m_mdid_cast_func->IsValid());
 
-	m_dxl_str = CDXLUtils::SerializeMDObj(m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
+	m_dxl_str = CDXLUtils::SerializeMDObj(
+		m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
 }
 
 //---------------------------------------------------------------------------
@@ -151,7 +144,7 @@ CMDCastGPDB::GetCastFuncMdId() const
 //		CMDCastGPDB::IsBinaryCoercible
 //
 //	@doc:
-//		Returns whether this is a cast between binary coercible types, i.e. the 
+//		Returns whether this is a cast between binary coercible types, i.e. the
 //		types are binary compatible
 //
 //---------------------------------------------------------------------------
@@ -177,27 +170,34 @@ CMDCastGPDB::GetMDPathType() const
 //
 //---------------------------------------------------------------------------
 void
-CMDCastGPDB::Serialize
-	(
-	CXMLSerializer *xml_serializer
-	) 
-	const
+CMDCastGPDB::Serialize(CXMLSerializer *xml_serializer) const
 {
-	xml_serializer->OpenElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), 
-						CDXLTokens::GetDXLTokenStr(EdxltokenGPDBCast));
-	
-	m_mdid->Serialize(xml_serializer, CDXLTokens::GetDXLTokenStr(EdxltokenMdid));
+	xml_serializer->OpenElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
+		CDXLTokens::GetDXLTokenStr(EdxltokenGPDBCast));
 
-	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenName), m_mdname->GetMDName());
+	m_mdid->Serialize(xml_serializer,
+					  CDXLTokens::GetDXLTokenStr(EdxltokenMdid));
 
-	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenGPDBCastBinaryCoercible), m_is_binary_coercible);
-	m_mdid_src->Serialize(xml_serializer, CDXLTokens::GetDXLTokenStr(EdxltokenGPDBCastSrcType));
-	m_mdid_dest->Serialize(xml_serializer, CDXLTokens::GetDXLTokenStr(EdxltokenGPDBCastDestType));
-	m_mdid_cast_func->Serialize(xml_serializer, CDXLTokens::GetDXLTokenStr(EdxltokenGPDBCastFuncId));
-	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenGPDBCastCoercePathType), m_path_type);
+	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenName),
+								 m_mdname->GetMDName());
 
-	xml_serializer->CloseElement(CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), 
-						CDXLTokens::GetDXLTokenStr(EdxltokenGPDBCast));
+	xml_serializer->AddAttribute(
+		CDXLTokens::GetDXLTokenStr(EdxltokenGPDBCastBinaryCoercible),
+		m_is_binary_coercible);
+	m_mdid_src->Serialize(xml_serializer,
+						  CDXLTokens::GetDXLTokenStr(EdxltokenGPDBCastSrcType));
+	m_mdid_dest->Serialize(
+		xml_serializer, CDXLTokens::GetDXLTokenStr(EdxltokenGPDBCastDestType));
+	m_mdid_cast_func->Serialize(
+		xml_serializer, CDXLTokens::GetDXLTokenStr(EdxltokenGPDBCastFuncId));
+	xml_serializer->AddAttribute(
+		CDXLTokens::GetDXLTokenStr(EdxltokenGPDBCastCoercePathType),
+		m_path_type);
+
+	xml_serializer->CloseElement(
+		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
+		CDXLTokens::GetDXLTokenStr(EdxltokenGPDBCast));
 }
 
 
@@ -212,32 +212,28 @@ CMDCastGPDB::Serialize
 //
 //---------------------------------------------------------------------------
 void
-CMDCastGPDB::DebugPrint
-	(
-	IOstream &os
-	)
-	const
+CMDCastGPDB::DebugPrint(IOstream &os) const
 {
 	os << "Cast " << (Mdname()).GetMDName()->GetBuffer() << ": ";
 	MdidSrc()->OsPrint(os);
 	os << "->";
 	MdidDest()->OsPrint(os);
 	os << std::endl;
-		
+
 	if (m_is_binary_coercible)
 	{
 		os << ", binary-coercible";
 	}
-	
+
 	if (IMDId::IsValid(m_mdid_cast_func))
 	{
 		os << ", Cast func id: ";
 		GetCastFuncMdId()->OsPrint(os);
 	}
-	
-	os << std::endl;	
+
+	os << std::endl;
 }
 
-#endif // GPOS_DEBUG
+#endif	// GPOS_DEBUG
 
 // EOF

@@ -3,7 +3,6 @@
 -- spills to disk.
 CREATE TABLE mksort_limit_test_table(dkey INT, jkey INT, rval REAL, tval TEXT default repeat('abcdefghijklmnopqrstuvwxyz', 300)) DISTRIBUTED BY (dkey);
 INSERT INTO mksort_limit_test_table VALUES(generate_series(1, 10000), generate_series(10001, 20000), sqrt(generate_series(10001, 20000)));
-SET gp_enable_mk_sort = on;
 --Should fit LESS (because of overhead) than (20 * 1024 * 1024) / (26 * 300 + 12) => 2684 tuples in memory, after that spills to disk
 SET statement_mem="20MB";
 -- Should work in memory
@@ -124,44 +123,38 @@ explain select * from t_volatile_limit order by i limit 2 offset (random()*5);
 (7 rows)
 
 explain select distinct(a), sum(b) from t_volatile_limit_1 group by a order by a, sum(b) limit (random()+3);
-                                                        QUERY PLAN                                                        
---------------------------------------------------------------------------------------------------------------------------
- Limit  (cost=1556.33..1559.08 rows=100 width=12)
-   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=1556.33..1583.83 rows=1000 width=12)
-         Merge Key: a, (sum(b))
-         ->  Unique  (cost=1556.33..1563.83 rows=334 width=12)
-               Group Key: a, (sum(b))
-               ->  Sort  (cost=1556.33..1558.83 rows=334 width=12)
-                     Sort Key: a, (sum(b))
-                     ->  Finalize HashAggregate  (cost=1496.50..1506.50 rows=334 width=12)
-                           Group Key: a
-                           ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=1391.50..1481.50 rows=1000 width=12)
-                                 Hash Key: a
-                                 ->  Partial HashAggregate  (cost=1391.50..1421.50 rows=1000 width=12)
-                                       Group Key: a
-                                       ->  Seq Scan on t_volatile_limit_1  (cost=0.00..961.00 rows=28700 width=8)
+                                                 QUERY PLAN                                                 
+------------------------------------------------------------------------------------------------------------
+ Limit  (cost=589.33..590.08 rows=100 width=12)
+   ->  Unique  (cost=589.33..596.83 rows=1000 width=12)
+         Group Key: a, (sum(b))
+         ->  Sort  (cost=589.33..591.83 rows=1000 width=12)
+               Sort Key: a, (sum(b))
+               ->  Finalize HashAggregate  (cost=529.50..539.50 rows=1000 width=12)
+                     Group Key: a
+                     ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=464.50..514.50 rows=3000 width=12)
+                           ->  Partial HashAggregate  (cost=464.50..474.50 rows=1000 width=12)
+                                 Group Key: a
+                                 ->  Seq Scan on t_volatile_limit_1  (cost=0.00..321.00 rows=28700 width=8)
  Optimizer: Postgres query optimizer
-(15 rows)
+(12 rows)
 
 explain select distinct(a), sum(b) from t_volatile_limit_1 group by a order by a, sum(b) limit 2 offset (random()*2);
-                                                        QUERY PLAN                                                        
---------------------------------------------------------------------------------------------------------------------------
- Limit  (cost=1559.08..1559.13 rows=2 width=12)
-   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=1556.33..1583.83 rows=1000 width=12)
-         Merge Key: a, (sum(b))
-         ->  Unique  (cost=1556.33..1563.83 rows=334 width=12)
-               Group Key: a, (sum(b))
-               ->  Sort  (cost=1556.33..1558.83 rows=334 width=12)
-                     Sort Key: a, (sum(b))
-                     ->  Finalize HashAggregate  (cost=1496.50..1506.50 rows=334 width=12)
-                           Group Key: a
-                           ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=1391.50..1481.50 rows=1000 width=12)
-                                 Hash Key: a
-                                 ->  Partial HashAggregate  (cost=1391.50..1421.50 rows=1000 width=12)
-                                       Group Key: a
-                                       ->  Seq Scan on t_volatile_limit_1  (cost=0.00..961.00 rows=28700 width=8)
+                                                 QUERY PLAN                                                 
+------------------------------------------------------------------------------------------------------------
+ Limit  (cost=590.08..590.09 rows=2 width=12)
+   ->  Unique  (cost=589.33..596.83 rows=1000 width=12)
+         Group Key: a, (sum(b))
+         ->  Sort  (cost=589.33..591.83 rows=1000 width=12)
+               Sort Key: a, (sum(b))
+               ->  Finalize HashAggregate  (cost=529.50..539.50 rows=1000 width=12)
+                     Group Key: a
+                     ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=464.50..514.50 rows=3000 width=12)
+                           ->  Partial HashAggregate  (cost=464.50..474.50 rows=1000 width=12)
+                                 Group Key: a
+                                 ->  Seq Scan on t_volatile_limit_1  (cost=0.00..321.00 rows=28700 width=8)
  Optimizer: Postgres query optimizer
-(15 rows)
+(12 rows)
 
 drop table t_volatile_limit;
 drop table t_volatile_limit_1;
@@ -175,9 +168,9 @@ select array(select b from t_limit_all order by b asc limit all) t;
  Result
    InitPlan 1 (returns $0)  (slice1)
      ->  Gather Motion 3:1  (slice2; segments: 3)
-           Merge Key: b
+           Merge Key: t_limit_all.b
            ->  Sort
-                 Sort Key: b
+                 Sort Key: t_limit_all.b
                  ->  Seq Scan on t_limit_all
  Optimizer: Postgres query optimizer
 (8 rows)

@@ -14,27 +14,35 @@
 #ifndef CDBGROUPINGPATHS_H
 #define CDBGROUPINGPATHS_H
 
-#include "nodes/relation.h"
+#include "nodes/pathnodes.h"
 
 extern void cdb_create_twostage_grouping_paths(PlannerInfo *root,
 											   RelOptInfo *input_rel,
 											   RelOptInfo *output_rel,
 											   PathTarget *target,
 											   PathTarget *partial_grouping_target,
+											   List *havingQual,
 											   bool can_sort,
-											   bool consider_hash,
-											   double dNumGroups,
+											   bool can_hash,
+											   double dNumGroupsTotal,
 											   const AggClauseCosts *agg_costs,
 											   const AggClauseCosts *agg_partial_costs,
 											   const AggClauseCosts *agg_final_costs,
-											   List *rollup_lists,
-											   List *rollup_groupclauses);
+											   List *rollups);
 
-extern CdbPathLocus cdb_choose_grouping_locus(PlannerInfo *root, Path *path,
-											  PathTarget *target,
-											  List *groupClause,
-											  List *rollup_lists,
-											  List *rollup_groupclauses,
-											  bool *need_redistribute_p);
+extern Path *cdb_prepare_path_for_sorted_agg(PlannerInfo *root,
+											 bool is_sorted,
+											 RelOptInfo *rel,
+											 Path *subpath,
+											 PathTarget *target,
+											 List *group_pathkeys,
+											 double limit_tuples,
+											 List *groupClause,
+											 List *rollups);
+extern Path *cdb_prepare_path_for_hashed_agg(PlannerInfo *root,
+											 Path *subpath,
+											 PathTarget *target,
+											 List *groupClause,
+											 List *rollups);
 
 #endif   /* CDBGROUPINGPATHS_H */

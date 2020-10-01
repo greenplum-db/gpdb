@@ -265,7 +265,7 @@
             <entry colname="col4">All transaction IDs before this one have been replaced with a
               permanent (frozen) transaction ID in this table. This is used to track whether the
               table needs to be vacuumed in order to prevent transaction ID wraparound or to allow
-              <codeph>pg_clog</codeph> to be shrunk. <p>The value is <codeph>0</codeph>
+              <codeph>pg_xact</codeph> to be shrunk. <p>The value is <codeph>0</codeph>
                 (<codeph>InvalidTransactionId</codeph>) if the relation is not a table or if the
                 table does not require vacuuming to prevent transaction ID wraparound. The table
                 still might require vacuuming to reclaim disk space.</p></entry>

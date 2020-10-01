@@ -16,54 +16,50 @@
 
 namespace gpopt
 {
-	using namespace gpos;
+using namespace gpos;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CXformSelect2Apply
-	//
-	//	@doc:
-	//		Transform Select to Apply; this transformation is only applicable
-	//		to a Select expression with subqueries in its scalar predicate
-	//
-	//---------------------------------------------------------------------------
-	class CXformSelect2Apply : public CXformSubqueryUnnest
+//---------------------------------------------------------------------------
+//	@class:
+//		CXformSelect2Apply
+//
+//	@doc:
+//		Transform Select to Apply; this transformation is only applicable
+//		to a Select expression with subqueries in its scalar predicate
+//
+//---------------------------------------------------------------------------
+class CXformSelect2Apply : public CXformSubqueryUnnest
+{
+private:
+	// private copy ctor
+	CXformSelect2Apply(const CXformSelect2Apply &);
+
+public:
+	// ctor
+	explicit CXformSelect2Apply(CMemoryPool *mp);
+
+	// dtor
+	virtual ~CXformSelect2Apply()
 	{
+	}
 
-		private:
+	// ident accessors
+	virtual EXformId
+	Exfid() const
+	{
+		return ExfSelect2Apply;
+	}
 
-			// private copy ctor
-			CXformSelect2Apply(const CXformSelect2Apply &);
+	// return a string for xform name
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CXformSelect2Apply";
+	}
 
-		public:
+};	// class CXformSelect2Apply
 
-			// ctor
-			explicit
-			CXformSelect2Apply(CMemoryPool *mp);
+}  // namespace gpopt
 
-			// dtor
-			virtual
-			~CXformSelect2Apply()
-			{}
-
-			// ident accessors
-			virtual
-			EXformId Exfid() const
-			{
-				return ExfSelect2Apply;
-			}
-
-			// return a string for xform name
-			virtual
-			const CHAR *SzId() const
-			{
-				return "CXformSelect2Apply";
-			}
-
-	}; // class CXformSelect2Apply
-
-}
-
-#endif // !GPOPT_CXformSelect2Apply_H
+#endif	// !GPOPT_CXformSelect2Apply_H
 
 // EOF

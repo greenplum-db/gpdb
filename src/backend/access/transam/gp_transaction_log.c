@@ -51,7 +51,7 @@ gp_transaction_log(PG_FUNCTION_ARGS)
 
 		/* build tupdesc for result tuples */
 		/* this had better match gp_distributed_xacts view in system_views.sql */
-		tupdesc = CreateTemplateTupleDesc(4, false);
+		tupdesc = CreateTemplateTupleDesc(4);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "segment_id",
 						   INT2OID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "dbid",
@@ -70,7 +70,7 @@ gp_transaction_log(PG_FUNCTION_ARGS)
 		context = (Context *) palloc(sizeof(Context));
 		funcctx->user_fctx = (void *) context;
 
-		context->indexXid = ShmemVariableCache->nextXid;
+		context->indexXid = XidFromFullTransactionId(ShmemVariableCache->nextFullXid);
 												// Start with last possible + 1.
 
 		funcctx->user_fctx = (void *) context;

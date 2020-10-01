@@ -275,7 +275,7 @@ select 1+row_number() over(order by foo.a+bar.a) from orca.foo inner join orca.b
 select row_number() over(order by foo.a+ bar.a)/count(*) from orca.foo inner join orca.bar using(b) group by foo.a, bar.a, bar.b;
 select count(*) over(partition by b order by a range between 1 preceding and (select count(*) from orca.bar) following) from orca.foo;
 select a+1, rank() over(partition by b+1 order by a+1) from orca.foo order by 1, 2;
-select a , sum(a) over (order by a range '1'::float8 preceding) from orca.r order by 1,2;
+select a , sum(a) over (order by a range 1 preceding) from orca.r order by 1,2;
 select a, b, floor(avg(b) over(order by a desc, b desc rows between unbounded preceding and unbounded following)) as avg, dense_rank() over (order by a) from orca.r order by 1,2,3,4;
 select lead(a) over(order by a) from orca.r order by 1;
 select lag(c,d) over(order by c,d) from orca.s order by 1;
@@ -307,6 +307,16 @@ select (select a from orca_w3 where a = orca_w1.a) as one from orca_w1 where orc
 
 -- window function in subquery inside target list with outer ref in partition clause
 select (select rank() over(partition by orca_w2.a) from orca_w3 where a = orca_w1.a) as one, row_number() over(partition by orca_w1.a) as two from orca_w1, orca_w2 order by orca_w1.a;
+
+-- correlated subquery in target list
+select (select a+1 from (select a from orca_w2 where orca_w1.a=orca_w2.a) sq(a)) as one, row_number() over(partition by orca_w1.a) as two from orca_w1;
+
+-- correlated subquery in target list, mismatching varattnos
+select (select a+1 from (select a from orca_w2 where sq2.a=orca_w2.a) sq1(a)) as one, row_number() over(partition by sq2.a) as two from (select 1,1,1,a from orca_w1) sq2(x,y,z,a);
+
+-- cte in scalar subquery
+with x as (select a, b from orca_w1)
+select (select count(*) from x) as one, rank() over(partition by a) as rank_within_parent from x order by a desc;
 
 -- window function in subquery inside target list with outer ref in order clause
 select (select rank() over(order by orca_w2.a) from orca_w3 where a = orca_w1.a) as one, row_number() over(partition by orca_w1.a) as two from orca_w1, orca_w2 order by orca_w1.a;
@@ -526,8 +536,6 @@ insert into orca.t_date values('01-03-2012'::date,9,'tag1','tag2');
 set optimizer_enable_partial_index=on;
 set optimizer_enable_space_pruning=off;
 set optimizer_enable_constant_expression_evaluation=on;
-set optimizer_enumerate_plans=on;
-set optimizer_plan_id = 2;
 -- start_ignore
 analyze orca.t_date;
 -- end_ignore
@@ -565,8 +573,6 @@ insert into orca.t_text values('01-03-2012'::date,9,'ugly','tag2');
 
 set optimizer_enable_space_pruning=off;
 set optimizer_enable_constant_expression_evaluation=on;
-set optimizer_enumerate_plans=on;
-set optimizer_plan_id = 2;
 -- start_ignore
 analyze orca.t_text;
 -- end_ignore
@@ -597,8 +603,6 @@ set optimizer_enable_partial_index=on;
 set optimizer_enable_space_pruning=off;
 set optimizer_enable_constant_expression_evaluation=on;
 set optimizer_use_external_constant_expression_evaluation_for_ints = on;
-set optimizer_enumerate_plans=on;
-set optimizer_plan_id = 2;
 -- start_ignore
 analyze orca.t_ceeval_ints;
 -- end_ignore
@@ -786,7 +790,8 @@ CTE1(e,f) AS
 ( SELECT f1.a, rank() OVER (PARTITION BY f1.b ORDER BY CTE.a) FROM orca.twf1 f1, CTE )
 SELECT * FROM CTE1,CTE WHERE CTE.a = CTE1.f and CTE.a = 2 ORDER BY 1;
 
-SET optimizer_cte_inlining = off;
+RESET optimizer_cte_inlining;
+RESET optimizer_cte_inlining_bound;
 
 -- catalog queries
 select 1 from pg_class c group by c.oid limit 1;
@@ -899,6 +904,11 @@ values (
   0::oid,
   0::oid,
   0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
   '{0.000161451,0.000107634,0.000107634,0.000107634,0.000107634,0.000107634,0.000107634,0.000107634,0.000107634,0.000107634,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05}'::real[],
   NULL::real[],
   NULL::real[],
@@ -924,6 +934,11 @@ values (
   0::smallint,
   94::oid,
   95::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
   0::oid,
   0::oid,
   0::oid,
@@ -955,6 +970,11 @@ values (
   0::oid,
   0::oid,
   0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
   '{0.0478164,0.0439146,0.0406856,0.0239755,0.0154186,0.0149073,0.0148804,0.0143422,0.0141808,0.0139386,0.0138848,0.0138848,0.0137502,0.0134812,0.0134004,0.0133197,0.0133197,0.013239,0.0131852,0.0130775,0.0130775,0.0130237,0.0129699,0.0129699,0.012943}'::real[],
   NULL::real[],
   NULL::real[],
@@ -980,6 +1000,11 @@ values (
   0::smallint,
   94::oid,
   95::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
   0::oid,
   0::oid,
   0::oid,
@@ -1011,6 +1036,11 @@ values (
   0::oid,
   0::oid,
   0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
   '{1}'::real[],
   NULL::real[],
   NULL::real[],
@@ -1036,6 +1066,11 @@ values (
   0::smallint,
   94::oid,
   95::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
   0::oid,
   0::oid,
   0::oid,
@@ -1067,6 +1102,11 @@ values (
   0::oid,
   0::oid,
   0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
   '{0.26042,0.0859995,0.0709308,0.0616473,0.0567231,0.0303797,0.0109787,0.0106289,0.00990232,0.00987541,0.00979469,0.00944488,0.00820709,0.00718457,0.00626968,0.00621586,0.00616204,0.00600059,0.00586605,0.00557006,0.00516643,0.00511261,0.0050857,0.0050857,0.0047628}'::real[],
   NULL::real[],
   NULL::real[],
@@ -1092,6 +1132,11 @@ values (
   0::smallint,
   1093::oid,
   1095::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
   0::oid,
   0::oid,
   0::oid,
@@ -1123,6 +1168,11 @@ values (
   0::oid,
   0::oid,
   0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
   '{1}'::real[],
   NULL::real[],
   NULL::real[],
@@ -1151,6 +1201,11 @@ values (
   0::oid,
   0::oid,
   0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
   '{1}'::real[],
   NULL::real[],
   NULL::real[],
@@ -1174,6 +1229,11 @@ values (
   0::smallint,
   0::smallint,
   0::smallint,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
   0::oid,
   0::oid,
   0::oid,
@@ -1207,6 +1267,11 @@ values (
   0::oid,
   0::oid,
   0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
   '{1}'::real[],
   NULL::real[],
   NULL::real[],
@@ -1232,6 +1297,11 @@ values (
   0::smallint,
   2060::oid,
   2062::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
   0::oid,
   0::oid,
   0::oid,
@@ -1263,6 +1333,11 @@ values (
   0::oid,
   0::oid,
   0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
   '{0.0715766,0.0621317,0.00546242,0.0044399,0.000134542,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05}'::real[],
   NULL::real[],
   NULL::real[],
@@ -1288,6 +1363,11 @@ values (
   0::smallint,
   2060::oid,
   2062::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
+  0::oid,
   0::oid,
   0::oid,
   0::oid,
@@ -1721,7 +1801,6 @@ drop table idxscan_outer;
 drop table idxscan_inner;
 
 drop table if exists ggg;
-set optimizer_metadata_caching=on;
 
 create table ggg (a char(1), b char(2), d char(3));
 insert into ggg values ('x', 'a', 'c');
@@ -1790,7 +1869,7 @@ drop table can_set_tag_target;
 drop table can_set_tag_audit;
 
 -- start_ignore
-create language plpythonu;
+create language plpython3u;
 -- end_ignore
 
 -- Checking if ORCA uses parser's canSetTag for CREATE TABLE AS SELECT
@@ -1799,7 +1878,7 @@ create or replace function canSetTag_Func(x int) returns int as $$
         return 0
     else:
         return x * 3
-$$ language plpythonu;
+$$ language plpython3u;
 
 create table canSetTag_input_data (domain integer, class integer, attr text, value integer)
    distributed by (domain);
@@ -2419,14 +2498,19 @@ INSERT INTO foo2 values (1,1,1), (2,2,2);
 INSERT INTO foo3 values (1,1), (2,2);
 
 set optimizer_join_order=query;
+-- we ignore enable/disable_xform statements as their output will differ if the server is compiled without Orca (the xform won't exist)
+-- start_ignore
 select disable_xform('CXformInnerJoin2HashJoin');
+-- end_ignore
 
 EXPLAIN SELECT 1 FROM foo1, foo2 WHERE foo1.a = foo2.a AND foo2.c = 3 AND foo2.b IN (SELECT b FROM foo3);
 SELECT 1 FROM foo1, foo2 WHERE foo1.a = foo2.a AND foo2.c = 3 AND foo2.b IN (SELECT b FROM foo3);
 
 reset optimizer_join_order;
+-- start_ignore
 select enable_xform('CXformInnerJoin2HashJoin');
-
+-- end_ignore
+-- Test that duplicate sensitive redistributes don't have invalid projection (eg: element that can't be hashed)
 drop table if exists t55;
 drop table if exists tp;
 
@@ -2435,21 +2519,301 @@ insert into t55 select i, i from generate_series(1, 1000) i;
 
 set optimizer_join_order = query;
 
+-- force_explain
 explain verbose
 CREATE TABLE TP AS
 WITH META AS (SELECT '2020-01-01' AS VALID_DT, '99' AS LOAD_ID)
 SELECT DISTINCT L1.c, L1.lid
 FROM t55 L1 CROSS JOIN META
-WHERE L1.lid = int4in(unknownout(meta.load_id));
+WHERE L1.lid = int4in(textout(meta.load_id));
 
 CREATE TABLE TP AS
 WITH META AS (SELECT '2020-01-01' AS VALID_DT, '99' AS LOAD_ID)
 SELECT DISTINCT L1.c, L1.lid
 FROM t55 L1 CROSS JOIN META
-WHERE L1.lid = int4in(unknownout(meta.load_id));
+WHERE L1.lid = int4in(textout(meta.load_id));
 
 reset optimizer_join_order;
 SELECT * from tp;
+
+-- Test partition selection for lossy casts
+create table lossycastrangepart(a float, b float) partition by range(b) (start(0) end(40) every(10));
+insert into lossycastrangepart (values (5.1,5.1), (9.9,9.9), (10.1,10.1), (9.1,9.1), (10.9,10.9), (11.1,11.1), (21.0,21.0)); 
+explain select * from lossycastrangepart where b::int = 10;
+select * from lossycastrangepart where b::int = 10;
+explain select * from lossycastrangepart where b::int = 11;
+select * from lossycastrangepart where b::int = 11;
+explain select * from lossycastrangepart where b::int < 10;
+select * from lossycastrangepart where b::int < 10;
+explain select * from lossycastrangepart where b::int < 11;
+select * from lossycastrangepart where b::int < 11;
+
+create table lossycastlistpart( a int, b float) partition by list(b) (partition l1 values(1.7, 2.1), partition l2 values(1.3, 2.7), partition l3 values(1.8, 2.8));
+insert into lossycastlistpart (values (1.0,2.1), (1.0,1.3), (10.1,2.1), (9.1,2.7), (10.9,1.8), (11.1,2.8), (21.0,1.7));
+explain select * from lossycastlistpart where b::int < 2;
+select * from lossycastlistpart where b::int < 2;
+explain select * from lossycastlistpart where b::int = 2;
+select * from lossycastlistpart where b::int = 2;
+
+--Test lossy casted NEQ on range partitioned table
+drop table if exists sales;
+create table sales(id int, prod_id int, cust_id int, sales_ts timestamp)
+partition by range(sales_ts) (start (timestamp '2010-01-01 00:00:00') end(timestamp '2010-02-02 23:59:59')
+every (interval '1 day'));
+insert into sales select i, i%100, i%1000, timestamp '2010-01-01 00:00:00' + i * interval '1 day' from generate_series(1,20) i;
+select * from sales where sales_ts::date != '2010-01-05' order by sales_ts;
+
+-- test n-ary inner and left joins with outer references
+drop table if exists tcorr1, tcorr2;
+
+create table tcorr1(a int, b int);
+create table tcorr2(a int, b int);
+
+insert into tcorr1 values (1,99);
+insert into tcorr2 values (1,1);
+
+set optimizer_trace_fallback to on;
+
+explain
+select *
+from tcorr1 out
+where out.b in (select coalesce(tcorr2.a, 99)
+                from tcorr1 left outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
+
+-- expect 1 row
+select *
+from tcorr1 out
+where out.b in (select coalesce(tcorr2.a, 99)
+                from tcorr1 left outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
+
+explain
+select *
+from tcorr1 out
+where out.b in (select max(tcorr2.b + out.b - 1)
+                from tcorr2
+                where tcorr2.a=out.a);
+-- expect 1 row
+select *
+from tcorr1 out
+where out.b in (select max(tcorr2.b + out.b - 1)
+                from tcorr2
+                where tcorr2.a=out.a);
+
+explain
+select *
+from tcorr1 out
+where out.b in (select coalesce(tcorr2_d.c, 99)
+                from tcorr1 left outer join (select a, count(*) as c
+                                             from tcorr2
+                                             where tcorr2.b = out.b
+                                             group by a) tcorr2_d on tcorr1.a=tcorr2_d.a);
+-- expect 1 row
+select *
+from tcorr1 out
+where out.b in (select coalesce(tcorr2_d.c, 99)
+                from tcorr1 left outer join (select a, count(*) as c
+                                             from tcorr2
+                                             where tcorr2.b = out.b
+                                             group by a) tcorr2_d on tcorr1.a=tcorr2_d.a);
+
+-- expect 1 row
+select *
+from tcorr1 out
+where out.b in (select coalesce(tcorr2.a, 99)
+                from tcorr1 full outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
+
+set optimizer_join_order to exhaustive2;
+
+explain
+select *
+from tcorr1 out
+where out.b in (select coalesce(tcorr2.a, 99)
+                from tcorr1 left outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
+-- expect 1 row
+select *
+from tcorr1 out
+where out.b in (select coalesce(tcorr2.a, 99)
+                from tcorr1 left outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
+
+explain
+select *
+from tcorr1 out
+where out.b in (select max(tcorr2.b + out.b - 1)
+                from tcorr2
+                where tcorr2.a=out.a);
+-- expect 1 row
+select *
+from tcorr1 out
+where out.b in (select max(tcorr2.b + out.b - 1)
+                from tcorr2
+                where tcorr2.a=out.a);
+
+explain
+select *
+from tcorr1 out
+where out.b in (select coalesce(tcorr2_d.c, 99)
+                from tcorr1 left outer join (select a, count(*) as c
+                                             from tcorr2
+                                             where tcorr2.b = out.b
+                                             group by a) tcorr2_d on tcorr1.a=tcorr2_d.a);
+-- expect 1 row
+select *
+from tcorr1 out
+where out.b in (select coalesce(tcorr2_d.c, 99)
+                from tcorr1 left outer join (select a, count(*) as c
+                                             from tcorr2
+                                             where tcorr2.b = out.b
+                                             group by a) tcorr2_d on tcorr1.a=tcorr2_d.a);
+
+-- expect 1 row
+select *
+from tcorr1 out
+where out.b in (select coalesce(tcorr2.a, 99)
+                from tcorr1 full outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
+
+reset optimizer_join_order;
+
+-- test selecting an outer ref from a scalar subquery
+-- expect 0 rows
+SELECT 1
+FROM   tcorr1
+WHERE  tcorr1.a IS NULL OR
+       tcorr1.a = (SELECT tcorr1.a
+                   FROM   (SELECT rtrim(tcorr1.a::text) AS userid,
+                                  rtrim(tcorr1.b::text) AS part_pls
+                           FROM   tcorr2) al
+                   WHERE  3 = tcorr1.a
+                  );
+
+-- expect 1 row, subquery returns a row
+select * from tcorr1 where b = (select tcorr1.b from tcorr2);
+
+-- expect 0 rows, subquery returns no rows
+select * from tcorr1 where b = (select tcorr1.b from tcorr2 where b=33);
+
+-- expect 1 row, subquery returns nothing, so a < 22 is true
+select * from tcorr1 where a < coalesce((select tcorr1.a from tcorr2 where a = 11), 22);
+
+-- test join to index get apply xform
+drop table if exists foo, tbtree, tbitmap;
+create table foo(a int, b int, c int) distributed by(a);
+create table tbtree(a int, b int, c int) distributed by(a);
+create table tbitmap(a int, b int, c int) distributed by(a);
+
+insert into foo select i*1000,i*1000,i*1000 from generate_series(1,10) i;
+insert into tbtree select i,i,i from generate_series(1,100000) i;
+insert into tbitmap select i,i,i from generate_series(1,100000) i;
+-- insert a duplicate value for a=2000
+insert into tbtree values (2000,-1,-1);
+insert into tbitmap values (2000,-1,-1);
+
+create index tbtreexa  on tbtree  using btree(a);
+create index tbitmapxa on tbitmap using bitmap(a);
+
+analyze foo;
+analyze tbtree;
+analyze tbitmap;
+
+set optimizer_join_order = query;
+set optimizer_enable_hashjoin = off;
+set optimizer_enable_groupagg = off;
+set optimizer_trace_fallback = on;
+set enable_sort = off;
+
+-- 1 simple btree
+explain (costs off)
+select * from foo join tbtree on foo.a=tbtree.a;
+select * from foo join tbtree on foo.a=tbtree.a;
+
+-- 2 simple bitmap
+explain (costs off)
+select * from foo join tbitmap on foo.a=tbitmap.a;
+select * from foo join tbitmap on foo.a=tbitmap.a;
+
+-- 3 btree with select pred
+explain (costs off)
+select * from foo join tbtree on foo.a=tbtree.a where tbtree.a < 5000;
+select * from foo join tbtree on foo.a=tbtree.a where tbtree.a < 5000;
+
+-- 4 bitmap with select pred
+explain (costs off)
+select * from foo join tbitmap on foo.a=tbitmap.a where tbitmap.a < 5000;
+select * from foo join tbitmap on foo.a=tbitmap.a where tbitmap.a < 5000;
+
+-- 5 btree with project
+explain (costs off)
+select * from foo join (select a, b+c as bc from tbtree) proj on foo.a=proj.a;
+select * from foo join (select a, b+c as bc from tbtree) proj on foo.a=proj.a;
+
+-- 6 bitmap with project
+explain (costs off)
+select * from foo join (select a, b+c as bc from tbitmap) proj on foo.a=proj.a;
+select * from foo join (select a, b+c as bc from tbitmap) proj on foo.a=proj.a;
+
+-- 7 btree with grby
+explain (costs off)
+select * from foo join (select a, count(*) as cnt from tbtree group by a,b) grby on foo.a=grby.a;
+select * from foo join (select a, count(*) as cnt from tbtree group by a,b) grby on foo.a=grby.a;
+
+-- 8 bitmap with grby
+explain (costs off)
+select * from foo join (select a, count(*) as cnt from tbitmap group by a) grby on foo.a=grby.a;
+select * from foo join (select a, count(*) as cnt from tbitmap group by a) grby on foo.a=grby.a;
+
+-- 9 btree with proj select grby select
+explain (costs off)
+select * from foo join (select a, count(*) + 5 as cnt from tbtree where tbtree.a < 5000 group by a having count(*) < 2) proj_sel_grby_sel on foo.a=proj_sel_grby_sel.a;
+select * from foo join (select a, count(*) + 5 as cnt from tbtree where tbtree.a < 5000 group by a having count(*) < 2) proj_sel_grby_sel on foo.a=proj_sel_grby_sel.a;
+
+-- 10 bitmap with proj select grby select
+explain (costs off)
+select * from foo join (select a, count(*) + 5 as cnt from tbitmap where tbitmap.a < 5000 group by a having count(*) < 2) proj_sel_grby_sel on foo.a=proj_sel_grby_sel.a;
+select * from foo join (select a, count(*) + 5 as cnt from tbitmap where tbitmap.a < 5000 group by a having count(*) < 2) proj_sel_grby_sel on foo.a=proj_sel_grby_sel.a;
+
+-- 11 bitmap with two groupbys
+explain (costs off)
+select * from foo join (select a, count(*) as cnt from (select distinct a, b from tbitmap) grby1 group by a) grby2 on foo.a=grby2.a;
+select * from foo join (select a, count(*) as cnt from (select distinct a, b from tbitmap) grby1 group by a) grby2 on foo.a=grby2.a;
+
+-- 12 btree with proj select 2*grby select
+explain (costs off)
+select * from foo join (select a, count(*) + cnt1 as cnt2 from (select a, count(*) as cnt1 from tbtree group by a) grby1
+                                                                where grby1.a < 5000 group by a, cnt1 having count(*) < 2) proj_sel_grby_sel
+                    on foo.a=proj_sel_grby_sel.a;
+select * from foo join (select a, count(*) + cnt1 as cnt2 from (select a, count(*) as cnt1 from tbtree group by a) grby1
+                                                                where grby1.a < 5000 group by a, cnt1 having count(*) < 2) proj_sel_grby_sel
+                    on foo.a=proj_sel_grby_sel.a;
+
+-- 13 join pred accesses a projected column - no index scan
+explain (costs off)
+select * from foo join (select a, a::bigint*a::bigint as aa from tbtree) proj on foo.a=proj.a and foo.b=proj.aa;
+
+-- 14 join pred accesses a projected column - no index scan
+explain (costs off)
+select * from foo join (select a, count(*) as cnt from tbitmap group by a) grby on foo.a=grby.a and foo.b=grby.cnt;
+
+-- 15 the potential index join itself contains outer refs - no index scan
+explain (costs off)
+select *
+from foo l1 where b in (select ab
+                        from foo l2 join (select *, l1.a+tbtree.b as ab from tbtree) tbtree_derived
+                                    on l2.a=tbtree_derived.a and l2.b=tbtree_derived.b
+                        where l2.c = 1
+                       );
+
+-- 16 group by columns are not a superset of the distribution columns - no index scan
+explain (costs off)
+select * from foo join (select b, count(*) as cnt from tbtree group by b) grby on foo.a=grby.cnt;
+
+-- 17 group by columns don't intersect - no index scan
+explain (costs off)
+select * from foo join (select min_a, count(*) as cnt from (select min(a) as min_a, b from tbitmap group by b) grby1 group by min_a) grby2 on foo.a=grby2.min_a;
+
+reset optimizer_join_order;
+reset optimizer_enable_hashjoin;
+reset optimizer_enable_groupagg;
+reset optimizer_trace_fallback;
+reset enable_sort;
 
 -- start_ignore
 DROP SCHEMA orca CASCADE;

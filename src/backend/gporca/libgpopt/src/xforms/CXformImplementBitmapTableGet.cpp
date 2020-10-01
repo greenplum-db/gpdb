@@ -9,7 +9,7 @@
 //		Implement BitmapTableGet
 //
 //	@owner:
-//		
+//
 //
 //	@test:
 //
@@ -33,23 +33,17 @@ using namespace gpos;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CXformImplementBitmapTableGet::CXformImplementBitmapTableGet
-	(
-	CMemoryPool *mp
-	)
-	:
-	// pattern
-	CXformImplementation
-		(
-		GPOS_NEW(mp) CExpression
-				(
-				mp,
-				GPOS_NEW(mp) CLogicalBitmapTableGet(mp),
-				GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CPatternLeaf(mp)), // predicate tree
-				GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CPatternLeaf(mp))  // bitmap index expression
-				)
-		)
-{}
+CXformImplementBitmapTableGet::CXformImplementBitmapTableGet(CMemoryPool *mp)
+	:  // pattern
+	  CXformImplementation(GPOS_NEW(mp) CExpression(
+		  mp, GPOS_NEW(mp) CLogicalBitmapTableGet(mp),
+		  GPOS_NEW(mp)
+			  CExpression(mp, GPOS_NEW(mp) CPatternLeaf(mp)),  // predicate tree
+		  GPOS_NEW(mp) CExpression(
+			  mp, GPOS_NEW(mp) CPatternLeaf(mp))  // bitmap index expression
+		  ))
+{
+}
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -60,20 +54,17 @@ CXformImplementBitmapTableGet::CXformImplementBitmapTableGet
 //
 //---------------------------------------------------------------------------
 void
-CXformImplementBitmapTableGet::Transform
-	(
-	CXformContext *pxfctxt,
-	CXformResult *pxfres,
-	CExpression *pexpr
-	)
-	const
+CXformImplementBitmapTableGet::Transform(CXformContext *pxfctxt,
+										 CXformResult *pxfres,
+										 CExpression *pexpr) const
 {
 	GPOS_ASSERT(NULL != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
 	CMemoryPool *mp = pxfctxt->Pmp();
-	CLogicalBitmapTableGet *popLogical = CLogicalBitmapTableGet::PopConvert(pexpr->Pop());
+	CLogicalBitmapTableGet *popLogical =
+		CLogicalBitmapTableGet::PopConvert(pexpr->Pop());
 
 	CTableDescriptor *ptabdesc = popLogical->Ptabdesc();
 	ptabdesc->AddRef();
@@ -81,23 +72,19 @@ CXformImplementBitmapTableGet::Transform
 	CColRefArray *pdrgpcrOutput = popLogical->PdrgpcrOutput();
 	pdrgpcrOutput->AddRef();
 
-	CPhysicalBitmapTableScan *popPhysical =
-			GPOS_NEW(mp) CPhysicalBitmapTableScan
-					(
-					mp,
-					ptabdesc,
-					pexpr->Pop()->UlOpId(),
-					GPOS_NEW(mp) CName(mp, *popLogical->PnameTableAlias()),
-					pdrgpcrOutput
-					);
+	CPhysicalBitmapTableScan *popPhysical = GPOS_NEW(mp)
+		CPhysicalBitmapTableScan(mp, ptabdesc, pexpr->Pop()->UlOpId(),
+								 GPOS_NEW(mp)
+									 CName(mp, *popLogical->PnameTableAlias()),
+								 pdrgpcrOutput);
 
 	CExpression *pexprCondition = (*pexpr)[0];
 	CExpression *pexprIndexPath = (*pexpr)[1];
 	pexprCondition->AddRef();
 	pexprIndexPath->AddRef();
 
-	CExpression *pexprPhysical =
-			GPOS_NEW(mp) CExpression(mp, popPhysical, pexprCondition, pexprIndexPath);
+	CExpression *pexprPhysical = GPOS_NEW(mp)
+		CExpression(mp, popPhysical, pexprCondition, pexprIndexPath);
 	pxfres->Add(pexprPhysical);
 }
 

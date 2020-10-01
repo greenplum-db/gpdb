@@ -3,7 +3,7 @@ doc/src/sgml/ref/grant.sgml
 PostgreSQL documentation
 -->
 
-<refentry id="SQL-GRANT">
+<refentry id="sql-grant">
  <indexterm zone="sql-grant">
   <primary>GRANT</primary>
  </indexterm>
@@ -23,74 +23,78 @@ PostgreSQL documentation
 <synopsis>
 GRANT { { SELECT | INSERT | UPDATE | DELETE | TRUNCATE | REFERENCES | TRIGGER }
     [, ...] | ALL [ PRIVILEGES ] }
-    ON { [ TABLE ] <replaceable class="PARAMETER">table_name</replaceable> [, ...]
-         | ALL TABLES IN SCHEMA <replaceable class="PARAMETER">schema_name</replaceable> [, ...] }
-    TO <replaceable class="PARAMETER">role_specification</replaceable> [, ...] [ WITH GRANT OPTION ]
+    ON { [ TABLE ] <replaceable class="parameter">table_name</replaceable> [, ...]
+         | ALL TABLES IN SCHEMA <replaceable class="parameter">schema_name</replaceable> [, ...] }
+    TO <replaceable class="parameter">role_specification</replaceable> [, ...] [ WITH GRANT OPTION ]
 
-GRANT { { SELECT | INSERT | UPDATE | REFERENCES } ( <replaceable class="PARAMETER">column_name</replaceable> [, ...] )
-    [, ...] | ALL [ PRIVILEGES ] ( <replaceable class="PARAMETER">column_name</replaceable> [, ...] ) }
-    ON [ TABLE ] <replaceable class="PARAMETER">table_name</replaceable> [, ...]
-    TO <replaceable class="PARAMETER">role_specification</replaceable> [, ...] [ WITH GRANT OPTION ]
+GRANT { { SELECT | INSERT | UPDATE | REFERENCES } ( <replaceable class="parameter">column_name</replaceable> [, ...] )
+    [, ...] | ALL [ PRIVILEGES ] ( <replaceable class="parameter">column_name</replaceable> [, ...] ) }
+    ON [ TABLE ] <replaceable class="parameter">table_name</replaceable> [, ...]
+    TO <replaceable class="parameter">role_specification</replaceable> [, ...] [ WITH GRANT OPTION ]
 
 GRANT { { USAGE | SELECT | UPDATE }
     [, ...] | ALL [ PRIVILEGES ] }
-    ON { SEQUENCE <replaceable class="PARAMETER">sequence_name</replaceable> [, ...]
-         | ALL SEQUENCES IN SCHEMA <replaceable class="PARAMETER">schema_name</replaceable> [, ...] }
-    TO <replaceable class="PARAMETER">role_specification</replaceable> [, ...] [ WITH GRANT OPTION ]
+    ON { SEQUENCE <replaceable class="parameter">sequence_name</replaceable> [, ...]
+         | ALL SEQUENCES IN SCHEMA <replaceable class="parameter">schema_name</replaceable> [, ...] }
+    TO <replaceable class="parameter">role_specification</replaceable> [, ...] [ WITH GRANT OPTION ]
 
 GRANT { { CREATE | CONNECT | TEMPORARY | TEMP } [, ...] | ALL [ PRIVILEGES ] }
     ON DATABASE <replaceable>database_name</replaceable> [, ...]
-    TO <replaceable class="PARAMETER">role_specification</replaceable> [, ...] [ WITH GRANT OPTION ]
+    TO <replaceable class="parameter">role_specification</replaceable> [, ...] [ WITH GRANT OPTION ]
 
 GRANT { USAGE | ALL [ PRIVILEGES ] }
     ON DOMAIN <replaceable>domain_name</replaceable> [, ...]
-    TO <replaceable class="PARAMETER">role_specification</replaceable> [, ...] [ WITH GRANT OPTION ]
+    TO <replaceable class="parameter">role_specification</replaceable> [, ...] [ WITH GRANT OPTION ]
 
 GRANT { USAGE | ALL [ PRIVILEGES ] }
     ON FOREIGN DATA WRAPPER <replaceable>fdw_name</replaceable> [, ...]
-    TO <replaceable class="PARAMETER">role_specification</replaceable> [, ...] [ WITH GRANT OPTION ]
+    TO <replaceable class="parameter">role_specification</replaceable> [, ...] [ WITH GRANT OPTION ]
 
 GRANT { USAGE | ALL [ PRIVILEGES ] }
     ON FOREIGN SERVER <replaceable>server_name</replaceable> [, ...]
-    TO <replaceable class="PARAMETER">role_specification</replaceable> [, ...] [ WITH GRANT OPTION ]
+    TO <replaceable class="parameter">role_specification</replaceable> [, ...] [ WITH GRANT OPTION ]
 
 GRANT { EXECUTE | ALL [ PRIVILEGES ] }
-    ON { FUNCTION <replaceable>function_name</replaceable> ( [ [ <replaceable class="parameter">argmode</replaceable> ] [ <replaceable class="parameter">arg_name</replaceable> ] <replaceable class="parameter">arg_type</replaceable> [, ...] ] ) [, ...]
-         | ALL FUNCTIONS IN SCHEMA <replaceable class="PARAMETER">schema_name</replaceable> [, ...] }
-    TO <replaceable class="PARAMETER">role_specification</replaceable> [, ...] [ WITH GRANT OPTION ]
+    ON { { FUNCTION | PROCEDURE | ROUTINE } <replaceable>routine_name</replaceable> [ ( [ [ <replaceable class="parameter">argmode</replaceable> ] [ <replaceable class="parameter">arg_name</replaceable> ] <replaceable class="parameter">arg_type</replaceable> [, ...] ] ) ] [, ...]
+         | ALL { FUNCTIONS | PROCEDURES | ROUTINES } IN SCHEMA <replaceable class="parameter">schema_name</replaceable> [, ...] }
+    TO <replaceable class="parameter">role_specification</replaceable> [, ...] [ WITH GRANT OPTION ]
 
 GRANT { USAGE | ALL [ PRIVILEGES ] }
     ON LANGUAGE <replaceable>lang_name</replaceable> [, ...]
-    TO <replaceable class="PARAMETER">role_specification</replaceable> [, ...] [ WITH GRANT OPTION ]
+    TO <replaceable class="parameter">role_specification</replaceable> [, ...] [ WITH GRANT OPTION ]
 
 GRANT { { SELECT | UPDATE } [, ...] | ALL [ PRIVILEGES ] }
-    ON LARGE OBJECT <replaceable class="PARAMETER">loid</replaceable> [, ...]
-    TO <replaceable class="PARAMETER">role_specification</replaceable> [, ...] [ WITH GRANT OPTION ]
+    ON LARGE OBJECT <replaceable class="parameter">loid</replaceable> [, ...]
+    TO <replaceable class="parameter">role_specification</replaceable> [, ...] [ WITH GRANT OPTION ]
 
 GRANT { { CREATE | USAGE } [, ...] | ALL [ PRIVILEGES ] }
     ON SCHEMA <replaceable>schema_name</replaceable> [, ...]
-    TO <replaceable class="PARAMETER">role_specification</replaceable> [, ...] [ WITH GRANT OPTION ]
+    TO <replaceable class="parameter">role_specification</replaceable> [, ...] [ WITH GRANT OPTION ]
 
 GRANT { CREATE | ALL [ PRIVILEGES ] }
     ON TABLESPACE <replaceable>tablespace_name</replaceable> [, ...]
-    TO <replaceable class="PARAMETER">role_specification</replaceable> [, ...] [ WITH GRANT OPTION ]
+    TO <replaceable class="parameter">role_specification</replaceable> [, ...] [ WITH GRANT OPTION ]
 
 GRANT { USAGE | ALL [ PRIVILEGES ] }
     ON TYPE <replaceable>type_name</replaceable> [, ...]
-    TO <replaceable class="PARAMETER">role_specification</replaceable> [, ...] [ WITH GRANT OPTION ]
+    TO <replaceable class="parameter">role_specification</replaceable> [, ...] [ WITH GRANT OPTION ]
 
-<phrase>where <replaceable class="PARAMETER">role_specification</replaceable> can be:</phrase>
+<phrase>where <replaceable class="parameter">role_specification</replaceable> can be:</phrase>
 
-    [ GROUP ] <replaceable class="PARAMETER">role_name</replaceable>
+    [ GROUP ] <replaceable class="parameter">role_name</replaceable>
   | PUBLIC
   | CURRENT_USER
   | SESSION_USER
 
+<<<<<<< HEAD
 GRANT <replaceable class="PARAMETER">role_name</replaceable> [, ...] TO <replaceable class="PARAMETER">role_name</replaceable> [, ...] [ WITH ADMIN OPTION ]
 
 GRANT { SELECT | INSERT | ALL [PRIVILEGES] } 
     ON PROTOCOL <replaceable>protocolname</replaceable>
     TO <replaceable class="PARAMETER">username</replaceable>
+=======
+GRANT <replaceable class="parameter">role_name</replaceable> [, ...] TO <replaceable class="parameter">role_name</replaceable> [, ...] [ WITH ADMIN OPTION ]
+>>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
 </synopsis>
  </refsynopsisdiv>
 
@@ -100,7 +104,7 @@ GRANT { SELECT | INSERT | ALL [PRIVILEGES] }
   <para>
    The <command>GRANT</command> command has two basic variants: one
    that grants privileges on a database object (table, column, view, foreign
-   table, sequence, database, foreign-data wrapper, foreign server, function,
+   table, sequence, database, foreign-data wrapper, foreign server, function, procedure,
    procedural language, schema, or tablespace), and one that grants
    membership in a role.  These variants are similar in many ways, but
    they are different enough to be described separately.
@@ -114,13 +118,6 @@ GRANT { SELECT | INSERT | ALL [PRIVILEGES] }
    privileges on a database object to
    one or more roles.  These privileges are added
    to those already granted, if any.
-  </para>
-
-  <para>
-   There is also an option to grant privileges on all objects of the same
-   type within one or more schemas.  This functionality is currently supported
-   only for tables, sequences, and functions (but note that <literal>ALL
-   TABLES</> is considered to include views and foreign tables).
   </para>
 
   <para>
@@ -158,6 +155,7 @@ GRANT { SELECT | INSERT | ALL [PRIVILEGES] }
   </para>
 
   <para>
+<<<<<<< HEAD
    PostgreSQL grants default privileges on some types of objects to
    <literal>PUBLIC</literal>.  No privileges are granted to
    <literal>PUBLIC</literal> by default on
@@ -187,45 +185,45 @@ GRANT { SELECT | INSERT | ALL [PRIVILEGES] }
   </para>
 
   <para>
+=======
+>>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
    The possible privileges are:
 
    <variablelist>
     <varlistentry>
-     <term>SELECT</term>
+     <term><literal>SELECT</literal></term>
+     <term><literal>INSERT</literal></term>
+     <term><literal>UPDATE</literal></term>
+     <term><literal>DELETE</literal></term>
+     <term><literal>TRUNCATE</literal></term>
+     <term><literal>REFERENCES</literal></term>
+     <term><literal>TRIGGER</literal></term>
+     <term><literal>CREATE</literal></term>
+     <term><literal>CONNECT</literal></term>
+     <term><literal>TEMPORARY</literal></term>
+     <term><literal>EXECUTE</literal></term>
+     <term><literal>USAGE</literal></term>
      <listitem>
       <para>
-       Allows <xref linkend="sql-select"> from
-       any column, or the specific columns listed, of the specified table,
-       view, or sequence.
-       Also allows the use of
-       <xref linkend="sql-copy"> TO.
-       This privilege is also needed to reference existing column values in
-       <xref linkend="sql-update"> or
-       <xref linkend="sql-delete">.
-       For sequences, this privilege also allows the use of the
-       <function>currval</function> function.
-       For large objects, this privilege allows the object to be read.
+       Specific types of privileges, as defined in <xref linkend="ddl-priv"/>.
       </para>
      </listitem>
     </varlistentry>
 
     <varlistentry>
-     <term>INSERT</term>
+     <term><literal>TEMP</literal></term>
      <listitem>
       <para>
-       Allows <xref linkend="sql-insert"> of a new
-       row into the specified table.  If specific columns are listed,
-       only those columns may be assigned to in the <command>INSERT</>
-       command (other columns will therefore receive default values).
-       Also allows <xref linkend="sql-copy"> FROM.
+       Alternative spelling for <literal>TEMPORARY</literal>.
       </para>
      </listitem>
     </varlistentry>
 
     <varlistentry>
-     <term>UPDATE</term>
+     <term><literal>ALL PRIVILEGES</literal></term>
      <listitem>
       <para>
+<<<<<<< HEAD
        Allows <xref linkend="sql-update"> of any
        column, or the specific columns listed, of the specified table.
        (In practice, any nontrivial <command>UPDATE</> command will require
@@ -390,6 +388,9 @@ GRANT { SELECT | INSERT | ALL [PRIVILEGES] }
      <listitem>
       <para>
        Grant all of the available privileges at once.
+=======
+       Grant all of the privileges available for the object's type.
+>>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
        The <literal>PRIVILEGES</literal> key word is optional in
        <productname>PostgreSQL</productname>, though it is required by
        strict SQL.
@@ -397,9 +398,26 @@ GRANT { SELECT | INSERT | ALL [PRIVILEGES] }
      </listitem>
     </varlistentry>
    </variablelist>
+  </para>
 
-   The privileges required by other commands are listed on the
-   reference page of the respective command.
+  <para>
+   The <literal>FUNCTION</literal> syntax works for plain functions,
+   aggregate functions, and window functions, but not for procedures;
+   use <literal>PROCEDURE</literal> for those.
+   Alternatively, use <literal>ROUTINE</literal> to refer to a function,
+   aggregate function, window function, or procedure regardless of its
+   precise type.
+  </para>
+
+  <para>
+   There is also an option to grant privileges on all objects of the same
+   type within one or more schemas.  This functionality is currently supported
+   only for tables, sequences, functions, and procedures.  <literal>ALL
+   TABLES</literal> also affects views and foreign tables, just like the
+   specific-object <command>GRANT</command> command.  <literal>ALL
+   FUNCTIONS</literal> also affects aggregate and window functions, but not
+   procedures, again just like the specific-object <command>GRANT</command>
+   command.  Use <literal>ALL ROUTINES</literal> to include procedures.
   </para>
  </refsect2>
 
@@ -421,7 +439,7 @@ GRANT { SELECT | INSERT | ALL [PRIVILEGES] }
    OPTION</literal> on itself, but it may grant or revoke membership in
    itself from a database session where the session user matches the
    role.  Database superusers can grant or revoke membership in any role
-   to anyone.  Roles having <literal>CREATEROLE</> privilege can grant
+   to anyone.  Roles having <literal>CREATEROLE</literal> privilege can grant
    or revoke membership in any role that is not a superuser.
   </para>
 
@@ -471,24 +489,24 @@ GRANT { SELECT | INSERT | ALL [PRIVILEGES] }
  </refsect1>
 
 
- <refsect1 id="SQL-GRANT-notes">
+ <refsect1 id="sql-grant-notes">
   <title>Notes</title>
 
    <para>
-    The <xref linkend="sql-revoke"> command is used
+    The <xref linkend="sql-revoke"/> command is used
     to revoke access privileges.
    </para>
 
    <para>
     Since <productname>PostgreSQL</productname> 8.1, the concepts of users and
     groups have been unified into a single kind of entity called a role.
-    It is therefore no longer necessary to use the keyword <literal>GROUP</>
-    to identify whether a grantee is a user or a group.  <literal>GROUP</>
+    It is therefore no longer necessary to use the keyword <literal>GROUP</literal>
+    to identify whether a grantee is a user or a group.  <literal>GROUP</literal>
     is still allowed in the command, but it is a noise word.
    </para>
 
    <para>
-    A user may perform <command>SELECT</>, <command>INSERT</>, etc. on a
+    A user may perform <command>SELECT</command>, <command>INSERT</command>, etc. on a
     column if they hold that privilege for either the specific column or
     its whole table.  Granting the privilege at the table level and then
     revoking it for one column will not do what one might wish: the
@@ -550,6 +568,7 @@ GRANT { SELECT | INSERT | ALL [PRIVILEGES] }
    </para>
 
    <para>
+<<<<<<< HEAD
     Granting permission on a table does not automatically extend 
     permissions to any sequences used by the table, including 
     sequences tied to <type>SERIAL</type> columns.  Permissions on 
@@ -630,6 +649,17 @@ GRANT SELECT (col1), UPDATE (col1) ON mytable TO miriam_rw;
     Notice that the owner's implicit grant options are not marked in the
     access privileges display.  A <literal>*</literal> will appear only when
     grant options have been explicitly granted to someone.
+=======
+    Granting permission on a table does not automatically extend
+    permissions to any sequences used by the table, including
+    sequences tied to <type>SERIAL</type> columns.  Permissions on
+    sequences must be set separately.
+   </para>
+
+   <para>
+    See <xref linkend="ddl-priv"/> for more information about specific
+    privilege types, as well as how to inspect objects' privileges.
+>>>>>>> 9e1c9f959422192bbe1b842a2a1ffaf76b080196
    </para>
  </refsect1>
 
@@ -679,8 +709,8 @@ GRANT admins TO joe;
    <para>
     <productname>PostgreSQL</productname> allows an object owner to revoke their
     own ordinary privileges: for example, a table owner can make the table
-    read-only to themselves by revoking their own <literal>INSERT</>,
-    <literal>UPDATE</>, <literal>DELETE</>, and <literal>TRUNCATE</>
+    read-only to themselves by revoking their own <literal>INSERT</literal>,
+    <literal>UPDATE</literal>, <literal>DELETE</literal>, and <literal>TRUNCATE</literal>
     privileges.  This is not possible according to the SQL standard.  The
     reason is that <productname>PostgreSQL</productname> treats the owner's
     privileges as having been granted by the owner to themselves; therefore they
@@ -724,8 +754,8 @@ GRANT admins TO joe;
   <title>See Also</title>
 
   <simplelist type="inline">
-   <member><xref linkend="sql-revoke"></member>
-   <member><xref linkend="sql-alterdefaultprivileges"></member>
+   <member><xref linkend="sql-revoke"/></member>
+   <member><xref linkend="sql-alterdefaultprivileges"/></member>
   </simplelist>
  </refsect1>
 

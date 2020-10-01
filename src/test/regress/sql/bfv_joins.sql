@@ -209,18 +209,30 @@ insert into a select g from generate_series(1,1) g;
 insert into b select g from generate_series(1,1) g;
 insert into c select g, g from generate_series(1, 100) g;
 
-create index on c (i,j);
+create index on c (j, i);
 
 -- In order to get the plan we want, Index Scan on 'c' must appear
 -- much cheaper than a Seq Scan. In order to keep this test quick and small,
 -- we don't want to actually create a huge table, so cheat a little and
 -- force that stats to make it look big to the planner.
 set allow_system_table_mods = on;
+
+update pg_class set reltuples=1 where oid ='a'::regclass;
+update pg_class set relpages=1 where oid ='a'::regclass;
+
+update pg_class set reltuples=10 where oid ='b'::regclass;
+update pg_class set relpages=10 where oid ='b'::regclass;
+
 update pg_class set reltuples=10000000 where oid ='c'::regclass;
+update pg_class set relpages=100000 where oid ='c'::regclass;
 
 set enable_hashjoin=off;
 set enable_mergejoin=off;
 set enable_nestloop=on;
+set random_page_cost=1;
+
+set join_collapse_limit=1;
+set from_collapse_limit=1;
 
 -- the plan should look something like this:
 --
@@ -236,7 +248,7 @@ set enable_nestloop=on;
 --                      ->  Materialize [5]
 --                            ->  Broadcast Motion 3:3  (slice3; segments: 3) [3]
 --                                  ->  Seq Scan on a
---                      ->  Index Only Scan using c_i_j_idx on c
+--                      ->  Index Only Scan using c_j_i_idx on c
 --                            Index Cond: (j = (a.i + b.i)) [4]
 --  Optimizer: Postgres query optimizer
 -- (14 rows)
@@ -258,9 +270,9 @@ set enable_nestloop=on;
 -- Motion node from rescanning! That Materialize node is rescanned, when the
 -- executor parameter 'b.i' changes.
 
-explain (costs off) select * from a, b, c where b.i = a.i and (a.i + b.i) = c.j;
+explain (costs off) select * from b, lateral (select * from a, c where b.i = a.i and (a.i + b.i) = c.j) as ac;
 
-select * from a, b, c where b.i = a.i and (a.i + b.i) = c.j;
+select * from b, lateral (select * from a, c where b.i = a.i and (a.i + b.i) = c.j) as ac;
 
 -- The above plan will prefetch inner plan and the inner plan refers
 -- outerParams. Previously, we do not handle this case correct and forgot
@@ -270,12 +282,15 @@ select * from a, b, c where b.i = a.i and (a.i + b.i) = c.j;
 -- for details.
 create type mytype_prefetch_params as (x int, y int);
 alter table b add column mt_col mytype_prefetch_params;
-explain select a.*, b.i, c.* from a, b, c where ((mt_col).x > a.i or b.i = a.i) and (a.i + b.i) = c.j;
-select a.*, b.i, c.* from a, b, c where ((mt_col).x > a.i or b.i = a.i) and (a.i + b.i) = c.j;
+
+explain select ac.*, b.i from b, lateral (select * from a, c where ((mt_col).x > a.i or b.i = a.i) and (a.i + b.i) = c.j) as ac;
+select ac.*, b.i from b, lateral (select * from a, c where ((mt_col).x > a.i or b.i = a.i) and (a.i + b.i) = c.j) as ac;
 
 reset enable_hashjoin;
 reset enable_mergejoin;
 reset enable_nestloop;
+reset join_collapse_limit;
+reset from_collapse_limit;
 
 --
 -- Mix timestamp and timestamptz in a join. We cannot use a Redistribute

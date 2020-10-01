@@ -20,135 +20,114 @@
 
 namespace gpopt
 {
+//---------------------------------------------------------------------------
+//	@class:
+//		CLogicalAssert
+//
+//	@doc:
+//		Assert operator
+//
+//---------------------------------------------------------------------------
+class CLogicalAssert : public CLogicalUnary
+{
+private:
+	// exception
+	CException *m_pexc;
 
-	//---------------------------------------------------------------------------
-	//	@class:
-	//		CLogicalAssert
-	//
-	//	@doc:
-	//		Assert operator
-	//
-	//---------------------------------------------------------------------------
-	class CLogicalAssert : public CLogicalUnary
+	// private copy ctor
+	CLogicalAssert(const CLogicalAssert &);
+
+public:
+	// ctors
+	explicit CLogicalAssert(CMemoryPool *mp);
+
+	CLogicalAssert(CMemoryPool *mp, CException *pexc);
+
+	// dtor
+	virtual ~CLogicalAssert()
 	{
-			
-		private:
-			
-			// exception
-			CException *m_pexc;
-			
-			// private copy ctor
-			CLogicalAssert(const CLogicalAssert &);
+		GPOS_DELETE(m_pexc);
+	}
 
-		public:
+	// ident accessors
+	virtual EOperatorId
+	Eopid() const
+	{
+		return EopLogicalAssert;
+	}
 
-			// ctors
-			explicit
-			CLogicalAssert(CMemoryPool *mp);
-			
-			CLogicalAssert(CMemoryPool *mp, CException *pexc);
+	// name of operator
+	virtual const CHAR *
+	SzId() const
+	{
+		return "CLogicalAssert";
+	}
 
-			// dtor
-			virtual
-			~CLogicalAssert()
-			{
-				GPOS_DELETE(m_pexc);
-			}
+	// exception
+	CException *
+	Pexc() const
+	{
+		return m_pexc;
+	}
 
-			// ident accessors
-			virtual 
-			EOperatorId Eopid() const
-			{
-				return EopLogicalAssert;
-			}
-						
-			// name of operator
-			virtual 
-			const CHAR *SzId() const
-			{
-				return "CLogicalAssert";
-			}
+	// match function;
+	virtual BOOL Matches(COperator *pop) const;
 
-			// exception
-			CException *Pexc() const
-			{
-				return m_pexc;
-			}
-						
-			// match function; 
-			virtual 
-			BOOL Matches(COperator *pop) const;
-			
-			//-------------------------------------------------------------------------------------
-			// Derived Relational Properties
-			//-------------------------------------------------------------------------------------
+	//-------------------------------------------------------------------------------------
+	// Derived Relational Properties
+	//-------------------------------------------------------------------------------------
 
-			// derive output columns
-			virtual
-			CColRefSet *DeriveOutputColumns(CMemoryPool *,CExpressionHandle &);
-			
-			// dervive keys
-			virtual 
-			CKeyCollection *DeriveKeyCollection(CMemoryPool *mp, CExpressionHandle &exprhdl) const;		
-					
-			// derive max card
-			virtual
-			CMaxCard DeriveMaxCard(CMemoryPool *mp, CExpressionHandle &exprhdl) const;
+	// derive output columns
+	virtual CColRefSet *DeriveOutputColumns(CMemoryPool *, CExpressionHandle &);
 
-			// derive constraint property
-			virtual
-			CPropConstraint *DerivePropertyConstraint
-				(
-				CMemoryPool *mp,
-				CExpressionHandle &exprhdl
-				)
-				const
-			{
-				return PpcDeriveConstraintFromPredicates(mp, exprhdl);
-			}
+	// dervive keys
+	virtual CKeyCollection *DeriveKeyCollection(
+		CMemoryPool *mp, CExpressionHandle &exprhdl) const;
 
-			//-------------------------------------------------------------------------------------
-			// Transformations
-			//-------------------------------------------------------------------------------------
+	// derive max card
+	virtual CMaxCard DeriveMaxCard(CMemoryPool *mp,
+								   CExpressionHandle &exprhdl) const;
 
-			// candidate set of xforms
-			virtual
-			CXformSet *PxfsCandidates(CMemoryPool *) const;
+	// derive constraint property
+	virtual CPropConstraint *
+	DerivePropertyConstraint(CMemoryPool *mp, CExpressionHandle &exprhdl) const
+	{
+		return PpcDeriveConstraintFromPredicates(mp, exprhdl);
+	}
 
-			//-------------------------------------------------------------------------------------
-			//-------------------------------------------------------------------------------------
-			//-------------------------------------------------------------------------------------
+	//-------------------------------------------------------------------------------------
+	// Transformations
+	//-------------------------------------------------------------------------------------
 
-			// conversion function
-			static
-			CLogicalAssert *PopConvert
-				(
-				COperator *pop
-				)
-			{
-				GPOS_ASSERT(NULL != pop);
-				GPOS_ASSERT(EopLogicalAssert == pop->Eopid());
-				
-				return reinterpret_cast<CLogicalAssert*>(pop);
-			}
+	// candidate set of xforms
+	virtual CXformSet *PxfsCandidates(CMemoryPool *) const;
 
-			// derive statistics
-			virtual
-			IStatistics *PstatsDerive
-						(
-						CMemoryPool *mp,
-						CExpressionHandle &exprhdl,
-						IStatisticsArray *stats_ctxt
-						)
-						const;
-			
-			// debug print
-			IOstream &OsPrint(IOstream &os) const;
+	//-------------------------------------------------------------------------------------
+	//-------------------------------------------------------------------------------------
+	//-------------------------------------------------------------------------------------
 
-	}; // class CLogicalAssert
+	// conversion function
+	static CLogicalAssert *
+	PopConvert(COperator *pop)
+	{
+		GPOS_ASSERT(NULL != pop);
+		GPOS_ASSERT(EopLogicalAssert == pop->Eopid());
 
-}
+		return reinterpret_cast<CLogicalAssert *>(pop);
+	}
 
-#endif // !GPOS_CLogicalAssert_H
+	// derive statistics
+	virtual IStatistics *PstatsDerive(CMemoryPool *mp,
+									  CExpressionHandle &exprhdl,
+									  IStatisticsArray *stats_ctxt) const;
+
+	// debug print
+	IOstream &OsPrint(IOstream &os) const;
+
+};	// class CLogicalAssert
+
+}  // namespace gpopt
+
+#endif	// !GPOS_CLogicalAssert_H
 
 // EOF
