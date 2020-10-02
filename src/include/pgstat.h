@@ -64,6 +64,7 @@ typedef enum StatMsgType
 	PGSTAT_MTYPE_ARCHIVER,
 	PGSTAT_MTYPE_QUEUESTAT, /* GPDB */
 	PGSTAT_MTYPE_BGWRITER,
+	PGSTAT_MTYPE_WAL,
 	PGSTAT_MTYPE_SLRU,
 	PGSTAT_MTYPE_FUNCSTAT,
 	PGSTAT_MTYPE_FUNCPURGE,
@@ -125,7 +126,8 @@ typedef struct PgStat_TableCounts
 typedef enum PgStat_Shared_Reset_Target
 {
 	RESET_ARCHIVER,
-	RESET_BGWRITER
+	RESET_BGWRITER,
+	RESET_WAL
 } PgStat_Shared_Reset_Target;
 
 /* Possible object types for resetting single counters */
@@ -455,6 +457,16 @@ typedef struct PgStat_MsgBgWriter
 } PgStat_MsgBgWriter;
 
 /* ----------
+ * PgStat_MsgWal			Sent by backends and background processes to update WAL statistics.
+ * ----------
+ */
+typedef struct PgStat_MsgWal
+{
+	PgStat_MsgHdr m_hdr;
+	PgStat_Counter m_wal_buffers_full;
+} PgStat_MsgWal;
+
+/* ----------
  * PgStat_MsgSLRU			Sent by a backend to update SLRU statistics.
  * ----------
  */
@@ -615,6 +627,7 @@ typedef union PgStat_Msg
 	PgStat_MsgArchiver msg_archiver;
 	PgStat_MsgQueuestat msg_queuestat;  /* GPDB */
 	PgStat_MsgBgWriter msg_bgwriter;
+	PgStat_MsgWal msg_wal;
 	PgStat_MsgSLRU msg_slru;
 	PgStat_MsgFuncstat msg_funcstat;
 	PgStat_MsgFuncpurge msg_funcpurge;
@@ -633,7 +646,7 @@ typedef union PgStat_Msg
  * ------------------------------------------------------------
  */
 
-#define PGSTAT_FILE_FORMAT_ID	0x01A5BC9D
+#define PGSTAT_FILE_FORMAT_ID	0x01A5BC9E
 
 /* ----------
  * PgStat_StatDBEntry			The collector's data per database
@@ -804,6 +817,15 @@ typedef struct PgStat_GlobalStats
 	PgStat_Counter buf_alloc;
 	TimestampTz stat_reset_timestamp;
 } PgStat_GlobalStats;
+
+/*
+ * WAL statistics kept in the stats collector
+ */
+typedef struct PgStat_WalStats
+{
+	PgStat_Counter wal_buffers_full;
+	TimestampTz stat_reset_timestamp;
+} PgStat_WalStats;
 
 /*
  * SLRU statistics kept in the stats collector
@@ -1359,6 +1381,11 @@ extern bool pgstat_collect_queuelevel;
 extern PgStat_MsgBgWriter BgWriterStats;
 
 /*
+ * WAL statistics counter is updated by backends and background processes
+ */
+extern PgStat_MsgWal WalStats;
+
+/*
  * Updated by pgstat_count_buffer_*_time macros
  */
 extern PgStat_Counter pgStatBlockReadTime;
@@ -1652,6 +1679,7 @@ extern void pgstat_twophase_postabort(TransactionId xid, uint16 info,
 
 extern void pgstat_send_archiver(const char *xlog, bool failed);
 extern void pgstat_send_bgwriter(void);
+extern void pgstat_send_wal(void);
 
 struct CdbDispatchResults;
 struct pg_result;
@@ -1677,6 +1705,7 @@ extern PgStat_StatFuncEntry *pgstat_fetch_stat_funcentry(Oid funcid);
 extern int	pgstat_fetch_stat_numbackends(void);
 extern PgStat_ArchiverStats *pgstat_fetch_stat_archiver(void);
 extern PgStat_GlobalStats *pgstat_fetch_global(void);
+extern PgStat_WalStats *pgstat_fetch_stat_wal(void);
 extern PgStat_SLRUStats *pgstat_fetch_slru(void);
 
 extern void pgstat_count_slru_page_zeroed(int slru_idx);
