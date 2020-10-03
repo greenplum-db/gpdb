@@ -338,7 +338,7 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE [IF NOT EXISTS]
           <pt>LIKE <varname>source_table</varname>
             <varname>like_option</varname>
             <codeph>...</codeph>]</pt>
-          <pd>The <codeph>LIKE</codeph> clause specifies a table from which t`he new table
+          <pd>The <codeph>LIKE</codeph> clause specifies a table from which the new table
             automatically copies all column names, their data types, not-null constraints, and
             distribution policy. Unlike <codeph>INHERITS</codeph>, the new table and original table
             are completely decoupled after creation is complete.</pd>
