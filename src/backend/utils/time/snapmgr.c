@@ -225,11 +225,11 @@ GetTransactionSnapshot(void)
 
 	if (IsolationUsesXactSnapshot())
 	{
-		elog((Debug_print_snapshot_dtm ? LOG : DEBUG5),
-			 "[Distributed Snapshot #%u] *Serializable* (gxid = %u, '%s')",
-			 CurrentSnapshot->distribSnapshotWithLocalMapping.ds.distribSnapshotId,
-			 getDistributedTransactionId(),
-			 DtxContextToString(DistributedTransactionContext));
+		elogif(Debug_print_snapshot_dtm, LOG,
+			   "[Distributed Snapshot #%u] *Serializable* (gxid = %u, '%s')",
+			   CurrentSnapshot->distribSnapshotWithLocalMapping.ds.distribSnapshotId,
+			   getDistributedTransactionId(),
+			   DtxContextToString(DistributedTransactionContext));
 
 		// GPDB_91_MERGE_FIXME: the name of UpdateSerializableCommandId is a bit
 		// wrong, now that SERIALIZABLE and REPEATABLE READ are not the same.
@@ -245,11 +245,11 @@ GetTransactionSnapshot(void)
 
 	CurrentSnapshot = GetSnapshotData(&CurrentSnapshotData, DistributedTransactionContext);
 
-	elog((Debug_print_snapshot_dtm ? LOG : DEBUG5),
-		 "[Distributed Snapshot #%u] (gxid = %u, '%s')",
-		 CurrentSnapshot->distribSnapshotWithLocalMapping.ds.distribSnapshotId,
-		 getDistributedTransactionId(),
-		 DtxContextToString(DistributedTransactionContext));
+	elogif(Debug_print_snapshot_dtm, LOG,
+		   "[Distributed Snapshot #%u] (gxid = %u, '%s')",
+		   CurrentSnapshot->distribSnapshotWithLocalMapping.ds.distribSnapshotId,
+		   getDistributedTransactionId(),
+		   DtxContextToString(DistributedTransactionContext));
 
 	return CurrentSnapshot;
 }

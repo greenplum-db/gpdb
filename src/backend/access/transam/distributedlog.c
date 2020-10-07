@@ -336,15 +336,15 @@ DistributedLog_SetCommittedWithinAPage(
 
 	if (isRedo)
 	{
-		elog((Debug_print_full_dtm ? LOG : DEBUG5),
-			 "DistributedLog_SetCommitted check if page %d is present",
-			 page);
+		elogif(Debug_print_full_dtm, LOG,
+			   "DistributedLog_SetCommitted check if page %d is present",
+			   page);
 		if (!SimpleLruDoesPhysicalPageExist(DistributedLogCtl, page))
 		{
 			DistributedLog_ZeroPage(page, /* writeXLog */ false);
-			elog((Debug_print_full_dtm ? LOG : DEBUG5),
-				 "DistributedLog_SetCommitted zeroed page %d",
-				 page);
+			elogif(Debug_print_full_dtm, LOG,
+				   "DistributedLog_SetCommitted zeroed page %d",
+				   page);
 		}
 	}
 
@@ -382,10 +382,10 @@ DistributedLog_SetCommittedWithinAPage(
 			DistributedLogCtl->shared->page_dirty[slotno] = true;
 		}
 
-		elog((Debug_print_full_dtm ? LOG : DEBUG5),
-			 "DistributedLog_SetCommitted with local xid = %d (page = %d, entryno = %d) and distributed transaction xid = %u (timestamp = %u) status = %s",
-			 localXid[i], page, entryno, distribXid, distribTimeStamp,
-			 (alreadyThere ? "already there" : "set"));
+		elogif(Debug_print_full_dtm, LOG,
+			   "DistributedLog_SetCommitted with local xid = %d (page = %d, entryno = %d) and distributed transaction xid = %u (timestamp = %u) status = %s",
+			   localXid[i], page, entryno, distribXid, distribTimeStamp,
+			   (alreadyThere ? "already there" : "set"));
 	}
 
 	LWLockRelease(DistributedLogControlLock);
@@ -716,9 +716,9 @@ DistributedLog_ZeroPage(int page, bool writeXlog)
 
 	Assert(!IS_QUERY_DISPATCHER());
 
-	elog((Debug_print_full_dtm ? LOG : DEBUG5),
-		 "DistributedLog_ZeroPage zero page %d",
-		 page);
+	elogif(Debug_print_full_dtm, LOG,
+		   "DistributedLog_ZeroPage zero page %d",
+		   page);
 	slotno = SimpleLruZeroPage(DistributedLogCtl, page);
 
 	if (writeXlog)
@@ -751,9 +751,9 @@ DistributedLog_Startup(TransactionId oldestActiveXid,
 
 	LWLockAcquire(DistributedLogControlLock, LW_EXCLUSIVE);
 
-	elog((Debug_print_full_dtm ? LOG : DEBUG5),
-		 "DistributedLog_Startup startPage %d, endPage %d",
-		 startPage, endPage);
+	elogif(Debug_print_full_dtm, LOG,
+		   "DistributedLog_Startup startPage %d, endPage %d",
+		   startPage, endPage);
 
 	/*
 	 * Initialize our idea of the latest page number.
@@ -841,8 +841,7 @@ DistributedLog_Shutdown(void)
 	if (IS_QUERY_DISPATCHER())
 		return;
 
-	elog((Debug_print_full_dtm ? LOG : DEBUG5),
-		 "DistributedLog_Shutdown");
+	elogif(Debug_print_full_dtm, LOG, "DistributedLog_Shutdown");
 
 	/* Flush dirty DistributedLog pages to disk */
 	SimpleLruFlush(DistributedLogCtl, false);
@@ -857,8 +856,7 @@ DistributedLog_CheckPoint(void)
 	if (IS_QUERY_DISPATCHER())
 		return;
 
-	elog((Debug_print_full_dtm ? LOG : DEBUG5),
-		 "DistributedLog_CheckPoint");
+	elogif(Debug_print_full_dtm, LOG, "DistributedLog_CheckPoint");
 
 	/* Flush dirty DistributedLog pages to disk */
 	SimpleLruFlush(DistributedLogCtl, true);
@@ -891,9 +889,7 @@ DistributedLog_Extend(TransactionId newestXact)
 
 	page = TransactionIdToPage(newestXact);
 
-	elog((Debug_print_full_dtm ? LOG : DEBUG5),
-		 "DistributedLog_Extend page %d",
-		 page);
+	elogif(Debug_print_full_dtm, LOG, "DistributedLog_Extend page %d", page);
 
 	LWLockAcquire(DistributedLogControlLock, LW_EXCLUSIVE);
 
@@ -902,9 +898,9 @@ DistributedLog_Extend(TransactionId newestXact)
 
 	LWLockRelease(DistributedLogControlLock);
 
-	elog((Debug_print_full_dtm ? LOG : DEBUG5),
-		 "DistributedLog_Extend with newest local xid = %d to page = %d",
-		 newestXact, page);
+	elogif(Debug_print_full_dtm, LOG,
+		   "DistributedLog_Extend with newest local xid = %d to page = %d",
+		   newestXact, page);
 }
 
 
@@ -945,9 +941,9 @@ DistributedLog_Truncate(TransactionId oldestXmin)
 	 */
 	cutoffPage = TransactionIdToPage(oldestXmin);
 
-	elog((Debug_print_full_dtm ? LOG : DEBUG5),
-		 "DistributedLog_Truncate with oldest local xid = %d to cutoff page = %d",
-		 oldestXmin, cutoffPage);
+	elogif(Debug_print_full_dtm, LOG,
+		   "DistributedLog_Truncate with oldest local xid = %d to cutoff page = %d",
+		   oldestXmin, cutoffPage);
 
 	/* Check to see if there's any files that could be removed */
 	if (!SlruScanDirectory(DistributedLogCtl, SlruScanDirCbReportPresence, &cutoffPage))
@@ -1047,9 +1043,9 @@ DistributedLog_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 
 		memcpy(&page, XLogRecGetData(record), sizeof(int));
 
-		elog((Debug_print_full_dtm ? LOG : DEBUG5),
-			 "Redo DISTRIBUTEDLOG_ZEROPAGE page %d",
-			 page);
+		elogif(Debug_print_full_dtm, LOG,
+			   "Redo DISTRIBUTEDLOG_ZEROPAGE page %d",
+			   page);
 
 		LWLockAcquire(DistributedLogControlLock, LW_EXCLUSIVE);
 
@@ -1059,9 +1055,9 @@ DistributedLog_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 
 		LWLockRelease(DistributedLogControlLock);
 
-		elog((Debug_print_full_dtm ? LOG : DEBUG5),
-			 "DistributedLog_redo zero page = %d",
-			 page);
+		elogif(Debug_print_full_dtm, LOG,
+			   "DistributedLog_redo zero page = %d",
+			   page);
 	}
 	else if (info == DISTRIBUTEDLOG_TRUNCATE)
 	{
@@ -1069,9 +1065,9 @@ DistributedLog_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 
 		memcpy(&page, XLogRecGetData(record), sizeof(int));
 
-		elog((Debug_print_full_dtm ? LOG : DEBUG5),
-			 "Redo DISTRIBUTEDLOG_TRUNCATE page %d",
-			 page);
+		elogif(Debug_print_full_dtm, LOG,
+			   "Redo DISTRIBUTEDLOG_TRUNCATE page %d",
+			   page);
 
 		/*
 		 * During XLOG replay, latest_page_number isn't set up yet; insert
@@ -1081,9 +1077,9 @@ DistributedLog_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 
 		SimpleLruTruncate(DistributedLogCtl, page);
 
-		elog((Debug_print_full_dtm ? LOG : DEBUG5),
-			 "DistributedLog_redo truncate to cutoff page = %d",
-			 page);
+		elogif(Debug_print_full_dtm, LOG,
+			   "DistributedLog_redo truncate to cutoff page = %d",
+			   page);
 	}
 	else
 		elog(PANIC, "DistributedLog_redo: unknown op code %u", info);

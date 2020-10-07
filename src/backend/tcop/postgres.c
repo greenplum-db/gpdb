@@ -1472,8 +1472,8 @@ exec_mpp_dtx_protocol_command(DtxProtocolCommand dtxProtocolCommand,
 	if (log_statement == LOGSTMT_ALL)
 		elog(LOG,"DTM protocol command '%s' for gid = %s", loggingStr, gid);
 
-	elog((Debug_print_full_dtm ? LOG : DEBUG5),"exec_mpp_dtx_protocol_command received the dtxProtocolCommand = %d (%s) gid = %s",
-		 dtxProtocolCommand, loggingStr, gid);
+	elogif(Debug_print_full_dtm, LOG, "exec_mpp_dtx_protocol_command received the dtxProtocolCommand = %d (%s) gid = %s",
+		   dtxProtocolCommand, loggingStr, gid);
 
 	set_ps_display(commandTag, false);
 
@@ -1497,8 +1497,8 @@ exec_mpp_dtx_protocol_command(DtxProtocolCommand dtxProtocolCommand,
 
 	performDtxProtocolCommand(dtxProtocolCommand, gid, contextInfo);
 
-	elog((Debug_print_full_dtm ? LOG : DEBUG5),"exec_mpp_dtx_protocol_command calling EndCommand for dtxProtocolCommand = %d (%s) gid = %s",
-		 dtxProtocolCommand, loggingStr, gid);
+	elogif(Debug_print_full_dtm, LOG, "exec_mpp_dtx_protocol_command calling EndCommand for dtxProtocolCommand = %d (%s) gid = %s",
+		   dtxProtocolCommand, loggingStr, gid);
 
 	if (Debug_dtm_action == DEBUG_DTM_ACTION_FAIL_END_COMMAND &&
 		CheckDebugDtmActionProtocol(dtxProtocolCommand, contextInfo))
@@ -1531,11 +1531,11 @@ CheckDebugDtmActionSqlCommandTag(const char *sqlCommandTag)
 			  strcmp(Debug_dtm_action_sql_command_tag, sqlCommandTag) == 0 &&
 			  Debug_dtm_action_segment == GpIdentity.segindex);
 
-	elog((Debug_print_full_dtm ? LOG : DEBUG5),"CheckDebugDtmActionSqlCommandTag Debug_dtm_action_target = %d, Debug_dtm_action_sql_command_tag = '%s' check '%s', Debug_dtm_action_segment = %d, Debug_dtm_action_primary = %s, result = %s.",
-		Debug_dtm_action_target,
-		Debug_dtm_action_sql_command_tag, (sqlCommandTag == NULL ? "<NULL>" : sqlCommandTag),
-		Debug_dtm_action_segment, (Debug_dtm_action_primary ? "true" : "false"),
-		(result ? "true" : "false"));
+	elogif(Debug_print_full_dtm, LOG, "CheckDebugDtmActionSqlCommandTag Debug_dtm_action_target = %d, Debug_dtm_action_sql_command_tag = '%s' check '%s', Debug_dtm_action_segment = %d, Debug_dtm_action_primary = %s, result = %s.",
+		   Debug_dtm_action_target,
+		   Debug_dtm_action_sql_command_tag, (sqlCommandTag == NULL ? "<NULL>" : sqlCommandTag),
+		   Debug_dtm_action_segment, (Debug_dtm_action_primary ? "true" : "false"),
+		   (result ? "true" : "false"));
 
 	return result;
 }
@@ -2221,7 +2221,7 @@ exec_bind_message(StringInfo input_message)
 	portal_name = pq_getmsgstring(input_message);
 	stmt_name = pq_getmsgstring(input_message);
 
-	elog((Debug_print_full_dtm ? LOG : DEBUG5), "Bind: portal %s stmt_name %s", portal_name, stmt_name);
+	elogif(Debug_print_full_dtm, LOG, "Bind: portal %s stmt_name %s", portal_name, stmt_name);
 
 	ereport(DEBUG2,
 			(errmsg("bind %s to %s",
@@ -5216,8 +5216,8 @@ PostgresMain(int argc, char *argv[],
 			restore_guc_to_QE();
 
 
-		ereport((Debug_print_full_dtm ? LOG : DEBUG5),
-				(errmsg_internal("First char: '%c'; gp_role = '%s'.", firstchar, role_to_string(Gp_role))));
+		ereportif(Debug_print_full_dtm, LOG,
+				  (errmsg_internal("First char: '%c'; gp_role = '%s'.", firstchar, role_to_string(Gp_role))));
 
 		check_forbidden_in_gpdb_handlers(firstchar);
 
@@ -5234,7 +5234,7 @@ PostgresMain(int argc, char *argv[],
                     query_string = pq_getmsgstring(&input_message);
 					pq_getmsgend(&input_message);
 
-					elog((Debug_print_full_dtm ? LOG : DEBUG5), "Simple query stmt: %s.",query_string);
+					elogif(Debug_print_full_dtm, LOG, "Simple query stmt: %s.",query_string);
 
 					if (am_walsender)
 						exec_replication_command(query_string);
@@ -5339,7 +5339,7 @@ PostgresMain(int argc, char *argv[],
 
 					pq_getmsgend(&input_message);
 
-					elog((Debug_print_full_dtm ? LOG : DEBUG5), "MPP dispatched stmt from QD: %s.",query_string);
+					elogif(Debug_print_full_dtm, LOG, "MPP dispatched stmt from QD: %s.",query_string);
 
 					if (IsResGroupActivated() && resgroupInfoLen > 0)
 						SwitchResGroupOnSegment(resgroupInfoBuf, resgroupInfoLen);
@@ -5371,7 +5371,7 @@ PostgresMain(int argc, char *argv[],
 							 * Special explicit BEGIN for COPY, etc.
 							 * We've already begun it as part of setting up the context.
 							 */
-							elog((Debug_print_full_dtm ? LOG : DEBUG5), "PostgresMain explicit %s", query_string);
+							elogif(Debug_print_full_dtm, LOG, "PostgresMain explicit %s", query_string);
 
 							// UNDONE: HACK
 							pgstat_report_activity(STATE_RUNNING, "BEGIN");
@@ -5476,7 +5476,7 @@ PostgresMain(int argc, char *argv[],
 					}
 					pq_getmsgend(&input_message);
 
-					elog((Debug_print_full_dtm ? LOG : DEBUG5), "Parse: %s.",query_string);
+					elogif(Debug_print_full_dtm, LOG, "Parse: %s.",query_string);
 
 					exec_parse_message(query_string, stmt_name,
 									   paramTypes, numParams);
@@ -5512,7 +5512,7 @@ PostgresMain(int argc, char *argv[],
 					max_rows = (int64)pq_getmsgint(&input_message, 4);
 					pq_getmsgend(&input_message);
 
-					elog((Debug_print_full_dtm ? LOG : DEBUG5), "Execute: %s.",portal_name);
+					elogif(Debug_print_full_dtm, LOG, "Execute: %s.",portal_name);
 
 					exec_execute_message(portal_name, max_rows);
 				}
@@ -5528,7 +5528,7 @@ PostgresMain(int argc, char *argv[],
 				pgstat_report_activity(STATE_FASTPATH, NULL);
 				set_ps_display("<FASTPATH>", false);
 
-				elog((Debug_print_full_dtm ? LOG : DEBUG5), "Fast path function call.");
+				elogif(Debug_print_full_dtm, LOG, "Fast path function call.");
 
 				/* start an xact for this function invocation */
 				start_xact_command();
@@ -5611,7 +5611,7 @@ PostgresMain(int argc, char *argv[],
 					describe_target = pq_getmsgstring(&input_message);
 					pq_getmsgend(&input_message);
 
-					elog((Debug_print_full_dtm ? LOG : DEBUG5), "Describe: %s.", describe_target);
+					elogif(Debug_print_full_dtm, LOG, "Describe: %s.", describe_target);
 
 					switch (describe_type)
 					{

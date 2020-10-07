@@ -123,9 +123,9 @@ CdbDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 		if (!GangOK(primaryGang) && badGangs != NULL)
 		{
 			*badGangs = true;
-			elog((Debug_print_full_dtm ? LOG : DEBUG5),
-				 "CdbDispatchDtxProtocolCommand: Bad gang from dispatch of %s for gid = %s",
-				 dtxProtocolCommandLoggingStr, gid);
+			elogif(Debug_print_full_dtm, LOG,
+				   "CdbDispatchDtxProtocolCommand: Bad gang from dispatch of %s for gid = %s",
+				   dtxProtocolCommandLoggingStr, gid);
 		}
 
 		cdbdisp_destroyDispatcherState(ds);
@@ -209,10 +209,10 @@ qdSerializeDtxContextInfo(int *size, bool wantSnapshot, bool inCursor,
 
 	DtxContextInfo_Serialize(serializedDtxContextInfo, pDtxContextInfo);
 
-	elog((Debug_print_full_dtm ? LOG : DEBUG5),
-		 "qdSerializeDtxContextInfo (called by %s) returning a snapshot of %d bytes (ptr is %s)",
-		 debugCaller, *size,
-		 (serializedDtxContextInfo != NULL ? "Non-NULL" : "NULL"));
+	elogif(Debug_print_full_dtm, LOG,
+		   "qdSerializeDtxContextInfo (called by %s) returning a snapshot of %d bytes (ptr is %s)",
+		   debugCaller, *size,
+		   (serializedDtxContextInfo != NULL ? "Non-NULL" : "NULL"));
 	return serializedDtxContextInfo;
 }
 

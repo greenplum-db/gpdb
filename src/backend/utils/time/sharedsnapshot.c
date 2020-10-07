@@ -551,8 +551,8 @@ SharedSnapshotRemove(volatile SharedSnapshotSlot *slot, char *creatorDescription
 
 	LWLockRelease(SharedSnapshotLock);
 
-	elog((Debug_print_full_dtm ? LOG : DEBUG5),"SharedSnapshotRemove removed slot for slotId = %d, creator = %s (address %p)",
-		 slotId, creatorDescription, SharedLocalSnapshotSlot);
+	elogif(Debug_print_full_dtm, LOG, "SharedSnapshotRemove removed slot for slotId = %d, creator = %s (address %p)",
+		   slotId, creatorDescription, SharedLocalSnapshotSlot);
 }
 
 void
@@ -560,8 +560,8 @@ addSharedSnapshot(char *creatorDescription, int id)
 {
 	SharedLocalSnapshotSlot = SharedSnapshotAdd(id);
 
-	elog((Debug_print_full_dtm ? LOG : DEBUG5),"%s added Shared Local Snapshot slot for gp_session_id = %d (address %p)",
-		 creatorDescription, id, SharedLocalSnapshotSlot);
+	elogif(Debug_print_full_dtm, LOG, "%s added Shared Local Snapshot slot for gp_session_id = %d (address %p)",
+		   creatorDescription, id, SharedLocalSnapshotSlot);
 }
 
 void
@@ -586,8 +586,8 @@ lookupSharedSnapshot(char *lookerDescription, char *creatorDescription, int id)
 
 	SharedLocalSnapshotSlot = slot;
 
-	elog((Debug_print_full_dtm ? LOG : DEBUG5),"%s found Shared Local Snapshot slot for gp_session_id = %d created by %s (address %p)",
-		 lookerDescription, id, creatorDescription, SharedLocalSnapshotSlot);
+	elogif(Debug_print_full_dtm, LOG, "%s found Shared Local Snapshot slot for gp_session_id = %d created by %s (address %p)",
+		   lookerDescription, id, creatorDescription, SharedLocalSnapshotSlot);
 }
 
 static char *

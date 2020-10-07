@@ -590,8 +590,8 @@ MarkAsPrepared(GlobalTransaction gxact)
 	gxact->valid = true;
 	LWLockRelease(TwoPhaseStateLock);
 
-	elog((Debug_print_full_dtm ? LOG : DEBUG5),"MarkAsPrepared marking GXACT gid = %s as valid (prepared)",
-		 gxact->gid);
+	elogif(Debug_print_full_dtm, LOG, "MarkAsPrepared marking GXACT gid = %s as valid (prepared)",
+		   gxact->gid);
 
 	LocalDistribXact_ChangeState(gxact->pgprocno,
 								 LOCALDISTRIBXACT_STATE_PREPARED);
@@ -612,7 +612,7 @@ LockGXact(const char *gid, Oid user, bool raiseErrorIfNotFound)
 {
 	int			i;
 
-	elog((Debug_print_full_dtm ? LOG : DEBUG5),"LockGXact called to lock identifier = %s.",gid);
+	elogif(Debug_print_full_dtm, LOG, "LockGXact called to lock identifier = %s.", gid);
 	/* on first call, register the exit hook */
 	if (!twophaseExitRegistered)
 	{
@@ -627,7 +627,7 @@ LockGXact(const char *gid, Oid user, bool raiseErrorIfNotFound)
 		GlobalTransaction gxact = TwoPhaseState->prepXacts[i];
 		PGPROC	   *proc = &ProcGlobal->allProcs[gxact->pgprocno];
 
-		elog((Debug_print_full_dtm ? LOG : DEBUG5), "LockGXact checking identifier = %s.",gxact->gid);
+		elogif(Debug_print_full_dtm, LOG, "LockGXact checking identifier = %s.", gxact->gid);
 
 		/* Ignore not-yet-valid GIDs */
 		if (!gxact->valid)
@@ -1391,8 +1391,8 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 	xid = pgxact->xid;
 	tfXLogRecPtr = gxact->prepare_begin_lsn;
 
-	elog((Debug_print_full_dtm ? LOG : DEBUG5),
-		 "FinishPreparedTransaction(): got xid %d for gid '%s'", xid, gid);
+	elogif(Debug_print_full_dtm, LOG,
+		   "FinishPreparedTransaction(): got xid %d for gid '%s'", xid, gid);
 
     /* get the two phase information from the xlog */
 	/*

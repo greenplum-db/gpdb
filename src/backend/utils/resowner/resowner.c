@@ -215,7 +215,7 @@ ResourceOwnerRelease(ResourceOwner owner,
 	 */
 	if (owner == NULL)
 	{
-		elog((Debug_print_full_dtm ? LOG : DEBUG5),"ResourceOwnerRelease found owner = NULL");
+		elogif(Debug_print_full_dtm, LOG, "ResourceOwnerRelease found owner = NULL");
 		return;
 	}
 

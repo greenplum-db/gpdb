@@ -117,12 +117,12 @@ LocalDistribXact_ChangeState(int pgprocno,
 
 	proc->localDistribXactData.state = newState;
 
-	elog((Debug_print_full_dtm ? LOG : DEBUG5),
-		 "Moved distributed transaction xid = %u (local xid = %u) from \"%s\" to \"%s\"",
-		 distribXid,
-		 pgxact->xid,
-		 LocalDistribXactStateToString(oldState),
-		 LocalDistribXactStateToString(newState));
+	elogif(Debug_print_full_dtm, LOG,
+		   "Moved distributed transaction xid = %u (local xid = %u) from \"%s\" to \"%s\"",
+		   distribXid,
+		   pgxact->xid,
+		   LocalDistribXactStateToString(oldState),
+		   LocalDistribXactStateToString(newState));
 }
 
 #define MAX_LOCAL_DISTRIB_DISPLAY_BUFFER 100

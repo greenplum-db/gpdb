@@ -176,9 +176,9 @@ DistributedSnapshotWithLocalMapping_CommittedTest(
 	 */
 	if (distribXid >= ds->xmax)
 	{
-		elog((Debug_print_snapshot_dtm ? LOG : DEBUG5),
-			 "distributedsnapshot committed but invisible: distribXid %d dxmax %d dxmin %d distribSnapshotId %d",
-			 distribXid, ds->xmax, ds->xmin, ds->distribSnapshotId);
+		elogif(Debug_print_snapshot_dtm, LOG,
+			   "distributedsnapshot committed but invisible: distribXid %d dxmax %d dxmin %d distribSnapshotId %d",
+			   distribXid, ds->xmax, ds->xmin, ds->distribSnapshotId);
 
 		return DISTRIBUTEDSNAPSHOT_COMMITTED_INPROGRESS;
 	}
@@ -260,14 +260,14 @@ DistributedSnapshot_Copy(DistributedSnapshot *target,
 {
 	DistributedSnapshot_Reset(target);
 
-	elog((Debug_print_full_dtm ? LOG : DEBUG5),
-		 "DistributedSnapshot_Copy target maxCount %d, inProgressXidArray %p, and "
-		 "source maxCount %d, count %d, inProgressXidArray %p",
-		 target->maxCount,
-		 target->inProgressXidArray,
-		 source->maxCount,
-		 source->count,
-		 source->inProgressXidArray);
+	elogif(Debug_print_full_dtm, LOG,
+		   "DistributedSnapshot_Copy target maxCount %d, inProgressXidArray %p, and "
+		   "source maxCount %d, count %d, inProgressXidArray %p",
+		   target->maxCount,
+		   target->inProgressXidArray,
+		   source->maxCount,
+		   source->count,
+		   source->inProgressXidArray);
 
 	/*
 	 * If we have allocated space for the in-progress distributed
