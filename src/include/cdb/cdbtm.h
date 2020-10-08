@@ -257,9 +257,6 @@ typedef struct TMGALLXACTSTATUS
 	TMGXACTSTATUS		*statusArray;
 } TMGALLXACTSTATUS;
 
-
-#define DTM_DEBUG5 (Debug_print_full_dtm ? LOG : DEBUG5)
-
 extern int max_tm_gxacts;
 
 extern DtxContext DistributedTransactionContext;

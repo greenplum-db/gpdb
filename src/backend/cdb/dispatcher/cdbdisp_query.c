@@ -272,9 +272,8 @@ CdbDispatchSetCommand(const char *strCommand, bool cancelOnError)
 	ListCell   *le;
 	ErrorData *qeError = NULL;
 
-	elog((Debug_print_full_dtm ? LOG : DEBUG5),
-		 "CdbDispatchSetCommand for command = '%s'",
-		 strCommand);
+	elogif(Debug_print_full_dtm, LOG,
+		   "CdbDispatchSetCommand for command = '%s'", strCommand);
 
 	pQueryParms = cdbdisp_buildCommandQueryParms(strCommand, DF_NONE);
 

@@ -1280,10 +1280,10 @@ doDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 			 								dtxProtocolCommandStr,
 											segmentsToContentStr(dtxSegments));
 
-	ereportif(Debug_print_full_dtm, LOG,
-			  (errmsg("dispatchDtxProtocolCommand: %d ('%s'), direct content #: %s",
-					  dtxProtocolCommand, dtxProtocolCommandStr,
-					  segmentsToContentStr(dtxSegments))));
+	elogif(Debug_print_full_dtm, LOG,
+		   "dispatchDtxProtocolCommand: %d ('%s'), direct content #: %s",
+		   dtxProtocolCommand, dtxProtocolCommandStr,
+		   segmentsToContentStr(dtxSegments));
 
 	ErrorData *qeError;
 	results = CdbDispatchDtxProtocolCommand(dtxProtocolCommand,
@@ -1751,23 +1751,23 @@ setupQEDtxContext(DtxContextInfo *dtxContextInfo)
 	haveDistributedSnapshot = dtxContextInfo->haveDistributedSnapshot;
 	isSharedLocalSnapshotSlotPresent = (SharedLocalSnapshotSlot != NULL);
 
-	if (DEBUG5 >= log_min_messages || Debug_print_full_dtm)
+	if (Debug_print_full_dtm)
 	{
-		elog(DTM_DEBUG5,
+		elog(LOG,
 			 "setupQEDtxContext inputs (part 1): Gp_role = %s, Gp_is_writer = %s, "
 			 "txnOptions = 0x%x, needDtx = %s, explicitBegin = %s, isoLevel = %s, readOnly = %s, haveDistributedSnapshot = %s.",
 			 role_to_string(Gp_role), (Gp_is_writer ? "true" : "false"), txnOptions,
 			 (needDtx ? "true" : "false"), (explicitBegin ? "true" : "false"),
 			 IsoLevelAsUpperString(mppTxOptions_IsoLevel(txnOptions)), (isMppTxOptions_ReadOnly(txnOptions) ? "true" : "false"),
 			 (haveDistributedSnapshot ? "true" : "false"));
-		elog(DTM_DEBUG5,
+		elog(LOG,
 			 "setupQEDtxContext inputs (part 2): distributedXid = %u, isSharedLocalSnapshotSlotPresent = %s.",
 			 dtxContextInfo->distributedXid,
 			 (isSharedLocalSnapshotSlotPresent ? "true" : "false"));
 
 		if (haveDistributedSnapshot)
 		{
-			elog(DTM_DEBUG5,
+			elog(LOG,
 				 "setupQEDtxContext inputs (part 2a): distributedXid = %u, "
 				 "distributedSnapshotData (xmin = %u, xmax = %u, xcnt = %u), distributedCommandId = %d",
 				 dtxContextInfo->distributedXid,
@@ -1777,21 +1777,18 @@ setupQEDtxContext(DtxContextInfo *dtxContextInfo)
 		}
 		if (isSharedLocalSnapshotSlotPresent)
 		{
-			if (DTM_DEBUG5 >= log_min_messages)
-			{
-				LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_SHARED);
-				elog(DTM_DEBUG5,
-					 "setupQEDtxContext inputs (part 2b):  shared local snapshot xid = %u "
-					 "(xmin: %u xmax: %u xcnt: %u) curcid: %d, QDxid = %u/%u",
-					 SharedLocalSnapshotSlot->xid,
-					 SharedLocalSnapshotSlot->snapshot.xmin,
-					 SharedLocalSnapshotSlot->snapshot.xmax,
-					 SharedLocalSnapshotSlot->snapshot.xcnt,
-					 SharedLocalSnapshotSlot->snapshot.curcid,
-					 SharedLocalSnapshotSlot->QDxid,
-					 SharedLocalSnapshotSlot->segmateSync);
-				LWLockRelease(SharedLocalSnapshotSlot->slotLock);
-			}
+			LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_SHARED);
+			elog(LOG,
+				 "setupQEDtxContext inputs (part 2b):  shared local snapshot xid = %u "
+				 "(xmin: %u xmax: %u xcnt: %u) curcid: %d, QDxid = %u/%u",
+				 SharedLocalSnapshotSlot->xid,
+				 SharedLocalSnapshotSlot->snapshot.xmin,
+				 SharedLocalSnapshotSlot->snapshot.xmax,
+				 SharedLocalSnapshotSlot->snapshot.xcnt,
+				 SharedLocalSnapshotSlot->snapshot.curcid,
+				 SharedLocalSnapshotSlot->QDxid,
+				 SharedLocalSnapshotSlot->segmateSync);
+			LWLockRelease(SharedLocalSnapshotSlot->slotLock);
 		}
 	}
 

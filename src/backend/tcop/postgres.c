@@ -5216,8 +5216,8 @@ PostgresMain(int argc, char *argv[],
 			restore_guc_to_QE();
 
 
-		ereportif(Debug_print_full_dtm, LOG,
-				  (errmsg_internal("First char: '%c'; gp_role = '%s'.", firstchar, role_to_string(Gp_role))));
+		elogif(Debug_print_full_dtm, LOG,
+			   "First char: '%c'; gp_role = '%s'.", firstchar, role_to_string(Gp_role));
 
 		check_forbidden_in_gpdb_handlers(firstchar);
 
