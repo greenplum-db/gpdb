@@ -15032,7 +15032,7 @@ with results as
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="204" Alias="sum">
                         <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Final">
-                          <dxl:Ident ColId="1495" ColName="ColRef_1495" TypeMdid="0.1700.1.0"/>
+                          <dxl:Ident ColId="1487" ColName="ColRef_1487" TypeMdid="0.1700.1.0"/>
                         </dxl:AggFunc>
                       </dxl:ProjElem>
                       <dxl:ProjElem ColId="88" Alias="s_county">
@@ -15054,8 +15054,8 @@ with results as
                         <dxl:ProjElem ColId="89" Alias="s_state">
                           <dxl:Ident ColId="89" ColName="s_state" TypeMdid="0.1042.1.0"/>
                         </dxl:ProjElem>
-                        <dxl:ProjElem ColId="1495" Alias="ColRef_1495">
-                          <dxl:Ident ColId="1495" ColName="ColRef_1495" TypeMdid="0.1700.1.0"/>
+                        <dxl:ProjElem ColId="1487" Alias="ColRef_1487">
+                          <dxl:Ident ColId="1487" ColName="ColRef_1487" TypeMdid="0.1700.1.0"/>
                         </dxl:ProjElem>
                       </dxl:ProjList>
                       <dxl:Filter/>
@@ -15079,8 +15079,8 @@ with results as
                           <dxl:ProjElem ColId="89" Alias="s_state">
                             <dxl:Ident ColId="89" ColName="s_state" TypeMdid="0.1042.1.0"/>
                           </dxl:ProjElem>
-                          <dxl:ProjElem ColId="1495" Alias="ColRef_1495">
-                            <dxl:Ident ColId="1495" ColName="ColRef_1495" TypeMdid="0.1700.1.0"/>
+                          <dxl:ProjElem ColId="1487" Alias="ColRef_1487">
+                            <dxl:Ident ColId="1487" ColName="ColRef_1487" TypeMdid="0.1700.1.0"/>
                           </dxl:ProjElem>
                         </dxl:ProjList>
                         <dxl:Filter/>
@@ -15094,7 +15094,7 @@ with results as
                             <dxl:GroupingColumn ColId="88"/>
                           </dxl:GroupingColumns>
                           <dxl:ProjList>
-                            <dxl:ProjElem ColId="1495" Alias="ColRef_1495">
+                            <dxl:ProjElem ColId="1487" Alias="ColRef_1487">
                               <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Partial">
                                 <dxl:Ident ColId="22" ColName="ss_net_profit" TypeMdid="0.1700.1.0"/>
                               </dxl:AggFunc>

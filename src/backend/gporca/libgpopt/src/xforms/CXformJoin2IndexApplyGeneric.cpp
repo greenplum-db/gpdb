@@ -172,6 +172,11 @@ CXformJoin2IndexApplyGeneric::Transform(CXformContext *pxfctxt,
 		switch (pexprCurrInnerChild->Pop()->Eopid())
 		{
 			case COperator::EopLogicalSelect:
+				// if the select pred has a subquery, don't generate alternatives
+				if ((*pexprCurrInnerChild)[1]->DeriveHasSubquery())
+				{
+					return;
+				}
 				// this might be a select on top of a get, unless proven otherwise
 				selectThatIsParentOfGet = pexprCurrInnerChild;
 				break;
@@ -182,6 +187,11 @@ CXformJoin2IndexApplyGeneric::Transform(CXformContext *pxfctxt,
 				// just copy them into the result of the transform, any selects above this node won't
 				// be used for index predicates.
 				{
+					if ((*pexprCurrInnerChild)[1]->DeriveHasSubquery())
+					{
+						return;
+					}
+
 					CColRefSet *joinPredUsedCols = GPOS_NEW(mp)
 						CColRefSet(mp, *(pexprScalar->DeriveUsedColumns()));
 
