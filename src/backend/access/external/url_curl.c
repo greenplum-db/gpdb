@@ -1197,7 +1197,7 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 	 */
 	if (IS_GPFDISTS_URI(url))
 	{
-		Insist(PointerIsValid(DataDir));
+		Assert(PointerIsValid(DataDir));
 		elog(LOG,"trying to load certificates from %s", DataDir);
 
 		/* curl will save its last error in curlErrorBuffer */

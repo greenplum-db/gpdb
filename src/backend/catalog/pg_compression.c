@@ -160,23 +160,23 @@ GetCompressionImplementation(char *comptype)
 
 	ctup = (Form_pg_compression)GETSTRUCT(tuple);
 
-	Insist(OidIsValid(ctup->compconstructor));
+	Assert(OidIsValid(ctup->compconstructor));
 	fmgr_info(ctup->compconstructor, &finfo);
 	funcs[COMPRESSION_CONSTRUCTOR] = finfo.fn_addr;
 
-	Insist(OidIsValid(ctup->compdestructor));
+	Assert(OidIsValid(ctup->compdestructor));
 	fmgr_info(ctup->compdestructor, &finfo);
 	funcs[COMPRESSION_DESTRUCTOR] = finfo.fn_addr;
 
-	Insist(OidIsValid(ctup->compcompressor));
+	Assert(OidIsValid(ctup->compcompressor));
 	fmgr_info(ctup->compcompressor, &finfo);
 	funcs[COMPRESSION_COMPRESS] = finfo.fn_addr;
 
-	Insist(OidIsValid(ctup->compdecompressor));
+	Assert(OidIsValid(ctup->compdecompressor));
 	fmgr_info(ctup->compdecompressor, &finfo);
 	funcs[COMPRESSION_DECOMPRESS] = finfo.fn_addr;
 
-	Insist(OidIsValid(ctup->compvalidator));
+	Assert(OidIsValid(ctup->compvalidator));
 	fmgr_info(ctup->compvalidator, &finfo);
 	funcs[COMPRESSION_VALIDATOR] = finfo.fn_addr;
 
@@ -249,7 +249,7 @@ zlib_constructor(PG_FUNCTION_ARGS)
 	cs->opaque = (void *) state;
 	cs->desired_sz = NULL;
 
-	Insist(PointerIsValid(sa->comptype));
+	Assert(PointerIsValid(sa->comptype));
 
 	if (sa->complevel == 0)
 		sa->complevel = 1;
@@ -338,7 +338,7 @@ zlib_decompress(PG_FUNCTION_ARGS)
 	int				last_error;
 	unsigned long amount_available_used = dst_sz;
 
-	Insist(src_sz > 0 && dst_sz > 0);
+	Assert(src_sz > 0 && dst_sz > 0);
 
 
 	last_error = state->decompress_fn(dst, &amount_available_used,

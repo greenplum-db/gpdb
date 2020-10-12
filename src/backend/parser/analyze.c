@@ -1391,7 +1391,7 @@ transformSelectStmt(ParseState *pstate, SelectStmt *stmt)
 	 * possible due to grammar restrictions on where a SCATTER clause is
 	 * allowed.
 	 */
-	Insist(!(stmt->scatterClause && stmt->intoClause));
+	Assert(!(stmt->scatterClause && stmt->intoClause));
 	qry->scatterClause = transformScatterClause(pstate,
 												stmt->scatterClause,
 												&qry->targetList);

@@ -45,7 +45,7 @@ deleteProcCallbacks(Oid profnoid)
 	SysScanDesc scan;
 	HeapTuple	tup;
 
-	Insist(OidIsValid(profnoid));
+	Assert(OidIsValid(profnoid));
 
 	/*
 	 * This is equivalent to:
@@ -91,8 +91,8 @@ addProcCallback(Oid profnoid, Oid procallback, char promethod)
 	Datum		values[Natts_pg_proc_callback];
 	HeapTuple   tup;
 	
-	Insist(OidIsValid(profnoid));
-	Insist(OidIsValid(procallback));
+	Assert(OidIsValid(profnoid));
+	Assert(OidIsValid(procallback));
 
 	/* open pg_proc_callback */
 	rel = table_open(ProcCallbackRelationId, RowExclusiveLock);
@@ -131,7 +131,7 @@ lookupProcCallback(Oid profnoid, char promethod)
 	HeapTuple	tup;
 	Oid         result;
 
-	Insist(OidIsValid(profnoid));
+	Assert(OidIsValid(profnoid));
 
 	/* open pg_proc_callback */
 	rel = heap_open(ProcCallbackRelationId, AccessShareLock);

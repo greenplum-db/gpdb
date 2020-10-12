@@ -680,7 +680,7 @@ make_join_rel(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2)
 	/* This is a convenient place to check for query cancel. */
 	CHECK_FOR_INTERRUPTS();
 
-    Insist(rel1 &&
+    Assert(rel1 &&
            rel2 &&
            rel1->cheapest_total_path &&
            rel2->cheapest_total_path);

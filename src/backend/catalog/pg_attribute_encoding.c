@@ -46,7 +46,7 @@ add_attribute_encoding_entry(Oid relid, AttrNumber attnum, Datum attoptions)
 	bool nulls[Natts_pg_attribute_encoding];
 	HeapTuple tuple;
 	
-	Insist(attnum != InvalidAttrNumber);
+	Assert(attnum != InvalidAttrNumber);
 
 	rel = heap_open(AttributeEncodingRelationId, RowExclusiveLock);
 
@@ -86,7 +86,7 @@ get_funcs_for_compression(char *compresstype)
 	{
 		func = GetCompressionImplementation(compresstype);
 
-		Insist(PointerIsValid(func));
+		Assert(PointerIsValid(func));
 	}
 	return func;
 }
@@ -126,11 +126,11 @@ get_rel_attoptions(Oid relid, AttrNumber max_attno)
 		Datum attoptions;
 		bool isnull;
 
-		Insist(attnum > 0 && attnum <= max_attno);
+		Assert(attnum > 0 && attnum <= max_attno);
 
 		attoptions = heap_getattr(tuple, Anum_pg_attribute_encoding_attoptions,
 								  RelationGetDescr(pgae), &isnull);
-		Insist(!isnull);
+		Assert(!isnull);
 
 		dats[attnum - 1] = datumCopy(attoptions,
 									 attform->attbyval,
@@ -232,7 +232,7 @@ AddRelationAttributeEncodings(Relation rel, List *attr_encodings)
 		List *encoding;
 		AttrNumber attnum;
 
-		Insist(IsA(c, ColumnReferenceStorageDirective));
+		Assert(IsA(c, ColumnReferenceStorageDirective));
 
 		attnum = get_attnum(relid, c->column);
 

@@ -1143,7 +1143,7 @@ split_encoding_clauses(List *encs, List **non_def,
 	{
 		ColumnReferenceStorageDirective *c = lfirst(lc);
 
-		Insist(IsA(c, ColumnReferenceStorageDirective));
+		Assert(IsA(c, ColumnReferenceStorageDirective));
 
 		if (c->deflt)
 		{

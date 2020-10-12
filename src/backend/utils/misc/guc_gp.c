@@ -4981,9 +4981,6 @@ DispatchSyncPGVariable(struct config_generic * gconfig)
 			}
 			break;
 		}
-		default:
-			Insist(false);
-
 	}
 
 	CdbDispatchSetCommand(buffer.data, false);

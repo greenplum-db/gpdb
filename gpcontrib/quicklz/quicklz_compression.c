@@ -180,7 +180,7 @@ quicklz_compress(PG_FUNCTION_ARGS)
 	CompressionState *cs 	= (CompressionState *)PG_GETARG_POINTER(5);
 	quicklz_state *state	= (quicklz_state *)cs->opaque;
 
-	Insist(dst_sz >= quicklz_desired_sz(src_sz));
+	Assert(dst_sz >= quicklz_desired_sz(src_sz));
 
 	*dst_used = state->compress_fn(state->level, src, dst, (size_t)src_sz,
 								   state->scratch);
@@ -199,7 +199,7 @@ quicklz_decompress(PG_FUNCTION_ARGS)
 	CompressionState *cs 	= (CompressionState *)PG_GETARG_POINTER(5);
 	quicklz_state *state	= (quicklz_state *)cs->opaque;
 
-	Insist(src_sz > 0 && dst_sz > 0);
+	Assert(src_sz > 0 && dst_sz > 0);
 	*dst_used = state->decompress_fn(state->level, src, dst, state->scratch);
 
 	PG_RETURN_VOID();

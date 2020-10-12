@@ -308,7 +308,7 @@ cdbexplain_localExecStats(struct PlanState *planstate,
 
 	Assert(Gp_role != GP_ROLE_EXECUTE);
 
-	Insist(planstate && planstate->instrument && showstatctx);
+	Assert(planstate && planstate->instrument && showstatctx);
 
 	memset(&ctx, 0, sizeof(ctx));
 
@@ -610,7 +610,7 @@ cdbexplain_recvExecStats(struct PlanState *planstate,
 										"the correct %s software version.",
 										PACKAGE_NAME)));
 
-			Insist(ctx.nStatInst == hdr->nInst);
+			Assert(ctx.nStatInst == hdr->nInst);
 		}
 
 		/* Save lowest and highest segment id for which we have stats. */
@@ -630,7 +630,7 @@ cdbexplain_recvExecStats(struct PlanState *planstate,
 	planstate_walk_node(planstate, cdbexplain_recvStatWalker, &ctx);
 
 	/* Make sure we visited the right number of PlanState nodes. */
-	Insist(ctx.iStatInst == ctx.nStatInst);
+	Assert(ctx.iStatInst == ctx.nStatInst);
 
 	/* Transfer per-slice stats from message headers to the SliceSummary. */
 	for (imsgptr = 0; imsgptr < ctx.nmsgptr; imsgptr++)
@@ -735,7 +735,7 @@ cdbexplain_depositSliceStats(CdbExplain_StatHdr *hdr,
 	CdbExplain_SliceWorker *ssw;
 	int			iworker;
 
-	Insist(sliceIndex >= 0 &&
+	Assert(sliceIndex >= 0 &&
 		   sliceIndex < showstatctx->nslice);
 
 	/* Kludge:	QD can have more than one 'Slice 0' if plan is non-parallel. */
@@ -767,8 +767,8 @@ cdbexplain_depositSliceStats(CdbExplain_StatHdr *hdr,
 	/* Save a copy of this SliceWorker instance in the worker array. */
 	iworker = hdr->segindex - ss->segindex0;
 	ssw = &ss->workers[iworker];
-	Insist(iworker >= 0 && iworker < ss->nworker);
-	Insist(ssw->peakmemused == 0);	/* each worker should be seen just once */
+	Assert(iworker >= 0 && iworker < ss->nworker);
+	Assert(ssw->peakmemused == 0);	/* each worker should be seen just once */
 	*ssw = hdr->worker;
 
 	/* Rollup of per-worker stats into SliceSummary */
@@ -799,7 +799,7 @@ cdbexplain_collectStatsFromNode(PlanState *planstate, CdbExplain_SendStatCtx *ct
 	CdbExplain_StatInst *si = &ctx->hdr.inst[0];
 	Instrumentation *instr = planstate->instrument;
 
-	Insist(instr);
+	Assert(instr);
 
 	/* We have to finalize statistics, since ExecutorEnd hasn't been called. */
 	InstrEndLoop(instr);
@@ -921,7 +921,7 @@ cdbexplain_depStatAcc_saveText(CdbExplain_DepStatAcc *acc,
 		int			notelen = rsi->enotes - rsi->bnotes;
 		const char *notes = (const char *) rsh + rsh->bnotes + rsi->bnotes;
 
-		Insist(rsh->bnotes + rsi->enotes < rsh->enotes &&
+		Assert(rsh->bnotes + rsi->enotes < rsh->enotes &&
 			   notes[notelen] == '\0');
 
 		/* Append to extratextbuf. */
@@ -977,7 +977,7 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	int			imsgptr;
 	int			nInst;
 
-	Insist(instr &&
+	Assert(instr &&
 		   ctx->iStatInst < ctx->nStatInst);
 
 	/* Allocate NodeSummary block. */
@@ -1017,7 +1017,7 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 		rsh = ctx->msgptrs[imsgptr];
 		rsi = &rsh->inst[ctx->iStatInst];
 
-		Insist(rsi->pstype == planstate->type &&
+		Assert(rsi->pstype == planstate->type &&
 			   ns->segindex0 <= rsh->segindex &&
 			   rsh->segindex < ns->segindex0 + ns->ninst);
 

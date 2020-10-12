@@ -1311,7 +1311,7 @@ validateColumnStorageEncodingClauses(List *aocoColumnEncoding,
 	{
 		ColumnReferenceStorageDirective *c = lfirst(lc);
 
-		Insist(IsA(c, ColumnReferenceStorageDirective));
+		Assert(IsA(c, ColumnReferenceStorageDirective));
 
 		if (c->deflt)
 			continue;
@@ -1532,7 +1532,7 @@ transformAttributeEncoding(List *columns,
 	foreach(lc, stenc)
 	{
 		ColumnReferenceStorageDirective *c = lfirst(lc);
-		Insist(IsA(c, ColumnReferenceStorageDirective));
+		Assert(IsA(c, ColumnReferenceStorageDirective));
 
 		if (c->deflt)
 		{

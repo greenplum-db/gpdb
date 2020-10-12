@@ -1667,7 +1667,7 @@ addRangeTableEntryForFunction(ParseState *pstate,
 			Datum     d;
 			int       i;
 
-			Insist(TypeSupportsDescribe(funcrettype));
+			Assert(TypeSupportsDescribe(funcrettype));
 
 			funcDescribe = lookupProcCallback(func->funcid, PROMETHOD_DESCRIBE);
 			if (OidIsValid(funcDescribe))

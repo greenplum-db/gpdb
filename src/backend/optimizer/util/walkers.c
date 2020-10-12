@@ -601,7 +601,7 @@ Plan *plan_tree_base_subplan_get_plan(plan_tree_base_prefix *base, SubPlan *subp
 		rootdata.glob = (PlannerGlobal*)base->node;
 		return planner_subplan_get_plan(&rootdata, subplan);
 	}
-	Insist(false);
+	Assert(false);
 	return NULL;
 }
 

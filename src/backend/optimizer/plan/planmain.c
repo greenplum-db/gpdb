@@ -306,7 +306,7 @@ query_planner(PlannerInfo *root,
 	if (!final_rel || !final_rel->cheapest_total_path ||
 		final_rel->cheapest_total_path->param_info != NULL)
 		elog(ERROR, "failed to construct the join relation");
-	Insist(final_rel->cheapest_startup_path);
+	Assert(final_rel->cheapest_startup_path);
 
 	return final_rel;
 }

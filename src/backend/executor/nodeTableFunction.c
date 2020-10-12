@@ -149,8 +149,8 @@ TableFunctionNext(TableFunctionState *node)
 			Datum		values[MaxTupleAttributeNumber];
 			bool		nulls[MaxTupleAttributeNumber];
 
-			Insist(!returns_set);  /* checked above */
-			Insist(resultdesc->natts <= MaxTupleAttributeNumber);
+			Assert(!returns_set);  /* checked above */
+			Assert(resultdesc->natts <= MaxTupleAttributeNumber);
 			for (i = 0; i < resultdesc->natts; i++)
 				nulls[i] = true;
 
@@ -483,7 +483,7 @@ AnyTable_GetTupleDesc(AnyTable t)
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("invalid null value for anytable type")));
 	}
-	Insist(t->junkfilter && IsA(t->junkfilter, JunkFilter));
+	Assert(t->junkfilter && IsA(t->junkfilter, JunkFilter));
 
 	/* Return the projected tuple descriptor */
 	return t->junkfilter->jf_cleanTupType;

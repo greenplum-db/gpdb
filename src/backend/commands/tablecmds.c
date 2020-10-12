@@ -17039,7 +17039,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 			relationRelation = table_open(RelationRelationId, RowExclusiveLock);
 			tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(tarrelid));
 
-			Insist(HeapTupleIsValid(tuple));
+			Assert(HeapTupleIsValid(tuple));
 			newOptsTuple = heap_modify_tuple(tuple, RelationGetDescr(relationRelation),
 											 repl_val, repl_null, repl_repl);
 

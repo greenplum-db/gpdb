@@ -781,7 +781,7 @@ ExecInitHashJoin(HashJoin *node, EState *estate, int eflags)
 	if (node->hashqualclauses != NIL)
 	{
 		/* CDB: This must be an IS NOT DISTINCT join!  */
-		Insist(isNotDistinctJoin(node->hashqualclauses));
+		Assert(isNotDistinctJoin(node->hashqualclauses));
 		hjstate->hj_nonequijoin = true;
 	}
 	else

@@ -1161,7 +1161,7 @@ validate_describe_callback(List *describeQualName,
 		int   len   = ARR_DIMS(parameterModes)[0];
 		char *modes = ARR_DATA_PTR(parameterModes);
 		
-		Insist(ARR_NDIM(parameterModes) == 1);
+		Assert(ARR_NDIM(parameterModes) == 1);
 		for (i = 0; i < len; i++)
 		{
 			switch (modes[i])

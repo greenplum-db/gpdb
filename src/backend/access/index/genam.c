@@ -388,11 +388,6 @@ systable_beginscan(Relation heapRelation,
 	{
 		int			i;
 
-		if (!IsBootstrapProcessingMode())
-		{
-			Insist(RelationGetRelid(heapRelation) == irel->rd_index->indrelid);
-		}
-
 		/* Change attribute numbers to be index column numbers. */
 		for (i = 0; i < nkeys; i++)
 		{

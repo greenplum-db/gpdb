@@ -343,8 +343,6 @@ addOneOption(StringInfo string, struct config_generic *guc)
 				}
 				break;
 			}
-		default:
-			Insist(false);
 	}
 }
 
