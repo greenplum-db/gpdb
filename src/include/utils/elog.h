@@ -98,39 +98,6 @@ extern pthread_t main_tid;
 #endif 
 
 /*
- * Insist(assertion)
- *
- * Returns true if assertion is true; else issues a generic internal
- * error message and exits to the closest enclosing PG_TRY block via
- * plain old ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR), ...)).
- *
- ** Use instead of Assert() for internal errors that should always be checked
- *  even in release builds; and to suppress warnings (such as uninitialized
- *  variables) along paths that should never be executed (eg. switch defaults).
- ** Use instead of ExceptionalCondition() for internal errors that are not
- *  so severe as to necessitate aborting the process, where ordinary error
- *  handling should suffice.
- ** Use when elog()/ereport() is just not worth it because no user would
- *  ever see the nice customized message that you would otherwise code up
- *  for that weird case that should never happen.
- */
-/*
- * TODO  Why aren't we passing the text of the assertion to elog_internalerror?
- * How is anybody supposed to know what was wrong?
- */
-#define Insist(assertion) \
-	do {				  \
-		if (!(assertion))										   \
-			elog_internalerror(__FILE__, __LINE__, PG_FUNCNAME_MACRO);	\
-	} while(0)
-
-#ifdef _MSC_VER
-__declspec(noreturn)
-#endif
-void elog_internalerror(const char *filename, int lineno, const char *funcname)
-						pg_attribute_noreturn();
-
-/*
  * Provide a way to prevent "errno" from being accidentally used inside an
  * elog() or ereport() invocation.  Since we know that some operating systems
  * define errno as something involving a function call, we'll put a local

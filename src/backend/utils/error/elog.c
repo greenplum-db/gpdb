@@ -284,33 +284,6 @@ err_gettext(const char *str)
 #endif
 }
 
-
-/*
- * elog_internalerror -- report an internal error
- *
- * GPDB only
- *
- * Does not return; exits via longjmp to PG_CATCH error handler.
- */
-void
-elog_internalerror(const char *filename, int lineno, const char *funcname)
-{
-	/*
-	 * TODO  Why isn't this a FATAL error?
-	 *
-	 * Also, why aren't we allowing for a specific err message to be passed in?
-	 */
-    if (errstart(ERROR, TEXTDOMAIN))
-    {
-		errcode(ERRCODE_INTERNAL_ERROR);
-		errmsg("Unexpected internal error");
-        errfinish(filename, lineno, funcname);
-    }
-    /* not reached */
-    abort();
-}                               /* elog_internalerror */
-
-
 /*
  * errstart --- begin an error-reporting cycle
  *
