@@ -80,6 +80,7 @@ const char *basic_diff_opts = "-w";
 const char *pretty_diff_opts = "-w -U3";
 #endif
 
+_stringlist *setup_tests = NULL;
 /* options settable from command line */
 _stringlist *dblist = NULL;
 bool		debug = false;
@@ -3210,6 +3211,11 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 	 * Ready to run the tests
 	 */
 	header(_("running regression test queries"));
+
+	for (sl = setup_tests; sl != NULL; sl = sl->next)
+	{
+		run_single_test(sl->str, tfunc);
+	}
 
 	for (sl = schedulelist; sl != NULL; sl = sl->next)
 	{

@@ -38,6 +38,7 @@ extern char *libdir;
 extern char *datadir;
 extern char *host_platform;
 
+extern _stringlist *setup_tests;
 extern _stringlist *dblist;
 extern bool debug;
 extern char *inputdir;

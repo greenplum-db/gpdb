@@ -1,5 +1,3 @@
-test: setup
-
 test: autovacuum-analyze
 test: lockmodes
 # Put test prepare_limit near to test lockmodes since both of them reboot the
