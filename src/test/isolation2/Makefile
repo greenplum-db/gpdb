@@ -17,13 +17,10 @@ endif
 override CPPFLAGS := -I$(srcdir) -I$(libpq_srcdir) -I$(srcdir)/../regress $(CPPFLAGS)
 override LDLIBS := $(libpq_pgport) $(LDLIBS)
 
-all: test_python pg_isolation2_regress$(X) all-lib data extended_protocol_test scan_flaky_fault_injectors
+all: pg_isolation2_regress$(X) all-lib data extended_protocol_test scan_flaky_fault_injectors
 
 extended_protocol_test: extended_protocol_test.c
 	$(CC) $(CPPFLAGS) -I$(top_builddir)/src/interfaces/libpq -L$(GPHOME)/lib -L$(top_builddir)/src/interfaces/libpq  -o $@ $< -lpq
-
-test_python:
-	python3 helpers_test.py
 
 pg_regress.o:
 	$(MAKE) -C $(top_builddir)/src/test/regress pg_regress.o

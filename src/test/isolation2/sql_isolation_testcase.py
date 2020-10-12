@@ -34,21 +34,6 @@ def is_digit(n):
     except ValueError:
         return  False
 
-def load_helper_file(helper_file):
-    with open(helper_file) as file:
-        return "".join(file.readlines()).strip()
-
-
-def parse_include_statement(sql):
-    include_statement, command = sql.split(None, 1)
-    stripped_command = command.strip()
-
-    if stripped_command.endswith(";"):
-        return stripped_command.replace(";", "")
-    else:
-        raise SyntaxError("expected 'include: %s' to end with a semicolon." % stripped_command)
-
-
 def null_notice_receiver(notice):
     '''
         Tests ignore notice messages when analyzing results,
@@ -63,7 +48,7 @@ class SQLIsolationExecutor(object):
         # The re.S flag makes the "." in the regex match newlines.
         # When matched against a command in process_command(), all
         # lines in the command are matched and sent as SQL query.
-        self.command_pattern = re.compile(r"^(-?\d+|[*])([&\\<\\>USIq]*?)\:(.*)", re.S)
+        self.command_pattern = re.compile(r"^(-?\d+|[*])([&\\<\\>USq]*?)\:(.*)", re.S)
         if dbname:
             self.dbname = dbname
         else:
@@ -428,16 +413,6 @@ class SQLIsolationExecutor(object):
                 if mode == '\\retcode':
                     print('-- end_ignore', file=output_file)
                     print('(exited with code {})'.format(cmd_output.returncode), file=output_file)
-            elif sql.startswith('include:'):
-                helper_file = parse_include_statement(sql)
-
-                self.get_process(
-                    output_file,
-                    process_name,
-                    dbname=dbname
-                ).query(
-                    load_helper_file(helper_file)
-                )
             else:
                 self.get_process(output_file, process_name, con_mode, dbname=dbname).query(sql.strip())
         elif flag == "&":
@@ -536,7 +511,6 @@ class SQLIsolationTestCase:
             U: connect in utility mode to primary contentid from gp_segment_configuration
             U&: expect blocking behavior in utility mode (does not currently support an asterisk target)
             U<: join an existing utility mode session (does not currently support an asterisk target)
-            I: include a file of sql statements (useful for loading reusable functions)
 
         An example is:
 
@@ -636,12 +610,6 @@ class SQLIsolationTestCase:
         failures; a better long-term solution is needed.)
 
         Block/join flags are not currently supported with *U.
-
-        Including files:
-
-        -- example contents for file.sql: create function some_test_function() returning void ...
-        include: path/to/some/file.sql;
-        select some_helper_function();
 
         Line continuation:
         If a line is not ended by a semicolon ';' which is followed by 0 or more spaces, the line will be combined with next line and
