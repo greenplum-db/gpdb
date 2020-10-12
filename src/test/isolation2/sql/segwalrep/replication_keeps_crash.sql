@@ -9,8 +9,6 @@
 -- to avoid blocking other queries.
 -- More details please refer to FTSGetReplicationDisconnectTime.
 
-include: helpers/server_helpers.sql;
-
 -- modify fts gucs to speed up the test.
 1: alter system set gp_fts_probe_interval to 10;
 1: alter system set gp_fts_replication_attempt_count to 3;

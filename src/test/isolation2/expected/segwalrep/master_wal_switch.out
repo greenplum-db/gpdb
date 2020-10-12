@@ -1,9 +1,6 @@
 -- Test for verifying if wal seg created while basebackup
 -- dumps out data does not get cleaned
 
-include: helpers/gp_management_utils_helpers.sql;
-CREATE
-
 -- Inject fault after checkpoint creation in basebackup
 SELECT gp_inject_fault('base_backup_post_create_checkpoint', 'suspend', dbid) FROM gp_segment_configuration WHERE content=-1 and role='p';
  gp_inject_fault 

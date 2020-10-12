@@ -1,6 +1,3 @@
-include: helpers/server_helpers.sql;
-CREATE
-
 -- table to just store the master's data directory path on segment.
 CREATE TABLE lockmodes_datadir(a int, dir text);
 CREATE

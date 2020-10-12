@@ -15,8 +15,6 @@
 --
 -- end_matchsubs
 
-include: helpers/server_helpers.sql;
-
 -- Make the test faster and also make some queries fail as expected after
 -- 2pc retry PANIC (do not finish earlier before PANIC happens).
 alter system set dtx_phase2_retry_second to 5;

@@ -20,9 +20,6 @@
 -- NOTE: you must add '--load-extension=gp_inject_fault' to the commandline
 --   for a manual test.
 
-include: helpers/server_helpers.sql;
-CREATE
-
 select gp_inject_fault('all', 'reset', 1) from master();
  gp_inject_fault 
 -----------------

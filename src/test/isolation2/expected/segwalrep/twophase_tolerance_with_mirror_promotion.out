@@ -22,9 +22,6 @@
 --
 -- end_matchsubs
 
-include: helpers/server_helpers.sql;
-CREATE
-
 !\retcode gpconfig -c gp_fts_probe_retries -v 2 --masteronly;
 -- start_ignore
 -- end_ignore

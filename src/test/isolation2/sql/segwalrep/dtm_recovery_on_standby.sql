@@ -1,7 +1,5 @@
 -- Validate that standby performs DTM recovery upon promotion.
 
-include: helpers/server_helpers.sql;
-
 -- Check that are starting with a clean slate, standby must be in sync
 -- with master.
 select application_name, state, sync_state from pg_stat_replication;

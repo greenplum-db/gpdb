@@ -1,5 +1,3 @@
-include: helpers/server_helpers.sql;
-
 ALTER SYSTEM RESET gp_enable_global_deadlock_detector;
 ALTER SYSTEM RESET gp_global_deadlock_detector_period;
 

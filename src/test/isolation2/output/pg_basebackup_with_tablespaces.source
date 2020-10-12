@@ -1,6 +1,3 @@
-include: helpers/gp_management_utils_helpers.sql;
-CREATE
-
 -- Given a segment with a database that has a tablespace
 !\retcode mkdir -p @testtablespace@/some_basebackup_tablespace;
 -- start_ignore
