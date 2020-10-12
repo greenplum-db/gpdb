@@ -80,7 +80,7 @@ CREATE UNIQUE INDEX inhz_xx_idx on inhz (xx) WHERE xx <> 'test';
 NOTICE:  UNIQUE index must contain all columns in the table's distribution key.
 DETAIL:  Distribution key column "yy" is not included in the constraint.
 HINT:  Add "yy" to the constraint with the operator.
-ERROR:  the set of columns being indexed should be a superset of the policy.
+ERROR:  UNIQUE index must contain all columns in the distribution key of relation "inhz"
 /* Ok to create multiple unique indexes */
 /* GPDB: This query will fail because unique index must contain all distribution key */
 CREATE TABLE inhg (x text UNIQUE, LIKE inhz INCLUDING INDEXES);

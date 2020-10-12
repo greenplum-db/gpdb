@@ -1401,7 +1401,7 @@ CREATE UNIQUE INDEX tstab_idx ON tstab(t);
 NOTICE:  UNIQUE index must contain all columns in the table's distribution key.
 DETAIL:  Distribution key column "i" is not included in the constraint.
 HINT:  Add "i" to the constraint with the operator.
-ERROR:  the set of columns being indexed should be a superset of the policy.
+ERROR:  UNIQUE index must contain all columns in the distribution key of relation "tstab"
 INSERT INTO tstab VALUES (1, 'foo');
 -- ALTER TABLE SET DISTRIBUTED RANDOMLY should not work on a table
 -- that has a primary key or unique index.

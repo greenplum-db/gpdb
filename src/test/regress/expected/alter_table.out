@@ -899,7 +899,7 @@ alter table atacc1 add unique (test2);
 NOTICE:  UNIQUE index must contain all columns in the table's distribution key.
 DETAIL:  Distribution key column "test" is not included in the constraint.
 HINT:  Add "test" to the constraint with the operator.
-ERROR:  the set of columns being indexed should be a superset of the policy.
+ERROR:  UNIQUE index must contain all columns in the distribution key of relation "atacc1"
 -- should fail for @@ second one @@
 insert into atacc1 (test2, test) values (3, 3);
 insert into atacc1 (test2, test) values (2, 3);

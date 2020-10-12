@@ -241,7 +241,7 @@ NOTICE:  building index for child partition "mpp3033a_1_prt_default_part"
 NOTICE:  UNIQUE index must contain all columns in the table's distribution key.
 DETAIL:  Distribution key column "unique1" is not included in the constraint.
 HINT:  Add "unique1" to the constraint with the operator.
-ERROR:  the set of columns being indexed should be a superset of the policy.
+ERROR:  UNIQUE index must contain all columns in the distribution key of relation "mpp3033a"
 CREATE UNIQUE INDEX mpp3033a_hundred ON mpp3033a (hundred);
 NOTICE:  building index for child partition "mpp3033a_1_prt_aa"
 NOTICE:  building index for child partition "mpp3033a_1_prt_bb"
@@ -249,7 +249,7 @@ NOTICE:  building index for child partition "mpp3033a_1_prt_default_part"
 NOTICE:  UNIQUE index must contain all columns in the table's distribution key.
 DETAIL:  Distribution key column "unique1" is not included in the constraint.
 HINT:  Add "unique1" to the constraint with the operator.
-ERROR:  the set of columns being indexed should be a superset of the policy.
+ERROR:  UNIQUE index must contain all columns in the distribution key of relation "mpp3033a"
 CREATE UNIQUE INDEX mpp3033a_stringu1 ON mpp3033a (stringu1);
 NOTICE:  building index for child partition "mpp3033a_1_prt_aa"
 NOTICE:  building index for child partition "mpp3033a_1_prt_bb"
@@ -257,7 +257,7 @@ NOTICE:  building index for child partition "mpp3033a_1_prt_default_part"
 NOTICE:  UNIQUE index must contain all columns in the table's distribution key.
 DETAIL:  Distribution key column "unique1" is not included in the constraint.
 HINT:  Add "unique1" to the constraint with the operator.
-ERROR:  the set of columns being indexed should be a superset of the policy.
+ERROR:  UNIQUE index must contain all columns in the distribution key of relation "mpp3033a"
 CREATE UNIQUE INDEX mpp3033b_unique1 ON mpp3033b (unique1);
 NOTICE:  building index for child partition "mpp3033b_1_prt_aa"
 NOTICE:  building index for child partition "mpp3033b_1_prt_bb"
@@ -275,7 +275,7 @@ NOTICE:  building index for child partition "mpp3033b_1_prt_bb_2_prt_dd"
 NOTICE:  UNIQUE index must contain all columns in the table's distribution key.
 DETAIL:  Distribution key column "unique1" is not included in the constraint.
 HINT:  Add "unique1" to the constraint with the operator.
-ERROR:  the set of columns being indexed should be a superset of the policy.
+ERROR:  UNIQUE index must contain all columns in the distribution key of relation "mpp3033b"
 CREATE UNIQUE INDEX mpp3033b_hundred ON mpp3033b (hundred);
 NOTICE:  building index for child partition "mpp3033b_1_prt_aa"
 NOTICE:  building index for child partition "mpp3033b_1_prt_bb"
@@ -286,7 +286,7 @@ NOTICE:  building index for child partition "mpp3033b_1_prt_bb_2_prt_dd"
 NOTICE:  UNIQUE index must contain all columns in the table's distribution key.
 DETAIL:  Distribution key column "unique1" is not included in the constraint.
 HINT:  Add "unique1" to the constraint with the operator.
-ERROR:  the set of columns being indexed should be a superset of the policy.
+ERROR:  UNIQUE index must contain all columns in the distribution key of relation "mpp3033b"
 CREATE UNIQUE INDEX mpp3033b_stringu1 ON mpp3033b (stringu1);
 NOTICE:  building index for child partition "mpp3033b_1_prt_aa"
 NOTICE:  building index for child partition "mpp3033b_1_prt_bb"
@@ -297,7 +297,7 @@ NOTICE:  building index for child partition "mpp3033b_1_prt_bb_2_prt_dd"
 NOTICE:  UNIQUE index must contain all columns in the table's distribution key.
 DETAIL:  Distribution key column "unique1" is not included in the constraint.
 HINT:  Add "unique1" to the constraint with the operator.
-ERROR:  the set of columns being indexed should be a superset of the policy.
+ERROR:  UNIQUE index must contain all columns in the distribution key of relation "mpp3033b"
 select count(*) from mpp3033a;
  count 
 -------
@@ -866,7 +866,7 @@ NOTICE:  building index for child partition "mpp3033a_1_prt_aa_10"
 NOTICE:  UNIQUE index must contain all columns in the table's distribution key.
 DETAIL:  Distribution key column "unique1" is not included in the constraint.
 HINT:  Add "unique1" to the constraint with the operator.
-ERROR:  the set of columns being indexed should be a superset of the policy.
+ERROR:  UNIQUE index must contain all columns in the distribution key of relation "mpp3033a"
 CREATE UNIQUE INDEX mpp3033a_hundred ON mpp3033a (hundred);
 NOTICE:  building index for child partition "mpp3033a_1_prt_default_part"
 NOTICE:  building index for child partition "mpp3033a_1_prt_aa_1"
@@ -882,7 +882,7 @@ NOTICE:  building index for child partition "mpp3033a_1_prt_aa_10"
 NOTICE:  UNIQUE index must contain all columns in the table's distribution key.
 DETAIL:  Distribution key column "unique1" is not included in the constraint.
 HINT:  Add "unique1" to the constraint with the operator.
-ERROR:  the set of columns being indexed should be a superset of the policy.
+ERROR:  UNIQUE index must contain all columns in the distribution key of relation "mpp3033a"
 CREATE UNIQUE INDEX mpp3033a_stringu1 ON mpp3033a (stringu1);
 NOTICE:  building index for child partition "mpp3033a_1_prt_default_part"
 NOTICE:  building index for child partition "mpp3033a_1_prt_aa_1"
@@ -898,7 +898,7 @@ NOTICE:  building index for child partition "mpp3033a_1_prt_aa_10"
 NOTICE:  UNIQUE index must contain all columns in the table's distribution key.
 DETAIL:  Distribution key column "unique1" is not included in the constraint.
 HINT:  Add "unique1" to the constraint with the operator.
-ERROR:  the set of columns being indexed should be a superset of the policy.
+ERROR:  UNIQUE index must contain all columns in the distribution key of relation "mpp3033a"
 CREATE UNIQUE INDEX mpp3033b_unique1 ON mpp3033b (unique1);
 NOTICE:  building index for child partition "mpp3033b_1_prt_2"
 NOTICE:  building index for child partition "mpp3033b_1_prt_4"
@@ -940,7 +940,7 @@ NOTICE:  building index for child partition "mpp3033b_1_prt_default_part_2_prt_2
 NOTICE:  UNIQUE index must contain all columns in the table's distribution key.
 DETAIL:  Distribution key column "unique1" is not included in the constraint.
 HINT:  Add "unique1" to the constraint with the operator.
-ERROR:  the set of columns being indexed should be a superset of the policy.
+ERROR:  UNIQUE index must contain all columns in the distribution key of relation "mpp3033b"
 CREATE UNIQUE INDEX mpp3033b_hundred ON mpp3033b (hundred);
 NOTICE:  building index for child partition "mpp3033b_1_prt_2"
 NOTICE:  building index for child partition "mpp3033b_1_prt_4"
@@ -963,7 +963,7 @@ NOTICE:  building index for child partition "mpp3033b_1_prt_default_part_2_prt_2
 NOTICE:  UNIQUE index must contain all columns in the table's distribution key.
 DETAIL:  Distribution key column "unique1" is not included in the constraint.
 HINT:  Add "unique1" to the constraint with the operator.
-ERROR:  the set of columns being indexed should be a superset of the policy.
+ERROR:  UNIQUE index must contain all columns in the distribution key of relation "mpp3033b"
 CREATE UNIQUE INDEX mpp3033b_stringu1 ON mpp3033b (stringu1);
 NOTICE:  building index for child partition "mpp3033b_1_prt_2"
 NOTICE:  building index for child partition "mpp3033b_1_prt_4"
@@ -986,7 +986,7 @@ NOTICE:  building index for child partition "mpp3033b_1_prt_default_part_2_prt_2
 NOTICE:  UNIQUE index must contain all columns in the table's distribution key.
 DETAIL:  Distribution key column "unique1" is not included in the constraint.
 HINT:  Add "unique1" to the constraint with the operator.
-ERROR:  the set of columns being indexed should be a superset of the policy.
+ERROR:  UNIQUE index must contain all columns in the distribution key of relation "mpp3033b"
 select count(*) from mpp3033a;
  count 
 -------

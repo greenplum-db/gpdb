@@ -45,7 +45,7 @@ CREATE UNIQUE INDEX ON tbl_create_index(i);
 NOTICE:  UNIQUE index must contain all columns in the table's distribution key.
 DETAIL:  Distribution key column "j" is not included in the constraint.
 HINT:  Add "j" to the constraint with the operator.
-ERROR:  the set of columns being indexed should be a superset of the policy.
+ERROR:  UNIQUE index must contain all columns in the distribution key of relation "tbl_create_index"
 CREATE UNIQUE INDEX ON tbl_create_index(k);
 NOTICE:  UNIQUE index must contain all columns in the table's distribution key.
 DETAIL:  Distribution key column "i" is not included in the constraint.
@@ -53,17 +53,17 @@ HINT:  Add "i" to the constraint with the operator.
 NOTICE:  UNIQUE index must contain all columns in the table's distribution key.
 DETAIL:  Distribution key column "j" is not included in the constraint.
 HINT:  Add "j" to the constraint with the operator.
-ERROR:  the set of columns being indexed should be a superset of the policy.
+ERROR:  UNIQUE index must contain all columns in the distribution key of relation "tbl_create_index"
 CREATE UNIQUE INDEX ON tbl_create_index(i, k);
 NOTICE:  UNIQUE index must contain all columns in the table's distribution key.
 DETAIL:  Distribution key column "j" is not included in the constraint.
 HINT:  Add "j" to the constraint with the operator.
-ERROR:  the set of columns being indexed should be a superset of the policy.
+ERROR:  UNIQUE index must contain all columns in the distribution key of relation "tbl_create_index"
 ALTER TABLE tbl_create_index ADD CONSTRAINT PKEY PRIMARY KEY(i);
 NOTICE:  PRIMARY KEY index must contain all columns in the table's distribution key.
 DETAIL:  Distribution key column "j" is not included in the constraint.
 HINT:  Add "j" to the constraint with the operator.
-ERROR:  the set of columns being indexed should be a superset of the policy.
+ERROR:  PRIMARY KEY must contain all columns in the distribution key of relation "tbl_create_index"
 ALTER TABLE tbl_create_index ADD CONSTRAINT PKEY PRIMARY KEY(k);
 NOTICE:  PRIMARY KEY index must contain all columns in the table's distribution key.
 DETAIL:  Distribution key column "i" is not included in the constraint.
@@ -71,12 +71,12 @@ HINT:  Add "i" to the constraint with the operator.
 NOTICE:  PRIMARY KEY index must contain all columns in the table's distribution key.
 DETAIL:  Distribution key column "j" is not included in the constraint.
 HINT:  Add "j" to the constraint with the operator.
-ERROR:  the set of columns being indexed should be a superset of the policy.
+ERROR:  PRIMARY KEY must contain all columns in the distribution key of relation "tbl_create_index"
 ALTER TABLE tbl_create_index ADD CONSTRAINT PKEY PRIMARY KEY(i, k);
 NOTICE:  PRIMARY KEY index must contain all columns in the table's distribution key.
 DETAIL:  Distribution key column "j" is not included in the constraint.
 HINT:  Add "j" to the constraint with the operator.
-ERROR:  the set of columns being indexed should be a superset of the policy.
+ERROR:  PRIMARY KEY must contain all columns in the distribution key of relation "tbl_create_index"
 -- should success
 CREATE UNIQUE INDEX tbl_create_index_ij ON tbl_create_index(i, j);
 CREATE UNIQUE INDEX tbl_create_index_ijk ON tbl_create_index(i, j, k);

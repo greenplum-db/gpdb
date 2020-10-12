@@ -500,7 +500,7 @@ HINT:  Add "ename" to the constraint with the operator.
 NOTICE:  UNIQUE index must contain all columns in the table's distribution key.
 DETAIL:  Distribution key column "gender" is not included in the constraint.
 HINT:  Add "gender" to the constraint with the operator.
-ERROR:  the set of columns being indexed should be a superset of the policy.
+ERROR:  UNIQUE index must contain all columns in the distribution key of relation "mdt_test_emp"
 CREATE INDEX mdt_gender_bmp_idx ON mdt_test_emp USING bitmap (gender);
 CREATE INDEX mdt_lower_ename_idex  ON mdt_test_emp ((upper(ename))) WHERE upper(ename)='JIM';
 CREATE  INDEX mdt_ename_idx ON mdt_test_emp  (ename) WITH (fillfactor =80);

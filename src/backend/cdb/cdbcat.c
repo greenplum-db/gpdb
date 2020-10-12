@@ -787,6 +787,9 @@ checkPolicyForUniqueIndex(Relation rel, AttrNumber *indattr, int nidxatts,
 
 	ereport(ERROR,
 			(errcode(ERRCODE_UNIQUE_VIOLATION),
-			 errmsg("the set of columns being indexed should be a superset of the policy.")));
+			 errmsg("%s must contain all columns in the "
+				 "distribution key of relation \"%s\"",
+				 isprimary ? "PRIMARY KEY" : "UNIQUE index",
+				 RelationGetRelationName(rel))));
 }
 
