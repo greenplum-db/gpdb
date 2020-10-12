@@ -1549,9 +1549,7 @@ motion_sanity_check(PlannerInfo *root, Plan *plan)
 	elog(DEBUG5, "Motion Deadlock Sanity Check");
 
 	if (motion_sanity_walker((Node *) plan, &sanity_result))
-	{
-		Insist(0);
-	}
+		elog(ERROR, "motion sanity walker returned true");
 
 	if (sanity_result.flags & SANITY_DEADLOCK)
 		elog(ERROR, "Post-planning sanity check detected motion deadlock.");

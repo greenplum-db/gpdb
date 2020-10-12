@@ -1636,8 +1636,8 @@ expandRecordVariable(ParseState *pstate, Var *var, int levelsup)
 			}
 			break;
 		case RTE_VOID:
-	            Insist(0);
-        	    break;
+			elog(ERROR, "unexpected RTE type RTE_VOID");
+			break;
 	}
 
 	/*

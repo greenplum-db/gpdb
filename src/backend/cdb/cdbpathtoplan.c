@@ -81,7 +81,7 @@ cdbpathtoplan_create_flow(PlannerInfo *root,
 		flow = makeFlow(FLOW_SINGLETON, 1);
 	}
 	else
-		Insist(0);
+		elog(ERROR, "incorrect locus type %d to create flow", locus.locustype);
 
 	flow->locustype = locus.locustype;
 	return flow;

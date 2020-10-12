@@ -279,22 +279,27 @@ GetExtFromForeignTableOptions(List *ftoptons, Oid relid)
 				(errcode(ERRCODE_SYNTAX_ERROR),
 				 errmsg("locationuris and command options conflict with each other")));
 
-	Insist(fmttype_is_custom(extentry->fmtcode) ||
-		   fmttype_is_csv(extentry->fmtcode) ||
-		   fmttype_is_text(extentry->fmtcode));
+	if (!fmttype_is_custom(extentry->fmtcode) &&
+		!fmttype_is_csv(extentry->fmtcode) &&
+		!fmttype_is_text(extentry->fmtcode))
+		elog(ERROR, "unsupported format type %d for external table", extentry->fmtcode);
 
 	if (!rejectlimit_found) {
 		/* mark that no SREH requested */
 		extentry->rejectlimit = -1;
 	}
 
-	if (rejectlimittype_found) {
-		Insist(extentry->rejectlimittype == 'r' || extentry->rejectlimittype == 'p');
-	} else {
-		extentry->rejectlimittype = -1;
+	if (rejectlimittype_found)
+	{
+		if (extentry->rejectlimittype != 'r' && extentry->rejectlimittype != 'p')
+			elog(ERROR, "unsupported reject limit type %c for external table",
+				 extentry->rejectlimittype);
 	}
+	else
+		extentry->rejectlimittype = -1;
 
-	Insist(PG_VALID_ENCODING(extentry->encoding));
+	if (!PG_VALID_ENCODING(extentry->encoding))
+		elog(ERROR, "invalid encoding found for external table");
 
 	extentry->options = entryOptions;
 

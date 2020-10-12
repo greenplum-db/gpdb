@@ -317,7 +317,7 @@ zlib_compress(PG_FUNCTION_ARGS)
 
 			default:
 				/* shouldn't get here */
-				Insist(false);
+				elog(ERROR, "zlib compression failed with error %d", last_error);
 				break;
 		}
 	}
@@ -376,7 +376,7 @@ zlib_decompress(PG_FUNCTION_ARGS)
 
 			default:
 				/* shouldn't get here */
-				Insist(false);
+				elog(ERROR, "zlib decompression failed with error %d", last_error);
 				break;
 		}
 	}

@@ -2081,7 +2081,8 @@ create_unique_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath,
 		 * which might be optimal in some cases?
 		 */
 		add_motion = true;
-        Insist(subpath);
+		if (subpath == NULL)
+			elog(ERROR, "could not create motion path");
 	}
 	else
 		locus = subpath->locus;

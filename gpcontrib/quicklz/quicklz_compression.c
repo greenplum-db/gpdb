@@ -71,24 +71,16 @@ static size_t
 quicklz_compressor(int level, const void *source, char *destination,
 				   size_t size, void *state)
 {
-	if (level == 1)
-	{
-		return qlz_compress(source, destination, size,
-							 (qlz_state_compress *)state);
-	}
-	Insist(false);
+	return qlz_compress(source, destination, size,
+						(qlz_state_compress *)state);
 }
 
 static size_t
 quicklz_decompressor(int level, const char *source, void *destination,
 					 void *state)
 {
-	if (level == 1)
-	{
-		return qlz_decompress(source, destination,
-							   (qlz_state_decompress *)state);
-	}
-	Insist(false);
+	return qlz_decompress(source, destination,
+						  (qlz_state_decompress *)state);
 }
 
 /* ---------------------------------------------------------------------
@@ -116,23 +108,17 @@ quicklz_constructor(PG_FUNCTION_ARGS)
 
 	cs->opaque = (void *)state;
 
-	Insist(PointerIsValid(sa->comptype));
-	Insist(strcmp(sa->comptype, "quicklz") == 0);
-	Insist(sa->complevel == 1);
+	Assert(PointerIsValid(sa->comptype));
+	Assert(strcmp(sa->comptype, "quicklz") == 0);
 
 	state->level = sa->complevel;
 	state->compress = compress;
-	if (sa->complevel == 1)
-	{
-		state->compress_fn = quicklz_compressor;
-		state->decompress_fn = quicklz_decompressor;
-		if (compress)
-			scratchlen = sizeof(qlz_state_compress);
-		else
-			scratchlen = sizeof(qlz_state_decompress);
-	}
+	state->compress_fn = quicklz_compressor;
+	state->decompress_fn = quicklz_decompressor;
+	if (compress)
+		scratchlen = sizeof(qlz_state_compress);
 	else
-		Insist(false); /* shouldn't get here but code defensively */
+		scratchlen = sizeof(qlz_state_decompress);
 
 	state->scratch = palloc0(scratchlen);
 

@@ -4867,7 +4867,9 @@ TypeNameGetStorageDirective(TypeName *typname)
 							   RelationGetDescr(rel),
 							   &isnull);
 
-		Insist(!isnull);
+		if (isnull)
+			elog(ERROR, "null typoptions attribute encountered for pg_type_encoding for typid %d",
+				 typid);
 
 		out = untransformRelOptions(options);
 	}

@@ -436,7 +436,8 @@ getCurrentOf(CurrentOfExpr *cexpr,
 		 * tuple yielded by the top node in the plan.
 		 */
 		slot = queryDesc->planstate->ps_ResultTupleSlot;
-		Insist(!TupIsNull(slot));
+		if (TupIsNull(slot))
+			elog(ERROR, "TupleTableslot is empty");
 		Assert(queryDesc->estate->es_junkFilter);
 
 		/* extract gp_segment_id metadata */

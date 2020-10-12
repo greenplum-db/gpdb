@@ -19292,7 +19292,7 @@ mergeTableFuncParameters(List *func_args, List *columns)
 
 			/* Output modes */
 			case FUNC_PARAM_TABLE:
-				Insist(false);  /* not feasible */
+				elog(ERROR, "TABLE arguments aren't allowed in TABLE functions"); /* not feasible */
 				break;
 			case FUNC_PARAM_OUT:
 				ereport(ERROR,

@@ -709,7 +709,7 @@ CopyToDispatchFlush(CopyState cstate)
 			(void) pq_putmessage('d', fe_msgbuf->data, fe_msgbuf->len);
 			break;
 		case COPY_CALLBACK:
-			Insist(false); /* internal error */
+			elog(ERROR, "unexpected destination COPY_CALLBACK to flush data");
 			break;
 	}
 

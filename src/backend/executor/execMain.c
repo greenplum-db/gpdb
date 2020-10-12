@@ -4067,10 +4067,10 @@ AdjustReplicatedTableCounts(EState *estate)
 		else if (containReplicatedTable)
 		{
 			/*
-			 * If one is replicated table, assert that other
-			 * tables are also replicated table.
+			 * If one is replicated table, error if other tables are not
+			 * replicated table.
  			 */
-			Insist(0);
+			elog(ERROR, "mix of replicated and non-replicated tables in result_relation is not supported");
 		}
 	}
 
