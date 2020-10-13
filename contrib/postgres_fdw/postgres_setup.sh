@@ -19,11 +19,14 @@ pgbin="pgsql"
 # install postgres
 if [ ! -d "${pgbin}" ] ; then
 	mkdir ${pgbin}
-	wget https://ftp.postgresql.org/pub/source/v10.4/postgresql-10.4.tar.gz
-	tar -xvf postgresql-10.4.tar.gz
+	if [ ! -d postgresql-10.4 ]; then
+		wget https://ftp.postgresql.org/pub/source/v10.4/postgresql-10.4.tar.gz
+		tar -xvf postgresql-10.4.tar.gz
+	fi
 	pushd postgresql-10.4
-	./configure --prefix=${DIR}/testdata/${pgsql}
-	make -j2 install
+	./configure --prefix=${DIR}/testdata/${pgbin}
+	make -j4 install
+	rm -rf postgresql-10.4.tar.gz
 	popd
 fi
 
