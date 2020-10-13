@@ -18,9 +18,13 @@ pgbin="pgsql"
 
 # install postgres
 if [ ! -d "${pgbin}" ] ; then
-	wget https://get.enterprisedb.com/postgresql/postgresql-10.14-1-linux-x64-binaries.tar.gz
-	tar xf postgresql-10.14-1-linux-x64-binaries.tar.gz
-	rm postgresql-10.14-1-linux-x64-binaries.tar.gz
+	mkdir ${pgbin}
+	wget https://ftp.postgresql.org/pub/source/v10.4/postgresql-10.4.tar.gz
+	tar -xvf postgresql-10.4.tar.gz
+	pushd postgresql-10.4
+	./configure --prefix=${DIR}/testdata/${pgsql}
+	make -j2 install
+	popd
 fi
 
 # start postgres
