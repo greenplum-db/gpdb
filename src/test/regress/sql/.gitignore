@@ -17,6 +17,7 @@
 /autovacuum-template0.sql
 /bb_memory_quota.sql
 /bb_mpph.sql
+/collect_tabstat.sql
 /createdb.sql
 /default_tablespace.sql
 /dispatch.sql
