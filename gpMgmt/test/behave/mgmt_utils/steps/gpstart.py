@@ -3,7 +3,8 @@ import signal
 import subprocess
 
 from behave import given, when, then
-from  test.behave_utils import utils
+from test.behave_utils import utils
+from gppylib.commands.base import Command
 
 def _run_sql(sql, opts=None):
     env = None
@@ -23,32 +24,29 @@ def _run_sql(sql, opts=None):
         "-c", sql,
     ], env=env)
 
+def do_catalog_query(query):
+    cmd = '''PGOPTIONS='-c gp_role=utility' psql -t -d template1 -c "SET allow_system_table_mods='true'; %s"''' % query
+    cmd = Command(name="catalog query", cmdStr=cmd)
+    cmd.run(validateAfter=True)
+    return cmd
+
+def change_hostname(dbid, hostname):
+    do_catalog_query("UPDATE gp_segment_configuration SET hostname = '{0}', address = '{0}' WHERE dbid = {1}".format(hostname, dbid))
+
+def change_status(dbid, status):
+    do_catalog_query("UPDATE gp_segment_configuration SET status = '%s' WHERE dbid = %s" % (status, dbid))
+
 @when('the standby host goes down')
 def impl(context):
-    """
-    Fakes a host failure by updating the standby segment entry to point at an
-    invalid hostname and address.
-    """
-    opts = {
-        'gp_role': 'utility',
-        'allow_system_table_mods': 'on',
-    }
-
-    subprocess.check_call(['gpstart', '-am'])
-    _run_sql("""
-        UPDATE gp_segment_configuration
-           SET hostname = 'standby.invalid',
-                address = 'standby.invalid'
-         WHERE content = -1 AND role = 'm'
-    """, opts=opts)
-    subprocess.check_call(['gpstop', '-am'])
+    result = do_catalog_query("SELECT dbid FROM gp_segment_configuration WHERE content = -1 AND role = 'm'")
+    dbid = result.get_stdout().strip()
+    change_hostname(dbid, 'invalid_host')
 
     def cleanup(context):
         """
         Reverses the above SQL by starting up in master-only utility mode. Since
         the standby host is incorrect, a regular gpstart call won't work.
         """
-
         utils.stop_database_if_started(context)
 
         subprocess.check_call(['gpstart', '-am'])
@@ -65,7 +63,7 @@ def impl(context):
         """, opts=opts)
         subprocess.check_call(['gpstop', '-am'])
 
-    context.add_cleanup(cleanup, context)
+        context.add_cleanup(cleanup, context)
 
 def _handle_sigpipe():
     """
@@ -90,3 +88,41 @@ def impl(context):
 
     context.stdout_message, context.stderr_message = p.communicate()
     context.ret_code = p.returncode
+
+@given('segment {dbid} goes down' )
+def impl(context, dbid):
+    result = do_catalog_query("SELECT hostname FROM gp_segment_configuration WHERE dbid = %s" % dbid)
+    if not hasattr(context, 'old_hostnames'):
+        context.old_hostnames = {}
+    context.old_hostnames[dbid] = result.get_stdout().strip()
+    change_hostname(dbid, 'invalid_host')
+
+@then('the status of segment {dbid} should be "{expected_status}"' )
+def impl(context, dbid, expected_status):
+    result = do_catalog_query("SELECT status FROM gp_segment_configuration WHERE dbid = %s" % dbid)
+
+    status = result .get_stdout().strip()
+    if status != expected_status:
+        raise Exception("Expected status to be %s, but it is %s" % (expected_status, status))
+
+@then('the status of segment {dbid} is changed to "{status}"' )
+def impl(context, dbid, status):
+    do_catalog_query("UPDATE gp_segment_configuration SET status = '%s' WHERE dbid = %s" % (status, dbid))
+
+@then('the cluster is returned to a good state' )
+def impl(context):
+    if not hasattr(context, 'old_hostnames'):
+        raise Exception("Cannot reset segment hostnames: no hostnames are saved")
+    for dbid, hostname in context.old_hostnames.items():
+        change_hostname(dbid, hostname)
+
+    context.execute_steps("""
+    When the user runs "gprecoverseg -a"
+    Then gprecoverseg should return a return code of 0
+    And all the segments are running
+    And the segments are synchronized
+    When the user runs "gprecoverseg -a -r"
+    Then gprecoverseg should return a return code of 0
+    And all the segments are running
+    And the segments are synchronized
+    """)

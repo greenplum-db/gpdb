@@ -1245,13 +1245,13 @@ def impl(context):
         statrep = dbconn.query(conn, check_stat_replication_query).fetchall()
     conn.close()
 
-    context.standby_dbid = segconfig[0][0]
-
     if len(segconfig) != 1:
         raise Exception("gp_segment_configuration did not have standby master")
 
     if len(statrep) != 1:
         raise Exception("pg_stat_replication did not have standby master")
+
+    context.standby_dbid = segconfig[0][0]
 
 @then('verify the standby master is now acting as master')
 def impl(context):
