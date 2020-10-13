@@ -1,5 +1,4 @@
 #!/bin/bash
-set -eox pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ ! -d testdata ]; then
 	mkdir testdata
