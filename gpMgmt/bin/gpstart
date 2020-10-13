@@ -113,12 +113,19 @@ class GpStart:
             if self.masteronly:
                 return 0
 
+            num_workers = min(len(self.gparray.get_hostlist()), self.parallel)
+            # We check for unreachable segment hosts first thing, because if a host is down but its segments
+            # are marked up, later checks can return invalid or misleading results and the cluster may not
+            # start in a good state.
+            unreachable_hosts = self.get_unreachable_segment_hosts(num_workers)
+            if unreachable_hosts:
+                self.mark_segments_down_for_unreachable_hosts(unreachable_hosts)
+
             if self.skip_heap_checksum_validation:
                 self.master_checksum_value = None
                 logger.warning("Because of --skip-heap-checksum-validation, the GUC for data_checksums "
                                    "will not be checked between master and segments")
             else:
-                num_workers = min(len(self.gparray.get_hostlist()), self.parallel)
                 self.master_checksum_value = HeapChecksum(gparray=self.gparray, num_workers=num_workers,
                                                           logger=logger).get_master_value()
 
@@ -288,6 +295,46 @@ class GpStart:
         cmd.run(validateAfter=True)
         logger.info("Master Stopped...")
         raise ExceptionNoStackTraceNeeded("Standby activated, this node no more can act as master.")
+
+    def get_unreachable_segment_hosts(self, num_workers):
+        hostlist = set(self.gparray.get_hostlist(includeMaster=False))
+
+        pool = base.WorkerPool(numWorkers=num_workers)
+        try:
+            for host in hostlist:
+                cmd = Command(name='check %s is up' % host, cmdStr="ssh %s 'echo %s'" % (host, host))
+                pool.addCommand(cmd)
+            pool.join()
+        finally:
+            pool.haltWork()
+            pool.joinWorkers()
+
+        # There's no good way to map a CommandResult back to its originating Command so instead
+        # of looping through and finding the hosts that errored out, we remove any hosts that
+        # succeeded from the hostlist and any remaining hosts will be ones that were unreachable.
+        for item in pool.getCompletedItems():
+            result = item.get_results()
+            if result.rc == 0:
+                host = result.stdout.strip()
+                hostlist.remove(host)
+
+        if len(hostlist) > 0:
+            logger.warning("One or more hosts are not reachable via SSH.  Any segments on those hosts will be marked down")
+            for host in sorted(hostlist):
+                logger.warning("Host %s is unreachable" % host)
+            return hostlist
+        return None
+
+    def mark_segments_down_for_unreachable_hosts(self, unreachable_hosts):
+        # We only mark the segment down in gparray for use by later checks, as
+        # setting the actual segment down in gp_segment_configuration leads to
+        # an inconsistent state and may prevent the database from starting.
+        for segmentPair in self.gparray.segmentPairs:
+            for seg in [segmentPair.primaryDB, segmentPair.mirrorDB]:
+                host = seg.getSegmentHostName()
+                if host in unreachable_hosts:
+                    logger.warning("Marking segment %d down because %s is unreachable" % (seg.dbid, host))
+                    seg.setSegmentStatus(STATUS_DOWN)
 
     ######
     def _recovery_startup(self):

@@ -1243,13 +1243,13 @@ def impl(context):
 		segconfig = dbconn.execSQL(conn, check_segment_config_query).fetchall()
 		statrep = dbconn.execSQL(conn, check_stat_replication_query).fetchall()
 
-	context.standby_dbid = segconfig[0][0]
-
 	if len(segconfig) != 1:
 		raise Exception("gp_segment_configuration did not have standby master")
 
 	if len(statrep) != 1:
 		raise Exception("pg_stat_replication did not have standby master")
+
+	context.standby_dbid = segconfig[0][0]
 
 @then('verify the standby master is now acting as master')
 def impl(context):
@@ -1946,6 +1946,19 @@ def impl(context, gppkg_name):
         if not gppkg_name in cmd.get_stdout():
             raise Exception( '"%s" gppkg is not installed on host: %s. \nInstalled packages: %s' % (gppkg_name, hostname, cmd.get_stdout()))
 
+
+@given('the user runs command "{command}" on all hosts without validation')
+@when('the user runs command "{command}" on all hosts without validation')
+@then('the user runs command "{command}" on all hosts without validation')
+def impl(context, command):
+    hostlist = get_all_hostnames_as_list(context, 'template1')
+
+    for hostname in set(hostlist):
+        cmd = Command(name='running command:%s' % command,
+                      cmdStr=command,
+                      ctxt=REMOTE,
+                      remoteHost=hostname)
+        cmd.run(validateAfter=False)
 
 @given('"{gppkg_name}" gppkg files do not exist on any hosts')
 @when('"{gppkg_name}" gppkg files do not exist on any hosts')
