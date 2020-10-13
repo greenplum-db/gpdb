@@ -1472,7 +1472,7 @@ CDXLOperatorFactory::MakeDXLIndexDescr(CDXLMemoryManager *dxl_memory_manager,
 	CMDName *mdname = GPOS_NEW(mp) CMDName(mp, index_name);
 	GPOS_DELETE(index_name);
 
-	return GPOS_NEW(mp) CDXLIndexDescr(mp, mdid, mdname);
+	return GPOS_NEW(mp) CDXLIndexDescr(mdid, mdname);
 }
 
 //---------------------------------------------------------------------------

@@ -31,9 +31,6 @@ using namespace gpmd;
 class CDXLIndexDescr : public CRefCount
 {
 private:
-	// memory pool
-	CMemoryPool *m_mp;
-
 	// id and version information for the table
 	IMDId *m_mdid;
 
@@ -45,7 +42,7 @@ private:
 
 public:
 	// ctor
-	CDXLIndexDescr(CMemoryPool *mp, IMDId *mdid, CMDName *mdname);
+	CDXLIndexDescr(IMDId *mdid, CMDName *mdname);
 
 	// dtor
 	virtual ~CDXLIndexDescr();

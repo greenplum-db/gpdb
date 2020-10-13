@@ -100,7 +100,7 @@ CTranslatorUtils::GetIndexDescr(CMemoryPool *mp, CMDAccessor *md_accessor,
 	const CWStringConst *index_name = index->Mdname().GetMDName();
 	CMDName *index_mdname = GPOS_NEW(mp) CMDName(mp, index_name);
 
-	return GPOS_NEW(mp) CDXLIndexDescr(mp, mdid, index_mdname);
+	return GPOS_NEW(mp) CDXLIndexDescr(mdid, index_mdname);
 }
 
 //---------------------------------------------------------------------------
