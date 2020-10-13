@@ -4060,7 +4060,13 @@ deconstruct_expr_mutator(Node *node, MppGroupContext *ctx)
 			prelim_tle->ressortgroupref = sub_tle->ressortgroupref;
 			prelim_tle->resjunk = false;
 			ctx->grps_tlist = lappend(ctx->grps_tlist, prelim_tle);
-			return node;
+
+			Var			*var = makeVar(grp_varno, prelim_tle->resno,
+										  exprType((Node *) prelim_tle->expr),
+										  exprTypmod((Node *) prelim_tle->expr),
+										  exprCollation((Node *) prelim_tle->expr),
+										  0);
+			return (Node*) var;
 		}
 	}
 

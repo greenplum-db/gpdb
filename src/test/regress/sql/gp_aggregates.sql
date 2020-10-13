@@ -169,3 +169,16 @@ select j >= 0,
 		from multiagg_expr_group_tbl group by 1;
 
 drop table multiagg_expr_group_tbl;
+
+CREATE TABLE multiagg_expr_group_tbl2 (
+	A int,
+	B int,
+	C text ) DISTRIBUTED RANDOMLY;
+CREATE VIEW multiagg_expr_group_view as select B, rtrim(C) AS C FROM multiagg_expr_group_tbl2;
+INSERT INTO multiagg_expr_group_tbl2 VALUES(1,1,1), (2,2,2);
+SELECT v1.B
+  FROM multiagg_expr_group_view v1
+  GROUP BY
+  v1.B, v1.C
+  HAVING ( v1.B= ( SELECT v2.B FROM multiagg_expr_group_view v2 WHERE v1.C = v2.C));
+
