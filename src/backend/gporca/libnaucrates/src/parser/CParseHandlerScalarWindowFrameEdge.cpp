@@ -31,9 +31,8 @@ XERCES_CPP_NAMESPACE_USE
 //---------------------------------------------------------------------------
 CParseHandlerScalarWindowFrameEdge::CParseHandlerScalarWindowFrameEdge(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root, BOOL leading_edge)
-	: CParseHandlerScalarOp(mp, parse_handler_mgr, parse_handler_root),
-	  m_leading_edge(leading_edge)
+	CParseHandlerBase *parse_handler_root)
+	: CParseHandlerScalarOp(mp, parse_handler_mgr, parse_handler_root)
 {
 }
 

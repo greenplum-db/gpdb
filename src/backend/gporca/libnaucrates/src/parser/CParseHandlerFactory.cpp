@@ -1969,7 +1969,7 @@ CParseHandlerFactory::CreateFrameTrailingEdgeParseHandler(
 	CParseHandlerBase *parse_handler_root)
 {
 	return GPOS_NEW(mp) CParseHandlerScalarWindowFrameEdge(
-		mp, parse_handler_mgr, parse_handler_root, false /*fLeading*/);
+		mp, parse_handler_mgr, parse_handler_root);
 }
 
 // creates a leading window frame edge parser
@@ -1979,7 +1979,7 @@ CParseHandlerFactory::CreateFrameLeadingEdgeParseHandler(
 	CParseHandlerBase *parse_handler_root)
 {
 	return GPOS_NEW(mp) CParseHandlerScalarWindowFrameEdge(
-		mp, parse_handler_mgr, parse_handler_root, true /*fLeading*/);
+		mp, parse_handler_mgr, parse_handler_root);
 }
 
 // creates a parse handler for parsing search strategy

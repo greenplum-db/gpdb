@@ -33,9 +33,6 @@ XERCES_CPP_NAMESPACE_USE
 class CParseHandlerScalarWindowFrameEdge : public CParseHandlerScalarOp
 {
 private:
-	// identify if the parser is for a leading or trailing edge
-	BOOL m_leading_edge;
-
 	// private copy ctor
 	CParseHandlerScalarWindowFrameEdge(
 		const CParseHandlerScalarWindowFrameEdge &);
@@ -54,8 +51,7 @@ public:
 	// ctor
 	CParseHandlerScalarWindowFrameEdge(CMemoryPool *mp,
 									   CParseHandlerManager *parse_handler_mgr,
-									   CParseHandlerBase *parse_handler_root,
-									   BOOL leading_edge);
+									   CParseHandlerBase *parse_handler_root);
 };
 }  // namespace gpdxl
 
