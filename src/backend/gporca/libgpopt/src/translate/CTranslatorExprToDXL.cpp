@@ -3456,8 +3456,8 @@ CTranslatorExprToDXL::PdxlnCorrelatedNLJoin(
 		CMDName *mdname = GPOS_NEW(m_mp) CMDName(m_mp, colref->Name().Pstr());
 		IMDId *mdid = colref->RetrieveType()->MDId();
 		mdid->AddRef();
-		CDXLColRef *dxl_colref = GPOS_NEW(m_mp) CDXLColRef(
-			m_mp, mdname, colref->Id(), mdid, colref->TypeModifier());
+		CDXLColRef *dxl_colref = GPOS_NEW(m_mp)
+			CDXLColRef(mdname, colref->Id(), mdid, colref->TypeModifier());
 		dxl_colref_array->Append(dxl_colref);
 	}
 
@@ -3953,7 +3953,7 @@ CTranslatorExprToDXL::PdxlnNLJoin(CExpression *pexprInnerNLJ,
 			IMDId *mdid = col_ref->RetrieveType()->MDId();
 			mdid->AddRef();
 			CDXLColRef *colref_dxl = GPOS_NEW(m_mp) CDXLColRef(
-				m_mp, md_name, col_ref->Id(), mdid, col_ref->TypeModifier());
+				md_name, col_ref->Id(), mdid, col_ref->TypeModifier());
 			col_refs->Append(colref_dxl);
 		}
 	}

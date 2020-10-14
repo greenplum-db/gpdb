@@ -1415,7 +1415,7 @@ CTranslatorUtils::CreateDummyProjectElem(CMemoryPool *mp, ULONG colid_input,
 	CMDName *mdname =
 		GPOS_NEW(mp) CMDName(mp, dxl_col_descr->MdName()->GetMDName());
 	CDXLColRef *dxl_colref = GPOS_NEW(mp) CDXLColRef(
-		mp, mdname, colid_input, copy_mdid, dxl_col_descr->TypeModifier());
+		mdname, colid_input, copy_mdid, dxl_col_descr->TypeModifier());
 	CDXLScalarIdent *dxl_scalar_ident =
 		GPOS_NEW(mp) CDXLScalarIdent(mp, dxl_colref);
 

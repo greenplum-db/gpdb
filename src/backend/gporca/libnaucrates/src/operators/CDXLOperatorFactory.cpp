@@ -1604,7 +1604,7 @@ CDXLOperatorFactory::MakeDXLColRef(CDXLMemoryManager *dxl_memory_manager,
 		dxl_memory_manager, attrs, EdxltokenTypeMod, target_elem, true,
 		default_type_modifier);
 
-	return GPOS_NEW(mp) CDXLColRef(mp, mdname, id, mdid_type, type_modifier);
+	return GPOS_NEW(mp) CDXLColRef(mdname, id, mdid_type, type_modifier);
 }
 
 //---------------------------------------------------------------------------

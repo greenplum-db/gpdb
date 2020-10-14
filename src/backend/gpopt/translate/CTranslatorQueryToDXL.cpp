@@ -1698,7 +1698,6 @@ CTranslatorQueryToDXL::TranslateWindowToDXL(
 						m_mp,
 						GPOS_NEW(m_mp) CDXLScalarIdent(
 							m_mp, GPOS_NEW(m_mp) CDXLColRef(
-									  m_mp,
 									  GPOS_NEW(m_mp) CMDName(
 										  m_mp, mdname_alias->GetMDName()),
 									  colid,
@@ -4183,8 +4182,8 @@ CTranslatorQueryToDXL::CreateDXLOutputCols(
 		IMDId *mdid_type = GPOS_NEW(m_mp)
 			CMDIdGPDB(gpdb::ExprType((Node *) target_entry->expr));
 		INT type_modifier = gpdb::ExprTypeMod((Node *) target_entry->expr);
-		CDXLColRef *dxl_colref = GPOS_NEW(m_mp)
-			CDXLColRef(m_mp, mdname, colid, mdid_type, type_modifier);
+		CDXLColRef *dxl_colref =
+			GPOS_NEW(m_mp) CDXLColRef(mdname, colid, mdid_type, type_modifier);
 		CDXLScalarIdent *dxl_ident =
 			GPOS_NEW(m_mp) CDXLScalarIdent(m_mp, dxl_colref);
 

@@ -1443,8 +1443,8 @@ CTranslatorExprToDXLUtils::ReplaceSubplan(
 	mdid_type->AddRef();
 	CMDName *mdname =
 		GPOS_NEW(mp) CMDName(mp, pdxlopPrEl->GetMdNameAlias()->GetMDName());
-	CDXLColRef *dxl_colref = GPOS_NEW(mp) CDXLColRef(
-		mp, mdname, pdxlopPrEl->Id(), mdid_type, colref->TypeModifier());
+	CDXLColRef *dxl_colref = GPOS_NEW(mp)
+		CDXLColRef(mdname, pdxlopPrEl->Id(), mdid_type, colref->TypeModifier());
 	CDXLScalarIdent *pdxlnScId = GPOS_NEW(mp) CDXLScalarIdent(mp, dxl_colref);
 	CDXLNode *dxlnode = GPOS_NEW(mp) CDXLNode(mp, pdxlnScId);
 	BOOL fReplaced GPOS_ASSERTS_ONLY =
@@ -1542,7 +1542,7 @@ CTranslatorExprToDXLUtils::PdxlnIdent(CMemoryPool *mp,
 	mdid->AddRef();
 
 	CDXLColRef *dxl_colref = GPOS_NEW(mp)
-		CDXLColRef(mp, mdname, colref->Id(), mdid, colref->TypeModifier());
+		CDXLColRef(mdname, colref->Id(), mdid, colref->TypeModifier());
 
 	CDXLScalarIdent *dxl_op = GPOS_NEW(mp) CDXLScalarIdent(mp, dxl_colref);
 	return GPOS_NEW(mp) CDXLNode(mp, dxl_op);

@@ -217,9 +217,8 @@ CTranslatorScalarToDXL::TranslateVarToDXL(
 	CMDName *mdname = GPOS_NEW(m_mp) CMDName(m_mp, str);
 
 	// create a column reference for the given var
-	CDXLColRef *dxl_colref = GPOS_NEW(m_mp)
-		CDXLColRef(m_mp, mdname, id, GPOS_NEW(m_mp) CMDIdGPDB(var->vartype),
-				   var->vartypmod);
+	CDXLColRef *dxl_colref = GPOS_NEW(m_mp) CDXLColRef(
+		mdname, id, GPOS_NEW(m_mp) CMDIdGPDB(var->vartype), var->vartypmod);
 
 	// create the scalar ident operator
 	CDXLScalarIdent *scalar_ident =
@@ -1471,12 +1470,12 @@ CTranslatorScalarToDXL::TranslateWindowFrameEdgeToDXL(
 
 		// construct a new scalar ident
 		CDXLScalarIdent *scalar_ident = GPOS_NEW(m_mp) CDXLScalarIdent(
-			m_mp, GPOS_NEW(m_mp) CDXLColRef(
-					  m_mp, GPOS_NEW(m_mp) CMDName(m_mp, &unnamed_col),
-					  project_element_id,
-					  GPOS_NEW(m_mp)
-						  CMDIdGPDB(gpdb::ExprType(const_cast<Node *>(node))),
-					  gpdb::ExprTypeMod(const_cast<Node *>(node))));
+			m_mp,
+			GPOS_NEW(m_mp) CDXLColRef(
+				GPOS_NEW(m_mp) CMDName(m_mp, &unnamed_col), project_element_id,
+				GPOS_NEW(m_mp)
+					CMDIdGPDB(gpdb::ExprType(const_cast<Node *>(node))),
+				gpdb::ExprTypeMod(const_cast<Node *>(node))));
 
 		val_node = GPOS_NEW(m_mp) CDXLNode(m_mp, scalar_ident);
 	}

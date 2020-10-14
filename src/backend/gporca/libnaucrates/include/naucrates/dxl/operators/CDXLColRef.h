@@ -44,9 +44,6 @@ typedef CDynamicPtrArray<CDXLColRef, CleanupRelease> CDXLColRefArray;
 class CDXLColRef : public CRefCount
 {
 private:
-	// memory pool
-	CMemoryPool *m_mp;
-
 	// name
 	CMDName *m_mdname;
 
@@ -64,8 +61,7 @@ private:
 
 public:
 	// ctor/dtor
-	CDXLColRef(CMemoryPool *mp, CMDName *mdname, ULONG id, IMDId *mdid_type,
-			   INT type_modifier);
+	CDXLColRef(CMDName *mdname, ULONG id, IMDId *mdid_type, INT type_modifier);
 
 	~CDXLColRef();
 
