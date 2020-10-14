@@ -1919,39 +1919,22 @@ static bool
 openFetchSegmentFile(AppendOnlyFetchDesc aoFetchDesc,
 					 int openSegmentFileNum)
 {
-	int			i;
-
 	FileSegInfo *fsInfo;
-	int			segmentFileNum;
 	int64		logicalEof;
 	int32		fileSegNo;
 
 	Assert(!aoFetchDesc->currentSegmentFile.isOpen);
 
-	i = 0;
-	while (true)
+	fsInfo = aoFetchDesc->segmentFileInfo[openSegmentFileNum];
+	if (fsInfo->state == AOSEG_STATE_AWAITING_DROP)
 	{
-		if (i >= aoFetchDesc->totalSegfiles)
-			return false;
-		/* Segment file not visible in catalog information. */
-
-		fsInfo = aoFetchDesc->segmentFileInfo[i];
-		segmentFileNum = fsInfo->segno;
-		if (openSegmentFileNum == segmentFileNum)
-		{
-			if (fsInfo->state == AOSEG_STATE_AWAITING_DROP)
-			{
-				/*
-				 * File compacted, but not dropped. All information are
-				 * declared invisible
-				 */
-				return false;
-			}
-			logicalEof = (int64) fsInfo->eof;
-			break;
-		}
-		i++;
+		/*
+		 * File compacted, but not dropped. All information are
+		 * declared invisible
+		 */
+		return false;
 	}
+	logicalEof = (int64) fsInfo->eof;
 
 	/*
 	 * Don't try to open a segment file when its EOF is 0, since the file may
@@ -2263,14 +2246,15 @@ appendonly_fetch_init(Relation relation,
 	 * Get information about all the file segments we need to scan
 	 */
 	aoFetchDesc->segmentFileInfo =
-		GetAllFileSegInfo(
+		GetAllFileSegInfoArray(
 						  relation,
-						  appendOnlyMetaDataSnapshot,
-						  &aoFetchDesc->totalSegfiles);
+						  appendOnlyMetaDataSnapshot);
 	for (segno = 0; segno < AOTupleId_MultiplierSegmentFileNum; ++segno)
 	{
 		aoFetchDesc->lastSequence[segno] = ReadLastSequence(segrelid, segno);
+		aoFetchDesc->firstRowNum[segno] = AOTupleId_MaxRowNum;
 	}
+
 
 	AppendOnlyStorageRead_Init(
 							   &aoFetchDesc->storageRead,
@@ -2312,7 +2296,6 @@ appendonly_fetch_init(Relation relation,
 											&aoFetchDesc->blockDirectory,
 											appendOnlyMetaDataSnapshot,
 											aoFetchDesc->segmentFileInfo,
-											aoFetchDesc->totalSegfiles,
 											aoFetchDesc->relation,
 											1,
 											false,
@@ -2557,7 +2540,7 @@ appendonly_fetch_finish(AppendOnlyFetchDesc aoFetchDesc)
 
 	if (aoFetchDesc->segmentFileInfo)
 	{
-		FreeAllSegFileInfo(aoFetchDesc->segmentFileInfo, aoFetchDesc->totalSegfiles);
+		FreeAllSegFileInfoArray(aoFetchDesc->segmentFileInfo);
 		pfree(aoFetchDesc->segmentFileInfo);
 		aoFetchDesc->segmentFileInfo = NULL;
 	}
