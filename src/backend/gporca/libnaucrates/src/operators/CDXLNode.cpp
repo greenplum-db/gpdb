@@ -27,10 +27,7 @@ using namespace gpdxl;
 //
 //---------------------------------------------------------------------------
 CDXLNode::CDXLNode(CMemoryPool *mp)
-	: m_mp(mp),
-	  m_dxl_op(NULL),
-	  m_dxl_properties(NULL),
-	  m_direct_dispatch_info(NULL)
+	: m_dxl_op(NULL), m_dxl_properties(NULL), m_direct_dispatch_info(NULL)
 {
 	m_dxl_array = GPOS_NEW(mp) CDXLNodeArray(mp);
 }
@@ -44,10 +41,7 @@ CDXLNode::CDXLNode(CMemoryPool *mp)
 //
 //---------------------------------------------------------------------------
 CDXLNode::CDXLNode(CMemoryPool *mp, CDXLOperator *dxl_op)
-	: m_mp(mp),
-	  m_dxl_op(dxl_op),
-	  m_dxl_properties(NULL),
-	  m_direct_dispatch_info(NULL)
+	: m_dxl_op(dxl_op), m_dxl_properties(NULL), m_direct_dispatch_info(NULL)
 {
 	GPOS_ASSERT(NULL != dxl_op);
 	m_dxl_array = GPOS_NEW(mp) CDXLNodeArray(mp);
@@ -63,8 +57,7 @@ CDXLNode::CDXLNode(CMemoryPool *mp, CDXLOperator *dxl_op)
 //---------------------------------------------------------------------------
 CDXLNode::CDXLNode(CMemoryPool *mp, CDXLOperator *dxl_op,
 				   CDXLNode *child_dxlnode)
-	: m_mp(mp),
-	  m_dxl_op(dxl_op),
+	: m_dxl_op(dxl_op),
 	  m_dxl_properties(NULL),
 	  m_dxl_array(NULL),
 	  m_direct_dispatch_info(NULL)
@@ -87,8 +80,7 @@ CDXLNode::CDXLNode(CMemoryPool *mp, CDXLOperator *dxl_op,
 CDXLNode::CDXLNode(CMemoryPool *mp, CDXLOperator *dxl_op,
 				   CDXLNode *first_child_dxlnode,
 				   CDXLNode *second_child_dxlnode)
-	: m_mp(mp),
-	  m_dxl_op(dxl_op),
+	: m_dxl_op(dxl_op),
 	  m_dxl_properties(NULL),
 	  m_dxl_array(NULL),
 	  m_direct_dispatch_info(NULL)
@@ -114,8 +106,7 @@ CDXLNode::CDXLNode(CMemoryPool *mp, CDXLOperator *dxl_op,
 				   CDXLNode *first_child_dxlnode,
 				   CDXLNode *second_child_dxlnode,
 				   CDXLNode *third_child_dxlnode)
-	: m_mp(mp),
-	  m_dxl_op(dxl_op),
+	: m_dxl_op(dxl_op),
 	  m_dxl_properties(NULL),
 	  m_dxl_array(NULL),
 	  m_direct_dispatch_info(NULL)
@@ -139,10 +130,8 @@ CDXLNode::CDXLNode(CMemoryPool *mp, CDXLOperator *dxl_op,
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CDXLNode::CDXLNode(CMemoryPool *mp, CDXLOperator *dxl_op,
-				   CDXLNodeArray *dxl_array)
-	: m_mp(mp),
-	  m_dxl_op(dxl_op),
+CDXLNode::CDXLNode(CDXLOperator *dxl_op, CDXLNodeArray *dxl_array)
+	: m_dxl_op(dxl_op),
 	  m_dxl_properties(NULL),
 	  m_dxl_array(dxl_array),
 	  m_direct_dispatch_info(NULL)

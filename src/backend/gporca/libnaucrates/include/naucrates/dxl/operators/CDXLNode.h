@@ -48,9 +48,6 @@ typedef CHashMap<ULONG, CDXLNode, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
 class CDXLNode : public CRefCount
 {
 private:
-	// memory pool
-	CMemoryPool *m_mp;
-
 	// dxl tree operator class
 	CDXLOperator *m_dxl_op;
 
@@ -77,7 +74,7 @@ public:
 	CDXLNode(CMemoryPool *mp, CDXLOperator *dxl_op,
 			 CDXLNode *first_child_dxlnode, CDXLNode *second_child_dxlnode,
 			 CDXLNode *third_child_dxlnode);
-	CDXLNode(CMemoryPool *mp, CDXLOperator *dxl_op, CDXLNodeArray *dxl_array);
+	CDXLNode(CDXLOperator *dxl_op, CDXLNodeArray *dxl_array);
 
 	// dtor
 	virtual ~CDXLNode();

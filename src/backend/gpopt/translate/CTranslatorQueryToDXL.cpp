@@ -2716,7 +2716,7 @@ CTranslatorQueryToDXL::CreateDXLSetOpFromColumns(
 	CDXLLogicalSetOp *dxlop =
 		GPOS_NEW(m_mp) CDXLLogicalSetOp(m_mp, setop_type, output_col_descrs,
 										input_colids, is_cast_across_input);
-	CDXLNode *dxlnode = GPOS_NEW(m_mp) CDXLNode(m_mp, dxlop, children_dxlnodes);
+	CDXLNode *dxlnode = GPOS_NEW(m_mp) CDXLNode(dxlop, children_dxlnodes);
 
 	bitset->Release();
 	output_col_pos->Release();
@@ -3440,7 +3440,7 @@ CTranslatorQueryToDXL::TranslateValueScanRTEToDXL(const RangeTblEntry *rte,
 		// create a UNION ALL operator
 		CDXLLogicalSetOp *dxlop = GPOS_NEW(m_mp) CDXLLogicalSetOp(
 			m_mp, EdxlsetopUnionAll, dxl_col_descr_array, input_colids, false);
-		CDXLNode *dxlnode = GPOS_NEW(m_mp) CDXLNode(m_mp, dxlop, dxlnodes);
+		CDXLNode *dxlnode = GPOS_NEW(m_mp) CDXLNode(dxlop, dxlnodes);
 
 		// make note of new columns from UNION ALL
 		m_var_to_colid_map->LoadColumns(m_query_level, rt_index,
@@ -3516,7 +3516,7 @@ CTranslatorQueryToDXL::TranslateColumnValuesToDXL(
 	// create a project node for the list of project elements
 	project_elem_dxlnode_array->AddRef();
 	CDXLNode *project_list_dxlnode =
-		GPOS_NEW(m_mp) CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLScalarProjList(m_mp),
+		GPOS_NEW(m_mp) CDXLNode(GPOS_NEW(m_mp) CDXLScalarProjList(m_mp),
 								project_elem_dxlnode_array);
 
 	CDXLNode *project_dxlnode =

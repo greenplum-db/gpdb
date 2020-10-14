@@ -163,7 +163,7 @@ CTranslatorExprToDXLUtils::PdxlnPartialScanTest(
 	}
 
 	return GPOS_NEW(mp)
-		CDXLNode(mp, GPOS_NEW(mp) CDXLScalarBoolExpr(mp, Edxland), dxl_array);
+		CDXLNode(GPOS_NEW(mp) CDXLScalarBoolExpr(mp, Edxland), dxl_array);
 }
 
 //---------------------------------------------------------------------------

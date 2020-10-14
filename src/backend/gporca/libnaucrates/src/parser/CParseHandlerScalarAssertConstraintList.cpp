@@ -124,7 +124,7 @@ CParseHandlerScalarAssertConstraintList::EndElement(
 
 		// assemble final assert predicate node
 		m_dxl_node = GPOS_NEW(m_mp)
-			CDXLNode(m_mp, m_dxl_op, m_dxlnode_assert_constraints_parsed_array);
+			CDXLNode(m_dxl_op, m_dxlnode_assert_constraints_parsed_array);
 
 #ifdef GPOS_DEBUG
 		m_dxl_op->AssertValid(m_dxl_node, false /* validate_children */);
