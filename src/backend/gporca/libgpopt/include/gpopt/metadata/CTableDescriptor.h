@@ -82,9 +82,6 @@ private:
 	// key sets
 	CBitSetArray *m_pdrgpbsKeys;
 
-	// number of leaf partitions
-	ULONG m_num_of_partitions;
-
 	// id of user the table needs to be accessed with
 	ULONG m_execute_as_user_id;
 

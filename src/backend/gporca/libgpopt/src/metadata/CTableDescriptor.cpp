@@ -48,7 +48,6 @@ CTableDescriptor::CTableDescriptor(
 	  m_convert_hash_to_random(convert_hash_to_random),
 	  m_pdrgpulPart(NULL),
 	  m_pdrgpbsKeys(NULL),
-	  m_num_of_partitions(0),
 	  m_execute_as_user_id(ulExecuteAsUser),
 	  m_fHasPartialIndexes(FDescriptorWithPartialIndexes())
 {
