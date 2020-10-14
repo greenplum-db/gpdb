@@ -30,8 +30,7 @@ using namespace gpdxl;
 //---------------------------------------------------------------------------
 CDXLTableDescr::CDXLTableDescr(CMemoryPool *mp, IMDId *mdid, CMDName *mdname,
 							   ULONG ulExecuteAsUser)
-	: m_mp(mp),
-	  m_mdid(mdid),
+	: m_mdid(mdid),
 	  m_mdname(mdname),
 	  m_dxl_column_descr_array(NULL),
 	  m_execute_as_user_id(ulExecuteAsUser)

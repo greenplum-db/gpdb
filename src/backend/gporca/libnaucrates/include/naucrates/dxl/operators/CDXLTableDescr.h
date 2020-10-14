@@ -34,9 +34,6 @@ using namespace gpmd;
 class CDXLTableDescr : public CRefCount
 {
 private:
-	// memory pool
-	CMemoryPool *m_mp;
-
 	// id and version information for the table
 	IMDId *m_mdid;
 
