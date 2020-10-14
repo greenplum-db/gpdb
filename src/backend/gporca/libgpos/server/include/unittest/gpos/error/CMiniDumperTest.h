@@ -42,7 +42,7 @@ private:
 	{
 	public:
 		// ctor
-		CMiniDumperStream(CMemoryPool *mp);
+		CMiniDumperStream();
 
 		// dtor
 		virtual ~CMiniDumperStream();

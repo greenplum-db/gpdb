@@ -247,7 +247,7 @@ COptimizer::PdxlnOptimize(
 	// If minidump was requested, open the minidump file and initialize
 	// minidumper. (We create the minidumper object even if we're not
 	// dumping, but without the Init-call, it will stay inactive.)
-	CMiniDumperDXL mdmp(mp);
+	CMiniDumperDXL mdmp;
 	CAutoP<std::wofstream> wosMinidump;
 	CAutoP<COstreamBasic> osMinidump;
 	if (fMinidump)

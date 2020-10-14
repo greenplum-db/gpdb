@@ -3515,9 +3515,8 @@ CTranslatorQueryToDXL::TranslateColumnValuesToDXL(
 
 	// create a project node for the list of project elements
 	project_elem_dxlnode_array->AddRef();
-	CDXLNode *project_list_dxlnode =
-		GPOS_NEW(m_mp) CDXLNode(GPOS_NEW(m_mp) CDXLScalarProjList(m_mp),
-								project_elem_dxlnode_array);
+	CDXLNode *project_list_dxlnode = GPOS_NEW(m_mp) CDXLNode(
+		GPOS_NEW(m_mp) CDXLScalarProjList(m_mp), project_elem_dxlnode_array);
 
 	CDXLNode *project_dxlnode =
 		GPOS_NEW(m_mp) CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLLogicalProject(m_mp),

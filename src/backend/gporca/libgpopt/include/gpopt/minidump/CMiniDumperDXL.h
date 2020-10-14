@@ -34,7 +34,7 @@ private:
 
 public:
 	// ctor
-	explicit CMiniDumperDXL(CMemoryPool *mp);
+	CMiniDumperDXL();
 
 	// dtor
 	virtual ~CMiniDumperDXL();

@@ -33,7 +33,7 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CMiniDumperDXL::CMiniDumperDXL(CMemoryPool *mp) : CMiniDumper(mp)
+CMiniDumperDXL::CMiniDumperDXL() : CMiniDumper()
 {
 }
 

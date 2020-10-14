@@ -28,9 +28,6 @@ namespace gpos
 class CMiniDumper : CStackObject
 {
 private:
-	// memory pool
-	CMemoryPool *m_mp;
-
 	// flag indicating if handler is initialized
 	BOOL m_initialized;
 
@@ -46,7 +43,7 @@ protected:
 
 public:
 	// ctor
-	CMiniDumper(CMemoryPool *mp);
+	CMiniDumper();
 
 	// dtor
 	virtual ~CMiniDumper();

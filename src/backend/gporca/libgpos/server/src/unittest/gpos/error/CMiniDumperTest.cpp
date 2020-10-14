@@ -57,7 +57,7 @@ CMiniDumperTest::EresUnittest_Basic()
 	CAutoMemoryPool amp;
 	CMemoryPool *mp = amp.Pmp();
 
-	CMiniDumperStream mdrs(mp);
+	CMiniDumperStream mdrs;
 
 	CWStringDynamic wstrMinidump(mp);
 	COstreamString oss(&wstrMinidump);
@@ -113,8 +113,7 @@ CMiniDumperTest::PvRaise(void *	 // pv
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CMiniDumperTest::CMiniDumperStream::CMiniDumperStream(CMemoryPool *mp)
-	: CMiniDumper(mp)
+CMiniDumperTest::CMiniDumperStream::CMiniDumperStream() : CMiniDumper()
 {
 }
 

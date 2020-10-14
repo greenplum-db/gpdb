@@ -78,7 +78,7 @@ CMiniDumperDXLTest::EresUnittest_Basic()
 
 	CWStringDynamic minidumpstr(mp);
 	COstreamString oss(&minidumpstr);
-	CMiniDumperDXL mdrs(mp);
+	CMiniDumperDXL mdrs;
 	mdrs.Init(&oss);
 
 	CHAR file_name[GPOS_FILE_NAME_BUF_SIZE];
