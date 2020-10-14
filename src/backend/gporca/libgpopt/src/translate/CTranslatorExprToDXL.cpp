@@ -5705,7 +5705,7 @@ CTranslatorExprToDXL::PdxlnCTAS(CExpression *pexpr,
 		pmdidColType->AddRef();
 
 		CDXLColDescr *pdxlcd = GPOS_NEW(m_mp) CDXLColDescr(
-			m_mp, pmdnameCol, colref->Id(), pcd->AttrNum(), pmdidColType,
+			pmdnameCol, colref->Id(), pcd->AttrNum(), pmdidColType,
 			colref->TypeModifier(), false /* fdropped */, pcd->Width());
 
 		dxl_col_descr_array->Append(pdxlcd);
@@ -7368,7 +7368,7 @@ CTranslatorExprToDXL::MakeDXLTableDescr(const CTableDescriptor *ptabdesc,
 		pmdidColType->AddRef();
 
 		CDXLColDescr *pdxlcd = GPOS_NEW(m_mp) CDXLColDescr(
-			m_mp, pmdnameCol, colref->Id(), pcd->AttrNum(), pmdidColType,
+			pmdnameCol, colref->Id(), pcd->AttrNum(), pmdidColType,
 			colref->TypeModifier(), false /* fdropped */, pcd->Width());
 
 		table_descr->AddColumnDescr(pdxlcd);

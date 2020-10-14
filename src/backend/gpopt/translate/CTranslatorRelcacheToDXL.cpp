@@ -1889,7 +1889,7 @@ CTranslatorRelcacheToDXL::RetrieveCheckConstraints(CMemoryPool *mp,
 
 		// create a column descriptor for the column
 		CDXLColDescr *dxl_col_descr = GPOS_NEW(mp) CDXLColDescr(
-			mp, md_colname, ul + 1 /*colid*/, md_col->AttrNum(), mdid_col_type,
+			md_colname, ul + 1 /*colid*/, md_col->AttrNum(), mdid_col_type,
 			md_col->TypeModifier(), false /* fColDropped */
 		);
 		dxl_col_descr_array->Append(dxl_col_descr);
@@ -3128,7 +3128,7 @@ CTranslatorRelcacheToDXL::RetrievePartConstraintForIndex(
 
 		// create a column descriptor for the column
 		CDXLColDescr *dxl_col_descr = GPOS_NEW(mp) CDXLColDescr(
-			mp, md_colname,
+			md_colname,
 			ul + 1,	 // colid
 			md_col->AttrNum(), mdid_col_type, md_col->TypeModifier(),
 			false  // fColDropped

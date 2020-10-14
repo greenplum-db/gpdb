@@ -183,7 +183,7 @@ CTranslatorUtils::GetTableDescr(CMemoryPool *mp, CMDAccessor *md_accessor,
 
 		// create a column descriptor for the column
 		CDXLColDescr *dxl_col_descr = GPOS_NEW(mp)
-			CDXLColDescr(mp, col, id_generator->next_id(), md_col->AttrNum(),
+			CDXLColDescr(col, id_generator->next_id(), md_col->AttrNum(),
 						 col_type, md_col->TypeModifier(), /* type_modifier */
 						 false,							   /* fColDropped */
 						 md_col->Length());
@@ -479,7 +479,7 @@ CTranslatorUtils::GetColumnDescriptorsFromRecord(CMemoryPool *mp,
 		IMDId *col_type = GPOS_NEW(mp) CMDIdGPDB(coltype);
 
 		CDXLColDescr *dxl_col_descr = GPOS_NEW(mp) CDXLColDescr(
-			mp, col_mdname, id_generator->next_id(), INT(ul + 1) /* attno */,
+			col_mdname, id_generator->next_id(), INT(ul + 1) /* attno */,
 			col_type, type_modifier, false /* fColDropped */
 		);
 		column_descrs->Append(dxl_col_descr);
@@ -526,7 +526,7 @@ CTranslatorUtils::GetColumnDescriptorsFromRecord(CMemoryPool *mp,
 		// This function is only called to construct column descriptors for table-valued functions
 		// which won't have type modifiers for columns of the returned table
 		CDXLColDescr *dxl_col_descr = GPOS_NEW(mp) CDXLColDescr(
-			mp, col_mdname, id_generator->next_id(), INT(ul + 1) /* attno */,
+			col_mdname, id_generator->next_id(), INT(ul + 1) /* attno */,
 			col_type, default_type_modifier, false /* fColDropped */
 		);
 		column_descrs->Append(dxl_col_descr);
@@ -556,11 +556,11 @@ CTranslatorUtils::GetColumnDescriptorsFromBase(CMemoryPool *mp,
 	mdid_return_type->AddRef();
 	CMDName *col_mdname = GPOS_NEW(mp) CMDName(mp, pmdName->GetMDName());
 
-	CDXLColDescr *dxl_col_descr = GPOS_NEW(mp) CDXLColDescr(
-		mp, col_mdname, id_generator->next_id(), INT(1) /* attno */,
-		mdid_return_type, type_modifier, /* type_modifier */
-		false							 /* fColDropped */
-	);
+	CDXLColDescr *dxl_col_descr = GPOS_NEW(mp)
+		CDXLColDescr(col_mdname, id_generator->next_id(), INT(1) /* attno */,
+					 mdid_return_type, type_modifier, /* type_modifier */
+					 false							  /* fColDropped */
+		);
 
 	column_descrs->Append(dxl_col_descr);
 
@@ -595,7 +595,7 @@ CTranslatorUtils::GetColumnDescriptorsFromComposite(CMemoryPool *mp,
 
 		col_type->AddRef();
 		CDXLColDescr *dxl_col_descr = GPOS_NEW(mp) CDXLColDescr(
-			mp, col_mdname, id_generator->next_id(), INT(ul + 1) /* attno */,
+			col_mdname, id_generator->next_id(), INT(ul + 1) /* attno */,
 			col_type, md_col->TypeModifier(), /* type_modifier */
 			false							  /* fColDropped */
 		);
@@ -1386,7 +1386,7 @@ CTranslatorUtils::GetColumnDescrAt(CMemoryPool *mp, TargetEntry *target_entry,
 	INT type_modifier = gpdb::ExprTypeMod((Node *) target_entry->expr);
 	CMDIdGPDB *col_type = GPOS_NEW(mp) CMDIdGPDB(type_oid);
 	CDXLColDescr *dxl_col_descr =
-		GPOS_NEW(mp) CDXLColDescr(mp, mdname, colid, pos,  /* attno */
+		GPOS_NEW(mp) CDXLColDescr(mdname, colid, pos,	   /* attno */
 								  col_type, type_modifier, /* type_modifier */
 								  false					   /* fColDropped */
 		);

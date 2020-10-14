@@ -886,11 +886,11 @@ CTranslatorQueryToDXL::TranslateCTASToDXL()
 		GPOS_ASSERT(NULL != md_colname);
 		IMDId *mdid = dxl_ident->MdidType();
 		mdid->AddRef();
-		CDXLColDescr *dxl_col_descr = GPOS_NEW(m_mp) CDXLColDescr(
-			m_mp, md_colname, m_context->m_colid_counter->next_id(),
-			resno /* attno */, mdid, dxl_ident->TypeModifier(),
-			false /* is_dropped */
-		);
+		CDXLColDescr *dxl_col_descr = GPOS_NEW(m_mp)
+			CDXLColDescr(md_colname, m_context->m_colid_counter->next_id(),
+						 resno /* attno */, mdid, dxl_ident->TypeModifier(),
+						 false /* is_dropped */
+			);
 		dxl_col_descr_array->Append(dxl_col_descr);
 	}
 
@@ -2479,7 +2479,7 @@ CTranslatorQueryToDXL::DXLDummyConstTableGet() const
 	CWStringConst str_unnamed_col(GPOS_WSZ_LIT(""));
 	CMDName *mdname = GPOS_NEW(m_mp) CMDName(m_mp, &str_unnamed_col);
 	CDXLColDescr *dxl_col_descr = GPOS_NEW(m_mp)
-		CDXLColDescr(m_mp, mdname, m_context->m_colid_counter->next_id(),
+		CDXLColDescr(mdname, m_context->m_colid_counter->next_id(),
 					 1 /* attno */, GPOS_NEW(m_mp) CMDIdGPDB(mdid->Oid()),
 					 default_type_modifier, false /* is_dropped */
 		);
@@ -3352,7 +3352,7 @@ CTranslatorQueryToDXL::TranslateValueScanRTEToDXL(const RangeTblEntry *rte,
 				GPOS_DELETE(alias_str);
 
 				CDXLColDescr *dxl_col_descr = GPOS_NEW(m_mp) CDXLColDescr(
-					m_mp, mdname, colid, col_pos_idx + 1 /* attno */,
+					mdname, colid, col_pos_idx + 1 /* attno */,
 					GPOS_NEW(m_mp) CMDIdGPDB(const_expr->consttype),
 					const_expr->consttypmod, false /* is_dropped */
 				);
@@ -3384,7 +3384,7 @@ CTranslatorQueryToDXL::TranslateValueScanRTEToDXL(const RangeTblEntry *rte,
 					GPOS_DELETE(alias_str);
 
 					CDXLColDescr *dxl_col_descr = GPOS_NEW(m_mp) CDXLColDescr(
-						m_mp, mdname, colid, col_pos_idx + 1 /* attno */,
+						mdname, colid, col_pos_idx + 1 /* attno */,
 						GPOS_NEW(m_mp) CMDIdGPDB(gpdb::ExprType((Node *) expr)),
 						gpdb::ExprTypeMod((Node *) expr), false /* is_dropped */
 					);

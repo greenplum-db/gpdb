@@ -1551,7 +1551,7 @@ CDXLOperatorFactory::MakeColumnDescr(CDXLMemoryManager *dxl_memory_manager,
 
 	GPOS_DELETE(col_name);
 
-	return GPOS_NEW(mp) CDXLColDescr(mp, mdname, id, attno, mdid_type,
+	return GPOS_NEW(mp) CDXLColDescr(mdname, id, attno, mdid_type,
 									 type_modifier, col_dropped, col_len);
 }
 

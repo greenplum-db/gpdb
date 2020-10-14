@@ -41,9 +41,6 @@ typedef CDynamicPtrArray<CDXLColDescr, CleanupRelease> CDXLColDescrArray;
 class CDXLColDescr : public CRefCount
 {
 private:
-	// memory pool
-	CMemoryPool *m_mp;
-
 	// name
 	CMDName *m_md_name;
 
@@ -69,7 +66,7 @@ private:
 
 public:
 	// ctor
-	CDXLColDescr(CMemoryPool *, CMDName *, ULONG column_id, INT attr_no,
+	CDXLColDescr(CMDName *, ULONG column_id, INT attr_no,
 				 IMDId *column_mdid_type, INT type_modifier, BOOL is_dropped,
 				 ULONG width = gpos::ulong_max);
 
