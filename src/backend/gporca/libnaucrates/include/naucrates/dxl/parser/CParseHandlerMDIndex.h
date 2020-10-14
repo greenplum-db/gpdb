@@ -42,9 +42,6 @@ private:
 	// name of the index
 	CMDName *m_mdname;
 
-	// mdid of the indexed relation
-	IMDId *m_rel_mdid;
-
 	// is the index clustered
 	BOOL m_clustered;
 
