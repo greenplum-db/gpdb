@@ -42,8 +42,8 @@ installcheck: prep_postgres
 clean: clean_postgres
 
 prep_postgres:
-	sh postgres_setup.sh
+	./postgres_setup.bash
 clean_postgres:
-	sh postgres_clean.sh
+	./postgres_clean.bash
 
 .PHONY: prep_postgres clean_postgres
