@@ -23,7 +23,7 @@ using namespace gpopt;
 //		ctor
 //
 //---------------------------------------------------------------------------
-CKeyCollection::CKeyCollection(CMemoryPool *mp) : m_mp(mp), m_pdrgpcrs(NULL)
+CKeyCollection::CKeyCollection(CMemoryPool *mp) : m_pdrgpcrs(NULL)
 {
 	GPOS_ASSERT(NULL != mp);
 
@@ -40,7 +40,7 @@ CKeyCollection::CKeyCollection(CMemoryPool *mp) : m_mp(mp), m_pdrgpcrs(NULL)
 //
 //---------------------------------------------------------------------------
 CKeyCollection::CKeyCollection(CMemoryPool *mp, CColRefSet *pcrs)
-	: m_mp(mp), m_pdrgpcrs(NULL)
+	: m_pdrgpcrs(NULL)
 {
 	GPOS_ASSERT(NULL != pcrs && 0 < pcrs->Size());
 
@@ -60,7 +60,7 @@ CKeyCollection::CKeyCollection(CMemoryPool *mp, CColRefSet *pcrs)
 //
 //---------------------------------------------------------------------------
 CKeyCollection::CKeyCollection(CMemoryPool *mp, CColRefArray *colref_array)
-	: m_mp(mp), m_pdrgpcrs(NULL)
+	: m_pdrgpcrs(NULL)
 {
 	GPOS_ASSERT(NULL != mp);
 	GPOS_ASSERT(NULL != colref_array && 0 < colref_array->Size());

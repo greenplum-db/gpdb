@@ -33,9 +33,6 @@ using namespace gpos;
 class CKeyCollection : public CRefCount
 {
 private:
-	// memory pool
-	CMemoryPool *m_mp;
-
 	// array of key sets
 	CColRefSetArray *m_pdrgpcrs;
 
