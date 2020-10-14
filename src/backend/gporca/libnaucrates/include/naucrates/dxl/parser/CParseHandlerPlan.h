@@ -45,9 +45,6 @@ private:
 	// the root of the parsed DXL tree constructed by the parse handler
 	CDXLNode *m_dxl_node;
 
-	// direct dispatch info spec
-	CDXLDirectDispatchInfo *m_direct_dispatch_info;
-
 	// private ctor
 	CParseHandlerPlan(const CParseHandlerPlan &);
 

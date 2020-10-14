@@ -36,8 +36,7 @@ CParseHandlerPlan::CParseHandlerPlan(CMemoryPool *mp,
 	: CParseHandlerBase(mp, parse_handler_mgr, parse_handler_root),
 	  m_plan_id(0),
 	  m_plan_space_size(0),
-	  m_dxl_node(NULL),
-	  m_direct_dispatch_info(NULL)
+	  m_dxl_node(NULL)
 {
 }
 
