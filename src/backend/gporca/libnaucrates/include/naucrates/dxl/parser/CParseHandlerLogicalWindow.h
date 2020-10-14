@@ -34,9 +34,6 @@ XERCES_CPP_NAMESPACE_USE
 class CParseHandlerLogicalWindow : public CParseHandlerLogicalOp
 {
 private:
-	// list of window specification
-	CDXLWindowSpecArray *m_window_spec_array;
-
 	// private copy ctor
 	CParseHandlerLogicalWindow(const CParseHandlerLogicalWindow &);
 
