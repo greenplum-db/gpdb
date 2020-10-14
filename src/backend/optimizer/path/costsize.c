@@ -78,6 +78,7 @@
 #include "access/amapi.h"
 #include "access/htup_details.h"
 #include "access/tsmapi.h"
+#include "catalog/pg_proc.h"
 #include "executor/executor.h"
 #include "executor/nodeAgg.h"
 #include "executor/nodeHash.h"
@@ -701,6 +702,10 @@ cost_index(IndexPath *path, PlannerInfo *root, double loop_count,
 	get_tablespace_page_costs(baserel->reltablespace,
 							  &spc_random_page_cost,
 							  &spc_seq_page_cost);
+
+	if (baserel_orig->amhandler == AO_ROW_TABLE_AM_HANDLER_OID ||
+		baserel_orig->amhandler == AO_COLUMN_TABLE_AM_HANDLER_OID)
+		baserel->allvisfrac = 1.0;
 
 	/*----------
 	 * Estimate number of main-table pages fetched, and compute I/O cost.

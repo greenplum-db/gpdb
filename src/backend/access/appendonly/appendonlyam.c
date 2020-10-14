@@ -2525,6 +2525,49 @@ appendonly_fetch(AppendOnlyFetchDesc aoFetchDesc,
 	/* Segment file not in aoseg table.. */
 }
 
+bool
+appendonly_tuple_visible(AppendOnlyFetchDesc aoFetchDesc,
+						 AOTupleId *aoTupleId)
+{
+	int				segmentFileNum = AOTupleIdGet_segmentFileNum(aoTupleId);
+	int64			rowNum = AOTupleIdGet_rowNum(aoTupleId);
+	FileSegInfo	   *segInfo;
+	AppendOnlyBlockDirectoryEntry *curBlockDirectoryEntry;
+	bool		isSnapshotAny = (aoFetchDesc->snapshot == SnapshotAny);
+
+	segInfo = aoFetchDesc->segmentFileInfo[segmentFileNum];
+	Assert(segInfo);
+
+	if (rowNum > aoFetchDesc->lastRowNum[segmentFileNum] ||
+		rowNum < aoFetchDesc->firstRowNum[segmentFileNum])
+	{
+		curBlockDirectoryEntry = &aoFetchDesc->currentBlock.blockDirectoryEntry;
+		if(!AppendOnlyBlockDirectory_GetEntry(&aoFetchDesc->blockDirectory,
+											  aoTupleId,
+											  0,
+											  curBlockDirectoryEntry))
+			return false;
+		if (rowNum > aoFetchDesc->lastRowNum[segmentFileNum])
+			aoFetchDesc->lastRowNum[segmentFileNum] = curBlockDirectoryEntry->range.lastRowNum;
+		if (rowNum < aoFetchDesc->firstRowNum[segmentFileNum])
+			aoFetchDesc->firstRowNum[segmentFileNum] = curBlockDirectoryEntry->range.firstRowNum;
+
+		if (curBlockDirectoryEntry->range.afterFileOffset > segInfo->eof)
+			return false;
+	}
+
+	if (rowNum > aoFetchDesc->lastRowNum[segmentFileNum])
+		return false;
+
+	if (!isSnapshotAny &&
+		!AppendOnlyVisimap_IsVisible(&aoFetchDesc->visibilityMap, aoTupleId))
+	{
+		return false;			/* row has been deleted or updated. */
+	}
+
+	return true;
+}
+
 void
 appendonly_fetch_finish(AppendOnlyFetchDesc aoFetchDesc)
 {

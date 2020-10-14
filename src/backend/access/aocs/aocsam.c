@@ -1618,6 +1618,57 @@ aocs_fetch(AOCSFetchDesc aocsFetchDesc,
 	return found;
 }
 
+
+bool
+aocs_tuple_visible(AOCSFetchDesc aocsFetchDesc,
+						 AOTupleId *aoTupleId)
+{
+	int				segmentFileNum = AOTupleIdGet_segmentFileNum(aoTupleId);
+	int64			rowNum = AOTupleIdGet_rowNum(aoTupleId);
+	int				numCols = aocsFetchDesc->relation->rd_att->natts;
+	AOCSFileSegInfo	*segInfo;
+	AppendOnlyBlockDirectoryEntry *curBlockDirectoryEntry;
+	bool		isSnapshotAny = (aocsFetchDesc->snapshot == SnapshotAny);
+
+	segInfo = aocsFetchDesc->segmentFileInfo[segmentFileNum];
+	Assert(segInfo);
+
+	if (numCols == 0)
+		return false;
+
+	DatumStreamFetchDesc datumStreamFetchDesc = aocsFetchDesc->datumStreamFetchDesc[0];
+
+	if (rowNum > aocsFetchDesc->lastRowNum[segmentFileNum] ||
+		rowNum < aocsFetchDesc->firstRowNum[segmentFileNum])
+	{
+		curBlockDirectoryEntry = &datumStreamFetchDesc->currentBlock.blockDirectoryEntry;
+		if(!AppendOnlyBlockDirectory_GetEntry(&aocsFetchDesc->blockDirectory,
+											  aoTupleId,
+											  0,
+											  curBlockDirectoryEntry))
+			return false;
+		if (rowNum > aocsFetchDesc->lastRowNum[segmentFileNum])
+			aocsFetchDesc->lastRowNum[segmentFileNum] = curBlockDirectoryEntry->range.lastRowNum;
+		if (rowNum < aocsFetchDesc->firstRowNum[segmentFileNum])
+			aocsFetchDesc->firstRowNum[segmentFileNum] = curBlockDirectoryEntry->range.firstRowNum;
+
+		if (curBlockDirectoryEntry->range.afterFileOffset > segInfo->vpinfo.entry[0].eof)
+			return false;
+	}
+
+	if (rowNum > aocsFetchDesc->lastRowNum[segmentFileNum])
+		return false;
+
+	if (!isSnapshotAny &&
+		!AppendOnlyVisimap_IsVisible(&aocsFetchDesc->visibilityMap, aoTupleId))
+	{
+		return false;			/* row has been deleted or updated. */
+	}
+
+	return true;
+}
+
+
 void
 aocs_fetch_finish(AOCSFetchDesc aocsFetchDesc)
 {

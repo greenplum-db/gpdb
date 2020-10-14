@@ -137,6 +137,8 @@ extern void ValidateAppendonlySegmentDataBeforeStorage(int segno);
 extern FileSegInfo *GetFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int segno, bool locked);
 
 extern FileSegInfo **GetAllFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int *totalsegs);
+extern FileSegInfo **GetAllFileSegInfoArray(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot);
+extern FileSegInfo **AllFileSegInfoToArray(FileSegInfo **allSegInfo, int totalsegs);
 
 extern void UpdateFileSegInfo(Relation parentrel,
 				  int segno,
@@ -154,6 +156,7 @@ extern FileSegTotals *GetSegFilesTotals(Relation parentrel, Snapshot appendOnlyM
 
 extern void FreeAllSegFileInfo(FileSegInfo **allSegInfo,
 				   int totalSegFiles);
+extern void FreeAllSegFileInfoArray(FileSegInfo **allSegInfoArray);
 
 extern bool pg_aoseg_tuple_could_be_updated(Relation relation, HeapTuple tuple);
 extern bool pg_aoseg_tuple_is_locked_by_me(HeapTuple tuple);

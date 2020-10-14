@@ -90,11 +90,11 @@ IndexOnlyNext(IndexOnlyScanState *node)
 		 * serially executing an index only scan that was planned to be
 		 * parallel.
 		 */
-		scandesc = index_beginscan(node->ss.ss_currentRelation,
-								   node->ioss_RelationDesc,
-								   estate->es_snapshot,
-								   node->ioss_NumScanKeys,
-								   node->ioss_NumOrderByKeys);
+		scandesc = indexonly_beginscan(node->ss.ss_currentRelation,
+									   node->ioss_RelationDesc,
+									   estate->es_snapshot,
+									   node->ioss_NumScanKeys,
+									   node->ioss_NumOrderByKeys);
 
 		node->ioss_ScanDesc = scandesc;
 

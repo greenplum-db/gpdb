@@ -317,6 +317,9 @@ typedef struct AppendOnlyFetchDescData
 	 * maximum row number.
 	 */
 	int64			lastSequence[AOTupleId_MultiplierSegmentFileNum];
+	int64 			lastRowNum[AOTupleId_MultiplierSegmentFileNum];
+	int64 			firstRowNum[AOTupleId_MultiplierSegmentFileNum];
+
 
 	int32			usableBlockSize;
 
@@ -385,6 +388,8 @@ extern bool appendonly_fetch(
 	AppendOnlyFetchDesc aoFetchDesc,
 	AOTupleId *aoTid,
 	TupleTableSlot *slot);
+extern bool appendonly_tuple_visible(AppendOnlyFetchDesc aoFetchDesc,
+									 AOTupleId *aoTupleId);
 extern void appendonly_fetch_finish(AppendOnlyFetchDesc aoFetchDesc);
 extern void appendonly_dml_init(Relation relation, CmdType operation);
 extern AppendOnlyInsertDesc appendonly_insert_init(Relation rel, int segno);

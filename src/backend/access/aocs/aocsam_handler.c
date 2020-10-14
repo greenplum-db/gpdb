@@ -685,6 +685,9 @@ aoco_index_fetch_tuple(struct IndexFetchTableData *scan,
 
 	ExecClearTuple(slot);
 
+	if (aocoscan->xs_base.indexonly)
+		return aocs_tuple_visible(aocoscan->aocofetch, (AOTupleId *) tid);
+
 	if (aocs_fetch(aocoscan->aocofetch, (AOTupleId *) tid, slot))
 	{
 		ExecStoreVirtualTuple(slot);

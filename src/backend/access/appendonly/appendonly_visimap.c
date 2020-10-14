@@ -192,12 +192,20 @@ AppendOnlyVisimap_IsVisible(
 							AppendOnlyVisimap *visiMap,
 							AOTupleId *aoTupleId)
 {
+	int segNum, rowNum, rangeNum;
+
 	Assert(visiMap);
 
 	elogif(Debug_appendonly_print_visimap, LOG,
 		   "Append-only visi map: Visibility check: "
 		   "(tupleId) = %s",
 		   AOTupleIdToString(aoTupleId));
+	rowNum = AOTupleIdGet_rowNum(aoTupleId);
+	segNum = AOTupleIdGet_segmentFileNum(aoTupleId);
+	rangeNum =  rowNum / APPENDONLY_VISIMAP_MAX_RANGE;
+
+	if (bms_is_member(rangeNum, visiMap->allvisible_bitmap[segNum]))
+		return true;
 
 	if (!AppendOnlyVisimapEntry_CoversTuple(&visiMap->visimapEntry,
 											aoTupleId))
@@ -213,7 +221,8 @@ AppendOnlyVisimap_IsVisible(
 
 	/* visimap entry is now positioned to cover the aoTupleId */
 	return AppendOnlyVisimapEntry_IsVisible(&visiMap->visimapEntry,
-											aoTupleId);
+											aoTupleId,
+											&visiMap->allvisible_bitmap[segNum]);
 }
 
 /*
