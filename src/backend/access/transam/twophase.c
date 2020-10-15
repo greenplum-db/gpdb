@@ -65,6 +65,7 @@
 #include "replication/walsender.h"
 #include "replication/syncrep.h"
 #include "storage/backendid.h"
+#include "storage/barrier.h"
 #include "storage/fd.h"
 #include "storage/ipc.h"
 #include "storage/predicate.h"
@@ -126,6 +127,7 @@ typedef struct GlobalTransactionData
 	Oid			owner;			/* ID of user that executed the xact */
 	BackendId	locking_backend; /* backend currently working on the xact */
 	bool		valid;			/* TRUE if PGPROC entry is in proc array */
+	bool		committed;		/* TRUE iff the transaction is committed */
 	char		gid[GIDSIZE];	/* The GID assigned to the prepared xact */
 }	GlobalTransactionData;
 
@@ -181,7 +183,8 @@ static void RecordTransactionCommitPrepared(TransactionId xid,
 								DbDirNode *deldbs,
 								int ninvalmsgs,
 								SharedInvalidationMessage *invalmsgs,
-								bool initfileinval);
+								bool initfileinval,
+								GlobalTransaction gxact);
 static void RecordTransactionAbortPrepared(TransactionId xid,
 							   int nchildren,
 							   TransactionId *children,
@@ -531,6 +534,7 @@ MarkAsPreparing(TransactionId xid,
 	gxact->prepare_begin_lsn = xlogrecptr;	/* might be invalid */
 	gxact->owner = owner;
 	gxact->locking_backend = MyBackendId;
+	gxact->committed = false;
 	gxact->valid = false;
 	strcpy(gxact->gid, gid);
 
@@ -1471,7 +1475,8 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 										hdr->ncommitrels, commitrels,
 										hdr->ncommitdbs, commitdbs,
 										hdr->ninvalmsgs, invalmsgs,
-										hdr->initfileinval);
+										hdr->initfileinval,
+										gxact);
 	else
 		RecordTransactionAbortPrepared(xid,
 									   hdr->nsubxacts, children,
@@ -2059,7 +2064,8 @@ RecordTransactionCommitPrepared(TransactionId xid,
 								DbDirNode *deldbs,
 								int ninvalmsgs,
 								SharedInvalidationMessage *invalmsgs,
-								bool initfileinval)
+								bool initfileinval,
+								GlobalTransaction gxact)
 {
 	XLogRecData rdata[5];
 	int			lastrdata = 0;
@@ -2160,6 +2166,9 @@ RecordTransactionCommitPrepared(TransactionId xid,
 	/* Mark the transaction committed in pg_clog */
 	TransactionIdCommitTree(xid, nchildren, children);
 
+	gxact->committed = true;
+	pg_memory_barrier(); /* Prevent reordering */
+
 	/* Checkpoint can proceed now */
 	MyPgXact->delayChkpt = false;
 
@@ -2172,6 +2181,8 @@ RecordTransactionCommitPrepared(TransactionId xid,
 	 * in the procarray and continue to hold locks.
 	 */
 	SyncRepWaitForLSN(recptr, true);
+
+	SIMPLE_FAULT_INJECTOR("after_commit_prepared");
 }
 
 /*
@@ -2345,9 +2356,11 @@ getTwoPhasePreparedTransactionData(prepared_transaction_agg_state **ptas)
 	for (int i = 0; i < numberOfPrepareXacts; i++)
     {
 		GlobalTransaction gxact = globalTransactionArray[i];
-		if (gxact->valid == false)
-			/* Skip any invalid prepared transacitons. */
+
+		/* Skip any invalid prepared transacitons. */
+		if (!gxact->valid || gxact->committed)
 			continue;
+
 		xid 	  = ProcGlobal->allPgXact[gxact->pgprocno].xid;
 		recordPtr = &gxact->prepare_begin_lsn;
 
