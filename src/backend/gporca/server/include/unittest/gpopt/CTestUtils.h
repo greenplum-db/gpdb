@@ -614,6 +614,9 @@ public:
 									  CWStringDynamic *pstrEncodedValue,
 									  LINT value);
 
+	// Create a datum with a given type and double value
+	static IDatum *CreateDoubleDatum(CMemoryPool *mp, CMDAccessor *md_accessor,
+									 IMDId *mdid_type, CDouble value);
 	// create an interval for generic data types
 	// does not take ownership of mdid_type
 	static CConstraintInterval *PciGenericInterval(

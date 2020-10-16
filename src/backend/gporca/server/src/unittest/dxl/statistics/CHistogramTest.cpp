@@ -39,7 +39,10 @@ CHistogramTest::EresUnittest()
 		GPOS_UNITTEST_FUNC(CHistogramTest::EresUnittest_CHistogramBool),
 		GPOS_UNITTEST_FUNC(CHistogramTest::EresUnittest_Skew),
 		GPOS_UNITTEST_FUNC(CHistogramTest::EresUnittest_CHistogramValid),
-		GPOS_UNITTEST_FUNC(CHistogramTest::EresUnittest_MergeUnion)};
+		GPOS_UNITTEST_FUNC(CHistogramTest::EresUnittest_MergeUnion),
+		GPOS_UNITTEST_FUNC(
+			CHistogramTest::EresUnittest_MergeUnionDoubleLessThanEpsilon)};
+
 
 	CAutoMemoryPool amp;
 	CMemoryPool *mp = amp.Pmp();
@@ -319,7 +322,7 @@ CHistogramTest::EresUnittest_Skew()
 	return GPOS_OK;
 }
 
-// basis merge commutativity test
+// basic merge commutativity test
 GPOS_RESULT
 CHistogramTest::EresUnittest_MergeUnion()
 {
@@ -375,4 +378,56 @@ CHistogramTest::EresUnittest_MergeUnion()
 	return GPOS_OK;
 }
 
+// merge union test with double values differing by less than epsilon
+GPOS_RESULT
+CHistogramTest::EresUnittest_MergeUnionDoubleLessThanEpsilon()
+{
+	// create memory pool
+	CAutoMemoryPool amp;
+	CMemoryPool *mp = amp.Pmp();
+
+	// [631.82140700000002, 631.82140700000002]
+	CPoint *ppLower1 = CCardinalityTestUtils::PpointDouble(
+		mp, GPDB_FLOAT8, CDouble(631.82140700000002));
+	CPoint *ppUpper1 = CCardinalityTestUtils::PpointDouble(
+		mp, GPDB_FLOAT8, CDouble(631.82140700000002));
+
+	CBucket *bucket1 = GPOS_NEW(mp)
+		CBucket(ppLower1, ppUpper1, true /* is_lower_closed */,
+				true /*is_upper_closed*/, CDouble(0.2), CDouble(50));
+
+	// (631.82140500000003, 645.05197699999997)
+	CPoint *ppLower2 = CCardinalityTestUtils::PpointDouble(
+		mp, GPDB_FLOAT8, CDouble(631.82140500000003));
+	CPoint *ppUpper2 = CCardinalityTestUtils::PpointDouble(
+		mp, GPDB_FLOAT8, CDouble(645.05197699999997));
+	CBucket *bucket2 = GPOS_NEW(mp)
+		CBucket(ppLower2, ppUpper2, false /* is_lower_closed */,
+				false /*is_upper_closed*/, CDouble(0.2), CDouble(50));
+
+	CBucketArray *pdrgppbucket1 = GPOS_NEW(mp) CBucketArray(mp);
+	pdrgppbucket1->Append(bucket1);
+	CHistogram *histogram1 = GPOS_NEW(mp) CHistogram(mp, pdrgppbucket1);
+
+	CBucketArray *pdrgppbucket2 = GPOS_NEW(mp) CBucketArray(mp);
+	pdrgppbucket2->Append(bucket2);
+	CHistogram *histogram2 = GPOS_NEW(mp) CHistogram(mp, pdrgppbucket2);
+
+	CDouble output_rows1(0.0);
+	CHistogram *result1 = histogram1->MakeUnionHistogramNormalize(
+		1000, histogram2, 600, &output_rows1);
+
+
+	{
+		CAutoTrace at(mp);
+		result1->OsPrint(at.Os());
+		at.Os() << "Result 1: " << output_rows1 << std::endl;
+	}
+
+	GPOS_DELETE(histogram1);
+	GPOS_DELETE(histogram2);
+	GPOS_DELETE(result1);
+
+	return GPOS_OK;
+}
 // EOF

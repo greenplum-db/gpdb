@@ -196,6 +196,19 @@ CCardinalityTestUtils::PpointNumeric(CMemoryPool *mp,
 	return point;
 }
 
+// helper function to generate a point from an encoded value of specific datatype
+CPoint *
+CCardinalityTestUtils::PpointDouble(CMemoryPool *mp, OID oid, CDouble value)
+{
+	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
+
+	IMDId *mdid = GPOS_NEW(mp) CMDIdGPDB(oid);
+	IDatum *datum = CTestUtils::CreateDoubleDatum(mp, md_accessor, mdid, value);
+	CPoint *point = GPOS_NEW(mp) CPoint(datum);
+
+	return point;
+}
+
 // helper function to print the bucket object
 void
 CCardinalityTestUtils::PrintBucket(CMemoryPool *mp, const char *pcPrefix,
