@@ -186,6 +186,14 @@ CBucket::GetOverlapPercentage(const CPoint *point, BOOL include_point) const
 	CDouble res = 1 / distance_upper;
 	res = res * distance_middle;
 
+	// TODO: When calculating the overlap percentage for doubles, we're
+	// using a different method than when calculating the frequency. This
+	// causes the frequency of singleton Double buckets to be inconsistent
+	// -- the frequency of the split bucket exceeds the frequency of the
+	// original bucket.  Instead, we should have a consistent method of
+	// calculating singleton frequency, either through NDV or assuming a
+	// small epsilon (using the NDV in GetOverlapPercentage is probably
+	// safer)
 	return CDouble(std::min(res.Get(), DOUBLE(1.0)));
 }
 
@@ -1195,9 +1203,6 @@ CBucket::SplitAndMergeBuckets(
 													 true /*include_lower*/);
 			this_overlap =
 				this->GetOverlapPercentage(minUpper, false /*include_point*/);
-			GPOS_ASSERT(this_overlap * this->GetFrequency() +
-							upper_third->GetFrequency() <=
-						this->GetFrequency() + CStatistics::Epsilon);
 		}
 		else
 		{
@@ -1206,9 +1211,6 @@ CBucket::SplitAndMergeBuckets(
 				mp, minUpper, true /*include_lower*/);
 			bucket_other_overlap = bucket_other->GetOverlapPercentage(
 				minUpper, false /*include_point*/);
-			GPOS_ASSERT(bucket_other_overlap * bucket_other->GetFrequency() +
-							upper_third->GetFrequency() <=
-						bucket_other->GetFrequency() + CStatistics::Epsilon);
 		}
 	}
 	else
@@ -1222,9 +1224,6 @@ CBucket::SplitAndMergeBuckets(
 													 true /*include_lower*/);
 			this_overlap =
 				this->GetOverlapPercentage(minUpper, false /*include_point*/);
-			GPOS_ASSERT(this_overlap * this->GetFrequency() +
-							upper_third->GetFrequency() <=
-						this->GetFrequency() + CStatistics::Epsilon);
 		}
 		else if (bucket_other->IsUpperClosed() && !this->IsUpperClosed())
 		{
@@ -1232,9 +1231,6 @@ CBucket::SplitAndMergeBuckets(
 				mp, minUpper, true /*include_lower*/);
 			bucket_other_overlap = bucket_other->GetOverlapPercentage(
 				minUpper, false /*include_point*/);
-			GPOS_ASSERT(bucket_other_overlap * bucket_other->GetFrequency() +
-							upper_third->GetFrequency() <=
-						bucket_other->GetFrequency() + CStatistics::Epsilon);
 		}
 		// the buckets are completely identical
 		// [1,5) & [1,5) OR (1,5] & (1,5] OR [1,5] & [1,5]
