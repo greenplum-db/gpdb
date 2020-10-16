@@ -29,6 +29,7 @@
 #include "nodes/plannodes.h"
 #include "parser/parsetree.h"
 #include "postmaster/autostats.h"
+#include "postmaster/autovacuum.h"
 #include "utils/acl.h"
 #include "utils/guc.h"
 #include "utils/lsyscache.h"
@@ -291,6 +292,9 @@ auto_stats(AutoStatsCmdType cmdType, Oid relationOid, uint64 ntuples, bool inFun
 	start = GetCurrentTimestamp();
 
 	if (Gp_role != GP_ROLE_DISPATCH)
+		return;
+
+	if (AutoVacuumingActive())
 		return;
 
 	if (relationOid == InvalidOid)

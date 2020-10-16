@@ -41,6 +41,7 @@
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "access/heapam.h"
+#include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbexplain.h"             /* cdbexplain_recvExecStats */
 #include "cdb/cdbsubplan.h"
 #include "cdb/cdbvars.h"
@@ -48,6 +49,7 @@
 #include "cdb/cdbdisp_query.h"
 #include "cdb/ml_ipc.h"
 #include "executor/nodeShareInputScan.h"
+#include "pgstat.h"
 
 
 static Datum ExecHashSubPlan(SubPlanState *node,
@@ -1376,10 +1378,12 @@ PG_TRY();
 		queryDesc->estate->dispatcherState->primaryResults)
 	{
 		ErrorData *qeError = NULL;
+		CdbDispatchResults *pr = NULL;
 		CdbDispatcherState *ds = queryDesc->estate->dispatcherState;
+		int	primaryWriterSliceIndex = PrimaryWriterSliceIndex(queryDesc->estate);
 
 		cdbdisp_checkDispatchResult(ds, DISPATCH_WAIT_NONE);
-		cdbdisp_getDispatchResults(ds, &qeError);		
+		pr = cdbdisp_getDispatchResults(ds, &qeError);
 
 		if (qeError)
 		{
@@ -1387,6 +1391,9 @@ PG_TRY();
 			FlushErrorState();
 			ReThrowError(qeError);
 		}
+
+		/* collect pgstat from QEs for current transaction level */
+		pgstat_combine_from_qe(pr, primaryWriterSliceIndex);
 
 		/* If EXPLAIN ANALYZE, collect execution stats from qExecs. */
 		if (planstate->instrument && planstate->instrument->need_cdb)

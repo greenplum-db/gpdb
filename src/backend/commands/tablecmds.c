@@ -16378,7 +16378,7 @@ ATExecExpandTableCTAS(AlterTableCmd *rootCmd, Relation rel, AlterTableCmd *cmd)
 		ExecutorFinish(queryDesc);
 		ExecutorEnd(queryDesc);
 
-		collect_tabstat(cmdType, relationOid, queryDesc->es_processed, false);
+		auto_stats(cmdType, relationOid, queryDesc->es_processed, false);
 
 		FreeQueryDesc(queryDesc);
 
@@ -16908,7 +16908,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 			ExecutorEnd(queryDesc);
 
 			if (Gp_role == GP_ROLE_DISPATCH)
-				collect_tabstat(cmdType, relationOid, queryDesc->es_processed,
+				auto_stats(cmdType, relationOid, queryDesc->es_processed,
 								false);
 
 			FreeQueryDesc(queryDesc);

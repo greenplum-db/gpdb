@@ -145,11 +145,25 @@ select count(*)  from ao2_@amname@;
 (1 row)
 
 delete from ao2_@amname@ where i < 27;
+-- make sure the pgstat msg sends out at least PGSTAT_STAT_INTERVAL msec since last one
+select pg_sleep(0.6);
+ pg_sleep 
+----------
+ 
+(1 row)
+
 analyze ao2_@amname@;
 select count(*)  from ao2_@amname@;
  count 
 -------
     12
+(1 row)
+
+-- make sure the pgstat msg sends out at least PGSTAT_STAT_INTERVAL msec since last one
+select pg_sleep(0.6);
+ pg_sleep 
+----------
+ 
 (1 row)
 
 select pg_stat_get_live_tuples(c.oid) as livetuples, pg_stat_get_dead_tuples(c.oid) as deadtuples 

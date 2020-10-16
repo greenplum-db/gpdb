@@ -1424,6 +1424,12 @@ exec_mpp_query(const char *query_string,
 						 receiver,
 						 completionTag);
 
+		/*
+		 * If writer QE, sent current pgstat for tables to QD.
+		 */
+		if (Gp_role == GP_ROLE_EXECUTE && Gp_is_writer)
+			pgstat_send_qd_tabstats();
+
 		(*receiver->rDestroy) (receiver);
 
 		PortalDrop(portal, false);
