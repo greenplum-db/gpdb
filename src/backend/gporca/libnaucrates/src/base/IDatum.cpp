@@ -110,7 +110,8 @@ IDatum::StatsAreLessThan(const IDatum *datum) const
 
 	CDouble d1 = this->GetDoubleMapping();
 	CDouble d2 = datum->GetDoubleMapping();
-	return d1 < d2;
+	CDouble diff = d2 - d1;
+	return diff > CStatistics::Epsilon;
 }
 
 //---------------------------------------------------------------------------

@@ -99,6 +99,13 @@ public:
 
 	static GPOS_RESULT EresUnittest_CBucketMergeCommutativityUnionAll();
 
+	static GPOS_RESULT EresUnittest_CBucketMergeCommutativityDoubleDatum();
+
+	static GPOS_RESULT
+	EresUnittest_CBucketMergeCommutativityDoubleDatumSameLowerBounds();
+
+	static GPOS_RESULT
+	EresUnittest_CBucketMergeCommutativityDoubleDatumSameUpperBounds();
 };	// class CBucketTest
 }  // namespace gpnaucrates
 

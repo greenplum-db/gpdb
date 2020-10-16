@@ -3853,6 +3853,39 @@ CTestUtils::CreateGenericDatum(CMemoryPool *mp, CMDAccessor *md_accessor,
 }
 
 //---------------------------------------------------------------------------
+//	@function:
+//		CTestUtils::CreateDoubleDatum
+//
+//	@doc:
+//		Create a datum with a given type and double value
+//
+//---------------------------------------------------------------------------
+IDatum *
+CTestUtils::CreateDoubleDatum(CMemoryPool *mp, CMDAccessor *md_accessor,
+							  IMDId *mdid_type, CDouble value)
+{
+	GPOS_ASSERT(NULL != md_accessor);
+
+	GPOS_ASSERT(!mdid_type->Equals(&CMDIdGPDB::m_mdid_numeric));
+	const IMDType *pmdtype = md_accessor->RetrieveType(mdid_type);
+	ULONG ulbaSize = 0;
+	CWStringDynamic *pstrW =
+		GPOS_NEW(mp) CWStringDynamic(mp, GPOS_WSZ_LIT("AAAABXc="));
+	BYTE *data = CDXLUtils::DecodeByteArrayFromString(mp, pstrW, &ulbaSize);
+	CDXLDatumGeneric *dxl_datum = NULL;
+
+	dxl_datum = GPOS_NEW(mp) CDXLDatumStatsDoubleMappable(
+		mp, mdid_type, default_type_modifier, false /*is_const_null*/, data,
+		ulbaSize, CDouble(value));
+
+
+	IDatum *datum = pmdtype->GetDatumForDXLDatum(mp, dxl_datum);
+	dxl_datum->Release();
+	GPOS_DELETE(pstrW);
+	return datum;
+}
+
+//---------------------------------------------------------------------------
 //      @function:
 //              CConstraintTest::PciGenericInterval
 //
@@ -3887,8 +3920,6 @@ CTestUtils::PciGenericInterval(CMemoryPool *mp, CMDAccessor *md_accessor,
 	return GPOS_NEW(mp)
 		CConstraintInterval(mp, colref, pdrgprng, false /*is_null*/);
 }
-
-
 //---------------------------------------------------------------------------
 //	@function:
 //		CTestUtils::PexprScalarCmpIdentToConstant
